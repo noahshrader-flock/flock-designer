@@ -17,12 +17,12 @@ the wider product process at readiness to build.
 
 > ### Where we are
 >
-> **Steps 1–6 are done bar one handoff. Step 7 is next.**
+> **Steps 1–7 are complete. Step 8 is next.**
 >
-> Step 6's content is complete — the shared repository holds the portable standards, the projects
-> structure, and the plan, and Coke resolves the standards from it. It is blocked only on the
-> **org transfer** to `flocksafety/flock-designer`, which needs someone with org permission and
-> changes nothing here when it happens.
+> Everything needing org or release permission — the shared repo's transfer to `flocksafety`, the FUI
+> context generator, shipping `.flkd` in the package — is collected in
+> **[step 17](#step-17--ship-the-design-system-context-in-the-package)** so it does not block the work
+> in front of it.
 >
 > Step 6 is live at `noahshrader-flock/flock-designer` and waiting on an org transfer to
 > `flocksafety/flock-designer` — a one-step move once someone with permission does it. Nothing else
@@ -810,12 +810,12 @@ decides it on evidence.
 
 ## Status
 
-> **Steps 1–6 are done bar one handoff. Step 7 is next.**
+> **Steps 1–7 are complete. Step 8 is next.**
 >
-> Step 6's content is complete — the shared repository holds the portable standards, the projects
-> structure, and the plan, and Coke resolves the standards from it. It is blocked only on the
-> **org transfer** to `flocksafety/flock-designer`, which needs someone with org permission and
-> changes nothing here when it happens.
+> Everything needing org or release permission — the shared repo's transfer to `flocksafety`, the FUI
+> context generator, shipping `.flkd` in the package — is collected in
+> **[step 17](#step-17--ship-the-design-system-context-in-the-package)** so it does not block the work
+> in front of it.
 >
 > Step 6 is live at `noahshrader-flock/flock-designer`, pending an org transfer to
 > `flocksafety/flock-designer`.
@@ -829,8 +829,8 @@ decides it on evidence.
 | 3 | [Rename existing prototype work](#step-3--rename-existing-prototype-work) | Claude | No `proto/<name>` branch or directory remains | **Complete** — nothing to rename; the stale branch was deleted |
 | 4 | [Fix the product repository files](#step-4--fix-the-product-repository-files) | Claude → Noah reviews | Every row of the audit is done, and the cold-start check passes | **Complete** — cold-start check passed 2026-09-28 |
 | 5 | [Set up the design-system agent files](#step-5--set-up-the-design-system-agent-files) | Claude + Design System owner | The agent reads component facts matching the installed version, and the authoring standards exist | **Complete** — `a160edf`, `62f8748`, `b8515fb`, `f03db25`; cold-start tested; packaging deferred to step 17 |
-| 6 | [Create the shared repository](#step-6--create-the-shared-repository) | Noah + Claude | `flocksafety/flock-designer` holds the portable standards and Coke resolves them | **Content complete** — `3d15ae9`; blocked only on the org transfer |
-| 7 | [Confirm the prototype harness](#step-7--confirm-the-prototype-harness) | Claude | One real artifact builds, opens, and reviews cleanly | Not started |
+| 6 | [Create the shared repository](#step-6--create-the-shared-repository) | Noah + Claude | The shared repository holds the portable standards, the projects structure, and the plan, and Coke resolves the standards from it | **Complete** — `3d15ae9`; cold-start tested; org transfer moved to step 17 |
+| 7 | [Confirm the prototype harness](#step-7--confirm-the-prototype-harness) | Claude | One real artifact builds, opens, and reviews cleanly | **Complete** — `e9e5b14c`; bundle gap closed and the check itself verified |
 | 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | Claude + a test designer | A designer who has never run Coke reaches a running app unaided | Not started |
 | 9 | [Prove it on real decisions](#step-9--prove-it-on-real-decisions) | Noah leads | Two or three real decisions went from request to reviewed prototype | Not started |
 | 10 | [Hand one off to an engineer](#step-10--hand-one-off-to-an-engineer) | Noah + an engineer | An engineer has received a real handoff and said whether it helped | Not started |
@@ -840,7 +840,7 @@ decides it on evidence.
 | 14 | [Workspace: shared review](#step-14--workspace-shared-review) | Engineering | A distributed team reviews a real iteration from an internal link | Not started |
 | 15 | [Workspace: handoff and learning](#step-15--workspace-handoff-and-learning) | Engineering | The step 10 handoff happens inside the app | Not started |
 | 16 | [Pilot and release decision](#step-16--pilot-and-release-decision) | Engineering + Noah | There is enough real usage to approve a broader rollout | Not started |
-| 17 | [Ship the design-system context in the package](#step-17--ship-the-design-system-context-in-the-package) | Design System owner + a developer | FUI context regenerates on release and reaches products through the package | Not started |
+| 17 | [Ship the design-system context in the package](#step-17--ship-the-design-system-context-in-the-package) | Design System owner + a developer | FUI context regenerates on release and reaches products through the package, and the shared repo lives under `flocksafety` | Not started |
 
 **Status values:** Not started, In progress, Complete. A step is Complete only when its "done when"
 is met and the evidence is cited in the [change log](#change-log).
@@ -1148,14 +1148,14 @@ survivable for a designer.
 
 `validate.py`: **1006 checks, 0 failures.**
 
-**Still open — the transfer, and only the transfer.** `flocksafety/flock-designer` once someone with
-org permission does it (Settings → Transfer ownership, from either side). Every reference in this
-document to `flocksafety/flock-designer` means this repository at whichever address it currently has
-— **the transfer is housekeeping, not a plan change**, and nothing here should be re-derived once it
-happens.
+**Nothing is open here. The org transfer moved to [step 17](#step-17--ship-the-design-system-context-in-the-package)**,
+where it sits with the other items needing someone with org and release permission. Every reference
+in this document to `flocksafety/flock-designer` means this repository at whichever address it
+currently has — **the transfer is housekeeping, not a plan change**, and nothing here gets re-derived
+once it happens.
 
-**Done when:** the repository lives at `flocksafety/flock-designer`, holds the portable standards
-and the project structure, and Coke resolves the standards from it.
+**Done when:** the repository holds the portable standards, the project structure, and the plan, and
+Coke resolves the standards from it. **The address is not part of this step** — it is step 17.
 
 ### Step 7 — Confirm the prototype harness
 
@@ -1166,6 +1166,43 @@ and the project structure, and Coke resolves the standards from it.
 - Keep `tsc`, lint, and the bare `src/...` import guard, and add the bundle or dev-server smoke check that the gap log showed those two miss.
 
 **Done when:** an isolated prototype can be built, opened, and honestly reviewed.
+
+#### What was done, 2026-09-28
+
+`e9e5b14c` (flock-coke), `2f43511` (flock-designer). Branch `fd/alert-notification-prefs/i1`.
+
+**The bundle gap is closed** — the open item the gap log has carried since 2026-09-02.
+`scripts/smoke-prototype.mjs` bundles a prototype entry with rsbuild's alias set and deliberately
+without a bare `src/` alias, so an import that type-checks and does not bundle fails here. Wired into
+the agent, the skill, and `src/prototypes/README.md` as a required third check, and exposed as
+`npm run smoke:prototype -- <project-id>`.
+
+**It was verified, not asserted.** Injecting the exact import from the 2026-09-02 gap entry produced
+`tsc` **0 errors**, Biome **clean**, and a smoke-check **failure**. Then reverted. That is the whole
+argument for the check, demonstrated rather than claimed.
+
+**The artifact:** `src/prototypes/alert-notification-prefs/`, holding the full directory contract and
+all seven view states behind a switcher so a reviewer compares them without editing code. The
+project folder in `flock-designer` carries brief, context receipt, and review — one slug keying the
+branch, the directory, and the folder, which is the contract proved end to end.
+
+**Building it corrected three things the manifest alone did not carry**, each caught by `tsc` against
+FUI's prop allowlists rather than by inspection: `FSToggle` requires `label` and permits no
+`aria-label` or `inputProps`; `FSToggleButtonGroup` omits `size`; `FSButton` takes `FSVariant`, not
+`filled`/`outlined`. This is the allowlist behaving exactly as
+[`authoring/components.md`](#step-5--set-up-the-design-system-agent-files) says it should.
+
+**The first real component gap came out of it.** `FSToggle` has no accessible-name route in its
+allowlist, so when the visible label is rendered separately — which the product's canonical settings
+row does — the only option is a native `<label htmlFor>` bound to the input `id`. Coke's
+`togglePreferenceRow.tsx` renders `<FSToggle label="" />`, so those toggles appear to be unnamed
+product-wide. Logged in the project's `review.md`; **not yet filed in FUI**, because the Design
+System owner is still unnamed.
+
+**What the review record does not claim:** six of ten manual accessibility checks are recorded as
+**not run**, the automated scan could not run at all (Cypress will not launch in this environment),
+and no human has reviewed product parity. The artifact proves the harness; it does not prove the
+design.
 
 ### Step 8 — Make the product runnable on mock data
 
@@ -1341,8 +1378,19 @@ distributes the stale one on a schedule.
 - **Drop the release-tag requirement** from the setup path, and turn `validate.py`'s staleness NOTE
   back into a failure once a generator makes it actionable.
 
+#### Also here: the org transfer
+
+Batched here because it needs the same thing everything above needs — someone with org permission.
+
+- **Transfer `noahshrader-flock/flock-designer` to `flocksafety/flock-designer`.** Settings →
+  Transfer ownership, from either side. It is a one-step GitHub operation that keeps full history,
+  so nothing gets redone and no reference in this document changes meaning.
+- It was carried as step 6's open item until 2026-09-28, which made a finished step look unfinished.
+  Step 6's work is done; this is an address change and belongs with the other permissioned items.
+
 **Done when:** a product installs the package and reads FUI context that provably matches the
-installed version, with no sibling checkout and no tag discipline required.
+installed version, with no sibling checkout and no tag discipline required — and the shared
+repository lives at `flocksafety/flock-designer`.
 
 ## The learning loop
 
@@ -1804,6 +1852,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-09-28 | **Step 7 complete, and the org transfer moved to step 17 at the plan owner’s direction** so a finished step stops looking unfinished. **The bundle gap is closed** — open in the gap log since 2026-09-02. `npm run smoke:prototype` bundles a prototype entry with rsbuild’s alias set, and **the check was verified rather than asserted**: injecting the original failing import gave `tsc` 0 errors, Biome clean, and a smoke failure. The artifact is `src/prototypes/alert-notification-prefs/` with the full directory contract and all seven states behind a switcher, plus a project folder keyed by the same slug — the contract proved end to end. **Building it corrected three FUI assumptions** the manifest alone did not carry, all caught by `tsc` against the prop allowlists, and **produced the first real component gap**: `FSToggle` has no accessible-name route, so Coke’s canonical settings row ships unnamed toggles. Logged, not yet filed — the Design System owner is still unnamed. The review record leaves six of ten accessibility checks recorded as **not run** and the automated scan as **could not run**, which is the artifact proving the harness rather than pretending to prove the design. | Step 7 and its sequence row; step 6 and step 17 (transfer); both status blocks. Repos: `e9e5b14c`, `2f43511`. |
 | 2026-09-28 | **Step 6 cold-start test: passed all three questions, and was right to complain about something it misdiagnosed.** A fresh session in `flock-coke` followed the references out to the sibling checkout, gave the accessibility floor and Test-level requirements, all seven view states, and — the question most likely to be confabulated — got the tier-precedence asymmetry right with citations rather than from memory: Flock wins on design judgment, the universal tier wins on accessibility, because conformance is a floor and judgment is not. Every citation verified accurate. **It then flagged the README’s file tree as stale for still listing `standards/universal/` under `.flkd/`. The tree was correct; the prose around it was not.** A blunt path substitution in step 6 had produced "the universal tier and `../flock-designer/standards/production-readiness.md` are no longer here" — a sentence saying a file at its new path is not at that path, twice over. The reader was reacting to something genuinely broken and reached for the nearest explanation. Fixed in `6cacfc74`; both sentences now say the two are deliberately absent and point at where they went. **Three tests, three defects — none of which the author could see from inside the work.** | Change log. Repo: `6cacfc74`. |
 | 2026-09-28 | **Step 6’s content is complete; only the org transfer remains.** `standards/universal/` and `production-readiness.md` moved into the shared repository, Coke resolves them from `../flock-designer/standards/`, and `PLAN.md` moved in alongside them. **Verifying portability was the part that mattered:** the audit’s "zero product-specific references" claim came from grepping product names and was incomplete — validating the moved files caught two universal standards that called themselves product-agnostic while hard-linking to the Flock tier above them, plus a third reference form the substitution pass missed. All fixed; the universal tier now describes the tier relationship without knowing where it lives, which is what portability actually requires. **A consequence the plan had not stated: a `flock-coke` checkout alone no longer holds the accessibility floor or the view-state list, so the cold-start check now needs two checkouts.** Coke’s README says so and `validate.py` reports a missing shared checkout instead of failing silently, but it is a real increase in setup burden and step 8 owns it. `validate.py`: **1006 checks, 0 failures.** | Step 6, sequence row, both status blocks. Repos: `3d15ae9`, `82d6112d`, `6e0d469`. |
 | 2026-09-28 | **Cold-start test on step 5 found a live contradiction I had created**, the same class step 4's test found: I corrected a false "generated from `src/` — fix the source and regenerate" claim in `.flkd/README.md` but left the identical claim standing in `.flkd/authoring/components.md`, the file it originated in. A fresh session got the right answer anyway, by citing the corrected file — luck of which file it trusted, not agreement across the repository. Also surfaced a real gap (composite components were undocumented) and, while fixing that, a second self-made confusion (two unrelated splits both labeled "two shapes"). All three fixed in `f03db25`. **This is now the pattern, not a one-off:** both cold-start tests run so far have each found one thing the author could not see from inside the work. | Step 5, sequence row. Repo: `f03db25`. |
