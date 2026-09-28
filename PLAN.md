@@ -831,7 +831,7 @@ decides it on evidence.
 | 5 | [Set up the design-system agent files](#step-5--set-up-the-design-system-agent-files) | Claude + Design System owner | The agent reads component facts matching the installed version, and the authoring standards exist | **Complete** — `a160edf`, `62f8748`, `b8515fb`, `f03db25`; cold-start tested; packaging deferred to step 17 |
 | 6 | [Create the shared repository](#step-6--create-the-shared-repository) | Noah + Claude | The shared repository holds the portable standards, the projects structure, and the plan, and Coke resolves the standards from it | **Complete** — `3d15ae9`; cold-start tested; org transfer moved to step 17 |
 | 7 | [Confirm the prototype harness](#step-7--confirm-the-prototype-harness) | Claude | One real artifact builds, opens, and reviews cleanly | **Complete** — `e9e5b14c`; bundle gap closed and the check itself verified |
-| 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | Claude + a test designer | A designer who has never run Coke reaches a running app unaided | **In progress** — `afa5aa4f`; server side verified, **no designer has run it** |
+| 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | Claude + a test designer | A designer who has never run Coke reaches a running app unaided | **In progress** — renders correctly, but **`npm ci` is blocked by AWS registry auth** |
 | 9 | [Prove it on real decisions](#step-9--prove-it-on-real-decisions) | Noah leads | Two or three real decisions went from request to reviewed prototype | Not started |
 | 10 | [Hand one off to an engineer](#step-10--hand-one-off-to-an-engineer) | Noah + an engineer | An engineer has received a real handoff and said whether it helped | Not started |
 | 11 | [Decide if the managed harness is needed](#step-11--decide-if-the-managed-harness-is-needed) | Noah | The decision is recorded either way, with the friction log as evidence | Not started |
@@ -1289,7 +1289,34 @@ setup was broken — a false negative sending them for help while everything wor
 development needs a local database and `flock-tanquery` — the exact barrier design mode removes. A
 designer would have read that and concluded they could not run Coke. Fixed in `ddcc6f54`.
 
-**Still not done:** **`npm ci` has never been exercised.** The run above was on a machine that
+#### `npm ci` was exercised, and it failed — 2026-09-28
+
+A fresh clone into `/tmp` by the plan owner. The clone worked and the branch carried design mode.
+**`npm ci` failed immediately with `401 Unable to authenticate`.**
+
+**The cause is not what this plan assumed.** GitHub Packages answered fine
+(`npm view @flocksafety/flock-react-component-lib version` → `5.6.4`). The **default registry, AWS
+CodeArtifact, returned the 401**, and `aws sts get-caller-identity` showed no AWS credentials at all.
+
+**1,320 of the 1,428 packages in `package-lock.json` resolve through CodeArtifact** — `react`
+included, not just the private `@flocksafety` ones. **Without AWS access, a designer installs
+nothing.** The CodeArtifact token also **expires within 12 hours**, so this is recurring friction,
+not one-time setup: it will feel like the environment breaking for no reason, on a schedule.
+
+**The setup doc was wrong about the cause**, which would have made it worse rather than neutral. It
+said a `401` meant a missing GitHub PAT with `read:packages`; a designer would have made a new GitHub
+token, added it, still failed, and had nothing pointing at the real system. Corrected in `3fdec5af`,
+with the AWS credential step explicitly marked unconfirmed with whoever owns the registry.
+
+**This is evidence [step 11](#step-11--decide-if-the-managed-harness-is-needed) has to weigh.** The
+premise that making the real product runnable removes the need for a managed harness assumed the
+barrier was the **backend**. Design mode does remove that — proven, the shell renders on fixtures.
+It does **not** remove the **internal-registry** barrier, which sits in front of `npm install` and
+therefore in front of everything. It was invisible until someone cloned from scratch, which is the
+argument for having done so.
+
+**Still not verified:** the hand-ported `msw` lockfile entries, since `npm ci` never got far enough
+to install anything. The run above was on a machine that
 already had `node_modules`, so nothing was installed and no token was needed — which is precisely
 the step predicted to block a designer. The hand-ported `msw` lockfile entries remain unverified.
 
@@ -1932,6 +1959,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-09-28 | **The real setup barrier is AWS CodeArtifact, and it is bigger than the plan assumed.** A fresh clone reached `npm ci` and failed with `401`. GitHub Packages answered fine; the **default registry, AWS CodeArtifact, refused**, with no AWS credentials present at all. **1,320 of 1,428 lockfile packages resolve through CodeArtifact** — `react` included — so without AWS access a designer installs **nothing**, and the token **expires within 12 hours**, making this recurring rather than one-time. **The setup doc blamed GitHub**, which would have sent a designer to generate a PAT, fail again, and have no pointer to the real system; corrected in `3fdec5af`. **This is evidence step 11 must weigh:** design mode demonstrably removes the *backend* barrier — the shell renders on fixtures — but not the *internal-registry* barrier sitting in front of `npm install`, and therefore in front of everything. Invisible until someone cloned from scratch. The `msw` lockfile port remains unverified because installation never began. | Step 8 and its sequence row; friction log; step 11 evidence. Repo: `3fdec5af`. |
 | 2026-09-28 | **Design mode renders — the plan owner ran it and it worked in seconds.** Screenshots show the full Coke shell on fixtures: nav, admin sub-nav, Organizations List, Profile, account switcher. That settles what could not be checked from a shell — MSW interception, the auth bypass and the LaunchDarkly mocking all hold end to end, the nav rendering being proof of the last since `AppHeader` waits on a flag. **Two defects came out of it.** `DESIGN-MODE.md` promised data for "Springfield Police Department", **a name found nowhere in the fixtures** — asserted rather than read. The real data is *HOA Org*, *Law Enforcement Org*, *John Smith*, and a designer would have seen the right screen, not recognised it, and reported the setup broken. Corrected to a table taken from the fixtures (`99491e48`). Separately, the file was undiscoverable: nothing linked to it and the root README opened by saying local dev needs a database and `flock-tanquery`, the very barrier design mode removes (`ddcc6f54`). **`npm ci` is still unexercised** — the run used an existing `node_modules`, so the hand-ported lockfile remains the open risk. | Step 8; friction log. Repo: `99491e48`, `ddcc6f54`. |
 | 2026-09-28 | **Step 8 cold-start test passed, both traps cleared — and it is not the test that closes step 8.** A fresh session answered all four questions from `DESIGN-MODE.md` with accurate citations, correctly diagnosing the no-navigation case as LaunchDarkly plus running `start` instead of `start:design`, and correctly separating design mode from the prototype harness. Second clean pass in a row after three that each found a defect. **But this tests the document, not the setup.** Step 8’s "done when" is a designer reaching a running app unaided, and none has tried. **The most likely failure is now named in advance:** `msw`’s 43 lockfile entries were ported by hand because a `401` against GitHub Packages made a real install impossible in this environment, and **no clean `npm ci` has ever run against the result** — if the port is wrong, design mode fails rather than the install obviously erroring. Recorded in the friction log so whoever runs the designer test checks `npm ci` first. | Step 8; friction log. Repo: `cadff46d`. |
 | 2026-09-28 | **Step 8 built; the half that needs a person is named.** The MSW `start:design` mechanism is ported onto the baseline — not the branch, which stays unmerged — gated behind `PUBLIC_APP_DESIGN_MODE` with MSW behind a dynamic import so it never reaches production. `npm run smoke:design` verifies the four shell-checkable things, including that the checked-in worker matches the installed `msw`. **Two real defects found.** First, `msw` was in `node_modules` but **absent from `package-lock.json`** — a clean `npm ci` would have installed none and design mode would have failed silently, hidden by a working dev environment; 43 entries ported, 499 insertions matching the source branch exactly. Second, **step 7’s tooling had been committed to the prototype iteration branch rather than the baseline**, where it would have been stranded because prototype branches never merge; split in `22de790d`, and the iteration branch now respects the change boundary it always claimed. **Setup friction recorded honestly:** `npm install` failed with a `401` that names npm rather than GitHub and never mentions the `read:packages` scope a designer would need — documented first in `DESIGN-MODE.md`, but documenting a trap is not removing it. **Step 8 stays In progress: no designer has run this**, and whether the shell renders needs a browser. | Step 8 and its sequence row; both status blocks. Repo: `afa5aa4f`, `22de790d`. |
