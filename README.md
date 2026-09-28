@@ -1,11 +1,16 @@
 # Flock Designer
 
-Two things live here.
+Three things live here.
+
+**[`PLAN.md`](PLAN.md)** — the plan. What Flock Designer is, every contract, the 17-step sequence and
+where it currently stands, the decision gates, and the change log. **It is the single document**; if
+you are picking this up, start with its "Where we are" block.
 
 **`projects/`** — one folder per project. Drop in whatever context you have.
 
 **`standards/`** — the design standards that are not specific to any one product. The product's own
-patterns and boundaries stay in the product repository; these are the ones that hold anywhere.
+patterns and boundaries stay in the product repository; these are the ones that hold anywhere. See
+[`standards/README.md`](standards/README.md) for how a product resolves them and which tier wins.
 
 ## Starting a project
 
