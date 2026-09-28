@@ -17,7 +17,7 @@ the wider product process at readiness to build.
 
 > ### Where we are
 >
-> **Steps 1–7 are complete. Step 8 is next.**
+> **Steps 1–7 are complete. Step 8 is built and waiting on a designer to try it.**
 >
 > Everything needing org or release permission — the shared repo's transfer to `flocksafety`, the FUI
 > context generator, shipping `.flkd` in the package — is collected in
@@ -810,7 +810,7 @@ decides it on evidence.
 
 ## Status
 
-> **Steps 1–7 are complete. Step 8 is next.**
+> **Steps 1–7 are complete. Step 8 is built and waiting on a designer to try it.**
 >
 > Everything needing org or release permission — the shared repo's transfer to `flocksafety`, the FUI
 > context generator, shipping `.flkd` in the package — is collected in
@@ -831,7 +831,7 @@ decides it on evidence.
 | 5 | [Set up the design-system agent files](#step-5--set-up-the-design-system-agent-files) | Claude + Design System owner | The agent reads component facts matching the installed version, and the authoring standards exist | **Complete** — `a160edf`, `62f8748`, `b8515fb`, `f03db25`; cold-start tested; packaging deferred to step 17 |
 | 6 | [Create the shared repository](#step-6--create-the-shared-repository) | Noah + Claude | The shared repository holds the portable standards, the projects structure, and the plan, and Coke resolves the standards from it | **Complete** — `3d15ae9`; cold-start tested; org transfer moved to step 17 |
 | 7 | [Confirm the prototype harness](#step-7--confirm-the-prototype-harness) | Claude | One real artifact builds, opens, and reviews cleanly | **Complete** — `e9e5b14c`; bundle gap closed and the check itself verified |
-| 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | Claude + a test designer | A designer who has never run Coke reaches a running app unaided | Not started |
+| 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | Claude + a test designer | A designer who has never run Coke reaches a running app unaided | **In progress** — `afa5aa4f`; server side verified, **no designer has run it** |
 | 9 | [Prove it on real decisions](#step-9--prove-it-on-real-decisions) | Noah leads | Two or three real decisions went from request to reviewed prototype | Not started |
 | 10 | [Hand one off to an engineer](#step-10--hand-one-off-to-an-engineer) | Noah + an engineer | An engineer has received a real handoff and said whether it helped | Not started |
 | 11 | [Decide if the managed harness is needed](#step-11--decide-if-the-managed-harness-is-needed) | Noah | The decision is recorded either way, with the friction log as evidence | Not started |
@@ -1217,6 +1217,42 @@ Step 11 needs.
 
 **Done when:** the real Coke shell runs locally on mock data, and a designer reaches that state
 unaided.
+
+#### What was done, 2026-09-28
+
+`afa5aa4f`, plus `22de790d` which moved step 7's tooling onto this baseline.
+
+**The port is in and the server side is verified.** The mechanism came across from
+`noah/local-design-mode` — not the branch, which is not merged. Design mode is gated on
+`PUBLIC_APP_DESIGN_MODE`, set only by `start:design`, with MSW behind a dynamic import so it never
+reaches a production bundle. `npm run smoke:design` checks the four things a shell can check: the
+server boots with no Crown or Tanqueray, design mode is compiled into the entry bundle, the worker is
+served, and **the checked-in worker matches the installed `msw`** — a stale worker after an upgrade
+is the classic silent MSW failure.
+
+**A real defect the port surfaced.** `msw` was present in `node_modules` from an earlier checkout but
+**absent from `package-lock.json`**. A clean `npm ci` — which is what a designer runs — would have
+installed no `msw`, and design mode would have failed with the working environment showing no sign of
+it. The 43 lockfile entries were ported from the verified branch; the resulting diff is 499
+insertions, matching that branch's own lockfile diff exactly.
+
+**A branch-hygiene mistake, found and fixed.** Step 7's infrastructure — the smoke script, the npm
+script, the `.flkd` and README updates — had been committed to the prototype *iteration* branch
+rather than the baseline. Prototype branches are never merged, so that tooling would have been
+stranded and every future branch cut from the baseline would have lacked it. Split in `22de790d`;
+the iteration branch now touches only `src/prototypes/alert-notification-prefs/`, which is what the
+change boundary always said it should.
+
+**Setup friction, recorded:** `npm install` failed with `401 Unable to authenticate` against
+`npm.pkg.github.com` — `@flocksafety` packages need a GitHub token with `read:packages`. The error
+names npm, not GitHub, and says nothing about scopes. It is now the first thing in
+`src/prototypes/DESIGN-MODE.md`, but **documenting a trap is not removing it**, and it is the most
+likely thing to stop a designer.
+
+**Not done, and it is the half that matters:** **no designer has run this.** The server-side checks
+pass, but whether the shell *renders* needs a real browser running the service worker, and whether a
+designer gets there unaided is the actual "done when." Step 8 stays **In progress** until someone who
+has never run Coke tries it and the result is in the friction log.
 
 ### Step 9 — Prove it on real decisions
 
@@ -1852,6 +1888,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-09-28 | **Step 8 built; the half that needs a person is named.** The MSW `start:design` mechanism is ported onto the baseline — not the branch, which stays unmerged — gated behind `PUBLIC_APP_DESIGN_MODE` with MSW behind a dynamic import so it never reaches production. `npm run smoke:design` verifies the four shell-checkable things, including that the checked-in worker matches the installed `msw`. **Two real defects found.** First, `msw` was in `node_modules` but **absent from `package-lock.json`** — a clean `npm ci` would have installed none and design mode would have failed silently, hidden by a working dev environment; 43 entries ported, 499 insertions matching the source branch exactly. Second, **step 7’s tooling had been committed to the prototype iteration branch rather than the baseline**, where it would have been stranded because prototype branches never merge; split in `22de790d`, and the iteration branch now respects the change boundary it always claimed. **Setup friction recorded honestly:** `npm install` failed with a `401` that names npm rather than GitHub and never mentions the `read:packages` scope a designer would need — documented first in `DESIGN-MODE.md`, but documenting a trap is not removing it. **Step 8 stays In progress: no designer has run this**, and whether the shell renders needs a browser. | Step 8 and its sequence row; both status blocks. Repo: `afa5aa4f`, `22de790d`. |
 | 2026-09-28 | **Step 7 cold-start test: clean pass, and the first one to find no real defect.** A fresh session named the entry point, the state switcher and all seven states, gave the review order, correctly identified `view.tsx` as the thing under review and `host.tsx` as throwaway, and — the trap — listed **all four** verification checks rather than stopping at `tsc` and lint. It also surfaced the accessibility caveat unprompted, without being asked about it, and correctly framed it as the reviewer’s outstanding work. Every citation verified exact. **One small inconsistency it exposed by being more thorough than the README:** `src/prototypes/README.md` said "three checks" and omitted the bare-`src/` grep from its table, while the agent file and `review.md` both require four — so a reviewer following the README alone would have run three. Fixed in `c329dffd`. **Four tests, four findings, though this one only because the session read more widely than one file.** | Change log. Repo: `c329dffd`. |
 | 2026-09-28 | **Step 7 complete, and the org transfer moved to step 17 at the plan owner’s direction** so a finished step stops looking unfinished. **The bundle gap is closed** — open in the gap log since 2026-09-02. `npm run smoke:prototype` bundles a prototype entry with rsbuild’s alias set, and **the check was verified rather than asserted**: injecting the original failing import gave `tsc` 0 errors, Biome clean, and a smoke failure. The artifact is `src/prototypes/alert-notification-prefs/` with the full directory contract and all seven states behind a switcher, plus a project folder keyed by the same slug — the contract proved end to end. **Building it corrected three FUI assumptions** the manifest alone did not carry, all caught by `tsc` against the prop allowlists, and **produced the first real component gap**: `FSToggle` has no accessible-name route, so Coke’s canonical settings row ships unnamed toggles. Logged, not yet filed — the Design System owner is still unnamed. The review record leaves six of ten accessibility checks recorded as **not run** and the automated scan as **could not run**, which is the artifact proving the harness rather than pretending to prove the design. | Step 7 and its sequence row; step 6 and step 17 (transfer); both status blocks. Repos: `e9e5b14c`, `2f43511`. |
 | 2026-09-28 | **Step 6 cold-start test: passed all three questions, and was right to complain about something it misdiagnosed.** A fresh session in `flock-coke` followed the references out to the sibling checkout, gave the accessibility floor and Test-level requirements, all seven view states, and — the question most likely to be confabulated — got the tier-precedence asymmetry right with citations rather than from memory: Flock wins on design judgment, the universal tier wins on accessibility, because conformance is a floor and judgment is not. Every citation verified accurate. **It then flagged the README’s file tree as stale for still listing `standards/universal/` under `.flkd/`. The tree was correct; the prose around it was not.** A blunt path substitution in step 6 had produced "the universal tier and `../flock-designer/standards/production-readiness.md` are no longer here" — a sentence saying a file at its new path is not at that path, twice over. The reader was reacting to something genuinely broken and reached for the nearest explanation. Fixed in `6cacfc74`; both sentences now say the two are deliberately absent and point at where they went. **Three tests, three defects — none of which the author could see from inside the work.** | Change log. Repo: `6cacfc74`. |
