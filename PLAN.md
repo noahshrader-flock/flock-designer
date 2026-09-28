@@ -17,7 +17,13 @@ the wider product process at readiness to build.
 
 > ### Where we are
 >
-> **Steps 1–7 are complete. Step 8 is built and waiting on a designer to try it.**
+> **Steps 1–8 are complete. Step 9 is next — the first real design decision.**
+>
+> Everything that needs access or another person is parked out of the critical path:
+> **[step 17](#step-17--ship-the-design-system-context-in-the-package)** (the shared repo's org
+> transfer, the FUI context generator, shipping `.flkd` in the package) and
+> **[step 18](#step-18--designer-environment-access)** (AWS registry access, and the unaided
+> designer test).
 >
 > Everything needing org or release permission — the shared repo's transfer to `flocksafety`, the FUI
 > context generator, shipping `.flkd` in the package — is collected in
@@ -33,7 +39,7 @@ the wider product process at readiness to build.
 
 - **[Part I — What this is](#part-i--what-this-is)**: purpose, principles, vocabulary, the four credibility levels, the evidence model, how this compares to Magic Patterns, and what exists today.
 - **[Part II — Contracts](#part-ii--contracts)**: what must be true throughout — the architecture, how the agent behaves, where code and records live, how review and handoff work. Reference, consulted while working.
-- **[Part III — The work](#part-iii--the-work)**: one numbered sequence of 17 steps. Do a step, see the result, move to the next.
+- **[Part III — The work](#part-iii--the-work)**: one numbered sequence of 18 steps. Do a step, see the result, move to the next.
 - **[Part IV — Decision gates](#part-iv--decision-gates)**: every organizational confirmation, its recommendation, its owner, and the step by which it must close.
 - **[Part V — The Workspace application](#part-v--the-workspace-application)**: the Electron app. **Last on purpose** — built at step 13, after steps 1–12 prove the workflow without it.
 
@@ -810,7 +816,13 @@ decides it on evidence.
 
 ## Status
 
-> **Steps 1–7 are complete. Step 8 is built and waiting on a designer to try it.**
+> **Steps 1–8 are complete. Step 9 is next — the first real design decision.**
+>
+> Everything that needs access or another person is parked out of the critical path:
+> **[step 17](#step-17--ship-the-design-system-context-in-the-package)** (the shared repo's org
+> transfer, the FUI context generator, shipping `.flkd` in the package) and
+> **[step 18](#step-18--designer-environment-access)** (AWS registry access, and the unaided
+> designer test).
 >
 > Everything needing org or release permission — the shared repo's transfer to `flocksafety`, the FUI
 > context generator, shipping `.flkd` in the package — is collected in
@@ -831,7 +843,7 @@ decides it on evidence.
 | 5 | [Set up the design-system agent files](#step-5--set-up-the-design-system-agent-files) | Claude + Design System owner | The agent reads component facts matching the installed version, and the authoring standards exist | **Complete** — `a160edf`, `62f8748`, `b8515fb`, `f03db25`; cold-start tested; packaging deferred to step 17 |
 | 6 | [Create the shared repository](#step-6--create-the-shared-repository) | Noah + Claude | The shared repository holds the portable standards, the projects structure, and the plan, and Coke resolves the standards from it | **Complete** — `3d15ae9`; cold-start tested; org transfer moved to step 17 |
 | 7 | [Confirm the prototype harness](#step-7--confirm-the-prototype-harness) | Claude | One real artifact builds, opens, and reviews cleanly | **Complete** — `e9e5b14c`; bundle gap closed and the check itself verified |
-| 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | Claude + a test designer | A designer who has never run Coke reaches a running app unaided | **In progress** — renders correctly; AWS access to be provisioned; `npm ci` still unverified |
+| 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | Claude | The real Coke shell runs locally on mock data | **Complete** — `afa5aa4f`; render verified from screenshots. Access and the designer test moved to step 18 |
 | 9 | [Prove it on real decisions](#step-9--prove-it-on-real-decisions) | Noah leads | Two or three real decisions went from request to reviewed prototype | Not started |
 | 10 | [Hand one off to an engineer](#step-10--hand-one-off-to-an-engineer) | Noah + an engineer | An engineer has received a real handoff and said whether it helped | Not started |
 | 11 | [Decide if the managed harness is needed](#step-11--decide-if-the-managed-harness-is-needed) | Noah | The decision is recorded either way, with the friction log as evidence | Not started |
@@ -841,6 +853,7 @@ decides it on evidence.
 | 15 | [Workspace: handoff and learning](#step-15--workspace-handoff-and-learning) | Engineering | The step 10 handoff happens inside the app | Not started |
 | 16 | [Pilot and release decision](#step-16--pilot-and-release-decision) | Engineering + Noah | There is enough real usage to approve a broader rollout | Not started |
 | 17 | [Ship the design-system context in the package](#step-17--ship-the-design-system-context-in-the-package) | Design System owner + a developer | FUI context regenerates on release and reaches products through the package, and the shared repo lives under `flocksafety` | Not started |
+| 18 | [Designer environment access](#step-18--designer-environment-access) | Noah + whoever owns the registry, then a test designer | A designer with no prior setup runs `npm ci` and reaches a running app unaided | Not started |
 
 **Status values:** Not started, In progress, Complete. A step is Complete only when its "done when"
 is met and the evidence is cited in the [change log](#change-log).
@@ -1215,8 +1228,15 @@ Step 11 needs.
 - Add one shell-level smoke check and a manual review checklist.
 - Write a setup path a designer can follow without frontend help, then test it on a designer who has never run Coke and record what happened in the friction log.
 
-**Done when:** the real Coke shell runs locally on mock data, and a designer reaches that state
-unaided.
+**Done when:** the real Coke shell runs locally on mock data.
+
+> **Scope narrowed 2026-09-28, at the plan owner's direction.** This step originally also required
+> *"and a designer reaches that state unaided."* That half depends on AWS registry access being
+> provisioned and on the correct SSO command being confirmed — neither of which is Claude's to do,
+> and both of which were discovered only at the end of this step. **They moved to
+> [step 18](#step-18--designer-environment-access), together with the unaided designer test and the
+> unverified `msw` lockfile port.** Narrowing the step is recorded here rather than done quietly,
+> because "done when" changed after the fact.
 
 #### What was done, 2026-09-28
 
@@ -1506,6 +1526,40 @@ Batched here because it needs the same thing everything above needs — someone 
 **Done when:** a product installs the package and reads FUI context that provably matches the
 installed version, with no sibling checkout and no tag discipline required — and the shared
 repository lives at `flocksafety/flock-designer`.
+
+### Step 18 — Designer environment access
+
+**Noah, with whoever owns the internal registry; then a test designer.** Split out of
+[step 8](#step-8--make-the-product-runnable-on-mock-data) on 2026-09-28, because everything left in
+it needs access or a person rather than code.
+
+**What step 8 found.** Design mode works — the real shell renders on fixtures, verified from
+screenshots. But a **fresh clone cannot install anything**: `npm ci` fails with `401`, because
+**1,320 of the 1,428 packages in `package-lock.json` resolve through AWS CodeArtifact**, Flock's
+internal registry, and a designer has no credentials for it. GitHub Packages was never the problem.
+
+- **Confirm the correct AWS SSO command.** `aws login` is a guess in
+  `src/prototypes/DESIGN-MODE.md`, explicitly marked unconfirmed. The domain, owner, repository and
+  region in the `codeartifact login` line are read from the registry URL and are right; the
+  credential step is not. A designer following a wrong AWS command fails exactly like they would
+  have with the GitHub misdiagnosis that step 8 already had to correct.
+- **Provision designer access** to that registry. The plan owner confirmed on 2026-09-28 that
+  designers are meant to have it.
+- **Verify `npm ci` on a fresh clone.** This is the only remaining technical unknown from step 8:
+  `msw`'s 43 lockfile entries were **ported by hand** because no install was possible, and **no
+  clean `npm ci` has ever run against them.** If the port is wrong, the symptom is design mode
+  failing rather than an obvious install error — so this must be checked before a designer sees it,
+  not after.
+- **Decide whether the 12-hour token expiry needs mitigating.** Provisioning does not fix it. Every
+  designer will repeatedly hit a setup that worked yesterday and does not today, with an error
+  naming npm rather than AWS. `DESIGN-MODE.md` documents it as expected behavior, which is the
+  cheapest mitigation and may be enough — but it is recurring friction of the kind that produces
+  quiet abandonment rather than complaints, so the friction log should watch for it.
+- **Then run the unaided designer test** — a designer who has never run Coke, given only the README
+  and `DESIGN-MODE.md`, with no help. Record where they stick and for how long.
+
+**Done when:** a designer with no prior setup runs `npm ci` successfully and reaches a running app
+on mock data unaided, and the result is in the friction log.
 
 ## The learning loop
 
@@ -1967,6 +2021,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-09-28 | **Step 8 narrowed and closed; the access work becomes step 18, at the plan owner’s direction** ("we can figure this out later — add it to a later step"). Step 8’s "done when" originally read *"the real Coke shell runs locally on mock data, **and a designer reaches that state unaided**."* The first half is done and verified from screenshots. The second depends on AWS registry access, on confirming the correct SSO command, and on a `npm ci` that has never succeeded — none of it Claude’s to do. **Narrowing a step’s "done when" after the fact is recorded rather than done quietly**, both in the step and here. New **step 18** carries: confirm the AWS SSO command (currently a guess, flagged as such in `DESIGN-MODE.md`), provision designer access, **verify the hand-ported `msw` lockfile entries with a real `npm ci`** — the last technical unknown, whose failure mode is design mode breaking rather than an obvious install error — decide whether the 12-hour token expiry needs mitigating, and then run the unaided designer test. The plan is now 18 steps. | Step 8 and its sequence row; new step 18; intro step count. |
 | 2026-09-28 | **The registry barrier is an onboarding step, not a wall — designers will be provisioned AWS access** (plan owner). That resolves the blocking question from the fresh-clone test. **What provisioning does not fix, and step 11 should still weigh:** the CodeArtifact token expires within 12 hours, so every designer will repeatedly hit a setup that worked yesterday and does not today, with an error that names npm rather than AWS. The backend barrier is genuinely removed — the shell renders on fixtures — but "runs locally on mock data" carries a standing dependency on an internal registry plus a twice-daily token refresh. Named as a cost rather than a blocker. `DESIGN-MODE.md` now says access is provisioned, who to ask, and that the expiry is expected behavior rather than something the designer broke. | Step 8 and its sequence row; friction log. Repo: `3d9f3565`. |
 | 2026-09-28 | **The real setup barrier is AWS CodeArtifact, and it is bigger than the plan assumed.** A fresh clone reached `npm ci` and failed with `401`. GitHub Packages answered fine; the **default registry, AWS CodeArtifact, refused**, with no AWS credentials present at all. **1,320 of 1,428 lockfile packages resolve through CodeArtifact** — `react` included — so without AWS access a designer installs **nothing**, and the token **expires within 12 hours**, making this recurring rather than one-time. **The setup doc blamed GitHub**, which would have sent a designer to generate a PAT, fail again, and have no pointer to the real system; corrected in `3fdec5af`. **This is evidence step 11 must weigh:** design mode demonstrably removes the *backend* barrier — the shell renders on fixtures — but not the *internal-registry* barrier sitting in front of `npm install`, and therefore in front of everything. Invisible until someone cloned from scratch. The `msw` lockfile port remains unverified because installation never began. | Step 8 and its sequence row; friction log; step 11 evidence. Repo: `3fdec5af`. |
 | 2026-09-28 | **Design mode renders — the plan owner ran it and it worked in seconds.** Screenshots show the full Coke shell on fixtures: nav, admin sub-nav, Organizations List, Profile, account switcher. That settles what could not be checked from a shell — MSW interception, the auth bypass and the LaunchDarkly mocking all hold end to end, the nav rendering being proof of the last since `AppHeader` waits on a flag. **Two defects came out of it.** `DESIGN-MODE.md` promised data for "Springfield Police Department", **a name found nowhere in the fixtures** — asserted rather than read. The real data is *HOA Org*, *Law Enforcement Org*, *John Smith*, and a designer would have seen the right screen, not recognised it, and reported the setup broken. Corrected to a table taken from the fixtures (`99491e48`). Separately, the file was undiscoverable: nothing linked to it and the root README opened by saying local dev needs a database and `flock-tanquery`, the very barrier design mode removes (`ddcc6f54`). **`npm ci` is still unexercised** — the run used an existing `node_modules`, so the hand-ported lockfile remains the open risk. | Step 8; friction log. Repo: `99491e48`, `ddcc6f54`. |
