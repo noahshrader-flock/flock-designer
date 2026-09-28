@@ -1249,6 +1249,26 @@ names npm, not GitHub, and says nothing about scopes. It is now the first thing 
 `src/prototypes/DESIGN-MODE.md`, but **documenting a trap is not removing it**, and it is the most
 likely thing to stop a designer.
 
+#### Cold-start test, 2026-09-28 — passed, both traps cleared
+
+A fresh session in `flock-coke`, plan unavailable, answered all four from the repository: the
+command and the token setup, what is real versus mocked, the no-navigation cause, and — the trap —
+that design mode is **not** needed to review a prototype. It got the no-nav answer exactly right
+(LaunchDarkly; they ran `start` rather than `start:design`) and volunteered `npm run smoke:design`
+as the self-check. Every citation verified accurate. **No defect found** — the second clean pass in a
+row, after three that each found one.
+
+**This was the document test, not the designer test.** It proves `DESIGN-MODE.md` answers the
+questions; it does not prove a designer gets a running app.
+
+#### The most likely failure, named in advance
+
+`msw`'s lockfile entries were **ported by hand**, because the `401` made a real install impossible
+here. The port matches the source branch's lockfile diff exactly — 499 insertions — but **no clean
+`npm ci` has ever run against it.** If it is wrong, the first person to run `npm ci` finds out, and
+the symptom is design mode failing rather than an obvious install error. Whoever runs the designer
+test should run `npm ci` first and report whether it succeeded, before judging anything else.
+
 **Not done, and it is the half that matters:** **no designer has run this.** The server-side checks
 pass, but whether the shell *renders* needs a real browser running the service worker, and whether a
 designer gets there unaided is the actual "done when." Step 8 stays **In progress** until someone who
@@ -1888,6 +1908,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-09-28 | **Step 8 cold-start test passed, both traps cleared — and it is not the test that closes step 8.** A fresh session answered all four questions from `DESIGN-MODE.md` with accurate citations, correctly diagnosing the no-navigation case as LaunchDarkly plus running `start` instead of `start:design`, and correctly separating design mode from the prototype harness. Second clean pass in a row after three that each found a defect. **But this tests the document, not the setup.** Step 8’s "done when" is a designer reaching a running app unaided, and none has tried. **The most likely failure is now named in advance:** `msw`’s 43 lockfile entries were ported by hand because a `401` against GitHub Packages made a real install impossible in this environment, and **no clean `npm ci` has ever run against the result** — if the port is wrong, design mode fails rather than the install obviously erroring. Recorded in the friction log so whoever runs the designer test checks `npm ci` first. | Step 8; friction log. Repo: `cadff46d`. |
 | 2026-09-28 | **Step 8 built; the half that needs a person is named.** The MSW `start:design` mechanism is ported onto the baseline — not the branch, which stays unmerged — gated behind `PUBLIC_APP_DESIGN_MODE` with MSW behind a dynamic import so it never reaches production. `npm run smoke:design` verifies the four shell-checkable things, including that the checked-in worker matches the installed `msw`. **Two real defects found.** First, `msw` was in `node_modules` but **absent from `package-lock.json`** — a clean `npm ci` would have installed none and design mode would have failed silently, hidden by a working dev environment; 43 entries ported, 499 insertions matching the source branch exactly. Second, **step 7’s tooling had been committed to the prototype iteration branch rather than the baseline**, where it would have been stranded because prototype branches never merge; split in `22de790d`, and the iteration branch now respects the change boundary it always claimed. **Setup friction recorded honestly:** `npm install` failed with a `401` that names npm rather than GitHub and never mentions the `read:packages` scope a designer would need — documented first in `DESIGN-MODE.md`, but documenting a trap is not removing it. **Step 8 stays In progress: no designer has run this**, and whether the shell renders needs a browser. | Step 8 and its sequence row; both status blocks. Repo: `afa5aa4f`, `22de790d`. |
 | 2026-09-28 | **Step 7 cold-start test: clean pass, and the first one to find no real defect.** A fresh session named the entry point, the state switcher and all seven states, gave the review order, correctly identified `view.tsx` as the thing under review and `host.tsx` as throwaway, and — the trap — listed **all four** verification checks rather than stopping at `tsc` and lint. It also surfaced the accessibility caveat unprompted, without being asked about it, and correctly framed it as the reviewer’s outstanding work. Every citation verified exact. **One small inconsistency it exposed by being more thorough than the README:** `src/prototypes/README.md` said "three checks" and omitted the bare-`src/` grep from its table, while the agent file and `review.md` both require four — so a reviewer following the README alone would have run three. Fixed in `c329dffd`. **Four tests, four findings, though this one only because the session read more widely than one file.** | Change log. Repo: `c329dffd`. |
 | 2026-09-28 | **Step 7 complete, and the org transfer moved to step 17 at the plan owner’s direction** so a finished step stops looking unfinished. **The bundle gap is closed** — open in the gap log since 2026-09-02. `npm run smoke:prototype` bundles a prototype entry with rsbuild’s alias set, and **the check was verified rather than asserted**: injecting the original failing import gave `tsc` 0 errors, Biome clean, and a smoke failure. The artifact is `src/prototypes/alert-notification-prefs/` with the full directory contract and all seven states behind a switcher, plus a project folder keyed by the same slug — the contract proved end to end. **Building it corrected three FUI assumptions** the manifest alone did not carry, all caught by `tsc` against the prop allowlists, and **produced the first real component gap**: `FSToggle` has no accessible-name route, so Coke’s canonical settings row ships unnamed toggles. Logged, not yet filed — the Design System owner is still unnamed. The review record leaves six of ten accessibility checks recorded as **not run** and the automated scan as **could not run**, which is the artifact proving the harness rather than pretending to prove the design. | Step 7 and its sequence row; step 6 and step 17 (transfer); both status blocks. Repos: `e9e5b14c`, `2f43511`. |
