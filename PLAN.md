@@ -17,8 +17,12 @@ the wider product process at readiness to build.
 
 > ### Where we are
 >
-> **Steps 1–5 are complete. Step 6 is next** — it is already built and waiting only on the org transfer,
-> so step 7 is the next one with work in it.
+> **Steps 1–6 are done bar one handoff. Step 7 is next.**
+>
+> Step 6's content is complete — the shared repository holds the portable standards, the projects
+> structure, and the plan, and Coke resolves the standards from it. It is blocked only on the
+> **org transfer** to `flocksafety/flock-designer`, which needs someone with org permission and
+> changes nothing here when it happens.
 >
 > Step 6 is live at `noahshrader-flock/flock-designer` and waiting on an org transfer to
 > `flocksafety/flock-designer` — a one-step move once someone with permission does it. Nothing else
@@ -806,8 +810,12 @@ decides it on evidence.
 
 ## Status
 
-> **Steps 1–5 are complete. Step 6 is next** — it is already built and waiting only on the org transfer,
-> so step 7 is the next one with work in it.
+> **Steps 1–6 are done bar one handoff. Step 7 is next.**
+>
+> Step 6's content is complete — the shared repository holds the portable standards, the projects
+> structure, and the plan, and Coke resolves the standards from it. It is blocked only on the
+> **org transfer** to `flocksafety/flock-designer`, which needs someone with org permission and
+> changes nothing here when it happens.
 >
 > Step 6 is live at `noahshrader-flock/flock-designer`, pending an org transfer to
 > `flocksafety/flock-designer`.
@@ -821,7 +829,7 @@ decides it on evidence.
 | 3 | [Rename existing prototype work](#step-3--rename-existing-prototype-work) | Claude | No `proto/<name>` branch or directory remains | **Complete** — nothing to rename; the stale branch was deleted |
 | 4 | [Fix the product repository files](#step-4--fix-the-product-repository-files) | Claude → Noah reviews | Every row of the audit is done, and the cold-start check passes | **Complete** — cold-start check passed 2026-09-28 |
 | 5 | [Set up the design-system agent files](#step-5--set-up-the-design-system-agent-files) | Claude + Design System owner | The agent reads component facts matching the installed version, and the authoring standards exist | **Complete** — `a160edf`, `62f8748`, `b8515fb`, `f03db25`; cold-start tested; packaging deferred to step 17 |
-| 6 | [Create the shared repository](#step-6--create-the-shared-repository) | Noah + Claude | `flocksafety/flock-designer` holds the portable standards and Coke resolves them | **In progress** — live at `noahshrader-flock/flock-designer`, `d2afdfa`; org transfer pending |
+| 6 | [Create the shared repository](#step-6--create-the-shared-repository) | Noah + Claude | `flocksafety/flock-designer` holds the portable standards and Coke resolves them | **Content complete** — `3d15ae9`; blocked only on the org transfer |
 | 7 | [Confirm the prototype harness](#step-7--confirm-the-prototype-harness) | Claude | One real artifact builds, opens, and reviews cleanly | Not started |
 | 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | Claude + a test designer | A designer who has never run Coke reaches a running app unaided | Not started |
 | 9 | [Prove it on real decisions](#step-9--prove-it-on-real-decisions) | Noah leads | Two or three real decisions went from request to reviewed prototype | Not started |
@@ -1111,12 +1119,40 @@ GitHub operation that keeps the full history, so nothing here gets redone when i
 - `standards/` — empty, waiting for the portable standards to move out of `flock-coke`.
 - `README.md` — how to start a project, and what does not belong here.
 
-**Still open:** transfer to `flocksafety/flock-designer` once someone with org permission does it
-(Settings → Transfer ownership, from either side). Every reference in these documents to
-`flocksafety/flock-designer` means this repository, at whichever address it currently has —
-**the transfer is a housekeeping step, not a plan change**, and nothing here should be re-derived
-once it happens. Then: move `standards/universal/` and `production-readiness.md` across, make Coke
-resolve them from a sibling checkout, and move these three planning documents in.
+#### The content moved, 2026-09-28
+
+`3d15ae9` (flock-designer), `82d6112d` (flock-coke), `6e0d469` (flock-react-component-lib).
+
+- **`standards/universal/` and `production-readiness.md` moved across**, verified portable first.
+- **Coke resolves them from a sibling checkout** — `../flock-designer/standards/` — the same
+  arrangement FUI context uses and the same terms on which it becomes a package later.
+- **`PLAN.md` moved in**, per step 1's decision that the plan lives alongside the standards and
+  projects it describes. `standards/README.md` states how a product resolves the tiers and which one
+  wins.
+- **`non-negotiables.md` and `standards/flock/` stayed.** Both wrap a portable rule around a Coke
+  instance table; they move once those instances are lifted into `manifest.md`.
+
+**Verifying portability turned out to be the interesting part.** The audit's claim that
+`standards/universal/` held "zero product-specific references" came from grepping for product names,
+and it was incomplete. Validating the files from a consuming repo immediately caught **two universal
+files that declared themselves "product-agnostic" in one line and hard-linked to
+`../flock/product-native-ui.md` in the next** — a universal standard reaching up into the tier above
+it. Both now describe the relationship without the path, which is what actually makes them portable.
+A third reference form was missed on the first substitution pass and also caught by the validator.
+
+**One consequence worth stating plainly:** a `flock-coke` checkout alone no longer contains the
+accessibility floor or the view-state list. **The cold-start check now needs two checkouts.** Coke's
+`.flkd/README.md` says so, and `validate.py` reports a missing shared checkout rather than letting
+the gap pass silently — but this is a real increase in setup burden, and step 8 owns making that
+survivable for a designer.
+
+`validate.py`: **1006 checks, 0 failures.**
+
+**Still open — the transfer, and only the transfer.** `flocksafety/flock-designer` once someone with
+org permission does it (Settings → Transfer ownership, from either side). Every reference in this
+document to `flocksafety/flock-designer` means this repository at whichever address it currently has
+— **the transfer is housekeeping, not a plan change**, and nothing here should be re-derived once it
+happens.
 
 **Done when:** the repository lives at `flocksafety/flock-designer`, holds the portable standards
 and the project structure, and Coke resolves the standards from it.
@@ -1768,6 +1804,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-09-28 | **Step 6’s content is complete; only the org transfer remains.** `standards/universal/` and `production-readiness.md` moved into the shared repository, Coke resolves them from `../flock-designer/standards/`, and `PLAN.md` moved in alongside them. **Verifying portability was the part that mattered:** the audit’s "zero product-specific references" claim came from grepping product names and was incomplete — validating the moved files caught two universal standards that called themselves product-agnostic while hard-linking to the Flock tier above them, plus a third reference form the substitution pass missed. All fixed; the universal tier now describes the tier relationship without knowing where it lives, which is what portability actually requires. **A consequence the plan had not stated: a `flock-coke` checkout alone no longer holds the accessibility floor or the view-state list, so the cold-start check now needs two checkouts.** Coke’s README says so and `validate.py` reports a missing shared checkout instead of failing silently, but it is a real increase in setup burden and step 8 owns it. `validate.py`: **1006 checks, 0 failures.** | Step 6, sequence row, both status blocks. Repos: `3d15ae9`, `82d6112d`, `6e0d469`. |
 | 2026-09-28 | **Cold-start test on step 5 found a live contradiction I had created**, the same class step 4's test found: I corrected a false "generated from `src/` — fix the source and regenerate" claim in `.flkd/README.md` but left the identical claim standing in `.flkd/authoring/components.md`, the file it originated in. A fresh session got the right answer anyway, by citing the corrected file — luck of which file it trusted, not agreement across the repository. Also surfaced a real gap (composite components were undocumented) and, while fixing that, a second self-made confusion (two unrelated splits both labeled "two shapes"). All three fixed in `f03db25`. **This is now the pattern, not a one-off:** both cold-start tests run so far have each found one thing the author could not see from inside the work. | Step 5, sequence row. Repo: `f03db25`. |
 | 2026-09-28 | **Step 5 closed on the local path; packaging becomes step 17, at the plan owner's direction** — "test with the local version first, and have a follow-up step at the end to bring this into the package." Two problems had been tangled together and only one defers. **Distribution** (sibling checkout now, package later) defers to [step 17](#step-17--ship-the-design-system-context-in-the-package). **Version match does not defer, and it already holds:** Coke has `5.5.4` installed, the manifest is stamped `5.5.4`, and every `FS*` name in every context file is verified against that manifest plus the installed type declarations, so the agent cannot name a component the product lacks. What is misaligned is FUI's own hygiene — that checkout's source is `5.5.8` — which is FUI's to fix and does not make the JSON wrong for a product pinned to an older version. **`validate.py` was over-scoped and is corrected** (`b8515fb`): it failed a consuming repo's build for a condition only the design system could fix, which is how checks get disabled. It now fails on `manifest == installed` and reports `manifest == source` as a NOTE — printed every run, never silent, never blocking; run without an installed package the NOTE becomes the failure, because there it is actionable. **998 checks, 0 failures.** Residual risk stated in step 5: hand-authored `.md` prose in an ahead checkout is unversioned and could describe newer behavior; names are covered, prose is not. New **step 17** carries the generator, the `cokeUsages` decision, and shipping `.flkd` — the plan is now 17 steps. | Step 5, new step 17, sequence table, both status blocks, intro step count. Repo: `b8515fb`. |
 | 2026-09-28 | **Open: decision 1 is necessary but not sufficient, and step 5 cannot close without a piece nobody has built.** Tracing the version drift found that FUI’s JSON context **has no generator** — produced once in `0f25abd`, never regenerated, and nothing in that repository references `versionScannedFrom` except the manifest and the validator. Its README claimed the files are "generated from `src/`" and said to "fix the source and regenerate," which named a process that does not exist; corrected in `62f8748`. It also **could not** be regenerated from `src/` alone: 35 components carry a `cokeUsages` count sourced from scanning Coke, so the manifest is a cross-repository artifact. Three versions are live — manifest `5.5.4`, working branch `5.5.8`, `develop` `5.6.4`, Coke installed `5.5.4` — and the one that matches Coke does so by luck. **Decision 1 recommends shipping `.flkd` in the package; that makes staleness reliable rather than absent unless a generator exists first.** The spec for one is now in FUI’s README. **Needs: the Design System owner to decide whether Claude builds the generator, and what `cokeUsages` becomes.** Step 5 stays In progress — its "done when" requires the agent to read facts matching the installed version, and today that holds only by coincidence. | Step 5; decision 1 context. Repo: `62f8748`. |
