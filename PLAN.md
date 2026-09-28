@@ -1269,6 +1269,30 @@ here. The port matches the source branch's lockfile diff exactly — 499 inserti
 the symptom is design mode failing rather than an obvious install error. Whoever runs the designer
 test should run `npm ci` first and report whether it succeeded, before judging anything else.
 
+#### The render question is settled, 2026-09-28
+
+**The plan owner ran `npm run start:design` and it worked in seconds.** Screenshots show the full
+shell: top nav, admin sub-nav, Organizations List populated, Profile page, account switcher. That
+settles the thing this step could not verify from a shell — **MSW interception, the auth bypass, and
+the LaunchDarkly flag mocking all hold end to end.** The nav rendering is the proof of the last one,
+since `AppHeader` does not render until at least one flag returns.
+
+**It also caught a documentation defect, and a nasty one.** `DESIGN-MODE.md` said to expect data for
+"Springfield Police Department" — **a name that appears nowhere in `src/mocks/fixtures/`.** It was
+asserted, not read. The real data is *HOA Org*, *Law Enforcement Org*, and *John Smith*. A designer
+following that file would have seen the correct screen, failed to recognise it, and concluded the
+setup was broken — a false negative sending them for help while everything worked. Corrected in
+`99491e48` to a table taken from the fixtures, usable to tell working from broken at a glance.
+
+**Discoverability was broken too, found in the same conversation.** `DESIGN-MODE.md` sat at
+`src/prototypes/` with nothing linking to it, while the root `README.md` opened by saying local
+development needs a local database and `flock-tanquery` — the exact barrier design mode removes. A
+designer would have read that and concluded they could not run Coke. Fixed in `ddcc6f54`.
+
+**Still not done:** **`npm ci` has never been exercised.** The run above was on a machine that
+already had `node_modules`, so nothing was installed and no token was needed — which is precisely
+the step predicted to block a designer. The hand-ported `msw` lockfile entries remain unverified.
+
 **Not done, and it is the half that matters:** **no designer has run this.** The server-side checks
 pass, but whether the shell *renders* needs a real browser running the service worker, and whether a
 designer gets there unaided is the actual "done when." Step 8 stays **In progress** until someone who
@@ -1908,6 +1932,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-09-28 | **Design mode renders — the plan owner ran it and it worked in seconds.** Screenshots show the full Coke shell on fixtures: nav, admin sub-nav, Organizations List, Profile, account switcher. That settles what could not be checked from a shell — MSW interception, the auth bypass and the LaunchDarkly mocking all hold end to end, the nav rendering being proof of the last since `AppHeader` waits on a flag. **Two defects came out of it.** `DESIGN-MODE.md` promised data for "Springfield Police Department", **a name found nowhere in the fixtures** — asserted rather than read. The real data is *HOA Org*, *Law Enforcement Org*, *John Smith*, and a designer would have seen the right screen, not recognised it, and reported the setup broken. Corrected to a table taken from the fixtures (`99491e48`). Separately, the file was undiscoverable: nothing linked to it and the root README opened by saying local dev needs a database and `flock-tanquery`, the very barrier design mode removes (`ddcc6f54`). **`npm ci` is still unexercised** — the run used an existing `node_modules`, so the hand-ported lockfile remains the open risk. | Step 8; friction log. Repo: `99491e48`, `ddcc6f54`. |
 | 2026-09-28 | **Step 8 cold-start test passed, both traps cleared — and it is not the test that closes step 8.** A fresh session answered all four questions from `DESIGN-MODE.md` with accurate citations, correctly diagnosing the no-navigation case as LaunchDarkly plus running `start` instead of `start:design`, and correctly separating design mode from the prototype harness. Second clean pass in a row after three that each found a defect. **But this tests the document, not the setup.** Step 8’s "done when" is a designer reaching a running app unaided, and none has tried. **The most likely failure is now named in advance:** `msw`’s 43 lockfile entries were ported by hand because a `401` against GitHub Packages made a real install impossible in this environment, and **no clean `npm ci` has ever run against the result** — if the port is wrong, design mode fails rather than the install obviously erroring. Recorded in the friction log so whoever runs the designer test checks `npm ci` first. | Step 8; friction log. Repo: `cadff46d`. |
 | 2026-09-28 | **Step 8 built; the half that needs a person is named.** The MSW `start:design` mechanism is ported onto the baseline — not the branch, which stays unmerged — gated behind `PUBLIC_APP_DESIGN_MODE` with MSW behind a dynamic import so it never reaches production. `npm run smoke:design` verifies the four shell-checkable things, including that the checked-in worker matches the installed `msw`. **Two real defects found.** First, `msw` was in `node_modules` but **absent from `package-lock.json`** — a clean `npm ci` would have installed none and design mode would have failed silently, hidden by a working dev environment; 43 entries ported, 499 insertions matching the source branch exactly. Second, **step 7’s tooling had been committed to the prototype iteration branch rather than the baseline**, where it would have been stranded because prototype branches never merge; split in `22de790d`, and the iteration branch now respects the change boundary it always claimed. **Setup friction recorded honestly:** `npm install` failed with a `401` that names npm rather than GitHub and never mentions the `read:packages` scope a designer would need — documented first in `DESIGN-MODE.md`, but documenting a trap is not removing it. **Step 8 stays In progress: no designer has run this**, and whether the shell renders needs a browser. | Step 8 and its sequence row; both status blocks. Repo: `afa5aa4f`, `22de790d`. |
 | 2026-09-28 | **Step 7 cold-start test: clean pass, and the first one to find no real defect.** A fresh session named the entry point, the state switcher and all seven states, gave the review order, correctly identified `view.tsx` as the thing under review and `host.tsx` as throwaway, and — the trap — listed **all four** verification checks rather than stopping at `tsc` and lint. It also surfaced the accessibility caveat unprompted, without being asked about it, and correctly framed it as the reviewer’s outstanding work. Every citation verified exact. **One small inconsistency it exposed by being more thorough than the README:** `src/prototypes/README.md` said "three checks" and omitted the bare-`src/` grep from its table, while the agent file and `review.md` both require four — so a reviewer following the README alone would have run three. Fixed in `c329dffd`. **Four tests, four findings, though this one only because the session read more widely than one file.** | Change log. Repo: `c329dffd`. |
