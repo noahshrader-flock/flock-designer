@@ -17,7 +17,14 @@ the wider product process at readiness to build.
 
 > ### Where we are
 >
-> **Steps 1–8 are complete. Step 9 is next — the first real design decision.**
+> **Track A is one gate from done. Track B has just been specified and is next to build.**
+>
+> **What is actually left in Track A:** a person opening a prototype and reviewing it. Four proofs are
+> built and every mechanical check passes; steps 7 and 9 both wait on that same act.
+>
+> **Corrected 2026-09-29:** the status column had been wrong in both directions — step 9 read
+> "Not started" with four proofs on disk, step 7 read Complete with "opens" never verified, and step 5
+> read Complete in the table and In progress in the change log.
 >
 > Everything that needs access or another person is parked out of the critical path:
 > **[step 17](#step-17--ship-the-design-system-context-in-the-package)** (the shared repo's org
@@ -854,7 +861,14 @@ decides it on evidence.
 
 ## Status
 
-> **Steps 1–8 are complete. Step 9 is next — the first real design decision.**
+> **Track A is one gate from done. Track B has just been specified and is next to build.**
+>
+> **What is actually left in Track A:** a person opening a prototype and reviewing it. Four proofs are
+> built and every mechanical check passes; steps 7 and 9 both wait on that same act.
+>
+> **Corrected 2026-09-29:** the status column had been wrong in both directions — step 9 read
+> "Not started" with four proofs on disk, step 7 read Complete with "opens" never verified, and step 5
+> read Complete in the table and In progress in the change log.
 >
 > Everything that needs access or another person is parked out of the critical path:
 > **[step 17](#step-17--ship-the-design-system-context-in-the-package)** (the shared repo's org
@@ -872,26 +886,71 @@ decides it on evidence.
 
 ## The sequence
 
-| # | Step | Who | Done when | Status |
+**Three things get built, in order. Finish one before starting the next.**
+
+| Track | What it delivers | State |
+|---|---|---|
+| **A — the prototype path** | A designer takes a real request to a reviewed prototype, isolated from the product | **Nearly done** — one gate left |
+| **B — the codebase path** | A designer builds the real frontend on mock data; engineering takes the branch | **Just specified, nothing built** |
+| **C — the Workspace app** | The Electron app that orchestrates both | **Not started, and deliberately last** |
+
+Two things sit outside the tracks because they need access or another person, and neither blocks the
+work in front of it: **[17](#step-17--ship-the-design-system-context-in-the-package)** (packaging, org
+transfer) and **[18](#step-18--designer-environment-access)** (designer AWS access).
+
+### How a step gets marked Complete
+
+**Every step names how it is checked, and a step whose check needs a person cannot be closed by
+Claude.** This rule exists because it was broken: step 7 was marked Complete with "opens" never
+verified, and step 8 was closed having implemented half of what it owned.
+
+| Check type | Meaning |
+|---|---|
+| **Mechanical** | A command anyone can run. If it passes, the step is done |
+| **Cold start** | A fresh session in the checkout, plan unavailable, answering from repository files alone |
+| **Human** | A named person has to do something. **Claude may not mark these Complete** |
+
+### Track A — the prototype path
+
+| # | Step | Done when | How it is checked | Status |
 |---|---|---|---|---|
-| 1 | [Decide the rules](#step-1--decide-the-rules) | Noah | The contracts are approved, the four decisions are settled, and owners are named | **Complete** |
-| 2 | [Set up the first files](#step-2--set-up-the-first-files) | Claude | The request guide, baselines file, and friction log exist in the repository | **Complete** — `4538812e` |
-| 3 | [Rename existing prototype work](#step-3--rename-existing-prototype-work) | Claude | No `proto/<name>` branch or directory remains | **Complete** — nothing to rename; the stale branch was deleted |
-| 4 | [Fix the product repository files](#step-4--fix-the-product-repository-files) | Claude → Noah reviews | Every row of the audit is done, and the cold-start check passes | **Complete** — cold-start check passed 2026-09-28 |
-| 5 | [Set up the design-system agent files](#step-5--set-up-the-design-system-agent-files) | Claude + Design System owner | The agent reads component facts matching the installed version, and the authoring standards exist | **Complete** — `a160edf`, `62f8748`, `b8515fb`, `f03db25`; cold-start tested; packaging deferred to step 17 |
-| 6 | [Create the shared repository](#step-6--create-the-shared-repository) | Noah + Claude | The shared repository holds the portable standards, the projects structure, and the plan, and Coke resolves the standards from it | **Complete** — `3d15ae9`; cold-start tested; org transfer moved to step 17 |
-| 7 | [Confirm the prototype harness](#step-7--confirm-the-prototype-harness) | Claude | One real artifact builds, opens, and reviews cleanly | **Complete** — `e9e5b14c`; bundle gap closed and the check itself verified |
-| 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | Claude | The real Coke shell runs locally on mock data | **Complete** — `afa5aa4f`; render verified from screenshots. Access and the designer test moved to step 18 |
-| 9 | [Prove it on real decisions](#step-9--prove-it-on-real-decisions) | Noah leads | Two or three real decisions went from request to reviewed prototype | Not started |
-| 10 | [Hand one off to an engineer](#step-10--hand-one-off-to-an-engineer) | Noah + an engineer | An engineer has received a real handoff and said whether it helped | Not started |
-| 11 | [Decide if the managed harness is needed](#step-11--decide-if-the-managed-harness-is-needed) | Noah | The decision is recorded either way, with the friction log as evidence | Not started |
-| 12 | [Add states, captures, and accessibility checks](#step-12--add-states-captures-and-accessibility-checks) | Claude | Every decision-relevant state can be switched to, captured, and checked | Not started |
-| 13 | [Build the Workspace local loop](#step-13--build-the-workspace-local-loop) | Engineering | A designer goes from request to local preview through the app | Not started |
-| 14 | [Workspace: shared review](#step-14--workspace-shared-review) | Engineering | A distributed team reviews a real iteration from an internal link | Not started |
-| 15 | [Workspace: handoff and learning](#step-15--workspace-handoff-and-learning) | Engineering | The step 10 handoff happens inside the app | Not started |
-| 16 | [Pilot and release decision](#step-16--pilot-and-release-decision) | Engineering + Noah | There is enough real usage to approve a broader rollout | Not started |
-| 17 | [Ship the design-system context in the package](#step-17--ship-the-design-system-context-in-the-package) | Design System owner + a developer | FUI context regenerates on release and reaches products through the package, and the shared repo lives under `flocksafety` | Not started |
-| 18 | [Designer environment access](#step-18--designer-environment-access) | Noah + whoever owns the registry, then a test designer | A designer with no prior setup runs `npm ci` and reaches a running app unaided | Not started |
+| 1 | [Decide the rules](#step-1--decide-the-rules) | Contracts approved, decisions settled, **owners named** | Human | **In progress** — the Design System owner is still unnamed, which blocks part of 5 and 17 |
+| 2 | [Set up the first files](#step-2--set-up-the-first-files) | The three files exist | Mechanical | **Complete** — `4538812e` |
+| 3 | [Rename existing prototype work](#step-3--rename-existing-prototype-work) | No `proto/<name>` branch or directory remains | Mechanical | **Complete** — nothing to rename |
+| 4 | [Fix the product repository files](#step-4--fix-the-product-repository-files) | Audit done; `validate.py` passes; cold start passes | Mechanical + cold start | **Complete** — 1,006 checks, cold start passed |
+| 5 | [Set up the design-system agent files](#step-5--set-up-the-design-system-agent-files) | Agent reads facts matching the installed version; authoring standards exist | Mechanical + human | **In progress** — standards done; the version half needs the generator, which needs the DS owner |
+| 6 | [Create the shared repository](#step-6--create-the-shared-repository) | Holds the standards, projects and plan; Coke resolves them | Mechanical | **Complete** — `3d15ae9` |
+| 7 | [Confirm the prototype harness](#step-7--confirm-the-prototype-harness) | One real artifact **builds, opens, and reviews cleanly** | Mechanical + human | **In progress** — builds and opens (`9015497e`); **no human has reviewed one** |
+| 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | The real shell runs locally on mock data | Mechanical | **Complete** — render verified from screenshots |
+| 9 | [Prove it on real decisions](#step-9--prove-it-on-real-decisions) | A proof went request → **reviewed** prototype; a second person resumed from the folder alone | Human | **In progress** — **four** proofs built, resume test passed; **none reviewed by a human** |
+
+**Track A's remaining gate is one thing: a person opening a prototype and reviewing it.** Everything
+mechanical is done. Steps 7 and 9 both wait on the same act.
+
+### Track B — the codebase path
+
+| # | Step | Done when | How it is checked | Status |
+|---|---|---|---|---|
+| B1 | [Prove the codebase path](#step-b1--prove-the-codebase-path) | One real feature built in real locations on MSW data, with tests and every state | Mechanical | **Not started** |
+| 10 | [Hand one off to an engineer](#step-10--hand-one-off-to-an-engineer) | An engineer took the branch and said whether it was usable | Human | **Not started** |
+| 12 | [Add states, captures, and accessibility checks](#step-12--add-states-captures-and-accessibility-checks) | Every decision-relevant state can be switched to, captured, and checked | Mechanical | **Not started** |
+| 11 | [Decide if the managed harness is needed](#step-11--decide-if-the-managed-harness-is-needed) | The decision is recorded either way | Human | **Not started** — needs 9 and 10 first |
+
+### Track C — the Workspace app
+
+| # | Step | Done when | How it is checked | Status |
+|---|---|---|---|---|
+| 13 | [Build the Workspace local loop](#step-13--build-the-workspace-local-loop) | A designer goes request → local preview through the app | Human | **Not started** |
+| 14 | [Workspace: shared review](#step-14--workspace-shared-review) | A distributed team reviews a real iteration from an internal link | Human | **Not started** |
+| 15 | [Workspace: handoff and learning](#step-15--workspace-handoff-and-learning) | The step 10 handoff happens inside the app | Human | **Not started** |
+| 16 | [Pilot and release decision](#step-16--pilot-and-release-decision) | Enough real usage to approve a broader rollout | Human | **Not started** |
+
+### Parked — needs access or another person
+
+| # | Step | Done when | Status |
+|---|---|---|---|
+| 17 | [Ship the design-system context in the package](#step-17--ship-the-design-system-context-in-the-package) | FUI context regenerates on release and ships in the package; shared repo under `flocksafety` | **Not started** — needs the DS owner |
+| 18 | [Designer environment access](#step-18--designer-environment-access) | A designer with no prior setup runs `npm ci` and reaches a running app unaided | **Not started** — AWS access to be provisioned |
 
 **Status values:** Not started, In progress, Complete. A step is Complete only when its "done when"
 is met and the evidence is cited in the [change log](#change-log).
@@ -1426,6 +1485,28 @@ no harness.
 **Done when:** at least one proof went from request to reviewed prototype in a single working
 session; a second person resumed a proof from its project folder alone; no production code changed;
 and the team knows whether local setup is genuinely blocking anyone.
+
+### Step B1 — Prove the codebase path
+
+**Claude builds it; Noah judges it.** Track B's first step, and the thing the plan described from the
+start and never built — see [the two build paths](#the-two-build-paths).
+
+Build **one real feature** the way a designer would hand it to engineering: real file locations, real
+Redux, real routing, real permissions, with **only the network stubbed** by MSW handlers in
+`src/mocks/`. Tests written. Every state the feature actually has. Accessibility **run**, not
+recorded as "not run."
+
+**Pick something already prototyped**, so the two paths can be compared directly on the same feature.
+The inactivity signal is the obvious candidate: it exists as a prototype, and as production work it
+is a contained change to one existing column.
+
+**Done when:** the feature is built on a normal product branch; `tsc`, lint, tests and
+`npm run check:boundary` pass; every state is reachable in the running app; the accessibility
+checklist is genuinely run; and `handoff.md` lists the stubbed endpoints — the list engineering
+swaps.
+
+**How it is checked:** mechanical. Unlike Track A's remaining gate, nothing here needs a person until
+step 10.
 
 ### Step 10 — Hand one off to an engineer
 
@@ -2069,6 +2150,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-09-29 | **The sequence is restructured into three tracks, and the status column was wrong in both directions.** At the plan owner’s direction: *"get over the line with one, then move to the next,"* and *"I need to see where we actually are."* **Track A** (prototype path), **Track B** (codebase path), **Track C** (the Workspace app), with 17 and 18 parked outside because they need access or another person and block nothing. **The audit found the status table lying both ways:** step 9 read "Not started" with **four** proofs on disk and the resume test passed; step 7 read **Complete** with "opens" never verified until `9015497e` hours ago, and "reviews cleanly" still unmet; step 5 read **Complete** in the table and **In progress** in the change log; step 1 read **Complete** while its own "done when" requires owners named and the Design System owner never was. All corrected. **Every step now names how it is checked** — mechanical, cold start, or human — and **a step whose check needs a person cannot be marked Complete by Claude.** That rule exists because it was broken twice: step 7 closed on an unverified claim, step 8 closed having built half of what it owned. **Track A’s entire remaining gate is one act:** a person opening a prototype and reviewing it. New **step B1** starts Track B. | The sequence, rebuilt; both status blocks; new step B1. |
 | 2026-09-29 | **The codebase path is specified, at the plan owner’s direction — and it was always in the plan.** The two-runtime-modes contract has said since the original runtime document that real-shell design mode is *"for Test work when the question is about a real app surface."* **Step 8 implemented only half of it** — design mode as a way to *run* the product — and closed; every proof written afterwards pointed at `src/prototypes/`, so the second path was never exercised, and its `Implemented in:` line read "Not yet" while the step owning it was marked Complete. **Claude then compounded it by answering "never, by design" when asked when work happens in the real codebase**, quoting the prototype graduation rule as though it governed everything. It does not. **Now specified:** one agent, two paths. On the codebase path the designer builds the actual frontend in real locations with real Redux, routing and permissions, and **only the network stubbed** via MSW handlers in `src/mocks/`; `.github/instructions/*` come into force alongside `.flkd`; tests are required; every state the feature has is built. Non-negotiables §1–3 are marked prototype-only, §8 splits, and new §1b carries the codebase boundaries. **Handoff differs by path:** a rewrite plan for prototypes, and for the codebase path **a branch engineering takes over** — "as if they had built it themselves" — with the report ending in the list of stubbed endpoints, which is exactly what they swap. | New "The two build paths" contract; the runtime-modes `Implemented in:`; step 10. Repo: `0c9d64a7`. |
 | 2026-09-29 | **Step 7 was closed on an unmet criterion, found by the third real project.** Its "done when" is *built, opened, and honestly reviewed*. Built was verified by a smoke check; **opened was never verified at all.** Prototypes register no production route by design, so nothing served them — the README said "open `index.tsx`", a file rather than a URL, and no mechanism existed. The agent tried to follow it, worked out a manual `src/index.tsx` swap with a revert, and reported the documentation as wrong. **Fixed:** `npm run start:prototype -- <project-id>` serves one prototype on `:3100` from a dev-only config that touches no product route, with a generated bootstrap that wraps it in `FSApp` — without the theme provider a prototype renders unstyled and looks broken. Verified end to end. The agent is now told to open its own work before reporting that it works. **This is the second step closed on a procedure its author never executed**, after the impossible FUI tag instruction. | Step 7; `src/prototypes/README.md`; agent contract. Repo: `9015497e`, `90043e1c`. |
 | 2026-09-29 | **Third proof, run at Explore — the level scaling works.** 5 files against the previous project’s 9, and **`brief.md` alone** in the records: no context receipt, no review record, which is exactly what the contract says Explore owes. All five checks pass and the iteration was **committed** without being asked, so both contract changes from the previous run held. **The reliability question improved again:** it verified `lastLogin` is a real field and cited the file rather than assuming, flagged the 90-day threshold as **invented with no policy behind it** and named it "the thing most likely to be wrong," and flagged that turning an absolute date into relative text is a **behavior change rather than an addition** — a distinction nobody asked it to draw. One cited line number was off by two; the substantive claim was right. | Step 9 evidence. |
