@@ -576,9 +576,42 @@ before any code is written.
 - Keep the project folder, source, review exports, captures, and handoff in Git indefinitely so another designer or engineer can continue without Electron. Restrict them to authorized code, approved assets, and mock, synthetic, or approved anonymized data.
 - Because branches are retained indefinitely and never merge, prototype history in the product repository grows without bound. This is acceptable at pilot scale and is listed as an open question rather than settled here.
 
+## The two build paths
+
+**Implemented in:** `flock-coke/.flkd/standards/non-negotiables.md` §0 and §1b; the agent's path
+decision. Added 2026-09-29.
+
+**This is the thing the plan always described and only half-built.** Two paths, not two tools:
+
+| | **Prototype path** | **Codebase path** |
+|---|---|---|
+| The question | "Should we do this, and what should it look like?" | "Build this — we know we want it" |
+| Code goes | `src/prototypes/<project-id>/` | Real locations, this repo's conventions |
+| Data | Local mocks in the prototype directory | **MSW handlers in `src/mocks/`** — the only fake |
+| Redux, routing, permissions | Forbidden | **Required, and real** |
+| States | What the credibility level owes | **Every state the feature has** |
+| Tests | Skipped | **Required** |
+| Branch | `fd/<project-id>/iN` | The repo's normal convention |
+| Ends as | Thrown away; the decision survives | **A branch engineering takes over** |
+
+**On the codebase path the designer builds the actual frontend**, to spec, with the real design
+system and the repo's real standards — backend stubbed. **Engineering takes the branch and wires the
+plumbing.** The bar, in the plan owner's words: *"as if they had built it themselves."* They may
+change things here and there; they should not be rebuilding.
+
+**One agent, not two.** The paths share everything that matters — FUI resolution, product patterns,
+accessibility as a floor, reading context before writing. What differs is four non-negotiables and
+where the files land. Splitting the agent would duplicate the 80% that is identical and invite the
+two copies to drift.
+
+**Why this was missed for nine steps:** the contract below described both modes from the start, but
+step 8 implemented design mode only as *a way to run the product* and closed. Every proof written
+after it pointed at `src/prototypes/`, so the second path was never exercised, and its
+`Implemented in:` line read "Not yet" while the step that owned it was marked Complete.
+
 ## The two runtime modes
 
-**Implemented in:** **Not yet** — step 8 ports the mock-data path. `flock-coke/.flkd/manifest.md` records honestly that the shell render is unconfirmed.
+**Implemented in:** `flock-coke` — `npm run start:design` (step 8) and `npm run start:prototype` (step 7). Both run; design mode as a **build** environment is what the codebase path above adds.
 
 Two modes, not forced into one. Both produce reviewable evidence; neither is production.
 
@@ -1401,7 +1434,8 @@ inside the app at step 15, because handoff is the claim engineering cares about 
 hand costs little; discovering at step 15 that the shape was wrong means rebuilding it inside an
 application.
 
-- Claude creates the handoff branch, runs the checks against every touched state, and writes `handoff.md` with the [accessibility and hardening report](#the-accessibility-and-hardening-report) and a rewrite plan.
+- **Prototype path:** Claude creates the handoff branch, runs the checks against every touched state, and writes `handoff.md` with the [accessibility and hardening report](#the-accessibility-and-hardening-report) and a **rewrite plan**.
+- **Codebase path:** there is no rewrite. Engineering **takes the branch over**. Claude's job is to hand it across complete — every state built, tests written, accessibility actually run rather than recorded as "not run", and `handoff.md` carrying the **list of stubbed MSW endpoints**, which is precisely the work engineering picks up.
 - Noah gives it to the engineer who would actually build it, and records whether it reduced ambiguity, what they still had to ask, and what they wanted that it lacked.
 - Claude then revises the report and writes the handoff skill from what the engineer said.
 
@@ -2035,6 +2069,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-09-29 | **The codebase path is specified, at the plan owner’s direction — and it was always in the plan.** The two-runtime-modes contract has said since the original runtime document that real-shell design mode is *"for Test work when the question is about a real app surface."* **Step 8 implemented only half of it** — design mode as a way to *run* the product — and closed; every proof written afterwards pointed at `src/prototypes/`, so the second path was never exercised, and its `Implemented in:` line read "Not yet" while the step owning it was marked Complete. **Claude then compounded it by answering "never, by design" when asked when work happens in the real codebase**, quoting the prototype graduation rule as though it governed everything. It does not. **Now specified:** one agent, two paths. On the codebase path the designer builds the actual frontend in real locations with real Redux, routing and permissions, and **only the network stubbed** via MSW handlers in `src/mocks/`; `.github/instructions/*` come into force alongside `.flkd`; tests are required; every state the feature has is built. Non-negotiables §1–3 are marked prototype-only, §8 splits, and new §1b carries the codebase boundaries. **Handoff differs by path:** a rewrite plan for prototypes, and for the codebase path **a branch engineering takes over** — "as if they had built it themselves" — with the report ending in the list of stubbed endpoints, which is exactly what they swap. | New "The two build paths" contract; the runtime-modes `Implemented in:`; step 10. Repo: `0c9d64a7`. |
 | 2026-09-29 | **Step 7 was closed on an unmet criterion, found by the third real project.** Its "done when" is *built, opened, and honestly reviewed*. Built was verified by a smoke check; **opened was never verified at all.** Prototypes register no production route by design, so nothing served them — the README said "open `index.tsx`", a file rather than a URL, and no mechanism existed. The agent tried to follow it, worked out a manual `src/index.tsx` swap with a revert, and reported the documentation as wrong. **Fixed:** `npm run start:prototype -- <project-id>` serves one prototype on `:3100` from a dev-only config that touches no product route, with a generated bootstrap that wraps it in `FSApp` — without the theme provider a prototype renders unstyled and looks broken. Verified end to end. The agent is now told to open its own work before reporting that it works. **This is the second step closed on a procedure its author never executed**, after the impossible FUI tag instruction. | Step 7; `src/prototypes/README.md`; agent contract. Repo: `9015497e`, `90043e1c`. |
 | 2026-09-29 | **Third proof, run at Explore — the level scaling works.** 5 files against the previous project’s 9, and **`brief.md` alone** in the records: no context receipt, no review record, which is exactly what the contract says Explore owes. All five checks pass and the iteration was **committed** without being asked, so both contract changes from the previous run held. **The reliability question improved again:** it verified `lastLogin` is a real field and cited the file rather than assuming, flagged the 90-day threshold as **invented with no policy behind it** and named it "the thing most likely to be wrong," and flagged that turning an absolute date into relative text is a **behavior change rather than an addition** — a distinction nobody asked it to draw. One cited line number was off by two; the substantive claim was right. | Step 9 evidence. |
 | 2026-09-29 | **Every credibility level produces something runnable and clickable, at the plan owner’s direction** — "I never want just a visual prototype." The credibility table listed "Clickable prototype" only on the **Test** row, which made clickability read as something Test buys. The first real project’s agent drew exactly that inference and asked the requester to choose between a "rough, static mockup" and a clickable one. Nothing said *static*; the table implied it by omission. **That inverts the premise:** building in the product with real components is only worth doing because the result runs — a picture of an interface is what Figma is for, and Figma is faster at it. What scales with the level is now stated as states, evidence and ceremony, never whether it runs. Explore still owes one state and no context receipt; it still runs. | Credibility levels here and in `flock-coke/.flkd/manifest.md`; the agent’s states-by-level section. Repo: `7779d6cd`. |
