@@ -606,6 +606,29 @@ system and the repo's real standards — backend stubbed. **Engineering takes th
 plumbing.** The bar, in the plan owner's words: *"as if they had built it themselves."* They may
 change things here and there; they should not be rebuilding.
 
+**How a path gets chosen.** Not by reading the request's wording — inference is where this agent has
+been weakest, and "build me a X" is the most common way someone asks for a **prototype**.
+
+| Signal | Result |
+|---|---|
+| On an `fd/<project-id>/iN` branch | Prototype path, no question |
+| On a product feature branch | Codebase path, no question |
+| On a baseline branch — **new work** | **The agent must ask.** No default, no recommendation |
+| `node_modules` missing | **Neither path is available** — both need it for FUI resolution, typecheck, lint and bundling. A setup problem, not a path choice |
+
+**Asking is mandatory on new work, not a fallback for unclear requests.** Which path is right depends
+on how settled the decision is, and only the requester knows that. Silence never means codebase,
+because that is the direction that does not undo cleanly.
+
+**Deliberately not a slash command.** `.flkd` is tool-agnostic so it works in Codex or Cursor with a
+thin adapter; routing through a Claude Code feature would move the decision into `.claude/` and break
+that. A `/prototype` shortcut can exist later as an adapter that expands to the same prompt.
+
+**Richer environment detection belongs to [Track C](#step-13--build-the-workspace-local-loop).** When
+a designer is working through the Workspace rather than a terminal, the app knows whether they have a
+full checkout with dependencies or something lighter, and can settle the question before asking it.
+Today the branch is the reliable signal.
+
 **One agent, not two.** The paths share everything that matters — FUI resolution, product patterns,
 accessibility as a floor, reading context before writing. What differs is four non-negotiables and
 where the files land. Splitting the agent would duplicate the 80% that is identical and invite the
@@ -2180,6 +2203,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-09-29 | **Path routing is decided by the branch and a mandatory question, not by inference**, at the plan owner’s suggestion. An `fd/<project-id>/iN` branch means prototype work and a product feature branch means codebase work — neither needs asking. **Only new work on a baseline branch is open, and there the agent must ask, with no default and no recommendation**, because "build me a X" is the most common way someone asks for a prototype and the wording does not disambiguate. Silence never means codebase, since that is the direction that does not undo cleanly. Also checks the environment can support the answer: without `node_modules` **both** paths are blocked, so that signal cannot separate them — it is a setup problem. **Deliberately not a slash command:** `.flkd` is tool-agnostic, and routing through a Claude Code feature would move the decision into `.claude/`. Richer detection — knowing whether the designer has a full checkout at all — belongs to the Workspace in Track C. | The two build paths. Repo: `3f9e5f39`. |
 | 2026-09-29 | **B1 done — the codebase path works.** The inactivity signal built for real in `flock-coke` on `feature/users-inactivity-signal`: `lastLogin` now reads relatively and renders a warning chip past a threshold, in the actual `orgUsersList.tsx`, with 7 new specs against a fixed clock. **376 tests pass**, `tsc` and lint clean, and it was **verified rendering in the real app** rather than assumed. **The handoff is smaller than expected:** there is no API work at all — `searchUserDto` already types `lastLogin` and the real endpoint already returns it, so the only stub was fixture *values*, and reverting that one file runs it against real data. The structural decision worth review: `mapUserToTableRow` used to format the date at the data layer; the row now carries raw ISO and the column formats it. **Same feature now exists on both paths**, which is the comparison B1 existed to produce. | Track B table; `projects/users-inactivity-signal/handoff.md`. Repo: `56aee3c3`. |
 | 2026-09-29 | **New step A2: run a prototype in the real shell — it was described but never scheduled.** A prototype’s chrome is reconstructed in `host.tsx`, so an admin view shows a **copy** of the Admin nav that goes stale the day someone adds an item. The contract has always described real-shell design mode "for Test work when the question is about a real app surface," and step 8 built design mode only as a way to *run the product*, so **no step ever owned the other half** — the same described-but-unscheduled failure that left the codebase path unbuilt for nine steps. A2 is **sequenced after B1**, because building in the real app first shows what this should look like, and Track B gets real chrome for free. Standalone `start:prototype` stays; two ways to open a prototype, chosen by whether the work depends on its surroundings. | Track A table; new step A2. |
 | 2026-09-29 | **The sequence is restructured into three tracks, and the status column was wrong in both directions.** At the plan owner’s direction: *"get over the line with one, then move to the next,"* and *"I need to see where we actually are."* **Track A** (prototype path), **Track B** (codebase path), **Track C** (the Workspace app), with 17 and 18 parked outside because they need access or another person and block nothing. **The audit found the status table lying both ways:** step 9 read "Not started" with **four** proofs on disk and the resume test passed; step 7 read **Complete** with "opens" never verified until `9015497e` hours ago, and "reviews cleanly" still unmet; step 5 read **Complete** in the table and **In progress** in the change log; step 1 read **Complete** while its own "done when" requires owners named and the Design System owner never was. All corrected. **Every step now names how it is checked** — mechanical, cold start, or human — and **a step whose check needs a person cannot be marked Complete by Claude.** That rule exists because it was broken twice: step 7 closed on an unverified claim, step 8 closed having built half of what it owned. **Track A’s entire remaining gate is one act:** a person opening a prototype and reviewing it. New **step B1** starts Track B. | The sequence, rebuilt; both status blocks; new step B1. |
