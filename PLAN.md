@@ -923,6 +923,7 @@ verified, and step 8 was closed having implemented half of what it owned.
 | 7 | [Confirm the prototype harness](#step-7--confirm-the-prototype-harness) | One real artifact **builds, opens, and reviews cleanly** | Mechanical + human | **In progress** — builds and opens (`9015497e`); **no human has reviewed one** |
 | 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | The real shell runs locally on mock data | Mechanical | **Complete** — render verified from screenshots |
 | 9 | [Prove it on real decisions](#step-9--prove-it-on-real-decisions) | A proof went request → **reviewed** prototype; a second person resumed from the folder alone | Human | **In progress** — **four** proofs built, resume test passed; **none reviewed by a human** |
+| A2 | [Run a prototype in the real shell](#step-a2--run-a-prototype-in-the-real-shell) | A prototype mounts inside design mode with the product's real navigation and routing | Mechanical | **Not started — sequenced after B1** |
 
 **Track A's remaining gate is one thing: a person opening a prototype and reviewing it.** Everything
 mechanical is done. Steps 7 and 9 both wait on the same act.
@@ -1485,6 +1486,35 @@ no harness.
 **Done when:** at least one proof went from request to reviewed prototype in a single working
 session; a second person resumed a proof from its project folder alone; no production code changed;
 and the team knows whether local setup is genuinely blocking anyone.
+
+### Step A2 — Run a prototype in the real shell
+
+**Claude. Sequenced after [B1](#step-b1--prove-the-codebase-path)**, not before it — building in the
+real app first is what will show what this should look like, and Track B needs no new mechanism to
+get real chrome.
+
+**The problem.** A prototype's surrounding chrome is **reconstructed** in `host.tsx`, not real. It
+looks right because the agent read `useAdminSubNavItems` and copied the item list — so it is a
+snapshot that silently goes stale the day someone adds a nav item. A prototype of an admin view
+should inherit the actual navigation, not a copy of it.
+
+**The mechanism already half-exists.** Design mode runs the real shell on MSW data
+(`npm run start:design`). What is missing is mounting a prototype *inside* it, so the prototype
+inherits real navigation, real routing and real chrome, with only the network faked. That is the
+[real-shell design mode](#the-two-runtime-modes) the contract has described from the start.
+
+**Why this was not already a step.** The contract described it; nothing scheduled it. Step 8 built
+design mode as a way to *run the product* and closed, and no step ever owned the other half — the
+same failure that left the codebase path unbuilt for nine steps.
+
+- Mount a prototype inside design mode without registering a production route.
+- Keep `npm run start:prototype` — standalone is faster and right for a view that does not depend on
+  its surroundings. Two ways to open one, chosen by what the work needs.
+- `host.tsx` becomes optional rather than required, and the agent is told when each applies.
+
+**Done when:** a prototype opens inside the real shell with the product's actual navigation, and
+adding a nav item to the product changes what the prototype shows without anyone editing the
+prototype.
 
 ### Step B1 — Prove the codebase path
 
@@ -2150,6 +2180,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-09-29 | **New step A2: run a prototype in the real shell — it was described but never scheduled.** A prototype’s chrome is reconstructed in `host.tsx`, so an admin view shows a **copy** of the Admin nav that goes stale the day someone adds an item. The contract has always described real-shell design mode "for Test work when the question is about a real app surface," and step 8 built design mode only as a way to *run the product*, so **no step ever owned the other half** — the same described-but-unscheduled failure that left the codebase path unbuilt for nine steps. A2 is **sequenced after B1**, because building in the real app first shows what this should look like, and Track B gets real chrome for free. Standalone `start:prototype` stays; two ways to open a prototype, chosen by whether the work depends on its surroundings. | Track A table; new step A2. |
 | 2026-09-29 | **The sequence is restructured into three tracks, and the status column was wrong in both directions.** At the plan owner’s direction: *"get over the line with one, then move to the next,"* and *"I need to see where we actually are."* **Track A** (prototype path), **Track B** (codebase path), **Track C** (the Workspace app), with 17 and 18 parked outside because they need access or another person and block nothing. **The audit found the status table lying both ways:** step 9 read "Not started" with **four** proofs on disk and the resume test passed; step 7 read **Complete** with "opens" never verified until `9015497e` hours ago, and "reviews cleanly" still unmet; step 5 read **Complete** in the table and **In progress** in the change log; step 1 read **Complete** while its own "done when" requires owners named and the Design System owner never was. All corrected. **Every step now names how it is checked** — mechanical, cold start, or human — and **a step whose check needs a person cannot be marked Complete by Claude.** That rule exists because it was broken twice: step 7 closed on an unverified claim, step 8 closed having built half of what it owned. **Track A’s entire remaining gate is one act:** a person opening a prototype and reviewing it. New **step B1** starts Track B. | The sequence, rebuilt; both status blocks; new step B1. |
 | 2026-09-29 | **The codebase path is specified, at the plan owner’s direction — and it was always in the plan.** The two-runtime-modes contract has said since the original runtime document that real-shell design mode is *"for Test work when the question is about a real app surface."* **Step 8 implemented only half of it** — design mode as a way to *run* the product — and closed; every proof written afterwards pointed at `src/prototypes/`, so the second path was never exercised, and its `Implemented in:` line read "Not yet" while the step owning it was marked Complete. **Claude then compounded it by answering "never, by design" when asked when work happens in the real codebase**, quoting the prototype graduation rule as though it governed everything. It does not. **Now specified:** one agent, two paths. On the codebase path the designer builds the actual frontend in real locations with real Redux, routing and permissions, and **only the network stubbed** via MSW handlers in `src/mocks/`; `.github/instructions/*` come into force alongside `.flkd`; tests are required; every state the feature has is built. Non-negotiables §1–3 are marked prototype-only, §8 splits, and new §1b carries the codebase boundaries. **Handoff differs by path:** a rewrite plan for prototypes, and for the codebase path **a branch engineering takes over** — "as if they had built it themselves" — with the report ending in the list of stubbed endpoints, which is exactly what they swap. | New "The two build paths" contract; the runtime-modes `Implemented in:`; step 10. Repo: `0c9d64a7`. |
 | 2026-09-29 | **Step 7 was closed on an unmet criterion, found by the third real project.** Its "done when" is *built, opened, and honestly reviewed*. Built was verified by a smoke check; **opened was never verified at all.** Prototypes register no production route by design, so nothing served them — the README said "open `index.tsx`", a file rather than a URL, and no mechanism existed. The agent tried to follow it, worked out a manual `src/index.tsx` swap with a revert, and reported the documentation as wrong. **Fixed:** `npm run start:prototype -- <project-id>` serves one prototype on `:3100` from a dev-only config that touches no product route, with a generated bootstrap that wraps it in `FSApp` — without the theme provider a prototype renders unstyled and looks broken. Verified end to end. The agent is now told to open its own work before reporting that it works. **This is the second step closed on a procedure its author never executed**, after the impossible FUI tag instruction. | Step 7; `src/prototypes/README.md`; agent contract. Repo: `9015497e`, `90043e1c`. |
