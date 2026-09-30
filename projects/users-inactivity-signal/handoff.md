@@ -62,9 +62,17 @@ decision. `lastLogin` was read in exactly two places, so the change is contained
 | Keyboard reachability | **Unchanged** — the cell adds no interactive element |
 | Focus management | **Not applicable** — nothing opens |
 | Status announcement | **Not applicable** — static cell content, no live update |
-| Screen-reader read-through | **Not run.** Needs a human with a screen reader. The chip announces its label, but that is reasoning, not a test |
+| Screen-reader read-through | **Not run.** Needs a person with a screen reader; no tool substitutes. Owner: whoever takes the branch |
+| Automated axe scan | **Run, clean.** See below |
 
-**Automated axe scan: not run.** Cypress does not launch in this environment.
+**Automated axe scan: run, clean.** `npm run a11y` — axe-core 4.10.3 against WCAG 2 A, all four cell
+states (`__tests__/src/components/user/lastLoginDisplay.a11y.spec.tsx`). No violations.
+
+The cell was built inline in the column definition, so a test could only have rendered a copy of it.
+It is now `LastLoginCell` in `lastLoginDisplay.tsx`, so the markup under test is the markup the Users
+list renders. Added 2026-09-29 as part of step B3; this said "not run — Cypress does not launch" until
+then, and axe never needed Cypress. Colour contrast is the one thing it cannot judge, because
+happy-dom has no layout.
 
 ## States
 

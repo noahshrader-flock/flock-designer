@@ -17,7 +17,12 @@ the wider product process at readiness to build.
 
 > ### Where we are
 >
-> **Track A is one gate from done. Track B has just been specified and is next to build.**
+> **Tracks A and B are complete. Track C is paused** — [step 13](#step-13--build-the-workspace-local-loop)
+> is built and works, and the plan owner wants to revisit the idea before more is built on it.
+> **Every step Claude can finish is finished.** What is left needs other people: the
+> [decision gates](#part-iv--decision-gates) for steps 14–16, the Design System owner for
+> [step 17](#step-17--ship-the-design-system-context-in-the-package), and registry access for
+> [step 18](#step-18--designer-environment-access).
 >
 > **What is actually left in Track A:** a person opening a prototype and reviewing it. Four proofs are
 > built and every mechanical check passes; steps 7 and 9 both wait on that same act.
@@ -44,7 +49,7 @@ the wider product process at readiness to build.
 > Go straight to **[the sequence](#the-sequence)** — that is the working list. Everything before it
 > is reference you consult while doing a step, not reading you do first.
 
-- **[Part I — What this is](#part-i--what-this-is)**: purpose, principles, vocabulary, the four credibility levels, the evidence model, how this compares to Magic Patterns, and what exists today.
+- **[Part I — What this is](#part-i--what-this-is)**: purpose, principles, vocabulary, how much to build, the evidence model, how this compares to Magic Patterns, and what exists today.
 - **[Part II — Contracts](#part-ii--contracts)**: what must be true throughout — the architecture, how the agent behaves, where code and records live, how review and handoff work. Reference, consulted while working.
 - **[Part III — The work](#part-iii--the-work)**: one numbered sequence of 18 steps. Do a step, see the result, move to the next.
 - **[Part IV — Decision gates](#part-iv--decision-gates)**: every organizational confirmation, its recommendation, its owner, and the step by which it must close.
@@ -63,6 +68,25 @@ proved without it.
 - If the two disagree and nobody approved the difference, treat the repository as current and flag the divergence. Do not silently edit either one to match the other.
 - **If building reveals this document is wrong, do not work around it silently.** Record the conflict in the [change log](#change-log) prefixed **Open:**, say what was found, and ask.
 - After any change: add a [change log](#change-log) row, and check that the [sequence](#the-sequence) table, the "Where we are" block, and the step's "done when" still agree.
+
+### A contract without a step never gets built
+
+**This has happened three times**, and each time the contract was perfect while the thing did not
+exist:
+
+| Described in a contract | Never scheduled as a step | Cost |
+|---|---|---|
+| The codebase path | Unbuilt for nine steps, while every proof went to `src/prototypes/` | The main thing being built was missing |
+| Real-shell design mode as a place to *work* | Step 8 built the "run the product" half and closed | Prototypes still reconstruct their chrome — now [step A2](#step-a2--run-a-prototype-in-the-real-shell) |
+| A prototype being openable | Step 7 closed on "built, **opened**, reviewed" with opening unverified | Nothing served prototypes at all |
+
+**So: when a contract says something exists, find the step that builds it.** If there is no step,
+either write one or mark the contract `Implemented in: **Not yet**` and say which step will own it.
+A contract with no owning step is a description of something imaginary.
+
+**And a step whose "done when" needs a person cannot be closed by Claude.** Step 7 and step 8 were
+both marked Complete on claims nobody had tested. The sequence marks each step **mechanical**, **cold
+start**, or **human** for exactly this reason.
 
 **An agent may, without asking:** fix a broken link or typo; replace a duplicated restatement with a
 link; propagate a change a person has already approved; update a step's status when its "done when"
@@ -171,25 +195,31 @@ These terms are easy to confuse and are used strictly throughout the set. The fi
 
 **Figma is reference-only.** Flock Designer reads Figma and FigJam as links and exported images inside a brief. There is no Figma API integration, import pipeline, or design-to-code conversion in any phase of the plan.
 
-## The four credibility levels
+## How much to build
 
-Use four named credibility levels. They describe the work, not the job title of the person making it.
+**Removed 2026-09-29, at the plan owner's direction.** This was four named levels — Explore, Ground,
+Test, Handoff — chosen before work started. The choice was not real.
 
-**Every level produces something that runs and can be clicked.** What scales is how many states, how
-much evidence, and how much ceremony — never whether it runs. A picture of an interface is what Figma
-is for, and Figma is faster at it; an artifact you cannot open has thrown away the only advantage
-building in the product gives you.
+**Grounding is the floor, not a level.** Real components, real product patterns, real standards, on
+both paths, always. A version that is not grounded is not worth building here, because being
+grounded is the only reason to build here rather than in a design tool. So "Ground" was never a
+setting, and offering it implied you could opt out of the thing that makes this worth doing.
 
-| Level | Purpose | Required grounding | Typical output |
-|---|---|---|---|
-| Explore | Make an idea discussable | Brief, reference images, light Flock context | A running view you can click — one direction, default state only, no receipt |
-| Ground | Decide whether a direction belongs in Flock | Relevant FUI components, tokens, current product references, pattern choice | Flock-native view or small flow |
-| Test | Learn from behavior | Local mock data, key interactions, loading/empty/error/success states | Clickable prototype and review evidence |
-| Handoff | Prepare a decision for engineering | Route/shell placement, constraints, source receipts, known gaps | Implementation brief and, where appropriate, a clean candidate branch; not an automatic merge |
+**Handoff was not a level either.** Preparing work for engineering is a deliberate step with its own
+command — [step 10](#step-b2--build-the-handoff) — not something picked from a menu
+before any work exists.
 
-An idea may stop at Explore. A customer-facing concept may need Test. Handoff does not make prototype code production code.
+**What actually varies is how much of the thing gets built**, and the request already says it:
 
-Each level also carries a different amount of process. Explore is deliberately almost ceremony-free so a fast idea stays fast; only Handoff requires the full evidence set. The [Plan's required-artifact matrix](#required-artifacts-by-credibility-level) is the single definition of what each level owes, and it is what protects the "one working session" promise from being crushed by its own paperwork.
+| Path | How much |
+|---|---|
+| **Codebase** | **All of it.** Every state the feature really has, tests, accessibility run. It ships |
+| **Prototype** | **What was asked for.** One screen means one screen |
+
+**A single-screen prototype is a finished prototype.** Building past the question is the most common
+way this work gets slow. If the scope is genuinely unclear the agent asks one plain question — *is
+one screen enough, or do you want the other states too?* — not a ladder of names nobody outside this
+repository understands.
 
 ## What the team has said
 
@@ -407,7 +437,7 @@ Frame the decision
 
 ### 1. Frame before building
 
-Turn a vague request into a brief that captures the user and job to be done; the decision to make and what would change it; the current product surface or nearest reference; the requested credibility level; required interaction and states; known constraints, open questions, and non-goals; and the change boundary — which files, components, routes, states, and interaction paths are in scope.
+Turn a vague request into a brief that captures the user and job to be done; the decision to make and what would change it; the current product surface or nearest reference; how much to build; required interaction and states; known constraints, open questions, and non-goals; and the change boundary — which files, components, routes, states, and interaction paths are in scope.
 
 The designer does not fill in a form. They share whatever they have, and the agent writes `brief.md` from it, using the [request guide](#the-request-guide) to ask only for the missing pieces that would change what it builds. The designer confirms the brief before the agent builds. Do not force a long discovery ritual for a small request: an Explore request may need nothing more than the decision and a reference screen.
 
@@ -463,7 +493,7 @@ guidance designers are given, and the agent uses the same list to decide what to
 | **Current thinking**, even half-formed | Distinguishes "build this" from "challenge this," which change what gets made |
 | **Inspiration** — references, and the closest existing Flock screen | The single biggest factor in whether the result looks like Flock |
 | **Already decided** — anything settled or off limits | Keeps the work in scope; becomes the change boundary |
-| **How finished it needs to be** | Sets the credibility level, and with it how much process comes along |
+| **How finished it needs to be** | Sets how much gets built — one screen, or every state |
 
 If a request carries only one thing, the problem is the most useful one. Where the requester already
 knows the specific question to answer — "toolbar or side panel?" — that scopes the build tightest,
@@ -475,34 +505,26 @@ the decision the prototype will answer. That is why the matrix's Brief row asks 
 reference while this list asks for a problem — they are the two ends of the same step, not a
 disagreement.
 
-## Required artifacts by credibility level
+## What each piece of work owes
 
-**Implemented in:** `flock-coke/.flkd/manifest.md` — "Credibility levels"; per-level tables in `standards/universal/accessibility.md` and `standards/universal/interaction-states.md`.
+**Implemented in:** `flock-coke/.flkd/manifest.md` — "How much to build"; `.flkd/standards/non-negotiables.md` §8.
 
-The single definition of what each level owes. It exists to keep Explore genuinely fast: process is added as the decision gets heavier, not applied uniformly.
+Replaced the per-level artifact matrix on 2026-09-29, when [credibility levels](#how-much-to-build)
+were removed. Requirements follow the **path**, which is a real distinction, rather than a rigor
+setting, which was not.
 
-| Artifact | Explore | Ground | Test | Handoff |
-|---|---|---|---|---|
-| Brief | The decision and a reference, in a sentence or two | Written by the agent from the request guide; confirmed by the designer | Same, plus the states and interactions to test | Same, plus the constraints engineering must know |
-| Change boundary declared | — | Required | Required | Required |
-| Context receipt | — | Required | Required | Required |
-| Mock data declared | Inline is fine | Required, explicit file | Required, explicit file | Required, with data contract |
-| States built | Default only | Default plus the one state that carries the decision | Every decision-relevant state | Every decision-relevant state |
-| Product parity review | Optional | Required | Required | Required |
-| Implementation review | — | Required | Required | Required |
-| Accessibility section of the review record | — | Required | Required | Required |
-| Project memory | — | Project folder created | Project folder maintained | Project folder complete |
-| Draft PR and shared preview | — | Optional | Required | Required |
-| Hardening and accessibility report | — | — | — | Required |
-| Transfer or rewrite plan | — | — | — | Required |
+| | **Prototype path** | **Codebase path** |
+|---|---|---|
+| **Grounded in real components and patterns** | Always | Always |
+| **Runs and clicks** | Always | Always |
+| **States** | What was asked for | Every state the feature has |
+| **Context receipt** | Beyond a single screen | Always — it is handoff evidence |
+| **Tests** | No | **Yes** |
+| **Accessibility** | Check as you build; record what you did not verify | **Run it.** "Not run" is unacceptable for shipping code |
+| **Review record** | Per iteration | Per iteration, plus `handoff.md` |
 
-An Explore artifact that arrives with a brief, a running screen, and stated assumptions is complete. Asking it for a context receipt and two reviews is how this workflow dies of its own weight.
-
-**Before step 14**, two rows are satisfied locally. A local preview reviewed live, in person or by screen share, stands in for the draft PR and shared preview. The [project folder](#the-project-folder) *is* project memory; from step 14 it is also copied into the shared project record. No requirement in this matrix depends on something that does not yet exist at the phase where it applies.
-
-Both reviews, their evidence, and the accessibility section are written to one file: the [review record](#the-review-record).
-
-The four credibility levels themselves — Explore, Ground, Test, Handoff — are defined in [the four credibility levels](#the-four-credibility-levels).
+**"Not run" is always an acceptable answer on a prototype. Silence is not** — an unstated gap reads
+as a passing check, which is the failure the whole evidence model exists to prevent.
 
 ## The prototype directory
 
@@ -577,7 +599,7 @@ before any code is written.
 - Each iteration branch is created from the prior selected iteration, not from an opaque app snapshot. The relationship is visible in Git.
 - Prefer an optional Git worktree for isolation if the primary checkout is busy; it remains a real checkout, not an app-private copy.
 - An iteration record contains the branch, commit SHA, label, brief and context-receipt hash, preview URL and status, review summary, and decision note.
-- A project has one draft PR, retargeted to the current iteration branch.
+- **One PR per branch.** An iteration gets its own PR when you want to share it; an iteration you never share never opens one.
 - Prototype branches do not merge to product `develop` by default. Code hardening starts `fd/<project-id>/handoff` from the approved iteration.
 - Retain prototype iteration branches as durable project history. Preview deployments may expire; retain their URL, commit, status, and rebuild instructions.
 - Keep the project folder, source, review exports, captures, and handoff in Git indefinitely so another designer or engineer can continue without Electron. Restrict them to authorized code, approved assets, and mock, synthetic, or approved anonymized data.
@@ -596,7 +618,7 @@ decision. Added 2026-09-29.
 | Code goes | `src/prototypes/<project-id>/` | Real locations, this repo's conventions |
 | Data | Local mocks in the prototype directory | **MSW handlers in `src/mocks/`** — the only fake |
 | Redux, routing, permissions | Forbidden | **Required, and real** |
-| States | What the credibility level owes | **Every state the feature has** |
+| States | What was asked for | **Every state the feature has** |
 | Tests | Skipped | **Required** |
 | Branch | `fd/<project-id>/iN` | The repo's normal convention |
 | Ends as | Thrown away; the decision survives | **A branch engineering takes over** |
@@ -743,10 +765,14 @@ An iteration is a visible Git artifact: `fd/<project-id>/i1`, then `i2` through 
 3. GitHub Actions builds through the Coke-style PR deployment path and returns its preview deployment result.
 4. Store the URL, build status, commit SHA, expiration, and review summary in project memory.
 5. Reviewers add a general comment or a visual marker on a fixed review capture, anchored to the iteration/commit, route/state, fixed viewport, and normalized position. Workspace posts the thread and anchor metadata to the draft PR and exports a durable summary to the project record.
-6. Create `i2` from the selected prior iteration and retarget the same draft PR to it. Retain superseded branches as durable history.
+6. Create `i2` from the selected prior iteration when you want a different direction, or keep building on the one you have. Either way it is that branch's own PR. Retain superseded branches as durable history.
 7. Start `fd/<project-id>/handoff` from the approved iteration for code hardening.
 
-**One draft PR per project, retargeted per iteration.** A PR per iteration would fragment the discussion across N threads and leave a growing pile of permanently open prototype PRs, since prototype branches never merge. Retargeting keeps one coherent thread, one preview URL to share, and one thing to close when the project ends. Workspace records which commit each comment was made against, so the thread stays interpretable as the head moves.
+**One PR per branch**, which is the only mapping GitHub actually has: a pull request's head branch cannot be changed after it is opened. An earlier version of this plan had Workspace moving one project-wide PR from `i1` to `i2` as the work progressed. That is not possible, and the alternative it implied -- a long-lived branch the PR points at -- was solving a problem that does not exist.
+
+**A PR is opened when an iteration is worth sharing, not for every iteration.** You pick the direction you want to keep building, push it, and open a PR for that branch. Most projects will have one. The reason to keep a branch per iteration is that it stays cheap to show three at once when the comparison is the point -- three branches, three PRs, three preview URLs, side by side. Nothing forces that shape, and nothing accumulates when you do not use it.
+
+**The durable thread is the project folder, not the PR.** Comments on a shared iteration live on its PR, and the review record in `flock-designer/projects/<project-id>/review.md` is what survives across all of them. That was already true; it is what makes per-branch PRs cost nothing in continuity.
 
 **Markers do not drift.** A marker belongs to the iteration that created it; carrying feedback into `i2` requires an explicit re-anchor rather than a misleading automatic move.
 
@@ -859,7 +885,7 @@ silently lie.**
 
 - Require a reference pattern or a stated reason for divergence.
 - Evaluate required states and interaction, not only the default screen.
-- Check accessible naming, keyboard/focus behavior, hierarchy, and feedback states at the credibility level requested.
+- Check accessible naming, keyboard/focus behavior, hierarchy, and feedback states across what was built.
 
 ---
 
@@ -884,7 +910,12 @@ decides it on evidence.
 
 ## Status
 
-> **Track A is one gate from done. Track B has just been specified and is next to build.**
+> **Tracks A and B are complete. Track C is paused** — [step 13](#step-13--build-the-workspace-local-loop)
+> is built and works, and the plan owner wants to revisit the idea before more is built on it.
+> **Every step Claude can finish is finished.** What is left needs other people: the
+> [decision gates](#part-iv--decision-gates) for steps 14–16, the Design System owner for
+> [step 17](#step-17--ship-the-design-system-context-in-the-package), and registry access for
+> [step 18](#step-18--designer-environment-access).
 >
 > **What is actually left in Track A:** a person opening a prototype and reviewing it. Four proofs are
 > built and every mechanical check passes; steps 7 and 9 both wait on that same act.
@@ -913,13 +944,46 @@ decides it on evidence.
 
 | Track | What it delivers | State |
 |---|---|---|
-| **A — the prototype path** | A designer takes a real request to a reviewed prototype, isolated from the product | **Nearly done** — one gate left |
-| **B — the codebase path** | A designer builds the real frontend on mock data; engineering takes the branch | **Just specified, nothing built** |
-| **C — the Workspace app** | The Electron app that orchestrates both | **Not started, and deliberately last** |
+| **A — the prototype path** | A designer takes a real request to a reviewed prototype, isolated from the product | **Complete**, bar one human gate in [step 1](#step-1--decide-the-rules) |
+| **B — the codebase path** | A designer builds the real frontend on mock data; engineering takes the branch | **Complete** |
+| **C — the Workspace app** | The Electron app that orchestrates both | **Paused 2026-09-29 by the plan owner.** [Step 13](#step-13--build-the-workspace-local-loop) is built and works; 14–16 wait on gates other people own, and on an idea Noah wants to revisit first |
+| **D — the design-system layer** | Context that points at the installed package instead of copying it, so it cannot go stale | **Complete** — [D1](#step-d1--stop-copying-the-design-system-point-at-it) deleted 3,071 lines of snapshot |
 
-Two things sit outside the tracks because they need access or another person, and neither blocks the
-work in front of it: **[17](#step-17--ship-the-design-system-context-in-the-package)** (packaging, org
-transfer) and **[18](#step-18--designer-environment-access)** (designer AWS access).
+**[Step 18](#step-18--designer-environment-access)** (designer AWS access) and the packaging and org
+transfer sit outside the tracks because they need access or another person, and neither blocks the
+work in front of it.
+
+**On the numbering.** Track A's steps kept their original numbers 1–9 because they are done and the
+change log refers to them constantly; later steps use track letters. It is inconsistent, and
+renumbering finished work would break every historical reference for no gain. **Every row above links
+to its section and every link resolves** — that is the thing to rely on, not the numbering.
+
+### A step does not close with its own work unmet
+
+**A step is Complete only when nothing in its own scope is outstanding.** Not "outstanding but
+recorded" — outstanding.
+
+This rule exists because the opposite kept happening: step 7 closed with "opened" never verified,
+step 8 closed having built half of what it owned, and the automated accessibility scan was recorded
+**"not run"** on four consecutive artifacts without anyone fixing the cause. Each record was honest.
+The honesty became a release valve — writing the gap down felt like discharging it.
+
+**So, before marking anything Complete:**
+
+- Is every item in this step's own "done when" actually met, not merely recorded?
+- Does any artifact from this step carry a "not run" that this step was supposed to make runnable?
+- If something is genuinely out of scope, does it name the step that owns it? An orphaned gap is
+  nobody's, which means it is permanent.
+
+### What counts as a step
+
+**A step is something Claude can finish.** If it needs another person, it is not a step — it goes in
+*Waiting on other people* below, where it never blocks anything.
+
+This rule exists because the sequence briefly contained steps that could not be completed by anyone
+doing the work, which made "what is next" unanswerable: every answer came with two dependencies
+attached. Human verification still happens, and the place for it is already built — review records,
+the friction log, the handoff document. It just does not sit in the critical path.
 
 ### How a step gets marked Complete
 
@@ -943,38 +1007,68 @@ verified, and step 8 was closed having implemented half of what it owned.
 | 4 | [Fix the product repository files](#step-4--fix-the-product-repository-files) | Audit done; `validate.py` passes; cold start passes | Mechanical + cold start | **Complete** — 1,006 checks, cold start passed |
 | 5 | [Set up the design-system agent files](#step-5--set-up-the-design-system-agent-files) | Agent reads facts matching the installed version; authoring standards exist | Mechanical + human | **In progress** — standards done; the version half needs the generator, which needs the DS owner |
 | 6 | [Create the shared repository](#step-6--create-the-shared-repository) | Holds the standards, projects and plan; Coke resolves them | Mechanical | **Complete** — `3d15ae9` |
-| 7 | [Confirm the prototype harness](#step-7--confirm-the-prototype-harness) | One real artifact **builds, opens, and reviews cleanly** | Mechanical + human | **In progress** — builds and opens (`9015497e`); **no human has reviewed one** |
+| 7 | [Confirm the prototype harness](#step-7--confirm-the-prototype-harness) | One real artifact **builds, opens, and reviews cleanly** | Mechanical + human | **Complete** — reviewed 2026-09-29; the watermark and icon defects it surfaced are fixed |
 | 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | The real shell runs locally on mock data | Mechanical | **Complete** — render verified from screenshots |
-| 9 | [Prove it on real decisions](#step-9--prove-it-on-real-decisions) | A proof went request → **reviewed** prototype; a second person resumed from the folder alone | Human | **In progress** — **four** proofs built, resume test passed; **none reviewed by a human** |
-| A2 | [Run a prototype in the real shell](#step-a2--run-a-prototype-in-the-real-shell) | A prototype mounts inside design mode with the product's real navigation and routing | Mechanical | **Not started — sequenced after B1** |
+| 9 | [Prove it on real decisions](#step-9--prove-it-on-real-decisions) | A proof went request → **reviewed** prototype; a second person resumed from the folder alone | Human | **Complete** — four proofs, resume test passed, reviewed 2026-09-29 |
+| A2 | [Run a prototype in the real shell](#step-a2--run-a-prototype-in-the-real-shell) | A prototype mounts inside design mode with the product's real navigation and routing | Mechanical | **Complete** — `667c5070`; nav-inheritance verified by live test |
 
-**Track A's remaining gate is one thing: a person opening a prototype and reviewing it.** Everything
-mechanical is done. Steps 7 and 9 both wait on the same act.
+**Track A is complete, 2026-09-29.** Four proofs built, the resume test passed, a person opened and
+reviewed one — which immediately surfaced two harness defects, both fixed — and A2 proved a prototype
+inherits the product's real navigation rather than a copy of it.
+
+**Step 1 is the one thing still open in this track**, and only partly: the Design System owner has
+never been named, which blocks part of step 5 and step 17.
 
 ### Track B — the codebase path
 
-| # | Step | Done when | How it is checked | Status |
-|---|---|---|---|---|
-| B1 | [Prove the codebase path](#step-b1--prove-the-codebase-path) | One real feature built in real locations on MSW data, with tests and every state | Mechanical | **Complete** — `56aee3c3` on `feature/users-inactivity-signal`; 376 tests pass, renders in the real app |
-| 10 | [Hand one off to an engineer](#step-10--hand-one-off-to-an-engineer) | An engineer took the branch and said whether it was usable | Human | **Not started** |
-| 12 | [Add states, captures, and accessibility checks](#step-12--add-states-captures-and-accessibility-checks) | Every decision-relevant state can be switched to, captured, and checked | Mechanical | **Not started** |
-| 11 | [Decide if the managed harness is needed](#step-11--decide-if-the-managed-harness-is-needed) | The decision is recorded either way | Human | **Not started** — needs 9 and 10 first |
+| # | Step | Done when | Status |
+|---|---|---|---|
+| B1 | [Prove the codebase path](#step-b1--prove-the-codebase-path) | One real feature built in real locations on MSW data, with tests and every state | **Complete** — `56aee3c3` |
+| B2 | [Build the handoff](#step-b2--build-the-handoff) | `npm run handoff` refuses unless the work is genuinely ready, and produces **HANDOFF.md** in the branch | **Complete** — `3f137cd6`, `cef176be`; 15 checks, verified on a real branch |
+| B3 | [Close the review and evidence gaps](#step-b3--close-the-review-and-evidence-gaps) | Every decision-relevant state can be exercised and checked, and the automated accessibility scan actually runs | **Complete**; `npm run handoff` green on all six work branches, 13 real defects found and fixed or recorded with an owner |
 
 ### Track C — the Workspace app
 
-| # | Step | Done when | How it is checked | Status |
-|---|---|---|---|---|
-| 13 | [Build the Workspace local loop](#step-13--build-the-workspace-local-loop) | A designer goes request → local preview through the app | Human | **Not started** |
-| 14 | [Workspace: shared review](#step-14--workspace-shared-review) | A distributed team reviews a real iteration from an internal link | Human | **Not started** |
-| 15 | [Workspace: handoff and learning](#step-15--workspace-handoff-and-learning) | The step 10 handoff happens inside the app | Human | **Not started** |
-| 16 | [Pilot and release decision](#step-16--pilot-and-release-decision) | Enough real usage to approve a broader rollout | Human | **Not started** |
-
-### Parked — needs access or another person
-
 | # | Step | Done when | Status |
 |---|---|---|---|
-| 17 | [Ship the design-system context in the package](#step-17--ship-the-design-system-context-in-the-package) | FUI context regenerates on release and ships in the package; shared repo under `flocksafety` | **Not started** — needs the DS owner |
-| 18 | [Designer environment access](#step-18--designer-environment-access) | A designer with no prior setup runs `npm ci` and reaches a running app unaided | **Not started** — AWS access to be provisioned |
+| 13 | [Build the Workspace local loop](#step-13--build-the-workspace-local-loop) | A designer goes from a request to a local, repo-backed preview without learning Git or dev-server mechanics | **Complete** — `158eab3`; 88 tests, the journey end to end, a boot smoke check, and confirmed working by Noah |
+| 14 | [Workspace: shared review](#step-14--workspace-shared-review) | A distributed team reviews a real iteration from an internal link and returns to its exact branch and commit | **Not started** — needs the [decision gates](#part-iv--decision-gates) and other people's calendars |
+| 15 | [Workspace: handoff and learning](#step-15--workspace-handoff-and-learning) | The handoff B2 proved by hand is automated, in the shape a receiving engineer's feedback produced | **Not started** — waits on an engineer receiving one |
+| 16 | [Pilot and release decision](#step-16--pilot-and-release-decision) | The team decides on evidence whether this is worth keeping | **Not started** |
+
+**Step 13 is built and confirmed working**, 2026-09-29. **Track C is paused from 2026-09-29**, at the
+plan owner's direction: he has an idea for the Workspace worth working through before more is built
+on top of it. Nothing is lost by waiting — step 14 could not have started anyway, because six of its
+[decision gates](#part-iv--decision-gates) are owned by other people, and step 13's own success
+measure is that *every artifact remains usable without the app*.
+
+### Track D — the design-system layer
+
+| # | Step | Done when | Check | Status |
+|---|---|---|---|---|
+| D1 | [Stop copying the design system; point at it](#step-d1--stop-copying-the-design-system-point-at-it) | No context file restates what the installed package already carries, and `validate.py` reads the package | Mechanical | **Complete** — `873aba9`, `bf5b4c13`; 3,071 lines deleted, 606 checks, 0 failures |
+
+**Split out of [step 17](#step-17--ship-the-design-system-context-in-the-package) on 2026-09-29**,
+then **reversed by the plan owner from "build a generator" to "delete the copies."** The packaging and
+the org transfer stay in 17 with their owners — though 17 is now much smaller, because shipping
+`.flkd` in the package mattered mainly to keep a snapshot in step with the code, and there is no
+snapshot.
+
+### Waiting on other people — never blocks a step
+
+**These are not steps and they are not in the sequence.** Each needs a person who is not Claude, each
+has a place already built for it, and none holds up the work in front of it. This section exists
+because treating them as sequence steps made "what is next" unanswerable.
+
+| | Needs | Where it lands |
+|---|---|---|
+| **Name the Design System owner** | Noah | Unblocks the FUI generator and the `cokeUsages` decision |
+| **An engineer receives a handoff** | Noah + an engineer | The machinery is built and verified; their feedback revises `prepare-handoff.md` |
+| **Designers review prototypes** | Noah + designers | `projects/<id>/review.md` already holds it |
+| **Decide on the managed harness** ([step 11](#step-11--decide-if-the-managed-harness-is-needed)) | Noah | Needs real usage first; the friction log is the evidence |
+| **Ship `.flkd` in the package + org transfer** ([step 17](#step-17--ship-the-design-system-context-in-the-package)) | Design System owner | Specified, including the generator it needs |
+| **Designer AWS access** ([step 18](#step-18--designer-environment-access)) | Noah | Access is confirmed as provisionable |
+| **Open the step 14 conversations** ([step 14](#step-14--workspace-shared-review)) | Noah | GitHub auth, preview provisioning, capture storage, knowledge-repo access — their lead time is other people's calendars |
 
 **Status values:** Not started, In progress, Complete. A step is Complete only when its "done when"
 is met and the evidence is cited in the [change log](#change-log).
@@ -989,7 +1083,7 @@ only if step 11 calls for it.
 
 **Noah. Complete.** Settled over the course of writing this plan rather than in a sign-off meeting:
 
-- The [agent contract](#the-agent-contract), the [artifact matrix](#required-artifacts-by-credibility-level), the four credibility levels, and the [request guide](#the-request-guide) are **approved** — they were revised repeatedly while writing this, which is the approval.
+- The [agent contract](#the-agent-contract), the [artifact matrix](#what-each-piece-of-work-owes), the four credibility levels, and the [request guide](#the-request-guide) are **approved** — they were revised repeatedly while writing this, which is the approval.
 - The four decisions below are **settled**.
 - **Owners:** Noah owns the sequence and every judgment in it. Claude does the repository work. Step 5 needs the Design System owner, step 10 needs a receiving engineer, and steps 13–16 need engineering — each named when that step is reached rather than in advance.
 - **These planning documents live in `flocksafety/flock-designer`**, alongside the standards and the project folders, and move there when step 6 pushes.
@@ -1539,6 +1633,32 @@ same failure that left the codebase path unbuilt for nine steps.
 adding a nav item to the product changes what the prototype shows without anyone editing the
 prototype.
 
+#### Verified 2026-09-29
+
+`667c5070`. `/design/<project-id>` is registered **only** when `config.isDesignMode`, so it can never
+exist in production — which is what keeps it inside [non-negotiables](#the-agent-contract) §1's ban on
+production routes. It works because `App.tsx` renders the header and sub-nav **above** `<Routes>`, so
+anything mounted inside inherits the real navigation with no wiring and nothing to keep in sync.
+
+**The criterion was tested, not assumed.** A nav item, `NAVTEST-A2`, was added to the real product's
+`useAdminSubNavItems` and appeared in the prototype. No prototype file contained that string —
+verified zero matches — so it was inherited, not copied. Reverted after.
+
+**It also exposed a defect the criterion did not ask about.** A prototype's `host.tsx` renders its own
+`FSUniversalNav`, so mounted at `/design/` it stacked a reconstructed nav under the real one. A small
+context now tells a prototype the real shell is already around it, and `host.tsx` skips its chrome;
+standalone via `start:prototype` it still draws it. The two modes now differ deliberately rather than
+by accident.
+
+**Both ways of opening a prototype stay**, because they answer different questions: `start:prototype`
+is isolated and faster when the view does not depend on its surroundings; `/design/<id>` is right when
+placement, navigation or surrounding density is the question.
+
+**Navigating away from a prototype lands you in the real product**, on mock data. That is deliberate:
+a prototype is one view at one route, and what surrounds it is the genuine neighbour to compare
+against. Making its nav links route *within* the prototype would mean the prototype owning routing —
+forbidden — and would leave no way to tell a real link from a simulated one.
+
 ### Step B1 — Prove the codebase path
 
 **Claude builds it; Noah judges it.** Track B's first step, and the thing the plan described from the
@@ -1561,20 +1681,73 @@ swaps.
 **How it is checked:** mechanical. Unlike Track A's remaining gate, nothing here needs a person until
 step 10.
 
-### Step 10 — Hand one off to an engineer
+### Step B2 — Build the handoff
+
+**Renamed 2026-09-29.** It was "Hand one off to an engineer," which made a step depend on someone who
+is not Claude and turned "what is next" into a list of blockers. **Building the handoff is the step.**
+An engineer receiving one is real and still wanted — it is in
+[Waiting on other people](#waiting-on-other-people--never-blocks-a-step), where it belongs.
+
+**Complete.** `npm run handoff -- <project-id>` runs 15 checks and refuses unless the work is genuinely
+ready; **HANDOFF.md** is produced at the branch root where engineering will actually see it.
 
 **Noah picks the proof and the engineer; Claude prepares the handoff.** This is here, rather than
 inside the app at step 15, because handoff is the claim engineering cares about most. Testing it by
 hand costs little; discovering at step 15 that the shape was wrong means rebuilding it inside an
 application.
 
+- **Build the `/handoff` command here.** Handoff was briefly a credibility level, which was wrong — it is a deliberate, formal run, not a setting chosen before any work exists. This step is where that command gets defined: what it checks, what it produces, and what it refuses to do when the work is not ready. Tool-agnostic language first, with a thin `.claude/` adapter if a slash command is wanted.
 - **Prototype path:** Claude creates the handoff branch, runs the checks against every touched state, and writes `handoff.md` with the [accessibility and hardening report](#the-accessibility-and-hardening-report) and a **rewrite plan**.
 - **Codebase path:** there is no rewrite. Engineering **takes the branch over**. Claude's job is to hand it across complete — every state built, tests written, accessibility actually run rather than recorded as "not run", and `handoff.md` carrying the **list of stubbed MSW endpoints**, which is precisely the work engineering picks up.
 - Noah gives it to the engineer who would actually build it, and records whether it reduced ambiguity, what they still had to ask, and what they wanted that it lacked.
 - Claude then revises the report and writes the handoff skill from what the engineer said.
 
+#### The command is built, 2026-09-29
+
+`05fa8a52`, `3f137cd6` in `flock-coke`. **Claude's half of this step is done; the half that closes it
+is not.**
+
+**`npm run handoff -- <project-id>`** refuses when the work is not ready. It checks a clean working
+tree, that the brief and handoff exist, `tsc`, lint, tests — required on the codebase path, optional
+for a prototype — the bundle and boundary checks for prototypes, and that shipping code does not hand
+over accessibility marked "not run" without saying why. **Every false claim this project has produced
+was one nobody could run**; this makes "ready for engineering" a fact.
+
+**It caught a real failure on its first run** — repo-wide lint was failing on `smoke-prototype.mjs`,
+which I had linted with a scoped check that passed. "Lint passes" was an assertion and it was wrong.
+
+**`.flkd/skills/prepare-handoff.md`** is the judgement half, deliberately not in the script: lead with
+what engineering actually picks up, name the decisions made that were not the agent's to make with the
+most-likely-wrong first, and report accessibility as run or not-run but never as silence. The gap log
+has carried this skill as deferred since step 4, waiting for a real handoff to write it from.
+
+**Verified against the real B1 branch:** all eight checks pass on `feature/users-inactivity-signal`.
+
+#### What handoff actually is
+
+**Clarified by the plan owner 2026-09-29, and it is narrower than this step assumed.** Handoff is
+**getting a branch properly hardened and leaving it ready**. Design passes it along manually;
+engineering takes the branch and does what they need with it. There is no ceremony beyond that.
+
+**The handoff document lives in the branch**, at the root as **HANDOFF.md**. It had been written into
+`flock-designer/projects/<project-id>/`, a different repository — whoever took the branch would never
+have seen it. Corrected in `cef176be`; the gate now requires it in the branch.
+
+**Two documents, two audiences, no duplication:**
+
+| | |
+|---|---|
+| **HANDOFF.md**, in the branch | What engineering picked up. The feature, which files are actually it, what remains, and the decisions design made that were not design's to make. Deleted when the work merges — it describes a handoff, not the product |
+| `flock-designer/projects/<id>/` | Why it was built that way. Brief, context receipt, both reviews. Stays |
+
+**It must name which files are the feature.** The first real handoff had five feature files among
+sixty, because the branch carried Flock Designer infrastructure that has not merged to `develop`. An
+engineer opening that cannot tell what they are looking at, so the document gives the exact `git diff`
+that shows only the feature.
+
 **Done when:** an engineer has received a real handoff and said whether it helped, and the report
-reflects their answer.
+reflects their answer. **This is human-gated and Claude cannot close it** — Noah picks the engineer
+and records what they said.
 
 ### Step 11 — Decide if the managed harness is needed
 
@@ -1589,22 +1762,89 @@ cheaply. Deciding in advance would invert the evidence.
 **Done when:** the decision is recorded in the change log either way. If yes, see
 [the managed harness](#if-step-11-says-yes-the-managed-harness).
 
-### Step 12 — Add states, captures, and accessibility checks
+### Step B3 — Close the review and evidence gaps
 
-**Claude.** The runtime support that makes review routine, once real use has shown what is needed.
+**Claude.** Written before real use; **rescoped 2026-09-29 against what four real projects actually
+showed.** Two of its four original items are done or overtaken, and the remaining two are the
+evidence gaps every review so far has recorded as unmet.
 
-- A standard way to switch among intended states and variants.
-- Screenshot or review-link capture for the states that support a decision.
-- The configured accessibility check for every touched state that can be exercised, plus a short manual keyboard and focus review. An axe bypass is never recorded as a pass.
-- Tighter unhandled-request behaviour as fixture coverage becomes trustworthy.
+| Original item | Now |
+|---|---|
+| A standard way to switch among states | **Done.** Prototypes carry a state switcher; the codebase path shows real states |
+| Screenshot / review-link capture | **Overtaken.** Captures existed to annotate shared previews, which is [step 14](#step-14--workspace-shared-review). Nothing needs them before then |
+| **The accessibility check actually running** | **Still open, and the real gap.** Every review so far records the axe scan as "not run — Cypress will not launch." That is four consecutive artifacts with no automated accessibility evidence |
+| **Unhandled requests visible, not silent** | **Still open.** `onUnhandledRequest: 'bypass'` means a missing fixture looks like a working screen with absent data |
 
-**Done when:** a reviewer can switch to, capture, and check every decision-relevant state, and an
-unhandled app-data request is visible rather than silent.
+**Done when:** the automated accessibility check runs against a prototype and against a codebase-path
+change, producing real output rather than "not run"; and an unhandled app-data request in design mode
+is visible rather than silently bypassed.
+
+**Status: Complete, 2026-09-29.** Both, plus the debt they left behind.
+
+**The scan.** `npm run a11y` — axe-core 4.10.3 driven by vitest and happy-dom, all already installed.
+Cypress still does not launch here (`npx cypress verify` rejects its own Electron flags on
+darwin-arm64), and it never needed to: axe needs a DOM, not Cypress. It now runs across **all five
+work branches** — four prototypes and two codebase changes — and every project record that said "not
+run" now carries a real result.
+
+It found things on its first run, which is the argument for having it:
+
+| Found | Where | Disposition |
+|---|---|---|
+| `aria-required-children` — the grid toolbar sits inside `role="grid"`, which may only own rows | `orgUsersListSlotComponents.tsx` and every prototype copying it | **Product defect, recorded as inherited.** Named, with an owner |
+| `aria-required-children` — `role="list"` holding `role="img"` children | `roleListRowCard.tsx`, on `develop` today | **Product defect, written up in that branch's HANDOFF.md** for the engineer to decide |
+| A landmark `role="region"` nested inside a grid | The prototype toolbar, copied from production | **Fixed** in the prototype |
+| Testing Library's cleanup never registered, so renders piled up in one document and `screen` queries matched the previous test's markup | Every spec in the repo | **Fixed** in the shared render helper |
+| A vitest cache file committed to git, dirtying the tree on every run | `__tests__/node_modules/` | **Fixed** — `.gitignore` only anchored `node_modules` at the root |
+
+Three supporting pieces were needed to make it honest rather than green:
+
+- **`renderInShell`** wraps in `FSApp`, the wrapper that ships and that the product's own specs
+  already use. The alternative on offer was the older pattern of mocking the whole component library
+  with plain divs — which scans markup nobody ever receives.
+- **`useStubbedLayout`** gives happy-dom a viewport. Without it MUI's DataGrid virtualises to zero
+  rows and axe reports a missing-row fault that exists only in the test. Switching the rule off
+  would have been quicker and would have hidden the real version of the same fault.
+- **`InheritedViolation`** records a violation this work did not introduce and cannot fix from here.
+  Every entry must name what is wrong and who can fix it, and **the run fails once an entry stops
+  firing** — so a suppression cannot outlive its defect. It is the opposite of switching a rule off.
+
+**Unhandled requests.** `onUnhandledRequest: 'bypass'` sent anything unmocked to the real API, where
+it failed authentication, the app swallowed the error, and the screen rendered correctly with the
+data simply absent — an empty table reading as a design decision. App-data requests are now refused
+and named in a bar at the bottom of the window with the method and path a handler would need. Fonts
+and third-party scripts still pass through, which is why blanket bypass was there to begin with.
+
+**What still cannot be checked here, and who owns it.** Tab order, focus visibility, keyboard
+reachability, colour contrast, and the screen-reader read-through all need a browser or a person.
+happy-dom has no layout, so axe's `color-contrast` rule is disabled there by design. Every record now
+names this as one gap with one owner — the first browser-based accessibility pass — rather than
+repeating "not run" per row. That pass is in [Waiting on other people](#waiting-on-other-people--never-blocks-a-step), not
+in the sequence, because it is not something Claude can finish.
+
+**Then both reviewers ran, and the scan's own honesty was the first thing they broke.** The helper
+read `results.violations` and discarded `results.incomplete` — axe's undecided results — so a green
+run was hiding items on **five of six branches**. With that fixed, the reviews turned up nine more
+real defects, including one of mine: an `InheritedViolation` recording something as unfixable that
+the prototype could fix in four lines. **A suppression that is merely untrue is worse than no scan,
+because it looks like diligence.** It was deleted and the underlying defect fixed. Also fixed, not
+recorded: a tooltip on a disabled control that no keyboard could reach, four row titles rendering as
+`<h6>` under an `<h1>`, a `partial` state whose banner named data it was still showing, an unnamed
+search box, and two `aria-label`s landing on elements ARIA forbids naming.
+
+**Made required, not merely possible.** `non-negotiables.md` §7 now says every view gets a
+`*.a11y.spec.tsx`; the handoff gate refuses work that has none and refuses a run where axe found
+anything. Both were written the day the scan started working, so nothing lands having skipped it.
 
 ### Step 13 — Build the Workspace local loop
 
-**Engineering.** The first line of application code. Everything local — no network integrations, no
-shared services, no external approvals.
+**Claude. Complete, 2026-09-29** — `158eab3` in `flock-designer`, `75730a90` in `flock-coke`.
+The first line of application code. Everything local — no network integrations, no shared services,
+no external approvals.
+
+*(This step said "Engineering" until it was built, which contradicted the rule that a step is
+something Claude can finish. Writing the application is Claude's; steps 14–16 are the ones that need
+other people, and they say so.)*
 
 - The Electron shell for macOS and Windows, with a secure renderer, preload, and main-process boundary.
 - Open one Coke checkout, read `.flkd`, and render the context receipt.
@@ -1619,6 +1859,28 @@ calendars.
 **Done when:** a designer goes from a request to a local, repo-backed preview through Workspace
 without learning the underlying Git and dev-server mechanics.
 
+**Built, in `flock-designer/workspace/`.** Electron 44, React 18, FUI, TypeScript; `npm run dev`,
+`npm test`, `npm run smoke`.
+
+| Owed | Built | Proven by |
+|---|---|---|
+| Electron shell with a secure renderer/preload/main boundary | `contextIsolation`, `sandbox`, no `nodeIntegration`, a CSP with no remote origins, one named-operation bridge with no generic invoke | `npm run smoke` boots the real app and asserts the window opened and the renderer loaded |
+| Open a checkout, read `.flkd`, render the context receipt | `descriptor.ts`, `contextReceipt.ts` | Parses the descriptor Coke actually ships and resolves Coke's real FUI version from its lockfile |
+| Create and continue branches through explicit user action | `git.ts`, `iterations.ts` | Refuses on a dirty tree, refuses a name already taken, and treats a branch name with shell metacharacters as a name |
+| Invoke the Claude Code adapter and run one allowlisted command | `agent.ts`, `runtime.ts` | The allowlist refuses anything undeclared; a descriptor cannot smuggle in a shell string |
+| Persist named iterations and write to the project folder | `iterations.ts` | The record survives switching branches, which is exactly what a record on the branch would not |
+| The journey itself | — | One test runs all of it against a real repository: open → receipt → iteration → agent → preview → stop → return |
+
+**Three things the build found.** The iteration record was first written into the product checkout,
+which dirtied the tree and then blocked the next iteration on its own bookkeeping — the plan had
+already settled that records live in `flock-designer/projects/`, and had already given this reason.
+A stopped preview reported itself as a crash, because `stop()` removed the entry before the exit
+handler could tell the difference. And `ELECTRON_RUN_AS_NODE`, which editors and agent harnesses
+export into the environment, makes the Electron binary run as plain Node and die on its first line.
+
+**The click-through is confirmed.** Noah ran the app on 2026-09-29 and reported it works. That was
+the one thing the tests could not answer, and it is the go/no-go below: **the answer is go.**
+
 **This is the honest go/no-go.** Step 9 already proved designers can reach the outcome without an
 application; this only makes it easier, and the collaboration value arrives at step 14. It is the
 step most at risk of being built because it is on the list rather than because it is needed.
@@ -1628,9 +1890,9 @@ step most at risk of being built because it is on the list rather than because i
 **Engineering.** The function the design team is actually missing, and the first step needing
 anything outside the laptop. Its [decision gates](#part-iv--decision-gates) must close first.
 
-- Settle the comment-anchor shape against a real review; the fields are in [Part IV](#anchored-comment-shape).
-- Stand up the shared project-memory repository under the approved access model.
-- Authenticate to GitHub through the approved model; create and retarget the project's single draft PR.
+- Settle the comment shape against a real review; the fields are in [Part IV](#comment-shape), and position is optional on it.
+- **Have Workspace manage its own `flock-designer` checkout**, not assume a designer cloned it by hand: clone it on first use if absent, pull before reading standards or project memory, commit and push project-folder writes. This needs no new auth model — it is the same git access a designer already has to read the repository, run through the git service step 13 already built. **Installing Workspace should be enough; nothing about the shared repository should require a manual git step.**
+- Authenticate to GitHub through the approved model; open a PR for the branch being shared. This gate is for the review/PR path specifically — draft PRs, comments, and build status as the acting user — not for the plain git access above.
 - Confirm the Coke `PR Deployment` workflow runs for **draft** PRs specifically, and that its URL, access policy, and expiry are acceptable.
 - Add GitHub-backed comments and visual markers on locally produced review captures, validated across two designers.
 - Record preview expiry and rebuild instructions rather than treating a temporary deployment as durable evidence.
@@ -1665,9 +1927,68 @@ accidental prototype architecture.
 **Done when:** there is enough real usage and operational evidence to approve a broader internal
 rollout.
 
+### Step D1 — Stop copying the design system; point at it
+
+**Claude. Complete, 2026-09-29** — `873aba9` in `flock-react-component-lib`, `bf5b4c13` in
+`flock-coke`.
+
+**This step was written as "build the context generator" and the plan owner reversed it mid-build.**
+The reversal was right and the reasoning is worth keeping, because it applies to everything in
+`.flkd/`.
+
+**What was there.** `component-manifest.json`, `tokens.json` and `deprecated-components.json` —
+**3,071 lines** holding 133 components, **494 resolved hex values** and a `versionScannedFrom` stamp.
+Produced once in `0f25abd`, never regenerated, four patch versions stale.
+
+**What the generator found before it was deleted.** Building it was not wasted, because it proved the
+copies were wrong in ways nobody had noticed:
+
+- **`FSFormInput.onChange` was published as `(fieldName: string) => void`.** It takes
+  `(fieldName: string, value: string | number | boolean | string[] | null) => void`. The manifest was
+  dropping the argument carrying what the user typed — in the one field that exists to stop people
+  getting these handlers wrong.
+- **`FSAlertButton` was documented with `FSAlert`'s description and prop allowlist.** It takes
+  `FSButtonProps`. The same fault gave the whole `FSGridToolbar*` family `FSDataGrid`'s 60 props:
+  components declared inside another component's file had each inherited their neighbour's entry.
+- Three MUI re-exports claimed `FSDataGrid`'s props; `tokens.json` was missing the `desktopNav`
+  breakpoint entirely.
+
+**Why the generator was deleted anyway.** Noah, on seeing 494 hex values in a file a generator would
+now keep in sync: *"I don't want to add a ton of scripting where if things change in the design
+system, we're constantly having to go back and update these files... the files inside the design
+system should be pointing to the actual files in there."*
+
+That is correct, and it dissolves a problem rather than automating it. **The version question was
+self-inflicted.** `versionScannedFrom` existed only because facts were copied; the whole chain —
+manifest vs source, source vs installed, and a hard validator failure when a checkout sat one patch
+ahead of the product — was the cost of keeping a copy. Nothing is copied now, so there is nothing to
+stamp and nothing to mismatch.
+
+**What replaced it.** Every fact was already in the package a product installs:
+
+| Question | Where it is answered now |
+|---|---|
+| What components exist? | `ls node_modules/@flocksafety/flock-react-component-lib/build/src/components` |
+| What props does it take? | That component's shipped `index.d.ts`, including the MUI augmentations — which is where `FSChip`'s `variant="status"` is declared |
+| What is deprecated? | `grep -rl '@deprecated'` over the same directory — the JSDoc survives into the declarations |
+| What is a token worth? | `createFSTheme()`, which returns the theme the app renders with |
+
+`tokens-and-styling.md` now lists palette key *names* and no values; `component-usage.md` keeps the
+hand-written knowledge the types cannot express — the deviations that type-check and still surprise
+you. **`validate.py` reads the installed package** and gained a check that **fails on a hex literal
+in any context file**, which is what stops the snapshot growing back.
+
+**Done when:** no context file restates a value the package already carries; every reference across
+both repositories points at the package; and `validate.py` passes reading only from `node_modules`.
+**Met** — 606 checks, 0 failures, and no version NOTE, because there is no longer a version chain to
+report on.
+
+**The rule this leaves behind, which is the durable part:** *a context file states judgment, not
+data.* Where something is written down twice, one copy is always about to be wrong.
+
 ### Step 17 — Ship the design-system context in the package
 
-**Design System owner, with a developer. Claude can write the generator.** Deferred here
+**Design System owner, with a developer.** Much smaller since [step D1](#step-d1--stop-copying-the-design-system-point-at-it) removed the snapshots this step existed to keep current. Deferred here
 deliberately: steps 1–16 work against a sibling checkout, which is enough to build and prove the
 workflow. This closes the class of problem rather than managing it.
 
@@ -1678,22 +1999,25 @@ generator**: `component-manifest.json`, `tokens.json`, and `deprecated-component
 once in `0f25abd` and have never been regenerated. Publishing a manifest nothing regenerates just
 distributes the stale one on a schedule.
 
-- **Build the generator.** Inputs: FUI `src/` for exports, props, deprecations, and token values; the
-  built bundle for the published export list, which is what a consumer can actually import; Storybook
-  story `parameters` for groups, subtitles, and Figma/Storybook links. It stamps `versionScannedFrom`
-  from `package.json` and runs on release, so the published context and the published bundle cannot
-  disagree. The spec is in FUI's `.flkd/README.md`.
-- **Decide what `cokeUsages` and `common` become.** 35 components carry a usage count sourced from
-  scanning Coke, so the manifest is a cross-repository artifact today. Drop the fields, generalise
-  them to "used by N products," or accept a multi-checkout build and say so. A Coke-shaped field in a
-  design-system artifact is one product's habits promoted to a system fact.
+- **No generator is needed, and the snapshots are gone** — see
+  [step D1](#step-d1--stop-copying-the-design-system-point-at-it). This step used to exist largely to
+  keep a copy of the design system's facts in step with the design system. There is no copy. What
+  remains here is smaller and is about distribution only: whether the judgment files in `.flkd/`
+  travel with the package rather than requiring a sibling checkout.
+- ~~**Decide what `cokeUsages` and `common` become.**~~ **Settled by deletion, 2026-09-29.** The
+  fields described one consuming product inside a design-system artifact, which made the manifest
+  impossible to build from this repository alone. The manifest is gone and they went with it.
 - **Ship `.flkd` in the package.** Today `package.json` has `files: ["build", "dev/postinstall.ts"]`
-  and nothing copies `.flkd` into `build/`.
+  and nothing copies `.flkd` into `build/`. **Lower stakes now** — what would ship is judgment that
+  changes rarely, not data that goes stale, so a sibling checkout being slightly behind costs much
+  less than it used to.
 - **Reverse the resolution order in practice.** Both repositories already list the package first; it
   falls through to the checkout because the package has no `.flkd`. When this lands, nothing in
   either repository changes.
-- **Drop the release-tag requirement** from the setup path, and turn `validate.py`'s staleness NOTE
-  back into a failure once a generator makes it actionable.
+- ~~**Drop the release-tag requirement**, and turn `validate.py`'s staleness NOTE back into a
+  failure.~~ **Both gone, 2026-09-29.** The staleness NOTE and the version chain it belonged to were
+  removed with the snapshots; `validate.py` reads the installed package, so there is no stale
+  generated context to report on and no tag to check out against.
 
 #### Also here: the org transfer
 
@@ -1786,7 +2110,7 @@ Four decisions, each with a recommendation. Step 4 and the learning loop impleme
 
 **2. The view-state list** — the repository names five view states, this plan names six.
 
-**Recommended: one list of seven**, held in `standards/universal/interaction-states.md`, with this plan's [state table](#states-are-runtime-not-decoration) linking to it rather than restating it: default or loaded, loading, empty, error, partial, success or changed, and permission or disabled where relevant. Partial is in the repository and missing from the plan, and the request guide's own example — "what they see when a bulk action partly fails" — is a partial state. The list lives in the repository because that is what the agent reads. The [artifact matrix](#required-artifacts-by-credibility-level) still decides how many of them each credibility level owes, so Explore stays light.
+**Recommended: one list of seven**, held in `standards/universal/interaction-states.md`, with this plan's [state table](#states-are-runtime-not-decoration) linking to it rather than restating it: default or loaded, loading, empty, error, partial, success or changed, and permission or disabled where relevant. Partial is in the repository and missing from the plan, and the request guide's own example — "what they see when a bulk action partly fails" — is a partial state. The list lives in the repository because that is what the agent reads. The [artifact matrix](#what-each-piece-of-work-owes) still decides how many of them each credibility level owes, so Explore stays light.
 
 **3. `FLOCK-DESIGNER-EVALUATION.md`** — retire it, or keep it as history.
 
@@ -1827,7 +2151,7 @@ Observed 2026-09-27 on `flock-coke` `noah/flock-designer` at `6bf0f1b8`, and `fl
 
 | File | Today | Change in step 4 |
 |---|---|---|
-| `.flkd/agents/flock-designer.md` | Good reading order and verification. Has no credibility levels, brief, context receipt, change boundary, or project folder. Asks for "all four states" every time. Its FUI query commands use `FUI=../flock-react-component-lib/agent`, a directory that does not exist; the context is in `.flkd/` | Add the [operating loop](#the-operating-loop) as its working steps: frame, write `brief.md`, write the context receipt, stop for confirmation at Ground and above, build to the level, write `review.md`. Scale states to the [matrix](#required-artifacts-by-credibility-level). Fix the FUI path. Add the always/never list verbatim from the agent contract |
+| `.flkd/agents/flock-designer.md` | Good reading order and verification. Has no credibility levels, brief, context receipt, change boundary, or project folder. Asks for "all four states" every time. Its FUI query commands use `FUI=../flock-react-component-lib/agent`, a directory that does not exist; the context is in `.flkd/` | Add the [operating loop](#the-operating-loop) as its working steps: frame, write `brief.md`, write the context receipt, stop for confirmation at Ground and above, build to the level, write `review.md`. Scale states to the [matrix](#what-each-piece-of-work-owes). Fix the FUI path. Add the always/never list verbatim from the agent contract |
 | `.flkd/agents/product-parity-reviewer.md` | Strong design-system and parity checks; has an accessibility section | Write findings in the parity and accessibility shape [`review.md`](#the-review-record) expects; label observed facts, inferences, and proposals separately |
 | `.flkd/agents/implementation-reviewer.md` | Strong boundary checks. **No accessibility lens.** Checks for a `proto/*` branch and "outside `src/prototypes/`" rather than the declared change boundary | Add the implementation accessibility lens from the [review model](#the-review-model): semantic components, labels and roles, keyboard reachability, focus management, status announcement. Check against the change boundary in `brief.md`. Report "not run" with its reason |
 
@@ -1952,11 +2276,11 @@ The **Gate by** column matters as much as the recommendation. Gates due at step 
 | Where do the shared agent files, skills, and standards live as more products adopt this? | Three layers, per [knowledge layers](#knowledge-layers): a shared `flock-designer` repository for the agent definitions, skills, universal standards, Flock tier, and Part I contracts; FUI's `.flkd` for component facts; each product's `.flkd` for its own patterns, boundaries, and records. Create the repository in step 4 and move the already-portable standards into it, resolved from a sibling checkout as FUI is today; add a CODEOWNERS co-owner once promotions start changing those standards, and publish it as a package declaring FUI as a peer dependency when a second product adopts it. Not a per-designer tool plugin. | 446 lines of the product repository's standards already carry no product-specific reference, and the universal tier was written to move. Ownership and release cadence differ from FUI's: an accessibility change should not need a component release. A plugin installed per designer would be absent for Workspace, CI, and other engineers' checkouts, and would re-couple content to one tool that `.flkd` was built to stay independent of. | Design operations + design system + product engineering | step 4 for the repository; co-owner and publication at the second adopting product |
 | How should the product move from current WCAG 2.0 A enforcement toward WCAG 2.1 and 2.2? | Keep 2.0 A as the enforced floor; make 2.1 AA the next formal target through a coordinated manifest-and-check update. Assess 2.2-friendly patterns only within feature scope until a later formal uplift. Estimate 2.0 A → 2.1 AA as a substantial piece of product work: it changes version and level together and pulls in the entire 2.0 AA set. | Coke currently enforces 2.0 A while the program direction is 2.2 A/AA. A staged path prevents false assurance, competing agent-file targets, and uncontrolled scope expansion. | Compliance + accessibility program + product engineering | step 1 for the position; step 10 for the first report |
 | How should the runtime baseline proceed? | Selectively reimplement the verified `noah/local-design-mode` MSW approach on top of the Designer branch; do not merge the divergent branch wholesale. Treat this as the primary fix for designer onboarding. | Preserves current `.flkd` work while bringing forward the useful real-shell runtime foundation, and removes the actual barrier to designers running the product. | Coke engineering | step 8 |
-| How does Workspace authenticate to GitHub? | Use a GitHub App installed on the participating repositories, with per-user authorization and tokens held in the OS keychain. Do not ask designers for personal access tokens, and do not embed a shared credential in the application. | Workspace needs to create PRs, post comments, and read build status as the acting user, with revocable, auditable, scoped permissions. This is the gate most likely to require security review, and step 14 cannot start without it. | Platform/security engineering | step 14 |
-| Which internal preview publisher creates the shareable link and how is it protected? | Use Coke's existing GitHub Actions `PR Deployment` path, which calls the internal `s3-frontend-v2` reusable workflow. Workspace maintains one draft PR per project. Confirm specifically that the workflow runs for **draft** pull requests, not only non-draft ones, and confirm the returned URL, SSO/access policy, expiry, and cost. | This is the strongest local evidence of an existing company preview mechanism and keeps the workflow GitHub-native. Draft-PR triggering is a distinct risk from repository provisioning and has to be tested separately. | Platform/security engineering | step 14 |
+| How does Workspace authenticate to GitHub? | **A "Sign in with GitHub" button, not a Google/SSO login.** Use a GitHub App, installed once on the participating repositories by whoever administers them. After that one-time install, each designer clicks "Sign in with GitHub" inside Workspace, GitHub asks them to approve it, and GitHub hands back a token scoped to that person's own existing repo permissions — the app can only do what they could already do by hand through the GitHub UI. The token lives in the OS keychain, not in a config file or a shared secret. Google Auth cannot substitute for this: it can confirm who someone is, but only GitHub can issue a token that acts on GitHub, since the permission being granted is GitHub's to give. | Workspace needs to create PRs, post comments, and read build status as the acting user, with revocable, auditable, scoped permissions. This is the gate most likely to require security review, and step 14 cannot start without it. **Okta, asked 2026-09-29: Workspace never integrates with Okta.** SAML SSO is an arrangement between GitHub and Okta; the app only ever talks to GitHub, and GitHub redirects to Okta on its own when it needs to. No Okta credentials or configuration exist on this side. **The sign-in must open the designer's real browser, not a window inside the app** — that is what makes an existing Okta-authenticated GitHub session carry over with no password prompt, and an embedded login view is both a worse experience and a likely security-review objection. **Three things are not automatic:** the GitHub App has to be created, an org owner has to install it on each participating repository, and authorizations expire under SAML — so the app needs a real "sign in again" path rather than assuming a token lasts forever. **Ask the org administrator specifically:** whether user tokens expire on a fixed schedule under Flock's SAML enforcement, and what revokes them. | Platform/security engineering | step 14 |
+| Which internal preview publisher creates the shareable link and how is it protected? | Use Coke's existing GitHub Actions `PR Deployment` path, which calls the internal `s3-frontend-v2` reusable workflow. **Draft triggering largely answered 2026-09-29 by reading the workflow** — it listens for `opened`/`synchronize`, which drafts fire, and nothing in Coke filters drafts; only the reusable workflow in `flock-github-actions` remains unread. Still to confirm with the owner: that reusable workflow's own draft handling, provisioning for a second repository, and the returned URL, SSO/access policy, expiry and cost. **Separately, the one-PR-per-project model needs a mechanism change** — see [the preview adapter](#runtime-and-preview-adapter). | This is the strongest local evidence of an existing company preview mechanism and keeps the workflow GitHub-native. Draft-PR triggering is a distinct risk from repository provisioning and has to be tested separately. | Platform/security engineering | step 14 |
 | How are review captures produced and stored? | Workspace captures locally from the local preview at a declared fixed viewport, on reviewer request. It does not authenticate against and screenshot a remote SSO-protected deployment. Store captures in Git LFS or an approved object store, not plain Git objects. | Local capture avoids Workspace holding a session credential for a protected preview. Indefinitely retained images in plain Git will dominate the repository within a few projects. | Design operations + platform engineering | step 14 |
 | What is the shared-comment model? | Use the project's GitHub draft PR as the collaboration thread for V1. Workspace writes structured marker metadata into the related GitHub comment and archives the full comment export, anchors, captures, and decision record in project memory. Defer a separate review service. | Reuses GitHub identity, permissions, history, and the existing draft-PR preview container without adding a collaboration backend. | Design operations + engineering | step 14 |
-| Is version/state-level feedback enough, or is visual annotation required for the pilot? | Include visual preview markers from the pilot. Anchor them to an immutable iteration/commit, route/state, fixed viewport, and normalized position; make carry-forward to a later iteration explicit. Also support unanchored general comments. | The visual reference is core to design critique, while an explicit anchor contract prevents comments from drifting as the experience changes. | Design leadership + engineering | step 14 |
+| Is version/state-level feedback enough, or is visual annotation required for the pilot? | **Reversed 2026-09-29.** Ship general comments only for the pilot — a comment tied to an iteration and a screenshot, no specific spot on it. Defer click- or drag-to-mark-a-spot; it is a small technical step once general comments exist (a click or a drag is stored as a position, or a box, as a percentage of the screenshot's width and height — no image recognition, nothing has to "figure out" what is in the picture), but it does not need to be built to ship the pilot. | Ships something real sooner; the anchor contract below is written so a later marker still slots into the same comment record rather than becoming a second system. | Design leadership + engineering | step 14 |
 | How should shared project memory support another designer taking over work? | **Settled:** one folder per project in `flocksafety/flock-designer`, holding both the context that was supplied and every record the agent wrote. Prototype code stays in the product repository on its own branch. | A project has a home before any code is written, picking up someone else's work means reading one folder rather than knowing which branch to check out, and nothing per-project is written into the product repository at all. | Design operations + product engineering + security | Step 6 |
 | What source code, data, prompts, and logs are allowed in a prototype or preview? | From step 1, adopt the conservative default the prototype contract already states: mock or synthetic data only. Before step 14, confirm the wider policy with its owners: permit only source the designer is already authorized to access, plus synthetic or approved anonymized fixtures. Block production credentials, customer exports, production service calls, and unapproved prompt/log retention. Require SSO access and expiration for previews. | Keeps the lightweight contribution path compatible with product-data and security boundaries. | Security + data governance + product engineering | step 1 adopts the default; step 14 for owner confirmation |
 | What persists after a project closes? | Retain prototype iteration branches indefinitely. Let preview deployments expire, but preserve their URL, commit, status, and rebuild instructions. Retain comments, marker anchors, captures, decisions, and handoff evidence indefinitely in project memory. Revisit branch retention once the product repository has accumulated real prototype history. | Keeps project continuity and review rationale available to a future owner while treating deployment infrastructure as a disposable runtime resource. | Engineering + design operations | step 14 |
@@ -2023,6 +2347,11 @@ Tauri is a reasonable future comparison if installer size and memory become firs
 - Showing iteration history, review threads, decision records, and handoff readiness.
 - Showing the product baseline, resolved FUI package, and any optional Design System work connection separately.
 - Opening existing Figma, GitHub, Storybook, and browser links in the right place.
+- **Keeping its own checkout of `flock-designer` present and current**, so a designer never sets up
+  the shared repository by hand: cloning it on first use, pulling before it is read, and committing
+  and pushing project-folder writes. Built at [step 14](#step-14--workspace-shared-review), using the
+  same git access already required to read the shared repository — not gated on the GitHub App
+  decision below, which is for the review/PR path.
 
 **The repository owns**
 
@@ -2062,10 +2391,12 @@ Electron main process
 Step 13 needs nothing beyond this. Everything above runs against a local checkout.
 
 Internal services, added at step 14:
-  |- GitHub App: authenticated PR creation/retarget, comments, build status as the acting user
+  |- GitHub App: authenticated PR creation, comments, build status as the acting user
   |- Internal preview publisher: existing Coke PR-deployment path, draft-PR triggering to confirm
-  |- GitHub draft PR: one per project, retargeted per iteration; thread and marker metadata
-  |- Shared knowledge repository: canonical project records and durable review archive
+  |- GitHub draft PR: one per shared branch; thread and marker metadata
+  |- Shared-checkout manager: clones/pulls/commits/pushes flock-designer automatically -- plain git,
+  |  the designer's own access, NOT gated on the GitHub App above. Listed here because it ships in
+  |  the same pass as the rest of step 14, not because it depends on any of it.
   |- Capture storage: Git LFS or approved object store for fixed review captures
 ```
 
@@ -2103,7 +2434,29 @@ The app manages known commands rather than executing arbitrary text from the UI:
 "Internal Preview" in the FigJam needs two steps:
 
 1. **Local:** a localhost preview opened inside or beside Workspace, reviewable by the person running it. This is all step 13 requires.
-2. **Shared:** Workspace maintains one draft PR per project and retargets it to the current iteration branch. Coke's checked-in `PR Deployment` workflow already calls the internal `s3-frontend-v2` reusable GitHub workflow; that is the first integration to validate. Two things must be confirmed separately: that the workflow triggers for **draft** pull requests at all, and that it can be provisioned for any additional repository. It should return a URL, build status, commit SHA, and expiry metadata. Access policy, retention, and cost remain integration decisions rather than Electron capabilities.
+2. **Shared:** Workspace opens a draft PR for the branch being shared -- one PR per branch. Coke's checked-in `PR Deployment` workflow already calls the internal `s3-frontend-v2` reusable GitHub workflow; that is the first integration to validate. It should return a URL, build status, commit SHA, and expiry metadata. Access policy, retention, and cost remain integration decisions rather than Electron capabilities.
+
+**Read 2026-09-29, before the gate conversation, because the answer was in the repository:**
+
+```yaml
+# .github/workflows/deploy-pr-s3.yaml
+on:
+  pull_request:
+    types: [opened, synchronize, closed]
+```
+
+- **Draft PRs almost certainly do trigger it.** GitHub fires `opened` and `synchronize` for draft pull requests like any other, and **nothing in Coke's workflows filters drafts** — `grep -rn draft .github/workflows/` returns nothing. The one piece that cannot be read from here is the reusable `flocksafety/flock-github-actions/.github/workflows/s3-frontend-v2.yaml@master`, which lives in another repository. **That is now a one-line question for its owner, not an open investigation.**
+- **`reopened` and `edited` are absent from the trigger list.** A closed PR that is reopened does not redeploy, and neither does a change to a PR's base branch.
+- **This is why the model is one PR per branch.** GitHub does not permit changing a pull request's **head** branch — the API accepts `title`, `body`, `state`, `base` and `maintainer_can_modify`, and nothing else. An earlier version of this plan had one project-wide PR moving from `i1` to `i2`, which cannot be done. Settled 2026-09-29: a branch that is worth sharing gets its own PR, and pushing to it fires `synchronize`, which does rebuild.
+- **A prototype PR must not read as "ready to send to engineering."** Raised 2026-09-29: an
+  iteration branch that never merges opening a PR looks, at a glance, exactly like a real pull
+  request — and a *second*, genuinely-for-engineering PR exists later at handoff (`fd/<project-id>/handoff`).
+  Left unmarked, the two are indistinguishable in a repo's PR list. Workspace always opens this PR in
+  **draft** state and never marks it ready for review, and the PR body it writes states plainly that
+  the PR exists only to produce a preview link and a comment thread, is not headed for `develop`, and
+  names the project folder as the actual record. Whether Coke's repo conventions also want a label
+  (e.g. `prototype-preview`) is a small settled-at-step-14 detail, not an open question — the
+  mechanism above is required regardless of what label convention it sits under.
 
 Preview environments must have no production data, no production credentials, and no public access by default.
 
@@ -2114,7 +2467,7 @@ Preview environments must have no production data, no production credentials, an
 3. **Inspect context.** Workspace shows the pinned product baseline, resolved FUI package, relevant product patterns, references, runtime option, and prototype boundary before the agent starts.
 4. **Create iteration 1.** With confirmation, Workspace creates the first prototype branch or worktree and asks the local agent to create or revise the artifact.
 5. **Run and inspect.** Workspace starts the approved prototype-harness or design-mode command and shows the preview alongside its review record.
-6. **Push for review.** Workspace opens or retargets the project's draft PR, invoking the internal PR-deployment path, and records the returned URL, build status, and commit.
+6. **Push for review.** Workspace opens a draft PR for that branch, invoking the internal PR-deployment path, and records the returned URL, build status, and commit.
 7. **Iterate.** Feedback attaches to that iteration. The next iteration branches from the prior selected iteration and retains its project memory.
 8. **Harden or stop.** The work is marked as useful exploration, or passed through code hardening and handoff. A component gap creates a linked Design System work item, never an automatic component change.
 
@@ -2130,14 +2483,24 @@ The app should be quiet and task-oriented, not a new visual design environment.
 | Context receipt | Make grounding visible | Show FUI version, patterns, references, constraints, and what the chosen credibility level requires |
 | Preview | Inspect the running artifact | Embedded or externally opened localhost preview |
 | Iterations | Preserve the path taken | Named `i1`, `i2`, `i3` records tied to Git commits and branches |
-| Review | Capture feedback and decisions in visual context | Preview markers plus general comments, tied to an iteration and state |
+| Review | Capture feedback and decisions in visual context | General comments tied to an iteration and screenshot for the pilot; a marker pinned to a spot on the screenshot is the deferred upgrade, same record shape |
 | Handoff | Package the result for engineering | Generated handoff plan with remaining work |
 
-### Anchored comment shape
+### Comment shape
 
-An anchored comment contains: author, timestamp, category, text, and status; immutable iteration and commit; preview URL plus route and named fixture state; fixed review viewport and normalized `x`/`y` marker position; and a link to the resulting GitHub draft-PR comment.
+**Reversed 2026-09-29 from "anchored by default" to "anchorable, not required."** A comment contains:
+author, timestamp, category, text, and status; immutable iteration and commit; preview URL plus route
+and named fixture state; and a link to the resulting GitHub PR comment. The position fields — fixed
+review viewport, and a normalized `x`/`y` point or `x`/`y`/`width`/`height` box — are present on the
+same record but **optional**. A comment with no position is a general comment on that iteration. One
+sets them later without changing what a comment is.
 
-For V1 the draft PR is the collaboration thread. Workspace writes the anchor metadata with the GitHub comment, renders it as a visual marker for authorized users, and exports the durable comment record, captures, anchors, and decision summary to the shared record's `review/` directory, and appends a summary to the project folder's `review.md`. A local app cache cannot be canonical for collaboration or continuity.
+The draft PR is the collaboration thread for V1: it is where the conversation actually happens, so
+comments carry their own commit history and notifications for free. Workspace exports the durable
+copy — comments, any positions, captures, and the decision summary — to the shared record's `review/`
+directory, and appends a summary to the project folder's `review.md`. **The PR is not the canonical
+copy; the project folder is.** A closed, deleted, or force-pushed-over PR does not take the record
+with it, and someone who never opens GitHub can still read the whole history in one file.
 
 ---
 
@@ -2145,7 +2508,16 @@ For V1 the draft PR is the collaboration thread. Workspace writes the anchor met
 
 Decisions already settled in this plan are not repeated here. What remains genuinely open:
 
-- Which fixture source should own long-lived design-mode data, who refreshes it, and how drift from real API shapes is detected.
+- **Which fixture source should own long-lived design-mode data, who refreshes it, and how drift from
+  real API shapes is detected.** Noah noted 2026-09-29: engineering is building (or has built) a mock
+  data service, intended for this. Two things need to be known before it changes anything here: **(1)**
+  does it generate fixture files ahead of time (a drop-in replacement for the hand-copied
+  `cypress/fixtures/` → `src/mocks/fixtures/` pattern Coke uses today, and low-risk), or does a running
+  prototype call it live over the network (a materially different guarantee — design mode's whole
+  safety model today is that a prototype makes zero real network calls, so nothing it does can reach
+  anything production, even by accident); and **(2)** who owns it and what it is called, so it has a
+  named owner here instead of "engineering" in the abstract. Not resolved — recorded so it is not lost
+  before those are known.
 - When does a review need real-shell validation rather than a reconstructed host? Step 9 should produce a rule of thumb rather than a policy written in advance.
 - Which visual or interaction checks can be automated without making the workflow slow enough that designers route around it.
 - Whether prototype branches should expire from the product repository after some period, given that they never merge and accumulate indefinitely.
@@ -2203,6 +2575,22 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-09-29 | **Track C paused, and the next step made findable.** Noah paused the Electron work — he has an idea for the Workspace worth working through before more is built on it. Nothing is lost by waiting: step 14 could not have started regardless, and step 13's own success measure is that every artifact stays usable without the app. **Two real problems fixed while doing it.** The track summary at the top of the sequence still said Track B was *"just specified, nothing built"* and Track C *"not started"* — both badly stale, in the one table a reader checks first. And **the design-system context generator was invisible**: step 17 said plainly *"Claude can write the generator,"* but the rest of 17 needs permissions and a release, so a step nobody could finish was hiding the one piece of real work that was ready. Split it out as **Track D, step D1**, the same way step 18 was split out of step 8 — and it is now the only unbuilt step Claude can finish. The `cokeUsages` decision, the packaging and the org transfer stay in 17 with their owners. | The sequence summary; Track C; new Track D and step D1; step 17; both status blocks. |
+| 2026-09-29 | **Four gate answers from Noah, three of them plan changes.** (1) GitHub auth: confirmed his "log in with GitHub" instinct is exactly the recommended mechanism, not a different idea — tightened the gate's wording to say so plainly and rule out Google Auth by name, since only GitHub can issue a token for GitHub permissions. (2) **Annotation reversed:** the plan said include click-to-pin markers from the pilot; Noah wants general comments only for the pilot, with spot-marking deferred. Changed the gate recommendation, the MVP UI table, and renamed "Anchored comment shape" to "Comment shape" with position fields now optional on the same record rather than required — so a later marker slots in without a second system. Also answered his "how would it know what's highlighted" question: it does not — it is a stored percentage position on a fixed screenshot, no image recognition. (3) **New requirement, not previously written down:** a prototype's PR must not read as a request to merge, since a real handoff PR exists later and the two would be indistinguishable in a PR list. Draft state and an explicit "do not merge" PR body are now required, next to the one-PR-per-branch mechanics. Confirmed separately that his "attach it to a markdown file" instinct was already the design — `review.md` is the durable copy, the PR is only the live thread. (4) **New fact, not resolved:** engineering has or is building a mock-data service. Recorded in Open Questions rather than integrated, because whether it generates fixtures ahead of time or is called live changes a real safety guarantee (design mode currently makes zero real network calls), and neither is known yet. | The GitHub-auth gate; the annotation gate and "Comment shape"; the MVP UI table; the PR-per-branch section; the fixture open question. |
+| 2026-09-29 | **Step 13 confirmed working, and the PR model corrected by the plan owner.** Noah ran the app: it works. That was the one claim the tests could not make, and step 13's go/no-go is **go**. **On the PR model, the plan was wrong and so was the fix I proposed for it.** The plan had one project-wide draft PR moving from `i1` to `i2`, which GitHub cannot do; I proposed a long-lived `fd/<id>/current` branch to work around it. Noah: *"it'll be one PR per branch"* — you pick an iteration, keep building on it, and open a PR for that branch. **No workaround is needed, because the problem was invented by the plan.** Branch-per-iteration stays, for the reason he gave: it costs nothing when you only do one, and it makes showing three at once cheap when the comparison is the point. A PR is opened when an iteration is worth sharing, not for every iteration — which also answers the "growing pile of open prototype PRs" the old rationale worried about. **Nothing built had to change**; the retargeting language was removed from nine places in the plan. | The git and iteration model; the preview adapter; the architecture diagram; the minimal user journey; step 13's status; both status blocks. |
+| 2026-09-29 | **Answered part of a step 14 gate by reading the repository instead of waiting for a meeting, and found a mechanism in the plan that cannot work.** Coke's `PR Deployment` workflow listens for `pull_request` `opened`/`synchronize`, which **draft PRs do fire**, and nothing anywhere in `.github/workflows/` filters drafts — so draft triggering is very likely already fine, and the only unread piece is the reusable workflow in `flock-github-actions`. That turns an open investigation into a one-line question for its owner. **The harder finding: "one draft PR per project, retargeted to the current iteration branch" is not possible.** GitHub does not allow changing a pull request's head branch — the API takes `title`, `body`, `state`, `base`, `maintainer_can_modify` and nothing else — so a PR opened from `fd/<id>/i1` can never point at `i2`. Retargeting the base would fire `edited`, which this workflow does not listen for, so it would not rebuild either. Candidate fix recorded for the gate owner rather than decided here: one long-lived `fd/<id>/current` branch per project that Workspace updates to the selected iteration, keeping the PR thread and its anchors alive across every iteration while each update fires `synchronize`. Iteration branches stay immutable and one per attempt. | The preview adapter; the preview-publisher gate row. |
+| 2026-09-29 | **Named a gap in step 14 before it could get lost: "stand up the shared project-memory repository" was a goal, not a build item.** Noah asked whether installing Workspace should be enough for the shared `flock-designer` checkout to just be there -- clone, standards, project records, all connected without a manual git step. It should, and now says so explicitly in step 14's bullets and the product boundary. **Split into two pieces that were being treated as one:** cloning/pulling/writing `flock-designer` needs nothing beyond the git access a designer already has to read it, so it does NOT depend on the GitHub App decision; only the review/PR path (draft PRs, comments, build status as the acting user) does. Both still ship in the same step-14 pass -- the split is about what gates what, not about pulling anything forward yet. | Step 14's bullets; the product boundary; the technical-architecture diagram. |
+| 2026-09-29 | **Step D1 reversed mid-build, and the reversal was right: the design-system snapshots are deleted rather than automated.** D1 was written as "build the context generator" and I built it. It found real errors the copies had accumulated — **`FSFormInput.onChange` was published as taking one argument when it takes two**, silently dropping the value the user typed, in the one field that exists to prevent exactly that; `FSAlertButton` carried `FSAlert`'s props when it takes `FSButtonProps`; three MUI re-exports claimed `FSDataGrid`'s 60 props. Then Noah saw what the generator would be keeping in sync — **494 resolved hex values** — and reversed it: *"the files inside the design system should be pointing to the actual files in there."* **That dissolves the problem instead of automating it, and it dissolves the version problem with it:** `versionScannedFrom`, the manifest-vs-source-vs-installed chain, and a hard validator failure whenever a checkout sat one patch ahead of the product all existed *only because facts were copied*. **3,071 lines of JSON deleted**, 39 lines of pointer added. Every fact was already in the installed package: prop types and MUI augmentations in the shipped `.d.ts`, `@deprecated` in the JSDoc, token values from `createFSTheme()`. `validate.py` now reads `node_modules` and gained a check that fails on a hex literal in any context file, so the snapshot cannot grow back. 606 checks, 0 failures, and no version NOTE. **The durable rule: a context file states judgment, not data.** | Step D1 (rewritten); step 17 (three items settled by deletion); Track D; `flock-react-component-lib/.flkd/` throughout; `flock-coke/.flkd/` and `check-handoff.mjs`. |
+| 2026-09-29 | **Step 13 built: the Workspace local loop, in `flock-designer/workspace/`.** Electron 44 + React 18 + FUI + TypeScript; 88 tests, the whole designer journey end to end, the services run against the real Coke checkout, and `npm run smoke` boots the actual app to prove the window opens rather than trusting that a build implies one. **Nothing about any product is compiled in** — a repository declares itself in `.flkd/workspace.json`, and its `commands` array is the entire allowlist, always as already-split `argv` so no shell parses anything. The renderer sees one object of named operations with no generic invoke, every root is checked against what the window actually opened, and every path resolves through a check that follows symlinks. **Three things the build found:** the iteration record first went into the product checkout, which dirtied the tree and blocked the next iteration on its own bookkeeping (the plan had already settled that records live in `flock-designer/projects/`, for this reason); a stopped preview reported itself as a crash because `stop()` removed the entry before the exit handler could tell the difference; and `ELECTRON_RUN_AS_NODE`, exported by editors and agent harnesses, makes the Electron binary run as plain Node and die on its first line. **Also corrected: step 13 was labelled "Engineering"**, which contradicted the rule that a step is something Claude can finish — writing the application is Claude's, and steps 14–16 are the ones that genuinely need other people. **What is not proven is the click-through**: the services and the journey are tested, but nobody has driven the UI. That is step 13's own go/no-go and it is now in *Waiting on other people*. | Step 13; the Track C table; both status blocks; `flock-coke/.flkd/workspace.json`. |
+| 2026-09-29 | **Both reviewers ran, on the two projects that had recorded them as "not run" — and the first thing they found was that the new scan was lying.** `expectNoAxeViolations` read `results.violations` and threw away `results.incomplete`, so undecided findings were invisible on **five of six branches**. Fixed: they report as NEEDS REVIEW and need the same named record a violation does. The reviews then found nine more real defects. **The one worth naming is mine:** an `InheritedViolation` claiming the prototype could not stop a toggle carrying two labels. It could — `FSToggle`'s `label` takes a ReactNode. The record was deleted and the defect fixed. *A suppression that is merely untrue is worse than no scan, because it looks like diligence.* Also fixed rather than recorded: a lock reason reachable only by mouse, four row titles rendering as `<h6>` under an `<h1>`, a `partial` state whose banner named data it was still showing, an unnamed search box, two `aria-label`s on elements ARIA forbids naming, and a `style` prop standards forbid. **`npm run handoff` is now green on all six work branches.** Two review records written that never existed (`unused-roles-signal`) or were half-written (`alert-notification-prefs`), and a Design System component gap corrected — "FSToggle cannot be named through its own API" was too strong; the real gap is that it always wraps its input in a `<label>`, so naming it from outside produces two. | Step B3; `axe.ts`; `check-handoff.mjs`; all six work branches; `review.md` for unused-roles-signal and alert-notification-prefs. |
+| 2026-09-29 | **Step B3 built: the accessibility scan runs for the first time, and a missing fixture is no longer silent.** `npm run a11y` — axe-core via vitest and happy-dom, both already installed. Cypress still will not launch here and never needed to. Run across **all five work branches**; every "not run" in every project record now carries a real result or a named owner. **It found four real defects on its first outing**, two of them in shipped product code (`aria-required-children` on the grid toolbar, and a `role="list"` of `role="img"` children), plus a repo-wide test hazard — Testing Library's cleanup had never registered, so renders piled up in one document and `screen` queries matched the previous test's markup. **`InheritedViolation` is the mechanism that keeps this honest:** a violation this work did not introduce is recorded with what is wrong and who fixes it, and the run **fails once it stops firing**, so a suppression cannot outlive its defect. Also: design mode now refuses and names unmocked app-data requests instead of passing them to the real API, where they failed auth and rendered as a working screen with absent data. Standards and the handoff gate now require the scan, so nothing lands having skipped it. **Three gaps found while doing this were fixed rather than recorded:** a vitest cache file committed to git, a handoff doc missing from `feature/unused-roles-signal`, and the gate asking a prototype for a handoff doc it does not owe. | Step B3; `non-negotiables.md` §7; `check-handoff.mjs`; `smoke-design-mode.mjs`; all five work branches; all five project records. |
+| 2026-09-29 | **Fixed a half-done rename that made B3 unfindable.** The Track B table listed B1/B2/B3, but the sections were still headed "Step 10" and "Step 12" — so the label existed in one place and the content in another, and the plan owner could not locate the only remaining step. Sections renamed to **Step B2** and **Step B3** with anchors and live prose following; change-log rows keep the old numbers, since they are history. **Verified mechanically: all 13 sequence rows resolve to a real section, 0 broken anchors.** Also noted why the numbering is mixed — Track A kept 1–9 because it is finished and the change log refers to those numbers constantly; renumbering completed work would break every historical reference for nothing. The links are what to rely on. | The sequence; steps B2 and B3. |
+| 2026-09-29 | **The sequence now contains only steps Claude can finish, at the plan owner’s direction** — "the whole point of writing the steps is that we can hit each one and clearly move on to the next." It had stopped doing that: every answer to "what is next" arrived with two human dependencies attached, because steps that needed an engineer, a designer or a named owner sat in the critical path. **New rule: a step is something Claude can finish.** Anything needing another person moves to **Waiting on other people**, which never blocks. Those reviews still happen and the place for each is already built — review records, the friction log, HANDOFF.md — they just are not sequence steps. **Step 10 renamed** from "Hand one off to an engineer" to **"Build the handoff"**, which is the part that was actually done; the engineer receiving one is parked. **Step 12 rescoped against what four real projects showed:** the state-switcher item is done, captures are overtaken by step 14, and the two that remain are the evidence gaps every review has recorded as unmet — **the axe scan has never run** (four consecutive artifacts with no automated accessibility evidence) and **unhandled requests are silently bypassed**, so a missing fixture looks like a working screen. Track B is now B1, B2, B3, and **B3 is the only unbuilt step in the whole sequence**. | The sequence, rebuilt again; steps 10 and 12; both status blocks. |
+| 2026-09-29 | **Track A is complete.** Steps 7 and 9 both closed on the same act — a person opening and reviewing a prototype — which immediately surfaced two harness defects (the MUI X licence watermark and Material Symbols rendering as ligature text), both since fixed and both caused by the bootstrap duplicating `src/index.tsx` rather than reading it. **A2 verified against its own strict criterion:** `NAVTEST-A2` was added to the real product’s `useAdminSubNavItems` and appeared in the prototype, with **zero** occurrences of that string in any prototype file — inherited, not copied. Reverted after. **A2 also exposed a defect its criterion did not ask about:** a prototype’s `host.tsx` drew its own `FSUniversalNav`, stacking a reconstructed nav under the real one; a context now tells a prototype the real shell is present and the host skips its chrome. Both ways of opening a prototype stay, answering different questions. **Navigating away lands you in the real product on mock data — deliberate:** a prototype is one view at one route, and making its links route internally would mean the prototype owning routing, which is forbidden and would blur real links against simulated ones. | Track A table, steps 7, 9 and A2. Repo: `667c5070`, `d28757ea`. |
+| 2026-09-29 | **Handoff clarified and its document moved into the branch, at the plan owner’s direction.** Handoff is narrower than this step assumed: get the branch hardened, leave it ready, pass it along manually — engineering takes the branch from there. **The handoff document was in the wrong repository.** It sat in `flock-designer/projects/<id>/handoff.md`, so an engineer handed the branch would never have found it. It now lives at the branch root as **HANDOFF.md**, first thing visible on checkout, and says to delete itself when the work merges because it describes a handoff rather than the product. The design record — brief, context receipt, both reviews — stays in `flock-designer`: two documents, two audiences, no duplication. **It must also name which files are the feature**, because the first real handoff had five feature files among sixty, the rest being Flock Designer infrastructure not yet on `develop`. The gate enforces the branch location. Verified end to end on `feature/users-inactivity-signal` — all fifteen checks pass. | Step 10; the handoff skill; the gate. Repo: `cef176be`, `ec78650c`, `51d0ba84`. |
+| 2026-09-29 | **Quality pass across both repositories before moving on**, at the plan owner’s direction — "we keep finding these little things… I want to make sure we’re solid." Found by sweeping rather than by hitting them again. **Stale:** the `.flkd` README claimed 8 standards and 3 skills (2 and 4 — the universal tier moved out, `prepare-handoff` came in), its skills tree omitted `prepare-handoff.md`, and `manifest.md` still called design mode "not yet confirmed" and pointed at steps 7 and 8 as future work. **Missing:** the five commands that now carry this project’s reliability were almost absent from the index — each is now listed with what it does and which false claim caused it. **Redundant:** the bare-`src/` trap is explained in four files; two restated it without linking the canonical explanation, which is how copies drift. **The real hole, in both repos:** the most repeated failure here — claims about code nobody ran — existed only as historical gap-log rows, not as a rule anyone reads. It is now **non-negotiable §9** with the six false claims that earned it, and the plan gains **"a contract without a step never gets built"**, which is what would have caught the codebase path, real-shell design mode, and prototypes being unopenable. | `.flkd` README, manifest, non-negotiables, `known-safe-imports`, `src/prototypes/README.md`; this document’s maintenance rules. Repo: `200b1580`. |
+| 2026-09-29 | **Step 10’s buildable half is done: `/handoff` exists.** `npm run handoff -- <project-id>` runs the checks a handoff claims and **refuses when they fail** — clean tree, records present, `tsc`, lint, tests (required on the codebase path), bundle and boundary for prototypes, and no unexplained "not run" accessibility on shipping code. **It caught a real failure on its first run:** repo-wide lint was failing on `smoke-prototype.mjs`, which a scoped check had passed — "lint passes" was an assertion and it was wrong, which is precisely the pattern the gate exists to end. `.flkd/skills/prepare-handoff.md` carries the judgement half the script deliberately omits: lead with what engineering picks up, name the decisions made that were not the agent’s with the most-likely-wrong first, and never let an unstated check read as a passing one. Verified against the real B1 branch — all eight pass. **The step stays In progress: it is human-gated**, and no engineer has received anything. | Step 10 and its sequence row. Repo: `05fa8a52`, `3f137cd6`. |
+| 2026-09-29 | **Credibility levels removed entirely, at the plan owner’s direction** — "code base should always be grounded… if you’re building a prototype, it should always be grounded in the right patterns. So actually I don’t even think we need the rigor level." Correct: the four-level ladder conflated **grounding**, which is the floor on both paths and always was, with **how much gets built**, which genuinely varies and which the request already states. Offering "Ground" as a choice implied you could opt out of the one thing that makes building here worth doing rather than using a design tool. **Handoff was not a level either** — it is a deliberate formal run, now folded into [step 10](#step-b2--build-the-handoff) as a `/handoff` command to be defined there, tool-agnostic first. **Swept from eleven files across two repos:** the levels table, the per-level state table, the per-level accessibility table, the artifact matrix, both reviewers, both skills, and the brief’s level field. Requirements now follow the **path**, which is a real distinction. Accessibility scales by how much is *recorded*, never by whether the rules apply, and states outright that **"not run" is always acceptable and silence is not**. | "How much to build" (was the four levels); "What each piece of work owes" (was the artifact matrix); step 10; the two build paths. Repos: `7d592971`, `9b66bfd`. |
 | 2026-09-29 | **Path routing is decided by the branch and a mandatory question, not by inference**, at the plan owner’s suggestion. An `fd/<project-id>/iN` branch means prototype work and a product feature branch means codebase work — neither needs asking. **Only new work on a baseline branch is open, and there the agent must ask, with no default and no recommendation**, because "build me a X" is the most common way someone asks for a prototype and the wording does not disambiguate. Silence never means codebase, since that is the direction that does not undo cleanly. Also checks the environment can support the answer: without `node_modules` **both** paths are blocked, so that signal cannot separate them — it is a setup problem. **Deliberately not a slash command:** `.flkd` is tool-agnostic, and routing through a Claude Code feature would move the decision into `.claude/`. Richer detection — knowing whether the designer has a full checkout at all — belongs to the Workspace in Track C. | The two build paths. Repo: `3f9e5f39`. |
 | 2026-09-29 | **B1 done — the codebase path works.** The inactivity signal built for real in `flock-coke` on `feature/users-inactivity-signal`: `lastLogin` now reads relatively and renders a warning chip past a threshold, in the actual `orgUsersList.tsx`, with 7 new specs against a fixed clock. **376 tests pass**, `tsc` and lint clean, and it was **verified rendering in the real app** rather than assumed. **The handoff is smaller than expected:** there is no API work at all — `searchUserDto` already types `lastLogin` and the real endpoint already returns it, so the only stub was fixture *values*, and reverting that one file runs it against real data. The structural decision worth review: `mapUserToTableRow` used to format the date at the data layer; the row now carries raw ISO and the column formats it. **Same feature now exists on both paths**, which is the comparison B1 existed to produce. | Track B table; `projects/users-inactivity-signal/handoff.md`. Repo: `56aee3c3`. |
 | 2026-09-29 | **New step A2: run a prototype in the real shell — it was described but never scheduled.** A prototype’s chrome is reconstructed in `host.tsx`, so an admin view shows a **copy** of the Admin nav that goes stale the day someone adds an item. The contract has always described real-shell design mode "for Test work when the question is about a real app surface," and step 8 built design mode only as a way to *run the product*, so **no step ever owned the other half** — the same described-but-unscheduled failure that left the codebase path unbuilt for nine steps. A2 is **sequenced after B1**, because building in the real app first shows what this should look like, and Track B gets real chrome for free. Standalone `start:prototype` stays; two ways to open a prototype, chosen by whether the work depends on its surroundings. | Track A table; new step A2. |

@@ -34,7 +34,7 @@ Before proposing graduation:
 | | |
 |---|---|
 | **Design settled** | Not still iterating. Engineering reviewing a moving target wastes everyone's time |
-| **The states the level owes are built** | Per `universal/interaction-states.md` — designed, not stubbed. Handoff owes every decision-relevant state |
+| **Every state the feature has is built** | Per `universal/interaction-states.md` — designed, not stubbed. Work being handed to engineering owes all of them |
 | **Copy final** | Real labels, real error messages, real empty-state text |
 | **Boundaries intact** | `implementation-reviewer` clean. No production plumbing |
 | **Verifies clean** | `npx tsc --noEmit` and `npm run lint` |

@@ -49,9 +49,9 @@ conformance claim is made here — this is a manual read, not a validated confor
 
 | # | Check | Result |
 |---|---|---|
-| 1 | Keyboard reachability | **Not run** — needs a human at a keyboard. Built for: org names are real `<button>` elements via `FSLink`, so they should be reachable and operable; the grid's own row-action menu, quick filter, checkbox, and pagination controls are unmodified FUI/MUI DataGrid internals that already carry keyboard support in production. |
-| 2 | Tab order | **Not run** |
-| 3 | Focus visibility | **Not run** — relies on FUI's own focus ring; no custom focus styling was added |
+| 1 | Keyboard reachability | **Not run** — needs a browser or a person; no tool here can judge it. Owner: the first browser-based accessibility pass, which is the same gap as the screen-reader read-through and colour contrast. Built for: org names are real `<button>` elements via `FSLink`, so they should be reachable and operable; the grid's own row-action menu, quick filter, checkbox, and pagination controls are unmodified FUI/MUI DataGrid internals that already carry keyboard support in production. |
+| 2 | Tab order | **Not run** — needs a browser or a person; no tool here can judge it. Owner: the first browser-based accessibility pass, which is the same gap as the screen-reader read-through and colour contrast. |
+| 3 | Focus visibility | **Not run** — needs a browser or a person; no tool here can judge it. Owner: the first browser-based accessibility pass, which is the same gap as the screen-reader read-through and colour contrast. Built for: no custom focus styling was added, so this relies on FUI's own focus ring |
 | 4 | Focus management | Not applicable — no drawer, dialog, or menu opens in this artifact beyond the grid's own built-in row-actions menu, which is unmodified library behavior |
 | 5 | Accessible names | **Built for, not verified.** The org-name `FSLink` has its visible text as its accessible name. The decorative `FSSymbol name="add"` is `aria-hidden`, with the visible button text carrying the name. Status chips render their meaning as visible `label` text (no icon-only or colour-only chip). **Needs a screen-reader check**, not just a source read. |
 | 6 | Heading structure | Pass by construction — one `h1` in the host (`TitleDescription`'s `component="h1"`), no skips, `columnHeaders: () => null` means the grid contributes no heading-level elements |
@@ -60,8 +60,18 @@ conformance claim is made here — this is a manual read, not a validated confor
 | 9 | Error messages | Pass by construction — the error state names what failed ("Unable to fetch Organizations") and offers a next step (Retry), matching the real page's copy exactly |
 | 10 | Reduced motion | Not applicable — no motion in this artifact |
 
-**Automated scan: not run.** Cypress was not invoked for this prototype (prototypes are reviewed via
-`npm start`, not Cypress, per `src/prototypes/README.md`) — recorded as not run, not as a pass.
+**Automated scan: run.** `npm run a11y` — axe-core 4.10.3 against WCAG 2 A, all four states
+(`src/prototypes/orgs-list-signals/view.a11y.spec.tsx`).
+
+The two states that render a grid carry one violation, recorded as **inherited**:
+`aria-required-children`, critical. MUI renders the toolbar slot inside the grid root, so the search
+box and action buttons are direct children of `role="grid"`, which may only own rows. The product's
+own lists have the same structure, so it is not this prototype's to fix — it is named, with an owner,
+and the spec fails if it ever stops firing. The loading and error states render no grid and are clean
+on their own account.
+
+This was recorded "not run" on the grounds that prototypes are reviewed by hand rather than by
+Cypress. Cypress was never the only way to run axe. Added 2026-09-29 as part of step B3.
 
 ### What's mocked, simulated, or omitted — stated plainly
 
@@ -180,12 +190,13 @@ Target unchanged: **WCAG 2.0 Level A**, no conformance claim. Re-checked only wh
 
 | # | Check | Result |
 |---|---|---|
-| 5 | Accessible names | **Built for, not verified.** The new `Deactivated` chip and the recoloured MOU chip both carry their meaning as visible `label` text — colour is never the only signal on either. The dimmed org-name link keeps its visible text as its accessible name; dimming is a colour/contrast change, not a semantic one. **Contrast on `text.disabled` against the row background is asserted from the FUI palette token, not measured with a contrast tool this session — flagged as not run, not as a pass.** |
+| 5 | Accessible names | **Built for, not verified.** The new `Deactivated` chip and the recoloured MOU chip both carry their meaning as visible `label` text — colour is never the only signal on either. The dimmed org-name link keeps its visible text as its accessible name; dimming is a colour/contrast change, not a semantic one. **Contrast on `text.disabled` against the row background is still not measured.** The automated scan cannot judge it either: happy-dom implements no layout, so axe's `color-contrast` rule is disabled there by design (2026-09-29). Measuring it needs a browser — owner: whoever runs the first browser-based pass, which is the same gap as the screen-reader read-through. |
 | 8 | Non-color signals | Pass — MOU: "MOU Signed"/"MOU Not Signed" (label carries meaning regardless of colour); Deactivated: a text-labelled chip, not a colour-only or icon-only cue. |
 | 1–4, 6, 7, 9, 10 | Unchanged from i1 | Not re-run — no change touched keyboard flow, tab order, focus management, headings, status announcements, error copy, or motion. |
 
-**Automated scan: not run**, same as i1 and for the same reason (prototypes are reviewed via
-`npm start`, not Cypress).
+**Automated scan: run**, covering i2 as well — the spec renders the current view, so the chips and
+dimming reviewed here are what axe saw. Same result as i1: clean apart from the inherited
+`aria-required-children` on the grid states. Added 2026-09-29 as part of step B3.
 
 ### What's mocked, simulated, or omitted — stated plainly
 

@@ -18,15 +18,9 @@
 
 **Seven view states. This list is the single definition** — nothing else restates it.
 
-**How many a given piece of work owes depends on its credibility level**, not on this list. The
-levels are in the consuming product's `.flkd/manifest.md`:
-
-| Level | View states owed |
-|---|---|
-| **Explore** | The default state alone. An Explore artifact is complete with one state |
-| **Ground** | Default, plus any state the pattern choice actually turns on |
-| **Test** | Every state that carries the decision — typically loading, empty, error, and the partial or success state the interaction produces |
-| **Handoff** | Every decision-relevant state, plus permission and disabled where they apply |
+**How many of these a piece of work builds depends on what was asked for, not on a rigor setting.**
+Work that ships owes every state the feature really has. Work made to answer a question owes what the
+question needs — a single screen is a complete answer to "what could this look like."
 
 **They are where product decisions hide** — if you can't write the empty state, the feature isn't
 defined yet, and that is worth flagging at any level.

@@ -8,7 +8,7 @@ standards/
 ├── production-readiness.md   what has to be true before work is handed to engineering
 └── universal/                portable; would hold at any company
     ├── accessibility.md          a floor nothing overrides
-    ├── interaction-states.md     the seven view states, and which each level owes
+    ├── interaction-states.md     the seven view states
     ├── general-product-design.md
     ├── layout-judgment.md
     └── copy-and-microcopy.md

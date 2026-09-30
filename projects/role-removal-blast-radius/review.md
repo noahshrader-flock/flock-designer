@@ -53,19 +53,24 @@ conformance level is claimed here.**
 
 | # | Check | Result |
 |---|---|---|
-| 1 | Keyboard reachability | **Not run** — needs a human at a keyboard |
-| 2 | Tab order | **Not run** |
-| 3 | Focus visibility | **Not run** |
+| 1 | Keyboard reachability | **Not run** — needs a browser or a person; no tool here can judge it. Owner: the first browser-based accessibility pass, which is the same gap as the screen-reader read-through and colour contrast. |
+| 2 | Tab order | **Not run** — needs a browser or a person; no tool here can judge it. Owner: the first browser-based accessibility pass, which is the same gap as the screen-reader read-through and colour contrast. |
+| 3 | Focus visibility | **Not run** — needs a browser or a person; no tool here can judge it. Owner: the first browser-based accessibility pass, which is the same gap as the screen-reader read-through and colour contrast. |
 | 4 | Focus management | **Built for, not verified** — `FSDialog` is FUI's own (MUI-based) dialog, which traps and returns focus by construction; not independently confirmed here |
 | 5 | Accessible names | **Built for, not verified.** Every checkbox carries both a visible `label` and an explicit `aria-label` (matching the real `rolePermissionSection.tsx` pattern); every icon-only button (`FSIconButton` close, in the dialog and the recreated breadcrumb) has an `aria-label`. Not screen-reader-tested |
 | 6 | Heading structure | **Fixed, not just built-for** — see the real-page gap named in `context-receipt.md`: this prototype's own heading is `h4`-visual/`h1`-semantic → `h6`-visual/`h2`-semantic, correcting a skip found in the real `RoleFormPage` rather than reproducing it |
-| 7 | Status announcement | **Not run.** The post-save `FSAlert severity="success"` is not wired to a live region beyond whatever `FSAlert` provides by default — not confirmed |
+| 7 | Status announcement | **Confirmed 2026-09-29.** The post-save `FSAlert severity="success"` renders `role="alert"`, which carries an implicit assertive live region, so it reaches a screen reader with no focus change — asserted in `view.a11y.spec.tsx`. Whether *assertive* is right for a success message (rather than polite `role="status"`) is a design judgment, not a conformance failure |
 | 8 | Non-color signals | Pass by construction — every banner and the confirmation dialog carry the affected-user count and permission names as text, never color alone |
 | 9 | Error messages | Not applicable — this prototype has no error state (see "states owed," below) |
 | 10 | Reduced motion | Not applicable — no motion beyond `FSDialog`'s own built-in transition |
 
-**Automated scan: not run.** No Cypress invocation attempted this iteration — this is a
-`src/prototypes/` artifact, never routed, and isn't under `cy.checkPageA11y()` coverage regardless.
+**Automated scan: run, clean.** `npm run a11y` — axe-core 4.10.3 against WCAG 2 A
+(`src/prototypes/role-removal-blast-radius/view.a11y.spec.tsx`): both role sizes, all three
+treatments, and the confirmation dialog, which only exists after an interaction. No violations.
+
+This was recorded "not run" on the grounds that a prototype is outside `cy.checkPageA11y()` coverage.
+True, and beside the point — the reason to scan a prototype is the same as the reason to scan
+shipped code. Added 2026-09-29 as part of step B3.
 
 ### States built, and why not others
 

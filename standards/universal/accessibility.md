@@ -110,18 +110,17 @@ somewhere useful, or whether an error message explains anything.
 
 A passing axe run is a floor, not a pass mark. Keyboard-test anything with real interaction.
 
-## What each credibility level must check and record
+## What must be checked and recorded
 
-The levels are in the consuming product's `.flkd/manifest.md`. Accessibility is a floor, not a level-scaled nicety — what
-changes with the level is how much is **verified and recorded**, never whether the rules apply. The
-universal rules above hold at every level.
+**Accessibility is a floor, not something that scales.** The universal rules above hold for anything
+built, always. What changes is how much is **verified and recorded** — never whether the rules apply.
 
-| Level | Must check | Must record |
+| Work | Must check | Must record |
 |---|---|---|
-| **Explore** | Semantic elements and accessible names as you build. No formal pass | Nothing required. Note anything you knowingly skipped |
-| **Ground** | The above, plus heading structure, non-color signals, and visible focus on the default state | A short note in the review record: what you checked, what you did not |
-| **Test** | The manual checklist below, across the states the level owes | The full checklist, each item pass / fail / not run with the reason |
-| **Handoff** | The manual checklist plus the automated run, across every decision-relevant state | The checklist, the automated output, and what remains — this becomes the hardening report |
+| **Anything that ships** | The full manual checklist below, across every state, plus the automated run | The whole checklist, each item pass / fail / not run with the reason, and what remains |
+| **Work made to answer a question** | Semantic elements, accessible names, and visible focus as you build | What you checked and what you did not. A rough artifact may leave items unrun — it may not leave them unstated |
+
+**"Not run" is always an acceptable answer. Silence is not.**
 
 ## The manual checklist
 
