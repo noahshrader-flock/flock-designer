@@ -175,9 +175,12 @@ called before 2026-10-05, so history still resolves.
 | 3.2 | [Sign in, and the comment store](#32--prove-sign-in-and-the-comment-store-was-c1) | ◐ Built — awaiting your check | Sign-in, the project list and **automatic publishing of iteration records** are built. **You:** raise the app's Contents permission to read and write, open an iteration and post one comment; then a second person signs in | C1 |
 | 3.2.5 | [Show who is on each project](#325--show-who-is-on-each-project) | ◐ Built — awaiting your check | Every project lists everyone who has committed to it, on any iteration. **You:** restart the app and look at the project list | added 2026-10-05 |
 | 3.3 | [Open a preview and comment on an element](#33--open-a-preview-and-comment-on-an-element-was-c2) | ◐ Built — awaiting your check | Click an element in a preview, comment, and see it marked on reopening. Verified in real Electron against a real click. **You:** try it on a prototype and say whether it feels right. Needs a security look | C2 |
-| 3.4 | [Share for review](#34--share-for-review-was-c3) | ○ Not started | Pushes the branch, opens the draft PR, records the preview URL. Needs Coke engineering's mock-data build to finish end to end | C3 |
+| 3.3.5 | [Prove it locally, start to finish](#335--prove-it-locally-start-to-finish) | ▶ **Next** | Generate a prototype on this machine, see it in the app, comment on it. Needs nothing from anyone | added 2026-10-05 |
+| 3.4 | [Share for review](#34--share-for-review-was-c3) | ⏸ Deferred until the local proof works | A hosted preview link, which feeds the same app. Needs Coke engineering; an easy conversation once 3.3.5 and 3.5 show it works | C3 |
 | 3.5 | [Close the loop](#35--close-the-loop-was-c4) | ○ Not started | Comments become something the agent can act on | C4 |
 | 3.6 | [Pilot and decision](#36--pilot-and-decision-was-c5) | ⏸ Needs people | Real projects reviewed by people outside design | C5 |
+
+**The proof of concept is 3.3.5, then 3.5, run on one machine.** A prototype is generated locally, appears in the app, gets pinned comments, and the agent acts on them. Hosting (3.4) is deferred: it only changes where the preview address comes from, and the app already accepts one.
 
 **If we stop after 3.2:** sign-in and a browsable list of every project. **After 3.3:** click-to-comment
 on a prototype, against any preview. **After 3.4:** the full loop — author shares, reviewer opens and
@@ -397,10 +400,38 @@ one reviewer places a comment and says whether it feels right.
 
 **Not in this step, and not wanted:** dragging a region. **Later, if needed:** thumbnails, notifications.
 
+### 3.3.5 — Prove it locally, start to finish
+
+**Claude. Added 2026-10-05 as the proof of concept.** The whole loop on one machine, with no hosting and
+no other people: **generate a prototype, see it in Flock Designer, comment on it, and (with 3.5) have the
+agent act on the comments.** If this works, putting the preview on a shared address is a small, separate
+conversation with Coke engineering, because it only changes where the address comes from.
+
+When the Author screen was hidden (2026-10-05) the app lost its only way to create work. Its services
+are still there; this step gives them a place, inside the Projects tab, without bringing back a second mode.
+
+- **Remember the product checkout.** Choose the Coke checkout once; the app keeps it.
+- **New prototype** (and **work in the codebase**), from Projects: a project id and a line on what it
+  is trying. It creates the branch and the record through the services that already exist (3.2 and
+  the codebase route).
+- **Run the agent** on that request, with its output shown in the window, so a designer is not
+  watching a terminal.
+- **Run the preview** with the repository's declared command, and **open the iteration straight onto
+  it**: no pasting an address. The preview then behaves as in 3.3.
+- **Comments** are placed and kept as in 3.3. On one machine they need only the Issues permission the
+  app already has; publishing the record to the design repo is best-effort, as built.
+
+**Done when:** from the app, on this machine, a new prototype is created from a short request, the
+agent builds it, its preview opens in the app, and a pinned comment is placed and survives a restart.
+**Human:** you do this once, start to finish, and say where it was awkward.
+
+**Not in this step:** a hosted preview, other people's access, the list of GitHub repositories.
+
 ### 3.4 — Share for review (was C3)
 
-**Claude for the app; Coke engineering for CI.** The author's half: without it a reviewer has
-nothing to open.
+**Deferred until the local proof (3.3.5, then 3.5) works.** Claude for the app; Coke engineering for CI.
+The author's half: without it a reviewer *elsewhere* has nothing to open. It is not needed to prove the
+idea, only to put it in front of other people.
 
 - One click **pushes the branch, opens a draft PR** with a body saying it is a preview thread and not
   for merge (one PR per branch — settled), **waits for the deployment, and records its URL** on the
@@ -3058,6 +3089,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **Re-scoped Phase 3 around a local proof of concept.** Noah wants to prove the loop on one machine first: generate a prototype locally, see it in the app, comment, and close the loop at 3.5, and treat a hosted preview as a later, easy conversation with engineering. Added **3.3.5** (the local walkthrough, including a place in the Projects tab to create work, since hiding the Author screen removed it) and **deferred 3.4**. Considered GitHub Pages for hosted links and set it aside: Pages on a private repo is public unless the org has Enterprise Cloud access control, serves one site per repo, and Coke's existing S3 PR deployment already does per-PR previews, so the later change is a mock-data build through that workflow. | Phase 3 table; 3.3.5 new; 3.4. |
 | 2026-10-05 | **Window reworked: a top bar instead of a toolbar, and the Author view hidden.** Noah asked for a toolbar-less window with a normal top nav: Flock Designer on the left, a Projects tab beside it, and an account menu (GitHub picture and name, with Sign out) fixed at the top. The native title bar is gone (on macOS the window buttons sit inside the bar). The Author screen was removed from the window for now, because it will come back as a list of repositories from GitHub; its services stay in the main process. The preview is hidden while the account menu is open, since a native view would otherwise cover the menu. | The app and its README; the description of modes in Part I. |
 | 2026-10-05 | **Pins can be clicked and dragged.** Noah asked to move a pin after placing it, and for a click on a pin to highlight its comment. A click selects the comment in the panel and scrolls to it; a drag moves the pin and saves the new position by editing the comment, so only its author can. Pins now report back through the page's console with a per-preview secret, since the preview has no bridge to the app; `smoke:page` checks a real click, a real drag and that a forged message is ignored. | 3.3; the app and its README. |
 | 2026-10-05 | **First real use of 3.3 found two faults, both fixed.** Noah placed comments and reported no pin and nothing saving. The comments were in fact saved, but as **two separate issues** for one iteration. GitHub's issue listing lags a new issue by ten seconds or more (measured: not visible at 8 s, visible by 10 s, with or without the label filter), so the app could not find the thread it had just made, showed no comments, and the next comment created a second thread. The app now remembers threads it creates, reads every thread for a branch and writes to the oldest, so the two existing ones show together. Separately, the element outline was dropped: Noah wants a plain click-to-place pin, so comment mode is a crosshair and a teardrop pin whose tip is the click point, shown amber while writing. A pick that cannot be anchored now says so instead of silently doing nothing. | 3.3; the app. |
