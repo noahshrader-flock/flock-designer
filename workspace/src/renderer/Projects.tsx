@@ -52,10 +52,14 @@ export const Projects = () => {
 	const [checkout, setCheckout] = useState<Checkout | null>(null);
 	const [creating, setCreating] = useState(false);
 	const [localUrl, setLocalUrl] = useState<string | null>(null);
+	const [looked, setLooked] = useState(false);
 
 	// The checkout is chosen once and remembered.
 	useEffect(() => {
-		void window.workspace.lastCheckout().then((r) => r.ok && setCheckout(r.value));
+		void window.workspace.lastCheckout().then((r) => {
+			if (r.ok) setCheckout(r.value);
+			setLooked(true);
+		});
 	}, []);
 	const chooseCheckout = useCallback(async () => {
 		const r = await window.workspace.chooseCheckout();
@@ -140,9 +144,9 @@ export const Projects = () => {
 				</FSButton>
 				<FSButton onClick={() => setCreating(true)}>New prototype</FSButton>
 			</FSStack>
-			{!checkout && (
-				<FSAlert severity="info" action={<FSButton onClick={chooseCheckout}>Choose checkout</FSButton>}>
-					Choose your Coke checkout to see work built on this machine alongside everyone else's.
+			{looked && !checkout && (
+				<FSAlert severity="info" action={<FSButton onClick={chooseCheckout}>Find it</FSButton>}>
+					Flock Designer could not find a Flock product repository on this machine. Point it at your Coke folder once.
 				</FSAlert>
 			)}
 			<NewWork

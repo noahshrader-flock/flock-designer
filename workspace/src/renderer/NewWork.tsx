@@ -5,6 +5,7 @@ import {
 	FSDialogActions,
 	FSDialogContent,
 	FSDialogTitle,
+	FSLink,
 	FSStack,
 	FSTextField,
 	FSTypography,
@@ -80,11 +81,14 @@ export const NewWork = ({
 				<FSStack spacing={2} sx={{ pt: 1 }}>
 					{checkout ? (
 						<FSTypography variant="body2" color="text.secondary">
-							In {checkout.name}, on {checkout.branch ?? 'a detached HEAD'}. The new branch starts from there.
+							In {checkout.name}, on {checkout.branch ?? 'a detached HEAD'}. The new branch starts from there.{' '}
+							<FSLink component="button" onClick={onChoose}>
+								Change
+							</FSLink>
 						</FSTypography>
 					) : (
-						<FSAlert severity="info" action={<FSButton onClick={onChoose}>Choose</FSButton>}>
-							Choose your Coke checkout first.
+						<FSAlert severity="info" action={<FSButton onClick={onChoose}>Find it</FSButton>}>
+							Flock Designer could not find a Flock product repository on this machine.
 						</FSAlert>
 					)}
 					<FSTextField label="Name" placeholder="Users — inactivity signal" value={name} onChange={setName} autoFocus />

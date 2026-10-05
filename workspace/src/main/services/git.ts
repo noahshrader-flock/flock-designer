@@ -142,6 +142,10 @@ export const localIdentity = async (root: string): Promise<Author> => {
 	return { name: await read('user.name'), email: await read('user.email') };
 };
 
+/** The commit a branch is at, without switching to it. */
+export const branchCommit = async (root: string, branch: string): Promise<string> =>
+	git(root, ['rev-parse', '--verify', `refs/heads/${branch}`]);
+
 export const checkoutBranch = async (root: string, branch: string): Promise<void> => {
 	await requireCleanTree(root, 'switching iteration');
 	if (!(await branchExists(root, branch))) {

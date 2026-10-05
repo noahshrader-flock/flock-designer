@@ -139,7 +139,7 @@ export interface WorkspaceApi {
 
 	/** `projectId` fills `<project-id>` in a command that serves one project. */
 	startCommand(root: string, commandId: string, projectId?: string): Promise<Result<PreviewStatus>>;
-	/** The checkout this person used last, if it is still a repository. Reopens it. */
+	/** The product checkout in use: the one chosen before, else one found on this machine by its `.flkd/workspace.json`. Null if none. */
 	lastCheckout(): Promise<Result<Checkout | null>>;
 	stopCommand(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	commandStatus(root: string, commandId: string): Promise<Result<PreviewStatus>>;

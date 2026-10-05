@@ -1,5 +1,6 @@
 import { type BrowserWindow, dialog, ipcMain } from 'electron';
 import { existsSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import {
 	CHANNELS,
 	type Checkout,
@@ -17,7 +18,9 @@ import { AgentRunner } from './services/agent';
 import { buildContextReceipt } from './services/contextReceipt';
 import { readDescriptor } from './services/descriptor';
 import { isRepository, readCheckout } from './services/git';
-import { continueIteration, createIteration, defaultRecordsRoot, readIterations } from './services/iterations';
+import { continueIteration, createIteration, readIterations } from './services/iterations';
+import { findProductCheckouts, recordsRootFor } from './services/discovery';
+import { readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
 import { DesignRepo } from './services/designRepo';
 import type { PageView } from './services/pageView';
@@ -25,7 +28,7 @@ import { sanitizeAnchor } from '../shared/anchor';
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readLocalProjects } from './services/localProjects';
-import { mergeProjects } from '../shared/projects';
+import { mergeProjects, unionLocal } from '../shared/projects';
 import type { CheckoutMemory } from './services/checkoutMemory';
 
 /**
@@ -78,6 +81,27 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 	const descriptorFor = (root: string) => readDescriptor(opened.require(root));
 
 	/**
+	 * The product checkout in use: the one chosen before if it is still there,
+	 * otherwise whichever the machine has -- found by its own marker, not asked for.
+	 */
+	const currentRoot = (): string | null => {
+		const saved = memory.read();
+		if (saved !== null && isRepository(saved) && existsSync(join(saved, '.flkd', 'workspace.json'))) return saved;
+		return findProductCheckouts()[0] ?? null;
+	};
+
+	/** Where this checkout's design records go; an error that says what to do when the design repository is not beside it. */
+	const recordsFor = (productRoot: string): string => {
+		const found = recordsRootFor(productRoot);
+		if (found === null) {
+			throw new Error(
+				`Flock Designer could not find the design repository next to ${basename(productRoot)}. Clone flock-designer into the same folder, beside it.`,
+			);
+		}
+		return found;
+	};
+
+	/**
 	 * Shares an iteration's record with reviewers. Best effort by design: the
 	 * designer's local work is already saved, so being signed out or lacking a
 	 * permission is reported, never raised.
@@ -116,8 +140,8 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 	ipcMain.handle(
 		CHANNELS.lastCheckout,
 		guard(async (): Promise<Checkout | null> => {
-			const saved = memory.read();
-			return saved !== null && isRepository(saved) ? openRepository(saved) : null;
+			const root = currentRoot();
+			return root === null ? null : openRepository(root);
 		}),
 	);
 
@@ -131,7 +155,7 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 	ipcMain.handle(
 		CHANNELS.listIterations,
 		guard((root: string, projectId: string) =>
-			readIterations(defaultRecordsRoot(opened.require(root)), projectId),
+			readIterations(recordsFor(opened.require(root)), projectId),
 		),
 	);
 
@@ -144,7 +168,7 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 			if (branch === null) {
 				throw new Error('This repository has a detached HEAD. Check out a branch first.');
 			}
-			const recordsRoot = defaultRecordsRoot(canonical);
+			const recordsRoot = recordsFor(canonical);
 			return saved(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch, kind), recordsRoot);
 		}),
 	);
@@ -153,10 +177,10 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 		CHANNELS.continueIteration,
 		guard(async (root: string, projectId: string, name: string) => {
 			const canonical = opened.require(root);
-			const recordsRoot = defaultRecordsRoot(canonical);
+			const recordsRoot = recordsFor(canonical);
 			const me = github.state();
 			const login = me.state === 'signedIn' ? me.user.login : null;
-			return saved(await continueIteration(canonical, recordsRoot, projectId, name, login), recordsRoot);
+			return saved(await continueIteration(canonical, recordsRoot, projectId, name, login, descriptorFor(root)), recordsRoot);
 		}),
 	);
 
@@ -188,7 +212,7 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 		guard((root: string, projectId: string, task: string) =>
 			agent.start(opened.require(root), projectId, task, {
 				// The project's records live in the design repository, beside the product checkout.
-				addDirs: existsSync(defaultRecordsRoot(opened.require(root))) ? [defaultRecordsRoot(opened.require(root))] : [],
+				addDirs: [recordsFor(opened.require(root))],
 			}),
 		),
 	);
@@ -221,8 +245,17 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 	ipcMain.handle(
 		CHANNELS.listProjects,
 		guard(async (): Promise<Project[]> => {
-			const saved = memory.read();
-			const local = saved !== null && isRepository(saved) ? readLocalProjects(defaultRecordsRoot(saved)) : [];
+			const root = currentRoot();
+			const me = github.state();
+			const login = me.state === 'signedIn' ? me.user.login : null;
+			let local: Project[] = [];
+			if (root !== null) {
+				const recordsRoot = recordsRootFor(root);
+				const records = recordsRoot ? readLocalProjects(recordsRoot) : [];
+				// The branches are the evidence: work made without the app still shows.
+				const branches = await readBranchProjects(root, readDescriptor(root), login).catch(() => []);
+				local = unionLocal(records, branches);
+			}
 			let remote: Project[] = [];
 			try {
 				remote = await designRepo.listProjects();

@@ -29,7 +29,9 @@ there is no server of ours anywhere.
 
 **Building on this machine** is part of Projects, not a separate mode. **New prototype** asks for a name and
 what to explore, creates the branch and record, runs the agent, then the preview, and opens it with pins.
-Any iteration also has a **Build on this machine** panel. The checkout is chosen once and remembered.
+Any iteration also has a **Build on this machine** panel. The product repository is found on its own, by its
+`.flkd/workspace.json`, in the usual places; work in it appears from its branches (`fd/<project>/iN`,
+`feature/<project>`) with no record needed. The design repository is expected beside it.
 The agent runs unattended: it may edit and run the repository's own scripts and local git, and nothing
 that pushes, switches branch or deletes. `npm run smoke:local` runs a real prototype from a real Coke
 checkout through the app's own services (see the script for its two variables).

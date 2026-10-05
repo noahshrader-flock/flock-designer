@@ -42,6 +42,30 @@ export const mergeProjects = (remote: Project[], local: Project[]): Project[] =>
 	return [...byId.values()].sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
 };
 
+/**
+ * Two lists of the same machine's work -- records on disk, and branches in git --
+ * as one. Records lead, because they carry what a branch cannot (a preview
+ * address); a branch with no record is still work, and is added.
+ */
+export const unionLocal = (records: Project[], branches: Project[]): Project[] => {
+	const byId = new Map<string, Project>(records.map((p) => [p.id, p]));
+	for (const b of branches) {
+		const r = byId.get(b.id);
+		if (!r) {
+			byId.set(b.id, b);
+			continue;
+		}
+		const have = new Map(r.iterations.map((i) => [i.branch, i]));
+		for (const bi of b.iterations) {
+			const ri = have.get(bi.branch);
+			have.set(bi.branch, ri ? { ...ri, commit: bi.commit ?? ri.commit, contributors: mergePeople(ri.contributors, bi.contributors) } : bi);
+		}
+		const its = [...have.values()].sort(newestFirst);
+		byId.set(b.id, { ...r, iterations: its, people: mergePeople(r.people, ...its.map((i) => i.contributors)) });
+	}
+	return [...byId.values()];
+};
+
 /** Prototype iterations newest first, then the codebase branch. */
 export const newestFirst = (a: ProjectIteration, b: ProjectIteration): number => {
 	const codebase = (x: ProjectIteration) => (x.branch.startsWith('fd/') ? 0 : 1);

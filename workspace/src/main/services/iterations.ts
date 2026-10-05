@@ -161,9 +161,19 @@ export const continueIteration = async (
 	projectId: string,
 	name: string,
 	signedInLogin: string | null = null,
+	descriptor?: WorkspaceDescriptor,
 ): Promise<Iteration> => {
-	const iterations = readIterations(recordsRoot, projectId);
-	const iteration = iterations.find((i) => i.name === name);
+	let iterations = readIterations(recordsRoot, projectId);
+	let iteration = iterations.find((i) => i.name === name);
+	if (!iteration && descriptor) {
+		// Work started outside the app has a branch but no record. The branch is the
+		// evidence, so the record is written now rather than refusing to open it.
+		const branch = name === 'codebase' ? codebaseBranchFor(descriptor, projectId) : /^i\d+$/.test(name) ? branchFor(descriptor, projectId, Number(name.slice(1))) : null;
+		if (branch && (await branchExists(productRoot, branch))) {
+			iteration = { projectId, name, branch, commit: null, createdAt: new Date().toISOString(), note: 'Found in the repository; recorded when first opened here.' };
+			iterations = [...iterations, iteration];
+		}
+	}
 	if (!iteration) {
 		throw new IterationProblem(`${projectId} has no iteration called ${name}.`);
 	}

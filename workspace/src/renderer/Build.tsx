@@ -1,4 +1,4 @@
-import { FSAlert, FSBox, FSButton, FSChip, FSStack, FSTextField, FSTypography } from '@flocksafety/flock-react-component-lib';
+import { FSAlert, FSBox, FSButton, FSChip, FSLink, FSStack, FSTextField, FSTypography } from '@flocksafety/flock-react-component-lib';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AgentStatus, Checkout, PreviewStatus, Project, ProjectIteration, RunLogLine } from '../shared/contract';
 
@@ -131,10 +131,10 @@ export const Build = ({
 				<FSStack spacing={1}>
 					<FSTypography variant="subtitle2">Build on this machine</FSTypography>
 					<FSTypography variant="body2" color="text.secondary">
-						Choose your Coke checkout to run this prototype here and let the agent change it.
+						Flock Designer could not find a Flock product repository on this machine. Point it at your Coke folder once to run this here.
 					</FSTypography>
 					<FSButton variant="secondary" onClick={onChoose}>
-						Choose checkout
+						Find it
 					</FSButton>
 				</FSStack>
 			</FSBox>
@@ -148,6 +148,9 @@ export const Build = ({
 				<FSStack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
 					<FSTypography variant="subtitle2">Build on this machine</FSTypography>
 					<FSChip variant="status" size="small" label={checkout?.name ?? ''} />
+					<FSLink component="button" variant="caption" onClick={onChoose}>
+						Change
+					</FSLink>
 				</FSStack>
 
 				<FSStack direction="row" spacing={1} alignItems="center">
