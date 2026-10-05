@@ -11,9 +11,9 @@ import {
 	FSTooltip,
 	FSTypography,
 } from '@flocksafety/flock-react-component-lib';
-import AddCommentOutlined from '@mui/icons-material/AddCommentOutlined';
+import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutline';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
-import ViewSidebarOutlined from '@mui/icons-material/ViewSidebarOutlined';
+import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
 import { Popover } from '@mui/material';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
@@ -429,24 +429,26 @@ export const Review = ({
 				<People people={iteration.contributors} />
 				<FSBox sx={{ flexGrow: 1 }} />
 
-				{/* One control, two halves: comment mode on the left, the list of comments on the right. */}
-				<FSButtonGroup size="md">
+				{/* One control, two halves: comment mode on the left, the list of comments on the right.
+				    The group hands its variant and size to both buttons; pressed is the design
+				    system's own secondaryActive, not a different colour of button. */}
+				<FSButtonGroup size="sm" variant="secondary">
 					<FSButton
-						variant={commentMode ? 'primary' : 'secondary'}
+						variant={commentMode ? 'secondaryActive' : 'secondary'}
 						aria-pressed={commentMode}
 						disabled={!opened}
 						title="Comment: click anywhere on the page to leave one (C)"
-						startIcon={<AddCommentOutlined fontSize="small" />}
+						startIcon={<LocationOnOutlined fontSize="small" />}
 						onClick={() => (commentMode ? exitCommentMode() : setCommentMode(true))}
 					>
 						Comment
 					</FSButton>
 					<FSButton
-						variant={sidebarOpen ? 'primary' : 'secondary'}
+						variant={sidebarOpen ? 'secondaryActive' : 'secondary'}
 						aria-pressed={sidebarOpen}
 						aria-label="Show all comments"
 						title={total > 0 ? `All comments (${total})` : 'All comments'}
-						startIcon={<ViewSidebarOutlined fontSize="small" />}
+						startIcon={<ChatBubbleOutline fontSize="small" />}
 						onClick={() => setSidebarOpen((o) => !o)}
 					>
 						{total > 0 ? total : null}
