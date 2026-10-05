@@ -113,15 +113,33 @@ const trunk = async (root: string): Promise<string | null> => {
  * order they first appear. Names only: a shared repository is no place for
  * anyone's email address.
  */
-export const branchAuthors = async (root: string, branch: string): Promise<string[]> => {
+export interface Author {
+	name: string;
+	email: string;
+}
+
+export const branchAuthors = async (root: string, branch: string): Promise<Author[]> => {
 	const base = await trunk(root);
 	if (base === null || base === branch) return [];
-	const out = await git(root, ['log', '--reverse', '--format=%aN', `${base}..${branch}`]);
-	const seen = new Map<string, string>();
-	for (const name of out.split('\n').map((n) => n.trim())) {
-		if (isPerson(name) && !seen.has(name.toLowerCase())) seen.set(name.toLowerCase(), name);
+	const out = await git(root, ['log', '--reverse', '--format=%aN%x09%aE', `${base}..${branch}`]);
+	const seen = new Map<string, Author>();
+	for (const line of out.split('\n')) {
+		const [name = '', email = ''] = line.split('\t').map((x) => x.trim());
+		if (isPerson(name) && !seen.has(name.toLowerCase())) seen.set(name.toLowerCase(), { name, email });
 	}
 	return [...seen.values()];
+};
+
+/** Who this machine commits as. Empty strings when git has no identity set. */
+export const localIdentity = async (root: string): Promise<Author> => {
+	const read = async (key: string) => {
+		try {
+			return await git(root, ['config', key]);
+		} catch {
+			return '';
+		}
+	};
+	return { name: await read('user.name'), email: await read('user.email') };
 };
 
 export const checkoutBranch = async (root: string, branch: string): Promise<void> => {

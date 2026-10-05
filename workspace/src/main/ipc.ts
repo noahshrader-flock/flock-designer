@@ -134,7 +134,9 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 		guard(async (root: string, projectId: string, name: string) => {
 			const canonical = opened.require(root);
 			const recordsRoot = defaultRecordsRoot(canonical);
-			return saved(await continueIteration(canonical, recordsRoot, projectId, name), recordsRoot);
+			const me = github.state();
+			const login = me.state === 'signedIn' ? me.user.login : null;
+			return saved(await continueIteration(canonical, recordsRoot, projectId, name, login), recordsRoot);
 		}),
 	);
 

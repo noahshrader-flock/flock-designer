@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import type { Iteration, WorkspaceDescriptor } from '../../shared/contract';
-import { branchAuthors, checkoutBranch, createBranch, headCommit } from './git';
+import type { Iteration, Person, WorkspaceDescriptor } from '../../shared/contract';
+import { branchAuthors, checkoutBranch, createBranch, headCommit, localIdentity } from './git';
+import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
 
 /**
@@ -103,11 +104,30 @@ export const createIteration = async (
 	return iteration;
 };
 
+/**
+ * Authors on the branch, with a GitHub login where one can be established
+ * without guessing: a noreply address names its account, and the person running
+ * this app is signed in as themselves, so their own commits (matched on the
+ * git identity they commit under) carry their login. Everyone else stays a
+ * name until they open an iteration of their own.
+ */
+const peopleOn = async (productRoot: string, branch: string, signedInLogin: string | null): Promise<Person[]> => {
+	const me = await localIdentity(productRoot);
+	return (await branchAuthors(productRoot, branch)).map((a) => {
+		const mine =
+			signedInLogin !== null &&
+			((me.email !== '' && a.email.toLowerCase() === me.email.toLowerCase()) ||
+				(me.name !== '' && a.name.toLowerCase() === me.name.toLowerCase()));
+		return { name: a.name, login: loginFromNoreply(a.email) ?? (mine ? signedInLogin : null) };
+	});
+};
+
 export const continueIteration = async (
 	productRoot: string,
 	recordsRoot: string,
 	projectId: string,
 	name: string,
+	signedInLogin: string | null = null,
 ): Promise<Iteration> => {
 	const iterations = readIterations(recordsRoot, projectId);
 	const iteration = iterations.find((i) => i.name === name);
@@ -119,7 +139,7 @@ export const continueIteration = async (
 	// Recorded on return, so the record tracks where the branch actually is
 	// rather than where it started.
 	const commit = await headCommit(productRoot);
-	const contributors = await branchAuthors(productRoot, iteration.branch);
+	const contributors = await peopleOn(productRoot, iteration.branch, signedInLogin);
 	const updated = iterations.map((i) => (i.name === name ? { ...i, commit, contributors } : i));
 	writeIterations(recordsRoot, projectId, updated);
 	return { ...iteration, commit, contributors };

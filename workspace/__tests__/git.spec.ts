@@ -122,14 +122,14 @@ describe('branchAuthors', () => {
 		commitAs('Ada Lovelace', 'a.txt');
 		commitAs('Grace Hopper', 'b.txt');
 		commitAs('Ada Lovelace', 'c.txt');
-		expect(await branchAuthors(root, 'fd/p/i1')).toEqual(['Ada Lovelace', 'Grace Hopper']);
+		expect((await branchAuthors(root, 'fd/p/i1')).map((a) => a.name)).toEqual(['Ada Lovelace', 'Grace Hopper']);
 	});
 
 	it('leaves out automation', async () => {
 		g('checkout', '-q', '-b', 'fd/p/i1');
 		commitAs('dependabot[bot]', 'a.txt');
 		commitAs('Grace Hopper', 'b.txt');
-		expect(await branchAuthors(root, 'fd/p/i1')).toEqual(['Grace Hopper']);
+		expect((await branchAuthors(root, 'fd/p/i1')).map((a) => a.name)).toEqual(['Grace Hopper']);
 	});
 
 	it('credits nobody on the trunk itself, rather than everybody', async () => {

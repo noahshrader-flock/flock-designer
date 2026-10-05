@@ -1,5 +1,6 @@
 import {
 	FSAlert,
+	FSAvatar,
 	FSBox,
 	FSButton,
 	FSChip,
@@ -8,7 +9,33 @@ import {
 	FSTypography,
 } from '@flocksafety/flock-react-component-lib';
 import { useCallback, useEffect, useState } from 'react';
-import type { Project, ProjectIteration, ReviewComment } from '../shared/contract';
+import type { Person, Project, ProjectIteration, ReviewComment } from '../shared/contract';
+import { avatarUrl } from '../shared/people';
+
+/** Profile picture and username for each person; initials stand in when no GitHub account is known. */
+const People = ({ people, empty }: { people: Person[]; empty?: string }) =>
+	people.length === 0 ? (
+		empty ? (
+			<FSTypography variant="body2" color="text.secondary">
+				{empty}
+			</FSTypography>
+		) : null
+	) : (
+		<FSStack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+			{people.map((p) => (
+				<FSStack key={p.login ?? p.name} direction="row" spacing={1} alignItems="center">
+					<FSAvatar
+						src={avatarUrl(p.login) ?? undefined}
+						alt={p.name}
+						sx={{ width: 24, height: 24, fontSize: 12 }}
+					>
+						{p.name.charAt(0).toUpperCase()}
+					</FSAvatar>
+					<FSTypography variant="body2">{p.login ?? p.name}</FSTypography>
+				</FSStack>
+			))}
+		</FSStack>
+	);
 
 /**
  * Reviewer mode: every project in the design repository, read through the API.
@@ -102,9 +129,7 @@ export const Projects = () => {
 							)}
 						</FSStack>
 
-						<FSTypography variant="body2" color="text.secondary">
-							{project.people.length > 0 ? project.people.join(', ') : 'No contributors recorded yet'}
-						</FSTypography>
+						<People people={project.people} empty="No contributors recorded yet" />
 
 						<FSTypography variant="body2" color="text.secondary">
 							{project.records.join(' · ') || 'no records yet'}
@@ -187,8 +212,8 @@ const Iteration = ({
 			</FSStack>
 			<FSTypography variant="body2" color="text.secondary">
 				{iteration.branch}
-				{iteration.contributors.length > 0 && ` · ${iteration.contributors.join(', ')}`}
 			</FSTypography>
+			<People people={iteration.contributors} />
 
 			{error && <FSAlert severity="error">{error}</FSAlert>}
 

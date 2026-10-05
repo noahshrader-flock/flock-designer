@@ -1,5 +1,6 @@
-import type { Iteration, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
+import type { Iteration, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
 import { GitHubError } from './github';
+import { asPeople, mergePeople } from '../../shared/people';
 import type { GitHubSession } from './githubSession';
 
 /**
@@ -36,15 +37,6 @@ const firstHeading = (markdown: string): string | null => {
   return null;
 };
 
-/** Names combined without duplicates, ignoring case, keeping the first spelling seen. */
-const unionNames = (...lists: string[][]): string[] => {
-  const seen = new Map<string, string>();
-  for (const name of lists.flat().map((n) => n.trim())) {
-    if (name && !seen.has(name.toLowerCase())) seen.set(name.toLowerCase(), name);
-  }
-  return [...seen.values()];
-};
-
 const isBot = (name: string): boolean => /\[bot\]$/i.test(name);
 
 export class DesignRepo {
@@ -76,10 +68,10 @@ export class DesignRepo {
 
         const iterations = await this.readIterations(id, records, issues);
         // Alphabetical, so the line does not reshuffle as iterations are added.
-        const people = unionNames(
+        const people = mergePeople(
           iterations.flatMap((it) => it.contributors),
           await this.folderAuthors(id),
-        ).sort((x, y) => x.localeCompare(y));
+        );
         return {
           id,
           title: (await this.readBriefTitle(id, records)) ?? id,
@@ -96,13 +88,15 @@ export class DesignRepo {
    * People who have committed to the project's own folder (brief, review,
    * decisions). Best effort: a failure here must not hide the project list.
    */
-  private async folderAuthors(id: string): Promise<string[]> {
+  private async folderAuthors(id: string): Promise<Person[]> {
     try {
       const commits = asArray(await this.session.api(`${this.base}/commits?path=projects/${id}&per_page=100`));
-      return commits
-        .map((c) => String(asRecord(asRecord(asRecord(c).commit).author).name ?? ''))
-        .filter((n) => n && !isBot(n))
-        .reverse();
+      return commits.reverse().flatMap((c): Person[] => {
+        const name = String(asRecord(asRecord(asRecord(c).commit).author).name ?? '');
+        const account = asRecord(asRecord(c).author); // the GitHub account, when the email is linked to one
+        const login = typeof account.login === 'string' && !isBot(account.login) ? account.login : null;
+        return name && !isBot(name) ? [{ name, login }] : [];
+      });
     } catch {
       return [];
     }
@@ -168,7 +162,7 @@ export class DesignRepo {
         branch: String(it.branch),
         issueNumber: issues.get(String(it.branch))?.number ?? null,
         previewUrl: typeof it.previewUrl === 'string' ? it.previewUrl : null,
-        contributors: asArray(it.contributors).filter((n): n is string => typeof n === 'string'),
+        contributors: asPeople(it.contributors),
       }))
       .sort((a, b) => {
         // Prototype iterations newest first, then the codebase branch.
@@ -205,7 +199,7 @@ export class DesignRepo {
       for (const r of remote) merged.set(String(r.name), r);
       for (const l of local) {
         const theirs = merged.get(l.name);
-        const people = unionNames(asArray(theirs?.contributors).map(String), l.contributors ?? []);
+        const people = mergePeople(asPeople(theirs?.contributors), asPeople(l.contributors));
         merged.set(l.name, { ...theirs, ...l, ...(people.length > 0 ? { contributors: people } : {}) });
       }
       const next = [...merged.values()].sort((a, b) =>
