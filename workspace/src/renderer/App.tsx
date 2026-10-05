@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { SignInState } from '../shared/contract';
 import { Projects } from './Projects';
 import { SignIn } from './SignIn';
+import { ErrorBoundary } from './ErrorBoundary';
 import { NAV_HEIGHT, TopNav } from './TopNav';
 
 /**
@@ -37,7 +38,9 @@ export const App = () => {
 			<TopNav user={signIn.state === 'signedIn' ? signIn.user : null} onSignOut={signOut} />
 			<FSBox sx={{ pt: `${NAV_HEIGHT}px` }}>
 				<FSBox sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
-					{signIn.state === 'signedIn' ? <Projects /> : <SignIn state={signIn} onChanged={refreshSignIn} />}
+					<ErrorBoundary>
+						{signIn.state === 'signedIn' ? <Projects /> : <SignIn state={signIn} onChanged={refreshSignIn} />}
+					</ErrorBoundary>
 				</FSBox>
 			</FSBox>
 		</FSBox>

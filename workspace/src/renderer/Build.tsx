@@ -46,7 +46,11 @@ export const Build = ({
 		return () => offs.forEach((off) => off());
 	}, []);
 
-	useEffect(() => logEnd.current?.scrollIntoView({ block: 'end' }), [log]);
+	useEffect(() => {
+		// A block body on purpose: newer Chromium's scrollIntoView returns a Promise, and an
+		// effect that returns anything but a cleanup function takes the whole window down.
+		logEnd.current?.scrollIntoView({ block: 'end' });
+	}, [log]);
 
 	/** Puts the checkout on this iteration's branch first; a clean tree is required, and the app says so if it is not. */
 	const onBranch = useCallback(async (): Promise<boolean> => {

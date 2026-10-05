@@ -237,9 +237,11 @@ export const Review = ({
 							<FSTypography variant="body2" color="text.secondary">
 								{iteration.previewUrl
 									? 'Opening the preview…'
-									: 'This iteration has no preview address recorded yet. To try it, paste the address of one running on this machine, like http://localhost:3000.'}
+									: build
+										? 'Press Run preview on the right to see this here.'
+										: 'This iteration has no preview address recorded yet. To try it, paste the address of one running on this machine, like http://localhost:3000.'}
 							</FSTypography>
-							{!iteration.previewUrl && (
+							{!iteration.previewUrl && !build && (
 								<FSStack direction="row" spacing={1}>
 									<FSTextField label="Preview address" value={urlDraft} onChange={setUrlDraft} sx={{ flexGrow: 1 }} />
 									<FSButton onClick={() => void open(urlDraft)} disabled={!urlDraft.trim()}>
