@@ -131,6 +131,20 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	await new Promise((res) => setTimeout(res, 500));
 	if (!wc.getURL().startsWith(origin)) fail(`the preview navigated away: ${wc.getURL()}`);
 
+	// 6b. Hiding the preview hands the keyboard to the window, so a box drawn by the window can be typed into.
+	console.log('smoke-page: step 6b');
+	let handedOver = 0;
+	const realFocus = window.webContents.focus.bind(window.webContents);
+	window.webContents.focus = () => {
+		handedOver++;
+		realFocus();
+	};
+	page.hold('popover', true);
+	if (handedOver !== 1) fail(`hiding the preview did not hand the keyboard to the window (${handedOver} times)`);
+	page.hold('popover', false);
+	if (handedOver !== 1) fail('showing the preview again took the keyboard from the window');
+	window.webContents.focus = realFocus;
+
 	// 7. Addresses a preview may not have are refused before a view exists.
 	console.log('smoke-page: step 7');
 	for (const bad of ['file:///etc/passwd', 'javascript:alert(1)', 'http://example.com']) {

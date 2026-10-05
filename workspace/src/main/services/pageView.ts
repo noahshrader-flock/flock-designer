@@ -103,6 +103,11 @@ export class PageView {
 		if (held) this.holds.add(reason);
 		else this.holds.delete(reason);
 		this.view?.setVisible(this.holds.size === 0);
+		// A preview that is hidden must not keep the keyboard. The click that placed a pin was
+		// inside the page, so the page owns it, and typing into a box drawn by the window would
+		// go to a page nobody can see. Whatever hid the preview is about to show something that
+		// wants keystrokes, so the window takes them back.
+		if (held) this.window.webContents.focus();
 	}
 
 	/**

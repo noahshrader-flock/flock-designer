@@ -99,6 +99,7 @@ export const Review = ({
 	const [snapshot, setSnapshot] = useState<string | null>(null);
 	const held = useRef(false);
 	const pickActive = useRef(false);
+	const composer = useRef<HTMLDivElement>(null);
 
 	// Bring the iteration up here, unless it already has a hosted address to open.
 	const local = useLocalBuild({ checkout, project, iteration, task, enabled: !iteration.previewUrl });
@@ -630,9 +631,13 @@ export const Review = ({
 				anchorPosition={boxPosition}
 				transformOrigin={{ vertical: 'center', horizontal: 'left' }}
 				PaperProps={{ sx: { width: 300, maxWidth: 'calc(100vw - 16px)' } }}
+				// The popover moves focus to its own frame as it opens, which can override the input's
+				// autoFocus; so once it has finished opening, put the cursor in the input explicitly.
+				TransitionProps={{ onEntered: () => composer.current?.querySelector('textarea')?.focus() }}
 			>
 				{/* Cmd or Ctrl and Enter saves, as in the tools people already use. */}
 				<FSBox
+					ref={composer}
 					onKeyDown={(e: React.KeyboardEvent) => {
 						if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void post();
 					}}
