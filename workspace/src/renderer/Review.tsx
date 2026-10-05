@@ -4,6 +4,7 @@ import {
 	FSButton,
 	FSChip,
 	FSIconButton,
+	FSSpinner,
 	FSStack,
 	FSTextField,
 	FSTooltip,
@@ -11,25 +12,28 @@ import {
 } from '@flocksafety/flock-react-component-lib';
 import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutline';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
-import BuildOutlined from '@mui/icons-material/BuildOutlined';
 import { Popover } from '@mui/material';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
+import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { People } from './People';
+import { useLocalBuild } from './useLocalBuild';
 import { NAV_HEIGHT } from './TopNav';
 
 /**
  * One iteration: a thin toolbar, and the preview taking everything under it.
  *
- * Build and Comments are icons in the toolbar, each opening a popover. The preview
- * is a native view, always drawn *above* the window's own content, so a popover
- * cannot be laid over it. While one is open the preview is swapped for a picture of
- * itself and the popover is drawn over that; closing the popover brings the live
- * page back. The picture is taken after the pins are drawn, and shown before the
- * live view is hidden, so nothing flashes.
+ * Opening an iteration brings its preview up on this machine by itself: the screen says
+ * what it is doing while it works, and shows the page when it is ready, so nobody has to
+ * decide to run anything. Comments are an icon in the toolbar that opens a popover.
+ *
+ * The preview is a native view, always drawn *above* the window's own content, so a popover
+ * cannot be laid over it. While one is open the preview is swapped for a picture of itself
+ * and the popover is drawn over that; closing it brings the live page back. The picture is
+ * taken after the pins are drawn, and shown before the live view is hidden, so nothing
+ * flashes.
  */
 
-/** What both popovers look like. Sized to the window, so a short window scrolls instead of overflowing. */
+/** What the popover looks like. Sized to the window, so a short window scrolls instead of overflowing. */
 const POPOVER_PAPER = {
 	width: 380,
 	maxWidth: 'calc(100vw - 16px)',
@@ -41,7 +45,6 @@ const POPOVER_PAPER = {
 export const TOOLBAR_HEIGHT = 44;
 
 type Mode = 'browse' | 'picking' | 'composing';
-type Which = 'build' | 'comments';
 
 const NOTE: Record<MarkerState, string | null> = {
 	found: null,
@@ -54,16 +57,18 @@ export const Review = ({
 	project,
 	iteration,
 	onBack,
-	build,
-	externalUrl,
+	checkout,
+	onChoose,
+	task,
 }: {
 	project: Project;
 	iteration: ProjectIteration;
 	onBack: () => void;
-	/** Controls for building on this machine, shown above the comments. */
-	build?: ReactNode;
-	/** A preview address from somewhere else -- a local run -- to open as soon as it appears. */
-	externalUrl?: string | null;
+	/** The product repository on this machine, if one has been accepted. */
+	checkout: Checkout | null;
+	onChoose: () => void;
+	/** For work that was just created: what the agent builds before the preview starts. */
+	task?: string;
 }) => {
 	const [comments, setComments] = useState<ReviewComment[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -81,13 +86,14 @@ export const Review = ({
 	const [redraw, setRedraw] = useState(0);
 	const cards = useRef(new Map<number, HTMLElement>());
 
-	// Which popover is open, if any. Build first when there is nothing to look at yet,
-	// because that is where the preview is started.
-	const [popover, setPopover] = useState<Which | null>(!iteration.previewUrl && build ? 'build' : null);
+	const [commentsOpen, setCommentsOpen] = useState(false);
 	const [ready, setReady] = useState(false); // the preview has stepped aside, so the popover can show
 	const [snapshot, setSnapshot] = useState<string | null>(null);
 	const held = useRef(false);
-	const anchors = useRef<Partial<Record<Which, HTMLElement | null>>>({});
+	const anchor = useRef<HTMLElement | null>(null);
+
+	// Bring the iteration up here, unless it already has a hosted address to open.
+	const local = useLocalBuild({ checkout, project, iteration, task, enabled: !iteration.previewUrl });
 
 	useEffect(() => {
 		void window.workspace.signInState().then((r) => {
@@ -132,9 +138,10 @@ export const Review = ({
 		return () => void window.workspace.pageClose();
 	}, [iteration.previewUrl, open]);
 
+	// When the preview is up, show it.
 	useEffect(() => {
-		if (externalUrl) void open(externalUrl);
-	}, [externalUrl, open]);
+		if (local.phase.kind === 'running') void open(local.phase.url);
+	}, [local.phase, open]);
 
 	useEffect(() => window.workspace.onPageRoute(setRoute), []);
 
@@ -183,7 +190,7 @@ export const Review = ({
 			if (e.kind === 'click') {
 				if (e.id < 0) return;
 				setSelected(e.id);
-				setPopover('comments'); // the comment is in there, so show it
+				setCommentsOpen(true); // the comment is in there, so show it
 				setTimeout(() => cards.current.get(e.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 250);
 			} else if (e.id < 0) {
 				// The unsaved pin: just remember where it now is.
@@ -207,7 +214,7 @@ export const Review = ({
 
 	const startComment = useCallback(async () => {
 		setError(null);
-		setPopover(null); // the page has to be live to be clicked
+		setCommentsOpen(false); // the page has to be live to be clicked
 		setMode('picking');
 		const r = await window.workspace.pagePick();
 		if (!r.ok) {
@@ -240,33 +247,28 @@ export const Review = ({
 		return () => window.removeEventListener('keydown', onKey);
 	}, [opened, mode, startComment, cancel]);
 
-	// Writing a comment happens in the Comments popover.
+	// Writing a comment happens in the comments popover.
 	useEffect(() => {
-		if (mode === 'composing') setPopover('comments');
+		if (mode === 'composing') setCommentsOpen(true);
 	}, [mode]);
 
-	// An error is drawn in a popover, so raise one: Comments if there is a page to comment on, else Build.
+	// A comment error is drawn in the popover, so raise it when there is a page to comment on.
 	useEffect(() => {
-		if (error) setPopover(opened ? 'comments' : 'build');
+		if (error && opened) setCommentsOpen(true);
 	}, [error, opened]);
 
-	// A preview opening is what Build was for, so get out of its way.
-	useEffect(() => {
-		if (opened) setPopover((p) => (p === 'build' ? null : p));
-	}, [opened]);
-
 	/**
-	 * Popover open: freeze the preview. Closed: bring it back.
+	 * Comments open: freeze the preview. Closed: bring it back.
 	 *
 	 * The order matters. Markers are drawn first so the picture includes them; the picture
 	 * is on screen before the live view is hidden, so there is no flash of empty window;
 	 * and a run counter drops the result of a freeze that was overtaken by the popover
-	 * closing again. Switching from one popover to the other keeps the same picture.
+	 * closing again.
 	 */
 	const run = useRef(0);
 	useEffect(() => {
 		const mine = ++run.current;
-		if (popover === null) {
+		if (!commentsOpen) {
 			setReady(false);
 			held.current = false;
 			void window.workspace.pageHold('popover', false);
@@ -292,7 +294,7 @@ export const Review = ({
 			held.current = true;
 			setReady(true);
 		})();
-	}, [popover, opened]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [commentsOpen, opened]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// Letting go on the way out matters: the hold lives in the main process, and a preview
 	// left hidden would stay hidden for the next iteration too.
@@ -313,7 +315,7 @@ export const Review = ({
 			setDraft('');
 			setPending(null);
 			setMode('browse');
-			setPopover('comments'); // so the comment just posted is there to see
+			setCommentsOpen(true); // so the comment just posted is there to see
 			await load();
 		} else {
 			setError(r.error);
@@ -365,28 +367,14 @@ export const Review = ({
 				</FSTypography>
 				<People people={iteration.contributors} />
 				<FSBox sx={{ flexGrow: 1 }} />
-				{/* Two icons, each opening a popover. The count is in the Comments popover's heading. */}
-				<FSTooltip title="Build" describeChild>
-					<FSBox ref={(el: HTMLDivElement | null) => void (anchors.current.build = el)}>
-						<FSIconButton
-							size="md"
-							variant={popover === 'build' ? 'primary' : 'secondary'}
-							aria-label="Build"
-							aria-pressed={popover === 'build'}
-							onClick={() => setPopover((p) => (p === 'build' ? null : 'build'))}
-						>
-							<BuildOutlined fontSize="small" />
-						</FSIconButton>
-					</FSBox>
-				</FSTooltip>
 				<FSTooltip title={unread > 0 ? `Comments (${unread})` : 'Comments'} describeChild>
-					<FSBox ref={(el: HTMLDivElement | null) => void (anchors.current.comments = el)}>
+					<FSBox ref={(el: HTMLDivElement | null) => void (anchor.current = el)}>
 						<FSIconButton
 							size="md"
-							variant={popover === 'comments' ? 'primary' : 'secondary'}
+							variant={commentsOpen ? 'primary' : 'secondary'}
 							aria-label="Comments"
-							aria-pressed={popover === 'comments'}
-							onClick={() => setPopover((p) => (p === 'comments' ? null : 'comments'))}
+							aria-pressed={commentsOpen}
+							onClick={() => setCommentsOpen((o) => !o)}
 						>
 							<ChatBubbleOutline fontSize="small" />
 						</FSIconButton>
@@ -397,59 +385,77 @@ export const Review = ({
 			{/* The preview takes everything under the toolbar. Nothing else shares its space. */}
 			<FSBox ref={slot} sx={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden', bgcolor: 'grey.100' }}>
 				{!opened && (
-					<FSStack spacing={1} sx={{ p: 3, maxWidth: 640 }}>
-						<FSTypography variant="body2" color="text.secondary">
-							{iteration.previewUrl
-								? 'Opening the preview…'
-								: build
-									? 'Press Run preview in the Build popover (the wrench in the toolbar).'
-									: 'This iteration has no preview address recorded yet. To try it, paste the address of one running on this machine, like http://localhost:3000.'}
-						</FSTypography>
-						{!iteration.previewUrl && !build && (
-							<FSStack direction="row" spacing={1}>
-								<FSTextField label="Preview address" value={urlDraft} onChange={setUrlDraft} sx={{ flexGrow: 1 }} />
-								<FSButton size="md" onClick={() => void open(urlDraft)} disabled={!urlDraft.trim()}>
-									Open
+					<FSStack spacing={2} alignItems="center" justifyContent="center" sx={{ position: 'absolute', inset: 0, p: 3, textAlign: 'center' }}>
+						{local.phase.kind === 'failed' ? (
+							<>
+								<FSAlert severity="error" sx={{ maxWidth: 560, textAlign: 'left' }}>
+									{local.phase.message}
+								</FSAlert>
+								{local.log.length > 0 && (
+									<FSBox
+										component="pre"
+										sx={{ m: 0, p: 1.5, maxWidth: 560, width: '100%', maxHeight: 180, overflow: 'auto', bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1, fontSize: 11, textAlign: 'left', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+									>
+										{local.log.slice(-15).join('\n')}
+									</FSBox>
+								)}
+								<FSButton size="md" onClick={local.retry}>
+									Try again
 								</FSButton>
-							</FSStack>
+							</>
+						) : error ? (
+							<FSAlert severity="error" sx={{ maxWidth: 560, textAlign: 'left' }}>
+								{error}
+							</FSAlert>
+						) : !iteration.previewUrl && !checkout ? (
+							<>
+								<FSTypography variant="body1">Flock Designer needs your Coke repository to show this.</FSTypography>
+								<FSTypography variant="body2" color="text.secondary">
+									It could not find one on this machine. Point it at your Coke folder once.
+								</FSTypography>
+								<FSButton size="md" onClick={onChoose}>
+									Find it
+								</FSButton>
+							</>
+						) : (
+							<>
+								<FSSpinner />
+								<FSTypography variant="body1">
+									{local.phase.kind === 'agent'
+										? `Building ${project.title}…`
+										: local.phase.kind === 'preview'
+											? 'Starting the preview…'
+											: 'Opening the preview…'}
+								</FSTypography>
+								{local.phase.kind === 'agent' && (
+									<FSTypography variant="body2" color="text.secondary" sx={{ maxWidth: 480 }}>
+										The agent is writing it from your request. This takes a few minutes.
+									</FSTypography>
+								)}
+								{local.phase.kind === 'preview' && (
+									<FSTypography variant="body2" color="text.secondary">
+										The first time can take a minute.
+									</FSTypography>
+								)}
+							</>
 						)}
 					</FSStack>
 				)}
 
-				{/* While a popover is open the preview is this picture of it. */}
+				{/* While the comments are open the preview is this picture of it. */}
 				{snapshot && (
 					<img
 						src={snapshot}
-						alt="The preview, paused while a popover is open"
+						alt="The preview, paused while the comments are open"
 						style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill' }}
 					/>
 				)}
 			</FSBox>
 
-			{/* Build stays mounted while closed: the agent, and the preview it starts, outlive the popover. */}
 			<Popover
-				keepMounted
-				open={popover === 'build' && ready}
-				onClose={() => setPopover(null)}
-				anchorEl={anchors.current.build ?? null}
-				anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-				transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-				PaperProps={{ sx: POPOVER_PAPER }}
-			>
-				<FSStack spacing={2} sx={{ p: 2 }}>
-					{error && popover === 'build' && <FSAlert severity="error">{error}</FSAlert>}
-					{build ?? (
-						<FSTypography variant="body2" color="text.secondary">
-							Building is available once your Coke repository is found.
-						</FSTypography>
-					)}
-				</FSStack>
-			</Popover>
-
-			<Popover
-				open={popover === 'comments' && ready}
-				onClose={() => setPopover(null)}
-				anchorEl={anchors.current.comments ?? null}
+				open={commentsOpen && ready}
+				onClose={() => setCommentsOpen(false)}
+				anchorEl={anchor.current}
 				anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
 				transformOrigin={{ vertical: 'top', horizontal: 'right' }}
 				PaperProps={{ sx: POPOVER_PAPER }}

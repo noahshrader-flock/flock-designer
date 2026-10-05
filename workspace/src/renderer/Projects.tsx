@@ -9,7 +9,6 @@ import {
 } from '@flocksafety/flock-react-component-lib';
 import { useCallback, useEffect, useState } from 'react';
 import type { Checkout, CheckoutSuggestion, Person, Project, ProjectIteration } from '../shared/contract';
-import { Build } from './Build';
 import { NewWork, type Created } from './NewWork';
 import { People } from './People';
 import { Review } from './Review';
@@ -26,7 +25,6 @@ export const Projects = () => {
 	const [selected, setSelected] = useState<{ project: Project; iteration: ProjectIteration; task?: string } | null>(null);
 	const [checkout, setCheckout] = useState<Checkout | null>(null);
 	const [creating, setCreating] = useState(false);
-	const [localUrl, setLocalUrl] = useState<string | null>(null);
 	const [looked, setLooked] = useState(false);
 	const [suggestion, setSuggestion] = useState<CheckoutSuggestion | null>(null);
 
@@ -49,7 +47,6 @@ export const Projects = () => {
 			setSuggestion(null);
 		}
 	}, []);
-	const showPreview = useCallback((url: string) => setLocalUrl(url), []);
 
 	const load = useCallback(async () => {
 		setError(null);
@@ -96,23 +93,15 @@ export const Projects = () => {
 	if (selected) {
 		return (
 			<Review
+				// A new key per iteration, so opening another one starts it fresh.
+				key={`${selected.project.id}/${selected.iteration.name}`}
 				project={selected.project}
 				iteration={selected.iteration}
-				externalUrl={localUrl}
-				build={
-					<Build
-						key={`${selected.project.id}/${selected.iteration.name}`}
-						checkout={checkout}
-						onChoose={chooseCheckout}
-						project={selected.project}
-						iteration={selected.iteration}
-						autoTask={selected.task}
-						onPreviewUrl={showPreview}
-					/>
-				}
+				checkout={checkout}
+				onChoose={chooseCheckout}
+				task={selected.task}
 				onBack={() => {
 					setSelected(null);
-					setLocalUrl(null);
 					void load();
 				}}
 			/>
@@ -158,7 +147,6 @@ export const Projects = () => {
 				onChoose={chooseCheckout}
 				onCreated={(c: Created) => {
 					setCreating(false);
-					setLocalUrl(null);
 					setSelected({ project: c.project, iteration: c.iteration, task: c.task });
 				}}
 			/>
