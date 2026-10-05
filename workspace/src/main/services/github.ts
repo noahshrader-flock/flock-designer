@@ -192,16 +192,28 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): P
   }
   if (res.status >= 400) {
     const detail = asRecord(await res.json().catch(() => ({})));
-    // 404 is what GitHub returns for a repository the app cannot see, which is
-    // indistinguishable from one that does not exist. Say both.
-    throw new GitHubError(
-      res.status === 404
-        ? `Not found, or this app is not installed on it: ${call.path}`
-        : typeof detail.message === 'string'
-          ? detail.message
-          : `GitHub returned ${res.status}`,
-      res.status,
-    );
+    const message = typeof detail.message === 'string' ? detail.message : '';
+
+    // GitHub's own wording for a missing permission is "Resource not accessible
+    // by integration", which tells you nothing about which permission or where
+    // to set it. Name both -- this cost a round trip the first time it happened.
+    if (res.status === 403 && /not accessible by integration/i.test(message)) {
+      const needed = call.path.includes('/contents/') || call.path.includes('/branches')
+        ? 'Contents (read-only)'
+        : call.path.includes('/issues')
+          ? 'Issues (read and write)'
+          : 'an additional repository permission';
+      throw new GitHubError(
+        `The GitHub App is missing the ${needed} permission. Add it under the app's ` +
+          'Permissions & events, then approve the update on the installation.',
+        res.status,
+      );
+    }
+    if (res.status === 404) {
+      // Indistinguishable from a repository that does not exist, so say both.
+      throw new GitHubError(`Not found, or this app is not installed on it: ${call.path}`, res.status);
+    }
+    throw new GitHubError(message || `GitHub returned ${res.status}`, res.status);
   }
   return res.json();
 };

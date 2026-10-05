@@ -127,6 +127,18 @@ describe('callApi', () => {
     await expect(callApi('tok', { path: '/repos/x/y' }, fetcher)).rejects.toThrow(/not installed/);
   });
 
+  it('names the missing permission and where to set it, which GitHub does not', async () => {
+    const { fetcher } = stub([{ status: 403, body: { message: 'Resource not accessible by integration' } }]);
+    await expect(callApi('tok', { path: '/repos/a/b/contents/projects' }, fetcher)).rejects.toThrow(
+      /Contents \(read-only\).*Permissions & events/s,
+    );
+  });
+
+  it('names the Issues permission when that is the one missing', async () => {
+    const { fetcher } = stub([{ status: 403, body: { message: 'Resource not accessible by integration' } }]);
+    await expect(callApi('tok', { path: '/repos/a/b/issues' }, fetcher)).rejects.toThrow(/Issues \(read and write\)/);
+  });
+
   it("passes GitHub's own message through for other failures", async () => {
     const { fetcher } = stub([{ status: 422, body: { message: 'Validation failed' } }]);
     await expect(callApi('tok', { path: '/x' }, fetcher)).rejects.toThrow(GitHubError);

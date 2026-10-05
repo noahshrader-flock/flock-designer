@@ -37,8 +37,16 @@ which is why nothing here runs a backend. The token is encrypted with the OS key
 Tokens last 8 hours and are refreshed silently. A refresh that fails signs you out rather than
 failing a call mysteriously.
 
-The app is configured for a GitHub App that must have device flow enabled, Issues write permission,
-and be installed on the design repository. Point a development build elsewhere with
+The app is configured for a GitHub App that must have device flow enabled, be installed on the design
+repository, and carry two repository permissions:
+
+| Permission | Level | Why |
+|---|---|---|
+| **Contents** | Read-only | Lists project folders and branches. Read-only because the app never writes code through the API — authoring writes go through git in a real checkout |
+| **Issues** | Read and write | Comments are issue comments |
+
+Changing a permission later also requires approving the update on the installation; GitHub does not
+apply it until then. Point a development build elsewhere with
 `FLOCK_DESIGNER_CLIENT_ID`, `FLOCK_DESIGNER_REPO_OWNER` and `FLOCK_DESIGNER_REPO_NAME`.
 
 ## What it can and cannot do
