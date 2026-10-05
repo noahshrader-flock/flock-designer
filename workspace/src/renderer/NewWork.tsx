@@ -80,7 +80,7 @@ export const NewWork = ({
 							</FSLink>
 						</FSTypography>
 					) : (
-						<FSAlert severity="info" action={<FSButton onClick={onChoose}>Find it</FSButton>}>
+						<FSAlert severity="info" action={<FSButton size="md" onClick={onChoose}>Find it</FSButton>}>
 							Flock Designer could not find a Flock product repository on this machine.
 						</FSAlert>
 					)}
@@ -103,13 +103,13 @@ export const NewWork = ({
 				</FSStack>
 			</FSDialogContent>
 			<FSDialogActions>
-				<FSButton variant="secondary" onClick={onClose} disabled={busy}>
+				<FSButton size="md" variant="secondary" onClick={onClose} disabled={busy}>
 					Cancel
 				</FSButton>
-				<FSButton variant="secondary" onClick={() => void create('codebase')} disabled={busy || !checkout || !id || !task.trim()}>
+				<FSButton size="md" variant="secondary" onClick={() => void create('codebase')} disabled={busy || !checkout || !id || !task.trim()}>
 					In the codebase
 				</FSButton>
-				<FSButton onClick={() => void create('prototype')} disabled={busy || !checkout || !id || !task.trim()}>
+				<FSButton size="md" onClick={() => void create('prototype')} disabled={busy || !checkout || !id || !task.trim()}>
 					{busy ? 'Creating…' : 'Create prototype'}
 				</FSButton>
 			</FSDialogActions>

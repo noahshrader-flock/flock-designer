@@ -63,7 +63,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 					</FSBox>
 
 					<FSStack direction="row" spacing={2} justifyContent="center">
-						<FSButton
+						<FSButton size="md"
 							onClick={() => {
 								void navigator.clipboard.writeText(start.userCode);
 								setCopied(true);
@@ -72,7 +72,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 							{copied ? 'Copied' : 'Copy code'}
 						</FSButton>
 						{/* Opens in the real browser: the main process denies in-window navigation. */}
-						<FSButton variant="secondary" onClick={() => window.open(start.verificationUri, '_blank')}>
+						<FSButton size="md" variant="secondary" onClick={() => window.open(start.verificationUri, '_blank')}>
 							Open GitHub
 						</FSButton>
 					</FSStack>
@@ -81,7 +81,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 						Waiting for you to approve it. This page continues on its own.
 					</FSTypography>
 					<FSBox>
-						<FSButton variant="secondary" onClick={cancel}>
+						<FSButton size="md" variant="secondary" onClick={cancel}>
 							Cancel
 						</FSButton>
 					</FSBox>
@@ -102,7 +102,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 				</FSTypography>
 				{error && <FSAlert severity="error">{error}</FSAlert>}
 				<FSBox>
-					<FSButton onClick={begin} disabled={busy}>
+					<FSButton size="md" onClick={begin} disabled={busy}>
 						{busy ? 'Starting…' : 'Sign in with GitHub'}
 					</FSButton>
 				</FSBox>

@@ -156,7 +156,7 @@ export const Build = ({
 					<FSTypography variant="body2" color="text.secondary">
 						Flock Designer could not find a Flock product repository on this machine. Point it at your Coke folder once to run this here.
 					</FSTypography>
-					<FSButton variant="secondary" onClick={onChoose}>
+					<FSButton size="md" variant="secondary" onClick={onChoose}>
 						Find it
 					</FSButton>
 				</FSStack>
@@ -178,11 +178,11 @@ export const Build = ({
 
 				<FSStack direction="row" spacing={1} alignItems="center">
 					{running ? (
-						<FSButton variant="secondary" onClick={stopPreview}>
+						<FSButton size="md" variant="secondary" onClick={stopPreview}>
 							Stop preview
 						</FSButton>
 					) : (
-						<FSButton onClick={runPreview} disabled={busy || preview.state === 'starting'}>
+						<FSButton size="md" onClick={runPreview} disabled={busy || preview.state === 'starting'}>
 							{preview.state === 'starting' ? 'Starting…' : 'Run preview'}
 						</FSButton>
 					)}
@@ -198,7 +198,7 @@ export const Build = ({
 				</FSStack>
 
 				<FSTextField label="Ask the agent" multiline minRows={2} value={task} onChange={setTask} />
-				<FSButton variant="secondary" onClick={() => void askAgent(task, true)} disabled={busy || agent.state === 'running' || !task.trim()}>
+				<FSButton size="md" variant="secondary" onClick={() => void askAgent(task, true)} disabled={busy || agent.state === 'running' || !task.trim()}>
 					{agent.state === 'running' ? 'Agent is working…' : 'Ask the agent'}
 				</FSButton>
 				{agent.state === 'unavailable' && <FSAlert severity="error">{agent.detail}</FSAlert>}

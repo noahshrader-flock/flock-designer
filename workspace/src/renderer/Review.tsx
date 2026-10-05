@@ -218,7 +218,7 @@ export const Review = ({
 	return (
 		<FSStack spacing={2}>
 			<FSStack direction="row" alignItems="center" spacing={2}>
-				<FSButton variant="secondary" onClick={onBack}>
+				<FSButton size="md" variant="secondary" onClick={onBack}>
 					Back
 				</FSButton>
 				<FSTypography variant="h6" component="h2">
@@ -245,7 +245,7 @@ export const Review = ({
 							{!iteration.previewUrl && !build && (
 								<FSStack direction="row" spacing={1}>
 									<FSTextField label="Preview address" value={urlDraft} onChange={setUrlDraft} sx={{ flexGrow: 1 }} />
-									<FSButton onClick={() => void open(urlDraft)} disabled={!urlDraft.trim()}>
+									<FSButton size="md" onClick={() => void open(urlDraft)} disabled={!urlDraft.trim()}>
 										Open
 									</FSButton>
 								</FSStack>
@@ -257,7 +257,7 @@ export const Review = ({
 				<FSStack spacing={2} sx={{ width: 340, flexShrink: 0, maxHeight: 'calc(100vh - 260px)', overflowY: 'auto' }}>
 					{build}
 					<FSStack direction="row" spacing={1} alignItems="center">
-						<FSButton
+						<FSButton size="md"
 							variant={mode === 'browse' ? 'primary' : 'secondary'}
 							disabled={!opened || mode === 'composing'}
 							onClick={() => (mode === 'picking' ? void cancel() : void startComment())}
@@ -265,7 +265,7 @@ export const Review = ({
 							{mode === 'picking' ? 'Click to place a pin…' : 'Place a pin (C)'}
 						</FSButton>
 						{mode !== 'browse' && (
-							<FSButton variant="secondary" onClick={() => void cancel()}>
+							<FSButton size="md" variant="secondary" onClick={() => void cancel()}>
 								Cancel
 							</FSButton>
 						)}
@@ -279,7 +279,7 @@ export const Review = ({
 									Pinned on {pending.route}
 								</FSTypography>
 								<FSTextField label="Your comment" multiline minRows={3} value={draft} onChange={setDraft} autoFocus />
-								<FSButton onClick={post} disabled={posting || !draft.trim()}>
+								<FSButton size="md" onClick={post} disabled={posting || !draft.trim()}>
 									{posting ? 'Posting…' : 'Post comment'}
 								</FSButton>
 							</FSStack>

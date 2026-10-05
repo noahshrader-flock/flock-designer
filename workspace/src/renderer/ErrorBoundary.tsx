@@ -20,7 +20,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
 				<FSStack spacing={2}>
 					<FSAlert severity="error">Something on this screen broke: {this.state.error.message}</FSAlert>
 					<FSBox>
-						<FSButton onClick={() => this.setState({ error: null })}>Try again</FSButton>
+						<FSButton size="md" onClick={() => this.setState({ error: null })}>Try again</FSButton>
 					</FSBox>
 				</FSStack>
 			</FSBox>

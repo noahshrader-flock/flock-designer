@@ -106,7 +106,7 @@ export const Projects = () => {
 			<FSStack spacing={2}>
 				<FSAlert severity="error">{error}</FSAlert>
 				<FSBox>
-					<FSButton variant="secondary" onClick={load}>
+					<FSButton size="md" variant="secondary" onClick={load}>
 						Try again
 					</FSButton>
 				</FSBox>
@@ -159,20 +159,20 @@ export const Projects = () => {
 					Projects
 				</FSTypography>
 				<FSBox flexGrow={1} />
-				<FSButton variant="secondary" onClick={load}>
+				<FSButton size="md" variant="secondary" onClick={load}>
 					Refresh
 				</FSButton>
-				<FSButton onClick={() => setCreating(true)}>New prototype</FSButton>
+				<FSButton size="md" onClick={() => setCreating(true)}>New prototype</FSButton>
 			</FSStack>
 			{looked && !checkout && suggestion && (
 				<FSAlert
 					severity="info"
 					action={
 						<FSStack direction="row" spacing={1}>
-							<FSButton variant="secondary" onClick={chooseCheckout}>
+							<FSButton size="md" variant="secondary" onClick={chooseCheckout}>
 								Choose another
 							</FSButton>
-							<FSButton onClick={() => void useSuggestion(suggestion.root)}>Use this one</FSButton>
+							<FSButton size="md" onClick={() => void useSuggestion(suggestion.root)}>Use this one</FSButton>
 						</FSStack>
 					}
 				>
@@ -180,7 +180,7 @@ export const Projects = () => {
 				</FSAlert>
 			)}
 			{looked && !checkout && !suggestion && (
-				<FSAlert severity="info" action={<FSButton onClick={chooseCheckout}>Find it</FSButton>}>
+				<FSAlert severity="info" action={<FSButton size="md" onClick={chooseCheckout}>Find it</FSButton>}>
 					Flock Designer could not find a Flock product repository on this machine. Point it at your Coke folder once.
 				</FSAlert>
 			)}
@@ -235,7 +235,7 @@ export const Projects = () => {
 						) : (
 							<FSStack direction="row" spacing={1} flexWrap="wrap">
 								{project.iterations.map((iteration) => (
-									<FSButton
+									<FSButton size="md"
 										key={iteration.branch}
 										variant="secondary"
 										onClick={() => setSelected({ project, iteration })}
