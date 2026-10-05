@@ -48,6 +48,13 @@ const createWindow = (): BrowserWindow => {
 		height: 860,
 		show: !smokeMode && !process.argv.includes('--smoke-page'),
 		title: 'Flock Designer',
+		// No native title bar: the app's own top bar is the toolbar. On macOS the window
+		// buttons stay, inset to sit centred in it; elsewhere the system draws its
+		// controls over the bar's right edge.
+		titleBarStyle: 'hidden',
+		...(process.platform === 'darwin'
+			? { trafficLightPosition: { x: 20, y: 20 } }
+			: { titleBarOverlay: { color: '#ffffff', symbolColor: '#111111', height: 56 } }),
 		backgroundColor: '#ffffff',
 		webPreferences: {
 			preload: join(__dirname, '../preload/index.js'),

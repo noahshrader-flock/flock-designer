@@ -16,16 +16,20 @@ npm test          # 88 tests
 npm run smoke     # boot the real app and prove the window opens
 ```
 
-## Two modes
+## What the window shows
 
-| Mode | Who | Needs |
-|---|---|---|
-| **Review** | Anyone — design, product, engineering | A GitHub account with read access to the design repository. No checkout, no git, no toolchain |
-| **Author** | The person building | A real checkout of the product repository, plus the agent |
+A fixed top bar (there is no native title bar; on macOS the window buttons sit inside it): **Flock
+Designer** on the left, the **Projects** tab beside it, and the account on the right, showing your GitHub
+picture and name, with **Sign out** in its menu. Projects is the only section.
 
-Review mode reads projects, iterations and comments through GitHub's API. **Comments are issue
-comments** in the design repository, one issue per iteration, so GitHub does the storing and the
-notifying and there is no server of ours anywhere.
+It reads projects, iterations and comments through GitHub's API, so it needs only a GitHub account with
+read access to the design repository: no checkout, no git, no toolchain. **Comments are issue comments**
+in the design repository, one issue per iteration, so GitHub does the storing and the notifying and
+there is no server of ours anywhere.
+
+**The Author view is not shown for now.** It (open a checkout, create an iteration, start the agent, run
+a preview) is still in the main process and the bridge, but has no screen. It comes back as a list of
+repositories from GitHub rather than a folder picker.
 
 ## Signing in
 

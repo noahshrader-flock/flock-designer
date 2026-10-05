@@ -26,6 +26,7 @@ export class PageView {
 	private origin: string | null = null;
 	private bounds: PageBounds = { x: 0, y: 0, width: 0, height: 0 };
 	private picking = false;
+	private visible = true;
 
 	constructor(
 		private readonly window: BrowserWindow,
@@ -77,6 +78,7 @@ export class PageView {
 		this.view = view;
 		this.window.contentView.addChildView(view);
 		view.setBounds(this.bounds);
+		view.setVisible(this.visible);
 		await wc.loadURL(url);
 	}
 
@@ -88,6 +90,12 @@ export class PageView {
 			this.origin = null;
 			this.picking = false;
 		}
+	}
+
+	/** Remembered across opens: a menu that is open stays open when the preview changes. */
+	setVisible(visible: boolean): void {
+		this.visible = visible;
+		this.view?.setVisible(visible);
 	}
 
 	setBounds(b: PageBounds): void {

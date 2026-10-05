@@ -90,8 +90,11 @@ That is the function [Magic Patterns](https://www.magicpatterns.com/docs/documen
 has and Flock does not, and it is what the design team is actually missing.
 
 **One app, two modes.** The Electron app built at [step 3.1](#31--build-the-workspace-local-loop-was-step-13)
-(`flock-designer/workspace/`) is renamed **Flock Designer**. *Author mode* is what it does today and
-needs a checkout. *Reviewer mode* is new and needs only a GitHub account.
+(`flock-designer/workspace/`) is renamed **Flock Designer**. *Author mode* is what it did first and
+needs a checkout; *reviewer mode* is new and needs only a GitHub account. **As of 2026-10-05 the window
+shows only the reviewer side**, as a **Projects** tab in a fixed top bar with the account menu on the
+right. The Author screen is hidden, not deleted from the main process; it returns as a GitHub-backed
+list of repositories rather than a folder picker.
 
 | What a reviewer does | What happens behind the scenes |
 |---|---|
@@ -3055,6 +3058,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **Window reworked: a top bar instead of a toolbar, and the Author view hidden.** Noah asked for a toolbar-less window with a normal top nav: Flock Designer on the left, a Projects tab beside it, and an account menu (GitHub picture and name, with Sign out) fixed at the top. The native title bar is gone (on macOS the window buttons sit inside the bar). The Author screen was removed from the window for now, because it will come back as a list of repositories from GitHub; its services stay in the main process. The preview is hidden while the account menu is open, since a native view would otherwise cover the menu. | The app and its README; the description of modes in Part I. |
 | 2026-10-05 | **Pins can be clicked and dragged.** Noah asked to move a pin after placing it, and for a click on a pin to highlight its comment. A click selects the comment in the panel and scrolls to it; a drag moves the pin and saves the new position by editing the comment, so only its author can. Pins now report back through the page's console with a per-preview secret, since the preview has no bridge to the app; `smoke:page` checks a real click, a real drag and that a forged message is ignored. | 3.3; the app and its README. |
 | 2026-10-05 | **First real use of 3.3 found two faults, both fixed.** Noah placed comments and reported no pin and nothing saving. The comments were in fact saved, but as **two separate issues** for one iteration. GitHub's issue listing lags a new issue by ten seconds or more (measured: not visible at 8 s, visible by 10 s, with or without the label filter), so the app could not find the thread it had just made, showed no comments, and the next comment created a second thread. The app now remembers threads it creates, reads every thread for a branch and writes to the oldest, so the two existing ones show together. Separately, the element outline was dropped: Noah wants a plain click-to-place pin, so comment mode is a crosshair and a teardrop pin whose tip is the click point, shown amber while writing. A pick that cannot be anchored now says so instead of silently doing nothing. | 3.3; the app. |
 | 2026-10-05 | **Built 3.3.** Preview inside the app, click-to-comment with element anchoring, markers on reopening, and the moved/missing degrade. The preview is an isolated view with no bridge to the app; the app runs scripts in it and validates what comes back. Added `smoke:page`, which tests this in real Electron because jsdom cannot show isolation, real clicks or layout. Left for later, as specified: dragging a region, thumbnails, notifications. Still needs the human feel check and the security look. | 3.3; the app and its README. |

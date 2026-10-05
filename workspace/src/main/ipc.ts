@@ -220,6 +220,7 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 		CHANNELS.pageSetBounds,
 		guard((b: PageBounds) => nothing(page.setBounds({ x: Number(b?.x), y: Number(b?.y), width: Number(b?.width), height: Number(b?.height) }))),
 	);
+	ipcMain.handle(CHANNELS.pageSetVisible, guard((visible: boolean) => nothing(page.setVisible(visible === true))));
 	ipcMain.handle(CHANNELS.pagePick, guard(() => page.pick()));
 	ipcMain.handle(CHANNELS.pageCancelPick, guard(async () => nothing(await page.cancelPick())));
 	ipcMain.handle(

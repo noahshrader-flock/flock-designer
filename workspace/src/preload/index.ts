@@ -73,6 +73,7 @@ const api: WorkspaceApi = {
 	pageOpen: (url) => invoke<null>(CHANNELS.pageOpen, url),
 	pageClose: () => invoke<null>(CHANNELS.pageClose),
 	pageSetBounds: (bounds) => invoke<null>(CHANNELS.pageSetBounds, bounds),
+	pageSetVisible: (visible) => invoke<null>(CHANNELS.pageSetVisible, visible),
 	pagePick: () => invoke<CommentAnchor | null>(CHANNELS.pagePick),
 	pageCancelPick: () => invoke<null>(CHANNELS.pageCancelPick),
 	pageShowMarkers: (items) => invoke<MarkerResult[]>(CHANNELS.pageShowMarkers, items),

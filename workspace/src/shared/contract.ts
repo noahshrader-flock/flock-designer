@@ -169,6 +169,8 @@ export interface WorkspaceApi {
 	pageOpen(url: string): Promise<Result<null>>;
 	pageClose(): Promise<Result<null>>;
 	pageSetBounds(bounds: PageBounds): Promise<Result<null>>;
+	/** Hides or shows the preview, so a menu drawn by the window is not buried under it. */
+	pageSetVisible(visible: boolean): Promise<Result<null>>;
 	/** Comment mode: resolves with the next element clicked, or null if cancelled. */
 	pagePick(): Promise<Result<CommentAnchor | null>>;
 	pageCancelPick(): Promise<Result<null>>;
@@ -328,6 +330,7 @@ export const CHANNELS = {
 	pageOpen: 'workspace:pageOpen',
 	pageClose: 'workspace:pageClose',
 	pageSetBounds: 'workspace:pageSetBounds',
+	pageSetVisible: 'workspace:pageSetVisible',
 	pagePick: 'workspace:pagePick',
 	pageCancelPick: 'workspace:pageCancelPick',
 	pageShowMarkers: 'workspace:pageShowMarkers',
