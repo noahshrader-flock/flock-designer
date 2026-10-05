@@ -154,3 +154,57 @@ describe('commands that serve one project', () => {
 		expect(() => fillProjectId(['x', '<project-id>'], bad)).toThrow();
 	});
 });
+
+describe('one port, many prototypes', () => {
+	// Every prototype is served on the same port by the same command, so the only
+	// thing that says whose preview is running is the project it was started for.
+	const proto: WorkspaceDescriptor = {
+		...descriptor,
+		commands: [
+			{
+				id: 'preview',
+				label: 'Preview',
+				argv: ['node', '-e', 'setInterval(() => {}, 1000)', '<project-id>'],
+				servesPreviewOn: 4999,
+			},
+		],
+	};
+
+	it('says whose preview is running', async () => {
+		manager = make();
+		const s = await manager.start(root, proto, 'preview', 'alert-notification-prefs');
+		expect(s).toMatchObject({ state: 'running', projectId: 'alert-notification-prefs' });
+	});
+
+	it('reuses the running preview for the same project, rather than starting a second', async () => {
+		manager = make();
+		const spawnSpy = vi.fn(spawn);
+		manager = make({ spawnProcess: spawnSpy as unknown as typeof spawn });
+		await manager.start(root, proto, 'preview', 'users-inactivity-signal');
+		await manager.start(root, proto, 'preview', 'users-inactivity-signal');
+		expect(spawnSpy).toHaveBeenCalledTimes(1);
+	});
+
+	it("replaces the running preview when a different project asks, instead of showing the first project's", async () => {
+		const spawnSpy = vi.fn(spawn);
+		manager = make({ spawnProcess: spawnSpy as unknown as typeof spawn });
+
+		await manager.start(root, proto, 'preview', 'users-inactivity-signal');
+		const second = await manager.start(root, proto, 'preview', 'alert-notification-prefs');
+
+		// The bug this guards: the second call used to return the first project's
+		// running status, so every iteration opened showed the same prototype.
+		expect(spawnSpy).toHaveBeenCalledTimes(2);
+		expect(second).toMatchObject({ state: 'running', projectId: 'alert-notification-prefs' });
+		expect(manager.status('preview')).toMatchObject({ projectId: 'alert-notification-prefs' });
+	});
+
+	it('hands the new project to the process it starts', async () => {
+		const spawnSpy = vi.fn(spawn);
+		manager = make({ spawnProcess: spawnSpy as unknown as typeof spawn });
+		await manager.start(root, proto, 'preview', 'users-inactivity-signal');
+		await manager.start(root, proto, 'preview', 'alert-notification-prefs');
+		const argvs = spawnSpy.mock.calls.map((c) => (c[1] as string[]).at(-1));
+		expect(argvs).toEqual(['users-inactivity-signal', 'alert-notification-prefs']);
+	});
+});

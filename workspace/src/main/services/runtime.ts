@@ -56,6 +56,8 @@ export const defaultDeps: RuntimeDeps = {
 interface Running {
 	child: ChildProcess;
 	status: PreviewStatus;
+	/** Which project this process is serving, for commands that serve one. */
+	projectId?: string;
 }
 
 export class RuntimeManager {
@@ -114,8 +116,13 @@ export class RuntimeManager {
 		commandId: string,
 		projectId?: string,
 	): Promise<PreviewStatus> {
-		if (this.running.has(commandId)) {
-			return this.status(commandId);
+		const current = this.running.get(commandId);
+		if (current) {
+			if (current.projectId === projectId) return this.status(commandId);
+			// Every prototype is served on the same port, so a different project asking
+			// for it means the one running has to go first. Reusing it was the bug where
+			// opening any iteration showed whichever prototype had been run before.
+			await this.stop(commandId);
 		}
 		// Throws if the repository does not declare it. This is the allowlist.
 		const command = findCommand(descriptor, commandId);
@@ -131,8 +138,8 @@ export class RuntimeManager {
 			env: process.env,
 		});
 
-		this.running.set(commandId, { child, status: { state: 'starting', commandId } });
-		this.events.onStatus({ state: 'starting', commandId });
+		this.running.set(commandId, { child, projectId, status: { state: 'starting', commandId, projectId } });
+		this.events.onStatus({ state: 'starting', commandId, projectId });
 
 		child.stdout?.on('data', (d: Buffer) =>
 			this.events.onLog({ commandId, stream: 'stdout', text: d.toString() }),
@@ -171,7 +178,12 @@ export class RuntimeManager {
 				return this.status(commandId);
 			}
 			if (await this.deps.probe(port)) {
-				const status: PreviewStatus = { state: 'running', commandId, url: `http://localhost:${port}/` };
+				const status: PreviewStatus = {
+					state: 'running',
+					commandId,
+					url: `http://localhost:${port}/`,
+					projectId: this.running.get(commandId)?.projectId,
+				};
 				this.setStatus(commandId, status);
 				return status;
 			}

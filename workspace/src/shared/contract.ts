@@ -85,8 +85,9 @@ export interface Iteration {
 
 export type PreviewStatus =
 	| { state: 'stopped' }
-	| { state: 'starting'; commandId: string }
-	| { state: 'running'; commandId: string; url: string }
+	| { state: 'starting'; commandId: string; projectId?: string }
+	/** `projectId` is whose preview this is: every prototype shares one port, so the address alone cannot say. */
+	| { state: 'running'; commandId: string; url: string; projectId?: string }
 	| { state: 'failed'; commandId: string; detail: string };
 
 /** A line of output from a running command, for the log surface. */

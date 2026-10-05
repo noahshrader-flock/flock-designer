@@ -53,9 +53,14 @@ export const Build = ({
 
 	useEffect(() => {
 		const add = (l: RunLogLine) => setLog((prev) => [...prev, l.text.replace(/\n$/, '')].slice(-300));
-		const offs = [window.workspace.onAgentLog(add), window.workspace.onRunLog(add), window.workspace.onPreviewStatus(setPreview)];
+		const offs = [window.workspace.onAgentLog(add), window.workspace.onRunLog(add), window.workspace.onPreviewStatus((status) => {
+				// A preview that belongs to another project is not this panel's to show.
+				if ('projectId' in status && status.projectId && status.projectId !== project.id) return;
+				setPreview(status);
+			}),
+		];
 		return () => offs.forEach((off) => off());
-	}, []);
+	}, [project.id]);
 
 	useEffect(() => {
 		// A block body on purpose: newer Chromium's scrollIntoView returns a Promise, and an
@@ -141,12 +146,14 @@ export const Build = ({
 		if (!root) return;
 		void window.workspace.commandStatus(root, command).then((r) => {
 			if (!live.current) return;
-			if (r.ok && r.value.state === 'running') {
+			// Only a preview that belongs to *this* project. Every prototype shares one
+			// port, so a running preview is usually someone else's.
+			if (r.ok && r.value.state === 'running' && r.value.projectId === project.id) {
 				setPreview(r.value);
 				onPreviewUrl(r.value.url);
 			}
 		});
-	}, [root, command, onPreviewUrl]);
+	}, [root, command, project.id, onPreviewUrl]);
 
 	if (!root) {
 		return (
