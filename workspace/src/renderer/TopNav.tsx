@@ -62,7 +62,7 @@ export const TopNav = ({ user, onSignOut }: { user: GitHubUser | null; onSignOut
 				borderColor: 'divider',
 			}}
 		>
-			<FSTypography variant="h6" component="span" sx={{ fontWeight: 700, whiteSpace: 'nowrap', mr: 3 }}>
+			<FSTypography variant="subtitle1" component="span" sx={{ fontWeight: 700, whiteSpace: 'nowrap', mr: 3 }}>
 				Flock Designer
 			</FSTypography>
 
