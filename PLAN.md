@@ -23,10 +23,11 @@ the wider product process at readiness to build.
 >
 > **What remains is one build: making Flock Designer a place the whole team — design, product,
 > engineering — can browse each other's prototypes and comment on them.** That is
-> [steps C1–C5](#the-sequence), plus the steps that wait on other people.
+> [steps C0–C5](#the-sequence), plus the steps that wait on other people.
 >
-> **Next: [C1](#step-c1--prove-sign-in-and-the-comment-store)** — sign in with GitHub, and prove
-> comments can live as issue comments in the design repo.
+> **Next: [C0](#step-c0--build-the-ui-foundation-with-shadcn-and-tailwind)** — give the app a proper UI foundation (shadcn/ui and Tailwind). It needs
+> nothing from anyone. Then [C1](#step-c1--prove-sign-in-and-the-comment-store): sign in with GitHub,
+> and prove comments can live as issue comments in the design repo.
 >
 > This document was restructured on 2026-10-05 so the plan covers only what remains. Nothing was
 > deleted: completed work moved into the appendices, and the [change log](#change-log) says why.
@@ -133,7 +134,8 @@ traces to adding one of those.
 |---|---|---|---|---|
 | 1 | [Decide the rules](#step-1--decide-the-rules) | The Design System owner is named | Human | **In progress** — waits on Noah |
 | 5 | [Design-system agent files](#step-5--design-system-agent-files-what-is-still-owed) | The authoring standards are approved | Human | **In progress** — waits on the owner |
-| C1 | [Prove sign-in and the comment store](#step-c1--prove-sign-in-and-the-comment-store) | A read-only account signs in, lists projects, posts a comment, and another account sees it | Mechanical + human | **Not started — next** |
+| C0 | [Build the UI foundation](#step-c0--build-the-ui-foundation-with-shadcn-and-tailwind) | The app runs on shadcn/ui and Tailwind, FUI is gone, and a clean install needs no registry token | Mechanical + human | **Not started — next** |
+| C1 | [Prove sign-in and the comment store](#step-c1--prove-sign-in-and-the-comment-store) | A read-only account signs in, lists projects, posts a comment, and another account sees it | Mechanical + human | Not started |
 | C2 | [Open a preview and comment on an element](#step-c2--open-a-preview-and-comment-on-an-element) | Click-to-comment works on a real prototype and survives reload and resize | Mechanical + human | Not started |
 | C3 | [Share for review](#step-c3--share-for-review) | One click pushes, opens a draft PR, and records the preview URL | Mechanical | Not started |
 | C4 | [Close the loop](#step-c4--close-the-loop) | Comments export to `review.md` and the agent acts on them | Mechanical | Not started |
@@ -142,8 +144,23 @@ traces to adding one of those.
 | 17 | [Ship the design-system context in the package](#step-17--ship-the-design-system-context-in-the-package) | Org transfer and packaging | Human | Not started |
 | 18 | [Designer environment access](#step-18--designer-environment-access) | Designers can install; an unaided designer test | Human | Not started |
 
-C1 → C5 are in order. The human-owned steps are independent of them and of each other. Completed
+C0 → C5 are in order. The human-owned steps are independent of them and of each other. Completed
 steps are in [Appendix B](#appendix-b--what-was-built-and-why).
+
+**Phases, and what exists if we stop after each one.** Each is useful alone, so none is a bet on the
+next.
+
+| Phase | Step | If we stop here, the team has |
+|---|---|---|
+| 1 — Foundation | C0 | A good-looking app with the authoring features it already had |
+| 2 — Identity and store | C1 | Sign-in, and a browsable list of every project and iteration |
+| 3 — Commenting | C2 | Click-to-comment on a prototype, against any preview |
+| 4 — Sharing | C3 | The full loop: author shares, reviewer opens and comments |
+| 5 — Agent loop | C4 | Comments that the agent can act on |
+| 6 — Decision | C5 | Evidence on whether to keep going |
+
+**Natural stop points are after C2 and C4.** C2 answers whether commenting feels right; C4 answers
+whether closing the loop is worth it.
 
 ### A step does not close with its own work unmet
 
@@ -228,14 +245,37 @@ cheaply. Deciding in advance would invert the evidence.
 [the managed harness](#if-step-11-says-yes-the-managed-harness).
 
 
+### Step C0 — Build the UI foundation with shadcn and Tailwind
+
+**Claude. Mechanical, plus a human look.** Every later step adds screens — sign-in, a project list, a
+comment panel — so the UI stack comes first, or they get built twice.
+
+- Add **Tailwind** and **shadcn/ui** to the renderer, with shadcn's **default styling** and light and
+  dark themes. shadcn copies its components into the repository (`src/renderer/components/ui/`)
+  rather than adding a dependency, so the code is ours to change. No custom theme yet.
+- **Prove the stack works inside Electron first.** shadcn's install docs say nothing about Electron;
+  `electron-vite` builds the renderer with Vite, so it should work, but that is an inference.
+- **Port the existing screens** — `App`, `ContextReceiptPanel`, `LogPanel`: 373 lines in five files,
+  with four FUI imports — and give the app a **layout skeleton** the later steps fill: navigation, a
+  projects area, a project view, a place for settings. Structure only, no reviewer features.
+- **Remove FUI, MUI, emotion and luxon**, and drop the `@flocksafety` GitHub Packages line from
+  `.npmrc`. A clean `npm install` then needs no registry token at all.
+- **Rename** the app Flock Designer: window title, package name, README.
+
+**Done when:** the app boots (`npm run smoke`), typecheck and the 87 service tests pass, the existing
+authoring journey works under the new UI, a clean install succeeds with no token, and nothing from
+FUI or MUI remains in the build. **Human:** Noah looks at it and says whether it looks right.
+
+**Needs nothing from anyone.** **Not in this step:** reviewer features, a custom theme, thumbnails.
+
 ### Step C1 — Prove sign-in and the comment store
 
 **Claude. Mechanical, plus one human check.** Built in the existing app. Everything later depends on
 two things being true that are *not yet verified*: that device-flow sign-in works for people in the
 company's GitHub org, and that issue comments are a workable comment store.
 
-- Rename the app **Flock Designer**; separate *author* features (need a checkout) from *reviewer*
-  features (need only a GitHub account).
+- In the shell C0 built, separate *author* features (need a checkout) from *reviewer* features
+  (need only a GitHub account).
 - **Sign in with GitHub by device flow**; keep the token in the OS keychain. Build against a
   development OAuth app (GitHub's docs confirm device flow needs no secret for OAuth apps; they do
   **not** confirm it for GitHub Apps, so start with an OAuth app and treat the rest as a question).
@@ -421,14 +461,15 @@ is met and the evidence is cited in the [change log](#change-log).
 | Durable record | Exported to `review.md` | The agent reads it with no app. A closed or deleted PR cannot take it away |
 | Gesture and anchor | Click an element; anchor by selector with fallbacks | Survives a resize; degrades instead of breaking |
 | Client | One Electron app, author and reviewer modes | No web app, extension or server to maintain |
+| App UI | **shadcn/ui and Tailwind, default styling** — not FUI | Components are copied in and ours to change; a good-looking app for little work; and the app no longer needs FUI, MUI or a GitHub Packages token to build. The rule to use FUI governs *product* UI built in Coke, not an internal tool. The cost is that the tool and the product look different |
 | Preview | A CI-built **mock-data** deployment; **one PR per branch**, always draft | A PR's head branch cannot change, so one PR per shared branch is the only mapping GitHub has |
 | Distribution | IT's device management | Internal only; no store, and IT can push updates |
 | Data | Mock or synthetic only — never production data | Unchanged since step 1 |
 | Persistence | Branches kept; previews expire; comments and the record kept in the design repo | A comment must outlive the preview it was made on |
 | Component gaps | Through the [learning loop](#the-learning-loop) | Unchanged |
 
-**Dropped from the earlier design:** capture storage (no screenshots to host), a GitHub App, and
-automating handoff inside the app (`npm run handoff` already does it). See
+**Dropped from the earlier design:** FUI as the app's UI, capture storage (no screenshots to host), a
+GitHub App, and automating handoff inside the app (`npm run handoff` already does it). See
 [Appendix C](#appendix-c--superseded-designs).
 
 ## Risks and ongoing costs
@@ -436,6 +477,7 @@ automating handoff inside the app (`npm run handoff` already does it). See
 | Risk | Why it matters | Mitigation |
 |---|---|---|
 | **Electron upkeep** | A new major version ships every 8 weeks and only the latest three are supported ([policy](https://www.electronjs.org/docs/latest/tutorial/electron-timelines)) | Someone owns an upgrade at least about twice a year. **The largest standing cost** |
+| **shadcn and Tailwind inside Electron unproven** | shadcn's docs don't mention Electron, and Tailwind v4 uses a Vite plugin | C0 proves it before anything is built on it |
 | **Sign-in specifics unverified** | GitHub's docs confirm device flow needs no secret for OAuth apps, but say nothing about GitHub Apps or org SSO | Use an OAuth app; C1 tests with a real account |
 | **The CI change** | Without a mock-data build the link is a login screen on real dev data — also a breach of the data rule | Coke engineering; drafted by Claude |
 | **Reading SSO-protected pages** | The app displays and inspects internal pages | The preview gets no bridge; security review before C2 closes |
@@ -455,6 +497,7 @@ automating handoff inside the app (`npm run handoff` already does it). See
 | Thumbnails and a polished gallery | Decide after C2, on whether people want to browse |
 | Dragging out a region | Click-an-element first; a region is a small step later |
 | Windows | Open question — see below |
+| A custom theme or Flock branding for the app | shadcn's defaults first; restyle only if people ask |
 | Any visual canvas, embedded editor, Figma import, or model-provider integration | Never in this plan |
 
 ## Open questions
@@ -2896,6 +2939,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **App UI set to shadcn/ui and Tailwind; phases made explicit.** Noah asked for the Electron app to be built on shadcn's default styling so it looks good, and for the work to stay in phases. Added **step C0**, a foundation step, ahead of C1 — every later screen would otherwise be built twice — and a table of what exists if we stop after each phase, with natural stop points after C2 and C4. **This replaces FUI as the app's UI**, a change from step 13: cheap, since the renderer is 373 lines in five files with four FUI imports, and it removes FUI, MUI, emotion and the GitHub Packages token from the app's build. The rule to use FUI governs product UI in Coke, not this tool. **Checked:** shadcn copies components into the repo rather than adding a dependency; its docs do not mention Electron, so C0 proves that combination first. | Step C0 (new); the sequence; decisions, risks and not-building tables. |
 | 2026-10-05 | **Restructured so the plan covers only what remains, and set the direction for it.** The plan had grown to ~44,000 words, 27% of it change log and most of the rest describing finished work, so the live plan was hard to find. Completed work moved **intact** into [Appendix B](#appendix-b--what-was-built-and-why), the contracts into [Appendix A](#appendix-a--how-the-system-works), and the superseded Workspace design and decision gates into [Appendix C](#appendix-c--superseded-designs); a check confirmed every original line still exists. **The direction changed too.** Noah's goal — a Figma-like place where design, product and engineering browse each other's prototypes and comment — reframed Track C: the Electron app is no longer a paused authoring convenience but the client for **review**, because GitHub's device flow lets a desktop app sign people in with no server of ours, and the existing Electron app already holds the authoring half. Decisions reached in discussion: GitHub identity (Okta is GitHub's concern); comments as issue comments in the **design repo**, one issue per iteration, keeping PMs out of Coke; click-an-element anchoring, as Magic Patterns does; a **mock-data** CI build as the shared preview, which the current `build:dev` workflow is not; one PR per branch. Old steps 14–16 are replaced by **C1–C5**; automating handoff inside the app was dropped because `npm run handoff` already does it. **Checked rather than assumed:** device flow needs no secret for OAuth apps and read access can comment on issues (GitHub docs); Electron needs an upgrade at least about twice a year (its policy); GitHub's docs are silent on device flow for GitHub Apps and under org SSO, so C1 tests them. | The whole document; Track C; steps 14–16 → C1–C5. |
 | 2026-09-29 | **Track C paused, and the next step made findable.** Noah paused the Electron work — he has an idea for the Workspace worth working through before more is built on it. Nothing is lost by waiting: step 14 could not have started regardless, and step 13's own success measure is that every artifact stays usable without the app. **Two real problems fixed while doing it.** The track summary at the top of the sequence still said Track B was *"just specified, nothing built"* and Track C *"not started"* — both badly stale, in the one table a reader checks first. And **the design-system context generator was invisible**: step 17 said plainly *"Claude can write the generator,"* but the rest of 17 needs permissions and a release, so a step nobody could finish was hiding the one piece of real work that was ready. Split it out as **Track D, step D1**, the same way step 18 was split out of step 8 — and it is now the only unbuilt step Claude can finish. The `cokeUsages` decision, the packaging and the org transfer stay in 17 with their owners. | The sequence summary; Track C; new Track D and step D1; step 17; both status blocks. |
 | 2026-10-05 | **Full verification pass.** Baseline green (tsc, lint, 396 tests, 12 a11y, 599 context checks, Workspace 87 tests and boot); all six work branches rebased to the current baseline and **Ready** on the corrected gate; zero co-authored commits of mine on any ref (the 16 pre-existing team commits in Coke are untouched). **Found and fixed:** the "not run" check could never fail, and my first repair of it over-corrected and rejected good records; the design-system docs still made false present-tense claims about the deleted JSON and counted allowlisted components three different ways; and the token lookup command I had documented in three files **does not run in plain Node**. tsbuildinfo files had been committed. | Step D1 (token lookup); `check-handoff.mjs`; FUI and Coke `.flkd/`. |
