@@ -44,8 +44,8 @@ const DESIGN_REPO = {
 
 const createWindow = (): BrowserWindow => {
 	const window = new BrowserWindow({
-		width: 1280,
-		height: 860,
+		width: 1260,
+		height: 780,
 		show: !smokeMode && !process.argv.includes('--smoke-page'),
 		title: 'Flock Designer',
 		// No native title bar: the app's own top bar is the toolbar. On macOS the window
