@@ -107,7 +107,12 @@ export class PageView {
 		this.view.webContents.focus();
 		try {
 			const raw = await this.run<unknown>(PICK_SCRIPT);
-			return sanitizeAnchor(raw);
+			if (raw === null || raw === undefined) return null; // cancelled
+			const anchor = sanitizeAnchor(raw);
+			// Said aloud, never swallowed: a click that silently did nothing is
+			// indistinguishable from a comment that was lost.
+			if (!anchor) throw new Error('That spot could not be pinned. Try clicking somewhere else on the page.');
+			return anchor;
 		} finally {
 			this.picking = false;
 		}

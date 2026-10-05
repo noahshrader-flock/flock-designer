@@ -37,29 +37,30 @@ const HELPERS = String.raw`
       if (unique(sel)) return sel;
       cur = cur.parentElement;
     }
-    return parts.join(' > ');
+    return parts.join(' > ') || 'html';
   };
 `;
 
 /**
- * Comment mode. Resolves with a description of the next element clicked, or
- * null if the person presses Escape or the app cancels. The click is swallowed,
- * so choosing an element never also follows its link or presses its button.
+ * Comment mode. Resolves with where the next click landed, or null if the
+ * person presses Escape or the app cancels. The click is swallowed, so placing
+ * a pin never also follows a link or presses a button.
+ *
+ * The person is placing a pin, not choosing an element, so nothing is
+ * highlighted. The element underneath is still recorded -- with the click's
+ * position inside it -- because that is what lets the pin stay in the right
+ * place when the window is resized or the page reflows.
  */
 export const PICK_SCRIPT = String.raw`(function () {
 ${HELPERS}
   return new Promise(function (resolve) {
     var style = doc.createElement('style');
     style.setAttribute('data-fd', 'pick');
-    style.textContent = '[data-fd-hover]{outline:2px solid #2563eb !important;outline-offset:-2px;cursor:crosshair !important}';
+    style.textContent = 'html, html * { cursor: crosshair !important }';
     doc.head.appendChild(style);
-    var hover = null;
-    var clear = function () { if (hover) { hover.removeAttribute('data-fd-hover'); hover = null; } };
-    var over = function (e) { clear(); hover = e.target; if (hover && hover.setAttribute) hover.setAttribute('data-fd-hover', ''); };
     var swallow = function (e) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); };
     var done = function (value) {
-      clear(); style.remove();
-      doc.removeEventListener('mouseover', over, true);
+      style.remove();
       doc.removeEventListener('click', click, true);
       doc.removeEventListener('mousedown', swallow, true);
       doc.removeEventListener('mouseup', swallow, true);
@@ -86,7 +87,6 @@ ${HELPERS}
     };
     var key = function (e) { if (e.key === 'Escape') done(null); };
     window.__fdCancelPick = function () { done(null); };
-    doc.addEventListener('mouseover', over, true);
     doc.addEventListener('click', click, true);
     doc.addEventListener('mousedown', swallow, true);
     doc.addEventListener('mouseup', swallow, true);
@@ -130,7 +130,7 @@ ${HELPERS}
       if (best) { el = best; state = 'moved'; }
     }
     if (!el) { results.push({ id: item.id, state: 'missing' }); return; }
-    placed.push({ id: item.id, number: item.number, el: el, offset: a.offset || { x: 0, y: 0 } });
+    placed.push({ id: item.id, number: item.number, draft: item.id < 0, el: el, offset: a.offset || { x: 0, y: 0 } });
     results.push({ id: item.id, state: state });
   });
   if (placed.length === 0) { window.__fdMarkers = undefined; return results; }
@@ -138,10 +138,18 @@ ${HELPERS}
   layer = doc.createElement('div');
   layer.setAttribute('data-fd-layer', '');
   layer.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;z-index:2147483647;pointer-events:none';
+  // A teardrop pin whose tip is the point that was clicked. The wrapper has no
+  // size and sits exactly on that point; the pin hangs above it.
   placed.forEach(function (p) {
     var m = doc.createElement('div');
-    m.textContent = String(p.number);
-    m.style.cssText = 'position:fixed;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:#2563eb;color:#fff;font:600 12px/22px sans-serif;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.4);pointer-events:none';
+    m.style.cssText = 'position:fixed;width:0;height:0;pointer-events:none';
+    var pin = doc.createElement('div');
+    pin.style.cssText = 'position:absolute;left:-14px;top:-33px;width:28px;height:28px;border-radius:50% 50% 50% 0;background:' + (p.draft ? '#f59e0b' : '#2563eb') + ';border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.45);transform:rotate(-45deg);display:flex;align-items:center;justify-content:center';
+    var label = doc.createElement('span');
+    label.textContent = String(p.number);
+    label.style.cssText = 'transform:rotate(45deg);color:#fff;font:700 12px/1 sans-serif';
+    pin.appendChild(label);
+    m.appendChild(pin);
     p.marker = m;
     layer.appendChild(m);
   });
@@ -165,8 +173,8 @@ ${HELPERS}
       for (var i = 0; i < placed.length; i++) {
         if (placed[i].id === id) {
           placed[i].el.scrollIntoView({ block: 'center', inline: 'nearest' });
-          var m = placed[i].marker;
-          m.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.8)' }, { transform: 'scale(1)' }], { duration: 700 });
+          var m = placed[i].marker.firstChild;
+          m.animate([{ transform: 'rotate(-45deg) scale(1)' }, { transform: 'rotate(-45deg) scale(1.6)' }, { transform: 'rotate(-45deg) scale(1)' }], { duration: 700 });
           place();
         }
       }

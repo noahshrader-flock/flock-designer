@@ -277,3 +277,70 @@ describe('contributors', () => {
     expect(written[0].contributors).toEqual([{ name: 'Ada Lovelace', login: null }, { name: 'Grace Hopper', login: null }]);
   });
 });
+
+describe('comment threads and GitHub listing lag', () => {
+  /** A repository whose issue *listing* never shows what was just created, as GitHub's does for ten seconds or more. */
+  const lagging = () => {
+    const created: Array<{ number: number }> = [];
+    const comments = new Map<number, Array<Record<string, unknown>>>();
+    const api = vi.fn(async (path: string, init: { method?: string; body?: unknown } = {}) => {
+      if (path.includes('/issues?state=all')) return []; // the listing has not caught up
+      if (path.endsWith('/issues') && init.method === 'POST') {
+        const number = created.length + 10;
+        created.push({ number });
+        comments.set(number, []);
+        return { number };
+      }
+      const m = /\/issues\/(\d+)\/comments/.exec(path);
+      if (m) {
+        const n = Number(m[1]);
+        if (init.method === 'POST') {
+          const c = { id: comments.get(n)!.length + 1, user: { login: 'noah' }, body: (init.body as { body: string }).body, created_at: `2026-10-05T10:00:0${comments.get(n)!.length}Z` };
+          comments.get(n)!.push(c);
+          return c;
+        }
+        return comments.get(n) ?? [];
+      }
+      throw new Error(`no stub for ${path}`);
+    });
+    return { repo: new DesignRepo({ api } as unknown as GitHubSession, REF), created };
+  };
+
+  it('puts a second comment in the same thread even though the listing has not caught up', async () => {
+    const { repo, created } = lagging();
+    await repo.postComment('alpha', 'fd/alpha/i1', 'first');
+    await repo.postComment('alpha', 'fd/alpha/i1', 'second');
+    expect(created).toHaveLength(1);
+  });
+
+  it('shows a comment straight after it is posted', async () => {
+    const { repo } = lagging();
+    await repo.postComment('alpha', 'fd/alpha/i1', 'hello');
+    expect((await repo.readComments('alpha', 'fd/alpha/i1')).map((c) => c.body)).toEqual(['hello']);
+  });
+
+  it('reads every thread for a branch, so duplicates made earlier are not lost', async () => {
+    const mk = (n: number, at: string, body: string) => [{ id: n, user: { login: 'noah' }, body, created_at: at }];
+    const { session } = fakeSession({
+      '/repos/acme/design/issues?state=all': [
+        { number: 3, comments: 1, body: 'branch: `fd/alpha/i1`' },
+        { number: 2, comments: 1, body: 'branch: `fd/alpha/i1`' },
+      ],
+      '/repos/acme/design/issues/2/comments': mk(2, '2026-10-05T10:00:00Z', 'This is cool'),
+      '/repos/acme/design/issues/3/comments': mk(3, '2026-10-05T10:00:18Z', 'asdasd'),
+    });
+    expect((await new DesignRepo(session, REF).readComments('alpha', 'fd/alpha/i1')).map((c) => c.body)).toEqual(['This is cool', 'asdasd']);
+  });
+
+  it('writes to the oldest thread when several exist', async () => {
+    const { session, writes } = fakeSession({
+      '/repos/acme/design/issues?state=all': [
+        { number: 3, comments: 1, body: 'branch: `fd/alpha/i1`' },
+        { number: 2, comments: 1, body: 'branch: `fd/alpha/i1`' },
+      ],
+      '/repos/acme/design/issues/2/comments': { id: 9, user: { login: 'noah' }, body: 'x', created_at: 'now' },
+    });
+    await new DesignRepo(session, REF).postComment('alpha', 'fd/alpha/i1', 'x');
+    expect(writes.map((w) => w.path)).toEqual(['/repos/acme/design/issues/2/comments']);
+  });
+});

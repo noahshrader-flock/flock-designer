@@ -43,10 +43,16 @@ export const Review = ({
 	const [placed, setPlaced] = useState<Map<number, MarkerState>>(new Map());
 	const slot = useRef<HTMLDivElement>(null);
 
+	// Comments posted in this window. GitHub's listings can trail a new comment, so
+	// what was just posted is kept here and merged into whatever is read back.
+	const posted = useRef(new Map<number, ReviewComment>());
+
 	const load = useCallback(async () => {
 		const result = await window.workspace.readComments(project.id, iteration.branch);
-		if (result.ok) setComments(result.value);
-		else setError(result.error);
+		if (!result.ok) return setError(result.error);
+		const have = new Set(result.value.map((c) => c.id));
+		const merged = [...result.value, ...[...posted.current.values()].filter((c) => !have.has(c.id))];
+		setComments(merged.sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
 	}, [project.id, iteration.branch]);
 	useEffect(() => void load(), [load]);
 
@@ -101,10 +107,12 @@ export const Review = ({
 		if (!opened) return;
 		void (async () => {
 			const items = anchored.map((c, i) => ({ id: c.id, number: i + 1, anchor: c.anchor as CommentAnchor }));
+			// The pin being placed shows at once, before it is saved (id -1, amber).
+			if (pending) items.push({ id: -1, number: items.length + 1, anchor: pending });
 			const r = await window.workspace.pageShowMarkers(items);
 			if (r.ok) setPlaced(new Map(r.value.map((m: MarkerResult) => [m.id, m.state])));
 		})();
-	}, [opened, anchored, route]);
+	}, [opened, anchored, route, pending]);
 
 	const startComment = useCallback(async () => {
 		setError(null);
@@ -146,6 +154,7 @@ export const Review = ({
 		const r = await window.workspace.postComment(project.id, iteration.branch, draft.trim(), pending);
 		setPosting(false);
 		if (r.ok) {
+			posted.current.set(r.value.id, r.value);
 			setDraft('');
 			setPending(null);
 			setMode('browse');
@@ -166,7 +175,7 @@ export const Review = ({
 				</FSTypography>
 			</FSStack>
 			{header}
-			{error && <FSAlert severity="error">{error}</FSAlert>}
+			{error && mode !== 'composing' && <FSAlert severity="error">{error}</FSAlert>}
 
 			<FSStack direction="row" spacing={2} alignItems="stretch">
 				<FSBox
@@ -199,7 +208,7 @@ export const Review = ({
 							disabled={!opened || mode === 'composing'}
 							onClick={() => (mode === 'picking' ? void cancel() : void startComment())}
 						>
-							{mode === 'picking' ? 'Click an element…' : 'Comment (C)'}
+							{mode === 'picking' ? 'Click to place a pin…' : 'Place a pin (C)'}
 						</FSButton>
 						{mode !== 'browse' && (
 							<FSButton variant="secondary" onClick={() => void cancel()}>
@@ -211,8 +220,9 @@ export const Review = ({
 					{mode === 'composing' && pending && (
 						<FSBox sx={{ border: 1, borderColor: 'primary.main', borderRadius: 1, p: 2 }}>
 							<FSStack spacing={1}>
+								{error && <FSAlert severity="error">{error}</FSAlert>}
 								<FSTypography variant="caption" color="text.secondary">
-									On {pending.route} · {pending.nearbyText || pending.selector}
+									Pinned on {pending.route}
 								</FSTypography>
 								<FSTextField label="Your comment" multiline minRows={3} value={draft} onChange={setDraft} autoFocus />
 								<FSButton onClick={post} disabled={posting || !draft.trim()}>
@@ -224,7 +234,7 @@ export const Review = ({
 
 					{comments?.length === 0 && (
 						<FSTypography variant="body2" color="text.secondary">
-							No comments yet. Press C, then click what you want to comment on.
+							No comments yet. Press C, then click anywhere on the page to place a pin.
 						</FSTypography>
 					)}
 

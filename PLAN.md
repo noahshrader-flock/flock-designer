@@ -358,9 +358,12 @@ the list.
 against a local design-mode preview, so it did not wait on CI.
 
 **What exists.** An iteration opens its preview inside the app, with a numbered comment panel beside
-it. **C** (or the button) starts comment mode: the element under the pointer is outlined, one click
-chooses it and is not delivered to the page, and **Escape** cancels. The comment is posted with its
-anchor hidden in the comment body, and a plain "On /route · selector" line for anyone reading on
+it. **C** (or the button) starts pin mode: the cursor becomes a crosshair, one click anywhere places a
+pin and is not delivered to the page, and **Escape** cancels. Nothing is highlighted: it is a pin, not
+an element picker. The pin shows at once (amber) while the comment is written, then turns blue and
+numbered once saved. Under the pin the app still records the element it landed on, and where inside
+it, because that is what keeps the pin in place when the window is resized or the page reflows. The
+comment is posted with its anchor hidden in the comment body, and a plain "On /route · selector" line for anyone reading on
 GitHub. On reopening, each comment is placed again: *found* by its selector, *moved* when the
 selector no longer matches but its text does (the marker follows the text, and the panel says so), or
 *missing* when neither does (it stays as a page-level comment, and says so). Comments for another
@@ -387,7 +390,7 @@ after a resize, the moved and missing cases, and that the page cannot navigate t
 reload and after resizing the window, and degrades correctly when the element is removed. **Human:**
 one reviewer places a comment and says whether it feels right.
 
-**Not in this step:** dragging a region, thumbnails, notifications.
+**Not in this step, and not wanted:** dragging a region. **Later, if needed:** thumbnails, notifications.
 
 ### 3.4 — Share for review (was C3)
 
@@ -3050,6 +3053,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **First real use of 3.3 found two faults, both fixed.** Noah placed comments and reported no pin and nothing saving. The comments were in fact saved, but as **two separate issues** for one iteration. GitHub's issue listing lags a new issue by ten seconds or more (measured: not visible at 8 s, visible by 10 s, with or without the label filter), so the app could not find the thread it had just made, showed no comments, and the next comment created a second thread. The app now remembers threads it creates, reads every thread for a branch and writes to the oldest, so the two existing ones show together. Separately, the element outline was dropped: Noah wants a plain click-to-place pin, so comment mode is a crosshair and a teardrop pin whose tip is the click point, shown amber while writing. A pick that cannot be anchored now says so instead of silently doing nothing. | 3.3; the app. |
 | 2026-10-05 | **Built 3.3.** Preview inside the app, click-to-comment with element anchoring, markers on reopening, and the moved/missing degrade. The preview is an isolated view with no bridge to the app; the app runs scripts in it and validates what comes back. Added `smoke:page`, which tests this in real Electron because jsdom cannot show isolation, real clicks or layout. Left for later, as specified: dragging a region, thumbnails, notifications. Still needs the human feel check and the security look. | 3.3; the app and its README. |
 | 2026-10-05 | **Checked that prototype and codebase work are treated equally, and fixed what was not.** Noah asked for confirmation that the app works equally well for designers working directly in the codebase and for simple prototypes. It did not: the app could only start `fd/` prototype iterations, and codebase work had to be created and recorded by hand. Added **Work in the codebase** (adopts an existing feature branch), and fixed iteration numbering skipping a number when a codebase record existed. | 3.2; the app. |
 | 2026-10-05 | **Added 3.2.5, who is on each project.** Noah asked for the project list to show everyone who has committed to a project, since designers working in the codebase will be the main way in. Added as 3.2.5 at his suggestion rather than renumbering. Code authors are recorded in the iteration record by the author's app (reviewers cannot see Coke) and design-repo folder history is read by the reviewer's app. Names only, no emails; bots excluded. Avatars and usernames added the same day: logins are resolved from noreply addresses, the signed-in user's own commits, and design-repo history, never guessed from a name. | Phase 3 table; new section 3.2.5; the five iteration records. |

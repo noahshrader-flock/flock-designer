@@ -76,8 +76,9 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	const items = [{ id: 7, number: 1, anchor }];
 	let r = await page.showMarkers(items);
 	if (r[0]?.state !== 'found') fail(`expected found, got ${JSON.stringify(r)}`);
+	// The pin's tip is the wrapper's position, and it must be where the click was: inside the element.
 	const markerOnElement = () =>
-		js<boolean>(`(function(){var m=document.querySelector('[data-fd-layer] div').getBoundingClientRect();var e=document.querySelector('[data-e2e-ref]').getBoundingClientRect();return m.left+11>=e.left-1&&m.left+11<=e.right+1&&m.top+11>=e.top-1&&m.top+11<=e.bottom+1;})()`);
+		js<boolean>(`(function(){var m=document.querySelector('[data-fd-layer] > div').getBoundingClientRect();var e=document.querySelector('[data-e2e-ref]').getBoundingClientRect();return m.left>=e.left-1&&m.left<=e.right+1&&m.top>=e.top-1&&m.top<=e.bottom+1;})()`);
 	if (!(await markerOnElement())) fail('the marker is not on the element');
 
 	// 4. After the window is resized the marker is still on it.

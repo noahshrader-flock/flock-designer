@@ -110,18 +110,41 @@ export class DesignRepo {
     return firstHeading(Buffer.from(file.content, 'base64').toString('utf8'));
   }
 
+  /**
+   * Review threads we created or found this session, by branch.
+   *
+   * GitHub's issue *listing* lags a new issue by ten seconds or more -- measured
+   * 2026-10-05 -- even though fetching the issue by number is immediate. Without
+   * this, the first comment on an iteration created a thread nobody could find,
+   * so it never appeared, and the next comment created a second thread.
+   */
+  private readonly known = new Map<string, Set<number>>();
+
   /** Review issues keyed by the branch they carry comments for. */
-  private async listReviewIssues(): Promise<Map<string, { number: number; openComments: number }>> {
+  private async listReviewIssues(): Promise<Map<string, { number: number; numbers: number[]; openComments: number }>> {
     const issues = asArray(
       await this.session.api(`${this.base}/issues?state=all&labels=${encodeURIComponent(ITERATION_LABEL)}&per_page=100`),
     ).map(asRecord);
 
-    const byBranch = new Map<string, { number: number; openComments: number }>();
+    // More than one thread can exist for a branch (the listing lag above made
+    // some). All of them are read, the oldest is written to, and none is lost.
+    const byBranch = new Map<string, { number: number; numbers: number[]; openComments: number }>();
     for (const issue of issues) {
       const branch = /branch:\s*`([^`]+)`/.exec(String(issue.body ?? ''))?.[1];
       if (branch && typeof issue.number === 'number') {
-        byBranch.set(branch, { number: issue.number, openComments: Number(issue.comments ?? 0) });
+        const have = byBranch.get(branch);
+        const numbers = [...(have?.numbers ?? []), issue.number];
+        byBranch.set(branch, {
+          number: Math.min(...numbers),
+          numbers,
+          openComments: (have?.openComments ?? 0) + Number(issue.comments ?? 0),
+        });
       }
+    }
+    for (const [branch, known] of this.known) {
+      const have = byBranch.get(branch);
+      const numbers = [...new Set([...(have?.numbers ?? []), ...known])];
+      byBranch.set(branch, { number: Math.min(...numbers), numbers, openComments: have?.openComments ?? 0 });
     }
     return byBranch;
   }
@@ -231,6 +254,7 @@ export class DesignRepo {
   async ensureIssue(projectId: string, branch: string): Promise<number> {
     const existing = (await this.listReviewIssues()).get(branch);
     if (existing) return existing.number;
+    // Listings lag, so a thread made seconds ago may not be in `existing`.
 
     const created = asRecord(
       await this.session.api(`${this.base}/issues`, {
@@ -250,14 +274,20 @@ export class DesignRepo {
     if (typeof created.number !== 'number') {
       throw new Error(`Could not create a review thread for ${branch}.`);
     }
+    this.known.set(branch, new Set([...(this.known.get(branch) ?? []), created.number]));
     return created.number;
   }
 
   async readComments(projectId: string, branch: string): Promise<ReviewComment[]> {
     const issue = (await this.listReviewIssues()).get(branch);
     if (!issue) return [];
-    return asArray(await this.session.api(`${this.base}/issues/${issue.number}/comments?per_page=100`))
+    const threads = await Promise.all(
+      issue.numbers.map(async (n) => asArray(await this.session.api(`${this.base}/issues/${n}/comments?per_page=100`))),
+    );
+    return threads
+      .flat()
       .map(asRecord)
+      .sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')))
       .map((c) => {
         const body = String(c.body ?? '');
         const user = asRecord(c.user);
