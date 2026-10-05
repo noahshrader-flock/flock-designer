@@ -103,6 +103,10 @@ export const Projects = () => {
 						</FSStack>
 
 						<FSTypography variant="body2" color="text.secondary">
+							{project.people.length > 0 ? project.people.join(', ') : 'No contributors recorded yet'}
+						</FSTypography>
+
+						<FSTypography variant="body2" color="text.secondary">
 							{project.records.join(' · ') || 'no records yet'}
 						</FSTypography>
 
@@ -183,6 +187,7 @@ const Iteration = ({
 			</FSStack>
 			<FSTypography variant="body2" color="text.secondary">
 				{iteration.branch}
+				{iteration.contributors.length > 0 && ` · ${iteration.contributors.join(', ')}`}
 			</FSTypography>
 
 			{error && <FSAlert severity="error">{error}</FSAlert>}

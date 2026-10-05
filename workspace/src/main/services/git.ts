@@ -89,6 +89,41 @@ export const createBranch = async (root: string, branch: string, from: string): 
 	await git(root, ['checkout', '-b', branch, from]);
 };
 
+/** `[bot]` accounts and automation are not people working on a design. */
+const isPerson = (name: string): boolean => name !== '' && !/\[bot\]$/i.test(name);
+
+/**
+ * The branch the repository treats as its trunk, to measure an iteration against.
+ * Prefers the remote's own default, then the usual names; null if none exists,
+ * in which case nobody is credited rather than everybody.
+ */
+const trunk = async (root: string): Promise<string | null> => {
+	try {
+		return (await git(root, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'])) || null;
+	} catch {
+		for (const name of ['develop', 'main', 'master']) {
+			if (await branchExists(root, name)) return name;
+		}
+		return null;
+	}
+};
+
+/**
+ * Who has committed on a branch, beyond what is already on the trunk, in the
+ * order they first appear. Names only: a shared repository is no place for
+ * anyone's email address.
+ */
+export const branchAuthors = async (root: string, branch: string): Promise<string[]> => {
+	const base = await trunk(root);
+	if (base === null || base === branch) return [];
+	const out = await git(root, ['log', '--reverse', '--format=%aN', `${base}..${branch}`]);
+	const seen = new Map<string, string>();
+	for (const name of out.split('\n').map((n) => n.trim())) {
+		if (isPerson(name) && !seen.has(name.toLowerCase())) seen.set(name.toLowerCase(), name);
+	}
+	return [...seen.values()];
+};
+
 export const checkoutBranch = async (root: string, branch: string): Promise<void> => {
 	await requireCleanTree(root, 'switching iteration');
 	if (!(await branchExists(root, branch))) {

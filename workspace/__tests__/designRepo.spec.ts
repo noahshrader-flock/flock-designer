@@ -227,3 +227,49 @@ describe('publishIterations', () => {
     expect(reads).toBe(2);
   });
 });
+
+describe('contributors', () => {
+  it('shows everyone: code authors from the record plus people who committed to the folder', async () => {
+    const records = [
+      { projectId: 'alpha', name: 'i1', branch: 'fd/alpha/i1', commit: null, createdAt: '', note: '', contributors: ['Ada Lovelace', 'Grace Hopper'] },
+      { projectId: 'alpha', name: 'i2', branch: 'fd/alpha/i2', commit: null, createdAt: '', note: '', contributors: ['Grace Hopper'] },
+    ];
+    const { session } = fakeSession({
+      '/repos/acme/design/contents/projects/alpha/iterations.json': { content: b64(JSON.stringify(records)) },
+      '/repos/acme/design/contents/projects/alpha': [{ type: 'file', name: 'iterations.json' }],
+      '/repos/acme/design/contents/projects': [{ type: 'dir', name: 'alpha' }],
+      '/repos/acme/design/issues?state=all': [],
+      '/repos/acme/design/commits?path=projects/alpha': [
+        { commit: { author: { name: 'Noah Shrader' } } },
+        { commit: { author: { name: 'github-actions[bot]' } } },
+        { commit: { author: { name: 'Ada Lovelace' } } },
+      ],
+    });
+    const [project] = await new DesignRepo(session, REF).listProjects();
+    expect(project?.people).toEqual(['Ada Lovelace', 'Grace Hopper', 'Noah Shrader']);
+    expect(project?.iterations.find((i) => i.name === 'i1')?.contributors).toEqual(['Ada Lovelace', 'Grace Hopper']);
+  });
+
+  it('still lists the project if the folder history cannot be read', async () => {
+    const { session } = fakeSession({
+      '/repos/acme/design/contents/projects/alpha': [],
+      '/repos/acme/design/contents/projects': [{ type: 'dir', name: 'alpha' }],
+      '/repos/acme/design/issues?state=all': [],
+      '/repos/acme/design/commits?path=projects/alpha': () => {
+        throw new Error('rate limited');
+      },
+    });
+    expect((await new DesignRepo(session, REF).listProjects())[0]?.people).toEqual([]);
+  });
+
+  it('keeps people already recorded when publishing, rather than replacing them', async () => {
+    const FILE = '/repos/acme/design/contents/projects/alpha/iterations.json';
+    const base = { projectId: 'alpha', name: 'i1', branch: 'fd/alpha/i1', commit: null, createdAt: '', note: '' };
+    const { session, writes } = fakeSession({
+      [FILE]: { sha: 's', content: b64(JSON.stringify([{ ...base, contributors: ['Grace Hopper'] }])) },
+    });
+    await new DesignRepo(session, REF).publishIterations('alpha', [{ ...base, contributors: ['Ada Lovelace'] }]);
+    const written = JSON.parse(Buffer.from((writes[0]?.body as { content: string }).content, 'base64').toString('utf8'));
+    expect(written[0].contributors).toEqual(['Grace Hopper', 'Ada Lovelace']);
+  });
+});

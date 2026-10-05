@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	GitProblem,
+	branchAuthors,
 	branchExists,
 	checkoutBranch,
 	createBranch,
@@ -106,5 +107,32 @@ describe('listing', () => {
 	it('knows whether a branch exists', async () => {
 		expect(await branchExists(root, 'develop')).toBe(true);
 		expect(await branchExists(root, 'nope')).toBe(false);
+	});
+});
+
+describe('branchAuthors', () => {
+	const commitAs = (name: string, file: string) => {
+		writeFileSync(join(root, file), `${name}\n`);
+		g('add', '.');
+		g('-c', `user.name=${name}`, '-c', 'user.email=x@example.test', 'commit', '-q', '-m', `by ${name}`);
+	};
+
+	it('lists everyone who committed on the branch, once each, and not the trunk\'s authors', async () => {
+		g('checkout', '-q', '-b', 'fd/p/i1');
+		commitAs('Ada Lovelace', 'a.txt');
+		commitAs('Grace Hopper', 'b.txt');
+		commitAs('Ada Lovelace', 'c.txt');
+		expect(await branchAuthors(root, 'fd/p/i1')).toEqual(['Ada Lovelace', 'Grace Hopper']);
+	});
+
+	it('leaves out automation', async () => {
+		g('checkout', '-q', '-b', 'fd/p/i1');
+		commitAs('dependabot[bot]', 'a.txt');
+		commitAs('Grace Hopper', 'b.txt');
+		expect(await branchAuthors(root, 'fd/p/i1')).toEqual(['Grace Hopper']);
+	});
+
+	it('credits nobody on the trunk itself, rather than everybody', async () => {
+		expect(await branchAuthors(root, 'develop')).toEqual([]);
 	});
 });

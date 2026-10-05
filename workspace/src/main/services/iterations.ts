@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { Iteration, WorkspaceDescriptor } from '../../shared/contract';
-import { checkoutBranch, createBranch, headCommit } from './git';
+import { branchAuthors, checkoutBranch, createBranch, headCommit } from './git';
 import { resolveInside } from './paths';
 
 /**
@@ -119,7 +119,8 @@ export const continueIteration = async (
 	// Recorded on return, so the record tracks where the branch actually is
 	// rather than where it started.
 	const commit = await headCommit(productRoot);
-	const updated = iterations.map((i) => (i.name === name ? { ...i, commit } : i));
+	const contributors = await branchAuthors(productRoot, iteration.branch);
+	const updated = iterations.map((i) => (i.name === name ? { ...i, commit, contributors } : i));
 	writeIterations(recordsRoot, projectId, updated);
-	return { ...iteration, commit };
+	return { ...iteration, commit, contributors };
 };

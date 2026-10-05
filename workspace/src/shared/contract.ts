@@ -79,6 +79,8 @@ export interface Iteration {
 	commit: string | null;
 	createdAt: string;
 	note: string;
+	/** People who have committed on this branch, by name. Refreshed whenever the iteration is opened or shared. */
+	contributors?: string[];
 }
 
 export type PreviewStatus =
@@ -190,6 +192,8 @@ export interface Project {
   records: string[];
   /** Iterations found as branches, newest first. */
   iterations: ProjectIteration[];
+  /** Everyone who has committed to the project: code on any iteration, or its design-repo folder. */
+  people: string[];
   /** Open comment count across the project's iterations. */
   openComments: number;
 }
@@ -201,6 +205,7 @@ export interface ProjectIteration {
   issueNumber: number | null;
   /** Preview URL recorded when the iteration was shared, if any. */
   previewUrl: string | null;
+  contributors: string[];
 }
 
 /** One reviewer comment, stored as a GitHub issue comment. */

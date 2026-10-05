@@ -170,6 +170,7 @@ called before 2026-10-05, so history still resolves.
 |---|---|---|---|---|
 | 3.1 | [Build the local authoring app](#31--build-the-workspace-local-loop-was-step-13) | ✔ Done | `158eab3`; confirmed working | step 13 |
 | 3.2 | [Sign in, and the comment store](#32--prove-sign-in-and-the-comment-store-was-c1) | ◐ Built — awaiting your check | Sign-in, the project list and **automatic publishing of iteration records** are built. **You:** raise the app's Contents permission to read and write, open an iteration and post one comment; then a second person signs in | C1 |
+| 3.2.5 | [Show who is on each project](#325--show-who-is-on-each-project) | ◐ Built — awaiting your check | Every project lists everyone who has committed to it, on any iteration. **You:** restart the app and look at the project list | added 2026-10-05 |
 | 3.3 | [Open a preview and comment on an element](#33--open-a-preview-and-comment-on-an-element-was-c2) | ▶ **Next** | Needs nothing from anyone | C2 |
 | 3.4 | [Share for review](#34--share-for-review-was-c3) | ○ Not started | Pushes the branch, opens the draft PR, records the preview URL. Needs Coke engineering's mock-data build to finish end to end | C3 |
 | 3.5 | [Close the loop](#35--close-the-loop-was-c4) | ○ Not started | Comments become something the agent can act on | C4 |
@@ -306,6 +307,31 @@ with a real company account, to confirm the org's SSO behaves.
 
 **Needs:** one GitHub App client ID, registered by Noah for development. **Not in this step:** previews,
 anchoring, any server.
+
+### 3.2.5 — Show who is on each project
+
+**Claude. Built 2026-10-05; added because designers working directly in the codebase will be the main
+way in, and a reviewer needs to know whose work they are looking at.** The project list shows, for each
+project, everyone who has committed to it, so two designers on one project both appear.
+
+- **Where the names come from.** Code commits live in the Coke repo, which reviewers cannot see, so
+  the author's app records them. Opening or continuing an iteration reads the commit authors on that
+  branch beyond the trunk, and writes them into the iteration record as `contributors`, which is
+  published to the design repo with the rest of the record. The reviewer's app also reads the history
+  of the project's own design-repo folder, which catches whoever wrote the brief or the review. A
+  project's list is the union, alphabetical, with no duplicates.
+- **Names only, no emails.** The record lives in a shared repository.
+- **Bots are left out.** Accounts ending `[bot]` are automation, not people.
+- **How current it is.** Refreshed when an iteration is opened or shared (3.4 also refreshes it), so
+  commits made since then appear at the next one. Names are matched case-insensitively; one person
+  who commits under two git names appears twice, which `git config user.name` fixes.
+- **Simple prototypes.** A prototype with no branch of its own still shows whoever committed to its
+  project folder.
+
+The five existing records were backfilled from the Coke branches (all Noah, so far).
+
+**Done when:** a project with commits from two people lists both in the app. **Human:** one look at
+the list.
 
 ### 3.3 — Open a preview and comment on an element (was C2)
 
@@ -2988,6 +3014,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **Added 3.2.5, who is on each project.** Noah asked for the project list to show everyone who has committed to a project, since designers working in the codebase will be the main way in. Added as 3.2.5 at his suggestion rather than renumbering. Code authors are recorded in the iteration record by the author's app (reviewers cannot see Coke) and design-repo folder history is read by the reviewer's app. Names only, no emails; bots excluded. | Phase 3 table; new section 3.2.5; the five iteration records. |
 | 2026-10-05 | **Moved automatic publishing of iteration records forward into 3.2.** Noah asked why `iterations.json` exists and whether it could be automatic. It exists because iteration branches live in the Coke repo, which reviewers deliberately cannot see, so the record has to be in the design repo. The authoring side already wrote it locally; nothing committed it, and the note I had written in the five backfilled records ("the app writes this file from now on") was not yet true. The app now publishes the record through the API on create and continue, merging by name. It needs the GitHub App's Contents permission raised to read and write. 3.4 keeps only the preview URL. | 3.2, 3.4, the app README. |
 | 2026-10-05 | **Reorganised the plan into four numbered phases.** The sequence mixed numbers and letters (1, 5, C1, A2, D1) and skipped, which made it impossible to see where we were. It is now Phase 1 (foundation), Phase 2 (working in the codebase), Phase 3 (the review app, the current build) and Phase 4 (rollout, needing other people), with steps numbered 1.1 to 4.3. Every old name is mapped to its new number in [Appendix B](#name-map-old-step-names-to-the-new-numbers), the finished-step sections there are now in phase order, and every internal link was rewritten and checked. Historical text, including the change log, keeps the old names on purpose. | The sequence; the status box; all step headings. |
 | 2026-10-05 | **Restored one complete, ordered list of steps.** Moving finished work into appendices had left the live table showing steps 1, 5, C1 and so on, with the completed run missing, which read as disorganised and hid how much was done. The sequence is now one numbered list, 1 to 23, with every step marked done, built-awaiting-a-check, next, not started, or needing a person, and the old name beside each so history still resolves. 13 of 23 are done. Also marked stop 1 cleared and stop 2 partly cleared, since the client ID arrived and sign-in was verified. | The sequence; the status box; the stop table. |
