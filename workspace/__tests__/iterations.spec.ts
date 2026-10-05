@@ -9,6 +9,7 @@ import {
 	IterationProblem,
 	assertUsableProjectId,
 	branchFor,
+	codebaseBranchFor,
 	continueIteration,
 	createIteration,
 	defaultRecordsRoot,
@@ -128,5 +129,51 @@ describe('continueIteration', () => {
 
 	it('refuses an iteration it has no record of', async () => {
 		await expect(continueIteration(root, records, 'demo', 'i9')).rejects.toThrow(/no iteration called i9/);
+	});
+});
+
+describe('codebase work', () => {
+	it('creates the one feature branch and records it as "codebase"', async () => {
+		const it = await createIteration(root, records, descriptor, 'demo', 'real change', 'develop', 'codebase');
+		expect(it.name).toBe('codebase');
+		expect(it.branch).toBe(codebaseBranchFor(descriptor, 'demo'));
+		expect((await readCheckout(root)).branch).toBe('feature/demo');
+		expect(readIterations(records, 'demo')).toHaveLength(1);
+	});
+
+	it('adopts a feature branch someone already made by hand, keeping its commits', async () => {
+		g('checkout', '-q', '-b', 'feature/demo');
+		writeFileSync(join(root, 'work.txt'), 'x\n');
+		g('add', '.');
+		g('commit', '-q', '-m', 'by hand');
+		const head = g('rev-parse', 'HEAD').trim();
+		g('checkout', '-q', 'develop');
+
+		await createIteration(root, records, descriptor, 'demo', '', 'develop', 'codebase');
+		expect(g('rev-parse', 'feature/demo').trim()).toBe(head);
+		expect(readIterations(records, 'demo')[0]?.name).toBe('codebase');
+	});
+
+	it('refuses a second codebase record for the same project', async () => {
+		await createIteration(root, records, descriptor, 'demo', '', 'develop', 'codebase');
+		g('checkout', '-q', 'develop');
+		await expect(createIteration(root, records, descriptor, 'demo', '', 'develop', 'codebase')).rejects.toThrow(
+			/already has codebase work/,
+		);
+	});
+
+	it('records nothing when a dirty tree stops the switch', async () => {
+		writeFileSync(join(root, 'README.md'), 'uncommitted\n');
+		await expect(createIteration(root, records, descriptor, 'demo', '', 'develop', 'codebase')).rejects.toThrow(/uncommitted/);
+		expect(readIterations(records, 'demo')).toEqual([]);
+	});
+
+	it('does not skip a prototype number because a codebase entry exists', async () => {
+		await createIteration(root, records, descriptor, 'demo', '', 'develop', 'codebase');
+		g('checkout', '-q', 'develop');
+		const proto = await createIteration(root, records, descriptor, 'demo', '', 'develop', 'prototype');
+		expect(proto.name).toBe('i1');
+		g('checkout', '-q', 'develop');
+		expect((await createIteration(root, records, descriptor, 'demo', '', 'develop')).name).toBe('i2');
 	});
 });

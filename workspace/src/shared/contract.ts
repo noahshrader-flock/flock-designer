@@ -109,6 +109,12 @@ export type AgentStatus =
  * that can fail for an ordinary reason -- no descriptor, dirty tree, command not
  * allowed -- returns this, so the renderer can say what happened.
  */
+/**
+ * The two ways in. A **prototype** is a throwaway attempt on its own `fd/` branch, numbered i1, i2, …
+ * **Codebase** work is the real change on the project's one `feature/` branch.
+ */
+export type IterationKind = 'prototype' | 'codebase';
+
 /** Whether an iteration's record reached the design repository, where reviewers read it. */
 export type PublishOutcome = { state: 'published' } | { state: 'skipped'; reason: string };
 
@@ -127,7 +133,7 @@ export interface WorkspaceApi {
 
 	listIterations(root: string, projectId: string): Promise<Result<Iteration[]>>;
 	/** Creates the branch. Refuses if the tree is dirty; never discards work. */
-	createIteration(root: string, projectId: string, note: string): Promise<Result<SavedIteration>>;
+	createIteration(root: string, projectId: string, note: string, kind: IterationKind): Promise<Result<SavedIteration>>;
 	/** Checks out an existing iteration's branch. */
 	continueIteration(root: string, projectId: string, name: string): Promise<Result<SavedIteration>>;
 

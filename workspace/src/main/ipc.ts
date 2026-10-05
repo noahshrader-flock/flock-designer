@@ -3,6 +3,7 @@ import {
 	CHANNELS,
 	type Checkout,
 	type Iteration,
+	type IterationKind,
 	type Project,
 	type PublishOutcome,
 	type Result,
@@ -117,7 +118,7 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 
 	ipcMain.handle(
 		CHANNELS.createIteration,
-		guard(async (root: string, projectId: string, note: string) => {
+		guard(async (root: string, projectId: string, note: string, kind: IterationKind) => {
 			const canonical = opened.require(root);
 			const descriptor = descriptorFor(root);
 			const { branch } = await readCheckout(canonical);
@@ -125,7 +126,7 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 				throw new Error('This repository has a detached HEAD. Check out a branch first.');
 			}
 			const recordsRoot = defaultRecordsRoot(canonical);
-			return saved(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch), recordsRoot);
+			return saved(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch, kind), recordsRoot);
 		}),
 	);
 

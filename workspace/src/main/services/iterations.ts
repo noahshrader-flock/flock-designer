@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import type { Iteration, Person, WorkspaceDescriptor } from '../../shared/contract';
-import { branchAuthors, checkoutBranch, createBranch, headCommit, localIdentity } from './git';
+import type { Iteration, IterationKind, Person, WorkspaceDescriptor } from '../../shared/contract';
+import { branchAuthors, branchExists, checkoutBranch, createBranch, headCommit, localIdentity } from './git';
 import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
 
@@ -75,6 +75,22 @@ const writeIterations = (recordsRoot: string, projectId: string, iterations: Ite
 	writeFileSync(path, `${JSON.stringify(iterations, null, 2)}\n`);
 };
 
+/** The next prototype number: one past the highest `iN` recorded. Counting records would skip a number once a codebase entry exists. */
+const nextPrototypeNumber = (existing: Iteration[]): number =>
+	existing.reduce((max, i) => Math.max(max, Number(/^i(\d+)$/.exec(i.name)?.[1] ?? 0)), 0) + 1;
+
+/** The one `feature/<project-id>` branch for real-code work. */
+export const codebaseBranchFor = (descriptor: WorkspaceDescriptor, projectId: string): string =>
+	descriptor.branchPattern.codebase.replace('<project-id>', projectId);
+
+/**
+ * Starts work on a project, by either route. Both end the same way: a branch,
+ * and a record of it in the design repository that reviewers can read.
+ *
+ * A prototype always gets a new `fd/` branch. Codebase work is one branch per
+ * project, so if it already exists -- someone started it by hand, which is how
+ * the first ones were made -- it is adopted rather than refused, and recorded.
+ */
 export const createIteration = async (
 	productRoot: string,
 	recordsRoot: string,
@@ -82,19 +98,36 @@ export const createIteration = async (
 	projectId: string,
 	note: string,
 	from: string,
+	kind: IterationKind = 'prototype',
 ): Promise<Iteration> => {
 	const existing = readIterations(recordsRoot, projectId);
-	const n = existing.length + 1;
-	const branch = branchFor(descriptor, projectId, n);
+	let name: string;
+	let branch: string;
 
-	// The branch is created first. If it fails -- a dirty tree, a name already
-	// taken -- nothing has been recorded, so the record cannot claim an iteration
-	// that does not exist.
-	await createBranch(productRoot, branch, from);
+	if (kind === 'codebase') {
+		name = 'codebase';
+		branch = codebaseBranchFor(descriptor, projectId);
+		if (existing.some((i) => i.name === name)) {
+			throw new IterationProblem(`${projectId} already has codebase work recorded. Use Continue on it.`);
+		}
+		// Either way nothing is recorded unless the checkout succeeds, so the
+		// record cannot claim work that is not there.
+		if (await branchExists(productRoot, branch)) {
+			await checkoutBranch(productRoot, branch);
+		} else {
+			await createBranch(productRoot, branch, from);
+		}
+	} else {
+		name = `i${nextPrototypeNumber(existing)}`;
+		branch = branchFor(descriptor, projectId, nextPrototypeNumber(existing));
+		// The branch is created first. If it fails -- a dirty tree, a name already
+		// taken -- nothing has been recorded.
+		await createBranch(productRoot, branch, from);
+	}
 
 	const iteration: Iteration = {
 		projectId,
-		name: `i${n}`,
+		name,
 		branch,
 		commit: null,
 		createdAt: new Date().toISOString(),

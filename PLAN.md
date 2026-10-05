@@ -339,6 +339,16 @@ project, everyone who has committed to it, so two designers on one project both 
 
 The five existing records were backfilled from the Coke branches (all Noah, so far).
 
+**Both ways in work the same** *(checked 2026-10-05)*. The app offers **New prototype** (a throwaway
+`fd/<project>/iN` branch) and **Work in the codebase** (the project's one `feature/<project>` branch).
+Before this check only the first existed: the app read the codebase branch pattern and never used it,
+so codebase work could only be started by hand and recorded by hand. Now both create the branch, write
+the record, publish it, and credit contributors identically. Starting codebase work on a branch that
+already exists adopts it and keeps its commits. Also fixed: numbering counted every record, so a
+codebase entry made the next prototype `i3` instead of `i2`. After the branch exists, everything
+downstream does not care which kind it is: the preview command, the agent task, comments (keyed by
+branch), the handoff gate and the project list.
+
 **Done when:** a project with commits from two people lists both in the app. **Human:** one look at
 the list.
 
@@ -3023,6 +3033,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **Checked that prototype and codebase work are treated equally, and fixed what was not.** Noah asked for confirmation that the app works equally well for designers working directly in the codebase and for simple prototypes. It did not: the app could only start `fd/` prototype iterations, and codebase work had to be created and recorded by hand. Added **Work in the codebase** (adopts an existing feature branch), and fixed iteration numbering skipping a number when a codebase record existed. | 3.2; the app. |
 | 2026-10-05 | **Added 3.2.5, who is on each project.** Noah asked for the project list to show everyone who has committed to a project, since designers working in the codebase will be the main way in. Added as 3.2.5 at his suggestion rather than renumbering. Code authors are recorded in the iteration record by the author's app (reviewers cannot see Coke) and design-repo folder history is read by the reviewer's app. Names only, no emails; bots excluded. Avatars and usernames added the same day: logins are resolved from noreply addresses, the signed-in user's own commits, and design-repo history, never guessed from a name. | Phase 3 table; new section 3.2.5; the five iteration records. |
 | 2026-10-05 | **Moved automatic publishing of iteration records forward into 3.2.** Noah asked why `iterations.json` exists and whether it could be automatic. It exists because iteration branches live in the Coke repo, which reviewers deliberately cannot see, so the record has to be in the design repo. The authoring side already wrote it locally; nothing committed it, and the note I had written in the five backfilled records ("the app writes this file from now on") was not yet true. The app now publishes the record through the API on create and continue, merging by name. It needs the GitHub App's Contents permission raised to read and write. 3.4 keeps only the preview URL. | 3.2, 3.4, the app README. |
 | 2026-10-05 | **Reorganised the plan into four numbered phases.** The sequence mixed numbers and letters (1, 5, C1, A2, D1) and skipped, which made it impossible to see where we were. It is now Phase 1 (foundation), Phase 2 (working in the codebase), Phase 3 (the review app, the current build) and Phase 4 (rollout, needing other people), with steps numbered 1.1 to 4.3. Every old name is mapped to its new number in [Appendix B](#name-map-old-step-names-to-the-new-numbers), the finished-step sections there are now in phase order, and every internal link was rewritten and checked. Historical text, including the change log, keeps the old names on purpose. | The sequence; the status box; all step headings. |

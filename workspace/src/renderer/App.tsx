@@ -9,7 +9,7 @@ import {
 	FSTypography,
 } from '@flocksafety/flock-react-component-lib';
 import { useCallback, useEffect, useState } from 'react';
-import type { Checkout, ContextReceipt, Iteration, PreviewStatus, RunLogLine, SignInState } from '../shared/contract';
+import type { Checkout, ContextReceipt, Iteration, IterationKind, PreviewStatus, RunLogLine, SignInState } from '../shared/contract';
 import { ContextReceiptPanel } from './ContextReceiptPanel';
 import { LogPanel } from './LogPanel';
 import { Projects } from './Projects';
@@ -82,12 +82,12 @@ export const App = () => {
 		}
 	}, [iterations, root, projectId]);
 
-	const newIteration = useCallback(async () => {
+	const newIteration = useCallback(async (kind: IterationKind) => {
 		if (!root || !projectId) {
 			return;
 		}
 		const created = await iterations.call(async () => {
-			const result = await window.workspace.createIteration(root, projectId, note);
+			const result = await window.workspace.createIteration(root, projectId, note, kind);
 			setPublishNote(result.ok && result.value.published.state === 'skipped' ? result.value.published.reason : null);
 			return result.ok ? { ok: true as const, value: [result.value] } : result;
 		});
@@ -189,8 +189,15 @@ export const App = () => {
 								onChange={setNote}
 								sx={{ flexGrow: 1 }}
 							/>
-							<FSButton onClick={newIteration} disabled={!projectId || iterations.busy}>
-								New iteration
+							<FSButton onClick={() => newIteration('prototype')} disabled={!projectId || iterations.busy}>
+								New prototype
+							</FSButton>
+							<FSButton
+								variant="secondary"
+								onClick={() => newIteration('codebase')}
+								disabled={!projectId || iterations.busy}
+							>
+								Work in the codebase
 							</FSButton>
 							<FSButton variant="secondary" onClick={refreshIterations} disabled={!projectId}>
 								Load
