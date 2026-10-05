@@ -1,18 +1,30 @@
 [
   {
     "projectId": "users-inactivity-signal",
-    "name": "i1",
-    "branch": "fd/users-inactivity-signal/i1",
-    "commit": null,
-    "createdAt": "2026-09-29T10:27:04-04:00",
-    "note": "Recorded 2026-10-05. This iteration predates the app, which writes this file itself from now on."
-  },
-  {
-    "projectId": "users-inactivity-signal",
     "name": "codebase",
     "branch": "feature/users-inactivity-signal",
     "commit": null,
     "createdAt": "2026-09-29T10:39:01-04:00",
-    "note": "Recorded 2026-10-05. This iteration predates the app, which writes this file itself from now on."
+    "note": "Recorded by hand on 2026-10-05, because this iteration predates the app. Iterations created in the app are written and shared automatically.",
+    "contributors": [
+      {
+        "name": "Noah Shrader",
+        "login": "noahshrader-flock"
+      }
+    ]
+  },
+  {
+    "projectId": "users-inactivity-signal",
+    "name": "i1",
+    "branch": "fd/users-inactivity-signal/i1",
+    "commit": "b276ef5ab79978231107889c6f5d44617628fb90",
+    "createdAt": "2026-09-29T10:27:04-04:00",
+    "note": "Recorded by hand on 2026-10-05, because this iteration predates the app. Iterations created in the app are written and shared automatically.",
+    "contributors": [
+      {
+        "name": "Noah Shrader",
+        "login": "noahshrader-flock"
+      }
+    ]
   }
 ]
