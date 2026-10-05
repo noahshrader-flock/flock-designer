@@ -1,6 +1,6 @@
 import { type BrowserWindow, WebContentsView, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
-import type { CommentAnchor, MarkerRequest, MarkerResult, PageBounds, PageHoldReason, PinEvent } from '../../shared/contract';
+import type { MarkerRequest, MarkerResult, PageBounds, PageHoldReason, PickedPoint, PinEvent } from '../../shared/contract';
 import { assertPreviewUrl, sanitizeAnchor } from '../../shared/anchor';
 import { CANCEL_PICK_SCRIPT, MESSAGE_PREFIX, PICK_SCRIPT, ROUTE_SCRIPT, focusScript, resolveScript } from './pageScripts';
 
@@ -114,6 +114,9 @@ export class PageView {
 	async snapshot(): Promise<string | null> {
 		const wc = this.view?.webContents;
 		if (!wc || wc.isDestroyed()) return null;
+		// Markers were only just drawn: let the page paint them before taking the picture, or the
+		// picture shows the page as it was a frame ago, without the pin that was just placed.
+		await this.run('new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))');
 		const image = await wc.capturePage();
 		return image.isEmpty() ? null : `data:image/jpeg;base64,${image.toJPEG(85).toString('base64')}`;
 	}
@@ -135,7 +138,7 @@ export class PageView {
 	}
 
 	/** Waits for one click. Null if cancelled, or if the page changed under it. */
-	async pick(): Promise<CommentAnchor | null> {
+	async pick(): Promise<PickedPoint | null> {
 		if (!this.view) throw new Error('There is no preview open.');
 		if (this.picking) await this.cancelPick();
 		this.picking = true;
@@ -144,10 +147,13 @@ export class PageView {
 			const raw = await this.run<unknown>(PICK_SCRIPT);
 			if (raw === null || raw === undefined) return null; // cancelled
 			const anchor = sanitizeAnchor(raw);
+			const at = (raw as { at?: { x?: unknown; y?: unknown } }).at;
 			// Said aloud, never swallowed: a click that silently did nothing is
 			// indistinguishable from a comment that was lost.
 			if (!anchor) throw new Error('That spot could not be pinned. Try clicking somewhere else on the page.');
-			return anchor;
+			// Only used to place a box, so a nonsense value just means the box goes in a corner.
+			const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(100_000, v)) : 0);
+			return { anchor, at: { x: n(at?.x), y: n(at?.y) } };
 		} finally {
 			this.picking = false;
 		}

@@ -68,7 +68,9 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	wc.sendInputEvent({ type: 'mouseUp', x: 100, y: 70, button: 'left', clickCount: 1 });
 	const picked = await picking;
 	if (picked === null) return fail('nothing was picked');
-	const anchor = picked;
+	const anchor = picked.anchor;
+	// The click's own position comes back too: the comment box is placed beside the pin with it.
+	if (Math.abs(picked.at.x - 100) > 2 || Math.abs(picked.at.y - 70) > 2) fail(`the click position was wrong: ${JSON.stringify(picked.at)}`);
 	if (anchor.selector !== '[data-e2e-ref="users-invite"]') fail(`wrong element picked: ${JSON.stringify(anchor)}`);
 	if (anchor.route !== '/users') fail(`wrong route: ${anchor.route}`);
 	if ((await js<number>('window.__pressed')) !== 0) fail('the click reached the page');

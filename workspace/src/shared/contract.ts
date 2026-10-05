@@ -199,7 +199,7 @@ export interface WorkspaceApi {
 	pageSnapshot(): Promise<Result<string | null>>;
 
 	/** Comment mode: resolves with the next element clicked, or null if cancelled. */
-	pagePick(): Promise<Result<CommentAnchor | null>>;
+	pagePick(): Promise<Result<PickedPoint | null>>;
 	pageCancelPick(): Promise<Result<null>>;
 	pageShowMarkers(items: MarkerRequest[]): Promise<Result<MarkerResult[]>>;
 	pageFocusMarker(id: number): Promise<Result<null>>;
@@ -334,8 +334,14 @@ export interface MarkerResult {
   state: MarkerState;
 }
 
+/** Where a click landed: the anchor to store, and the point in the page, which is only for placing the comment box. */
+export interface PickedPoint {
+  anchor: CommentAnchor;
+  at: { x: number; y: number };
+}
+
 /** Why the preview is hidden. A closed set, so the window cannot invent reasons. */
-export const PAGE_HOLD_REASONS = ['menu', 'popover'] as const;
+export const PAGE_HOLD_REASONS = ['menu', 'popover', 'resize'] as const;
 export type PageHoldReason = (typeof PAGE_HOLD_REASONS)[number];
 
 /** Where the preview sits, in the window's own coordinates. */

@@ -2,6 +2,7 @@ import {
 	FSAlert,
 	FSBox,
 	FSButton,
+	FSButtonGroup,
 	FSChip,
 	FSIconButton,
 	FSSpinner,
@@ -10,39 +11,38 @@ import {
 	FSTooltip,
 	FSTypography,
 } from '@flocksafety/flock-react-component-lib';
-import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutline';
+import AddCommentOutlined from '@mui/icons-material/AddCommentOutlined';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
+import ViewSidebarOutlined from '@mui/icons-material/ViewSidebarOutlined';
 import { Popover } from '@mui/material';
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { People } from './People';
-import { useLocalBuild } from './useLocalBuild';
+import { PANEL_STEP, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
 import { NAV_HEIGHT } from './TopNav';
+import { useLocalBuild } from './useLocalBuild';
 
 /**
  * One iteration: a thin toolbar, and the preview taking everything under it.
  *
- * Opening an iteration brings its preview up on this machine by itself: the screen says
- * what it is doing while it works, and shows the page when it is ready, so nobody has to
- * decide to run anything. Comments are an icon in the toolbar that opens a popover.
+ * Opening an iteration brings its preview up on this machine by itself. Commenting is a
+ * mode: the left half of the toolbar's split button turns it on, and then every click on the
+ * page drops a pin with a small box beside it to write in. It stays on, so you can go through
+ * the page commenting as you go. The right half opens a docked, resizable sidebar listing
+ * every comment. The sidebar is closed until asked for.
  *
- * The preview is a native view, always drawn *above* the window's own content, so a popover
- * cannot be laid over it. While one is open the preview is swapped for a picture of itself
- * and the popover is drawn over that; closing it brings the live page back. The picture is
- * taken after the pins are drawn, and shown before the live view is hidden, so nothing
- * flashes.
+ * The preview is a native view, always drawn *above* the window's own content, so the comment
+ * box cannot be laid over it. While one is open the preview is swapped for a picture of itself
+ * (taken after the pins are drawn, shown before the live view is hidden, so nothing flashes)
+ * and the box is drawn over that. Dragging the sidebar's divider hides the preview for the
+ * length of the drag, because the pointer over a native view never reaches this window.
  */
-
-/** What the popover looks like. Sized to the window, so a short window scrolls instead of overflowing. */
-const POPOVER_PAPER = {
-	width: 380,
-	maxWidth: 'calc(100vw - 16px)',
-	maxHeight: 'calc(100vh - 140px)',
-	mt: '6px', // clear of the toolbar's bottom line
-} as const;
 
 /** Height of the toolbar under the main bar. */
 export const TOOLBAR_HEIGHT = 44;
+
+/** Where the comment box sits relative to the pin, whose body is drawn above its tip. */
+const BOX_OFFSET = { x: 22, y: -19 } as const;
 
 type Mode = 'browse' | 'picking' | 'composing';
 
@@ -72,11 +72,12 @@ export const Review = ({
 }) => {
 	const [comments, setComments] = useState<ReviewComment[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
-	const [urlDraft, setUrlDraft] = useState(iteration.previewUrl ?? '');
 	const [opened, setOpened] = useState(false);
 	const [route, setRoute] = useState<string | null>(null);
 	const [mode, setMode] = useState<Mode>('browse');
+	const [commentMode, setCommentMode] = useState(false);
 	const [pending, setPending] = useState<CommentAnchor | null>(null);
+	const [pendingAt, setPendingAt] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 	const [draft, setDraft] = useState('');
 	const [posting, setPosting] = useState(false);
 	const [placed, setPlaced] = useState<Map<number, MarkerState>>(new Map());
@@ -86,11 +87,18 @@ export const Review = ({
 	const [redraw, setRedraw] = useState(0);
 	const cards = useRef(new Map<number, HTMLElement>());
 
-	const [commentsOpen, setCommentsOpen] = useState(false);
-	const [ready, setReady] = useState(false); // the preview has stepped aside, so the popover can show
+	// The sidebar: closed until asked for. Its width is the person's to set, and is remembered.
+	const [sidebarOpen, setSidebarOpen] = useState(false);
+	const [panelWidth, setPanelWidth] = useState(() => loadPanelWidth(window.innerWidth));
+	const [resizing, setResizing] = useState(false);
+	// A ref as well as state: pointer events can arrive faster than a render.
+	const dragging = useRef(false);
+
+	// The comment box needs the preview out of the way; this is that handshake.
+	const [ready, setReady] = useState(false);
 	const [snapshot, setSnapshot] = useState<string | null>(null);
 	const held = useRef(false);
-	const anchor = useRef<HTMLElement | null>(null);
+	const pickActive = useRef(false);
 
 	// Bring the iteration up here, unless it already has a hosted address to open.
 	const local = useLocalBuild({ checkout, project, iteration, task, enabled: !iteration.previewUrl });
@@ -118,19 +126,16 @@ export const Review = ({
 	const anchored = useMemo(() => (comments ?? []).filter((c) => c.anchor), [comments]);
 	const numberOf = useCallback((id: number) => anchored.findIndex((c) => c.id === id) + 1, [anchored]);
 
-	const open = useCallback(
-		async (url: string) => {
-			setError(null);
-			const r = await window.workspace.pageOpen(url);
-			if (r.ok) {
-				setOpened(true);
-			} else {
-				setOpened(false);
-				setError(r.error);
-			}
-		},
-		[],
-	);
+	const open = useCallback(async (url: string) => {
+		setError(null);
+		const r = await window.workspace.pageOpen(url);
+		if (r.ok) {
+			setOpened(true);
+		} else {
+			setOpened(false);
+			setError(r.error);
+		}
+	}, []);
 
 	// Open the recorded preview straight away; close it when leaving.
 	useEffect(() => {
@@ -168,12 +173,12 @@ export const Review = ({
 		};
 	}, [opened]);
 
-	// Put the markers on the page. A function, not just an effect, because freezing
-	// the preview for the panel must first make sure the picture includes them.
+	// Put the markers on the page. A function, not just an effect, because freezing the
+	// preview for the comment box must first make sure the picture includes them.
 	const drawMarkers = useCallback(async () => {
 		// Only your own pins can be dragged; GitHub would refuse anyone else's edit anyway.
 		const items = anchored.map((c, i) => ({ id: c.id, number: i + 1, anchor: c.anchor as CommentAnchor, movable: c.author === me }));
-		// The pin being placed shows at once, before it is saved (id -1, amber), and can be moved.
+		// The pin being placed shows at once, before it is saved (id -1, amber).
 		if (pending) items.push({ id: -1, number: items.length + 1, anchor: pending, movable: true });
 		const r = await window.workspace.pageShowMarkers(items);
 		if (r.ok) setPlaced(new Map(r.value.map((m: MarkerResult) => [m.id, m.state])));
@@ -190,7 +195,7 @@ export const Review = ({
 			if (e.kind === 'click') {
 				if (e.id < 0) return;
 				setSelected(e.id);
-				setCommentsOpen(true); // the comment is in there, so show it
+				setSidebarOpen(true); // the comment is in the sidebar, so show it
 				setTimeout(() => cards.current.get(e.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 250);
 			} else if (e.id < 0) {
 				// The unsaved pin: just remember where it now is.
@@ -212,63 +217,78 @@ export const Review = ({
 		return off;
 	}, []);
 
-	const startComment = useCallback(async () => {
+	/** Waits for one click on the page. */
+	const pick = useCallback(async () => {
+		// Only one at a time: React runs every effect twice in development, and a second
+		// pick would cancel the first, which reads as someone pressing Escape.
+		if (pickActive.current) return;
+		pickActive.current = true;
 		setError(null);
-		setCommentsOpen(false); // the page has to be live to be clicked
 		setMode('picking');
 		const r = await window.workspace.pagePick();
+		pickActive.current = false;
 		if (!r.ok) {
 			setError(r.error);
 			setMode('browse');
+			setCommentMode(false);
 		} else if (r.value) {
-			setPending({ ...r.value, commit: iteration.commit ?? '' });
+			setPending({ ...r.value.anchor, commit: iteration.commit ?? '' });
+			setPendingAt(r.value.at);
 			setMode('composing');
 		} else {
+			// Cancelled: Escape on the page, or comment mode switched off.
 			setMode('browse');
+			setCommentMode(false);
 		}
 	}, [iteration.commit]);
 
-	const cancel = useCallback(async () => {
-		if (mode === 'picking') await window.workspace.pageCancelPick();
+	// Comment mode stays on: as soon as one comment is done, the next click is waited for.
+	useEffect(() => {
+		if (commentMode && opened && mode === 'browse') void pick();
+	}, [commentMode, opened, mode, pick]);
+
+	const exitCommentMode = useCallback(() => {
+		setCommentMode(false);
+		if (pickActive.current) void window.workspace.pageCancelPick();
+	}, []);
+
+	/** Abandons the comment being written, and the pin with it. Comment mode carries on. */
+	const cancelCompose = useCallback(() => {
 		setPending(null);
 		setDraft('');
+		setError(null);
 		setMode('browse');
-	}, [mode]);
+	}, []);
 
-	// C starts comment mode, as in the tools people already use; Escape backs out.
+	// C turns comment mode on and off; Escape backs out of whatever is happening.
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
 			const t = e.target as HTMLElement | null;
-			if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-			if (e.key.toLowerCase() === 'c' && !e.metaKey && !e.ctrlKey && opened && mode === 'browse') void startComment();
-			if (e.key === 'Escape' && mode !== 'browse') void cancel();
+			const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+			if (e.key === 'Escape') {
+				if (mode === 'composing') cancelCompose();
+				else if (commentMode) exitCommentMode();
+				return;
+			}
+			if (typing || e.metaKey || e.ctrlKey || !opened) return;
+			if (e.key.toLowerCase() === 'c') (commentMode ? exitCommentMode : () => setCommentMode(true))();
 		};
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
-	}, [opened, mode, startComment, cancel]);
-
-	// Writing a comment happens in the comments popover.
-	useEffect(() => {
-		if (mode === 'composing') setCommentsOpen(true);
-	}, [mode]);
-
-	// A comment error is drawn in the popover, so raise it when there is a page to comment on.
-	useEffect(() => {
-		if (error && opened) setCommentsOpen(true);
-	}, [error, opened]);
+	}, [opened, mode, commentMode, cancelCompose, exitCommentMode]);
 
 	/**
-	 * Comments open: freeze the preview. Closed: bring it back.
+	 * Writing a comment: freeze the preview. Done: bring it back.
 	 *
-	 * The order matters. Markers are drawn first so the picture includes them; the picture
-	 * is on screen before the live view is hidden, so there is no flash of empty window;
-	 * and a run counter drops the result of a freeze that was overtaken by the popover
-	 * closing again.
+	 * The order matters. Markers are drawn first so the picture includes the pin; the picture
+	 * is on screen before the live view is hidden, so there is no flash of empty window; and
+	 * a run counter drops the result of a freeze that was overtaken by the box closing again.
 	 */
+	const composing = mode === 'composing';
 	const run = useRef(0);
 	useEffect(() => {
 		const mine = ++run.current;
-		if (!commentsOpen) {
+		if (!composing) {
 			setReady(false);
 			held.current = false;
 			void window.workspace.pageHold('popover', false);
@@ -277,8 +297,8 @@ export const Review = ({
 			}, 120);
 			return () => clearTimeout(t);
 		}
-		if (!opened || held.current) {
-			setReady(true); // nothing to freeze, or already frozen
+		if (!opened) {
+			setReady(true); // nothing to freeze
 			return;
 		}
 		void (async () => {
@@ -288,15 +308,21 @@ export const Review = ({
 			setSnapshot(snap.ok ? snap.value : null);
 			await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 			if (mine !== run.current) return;
-			// Even with no picture the popover has to be visible, so the preview still steps aside.
+			// Even with no picture the box has to be visible, so the preview still steps aside.
 			await window.workspace.pageHold('popover', true);
 			if (mine !== run.current) return;
 			held.current = true;
 			setReady(true);
 		})();
-	}, [commentsOpen, opened]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [composing, opened]); // eslint-disable-line react-hooks/exhaustive-deps
 
-	// Letting go on the way out matters: the hold lives in the main process, and a preview
+	// Dragging the divider hides the preview for the length of the drag.
+	useEffect(() => {
+		void window.workspace.pageHold('resize', resizing);
+		return () => void window.workspace.pageHold('resize', false);
+	}, [resizing]);
+
+	// Letting go on the way out matters: the holds live in the main process, and a preview
 	// left hidden would stay hidden for the next iteration too.
 	useEffect(
 		() => () => {
@@ -305,8 +331,40 @@ export const Review = ({
 		[],
 	);
 
+	// A narrower window may no longer have room for the width that was set.
+	useEffect(() => {
+		const fit = () => setPanelWidth((w) => clampPanelWidth(w, window.innerWidth));
+		window.addEventListener('resize', fit);
+		return () => window.removeEventListener('resize', fit);
+	}, []);
+
+	const startResize = (e: React.PointerEvent<HTMLElement>) => {
+		e.preventDefault();
+		try {
+			// Keeps the drag attached to the divider if the pointer strays off it.
+			e.currentTarget.setPointerCapture(e.pointerId);
+		} catch {
+			// Resizing still works without capture; it just follows the pointer less tightly.
+		}
+		dragging.current = true;
+		setResizing(true);
+	};
+	// The sidebar's right edge is the window's, so its width is how far the pointer is from it.
+	const moveResize = (e: React.PointerEvent<HTMLElement>) => {
+		if (dragging.current) setPanelWidth(clampPanelWidth(window.innerWidth - e.clientX, window.innerWidth));
+	};
+	const endResize = () => {
+		if (!dragging.current) return;
+		dragging.current = false;
+		setResizing(false);
+		setPanelWidth((w) => {
+			savePanelWidth(w);
+			return w;
+		});
+	};
+
 	const post = async () => {
-		if (!draft.trim()) return;
+		if (!draft.trim() || !pending) return;
 		setPosting(true);
 		const r = await window.workspace.postComment(project.id, iteration.branch, draft.trim(), pending);
 		setPosting(false);
@@ -314,16 +372,19 @@ export const Review = ({
 			posted.current.set(r.value.id, r.value);
 			setDraft('');
 			setPending(null);
-			setMode('browse');
-			setCommentsOpen(true); // so the comment just posted is there to see
+			setMode('browse'); // comment mode is still on, so the next click is waited for
 			await load();
 		} else {
 			setError(r.error);
 		}
 	};
 
-
-	const unread = comments?.length ?? 0;
+	const total = comments?.length ?? 0;
+	// Where the comment box goes: beside the pin, in window coordinates.
+	const slotBox = slot.current?.getBoundingClientRect();
+	const boxPosition = slotBox
+		? { top: slotBox.top + pendingAt.y + BOX_OFFSET.y, left: slotBox.left + pendingAt.x + BOX_OFFSET.x }
+		: { top: 0, left: 0 };
 
 	return (
 		<FSBox
@@ -367,185 +428,227 @@ export const Review = ({
 				</FSTypography>
 				<People people={iteration.contributors} />
 				<FSBox sx={{ flexGrow: 1 }} />
-				<FSTooltip title={unread > 0 ? `Comments (${unread})` : 'Comments'} describeChild>
-					<FSBox ref={(el: HTMLDivElement | null) => void (anchor.current = el)}>
-						<FSIconButton
-							size="md"
-							variant={commentsOpen ? 'primary' : 'secondary'}
-							aria-label="Comments"
-							aria-pressed={commentsOpen}
-							onClick={() => setCommentsOpen((o) => !o)}
-						>
-							<ChatBubbleOutline fontSize="small" />
-						</FSIconButton>
-					</FSBox>
-				</FSTooltip>
+
+				{/* One control, two halves: comment mode on the left, the list of comments on the right. */}
+				<FSButtonGroup size="md">
+					<FSButton
+						variant={commentMode ? 'primary' : 'secondary'}
+						aria-pressed={commentMode}
+						disabled={!opened}
+						title="Comment: click anywhere on the page to leave one (C)"
+						startIcon={<AddCommentOutlined fontSize="small" />}
+						onClick={() => (commentMode ? exitCommentMode() : setCommentMode(true))}
+					>
+						Comment
+					</FSButton>
+					<FSButton
+						variant={sidebarOpen ? 'primary' : 'secondary'}
+						aria-pressed={sidebarOpen}
+						aria-label="Show all comments"
+						title={total > 0 ? `All comments (${total})` : 'All comments'}
+						startIcon={<ViewSidebarOutlined fontSize="small" />}
+						onClick={() => setSidebarOpen((o) => !o)}
+					>
+						{total > 0 ? total : null}
+					</FSButton>
+				</FSButtonGroup>
 			</FSBox>
 
-			{/* The preview takes everything under the toolbar. Nothing else shares its space. */}
-			<FSBox ref={slot} sx={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden', bgcolor: 'grey.100' }}>
-				{!opened && (
-					<FSStack spacing={2} alignItems="center" justifyContent="center" sx={{ position: 'absolute', inset: 0, p: 3, textAlign: 'center' }}>
-						{local.phase.kind === 'failed' ? (
-							<>
+			{/* Under the toolbar: the preview, and beside it the sidebar when it is open. */}
+			<FSBox sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
+				<FSBox ref={slot} sx={{ position: 'relative', flex: 1, minWidth: 0, overflow: 'hidden', bgcolor: 'grey.100' }}>
+					{!opened && (
+						<FSStack spacing={2} alignItems="center" justifyContent="center" sx={{ position: 'absolute', inset: 0, p: 3, textAlign: 'center' }}>
+							{local.phase.kind === 'failed' ? (
+								<>
+									<FSAlert severity="error" sx={{ maxWidth: 560, textAlign: 'left' }}>
+										{local.phase.message}
+									</FSAlert>
+									{local.log.length > 0 && (
+										<FSBox
+											component="pre"
+											sx={{ m: 0, p: 1.5, maxWidth: 560, width: '100%', maxHeight: 180, overflow: 'auto', bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1, fontSize: 11, textAlign: 'left', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+										>
+											{local.log.slice(-15).join('\n')}
+										</FSBox>
+									)}
+									<FSButton size="md" onClick={local.retry}>
+										Try again
+									</FSButton>
+								</>
+							) : error ? (
 								<FSAlert severity="error" sx={{ maxWidth: 560, textAlign: 'left' }}>
-									{local.phase.message}
+									{error}
 								</FSAlert>
-								{local.log.length > 0 && (
-									<FSBox
-										component="pre"
-										sx={{ m: 0, p: 1.5, maxWidth: 560, width: '100%', maxHeight: 180, overflow: 'auto', bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1, fontSize: 11, textAlign: 'left', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-									>
-										{local.log.slice(-15).join('\n')}
-									</FSBox>
-								)}
-								<FSButton size="md" onClick={local.retry}>
-									Try again
-								</FSButton>
-							</>
-						) : error ? (
-							<FSAlert severity="error" sx={{ maxWidth: 560, textAlign: 'left' }}>
-								{error}
-							</FSAlert>
-						) : !iteration.previewUrl && !checkout ? (
-							<>
-								<FSTypography variant="body1">Flock Designer needs your Coke repository to show this.</FSTypography>
-								<FSTypography variant="body2" color="text.secondary">
-									It could not find one on this machine. Point it at your Coke folder once.
-								</FSTypography>
-								<FSButton size="md" onClick={onChoose}>
-									Find it
-								</FSButton>
-							</>
-						) : (
-							<>
-								<FSSpinner />
-								<FSTypography variant="body1">
-									{local.phase.kind === 'agent'
-										? `Building ${project.title}…`
-										: local.phase.kind === 'preview'
-											? 'Starting the preview…'
-											: 'Opening the preview…'}
-								</FSTypography>
-								{local.phase.kind === 'agent' && (
-									<FSTypography variant="body2" color="text.secondary" sx={{ maxWidth: 480 }}>
-										The agent is writing it from your request. This takes a few minutes.
-									</FSTypography>
-								)}
-								{local.phase.kind === 'preview' && (
+							) : !iteration.previewUrl && !checkout ? (
+								<>
+									<FSTypography variant="body1">Flock Designer needs your Coke repository to show this.</FSTypography>
 									<FSTypography variant="body2" color="text.secondary">
-										The first time can take a minute.
+										It could not find one on this machine. Point it at your Coke folder once.
+									</FSTypography>
+									<FSButton size="md" onClick={onChoose}>
+										Find it
+									</FSButton>
+								</>
+							) : (
+								<>
+									<FSSpinner />
+									<FSTypography variant="body1">
+										{local.phase.kind === 'agent'
+											? `Building ${project.title}…`
+											: local.phase.kind === 'preview'
+												? 'Starting the preview…'
+												: 'Opening the preview…'}
+									</FSTypography>
+									{local.phase.kind === 'agent' && (
+										<FSTypography variant="body2" color="text.secondary" sx={{ maxWidth: 480 }}>
+											The agent is writing it from your request. This takes a few minutes.
+										</FSTypography>
+									)}
+									{local.phase.kind === 'preview' && (
+										<FSTypography variant="body2" color="text.secondary">
+											The first time can take a minute.
+										</FSTypography>
+									)}
+								</>
+							)}
+						</FSStack>
+					)}
+
+					{/* While a comment is being written the preview is this picture of it. */}
+					{snapshot && (
+						<img
+							src={snapshot}
+							alt="The preview, paused while a comment is written"
+							style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill' }}
+						/>
+					)}
+				</FSBox>
+
+				{sidebarOpen && (
+					<>
+						{/* The divider. Drag it, or focus it and use the arrow keys. */}
+						<FSBox
+							role="separator"
+							aria-orientation="vertical"
+							aria-label="Resize the comments sidebar"
+							aria-valuenow={panelWidth}
+							tabIndex={0}
+							onPointerDown={startResize}
+							onPointerMove={moveResize}
+							onPointerUp={endResize}
+							onPointerCancel={endResize}
+							onKeyDown={(e: React.KeyboardEvent) => {
+								if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+								e.preventDefault();
+								const next = clampPanelWidth(panelWidth + (e.key === 'ArrowLeft' ? PANEL_STEP : -PANEL_STEP), window.innerWidth);
+								setPanelWidth(next);
+								savePanelWidth(next);
+							}}
+							sx={{
+								// One pixel to look at...
+								width: '1px',
+								flexShrink: 0,
+								position: 'relative',
+								touchAction: 'none',
+								bgcolor: resizing ? 'primary.main' : 'divider',
+								transition: 'background-color 120ms',
+								'&:hover, &:focus-visible': { bgcolor: 'primary.main' },
+								outline: 'none',
+								// ...and a wider strip to grab. It extends over the sidebar only: the other side is
+								// the native preview, which never passes the pointer to this window.
+								'&::after': { content: '""', position: 'absolute', top: 0, bottom: 0, left: 0, width: '7px', cursor: 'col-resize' },
+							}}
+						/>
+						<FSBox sx={{ width: panelWidth, flexShrink: 0, bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+							<FSStack spacing={2} sx={{ p: 2, flex: 1, minHeight: 0, overflowY: 'auto' }}>
+								<FSTypography variant="subtitle2">{total > 0 ? `Comments (${total})` : 'Comments'}</FSTypography>
+								{error && opened && !composing && <FSAlert severity="error">{error}</FSAlert>}
+								{comments?.length === 0 && (
+									<FSTypography variant="body2" color="text.secondary">
+										No comments yet. Choose Comment, then click anywhere on the page.
 									</FSTypography>
 								)}
-							</>
-						)}
-					</FSStack>
-				)}
-
-				{/* While the comments are open the preview is this picture of it. */}
-				{snapshot && (
-					<img
-						src={snapshot}
-						alt="The preview, paused while the comments are open"
-						style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill' }}
-					/>
-				)}
-			</FSBox>
-
-			<Popover
-				open={commentsOpen && ready}
-				onClose={() => setCommentsOpen(false)}
-				anchorEl={anchor.current}
-				anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-				transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-				PaperProps={{ sx: POPOVER_PAPER }}
-			>
-				<FSStack spacing={2} sx={{ p: 2 }}>
-					<FSTypography variant="subtitle2">{unread > 0 ? `Comments (${unread})` : 'Comments'}</FSTypography>
-					{error && mode !== 'composing' && <FSAlert severity="error">{error}</FSAlert>}
-					<FSStack direction="row" spacing={1} alignItems="center">
-						<FSButton
-							size="md"
-							variant={mode === 'browse' ? 'primary' : 'secondary'}
-							disabled={!opened || mode === 'composing'}
-							onClick={() => (mode === 'picking' ? void cancel() : void startComment())}
-						>
-							{mode === 'picking' ? 'Click to place a pin…' : 'Place a pin (C)'}
-						</FSButton>
-						{mode !== 'browse' && (
-							<FSButton size="md" variant="secondary" onClick={() => void cancel()}>
-								Cancel
-							</FSButton>
-						)}
-					</FSStack>
-
-					{mode === 'composing' && pending && (
-						<FSBox sx={{ border: 1, borderColor: 'primary.main', borderRadius: 1, p: 2 }}>
-							<FSStack spacing={1}>
-								{error && <FSAlert severity="error">{error}</FSAlert>}
-								<FSTypography variant="caption" color="text.secondary">
-									Pinned on {pending.route}
-								</FSTypography>
-								<FSTextField label="Your comment" multiline minRows={3} value={draft} onChange={setDraft} autoFocus />
-								<FSButton size="md" onClick={post} disabled={posting || !draft.trim()}>
-									{posting ? 'Posting…' : 'Post comment'}
-								</FSButton>
+								{comments?.map((comment) => {
+									const state = placed.get(comment.id);
+									const n = numberOf(comment.id);
+									return (
+										<FSBox
+											key={comment.id}
+											ref={(el: HTMLElement | null) => {
+												if (el) cards.current.set(comment.id, el);
+												else cards.current.delete(comment.id);
+											}}
+											onClick={() => {
+												setSelected(comment.id);
+												if (comment.anchor) void window.workspace.pageFocusMarker(comment.id);
+											}}
+											sx={{
+												border: 1,
+												borderColor: selected === comment.id ? 'primary.main' : 'divider',
+												borderWidth: selected === comment.id ? 2 : 1,
+												bgcolor: selected === comment.id ? 'action.selected' : undefined,
+												borderRadius: 1,
+												p: 1.5,
+												cursor: comment.anchor ? 'pointer' : 'default',
+											}}
+										>
+											<FSStack spacing={0.5}>
+												<FSStack direction="row" spacing={1} alignItems="center">
+													{n > 0 && <FSChip variant="status" size="small" label={String(n)} />}
+													<FSTypography variant="subtitle2">{comment.author}</FSTypography>
+													{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
+												</FSStack>
+												<FSTypography variant="body2">{comment.body}</FSTypography>
+												{comment.anchor && state === 'elsewhere' && (
+													<FSTypography variant="caption" color="text.secondary">
+														On {comment.anchor.route}
+													</FSTypography>
+												)}
+												{state && NOTE[state] && (
+													<FSTypography variant="caption" color="warning.main">
+														{NOTE[state]}
+													</FSTypography>
+												)}
+											</FSStack>
+										</FSBox>
+									);
+								})}
 							</FSStack>
 						</FSBox>
-					)}
+					</>
+				)}
+			</FSBox>
 
-					{comments?.length === 0 && (
-						<FSTypography variant="body2" color="text.secondary">
-							No comments yet. Press C, then click anywhere on the page to place a pin.
-						</FSTypography>
-					)}
-
-					{comments?.map((comment) => {
-						const state = placed.get(comment.id);
-						const n = numberOf(comment.id);
-						return (
-							<FSBox
-								key={comment.id}
-								ref={(el: HTMLElement | null) => {
-									if (el) cards.current.set(comment.id, el);
-									else cards.current.delete(comment.id);
-								}}
-								onClick={() => {
-									setSelected(comment.id);
-									if (comment.anchor) void window.workspace.pageFocusMarker(comment.id);
-								}}
-								sx={{
-									border: 1,
-									borderColor: selected === comment.id ? 'primary.main' : 'divider',
-									borderWidth: selected === comment.id ? 2 : 1,
-									bgcolor: selected === comment.id ? 'action.selected' : undefined,
-									borderRadius: 1,
-									p: 1.5,
-									cursor: comment.anchor ? 'pointer' : 'default',
-								}}
-							>
-								<FSStack spacing={0.5}>
-									<FSStack direction="row" spacing={1} alignItems="center">
-										{n > 0 && <FSChip variant="status" size="small" label={String(n)} />}
-										<FSTypography variant="subtitle2">{comment.author}</FSTypography>
-										{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
-									</FSStack>
-									<FSTypography variant="body2">{comment.body}</FSTypography>
-									{comment.anchor && state === 'elsewhere' && (
-										<FSTypography variant="caption" color="text.secondary">
-											On {comment.anchor.route}
-										</FSTypography>
-									)}
-									{state && NOTE[state] && (
-										<FSTypography variant="caption" color="warning.main">
-											{NOTE[state]}
-										</FSTypography>
-									)}
-								</FSStack>
-							</FSBox>
-						);
-					})}
-				</FSStack>
+			{/* The comment box, beside the pin that was just placed. */}
+			<Popover
+				open={composing && ready}
+				onClose={cancelCompose}
+				anchorReference="anchorPosition"
+				anchorPosition={boxPosition}
+				transformOrigin={{ vertical: 'center', horizontal: 'left' }}
+				PaperProps={{ sx: { width: 300, maxWidth: 'calc(100vw - 16px)' } }}
+			>
+				{/* Cmd or Ctrl and Enter saves, as in the tools people already use. */}
+				<FSBox
+					onKeyDown={(e: React.KeyboardEvent) => {
+						if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void post();
+					}}
+					sx={{ p: 2 }}
+				>
+					<FSStack spacing={1.5}>
+						{error && <FSAlert severity="error">{error}</FSAlert>}
+						<FSTextField label="Comment" multiline minRows={3} value={draft} onChange={setDraft} autoFocus />
+						<FSStack direction="row" spacing={1} justifyContent="flex-end">
+							<FSButton size="md" variant="secondary" onClick={cancelCompose} disabled={posting}>
+								Cancel
+							</FSButton>
+							<FSButton size="md" onClick={() => void post()} disabled={posting || !draft.trim()}>
+								{posting ? 'Saving…' : 'Save'}
+							</FSButton>
+						</FSStack>
+					</FSStack>
+				</FSBox>
 			</Popover>
 		</FSBox>
 	);

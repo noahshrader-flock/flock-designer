@@ -38,8 +38,9 @@ export const runLocalSmoke = async (window: BrowserWindow, coke: string, project
 	await new Promise((r) => setTimeout(r, 200));
 	wc.sendInputEvent({ type: 'mouseDown', x: 400, y: 300, button: 'left', clickCount: 1 });
 	wc.sendInputEvent({ type: 'mouseUp', x: 400, y: 300, button: 'left', clickCount: 1 });
-	const anchor = await picking;
-	if (!anchor) throw new Error('no pin could be placed on the real prototype');
+	const picked = await picking;
+	if (!picked) throw new Error('no pin could be placed on the real prototype');
+	const anchor = picked.anchor;
 	const [result] = await page.showMarkers([{ id: 1, number: 1, anchor, movable: true }]);
 	console.log(`smoke-local: pin placed on ${anchor.selector} (${result?.state})`);
 	if (result?.state !== 'found') throw new Error(`the pin was not found again: ${JSON.stringify(result)}`);

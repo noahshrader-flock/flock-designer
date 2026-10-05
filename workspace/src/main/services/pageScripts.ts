@@ -99,7 +99,10 @@ ${HELPERS}
       // A click on an existing pin lands on the page beneath it.
       if (el && el.closest && el.closest('[data-fd-layer]')) el = underlying(e.clientX, e.clientY);
       if (!el || el.nodeType !== 1) return done(null);
-      done(describe(el, e.clientX, e.clientY));
+      // Where the click landed in the page, so the app can put the comment box beside the pin.
+      var info = describe(el, e.clientX, e.clientY);
+      info.at = { x: e.clientX, y: e.clientY };
+      done(info);
     };
     var key = function (e) { if (e.key === 'Escape') done(null); };
     window.__fdCancelPick = function () { done(null); };
