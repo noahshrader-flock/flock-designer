@@ -8,6 +8,7 @@ import type {
 	ContextReceipt,
 	Iteration,
 	MarkerResult,
+	PinEvent,
 	SavedIteration,
 	PreviewStatus,
 	Project,
@@ -77,6 +78,8 @@ const api: WorkspaceApi = {
 	pageShowMarkers: (items) => invoke<MarkerResult[]>(CHANNELS.pageShowMarkers, items),
 	pageFocusMarker: (id) => invoke<null>(CHANNELS.pageFocusMarker, id),
 	onPageRoute: (listener) => subscribe<string>(CHANNELS.pageRoute, listener),
+	onPinEvent: (listener) => subscribe<PinEvent>(CHANNELS.pinEvent, listener),
+	moveComment: (commentId, anchor) => invoke<ReviewComment>(CHANNELS.moveComment, commentId, anchor),
 };
 
 contextBridge.exposeInMainWorld('workspace', api);

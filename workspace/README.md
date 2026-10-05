@@ -110,6 +110,10 @@ The code stays on its branch in the product repository, where it can actually ru
   direction. Everything the page returns is validated before use. A page cannot navigate the view
   elsewhere (other origins open in the real browser), and only `https` or a local `http` address can
   be opened. `npm run smoke:page` checks all of this in real Electron, against a real click.
+- A pin reports a click or a drop back through the page's console, tagged with a secret that is new for
+  every preview. The app accepts a message only if it carries that secret and has exactly the shape of
+  a click or a move; `smoke:page` checks that a forged message is ignored. The worst a page that learned
+  the secret could do is select a pin, or move one of the viewer's own pins.
 - The window may load images from `avatars.githubusercontent.com`, and nothing else from the network.
 
 ## Its own FUI version is not the product's

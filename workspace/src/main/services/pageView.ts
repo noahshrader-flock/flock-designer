@@ -1,7 +1,8 @@
 import { type BrowserWindow, WebContentsView, shell } from 'electron';
-import type { CommentAnchor, MarkerRequest, MarkerResult, PageBounds } from '../../shared/contract';
+import { randomUUID } from 'node:crypto';
+import type { CommentAnchor, MarkerRequest, MarkerResult, PageBounds, PinEvent } from '../../shared/contract';
 import { assertPreviewUrl, sanitizeAnchor } from '../../shared/anchor';
-import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, ROUTE_SCRIPT, focusScript, resolveScript } from './pageScripts';
+import { CANCEL_PICK_SCRIPT, MESSAGE_PREFIX, PICK_SCRIPT, ROUTE_SCRIPT, focusScript, resolveScript } from './pageScripts';
 
 /**
  * A prototype's preview, shown inside the app so a comment can be placed on it.
@@ -29,11 +30,16 @@ export class PageView {
 	constructor(
 		private readonly window: BrowserWindow,
 		private readonly onRoute: (route: string) => void,
+		private readonly onPin: (event: PinEvent) => void = () => undefined,
 	) {}
+
+	/** Secret for this preview, so only the app's own pins can speak for it. Rotated on every open. */
+	private nonce = randomUUID();
 
 	async open(rawUrl: string): Promise<void> {
 		const url = assertPreviewUrl(rawUrl);
 		this.close();
+		this.nonce = randomUUID();
 
 		const view = new WebContentsView({
 			webPreferences: {
@@ -62,6 +68,7 @@ export class PageView {
 		const reportRoute = () => {
 			void this.run<string>(ROUTE_SCRIPT).then((r) => typeof r === 'string' && this.onRoute(r.slice(0, 300)));
 		};
+		wc.on('console-message', (event) => this.heard(event.message));
 		wc.on('did-navigate', reportRoute);
 		wc.on('did-navigate-in-page', reportRoute);
 		wc.on('did-finish-load', reportRoute);
@@ -124,7 +131,7 @@ export class PageView {
 
 	/** Draws markers and reports how each comment was placed. Never trusts the reply's shape. */
 	async showMarkers(items: MarkerRequest[]): Promise<MarkerResult[]> {
-		const raw = await this.run<unknown>(resolveScript(items));
+		const raw = await this.run<unknown>(resolveScript(items, this.nonce));
 		const wanted = new Set(items.map((i) => i.id));
 		return (Array.isArray(raw) ? raw : []).flatMap((r): MarkerResult[] => {
 			const rec = r as { id?: unknown; state?: unknown };
@@ -132,6 +139,27 @@ export class PageView {
 				? [{ id: rec.id, state: rec.state as MarkerResult['state'] }]
 				: [];
 		});
+	}
+
+	/**
+	 * A pin's report, taken from the page's console. The page could write
+	 * anything there, so a message counts only if it carries this preview's
+	 * secret and has exactly the shape of a click or a move.
+	 */
+	private heard(message: string): void {
+		if (!message.startsWith(MESSAGE_PREFIX)) return;
+		let m: { n?: unknown; t?: unknown; id?: unknown; anchor?: unknown };
+		try {
+			m = JSON.parse(message.slice(MESSAGE_PREFIX.length));
+		} catch {
+			return;
+		}
+		if (m.n !== this.nonce || typeof m.id !== 'number' || !Number.isInteger(m.id)) return;
+		if (m.t === 'click') this.onPin({ kind: 'click', id: m.id });
+		else if (m.t === 'move') {
+			const anchor = sanitizeAnchor(m.anchor);
+			if (anchor) this.onPin({ kind: 'move', id: m.id, anchor });
+		}
 	}
 
 	async focusMarker(id: number): Promise<void> {

@@ -303,6 +303,35 @@ export class DesignRepo {
       });
   }
 
+  /**
+   * Moves a comment's pin by rewriting the anchor inside its body. GitHub lets
+   * a person edit their own comment and refuses anyone else, which is exactly
+   * the rule wanted: you can move your own pins, not someone else's.
+   */
+  async moveComment(commentId: number, anchor: CommentAnchor): Promise<ReviewComment> {
+    const path = `${this.base}/issues/comments/${commentId}`;
+    const current = asRecord(await this.session.api(path));
+    const body = String(current.body ?? '');
+    const old = parseAnchor(body);
+    const resolved = body.includes(RESOLVED_MARK);
+    const text = stripAnchor(body.replace(RESOLVED_MARK, '').trim());
+    // The commit is when the comment was made, not when it was moved.
+    const next = composeBody(text, { ...anchor, commit: old?.commit ?? anchor.commit });
+    const updated = asRecord(
+      await this.session.api(path, { method: 'PATCH', body: { body: resolved ? `${next}\n${RESOLVED_MARK}` : next } }),
+    );
+    const user = asRecord(updated.user);
+    return {
+      id: Number(updated.id),
+      author: String(user.login ?? 'unknown'),
+      authorAvatarUrl: typeof user.avatar_url === 'string' ? user.avatar_url : null,
+      body: stripAnchor(String(updated.body ?? '').replace(RESOLVED_MARK, '').trim()),
+      createdAt: String(updated.created_at ?? ''),
+      resolved,
+      anchor: parseAnchor(String(updated.body ?? '')),
+    };
+  }
+
   async postComment(
     projectId: string,
     branch: string,

@@ -176,6 +176,10 @@ export interface WorkspaceApi {
 	pageFocusMarker(id: number): Promise<Result<null>>;
 	/** The preview moved to another page. */
 	onPageRoute(listener: (route: string) => void): () => void;
+	/** A pin on the page was clicked or moved. */
+	onPinEvent(listener: (event: PinEvent) => void): () => void;
+	/** Saves where a comment's pin now is. Only the comment's author can. */
+	moveComment(commentId: number, anchor: CommentAnchor): Promise<Result<ReviewComment>>;
 }
 
 /** Who is signed in. */
@@ -273,7 +277,14 @@ export interface MarkerRequest {
   id: number;
   number: number;
   anchor: CommentAnchor;
+  /** True for the viewer's own pins, which can be dragged. */
+  movable?: boolean;
 }
+
+/** What a pin on the page reports: it was clicked, or it was dragged and dropped. */
+export type PinEvent =
+  | { kind: 'click'; id: number }
+  | { kind: 'move'; id: number; anchor: CommentAnchor };
 
 /** How a comment was placed on the page. `moved` follows the text; `missing` degrades to a page-level comment. */
 export type MarkerState = 'found' | 'moved' | 'missing' | 'elsewhere';
@@ -322,4 +333,6 @@ export const CHANNELS = {
 	pageShowMarkers: 'workspace:pageShowMarkers',
 	pageFocusMarker: 'workspace:pageFocusMarker',
 	pageRoute: 'workspace:event:pageRoute',
+	pinEvent: 'workspace:event:pinEvent',
+	moveComment: 'workspace:moveComment',
 } as const;

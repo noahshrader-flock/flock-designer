@@ -99,7 +99,9 @@ void app.whenReady().then(() => {
 	);
 	const designRepo = new DesignRepo(github, DESIGN_REPO);
 
-	const page = new PageView(window, (route) => window.webContents.send('workspace:event:pageRoute', route));
+	const page = new PageView(window, (route) => window.webContents.send('workspace:event:pageRoute', route), (e) =>
+		window.webContents.send('workspace:event:pinEvent', e),
+	);
 
 	registerIpc({ window, opened, runtime, agent, github, designRepo, page });
 

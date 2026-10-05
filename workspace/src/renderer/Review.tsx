@@ -1,6 +1,6 @@
 import { FSAlert, FSBox, FSButton, FSChip, FSStack, FSTextField, FSTypography } from '@flocksafety/flock-react-component-lib';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CommentAnchor, MarkerResult, MarkerState, Project, ProjectIteration, ReviewComment } from '../shared/contract';
+import type { CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 
 /**
  * One iteration: its preview, and the comments placed on it.
@@ -42,6 +42,16 @@ export const Review = ({
 	const [posting, setPosting] = useState(false);
 	const [placed, setPlaced] = useState<Map<number, MarkerState>>(new Map());
 	const slot = useRef<HTMLDivElement>(null);
+	const [me, setMe] = useState<string | null>(null);
+	const [selected, setSelected] = useState<number | null>(null);
+	const [redraw, setRedraw] = useState(0);
+	const cards = useRef(new Map<number, HTMLElement>());
+
+	useEffect(() => {
+		void window.workspace.signInState().then((r) => {
+			if (r.ok && r.value.state === 'signedIn') setMe(r.value.user.login);
+		});
+	}, []);
 
 	// Comments posted in this window. GitHub's listings can trail a new comment, so
 	// what was just posted is kept here and merged into whatever is read back.
@@ -106,13 +116,40 @@ export const Review = ({
 	useEffect(() => {
 		if (!opened) return;
 		void (async () => {
-			const items = anchored.map((c, i) => ({ id: c.id, number: i + 1, anchor: c.anchor as CommentAnchor }));
-			// The pin being placed shows at once, before it is saved (id -1, amber).
-			if (pending) items.push({ id: -1, number: items.length + 1, anchor: pending });
+			// Only your own pins can be dragged; GitHub would refuse anyone else's edit anyway.
+			const items = anchored.map((c, i) => ({ id: c.id, number: i + 1, anchor: c.anchor as CommentAnchor, movable: c.author === me }));
+			// The pin being placed shows at once, before it is saved (id -1, amber), and can be moved.
+			if (pending) items.push({ id: -1, number: items.length + 1, anchor: pending, movable: true });
 			const r = await window.workspace.pageShowMarkers(items);
 			if (r.ok) setPlaced(new Map(r.value.map((m: MarkerResult) => [m.id, m.state])));
 		})();
-	}, [opened, anchored, route, pending]);
+	}, [opened, anchored, route, pending, me, redraw]);
+
+	// A pin on the page was clicked or dropped somewhere new.
+	useEffect(
+		() =>
+			window.workspace.onPinEvent((e: PinEvent) => {
+				if (e.kind === 'click') {
+					if (e.id < 0) return;
+					setSelected(e.id);
+					cards.current.get(e.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+				} else if (e.id < 0) {
+					// The unsaved pin: just remember where it now is.
+					setPending((p) => (p ? { ...e.anchor, commit: p.commit } : p));
+				} else {
+					void window.workspace.moveComment(e.id, e.anchor).then((r) => {
+						if (r.ok) {
+							posted.current.set(r.value.id, r.value);
+							setComments((cs) => (cs ?? []).map((c) => (c.id === r.value.id ? { ...c, anchor: r.value.anchor } : c)));
+						} else {
+							setError(r.error);
+						}
+						setRedraw((n) => n + 1); // either way, draw the pin from what is saved
+					});
+				}
+			}),
+		[],
+	);
 
 	const startComment = useCallback(async () => {
 		setError(null);
@@ -244,8 +281,23 @@ export const Review = ({
 						return (
 							<FSBox
 								key={comment.id}
-								onClick={() => comment.anchor && void window.workspace.pageFocusMarker(comment.id)}
-								sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5, cursor: comment.anchor ? 'pointer' : 'default' }}
+								ref={(el: HTMLElement | null) => {
+									if (el) cards.current.set(comment.id, el);
+									else cards.current.delete(comment.id);
+								}}
+								onClick={() => {
+									setSelected(comment.id);
+									if (comment.anchor) void window.workspace.pageFocusMarker(comment.id);
+								}}
+								sx={{
+									border: 1,
+									borderColor: selected === comment.id ? 'primary.main' : 'divider',
+									borderWidth: selected === comment.id ? 2 : 1,
+									bgcolor: selected === comment.id ? 'action.selected' : undefined,
+									borderRadius: 1,
+									p: 1.5,
+									cursor: comment.anchor ? 'pointer' : 'default',
+								}}
 							>
 								<FSStack spacing={0.5}>
 									<FSStack direction="row" spacing={1} alignItems="center">

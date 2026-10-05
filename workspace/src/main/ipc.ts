@@ -227,9 +227,19 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 		guard((items: MarkerRequest[]) => {
 			const clean = (Array.isArray(items) ? items : []).slice(0, 200).flatMap((i): MarkerRequest[] => {
 				const anchor = sanitizeAnchor(i?.anchor);
-				return anchor && Number.isInteger(i.id) && Number.isInteger(i.number) ? [{ id: i.id, number: i.number, anchor }] : [];
+				return anchor && Number.isInteger(i.id) && Number.isInteger(i.number)
+					? [{ id: i.id, number: i.number, anchor, movable: i.movable === true }]
+					: [];
 			});
 			return page.showMarkers(clean);
+		}),
+	);
+	ipcMain.handle(
+		CHANNELS.moveComment,
+		guard((commentId: number, anchor: unknown): Promise<ReviewComment> => {
+			const clean = sanitizeAnchor(anchor);
+			if (!clean || !Number.isInteger(commentId)) throw new Error('That is not a place a pin can be moved to.');
+			return designRepo.moveComment(commentId, clean);
 		}),
 	);
 	ipcMain.handle(CHANNELS.pageFocusMarker, guard(async (id: number) => nothing(await page.focusMarker(Number(id)))));

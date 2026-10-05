@@ -2,6 +2,7 @@ import { type BrowserWindow, type WebContentsView } from 'electron';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { assertPreviewUrl } from '../shared/anchor';
+import type { PinEvent } from '../shared/contract';
 import { PageView } from './services/pageView';
 
 /**
@@ -43,7 +44,8 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	window.showInactive();
 
 	const routes: string[] = [];
-	const page = new PageView(window, (r) => routes.push(r));
+	const pins: PinEvent[] = [];
+	const page = new PageView(window, (r) => routes.push(r), (e) => pins.push(e));
 	page.setBounds({ x: 0, y: 0, width: 800, height: 600 });
 	await page.open(`${origin}/users`);
 
@@ -73,13 +75,36 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 
 	// 3. Reopened on the same page: found, and the marker sits on the element.
 	console.log('smoke-page: step 3');
-	const items = [{ id: 7, number: 1, anchor }];
+	const items = [{ id: 7, number: 1, anchor, movable: true }];
 	let r = await page.showMarkers(items);
 	if (r[0]?.state !== 'found') fail(`expected found, got ${JSON.stringify(r)}`);
 	// The pin's tip is the wrapper's position, and it must be where the click was: inside the element.
 	const markerOnElement = () =>
 		js<boolean>(`(function(){var m=document.querySelector('[data-fd-layer] > div').getBoundingClientRect();var e=document.querySelector('[data-e2e-ref]').getBoundingClientRect();return m.left>=e.left-1&&m.left<=e.right+1&&m.top>=e.top-1&&m.top<=e.bottom+1;})()`);
 	if (!(await markerOnElement())) fail('the marker is not on the element');
+
+	// 3b. A pin can be clicked, and dragged, with the real mouse. The pin's body hangs above its tip.
+	const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
+	console.log('smoke-page: step 3b');
+	wc.sendInputEvent({ type: 'mouseDown', x: 100, y: 51, button: 'left', clickCount: 1 });
+	wc.sendInputEvent({ type: 'mouseUp', x: 100, y: 51, button: 'left', clickCount: 1 });
+	await wait(300);
+	if (pins.length !== 1 || pins[0]?.kind !== 'click' || pins[0].id !== 7) fail(`a click on the pin was not reported: ${JSON.stringify(pins)}`);
+	wc.sendInputEvent({ type: 'mouseDown', x: 100, y: 51, button: 'left', clickCount: 1 });
+	for (const [x, y] of [[140, 90], [220, 200], [300, 300]] as const) {
+		wc.sendInputEvent({ type: 'mouseMove', x, y, modifiers: ['leftbuttondown'] });
+		await wait(50);
+	}
+	wc.sendInputEvent({ type: 'mouseUp', x: 300, y: 300, button: 'left', clickCount: 1 });
+	await wait(300);
+	const moved = pins[1];
+	if (pins.length !== 2 || moved?.kind !== 'move' || moved.id !== 7 || moved.anchor.route !== '/users') fail(`a drag was not reported as a move: ${JSON.stringify(pins)}`);
+	// A page that writes the same kind of message without knowing the secret is ignored.
+	await js(`console.debug('__fd:' + JSON.stringify({ n: 'guess', t: 'click', id: 7 }))`);
+	await js(`console.debug('__fd:' + JSON.stringify({ t: 'move', id: 7, anchor: {} }))`);
+	await wait(300);
+	if (pins.length !== 2) fail(`a forged message was accepted: ${JSON.stringify(pins.slice(2))}`);
+	await page.showMarkers(items); // redrawn from the saved comment, back on its element
 
 	// 4. After the window is resized the marker is still on it.
 	console.log('smoke-page: step 4');

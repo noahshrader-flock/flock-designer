@@ -344,3 +344,33 @@ describe('comment threads and GitHub listing lag', () => {
     expect(writes.map((w) => w.path)).toEqual(['/repos/acme/design/issues/2/comments']);
   });
 });
+
+describe('moveComment', () => {
+  const COMMENT = '/repos/acme/design/issues/comments/55';
+  const before = {
+    route: '/users', selector: 'main', nearbyText: 'x', viewport: { width: 1, height: 1 }, commit: 'abc123', offset: { x: 0.1, y: 0.1 },
+  };
+  const after = { ...before, selector: '#new', commit: '', offset: { x: 0.9, y: 0.5 } };
+
+  it("rewrites the pin's position, keeps the words, and keeps the commit it was made against", async () => {
+    const { composeBody, parseAnchor, stripAnchor } = await import('../src/shared/anchor');
+    const { session, writes } = fakeSession({
+      [COMMENT]: { id: 55, user: { login: 'noah' }, created_at: 'then', body: composeBody('Make this primary', before) },
+    });
+    const moved = await new DesignRepo(session, REF).moveComment(55, after);
+    const sent = (writes[0]?.body as { body: string }).body;
+    expect(writes[0]).toMatchObject({ path: COMMENT, method: 'PATCH' });
+    expect(stripAnchor(sent)).toBe('Make this primary');
+    expect(parseAnchor(sent)).toMatchObject({ selector: '#new', offset: { x: 0.9, y: 0.5 }, commit: 'abc123' });
+    expect(moved.id).toBe(55);
+  });
+
+  it('keeps a comment resolved if it was', async () => {
+    const { composeBody } = await import('../src/shared/anchor');
+    const { session, writes } = fakeSession({
+      [COMMENT]: { id: 55, user: { login: 'noah' }, created_at: 't', body: `${composeBody('done', before)}\n<!-- resolved -->` },
+    });
+    await new DesignRepo(session, REF).moveComment(55, after);
+    expect((writes[0]?.body as { body: string }).body).toContain('<!-- resolved -->');
+  });
+});
