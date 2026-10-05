@@ -3,7 +3,7 @@
     "projectId": "role-removal-blast-radius",
     "name": "i1",
     "branch": "fd/role-removal-blast-radius/i1",
-    "commit": null,
+    "commit": "e9ed1b527f3bdc4a5932c867b386154414843e1c",
     "createdAt": "2026-09-30T13:19:20-04:00",
     "note": "Recorded by hand on 2026-10-05, because this iteration predates the app. Iterations created in the app are written and shared automatically.",
     "contributors": [
