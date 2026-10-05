@@ -53,8 +53,9 @@ export const TopNav = ({ user, onSignOut }: { user: GitHubUser | null; onSignOut
 				zIndex: 1200,
 				display: 'flex',
 				alignItems: 'center',
-				// 80px clears the macOS window buttons; elsewhere the overlay controls sit on the right.
-				pl: onMac ? '80px' : 3,
+				// 108px leaves a clear gap after the macOS window buttons (they end near 76px);
+				// elsewhere the overlay controls sit on the right.
+				pl: onMac ? '108px' : 3,
 				pr: onMac ? 3 : '150px',
 				bgcolor: 'background.paper',
 				borderBottom: 1,
