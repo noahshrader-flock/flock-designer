@@ -142,6 +142,18 @@ This app is built with its own pinned FUI. A context receipt shows the version t
 repository** resolves, read from that repository's lockfile. They are unrelated facts, and showing
 one where the other belongs would make the receipt confidently wrong.
 
+## If the window shows "Invalid hook call" while developing
+
+Only under `npm run dev`, and never in a built app. Vite pre-bundles each package the first
+time something imports it. If a change brings in a package the running window has not seen
+before (a new icon is the usual one), Vite rebuilds its cache mid-session and the window ends
+up holding modules from two generations of it, which React reports as two copies of itself:
+`Invalid hook call`, then `Cannot read properties of null (reading 'useContext')`. There is only
+one React installed (`npm ls react` shows it deduplicated), so nothing is actually duplicated.
+
+**Reload the window (Cmd+R).** If it persists, stop and restart `npm run dev`. The packaged and
+`npm start` builds bundle everything up front and are not affected.
+
 ## A note on npm
 
 `.npmrc` here points public packages at npmjs.org and `@flocksafety` at GitHub Packages. The
