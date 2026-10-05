@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { registerIpc } from './ipc';
 import { AgentRunner } from './services/agent';
 import { DesignRepo } from './services/designRepo';
+import { PageView } from './services/pageView';
 import type { Fetcher } from './services/github';
 import { GitHubSession } from './services/githubSession';
 import { RuntimeManager } from './services/runtime';
@@ -45,7 +46,7 @@ const createWindow = (): BrowserWindow => {
 	const window = new BrowserWindow({
 		width: 1280,
 		height: 860,
-		show: !smokeMode,
+		show: !smokeMode && !process.argv.includes('--smoke-page'),
 		title: 'Flock Designer',
 		backgroundColor: '#ffffff',
 		webPreferences: {
@@ -98,7 +99,9 @@ void app.whenReady().then(() => {
 	);
 	const designRepo = new DesignRepo(github, DESIGN_REPO);
 
-	registerIpc({ window, opened, runtime, agent, github, designRepo });
+	const page = new PageView(window, (route) => window.webContents.send('workspace:event:pageRoute', route));
+
+	registerIpc({ window, opened, runtime, agent, github, designRepo, page });
 
 	// Restores a previous session from the keychain without blocking the window.
 	void github.restore();
@@ -107,7 +110,22 @@ void app.whenReady().then(() => {
 	app.on('before-quit', () => {
 		runtime.stopAll();
 		agent.stop();
+		page.close();
 	});
+
+	if (process.argv.includes('--smoke-page')) {
+		void import('./smokePage')
+			.then(({ runPageSmoke }) => runPageSmoke(window))
+			.then(() => app.exit(0))
+			.catch((err) => {
+				console.error(`smoke-page: FAILED -- ${err instanceof Error ? err.message : String(err)}`);
+				app.exit(1);
+			});
+		setTimeout(() => {
+			console.error('smoke-page: timed out');
+			app.exit(1);
+		}, 60_000);
+	}
 
 	if (smokeMode) {
 		// Prove the whole boot path ran -- ready fired, the window exists, the

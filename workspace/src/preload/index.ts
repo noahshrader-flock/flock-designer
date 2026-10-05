@@ -3,9 +3,11 @@ import { CHANNELS } from '../shared/contract';
 import type {
 	AgentStatus,
 	Checkout,
+	CommentAnchor,
 	DeviceCodeStart,
 	ContextReceipt,
 	Iteration,
+	MarkerResult,
 	SavedIteration,
 	PreviewStatus,
 	Project,
@@ -64,8 +66,17 @@ const api: WorkspaceApi = {
 
 	listProjects: () => invoke<Project[]>(CHANNELS.listProjects),
 	readComments: (projectId, iteration) => invoke<ReviewComment[]>(CHANNELS.readComments, projectId, iteration),
-	postComment: (projectId, iteration, body) =>
-		invoke<ReviewComment>(CHANNELS.postComment, projectId, iteration, body),
+	postComment: (projectId, iteration, body, anchor) =>
+		invoke<ReviewComment>(CHANNELS.postComment, projectId, iteration, body, anchor),
+
+	pageOpen: (url) => invoke<null>(CHANNELS.pageOpen, url),
+	pageClose: () => invoke<null>(CHANNELS.pageClose),
+	pageSetBounds: (bounds) => invoke<null>(CHANNELS.pageSetBounds, bounds),
+	pagePick: () => invoke<CommentAnchor | null>(CHANNELS.pagePick),
+	pageCancelPick: () => invoke<null>(CHANNELS.pageCancelPick),
+	pageShowMarkers: (items) => invoke<MarkerResult[]>(CHANNELS.pageShowMarkers, items),
+	pageFocusMarker: (id) => invoke<null>(CHANNELS.pageFocusMarker, id),
+	onPageRoute: (listener) => subscribe<string>(CHANNELS.pageRoute, listener),
 };
 
 contextBridge.exposeInMainWorld('workspace', api);

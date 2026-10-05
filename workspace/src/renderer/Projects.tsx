@@ -5,11 +5,11 @@ import {
 	FSButton,
 	FSChip,
 	FSStack,
-	FSTextField,
 	FSTypography,
 } from '@flocksafety/flock-react-component-lib';
 import { useCallback, useEffect, useState } from 'react';
-import type { Person, Project, ProjectIteration, ReviewComment } from '../shared/contract';
+import type { Person, Project, ProjectIteration } from '../shared/contract';
+import { Review } from './Review';
 import { avatarUrl } from '../shared/people';
 
 /** Profile picture and username for each person; initials stand in when no GitHub account is known. */
@@ -81,9 +81,17 @@ export const Projects = () => {
 
 	if (selected) {
 		return (
-			<Iteration
+			<Review
 				project={selected.project}
 				iteration={selected.iteration}
+				header={
+					<>
+						<FSTypography variant="body2" color="text.secondary">
+							{selected.iteration.branch}
+						</FSTypography>
+						<People people={selected.iteration.contributors} />
+					</>
+				}
 				onBack={() => {
 					setSelected(null);
 					void load();
@@ -155,99 +163,6 @@ export const Projects = () => {
 					</FSStack>
 				</FSBox>
 			))}
-		</FSStack>
-	);
-};
-
-/** One iteration's comment thread. C2 adds the preview and element anchoring. */
-const Iteration = ({
-	project,
-	iteration,
-	onBack,
-}: {
-	project: Project;
-	iteration: ProjectIteration;
-	onBack: () => void;
-}) => {
-	const [comments, setComments] = useState<ReviewComment[] | null>(null);
-	const [draft, setDraft] = useState('');
-	const [error, setError] = useState<string | null>(null);
-	const [posting, setPosting] = useState(false);
-
-	const load = useCallback(async () => {
-		const result = await window.workspace.readComments(project.id, iteration.branch);
-		if (result.ok) {
-			setComments(result.value);
-		} else {
-			setError(result.error);
-		}
-	}, [project.id, iteration.branch]);
-
-	useEffect(() => {
-		void load();
-	}, [load]);
-
-	const post = async () => {
-		if (!draft.trim()) return;
-		setPosting(true);
-		const result = await window.workspace.postComment(project.id, iteration.branch, draft.trim());
-		setPosting(false);
-		if (result.ok) {
-			setDraft('');
-			await load();
-		} else {
-			setError(result.error);
-		}
-	};
-
-	return (
-		<FSStack spacing={2}>
-			<FSStack direction="row" alignItems="center" spacing={2}>
-				<FSButton variant="secondary" onClick={onBack}>
-					Back
-				</FSButton>
-				<FSTypography variant="h6" component="h2">
-					{project.title} — {iteration.name}
-				</FSTypography>
-			</FSStack>
-			<FSTypography variant="body2" color="text.secondary">
-				{iteration.branch}
-			</FSTypography>
-			<People people={iteration.contributors} />
-
-			{error && <FSAlert severity="error">{error}</FSAlert>}
-
-			{comments?.length === 0 && (
-				<FSTypography variant="body2" color="text.secondary">
-					No comments yet.
-				</FSTypography>
-			)}
-
-			{comments?.map((comment) => (
-				<FSBox key={comment.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2 }}>
-					<FSStack spacing={0.5}>
-						<FSStack direction="row" spacing={1} alignItems="center">
-							<FSTypography variant="subtitle2">{comment.author}</FSTypography>
-							{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
-						</FSStack>
-						<FSTypography variant="body2">{comment.body}</FSTypography>
-					</FSStack>
-				</FSBox>
-			))}
-
-			<FSStack direction="row" spacing={2} alignItems="flex-start">
-				<FSTextField
-					label="Add a comment"
-					multiline
-					minRows={2}
-					value={draft}
-					onChange={setDraft}
-					sx={{ flexGrow: 1 }}
-				/>
-				<FSButton onClick={post} disabled={posting || !draft.trim()}>
-					{posting ? 'Posting…' : 'Comment'}
-				</FSButton>
-			</FSStack>
 		</FSStack>
 	);
 };

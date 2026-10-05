@@ -1,6 +1,7 @@
-import type { Iteration, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
+import type { CommentAnchor, Iteration, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
 import { GitHubError } from './github';
 import { asPeople, mergePeople } from '../../shared/people';
+import { composeBody, parseAnchor, stripAnchor } from '../../shared/anchor';
 import type { GitHubSession } from './githubSession';
 
 /**
@@ -163,6 +164,7 @@ export class DesignRepo {
         issueNumber: issues.get(String(it.branch))?.number ?? null,
         previewUrl: typeof it.previewUrl === 'string' ? it.previewUrl : null,
         contributors: asPeople(it.contributors),
+        commit: typeof it.commit === 'string' ? it.commit : null,
       }))
       .sort((a, b) => {
         // Prototype iterations newest first, then the codebase branch.
@@ -263,28 +265,36 @@ export class DesignRepo {
           id: Number(c.id),
           author: String(user.login ?? 'unknown'),
           authorAvatarUrl: typeof user.avatar_url === 'string' ? user.avatar_url : null,
-          body: body.replace(RESOLVED_MARK, '').trim(),
+          body: stripAnchor(body.replace(RESOLVED_MARK, '').trim()),
           createdAt: String(c.created_at ?? ''),
           resolved: body.includes(RESOLVED_MARK),
-          anchor: null,
+          anchor: parseAnchor(body),
         };
       });
   }
 
-  async postComment(projectId: string, branch: string, body: string): Promise<ReviewComment> {
+  async postComment(
+    projectId: string,
+    branch: string,
+    body: string,
+    anchor: CommentAnchor | null = null,
+  ): Promise<ReviewComment> {
     const number = await this.ensureIssue(projectId, branch);
     const created = asRecord(
-      await this.session.api(`${this.base}/issues/${number}/comments`, { method: 'POST', body: { body } }),
+      await this.session.api(`${this.base}/issues/${number}/comments`, {
+        method: 'POST',
+        body: { body: composeBody(body, anchor) },
+      }),
     );
     const user = asRecord(created.user);
     return {
       id: Number(created.id),
       author: String(user.login ?? 'unknown'),
       authorAvatarUrl: typeof user.avatar_url === 'string' ? user.avatar_url : null,
-      body: String(created.body ?? ''),
+      body: stripAnchor(String(created.body ?? '')),
       createdAt: String(created.created_at ?? ''),
       resolved: false,
-      anchor: null,
+      anchor,
     };
   }
 }

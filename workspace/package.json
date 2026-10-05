@@ -10,12 +10,13 @@
 		"start": "electron-vite preview",
 		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
 		"test": "vitest run",
-		"smoke": "npm run build && node scripts/smoke-boot.mjs"
+		"smoke": "npm run build && node scripts/smoke-boot.mjs",
+		"smoke:page": "npm run build && node scripts/smoke-page.mjs"
 	},
 	"dependencies": {
-		"@flocksafety/flock-react-component-lib": "5.6.5",
 		"@emotion/react": "^11.14.0",
 		"@emotion/styled": "^11.14.0",
+		"@flocksafety/flock-react-component-lib": "5.6.5",
 		"@mui/icons-material": "^5.15.1",
 		"@mui/material": "^5.14.20",
 		"luxon": "^3.4.4",
@@ -30,6 +31,7 @@
 		"@vitejs/plugin-react": "^4.3.4",
 		"electron": "^44.5.0",
 		"electron-vite": "^5.0.0",
+		"jsdom": "^26.1.0",
 		"typescript": "^5.7.2",
 		"vitest": "^5.0.2"
 	}

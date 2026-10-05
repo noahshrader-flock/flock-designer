@@ -171,7 +171,7 @@ called before 2026-10-05, so history still resolves.
 | 3.1 | [Build the local authoring app](#31--build-the-workspace-local-loop-was-step-13) | ✔ Done | `158eab3`; confirmed working | step 13 |
 | 3.2 | [Sign in, and the comment store](#32--prove-sign-in-and-the-comment-store-was-c1) | ◐ Built — awaiting your check | Sign-in, the project list and **automatic publishing of iteration records** are built. **You:** raise the app's Contents permission to read and write, open an iteration and post one comment; then a second person signs in | C1 |
 | 3.2.5 | [Show who is on each project](#325--show-who-is-on-each-project) | ◐ Built — awaiting your check | Every project lists everyone who has committed to it, on any iteration. **You:** restart the app and look at the project list | added 2026-10-05 |
-| 3.3 | [Open a preview and comment on an element](#33--open-a-preview-and-comment-on-an-element-was-c2) | ▶ **Next** | Needs nothing from anyone | C2 |
+| 3.3 | [Open a preview and comment on an element](#33--open-a-preview-and-comment-on-an-element-was-c2) | ◐ Built — awaiting your check | Click an element in a preview, comment, and see it marked on reopening. Verified in real Electron against a real click. **You:** try it on a prototype and say whether it feels right. Needs a security look | C2 |
 | 3.4 | [Share for review](#34--share-for-review-was-c3) | ○ Not started | Pushes the branch, opens the draft PR, records the preview URL. Needs Coke engineering's mock-data build to finish end to end | C3 |
 | 3.5 | [Close the loop](#35--close-the-loop-was-c4) | ○ Not started | Comments become something the agent can act on | C4 |
 | 3.6 | [Pilot and decision](#36--pilot-and-decision-was-c5) | ⏸ Needs people | Real projects reviewed by people outside design | C5 |
@@ -354,8 +354,25 @@ the list.
 
 ### 3.3 — Open a preview and comment on an element (was C2)
 
-**Claude. Mechanical, plus a human feel check.** Can be built and tested against a local design-mode
-preview, so it does not wait on CI.
+**Claude. Built 2026-10-05; waits on a human feel check and a security look.** Built and tested
+against a local design-mode preview, so it did not wait on CI.
+
+**What exists.** An iteration opens its preview inside the app, with a numbered comment panel beside
+it. **C** (or the button) starts comment mode: the element under the pointer is outlined, one click
+chooses it and is not delivered to the page, and **Escape** cancels. The comment is posted with its
+anchor hidden in the comment body, and a plain "On /route · selector" line for anyone reading on
+GitHub. On reopening, each comment is placed again: *found* by its selector, *moved* when the
+selector no longer matches but its text does (the marker follows the text, and the panel says so), or
+*missing* when neither does (it stays as a page-level comment, and says so). Comments for another
+page of the preview wait for that page. A preview address is `https`, or `http` on this machine; an
+iteration with no recorded address offers a field to paste a local one, until 3.4 records it.
+
+**Verified three ways.** The in-page scripts in jsdom (selectors, text fallback, markup that tries
+to break out of the script); the anchor encoding; and `npm run smoke:page`, which drives the real
+view in real Electron with a genuine mouse click and checks isolation (the page can see no `window.workspace`,
+`require` or `process`), that the click is picked and not delivered, that the marker stays on its element
+after a resize, the moved and missing cases, and that the page cannot navigate the view away.
+
 
 - Show a project's preview in the app's own browser view.
 - Comment mode (**C**): click an element, write a comment, post it as an issue comment with its
@@ -3033,6 +3050,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **Built 3.3.** Preview inside the app, click-to-comment with element anchoring, markers on reopening, and the moved/missing degrade. The preview is an isolated view with no bridge to the app; the app runs scripts in it and validates what comes back. Added `smoke:page`, which tests this in real Electron because jsdom cannot show isolation, real clicks or layout. Left for later, as specified: dragging a region, thumbnails, notifications. Still needs the human feel check and the security look. | 3.3; the app and its README. |
 | 2026-10-05 | **Checked that prototype and codebase work are treated equally, and fixed what was not.** Noah asked for confirmation that the app works equally well for designers working directly in the codebase and for simple prototypes. It did not: the app could only start `fd/` prototype iterations, and codebase work had to be created and recorded by hand. Added **Work in the codebase** (adopts an existing feature branch), and fixed iteration numbering skipping a number when a codebase record existed. | 3.2; the app. |
 | 2026-10-05 | **Added 3.2.5, who is on each project.** Noah asked for the project list to show everyone who has committed to a project, since designers working in the codebase will be the main way in. Added as 3.2.5 at his suggestion rather than renumbering. Code authors are recorded in the iteration record by the author's app (reviewers cannot see Coke) and design-repo folder history is read by the reviewer's app. Names only, no emails; bots excluded. Avatars and usernames added the same day: logins are resolved from noreply addresses, the signed-in user's own commits, and design-repo history, never guessed from a name. | Phase 3 table; new section 3.2.5; the five iteration records. |
 | 2026-10-05 | **Moved automatic publishing of iteration records forward into 3.2.** Noah asked why `iterations.json` exists and whether it could be automatic. It exists because iteration branches live in the Coke repo, which reviewers deliberately cannot see, so the record has to be in the design repo. The authoring side already wrote it locally; nothing committed it, and the note I had written in the five backfilled records ("the app writes this file from now on") was not yet true. The app now publishes the record through the API on create and continue, merging by name. It needs the GitHub App's Contents permission raised to read and write. 3.4 keeps only the preview URL. | 3.2, 3.4, the app README. |

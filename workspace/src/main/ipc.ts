@@ -4,6 +4,8 @@ import {
 	type Checkout,
 	type Iteration,
 	type IterationKind,
+	type MarkerRequest,
+	type PageBounds,
 	type Project,
 	type PublishOutcome,
 	type Result,
@@ -17,6 +19,8 @@ import { isRepository, readCheckout } from './services/git';
 import { continueIteration, createIteration, defaultRecordsRoot, readIterations } from './services/iterations';
 import { RuntimeManager } from './services/runtime';
 import { DesignRepo } from './services/designRepo';
+import type { PageView } from './services/pageView';
+import { sanitizeAnchor } from '../shared/anchor';
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 
@@ -53,9 +57,10 @@ export interface IpcContext {
 	agent: AgentRunner;
 	github: GitHubSession;
 	designRepo: DesignRepo;
+	page: PageView;
 }
 
-export const registerIpc = ({ window, opened, runtime, agent, github, designRepo }: IpcContext): void => {
+export const registerIpc = ({ window, opened, runtime, agent, github, designRepo, page }: IpcContext): void => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
 			throw new Error(`${root} is not a git repository.`);
@@ -201,8 +206,31 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 	ipcMain.handle(
 		CHANNELS.postComment,
 		guard(
-			(projectId: string, branch: string, body: string): Promise<ReviewComment> =>
-				designRepo.postComment(projectId, branch, body),
+			(projectId: string, branch: string, body: string, anchor: unknown): Promise<ReviewComment> =>
+				designRepo.postComment(projectId, branch, body, sanitizeAnchor(anchor)),
 		),
 	);
+
+	// The preview. Every argument is re-checked here: the window is trusted less
+	// than the main process, and the preview less than the window.
+	const nothing = (_done?: unknown): null => null;
+	ipcMain.handle(CHANNELS.pageOpen, guard(async (url: string) => nothing(await page.open(String(url)))));
+	ipcMain.handle(CHANNELS.pageClose, guard(() => nothing(page.close())));
+	ipcMain.handle(
+		CHANNELS.pageSetBounds,
+		guard((b: PageBounds) => nothing(page.setBounds({ x: Number(b?.x), y: Number(b?.y), width: Number(b?.width), height: Number(b?.height) }))),
+	);
+	ipcMain.handle(CHANNELS.pagePick, guard(() => page.pick()));
+	ipcMain.handle(CHANNELS.pageCancelPick, guard(async () => nothing(await page.cancelPick())));
+	ipcMain.handle(
+		CHANNELS.pageShowMarkers,
+		guard((items: MarkerRequest[]) => {
+			const clean = (Array.isArray(items) ? items : []).slice(0, 200).flatMap((i): MarkerRequest[] => {
+				const anchor = sanitizeAnchor(i?.anchor);
+				return anchor && Number.isInteger(i.id) && Number.isInteger(i.number) ? [{ id: i.id, number: i.number, anchor }] : [];
+			});
+			return page.showMarkers(clean);
+		}),
+	);
+	ipcMain.handle(CHANNELS.pageFocusMarker, guard(async (id: number) => nothing(await page.focusMarker(Number(id)))));
 };

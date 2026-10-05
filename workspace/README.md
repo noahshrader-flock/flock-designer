@@ -59,6 +59,7 @@ apply it until then. Point a development build elsewhere with
 | Create and switch iteration branches | Rewrite, discard, or force anything in git |
 | Invoke a locally installed agent | Hold model credentials, or carry its own prompts |
 | Read and write project records | Become the only place those records exist |
+| Show a prototype's preview in the window and place comments on elements | Let that preview call back into the app, or leave the preview's origin |
 
 ## How a repository joins
 
@@ -103,6 +104,13 @@ The code stays on its branch in the product repository, where it can actually ru
 - Every path is resolved through `resolveInside`, which follows symlinks — the check string
   comparison alone gets wrong.
 - Links open in the real browser; the app window itself cannot be navigated.
+- **The preview is untrusted web content.** It runs in its own view with no preload script, no Node, a
+  sandbox, and an in-memory session that is granted no permissions. The app reads it by running a
+  script in the page and taking the return value; the page has no function to call in the other
+  direction. Everything the page returns is validated before use. A page cannot navigate the view
+  elsewhere (other origins open in the real browser), and only `https` or a local `http` address can
+  be opened. `npm run smoke:page` checks all of this in real Electron, against a real click.
+- The window may load images from `avatars.githubusercontent.com`, and nothing else from the network.
 
 ## Its own FUI version is not the product's
 

@@ -158,7 +158,24 @@ export interface WorkspaceApi {
 	/** Reviewer mode: everything below reads the design repo through the API. */
 	listProjects(): Promise<Result<Project[]>>;
 	readComments(projectId: string, iteration: string): Promise<Result<ReviewComment[]>>;
-	postComment(projectId: string, iteration: string, body: string): Promise<Result<ReviewComment>>;
+	postComment(
+		projectId: string,
+		iteration: string,
+		body: string,
+		anchor: CommentAnchor | null,
+	): Promise<Result<ReviewComment>>;
+
+	/** The preview, shown inside the window at the given place. It cannot call back into the app. */
+	pageOpen(url: string): Promise<Result<null>>;
+	pageClose(): Promise<Result<null>>;
+	pageSetBounds(bounds: PageBounds): Promise<Result<null>>;
+	/** Comment mode: resolves with the next element clicked, or null if cancelled. */
+	pagePick(): Promise<Result<CommentAnchor | null>>;
+	pageCancelPick(): Promise<Result<null>>;
+	pageShowMarkers(items: MarkerRequest[]): Promise<Result<MarkerResult[]>>;
+	pageFocusMarker(id: number): Promise<Result<null>>;
+	/** The preview moved to another page. */
+	onPageRoute(listener: (route: string) => void): () => void;
 }
 
 /** Who is signed in. */
@@ -211,6 +228,8 @@ export interface ProjectIteration {
   issueNumber: number | null;
   /** Preview URL recorded when the iteration was shared, if any. */
   previewUrl: string | null;
+  /** The commit the iteration was last recorded at, so a comment can say what it was made against. */
+  commit: string | null;
   contributors: Person[];
 }
 
@@ -245,6 +264,30 @@ export interface CommentAnchor {
   nearbyText: string;
   viewport: { width: number; height: number };
   commit: string;
+  /** Where in the element the click landed, 0 to 1 each way, so a marker sits where the comment was made. */
+  offset?: { x: number; y: number };
+}
+
+/** A comment to place on the page, numbered as it is listed beside it. */
+export interface MarkerRequest {
+  id: number;
+  number: number;
+  anchor: CommentAnchor;
+}
+
+/** How a comment was placed on the page. `moved` follows the text; `missing` degrades to a page-level comment. */
+export type MarkerState = 'found' | 'moved' | 'missing' | 'elsewhere';
+export interface MarkerResult {
+  id: number;
+  state: MarkerState;
+}
+
+/** Where the preview sits, in the window's own coordinates. */
+export interface PageBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 /** Channel names, in one place so main and preload cannot drift. */
@@ -271,4 +314,12 @@ export const CHANNELS = {
 	readComments: 'workspace:readComments',
 	postComment: 'workspace:postComment',
 	signInChanged: 'workspace:event:signInChanged',
+	pageOpen: 'workspace:pageOpen',
+	pageClose: 'workspace:pageClose',
+	pageSetBounds: 'workspace:pageSetBounds',
+	pagePick: 'workspace:pagePick',
+	pageCancelPick: 'workspace:pageCancelPick',
+	pageShowMarkers: 'workspace:pageShowMarkers',
+	pageFocusMarker: 'workspace:pageFocusMarker',
+	pageRoute: 'workspace:event:pageRoute',
 } as const;
