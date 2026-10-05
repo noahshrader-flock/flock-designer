@@ -75,7 +75,7 @@ export const Review = ({
 	const cards = useRef(new Map<number, HTMLElement>());
 
 	// The panel is docked beside the preview. Its width is the person's to set, and is remembered.
-	const [panelOpen, setPanelOpen] = useState(false);
+	const [panelOpen, setPanelOpen] = useState(true);
 	const [panelWidth, setPanelWidth] = useState(() => loadPanelWidth(window.innerWidth));
 	const [resizing, setResizing] = useState(false);
 	// A ref as well as state: pointer events can arrive faster than a render, and a handler
@@ -422,14 +422,18 @@ export const Review = ({
 								savePanelWidth(next);
 							}}
 							sx={{
-								width: 6,
+								// One pixel to look at...
+								width: '1px',
 								flexShrink: 0,
-								cursor: 'col-resize',
+								position: 'relative',
 								touchAction: 'none',
 								bgcolor: resizing ? 'primary.main' : 'divider',
 								transition: 'background-color 120ms',
 								'&:hover, &:focus-visible': { bgcolor: 'primary.main' },
 								outline: 'none',
+								// ...and a wider strip to grab. It extends over the panel only: the other side is
+								// the native preview, which never passes the pointer to this window.
+								'&::after': { content: '""', position: 'absolute', top: 0, bottom: 0, left: 0, width: '7px', cursor: 'col-resize' },
 							}}
 						/>
 						<FSBox
