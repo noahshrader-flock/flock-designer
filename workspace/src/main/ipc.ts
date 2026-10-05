@@ -342,7 +342,6 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 			return nothing(page.hold(reason as PageHoldReason, held === true));
 		}),
 	);
-	ipcMain.handle(CHANNELS.pageSnapshot, guard(() => page.snapshot()));
 	ipcMain.handle(CHANNELS.pagePick, guard(() => page.pick()));
 	ipcMain.handle(CHANNELS.pageCancelPick, guard(async () => nothing(await page.cancelPick())));
 	ipcMain.handle(

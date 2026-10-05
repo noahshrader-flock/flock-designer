@@ -96,36 +96,13 @@ export class PageView {
 	/**
 	 * Hides the preview for a named reason, and shows it again when the last reason
 	 * lets go. Remembered across opens, so a menu that is open stays open when the
-	 * preview changes. One flag would let the account menu closing bring the preview
-	 * back over a panel that is still open.
+	 * preview changes. Reasons are named so that one thing letting go cannot bring
+	 * the preview back while another still needs it hidden.
 	 */
 	hold(reason: PageHoldReason, held: boolean): void {
 		if (held) this.holds.add(reason);
 		else this.holds.delete(reason);
 		this.view?.setVisible(this.holds.size === 0);
-	}
-
-	/** Whether the preview is on screen, for the edge watcher: nothing to hover over when hidden. */
-	get shown(): boolean {
-		return this.view !== null && this.holds.size === 0;
-	}
-
-	/** Where the preview is, in window coordinates. */
-	get area(): PageBounds {
-		return this.bounds;
-	}
-
-	/**
-	 * The preview as an image. The window draws it where the preview was and hides
-	 * the real one, which is what lets a panel appear *over* the page: a native view
-	 * is always drawn above the window's own content, so it cannot be covered, only
-	 * swapped for a picture of itself.
-	 */
-	async snapshot(): Promise<string | null> {
-		const wc = this.view?.webContents;
-		if (!wc || wc.isDestroyed()) return null;
-		const image = await wc.capturePage();
-		return image.isEmpty() ? null : `data:image/jpeg;base64,${image.toJPEG(85).toString('base64')}`;
 	}
 
 	setBounds(b: PageBounds): void {
