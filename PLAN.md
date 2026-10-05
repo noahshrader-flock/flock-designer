@@ -159,6 +159,20 @@ next.
 **Natural stop points are after C2 and C4.** C2 answers whether commenting feels right; C4 answers
 whether closing the loop is worth it.
 
+**How the work flows.** Build step after step. A step whose last check needs a person is marked
+**Built — awaiting check** and the next step starts anyway; it is not closed until that person has
+done it, and Claude never closes it. The work stops only at these points:
+
+| Stop | When | What I need | What I do meanwhile |
+|---|---|---|---|
+| 1 | Before C1 | A development OAuth app's client ID, from Noah | Everything in C1 that does not need to sign in |
+| 2 | End of C1 | One sign-in with a real company account, to check SSO | Start C2, which works against a local preview |
+| 3 | End of C2 | One reviewer saying whether commenting feels right, and a security look | Start C3 |
+| 4 | C3, end to end | Coke engineering merging the mock-data build | Finish and test the app side against a stub; draft the Coke change |
+| 5 | C5 | Real projects reviewed by people outside design | Nothing — this is the decision |
+
+Everything else — C1's build, C2's build, C3's app side, all of C4 — runs without waiting.
+
 ### A step does not close with its own work unmet
 
 **A step is Complete only when nothing in its own scope is outstanding.** Not "outstanding but
@@ -423,7 +437,7 @@ none holds up the work in front of it.
 | Registry access and the unaided designer test ([step 18](#step-18--designer-environment-access)) | Noah + the registry owner | Real designer onboarding |
 | Package and org items ([step 17](#step-17--ship-the-design-system-context-in-the-package)) | Design System owner | Smaller now than it was |
 
-**Status values:** Not started, In progress, Complete. A step is Complete only when its "done when"
+**Status values:** Not started, In progress, **Built — awaiting check**, Complete. A step is Complete only when its "done when"
 is met and the evidence is cited in the [change log](#change-log).
 
 ## Decisions made, and what is still owed
@@ -2911,6 +2925,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **Made the flow continuous.** Noah asked that the steps can be worked one after another until everything is finished. The plan did not say what happens when a step's last check needs a person, which would have stalled it. Added a status, **Built — awaiting check**, so the next step can start while a human check is pending, and a table of the five points where work genuinely stops and what happens meanwhile. | The sequence; status values. |
 | 2026-10-05 | **Phases made explicit; the app's UI stays on FUI.** Noah asked for the work to stay in phases, which it already was as C1–C5; added a table of what exists if the work stops after each phase, with natural stop points after C2 and C4. He also considered moving the app to shadcn/ui and Tailwind for a nicer default look, then decided to keep the Flock design system. The shadcn route was checked first — components are copied into the repo, and its docs do not mention Electron — and would have been cheap, since the renderer is 373 lines with four FUI imports, so this is a preference and not a constraint. The cost of staying: building the app needs the GitHub Packages token, and it stays on React 18. | The sequence; the decisions table. |
 | 2026-10-05 | **Restructured so the plan covers only what remains, and set the direction for it.** The plan had grown to ~44,000 words, 27% of it change log and most of the rest describing finished work, so the live plan was hard to find. Completed work moved **intact** into [Appendix B](#appendix-b--what-was-built-and-why), the contracts into [Appendix A](#appendix-a--how-the-system-works), and the superseded Workspace design and decision gates into [Appendix C](#appendix-c--superseded-designs); a check confirmed every original line still exists. **The direction changed too.** Noah's goal — a Figma-like place where design, product and engineering browse each other's prototypes and comment — reframed Track C: the Electron app is no longer a paused authoring convenience but the client for **review**, because GitHub's device flow lets a desktop app sign people in with no server of ours, and the existing Electron app already holds the authoring half. Decisions reached in discussion: GitHub identity (Okta is GitHub's concern); comments as issue comments in the **design repo**, one issue per iteration, keeping PMs out of Coke; click-an-element anchoring, as Magic Patterns does; a **mock-data** CI build as the shared preview, which the current `build:dev` workflow is not; one PR per branch. Old steps 14–16 are replaced by **C1–C5**; automating handoff inside the app was dropped because `npm run handoff` already does it. **Checked rather than assumed:** device flow needs no secret for OAuth apps and read access can comment on issues (GitHub docs); Electron needs an upgrade at least about twice a year (its policy); GitHub's docs are silent on device flow for GitHub Apps and under org SSO, so C1 tests them. | The whole document; Track C; steps 14–16 → C1–C5. |
 | 2026-09-29 | **Track C paused, and the next step made findable.** Noah paused the Electron work — he has an idea for the Workspace worth working through before more is built on it. Nothing is lost by waiting: step 14 could not have started regardless, and step 13's own success measure is that every artifact stays usable without the app. **Two real problems fixed while doing it.** The track summary at the top of the sequence still said Track B was *"just specified, nothing built"* and Track C *"not started"* — both badly stale, in the one table a reader checks first. And **the design-system context generator was invisible**: step 17 said plainly *"Claude can write the generator,"* but the rest of 17 needs permissions and a release, so a step nobody could finish was hiding the one piece of real work that was ready. Split it out as **Track D, step D1**, the same way step 18 was split out of step 8 — and it is now the only unbuilt step Claude can finish. The `cokeUsages` decision, the packaging and the org transfer stay in 17 with their owners. | The sequence summary; Track C; new Track D and step D1; step 17; both status blocks. |
