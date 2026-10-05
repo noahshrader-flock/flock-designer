@@ -103,7 +103,7 @@ needs a checkout. *Reviewer mode* is new and needs only a GitHub account.
 
 | Piece | Where it lives |
 |---|---|
-| Who you are | GitHub sign-in by **device flow**, which needs no client secret and so no server. SSO is between GitHub and Okta; the app never touches it |
+| Who you are | GitHub sign-in by **device flow** through a **GitHub App** — no client secret, so no server — whose token can touch only the design repo's issues. SSO is between GitHub and Okta; the app never touches it |
 | Projects and iterations | The design repo, read through the API |
 | Comments | **Issue comments in the design repo, one issue per iteration.** Read access is enough to comment; authors keep edit access. Keeps PMs out of the Coke repo |
 | The prototype | A preview CI builds from the iteration's branch — which **must be a mock-data build** |
@@ -165,7 +165,7 @@ done it, and Claude never closes it. The work stops only at these points:
 
 | Stop | When | What I need | What I do meanwhile |
 |---|---|---|---|
-| 1 | Before C1 | A development OAuth app's client ID, from Noah | Everything in C1 that does not need to sign in |
+| 1 | Before C1 | A development GitHub App's client ID, from Noah | Everything in C1 that does not need to sign in |
 | 2 | End of C1 | One sign-in with a real company account, to check SSO | Start C2, which works against a local preview |
 | 3 | End of C2 | One reviewer saying whether commenting feels right, and a security look | Start C3 |
 | 4 | C3, end to end | Coke engineering merging the mock-data build | Finish and test the app side against a stub; draft the Coke change |
@@ -265,8 +265,10 @@ company's GitHub org, and that issue comments are a workable comment store.
 - Rename the app **Flock Designer**; separate *author* features (need a checkout) from *reviewer*
   features (need only a GitHub account).
 - **Sign in with GitHub by device flow**; keep the token in the OS keychain. Build against a
-  development OAuth app (GitHub's docs confirm device flow needs no secret for OAuth apps; they do
-  **not** confirm it for GitHub Apps, so start with an OAuth app and treat the rest as a question).
+  development **GitHub App** with device flow enabled and permission for Issues on the design repo
+  only. GitHub's docs confirm device flow needs no secret for GitHub Apps, and that a user token is
+  limited to what both the app and the user can do. (An OAuth app would need the `repo` scope, which
+  reaches every repository the user can access — Coke included.)
 - **List projects and their iterations** from the design repo through the API — no clone.
 - **Create, post to and read** one issue per iteration, with a label, for comments.
 
@@ -274,7 +276,7 @@ company's GitHub org, and that issue comments are a workable comment store.
 iteration, and a second account sees it — verified against a test repository. **Human:** one sign-in
 with a real company account, to confirm the org's SSO behaves.
 
-**Needs:** one OAuth client ID, registered by Noah for development. **Not in this step:** previews,
+**Needs:** one GitHub App client ID, registered by Noah for development. **Not in this step:** previews,
 anchoring, any server.
 
 ### Step C2 — Open a preview and comment on an element
@@ -426,9 +428,9 @@ none holds up the work in front of it.
 | Needs | Who | What it unblocks |
 |---|---|---|
 | Name the Design System owner | Noah | Steps 1, 5 and 17 |
-| Register a **development** OAuth app and give me its client ID | Noah | C1 |
+| Register a **development GitHub App**, install it on the design repo, and give me its client ID | Noah | C1 |
 | Move the design repo from `noahshrader-flock` to the `flocksafety` org | Someone with org permission | Everyone else's access; rollout |
-| Register the OAuth app **for the org** | An org owner | Rollout |
+| Register the GitHub App **for the org** and install it on the design repo | An org owner | Rollout |
 | `build:design` and CI for `fd/*` branches — I draft it | Coke engineering | C3, end to end |
 | Read access to the **design repo** for PMs (not Coke) | GitHub admin | C5 |
 | How internal Mac apps are deployed here, what they require (usually signing), and the turnaround | IT | Rollout |
@@ -444,7 +446,7 @@ is met and the evidence is cited in the [change log](#change-log).
 
 | Decision | Choice | Why |
 |---|---|---|
-| Identity | GitHub sign-in, device flow | Everyone who needs it can have a GitHub account; no secret, so no server. Okta is GitHub's concern |
+| Identity | GitHub sign-in, device flow, through a **GitHub App** | Everyone who needs it can have a GitHub account; no secret, so no server. The token reaches only the design repo's issues, not every repo the user can see. Okta is GitHub's concern |
 | Comment store | Issue comments in the design repo, one issue per iteration | No commits, no merge conflicts, notifications built in, and read access suffices. Keeps PMs out of Coke |
 | Durable record | Exported to `review.md` | The agent reads it with no app. A closed or deleted PR cannot take it away |
 | Gesture and anchor | Click an element; anchor by selector with fallbacks | Survives a resize; degrades instead of breaking |
@@ -456,7 +458,7 @@ is met and the evidence is cited in the [change log](#change-log).
 | Persistence | Branches kept; previews expire; comments and the record kept in the design repo | A comment must outlive the preview it was made on |
 | Component gaps | Through the [learning loop](#the-learning-loop) | Unchanged |
 
-**Dropped from the earlier design:** capture storage (no screenshots to host), a GitHub App, and
+**Dropped from the earlier design:** capture storage (no screenshots to host) and
 automating handoff inside the app (`npm run handoff` already does it). See
 [Appendix C](#appendix-c--superseded-designs).
 
@@ -465,7 +467,7 @@ automating handoff inside the app (`npm run handoff` already does it). See
 | Risk | Why it matters | Mitigation |
 |---|---|---|
 | **Electron upkeep** | A new major version ships every 8 weeks and only the latest three are supported ([policy](https://www.electronjs.org/docs/latest/tutorial/electron-timelines)) | Someone owns an upgrade at least about twice a year. **The largest standing cost** |
-| **Sign-in specifics unverified** | GitHub's docs confirm device flow needs no secret for OAuth apps, but say nothing about GitHub Apps or org SSO | Use an OAuth app; C1 tests with a real account |
+| **Org SSO unverified** | GitHub's docs confirm device flow needs no secret for GitHub Apps and gives fine-grained permissions, but say nothing about org SSO | C1 tests with a real company account |
 | **The CI change** | Without a mock-data build the link is a login screen on real dev data — also a breach of the data rule | Coke engineering; drafted by Claude |
 | **Reading SSO-protected pages** | The app displays and inspects internal pages | The preview gets no bridge; security review before C2 closes |
 | **Anchoring drift** | Selectors break when markup changes; `data-e2e-ref` coverage is unmeasured | Route + selector + text + crop; degrade to a page-level comment |
@@ -491,7 +493,7 @@ automating handoff inside the app (`npm run handoff` already does it). See
 Decisions already settled in this plan are not repeated here. What remains genuinely open:
 
 - **Is Mac enough for now?** Windows roughly doubles the distribution work. Decide before C5.
-- **Does device flow work with the company's SSO, and with a GitHub App rather than an OAuth app?** GitHub's docs are silent on both. C1 answers it.
+- **Does device flow work with the company's SSO?** GitHub's docs are silent on it; they do confirm device flow for GitHub Apps. C1 answers it.
 - **How complete is `data-e2e-ref` coverage** on the elements people will want to comment on? Unmeasured; C2 measures it.
 - **Who owns the Electron upgrade cadence**, and who holds the signing certificate IT requires?
 - **How long do preview deployments live**, and what happens to the comments on an expired one?
@@ -2925,6 +2927,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **Corrected: the sign-in is a GitHub App, not an OAuth app.** The plan said to start with an OAuth app because GitHub's device-flow page did not mention GitHub Apps. Checked properly: GitHub Apps do support device flow (it must be enabled in the app's settings), need no client secret, and issue a user token limited to what both the app and the user can do. An OAuth app would have needed the `repo` scope, which reaches every repository the user can access, Coke source included — and GitHub itself recommends a GitHub App for that reason. This reverses an earlier decision to drop the GitHub App. Org SSO remains unverified; C1 tests it. | C1; the waiting list, risks, decisions and open questions. |
 | 2026-10-05 | **Made the flow continuous.** Noah asked that the steps can be worked one after another until everything is finished. The plan did not say what happens when a step's last check needs a person, which would have stalled it. Added a status, **Built — awaiting check**, so the next step can start while a human check is pending, and a table of the five points where work genuinely stops and what happens meanwhile. | The sequence; status values. |
 | 2026-10-05 | **Phases made explicit; the app's UI stays on FUI.** Noah asked for the work to stay in phases, which it already was as C1–C5; added a table of what exists if the work stops after each phase, with natural stop points after C2 and C4. He also considered moving the app to shadcn/ui and Tailwind for a nicer default look, then decided to keep the Flock design system. The shadcn route was checked first — components are copied into the repo, and its docs do not mention Electron — and would have been cheap, since the renderer is 373 lines with four FUI imports, so this is a preference and not a constraint. The cost of staying: building the app needs the GitHub Packages token, and it stays on React 18. | The sequence; the decisions table. |
 | 2026-10-05 | **Restructured so the plan covers only what remains, and set the direction for it.** The plan had grown to ~44,000 words, 27% of it change log and most of the rest describing finished work, so the live plan was hard to find. Completed work moved **intact** into [Appendix B](#appendix-b--what-was-built-and-why), the contracts into [Appendix A](#appendix-a--how-the-system-works), and the superseded Workspace design and decision gates into [Appendix C](#appendix-c--superseded-designs); a check confirmed every original line still exists. **The direction changed too.** Noah's goal — a Figma-like place where design, product and engineering browse each other's prototypes and comment — reframed Track C: the Electron app is no longer a paused authoring convenience but the client for **review**, because GitHub's device flow lets a desktop app sign people in with no server of ours, and the existing Electron app already holds the authoring half. Decisions reached in discussion: GitHub identity (Okta is GitHub's concern); comments as issue comments in the **design repo**, one issue per iteration, keeping PMs out of Coke; click-an-element anchoring, as Magic Patterns does; a **mock-data** CI build as the shared preview, which the current `build:dev` workflow is not; one PR per branch. Old steps 14–16 are replaced by **C1–C5**; automating handoff inside the app was dropped because `npm run handoff` already does it. **Checked rather than assumed:** device flow needs no secret for OAuth apps and read access can comment on issues (GitHub docs); Electron needs an upgrade at least about twice a year (its policy); GitHub's docs are silent on device flow for GitHub Apps and under org SSO, so C1 tests them. | The whole document; Track C; steps 14–16 → C1–C5. |
