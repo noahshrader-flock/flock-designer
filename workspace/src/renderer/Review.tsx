@@ -139,30 +139,31 @@ export const Review = ({
 	}, [opened, anchored, route, pending, me, redraw]);
 
 	// A pin on the page was clicked or dropped somewhere new.
-	useEffect(
-		() =>
-			window.workspace.onPinEvent((e: PinEvent) => {
-				if (e.kind === 'click') {
-					if (e.id < 0) return;
-					setSelected(e.id);
-					cards.current.get(e.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-				} else if (e.id < 0) {
-					// The unsaved pin: just remember where it now is.
-					setPending((p) => (p ? { ...e.anchor, commit: p.commit } : p));
-				} else {
-					void window.workspace.moveComment(e.id, e.anchor).then((r) => {
-						if (r.ok) {
-							posted.current.set(r.value.id, r.value);
-							setComments((cs) => (cs ?? []).map((c) => (c.id === r.value.id ? { ...c, anchor: r.value.anchor } : c)));
-						} else {
-							setError(r.error);
-						}
-						setRedraw((n) => n + 1); // either way, draw the pin from what is saved
-					});
-				}
-			}),
-		[],
-	);
+	useEffect(() => {
+		const off = window.workspace.onPinEvent((e: PinEvent) => {
+			if (e.kind === 'click') {
+				if (e.id < 0) return;
+				setSelected(e.id);
+				cards.current.get(e.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+			} else if (e.id < 0) {
+				// The unsaved pin: just remember where it now is.
+				setPending((p) => (p ? { ...e.anchor, commit: p.commit } : p));
+			} else {
+				void window.workspace.moveComment(e.id, e.anchor).then((r) => {
+					if (r.ok) {
+						posted.current.set(r.value.id, r.value);
+						setComments((cs) => (cs ?? []).map((c) => (c.id === r.value.id ? { ...c, anchor: r.value.anchor } : c)));
+					} else {
+						setError(r.error);
+					}
+					setRedraw((n) => n + 1); // either way, draw the pin from what is saved
+				});
+			}
+		});
+		// Without this, the handler for an iteration the person has left stays live
+		// and keeps acting on that iteration's comment ids.
+		return off;
+	}, []);
 
 	const startComment = useCallback(async () => {
 		setError(null);

@@ -8,7 +8,7 @@ import {
 	FSTypography,
 } from '@flocksafety/flock-react-component-lib';
 import { useCallback, useEffect, useState } from 'react';
-import type { Checkout, Person, Project, ProjectIteration } from '../shared/contract';
+import type { Checkout, CheckoutSuggestion, Person, Project, ProjectIteration } from '../shared/contract';
 import { Build } from './Build';
 import { NewWork, type Created } from './NewWork';
 import { Review } from './Review';
@@ -53,17 +53,26 @@ export const Projects = () => {
 	const [creating, setCreating] = useState(false);
 	const [localUrl, setLocalUrl] = useState<string | null>(null);
 	const [looked, setLooked] = useState(false);
+	const [suggestion, setSuggestion] = useState<CheckoutSuggestion | null>(null);
 
 	// The checkout is chosen once and remembered.
 	useEffect(() => {
-		void window.workspace.lastCheckout().then((r) => {
-			if (r.ok) setCheckout(r.value);
+		void window.workspace.lastCheckout().then(async (r) => {
+			if (r.ok && r.value) setCheckout(r.value);
+			else {
+				// Nothing trusted yet: offer what is on the machine, for one click.
+				const s = await window.workspace.suggestCheckout();
+				if (s.ok) setSuggestion(s.value);
+			}
 			setLooked(true);
 		});
 	}, []);
 	const chooseCheckout = useCallback(async () => {
 		const r = await window.workspace.chooseCheckout();
-		if (r.ok && r.value) setCheckout(r.value);
+		if (r.ok && r.value) {
+			setCheckout(r.value);
+			setSuggestion(null);
+		}
 	}, []);
 	const showPreview = useCallback((url: string) => setLocalUrl(url), []);
 
@@ -80,6 +89,17 @@ export const Projects = () => {
 	useEffect(() => {
 		void load();
 	}, [load]);
+
+	/** Accepting the suggestion is what trusts it; finding it did not. */
+	const useSuggestion = useCallback(async (root: string) => {
+		const r = await window.workspace.useCheckout(root);
+		if (r.ok) {
+			setCheckout(r.value);
+			setSuggestion(null);
+			await load();
+		}
+	}, [load]);
+
 
 	if (error) {
 		return (
@@ -144,7 +164,22 @@ export const Projects = () => {
 				</FSButton>
 				<FSButton onClick={() => setCreating(true)}>New prototype</FSButton>
 			</FSStack>
-			{looked && !checkout && (
+			{looked && !checkout && suggestion && (
+				<FSAlert
+					severity="info"
+					action={
+						<FSStack direction="row" spacing={1}>
+							<FSButton variant="secondary" onClick={chooseCheckout}>
+								Choose another
+							</FSButton>
+							<FSButton onClick={() => void useSuggestion(suggestion.root)}>Use this one</FSButton>
+						</FSStack>
+					}
+				>
+					Found {suggestion.product} at {suggestion.root}. Use it for building and previewing here?
+				</FSAlert>
+			)}
+			{looked && !checkout && !suggestion && (
 				<FSAlert severity="info" action={<FSButton onClick={chooseCheckout}>Find it</FSButton>}>
 					Flock Designer could not find a Flock product repository on this machine. Point it at your Coke folder once.
 				</FSAlert>

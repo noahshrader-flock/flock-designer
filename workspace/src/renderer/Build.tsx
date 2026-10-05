@@ -12,7 +12,9 @@ import type { AgentStatus, Checkout, PreviewStatus, Project, ProjectIteration, R
  * declares; this names one and the repository decides what it means.
  */
 
-const commandFor = (iteration: ProjectIteration): string => (iteration.branch.startsWith('fd/') ? 'preview' : 'design-mode');
+// From the iteration's own name, which the main process already normalised, rather
+// than a hard-coded `fd/` prefix -- the branch pattern is the repository's to declare.
+const commandFor = (iteration: ProjectIteration): string => (iteration.name === 'codebase' ? 'design-mode' : 'preview');
 
 export const Build = ({
 	checkout,
@@ -37,6 +39,15 @@ export const Build = ({
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const logEnd = useRef<HTMLDivElement>(null);
+	// Everything async below checks this: the panel unmounts whenever the person
+	// presses Back, and a poll that outlives it would keep running for the session.
+	const live = useRef(true);
+	useEffect(() => {
+		live.current = true;
+		return () => {
+			live.current = false;
+		};
+	}, []);
 	const root = checkout?.root ?? null;
 	const command = commandFor(iteration);
 
@@ -95,12 +106,19 @@ export const Build = ({
 			setAgent(started.value);
 			for (;;) {
 				await new Promise((r) => setTimeout(r, 1000));
+				if (!live.current) return;
 				const s = await window.workspace.agentStatus();
-				if (!s.ok) break;
+				if (!s.ok) {
+					// Say so rather than leaving the button reading "Agent is working…"
+					// for the rest of the session with nothing to click.
+					setError(s.error);
+					setAgent({ state: 'idle' });
+					break;
+				}
 				setAgent(s.value);
 				if (s.value.state !== 'running') {
 					setBusy(false);
-					if (thenRun && s.value.state === 'finished' && s.value.exitCode === 0) await runPreview();
+					if (thenRun && s.value.state === 'finished' && s.value.exitCode === 0 && live.current) await runPreview();
 					return;
 				}
 			}
@@ -122,6 +140,7 @@ export const Build = ({
 	useEffect(() => {
 		if (!root) return;
 		void window.workspace.commandStatus(root, command).then((r) => {
+			if (!live.current) return;
 			if (r.ok && r.value.state === 'running') {
 				setPreview(r.value);
 				onPreviewUrl(r.value.url);

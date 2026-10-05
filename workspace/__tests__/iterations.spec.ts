@@ -12,7 +12,6 @@ import {
 	codebaseBranchFor,
 	continueIteration,
 	createIteration,
-	defaultRecordsRoot,
 	readIterations,
 } from '../src/main/services/iterations';
 
@@ -55,12 +54,6 @@ describe('project ids', () => {
 		// The id becomes both a directory and a branch name, so anything that could
 		// escape either has to fail here rather than downstream.
 		expect(() => assertUsableProjectId(id)).toThrow(IterationProblem);
-	});
-});
-
-describe('defaultRecordsRoot', () => {
-	it('points at the sibling design repository, matching check-handoff.mjs', () => {
-		expect(defaultRecordsRoot('/Users/x/GitHub/flock-coke')).toBe('/Users/x/GitHub/flock-designer/projects');
 	});
 });
 

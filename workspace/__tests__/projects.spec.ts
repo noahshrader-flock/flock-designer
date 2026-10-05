@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
-import { mergeProjects } from '../src/shared/projects';
+import { PROJECT_ID, mergeProjects, slugify } from '../src/shared/projects';
 import { readLocalProjects } from '../src/main/services/localProjects';
 
 const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
@@ -91,5 +91,23 @@ describe('readLocalProjects', () => {
 
 	it('returns nothing, not an error, when the design repository is not there', () => {
 		expect(readLocalProjects(join(root, 'nope'))).toEqual([]);
+	});
+});
+
+describe('slugify', () => {
+	it('makes an id the main process will accept, however long the name', () => {
+		// This used to truncate mid-word and leave a trailing hyphen, which the
+		// dialog showed as valid and createIteration then rejected.
+		const long = 'Users list inactivity signal for organisation administrator review';
+		expect(PROJECT_ID.test(slugify(long))).toBe(true);
+		expect(PROJECT_ID.test(slugify(`${'a'.repeat(59)} b`))).toBe(true);
+	});
+
+	it('turns an ordinary name into the expected id', () => {
+		expect(slugify('Users list — inactivity signal')).toBe('users-list-inactivity-signal');
+	});
+
+	it('gives an empty id for a name with nothing usable in it, so Create stays disabled', () => {
+		expect(slugify('   ---   ')).toBe('');
 	});
 });

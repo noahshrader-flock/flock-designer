@@ -29,9 +29,11 @@ there is no server of ours anywhere.
 
 **Building on this machine** is part of Projects, not a separate mode. **New prototype** asks for a name and
 what to explore, creates the branch and record, runs the agent, then the preview, and opens it with pins.
-Any iteration also has a **Build on this machine** panel. The product repository is found on its own, by its
-`.flkd/workspace.json`, in the usual places; work in it appears from its branches (`fd/<project>/iN`,
-`feature/<project>`) with no record needed. The design repository is expected beside it.
+Any iteration also has a **Build on this machine** panel. The product repository is **suggested** on its own
+— found in the usual places by its `.flkd/workspace.json` — and you accept it once with a click; after that it
+is remembered. Prototype branches (`fd/<project>/iN`) appear from the repository with no record needed;
+a `feature/<project>` branch appears only when a project already has a record for it, because that is also
+how the whole product team names ticket branches. The design repository is expected beside the product one.
 The agent runs unattended: it may edit and run the repository's own scripts and local git, and nothing
 that pushes, switches branch or deletes. `npm run smoke:local` runs a real prototype from a real Coke
 checkout through the app's own services (see the script for its two variables).
@@ -110,6 +112,15 @@ The code stays on its branch in the product repository, where it can actually ru
   `invoke(channel, …)`, so a capability without a method is a capability it does not have.
 - Every root is checked against the repositories this window actually opened. The renderer cannot
   name a directory and have the main process act on it.
+- **Discovery suggests; it never trusts.** A repository's own `.flkd/workspace.json` is the list of
+  commands the app may run in it, so finding that file on disk grants nothing: the repository is
+  offered, and accepting it is what admits it. `useCheckout` will only accept a path discovery itself
+  found, and a remembered choice is restored only if the person made one. `__tests__/ipc.spec.ts`
+  asserts this at the handler level — the gate was briefly bypassed while every service test stayed
+  green, which is why those tests exist.
+- A project id is validated before it reaches a command's argv **and** before it reaches the agent's
+  prompt; the agent runs unattended with edit permission, so an unchecked id there is prompt
+  injection rather than argv injection.
 - Every path is resolved through `resolveInside`, which follows symlinks — the check string
   comparison alone gets wrong.
 - Links open in the real browser; the app window itself cannot be navigated.

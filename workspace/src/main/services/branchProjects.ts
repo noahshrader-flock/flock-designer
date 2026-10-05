@@ -1,8 +1,8 @@
 import type { Person, Project, ProjectIteration, WorkspaceDescriptor } from '../../shared/contract';
 import { mergePeople } from '../../shared/people';
 import { newestFirst } from '../../shared/projects';
-import { branchAuthors, branchCommit, listBranches, localIdentity } from './git';
-import { loginFromNoreply } from '../../shared/people';
+import { branchCommit, listBranches } from './git';
+import { peopleOn } from './iterations';
 
 /**
  * Work found in the product repository's own branches.
@@ -40,30 +40,33 @@ export const classify = (descriptor: WorkspaceDescriptor, branch: string): Branc
 	return null;
 };
 
+/**
+ * Reads the repository's branches as work.
+ *
+ * `known` is the set of project ids the design repository already has a record
+ * for. A prototype branch is self-evidently ours -- its pattern carries a
+ * project id and a number no other work uses. A codebase branch is not:
+ * `feature/<project-id>` is how the whole product team names ticket branches,
+ * so `feature/dda-1221` would otherwise arrive as a design project. A codebase
+ * branch therefore counts only when a project already vouches for it.
+ */
 export const readBranchProjects = async (
 	productRoot: string,
 	descriptor: WorkspaceDescriptor,
 	signedInLogin: string | null,
+	known: ReadonlySet<string> = new Set(),
 ): Promise<Project[]> => {
 	const prefixes = [...new Set([descriptor.branchPattern.prototype, descriptor.branchPattern.codebase].map(prefixOf).filter(Boolean))];
 	const branches = (await Promise.all(prefixes.map((p) => listBranches(productRoot, p)))).flat();
-	const me = await localIdentity(productRoot);
 
 	const iterations = (
 		await Promise.all(
 			branches.slice(0, 200).map(async (branch) => {
 				const it = classify(descriptor, branch);
 				if (!it) return null;
-				const people: Person[] = (await branchAuthors(productRoot, branch).catch(() => [])).map((a) => ({
-					name: a.name,
-					login:
-						loginFromNoreply(a.email) ??
-						(signedInLogin !== null &&
-						((me.email !== '' && a.email.toLowerCase() === me.email.toLowerCase()) ||
-							(me.name !== '' && a.name.toLowerCase() === me.name.toLowerCase()))
-							? signedInLogin
-							: null),
-				}));
+				if (it.name === 'codebase' && !known.has(it.projectId)) return null;
+				// The same rule the records use, so one person is one person in both.
+				const people: Person[] = await peopleOn(productRoot, branch, signedInLogin).catch(() => []);
 				const iteration: ProjectIteration = {
 					name: it.name,
 					branch,

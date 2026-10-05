@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { buildContextReceipt } from '../src/main/services/contextReceipt';
 import { findCommand, readDescriptor } from '../src/main/services/descriptor';
-import { defaultRecordsRoot } from '../src/main/services/iterations';
+import { recordsRootFor } from '../src/main/services/discovery';
 
 /**
  * The services against a real checkout, not a fixture.
@@ -59,7 +59,7 @@ describe.skipIf(!available)('against the real Coke checkout', () => {
 	it('puts project records where the repository\'s own handoff gate looks for them', () => {
 		// check-handoff.mjs resolves '../flock-designer/projects/<id>'. If these two
 		// ever disagree, Workspace writes records the gate cannot find.
-		expect(defaultRecordsRoot(COKE)).toBe('/Users/noah.shrader/Documents/GitHub/flock-designer/projects');
+		expect(recordsRootFor(COKE)).toBe('/Users/noah.shrader/Documents/GitHub/flock-designer/projects');
 	});
 });
 

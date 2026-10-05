@@ -118,11 +118,22 @@ void app.whenReady().then(() => {
 	// Restores a previous session from the keychain without blocking the window.
 	void github.restore();
 
-	// A dev server started from the app must not outlive it.
-	app.on('before-quit', () => {
+	/**
+	 * Nothing the app started may outlive the window.
+	 *
+	 * Wired to the window closing, not only to quitting: on macOS closing the last
+	 * window does not quit, so a `before-quit`-only cleanup left a dev server
+	 * holding its port and an agent still writing to the repository.
+	 */
+	const stopEverything = () => {
 		runtime.stopAll();
 		agent.stop();
 		page.close();
+	};
+	window.on('closed', stopEverything);
+
+	app.on('before-quit', () => {
+		stopEverything();
 	});
 
 	if (process.argv.includes('--smoke-local')) {

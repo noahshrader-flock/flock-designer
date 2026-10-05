@@ -12,14 +12,7 @@ import {
 } from '@flocksafety/flock-react-component-lib';
 import { useState } from 'react';
 import type { Checkout, IterationKind, Project, ProjectIteration } from '../shared/contract';
-
-/** A name becomes a project id: lower-case words joined by hyphens, the only shape the app accepts. */
-export const slugify = (name: string): string =>
-	name
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
-		.replace(/^-+|-+$/g, '')
-		.slice(0, 60);
+import { slugify } from '../shared/projects';
 
 export interface Created {
 	project: Project;

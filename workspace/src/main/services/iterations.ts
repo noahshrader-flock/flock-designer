@@ -4,6 +4,7 @@ import type { Iteration, IterationKind, Person, WorkspaceDescriptor } from '../.
 import { branchAuthors, branchExists, checkoutBranch, createBranch, headCommit, localIdentity } from './git';
 import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
+import { PROJECT_ID } from '../../shared/projects';
 
 /**
  * Named attempts at the question, and the record of them.
@@ -25,16 +26,6 @@ export class IterationProblem extends Error {
 	}
 }
 
-/**
- * Where the design records live, given a product checkout.
- *
- * Defaults to a sibling `flock-designer`, which is how the repository's own
- * `check-handoff.mjs` already finds them (`../flock-designer/projects`). Keeping
- * the two in step matters more than the default itself.
- */
-export const defaultRecordsRoot = (productRoot: string): string =>
-	join(dirname(resolve(productRoot)), 'flock-designer', 'projects');
-
 /** `fd/<project-id>/i<n>` from the repository's own pattern, never hard-coded. */
 export const branchFor = (descriptor: WorkspaceDescriptor, projectId: string, n: number): string =>
 	descriptor.branchPattern.prototype.replace('<project-id>', projectId).replace('<n>', String(n));
@@ -44,7 +35,7 @@ export const branchFor = (descriptor: WorkspaceDescriptor, projectId: string, n:
  * rather than trusted. Anything outside this set could escape either one.
  */
 export const assertUsableProjectId = (projectId: string): void => {
-	if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(projectId)) {
+	if (!PROJECT_ID.test(projectId)) {
 		throw new IterationProblem(
 			`"${projectId}" is not a usable project id. Use lower-case words separated by hyphens, like "users-inactivity-signal".`,
 		);
@@ -144,7 +135,7 @@ export const createIteration = async (
  * git identity they commit under) carry their login. Everyone else stays a
  * name until they open an iteration of their own.
  */
-const peopleOn = async (productRoot: string, branch: string, signedInLogin: string | null): Promise<Person[]> => {
+export const peopleOn = async (productRoot: string, branch: string, signedInLogin: string | null): Promise<Person[]> => {
 	const me = await localIdentity(productRoot);
 	return (await branchAuthors(productRoot, branch)).map((a) => {
 		const mine =

@@ -1,6 +1,7 @@
 import type { CommentAnchor, Iteration, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
 import { GitHubError } from './github';
 import { asPeople, mergePeople } from '../../shared/people';
+import { newestFirst } from '../../shared/projects';
 import { composeBody, parseAnchor, stripAnchor } from '../../shared/anchor';
 import type { GitHubSession } from './githubSession';
 
@@ -189,11 +190,7 @@ export class DesignRepo {
         contributors: asPeople(it.contributors),
         commit: typeof it.commit === 'string' ? it.commit : null,
       }))
-      .sort((a, b) => {
-        // Prototype iterations newest first, then the codebase branch.
-        const codebase = (x: { branch: string }) => (x.branch.startsWith('fd/') ? 0 : 1);
-        return codebase(a) - codebase(b) || b.name.localeCompare(a.name, undefined, { numeric: true });
-      });
+      .sort(newestFirst);
   }
 
   /**

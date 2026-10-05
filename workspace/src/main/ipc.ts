@@ -4,6 +4,7 @@ import { basename, join } from 'node:path';
 import {
 	CHANNELS,
 	type Checkout,
+	type CheckoutSuggestion,
 	type Iteration,
 	type IterationKind,
 	type MarkerRequest,
@@ -18,7 +19,7 @@ import { AgentRunner } from './services/agent';
 import { buildContextReceipt } from './services/contextReceipt';
 import { readDescriptor } from './services/descriptor';
 import { isRepository, readCheckout } from './services/git';
-import { continueIteration, createIteration, readIterations } from './services/iterations';
+import { assertUsableProjectId, continueIteration, createIteration, readIterations } from './services/iterations';
 import { findProductCheckouts, recordsRootFor } from './services/discovery';
 import { readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
@@ -81,13 +82,18 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 	const descriptorFor = (root: string) => readDescriptor(opened.require(root));
 
 	/**
-	 * The product checkout in use: the one chosen before if it is still there,
-	 * otherwise whichever the machine has -- found by its own marker, not asked for.
+	 * The product checkout this person has already accepted, or null.
+	 *
+	 * **Discovery deliberately does not feed this.** A repository's own
+	 * `.flkd/workspace.json` is its command allowlist, so a repository that merely
+	 * exists on disk must never become runnable: finding one is a suggestion, and
+	 * accepting it (`useCheckout`, which a click calls) is what trusts it. Only a
+	 * root that went through `openRepository` is remembered here, so the memory file
+	 * can restore a choice that was made, never manufacture one.
 	 */
-	const currentRoot = (): string | null => {
+	const trustedRoot = (): string | null => {
 		const saved = memory.read();
-		if (saved !== null && isRepository(saved) && existsSync(join(saved, '.flkd', 'workspace.json'))) return saved;
-		return findProductCheckouts()[0] ?? null;
+		return saved !== null && isRepository(saved) && existsSync(join(saved, '.flkd', 'workspace.json')) ? saved : null;
 	};
 
 	/** Where this checkout's design records go; an error that says what to do when the design repository is not beside it. */
@@ -140,8 +146,37 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 	ipcMain.handle(
 		CHANNELS.lastCheckout,
 		guard(async (): Promise<Checkout | null> => {
-			const root = currentRoot();
+			const root = trustedRoot();
 			return root === null ? null : openRepository(root);
+		}),
+	);
+
+	// Finding a repository grants it nothing: this only describes one, and
+	// `useCheckout` is the step that trusts it.
+	ipcMain.handle(
+		CHANNELS.suggestCheckout,
+		guard((): CheckoutSuggestion | null => {
+			if (trustedRoot() !== null) return null;
+			const root = findProductCheckouts()[0];
+			if (root === undefined) return null;
+			try {
+				return { root, name: basename(root), product: readDescriptor(root).product };
+			} catch {
+				// A descriptor we cannot read is not a repository we should offer.
+				return null;
+			}
+		}),
+	);
+
+	ipcMain.handle(
+		CHANNELS.useCheckout,
+		guard(async (root: string): Promise<Checkout> => {
+			// Only ever a repository discovery itself found, so the renderer cannot
+			// name an arbitrary directory and have it trusted.
+			if (!findProductCheckouts().includes(root)) {
+				throw new Error('That is not a repository Flock Designer found on this machine.');
+			}
+			return openRepository(root);
 		}),
 	);
 
@@ -209,12 +244,16 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 
 	ipcMain.handle(
 		CHANNELS.startAgent,
-		guard((root: string, projectId: string, task: string) =>
-			agent.start(opened.require(root), projectId, task, {
+		guard((root: string, projectId: string, task: string) => {
+			// Same rule startCommand applies. This one is interpolated into the agent's
+			// prompt, and the agent runs unattended with edit permission, so an
+			// unchecked value here is prompt injection rather than argv injection.
+			assertUsableProjectId(projectId);
+			return agent.start(opened.require(root), projectId, task, {
 				// The project's records live in the design repository, beside the product checkout.
 				addDirs: [recordsFor(opened.require(root))],
-			}),
-		),
+			});
+		}),
 	);
 
 	ipcMain.handle(CHANNELS.agentStatus, guard(() => agent.status()));
@@ -245,15 +284,23 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 	ipcMain.handle(
 		CHANNELS.listProjects,
 		guard(async (): Promise<Project[]> => {
-			const root = currentRoot();
+			// The gate, not the discovery list: nothing is read or run in a repository
+			// this person has not accepted.
+			const root = trustedRoot();
 			const me = github.state();
 			const login = me.state === 'signedIn' ? me.user.login : null;
 			let local: Project[] = [];
 			if (root !== null) {
+				opened.require(root);
 				const recordsRoot = recordsRootFor(root);
 				const records = recordsRoot ? readLocalProjects(recordsRoot) : [];
 				// The branches are the evidence: work made without the app still shows.
-				const branches = await readBranchProjects(root, readDescriptor(root), login).catch(() => []);
+				const branches = await readBranchProjects(
+					root,
+					readDescriptor(root),
+					login,
+					new Set(records.map((p) => p.id)),
+				).catch(() => []);
 				local = unionLocal(records, branches);
 			}
 			let remote: Project[] = [];

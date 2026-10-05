@@ -95,11 +95,29 @@ describe('work found in a real repository, with no record written', () => {
 	});
 
 	it('lists it as a project, with its iterations and who committed', async () => {
-		const [p] = await readBranchProjects(root, descriptor, null);
+		const [p] = await readBranchProjects(root, descriptor, null, new Set(['real-change']));
 		expect(p?.id).toBe('real-change');
 		expect(p?.iterations.map((i) => i.name)).toEqual(['i1', 'codebase']);
 		expect(p?.people.map((x) => x.name).sort()).toEqual(['Ada Lovelace', 'Grace Hopper']);
 		expect(p?.iterations[0]?.commit).toMatch(/^[0-9a-f]{40}$/);
+	});
+
+	it("ignores a feature branch no project vouches for, so teammates' tickets stay out", async () => {
+		// `feature/<project-id>` is how the whole product team names ticket branches.
+		g('checkout', '-q', '-b', 'feature/dda-1221');
+		commitAs('Someone Else', 'd.txt');
+		g('checkout', '-q', 'develop');
+
+		const known = new Set(['real-change']);
+		const ids = (await readBranchProjects(root, descriptor, null, known)).map((p) => p.id);
+		expect(ids).not.toContain('dda-1221');
+		expect(ids).toContain('real-change');
+	});
+
+	it('still shows a prototype branch with no record, which only this app creates', async () => {
+		const [p] = await readBranchProjects(root, descriptor, null, new Set());
+		expect(p?.id).toBe('real-change');
+		expect(p?.iterations.map((i) => i.name)).toEqual(['i1']);
 	});
 
 	it('credits the person running the app with their login', async () => {

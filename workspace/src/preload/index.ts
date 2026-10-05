@@ -3,6 +3,7 @@ import { CHANNELS } from '../shared/contract';
 import type {
 	AgentStatus,
 	Checkout,
+	CheckoutSuggestion,
 	CommentAnchor,
 	DeviceCodeStart,
 	ContextReceipt,
@@ -51,6 +52,8 @@ const api: WorkspaceApi = {
 
 	startCommand: (root, commandId, projectId) => invoke<PreviewStatus>(CHANNELS.startCommand, root, commandId, projectId),
 	lastCheckout: () => invoke<Checkout | null>(CHANNELS.lastCheckout),
+	suggestCheckout: () => invoke<CheckoutSuggestion | null>(CHANNELS.suggestCheckout),
+	useCheckout: (root) => invoke<Checkout>(CHANNELS.useCheckout, root),
 	stopCommand: (root, commandId) => invoke<PreviewStatus>(CHANNELS.stopCommand, root, commandId),
 	commandStatus: (root, commandId) => invoke<PreviewStatus>(CHANNELS.commandStatus, root, commandId),
 	onRunLog: (listener) => subscribe<RunLogLine>(CHANNELS.runLog, listener),

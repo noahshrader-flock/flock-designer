@@ -139,8 +139,19 @@ export interface WorkspaceApi {
 
 	/** `projectId` fills `<project-id>` in a command that serves one project. */
 	startCommand(root: string, commandId: string, projectId?: string): Promise<Result<PreviewStatus>>;
-	/** The product checkout in use: the one chosen before, else one found on this machine by its `.flkd/workspace.json`. Null if none. */
+	/**
+	 * The product checkout in use, if one has already been trusted: a repository this
+	 * person opened before. Discovery alone never lands here -- see `suggestCheckout`.
+	 */
 	lastCheckout(): Promise<Result<Checkout | null>>;
+	/**
+	 * A repository found on this machine by its `.flkd/workspace.json`, offered for the
+	 * person to confirm. Finding it grants nothing: nothing may run in it until
+	 * `useCheckout` is called, which is what a click does.
+	 */
+	suggestCheckout(): Promise<Result<CheckoutSuggestion | null>>;
+	/** Accepts a suggested repository. This is the step that trusts it. */
+	useCheckout(root: string): Promise<Result<Checkout>>;
 	stopCommand(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	commandStatus(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	onRunLog(listener: (line: RunLogLine) => void): () => void;
@@ -215,6 +226,14 @@ export type SignInState =
  * not from a checkout. Authors still work from a real checkout -- that is the
  * difference between the two modes.
  */
+/** A repository discovery found, which the person has not accepted yet. */
+export interface CheckoutSuggestion {
+  root: string;
+  name: string;
+  /** What the repository calls itself, read from its descriptor. */
+  product: string;
+}
+
 export interface Project {
   /** Directory name under `projects/`, which is also the project id. */
   id: string;
@@ -320,6 +339,8 @@ export const CHANNELS = {
 	continueIteration: 'workspace:continueIteration',
 	startCommand: 'workspace:startCommand',
 	lastCheckout: 'workspace:lastCheckout',
+	suggestCheckout: 'workspace:suggestCheckout',
+	useCheckout: 'workspace:useCheckout',
 	stopCommand: 'workspace:stopCommand',
 	commandStatus: 'workspace:commandStatus',
 	startAgent: 'workspace:startAgent',

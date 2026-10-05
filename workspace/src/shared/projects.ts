@@ -1,4 +1,20 @@
 import type { Project, ProjectIteration } from './contract';
+
+/** The only shape a project id may take: lower-case words joined by single hyphens. */
+export const PROJECT_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+/**
+ * A name becomes a project id. Truncation happens before the trailing hyphen is
+ * stripped, so a long name cannot produce an id the main process would reject --
+ * which is what the renderer's own copy of this used to do.
+ */
+export const slugify = (name: string): string =>
+	name
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.slice(0, 60)
+		.replace(/^-+|-+$/g, '');
+
 import { mergePeople } from './people';
 
 /**
