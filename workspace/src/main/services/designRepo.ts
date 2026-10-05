@@ -51,7 +51,7 @@ export class DesignRepo {
       .map(asRecord)
       .filter((e) => e.type === 'dir' && typeof e.name === 'string' && !String(e.name).startsWith('_'));
 
-    const [branches, issues] = await Promise.all([this.listBranches(), this.listReviewIssues()]);
+    const issues = await this.listReviewIssues();
 
     return Promise.all(
       dirs.map(async (dir) => {
@@ -62,7 +62,7 @@ export class DesignRepo {
           .map((f) => String(f.name))
           .sort();
 
-        const iterations = this.iterationsFor(id, branches, issues);
+        const iterations = await this.readIterations(id, records, issues);
         return {
           id,
           title: (await this.readBriefTitle(id, records)) ?? id,
@@ -81,12 +81,6 @@ export class DesignRepo {
     return firstHeading(Buffer.from(file.content, 'base64').toString('utf8'));
   }
 
-  private async listBranches(): Promise<string[]> {
-    return asArray(await this.session.api(`${this.base}/branches?per_page=100`))
-      .map(asRecord)
-      .map((b) => String(b.name));
-  }
-
   /** Review issues keyed by the branch they carry comments for. */
   private async listReviewIssues(): Promise<Map<string, { number: number; openComments: number }>> {
     const issues = asArray(
@@ -103,26 +97,49 @@ export class DesignRepo {
     return byBranch;
   }
 
-  private iterationsFor(
+  /**
+   * A project's iterations, from `projects/<id>/iterations.json`.
+   *
+   * **Not from branches.** Iteration branches live in the product repository,
+   * which this app is deliberately unable to see -- that is what keeps a PM out
+   * of the product's source. The record is written into the project folder when
+   * an iteration is created, so it is readable here with no extra access. The
+   * first version of this looked for branches in the design repo and listed
+   * "No branches yet" for every project.
+   *
+   * A missing or unreadable record means "no iterations recorded", never an
+   * error: a project folder exists before its first iteration does.
+   */
+  private async readIterations(
     id: string,
-    branches: string[],
+    records: string[],
     issues: Map<string, { number: number }>,
-  ): ProjectIteration[] {
-    // Both shapes the plan declares: prototype iterations and the codebase path.
-    const mine = branches.filter((b) => b === `feature/${id}` || b.startsWith(`fd/${id}/`));
-    // Prototype iterations newest first, then the codebase branch. Sorting the
-    // strings put `feature/` above `fd/`, so the codebase branch outranked i2.
-    return mine
+  ): Promise<ProjectIteration[]> {
+    if (!records.includes('iterations.json')) return [];
+    const file = asRecord(await this.session.api(`${this.base}/contents/projects/${id}/iterations.json`));
+    if (typeof file.content !== 'string') return [];
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(Buffer.from(file.content, 'base64').toString('utf8'));
+    } catch {
+      return [];
+    }
+
+    return asArray(parsed)
+      .map(asRecord)
+      .filter((it) => typeof it.branch === 'string' && typeof it.name === 'string')
+      .map((it) => ({
+        name: String(it.name),
+        branch: String(it.branch),
+        issueNumber: issues.get(String(it.branch))?.number ?? null,
+        previewUrl: typeof it.previewUrl === 'string' ? it.previewUrl : null,
+      }))
       .sort((a, b) => {
-        const codebase = (x: string) => (x.startsWith('fd/') ? 0 : 1);
-        return codebase(a) - codebase(b) || b.localeCompare(a, undefined, { numeric: true });
-      })
-      .map((branch) => ({
-        name: branch.startsWith('fd/') ? (branch.split('/').pop() ?? branch) : 'codebase',
-        branch,
-        issueNumber: issues.get(branch)?.number ?? null,
-        previewUrl: null,
-      }));
+        // Prototype iterations newest first, then the codebase branch.
+        const codebase = (x: { branch: string }) => (x.branch.startsWith('fd/') ? 0 : 1);
+        return codebase(a) - codebase(b) || b.name.localeCompare(a.name, undefined, { numeric: true });
+      });
   }
 
   /** The issue carrying an iteration's comments, created on first use. */

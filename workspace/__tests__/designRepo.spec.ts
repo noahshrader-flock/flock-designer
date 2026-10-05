@@ -20,10 +20,17 @@ const fakeSession = (routes: Record<string, unknown>) => {
 const b64 = (s: string) => Buffer.from(s, 'utf8').toString('base64');
 const REF = { owner: 'acme', repo: 'design' };
 
+const ITERATIONS = [
+  { projectId: 'alpha', name: 'i1', branch: 'fd/alpha/i1', commit: null, createdAt: '2026-10-01', note: '' },
+  { projectId: 'alpha', name: 'i2', branch: 'fd/alpha/i2', commit: null, createdAt: '2026-10-02', note: '', previewUrl: 'https://preview.test/alpha-i2' },
+  { projectId: 'alpha', name: 'codebase', branch: 'feature/alpha', commit: null, createdAt: '2026-10-03', note: '' },
+];
+
 describe('listProjects', () => {
   const routes = {
     '/repos/acme/design/contents/projects/alpha': [
       { type: 'file', name: 'brief.md' },
+      { type: 'file', name: 'iterations.json' },
       { type: 'file', name: 'review.md' },
     ],
     '/repos/acme/design/contents/projects': [
@@ -31,70 +38,81 @@ describe('listProjects', () => {
       { type: 'file', name: 'README.md' },
       { type: 'dir', name: '_template' },
     ],
-    '/repos/acme/design/branches': [
-      { name: 'fd/alpha/i1' },
-      { name: 'fd/alpha/i2' },
-      { name: 'feature/alpha' },
-      { name: 'fd/other/i1' },
-      { name: 'main' },
-    ],
+    '/repos/acme/design/contents/projects/alpha/brief.md': { content: b64('# Inactive users\n') },
+    '/repos/acme/design/contents/projects/alpha/iterations.json': { content: b64(JSON.stringify(ITERATIONS)) },
     '/repos/acme/design/issues?state=all': [
       { number: 7, comments: 3, body: 'Review thread for alpha, branch: `fd/alpha/i2`.' },
     ],
   };
 
   it('lists project folders, skipping files and templates', async () => {
-    const { session } = fakeSession({
-      ...routes,
-      '/repos/acme/design/contents/projects/alpha/brief.md': { content: b64('# Inactive users\n') },
-    });
-    const projects = await new DesignRepo(session, REF).listProjects();
-    expect(projects.map((p) => p.id)).toEqual(['alpha']);
+    const { session } = fakeSession(routes);
+    expect((await new DesignRepo(session, REF).listProjects()).map((p) => p.id)).toEqual(['alpha']);
   });
 
   it('reads the title from the brief, and falls back to the id', async () => {
-    const { session } = fakeSession({
-      ...routes,
-      '/repos/acme/design/contents/projects/alpha/brief.md': { content: b64('# Inactive users\n\nbody') },
-    });
+    const { session } = fakeSession(routes);
     expect((await new DesignRepo(session, REF).listProjects())[0]?.title).toBe('Inactive users');
 
     const noBrief = fakeSession({
       ...routes,
-      '/repos/acme/design/contents/projects/alpha': [{ type: 'file', name: 'review.md' }],
+      '/repos/acme/design/contents/projects/alpha': [{ type: 'file', name: 'iterations.json' }],
     });
     expect((await new DesignRepo(noBrief.session, REF).listProjects())[0]?.title).toBe('alpha');
   });
 
-  it('finds this project\'s branches only, newest first, and both path shapes', async () => {
-    const { session } = fakeSession({
-      ...routes,
-      '/repos/acme/design/contents/projects/alpha/brief.md': { content: b64('# A') },
-    });
+  it('reads iterations from the project folder, not from branches', async () => {
+    // The regression: iteration branches live in the PRODUCT repository, which
+    // this app cannot see. Looking for them in the design repo listed "No
+    // branches yet" for every project, including ones with iterations.
+    const { session, api } = fakeSession(routes);
     const [alpha] = await new DesignRepo(session, REF).listProjects();
     expect(alpha?.iterations.map((i) => i.branch)).toEqual(['fd/alpha/i2', 'fd/alpha/i1', 'feature/alpha']);
+    expect(api.mock.calls.some(([path]) => path.includes('/branches'))).toBe(false);
+  });
+
+  it('puts prototype iterations newest first and the codebase branch last', async () => {
+    const { session } = fakeSession(routes);
+    const [alpha] = await new DesignRepo(session, REF).listProjects();
     expect(alpha?.iterations.map((i) => i.name)).toEqual(['i2', 'i1', 'codebase']);
   });
 
-  it('links an iteration to its review thread and counts open comments', async () => {
+  it('carries a recorded preview link through', async () => {
+    const { session } = fakeSession(routes);
+    const [alpha] = await new DesignRepo(session, REF).listProjects();
+    expect(alpha?.iterations.find((i) => i.name === 'i2')?.previewUrl).toBe('https://preview.test/alpha-i2');
+    expect(alpha?.iterations.find((i) => i.name === 'i1')?.previewUrl).toBeNull();
+  });
+
+  it('shows no iterations, not an error, for a project that has none recorded', async () => {
     const { session } = fakeSession({
       ...routes,
-      '/repos/acme/design/contents/projects/alpha/brief.md': { content: b64('# A') },
+      '/repos/acme/design/contents/projects/alpha': [{ type: 'file', name: 'brief.md' }],
     });
+    expect((await new DesignRepo(session, REF).listProjects())[0]?.iterations).toEqual([]);
+  });
+
+  it('shows no iterations, not an error, when the record is unreadable', async () => {
+    const { session } = fakeSession({
+      ...routes,
+      '/repos/acme/design/contents/projects/alpha/iterations.json': { content: b64('{ not json') },
+    });
+    expect((await new DesignRepo(session, REF).listProjects())[0]?.iterations).toEqual([]);
+  });
+
+  it('links an iteration to its review thread and counts open comments', async () => {
+    const { session } = fakeSession(routes);
     const [alpha] = await new DesignRepo(session, REF).listProjects();
     expect(alpha?.iterations.find((i) => i.branch === 'fd/alpha/i2')?.issueNumber).toBe(7);
     expect(alpha?.iterations.find((i) => i.branch === 'fd/alpha/i1')?.issueNumber).toBeNull();
     expect(alpha?.openComments).toBe(3);
   });
 
-  it('never clones or touches git', async () => {
-    const { session, api } = fakeSession({
-      ...routes,
-      '/repos/acme/design/contents/projects/alpha/brief.md': { content: b64('# A') },
-    });
+  it('only ever calls the repository API', async () => {
+    const { session, api } = fakeSession(routes);
     await new DesignRepo(session, REF).listProjects();
-    // Reviewer mode's whole promise: the API only.
-    expect(api.mock.calls.every(([path]) => path.startsWith('/repos/'))).toBe(true);
+    // Reviewer mode's whole promise: no clone, no git, nothing outside the repo.
+    expect(api.mock.calls.every(([path]) => path.startsWith('/repos/acme/design/'))).toBe(true);
   });
 });
 
