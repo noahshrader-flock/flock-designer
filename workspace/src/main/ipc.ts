@@ -1,11 +1,13 @@
 import { type BrowserWindow, dialog, ipcMain } from 'electron';
-import { CHANNELS, type Checkout, type Result } from '../shared/contract';
+import { CHANNELS, type Checkout, type Project, type Result, type ReviewComment } from '../shared/contract';
 import { AgentRunner } from './services/agent';
 import { buildContextReceipt } from './services/contextReceipt';
 import { readDescriptor } from './services/descriptor';
 import { isRepository, readCheckout } from './services/git';
 import { continueIteration, createIteration, defaultRecordsRoot, readIterations } from './services/iterations';
 import { RuntimeManager } from './services/runtime';
+import { DesignRepo } from './services/designRepo';
+import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 
 /**
@@ -39,9 +41,11 @@ export interface IpcContext {
 	opened: OpenedCheckouts;
 	runtime: RuntimeManager;
 	agent: AgentRunner;
+	github: GitHubSession;
+	designRepo: DesignRepo;
 }
 
-export const registerIpc = ({ window, opened, runtime, agent }: IpcContext): void => {
+export const registerIpc = ({ window, opened, runtime, agent, github, designRepo }: IpcContext): void => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
 			throw new Error(`${root} is not a git repository.`);
@@ -133,4 +137,37 @@ export const registerIpc = ({ window, opened, runtime, agent }: IpcContext): voi
 	);
 
 	ipcMain.handle(CHANNELS.agentStatus, guard(() => agent.status()));
+
+	// Sign-in. No handler returns a token: the renderer only ever learns whether
+	// someone is signed in, and who.
+	ipcMain.handle(CHANNELS.signInStart, guard(() => github.startSignIn()));
+	ipcMain.handle(
+		CHANNELS.signInCancel,
+		guard(() => {
+			github.cancelSignIn();
+			return null;
+		}),
+	);
+	ipcMain.handle(CHANNELS.signInState, guard(() => github.state()));
+	ipcMain.handle(
+		CHANNELS.signOut,
+		guard(() => {
+			github.signOut();
+			return null;
+		}),
+	);
+
+	// Reviewer mode: read through the API, never a checkout.
+	ipcMain.handle(CHANNELS.listProjects, guard((): Promise<Project[]> => designRepo.listProjects()));
+	ipcMain.handle(
+		CHANNELS.readComments,
+		guard((projectId: string, branch: string): Promise<ReviewComment[]> => designRepo.readComments(projectId, branch)),
+	);
+	ipcMain.handle(
+		CHANNELS.postComment,
+		guard(
+			(projectId: string, branch: string, body: string): Promise<ReviewComment> =>
+				designRepo.postComment(projectId, branch, body),
+		),
+	);
 };

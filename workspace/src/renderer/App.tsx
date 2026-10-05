@@ -9,20 +9,39 @@ import {
 	FSTypography,
 } from '@flocksafety/flock-react-component-lib';
 import { useCallback, useEffect, useState } from 'react';
-import type { Checkout, ContextReceipt, Iteration, PreviewStatus, RunLogLine } from '../shared/contract';
+import type { Checkout, ContextReceipt, Iteration, PreviewStatus, RunLogLine, SignInState } from '../shared/contract';
 import { ContextReceiptPanel } from './ContextReceiptPanel';
 import { LogPanel } from './LogPanel';
+import { Projects } from './Projects';
+import { SignIn } from './SignIn';
 import { useCall } from './useWorkspace';
 
 /**
- * The whole journey step 13 owes, on one screen.
+ * Two modes, and the difference between them is what a person needs installed.
  *
- * Open a repository, see what was grounded before anything is generated, create
- * or continue an iteration, hand the task to the agent, run the preview. The app
- * stays quiet on purpose -- it coordinates a repository, it is not a place to
- * design in.
+ * **Review** needs only a GitHub account: projects, iterations and comments are
+ * read through the API. That is what lets a PM or an engineer take part.
+ * **Author** needs a real checkout, and is the journey step 13 built: open a
+ * repository, see what was grounded, create an iteration, run the agent and the
+ * preview.
+ *
+ * The app stays quiet on purpose -- it coordinates a repository, it is not a
+ * place to design in.
  */
 export const App = () => {
+	const [signIn, setSignIn] = useState<SignInState>({ state: 'signedOut' });
+	const [mode, setMode] = useState<'review' | 'author'>('review');
+
+	const refreshSignIn = useCallback(async () => {
+		const result = await window.workspace.signInState();
+		if (result.ok) setSignIn(result.value);
+	}, []);
+
+	useEffect(() => {
+		void refreshSignIn();
+		return window.workspace.onSignInChanged(setSignIn);
+	}, [refreshSignIn]);
+
 	const checkout = useCall<Checkout | null>();
 	const receipt = useCall<ContextReceipt>();
 	const iterations = useCall<Iteration[]>();
@@ -79,13 +98,51 @@ export const App = () => {
 	const commands = receipt.value?.commands ?? [];
 	const previewCommand = commands.find((c) => c.id === 'preview') ?? commands[0];
 
+	if (signIn.state !== 'signedIn') {
+		return (
+			<FSBox sx={{ p: 3 }}>
+				<SignIn state={signIn} onChanged={refreshSignIn} />
+			</FSBox>
+		);
+	}
+
 	return (
 		<FSBox sx={{ p: 3, maxWidth: 1100, mx: 'auto' }}>
 			<FSStack spacing={3}>
 				<FSStack direction="row" alignItems="center" spacing={2}>
 					<FSTypography variant="h5" component="h1">
-						Flock Designer Workspace
+						Flock Designer
 					</FSTypography>
+					<FSBox flexGrow={1} />
+					<FSButton
+						variant={mode === 'review' ? 'primary' : 'secondary'}
+						onClick={() => setMode('review')}
+					>
+						Review
+					</FSButton>
+					<FSButton variant={mode === 'author' ? 'primary' : 'secondary'} onClick={() => setMode('author')}>
+						Author
+					</FSButton>
+					<FSTypography variant="body2" color="text.secondary">
+						{signIn.user.login}
+					</FSTypography>
+					<FSButton
+						variant="secondary"
+						onClick={async () => {
+							await window.workspace.signOut();
+							await refreshSignIn();
+						}}
+					>
+						Sign out
+					</FSButton>
+				</FSStack>
+
+				{mode === 'review' && <Projects />}
+
+				{mode === 'author' && (
+					<FSStack spacing={3}>
+				<FSStack direction="row" alignItems="center" spacing={2}>
+					<FSTypography variant="subtitle1">Author</FSTypography>
 					<FSBox flexGrow={1} />
 					<FSButton onClick={openRepository} disabled={checkout.busy}>
 						Open a repository
@@ -218,6 +275,8 @@ export const App = () => {
 
 						<LogPanel lines={log} />
 					</>
+				)}
+					</FSStack>
 				)}
 			</FSStack>
 		</FSBox>

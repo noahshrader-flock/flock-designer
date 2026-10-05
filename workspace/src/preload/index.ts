@@ -3,11 +3,15 @@ import { CHANNELS } from '../shared/contract';
 import type {
 	AgentStatus,
 	Checkout,
+	DeviceCodeStart,
 	ContextReceipt,
 	Iteration,
 	PreviewStatus,
+	Project,
 	Result,
+	ReviewComment,
 	RunLogLine,
+	SignInState,
 	WorkspaceApi,
 } from '../shared/contract';
 
@@ -49,6 +53,17 @@ const api: WorkspaceApi = {
 	startAgent: (root, projectId, task) => invoke<AgentStatus>(CHANNELS.startAgent, root, projectId, task),
 	agentStatus: () => invoke<AgentStatus>(CHANNELS.agentStatus),
 	onAgentLog: (listener) => subscribe<RunLogLine>(CHANNELS.agentLog, listener),
+
+	signInStart: () => invoke<DeviceCodeStart>(CHANNELS.signInStart),
+	signInCancel: () => invoke<null>(CHANNELS.signInCancel),
+	signInState: () => invoke<SignInState>(CHANNELS.signInState),
+	signOut: () => invoke<null>(CHANNELS.signOut),
+	onSignInChanged: (listener) => subscribe<SignInState>(CHANNELS.signInChanged, listener),
+
+	listProjects: () => invoke<Project[]>(CHANNELS.listProjects),
+	readComments: (projectId, iteration) => invoke<ReviewComment[]>(CHANNELS.readComments, projectId, iteration),
+	postComment: (projectId, iteration, body) =>
+		invoke<ReviewComment>(CHANNELS.postComment, projectId, iteration, body),
 };
 
 contextBridge.exposeInMainWorld('workspace', api);

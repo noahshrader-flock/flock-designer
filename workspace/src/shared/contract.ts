@@ -133,6 +133,95 @@ export interface WorkspaceApi {
 	startAgent(root: string, projectId: string, task: string): Promise<Result<AgentStatus>>;
 	agentStatus(): Promise<Result<AgentStatus>>;
 	onAgentLog(listener: (line: RunLogLine) => void): () => void;
+
+	/** Begins device-flow sign-in. Resolves as soon as there is a code to show. */
+	signInStart(): Promise<Result<DeviceCodeStart>>;
+	signInCancel(): Promise<Result<null>>;
+	signInState(): Promise<Result<SignInState>>;
+	signOut(): Promise<Result<null>>;
+	onSignInChanged(listener: (state: SignInState) => void): () => void;
+
+	/** Reviewer mode: everything below reads the design repo through the API. */
+	listProjects(): Promise<Result<Project[]>>;
+	readComments(projectId: string, iteration: string): Promise<Result<ReviewComment[]>>;
+	postComment(projectId: string, iteration: string, body: string): Promise<Result<ReviewComment>>;
+}
+
+/** Who is signed in. */
+export interface GitHubUser {
+  login: string;
+  name: string | null;
+  avatarUrl: string | null;
+}
+
+/** What the person types in, and where. */
+export interface DeviceCodeStart {
+  deviceCode: string;
+  userCode: string;
+  verificationUri: string;
+  expiresInSeconds: number;
+  intervalSeconds: number;
+}
+
+export type SignInState =
+  | { state: 'signedOut' }
+  | { state: 'awaitingDevice'; userCode: string; verificationUri: string; expiresAt: string }
+  | { state: 'signedIn'; user: GitHubUser };
+
+/**
+ * A project, read from the design repository through the API.
+ *
+ * Reviewers never clone anything: this is assembled from the repo's contents,
+ * not from a checkout. Authors still work from a real checkout -- that is the
+ * difference between the two modes.
+ */
+export interface Project {
+  /** Directory name under `projects/`, which is also the project id. */
+  id: string;
+  /** First heading of `brief.md`, or the id if it has none. */
+  title: string;
+  /** Files present in the project folder, for showing what a project has. */
+  records: string[];
+  /** Iterations found as branches, newest first. */
+  iterations: ProjectIteration[];
+  /** Open comment count across the project's iterations. */
+  openComments: number;
+}
+
+export interface ProjectIteration {
+  name: string;
+  branch: string;
+  /** The issue that carries this iteration's comments, once one exists. */
+  issueNumber: number | null;
+  /** Preview URL recorded when the iteration was shared, if any. */
+  previewUrl: string | null;
+}
+
+/** One reviewer comment, stored as a GitHub issue comment. */
+export interface ReviewComment {
+  id: number;
+  author: string;
+  authorAvatarUrl: string | null;
+  body: string;
+  createdAt: string;
+  resolved: boolean;
+  /** Present once C2 anchors comments to an element; absent for page-level ones. */
+  anchor: CommentAnchor | null;
+}
+
+/**
+ * Where a comment points.
+ *
+ * Recorded as several independent clues on purpose: a selector alone breaks the
+ * moment the markup changes, and a comment that cannot be placed must degrade to
+ * a page-level comment rather than vanish.
+ */
+export interface CommentAnchor {
+  route: string;
+  selector: string;
+  nearbyText: string;
+  viewport: { width: number; height: number };
+  commit: string;
 }
 
 /** Channel names, in one place so main and preload cannot drift. */
@@ -151,4 +240,12 @@ export const CHANNELS = {
 	runLog: 'workspace:event:runLog',
 	previewStatus: 'workspace:event:previewStatus',
 	agentLog: 'workspace:event:agentLog',
+	signInStart: 'workspace:signInStart',
+	signInCancel: 'workspace:signInCancel',
+	signInState: 'workspace:signInState',
+	signOut: 'workspace:signOut',
+	listProjects: 'workspace:listProjects',
+	readComments: 'workspace:readComments',
+	postComment: 'workspace:postComment',
+	signInChanged: 'workspace:event:signInChanged',
 } as const;

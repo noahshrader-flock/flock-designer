@@ -1,4 +1,4 @@
-# Flock Designer Workspace
+# Flock Designer
 
 A local coordination layer over real Flock product repositories. It opens a checkout, shows what was
 grounded before anything is generated, creates and continues iteration branches, hands a task to the
@@ -16,11 +16,37 @@ npm test          # 88 tests
 npm run smoke     # boot the real app and prove the window opens
 ```
 
+## Two modes
+
+| Mode | Who | Needs |
+|---|---|---|
+| **Review** | Anyone — design, product, engineering | A GitHub account with read access to the design repository. No checkout, no git, no toolchain |
+| **Author** | The person building | A real checkout of the product repository, plus the agent |
+
+Review mode reads projects, iterations and comments through GitHub's API. **Comments are issue
+comments** in the design repository, one issue per iteration, so GitHub does the storing and the
+notifying and there is no server of ours anywhere.
+
+## Signing in
+
+`Sign in with GitHub` uses the **device flow**: the app shows a code, you enter it on
+github.com/login/device, and the app receives a token. A desktop app needs no client secret for this,
+which is why nothing here runs a backend. The token is encrypted with the OS keychain
+(`safeStorage`) and never reaches the renderer.
+
+Tokens last 8 hours and are refreshed silently. A refresh that fails signs you out rather than
+failing a call mysteriously.
+
+The app is configured for a GitHub App that must have device flow enabled, Issues write permission,
+and be installed on the design repository. Point a development build elsewhere with
+`FLOCK_DESIGNER_CLIENT_ID`, `FLOCK_DESIGNER_REPO_OWNER` and `FLOCK_DESIGNER_REPO_NAME`.
+
 ## What it can and cannot do
 
 | It can | It cannot |
 |---|---|
 | Open a repository the designer picks | Reach any path outside that repository |
+| Read and write issue comments in the design repository | Reach any repository the GitHub App is not installed on |
 | Run commands the repository declares | Run anything else, or a shell of any kind |
 | Create and switch iteration branches | Rewrite, discard, or force anything in git |
 | Invoke a locally installed agent | Hold model credentials, or carry its own prompts |
