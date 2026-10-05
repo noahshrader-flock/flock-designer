@@ -17,22 +17,22 @@ the wider product process at readiness to build.
 
 > ### Where we are
 >
-> **13 of 23 steps are done.** The numbered list under [The sequence](#the-sequence) marks every step
-> off, in order, from step 1 to step 23. Steps 1 and 5 are finished except for approvals only a person
-> can give.
+> **Phases 1 and 2 are done**, apart from two approvals only a person can give. **We are in
+> Phase 3**, building the review app: **3.1 is done, 3.2 is built and waits on you to post one comment
+> in the app, and 3.3 is next to build.** Phase 4 needs other people.
 >
-> **Right now:** step 16 — sign-in and comments — is built and waits on you to post one comment in the
-> app. **Next to build: step 17**, opening a prototype in the app and clicking an element to comment.
+> **13 of 23 steps are done.** The full list, every step marked off in order, is
+> [The sequence](#the-sequence): Phases 1 to 4, numbered 1.1 to 4.3.
 >
 > **What remains is one build:** making Flock Designer a place the whole team — design, product,
-> engineering — can browse each other's prototypes and comment on them. That is steps 16–20.
+> engineering — can browse each other's prototypes and comment on them. That is Phase 3.
 >
 > The detail for every finished step is in [Appendix B](#appendix-b--what-was-built-and-why).
 >
 > This document was restructured on 2026-10-05 so the plan covers only what remains. Nothing was
 > deleted: completed work moved into the appendices, and the [change log](#change-log) says why.
 
-- **[The plan — what remains](#the-plan--what-remains)**: the direction, the sequence, the asks to other people, the decisions made, the risks, and the open questions.
+- **[The plan — what remains](#the-plan--what-remains)**: the direction, **the four phases and every step in order**, the asks to other people, the decisions made, the risks, and the open questions.
 - **[Appendix A — How the system works](#appendix-a--how-the-system-works)**: principles, contracts and reference for what is built. Consulted while working.
 - **[Appendix B — What was built, and why](#appendix-b--what-was-built-and-why)**: every completed step with its evidence, and the status blocks as they stood.
 - **[Appendix C — Superseded designs](#appendix-c--superseded-designs)**: the earlier decision gates, Workspace architecture, and old steps 14–16, kept for the reasoning.
@@ -56,14 +56,14 @@ exist:
 | Described in a contract | Never scheduled as a step | Cost |
 |---|---|---|
 | The codebase path | Unbuilt for nine steps, while every proof went to `src/prototypes/` | The main thing being built was missing |
-| Real-shell design mode as a place to *work* | Step 8 built the "run the product" half and closed | Prototypes still reconstruct their chrome — now [step A2](#step-a2--run-a-prototype-in-the-real-shell) |
-| A prototype being openable | Step 7 closed on "built, **opened**, reviewed" with opening unverified | Nothing served prototypes at all |
+| Real-shell design mode as a place to *work* | Step 2.2 built the "run the product" half and closed | Prototypes still reconstruct their chrome — now [step 2.4](#24--run-a-prototype-in-the-real-shell-was-a2) |
+| A prototype being openable | Step 2.1 closed on "built, **opened**, reviewed" with opening unverified | Nothing served prototypes at all |
 
 **So: when a contract says something exists, find the step that builds it.** If there is no step,
 either write one or mark the contract `Implemented in: **Not yet**` and say which step will own it.
 A contract with no owning step is a description of something imaginary.
 
-**And a step whose "done when" needs a person cannot be closed by Claude.** Step 7 and step 8 were
+**And a step whose "done when" needs a person cannot be closed by Claude.** Step 2.1 and step 2.2 were
 both marked Complete on claims nobody had tested. The sequence marks each step **mechanical**, **cold
 start**, or **human** for exactly this reason.
 
@@ -89,7 +89,7 @@ is, and says what they think, **without installing a toolchain, cloning anything
 That is the function [Magic Patterns](https://www.magicpatterns.com/docs/documentation/collaboration/inline-comments)
 has and Flock does not, and it is what the design team is actually missing.
 
-**One app, two modes.** The Electron app built at [step 13](#step-13--build-the-workspace-local-loop)
+**One app, two modes.** The Electron app built at [step 3.1](#31--build-the-workspace-local-loop-was-step-13)
 (`flock-designer/workspace/`) is renamed **Flock Designer**. *Author mode* is what it does today and
 needs a checkout. *Reviewer mode* is new and needs only a GitHub account.
 
@@ -122,7 +122,7 @@ degrades to a page-level comment that says so.** Dragging out a region is deferr
 |---|---|
 | A comment overlay built into the prototype itself | Needs a small server to finish a web sign-in, and a change to Coke's build |
 | A Chrome extension | Still an install, plus a store listing, updates and permission review; anchoring on someone else's page is brittle |
-| A hosted web app that also *builds* prototypes | That is the managed harness — cloud builds against Coke. Closest to Magic Patterns and by far the most expensive; [step 11](#step-11--decide-if-the-managed-harness-is-needed) decides it on evidence |
+| A hosted web app that also *builds* prototypes | That is the managed harness — cloud builds against Coke. Closest to Magic Patterns and by far the most expensive; [step 4.3](#43--decide-if-the-managed-harness-is-needed-was-step-11) decides it on evidence |
 | A separate comments service | A server and database to own, for something GitHub already does |
 
 **The line to hold: no server, no database, no second client.** Every "weird web of stuff" risk
@@ -130,53 +130,67 @@ traces to adding one of those.
 
 ## The sequence
 
-**Every step, in order.** ✔ done · ◐ built, awaiting a check · ▶ next · ○ not started · ⏸ needs a
-person. The number is the order things happen. The name in brackets is what the step is called in its
-own section and in the change log.
+**Four phases, every step in order.** ✔ done · ◐ built, awaiting a check · ▶ next · ○ not started ·
+⏸ needs a person. Steps are numbered by phase: **1.1 to 4.3**. The last column is what the step was
+called before 2026-10-05, so history still resolves.
 
-| # | Step | Status | Evidence, or what it needs |
-|---|---|---|---|
-| 1 | [Decide the rules](#step-1--decide-the-rules) | ⏸ Needs a person | Name the Design System owner. Everything else here is settled |
-| 2 | [Set up the first files](#step-2--set-up-the-first-files) | ✔ Done | `4538812e` |
-| 3 | [Rename existing prototype work](#step-3--rename-existing-prototype-work) | ✔ Done | Nothing needed renaming |
-| 4 | [Fix the product repository files](#step-4--fix-the-product-repository-files) | ✔ Done | 1,006 checks; cold start passed |
-| 5 | [Design-system agent files](#step-5--design-system-agent-files-what-is-still-owed) ([full account](#step-5--set-up-the-design-system-agent-files)) | ◐ Built — awaiting approval | Standards written and verified; the Design System owner approves them |
-| 6 | [Create the shared repository](#step-6--create-the-shared-repository) | ✔ Done | `3d15ae9`. Moving it to the `flocksafety` org is step 22 |
-| 7 | [Confirm the prototype harness](#step-7--confirm-the-prototype-harness) | ✔ Done | Reviewed 2026-09-29; the watermark and icon defects it found are fixed |
-| 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | ✔ Done | The real shell renders on fixtures. Designer install access is step 23 |
-| 9 | [Prove it on real decisions](#step-9--prove-it-on-real-decisions) | ✔ Done | Four proofs; the resume test passed |
-| 10 | [Run a prototype in the real shell](#step-a2--run-a-prototype-in-the-real-shell) *(A2)* | ✔ Done | `667c5070` |
-| 11 | [Prove the codebase path](#step-b1--prove-the-codebase-path) *(B1)* | ✔ Done | `56aee3c3` |
-| 12 | [Build the handoff](#step-b2--build-the-handoff) *(B2)* | ✔ Done | `3f137cd6`, `cef176be` |
-| 13 | [Close the review and evidence gaps](#step-b3--close-the-review-and-evidence-gaps) *(B3)* | ✔ Done | The accessibility scan runs; the handoff gate passes on all six work branches |
-| 14 | [Build the local authoring app](#step-13--build-the-workspace-local-loop) *(old step 13)* | ✔ Done | `158eab3`; confirmed working |
-| 15 | [Stop copying the design system](#step-d1--stop-copying-the-design-system-point-at-it) *(D1)* | ✔ Done | `873aba9`, `bf5b4c13` |
-| 16 | [Sign in, and the comment store](#step-c1--prove-sign-in-and-the-comment-store) *(C1)* | ◐ Built — awaiting your check | Sign-in and the project list work against the real repo (`a182852`, `ab794d6`). **You:** open an iteration and post one comment; then a second person signs in |
-| 17 | [Open a preview and comment on an element](#step-c2--open-a-preview-and-comment-on-an-element) *(C2)* | ▶ **Next** | Needs nothing from anyone |
-| 18 | [Share for review](#step-c3--share-for-review) *(C3)* | ○ Not started | Also publishes the iteration record automatically. Finishing end to end needs Coke engineering's mock-data build |
-| 19 | [Close the loop](#step-c4--close-the-loop) *(C4)* | ○ Not started | Comments become something the agent can act on |
-| 20 | [Pilot and decision](#step-c5--pilot-and-decision) *(C5)* | ⏸ Needs people | Real projects reviewed by people outside design |
-| 21 | [Managed harness decision](#step-11--decide-if-the-managed-harness-is-needed) *(old 11)* | ⏸ Conditional | Only if local setup fails designers |
-| 22 | [Ship the design-system context in the package](#step-17--ship-the-design-system-context-in-the-package) *(old 17)* | ⏸ Needs a person | The org transfer and packaging; the Design System owner |
-| 23 | [Designer environment access](#step-18--designer-environment-access) *(old 18)* | ⏸ Needs a person | Registry access, then the unaided designer test |
+### Phase 1 — Foundation: the rules, the context, and the shared repository
 
-Steps 16–20 are one build, in order. Steps 1, 5 and 21–23 need a person and do not hold up the
-build. Each finished step's detail, with its evidence, is in
-[Appendix B](#appendix-b--what-was-built-and-why).
+*Done apart from two approvals. If we stopped here, the agent already has the right context.*
 
-**Phases, and what exists if we stop after each one.** Each is useful alone, so none is a bet on the
-next.
+| # | Step | Status | Evidence, or what it needs | Was |
+|---|---|---|---|---|
+| 1.1 | [Decide the rules](#11--decide-the-rules-was-step-1) | ⏸ Needs a person | Name the Design System owner. Everything else here is settled | step 1 |
+| 1.2 | [Set up the first files](#12--set-up-the-first-files-was-step-2) | ✔ Done | `4538812e` | step 2 |
+| 1.3 | [Rename existing prototype work](#13--rename-existing-prototype-work-was-step-3) | ✔ Done | Nothing needed renaming | step 3 |
+| 1.4 | [Fix the product repository files](#14--fix-the-product-repository-files-was-step-4) | ✔ Done | 1,006 checks; cold start passed | step 4 |
+| 1.5 | [Design-system agent files](#15--design-system-agent-files-what-is-still-owed-was-step-5) ([full account](#15--set-up-the-design-system-agent-files-the-full-account-was-step-5)) | ◐ Built — awaiting approval | Standards written and verified; the Design System owner approves them | step 5 |
+| 1.6 | [Create the shared repository](#16--create-the-shared-repository-was-step-6) | ✔ Done | `3d15ae9`. Moving it to the `flocksafety` org is 4.2 | step 6 |
+| 1.7 | [Stop copying the design system](#17--stop-copying-the-design-system-point-at-it-was-d1) | ✔ Done | `873aba9`, `bf5b4c13` | D1 |
 
-| Phase | Step | If we stop here, the team has |
-|---|---|---|
-| 1 — Identity and store | C1 | Sign-in, and a browsable list of every project and iteration |
-| 2 — Commenting | C2 | Click-to-comment on a prototype, against any preview |
-| 3 — Sharing | C3 | The full loop: author shares, reviewer opens and comments |
-| 4 — Agent loop | C4 | Comments that the agent can act on |
-| 5 — Decision | C5 | Evidence on whether to keep going |
+### Phase 2 — Working in the codebase: prototypes and real code, on mock data
 
-**Natural stop points are after C2 and C4.** C2 answers whether commenting feels right; C4 answers
-whether closing the loop is worth it.
+*Done. If we stopped here, a designer can build a prototype or a real change, and engineering can take the branch.*
+
+| # | Step | Status | Evidence, or what it needs | Was |
+|---|---|---|---|---|
+| 2.1 | [Confirm the prototype harness](#21--confirm-the-prototype-harness-was-step-7) | ✔ Done | Reviewed 2026-09-29; the watermark and icon defects it found are fixed | step 7 |
+| 2.2 | [Make the product runnable on mock data](#22--make-the-product-runnable-on-mock-data-was-step-8) | ✔ Done | The real shell renders on fixtures. Designer install access is 4.1 | step 8 |
+| 2.3 | [Prove it on real decisions](#23--prove-it-on-real-decisions-was-step-9) | ✔ Done | Four proofs; the resume test passed | step 9 |
+| 2.4 | [Run a prototype in the real shell](#24--run-a-prototype-in-the-real-shell-was-a2) | ✔ Done | `667c5070` | A2 |
+| 2.5 | [Prove the codebase path](#25--prove-the-codebase-path-was-b1) | ✔ Done | `56aee3c3` | B1 |
+| 2.6 | [Build the handoff](#26--build-the-handoff-was-b2) | ✔ Done | `3f137cd6`, `cef176be` | B2 |
+| 2.7 | [Close the review and evidence gaps](#27--close-the-review-and-evidence-gaps-was-b3) | ✔ Done | The accessibility scan runs; the handoff gate passes on all six work branches | B3 |
+
+### Phase 3 — Flock Designer: the whole team browses and comments
+
+*In progress. This is the current build.*
+
+| # | Step | Status | Evidence, or what it needs | Was |
+|---|---|---|---|---|
+| 3.1 | [Build the local authoring app](#31--build-the-workspace-local-loop-was-step-13) | ✔ Done | `158eab3`; confirmed working | step 13 |
+| 3.2 | [Sign in, and the comment store](#32--prove-sign-in-and-the-comment-store-was-c1) | ◐ Built — awaiting your check | Sign-in and the project list work against the real repo (`a182852`, `ab794d6`). **You:** open an iteration and post one comment; then a second person signs in | C1 |
+| 3.3 | [Open a preview and comment on an element](#33--open-a-preview-and-comment-on-an-element-was-c2) | ▶ **Next** | Needs nothing from anyone | C2 |
+| 3.4 | [Share for review](#34--share-for-review-was-c3) | ○ Not started | Also publishes the iteration record automatically. Finishing end to end needs Coke engineering's mock-data build | C3 |
+| 3.5 | [Close the loop](#35--close-the-loop-was-c4) | ○ Not started | Comments become something the agent can act on | C4 |
+| 3.6 | [Pilot and decision](#36--pilot-and-decision-was-c5) | ⏸ Needs people | Real projects reviewed by people outside design | C5 |
+
+**If we stop after 3.2:** sign-in and a browsable list of every project. **After 3.3:** click-to-comment
+on a prototype, against any preview. **After 3.4:** the full loop — author shares, reviewer opens and
+comments. **After 3.5:** comments the agent can act on. **Natural stop points are after 3.3 and 3.5:**
+3.3 answers whether commenting feels right, and 3.5 whether closing the loop is worth it.
+
+### Phase 4 — Rollout and open decisions
+
+*Needs other people, and none of it holds up Phase 3. It can start any time.*
+
+| # | Step | Status | Evidence, or what it needs | Was |
+|---|---|---|---|---|
+| 4.1 | [Designer environment access](#41--designer-environment-access-was-step-18) | ⏸ Needs a person | Registry access, then the unaided designer test | step 18 |
+| 4.2 | [Ship the design-system context in the package](#42--ship-the-design-system-context-in-the-package-was-step-17) | ⏸ Needs a person | The org transfer and packaging; the Design System owner | step 17 |
+| 4.3 | [Decide if the managed harness is needed](#43--decide-if-the-managed-harness-is-needed-was-step-11) | ⏸ Conditional | Only if local setup fails designers | step 11 |
+
+Each finished step's detail, with its evidence, is in [Appendix B](#appendix-b--what-was-built-and-why).
 
 **How the work flows.** Build step after step. A step whose last check needs a person is marked
 **Built — awaiting check** and the next step starts anyway; it is not closed until that person has
@@ -184,21 +198,21 @@ done it, and Claude never closes it. The work stops only at these points:
 
 | Stop | When | What I need | What I do meanwhile |
 |---|---|---|---|
-| 1 | Before C1 | **Cleared 2026-10-05** — Noah registered the GitHub App and sent its client ID | — |
-| 2 | End of C1 | **Partly cleared:** Noah signed in under company SSO. Still needed: one comment posted in the app, and a second person signing in | Start C2, which works against a local preview |
-| 3 | End of C2 | One reviewer saying whether commenting feels right, and a security look | Start C3 |
-| 4 | C3, end to end | Coke engineering merging the mock-data build | Finish and test the app side against a stub; draft the Coke change |
-| 5 | C5 | Real projects reviewed by people outside design | Nothing — this is the decision |
+| 1 | Before 3.2 | **Cleared 2026-10-05** — Noah registered the GitHub App and sent its client ID | — |
+| 2 | End of 3.2 | **Partly cleared:** Noah signed in under company SSO. Still needed: one comment posted in the app, and a second person signing in | Start 3.3, which works against a local preview |
+| 3 | End of 3.3 | One reviewer saying whether commenting feels right, and a security look | Start 3.4 |
+| 4 | 3.4, end to end | Coke engineering merging the mock-data build | Finish and test the app side against a stub; draft the Coke change |
+| 5 | 3.6 | Real projects reviewed by people outside design | Nothing — this is the decision |
 
-Everything else — C1's build, C2's build, C3's app side, all of C4 — runs without waiting.
+Everything else — the builds of 3.2, 3.3 and 3.5, and 3.4's app side — runs without waiting.
 
 ### A step does not close with its own work unmet
 
 **A step is Complete only when nothing in its own scope is outstanding.** Not "outstanding but
 recorded" — outstanding.
 
-This rule exists because the opposite kept happening: step 7 closed with "opened" never verified,
-step 8 closed having built half of what it owned, and the automated accessibility scan was recorded
+This rule exists because the opposite kept happening: step 2.1 closed with "opened" never verified,
+step 2.2 closed having built half of what it owned, and the automated accessibility scan was recorded
 **"not run"** on four consecutive artifacts without anyone fixing the cause. Each record was honest.
 The honesty became a release valve — writing the gap down felt like discharging it.
 
@@ -222,8 +236,8 @@ the friction log, the handoff document. It just does not sit in the critical pat
 ### How a step gets marked Complete
 
 **Every step names how it is checked, and a step whose check needs a person cannot be closed by
-Claude.** This rule exists because it was broken: step 7 was marked Complete with "opens" never
-verified, and step 8 was closed having implemented half of what it owned.
+Claude.** This rule exists because it was broken: step 2.1 was marked Complete with "opens" never
+verified, and step 2.2 was closed having implemented half of what it owned.
 
 | Check type | Meaning |
 |---|---|
@@ -232,27 +246,28 @@ verified, and step 8 was closed having implemented half of what it owned.
 | **Human** | A named person has to do something. **Claude may not mark these Complete** |
 
 
-### Step 1 — Decide the rules
+### 1.1 — Decide the rules (was step 1)
+
+*Written before the 2026-10-05 renumbering: step numbers in the paragraphs below are the old ones. The name map at the top of [Appendix B](#appendix-b--what-was-built-and-why) translates them.*
 
 **Noah. Complete.** Settled over the course of writing this plan rather than in a sign-off meeting:
 
 - The [agent contract](#the-agent-contract), the [artifact matrix](#what-each-piece-of-work-owes), the four credibility levels, and the [request guide](#the-request-guide) are **approved** — they were revised repeatedly while writing this, which is the approval.
 - The four decisions below are **settled**.
-- **Owners:** Noah owns the sequence and every judgment in it. Claude does the repository work. Step 5 needs the Design System owner, step 10 needs a receiving engineer, and steps 13–16 need engineering — each named when that step is reached rather than in advance.
-- **These planning documents live in `flocksafety/flock-designer`**, alongside the standards and the project folders, and move there when step 6 pushes.
-- **Baselines** are a file, not a gate: `.flkd/knowledge/baselines.md` is waiting, and the numbers go in when someone has them. Step 16 is the only thing that needs them.
+- **Owners:** Noah owns the sequence and every judgment in it. Claude does the repository work. 1.5 needs the Design System owner, 2.6 needs a receiving engineer, and 3.2–3.6 need engineering — each named when that step is reached rather than in advance.
+- **These planning documents live in `flocksafety/flock-designer`**, alongside the standards and the project folders, and move there when 1.6 pushes.
+- **Baselines** are a file, not a gate: `.flkd/knowledge/baselines.md` is waiting, and the numbers go in when someone has them. 3.6 is the only thing that needs them.
 
 **Also settled**, costing nothing but agreement: the `fd/<project-id>/iN` branch namespace, the
 [project folder](#the-project-folder) layout, and mock or synthetic data only — never production
 data or credentials.
 
-
-### Step 5 — Design-system agent files: what is still owed
+### 1.5 — Design-system agent files: what is still owed (was step 5)
 
 **Human — the Design System owner, once named.** The work itself is done and verified (full account
-in [Appendix B](#step-5--set-up-the-design-system-agent-files)): the authoring standards exist in
+in [Appendix B](#15--set-up-the-design-system-agent-files-the-full-account-was-step-5)): the authoring standards exist in
 FUI's `.flkd/authoring/`, and the snapshot problem the resolution half was fighting is gone
-([step D1](#step-d1--stop-copying-the-design-system-point-at-it)). Two approvals remain:
+([step 1.7](#17--stop-copying-the-design-system-point-at-it-was-d1)). Two approvals remain:
 
 - **Approve the authoring standards** (`authoring/components.md` and `authoring/stories.md` in
   `flock-react-component-lib`).
@@ -261,21 +276,7 @@ FUI's `.flkd/authoring/`, and the snapshot problem the resolution half was fight
 
 **Done when:** the owner has approved both. Nothing here blocks the steps below.
 
-### Step 11 — Decide if the managed harness is needed
-
-**Noah.** With the friction log from steps 8 and 9 in hand, decide whether designers are still
-blocked from running the product.
-
-The managed harness is the single most expensive thing in this plan — a product-specific adapter
-that clones at a pinned revision, resolves FUI, and generates a runnable near-replica, per product.
-It exists for designers who cannot run the product locally, and step 8 addresses that far more
-cheaply. Deciding in advance would invert the evidence.
-
-**Done when:** the decision is recorded in the change log either way. If yes, see
-[the managed harness](#if-step-11-says-yes-the-managed-harness).
-
-
-### Step C1 — Prove sign-in and the comment store
+### 3.2 — Prove sign-in and the comment store (was C1)
 
 **Claude. Mechanical, plus one human check.** Built in the existing app. Everything later depends on
 two things being true that are *not yet verified*: that device-flow sign-in works for people in the
@@ -298,7 +299,7 @@ with a real company account, to confirm the org's SSO behaves.
 **Needs:** one GitHub App client ID, registered by Noah for development. **Not in this step:** previews,
 anchoring, any server.
 
-### Step C2 — Open a preview and comment on an element
+### 3.3 — Open a preview and comment on an element (was C2)
 
 **Claude. Mechanical, plus a human feel check.** Can be built and tested against a local design-mode
 preview, so it does not wait on CI.
@@ -318,7 +319,7 @@ one reviewer places a comment and says whether it feels right.
 
 **Not in this step:** dragging a region, thumbnails, notifications.
 
-### Step C3 — Share for review
+### 3.4 — Share for review (was C3)
 
 **Claude for the app; Coke engineering for CI.** The author's half: without it a reviewer has
 nothing to open.
@@ -342,7 +343,7 @@ Today the preview workflow runs `build:dev` — Auth0 login, real dev APIs, no m
 `/design/:projectId` route — so a real link would show a login screen on real data. **Claude drafts
 that change; merging it is engineering's.**
 
-### Step C4 — Close the loop
+### 3.5 — Close the loop (was C4)
 
 **Claude. Mechanical.** Comments are worth more if the agent can act on them.
 
@@ -354,7 +355,7 @@ that change; merging it is engineering's.**
 **Done when:** on one real project, comments placed through the app produce a change on the branch
 through that instruction, with no app involved on the agent's side.
 
-### Step C5 — Pilot and decision
+### 3.6 — Pilot and decision (was C5)
 
 **Human.** Two or three real projects reviewed through the app by people **outside design** — a PM and
 an engineer at minimum.
@@ -362,10 +363,44 @@ an engineer at minimum.
 **Done when:** the team decides to keep it, change it, or stop, on what happened: did they open it,
 did they comment, how long from share to first comment, what did they say about installing it.
 
-### Step 17 — Ship the design-system context in the package
+### 4.1 — Designer environment access (was step 18)
 
-**Design System owner, with a developer.** Much smaller since [step D1](#step-d1--stop-copying-the-design-system-point-at-it) removed the snapshots this step existed to keep current. Deferred here
-deliberately: steps 1–16 work against a sibling checkout, which is enough to build and prove the
+**Noah, with whoever owns the internal registry; then a test designer.** Split out of
+[step 2.2](#22--make-the-product-runnable-on-mock-data-was-step-8) on 2026-09-28, because everything left in
+it needs access or a person rather than code.
+
+**What step 2.2 found.** Design mode works — the real shell renders on fixtures, verified from
+screenshots. But a **fresh clone cannot install anything**: `npm ci` fails with `401`, because
+**1,320 of the 1,428 packages in `package-lock.json` resolve through AWS CodeArtifact**, Flock's
+internal registry, and a designer has no credentials for it. GitHub Packages was never the problem.
+
+- **Confirm the correct AWS SSO command.** `aws login` is a guess in
+  `src/prototypes/DESIGN-MODE.md`, explicitly marked unconfirmed. The domain, owner, repository and
+  region in the `codeartifact login` line are read from the registry URL and are right; the
+  credential step is not. A designer following a wrong AWS command fails exactly like they would
+  have with the GitHub misdiagnosis that step 2.2 already had to correct.
+- **Provision designer access** to that registry. The plan owner confirmed on 2026-09-28 that
+  designers are meant to have it.
+- **Verify `npm ci` on a fresh clone.** This is the only remaining technical unknown from step 2.2:
+  `msw`'s 43 lockfile entries were **ported by hand** because no install was possible, and **no
+  clean `npm ci` has ever run against them.** If the port is wrong, the symptom is design mode
+  failing rather than an obvious install error — so this must be checked before a designer sees it,
+  not after.
+- **Decide whether the 12-hour token expiry needs mitigating.** Provisioning does not fix it. Every
+  designer will repeatedly hit a setup that worked yesterday and does not today, with an error
+  naming npm rather than AWS. `DESIGN-MODE.md` documents it as expected behavior, which is the
+  cheapest mitigation and may be enough — but it is recurring friction of the kind that produces
+  quiet abandonment rather than complaints, so the friction log should watch for it.
+- **Then run the unaided designer test** — a designer who has never run Coke, given only the README
+  and `DESIGN-MODE.md`, with no help. Record where they stick and for how long.
+
+**Done when:** a designer with no prior setup runs `npm ci` successfully and reaches a running app
+on mock data unaided, and the result is in the friction log.
+
+### 4.2 — Ship the design-system context in the package (was step 17)
+
+**Design System owner, with a developer.** Much smaller since [step 1.7](#17--stop-copying-the-design-system-point-at-it-was-d1) removed the snapshots this step existed to keep current. Deferred here
+deliberately: Phases 1–3 work against a sibling checkout, which is enough to build and prove the
 workflow. This closes the class of problem rather than managing it.
 
 **Why it is not just a packaging task.** [Decision 1](#decisions-the-audit-raises) recommends
@@ -376,7 +411,7 @@ once in `0f25abd` and have never been regenerated. Publishing a manifest nothing
 distributes the stale one on a schedule.
 
 - **No generator is needed, and the snapshots are gone** — see
-  [step D1](#step-d1--stop-copying-the-design-system-point-at-it). This step used to exist largely to
+  [step 1.7](#17--stop-copying-the-design-system-point-at-it-was-d1). This step used to exist largely to
   keep a copy of the design system's facts in step with the design system. There is no copy. What
   remains here is smaller and is about distribution only: whether the judgment files in `.flkd/`
   travel with the package rather than requiring a sibling checkout.
@@ -402,48 +437,25 @@ Batched here because it needs the same thing everything above needs — someone 
 - **Transfer `noahshrader-flock/flock-designer` to `flocksafety/flock-designer`.** Settings →
   Transfer ownership, from either side. It is a one-step GitHub operation that keeps full history,
   so nothing gets redone and no reference in this document changes meaning.
-- It was carried as step 6's open item until 2026-09-28, which made a finished step look unfinished.
-  Step 6's work is done; this is an address change and belongs with the other permissioned items.
+- It was carried as step 1.6's open item until 2026-09-28, which made a finished step look unfinished.
+  Step 1.6's work is done; this is an address change and belongs with the other permissioned items.
 
 **Done when:** a product installs the package and reads FUI context that provably matches the
 installed version, with no sibling checkout and no tag discipline required — and the shared
 repository lives at `flocksafety/flock-designer`.
 
+### 4.3 — Decide if the managed harness is needed (was step 11)
 
-### Step 18 — Designer environment access
+**Noah.** With the friction log from 2.2 and 2.3 in hand, decide whether designers are still
+blocked from running the product.
 
-**Noah, with whoever owns the internal registry; then a test designer.** Split out of
-[step 8](#step-8--make-the-product-runnable-on-mock-data) on 2026-09-28, because everything left in
-it needs access or a person rather than code.
+The managed harness is the single most expensive thing in this plan — a product-specific adapter
+that clones at a pinned revision, resolves FUI, and generates a runnable near-replica, per product.
+It exists for designers who cannot run the product locally, and step 2.2 addresses that far more
+cheaply. Deciding in advance would invert the evidence.
 
-**What step 8 found.** Design mode works — the real shell renders on fixtures, verified from
-screenshots. But a **fresh clone cannot install anything**: `npm ci` fails with `401`, because
-**1,320 of the 1,428 packages in `package-lock.json` resolve through AWS CodeArtifact**, Flock's
-internal registry, and a designer has no credentials for it. GitHub Packages was never the problem.
-
-- **Confirm the correct AWS SSO command.** `aws login` is a guess in
-  `src/prototypes/DESIGN-MODE.md`, explicitly marked unconfirmed. The domain, owner, repository and
-  region in the `codeartifact login` line are read from the registry URL and are right; the
-  credential step is not. A designer following a wrong AWS command fails exactly like they would
-  have with the GitHub misdiagnosis that step 8 already had to correct.
-- **Provision designer access** to that registry. The plan owner confirmed on 2026-09-28 that
-  designers are meant to have it.
-- **Verify `npm ci` on a fresh clone.** This is the only remaining technical unknown from step 8:
-  `msw`'s 43 lockfile entries were **ported by hand** because no install was possible, and **no
-  clean `npm ci` has ever run against them.** If the port is wrong, the symptom is design mode
-  failing rather than an obvious install error — so this must be checked before a designer sees it,
-  not after.
-- **Decide whether the 12-hour token expiry needs mitigating.** Provisioning does not fix it. Every
-  designer will repeatedly hit a setup that worked yesterday and does not today, with an error
-  naming npm rather than AWS. `DESIGN-MODE.md` documents it as expected behavior, which is the
-  cheapest mitigation and may be enough — but it is recurring friction of the kind that produces
-  quiet abandonment rather than complaints, so the friction log should watch for it.
-- **Then run the unaided designer test** — a designer who has never run Coke, given only the README
-  and `DESIGN-MODE.md`, with no help. Record where they stick and for how long.
-
-**Done when:** a designer with no prior setup runs `npm ci` successfully and reaches a running app
-on mock data unaided, and the result is in the friction log.
-
+**Done when:** the decision is recorded in the change log either way. If yes, see
+[the managed harness](#if-step-11-says-yes-the-managed-harness).
 
 ### Waiting on other people — never blocks a step
 
@@ -452,17 +464,17 @@ none holds up the work in front of it.
 
 | Needs | Who | What it unblocks |
 |---|---|---|
-| Name the Design System owner | Noah | Steps 1, 5 and 17 |
-| Register a **development GitHub App**, install it on the design repo, and give me its client ID | Noah | C1 |
+| Name the Design System owner | Noah | 1.1, 1.5 and 4.2 |
+| Register a **development GitHub App**, install it on the design repo, and give me its client ID | Noah | 3.2 |
 | Move the design repo from `noahshrader-flock` to the `flocksafety` org | Someone with org permission | Everyone else's access; rollout |
 | Register the GitHub App **for the org** and install it on the design repo | An org owner | Rollout |
-| `build:design` and CI for `fd/*` branches — I draft it | Coke engineering | C3, end to end |
-| Read access to the **design repo** for PMs (not Coke) | GitHub admin | C5 |
+| `build:design` and CI for `fd/*` branches — I draft it | Coke engineering | 3.4, end to end |
+| Read access to the **design repo** for PMs (not Coke) | GitHub admin | 3.6 |
 | How internal Mac apps are deployed here, what they require (usually signing), and the turnaround | IT | Rollout |
-| A security look at an app that reads SSO-protected pages and holds a token | Security | Closing C2 |
-| Whether a managed harness is needed ([step 11](#step-11--decide-if-the-managed-harness-is-needed)) | Noah | Only if local setup fails designers |
-| Registry access and the unaided designer test ([step 18](#step-18--designer-environment-access)) | Noah + the registry owner | Real designer onboarding |
-| Package and org items ([step 17](#step-17--ship-the-design-system-context-in-the-package)) | Design System owner | Smaller now than it was |
+| A security look at an app that reads SSO-protected pages and holds a token | Security | Closing 3.3 |
+| Whether a managed harness is needed ([step 4.3](#43--decide-if-the-managed-harness-is-needed-was-step-11)) | Noah | Only if local setup fails designers |
+| Registry access and the unaided designer test ([step 4.1](#41--designer-environment-access-was-step-18)) | Noah + the registry owner | Real designer onboarding |
+| Package and org items ([step 4.2](#42--ship-the-design-system-context-in-the-package-was-step-17)) | Design System owner | Smaller now than it was |
 
 **Status values:** Not started, In progress, **Built — awaiting check**, Complete. A step is Complete only when its "done when"
 is met and the evidence is cited in the [change log](#change-log).
@@ -479,7 +491,7 @@ is met and the evidence is cited in the [change log](#change-log).
 | App UI | **The Flock design system (FUI)**, as it is today | The tool uses the system it serves, and the renderer already does. shadcn/ui and Tailwind were considered and set aside. The cost: building the app needs the `@flocksafety` GitHub Packages token, and it stays on React 18 for FUI's peer dependencies |
 | Preview | A CI-built **mock-data** deployment; **one PR per branch**, always draft | A PR's head branch cannot change, so one PR per shared branch is the only mapping GitHub has |
 | Distribution | IT's device management | Internal only; no store, and IT can push updates |
-| Data | Mock or synthetic only — never production data | Unchanged since step 1 |
+| Data | Mock or synthetic only — never production data | Unchanged since step 1.1 |
 | Persistence | Branches kept; previews expire; comments and the record kept in the design repo | A comment must outlive the preview it was made on |
 | Component gaps | Through the [learning loop](#the-learning-loop) | Unchanged |
 
@@ -492,9 +504,9 @@ automating handoff inside the app (`npm run handoff` already does it). See
 | Risk | Why it matters | Mitigation |
 |---|---|---|
 | **Electron upkeep** | A new major version ships every 8 weeks and only the latest three are supported ([policy](https://www.electronjs.org/docs/latest/tutorial/electron-timelines)) | Someone owns an upgrade at least about twice a year. **The largest standing cost** |
-| **Org SSO unverified** | GitHub's docs confirm device flow needs no secret for GitHub Apps and gives fine-grained permissions, but say nothing about org SSO | C1 tests with a real company account |
+| **Org SSO unverified** | GitHub's docs confirm device flow needs no secret for GitHub Apps and gives fine-grained permissions, but say nothing about org SSO | 3.2 tests with a real company account |
 | **The CI change** | Without a mock-data build the link is a login screen on real dev data — also a breach of the data rule | Coke engineering; drafted by Claude |
-| **Reading SSO-protected pages** | The app displays and inspects internal pages | The preview gets no bridge; security review before C2 closes |
+| **Reading SSO-protected pages** | The app displays and inspects internal pages | The preview gets no bridge; security review before 3.3 closes |
 | **Anchoring drift** | Selectors break when markup changes; `data-e2e-ref` coverage is unmeasured | Route + selector + text + crop; degrade to a page-level comment |
 | **Deployment to laptops** | Unsigned Mac apps are blocked by default, even inside a company | The IT question above |
 | **Preview expiry** | A comment's page can disappear | Comments carry commit and route; rebuild from the branch |
@@ -508,7 +520,7 @@ automating handoff inside the app (`npm run handoff` already does it). See
 | A web app, a browser extension, or a second client | One client to maintain. A hosted version stays a fallback if IT's deployment route is awkward |
 | Live syncing | The app fetches comments when a project is opened |
 | Auto-update | IT pushes new versions |
-| Thumbnails and a polished gallery | Decide after C2, on whether people want to browse |
+| Thumbnails and a polished gallery | Decide after 3.3, on whether people want to browse |
 | Dragging out a region | Click-an-element first; a region is a small step later |
 | Windows | Open question — see below |
 | Any visual canvas, embedded editor, Figma import, or model-provider integration | Never in this plan |
@@ -517,9 +529,9 @@ automating handoff inside the app (`npm run handoff` already does it). See
 
 Decisions already settled in this plan are not repeated here. What remains genuinely open:
 
-- **Is Mac enough for now?** Windows roughly doubles the distribution work. Decide before C5.
-- **Does device flow work with the company's SSO?** GitHub's docs are silent on it; they do confirm device flow for GitHub Apps. C1 answers it.
-- **How complete is `data-e2e-ref` coverage** on the elements people will want to comment on? Unmeasured; C2 measures it.
+- **Is Mac enough for now?** Windows roughly doubles the distribution work. Decide before 3.6.
+- **Does device flow work with the company's SSO?** GitHub's docs are silent on it; they do confirm device flow for GitHub Apps. 3.2 answers it.
+- **How complete is `data-e2e-ref` coverage** on the elements people will want to comment on? Unmeasured; 3.3 measures it.
 - **Who owns the Electron upgrade cadence**, and who holds the signing certificate IT requires?
 - **How long do preview deployments live**, and what happens to the comments on an expired one?
 - **Does a PM need anything beyond read access** to the design repo to comment on its issues? GitHub's docs say no; confirm with a real PM account.
@@ -534,7 +546,7 @@ Decisions already settled in this plan are not repeated here. What remains genui
   anything production, even by accident); and **(2)** who owns it and what it is called, so it has a
   named owner here instead of "engineering" in the abstract. Not resolved — recorded so it is not lost
   before those are known.
-- When does a review need real-shell validation rather than a reconstructed host? Step 9 should produce a rule of thumb rather than a policy written in advance.
+- When does a review need real-shell validation rather than a reconstructed host? Step 2.3 should produce a rule of thumb rather than a policy written in advance.
 - Which visual or interaction checks can be automated without making the workflow slow enough that designers route around it.
 - Whether prototype branches should expire from the product repository after some period, given that they never merge and accumulate indefinitely.
 - How the team protects the distinction between a prototype that is credible and code that is production-ready, once previews are easy to share widely.
@@ -708,7 +720,7 @@ grounded is the only reason to build here rather than in a design tool. So "Grou
 setting, and offering it implied you could opt out of the thing that makes this worth doing.
 
 **Handoff was not a level either.** Preparing work for engineering is a deliberate step with its own
-command — [step 10](#step-b2--build-the-handoff) — not something picked from a menu
+command — [step 10](#26--build-the-handoff-was-b2) — not something picked from a menu
 before any work exists.
 
 **What actually varies is how much of the thing gets built**, and the request already says it:
@@ -805,14 +817,14 @@ Stating this honestly is the only way to know whether the effort is worth it.
 
 **Where Magic Patterns is better, and these are real:**
 
-- **Time to first artifact.** Magic Patterns is a URL. Flock Designer needs a checkout that runs. This is the single largest risk to adoption, it is what [step 8](#step-8--make-the-product-runnable-on-mock-data) exists to fix, and [step 11](#step-11--decide-if-the-managed-harness-is-needed) is the fallback if step 8 is not enough.
+- **Time to first artifact.** Magic Patterns is a URL. Flock Designer needs a checkout that runs. This is the single largest risk to adoption, it is what [step 8](#22--make-the-product-runnable-on-mock-data-was-step-8) exists to fix, and [step 11](#43--decide-if-the-managed-harness-is-needed-was-step-11) is the fallback if step 8 is not enough.
 - **Sharing.** Magic Patterns gives a link immediately. Flock Designer has no shared preview until [step 14](#step-14--workspace-shared-review); until then review is live against a local preview. That is a genuine gap, not a deferral of something unimportant.
 - **Polish of the loop.** A funded product team has iterated on that experience for years. Steps 12 and 13 narrow it; they will not close it.
 
 **The bet this plan makes:** for a real product decision, fidelity and continuity matter more than
 the first thirty seconds. A prototype built from the installed components, in the real shell, that an
 engineer can continue from, is worth more than one that looks right and has to be rebuilt. If
-[step 9](#step-9--prove-it-on-real-decisions) shows that bet is wrong — that designers would rather
+[step 9](#23--prove-it-on-real-decisions-was-step-9) shows that bet is wrong — that designers would rather
 have something fast and disposable — that is a finding worth having early, and it is why step 9 comes
 before any application code.
 
@@ -839,7 +851,7 @@ The `noah/flock-designer` branch contains durable `.flkd` context for product pa
 
 The FUI `.flkd` directory contains an inventory of 133 `FS*` components, token data, deprecations, usage guidance, examples, and a validator. This is unusually valuable context, but it must be resolved against the app’s installed FUI version; the sibling library can be ahead of Coke.
 
-**What it does not yet contain: standards for working *in* the library.** Everything there describes FUI for a consumer. The standards for authoring and changing components, and for creating and adjusting stories, do not exist as agent files today. That is the design system’s own layer, and [step 5](#step-5--set-up-the-design-system-agent-files) adds it.
+**What it does not yet contain: standards for working *in* the library.** Everything there describes FUI for a consumer. The standards for authoring and changing components, and for creating and adjusting stories, do not exist as agent files today. That is the design system’s own layer, and [step 5](#15--set-up-the-design-system-agent-files-the-full-account-was-step-5) adds it.
 
 #### Runtime foundations
 
@@ -893,7 +905,7 @@ Where knowledge lives, and what each layer may not claim:
 | Project intelligence | The project folder in `flock-designer` | Decisions, feedback, open questions, ownership | A permanent rule after one project |
 | Tool adapters | Claude Code first through `.claude/agents`; future adapters including Codex | How a tool discovers the workflow | The durable source of truth |
 
-**The shared layer is a repository first and a package later.** It is created in [step 4](#step-4--fix-the-product-repository-files), holding the standards that carry no product-specific reference, and a product resolves it from a sibling checkout exactly as FUI context resolves today. A CODEOWNERS co-owner and a published package follow when promotions start changing the standards and when a second product adopts them. Published, it declares FUI as a peer dependency and resolves FUI's context, so a product installs one thing and the agent keeps one resolution order. It is not a per-designer tool plugin: Workspace invokes an agent against a checkout, and context that exists only on one machine is not there for Workspace, for CI, or for another engineer.
+**The shared layer is a repository first and a package later.** It is created in [step 4](#14--fix-the-product-repository-files-was-step-4), holding the standards that carry no product-specific reference, and a product resolves it from a sibling checkout exactly as FUI context resolves today. A CODEOWNERS co-owner and a published package follow when promotions start changing the standards and when a second product adopts them. Published, it declares FUI as a peer dependency and resolves FUI's context, so a product installs one thing and the agent keeps one resolution order. It is not a per-designer tool plugin: Workspace invokes an agent against a checkout, and context that exists only on one machine is not there for Workspace, for CI, or for another engineer.
 
 **A shared file states the rule; the product holds the instances.** The same rule then serves every product, and the product's `manifest.md` and `implementation/` supply what is true of it. Reasoning about the split belongs to [decision 4](#decisions-the-audit-raises).
 
@@ -1149,7 +1161,7 @@ because that is the direction that does not undo cleanly.
 thin adapter; routing through a Claude Code feature would move the decision into `.claude/` and break
 that. A `/prototype` shortcut can exist later as an adapter that expands to the same prompt.
 
-**Richer environment detection belongs to [Track C](#step-13--build-the-workspace-local-loop).** When
+**Richer environment detection belongs to [Track C](#31--build-the-workspace-local-loop-was-step-13).** When
 a designer is working through the Workspace rather than a terminal, the app knows whether they have a
 full checkout with dependencies or something lighter, and can settle the question before asking it.
 Today the branch is the reliable signal.
@@ -1441,7 +1453,7 @@ The files already make the case. Measured at `6bf0f1b8`, `standards/universal/` 
 
 ### The audit
 
-The checklist for [step 4](#step-4--fix-the-product-repository-files), plus what [step 5](#step-5--set-up-the-design-system-agent-files) and [step 6](#step-6--create-the-shared-repository) do.
+The checklist for [step 4](#14--fix-the-product-repository-files-was-step-4), plus what [step 5](#15--set-up-the-design-system-agent-files-the-full-account-was-step-5) and [step 6](#16--create-the-shared-repository-was-step-6) do.
 
 #### Product repository audit
 
@@ -1582,16 +1594,48 @@ Cut from the first pass to keep the path to a real prototype short. Nothing here
 
 *Every completed step, with its evidence and what it changed. Moved here intact on 2026-10-05.*
 
+## Name map: old step names to the new numbers
+
+Steps were renumbered by phase on 2026-10-05. Everything below, and the change log, still uses the old
+names, so this is how to read them.
+
+| Old name | Now | Step |
+|---|---|---|
+| step 1 | 1.1 | Decide the rules |
+| step 2 | 1.2 | Set up the first files |
+| step 3 | 1.3 | Rename existing prototype work |
+| step 4 | 1.4 | Fix the product repository files |
+| step 5 | 1.5 | Design-system agent files |
+| step 6 | 1.6 | Create the shared repository |
+| D1 | 1.7 | Stop copying the design system |
+| step 7 | 2.1 | Confirm the prototype harness |
+| step 8 | 2.2 | Make the product runnable on mock data |
+| step 9 | 2.3 | Prove it on real decisions |
+| A2 | 2.4 | Run a prototype in the real shell |
+| B1 | 2.5 | Prove the codebase path |
+| step 10, B2 | 2.6 | Build the handoff |
+| step 12, B3 | 2.7 | Close the review and evidence gaps |
+| step 13 | 3.1 | Build the local authoring app |
+| C1 | 3.2 | Sign in, and the comment store |
+| C2 | 3.3 | Open a preview and comment on an element |
+| C3 | 3.4 | Share for review |
+| C4 | 3.5 | Close the loop |
+| C5, step 16 | 3.6 | Pilot and decision |
+| step 18 | 4.1 | Designer environment access |
+| step 17 | 4.2 | Ship the design-system context in the package |
+| step 11 | 4.3 | Decide if the managed harness is needed |
+| steps 14 and 15 | — | Replaced by 3.3 and 3.4; automating handoff inside the app was dropped. Kept in [Appendix C](#appendix-c--superseded-designs) |
+
 ## Status blocks and navigation as they stood before 2026-10-05
 
 > ### Where we are
 >
-> **Tracks A and B are complete. Track C is paused** — [step 13](#step-13--build-the-workspace-local-loop)
+> **Tracks A and B are complete. Track C is paused** — [step 13](#31--build-the-workspace-local-loop-was-step-13)
 > is built and works, and the plan owner wants to revisit the idea before more is built on it.
 > **Every step Claude can finish is finished.** What is left needs other people: the
 > [decision gates](#part-iv--decision-gates) for steps 14–16, the Design System owner for
-> [step 17](#step-17--ship-the-design-system-context-in-the-package), and registry access for
-> [step 18](#step-18--designer-environment-access).
+> [step 17](#42--ship-the-design-system-context-in-the-package-was-step-17), and registry access for
+> [step 18](#41--designer-environment-access-was-step-18).
 >
 > **What is actually left in Track A:** a person opening a prototype and reviewing it. Four proofs are
 > built and every mechanical check passes; steps 7 and 9 both wait on that same act.
@@ -1601,14 +1645,14 @@ Cut from the first pass to keep the path to a real prototype short. Nothing here
 > read Complete in the table and In progress in the change log.
 >
 > Everything that needs access or another person is parked out of the critical path:
-> **[step 17](#step-17--ship-the-design-system-context-in-the-package)** (the shared repo's org
+> **[step 17](#42--ship-the-design-system-context-in-the-package-was-step-17)** (the shared repo's org
 > transfer, the FUI context generator, shipping `.flkd` in the package) and
-> **[step 18](#step-18--designer-environment-access)** (AWS registry access, and the unaided
+> **[step 18](#41--designer-environment-access-was-step-18)** (AWS registry access, and the unaided
 > designer test).
 >
 > Everything needing org or release permission — the shared repo's transfer to `flocksafety`, the FUI
 > context generator, shipping `.flkd` in the package — is collected in
-> **[step 17](#step-17--ship-the-design-system-context-in-the-package)** so it does not block the work
+> **[step 17](#42--ship-the-design-system-context-in-the-package-was-step-17)** so it does not block the work
 > in front of it.
 >
 > Step 6 is live at `noahshrader-flock/flock-designer` and waiting on an org transfer to
@@ -1647,19 +1691,19 @@ repository change through the [learning loop](#the-learning-loop), so every late
 
 **The managed harness is conditional on purpose.** It is the most expensive item here — a
 product-specific adapter that clones at a pinned revision and generates a runnable near-replica. It
-exists for designers who cannot run the product locally, and [step 8](#step-8--make-the-product-runnable-on-mock-data)
-addresses the same problem far more cheaply. [Step 11](#step-11--decide-if-the-managed-harness-is-needed)
+exists for designers who cannot run the product locally, and [step 8](#22--make-the-product-runnable-on-mock-data-was-step-8)
+addresses the same problem far more cheaply. [Step 11](#43--decide-if-the-managed-harness-is-needed-was-step-11)
 decides it on evidence.
 
 
 ### Status
 
-> **Tracks A and B are complete. Track C is paused** — [step 13](#step-13--build-the-workspace-local-loop)
+> **Tracks A and B are complete. Track C is paused** — [step 13](#31--build-the-workspace-local-loop-was-step-13)
 > is built and works, and the plan owner wants to revisit the idea before more is built on it.
 > **Every step Claude can finish is finished.** What is left needs other people: the
 > [decision gates](#part-iv--decision-gates) for steps 14–16, the Design System owner for
-> [step 17](#step-17--ship-the-design-system-context-in-the-package), and registry access for
-> [step 18](#step-18--designer-environment-access).
+> [step 17](#42--ship-the-design-system-context-in-the-package-was-step-17), and registry access for
+> [step 18](#41--designer-environment-access-was-step-18).
 >
 > **What is actually left in Track A:** a person opening a prototype and reviewing it. Four proofs are
 > built and every mechanical check passes; steps 7 and 9 both wait on that same act.
@@ -1669,14 +1713,14 @@ decides it on evidence.
 > read Complete in the table and In progress in the change log.
 >
 > Everything that needs access or another person is parked out of the critical path:
-> **[step 17](#step-17--ship-the-design-system-context-in-the-package)** (the shared repo's org
+> **[step 17](#42--ship-the-design-system-context-in-the-package-was-step-17)** (the shared repo's org
 > transfer, the FUI context generator, shipping `.flkd` in the package) and
-> **[step 18](#step-18--designer-environment-access)** (AWS registry access, and the unaided
+> **[step 18](#41--designer-environment-access-was-step-18)** (AWS registry access, and the unaided
 > designer test).
 >
 > Everything needing org or release permission — the shared repo's transfer to `flocksafety`, the FUI
 > context generator, shipping `.flkd` in the package — is collected in
-> **[step 17](#step-17--ship-the-design-system-context-in-the-package)** so it does not block the work
+> **[step 17](#42--ship-the-design-system-context-in-the-package-was-step-17)** so it does not block the work
 > in front of it.
 >
 > Step 6 is live at `noahshrader-flock/flock-designer`, pending an org transfer to
@@ -1689,12 +1733,12 @@ decides it on evidence.
 
 | Track | What it delivers | State |
 |---|---|---|
-| **A — the prototype path** | A designer takes a real request to a reviewed prototype, isolated from the product | **Complete**, bar one human gate in [step 1](#step-1--decide-the-rules) |
+| **A — the prototype path** | A designer takes a real request to a reviewed prototype, isolated from the product | **Complete**, bar one human gate in [step 1](#11--decide-the-rules-was-step-1) |
 | **B — the codebase path** | A designer builds the real frontend on mock data; engineering takes the branch | **Complete** |
-| **C — the Workspace app** | The Electron app that orchestrates both | **Paused 2026-09-29 by the plan owner.** [Step 13](#step-13--build-the-workspace-local-loop) is built and works; 14–16 wait on gates other people own, and on an idea Noah wants to revisit first |
-| **D — the design-system layer** | Context that points at the installed package instead of copying it, so it cannot go stale | **Complete** — [D1](#step-d1--stop-copying-the-design-system-point-at-it) deleted 3,071 lines of snapshot |
+| **C — the Workspace app** | The Electron app that orchestrates both | **Paused 2026-09-29 by the plan owner.** [Step 13](#31--build-the-workspace-local-loop-was-step-13) is built and works; 14–16 wait on gates other people own, and on an idea Noah wants to revisit first |
+| **D — the design-system layer** | Context that points at the installed package instead of copying it, so it cannot go stale | **Complete** — [D1](#17--stop-copying-the-design-system-point-at-it-was-d1) deleted 3,071 lines of snapshot |
 
-**[Step 18](#step-18--designer-environment-access)** (designer AWS access) and the packaging and org
+**[Step 18](#41--designer-environment-access-was-step-18)** (designer AWS access) and the packaging and org
 transfer sit outside the tracks because they need access or another person, and neither blocks the
 work in front of it.
 
@@ -1708,16 +1752,16 @@ to its section and every link resolves** — that is the thing to rely on, not t
 
 | # | Step | Done when | How it is checked | Status |
 |---|---|---|---|---|
-| 1 | [Decide the rules](#step-1--decide-the-rules) | Contracts approved, decisions settled, **owners named** | Human | **In progress** — the Design System owner is still unnamed, which blocks part of 5 and 17 |
-| 2 | [Set up the first files](#step-2--set-up-the-first-files) | The three files exist | Mechanical | **Complete** — `4538812e` |
-| 3 | [Rename existing prototype work](#step-3--rename-existing-prototype-work) | No `proto/<name>` branch or directory remains | Mechanical | **Complete** — nothing to rename |
-| 4 | [Fix the product repository files](#step-4--fix-the-product-repository-files) | Audit done; `validate.py` passes; cold start passes | Mechanical + cold start | **Complete** — 1,006 checks, cold start passed |
-| 5 | [Set up the design-system agent files](#step-5--set-up-the-design-system-agent-files) | Agent reads facts matching the installed version; authoring standards exist | Mechanical + human | **In progress** — standards done; the version half needs the generator, which needs the DS owner |
-| 6 | [Create the shared repository](#step-6--create-the-shared-repository) | Holds the standards, projects and plan; Coke resolves them | Mechanical | **Complete** — `3d15ae9` |
-| 7 | [Confirm the prototype harness](#step-7--confirm-the-prototype-harness) | One real artifact **builds, opens, and reviews cleanly** | Mechanical + human | **Complete** — reviewed 2026-09-29; the watermark and icon defects it surfaced are fixed |
-| 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | The real shell runs locally on mock data | Mechanical | **Complete** — render verified from screenshots |
-| 9 | [Prove it on real decisions](#step-9--prove-it-on-real-decisions) | A proof went request → **reviewed** prototype; a second person resumed from the folder alone | Human | **Complete** — four proofs, resume test passed, reviewed 2026-09-29 |
-| A2 | [Run a prototype in the real shell](#step-a2--run-a-prototype-in-the-real-shell) | A prototype mounts inside design mode with the product's real navigation and routing | Mechanical | **Complete** — `667c5070`; nav-inheritance verified by live test |
+| 1 | [Decide the rules](#11--decide-the-rules-was-step-1) | Contracts approved, decisions settled, **owners named** | Human | **In progress** — the Design System owner is still unnamed, which blocks part of 5 and 17 |
+| 2 | [Set up the first files](#12--set-up-the-first-files-was-step-2) | The three files exist | Mechanical | **Complete** — `4538812e` |
+| 3 | [Rename existing prototype work](#13--rename-existing-prototype-work-was-step-3) | No `proto/<name>` branch or directory remains | Mechanical | **Complete** — nothing to rename |
+| 4 | [Fix the product repository files](#14--fix-the-product-repository-files-was-step-4) | Audit done; `validate.py` passes; cold start passes | Mechanical + cold start | **Complete** — 1,006 checks, cold start passed |
+| 5 | [Set up the design-system agent files](#15--set-up-the-design-system-agent-files-the-full-account-was-step-5) | Agent reads facts matching the installed version; authoring standards exist | Mechanical + human | **In progress** — standards done; the version half needs the generator, which needs the DS owner |
+| 6 | [Create the shared repository](#16--create-the-shared-repository-was-step-6) | Holds the standards, projects and plan; Coke resolves them | Mechanical | **Complete** — `3d15ae9` |
+| 7 | [Confirm the prototype harness](#21--confirm-the-prototype-harness-was-step-7) | One real artifact **builds, opens, and reviews cleanly** | Mechanical + human | **Complete** — reviewed 2026-09-29; the watermark and icon defects it surfaced are fixed |
+| 8 | [Make the product runnable on mock data](#22--make-the-product-runnable-on-mock-data-was-step-8) | The real shell runs locally on mock data | Mechanical | **Complete** — render verified from screenshots |
+| 9 | [Prove it on real decisions](#23--prove-it-on-real-decisions-was-step-9) | A proof went request → **reviewed** prototype; a second person resumed from the folder alone | Human | **Complete** — four proofs, resume test passed, reviewed 2026-09-29 |
+| A2 | [Run a prototype in the real shell](#24--run-a-prototype-in-the-real-shell-was-a2) | A prototype mounts inside design mode with the product's real navigation and routing | Mechanical | **Complete** — `667c5070`; nav-inheritance verified by live test |
 
 **Track A is complete, 2026-09-29.** Four proofs built, the resume test passed, a person opened and
 reviewed one — which immediately surfaced two harness defects, both fixed — and A2 proved a prototype
@@ -1730,15 +1774,15 @@ never been named, which blocks part of step 5 and step 17.
 
 | # | Step | Done when | Status |
 |---|---|---|---|
-| B1 | [Prove the codebase path](#step-b1--prove-the-codebase-path) | One real feature built in real locations on MSW data, with tests and every state | **Complete** — `56aee3c3` |
-| B2 | [Build the handoff](#step-b2--build-the-handoff) | `npm run handoff` refuses unless the work is genuinely ready, and produces **HANDOFF.md** in the branch | **Complete** — `3f137cd6`, `cef176be`; 15 checks, verified on a real branch |
-| B3 | [Close the review and evidence gaps](#step-b3--close-the-review-and-evidence-gaps) | Every decision-relevant state can be exercised and checked, and the automated accessibility scan actually runs | **Complete**; `npm run handoff` green on all six work branches, 13 real defects found and fixed or recorded with an owner |
+| B1 | [Prove the codebase path](#25--prove-the-codebase-path-was-b1) | One real feature built in real locations on MSW data, with tests and every state | **Complete** — `56aee3c3` |
+| B2 | [Build the handoff](#26--build-the-handoff-was-b2) | `npm run handoff` refuses unless the work is genuinely ready, and produces **HANDOFF.md** in the branch | **Complete** — `3f137cd6`, `cef176be`; 15 checks, verified on a real branch |
+| B3 | [Close the review and evidence gaps](#27--close-the-review-and-evidence-gaps-was-b3) | Every decision-relevant state can be exercised and checked, and the automated accessibility scan actually runs | **Complete**; `npm run handoff` green on all six work branches, 13 real defects found and fixed or recorded with an owner |
 
 #### Track C — the Workspace app
 
 | # | Step | Done when | Status |
 |---|---|---|---|
-| 13 | [Build the Workspace local loop](#step-13--build-the-workspace-local-loop) | A designer goes from a request to a local, repo-backed preview without learning Git or dev-server mechanics | **Complete** — `158eab3`; 88 tests, the journey end to end, a boot smoke check, and confirmed working by Noah |
+| 13 | [Build the Workspace local loop](#31--build-the-workspace-local-loop-was-step-13) | A designer goes from a request to a local, repo-backed preview without learning Git or dev-server mechanics | **Complete** — `158eab3`; 88 tests, the journey end to end, a boot smoke check, and confirmed working by Noah |
 | 14 | [Workspace: shared review](#step-14--workspace-shared-review) | A distributed team reviews a real iteration from an internal link and returns to its exact branch and commit | **Not started** — needs the [decision gates](#part-iv--decision-gates) and other people's calendars |
 | 15 | [Workspace: handoff and learning](#step-15--workspace-handoff-and-learning) | The handoff B2 proved by hand is automated, in the shape a receiving engineer's feedback produced | **Not started** — waits on an engineer receiving one |
 | 16 | [Pilot and release decision](#step-16--pilot-and-release-decision) | The team decides on evidence whether this is worth keeping | **Not started** |
@@ -1753,9 +1797,9 @@ measure is that *every artifact remains usable without the app*.
 
 | # | Step | Done when | Check | Status |
 |---|---|---|---|---|
-| D1 | [Stop copying the design system; point at it](#step-d1--stop-copying-the-design-system-point-at-it) | No context file restates what the installed package already carries, and `validate.py` reads the package | Mechanical | **Complete** — `873aba9`, `bf5b4c13`; 3,071 lines deleted, 606 checks, 0 failures |
+| D1 | [Stop copying the design system; point at it](#17--stop-copying-the-design-system-point-at-it-was-d1) | No context file restates what the installed package already carries, and `validate.py` reads the package | Mechanical | **Complete** — `873aba9`, `bf5b4c13`; 3,071 lines deleted, 606 checks, 0 failures |
 
-**Split out of [step 17](#step-17--ship-the-design-system-context-in-the-package) on 2026-09-29**,
+**Split out of [step 17](#42--ship-the-design-system-context-in-the-package-was-step-17) on 2026-09-29**,
 then **reversed by the plan owner from "build a generator" to "delete the copies."** The packaging and
 the org transfer stay in 17 with their owners — though 17 is now much smaller, because shipping
 `.flkd` in the package mattered mainly to keep a snapshot in step with the code, and there is no
@@ -1773,9 +1817,9 @@ because treating them as sequence steps made "what is next" unanswerable.
 | **Name the Design System owner** | Noah | Unblocks the FUI generator and the `cokeUsages` decision |
 | **An engineer receives a handoff** | Noah + an engineer | The machinery is built and verified; their feedback revises `prepare-handoff.md` |
 | **Designers review prototypes** | Noah + designers | `projects/<id>/review.md` already holds it |
-| **Decide on the managed harness** ([step 11](#step-11--decide-if-the-managed-harness-is-needed)) | Noah | Needs real usage first; the friction log is the evidence |
-| **Ship `.flkd` in the package + org transfer** ([step 17](#step-17--ship-the-design-system-context-in-the-package)) | Design System owner | Specified, including the generator it needs |
-| **Designer AWS access** ([step 18](#step-18--designer-environment-access)) | Noah | Access is confirmed as provisionable |
+| **Decide on the managed harness** ([step 11](#43--decide-if-the-managed-harness-is-needed-was-step-11)) | Noah | Needs real usage first; the friction log is the evidence |
+| **Ship `.flkd` in the package + org transfer** ([step 17](#42--ship-the-design-system-context-in-the-package-was-step-17)) | Design System owner | Specified, including the generator it needs |
+| **Designer AWS access** ([step 18](#41--designer-environment-access-was-step-18)) | Noah | Access is confirmed as provisionable |
 | **Open the step 14 conversations** ([step 14](#step-14--workspace-shared-review)) | Noah | GitHub auth, preview provisioning, capture storage, knowledge-repo access — their lead time is other people's calendars |
 
 **Status values:** Not started, In progress, Complete. A step is Complete only when its "done when"
@@ -1802,8 +1846,7 @@ only if step 11 calls for it.
 
 The external confirmations step 14 depends on — GitHub authentication, preview provisioning and access policy, capture storage, and knowledge-repository access — gate step 14, not step 13. Open them during step 13, since their lead time is other people's calendars.
 
-
-#### Step 2 — Set up the first files
+#### 1.2 — Set up the first files (was step 2)
 
 **Claude. Complete**, on `flock-coke` `noah/flock-designer` at `4538812e`.
 
@@ -1813,8 +1856,7 @@ The external confirmations step 14 depends on — GitHub authentication, preview
 
 **Done when:** the three files exist. ✅
 
-
-#### Step 3 — Rename existing prototype work
+#### 1.3 — Rename existing prototype work (was step 3)
 
 **Claude. Complete.** It went first so step 4 would write the final names rather than renaming twice.
 There was nothing to rename.
@@ -1834,8 +1876,7 @@ ancestor of `noah/flock-designer` and stays reachable, and the branch is recreat
 **Done when:** no `proto/<name>` branch or directory remains. ✅ Verified — `git branch -a` in
 `flock-coke` matches neither `proto` nor `device-health`.
 
-
-#### Step 4 — Fix the product repository files
+#### 1.4 — Fix the product repository files (was step 4)
 
 **Claude writes it; Noah reviews and merges.** The biggest step, and the one everything after it
 depends on. Claude Code reads `CLAUDE.md`, the agent files, and `.flkd` — not these planning
@@ -1903,616 +1944,7 @@ rewrite. `production-readiness.md` gets its full revision in step 10, after a re
 bundle smoke check is step 7; the agent and the gap log both record that `tsc` and lint do not prove
 a prototype builds.
 
-
-#### Step 6 — Create the shared repository
-
-**Done, at a temporary address.** `noahshrader-flock/flock-designer` on GitHub, branch
-`noah/flock-designer`, commit `d2afdfa` — pushed there rather than under `flocksafety` because
-`noahshrader-flock` cannot create repositories in that org. A personal-to-org transfer is a one-step
-GitHub operation that keeps the full history, so nothing here gets redone when it moves.
-
-**Built so far:**
-
-- `projects/` — one folder per project. Drop in whatever context exists, in whatever form it exists.
-- `projects/_template.md` — the optional starting template. Prompts, not fields; ignoring it is fine.
-- `standards/` — empty, waiting for the portable standards to move out of `flock-coke`.
-- `README.md` — how to start a project, and what does not belong here.
-
-##### The content moved, 2026-09-28
-
-`3d15ae9` (flock-designer), `82d6112d` (flock-coke), `6e0d469` (flock-react-component-lib).
-
-- **`standards/universal/` and `production-readiness.md` moved across**, verified portable first.
-- **Coke resolves them from a sibling checkout** — `../flock-designer/standards/` — the same
-  arrangement FUI context uses and the same terms on which it becomes a package later.
-- **`PLAN.md` moved in**, per step 1's decision that the plan lives alongside the standards and
-  projects it describes. `standards/README.md` states how a product resolves the tiers and which one
-  wins.
-- **`non-negotiables.md` and `standards/flock/` stayed.** Both wrap a portable rule around a Coke
-  instance table; they move once those instances are lifted into `manifest.md`.
-
-**Verifying portability turned out to be the interesting part.** The audit's claim that
-`standards/universal/` held "zero product-specific references" came from grepping for product names,
-and it was incomplete. Validating the files from a consuming repo immediately caught **two universal
-files that declared themselves "product-agnostic" in one line and hard-linked to
-`../flock/product-native-ui.md` in the next** — a universal standard reaching up into the tier above
-it. Both now describe the relationship without the path, which is what actually makes them portable.
-A third reference form was missed on the first substitution pass and also caught by the validator.
-
-**One consequence worth stating plainly:** a `flock-coke` checkout alone no longer contains the
-accessibility floor or the view-state list. **The cold-start check now needs two checkouts.** Coke's
-`.flkd/README.md` says so, and `validate.py` reports a missing shared checkout rather than letting
-the gap pass silently — but this is a real increase in setup burden, and step 8 owns making that
-survivable for a designer.
-
-`validate.py`: **1006 checks, 0 failures.**
-
-**Nothing is open here. The org transfer moved to [step 17](#step-17--ship-the-design-system-context-in-the-package)**,
-where it sits with the other items needing someone with org and release permission. Every reference
-in this document to `flocksafety/flock-designer` means this repository at whichever address it
-currently has — **the transfer is housekeeping, not a plan change**, and nothing here gets re-derived
-once it happens.
-
-**Done when:** the repository holds the portable standards, the project structure, and the plan, and
-Coke resolves the standards from it. **The address is not part of this step** — it is step 17.
-
-
-#### Step 7 — Confirm the prototype harness
-
-**Claude.** Prove the prototype contract works before using it on anything real.
-
-- Build one small real artifact in `src/prototypes/<project-id>/` and confirm the directory contract holds.
-- Document how a reviewer opens the entry point and compares states.
-- Keep `tsc`, lint, and the bare `src/...` import guard, and add the bundle or dev-server smoke check that the gap log showed those two miss.
-
-**Done when:** an isolated prototype can be built, opened, and honestly reviewed.
-
-> **Corrected 2026-09-29.** This step was marked Complete on 2026-09-28 with "opened" **unverified**.
-> Prototypes register no production route by design, so nothing served them — `src/prototypes/README.md`
-> said "open `index.tsx`", which is a file, not a URL. The instruction had never been followed by
-> anyone, including its author. Found by the third real project's agent, which tried to follow it,
-> worked out a manual `src/index.tsx` swap, and reported the docs as wrong. Fixed in `9015497e` and
-> `90043e1c`: `npm run start:prototype -- <project-id>` serves one prototype on `:3100` from its own
-> dev-only config, verified end to end. **The step's own "done when" was not met when it was closed**,
-> and the closing evidence cited the build check for a claim about opening.
-
-##### What was done, 2026-09-28
-
-`e9e5b14c` (flock-coke), `2f43511` (flock-designer). Branch `fd/alert-notification-prefs/i1`.
-
-**The bundle gap is closed** — the open item the gap log has carried since 2026-09-02.
-`scripts/smoke-prototype.mjs` bundles a prototype entry with rsbuild's alias set and deliberately
-without a bare `src/` alias, so an import that type-checks and does not bundle fails here. Wired into
-the agent, the skill, and `src/prototypes/README.md` as a required third check, and exposed as
-`npm run smoke:prototype -- <project-id>`.
-
-**It was verified, not asserted.** Injecting the exact import from the 2026-09-02 gap entry produced
-`tsc` **0 errors**, Biome **clean**, and a smoke-check **failure**. Then reverted. That is the whole
-argument for the check, demonstrated rather than claimed.
-
-**The artifact:** `src/prototypes/alert-notification-prefs/`, holding the full directory contract and
-all seven view states behind a switcher so a reviewer compares them without editing code. The
-project folder in `flock-designer` carries brief, context receipt, and review — one slug keying the
-branch, the directory, and the folder, which is the contract proved end to end.
-
-**Building it corrected three things the manifest alone did not carry**, each caught by `tsc` against
-FUI's prop allowlists rather than by inspection: `FSToggle` requires `label` and permits no
-`aria-label` or `inputProps`; `FSToggleButtonGroup` omits `size`; `FSButton` takes `FSVariant`, not
-`filled`/`outlined`. This is the allowlist behaving exactly as
-[`authoring/components.md`](#step-5--set-up-the-design-system-agent-files) says it should.
-
-**The first real component gap came out of it.** `FSToggle` has no accessible-name route in its
-allowlist, so when the visible label is rendered separately — which the product's canonical settings
-row does — the only option is a native `<label htmlFor>` bound to the input `id`. Coke's
-`togglePreferenceRow.tsx` renders `<FSToggle label="" />`, so those toggles appear to be unnamed
-product-wide. Logged in the project's `review.md`; **not yet filed in FUI**, because the Design
-System owner is still unnamed.
-
-**What the review record does not claim:** six of ten manual accessibility checks are recorded as
-**not run**, the automated scan could not run at all (Cypress will not launch in this environment),
-and no human has reviewed product parity. The artifact proves the harness; it does not prove the
-design.
-
-
-#### Step 8 — Make the product runnable on mock data
-
-**Claude, tested on a real designer.** The cheapest fix for the onboarding problem, and the evidence
-Step 11 needs.
-
-- Port the verified MSW and `start:design` approach from `noah/local-design-mode` onto the Designer baseline. Do not merge the divergent branch wholesale.
-- Preserve `.flkd`, the agent adapters, and the prototype contract.
-- Keep fixtures separate from product-pattern truth, and document where they came from.
-- Add one shell-level smoke check and a manual review checklist.
-- Write a setup path a designer can follow without frontend help, then test it on a designer who has never run Coke and record what happened in the friction log.
-
-**Done when:** the real Coke shell runs locally on mock data.
-
-> **Scope narrowed 2026-09-28, at the plan owner's direction.** This step originally also required
-> *"and a designer reaches that state unaided."* That half depends on AWS registry access being
-> provisioned and on the correct SSO command being confirmed — neither of which is Claude's to do,
-> and both of which were discovered only at the end of this step. **They moved to
-> [step 18](#step-18--designer-environment-access), together with the unaided designer test and the
-> unverified `msw` lockfile port.** Narrowing the step is recorded here rather than done quietly,
-> because "done when" changed after the fact.
-
-##### What was done, 2026-09-28
-
-`afa5aa4f`, plus `22de790d` which moved step 7's tooling onto this baseline.
-
-**The port is in and the server side is verified.** The mechanism came across from
-`noah/local-design-mode` — not the branch, which is not merged. Design mode is gated on
-`PUBLIC_APP_DESIGN_MODE`, set only by `start:design`, with MSW behind a dynamic import so it never
-reaches a production bundle. `npm run smoke:design` checks the four things a shell can check: the
-server boots with no Crown or Tanqueray, design mode is compiled into the entry bundle, the worker is
-served, and **the checked-in worker matches the installed `msw`** — a stale worker after an upgrade
-is the classic silent MSW failure.
-
-**A real defect the port surfaced.** `msw` was present in `node_modules` from an earlier checkout but
-**absent from `package-lock.json`**. A clean `npm ci` — which is what a designer runs — would have
-installed no `msw`, and design mode would have failed with the working environment showing no sign of
-it. The 43 lockfile entries were ported from the verified branch; the resulting diff is 499
-insertions, matching that branch's own lockfile diff exactly.
-
-**A branch-hygiene mistake, found and fixed.** Step 7's infrastructure — the smoke script, the npm
-script, the `.flkd` and README updates — had been committed to the prototype *iteration* branch
-rather than the baseline. Prototype branches are never merged, so that tooling would have been
-stranded and every future branch cut from the baseline would have lacked it. Split in `22de790d`;
-the iteration branch now touches only `src/prototypes/alert-notification-prefs/`, which is what the
-change boundary always said it should.
-
-**Setup friction, recorded:** `npm install` failed with `401 Unable to authenticate` against
-`npm.pkg.github.com` — `@flocksafety` packages need a GitHub token with `read:packages`. The error
-names npm, not GitHub, and says nothing about scopes. It is now the first thing in
-`src/prototypes/DESIGN-MODE.md`, but **documenting a trap is not removing it**, and it is the most
-likely thing to stop a designer.
-
-##### Cold-start test, 2026-09-28 — passed, both traps cleared
-
-A fresh session in `flock-coke`, plan unavailable, answered all four from the repository: the
-command and the token setup, what is real versus mocked, the no-navigation cause, and — the trap —
-that design mode is **not** needed to review a prototype. It got the no-nav answer exactly right
-(LaunchDarkly; they ran `start` rather than `start:design`) and volunteered `npm run smoke:design`
-as the self-check. Every citation verified accurate. **No defect found** — the second clean pass in a
-row, after three that each found one.
-
-**This was the document test, not the designer test.** It proves `DESIGN-MODE.md` answers the
-questions; it does not prove a designer gets a running app.
-
-##### The most likely failure, named in advance
-
-`msw`'s lockfile entries were **ported by hand**, because the `401` made a real install impossible
-here. The port matches the source branch's lockfile diff exactly — 499 insertions — but **no clean
-`npm ci` has ever run against it.** If it is wrong, the first person to run `npm ci` finds out, and
-the symptom is design mode failing rather than an obvious install error. Whoever runs the designer
-test should run `npm ci` first and report whether it succeeded, before judging anything else.
-
-##### The render question is settled, 2026-09-28
-
-**The plan owner ran `npm run start:design` and it worked in seconds.** Screenshots show the full
-shell: top nav, admin sub-nav, Organizations List populated, Profile page, account switcher. That
-settles the thing this step could not verify from a shell — **MSW interception, the auth bypass, and
-the LaunchDarkly flag mocking all hold end to end.** The nav rendering is the proof of the last one,
-since `AppHeader` does not render until at least one flag returns.
-
-**It also caught a documentation defect, and a nasty one.** `DESIGN-MODE.md` said to expect data for
-"Springfield Police Department" — **a name that appears nowhere in `src/mocks/fixtures/`.** It was
-asserted, not read. The real data is *HOA Org*, *Law Enforcement Org*, and *John Smith*. A designer
-following that file would have seen the correct screen, failed to recognise it, and concluded the
-setup was broken — a false negative sending them for help while everything worked. Corrected in
-`99491e48` to a table taken from the fixtures, usable to tell working from broken at a glance.
-
-**Discoverability was broken too, found in the same conversation.** `DESIGN-MODE.md` sat at
-`src/prototypes/` with nothing linking to it, while the root `README.md` opened by saying local
-development needs a local database and `flock-tanquery` — the exact barrier design mode removes. A
-designer would have read that and concluded they could not run Coke. Fixed in `ddcc6f54`.
-
-##### `npm ci` was exercised, and it failed — 2026-09-28
-
-A fresh clone into `/tmp` by the plan owner. The clone worked and the branch carried design mode.
-**`npm ci` failed immediately with `401 Unable to authenticate`.**
-
-**The cause is not what this plan assumed.** GitHub Packages answered fine
-(`npm view @flocksafety/flock-react-component-lib version` → `5.6.4`). The **default registry, AWS
-CodeArtifact, returned the 401**, and `aws sts get-caller-identity` showed no AWS credentials at all.
-
-**1,320 of the 1,428 packages in `package-lock.json` resolve through CodeArtifact** — `react`
-included, not just the private `@flocksafety` ones. **Without AWS access, a designer installs
-nothing.** The CodeArtifact token also **expires within 12 hours**, so this is recurring friction,
-not one-time setup: it will feel like the environment breaking for no reason, on a schedule.
-
-**The setup doc was wrong about the cause**, which would have made it worse rather than neutral. It
-said a `401` meant a missing GitHub PAT with `read:packages`; a designer would have made a new GitHub
-token, added it, still failed, and had nothing pointing at the real system. Corrected in `3fdec5af`,
-with the AWS credential step explicitly marked unconfirmed with whoever owns the registry.
-
-**Resolved the same day — designers will be provisioned AWS access** (plan owner, 2026-09-28). That
-turns the registry from a capability barrier into an **onboarding step**: real, and it has to happen
-before a designer is handed this, but not a reason to build anything.
-
-**What provisioning does not fix, and [step 11](#step-11--decide-if-the-managed-harness-is-needed)
-should still weigh:** the CodeArtifact token expires within 12 hours. Every designer doing this work
-will hit a setup that worked yesterday and does not today, with an error naming npm rather than AWS.
-That is permanent recurring friction of the kind that makes people quietly stop using a tool rather
-than complain about it. The backend barrier is genuinely gone — the shell renders on fixtures — but
-"runs locally on mock data" now carries a standing dependency on an internal registry and a
-twice-daily token refresh. Worth naming as a cost, not a blocker.
-
-**None of this was visible until someone cloned from scratch**, which is the argument for having
-done it before handing this to a designer rather than after.
-
-**Still not verified:** the hand-ported `msw` lockfile entries, since `npm ci` never got far enough
-to install anything. The run above was on a machine that
-already had `node_modules`, so nothing was installed and no token was needed — which is precisely
-the step predicted to block a designer. The hand-ported `msw` lockfile entries remain unverified.
-
-**Not done, and it is the half that matters:** **no designer has run this.** The server-side checks
-pass, but whether the shell *renders* needs a real browser running the service worker, and whether a
-designer gets there unaided is the actual "done when." Step 8 stays **In progress** until someone who
-has never run Coke tries it and the result is in the friction log.
-
-
-#### Step 9 — Prove it on real decisions
-
-**Noah leads; Claude does the setup and the writing.** Everything before this was building. This is
-where we find out whether it works. Two or three real decisions, in a real checkout — no Workspace,
-no harness.
-
-**Noah**
-
-- Pick two or three Explore or Ground requests from real product work, and send whatever exists for each.
-- **Confirm the brief and correct the context receipt before the build.** The one moment that cannot be delegated back to the agent.
-- Answer the product questions it raises; confirm or reject each drafted decision.
-- Judge each prototype. Would it go in front of a stakeholder? Is it grounded in Flock, or generic?
-- Run the **resume test**: give someone else one project folder and nothing else, and record what they could and could not recover.
-- Record setup friction — yours and every participant's.
-
-**Claude**
-
-- Check step 4 landed before starting: the audited `.flkd` is on the baseline, `validate.py` passes, the cold-start check passes, FUI facts resolve. If not, stop and say so rather than testing an agent that never saw the contract.
-- For each proof, create the project folder, the branch, and the prototype directory, pinning the baseline commit and resolved FUI version.
-- Write `brief.md`, then the context receipt **before building**, then build only what makes the decision testable.
-- Run the checks, run both reviews, and write `review.md` with the accessibility section. Report anything not run as "not run," with the reason.
-- Log every miss in the gap log. A miss that blocks a proof is fixed as a reviewed repository change through the [learning loop](#the-learning-loop), never patched by hand inside one prototype.
-
-**Done when:** at least one proof went from request to reviewed prototype in a single working
-session; a second person resumed a proof from its project folder alone; no production code changed;
-and the team knows whether local setup is genuinely blocking anyone.
-
-
-#### Step A2 — Run a prototype in the real shell
-
-**Claude. Sequenced after [B1](#step-b1--prove-the-codebase-path)**, not before it — building in the
-real app first is what will show what this should look like, and Track B needs no new mechanism to
-get real chrome.
-
-**The problem.** A prototype's surrounding chrome is **reconstructed** in `host.tsx`, not real. It
-looks right because the agent read `useAdminSubNavItems` and copied the item list — so it is a
-snapshot that silently goes stale the day someone adds a nav item. A prototype of an admin view
-should inherit the actual navigation, not a copy of it.
-
-**The mechanism already half-exists.** Design mode runs the real shell on MSW data
-(`npm run start:design`). What is missing is mounting a prototype *inside* it, so the prototype
-inherits real navigation, real routing and real chrome, with only the network faked. That is the
-[real-shell design mode](#the-two-runtime-modes) the contract has described from the start.
-
-**Why this was not already a step.** The contract described it; nothing scheduled it. Step 8 built
-design mode as a way to *run the product* and closed, and no step ever owned the other half — the
-same failure that left the codebase path unbuilt for nine steps.
-
-- Mount a prototype inside design mode without registering a production route.
-- Keep `npm run start:prototype` — standalone is faster and right for a view that does not depend on
-  its surroundings. Two ways to open one, chosen by what the work needs.
-- `host.tsx` becomes optional rather than required, and the agent is told when each applies.
-
-**Done when:** a prototype opens inside the real shell with the product's actual navigation, and
-adding a nav item to the product changes what the prototype shows without anyone editing the
-prototype.
-
-##### Verified 2026-09-29
-
-`667c5070`. `/design/<project-id>` is registered **only** when `config.isDesignMode`, so it can never
-exist in production — which is what keeps it inside [non-negotiables](#the-agent-contract) §1's ban on
-production routes. It works because `App.tsx` renders the header and sub-nav **above** `<Routes>`, so
-anything mounted inside inherits the real navigation with no wiring and nothing to keep in sync.
-
-**The criterion was tested, not assumed.** A nav item, `NAVTEST-A2`, was added to the real product's
-`useAdminSubNavItems` and appeared in the prototype. No prototype file contained that string —
-verified zero matches — so it was inherited, not copied. Reverted after.
-
-**It also exposed a defect the criterion did not ask about.** A prototype's `host.tsx` renders its own
-`FSUniversalNav`, so mounted at `/design/` it stacked a reconstructed nav under the real one. A small
-context now tells a prototype the real shell is already around it, and `host.tsx` skips its chrome;
-standalone via `start:prototype` it still draws it. The two modes now differ deliberately rather than
-by accident.
-
-**Both ways of opening a prototype stay**, because they answer different questions: `start:prototype`
-is isolated and faster when the view does not depend on its surroundings; `/design/<id>` is right when
-placement, navigation or surrounding density is the question.
-
-**Navigating away from a prototype lands you in the real product**, on mock data. That is deliberate:
-a prototype is one view at one route, and what surrounds it is the genuine neighbour to compare
-against. Making its nav links route *within* the prototype would mean the prototype owning routing —
-forbidden — and would leave no way to tell a real link from a simulated one.
-
-
-#### Step B1 — Prove the codebase path
-
-**Claude builds it; Noah judges it.** Track B's first step, and the thing the plan described from the
-start and never built — see [the two build paths](#the-two-build-paths).
-
-Build **one real feature** the way a designer would hand it to engineering: real file locations, real
-Redux, real routing, real permissions, with **only the network stubbed** by MSW handlers in
-`src/mocks/`. Tests written. Every state the feature actually has. Accessibility **run**, not
-recorded as "not run."
-
-**Pick something already prototyped**, so the two paths can be compared directly on the same feature.
-The inactivity signal is the obvious candidate: it exists as a prototype, and as production work it
-is a contained change to one existing column.
-
-**Done when:** the feature is built on a normal product branch; `tsc`, lint, tests and
-`npm run check:boundary` pass; every state is reachable in the running app; the accessibility
-checklist is genuinely run; and `handoff.md` lists the stubbed endpoints — the list engineering
-swaps.
-
-**How it is checked:** mechanical. Unlike Track A's remaining gate, nothing here needs a person until
-step 10.
-
-
-#### Step B2 — Build the handoff
-
-**Renamed 2026-09-29.** It was "Hand one off to an engineer," which made a step depend on someone who
-is not Claude and turned "what is next" into a list of blockers. **Building the handoff is the step.**
-An engineer receiving one is real and still wanted — it is in
-[Waiting on other people](#waiting-on-other-people--never-blocks-a-step), where it belongs.
-
-**Complete.** `npm run handoff -- <project-id>` runs 15 checks and refuses unless the work is genuinely
-ready; **HANDOFF.md** is produced at the branch root where engineering will actually see it.
-
-**Noah picks the proof and the engineer; Claude prepares the handoff.** This is here, rather than
-inside the app at step 15, because handoff is the claim engineering cares about most. Testing it by
-hand costs little; discovering at step 15 that the shape was wrong means rebuilding it inside an
-application.
-
-- **Build the `/handoff` command here.** Handoff was briefly a credibility level, which was wrong — it is a deliberate, formal run, not a setting chosen before any work exists. This step is where that command gets defined: what it checks, what it produces, and what it refuses to do when the work is not ready. Tool-agnostic language first, with a thin `.claude/` adapter if a slash command is wanted.
-- **Prototype path:** Claude creates the handoff branch, runs the checks against every touched state, and writes `handoff.md` with the [accessibility and hardening report](#the-accessibility-and-hardening-report) and a **rewrite plan**.
-- **Codebase path:** there is no rewrite. Engineering **takes the branch over**. Claude's job is to hand it across complete — every state built, tests written, accessibility actually run rather than recorded as "not run", and `handoff.md` carrying the **list of stubbed MSW endpoints**, which is precisely the work engineering picks up.
-- Noah gives it to the engineer who would actually build it, and records whether it reduced ambiguity, what they still had to ask, and what they wanted that it lacked.
-- Claude then revises the report and writes the handoff skill from what the engineer said.
-
-##### The command is built, 2026-09-29
-
-`05fa8a52`, `3f137cd6` in `flock-coke`. **Claude's half of this step is done; the half that closes it
-is not.**
-
-**`npm run handoff -- <project-id>`** refuses when the work is not ready. It checks a clean working
-tree, that the brief and handoff exist, `tsc`, lint, tests — required on the codebase path, optional
-for a prototype — the bundle and boundary checks for prototypes, and that shipping code does not hand
-over accessibility marked "not run" without saying why. **Every false claim this project has produced
-was one nobody could run**; this makes "ready for engineering" a fact.
-
-**It caught a real failure on its first run** — repo-wide lint was failing on `smoke-prototype.mjs`,
-which I had linted with a scoped check that passed. "Lint passes" was an assertion and it was wrong.
-
-**`.flkd/skills/prepare-handoff.md`** is the judgement half, deliberately not in the script: lead with
-what engineering actually picks up, name the decisions made that were not the agent's to make with the
-most-likely-wrong first, and report accessibility as run or not-run but never as silence. The gap log
-has carried this skill as deferred since step 4, waiting for a real handoff to write it from.
-
-**Verified against the real B1 branch:** all eight checks pass on `feature/users-inactivity-signal`.
-
-##### What handoff actually is
-
-**Clarified by the plan owner 2026-09-29, and it is narrower than this step assumed.** Handoff is
-**getting a branch properly hardened and leaving it ready**. Design passes it along manually;
-engineering takes the branch and does what they need with it. There is no ceremony beyond that.
-
-**The handoff document lives in the branch**, at the root as **HANDOFF.md**. It had been written into
-`flock-designer/projects/<project-id>/`, a different repository — whoever took the branch would never
-have seen it. Corrected in `cef176be`; the gate now requires it in the branch.
-
-**Two documents, two audiences, no duplication:**
-
-| | |
-|---|---|
-| **HANDOFF.md**, in the branch | What engineering picked up. The feature, which files are actually it, what remains, and the decisions design made that were not design's to make. Deleted when the work merges — it describes a handoff, not the product |
-| `flock-designer/projects/<id>/` | Why it was built that way. Brief, context receipt, both reviews. Stays |
-
-**It must name which files are the feature.** The first real handoff had five feature files among
-sixty, because the branch carried Flock Designer infrastructure that has not merged to `develop`. An
-engineer opening that cannot tell what they are looking at, so the document gives the exact `git diff`
-that shows only the feature.
-
-**Done when:** an engineer has received a real handoff and said whether it helped, and the report
-reflects their answer. **This is human-gated and Claude cannot close it** — Noah picks the engineer
-and records what they said.
-
-
-#### Step B3 — Close the review and evidence gaps
-
-**Claude.** Written before real use; **rescoped 2026-09-29 against what four real projects actually
-showed.** Two of its four original items are done or overtaken, and the remaining two are the
-evidence gaps every review so far has recorded as unmet.
-
-| Original item | Now |
-|---|---|
-| A standard way to switch among states | **Done.** Prototypes carry a state switcher; the codebase path shows real states |
-| Screenshot / review-link capture | **Overtaken.** Captures existed to annotate shared previews, which is [step 14](#step-14--workspace-shared-review). Nothing needs them before then |
-| **The accessibility check actually running** | **Still open, and the real gap.** Every review so far records the axe scan as "not run — Cypress will not launch." That is four consecutive artifacts with no automated accessibility evidence |
-| **Unhandled requests visible, not silent** | **Still open.** `onUnhandledRequest: 'bypass'` means a missing fixture looks like a working screen with absent data |
-
-**Done when:** the automated accessibility check runs against a prototype and against a codebase-path
-change, producing real output rather than "not run"; and an unhandled app-data request in design mode
-is visible rather than silently bypassed.
-
-**Status: Complete, 2026-09-29.** Both, plus the debt they left behind.
-
-**The scan.** `npm run a11y` — axe-core 4.10.3 driven by vitest and happy-dom, all already installed.
-Cypress still does not launch here (`npx cypress verify` rejects its own Electron flags on
-darwin-arm64), and it never needed to: axe needs a DOM, not Cypress. It now runs across **all five
-work branches** — four prototypes and two codebase changes — and every project record that said "not
-run" now carries a real result.
-
-It found things on its first run, which is the argument for having it:
-
-| Found | Where | Disposition |
-|---|---|---|
-| `aria-required-children` — the grid toolbar sits inside `role="grid"`, which may only own rows | `orgUsersListSlotComponents.tsx` and every prototype copying it | **Product defect, recorded as inherited.** Named, with an owner |
-| `aria-required-children` — `role="list"` holding `role="img"` children | `roleListRowCard.tsx`, on `develop` today | **Product defect, written up in that branch's HANDOFF.md** for the engineer to decide |
-| A landmark `role="region"` nested inside a grid | The prototype toolbar, copied from production | **Fixed** in the prototype |
-| Testing Library's cleanup never registered, so renders piled up in one document and `screen` queries matched the previous test's markup | Every spec in the repo | **Fixed** in the shared render helper |
-| A vitest cache file committed to git, dirtying the tree on every run | `__tests__/node_modules/` | **Fixed** — `.gitignore` only anchored `node_modules` at the root |
-
-Three supporting pieces were needed to make it honest rather than green:
-
-- **`renderInShell`** wraps in `FSApp`, the wrapper that ships and that the product's own specs
-  already use. The alternative on offer was the older pattern of mocking the whole component library
-  with plain divs — which scans markup nobody ever receives.
-- **`useStubbedLayout`** gives happy-dom a viewport. Without it MUI's DataGrid virtualises to zero
-  rows and axe reports a missing-row fault that exists only in the test. Switching the rule off
-  would have been quicker and would have hidden the real version of the same fault.
-- **`InheritedViolation`** records a violation this work did not introduce and cannot fix from here.
-  Every entry must name what is wrong and who can fix it, and **the run fails once an entry stops
-  firing** — so a suppression cannot outlive its defect. It is the opposite of switching a rule off.
-
-**Unhandled requests.** `onUnhandledRequest: 'bypass'` sent anything unmocked to the real API, where
-it failed authentication, the app swallowed the error, and the screen rendered correctly with the
-data simply absent — an empty table reading as a design decision. App-data requests are now refused
-and named in a bar at the bottom of the window with the method and path a handler would need. Fonts
-and third-party scripts still pass through, which is why blanket bypass was there to begin with.
-
-**What still cannot be checked here, and who owns it.** Tab order, focus visibility, keyboard
-reachability, colour contrast, and the screen-reader read-through all need a browser or a person.
-happy-dom has no layout, so axe's `color-contrast` rule is disabled there by design. Every record now
-names this as one gap with one owner — the first browser-based accessibility pass — rather than
-repeating "not run" per row. That pass is in [Waiting on other people](#waiting-on-other-people--never-blocks-a-step), not
-in the sequence, because it is not something Claude can finish.
-
-**Then both reviewers ran, and the scan's own honesty was the first thing they broke.** The helper
-read `results.violations` and discarded `results.incomplete` — axe's undecided results — so a green
-run was hiding items on **five of six branches**. With that fixed, the reviews turned up nine more
-real defects, including one of mine: an `InheritedViolation` recording something as unfixable that
-the prototype could fix in four lines. **A suppression that is merely untrue is worse than no scan,
-because it looks like diligence.** It was deleted and the underlying defect fixed. Also fixed, not
-recorded: a tooltip on a disabled control that no keyboard could reach, four row titles rendering as
-`<h6>` under an `<h1>`, a `partial` state whose banner named data it was still showing, an unnamed
-search box, and two `aria-label`s landing on elements ARIA forbids naming.
-
-**Made required, not merely possible.** `non-negotiables.md` §7 now says every view gets a
-`*.a11y.spec.tsx`; the handoff gate refuses work that has none and refuses a run where axe found
-anything. Both were written the day the scan started working, so nothing lands having skipped it.
-
-
-#### Step 13 — Build the Workspace local loop
-
-**Claude. Complete, 2026-09-29** — `158eab3` in `flock-designer`, `75730a90` in `flock-coke`.
-The first line of application code. Everything local — no network integrations, no shared services,
-no external approvals.
-
-*(This step said "Engineering" until it was built, which contradicted the rule that a step is
-something Claude can finish. Writing the application is Claude's; steps 14–16 are the ones that need
-other people, and they say so.)*
-
-- The Electron shell for macOS and Windows, with a secure renderer, preload, and main-process boundary.
-- Open one Coke checkout, read `.flkd`, and render the context receipt.
-- Create and continue project branches and worktrees through explicit user action.
-- Invoke the Claude Code adapter and run one allowlisted local preview command.
-- Persist named iterations and write to the project folder.
-
-**In parallel:** open the step 14 conversations with their owners — GitHub authentication, preview
-provisioning, capture storage, knowledge-repository access. Their lead time is other people's
-calendars.
-
-**Done when:** a designer goes from a request to a local, repo-backed preview through Workspace
-without learning the underlying Git and dev-server mechanics.
-
-**Built, in `flock-designer/workspace/`.** Electron 44, React 18, FUI, TypeScript; `npm run dev`,
-`npm test`, `npm run smoke`.
-
-| Owed | Built | Proven by |
-|---|---|---|
-| Electron shell with a secure renderer/preload/main boundary | `contextIsolation`, `sandbox`, no `nodeIntegration`, a CSP with no remote origins, one named-operation bridge with no generic invoke | `npm run smoke` boots the real app and asserts the window opened and the renderer loaded |
-| Open a checkout, read `.flkd`, render the context receipt | `descriptor.ts`, `contextReceipt.ts` | Parses the descriptor Coke actually ships and resolves Coke's real FUI version from its lockfile |
-| Create and continue branches through explicit user action | `git.ts`, `iterations.ts` | Refuses on a dirty tree, refuses a name already taken, and treats a branch name with shell metacharacters as a name |
-| Invoke the Claude Code adapter and run one allowlisted command | `agent.ts`, `runtime.ts` | The allowlist refuses anything undeclared; a descriptor cannot smuggle in a shell string |
-| Persist named iterations and write to the project folder | `iterations.ts` | The record survives switching branches, which is exactly what a record on the branch would not |
-| The journey itself | — | One test runs all of it against a real repository: open → receipt → iteration → agent → preview → stop → return |
-
-**Three things the build found.** The iteration record was first written into the product checkout,
-which dirtied the tree and then blocked the next iteration on its own bookkeeping — the plan had
-already settled that records live in `flock-designer/projects/`, and had already given this reason.
-A stopped preview reported itself as a crash, because `stop()` removed the entry before the exit
-handler could tell the difference. And `ELECTRON_RUN_AS_NODE`, which editors and agent harnesses
-export into the environment, makes the Electron binary run as plain Node and die on its first line.
-
-**The click-through is confirmed.** Noah ran the app on 2026-09-29 and reported it works. That was
-the one thing the tests could not answer, and it is the go/no-go below: **the answer is go.**
-
-**This is the honest go/no-go.** Step 9 already proved designers can reach the outcome without an
-application; this only makes it easier, and the collaboration value arrives at step 14. It is the
-step most at risk of being built because it is on the list rather than because it is needed.
-
-
-#### Step D1 — Stop copying the design system; point at it
-
-**Claude. Complete, 2026-09-29** — `873aba9` in `flock-react-component-lib`, `bf5b4c13` in
-`flock-coke`.
-
-**This step was written as "build the context generator" and the plan owner reversed it mid-build.**
-The reversal was right and the reasoning is worth keeping, because it applies to everything in
-`.flkd/`.
-
-**What was there.** `component-manifest.json`, `tokens.json` and `deprecated-components.json` —
-**3,071 lines** holding 133 components, **494 resolved hex values** and a `versionScannedFrom` stamp.
-Produced once in `0f25abd`, never regenerated, four patch versions stale.
-
-**What the generator found before it was deleted.** Building it was not wasted, because it proved the
-copies were wrong in ways nobody had noticed:
-
-- **`FSFormInput.onChange` was published as `(fieldName: string) => void`.** It takes
-  `(fieldName: string, value: string | number | boolean | string[] | null) => void`. The manifest was
-  dropping the argument carrying what the user typed — in the one field that exists to stop people
-  getting these handlers wrong.
-- **`FSAlertButton` was documented with `FSAlert`'s description and prop allowlist.** It takes
-  `FSButtonProps`. The same fault gave the whole `FSGridToolbar*` family `FSDataGrid`'s 60 props:
-  components declared inside another component's file had each inherited their neighbour's entry.
-- Three MUI re-exports claimed `FSDataGrid`'s props; `tokens.json` was missing the `desktopNav`
-  breakpoint entirely.
-
-**Why the generator was deleted anyway.** Noah, on seeing 494 hex values in a file a generator would
-now keep in sync: *"I don't want to add a ton of scripting where if things change in the design
-system, we're constantly having to go back and update these files... the files inside the design
-system should be pointing to the actual files in there."*
-
-That is correct, and it dissolves a problem rather than automating it. **The version question was
-self-inflicted.** `versionScannedFrom` existed only because facts were copied; the whole chain —
-manifest vs source, source vs installed, and a hard validator failure when a checkout sat one patch
-ahead of the product — was the cost of keeping a copy. Nothing is copied now, so there is nothing to
-stamp and nothing to mismatch.
-
-**What replaced it.** Every fact was already in the package a product installs:
-
-| Question | Where it is answered now |
-|---|---|
-| What components exist? | `ls node_modules/@flocksafety/flock-react-component-lib/build/src/components` |
-| What props does it take? | That component's shipped `index.d.ts`, including the MUI augmentations — which is where `FSChip`'s `variant="status"` is declared |
-| What is deprecated? | `grep -rl '@deprecated'` over the same directory — the JSDoc survives into the declarations |
-| What tokens exist? | `build/src/colors/*.d.ts` — names only. **No one needs the values**: tokens are referenced by name in `sx` and the theme resolves them. `createFSTheme()` works inside the app or a test, but **not from a bare `node -e`**, whose plain-Node loader rejects the bundle's extensionless imports (found 2026-10-05; the original instruction here had never been run) |
-
-`tokens-and-styling.md` now lists palette key *names* and no values; `component-usage.md` keeps the
-hand-written knowledge the types cannot express — the deviations that type-check and still surprise
-you. **`validate.py` reads the installed package** and gained a check that **fails on a hex literal
-in any context file**, which is what stops the snapshot growing back.
-
-**Done when:** no context file restates a value the package already carries; every reference across
-both repositories points at the package; and `validate.py` passes reading only from `node_modules`.
-**Met** — 606 checks, 0 failures, and no version NOTE, because there is no longer a version chain to
-report on.
-
-**The rule this leaves behind, which is the durable part:** *a context file states judgment, not
-data.* Where something is written down twice, one copy is always about to be wrong.
-
-
-#### Step 5 — Set up the design-system agent files
+#### 1.5 — Set up the design-system agent files: the full account (was step 5)
 
 **Claude, with the Design System owner approving.** Two things: resolution, which is one fix, and the
 authoring standards, which do not exist yet.
@@ -2618,7 +2050,7 @@ a Coke-shaped field in a design-system artifact is one product's habits promoted
 ##### Resolved: the local path is the working path
 
 **Decided 2026-09-28 by the plan owner.** Work against the sibling checkout now; bring the context
-into the published package later, with a developer, as [step 17](#step-17--ship-the-design-system-context-in-the-package).
+into the published package later, with a developer, as [step 17](#42--ship-the-design-system-context-in-the-package-was-step-17).
 
 Two problems were tangled together, and only one of them defers:
 
@@ -2651,9 +2083,606 @@ by the validator; prose is not. Step 17 removes the class of problem.
 | Name the Design System owner | Noah |
 | Approve the authoring standards and the FUI change | Design System owner |
 | Align the versions — tag the checkout at the installed version, or regenerate and pin | Design System owner |
-| **Build the context generator**, decide `cokeUsages`, ship `.flkd` in the package | [Step 17](#step-17--ship-the-design-system-context-in-the-package) |
+| **Build the context generator**, decide `cokeUsages`, ship `.flkd` in the package | [Step 17](#42--ship-the-design-system-context-in-the-package-was-step-17) |
 | Confirm the component-gap destination is the right process | Noah + Design System owner |
 
+#### 1.6 — Create the shared repository (was step 6)
+
+**Done, at a temporary address.** `noahshrader-flock/flock-designer` on GitHub, branch
+`noah/flock-designer`, commit `d2afdfa` — pushed there rather than under `flocksafety` because
+`noahshrader-flock` cannot create repositories in that org. A personal-to-org transfer is a one-step
+GitHub operation that keeps the full history, so nothing here gets redone when it moves.
+
+**Built so far:**
+
+- `projects/` — one folder per project. Drop in whatever context exists, in whatever form it exists.
+- `projects/_template.md` — the optional starting template. Prompts, not fields; ignoring it is fine.
+- `standards/` — empty, waiting for the portable standards to move out of `flock-coke`.
+- `README.md` — how to start a project, and what does not belong here.
+
+##### The content moved, 2026-09-28
+
+`3d15ae9` (flock-designer), `82d6112d` (flock-coke), `6e0d469` (flock-react-component-lib).
+
+- **`standards/universal/` and `production-readiness.md` moved across**, verified portable first.
+- **Coke resolves them from a sibling checkout** — `../flock-designer/standards/` — the same
+  arrangement FUI context uses and the same terms on which it becomes a package later.
+- **`PLAN.md` moved in**, per step 1's decision that the plan lives alongside the standards and
+  projects it describes. `standards/README.md` states how a product resolves the tiers and which one
+  wins.
+- **`non-negotiables.md` and `standards/flock/` stayed.** Both wrap a portable rule around a Coke
+  instance table; they move once those instances are lifted into `manifest.md`.
+
+**Verifying portability turned out to be the interesting part.** The audit's claim that
+`standards/universal/` held "zero product-specific references" came from grepping for product names,
+and it was incomplete. Validating the files from a consuming repo immediately caught **two universal
+files that declared themselves "product-agnostic" in one line and hard-linked to
+`../flock/product-native-ui.md` in the next** — a universal standard reaching up into the tier above
+it. Both now describe the relationship without the path, which is what actually makes them portable.
+A third reference form was missed on the first substitution pass and also caught by the validator.
+
+**One consequence worth stating plainly:** a `flock-coke` checkout alone no longer contains the
+accessibility floor or the view-state list. **The cold-start check now needs two checkouts.** Coke's
+`.flkd/README.md` says so, and `validate.py` reports a missing shared checkout rather than letting
+the gap pass silently — but this is a real increase in setup burden, and step 8 owns making that
+survivable for a designer.
+
+`validate.py`: **1006 checks, 0 failures.**
+
+**Nothing is open here. The org transfer moved to [step 17](#42--ship-the-design-system-context-in-the-package-was-step-17)**,
+where it sits with the other items needing someone with org and release permission. Every reference
+in this document to `flocksafety/flock-designer` means this repository at whichever address it
+currently has — **the transfer is housekeeping, not a plan change**, and nothing here gets re-derived
+once it happens.
+
+**Done when:** the repository holds the portable standards, the project structure, and the plan, and
+Coke resolves the standards from it. **The address is not part of this step** — it is step 17.
+
+#### 1.7 — Stop copying the design system; point at it (was D1)
+
+**Claude. Complete, 2026-09-29** — `873aba9` in `flock-react-component-lib`, `bf5b4c13` in
+`flock-coke`.
+
+**This step was written as "build the context generator" and the plan owner reversed it mid-build.**
+The reversal was right and the reasoning is worth keeping, because it applies to everything in
+`.flkd/`.
+
+**What was there.** `component-manifest.json`, `tokens.json` and `deprecated-components.json` —
+**3,071 lines** holding 133 components, **494 resolved hex values** and a `versionScannedFrom` stamp.
+Produced once in `0f25abd`, never regenerated, four patch versions stale.
+
+**What the generator found before it was deleted.** Building it was not wasted, because it proved the
+copies were wrong in ways nobody had noticed:
+
+- **`FSFormInput.onChange` was published as `(fieldName: string) => void`.** It takes
+  `(fieldName: string, value: string | number | boolean | string[] | null) => void`. The manifest was
+  dropping the argument carrying what the user typed — in the one field that exists to stop people
+  getting these handlers wrong.
+- **`FSAlertButton` was documented with `FSAlert`'s description and prop allowlist.** It takes
+  `FSButtonProps`. The same fault gave the whole `FSGridToolbar*` family `FSDataGrid`'s 60 props:
+  components declared inside another component's file had each inherited their neighbour's entry.
+- Three MUI re-exports claimed `FSDataGrid`'s props; `tokens.json` was missing the `desktopNav`
+  breakpoint entirely.
+
+**Why the generator was deleted anyway.** Noah, on seeing 494 hex values in a file a generator would
+now keep in sync: *"I don't want to add a ton of scripting where if things change in the design
+system, we're constantly having to go back and update these files... the files inside the design
+system should be pointing to the actual files in there."*
+
+That is correct, and it dissolves a problem rather than automating it. **The version question was
+self-inflicted.** `versionScannedFrom` existed only because facts were copied; the whole chain —
+manifest vs source, source vs installed, and a hard validator failure when a checkout sat one patch
+ahead of the product — was the cost of keeping a copy. Nothing is copied now, so there is nothing to
+stamp and nothing to mismatch.
+
+**What replaced it.** Every fact was already in the package a product installs:
+
+| Question | Where it is answered now |
+|---|---|
+| What components exist? | `ls node_modules/@flocksafety/flock-react-component-lib/build/src/components` |
+| What props does it take? | That component's shipped `index.d.ts`, including the MUI augmentations — which is where `FSChip`'s `variant="status"` is declared |
+| What is deprecated? | `grep -rl '@deprecated'` over the same directory — the JSDoc survives into the declarations |
+| What tokens exist? | `build/src/colors/*.d.ts` — names only. **No one needs the values**: tokens are referenced by name in `sx` and the theme resolves them. `createFSTheme()` works inside the app or a test, but **not from a bare `node -e`**, whose plain-Node loader rejects the bundle's extensionless imports (found 2026-10-05; the original instruction here had never been run) |
+
+`tokens-and-styling.md` now lists palette key *names* and no values; `component-usage.md` keeps the
+hand-written knowledge the types cannot express — the deviations that type-check and still surprise
+you. **`validate.py` reads the installed package** and gained a check that **fails on a hex literal
+in any context file**, which is what stops the snapshot growing back.
+
+**Done when:** no context file restates a value the package already carries; every reference across
+both repositories points at the package; and `validate.py` passes reading only from `node_modules`.
+**Met** — 606 checks, 0 failures, and no version NOTE, because there is no longer a version chain to
+report on.
+
+**The rule this leaves behind, which is the durable part:** *a context file states judgment, not
+data.* Where something is written down twice, one copy is always about to be wrong.
+
+#### 2.1 — Confirm the prototype harness (was step 7)
+
+**Claude.** Prove the prototype contract works before using it on anything real.
+
+- Build one small real artifact in `src/prototypes/<project-id>/` and confirm the directory contract holds.
+- Document how a reviewer opens the entry point and compares states.
+- Keep `tsc`, lint, and the bare `src/...` import guard, and add the bundle or dev-server smoke check that the gap log showed those two miss.
+
+**Done when:** an isolated prototype can be built, opened, and honestly reviewed.
+
+> **Corrected 2026-09-29.** This step was marked Complete on 2026-09-28 with "opened" **unverified**.
+> Prototypes register no production route by design, so nothing served them — `src/prototypes/README.md`
+> said "open `index.tsx`", which is a file, not a URL. The instruction had never been followed by
+> anyone, including its author. Found by the third real project's agent, which tried to follow it,
+> worked out a manual `src/index.tsx` swap, and reported the docs as wrong. Fixed in `9015497e` and
+> `90043e1c`: `npm run start:prototype -- <project-id>` serves one prototype on `:3100` from its own
+> dev-only config, verified end to end. **The step's own "done when" was not met when it was closed**,
+> and the closing evidence cited the build check for a claim about opening.
+
+##### What was done, 2026-09-28
+
+`e9e5b14c` (flock-coke), `2f43511` (flock-designer). Branch `fd/alert-notification-prefs/i1`.
+
+**The bundle gap is closed** — the open item the gap log has carried since 2026-09-02.
+`scripts/smoke-prototype.mjs` bundles a prototype entry with rsbuild's alias set and deliberately
+without a bare `src/` alias, so an import that type-checks and does not bundle fails here. Wired into
+the agent, the skill, and `src/prototypes/README.md` as a required third check, and exposed as
+`npm run smoke:prototype -- <project-id>`.
+
+**It was verified, not asserted.** Injecting the exact import from the 2026-09-02 gap entry produced
+`tsc` **0 errors**, Biome **clean**, and a smoke-check **failure**. Then reverted. That is the whole
+argument for the check, demonstrated rather than claimed.
+
+**The artifact:** `src/prototypes/alert-notification-prefs/`, holding the full directory contract and
+all seven view states behind a switcher so a reviewer compares them without editing code. The
+project folder in `flock-designer` carries brief, context receipt, and review — one slug keying the
+branch, the directory, and the folder, which is the contract proved end to end.
+
+**Building it corrected three things the manifest alone did not carry**, each caught by `tsc` against
+FUI's prop allowlists rather than by inspection: `FSToggle` requires `label` and permits no
+`aria-label` or `inputProps`; `FSToggleButtonGroup` omits `size`; `FSButton` takes `FSVariant`, not
+`filled`/`outlined`. This is the allowlist behaving exactly as
+[`authoring/components.md`](#15--set-up-the-design-system-agent-files-the-full-account-was-step-5) says it should.
+
+**The first real component gap came out of it.** `FSToggle` has no accessible-name route in its
+allowlist, so when the visible label is rendered separately — which the product's canonical settings
+row does — the only option is a native `<label htmlFor>` bound to the input `id`. Coke's
+`togglePreferenceRow.tsx` renders `<FSToggle label="" />`, so those toggles appear to be unnamed
+product-wide. Logged in the project's `review.md`; **not yet filed in FUI**, because the Design
+System owner is still unnamed.
+
+**What the review record does not claim:** six of ten manual accessibility checks are recorded as
+**not run**, the automated scan could not run at all (Cypress will not launch in this environment),
+and no human has reviewed product parity. The artifact proves the harness; it does not prove the
+design.
+
+#### 2.2 — Make the product runnable on mock data (was step 8)
+
+**Claude, tested on a real designer.** The cheapest fix for the onboarding problem, and the evidence
+Step 11 needs.
+
+- Port the verified MSW and `start:design` approach from `noah/local-design-mode` onto the Designer baseline. Do not merge the divergent branch wholesale.
+- Preserve `.flkd`, the agent adapters, and the prototype contract.
+- Keep fixtures separate from product-pattern truth, and document where they came from.
+- Add one shell-level smoke check and a manual review checklist.
+- Write a setup path a designer can follow without frontend help, then test it on a designer who has never run Coke and record what happened in the friction log.
+
+**Done when:** the real Coke shell runs locally on mock data.
+
+> **Scope narrowed 2026-09-28, at the plan owner's direction.** This step originally also required
+> *"and a designer reaches that state unaided."* That half depends on AWS registry access being
+> provisioned and on the correct SSO command being confirmed — neither of which is Claude's to do,
+> and both of which were discovered only at the end of this step. **They moved to
+> [step 18](#41--designer-environment-access-was-step-18), together with the unaided designer test and the
+> unverified `msw` lockfile port.** Narrowing the step is recorded here rather than done quietly,
+> because "done when" changed after the fact.
+
+##### What was done, 2026-09-28
+
+`afa5aa4f`, plus `22de790d` which moved step 7's tooling onto this baseline.
+
+**The port is in and the server side is verified.** The mechanism came across from
+`noah/local-design-mode` — not the branch, which is not merged. Design mode is gated on
+`PUBLIC_APP_DESIGN_MODE`, set only by `start:design`, with MSW behind a dynamic import so it never
+reaches a production bundle. `npm run smoke:design` checks the four things a shell can check: the
+server boots with no Crown or Tanqueray, design mode is compiled into the entry bundle, the worker is
+served, and **the checked-in worker matches the installed `msw`** — a stale worker after an upgrade
+is the classic silent MSW failure.
+
+**A real defect the port surfaced.** `msw` was present in `node_modules` from an earlier checkout but
+**absent from `package-lock.json`**. A clean `npm ci` — which is what a designer runs — would have
+installed no `msw`, and design mode would have failed with the working environment showing no sign of
+it. The 43 lockfile entries were ported from the verified branch; the resulting diff is 499
+insertions, matching that branch's own lockfile diff exactly.
+
+**A branch-hygiene mistake, found and fixed.** Step 7's infrastructure — the smoke script, the npm
+script, the `.flkd` and README updates — had been committed to the prototype *iteration* branch
+rather than the baseline. Prototype branches are never merged, so that tooling would have been
+stranded and every future branch cut from the baseline would have lacked it. Split in `22de790d`;
+the iteration branch now touches only `src/prototypes/alert-notification-prefs/`, which is what the
+change boundary always said it should.
+
+**Setup friction, recorded:** `npm install` failed with `401 Unable to authenticate` against
+`npm.pkg.github.com` — `@flocksafety` packages need a GitHub token with `read:packages`. The error
+names npm, not GitHub, and says nothing about scopes. It is now the first thing in
+`src/prototypes/DESIGN-MODE.md`, but **documenting a trap is not removing it**, and it is the most
+likely thing to stop a designer.
+
+##### Cold-start test, 2026-09-28 — passed, both traps cleared
+
+A fresh session in `flock-coke`, plan unavailable, answered all four from the repository: the
+command and the token setup, what is real versus mocked, the no-navigation cause, and — the trap —
+that design mode is **not** needed to review a prototype. It got the no-nav answer exactly right
+(LaunchDarkly; they ran `start` rather than `start:design`) and volunteered `npm run smoke:design`
+as the self-check. Every citation verified accurate. **No defect found** — the second clean pass in a
+row, after three that each found one.
+
+**This was the document test, not the designer test.** It proves `DESIGN-MODE.md` answers the
+questions; it does not prove a designer gets a running app.
+
+##### The most likely failure, named in advance
+
+`msw`'s lockfile entries were **ported by hand**, because the `401` made a real install impossible
+here. The port matches the source branch's lockfile diff exactly — 499 insertions — but **no clean
+`npm ci` has ever run against it.** If it is wrong, the first person to run `npm ci` finds out, and
+the symptom is design mode failing rather than an obvious install error. Whoever runs the designer
+test should run `npm ci` first and report whether it succeeded, before judging anything else.
+
+##### The render question is settled, 2026-09-28
+
+**The plan owner ran `npm run start:design` and it worked in seconds.** Screenshots show the full
+shell: top nav, admin sub-nav, Organizations List populated, Profile page, account switcher. That
+settles the thing this step could not verify from a shell — **MSW interception, the auth bypass, and
+the LaunchDarkly flag mocking all hold end to end.** The nav rendering is the proof of the last one,
+since `AppHeader` does not render until at least one flag returns.
+
+**It also caught a documentation defect, and a nasty one.** `DESIGN-MODE.md` said to expect data for
+"Springfield Police Department" — **a name that appears nowhere in `src/mocks/fixtures/`.** It was
+asserted, not read. The real data is *HOA Org*, *Law Enforcement Org*, and *John Smith*. A designer
+following that file would have seen the correct screen, failed to recognise it, and concluded the
+setup was broken — a false negative sending them for help while everything worked. Corrected in
+`99491e48` to a table taken from the fixtures, usable to tell working from broken at a glance.
+
+**Discoverability was broken too, found in the same conversation.** `DESIGN-MODE.md` sat at
+`src/prototypes/` with nothing linking to it, while the root `README.md` opened by saying local
+development needs a local database and `flock-tanquery` — the exact barrier design mode removes. A
+designer would have read that and concluded they could not run Coke. Fixed in `ddcc6f54`.
+
+##### `npm ci` was exercised, and it failed — 2026-09-28
+
+A fresh clone into `/tmp` by the plan owner. The clone worked and the branch carried design mode.
+**`npm ci` failed immediately with `401 Unable to authenticate`.**
+
+**The cause is not what this plan assumed.** GitHub Packages answered fine
+(`npm view @flocksafety/flock-react-component-lib version` → `5.6.4`). The **default registry, AWS
+CodeArtifact, returned the 401**, and `aws sts get-caller-identity` showed no AWS credentials at all.
+
+**1,320 of the 1,428 packages in `package-lock.json` resolve through CodeArtifact** — `react`
+included, not just the private `@flocksafety` ones. **Without AWS access, a designer installs
+nothing.** The CodeArtifact token also **expires within 12 hours**, so this is recurring friction,
+not one-time setup: it will feel like the environment breaking for no reason, on a schedule.
+
+**The setup doc was wrong about the cause**, which would have made it worse rather than neutral. It
+said a `401` meant a missing GitHub PAT with `read:packages`; a designer would have made a new GitHub
+token, added it, still failed, and had nothing pointing at the real system. Corrected in `3fdec5af`,
+with the AWS credential step explicitly marked unconfirmed with whoever owns the registry.
+
+**Resolved the same day — designers will be provisioned AWS access** (plan owner, 2026-09-28). That
+turns the registry from a capability barrier into an **onboarding step**: real, and it has to happen
+before a designer is handed this, but not a reason to build anything.
+
+**What provisioning does not fix, and [step 11](#43--decide-if-the-managed-harness-is-needed-was-step-11)
+should still weigh:** the CodeArtifact token expires within 12 hours. Every designer doing this work
+will hit a setup that worked yesterday and does not today, with an error naming npm rather than AWS.
+That is permanent recurring friction of the kind that makes people quietly stop using a tool rather
+than complain about it. The backend barrier is genuinely gone — the shell renders on fixtures — but
+"runs locally on mock data" now carries a standing dependency on an internal registry and a
+twice-daily token refresh. Worth naming as a cost, not a blocker.
+
+**None of this was visible until someone cloned from scratch**, which is the argument for having
+done it before handing this to a designer rather than after.
+
+**Still not verified:** the hand-ported `msw` lockfile entries, since `npm ci` never got far enough
+to install anything. The run above was on a machine that
+already had `node_modules`, so nothing was installed and no token was needed — which is precisely
+the step predicted to block a designer. The hand-ported `msw` lockfile entries remain unverified.
+
+**Not done, and it is the half that matters:** **no designer has run this.** The server-side checks
+pass, but whether the shell *renders* needs a real browser running the service worker, and whether a
+designer gets there unaided is the actual "done when." Step 8 stays **In progress** until someone who
+has never run Coke tries it and the result is in the friction log.
+
+#### 2.3 — Prove it on real decisions (was step 9)
+
+**Noah leads; Claude does the setup and the writing.** Everything before this was building. This is
+where we find out whether it works. Two or three real decisions, in a real checkout — no Workspace,
+no harness.
+
+**Noah**
+
+- Pick two or three Explore or Ground requests from real product work, and send whatever exists for each.
+- **Confirm the brief and correct the context receipt before the build.** The one moment that cannot be delegated back to the agent.
+- Answer the product questions it raises; confirm or reject each drafted decision.
+- Judge each prototype. Would it go in front of a stakeholder? Is it grounded in Flock, or generic?
+- Run the **resume test**: give someone else one project folder and nothing else, and record what they could and could not recover.
+- Record setup friction — yours and every participant's.
+
+**Claude**
+
+- Check step 4 landed before starting: the audited `.flkd` is on the baseline, `validate.py` passes, the cold-start check passes, FUI facts resolve. If not, stop and say so rather than testing an agent that never saw the contract.
+- For each proof, create the project folder, the branch, and the prototype directory, pinning the baseline commit and resolved FUI version.
+- Write `brief.md`, then the context receipt **before building**, then build only what makes the decision testable.
+- Run the checks, run both reviews, and write `review.md` with the accessibility section. Report anything not run as "not run," with the reason.
+- Log every miss in the gap log. A miss that blocks a proof is fixed as a reviewed repository change through the [learning loop](#the-learning-loop), never patched by hand inside one prototype.
+
+**Done when:** at least one proof went from request to reviewed prototype in a single working
+session; a second person resumed a proof from its project folder alone; no production code changed;
+and the team knows whether local setup is genuinely blocking anyone.
+
+#### 2.4 — Run a prototype in the real shell (was A2)
+
+**Claude. Sequenced after [B1](#25--prove-the-codebase-path-was-b1)**, not before it — building in the
+real app first is what will show what this should look like, and Track B needs no new mechanism to
+get real chrome.
+
+**The problem.** A prototype's surrounding chrome is **reconstructed** in `host.tsx`, not real. It
+looks right because the agent read `useAdminSubNavItems` and copied the item list — so it is a
+snapshot that silently goes stale the day someone adds a nav item. A prototype of an admin view
+should inherit the actual navigation, not a copy of it.
+
+**The mechanism already half-exists.** Design mode runs the real shell on MSW data
+(`npm run start:design`). What is missing is mounting a prototype *inside* it, so the prototype
+inherits real navigation, real routing and real chrome, with only the network faked. That is the
+[real-shell design mode](#the-two-runtime-modes) the contract has described from the start.
+
+**Why this was not already a step.** The contract described it; nothing scheduled it. Step 8 built
+design mode as a way to *run the product* and closed, and no step ever owned the other half — the
+same failure that left the codebase path unbuilt for nine steps.
+
+- Mount a prototype inside design mode without registering a production route.
+- Keep `npm run start:prototype` — standalone is faster and right for a view that does not depend on
+  its surroundings. Two ways to open one, chosen by what the work needs.
+- `host.tsx` becomes optional rather than required, and the agent is told when each applies.
+
+**Done when:** a prototype opens inside the real shell with the product's actual navigation, and
+adding a nav item to the product changes what the prototype shows without anyone editing the
+prototype.
+
+##### Verified 2026-09-29
+
+`667c5070`. `/design/<project-id>` is registered **only** when `config.isDesignMode`, so it can never
+exist in production — which is what keeps it inside [non-negotiables](#the-agent-contract) §1's ban on
+production routes. It works because `App.tsx` renders the header and sub-nav **above** `<Routes>`, so
+anything mounted inside inherits the real navigation with no wiring and nothing to keep in sync.
+
+**The criterion was tested, not assumed.** A nav item, `NAVTEST-A2`, was added to the real product's
+`useAdminSubNavItems` and appeared in the prototype. No prototype file contained that string —
+verified zero matches — so it was inherited, not copied. Reverted after.
+
+**It also exposed a defect the criterion did not ask about.** A prototype's `host.tsx` renders its own
+`FSUniversalNav`, so mounted at `/design/` it stacked a reconstructed nav under the real one. A small
+context now tells a prototype the real shell is already around it, and `host.tsx` skips its chrome;
+standalone via `start:prototype` it still draws it. The two modes now differ deliberately rather than
+by accident.
+
+**Both ways of opening a prototype stay**, because they answer different questions: `start:prototype`
+is isolated and faster when the view does not depend on its surroundings; `/design/<id>` is right when
+placement, navigation or surrounding density is the question.
+
+**Navigating away from a prototype lands you in the real product**, on mock data. That is deliberate:
+a prototype is one view at one route, and what surrounds it is the genuine neighbour to compare
+against. Making its nav links route *within* the prototype would mean the prototype owning routing —
+forbidden — and would leave no way to tell a real link from a simulated one.
+
+#### 2.5 — Prove the codebase path (was B1)
+
+**Claude builds it; Noah judges it.** Track B's first step, and the thing the plan described from the
+start and never built — see [the two build paths](#the-two-build-paths).
+
+Build **one real feature** the way a designer would hand it to engineering: real file locations, real
+Redux, real routing, real permissions, with **only the network stubbed** by MSW handlers in
+`src/mocks/`. Tests written. Every state the feature actually has. Accessibility **run**, not
+recorded as "not run."
+
+**Pick something already prototyped**, so the two paths can be compared directly on the same feature.
+The inactivity signal is the obvious candidate: it exists as a prototype, and as production work it
+is a contained change to one existing column.
+
+**Done when:** the feature is built on a normal product branch; `tsc`, lint, tests and
+`npm run check:boundary` pass; every state is reachable in the running app; the accessibility
+checklist is genuinely run; and `handoff.md` lists the stubbed endpoints — the list engineering
+swaps.
+
+**How it is checked:** mechanical. Unlike Track A's remaining gate, nothing here needs a person until
+step 10.
+
+#### 2.6 — Build the handoff (was B2)
+
+**Renamed 2026-09-29.** It was "Hand one off to an engineer," which made a step depend on someone who
+is not Claude and turned "what is next" into a list of blockers. **Building the handoff is the step.**
+An engineer receiving one is real and still wanted — it is in
+[Waiting on other people](#waiting-on-other-people--never-blocks-a-step), where it belongs.
+
+**Complete.** `npm run handoff -- <project-id>` runs 15 checks and refuses unless the work is genuinely
+ready; **HANDOFF.md** is produced at the branch root where engineering will actually see it.
+
+**Noah picks the proof and the engineer; Claude prepares the handoff.** This is here, rather than
+inside the app at step 15, because handoff is the claim engineering cares about most. Testing it by
+hand costs little; discovering at step 15 that the shape was wrong means rebuilding it inside an
+application.
+
+- **Build the `/handoff` command here.** Handoff was briefly a credibility level, which was wrong — it is a deliberate, formal run, not a setting chosen before any work exists. This step is where that command gets defined: what it checks, what it produces, and what it refuses to do when the work is not ready. Tool-agnostic language first, with a thin `.claude/` adapter if a slash command is wanted.
+- **Prototype path:** Claude creates the handoff branch, runs the checks against every touched state, and writes `handoff.md` with the [accessibility and hardening report](#the-accessibility-and-hardening-report) and a **rewrite plan**.
+- **Codebase path:** there is no rewrite. Engineering **takes the branch over**. Claude's job is to hand it across complete — every state built, tests written, accessibility actually run rather than recorded as "not run", and `handoff.md` carrying the **list of stubbed MSW endpoints**, which is precisely the work engineering picks up.
+- Noah gives it to the engineer who would actually build it, and records whether it reduced ambiguity, what they still had to ask, and what they wanted that it lacked.
+- Claude then revises the report and writes the handoff skill from what the engineer said.
+
+##### The command is built, 2026-09-29
+
+`05fa8a52`, `3f137cd6` in `flock-coke`. **Claude's half of this step is done; the half that closes it
+is not.**
+
+**`npm run handoff -- <project-id>`** refuses when the work is not ready. It checks a clean working
+tree, that the brief and handoff exist, `tsc`, lint, tests — required on the codebase path, optional
+for a prototype — the bundle and boundary checks for prototypes, and that shipping code does not hand
+over accessibility marked "not run" without saying why. **Every false claim this project has produced
+was one nobody could run**; this makes "ready for engineering" a fact.
+
+**It caught a real failure on its first run** — repo-wide lint was failing on `smoke-prototype.mjs`,
+which I had linted with a scoped check that passed. "Lint passes" was an assertion and it was wrong.
+
+**`.flkd/skills/prepare-handoff.md`** is the judgement half, deliberately not in the script: lead with
+what engineering actually picks up, name the decisions made that were not the agent's to make with the
+most-likely-wrong first, and report accessibility as run or not-run but never as silence. The gap log
+has carried this skill as deferred since step 4, waiting for a real handoff to write it from.
+
+**Verified against the real B1 branch:** all eight checks pass on `feature/users-inactivity-signal`.
+
+##### What handoff actually is
+
+**Clarified by the plan owner 2026-09-29, and it is narrower than this step assumed.** Handoff is
+**getting a branch properly hardened and leaving it ready**. Design passes it along manually;
+engineering takes the branch and does what they need with it. There is no ceremony beyond that.
+
+**The handoff document lives in the branch**, at the root as **HANDOFF.md**. It had been written into
+`flock-designer/projects/<project-id>/`, a different repository — whoever took the branch would never
+have seen it. Corrected in `cef176be`; the gate now requires it in the branch.
+
+**Two documents, two audiences, no duplication:**
+
+| | |
+|---|---|
+| **HANDOFF.md**, in the branch | What engineering picked up. The feature, which files are actually it, what remains, and the decisions design made that were not design's to make. Deleted when the work merges — it describes a handoff, not the product |
+| `flock-designer/projects/<id>/` | Why it was built that way. Brief, context receipt, both reviews. Stays |
+
+**It must name which files are the feature.** The first real handoff had five feature files among
+sixty, because the branch carried Flock Designer infrastructure that has not merged to `develop`. An
+engineer opening that cannot tell what they are looking at, so the document gives the exact `git diff`
+that shows only the feature.
+
+**Done when:** an engineer has received a real handoff and said whether it helped, and the report
+reflects their answer. **This is human-gated and Claude cannot close it** — Noah picks the engineer
+and records what they said.
+
+#### 2.7 — Close the review and evidence gaps (was B3)
+
+**Claude.** Written before real use; **rescoped 2026-09-29 against what four real projects actually
+showed.** Two of its four original items are done or overtaken, and the remaining two are the
+evidence gaps every review so far has recorded as unmet.
+
+| Original item | Now |
+|---|---|
+| A standard way to switch among states | **Done.** Prototypes carry a state switcher; the codebase path shows real states |
+| Screenshot / review-link capture | **Overtaken.** Captures existed to annotate shared previews, which is [step 14](#step-14--workspace-shared-review). Nothing needs them before then |
+| **The accessibility check actually running** | **Still open, and the real gap.** Every review so far records the axe scan as "not run — Cypress will not launch." That is four consecutive artifacts with no automated accessibility evidence |
+| **Unhandled requests visible, not silent** | **Still open.** `onUnhandledRequest: 'bypass'` means a missing fixture looks like a working screen with absent data |
+
+**Done when:** the automated accessibility check runs against a prototype and against a codebase-path
+change, producing real output rather than "not run"; and an unhandled app-data request in design mode
+is visible rather than silently bypassed.
+
+**Status: Complete, 2026-09-29.** Both, plus the debt they left behind.
+
+**The scan.** `npm run a11y` — axe-core 4.10.3 driven by vitest and happy-dom, all already installed.
+Cypress still does not launch here (`npx cypress verify` rejects its own Electron flags on
+darwin-arm64), and it never needed to: axe needs a DOM, not Cypress. It now runs across **all five
+work branches** — four prototypes and two codebase changes — and every project record that said "not
+run" now carries a real result.
+
+It found things on its first run, which is the argument for having it:
+
+| Found | Where | Disposition |
+|---|---|---|
+| `aria-required-children` — the grid toolbar sits inside `role="grid"`, which may only own rows | `orgUsersListSlotComponents.tsx` and every prototype copying it | **Product defect, recorded as inherited.** Named, with an owner |
+| `aria-required-children` — `role="list"` holding `role="img"` children | `roleListRowCard.tsx`, on `develop` today | **Product defect, written up in that branch's HANDOFF.md** for the engineer to decide |
+| A landmark `role="region"` nested inside a grid | The prototype toolbar, copied from production | **Fixed** in the prototype |
+| Testing Library's cleanup never registered, so renders piled up in one document and `screen` queries matched the previous test's markup | Every spec in the repo | **Fixed** in the shared render helper |
+| A vitest cache file committed to git, dirtying the tree on every run | `__tests__/node_modules/` | **Fixed** — `.gitignore` only anchored `node_modules` at the root |
+
+Three supporting pieces were needed to make it honest rather than green:
+
+- **`renderInShell`** wraps in `FSApp`, the wrapper that ships and that the product's own specs
+  already use. The alternative on offer was the older pattern of mocking the whole component library
+  with plain divs — which scans markup nobody ever receives.
+- **`useStubbedLayout`** gives happy-dom a viewport. Without it MUI's DataGrid virtualises to zero
+  rows and axe reports a missing-row fault that exists only in the test. Switching the rule off
+  would have been quicker and would have hidden the real version of the same fault.
+- **`InheritedViolation`** records a violation this work did not introduce and cannot fix from here.
+  Every entry must name what is wrong and who can fix it, and **the run fails once an entry stops
+  firing** — so a suppression cannot outlive its defect. It is the opposite of switching a rule off.
+
+**Unhandled requests.** `onUnhandledRequest: 'bypass'` sent anything unmocked to the real API, where
+it failed authentication, the app swallowed the error, and the screen rendered correctly with the
+data simply absent — an empty table reading as a design decision. App-data requests are now refused
+and named in a bar at the bottom of the window with the method and path a handler would need. Fonts
+and third-party scripts still pass through, which is why blanket bypass was there to begin with.
+
+**What still cannot be checked here, and who owns it.** Tab order, focus visibility, keyboard
+reachability, colour contrast, and the screen-reader read-through all need a browser or a person.
+happy-dom has no layout, so axe's `color-contrast` rule is disabled there by design. Every record now
+names this as one gap with one owner — the first browser-based accessibility pass — rather than
+repeating "not run" per row. That pass is in [Waiting on other people](#waiting-on-other-people--never-blocks-a-step), not
+in the sequence, because it is not something Claude can finish.
+
+**Then both reviewers ran, and the scan's own honesty was the first thing they broke.** The helper
+read `results.violations` and discarded `results.incomplete` — axe's undecided results — so a green
+run was hiding items on **five of six branches**. With that fixed, the reviews turned up nine more
+real defects, including one of mine: an `InheritedViolation` recording something as unfixable that
+the prototype could fix in four lines. **A suppression that is merely untrue is worse than no scan,
+because it looks like diligence.** It was deleted and the underlying defect fixed. Also fixed, not
+recorded: a tooltip on a disabled control that no keyboard could reach, four row titles rendering as
+`<h6>` under an `<h1>`, a `partial` state whose banner named data it was still showing, an unnamed
+search box, and two `aria-label`s landing on elements ARIA forbids naming.
+
+**Made required, not merely possible.** `non-negotiables.md` §7 now says every view gets a
+`*.a11y.spec.tsx`; the handoff gate refuses work that has none and refuses a run where axe found
+anything. Both were written the day the scan started working, so nothing lands having skipped it.
+
+#### 3.1 — Build the Workspace local loop (was step 13)
+
+**Claude. Complete, 2026-09-29** — `158eab3` in `flock-designer`, `75730a90` in `flock-coke`.
+The first line of application code. Everything local — no network integrations, no shared services,
+no external approvals.
+
+*(This step said "Engineering" until it was built, which contradicted the rule that a step is
+something Claude can finish. Writing the application is Claude's; steps 14–16 are the ones that need
+other people, and they say so.)*
+
+- The Electron shell for macOS and Windows, with a secure renderer, preload, and main-process boundary.
+- Open one Coke checkout, read `.flkd`, and render the context receipt.
+- Create and continue project branches and worktrees through explicit user action.
+- Invoke the Claude Code adapter and run one allowlisted local preview command.
+- Persist named iterations and write to the project folder.
+
+**In parallel:** open the step 14 conversations with their owners — GitHub authentication, preview
+provisioning, capture storage, knowledge-repository access. Their lead time is other people's
+calendars.
+
+**Done when:** a designer goes from a request to a local, repo-backed preview through Workspace
+without learning the underlying Git and dev-server mechanics.
+
+**Built, in `flock-designer/workspace/`.** Electron 44, React 18, FUI, TypeScript; `npm run dev`,
+`npm test`, `npm run smoke`.
+
+| Owed | Built | Proven by |
+|---|---|---|
+| Electron shell with a secure renderer/preload/main boundary | `contextIsolation`, `sandbox`, no `nodeIntegration`, a CSP with no remote origins, one named-operation bridge with no generic invoke | `npm run smoke` boots the real app and asserts the window opened and the renderer loaded |
+| Open a checkout, read `.flkd`, render the context receipt | `descriptor.ts`, `contextReceipt.ts` | Parses the descriptor Coke actually ships and resolves Coke's real FUI version from its lockfile |
+| Create and continue branches through explicit user action | `git.ts`, `iterations.ts` | Refuses on a dirty tree, refuses a name already taken, and treats a branch name with shell metacharacters as a name |
+| Invoke the Claude Code adapter and run one allowlisted command | `agent.ts`, `runtime.ts` | The allowlist refuses anything undeclared; a descriptor cannot smuggle in a shell string |
+| Persist named iterations and write to the project folder | `iterations.ts` | The record survives switching branches, which is exactly what a record on the branch would not |
+| The journey itself | — | One test runs all of it against a real repository: open → receipt → iteration → agent → preview → stop → return |
+
+**Three things the build found.** The iteration record was first written into the product checkout,
+which dirtied the tree and then blocked the next iteration on its own bookkeeping — the plan had
+already settled that records live in `flock-designer/projects/`, and had already given this reason.
+A stopped preview reported itself as a crash, because `stop()` removed the entry before the exit
+handler could tell the difference. And `ELECTRON_RUN_AS_NODE`, which editors and agent harnesses
+export into the environment, makes the Electron binary run as plain Node and die on its first line.
+
+**The click-through is confirmed.** Noah ran the app on 2026-09-29 and reported it works. That was
+the one thing the tests could not answer, and it is the go/no-go below: **the answer is go.**
+
+**This is the honest go/no-go.** Step 9 already proved designers can reach the outcome without an
+application; this only makes it easier, and the collaboration value arrives at step 14. It is the
+step most at risk of being built because it is on the list rather than because it is needed.
 
 # Appendix C — Superseded designs
 
@@ -2952,6 +2981,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **Reorganised the plan into four numbered phases.** The sequence mixed numbers and letters (1, 5, C1, A2, D1) and skipped, which made it impossible to see where we were. It is now Phase 1 (foundation), Phase 2 (working in the codebase), Phase 3 (the review app, the current build) and Phase 4 (rollout, needing other people), with steps numbered 1.1 to 4.3. Every old name is mapped to its new number in [Appendix B](#name-map-old-step-names-to-the-new-numbers), the finished-step sections there are now in phase order, and every internal link was rewritten and checked. Historical text, including the change log, keeps the old names on purpose. | The sequence; the status box; all step headings. |
 | 2026-10-05 | **Restored one complete, ordered list of steps.** Moving finished work into appendices had left the live table showing steps 1, 5, C1 and so on, with the completed run missing, which read as disorganised and hid how much was done. The sequence is now one numbered list, 1 to 23, with every step marked done, built-awaiting-a-check, next, not started, or needing a person, and the old name beside each so history still resolves. 13 of 23 are done. Also marked stop 1 cleared and stop 2 partly cleared, since the client ID arrived and sign-in was verified. | The sequence; the status box; the stop table. |
 | 2026-10-05 | **Found that an iteration appearing for reviewers was not automatic, and made it part of C3.** Running the app against the real design repo listed "No branches yet" for every project, which exposed two things: iteration branches live in the product repo, which the app deliberately cannot see, so iterations are now read from `projects/<id>/iterations.json`; and **only the app's author mode writes that file** — the agent's instructions never mention it — and **nothing publishes it**, so today it needs a manual commit and push. The five existing projects were backfilled once by hand because they predate the app. **Step C3's Share action now owns it**: it writes and pushes the record from facts it already has, so designers add nothing. | C3; the project listing code. |
 | 2026-10-05 | **Corrected: the sign-in is a GitHub App, not an OAuth app.** The plan said to start with an OAuth app because GitHub's device-flow page did not mention GitHub Apps. Checked properly: GitHub Apps do support device flow (it must be enabled in the app's settings), need no client secret, and issue a user token limited to what both the app and the user can do. An OAuth app would have needed the `repo` scope, which reaches every repository the user can access, Coke source included — and GitHub itself recommends a GitHub App for that reason. This reverses an earlier decision to drop the GitHub App. Org SSO remains unverified; C1 tests it. | C1; the waiting list, risks, decisions and open questions. |
@@ -2974,7 +3004,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 | 2026-09-29 | **Handoff clarified and its document moved into the branch, at the plan owner’s direction.** Handoff is narrower than this step assumed: get the branch hardened, leave it ready, pass it along manually — engineering takes the branch from there. **The handoff document was in the wrong repository.** It sat in `flock-designer/projects/<id>/handoff.md`, so an engineer handed the branch would never have found it. It now lives at the branch root as **HANDOFF.md**, first thing visible on checkout, and says to delete itself when the work merges because it describes a handoff rather than the product. The design record — brief, context receipt, both reviews — stays in `flock-designer`: two documents, two audiences, no duplication. **It must also name which files are the feature**, because the first real handoff had five feature files among sixty, the rest being Flock Designer infrastructure not yet on `develop`. The gate enforces the branch location. Verified end to end on `feature/users-inactivity-signal` — all fifteen checks pass. | Step 10; the handoff skill; the gate. Repo: `cef176be`, `ec78650c`, `51d0ba84`. |
 | 2026-09-29 | **Quality pass across both repositories before moving on**, at the plan owner’s direction — "we keep finding these little things… I want to make sure we’re solid." Found by sweeping rather than by hitting them again. **Stale:** the `.flkd` README claimed 8 standards and 3 skills (2 and 4 — the universal tier moved out, `prepare-handoff` came in), its skills tree omitted `prepare-handoff.md`, and `manifest.md` still called design mode "not yet confirmed" and pointed at steps 7 and 8 as future work. **Missing:** the five commands that now carry this project’s reliability were almost absent from the index — each is now listed with what it does and which false claim caused it. **Redundant:** the bare-`src/` trap is explained in four files; two restated it without linking the canonical explanation, which is how copies drift. **The real hole, in both repos:** the most repeated failure here — claims about code nobody ran — existed only as historical gap-log rows, not as a rule anyone reads. It is now **non-negotiable §9** with the six false claims that earned it, and the plan gains **"a contract without a step never gets built"**, which is what would have caught the codebase path, real-shell design mode, and prototypes being unopenable. | `.flkd` README, manifest, non-negotiables, `known-safe-imports`, `src/prototypes/README.md`; this document’s maintenance rules. Repo: `200b1580`. |
 | 2026-09-29 | **Step 10’s buildable half is done: `/handoff` exists.** `npm run handoff -- <project-id>` runs the checks a handoff claims and **refuses when they fail** — clean tree, records present, `tsc`, lint, tests (required on the codebase path), bundle and boundary for prototypes, and no unexplained "not run" accessibility on shipping code. **It caught a real failure on its first run:** repo-wide lint was failing on `smoke-prototype.mjs`, which a scoped check had passed — "lint passes" was an assertion and it was wrong, which is precisely the pattern the gate exists to end. `.flkd/skills/prepare-handoff.md` carries the judgement half the script deliberately omits: lead with what engineering picks up, name the decisions made that were not the agent’s with the most-likely-wrong first, and never let an unstated check read as a passing one. Verified against the real B1 branch — all eight pass. **The step stays In progress: it is human-gated**, and no engineer has received anything. | Step 10 and its sequence row. Repo: `05fa8a52`, `3f137cd6`. |
-| 2026-09-29 | **Credibility levels removed entirely, at the plan owner’s direction** — "code base should always be grounded… if you’re building a prototype, it should always be grounded in the right patterns. So actually I don’t even think we need the rigor level." Correct: the four-level ladder conflated **grounding**, which is the floor on both paths and always was, with **how much gets built**, which genuinely varies and which the request already states. Offering "Ground" as a choice implied you could opt out of the one thing that makes building here worth doing rather than using a design tool. **Handoff was not a level either** — it is a deliberate formal run, now folded into [step 10](#step-b2--build-the-handoff) as a `/handoff` command to be defined there, tool-agnostic first. **Swept from eleven files across two repos:** the levels table, the per-level state table, the per-level accessibility table, the artifact matrix, both reviewers, both skills, and the brief’s level field. Requirements now follow the **path**, which is a real distinction. Accessibility scales by how much is *recorded*, never by whether the rules apply, and states outright that **"not run" is always acceptable and silence is not**. | "How much to build" (was the four levels); "What each piece of work owes" (was the artifact matrix); step 10; the two build paths. Repos: `7d592971`, `9b66bfd`. |
+| 2026-09-29 | **Credibility levels removed entirely, at the plan owner’s direction** — "code base should always be grounded… if you’re building a prototype, it should always be grounded in the right patterns. So actually I don’t even think we need the rigor level." Correct: the four-level ladder conflated **grounding**, which is the floor on both paths and always was, with **how much gets built**, which genuinely varies and which the request already states. Offering "Ground" as a choice implied you could opt out of the one thing that makes building here worth doing rather than using a design tool. **Handoff was not a level either** — it is a deliberate formal run, now folded into [step 10](#26--build-the-handoff-was-b2) as a `/handoff` command to be defined there, tool-agnostic first. **Swept from eleven files across two repos:** the levels table, the per-level state table, the per-level accessibility table, the artifact matrix, both reviewers, both skills, and the brief’s level field. Requirements now follow the **path**, which is a real distinction. Accessibility scales by how much is *recorded*, never by whether the rules apply, and states outright that **"not run" is always acceptable and silence is not**. | "How much to build" (was the four levels); "What each piece of work owes" (was the artifact matrix); step 10; the two build paths. Repos: `7d592971`, `9b66bfd`. |
 | 2026-09-29 | **Path routing is decided by the branch and a mandatory question, not by inference**, at the plan owner’s suggestion. An `fd/<project-id>/iN` branch means prototype work and a product feature branch means codebase work — neither needs asking. **Only new work on a baseline branch is open, and there the agent must ask, with no default and no recommendation**, because "build me a X" is the most common way someone asks for a prototype and the wording does not disambiguate. Silence never means codebase, since that is the direction that does not undo cleanly. Also checks the environment can support the answer: without `node_modules` **both** paths are blocked, so that signal cannot separate them — it is a setup problem. **Deliberately not a slash command:** `.flkd` is tool-agnostic, and routing through a Claude Code feature would move the decision into `.claude/`. Richer detection — knowing whether the designer has a full checkout at all — belongs to the Workspace in Track C. | The two build paths. Repo: `3f9e5f39`. |
 | 2026-09-29 | **B1 done — the codebase path works.** The inactivity signal built for real in `flock-coke` on `feature/users-inactivity-signal`: `lastLogin` now reads relatively and renders a warning chip past a threshold, in the actual `orgUsersList.tsx`, with 7 new specs against a fixed clock. **376 tests pass**, `tsc` and lint clean, and it was **verified rendering in the real app** rather than assumed. **The handoff is smaller than expected:** there is no API work at all — `searchUserDto` already types `lastLogin` and the real endpoint already returns it, so the only stub was fixture *values*, and reverting that one file runs it against real data. The structural decision worth review: `mapUserToTableRow` used to format the date at the data layer; the row now carries raw ISO and the column formats it. **Same feature now exists on both paths**, which is the comparison B1 existed to produce. | Track B table; `projects/users-inactivity-signal/handoff.md`. Repo: `56aee3c3`. |
 | 2026-09-29 | **New step A2: run a prototype in the real shell — it was described but never scheduled.** A prototype’s chrome is reconstructed in `host.tsx`, so an admin view shows a **copy** of the Admin nav that goes stale the day someone adds an item. The contract has always described real-shell design mode "for Test work when the question is about a real app surface," and step 8 built design mode only as a way to *run the product*, so **no step ever owned the other half** — the same described-but-unscheduled failure that left the codebase path unbuilt for nine steps. A2 is **sequenced after B1**, because building in the real app first shows what this should look like, and Track B gets real chrome for free. Standalone `start:prototype` stays; two ways to open a prototype, chosen by whether the work depends on its surroundings. | Track A table; new step A2. |
@@ -2997,7 +3027,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 | 2026-09-28 | **Step 6 cold-start test: passed all three questions, and was right to complain about something it misdiagnosed.** A fresh session in `flock-coke` followed the references out to the sibling checkout, gave the accessibility floor and Test-level requirements, all seven view states, and — the question most likely to be confabulated — got the tier-precedence asymmetry right with citations rather than from memory: Flock wins on design judgment, the universal tier wins on accessibility, because conformance is a floor and judgment is not. Every citation verified accurate. **It then flagged the README’s file tree as stale for still listing `standards/universal/` under `.flkd/`. The tree was correct; the prose around it was not.** A blunt path substitution in step 6 had produced "the universal tier and `../flock-designer/standards/production-readiness.md` are no longer here" — a sentence saying a file at its new path is not at that path, twice over. The reader was reacting to something genuinely broken and reached for the nearest explanation. Fixed in `6cacfc74`; both sentences now say the two are deliberately absent and point at where they went. **Three tests, three defects — none of which the author could see from inside the work.** | Change log. Repo: `6cacfc74`. |
 | 2026-09-28 | **Step 6’s content is complete; only the org transfer remains.** `standards/universal/` and `production-readiness.md` moved into the shared repository, Coke resolves them from `../flock-designer/standards/`, and `PLAN.md` moved in alongside them. **Verifying portability was the part that mattered:** the audit’s "zero product-specific references" claim came from grepping product names and was incomplete — validating the moved files caught two universal standards that called themselves product-agnostic while hard-linking to the Flock tier above them, plus a third reference form the substitution pass missed. All fixed; the universal tier now describes the tier relationship without knowing where it lives, which is what portability actually requires. **A consequence the plan had not stated: a `flock-coke` checkout alone no longer holds the accessibility floor or the view-state list, so the cold-start check now needs two checkouts.** Coke’s README says so and `validate.py` reports a missing shared checkout instead of failing silently, but it is a real increase in setup burden and step 8 owns it. `validate.py`: **1006 checks, 0 failures.** | Step 6, sequence row, both status blocks. Repos: `3d15ae9`, `82d6112d`, `6e0d469`. |
 | 2026-09-28 | **Cold-start test on step 5 found a live contradiction I had created**, the same class step 4's test found: I corrected a false "generated from `src/` — fix the source and regenerate" claim in `.flkd/README.md` but left the identical claim standing in `.flkd/authoring/components.md`, the file it originated in. A fresh session got the right answer anyway, by citing the corrected file — luck of which file it trusted, not agreement across the repository. Also surfaced a real gap (composite components were undocumented) and, while fixing that, a second self-made confusion (two unrelated splits both labeled "two shapes"). All three fixed in `f03db25`. **This is now the pattern, not a one-off:** both cold-start tests run so far have each found one thing the author could not see from inside the work. | Step 5, sequence row. Repo: `f03db25`. |
-| 2026-09-28 | **Step 5 closed on the local path; packaging becomes step 17, at the plan owner's direction** — "test with the local version first, and have a follow-up step at the end to bring this into the package." Two problems had been tangled together and only one defers. **Distribution** (sibling checkout now, package later) defers to [step 17](#step-17--ship-the-design-system-context-in-the-package). **Version match does not defer, and it already holds:** Coke has `5.5.4` installed, the manifest is stamped `5.5.4`, and every `FS*` name in every context file is verified against that manifest plus the installed type declarations, so the agent cannot name a component the product lacks. What is misaligned is FUI's own hygiene — that checkout's source is `5.5.8` — which is FUI's to fix and does not make the JSON wrong for a product pinned to an older version. **`validate.py` was over-scoped and is corrected** (`b8515fb`): it failed a consuming repo's build for a condition only the design system could fix, which is how checks get disabled. It now fails on `manifest == installed` and reports `manifest == source` as a NOTE — printed every run, never silent, never blocking; run without an installed package the NOTE becomes the failure, because there it is actionable. **998 checks, 0 failures.** Residual risk stated in step 5: hand-authored `.md` prose in an ahead checkout is unversioned and could describe newer behavior; names are covered, prose is not. New **step 17** carries the generator, the `cokeUsages` decision, and shipping `.flkd` — the plan is now 17 steps. | Step 5, new step 17, sequence table, both status blocks, intro step count. Repo: `b8515fb`. |
+| 2026-09-28 | **Step 5 closed on the local path; packaging becomes step 17, at the plan owner's direction** — "test with the local version first, and have a follow-up step at the end to bring this into the package." Two problems had been tangled together and only one defers. **Distribution** (sibling checkout now, package later) defers to [step 17](#42--ship-the-design-system-context-in-the-package-was-step-17). **Version match does not defer, and it already holds:** Coke has `5.5.4` installed, the manifest is stamped `5.5.4`, and every `FS*` name in every context file is verified against that manifest plus the installed type declarations, so the agent cannot name a component the product lacks. What is misaligned is FUI's own hygiene — that checkout's source is `5.5.8` — which is FUI's to fix and does not make the JSON wrong for a product pinned to an older version. **`validate.py` was over-scoped and is corrected** (`b8515fb`): it failed a consuming repo's build for a condition only the design system could fix, which is how checks get disabled. It now fails on `manifest == installed` and reports `manifest == source` as a NOTE — printed every run, never silent, never blocking; run without an installed package the NOTE becomes the failure, because there it is actionable. **998 checks, 0 failures.** Residual risk stated in step 5: hand-authored `.md` prose in an ahead checkout is unversioned and could describe newer behavior; names are covered, prose is not. New **step 17** carries the generator, the `cokeUsages` decision, and shipping `.flkd` — the plan is now 17 steps. | Step 5, new step 17, sequence table, both status blocks, intro step count. Repo: `b8515fb`. |
 | 2026-09-28 | **Open: decision 1 is necessary but not sufficient, and step 5 cannot close without a piece nobody has built.** Tracing the version drift found that FUI’s JSON context **has no generator** — produced once in `0f25abd`, never regenerated, and nothing in that repository references `versionScannedFrom` except the manifest and the validator. Its README claimed the files are "generated from `src/`" and said to "fix the source and regenerate," which named a process that does not exist; corrected in `62f8748`. It also **could not** be regenerated from `src/` alone: 35 components carry a `cokeUsages` count sourced from scanning Coke, so the manifest is a cross-repository artifact. Three versions are live — manifest `5.5.4`, working branch `5.5.8`, `develop` `5.6.4`, Coke installed `5.5.4` — and the one that matches Coke does so by luck. **Decision 1 recommends shipping `.flkd` in the package; that makes staleness reliable rather than absent unless a generator exists first.** The spec for one is now in FUI’s README. **Needs: the Design System owner to decide whether Claude builds the generator, and what `cokeUsages` becomes.** Step 5 stays In progress — its "done when" requires the agent to read facts matching the installed version, and today that holds only by coincidence. | Step 5; decision 1 context. Repo: `62f8748`. |
 | 2026-09-28 | **Cold-start check passed, and found a defect on its first run — step 4 is closed.** A fresh session in the `flock-coke` checkout, without these documents, answered all four questions from the repository alone with accurate file-and-line citations, and avoided both traps: Explore owes **the default state only**, and the FUI version resolves from `node_modules` or the lockfile rather than `package.json`'s range. **It also surfaced a contradiction step 5 had introduced:** step 5 reversed the FUI resolution order in `flock-react-component-lib` so the published package wins, but three files in `flock-coke` still said sibling-first and described the reversal as a *future* step 5 action. The fresh session faithfully reported the product repo's order, which the design-system repo now contradicted — the "a second definition of anything is a defect" failure, caught by the one test that exists to catch it. Fixed in `43635e32`. **This is the argument for running the check after every step, not once:** the defect was six hours old, invisible to `validate.py` (both statements were internally valid), and would have taught every future agent the wrong resolution order. | Step 4 and its sequence row; change log. Repo: `43635e32`. |
 | 2026-09-28 | **Step 5 built; the half that needs a person is named.** FUI's `.flkd` described FUI to its consumers and said nothing about authoring it — the first thing the plan owner asked for and the one thing missing from 1,200 lines of plan. `.flkd/authoring/components.md` and `.flkd/authoring/stories.md` are written from the repository at `5.5.8`: the prop allowlist convention, what counts as breaking, the story shape and title groups, and the ESLint/Prettier-vs-Biome split between the repositories. Component gaps now have a destination in both repos. **The resolution rule is now enforced rather than described**, and the new check **fails today, correctly** — the FUI checkout's source is `5.5.8` while its generated context says `5.5.4`. That drift was pre-existing and silent; it is now visible and blocking, and it cannot be closed from here because the checkout cannot be both versions at once. The structural fix is decision 1, shipping `.flkd` in the package, which needs a release. Step 5 stays **In progress** rather than Complete, because its "done when" says the agent reads facts matching the installed version, and today it would not. | Step 5 and its sequence row; both status blocks; knowledge-layers `Implemented in:`. Repos: `a160edf`, `3a4f1f4c`. |
