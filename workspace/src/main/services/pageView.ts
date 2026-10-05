@@ -105,6 +105,19 @@ export class PageView {
 		this.view?.setVisible(this.holds.size === 0);
 	}
 
+	/**
+	 * The preview as an image. The window draws it where the preview was and hides the real
+	 * one, which is what lets a popover appear *over* the page: a native view is always drawn
+	 * above the window's own content, so it cannot be covered, only swapped for a picture of
+	 * itself.
+	 */
+	async snapshot(): Promise<string | null> {
+		const wc = this.view?.webContents;
+		if (!wc || wc.isDestroyed()) return null;
+		const image = await wc.capturePage();
+		return image.isEmpty() ? null : `data:image/jpeg;base64,${image.toJPEG(85).toString('base64')}`;
+	}
+
 	setBounds(b: PageBounds): void {
 		const n = (v: number) => (Number.isFinite(v) ? Math.max(0, Math.round(v)) : 0);
 		this.bounds = { x: n(b.x), y: n(b.y), width: n(b.width), height: n(b.height) };

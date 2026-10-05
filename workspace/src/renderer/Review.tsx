@@ -5,36 +5,43 @@ import {
 	FSChip,
 	FSIconButton,
 	FSStack,
-	FSTab,
-	FSTabs,
 	FSTextField,
 	FSTooltip,
 	FSTypography,
 } from '@flocksafety/flock-react-component-lib';
 import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutline';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
-import ViewSidebarOutlined from '@mui/icons-material/ViewSidebarOutlined';
+import BuildOutlined from '@mui/icons-material/BuildOutlined';
+import { Popover } from '@mui/material';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { People } from './People';
-import { PANEL_STEP, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
 import { NAV_HEIGHT } from './TopNav';
 
 /**
- * One iteration: a thin toolbar, the preview, and a side panel that sits beside it.
+ * One iteration: a thin toolbar, and the preview taking everything under it.
  *
- * The panel is docked, not laid over the page: opening it makes the preview
- * narrower, so the page stays live and usable next to the comments. The preview is
- * a native view, so its size follows the slot it is laid on, and dragging the divider
- * hides it for the length of the drag (the pointer over a native view never reaches
- * the window, so the drag would stall the moment it crossed into the page).
+ * Build and Comments are icons in the toolbar, each opening a popover. The preview
+ * is a native view, always drawn *above* the window's own content, so a popover
+ * cannot be laid over it. While one is open the preview is swapped for a picture of
+ * itself and the popover is drawn over that; closing the popover brings the live
+ * page back. The picture is taken after the pins are drawn, and shown before the
+ * live view is hidden, so nothing flashes.
  */
+
+/** What both popovers look like. Sized to the window, so a short window scrolls instead of overflowing. */
+const POPOVER_PAPER = {
+	width: 380,
+	maxWidth: 'calc(100vw - 16px)',
+	maxHeight: 'calc(100vh - 140px)',
+	mt: '6px', // clear of the toolbar's bottom line
+} as const;
 
 /** Height of the toolbar under the main bar. */
 export const TOOLBAR_HEIGHT = 44;
 
 type Mode = 'browse' | 'picking' | 'composing';
-type Tab = 'build' | 'comments';
+type Which = 'build' | 'comments';
 
 const NOTE: Record<MarkerState, string | null> = {
 	found: null,
@@ -74,15 +81,13 @@ export const Review = ({
 	const [redraw, setRedraw] = useState(0);
 	const cards = useRef(new Map<number, HTMLElement>());
 
-	// The panel is docked beside the preview. Its width is the person's to set, and is remembered.
-	const [panelOpen, setPanelOpen] = useState(true);
-	const [panelWidth, setPanelWidth] = useState(() => loadPanelWidth(window.innerWidth));
-	const [resizing, setResizing] = useState(false);
-	// A ref as well as state: pointer events can arrive faster than a render, and a handler
-	// that read only the state would still see the drag as not started.
-	const dragging = useRef(false);
-	// Build first when there is nothing to look at yet, because that is where the preview is started.
-	const [tab, setTab] = useState<Tab>(!iteration.previewUrl && build ? 'build' : 'comments');
+	// Which popover is open, if any. Build first when there is nothing to look at yet,
+	// because that is where the preview is started.
+	const [popover, setPopover] = useState<Which | null>(!iteration.previewUrl && build ? 'build' : null);
+	const [ready, setReady] = useState(false); // the preview has stepped aside, so the popover can show
+	const [snapshot, setSnapshot] = useState<string | null>(null);
+	const held = useRef(false);
+	const anchors = useRef<Partial<Record<Which, HTMLElement | null>>>({});
 
 	useEffect(() => {
 		void window.workspace.signInState().then((r) => {
@@ -178,8 +183,7 @@ export const Review = ({
 			if (e.kind === 'click') {
 				if (e.id < 0) return;
 				setSelected(e.id);
-				setTab('comments');
-				setPanelOpen(true); // the comment is in the panel, so show it
+				setPopover('comments'); // the comment is in there, so show it
 				setTimeout(() => cards.current.get(e.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 250);
 			} else if (e.id < 0) {
 				// The unsaved pin: just remember where it now is.
@@ -203,6 +207,7 @@ export const Review = ({
 
 	const startComment = useCallback(async () => {
 		setError(null);
+		setPopover(null); // the page has to be live to be clicked
 		setMode('picking');
 		const r = await window.workspace.pagePick();
 		if (!r.ok) {
@@ -235,58 +240,68 @@ export const Review = ({
 		return () => window.removeEventListener('keydown', onKey);
 	}, [opened, mode, startComment, cancel]);
 
-	// Writing a comment happens in the panel, so it opens on the Comments tab.
+	// Writing a comment happens in the Comments popover.
 	useEffect(() => {
-		if (mode === 'composing') {
-			setTab('comments');
-			setPanelOpen(true);
-		}
+		if (mode === 'composing') setPopover('comments');
 	}, [mode]);
 
-	// An error is drawn in the panel, so raise it.
+	// An error is drawn in a popover, so raise one: Comments if there is a page to comment on, else Build.
 	useEffect(() => {
-		if (error) setPanelOpen(true);
-	}, [error]);
+		if (error) setPopover(opened ? 'comments' : 'build');
+	}, [error, opened]);
 
-	// Dragging the divider hides the preview for the length of the drag. The pointer over a
-	// native view is delivered to that view and never to this window, so without this the
-	// drag would stop the moment it crossed into the page.
+	// A preview opening is what Build was for, so get out of its way.
 	useEffect(() => {
-		void window.workspace.pageHold('resize', resizing);
-		return () => void window.workspace.pageHold('resize', false);
-	}, [resizing]);
+		if (opened) setPopover((p) => (p === 'build' ? null : p));
+	}, [opened]);
 
-	// A narrower window may no longer have room for the width that was set.
+	/**
+	 * Popover open: freeze the preview. Closed: bring it back.
+	 *
+	 * The order matters. Markers are drawn first so the picture includes them; the picture
+	 * is on screen before the live view is hidden, so there is no flash of empty window;
+	 * and a run counter drops the result of a freeze that was overtaken by the popover
+	 * closing again. Switching from one popover to the other keeps the same picture.
+	 */
+	const run = useRef(0);
 	useEffect(() => {
-		const fit = () => setPanelWidth((w) => clampPanelWidth(w, window.innerWidth));
-		window.addEventListener('resize', fit);
-		return () => window.removeEventListener('resize', fit);
-	}, []);
-
-	const startResize = (e: React.PointerEvent<HTMLElement>) => {
-		e.preventDefault();
-		try {
-			// Keeps the drag attached to the divider if the pointer strays off it.
-			e.currentTarget.setPointerCapture(e.pointerId);
-		} catch {
-			// Resizing still works without capture; it just follows the pointer less tightly.
+		const mine = ++run.current;
+		if (popover === null) {
+			setReady(false);
+			held.current = false;
+			void window.workspace.pageHold('popover', false);
+			const t = setTimeout(() => {
+				if (mine === run.current) setSnapshot(null);
+			}, 120);
+			return () => clearTimeout(t);
 		}
-		dragging.current = true;
-		setResizing(true);
-	};
-	// The panel's right edge is the window's, so its width is how far the pointer is from it.
-	const moveResize = (e: React.PointerEvent<HTMLElement>) => {
-		if (dragging.current) setPanelWidth(clampPanelWidth(window.innerWidth - e.clientX, window.innerWidth));
-	};
-	const endResize = () => {
-		if (!dragging.current) return;
-		dragging.current = false;
-		setResizing(false);
-		setPanelWidth((w) => {
-			savePanelWidth(w);
-			return w;
-		});
-	};
+		if (!opened || held.current) {
+			setReady(true); // nothing to freeze, or already frozen
+			return;
+		}
+		void (async () => {
+			await drawMarkers();
+			const snap = await window.workspace.pageSnapshot();
+			if (mine !== run.current) return;
+			setSnapshot(snap.ok ? snap.value : null);
+			await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+			if (mine !== run.current) return;
+			// Even with no picture the popover has to be visible, so the preview still steps aside.
+			await window.workspace.pageHold('popover', true);
+			if (mine !== run.current) return;
+			held.current = true;
+			setReady(true);
+		})();
+	}, [popover, opened]); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Letting go on the way out matters: the hold lives in the main process, and a preview
+	// left hidden would stay hidden for the next iteration too.
+	useEffect(
+		() => () => {
+			void window.workspace.pageHold('popover', false);
+		},
+		[],
+	);
 
 	const post = async () => {
 		if (!draft.trim()) return;
@@ -298,7 +313,7 @@ export const Review = ({
 			setDraft('');
 			setPending(null);
 			setMode('browse');
-			setPanelOpen(true); // so the comment just posted is there to see
+			setPopover('comments'); // so the comment just posted is there to see
 			await load();
 		} else {
 			setError(r.error);
@@ -337,7 +352,7 @@ export const Review = ({
 					borderColor: 'divider',
 				}}
 			>
-				<FSTooltip title="Back to projects">
+				<FSTooltip title="Back to projects" describeChild>
 					<FSIconButton size="md" variant="ghost" aria-label="Back to projects" onClick={onBack} sx={{ ml: -1 }}>
 						<ChevronLeft />
 					</FSIconButton>
@@ -350,200 +365,182 @@ export const Review = ({
 				</FSTypography>
 				<People people={iteration.contributors} />
 				<FSBox sx={{ flexGrow: 1 }} />
-				{unread > 0 && (
-					<FSTooltip title="Show the comments">
-						<FSChip
-							variant="status"
-							size="small"
-							icon={<ChatBubbleOutline />}
-							label={String(unread)}
-							onClick={() => {
-								setTab('comments');
-								setPanelOpen(true);
-							}}
-						/>
-					</FSTooltip>
-				)}
-				<FSTooltip title={panelOpen ? 'Hide the panel' : 'Show the panel'}>
-					<FSIconButton
-						size="md"
-						variant={panelOpen ? 'primary' : 'secondary'}
-						aria-label="Toggle the side panel"
-						aria-pressed={panelOpen}
-						onClick={() => setPanelOpen((o) => !o)}
-					>
-						<ViewSidebarOutlined fontSize="small" />
-					</FSIconButton>
+				{/* Two icons, each opening a popover. The count is in the Comments popover's heading. */}
+				<FSTooltip title="Build" describeChild>
+					<FSBox ref={(el: HTMLDivElement | null) => void (anchors.current.build = el)}>
+						<FSIconButton
+							size="md"
+							variant={popover === 'build' ? 'primary' : 'secondary'}
+							aria-label="Build"
+							aria-pressed={popover === 'build'}
+							onClick={() => setPopover((p) => (p === 'build' ? null : 'build'))}
+						>
+							<BuildOutlined fontSize="small" />
+						</FSIconButton>
+					</FSBox>
+				</FSTooltip>
+				<FSTooltip title={unread > 0 ? `Comments (${unread})` : 'Comments'} describeChild>
+					<FSBox ref={(el: HTMLDivElement | null) => void (anchors.current.comments = el)}>
+						<FSIconButton
+							size="md"
+							variant={popover === 'comments' ? 'primary' : 'secondary'}
+							aria-label="Comments"
+							aria-pressed={popover === 'comments'}
+							onClick={() => setPopover((p) => (p === 'comments' ? null : 'comments'))}
+						>
+							<ChatBubbleOutline fontSize="small" />
+						</FSIconButton>
+					</FSBox>
 				</FSTooltip>
 			</FSBox>
 
-			{/* Under the toolbar: the preview, and beside it the panel when it is open. */}
-			<FSBox sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
-				<FSBox ref={slot} sx={{ position: 'relative', flex: 1, minWidth: 0, overflow: 'hidden', bgcolor: 'grey.100' }}>
-					{!opened && (
-						<FSStack spacing={1} sx={{ p: 3, maxWidth: 640 }}>
-							<FSTypography variant="body2" color="text.secondary">
-								{iteration.previewUrl
-									? 'Opening the preview…'
-									: build
-										? 'Open the panel (the icon in the toolbar) and press Run preview on the Build tab.'
-										: 'This iteration has no preview address recorded yet. To try it, paste the address of one running on this machine, like http://localhost:3000.'}
-							</FSTypography>
-							{!iteration.previewUrl && !build && (
-								<FSStack direction="row" spacing={1}>
-									<FSTextField label="Preview address" value={urlDraft} onChange={setUrlDraft} sx={{ flexGrow: 1 }} />
-									<FSButton size="md" onClick={() => void open(urlDraft)} disabled={!urlDraft.trim()}>
-										Open
-									</FSButton>
-								</FSStack>
-							)}
-						</FSStack>
-					)}
-				</FSBox>
+			{/* The preview takes everything under the toolbar. Nothing else shares its space. */}
+			<FSBox ref={slot} sx={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden', bgcolor: 'grey.100' }}>
+				{!opened && (
+					<FSStack spacing={1} sx={{ p: 3, maxWidth: 640 }}>
+						<FSTypography variant="body2" color="text.secondary">
+							{iteration.previewUrl
+								? 'Opening the preview…'
+								: build
+									? 'Press Run preview in the Build popover (the wrench in the toolbar).'
+									: 'This iteration has no preview address recorded yet. To try it, paste the address of one running on this machine, like http://localhost:3000.'}
+						</FSTypography>
+						{!iteration.previewUrl && !build && (
+							<FSStack direction="row" spacing={1}>
+								<FSTextField label="Preview address" value={urlDraft} onChange={setUrlDraft} sx={{ flexGrow: 1 }} />
+								<FSButton size="md" onClick={() => void open(urlDraft)} disabled={!urlDraft.trim()}>
+									Open
+								</FSButton>
+							</FSStack>
+						)}
+					</FSStack>
+				)}
 
-				{panelOpen && (
-					<>
-						{/* The divider. Drag it, or focus it and use the arrow keys. */}
-						<FSBox
-							role="separator"
-							aria-orientation="vertical"
-							aria-label="Resize the side panel"
-							aria-valuenow={panelWidth}
-							tabIndex={0}
-							onPointerDown={startResize}
-							onPointerMove={moveResize}
-							onPointerUp={endResize}
-							onPointerCancel={endResize}
-							onKeyDown={(e: React.KeyboardEvent) => {
-								if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-								e.preventDefault();
-								const next = clampPanelWidth(panelWidth + (e.key === 'ArrowLeft' ? PANEL_STEP : -PANEL_STEP), window.innerWidth);
-								setPanelWidth(next);
-								savePanelWidth(next);
-							}}
-							sx={{
-								// One pixel to look at...
-								width: '1px',
-								flexShrink: 0,
-								position: 'relative',
-								touchAction: 'none',
-								bgcolor: resizing ? 'primary.main' : 'divider',
-								transition: 'background-color 120ms',
-								'&:hover, &:focus-visible': { bgcolor: 'primary.main' },
-								outline: 'none',
-								// ...and a wider strip to grab. It extends over the panel only: the other side is
-								// the native preview, which never passes the pointer to this window.
-								'&::after': { content: '""', position: 'absolute', top: 0, bottom: 0, left: 0, width: '7px', cursor: 'col-resize' },
-							}}
-						/>
-						<FSBox
-							sx={{
-								width: panelWidth,
-								flexShrink: 0,
-								bgcolor: 'background.paper',
-								display: 'flex',
-								flexDirection: 'column',
-								minHeight: 0,
-							}}
-						>
-						<FSTabs value={tab} onChange={(_, v: Tab) => setTab(v)} variant="fullWidth" sx={{ flexShrink: 0, borderBottom: 1, borderColor: 'divider' }}>
-							<FSTab value="build" label="Build" />
-							<FSTab value="comments" label={unread > 0 ? `Comments (${unread})` : 'Comments'} />
-						</FSTabs>
-						<FSStack spacing={2} sx={{ p: 2, flex: 1, minHeight: 0, overflowY: 'auto' }}>
-							{error && mode !== 'composing' && <FSAlert severity="error">{error}</FSAlert>}
-							{tab === 'build' && (build ?? <FSTypography variant="body2" color="text.secondary">Building is available once your Coke repository is found.</FSTypography>)}
-							{tab === 'comments' && (
-								<>
-								<FSStack direction="row" spacing={1} alignItems="center">
-									<FSButton
-										size="md"
-										variant={mode === 'browse' ? 'primary' : 'secondary'}
-										disabled={!opened || mode === 'composing'}
-										onClick={() => (mode === 'picking' ? void cancel() : void startComment())}
-									>
-										{mode === 'picking' ? 'Click to place a pin…' : 'Place a pin (C)'}
-									</FSButton>
-									{mode !== 'browse' && (
-										<FSButton size="md" variant="secondary" onClick={() => void cancel()}>
-											Cancel
-										</FSButton>
-									)}
-								</FSStack>
-
-								{mode === 'composing' && pending && (
-									<FSBox sx={{ border: 1, borderColor: 'primary.main', borderRadius: 1, p: 2 }}>
-										<FSStack spacing={1}>
-											{error && <FSAlert severity="error">{error}</FSAlert>}
-											<FSTypography variant="caption" color="text.secondary">
-												Pinned on {pending.route}
-											</FSTypography>
-											<FSTextField label="Your comment" multiline minRows={3} value={draft} onChange={setDraft} autoFocus />
-											<FSButton size="md" onClick={post} disabled={posting || !draft.trim()}>
-												{posting ? 'Posting…' : 'Post comment'}
-											</FSButton>
-										</FSStack>
-									</FSBox>
-								)}
-
-								{comments?.length === 0 && (
-									<FSTypography variant="body2" color="text.secondary">
-										No comments yet. Press C, then click anywhere on the page to place a pin.
-									</FSTypography>
-								)}
-
-								{comments?.map((comment) => {
-									const state = placed.get(comment.id);
-									const n = numberOf(comment.id);
-									return (
-										<FSBox
-											key={comment.id}
-											ref={(el: HTMLElement | null) => {
-												if (el) cards.current.set(comment.id, el);
-												else cards.current.delete(comment.id);
-											}}
-											onClick={() => {
-												setSelected(comment.id);
-												if (comment.anchor) void window.workspace.pageFocusMarker(comment.id);
-											}}
-											sx={{
-												border: 1,
-												borderColor: selected === comment.id ? 'primary.main' : 'divider',
-												borderWidth: selected === comment.id ? 2 : 1,
-												bgcolor: selected === comment.id ? 'action.selected' : undefined,
-												borderRadius: 1,
-												p: 1.5,
-												cursor: comment.anchor ? 'pointer' : 'default',
-											}}
-										>
-											<FSStack spacing={0.5}>
-												<FSStack direction="row" spacing={1} alignItems="center">
-													{n > 0 && <FSChip variant="status" size="small" label={String(n)} />}
-													<FSTypography variant="subtitle2">{comment.author}</FSTypography>
-													{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
-												</FSStack>
-												<FSTypography variant="body2">{comment.body}</FSTypography>
-												{comment.anchor && state === 'elsewhere' && (
-													<FSTypography variant="caption" color="text.secondary">
-														On {comment.anchor.route}
-													</FSTypography>
-												)}
-												{state && NOTE[state] && (
-													<FSTypography variant="caption" color="warning.main">
-														{NOTE[state]}
-													</FSTypography>
-												)}
-											</FSStack>
-										</FSBox>
-									);
-								})}
-								</>
-							)}
-						</FSStack>
-					</FSBox>
-					</>
+				{/* While a popover is open the preview is this picture of it. */}
+				{snapshot && (
+					<img
+						src={snapshot}
+						alt="The preview, paused while a popover is open"
+						style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill' }}
+					/>
 				)}
 			</FSBox>
+
+			{/* Build stays mounted while closed: the agent, and the preview it starts, outlive the popover. */}
+			<Popover
+				keepMounted
+				open={popover === 'build' && ready}
+				onClose={() => setPopover(null)}
+				anchorEl={anchors.current.build ?? null}
+				anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+				transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+				PaperProps={{ sx: POPOVER_PAPER }}
+			>
+				<FSStack spacing={2} sx={{ p: 2 }}>
+					{error && popover === 'build' && <FSAlert severity="error">{error}</FSAlert>}
+					{build ?? (
+						<FSTypography variant="body2" color="text.secondary">
+							Building is available once your Coke repository is found.
+						</FSTypography>
+					)}
+				</FSStack>
+			</Popover>
+
+			<Popover
+				open={popover === 'comments' && ready}
+				onClose={() => setPopover(null)}
+				anchorEl={anchors.current.comments ?? null}
+				anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+				transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+				PaperProps={{ sx: POPOVER_PAPER }}
+			>
+				<FSStack spacing={2} sx={{ p: 2 }}>
+					<FSTypography variant="subtitle2">{unread > 0 ? `Comments (${unread})` : 'Comments'}</FSTypography>
+					{error && mode !== 'composing' && <FSAlert severity="error">{error}</FSAlert>}
+					<FSStack direction="row" spacing={1} alignItems="center">
+						<FSButton
+							size="md"
+							variant={mode === 'browse' ? 'primary' : 'secondary'}
+							disabled={!opened || mode === 'composing'}
+							onClick={() => (mode === 'picking' ? void cancel() : void startComment())}
+						>
+							{mode === 'picking' ? 'Click to place a pin…' : 'Place a pin (C)'}
+						</FSButton>
+						{mode !== 'browse' && (
+							<FSButton size="md" variant="secondary" onClick={() => void cancel()}>
+								Cancel
+							</FSButton>
+						)}
+					</FSStack>
+
+					{mode === 'composing' && pending && (
+						<FSBox sx={{ border: 1, borderColor: 'primary.main', borderRadius: 1, p: 2 }}>
+							<FSStack spacing={1}>
+								{error && <FSAlert severity="error">{error}</FSAlert>}
+								<FSTypography variant="caption" color="text.secondary">
+									Pinned on {pending.route}
+								</FSTypography>
+								<FSTextField label="Your comment" multiline minRows={3} value={draft} onChange={setDraft} autoFocus />
+								<FSButton size="md" onClick={post} disabled={posting || !draft.trim()}>
+									{posting ? 'Posting…' : 'Post comment'}
+								</FSButton>
+							</FSStack>
+						</FSBox>
+					)}
+
+					{comments?.length === 0 && (
+						<FSTypography variant="body2" color="text.secondary">
+							No comments yet. Press C, then click anywhere on the page to place a pin.
+						</FSTypography>
+					)}
+
+					{comments?.map((comment) => {
+						const state = placed.get(comment.id);
+						const n = numberOf(comment.id);
+						return (
+							<FSBox
+								key={comment.id}
+								ref={(el: HTMLElement | null) => {
+									if (el) cards.current.set(comment.id, el);
+									else cards.current.delete(comment.id);
+								}}
+								onClick={() => {
+									setSelected(comment.id);
+									if (comment.anchor) void window.workspace.pageFocusMarker(comment.id);
+								}}
+								sx={{
+									border: 1,
+									borderColor: selected === comment.id ? 'primary.main' : 'divider',
+									borderWidth: selected === comment.id ? 2 : 1,
+									bgcolor: selected === comment.id ? 'action.selected' : undefined,
+									borderRadius: 1,
+									p: 1.5,
+									cursor: comment.anchor ? 'pointer' : 'default',
+								}}
+							>
+								<FSStack spacing={0.5}>
+									<FSStack direction="row" spacing={1} alignItems="center">
+										{n > 0 && <FSChip variant="status" size="small" label={String(n)} />}
+										<FSTypography variant="subtitle2">{comment.author}</FSTypography>
+										{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
+									</FSStack>
+									<FSTypography variant="body2">{comment.body}</FSTypography>
+									{comment.anchor && state === 'elsewhere' && (
+										<FSTypography variant="caption" color="text.secondary">
+											On {comment.anchor.route}
+										</FSTypography>
+									)}
+									{state && NOTE[state] && (
+										<FSTypography variant="caption" color="warning.main">
+											{NOTE[state]}
+										</FSTypography>
+									)}
+								</FSStack>
+							</FSBox>
+						);
+					})}
+				</FSStack>
+			</Popover>
 		</FSBox>
 	);
 };

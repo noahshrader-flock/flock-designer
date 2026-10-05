@@ -335,6 +335,7 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 		CHANNELS.pageSetBounds,
 		guard((b: PageBounds) => nothing(page.setBounds({ x: Number(b?.x), y: Number(b?.y), width: Number(b?.width), height: Number(b?.height) }))),
 	);
+	ipcMain.handle(CHANNELS.pageSnapshot, guard(() => page.snapshot()));
 	ipcMain.handle(
 		CHANNELS.pageHold,
 		guard((reason: string, held: boolean) => {

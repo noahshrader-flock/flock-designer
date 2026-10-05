@@ -98,7 +98,7 @@ beforeEach(async () => {
 		agent: { start: agentStart, status: vi.fn(() => ({ state: 'idle' })) } as never,
 		github: { state: () => ({ state: 'signedOut' }) } as never,
 		designRepo: { listProjects: vi.fn(async () => []) } as never,
-		page: { hold: vi.fn(), close: vi.fn() } as never,
+		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn() } as never,
 		memory: { read: () => memoryValue, write: (r: string) => { memoryValue = r; }, available: () => true } as never,
 	});
 });

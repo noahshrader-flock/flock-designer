@@ -190,6 +190,13 @@ export interface WorkspaceApi {
 	 * preview comes back only when every reason has let go.
 	 */
 	pageHold(reason: PageHoldReason, held: boolean): Promise<Result<null>>;
+	/**
+	 * The preview as an image, so the window can draw over where it is. The preview is a native
+	 * layer, always drawn above the window's own content, so a popover cannot be laid over it:
+	 * the preview is swapped for a picture of itself while the popover is open. Null if there is
+	 * no preview.
+	 */
+	pageSnapshot(): Promise<Result<string | null>>;
 
 	/** Comment mode: resolves with the next element clicked, or null if cancelled. */
 	pagePick(): Promise<Result<CommentAnchor | null>>;
@@ -328,7 +335,7 @@ export interface MarkerResult {
 }
 
 /** Why the preview is hidden. A closed set, so the window cannot invent reasons. */
-export const PAGE_HOLD_REASONS = ['menu', 'resize'] as const;
+export const PAGE_HOLD_REASONS = ['menu', 'popover'] as const;
 export type PageHoldReason = (typeof PAGE_HOLD_REASONS)[number];
 
 /** Where the preview sits, in the window's own coordinates. */
@@ -370,6 +377,7 @@ export const CHANNELS = {
 	pageClose: 'workspace:pageClose',
 	pageSetBounds: 'workspace:pageSetBounds',
 	pageHold: 'workspace:pageHold',
+	pageSnapshot: 'workspace:pageSnapshot',
 	pagePick: 'workspace:pagePick',
 	pageCancelPick: 'workspace:pageCancelPick',
 	pageShowMarkers: 'workspace:pageShowMarkers',
