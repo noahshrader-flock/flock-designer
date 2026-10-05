@@ -45,6 +45,7 @@ export const App = () => {
 	const checkout = useCall<Checkout | null>();
 	const receipt = useCall<ContextReceipt>();
 	const iterations = useCall<Iteration[]>();
+	const [publishNote, setPublishNote] = useState<string | null>(null);
 	const preview = useCall<PreviewStatus>();
 	const agent = useCall<unknown>();
 
@@ -87,6 +88,7 @@ export const App = () => {
 		}
 		const created = await iterations.call(async () => {
 			const result = await window.workspace.createIteration(root, projectId, note);
+			setPublishNote(result.ok && result.value.published.state === 'skipped' ? result.value.published.reason : null);
 			return result.ok ? { ok: true as const, value: [result.value] } : result;
 		});
 		if (created) {
@@ -195,6 +197,11 @@ export const App = () => {
 							</FSButton>
 						</FSStack>
 						{iterations.error && <FSAlert severity="error">{iterations.error}</FSAlert>}
+						{publishNote && (
+							<FSAlert severity="warning">
+								Saved on this machine, but not shared with reviewers yet. {publishNote}
+							</FSAlert>
+						)}
 						{iterations.value?.map((it) => (
 							<FSStack key={it.name} direction="row" spacing={2} alignItems="center">
 								<FSChip variant="status" size="small" label={it.name} />
@@ -208,6 +215,7 @@ export const App = () => {
 									onClick={() =>
 										iterations.call(async () => {
 											const r = await window.workspace.continueIteration(root, projectId, it.name);
+											setPublishNote(r.ok && r.value.published.state === 'skipped' ? r.value.published.reason : null);
 											return r.ok ? { ok: true as const, value: [r.value] } : r;
 										})
 									}

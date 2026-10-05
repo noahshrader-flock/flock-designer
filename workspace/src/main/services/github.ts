@@ -198,8 +198,11 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): P
     // by integration", which tells you nothing about which permission or where
     // to set it. Name both -- this cost a round trip the first time it happened.
     if (res.status === 403 && /not accessible by integration/i.test(message)) {
+      const writing = call.method !== undefined && call.method !== 'GET';
       const needed = call.path.includes('/contents/') || call.path.includes('/branches')
-        ? 'Contents (read-only)'
+        ? writing
+          ? 'Contents (read and write)'
+          : 'Contents (read-only)'
         : call.path.includes('/issues')
           ? 'Issues (read and write)'
           : 'an additional repository permission';

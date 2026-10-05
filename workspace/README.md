@@ -42,7 +42,7 @@ repository, and carry two repository permissions:
 
 | Permission | Level | Why |
 |---|---|---|
-| **Contents** | Read-only | Lists project folders and branches. Read-only because the app never writes code through the API — authoring writes go through git in a real checkout |
+| **Contents** | Read and write | Reads project folders and iteration records. Writes one file only: `projects/<id>/iterations.json`, so an iteration created in the app reaches reviewers with no manual step. The app never writes code through the API — authoring writes go through git in a real checkout |
 | **Issues** | Read and write | Comments are issue comments |
 
 Changing a permission later also requires approving the update on the installation; GitHub does not

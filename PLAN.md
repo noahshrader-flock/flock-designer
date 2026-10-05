@@ -169,9 +169,9 @@ called before 2026-10-05, so history still resolves.
 | # | Step | Status | Evidence, or what it needs | Was |
 |---|---|---|---|---|
 | 3.1 | [Build the local authoring app](#31--build-the-workspace-local-loop-was-step-13) | ✔ Done | `158eab3`; confirmed working | step 13 |
-| 3.2 | [Sign in, and the comment store](#32--prove-sign-in-and-the-comment-store-was-c1) | ◐ Built — awaiting your check | Sign-in and the project list work against the real repo (`a182852`, `ab794d6`). **You:** open an iteration and post one comment; then a second person signs in | C1 |
+| 3.2 | [Sign in, and the comment store](#32--prove-sign-in-and-the-comment-store-was-c1) | ◐ Built — awaiting your check | Sign-in, the project list and **automatic publishing of iteration records** are built. **You:** raise the app's Contents permission to read and write, open an iteration and post one comment; then a second person signs in | C1 |
 | 3.3 | [Open a preview and comment on an element](#33--open-a-preview-and-comment-on-an-element-was-c2) | ▶ **Next** | Needs nothing from anyone | C2 |
-| 3.4 | [Share for review](#34--share-for-review-was-c3) | ○ Not started | Also publishes the iteration record automatically. Finishing end to end needs Coke engineering's mock-data build | C3 |
+| 3.4 | [Share for review](#34--share-for-review-was-c3) | ○ Not started | Pushes the branch, opens the draft PR, records the preview URL. Needs Coke engineering's mock-data build to finish end to end | C3 |
 | 3.5 | [Close the loop](#35--close-the-loop-was-c4) | ○ Not started | Comments become something the agent can act on | C4 |
 | 3.6 | [Pilot and decision](#36--pilot-and-decision-was-c5) | ⏸ Needs people | Real projects reviewed by people outside design | C5 |
 
@@ -291,6 +291,14 @@ company's GitHub org, and that issue comments are a workable comment store.
   reaches every repository the user can access — Coke included.)
 - **List projects and their iterations** from the design repo through the API — no clone.
 - **Create, post to and read** one issue per iteration, with a label, for comments.
+- **Publish the iteration record automatically** *(added 2026-10-05, built)*. Creating or continuing
+  an iteration in the app writes `projects/<id>/iterations.json` to the design repo through the API,
+  so reviewers see it with no manual step. It merges by iteration name, so a stale checkout cannot
+  delete someone else's iteration, and it writes nothing when the record is unchanged. If the author
+  is signed out, or the app lacks permission, the local save still succeeds and the app says the
+  iteration has not been shared yet. The five older records were written by hand and are marked so.
+  **Needs the GitHub App's Contents permission raised from read-only to read and write**, then
+  approved on the installation.
 
 **Done when:** an account with only *read* access signs in, lists the projects, posts a comment on an
 iteration, and a second account sees it — verified against a test repository. **Human:** one sign-in
@@ -327,11 +335,10 @@ nothing to open.
 - One click **pushes the branch, opens a draft PR** with a body saying it is a preview thread and not
   for merge (one PR per branch — settled), **waits for the deployment, and records its URL** on the
   iteration.
-- **Publishes the iteration record.** It writes `projects/<id>/iterations.json` in the design repo from
-  facts it already has — branch, commit, preview URL — and pushes it. **The designer adds nothing by
-  hand.** Reviewers only need an iteration once it has been shared, so this is the moment it must
-  exist; an iteration that was never shared has nothing to review. Until this lands the record has to
-  be committed and pushed manually, which is a known gap, not the intended process.
+- **Adds the preview URL to the iteration record.** The record itself is already published
+  automatically by [3.2](#32--prove-sign-in-and-the-comment-store-was-c1) when the iteration is
+  created; this step only adds `previewUrl` to it once the deployment is up. **The designer adds
+  nothing by hand.**
 - A reviewer's app shows that URL as the iteration's preview, with build status while it is coming.
 
 **Done when:** against a throwaway repository with a stub deploy workflow, the click produces a draft
@@ -2981,6 +2988,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **Moved automatic publishing of iteration records forward into 3.2.** Noah asked why `iterations.json` exists and whether it could be automatic. It exists because iteration branches live in the Coke repo, which reviewers deliberately cannot see, so the record has to be in the design repo. The authoring side already wrote it locally; nothing committed it, and the note I had written in the five backfilled records ("the app writes this file from now on") was not yet true. The app now publishes the record through the API on create and continue, merging by name. It needs the GitHub App's Contents permission raised to read and write. 3.4 keeps only the preview URL. | 3.2, 3.4, the app README. |
 | 2026-10-05 | **Reorganised the plan into four numbered phases.** The sequence mixed numbers and letters (1, 5, C1, A2, D1) and skipped, which made it impossible to see where we were. It is now Phase 1 (foundation), Phase 2 (working in the codebase), Phase 3 (the review app, the current build) and Phase 4 (rollout, needing other people), with steps numbered 1.1 to 4.3. Every old name is mapped to its new number in [Appendix B](#name-map-old-step-names-to-the-new-numbers), the finished-step sections there are now in phase order, and every internal link was rewritten and checked. Historical text, including the change log, keeps the old names on purpose. | The sequence; the status box; all step headings. |
 | 2026-10-05 | **Restored one complete, ordered list of steps.** Moving finished work into appendices had left the live table showing steps 1, 5, C1 and so on, with the completed run missing, which read as disorganised and hid how much was done. The sequence is now one numbered list, 1 to 23, with every step marked done, built-awaiting-a-check, next, not started, or needing a person, and the old name beside each so history still resolves. 13 of 23 are done. Also marked stop 1 cleared and stop 2 partly cleared, since the client ID arrived and sign-in was verified. | The sequence; the status box; the stop table. |
 | 2026-10-05 | **Found that an iteration appearing for reviewers was not automatic, and made it part of C3.** Running the app against the real design repo listed "No branches yet" for every project, which exposed two things: iteration branches live in the product repo, which the app deliberately cannot see, so iterations are now read from `projects/<id>/iterations.json`; and **only the app's author mode writes that file** — the agent's instructions never mention it — and **nothing publishes it**, so today it needs a manual commit and push. The five existing projects were backfilled once by hand because they predate the app. **Step C3's Share action now owns it**: it writes and pushes the record from facts it already has, so designers add nothing. | C3; the project listing code. |

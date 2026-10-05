@@ -6,6 +6,7 @@ import type {
 	DeviceCodeStart,
 	ContextReceipt,
 	Iteration,
+	SavedIteration,
 	PreviewStatus,
 	Project,
 	Result,
@@ -41,8 +42,8 @@ const api: WorkspaceApi = {
 	readContextReceipt: (root) => invoke<ContextReceipt>(CHANNELS.readContextReceipt, root),
 
 	listIterations: (root, projectId) => invoke<Iteration[]>(CHANNELS.listIterations, root, projectId),
-	createIteration: (root, projectId, note) => invoke<Iteration>(CHANNELS.createIteration, root, projectId, note),
-	continueIteration: (root, projectId, name) => invoke<Iteration>(CHANNELS.continueIteration, root, projectId, name),
+	createIteration: (root, projectId, note) => invoke<SavedIteration>(CHANNELS.createIteration, root, projectId, note),
+	continueIteration: (root, projectId, name) => invoke<SavedIteration>(CHANNELS.continueIteration, root, projectId, name),
 
 	startCommand: (root, commandId) => invoke<PreviewStatus>(CHANNELS.startCommand, root, commandId),
 	stopCommand: (root, commandId) => invoke<PreviewStatus>(CHANNELS.stopCommand, root, commandId),

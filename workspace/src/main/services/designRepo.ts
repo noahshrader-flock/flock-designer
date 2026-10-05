@@ -1,4 +1,5 @@
-import type { Project, ProjectIteration, ReviewComment } from '../../shared/contract';
+import type { Iteration, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
+import { GitHubError } from './github';
 import type { GitHubSession } from './githubSession';
 
 /**
@@ -140,6 +141,56 @@ export class DesignRepo {
         const codebase = (x: { branch: string }) => (x.branch.startsWith('fd/') ? 0 : 1);
         return codebase(a) - codebase(b) || b.name.localeCompare(a.name, undefined, { numeric: true });
       });
+  }
+
+  /**
+   * Writes a project's iteration record into the design repository, so a
+   * reviewer on another machine can see it with no clone and no manual step.
+   *
+   * Merges by name rather than overwriting: the author's checkout may be behind
+   * the repository, and a stale local file must not delete someone else's
+   * iteration. Fields only the repository has (a preview URL added later) are
+   * kept. An unchanged record is not written, so no empty commits.
+   */
+  async publishIterations(projectId: string, local: Iteration[]): Promise<void> {
+    const path = `${this.base}/contents/projects/${projectId}/iterations.json`;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let sha: string | undefined;
+      let remote: Record<string, unknown>[] = [];
+      try {
+        const file = asRecord(await this.session.api(path));
+        sha = typeof file.sha === 'string' ? file.sha : undefined;
+        if (typeof file.content === 'string') {
+          remote = asArray(JSON.parse(Buffer.from(file.content, 'base64').toString('utf8'))).map(asRecord);
+        }
+      } catch (err) {
+        if (!(err instanceof GitHubError && err.status === 404)) throw err;
+      }
+
+      const merged = new Map<string, Record<string, unknown>>();
+      for (const r of remote) merged.set(String(r.name), r);
+      for (const l of local) merged.set(l.name, { ...merged.get(l.name), ...l });
+      const next = [...merged.values()].sort((a, b) =>
+        String(a.name).localeCompare(String(b.name), undefined, { numeric: true }),
+      );
+      if (JSON.stringify(next) === JSON.stringify(remote)) return;
+
+      try {
+        await this.session.api(path, {
+          method: 'PUT',
+          body: {
+            message: `Record iterations for ${projectId}`,
+            content: Buffer.from(`${JSON.stringify(next, null, 2)}\n`, 'utf8').toString('base64'),
+            ...(sha ? { sha } : {}),
+          },
+        });
+        return;
+      } catch (err) {
+        // Someone else wrote between our read and our write: read again and merge once more.
+        if (attempt === 0 && err instanceof GitHubError && (err.status === 409 || err.status === 422)) continue;
+        throw err;
+      }
+    }
   }
 
   /** The issue carrying an iteration's comments, created on first use. */

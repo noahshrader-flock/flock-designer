@@ -1,5 +1,14 @@
 import { type BrowserWindow, dialog, ipcMain } from 'electron';
-import { CHANNELS, type Checkout, type Project, type Result, type ReviewComment } from '../shared/contract';
+import {
+	CHANNELS,
+	type Checkout,
+	type Iteration,
+	type Project,
+	type PublishOutcome,
+	type Result,
+	type ReviewComment,
+	type SavedIteration,
+} from '../shared/contract';
 import { AgentRunner } from './services/agent';
 import { buildContextReceipt } from './services/contextReceipt';
 import { readDescriptor } from './services/descriptor';
@@ -56,6 +65,27 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 
 	const descriptorFor = (root: string) => readDescriptor(opened.require(root));
 
+	/**
+	 * Shares an iteration's record with reviewers. Best effort by design: the
+	 * designer's local work is already saved, so being signed out or lacking a
+	 * permission is reported, never raised.
+	 */
+	const publish = async (projectId: string, recordsRoot: string): Promise<PublishOutcome> => {
+		if (github.state().state !== 'signedIn') {
+			return { state: 'skipped', reason: 'Sign in to share this iteration with reviewers.' };
+		}
+		try {
+			await designRepo.publishIterations(projectId, readIterations(recordsRoot, projectId));
+			return { state: 'published' };
+		} catch (err) {
+			return { state: 'skipped', reason: err instanceof Error ? err.message : String(err) };
+		}
+	};
+	const saved = async (it: Iteration, recordsRoot: string): Promise<SavedIteration> => ({
+		...it,
+		published: await publish(it.projectId, recordsRoot),
+	});
+
 	ipcMain.handle(
 		CHANNELS.chooseCheckout,
 		guard(async (): Promise<Checkout | null> => {
@@ -94,15 +124,17 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 			if (branch === null) {
 				throw new Error('This repository has a detached HEAD. Check out a branch first.');
 			}
-			return createIteration(canonical, defaultRecordsRoot(canonical), descriptor, projectId, note, branch);
+			const recordsRoot = defaultRecordsRoot(canonical);
+			return saved(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch), recordsRoot);
 		}),
 	);
 
 	ipcMain.handle(
 		CHANNELS.continueIteration,
-		guard((root: string, projectId: string, name: string) => {
+		guard(async (root: string, projectId: string, name: string) => {
 			const canonical = opened.require(root);
-			return continueIteration(canonical, defaultRecordsRoot(canonical), projectId, name);
+			const recordsRoot = defaultRecordsRoot(canonical);
+			return saved(await continueIteration(canonical, recordsRoot, projectId, name), recordsRoot);
 		}),
 	);
 

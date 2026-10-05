@@ -107,6 +107,12 @@ export type AgentStatus =
  * that can fail for an ordinary reason -- no descriptor, dirty tree, command not
  * allowed -- returns this, so the renderer can say what happened.
  */
+/** Whether an iteration's record reached the design repository, where reviewers read it. */
+export type PublishOutcome = { state: 'published' } | { state: 'skipped'; reason: string };
+
+/** An iteration, plus what happened when its record was shared. The local save never depends on it. */
+export type SavedIteration = Iteration & { published: PublishOutcome };
+
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export interface WorkspaceApi {
@@ -119,9 +125,9 @@ export interface WorkspaceApi {
 
 	listIterations(root: string, projectId: string): Promise<Result<Iteration[]>>;
 	/** Creates the branch. Refuses if the tree is dirty; never discards work. */
-	createIteration(root: string, projectId: string, note: string): Promise<Result<Iteration>>;
+	createIteration(root: string, projectId: string, note: string): Promise<Result<SavedIteration>>;
 	/** Checks out an existing iteration's branch. */
-	continueIteration(root: string, projectId: string, name: string): Promise<Result<Iteration>>;
+	continueIteration(root: string, projectId: string, name: string): Promise<Result<SavedIteration>>;
 
 	startCommand(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	stopCommand(root: string, commandId: string): Promise<Result<PreviewStatus>>;

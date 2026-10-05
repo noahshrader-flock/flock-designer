@@ -5,6 +5,6 @@
     "branch": "fd/orgs-list-signals/i1",
     "commit": null,
     "createdAt": "2026-09-28T18:58:45-04:00",
-    "note": "Recorded 2026-10-05. This iteration predates the app, which writes this file itself from now on."
+    "note": "Recorded by hand on 2026-10-05, because this iteration predates the app. Iterations created in the app are written and shared automatically."
   }
 ]
