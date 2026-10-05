@@ -1,0 +1,10 @@
+[
+  {
+    "projectId": "alert-notification-prefs",
+    "name": "i1",
+    "branch": "fd/alert-notification-prefs/i1",
+    "commit": null,
+    "createdAt": "2026-09-28T17:13:52-04:00",
+    "note": "Recorded 2026-10-05. This iteration predates the app, which writes this file itself from now on."
+  }
+]

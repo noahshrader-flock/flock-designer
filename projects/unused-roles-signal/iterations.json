@@ -1,0 +1,10 @@
+[
+  {
+    "projectId": "unused-roles-signal",
+    "name": "codebase",
+    "branch": "feature/unused-roles-signal",
+    "commit": null,
+    "createdAt": "2026-09-30T13:19:20-04:00",
+    "note": "Recorded 2026-10-05. This iteration predates the app, which writes this file itself from now on."
+  }
+]
