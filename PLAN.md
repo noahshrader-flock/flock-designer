@@ -17,16 +17,17 @@ the wider product process at readiness to build.
 
 > ### Where we are
 >
-> **Built and working:** the prototype path, the codebase path, the design-system layer, and the local
-> authoring app ([step 13](#step-13--build-the-workspace-local-loop)). What was built, and why it looks
-> the way it does, is in [Appendix B](#appendix-b--what-was-built-and-why).
+> **13 of 23 steps are done.** The numbered list under [The sequence](#the-sequence) marks every step
+> off, in order, from step 1 to step 23. Steps 1 and 5 are finished except for approvals only a person
+> can give.
 >
-> **What remains is one build: making Flock Designer a place the whole team — design, product,
-> engineering — can browse each other's prototypes and comment on them.** That is
-> [steps C1–C5](#the-sequence), plus the steps that wait on other people.
+> **Right now:** step 16 — sign-in and comments — is built and waits on you to post one comment in the
+> app. **Next to build: step 17**, opening a prototype in the app and clicking an element to comment.
 >
-> **Next: [C1](#step-c1--prove-sign-in-and-the-comment-store)** — sign in with GitHub, and prove
-> comments can live as issue comments in the design repo.
+> **What remains is one build:** making Flock Designer a place the whole team — design, product,
+> engineering — can browse each other's prototypes and comment on them. That is steps 16–20.
+>
+> The detail for every finished step is in [Appendix B](#appendix-b--what-was-built-and-why).
 >
 > This document was restructured on 2026-10-05 so the plan covers only what remains. Nothing was
 > deleted: completed work moved into the appendices, and the [change log](#change-log) says why.
@@ -129,21 +130,39 @@ traces to adding one of those.
 
 ## The sequence
 
-| # | Step | Done when | Check | Status |
-|---|---|---|---|---|
-| 1 | [Decide the rules](#step-1--decide-the-rules) | The Design System owner is named | Human | **In progress** — waits on Noah |
-| 5 | [Design-system agent files](#step-5--design-system-agent-files-what-is-still-owed) | The authoring standards are approved | Human | **In progress** — waits on the owner |
-| C1 | [Prove sign-in and the comment store](#step-c1--prove-sign-in-and-the-comment-store) | A read-only account signs in, lists projects, posts a comment, and another account sees it | Mechanical + human | **Not started — next** |
-| C2 | [Open a preview and comment on an element](#step-c2--open-a-preview-and-comment-on-an-element) | Click-to-comment works on a real prototype and survives reload and resize | Mechanical + human | Not started |
-| C3 | [Share for review](#step-c3--share-for-review) | One click pushes, opens a draft PR, and records the preview URL | Mechanical | Not started |
-| C4 | [Close the loop](#step-c4--close-the-loop) | Comments export to `review.md` and the agent acts on them | Mechanical | Not started |
-| C5 | [Pilot and decision](#step-c5--pilot-and-decision) | Real projects reviewed by people outside design; keep or stop | Human | Not started |
-| 11 | [Managed harness decision](#step-11--decide-if-the-managed-harness-is-needed) | A recorded decision | Human | Conditional |
-| 17 | [Ship the design-system context in the package](#step-17--ship-the-design-system-context-in-the-package) | Org transfer and packaging | Human | Not started |
-| 18 | [Designer environment access](#step-18--designer-environment-access) | Designers can install; an unaided designer test | Human | Not started |
+**Every step, in order.** ✔ done · ◐ built, awaiting a check · ▶ next · ○ not started · ⏸ needs a
+person. The number is the order things happen. The name in brackets is what the step is called in its
+own section and in the change log.
 
-C1 → C5 are in order. The human-owned steps are independent of them and of each other. Completed
-steps are in [Appendix B](#appendix-b--what-was-built-and-why).
+| # | Step | Status | Evidence, or what it needs |
+|---|---|---|---|
+| 1 | [Decide the rules](#step-1--decide-the-rules) | ⏸ Needs a person | Name the Design System owner. Everything else here is settled |
+| 2 | [Set up the first files](#step-2--set-up-the-first-files) | ✔ Done | `4538812e` |
+| 3 | [Rename existing prototype work](#step-3--rename-existing-prototype-work) | ✔ Done | Nothing needed renaming |
+| 4 | [Fix the product repository files](#step-4--fix-the-product-repository-files) | ✔ Done | 1,006 checks; cold start passed |
+| 5 | [Design-system agent files](#step-5--design-system-agent-files-what-is-still-owed) ([full account](#step-5--set-up-the-design-system-agent-files)) | ◐ Built — awaiting approval | Standards written and verified; the Design System owner approves them |
+| 6 | [Create the shared repository](#step-6--create-the-shared-repository) | ✔ Done | `3d15ae9`. Moving it to the `flocksafety` org is step 22 |
+| 7 | [Confirm the prototype harness](#step-7--confirm-the-prototype-harness) | ✔ Done | Reviewed 2026-09-29; the watermark and icon defects it found are fixed |
+| 8 | [Make the product runnable on mock data](#step-8--make-the-product-runnable-on-mock-data) | ✔ Done | The real shell renders on fixtures. Designer install access is step 23 |
+| 9 | [Prove it on real decisions](#step-9--prove-it-on-real-decisions) | ✔ Done | Four proofs; the resume test passed |
+| 10 | [Run a prototype in the real shell](#step-a2--run-a-prototype-in-the-real-shell) *(A2)* | ✔ Done | `667c5070` |
+| 11 | [Prove the codebase path](#step-b1--prove-the-codebase-path) *(B1)* | ✔ Done | `56aee3c3` |
+| 12 | [Build the handoff](#step-b2--build-the-handoff) *(B2)* | ✔ Done | `3f137cd6`, `cef176be` |
+| 13 | [Close the review and evidence gaps](#step-b3--close-the-review-and-evidence-gaps) *(B3)* | ✔ Done | The accessibility scan runs; the handoff gate passes on all six work branches |
+| 14 | [Build the local authoring app](#step-13--build-the-workspace-local-loop) *(old step 13)* | ✔ Done | `158eab3`; confirmed working |
+| 15 | [Stop copying the design system](#step-d1--stop-copying-the-design-system-point-at-it) *(D1)* | ✔ Done | `873aba9`, `bf5b4c13` |
+| 16 | [Sign in, and the comment store](#step-c1--prove-sign-in-and-the-comment-store) *(C1)* | ◐ Built — awaiting your check | Sign-in and the project list work against the real repo (`a182852`, `ab794d6`). **You:** open an iteration and post one comment; then a second person signs in |
+| 17 | [Open a preview and comment on an element](#step-c2--open-a-preview-and-comment-on-an-element) *(C2)* | ▶ **Next** | Needs nothing from anyone |
+| 18 | [Share for review](#step-c3--share-for-review) *(C3)* | ○ Not started | Also publishes the iteration record automatically. Finishing end to end needs Coke engineering's mock-data build |
+| 19 | [Close the loop](#step-c4--close-the-loop) *(C4)* | ○ Not started | Comments become something the agent can act on |
+| 20 | [Pilot and decision](#step-c5--pilot-and-decision) *(C5)* | ⏸ Needs people | Real projects reviewed by people outside design |
+| 21 | [Managed harness decision](#step-11--decide-if-the-managed-harness-is-needed) *(old 11)* | ⏸ Conditional | Only if local setup fails designers |
+| 22 | [Ship the design-system context in the package](#step-17--ship-the-design-system-context-in-the-package) *(old 17)* | ⏸ Needs a person | The org transfer and packaging; the Design System owner |
+| 23 | [Designer environment access](#step-18--designer-environment-access) *(old 18)* | ⏸ Needs a person | Registry access, then the unaided designer test |
+
+Steps 16–20 are one build, in order. Steps 1, 5 and 21–23 need a person and do not hold up the
+build. Each finished step's detail, with its evidence, is in
+[Appendix B](#appendix-b--what-was-built-and-why).
 
 **Phases, and what exists if we stop after each one.** Each is useful alone, so none is a bet on the
 next.
@@ -165,8 +184,8 @@ done it, and Claude never closes it. The work stops only at these points:
 
 | Stop | When | What I need | What I do meanwhile |
 |---|---|---|---|
-| 1 | Before C1 | A development GitHub App's client ID, from Noah | Everything in C1 that does not need to sign in |
-| 2 | End of C1 | One sign-in with a real company account, to check SSO | Start C2, which works against a local preview |
+| 1 | Before C1 | **Cleared 2026-10-05** — Noah registered the GitHub App and sent its client ID | — |
+| 2 | End of C1 | **Partly cleared:** Noah signed in under company SSO. Still needed: one comment posted in the app, and a second person signing in | Start C2, which works against a local preview |
 | 3 | End of C2 | One reviewer saying whether commenting feels right, and a security look | Start C3 |
 | 4 | C3, end to end | Coke engineering merging the mock-data build | Finish and test the app side against a stub; draft the Coke change |
 | 5 | C5 | Real projects reviewed by people outside design | Nothing — this is the decision |
@@ -2933,6 +2952,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **Restored one complete, ordered list of steps.** Moving finished work into appendices had left the live table showing steps 1, 5, C1 and so on, with the completed run missing, which read as disorganised and hid how much was done. The sequence is now one numbered list, 1 to 23, with every step marked done, built-awaiting-a-check, next, not started, or needing a person, and the old name beside each so history still resolves. 13 of 23 are done. Also marked stop 1 cleared and stop 2 partly cleared, since the client ID arrived and sign-in was verified. | The sequence; the status box; the stop table. |
 | 2026-10-05 | **Found that an iteration appearing for reviewers was not automatic, and made it part of C3.** Running the app against the real design repo listed "No branches yet" for every project, which exposed two things: iteration branches live in the product repo, which the app deliberately cannot see, so iterations are now read from `projects/<id>/iterations.json`; and **only the app's author mode writes that file** — the agent's instructions never mention it — and **nothing publishes it**, so today it needs a manual commit and push. The five existing projects were backfilled once by hand because they predate the app. **Step C3's Share action now owns it**: it writes and pushes the record from facts it already has, so designers add nothing. | C3; the project listing code. |
 | 2026-10-05 | **Corrected: the sign-in is a GitHub App, not an OAuth app.** The plan said to start with an OAuth app because GitHub's device-flow page did not mention GitHub Apps. Checked properly: GitHub Apps do support device flow (it must be enabled in the app's settings), need no client secret, and issue a user token limited to what both the app and the user can do. An OAuth app would have needed the `repo` scope, which reaches every repository the user can access, Coke source included — and GitHub itself recommends a GitHub App for that reason. This reverses an earlier decision to drop the GitHub App. Org SSO remains unverified; C1 tests it. | C1; the waiting list, risks, decisions and open questions. |
 | 2026-10-05 | **Made the flow continuous.** Noah asked that the steps can be worked one after another until everything is finished. The plan did not say what happens when a step's last check needs a person, which would have stalled it. Added a status, **Built — awaiting check**, so the next step can start while a human check is pending, and a table of the five points where work genuinely stops and what happens meanwhile. | The sequence; status values. |
