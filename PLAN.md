@@ -448,6 +448,13 @@ remembered.
   server, when stopped (Coke changes).
 - **Generated element ids** such as `:r1:` are no longer used to find an element again.
 
+**Anything built on this machine shows in the project list.** The list is GitHub's projects merged with the
+local copy of the design repository, read straight from disk: a project folder with an iteration record
+in it is a project, however it got there (the app, or an agent in a terminal), and whether or not it has
+been shared. Work only on this machine is marked **Only on this machine**; an iteration made here for a
+project that is already shared is marked **local**. If GitHub cannot be reached, local work still shows.
+It needs the Coke checkout to be chosen once, and says so when it has not been.
+
 The Coke changes are three commits on `noah/flock-designer`, and the four prototype branches were rebased
 onto them (backups are `backup/pre-descriptor-…`); the handoff gate passes on the ones I re-ran.
 
@@ -3117,6 +3124,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **Local work now shows in the project list.** Noah expected anything built locally, a prototype or codebase work, to appear in Flock Designer. It did not: the list read only GitHub, so work appeared only after its record was pushed (and its title was just its id until the brief was too). The list now merges GitHub's projects with the local design repository's, marked *Only on this machine* or *local*, and still shows local work if GitHub is unreachable. | 3.3.5; the app. |
 | 2026-10-05 | **Built 3.3.5, the local proof.** From Projects, *New prototype* creates the branch and record, runs the agent, runs the preview and opens it with pins; existing iterations get a *Build on this machine* panel. Checking it against the real Coke checkout found five faults that would each have stopped the walkthrough: Claude Code was not on the PATH on this machine, the agent had no way to run unattended, the declared preview command exited without a project id, a running preview left a generated file that failed the linter and the typecheck on other branches, and a stopped preview left its server holding the port. All fixed (three Coke commits; the four prototype branches rebased, with backups). The one thing not run is the agent building a new prototype from scratch. | 3.3.5; the app; Coke's descriptor, biome config and start script. |
 | 2026-10-05 | **Re-scoped Phase 3 around a local proof of concept.** Noah wants to prove the loop on one machine first: generate a prototype locally, see it in the app, comment, and close the loop at 3.5, and treat a hosted preview as a later, easy conversation with engineering. Added **3.3.5** (the local walkthrough, including a place in the Projects tab to create work, since hiding the Author screen removed it) and **deferred 3.4**. Considered GitHub Pages for hosted links and set it aside: Pages on a private repo is public unless the org has Enterprise Cloud access control, serves one site per repo, and Coke's existing S3 PR deployment already does per-PR previews, so the later change is a mock-data build through that workflow. | Phase 3 table; 3.3.5 new; 3.4. |
 | 2026-10-05 | **Window reworked: a top bar instead of a toolbar, and the Author view hidden.** Noah asked for a toolbar-less window with a normal top nav: Flock Designer on the left, a Projects tab beside it, and an account menu (GitHub picture and name, with Sign out) fixed at the top. The native title bar is gone (on macOS the window buttons sit inside the bar). The Author screen was removed from the window for now, because it will come back as a list of repositories from GitHub; its services stay in the main process. The preview is hidden while the account menu is open, since a native view would otherwise cover the menu. | The app and its README; the description of modes in Part I. |

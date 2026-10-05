@@ -140,6 +140,11 @@ export const Projects = () => {
 				</FSButton>
 				<FSButton onClick={() => setCreating(true)}>New prototype</FSButton>
 			</FSStack>
+			{!checkout && (
+				<FSAlert severity="info" action={<FSButton onClick={chooseCheckout}>Choose checkout</FSButton>}>
+					Choose your Coke checkout to see work built on this machine alongside everyone else's.
+				</FSAlert>
+			)}
 			<NewWork
 				open={creating}
 				onClose={() => setCreating(false)}
@@ -167,6 +172,7 @@ export const Projects = () => {
 								{project.id}
 							</FSTypography>
 							<FSBox flexGrow={1} />
+							{project.localOnly && <FSChip variant="status" size="small" label="Only on this machine" />}
 							{project.openComments > 0 && (
 								<FSChip
 									variant="status"
@@ -196,6 +202,7 @@ export const Projects = () => {
 										onClick={() => setSelected({ project, iteration })}
 									>
 										{iteration.name}
+										{iteration.localOnly && !project.localOnly ? ' · local' : ''}
 									</FSButton>
 								))}
 							</FSStack>

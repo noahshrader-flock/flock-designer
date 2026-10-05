@@ -228,6 +228,8 @@ export interface Project {
   people: Person[];
   /** Open comment count across the project's iterations. */
   openComments: number;
+  /** True when the project exists only on this machine: built here, not yet shared. */
+  localOnly?: boolean;
 }
 
 export interface ProjectIteration {
@@ -240,6 +242,8 @@ export interface ProjectIteration {
   /** The commit the iteration was last recorded at, so a comment can say what it was made against. */
   commit: string | null;
   contributors: Person[];
+  /** True when this iteration exists only on this machine. */
+  localOnly?: boolean;
 }
 
 /** Someone who has committed to a project. The login is known only when we could resolve one. */

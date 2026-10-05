@@ -24,6 +24,8 @@ import type { PageView } from './services/pageView';
 import { sanitizeAnchor } from '../shared/anchor';
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
+import { readLocalProjects } from './services/localProjects';
+import { mergeProjects } from '../shared/projects';
 import type { CheckoutMemory } from './services/checkoutMemory';
 
 /**
@@ -213,7 +215,23 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 	);
 
 	// Reviewer mode: read through the API, never a checkout.
-	ipcMain.handle(CHANNELS.listProjects, guard((): Promise<Project[]> => designRepo.listProjects()));
+	// Everything on GitHub plus everything built on this machine. Work made here
+	// must appear here, shared or not, so the two are merged; if GitHub cannot be
+	// reached, what is local still shows.
+	ipcMain.handle(
+		CHANNELS.listProjects,
+		guard(async (): Promise<Project[]> => {
+			const saved = memory.read();
+			const local = saved !== null && isRepository(saved) ? readLocalProjects(defaultRecordsRoot(saved)) : [];
+			let remote: Project[] = [];
+			try {
+				remote = await designRepo.listProjects();
+			} catch (err) {
+				if (local.length === 0) throw err;
+			}
+			return mergeProjects(remote, local);
+		}),
+	);
 	ipcMain.handle(
 		CHANNELS.readComments,
 		guard((projectId: string, branch: string): Promise<ReviewComment[]> => designRepo.readComments(projectId, branch)),
