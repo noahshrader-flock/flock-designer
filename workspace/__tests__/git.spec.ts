@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -134,5 +134,72 @@ describe('branchAuthors', () => {
 
 	it('credits nobody on the trunk itself, rather than everybody', async () => {
 		expect(await branchAuthors(root, 'develop')).toEqual([]);
+	});
+});
+
+describe('two commands at once in one repository', () => {
+	// The bug this guards: opening an iteration ran its branch switch twice at the same
+	// moment (React runs effects twice in development), and one `git checkout` hit the
+	// other's index.lock and failed, with "Another git process seems to be running".
+	it('do not collide: every one of them succeeds', async () => {
+		// Real checkouts are quick, so a collision needs a repository big enough that holding
+		// the lock takes a moment, and enough commands at once that two are bound to overlap.
+		mkdirSync(join(root, 'src'), { recursive: true });
+		for (let i = 0; i < 400; i++) writeFileSync(join(root, 'src', `f${i}.txt`), `${i}\n`.repeat(50));
+		g('add', '.');
+		g('commit', '-q', '-m', 'many files');
+		g('checkout', '-q', '-b', 'a');
+		writeFileSync(join(root, 'src', 'f0.txt'), 'different\n');
+		g('commit', '-q', '-am', 'a differs');
+		g('checkout', '-q', 'develop');
+		g('branch', 'b');
+
+		const jobs = Array.from({ length: 24 }, (_, i) => (i % 3 === 0 ? readCheckout(root) : checkoutBranch(root, i % 2 ? 'a' : 'b')));
+		const results = await Promise.allSettled(jobs);
+		expect(results.filter((r) => r.status === 'rejected').map((r) => String((r as PromiseRejectedResult).reason))).toEqual([]);
+	}, 60_000);
+
+	it('run in the order they were asked for', async () => {
+		g('branch', 'a');
+		g('branch', 'b');
+		await Promise.all([checkoutBranch(root, 'a'), checkoutBranch(root, 'b')]);
+		expect((await readCheckout(root)).branch).toBe('b');
+	});
+
+	it('do not let a failure stop the commands queued behind it', async () => {
+		g('branch', 'a');
+		await expect(checkoutBranch(root, 'no-such-branch')).rejects.toThrow(GitProblem);
+		await checkoutBranch(root, 'a');
+		expect((await readCheckout(root)).branch).toBe('a');
+	});
+});
+
+describe('a lock held by something outside the app', () => {
+	const lock = () => join(root, '.git', 'index.lock');
+
+	it('is waited out when it clears by itself, as an editor\'s brief lock does', async () => {
+		g('branch', 'a');
+		writeFileSync(lock(), '');
+		setTimeout(() => existsSync(lock()) && unlinkSync(lock()), 400);
+		await checkoutBranch(root, 'a');
+		expect((await readCheckout(root)).branch).toBe('a');
+	}, 10_000);
+
+	it('is never deleted for the person, and the error says what to check', async () => {
+		g('branch', 'a');
+		writeFileSync(lock(), '');
+		const err = await checkoutBranch(root, 'a').catch((e: Error) => e);
+		expect(err).toBeInstanceOf(GitProblem);
+		expect((err as Error).message).toMatch(/index\.lock/);
+		expect((err as Error).message).toMatch(/nothing else is running git/i);
+		// Deleting a lock under a live process corrupts the index, so it must still be there.
+		expect(existsSync(lock())).toBe(true);
+		unlinkSync(lock());
+	}, 15_000);
+
+	it('does not hold up a read: status takes no lock, so it works while one is held', async () => {
+		writeFileSync(lock(), '');
+		expect((await readCheckout(root)).branch).toBe('develop');
+		unlinkSync(lock());
 	});
 });

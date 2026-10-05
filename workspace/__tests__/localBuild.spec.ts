@@ -141,6 +141,21 @@ describe('when nobody is looking any more', () => {
 		expect(a.startCommand).not.toHaveBeenCalled();
 	});
 
+	it('does not switch branches for a screen that has already gone', async () => {
+		// React runs every effect twice in development, cancelling the first run. If that run
+		// still switched branches, two checkouts ran at once and one hit git's lock.
+		let live = true;
+		const { a } = api({
+			openCheckout: vi.fn(async () => {
+				live = false;
+				return { ok: true, value: { branch: 'develop' } };
+			}),
+		});
+		const url = await runLocalBuild({ api: a, root: '/r', project, iteration: iteration(), isLive: () => live, onPhase: () => undefined });
+		expect(url).toBeNull();
+		expect(a.continueIteration).not.toHaveBeenCalled();
+	});
+
 	it('stops polling an agent whose screen has gone', async () => {
 		let live = true;
 		let polls = 0;

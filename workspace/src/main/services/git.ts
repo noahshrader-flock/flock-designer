@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import type { Checkout } from '../../shared/contract';
 
@@ -22,14 +22,50 @@ export class GitProblem extends Error {
 	}
 }
 
-const git = async (root: string, args: string[]): Promise<string> => {
-	try {
-		const { stdout } = await run('git', ['-C', root, ...args], { maxBuffer: 16 * 1024 * 1024 });
-		return stdout.trim();
-	} catch (err) {
-		const detail = (err as { stderr?: string; message: string }).stderr?.trim() || (err as Error).message;
-		throw new GitProblem(detail);
-	}
+/** One queue per repository: git takes a lock on the index, so two commands at once can collide. */
+const queues = new Map<string, Promise<unknown>>();
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const isLockContention = (detail: string): boolean => /index\.lock|Unable to create .*\.lock|another git process/i.test(detail);
+
+const attempt = async (root: string, args: string[]): Promise<string> => {
+	// `--no-optional-locks`: a read-only command (status, log, rev-parse) would otherwise
+	// refresh the index in the background and take the same lock a checkout needs. Git
+	// documents this flag for exactly the case of a tool polling a repository.
+	const { stdout } = await run('git', ['--no-optional-locks', '-C', root, ...args], { maxBuffer: 16 * 1024 * 1024 });
+	return stdout.trim();
+};
+
+/**
+ * Runs git, one command at a time per repository, retrying briefly if something outside
+ * this app (an editor, a terminal) holds the lock for a moment.
+ *
+ * A lock that stays is not removed here: a lock file is how git says "someone is writing
+ * to this", and deleting one under a live process corrupts the index. The error says what
+ * to check instead.
+ */
+const git = (root: string, args: string[]): Promise<string> => {
+	const run1 = async (): Promise<string> => {
+		let lastDetail = '';
+		for (let i = 0; i < 4; i++) {
+			try {
+				return await attempt(root, args);
+			} catch (err) {
+				lastDetail = (err as { stderr?: string; message: string }).stderr?.trim() || (err as Error).message;
+				if (!isLockContention(lastDetail)) throw new GitProblem(lastDetail);
+				if (i < 3) await sleep(250 * (i + 1));
+			}
+		}
+		throw new GitProblem(
+			`${lastDetail}\n\nGit says another process is using this repository. If nothing else is running git in it, the lock is left over and .git/index.lock can be deleted.`,
+		);
+	};
+	const key = resolve(root);
+	const result = (queues.get(key) ?? Promise.resolve()).then(run1, run1);
+	// The next command waits for this one whether it worked or not.
+	queues.set(key, result.catch(() => undefined));
+	return result;
 };
 
 export const isRepository = (root: string): boolean => existsSync(join(root, '.git'));

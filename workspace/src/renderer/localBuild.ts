@@ -63,6 +63,9 @@ export const runLocalBuild = async ({
 	// The checkout has to be on this iteration's branch. A dirty tree stops it, and the
 	// message says what to do about it.
 	const opened = await api.openCheckout(root);
+	// Checked before every step that changes something, not just at the end: a screen that
+	// has gone (or that React ran twice on purpose) must not still be switching branches.
+	if (!isLive()) return null;
 	if (!opened.ok) return fail(opened.error);
 	if (opened.value.branch !== iteration.branch) {
 		const moved = await api.continueIteration(root, project.id, iteration.name);
