@@ -1,16 +1,18 @@
 import {
 	FSAlert,
-	FSBadge,
 	FSBox,
 	FSButton,
 	FSChip,
 	FSIconButton,
 	FSStack,
+	FSTab,
+	FSTabs,
 	FSTextField,
 	FSTooltip,
 	FSTypography,
 } from '@flocksafety/flock-react-component-lib';
-import ArrowBackOutlined from '@mui/icons-material/ArrowBackOutlined';
+import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutline';
+import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ViewSidebarOutlined from '@mui/icons-material/ViewSidebarOutlined';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
@@ -34,6 +36,7 @@ export const TOOLBAR_HEIGHT = 44;
 const PANEL_WIDTH = 380;
 
 type Mode = 'browse' | 'picking' | 'composing';
+type Tab = 'build' | 'comments';
 
 const NOTE: Record<MarkerState, string | null> = {
 	found: null,
@@ -78,6 +81,8 @@ export const Review = ({
 	const [pinned, setPinned] = useState(false);
 	const [peek, setPeek] = useState(false);
 	const [snapshot, setSnapshot] = useState<string | null>(null);
+	// Build first when there is nothing to look at yet, because that is where the preview is started.
+	const [tab, setTab] = useState<Tab>(!iteration.previewUrl && build ? 'build' : 'comments');
 	const modeRef = useRef<Mode>('browse');
 	const leaveTimer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -175,6 +180,7 @@ export const Review = ({
 			if (e.kind === 'click') {
 				if (e.id < 0) return;
 				setSelected(e.id);
+				setTab('comments');
 				// The comment is in the panel, so open it. It stays open until dismissed:
 				// the pointer is on the page, not the panel, so a hover-open would shut at once.
 				setPinned(true);
@@ -244,6 +250,7 @@ export const Review = ({
 
 	useEffect(() => {
 		modeRef.current = mode;
+		if (mode === 'composing') setTab('comments');
 	}, [mode]);
 
 	const open_ = pinned || peek || mode === 'composing';
@@ -365,9 +372,11 @@ export const Review = ({
 					borderColor: 'divider',
 				}}
 			>
-				<FSButton size="md" variant="secondary" onClick={onBack} startIcon={<ArrowBackOutlined fontSize="small" />}>
-					Back
-				</FSButton>
+				<FSTooltip title="Back to projects">
+					<FSIconButton size="md" variant="ghost" aria-label="Back to projects" onClick={onBack} sx={{ ml: -1 }}>
+						<ChevronLeft />
+					</FSIconButton>
+				</FSTooltip>
 				<FSTypography variant="subtitle2" component="h2" noWrap sx={{ fontWeight: 600 }}>
 					{project.title} — {iteration.name}
 				</FSTypography>
@@ -376,23 +385,34 @@ export const Review = ({
 				</FSTypography>
 				<People people={iteration.contributors} />
 				<FSBox sx={{ flexGrow: 1 }} />
-				<FSTooltip title={pinned ? 'Hide comments and build' : 'Comments and build'}>
-					<FSBox>
-						<FSBadge badgeContent={pinned ? 0 : unread} color="primary" overlap="rectangular" max={99}>
-							<FSIconButton
-								size="md"
-								variant={pinned ? 'primary' : 'secondary'}
-								aria-label="Toggle the comments panel"
-								aria-pressed={pinned}
-								onClick={() => {
-									setPeek(false);
-									setPinned((p) => !p);
-								}}
-							>
-								<ViewSidebarOutlined fontSize="small" />
-							</FSIconButton>
-						</FSBadge>
-					</FSBox>
+				{unread > 0 && (
+					<FSTooltip title="Show the comments">
+						<FSChip
+							variant="status"
+							size="small"
+							icon={<ChatBubbleOutline />}
+							label={String(unread)}
+							onClick={() => {
+								setPeek(false);
+								setTab('comments');
+								setPinned(true);
+							}}
+						/>
+					</FSTooltip>
+				)}
+				<FSTooltip title={pinned ? 'Hide the panel' : 'Show the panel'}>
+					<FSIconButton
+						size="md"
+						variant={pinned ? 'primary' : 'secondary'}
+						aria-label="Toggle the side panel"
+						aria-pressed={pinned}
+						onClick={() => {
+							setPeek(false);
+							setPinned((p) => !p);
+						}}
+					>
+						<ViewSidebarOutlined fontSize="small" />
+					</FSIconButton>
 				</FSTooltip>
 			</FSBox>
 
@@ -451,95 +471,103 @@ export const Review = ({
 						transform: open_ ? 'translateX(0)' : 'translateX(100%)',
 						transition: 'transform 180ms ease',
 						pointerEvents: open_ ? 'auto' : 'none',
-						overflowY: 'auto',
-						p: 2,
+						display: 'flex',
+						flexDirection: 'column',
 					}}
 				>
-					<FSStack spacing={2}>
+					<FSTabs value={tab} onChange={(_, v: Tab) => setTab(v)} variant="fullWidth" sx={{ flexShrink: 0, borderBottom: 1, borderColor: 'divider' }}>
+						<FSTab value="build" label="Build" />
+						<FSTab value="comments" label={unread > 0 ? `Comments (${unread})` : 'Comments'} />
+					</FSTabs>
+					<FSStack spacing={2} sx={{ p: 2, flex: 1, minHeight: 0, overflowY: 'auto' }}>
 						{error && mode !== 'composing' && <FSAlert severity="error">{error}</FSAlert>}
-						{build}
-						<FSStack direction="row" spacing={1} alignItems="center">
-							<FSButton
-								size="md"
-								variant={mode === 'browse' ? 'primary' : 'secondary'}
-								disabled={!opened || mode === 'composing'}
-								onClick={() => (mode === 'picking' ? void cancel() : void startComment())}
-							>
-								{mode === 'picking' ? 'Click to place a pin…' : 'Place a pin (C)'}
-							</FSButton>
-							{mode !== 'browse' && (
-								<FSButton size="md" variant="secondary" onClick={() => void cancel()}>
-									Cancel
-								</FSButton>
-							)}
-						</FSStack>
-
-						{mode === 'composing' && pending && (
-							<FSBox sx={{ border: 1, borderColor: 'primary.main', borderRadius: 1, p: 2 }}>
-								<FSStack spacing={1}>
-									{error && <FSAlert severity="error">{error}</FSAlert>}
-									<FSTypography variant="caption" color="text.secondary">
-										Pinned on {pending.route}
-									</FSTypography>
-									<FSTextField label="Your comment" multiline minRows={3} value={draft} onChange={setDraft} autoFocus />
-									<FSButton size="md" onClick={post} disabled={posting || !draft.trim()}>
-										{posting ? 'Posting…' : 'Post comment'}
-									</FSButton>
-								</FSStack>
-							</FSBox>
-						)}
-
-						{comments?.length === 0 && (
-							<FSTypography variant="body2" color="text.secondary">
-								No comments yet. Press C, then click anywhere on the page to place a pin.
-							</FSTypography>
-						)}
-
-						{comments?.map((comment) => {
-							const state = placed.get(comment.id);
-							const n = numberOf(comment.id);
-							return (
-								<FSBox
-									key={comment.id}
-									ref={(el: HTMLElement | null) => {
-										if (el) cards.current.set(comment.id, el);
-										else cards.current.delete(comment.id);
-									}}
-									onClick={() => {
-										setSelected(comment.id);
-										if (comment.anchor) void window.workspace.pageFocusMarker(comment.id);
-									}}
-									sx={{
-										border: 1,
-										borderColor: selected === comment.id ? 'primary.main' : 'divider',
-										borderWidth: selected === comment.id ? 2 : 1,
-										bgcolor: selected === comment.id ? 'action.selected' : undefined,
-										borderRadius: 1,
-										p: 1.5,
-										cursor: comment.anchor ? 'pointer' : 'default',
-									}}
+						{tab === 'build' && (build ?? <FSTypography variant="body2" color="text.secondary">Building is available once your Coke repository is found.</FSTypography>)}
+						{tab === 'comments' && (
+							<>
+							<FSStack direction="row" spacing={1} alignItems="center">
+								<FSButton
+									size="md"
+									variant={mode === 'browse' ? 'primary' : 'secondary'}
+									disabled={!opened || mode === 'composing'}
+									onClick={() => (mode === 'picking' ? void cancel() : void startComment())}
 								>
-									<FSStack spacing={0.5}>
-										<FSStack direction="row" spacing={1} alignItems="center">
-											{n > 0 && <FSChip variant="status" size="small" label={String(n)} />}
-											<FSTypography variant="subtitle2">{comment.author}</FSTypography>
-											{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
-										</FSStack>
-										<FSTypography variant="body2">{comment.body}</FSTypography>
-										{comment.anchor && state === 'elsewhere' && (
-											<FSTypography variant="caption" color="text.secondary">
-												On {comment.anchor.route}
-											</FSTypography>
-										)}
-										{state && NOTE[state] && (
-											<FSTypography variant="caption" color="warning.main">
-												{NOTE[state]}
-											</FSTypography>
-										)}
+									{mode === 'picking' ? 'Click to place a pin…' : 'Place a pin (C)'}
+								</FSButton>
+								{mode !== 'browse' && (
+									<FSButton size="md" variant="secondary" onClick={() => void cancel()}>
+										Cancel
+									</FSButton>
+								)}
+							</FSStack>
+
+							{mode === 'composing' && pending && (
+								<FSBox sx={{ border: 1, borderColor: 'primary.main', borderRadius: 1, p: 2 }}>
+									<FSStack spacing={1}>
+										{error && <FSAlert severity="error">{error}</FSAlert>}
+										<FSTypography variant="caption" color="text.secondary">
+											Pinned on {pending.route}
+										</FSTypography>
+										<FSTextField label="Your comment" multiline minRows={3} value={draft} onChange={setDraft} autoFocus />
+										<FSButton size="md" onClick={post} disabled={posting || !draft.trim()}>
+											{posting ? 'Posting…' : 'Post comment'}
+										</FSButton>
 									</FSStack>
 								</FSBox>
-							);
-						})}
+							)}
+
+							{comments?.length === 0 && (
+								<FSTypography variant="body2" color="text.secondary">
+									No comments yet. Press C, then click anywhere on the page to place a pin.
+								</FSTypography>
+							)}
+
+							{comments?.map((comment) => {
+								const state = placed.get(comment.id);
+								const n = numberOf(comment.id);
+								return (
+									<FSBox
+										key={comment.id}
+										ref={(el: HTMLElement | null) => {
+											if (el) cards.current.set(comment.id, el);
+											else cards.current.delete(comment.id);
+										}}
+										onClick={() => {
+											setSelected(comment.id);
+											if (comment.anchor) void window.workspace.pageFocusMarker(comment.id);
+										}}
+										sx={{
+											border: 1,
+											borderColor: selected === comment.id ? 'primary.main' : 'divider',
+											borderWidth: selected === comment.id ? 2 : 1,
+											bgcolor: selected === comment.id ? 'action.selected' : undefined,
+											borderRadius: 1,
+											p: 1.5,
+											cursor: comment.anchor ? 'pointer' : 'default',
+										}}
+									>
+										<FSStack spacing={0.5}>
+											<FSStack direction="row" spacing={1} alignItems="center">
+												{n > 0 && <FSChip variant="status" size="small" label={String(n)} />}
+												<FSTypography variant="subtitle2">{comment.author}</FSTypography>
+												{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
+											</FSStack>
+											<FSTypography variant="body2">{comment.body}</FSTypography>
+											{comment.anchor && state === 'elsewhere' && (
+												<FSTypography variant="caption" color="text.secondary">
+													On {comment.anchor.route}
+												</FSTypography>
+											)}
+											{state && NOTE[state] && (
+												<FSTypography variant="caption" color="warning.main">
+													{NOTE[state]}
+												</FSTypography>
+											)}
+										</FSStack>
+									</FSBox>
+								);
+							})}
+							</>
+						)}
 					</FSStack>
 				</FSBox>
 			</FSBox>
