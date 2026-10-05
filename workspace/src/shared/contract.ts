@@ -137,7 +137,10 @@ export interface WorkspaceApi {
 	/** Checks out an existing iteration's branch. */
 	continueIteration(root: string, projectId: string, name: string): Promise<Result<SavedIteration>>;
 
-	startCommand(root: string, commandId: string): Promise<Result<PreviewStatus>>;
+	/** `projectId` fills `<project-id>` in a command that serves one project. */
+	startCommand(root: string, commandId: string, projectId?: string): Promise<Result<PreviewStatus>>;
+	/** The checkout this person used last, if it is still a repository. Reopens it. */
+	lastCheckout(): Promise<Result<Checkout | null>>;
 	stopCommand(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	commandStatus(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	onRunLog(listener: (line: RunLogLine) => void): () => void;
@@ -312,6 +315,7 @@ export const CHANNELS = {
 	createIteration: 'workspace:createIteration',
 	continueIteration: 'workspace:continueIteration',
 	startCommand: 'workspace:startCommand',
+	lastCheckout: 'workspace:lastCheckout',
 	stopCommand: 'workspace:stopCommand',
 	commandStatus: 'workspace:commandStatus',
 	startAgent: 'workspace:startAgent',

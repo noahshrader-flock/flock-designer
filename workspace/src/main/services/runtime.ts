@@ -1,6 +1,7 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import type { PreviewStatus, RunLogLine, WorkspaceDescriptor } from '../../shared/contract';
 import { findCommand } from './descriptor';
+import { assertUsableProjectId } from './iterations';
 
 /**
  * Runs the commands a repository declares, and nothing else.
@@ -10,6 +11,18 @@ import { findCommand } from './descriptor';
  * is spawned from an argv array with `shell: false`, so there is no interpreter
  * to hand a pipe, a semicolon or a substitution to.
  */
+
+/**
+ * A command that serves one project names it with `<project-id>` in its argv.
+ * The id becomes a single argument, never part of a string a shell reads, and
+ * is checked first, so it cannot carry anything but a project name.
+ */
+export const fillProjectId = (argv: string[], projectId?: string): string[] => {
+	if (!argv.some((a) => a.includes('<project-id>'))) return argv;
+	if (projectId === undefined) throw new Error('This command needs a project, and none was given.');
+	assertUsableProjectId(projectId);
+	return argv.map((a) => a.replaceAll('<project-id>', projectId));
+};
 
 export interface RuntimeEvents {
 	onLog(line: RunLogLine): void;
@@ -73,13 +86,18 @@ export class RuntimeManager {
 		this.events.onStatus(status);
 	}
 
-	async start(root: string, descriptor: WorkspaceDescriptor, commandId: string): Promise<PreviewStatus> {
+	async start(
+		root: string,
+		descriptor: WorkspaceDescriptor,
+		commandId: string,
+		projectId?: string,
+	): Promise<PreviewStatus> {
 		if (this.running.has(commandId)) {
 			return this.status(commandId);
 		}
 		// Throws if the repository does not declare it. This is the allowlist.
 		const command = findCommand(descriptor, commandId);
-		const [file, ...args] = command.argv;
+		const [file, ...args] = fillProjectId(command.argv, projectId);
 		if (file === undefined) {
 			throw new Error(`${commandId} has an empty argv`);
 		}

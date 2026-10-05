@@ -11,7 +11,8 @@
 		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
 		"test": "vitest run",
 		"smoke": "npm run build && node scripts/smoke-boot.mjs",
-		"smoke:page": "npm run build && node scripts/smoke-page.mjs"
+		"smoke:page": "npm run build && node scripts/smoke-page.mjs",
+		"smoke:local": "npm run build && node scripts/smoke-local.mjs"
 	},
 	"dependencies": {
 		"@emotion/react": "^11.14.0",

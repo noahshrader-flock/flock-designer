@@ -8,7 +8,9 @@ import {
 	FSTypography,
 } from '@flocksafety/flock-react-component-lib';
 import { useCallback, useEffect, useState } from 'react';
-import type { Person, Project, ProjectIteration } from '../shared/contract';
+import type { Checkout, Person, Project, ProjectIteration } from '../shared/contract';
+import { Build } from './Build';
+import { NewWork, type Created } from './NewWork';
 import { Review } from './Review';
 import { avatarUrl } from '../shared/people';
 
@@ -46,7 +48,20 @@ const People = ({ people, empty }: { people: Person[]; empty?: string }) =>
 export const Projects = () => {
 	const [projects, setProjects] = useState<Project[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
-	const [selected, setSelected] = useState<{ project: Project; iteration: ProjectIteration } | null>(null);
+	const [selected, setSelected] = useState<{ project: Project; iteration: ProjectIteration; task?: string } | null>(null);
+	const [checkout, setCheckout] = useState<Checkout | null>(null);
+	const [creating, setCreating] = useState(false);
+	const [localUrl, setLocalUrl] = useState<string | null>(null);
+
+	// The checkout is chosen once and remembered.
+	useEffect(() => {
+		void window.workspace.lastCheckout().then((r) => r.ok && setCheckout(r.value));
+	}, []);
+	const chooseCheckout = useCallback(async () => {
+		const r = await window.workspace.chooseCheckout();
+		if (r.ok && r.value) setCheckout(r.value);
+	}, []);
+	const showPreview = useCallback((url: string) => setLocalUrl(url), []);
 
 	const load = useCallback(async () => {
 		setError(null);
@@ -84,6 +99,18 @@ export const Projects = () => {
 			<Review
 				project={selected.project}
 				iteration={selected.iteration}
+				externalUrl={localUrl}
+				build={
+					<Build
+						key={`${selected.project.id}/${selected.iteration.name}`}
+						checkout={checkout}
+						onChoose={chooseCheckout}
+						project={selected.project}
+						iteration={selected.iteration}
+						autoTask={selected.task}
+						onPreviewUrl={showPreview}
+					/>
+				}
 				header={
 					<>
 						<FSTypography variant="body2" color="text.secondary">
@@ -94,6 +121,7 @@ export const Projects = () => {
 				}
 				onBack={() => {
 					setSelected(null);
+					setLocalUrl(null);
 					void load();
 				}}
 			/>
@@ -110,7 +138,19 @@ export const Projects = () => {
 				<FSButton variant="secondary" onClick={load}>
 					Refresh
 				</FSButton>
+				<FSButton onClick={() => setCreating(true)}>New prototype</FSButton>
 			</FSStack>
+			<NewWork
+				open={creating}
+				onClose={() => setCreating(false)}
+				checkout={checkout}
+				onChoose={chooseCheckout}
+				onCreated={(c: Created) => {
+					setCreating(false);
+					setLocalUrl(null);
+					setSelected({ project: c.project, iteration: c.iteration, task: c.task });
+				}}
+			/>
 
 			{projects.length === 0 && (
 				<FSTypography variant="body2" color="text.secondary">

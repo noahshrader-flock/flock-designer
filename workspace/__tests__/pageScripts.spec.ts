@@ -49,6 +49,20 @@ describe('picking an element', () => {
 		expect(w.document.querySelector(a.selector)).toBe(target);
 	});
 
+	it('does not rely on an id that React generates, which changes between renders', async () => {
+		const w = page('<main><div><input id=":r1:" /></div><div><input id="search" /></div></main>');
+		const generated = w.document.getElementById(':r1:')!;
+		const picked = w.eval(PICK_SCRIPT) as Promise<CommentAnchor>;
+		click(w, generated);
+		const a = await picked;
+		expect(a.selector).not.toContain(':r1:');
+		expect(w.document.querySelector(a.selector)).toBe(generated);
+
+		const stable = w.eval(PICK_SCRIPT) as Promise<CommentAnchor>;
+		click(w, w.document.getElementById('search')!);
+		expect((await stable).selector).toBe('#search');
+	});
+
 	it('swallows the click, so choosing a button does not press it', async () => {
 		const w = page('<button id="b">Go</button>');
 		let pressed = 0;

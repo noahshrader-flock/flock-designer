@@ -25,11 +25,17 @@ export const Review = ({
 	iteration,
 	onBack,
 	header,
+	build,
+	externalUrl,
 }: {
 	project: Project;
 	iteration: ProjectIteration;
 	onBack: () => void;
 	header: ReactNode;
+	/** Controls for building on this machine, shown above the comments. */
+	build?: ReactNode;
+	/** A preview address from somewhere else -- a local run -- to open as soon as it appears. */
+	externalUrl?: string | null;
 }) => {
 	const [comments, setComments] = useState<ReviewComment[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -90,6 +96,10 @@ export const Review = ({
 		return () => void window.workspace.pageClose();
 	}, [iteration.previewUrl, open]);
 
+	useEffect(() => {
+		if (externalUrl) void open(externalUrl);
+	}, [externalUrl, open]);
+
 	useEffect(() => window.workspace.onPageRoute(setRoute), []);
 
 	// Keep the native view on its slot, through window resizes and layout changes.
@@ -101,11 +111,14 @@ export const Review = ({
 			void window.workspace.pageSetBounds({ x: r.left, y: r.top, width: r.width, height: r.height });
 		};
 		sync();
+		// Layout above the slot can move it without resizing it; a light poll catches that.
+		const poll = setInterval(sync, 300);
 		const observer = new ResizeObserver(sync);
 		observer.observe(el);
 		window.addEventListener('resize', sync);
 		window.addEventListener('scroll', sync, true);
 		return () => {
+			clearInterval(poll);
 			observer.disconnect();
 			window.removeEventListener('resize', sync);
 			window.removeEventListener('scroll', sync, true);
@@ -239,6 +252,7 @@ export const Review = ({
 				</FSBox>
 
 				<FSStack spacing={2} sx={{ width: 340, flexShrink: 0, maxHeight: 'calc(100vh - 260px)', overflowY: 'auto' }}>
+					{build}
 					<FSStack direction="row" spacing={1} alignItems="center">
 						<FSButton
 							variant={mode === 'browse' ? 'primary' : 'secondary'}

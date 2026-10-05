@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { registerIpc } from './ipc';
 import { AgentRunner } from './services/agent';
 import { DesignRepo } from './services/designRepo';
+import { CheckoutMemory } from './services/checkoutMemory';
 import { PageView } from './services/pageView';
 import type { Fetcher } from './services/github';
 import { GitHubSession } from './services/githubSession';
@@ -46,7 +47,7 @@ const createWindow = (): BrowserWindow => {
 	const window = new BrowserWindow({
 		width: 1260,
 		height: 780,
-		show: !smokeMode && !process.argv.includes('--smoke-page'),
+		show: !smokeMode && !process.argv.includes('--smoke-page') && !process.argv.includes('--smoke-local'),
 		title: 'Flock Designer',
 		// No native title bar: the app's own top bar is the toolbar. On macOS the window
 		// buttons stay, inset to sit centred in it; elsewhere the system draws its
@@ -110,7 +111,9 @@ void app.whenReady().then(() => {
 		window.webContents.send('workspace:event:pinEvent', e),
 	);
 
-	registerIpc({ window, opened, runtime, agent, github, designRepo, page });
+	const memory = new CheckoutMemory(CheckoutMemory.defaultPath(app.getPath('userData')));
+
+	registerIpc({ window, opened, runtime, agent, github, designRepo, page, memory });
 
 	// Restores a previous session from the keychain without blocking the window.
 	void github.restore();
@@ -121,6 +124,20 @@ void app.whenReady().then(() => {
 		agent.stop();
 		page.close();
 	});
+
+	if (process.argv.includes('--smoke-local')) {
+		void import('./smokeLocal')
+			.then(({ runLocalSmoke }) => runLocalSmoke(window, process.env.FD_COKE ?? '', process.env.FD_PROJECT ?? ''))
+			.then(() => app.exit(0))
+			.catch((err) => {
+				console.error(`smoke-local: FAILED -- ${err instanceof Error ? err.message : String(err)}`);
+				app.exit(1);
+			});
+		setTimeout(() => {
+			console.error('smoke-local: timed out');
+			app.exit(1);
+		}, 150_000);
+	}
 
 	if (process.argv.includes('--smoke-page')) {
 		void import('./smokePage')

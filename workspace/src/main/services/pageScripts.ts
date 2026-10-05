@@ -26,7 +26,9 @@ const HELPERS = String.raw`
   var segment = function (el) {
     var ref = el.getAttribute('data-e2e-ref');
     if (ref) return '[data-e2e-ref="' + ref.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"]';
-    if (el.id && unique('#' + esc(el.id))) return '#' + esc(el.id);
+    // Ids React and component libraries generate at render time (":r1:", "mui-3") are not
+    // the same next time, so they are not used to find an element again.
+    if (el.id && !/^(:r|mui-|radix-|react-|rc_)|\d{3,}/i.test(el.id) && unique('#' + esc(el.id))) return '#' + esc(el.id);
     var tag = el.tagName.toLowerCase();
     var n = 1, sib = el;
     while ((sib = sib.previousElementSibling)) { if (sib.tagName === el.tagName) n++; }

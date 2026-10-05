@@ -49,7 +49,8 @@ const api: WorkspaceApi = {
 		invoke<SavedIteration>(CHANNELS.createIteration, root, projectId, note, kind),
 	continueIteration: (root, projectId, name) => invoke<SavedIteration>(CHANNELS.continueIteration, root, projectId, name),
 
-	startCommand: (root, commandId) => invoke<PreviewStatus>(CHANNELS.startCommand, root, commandId),
+	startCommand: (root, commandId, projectId) => invoke<PreviewStatus>(CHANNELS.startCommand, root, commandId, projectId),
+	lastCheckout: () => invoke<Checkout | null>(CHANNELS.lastCheckout),
 	stopCommand: (root, commandId) => invoke<PreviewStatus>(CHANNELS.stopCommand, root, commandId),
 	commandStatus: (root, commandId) => invoke<PreviewStatus>(CHANNELS.commandStatus, root, commandId),
 	onRunLog: (listener) => subscribe<RunLogLine>(CHANNELS.runLog, listener),

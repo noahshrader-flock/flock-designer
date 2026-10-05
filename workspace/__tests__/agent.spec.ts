@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { AgentRunner, claudeCodeAdapter } from '../src/main/services/agent';
+import { AgentRunner, claudeCodeAdapter, claudeStreamFormatter, locateClaude } from '../src/main/services/agent';
 import type { RunLogLine } from '../src/shared/contract';
 
 let root: string;
@@ -35,8 +35,9 @@ describe('the task handed over', () => {
 describe('the adapter boundary', () => {
 	it('produces argv, not a shell string', () => {
 		const argv = claudeCodeAdapter.argvFor('a task with ; and && in it');
-		expect(argv[0]).toBe('claude');
-		expect(argv).toHaveLength(2);
+		expect(argv[0]).toMatch(/claude$/);
+		// The task is one argument, however it is punctuated.
+		expect(argv[argv.indexOf('-p') + 1]).toBe('a task with ; and && in it');
 	});
 
 	it('can be swapped without touching the runner, so the tool is replaceable', async () => {
@@ -86,5 +87,70 @@ describe('status', () => {
 		const second = runner.start(root, 'demo', 'y');
 		expect(second).toEqual(first);
 		runner.stop();
+	});
+});
+
+describe('running unattended', () => {
+	const argv = claudeCodeAdapter.argvFor('build it', { addDirs: ['/design/projects'] });
+
+	it('prints, allows edits, and streams, since nobody is there to answer a prompt', () => {
+		expect(argv).toContain('-p');
+		expect(argv[argv.indexOf('--permission-mode') + 1]).toBe('acceptEdits');
+		expect(argv[argv.indexOf('--output-format') + 1]).toBe('stream-json');
+	});
+
+	it('allows running the repository\'s scripts and local git, but nothing that pushes or discards', () => {
+		const allowed = argv[argv.indexOf('--allowedTools') + 1] ?? '';
+		expect(allowed).toContain('Bash(npm run:*)');
+		expect(allowed).toContain('Bash(git commit:*)');
+		for (const bad of ['git push', 'git reset', 'git checkout', 'rm', 'curl']) expect(allowed).not.toContain(bad);
+	});
+
+	it('lets it write to the design repository, and puts that list last so it swallows nothing', () => {
+		expect(argv.slice(-2)).toEqual(['--add-dir', '/design/projects']);
+	});
+});
+
+describe('finding Claude Code', () => {
+	const none = () => false;
+	it('prefers whatever is on the PATH', () => {
+		expect(locateClaude({ PATH: '/a:/b' }, '/h', (p) => p === '/b/claude', () => [])).toBe('/b/claude');
+	});
+
+	it('finds the copy an editor bundles, newest version, when nothing is on the PATH', () => {
+		const bin = (v: string) => `/h/.vscode/extensions/anthropic.claude-code-${v}/resources/native-binary/claude`;
+		const found = locateClaude({ PATH: '' }, '/h', (p) => p === bin('2.1.289-darwin-arm64') || p === bin('2.1.287-darwin-arm64'), () => [
+			'anthropic.claude-code-2.1.287-darwin-arm64',
+			'anthropic.claude-code-2.1.289-darwin-arm64',
+			'other.extension-1.0.0',
+		]);
+		expect(found).toBe(bin('2.1.289-darwin-arm64'));
+	});
+
+	it('falls back to the bare name, whose failure says what to install', () => {
+		expect(locateClaude({ PATH: '' }, '/h', none, () => [])).toBe('claude');
+	});
+});
+
+describe('reading the stream', () => {
+	const events = [
+		{ type: 'system', subtype: 'init' },
+		{ type: 'assistant', message: { content: [{ type: 'text', text: 'Reading the brief.' }, { type: 'tool_use', name: 'Write', input: { file_path: 'src/prototypes/x/index.tsx' } }] } },
+		{ type: 'result', subtype: 'success', is_error: false },
+	].map((e) => JSON.stringify(e));
+
+	it('shows what it says and which file it touches, and nothing else', () => {
+		const lines = claudeStreamFormatter()(`${events.join('\n')}\n`);
+		expect(lines).toEqual(['Reading the brief.', '→ Write src/prototypes/x/index.tsx', 'Finished.']);
+	});
+
+	it('copes with a chunk that ends in the middle of a line', () => {
+		const f = claudeStreamFormatter();
+		const whole = `${events[1]}\n`;
+		expect([...f(whole.slice(0, 20)), ...f(whole.slice(20))]).toEqual(['Reading the brief.', '→ Write src/prototypes/x/index.tsx']);
+	});
+
+	it('reports a failed run as stopped', () => {
+		expect(claudeStreamFormatter()(`${JSON.stringify({ type: 'result', is_error: true, result: 'out of turns' })}\n`)).toEqual(['Stopped: out of turns']);
 	});
 });

@@ -27,9 +27,12 @@ read access to the design repository: no checkout, no git, no toolchain. **Comme
 in the design repository, one issue per iteration, so GitHub does the storing and the notifying and
 there is no server of ours anywhere.
 
-**The Author view is not shown for now.** It (open a checkout, create an iteration, start the agent, run
-a preview) is still in the main process and the bridge, but has no screen. It comes back as a list of
-repositories from GitHub rather than a folder picker.
+**Building on this machine** is part of Projects, not a separate mode. **New prototype** asks for a name and
+what to explore, creates the branch and record, runs the agent, then the preview, and opens it with pins.
+Any iteration also has a **Build on this machine** panel. The checkout is chosen once and remembered.
+The agent runs unattended: it may edit and run the repository's own scripts and local git, and nothing
+that pushes, switches branch or deletes. `npm run smoke:local` runs a real prototype from a real Coke
+checkout through the app's own services (see the script for its two variables).
 
 ## Signing in
 

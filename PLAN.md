@@ -175,7 +175,7 @@ called before 2026-10-05, so history still resolves.
 | 3.2 | [Sign in, and the comment store](#32--prove-sign-in-and-the-comment-store-was-c1) | ◐ Built — awaiting your check | Sign-in, the project list and **automatic publishing of iteration records** are built. **You:** raise the app's Contents permission to read and write, open an iteration and post one comment; then a second person signs in | C1 |
 | 3.2.5 | [Show who is on each project](#325--show-who-is-on-each-project) | ◐ Built — awaiting your check | Every project lists everyone who has committed to it, on any iteration. **You:** restart the app and look at the project list | added 2026-10-05 |
 | 3.3 | [Open a preview and comment on an element](#33--open-a-preview-and-comment-on-an-element-was-c2) | ◐ Built — awaiting your check | Click an element in a preview, comment, and see it marked on reopening. Verified in real Electron against a real click. **You:** try it on a prototype and say whether it feels right. Needs a security look | C2 |
-| 3.3.5 | [Prove it locally, start to finish](#335--prove-it-locally-start-to-finish) | ▶ **Next** | Generate a prototype on this machine, see it in the app, comment on it. Needs nothing from anyone | added 2026-10-05 |
+| 3.3.5 | [Prove it locally, start to finish](#335--prove-it-locally-start-to-finish) | ◐ Built — awaiting your walkthrough | **New prototype** in Projects creates the branch, runs the agent, runs the preview and opens it with pins. A real Coke prototype has been run through the app's own services and pinned. **You:** do it once end to end | added 2026-10-05 |
 | 3.4 | [Share for review](#34--share-for-review-was-c3) | ⏸ Deferred until the local proof works | A hosted preview link, which feeds the same app. Needs Coke engineering; an easy conversation once 3.3.5 and 3.5 show it works | C3 |
 | 3.5 | [Close the loop](#35--close-the-loop-was-c4) | ○ Not started | Comments become something the agent can act on | C4 |
 | 3.6 | [Pilot and decision](#36--pilot-and-decision-was-c5) | ⏸ Needs people | Real projects reviewed by people outside design | C5 |
@@ -426,6 +426,34 @@ agent builds it, its preview opens in the app, and a pinned comment is placed an
 **Human:** you do this once, start to finish, and say where it was awkward.
 
 **Not in this step:** a hosted preview, other people's access, the list of GitHub repositories.
+
+**Built 2026-10-05.** **New prototype** (and *In the codebase*) in the Projects tab asks for a name and what
+to explore, creates the branch and record, runs the agent, then the preview, and opens it with pins.
+Any existing iteration also gets a **Build on this machine** panel: run or stop its preview, or ask the
+agent for a change, with the agent's progress shown in the window. The checkout is chosen once and
+remembered.
+
+**What checking it end to end turned up, all fixed:**
+- **No `claude` on this machine's PATH.** Claude Code here exists only inside the editor, so the app
+  looked for it on the PATH, then the usual install places, then the newest copy an editor bundles.
+- **The agent could not have run unattended.** It now runs in print mode with streamed output, may edit
+  and run the repository's own scripts and local git, but not push, switch branches or delete, and may
+  write to the project's folder in the design repository.
+- **The declared preview command could never run.** `start:prototype` exits unless given a project id and
+  the descriptor gave none. The descriptor now says `<project-id>`, which the app fills in as one argument
+  (Coke change).
+- **Running a preview broke the handoff gate.** It writes a generated `bootstrap.tsx` that the linter
+  failed and that broke the typecheck on any other branch, and stopping the app's preview left the dev
+  server holding port 3100. Coke now ignores the file in the linter and the script removes it, and its
+  server, when stopped (Coke changes).
+- **Generated element ids** such as `:r1:` are no longer used to find an element again.
+
+The Coke changes are three commits on `noah/flock-designer`, and the four prototype branches were rebased
+onto them (backups are `backup/pre-descriptor-…`); the handoff gate passes on the ones I re-ran.
+
+**Verified:** `npm run smoke:local` ran the real Users prototype from its declared command in real Electron,
+opened it in the preview view and placed a pin on it that was found again. **Not yet verified:** the agent
+building a *new* prototype from a request, which needs a real run and takes a few minutes.
 
 ### 3.4 — Share for review (was C3)
 
@@ -3089,6 +3117,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **Built 3.3.5, the local proof.** From Projects, *New prototype* creates the branch and record, runs the agent, runs the preview and opens it with pins; existing iterations get a *Build on this machine* panel. Checking it against the real Coke checkout found five faults that would each have stopped the walkthrough: Claude Code was not on the PATH on this machine, the agent had no way to run unattended, the declared preview command exited without a project id, a running preview left a generated file that failed the linter and the typecheck on other branches, and a stopped preview left its server holding the port. All fixed (three Coke commits; the four prototype branches rebased, with backups). The one thing not run is the agent building a new prototype from scratch. | 3.3.5; the app; Coke's descriptor, biome config and start script. |
 | 2026-10-05 | **Re-scoped Phase 3 around a local proof of concept.** Noah wants to prove the loop on one machine first: generate a prototype locally, see it in the app, comment, and close the loop at 3.5, and treat a hosted preview as a later, easy conversation with engineering. Added **3.3.5** (the local walkthrough, including a place in the Projects tab to create work, since hiding the Author screen removed it) and **deferred 3.4**. Considered GitHub Pages for hosted links and set it aside: Pages on a private repo is public unless the org has Enterprise Cloud access control, serves one site per repo, and Coke's existing S3 PR deployment already does per-PR previews, so the later change is a mock-data build through that workflow. | Phase 3 table; 3.3.5 new; 3.4. |
 | 2026-10-05 | **Window reworked: a top bar instead of a toolbar, and the Author view hidden.** Noah asked for a toolbar-less window with a normal top nav: Flock Designer on the left, a Projects tab beside it, and an account menu (GitHub picture and name, with Sign out) fixed at the top. The native title bar is gone (on macOS the window buttons sit inside the bar). The Author screen was removed from the window for now, because it will come back as a list of repositories from GitHub; its services stay in the main process. The preview is hidden while the account menu is open, since a native view would otherwise cover the menu. | The app and its README; the description of modes in Part I. |
 | 2026-10-05 | **Pins can be clicked and dragged.** Noah asked to move a pin after placing it, and for a click on a pin to highlight its comment. A click selects the comment in the panel and scrolls to it; a drag moves the pin and saves the new position by editing the comment, so only its author can. Pins now report back through the page's console with a per-preview secret, since the preview has no bridge to the app; `smoke:page` checks a real click, a real drag and that a forged message is ignored. | 3.3; the app and its README. |

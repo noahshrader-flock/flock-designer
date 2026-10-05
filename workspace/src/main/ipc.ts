@@ -1,4 +1,5 @@
 import { type BrowserWindow, dialog, ipcMain } from 'electron';
+import { existsSync } from 'node:fs';
 import {
 	CHANNELS,
 	type Checkout,
@@ -23,6 +24,7 @@ import type { PageView } from './services/pageView';
 import { sanitizeAnchor } from '../shared/anchor';
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
+import type { CheckoutMemory } from './services/checkoutMemory';
 
 /**
  * Every operation the window can reach, and nothing else.
@@ -58,14 +60,16 @@ export interface IpcContext {
 	github: GitHubSession;
 	designRepo: DesignRepo;
 	page: PageView;
+	memory: CheckoutMemory;
 }
 
-export const registerIpc = ({ window, opened, runtime, agent, github, designRepo, page }: IpcContext): void => {
+export const registerIpc = ({ window, opened, runtime, agent, github, designRepo, page, memory }: IpcContext): void => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
 			throw new Error(`${root} is not a git repository.`);
 		}
 		const canonical = opened.remember(root);
+		memory.write(canonical);
 		return readCheckout(canonical);
 	};
 
@@ -104,6 +108,14 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 				return null;
 			}
 			return openRepository(chosen);
+		}),
+	);
+
+	ipcMain.handle(
+		CHANNELS.lastCheckout,
+		guard(async (): Promise<Checkout | null> => {
+			const saved = memory.read();
+			return saved !== null && isRepository(saved) ? openRepository(saved) : null;
 		}),
 	);
 
@@ -148,8 +160,8 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 
 	ipcMain.handle(
 		CHANNELS.startCommand,
-		guard((root: string, commandId: string) =>
-			runtime.start(opened.require(root), descriptorFor(root), commandId),
+		guard((root: string, commandId: string, projectId?: string) =>
+			runtime.start(opened.require(root), descriptorFor(root), commandId, projectId),
 		),
 	);
 
@@ -172,7 +184,10 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 	ipcMain.handle(
 		CHANNELS.startAgent,
 		guard((root: string, projectId: string, task: string) =>
-			agent.start(opened.require(root), projectId, task),
+			agent.start(opened.require(root), projectId, task, {
+				// The project's records live in the design repository, beside the product checkout.
+				addDirs: existsSync(defaultRecordsRoot(opened.require(root))) ? [defaultRecordsRoot(opened.require(root))] : [],
+			}),
 		),
 	);
 

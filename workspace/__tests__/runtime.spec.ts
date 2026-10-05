@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { RuntimeManager, type RuntimeDeps } from '../src/main/services/runtime';
+import { RuntimeManager, fillProjectId, type RuntimeDeps } from '../src/main/services/runtime';
 import type { PreviewStatus, RunLogLine, WorkspaceDescriptor } from '../src/shared/contract';
 
 const descriptor: WorkspaceDescriptor = {
@@ -132,5 +132,25 @@ describe('preview', () => {
 		await manager.stop('preview');
 		await settle();
 		expect(statuses.filter((s) => s.state === 'failed')).toEqual([]);
+	});
+});
+
+describe('commands that serve one project', () => {
+	it('puts the project in as its own argument', () => {
+		expect(fillProjectId(['npm', 'run', 'start:prototype', '--', '<project-id>'], 'users-inactivity-signal')).toEqual([
+			'npm', 'run', 'start:prototype', '--', 'users-inactivity-signal',
+		]);
+	});
+
+	it('leaves a command that names no project alone', () => {
+		expect(fillProjectId(['npm', 'test'])).toEqual(['npm', 'test']);
+	});
+
+	it('refuses to run one that needs a project without being given one', () => {
+		expect(() => fillProjectId(['npm', 'run', 'x', '<project-id>'])).toThrow(/needs a project/);
+	});
+
+	it.each(['a; rm -rf ~', '../../etc', '$(whoami)', 'Has Caps', ''])('refuses %j as a project', (bad) => {
+		expect(() => fillProjectId(['x', '<project-id>'], bad)).toThrow();
 	});
 });
