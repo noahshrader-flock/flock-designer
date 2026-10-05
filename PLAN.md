@@ -307,10 +307,16 @@ nothing to open.
 - One click **pushes the branch, opens a draft PR** with a body saying it is a preview thread and not
   for merge (one PR per branch — settled), **waits for the deployment, and records its URL** on the
   iteration.
+- **Publishes the iteration record.** It writes `projects/<id>/iterations.json` in the design repo from
+  facts it already has — branch, commit, preview URL — and pushes it. **The designer adds nothing by
+  hand.** Reviewers only need an iteration once it has been shared, so this is the moment it must
+  exist; an iteration that was never shared has nothing to review. Until this lands the record has to
+  be committed and pushed manually, which is a known gap, not the intended process.
 - A reviewer's app shows that URL as the iteration's preview, with build status while it is coming.
 
 **Done when:** against a throwaway repository with a stub deploy workflow, the click produces a draft
-PR and a recorded URL that a second account can open.
+PR and a recorded URL that a second account can open, **and the iteration appears in that account's
+app with no manual step in between.**
 
 **Needs from Coke engineering:** a `build:design` script, and CI that builds `fd/*` branches with it.
 Today the preview workflow runs `build:dev` — Auth0 login, real dev APIs, no mock data, no
@@ -2927,6 +2933,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-05 | **Found that an iteration appearing for reviewers was not automatic, and made it part of C3.** Running the app against the real design repo listed "No branches yet" for every project, which exposed two things: iteration branches live in the product repo, which the app deliberately cannot see, so iterations are now read from `projects/<id>/iterations.json`; and **only the app's author mode writes that file** — the agent's instructions never mention it — and **nothing publishes it**, so today it needs a manual commit and push. The five existing projects were backfilled once by hand because they predate the app. **Step C3's Share action now owns it**: it writes and pushes the record from facts it already has, so designers add nothing. | C3; the project listing code. |
 | 2026-10-05 | **Corrected: the sign-in is a GitHub App, not an OAuth app.** The plan said to start with an OAuth app because GitHub's device-flow page did not mention GitHub Apps. Checked properly: GitHub Apps do support device flow (it must be enabled in the app's settings), need no client secret, and issue a user token limited to what both the app and the user can do. An OAuth app would have needed the `repo` scope, which reaches every repository the user can access, Coke source included — and GitHub itself recommends a GitHub App for that reason. This reverses an earlier decision to drop the GitHub App. Org SSO remains unverified; C1 tests it. | C1; the waiting list, risks, decisions and open questions. |
 | 2026-10-05 | **Made the flow continuous.** Noah asked that the steps can be worked one after another until everything is finished. The plan did not say what happens when a step's last check needs a person, which would have stalled it. Added a status, **Built — awaiting check**, so the next step can start while a human check is pending, and a table of the five points where work genuinely stops and what happens meanwhile. | The sequence; status values. |
 | 2026-10-05 | **Phases made explicit; the app's UI stays on FUI.** Noah asked for the work to stay in phases, which it already was as C1–C5; added a table of what exists if the work stops after each phase, with natural stop points after C2 and C4. He also considered moving the app to shadcn/ui and Tailwind for a nicer default look, then decided to keep the Flock design system. The shadcn route was checked first — components are copied into the repo, and its docs do not mention Electron — and would have been cheap, since the renderer is 373 lines with four FUI imports, so this is a preference and not a constraint. The cost of staying: building the app needs the GitHub Packages token, and it stays on React 18. | The sequence; the decisions table. |
