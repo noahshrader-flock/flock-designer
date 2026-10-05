@@ -1,9 +1,10 @@
-import { BrowserWindow, app, safeStorage, shell } from 'electron';
+import { BrowserWindow, app, safeStorage, screen, shell } from 'electron';
 import { join } from 'node:path';
 import { registerIpc } from './ipc';
 import { AgentRunner } from './services/agent';
 import { DesignRepo } from './services/designRepo';
 import { CheckoutMemory } from './services/checkoutMemory';
+import { EdgeWatcher } from './services/edgeWatcher';
 import { PageView } from './services/pageView';
 import type { Fetcher } from './services/github';
 import { GitHubSession } from './services/githubSession';
@@ -110,6 +111,24 @@ void app.whenReady().then(() => {
 	const page = new PageView(window, (route) => window.webContents.send('workspace:event:pageRoute', route), (e) =>
 		window.webContents.send('workspace:event:pinEvent', e),
 	);
+
+	// The preview is a native view, so the pointer over it never reaches the window.
+	// Ask the system where the pointer is instead, and say when it rests at the edge.
+	const edge = new EdgeWatcher({
+		pointer: () => {
+			const cursor = screen.getCursorScreenPoint();
+			const inner = window.getContentBounds();
+			const x = cursor.x - inner.x;
+			const y = cursor.y - inner.y;
+			return x < 0 || y < 0 || x > inner.width || y > inner.height ? null : { x, y };
+		},
+		// A hidden preview has nothing to hover over, which also clears a stale "near".
+		view: () => (page.shown ? page.area : { x: 0, y: 0, width: 0, height: 0 }),
+		now: () => Date.now(),
+		onChange: (near) => window.webContents.send('workspace:event:edgeHover', near),
+	});
+	const edgeTimer = setInterval(() => edge.tick(), 80);
+	window.on('closed', () => clearInterval(edgeTimer));
 
 	const memory = new CheckoutMemory(CheckoutMemory.defaultPath(app.getPath('userData')));
 

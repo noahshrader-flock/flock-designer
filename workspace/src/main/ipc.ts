@@ -8,7 +8,9 @@ import {
 	type Iteration,
 	type IterationKind,
 	type MarkerRequest,
+	PAGE_HOLD_REASONS,
 	type PageBounds,
+	type PageHoldReason,
 	type Project,
 	type PublishOutcome,
 	type Result,
@@ -333,7 +335,14 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 		CHANNELS.pageSetBounds,
 		guard((b: PageBounds) => nothing(page.setBounds({ x: Number(b?.x), y: Number(b?.y), width: Number(b?.width), height: Number(b?.height) }))),
 	);
-	ipcMain.handle(CHANNELS.pageSetVisible, guard((visible: boolean) => nothing(page.setVisible(visible === true))));
+	ipcMain.handle(
+		CHANNELS.pageHold,
+		guard((reason: string, held: boolean) => {
+			if (!(PAGE_HOLD_REASONS as readonly string[]).includes(reason)) throw new Error('That is not a reason to hide the preview.');
+			return nothing(page.hold(reason as PageHoldReason, held === true));
+		}),
+	);
+	ipcMain.handle(CHANNELS.pageSnapshot, guard(() => page.snapshot()));
 	ipcMain.handle(CHANNELS.pagePick, guard(() => page.pick()));
 	ipcMain.handle(CHANNELS.pageCancelPick, guard(async () => nothing(await page.cancelPick())));
 	ipcMain.handle(

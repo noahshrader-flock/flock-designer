@@ -37,7 +37,7 @@ export const TopNav = ({ user, onSignOut }: { user: GitHubUser | null; onSignOut
 
 	const setOpen = (el: HTMLElement | null) => {
 		setAnchor(el);
-		void window.workspace.pageSetVisible(el === null);
+		void window.workspace.pageHold('menu', el !== null);
 	};
 
 	return (

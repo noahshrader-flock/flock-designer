@@ -184,8 +184,16 @@ export interface WorkspaceApi {
 	pageOpen(url: string): Promise<Result<null>>;
 	pageClose(): Promise<Result<null>>;
 	pageSetBounds(bounds: PageBounds): Promise<Result<null>>;
-	/** Hides or shows the preview, so a menu drawn by the window is not buried under it. */
-	pageSetVisible(visible: boolean): Promise<Result<null>>;
+	/**
+	 * Hides the preview while something drawn by the window needs the space it
+	 * occupies. Several things can want that at once, so each says *why*: the
+	 * preview comes back only when every reason has let go.
+	 */
+	pageHold(reason: PageHoldReason, held: boolean): Promise<Result<null>>;
+	/** The preview as an image, so the window can draw over where it is. Null if there is no preview. */
+	pageSnapshot(): Promise<Result<string | null>>;
+	/** The pointer has rested near the right edge of the preview, or left it. */
+	onEdgeHover(listener: (near: boolean) => void): () => void;
 	/** Comment mode: resolves with the next element clicked, or null if cancelled. */
 	pagePick(): Promise<Result<CommentAnchor | null>>;
 	pageCancelPick(): Promise<Result<null>>;
@@ -322,6 +330,10 @@ export interface MarkerResult {
   state: MarkerState;
 }
 
+/** Why the preview is hidden. A closed set, so the window cannot invent reasons. */
+export const PAGE_HOLD_REASONS = ['menu', 'panel'] as const;
+export type PageHoldReason = (typeof PAGE_HOLD_REASONS)[number];
+
 /** Where the preview sits, in the window's own coordinates. */
 export interface PageBounds {
   x: number;
@@ -360,7 +372,9 @@ export const CHANNELS = {
 	pageOpen: 'workspace:pageOpen',
 	pageClose: 'workspace:pageClose',
 	pageSetBounds: 'workspace:pageSetBounds',
-	pageSetVisible: 'workspace:pageSetVisible',
+	pageHold: 'workspace:pageHold',
+	pageSnapshot: 'workspace:pageSnapshot',
+	edgeHover: 'workspace:event:edgeHover',
 	pagePick: 'workspace:pagePick',
 	pageCancelPick: 'workspace:pageCancelPick',
 	pageShowMarkers: 'workspace:pageShowMarkers',

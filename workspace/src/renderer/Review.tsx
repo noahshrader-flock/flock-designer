@@ -1,15 +1,37 @@
-import { FSAlert, FSBox, FSButton, FSChip, FSStack, FSTextField, FSTypography } from '@flocksafety/flock-react-component-lib';
+import {
+	FSAlert,
+	FSBadge,
+	FSBox,
+	FSButton,
+	FSChip,
+	FSIconButton,
+	FSStack,
+	FSTextField,
+	FSTooltip,
+	FSTypography,
+} from '@flocksafety/flock-react-component-lib';
+import ArrowBackOutlined from '@mui/icons-material/ArrowBackOutlined';
+import ViewSidebarOutlined from '@mui/icons-material/ViewSidebarOutlined';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
+import { People } from './People';
+import { NAV_HEIGHT } from './TopNav';
 
 /**
- * One iteration: its preview, and the comments placed on it.
+ * One iteration, full width: a thin toolbar, and under it the preview, with
+ * nothing else taking its space.
  *
- * The preview is a native view the main process lays over the grey box on the
- * left, so everything that has to appear *over* the page -- the numbered
- * markers -- is drawn inside the page by the app, and everything else lives in
- * the panel on the right. The page itself is given no way to call this window.
+ * The comments, the build controls and the composer live in a panel that slides
+ * in from the right. The preview is a native view, which is always drawn *above*
+ * the window's own content, so a panel cannot be laid over it: while the panel is
+ * open the preview is swapped for a picture of itself and the panel is drawn over
+ * that, and the live preview comes back when the panel closes. Clicking the
+ * picture closes the panel, which is how you get back to using the page.
  */
+
+/** Height of the toolbar under the main bar. */
+export const TOOLBAR_HEIGHT = 44;
+const PANEL_WIDTH = 380;
 
 type Mode = 'browse' | 'picking' | 'composing';
 
@@ -24,14 +46,12 @@ export const Review = ({
 	project,
 	iteration,
 	onBack,
-	header,
 	build,
 	externalUrl,
 }: {
 	project: Project;
 	iteration: ProjectIteration;
 	onBack: () => void;
-	header: ReactNode;
 	/** Controls for building on this machine, shown above the comments. */
 	build?: ReactNode;
 	/** A preview address from somewhere else -- a local run -- to open as soon as it appears. */
@@ -52,6 +72,14 @@ export const Review = ({
 	const [selected, setSelected] = useState<number | null>(null);
 	const [redraw, setRedraw] = useState(0);
 	const cards = useRef(new Map<number, HTMLElement>());
+
+	// The panel is open when it was asked for (the toggle, a pin click, an error),
+	// when the pointer rested at the edge, or while a comment is being written.
+	const [pinned, setPinned] = useState(false);
+	const [peek, setPeek] = useState(false);
+	const [snapshot, setSnapshot] = useState<string | null>(null);
+	const modeRef = useRef<Mode>('browse');
+	const leaveTimer = useRef<ReturnType<typeof setTimeout>>();
 
 	useEffect(() => {
 		void window.workspace.signInState().then((r) => {
@@ -125,18 +153,21 @@ export const Review = ({
 		};
 	}, [opened]);
 
-	// Put the markers on the page whenever the comments, the page, or the route change.
+	// Put the markers on the page. A function, not just an effect, because freezing
+	// the preview for the panel must first make sure the picture includes them.
+	const drawMarkers = useCallback(async () => {
+		// Only your own pins can be dragged; GitHub would refuse anyone else's edit anyway.
+		const items = anchored.map((c, i) => ({ id: c.id, number: i + 1, anchor: c.anchor as CommentAnchor, movable: c.author === me }));
+		// The pin being placed shows at once, before it is saved (id -1, amber), and can be moved.
+		if (pending) items.push({ id: -1, number: items.length + 1, anchor: pending, movable: true });
+		const r = await window.workspace.pageShowMarkers(items);
+		if (r.ok) setPlaced(new Map(r.value.map((m: MarkerResult) => [m.id, m.state])));
+	}, [anchored, pending, me]);
+
+	// ...and again whenever the comments, the page, or the route change.
 	useEffect(() => {
-		if (!opened) return;
-		void (async () => {
-			// Only your own pins can be dragged; GitHub would refuse anyone else's edit anyway.
-			const items = anchored.map((c, i) => ({ id: c.id, number: i + 1, anchor: c.anchor as CommentAnchor, movable: c.author === me }));
-			// The pin being placed shows at once, before it is saved (id -1, amber), and can be moved.
-			if (pending) items.push({ id: -1, number: items.length + 1, anchor: pending, movable: true });
-			const r = await window.workspace.pageShowMarkers(items);
-			if (r.ok) setPlaced(new Map(r.value.map((m: MarkerResult) => [m.id, m.state])));
-		})();
-	}, [opened, anchored, route, pending, me, redraw]);
+		if (opened) void drawMarkers();
+	}, [opened, drawMarkers, route, redraw]);
 
 	// A pin on the page was clicked or dropped somewhere new.
 	useEffect(() => {
@@ -144,7 +175,10 @@ export const Review = ({
 			if (e.kind === 'click') {
 				if (e.id < 0) return;
 				setSelected(e.id);
-				cards.current.get(e.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+				// The comment is in the panel, so open it. It stays open until dismissed:
+				// the pointer is on the page, not the panel, so a hover-open would shut at once.
+				setPinned(true);
+				setTimeout(() => cards.current.get(e.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 250);
 			} else if (e.id < 0) {
 				// The unsaved pin: just remember where it now is.
 				setPending((p) => (p ? { ...e.anchor, commit: p.commit } : p));
@@ -167,6 +201,9 @@ export const Review = ({
 
 	const startComment = useCallback(async () => {
 		setError(null);
+		// The page has to be live to be clicked, so the panel gets out of the way.
+		setPinned(false);
+		setPeek(false);
 		setMode('picking');
 		const r = await window.workspace.pagePick();
 		if (!r.ok) {
@@ -193,11 +230,91 @@ export const Review = ({
 			const t = e.target as HTMLElement | null;
 			if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
 			if (e.key.toLowerCase() === 'c' && !e.metaKey && !e.ctrlKey && opened && mode === 'browse') void startComment();
-			if (e.key === 'Escape' && mode !== 'browse') void cancel();
+			if (e.key === 'Escape') {
+				if (mode !== 'browse') void cancel();
+				else {
+					setPinned(false);
+					setPeek(false);
+				}
+			}
 		};
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
 	}, [opened, mode, startComment, cancel]);
+
+	useEffect(() => {
+		modeRef.current = mode;
+	}, [mode]);
+
+	const open_ = pinned || peek || mode === 'composing';
+
+	// An error cannot be shown over a preview that is covering the window, so
+	// raise the panel, which is where errors are drawn.
+	useEffect(() => {
+		if (error) setPinned(true);
+	}, [error]);
+
+	/**
+	 * Open panel: freeze the preview. Closed: bring it back.
+	 *
+	 * The order matters. Markers are drawn first so the picture includes them; the
+	 * picture is on screen before the live view is hidden, so there is no flash of
+	 * empty window; and a run counter drops the result of a freeze that was
+	 * overtaken by the panel closing again.
+	 */
+	const run = useRef(0);
+	useEffect(() => {
+		const mine = ++run.current;
+		if (!opened) {
+			setSnapshot(null);
+			return;
+		}
+		if (!open_) {
+			void window.workspace.pageHold('panel', false);
+			const t = setTimeout(() => {
+				if (mine === run.current) setSnapshot(null);
+			}, 120);
+			return () => clearTimeout(t);
+		}
+		void (async () => {
+			await drawMarkers();
+			const snap = await window.workspace.pageSnapshot();
+			if (mine !== run.current) return;
+			setSnapshot(snap.ok ? snap.value : null);
+			await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+			if (mine !== run.current) return;
+			// Even with no picture the panel has to be visible, so the preview still steps aside.
+			await window.workspace.pageHold('panel', true);
+		})();
+	}, [open_, opened]); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Letting go on the way out matters: the hold lives in the main process, and
+	// a preview left hidden would stay hidden for the next iteration too.
+	useEffect(
+		() => () => {
+			void window.workspace.pageHold('panel', false);
+		},
+		[],
+	);
+
+	// The pointer resting at the right edge of the page opens the panel. The main
+	// process watches for it, because the page is a native view the window never
+	// sees the pointer over. Not while placing a pin: the page has to stay live.
+	useEffect(
+		() =>
+			window.workspace.onEdgeHover((near) => {
+				if (near && modeRef.current === 'browse') setPeek(true);
+			}),
+		[],
+	);
+
+	// A panel that opened because the pointer rested at the edge closes when the
+	// pointer leaves it. A short delay forgives a pointer that wobbles over the edge.
+	const holdPeek = () => clearTimeout(leaveTimer.current);
+	const releasePeek = () => {
+		clearTimeout(leaveTimer.current);
+		leaveTimer.current = setTimeout(() => setPeek(false), 250);
+	};
 
 	const post = async () => {
 		if (!draft.trim()) return;
@@ -209,136 +326,223 @@ export const Review = ({
 			setDraft('');
 			setPending(null);
 			setMode('browse');
+			setPinned(true); // so the comment just posted is there to see
 			await load();
 		} else {
 			setError(r.error);
 		}
 	};
 
+
+	const unread = comments?.length ?? 0;
+
 	return (
-		<FSStack spacing={2}>
-			<FSStack direction="row" alignItems="center" spacing={2}>
-				<FSButton size="md" variant="secondary" onClick={onBack}>
+		<FSBox
+			sx={{
+				position: 'fixed',
+				top: NAV_HEIGHT,
+				left: 0,
+				right: 0,
+				bottom: 0,
+				display: 'flex',
+				flexDirection: 'column',
+				bgcolor: 'background.default',
+				zIndex: 1000, // under the main bar, so its account menu is never covered
+			}}
+		>
+			{/* The toolbar: where you are, and the way back. Always visible, always fixed. */}
+			<FSBox
+				component="div"
+				sx={{
+					height: TOOLBAR_HEIGHT,
+					flexShrink: 0,
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
+					px: 2,
+					bgcolor: 'background.paper',
+					borderBottom: 1,
+					borderColor: 'divider',
+				}}
+			>
+				<FSButton size="md" variant="secondary" onClick={onBack} startIcon={<ArrowBackOutlined fontSize="small" />}>
 					Back
 				</FSButton>
-				<FSTypography variant="h6" component="h2">
+				<FSTypography variant="subtitle2" component="h2" noWrap sx={{ fontWeight: 600 }}>
 					{project.title} — {iteration.name}
 				</FSTypography>
-			</FSStack>
-			{header}
-			{error && mode !== 'composing' && <FSAlert severity="error">{error}</FSAlert>}
-
-			<FSStack direction="row" spacing={2} alignItems="stretch">
-				<FSBox
-					ref={slot}
-					sx={{ flex: 1, minWidth: 0, height: 'calc(100vh - 260px)', minHeight: 480, border: 1, borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.100' }}
-				>
-					{!opened && (
-						<FSStack spacing={1} sx={{ p: 2 }}>
-							<FSTypography variant="body2" color="text.secondary">
-								{iteration.previewUrl
-									? 'Opening the preview…'
-									: build
-										? 'Press Run preview on the right to see this here.'
-										: 'This iteration has no preview address recorded yet. To try it, paste the address of one running on this machine, like http://localhost:3000.'}
-							</FSTypography>
-							{!iteration.previewUrl && !build && (
-								<FSStack direction="row" spacing={1}>
-									<FSTextField label="Preview address" value={urlDraft} onChange={setUrlDraft} sx={{ flexGrow: 1 }} />
-									<FSButton size="md" onClick={() => void open(urlDraft)} disabled={!urlDraft.trim()}>
-										Open
-									</FSButton>
-								</FSStack>
-							)}
-						</FSStack>
-					)}
-				</FSBox>
-
-				<FSStack spacing={2} sx={{ width: 340, flexShrink: 0, maxHeight: 'calc(100vh - 260px)', overflowY: 'auto' }}>
-					{build}
-					<FSStack direction="row" spacing={1} alignItems="center">
-						<FSButton size="md"
-							variant={mode === 'browse' ? 'primary' : 'secondary'}
-							disabled={!opened || mode === 'composing'}
-							onClick={() => (mode === 'picking' ? void cancel() : void startComment())}
-						>
-							{mode === 'picking' ? 'Click to place a pin…' : 'Place a pin (C)'}
-						</FSButton>
-						{mode !== 'browse' && (
-							<FSButton size="md" variant="secondary" onClick={() => void cancel()}>
-								Cancel
-							</FSButton>
-						)}
-					</FSStack>
-
-					{mode === 'composing' && pending && (
-						<FSBox sx={{ border: 1, borderColor: 'primary.main', borderRadius: 1, p: 2 }}>
-							<FSStack spacing={1}>
-								{error && <FSAlert severity="error">{error}</FSAlert>}
-								<FSTypography variant="caption" color="text.secondary">
-									Pinned on {pending.route}
-								</FSTypography>
-								<FSTextField label="Your comment" multiline minRows={3} value={draft} onChange={setDraft} autoFocus />
-								<FSButton size="md" onClick={post} disabled={posting || !draft.trim()}>
-									{posting ? 'Posting…' : 'Post comment'}
-								</FSButton>
-							</FSStack>
-						</FSBox>
-					)}
-
-					{comments?.length === 0 && (
-						<FSTypography variant="body2" color="text.secondary">
-							No comments yet. Press C, then click anywhere on the page to place a pin.
-						</FSTypography>
-					)}
-
-					{comments?.map((comment) => {
-						const state = placed.get(comment.id);
-						const n = numberOf(comment.id);
-						return (
-							<FSBox
-								key={comment.id}
-								ref={(el: HTMLElement | null) => {
-									if (el) cards.current.set(comment.id, el);
-									else cards.current.delete(comment.id);
-								}}
+				<FSTypography variant="caption" color="text.secondary" noWrap sx={{ fontFamily: 'monospace' }}>
+					{iteration.branch}
+				</FSTypography>
+				<People people={iteration.contributors} />
+				<FSBox sx={{ flexGrow: 1 }} />
+				<FSTooltip title={pinned ? 'Hide comments and build' : 'Comments and build'}>
+					<FSBox>
+						<FSBadge badgeContent={pinned ? 0 : unread} color="primary" overlap="rectangular" max={99}>
+							<FSIconButton
+								size="md"
+								variant={pinned ? 'primary' : 'secondary'}
+								aria-label="Toggle the comments panel"
+								aria-pressed={pinned}
 								onClick={() => {
-									setSelected(comment.id);
-									if (comment.anchor) void window.workspace.pageFocusMarker(comment.id);
-								}}
-								sx={{
-									border: 1,
-									borderColor: selected === comment.id ? 'primary.main' : 'divider',
-									borderWidth: selected === comment.id ? 2 : 1,
-									bgcolor: selected === comment.id ? 'action.selected' : undefined,
-									borderRadius: 1,
-									p: 1.5,
-									cursor: comment.anchor ? 'pointer' : 'default',
+									setPeek(false);
+									setPinned((p) => !p);
 								}}
 							>
-								<FSStack spacing={0.5}>
-									<FSStack direction="row" spacing={1} alignItems="center">
-										{n > 0 && <FSChip variant="status" size="small" label={String(n)} />}
-										<FSTypography variant="subtitle2">{comment.author}</FSTypography>
-										{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
-									</FSStack>
-									<FSTypography variant="body2">{comment.body}</FSTypography>
-									{comment.anchor && state === 'elsewhere' && (
-										<FSTypography variant="caption" color="text.secondary">
-											On {comment.anchor.route}
-										</FSTypography>
-									)}
-									{state && NOTE[state] && (
-										<FSTypography variant="caption" color="warning.main">
-											{NOTE[state]}
-										</FSTypography>
-									)}
+								<ViewSidebarOutlined fontSize="small" />
+							</FSIconButton>
+						</FSBadge>
+					</FSBox>
+				</FSTooltip>
+			</FSBox>
+
+			{/* The preview takes everything under the toolbar. Nothing else shares its space. */}
+			<FSBox ref={slot} sx={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden', bgcolor: 'grey.100' }}>
+				{!opened && (
+					<FSStack spacing={1} sx={{ p: 3, maxWidth: 640 }}>
+						<FSTypography variant="body2" color="text.secondary">
+							{iteration.previewUrl
+								? 'Opening the preview…'
+								: build
+									? 'Open the panel on the right (the icon in the toolbar) and press Run preview.'
+									: 'This iteration has no preview address recorded yet. To try it, paste the address of one running on this machine, like http://localhost:3000.'}
+						</FSTypography>
+						{!iteration.previewUrl && !build && (
+							<FSStack direction="row" spacing={1}>
+								<FSTextField label="Preview address" value={urlDraft} onChange={setUrlDraft} sx={{ flexGrow: 1 }} />
+								<FSButton size="md" onClick={() => void open(urlDraft)} disabled={!urlDraft.trim()}>
+									Open
+								</FSButton>
+							</FSStack>
+						)}
+					</FSStack>
+				)}
+
+				{/* While the panel is open the preview is this picture of it, and a click on it closes the panel. */}
+				{snapshot && open_ && (
+					<img
+						src={snapshot}
+						alt="The preview, paused while the panel is open"
+						onClick={() => {
+							setPinned(false);
+							setPeek(false);
+						}}
+						style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill', cursor: 'pointer' }}
+					/>
+				)}
+
+				<FSBox
+					onMouseEnter={holdPeek}
+					onMouseLeave={() => {
+						if (!pinned && mode !== 'composing') releasePeek();
+					}}
+					aria-hidden={!open_}
+					sx={{
+						position: 'absolute',
+						top: 0,
+						right: 0,
+						bottom: 0,
+						width: PANEL_WIDTH,
+						maxWidth: '100%',
+						bgcolor: 'background.paper',
+						borderLeft: 1,
+						borderColor: 'divider',
+						boxShadow: open_ ? '-8px 0 24px rgba(0,0,0,0.18)' : 'none',
+						transform: open_ ? 'translateX(0)' : 'translateX(100%)',
+						transition: 'transform 180ms ease',
+						pointerEvents: open_ ? 'auto' : 'none',
+						overflowY: 'auto',
+						p: 2,
+					}}
+				>
+					<FSStack spacing={2}>
+						{error && mode !== 'composing' && <FSAlert severity="error">{error}</FSAlert>}
+						{build}
+						<FSStack direction="row" spacing={1} alignItems="center">
+							<FSButton
+								size="md"
+								variant={mode === 'browse' ? 'primary' : 'secondary'}
+								disabled={!opened || mode === 'composing'}
+								onClick={() => (mode === 'picking' ? void cancel() : void startComment())}
+							>
+								{mode === 'picking' ? 'Click to place a pin…' : 'Place a pin (C)'}
+							</FSButton>
+							{mode !== 'browse' && (
+								<FSButton size="md" variant="secondary" onClick={() => void cancel()}>
+									Cancel
+								</FSButton>
+							)}
+						</FSStack>
+
+						{mode === 'composing' && pending && (
+							<FSBox sx={{ border: 1, borderColor: 'primary.main', borderRadius: 1, p: 2 }}>
+								<FSStack spacing={1}>
+									{error && <FSAlert severity="error">{error}</FSAlert>}
+									<FSTypography variant="caption" color="text.secondary">
+										Pinned on {pending.route}
+									</FSTypography>
+									<FSTextField label="Your comment" multiline minRows={3} value={draft} onChange={setDraft} autoFocus />
+									<FSButton size="md" onClick={post} disabled={posting || !draft.trim()}>
+										{posting ? 'Posting…' : 'Post comment'}
+									</FSButton>
 								</FSStack>
 							</FSBox>
-						);
-					})}
-				</FSStack>
-			</FSStack>
-		</FSStack>
+						)}
+
+						{comments?.length === 0 && (
+							<FSTypography variant="body2" color="text.secondary">
+								No comments yet. Press C, then click anywhere on the page to place a pin.
+							</FSTypography>
+						)}
+
+						{comments?.map((comment) => {
+							const state = placed.get(comment.id);
+							const n = numberOf(comment.id);
+							return (
+								<FSBox
+									key={comment.id}
+									ref={(el: HTMLElement | null) => {
+										if (el) cards.current.set(comment.id, el);
+										else cards.current.delete(comment.id);
+									}}
+									onClick={() => {
+										setSelected(comment.id);
+										if (comment.anchor) void window.workspace.pageFocusMarker(comment.id);
+									}}
+									sx={{
+										border: 1,
+										borderColor: selected === comment.id ? 'primary.main' : 'divider',
+										borderWidth: selected === comment.id ? 2 : 1,
+										bgcolor: selected === comment.id ? 'action.selected' : undefined,
+										borderRadius: 1,
+										p: 1.5,
+										cursor: comment.anchor ? 'pointer' : 'default',
+									}}
+								>
+									<FSStack spacing={0.5}>
+										<FSStack direction="row" spacing={1} alignItems="center">
+											{n > 0 && <FSChip variant="status" size="small" label={String(n)} />}
+											<FSTypography variant="subtitle2">{comment.author}</FSTypography>
+											{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
+										</FSStack>
+										<FSTypography variant="body2">{comment.body}</FSTypography>
+										{comment.anchor && state === 'elsewhere' && (
+											<FSTypography variant="caption" color="text.secondary">
+												On {comment.anchor.route}
+											</FSTypography>
+										)}
+										{state && NOTE[state] && (
+											<FSTypography variant="caption" color="warning.main">
+												{NOTE[state]}
+											</FSTypography>
+										)}
+									</FSStack>
+								</FSBox>
+							);
+						})}
+					</FSStack>
+				</FSBox>
+			</FSBox>
+		</FSBox>
 	);
 };

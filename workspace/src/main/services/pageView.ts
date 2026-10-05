@@ -1,6 +1,6 @@
 import { type BrowserWindow, WebContentsView, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
-import type { CommentAnchor, MarkerRequest, MarkerResult, PageBounds, PinEvent } from '../../shared/contract';
+import type { CommentAnchor, MarkerRequest, MarkerResult, PageBounds, PageHoldReason, PinEvent } from '../../shared/contract';
 import { assertPreviewUrl, sanitizeAnchor } from '../../shared/anchor';
 import { CANCEL_PICK_SCRIPT, MESSAGE_PREFIX, PICK_SCRIPT, ROUTE_SCRIPT, focusScript, resolveScript } from './pageScripts';
 
@@ -26,7 +26,8 @@ export class PageView {
 	private origin: string | null = null;
 	private bounds: PageBounds = { x: 0, y: 0, width: 0, height: 0 };
 	private picking = false;
-	private visible = true;
+	/** Reasons the preview is hidden right now. It shows only when this is empty. */
+	private readonly holds = new Set<PageHoldReason>();
 
 	constructor(
 		private readonly window: BrowserWindow,
@@ -78,7 +79,7 @@ export class PageView {
 		this.view = view;
 		this.window.contentView.addChildView(view);
 		view.setBounds(this.bounds);
-		view.setVisible(this.visible);
+		view.setVisible(this.holds.size === 0);
 		await wc.loadURL(url);
 	}
 
@@ -92,10 +93,39 @@ export class PageView {
 		}
 	}
 
-	/** Remembered across opens: a menu that is open stays open when the preview changes. */
-	setVisible(visible: boolean): void {
-		this.visible = visible;
-		this.view?.setVisible(visible);
+	/**
+	 * Hides the preview for a named reason, and shows it again when the last reason
+	 * lets go. Remembered across opens, so a menu that is open stays open when the
+	 * preview changes. One flag would let the account menu closing bring the preview
+	 * back over a panel that is still open.
+	 */
+	hold(reason: PageHoldReason, held: boolean): void {
+		if (held) this.holds.add(reason);
+		else this.holds.delete(reason);
+		this.view?.setVisible(this.holds.size === 0);
+	}
+
+	/** Whether the preview is on screen, for the edge watcher: nothing to hover over when hidden. */
+	get shown(): boolean {
+		return this.view !== null && this.holds.size === 0;
+	}
+
+	/** Where the preview is, in window coordinates. */
+	get area(): PageBounds {
+		return this.bounds;
+	}
+
+	/**
+	 * The preview as an image. The window draws it where the preview was and hides
+	 * the real one, which is what lets a panel appear *over* the page: a native view
+	 * is always drawn above the window's own content, so it cannot be covered, only
+	 * swapped for a picture of itself.
+	 */
+	async snapshot(): Promise<string | null> {
+		const wc = this.view?.webContents;
+		if (!wc || wc.isDestroyed()) return null;
+		const image = await wc.capturePage();
+		return image.isEmpty() ? null : `data:image/jpeg;base64,${image.toJPEG(85).toString('base64')}`;
 	}
 
 	setBounds(b: PageBounds): void {
