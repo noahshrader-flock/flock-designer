@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { CircleCheckIcon } from 'lucide-react';
 import type { AgentReadiness, Checkout, IterationKind, Project, ProjectIteration, QuickReadiness, Repository } from '../shared/contract';
 import { freshIteration, slugify } from '../shared/projects';
 import { SearchSelect } from './SearchSelect';
@@ -173,13 +172,6 @@ export const NewWork = ({
 						</TabsList>
 					</Tabs>
 					<p className="text-muted-foreground text-sm">{KINDS.find((k) => k.kind === kind)?.about}</p>
-					{kind === 'quick' && quick?.ready && (
-						<p className="text-success flex items-center gap-1.5 text-sm">
-							<CircleCheckIcon className="size-4 shrink-0" />
-							Real components available: {quick.designSystem}
-							{quick.version ? ` ${quick.version}` : ''}
-						</p>
-					)}
 				</div>
 				<DialogBody className="flex flex-col gap-4">
 					{checkout || choices.length > 0 ? (
