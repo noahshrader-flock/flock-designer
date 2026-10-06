@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<!--
+QUICK PROTOTYPE: Organization > Usage tab (role usage, unused roles, bulk archive)
+
+WHAT IT SHOWS
+  A new "Usage" tab, placed after the last existing tab (Data & Privacy) on the Organization page.
+  It shows (1) a 90-day usage line per role, (2) a list of roles nobody used in 90 days with a bulk
+  "Archive Roles" action, (3) a right-hand drawer, opened by picking any role, that lists who holds it.
+
+WHERE IT SITS
+  Admin > Organization (route orgPaths('') -> /organization/:id), ?tab=usage. Host page:
+  src/components/org/upsertOrgPage.tsx (tabs are FSTabs/FSTab, enum UpsertOrgPageTabs in org/utils.ts,
+  labels in ORG_TAB_LABEL_MAP). The new tab would add UpsertOrgPageTabs.Usage = 'usage'.
+
+MODELLED ON
+  Frame: upsertOrgPage.tsx (inline org header, FSTabs bar, maxWidth 1200) + orgPageV2 tab anatomy
+  (padding 1.5rem, TabTitle, sections, FSDivider). Lists: roles list toolbar (rolesListSlotComponents.tsx),
+  users list bulk-selection toolbar (orgUsersListSlotComponents.tsx) and FSDataGrid defaults from the
+  installed FUI 5.5.4 theme. Drawer: FSDrawer + FSDrawerHeader/Content/Actions. Compact list:
+  role/networkConfig/devicesDrawer.tsx. Dialog: role/deleteConfirmationDialog.tsx. Empty state: the
+  hand-rolled RolesListInitialEmptyState pattern. No existing tab's layout or content is reused.
+
+NAVIGATION PERSON
+  An org admin of a single (non-global) law-enforcement organization, "Ridgeline Police Department",
+  roughly 200 people. Sub-nav they see: Profile, Organization (active), Devices, Roles, Users, Zones,
+  Integrations. No "Organizations List" and no "< Organization List" back link (global admins only).
+  Assumed to hold every Organization tab permission, so all six existing tabs show.
+
+STATES  (?state=<name>, default first)
+  default           roles with usage, 12 unused roles, nothing selected
+  empty             the organization has no roles yet (whole-tab empty state). The unused list also has its
+                    own section-level empty state: archive all 12 unused roles in the default state to see it
+  loading           content-shaped skeletons for both sections
+  archive-assigned  default page with the archive dialog open for a role that 40 people still hold
+
+GAPS (data-gap attributes mark each one in the markup)
+  1. 90-day usage line chart: no chart component in FUI 5.5.4 and none in Coke (dashboard-patterns.md says so).
+     Drawn here as inline SVG. Needs a design-system decision.
+  2. Role usage data and the definition of "used": no endpoint, no field. Assumed: a holder exercised one of
+     the role's permissions that day. The "Last Used", "Active Holders" and chart values are all mock.
+  3. "Archive" for roles: the product only has Delete, and it is disabled while a role has users
+     (rolesList.tsx: canDeleteRoles = userCount === 0). Archive, "restore it later" and where archived roles
+     are listed do not exist today.
+  4. What happens to people who still hold an archived role. Prototype proposes: they keep the role's access
+     until reassigned, and an acknowledgement checkbox gates the confirm button. This is a product decision.
+  5. Holders drawer: the existing "N Users" link navigates away to /users?role=<id>. A side panel listing
+     holders with per-person "last used" is new (FSDrawer and FSList are real; the content is new).
+  6. Per-role "Active Holders" and "last used" per person need the same usage data as gap 2.
+  Also: design-system finding, warningContainer.contrastText on warningContainer.main is about 3.5:1.
+
+ICONS: the product uses FSSymbol (Material Symbols font). A single file may not load fonts, so these are
+inline SVG paths of the same glyphs. Typography sizes are MUI defaults; FUI's variant weights were not read.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usage - Ridgeline Police Department</title>
+<style>
+/* ---- Design system tokens (FUI 5.5.4, light mode, resolved from the installed package) ---- */
+:root {
+    --primary: #108062;               /* palette.primary.main */
+    --primary-dark: #1D6D59;          /* palette.primary.dark */
+    --primary-contrast: #FFFFFF;      /* palette.primary.contrastText */
+    --primary-container: #E0F2EC;     /* palette.primaryContainer.main */
+    --on-primary-container: #18372F;  /* palette.primaryContainer.contrastText */
+    --error: #BA1A1A;                 /* palette.error.main */
+    --error-dark: #93000A;            /* palette.error.dark */
+    --error-contrast: #FFFFFF;        /* palette.error.contrastText */
+    --error-container: #FFDAD6;       /* palette.errorContainer.main */
+    --warning-container: #FFDF9E;     /* palette.warningContainer.main */
+    --on-warning-container: #977100;  /* palette.warningContainer.contrastText (icon only; see gaps) */
+    --neutral: #EAF0F4;               /* palette.neutral.main (chip) */
+    --on-neutral: #35494F;            /* palette.neutral.contrastText */
+    --surface0: #F9FDFF;              /* palette.surface0.main */
+    --surface1: #F2F7FA;              /* palette.surface1.main (grid header, hover) */
+    --surface3: #E5EBEE;              /* palette.surface3.main (skeleton) */
+    --surface5: #C9D7DB;              /* palette.surface5.main (grid border) */
+    --on-surface: #151D20;            /* palette.surface0.contrastText (text.primary) */
+    --text-secondary: #4A666F;        /* text.secondary: value not read, approximated with neutral 40 */
+    --outline: #5F838F;               /* palette.outline.main */
+    --outline-variant: #A9BDC4;       /* palette.outlineVariant.main */
+    --outline-divider: #D3DEE2;       /* palette.outlineDivider.main (divider) */
+    --nav-bar: #182124;               /* FSUniversalNav dark bar: approximation, not a palette token */
+    --scrim: rgba(0, 0, 0, 0.32);     /* MUI backdrop default, not a palette token */
+    --radius: 8px;                    /* theme.shape.borderRadius */
+    --s1: 8px; --s2: 16px; --s3: 24px; /* theme.spacing(1|2|3) */
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font-family: "Inter", sans-serif; background: var(--surface0); color: var(--on-surface); font-size: 16px; line-height: 1.5; }
+h1, h2, h3, p { margin: 0; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.secondary { color: var(--text-secondary); }
+svg.icon { width: 24px; height: 24px; fill: currentColor; flex: none; }
+
+/* ---- Global nav (FSUniversalNav) ---- */
+.topbar { height: 48px; background: var(--nav-bar); color: #fff; display: flex; align-items: center; padding: 0 var(--s2); font-weight: 700; letter-spacing: .02em; }
+.subnav { display: flex; align-items: stretch; height: 41px; padding: 0 var(--s2); border-bottom: 1px solid var(--outline-divider); background: var(--surface0); }
+.subnav .title { display: flex; align-items: center; font-weight: 700; font-size: 14px; padding-right: var(--s2); margin-right: var(--s1); border-right: 1px solid var(--outline-divider); }
+.subnav a { display: flex; align-items: center; padding: 0 12px; font-size: 14px; font-weight: 500; color: var(--text-secondary); text-decoration: none; border-bottom: 2px solid transparent; }
+.subnav a[aria-current="page"] { color: var(--primary); border-bottom-color: var(--primary); }
+
+/* ---- Page frame (upsertOrgPage.tsx) ---- */
+.page { display: flex; justify-content: center; padding: 1rem 1.5rem; }
+.page-inner { width: 100%; max-width: 1200px; }
+.org-header { margin-top: 1rem; padding-bottom: var(--s2); }
+.org-type { font-size: 14px; color: var(--text-secondary); text-transform: uppercase; }
+.org-name { font-size: 2rem; font-weight: 500; line-height: 1.25; }
+.tabs { border-bottom: 1px solid var(--outline-divider); }
+.tabs [role="tablist"] { display: flex; padding: 0 20px; overflow-x: auto; }
+.tabs [role="tab"] { background: none; border: 0; border-bottom: 2px solid transparent; height: 48px; padding: 0 16px; font-size: 14px; font-weight: 500; color: var(--text-secondary); cursor: pointer; white-space: nowrap; }
+.tabs [role="tab"][aria-selected="true"] { color: var(--primary); border-bottom-color: var(--primary); }
+.tab-body { padding: 1.5rem; }
+.tab-title h2 { font-size: 1.5rem; font-weight: 500; line-height: 1.33; }
+.tab-title p { font-size: .875rem; margin-top: 4px; }
+.tab-title { margin-bottom: var(--s2); }
+.divider { border: 0; border-top: 1px solid var(--outline-divider); margin: var(--s3) 0; }
+.section-heading { font-size: 1.25rem; font-weight: 500; line-height: 1.6; }
+.section-desc { font-size: .875rem; margin-top: 2px; }
+.section { scroll-margin-top: 16px; }
+.section h3:focus { outline: none; }
+
+/* ---- Buttons (FSButton / FSLoadingButton) ---- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: var(--radius); border: 1px solid transparent; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; background: none; }
+.btn.sm { height: 32px; padding: 0 12px; }
+.btn.primary { background: var(--primary); color: var(--primary-contrast); }
+.btn.secondary { border-color: var(--outline); color: var(--on-surface); background: var(--surface0); }
+.btn.ghost { color: var(--primary); }
+.btn.destructivePrimary { background: var(--error); color: var(--error-contrast); }
+.btn.destructiveSecondary { border-color: var(--error); color: var(--error); background: var(--surface0); }
+.btn:hover:not(:disabled) { filter: brightness(.94); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn .spinner { width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.icon-btn { background: none; border: 0; width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-secondary); }
+.icon-btn:hover:not(:disabled) { background: var(--surface1); }
+.icon-btn:disabled { opacity: .4; cursor: default; }
+.link { background: none; border: 0; padding: 0; color: var(--primary); text-decoration: underline; cursor: pointer; font-size: inherit; text-align: left; }
+.link:hover { color: var(--primary-dark); }
+
+/* ---- Toolbar (FSGridToolbarContainer) ---- */
+.toolbar { margin-top: var(--s2); }
+.quick-filter { position: relative; width: 565px; max-width: 100%; }
+.quick-filter svg { position: absolute; left: 12px; top: 10px; color: var(--text-secondary); }
+.quick-filter input { width: 100%; height: 44px; padding: 0 12px 0 44px; border: 1px solid var(--outline-variant); border-radius: var(--radius); font: inherit; font-size: .875rem; background: var(--surface0); color: var(--on-surface); }
+.toolbar-row2 { display: flex; align-items: flex-end; gap: var(--s2); margin-top: var(--s2); min-height: 40px; flex-wrap: wrap; }
+.count { font-size: 20px; font-weight: 600; line-height: 1.25; }
+.spacer { flex-grow: 1; }
+
+/* ---- Data grid (FSDataGrid) ---- */
+.grid-wrap { margin-top: var(--s1); border: 1px solid var(--surface5); border-radius: var(--radius) var(--radius) 0 0; overflow-x: auto; }
+.grid-wrap.no-footer { border-radius: var(--radius); }
+table.grid { width: 100%; border-collapse: collapse; font-size: .75rem; }
+table.grid th { height: 40px; background: var(--surface1); text-align: left; padding: 0 10px; font-weight: 700; white-space: nowrap; }
+table.grid th .sort { background: none; border: 0; padding: 0; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+table.grid th .sort svg { width: 16px; height: 16px; opacity: 0; }
+table.grid th[aria-sort="ascending"] .sort svg, table.grid th[aria-sort="descending"] .sort svg { opacity: 1; }
+table.grid th[aria-sort="descending"] .sort svg { transform: rotate(180deg); }
+table.grid td { padding: 6px 10px; border-top: 1px solid var(--outline-divider); vertical-align: middle; }
+table.grid tbody tr { height: 64px; }
+table.grid.compact tbody tr { height: 56px; }
+table.grid tbody tr:hover { background: var(--surface1); }
+table.grid tbody tr.selected { background: var(--primary-container); }
+table.grid tbody tr.clickable { cursor: pointer; }
+.col-check { width: 48px; padding-right: 0 !important; }
+.col-actions { width: 56px; text-align: right; }
+.cell-name .name { font-size: 1rem; font-weight: 700; line-height: 1.4; }
+.cell-name .meta { font-size: .875rem; font-weight: 500; color: var(--text-secondary); }
+.cell-main { font-size: .875rem; }
+.cell-sub { font-size: .75rem; color: var(--text-secondary); }
+.grid-footer { display: flex; align-items: center; justify-content: flex-end; gap: var(--s1); height: 52px; padding: 0 var(--s1); border: 1px solid var(--surface5); border-top: 0; border-radius: 0 0 var(--radius) var(--radius); font-size: .875rem; }
+input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; margin: 0; }
+.chip { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 12px; font-size: .75rem; font-weight: 500; background: var(--neutral); color: var(--on-neutral); }
+.nodata-row td { height: 120px; text-align: center; border-top: 1px solid var(--outline-divider); font-size: .875rem; }
+
+/* ---- Usage chart (no FUI component: gap 1) ---- */
+.spark { display: block; width: 240px; height: 40px; overflow: visible; }
+.spark .base, .big .base, .big .gridline { stroke: var(--outline-divider); stroke-width: 1; }
+.spark .line, .big .line { fill: none; stroke: var(--primary); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.spark .end, .big .end { fill: var(--primary); stroke: var(--surface0); stroke-width: 2; }
+.spark .cross, .big .cross { stroke: var(--outline); stroke-width: 1; stroke-dasharray: 2 2; visibility: hidden; }
+.spark .hov, .big .hov { fill: var(--primary); stroke: var(--surface0); stroke-width: 2; visibility: hidden; }
+.big { display: block; width: 100%; height: 130px; overflow: visible; }
+.big text { font-size: 11px; fill: var(--text-secondary); font-family: inherit; }
+.chart-tip { position: fixed; z-index: 1600; pointer-events: none; background: var(--on-surface); color: var(--surface0); border-radius: 4px; padding: 6px 8px; font-size: 12px; line-height: 1.35; display: none; max-width: 240px; }
+
+/* ---- Menu (FSMenu) ---- */
+.menu { position: fixed; z-index: 1500; min-width: 10em; background: var(--surface0); border-radius: var(--radius); box-shadow: 0 4px 16px var(--scrim); padding: 4px 0; display: none; }
+.menu button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 10px 16px; font-size: .875rem; cursor: pointer; }
+.menu button:hover, .menu button:focus-visible { background: var(--surface1); }
+.menu button.danger { color: var(--error); }
+
+/* ---- Drawer (FSDrawer) ---- */
+.scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 1200; display: none; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 480px; max-width: 100vw; background: var(--surface0); z-index: 1300; display: none; flex-direction: column; box-shadow: -4px 0 16px var(--scrim); }
+.drawer-header { display: flex; align-items: flex-start; gap: var(--s1); padding: var(--s2) var(--s2) var(--s2) var(--s3); border-bottom: 1px solid var(--outline-divider); }
+.drawer-header h2 { font-size: 1.25rem; font-weight: 500; line-height: 1.6; }
+.drawer-content { flex: 1; overflow-y: auto; padding: var(--s2) var(--s3) var(--s3); }
+.drawer-actions { display: flex; align-items: center; gap: var(--s1); padding: var(--s2) var(--s3); border-top: 1px solid var(--outline-divider); }
+.stats { display: flex; gap: var(--s3); }
+.stat .label { font-size: .875rem; font-weight: 500; color: var(--text-secondary); }
+.stat .value { font-size: 20px; font-weight: 600; line-height: 1.3; }
+.drawer h3 { font-size: 1.25rem; font-weight: 500; line-height: 1.6; }
+.drawer-section { margin-top: var(--s3); }
+details.accordion { margin-top: var(--s1); border: 1px solid var(--outline-divider); border-radius: var(--radius); }
+details.accordion summary { cursor: pointer; padding: 10px 16px; font-size: .875rem; font-weight: 600; }
+details.accordion table { width: 100%; border-collapse: collapse; font-size: .75rem; margin-bottom: 8px; }
+details.accordion th, details.accordion td { text-align: left; padding: 4px 16px; }
+.text-field { margin-top: var(--s1); width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--outline-variant); border-radius: var(--radius); font: inherit; font-size: .875rem; background: var(--surface0); color: var(--on-surface); }
+ul.fs-list { list-style: none; padding: 0; margin: var(--s1) 0 0; }
+ul.fs-list li { display: flex; justify-content: space-between; align-items: center; gap: var(--s2); padding: 10px 0; border-bottom: 1px solid var(--outline-divider); }
+ul.fs-list .nm { font-size: .875rem; font-weight: 600; }
+ul.fs-list .cap { font-size: .75rem; color: var(--text-secondary); }
+ul.fs-list .right { font-size: .75rem; color: var(--text-secondary); text-align: right; white-space: nowrap; }
+
+/* ---- Dialog (FSDialog) ---- */
+.dialog-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 1400; display: none; align-items: center; justify-content: center; padding: var(--s2); }
+.dialog { background: var(--surface0); border-radius: var(--radius); width: 560px; max-width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px var(--scrim); }
+.dialog-title { display: flex; align-items: center; padding: var(--s1) var(--s1) 0 var(--s3); }
+.dialog-title h2 { font-size: 1.25rem; font-weight: 500; line-height: 1.6; flex: 1; padding-top: var(--s1); }
+.dialog-content { padding: var(--s1) var(--s3) var(--s2); font-size: 1rem; }
+.dialog-actions { display: flex; align-items: center; padding: var(--s1) var(--s3) var(--s2); }
+.alert { display: flex; align-items: center; gap: 12px; padding: 8px 16px; border-radius: var(--radius); margin-top: var(--s2); font-size: .875rem; background: var(--warning-container); color: var(--on-surface); }
+.alert svg { color: var(--on-warning-container); }
+.alert .link { font-weight: 600; white-space: nowrap; margin-left: auto; }
+.check-row { display: flex; align-items: center; gap: 10px; margin-top: var(--s2); font-size: .875rem; }
+
+/* ---- Snackbar (FSSnackbar, top center per FUI default) ---- */
+.snackbar { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 1700; background: var(--primary-dark); color: var(--primary-contrast); border-radius: var(--radius); padding: 12px 16px; display: none; align-items: center; gap: 12px; font-size: .875rem; max-width: 90vw; box-shadow: 0 4px 16px var(--scrim); }
+
+/* ---- Empty states (hand-rolled product pattern) ---- */
+.empty { display: flex; flex-direction: column; align-items: center; gap: var(--s2); margin-top: 56px; margin-bottom: 56px; text-align: center; }
+.empty.small { margin: 32px 0; gap: 12px; }
+.empty .icon { width: 36px; height: 36px; color: var(--outline); }
+.empty .t { font-weight: 600; font-size: 16px; }
+.empty .d { font-size: 14px; max-width: 360px; }
+
+/* ---- Loading (FSSkeleton) ---- */
+.skel { background: var(--surface3); border-radius: var(--radius); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .skel, .btn .spinner { animation: none; } }
+
+/* ---- Prototype-only state switcher (not the product) ---- */
+.proto-switch { position: fixed; left: 12px; bottom: 12px; z-index: 2000; background: var(--surface1); border: 1px solid var(--outline-variant); border-radius: var(--radius); padding: 6px 8px; font-size: 11px; display: flex; gap: 8px; align-items: center; }
+.proto-switch a { color: var(--text-secondary); text-decoration: none; padding: 2px 4px; border-radius: 4px; }
+.proto-switch a[aria-current="true"] { background: var(--primary-container); color: var(--on-primary-container); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- Global nav: FSUniversalNav, standalone mode (top bar + Admin sub-nav). Persona: single-org admin. -->
+<header data-component="FSUniversalNav" data-e2e-ref="global-nav">
+    <div class="topbar">Flock Safety</div>
+    <nav class="subnav" aria-label="Admin">
+        <span class="title">Admin</span>
+        <a href="#">Profile</a>
+        <a href="#" aria-current="page">Organization</a>
+        <a href="#">Devices</a>
+        <a href="#">Roles</a>
+        <a href="#">Users</a>
+        <a href="#">Zones</a>
+        <a href="#">Integrations</a>
+    </nav>
+</header>
+
+<main class="page">
+<div class="page-inner">
+
+    <!-- Org header: inline markup in upsertOrgPage.tsx (not PageTitle). -->
+    <div class="org-header" data-component="FSStack" data-e2e-ref="org-header">
+        <div class="org-type" data-component="FSTypography">Law Enforcement</div>
+        <h1 class="org-name" data-component="FSTypography">Ridgeline Police Department</h1>
+    </div>
+
+    <div class="tabs" data-component="FSTabs" data-e2e-ref="org-tabs">
+        <div role="tablist" aria-label="Organization sections">
+            <button role="tab" data-component="FSTab" aria-selected="false" tabindex="-1">Overview</button>
+            <button role="tab" data-component="FSTab" aria-selected="false" tabindex="-1">Package &amp; Features</button>
+            <button role="tab" data-component="FSTab" aria-selected="false" tabindex="-1">Policies</button>
+            <button role="tab" data-component="FSTab" aria-selected="false" tabindex="-1">Settings</button>
+            <button role="tab" data-component="FSTab" aria-selected="false" tabindex="-1">Authentication</button>
+            <button role="tab" data-component="FSTab" aria-selected="false" tabindex="-1">Data &amp; Privacy</button>
+            <button role="tab" data-component="FSTab" data-e2e-ref="usage-tab" aria-selected="true" aria-controls="usage-panel" id="usage-tab">Usage</button>
+        </div>
+    </div>
+
+    <div class="tab-body" id="usage-panel" role="tabpanel" aria-labelledby="usage-tab">
+        <div class="tab-title" data-component="TabTitle">
+            <h2 data-component="FSTypography">Role Usage</h2>
+            <p class="secondary" data-component="FSTypography">See how each role was used from Jul 8 to Oct 5, 2026 (the last 90 days), so you can archive the ones nobody needs.</p>
+        </div>
+        <div id="content"></div>
+    </div>
+</div>
+</main>
+
+<!-- Layers (all rendered by script) -->
+<div class="scrim" id="drawerScrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" data-component="FSDrawer" data-e2e-ref="holders-drawer"></aside>
+<div class="dialog-scrim" id="dialogScrim"><div class="dialog" id="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle" data-component="FSDialog" data-e2e-ref="archive-dialog"></div></div>
+<div class="menu" id="menu" role="menu" data-component="FSMenu"></div>
+<div class="chart-tip" id="tip" aria-hidden="true"></div>
+<div class="snackbar" id="snackbar" role="status" aria-live="polite" data-component="FSSnackbar"></div>
+
+<nav class="proto-switch" aria-label="Prototype state (not part of the product)" data-component="none" data-gap="prototype-only state switcher, not part of the product">
+    <span>State:</span>
+    <a href="?state=default" data-s="default">default</a>
+    <a href="?state=empty" data-s="empty">empty</a>
+    <a href="?state=loading" data-s="loading">loading</a>
+    <a href="?state=archive-assigned" data-s="archive-assigned">archive-assigned</a>
+</nav>
+
+<script>
+(function () {
+'use strict';
+
+/* ================= Mock data (all invented; usage data is gap 2) ================= */
+const TODAY = new Date(2026, 9, 6);                 // Oct 6, 2026
+const DAY = 86400000;
+const WINDOW_START = new Date(2026, 6, 8);          // Jul 8, 2026 = day 0 of 90
+const N = 90;
+const ORG = 'Ridgeline Police Department';
+
+function rng(seed) { let s = seed >>> 0; return function () { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const fmtDate = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const fmtShort = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const dayDate = (i) => new Date(WINDOW_START.getTime() + i * DAY);
+const daysAgoDate = (n) => new Date(TODAY.getTime() - n * DAY);
+const plural = (n, w, p) => n + ' ' + (n === 1 ? w : (p || w + 's'));
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function relative(d) { if (d === 0) return 'Today'; if (d === 1) return 'Yesterday'; return d + ' days ago'; }
+
+// [id, name, category, holders, profile, lastUsedDays (null = never)]
+const IN_USE = [
+    ['patrol-officer', 'Patrol Officer', 'Search', 30, 'high', 0],
+    ['detective', 'Detective', 'Investigations', 18, 'high', 0],
+    ['sergeant', 'Sergeant', 'Search', 8, 'high', 0],
+    ['dispatcher', 'Dispatcher', 'Alerts', 10, 'high', 0],
+    ['rtcc-analyst', 'Real Time Crime Center Analyst', 'Investigations', 6, 'high', 0],
+    ['records-clerk', 'Records Clerk', 'Viewer', 8, 'mid', 1],
+    ['crime-analyst', 'Crime Analyst', 'Investigations', 4, 'mid', 1],
+    ['admin', 'Admin', 'Admin', 4, 'high', 0],
+    ['user-manager', 'User Manager', 'Admin', 3, 'mid', 2],
+    ['traffic-unit', 'Traffic Unit', 'Search', 6, 'mid', 1],
+    ['property-crimes', 'Property Crimes', 'Investigations', 5, 'mid', 3],
+    ['patrol-supervisor', 'Patrol Supervisor', 'Search', 5, 'mid', 1],
+    ['alert-responder', 'Alert Responder', 'Alerts', 8, 'mid', 0],
+    ['camera-technician', 'Camera Technician', 'Admin', 3, 'mid', 6],
+    ['command-staff', 'Command Staff', 'Admin', 4, 'mid', 2],
+    ['narcotics-unit', 'Narcotics Unit', 'Investigations', 4, 'mid', 3],
+    ['hotlist-admin', 'Hotlist Admin', 'Admin', 2, 'mid', 4],
+    ['evidence-technician', 'Evidence Technician', 'Viewer', 3, 'low', 9],
+    ['school-resource-officer', 'School Resource Officer', 'Search', 3, 'low', 5],
+    ['parking-enforcement', 'Parking Enforcement', 'Search', 2, 'low', 12],
+    ['community-liaison', 'Community Liaison', 'Viewer', 2, 'low', 21],
+    ['intern-read-only', 'Intern Read Only', 'Viewer', 4, 'declining', 34],
+    ['grant-auditor', 'Grant Auditor', 'Viewer', 1, 'declining', 18],
+    ['training-officer', 'Training Officer', 'Viewer', 2, 'declining', 27],
+    ['special-events', 'Special Events', 'Alerts', 3, 'declining', 23],
+    ['cold-case-review', 'Cold Case Review', 'Investigations', 2, 'spiky', 16],
+    ['auditor', 'Auditor', 'Viewer', 2, 'low', 41],
+    ['court-liaison', 'Municipal Court Liaison', 'Viewer', 1, 'low', 38],
+    ['city-it-liaison', 'City IT Liaison', 'Admin', 1, 'low', 52],
+];
+const UNUSED = [
+    ['legacy-hotlist', 'Legacy Hotlist Review', 'Investigations', 40, 'none', 201],
+    ['pilot-viewer', 'Pilot Program Viewer', 'Viewer', 6, 'none', 159],
+    ['county-task-force', 'County Task Force', 'Search', 5, 'none', 180],
+    ['old-dispatch-2', 'Old Dispatch Tier 2', 'Alerts', 3, 'none', 125],
+    ['drone-pilot', 'Drone Pilot', 'Search', 2, 'none', 265],
+    ['records-backfill', 'Records Backfill', 'Viewer', 2, 'none', 228],
+    ['retired-chief', 'Retired Chief Access', 'Admin', 1, 'none', 307],
+    ['evidence-room-pilot', 'Evidence Room Pilot', 'Viewer', 0, 'none', 147],
+    ['mutual-aid-test', 'Mutual Aid Test', 'Search', 0, 'none', null],
+    ['summer-intern-2025', 'Temp Summer Intern 2025', 'Viewer', 0, 'none', null],
+    ['neighborhood-watch', 'Neighborhood Watch Liaison', 'Viewer', 0, 'none', null],
+    ['detective-legacy', 'Detective (Legacy)', 'Investigations', 0, 'none', null],
+];
+const DISTINCT_FRAC = { high: .92, mid: .72, low: .4, declining: .6, spiky: .45, none: 0 };
+
+function makeRole(r, idx) {
+    const [id, name, category, holders, profile, lastUsedDays] = r;
+    const rand = rng(1000 + idx * 37);
+    const lastIdx = lastUsedDays === null ? -1 : Math.min(N - 1, N - lastUsedDays);   // last day index with activity
+    const daily = [];
+    for (let i = 0; i < N; i++) {
+        const dow = dayDate(i).getDay();
+        const wk = (dow === 0 || dow === 6) ? .45 : 1;
+        let p = { high: .78, mid: .5, low: .2, none: 0 }[profile];
+        if (profile === 'declining') p = .7 - .6 * (i / N);
+        if (profile === 'spiky') p = (i % 23 < 3) ? .7 : .06;
+        let v = p * wk * (.8 + .4 * rand());
+        if (i > lastIdx) v = 0;
+        daily.push(holders ? Math.round(v * holders) / holders : 0);
+    }
+    const series = daily.map((_, i) => { let s = 0, c = 0; for (let k = Math.max(0, i - 6); k <= i; k++) { s += daily[k]; c++; } return s / c; });
+    const active = lastUsedDays !== null && lastUsedDays <= N && holders ? Math.max(1, Math.round(holders * DISTINCT_FRAC[profile])) : 0;
+    return { id, name, category, holders, profile, lastUsedDays, series, active, activePct: holders ? active / holders : 0 };
+}
+let roles = IN_USE.concat(UNUSED).map(makeRole);
+const isUnused = (r) => r.lastUsedDays === null || r.lastUsedDays > N;
+
+const FIRST = ['Maria','James','Aisha','Daniel','Priya','Marcus','Elena','Tyrone','Hannah','Luis','Grace','Omar','Nicole','Victor','Sofia','Andre','Rachel','Kevin','Imani','Peter','Dana','Carlos','Megan','Samuel','Yuki','Brian','Tasha','Owen','Leah','Raj'];
+const LAST = ['Alvarez','Brooks','Chen','Dawson','Eriksen','Fitzgerald','Garcia','Hughes','Ibrahim','Jenkins','Kowalski','Lawson','Mbeki','Nguyen','Okafor','Patel','Quinn','Ramirez','Sullivan','Thompson','Underwood','Vasquez','Walker','Xiong','Young','Zielinski'];
+function holdersOf(role) {
+    if (role._holders) return role._holders;
+    const rand = rng(role.id.length * 131 + role.holders);
+    const used = new Set(); const out = [];
+    for (let i = 0; i < role.holders; i++) {
+        let nm; do { nm = [FIRST[Math.floor(rand() * FIRST.length)], LAST[Math.floor(rand() * LAST.length)]]; } while (used.has(nm.join(' ')));
+        used.add(nm.join(' '));
+        let usedDays = null;
+        if (i < role.active) usedDays = i === 0 ? role.lastUsedDays : Math.min(N - 1, role.lastUsedDays + Math.floor(rand() * (N - role.lastUsedDays)));
+        out.push({ name: nm.join(' '), email: (nm[0] + '.' + nm[1]).toLowerCase() + '@ridgelinepd.gov', usedDays });
+    }
+    out.sort((a, b) => a.name.localeCompare(b.name));
+    role._holders = out; return out;
+}
+
+/* ================= Icons (inline SVG of Material glyphs) ================= */
+const I = {
+    close: 'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+    search: 'M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+    more: 'M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z',
+    warn: 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
+    up: 'M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z',
+    ok: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
+    lock: 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM9 8V6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9z',
+    prev: 'M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z',
+    next: 'M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z',
+};
+const icon = (n, extra) => '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" ' + (extra || '') + '><path d="' + I[n] + '"/></svg>';
+
+/* ================= Usage chart (gap 1) ================= */
+// opts: {w,h,pad,key}; returns svg markup. Y is 0-100% of holders (shared scale across all roles).
+function chartSvg(role, o) {
+    const { w, h, pad } = o; const n = role.series.length;
+    const x = (i) => pad + (w - 2 * pad) * i / (n - 1);
+    const y = (v) => h - pad - (h - 2 * pad) * Math.min(1, v);
+    const pts = role.series.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1)).join(' ');
+    let extra = '';
+    if (o.big) {
+        [0, .5, 1].forEach((g) => { extra += '<line class="gridline" x1="' + pad + '" x2="' + (w - pad) + '" y1="' + y(g) + '" y2="' + y(g) + '"/><text x="0" y="' + (y(g) + 3) + '">' + (g * 100) + '%</text>'; });
+        [0, 30, 60, 89].forEach((i) => { extra += '<text x="' + x(i) + '" y="' + (h + 14) + '" text-anchor="' + (i === 0 ? 'start' : i === 89 ? 'end' : 'middle') + '">' + fmtShort(dayDate(i)) + '</text>'; });
+    }
+    return '<svg class="' + (o.big ? 'big' : 'spark') + '" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" data-chart="' + role.id + '" data-w="' + w + '" data-pad="' + pad + '"' +
+        (o.big ? ' tabindex="0"' : '') + ' role="img" aria-label="' + esc(chartSummary(role)) + '">' +
+        (o.big ? '' : '<line class="base" x1="0" x2="' + w + '" y1="' + (h - pad) + '" y2="' + (h - pad) + '"/>') + extra +
+        '<polyline class="line" points="' + pts + '" vector-effect="non-scaling-stroke"/>' +
+        '<line class="cross" y1="' + pad + '" y2="' + (h - pad) + '"/><circle class="hov" r="4"/>' +
+        '<circle class="end" r="3" cx="' + x(n - 1).toFixed(1) + '" cy="' + y(role.series[n - 1]).toFixed(1) + '"/></svg>';
+}
+function chartSummary(role) {
+    if (!role.holders) return role.name + ': no one holds this role.';
+    const pk = Math.max.apply(null, role.series);
+    if (isUnused(role)) return role.name + ': no activity in the last 90 days.';
+    return role.name + ', share of holders active per day over 90 days: ' + Math.round(role.series[0] * 100) + '% at the start, ' + Math.round(role.series[N - 1] * 100) + '% at the end, peak ' + Math.round(pk * 100) + '%.';
+}
+const tip = document.getElementById('tip');
+function scrub(svg, clientX, clientY, idx) {
+    const role = roles.find((r) => r.id === svg.dataset.chart) || archived.find((r) => r.id === svg.dataset.chart); if (!role) return;
+    const w = +svg.dataset.w, pad = +svg.dataset.pad, rect = svg.getBoundingClientRect();
+    if (idx == null) idx = Math.round(Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * (N - 1));
+    const cx = pad + (w - 2 * pad) * idx / (N - 1);
+    const vb = svg.viewBox.baseVal, h = vb.height;
+    const cy = h - pad - (h - 2 * pad) * Math.min(1, role.series[idx]);
+    const cross = svg.querySelector('.cross'), dot = svg.querySelector('.hov');
+    cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.style.visibility = 'visible';
+    dot.setAttribute('cx', cx); dot.setAttribute('cy', cy); dot.style.visibility = 'visible';
+    const pct = Math.round(role.series[idx] * 100);
+    tip.innerHTML = '<strong>' + fmtDate(dayDate(idx)) + '</strong><br>' + pct + '% of ' + plural(role.holders, 'holder') + ' active<br><span style="opacity:.8">7-day average</span>';
+    tip.style.display = 'block';
+    const r2 = svg.getBoundingClientRect();
+    tip.style.left = Math.min(window.innerWidth - 250, r2.left + r2.width * idx / (N - 1) + 12) + 'px';
+    tip.style.top = Math.max(8, r2.top - 62) + 'px';
+}
+function unscrub(svg) { svg.querySelector('.cross').style.visibility = 'hidden'; svg.querySelector('.hov').style.visibility = 'hidden'; tip.style.display = 'none'; }
+document.addEventListener('mousemove', (e) => { const s = e.target.closest && e.target.closest('svg[data-chart]'); if (s) scrub(s, e.clientX, e.clientY); });
+document.addEventListener('mouseout', (e) => { const s = e.target.closest && e.target.closest('svg[data-chart]'); if (s && !s.contains(e.relatedTarget)) unscrub(s); });
+document.addEventListener('keydown', (e) => {
+    const s = e.target.closest && e.target.closest('svg.big[data-chart]');
+    if (s && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End')) {
+        e.preventDefault();
+        let i = s._i == null ? N - 1 : s._i;
+        i = e.key === 'ArrowLeft' ? Math.max(0, i - 1) : e.key === 'ArrowRight' ? Math.min(N - 1, i + 1) : e.key === 'Home' ? 0 : N - 1;
+        s._i = i; const r = s.getBoundingClientRect(); scrub(s, 0, 0, i); tip.style.left = Math.min(window.innerWidth - 250, r.left + r.width * i / (N - 1) + 12) + 'px';
+    }
+});
+document.addEventListener('focusout', (e) => { const s = e.target.closest && e.target.closest('svg.big[data-chart]'); if (s) unscrub(s); });
+
+/* ================= Page state ================= */
+const params = new URLSearchParams(location.search);
+const STATE = ['default', 'empty', 'loading', 'archive-assigned'].includes(params.get('state')) ? params.get('state') : 'default';
+document.querySelectorAll('.proto-switch a[data-s]').forEach((a) => { if (a.dataset.s === STATE) a.setAttribute('aria-current', 'true'); });
+
+const archived = [];
+const G = {
+    inUse: { sortKey: 'activePct', dir: 'asc', page: 0, query: '' },
+    unused: { sortKey: 'lastUsedDays', dir: 'desc', selected: new Set() },
+};
+const PAGE_SIZE = 10;
+const $ = (s, el) => (el || document).querySelector(s);
+const content = $('#content');
+
+function sortRows(rows, key, dir) {
+    const val = (r) => key === 'name' ? r.name.toLowerCase() : key === 'lastUsedDays' ? (r.lastUsedDays === null ? Infinity : r.lastUsedDays) : r[key];
+    return rows.slice().sort((a, b) => { const x = val(a), y = val(b); const c = x < y ? -1 : x > y ? 1 : a.name.localeCompare(b.name); return dir === 'asc' ? c : -c; });
+}
+function keepFocus(fn) {
+    const a = document.activeElement; const key = a && a.dataset ? a.dataset.key : null;
+    fn(); if (key) { const el = document.querySelector('[data-key="' + key + '"]'); if (el) el.focus(); }
+}
+function th(label, key, g, extra) {
+    const active = g.sortKey === key;
+    return '<th scope="col"' + (extra || '') + ' aria-sort="' + (active ? (g.dir === 'asc' ? 'ascending' : 'descending') : 'none') + '"><button class="sort" data-sort="' + key + '" data-key="sort-' + key + '">' + label + icon('up') + '</button></th>';
+}
+function lastUsedCell(r) {
+    if (r.lastUsedDays === null) return '<span class="chip" data-component="FSChip">Never Used</span>';
+    return '<div class="cell-main">' + fmtDate(daysAgoDate(r.lastUsedDays)) + '</div><div class="cell-sub">' + relative(r.lastUsedDays) + '</div>';
+}
+function nameCell(r) {
+    return '<div class="cell-name"><button class="link" style="text-decoration:none" data-open="' + r.id + '" data-key="open-' + r.id + '"><span class="name">' + esc(r.name) + '</span></button><div class="meta">Category: ' + esc(r.category) + '</div></div>';
+}
+function usersCell(r) {
+    return r.holders ? '<button class="link cell-main" data-open="' + r.id + '" aria-label="View ' + plural(r.holders, 'user') + ' with the role ' + esc(r.name) + '">' + plural(r.holders, 'User') + '</button>' : '<span class="cell-main">0 Users</span>';
+}
+function actionsCell(r) {
+    return '<button class="icon-btn" data-menu="' + r.id + '" data-key="menu-' + r.id + '" aria-haspopup="menu" aria-label="Actions for ' + esc(r.name) + '">' + icon('more') + '</button>';
+}
+
+/* ----- Section 1: roles in use ----- */
+function inUseRows() {
+    const q = G.inUse.query.trim().toLowerCase();
+    return roles.filter((r) => !isUnused(r) && (!q || r.name.toLowerCase().includes(q) || r.category.toLowerCase().includes(q)));
+}
+function renderInUseBody() {
+    keepFocus(() => {
+        const g = G.inUse, total = roles.filter((r) => !isUnused(r)).length;
+        const rows = sortRows(inUseRows(), g.sortKey, g.dir);
+        const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE)); g.page = Math.min(g.page, pages - 1);
+        const slice = rows.slice(g.page * PAGE_SIZE, g.page * PAGE_SIZE + PAGE_SIZE);
+        const body = slice.length ? slice.map((r) =>
+            '<tr class="clickable" data-row="' + r.id + '"><td>' + nameCell(r) + '</td><td>' + usersCell(r) + '</td>' +
+            '<td><div class="cell-main">' + r.active + ' of ' + r.holders + '</div><div class="cell-sub">' + Math.round(r.activePct * 100) + '% of holders</div></td>' +
+            '<td data-e2e-ref="usage-chart" data-component="none" data-gap="90-day usage line chart (no chart component in FUI 5.5.4 or Coke)">' + chartSvg(r, { w: 240, h: 40, pad: 4 }) + '</td>' +
+            '<td>' + lastUsedCell(r) + '</td><td class="col-actions">' + actionsCell(r) + '</td></tr>').join('')
+            : '<tr class="nodata-row"><td colspan="6">No roles found matching the search.</td></tr>';
+        const filtered = rows.length < total;
+        $('#inUseCount').textContent = filtered ? rows.length + ' of ' + total + ' Roles' : total + ' Roles';
+        $('#inUseBody').innerHTML =
+            '<div class="grid-wrap" data-component="FSDataGrid" data-e2e-ref="inuse-roles-table"><table class="grid"><caption class="visually-hidden">Roles used in the last 90 days, with a usage chart per role</caption><thead><tr>' +
+            th('Role Name', 'name', g) + th('Users', 'holders', g) + th('Active Holders', 'activePct', g) +
+            '<th scope="col">90-Day Usage</th>' + th('Last Used', 'lastUsedDays', g) + '<th scope="col" class="col-actions"><span class="visually-hidden">Actions</span></th></tr></thead><tbody>' + body + '</tbody></table></div>' +
+            '<div class="grid-footer"><span aria-live="polite">' + (rows.length ? (g.page * PAGE_SIZE + 1) + '–' + Math.min(rows.length, g.page * PAGE_SIZE + PAGE_SIZE) + ' of ' + rows.length : '0 of 0') + '</span>' +
+            '<button class="icon-btn" data-page="-1" data-key="page-prev" aria-label="Previous page"' + (g.page === 0 ? ' disabled' : '') + '>' + icon('prev') + '</button>' +
+            '<button class="icon-btn" data-page="1" data-key="page-next" aria-label="Next page"' + (g.page >= pages - 1 ? ' disabled' : '') + '>' + icon('next') + '</button></div>';
+    });
+}
+
+/* ----- Section 2: unused roles ----- */
+function renderUnused() {
+    keepFocus(() => {
+        const g = G.unused, all = roles.filter(isUnused);
+        const rows = sortRows(all, g.sortKey, g.dir);
+        g.selected.forEach((id) => { if (!all.find((r) => r.id === id)) g.selected.delete(id); });
+        const nSel = g.selected.size, allSel = rows.length && nSel === rows.length;
+        const holdersSel = all.filter((r) => g.selected.has(r.id)).reduce((s, r) => s + r.holders, 0);
+        const unusedSec = $('#unusedSection');
+        if (!all.length) {
+            unusedSec.innerHTML = sectionHead('Unused Roles', 'Roles that nobody used in the last 90 days. Review who holds a role before you archive it.') +
+                '<div class="empty small" data-component="RolesListInitialEmptyState" data-e2e-ref="unused-empty-state">' + icon('lock').replace('class="icon"', 'class="icon" style="width:36px;height:36px;color:var(--outline)"') +
+                '<div class="t">No Unused Roles</div><div class="d">Every role in ' + esc(ORG) + ' was used in the last 90 days.</div></div>';
+            return;
+        }
+        if (!$('#unusedBody')) unusedSec.innerHTML = sectionHead('Unused Roles', 'Roles that nobody used in the last 90 days. Review who holds a role before you archive it.') +
+            '<div class="toolbar" data-component="FSGridToolbarContainer"><div class="toolbar-row2" style="margin-top:0"><div class="count" id="unusedCount" aria-live="polite"></div><div class="spacer"></div><span id="bulkWrap"></span></div></div><div id="unusedBody"></div>';
+        $('#unusedCount').textContent = nSel ? plural(nSel, 'Selected Role') : plural(all.length, 'Unused Role');
+        $('#bulkWrap').innerHTML = '<span title="' + (nSel ? '' : 'Select one or more roles to archive') + '"><button class="btn secondary" data-bulk-archive data-key="bulk-archive" data-e2e-ref="bulk-archive-button" data-component="FSButton" data-gap="Archive action for roles (product only has Delete)"' + (nSel ? '' : ' disabled') + '>' + (nSel ? 'Archive ' + plural(nSel, 'Role') : 'Archive Roles') + '</button></span>' +
+            (nSel && holdersSel ? '<span class="visually-hidden">' + plural(holdersSel, 'user') + ' hold the selected roles</span>' : '');
+        $('#unusedBody').innerHTML =
+            '<div class="grid-wrap no-footer" data-component="FSDataGrid" data-e2e-ref="unused-roles-table"><table class="grid compact"><caption class="visually-hidden">Roles nobody used in the last 90 days. Select roles to archive them.</caption><thead><tr>' +
+            '<th scope="col" class="col-check"><input type="checkbox" data-select-all data-key="select-all" aria-label="Select all unused roles"' + (allSel ? ' checked' : '') + '></th>' +
+            th('Role Name', 'name', g) + th('Users', 'holders', g) + th('Last Used', 'lastUsedDays', g) + '<th scope="col" class="col-actions"><span class="visually-hidden">Actions</span></th></tr></thead><tbody>' +
+            rows.map((r) => '<tr class="clickable' + (g.selected.has(r.id) ? ' selected' : '') + '" data-row="' + r.id + '"><td class="col-check"><input type="checkbox" data-select="' + r.id + '" data-key="sel-' + r.id + '" aria-label="Select ' + esc(r.name) + '"' + (g.selected.has(r.id) ? ' checked' : '') + '></td>' +
+                '<td>' + nameCell(r) + '</td><td>' + usersCell(r) + '</td><td>' + lastUsedCell(r) + '</td><td class="col-actions">' + actionsCell(r) + '</td></tr>').join('') +
+            '</tbody></table></div>';
+        const cb = $('[data-select-all]'); if (cb) cb.indeterminate = nSel > 0 && !allSel;
+    });
+}
+function sectionHead(title, desc) {
+    return '<h3 class="section-heading" tabindex="-1" data-component="FSTypography">' + title + '</h3><p class="section-desc secondary" data-component="FSTypography">' + desc + '</p>';
+}
+
+/* ----- Whole tab ----- */
+function renderTab() {
+    if (STATE === 'loading') {
+        const bar = (h, w) => '<div class="skel" style="height:' + h + 'px;' + (w ? 'width:' + w + ';' : '') + '"></div>';
+        const rows = (n, h) => Array.from({ length: n }, () => '<div style="margin-top:8px">' + bar(h) + '</div>').join('');
+        content.innerHTML = '<div aria-busy="true" data-e2e-ref="loading-skeleton" data-component="FSSkeleton"><span class="visually-hidden" role="status">Loading role usage</span>' +
+            bar(24, '180px') + '<div style="margin-top:8px">' + bar(18, '60%') + '</div><div style="margin-top:16px">' + bar(44, '565px') + '</div><div style="margin-top:16px">' + bar(28, '120px') + '</div>' + rows(6, 56) +
+            '<hr class="divider">' + bar(24, '160px') + '<div style="margin-top:8px">' + bar(18, '50%') + '</div><div style="margin-top:16px">' + bar(28, '140px') + '</div>' + rows(4, 48) + '</div>';
+        return;
+    }
+    if (STATE === 'empty') {
+        content.innerHTML = '<div class="empty" data-component="RolesListInitialEmptyState" data-e2e-ref="empty-state">' + icon('lock').replace('class="icon"', 'class="icon" style="width:36px;height:36px;color:var(--outline)"') +
+            '<div class="t">No Roles Found</div><div class="d">Role usage appears here once ' + esc(ORG) + ' has roles and people assigned to them.</div>' +
+            '<button class="btn primary" data-component="FSButton" data-e2e-ref="add-role-button">Add New Role</button></div>';
+        return;
+    }
+    const unusedN = roles.filter(isUnused).length;
+    content.innerHTML =
+        '<section class="section" aria-labelledby="usageHeading">' + sectionHead('Usage by Role', 'Each line shows the share of a role’s holders who were active per day, as a 7-day average. The scale is 0–100% on every row, so rows compare directly.').replace('<h3 ', '<h3 id="usageHeading" ') +
+        '<div class="toolbar" data-component="FSGridToolbarContainer"><div class="quick-filter" data-component="FSGridToolbarQuickFilter">' + icon('search') + '<input type="search" id="inUseSearch" placeholder="Search" aria-label="Search roles" data-key="inuse-search"></div>' +
+        '<div class="toolbar-row2"><div class="count" id="inUseCount" aria-live="polite"></div><div class="spacer"></div>' + (unusedN ? '<button class="link" style="font-size:.875rem" data-jump data-key="jump">Jump to Unused Roles (' + unusedN + ')</button>' : '') + '</div></div>' +
+        '<div id="inUseBody"></div></section><hr class="divider"><section class="section" id="unusedSection" aria-label="Unused roles" data-e2e-ref="unused-section"></section>';
+    renderInUseBody(); renderUnused();
+}
+
+/* ================= Layers ================= */
+let lastTrigger = null;
+const drawer = $('#drawer'), scrim = $('#drawerScrim'), dlgScrim = $('#dialogScrim'), dlg = $('#dialog'), menu = $('#menu'), snack = $('#snackbar');
+const findRole = (id) => roles.find((r) => r.id === id);
+
+function weeklyRows(role) {
+    const out = [];
+    for (let s = 0; s < N; s += 7) { const e = Math.min(N, s + 7); let sum = 0; for (let i = s; i < e; i++) sum += role.series[i]; out.push([fmtShort(dayDate(s)) + ' – ' + fmtShort(dayDate(e - 1)), Math.round(sum / (e - s) * 100)]); }
+    return out;
+}
+function holderListHtml(role, q) {
+    const list = holdersOf(role).filter((h) => !q || h.name.toLowerCase().includes(q.toLowerCase()) || h.email.includes(q.toLowerCase()));
+    if (!role.holders) return '<p class="secondary" style="font-size:.875rem;margin-top:12px">No one holds this role. It can be archived without affecting anyone.</p>';
+    if (!list.length) return '<p class="secondary" style="font-size:.875rem;margin-top:12px">No users found matching the search.</p>';
+    return '<ul class="fs-list" data-component="FSList">' + list.map((h) => '<li data-component="FSListItem"><div><div class="nm">' + esc(h.name) + '</div><div class="cap">' + esc(h.email) + '</div></div><div class="right">' +
+        (h.usedDays === null ? 'Not used in 90 days' : 'Used ' + fmtDate(daysAgoDate(h.usedDays))) + '</div></li>').join('') + '</ul>';
+}
+function openDrawer(id, trigger) {
+    const role = findRole(id); if (!role) return;
+    lastTrigger = trigger || lastTrigger;
+    const unused = isUnused(role);
+    drawer.dataset.role = id;
+    drawer.innerHTML =
+        '<div class="drawer-header" data-component="FSDrawerHeader"><div style="flex:1"><h2 id="drawerTitle">' + esc(role.name) + '</h2><div class="cell-sub" style="font-size:.875rem">Category: ' + esc(role.category) + '</div></div>' +
+        '<button class="icon-btn" data-close-drawer aria-label="Close ' + esc(role.name) + ' details">' + icon('close') + '</button></div>' +
+        '<div class="drawer-content" data-component="FSDrawerContent">' +
+        '<div class="stats"><div class="stat"><div class="label">Active Holders</div><div class="value">' + role.active + ' of ' + role.holders + '</div><div class="cell-sub">in the last 90 days</div></div>' +
+        '<div class="stat"><div class="label">Last Used</div><div class="value">' + (role.lastUsedDays === null ? 'Never' : relative(role.lastUsedDays)) + '</div><div class="cell-sub">' + (role.lastUsedDays === null ? 'No activity recorded' : fmtDate(daysAgoDate(role.lastUsedDays))) + '</div></div></div>' +
+        '<div class="drawer-section"><h3 data-component="FSTypography">Usage, Last 90 Days</h3><p class="secondary" style="font-size:.875rem">' + (unused ? 'No holder used this role in the last 90 days.' : 'Share of holders active per day, 7-day average. Use the arrow keys to read values.') + '</p>' +
+        '<div style="margin-top:12px;padding-bottom:16px" data-component="none" data-gap="90-day usage line chart (no chart component in FUI 5.5.4 or Coke)" data-e2e-ref="drawer-usage-chart">' + chartSvg(role, { w: 432, h: 130, pad: 8, big: true }) + '</div>' +
+        '<details class="accordion" data-component="FSAccordion"><summary>View Chart Data</summary><table><thead><tr><th scope="col">Week</th><th scope="col">Holders active (avg.)</th></tr></thead><tbody>' + weeklyRows(role).map((w) => '<tr><td>' + w[0] + '</td><td>' + w[1] + '%</td></tr>').join('') + '</tbody></table></details></div>' +
+        '<div class="drawer-section"><h3 data-component="FSTypography">Users With This Role</h3><div class="count" style="font-size:16px" aria-live="polite" id="holderCount">' + plural(role.holders, 'User') + '</div>' +
+        (role.holders ? '<input type="search" class="text-field" id="holderSearch" placeholder="Search users" aria-label="Search users with this role" data-component="FSTextField">' : '') +
+        '<div id="holderList">' + holderListHtml(role, '') + '</div></div></div>' +
+        '<div class="drawer-actions" data-component="FSDrawerActions"><button class="btn destructiveSecondary" data-archive-one="' + id + '" data-component="FSButton">Archive Role</button><div class="spacer"></div>' +
+        '<a class="btn secondary" href="#" data-component="FSButton" data-open-users="' + id + '">Open in Users</a></div>';
+    scrim.style.display = 'block'; drawer.style.display = 'flex';
+    $('[data-close-drawer]', drawer).focus();
+    const s = $('#holderSearch', drawer);
+    if (s) s.addEventListener('input', () => { $('#holderList', drawer).innerHTML = holderListHtml(role, s.value); });
+}
+function closeDrawer(restore) {
+    drawer.style.display = 'none'; scrim.style.display = 'none'; tip.style.display = 'none';
+    if (restore !== false && lastTrigger && document.contains(lastTrigger)) lastTrigger.focus();
+}
+
+/* ----- Menu ----- */
+function openMenu(id, btn) {
+    const role = findRole(id);
+    menu.innerHTML = '<button role="menuitem" data-open="' + id + '">View Users</button><button role="menuitem" class="danger" data-archive-one="' + id + '">Archive</button>';
+    const r = btn.getBoundingClientRect(); menu.style.display = 'block';
+    menu.style.top = (r.bottom + 4) + 'px'; menu.style.left = Math.max(8, r.right - menu.offsetWidth) + 'px';
+    menu._btn = btn; menu.querySelector('button').focus();
+}
+function closeMenu(restore) { if (menu.style.display === 'none') return; menu.style.display = 'none'; if (restore && menu._btn) menu._btn.focus(); }
+
+/* ----- Archive dialog (gaps 3 and 4) ----- */
+let pendingIds = [];
+function openArchive(ids, trigger) {
+    pendingIds = ids; if (trigger) lastTrigger = trigger;
+    const rs = ids.map(findRole).filter(Boolean); if (!rs.length) return;
+    const holders = rs.reduce((s, r) => s + r.holders, 0), active = rs.reduce((s, r) => s + r.active, 0);
+    const one = rs.length === 1;
+    const title = one ? 'Archive Role' : 'Archive ' + rs.length + ' Roles';
+    let h = '<div class="dialog-title"><h2 id="dialogTitle" data-component="FSDialogTitle">' + title + '</h2><button class="icon-btn" data-close-dialog aria-label="Close">' + icon('close') + '</button></div><div class="dialog-content" data-component="FSDialogContent">';
+    h += '<p data-component="FSDialogContentText">' + (one ? 'Archive <strong>' + esc(rs[0].name) + '</strong>? It will be removed from the Roles list and from Assign to Role. You can restore it later.' :
+        'Archive these ' + rs.length + ' roles? They will be removed from the Roles list and from Assign to Role. You can restore them later.') + '</p>';
+    if (!one) h += '<ul class="fs-list" data-component="FSList">' + rs.map((r) => '<li><div class="nm">' + esc(r.name) + '</div><div class="right">' + (r.holders ? '<button class="link" data-review="' + r.id + '">Review ' + plural(r.holders, 'User') + '</button>' : '0 Users') + '</div></li>').join('') + '</ul>';
+    if (holders) {
+        h += '<div class="alert" role="alert" data-component="FSAlert" data-e2e-ref="assigned-warning" data-gap="warning for archiving roles that still have users (new decision, gap 4)">' + icon('warn') +
+            '<span>' + plural(holders, 'user') + (holders === 1 ? ' still holds ' : ' still hold ') + (one ? 'this role' : 'these roles') + '. They keep ' + (one ? 'its' : 'their') + ' access until you assign them a different role. ' +
+            (active ? active + ' of them used ' + (one ? 'it' : 'them') + ' in the last 90 days.' : 'None of them used ' + (one ? 'it' : 'them') + ' in the last 90 days.') + '</span>' +
+            (one ? '<button class="link" data-review="' + rs[0].id + '" data-component="FSAlertButton">Review Users</button>' : '') + '</div>' +
+            '<label class="check-row" data-component="FSCheckbox" data-gap="acknowledgement gate before archiving roles that still have users"><input type="checkbox" id="ackBox"> I’ve reviewed the ' + plural(holders, 'user') + ' who ' + (holders === 1 ? 'holds ' : 'hold ') + (one ? 'this role' : 'these roles') + '</label>';
+    }
+    h += '</div><div class="dialog-actions" data-component="FSDialogActions"><button class="btn ghost" data-close-dialog data-component="FSButton" id="dlgCancel">Cancel</button><div class="spacer"></div>' +
+        '<span id="confirmWrap" title="' + (holders ? 'Confirm you’ve reviewed the users first' : '') + '"><button class="btn destructivePrimary" id="confirmArchive" data-component="FSLoadingButton" data-e2e-ref="archive-confirm-button"' + (holders ? ' disabled aria-describedby="confirmHint"' : '') + '>' + (one ? 'Archive Role' : 'Archive ' + rs.length + ' Roles') + '</button></span>' +
+        (holders ? '<span id="confirmHint" class="visually-hidden">Check the box to confirm you’ve reviewed the users first.</span>' : '') + '</div>';
+    dlg.innerHTML = h; dlgScrim.style.display = 'flex'; $('#dlgCancel').focus();
+    const ack = $('#ackBox'); if (ack) ack.addEventListener('change', () => { $('#confirmArchive').disabled = !ack.checked; $('#confirmWrap').title = ack.checked ? '' : 'Confirm you’ve reviewed the users first'; });
+}
+function closeDialog(restore) { dlgScrim.style.display = 'none'; if (restore !== false && lastTrigger && document.contains(lastTrigger)) lastTrigger.focus(); }
+function confirmArchive() {
+    const btn = $('#confirmArchive'); btn.disabled = true; btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Archiving'; btn.setAttribute('aria-busy', 'true');
+    setTimeout(() => {
+        const rs = pendingIds.map(findRole).filter(Boolean), holders = rs.reduce((s, r) => s + r.holders, 0);
+        roles = roles.filter((r) => !pendingIds.includes(r.id)); archived.push.apply(archived, rs);
+        pendingIds.forEach((id) => G.unused.selected.delete(id));
+        closeDialog(false); closeDrawer(false);
+        renderInUseBody(); renderUnused();
+        const msg = rs.length === 1 ? 'Archived ' + rs[0].name + '.' : 'Archived ' + rs.length + ' roles.';
+        toast(msg + (holders ? ' ' + plural(holders, 'user') + (holders === 1 ? ' still holds it.' : ' still hold ' + (rs.length === 1 ? 'it.' : 'them.')) : ''));
+        const h = $('#unusedSection h3'); if (h) h.focus(); else $('#usageHeading') && $('#usageHeading').focus();
+    }, 900);
+}
+let toastTimer;
+function toast(msg) { snack.innerHTML = icon('ok') + '<span>' + esc(msg) + '</span>'; snack.style.display = 'flex'; clearTimeout(toastTimer); toastTimer = setTimeout(() => { snack.style.display = 'none'; }, 6000); }
+
+/* ================= Events ================= */
+document.addEventListener('click', (e) => {
+    const t = e.target;
+    const c = (sel) => t.closest(sel);
+    if (menu.style.display === 'block' && !c('#menu') && !c('[data-menu]')) closeMenu(false);
+    let el;
+    if ((el = c('[data-menu]'))) { e.stopPropagation(); return openMenu(el.dataset.menu, el); }
+    if ((el = c('#menu [data-open]'))) { const id = el.dataset.open; const b = menu._btn; closeMenu(false); return openDrawer(id, b); }
+    if ((el = c('#menu [data-archive-one]'))) { const id = el.dataset.archiveOne; const b = menu._btn; closeMenu(false); return openArchive([id], b); }
+    if ((el = c('[data-sort]'))) { const g = el.closest('#unusedBody') ? G.unused : G.inUse; const k = el.dataset.sort; if (g.sortKey === k) g.dir = g.dir === 'asc' ? 'desc' : 'asc'; else { g.sortKey = k; g.dir = 'asc'; } return g === G.unused ? renderUnused() : renderInUseBody(); }
+    if ((el = c('[data-page]'))) { G.inUse.page += +el.dataset.page; return renderInUseBody(); }
+    if ((el = c('[data-jump]'))) { const h = $('#unusedSection h3') || $('#unusedSection'); h.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return h.focus && h.focus(); }
+    if ((el = c('[data-bulk-archive]'))) { return openArchive(Array.from(G.unused.selected), el); }
+    if ((el = c('[data-close-drawer]'))) return closeDrawer();
+    if (c('#drawerScrim')) return closeDrawer();
+    if ((el = c('[data-archive-one]'))) { return openArchive([el.dataset.archiveOne], el); }
+    if ((el = c('[data-review]'))) { const id = el.dataset.review; closeDialog(false); return openDrawer(id, lastTrigger); }
+    if ((el = c('[data-close-dialog]'))) return closeDialog();
+    if (t === dlgScrim) return closeDialog();
+    if (t.id === 'confirmArchive' || c('#confirmArchive')) return confirmArchive();
+    if ((el = c('[data-open-users]'))) { e.preventDefault(); return; }
+    if ((el = c('[data-open]'))) return openDrawer(el.dataset.open, el);
+    if (c('input[type="checkbox"]')) return;                                  // handled in change
+    const row = c('tr[data-row]'); if (row && !c('button, a, input, label')) return openDrawer(row.dataset.row, row.querySelector('[data-open]'));
+});
+document.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.matches('[data-select-all]')) { const rows = roles.filter(isUnused); G.unused.selected = t.checked ? new Set(rows.map((r) => r.id)) : new Set(); renderUnused(); }
+    else if (t.matches('[data-select]')) { t.checked ? G.unused.selected.add(t.dataset.select) : G.unused.selected.delete(t.dataset.select); renderUnused(); }
+});
+document.addEventListener('input', (e) => { if (e.target.id === 'inUseSearch') { G.inUse.query = e.target.value; G.inUse.page = 0; renderInUseBody(); } });
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (dlgScrim.style.display === 'flex') return closeDialog();
+        if (menu.style.display === 'block') return closeMenu(true);
+        if (drawer.style.display === 'flex') return closeDrawer();
+    }
+    if (e.key === 'Tab') {                                                       // keep focus inside the top layer
+        const layer = dlgScrim.style.display === 'flex' ? dlg : drawer.style.display === 'flex' ? drawer : null; if (!layer) return;
+        const f = Array.from(layer.querySelectorAll('button:not(:disabled), a[href], input:not(:disabled), summary, [tabindex="0"]'));
+        if (!f.length) return; const first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+    if (menu.style.display === 'block' && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        e.preventDefault(); const items = Array.from(menu.querySelectorAll('button')); const i = items.indexOf(document.activeElement);
+        items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus();
+    }
+});
+window.addEventListener('scroll', () => closeMenu(false), true);
+
+/* ================= Boot ================= */
+renderTab();
+if (STATE === 'archive-assigned') openArchive(['legacy-hotlist'], null);
+})();
+</script>
+</body>
+</html>
