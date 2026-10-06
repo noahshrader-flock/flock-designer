@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Project, ProjectIteration } from '../../shared/contract';
 import { asPeople, mergePeople } from '../../shared/people';
-import { asDate, firstHeading, newestFirst } from '../../shared/projects';
+import { asDate, asRoute, firstHeading, newestFirst } from '../../shared/projects';
 
 const readJson = (path: string): unknown => {
 	try {
@@ -42,6 +42,7 @@ export const readFolderProjects = (recordsRoot: string): Project[] => {
 						commit: typeof it.commit === 'string' ? it.commit : null,
 						contributors: asPeople(it.contributors),
 						createdAt: asDate(it.createdAt),
+						route: asRoute(it.route),
 					}),
 				)
 				.sort(newestFirst);

@@ -55,6 +55,8 @@ export const NewWork = ({
 			branch: r.value.branch,
 			issueNumber: null,
 			previewUrl: null,
+			// Nothing is built yet, so there is nowhere to land: whoever builds it records the route.
+			route: null,
 			commit: r.value.commit,
 			contributors: r.value.contributors ?? [],
 			createdAt: r.value.createdAt,

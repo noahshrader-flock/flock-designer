@@ -29,6 +29,29 @@ export type BuildApi = Pick<WorkspaceApi, 'openCheckout' | 'continueIteration' |
 export const previewCommandFor = (iteration: ProjectIteration): string =>
 	iteration.name === 'codebase' ? 'design-mode' : 'preview';
 
+/**
+ * Where the preview opens: the iteration's own route within the running app when its record says
+ * one, and otherwise wherever the preview starts by itself.
+ *
+ * A codebase iteration runs the whole product, so without this it opens at the product's front door
+ * and the designer has to find the change themselves -- which is how a comment meant for an
+ * iteration whose work is at `/roles/compare` was made on the Organizations list instead.
+ *
+ * The route is already checked where it is read from the record. This joins it on, keeping whatever
+ * the preview's address carries (its port, any base path), and refuses anything that would move the
+ * origin rather than quietly following it.
+ */
+export const previewAddress = (previewUrl: string, route: string | null | undefined): string => {
+	if (!route) return previewUrl;
+	try {
+		const base = new URL(previewUrl);
+		const at = new URL(route, base);
+		return at.origin === base.origin ? at.href : previewUrl;
+	} catch {
+		return previewUrl;
+	}
+};
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** How an agent run ended: it finished cleanly, it failed (with what to tell the person), or nobody is looking any more. */
@@ -114,8 +137,9 @@ export const runLocalBuild = async ({
 	const result = await api.startCommand(root, previewCommandFor(iteration), project.id);
 	if (!result.ok) return fail(result.error);
 	if (result.value.state === 'running') {
-		onPhase({ kind: 'running', url: result.value.url });
-		return result.value.url;
+		const url = previewAddress(result.value.url, iteration.route);
+		onPhase({ kind: 'running', url });
+		return url;
 	}
 	// `stopped` here means the process ended before it ever answered; its output is on screen.
 	return fail(result.value.state === 'failed' ? result.value.detail : 'The preview stopped before it was ready. Its output is below.');

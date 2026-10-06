@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
-import { PROJECT_ID, asDate, mergeProjects, newestProjectFirst, slugify, startedAt, unionLocal } from '../src/shared/projects';
+import { PROJECT_ID, asDate, asRoute, mergeProjects, newestProjectFirst, slugify, startedAt, unionLocal } from '../src/shared/projects';
 import { readFolderProjects } from '../src/main/services/localProjects';
 
 const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
@@ -161,6 +161,45 @@ describe('reading projects from their folders', () => {
 		expect(readFolderProjects(root).map((p) => p.id)).toEqual(['new-view']);
 		expect(readFolderProjects(root)[0]).toMatchObject({ title: 'A new view', records: ['brief.md'], iterations: [] });
 		expect(inProgress(root)).toEqual([]); // not work in progress until something is recorded
+	});
+});
+
+describe('asRoute', () => {
+	it('takes a path to the work, with or without a leading slash, and keeps the query', () => {
+		expect(asRoute('/roles/compare')).toBe('/roles/compare');
+		expect(asRoute('roles/compare')).toBe('/roles/compare');
+		expect(asRoute('/roles/compare?state=error')).toBe('/roles/compare?state=error');
+		expect(asRoute('  /roles/compare  ')).toBe('/roles/compare');
+	});
+
+	it('is null when the record does not say, so the preview opens where it always did', () => {
+		expect(asRoute(undefined)).toBeNull();
+		expect(asRoute(null)).toBeNull();
+		expect(asRoute('')).toBeNull();
+		expect(asRoute('   ')).toBeNull();
+		expect(asRoute(42)).toBeNull();
+		expect(asRoute({ path: '/x' })).toBeNull();
+	});
+
+	it('refuses anything that could leave the preview, because this comes from a file an agent wrote', () => {
+		// A scheme would take the preview somewhere else entirely.
+		expect(asRoute('javascript:alert(1)')).toBeNull();
+		expect(asRoute('https://evil.test/steal')).toBeNull();
+		expect(asRoute('HTTP://evil.test')).toBeNull();
+		expect(asRoute('data:text/html,<script>')).toBeNull();
+		// A protocol-relative address is a host, not a path.
+		expect(asRoute('//evil.test/steal')).toBeNull();
+		// Some parsers read a backslash as a slash, so it never reaches one.
+		expect(asRoute('/\\evil.test')).toBeNull();
+		expect(asRoute('\\\\evil.test')).toBeNull();
+		// Control characters and whitespace can split a header or hide the rest of a line.
+		expect(asRoute('/roles\nHost: evil.test')).toBeNull();
+		expect(asRoute('/roles compare')).toBeNull();
+		// A route that climbs is a mistake in the record.
+		expect(asRoute('/../../etc/passwd')).toBeNull();
+		expect(asRoute('..')).toBeNull();
+		// And nothing absurdly long.
+		expect(asRoute(`/${'a'.repeat(400)}`)).toBeNull();
 	});
 });
 

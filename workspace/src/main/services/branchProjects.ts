@@ -72,6 +72,8 @@ export const readBranchProjects = async (
 					branch,
 					issueNumber: null,
 					previewUrl: null,
+					// Found as a branch, with no record to say where its work is.
+					route: null,
 					commit: await branchCommit(productRoot, branch).catch(() => null),
 					contributors: people,
 					createdAt: await branchStartedAt(productRoot, branch).catch(() => null),

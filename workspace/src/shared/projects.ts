@@ -29,6 +29,31 @@ import { mergePeople } from './people';
 /** A date from a record or from git, or null: anything that does not parse is not a date. */
 export const asDate = (v: unknown): string | null => (typeof v === 'string' && v !== '' && !Number.isNaN(Date.parse(v)) ? v : null);
 
+/**
+ * Where in the running app an iteration's work actually is, as a path within it -- `/roles/compare`,
+ * or `roles/compare?state=error`. Null when the record does not say, and the preview opens at the
+ * app's own front door as before.
+ *
+ * **This comes out of a file an agent wrote, so it is checked, not trusted.** It is joined onto
+ * `http://localhost:<port>` to make the address the preview loads, so anything that could leave that
+ * origin is refused rather than corrected: a scheme (`javascript:`, `http:`), a host (`//evil.test`),
+ * or a backslash, which some parsers read as a slash. What is left is a path on the preview itself.
+ */
+export const asRoute = (v: unknown): string | null => {
+	if (typeof v !== 'string') return null;
+	const raw = v.trim();
+	if (raw === '' || raw.length > 300) return null;
+	// No scheme, no authority, no backslash, no control characters, no whitespace.
+	if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return null;
+	if (raw.startsWith('//') || raw.includes('\\')) return null;
+	// eslint-disable-next-line no-control-regex
+	if (/[\u0000- \u007f]/.test(raw)) return null;
+	const path = raw.startsWith('/') ? raw : `/${raw}`;
+	// `..` cannot escape the origin, but a route that climbs is a mistake in the record, not a landing place.
+	if (path.split(/[/?#]/).includes('..')) return null;
+	return path;
+};
+
 /** When a project was started: its earliest iteration's date, or null if none has one. */
 export const startedAt = (p: Pick<Project, 'iterations'>): string | null =>
 	p.iterations

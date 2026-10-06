@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
-import { type BuildApi, type BuildPhase, previewCommandFor, runLocalBuild } from '../src/renderer/localBuild';
+import { type BuildApi, type BuildPhase, previewAddress, previewCommandFor, runLocalBuild } from '../src/renderer/localBuild';
 
 const iteration = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
-	name: 'i1', branch: 'fd/users/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], ...over,
+	name: 'i1', branch: 'fd/users/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], createdAt: null, route: null, ...over,
 });
 const project: Project = { id: 'users', title: 'Users', records: [], iterations: [], people: [], openComments: 0 };
 
@@ -53,6 +53,15 @@ describe('opening an iteration', () => {
 	it('serves a prototype with the prototype command and codebase work with the real shell', () => {
 		expect(previewCommandFor(iteration({ name: 'i3' }))).toBe('preview');
 		expect(previewCommandFor(iteration({ name: 'codebase' }))).toBe('design-mode');
+	});
+
+	it('opens where the work is when the record says, instead of the product\'s front door', async () => {
+		// A codebase iteration runs the whole product. Without this it opens on whatever the app shows
+		// first, which is how a comment meant for /roles/compare was made on the Organizations list.
+		const { a } = api();
+		const { url, phases } = await run(a, { iteration: iteration({ name: 'codebase', route: '/roles/compare' }) });
+		expect(url).toBe('http://localhost:3100/roles/compare');
+		expect(phases.at(-1)).toEqual({ kind: 'running', url: 'http://localhost:3100/roles/compare' });
 	});
 
 	it('names the project when it starts the preview, because every prototype shares one port', async () => {
@@ -164,5 +173,31 @@ describe('when nobody is looking any more', () => {
 		expect(url).toBeNull();
 		expect(polls).toBeLessThanOrEqual(1);
 		expect(a.startCommand).not.toHaveBeenCalled();
+	});
+});
+
+
+describe('previewAddress', () => {
+	it('joins the iteration\'s route onto the preview, keeping its port', () => {
+		expect(previewAddress('http://localhost:3100/', '/roles/compare')).toBe('http://localhost:3100/roles/compare');
+		expect(previewAddress('http://localhost:3000/', '/roles/compare?state=error')).toBe('http://localhost:3000/roles/compare?state=error');
+	});
+
+	it('opens where the preview starts when there is no route, which is every prototype', () => {
+		expect(previewAddress('http://localhost:3100/', null)).toBe('http://localhost:3100/');
+		expect(previewAddress('http://localhost:3100/', undefined)).toBe('http://localhost:3100/');
+		expect(previewAddress('http://localhost:3100/', '')).toBe('http://localhost:3100/');
+	});
+
+	it('never leaves the preview, whatever the record says', () => {
+		// asRoute refuses these where the record is read; this is the second door, because the value
+		// is joined onto an address the preview then loads.
+		for (const bad of ['https://evil.test/steal', '//evil.test', 'javascript:alert(1)']) {
+			expect(previewAddress('http://localhost:3100/', bad)).toBe('http://localhost:3100/');
+		}
+	});
+
+	it('keeps a preview address that is not a URL rather than failing to open anything', () => {
+		expect(previewAddress('not a url', '/roles/compare')).toBe('not a url');
 	});
 });

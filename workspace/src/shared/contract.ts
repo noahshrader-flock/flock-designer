@@ -100,6 +100,13 @@ export interface Iteration {
 	contributors?: Person[];
 	/** Where a reviewer can open this iteration, once it has been shared. */
 	previewUrl?: string;
+	/**
+	 * Where this iteration's work is in the running app, as a path within it (`/roles/compare`).
+	 * Written by whoever built the work, so opening the iteration lands on what was changed rather
+	 * than at the app's front door. Checked with `asRoute` wherever it is read back: it comes from a
+	 * file an agent wrote, and it is joined onto the preview's own address.
+	 */
+	route?: string;
 }
 
 /** Where sharing an iteration has got to. One at a time: it is a push, a pull request and a build. */
@@ -353,6 +360,11 @@ export interface ProjectIteration {
    * commit. Null when neither is known. A project's date is its earliest iteration's, and orders the list.
    */
   createdAt: string | null;
+  /**
+   * Where the work is in the running app (`/roles/compare`), so opening the iteration lands on what
+   * was changed instead of the app's front door. Null when the record does not say.
+   */
+  route: string | null;
   /** True when this iteration exists only on this machine. */
   localOnly?: boolean;
 }
