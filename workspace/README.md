@@ -37,7 +37,7 @@ kinds, switched at the top, both starting from a repository and a branch in it:
   they are, and will not start without them. The agent writes one React file, the app bundles it against
   the product's installed packages into one page, and both are kept in the project's folder
   (`quick/qN.tsx`, `quick/qN.html`). Large files the pages embed (the design system's fonts) are kept once,
-  in `projects/_shared/`, and served beside every page. **Build in the codebase** moves one into the code.
+  in `projects/_shared/`, and served beside every page. **Build in the codebase** (in the review menu) moves one into the code: it asks first, shows the branch it will create and what would stop it (uncommitted changes, an existing codebase branch, Claude Code not ready), and starts from the branch the prototype was modelled on.
 - **Codebase feature**: real work on the project's `feature/<project>` branch, which needs the full setup.
 
 Each runs the agent, then shows the result with pins. The product repository is **suggested** on its own

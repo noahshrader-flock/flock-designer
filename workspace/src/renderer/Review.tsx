@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
 import { latest } from '../shared/latest';
-import { freshIteration, isQuick, quickPagePath } from '../shared/projects';
+import { isQuick, quickPagePath } from '../shared/projects';
+import { MoveToCode } from './MoveToCode';
 import { PeopleAvatars } from './People';
 import { AgentLog, Loading } from './Loading';
 import { ShareControl } from './ShareControl';
@@ -134,6 +135,8 @@ export const Review = ({
 	const useHosted = hostedUrl !== null && (checkout === null || local.phase.kind === 'failed');
 	const hosted = useHostedPreview(useHosted ? hostedUrl : null);
 	const [shareOpen, setShareOpen] = useState(false);
+	// Moving a quick prototype into the code is confirmed first, in a dialog (MoveToCode).
+	const [moving, setMoving] = useState(false);
 	// The branch tooltip opens over the preview, which is a native layer above everything in this window.
 	const [branchTip, setBranchTip] = useState(false);
 
@@ -446,7 +449,7 @@ export const Review = ({
 	 */
 	// The sharing dialog, the menu and the branch tooltip need the same thing the comment box does: the space
 	// the preview occupies.
-	const frozen = composing || shareOpen || branchTip || menuOpen;
+	const frozen = composing || shareOpen || branchTip || menuOpen || moving;
 	const run = useRef(0);
 	useEffect(() => {
 		const mine = ++run.current;
@@ -545,20 +548,6 @@ export const Review = ({
 
 	// What is still to be dealt with. Resolved comments stay listed, but are not the count.
 	const total = openComments(comments ?? []).length;
-
-	/**
-	 * A quick prototype moves into the code as the project's codebase work: the agent audits the page
-	 * against the real code first, then builds it, and that opens here as it would have from New.
-	 */
-	const moveToCode = async () => {
-		if (!checkout) return;
-		setError(null);
-		const task = await window.workspace.prepareMoveToCode(project.id, iteration.name);
-		if (!task.ok) return setError(task.error);
-		const made = await window.workspace.createIteration(checkout.root, project.id, `From quick prototype ${iteration.name}`, 'codebase');
-		if (!made.ok) return setError(made.error);
-		onOpen(project, freshIteration(made.value), task.value);
-	};
 
 	/** The agent is asked for one comment, from that comment's own button: never for a batch. */
 	const addressComment = async (commentId: number) => {
@@ -669,7 +658,7 @@ export const Review = ({
 					onOpenInBrowser={() => void window.workspace.openPreviewInBrowser().then((r) => !r.ok && setError(r.error))}
 					onOpenChange={setShareOpen}
 					quick={quick}
-					onMoveToCode={checkout ? () => void moveToCode() : undefined}
+					onMoveToCode={checkout ? () => setMoving(true) : undefined}
 				/>
 
 				{/* One control, two halves: comment mode on the left, the list of comments on the right.
@@ -701,6 +690,10 @@ export const Review = ({
 					</Button>
 				</div>
 			</Toolbar>
+
+			{checkout && quick && (
+				<MoveToCode open={moving} onClose={() => setMoving(false)} project={project} iteration={iteration} checkout={checkout} onStarted={onOpen} />
+			)}
 
 			{/* Under the toolbar: the preview, and beside it the sidebar when it is open. */}
 			<div className="flex min-h-0 flex-1">

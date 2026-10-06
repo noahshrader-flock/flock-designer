@@ -160,6 +160,22 @@ export type AgentStatus =
  */
 export type IterationKind = 'prototype' | 'codebase' | 'quick';
 
+/** What moving a quick prototype into the code would do here, so the person is told before it does it. */
+export interface MoveToCodePlan {
+	/** The project's one codebase branch, as this repository names it. */
+	branch: string;
+	/** That branch already exists in this checkout: the work continues on it rather than starting a new one. */
+	exists: boolean;
+	/** The project already has codebase work recorded, so there is nothing to start. */
+	recorded: boolean;
+	repository: string;
+	/** What the prototype was modelled on, if it says. */
+	basedOn: { repository: string; branch: string } | null;
+	/** The checkout's current branch, and whether it is free of uncommitted changes (which blocks creating a branch). */
+	current: string | null;
+	clean: boolean;
+}
+
 /** Whether a quick prototype can be built from a repository here: its design system installed, and the bundler present. */
 export type QuickReadiness =
 	| { ready: true; designSystem: string; version: string | null }
@@ -270,6 +286,8 @@ export interface WorkspaceApi {
 	buildQuick(projectId: string, name: string, request: string): Promise<Result<AgentStatus>>;
 	saveQuick(projectId: string, name: string): Promise<Result<null>>;
 	openQuick(projectId: string, name: string): Promise<Result<string>>;
+	/** What moving a quick prototype into the code would do in this checkout, asked before it is offered. */
+	moveToCodePlan(root: string, projectId: string, name: string): Promise<Result<MoveToCodePlan>>;
 	/** Whether a quick prototype can be built from this repository on this machine, and with which design system version. */
 	quickReadiness(root: string): Promise<Result<QuickReadiness>>;
 	/** The task that moves a quick prototype into the codebase: an audit of it against the real code, then the work. */
@@ -551,6 +569,7 @@ export const CHANNELS = {
 	openQuick: 'workspace:openQuick',
 	prepareMoveToCode: 'workspace:prepareMoveToCode',
 	quickReadiness: 'workspace:quickReadiness',
+	moveToCodePlan: 'workspace:moveToCodePlan',
 	addressComments: 'workspace:addressComments',
 	shareIteration: 'workspace:shareIteration',
 	shareStatus: 'workspace:shareStatus',

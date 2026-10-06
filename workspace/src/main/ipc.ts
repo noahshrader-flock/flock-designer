@@ -12,6 +12,7 @@ import {
 	PAGE_HOLD_REASONS,
 	type PageBounds,
 	type PageHoldReason,
+	type MoveToCodePlan,
 	type Person,
 	type QuickReadiness,
 	type Project,
@@ -26,7 +27,7 @@ import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
 import { readDescriptor } from './services/descriptor';
 import { branchCommit, branchExists, isRepository, readCheckout, readTreeAt, recentBranches, runGit } from './services/git';
-import { assertUsableProjectId, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
+import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
 import { classify, readBranchProjects } from './services/branchProjects';
@@ -780,6 +781,29 @@ export const registerIpc = ({
 			if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html) await keepQuick(projectId, name, html);
 			await serveShared(html);
 			return quickServer.serve(`${projectId}/${name}`, html);
+		}),
+	);
+
+	ipcMain.handle(
+		CHANNELS.moveToCodePlan,
+		guard(async (root: string, projectId: string, name: string): Promise<MoveToCodePlan> => {
+			assertUsableProjectId(projectId);
+			assertQuickName(name);
+			const canonical = opened.require(root);
+			const branch = codebaseBranchFor(descriptorFor(root), projectId);
+			const raw = await recordStore().read(`projects/${projectId}/iterations.json`);
+			const records = JSON.parse(raw ?? '[]') as Iteration[];
+			const basedOn = records.find((i) => i.name === name)?.basedOn;
+			const here = await readCheckout(canonical);
+			return {
+				branch,
+				exists: await branchExists(canonical, branch),
+				recorded: records.some((i) => i.name === 'codebase'),
+				repository: basename(canonical),
+				basedOn: basedOn ? { repository: basedOn.repository, branch: basedOn.branch } : null,
+				current: here.branch,
+				clean: here.clean,
+			};
 		}),
 	);
 

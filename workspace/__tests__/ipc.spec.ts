@@ -404,6 +404,51 @@ describe('quick prototypes', () => {
 		expect((listed.value as { id: string }[]).map((p) => p.id)).not.toContain('_shared');
 	});
 
+	describe('moving into the code', () => {
+		const start = async () => {
+			await call(CHANNELS.useCheckout, product);
+			await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		};
+
+		it('says what it would do: the branch, whether it exists, and what the prototype was modelled on', async () => {
+			await start();
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'q1')).value).toEqual({
+				branch: 'feature/demo',
+				exists: false,
+				recorded: false,
+				repository: 'flock-coke',
+				basedOn: { repository: 'flock-coke', branch: 'develop' },
+				current: 'develop',
+				clean: true,
+			});
+		});
+
+		it('says when the branch already exists here, so the work continues on it', async () => {
+			await start();
+			g(product, 'branch', 'feature/demo');
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'q1')).value).toMatchObject({ exists: true, recorded: false });
+		});
+
+		it('says when the project already has codebase work recorded', async () => {
+			await start();
+			await call(CHANNELS.createIteration, product, 'demo', 'x', 'codebase', 'develop');
+			g(product, 'checkout', '-q', 'develop');
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'q1')).value).toMatchObject({ recorded: true });
+		});
+
+		it('says when uncommitted changes would stop it', async () => {
+			await start();
+			writeFileSync(join(product, 'README.md'), 'changed\n');
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'q1')).value).toMatchObject({ clean: false });
+		});
+
+		it('refuses a name that is not a quick prototype, and a repository that was not accepted', async () => {
+			await start();
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', '../x')).ok).toBe(false);
+			expect((await call(CHANNELS.moveToCodePlan, home, 'demo', 'q1')).ok).toBe(false);
+		});
+	});
+
 	it('refuse to save React that does not build, and say why', async () => {
 		await call(CHANNELS.useCheckout, product);
 		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
