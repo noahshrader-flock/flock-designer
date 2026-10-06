@@ -1,4 +1,3 @@
-import { FSBox } from '@flocksafety/flock-react-component-lib';
 import { useCallback, useEffect, useState } from 'react';
 import type { SignInState } from '../shared/contract';
 import { Projects } from './Projects';
@@ -34,15 +33,16 @@ export const App = () => {
 	};
 
 	return (
-		<FSBox sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+		<div className="bg-background h-screen overflow-hidden">
 			<TopNav user={signIn.state === 'signedIn' ? signIn.user : null} onSignOut={signOut} />
-			<FSBox sx={{ pt: `${NAV_HEIGHT}px` }}>
-				<FSBox sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
+			{/* The bar is fixed, so the rest starts below it and scrolls on its own. */}
+			<div className="h-full overflow-y-auto" style={{ paddingTop: NAV_HEIGHT }}>
+				<div className="mx-auto max-w-[1400px] p-6">
 					<ErrorBoundary>
 						{signIn.state === 'signedIn' ? <Projects /> : <SignIn state={signIn} onChanged={refreshSignIn} />}
 					</ErrorBoundary>
-				</FSBox>
-			</FSBox>
-		</FSBox>
+				</div>
+			</div>
+		</div>
 	);
 };

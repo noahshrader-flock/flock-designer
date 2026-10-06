@@ -1,5 +1,6 @@
-import { FSAlert, FSBox, FSButton, FSStack } from '@flocksafety/flock-react-component-lib';
 import { Component, type ReactNode } from 'react';
+import { Alert, AlertDescription } from './ui/alert';
+import { Button } from './ui/button';
 
 /**
  * Keeps one broken screen from taking the whole window with it. Without it a
@@ -16,14 +17,16 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
 	render() {
 		if (!this.state.error) return this.props.children;
 		return (
-			<FSBox sx={{ p: 3, pt: '80px', maxWidth: 720, mx: 'auto' }}>
-				<FSStack spacing={2}>
-					<FSAlert severity="error">Something on this screen broke: {this.state.error.message}</FSAlert>
-					<FSBox>
-						<FSButton size="md" onClick={() => this.setState({ error: null })}>Try again</FSButton>
-					</FSBox>
-				</FSStack>
-			</FSBox>
+			<div className="mx-auto max-w-[720px] p-6 pt-20">
+				<div className="flex flex-col gap-4">
+					<Alert variant="destructive">
+						<AlertDescription>Something on this screen broke: {this.state.error.message}</AlertDescription>
+					</Alert>
+					<div>
+						<Button onClick={() => this.setState({ error: null })}>Try again</Button>
+					</div>
+				</div>
+			</div>
 		);
 	}
 }

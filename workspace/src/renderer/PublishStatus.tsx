@@ -1,4 +1,5 @@
-import { FSAlert, FSBox, FSButton, FSTypography } from '@flocksafety/flock-react-component-lib';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Button } from './ui/button';
 import { useEffect, useState } from 'react';
 import type { PublishStatus as Status } from '../shared/contract';
 
@@ -19,32 +20,26 @@ export const usePublishStatus = (): [Status, (s: Status) => void] => {
 export const PublishBanner = ({ status, onChange }: { status: Status; onChange: (s: Status) => void }) => {
 	if (status.state === 'held') {
 		return (
-			<FSAlert
-				severity="warning"
-				action={
-					<FSButton
-						size="md"
+			<Alert variant="warning">
+				<AlertTitle>Some of your work is not published yet</AlertTitle>
+				<AlertDescription>
+					<ul className="m-0 list-disc pl-5">
+						{status.problems.map((p) => (
+							<li key={`${p.what}:${p.why}`} className="text-sm">
+								<b className="text-foreground">{p.what}:</b> {p.why}
+							</li>
+						))}
+					</ul>
+					<Button
 						variant="secondary"
-						sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+						size="sm"
+						className="mt-2 shrink-0"
 						onClick={() => void window.workspace.publishNow().then((r) => r.ok && onChange(r.value))}
 					>
 						Try again
-					</FSButton>
-				}
-			>
-				<FSTypography variant="body2" sx={{ fontWeight: 600 }}>
-					Some of your work is not published yet
-				</FSTypography>
-				<FSBox component="ul" sx={{ m: 0, mt: 0.5, pl: 2.5 }}>
-					{status.problems.map((p) => (
-						<li key={`${p.what}:${p.why}`}>
-							<FSTypography variant="body2">
-								<b>{p.what}:</b> {p.why}
-							</FSTypography>
-						</li>
-					))}
-				</FSBox>
-			</FSAlert>
+					</Button>
+				</AlertDescription>
+			</Alert>
 		);
 	}
 	return null;
@@ -74,12 +69,11 @@ export const PublishLine = ({ status }: { status: Status }) => {
 	const text = publishLineText(status);
 	if (text === null) return null;
 	return (
-		<FSTypography
-			variant="caption"
-			color={status.state === 'held' ? 'warning.dark' : 'text.secondary'}
+		<span
+			className={`text-xs ${status.state === 'held' ? 'text-warning' : 'text-muted-foreground'}`}
 			title={held.map((p) => `${p.what}: ${p.why}`).join('\n') || undefined}
 		>
 			{text}
-		</FSTypography>
+		</span>
 	);
 };

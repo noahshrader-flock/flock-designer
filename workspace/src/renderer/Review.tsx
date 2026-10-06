@@ -1,21 +1,4 @@
-import {
-	FSAlert,
-	FSBox,
-	FSButton,
-	FSButtonGroup,
-	FSChip,
-	FSIconButton,
-	FSSpinner,
-	FSStack,
-	FSTextField,
-	FSTooltip,
-	FSTypography,
-} from '@flocksafety/flock-react-component-lib';
-import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutline';
-import ChevronLeft from '@mui/icons-material/ChevronLeft';
-import OpenInNew from '@mui/icons-material/OpenInNew';
-import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
-import { Popover } from '@mui/material';
+import { ChevronLeftIcon, ExternalLinkIcon, MapPinIcon, MessageSquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
@@ -28,6 +11,12 @@ import { routeWentWrong } from './localBuild';
 import { PANEL_STEP, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
 import { NAV_HEIGHT } from './TopNav';
 import { useLocalBuild } from './useLocalBuild';
+import { Alert, AlertDescription } from './ui/alert';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Spinner } from './ui/spinner';
+import { Textarea } from './ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /**
  * One iteration: a thin toolbar, and the preview taking everything under it.
@@ -613,161 +602,137 @@ export const Review = ({
 		: { top: 0, left: 0 };
 
 	return (
-		<FSBox
-			sx={{
-				position: 'fixed',
-				top: NAV_HEIGHT,
-				left: 0,
-				right: 0,
-				bottom: 0,
-				display: 'flex',
-				flexDirection: 'column',
-				bgcolor: 'background.default',
-				zIndex: 1000, // under the main bar, so its account menu is never covered
-			}}
+		<div
+			className="bg-background fixed inset-x-0 bottom-0 z-[1000] flex flex-col"
+			// Under the main bar, so its account menu is never covered.
+			style={{ top: NAV_HEIGHT }}
 		>
 			{/* The toolbar: where you are, and the way back. Always visible, always fixed. */}
-			<FSBox
-				component="div"
-				sx={{
-					height: TOOLBAR_HEIGHT,
-					flexShrink: 0,
-					display: 'flex',
-					alignItems: 'center',
-					gap: 2,
-					px: 2,
-					bgcolor: 'background.paper',
-					borderBottom: 1,
-					borderColor: 'divider',
-				}}
+			<div
+				className="bg-card flex shrink-0 items-center gap-4 border-b px-4"
+				style={{ height: TOOLBAR_HEIGHT }}
 			>
-				<FSTooltip title="Back to projects" describeChild>
-					<FSIconButton size="md" variant="ghost" aria-label="Back to projects" onClick={onBack} sx={{ ml: -1 }}>
-						<ChevronLeft />
-					</FSIconButton>
-				</FSTooltip>
-				<FSTypography variant="subtitle2" component="h2" noWrap sx={{ fontWeight: 600 }}>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button size="icon" variant="ghost" aria-label="Back to projects" className="-ml-2" onClick={onBack}>
+							<ChevronLeftIcon />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>Back to projects</TooltipContent>
+				</Tooltip>
+				<h2 className="truncate text-sm font-semibold">
 					{project.title} — {iteration.name}
-				</FSTypography>
-				<FSTypography variant="caption" color="text.secondary" noWrap sx={{ fontFamily: 'monospace' }}>
-					{iteration.branch}
-				</FSTypography>
+				</h2>
+				<span className="text-muted-foreground truncate font-mono text-xs">{iteration.branch}</span>
 				<People people={iteration.contributors} />
-				<FSBox sx={{ flexGrow: 1 }} />
+				<div className="grow" />
 
-				<FSTooltip title="Open this page in your browser" describeChild>
-					<span>
-						<FSIconButton
-							size="md"
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							size="icon"
 							variant="ghost"
 							aria-label="Open this page in your browser"
 							disabled={!opened}
 							onClick={() => void window.workspace.openPreviewInBrowser().then((r) => !r.ok && setError(r.error))}
 						>
-							<OpenInNew fontSize="small" />
-						</FSIconButton>
-					</span>
-				</FSTooltip>
+							<ExternalLinkIcon />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>Open this page in your browser</TooltipContent>
+				</Tooltip>
 
 				<ShareControl checkout={checkout} project={project} iteration={iteration} onOpenChange={setShareOpen} />
 
 				{/* One control, two halves: comment mode on the left, the list of comments on the right.
-				    The group hands its variant and size to both buttons; pressed is the design
-				    system's own secondaryActive, not a different colour of button. */}
-				<FSButtonGroup size="sm" variant="secondary">
-					<FSButton
-						variant={commentMode ? 'secondaryActive' : 'secondary'}
+				    A pressed half is filled rather than outlined, so which mode is on is readable at a glance. */}
+				<div className="flex items-center">
+					<Button
+						size="sm"
+						variant={commentMode ? 'default' : 'outline'}
 						aria-pressed={commentMode}
 						disabled={!opened}
 						title="Comment: click anywhere on the page to leave one (C)"
-						startIcon={<LocationOnOutlined fontSize="small" />}
+						className="rounded-r-none"
 						onClick={() => (commentMode ? exitCommentMode() : setCommentMode(true))}
 					>
+						<MapPinIcon />
 						Comment
-					</FSButton>
-					<FSButton
-						variant={sidebarOpen ? 'secondaryActive' : 'secondary'}
+					</Button>
+					<Button
+						size="sm"
+						variant={sidebarOpen ? 'default' : 'outline'}
 						aria-pressed={sidebarOpen}
 						aria-label="Show all comments"
 						title={total > 0 ? `All comments (${total})` : 'All comments'}
-						startIcon={<ChatBubbleOutline fontSize="small" />}
+						className="rounded-l-none border-l-0"
 						onClick={() => setSidebarOpen((o) => !o)}
 					>
+						<MessageSquareIcon />
 						{total > 0 ? total : null}
-					</FSButton>
-				</FSButtonGroup>
-			</FSBox>
+					</Button>
+				</div>
+			</div>
 
 			{/* Under the toolbar: the preview, and beside it the sidebar when it is open. */}
-			<FSBox sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
-				<FSBox ref={slot} sx={{ position: 'relative', flex: 1, minWidth: 0, overflow: 'hidden', bgcolor: 'background.default' }}>
+			<div className="flex min-h-0 flex-1">
+				<div ref={slot} className="bg-background relative min-w-0 flex-1 overflow-hidden">
 					{!opened && (
-						<FSStack spacing={2} alignItems="center" justifyContent="center" sx={{ position: 'absolute', inset: 0, p: 3, textAlign: 'center' }}>
+						<div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
 							{local.phase.kind === 'failed' && !useHosted ? (
 								<>
-									<FSAlert severity="error" sx={{ maxWidth: 560, textAlign: 'left' }}>
-										{local.phase.message}
-									</FSAlert>
+									<Alert variant="destructive" className="max-w-[560px] text-left">
+										<AlertDescription>{local.phase.message}</AlertDescription>
+									</Alert>
 									{local.log.length > 0 && (
-										<FSBox
-											component="pre"
-											sx={{ m: 0, p: 1.5, maxWidth: 560, width: '100%', maxHeight: 180, overflow: 'auto', bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1, fontSize: 11, textAlign: 'left', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-										>
+										<pre className="bg-card m-0 max-h-[180px] w-full max-w-[560px] overflow-auto rounded-md border p-3 text-left text-[11px] wrap-anywhere whitespace-pre-wrap">
 											{local.log.slice(-15).join('\n')}
-										</FSBox>
+										</pre>
 									)}
-									<FSButton size="md" onClick={local.retry}>
-										Try again
-									</FSButton>
+									<Button onClick={local.retry}>Try again</Button>
 								</>
 							) : error ? (
-								<FSAlert severity="error" sx={{ maxWidth: 560, textAlign: 'left' }}>
-									{error}
-								</FSAlert>
+								<Alert variant="destructive" className="max-w-[560px] text-left">
+									<AlertDescription>{error}</AlertDescription>
+								</Alert>
 							) : useHosted && hosted.state !== 'up' ? (
 								<>
-									<FSSpinner />
-									<FSTypography variant="body1">This preview is still being built.</FSTypography>
-									<FSTypography variant="body2" color="text.secondary" sx={{ maxWidth: 480 }}>
+									<Spinner className="size-6" />
+									<p className="text-sm">This preview is still being built.</p>
+									<p className="text-muted-foreground max-w-[480px] text-sm">
 										It opens here by itself as soon as it is ready. A new share takes a few minutes.
-									</FSTypography>
-									<FSButton size="md" variant="secondary" onClick={hosted.openAnyway}>
+									</p>
+									<Button variant="secondary" onClick={hosted.openAnyway}>
 										Open it anyway
-									</FSButton>
+									</Button>
 								</>
 							) : !iteration.previewUrl && !checkout ? (
 								<>
-									<FSTypography variant="body1">Flock Designer needs your Coke repository to show this.</FSTypography>
-									<FSTypography variant="body2" color="text.secondary">
+									<p className="text-sm">Flock Designer needs your Coke repository to show this.</p>
+									<p className="text-muted-foreground text-sm">
 										It could not find one on this machine. Point it at your Coke folder once.
-									</FSTypography>
-									<FSButton size="md" onClick={onChoose}>
-										Find it
-									</FSButton>
+									</p>
+									<Button onClick={onChoose}>Find it</Button>
 								</>
 							) : (
 								<>
-									<FSSpinner />
-									<FSTypography variant="body1">
+									<Spinner className="size-6" />
+									<p className="text-sm">
 										{local.phase.kind === 'agent'
 											? `Building ${project.title}…`
 											: local.phase.kind === 'preview'
 												? 'Starting the preview…'
 												: 'Opening the preview…'}
-									</FSTypography>
+									</p>
 									{local.phase.kind === 'agent' && (
-										<FSTypography variant="body2" color="text.secondary" sx={{ maxWidth: 480 }}>
+										<p className="text-muted-foreground max-w-[480px] text-sm">
 											The agent is writing it from your request. This takes a few minutes.
-										</FSTypography>
+										</p>
 									)}
-									{local.phase.kind === 'preview' && (
-										<FSTypography variant="body2" color="text.secondary">
-											The first time can take a minute.
-										</FSTypography>
-									)}
+									{local.phase.kind === 'preview' && <p className="text-muted-foreground text-sm">The first time can take a minute.</p>}
 								</>
 							)}
-						</FSStack>
+						</div>
 					)}
 
 					{/* While a comment is being written the preview is this picture of it. */}
@@ -775,15 +740,17 @@ export const Review = ({
 						<img
 							src={snapshot}
 							alt="The preview, paused while a comment is written"
-							style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill' }}
+							className="absolute inset-0 size-full object-fill"
 						/>
 					)}
-				</FSBox>
+				</div>
 
 				{sidebarOpen && (
 					<>
-						{/* The divider. Drag it, or focus it and use the arrow keys. */}
-						<FSBox
+						{/* The divider. Drag it, or focus it and use the arrow keys. One pixel to look at, with a
+						    wider strip to grab that extends over the sidebar only: the other side is the native
+						    preview, which never passes the pointer to this window. */}
+						<div
 							role="separator"
 							aria-orientation="vertical"
 							aria-label="Resize the comments sidebar"
@@ -800,64 +767,66 @@ export const Review = ({
 								setPanelWidth(next);
 								savePanelWidth(next);
 							}}
-							sx={{
-								// One pixel to look at...
-								width: '1px',
-								flexShrink: 0,
-								position: 'relative',
-								touchAction: 'none',
-								bgcolor: resizing ? 'primary.main' : 'divider',
-								transition: 'background-color 120ms',
-								'&:hover, &:focus-visible': { bgcolor: 'primary.main' },
-								outline: 'none',
-								// ...and a wider strip to grab. It extends over the sidebar only: the other side is
-								// the native preview, which never passes the pointer to this window.
-								'&::after': { content: '""', position: 'absolute', top: 0, bottom: 0, left: 0, width: '7px', cursor: 'col-resize' },
-							}}
+							className={`relative w-px shrink-0 touch-none outline-none transition-colors after:absolute after:inset-y-0 after:left-0 after:w-[7px] after:cursor-col-resize after:content-[''] hover:bg-primary focus-visible:bg-primary ${
+								resizing ? 'bg-primary' : 'bg-border'
+							}`}
 						/>
-						<FSBox sx={{ width: panelWidth, flexShrink: 0, bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-							<FSStack spacing={2} sx={{ p: 2, flex: 1, minHeight: 0, overflowY: 'auto' }}>
-								<FSTypography variant="subtitle2">{total > 0 ? `Comments (${total})` : 'Comments'}</FSTypography>
-								{error && opened && !composing && <FSAlert severity="error">{error}</FSAlert>}
+						<div className="bg-card flex min-h-0 shrink-0 flex-col" style={{ width: panelWidth }}>
+							<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+								<h3 className="text-sm font-semibold">{total > 0 ? `Comments (${total})` : 'Comments'}</h3>
+								{error && opened && !composing && (
+									<Alert variant="destructive">
+										<AlertDescription>{error}</AlertDescription>
+									</Alert>
+								)}
 								{/* The recorded route did not load. Said once, plainly: the page on screen is not the
 								    work, so a comment made here would be about something this iteration never touched. */}
 								{wrongRoute && !composing && (
-									<FSAlert severity="warning">
-										This iteration records its work at <code>{wrongRoute.asked}</code>, but the preview opened{' '}
-										<code>{wrongRoute.landedOn}</code>. The page you are looking at may not be the work. The route may have
-										moved, or something redirected it.
-									</FSAlert>
+									<Alert variant="warning">
+										<AlertDescription>
+											This iteration records its work at <code>{wrongRoute.asked}</code>, but the preview opened{' '}
+											<code>{wrongRoute.landedOn}</code>. The page you are looking at may not be the work. The route may have
+											moved, or something redirected it.
+										</AlertDescription>
+									</Alert>
 								)}
 								{address.kind === 'running' && (
 									<>
-										<FSTypography variant="caption" color="text.secondary">
+										<p className="text-muted-foreground text-xs">
 											The agent is working on that comment. The preview updates as it changes the code.
-										</FSTypography>
+										</p>
 										{addressLog.length > 0 && (
-											<FSBox component="pre" sx={{ m: 0, p: 1, maxHeight: 140, overflow: 'auto', bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 1, fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+											<pre className="bg-background m-0 max-h-[140px] overflow-auto rounded-md border p-2 text-[11px] wrap-anywhere whitespace-pre-wrap">
 												{addressLog.slice(-8).join('\n')}
-											</FSBox>
+											</pre>
 										)}
 									</>
 								)}
 								{address.kind === 'done' && (
-									<FSAlert severity={address.changed ? 'success' : 'info'}>
-										{address.changed
-											? 'The agent has finished. Look at the preview and the changes, then resolve what is done.'
-											: 'The agent finished without changing anything. What it says below is why — often the change is outside this iteration, or the comment needs a decision from you.'}
-										{addressLog.length > 0 && (
-											<FSBox component="pre" sx={{ m: 0, mt: 1, maxHeight: address.changed ? 200 : 320, overflow: 'auto', fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-												{/* When nothing changed, what it said is the whole answer, so less of it is cut. */}
-												{addressLog.slice(address.changed ? -25 : -60).join('\n')}
-											</FSBox>
-										)}
-									</FSAlert>
+									<Alert variant={address.changed ? 'default' : 'default'}>
+										<AlertDescription>
+											{address.changed
+												? 'The agent has finished. Look at the preview and the changes, then resolve what is done.'
+												: 'The agent finished without changing anything. What it says below is why — often the change is outside this iteration, or the comment needs a decision from you.'}
+											{addressLog.length > 0 && (
+												<pre
+													className="m-0 mt-2 overflow-auto text-[11px] wrap-anywhere whitespace-pre-wrap"
+													style={{ maxHeight: address.changed ? 200 : 320 }}
+												>
+													{/* When nothing changed, what it said is the whole answer, so less of it is cut. */}
+													{addressLog.slice(address.changed ? -25 : -60).join('\n')}
+												</pre>
+											)}
+										</AlertDescription>
+									</Alert>
 								)}
-								{address.kind === 'failed' && <FSAlert severity="error">{address.message}</FSAlert>}
+								{address.kind === 'failed' && (
+									<Alert variant="destructive">
+										<AlertDescription>{address.message}</AlertDescription>
+									</Alert>
+								)}
 								{comments?.length === 0 && (
-									<FSTypography variant="body2" color="text.secondary">
-										No comments yet. Choose Comment, then click anywhere on the page.
-									</FSTypography>
+									<p className="text-muted-foreground text-sm">No comments yet. Choose Comment, then click anywhere on the page.</p>
 								)}
 								{comments?.map((comment) => {
 									/**
@@ -874,9 +843,9 @@ export const Review = ({
 									const state = comment.resolved || addressed ? undefined : placed.get(comment.id);
 									const n = numberOf(comment.id);
 									return (
-										<FSBox
+										<div
 											key={comment.id}
-											ref={(el: HTMLElement | null) => {
+											ref={(el: HTMLDivElement | null) => {
 												if (el) cards.current.set(comment.id, el);
 												else cards.current.delete(comment.id);
 											}}
@@ -884,44 +853,31 @@ export const Review = ({
 												setSelected(comment.id);
 												if (comment.anchor) void window.workspace.pageFocusMarker(comment.id);
 											}}
-											sx={{
-												border: 1,
-												borderColor: selected === comment.id ? 'primary.main' : 'divider',
-												borderWidth: selected === comment.id ? 2 : 1,
-												bgcolor: selected === comment.id ? 'action.selected' : undefined,
-												borderRadius: 1,
-												p: 1.5,
-												cursor: comment.anchor ? 'pointer' : 'default',
-												opacity: comment.resolved ? 0.65 : 1,
-												// What is left to do is faded, not the whole card: the two buttons that are
-												// still live stay at full strength, since they are the point of it being here.
-												'& .fd-faded': { opacity: addressed ? 0.6 : 1 },
-											}}
+											className={`rounded-lg border p-3 ${selected === comment.id ? 'border-primary bg-accent border-2' : ''} ${
+												comment.anchor ? 'cursor-pointer' : ''
+											} ${comment.resolved ? 'opacity-65' : ''}`}
+											// What is left to do is faded, not the whole card: the two buttons that are
+											// still live stay at full strength, since they are the point of it being here.
+											style={{ ['--fd-fade' as string]: addressed ? 0.6 : 1 }}
 										>
-											<FSStack spacing={0.5}>
-												<FSStack direction="row" spacing={1} alignItems="center">
-													{n > 0 && <FSChip variant="status" size="small" label={String(n)} />}
-													<FSTypography
-														className="fd-faded"
-														variant="subtitle2"
-														sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-													>
-														{comment.author}
-													</FSTypography>
-													{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
-												</FSStack>
+											<div className="flex flex-col gap-1.5">
+												<div className="flex flex-row items-center gap-2">
+													{n > 0 && <Badge variant="secondary">{n}</Badge>}
+													<span className="fd-faded min-w-0 truncate text-sm font-medium">{comment.author}</span>
+													{comment.resolved && <Badge variant="success">Resolved</Badge>}
+												</div>
 												{addressed && (
-													<FSTypography variant="caption" color="text.secondary">
+													<p className="text-muted-foreground text-xs">
 														The agent addressed this in <code>{comment.addressedAt?.slice(0, 7)}</code>
-													</FSTypography>
+													</p>
 												)}
 												{/* The actions get their own row. Three of them beside a name did not fit a narrow
 												    panel, and ran together into one unreadable word. */}
-												<FSStack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}>
+												<div className="flex flex-row flex-wrap items-center gap-2">
 													{/* One comment at a time: the designer picks the one that is a clear change, and
 													    leaves the ones that still need a decision. */}
 													{!comment.resolved && !addressed && checkout && (
-														<FSButton
+														<Button
 															size="sm"
 															variant="ghost"
 															disabled={address.kind === 'running'}
@@ -931,9 +887,9 @@ export const Review = ({
 															}}
 														>
 															{addressing === comment.id && address.kind === 'running' ? 'Working…' : 'Address'}
-														</FSButton>
+														</Button>
 													)}
-													<FSButton
+													<Button
 														size="sm"
 														variant="ghost"
 														onClick={(e: React.MouseEvent) => {
@@ -942,8 +898,8 @@ export const Review = ({
 														}}
 													>
 														{comment.resolved ? 'Reopen' : 'Resolve'}
-													</FSButton>
-													<FSButton
+													</Button>
+													<Button
 														size="sm"
 														variant="ghost"
 														onClick={(e: React.MouseEvent) => {
@@ -952,96 +908,90 @@ export const Review = ({
 														}}
 													>
 														Delete
-													</FSButton>
-												</FSStack>
+													</Button>
+												</div>
 												{confirmingDelete === comment.id && (
-													<FSStack
-														direction="row"
-														spacing={1}
-														alignItems="center"
-														onClick={(e: React.MouseEvent) => e.stopPropagation()}
-													>
-														<FSTypography variant="caption" color="error" sx={{ flexGrow: 1 }}>
-															Delete this comment for good? It cannot be brought back.
-														</FSTypography>
-														<FSButton size="sm" variant="ghost" onClick={() => setConfirmingDelete(null)}>
+													<div className="flex flex-row items-center gap-2" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+														<span className="text-destructive grow text-xs">Delete this comment for good? It cannot be brought back.</span>
+														<Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(null)}>
 															Keep
-														</FSButton>
-														<FSButton size="sm" variant="secondary" onClick={() => void removeComment(comment)}>
+														</Button>
+														<Button size="sm" variant="destructive" onClick={() => void removeComment(comment)}>
 															Delete
-														</FSButton>
-													</FSStack>
+														</Button>
+													</div>
 												)}
-												<FSTypography className="fd-faded" variant="body2">
-													{comment.body}
-												</FSTypography>
+												<p className="fd-faded text-sm">{comment.body}</p>
 												{comment.picture && (
 													<img
-														className="fd-faded"
+														className="fd-faded max-w-[240px] rounded border"
 														src={comment.picture}
 														alt={`The spot comment ${n || ''} was made on`}
-														style={{ width: '100%', maxWidth: 240, borderRadius: 4, border: '1px solid rgba(128,128,128,0.4)' }}
 													/>
 												)}
 												{comment.anchor?.state && (
-													<FSTypography className="fd-faded" variant="caption" color="text.secondary">
-														State: {comment.anchor.state}
-													</FSTypography>
+													<span className="fd-faded text-muted-foreground text-xs">State: {comment.anchor.state}</span>
 												)}
 												{comment.anchor && state === 'elsewhere' && (
-													<FSTypography className="fd-faded" variant="caption" color="text.secondary">
-														On {comment.anchor.route}
-													</FSTypography>
+													<span className="fd-faded text-muted-foreground text-xs">On {comment.anchor.route}</span>
 												)}
-												{state && NOTE[state] && (
-													<FSTypography variant="caption" color="warning.main">
-														{NOTE[state]}
-													</FSTypography>
-												)}
-											</FSStack>
-										</FSBox>
+												{state && NOTE[state] && <span className="text-warning text-xs">{NOTE[state]}</span>}
+											</div>
+										</div>
 									);
 								})}
-							</FSStack>
-						</FSBox>
+							</div>
+						</div>
 					</>
 				)}
-			</FSBox>
+			</div>
 
-			{/* The comment box, beside the pin that was just placed. */}
-			<Popover
-				open={composing && ready}
-				onClose={cancelCompose}
-				anchorReference="anchorPosition"
-				anchorPosition={boxPosition}
-				transformOrigin={{ vertical: 'center', horizontal: 'left' }}
-				PaperProps={{ sx: { width: 300, maxWidth: 'calc(100vw - 16px)' } }}
-				// The popover moves focus to its own frame as it opens, which can override the input's
-				// autoFocus; so once it has finished opening, put the cursor in the input explicitly.
-				TransitionProps={{ onEntered: () => composer.current?.querySelector('textarea')?.focus() }}
-			>
-				{/* Cmd or Ctrl and Enter saves, as in the tools people already use. */}
-				<FSBox
-					ref={composer}
-					onKeyDown={(e: React.KeyboardEvent) => {
-						if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void post();
-					}}
-					sx={{ p: 2 }}
-				>
-					<FSStack spacing={1.5}>
-						{error && <FSAlert severity="error">{error}</FSAlert>}
-						<FSTextField label="Comment" multiline minRows={3} value={draft} onChange={setDraft} autoFocus />
-						<FSStack direction="row" spacing={1} justifyContent="flex-end">
-							<FSButton size="md" variant="secondary" onClick={cancelCompose} disabled={posting}>
-								Cancel
-							</FSButton>
-							<FSButton size="md" onClick={() => void post()} disabled={posting || !draft.trim()}>
-								{posting ? 'Saving…' : 'Save'}
-							</FSButton>
-						</FSStack>
-					</FSStack>
-				</FSBox>
-			</Popover>
-		</FSBox>
+			{/* The comment box, beside the pin that was just placed. Positioned at window coordinates
+			    rather than anchored to an element: the pin it belongs to is inside the native preview,
+			    which is not part of this document. */}
+			{composing && ready && boxPosition && (
+				<>
+					{/* Clicking away is the same as cancelling, as it was when this was a popover. */}
+					<div className="fixed inset-0 z-[1100]" onClick={cancelCompose} />
+					<div
+						ref={composer}
+						onKeyDown={(e: React.KeyboardEvent) => {
+							// Cmd or Ctrl and Enter saves, as in the tools people already use.
+							if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void post();
+							if (e.key === 'Escape') cancelCompose();
+						}}
+						className="bg-popover fixed z-[1101] w-[300px] max-w-[calc(100vw-16px)] rounded-lg border p-4 shadow-lg"
+						style={{ top: boxPosition.top, left: boxPosition.left }}
+					>
+						<div className="flex flex-col gap-3">
+							{error && (
+								<Alert variant="destructive">
+									<AlertDescription>{error}</AlertDescription>
+								</Alert>
+							)}
+							<label htmlFor="comment-draft" className="text-sm font-medium">
+								Comment
+							</label>
+							{/* eslint-disable-next-line jsx-a11y/no-autofocus */}
+							<Textarea
+								id="comment-draft"
+								rows={3}
+								value={draft}
+								onChange={(e) => setDraft(e.target.value)}
+								autoFocus
+							/>
+							<div className="flex flex-row justify-end gap-2">
+								<Button variant="secondary" onClick={cancelCompose} disabled={posting}>
+									Cancel
+								</Button>
+								<Button onClick={() => void post()} disabled={posting || !draft.trim()}>
+									{posting ? 'Saving…' : 'Save'}
+								</Button>
+							</div>
+						</div>
+					</div>
+				</>
+			)}
+		</div>
 	);
 };

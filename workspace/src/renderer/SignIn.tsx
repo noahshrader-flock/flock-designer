@@ -1,6 +1,7 @@
-import { FSAlert, FSBox, FSButton, FSStack, FSTypography } from '@flocksafety/flock-react-component-lib';
 import { useEffect, useState } from 'react';
 import type { DeviceCodeStart, SignInState } from '../shared/contract';
+import { Alert, AlertDescription } from './ui/alert';
+import { Button } from './ui/button';
 
 /**
  * Sign-in, which for a desktop app means device flow: GitHub shows a code here,
@@ -41,72 +42,57 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 
 	if (state.state === 'awaitingDevice' && start) {
 		return (
-			<FSBox sx={{ maxWidth: 520, mx: 'auto', mt: 8, textAlign: 'center' }}>
-				<FSStack spacing={3}>
-					<FSTypography variant="h5" component="h1">
-						Enter this code on GitHub
-					</FSTypography>
+			<div className="mx-auto mt-16 max-w-[520px] text-center">
+				<div className="flex flex-col gap-6">
+					<h1 className="text-2xl font-semibold">Enter this code on GitHub</h1>
 
-					<FSBox
-						sx={{
-							fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-							fontSize: 40,
-							letterSpacing: 6,
-							py: 2,
-							border: 1,
-							borderColor: 'divider',
-							borderRadius: 1,
-							userSelect: 'all',
-						}}
-					>
-						{start.userCode}
-					</FSBox>
+					<div className="rounded-lg border py-4 font-mono text-4xl tracking-[0.3em] select-all">{start.userCode}</div>
 
-					<FSStack direction="row" spacing={2} justifyContent="center">
-						<FSButton size="md"
+					<div className="flex flex-row justify-center gap-4">
+						<Button
 							onClick={() => {
 								void navigator.clipboard.writeText(start.userCode);
 								setCopied(true);
 							}}
 						>
 							{copied ? 'Copied' : 'Copy code'}
-						</FSButton>
+						</Button>
 						{/* Opens in the real browser: the main process denies in-window navigation. */}
-						<FSButton size="md" variant="secondary" onClick={() => window.open(start.verificationUri, '_blank')}>
+						<Button variant="secondary" onClick={() => window.open(start.verificationUri, '_blank')}>
 							Open GitHub
-						</FSButton>
-					</FSStack>
+						</Button>
+					</div>
 
-					<FSTypography variant="body2" color="text.secondary">
-						Waiting for you to approve it. This page continues on its own.
-					</FSTypography>
-					<FSBox>
-						<FSButton size="md" variant="secondary" onClick={cancel}>
+					<p className="text-muted-foreground text-sm">Waiting for you to approve it. This page continues on its own.</p>
+					<div>
+						<Button variant="secondary" onClick={cancel}>
 							Cancel
-						</FSButton>
-					</FSBox>
-				</FSStack>
-			</FSBox>
+						</Button>
+					</div>
+				</div>
+			</div>
 		);
 	}
 
 	return (
-		<FSBox sx={{ maxWidth: 460, mx: 'auto', mt: 10, textAlign: 'center' }}>
-			<FSStack spacing={3}>
-				<FSTypography variant="h5" component="h1">
-					Flock Designer
-				</FSTypography>
-				<FSTypography variant="body2" color="text.secondary">
-					Sign in with GitHub to browse projects and leave comments. You need read access to the design
-					repository — nothing else, and no checkout.
-				</FSTypography>
-				{error && <FSAlert severity="error">{error}</FSAlert>}
-				<FSBox>
-					<FSButton size="md" onClick={begin} disabled={busy}>
+		<div className="mx-auto mt-20 max-w-[460px] text-center">
+			<div className="flex flex-col gap-6">
+				<h1 className="text-2xl font-semibold">Flock Designer</h1>
+				<p className="text-muted-foreground text-sm">
+					Sign in with GitHub to browse projects and leave comments. You need read access to the design repository — nothing
+					else, and no checkout.
+				</p>
+				{error && (
+					<Alert variant="destructive">
+						<AlertDescription>{error}</AlertDescription>
+					</Alert>
+				)}
+				<div>
+					<Button onClick={begin} disabled={busy}>
 						{busy ? 'Starting…' : 'Sign in with GitHub'}
-					</FSButton>
-				</FSBox>
-			</FSStack>
-		</FSBox>
+					</Button>
+				</div>
+			</div>
+		</div>
 	);
 };

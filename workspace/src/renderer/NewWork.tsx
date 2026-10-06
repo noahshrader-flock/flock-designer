@@ -1,18 +1,11 @@
-import {
-	FSAlert,
-	FSButton,
-	FSDialog,
-	FSDialogActions,
-	FSDialogContent,
-	FSDialogTitle,
-	FSLink,
-	FSStack,
-	FSTextField,
-	FSTypography,
-} from '@flocksafety/flock-react-component-lib';
 import { useState } from 'react';
 import type { Checkout, IterationKind, Project, ProjectIteration } from '../shared/contract';
 import { slugify } from '../shared/projects';
+import { Alert, AlertDescription } from './ui/alert';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 
 export interface Created {
 	project: Project;
@@ -71,51 +64,78 @@ export const NewWork = ({
 	};
 
 	return (
-		<FSDialog open={open} onClose={busy ? undefined : onClose} fullWidth maxWidth="sm">
-			<FSDialogTitle>New prototype</FSDialogTitle>
-			<FSDialogContent>
-				<FSStack spacing={2} sx={{ pt: 1 }}>
+		<Dialog open={open} onOpenChange={(next) => !next && !busy && onClose()}>
+			<DialogContent className="sm:max-w-xl" showCloseButton={!busy}>
+				<DialogHeader>
+					<DialogTitle>New prototype</DialogTitle>
+				</DialogHeader>
+				<div className="flex flex-col gap-4">
 					{checkout ? (
-						<FSTypography variant="body2" color="text.secondary">
+						<p className="text-muted-foreground text-sm">
 							In {checkout.name}, on {checkout.branch ?? 'a detached HEAD'}. The new branch starts from there.{' '}
-							<FSLink component="button" onClick={onChoose}>
+							<button type="button" className="text-primary cursor-pointer underline underline-offset-4" onClick={onChoose}>
 								Change
-							</FSLink>
-						</FSTypography>
+							</button>
+						</p>
 					) : (
-						<FSAlert severity="info" action={<FSButton size="md" onClick={onChoose}>Find it</FSButton>}>
-							Flock Designer could not find a Flock product repository on this machine.
-						</FSAlert>
+						<Alert>
+							<AlertDescription className="flex items-center justify-between gap-4">
+								<span>Flock Designer could not find a Flock product repository on this machine.</span>
+								<Button size="sm" onClick={onChoose}>
+									Find it
+								</Button>
+							</AlertDescription>
+						</Alert>
 					)}
-					<FSTextField label="Name" placeholder="Users — inactivity signal" value={name} onChange={setName} autoFocus />
-					<FSTypography variant="caption" color="text.secondary">
-						{id ? `Project id: ${id}` : 'The id is made from the name.'}
-					</FSTypography>
-					<FSTextField
-						label="What should it explore?"
-						multiline
-						minRows={4}
-						value={task}
-						onChange={setTask}
-						placeholder="A users list that flags people who have not signed in for 90 days."
-					/>
+					<div className="flex flex-col gap-2">
+						<label htmlFor="new-work-name" className="text-sm font-medium">
+							Name
+						</label>
+						{/* eslint-disable-next-line jsx-a11y/no-autofocus */}
+						<Input
+							id="new-work-name"
+							placeholder="Users — inactivity signal"
+							value={name}
+							onChange={(e) => setName(e.target.value)}
+							autoFocus
+						/>
+						<p className="text-muted-foreground text-xs">{id ? `Project id: ${id}` : 'The id is made from the name.'}</p>
+					</div>
+					<div className="flex flex-col gap-2">
+						<label htmlFor="new-work-task" className="text-sm font-medium">
+							What should it explore?
+						</label>
+						<Textarea
+							id="new-work-task"
+							rows={4}
+							value={task}
+							onChange={(e) => setTask(e.target.value)}
+							placeholder="A users list that flags people who have not signed in for 90 days."
+						/>
+					</div>
 					{checkout && checkout.clean === false && (
-						<FSAlert severity="warning">There are uncommitted changes in this checkout. Commit or set them aside first.</FSAlert>
+						<Alert variant="warning">
+							<AlertDescription>There are uncommitted changes in this checkout. Commit or set them aside first.</AlertDescription>
+						</Alert>
 					)}
-					{error && <FSAlert severity="error">{error}</FSAlert>}
-				</FSStack>
-			</FSDialogContent>
-			<FSDialogActions>
-				<FSButton size="md" variant="secondary" onClick={onClose} disabled={busy}>
-					Cancel
-				</FSButton>
-				<FSButton size="md" variant="secondary" onClick={() => void create('codebase')} disabled={busy || !checkout || !id || !task.trim()}>
-					In the codebase
-				</FSButton>
-				<FSButton size="md" onClick={() => void create('prototype')} disabled={busy || !checkout || !id || !task.trim()}>
-					{busy ? 'Creating…' : 'Create prototype'}
-				</FSButton>
-			</FSDialogActions>
-		</FSDialog>
+					{error && (
+						<Alert variant="destructive">
+							<AlertDescription>{error}</AlertDescription>
+						</Alert>
+					)}
+				</div>
+				<DialogFooter>
+					<Button variant="secondary" onClick={onClose} disabled={busy}>
+						Cancel
+					</Button>
+					<Button variant="secondary" onClick={() => void create('codebase')} disabled={busy || !checkout || !id || !task.trim()}>
+						In the codebase
+					</Button>
+					<Button onClick={() => void create('prototype')} disabled={busy || !checkout || !id || !task.trim()}>
+						{busy ? 'Creating…' : 'Create prototype'}
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 };

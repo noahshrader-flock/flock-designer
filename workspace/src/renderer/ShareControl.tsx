@@ -1,23 +1,12 @@
-import {
-	FSAlert,
-	FSBox,
-	FSButton,
-	FSDialog,
-	FSDialogActions,
-	FSDialogContent,
-	FSDialogTitle,
-	FSIconButton,
-	FSLink,
-	FSSpinner,
-	FSStack,
-	FSTooltip,
-	FSTypography,
-} from '@flocksafety/flock-react-component-lib';
-import ContentCopy from '@mui/icons-material/ContentCopy';
-import ShareOutlined from '@mui/icons-material/ShareOutlined';
+import { CopyIcon, Share2Icon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared/contract';
 import { dialogView, isMine, stepText } from './shareView';
+import { Alert, AlertDescription } from './ui/alert';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Spinner } from './ui/spinner';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /**
  * Share an iteration with people who are not on this machine: one click, then a dialog that
@@ -89,102 +78,108 @@ export const ShareControl = ({
 	return (
 		<>
 			{url && (
-				<FSTooltip title={copied ? 'Copied' : 'Copy the preview link'} describeChild>
-					<FSIconButton size="sm" variant="ghost" aria-label="Copy the preview link" onClick={() => void copy()}>
-						<ContentCopy fontSize="small" />
-					</FSIconButton>
-				</FSTooltip>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button size="icon" variant="ghost" aria-label="Copy the preview link" onClick={() => void copy()}>
+							<CopyIcon />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>{copied ? 'Copied' : 'Copy the preview link'}</TooltipContent>
+				</Tooltip>
 			)}
-			<FSButton
+			<Button
 				size="sm"
 				variant="secondary"
-				startIcon={running ? <FSSpinner size={14} /> : <ShareOutlined fontSize="small" />}
 				onClick={() => {
 					setPhase(running ? 'working' : 'confirm');
 					setError(null);
 					show(true);
 				}}
 			>
+				{running ? <Spinner /> : <Share2Icon />}
 				{running ? 'Sharing…' : url ? 'Update shared preview' : 'Share for review'}
-			</FSButton>
+			</Button>
 
-			<FSDialog open={open} onClose={() => show(false)} fullWidth maxWidth="sm">
-				<FSDialogTitle>{url && view === 'confirm' ? 'Update the shared preview' : 'Share for review'}</FSDialogTitle>
-				<FSDialogContent>
-					<FSStack spacing={2} sx={{ pt: 1 }}>
+			<Dialog open={open} onOpenChange={show}>
+				<DialogContent className="sm:max-w-xl">
+					<DialogHeader>
+						<DialogTitle>{url && view === 'confirm' ? 'Update the shared preview' : 'Share for review'}</DialogTitle>
+					</DialogHeader>
+					<div className="flex flex-col gap-4">
 						{view === 'confirm' && (
 							<>
-								<FSTypography variant="body2">
-									This pushes <b>{iteration.branch}</b> to the repository and opens a <b>draft pull request</b>, so a preview link
-									can be built for reviewers. The pull request is only there to make the link: it is not meant to be merged.
-								</FSTypography>
-								<FSTypography variant="body2" color="text.secondary">
+								<p className="text-sm">
+									This pushes <b>{iteration.branch}</b> to the repository and opens a <b>draft pull request</b>, so a preview
+									link can be built for reviewers. The pull request is only there to make the link: it is not meant to be
+									merged.
+								</p>
+								<p className="text-muted-foreground text-sm">
 									Only committed work is shared. The build takes several minutes, and you can close this and keep working.
-								</FSTypography>
+								</p>
 							</>
 						)}
 						{view === 'running' && status.state === 'running' && (
-							<FSStack direction="row" spacing={1.5} alignItems="center">
-								<FSSpinner />
-								<FSBox>
-									<FSTypography variant="body1">{stepText(status.step, status.detail)}</FSTypography>
-									<FSTypography variant="body2" color="text.secondary">
-										You can close this. It carries on.
-									</FSTypography>
-								</FSBox>
-							</FSStack>
+							<div className="flex flex-row items-center gap-3">
+								<Spinner />
+								<div>
+									<p className="text-sm">{stepText(status.step, status.detail)}</p>
+									<p className="text-muted-foreground text-sm">You can close this. It carries on.</p>
+								</div>
+							</div>
 						)}
 						{view === 'ready' && status.state === 'ready' && (
 							<>
-								<FSAlert severity="success">The preview is up.</FSAlert>
-								<FSTypography variant="body2" sx={{ wordBreak: 'break-all' }}>
-									<FSLink href={status.url} target="_blank" rel="noreferrer">
+								<Alert>
+									<AlertDescription>The preview is up.</AlertDescription>
+								</Alert>
+								<p className="text-sm break-all">
+									<a className="text-primary underline underline-offset-4" href={status.url} target="_blank" rel="noreferrer">
 										{status.url}
-									</FSLink>
-								</FSTypography>
-								<FSTypography variant="body2" color="text.secondary">
-									Reviewers will see it on this iteration the next time they open the app. If anything stops it
-									reaching them, the publishing status on the Projects page says what.
-								</FSTypography>
+									</a>
+								</p>
+								<p className="text-muted-foreground text-sm">
+									Reviewers will see it on this iteration the next time they open the app. If anything stops it reaching
+									them, the publishing status on the Projects page says what.
+								</p>
 							</>
 						)}
 						{view === 'failed' && status.state === 'failed' && (
-							<FSAlert severity="error" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-								{status.message}
-							</FSAlert>
+							<Alert variant="destructive">
+								<AlertDescription className="wrap-anywhere whitespace-pre-wrap">{status.message}</AlertDescription>
+							</Alert>
 						)}
-						{error && <FSAlert severity="error">{error}</FSAlert>}
-					</FSStack>
-				</FSDialogContent>
-				<FSDialogActions>
-					{view === 'confirm' ? (
-						<>
-							<FSButton size="md" variant="secondary" onClick={() => show(false)}>
-								Cancel
-							</FSButton>
-							<FSButton size="md" onClick={() => void start()}>
-								{url ? 'Push and update' : 'Push and share'}
-							</FSButton>
-						</>
-					) : (
-						<>
-							{view === 'failed' && (
-								<FSButton size="md" variant="secondary" onClick={() => setPhase('confirm')}>
-									Try again
-								</FSButton>
-							)}
-							{view === 'ready' && (
-								<FSButton size="md" variant="secondary" onClick={() => void copy()}>
-									{copied ? 'Copied' : 'Copy link'}
-								</FSButton>
-							)}
-							<FSButton size="md" onClick={() => show(false)}>
-								{view === 'running' ? 'Close' : 'Done'}
-							</FSButton>
-						</>
-					)}
-				</FSDialogActions>
-			</FSDialog>
+						{error && (
+							<Alert variant="destructive">
+								<AlertDescription>{error}</AlertDescription>
+							</Alert>
+						)}
+					</div>
+					<DialogFooter>
+						{view === 'confirm' ? (
+							<>
+								<Button variant="secondary" onClick={() => show(false)}>
+									Cancel
+								</Button>
+								<Button onClick={() => void start()}>{url ? 'Push and update' : 'Push and share'}</Button>
+							</>
+						) : (
+							<>
+								{view === 'failed' && (
+									<Button variant="secondary" onClick={() => setPhase('confirm')}>
+										Try again
+									</Button>
+								)}
+								{view === 'ready' && (
+									<Button variant="secondary" onClick={() => void copy()}>
+										{copied ? 'Copied' : 'Copy link'}
+									</Button>
+								)}
+								<Button onClick={() => show(false)}>{view === 'running' ? 'Close' : 'Done'}</Button>
+							</>
+						)}
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</>
 	);
 };

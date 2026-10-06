@@ -1,12 +1,3 @@
-import {
-	FSAlert,
-	FSAvatar,
-	FSBox,
-	FSButton,
-	FSChip,
-	FSStack,
-	FSTypography,
-} from '@flocksafety/flock-react-component-lib';
 import { useCallback, useEffect, useState } from 'react';
 import type { Checkout, CheckoutSuggestion, Person, Project, ProjectIteration } from '../shared/contract';
 import { NewWork, type Created } from './NewWork';
@@ -14,6 +5,9 @@ import { People } from './People';
 import { PublishBanner, usePublishStatus } from './PublishStatus';
 import { startedAt } from '../shared/projects';
 import { Review } from './Review';
+import { Alert, AlertDescription } from './ui/alert';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
 
 /**
  * Reviewer mode: every project in the design repository, read through the API.
@@ -78,19 +72,21 @@ export const Projects = () => {
 
 	if (error) {
 		return (
-			<FSStack spacing={2}>
-				<FSAlert severity="error">{error}</FSAlert>
-				<FSBox>
-					<FSButton size="md" variant="secondary" onClick={load}>
+			<div className="flex flex-col gap-4">
+				<Alert variant="destructive">
+					<AlertDescription>{error}</AlertDescription>
+				</Alert>
+				<div>
+					<Button variant="secondary" onClick={load}>
 						Try again
-					</FSButton>
-				</FSBox>
-			</FSStack>
+					</Button>
+				</div>
+			</div>
 		);
 	}
 
 	if (!projects) {
-		return <FSTypography variant="body2">Loading projects…</FSTypography>;
+		return <p className="text-muted-foreground text-sm">Loading projects…</p>;
 	}
 
 	if (selected) {
@@ -112,15 +108,12 @@ export const Projects = () => {
 	}
 
 	return (
-		<FSStack spacing={2}>
-			<FSStack direction="row" alignItems="center" spacing={2}>
-				<FSTypography variant="h6" component="h2">
-					Projects
-				</FSTypography>
-				<FSBox flexGrow={1} />
+		<div className="flex flex-col gap-4">
+			<div className="flex flex-row items-center gap-4">
+				<h2 className="text-xl font-semibold">Projects</h2>
+				<div className="grow" />
 				{/* Refreshing is an explicit ask, so it also publishes, rather than waiting for the next trigger. */}
-				<FSButton
-					size="md"
+				<Button
 					variant="secondary"
 					onClick={() => {
 						void window.workspace.publishNow().then((r) => r.ok && setPublishStatus(r.value));
@@ -128,29 +121,36 @@ export const Projects = () => {
 					}}
 				>
 					Refresh
-				</FSButton>
-				<FSButton size="md" onClick={() => setCreating(true)}>New prototype</FSButton>
-			</FSStack>
+				</Button>
+				<Button onClick={() => setCreating(true)}>New prototype</Button>
+			</div>
 			<PublishBanner status={publishStatus} onChange={setPublishStatus} />
 			{looked && !checkout && suggestion && (
-				<FSAlert
-					severity="info"
-					action={
-						<FSStack direction="row" spacing={1}>
-							<FSButton size="md" variant="secondary" onClick={chooseCheckout}>
+				<Alert>
+					<AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+						<span>
+							Found {suggestion.product} at {suggestion.root}. Use it for building and previewing here?
+						</span>
+						<span className="flex flex-row gap-2">
+							<Button size="sm" variant="secondary" onClick={chooseCheckout}>
 								Choose another
-							</FSButton>
-							<FSButton size="md" onClick={() => void useSuggestion(suggestion.root)}>Use this one</FSButton>
-						</FSStack>
-					}
-				>
-					Found {suggestion.product} at {suggestion.root}. Use it for building and previewing here?
-				</FSAlert>
+							</Button>
+							<Button size="sm" onClick={() => void useSuggestion(suggestion.root)}>
+								Use this one
+							</Button>
+						</span>
+					</AlertDescription>
+				</Alert>
 			)}
 			{looked && !checkout && !suggestion && (
-				<FSAlert severity="info" action={<FSButton size="md" onClick={chooseCheckout}>Find it</FSButton>}>
-					Flock Designer could not find a Flock product repository on this machine. Point it at your Coke folder once.
-				</FSAlert>
+				<Alert>
+					<AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+						<span>Flock Designer could not find a Flock product repository on this machine. Point it at your Coke folder once.</span>
+						<Button size="sm" onClick={chooseCheckout}>
+							Find it
+						</Button>
+					</AlertDescription>
+				</Alert>
 			)}
 			<NewWork
 				open={creating}
@@ -164,63 +164,55 @@ export const Projects = () => {
 			/>
 
 			{projects.length === 0 && (
-				<FSTypography variant="body2" color="text.secondary">
+				<p className="text-muted-foreground text-sm">
 					No projects yet. A project appears here once its folder exists in the design repository.
-				</FSTypography>
+				</p>
 			)}
 
 			{projects.map((project) => (
-				<FSBox key={project.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2 }}>
-					<FSStack spacing={1}>
-						<FSStack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
-							<FSTypography variant="subtitle1">{project.title}</FSTypography>
-							<FSTypography variant="body2" color="text.secondary">
-								{project.id}
-							</FSTypography>
+				<div key={project.id} className="rounded-lg border p-4">
+					<div className="flex flex-col gap-2">
+						<div className="flex flex-row flex-wrap items-center gap-2">
+							<h3 className="text-base font-medium">{project.title}</h3>
+							<span className="text-muted-foreground text-sm">{project.id}</span>
 							{startedAt(project) && (
-								<FSTypography variant="body2" color="text.secondary">
-									· Started {new Date(startedAt(project) as string).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-								</FSTypography>
+								<span className="text-muted-foreground text-sm">
+									· Started{' '}
+									{new Date(startedAt(project) as string).toLocaleDateString(undefined, {
+										month: 'short',
+										day: 'numeric',
+										year: 'numeric',
+									})}
+								</span>
 							)}
-							<FSBox flexGrow={1} />
-							{project.localOnly && <FSChip variant="status" size="small" label="Only on this machine" />}
+							<div className="grow" />
+							{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}
 							{project.openComments > 0 && (
-								<FSChip
-									variant="status"
-									size="small"
-									color="warning"
-									label={`${project.openComments} comment${project.openComments === 1 ? '' : 's'}`}
-								/>
+								<Badge variant="warning">
+									{project.openComments} comment{project.openComments === 1 ? '' : 's'}
+								</Badge>
 							)}
-						</FSStack>
+						</div>
 
 						<People people={project.people} empty="No contributors recorded yet" />
 
-						<FSTypography variant="body2" color="text.secondary">
-							{project.records.join(' · ') || 'no records yet'}
-						</FSTypography>
+						<p className="text-muted-foreground text-sm">{project.records.join(' · ') || 'no records yet'}</p>
 
 						{project.iterations.length === 0 ? (
-							<FSTypography variant="body2" color="text.secondary">
-								No branches yet.
-							</FSTypography>
+							<p className="text-muted-foreground text-sm">No branches yet.</p>
 						) : (
-							<FSStack direction="row" spacing={1} flexWrap="wrap">
+							<div className="flex flex-row flex-wrap gap-2">
 								{project.iterations.map((iteration) => (
-									<FSButton size="md"
-										key={iteration.branch}
-										variant="secondary"
-										onClick={() => setSelected({ project, iteration })}
-									>
+									<Button key={iteration.branch} variant="secondary" size="sm" onClick={() => setSelected({ project, iteration })}>
 										{iteration.name}
 										{iteration.localOnly && !project.localOnly ? ' · local' : ''}
-									</FSButton>
+									</Button>
 								))}
-							</FSStack>
+							</div>
 						)}
-					</FSStack>
-				</FSBox>
+					</div>
+				</div>
 			))}
-		</FSStack>
+		</div>
 	);
 };

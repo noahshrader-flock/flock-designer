@@ -11,7 +11,9 @@
 		"noEmit": true,
 		"skipLibCheck": true,
 		"isolatedModules": true,
-		"verbatimModuleSyntax": true
+		"verbatimModuleSyntax": true,
+		"baseUrl": ".",
+		"paths": { "@/*": ["./src/renderer/*"] }
 	},
 	"include": ["src/renderer/**/*", "src/shared/**/*"]
 }

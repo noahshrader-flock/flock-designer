@@ -1,28 +1,23 @@
-import { FSAvatar, FSStack, FSTypography } from '@flocksafety/flock-react-component-lib';
 import type { Person } from '../shared/contract';
 import { avatarUrl } from '../shared/people';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 /** Profile picture and username for each person; initials stand in when no GitHub account is known. */
 export const People = ({ people, empty }: { people: Person[]; empty?: string }) =>
 	people.length === 0 ? (
 		empty ? (
-			<FSTypography variant="body2" color="text.secondary">
-				{empty}
-			</FSTypography>
+			<p className="text-muted-foreground text-sm">{empty}</p>
 		) : null
 	) : (
-		<FSStack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+		<div className="flex flex-row flex-wrap gap-4">
 			{people.map((p) => (
-				<FSStack key={p.login ?? p.name} direction="row" spacing={1} alignItems="center">
-					<FSAvatar
-						src={avatarUrl(p.login) ?? undefined}
-						alt={p.name}
-						sx={{ width: 24, height: 24, fontSize: 12 }}
-					>
-						{p.name.charAt(0).toUpperCase()}
-					</FSAvatar>
-					<FSTypography variant="body2">{p.login ?? p.name}</FSTypography>
-				</FSStack>
+				<div key={p.login ?? p.name} className="flex flex-row items-center gap-2">
+					<Avatar className="size-6">
+						<AvatarImage src={avatarUrl(p.login) ?? undefined} alt={p.name} />
+						<AvatarFallback>{p.name.charAt(0).toUpperCase()}</AvatarFallback>
+					</Avatar>
+					<span className="text-sm">{p.login ?? p.name}</span>
+				</div>
 			))}
-		</FSStack>
+		</div>
 	);

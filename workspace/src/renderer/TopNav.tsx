@@ -1,24 +1,14 @@
-import {
-	FSAvatar,
-	FSBox,
-	FSDivider,
-	FSMenu,
-	FSMenuItem,
-	FSStack,
-	FSTab,
-	FSTabs,
-	FSTypography,
-} from '@flocksafety/flock-react-component-lib';
-import { useState } from 'react';
 import type { GitHubUser } from '../shared/contract';
 import { PublishLine, usePublishStatus } from './PublishStatus';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 
 /** Height of the bar, which the rest of the window is pushed down by. */
 export const NAV_HEIGHT = 56;
 
 /** The window has no native title bar on macOS, so the bar is what you drag. Controls opt out. */
-const drag = { WebkitAppRegion: 'drag' } as const;
-const noDrag = { WebkitAppRegion: 'no-drag' } as const;
+const drag = { WebkitAppRegion: 'drag' } as React.CSSProperties;
+const noDrag = { WebkitAppRegion: 'no-drag' } as React.CSSProperties;
 
 const onMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgent);
 
@@ -34,108 +24,54 @@ const onMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgen
  * is hidden, and shown again when it closes.
  */
 export const TopNav = ({ user, onSignOut }: { user: GitHubUser | null; onSignOut: () => void }) => {
-	const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 	const [publishStatus] = usePublishStatus();
 
-	const setOpen = (el: HTMLElement | null) => {
-		setAnchor(el);
-		void window.workspace.pageHold('menu', el !== null);
-	};
-
 	return (
-		<FSBox
-			component="header"
-			sx={{
-				...drag,
-				position: 'fixed',
-				top: 0,
-				left: 0,
-				right: 0,
-				height: NAV_HEIGHT,
-				zIndex: 1200,
-				display: 'flex',
-				alignItems: 'center',
+		<header
+			style={{ ...drag, height: NAV_HEIGHT }}
+			className={`bg-card fixed inset-x-0 top-0 z-[1200] flex items-center border-b ${
 				// 108px leaves a clear gap after the macOS window buttons (they end near 76px);
 				// elsewhere the overlay controls sit on the right.
-				pl: onMac ? '108px' : 3,
-				pr: onMac ? 3 : '150px',
-				bgcolor: 'background.paper',
-				borderBottom: 1,
-				borderColor: 'divider',
-			}}
+				onMac ? 'pr-6 pl-[108px]' : 'pr-[150px] pl-6'
+			}`}
 		>
-			<FSTypography variant="subtitle1" component="span" sx={{ fontWeight: 700, whiteSpace: 'nowrap', mr: 3 }}>
-				Flock Designer
-			</FSTypography>
+			<span className="mr-6 text-base font-bold whitespace-nowrap">Flock Designer</span>
 
 			{user && (
-				<FSTabs value="projects" sx={{ ...noDrag, minHeight: NAV_HEIGHT, alignSelf: 'stretch' }}>
-					<FSTab value="projects" label="Projects" sx={{ minHeight: NAV_HEIGHT }} />
-				</FSTabs>
+				<nav style={noDrag} className="self-stretch">
+					<span className="border-foreground flex h-full items-center border-b-2 px-1 text-sm font-medium">Projects</span>
+				</nav>
 			)}
 
-			<FSBox sx={{ flexGrow: 1 }} />
+			<div className="grow" />
 
 			{/* Where publishing is, on every screen: a problem must be visible wherever the person is working. */}
-			<FSBox sx={{ ...noDrag, mr: 2 }}>
+			<div style={noDrag} className="mr-4">
 				<PublishLine status={publishStatus} />
-			</FSBox>
+			</div>
 
 			{user && (
-				<>
-					<FSBox
-						component="button"
-						aria-haspopup="menu"
-						aria-expanded={anchor !== null}
-						onClick={(e: React.MouseEvent<HTMLElement>) => setOpen(e.currentTarget)}
-						sx={{
-							...noDrag,
-							display: 'flex',
-							alignItems: 'center',
-							gap: 1.5,
-							border: 0,
-							bgcolor: 'transparent',
-							borderRadius: 1,
-							px: 1,
-							py: 0.5,
-							cursor: 'pointer',
-							font: 'inherit',
-							color: 'text.primary',
-							'&:hover': { bgcolor: 'action.hover' },
-						}}
+				<DropdownMenu onOpenChange={(open) => void window.workspace.pageHold('menu', open)}>
+					<DropdownMenuTrigger
+						style={noDrag}
+						className="hover:bg-accent flex cursor-pointer items-center gap-3 rounded-md border-0 bg-transparent px-2 py-1 font-[inherit] outline-none"
 					>
-						<FSAvatar src={user.avatarUrl ?? undefined} alt={user.name ?? user.login} sx={{ width: 32, height: 32 }}>
-							{(user.name ?? user.login).charAt(0).toUpperCase()}
-						</FSAvatar>
-						<FSTypography variant="body2" component="span">
-							{user.name ?? user.login}
-						</FSTypography>
-					</FSBox>
-					<FSMenu
-						anchorEl={anchor}
-						open={anchor !== null}
-						onClose={() => setOpen(null)}
-						anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-						transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-					>
-						<FSStack sx={{ px: 2, py: 1, minWidth: 200 }}>
-							<FSTypography variant="subtitle2">{user.name ?? user.login}</FSTypography>
-							<FSTypography variant="caption" color="text.secondary">
-								@{user.login}
-							</FSTypography>
-						</FSStack>
-						<FSDivider />
-						<FSMenuItem
-							onClick={() => {
-								setOpen(null);
-								onSignOut();
-							}}
-						>
-							Sign out
-						</FSMenuItem>
-					</FSMenu>
-				</>
+						<Avatar>
+							<AvatarImage src={user.avatarUrl ?? undefined} alt={user.name ?? user.login} />
+							<AvatarFallback>{(user.name ?? user.login).charAt(0).toUpperCase()}</AvatarFallback>
+						</Avatar>
+						<span className="text-sm">{user.name ?? user.login}</span>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end" className="min-w-[200px]">
+						<div className="px-2 py-1.5">
+							<p className="text-sm font-medium">{user.name ?? user.login}</p>
+							<p className="text-muted-foreground text-xs">@{user.login}</p>
+						</div>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem onSelect={onSignOut}>Sign out</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
 			)}
-		</FSBox>
+		</header>
 	);
 };

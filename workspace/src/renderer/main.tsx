@@ -1,7 +1,8 @@
-import { FSApp } from '@flocksafety/flock-react-component-lib';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import './index.css';
+import { TooltipProvider } from './ui/tooltip';
 
 const container = document.getElementById('root');
 if (!container) {
@@ -10,8 +11,8 @@ if (!container) {
 
 createRoot(container).render(
 	<StrictMode>
-		<FSApp>
+		<TooltipProvider>
 			<App />
-		</FSApp>
+		</TooltipProvider>
 	</StrictMode>,
 );
