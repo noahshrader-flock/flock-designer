@@ -48,8 +48,18 @@ a view's place legible: as a rule, the global navigation (with the right item ac
 and header, and the tabs or sub-navigation the view sits in. Someone looking at the page should see where
 in the product they are.
 
-- **Navigation is a product statement.** Show what one realistic person would see, and say which person
-  in the comment at the top of the file. A navigation showing every item is fiction.
+- **Draw the shell as a person really sees it, all of it:** the top bar with its logo, its links to the
+  other apps, and its help and account controls; the sub-navigation; the page frame. Take its look from
+  the navigation component's own source in the design system, not from a description of it.
+- **Guidance written for coded prototypes may trim the shell** for reasons that only apply to running
+  code (a component that writes cookies, needs a signed-in user, or talks to a server). This page runs
+  none of that: draw what the product shows, and say where you went beyond that guidance and why.
+- **Some of the shell is not in the code.** Links that come from the signed-in account, a user's name,
+  the items their permissions show: use the product guidance's reference for what a real person sees.
+  When there is none, use the product's mock data, and say in your summary that it may not match what
+  people see today. Never invent the list.
+- **Navigation is a product statement.** Show what one realistic person would see, say which person in
+  the comment at the top of the file, and prefer the person the request is about.
 - **Neighbouring content at low detail:** the real structure of what sits beside the view, enough to read
   the placement, not enough to compete with it.
 - **Add no chrome the product does not have.** No "new" badges, banners or decorations unless asked.
