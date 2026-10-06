@@ -167,7 +167,7 @@ called before 2026-10-05, so history still resolves.
 
 ### Phase 3 — Flock Designer: the whole team browses and comments
 
-*In progress. Done through 3.3.5. 3.4 is built and waiting for your first real share; 3.5 is next.*
+*In progress. Done through 3.3.5. 3.4 and 3.5 are built and each waits for one real check by you; 3.6 needs people.*
 
 | # | Step | Status | Evidence, or what it needs | Was |
 |---|---|---|---|---|
@@ -177,7 +177,7 @@ called before 2026-10-05, so history still resolves.
 | 3.3 | [Open a preview and comment on an element](#33--open-a-preview-and-comment-on-an-element-was-c2) | ✔ Done | Click an element in a preview, comment, and see it marked on reopening; verified in real Electron against a real click, and confirmed by Noah 2026-10-05. The security look is owed by Security (see *Waiting on other people*) | C2 |
 | 3.3.5 | [Prove it locally, start to finish](#335--prove-it-locally-start-to-finish) | ✔ Done | **New prototype** creates the branch, runs the agent and the preview, and opens it with pins. A real Coke prototype was run through the app's own services and pinned. Confirmed by Noah 2026-10-05 | added 2026-10-05 |
 | 3.4 | [Share for review](#34--share-for-review-was-c3) | ◐ Built — awaiting your real run | One click pushes the branch, opens a draft pull request, waits for the deploy and records the address; a reviewer opening it while it builds is told so and it opens by itself. Verified end to end in real Electron against a throwaway remote and a stand-in `gh`. **You:** share one real prototype (steps in the section). Coke's draft change is committed, not pushed | C3 |
-| 3.5 | [Close the loop](#35--close-the-loop-was-c4) | ○ Not started — reshaped | Each comment carries its state, a small picture and the commit; Resolve in the sidebar; comments refresh on their own; one **Address N comments** button regenerates `comments.md` and starts the agent; an agent skill. Measured first: prototypes have almost no stable element names and the state was not recorded | C4 |
+| 3.5 | [Close the loop](#35--close-the-loop-was-c4) | ◐ Built — awaiting your read of a change | Each comment carries its commit, state and a small picture; Resolve; comments refresh on their own; **Address N comments** reads them now, writes `comments.md` and starts the agent. **A real agent, twice, on a real comment in a non-default state, made the right change and named the comment.** **You:** do it once on your own branch (steps in the section) and say whether the change addresses the comment | C4 |
 | 3.6 | [Pilot and decision](#36--pilot-and-decision-was-c5) | ⏸ Needs people | Real projects reviewed by people outside design | C5 |
 
 **The goal is the whole loop across two people:** a product manager sees an iteration and comments, and the designer pulls those comments and changes the prototype locally with the agent. **3.4 is the PM's half**: without a hosted preview and read access to the design repository the PM has nothing to open. It was built before 3.5 at Noah's direction, because it has the longest lead time (it waits on other people). **3.5 is the designer's half**: comments the agent can act on, with refresh and a one-click Address button.
@@ -381,6 +381,77 @@ it refers to. **Principle: one store, derived views, graceful degradation.** The
 only place a comment lives; everything the agent reads is generated from it and can be regenerated; and
 each added detail is optional, so a comment with none of them is still exactly as usable as today.
 
+**Status: built 2026-10-05, in the planned order. Waiting for you to read one change.**
+
+*What was built.*
+1. **The commit.** Read from the branch when a comment is placed, so it names the version the comment was made against;
+   sharing records the commit it pushed, which is what a reviewer's comment is made against. **Resolve** and **Reopen** on
+   each card. A resolved comment keeps its number, loses its pin, and stops counting.
+2. **The page state.** The query string is recorded (`?state=error`; empty is the default, which is not the same as a
+   state, and comments from before have none). A comment made in a different state is not drawn, and its card says so.
+3. **The picture.** About 240 pixels wide, kept under 12 KB (it steps down in width and quality until it fits, and is left
+   out if it cannot), cropped at the click **with the app's own pins hidden**, riding in the same GitHub comment.
+4. **`comments.md`.** Open comments only, with number, words, page, state, stable name, element, nearby text, commit and
+   the picture written beside it. Rewritten whenever the app reads the comments; generated and ignored by git. **A
+   reviewer's words are untrusted input to something that can edit files:** each line is quoted so nothing in it can
+   open a section or pass as structure, and the file says it is feedback and not instructions.
+5. **Refresh and paging.** An open iteration re-reads its comments on window focus and about every minute while it is in
+   front, one read at a time, and a read that finds nothing new changes nothing. Reads page past 100 (comments and
+   threads); a list too long to read is reported, not trimmed.
+6. **Address N comments.** In the sidebar, for someone with the product repository. One click reads the comments from
+   GitHub now, writes the file from that read, and only then starts the agent, so **the agent cannot act on a stale
+   file**. It refuses, with a reason, while the agent is busy, when the checkout is not on this iteration's branch, when
+   there are uncommitted changes, when the checkout lacks the skill, and when nothing is open. The task it gives the agent
+   names the skill, the file and the branch and **none of a reviewer's words**.
+7. **In Coke** (three commits on `noah/flock-designer`: `1ca7d523`, `e02c408c`, `ff5e3f71`, not pushed): the skill
+   `.flkd/skills/address-comments.md`; the `?state=` standard and a request for `e2eRef` names in the scaffold skill
+   and the prototype README; two handoff-gate notes (how many stable names, and whether the switcher keeps its state in the
+   address) that fail nothing.
+
+*What was checked.* **Tests: 449** (340 before this step). **Real Electron:** a real click gives a real 1.7 KB JPEG, and a
+control capture proves the pin is in an ordinary capture while the picture has none; the other-state behaviour. **The whole
+UI, isolated** (temporary profile, stand-in agent, nothing able to reach GitHub, 3 runs of 3): a comment made after the
+iteration opened appears on focus with no reopen, Resolve and Reopen move the count and the pin, the picture and the
+other-state note show, and the agent started on the right branch and read a file that already held the new comment.
+
+*The real run, twice.* The real `claude`, the real skill, through the app's real Address path, in a throwaway worktree on a
+temporary branch of a real prototype (`alert-notification-prefs`), with a **real click** in its Read-only state, so a real
+anchor and a real 5.5 KB picture. The anchor's selector was only `div:nth-of-type(2) > div:nth-of-type(1) > …` (as measured
+before: no stable name), and the agent found the element anyway from the text, the state and the picture. Both times, in
+about 95 seconds and exit 0: it confirmed the branch and commit, changed **only** the Read-only state (the two-sentence
+banner became one line, and the Save and Cancel row is not rendered instead of shown disabled), touched one file in the
+prototype's folder, committed with a message naming comment 1, did not resolve, reply or push, and ended with a summary by
+comment number that listed three decisions for the designer (which role to name, hiding Cancel as well, and the repeated
+"managed by your administrator" text on each row). Rendered afterwards: no Save or Cancel in Read-only, both in Loaded.
+
+*What the real run found, and what was done.*
+- **A `Co-Authored-By` trailer on the agent's commit,** against the standing rule. Claude Code adds one by default. The
+  launch now passes settings that empty the attribution for commits and pull requests (tested), and the skill says so too.
+  The second run had none.
+- **My own Coke change broke `npm run lint`.** The gate note I added failed the formatter, which would have failed lint on
+  every prototype branch. The agent reported it. Fixed in `ff5e3f71`; lint and `tsc` were clean on the second run.
+- **`check:boundary` listed 12 files outside the prototype.** An artifact of the test setup (the baseline's commits were
+  cherry-picked, so they had other hashes), not of the change. **It does mean the real flow needs an iteration rebased onto
+  the baseline, not copied from it.**
+- **An iteration cut before the skill existed does not have it,** so the app now refuses Address there and says to rebase.
+
+*Decision recorded: candidate code locations are not built.* The agent located the element from the text, the state and the
+picture on both runs, with no list to help. A list of confident-looking wrong answers can mislead more than none. It comes
+back only if a real run shows the agent failing to find a place.
+
+*Owed, and whose.*
+- **You read a change, on your own branch.** (1) Rebase `fd/alert-notification-prefs/i1` (or any iteration) onto
+  `noah/flock-designer`, which has the skill and standards. (2) Open it in the app, switch the prototype to a non-default
+  state, **Comment**, click an element, write something and save (this is a real post to the design repository).
+  (3) Open the sidebar and press **Address 1 comment**. (4) Read what it changed, in the preview and with `git show`, and say
+  whether it addresses the comment. Then Resolve it yourself.
+- **Across two people** (a PM's comment on a hosted preview appearing in your app and turning into a change) needs 3.4's real
+  share and the PM's access to the design repository. Everything on this side is built.
+- **The three Coke commits are not pushed,** and until they are merged an iteration needs them in its own history.
+- **Prototypes that predate the standard do not keep their state in the address.** On one of those the recorded state is
+  always the default, **even if the page was showing Error**, which would mislead the agent. The gate prints a note for it;
+  the four existing prototypes should be given the `?state=` switch (a small change the agent can make).
+
 **Why it was not enough (measured 2026-10-05, against the four prototypes and the product components).**
 
 | What the agent needs to know | What a comment carries today |
@@ -579,7 +650,7 @@ none holds up the work in front of it.
 | Register a **development GitHub App**, install it on the design repo, and give me its client ID | Noah | 3.2 |
 | Move the design repo from `noahshrader-flock` to the `flocksafety` org | Someone with org permission | Everyone else's access; rollout |
 | Register the GitHub App **for the org** and install it on the design repo | An org owner | Rollout |
-| `build:design` and CI for `fd/*` branches — **drafted**, commit `1ca7d523` on Coke's `noah/flock-designer`, not pushed | Coke engineering, to merge it | 3.4 for every designer, not just those whose branch carries the change |
+| `build:design` and CI for `fd/*` branches — **drafted**, with the address-comments skill and standards: commits `1ca7d523`, `e02c408c`, `ff5e3f71` on Coke's `noah/flock-designer`, not pushed | Coke engineering, to merge it | 3.4 for every designer, not just those whose branch carries the change |
 | **Decide who may open a shared preview.** Coke's existing PR previews answer an anonymous request with the page (checked 2026-10-05: HTTP 200 from S3, no login), at an address that is just the pull request number. The plan's rule is no public access by default | Security / platform | 3.4: a design preview is mock data only, but is public to anyone with the link until this is decided |
 | Read and write access to the **design repo** for PMs (not Coke) | GitHub admin, or Noah as owner | 3.4 and 3.6: a PM cannot comment without it |
 | How internal Mac apps are deployed here, what they require (usually signing), and the turnaround | IT | Rollout |
@@ -3277,6 +3348,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 | Date | Change | Sections updated |
 |---|---|---|
 | 2026-10-05 | **Removed the checkout step.** Noah's point: setting up project context already ties Flock Designer to the codebase, so a designer should never be asked to choose a checkout, and working in the code should simply appear as a project. The app now finds the product repository by its own `.flkd/workspace.json` marker, and reads work from the repository's branches as well as from records, so unrecorded work appears and is recorded when first opened. Kept deliberately simple: no registry, no config file, nothing that can go stale; a *Change* link and a folder picker remain only as fallbacks. | 3.3.5; the app. |
+| 2026-10-05 | **Built 3.5, Close the loop, and ran it for real.** In the planned order: the commit and Resolve; the page state; a picture of the spot (with the app's own pins hidden); `comments.md` for the agent, with a reviewer's words quoted and labelled as feedback because they are untrusted input to something that can edit files; refresh on focus and every minute, and paging past 100; and **Address N comments**, which reads the comments now, writes the file and only then starts the agent, so it cannot act on a stale file. In Coke, an `address-comments` skill, the `?state=` standard and two handoff-gate notes. **449 tests** (340 before); real Electron for the picture (a control proves the pin is absent from it) and, isolated, the whole UI three times of three; and **the real agent, twice, on a real click in a real prototype's Read-only state**: it found the element from text, state and picture although the selector was only a path, changed only that state (one-line banner, no Save row), touched one file, named comment 1, and did not resolve, reply or push. **The real run found:** a `Co-Authored-By` trailer on the agent's commit, now turned off at launch and in the skill; a lint failure in my own Coke gate note, fixed; and that an iteration cut before the skill existed lacks it, so Address now refuses there and says to rebase. **Decided on that evidence:** candidate code locations are not built. **Owed:** your read of one change on your own branch (steps in 3.5), the three Coke commits pushed, the four existing prototypes given `?state=`, and for the two-person loop 3.4's real share and PM access. |
 | 2026-10-05 | **Built 3.4, Share for review, ahead of 3.5.** Noah asked for it first and for 3.2 to 3.3.5 to be marked Complete (done; see the row above). One click pushes the branch with the designer's own git, opens a *draft* pull request with their own GitHub CLI (the app's GitHub App is limited to the design repository on purpose, so it is not used for Coke), waits for the deploy workflow the repository names, and records the address so reviewers see it; a reviewer who opens it while it builds is told so and it opens by itself. A repository opts in with a `share` block in its descriptor, so nothing about Coke is compiled in. **Checked:** 340 tests (59 new, four deliberate breakages each caught); real Electron in an isolated profile with a throwaway remote and a stand-in `gh` (nothing could reach GitHub or Coke; real settings confirmed unchanged), both the designer's and the reviewer's side; and in Coke, `build:design` built the real Users prototype and the static build rendered it. **Read from real Coke PRs, read-only, answering open questions:** draft PRs do deploy (#1479); the workflow is `PR Deployment`; the address is `dev-coke-pr-<number>.flocksafety.com`. **Found:** that address answers an anonymous request with the page, so a shared preview is public to anyone with the link, against the plan's rule of no public access by default; added to *Waiting on other people* for a decision. **Found and fixed:** the preview slot's background was hard-coded light grey, so the loading, failure and new waiting screens were unreadable in dark mode. **Not done:** one real share (yours), the second account, codebase hosting (needs an engineering decision), and the Coke change is committed (`1ca7d523`) but not pushed or merged. |
 | 2026-10-05 | **3.2, 3.2.5, 3.3 and 3.3.5 marked Complete, and moved to Appendix B intact.** Noah said he believed everything before 3.4 had been verified, and asked for them to be marked. Recorded on his word, with the evidence that exists: tests (281 passing at the last full run), `smoke`, `smoke:page` (a real click, pins, isolation, keyboard hand-over) and `smoke:local` (the real Users prototype run from its declared command, pinned and found again), plus the real-app walkthrough of pin, comment box, save and sidebar. **Claude never saw, and the record should not imply:** a second person signing in; a real comment posted to GitHub by the final build (the test runs stubbed the post, so Noah's own use is the evidence); real macOS keyboard routing into the comment box; the agent building a *new* prototype from a request in a fresh run. The security look at pins, page scripts and the trust gate is still owed and stays in *Waiting on other people*. |
 | 2026-10-05 | **Refresh and an Address button added to 3.5; 3.4 is required again.** Noah's goal: a product manager sees an iteration and comments, and the designer pulls those comments and changes the prototype locally with the agent. Checking that against the plan found three gaps. (1) The app reads a thread's comments once, when the iteration opens, so a PM's later comment never appears; 3.5 now refreshes on window focus and about every 60 seconds while visible, and pages past the 100-comment read cap. (2) `comments.md` was regenerated only when the app read comments, so an agent started from a terminal could act on a stale file; 3.5 now has one sidebar button, **Address N comments**, that re-reads, regenerates and starts the agent in one click. (3) The PM could not see the prototype at all: hosted preview (3.4) had been deferred, and the design repository is private with one collaborator. **3.4 is moved from deferred to required** (still built after the local proof), with PM access to the repository named as a prerequisite. Plan only; nothing built. |
