@@ -83,6 +83,14 @@ export const Review = ({
 }) => {
 	const [comments, setComments] = useState<ReviewComment[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	/**
+	 * Something went wrong is only useful if it can be seen. Errors are shown in the sidebar, which
+	 * starts shut, so a failed pin drag or delete said nothing at all: the pin snapped back and
+	 * nothing explained why. Anything that goes wrong opens the sidebar to say so.
+	 */
+	useEffect(() => {
+		if (error !== null) setSidebarOpen(true);
+	}, [error]);
 	const [opened, setOpened] = useState(false);
 	const [route, setRoute] = useState<string | null>(null);
 	const [mode, setMode] = useState<Mode>('browse');
