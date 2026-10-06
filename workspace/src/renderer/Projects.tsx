@@ -1,4 +1,4 @@
-import { MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
+import { FolderIcon, MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { Checkout, CheckoutSuggestion, Person, Project, ProjectIteration } from '../shared/contract';
 import { NewWork, type Created } from './NewWork';
@@ -193,8 +193,9 @@ export const Projects = () => {
 					<Card key={project.id} className="gap-4 py-5">
 						<CardHeader className="px-5">
 							<CardTitle className="text-base">{project.title}</CardTitle>
-							<CardDescription>
-								{project.id}
+							<CardDescription className="flex items-center gap-1.5">
+								<FolderIcon className="size-4 shrink-0" />
+								<span className="font-mono">{project.id}</span>
 								{startedAt(project) &&
 									` · Started ${new Date(startedAt(project) as string).toLocaleDateString(undefined, {
 										month: 'short',
