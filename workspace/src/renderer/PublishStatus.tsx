@@ -50,19 +50,35 @@ export const PublishBanner = ({ status, onChange }: { status: Status; onChange: 
 	return null;
 };
 
-/** The small always-there line: where publishing is, in a few words. Nothing to say when there is nothing to publish from here. */
+/**
+ * The small always-there line: where publishing is, in a few words. Nothing to say when there is
+ * nothing to publish from here.
+ *
+ * When something is held back, it names it. "Some work is not published" followed a person across
+ * every screen without saying which work or what to do about it, so it read as nagging about
+ * something they could not act on -- while the banner that does explain appears only on the project
+ * list. One held thing is named outright; several are counted, and the reason for each is there to
+ * hover without leaving the screen.
+ */
+export const publishLineText = (status: Status): string | null => {
+	if (status.state === 'working') return 'Publishing…';
+	if (status.state === 'shared') return 'Everything is published';
+	if (status.state !== 'held') return null;
+	const held = status.problems;
+	if (held.length === 1) return `Not published: ${held[0]?.what}`;
+	return held.length > 1 ? `${held.length} things are not published` : null;
+};
+
 export const PublishLine = ({ status }: { status: Status }) => {
-	const text =
-		status.state === 'working'
-			? 'Publishing…'
-			: status.state === 'shared'
-				? 'Everything is published'
-				: status.state === 'held'
-					? 'Some work is not published'
-					: null;
+	const held = status.state === 'held' ? status.problems : [];
+	const text = publishLineText(status);
 	if (text === null) return null;
 	return (
-		<FSTypography variant="caption" color={status.state === 'held' ? 'warning.dark' : 'text.secondary'}>
+		<FSTypography
+			variant="caption"
+			color={status.state === 'held' ? 'warning.dark' : 'text.secondary'}
+			title={held.map((p) => `${p.what}: ${p.why}`).join('\n') || undefined}
+		>
 			{text}
 		</FSTypography>
 	);
