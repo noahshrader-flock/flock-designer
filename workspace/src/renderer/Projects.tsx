@@ -14,6 +14,9 @@ import { Button } from './ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
+/** A name as it reads on a button: the first letter capital, the rest as written. */
+const sentence = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
 /** The list's own padding and width, under the toolbar. The toolbar is full width, so it is not inside this. */
 const Page = ({ children }: { children: ReactNode }) => (
 	<div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6">{children}</div>
@@ -194,7 +197,7 @@ export const Projects = () => {
 				)}
 
 				{projects.map((project) => (
-					<Card key={project.id} className="gap-4 py-5 has-data-[slot=card-footer]:pb-0">
+					<Card key={project.id} className="gap-4 pt-5 pb-0">
 						<CardHeader className="px-5">
 							<CardTitle className="text-base">{project.title}</CardTitle>
 							<CardDescription className="flex items-center gap-1.5">
@@ -229,31 +232,27 @@ export const Projects = () => {
 								</CardAction>
 							)}
 						</CardHeader>
-						<CardContent className="flex flex-col gap-3 px-5">
+						<CardContent className="px-5">
 							<People people={project.people} empty="No contributors recorded yet" />
-
-							{project.iterations.length === 0 ? (
-								<p className="text-muted-foreground text-sm">No branches yet.</p>
-							) : (
-								<div className="flex flex-row flex-wrap gap-2">
-									{project.iterations.map((iteration) => (
-										<Button key={iteration.branch} variant="secondary" size="sm" onClick={() => setSelected({ project, iteration })}>
-											{iteration.name}
-											{iteration.localOnly && !project.localOnly ? ' · local' : ''}
-										</Button>
-									))}
-								</div>
-							)}
 						</CardContent>
-						{project.records.length > 0 && (
-							<CardFooter className="flex-wrap gap-1 rounded-b-xl border-t bg-muted/50 px-3 py-2 [.border-t]:pt-2">
-								{project.records.map((record) => (
-									<Button key={record} variant="ghost" size="sm" onClick={() => setViewing({ project, name: record, open: true })}>
-										{record.replace(/\.[^.]+$/, '')}
+						<CardFooter className="flex-wrap items-center justify-between gap-2 rounded-b-xl border-t bg-muted/50 px-3 py-2 [.border-t]:pt-2">
+							<div className="flex flex-row flex-wrap items-center gap-2">
+								{project.iterations.length === 0 && <span className="text-muted-foreground px-2 text-sm">No branches yet.</span>}
+								{project.iterations.map((iteration) => (
+									<Button key={iteration.branch} variant="outline" size="sm" onClick={() => setSelected({ project, iteration })}>
+										{sentence(iteration.name)}
+										{iteration.localOnly && !project.localOnly ? ' · local' : ''}
 									</Button>
 								))}
-							</CardFooter>
-						)}
+							</div>
+							<div className="ml-auto flex flex-row flex-wrap items-center">
+								{project.records.map((record) => (
+									<Button key={record} variant="ghost" size="sm" onClick={() => setViewing({ project, name: record, open: true })}>
+										{sentence(record.replace(/\.[^.]+$/, '').replace(/-/g, ' '))}
+									</Button>
+								))}
+							</div>
+						</CardFooter>
 					</Card>
 				))}
 			</Page>
