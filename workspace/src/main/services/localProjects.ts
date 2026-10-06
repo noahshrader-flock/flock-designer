@@ -56,6 +56,3 @@ export const readFolderProjects = (recordsRoot: string): Project[] => {
 		});
 };
 
-/** Folders that record at least one iteration: work in progress, as opposed to a notes folder. */
-export const readLocalProjects = (recordsRoot: string): Project[] =>
-	readFolderProjects(recordsRoot).filter((p) => p.iterations.length > 0);

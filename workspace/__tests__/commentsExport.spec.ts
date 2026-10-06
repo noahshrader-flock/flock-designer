@@ -2,7 +2,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { numberComments, projectTitle, renderComments, writeCommentsExport } from '../src/main/services/commentsExport';
+import { projectTitle, renderComments, writeCommentsExport } from '../src/main/services/commentsExport';
+import { numberComments } from '../src/shared/comments';
 import type { CommentAnchor, ReviewComment } from '../src/shared/contract';
 
 const picture = (text: string) => `data:image/jpeg;base64,${Buffer.from(text).toString('base64')}`;
@@ -48,6 +49,19 @@ describe('numbering', () => {
 	it('puts comments that point at nothing after the pinned ones', () => {
 		const n = numberComments([comment(1, { anchor: null }), comment(2), comment(3)]);
 		expect([n.get(2), n.get(3), n.get(1)]).toEqual([1, 2, 3]);
+	});
+
+	it('gives the agent the same number the reviewer read off the pin', () => {
+		// A reviewer says "fix comment 2" having read it off a pin; the agent reads "Comment 2" out of
+		// this file. The window numbers its pins with this same function, so the two cannot drift.
+		const comments = [comment(1, { anchor: null }), comment(2, { resolved: true }), comment(3), comment(4)];
+		const numbers = numberComments(comments);
+		const { markdown } = renderComments(input(comments));
+		for (const c of comments.filter((x) => !x.resolved)) {
+			expect(markdown).toContain(`## Comment ${numbers.get(c.id)}\n`);
+		}
+		// The resolved one is not listed, and its number is not reused for anything else.
+		expect(markdown).not.toContain('comment 2');
 	});
 });
 

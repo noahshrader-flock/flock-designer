@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
 import { PROJECT_ID, asDate, mergeProjects, newestProjectFirst, slugify, startedAt, unionLocal } from '../src/shared/projects';
-import { readFolderProjects, readLocalProjects } from '../src/main/services/localProjects';
+import { readFolderProjects } from '../src/main/services/localProjects';
 
 const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
 	name: 'i1', branch: 'fd/alpha/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], createdAt: null, ...over,
@@ -106,7 +106,7 @@ describe('the order of the project list', () => {
 	});
 });
 
-describe('readLocalProjects', () => {
+describe('reading projects from their folders', () => {
 	let root: string;
 	beforeEach(() => {
 		root = mkdtempSync(join(tmpdir(), 'fdw-local-'));
@@ -117,27 +117,29 @@ describe('readLocalProjects', () => {
 		mkdirSync(join(root, id), { recursive: true });
 		for (const [name, body] of Object.entries(files)) writeFileSync(join(root, id, name), body);
 	};
+	// The rule the app applies to what it shows: a folder with nothing built yet is a notes folder.
+	const inProgress = (dir: string) => readFolderProjects(dir).filter((p) => p.iterations.length > 0);
 
 	it('finds a project from its folder, with its title and iterations, with nothing registered', () => {
 		write('alpha', {
 			'brief.md': '# Alpha prototype\n\nWhy.',
 			'iterations.json': JSON.stringify([{ name: 'i1', branch: 'fd/alpha/i1', commit: 'abc', contributors: [{ name: 'Noah', login: 'noah' }] }]),
 		});
-		const [p] = readLocalProjects(root);
+		const [p] = inProgress(root);
 		expect(p).toMatchObject({ id: 'alpha', title: 'Alpha prototype', people: [{ name: 'Noah', login: 'noah' }] });
 		expect(p?.iterations[0]).toMatchObject({ name: 'i1', branch: 'fd/alpha/i1', commit: 'abc' });
 	});
 
 	it('reads when each iteration was started, and ignores a date that is not one', () => {
 		write('dated', { 'iterations.json': JSON.stringify([{ name: 'i1', branch: 'fd/dated/i1', createdAt: '2026-09-28T17:13:52-04:00' }, { name: 'i2', branch: 'fd/dated/i2', createdAt: 'not a date' }]) });
-		const [p] = readLocalProjects(root);
+		const [p] = inProgress(root);
 		expect(p?.iterations.find((i) => i.name === 'i1')?.createdAt).toBe('2026-09-28T17:13:52-04:00');
 		expect(p?.iterations.find((i) => i.name === 'i2')?.createdAt).toBeNull();
 	});
 
 	it('names a project by its id when it has no brief yet', () => {
 		write('beta', { 'iterations.json': JSON.stringify([{ name: 'i1', branch: 'fd/beta/i1' }]) });
-		expect(readLocalProjects(root)[0]?.title).toBe('beta');
+		expect(inProgress(root)[0]?.title).toBe('beta');
 	});
 
 	it('skips templates, notes folders with no iterations, and unreadable records, without failing', () => {
@@ -145,11 +147,11 @@ describe('readLocalProjects', () => {
 		write('notes', { 'brief.md': '# Just notes' });
 		write('broken', { 'iterations.json': '{not json' });
 		write('good', { 'iterations.json': JSON.stringify([{ name: 'i1', branch: 'fd/good/i1' }]) });
-		expect(readLocalProjects(root).map((p) => p.id)).toEqual(['good']);
+		expect(inProgress(root).map((p) => p.id)).toEqual(['good']);
 	});
 
 	it('returns nothing, not an error, when the design repository is not there', () => {
-		expect(readLocalProjects(join(root, 'nope'))).toEqual([]);
+		expect(inProgress(join(root, 'nope'))).toEqual([]);
 		expect(readFolderProjects(join(root, 'nope'))).toEqual([]);
 	});
 
@@ -158,7 +160,7 @@ describe('readLocalProjects', () => {
 		write('_template', { 'brief.md': '# t' });
 		expect(readFolderProjects(root).map((p) => p.id)).toEqual(['new-view']);
 		expect(readFolderProjects(root)[0]).toMatchObject({ title: 'A new view', records: ['brief.md'], iterations: [] });
-		expect(readLocalProjects(root)).toEqual([]); // not work in progress until something is recorded
+		expect(inProgress(root)).toEqual([]); // not work in progress until something is recorded
 	});
 });
 

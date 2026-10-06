@@ -18,7 +18,7 @@ import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
 import { Popover } from '@mui/material';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
-import { mergeComments, sameComments } from '../shared/comments';
+import { mergeComments, numberComments, sameComments } from '../shared/comments';
 import { People } from './People';
 import { ShareControl } from './ShareControl';
 import { useHostedPreview } from './hostedPreview';
@@ -179,9 +179,10 @@ export const Review = ({
 		};
 	}, [load]);
 
-	// Numbers follow the order comments were made, and only anchored ones get one.
+	// The number on a pin and the number in the file the agent reads are the same number, counted once.
 	const anchored = useMemo(() => (comments ?? []).filter((c) => c.anchor), [comments]);
-	const numberOf = useCallback((id: number) => anchored.findIndex((c) => c.id === id) + 1, [anchored]);
+	const numbers = useMemo(() => numberComments(comments ?? []), [comments]);
+	const numberOf = useCallback((id: number) => numbers.get(id) ?? 0, [numbers]);
 
 	// Only the newest open counts: an older one that finishes late must not undo, or complain about, a newer one.
 	const openRun = useRef(0);
@@ -239,14 +240,14 @@ export const Review = ({
 	const drawMarkers = useCallback(async () => {
 		// Only your own pins can be dragged; GitHub would refuse anyone else's edit anyway.
 		// Resolved comments have no pin, but keep their number, so "comment 3" never changes meaning.
-		const items = anchored.flatMap((c, i) =>
-			c.resolved ? [] : [{ id: c.id, number: i + 1, anchor: c.anchor as CommentAnchor, movable: c.author === me }],
+		const items = anchored.flatMap((c) =>
+			c.resolved ? [] : [{ id: c.id, number: numbers.get(c.id) ?? 0, anchor: c.anchor as CommentAnchor, movable: c.author === me }],
 		);
 		// The pin being placed shows at once, before it is saved (id -1, amber).
 		if (pending) items.push({ id: -1, number: anchored.length + 1, anchor: pending, movable: true });
 		const r = await window.workspace.pageShowMarkers(items);
 		if (r.ok) setPlaced(new Map(r.value.map((m: MarkerResult) => [m.id, m.state])));
-	}, [anchored, pending, me]);
+	}, [anchored, numbers, pending, me]);
 
 	// ...and again whenever the comments, the page, or the route change.
 	useEffect(() => {

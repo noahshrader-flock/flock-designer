@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { join } from 'node:path';
 import type { ReviewComment } from '../../shared/contract';
 import { assertUsableProjectId } from './iterations';
+import { numberComments } from '../../shared/comments';
 import { firstHeading } from '../../shared/projects';
 import { resolveInside } from './paths';
 
@@ -36,14 +37,6 @@ export interface Exported {
 }
 
 const PICTURES_DIR = 'comment-pictures';
-
-/** A comment's number: its place among the comments that point at the page, which is the number on its pin. Page-level ones follow. */
-export const numberComments = (comments: ReviewComment[]): Map<number, number> => {
-	const ordered = [...comments].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-	const pinned = ordered.filter((c) => c.anchor);
-	const loose = ordered.filter((c) => !c.anchor);
-	return new Map([...pinned, ...loose].map((c, i) => [c.id, i + 1]));
-};
 
 /** The element's own stable name, if it has one: what to search the code for. */
 const stableName = (selector: string): string | null => /\[data-e2e-ref="([^"]+)"\]/.exec(selector)?.[1] ?? null;

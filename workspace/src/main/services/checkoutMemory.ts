@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 /**
@@ -29,9 +29,5 @@ export class CheckoutMemory {
 		} catch {
 			// Not remembering is an inconvenience, never a reason to fail the open.
 		}
-	}
-
-	exists(): boolean {
-		return existsSync(this.file);
 	}
 }
