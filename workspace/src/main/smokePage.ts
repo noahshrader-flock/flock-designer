@@ -169,7 +169,15 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 		wc.sendInputEvent({ type: 'mouseMove', x, y, modifiers: ['leftbuttondown'] });
 		await wait(50);
 	}
+	// Mid-drag, what the pin would re-attach to is outlined, as it is when a pin is first placed.
+	const dragOutline = await js<{ shown: boolean; label: string } | null>(
+		`(function(){var l=document.querySelectorAll('[data-fd-layer="hover"]');if(l.length<2)return null;return {shown:l[0].style.display==='block',label:l[1].textContent}})()`,
+	);
+	if (!dragOutline?.shown) fail(`nothing was outlined while dragging a pin: ${JSON.stringify(dragOutline)}`);
+	console.log(`smoke-page: dragging outlines ${dragOutline?.label ?? ''}`);
 	wc.sendInputEvent({ type: 'mouseUp', x: 300, y: 300, button: 'left', clickCount: 1 });
+	await wait(200);
+	if (await js<boolean>(`document.querySelector('[data-fd-layer="hover"]') !== null`)) fail('the drag outline was left on the page');
 	await wait(300);
 	const moved = pins[1];
 	if (pins.length !== 2 || moved?.kind !== 'move' || moved.id !== 7 || moved.anchor.route !== '/users') fail(`a drag was not reported as a move: ${JSON.stringify(pins)}`);

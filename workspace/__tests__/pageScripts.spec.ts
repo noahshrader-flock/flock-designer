@@ -254,6 +254,35 @@ describe('pins that can be clicked and dragged', () => {
 		expect((said[0]?.anchor as { selector: string }).selector).toBe('[data-e2e-ref="users-invite"]');
 	});
 
+	it('outlines what the pin would attach to while it is being dragged, and only then', () => {
+		const { w, fire } = setup(true);
+		const seen = () => Array.from(w.document.querySelectorAll('[data-fd-layer="hover"]')) as HTMLElement[];
+		expect(seen()).toHaveLength(0); // nothing before the drag
+
+		fire('pointerdown', 10, 10);
+		fire('pointermove', 200, 120);
+		const [outline, chip] = seen();
+		expect(outline?.style.display).toBe('block');
+		// The same element the drop would re-attach to, named the same way as when a pin is placed.
+		expect(chip?.textContent).toContain('<button>');
+		expect(chip?.textContent).toContain('Invite users');
+
+		fire('pointerup', 200, 120);
+		expect(seen()).toHaveLength(0); // and gone again afterwards
+	});
+
+	it('shows no outline for a wobble, or for a pin that cannot be moved', () => {
+		const wobble = setup(true);
+		wobble.fire('pointerdown', 10, 10);
+		wobble.fire('pointermove', 12, 11);
+		expect(wobble.w.document.querySelectorAll('[data-fd-layer="hover"]')).toHaveLength(0);
+
+		const theirs = setup(false);
+		theirs.fire('pointerdown', 10, 10);
+		theirs.fire('pointermove', 200, 120);
+		expect(theirs.w.document.querySelectorAll('[data-fd-layer="hover"]')).toHaveLength(0);
+	});
+
 	it('treats a small wobble as a click, not a drag', () => {
 		const { said, fire } = setup(true);
 		fire('pointerdown', 10, 10);

@@ -133,6 +133,41 @@ const HELPERS = String.raw`
         : { x: 0, y: 0 }
     };
   };
+  /**
+   * The blue outline and its label, which show what a pin will attach to.
+   *
+   * Shared by placing a pin and dragging one: a pin that is dropped re-attaches to whatever is under
+   * it, so the person moving it needs to see the same thing as the person placing it, looking the
+   * same way. Returns what the caller drives it with; remove() takes it off the page again.
+   */
+  var hoverOutline = function () {
+    var outline = doc.createElement('div');
+    outline.setAttribute('data-fd-layer', 'hover');
+    outline.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483646;display:none;border:2px solid #2563eb;background:rgba(37,99,235,.08);border-radius:2px;box-sizing:border-box';
+    var chip = doc.createElement('div');
+    chip.setAttribute('data-fd-layer', 'hover');
+    chip.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483647;display:none;background:#2563eb;color:#fff;font:600 11px/1.4 sans-serif;padding:2px 6px;border-radius:3px;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    doc.documentElement.appendChild(outline);
+    doc.documentElement.appendChild(chip);
+    return {
+      /** Draws it around el, with its tag and text; hint is appended to the label when given. */
+      show: function (el, hint) {
+        if (!el || el.nodeType !== 1) { outline.style.display = 'none'; chip.style.display = 'none'; return; }
+        var r = el.getBoundingClientRect();
+        outline.style.display = 'block';
+        outline.style.left = r.left + 'px';
+        outline.style.top = r.top + 'px';
+        outline.style.width = r.width + 'px';
+        outline.style.height = r.height + 'px';
+        chip.textContent = '<' + el.tagName.toLowerCase() + '> ' + collapse(el.innerText || el.textContent).slice(0, 40) + (hint || '');
+        chip.style.display = 'block';
+        chip.style.left = Math.max(0, r.left) + 'px';
+        chip.style.top = (r.top > 22 ? r.top - 22 : r.bottom + 2) + 'px';
+      },
+      hide: function () { outline.style.display = 'none'; chip.style.display = 'none'; },
+      remove: function () { outline.remove(); chip.remove(); }
+    };
+  };
 `;
 
 /**
@@ -156,30 +191,14 @@ ${HELPERS}
     // What the pin will attach to is shown before the click: the element under the pointer is outlined and
     // named. Up and Down arrows climb to its container and back, for a comment about a section and not a
     // line. What is recorded is exactly what is outlined, never a guess about what was meant.
-    var outline = doc.createElement('div');
-    outline.setAttribute('data-fd-layer', 'hover');
-    outline.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483646;display:none;border:2px solid #2563eb;background:rgba(37,99,235,.08);border-radius:2px;box-sizing:border-box';
-    var chip = doc.createElement('div');
-    chip.setAttribute('data-fd-layer', 'hover');
-    chip.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483647;display:none;background:#2563eb;color:#fff;font:600 11px/1.4 sans-serif;padding:2px 6px;border-radius:3px;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-    doc.documentElement.appendChild(outline);
-    doc.documentElement.appendChild(chip);
+    var hover = hoverOutline();
     var stack = [];
     var chosen = function () { return stack.length ? stack[stack.length - 1] : null; };
     var paint = function () {
       var el = chosen();
-      if (!el) { outline.style.display = 'none'; chip.style.display = 'none'; return; }
-      var r = el.getBoundingClientRect();
-      outline.style.display = 'block';
-      outline.style.left = r.left + 'px';
-      outline.style.top = r.top + 'px';
-      outline.style.width = r.width + 'px';
-      outline.style.height = r.height + 'px';
+      if (!el) return hover.hide();
       var up = el.parentElement && el.parentElement !== doc.body && el.parentElement !== doc.documentElement;
-      chip.textContent = '<' + el.tagName.toLowerCase() + '> ' + collapse(el.innerText || el.textContent).slice(0, 40) + (up ? '    ↑ container' : '');
-      chip.style.display = 'block';
-      chip.style.left = Math.max(0, r.left) + 'px';
-      chip.style.top = (r.top > 22 ? r.top - 22 : r.bottom + 2) + 'px';
+      hover.show(el, up ? '    ↑ container' : '');
     };
     var move = function (e) {
       var el = underlying(e.clientX, e.clientY);
@@ -189,8 +208,7 @@ ${HELPERS}
     var swallow = function (e) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); };
     var done = function (value) {
       style.remove();
-      outline.remove();
-      chip.remove();
+      hover.remove();
       doc.removeEventListener('click', click, true);
       doc.removeEventListener('mousedown', swallow, true);
       doc.removeEventListener('mouseup', swallow, true);
@@ -353,7 +371,7 @@ ${HELPERS}
     pin.addEventListener('pointerdown', function (e) {
       if (e.button !== 0) return;
       e.preventDefault(); e.stopPropagation();
-      var sx = e.clientX, sy = e.clientY, dragging = false;
+      var sx = e.clientX, sy = e.clientY, dragging = false, hover = null;
       if (pin.setPointerCapture && e.pointerId !== undefined) { try { pin.setPointerCapture(e.pointerId); } catch (err) {} }
       var move = function (ev) {
         ev.stopPropagation();
@@ -363,11 +381,17 @@ ${HELPERS}
         p.pos = { x: ev.clientX, y: ev.clientY };
         pin.style.cursor = 'grabbing';
         place();
+        // Dropping re-attaches the pin to whatever is under it, so show what that is while it is being
+        // dragged -- the same outline, from the same code, as when a pin is first placed. It exists
+        // only for the length of the drag: there is nothing to point at the rest of the time.
+        if (!hover) hover = hoverOutline();
+        hover.show(underlying(ev.clientX, ev.clientY), '');
       };
       var up = function (ev) {
         ev.stopPropagation();
         pin.removeEventListener('pointermove', move);
         pin.removeEventListener('pointerup', up);
+        if (hover) { hover.remove(); hover = null; }
         if (pin.releasePointerCapture && e.pointerId !== undefined) { try { pin.releasePointerCapture(e.pointerId); } catch (err) {} }
         pin.style.cursor = p.movable ? 'grab' : 'pointer';
         if (!dragging) { say({ t: 'click', id: p.id }); return; }
