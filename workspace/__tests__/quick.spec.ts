@@ -107,7 +107,7 @@ describe('what the agent is told', () => {
 	const sources = {
 		code: '/q/source/coke',
 		productGuidance: '/c/coke/.flkd',
-		designSystemGuidance: '/c/fui/.flkd',
+		designSystemGuidance: '/c/fui',
 		installedDesignSystem: null,
 		sharedStandards: '/d/standards',
 	};
@@ -117,7 +117,7 @@ describe('what the agent is told', () => {
 		expect(task.startsWith('# Skill')).toBe(true);
 		expect(task).toContain('`/q/users/q1.html`');
 		expect(task).toContain('Read only: never change anything');
-		for (const dir of ['/q/source/coke', '/c/coke/.flkd', '/c/fui/.flkd', '/d/standards']) expect(task).toContain(`\`${dir}\``);
+		for (const dir of ['/q/source/coke', '/c/coke/.flkd', '/c/fui', '/d/standards']) expect(task).toContain(`\`${dir}\``);
 		expect(task.trimEnd().endsWith('A users list')).toBe(true);
 	});
 
@@ -127,7 +127,7 @@ describe('what the agent is told', () => {
 	});
 
 	it('lets the agent read only the folders that exist', () => {
-		expect(quickReadable(sources)).toEqual(['/q/source/coke', '/c/coke/.flkd', '/c/fui/.flkd', '/d/standards']);
+		expect(quickReadable(sources)).toEqual(['/q/source/coke', '/c/coke/.flkd', '/c/fui', '/d/standards']);
 		expect(quickReadable(null)).toEqual([]);
 	});
 

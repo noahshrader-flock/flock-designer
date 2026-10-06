@@ -104,7 +104,7 @@ export interface QuickSources {
 	code: string;
 	/** The product's own Flock Designer guidance: how its app is put together, its patterns, its rules. */
 	productGuidance: string | null;
-	/** The design system's guidance: its tokens, its components, how they are used. */
+	/** The design system's checkout: its guidance (in its context folder) and its components' source. */
 	designSystemGuidance: string | null;
 	/** The design system as installed in the product: the version it really renders with. */
 	installedDesignSystem: string | null;
@@ -144,7 +144,7 @@ export const quickBuildTask = ({
 					'',
 					line('The product\'s code', sources.code, ''),
 					line("The product's guidance", sources.productGuidance, 'Say so in your summary: the page cannot follow the product\'s structure without it.'),
-					line("The design system's guidance", sources.designSystemGuidance, 'Use the installed design system and the product\'s own code for tokens and components.'),
+					line("The design system (guidance and source)", sources.designSystemGuidance, 'Use the installed design system and the product\'s own code for tokens and components.'),
 					line('The design system as installed', sources.installedDesignSystem, 'Its version cannot be confirmed; say so.'),
 					line('Shared standards', sources.sharedStandards, ''),
 				]

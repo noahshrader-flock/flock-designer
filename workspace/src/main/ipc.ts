@@ -590,8 +590,9 @@ export const registerIpc = ({
 			// From the accepted checkout itself, which always has it: the branch the code is read from may
 			// predate it (develop has no Flock Designer files), and the page must still follow the product.
 			productGuidance: dir(join(canonical, descriptor.contextDir)),
-			// The design system's own guidance lives in its checkout beside the product, named as its package is.
-			designSystemGuidance: dir(join(dirname(canonical), basename(pkg), descriptor.contextDir)),
+			// The design system's checkout beside the product, named as its package is: its guidance and, as
+			// important for a page that redraws its components, its source.
+			designSystemGuidance: dir(join(dirname(canonical), basename(pkg))),
 			installedDesignSystem: dir(join(canonical, 'node_modules', ...pkg.split('/'))),
 			sharedStandards: designRoot === null ? null : dir(join(dirname(designRoot), 'standards')),
 		};
