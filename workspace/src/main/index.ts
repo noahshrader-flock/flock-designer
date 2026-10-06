@@ -1,4 +1,4 @@
-import { BrowserWindow, app, safeStorage, shell } from 'electron';
+import { BrowserWindow, app, safeStorage, screen, shell } from 'electron';
 import { join } from 'node:path';
 import { CHANNELS } from '../shared/contract';
 import { registerIpc } from './ipc';
@@ -6,6 +6,7 @@ import { AgentRunner } from './services/agent';
 import { DesignRepo } from './services/designRepo';
 import { CheckoutMemory } from './services/checkoutMemory';
 import { PageView } from './services/pageView';
+import { type WindowState, WindowMemory, restoreState } from './services/windowMemory';
 import { QuickServer } from './services/quickServer';
 import type { Fetcher } from './services/github';
 import { GitHubSession } from './services/githubSession';
@@ -46,10 +47,21 @@ const DESIGN_REPO = {
 	repo: process.env.FLOCK_DESIGNER_REPO_NAME ?? 'flock-designer',
 };
 
+const DEFAULT_SIZE = { width: 1260, height: 780 };
+
 const createWindow = (): BrowserWindow => {
+	// A check run for testing must neither read nor change how the person's own window is kept.
+	const testing = smokeMode || process.argv.includes('--smoke-page') || process.argv.includes('--smoke-local');
+	const memory = new WindowMemory(WindowMemory.defaultPath(app.getPath('userData')));
+	const state: WindowState = testing
+		? DEFAULT_SIZE
+		: restoreState(memory.read(), screen.getAllDisplays().map((d) => d.workArea), DEFAULT_SIZE);
 	const window = new BrowserWindow({
-		width: 1260,
-		height: 780,
+		width: state.width,
+		height: state.height,
+		...(state.x !== undefined && state.y !== undefined ? { x: state.x, y: state.y } : {}),
+		minWidth: 900,
+		minHeight: 560,
 		show: !smokeMode && !process.argv.includes('--smoke-page') && !process.argv.includes('--smoke-local'),
 		title: 'Flock Designer',
 		// No native title bar: the app's own top bar is the toolbar. On macOS the window
@@ -68,6 +80,27 @@ const createWindow = (): BrowserWindow => {
 			webSecurity: true,
 		},
 	});
+
+	if (!testing) {
+		if (state.maximized) window.maximize();
+		// The size it has when not maximised or full screen, so un-maximising returns to it. Saved shortly after
+		// the last change, not on every pixel of a drag, and once more on the way out.
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const save = () => {
+			if (window.isDestroyed() || window.isMinimized()) return;
+			const { x, y, width, height } = window.getNormalBounds();
+			memory.write({ x, y, width, height, maximized: window.isMaximized() });
+		};
+		const later = () => {
+			clearTimeout(timer);
+			timer = setTimeout(save, 400);
+		};
+		window.on('resize', later);
+		window.on('move', later);
+		window.on('maximize', later);
+		window.on('unmaximize', later);
+		window.on('close', save);
+	}
 
 	// A link to Figma or GitHub opens in the real browser. Nothing navigates the
 	// app window itself: a window that can be navigated is a window that can be
