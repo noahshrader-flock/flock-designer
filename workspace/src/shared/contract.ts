@@ -354,6 +354,12 @@ export interface CommentAnchor {
   commit: string;
   /** Where in the element the click landed, 0 to 1 each way, so a marker sits where the comment was made. */
   offset?: { x: number; y: number };
+  /**
+   * The page's query string when the comment was made (`?state=error`), which is what tells one state of a
+   * prototype from another. Empty for the default state. Absent on comments made before this was recorded,
+   * which are shown wherever their element is.
+   */
+  state?: string;
 }
 
 /** A comment to place on the page, numbered as it is listed beside it. */
@@ -371,7 +377,7 @@ export type PinEvent =
   | { kind: 'move'; id: number; anchor: CommentAnchor };
 
 /** How a comment was placed on the page. `moved` follows the text; `missing` degrades to a page-level comment. */
-export type MarkerState = 'found' | 'moved' | 'missing' | 'elsewhere';
+export type MarkerState = 'found' | 'moved' | 'missing' | 'elsewhere' | 'otherState';
 export interface MarkerResult {
   id: number;
   state: MarkerState;

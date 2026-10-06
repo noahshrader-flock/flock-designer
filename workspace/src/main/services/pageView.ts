@@ -19,7 +19,7 @@ import { CANCEL_PICK_SCRIPT, MESSAGE_PREFIX, PICK_SCRIPT, ROUTE_SCRIPT, focusScr
 
 const SESSION = 'fd-preview'; // no "persist:" prefix: in memory, gone on quit
 
-const MARKER_STATES = new Set(['found', 'moved', 'missing', 'elsewhere']);
+const MARKER_STATES = new Set(['found', 'moved', 'missing', 'elsewhere', 'otherState']);
 
 export class PageView {
 	private view: WebContentsView | null = null;

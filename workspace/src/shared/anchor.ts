@@ -27,6 +27,8 @@ export const sanitizeAnchor = (v: unknown): CommentAnchor | null => {
 	if (!route.startsWith('/') || selector === '') return null;
 	const viewport = (r.viewport ?? {}) as Record<string, unknown>;
 	const off = r.offset as Record<string, unknown> | undefined;
+	// A query string, or empty. Anything else (a script, markup, a very long value) is not a state, so it is dropped.
+	const state = typeof r.state === 'string' && /^(\?[^\s<>`"']{0,199})?$/.test(r.state) ? r.state : undefined;
 	return {
 		route,
 		selector,
@@ -34,6 +36,7 @@ export const sanitizeAnchor = (v: unknown): CommentAnchor | null => {
 		viewport: { width: int(viewport.width), height: int(viewport.height) },
 		commit: /^[0-9a-f]{0,40}$/i.test(clip(r.commit, 40)) ? clip(r.commit, 40) : '',
 		...(off ? { offset: { x: unit(off.x), y: unit(off.y) } } : {}),
+		...(state !== undefined ? { state } : {}),
 	};
 };
 
@@ -42,7 +45,7 @@ export const composeBody = (text: string, anchor: CommentAnchor | null): string 
 	if (!anchor) return text;
 	// `<` and `>` are escaped so the JSON can never close its own comment.
 	const json = JSON.stringify(anchor).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
-	const where = `_On \`${anchor.route}\` · \`${anchor.selector.replace(/`/g, "'")}\`_`;
+	const where = `_On \`${anchor.route}${anchor.state ?? ''}\` · \`${anchor.selector.replace(/`/g, "'")}\`_`;
 	return `${text}\n\n${where}\n<!-- fd-anchor: ${json} -->`;
 };
 

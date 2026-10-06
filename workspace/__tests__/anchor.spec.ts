@@ -85,3 +85,27 @@ describe('resolved marker', () => {
   });
 });
 
+describe('page state in an anchor', () => {
+	const base = { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
+
+	it('keeps a query string, and keeps an empty one, which means the default state', () => {
+		expect(sanitizeAnchor({ ...base, state: '?state=error' })?.state).toBe('?state=error');
+		expect(sanitizeAnchor({ ...base, state: '' })?.state).toBe('');
+	});
+
+	it('leaves it absent on a comment made before it was recorded', () => {
+		expect(sanitizeAnchor(base)).not.toHaveProperty('state');
+	});
+
+	it.each(['state=error', '?a b', '?<script>', '?x"y', `?${'a'.repeat(250)}`, 5])('drops a value that is not a query string: %j', (bad) => {
+		expect(sanitizeAnchor({ ...base, state: bad })).not.toHaveProperty('state');
+	});
+
+	it('survives being written into a comment and read back, and shows on the visible line', () => {
+		const body = composeBody('hi', { ...base, state: '?state=error' });
+		expect(parseAnchor(body)?.state).toBe('?state=error');
+		expect(body).toContain('`/a?state=error`');
+		expect(stripAnchor(body)).toBe('hi');
+	});
+});
+

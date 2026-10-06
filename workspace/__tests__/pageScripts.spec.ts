@@ -39,6 +39,18 @@ describe('picking an element', () => {
 		expect(a.viewport.width).toBeGreaterThan(0);
 	});
 
+	it('records which state of the page it was, from the query string', async () => {
+		const w = page(CARD, 'http://localhost:3000/users?state=error#/list');
+		const picked = w.eval(PICK_SCRIPT) as Promise<CommentAnchor>;
+		click(w, w.document.querySelector('main')!);
+		expect((await picked).state).toBe('?state=error');
+
+		const plain = page(CARD);
+		const p2 = plain.eval(PICK_SCRIPT) as Promise<CommentAnchor>;
+		click(plain, plain.document.querySelector('main')!);
+		expect((await p2).state).toBe('');
+	});
+
 	it('builds a selector that finds exactly that element when there is no ref', async () => {
 		const w = page(CARD);
 		const target = w.document.querySelectorAll('li')[1]!;
@@ -129,6 +141,29 @@ describe('placing comments on reopening', () => {
 		const w = page(CARD);
 		const out = w.eval(resolveScript([req(1, { route: '/orgs', selector: 'main' })], 'nonce')) as Array<{ state: string }>;
 		expect(out[0]?.state).toBe('elsewhere');
+	});
+
+	it('does not draw a comment made in another state of the page, and says so', () => {
+		const w = page(CARD, 'http://localhost:3000/users?state=loaded#/list');
+		const out = w.eval(resolveScript([req(1, { selector: 'main', state: '?state=error' })], 'nonce')) as Array<{ state: string }>;
+		expect(out[0]?.state).toBe('otherState');
+		expect(w.document.querySelector('[data-fd-layer]')).toBeNull();
+	});
+
+	it('draws it again once the page is in the state it was made in', () => {
+		const w = page(CARD, 'http://localhost:3000/users?state=error#/list');
+		const out = w.eval(resolveScript([req(1, { selector: 'main', state: '?state=error' })], 'nonce')) as Array<{ state: string }>;
+		expect(out[0]?.state).toBe('found');
+	});
+
+	it('treats an empty state as the default, which is not the same as a state', () => {
+		const w = page(CARD, 'http://localhost:3000/users?state=error#/list');
+		expect((w.eval(resolveScript([req(1, { selector: 'main', state: '' })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('otherState');
+	});
+
+	it('still draws comments from before the state was recorded, wherever they are', () => {
+		const w = page(CARD, 'http://localhost:3000/users?state=error#/list');
+		expect((w.eval(resolveScript([req(1, { selector: 'main' })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('found');
 	});
 
 	it('replaces earlier markers, and clears them when given nothing', () => {

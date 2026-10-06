@@ -59,6 +59,9 @@ const HELPERS = String.raw`
       nearbyText: collapse(el.innerText || el.textContent).slice(0, 80),
       viewport: { width: window.innerWidth, height: window.innerHeight },
       commit: '',
+      // Which state of the page: a prototype's switch lives in the query string, so a comment
+      // made on Error is not mistaken for one made on Loaded.
+      state: location.search.slice(0, 200),
       offset: rect.width > 0 && rect.height > 0
         ? { x: (x - rect.left) / rect.width, y: (y - rect.top) / rect.height }
         : { x: 0, y: 0 }
@@ -126,7 +129,9 @@ export const MESSAGE_PREFIX = '__fd:';
  * - `moved`: it does not, but one element still starts with the text that was
  *   beside the comment, so the pin follows the text;
  * - `missing`: neither -- the comment stays, as a page-level comment;
- * - `elsewhere`: it belongs to a different page of the preview.
+ * - `elsewhere`: it belongs to a different page of the preview;
+ * - `otherState`: it belongs to this page but another state of it (`?state=error`), where the
+ *   element may not exist or may be a different thing, so it is not drawn.
  *
  * A pin can be clicked (the app highlights its comment) and, if it is the
  * viewer's own, dragged (the app saves where it was dropped). Calling this again
@@ -144,6 +149,8 @@ ${HELPERS}
   items.forEach(function (item) {
     var a = item.anchor;
     if (a.route !== current) { results.push({ id: item.id, state: 'elsewhere' }); return; }
+    // Comments from before the state was recorded have none, and are shown wherever their element is.
+    if (a.state !== undefined && a.state !== location.search.slice(0, 200)) { results.push({ id: item.id, state: 'otherState' }); return; }
     var el = null, state = 'found';
     try { var hits = doc.querySelectorAll(a.selector); if (hits.length === 1) el = hits[0]; } catch (e) {}
     if (!el && a.nearbyText.length >= 3) {

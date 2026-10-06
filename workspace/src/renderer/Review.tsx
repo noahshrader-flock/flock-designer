@@ -53,6 +53,7 @@ const NOTE: Record<MarkerState, string | null> = {
 	moved: 'The element changed, so this follows its text.',
 	missing: 'The element is no longer on the page, so this is shown as a page comment.',
 	elsewhere: null,
+	otherState: 'Made in a different state of this page. Switch to that state to see where it was.',
 };
 
 export const Review = ({
@@ -653,6 +654,11 @@ export const Review = ({
 													</FSButton>
 												</FSStack>
 												<FSTypography variant="body2">{comment.body}</FSTypography>
+												{comment.anchor?.state && (
+													<FSTypography variant="caption" color="text.secondary">
+														State: {comment.anchor.state}
+													</FSTypography>
+												)}
 												{comment.anchor && state === 'elsewhere' && (
 													<FSTypography variant="caption" color="text.secondary">
 														On {comment.anchor.route}
