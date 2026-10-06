@@ -167,7 +167,7 @@ called before 2026-10-05, so history still resolves.
 
 ### Phase 3 — Flock Designer: the whole team browses and comments
 
-*In progress. Done through 3.3.5; 3.4 is next.*
+*In progress. Done through 3.3.5. 3.4 is built and waiting for your first real share; 3.5 is next.*
 
 | # | Step | Status | Evidence, or what it needs | Was |
 |---|---|---|---|---|
@@ -176,11 +176,11 @@ called before 2026-10-05, so history still resolves.
 | 3.2.5 | [Show who is on each project](#325--show-who-is-on-each-project) | ✔ Done | Every project lists everyone who has committed to it, on any iteration. Confirmed by Noah 2026-10-05 | added 2026-10-05 |
 | 3.3 | [Open a preview and comment on an element](#33--open-a-preview-and-comment-on-an-element-was-c2) | ✔ Done | Click an element in a preview, comment, and see it marked on reopening; verified in real Electron against a real click, and confirmed by Noah 2026-10-05. The security look is owed by Security (see *Waiting on other people*) | C2 |
 | 3.3.5 | [Prove it locally, start to finish](#335--prove-it-locally-start-to-finish) | ✔ Done | **New prototype** creates the branch, runs the agent and the preview, and opens it with pins. A real Coke prototype was run through the app's own services and pinned. Confirmed by Noah 2026-10-05 | added 2026-10-05 |
-| 3.4 | [Share for review](#34--share-for-review-was-c3) | ○ Not started — required | A hosted preview link, which feeds the same app, so a product manager can open an iteration and comment on it. Needs Coke engineering (CI) and a way for reviewers to read the design repository | C3 |
+| 3.4 | [Share for review](#34--share-for-review-was-c3) | ◐ Built — awaiting your real run | One click pushes the branch, opens a draft pull request, waits for the deploy and records the address; a reviewer opening it while it builds is told so and it opens by itself. Verified end to end in real Electron against a throwaway remote and a stand-in `gh`. **You:** share one real prototype (steps in the section). Coke's draft change is committed, not pushed | C3 |
 | 3.5 | [Close the loop](#35--close-the-loop-was-c4) | ○ Not started — reshaped | Each comment carries its state, a small picture and the commit; Resolve in the sidebar; comments refresh on their own; one **Address N comments** button regenerates `comments.md` and starts the agent; an agent skill. Measured first: prototypes have almost no stable element names and the state was not recorded | C4 |
 | 3.6 | [Pilot and decision](#36--pilot-and-decision-was-c5) | ⏸ Needs people | Real projects reviewed by people outside design | C5 |
 
-**The proof of concept is 3.3.5, then 3.5, run on one machine.** A prototype is generated locally, appears in the app, gets pinned comments, and the agent acts on them. **The goal is the whole loop across two people:** a product manager sees an iteration and comments, and the designer pulls those comments and changes the prototype locally with the agent. 3.5 makes the designer half work. **3.4 is required for the PM half**, because without a hosted preview and read access to the design repository the PM has nothing to open. It still waits behind the local proof, which shows the loop is worth hosting, but it is no longer optional.
+**The goal is the whole loop across two people:** a product manager sees an iteration and comments, and the designer pulls those comments and changes the prototype locally with the agent. **3.4 is the PM's half**: without a hosted preview and read access to the design repository the PM has nothing to open. It was built before 3.5 at Noah's direction, because it has the longest lead time (it waits on other people). **3.5 is the designer's half**: comments the agent can act on, with refresh and a one-click Address button.
 
 **If we stop after 3.2:** sign-in and a browsable list of every project. **After 3.3:** click-to-comment
 on a prototype, against any preview. **After 3.4:** the full loop — author shares, reviewer opens and
@@ -208,7 +208,7 @@ done it, and Claude never closes it. The work stops only at these points:
 | 1 | Before 3.2 | **Cleared 2026-10-05** — Noah registered the GitHub App and sent its client ID | — |
 | 2 | End of 3.2 | **Cleared 2026-10-05** — Noah confirmed 3.2 | — |
 | 3 | End of 3.3 | **Cleared 2026-10-05** — Noah confirmed 3.3. The security look is in *Waiting on other people* | — |
-| 4 | 3.4, end to end | Coke engineering merging the mock-data build | Finish and test the app side against a stub; draft the Coke change |
+| 4 | 3.4, end to end | **Your first real share**, and Coke engineering merging the `build:design` change. Until it is merged, a prototype branch carries the change itself (see 3.4) | App side is built and tested against a stub; the Coke change is drafted. Start 3.5 |
 | 5 | 3.6 | Real projects reviewed by people outside design | Nothing — this is the decision |
 
 Everything else — the builds of 3.2, 3.3 and 3.5, and 3.4's app side — runs without waiting.
@@ -285,31 +285,92 @@ FUI's `.flkd/authoring/`, and the snapshot problem the resolution half was fight
 
 ### 3.4 — Share for review (was C3)
 
-**Required. Built after the local proof (3.3.5, then 3.5) works.** Claude for the app; Coke engineering for
-CI. This is the half that lets a product manager see an iteration at all: without it a reviewer *elsewhere*
-has nothing to open, so the PM-to-designer loop cannot run. (Moved back from "deferred" on 2026-10-05.)
+**Claude for the app; Coke engineering for CI. Built 2026-10-05, waiting for your first real share.** This is the
+half that lets a product manager see an iteration at all: without it a reviewer *elsewhere* has nothing to open, so
+the PM-to-designer loop cannot run. (Moved back from "deferred" the same day, and built before 3.5 at Noah's direction.)
 
-- One click **pushes the branch, opens a draft PR** with a body saying it is a preview thread and not
-  for merge (one PR per branch — settled), **waits for the deployment, and records its URL** on the
-  iteration.
-- **Adds the preview URL to the iteration record.** The record itself is already published
-  automatically by [3.2](#32--prove-sign-in-and-the-comment-store-was-c1) when the iteration is
-  created; this step only adds `previewUrl` to it once the deployment is up. **The designer adds
-  nothing by hand.**
-- A reviewer's app shows that URL as the iteration's preview, with build status while it is coming.
+**What it does.** In the review screen, someone with the product repository sees **Share for review**. A dialog says what
+is about to happen (a push, and a *draft* pull request that exists only to make a link and is not meant to be merged), then:
 
-**Done when:** against a throwaway repository with a stub deploy workflow, the click produces a draft
-PR and a recorded URL that a second account can open, **and the iteration appears in that account's
-app with no manual step in between.**
+1. **Pushes** the branch to `origin` with the designer's own git. Plain push only: if the remote has work this machine
+   lacks it refuses and says so, and never forces. Only committed work goes; uncommitted changes on that branch are
+   refused with a message to commit first.
+2. **Opens a draft pull request** with the designer's own GitHub CLI, or reuses the open one for that branch (one PR per
+   branch, as settled). The body says it is a preview thread and not for merge, and names the project folder. It is never
+   opened ready for review.
+3. **Waits for the deploy workflow** the repository names, looking only at that workflow's checks and only at checks that
+   started after this push (a previous push's passing checks are not evidence). A failure names the check and its log; a
+   workflow that never starts, or a build that outlasts 25 minutes, says so.
+4. **Records the address** on the iteration (`previewUrl`, filled from the repository's pattern and the PR number) and
+   publishes the record, so it reaches reviewers with no manual step. If the designer is signed out the address is still
+   saved locally, and the dialog says it was not shared.
 
-**Also needed for the PM half: read access to the design repository.** The repository is private and its only
-collaborator is Noah, so a PM who opens a preview still cannot read or write comments. Either invite the PM
-as a collaborator or finish the org move (see *Waiting on other people*). Neither is code.
+It starts and returns at once; the main process holds the share, so closing the dialog or leaving the screen does not lose
+it, and the button shows it is still going. **A reviewer** who opens an iteration whose address is not up yet sees "This
+preview is still being built", and it opens by itself when the address answers (with "Open it anyway" for a check that
+cannot be trusted, such as a VPN). **A designer** with the product repository keeps building locally, which is their
+latest work, and falls back to the shared preview only if the local build cannot run.
 
-**Needs from Coke engineering:** a `build:design` script, and CI that builds `fd/*` branches with it.
-Today the preview workflow runs `build:dev` — Auth0 login, real dev APIs, no mock data, no
-`/design/:projectId` route — so a real link would show a login screen on real data. **Claude drafts
-that change; merging it is engineering's.**
+**How a repository joins** (`share` in `.flkd/workspace.json`; the app hard-codes nothing about Coke's CI):
+`url` (https, with `<pr>`), `workflow` (the CI workflow whose success means the preview is up) and `kinds` (which work
+gets one). Coke declares prototypes only, because codebase branches are real engineering PRs that must keep the dev
+build; hosting those needs a decision from engineering about how to tell the two apart (a branch prefix is race-free,
+a label is not, because the build starts before a label is applied).
+
+**Why the GitHub CLI.** The app's GitHub App is installed on the design repository only, deliberately; the pull request
+is in the product repository. Widening the app's token to every repository its user reaches would undo why it is narrow.
+The designer's own `gh` is already them, and the app never sees its token. Cost: designers need `gh` installed and
+signed in once, and the dialog says exactly that when it is not.
+
+**What was checked, and how.**
+- **Tests (340 passing, 59 new).** The flow with stubbed tools, including each outcome (failed check, never started,
+  timeout, stale checks, nothing new pushed, kind refused, unsafe branch, stopped); the real `git push` against a bare
+  remote (new, unchanged, incremental, refused rather than forced); the real way of running `gh` against a stand-in
+  that logs its calls (draft flag present, no ready or merge ever called, existing PR reused, "no checks yet", missing
+  or signed-out CLI, the branch still pushed). Four deliberate breakages (trusting stale checks, counting other
+  workflows, allowing a bad branch name, always opening a new PR) each fail a test.
+- **Real Electron, isolated** (temporary profile, a throwaway remote, a stand-in `gh`, sign-in and publish stubbed, so
+  nothing could reach GitHub or Coke, and the real settings were confirmed unchanged): the Share dialog over a real
+  preview, the preview stepping aside while it is open and returning after, the three steps, the address shown, the
+  branch present on the remote, one draft PR created, the address in the record and published, the button changing to
+  *Update shared preview*. And the reviewer side: no Share button, the waiting screen, then the preview opening on its
+  own about ten seconds after the address answered.
+- **Coke, for real:** `npm run build:design` built the real Users prototype into `build/` in about two seconds, and that
+  build, served statically, rendered the full prototype (theme, icons, mock data, no console errors). It refuses any
+  branch that is not `fd/<project-id>/i<n>`.
+- **Read from real Coke PRs (read-only), answering questions the plan had open since 2026-09-29:** a **draft** PR (#1479)
+  did deploy, so drafts trigger it; the workflow is named `PR Deployment` and its checks come through the GitHub CLI as
+  expected; the address is `https://dev-coke-pr-<number>.flocksafety.com`, confirmed from a real PR's deploy comment.
+
+**A finding that needs a decision.** That address answered an anonymous request with the page (HTTP 200, served from S3,
+no login), and PR numbers are sequential. A design preview is mock data only, but the plan's rule is *no public access
+by default*, and this is public to anyone who has or guesses the link. It is in *Waiting on other people*. The app is
+indifferent to it: if the preview is later put behind sign-in, the reviewer's window shows whatever the page shows.
+
+**What changed in Coke (committed on `noah/flock-designer` as `1ca7d523`, not pushed):** `npm run build:design`;
+`start-prototype.mjs --build` (same bootstrap as the local preview, so a comment placed on the shared page is placed on the
+page the designer sees); the PR Deployment workflow runs `build:design` for `fd/*` and `build:dev` for everything else,
+unchanged; and the `share` block. **Until engineering merges it**, a pull request carries its own copy of the workflow, so a
+branch only gets the design build if it contains this commit. **The four existing `fd/*` branches do not yet**; rebase
+one onto `noah/flock-designer` (the earlier rebase left `backup/pre-descriptor-*` branches in place), or start a new
+prototype from `noah/flock-designer`.
+
+**Done when:** against a throwaway repository with a stub deploy workflow, the click produces a draft PR and a recorded
+URL, and the iteration appears in a second account's app with no manual step in between. **Met** for everything except the
+second account, which needs someone else signed in (3.6). **Human, which Claude cannot close:** one real share.
+
+**You:** (1) `gh auth login` if you have not. (2) Rebase `fd/users-inactivity-signal/i1` onto `noah/flock-designer` (or
+make a new prototype from it) and open it in the app. (3) Click **Share for review**, then **Push and share**. Expect a
+draft PR in `flocksafety/flock-coke` and, within about ten minutes, a preview at `dev-coke-pr-<number>.flocksafety.com`.
+That opens Coke's other CI on the PR as well (tests, lint, security scans), which is normal for a draft there. (4) Say
+whether the preview matches the local one. Close the PR afterwards if you do not want it kept: closing destroys the preview.
+
+**Not in this step:** hosting codebase work (needs the engineering decision above); who may open a preview (Security);
+the PM's read and write access to the design repository (see below).
+
+**Also needed for the PM half: read and write access to the design repository.** It is private and its only collaborator
+is Noah, so a PM who opens a preview still cannot read or write comments. Either invite the PM as a collaborator or finish
+the org move (see *Waiting on other people*). Neither is code.
 
 ### 3.5 — Close the loop (was C4)
 
@@ -518,7 +579,8 @@ none holds up the work in front of it.
 | Register a **development GitHub App**, install it on the design repo, and give me its client ID | Noah | 3.2 |
 | Move the design repo from `noahshrader-flock` to the `flocksafety` org | Someone with org permission | Everyone else's access; rollout |
 | Register the GitHub App **for the org** and install it on the design repo | An org owner | Rollout |
-| `build:design` and CI for `fd/*` branches — I draft it | Coke engineering | 3.4, end to end |
+| `build:design` and CI for `fd/*` branches — **drafted**, commit `1ca7d523` on Coke's `noah/flock-designer`, not pushed | Coke engineering, to merge it | 3.4 for every designer, not just those whose branch carries the change |
+| **Decide who may open a shared preview.** Coke's existing PR previews answer an anonymous request with the page (checked 2026-10-05: HTTP 200 from S3, no login), at an address that is just the pull request number. The plan's rule is no public access by default | Security / platform | 3.4: a design preview is mock data only, but is public to anyone with the link until this is decided |
 | Read and write access to the **design repo** for PMs (not Coke) | GitHub admin, or Noah as owner | 3.4 and 3.6: a PM cannot comment without it |
 | How internal Mac apps are deployed here, what they require (usually signing), and the turnaround | IT | Rollout |
 | A security look at an app that reads SSO-protected pages and holds a token | Security | Closing 3.3 |
@@ -3215,6 +3277,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 | Date | Change | Sections updated |
 |---|---|---|
 | 2026-10-05 | **Removed the checkout step.** Noah's point: setting up project context already ties Flock Designer to the codebase, so a designer should never be asked to choose a checkout, and working in the code should simply appear as a project. The app now finds the product repository by its own `.flkd/workspace.json` marker, and reads work from the repository's branches as well as from records, so unrecorded work appears and is recorded when first opened. Kept deliberately simple: no registry, no config file, nothing that can go stale; a *Change* link and a folder picker remain only as fallbacks. | 3.3.5; the app. |
+| 2026-10-05 | **Built 3.4, Share for review, ahead of 3.5.** Noah asked for it first and for 3.2 to 3.3.5 to be marked Complete (done; see the row above). One click pushes the branch with the designer's own git, opens a *draft* pull request with their own GitHub CLI (the app's GitHub App is limited to the design repository on purpose, so it is not used for Coke), waits for the deploy workflow the repository names, and records the address so reviewers see it; a reviewer who opens it while it builds is told so and it opens by itself. A repository opts in with a `share` block in its descriptor, so nothing about Coke is compiled in. **Checked:** 340 tests (59 new, four deliberate breakages each caught); real Electron in an isolated profile with a throwaway remote and a stand-in `gh` (nothing could reach GitHub or Coke; real settings confirmed unchanged), both the designer's and the reviewer's side; and in Coke, `build:design` built the real Users prototype and the static build rendered it. **Read from real Coke PRs, read-only, answering open questions:** draft PRs do deploy (#1479); the workflow is `PR Deployment`; the address is `dev-coke-pr-<number>.flocksafety.com`. **Found:** that address answers an anonymous request with the page, so a shared preview is public to anyone with the link, against the plan's rule of no public access by default; added to *Waiting on other people* for a decision. **Found and fixed:** the preview slot's background was hard-coded light grey, so the loading, failure and new waiting screens were unreadable in dark mode. **Not done:** one real share (yours), the second account, codebase hosting (needs an engineering decision), and the Coke change is committed (`1ca7d523`) but not pushed or merged. |
 | 2026-10-05 | **3.2, 3.2.5, 3.3 and 3.3.5 marked Complete, and moved to Appendix B intact.** Noah said he believed everything before 3.4 had been verified, and asked for them to be marked. Recorded on his word, with the evidence that exists: tests (281 passing at the last full run), `smoke`, `smoke:page` (a real click, pins, isolation, keyboard hand-over) and `smoke:local` (the real Users prototype run from its declared command, pinned and found again), plus the real-app walkthrough of pin, comment box, save and sidebar. **Claude never saw, and the record should not imply:** a second person signing in; a real comment posted to GitHub by the final build (the test runs stubbed the post, so Noah's own use is the evidence); real macOS keyboard routing into the comment box; the agent building a *new* prototype from a request in a fresh run. The security look at pins, page scripts and the trust gate is still owed and stays in *Waiting on other people*. |
 | 2026-10-05 | **Refresh and an Address button added to 3.5; 3.4 is required again.** Noah's goal: a product manager sees an iteration and comments, and the designer pulls those comments and changes the prototype locally with the agent. Checking that against the plan found three gaps. (1) The app reads a thread's comments once, when the iteration opens, so a PM's later comment never appears; 3.5 now refreshes on window focus and about every 60 seconds while visible, and pages past the 100-comment read cap. (2) `comments.md` was regenerated only when the app read comments, so an agent started from a terminal could act on a stale file; 3.5 now has one sidebar button, **Address N comments**, that re-reads, regenerates and starts the agent in one click. (3) The PM could not see the prototype at all: hosted preview (3.4) had been deferred, and the design repository is private with one collaborator. **3.4 is moved from deferred to required** (still built after the local proof), with PM access to the repository named as a prerequisite. Plan only; nothing built. |
 | 2026-10-05 | **Local work now shows in the project list.** Noah expected anything built locally, a prototype or codebase work, to appear in Flock Designer. It did not: the list read only GitHub, so work appeared only after its record was pushed (and its title was just its id until the brief was too). The list now merges GitHub's projects with the local design repository's, marked *Only on this machine* or *local*, and still shows local work if GitHub is unreachable. | 3.3.5; the app. |
