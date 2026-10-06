@@ -17,7 +17,7 @@ export type AddressPhase =
 	 * needs a decision only a person can make -- finishes exactly as cleanly as one that rewrote half
 	 * the view. Reporting both as "finished" sent people looking for a change that was never made.
 	 */
-	| { kind: 'done'; changed: boolean }
+	| { kind: 'done'; changed: boolean; commit: string | null }
 	| { kind: 'failed'; message: string };
 
 export type AddressApi = Pick<WorkspaceApi, 'addressComments' | 'agentStatus' | 'iterationCommit'>;
@@ -56,5 +56,7 @@ export const runAddress = async ({
 	const after = await api.iterationCommit(root, projectId, name);
 	// Unknown either side means it cannot be said the branch stood still, so it is not claimed.
 	const moved = !before.ok || !after.ok || before.value === null || after.value === null || before.value !== after.value;
-	onPhase({ kind: 'done', changed: moved });
+	// The commit to show beside the comment, when there is one and it is this run's.
+	const commit = moved && after.ok ? after.value : null;
+	onPhase({ kind: 'done', changed: moved, commit });
 };

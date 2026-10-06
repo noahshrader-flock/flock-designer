@@ -75,6 +75,28 @@ export const withResolved = (body: string, resolved: boolean): string => {
 	return resolved ? `${bare}\n${RESOLVED_MARK}` : bare;
 };
 
+/**
+ * Marks a comment the agent has acted on, with the commit it made.
+ *
+ * Not the same as resolved, and deliberately not a step towards it: the agent knows it changed
+ * something, but only the person who wrote the comment knows whether that was what they meant. This
+ * says "there is a change here waiting for your verdict", so nobody has to remember which comments
+ * were handled, while the verdict itself stays theirs.
+ *
+ * Kept in the body like the resolved mark, so it survives the app restarting and is visible to
+ * anyone else reading the thread on GitHub.
+ */
+const ADDRESSED = /<!-- fd-addressed: ([0-9a-f]{7,40}) -->/;
+
+export const addressedAt = (body: string): string | null => ADDRESSED.exec(body)?.[1] ?? null;
+
+/** The body marked as addressed at `commit`, or with the mark cleared when it is null. */
+export const withAddressed = (body: string, commit: string | null): string => {
+	const bare = body.replace(ADDRESSED, '').trimEnd();
+	// Only ever a real commit: this is read back out and shown on the card.
+	return commit && /^[0-9a-f]{7,40}$/.test(commit) ? `${bare}\n<!-- fd-addressed: ${commit} -->` : bare;
+};
+
 export const parseAnchor = (body: string): CommentAnchor | null => {
 	const m = MARK.exec(body);
 	if (!m?.[1]) return null;
@@ -88,8 +110,8 @@ export const parseAnchor = (body: string): CommentAnchor | null => {
 /** The comment as a person wrote it: without the anchor, and without the "On /route" line that goes with it. */
 export const stripAnchor = (body: string): string =>
 	MARK.test(body)
-		? body.replace(PICTURE_MARK, '').replace(MARK, '').replace(/\n*_On `[^\n]*`_\s*$/, '').trim()
-		: body;
+		? body.replace(PICTURE_MARK, '').replace(ADDRESSED, '').replace(MARK, '').replace(/\n*_On `[^\n]*`_\s*$/, '').trim()
+		: body.replace(ADDRESSED, '').trimEnd();
 
 /**
  * Only addresses a preview can legitimately have. A local dev server is http on

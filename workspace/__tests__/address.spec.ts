@@ -188,7 +188,7 @@ describe('runAddress', () => {
 			iterationCommit: commits('abc', 'def'),
 		});
 		expect(phases.map((p) => p.kind)).toEqual(['running', 'done']);
-		expect(phases[1]).toEqual({ kind: 'done', changed: true });
+		expect(phases[1]).toEqual({ kind: 'done', changed: true, commit: 'def' });
 	});
 
 	it('says the agent changed nothing when the branch did not move, which is not a failure', async () => {
@@ -199,7 +199,7 @@ describe('runAddress', () => {
 			agentStatus: statuses(started, { state: 'finished', exitCode: 0 }),
 			iterationCommit: commits('abc', 'abc'),
 		});
-		expect(phases[1]).toEqual({ kind: 'done', changed: false });
+		expect(phases[1]).toEqual({ kind: 'done', changed: false, commit: null });
 	});
 
 	it('does not claim the branch stood still when it cannot be read', async () => {
@@ -208,7 +208,8 @@ describe('runAddress', () => {
 			agentStatus: statuses({ state: 'finished', exitCode: 0 }),
 			iterationCommit: async () => ({ ok: false, error: 'not a git repository' }),
 		});
-		expect(phases[1]).toEqual({ kind: 'done', changed: true });
+		// Nothing is claimed about the branch, and there is no commit to point at.
+		expect(phases[1]).toEqual({ kind: 'done', changed: true, commit: null });
 	});
 
 	it('says why when the request is refused, and never starts waiting', async () => {

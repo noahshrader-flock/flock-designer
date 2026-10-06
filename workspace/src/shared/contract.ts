@@ -291,6 +291,11 @@ export interface WorkspaceApi {
 	deleteComment(commentId: number): Promise<Result<null>>;
 	/** Marks a comment resolved, or open again. GitHub decides who is allowed. */
 	resolveComment(commentId: number, resolved: boolean): Promise<Result<ReviewComment>>;
+	/**
+	 * Records that the agent acted on a comment, with the commit it made, or clears that with null.
+	 * Never resolves it: that is the person's to say, after looking at the change.
+	 */
+	markAddressed(commentId: number, commit: string | null): Promise<Result<ReviewComment>>;
 	/** The commit an iteration's branch is at on this machine, to say what a comment was made against. Null if unknown. */
 	iterationCommit(root: string, projectId: string, name: string): Promise<Result<string | null>>;
 }
@@ -386,6 +391,11 @@ export interface ReviewComment {
   body: string;
   createdAt: string;
   resolved: boolean;
+  /**
+   * The commit the agent made when it acted on this comment, or null. Not the same as resolved: it
+   * says a change is waiting for the person's verdict, which only they can give.
+   */
+  addressedAt: string | null;
   /** Present once C2 anchors comments to an element; absent for page-level ones. */
   anchor: CommentAnchor | null;
   /** A small picture of the spot, as a JPEG data URL, taken when the comment was placed. Absent on older comments. */
@@ -514,6 +524,7 @@ export const CHANNELS = {
 	pinEvent: 'workspace:event:pinEvent',
 	moveComment: 'workspace:moveComment',
 	resolveComment: 'workspace:resolveComment',
+	markAddressed: 'workspace:markAddressed',
 	deleteComment: 'workspace:deleteComment',
 	iterationCommit: 'workspace:iterationCommit',
 } as const;

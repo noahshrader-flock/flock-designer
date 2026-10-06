@@ -2,7 +2,7 @@ import type { CommentAnchor, Person, Project, ProjectIteration, ReviewComment } 
 import { GitHubError } from './github';
 import { asPeople, mergePeople } from '../../shared/people';
 import { asDate, asRoute, firstHeading, newestFirst } from '../../shared/projects';
-import { RESOLVED_MARK, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withResolved } from '../../shared/anchor';
+import { RESOLVED_MARK, addressedAt, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withAddressed, withResolved } from '../../shared/anchor';
 import type { GitHubSession } from './githubSession';
 
 /**
@@ -236,6 +236,7 @@ export class DesignRepo {
       body: stripAnchor(body.replace(RESOLVED_MARK, '').trim()),
       createdAt: String(raw.created_at ?? ''),
       resolved: isResolved(body),
+      addressedAt: addressedAt(body),
       anchor: parseAnchor(body),
       picture: parsePicture(body),
     };
@@ -283,6 +284,21 @@ export class DesignRepo {
       method: 'PATCH',
       body: { body: withResolved(String(current.body ?? ''), resolved) },
     });
+    return this.toComment(asRecord(updated));
+  }
+
+  /**
+   * Records that the agent acted on a comment, with the commit it made. Clears the mark when the
+   * commit is null, which is what re-addressing a comment that changed nothing should do.
+   *
+   * This never resolves anything: it says a change is waiting to be looked at. The person decides.
+   */
+  async setAddressed(commentId: number, commit: string | null): Promise<ReviewComment> {
+    const path = `${this.base}/issues/comments/${commentId}`;
+    const current = asRecord(await this.session.api(path));
+    const body = String(current.body ?? '');
+    if (addressedAt(body) === commit) return this.toComment(current);
+    const updated = await this.session.api(path, { method: 'PATCH', body: { body: withAddressed(body, commit) } });
     return this.toComment(asRecord(updated));
   }
 

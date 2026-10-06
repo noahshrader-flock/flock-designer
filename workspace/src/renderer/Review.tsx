@@ -548,6 +548,8 @@ export const Review = ({
 		if (!checkout) return;
 		setAddressLog([]);
 		setAddressing(commentId);
+		// Typed wider than it is assigned: the compiler cannot see that the callback below runs.
+		let outcome = { kind: 'idle' } as AddressPhase;
 		await runAddress({
 			api: window.workspace,
 			root: checkout.root,
@@ -555,10 +557,27 @@ export const Review = ({
 			name: iteration.name,
 			commentId,
 			isLive: () => addressLive.current,
-			onPhase: (p) => addressLive.current && setAddress(p),
+			onPhase: (p) => {
+				outcome = p;
+				if (addressLive.current) setAddress(p);
+			},
 		});
+		if (!addressLive.current) return;
+		// A change was made, and it is waiting to be looked at. Marked on the comment itself, so it
+		// survives the app closing, whoever wrote the comment can see it was acted on, and nobody has
+		// to remember which comments were handled. Never resolved here: whether the change is what was
+		// meant is the one thing the agent cannot know.
+		if (outcome.kind === 'done') {
+			// Either way: a later run that changed nothing clears the mark an earlier one left, so a
+			// card never shows a change waiting that is no longer there.
+			const marked = await window.workspace.markAddressed(commentId, outcome.changed ? outcome.commit : null);
+			if (marked.ok) {
+				changes.current++;
+				posted.current.set(marked.value.id, marked.value);
+			}
+		}
 		// The agent may have changed the code, and a reviewer may have written meanwhile.
-		if (addressLive.current) void load(true);
+		void load(true);
 	};
 
 	// Deleting cannot be undone, so it asks first, on the card itself (a dialog would have to take the preview's place).
@@ -875,7 +894,17 @@ export const Review = ({
 														{comment.author}
 													</FSTypography>
 													{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
+													{/* Acted on, and waiting for this person to say whether that was what they meant. */}
+													{!comment.resolved && comment.addressedAt && (
+														<FSChip variant="status" size="small" color="warning" label="Addressed" />
+													)}
 												</FSStack>
+												{!comment.resolved && comment.addressedAt && (
+													<FSTypography variant="caption" color="text.secondary">
+														The agent changed the code in <code>{comment.addressedAt.slice(0, 7)}</code>. Look at the preview, then
+														resolve this if it is what you meant.
+													</FSTypography>
+												)}
 												{/* The actions get their own row. Three of them beside a name did not fit a narrow
 												    panel, and ran together into one unreadable word. */}
 												<FSStack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}>

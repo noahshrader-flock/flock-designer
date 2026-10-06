@@ -542,6 +542,15 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 			return designRepo.setResolved(commentId, resolved === true);
 		}),
 	);
+	ipcMain.handle(
+		CHANNELS.markAddressed,
+		guard((commentId: number, commit: unknown): Promise<ReviewComment> => {
+			if (!Number.isInteger(commentId)) throw new Error('That is not a comment.');
+			// A commit, or nothing. Anything else is not written into a comment body.
+			const sha = typeof commit === 'string' && /^[0-9a-f]{7,40}$/.test(commit) ? commit : null;
+			return designRepo.setAddressed(commentId, sha);
+		}),
+	);
 	// What the branch is at right now: read when a comment is placed, so the comment says
 	// which version of the code it was made against rather than which one was last recorded.
 	ipcMain.handle(

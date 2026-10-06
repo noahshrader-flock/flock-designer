@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RESOLVED_MARK, assertPreviewUrl, composeBody, isResolved, parseAnchor, parsePicture, sanitizeAnchor, sanitizePicture, stripAnchor, withResolved } from '../src/shared/anchor';
+import { RESOLVED_MARK, addressedAt, assertPreviewUrl, composeBody, isResolved, parseAnchor, parsePicture, sanitizeAnchor, sanitizePicture, stripAnchor, withAddressed, withResolved } from '../src/shared/anchor';
 import type { CommentAnchor } from '../src/shared/contract';
 
 const anchor: CommentAnchor = {
@@ -67,6 +67,52 @@ describe('assertPreviewUrl', () => {
 		'refuses %s',
 		(u) => expect(() => assertPreviewUrl(u)).toThrow(),
 	);
+});
+
+describe('addressed marker', () => {
+  const anchored = () => composeBody('Remove this text', { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' });
+
+  it('records the commit the agent made, without touching the comment or its anchor', () => {
+    const body = anchored();
+    const done = withAddressed(body, '7f90de2c54a5fad511237ef1b8d0821a6b95bc79');
+    expect(addressedAt(done)).toBe('7f90de2c54a5fad511237ef1b8d0821a6b95bc79');
+    expect(done.startsWith(body)).toBe(true);
+    expect(parseAnchor(done)).toMatchObject({ route: '/a' });
+    // It is not resolution: that is the person's to give.
+    expect(isResolved(done)).toBe(false);
+  });
+
+  it('clears the mark, so a later run that changed nothing leaves none behind', () => {
+    const body = anchored();
+    expect(withAddressed(withAddressed(body, 'abc1234'), null)).toBe(body);
+    expect(addressedAt(body)).toBeNull();
+  });
+
+  it('replaces the old commit rather than keeping both', () => {
+    const twice = withAddressed(withAddressed('x', 'abc1234'), 'def5678');
+    expect(addressedAt(twice)).toBe('def5678');
+    expect(twice.match(/fd-addressed/g)).toHaveLength(1);
+  });
+
+  it('writes only something that is a commit', () => {
+    for (const bad of ['', 'not-a-sha', '../etc', 'abc', '<!-- fd-addressed: deadbeef -->']) {
+      expect(addressedAt(withAddressed('x', bad))).toBeNull();
+    }
+  });
+
+  it('never shows in the comment as a person reads it', () => {
+    const marked = withAddressed(anchored(), 'abc1234');
+    expect(stripAnchor(marked)).toBe('Remove this text');
+    // And on a comment with no anchor at all.
+    expect(stripAnchor(withAddressed('Just a note', 'abc1234'))).toBe('Just a note');
+  });
+
+  it('sits alongside the resolved marker without disturbing it', () => {
+    const both = withResolved(withAddressed(anchored(), 'abc1234'), true);
+    expect(addressedAt(both)).toBe('abc1234');
+    expect(isResolved(both)).toBe(true);
+    expect(stripAnchor(both.replace(RESOLVED_MARK, '').trim())).toBe('Remove this text');
+  });
 });
 
 describe('resolved marker', () => {

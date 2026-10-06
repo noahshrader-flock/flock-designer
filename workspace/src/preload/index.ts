@@ -97,6 +97,7 @@ const api: WorkspaceApi = {
 	onPinEvent: (listener) => subscribe<PinEvent>(CHANNELS.pinEvent, listener),
 	deleteComment: (commentId) => invoke<null>(CHANNELS.deleteComment, commentId),
 	resolveComment: (commentId, resolved) => invoke<ReviewComment>(CHANNELS.resolveComment, commentId, resolved),
+	markAddressed: (commentId, commit) => invoke<ReviewComment>(CHANNELS.markAddressed, commentId, commit),
 	iterationCommit: (root, projectId, name) => invoke<string | null>(CHANNELS.iterationCommit, root, projectId, name),
 	moveComment: (commentId, anchor) => invoke<ReviewComment>(CHANNELS.moveComment, commentId, anchor),
 };
