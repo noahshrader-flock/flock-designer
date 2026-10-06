@@ -2,7 +2,8 @@ import { type BrowserWindow, WebContentsView, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
 import type { MarkerRequest, MarkerResult, PageBounds, PageHoldReason, PickedPoint, PinEvent } from '../../shared/contract';
 import { assertPreviewUrl, sanitizeAnchor } from '../../shared/anchor';
-import { CANCEL_PICK_SCRIPT, MESSAGE_PREFIX, PICK_SCRIPT, ROUTE_SCRIPT, focusScript, resolveScript } from './pageScripts';
+import { CANCEL_PICK_SCRIPT, MESSAGE_PREFIX, PICK_SCRIPT, ROUTE_SCRIPT, focusScript, layerVisibleScript, resolveScript } from './pageScripts';
+import { cropRect, toPicture } from './picture';
 
 /**
  * A prototype's preview, shown inside the app so a comment can be placed on it.
@@ -158,9 +159,28 @@ export class PageView {
 			if (!anchor) throw new Error('That spot could not be pinned. Try clicking somewhere else on the page.');
 			// Only used to place a box, so a nonsense value just means the box goes in a corner.
 			const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(100_000, v)) : 0);
-			return { anchor, at: { x: n(at?.x), y: n(at?.y) } };
+			const where = { x: n(at?.x), y: n(at?.y) };
+			return { anchor, at: where, picture: await this.pictureAt(where) };
 		} finally {
 			this.picking = false;
+		}
+	}
+
+	/**
+	 * A small picture of the page around a point, with the app's own pins hidden. Always the
+	 * current state of the page, so it is taken the moment the click happens. Null if it cannot
+	 * be taken or will not fit: a comment never fails for want of a picture.
+	 */
+	private async pictureAt(at: { x: number; y: number }): Promise<string | null> {
+		const wc = this.view?.webContents;
+		if (!wc || wc.isDestroyed() || this.bounds.width === 0 || this.bounds.height === 0) return null;
+		try {
+			await this.run(layerVisibleScript(false));
+			return toPicture(await wc.capturePage(cropRect(at, this.bounds)));
+		} catch {
+			return null;
+		} finally {
+			await this.run(layerVisibleScript(true));
 		}
 	}
 

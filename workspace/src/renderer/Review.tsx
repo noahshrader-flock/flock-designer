@@ -81,6 +81,8 @@ export const Review = ({
 	const [commentMode, setCommentMode] = useState(false);
 	const [pending, setPending] = useState<CommentAnchor | null>(null);
 	const [pendingAt, setPendingAt] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+	// The picture of the spot, taken at the click, that goes with the comment being written.
+	const [pendingPicture, setPendingPicture] = useState<string | null>(null);
 	const [draft, setDraft] = useState('');
 	const [posting, setPosting] = useState(false);
 	const [placed, setPlaced] = useState<Map<number, MarkerState>>(new Map());
@@ -250,6 +252,7 @@ export const Review = ({
 			const live = checkout ? await window.workspace.iterationCommit(checkout.root, project.id, iteration.name) : null;
 			setPending({ ...r.value.anchor, commit: (live?.ok && live.value) || iteration.commit || '' });
 			setPendingAt(r.value.at);
+			setPendingPicture(r.value.picture);
 			setMode('composing');
 		} else {
 			// Cancelled: Escape on the page, or comment mode switched off.
@@ -271,6 +274,7 @@ export const Review = ({
 	/** Abandons the comment being written, and the pin with it. Comment mode carries on. */
 	const cancelCompose = useCallback(() => {
 		setPending(null);
+		setPendingPicture(null);
 		setDraft('');
 		setError(null);
 		setMode('browse');
@@ -384,12 +388,13 @@ export const Review = ({
 	const post = async () => {
 		if (!draft.trim() || !pending) return;
 		setPosting(true);
-		const r = await window.workspace.postComment(project.id, iteration.branch, draft.trim(), pending);
+		const r = await window.workspace.postComment(project.id, iteration.branch, draft.trim(), pending, pendingPicture);
 		setPosting(false);
 		if (r.ok) {
 			posted.current.set(r.value.id, r.value);
 			setDraft('');
 			setPending(null);
+			setPendingPicture(null);
 			setMode('browse'); // comment mode is still on, so the next click is waited for
 			await load();
 		} else {
@@ -654,6 +659,13 @@ export const Review = ({
 													</FSButton>
 												</FSStack>
 												<FSTypography variant="body2">{comment.body}</FSTypography>
+												{comment.picture && (
+													<img
+														src={comment.picture}
+														alt={`The spot comment ${n || ''} was made on`}
+														style={{ width: '100%', maxWidth: 240, borderRadius: 4, border: '1px solid rgba(128,128,128,0.4)' }}
+													/>
+												)}
 												{comment.anchor?.state && (
 													<FSTypography variant="caption" color="text.secondary">
 														State: {comment.anchor.state}

@@ -217,6 +217,7 @@ export interface WorkspaceApi {
 		iteration: string,
 		body: string,
 		anchor: CommentAnchor | null,
+		picture?: string | null,
 	): Promise<Result<ReviewComment>>;
 
 	/** The preview, shown inside the window at the given place. It cannot call back into the app. */
@@ -337,6 +338,8 @@ export interface ReviewComment {
   resolved: boolean;
   /** Present once C2 anchors comments to an element; absent for page-level ones. */
   anchor: CommentAnchor | null;
+  /** A small picture of the spot, as a JPEG data URL, taken when the comment was placed. Absent on older comments. */
+  picture: string | null;
 }
 
 /**
@@ -387,6 +390,8 @@ export interface MarkerResult {
 export interface PickedPoint {
   anchor: CommentAnchor;
   at: { x: number; y: number };
+  /** The spot cropped from the page before any pin was drawn, if it could be taken. */
+  picture: string | null;
 }
 
 /** Why the preview is hidden. A closed set, so the window cannot invent reasons. */

@@ -10,6 +10,12 @@ import type { CommentAnchor } from './contract';
  */
 
 const MARK = /<!--\s*fd-anchor:\s*(\{[\s\S]*?\})\s*-->/;
+const PICTURE_MARK = /<!--\s*fd-picture:\s*(\S+)\s*-->/;
+/** A small JPEG as a data URL. The size cap is generous for what is made (about 12 KB), and bounds what a hand-written comment can carry. */
+const PICTURE = /^data:image\/jpeg;base64,[A-Za-z0-9+/]{1,24000}={0,2}$/;
+
+/** A picture from anywhere that did not come from this code, or null. Only a small JPEG data URL passes. */
+export const sanitizePicture = (v: unknown): string | null => (typeof v === 'string' && PICTURE.test(v) ? v : null);
 const clip = (v: unknown, max: number): string => (typeof v === 'string' ? v.slice(0, max) : '');
 const int = (v: unknown): number => (Number.isFinite(v) ? Math.max(0, Math.min(100_000, Math.round(v as number))) : 0);
 const unit = (v: unknown): number => (Number.isFinite(v) ? Math.max(0, Math.min(1, v as number)) : 0);
@@ -40,14 +46,17 @@ export const sanitizeAnchor = (v: unknown): CommentAnchor | null => {
 	};
 };
 
-/** Comment text, then a readable line and the hidden anchor. */
-export const composeBody = (text: string, anchor: CommentAnchor | null): string => {
+/** Comment text, then a readable line, the hidden anchor and, if there is one, the hidden picture. */
+export const composeBody = (text: string, anchor: CommentAnchor | null, picture: string | null = null): string => {
 	if (!anchor) return text;
 	// `<` and `>` are escaped so the JSON can never close its own comment.
 	const json = JSON.stringify(anchor).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 	const where = `_On \`${anchor.route}${anchor.state ?? ''}\` · \`${anchor.selector.replace(/`/g, "'")}\`_`;
-	return `${text}\n\n${where}\n<!-- fd-anchor: ${json} -->`;
+	const pic = sanitizePicture(picture);
+	return `${text}\n\n${where}\n<!-- fd-anchor: ${json} -->${pic ? `\n<!-- fd-picture: ${pic} -->` : ''}`;
 };
+
+export const parsePicture = (body: string): string | null => sanitizePicture(PICTURE_MARK.exec(body)?.[1]);
 
 /** Marks the body of a resolved comment. Simple, and visible to someone reading on GitHub. */
 export const RESOLVED_MARK = '<!-- resolved -->';
@@ -72,7 +81,9 @@ export const parseAnchor = (body: string): CommentAnchor | null => {
 
 /** The comment as a person wrote it: without the anchor, and without the "On /route" line that goes with it. */
 export const stripAnchor = (body: string): string =>
-	MARK.test(body) ? body.replace(MARK, '').replace(/\n*_On `[^\n]*`_\s*$/, '').trim() : body;
+	MARK.test(body)
+		? body.replace(PICTURE_MARK, '').replace(MARK, '').replace(/\n*_On `[^\n]*`_\s*$/, '').trim()
+		: body;
 
 /**
  * Only addresses a preview can legitimately have. A local dev server is http on

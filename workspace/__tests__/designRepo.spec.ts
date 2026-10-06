@@ -365,6 +365,16 @@ describe('moveComment', () => {
     expect(moved.id).toBe(55);
   });
 
+  it('keeps the comment\'s picture when its pin moves', async () => {
+    const { composeBody, parsePicture } = await import('../src/shared/anchor');
+    const picture = `data:image/jpeg;base64,${Buffer.from('a small picture').toString('base64')}`;
+    const { session, writes } = fakeSession({
+      [COMMENT]: { id: 55, user: { login: 'noah' }, created_at: 't', body: composeBody('Make this primary', before, picture) },
+    });
+    await new DesignRepo(session, REF).moveComment(55, after);
+    expect(parsePicture((writes[0]?.body as { body: string }).body)).toBe(picture);
+  });
+
   it('keeps a comment resolved if it was', async () => {
     const { composeBody } = await import('../src/shared/anchor');
     const { session, writes } = fakeSession({
@@ -416,6 +426,36 @@ describe('setResolved', () => {
       return { id: 70, user: { login: 'pm' }, created_at: 't', body: 'x' };
     });
     await expect(new DesignRepo({ api } as unknown as GitHubSession, REF).setResolved(70, true)).rejects.toThrow(/not accessible/);
+  });
+});
+
+describe('pictures on comments', () => {
+  const picture = `data:image/jpeg;base64,${Buffer.from('a small picture').toString('base64')}`;
+  const anchor = { route: '/users', selector: 'main', nearbyText: 'x', viewport: { width: 1, height: 1 }, commit: '' };
+
+  it('posts the picture with the comment, and reads it back', async () => {
+    const stored: string[] = [];
+    const { session } = fakeSession({
+      '/repos/acme/design/issues?state=all': [{ number: 4, comments: 0, body: 'branch: `fd/alpha/i1`' }],
+      '/repos/acme/design/issues/4/comments': (_p: string) => ({ id: 9, user: { login: 'noah' }, body: stored[0] ?? '', created_at: 'now' }),
+    });
+    const api = session as unknown as { api: (p: string, i?: { method?: string; body?: { body: string } }) => unknown };
+    const original = api.api;
+    api.api = async (p, i) => {
+      if (i?.method === 'POST' && i.body) stored[0] = i.body.body;
+      return original(p, i);
+    };
+    const posted = await new DesignRepo(session, REF).postComment('alpha', 'fd/alpha/i1', 'Make this primary', anchor, picture);
+    expect(posted.picture).toBe(picture);
+    expect(posted.body).toBe('Make this primary');
+  });
+
+  it('reads a comment with no picture as having none', async () => {
+    const { session } = fakeSession({
+      '/repos/acme/design/issues?state=all': [{ number: 4, comments: 1, body: 'branch: `fd/alpha/i1`' }],
+      '/repos/acme/design/issues/4/comments': [{ id: 1, user: { login: 'noah' }, body: 'plain', created_at: 'now' }],
+    });
+    expect((await new DesignRepo(session, REF).readComments('alpha', 'fd/alpha/i1'))[0]?.picture).toBeNull();
   });
 });
 

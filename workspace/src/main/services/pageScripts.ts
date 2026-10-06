@@ -116,6 +116,16 @@ ${HELPERS}
   });
 })()`;
 
+/**
+ * Hides or shows the app's own pins, and resolves once the page has painted that. A picture of
+ * the spot is taken with them hidden, so it shows the thing that was clicked and not an earlier pin.
+ */
+export const layerVisibleScript = (visible: boolean): string => String.raw`(function (visible) {
+  var layer = document.querySelector('[data-fd-layer]');
+  if (layer) layer.style.visibility = visible ? 'visible' : 'hidden';
+  return new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(function () { r(true); }); }); });
+})(${visible ? 'true' : 'false'})`;
+
 export const CANCEL_PICK_SCRIPT = 'window.__fdCancelPick && window.__fdCancelPick()';
 
 /** What a pin says back to the app. Prefix and secret let the app pick these out of the page's console. */

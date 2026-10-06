@@ -77,8 +77,8 @@ const api: WorkspaceApi = {
 
 	listProjects: () => invoke<Project[]>(CHANNELS.listProjects),
 	readComments: (projectId, iteration) => invoke<ReviewComment[]>(CHANNELS.readComments, projectId, iteration),
-	postComment: (projectId, iteration, body, anchor) =>
-		invoke<ReviewComment>(CHANNELS.postComment, projectId, iteration, body, anchor),
+	postComment: (projectId, iteration, body, anchor, picture) =>
+		invoke<ReviewComment>(CHANNELS.postComment, projectId, iteration, body, anchor, picture ?? null),
 
 	pageOpen: (url) => invoke<null>(CHANNELS.pageOpen, url),
 	pageClose: () => invoke<null>(CHANNELS.pageClose),

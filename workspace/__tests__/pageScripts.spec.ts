@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
-import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, resolveScript } from '../src/main/services/pageScripts';
+import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, layerVisibleScript, resolveScript } from '../src/main/services/pageScripts';
 import type { CommentAnchor, MarkerRequest } from '../src/shared/contract';
 
 const page = (html: string, url = 'http://localhost:3000/users#/list') => {
@@ -239,3 +239,22 @@ describe('pins that can be clicked and dragged', () => {
 		expect(reached).toBe(0);
 	});
 });
+
+describe('hiding the pins for a picture', () => {
+	it('hides the app\'s own pins and shows them again, leaving the page alone', async () => {
+		const w = page(CARD);
+		w.eval(resolveScript([req(1, { selector: '[data-e2e-ref="users-invite"]' })], 'nonce'));
+		const layer = w.document.querySelector('[data-fd-layer]') as HTMLElement;
+		await (w.eval(layerVisibleScript(false)) as Promise<unknown>);
+		expect(layer.style.visibility).toBe('hidden');
+		await (w.eval(layerVisibleScript(true)) as Promise<unknown>);
+		expect(layer.style.visibility).toBe('visible');
+		expect(w.document.querySelector('main')?.getAttribute('style')).toBeNull();
+	});
+
+	it('is harmless when there are no pins', async () => {
+		const w = page(CARD);
+		await expect(w.eval(layerVisibleScript(false)) as Promise<unknown>).resolves.toBe(true);
+	});
+});
+

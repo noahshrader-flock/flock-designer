@@ -2,7 +2,7 @@ import type { CommentAnchor, Iteration, Person, Project, ProjectIteration, Revie
 import { GitHubError } from './github';
 import { asPeople, mergePeople } from '../../shared/people';
 import { newestFirst } from '../../shared/projects';
-import { RESOLVED_MARK, composeBody, isResolved, parseAnchor, stripAnchor, withResolved } from '../../shared/anchor';
+import { RESOLVED_MARK, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withResolved } from '../../shared/anchor';
 import type { GitHubSession } from './githubSession';
 
 /**
@@ -285,6 +285,7 @@ export class DesignRepo {
       createdAt: String(raw.created_at ?? ''),
       resolved: isResolved(body),
       anchor: parseAnchor(body),
+      picture: parsePicture(body),
     };
   }
 
@@ -313,7 +314,8 @@ export class DesignRepo {
     const old = parseAnchor(body);
     const text = stripAnchor(body.replace(RESOLVED_MARK, '').trim());
     // The commit is when the comment was made, not when it was moved.
-    const next = composeBody(text, { ...anchor, commit: old?.commit ?? anchor.commit });
+    // The picture is of where the comment was first placed, so it goes with the comment, not with the pin.
+    const next = composeBody(text, { ...anchor, commit: old?.commit ?? anchor.commit }, parsePicture(body));
     return this.toComment(
       asRecord(await this.session.api(path, { method: 'PATCH', body: { body: withResolved(next, isResolved(body)) } })),
     );
@@ -339,12 +341,13 @@ export class DesignRepo {
     branch: string,
     body: string,
     anchor: CommentAnchor | null = null,
+    picture: string | null = null,
   ): Promise<ReviewComment> {
     const number = await this.ensureIssue(projectId, branch);
     const created = asRecord(
       await this.session.api(`${this.base}/issues/${number}/comments`, {
         method: 'POST',
-        body: { body: composeBody(body, anchor) },
+        body: { body: composeBody(body, anchor, picture) },
       }),
     );
     // Read back from what GitHub stored, so what the window shows is what was saved.

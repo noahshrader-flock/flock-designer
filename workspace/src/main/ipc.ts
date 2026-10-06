@@ -29,7 +29,7 @@ import { readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
 import { DesignRepo } from './services/designRepo';
 import type { PageView } from './services/pageView';
-import { assertPreviewUrl, sanitizeAnchor } from '../shared/anchor';
+import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anchor';
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readLocalProjects } from './services/localProjects';
@@ -378,8 +378,8 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 	ipcMain.handle(
 		CHANNELS.postComment,
 		guard(
-			(projectId: string, branch: string, body: string, anchor: unknown): Promise<ReviewComment> =>
-				designRepo.postComment(projectId, branch, body, sanitizeAnchor(anchor)),
+			(projectId: string, branch: string, body: string, anchor: unknown, picture?: unknown): Promise<ReviewComment> =>
+				designRepo.postComment(projectId, branch, body, sanitizeAnchor(anchor), sanitizePicture(picture)),
 		),
 	);
 

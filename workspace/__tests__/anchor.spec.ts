@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RESOLVED_MARK, assertPreviewUrl, composeBody, isResolved, parseAnchor, sanitizeAnchor, stripAnchor, withResolved } from '../src/shared/anchor';
+import { RESOLVED_MARK, assertPreviewUrl, composeBody, isResolved, parseAnchor, parsePicture, sanitizeAnchor, sanitizePicture, stripAnchor, withResolved } from '../src/shared/anchor';
 import type { CommentAnchor } from '../src/shared/contract';
 
 const anchor: CommentAnchor = {
@@ -106,6 +106,55 @@ describe('page state in an anchor', () => {
 		expect(parseAnchor(body)?.state).toBe('?state=error');
 		expect(body).toContain('`/a?state=error`');
 		expect(stripAnchor(body)).toBe('hi');
+	});
+});
+
+describe('a picture in a comment', () => {
+	const anchor = { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
+	const picture = `data:image/jpeg;base64,${Buffer.from('not really a jpeg but shaped like one').toString('base64')}`;
+
+	it('is written into the comment, read back, and does not show up as part of the words', () => {
+		const body = composeBody('Make this primary', anchor, picture);
+		expect(parsePicture(body)).toBe(picture);
+		expect(parseAnchor(body)).toMatchObject({ route: '/a' });
+		expect(stripAnchor(body)).toBe('Make this primary');
+	});
+
+	it('is hidden: nothing of it is visible markup, so a person reading on GitHub sees only the words and the spot', () => {
+		const visible = composeBody('hi', anchor, picture).replace(/<!--[\s\S]*?-->/g, '');
+		expect(visible).not.toContain('base64');
+	});
+
+	it('leaves a comment without one exactly as it was', () => {
+		expect(composeBody('hi', anchor)).toBe(composeBody('hi', anchor, null));
+		expect(parsePicture(composeBody('hi', anchor))).toBeNull();
+	});
+
+	it('survives being resolved and reopened', () => {
+		const resolved = withResolved(composeBody('hi', anchor, picture), true);
+		expect(parsePicture(resolved)).toBe(picture);
+		expect(parsePicture(withResolved(resolved, false))).toBe(picture);
+	});
+
+	it.each([
+		['a script', 'javascript:alert(1)'],
+		['an address', 'https://example.test/x.jpg'],
+		['another type', 'data:image/svg+xml;base64,PHN2Zz4='],
+		['markup', 'data:image/jpeg;base64,AAAA<script>'],
+		['something that would close the comment', 'data:image/jpeg;base64,AAAA-->'],
+		['nothing', ''],
+		['not a string', 5],
+	])('refuses %s', (_label, bad) => {
+		expect(sanitizePicture(bad)).toBeNull();
+		expect(parsePicture(`x <!-- fd-picture: ${String(bad)} -->`)).toBeNull();
+	});
+
+	it('refuses one far larger than a picture this app makes, so a hand-written comment cannot carry a payload', () => {
+		expect(sanitizePicture(`data:image/jpeg;base64,${'A'.repeat(30_000)}`)).toBeNull();
+	});
+
+	it('is dropped, not written, if it is not a picture', () => {
+		expect(composeBody('hi', anchor, 'javascript:alert(1)')).not.toContain('fd-picture');
 	});
 });
 

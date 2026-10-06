@@ -1,4 +1,4 @@
-import { type BrowserWindow, type WebContentsView } from 'electron';
+import { type BrowserWindow, type WebContentsView, nativeImage } from 'electron';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { assertPreviewUrl } from '../shared/anchor';
@@ -75,6 +75,17 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	if (anchor.route !== '/users') fail(`wrong route: ${anchor.route}`);
 	if ((await js<number>('window.__pressed')) !== 0) fail('the click reached the page');
 
+	// 2b. A picture of the spot came back with the click: a small, real JPEG that fits in a comment.
+	console.log('smoke-page: step 2b');
+	const first = picked.picture;
+	if (!first?.startsWith('data:image/jpeg;base64,')) return fail(`no picture came with the click: ${String(first).slice(0, 40)}`);
+	const bytes = Buffer.from(first.split(',')[1] as string, 'base64');
+	if (bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) fail('the picture is not a JPEG');
+	if (bytes.length > 12_000) fail(`the picture is ${bytes.length} bytes, over the 12,000 allowed`);
+	const decoded = nativeImage.createFromDataURL(first).getSize();
+	if (decoded.width < 80 || decoded.width > 240 || decoded.height < 40) fail(`the picture is an odd size: ${JSON.stringify(decoded)}`);
+	console.log(`smoke-page: picture ${bytes.length} bytes, ${decoded.width}x${decoded.height}`);
+
 	// 3. Reopened on the same page: found, and the marker sits on the element.
 	console.log('smoke-page: step 3');
 	const items = [{ id: 7, number: 1, anchor, movable: true }];
@@ -84,6 +95,34 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	const markerOnElement = () =>
 		js<boolean>(`(function(){var m=document.querySelector('[data-fd-layer] > div').getBoundingClientRect();var e=document.querySelector('[data-e2e-ref]').getBoundingClientRect();return m.left>=e.left-1&&m.left<=e.right+1&&m.top>=e.top-1&&m.top<=e.bottom+1;})()`);
 	if (!(await markerOnElement())) fail('the marker is not on the element');
+
+	// 3a. With a pin already on the page, a picture of that spot does not show the pin.
+	console.log('smoke-page: step 3a');
+	const blue = (img: Electron.NativeImage) => {
+		const bmp = img.toBitmap();
+		let n = 0;
+		for (let i = 0; i + 3 < bmp.length; i += 4) {
+			const b = bmp[i] as number, g = bmp[i + 1] as number, r = bmp[i + 2] as number;
+			if (Math.abs(r - 37) < 30 && Math.abs(g - 99) < 30 && Math.abs(b - 235) < 30) n++;
+		}
+		return n;
+	};
+	// Control: the pin really is in an ordinary capture, so finding none below means something.
+	// (The pin was only just drawn: let the page paint it first, as the app's own snapshot does.)
+	await js('new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))');
+	const control = blue(await wc.capturePage({ x: 20, y: 20, width: 160, height: 100 }));
+	if (control < 20) fail(`the control capture does not show the pin (${control} blue pixels), so the check below proves nothing`);
+	const again = page.pick();
+	await new Promise((res) => setTimeout(res, 200));
+	// Elsewhere on the same button, not on the pin itself (which would also select the pin), but
+	// close enough that the pin is inside the area the picture is cropped from.
+	wc.sendInputEvent({ type: 'mouseDown', x: 200, y: 85, button: 'left', clickCount: 1 });
+	wc.sendInputEvent({ type: 'mouseUp', x: 200, y: 85, button: 'left', clickCount: 1 });
+	const second = await again;
+	if (!second?.picture) return fail('no picture with the second click');
+	const inPicture = blue(nativeImage.createFromDataURL(second.picture));
+	if (inPicture > 3) fail(`the picture shows the pin (${inPicture} blue pixels), but it should show the thing and not the pin`);
+	if ((await js<string>("document.querySelector('[data-fd-layer]').style.visibility")) !== 'visible') fail('the pins were left hidden after the picture');
 
 	// 3b. A pin can be clicked, and dragged, with the real mouse. The pin's body hangs above its tip.
 	const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -117,13 +156,29 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	// 5. The markup changed: it follows the text. Then the element is gone: page-level.
 	console.log('smoke-page: step 5');
 	version = '2';
-	await wc.loadURL(`${origin}/users?x=2`);
+	await wc.loadURL(`${origin}/users`);
 	r = await page.showMarkers(items);
 	if (r[0]?.state !== 'moved') fail(`expected moved, got ${JSON.stringify(r)}`);
 	version = '3';
-	await wc.loadURL(`${origin}/users?x=3`);
+	await wc.loadURL(`${origin}/users`);
 	r = await page.showMarkers(items);
 	if (r[0]?.state !== 'missing') fail(`expected missing, got ${JSON.stringify(r)}`);
+
+	// 5b. The same page in another state (`?state=error`) is not the page the comment was made on.
+	console.log('smoke-page: step 5b');
+	version = '1';
+	await wc.loadURL(`${origin}/users?state=error`);
+	r = await page.showMarkers(items);
+	if (r[0]?.state !== 'otherState') fail(`expected otherState, got ${JSON.stringify(r)}`);
+	if (await js<boolean>("document.querySelector('[data-fd-layer]') !== null")) fail('a pin was drawn for a comment made in another state');
+	const inState = page.pick();
+	await new Promise((res) => setTimeout(res, 200));
+	wc.sendInputEvent({ type: 'mouseDown', x: 100, y: 70, button: 'left', clickCount: 1 });
+	wc.sendInputEvent({ type: 'mouseUp', x: 100, y: 70, button: 'left', clickCount: 1 });
+	const stated = (await inState)?.anchor.state;
+	if (stated !== '?state=error') fail(`a click in ?state=error recorded state ${JSON.stringify(stated)}`);
+	await wc.loadURL(`${origin}/users`);
+	await new Promise((res) => setTimeout(res, 300));
 
 	// 6. The page cannot take the view somewhere else.
 	console.log('smoke-page: step 6');
