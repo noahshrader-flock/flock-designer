@@ -183,9 +183,13 @@ export const Review = ({
 	const anchored = useMemo(() => (comments ?? []).filter((c) => c.anchor), [comments]);
 	const numberOf = useCallback((id: number) => anchored.findIndex((c) => c.id === id) + 1, [anchored]);
 
+	// Only the newest open counts: an older one that finishes late must not undo, or complain about, a newer one.
+	const openRun = useRef(0);
 	const open = useCallback(async (url: string) => {
+		const mine = ++openRun.current;
 		setError(null);
 		const r = await window.workspace.pageOpen(url);
+		if (mine !== openRun.current) return;
 		if (r.ok) {
 			setOpened(true);
 		} else {

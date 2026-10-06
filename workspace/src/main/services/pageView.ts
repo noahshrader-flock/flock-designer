@@ -20,6 +20,34 @@ import { cropRect, toPicture } from './picture';
 
 const SESSION = 'fd-preview'; // no "persist:" prefix: in memory, gone on quit
 
+const LOAD_ATTEMPTS = 6;
+const RETRY_MS = 1000;
+const SETTLE_MS = 1500;
+
+/**
+ * Whether the view is showing a real page that has finished loading, which is what a failed load may turn out
+ * to have become. A failed load leaves Chromium's own error page up, which is a finished page too, so "finished"
+ * alone proves nothing: the document has to be a real one, not `chrome-error:`.
+ */
+const realPageIsUp = async (wc: Electron.WebContents): Promise<boolean> => {
+	if (wc.isDestroyed() || wc.isLoading()) return false;
+	try {
+		return (await wc.executeJavaScript('location.protocol', true)) !== 'chrome-error:';
+	} catch {
+		return false;
+	}
+};
+
+/** Waits up to `ms` for that to be true. */
+const settled = async (wc: Electron.WebContents, ms: number): Promise<boolean> => {
+	for (let waited = 0; waited < ms; waited += 150) {
+		if (await realPageIsUp(wc)) return true;
+		if (wc.isDestroyed()) return false;
+		await new Promise((r) => setTimeout(r, 150));
+	}
+	return realPageIsUp(wc);
+};
+
 const MARKER_STATES = new Set(['found', 'moved', 'missing', 'elsewhere', 'otherState']);
 
 export class PageView {
@@ -81,7 +109,37 @@ export class PageView {
 		this.window.contentView.addChildView(view);
 		view.setBounds(this.bounds);
 		view.setVisible(this.holds.size === 0);
-		await wc.loadURL(url);
+		await this.load(wc, url);
+	}
+
+	/**
+	 * Loads a preview, and means it when it says it failed.
+	 *
+	 * A dev server is not ready the instant its port is: it can refuse the first attempts, or drop one while
+	 * it compiles, and a page can move on during its own first load, which cancels the load Electron was
+	 * waiting on and reports it as a failure even though the page is there a moment later. So a failed load
+	 * is retried, and is only a failure if the page is still not there after the tries. The person never sees
+	 * a failure that fixed itself, and a server that is really down is reported, in good time, with what to do.
+	 */
+	private async load(wc: Electron.WebContents, url: string): Promise<void> {
+		const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+		let last: unknown;
+		for (let attempt = 0; attempt < LOAD_ATTEMPTS; attempt++) {
+			try {
+				await wc.loadURL(url);
+				return;
+			} catch (err) {
+				last = err;
+				// Closed or replaced on purpose: not this load's to finish.
+				if (wc.isDestroyed() || this.view?.webContents !== wc) throw err;
+				// A cancelled or failed navigation may have been followed by the page arriving anyway.
+				if (await settled(wc, SETTLE_MS)) return;
+				await sleep(RETRY_MS);
+			}
+		}
+		const why = last instanceof Error ? last.message : String(last);
+		throw new Error(`The preview did not load after ${LOAD_ATTEMPTS} tries (${why}). If its server is still starting, give it a moment and try again.`);
 	}
 
 	/** The address the preview is showing right now, page and query included, or null if there is no preview. */

@@ -33,10 +33,10 @@ child.stderr.on('data', (d) => {
 });
 
 const timer = setTimeout(() => {
-	console.error('\nsmoke-page: the app did not exit within 60s');
+	console.error('\nsmoke-page: the app did not exit within 100s');
 	child.kill('SIGKILL');
 	process.exit(1);
-}, 60_000);
+}, 100_000);
 
 child.on('exit', (code) => {
 	clearTimeout(timer);

@@ -211,6 +211,65 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 		}
 	}
 
+	// 8. A dev server's page can reload itself during its first load (its own hot reload does). That cancels the
+	// load Electron was waiting on and reports it as a failure, although the page is there a moment later.
+	console.log('smoke-page: step 8');
+	const reloader = createServer((req, res) => {
+		res.setHeader('content-type', 'text/html');
+		res.end(
+			req.url?.startsWith('/second')
+				? '<body><h1 id="ok">second load</h1></body>'
+				: '<head><script>location.replace("/second")</script></head><body><h1>first load</h1></body>',
+		);
+	});
+	await new Promise<void>((r) => reloader.listen(0, '127.0.0.1', r));
+	const reloaderUrl = `http://127.0.0.1:${(reloader.address() as AddressInfo).port}/`;
+	try {
+		await page.open(reloaderUrl);
+	} catch (e) {
+		fail(`a page that moves on during its first load was reported as a failure: ${(e as Error).message}`);
+	}
+	await new Promise((res) => setTimeout(res, 600));
+	if (!(await (window.contentView.children[0] as WebContentsView).webContents.executeJavaScript('!!document.getElementById("ok")'))) fail('the page that moved on is not the one showing');
+	reloader.close();
+
+	// 9. A server whose port is open before it can serve: the first attempts are refused, and the preview still opens.
+	console.log('smoke-page: step 9');
+	const probe = createServer();
+	await new Promise<void>((r) => probe.listen(0, '127.0.0.1', r));
+	const latePortNumber = (probe.address() as AddressInfo).port;
+	await new Promise<void>((r) => probe.close(() => r()));
+	const late = createServer((_req, res) => {
+		res.setHeader('content-type', 'text/html');
+		res.end('<body><h1 id="late">late</h1></body>');
+	});
+	setTimeout(() => late.listen(latePortNumber, '127.0.0.1'), 1500);
+	const startedLate = Date.now();
+	try {
+		await page.open(`http://127.0.0.1:${latePortNumber}/`);
+	} catch (e) {
+		fail(`a server that was not ready yet was reported as a failure: ${(e as Error).message}`);
+	}
+	console.log(`smoke-page: opened after ${Date.now() - startedLate}ms`);
+	late.close();
+
+	// 10. A server that is really down fails clearly, and in good time, rather than hanging or lying.
+	console.log('smoke-page: step 10');
+	const down = createServer();
+	await new Promise<void>((r) => down.listen(0, '127.0.0.1', r));
+	const downPort = (down.address() as AddressInfo).port;
+	await new Promise<void>((r) => down.close(() => r()));
+	const startedDown = Date.now();
+	let downError = '';
+	try {
+		await page.open(`http://127.0.0.1:${downPort}/`);
+	} catch (e) {
+		downError = (e as Error).message;
+	}
+	if (downError === '') fail('a server that is down was reported as opened');
+	if (Date.now() - startedDown > 20_000) fail(`it took ${Date.now() - startedDown}ms to give up on a server that is down`);
+	console.log(`smoke-page: gave up on a dead server after ${Date.now() - startedDown}ms: ${downError.slice(0, 90)}`);
+
 	if (!routes.includes('/users')) fail(`the route was never reported: ${JSON.stringify(routes)}`);
 	page.close();
 	server.close();

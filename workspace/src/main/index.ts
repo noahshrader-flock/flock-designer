@@ -182,7 +182,7 @@ void app.whenReady().then(() => {
 		setTimeout(() => {
 			console.error('smoke-page: timed out');
 			app.exit(1);
-		}, 60_000);
+		}, 90_000);
 	}
 
 	if (smokeMode) {
