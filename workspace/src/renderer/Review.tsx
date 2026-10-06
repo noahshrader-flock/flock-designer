@@ -1,9 +1,9 @@
-import { ChevronLeftIcon, GitBranchIcon, MapPinIcon, MessageSquareIcon, ZapIcon } from 'lucide-react';
+import { ChevronLeftIcon, FolderIcon, GitBranchIcon, MapPinIcon, MessageSquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
 import { latest } from '../shared/latest';
-import { freshIteration, isQuick } from '../shared/projects';
+import { freshIteration, isQuick, quickPagePath } from '../shared/projects';
 import { People } from './People';
 import { AgentLog, Loading } from './Loading';
 import { ShareControl } from './ShareControl';
@@ -649,13 +649,13 @@ export const Review = ({
 				<Tooltip delayDuration={300} onOpenChange={setBranchTip}>
 					<TooltipTrigger asChild>
 						{quick ? (
-							<ZapIcon aria-label="Quick prototype" className="text-muted-foreground size-4 shrink-0" />
+							<FolderIcon aria-label={`Saved at ${quickPagePath(project.id, iteration.name)}`} className="text-muted-foreground size-4 shrink-0" />
 						) : (
 							<GitBranchIcon aria-label={`Branch ${iteration.branch}`} className="text-muted-foreground size-4 shrink-0" />
 						)}
 					</TooltipTrigger>
-					<TooltipContent side="bottom" className={quick ? undefined : 'font-mono'}>
-						{quick ? 'Quick prototype, saved in the design repository' : iteration.branch}
+					<TooltipContent side="bottom" className="font-mono">
+						{quick ? quickPagePath(project.id, iteration.name) : iteration.branch}
 					</TooltipContent>
 				</Tooltip>
 				<People people={iteration.contributors} />
