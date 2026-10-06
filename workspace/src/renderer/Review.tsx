@@ -19,6 +19,7 @@ import { Popover } from '@mui/material';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { markersFor, mergeComments, numberComments, sameComments } from '../shared/comments';
+import { latest } from '../shared/latest';
 import { People } from './People';
 import { ShareControl } from './ShareControl';
 import { useHostedPreview } from './hostedPreview';
@@ -152,25 +153,38 @@ export const Review = ({
 	// what was just posted is kept here and merged into whatever is read back.
 	const posted = useRef(new Map<number, ReviewComment>());
 
-	// `quiet` is for the background refresh below: a failed check in the background is not worth an error.
-	const reading = useRef(false);
+	/**
+	 * Reading the comments. `quiet` is for the background refresh: a failed check nobody asked for is
+	 * not worth an error on screen.
+	 *
+	 * One read at a time, and never a lost one -- see `latest`. The bug it fixes was visible: opening
+	 * an iteration reads on arrival and again once the preview is up, and while a request made during
+	 * a read was simply dropped, the comments stayed as the first read left them until something else
+	 * happened to ask. Posting a comment looked like what made an earlier one appear.
+	 */
+	/** True when someone asked for this read, so a failure is worth saying. Background reads are silent. */
+	const asked = useRef(false);
+	const read = useCallback(async () => {
+		const loud = asked.current;
+		asked.current = false;
+		const result = await window.workspace.readComments(project.id, iteration.branch);
+		if (!result.ok) {
+			if (loud) setError(result.error);
+			return;
+		}
+		const next = mergeComments(result.value, posted.current.values());
+		// Nothing new means nothing changes, so a refresh does not redraw every pin.
+		setComments((prev) => (sameComments(prev, next) ? prev : next));
+	}, [project.id, iteration.branch]);
+	const runRead = useMemo(() => latest(read), [read]);
 	const load = useCallback(
-		async (quiet = false) => {
-			// One read at a time: a slow one must not be overtaken by the next tick and then overwrite it.
-			if (reading.current) return;
-			reading.current = true;
-			try {
-				const result = await window.workspace.readComments(project.id, iteration.branch);
-				if (!result.ok) return quiet ? undefined : setError(result.error);
-				const next = mergeComments(result.value, posted.current.values());
-				// Nothing new means nothing changes, so a refresh does not redraw every pin.
-				setComments((prev) => (sameComments(prev, next) ? prev : next));
-			} finally {
-				reading.current = false;
-			}
+		(quiet = false) => {
+			if (!quiet) asked.current = true;
+			return runRead();
 		},
-		[project.id, iteration.branch],
+		[runRead],
 	);
+
 	useEffect(() => void load(), [load]);
 
 	// A reviewer's comment made after this was opened should appear without anyone reopening it: when the
@@ -200,11 +214,15 @@ export const Review = ({
 		if (mine !== openRun.current) return;
 		if (r.ok) {
 			setOpened(true);
+			// The page is up, so this is the first moment pins can be drawn on it. Read again rather
+			// than draw whatever the read on arrival happened to return: that one raced the preview
+			// starting, and a reviewer may have commented in between.
+			void load(true);
 		} else {
 			setOpened(false);
 			setError(r.error);
 		}
-	}, []);
+	}, [load]);
 
 	// The shared preview opens once it answers; the view closes when leaving.
 	useEffect(() => {
