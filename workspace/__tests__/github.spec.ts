@@ -139,6 +139,17 @@ describe('callApi', () => {
     await expect(callApi('tok', { path: '/repos/a/b/issues' }, fetcher)).rejects.toThrow(/Issues \(read and write\)/);
   });
 
+  it('treats 204 No Content as a success with nothing to read, instead of failing to parse an empty body', async () => {
+    const fetcher: Fetcher = async () => ({
+      status: 204,
+      json: async () => {
+        throw new SyntaxError('Unexpected end of JSON input');
+      },
+      text: async () => '',
+    });
+    await expect(callApi('tok', { path: '/repos/a/b/issues/comments/9', method: 'DELETE' }, fetcher)).resolves.toBeNull();
+  });
+
   it("passes GitHub's own message through for other failures", async () => {
     const { fetcher } = stub([{ status: 422, body: { message: 'Validation failed' } }]);
     await expect(callApi('tok', { path: '/x' }, fetcher)).rejects.toThrow(GitHubError);

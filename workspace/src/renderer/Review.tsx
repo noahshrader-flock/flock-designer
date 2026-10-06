@@ -465,6 +465,21 @@ export const Review = ({
 		if (addressLive.current) void load(true);
 	};
 
+	// Deleting cannot be undone, so it asks first, on the card itself (a dialog would have to take the preview's place).
+	const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
+	const removeComment = async (comment: ReviewComment) => {
+		setError(null);
+		const r = await window.workspace.deleteComment(comment.id);
+		if (!r.ok) return setError(r.error);
+		// Forgotten here too: comments just posted from this window are kept until a read includes them,
+		// and one that stayed would come back on the next refresh.
+		posted.current.delete(comment.id);
+		setConfirmingDelete(null);
+		setSelected((s) => (s === comment.id ? null : s));
+		setComments((cs) => (cs ?? []).filter((c) => c.id !== comment.id));
+		void load(true); // brings comments.md up to date too
+	};
+
 	const setResolved = async (comment: ReviewComment, resolved: boolean) => {
 		setError(null);
 		const r = await window.workspace.resolveComment(comment.id, resolved);
@@ -764,7 +779,35 @@ export const Review = ({
 													>
 														{comment.resolved ? 'Reopen' : 'Resolve'}
 													</FSButton>
+													<FSButton
+														size="sm"
+														variant="ghost"
+														onClick={(e: React.MouseEvent) => {
+															e.stopPropagation();
+															setConfirmingDelete(comment.id);
+														}}
+													>
+														Delete
+													</FSButton>
 												</FSStack>
+												{confirmingDelete === comment.id && (
+													<FSStack
+														direction="row"
+														spacing={1}
+														alignItems="center"
+														onClick={(e: React.MouseEvent) => e.stopPropagation()}
+													>
+														<FSTypography variant="caption" color="error" sx={{ flexGrow: 1 }}>
+															Delete this comment for good? It cannot be brought back.
+														</FSTypography>
+														<FSButton size="sm" variant="ghost" onClick={() => setConfirmingDelete(null)}>
+															Keep
+														</FSButton>
+														<FSButton size="sm" variant="secondary" onClick={() => void removeComment(comment)}>
+															Delete
+														</FSButton>
+													</FSStack>
+												)}
 												<FSTypography variant="body2">{comment.body}</FSTypography>
 												{comment.picture && (
 													<img

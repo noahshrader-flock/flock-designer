@@ -69,6 +69,7 @@ let agentStart: ReturnType<typeof vi.fn>;
 let runtimeStart: ReturnType<typeof vi.fn>;
 let memoryValue: string | null;
 let previewUrl: string | null;
+let deleteComment: ReturnType<typeof vi.fn>;
 
 beforeEach(async () => {
 	handlers.clear();
@@ -92,6 +93,7 @@ beforeEach(async () => {
 	runtimeStart = vi.fn(async () => ({ state: 'stopped' }));
 	memoryValue = null;
 	previewUrl = null;
+	deleteComment = vi.fn(async () => undefined);
 
 	registerIpc({
 		window: { webContents: { send: vi.fn() } } as never,
@@ -99,7 +101,7 @@ beforeEach(async () => {
 		runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
 		agent: { start: agentStart, status: vi.fn(() => ({ state: 'idle' })) } as never,
 		github: { state: () => ({ state: 'signedOut' }) } as never,
-		designRepo: { listProjects: vi.fn(async () => []) } as never,
+		designRepo: { listProjects: vi.fn(async () => []), deleteComment } as never,
 		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
 		memory: { read: () => memoryValue, write: (r: string) => { memoryValue = r; }, available: () => true } as never,
 	});
@@ -290,5 +292,25 @@ describe('opening the preview in the real browser', () => {
 			expect(open).not.toHaveBeenCalled();
 		},
 	);
+});
+
+describe('deleteComment', () => {
+	it('deletes the comment it is told to, and says nothing back', async () => {
+		const r = await call(CHANNELS.deleteComment, 42);
+		expect(r).toMatchObject({ ok: true, value: null });
+		expect(deleteComment).toHaveBeenCalledWith(42);
+	});
+
+	it.each([1.5, '42', null, undefined, '../../x', NaN])('refuses %p, and deletes nothing', async (bad) => {
+		const r = await call(CHANNELS.deleteComment, bad);
+		expect(r.ok).toBe(false);
+		expect(deleteComment).not.toHaveBeenCalled();
+	});
+
+	it("reports GitHub's refusal rather than pretending it worked", async () => {
+		deleteComment.mockRejectedValueOnce(new Error("Only a comment's author can delete it."));
+		const r = await call(CHANNELS.deleteComment, 42);
+		expect(r).toMatchObject({ ok: false, error: expect.stringContaining('can delete it') });
+	});
 });
 

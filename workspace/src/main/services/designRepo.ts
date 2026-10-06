@@ -339,6 +339,23 @@ export class DesignRepo {
     return this.toComment(asRecord(updated));
   }
 
+  /**
+   * Deletes a comment for good: GitHub keeps no copy. GitHub decides who may (the comment's author, or
+   * anyone who can write to the repository), and its refusal is put in words a person can act on.
+   * A comment that is already gone counts as deleted: someone else got there first.
+   */
+  async deleteComment(commentId: number): Promise<void> {
+    try {
+      await this.session.api(`${this.base}/issues/comments/${commentId}`, { method: 'DELETE' });
+    } catch (err) {
+      if (err instanceof GitHubError && err.status === 404) return;
+      if (err instanceof GitHubError && err.status === 403) {
+        throw new GitHubError("Only a comment's author, or someone who can write to the design repository, can delete it.", 403);
+      }
+      throw err;
+    }
+  }
+
   async postComment(
     projectId: string,
     branch: string,

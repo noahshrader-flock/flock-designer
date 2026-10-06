@@ -218,6 +218,8 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): P
     }
     throw new GitHubError(message || `GitHub returned ${res.status}`, res.status);
   }
+  // "No Content": a delete worked and there is nothing to read. Parsing it would fail a call that succeeded.
+  if (res.status === 204) return null;
   return res.json();
 };
 

@@ -515,3 +515,29 @@ describe('reading past one page', () => {
   });
 });
 
+describe('deleteComment', () => {
+  const COMMENT = '/repos/acme/design/issues/comments/70';
+  const failing = (status: number, message: string) =>
+    ({ api: vi.fn(async () => { throw new GitHubError(message, status); }) }) as unknown as GitHubSession;
+
+  it('deletes by comment id, with a DELETE and nothing else', async () => {
+    const { session, writes } = fakeSession({ [COMMENT]: null });
+    await new DesignRepo(session, REF).deleteComment(70);
+    expect(writes).toEqual([{ path: COMMENT, method: 'DELETE' }]);
+  });
+
+  it('counts a comment that is already gone as deleted, because someone else got there first', async () => {
+    await expect(new DesignRepo(failing(404, 'Not found'), REF).deleteComment(70)).resolves.toBeUndefined();
+  });
+
+  it("says who is allowed when GitHub refuses, in place of GitHub's own wording", async () => {
+    await expect(new DesignRepo(failing(403, 'Must have admin rights to Repository.'), REF).deleteComment(70)).rejects.toThrow(
+      /author, or someone who can write to the design repository/,
+    );
+  });
+
+  it('lets any other failure through, so a dropped connection is not mistaken for a delete', async () => {
+    await expect(new DesignRepo(failing(502, 'Bad gateway'), REF).deleteComment(70)).rejects.toThrow('Bad gateway');
+  });
+});
+

@@ -491,6 +491,14 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 		}),
 	);
 	ipcMain.handle(
+		CHANNELS.deleteComment,
+		guard(async (commentId: number) => {
+			if (!Number.isInteger(commentId)) throw new Error('That is not a comment.');
+			await designRepo.deleteComment(commentId);
+			return null;
+		}),
+	);
+	ipcMain.handle(
 		CHANNELS.resolveComment,
 		guard((commentId: number, resolved: boolean): Promise<ReviewComment> => {
 			if (!Number.isInteger(commentId)) throw new Error('That is not a comment.');
