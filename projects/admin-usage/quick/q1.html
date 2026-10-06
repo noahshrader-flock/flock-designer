@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usage - Cedar Valley Police Department</title>
+<!--
+  Quick prototype: new "Usage" tab on Organization settings.
+
+  Shows how each role is used over the last 90 days so an org admin can decide which roles to archive:
+  summary tiles, a bulk-archivable list of roles nobody has used in 90 days, a small-multiples usage chart
+  per role in use, and a right-hand drawer (opens on picking any role) showing who holds it.
+
+  Modelled on: src/components/org/upsertOrgPage.tsx (page header, FSTabs bar, tab body spacing),
+  orgSettingsTab.tsx / TabTitle (tab heading), role/rolesList (wording, "N Users", toolbar), role/deleteConfirmationDialog
+  (dialog shape), rolesListFiltersDrawer (FSDrawer) and common/stickyFooterActions (bulk action bar).
+  NOTE: in the product "Roles" is not a tab on this page (it is its own nav item), so Usage is appended
+  after the last existing tab, Data & Privacy.
+  "Archive" does not exist in the product today (roles can only be deleted, and only with 0 users); its behaviour here is assumed.
+
+  States, via ?state= :
+    default    - 34 roles, 9 unused (one still assigned to 40 people)
+    empty      - no unused roles
+    loading    - skeletons
+    archiving  - the 40-person role is selected and the archive confirmation is already open
+-->
+<style>
+  :root {
+    --primary: #32325d;
+    --primary-hover: #0d0c45;
+    --text: #212529;
+    --text-2: #6b6f72;
+    --divider: #e0e0e0;
+    --border: #ced4da;
+    --surface: #ffffff;
+    --surface-2: #f7f7f7;
+    --error: #b52634;
+    --warn-bg: #fff4e5;
+    --warn-text: #663c00;
+    --warn-icon: #ed6c02;
+    --series-1: #2a78d6;
+    --grid: #e1e0d9;
+    --focus: #2a78d6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Roboto, "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 14px; line-height: 1.5; color: var(--text); background: var(--surface); }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  svg.i { width: 20px; height: 20px; fill: currentColor; flex: none; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* prototype-only state switcher */
+  .proto-bar { display: flex; gap: 12px; align-items: center; justify-content: flex-end; padding: 6px 24px; background: var(--surface-2); border-bottom: 1px solid var(--divider); font-size: 12px; color: var(--text-2); }
+  .proto-bar a { color: var(--text-2); text-decoration: none; padding: 2px 8px; border-radius: 10px; }
+  .proto-bar a[aria-current="true"] { background: #e6e6ee; color: var(--text); font-weight: 500; }
+  .proto-bar a:hover { text-decoration: underline; }
+
+  .page { padding: 1rem 1.5rem; display: flex; justify-content: center; }
+  .page-inner { width: 100%; max-width: 1200px; }
+  .breadcrumb { margin-bottom: 1rem; }
+  .link { color: var(--primary); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; font-size: 14px; }
+  .org-type { font-size: 14px; color: var(--text-2); }
+  .org-name { font-size: 2rem; font-weight: 500; margin: 0; line-height: 1.25; }
+  .header { margin-top: 1rem; padding-bottom: 16px; }
+
+  /* tabs (FSTabs) */
+  .tabs { border-bottom: 1px solid var(--divider); padding: 0 20px; display: flex; overflow-x: auto; }
+  .tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 12px 16px; font-size: 14px; font-weight: 500; color: var(--text-2); cursor: pointer; white-space: nowrap; margin-bottom: -1px; }
+  .tab:hover { color: var(--text); }
+  .tab[aria-selected="true"] { color: var(--primary); border-bottom-color: var(--primary); }
+  .tab .new { margin-left: 6px; font-size: 10px; font-weight: 700; letter-spacing: .04em; padding: 1px 6px; border-radius: 8px; background: #e6e6ee; color: var(--primary); vertical-align: 1px; }
+
+  .tab-body { padding: 1.5rem; margin-bottom: 110px; }
+  h2.tab-title { font-size: 1.5rem; font-weight: 400; margin: 0; line-height: 1.33; }
+  .tab-desc { margin: 4px 0 24px; color: var(--text); max-width: 760px; }
+  .section { margin-top: 32px; }
+  .section-head { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .section-head h3 { margin: 0; font-size: 1.25rem; font-weight: 500; line-height: 1.6; }
+  .section-head .sub { color: var(--text-2); font-size: 14px; flex-basis: 100%; margin: -4px 0 0; max-width: 760px; }
+  .grow { flex: 1; }
+
+  /* buttons (FSButton) */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 6px 16px; border-radius: 4px; border: 1px solid transparent; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .btn.primary { background: var(--primary); color: #fff; }
+  .btn.primary:hover { background: var(--primary-hover); }
+  .btn.secondary { background: #fff; border-color: var(--primary); color: var(--primary); }
+  .btn.secondary:hover { background: #f0f0f6; }
+  .btn.ghost { background: transparent; color: var(--primary); }
+  .btn.ghost:hover { background: #f0f0f6; }
+  .btn.destructive { background: var(--error); color: #fff; }
+  .btn.destructive:hover { background: #8f1d29; }
+  .btn[disabled] { opacity: .45; cursor: not-allowed; }
+  .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; border: 0; background: none; cursor: pointer; color: var(--text-2); }
+  .icon-btn:hover { background: #efefef; }
+
+  /* summary tiles (FSCard) */
+  .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .tile { border: 1px solid var(--divider); border-radius: 8px; padding: 16px 20px; background: var(--surface); }
+  .tile .label { color: var(--text-2); font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  .tile .value { font-size: 2rem; font-weight: 500; line-height: 1.25; margin-top: 4px; }
+  .tile .foot { color: var(--text-2); font-size: 13px; margin-top: 2px; min-height: 20px; }
+  .tile.attn { border-color: #f1c28a; background: #fffaf2; }
+  .tile.attn .label svg { color: var(--warn-icon); }
+
+  /* lists */
+  .list { border: 1px solid var(--divider); border-radius: 8px; overflow: hidden; background: var(--surface); }
+  .row { display: grid; align-items: center; column-gap: 16px; padding: 12px 20px; border-top: 1px solid var(--divider); background: var(--surface); }
+  .row:first-child { border-top: 0; }
+  .row.head { background: var(--surface-2); color: var(--text-2); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; padding-top: 8px; padding-bottom: 8px; }
+  .row.clickable { cursor: pointer; }
+  .row.clickable:hover { background: #fafafc; }
+  .row.selected { background: #f1f1f8; }
+  .cols-unused { grid-template-columns: 24px minmax(180px, 1.6fr) minmax(140px, 1fr) minmax(130px, 1fr) 24px; }
+  .cols-usage { grid-template-columns: minmax(180px, 1.4fr) 200px 130px 130px 24px; }
+  .role-name { font-size: 15px; font-weight: 700; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; color: var(--text); }
+  .role-name:hover { text-decoration: underline; }
+  .muted { color: var(--text-2); font-size: 13px; }
+  .assigned { display: inline-flex; align-items: center; gap: 4px; color: var(--warn-text); }
+  .assigned svg { color: var(--warn-icon); width: 18px; height: 18px; }
+  .chev { color: var(--text-2); }
+
+  /* checkbox (FSCheckbox) */
+  .cb { appearance: none; width: 18px; height: 18px; margin: 0; border: 2px solid #6b6f72; border-radius: 3px; background: #fff; cursor: pointer; display: inline-grid; place-content: center; }
+  .cb:checked, .cb:indeterminate { background: var(--primary); border-color: var(--primary); }
+  .cb:checked::after { content: ""; width: 4px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px, -1px); }
+  .cb:indeterminate::after { content: ""; width: 8px; height: 2px; background: #fff; }
+
+  /* inputs */
+  .field { display: inline-flex; align-items: center; gap: 8px; height: 40px; border: 1px solid var(--border); border-radius: 4px; padding: 0 12px; background: #fff; color: var(--text-2); }
+  .field input, .field select { border: 0; outline: 0; background: transparent; font: inherit; color: var(--text); height: 100%; }
+  .field:focus-within { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+  .field input { width: 220px; }
+  .range-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 14px; background: #ececf3; color: var(--primary); font-size: 13px; font-weight: 500; }
+
+  /* alert (FSAlert) */
+  .alert { display: flex; gap: 12px; padding: 12px 16px; border-radius: 4px; background: var(--warn-bg); color: var(--warn-text); }
+  .alert svg { color: var(--warn-icon); margin-top: 1px; }
+  .alert b { display: block; }
+
+  /* chips (FSChip) */
+  .chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px; border-radius: 12px; font-size: 12px; font-weight: 500; background: #ececf3; color: var(--text); }
+  .chip.warn { background: var(--warn-bg); color: var(--warn-text); }
+  .chip.warn svg { width: 16px; height: 16px; color: var(--warn-icon); }
+  .chip.ok { background: #e8f3ea; color: #1e4620; }
+
+  /* empty state (FSEmptyState) */
+  .empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 40px 20px; gap: 8px; }
+  .empty svg { width: 36px; height: 36px; color: #2e7d32; }
+  .empty .t { font-weight: 600; font-size: 16px; }
+  .empty .d { max-width: 360px; }
+
+  /* skeleton (FSSkeleton) */
+  .sk { display: block; border-radius: 4px; background: linear-gradient(90deg, #ececec 25%, #f6f6f6 50%, #ececec 75%); background-size: 200% 100%; animation: sk 1.4s infinite linear; height: 14px; }
+  @keyframes sk { to { background-position: -200% 0; } }
+
+  /* charts */
+  .chart-wrap { position: relative; display: block; }
+  .chart-wrap svg { display: block; overflow: visible; }
+  .tip { position: absolute; pointer-events: none; z-index: 5; background: #212529; color: #fff; font-size: 12px; line-height: 1.4; padding: 6px 10px; border-radius: 4px; white-space: nowrap; transform: translate(-50%, -100%); opacity: 0; transition: opacity .08s; }
+  .tip.on { opacity: 1; }
+  .tip b { font-weight: 600; }
+  .spark { width: 180px; height: 36px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .seg button { background: #fff; border: 0; padding: 4px 12px; font-size: 13px; cursor: pointer; color: var(--text-2); }
+  .seg button[aria-pressed="true"] { background: #ececf3; color: var(--primary); font-weight: 500; }
+  table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.data th, table.data td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--divider); font-variant-numeric: tabular-nums; }
+  table.data th { color: var(--text-2); font-weight: 500; }
+
+  /* drawer (FSDrawer) */
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1200; opacity: 0; pointer-events: none; transition: opacity .15s; }
+  .scrim.on { opacity: 1; pointer-events: auto; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 520px; max-width: 100vw; background: #fff; z-index: 1210; display: flex; flex-direction: column; transform: translateX(100%); transition: transform .2s; box-shadow: -4px 0 16px rgba(0,0,0,.15); visibility: hidden; }
+  .drawer.on { transform: none; visibility: visible; }
+  .drawer-header { display: flex; align-items: center; gap: 8px; padding: 16px 16px 16px 24px; border-bottom: 1px solid var(--divider); }
+  .drawer-header h2 { margin: 0; font-size: 1.25rem; font-weight: 500; flex: 1; }
+  .drawer-content { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .drawer-actions { display: flex; align-items: center; gap: 8px; padding: 12px 24px; border-top: 1px solid var(--divider); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0 20px; }
+  .stat .v { font-size: 1.5rem; font-weight: 500; line-height: 1.3; }
+  .person { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--divider); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #dcdce9; color: var(--primary); font-size: 12px; font-weight: 600; display: grid; place-items: center; flex: none; }
+  .person .n { font-weight: 500; line-height: 1.3; }
+  .person .r { margin-left: auto; text-align: right; font-size: 13px; color: var(--text-2); white-space: nowrap; }
+  .person.dormant .r { color: var(--warn-text); }
+
+  /* dialog (FSDialog) */
+  .dialog-wrap { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1300; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .dialog-wrap.on { display: flex; }
+  .dialog { background: #fff; border-radius: 4px; width: 100%; max-width: 560px; box-shadow: 0 11px 15px -7px rgba(0,0,0,.2), 0 24px 38px 3px rgba(0,0,0,.14); max-height: 90vh; display: flex; flex-direction: column; }
+  .dialog-title { display: flex; align-items: center; padding: 8px 8px 0 24px; }
+  .dialog-title h2 { margin: 0; flex: 1; font-size: 1.25rem; font-weight: 500; padding: 8px 0; }
+  .dialog-content { padding: 8px 24px 16px; overflow-y: auto; display: grid; gap: 16px; }
+  .dialog-actions { display: flex; align-items: center; padding: 8px 16px 16px; gap: 8px; }
+  .affected { margin: 8px 0 0; padding: 0; list-style: none; font-size: 14px; }
+  .affected li { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
+  .confirm-line { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+
+  /* sticky action bar (StickyFooterActions) */
+  .sticky { position: fixed; left: 0; bottom: 0; width: 100vw; height: 90px; background: #fff; z-index: 1001; border-top: 1px solid var(--divider); display: none; align-items: center; justify-content: space-between; padding: 0 32px; }
+  .sticky.on { display: flex; }
+
+  /* snackbar (FSSnackbar) */
+  .snack { position: fixed; left: 24px; bottom: 24px; z-index: 1400; background: #323232; color: #fff; border-radius: 4px; padding: 8px 8px 8px 16px; display: none; align-items: center; gap: 16px; min-width: 288px; box-shadow: 0 3px 5px -1px rgba(0,0,0,.2), 0 6px 10px rgba(0,0,0,.14); }
+  .snack.on { display: flex; }
+  .snack .btn { color: #b9b9ff; min-height: 30px; }
+
+  .note { margin-top: 40px; border: 1px dashed var(--border); border-radius: 8px; padding: 12px 16px; color: var(--text-2); font-size: 13px; background: var(--surface-2); }
+  .note summary { cursor: pointer; font-weight: 500; color: var(--text); }
+  .note p { margin: 8px 0 0; }
+
+  @media (max-width: 900px) {
+    .tiles { grid-template-columns: 1fr; }
+    .cols-usage { grid-template-columns: 1fr 160px 24px; }
+    .cols-usage > :nth-child(3), .cols-usage > :nth-child(4) { display: none; }
+    .cols-unused { grid-template-columns: 24px 1fr 24px; }
+    .cols-unused > :nth-child(3), .cols-unused > :nth-child(4) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="proto-bar" data-e2e-ref="state-switcher" aria-label="Prototype states">
+  <span>Prototype state:</span>
+  <a href="?state=default" data-s="default">Default</a>
+  <a href="?state=empty" data-s="empty">Empty</a>
+  <a href="?state=loading" data-s="loading">Loading</a>
+  <a href="?state=archiving" data-s="archiving">Archiving a role with 40 people</a>
+</div>
+
+<div class="page">
+  <div class="page-inner">
+    <div class="breadcrumb" data-component="Breadcrumb">
+      <button class="link" type="button" style="text-decoration:none">&lt; Organization List</button>
+    </div>
+
+    <div class="header" data-e2e-ref="org-header">
+      <div class="org-type">LAW ENFORCEMENT</div>
+      <h1 class="org-name">Cedar Valley Police Department</h1>
+    </div>
+
+    <div class="tabs" role="tablist" data-component="FSTabs" data-e2e-ref="org-tabs">
+      <button class="tab" role="tab" aria-selected="false" data-component="FSTab">Overview</button>
+      <button class="tab" role="tab" aria-selected="false" data-component="FSTab">Package &amp; Features</button>
+      <button class="tab" role="tab" aria-selected="false" data-component="FSTab">Policies</button>
+      <button class="tab" role="tab" aria-selected="false" data-component="FSTab">Settings</button>
+      <button class="tab" role="tab" aria-selected="false" data-component="FSTab">Authentication</button>
+      <button class="tab" role="tab" aria-selected="false" data-component="FSTab">Data &amp; Privacy</button>
+      <button class="tab" role="tab" aria-selected="true" data-component="FSTab" data-e2e-ref="usage-tab">Usage<span class="new">NEW</span></button>
+    </div>
+
+    <main class="tab-body" id="tab-body" role="tabpanel" aria-label="Usage"></main>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" data-component="FSDrawer" data-e2e-ref="role-holders-panel"></aside>
+<div class="dialog-wrap" id="dialog-wrap"><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-title" data-component="FSDialog" data-e2e-ref="archive-dialog" id="dialog"></div></div>
+<div class="sticky" id="sticky" data-component="StickyFooterActions" data-e2e-ref="bulk-archive-bar"></div>
+<div class="snack" id="snack" role="status" data-component="FSSnackbar"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var STATE = new URLSearchParams(location.search).get('state') || 'default';
+  if (['default', 'empty', 'loading', 'archiving'].indexOf(STATE) < 0) STATE = 'default';
+  document.querySelectorAll('.proto-bar a').forEach(function (a) { a.setAttribute('aria-current', a.dataset.s === STATE ? 'true' : 'false'); });
+
+  /* ---------- helpers ---------- */
+  var TODAY = new Date(2026, 9, 6);
+  var WEEK0 = new Date(2026, 6, 8);
+  var DAY = 86400000;
+  function addDays(d, n) { return new Date(d.getTime() + n * DAY); }
+  function fmt(d, withYear) { return d.toLocaleDateString('en-US', withYear ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' }); }
+  function daysAgoOf(d) { return Math.round((TODAY - d) / DAY); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
+  function rng(seed) { var a = seed >>> 0; return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  var ICON = {
+    close: 'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+    search: 'M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+    check: 'M16.59 7.58 10 14.17l-3.59-3.58L5 12l5 5 8-8zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z',
+    warn: 'M12 5.99 19.53 19H4.47L12 5.99M12 2 1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2v-4z',
+    chev: 'M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z',
+    archive: 'M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5 6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z',
+    info: 'M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z',
+    drop: 'M7 10l5 5 5-5z'
+  };
+  function icon(n, cls) { return '<svg class="i ' + (cls || '') + '" viewBox="0 0 24 24" aria-hidden="true"><path d="' + ICON[n] + '"/></svg>'; }
+
+  /* ---------- mock data ---------- */
+  var FIRST = ['Marcus','Elena','Darnell','Priya','Tomas','Aisha','Jordan','Hannah','Luis','Keiko','Brandon','Sofia','Terrence','Maya','Owen','Renata','Calvin','Imani','Nate','Gloria','Victor','Dana','Ravi','Whitney','Mateo','Colleen','Andre','Lucy','Henry','Tasha','Gabriel','Fiona','Isaiah','Paula','Wesley','Naomi','Derek','Carmen','Spencer','Yusuf'];
+  var LAST = ['Alvarez','Brennan','Castillo','Dawson','Okafor','Fitzgerald','Gupta','Hollis','Ibarra','Jennings','Kowalski','Lindqvist','Mbeki','Novak','Ortega','Pham','Quinn','Reyes','Sandoval','Tran','Underwood','Vasquez','Whitaker','Xu','Yoder','Zielinski','Abernathy','Baptiste','Coleman','Delgado','Eastman','Foster','Greer','Hartman','Iverson','Jaramillo','Kessler','Lombardi','Maddox','Nakamura'];
+
+  // [name, people, share of people active in 90d, weekly activity prob, trend, lastUsed date (unused roles only)]
+  var SPEC = [
+    ['Patrol Officer', 30, 0.88, 0.78, 0.05], ['Detective', 18, 0.9, 0.7, 0], ['Dispatcher', 14, 0.95, 0.85, 0],
+    ['Sergeant', 11, 0.9, 0.8, 0], ['Traffic Unit', 9, 0.8, 0.55, -0.1], ['Records Clerk', 8, 1, 0.9, 0],
+    ['Command Staff', 7, 0.85, 0.6, 0], ['Reserve Officer', 7, 0.45, 0.25, 0.2], ['Real Time Crime Center', 6, 1, 0.9, 0.1],
+    ['Investigations – Property', 6, 0.85, 0.6, 0], ['Investigations – Persons', 6, 0.85, 0.65, 0.05], ['Alerts Only', 6, 0.7, 0.5, -0.4],
+    ['Crime Analyst', 5, 1, 0.95, 0], ['Admin', 4, 1, 0.8, 0], ['School Resource Officer', 4, 0.75, 0.4, -0.3],
+    ['Code Enforcement', 4, 0.75, 0.45, 0], ['Evidence Technician', 3, 1, 0.7, 0], ['Training Officer', 3, 0.67, 0.4, 0],
+    ['Parking Enforcement', 3, 1, 0.5, 0], ['Hotlist Admin', 3, 1, 0.6, 0.1], ['Public Information Officer', 2, 1, 0.3, 0],
+    ['Auditor', 2, 1, 0.2, 0], ['Intern – Read Only', 2, 1, 0.35, -0.6], ['Chief of Police', 1, 1, 0.5, 0], ['Fleet Manager', 1, 1, 0.3, 0],
+    ['Legacy Records Viewer', 40, 0, 0, 0, new Date(2026, 0, 22)],
+    ['Joint Task Force – 2023', 3, 0, 0, 0, new Date(2025, 10, 4)],
+    ['Search – Basic (legacy)', 2, 0, 0, 0, new Date(2026, 3, 9)],
+    ['Neighborhood Watch Liaison', 1, 0, 0, 0, new Date(2026, 2, 17)],
+    ['Vendor Support', 0, 0, 0, 0, new Date(2026, 1, 12)],
+    ['Search – Extended (legacy)', 0, 0, 0, 0, new Date(2025, 5, 30)],
+    ['Summer Event Staff – 2024', 0, 0, 0, 0, new Date(2024, 7, 18)],
+    ['Drone Pilot – Pilot Program', 0, 0, 0, 0, null],
+    ['Cadet', 0, 0, 0, 0, null]
+  ];
+
+  var used = 0;
+  var ROLES = SPEC.map(function (s, idx) {
+    var r = rng(1000 + idx * 97);
+    var unused = s.length > 5;
+    var role = { id: 'r' + (idx + 1), name: s[0], unused: unused, archived: false, people: [], weekly: [], lastUsedDate: unused ? s[5] : null };
+    var activeCount = unused ? 0 : Math.max(1, Math.round(s[1] * s[2]));
+    var activeIdx = [];
+    for (var i = 0; i < s[1]; i++) {
+      used++;
+      var f = FIRST[(used * 7) % 40], l = LAST[(used * 11 + Math.floor(used / 40)) % 40];
+      var daysAgo;
+      if (unused) {
+        var base = daysAgoOf(s[5]);
+        daysAgo = i === 0 ? base : base + Math.floor(r() * 160);
+      } else if (i < activeCount) {
+        daysAgo = i === 0 ? Math.floor(r() * 3) : Math.floor(Math.pow(r(), 1.6) * 88);
+        activeIdx.push(i);
+      } else {
+        daysAgo = 91 + Math.floor(r() * 220);
+      }
+      role.people.push({ name: f + ' ' + l, email: (f + '.' + l).toLowerCase() + '@cedarvalleypd.example', daysAgo: daysAgo });
+    }
+    var weekly = [];
+    for (var w = 0; w < 13; w++) {
+      var set = {};
+      var p = Math.max(0.03, Math.min(0.97, s[3] * (1 + s[4] * (w - 6) / 6)));
+      activeIdx.forEach(function (pi) {
+        if (r() < p) set[pi] = 1;
+        if (12 - Math.floor(role.people[pi].daysAgo / 7) === w) set[pi] = 1;
+      });
+      weekly.push(Object.keys(set).length);
+    }
+    role.weekly = weekly;
+    role.active = role.people.filter(function (p) { return p.daysAgo <= 90; }).length;
+    var best = role.people.reduce(function (m, p) { return Math.min(m, p.daysAgo); }, 9999);
+    role.lastUsed = unused ? role.lastUsedDate : (best === 9999 ? null : addDays(TODAY, -best));
+    return role;
+  });
+  if (STATE === 'empty') ROLES = ROLES.filter(function (r) { return !r.unused; });
+  var ROLE_BY_ID = {}; ROLES.forEach(function (r) { ROLE_BY_ID[r.id] = r; });
+
+  /* ---------- state ---------- */
+  var ui = { selected: {}, sort: 'active-desc', query: '', panelId: null, panelView: 'chart', peopleQuery: '', dialogIds: null, dialogConfirm: false, dialogBusy: false, undo: null };
+  var lastFocus = null;
+  var LEGACY = ROLES.filter(function (r) { return r.name === 'Legacy Records Viewer'; })[0];
+  if (STATE === 'archiving') { ui.selected[LEGACY.id] = true; ui.dialogIds = [LEGACY.id]; }
+
+  function live() { return ROLES.filter(function (r) { return !r.archived; }); }
+  function unusedRoles() { return live().filter(function (r) { return r.unused; }).sort(function (a, b) { return b.people.length - a.people.length || a.name.localeCompare(b.name); }); }
+  function usedRoles() { return live().filter(function (r) { return !r.unused; }); }
+  function selectedIds() { return Object.keys(ui.selected).filter(function (id) { return ui.selected[id] && ROLE_BY_ID[id] && !ROLE_BY_ID[id].archived; }); }
+
+  /* ---------- charts ---------- */
+  function weekLabel(i) { var s = addDays(WEEK0, i * 7), e = addDays(s, 6); return fmt(s) + ' – ' + fmt(e); }
+
+  function drawChart(host, values, o) {
+    var w = o.w, h = o.h, pl = o.axes ? 32 : 2, pr = o.axes ? 8 : 2, pt = o.axes ? 10 : 4, pb = o.axes ? 24 : 4;
+    var max = Math.max.apply(null, values.concat([1]));
+    if (o.axes) max = max <= 4 ? Math.max(max, 2) : Math.ceil(max / 2) * 2;
+    var n = values.length, iw = w - pl - pr, ih = h - pt - pb;
+    function X(i) { return pl + i * iw / (n - 1); }
+    function Y(v) { return pt + ih * (1 - v / max); }
+    var line = values.map(function (v, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1); }).join('');
+    var area = line + 'L' + X(n - 1).toFixed(1) + ' ' + Y(0).toFixed(1) + 'L' + X(0).toFixed(1) + ' ' + Y(0).toFixed(1) + 'Z';
+    var g = '';
+    if (o.axes) {
+      var ticks = [0, Math.round(max / 2), max].filter(function (t, i, a) { return a.indexOf(t) === i; });
+      ticks.forEach(function (t) {
+        g += '<line x1="' + pl + '" x2="' + (w - pr) + '" y1="' + Y(t) + '" y2="' + Y(t) + '" stroke="' + (t === 0 ? '#c3c2b7' : '#e1e0d9') + '" stroke-width="1"/>';
+        g += '<text x="' + (pl - 6) + '" y="' + (Y(t) + 4) + '" text-anchor="end" font-size="11" fill="#6b6f72">' + t + '</text>';
+      });
+      [0, 4, 8, 12].forEach(function (i) {
+        g += '<text x="' + X(i) + '" y="' + (h - 6) + '" text-anchor="' + (i === 0 ? 'start' : i === 12 ? 'end' : 'middle') + '" font-size="11" fill="#6b6f72">' + fmt(addDays(WEEK0, i * 7)) + '</text>';
+      });
+    } else {
+      g += '<line x1="' + pl + '" x2="' + (w - pr) + '" y1="' + Y(0) + '" y2="' + Y(0) + '" stroke="#e1e0d9" stroke-width="1"/>';
+    }
+    host.innerHTML =
+      '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="' + esc(o.label) + '">' + g +
+      '<path d="' + area + '" fill="#2a78d6" fill-opacity=".12"/>' +
+      '<path d="' + line + '" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' +
+      '<g class="hover" style="display:none"><line class="xh" y1="' + pt + '" y2="' + Y(0) + '" stroke="#898781" stroke-width="1"/><circle class="dot" r="4.5" fill="#2a78d6" stroke="#fff" stroke-width="2"/></g>' +
+      '<rect class="hit" x="0" y="0" width="' + w + '" height="' + h + '" fill="transparent"/></svg>' +
+      '<div class="tip"></div>';
+    var svg = host.querySelector('svg'), hv = svg.querySelector('.hover'), tip = host.querySelector('.tip');
+    function show(i) {
+      i = Math.max(0, Math.min(n - 1, i));
+      hv.style.display = '';
+      hv.querySelector('.xh').setAttribute('x1', X(i)); hv.querySelector('.xh').setAttribute('x2', X(i));
+      hv.querySelector('.dot').setAttribute('cx', X(i)); hv.querySelector('.dot').setAttribute('cy', Y(values[i]));
+      tip.innerHTML = weekLabel(i) + '<br><b>' + plural(values[i], 'active person', 'active people') + '</b>';
+      tip.style.left = X(i) + 'px'; tip.style.top = (Y(values[i]) - 10) + 'px'; tip.classList.add('on');
+      return i;
+    }
+    function hide() { hv.style.display = 'none'; tip.classList.remove('on'); }
+    svg.querySelector('.hit').addEventListener('mousemove', function (e) {
+      var rect = svg.getBoundingClientRect();
+      show(Math.round((e.clientX - rect.left - pl) / iw * (n - 1)));
+    });
+    svg.querySelector('.hit').addEventListener('mouseleave', hide);
+    if (o.keyboard) {
+      var cur = n - 1;
+      host.setAttribute('tabindex', '0');
+      host.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowLeft') { cur = show(cur - 1); e.preventDefault(); }
+        if (e.key === 'ArrowRight') { cur = show(cur + 1); e.preventDefault(); }
+      });
+      host.addEventListener('blur', hide);
+      host.addEventListener('focus', function () { cur = show(cur); });
+    }
+  }
+
+  /* ---------- tab body ---------- */
+  var body = document.getElementById('tab-body');
+
+  function skRow(cols, cells) {
+    return '<div class="row ' + cols + '">' + cells.join('') + '</div>';
+  }
+  function sk(w, h) { return '<span class="sk" style="width:' + w + ';height:' + (h || 14) + 'px"></span>'; }
+
+  function renderLoading() {
+    var tiles = '';
+    for (var i = 0; i < 3; i++) tiles += '<div class="tile">' + sk('90px') + '<div style="height:12px"></div>' + sk('60px', 32) + '<div style="height:8px"></div>' + sk('140px', 12) + '</div>';
+    var u = '', c = '';
+    for (var j = 0; j < 5; j++) u += skRow('cols-unused', [sk('18px', 18), sk('60%'), sk('70%'), sk('50%'), '<span></span>']);
+    for (var k = 0; k < 7; k++) c += skRow('cols-usage', [sk('55%'), sk('180px', 28), sk('70%'), sk('60%'), '<span></span>']);
+    body.innerHTML = head() + '<div class="tiles" aria-busy="true" data-e2e-ref="summary-tiles">' + tiles + '</div>' +
+      '<section class="section"><div class="section-head"><h3>Unused roles</h3></div><div class="list" data-e2e-ref="unused-roles-list" aria-busy="true">' + u + '</div></section>' +
+      '<section class="section"><div class="section-head"><h3>Roles in use</h3></div><div class="list" data-e2e-ref="role-usage-list" aria-busy="true">' + c + '</div></section>' + note();
+  }
+
+  function head() {
+    return '<div data-component="TabTitle"><h2 class="tab-title">Usage</h2>' +
+      '<p class="tab-desc">See how each role is actually being used so you can decide which ones to clean up. Based on sign-in activity from people who hold the role.</p></div>';
+  }
+
+  function note() {
+    return '<details class="note" data-e2e-ref="design-question"><summary>Design question: filter on the Roles list, or its own tab?</summary>' +
+      '<p>This prototype argues for a tab: the job here is comparing roles over time and deciding in bulk, which needs a chart per role, a holders panel and an archive flow that the Roles list (a card list of permissions) has no room for. ' +
+      'A lighter "Unused" filter on Roles could still link into this tab.</p></details>';
+  }
+
+  function tiles(un, inUse) {
+    var holdersOfUnused = un.reduce(function (s, r) { return s + r.people.length; }, 0);
+    return '<div class="tiles" data-e2e-ref="summary-tiles">' +
+      '<div class="tile" data-component="FSCard"><div class="label">Total roles</div><div class="value">' + live().length + '</div><div class="foot">&nbsp;</div></div>' +
+      '<div class="tile" data-component="FSCard"><div class="label">Used in the last 90 days</div><div class="value">' + inUse.length + '</div><div class="foot">At least one person with the role was active</div></div>' +
+      '<div class="tile ' + (un.length ? 'attn' : '') + '" data-component="FSCard"><div class="label">' + (un.length ? icon('warn') : icon('check')) + 'Unused in the last 90 days</div><div class="value">' + un.length + '</div>' +
+      '<div class="foot">' + (un.length ? (holdersOfUnused ? 'Still assigned to ' + plural(holdersOfUnused, 'person', 'people') : 'Not assigned to anyone') : 'Nothing to clean up') + '</div></div></div>';
+  }
+
+  function unusedSection(un) {
+    var sel = selectedIds();
+    var allSel = un.length > 0 && un.every(function (r) { return ui.selected[r.id]; });
+    var html = '<section class="section" aria-labelledby="unused-h" data-e2e-ref="unused-roles"><div class="section-head"><h3 id="unused-h">Unused roles' + (un.length ? ' (' + un.length + ')' : '') + '</h3>' +
+      '<span class="range-chip">Last 90 days · ' + fmt(WEEK0) + ' – ' + fmt(TODAY, true) + '</span><span class="grow"></span>' +
+      (un.length ? '<button class="btn secondary" data-act="archive-selected" data-e2e-ref="archive-selected-button"' + (sel.length ? '' : ' disabled') + '>' + icon('archive') + 'Archive' + (sel.length ? ' ' + sel.length + ' selected' : ' selected') + '</button>' : '') +
+      '<p class="sub">No one holding these roles has been active in the last 90 days. Select the ones you no longer need and archive them together.</p></div>';
+    if (!un.length) {
+      html += '<div class="list" data-e2e-ref="empty-state" data-component="FSEmptyState"><div class="empty">' + icon('check') +
+        '<div class="t">No unused roles</div><div class="d">Every role was used by at least one person in the last 90 days. Check back later, or review the roles in use below.</div></div></div></section>';
+      return html;
+    }
+    html += '<div class="list" data-e2e-ref="unused-roles-list"><div class="row head cols-unused"><span><input type="checkbox" class="cb" data-act="select-all" aria-label="Select all unused roles"' + (allSel ? ' checked' : '') + '></span><span>Role</span><span>People with role</span><span>Last used</span><span></span></div>';
+    un.forEach(function (r) {
+      var n = r.people.length;
+      html += '<div class="row cols-unused clickable' + (ui.selected[r.id] ? ' selected' : '') + '" data-open="' + r.id + '" data-e2e-ref="unused-role-row">' +
+        '<span><input type="checkbox" class="cb" data-sel="' + r.id + '" aria-label="Select ' + esc(r.name) + '"' + (ui.selected[r.id] ? ' checked' : '') + '></span>' +
+        '<span><button class="role-name" data-open-btn="' + r.id + '">' + esc(r.name) + '</button></span>' +
+        '<span>' + (n ? '<span class="assigned">' + icon('warn') + plural(n, 'person', 'people') + '</span>' : '<span class="muted">No one</span>') + '</span>' +
+        '<span class="muted">' + (r.lastUsed ? fmt(r.lastUsed, true) : 'Never used') + '</span><span class="chev">' + icon('chev') + '</span></div>';
+    });
+    return html + '</div></section>';
+  }
+
+  function sortRoles(list) {
+    var s = ui.sort;
+    return list.slice().sort(function (a, b) {
+      if (s === 'name') return a.name.localeCompare(b.name);
+      if (s === 'people-desc') return b.people.length - a.people.length || a.name.localeCompare(b.name);
+      if (s === 'active-asc') return a.active - b.active || a.name.localeCompare(b.name);
+      return b.active - a.active || a.name.localeCompare(b.name);
+    });
+  }
+
+  function usageSection(inUse) {
+    var q = ui.query.trim().toLowerCase();
+    var list = sortRoles(inUse.filter(function (r) { return !q || r.name.toLowerCase().indexOf(q) >= 0; }));
+    var html = '<section class="section" aria-labelledby="usage-h" data-e2e-ref="role-usage"><div class="section-head"><h3 id="usage-h">Roles in use (' + inUse.length + ')</h3><span class="grow"></span>' +
+      '<label class="field" data-component="FSTextField">' + icon('search') + '<input type="search" id="q" placeholder="Search roles" aria-label="Search roles" value="' + esc(ui.query) + '" data-e2e-ref="role-search"></label>' +
+      '<label class="field" data-component="FSSelect"><span class="muted" style="white-space:nowrap">Sort by</span><select id="sort" aria-label="Sort roles" data-e2e-ref="role-sort">' +
+      [['active-desc', 'Most active people'], ['active-asc', 'Fewest active people'], ['people-desc', 'Most people'], ['name', 'Name A–Z']].map(function (o) { return '<option value="' + o[0] + '"' + (ui.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') +
+      '</select></label>' +
+      '<p class="sub">Active people per week over the last 90 days. Each chart is scaled to its own role, so compare shapes, not heights.</p></div>' +
+      '<div class="list" data-e2e-ref="role-usage-list"><div class="row head cols-usage"><span>Role</span><span>Weekly active people</span><span>Active / people</span><span>Last used</span><span></span></div>';
+    if (!list.length) html += '<div class="empty"><div class="t">No roles match “' + esc(ui.query) + '”</div></div>';
+    list.forEach(function (r) {
+      html += '<div class="row cols-usage clickable" data-open="' + r.id + '" data-e2e-ref="role-usage-row">' +
+        '<span><button class="role-name" data-open-btn="' + r.id + '">' + esc(r.name) + '</button></span>' +
+        '<span class="chart-wrap spark" data-spark="' + r.id + '"></span>' +
+        '<span>' + r.active + ' of ' + r.people.length + '</span>' +
+        '<span class="muted">' + lastUsedText(r) + '</span><span class="chev">' + icon('chev') + '</span></div>';
+    });
+    return html + '</div></section>';
+  }
+
+  function lastUsedText(r) {
+    if (!r.lastUsed) return 'Never used';
+    var d = daysAgoOf(r.lastUsed);
+    return d === 0 ? 'Today' : d === 1 ? 'Yesterday' : d <= 30 ? d + ' days ago' : fmt(r.lastUsed, true);
+  }
+
+  function renderBody() {
+    if (STATE === 'loading') { renderLoading(); renderBar(); return; }
+    var un = unusedRoles(), inUse = usedRoles();
+    var scrollY = window.scrollY;
+    body.innerHTML = head() + tiles(un, inUse) + unusedSection(un) + usageSection(inUse) + note();
+    body.querySelectorAll('[data-spark]').forEach(function (el) {
+      var r = ROLE_BY_ID[el.dataset.spark];
+      drawChart(el, r.weekly, { w: 180, h: 36, axes: false, label: r.name + ': weekly active people over the last 90 days, ' + r.weekly.join(', ') });
+    });
+    window.scrollTo(0, scrollY);
+    renderBar();
+  }
+
+  function renderBar() {
+    var bar = document.getElementById('sticky'), ids = selectedIds();
+    if (!ids.length || STATE === 'loading') { bar.classList.remove('on'); bar.innerHTML = ''; return; }
+    var people = ids.reduce(function (s, id) { return s + ROLE_BY_ID[id].people.length; }, 0);
+    bar.classList.add('on');
+    bar.innerHTML = '<div><b>' + plural(ids.length, 'role') + ' selected</b><div class="muted">' + (people ? plural(people, 'person', 'people') + ' still hold ' + (ids.length === 1 ? 'it' : 'them') : 'Not assigned to anyone') + '</div></div>' +
+      '<div style="display:flex;gap:8px"><button class="btn ghost" data-act="clear" data-component="FSButton">Clear selection</button>' +
+      '<button class="btn primary" data-act="archive-selected" data-component="FSButton" data-e2e-ref="bulk-archive-button">' + icon('archive') + 'Archive ' + plural(ids.length, 'role') + '</button></div>';
+  }
+
+  /* ---------- drawer ---------- */
+  var drawer = document.getElementById('drawer'), scrim = document.getElementById('scrim');
+
+  function initials(n) { return n.split(' ').map(function (p) { return p[0]; }).join('').slice(0, 2); }
+  function lastActiveText(d) { return d === 0 ? 'Active today' : d === 1 ? 'Active yesterday' : d <= 30 ? 'Active ' + d + ' days ago' : 'Last active ' + fmt(addDays(TODAY, -d), true); }
+
+  function openPanel(id) {
+    lastFocus = document.activeElement;
+    ui.panelId = id; ui.panelView = 'chart'; ui.peopleQuery = '';
+    renderPanel();
+    drawer.classList.add('on'); scrim.classList.add('on');
+    drawChartPanel();
+    drawer.querySelector('[data-act="close-panel"]').focus();
+  }
+  function closePanel() {
+    ui.panelId = null; drawer.classList.remove('on'); scrim.classList.remove('on');
+    if (lastFocus && document.body.contains(lastFocus)) lastFocus.focus();
+  }
+  function drawChartPanel() {
+    var host = document.getElementById('panel-chart'); if (!host) return;
+    var r = ROLE_BY_ID[ui.panelId];
+    drawChart(host, r.weekly, { w: host.clientWidth || 470, h: 190, axes: true, keyboard: true, label: r.name + ': weekly active people over the last 90 days. Use left and right arrow keys to read each week.' });
+  }
+  function peopleListHtml(r) {
+    var q = ui.peopleQuery.trim().toLowerCase();
+    var list = r.people.slice().sort(function (a, b) { return a.daysAgo - b.daysAgo; }).filter(function (p) { return !q || p.name.toLowerCase().indexOf(q) >= 0 || p.email.indexOf(q) >= 0; });
+    if (!r.people.length) return '<div class="empty" style="padding:24px 0"><div class="t">No one holds this role</div><div class="d">It isn’t assigned to anyone right now.</div></div>';
+    if (!list.length) return '<div class="muted" style="padding:16px 0">No people match “' + esc(ui.peopleQuery) + '”.</div>';
+    return list.map(function (p) {
+      return '<div class="person' + (p.daysAgo > 90 ? ' dormant' : '') + '" data-e2e-ref="holder-row"><span class="avatar" aria-hidden="true">' + esc(initials(p.name)) + '</span>' +
+        '<span><div class="n">' + esc(p.name) + '</div><div class="muted">' + esc(p.email) + '</div></span><span class="r">' + lastActiveText(p.daysAgo) + '</span></div>';
+    }).join('');
+  }
+  function renderPanel() {
+    var r = ROLE_BY_ID[ui.panelId]; if (!r) return;
+    var n = r.people.length;
+    var chartBlock = ui.panelView === 'chart' ? '<div class="chart-wrap" id="panel-chart" data-e2e-ref="role-usage-chart" style="outline-offset:4px"></div>' :
+      '<table class="data" data-e2e-ref="role-usage-table"><thead><tr><th>Week</th><th>Active people</th></tr></thead><tbody>' +
+      r.weekly.map(function (v, i) { return '<tr><td>' + weekLabel(i) + '</td><td>' + v + '</td></tr>'; }).join('') + '</tbody></table>';
+    drawer.innerHTML =
+      '<div class="drawer-header" data-component="FSDrawerHeader"><h2 id="drawer-title">' + esc(r.name) + '</h2>' +
+      (r.unused ? '<span class="chip warn">' + icon('warn') + 'Unused 90+ days</span>' : '<span class="chip ok">In use</span>') +
+      '<button class="icon-btn" data-act="close-panel" aria-label="Close" data-component="FSIconButton">' + icon('close') + '</button></div>' +
+      '<div class="drawer-content" data-component="FSDrawerContent">' +
+      '<div class="stats"><div class="stat"><div class="muted">People with role</div><div class="v">' + n + '</div></div>' +
+      '<div class="stat"><div class="muted">Active in 90 days</div><div class="v">' + r.active + '</div></div>' +
+      '<div class="stat"><div class="muted">Last used</div><div class="v" style="font-size:1rem;padding-top:6px">' + (r.lastUsed ? fmt(r.lastUsed, true) : 'Never') + '</div></div></div>' +
+      '<div style="display:flex;align-items:center;margin-bottom:8px"><b style="flex:1">Weekly active people</b><span class="seg" role="group" aria-label="Chart or table">' +
+      '<button data-act="view" data-v="chart" aria-pressed="' + (ui.panelView === 'chart') + '">Chart</button><button data-act="view" data-v="table" aria-pressed="' + (ui.panelView === 'table') + '">Table</button></span></div>' +
+      chartBlock +
+      '<div style="display:flex;align-items:center;gap:12px;margin:28px 0 4px"><b style="flex:1">People with this role (' + n + ')</b>' +
+      (n > 6 ? '<label class="field" style="height:34px" data-component="FSTextField">' + icon('search') + '<input id="pq" type="search" placeholder="Search people" aria-label="Search people" style="width:140px" value="' + esc(ui.peopleQuery) + '"></label>' : '') + '</div>' +
+      '<div id="people" data-e2e-ref="holders-list">' + peopleListHtml(r) + '</div></div>' +
+      '<div class="drawer-actions" data-component="FSDrawerActions"><button class="btn ghost" data-act="open-role" data-component="FSButton">Open role</button><span class="grow"></span>' +
+      '<button class="btn secondary" data-act="close-panel" data-component="FSButton">Close</button>' +
+      (r.unused ? '<button class="btn primary" data-act="archive-one" data-component="FSButton" data-e2e-ref="archive-role-button">' + icon('archive') + 'Archive role</button>' : '') + '</div>';
+  }
+
+  /* ---------- archive dialog ---------- */
+  var dlgWrap = document.getElementById('dialog-wrap'), dlg = document.getElementById('dialog');
+
+  function openDialog(ids) {
+    lastFocus = document.activeElement;
+    ui.dialogIds = ids; ui.dialogConfirm = false; ui.dialogBusy = false;
+    renderDialog(); dlgWrap.classList.add('on');
+    var c = dlg.querySelector('[data-act="dlg-cancel"]'); if (c) c.focus();
+  }
+  function closeDialog() {
+    ui.dialogIds = null; dlgWrap.classList.remove('on');
+    if (lastFocus && document.body.contains(lastFocus)) lastFocus.focus();
+  }
+  function renderDialog() {
+    var roles = ui.dialogIds.map(function (id) { return ROLE_BY_ID[id]; });
+    var assigned = roles.filter(function (r) { return r.people.length > 0; });
+    var affected = assigned.reduce(function (s, r) { return s + r.people.length; }, 0);
+    var title = roles.length === 1 ? 'Archive Role' : 'Archive ' + roles.length + ' Roles';
+    var content;
+    if (assigned.length) {
+      content = '<div class="alert" data-component="FSAlert" data-e2e-ref="archive-assigned-warning">' + icon('warn') + '<div>' +
+        (assigned.length === 1 ?
+          '<b>' + esc(assigned[0].name) + ' is still assigned to ' + plural(assigned[0].people.length, 'person', 'people') + '.</b>' :
+          '<b>' + plural(affected, 'person', 'people') + ' still hold ' + (assigned.length === 1 ? 'this role' : 'these roles') + '.</b>') +
+        'None of them have been active in the last 90 days. Archiving removes ' + (roles.length === 1 ? 'this role' : 'these roles') + ' from their accounts, so they lose any access it gave them.' +
+        (assigned.length > 1 ? '<ul class="affected">' + assigned.map(function (r) { return '<li><span>' + esc(r.name) + '</span><span>' + plural(r.people.length, 'person', 'people') + '</span></li>'; }).join('') + '</ul>' : '') +
+        '</div></div>' +
+        '<div class="muted"><button class="link" data-act="view-holders" data-id="' + assigned[0].id + '">View the ' + (assigned.length === 1 ? plural(assigned[0].people.length, 'person', 'people') : 'people on ' + esc(assigned[0].name)) + '</button> before you decide.</div>' +
+        '<label class="confirm-line"><input type="checkbox" class="cb" id="dlg-confirm" data-component="FSCheckbox"' + (ui.dialogConfirm ? ' checked' : '') + '><span>I understand ' + plural(affected, 'person', 'people') + ' will lose access from ' + (assigned.length === 1 ? 'this role' : 'these roles') + '.</span></label>' +
+        (assigned.length < roles.length ? '<div class="muted">' + plural(roles.length - assigned.length, 'other role') + ' ' + (roles.length - assigned.length === 1 ? 'is' : 'are') + ' not assigned to anyone.</div>' : '');
+    } else {
+      content = '<p style="margin:0">Archiving ' + (roles.length === 1 ? '<b>' + esc(roles[0].name) + '</b>' : 'these roles') + ' removes ' + (roles.length === 1 ? 'it' : 'them') + ' from the role list so ' + (roles.length === 1 ? 'it' : 'they') + ' can’t be assigned. No one holds ' + (roles.length === 1 ? 'it' : 'them') + ' today.</p>' +
+        (roles.length > 1 ? '<ul class="affected">' + roles.map(function (r) { return '<li><span>' + esc(r.name) + '</span></li>'; }).join('') + '</ul>' : '');
+    }
+    var blocked = assigned.length && !ui.dialogConfirm;
+    dlg.innerHTML =
+      '<div class="dialog-title" data-component="FSDialogTitle"><h2 id="dlg-title">' + title + '</h2><button class="icon-btn" data-act="dlg-cancel" aria-label="Close" data-component="FSIconButton">' + icon('close') + '</button></div>' +
+      '<div class="dialog-content" data-component="FSDialogContent">' + content + '</div>' +
+      '<div class="dialog-actions" data-component="FSDialogActions"><button class="btn ghost" data-act="dlg-cancel" data-component="FSButton" data-e2e-ref="archive-dialog-cancel-button">Cancel</button><span class="grow"></span>' +
+      '<button class="btn ' + (assigned.length ? 'destructive' : 'primary') + '" data-act="dlg-confirm" data-component="' + (ui.dialogBusy ? 'FSLoadingButton' : 'FSButton') + '" data-e2e-ref="archive-dialog-proceed-button"' + (blocked || ui.dialogBusy ? ' disabled' : '') + '>' +
+      (ui.dialogBusy ? 'Archiving…' : (roles.length === 1 ? 'Archive Role' : 'Archive ' + roles.length + ' Roles')) + '</button></div>';
+  }
+
+  /* ---------- snackbar ---------- */
+  var snackTimer;
+  function snack(msg, undo) {
+    var el = document.getElementById('snack');
+    el.innerHTML = '<span>' + esc(msg) + '</span>' + (undo ? '<button class="btn ghost" data-act="undo">Undo</button>' : '');
+    el.classList.add('on'); clearTimeout(snackTimer); snackTimer = setTimeout(function () { el.classList.remove('on'); ui.undo = null; }, 8000);
+  }
+
+  function doArchive() {
+    var ids = ui.dialogIds.slice();
+    ui.dialogBusy = true; renderDialog();
+    setTimeout(function () {
+      ids.forEach(function (id) { ROLE_BY_ID[id].archived = true; delete ui.selected[id]; });
+      ui.undo = ids; closeDialog();
+      if (ui.panelId && ids.indexOf(ui.panelId) >= 0) closePanel();
+      renderBody();
+      snack(ids.length === 1 ? ROLE_BY_ID[ids[0]].name + ' archived.' : ids.length + ' roles archived.', true);
+    }, 700);
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    var cb = t.closest('[data-sel]');
+    if (cb) { ui.selected[cb.dataset.sel] = cb.checked; renderBody(); return; }
+    if (t.closest('[data-act="select-all"]')) {
+      var on = t.closest('input').checked;
+      unusedRoles().forEach(function (r) { ui.selected[r.id] = on; });
+      renderBody(); return;
+    }
+    var a = t.closest('[data-act]');
+    if (a) {
+      var act = a.dataset.act;
+      if (act === 'clear') { ui.selected = {}; renderBody(); }
+      else if (act === 'archive-selected') { if (selectedIds().length) openDialog(selectedIds()); }
+      else if (act === 'archive-one') { openDialog([ui.panelId]); }
+      else if (act === 'close-panel') closePanel();
+      else if (act === 'dlg-cancel') closeDialog();
+      else if (act === 'dlg-confirm') { if (!a.disabled) doArchive(); }
+      else if (act === 'view') { ui.panelView = a.dataset.v; renderPanel(); drawChartPanel(); }
+      else if (act === 'open-role') { snack('Opens the role editor (not part of this prototype).'); }
+      else if (act === 'view-holders') { var id = a.dataset.id; closeDialog(); openPanel(id); }
+      else if (act === 'undo' && ui.undo) { ui.undo.forEach(function (id) { ROLE_BY_ID[id].archived = false; }); ui.undo = null; document.getElementById('snack').classList.remove('on'); renderBody(); }
+      return;
+    }
+    var open = t.closest('[data-open]');
+    if (open && !t.closest('.cb')) openPanel(open.dataset.open);
+  });
+  document.addEventListener('change', function (e) {
+    if (e.target.id === 'dlg-confirm') { ui.dialogConfirm = e.target.checked; renderDialog(); var c = dlg.querySelector('#dlg-confirm'); if (c) c.focus(); }
+    if (e.target.id === 'sort') { ui.sort = e.target.value; renderBody(); document.getElementById('sort').focus(); }
+  });
+  document.addEventListener('input', function (e) {
+    if (e.target.id === 'q') { ui.query = e.target.value; var pos = e.target.selectionStart; renderBody(); var q = document.getElementById('q'); q.focus(); q.setSelectionRange(pos, pos); }
+    if (e.target.id === 'pq') { ui.peopleQuery = e.target.value; document.getElementById('people').innerHTML = peopleListHtml(ROLE_BY_ID[ui.panelId]); }
+  });
+  scrim.addEventListener('click', closePanel);
+  dlgWrap.addEventListener('mousedown', function (e) { if (e.target === dlgWrap && !ui.dialogBusy) closeDialog(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (ui.dialogIds && !ui.dialogBusy) closeDialog(); else if (ui.panelId) closePanel();
+  });
+  window.addEventListener('resize', function () { if (ui.panelId && ui.panelView === 'chart') drawChartPanel(); });
+
+  renderBody();
+  if (ui.dialogIds) openDialog(ui.dialogIds);
+})();
+</script>
+</body>
+</html>
