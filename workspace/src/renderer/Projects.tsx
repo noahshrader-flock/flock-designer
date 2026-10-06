@@ -1,10 +1,10 @@
 import { FolderIcon, MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import type { Checkout, CheckoutSuggestion, Person, Project, ProjectIteration } from '../shared/contract';
+import type { Checkout, CheckoutSuggestion, Project, ProjectIteration } from '../shared/contract';
 import { LoadingScreen } from './Loading';
 import { NewWork, type Created } from './NewWork';
 import { People } from './People';
-import { PublishBanner, usePublishStatus } from './PublishStatus';
+import { PublishBanner, PublishLine, usePublishStatus } from './PublishStatus';
 import { startedAt } from '../shared/projects';
 import { RecordSheet } from './RecordSheet';
 import { Review } from './Review';
@@ -135,6 +135,8 @@ export const Projects = ({ menuOpen }: { menuOpen: boolean }) => {
 				<h2 className="text-sm font-semibold">Projects</h2>
 				<div className="grow" />
 				<div className="flex items-center gap-2">
+					{/* Where syncing is, beside the button that starts it, so the two always read together. */}
+					<PublishLine status={publishStatus} />
 					{/* Sync sends what is waiting and reads what is new, rather than waiting for the next trigger. */}
 					<Button
 						size="sm"

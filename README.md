@@ -29,7 +29,11 @@ Everything the agent writes for that project lands in the same folder — the br
 context, what it read before building, the review, and the decisions you confirmed. One project, one
 place, so picking up someone else's work means reading one folder.
 
+A **quick prototype** is kept in its project's folder too, under `quick/`: one React file and the page
+built from it, so anyone can open it without the product. Large files those pages share are kept once in
+`projects/_shared/`, which is not a project.
+
 ## What is not here
 
-Prototype code. That lives in the product repository it was built against, on its own branch, where
-it can actually run.
+Code that runs inside the product. A codebase feature lives in the product repository it was built
+against, on its own branch, where it can actually run.

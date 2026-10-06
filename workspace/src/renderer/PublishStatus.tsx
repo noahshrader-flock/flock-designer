@@ -76,7 +76,18 @@ export const publishLineText = (status: Status): string | null => {
 	return held.length > 1 ? `${held.length} things are not synced` : null;
 };
 
-export const PublishLine = ({ status }: { status: Status }) => {
+/**
+ * What the line beside the Sync button shows: the last result, kept while the next sync runs. The button already
+ * says "Syncing…", so the line saying it too was the same word twice; it says "Syncing…" only on the first run,
+ * when there is no result yet to show.
+ */
+export const lineStatus = (current: Status, last: Status | null): Status =>
+	current.state === 'working' && last !== null && last.state !== 'unavailable' ? last : current;
+
+export const PublishLine = ({ status: current }: { status: Status }) => {
+	const last = useRef<Status | null>(null);
+	const status = lineStatus(current, last.current);
+	if (current.state !== 'working') last.current = current;
 	const held = status.state === 'held' ? status.problems : [];
 	const text = publishLineText(status);
 	if (text === null) return null;

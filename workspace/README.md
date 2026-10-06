@@ -20,16 +20,27 @@ npm run smoke     # boot the real app and prove the window opens
 
 A fixed top bar (there is no native title bar; on macOS the window buttons sit inside it): **Flock
 Designer** on the left, the **Projects** tab beside it, and the account on the right, showing your GitHub
-picture and name, with **Sign out** in its menu. Projects is the only section.
+picture and name, with **Sign out** in its menu. Projects is the only section. Its toolbar carries
+**Sync**, with where syncing stands beside it, and **New**. The window opens at the size and place it was
+left in.
 
 It reads projects, iterations and comments through GitHub's API, so it needs only a GitHub account with
 read access to the design repository: no checkout, no git, no toolchain. **Comments are issue comments**
 in the design repository, one issue per iteration, so GitHub does the storing and the notifying and
 there is no server of ours anywhere.
 
-**Building on this machine** is part of Projects, not a separate mode. **New prototype** asks for a name and
-what to explore, creates the branch and record, runs the agent, then the preview, and opens it with pins.
-Any iteration also has a **Build on this machine** panel. The product repository is **suggested** on its own
+**Building on this machine** is part of Projects, not a separate mode. **New** opens one dialog with two
+kinds, switched at the top, both starting from a repository and a branch in it:
+
+- **Quick prototype**: one page built from the product's real components, with nothing run and no
+  environment setup. It needs the repository with its packages installed here; the dialog says whether
+  they are, and will not start without them. The agent writes one React file, the app bundles it against
+  the product's installed packages into one page, and both are kept in the project's folder
+  (`quick/qN.tsx`, `quick/qN.html`). Large files the pages embed (the design system's fonts) are kept once,
+  in `projects/_shared/`, and served beside every page. **Build in the codebase** moves one into the code.
+- **Codebase feature**: real work on the project's `feature/<project>` branch, which needs the full setup.
+
+Each runs the agent, then shows the result with pins. The product repository is **suggested** on its own
 — found in the usual places by its `.flkd/workspace.json` — and you accept it once with a click; after that it
 is remembered. Prototype branches (`fd/<project>/iN`) appear from the repository with no record needed;
 a `feature/<project>` branch appears only when a project already has a record for it, because that is also
@@ -53,7 +64,7 @@ repository, and carry two repository permissions:
 
 | Permission | Level | Why |
 |---|---|---|
-| **Contents** | Read and write | Reads project folders and iteration records. Writes one file only: `projects/<id>/iterations.json`, so an iteration created in the app reaches reviewers with no manual step. The app never writes code through the API — authoring writes go through git in a real checkout |
+| **Contents** | Read and write | Reads project folders and iteration records. Writes only into `projects/`: an iteration's record, and, for a quick prototype made on a machine without the design repository cloned, its brief, page, source and the shared files it points at. With a clone, those go through git instead, one writer per machine. The app never writes product code through the API — authoring writes go through git in a real checkout |
 | **Issues** | Read and write | Comments are issue comments |
 
 Changing a permission later also requires approving the update on the installation; GitHub does not
@@ -69,6 +80,7 @@ apply it until then. Point a development build elsewhere with
 | Run commands the repository declares | Run anything else, or a shell of any kind |
 | Create and switch iteration branches | Rewrite, discard, or force anything in git |
 | Invoke a locally installed agent | Hold model credentials, or carry its own prompts |
+| Let a quick prototype's agent read the product's code, guidance and installed packages, and build its page from them | Let that agent change anything in the product repository, or run the product |
 | Read and write project records | Become the only place those records exist |
 | Show a prototype's preview in the window and place comments on elements | Let that preview call back into the app, or leave the preview's origin |
 | Push the person's own work branches (`fd/*`, `feature/<project>`) and commit and push the design repository's `projects/` folder, by itself | Push anything else, force-push, publish a teammate's branch, or push other unpublished work along with the records |

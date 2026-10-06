@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bannerStatus, publishLineText } from '../src/renderer/PublishStatus';
+import { bannerStatus, lineStatus, publishLineText } from '../src/renderer/PublishStatus';
 
 describe('the publishing line', () => {
 	it('says nothing when there is nothing to publish from here', () => {
@@ -52,5 +52,17 @@ describe('bannerStatus', () => {
 
 	it('shows nothing during a run when nothing was held before it', () => {
 		expect(bannerStatus({ state: 'working' }, null).state).toBe('working');
+	});
+});
+
+describe('lineStatus', () => {
+	const shared = { state: 'shared' as const, at: '2026-10-06T12:05:00Z' };
+
+	it('keeps the last result beside the button while it says Syncing', () => {
+		expect(lineStatus({ state: 'working' }, shared)).toBe(shared);
+	});
+
+	it('says Syncing only when there is no result yet', () => {
+		expect(lineStatus({ state: 'working' }, null).state).toBe('working');
 	});
 });

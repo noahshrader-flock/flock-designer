@@ -6,7 +6,7 @@ import { AgentRunner } from './services/agent';
 import { DesignRepo } from './services/designRepo';
 import { CheckoutMemory } from './services/checkoutMemory';
 import { PageView } from './services/pageView';
-import { type WindowState, WindowMemory, restoreState } from './services/windowMemory';
+import { MIN_WINDOW, type WindowState, WindowMemory, restoreState } from './services/windowMemory';
 import { QuickServer } from './services/quickServer';
 import type { Fetcher } from './services/github';
 import { GitHubSession } from './services/githubSession';
@@ -60,8 +60,8 @@ const createWindow = (): BrowserWindow => {
 		width: state.width,
 		height: state.height,
 		...(state.x !== undefined && state.y !== undefined ? { x: state.x, y: state.y } : {}),
-		minWidth: 900,
-		minHeight: 560,
+		minWidth: MIN_WINDOW.width,
+		minHeight: MIN_WINDOW.height,
 		show: !smokeMode && !process.argv.includes('--smoke-page') && !process.argv.includes('--smoke-local'),
 		title: 'Flock Designer',
 		// No native title bar: the app's own top bar is the toolbar. On macOS the window

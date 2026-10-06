@@ -734,7 +734,7 @@ export const registerIpc = ({
 	ipcMain.handle(
 		CHANNELS.buildQuick,
 		guard(async (projectId: string, name: string, request: string) => {
-			const pageFile = quickFile(projectId, name);
+			assertQuickName(name);
 			// The screen can ask twice (it is opened twice in development, and Try again asks again). One agent is
 			// already building: this request waits on that run rather than starting a second or failing.
 			if (agent.status().state === 'running') return agent.status();

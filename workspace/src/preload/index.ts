@@ -4,7 +4,6 @@ import type {
 	AgentStatus,
 	Checkout,
 	CheckoutSuggestion,
-	CommentAnchor,
 	DeviceCodeStart,
 	ContextReceipt,
 	Iteration,

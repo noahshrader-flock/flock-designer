@@ -1,5 +1,4 @@
 import type { GitHubUser } from '../shared/contract';
-import { PublishLine, usePublishStatus } from './PublishStatus';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
@@ -27,8 +26,6 @@ export const TopNav = ({
 	/** The screen under the bar needs to know, so a preview does not cover the menu. */
 	onMenuOpenChange: (open: boolean) => void;
 }) => {
-	const [publishStatus] = usePublishStatus();
-
 	return (
 		<header
 			className={`app-drag bg-card fixed inset-x-0 top-0 z-40 flex h-(--nav-height) items-center border-b ${
@@ -46,11 +43,6 @@ export const TopNav = ({
 			)}
 
 			<div className="grow" />
-
-			{/* Where publishing is, on every screen: a problem must be visible wherever the person is working. */}
-			<div className="app-no-drag mr-4">
-				<PublishLine status={publishStatus} />
-			</div>
 
 			{user && (
 				<DropdownMenu onOpenChange={onMenuOpenChange}>

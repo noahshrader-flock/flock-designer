@@ -132,4 +132,3 @@ export const runBundle = (
 
 /** The shared files a page points at, by name, so they can be kept with it and served beside it. */
 export const sharedFilesOf = (html: string): string[] => [...new Set([...html.matchAll(/\/_shared\/([0-9a-f]{16})\b/g)].map((m) => m[1] as string))];
-export const isSharedName = (name: string): boolean => /^[0-9a-f]{16}$/.test(name);
