@@ -12,13 +12,34 @@ that step harder, not easier.
 
 ## What you make
 
+The task says which of two modes this run is in. Either way, what reviewers get is one page that opens by
+itself, and **mock data only, and believable** for this product: real-looking names, counts and dates.
+Never real customer data, credentials, licence keys or anything copied from production, and no network
+requests of any kind.
+
+### React: the real design system (when the product is installed on this machine)
+
+**One React file, at the path the task gives,** written with the product's real components. The app builds
+it into the page; nothing else you write is kept.
+
+- **Its default export is the whole page,** shell included, mounted the way the product's own entry
+  mounts the app: the same root providers and the same global stylesheets, in the same order. The
+  product's guidance says what those are; if it does not, read the product's entry file.
+- **Import only installed packages:** the design system, and what the product itself depends on. Never
+  import the product's own source files. They pull in its state, routing and services; copy the little
+  you need instead, and say where it came from.
+- **Real components, used as the product uses them**, with the design system's theme tokens for every
+  colour and size. Nothing hand-drawn where a real component does the job.
+- **Check it builds** with the command the task gives, after every change. Do not finish while it reports
+  an error: a prototype that does not build cannot be saved.
+
+### HTML: drawn by hand (when the product is not installed here)
+
 **One HTML file, at the path the task gives.** Nothing else you write is kept.
 
 - **It opens by itself.** No build step, no server, no other files. Styles and scripts are inline. The
   only thing it may load is Tailwind, from `https://cdn.tailwindcss.com`, if you want it.
 - **Plain HTML, CSS and a little JavaScript** for the interactions the idea needs. No frameworks.
-- **Mock data only, and believable** for this product: real-looking names, counts and dates. Never real
-  customer data, credentials or anything copied from production, and no network requests of any kind.
 
 ## Before you write anything: read, in this order
 
@@ -49,8 +70,8 @@ and header, and the tabs or sub-navigation the view sits in. Someone looking at 
 in the product they are.
 
 - **Draw the shell as a person really sees it, all of it:** the top bar with its logo, its links to the
-  other apps, and its help and account controls; the sub-navigation; the page frame. Take its look from
-  the navigation component's own source in the design system, not from a description of it.
+  other apps, and its help and account controls; the sub-navigation; the page frame. In React, use the
+  design system's real navigation component; in HTML, take its look from that component's own source.
 - **Guidance written for coded prototypes may trim the shell** for reasons that only apply to running
   code (a component that writes cookies, needs a signed-in user, or talks to a server). This page runs
   none of that: draw what the product shows, and say where you went beyond that guidance and why.
@@ -66,16 +87,16 @@ in the product they are.
 
 ## Match the product, part by part
 
-- **Every part stands for something real.** Recreate each from the real component the product uses for
-  that job, as it really looks: its spacing, its type, its states. Where the product shows a list as a
-  data grid, yours is a data grid.
-- **Mark what each part stands for:** `data-component="<real component's name>"` on the element, using
-  the name the product's code imports.
+- **Every part stands for something real.** Build each from the real component the product uses for that
+  job, as the product uses it: its spacing, its type, its states. Where the product shows a list as a
+  data grid, yours is a data grid. Icons come from the icon component the product's rules name.
 - **Mark what has no real counterpart.** When nothing in the product or the design system does this job,
   put `data-component="none"` and `data-gap="<what it is, in a few words>"` on it, and list every gap in
-  the comment at the top. These are the decisions the move into the code needs, so do not hide them.
-- **Name the tokens.** In the page's styles, give each colour and size the design system's token name in
-  a comment beside its value, so the move into the code uses the token, not your value.
+  the comment at the top. These are the decisions the move into the code needs, so do not hide them. A
+  public package that would do the job (a chart library, say) is still a gap: name it as a proposal.
+- **In HTML, also mark what each hand-drawn part stands for**, `data-component="<real component's
+  name>"`, using the name the product's code imports, and give each colour and size the design system's
+  token name in a comment beside its value. In React the real components and tokens say this themselves.
 
 ## So it can be reviewed
 
@@ -84,8 +105,9 @@ in the product they are.
 - **States are a query parameter** (`?state=<name>`), the default being the one most people should see
   first. A small, clearly secondary switcher on the page is fine; it is the only thing on the page that
   is not the product.
-- **Start the file with an HTML comment** that says what the page shows, where in the product it sits,
-  which real screen it was modelled on, which person the navigation shows, its states, and its gaps.
+- **Start the file with a comment** (a block comment in React, an HTML comment in HTML) that says what the
+  page shows, where in the product it sits, which real screen it was modelled on, which person the
+  navigation shows, its states, and its gaps. It is carried into the page for reviewers.
 
 ## The rules
 
