@@ -13,14 +13,15 @@ const readJson = (path: string): unknown => {
 };
 
 /**
- * The projects in the local copy of the design repository, read straight from
- * disk. Nothing is registered anywhere: a project folder with an iteration
- * record in it is a project, however it got there.
+ * Every project folder in the local copy of the design repository, read straight from disk, with whatever
+ * iterations it records (none, for a project an agent has only just started). Nothing is registered anywhere:
+ * the folder is the project. That is also what vouches for a `feature/<id>` branch, which a repository's whole
+ * team names tickets with: the agent makes this folder before it writes any code.
  *
  * Unreadable pieces are skipped, never fatal -- a half-written record must not
  * hide every other project.
  */
-export const readLocalProjects = (recordsRoot: string): Project[] => {
+export const readFolderProjects = (recordsRoot: string): Project[] => {
 	if (!existsSync(recordsRoot)) return [];
 	return readdirSync(recordsRoot, { withFileTypes: true })
 		.filter((e) => e.isDirectory() && !e.name.startsWith('_') && !e.name.startsWith('.'))
@@ -51,7 +52,9 @@ export const readLocalProjects = (recordsRoot: string): Project[] => {
 				people: mergePeople(...iterations.map((i) => i.contributors)),
 				openComments: 0,
 			};
-		})
-		// A folder with no iterations is a notes folder, not work in progress.
-		.filter((p) => p.iterations.length > 0);
+		});
 };
+
+/** Folders that record at least one iteration: work in progress, as opposed to a notes folder. */
+export const readLocalProjects = (recordsRoot: string): Project[] =>
+	readFolderProjects(recordsRoot).filter((p) => p.iterations.length > 0);

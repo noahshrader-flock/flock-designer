@@ -14,6 +14,7 @@ import {
 	createIteration,
 	readIterations,
 	recordPreview,
+	recordedIteration,
 } from '../src/main/services/iterations';
 
 const descriptor: WorkspaceDescriptor = {
@@ -205,6 +206,45 @@ describe('recordPreview', () => {
 
 	it('refuses an iteration that is not recorded rather than inventing one', () => {
 		expect(() => recordPreview(records, 'demo', 'i9', 'https://x.example.test')).toThrow(IterationProblem);
+	});
+});
+
+describe('recordedIteration: work started outside the app', () => {
+	it('records codebase work an agent built in a terminal, even with the checkout already on its branch', async () => {
+		g('checkout', '-q', '-b', 'feature/new-view');
+		writeFileSync(join(root, 'view.tsx'), 'x');
+		g('add', '.');
+		g('commit', '-q', '-m', 'build the view');
+		expect(readIterations(records, 'new-view')).toEqual([]);
+
+		const found = await recordedIteration(root, records, descriptor, 'new-view', 'codebase');
+		expect(found).toMatchObject({ projectId: 'new-view', name: 'codebase', branch: 'feature/new-view' });
+		expect(readIterations(records, 'new-view')).toHaveLength(1);
+		expect((await readCheckout(root)).branch).toBe('feature/new-view'); // nothing was switched
+	});
+
+	it('records a numbered prototype the same way', async () => {
+		g('checkout', '-q', '-b', 'fd/demo/i3');
+		const found = await recordedIteration(root, records, descriptor, 'demo', 'i3');
+		expect(found).toMatchObject({ name: 'i3', branch: 'fd/demo/i3' });
+	});
+
+	it('returns an existing record as it is, and does not write a second', async () => {
+		await createIteration(root, records, descriptor, 'demo', 'first', 'develop');
+		const before = readFileSync(join(records, 'demo', 'iterations.json'), 'utf8');
+		const found = await recordedIteration(root, records, descriptor, 'demo', 'i1');
+		expect(found.branch).toBe('fd/demo/i1');
+		expect(readFileSync(join(records, 'demo', 'iterations.json'), 'utf8')).toBe(before);
+	});
+
+	it('refuses work whose branch is not there, rather than inventing a record for it', async () => {
+		await expect(recordedIteration(root, records, descriptor, 'demo', 'i7')).rejects.toThrow(/no iteration called i7/);
+		await expect(recordedIteration(root, records, descriptor, 'demo', 'codebase')).rejects.toThrow(IterationProblem);
+		expect(existsSync(join(records, 'demo', 'iterations.json'))).toBe(false);
+	});
+
+	it('does not record a name that could mean anything else', async () => {
+		await expect(recordedIteration(root, records, descriptor, 'demo', '../../etc')).rejects.toThrow();
 	});
 });
 

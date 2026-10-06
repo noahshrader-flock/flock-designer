@@ -166,6 +166,47 @@ export const recordPreview = (
 	return updated;
 };
 
+/**
+ * Work started outside the app (an agent in a terminal, or by hand) has a branch and no record. The branch is
+ * the evidence, so the record is made from it rather than refusing the work: null only if the branch is not there.
+ */
+const adoptUnrecorded = async (
+	productRoot: string,
+	descriptor: WorkspaceDescriptor,
+	projectId: string,
+	name: string,
+): Promise<Iteration | null> => {
+	const branch =
+		name === 'codebase'
+			? codebaseBranchFor(descriptor, projectId)
+			: /^i\d+$/.test(name)
+				? branchFor(descriptor, projectId, Number(name.slice(1)))
+				: null;
+	if (!branch || !(await branchExists(productRoot, branch))) return null;
+	return { projectId, name, branch, commit: null, createdAt: new Date().toISOString(), note: 'Found in the repository; recorded when first opened here.' };
+};
+
+/**
+ * An iteration's record, written now if the work has none. Everything that acts on an iteration (sharing it,
+ * addressing its comments, saying which commit a comment was made against) goes through this, so work an agent
+ * built in a terminal behaves exactly like work made in the app, whether or not the app ever switched branches for it.
+ */
+export const recordedIteration = async (
+	productRoot: string,
+	recordsRoot: string,
+	descriptor: WorkspaceDescriptor,
+	projectId: string,
+	name: string,
+): Promise<Iteration> => {
+	const existing = readIterations(recordsRoot, projectId);
+	const found = existing.find((i) => i.name === name);
+	if (found) return found;
+	const adopted = await adoptUnrecorded(productRoot, descriptor, projectId, name);
+	if (!adopted) throw new IterationProblem(`${projectId} has no iteration called ${name}.`);
+	writeIterations(recordsRoot, projectId, [...existing, adopted]);
+	return adopted;
+};
+
 export const continueIteration = async (
 	productRoot: string,
 	recordsRoot: string,
@@ -177,12 +218,10 @@ export const continueIteration = async (
 	let iterations = readIterations(recordsRoot, projectId);
 	let iteration = iterations.find((i) => i.name === name);
 	if (!iteration && descriptor) {
-		// Work started outside the app has a branch but no record. The branch is the
-		// evidence, so the record is written now rather than refusing to open it.
-		const branch = name === 'codebase' ? codebaseBranchFor(descriptor, projectId) : /^i\d+$/.test(name) ? branchFor(descriptor, projectId, Number(name.slice(1))) : null;
-		if (branch && (await branchExists(productRoot, branch))) {
-			iteration = { projectId, name, branch, commit: null, createdAt: new Date().toISOString(), note: 'Found in the repository; recorded when first opened here.' };
-			iterations = [...iterations, iteration];
+		const adopted = await adoptUnrecorded(productRoot, descriptor, projectId, name);
+		if (adopted) {
+			iteration = adopted;
+			iterations = [...iterations, adopted];
 		}
 	}
 	if (!iteration) {

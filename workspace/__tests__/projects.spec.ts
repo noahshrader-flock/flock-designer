@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
 import { PROJECT_ID, mergeProjects, slugify } from '../src/shared/projects';
-import { readLocalProjects } from '../src/main/services/localProjects';
+import { readFolderProjects, readLocalProjects } from '../src/main/services/localProjects';
 
 const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
 	name: 'i1', branch: 'fd/alpha/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], ...over,
@@ -91,6 +91,15 @@ describe('readLocalProjects', () => {
 
 	it('returns nothing, not an error, when the design repository is not there', () => {
 		expect(readLocalProjects(join(root, 'nope'))).toEqual([]);
+		expect(readFolderProjects(join(root, 'nope'))).toEqual([]);
+	});
+
+	it('knows a project an agent has only just started: a folder with a brief and nothing built', () => {
+		write('new-view', { 'brief.md': '# A new view\n\nWhy.' });
+		write('_template', { 'brief.md': '# t' });
+		expect(readFolderProjects(root).map((p) => p.id)).toEqual(['new-view']);
+		expect(readFolderProjects(root)[0]).toMatchObject({ title: 'A new view', records: ['brief.md'], iterations: [] });
+		expect(readLocalProjects(root)).toEqual([]); // not work in progress until something is recorded
 	});
 });
 

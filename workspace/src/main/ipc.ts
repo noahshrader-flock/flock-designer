@@ -23,9 +23,9 @@ import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
 import { readDescriptor } from './services/descriptor';
 import { branchCommit, isRepository, readCheckout } from './services/git';
-import { assertUsableProjectId, continueIteration, createIteration, readIterations, recordPreview } from './services/iterations';
+import { assertUsableProjectId, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { findProductCheckouts, recordsRootFor } from './services/discovery';
-import { readBranchProjects } from './services/branchProjects';
+import { classify, readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
 import { prepareAddress, readSkill } from './services/address';
 import { projectTitle, writeCommentsExport } from './services/commentsExport';
@@ -34,7 +34,7 @@ import type { PageView } from './services/pageView';
 import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anchor';
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
-import { readLocalProjects } from './services/localProjects';
+import { readFolderProjects } from './services/localProjects';
 import { mergeProjects, unionLocal } from '../shared/projects';
 import type { CheckoutMemory } from './services/checkoutMemory';
 
@@ -273,8 +273,7 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 			assertUsableProjectId(projectId);
 			const canonical = opened.require(root);
 			const recordsRoot = recordsFor(canonical);
-			const iteration = readIterations(recordsRoot, projectId).find((i) => i.name === name);
-			if (!iteration) throw new Error(`${projectId} has no iteration called ${name}.`);
+			const iteration = await recordedIteration(canonical, recordsRoot, descriptorFor(root), projectId, name);
 			const prepared = await prepareAddress(
 				{
 					readComments: () => designRepo.readComments(projectId, iteration.branch),
@@ -302,8 +301,7 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 				throw new Error(`${descriptor.product} does not say how a shared preview is built, so it cannot be shared from here.`);
 			}
 			const recordsRoot = recordsFor(canonical);
-			const iteration = readIterations(recordsRoot, projectId).find((i) => i.name === name);
-			if (!iteration) throw new Error(`${projectId} has no iteration called ${name}.`);
+			const iteration = await recordedIteration(canonical, recordsRoot, descriptor, projectId, name);
 			// Only what is committed goes up. Sharing a branch with unsaved edits would show reviewers less than the designer sees.
 			const here = await readCheckout(canonical);
 			if (here.branch === iteration.branch && !here.clean) {
@@ -378,15 +376,18 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 			if (root !== null) {
 				opened.require(root);
 				const recordsRoot = recordsRootFor(root);
-				const records = recordsRoot ? readLocalProjects(recordsRoot) : [];
+				// Every project folder, not only those that record an iteration: the folder is what an agent makes
+				// first, and it is what vouches for a `feature/<id>` branch (see readBranchProjects).
+				const folders = recordsRoot ? readFolderProjects(recordsRoot) : [];
 				// The branches are the evidence: work made without the app still shows.
 				const branches = await readBranchProjects(
 					root,
 					readDescriptor(root),
 					login,
-					new Set(records.map((p) => p.id)),
+					new Set(folders.map((p) => p.id)),
 				).catch(() => []);
-				local = unionLocal(records, branches);
+				// A folder with nothing built yet is a notes folder, not work in progress.
+				local = unionLocal(folders, branches).filter((p) => p.iterations.length > 0);
 			}
 			let remote: Project[] = [];
 			try {
@@ -407,12 +408,15 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 			const root = trustedRoot();
 			const recordsRoot = root === null ? null : recordsRootFor(root);
 			if (recordsRoot === null) return;
-			const iteration = readIterations(recordsRoot, projectId).find((i) => i.branch === branch);
-			if (!iteration) return;
+			// The record's name for it, or the one the branch's own name gives it (work with no record yet).
+			const name =
+				readIterations(recordsRoot, projectId).find((i) => i.branch === branch)?.name ??
+				classify(readDescriptor(root as string), branch)?.name;
+			if (!name) return;
 			writeCommentsExport(recordsRoot, {
 				projectId,
 				title: projectTitle(recordsRoot, projectId),
-				iteration: { name: iteration.name, branch },
+				iteration: { name, branch },
 				comments,
 				generatedAt: new Date(),
 			});
@@ -489,7 +493,7 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 		guard(async (root: string, projectId: string, name: string): Promise<string | null> => {
 			assertUsableProjectId(projectId);
 			const canonical = opened.require(root);
-			const found = readIterations(recordsFor(canonical), projectId).find((i) => i.name === name);
+			const found = await recordedIteration(canonical, recordsFor(canonical), descriptorFor(root), projectId, name).catch(() => null);
 			return found ? branchCommit(canonical, found.branch).catch(() => null) : null;
 		}),
 	);

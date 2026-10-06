@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -168,6 +168,55 @@ describe('listProjects', () => {
 		const r = await call(CHANNELS.listProjects);
 		expect(r.ok).toBe(true);
 		expect(r.value).toEqual([]);
+	});
+});
+
+describe('work an agent built in a terminal, with no record yet', () => {
+	const branchWithCommit = (name: string) => {
+		g(product, 'checkout', '-q', '-b', name);
+		writeFileSync(join(product, `${name.replace(/\W/g, '-')}.txt`), name);
+		g(product, 'add', '.');
+		g(product, 'commit', '-q', '-m', name);
+		g(product, 'checkout', '-q', 'develop');
+	};
+
+	it("shows a codebase branch once its project folder exists, with the folder's title, and not a teammate's ticket branch", async () => {
+		branchWithCommit('feature/new-view');
+		branchWithCommit('feature/dda-1221');
+		mkdirSync(join(design, 'projects', 'new-view'));
+		writeFileSync(join(design, 'projects', 'new-view', 'brief.md'), '# A new view\n');
+		await call(CHANNELS.useCheckout, product);
+
+		const r = await call(CHANNELS.listProjects);
+		const projects = r.value as Array<{ id: string; title: string; records: string[]; iterations: Array<{ name: string; branch: string }> }>;
+		expect(projects.map((p) => p.id)).toEqual(['new-view']);
+		expect(projects[0]).toMatchObject({ title: 'A new view', records: ['brief.md'] });
+		expect(projects[0]?.iterations).toEqual([expect.objectContaining({ name: 'codebase', branch: 'feature/new-view' })]);
+	});
+
+	it('does not show a project folder that has no work behind it yet', async () => {
+		mkdirSync(join(design, 'projects', 'only-notes'));
+		writeFileSync(join(design, 'projects', 'only-notes', 'brief.md'), '# Notes\n');
+		await call(CHANNELS.useCheckout, product);
+		expect((await call(CHANNELS.listProjects)).value).toEqual([]);
+	});
+
+	it('can say which commit a comment was made against, and records the work, without the app ever switching branches', async () => {
+		branchWithCommit('feature/new-view');
+		mkdirSync(join(design, 'projects', 'new-view'));
+		await call(CHANNELS.useCheckout, product);
+
+		const r = await call(CHANNELS.iterationCommit, product, 'new-view', 'codebase');
+		expect(r.value).toBe(g(product, 'rev-parse', 'refs/heads/feature/new-view').trim());
+		expect(JSON.parse(readFileSync(join(design, 'projects', 'new-view', 'iterations.json'), 'utf8'))).toEqual([
+			expect.objectContaining({ name: 'codebase', branch: 'feature/new-view' }),
+		]);
+	});
+
+	it('says nothing is known for work whose branch does not exist', async () => {
+		mkdirSync(join(design, 'projects', 'ghost'));
+		await call(CHANNELS.useCheckout, product);
+		expect((await call(CHANNELS.iterationCommit, product, 'ghost', 'codebase')).value).toBeNull();
 	});
 });
 
