@@ -13,6 +13,25 @@ export const mergeComments = (fetched: ReviewComment[], posted: Iterable<ReviewC
 };
 
 /**
+ * Forgets the local copies of comments GitHub has now returned: they have served their purpose, and
+ * keeping one means a later change to it there -- someone resolving it, editing it -- would be held
+ * back by a copy of how it looked when it was written.
+ */
+export const forgetPosted = (posted: Map<number, ReviewComment>, fetched: ReviewComment[]): void => {
+	for (const c of fetched) posted.delete(c.id);
+};
+
+/**
+ * Still to be dealt with, and already dealt with.
+ *
+ * One definition, because this same question decides the count on the screen, whether a comment has a
+ * pin, what the file an agent reads lists as outstanding, and whether the agent may be started at
+ * all. Those must never disagree about what "open" means.
+ */
+export const openComments = (comments: ReviewComment[]): ReviewComment[] => comments.filter((c) => !c.resolved);
+export const resolvedComments = (comments: ReviewComment[]): ReviewComment[] => comments.filter((c) => c.resolved);
+
+/**
  * What number each comment carries: the digit drawn in its pin, and the heading it is filed under
  * in the file an agent reads.
  *
@@ -58,9 +77,12 @@ export const markersFor = (
 ): MarkerRequest[] => {
 	const anchored = comments.filter((c) => c.anchor);
 	// Resolved comments have no pin, but keep their number, so "comment 3" never changes meaning.
-	const items = anchored.flatMap((c): MarkerRequest[] =>
-		c.resolved ? [] : [{ id: c.id, number: numbers.get(c.id) ?? 0, anchor: c.anchor as CommentAnchor, movable: c.author === me }],
-	);
+	const items = openComments(anchored).map((c): MarkerRequest => ({
+		id: c.id,
+		number: numbers.get(c.id) ?? 0,
+		anchor: c.anchor as CommentAnchor,
+		movable: c.author === me,
+	}));
 	if (draft?.composing) items.push({ id: -1, number: anchored.length + 1, anchor: draft.anchor, movable: true });
 	return items;
 };

@@ -2,7 +2,7 @@ import type { ReviewComment } from '../../shared/contract';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { type ExportInput, writeCommentsExport } from './commentsExport';
-import { numberComments } from '../../shared/comments';
+import { numberComments, openComments } from '../../shared/comments';
 
 /**
  * Everything that has to be true before the agent is asked to act on comments, in the order it
@@ -115,7 +115,7 @@ export const prepareAddress = async (
 	};
 	// Written even when nothing is open, so the file never keeps listing comments that have since been resolved.
 	const written = writeCommentsExport(recordsRoot, input);
-	const open = comments.filter((c) => !c.resolved).length;
+	const open = openComments(comments).length;
 	if (open === 0) throw new AddressProblem('There are no open comments to address.');
 
 	// The read above is the fresh truth, so this is also where a comment someone resolved or deleted a

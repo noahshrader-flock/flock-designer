@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { markersFor, mergeComments, numberComments, sameComments } from '../src/shared/comments';
+import { forgetPosted, markersFor, mergeComments, numberComments, openComments, resolvedComments, sameComments } from '../src/shared/comments';
 import type { CommentAnchor, ReviewComment } from '../src/shared/contract';
 
 const c = (id: number, over: Partial<ReviewComment> = {}): ReviewComment => ({
@@ -97,5 +97,42 @@ describe('markersFor', () => {
 		// that was not one. The pin and the box now hang off the same value.
 		const list = [pinned(1)];
 		expect(markersFor(list, numbers(list), 'a', { anchor: at(), composing: false }).map((m) => m.id)).toEqual([1]);
+	});
+});
+
+describe('forgetPosted', () => {
+	it('forgets a local copy once GitHub returns that comment', () => {
+		const held = new Map([[1, c(1)], [2, c(2)]]);
+		forgetPosted(held, [c(1)]);
+		expect([...held.keys()]).toEqual([2]);
+	});
+
+	it('keeps one GitHub has not caught up with yet, which is what it is for', () => {
+		const held = new Map([[9, c(9)]]);
+		forgetPosted(held, []);
+		expect([...held.keys()]).toEqual([9]);
+	});
+
+	it('lets a later change on GitHub through, instead of holding the copy as written', () => {
+		// Resolved by someone else after it was written here: dropping the local copy is what lets
+		// the newer version win.
+		const held = new Map([[1, c(1)]]);
+		const fromGitHub = [c(1, { resolved: true })];
+		forgetPosted(held, fromGitHub);
+		expect(mergeComments(fromGitHub, held.values())[0]?.resolved).toBe(true);
+	});
+});
+
+describe('openComments / resolvedComments', () => {
+	it('splits what is still to be dealt with from what is done', () => {
+		const list = [c(1), c(2, { resolved: true }), c(3)];
+		expect(openComments(list).map((x) => x.id)).toEqual([1, 3]);
+		expect(resolvedComments(list).map((x) => x.id)).toEqual([2]);
+	});
+
+	it('is the same question the pins ask, so a pin and the count cannot disagree', () => {
+		const withPin = (id: number, over = {}) => c(id, { anchor: { route: '/r', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' }, ...over });
+		const list = [withPin(1), withPin(2, { resolved: true })];
+		expect(markersFor(list, numberComments(list), 'a', null).map((m) => m.id)).toEqual(openComments(list).map((x) => x.id));
 	});
 });

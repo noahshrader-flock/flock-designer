@@ -18,7 +18,7 @@ import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
 import { Popover } from '@mui/material';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
-import { markersFor, mergeComments, numberComments, sameComments } from '../shared/comments';
+import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
 import { latest } from '../shared/latest';
 import { People } from './People';
 import { ShareControl } from './ShareControl';
@@ -164,14 +164,32 @@ export const Review = ({
 	 */
 	/** True when someone asked for this read, so a failure is worth saying. Background reads are silent. */
 	const asked = useRef(false);
+	/**
+	 * Counts the changes made from this window.
+	 *
+	 * GitHub answers a read as things stood *when the read began*. Resolve, move or delete something
+	 * while one is in flight and that answer is already out of date when it lands: applying it puts
+	 * the change back the way it was, and the comment reopens or the pin jumps back. So each change
+	 * bumps this, and a read whose generation has moved on is dropped. The change stands, and the next
+	 * read brings GitHub's own account of it.
+	 */
+	const changes = useRef(0);
 	const read = useCallback(async () => {
 		const loud = asked.current;
+		const at = changes.current;
 		asked.current = false;
 		const result = await window.workspace.readComments(project.id, iteration.branch);
 		if (!result.ok) {
 			if (loud) setError(result.error);
 			return;
 		}
+		// Something was changed here while this was in flight, so this answer predates it.
+		if (changes.current !== at) return;
+		// A read that worked clears a complaint from one that did not.
+		if (loud) setError(null);
+		// A comment GitHub has returned no longer needs its local copy; keeping one would hold back a
+		// later change to it there.
+		forgetPosted(posted.current, result.value);
 		const next = mergeComments(result.value, posted.current.values());
 		// Nothing new means nothing changes, so a refresh does not redraw every pin.
 		setComments((prev) => (sameComments(prev, next) ? prev : next));
@@ -274,12 +292,26 @@ export const Review = ({
 
 	// Put the markers on the page. A function, not just an effect, because freezing the
 	// preview for the comment box must first make sure the picture includes them.
+	const drawRun = useRef(0);
 	const drawMarkers = useCallback(async () => {
 		// Only your own pins can be dragged; GitHub would refuse anyone else's edit anyway.
 		// The pin being placed shows at once, before it is saved (id -1, amber).
 		const items = markersFor(comments ?? [], numbers, me, pending ? { anchor: pending, composing } : null);
+		// Several of the things this depends on can change inside one round trip to the page, so an
+		// older draw must not report its results over a newer one's: what is on the page would then be
+		// described by a list that is no longer what was drawn.
+		const mine = ++drawRun.current;
 		const r = await window.workspace.pageShowMarkers(items);
-		if (r.ok) setPlaced(new Map(r.value.map((m: MarkerResult) => [m.id, m.state])));
+		if (mine !== drawRun.current) return;
+		if (!r.ok) {
+			// Said, not swallowed. The pins on the page are now whatever was there before, which may be
+			// a different set from the comments listed beside them; silence would leave that looking
+			// deliberate.
+			setPlaced(new Map());
+			setError(r.error);
+			return;
+		}
+		setPlaced(new Map(r.value.map((m: MarkerResult) => [m.id, m.state])));
 	}, [comments, numbers, pending, composing, me]);
 
 	// ...and again whenever the comments, the page, or the route change.
@@ -301,8 +333,11 @@ export const Review = ({
 			} else {
 				void window.workspace.moveComment(e.id, e.anchor).then((r) => {
 					if (r.ok) {
+						changes.current++;
 						posted.current.set(r.value.id, r.value);
 						setComments((cs) => (cs ?? []).map((c) => (c.id === r.value.id ? { ...c, anchor: r.value.anchor } : c)));
+						// The comment now points somewhere else, and the file the agent reads says where.
+						void load(true);
 					} else {
 						setError(r.error);
 					}
@@ -485,6 +520,7 @@ export const Review = ({
 		const r = await window.workspace.postComment(project.id, iteration.branch, draft.trim(), pending, pendingPicture);
 		setPosting(false);
 		if (r.ok) {
+			changes.current++;
 			posted.current.set(r.value.id, r.value);
 			setDraft('');
 			setPending(null);
@@ -497,7 +533,7 @@ export const Review = ({
 	};
 
 	// What is still to be dealt with. Resolved comments stay listed, but are not the count.
-	const total = (comments ?? []).filter((c) => !c.resolved).length;
+	const total = openComments(comments ?? []).length;
 
 	/** The agent is asked for one comment, from that comment's own button: never for a batch. */
 	const addressComment = async (commentId: number) => {
@@ -525,6 +561,7 @@ export const Review = ({
 		if (!r.ok) return setError(r.error);
 		// Forgotten here too: comments just posted from this window are kept until a read includes them,
 		// and one that stayed would come back on the next refresh.
+		changes.current++;
 		posted.current.delete(comment.id);
 		setConfirmingDelete(null);
 		setSelected((s) => (s === comment.id ? null : s));
@@ -536,8 +573,11 @@ export const Review = ({
 		setError(null);
 		const r = await window.workspace.resolveComment(comment.id, resolved);
 		if (!r.ok) return setError(r.error);
+		changes.current++;
 		posted.current.set(r.value.id, r.value);
 		setComments((cs) => (cs ?? []).map((c) => (c.id === r.value.id ? r.value : c)));
+		// Same as deleting: the file the agent reads lists the open comments, and this is no longer one.
+		void load(true);
 	};
 	// Where the comment box goes: beside the pin, in window coordinates.
 	const slotBox = slot.current?.getBoundingClientRect();
@@ -793,7 +833,10 @@ export const Review = ({
 									</FSTypography>
 								)}
 								{comments?.map((comment) => {
-									const state = placed.get(comment.id);
+									// A resolved comment is not drawn on the page at all, so whatever was last said
+									// about placing it ("the element is no longer there") is about a pin that no
+									// longer exists, and saying it again would be about nothing.
+									const state = comment.resolved ? undefined : placed.get(comment.id);
 									const n = numberOf(comment.id);
 									return (
 										<FSBox

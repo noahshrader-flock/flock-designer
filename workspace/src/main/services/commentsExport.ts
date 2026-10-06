@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { join } from 'node:path';
 import type { ReviewComment } from '../../shared/contract';
 import { assertUsableProjectId } from './iterations';
-import { numberComments } from '../../shared/comments';
+import { numberComments, openComments, resolvedComments } from '../../shared/comments';
 import { firstHeading } from '../../shared/projects';
 import { resolveInside } from './paths';
 
@@ -51,7 +51,7 @@ const oneLine = (text: string): string => text.replace(/[\r\n]+/g, ' ').replace(
 
 export const renderComments = ({ projectId, title, iteration, comments, generatedAt }: ExportInput): Exported => {
 	const numbers = numberComments(comments);
-	const open = comments.filter((c) => !c.resolved).sort((a, b) => (numbers.get(a.id) ?? 0) - (numbers.get(b.id) ?? 0));
+	const open = openComments(comments).sort((a, b) => (numbers.get(a.id) ?? 0) - (numbers.get(b.id) ?? 0));
 	const resolved = comments.length - open.length;
 	const pictures = new Map<string, Buffer>();
 
@@ -96,7 +96,7 @@ export const renderComments = ({ projectId, title, iteration, comments, generate
 	// What has already been dealt with, so the file is the whole conversation and not only the part
 	// still outstanding: a designer opening it days later can see what was asked and what was settled.
 	// Listed after the open ones, plainly marked, so nothing here reads as work to do.
-	const done = comments.filter((c) => c.resolved).sort((a, b) => (numbers.get(a.id) ?? 0) - (numbers.get(b.id) ?? 0));
+	const done = resolvedComments(comments).sort((a, b) => (numbers.get(a.id) ?? 0) - (numbers.get(b.id) ?? 0));
 	if (done.length > 0) {
 		lines.push('', '---', '', '## Already resolved', '', '**Nothing in this section is work to do.** It is what has been dealt with, kept so the history is in one place.', '');
 		for (const c of done) {
