@@ -146,6 +146,19 @@ export const peopleOn = async (productRoot: string, branch: string, signedInLogi
 	});
 };
 
+/**
+ * Saves where reviewers can open an iteration. Only the record changes; publishing it is the
+ * caller's step, so a person who is signed out still keeps the address.
+ */
+export const recordPreview = (recordsRoot: string, projectId: string, name: string, previewUrl: string): Iteration => {
+	const iterations = readIterations(recordsRoot, projectId);
+	const found = iterations.find((i) => i.name === name);
+	if (!found) throw new IterationProblem(`${projectId} has no iteration called ${name}.`);
+	const updated = { ...found, previewUrl };
+	writeIterations(recordsRoot, projectId, iterations.map((i) => (i.name === name ? updated : i)));
+	return updated;
+};
+
 export const continueIteration = async (
 	productRoot: string,
 	recordsRoot: string,

@@ -82,3 +82,27 @@ describe('findCommand', () => {
 		expect(() => findCommand(parse(valid), 'rm')).toThrow(/not a command this repository declares/);
 	});
 });
+
+describe('share', () => {
+	const share = { url: 'https://dev-coke-pr-<pr>.flocksafety.com', workflow: 'PR Deployment', kinds: ['prototype'] };
+
+	it('is optional: a repository that cannot build a preview just omits it', () => {
+		expect(parse(valid).share).toBeUndefined();
+	});
+
+	it('reads how a preview is built', () => {
+		expect(parse({ ...valid, share }).share).toEqual(share);
+	});
+
+	it.each([
+		['an address that is not https', { ...share, url: 'http://dev-coke-pr-<pr>.example.test' }, /https/],
+		['an address with nowhere for the pull request number', { ...share, url: 'https://example.test/preview' }, /<pr>/],
+		['no workflow to wait for', { ...share, workflow: '' }, /workflow/],
+		['no kinds', { ...share, kinds: [] }, /kinds/],
+		['a kind that does not exist', { ...share, kinds: ['everything'] }, /kinds/],
+		['something that is not an object', 'yes', /share\.url/],
+	])('refuses %s', (_label, bad, message) => {
+		expect(() => parse({ ...valid, share: bad })).toThrow(message);
+	});
+});
+

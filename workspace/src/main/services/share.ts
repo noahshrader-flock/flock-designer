@@ -1,0 +1,227 @@
+import type { IterationKind, PublishOutcome, ShareDescriptor, ShareStatus, ShareStep } from '../../shared/contract';
+
+/**
+ * Putting an iteration in front of someone who is not on this machine.
+ *
+ * Four steps, each of which can fail for an ordinary reason with something specific to
+ * do about it: push the branch, open a *draft* pull request for it (the repository's CI
+ * builds pull requests, which is the whole mechanism), wait for the deploy workflow, and
+ * record the address. The address is not scraped from anywhere: the repository's descriptor
+ * says what it looks like, and the pull request number fills it in.
+ *
+ * The flow is a function over a small set of tools rather than code that calls git and gh,
+ * because what matters is the order, what each failure says, and what is never done -- and
+ * that is testable with no network, no remote and no real pull request.
+ */
+
+export class ShareProblem extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'ShareProblem';
+	}
+}
+
+export interface PullRequest {
+	number: number;
+	url: string;
+}
+
+/** One CI check on a pull request, as the GitHub CLI reports it. */
+export interface Check {
+	name: string;
+	workflow: string;
+	/** `pass`, `fail`, `pending`, `skipping` or `cancel`. */
+	bucket: string;
+	link: string;
+	startedAt: string;
+}
+
+export interface ShareTools {
+	push(branch: string): Promise<{ pushed: boolean }>;
+	/** The open pull request for a branch, if there is one. */
+	findPr(branch: string): Promise<PullRequest | null>;
+	/** Always a draft. Nothing here can open one that is ready for review. */
+	createDraftPr(branch: string, title: string, body: string): Promise<PullRequest>;
+	checks(pr: number): Promise<Check[]>;
+	sleep(ms: number): Promise<void>;
+	now(): number;
+}
+
+export interface ShareRequest {
+	share: ShareDescriptor;
+	kind: IterationKind;
+	projectId: string;
+	name: string;
+	branch: string;
+	title: string;
+	body: string;
+}
+
+export interface ShareTimings {
+	/** How often the checks are looked at. */
+	pollMs: number;
+	/** How long to wait for the deploy workflow to show up at all. */
+	startupMs: number;
+	/** How long a build may take before this gives up waiting (it may still finish). */
+	timeoutMs: number;
+	/** Allowance for this machine's clock and GitHub's differing. */
+	skewMs: number;
+}
+
+export const DEFAULT_TIMINGS: ShareTimings = { pollMs: 10_000, startupMs: 180_000, timeoutMs: 25 * 60_000, skewMs: 120_000 };
+
+/**
+ * A branch name goes to git and gh as an argument. It comes from this person's own record,
+ * not the window, but a name that starts with `-` would still be read as an option.
+ */
+const SAFE_BRANCH = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+
+/**
+ * Whether a shared preview's address answers yet. A person behind company sign-in gets a redirect or a
+ * refusal and the page is there; only no answer, "not found" and a server error mean it is not up.
+ */
+export const previewIsUp = (status: number): boolean => status !== 404 && status < 500;
+
+export const previewUrlFor = (share: ShareDescriptor, pr: number): string => share.url.replace('<pr>', String(pr));
+
+/** What the pull request says about itself, so nobody mistakes it for work headed to the trunk. */
+export const pullRequestText = (projectId: string, name: string): { title: string; body: string } => ({
+	title: `Preview: ${projectId} ${name} (not for merge)`,
+	body: [
+		'This is a **draft pull request that exists only to build a preview link** for review in Flock Designer.',
+		'It is not headed for the trunk and should not be merged or marked ready for review.',
+		'',
+		`The project record, with the brief and the comments, is \`projects/${projectId}\` in the design repository.`,
+		'',
+		'_Opened by Flock Designer._',
+	].join('\n'),
+});
+
+export const runShare = async (
+	req: ShareRequest,
+	tools: ShareTools,
+	onStep: (step: ShareStep, detail?: string) => void,
+	timings: ShareTimings = DEFAULT_TIMINGS,
+	isLive: () => boolean = () => true,
+): Promise<{ url: string; prUrl: string }> => {
+	if (!req.share.kinds.includes(req.kind)) {
+		throw new ShareProblem(
+			`This repository does not build a preview for ${req.kind} work. It does for: ${req.share.kinds.join(', ')}.`,
+		);
+	}
+	if (!SAFE_BRANCH.test(req.branch) || req.branch.includes('..')) {
+		throw new ShareProblem(`"${req.branch}" is not a branch name that can be shared.`);
+	}
+
+	onStep('pushing');
+	const pushedAt = tools.now();
+	const { pushed } = await tools.push(req.branch);
+	if (!isLive()) throw new ShareProblem('Sharing was stopped.');
+
+	onStep('opening');
+	const pr = (await tools.findPr(req.branch)) ?? (await tools.createDraftPr(req.branch, req.title, req.body));
+	if (!isLive()) throw new ShareProblem('Sharing was stopped.');
+
+	// What to wait for: the deploy workflow *for what was just pushed*. Checks left over from the
+	// previous push are not evidence about this one, so when something new went up, only checks
+	// that started after it count. When nothing new went up, the existing ones are the answer.
+	const cutoff = pushed ? pushedAt - timings.skewMs : Number.NEGATIVE_INFINITY;
+	const waitStart = tools.now();
+	for (;;) {
+		const mine = (await tools.checks(pr.number)).filter(
+			(c) => c.workflow === req.share.workflow && !(Date.parse(c.startedAt) < cutoff),
+		);
+
+		if (mine.length === 0) {
+			if (tools.now() - waitStart > timings.startupMs) {
+				throw new ShareProblem(
+					`The "${req.share.workflow}" workflow did not start for ${pr.url}. The preview is not being built, so there is no address to share.`,
+				);
+			}
+			onStep('building', 'Waiting for the build to start');
+		} else {
+			const bad = mine.find((c) => c.bucket === 'fail' || c.bucket === 'cancel');
+			if (bad) {
+				throw new ShareProblem(`"${bad.name}" did not succeed, so there is no preview to share. Its log: ${bad.link || pr.url}`);
+			}
+			const waiting = mine.filter((c) => c.bucket !== 'pass' && c.bucket !== 'skipping');
+			if (waiting.length === 0) break;
+			onStep('building', waiting.map((c) => c.name).join(', '));
+		}
+
+		if (tools.now() - waitStart > timings.timeoutMs) {
+			throw new ShareProblem(
+				`The preview was still building after ${Math.round(timings.timeoutMs / 60_000)} minutes. It may yet finish: share again to check.`,
+			);
+		}
+		await tools.sleep(timings.pollMs);
+		if (!isLive()) throw new ShareProblem('Sharing was stopped.');
+	}
+
+	return { url: previewUrlFor(req.share, pr.number), prUrl: pr.url };
+};
+
+export interface ShareJob {
+	request: ShareRequest;
+	tools: ShareTools;
+	/** Saves the address in the iteration's record and shares the record. Its outcome is reported, never raised. */
+	record(url: string): Promise<PublishOutcome>;
+	timings?: ShareTimings;
+}
+
+/**
+ * Holds the one share in progress and tells the window how it is going.
+ *
+ * One at a time, and it lives in the main process, so leaving the screen does not lose it:
+ * coming back finds it where it was. A build takes minutes.
+ */
+export class ShareRunner {
+	private current: ShareStatus = { state: 'idle' };
+	private live = false;
+
+	constructor(private readonly onStatus: (status: ShareStatus) => void) {}
+
+	status(): ShareStatus {
+		return this.current;
+	}
+
+	private set(status: ShareStatus): void {
+		this.current = status;
+		this.onStatus(status);
+	}
+
+	/** Stops waiting. Nothing already pushed is undone. */
+	stop(): void {
+		this.live = false;
+	}
+
+	start(job: ShareJob): ShareStatus {
+		if (this.current.state === 'running') {
+			throw new ShareProblem(`Already sharing ${this.current.projectId} ${this.current.name}. Wait for it to finish.`);
+		}
+		const { projectId, name } = job.request;
+		this.live = true;
+		this.set({ state: 'running', projectId, name, step: 'pushing' });
+
+		void (async () => {
+			try {
+				const { url, prUrl } = await runShare(
+					job.request,
+					job.tools,
+					(step, detail) => {
+						if (this.live) this.set({ state: 'running', projectId, name, step, ...(detail ? { detail } : {}) });
+					},
+					job.timings,
+					() => this.live,
+				);
+				const published = await job.record(url);
+				this.set({ state: 'ready', projectId, name, url, prUrl, published });
+			} catch (err) {
+				this.set({ state: 'failed', projectId, name, message: err instanceof Error ? err.message : String(err) });
+			} finally {
+				this.live = false;
+			}
+		})();
+		return this.current;
+	}
+}

@@ -1,7 +1,8 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { delimiter, join } from 'node:path';
+import { join } from 'node:path';
+import { findOnPath } from './paths';
 import type { AgentStatus, RunLogLine } from '../../shared/contract';
 
 /**
@@ -44,9 +45,8 @@ export const locateClaude = (
 	exists: (p: string) => boolean = existsSync,
 	list: (dir: string) => string[] = (d) => (existsSync(d) ? readdirSync(d) : []),
 ): string => {
-	for (const dir of (env.PATH ?? '').split(delimiter).filter(Boolean)) {
-		if (exists(join(dir, 'claude'))) return join(dir, 'claude');
-	}
+	const onPath = findOnPath('claude', env, exists);
+	if (onPath) return onPath;
 	for (const p of [
 		join(home, '.claude', 'local', 'claude'),
 		join(home, '.local', 'bin', 'claude'),

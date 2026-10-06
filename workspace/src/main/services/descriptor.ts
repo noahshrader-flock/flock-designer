@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import type { WorkspaceCommand, WorkspaceDescriptor } from '../../shared/contract';
+import type { ShareDescriptor, WorkspaceCommand, WorkspaceDescriptor } from '../../shared/contract';
 import { resolveInside } from './paths';
 
 /**
@@ -50,6 +50,29 @@ const parseCommand = (raw: unknown, index: number): WorkspaceCommand => {
 	};
 };
 
+/** The kinds of work a descriptor may say it can share. */
+const KINDS = ['prototype', 'codebase'] as const;
+
+/**
+ * Optional: a repository that cannot build a preview for a branch just leaves it out. When it is
+ * there it is held to what sharing needs, because a bad address here would be recorded for every
+ * reviewer: https only, and a place for the pull request number.
+ */
+const parseShare = (raw: unknown): ShareDescriptor | undefined => {
+	if (raw === undefined) return undefined;
+	const s = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+	if (typeof s.url !== 'string' || !s.url.startsWith('https://') || !s.url.includes('<pr>')) {
+		throw new DescriptorProblem(`${DESCRIPTOR_PATH} share.url must be an https address containing <pr>`);
+	}
+	if (typeof s.workflow !== 'string' || s.workflow === '') {
+		throw new DescriptorProblem(`${DESCRIPTOR_PATH} share.workflow must name the workflow that deploys a preview`);
+	}
+	if (!Array.isArray(s.kinds) || s.kinds.length === 0 || !s.kinds.every((k) => (KINDS as readonly unknown[]).includes(k))) {
+		throw new DescriptorProblem(`${DESCRIPTOR_PATH} share.kinds must list "prototype", "codebase" or both`);
+	}
+	return { url: s.url, workflow: s.workflow, kinds: s.kinds as ShareDescriptor['kinds'] };
+};
+
 export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 	let raw: unknown;
 	try {
@@ -98,6 +121,7 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 		branchPattern: { prototype: branch.prototype, codebase: branch.codebase },
 		commands,
 		designSystem: { package: ds.package },
+		...(d.share !== undefined ? { share: parseShare(d.share) } : {}),
 	};
 };
 

@@ -71,6 +71,7 @@ apply it until then. Point a development build elsewhere with
 | Invoke a locally installed agent | Hold model credentials, or carry its own prompts |
 | Read and write project records | Become the only place those records exist |
 | Show a prototype's preview in the window and place comments on elements | Let that preview call back into the app, or leave the preview's origin |
+| Push an iteration's branch and open a **draft** pull request, as the designer, through their own `git` and `gh` | Force-push, open a pull request that is ready for review, merge one, or see the designer's GitHub token |
 
 ## How a repository joins
 
@@ -94,6 +95,28 @@ this app.
 `commands` is the allowlist, and it is the whole allowlist. `argv` is an already-split array, never a
 shell string: there is no interpreter to hand a pipe or a semicolon to. A repository with no
 descriptor can be opened, but nothing can be run in it.
+
+### Sharing, and what it needs
+
+*Share for review* (author mode only) pushes the iteration's branch to `origin`, opens a **draft** pull
+request for it, waits for the repository's deploy workflow, and records the preview address on the
+iteration, so a reviewer who opens the app sees it. A repository opts in with a `share` block:
+
+```json
+"share": {
+  "url": "https://dev-coke-pr-<pr>.flocksafety.com",
+  "workflow": "PR Deployment",
+  "kinds": ["prototype"]
+}
+```
+
+`url` is the address with the pull request number where `<pr>` is, `workflow` is the name of the CI
+workflow whose success means the preview is up, and `kinds` is which work gets a preview. Without the
+block a repository cannot be shared from here.
+
+The designer needs the [GitHub CLI](https://cli.github.com) (`gh auth login` once). The app's own
+GitHub sign-in is deliberately limited to the design repository, so it is not used for the product's
+pull request, and the app never sees the designer's token. Only committed work is shared.
 
 ## Where things live
 

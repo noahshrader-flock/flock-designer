@@ -42,6 +42,23 @@ export interface WorkspaceDescriptor {
 	commands: WorkspaceCommand[];
 	/** How the resolved design-system version is discovered. */
 	designSystem: { package: string };
+	/** How this repository turns a branch into a link a reviewer can open. Absent: it cannot be shared from here. */
+	share?: ShareDescriptor;
+}
+
+/**
+ * The repository's own account of how a shared preview comes about, so Workspace
+ * hard-codes nothing about one product's CI. A draft pull request is opened for
+ * the branch; the repository's deploy workflow builds it; the address follows a
+ * fixed pattern.
+ */
+export interface ShareDescriptor {
+	/** The preview's address, with `<pr>` where the pull request number goes. Must be https. */
+	url: string;
+	/** Name of the workflow whose success means the preview is up. */
+	workflow: string;
+	/** Which kinds of work get a preview from this repository's CI. */
+	kinds: IterationKind[];
 }
 
 export interface WorkspaceCommand {
@@ -81,7 +98,18 @@ export interface Iteration {
 	note: string;
 	/** People who have committed on this branch. Refreshed whenever the iteration is opened or shared. */
 	contributors?: Person[];
+	/** Where a reviewer can open this iteration, once it has been shared. */
+	previewUrl?: string;
 }
+
+/** Where sharing an iteration has got to. One at a time: it is a push, a pull request and a build. */
+export type ShareStatus =
+	| { state: 'idle' }
+	| { state: 'running'; projectId: string; name: string; step: ShareStep; detail?: string }
+	| { state: 'ready'; projectId: string; name: string; url: string; prUrl: string; published: PublishOutcome }
+	| { state: 'failed'; projectId: string; name: string; message: string };
+
+export type ShareStep = 'pushing' | 'opening' | 'building';
 
 export type PreviewStatus =
 	| { state: 'stopped' }
@@ -157,6 +185,17 @@ export interface WorkspaceApi {
 	commandStatus(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	onRunLog(listener: (line: RunLogLine) => void): () => void;
 	onPreviewStatus(listener: (status: PreviewStatus) => void): () => void;
+
+	/**
+	 * Pushes the iteration's branch, opens a draft pull request for it, waits for the repository's
+	 * deploy workflow and records the preview address. Resolves at once with where it has got to;
+	 * progress arrives through `onShareStatus`, because the build takes minutes.
+	 */
+	shareIteration(root: string, projectId: string, name: string): Promise<Result<ShareStatus>>;
+	shareStatus(): Promise<Result<ShareStatus>>;
+	onShareStatus(listener: (status: ShareStatus) => void): () => void;
+	/** Whether a shared preview's address answers yet, for the "still building" screen. */
+	previewReachable(url: string): Promise<Result<boolean>>;
 
 	/** Hands the task to the locally installed agent. Never bundles credentials. */
 	startAgent(root: string, projectId: string, task: string): Promise<Result<AgentStatus>>;
@@ -368,6 +407,10 @@ export const CHANNELS = {
 	commandStatus: 'workspace:commandStatus',
 	startAgent: 'workspace:startAgent',
 	agentStatus: 'workspace:agentStatus',
+	shareIteration: 'workspace:shareIteration',
+	shareStatus: 'workspace:shareStatus',
+	shareStatusChanged: 'workspace:event:shareStatus',
+	previewReachable: 'workspace:previewReachable',
 	runLog: 'workspace:event:runLog',
 	previewStatus: 'workspace:event:previewStatus',
 	agentLog: 'workspace:event:agentLog',

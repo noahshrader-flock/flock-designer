@@ -18,6 +18,8 @@ import { Popover } from '@mui/material';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { People } from './People';
+import { ShareControl } from './ShareControl';
+import { useHostedPreview } from './hostedPreview';
 import { PANEL_STEP, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
 import { NAV_HEIGHT } from './TopNav';
 import { useLocalBuild } from './useLocalBuild';
@@ -101,8 +103,14 @@ export const Review = ({
 	const pickActive = useRef(false);
 	const composer = useRef<HTMLDivElement>(null);
 
-	// Bring the iteration up here, unless it already has a hosted address to open.
-	const local = useLocalBuild({ checkout, project, iteration, task, enabled: !iteration.previewUrl });
+	// Someone with the product repository builds it here, so what they see is their latest work.
+	// Everyone else, and anyone whose local build cannot run (a colleague's iteration they do not
+	// have), opens the shared preview. It may still be building: the screen says so.
+	const local = useLocalBuild({ checkout, project, iteration, task, enabled: !iteration.previewUrl || checkout !== null });
+	const hostedUrl = iteration.previewUrl ?? null;
+	const useHosted = hostedUrl !== null && (checkout === null || local.phase.kind === 'failed');
+	const hosted = useHostedPreview(useHosted ? hostedUrl : null);
+	const [shareOpen, setShareOpen] = useState(false);
 
 	useEffect(() => {
 		void window.workspace.signInState().then((r) => {
@@ -138,11 +146,11 @@ export const Review = ({
 		}
 	}, []);
 
-	// Open the recorded preview straight away; close it when leaving.
+	// The shared preview opens once it answers; the view closes when leaving.
 	useEffect(() => {
-		if (iteration.previewUrl) void open(iteration.previewUrl);
-		return () => void window.workspace.pageClose();
-	}, [iteration.previewUrl, open]);
+		if (hostedUrl && hosted.state === 'up') void open(hostedUrl);
+	}, [hostedUrl, hosted.state, open]);
+	useEffect(() => () => void window.workspace.pageClose(), []);
 
 	// When the preview is up, show it.
 	useEffect(() => {
@@ -286,10 +294,12 @@ export const Review = ({
 	 * a run counter drops the result of a freeze that was overtaken by the box closing again.
 	 */
 	const composing = mode === 'composing';
+	// The sharing dialog needs the same thing the comment box does: the space the preview occupies.
+	const frozen = composing || shareOpen;
 	const run = useRef(0);
 	useEffect(() => {
 		const mine = ++run.current;
-		if (!composing) {
+		if (!frozen) {
 			setReady(false);
 			held.current = false;
 			void window.workspace.pageHold('popover', false);
@@ -315,7 +325,7 @@ export const Review = ({
 			held.current = true;
 			setReady(true);
 		})();
-	}, [composing, opened]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [frozen, opened]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// Dragging the divider hides the preview for the length of the drag.
 	useEffect(() => {
@@ -430,6 +440,8 @@ export const Review = ({
 				<People people={iteration.contributors} />
 				<FSBox sx={{ flexGrow: 1 }} />
 
+				<ShareControl checkout={checkout} project={project} iteration={iteration} onOpenChange={setShareOpen} />
+
 				{/* One control, two halves: comment mode on the left, the list of comments on the right.
 				    The group hands its variant and size to both buttons; pressed is the design
 				    system's own secondaryActive, not a different colour of button. */}
@@ -459,10 +471,10 @@ export const Review = ({
 
 			{/* Under the toolbar: the preview, and beside it the sidebar when it is open. */}
 			<FSBox sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
-				<FSBox ref={slot} sx={{ position: 'relative', flex: 1, minWidth: 0, overflow: 'hidden', bgcolor: 'grey.100' }}>
+				<FSBox ref={slot} sx={{ position: 'relative', flex: 1, minWidth: 0, overflow: 'hidden', bgcolor: 'background.default' }}>
 					{!opened && (
 						<FSStack spacing={2} alignItems="center" justifyContent="center" sx={{ position: 'absolute', inset: 0, p: 3, textAlign: 'center' }}>
-							{local.phase.kind === 'failed' ? (
+							{local.phase.kind === 'failed' && !useHosted ? (
 								<>
 									<FSAlert severity="error" sx={{ maxWidth: 560, textAlign: 'left' }}>
 										{local.phase.message}
@@ -483,6 +495,17 @@ export const Review = ({
 								<FSAlert severity="error" sx={{ maxWidth: 560, textAlign: 'left' }}>
 									{error}
 								</FSAlert>
+							) : useHosted && hosted.state !== 'up' ? (
+								<>
+									<FSSpinner />
+									<FSTypography variant="body1">This preview is still being built.</FSTypography>
+									<FSTypography variant="body2" color="text.secondary" sx={{ maxWidth: 480 }}>
+										It opens here by itself as soon as it is ready. A new share takes a few minutes.
+									</FSTypography>
+									<FSButton size="md" variant="secondary" onClick={hosted.openAnyway}>
+										Open it anyway
+									</FSButton>
+								</>
 							) : !iteration.previewUrl && !checkout ? (
 								<>
 									<FSTypography variant="body1">Flock Designer needs your Coke repository to show this.</FSTypography>

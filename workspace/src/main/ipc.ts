@@ -18,16 +18,18 @@ import {
 	type SavedIteration,
 } from '../shared/contract';
 import { AgentRunner } from './services/agent';
+import { type ShareRunner, previewIsUp, pullRequestText } from './services/share';
+import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
 import { readDescriptor } from './services/descriptor';
 import { isRepository, readCheckout } from './services/git';
-import { assertUsableProjectId, continueIteration, createIteration, readIterations } from './services/iterations';
+import { assertUsableProjectId, continueIteration, createIteration, readIterations, recordPreview } from './services/iterations';
 import { findProductCheckouts, recordsRootFor } from './services/discovery';
 import { readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
 import { DesignRepo } from './services/designRepo';
 import type { PageView } from './services/pageView';
-import { sanitizeAnchor } from '../shared/anchor';
+import { assertPreviewUrl, sanitizeAnchor } from '../shared/anchor';
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readLocalProjects } from './services/localProjects';
@@ -65,13 +67,14 @@ export interface IpcContext {
 	opened: OpenedCheckouts;
 	runtime: RuntimeManager;
 	agent: AgentRunner;
+	share: ShareRunner;
 	github: GitHubSession;
 	designRepo: DesignRepo;
 	page: PageView;
 	memory: CheckoutMemory;
 }
 
-export const registerIpc = ({ window, opened, runtime, agent, github, designRepo, page, memory }: IpcContext): void => {
+export const registerIpc = ({ window, opened, runtime, agent, share, github, designRepo, page, memory }: IpcContext): void => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
 			throw new Error(`${root} is not a git repository.`);
@@ -259,6 +262,58 @@ export const registerIpc = ({ window, opened, runtime, agent, github, designRepo
 	);
 
 	ipcMain.handle(CHANNELS.agentStatus, guard(() => agent.status()));
+
+	// Sharing. The branch comes from this person's own record, never from the window, and
+	// the repository's descriptor says what a share is. Starts and returns: it takes minutes.
+	ipcMain.handle(
+		CHANNELS.shareIteration,
+		guard(async (root: string, projectId: string, name: string) => {
+			assertUsableProjectId(projectId);
+			const canonical = opened.require(root);
+			const descriptor = descriptorFor(root);
+			const { share: how } = descriptor;
+			if (!how) {
+				throw new Error(`${descriptor.product} does not say how a shared preview is built, so it cannot be shared from here.`);
+			}
+			const recordsRoot = recordsFor(canonical);
+			const iteration = readIterations(recordsRoot, projectId).find((i) => i.name === name);
+			if (!iteration) throw new Error(`${projectId} has no iteration called ${name}.`);
+			// Only what is committed goes up. Sharing a branch with unsaved edits would show reviewers less than the designer sees.
+			const here = await readCheckout(canonical);
+			if (here.branch === iteration.branch && !here.clean) {
+				throw new Error(`There are uncommitted changes on ${iteration.branch}, and only committed work is shared. Commit them, then share again.`);
+			}
+			return share.start({
+				request: {
+					share: how,
+					kind: name === 'codebase' ? 'codebase' : 'prototype',
+					projectId,
+					name,
+					branch: iteration.branch,
+					...pullRequestText(projectId, name),
+				},
+				tools: realShareTools(canonical),
+				record: async (url) => {
+					recordPreview(recordsRoot, projectId, name, url);
+					return publish(projectId, recordsRoot);
+				},
+			});
+		}),
+	);
+	ipcMain.handle(CHANNELS.shareStatus, guard(() => share.status()));
+	ipcMain.handle(
+		CHANNELS.previewReachable,
+		guard(async (url: string): Promise<boolean> => {
+			const checked = assertPreviewUrl(String(url));
+			try {
+				const res = await fetch(checked, { redirect: 'follow', signal: AbortSignal.timeout(6000) });
+				await res.body?.cancel();
+				return previewIsUp(res.status);
+			} catch {
+				return false;
+			}
+		}),
+	);
 
 	// Sign-in. No handler returns a token: the renderer only ever learns whether
 	// someone is signed in, and who.

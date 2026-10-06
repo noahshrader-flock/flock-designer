@@ -29,11 +29,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const isLockContention = (detail: string): boolean => /index\.lock|Unable to create .*\.lock|another git process/i.test(detail);
 
-const attempt = async (root: string, args: string[]): Promise<string> => {
+const attempt = async (root: string, args: string[], timeoutMs?: number): Promise<string> => {
 	// `--no-optional-locks`: a read-only command (status, log, rev-parse) would otherwise
 	// refresh the index in the background and take the same lock a checkout needs. Git
 	// documents this flag for exactly the case of a tool polling a repository.
-	const { stdout } = await run('git', ['--no-optional-locks', '-C', root, ...args], { maxBuffer: 16 * 1024 * 1024 });
+	const { stdout } = await run('git', ['--no-optional-locks', '-C', root, ...args], {
+		maxBuffer: 16 * 1024 * 1024,
+		...(timeoutMs ? { timeout: timeoutMs } : {}),
+		// Never wait for someone to type a password into a window that has no terminal.
+		env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+	});
 	return stdout.trim();
 };
 
@@ -45,12 +50,12 @@ const attempt = async (root: string, args: string[]): Promise<string> => {
  * to this", and deleting one under a live process corrupts the index. The error says what
  * to check instead.
  */
-const git = (root: string, args: string[]): Promise<string> => {
+const git = (root: string, args: string[], timeoutMs?: number): Promise<string> => {
 	const run1 = async (): Promise<string> => {
 		let lastDetail = '';
 		for (let i = 0; i < 4; i++) {
 			try {
-				return await attempt(root, args);
+				return await attempt(root, args, timeoutMs);
 			} catch (err) {
 				lastDetail = (err as { stderr?: string; message: string }).stderr?.trim() || (err as Error).message;
 				if (!isLockContention(lastDetail)) throw new GitProblem(lastDetail);
@@ -188,4 +193,32 @@ export const checkoutBranch = async (root: string, branch: string): Promise<void
 		throw new GitProblem(`Branch ${branch} does not exist.`);
 	}
 	await git(root, ['checkout', branch]);
+};
+
+/**
+ * Sends a branch to `origin` and says whether anything actually went.
+ *
+ * `--porcelain` is git's own format for scripts: a line starting with `=` means the remote
+ * already had exactly this, which is how sharing again with nothing new is told apart from
+ * sharing new work. Plain push only ever *adds* to the branch: it is refused, not forced,
+ * if the remote has commits this machine lacks.
+ */
+export const pushBranch = async (root: string, branch: string): Promise<{ pushed: boolean }> => {
+	if (!(await branchExists(root, branch))) {
+		throw new GitProblem(`Branch ${branch} does not exist on this machine, so there is nothing to share.`);
+	}
+	let out: string;
+	try {
+		out = await git(root, ['push', '--porcelain', '--set-upstream', 'origin', `refs/heads/${branch}:refs/heads/${branch}`], 120_000);
+	} catch (err) {
+		const detail = err instanceof Error ? err.message : String(err);
+		if (/rejected|non-fast-forward|fetch first/i.test(detail)) {
+			throw new GitProblem(
+				`${branch} has changes on the remote that this machine does not have, so it was not pushed. Pull them first, then share again.\n\n${detail}`,
+			);
+		}
+		throw new GitProblem(`Could not push ${branch} to origin.\n\n${detail}`);
+	}
+	const lines = out.split('\n').filter((l) => l.includes('refs/heads/'));
+	return { pushed: !lines.every((l) => l.startsWith('=')) };
 };

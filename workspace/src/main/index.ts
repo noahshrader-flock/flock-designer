@@ -1,5 +1,6 @@
 import { BrowserWindow, app, safeStorage, shell } from 'electron';
 import { join } from 'node:path';
+import { CHANNELS } from '../shared/contract';
 import { registerIpc } from './ipc';
 import { AgentRunner } from './services/agent';
 import { DesignRepo } from './services/designRepo';
@@ -8,6 +9,7 @@ import { PageView } from './services/pageView';
 import type { Fetcher } from './services/github';
 import { GitHubSession } from './services/githubSession';
 import { RuntimeManager } from './services/runtime';
+import { ShareRunner } from './services/share';
 import { OpenedCheckouts } from './services/session';
 import { TokenStore } from './services/tokenStore';
 
@@ -96,6 +98,7 @@ void app.whenReady().then(() => {
 		onStatus: (status) => window.webContents.send('workspace:event:previewStatus', status),
 	});
 	const agent = new AgentRunner((line) => window.webContents.send('workspace:event:agentLog', line));
+	const share = new ShareRunner((status) => window.webContents.send(CHANNELS.shareStatusChanged, status));
 
 	const github = new GitHubSession(
 		GITHUB_CLIENT_ID,
@@ -113,7 +116,7 @@ void app.whenReady().then(() => {
 
 	const memory = new CheckoutMemory(CheckoutMemory.defaultPath(app.getPath('userData')));
 
-	registerIpc({ window, opened, runtime, agent, github, designRepo, page, memory });
+	registerIpc({ window, opened, runtime, agent, share, github, designRepo, page, memory });
 
 	// Restores a previous session from the keychain without blocking the window.
 	void github.restore();
@@ -128,6 +131,7 @@ void app.whenReady().then(() => {
 	const stopEverything = () => {
 		runtime.stopAll();
 		agent.stop();
+		share.stop();
 		page.close();
 	};
 	window.on('closed', stopEverything);

@@ -13,6 +13,7 @@ import {
 	continueIteration,
 	createIteration,
 	readIterations,
+	recordPreview,
 } from '../src/main/services/iterations';
 
 const descriptor: WorkspaceDescriptor = {
@@ -170,3 +171,28 @@ describe('codebase work', () => {
 		expect((await createIteration(root, records, descriptor, 'demo', '', 'develop')).name).toBe('i2');
 	});
 });
+
+describe('recordPreview', () => {
+	it('saves the address on the named iteration and leaves the others alone', async () => {
+		await createIteration(root, records, descriptor, 'demo', 'first', 'develop');
+		g('checkout', '-q', 'develop');
+		await createIteration(root, records, descriptor, 'demo', 'second', 'develop');
+		const saved = recordPreview(records, 'demo', 'i1', 'https://dev-coke-pr-5.example.test');
+		expect(saved.previewUrl).toBe('https://dev-coke-pr-5.example.test');
+		const all = readIterations(records, 'demo');
+		expect(all.find((i) => i.name === 'i1')?.previewUrl).toBe('https://dev-coke-pr-5.example.test');
+		expect(all.find((i) => i.name === 'i2')?.previewUrl).toBeUndefined();
+	});
+
+	it('survives the record being refreshed when the iteration is opened again', async () => {
+		await createIteration(root, records, descriptor, 'demo', 'first', 'develop');
+		recordPreview(records, 'demo', 'i1', 'https://dev-coke-pr-5.example.test');
+		await continueIteration(root, records, 'demo', 'i1');
+		expect(readIterations(records, 'demo')[0]?.previewUrl).toBe('https://dev-coke-pr-5.example.test');
+	});
+
+	it('refuses an iteration that is not recorded rather than inventing one', () => {
+		expect(() => recordPreview(records, 'demo', 'i9', 'https://x.example.test')).toThrow(IterationProblem);
+	});
+});
+
