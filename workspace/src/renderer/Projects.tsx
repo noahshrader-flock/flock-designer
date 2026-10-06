@@ -1,4 +1,4 @@
-import { FolderIcon, MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
+import { FileTextIcon, FolderIcon, MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { Checkout, CheckoutSuggestion, Person, Project, ProjectIteration } from '../shared/contract';
 import { NewWork, type Created } from './NewWork';
@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /** The list's own padding and width, under the toolbar. The toolbar is full width, so it is not inside this. */
 const Page = ({ children }: { children: ReactNode }) => (
@@ -203,25 +204,50 @@ export const Projects = () => {
 										year: 'numeric',
 									})}`}
 							</CardDescription>
-							{(project.localOnly || project.openComments > 0) && (
+							{(project.localOnly || project.openComments > 0 || project.records.length > 0) && (
 								<CardAction className="flex flex-row items-center gap-2">
 									{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}
 									{project.openComments > 0 && (
-										<Badge
-											variant="secondary"
-											aria-label={`${project.openComments} open comment${project.openComments === 1 ? '' : 's'}`}
-										>
-											<MessageSquareIcon />
-											{project.openComments}
-										</Badge>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<Badge
+													variant="secondary"
+													aria-label={`${project.openComments} open comment${project.openComments === 1 ? '' : 's'}`}
+												>
+													<MessageSquareIcon />
+													{project.openComments}
+												</Badge>
+											</TooltipTrigger>
+											<TooltipContent>
+												{project.openComments} comment{project.openComments === 1 ? '' : 's'}
+											</TooltipContent>
+										</Tooltip>
+									)}
+									{project.records.length > 0 && (
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<Badge
+													variant="secondary"
+													aria-label={`${project.records.length} file${project.records.length === 1 ? '' : 's'}: ${project.records.join(', ')}`}
+												>
+													<FileTextIcon />
+													{project.records.length}
+												</Badge>
+											</TooltipTrigger>
+											<TooltipContent>
+												<ul className="m-0 flex list-none flex-col gap-0.5 p-0 font-mono">
+													{project.records.map((record) => (
+														<li key={record}>{record}</li>
+													))}
+												</ul>
+											</TooltipContent>
+										</Tooltip>
 									)}
 								</CardAction>
 							)}
 						</CardHeader>
 						<CardContent className="flex flex-col gap-3 px-5">
 							<People people={project.people} empty="No contributors recorded yet" />
-
-							<p className="text-muted-foreground text-sm">{project.records.join(' · ') || 'no records yet'}</p>
 
 							{project.iterations.length === 0 ? (
 								<p className="text-muted-foreground text-sm">No branches yet.</p>
