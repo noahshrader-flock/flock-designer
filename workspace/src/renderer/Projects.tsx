@@ -236,19 +236,19 @@ export const Projects = () => {
 							<People people={project.people} empty="No contributors recorded yet" />
 						</CardContent>
 						<CardFooter className="flex-wrap items-center justify-between gap-2 rounded-b-xl border-t bg-muted/50 px-3 py-2 [.border-t]:pt-2">
-							<div className="flex flex-row flex-wrap items-center gap-2">
+							<div className="flex flex-row flex-wrap items-center">
+								{project.records.map((record) => (
+									<Button key={record} variant="ghost" size="sm" onClick={() => setViewing({ project, name: record, open: true })}>
+										{sentence(record.replace(/\.[^.]+$/, '').replace(/-/g, ' '))}
+									</Button>
+								))}
+							</div>
+							<div className="ml-auto flex flex-row flex-wrap items-center gap-2">
 								{project.iterations.length === 0 && <span className="text-muted-foreground px-2 text-sm">No branches yet.</span>}
 								{project.iterations.map((iteration) => (
 									<Button key={iteration.branch} variant="outline" size="sm" onClick={() => setSelected({ project, iteration })}>
 										{sentence(iteration.name)}
 										{iteration.localOnly && !project.localOnly ? ' · local' : ''}
-									</Button>
-								))}
-							</div>
-							<div className="ml-auto flex flex-row flex-wrap items-center">
-								{project.records.map((record) => (
-									<Button key={record} variant="ghost" size="sm" onClick={() => setViewing({ project, name: record, open: true })}>
-										{sentence(record.replace(/\.[^.]+$/, '').replace(/-/g, ' '))}
 									</Button>
 								))}
 							</div>
