@@ -526,13 +526,19 @@ comment, in the hidden part that already holds the position:
 `review.md`**: every project folder already has a `review.md`, which is the agent's own review record, and
 comments must not be mixed into it. The app regenerates it whenever it reads a project's comments, on a
 machine where the design repository sits beside the product repository, so there is no button and nothing to
-remember. It lists the **open** comments only, in number order, and for each:
+remember. **It and its pictures are not committed:** they are generated, change constantly, and would conflict
+between machines, so `projects/*/comments.md` and `projects/*/comment-pictures/` are ignored by the design
+repository's `.gitignore` (done 2026-10-05, ahead of the export). It lists the **open** comments only, in number
+order, and for each:
 - the number, author and words, and the state it was made in;
 - the picture, written to a file beside it (`comment-pictures/3.jpg`) for the agent to open;
-- **candidate code locations**: the iteration's branch is searched (`git grep` on the branch, never a checkout)
-  for the comment's stable name and for its nearby text, and up to five matches are listed as
-  `file:line`, each saying how it matched ("exact `e2eRef`", "text match"). If nothing matches it says so,
-  instead of guessing. Searching rather than guessing is the point: the agent starts from a short list.
+- **candidate code locations, last and optional.** The branch is searched (`git grep` on the branch, never a
+  checkout) for the comment's stable name and nearby text, and up to five matches are listed as `file:line`,
+  each saying how it matched ("exact `e2eRef`", "text match") and saying so plainly when nothing matches.
+  **This is built only if the real run shows the agent struggling to find things without it.** A short list of
+  confident-looking wrong answers can mislead more than no list, and the agent can search the branch itself
+  given the text, the picture, the state and any stable name, which are what carry the meaning. Everything
+  above this bullet is what makes a comment clear; this is a convenience.
 
 **The agent instruction.** A skill in the product's agent files (`.flkd/skills/address-comments.md`): "address
 the open comments on `<project>`". For each open comment, in order: look at the picture, open the candidate
@@ -547,13 +553,14 @@ not a failure, with how many stable names a prototype has.
 
 **Done when:** on one real project, a comment placed on a **non-default state** of a prototype, on an element,
 produces a change on the branch through the instruction, and the agent's summary names that comment's number.
-Tests cover the picture crop and its size cap, the export on fixtures (open only, candidates, no-candidates),
-and Resolve. **Human:** you read the change and say it addresses the comment.
+Tests cover the picture crop and its size cap, the export on fixtures (open comments only, the picture written
+beside it), and Resolve. **Human:** you read the change and say it addresses the comment.
 
 **Not in this step:** the agent replying inside the thread, hosted previews, comments across several iterations.
 
 **Order:** the commit and Resolve first (small, and they make the rest honest), then the state, then the
-picture, then the export, then the skill.
+picture, then the export (words, state, status and picture), then the skill, then one real run. Candidate
+locations only if that run needs them.
 
 ### 3.6 — Pilot and decision (was C5)
 
@@ -3185,6 +3192,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 | 2026-10-05 | **Local work now shows in the project list.** Noah expected anything built locally, a prototype or codebase work, to appear in Flock Designer. It did not: the list read only GitHub, so work appeared only after its record was pushed (and its title was just its id until the brief was too). The list now merges GitHub's projects with the local design repository's, marked *Only on this machine* or *local*, and still shows local work if GitHub is unreachable. | 3.3.5; the app. |
 | 2026-10-05 | **Built 3.3.5, the local proof.** From Projects, *New prototype* creates the branch and record, runs the agent, runs the preview and opens it with pins; existing iterations get a *Build on this machine* panel. Checking it against the real Coke checkout found five faults that would each have stopped the walkthrough: Claude Code was not on the PATH on this machine, the agent had no way to run unattended, the declared preview command exited without a project id, a running preview left a generated file that failed the linter and the typecheck on other branches, and a stopped preview left its server holding the port. All fixed (three Coke commits; the four prototype branches rebased, with backups). The one thing not run is the agent building a new prototype from scratch. | 3.3.5; the app; Coke's descriptor, biome config and start script. |
 | 2026-10-05 | **Re-scoped Phase 3 around a local proof of concept.** Noah wants to prove the loop on one machine first: generate a prototype locally, see it in the app, comment, and close the loop at 3.5, and treat a hosted preview as a later, easy conversation with engineering. Added **3.3.5** (the local walkthrough, including a place in the Projects tab to create work, since hiding the Author screen removed it) and **deferred 3.4**. Considered GitHub Pages for hosted links and set it aside: Pages on a private repo is public unless the org has Enterprise Cloud access control, serves one site per repo, and Coke's existing S3 PR deployment already does per-PR previews, so the later change is a mock-data build through that workflow. | Phase 3 table; 3.3.5 new; 3.4. |
+| 2026-10-05 | **3.5 refined after a review of its own plan.** Candidate code locations are now the last, optional piece, built only if the real run shows the agent needs them: they are the least certain part, and a short list of confident wrong answers can mislead more than none, while the picture, state and stable names carry the meaning. And the generated `comments.md` and `comment-pictures/` are not committed (ignored by the design repository), because they are derived, change constantly and would conflict between machines. One further risk is recorded rather than solved: state in the URL depends on each prototype's harness following the standard, and the gate only prints a note. | 3.5; the design repository's `.gitignore`. |
 | 2026-10-05 | **Reshaped 3.5 so a comment is clear to the agent that acts on it.** Noah asked whether the agent would know what a comment refers to, and wanted it clear in a reliable, uncomplicated way. Measured first: prototypes have almost no stable element names (0, 0, 0 and 7 across four), the prototype state is not recorded, there is no picture, the recorded commit is empty or stale, and nothing can mark a comment resolved. 3.5 now adds the state, a small embedded picture and the real commit to each comment, a Resolve toggle, a generated `comments.md` that lists open comments with candidate code locations found by searching the branch, and an agent skill. Kept simple on purpose: one store (the GitHub comment), everything else derived and regenerable, every addition optional. The export is `comments.md`, not `review.md`, because every project already has a `review.md` holding the agent's own review. | 3.5 and its table row. |
 | 2026-10-05 | **Commenting is a mode, and the sidebar is back.** Noah asked for a split button at the top right: the left half turns on **comment mode**, the right half toggles a **sidebar** listing every comment. In comment mode a click anywhere on the page drops a pin and opens a small box beside it to write in and **Save**; the mode stays on, so you can comment your way down the page. The sidebar is the docked, resizable one from before (250px minimum, 1px divider, width remembered), restored from history rather than rewritten, and closed by default. The count shows beside the sidebar icon. Cmd or Ctrl and Enter saves; the first Escape cancels the box and keeps the mode on, the second leaves it. The click's position now comes back with the pick so the box can sit beside the pin. The box is drawn over a snapshot of the page, as the earlier popovers were, and the snapshot now waits for the page to paint first, or the pin that was just placed is missing from it. | The iteration screen; supersedes the Comments popover above. |
 | 2026-10-05 | **Opening an iteration now brings its preview up by itself; the Build controls are gone.** Noah asked for no Run preview button and no Ask the agent box: open an iteration, see a loading screen, and the preview appears when it is ready, so nobody has to decide to run anything. The wrench and its popover are removed, leaving one Comments icon in the toolbar. The steps (put the checkout on the branch, have the agent build it first if the work was only just created, start the preview) are one function over an injected API, tested without a window, and the screen says which step it is on. A failure shows what happened with the program's own output beneath it and a Try again button; a dirty working tree is reported with what to do about it; and trying again after the agent has done its work does not ask it to do the work twice. The agent now runs only at creation. Checked in the real app against a throwaway repository, so neither the user's Coke checkout nor its preview port were touched. | The iteration screen; supersedes the Build popover above. |
