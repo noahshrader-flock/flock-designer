@@ -1,4 +1,4 @@
-import { ChevronLeftIcon, ExternalLinkIcon, MapPinIcon, MessageSquareIcon } from 'lucide-react';
+import { ChevronLeftIcon, MapPinIcon, MessageSquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
@@ -619,22 +619,14 @@ export const Review = ({
 				<People people={iteration.contributors} />
 				<div className="grow" />
 
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Button
-							size="icon"
-							variant="ghost"
-							aria-label="Open this page in your browser"
-							disabled={!opened}
-							onClick={() => void window.workspace.openPreviewInBrowser().then((r) => !r.ok && setError(r.error))}
-						>
-							<ExternalLinkIcon />
-						</Button>
-					</TooltipTrigger>
-					<TooltipContent>Open this page in your browser</TooltipContent>
-				</Tooltip>
-
-				<ShareControl checkout={checkout} project={project} iteration={iteration} onOpenChange={setShareOpen} />
+				<ShareControl
+					checkout={checkout}
+					project={project}
+					iteration={iteration}
+					canOpen={opened}
+					onOpenInBrowser={() => void window.workspace.openPreviewInBrowser().then((r) => !r.ok && setError(r.error))}
+					onOpenChange={setShareOpen}
+				/>
 
 				{/* One control, two halves: comment mode on the left, the list of comments on the right.
 				    A pressed half is filled rather than outlined, so which mode is on is readable at a glance. */}

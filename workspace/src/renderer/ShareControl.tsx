@@ -1,35 +1,44 @@
-import { CopyIcon, Share2Icon } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, Share2Icon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared/contract';
 import { dialogView, isMine, stepText } from './shareView';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Spinner } from './ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /**
- * Share an iteration with people who are not on this machine: one click, then a dialog that
- * says what is about to happen, watches it, and ends with the address.
+ * What can be done with this page beyond reviewing it, behind one menu: share it, open it in the
+ * browser, copy its link.
  *
- * Only someone with the product repository (an author) sees it. It is a push and a pull request,
- * so it says so before doing either, and the dialog stays honest about the wait: a build takes
- * minutes. Closing the dialog does not stop it; the button shows it is still going.
+ * Sharing is for people who are not on this machine: one click, then a dialog that says what is about
+ * to happen, watches it, and ends with the address. Only someone with the product repository (an
+ * author) is offered it. It is a push and a pull request, so it says so before doing either, and the
+ * dialog stays honest about the wait: a build takes minutes. Closing the dialog does not stop it; the
+ * menu button shows it is still going.
  */
 export const ShareControl = ({
 	checkout,
 	project,
 	iteration,
+	canOpen,
+	onOpenInBrowser,
 	onOpenChange,
 }: {
 	checkout: Checkout | null;
 	project: Project;
 	iteration: ProjectIteration;
-	/** The preview is a native layer over this window, so the screen must know when a dialog needs the space. */
+	/** Whether the page is up, so there is something to open. */
+	canOpen: boolean;
+	onOpenInBrowser: () => void;
+	/** The preview is a native layer over this window, so the screen must know when the menu or dialog needs the space. */
 	onOpenChange: (open: boolean) => void;
 }) => {
 	const [status, setStatus] = useState<ShareStatus>({ state: 'idle' });
 	const [open, setOpen] = useState(false);
+	const [menuOpen, setMenuOpen] = useState(false);
 	const [phase, setPhase] = useState<'confirm' | 'working'>('confirm');
 	const [error, setError] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
@@ -44,19 +53,14 @@ export const ShareControl = ({
 	const url = mine && status.state === 'ready' ? status.url : iteration.previewUrl;
 	const view = dialogView(phase, status, mine);
 
-	const show = useCallback(
-		(next: boolean) => {
-			setOpen(next);
-			onOpenChange(next);
-		},
-		[onOpenChange],
-	);
-	// Leaving with the dialog open must hand the preview back.
+	useEffect(() => {
+		onOpenChange(open || menuOpen);
+	}, [open, menuOpen, onOpenChange]);
+	// Leaving with either open must hand the preview back.
 	useEffect(() => () => onOpenChange(false), [onOpenChange]);
 
-	if (!checkout) return null;
-
 	const start = async () => {
+		if (!checkout) return;
 		setError(null);
 		const r = await window.workspace.shareIteration(checkout.root, project.id, iteration.name);
 		if (!r.ok) return setError(r.error);
@@ -77,30 +81,44 @@ export const ShareControl = ({
 
 	return (
 		<>
-			{url && (
+			<DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<Button size="icon" variant="ghost" aria-label="Copy the preview link" onClick={() => void copy()}>
-							<CopyIcon />
-						</Button>
+						<DropdownMenuTrigger asChild>
+							<Button size="icon" variant="ghost" aria-label="More">
+								{running ? <Spinner /> : <EllipsisVerticalIcon />}
+							</Button>
+						</DropdownMenuTrigger>
 					</TooltipTrigger>
-					<TooltipContent>{copied ? 'Copied' : 'Copy the preview link'}</TooltipContent>
+					<TooltipContent>{running ? 'Sharing…' : 'More'}</TooltipContent>
 				</Tooltip>
-			)}
-			<Button
-				size="sm"
-				variant="secondary"
-				onClick={() => {
-					setPhase(running ? 'working' : 'confirm');
-					setError(null);
-					show(true);
-				}}
-			>
-				{running ? <Spinner /> : <Share2Icon />}
-				{running ? 'Sharing…' : url ? 'Update shared preview' : 'Share for review'}
-			</Button>
+				<DropdownMenuContent align="end">
+					{checkout && (
+						<DropdownMenuItem
+							onSelect={() => {
+								setPhase(running ? 'working' : 'confirm');
+								setError(null);
+								setOpen(true);
+							}}
+						>
+							<Share2Icon />
+							{running ? 'Sharing…' : url ? 'Update shared preview' : 'Share for review'}
+						</DropdownMenuItem>
+					)}
+					<DropdownMenuItem disabled={!canOpen} onSelect={onOpenInBrowser}>
+						<ExternalLinkIcon />
+						Open in browser
+					</DropdownMenuItem>
+					{url && (
+						<DropdownMenuItem onSelect={() => void copy()}>
+							<CopyIcon />
+							{copied ? 'Copied' : 'Copy preview link'}
+						</DropdownMenuItem>
+					)}
+				</DropdownMenuContent>
+			</DropdownMenu>
 
-			<Dialog open={open} onOpenChange={show}>
+			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogContent className="sm:max-w-xl">
 					<DialogHeader>
 						<DialogTitle>{url && view === 'confirm' ? 'Update the shared preview' : 'Share for review'}</DialogTitle>
@@ -157,7 +175,7 @@ export const ShareControl = ({
 					<DialogFooter>
 						{view === 'confirm' ? (
 							<>
-								<Button variant="secondary" onClick={() => show(false)}>
+								<Button variant="secondary" onClick={() => setOpen(false)}>
 									Cancel
 								</Button>
 								<Button onClick={() => void start()}>{url ? 'Push and update' : 'Push and share'}</Button>
@@ -174,7 +192,7 @@ export const ShareControl = ({
 										{copied ? 'Copied' : 'Copy link'}
 									</Button>
 								)}
-								<Button onClick={() => show(false)}>{view === 'running' ? 'Close' : 'Done'}</Button>
+								<Button onClick={() => setOpen(false)}>{view === 'running' ? 'Close' : 'Done'}</Button>
 							</>
 						)}
 					</DialogFooter>
