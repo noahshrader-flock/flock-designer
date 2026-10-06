@@ -31,6 +31,32 @@ export const previewCommandFor = (iteration: ProjectIteration): string =>
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** How an agent run ended: it finished cleanly, it failed (with what to tell the person), or nobody is looking any more. */
+export type AgentOutcome = { kind: 'finished' } | { kind: 'failed'; message: string } | { kind: 'stopped' };
+
+/**
+ * Waits for the agent that was just started, asking how it is getting on. Shared by building a
+ * prototype and addressing comments, which both start the one agent and wait for it the same way.
+ */
+export const waitForAgent = async (
+	api: Pick<WorkspaceApi, 'agentStatus'>,
+	isLive: () => boolean,
+	pollMs = 1000,
+): Promise<AgentOutcome> => {
+	for (;;) {
+		await sleep(pollMs);
+		if (!isLive()) return { kind: 'stopped' };
+		const status = await api.agentStatus();
+		if (!status.ok) return { kind: 'failed', message: status.error };
+		if (status.value.state === 'unavailable') return { kind: 'failed', message: status.value.detail };
+		if (status.value.state === 'running') continue;
+		if (status.value.state === 'finished' && status.value.exitCode !== 0) {
+			return { kind: 'failed', message: `The agent stopped with code ${status.value.exitCode}.` };
+		}
+		return { kind: 'finished' };
+	}
+};
+
 export interface BuildRun {
 	api: BuildApi;
 	root: string;
@@ -78,18 +104,9 @@ export const runLocalBuild = async ({
 		const started = await api.startAgent(root, project.id, task);
 		if (!started.ok) return fail(started.error);
 		if (started.value.state === 'unavailable') return fail(started.value.detail);
-		for (;;) {
-			await sleep(pollMs);
-			if (!isLive()) return null;
-			const status = await api.agentStatus();
-			if (!status.ok) return fail(status.error);
-			if (status.value.state === 'unavailable') return fail(status.value.detail);
-			if (status.value.state === 'running') continue;
-			if (status.value.state === 'finished' && status.value.exitCode !== 0) {
-				return fail(`The agent stopped with code ${status.value.exitCode}.`);
-			}
-			break;
-		}
+		const outcome = await waitForAgent(api, isLive, pollMs);
+		if (outcome.kind === 'stopped') return null;
+		if (outcome.kind === 'failed') return fail(outcome.message);
 		if (!isLive()) return null;
 	}
 

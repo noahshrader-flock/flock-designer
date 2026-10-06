@@ -21,6 +21,7 @@ import { mergeComments, sameComments } from '../shared/comments';
 import { People } from './People';
 import { ShareControl } from './ShareControl';
 import { useHostedPreview } from './hostedPreview';
+import { type AddressPhase, runAddress } from './address';
 import { PANEL_STEP, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
 import { NAV_HEIGHT } from './TopNav';
 import { useLocalBuild } from './useLocalBuild';
@@ -118,6 +119,19 @@ export const Review = ({
 	const useHosted = hostedUrl !== null && (checkout === null || local.phase.kind === 'failed');
 	const hosted = useHostedPreview(useHosted ? hostedUrl : null);
 	const [shareOpen, setShareOpen] = useState(false);
+
+	// Asking the agent to act on the open comments. It is one agent: not while it is building this iteration.
+	const [address, setAddress] = useState<AddressPhase>({ kind: 'idle' });
+	const [addressLog, setAddressLog] = useState<string[]>([]);
+	const addressLive = useRef(true);
+	useEffect(() => {
+		addressLive.current = true;
+		return () => void (addressLive.current = false);
+	}, []);
+	useEffect(() => {
+		if (address.kind !== 'running') return;
+		return window.workspace.onAgentLog((l) => setAddressLog((prev) => [...prev, l.text.replace(/\n$/, '')].slice(-40)));
+	}, [address.kind]);
 
 	useEffect(() => {
 		void window.workspace.signInState().then((r) => {
@@ -435,6 +449,21 @@ export const Review = ({
 	// What is still to be dealt with. Resolved comments stay listed, but are not the count.
 	const total = (comments ?? []).filter((c) => !c.resolved).length;
 
+	const addressComments = async () => {
+		if (!checkout) return;
+		setAddressLog([]);
+		await runAddress({
+			api: window.workspace,
+			root: checkout.root,
+			projectId: project.id,
+			name: iteration.name,
+			isLive: () => addressLive.current,
+			onPhase: (p) => addressLive.current && setAddress(p),
+		});
+		// The agent may have changed the code, and a reviewer may have written meanwhile.
+		if (addressLive.current) void load(true);
+	};
+
 	const setResolved = async (comment: ReviewComment, resolved: boolean) => {
 		setError(null);
 		const r = await window.workspace.resolveComment(comment.id, resolved);
@@ -641,6 +670,39 @@ export const Review = ({
 							<FSStack spacing={2} sx={{ p: 2, flex: 1, minHeight: 0, overflowY: 'auto' }}>
 								<FSTypography variant="subtitle2">{total > 0 ? `Comments (${total})` : 'Comments'}</FSTypography>
 								{error && opened && !composing && <FSAlert severity="error">{error}</FSAlert>}
+								{/* One click: the comments are read now, written to the file, and the agent is started on them. */}
+								{checkout && total > 0 && (
+									<FSButton
+										size="md"
+										onClick={() => void addressComments()}
+										disabled={address.kind === 'running' || local.phase.kind === 'agent'}
+									>
+										{address.kind === 'running' ? 'Addressing…' : `Address ${total} comment${total === 1 ? '' : 's'}`}
+									</FSButton>
+								)}
+								{address.kind === 'running' && (
+									<>
+										<FSTypography variant="caption" color="text.secondary">
+											The agent is working through them. The preview updates as it changes the code.
+										</FSTypography>
+										{addressLog.length > 0 && (
+											<FSBox component="pre" sx={{ m: 0, p: 1, maxHeight: 140, overflow: 'auto', bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 1, fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+												{addressLog.slice(-8).join('\n')}
+											</FSBox>
+										)}
+									</>
+								)}
+								{address.kind === 'done' && (
+									<FSAlert severity="success">
+										The agent has finished. Look at the preview and the changes, then resolve what is done.
+										{addressLog.length > 0 && (
+											<FSBox component="pre" sx={{ m: 0, mt: 1, maxHeight: 200, overflow: 'auto', fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+												{addressLog.slice(-25).join('\n')}
+											</FSBox>
+										)}
+									</FSAlert>
+								)}
+								{address.kind === 'failed' && <FSAlert severity="error">{address.message}</FSAlert>}
 								{comments?.length === 0 && (
 									<FSTypography variant="body2" color="text.secondary">
 										No comments yet. Choose Comment, then click anywhere on the page.

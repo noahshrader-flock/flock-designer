@@ -197,6 +197,13 @@ export interface WorkspaceApi {
 	/** Whether a shared preview's address answers yet, for the "still building" screen. */
 	previewReachable(url: string): Promise<Result<boolean>>;
 
+	/**
+	 * Reads the iteration's comments from GitHub now, writes them to `comments.md`, and starts the agent
+	 * on them. Refused if the agent is busy, the checkout is not on this iteration's branch, the tree
+	 * is dirty, or there is nothing open. Progress is the agent's own (`agentStatus`, `onAgentLog`).
+	 */
+	addressComments(root: string, projectId: string, name: string): Promise<Result<AgentStatus>>;
+
 	/** Hands the task to the locally installed agent. Never bundles credentials. */
 	startAgent(root: string, projectId: string, task: string): Promise<Result<AgentStatus>>;
 	agentStatus(): Promise<Result<AgentStatus>>;
@@ -422,6 +429,7 @@ export const CHANNELS = {
 	commandStatus: 'workspace:commandStatus',
 	startAgent: 'workspace:startAgent',
 	agentStatus: 'workspace:agentStatus',
+	addressComments: 'workspace:addressComments',
 	shareIteration: 'workspace:shareIteration',
 	shareStatus: 'workspace:shareStatus',
 	shareStatusChanged: 'workspace:event:shareStatus',

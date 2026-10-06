@@ -27,6 +27,7 @@ import { assertUsableProjectId, continueIteration, createIteration, readIteratio
 import { findProductCheckouts, recordsRootFor } from './services/discovery';
 import { readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
+import { prepareAddress } from './services/address';
 import { projectTitle, writeCommentsExport } from './services/commentsExport';
 import { DesignRepo } from './services/designRepo';
 import type { PageView } from './services/pageView';
@@ -263,6 +264,29 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 	);
 
 	ipcMain.handle(CHANNELS.agentStatus, guard(() => agent.status()));
+
+	// One click: read the comments now, write the file from that read, then start the agent. Nothing
+	// a reviewer wrote is put in the task; it reaches the agent only through the file.
+	ipcMain.handle(
+		CHANNELS.addressComments,
+		guard(async (root: string, projectId: string, name: string) => {
+			assertUsableProjectId(projectId);
+			const canonical = opened.require(root);
+			const recordsRoot = recordsFor(canonical);
+			const iteration = readIterations(recordsRoot, projectId).find((i) => i.name === name);
+			if (!iteration) throw new Error(`${projectId} has no iteration called ${name}.`);
+			const prepared = await prepareAddress(
+				{
+					readComments: () => designRepo.readComments(projectId, iteration.branch),
+					checkout: () => readCheckout(canonical),
+					agentRunning: () => agent.status().state === 'running',
+					title: projectTitle(recordsRoot, projectId),
+				},
+				{ recordsRoot, projectId, iteration },
+			);
+			return agent.start(canonical, projectId, prepared.task, { addDirs: [recordsRoot] });
+		}),
+	);
 
 	// Sharing. The branch comes from this person's own record, never from the window, and
 	// the repository's descriptor says what a share is. Starts and returns: it takes minutes.
