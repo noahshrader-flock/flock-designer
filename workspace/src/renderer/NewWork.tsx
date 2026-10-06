@@ -120,7 +120,7 @@ export const NewWork = ({
 		const note = task.trim().split('\n')[0] ?? '';
 		const r =
 			kind === 'quick'
-				? await window.workspace.createQuick(id, name.trim(), note, checkout && !elsewhere && from ? { root: checkout.root, branch: from } : undefined)
+				? await window.workspace.createQuick(id, name.trim(), task.trim(), checkout && !elsewhere && from ? { root: checkout.root, branch: from } : undefined)
 				: await window.workspace.createIteration((checkout as Checkout).root, id, note, kind, from ?? undefined);
 		setBusy(false);
 		if (!r.ok) return setError(r.error);

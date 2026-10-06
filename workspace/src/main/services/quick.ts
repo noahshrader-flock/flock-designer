@@ -71,14 +71,16 @@ export const recordQuick = async (
 		branch: quickKey(projectId, name),
 		commit: null,
 		createdAt: now.toISOString(),
-		note,
+		// The record carries the gist; the brief carries the whole request, which is what reviewers and the
+		// move into the code read.
+		note: note.trim().split('\n')[0] ?? '',
 		...(me ? { contributors: [me] } : {}),
 		...(basedOn ? { basedOn } : {}),
 	};
 	const brief = `projects/${projectId}/brief.md`;
 	const haveBrief = await store.read(brief);
 	if (haveBrief === null || firstHeading(haveBrief) === null) {
-		await store.write(brief, `# ${title.replace(/\s+/g, ' ').trim()}\n\n${note}\n`, `${projectId}: start the project`);
+		await store.write(brief, `# ${title.replace(/\s+/g, ' ').trim()}\n\n${note.trim()}\n`, `${projectId}: start the project`);
 	}
 	await store.write(records(projectId), `${JSON.stringify([...existing, iteration], null, 2)}\n`, `${projectId}: record quick prototype ${name}`);
 	return iteration;
@@ -92,31 +94,67 @@ export const assertQuickName = (name: string): void => {
  * What the agent is told for a quick prototype. The skill says how; this says where. The request is the
  * person's own words, and comes last, after everything that frames it.
  */
+/**
+ * What a quick prototype's agent may read, each a folder: the product's code (on the branch it is modelled
+ * on), and the guidance the code is built to, in its three layers. Every one is optional: whatever this
+ * machine does not have is left out, and the task says so rather than letting the agent guess.
+ */
+export interface QuickSources {
+	/** The product's code, on the branch the prototype is modelled on. */
+	code: string;
+	/** The product's own Flock Designer guidance: how its app is put together, its patterns, its rules. */
+	productGuidance: string | null;
+	/** The design system's guidance: its tokens, its components, how they are used. */
+	designSystemGuidance: string | null;
+	/** The design system as installed in the product: the version it really renders with. */
+	installedDesignSystem: string | null;
+	/** The standards every product shares. */
+	sharedStandards: string | null;
+}
+
+export const quickReadable = (s: QuickSources | null): string[] =>
+	s ? [s.code, s.productGuidance, s.designSystemGuidance, s.installedDesignSystem, s.sharedStandards].filter((d): d is string => d !== null) : [];
+
+/**
+ * What the agent is told for a quick prototype. The skill says how; this says where everything is. The
+ * request is the person's own words, and comes last, after everything that frames it.
+ */
 export const quickBuildTask = ({
 	skill,
 	pageFile,
-	product,
+	sources,
 	request,
 }: {
 	skill: string;
 	pageFile: string;
-	product: string | null;
+	sources: QuickSources | null;
 	request: string;
-}): string =>
-	[
+}): string => {
+	const line = (label: string, dir: string | null, missing: string) => (dir ? `- **${label}:** \`${dir}\`` : `- **${label}:** not on this machine. ${missing}`);
+	return [
 		skill.trim(),
 		'',
 		'## This run',
 		'',
 		`Write the page to \`${pageFile}\`. That file is the whole prototype: nothing else you write is kept.`,
-		product
-			? `The product's code is at \`${product}\`. Read it to match its layout, components and wording. You may only read it: never change anything there.`
-			: 'There is no product repository on this machine, so build from the request and the design guidance above.',
+		'',
+		...(sources
+			? [
+					'What you may read. **Read only: never change anything in any of these.**',
+					'',
+					line('The product\'s code', sources.code, ''),
+					line("The product's guidance", sources.productGuidance, 'Say so in your summary: the page cannot follow the product\'s structure without it.'),
+					line("The design system's guidance", sources.designSystemGuidance, 'Use the installed design system and the product\'s own code for tokens and components.'),
+					line('The design system as installed', sources.installedDesignSystem, 'Its version cannot be confirmed; say so.'),
+					line('Shared standards', sources.sharedStandards, ''),
+				]
+			: ['There is no product repository on this machine, so build from the request and keep the design plain and neutral. Say so in your summary.']),
 		'',
 		'## What the person asked for',
 		'',
 		request.trim(),
 	].join('\n');
+};
 
 /** What the agent is told when a quick prototype moves into the codebase: audit first, then build. */
 export const moveToCodeTask = ({

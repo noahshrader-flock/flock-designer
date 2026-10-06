@@ -213,6 +213,20 @@ describe('where new work starts', () => {
 		expect(g(product, 'log', '-1', '--format=%s', 'fd/demo/i1').trim()).toBe('baseline only');
 	});
 
+	it('refuses a branch without the Flock Designer setup, which would strand the checkout', async () => {
+		await call(CHANNELS.useCheckout, product);
+		g(product, 'checkout', '-q', '--orphan', 'bare');
+		g(product, 'rm', '-rfq', '.');
+		writeFileSync(join(product, 'x.txt'), 'x');
+		g(product, 'add', '.');
+		g(product, 'commit', '-q', '-m', 'no setup here');
+		g(product, 'checkout', '-q', '-f', 'develop');
+		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'codebase', 'bare');
+		expect(r.ok).toBe(false);
+		expect(r.error).toMatch(/has no \.flkd\/workspace\.json/);
+		expect(g(product, 'branch', '--show-current').trim()).toBe('develop');
+	});
+
 	it('refuses a branch that does not exist, so nothing else reaches git', async () => {
 		await call(CHANNELS.useCheckout, product);
 		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'prototype', '--orphan');
@@ -263,6 +277,8 @@ describe('quick prototypes', () => {
 		await call(CHANNELS.buildQuick, 'demo', 'q1', 'A list');
 		const extras = agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[]; bare: boolean };
 		expect(extras.bare).toBe(true);
+		// The product's guidance comes from the accepted checkout, whatever branch the code is read from.
+		expect(extras.readOnly).toContain(join(realpathSync(product), '.flkd'));
 		// Another branch than the one checked out: the app's own copy of it, and the person's checkout untouched.
 		const copy = extras.readOnly[0] as string;
 		expect(copy.startsWith(join(home, 'quick'))).toBe(true);
@@ -273,7 +289,7 @@ describe('quick prototypes', () => {
 		// On the branch already: the clone itself.
 		await call(CHANNELS.createQuick, 'demo', 'Demo', 'Another', { root: product, branch: 'develop' });
 		await call(CHANNELS.buildQuick, 'demo', 'q2', 'Another');
-		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([realpathSync(product)]);
+		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([realpathSync(product), join(realpathSync(product), '.flkd')]);
 	});
 
 	it('build once when asked twice at the same moment, as a screen opened twice does', async () => {

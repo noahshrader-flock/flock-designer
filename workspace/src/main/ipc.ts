@@ -24,7 +24,7 @@ import { type ShareRunner, previewIsUp, pullRequestText } from './services/share
 import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
 import { readDescriptor } from './services/descriptor';
-import { branchCommit, branchExists, isRepository, readCheckout, readTreeAt, recentBranches } from './services/git';
+import { branchCommit, branchExists, isRepository, readCheckout, readTreeAt, recentBranches, runGit } from './services/git';
 import { assertUsableProjectId, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
@@ -53,6 +53,8 @@ import {
 	cloneStore,
 	moveToCodeTask,
 	quickBuildTask,
+	quickReadable,
+	type QuickSources,
 	recordQuick,
 } from './services/quick';
 import type { CheckoutMemory } from './services/checkoutMemory';
@@ -287,6 +289,12 @@ export const registerIpc = ({
 			const branch = from ?? (await readCheckout(canonical)).branch;
 			if (branch === null) {
 				throw new Error('This repository has a detached HEAD. Check out a branch first.');
+			}
+			// Work is built where the product's Flock Designer setup is. A branch without it (develop, before the
+			// setup is merged there) would leave the checkout on a branch this app can no longer work in.
+			const setup = `${descriptor.contextDir}/workspace.json`;
+			if (!(await runGit(canonical, ['cat-file', '-e', `refs/heads/${branch}:${setup}`]).then(() => true, () => false))) {
+				throw new Error(`${branch} has no ${setup}, so work cannot start from it. Start from a branch that has the Flock Designer setup.`);
 			}
 			const recordsRoot = recordsFor(canonical);
 			return written(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch, kind));
@@ -560,17 +568,32 @@ export const registerIpc = ({
 	 * when it is on that branch already, otherwise the app's own read-only copy of the branch, so the
 	 * person's checkout is never switched. Null when there is nothing on this machine to read.
 	 */
-	const quickSource = async (projectId: string, name: string): Promise<string | null> => {
+	const quickSource = async (projectId: string, name: string): Promise<QuickSources | null> => {
 		const raw = await recordStore().read(`projects/${projectId}/iterations.json`);
 		const basedOn = (JSON.parse(raw ?? '[]') as Iteration[]).find((i) => i.name === name)?.basedOn;
 		const root = trustedRoot();
 		// Only the repository this person accepted, and only the one the prototype was based on.
 		if (!basedOn || root === null || basename(root) !== basedOn.repository) return null;
 		const canonical = opened.require(root);
-		if ((await readCheckout(canonical)).branch === basedOn.branch) return canonical;
-		const copy = join(quickRoot, 'source', basename(canonical));
-		await readTreeAt(canonical, copy, basedOn.branch);
-		return copy;
+		let code = canonical;
+		if ((await readCheckout(canonical)).branch !== basedOn.branch) {
+			code = join(quickRoot, 'source', basename(canonical));
+			await readTreeAt(canonical, code, basedOn.branch);
+		}
+		const dir = (p: string): string | null => (existsSync(p) ? p : null);
+		const descriptor = readDescriptor(canonical);
+		const pkg = descriptor.designSystem.package;
+		const designRoot = recordsRootFor(canonical);
+		return {
+			code,
+			// From the accepted checkout itself, which always has it: the branch the code is read from may
+			// predate it (develop has no Flock Designer files), and the page must still follow the product.
+			productGuidance: dir(join(canonical, descriptor.contextDir)),
+			// The design system's own guidance lives in its checkout beside the product, named as its package is.
+			designSystemGuidance: dir(join(dirname(canonical), basename(pkg), descriptor.contextDir)),
+			installedDesignSystem: dir(join(canonical, 'node_modules', ...pkg.split('/'))),
+			sharedStandards: designRoot === null ? null : dir(join(dirname(designRoot), 'standards')),
+		};
 	};
 	/** Runs `work` once at a time per key: a second caller waits for the first and shares its answer. */
 	const inFlight = new Map<string, Promise<unknown>>();
@@ -598,7 +621,7 @@ export const registerIpc = ({
 				if (!(await branchExists(canonical, from.branch))) throw new Error(`There is no branch called ${from.branch} in ${basename(canonical)}.`);
 				basedOn = { repository: basename(canonical), branch: from.branch, commit: await branchCommit(canonical, from.branch).catch(() => null) };
 			}
-			return recordQuick(recordStore(), { projectId, title: title.slice(0, 200), note: String(note).slice(0, 2000), me: me(), basedOn });
+			return recordQuick(recordStore(), { projectId, title: title.slice(0, 200), note: String(note).slice(0, 8000), me: me(), basedOn });
 		}),
 	);
 
@@ -612,10 +635,10 @@ export const registerIpc = ({
 			const store = recordStore();
 			const skill = (await store.read(BUILD_SKILL)) ?? (await designRepo.readFile(BUILD_SKILL));
 			if (skill === null) throw new Error(`The design repository has no ${BUILD_SKILL}, which tells the agent how to build a quick prototype.`);
-			const product = await once(`source:${projectId}`, () => quickSource(projectId, name));
-			return agent.start(quickDir(projectId), projectId, quickBuildTask({ skill, pageFile, product, request: String(request) }), {
+			const sources = await once(`source:${projectId}`, () => quickSource(projectId, name));
+			return agent.start(quickDir(projectId), projectId, quickBuildTask({ skill, pageFile, sources, request: String(request) }), {
 				bare: true,
-				readOnly: product ? [product] : [],
+				readOnly: quickReadable(sources),
 			});
 		}),
 	);

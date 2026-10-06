@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
 import { isQuick, nextQuickName, quickKey, quickPagePath } from '../src/shared/projects';
-import { type RecordStore, cloneStore, moveToCodeTask, quickBuildTask, recordQuick } from '../src/main/services/quick';
+import { type RecordStore, cloneStore, moveToCodeTask, quickBuildTask, quickReadable, recordQuick } from '../src/main/services/quick';
 import { QuickServer } from '../src/main/services/quickServer';
 import { claudeCodeAdapter } from '../src/main/services/agent';
 import { type QuickApi, runQuickBuild } from '../src/renderer/quickBuild';
@@ -43,6 +43,7 @@ describe('recordQuick', () => {
 		const it = await recordQuick(store, { projectId: 'users', title: 'Users — inactivity', note: 'flag inactive users', me, now });
 		expect(it).toMatchObject({ name: 'q1', branch: 'quick/users/q1', contributors: [me], createdAt: now.toISOString() });
 		expect(files['projects/users/brief.md']).toBe('# Users — inactivity\n\nflag inactive users\n');
+		expect(it.note).toBe('flag inactive users');
 		expect(JSON.parse(files['projects/users/iterations.json'] as string)).toHaveLength(1);
 		// The brief first: a record that names a project with no brief would list it under its bare id.
 		expect(writes).toEqual(['projects/users/brief.md', 'projects/users/iterations.json']);
@@ -58,6 +59,13 @@ describe('recordQuick', () => {
 		expect(it.contributors).toBeUndefined();
 		expect(files['projects/users/brief.md']).toBe('# Users\n\nThe real brief.\n');
 		expect(JSON.parse(files['projects/users/iterations.json'] as string).map((i: { name: string }) => i.name)).toEqual(['i1', 'q1', 'q2']);
+	});
+
+	it('keeps the whole request in the brief, and its first line on the record', async () => {
+		const { store, files } = memoryStore();
+		const it = await recordQuick(store, { projectId: 'users', title: 'Users', note: 'Add a Usage tab.\n\nWho uses it: admins.\n', me, now });
+		expect(files['projects/users/brief.md']).toBe('# Users\n\nAdd a Usage tab.\n\nWho uses it: admins.\n');
+		expect(it.note).toBe('Add a Usage tab.');
 	});
 
 	it('keeps what it was modelled on', async () => {
@@ -96,16 +104,31 @@ describe('cloneStore', () => {
 });
 
 describe('what the agent is told', () => {
-	it('names the page file, offers the product read-only, and puts the request last', () => {
-		const task = quickBuildTask({ skill: '# Skill', pageFile: '/q/users/q1.html', product: '/c/coke', request: 'A users list' });
+	const sources = {
+		code: '/q/source/coke',
+		productGuidance: '/c/coke/.flkd',
+		designSystemGuidance: '/c/fui/.flkd',
+		installedDesignSystem: null,
+		sharedStandards: '/d/standards',
+	};
+
+	it('names the page file and every folder it may read, read-only, and puts the request last', () => {
+		const task = quickBuildTask({ skill: '# Skill', pageFile: '/q/users/q1.html', sources, request: 'A users list' });
 		expect(task.startsWith('# Skill')).toBe(true);
 		expect(task).toContain('`/q/users/q1.html`');
-		expect(task).toContain('You may only read it');
+		expect(task).toContain('Read only: never change anything');
+		for (const dir of ['/q/source/coke', '/c/coke/.flkd', '/c/fui/.flkd', '/d/standards']) expect(task).toContain(`\`${dir}\``);
 		expect(task.trimEnd().endsWith('A users list')).toBe(true);
 	});
 
-	it('says so when there is no product to look at', () => {
-		expect(quickBuildTask({ skill: 's', pageFile: '/p', product: null, request: 'r' })).toContain('no product repository');
+	it('says what is missing rather than leaving the agent to guess', () => {
+		expect(quickBuildTask({ skill: 's', pageFile: '/p', sources, request: 'r' })).toContain('The design system as installed:** not on this machine');
+		expect(quickBuildTask({ skill: 's', pageFile: '/p', sources: null, request: 'r' })).toContain('no product repository');
+	});
+
+	it('lets the agent read only the folders that exist', () => {
+		expect(quickReadable(sources)).toEqual(['/q/source/coke', '/c/coke/.flkd', '/c/fui/.flkd', '/d/standards']);
+		expect(quickReadable(null)).toEqual([]);
 	});
 
 	it('asks for the audit before any code changes', () => {
