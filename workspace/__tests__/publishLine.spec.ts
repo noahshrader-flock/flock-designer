@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { publishLineText } from '../src/renderer/PublishStatus';
+import { bannerStatus, publishLineText } from '../src/renderer/PublishStatus';
 
 describe('the publishing line', () => {
 	it('says nothing when there is nothing to publish from here', () => {
@@ -36,5 +36,21 @@ describe('the publishing line', () => {
 
 	it('says nothing when it is held with nothing to name, rather than a bare count of zero', () => {
 		expect(publishLineText({ state: 'held', at: '2026-10-06T12:00:00Z', problems: [] })).toBeNull();
+	});
+});
+
+describe('bannerStatus', () => {
+	const held = { state: 'held' as const, problems: [{ what: 'Project records', why: 'x' }], at: '2026-10-06T12:00:00Z' };
+
+	it('keeps the banner up while the next sync runs, so it does not flicker', () => {
+		expect(bannerStatus({ state: 'working' }, held)).toBe(held);
+	});
+
+	it('takes it down only when a sync ends without the problem', () => {
+		expect(bannerStatus({ state: 'shared', at: '2026-10-06T12:05:00Z' }, held).state).toBe('shared');
+	});
+
+	it('shows nothing during a run when nothing was held before it', () => {
+		expect(bannerStatus({ state: 'working' }, null).state).toBe('working');
 	});
 });

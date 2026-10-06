@@ -1,6 +1,6 @@
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PublishStatus as Status } from '../shared/contract';
 
 /**
@@ -17,7 +17,18 @@ export const usePublishStatus = (): [Status, (s: Status) => void] => {
 	return [status, setStatus];
 };
 
-export const PublishBanner = ({ status, onChange }: { status: Status; onChange: (s: Status) => void }) => {
+/**
+ * What the banner shows: what was held at the last sync, kept through the next run. The app syncs by itself
+ * every few minutes, and hiding the banner for each run made it flicker for as long as something stayed held.
+ * It goes only when a sync ends without the problem.
+ */
+export const bannerStatus = (current: Status, lastHeld: Status | null): Status =>
+	current.state === 'working' && lastHeld?.state === 'held' ? lastHeld : current;
+
+export const PublishBanner = ({ status: current, onChange }: { status: Status; onChange: (s: Status) => void }) => {
+	const lastHeld = useRef<Status | null>(null);
+	const status = bannerStatus(current, lastHeld.current);
+	if (current.state !== 'working') lastHeld.current = current.state === 'held' ? current : null;
 	if (status.state === 'held') {
 		return (
 			<Alert variant="warning">
