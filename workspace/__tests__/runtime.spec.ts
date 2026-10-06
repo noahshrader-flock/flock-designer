@@ -208,3 +208,29 @@ describe('one port, many prototypes', () => {
 		expect(argvs).toEqual(['users-inactivity-signal', 'alert-notification-prefs']);
 	});
 });
+
+describe('a preview does not open a browser tab of its own', () => {
+	const envOf = (spy: ReturnType<typeof vi.fn>) => (spy.mock.calls[0]?.[2] as { env: Record<string, string> }).env;
+
+	it("tells a command that serves a preview not to open a browser, so the app's window is the only place it appears", async () => {
+		const spawnSpy = vi.fn(spawn);
+		manager = make({ spawnProcess: spawnSpy as unknown as typeof spawn });
+		await manager.start(root, descriptor, 'preview');
+		expect(envOf(spawnSpy)).toMatchObject({ CI: 'true', BROWSER: 'none' });
+	});
+
+	it('leaves the rest of the environment alone, so the command still finds its tools and credentials', async () => {
+		const spawnSpy = vi.fn(spawn);
+		manager = make({ spawnProcess: spawnSpy as unknown as typeof spawn });
+		await manager.start(root, descriptor, 'preview');
+		expect(envOf(spawnSpy).PATH).toBe(process.env.PATH);
+	});
+
+	it('does not touch the environment of an ordinary command, such as the tests or the linter', async () => {
+		const spawnSpy = vi.fn(spawn);
+		manager = make({ spawnProcess: spawnSpy as unknown as typeof spawn });
+		await manager.start(root, descriptor, 'echo');
+		expect(envOf(spawnSpy)).toBe(process.env);
+	});
+});
+

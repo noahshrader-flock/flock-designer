@@ -60,6 +60,15 @@ interface Running {
 	projectId?: string;
 }
 
+/**
+ * A preview is shown inside this app, so the server behind it must not also open a browser tab: most dev
+ * servers do by default, and a designer clicking a project would find a stray tab beside the app. The
+ * switch differs by tool, and these two cover the common ones: `CI` (rsbuild, and the many tools that
+ * treat it as "no interactive extras") and `BROWSER=none` (Vite, webpack-dev-server, Create React App).
+ * Only for commands that serve a preview. Opening one in a real browser is a button, not a side effect.
+ */
+const QUIET_PREVIEW = { CI: 'true', BROWSER: 'none' } as const;
+
 export class RuntimeManager {
 	private readonly running = new Map<string, Running>();
 	/**
@@ -135,7 +144,7 @@ export class RuntimeManager {
 			cwd: root,
 			shell: false,
 			stdio: ['ignore', 'pipe', 'pipe'],
-			env: process.env,
+			env: command.servesPreviewOn === undefined ? process.env : { ...process.env, ...QUIET_PREVIEW },
 		});
 
 		this.running.set(commandId, { child, projectId, status: { state: 'starting', commandId, projectId } });

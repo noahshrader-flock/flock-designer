@@ -230,6 +230,8 @@ export interface WorkspaceApi {
 	/** The preview, shown inside the window at the given place. It cannot call back into the app. */
 	pageOpen(url: string): Promise<Result<null>>;
 	pageClose(): Promise<Result<null>>;
+	/** Opens the page the preview is showing in the person's own browser. It never happens by itself. */
+	openPreviewInBrowser(): Promise<Result<null>>;
 	pageSetBounds(bounds: PageBounds): Promise<Result<null>>;
 	/**
 	 * Hides the preview while something drawn by the window needs the space it
@@ -452,6 +454,7 @@ export const CHANNELS = {
 	signInChanged: 'workspace:event:signInChanged',
 	pageOpen: 'workspace:pageOpen',
 	pageClose: 'workspace:pageClose',
+	openPreviewInBrowser: 'workspace:openPreviewInBrowser',
 	pageSetBounds: 'workspace:pageSetBounds',
 	pageHold: 'workspace:pageHold',
 	pageSnapshot: 'workspace:pageSnapshot',

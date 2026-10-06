@@ -83,6 +83,7 @@ const api: WorkspaceApi = {
 
 	pageOpen: (url) => invoke<null>(CHANNELS.pageOpen, url),
 	pageClose: () => invoke<null>(CHANNELS.pageClose),
+	openPreviewInBrowser: () => invoke<null>(CHANNELS.openPreviewInBrowser),
 	pageSetBounds: (bounds) => invoke<null>(CHANNELS.pageSetBounds, bounds),
 	pageHold: (reason, held) => invoke<null>(CHANNELS.pageHold, reason, held),
 	pageSnapshot: () => invoke<string | null>(CHANNELS.pageSnapshot),

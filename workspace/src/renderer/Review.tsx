@@ -13,6 +13,7 @@ import {
 } from '@flocksafety/flock-react-component-lib';
 import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutline';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
+import OpenInNew from '@mui/icons-material/OpenInNew';
 import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
 import { Popover } from '@mui/material';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -519,6 +520,20 @@ export const Review = ({
 				</FSTypography>
 				<People people={iteration.contributors} />
 				<FSBox sx={{ flexGrow: 1 }} />
+
+				<FSTooltip title="Open this page in your browser" describeChild>
+					<span>
+						<FSIconButton
+							size="md"
+							variant="ghost"
+							aria-label="Open this page in your browser"
+							disabled={!opened}
+							onClick={() => void window.workspace.openPreviewInBrowser().then((r) => !r.ok && setError(r.error))}
+						>
+							<OpenInNew fontSize="small" />
+						</FSIconButton>
+					</span>
+				</FSTooltip>
 
 				<ShareControl checkout={checkout} project={project} iteration={iteration} onOpenChange={setShareOpen} />
 

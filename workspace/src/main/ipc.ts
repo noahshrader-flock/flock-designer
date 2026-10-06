@@ -1,4 +1,4 @@
-import { type BrowserWindow, dialog, ipcMain } from 'electron';
+import { type BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import {
@@ -445,6 +445,17 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 	const nothing = (_done?: unknown): null => null;
 	ipcMain.handle(CHANNELS.pageOpen, guard(async (url: string) => nothing(await page.open(String(url)))));
 	ipcMain.handle(CHANNELS.pageClose, guard(() => nothing(page.close())));
+	// The page the preview is on, in the person's own browser. The address comes from the preview itself, never
+	// from the window, and goes through the same check as opening one: this app's own web addresses only.
+	ipcMain.handle(
+		CHANNELS.openPreviewInBrowser,
+		guard(async () => {
+			const url = page.currentUrl();
+			if (url === null) throw new Error('There is no preview open to show in a browser.');
+			await shell.openExternal(assertPreviewUrl(url));
+			return null;
+		}),
+	);
 	ipcMain.handle(
 		CHANNELS.pageSetBounds,
 		guard((b: PageBounds) => nothing(page.setBounds({ x: Number(b?.x), y: Number(b?.y), width: Number(b?.width), height: Number(b?.height) }))),

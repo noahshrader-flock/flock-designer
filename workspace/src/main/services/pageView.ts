@@ -84,6 +84,12 @@ export class PageView {
 		await wc.loadURL(url);
 	}
 
+	/** The address the preview is showing right now, page and query included, or null if there is no preview. */
+	currentUrl(): string | null {
+		const wc = this.view?.webContents;
+		return wc && !wc.isDestroyed() ? wc.getURL() || null : null;
+	}
+
 	close(): void {
 		if (this.view) {
 			this.window.contentView.removeChildView(this.view);

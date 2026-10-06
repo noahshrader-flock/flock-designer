@@ -68,6 +68,7 @@ let opened: InstanceType<typeof OpenedCheckouts>;
 let agentStart: ReturnType<typeof vi.fn>;
 let runtimeStart: ReturnType<typeof vi.fn>;
 let memoryValue: string | null;
+let previewUrl: string | null;
 
 beforeEach(async () => {
 	handlers.clear();
@@ -90,6 +91,7 @@ beforeEach(async () => {
 	agentStart = vi.fn(() => ({ state: 'idle' }));
 	runtimeStart = vi.fn(async () => ({ state: 'stopped' }));
 	memoryValue = null;
+	previewUrl = null;
 
 	registerIpc({
 		window: { webContents: { send: vi.fn() } } as never,
@@ -98,7 +100,7 @@ beforeEach(async () => {
 		agent: { start: agentStart, status: vi.fn(() => ({ state: 'idle' })) } as never,
 		github: { state: () => ({ state: 'signedOut' }) } as never,
 		designRepo: { listProjects: vi.fn(async () => []) } as never,
-		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn() } as never,
+		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
 		memory: { read: () => memoryValue, write: (r: string) => { memoryValue = r; }, available: () => true } as never,
 	});
 });
@@ -249,3 +251,44 @@ describe('moveComment validates its arguments', () => {
 		expect(r.ok).toBe(false);
 	});
 });
+
+describe('opening the preview in the real browser', () => {
+	const opened = async () => (await import('electron')).shell.openExternal as unknown as ReturnType<typeof vi.fn>;
+
+	it('opens the page the preview is on, query and all, in the default browser', async () => {
+		previewUrl = 'http://localhost:3000/organization/org_1/roles/compare?a=r1&b=r2';
+		const open = await opened();
+		open.mockClear();
+		expect((await call(CHANNELS.openPreviewInBrowser)).ok).toBe(true);
+		expect(open).toHaveBeenCalledWith('http://localhost:3000/organization/org_1/roles/compare?a=r1&b=r2');
+	});
+
+	it('opens a shared preview too', async () => {
+		previewUrl = 'https://dev-coke-pr-12.flocksafety.com/';
+		const open = await opened();
+		open.mockClear();
+		expect((await call(CHANNELS.openPreviewInBrowser)).ok).toBe(true);
+		expect(open).toHaveBeenCalledTimes(1);
+	});
+
+	it('says so, and opens nothing, when there is no preview', async () => {
+		const open = await opened();
+		open.mockClear();
+		const r = await call(CHANNELS.openPreviewInBrowser);
+		expect(r.ok).toBe(false);
+		expect(r.error).toMatch(/no preview open/);
+		expect(open).not.toHaveBeenCalled();
+	});
+
+	it.each(['file:///etc/passwd', 'javascript:alert(1)', 'http://example.com/', 'https://user:pw@example.com/'])(
+		'refuses an address a preview could not have, even if the preview somehow reports it: %s',
+		async (bad) => {
+			previewUrl = bad;
+			const open = await opened();
+			open.mockClear();
+			expect((await call(CHANNELS.openPreviewInBrowser)).ok).toBe(false);
+			expect(open).not.toHaveBeenCalled();
+		},
+	);
+});
+
