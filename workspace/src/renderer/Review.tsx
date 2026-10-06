@@ -1,4 +1,4 @@
-import { ChevronLeftIcon, MapPinIcon, MessageSquareIcon } from 'lucide-react';
+import { ChevronLeftIcon, GitBranchIcon, MapPinIcon, MessageSquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
@@ -615,7 +615,12 @@ export const Review = ({
 				<h2 className="truncate text-sm font-semibold">
 					{project.title} — {iteration.name}
 				</h2>
-				<span className="text-muted-foreground truncate font-mono text-xs">{iteration.branch}</span>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<GitBranchIcon aria-label={`Branch ${iteration.branch}`} className="text-muted-foreground size-4 shrink-0" />
+					</TooltipTrigger>
+					<TooltipContent className="font-mono">{iteration.branch}</TooltipContent>
+				</Tooltip>
 				<People people={iteration.contributors} />
 				<div className="grow" />
 
