@@ -1,4 +1,4 @@
-import { MessageSquareIcon } from 'lucide-react';
+import { MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { Checkout, CheckoutSuggestion, Person, Project, ProjectIteration } from '../shared/contract';
 import { NewWork, type Created } from './NewWork';
@@ -125,20 +125,23 @@ export const Projects = () => {
 			<Toolbar className="sticky top-0 z-40">
 				<h2 className="text-sm font-semibold">Projects</h2>
 				<div className="grow" />
-				{/* Refreshing is an explicit ask, so it also publishes, rather than waiting for the next trigger. */}
-				<Button
-					size="sm"
-					variant="secondary"
-					onClick={() => {
-						void window.workspace.publishNow().then((r) => r.ok && setPublishStatus(r.value));
-						void load();
-					}}
-				>
-					Refresh
-				</Button>
-				<Button size="sm" onClick={() => setCreating(true)}>
-					New prototype
-				</Button>
+				<div className="flex items-center gap-2">
+					{/* Refreshing is an explicit ask, so it also publishes, rather than waiting for the next trigger. */}
+					<Button
+						size="sm"
+						variant="ghost"
+						onClick={() => {
+							void window.workspace.publishNow().then((r) => r.ok && setPublishStatus(r.value));
+							void load();
+						}}
+					>
+						<RefreshCwIcon />
+						Refresh
+					</Button>
+					<Button size="sm" onClick={() => setCreating(true)}>
+						New prototype
+					</Button>
+				</div>
 			</Toolbar>
 			<Page>
 				<PublishBanner status={publishStatus} onChange={setPublishStatus} />
