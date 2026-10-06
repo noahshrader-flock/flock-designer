@@ -21,6 +21,7 @@ import type {
 	SignInState,
 	WorkspaceApi,
 	Repository,
+	AgentReadiness,
 } from '../shared/contract';
 
 /**
@@ -65,6 +66,7 @@ const api: WorkspaceApi = {
 
 	startAgent: (root, projectId, task) => invoke<AgentStatus>(CHANNELS.startAgent, root, projectId, task),
 	agentStatus: () => invoke<AgentStatus>(CHANNELS.agentStatus),
+	agentReadiness: () => invoke<AgentReadiness>(CHANNELS.agentReadiness),
 	addressComments: (root, projectId, name, commentId) => invoke<AgentStatus>(CHANNELS.addressComments, root, projectId, name, commentId),
 	shareIteration: (root, projectId, name) => invoke<ShareStatus>(CHANNELS.shareIteration, root, projectId, name),
 	shareStatus: () => invoke<ShareStatus>(CHANNELS.shareStatus),

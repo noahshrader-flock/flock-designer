@@ -132,6 +132,9 @@ export interface RunLogLine {
 	text: string;
 }
 
+/** Whether Claude Code is here and signed in, so new work can be built. `unknown`: it could not be told, which blocks nothing. */
+export type AgentReadiness = { state: 'ready' } | { state: 'missing' } | { state: 'signedOut' } | { state: 'unknown' };
+
 export type AgentStatus =
 	| { state: 'idle' }
 	| { state: 'running'; startedAt: string }
@@ -244,6 +247,8 @@ export interface WorkspaceApi {
 	/** Hands the task to the locally installed agent. Never bundles credentials. */
 	startAgent(root: string, projectId: string, task: string): Promise<Result<AgentStatus>>;
 	agentStatus(): Promise<Result<AgentStatus>>;
+	/** Asked when new work is about to be started: is Claude Code installed here, and signed in? */
+	agentReadiness(): Promise<Result<AgentReadiness>>;
 	onAgentLog(listener: (line: RunLogLine) => void): () => void;
 
 	/** Begins device-flow sign-in. Resolves as soon as there is a code to show. */
@@ -511,6 +516,7 @@ export const CHANNELS = {
 	commandStatus: 'workspace:commandStatus',
 	startAgent: 'workspace:startAgent',
 	agentStatus: 'workspace:agentStatus',
+	agentReadiness: 'workspace:agentReadiness',
 	addressComments: 'workspace:addressComments',
 	shareIteration: 'workspace:shareIteration',
 	shareStatus: 'workspace:shareStatus',

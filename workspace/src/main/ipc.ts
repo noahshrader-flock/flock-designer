@@ -17,7 +17,7 @@ import {
 	type Result,
 	type ReviewComment,
 } from '../shared/contract';
-import { AgentRunner } from './services/agent';
+import { AgentRunner, agentReadiness } from './services/agent';
 import { type ShareRunner, previewIsUp, pullRequestText } from './services/share';
 import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
@@ -310,6 +310,7 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 	);
 
 	ipcMain.handle(CHANNELS.agentStatus, guard(() => agent.status()));
+	ipcMain.handle(CHANNELS.agentReadiness, guard(() => agentReadiness()));
 
 	// One click: read the comments now, write the file from that read, then start the agent. Nothing
 	// a reviewer wrote is put in the task; it reaches the agent only through the file.

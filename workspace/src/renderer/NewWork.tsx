@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { Checkout, IterationKind, Project, ProjectIteration, Repository } from '../shared/contract';
+import type { AgentReadiness, Checkout, IterationKind, Project, ProjectIteration, Repository } from '../shared/contract';
 import { slugify } from '../shared/projects';
 import { SearchSelect } from './SearchSelect';
-import { Alert, AlertDescription } from './ui/alert';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
@@ -45,6 +45,7 @@ export const NewWork = ({
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [repos, setRepos] = useState<Repository[]>([]);
+	const [readiness, setReadiness] = useState<AgentReadiness>({ state: 'unknown' });
 	// The repository chosen, by name. Null means the one in use.
 	const [picked, setPicked] = useState<string | null>(null);
 	const [branches, setBranches] = useState<string[]>([]);
@@ -55,6 +56,8 @@ export const NewWork = ({
 		if (!open) return;
 		setPicked(null);
 		void window.workspace.listRepositories().then((r) => r.ok && setRepos(r.value));
+		// Asked now, not after the branch is made: an agent that cannot start would leave an empty iteration behind.
+		void window.workspace.agentReadiness().then((r) => r.ok && setReadiness(r.value));
 	}, [open]);
 
 	// A new repository brings its own branches, and starts on the one it has checked out.
@@ -76,6 +79,9 @@ export const NewWork = ({
 	const chosen = (picked === null ? inUse : choices.find((r) => r.name === picked)) ?? null;
 	// Chosen, and not the clone in use: either it is being switched to, or there is no clone to switch to.
 	const elsewhere = chosen !== null && chosen.root !== checkout?.root;
+
+	// Building needs Claude Code; when it is plainly not ready, nothing is created.
+	const blocked = readiness.state === 'missing' || readiness.state === 'signedOut';
 
 	const pickRepo = async (name: string) => {
 		const repo = choices.find((r) => r.name === name);
@@ -194,6 +200,26 @@ export const NewWork = ({
 							placeholder="A users list that flags people who have not signed in for 90 days."
 						/>
 					</div>
+					{readiness.state === 'missing' && (
+						<Alert variant="warning">
+							<AlertTitle>Claude Code is not installed</AlertTitle>
+							<AlertDescription>
+								New work is built by Claude Code on this machine. Install it from{' '}
+								<a href="https://claude.com/claude-code" target="_blank" rel="noreferrer">
+									claude.com/claude-code
+								</a>
+								, sign in, then open this again.
+							</AlertDescription>
+						</Alert>
+					)}
+					{readiness.state === 'signedOut' && (
+						<Alert variant="warning">
+							<AlertTitle>Claude Code is not signed in</AlertTitle>
+							<AlertDescription>
+								Sign in with your Claude account, in your editor's Claude panel or by running <code>claude</code> in a terminal. Then open this again.
+							</AlertDescription>
+						</Alert>
+					)}
 					{checkout && checkout.clean === false && (
 						<Alert variant="warning">
 							<AlertDescription>There are uncommitted changes in this checkout. Commit or set them aside first.</AlertDescription>
@@ -209,10 +235,10 @@ export const NewWork = ({
 					<Button variant="secondary" onClick={onClose} disabled={busy}>
 						Cancel
 					</Button>
-					<Button variant="secondary" onClick={() => void create('codebase')} disabled={busy || !checkout || elsewhere || !from || !id || !task.trim()}>
+					<Button variant="secondary" onClick={() => void create('codebase')} disabled={busy || blocked || !checkout || elsewhere || !from || !id || !task.trim()}>
 						In the codebase
 					</Button>
-					<Button onClick={() => void create('prototype')} disabled={busy || !checkout || elsewhere || !from || !id || !task.trim()}>
+					<Button onClick={() => void create('prototype')} disabled={busy || blocked || !checkout || elsewhere || !from || !id || !task.trim()}>
 						{busy ? 'Creating…' : 'Create prototype'}
 					</Button>
 				</DialogFooter>

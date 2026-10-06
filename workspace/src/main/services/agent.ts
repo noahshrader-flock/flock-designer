@@ -1,9 +1,9 @@
-import { type ChildProcess, spawn } from 'node:child_process';
+import { type ChildProcess, execFile, spawn } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { findOnPath } from './paths';
-import type { AgentStatus, RunLogLine } from '../../shared/contract';
+import type { AgentReadiness, AgentStatus, RunLogLine } from '../../shared/contract';
 
 /**
  * Hands a task to the agent the designer already has installed.
@@ -103,6 +103,47 @@ const SETTINGS = JSON.stringify({ attribution: { commit: '', pr: '' } });
  * see: what it says, and which file it is touching. Everything else is noise.
  * A chunk can end mid-line, so the unfinished tail is kept for the next one.
  */
+/** Runs a command and resolves with what it printed, or rejects. Bounded, so a hung check never holds anything up. */
+type RunCommand = (file: string, args: string[]) => Promise<string>;
+const runCommand: RunCommand = (file, args) =>
+	new Promise((resolve, reject) =>
+		execFile(file, args, { timeout: 10_000, env: process.env }, (err, stdout) =>
+			// A command that answers and then exits non-zero (as a "no" may) still answered.
+			err && !String(stdout).trim() ? reject(err) : resolve(String(stdout)),
+		),
+	);
+
+/**
+ * Whether new work can be built here, asked before anyone types a request rather than after the branch is made.
+ *
+ * Claude Code says itself whether someone is signed in (`claude auth status`); only that yes or no is read. The
+ * app never sees, keeps or handles the sign-in, which stays Claude Code's own. When the answer cannot be had --
+ * an older Claude Code without the command, a slow machine -- it does not stand in the way: the run itself
+ * still reports a real failure.
+ */
+export const agentReadiness = async (
+	locate: () => string = () => locateClaude(),
+	run: RunCommand = runCommand,
+): Promise<AgentReadiness> => {
+	const bin = locate();
+	let out: string;
+	try {
+		out = await run(bin, ['auth', 'status', '--json']);
+	} catch (err) {
+		// The bare name is what locating falls back to when it found nothing anywhere.
+		if ((err as NodeJS.ErrnoException).code === 'ENOENT') return { state: 'missing' };
+		return { state: 'unknown' };
+	}
+	try {
+		const status = JSON.parse(out) as { loggedIn?: unknown };
+		if (status.loggedIn === true) return { state: 'ready' };
+		if (status.loggedIn === false) return { state: 'signedOut' };
+	} catch {
+		// Not the JSON this was asked for.
+	}
+	return { state: 'unknown' };
+};
+
 export const claudeStreamFormatter = (): ((chunk: string) => string[]) => {
 	let tail = '';
 	// The run's closing event repeats the agent's last message verbatim, so it is said once.

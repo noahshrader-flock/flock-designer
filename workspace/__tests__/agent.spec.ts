@@ -2,8 +2,8 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { AgentRunner, claudeCodeAdapter, claudeStreamFormatter, locateClaude } from '../src/main/services/agent';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AgentRunner, agentReadiness, claudeCodeAdapter, claudeStreamFormatter, locateClaude } from '../src/main/services/agent';
 import type { RunLogLine } from '../src/shared/contract';
 
 let root: string;
@@ -176,5 +176,30 @@ describe('reading the stream', () => {
 				`${JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: said })}\n`,
 		);
 		expect(lines).toEqual([said, 'Finished.']);
+	});
+});
+
+describe('agentReadiness', () => {
+	const locate = () => '/bin/claude';
+	it('is ready when Claude Code says someone is signed in, and asks it nothing else', async () => {
+		const run = vi.fn(async () => JSON.stringify({ loggedIn: true, email: 'someone@example.test' }));
+		expect(await agentReadiness(locate, run)).toEqual({ state: 'ready' });
+		expect(run).toHaveBeenCalledWith('/bin/claude', ['auth', 'status', '--json']);
+	});
+
+	it('says signed out when Claude Code says so', async () => {
+		expect(await agentReadiness(locate, async () => '{"loggedIn":false}')).toEqual({ state: 'signedOut' });
+	});
+
+	it('says missing when there is no Claude Code to run', async () => {
+		const run = async () => {
+			throw Object.assign(new Error('spawn claude ENOENT'), { code: 'ENOENT' });
+		};
+		expect(await agentReadiness(() => 'claude', run)).toEqual({ state: 'missing' });
+	});
+
+	it('stands in nobody\'s way when it cannot tell: an older Claude Code, a timeout, an answer it does not understand', async () => {
+		expect(await agentReadiness(locate, async () => { throw Object.assign(new Error('unknown command'), { code: 1 }); })).toEqual({ state: 'unknown' });
+		expect(await agentReadiness(locate, async () => 'Logged in as someone')).toEqual({ state: 'unknown' });
 	});
 });
