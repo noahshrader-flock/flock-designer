@@ -36,8 +36,8 @@ export const runAddress = async ({
 	root: string;
 	projectId: string;
 	name: string;
-	/** The one comment to act on, or every open one when omitted. */
-	commentId?: number;
+	/** The one comment to act on. There is no batch. */
+	commentId: number;
 	isLive: () => boolean;
 	onPhase: (phase: AddressPhase) => void;
 	pollMs?: number;

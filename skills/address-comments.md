@@ -47,13 +47,14 @@ For each open comment it gives:
    else; on real-code work it is the change boundary in the brief. If the repository has a boundary
    check, it enforces this.
 
-## Which comments to act on
+## Which comment to act on
 
-**The task says.** When it names one comment ("Address comment 3, and only that one"), act on that
-one alone: the file still lists the others so you can see the context, and leaving them is correct,
-not an omission. Otherwise work through every open comment, in number order.
+**The task names one** ("Address comment 3, and only that one"). Act on that one alone. The file
+lists the others so you can see the context around it, and leaving them is correct, not an omission:
+the designer addresses each comment deliberately, because they are not all alike. Say what you did
+for the one you were given, and nothing about the rest beyond having left them.
 
-## For each comment you are acting on, in number order
+## For the comment you are acting on
 
 1. **Understand what is being asked.** Read the words, then open the picture. A comment can be a
    change ("make this primary"), a question ("why is this here?"), or a decision you cannot make.
@@ -68,19 +69,19 @@ not an omission. Otherwise work through every open comment, in number order.
    repository's own standards as for any other change.
 5. A question is answered in your summary and needs no change.
 
-## When you have been through them all
+## When you have finished with it
 
 1. **Check the work with the repository's own checks.** They are listed in `.flkd/workspace.json`
    under `commands`: run the ones that check work (type checking, lint, tests, and any boundary
    check), exactly as declared. Fix what is yours. Do not hand back work that does not pass; if a
    check fails for a reason that was there before you started, say so rather than fixing it.
-2. **Commit**, on this branch, with a message that names the comment numbers it addresses
-   ("Address comments 2 and 5: ..."). One commit is fine; several, one per comment, is better when
-   they are unrelated. **No `Co-Authored-By` or other attribution line:** the commit is the
-   designer's own work, under their name.
-3. **Say what you did, by number.** Your last message lists every open comment, in order, and for
-   each says one of: **changed** (what, and in which file), **answered** (the answer), or
-   **not changed** (why, and what you need). The designer reads this before anything else.
+2. **Commit**, on this branch, with a message that names the comment it addresses
+   ("Address comment 2: ..."). **No `Co-Authored-By` or other attribution line:** the commit is the
+   designer's own work, under their name. If you changed nothing, make no commit.
+3. **Say what you did.** Your last message is about the one comment you were given, and says one of:
+   **changed** (what, and in which file), **answered** (the answer), or **not changed** (why, and
+   what you need from the designer). This is the first thing they read, and when you changed nothing
+   it is the only thing they have, so it carries the whole reason.
 
 ## What you never do
 

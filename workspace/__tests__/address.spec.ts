@@ -20,7 +20,7 @@ const comment = (id: number, over: Partial<ReviewComment> = {}): ReviewComment =
 
 describe('prepareAddress', () => {
 	let records: string;
-	const target = () => ({ recordsRoot: records, projectId: 'demo', iteration: { name: 'i1', branch: 'fd/demo/i1' } });
+	const target = (commentId = 1) => ({ recordsRoot: records, projectId: 'demo', iteration: { name: 'i1', branch: 'fd/demo/i1' }, commentId });
 	const deps = (over: Partial<Parameters<typeof prepareAddress>[0]> = {}) => ({
 		readComments: vi.fn(async () => [comment(1), comment(2)]),
 		checkout: vi.fn(async () => ({ branch: 'fd/demo/i1' as string | null, clean: true })),
@@ -40,7 +40,8 @@ describe('prepareAddress', () => {
 		const d = deps();
 		const out = await prepareAddress(d, target());
 		expect(d.readComments).toHaveBeenCalledTimes(1);
-		expect(out.open).toBe(2);
+		expect(out.open).toBe(1);
+		// The file still holds every comment; the task says which one to act on.
 		expect(readFileSync(out.path, 'utf8')).toContain('## Comment 2');
 		expect(out.task).toContain(out.path);
 		expect(out.task).toContain('fd/demo/i1');
@@ -113,7 +114,7 @@ describe('prepareAddress', () => {
 	it('refuses when nothing is open, but still writes the file, so it does not keep listing resolved ones', async () => {
 		await prepareAddress(deps(), target());
 		const d = deps({ readComments: async () => [comment(1, { resolved: true })] });
-		await expect(prepareAddress(d, target())).rejects.toThrow(/no open comments/);
+		await expect(prepareAddress(d, target(1))).rejects.toThrow(/no open comments/);
 		expect(readFileSync(join(records, 'demo', 'comments.md'), 'utf8')).toContain('There are no open comments.');
 	});
 
@@ -128,10 +129,7 @@ describe('prepareAddress', () => {
 });
 
 describe('addressTask', () => {
-	it('asks for one comment when given its number, and for all of them otherwise', () => {
-		const all = addressTask('/r/comments.md', 'fd/demo/i1', 'SKILL');
-		expect(all).toContain('Address the open comments on this project.');
-		expect(all).not.toContain('only that one');
+	it('asks for the one comment it was given, by the number on its pin', () => {
 		const one = addressTask('/r/comments.md', 'fd/demo/i1', 'SKILL', 3);
 		expect(one).toContain('Address comment 3 on this project, and only that one.');
 		expect(one).toContain('leave them');
@@ -139,12 +137,12 @@ describe('addressTask', () => {
 	});
 
 	it('is short and names what the app produced', () => {
-		const task = addressTask('/r/projects/demo/comments.md', 'fd/demo/i1', 'SKILL TEXT');
-		expect(task.split('\n').slice(0, 3)).toEqual([
-			'Address the open comments on this project.',
+		const task = addressTask('/r/projects/demo/comments.md', 'fd/demo/i1', 'SKILL TEXT', 1);
+		expect(task.split('\n').slice(0, 2)).toEqual([
+			'Address comment 1 on this project, and only that one.',
 			'The comments are in /r/projects/demo/comments.md, written from GitHub a moment ago. Read it first.',
-			"This iteration's branch is fd/demo/i1.",
 		]);
+		expect(task).toContain("This iteration's branch is fd/demo/i1.");
 		expect(task.endsWith('SKILL TEXT')).toBe(true);
 	});
 

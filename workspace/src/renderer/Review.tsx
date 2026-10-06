@@ -471,11 +471,11 @@ export const Review = ({
 	// What is still to be dealt with. Resolved comments stay listed, but are not the count.
 	const total = (comments ?? []).filter((c) => !c.resolved).length;
 
-	/** With a comment's id, the agent is asked for that one alone; without, for every open one. */
-	const addressComments = async (commentId?: number) => {
+	/** The agent is asked for one comment, from that comment's own button: never for a batch. */
+	const addressComment = async (commentId: number) => {
 		if (!checkout) return;
 		setAddressLog([]);
-		setAddressing(commentId ?? null);
+		setAddressing(commentId);
 		await runAddress({
 			api: window.workspace,
 			root: checkout.root,
@@ -733,22 +733,10 @@ export const Review = ({
 										moved, or something redirected it.
 									</FSAlert>
 								)}
-								{/* One click: the comments are read now, written to the file, and the agent is started on them. */}
-								{checkout && total > 0 && (
-									<FSButton
-										size="md"
-										onClick={() => void addressComments()}
-										disabled={address.kind === 'running' || local.phase.kind === 'agent'}
-									>
-										{address.kind === 'running' ? 'Addressing…' : `Address ${total} comment${total === 1 ? '' : 's'}`}
-									</FSButton>
-								)}
 								{address.kind === 'running' && (
 									<>
 										<FSTypography variant="caption" color="text.secondary">
-											{addressing === null
-												? 'The agent is working through them. The preview updates as it changes the code.'
-												: 'The agent is working on that one comment. The preview updates as it changes the code.'}
+											The agent is working on that comment. The preview updates as it changes the code.
 										</FSTypography>
 										{addressLog.length > 0 && (
 											<FSBox component="pre" sx={{ m: 0, p: 1, maxHeight: 140, overflow: 'auto', bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 1, fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -816,7 +804,7 @@ export const Review = ({
 															disabled={address.kind === 'running'}
 															onClick={(e: React.MouseEvent) => {
 																e.stopPropagation();
-																void addressComments(comment.id);
+																void addressComment(comment.id);
 															}}
 														>
 															{addressing === comment.id && address.kind === 'running' ? 'Working…' : 'Address'}

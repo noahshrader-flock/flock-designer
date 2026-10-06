@@ -290,10 +290,11 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 	// a reviewer wrote is put in the task; it reaches the agent only through the file.
 	ipcMain.handle(
 		CHANNELS.addressComments,
-		guard(async (root: string, projectId: string, name: string, commentId?: number) => {
+		guard(async (root: string, projectId: string, name: string, commentId: number) => {
 			assertUsableProjectId(projectId);
 			// The window supplies this, so it is checked like anything else that crosses the boundary.
-			if (commentId !== undefined && !Number.isSafeInteger(commentId)) throw new Error('That is not a comment.');
+			// There is no batch: a request with no comment is a mistake, not a request for all of them.
+			if (!Number.isSafeInteger(commentId)) throw new Error('That is not a comment.');
 			const canonical = opened.require(root);
 			const recordsRoot = recordsFor(canonical);
 			const iteration = await recordedIteration(canonical, recordsRoot, descriptorFor(root), projectId, name);

@@ -227,8 +227,11 @@ export interface WorkspaceApi {
 	 * on them. Refused if the agent is busy, the checkout is not on this iteration's branch, the tree
 	 * is dirty, or there is nothing open. Progress is the agent's own (`agentStatus`, `onAgentLog`).
 	 */
-	/** `commentId` acts on that one comment alone; omitted, on every open one. */
-	addressComments(root: string, projectId: string, name: string, commentId?: number): Promise<Result<AgentStatus>>;
+	/**
+	 * Asks the agent to act on one comment, named by its id. There is no batch: comments are not alike,
+	 * and the designer picks the one that is a clear change from the comment itself.
+	 */
+	addressComments(root: string, projectId: string, name: string, commentId: number): Promise<Result<AgentStatus>>;
 
 	/** Hands the task to the locally installed agent. Never bundles credentials. */
 	startAgent(root: string, projectId: string, task: string): Promise<Result<AgentStatus>>;
