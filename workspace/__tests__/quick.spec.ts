@@ -60,6 +60,12 @@ describe('recordQuick', () => {
 		expect(JSON.parse(files['projects/users/iterations.json'] as string).map((i: { name: string }) => i.name)).toEqual(['i1', 'q1', 'q2']);
 	});
 
+	it('keeps what it was modelled on', async () => {
+		const { store } = memoryStore();
+		const basedOn = { repository: 'flock-coke', branch: 'develop', commit: 'abc1234' };
+		expect((await recordQuick(store, { projectId: 'users', title: 't', note: 'n', me, basedOn, now })).basedOn).toEqual(basedOn);
+	});
+
 	it('refuses to write over records it cannot read', async () => {
 		const { store, writes } = memoryStore({ 'projects/users/iterations.json': '{not json' });
 		await expect(recordQuick(store, { projectId: 'users', title: 't', note: 'n', me, now })).rejects.toThrow(/not readable JSON/);

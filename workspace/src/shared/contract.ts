@@ -107,6 +107,11 @@ export interface Iteration {
 	 * file an agent wrote, and it is joined onto the preview's own address.
 	 */
 	route?: string;
+	/**
+	 * For a quick prototype: the product code it was modelled on, so moving it into the code later knows
+	 * what it was looking at. Absent when it was made without a repository on the machine.
+	 */
+	basedOn?: { repository: string; branch: string; commit: string | null };
 }
 
 /** Where sharing an iteration has got to. One at a time: it is a push, a pull request and a build. */
@@ -252,7 +257,8 @@ export interface WorkspaceApi {
 	 * it is new; building runs the agent in the app's own folder; saving puts the page in the design
 	 * repository; opening serves it to the preview from this machine.
 	 */
-	createQuick(projectId: string, title: string, note: string): Promise<Result<Iteration>>;
+	/** `from`: the repository on this machine and a branch in it to model the page on. */
+	createQuick(projectId: string, title: string, note: string, from?: { root: string; branch: string }): Promise<Result<Iteration>>;
 	buildQuick(projectId: string, name: string, request: string): Promise<Result<AgentStatus>>;
 	saveQuick(projectId: string, name: string): Promise<Result<null>>;
 	openQuick(projectId: string, name: string): Promise<Result<string>>;

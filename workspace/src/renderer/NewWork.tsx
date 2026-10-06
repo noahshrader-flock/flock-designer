@@ -7,13 +7,19 @@ import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Textarea } from './ui/textarea';
 
-const TITLES: Record<IterationKind, string> = {
-	codebase: 'New codebase feature',
-	prototype: 'New prototype',
-	quick: 'New quick prototype',
-};
+/** What New makes. The older numbered prototype branches still open, but are no longer offered here. */
+type NewKind = Extract<IterationKind, 'quick' | 'codebase'>;
+const KINDS: { kind: NewKind; label: string; about: string }[] = [
+	{
+		kind: 'quick',
+		label: 'Quick prototype',
+		about: 'One page, made from your request and saved with the project, modelled on the branch below. Nothing in the codebase changes.',
+	},
+	{ kind: 'codebase', label: 'Codebase feature', about: "Real work on the project's own feature branch, started from the branch below." },
+];
 
 export interface Created {
 	project: Project;
@@ -22,8 +28,10 @@ export interface Created {
 }
 
 /**
- * Starting something new: where it starts (a repository, and a branch in it), a name, and what it should
- * explore. Creating it makes the branch and the record; the agent and the preview follow on their own.
+ * Starting something new: what kind (a quick prototype or a codebase feature, switched at the top), where
+ * it starts (a repository, and a branch in it), a name, and what it should explore. Both kinds start from
+ * the same two choices: a codebase feature branches from them, a quick prototype reads them to look like
+ * the product. Creating it makes the record (and the branch); the agent and the preview follow on their own.
  *
  * The repositories are the ones GitHub shows the signed-in person, so the list follows their permissions;
  * both lists can be searched by typing. The repository starts on the one last used, and the branch on the one
@@ -32,7 +40,6 @@ export interface Created {
  */
 export const NewWork = ({
 	open,
-	kind,
 	onClose,
 	checkout,
 	onChoose,
@@ -40,8 +47,6 @@ export const NewWork = ({
 	onCreated,
 }: {
 	open: boolean;
-	/** What is being made, chosen from the New menu before this opened. */
-	kind: IterationKind;
 	onClose: () => void;
 	checkout: Checkout | null;
 	onChoose: () => void;
@@ -49,6 +54,8 @@ export const NewWork = ({
 	onCheckout: (checkout: Checkout) => void;
 	onCreated: (created: Created) => void;
 }) => {
+	// Kept between openings, so someone who makes one kind is not switched back each time.
+	const [kind, setKind] = useState<NewKind>('quick');
 	const [name, setName] = useState('');
 	const [task, setTask] = useState('');
 	const [busy, setBusy] = useState(false);
@@ -113,7 +120,7 @@ export const NewWork = ({
 		const note = task.trim().split('\n')[0] ?? '';
 		const r =
 			kind === 'quick'
-				? await window.workspace.createQuick(id, name.trim(), note)
+				? await window.workspace.createQuick(id, name.trim(), note, checkout && !elsewhere && from ? { root: checkout.root, branch: from } : undefined)
 				: await window.workspace.createIteration((checkout as Checkout).root, id, note, kind, from ?? undefined);
 		setBusy(false);
 		if (!r.ok) return setError(r.error);
@@ -131,15 +138,20 @@ export const NewWork = ({
 		<Dialog open={open} onOpenChange={(next) => !next && !busy && onClose()}>
 			<DialogContent className="sm:max-w-xl" showCloseButton={!busy}>
 				<DialogHeader>
-					<DialogTitle>{TITLES[kind]}</DialogTitle>
+					<DialogTitle>New</DialogTitle>
 				</DialogHeader>
 				<div className="flex flex-col gap-4">
-					{kind === 'quick' ? (
-						<p className="text-muted-foreground text-sm">
-							One page, made from your request and saved with the project. Nothing in the codebase changes
-							{checkout ? `; it looks at ${checkout.name} to match the product` : ''}. When it is right, move it into the code from its review screen.
-						</p>
-					) : checkout || choices.length > 0 ? (
+					<Tabs value={kind} onValueChange={(v) => setKind(v as NewKind)}>
+						<TabsList className="w-full">
+							{KINDS.map((k) => (
+								<TabsTrigger key={k.kind} value={k.kind} disabled={busy}>
+									{k.label}
+								</TabsTrigger>
+							))}
+						</TabsList>
+					</Tabs>
+					<p className="text-muted-foreground text-sm">{KINDS.find((k) => k.kind === kind)?.about}</p>
+					{checkout || choices.length > 0 ? (
 						<>
 							<div className="flex flex-col gap-2">
 								<Label htmlFor="new-work-repo">Repository</Label>
@@ -155,7 +167,9 @@ export const NewWork = ({
 								/>
 								{elsewhere && chosen?.root === null && (
 									<p className="text-muted-foreground text-xs">
-										{chosen.name} is not on this machine, so there is nothing here to build it in. Clone it, then{' '}
+										{kind === 'quick'
+											? `${chosen.name} is not on this machine, so the page is made from your request alone. To model it on the real code, clone it, then `
+											: `${chosen.name} is not on this machine, so there is nothing here to build it in. Clone it, then `}
 										<button type="button" className="text-primary cursor-pointer underline underline-offset-4" onClick={onChoose}>
 											point the app at it
 										</button>
@@ -248,7 +262,7 @@ export const NewWork = ({
 						onClick={() => void create()}
 						disabled={busy || blocked || !id || !task.trim() || (kind !== 'quick' && (!checkout || elsewhere || !from))}
 					>
-						{busy ? 'Creating…' : `Create ${TITLES[kind].replace(/^New /, '')}`}
+						{busy ? 'Creating…' : `Create ${KINDS.find((k) => k.kind === kind)?.label.toLowerCase()}`}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

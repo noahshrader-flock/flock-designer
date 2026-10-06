@@ -24,7 +24,7 @@ import { type ShareRunner, previewIsUp, pullRequestText } from './services/share
 import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
 import { readDescriptor } from './services/descriptor';
-import { branchCommit, branchExists, isRepository, readCheckout, recentBranches } from './services/git';
+import { branchCommit, branchExists, isRepository, readCheckout, readTreeAt, recentBranches } from './services/git';
 import { assertUsableProjectId, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
@@ -555,6 +555,23 @@ export const registerIpc = ({
 		const file = join(designRoot, path);
 		return existsSync(file) ? readFileSync(file, 'utf8') : null;
 	};
+	/**
+	 * The product code a quick prototype is modelled on, as a folder the agent may read: the clone itself
+	 * when it is on that branch already, otherwise the app's own read-only copy of the branch, so the
+	 * person's checkout is never switched. Null when there is nothing on this machine to read.
+	 */
+	const quickSource = async (projectId: string, name: string): Promise<string | null> => {
+		const raw = await recordStore().read(`projects/${projectId}/iterations.json`);
+		const basedOn = (JSON.parse(raw ?? '[]') as Iteration[]).find((i) => i.name === name)?.basedOn;
+		const root = trustedRoot();
+		// Only the repository this person accepted, and only the one the prototype was based on.
+		if (!basedOn || root === null || basename(root) !== basedOn.repository) return null;
+		const canonical = opened.require(root);
+		if ((await readCheckout(canonical)).branch === basedOn.branch) return canonical;
+		const copy = join(quickRoot, 'source', basename(canonical));
+		await readTreeAt(canonical, copy, basedOn.branch);
+		return copy;
+	};
 	const me = (): Person | null => {
 		const s = github.state();
 		return s.state === 'signedIn' ? { name: s.user.name ?? s.user.login, login: s.user.login } : null;
@@ -562,10 +579,17 @@ export const registerIpc = ({
 
 	ipcMain.handle(
 		CHANNELS.createQuick,
-		guard(async (projectId: string, title: string, note: string) => {
+		guard(async (projectId: string, title: string, note: string, from: { root: string; branch: string } | null) => {
 			assertUsableProjectId(projectId);
 			if (typeof title !== 'string' || !title.trim()) throw new Error('A quick prototype needs a name.');
-			return recordQuick(recordStore(), { projectId, title: title.slice(0, 200), note: String(note).slice(0, 2000), me: me() });
+			// What it is modelled on: only a repository this person accepted, and a branch that exists in it.
+			let basedOn: Iteration['basedOn'];
+			if (from) {
+				const canonical = opened.require(from.root);
+				if (!(await branchExists(canonical, from.branch))) throw new Error(`There is no branch called ${from.branch} in ${basename(canonical)}.`);
+				basedOn = { repository: basename(canonical), branch: from.branch, commit: await branchCommit(canonical, from.branch).catch(() => null) };
+			}
+			return recordQuick(recordStore(), { projectId, title: title.slice(0, 200), note: String(note).slice(0, 2000), me: me(), basedOn });
 		}),
 	);
 
@@ -576,8 +600,7 @@ export const registerIpc = ({
 			const store = recordStore();
 			const skill = (await store.read(BUILD_SKILL)) ?? (await designRepo.readFile(BUILD_SKILL));
 			if (skill === null) throw new Error(`The design repository has no ${BUILD_SKILL}, which tells the agent how to build a quick prototype.`);
-			// Only the product this person accepted is offered for reading, and only for reading.
-			const product = trustedRoot();
+			const product = await quickSource(projectId, name);
 			return agent.start(quickDir(projectId), projectId, quickBuildTask({ skill, pageFile, product, request: String(request) }), {
 				bare: true,
 				readOnly: product ? [product] : [],
@@ -619,7 +642,9 @@ export const registerIpc = ({
 			if (html === null) throw new Error('This quick prototype has no page yet.');
 			const pageFile = quickFile(projectId, name);
 			writeFileSync(pageFile, html);
-			return moveToCodeTask({ skill, pageFile, auditFile: join(recordsRoot, projectId, `audit-${name}.md`), name });
+			const raw = await recordStore().read(`projects/${projectId}/iterations.json`);
+			const basedOn = (JSON.parse(raw ?? '[]') as Iteration[]).find((i) => i.name === name)?.basedOn;
+			return moveToCodeTask({ skill, pageFile, auditFile: join(recordsRoot, projectId, `audit-${name}.md`), name, basedOn });
 		}),
 	);
 

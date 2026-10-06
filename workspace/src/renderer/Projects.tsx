@@ -1,6 +1,6 @@
-import { ChevronDownIcon, FolderIcon, MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
+import { FolderIcon, MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import type { Checkout, CheckoutSuggestion, IterationKind, Person, Project, ProjectIteration } from '../shared/contract';
+import type { Checkout, CheckoutSuggestion, Person, Project, ProjectIteration } from '../shared/contract';
 import { LoadingScreen } from './Loading';
 import { NewWork, type Created } from './NewWork';
 import { People } from './People';
@@ -13,7 +13,6 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /** A name as it reads on a button: the first letter capital, the rest as written. */
@@ -38,8 +37,6 @@ export const Projects = ({ menuOpen }: { menuOpen: boolean }) => {
 	const [selected, setSelected] = useState<{ project: Project; iteration: ProjectIteration; task?: string } | null>(null);
 	const [checkout, setCheckout] = useState<Checkout | null>(null);
 	const [creating, setCreating] = useState(false);
-	// Kept after the dialog closes, so its title does not change while it fades out.
-	const [newKind, setNewKind] = useState<IterationKind>('prototype');
 	const [looked, setLooked] = useState(false);
 	const [suggestion, setSuggestion] = useState<CheckoutSuggestion | null>(null);
 	const [publishStatus, setPublishStatus] = usePublishStatus();
@@ -147,32 +144,9 @@ export const Projects = ({ menuOpen }: { menuOpen: boolean }) => {
 						<RefreshCwIcon />
 						Refresh
 					</Button>
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button size="sm">
-								New
-								<ChevronDownIcon />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end" className="w-auto">
-							{(
-								[
-									['codebase', 'Codebase feature'],
-									['quick', 'Quick prototype'],
-								] as const
-							).map(([kind, label]) => (
-								<DropdownMenuItem
-									key={kind}
-									onSelect={() => {
-										setNewKind(kind);
-										setCreating(true);
-									}}
-								>
-									{label}
-								</DropdownMenuItem>
-							))}
-						</DropdownMenuContent>
-					</DropdownMenu>
+					<Button size="sm" onClick={() => setCreating(true)}>
+						New
+					</Button>
 				</div>
 			</Toolbar>
 			<Page>
@@ -206,7 +180,6 @@ export const Projects = ({ menuOpen }: { menuOpen: boolean }) => {
 				)}
 				<NewWork
 					open={creating}
-					kind={newKind}
 					onClose={() => setCreating(false)}
 					checkout={checkout}
 					onChoose={chooseCheckout}

@@ -105,6 +105,23 @@ export const listBranches = async (root: string, prefix: string): Promise<string
 	return out === '' ? [] : out.split('\n');
 };
 
+/**
+ * A read-only copy of `branch` at `dir`, for an agent to look at without the person's own checkout
+ * being switched: a git worktree on a detached HEAD, made once and moved to the branch each time.
+ * Nothing in the person's working tree, index or current branch changes.
+ */
+export const readTreeAt = async (root: string, dir: string, branch: string): Promise<string> => {
+	if (!(await branchExists(root, branch))) throw new GitProblem(`There is no branch called ${branch} in ${basename(root)}.`);
+	if (existsSync(join(dir, '.git'))) {
+		// Its own copy, never edited, so anything left in it is discarded.
+		await git(dir, ['checkout', '--detach', '--force', `refs/heads/${branch}`]);
+	} else {
+		await git(root, ['worktree', 'prune']);
+		await git(root, ['worktree', 'add', '--detach', '--force', dir, `refs/heads/${branch}`]);
+	}
+	return git(dir, ['rev-parse', 'HEAD']);
+};
+
 /** Every local branch, the one most recently committed to first. */
 export const recentBranches = async (root: string): Promise<string[]> => {
 	const out = await git(root, ['for-each-ref', '--sort=-committerdate', '--format=%(refname:short)', 'refs/heads/']);

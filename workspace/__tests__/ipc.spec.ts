@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -245,6 +245,41 @@ describe('quick prototypes', () => {
 		const opened = await call(CHANNELS.openQuick, 'demo', 'q1');
 		expect(opened.ok).toBe(true);
 		expect(await (await fetch(opened.value as string)).text()).toBe('<h1>Demo</h1>');
+	});
+
+	it('record what they are modelled on, and give the agent that branch to read, never to change', async () => {
+		await call(CHANNELS.useCheckout, product);
+		mkdirSync(join(design, 'skills'), { recursive: true });
+		writeFileSync(join(design, 'skills', 'build-quick-prototype.md'), '# Build');
+		g(product, 'checkout', '-q', '-b', 'noah/baseline');
+		writeFileSync(join(product, 'baseline.txt'), 'only on the baseline');
+		g(product, 'add', '.');
+		g(product, 'commit', '-q', '-m', 'baseline');
+		g(product, 'checkout', '-q', 'develop');
+
+		const made = await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'noah/baseline' });
+		expect(made).toMatchObject({ ok: true, value: { basedOn: { repository: 'flock-coke', branch: 'noah/baseline' } } });
+
+		await call(CHANNELS.buildQuick, 'demo', 'q1', 'A list');
+		const extras = agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[]; bare: boolean };
+		expect(extras.bare).toBe(true);
+		// Another branch than the one checked out: the app's own copy of it, and the person's checkout untouched.
+		const copy = extras.readOnly[0] as string;
+		expect(copy.startsWith(join(home, 'quick'))).toBe(true);
+		expect(readFileSync(join(copy, 'baseline.txt'), 'utf8')).toBe('only on the baseline');
+		expect(g(product, 'branch', '--show-current').trim()).toBe('develop');
+		expect(existsSync(join(product, 'baseline.txt'))).toBe(false);
+
+		// On the branch already: the clone itself.
+		await call(CHANNELS.createQuick, 'demo', 'Demo', 'Another', { root: product, branch: 'develop' });
+		await call(CHANNELS.buildQuick, 'demo', 'q2', 'Another');
+		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([realpathSync(product)]);
+	});
+
+	it('refuse a base that is not a branch of an accepted repository', async () => {
+		await call(CHANNELS.useCheckout, product);
+		expect((await call(CHANNELS.createQuick, 'demo', 'Demo', 'x', { root: product, branch: 'nope' })).ok).toBe(false);
+		expect((await call(CHANNELS.createQuick, 'demo', 'Demo', 'x', { root: home, branch: 'develop' })).ok).toBe(false);
 	});
 
 	it('refuse names that are not theirs, before anything is read or written', async () => {

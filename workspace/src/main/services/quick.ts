@@ -45,7 +45,14 @@ const records = (projectId: string) => `projects/${projectId}/iterations.json`;
  */
 export const recordQuick = async (
 	store: RecordStore,
-	{ projectId, title, note, me, now = new Date() }: { projectId: string; title: string; note: string; me: Person | null; now?: Date },
+	{
+		projectId,
+		title,
+		note,
+		me,
+		basedOn,
+		now = new Date(),
+	}: { projectId: string; title: string; note: string; me: Person | null; basedOn?: Iteration['basedOn']; now?: Date },
 ): Promise<Iteration> => {
 	const raw = await store.read(records(projectId));
 	let existing: Iteration[] = [];
@@ -66,6 +73,7 @@ export const recordQuick = async (
 		createdAt: now.toISOString(),
 		note,
 		...(me ? { contributors: [me] } : {}),
+		...(basedOn ? { basedOn } : {}),
 	};
 	const brief = `projects/${projectId}/brief.md`;
 	const haveBrief = await store.read(brief);
@@ -116,11 +124,13 @@ export const moveToCodeTask = ({
 	pageFile,
 	auditFile,
 	name,
+	basedOn,
 }: {
 	skill: string;
 	pageFile: string;
 	auditFile: string;
 	name: string;
+	basedOn?: Iteration['basedOn'];
 }): string =>
 	[
 		`Build quick prototype ${name} of this project into the codebase.`,
@@ -130,5 +140,8 @@ export const moveToCodeTask = ({
 		'## This run',
 		'',
 		`The quick prototype's page is \`${pageFile}\`. Read it; do not change it.`,
+		basedOn
+			? `It was modelled on \`${basedOn.branch}\` of ${basedOn.repository}${basedOn.commit ? ` at ${basedOn.commit.slice(0, 7)}` : ''}; the code may have moved on since.`
+			: 'It was made without the product code to look at, so expect more of it to differ from how the product really works.',
 		`Write the audit to \`${auditFile}\` before you change any code.`,
 	].join('\n');
