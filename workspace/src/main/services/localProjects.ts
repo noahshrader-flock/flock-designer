@@ -2,15 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Project, ProjectIteration } from '../../shared/contract';
 import { asPeople, mergePeople } from '../../shared/people';
-import { newestFirst } from '../../shared/projects';
-
-const firstHeading = (markdown: string): string | null => {
-	for (const line of markdown.split('\n')) {
-		const m = /^#\s+(.+?)\s*$/.exec(line);
-		if (m?.[1]) return m[1];
-	}
-	return null;
-};
+import { firstHeading, newestFirst } from '../../shared/projects';
 
 const readJson = (path: string): unknown => {
 	try {

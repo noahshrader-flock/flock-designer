@@ -1,7 +1,7 @@
 import type { CommentAnchor, Iteration, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
 import { GitHubError } from './github';
 import { asPeople, mergePeople } from '../../shared/people';
-import { newestFirst } from '../../shared/projects';
+import { firstHeading, newestFirst } from '../../shared/projects';
 import { RESOLVED_MARK, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withResolved } from '../../shared/anchor';
 import type { GitHubSession } from './githubSession';
 
@@ -27,15 +27,6 @@ export interface DesignRepoRef {
 
 const asRecord = (v: unknown): Record<string, unknown> => (typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {});
 const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
-
-/** `# Title` from a brief, or null. The id is used when there is none. */
-const firstHeading = (markdown: string): string | null => {
-  for (const line of markdown.split('\n')) {
-    const m = /^#\s+(.+?)\s*$/.exec(line);
-    if (m?.[1]) return m[1];
-  }
-  return null;
-};
 
 const isBot = (name: string): boolean => /\[bot\]$/i.test(name);
 

@@ -3,6 +3,15 @@ import type { Project, ProjectIteration } from './contract';
 /** The only shape a project id may take: lower-case words joined by single hyphens. */
 export const PROJECT_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
+/** `# Title` from a brief, or null. The project id is used when there is none. */
+export const firstHeading = (markdown: string): string | null => {
+	for (const line of markdown.split('\n')) {
+		const m = /^#\s+(.+?)\s*$/.exec(line);
+		if (m?.[1]) return m[1];
+	}
+	return null;
+};
+
 /**
  * A name becomes a project id. Truncation happens before the trailing hyphen is
  * stripped, so a long name cannot produce an id the main process would reject --

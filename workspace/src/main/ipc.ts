@@ -27,6 +27,7 @@ import { assertUsableProjectId, continueIteration, createIteration, readIteratio
 import { findProductCheckouts, recordsRootFor } from './services/discovery';
 import { readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
+import { projectTitle, writeCommentsExport } from './services/commentsExport';
 import { DesignRepo } from './services/designRepo';
 import type { PageView } from './services/pageView';
 import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anchor';
@@ -371,9 +372,36 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 			return mergeProjects(remote, local);
 		}),
 	);
+	/**
+	 * Rewrites `comments.md` for what was just read, on a machine that has the design repository
+	 * beside the product checkout. Best effort: reading comments never fails because a file
+	 * could not be written; the Address button, which depends on the file, is strict.
+	 */
+	const exportComments = (projectId: string, branch: string, comments: ReviewComment[]): void => {
+		try {
+			const root = trustedRoot();
+			const recordsRoot = root === null ? null : recordsRootFor(root);
+			if (recordsRoot === null) return;
+			const iteration = readIterations(recordsRoot, projectId).find((i) => i.branch === branch);
+			if (!iteration) return;
+			writeCommentsExport(recordsRoot, {
+				projectId,
+				title: projectTitle(recordsRoot, projectId),
+				iteration: { name: iteration.name, branch },
+				comments,
+				generatedAt: new Date(),
+			});
+		} catch {
+			// Nothing to do: the comments themselves were read fine.
+		}
+	};
 	ipcMain.handle(
 		CHANNELS.readComments,
-		guard((projectId: string, branch: string): Promise<ReviewComment[]> => designRepo.readComments(projectId, branch)),
+		guard(async (projectId: string, branch: string): Promise<ReviewComment[]> => {
+			const comments = await designRepo.readComments(projectId, branch);
+			exportComments(projectId, branch, comments);
+			return comments;
+		}),
 	);
 	ipcMain.handle(
 		CHANNELS.postComment,
