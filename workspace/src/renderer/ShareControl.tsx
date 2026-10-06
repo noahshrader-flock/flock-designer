@@ -4,7 +4,7 @@ import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared
 import { dialogView, isMine, stepText } from './shareView';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Spinner } from './ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
@@ -135,7 +135,7 @@ export const ShareControl = ({
 					<DialogHeader>
 						<DialogTitle>{url && view === 'confirm' ? 'Update the shared preview' : 'Share for review'}</DialogTitle>
 					</DialogHeader>
-					<div className="flex flex-col gap-4">
+					<DialogBody className="flex flex-col gap-4">
 						{view === 'confirm' && (
 							<>
 								<p className="text-sm">
@@ -183,7 +183,7 @@ export const ShareControl = ({
 								<AlertDescription>{error}</AlertDescription>
 							</Alert>
 						)}
-					</div>
+					</DialogBody>
 					<DialogFooter>
 						{view === 'confirm' ? (
 							<>

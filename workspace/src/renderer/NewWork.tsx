@@ -4,7 +4,7 @@ import { freshIteration, slugify } from '../shared/projects';
 import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
@@ -140,6 +140,7 @@ export const NewWork = ({
 				<DialogHeader>
 					<DialogTitle>New</DialogTitle>
 				</DialogHeader>
+				{/* With the title: switching kind must stay in reach however far the form below has scrolled. */}
 				<div className="flex flex-col gap-4">
 					<Tabs value={kind} onValueChange={(v) => setKind(v as NewKind)}>
 						<TabsList className="w-full">
@@ -151,6 +152,8 @@ export const NewWork = ({
 						</TabsList>
 					</Tabs>
 					<p className="text-muted-foreground text-sm">{KINDS.find((k) => k.kind === kind)?.about}</p>
+				</div>
+				<DialogBody className="flex flex-col gap-4">
 					{checkout || choices.length > 0 ? (
 						<>
 							<div className="flex flex-col gap-2">
@@ -253,7 +256,7 @@ export const NewWork = ({
 							<AlertDescription>{error}</AlertDescription>
 						</Alert>
 					)}
-				</div>
+				</DialogBody>
 				<DialogFooter>
 					<Button variant="secondary" onClick={onClose} disabled={busy}>
 						Cancel

@@ -63,7 +63,7 @@ function DialogContent({
         className={cn(
           // Changed from stock, which centres vertically: anchored 10% from the top instead, so a dialog whose
           // content changes height (switching tabs) grows downward and its top edge stays where it is.
-          "fixed top-[10%] left-1/2 z-50 grid max-h-[85dvh] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 overflow-y-auto gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-[10%] left-1/2 z-50 flex max-h-[85dvh] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 flex-col gap-4 overflow-hidden rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}
@@ -84,6 +84,19 @@ function DialogContent({
         )}
       </DialogPrimitive.Content>
     </DialogPortal>
+  )
+}
+
+// Added here, not in stock shadcn: the part of a dialog that scrolls. The header and footer stay where they are,
+// and this takes the space between them, so a tall dialog on a short window scrolls its content, not its buttons.
+// Its edges reach the dialog's padding so a focus ring on a field at the edge is not clipped.
+function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="dialog-body"
+      className={cn("-mx-4 min-h-0 flex-1 overflow-y-auto px-4 py-1 -my-1", className)}
+      {...props}
+    />
   )
 }
 
@@ -159,6 +172,7 @@ function DialogDescription({
 export {
   Dialog,
   DialogClose,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
