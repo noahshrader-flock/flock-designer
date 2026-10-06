@@ -61,6 +61,27 @@ describe('picking an element', () => {
 		expect(w.document.querySelector(a.selector)).toBe(target);
 	});
 
+	it('finds the element again after the code around it is rearranged', async () => {
+		// Two cards that look alike. The comment is on the subtext of the second, which has no stable
+		// name of its own: the ordinary case for "remove this subtext".
+		const cards = (open = '', close = '') =>
+			'<main><section data-e2e-ref="alerts-card"><h3>Alerts</h3><div class="row"><p>Notify me by email</p></div></section>' +
+			`<section data-e2e-ref="billing-card"><h3>Billing</h3>${open}<div class="row"><p>Notify me by email</p></div>${close}</section></main>`;
+		const w = page(cards());
+		const target = w.document.querySelectorAll('p')[1]!;
+		const picked = w.eval(PICK_SCRIPT) as Promise<CommentAnchor>;
+		click(w, target);
+		const { selector } = await picked;
+		expect(w.document.querySelector(selector)).toBe(target);
+
+		// An agent wraps the row in a layout div, which is what restyling does. A path of direct
+		// children breaks here; being scoped to the named card does not.
+		const after = page(cards('<div class="stack">', '</div>'));
+		expect(after.document.querySelectorAll(selector)).toHaveLength(1);
+		// And it is the billing card's subtext, not the identical one in the alerts card.
+		expect(after.document.querySelector(selector)!.closest('section')!.getAttribute('data-e2e-ref')).toBe('billing-card');
+	});
+
 	it('does not rely on an id that React generates, which changes between renders', async () => {
 		const w = page('<main><div><input id=":r1:" /></div><div><input id="search" /></div></main>');
 		const generated = w.document.getElementById(':r1:')!;

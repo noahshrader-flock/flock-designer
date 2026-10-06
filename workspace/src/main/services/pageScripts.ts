@@ -34,7 +34,42 @@ const HELPERS = String.raw`
     while ((sib = sib.previousElementSibling)) { if (sib.tagName === el.tagName) n++; }
     return tag + ':nth-of-type(' + n + ')';
   };
+  /** The nearest ancestor with a stable name, which is the part of the page least likely to be rearranged. */
+  var namedScope = function (el) {
+    var cur = el.parentElement;
+    while (cur && cur !== doc.body && cur !== doc.documentElement) {
+      if (cur.getAttribute('data-e2e-ref')) return cur;
+      cur = cur.parentElement;
+    }
+    return null;
+  };
+  /**
+   * How an element is found again after the code has changed.
+   *
+   * A path of direct children says where an element sits in a tree that is about to be
+   * rearranged: inserting one wrapper div, which is what restyling does, breaks it. So when the element
+   * has no stable name of its own, it is described as a *descendant* of the nearest element that does
+   * ("the p inside billing-card"). That holds through anything done inside the card, and is scoped to
+   * the card, so it cannot drift onto an identical-looking element elsewhere on the page. The old path
+   * remains for a page with no stable names anywhere.
+   */
   var selectorFor = function (el) {
+    var own = segment(el);
+    if (own.charAt(0) === '[' || own.charAt(0) === '#') return own;
+    var scope = namedScope(el);
+    if (scope) {
+      var head = segment(scope) + ' ', tag = el.tagName.toLowerCase();
+      if (unique(head + tag)) return head + tag;
+      var same = scope.querySelectorAll(tag);
+      for (var i = 0; i < same.length; i++) {
+        if (same[i] === el) {
+          var nth = head + tag + ':nth-of-type(' + (i + 1) + ')';
+          // nth-of-type counts among siblings, not among matches, so it only means this element when it agrees.
+          if (doc.querySelectorAll(nth).length === 1 && doc.querySelector(nth) === el) return nth;
+          break;
+        }
+      }
+    }
     var parts = [], cur = el;
     while (cur && cur.nodeType === 1 && cur !== doc.documentElement) {
       parts.unshift(segment(cur));
