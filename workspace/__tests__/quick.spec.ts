@@ -192,11 +192,32 @@ describe('runQuickBuild', () => {
 		const { url, phases } = await run(a, 'A users list');
 		expect(url).toBe('http://127.0.0.1:5000/users/q1/');
 		expect(phases).toEqual(['agent', 'preview', 'running']);
-		expect(calls).toEqual(['buildQuick', 'agentStatus', 'saveQuick', 'openQuick']);
+		expect(calls).toEqual(['agentStatus', 'buildQuick', 'agentStatus', 'saveQuick', 'openQuick']);
 	});
 
 	it('only opens work that already exists', async () => {
 		const { a, calls } = api();
+		expect((await run(a)).phases).toEqual(['preview', 'running']);
+		expect(calls).toEqual(['agentStatus', 'openQuick']);
+	});
+
+	it('picks up a build still running when the screen is opened again, then saves and shows it', async () => {
+		let asked = 0;
+		const agentStatus = vi.fn(async () => ({
+			ok: true as const,
+			value: asked++ < 2 ? { state: 'running', startedAt: 'now', work: 'quick/users/q1' } : { state: 'finished', exitCode: 0, work: 'quick/users/q1' },
+		}));
+		const { a, calls } = api({ agentStatus });
+		const { url, phases } = await run(a);
+		expect(phases).toEqual(['agent', 'preview', 'running']);
+		expect(url).toBe('http://127.0.0.1:5000/users/q1/');
+		// It waits on the run that is there; it never starts a second one.
+		expect(calls).not.toContain('buildQuick');
+		expect(calls).toContain('saveQuick');
+	});
+
+	it("does not wait on another piece of work's run", async () => {
+		const { a, calls } = api({ agentStatus: vi.fn(async () => ({ ok: true as const, value: { state: 'running', startedAt: 'now', work: 'quick/other/q1' } })) });
 		expect((await run(a)).phases).toEqual(['preview', 'running']);
 		expect(calls).toEqual(['openQuick']);
 	});

@@ -66,6 +66,7 @@ const api: WorkspaceApi = {
 
 	startAgent: (root, projectId, task) => invoke<AgentStatus>(CHANNELS.startAgent, root, projectId, task),
 	agentStatus: () => invoke<AgentStatus>(CHANNELS.agentStatus),
+	agentRecent: () => invoke<{ work: string | null; lines: string[] }>(CHANNELS.agentRecent),
 	agentReadiness: () => invoke<AgentReadiness>(CHANNELS.agentReadiness),
 	createQuick: (projectId, title, note, from) => invoke<Iteration>(CHANNELS.createQuick, projectId, title, note, from ?? null),
 	buildQuick: (projectId, name, request) => invoke<AgentStatus>(CHANNELS.buildQuick, projectId, name, request),

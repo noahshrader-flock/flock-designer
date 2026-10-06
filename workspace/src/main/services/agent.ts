@@ -24,6 +24,8 @@ export interface AgentExtras {
 	 * and an edit rule denies it outright as well.
 	 */
 	readOnly?: string[];
+	/** Which piece of work this run is for (a quick prototype's key), carried on its status. */
+	work?: string;
 	/** The task stands alone: it is not working in a repository, so there are no repository instructions to point at. */
 	bare?: boolean;
 }
@@ -238,11 +240,23 @@ export const defaultAgentDeps: AgentDeps = {
 export class AgentRunner {
 	private child: ChildProcess | null = null;
 	private current: AgentStatus = { state: 'idle' };
+	private work: string | null = null;
+	/** The run's recent lines, kept here so a screen that was left and opened again can pick up where it was. */
+	private recent: string[] = [];
 
 	constructor(
 		private readonly onLog: (line: RunLogLine) => void,
 		private readonly deps: AgentDeps = defaultAgentDeps,
 	) {}
+
+	recentLines(): { work: string | null; lines: string[] } {
+		return { work: this.work, lines: [...this.recent] };
+	}
+
+	private keep(text: string): void {
+		this.recent.push(...text.split('\n').filter((l) => l.trim() !== ''));
+		if (this.recent.length > 200) this.recent.splice(0, this.recent.length - 200);
+	}
 
 	status(): AgentStatus {
 		return this.current;
@@ -289,12 +303,20 @@ export class AgentRunner {
 		}
 
 		this.child = child;
-		this.current = { state: 'running', startedAt: new Date().toISOString() };
+		this.work = extras?.work ?? null;
+		this.recent = [];
+		this.current = { state: 'running', startedAt: new Date().toISOString(), ...(this.work ? { work: this.work } : {}) };
 
 		const format = this.deps.adapter.formatter?.();
 		child.stdout?.on('data', (d: Buffer) => {
-			if (!format) return this.onLog({ commandId: 'agent', stream: 'stdout', text: d.toString() });
-			for (const text of format(d.toString())) this.onLog({ commandId: 'agent', stream: 'stdout', text: `${text}\n` });
+			if (!format) {
+				this.keep(d.toString());
+				return this.onLog({ commandId: 'agent', stream: 'stdout', text: d.toString() });
+			}
+			for (const text of format(d.toString())) {
+				this.keep(text);
+				this.onLog({ commandId: 'agent', stream: 'stdout', text: `${text}\n` });
+			}
 		});
 		child.stderr?.on('data', (d: Buffer) =>
 			this.onLog({ commandId: 'agent', stream: 'stderr', text: d.toString() }),
@@ -310,7 +332,7 @@ export class AgentRunner {
 			this.child = null;
 			// A crash and a clean finish are both "finished" with a code. The caller
 			// decides what a non-zero code means; this does not editorialise.
-			this.current = { state: 'finished', exitCode: code ?? -1 };
+			this.current = { state: 'finished', exitCode: code ?? -1, ...(this.work ? { work: this.work } : {}) };
 		});
 
 		return this.current;

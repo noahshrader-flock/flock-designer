@@ -203,3 +203,17 @@ describe('agentReadiness', () => {
 		expect(await agentReadiness(locate, async () => 'Logged in as someone')).toEqual({ state: 'unknown' });
 	});
 });
+
+describe('what a run leaves behind for a screen opened again', () => {
+	it("tags the run with its work and keeps its recent lines", async () => {
+		const runner = new AgentRunner(() => {}, {
+			adapter: { name: 'Echo', argvFor: () => ['node', '-e', 'console.log("one"); console.log("two")'] },
+			spawnProcess: spawn,
+		} as never);
+		const started = runner.start(tmpdir(), 'users', 't', { work: 'quick/users/q1' });
+		expect(started).toMatchObject({ state: 'running', work: 'quick/users/q1' });
+		for (let i = 0; i < 100 && runner.status().state === 'running'; i++) await new Promise((r) => setTimeout(r, 20));
+		expect(runner.status()).toMatchObject({ state: 'finished', work: 'quick/users/q1' });
+		expect(runner.recentLines()).toEqual({ work: 'quick/users/q1', lines: ['one', 'two'] });
+	});
+});

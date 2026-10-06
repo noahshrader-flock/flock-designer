@@ -41,7 +41,7 @@ import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anc
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
-import { isRecordName, mergeProjects, quickPagePath, unionLocal } from '../shared/projects';
+import { isRecordName, mergeProjects, quickKey, quickPagePath, unionLocal } from '../shared/projects';
 import { resolveInside } from './services/paths';
 import { QuickServer } from './services/quickServer';
 import {
@@ -352,6 +352,7 @@ export const registerIpc = ({
 	);
 
 	ipcMain.handle(CHANNELS.agentStatus, guard(() => agent.status()));
+	ipcMain.handle(CHANNELS.agentRecent, guard(() => agent.recentLines()));
 	ipcMain.handle(CHANNELS.agentReadiness, guard(() => agentReadiness()));
 
 	// One click: read the comments now, write the file from that read, then start the agent. Nothing
@@ -639,6 +640,7 @@ export const registerIpc = ({
 			return agent.start(quickDir(projectId), projectId, quickBuildTask({ skill, pageFile, sources, request: String(request) }), {
 				bare: true,
 				readOnly: quickReadable(sources),
+				work: quickKey(projectId, name),
 			});
 		}),
 	);

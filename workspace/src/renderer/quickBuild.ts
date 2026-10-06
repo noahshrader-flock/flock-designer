@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Project, ProjectIteration, RunLogLine, WorkspaceApi } from '../shared/contract';
+import { quickKey } from '../shared/projects';
 import { type BuildPhase, waitForAgent } from './localBuild';
 
 /**
@@ -30,11 +31,16 @@ export const runQuickBuild = async ({
 		onPhase({ kind: 'failed', message });
 		return null;
 	};
-	if (task) {
+	// Opened again while its agent is still building it: wait on that run, as if the screen had never been left.
+	const now = await api.agentStatus();
+	const stillBuilding = now.ok && now.value.state === 'running' && now.value.work === quickKey(project.id, iteration.name);
+	if (task || stillBuilding) {
 		onPhase({ kind: 'agent' });
-		const started = await api.buildQuick(project.id, iteration.name, task);
-		if (!started.ok) return fail(started.error);
-		if (started.value.state === 'unavailable') return fail(started.value.detail);
+		if (!stillBuilding) {
+			const started = await api.buildQuick(project.id, iteration.name, task as string);
+			if (!started.ok) return fail(started.error);
+			if (started.value.state === 'unavailable') return fail(started.value.detail);
+		}
 		const outcome = await waitForAgent(api, isLive, pollMs);
 		if (outcome.kind === 'stopped') return null;
 		if (outcome.kind === 'failed') return fail(outcome.message);
@@ -71,8 +77,12 @@ export const useQuickBuild = ({
 
 	useEffect(() => {
 		if (!enabled) return;
+		// What the agent said before this screen was opened, when the run is this prototype's: picks up where it was left.
+		void window.workspace.agentRecent().then((r) => {
+			if (r.ok && r.value.work === quickKey(project.id, iteration.name)) setLog((prev) => (prev.length ? prev : r.value.lines));
+		});
 		return window.workspace.onAgentLog((l: RunLogLine) => setLog((prev) => [...prev, l.text.replace(/\n$/, '')].slice(-200)));
-	}, [enabled]);
+	}, [enabled, project.id, iteration.name]);
 
 	useEffect(() => {
 		if (!enabled) return;

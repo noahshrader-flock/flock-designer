@@ -142,8 +142,9 @@ export type AgentReadiness = { state: 'ready' } | { state: 'missing' } | { state
 
 export type AgentStatus =
 	| { state: 'idle' }
-	| { state: 'running'; startedAt: string }
-	| { state: 'finished'; exitCode: number }
+	/** `work`: which piece of work this run is for, so a screen opened again can tell its own run from another. */
+	| { state: 'running'; startedAt: string; work?: string }
+	| { state: 'finished'; exitCode: number; work?: string }
 	| { state: 'unavailable'; detail: string };
 
 /**
@@ -252,6 +253,8 @@ export interface WorkspaceApi {
 	/** Hands the task to the locally installed agent. Never bundles credentials. */
 	startAgent(root: string, projectId: string, task: string): Promise<Result<AgentStatus>>;
 	agentStatus(): Promise<Result<AgentStatus>>;
+	/** The current or last run's recent lines, so a screen opened again can show where the agent has got to. */
+	agentRecent(): Promise<Result<{ work: string | null; lines: string[] }>>;
 	/**
 	 * Quick prototypes: one page, no product repository needed. Recording one makes the project too when
 	 * it is new; building runs the agent in the app's own folder; saving puts the page in the design
@@ -533,6 +536,7 @@ export const CHANNELS = {
 	commandStatus: 'workspace:commandStatus',
 	startAgent: 'workspace:startAgent',
 	agentStatus: 'workspace:agentStatus',
+	agentRecent: 'workspace:agentRecent',
 	agentReadiness: 'workspace:agentReadiness',
 	createQuick: 'workspace:createQuick',
 	buildQuick: 'workspace:buildQuick',
