@@ -173,7 +173,17 @@ resolves, read from that repository's lockfile. The two are unrelated facts, and
 the other belongs would make the receipt confidently wrong.
 
 The components under `src/renderer/ui/` are vendored source, not a dependency: shadcn/ui is copied in
-and owned here, so it is edited directly rather than themed around.
+and owned here, so it is edited directly rather than themed around. They are the official files,
+pulled with the shadcn CLI (`components.json` is configured for this), on React 19, which is what
+shadcn targets. Two additions are marked in place: `warning` and `success` variants on Alert and
+Badge, which the stock theme has no colour for.
+
+**When adding a component with `npx shadcn@latest add <name>`**, the CLI currently leaves the
+registry's placeholder `import { cn } from "cn"` unrewritten and installs an unrelated npm package
+called `cn`. After running it: `npm uninstall cn`, and change that import to `"@/lib/utils"`.
+
+Styling is classes, not inline styles. The only two inline `style` props are runtime values Tailwind
+cannot express: the sidebar width a person has dragged to, and the position of the comment box.
 
 ## If the window shows "Invalid hook call" while developing
 

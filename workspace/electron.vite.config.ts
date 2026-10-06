@@ -16,6 +16,11 @@ export default defineConfig({
 		root: resolve(__dirname, 'src/renderer'),
 		plugins: [react(), tailwindcss()],
 		resolve: { alias: { '@': resolve(__dirname, 'src/renderer') } },
-		build: { rollupOptions: { input: resolve(__dirname, 'src/renderer/index.html') } },
+		build: {
+			// React 19 ships readable source and leaves minifying to the build; React 18 shipped pre-minified,
+			// which is why this was never needed before and the bundle was fine without it.
+			minify: 'esbuild',
+			rollupOptions: { input: resolve(__dirname, 'src/renderer/index.html') },
+		},
 	},
 });

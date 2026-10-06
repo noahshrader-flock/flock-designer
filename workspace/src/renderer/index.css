@@ -108,13 +108,22 @@
 	}
 }
 
-@layer components {
-	/*
-	 * The parts of a comment card that step back once the agent has addressed it. The card sets
-	 * --fd-fade; this is applied to the content and never to the buttons, because fading the card
-	 * would dim the two decisions that are the only reason it is still on screen.
-	 */
-	.fd-faded {
-		opacity: var(--fd-fade, 1);
-	}
+/*
+ * The window's fixed layout: the top bar, and the toolbar under it on the review screen. Defined once
+ * here, because the screen under the bar has to start exactly where the bar ends.
+ */
+:root {
+	--nav-height: 3.5rem;
+	--toolbar-height: 2.75rem;
+}
+
+/*
+ * The window has no native title bar on macOS, so the top bar is what you drag, and the controls on it
+ * opt out. Electron's app-region has no Tailwind utility of its own.
+ */
+@utility app-drag {
+	-webkit-app-region: drag;
+}
+@utility app-no-drag {
+	-webkit-app-region: no-drag;
 }

@@ -3,7 +3,7 @@ import type { SignInState } from '../shared/contract';
 import { Projects } from './Projects';
 import { SignIn } from './SignIn';
 import { ErrorBoundary } from './ErrorBoundary';
-import { NAV_HEIGHT, TopNav } from './TopNav';
+import { TopNav } from './TopNav';
 
 /**
  * The window: a fixed top bar, and under it whatever the current section is.
@@ -36,7 +36,7 @@ export const App = () => {
 		<div className="bg-background h-screen overflow-hidden">
 			<TopNav user={signIn.state === 'signedIn' ? signIn.user : null} onSignOut={signOut} />
 			{/* The bar is fixed, so the rest starts below it and scrolls on its own. */}
-			<div className="h-full overflow-y-auto" style={{ paddingTop: NAV_HEIGHT }}>
+			<div className="h-full overflow-y-auto pt-(--nav-height)">
 				<div className="mx-auto max-w-[1400px] p-6">
 					<ErrorBoundary>
 						{signIn.state === 'signedIn' ? <Projects /> : <SignIn state={signIn} onChanged={refreshSignIn} />}

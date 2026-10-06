@@ -9,7 +9,6 @@ import { useHostedPreview } from './hostedPreview';
 import { type AddressPhase, runAddress } from './address';
 import { routeWentWrong } from './localBuild';
 import { PANEL_STEP, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
-import { NAV_HEIGHT } from './TopNav';
 import { useLocalBuild } from './useLocalBuild';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
@@ -35,7 +34,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
  */
 
 /** Height of the toolbar under the main bar. */
-export const TOOLBAR_HEIGHT = 44;
 
 /** How often an open iteration looks for new comments. */
 export const REFRESH_MS = 60_000;
@@ -602,16 +600,10 @@ export const Review = ({
 		: { top: 0, left: 0 };
 
 	return (
-		<div
-			className="bg-background fixed inset-x-0 bottom-0 z-[1000] flex flex-col"
-			// Under the main bar, so its account menu is never covered.
-			style={{ top: NAV_HEIGHT }}
-		>
+		// Under the main bar, so its account menu is never covered.
+		<div className="bg-background fixed inset-x-0 top-(--nav-height) bottom-0 z-[1000] flex flex-col">
 			{/* The toolbar: where you are, and the way back. Always visible, always fixed. */}
-			<div
-				className="bg-card flex shrink-0 items-center gap-4 border-b px-4"
-				style={{ height: TOOLBAR_HEIGHT }}
-			>
+			<div className="bg-card flex h-(--toolbar-height) shrink-0 items-center gap-4 border-b px-4">
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<Button size="icon" variant="ghost" aria-label="Back to projects" className="-ml-2" onClick={onBack}>
@@ -771,6 +763,7 @@ export const Review = ({
 								resizing ? 'bg-primary' : 'bg-border'
 							}`}
 						/>
+						{/* Inline on purpose: the width is wherever the person dragged the divider, a runtime value. */}
 						<div className="bg-card flex min-h-0 shrink-0 flex-col" style={{ width: panelWidth }}>
 							<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
 								<h3 className="text-sm font-semibold">{total > 0 ? `Comments (${total})` : 'Comments'}</h3>
@@ -810,8 +803,9 @@ export const Review = ({
 												: 'The agent finished without changing anything. What it says below is why — often the change is outside this iteration, or the comment needs a decision from you.'}
 											{addressLog.length > 0 && (
 												<pre
-													className="m-0 mt-2 overflow-auto text-[11px] wrap-anywhere whitespace-pre-wrap"
-													style={{ maxHeight: address.changed ? 200 : 320 }}
+													className={`m-0 mt-2 overflow-auto text-[11px] wrap-anywhere whitespace-pre-wrap ${
+														address.changed ? 'max-h-[200px]' : 'max-h-[320px]'
+													}`}
 												>
 													{/* When nothing changed, what it said is the whole answer, so less of it is cut. */}
 													{addressLog.slice(address.changed ? -25 : -60).join('\n')}
@@ -853,17 +847,17 @@ export const Review = ({
 												setSelected(comment.id);
 												if (comment.anchor) void window.workspace.pageFocusMarker(comment.id);
 											}}
-											className={`rounded-lg border p-3 ${selected === comment.id ? 'border-primary bg-accent border-2' : ''} ${
+											// An addressed comment fades its content and not the card: the two buttons that are
+											// still live stay at full strength, since they are the point of it being here.
+											data-addressed={addressed}
+											className={`group rounded-lg border p-3 ${selected === comment.id ? 'border-primary bg-accent border-2' : ''} ${
 												comment.anchor ? 'cursor-pointer' : ''
 											} ${comment.resolved ? 'opacity-65' : ''}`}
-											// What is left to do is faded, not the whole card: the two buttons that are
-											// still live stay at full strength, since they are the point of it being here.
-											style={{ ['--fd-fade' as string]: addressed ? 0.6 : 1 }}
 										>
 											<div className="flex flex-col gap-1.5">
 												<div className="flex flex-row items-center gap-2">
 													{n > 0 && <Badge variant="secondary">{n}</Badge>}
-													<span className="fd-faded min-w-0 truncate text-sm font-medium">{comment.author}</span>
+													<span className="group-data-[addressed=true]:opacity-60 min-w-0 truncate text-sm font-medium">{comment.author}</span>
 													{comment.resolved && <Badge variant="success">Resolved</Badge>}
 												</div>
 												{addressed && (
@@ -921,19 +915,19 @@ export const Review = ({
 														</Button>
 													</div>
 												)}
-												<p className="fd-faded text-sm">{comment.body}</p>
+												<p className="group-data-[addressed=true]:opacity-60 text-sm">{comment.body}</p>
 												{comment.picture && (
 													<img
-														className="fd-faded max-w-[240px] rounded border"
+														className="group-data-[addressed=true]:opacity-60 max-w-[240px] rounded border"
 														src={comment.picture}
 														alt={`The spot comment ${n || ''} was made on`}
 													/>
 												)}
 												{comment.anchor?.state && (
-													<span className="fd-faded text-muted-foreground text-xs">State: {comment.anchor.state}</span>
+													<span className="group-data-[addressed=true]:opacity-60 text-muted-foreground text-xs">State: {comment.anchor.state}</span>
 												)}
 												{comment.anchor && state === 'elsewhere' && (
-													<span className="fd-faded text-muted-foreground text-xs">On {comment.anchor.route}</span>
+													<span className="group-data-[addressed=true]:opacity-60 text-muted-foreground text-xs">On {comment.anchor.route}</span>
 												)}
 												{state && NOTE[state] && <span className="text-warning text-xs">{NOTE[state]}</span>}
 											</div>
@@ -961,6 +955,7 @@ export const Review = ({
 							if (e.key === 'Escape') cancelCompose();
 						}}
 						className="bg-popover fixed z-[1101] w-[300px] max-w-[calc(100vw-16px)] rounded-lg border p-4 shadow-lg"
+						// Inline on purpose: measured from the pin, which lives in the native preview.
 						style={{ top: boxPosition.top, left: boxPosition.left }}
 					>
 						<div className="flex flex-col gap-3">

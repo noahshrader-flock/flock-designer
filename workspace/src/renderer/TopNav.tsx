@@ -3,13 +3,6 @@ import { PublishLine, usePublishStatus } from './PublishStatus';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 
-/** Height of the bar, which the rest of the window is pushed down by. */
-export const NAV_HEIGHT = 56;
-
-/** The window has no native title bar on macOS, so the bar is what you drag. Controls opt out. */
-const drag = { WebkitAppRegion: 'drag' } as React.CSSProperties;
-const noDrag = { WebkitAppRegion: 'no-drag' } as React.CSSProperties;
-
 const onMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgent);
 
 /**
@@ -28,8 +21,7 @@ export const TopNav = ({ user, onSignOut }: { user: GitHubUser | null; onSignOut
 
 	return (
 		<header
-			style={{ ...drag, height: NAV_HEIGHT }}
-			className={`bg-card fixed inset-x-0 top-0 z-[1200] flex items-center border-b ${
+			className={`app-drag bg-card fixed inset-x-0 top-0 z-[1200] flex h-(--nav-height) items-center border-b ${
 				// 108px leaves a clear gap after the macOS window buttons (they end near 76px);
 				// elsewhere the overlay controls sit on the right.
 				onMac ? 'pr-6 pl-[108px]' : 'pr-[150px] pl-6'
@@ -38,7 +30,7 @@ export const TopNav = ({ user, onSignOut }: { user: GitHubUser | null; onSignOut
 			<span className="mr-6 text-base font-bold whitespace-nowrap">Flock Designer</span>
 
 			{user && (
-				<nav style={noDrag} className="self-stretch">
+				<nav className="app-no-drag self-stretch">
 					<span className="border-foreground flex h-full items-center border-b-2 px-1 text-sm font-medium">Projects</span>
 				</nav>
 			)}
@@ -46,15 +38,14 @@ export const TopNav = ({ user, onSignOut }: { user: GitHubUser | null; onSignOut
 			<div className="grow" />
 
 			{/* Where publishing is, on every screen: a problem must be visible wherever the person is working. */}
-			<div style={noDrag} className="mr-4">
+			<div className="app-no-drag mr-4">
 				<PublishLine status={publishStatus} />
 			</div>
 
 			{user && (
 				<DropdownMenu onOpenChange={(open) => void window.workspace.pageHold('menu', open)}>
 					<DropdownMenuTrigger
-						style={noDrag}
-						className="hover:bg-accent flex cursor-pointer items-center gap-3 rounded-md border-0 bg-transparent px-2 py-1 font-[inherit] outline-none"
+						className="app-no-drag hover:bg-accent flex cursor-pointer items-center gap-3 rounded-md border-0 bg-transparent px-2 py-1 font-[inherit] outline-none"
 					>
 						<Avatar>
 							<AvatarImage src={user.avatarUrl ?? undefined} alt={user.name ?? user.login} />
