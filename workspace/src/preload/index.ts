@@ -91,6 +91,8 @@ const api: WorkspaceApi = {
 	pageFocusMarker: (id) => invoke<null>(CHANNELS.pageFocusMarker, id),
 	onPageRoute: (listener) => subscribe<string>(CHANNELS.pageRoute, listener),
 	onPinEvent: (listener) => subscribe<PinEvent>(CHANNELS.pinEvent, listener),
+	resolveComment: (commentId, resolved) => invoke<ReviewComment>(CHANNELS.resolveComment, commentId, resolved),
+	iterationCommit: (root, projectId, name) => invoke<string | null>(CHANNELS.iterationCommit, root, projectId, name),
 	moveComment: (commentId, anchor) => invoke<ReviewComment>(CHANNELS.moveComment, commentId, anchor),
 };
 

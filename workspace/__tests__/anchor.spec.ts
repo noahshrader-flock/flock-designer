@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assertPreviewUrl, composeBody, parseAnchor, sanitizeAnchor, stripAnchor } from '../src/shared/anchor';
+import { RESOLVED_MARK, assertPreviewUrl, composeBody, isResolved, parseAnchor, sanitizeAnchor, stripAnchor, withResolved } from '../src/shared/anchor';
 import type { CommentAnchor } from '../src/shared/contract';
 
 const anchor: CommentAnchor = {
@@ -68,3 +68,20 @@ describe('assertPreviewUrl', () => {
 		(u) => expect(() => assertPreviewUrl(u)).toThrow(),
 	);
 });
+
+describe('resolved marker', () => {
+  it('sets and clears the marker without touching the comment or its anchor', () => {
+    const body = composeBody('Make this primary', { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' });
+    const done = withResolved(body, true);
+    expect(isResolved(done)).toBe(true);
+    expect(done.startsWith(body)).toBe(true);
+    expect(withResolved(done, false)).toBe(body);
+    expect(parseAnchor(done)).toMatchObject({ route: '/a' });
+  });
+
+  it('is idempotent: resolving twice leaves one marker', () => {
+    const once = withResolved('x', true);
+    expect(withResolved(once, true).split(RESOLVED_MARK).length).toBe(2);
+  });
+});
+

@@ -186,9 +186,12 @@ export const Review = ({
 	// preview for the comment box must first make sure the picture includes them.
 	const drawMarkers = useCallback(async () => {
 		// Only your own pins can be dragged; GitHub would refuse anyone else's edit anyway.
-		const items = anchored.map((c, i) => ({ id: c.id, number: i + 1, anchor: c.anchor as CommentAnchor, movable: c.author === me }));
+		// Resolved comments have no pin, but keep their number, so "comment 3" never changes meaning.
+		const items = anchored.flatMap((c, i) =>
+			c.resolved ? [] : [{ id: c.id, number: i + 1, anchor: c.anchor as CommentAnchor, movable: c.author === me }],
+		);
 		// The pin being placed shows at once, before it is saved (id -1, amber).
-		if (pending) items.push({ id: -1, number: items.length + 1, anchor: pending, movable: true });
+		if (pending) items.push({ id: -1, number: anchored.length + 1, anchor: pending, movable: true });
 		const r = await window.workspace.pageShowMarkers(items);
 		if (r.ok) setPlaced(new Map(r.value.map((m: MarkerResult) => [m.id, m.state])));
 	}, [anchored, pending, me]);
@@ -241,7 +244,10 @@ export const Review = ({
 			setMode('browse');
 			setCommentMode(false);
 		} else if (r.value) {
-			setPending({ ...r.value.anchor, commit: iteration.commit ?? '' });
+			// The commit the branch is at *now*, so the comment says which version it was made against.
+			// The recorded one can be stale; it is only the fallback (and all a reviewer has).
+			const live = checkout ? await window.workspace.iterationCommit(checkout.root, project.id, iteration.name) : null;
+			setPending({ ...r.value.anchor, commit: (live?.ok && live.value) || iteration.commit || '' });
 			setPendingAt(r.value.at);
 			setMode('composing');
 		} else {
@@ -249,7 +255,7 @@ export const Review = ({
 			setMode('browse');
 			setCommentMode(false);
 		}
-	}, [iteration.commit]);
+	}, [iteration.commit, iteration.name, project.id, checkout]);
 
 	// Comment mode stays on: as soon as one comment is done, the next click is waited for.
 	useEffect(() => {
@@ -390,7 +396,16 @@ export const Review = ({
 		}
 	};
 
-	const total = comments?.length ?? 0;
+	// What is still to be dealt with. Resolved comments stay listed, but are not the count.
+	const total = (comments ?? []).filter((c) => !c.resolved).length;
+
+	const setResolved = async (comment: ReviewComment, resolved: boolean) => {
+		setError(null);
+		const r = await window.workspace.resolveComment(comment.id, resolved);
+		if (!r.ok) return setError(r.error);
+		posted.current.set(r.value.id, r.value);
+		setComments((cs) => (cs ?? []).map((c) => (c.id === r.value.id ? r.value : c)));
+	};
 	// Where the comment box goes: beside the pin, in window coordinates.
 	const slotBox = slot.current?.getBoundingClientRect();
 	const boxPosition = slotBox
@@ -617,6 +632,7 @@ export const Review = ({
 												borderRadius: 1,
 												p: 1.5,
 												cursor: comment.anchor ? 'pointer' : 'default',
+												opacity: comment.resolved ? 0.65 : 1,
 											}}
 										>
 											<FSStack spacing={0.5}>
@@ -624,6 +640,17 @@ export const Review = ({
 													{n > 0 && <FSChip variant="status" size="small" label={String(n)} />}
 													<FSTypography variant="subtitle2">{comment.author}</FSTypography>
 													{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
+													<FSBox sx={{ flexGrow: 1 }} />
+													<FSButton
+														size="sm"
+														variant="ghost"
+														onClick={(e: React.MouseEvent) => {
+															e.stopPropagation();
+															void setResolved(comment, !comment.resolved);
+														}}
+													>
+														{comment.resolved ? 'Reopen' : 'Resolve'}
+													</FSButton>
 												</FSStack>
 												<FSTypography variant="body2">{comment.body}</FSTypography>
 												{comment.anchor && state === 'elsewhere' && (

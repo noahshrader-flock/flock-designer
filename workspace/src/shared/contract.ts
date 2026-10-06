@@ -248,6 +248,10 @@ export interface WorkspaceApi {
 	onPinEvent(listener: (event: PinEvent) => void): () => void;
 	/** Saves where a comment's pin now is. Only the comment's author can. */
 	moveComment(commentId: number, anchor: CommentAnchor): Promise<Result<ReviewComment>>;
+	/** Marks a comment resolved, or open again. GitHub decides who is allowed. */
+	resolveComment(commentId: number, resolved: boolean): Promise<Result<ReviewComment>>;
+	/** The commit an iteration's branch is at on this machine, to say what a comment was made against. Null if unknown. */
+	iterationCommit(root: string, projectId: string, name: string): Promise<Result<string | null>>;
 }
 
 /** Who is signed in. */
@@ -434,4 +438,6 @@ export const CHANNELS = {
 	pageRoute: 'workspace:event:pageRoute',
 	pinEvent: 'workspace:event:pinEvent',
 	moveComment: 'workspace:moveComment',
+	resolveComment: 'workspace:resolveComment',
+	iterationCommit: 'workspace:iterationCommit',
 } as const;

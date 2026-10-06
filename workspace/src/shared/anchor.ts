@@ -46,6 +46,17 @@ export const composeBody = (text: string, anchor: CommentAnchor | null): string 
 	return `${text}\n\n${where}\n<!-- fd-anchor: ${json} -->`;
 };
 
+/** Marks the body of a resolved comment. Simple, and visible to someone reading on GitHub. */
+export const RESOLVED_MARK = '<!-- resolved -->';
+
+export const isResolved = (body: string): boolean => body.includes(RESOLVED_MARK);
+
+/** The body with the resolved marker set or cleared, and nothing else touched. */
+export const withResolved = (body: string, resolved: boolean): string => {
+	const bare = body.replace(RESOLVED_MARK, '').trimEnd();
+	return resolved ? `${bare}\n${RESOLVED_MARK}` : bare;
+};
+
 export const parseAnchor = (body: string): CommentAnchor | null => {
 	const m = MARK.exec(body);
 	if (!m?.[1]) return null;

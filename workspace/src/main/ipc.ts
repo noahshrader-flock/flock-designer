@@ -22,7 +22,7 @@ import { type ShareRunner, previewIsUp, pullRequestText } from './services/share
 import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
 import { readDescriptor } from './services/descriptor';
-import { isRepository, readCheckout } from './services/git';
+import { branchCommit, isRepository, readCheckout } from './services/git';
 import { assertUsableProjectId, continueIteration, createIteration, readIterations, recordPreview } from './services/iterations';
 import { findProductCheckouts, recordsRootFor } from './services/discovery';
 import { readBranchProjects } from './services/branchProjects';
@@ -283,6 +283,8 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 			if (here.branch === iteration.branch && !here.clean) {
 				throw new Error(`There are uncommitted changes on ${iteration.branch}, and only committed work is shared. Commit them, then share again.`);
 			}
+			// The commit that goes up now, which is what reviewers will be looking at.
+			const shared = await branchCommit(canonical, iteration.branch).catch(() => undefined);
 			return share.start({
 				request: {
 					share: how,
@@ -294,7 +296,7 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 				},
 				tools: realShareTools(canonical),
 				record: async (url) => {
-					recordPreview(recordsRoot, projectId, name, url);
+					recordPreview(recordsRoot, projectId, name, url, shared);
 					return publish(projectId, recordsRoot);
 				},
 			});
@@ -418,6 +420,24 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 			const clean = sanitizeAnchor(anchor);
 			if (!clean || !Number.isInteger(commentId)) throw new Error('That is not a place a pin can be moved to.');
 			return designRepo.moveComment(commentId, clean);
+		}),
+	);
+	ipcMain.handle(
+		CHANNELS.resolveComment,
+		guard((commentId: number, resolved: boolean): Promise<ReviewComment> => {
+			if (!Number.isInteger(commentId)) throw new Error('That is not a comment.');
+			return designRepo.setResolved(commentId, resolved === true);
+		}),
+	);
+	// What the branch is at right now: read when a comment is placed, so the comment says
+	// which version of the code it was made against rather than which one was last recorded.
+	ipcMain.handle(
+		CHANNELS.iterationCommit,
+		guard(async (root: string, projectId: string, name: string): Promise<string | null> => {
+			assertUsableProjectId(projectId);
+			const canonical = opened.require(root);
+			const found = readIterations(recordsFor(canonical), projectId).find((i) => i.name === name);
+			return found ? branchCommit(canonical, found.branch).catch(() => null) : null;
 		}),
 	);
 	ipcMain.handle(CHANNELS.pageFocusMarker, guard(async (id: number) => nothing(await page.focusMarker(Number(id)))));

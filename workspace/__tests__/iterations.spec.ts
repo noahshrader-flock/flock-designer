@@ -191,6 +191,18 @@ describe('recordPreview', () => {
 		expect(readIterations(records, 'demo')[0]?.previewUrl).toBe('https://dev-coke-pr-5.example.test');
 	});
 
+	it('records the commit that was shared, so a comment can say what it was made against', async () => {
+		await createIteration(root, records, descriptor, 'demo', 'first', 'develop');
+		recordPreview(records, 'demo', 'i1', 'https://dev-coke-pr-5.example.test', 'abc123');
+		expect(readIterations(records, 'demo')[0]).toMatchObject({ previewUrl: 'https://dev-coke-pr-5.example.test', commit: 'abc123' });
+	});
+
+	it('leaves the commit alone when none is given', async () => {
+		await createIteration(root, records, descriptor, 'demo', 'first', 'develop');
+		recordPreview(records, 'demo', 'i1', 'https://x.example.test');
+		expect(readIterations(records, 'demo')[0]?.commit).toBeNull();
+	});
+
 	it('refuses an iteration that is not recorded rather than inventing one', () => {
 		expect(() => recordPreview(records, 'demo', 'i9', 'https://x.example.test')).toThrow(IterationProblem);
 	});

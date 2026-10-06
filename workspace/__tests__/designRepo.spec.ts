@@ -374,3 +374,48 @@ describe('moveComment', () => {
     expect((writes[0]?.body as { body: string }).body).toContain('<!-- resolved -->');
   });
 });
+
+describe('setResolved', () => {
+  const COMMENT = '/repos/acme/design/issues/comments/70';
+  const anchor = { route: '/users', selector: 'main', nearbyText: 'x', viewport: { width: 1, height: 1 }, commit: 'abc123' };
+
+  it('marks an open comment resolved, and changes nothing else about it', async () => {
+    const { composeBody, parseAnchor, stripAnchor } = await import('../src/shared/anchor');
+    const { session, writes } = fakeSession({
+      [COMMENT]: { id: 70, user: { login: 'pm' }, created_at: 't', body: composeBody('Make this primary', anchor) },
+    });
+    const result = await new DesignRepo(session, REF).setResolved(70, true);
+    const sent = (writes[0]?.body as { body: string }).body;
+    expect(writes[0]).toMatchObject({ path: COMMENT, method: 'PATCH' });
+    expect(sent).toContain('<!-- resolved -->');
+    expect(stripAnchor(sent.replace('<!-- resolved -->', '').trim())).toBe('Make this primary');
+    expect(parseAnchor(sent)).toMatchObject({ selector: 'main', commit: 'abc123' });
+    expect(result.resolved).toBe(false); // the stub returns the old body; the real API returns the new one
+  });
+
+  it('reads the new state back from what GitHub returns', async () => {
+    const { session } = fakeSession({ [COMMENT]: { id: 70, user: { login: 'pm' }, created_at: 't', body: 'Looks off <!-- resolved -->' } });
+    expect((await new DesignRepo(session, REF).setResolved(70, true)).resolved).toBe(true);
+  });
+
+  it('reopens a resolved comment by removing the marker only', async () => {
+    const { session, writes } = fakeSession({ [COMMENT]: { id: 70, user: { login: 'pm' }, created_at: 't', body: 'Looks off\n<!-- resolved -->' } });
+    await new DesignRepo(session, REF).setResolved(70, false);
+    expect((writes[0]?.body as { body: string }).body).toBe('Looks off');
+  });
+
+  it('writes nothing when the comment is already in the state asked for', async () => {
+    const { session, writes } = fakeSession({ [COMMENT]: { id: 70, user: { login: 'pm' }, created_at: 't', body: 'Looks off' } });
+    await new DesignRepo(session, REF).setResolved(70, false);
+    expect(writes).toEqual([]);
+  });
+
+  it("passes GitHub's refusal on, so someone who may not edit a comment is told so", async () => {
+    const api = vi.fn(async (_p: string, init: { method?: string } = {}) => {
+      if (init.method === 'PATCH') throw new GitHubError('Resource not accessible by integration', 403);
+      return { id: 70, user: { login: 'pm' }, created_at: 't', body: 'x' };
+    });
+    await expect(new DesignRepo({ api } as unknown as GitHubSession, REF).setResolved(70, true)).rejects.toThrow(/not accessible/);
+  });
+});
+

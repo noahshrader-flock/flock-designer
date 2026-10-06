@@ -2,7 +2,7 @@ import type { CommentAnchor, Iteration, Person, Project, ProjectIteration, Revie
 import { GitHubError } from './github';
 import { asPeople, mergePeople } from '../../shared/people';
 import { newestFirst } from '../../shared/projects';
-import { composeBody, parseAnchor, stripAnchor } from '../../shared/anchor';
+import { RESOLVED_MARK, composeBody, isResolved, parseAnchor, stripAnchor, withResolved } from '../../shared/anchor';
 import type { GitHubSession } from './githubSession';
 
 /**
@@ -19,8 +19,6 @@ import type { GitHubSession } from './githubSession';
  */
 
 const ITERATION_LABEL = 'flock-designer:review';
-/** Marks the body of a resolved comment. Simple, and visible to someone reading on GitHub. */
-const RESOLVED_MARK = '<!-- resolved -->';
 
 export interface DesignRepoRef {
   owner: string;
@@ -275,6 +273,21 @@ export class DesignRepo {
     return created.number;
   }
 
+  /** One GitHub comment as the app knows it. The one place a comment's body is taken apart. */
+  private toComment(raw: Record<string, unknown>): ReviewComment {
+    const body = String(raw.body ?? '');
+    const user = asRecord(raw.user);
+    return {
+      id: Number(raw.id),
+      author: String(user.login ?? 'unknown'),
+      authorAvatarUrl: typeof user.avatar_url === 'string' ? user.avatar_url : null,
+      body: stripAnchor(body.replace(RESOLVED_MARK, '').trim()),
+      createdAt: String(raw.created_at ?? ''),
+      resolved: isResolved(body),
+      anchor: parseAnchor(body),
+    };
+  }
+
   async readComments(projectId: string, branch: string): Promise<ReviewComment[]> {
     const issue = (await this.listReviewIssues()).get(branch);
     if (!issue) return [];
@@ -285,19 +298,7 @@ export class DesignRepo {
       .flat()
       .map(asRecord)
       .sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')))
-      .map((c) => {
-        const body = String(c.body ?? '');
-        const user = asRecord(c.user);
-        return {
-          id: Number(c.id),
-          author: String(user.login ?? 'unknown'),
-          authorAvatarUrl: typeof user.avatar_url === 'string' ? user.avatar_url : null,
-          body: stripAnchor(body.replace(RESOLVED_MARK, '').trim()),
-          createdAt: String(c.created_at ?? ''),
-          resolved: body.includes(RESOLVED_MARK),
-          anchor: parseAnchor(body),
-        };
-      });
+      .map((c) => this.toComment(c));
   }
 
   /**
@@ -310,23 +311,27 @@ export class DesignRepo {
     const current = asRecord(await this.session.api(path));
     const body = String(current.body ?? '');
     const old = parseAnchor(body);
-    const resolved = body.includes(RESOLVED_MARK);
     const text = stripAnchor(body.replace(RESOLVED_MARK, '').trim());
     // The commit is when the comment was made, not when it was moved.
     const next = composeBody(text, { ...anchor, commit: old?.commit ?? anchor.commit });
-    const updated = asRecord(
-      await this.session.api(path, { method: 'PATCH', body: { body: resolved ? `${next}\n${RESOLVED_MARK}` : next } }),
+    return this.toComment(
+      asRecord(await this.session.api(path, { method: 'PATCH', body: { body: withResolved(next, isResolved(body)) } })),
     );
-    const user = asRecord(updated.user);
-    return {
-      id: Number(updated.id),
-      author: String(user.login ?? 'unknown'),
-      authorAvatarUrl: typeof user.avatar_url === 'string' ? user.avatar_url : null,
-      body: stripAnchor(String(updated.body ?? '').replace(RESOLVED_MARK, '').trim()),
-      createdAt: String(updated.created_at ?? ''),
-      resolved,
-      anchor: parseAnchor(String(updated.body ?? '')),
-    };
+  }
+
+  /**
+   * Marks a comment resolved, or open again. GitHub decides who may: the comment's author,
+   * or anyone who can write to the repository, so nothing is enforced here.
+   */
+  async setResolved(commentId: number, resolved: boolean): Promise<ReviewComment> {
+    const path = `${this.base}/issues/comments/${commentId}`;
+    const current = asRecord(await this.session.api(path));
+    if (isResolved(String(current.body ?? '')) === resolved) return this.toComment(current);
+    const updated = await this.session.api(path, {
+      method: 'PATCH',
+      body: { body: withResolved(String(current.body ?? ''), resolved) },
+    });
+    return this.toComment(asRecord(updated));
   }
 
   async postComment(
@@ -342,15 +347,7 @@ export class DesignRepo {
         body: { body: composeBody(body, anchor) },
       }),
     );
-    const user = asRecord(created.user);
-    return {
-      id: Number(created.id),
-      author: String(user.login ?? 'unknown'),
-      authorAvatarUrl: typeof user.avatar_url === 'string' ? user.avatar_url : null,
-      body: stripAnchor(String(created.body ?? '')),
-      createdAt: String(created.created_at ?? ''),
-      resolved: false,
-      anchor,
-    };
+    // Read back from what GitHub stored, so what the window shows is what was saved.
+    return this.toComment(created);
   }
 }
