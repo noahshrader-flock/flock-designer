@@ -23,6 +23,7 @@ import { People } from './People';
 import { ShareControl } from './ShareControl';
 import { useHostedPreview } from './hostedPreview';
 import { type AddressPhase, runAddress } from './address';
+import { routeWentWrong } from './localBuild';
 import { PANEL_STEP, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
 import { NAV_HEIGHT } from './TopNav';
 import { useLocalBuild } from './useLocalBuild';
@@ -214,6 +215,18 @@ export const Review = ({
 	}, [local.phase, open]);
 
 	useEffect(() => window.workspace.onPageRoute(setRoute), []);
+
+	/**
+	 * Where the preview first settled after being sent to this iteration's recorded route. That first
+	 * moment is the only one worth checking: afterwards the designer navigates wherever they like, and
+	 * that is not a failure. Cleared whenever the preview is opened again.
+	 */
+	const [landedOn, setLandedOn] = useState<string | null>(null);
+	useEffect(() => {
+		if (!opened) return setLandedOn(null);
+		if (route !== null) setLandedOn((seen) => seen ?? route);
+	}, [opened, route]);
+	const wrongRoute = useMemo(() => routeWentWrong(iteration.route, landedOn), [iteration.route, landedOn]);
 
 	// Keep the native view on its slot, through window resizes and layout changes.
 	useEffect(() => {
@@ -711,6 +724,15 @@ export const Review = ({
 							<FSStack spacing={2} sx={{ p: 2, flex: 1, minHeight: 0, overflowY: 'auto' }}>
 								<FSTypography variant="subtitle2">{total > 0 ? `Comments (${total})` : 'Comments'}</FSTypography>
 								{error && opened && !composing && <FSAlert severity="error">{error}</FSAlert>}
+								{/* The recorded route did not load. Said once, plainly: the page on screen is not the
+								    work, so a comment made here would be about something this iteration never touched. */}
+								{wrongRoute && !composing && (
+									<FSAlert severity="warning">
+										This iteration records its work at <code>{wrongRoute.asked}</code>, but the preview opened{' '}
+										<code>{wrongRoute.landedOn}</code>. The page you are looking at may not be the work. The route may have
+										moved, or something redirected it.
+									</FSAlert>
+								)}
 								{/* One click: the comments are read now, written to the file, and the agent is started on them. */}
 								{checkout && total > 0 && (
 									<FSButton

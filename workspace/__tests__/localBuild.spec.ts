@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
-import { type BuildApi, type BuildPhase, previewAddress, previewCommandFor, runLocalBuild } from '../src/renderer/localBuild';
+import { type BuildApi, type BuildPhase, previewAddress, previewCommandFor, routeWentWrong, runLocalBuild } from '../src/renderer/localBuild';
 
 const iteration = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
 	name: 'i1', branch: 'fd/users/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], createdAt: null, route: null, ...over,
@@ -199,5 +199,34 @@ describe('previewAddress', () => {
 
 	it('keeps a preview address that is not a URL rather than failing to open anything', () => {
 		expect(previewAddress('not a url', '/roles/compare')).toBe('not a url');
+	});
+});
+
+describe('routeWentWrong', () => {
+	it('says nothing when the preview is where the record sent it', () => {
+		expect(routeWentWrong('/roles/compare', '/roles/compare')).toBeNull();
+		// A trailing slash is the router's business, not a failed landing.
+		expect(routeWentWrong('/roles/compare', '/roles/compare/')).toBeNull();
+		// The query is the prototype's state switch, which the designer changes freely.
+		expect(routeWentWrong('/roles/compare?state=error', '/roles/compare')).toBeNull();
+		expect(routeWentWrong('roles/compare', '/roles/compare')).toBeNull();
+	});
+
+	it('says nothing when there is nothing to check', () => {
+		expect(routeWentWrong(null, '/anywhere')).toBeNull();
+		expect(routeWentWrong(undefined, '/anywhere')).toBeNull();
+		expect(routeWentWrong('', '/anywhere')).toBeNull();
+		// The page has not said where it is yet.
+		expect(routeWentWrong('/roles/compare', null)).toBeNull();
+	});
+
+	it('catches the ways a recorded route stops working, which it cannot predict', () => {
+		// A permission guard sent it elsewhere -- the quietest failure, and a real one: the route is
+		// behind an accounts-view check, so a change to the mock user redirects it.
+		expect(routeWentWrong('/roles/compare', '/organizations')).toEqual({ asked: '/roles/compare', landedOn: '/organizations' });
+		// The view moved and the record still points at where it was.
+		expect(routeWentWrong('/roles/compare', '/roles/comparison')).not.toBeNull();
+		// A parameter was left unfilled, so the path never matched.
+		expect(routeWentWrong('/organization/:id/roles', '/')).not.toBeNull();
 	});
 });

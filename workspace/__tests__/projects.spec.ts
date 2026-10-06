@@ -201,6 +201,17 @@ describe('asRoute', () => {
 		// And nothing absurdly long.
 		expect(asRoute(`/${'a'.repeat(400)}`)).toBeNull();
 	});
+
+	it('refuses a route pattern, which is what a router matches and not an address', () => {
+		// The likeliest mistake: a product's route table says `/organization/:id/roles/compare`, and
+		// that is copied into the record. As an address the `:id` is literal and matches nothing, so
+		// the preview would open an error page looking like the work itself had failed.
+		expect(asRoute('/organization/:id/roles/compare')).toBeNull();
+		expect(asRoute('/org/{id}/roles')).toBeNull();
+		expect(asRoute('/org/*/roles')).toBeNull();
+		// A colon that is not a parameter is fine: it appears in real paths.
+		expect(asRoute('/notes/10:30')).toBe('/notes/10:30');
+	});
 });
 
 describe('slugify', () => {

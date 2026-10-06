@@ -25,9 +25,14 @@ In the design repository, `projects/<project-id>/iterations.json`, on this itera
 - **A path within the app, nothing more.** `/roles/compare`, or `/roles/compare?state=error` to land
   on a particular state. Never a full address, a host or a scheme: the app joins it onto whatever
   address the preview is serving on, and anything that would leave that address is ignored.
-- **The plainest form of the route.** Where a route has both a plain and a nested form
-  (`/roles/compare` and `/organization/:id/roles/compare`), record the one with no parameters in it.
-  A path with an unfilled `:id` in it does not load.
+- **The plainest form of the route, never a route pattern.** Where a route has both a plain and a
+  nested form (`/roles/compare` and `/organization/:id/roles/compare`), record the one with no
+  parameters in it. A pattern is what a router matches against; as an address, `:id` is taken
+  literally and matches nothing. Flock Designer refuses a route containing `:id`, `{id}` or `*` and
+  opens where it would have anyway, so a pattern here means the landing route simply does nothing.
+- **Check it loads.** Open the route in the running app before recording it. If it redirects --
+  a permission the mock user does not have, a guard, a parameter it needs -- it is not a landing
+  place; record the nearest page that does load, or leave it out.
 - **Where the work begins.** For a flow over several pages, record the first page of the flow, not
   the middle of it.
 

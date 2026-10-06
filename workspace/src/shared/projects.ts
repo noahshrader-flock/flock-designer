@@ -51,6 +51,11 @@ export const asRoute = (v: unknown): string | null => {
 	const path = raw.startsWith('/') ? raw : `/${raw}`;
 	// `..` cannot escape the origin, but a route that climbs is a mistake in the record, not a landing place.
 	if (path.split(/[/?#]/).includes('..')) return null;
+	// A route pattern is not a route. `/organization/:id/roles` and `/org/{id}/roles` are what a router
+	// matches against; as an address they are taken literally and match nothing, so the preview would
+	// open on an error page that looks like the work failed. Refusing it here means the iteration opens
+	// where it always did instead, and the skill says to record the form with no parameters in it.
+	if (/\/:[^/]|[{}*]/.test(path)) return null;
 	return path;
 };
 
