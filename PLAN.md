@@ -176,15 +176,15 @@ called before 2026-10-05, so history still resolves.
 | 3.2.5 | [Show who is on each project](#325--show-who-is-on-each-project) | ◐ Built — awaiting your check | Every project lists everyone who has committed to it, on any iteration. **You:** restart the app and look at the project list | added 2026-10-05 |
 | 3.3 | [Open a preview and comment on an element](#33--open-a-preview-and-comment-on-an-element-was-c2) | ◐ Built — awaiting your check | Click an element in a preview, comment, and see it marked on reopening. Verified in real Electron against a real click. **You:** try it on a prototype and say whether it feels right. Needs a security look | C2 |
 | 3.3.5 | [Prove it locally, start to finish](#335--prove-it-locally-start-to-finish) | ◐ Built — awaiting your walkthrough | **New prototype** in Projects creates the branch, runs the agent, runs the preview and opens it with pins. A real Coke prototype has been run through the app's own services and pinned. **You:** do it once end to end | added 2026-10-05 |
-| 3.4 | [Share for review](#34--share-for-review-was-c3) | ⏸ Deferred until the local proof works | A hosted preview link, which feeds the same app. Needs Coke engineering; an easy conversation once 3.3.5 and 3.5 show it works | C3 |
-| 3.5 | [Close the loop](#35--close-the-loop-was-c4) | ○ Not started — reshaped | Each comment carries its state, a small picture and the commit; Resolve in the sidebar; a generated `comments.md` with candidate code locations; an agent skill. Measured first: prototypes have almost no stable element names and the state was not recorded | C4 |
+| 3.4 | [Share for review](#34--share-for-review-was-c3) | ○ Not started — required | A hosted preview link, which feeds the same app, so a product manager can open an iteration and comment on it. Needs Coke engineering (CI) and a way for reviewers to read the design repository | C3 |
+| 3.5 | [Close the loop](#35--close-the-loop-was-c4) | ○ Not started — reshaped | Each comment carries its state, a small picture and the commit; Resolve in the sidebar; comments refresh on their own; one **Address N comments** button regenerates `comments.md` and starts the agent; an agent skill. Measured first: prototypes have almost no stable element names and the state was not recorded | C4 |
 | 3.6 | [Pilot and decision](#36--pilot-and-decision-was-c5) | ⏸ Needs people | Real projects reviewed by people outside design | C5 |
 
-**The proof of concept is 3.3.5, then 3.5, run on one machine.** A prototype is generated locally, appears in the app, gets pinned comments, and the agent acts on them. Hosting (3.4) is deferred: it only changes where the preview address comes from, and the app already accepts one.
+**The proof of concept is 3.3.5, then 3.5, run on one machine.** A prototype is generated locally, appears in the app, gets pinned comments, and the agent acts on them. **The goal is the whole loop across two people:** a product manager sees an iteration and comments, and the designer pulls those comments and changes the prototype locally with the agent. 3.5 makes the designer half work. **3.4 is required for the PM half**, because without a hosted preview and read access to the design repository the PM has nothing to open. It still waits behind the local proof, which shows the loop is worth hosting, but it is no longer optional.
 
 **If we stop after 3.2:** sign-in and a browsable list of every project. **After 3.3:** click-to-comment
 on a prototype, against any preview. **After 3.4:** the full loop — author shares, reviewer opens and
-comments. **After 3.5:** comments the agent can act on. **Natural stop points are after 3.3 and 3.5:**
+comments. **After 3.5:** comments the agent can act on, on your own machine. **Natural stop points are after 3.3 and 3.5, but the PM-to-designer loop is only complete with 3.4 as well:**
 3.3 answers whether commenting feels right, and 3.5 whether closing the loop is worth it.
 
 ### Phase 4 — Rollout and open decisions
@@ -464,9 +464,9 @@ building a *new* prototype from a request, which needs a real run and takes a fe
 
 ### 3.4 — Share for review (was C3)
 
-**Deferred until the local proof (3.3.5, then 3.5) works.** Claude for the app; Coke engineering for CI.
-The author's half: without it a reviewer *elsewhere* has nothing to open. It is not needed to prove the
-idea, only to put it in front of other people.
+**Required. Built after the local proof (3.3.5, then 3.5) works.** Claude for the app; Coke engineering for
+CI. This is the half that lets a product manager see an iteration at all: without it a reviewer *elsewhere*
+has nothing to open, so the PM-to-designer loop cannot run. (Moved back from "deferred" on 2026-10-05.)
 
 - One click **pushes the branch, opens a draft PR** with a body saying it is a preview thread and not
   for merge (one PR per branch — settled), **waits for the deployment, and records its URL** on the
@@ -480,6 +480,10 @@ idea, only to put it in front of other people.
 **Done when:** against a throwaway repository with a stub deploy workflow, the click produces a draft
 PR and a recorded URL that a second account can open, **and the iteration appears in that account's
 app with no manual step in between.**
+
+**Also needed for the PM half: read access to the design repository.** The repository is private and its only
+collaborator is Noah, so a PM who opens a preview still cannot read or write comments. Either invite the PM
+as a collaborator or finish the org move (see *Waiting on other people*). Neither is code.
 
 **Needs from Coke engineering:** a `build:design` script, and CI that builds `fd/*` branches with it.
 Today the preview workflow runs `build:dev` — Auth0 login, real dev APIs, no mock data, no
@@ -525,8 +529,8 @@ comment, in the hidden part that already holds the position:
 **The export: `comments.md`, generated, never hand-edited.** One file per project, in its project folder, **not
 `review.md`**: every project folder already has a `review.md`, which is the agent's own review record, and
 comments must not be mixed into it. The app regenerates it whenever it reads a project's comments, on a
-machine where the design repository sits beside the product repository, so there is no button and nothing to
-remember. **It and its pictures are not committed:** they are generated, change constantly, and would conflict
+machine where the design repository sits beside the product repository, and again whenever the **Address** button
+below is pressed, so it is never stale when the agent reads it. **It and its pictures are not committed:** they are generated, change constantly, and would conflict
 between machines, so `projects/*/comments.md` and `projects/*/comment-pictures/` are ignored by the design
 repository's `.gitignore` (done 2026-10-05, ahead of the export). It lists the **open** comments only, in number
 order, and for each:
@@ -539,6 +543,21 @@ order, and for each:
   confident-looking wrong answers can mislead more than no list, and the agent can search the branch itself
   given the text, the picture, the state and any stable name, which are what carry the meaning. Everything
   above this bullet is what makes a comment clear; this is a convenience.
+
+**Comments refresh on their own.** Today the app reads a thread's comments once, when the iteration is opened,
+so a PM's comment made afterwards never appears. After this step an open iteration re-reads its comments **when
+the window regains focus and on a gentle timer (about every 60 seconds, only while the window is visible)**. A
+new comment appears in the sidebar and as a pin, with the count updated. The read is a single request per open
+iteration, GitHub's listing lag does not apply because the thread is read by number, and the paging limit is
+fixed here: reads are currently capped at 100 comments per thread with no paging, so they page instead.
+
+**One button: "Address N comments".** In the sidebar, shown only when open comments exist. One click, in order:
+re-read the comments, regenerate `comments.md` and its pictures, then start the agent on the iteration's branch
+with the address-comments skill. Because the file is rebuilt by the same click that starts the agent, **the agent
+can never act on a stale file**, whether the comment arrived a minute ago or a day ago. It uses the agent launch
+that already exists (print mode, edits allowed, no push) and the same phases and log as a build, and it is
+refused while a build or another agent run is going. Running the agent from a terminal instead reads whatever
+`comments.md` was last generated, which is why the button is the supported path.
 
 **The agent instruction.** A skill in the product's agent files (`.flkd/skills/address-comments.md`): "address
 the open comments on `<project>`". For each open comment, in order: look at the picture, open the candidate
@@ -554,12 +573,15 @@ not a failure, with how many stable names a prototype has.
 **Done when:** on one real project, a comment placed on a **non-default state** of a prototype, on an element,
 produces a change on the branch through the instruction, and the agent's summary names that comment's number.
 Tests cover the picture crop and its size cap, the export on fixtures (open comments only, the picture written
-beside it), and Resolve. **Human:** you read the change and say it addresses the comment.
+beside it), Resolve, the refresh (a comment added elsewhere appears, none are lost or duplicated, paging past 100),
+and the Address button (regenerates before the agent starts, hidden with no open comments, refused while busy). **Human:** you read the change and say it addresses the comment. **Across two people** (once 3.4 is built): a PM's
+comment on a hosted preview appears in your app within a minute, and **Address** turns it into a change.
 
 **Not in this step:** the agent replying inside the thread, hosted previews, comments across several iterations.
 
 **Order:** the commit and Resolve first (small, and they make the rest honest), then the state, then the
-picture, then the export (words, state, status and picture), then the skill, then one real run. Candidate
+picture, then the export (words, state, status and picture), then refresh with the paging fix, then the skill and
+the Address button, then one real run. Candidate
 locations only if that run needs them.
 
 ### 3.6 — Pilot and decision (was C5)
@@ -676,7 +698,7 @@ none holds up the work in front of it.
 | Move the design repo from `noahshrader-flock` to the `flocksafety` org | Someone with org permission | Everyone else's access; rollout |
 | Register the GitHub App **for the org** and install it on the design repo | An org owner | Rollout |
 | `build:design` and CI for `fd/*` branches — I draft it | Coke engineering | 3.4, end to end |
-| Read access to the **design repo** for PMs (not Coke) | GitHub admin | 3.6 |
+| Read and write access to the **design repo** for PMs (not Coke) | GitHub admin, or Noah as owner | 3.4 and 3.6: a PM cannot comment without it |
 | How internal Mac apps are deployed here, what they require (usually signing), and the turnaround | IT | Rollout |
 | A security look at an app that reads SSO-protected pages and holds a token | Security | Closing 3.3 |
 | Whether a managed harness is needed ([step 4.3](#43--decide-if-the-managed-harness-is-needed-was-step-11)) | Noah | Only if local setup fails designers |
@@ -3189,6 +3211,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 | Date | Change | Sections updated |
 |---|---|---|
 | 2026-10-05 | **Removed the checkout step.** Noah's point: setting up project context already ties Flock Designer to the codebase, so a designer should never be asked to choose a checkout, and working in the code should simply appear as a project. The app now finds the product repository by its own `.flkd/workspace.json` marker, and reads work from the repository's branches as well as from records, so unrecorded work appears and is recorded when first opened. Kept deliberately simple: no registry, no config file, nothing that can go stale; a *Change* link and a folder picker remain only as fallbacks. | 3.3.5; the app. |
+| 2026-10-05 | **Refresh and an Address button added to 3.5; 3.4 is required again.** Noah's goal: a product manager sees an iteration and comments, and the designer pulls those comments and changes the prototype locally with the agent. Checking that against the plan found three gaps. (1) The app reads a thread's comments once, when the iteration opens, so a PM's later comment never appears; 3.5 now refreshes on window focus and about every 60 seconds while visible, and pages past the 100-comment read cap. (2) `comments.md` was regenerated only when the app read comments, so an agent started from a terminal could act on a stale file; 3.5 now has one sidebar button, **Address N comments**, that re-reads, regenerates and starts the agent in one click. (3) The PM could not see the prototype at all: hosted preview (3.4) had been deferred, and the design repository is private with one collaborator. **3.4 is moved from deferred to required** (still built after the local proof), with PM access to the repository named as a prerequisite. Plan only; nothing built. |
 | 2026-10-05 | **Local work now shows in the project list.** Noah expected anything built locally, a prototype or codebase work, to appear in Flock Designer. It did not: the list read only GitHub, so work appeared only after its record was pushed (and its title was just its id until the brief was too). The list now merges GitHub's projects with the local design repository's, marked *Only on this machine* or *local*, and still shows local work if GitHub is unreachable. | 3.3.5; the app. |
 | 2026-10-05 | **Built 3.3.5, the local proof.** From Projects, *New prototype* creates the branch and record, runs the agent, runs the preview and opens it with pins; existing iterations get a *Build on this machine* panel. Checking it against the real Coke checkout found five faults that would each have stopped the walkthrough: Claude Code was not on the PATH on this machine, the agent had no way to run unattended, the declared preview command exited without a project id, a running preview left a generated file that failed the linter and the typecheck on other branches, and a stopped preview left its server holding the port. All fixed (three Coke commits; the four prototype branches rebased, with backups). The one thing not run is the agent building a new prototype from scratch. | 3.3.5; the app; Coke's descriptor, biome config and start script. |
 | 2026-10-05 | **Re-scoped Phase 3 around a local proof of concept.** Noah wants to prove the loop on one machine first: generate a prototype locally, see it in the app, comment, and close the loop at 3.5, and treat a hosted preview as a later, easy conversation with engineering. Added **3.3.5** (the local walkthrough, including a place in the Projects tab to create work, since hiding the Author screen removed it) and **deferred 3.4**. Considered GitHub Pages for hosted links and set it aside: Pages on a private repo is public unless the org has Enterprise Cloud access control, serves one site per repo, and Coke's existing S3 PR deployment already does per-PR previews, so the later change is a mock-data build through that workflow. | Phase 3 table; 3.3.5 new; 3.4. |
