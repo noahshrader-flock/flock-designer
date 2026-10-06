@@ -40,6 +40,9 @@ export const Projects = ({ menuOpen }: { menuOpen: boolean }) => {
 	const [looked, setLooked] = useState(false);
 	const [suggestion, setSuggestion] = useState<CheckoutSuggestion | null>(null);
 	const [publishStatus, setPublishStatus] = usePublishStatus();
+	// Sync is in progress from the click until both halves are done, and while the app syncs by itself.
+	const [syncClicked, setSyncClicked] = useState(false);
+	const syncing = syncClicked || publishStatus.state === 'working';
 
 	// The checkout is chosen once and remembered.
 	useEffect(() => {
@@ -132,17 +135,20 @@ export const Projects = ({ menuOpen }: { menuOpen: boolean }) => {
 				<h2 className="text-sm font-semibold">Projects</h2>
 				<div className="grow" />
 				<div className="flex items-center gap-2">
-					{/* Refreshing is an explicit ask, so it also publishes, rather than waiting for the next trigger. */}
+					{/* Sync sends what is waiting and reads what is new, rather than waiting for the next trigger. */}
 					<Button
 						size="sm"
 						variant="ghost"
+						disabled={syncing}
 						onClick={() => {
-							void window.workspace.publishNow().then((r) => r.ok && setPublishStatus(r.value));
-							void load();
+							setSyncClicked(true);
+							void Promise.all([window.workspace.publishNow().then((r) => r.ok && setPublishStatus(r.value)), load()]).finally(() =>
+								setSyncClicked(false),
+							);
 						}}
 					>
-						<RefreshCwIcon />
-						Refresh
+						<RefreshCwIcon className={syncing ? 'animate-spin' : undefined} />
+						{syncing ? 'Syncing…' : 'Sync'}
 					</Button>
 					<Button size="sm" onClick={() => setCreating(true)}>
 						New
