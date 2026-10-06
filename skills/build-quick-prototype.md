@@ -15,8 +15,9 @@ write here, so it has to be the product as it really is, with the idea placed in
 is kept.
 
 - **Its default export is the whole page,** shell included, mounted the way the product's own entry
-  mounts the app: the same root providers and global stylesheets, in the same order. The product's
-  guidance says what those are; if it does not, read the product's entry file.
+  mounts the app: the same root providers and global stylesheets, in the same order, and the same colour
+  mode. If the product follows the system's light or dark setting, so does the prototype; do not pin one.
+  The product's guidance says what those are; if it does not, read the product's entry file.
 - **Import only installed packages:** the design system, and what the product itself depends on. Never
   import the product's own source files: they pull in its state, routing and services. Copy the little you
   need, and say where it came from.
@@ -84,6 +85,8 @@ when the prototype moves into the code:
   `invite-button`, `members-table`, `empty-state`.
 - **States are a query parameter** (`?state=<name>`), the default being the one most people should see
   first. A small, clearly secondary switcher is fine, marked `@remove`.
+- **A state shows the situation at rest.** A dialog open, yes; a menu or dropdown inside it already
+  expanded, no. Anything that closes on the next click hides what the state exists to show.
 - **Start the file with a block comment** that says what the page shows, where in the product it sits,
   which real screen it was modelled on, which person the navigation shows, its states, and **every mark**
   in the file, grouped by kind. It is carried into the page for reviewers.
