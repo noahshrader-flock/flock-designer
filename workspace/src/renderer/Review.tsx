@@ -620,7 +620,9 @@ export const Review = ({
 					<TooltipTrigger asChild>
 						<GitBranchIcon aria-label={`Branch ${iteration.branch}`} className="text-muted-foreground size-4 shrink-0" />
 					</TooltipTrigger>
-					<TooltipContent className="font-mono">{iteration.branch}</TooltipContent>
+					<TooltipContent side="bottom" className="font-mono">
+						{iteration.branch}
+					</TooltipContent>
 				</Tooltip>
 				<People people={iteration.contributors} />
 				<div className="grow" />
