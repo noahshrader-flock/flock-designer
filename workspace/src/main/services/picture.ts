@@ -33,6 +33,35 @@ export const cropRect = (
 	return { x, y, width, height };
 };
 
+export interface Box {
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+}
+
+/**
+ * The part of the page to capture so the picture frames the *element* the comment is about: its own box with some
+ * room around it, never smaller than a readable size, never larger than a screenful, and kept inside the page.
+ * A subtext line gives a wide, short picture of the line in its surroundings; a whole section, chosen as a
+ * container, gives the section (smaller on the page, so less detailed, but showing the layout).
+ */
+export const frameRect = (
+	box: Box,
+	view: { width: number; height: number },
+	pad = 24,
+	min = { width: 200, height: 120 },
+	max = { width: 800, height: 500 },
+): Box => {
+	const width = Math.max(1, Math.min(Math.max(box.width + pad * 2, min.width), max.width, Math.round(view.width)));
+	const height = Math.max(1, Math.min(Math.max(box.height + pad * 2, min.height), max.height, Math.round(view.height)));
+	const cx = box.x + box.width / 2;
+	const cy = box.y + box.height / 2;
+	const x = Math.max(0, Math.min(Math.round(cx - width / 2), Math.round(view.width) - width));
+	const y = Math.max(0, Math.min(Math.round(cy - height / 2), Math.round(view.height) - height));
+	return { x, y, width, height };
+};
+
 /** A data URL for the image, as small as it needs to be to fit, or null if it cannot be made to fit. */
 export const toPicture = (image: Capturable, maxBytes = MAX_PICTURE_BYTES): string | null => {
 	try {

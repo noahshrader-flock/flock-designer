@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Capturable, MAX_PICTURE_BYTES, cropRect, toPicture } from '../src/main/services/picture';
+import { type Capturable, MAX_PICTURE_BYTES, cropRect, frameRect, toPicture } from '../src/main/services/picture';
 
 /** An image whose JPEG size is predictable: width times quality, in bytes. */
 const image = (over: Partial<{ empty: boolean; bytes: (w: number, q: number) => number; throws: boolean }> = {}): Capturable & { tried: string[] } => {
@@ -71,3 +71,35 @@ describe('cropRect', () => {
 		expect(r.y).toBeGreaterThanOrEqual(0);
 	});
 });
+
+describe('frameRect', () => {
+	const view = { width: 1200, height: 800 };
+
+	it('frames a line of text in its surroundings: wide, and as short as is readable', () => {
+		expect(frameRect({ x: 100, y: 400, width: 600, height: 20 }, view)).toEqual({ x: 76, y: 350, width: 648, height: 120 });
+	});
+
+	it('gives a tiny element a readable minimum, centred on it', () => {
+		const r = frameRect({ x: 500, y: 300, width: 10, height: 10 }, view);
+		expect([r.width, r.height]).toEqual([200, 120]);
+		expect(r.x + r.width / 2).toBeCloseTo(505, 0);
+	});
+
+	it('shows a whole section, up to a screenful, when a container was chosen', () => {
+		const r = frameRect({ x: 0, y: 0, width: 1200, height: 800 }, view);
+		expect([r.width, r.height]).toEqual([800, 500]);
+	});
+
+	it('stays inside the page next to an edge, keeping its size', () => {
+		expect(frameRect({ x: 0, y: 0, width: 50, height: 20 }, view)).toMatchObject({ x: 0, y: 0, width: 200, height: 120 });
+		expect(frameRect({ x: 1190, y: 790, width: 10, height: 10 }, view)).toMatchObject({ x: 1000, y: 680 });
+	});
+
+	it('never exceeds a page smaller than it would like, and never goes empty', () => {
+		expect(frameRect({ x: 0, y: 0, width: 100, height: 100 }, { width: 150, height: 90 })).toEqual({ x: 0, y: 0, width: 150, height: 90 });
+		const r = frameRect({ x: 5, y: 5, width: 0, height: 0 }, { width: 0, height: 0 });
+		expect(r.width).toBeGreaterThanOrEqual(1);
+		expect(r.height).toBeGreaterThanOrEqual(1);
+	});
+});
+

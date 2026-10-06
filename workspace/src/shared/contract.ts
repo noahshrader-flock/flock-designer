@@ -391,6 +391,13 @@ export interface CommentAnchor {
   commit: string;
   /** Where in the element the click landed, 0 to 1 each way, so a marker sits where the comment was made. */
   offset?: { x: number; y: number };
+  /** The kind of element it is (`p`, `button`), so "this subtext" and "this button" are told apart in words. */
+  tag?: string;
+  /**
+   * The named containers it sits inside, outermost first, at most three: "Notification Preferences",
+   * "Hotlist Hits". Text a person or an agent can search for, which a path of nth-of-type cannot be.
+   */
+  inside?: string[];
   /**
    * The page's query string when the comment was made (`?state=error`), which is what tells one state of a
    * prototype from another. Empty for the default state. Absent on comments made before this was recorded,
@@ -424,6 +431,8 @@ export interface MarkerResult {
 export interface PickedPoint {
   anchor: CommentAnchor;
   at: { x: number; y: number };
+  /** The element's own box in the page, so the picture can frame the element. Absent if it could not be measured. */
+  box: { x: number; y: number; width: number; height: number } | null;
   /** The spot cropped from the page before any pin was drawn, if it could be taken. */
   picture: string | null;
 }

@@ -50,12 +50,40 @@ const HELPERS = String.raw`
     for (var i = 0; i < stack.length; i++) { if (!stack[i].closest('[data-fd-layer]')) return stack[i]; }
     return null;
   };
+  /** The text of the heading a container leads with, if it has one. */
+  var headingOf = function (container) {
+    for (var i = 0; i < container.children.length; i++) {
+      var c = container.children[i];
+      if (/^(H[1-6]|LEGEND)$/.test(c.tagName)) return collapse(c.textContent);
+      if (c.tagName === 'HEADER') {
+        for (var j = 0; j < c.children.length; j++) { if (/^H[1-6]$/.test(c.children[j].tagName)) return collapse(c.children[j].textContent); }
+      }
+    }
+    return '';
+  };
+  /**
+   * The named containers an element sits inside, outermost first (at most three): what a person would call
+   * the section. A container is named by its aria-label, its own heading, or its stable name. This is text
+   * a person or an agent can search for, which a path of nth-of-type cannot be.
+   */
+  var containers = function (el) {
+    var found = [], own = collapse(el.textContent).slice(0, 60), cur = el.parentElement;
+    while (cur && cur !== doc.body && cur !== doc.documentElement && found.length < 3) {
+      var label = collapse(cur.getAttribute('aria-label') || '') || headingOf(cur) || collapse(cur.getAttribute('data-e2e-ref') || '');
+      label = label.slice(0, 60);
+      if (label && label !== own && found.indexOf(label) < 0) found.push(label);
+      cur = cur.parentElement;
+    }
+    return found.reverse();
+  };
   /** Where a click landed: the element, and the position inside it. */
   var describe = function (el, x, y) {
     var rect = el.getBoundingClientRect();
     return {
       route: route(),
       selector: selectorFor(el),
+      tag: el.tagName.toLowerCase(),
+      inside: containers(el),
       nearbyText: collapse(el.innerText || el.textContent).slice(0, 80),
       viewport: { width: window.innerWidth, height: window.innerHeight },
       commit: '',
@@ -86,33 +114,91 @@ ${HELPERS}
     style.setAttribute('data-fd', 'pick');
     style.textContent = 'html, html * { cursor: crosshair !important }';
     doc.head.appendChild(style);
+
+    // What the pin will attach to is shown before the click: the element under the pointer is outlined and
+    // named. Up and Down arrows climb to its container and back, for a comment about a section and not a
+    // line. What is recorded is exactly what is outlined, never a guess about what was meant.
+    var outline = doc.createElement('div');
+    outline.setAttribute('data-fd-layer', 'hover');
+    outline.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483646;display:none;border:2px solid #2563eb;background:rgba(37,99,235,.08);border-radius:2px;box-sizing:border-box';
+    var chip = doc.createElement('div');
+    chip.setAttribute('data-fd-layer', 'hover');
+    chip.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483647;display:none;background:#2563eb;color:#fff;font:600 11px/1.4 sans-serif;padding:2px 6px;border-radius:3px;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    doc.documentElement.appendChild(outline);
+    doc.documentElement.appendChild(chip);
+    var stack = [];
+    var chosen = function () { return stack.length ? stack[stack.length - 1] : null; };
+    var paint = function () {
+      var el = chosen();
+      if (!el) { outline.style.display = 'none'; chip.style.display = 'none'; return; }
+      var r = el.getBoundingClientRect();
+      outline.style.display = 'block';
+      outline.style.left = r.left + 'px';
+      outline.style.top = r.top + 'px';
+      outline.style.width = r.width + 'px';
+      outline.style.height = r.height + 'px';
+      var up = el.parentElement && el.parentElement !== doc.body && el.parentElement !== doc.documentElement;
+      chip.textContent = '<' + el.tagName.toLowerCase() + '> ' + collapse(el.innerText || el.textContent).slice(0, 40) + (up ? '    ↑ container' : '');
+      chip.style.display = 'block';
+      chip.style.left = Math.max(0, r.left) + 'px';
+      chip.style.top = (r.top > 22 ? r.top - 22 : r.bottom + 2) + 'px';
+    };
+    var move = function (e) {
+      var el = underlying(e.clientX, e.clientY);
+      if (el && el.nodeType === 1 && (stack.length === 0 || stack[0] !== el)) { stack = [el]; paint(); }
+    };
+
     var swallow = function (e) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); };
     var done = function (value) {
       style.remove();
+      outline.remove();
+      chip.remove();
       doc.removeEventListener('click', click, true);
       doc.removeEventListener('mousedown', swallow, true);
       doc.removeEventListener('mouseup', swallow, true);
       doc.removeEventListener('keydown', key, true);
+      doc.removeEventListener('mousemove', move, true);
+      window.removeEventListener('scroll', paint, true);
       window.__fdCancelPick = undefined;
       resolve(value);
     };
     var click = function (e) {
       swallow(e);
-      var el = e.target;
-      // A click on an existing pin lands on the page beneath it.
-      if (el && el.closest && el.closest('[data-fd-layer]')) el = underlying(e.clientX, e.clientY);
+      // The element that is outlined, which is the one the person chose. A click that arrives with nothing
+      // outlined yet (no pointer move came first) takes the element under it.
+      var el = chosen();
+      if (!el || !el.isConnected) {
+        el = e.target;
+        // A click on one of this app's own layers lands on the page beneath it.
+        if (el && el.closest && el.closest('[data-fd-layer]')) el = underlying(e.clientX, e.clientY);
+      }
       if (!el || el.nodeType !== 1) return done(null);
-      // Where the click landed in the page, so the app can put the comment box beside the pin.
       var info = describe(el, e.clientX, e.clientY);
+      // Where the click landed in the page, so the app can put the comment box beside the pin; and the
+      // element's own box, so the picture can frame the element and not a fixed square around the click.
       info.at = { x: e.clientX, y: e.clientY };
+      var r = el.getBoundingClientRect();
+      info.box = { x: r.left, y: r.top, width: r.width, height: r.height };
       done(info);
     };
-    var key = function (e) { if (e.key === 'Escape') done(null); };
+    var key = function (e) {
+      if (e.key === 'Escape') return done(null);
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        swallow(e);
+        if (e.key === 'ArrowUp') {
+          var el = chosen();
+          var p = el && el.parentElement;
+          if (p && p !== doc.body && p !== doc.documentElement) { stack.push(p); paint(); }
+        } else if (stack.length > 1) { stack.pop(); paint(); }
+      }
+    };
     window.__fdCancelPick = function () { done(null); };
     doc.addEventListener('click', click, true);
     doc.addEventListener('mousedown', swallow, true);
     doc.addEventListener('mouseup', swallow, true);
     doc.addEventListener('keydown', key, true);
+    doc.addEventListener('mousemove', move, true);
+    window.addEventListener('scroll', paint, true);
   });
 })()`;
 
@@ -121,8 +207,8 @@ ${HELPERS}
  * the spot is taken with them hidden, so it shows the thing that was clicked and not an earlier pin.
  */
 export const layerVisibleScript = (visible: boolean): string => String.raw`(function (visible) {
-  var layer = document.querySelector('[data-fd-layer]');
-  if (layer) layer.style.visibility = visible ? 'visible' : 'hidden';
+  var layers = document.querySelectorAll('[data-fd-layer]');
+  for (var i = 0; i < layers.length; i++) layers[i].style.visibility = visible ? 'visible' : 'hidden';
   return new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(function () { r(true); }); }); });
 })(${visible ? 'true' : 'false'})`;
 

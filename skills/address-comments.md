@@ -26,9 +26,11 @@ resolved, so "comment 3" always means the same one. For each it gives:
 | **State of the page** | `?state=error` and so on. `default` is the default state. `not recorded` is an older comment: look at the default state first |
 | **Stable name (`e2eRef`)** | When the element has one. The most reliable handle: search the code for it |
 | **Element** | A selector. When it is a path like `div:nth-of-type(2) > div:nth-of-type(6)` it means nothing in the source: do not try to match it, use the text, the picture and the state |
+| **Kind of element** | The tag the person pinned: `button`, `section`, `div`... A **container** (`section`, `form`, `div`, `ul`) means the comment is about that whole area, not one control inside it |
+| **Inside** | The named areas the element sits in, outermost first (`Notification settings › Email`). Use it to find the right component when the element's own text is generic |
 | **Text near it** | The text the element held. Search the work's folder for it |
 | **Made against commit** | The version of the code the person was looking at. If it is not the current commit, the code may have moved since |
-| **Picture** | The spot, cropped at the moment of the click. **The spot is the centre of the picture.** Open it |
+| **Picture** | The pinned element, framed with a little room around it, taken at the moment of the click. **The pinned element is the centre of the picture.** It supports the fields above; when the two disagree, trust the stable name and the text. Open it |
 
 ## The rules
 
@@ -46,7 +48,7 @@ resolved, so "comment 3" always means the same one. For each it gives:
 
 1. **Understand what is being asked.** Read the words, then open the picture. A comment can be a
    change ("make this primary"), a question ("why is this here?"), or a decision you cannot make.
-2. **Find the place.** Search for the stable name first, then the nearby text, in the work's folder.
+2. **Find the place.** Search for the stable name first, then the nearby text, in the work's folder. If the text is generic, use **Inside** to pick the right component.
    Use the state to know which version of the view the person saw: if it was `?state=error`, the
    element lives in the error state. If you cannot reproduce what they were looking at, say so.
 3. **If you are not sure, do not guess.** No match, or several equally likely ones, or a comment

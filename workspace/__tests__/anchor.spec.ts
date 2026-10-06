@@ -158,3 +158,34 @@ describe('a picture in a comment', () => {
 	});
 });
 
+describe('what kind of element, and where it sits', () => {
+	const base = { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
+
+	it('keeps the kind of element and the containers it is inside, and they survive a comment round trip', () => {
+		const a = sanitizeAnchor({ ...base, tag: 'p', inside: ['Notification Preferences', 'Hotlist Hits'] });
+		expect(a).toMatchObject({ tag: 'p', inside: ['Notification Preferences', 'Hotlist Hits'] });
+		expect(parseAnchor(composeBody('hi', a as CommentAnchor))).toMatchObject({ tag: 'p', inside: ['Notification Preferences', 'Hotlist Hits'] });
+	});
+
+	it('leaves them off a comment from before they were recorded', () => {
+		const a = sanitizeAnchor(base);
+		expect(a).not.toHaveProperty('tag');
+		expect(a).not.toHaveProperty('inside');
+	});
+
+	it.each(['P', '<script>', 'a b', '', 'x'.repeat(40), 5, null])('drops a kind of element that is not a tag name: %j', (bad) => {
+		expect(sanitizeAnchor({ ...base, tag: bad })).not.toHaveProperty('tag');
+	});
+
+	it('keeps at most three containers, cleans each, and ignores what is not a list', () => {
+		const a = sanitizeAnchor({ ...base, inside: ['A', 'B<script>', 'C\nD', 'E', 'F'] });
+		expect(a?.inside).toEqual(['A', 'B script', 'C D']);
+		expect(sanitizeAnchor({ ...base, inside: 'nope' })).not.toHaveProperty('inside');
+		expect(sanitizeAnchor({ ...base, inside: ['', '   ', 7] })).not.toHaveProperty('inside');
+	});
+
+	it('cuts a long container name rather than carrying a page\'s text into the record', () => {
+		expect(sanitizeAnchor({ ...base, inside: ['x'.repeat(500)] })?.inside?.[0]?.length).toBe(60);
+	});
+});
+

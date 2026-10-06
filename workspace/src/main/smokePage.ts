@@ -16,7 +16,7 @@ import { PageView } from './services/pageView';
  */
 
 const PAGES: Record<string, string> = {
-	'1': '<body style="margin:0"><button data-e2e-ref="users-invite" style="margin:40px;width:200px;height:60px">Invite users</button><p>Other</p></body>',
+	'1': '<body style="margin:0"><section aria-label="Invite area"><button data-e2e-ref="users-invite" style="margin:40px;width:200px;height:60px">Invite users</button></section><p>Other</p></body>',
 	'2': '<body style="margin:0"><section><span style="display:block;margin:40px">Invite users</span></section></body>',
 	'3': '<body style="margin:0"><p>Nothing relevant</p></body>',
 };
@@ -64,6 +64,18 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	await js('window.__pressed = 0; document.addEventListener("click", () => window.__pressed++)');
 	const picking = page.pick();
 	await new Promise((r) => setTimeout(r, 200));
+	// 2a. Before the click, the element under the pointer is outlined where it is, and named.
+	console.log('smoke-page: step 2a');
+	wc.sendInputEvent({ type: 'mouseMove', x: 100, y: 70 });
+	await new Promise((r) => setTimeout(r, 250));
+	const outlined = await js<{ box: { left: number; top: number; width: number; height: number }; label: string; target: { left: number; top: number; width: number; height: number } } | null>(
+		`(function(){var l=document.querySelectorAll('[data-fd-layer="hover"]');if(l.length<2)return null;var o=l[0].getBoundingClientRect(),b=document.querySelector('[data-e2e-ref]').getBoundingClientRect();return {box:{left:o.left,top:o.top,width:o.width,height:o.height},label:l[1].textContent,target:{left:b.left,top:b.top,width:b.width,height:b.height}}})()`,
+	);
+	if (!outlined) return fail('nothing was outlined under the pointer');
+	for (const k of ['left', 'top', 'width', 'height'] as const) {
+		if (Math.abs(outlined.box[k] - outlined.target[k]) > 2) fail(`the outline is not on the element: ${JSON.stringify(outlined)}`);
+	}
+	if (!outlined.label.includes('<button>') || !outlined.label.includes('Invite users')) fail(`the outline's label is wrong: ${outlined.label}`);
 	wc.sendInputEvent({ type: 'mouseDown', x: 100, y: 70, button: 'left', clickCount: 1 });
 	wc.sendInputEvent({ type: 'mouseUp', x: 100, y: 70, button: 'left', clickCount: 1 });
 	const picked = await picking;
@@ -74,6 +86,27 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	if (anchor.selector !== '[data-e2e-ref="users-invite"]') fail(`wrong element picked: ${JSON.stringify(anchor)}`);
 	if (anchor.route !== '/users') fail(`wrong route: ${anchor.route}`);
 	if ((await js<number>('window.__pressed')) !== 0) fail('the click reached the page');
+
+	if (picked !== null && (picked.anchor.tag !== 'button' || !(picked.anchor.inside ?? []).includes('Invite area'))) fail(`the kind and containers were not recorded: ${JSON.stringify(picked.anchor)}`);
+	if (await js<boolean>('document.querySelector("[data-fd-layer]") !== null')) fail('the outline was left on the page after the click');
+
+	// 2c. Climbing to the container: the up arrow moves the outline to the section, and that is what is recorded.
+	console.log('smoke-page: step 2c');
+	const climbing = page.pick();
+	await new Promise((r) => setTimeout(r, 200));
+	wc.sendInputEvent({ type: 'mouseMove', x: 100, y: 70 });
+	await new Promise((r) => setTimeout(r, 200));
+	wc.sendInputEvent({ type: 'keyDown', keyCode: 'Up' });
+	wc.sendInputEvent({ type: 'keyUp', keyCode: 'Up' });
+	await new Promise((r) => setTimeout(r, 200));
+	const label = await js<string>('(document.querySelectorAll("[data-fd-layer=hover]")[1] || {}).textContent || ""');
+	if (!label.includes('<section>')) fail(`the up arrow did not climb to the container: ${label}`);
+	wc.sendInputEvent({ type: 'mouseDown', x: 100, y: 70, button: 'left', clickCount: 1 });
+	wc.sendInputEvent({ type: 'mouseUp', x: 100, y: 70, button: 'left', clickCount: 1 });
+	const climbed = await climbing;
+	if (!climbed || climbed.anchor.tag !== 'section') fail(`the container was not what was recorded: ${JSON.stringify(climbed?.anchor)}`);
+	if (!climbed?.box || climbed.box.width < 300) fail(`the container's box was not reported: ${JSON.stringify(climbed?.box)}`);
+	console.log(`smoke-page: container chosen: <${climbed?.anchor.tag}> ${climbed?.box?.width}x${climbed?.box?.height}`);
 
 	// 2b. A picture of the spot came back with the click: a small, real JPEG that fits in a comment.
 	console.log('smoke-page: step 2b');

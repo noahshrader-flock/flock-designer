@@ -35,6 +35,10 @@ export const sanitizeAnchor = (v: unknown): CommentAnchor | null => {
 	const off = r.offset as Record<string, unknown> | undefined;
 	// A query string, or empty. Anything else (a script, markup, a very long value) is not a state, so it is dropped.
 	const state = typeof r.state === 'string' && /^(\?[^\s<>`"']{0,199})?$/.test(r.state) ? r.state : undefined;
+	// Words describing where the element is, from a page, so capped and cleaned: no control characters, no markup.
+	const words = (x: unknown, max: number): string => (typeof x === 'string' ? x.replace(/[\u0000-\u001f<>`]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : '');
+	const tag = /^[a-z][a-z0-9-]{0,30}$/.test(typeof r.tag === 'string' ? r.tag : '') ? (r.tag as string) : undefined;
+	const inside = (Array.isArray(r.inside) ? r.inside : []).map((x) => words(x, 60)).filter(Boolean).slice(0, 3);
 	return {
 		route,
 		selector,
@@ -43,6 +47,8 @@ export const sanitizeAnchor = (v: unknown): CommentAnchor | null => {
 		commit: /^[0-9a-f]{0,40}$/i.test(clip(r.commit, 40)) ? clip(r.commit, 40) : '',
 		...(off ? { offset: { x: unit(off.x), y: unit(off.y) } } : {}),
 		...(state !== undefined ? { state } : {}),
+		...(tag !== undefined ? { tag } : {}),
+		...(inside.length > 0 ? { inside } : {}),
 	};
 };
 

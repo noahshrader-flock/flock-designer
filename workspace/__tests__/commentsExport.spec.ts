@@ -72,6 +72,18 @@ describe('renderComments', () => {
 		expect(markdown).toContain('**Made against commit:** `abcdef012345`');
 	});
 
+	it('says what kind of element it is and what it sits inside, which are words an agent can search for', () => {
+		const { markdown } = renderComments(input([comment(1, { anchor: anchor({ tag: 'p', inside: ['Notification Preferences', 'Hotlist Hits'] }) })]));
+		expect(markdown).toContain('**Kind of element:** `p`');
+		expect(markdown).toContain('**Inside:** Notification Preferences › Hotlist Hits');
+	});
+
+	it('leaves those lines out for a comment that does not have them', () => {
+		const { markdown } = renderComments(input([comment(1)]));
+		expect(markdown).not.toContain('Kind of element');
+		expect(markdown).not.toContain('Inside:');
+	});
+
 	it('tells the default state from one that was not recorded, because they mean different things', () => {
 		expect(renderComments(input([comment(1, { anchor: anchor({ state: '' }) })])).markdown).toContain('**State of the page:** default');
 		expect(renderComments(input([comment(1, { anchor: anchor({ state: undefined }) })])).markdown).toContain('**State of the page:** not recorded');

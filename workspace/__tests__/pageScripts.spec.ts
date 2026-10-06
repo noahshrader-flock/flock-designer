@@ -258,3 +258,153 @@ describe('hiding the pins for a picture', () => {
 	});
 });
 
+describe('choosing what a pin attaches to', () => {
+	const FORM = `
+	  <main>
+	    <section id="prefs">
+	      <h2>Notification Preferences</h2>
+	      <div aria-label="Hotlist Hits"><p id="sub">Notify me when a plate on one of my hotlists is detected.</p></div>
+	    </section>
+	  </main>`;
+
+	/** jsdom has no layout and no elementsFromPoint, so give an element a box, and say what is "under the pointer". */
+	const under = (w: Window & { document: Document }, el: Element, rect = { left: 10, top: 20, width: 100, height: 30 }) => {
+		(el as HTMLElement).getBoundingClientRect = () => ({ ...rect, right: rect.left + rect.width, bottom: rect.top + rect.height, x: rect.left, y: rect.top, toJSON: () => ({}) }) as DOMRect;
+		const chain: Element[] = [];
+		for (let e: Element | null = el; e; e = e.parentElement) chain.push(e);
+		(w.document as unknown as { elementsFromPoint: () => Element[] }).elementsFromPoint = () => chain;
+	};
+	const move = (w: Window, x = 12, y = 22) =>
+		w.document.dispatchEvent(new (w as unknown as { MouseEvent: typeof MouseEvent }).MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: y }));
+	const press = (w: Window, key: string) => {
+		const ev = new (w as unknown as { KeyboardEvent: typeof KeyboardEvent }).KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+		w.document.dispatchEvent(ev);
+		return ev;
+	};
+	const layers = (w: Window & { document: Document }) => [...w.document.querySelectorAll('[data-fd-layer="hover"]')] as HTMLElement[];
+	const outlineOf = (w: Window & { document: Document }) => layers(w)[0] as HTMLElement;
+	const chipOf = (w: Window & { document: Document }) => layers(w)[1] as HTMLElement;
+
+	it('outlines the element under the pointer, where it is, and names it, before anything is clicked', () => {
+		const w = page(FORM);
+		const sub = w.document.getElementById('sub') as HTMLElement;
+		void w.eval(PICK_SCRIPT);
+		under(w, sub);
+		move(w);
+		expect(outlineOf(w).style.display).toBe('block');
+		expect([outlineOf(w).style.left, outlineOf(w).style.top, outlineOf(w).style.width, outlineOf(w).style.height]).toEqual(['10px', '20px', '100px', '30px']);
+		expect(chipOf(w).textContent).toContain('<p> Notify me when a plate');
+		expect(chipOf(w).textContent).toContain('container');
+	});
+
+	it('records the element that is outlined, with its kind and the containers it sits inside', async () => {
+		const w = page(FORM);
+		const sub = w.document.getElementById('sub') as HTMLElement;
+		const picked = w.eval(PICK_SCRIPT) as Promise<CommentAnchor & { box: unknown }>;
+		under(w, sub);
+		move(w);
+		click(w, sub);
+		const a = await picked;
+		expect(a.tag).toBe('p');
+		expect(a.selector).toBe('#sub');
+		expect(a.inside).toEqual(['Notification Preferences', 'Hotlist Hits']);
+		expect(a.box).toEqual({ x: 10, y: 20, width: 100, height: 30 });
+	});
+
+	it('climbs to the container with the up arrow, and back with the down arrow', async () => {
+		const w = page(FORM);
+		const sub = w.document.getElementById('sub') as HTMLElement;
+		const picked = w.eval(PICK_SCRIPT) as Promise<CommentAnchor>;
+		under(w, sub);
+		move(w);
+		const up = press(w, 'ArrowUp');
+		expect(up.defaultPrevented).toBe(true); // the page does not scroll
+		expect(chipOf(w).textContent).toContain('<div>');
+		press(w, 'ArrowUp');
+		expect(chipOf(w).textContent).toContain('<section>');
+		press(w, 'ArrowDown');
+		expect(chipOf(w).textContent).toContain('<div>');
+		// The click lands on the paragraph, but what was chosen was the container, and that is what is recorded.
+		click(w, sub);
+		const a = await picked;
+		expect(a.tag).toBe('div');
+		expect(w.document.querySelector(a.selector)?.getAttribute('aria-label')).toBe('Hotlist Hits');
+	});
+
+	it('does not climb past the page itself', () => {
+		const w = page('<p id="only">Hi</p>');
+		void w.eval(PICK_SCRIPT);
+		under(w, w.document.getElementById('only') as HTMLElement);
+		move(w);
+		for (let i = 0; i < 5; i++) press(w, 'ArrowUp');
+		expect(chipOf(w).textContent).toContain('<p>');
+		expect(chipOf(w).textContent).not.toContain('<body>');
+	});
+
+	it('starts again from the new element when the pointer moves to another', () => {
+		const w = page(FORM);
+		void w.eval(PICK_SCRIPT);
+		under(w, w.document.getElementById('sub') as HTMLElement);
+		move(w);
+		press(w, 'ArrowUp');
+		under(w, w.document.querySelector('h2') as HTMLElement);
+		move(w);
+		expect(chipOf(w).textContent).toContain('<h2> Notification Preferences');
+	});
+
+	it('names only what is nameable, never repeats the element itself, and keeps at most three', async () => {
+		const w = page(`
+		  <main aria-label="Admin">
+		    <section aria-label="Settings"><div aria-label="Alerts"><div aria-label="Hotlist Hits"><p id="deep">Deep</p></div></div></section>
+		  </main>`);
+		const picked = w.eval(PICK_SCRIPT) as Promise<CommentAnchor>;
+		click(w, w.document.getElementById('deep') as HTMLElement);
+		expect((await picked).inside).toEqual(['Settings', 'Alerts', 'Hotlist Hits']);
+
+		const w2 = page('<section><h2>Same words</h2></section>');
+		const p2 = w2.eval(PICK_SCRIPT) as Promise<CommentAnchor>;
+		click(w2, w2.document.querySelector('h2') as HTMLElement);
+		expect((await p2).inside).toEqual([]);
+	});
+
+	it('takes the outline and its label away when the click is made, and when it is cancelled, leaving the page as it was', async () => {
+		const w = page(FORM);
+		const sub = w.document.getElementById('sub') as HTMLElement;
+		const picked = w.eval(PICK_SCRIPT) as Promise<unknown>;
+		under(w, sub);
+		move(w);
+		expect(layers(w)).toHaveLength(2);
+		click(w, sub);
+		await picked;
+		expect(w.document.querySelector('[data-fd-layer]')).toBeNull();
+		expect(w.document.querySelector('style[data-fd]')).toBeNull();
+
+		const cancelled = w.eval(PICK_SCRIPT) as Promise<unknown>;
+		move(w);
+		press(w, 'Escape');
+		expect(await cancelled).toBeNull();
+		expect(w.document.querySelector('[data-fd-layer]')).toBeNull();
+	});
+
+	it('does not outline one of the app\'s own pins as if it were the page', () => {
+		const w = page(FORM);
+		const sub = w.document.getElementById('sub') as HTMLElement;
+		w.eval(resolveScript([req(1, { selector: '#sub' })], 'nonce'));
+		void w.eval(PICK_SCRIPT);
+		const pin = w.document.querySelector('[data-fd-layer]') as HTMLElement;
+		(w.document as unknown as { elementsFromPoint: () => Element[] }).elementsFromPoint = () => [pin, sub, sub.parentElement as Element];
+		move(w);
+		expect(chipOf(w)).toBeDefined();
+		expect(chipOf(w).textContent).toContain('<p>');
+	});
+
+	it('hides the outline too while a picture is taken, with every other layer', async () => {
+		const w = page(FORM);
+		void w.eval(PICK_SCRIPT);
+		under(w, w.document.getElementById('sub') as HTMLElement);
+		move(w);
+		await (w.eval(layerVisibleScript(false)) as Promise<unknown>);
+		expect(layers(w).every((l) => l.style.visibility === 'hidden')).toBe(true);
+	});
+});
+

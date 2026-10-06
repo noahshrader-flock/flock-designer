@@ -83,6 +83,8 @@ export const renderComments = ({ projectId, title, iteration, comments, generate
 		if (a) {
 			lines.push(`- **Page:** \`${oneLine(a.route)}\``);
 			lines.push(`- **State of the page:** ${a.state === undefined ? 'not recorded' : a.state === '' ? 'default' : `\`${oneLine(a.state)}\``}`);
+			if (a.tag) lines.push(`- **Kind of element:** \`${oneLine(a.tag)}\``);
+			if (a.inside?.length) lines.push(`- **Inside:** ${a.inside.map((x) => oneLine(x)).join(' › ')}`);
 			const name = stableName(a.selector);
 			if (name) lines.push(`- **Stable name (\`e2eRef\`):** \`${oneLine(name)}\``);
 			lines.push(`- **Element:** \`${oneLine(a.selector)}\``);
