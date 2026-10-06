@@ -197,9 +197,9 @@ export const Projects = () => {
 				)}
 
 				{projects.map((project) => (
-					<Card key={project.id} className="gap-4 pt-5 pb-0">
-						<CardHeader className="px-5">
-							<CardTitle className="text-base">{project.title}</CardTitle>
+					<Card key={project.id}>
+						<CardHeader>
+							<CardTitle>{project.title}</CardTitle>
 							<CardDescription className="flex items-center gap-1.5">
 								<FolderIcon className="size-4 shrink-0" />
 								<span className="font-mono">{project.id}</span>
@@ -232,10 +232,10 @@ export const Projects = () => {
 								</CardAction>
 							)}
 						</CardHeader>
-						<CardContent className="px-5">
+						<CardContent>
 							<People people={project.people} empty="No contributors recorded yet" />
 						</CardContent>
-						<CardFooter className="flex-wrap items-center justify-between gap-2 rounded-b-xl border-t bg-muted/50 px-3 py-2 [.border-t]:pt-2">
+						<CardFooter className="flex-wrap justify-between gap-2">
 							<div className="flex flex-row flex-wrap items-center gap-2">
 								{project.iterations.length === 0 && <span className="text-muted-foreground px-2 text-sm">No branches yet.</span>}
 								{project.iterations.map((iteration) => (

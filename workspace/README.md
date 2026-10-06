@@ -174,8 +174,10 @@ the other belongs would make the receipt confidently wrong.
 
 The components under `src/renderer/ui/` are vendored source, not a dependency: shadcn/ui is copied in
 and owned here, so it is edited directly rather than themed around. They are the official files,
-pulled with the shadcn CLI (`components.json` is configured for this), on React 19, which is what
-shadcn targets. Additions are marked in place: `warning` and `success` variants on Alert, and
+pulled with the shadcn CLI in the **Nova** style (`"style": "radix-nova"` in `components.json`), which
+is what ui.shadcn.com shows; the older `new-york` style looks different (shadowed cards, no card sizes).
+Nova needs `tw-animate-css` and `shadcn/tailwind.css` imported in `index.css` for its open and close
+animations. React 19, which is what shadcn targets. Additions are marked in place: `warning` and `success` variants on Alert, and
 `success` on Badge, which the stock theme has no colour for.
 
 **When adding a component with `npx shadcn@latest add <name>`**, the CLI currently leaves the

@@ -1,7 +1,9 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 /*
- * shadcn/ui's default Neutral theme, unchanged.
+ * shadcn/ui's Nova style (`radix-nova` in components.json, what ui.shadcn.com shows) on its default Neutral theme, unchanged.
  *
  * Deliberately not Flock's design system. The app is the tool, not the product: a prototype inside it
  * is built with whichever product's design system it belongs to, and the shell around it should not
