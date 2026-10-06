@@ -176,6 +176,23 @@ describe('listProjects', () => {
 	});
 });
 
+describe('readRecord', () => {
+	it('refuses a name that is a path, before anything is read', async () => {
+		for (const name of ['../outside.md', 'a/b.md', '..']) {
+			const r = await call(CHANNELS.readRecord, 'alpha', name);
+			expect(r.ok).toBe(false);
+		}
+	});
+
+	it('reads this machine\'s copy of a record', async () => {
+		await call(CHANNELS.useCheckout, product);
+		mkdirSync(join(design, 'projects', 'alpha'), { recursive: true });
+		writeFileSync(join(design, 'projects', 'alpha', 'brief.md'), '# Alpha\n');
+		const r = await call(CHANNELS.readRecord, 'alpha', 'brief.md');
+		expect(r).toEqual({ ok: true, value: '# Alpha\n' });
+	});
+});
+
 describe('work an agent built in a terminal, with no record yet', () => {
 	const branchWithCommit = (name: string) => {
 		g(product, 'checkout', '-q', '-b', name);

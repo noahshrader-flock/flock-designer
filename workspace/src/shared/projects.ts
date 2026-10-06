@@ -145,3 +145,9 @@ export const newestFirst = (a: ProjectIteration, b: ProjectIteration): number =>
 	const codebase = (x: ProjectIteration) => (x.branch.startsWith('fd/') ? 0 : 1);
 	return codebase(a) - codebase(b) || b.name.localeCompare(a.name, undefined, { numeric: true });
 };
+
+/**
+ * One plain file or folder name, never a path. Project ids and record names reach the main process from the window and
+ * are joined onto a folder or a repository address, so they are checked before they are used for either.
+ */
+export const isRecordName = (n: unknown): n is string => typeof n === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(n) && !n.includes('..');

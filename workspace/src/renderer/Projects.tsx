@@ -1,16 +1,17 @@
-import { FileTextIcon, FolderIcon, MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
+import { FolderIcon, MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { Checkout, CheckoutSuggestion, Person, Project, ProjectIteration } from '../shared/contract';
 import { NewWork, type Created } from './NewWork';
 import { People } from './People';
 import { PublishBanner, usePublishStatus } from './PublishStatus';
 import { startedAt } from '../shared/projects';
+import { RecordSheet } from './RecordSheet';
 import { Review } from './Review';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /** The list's own padding and width, under the toolbar. The toolbar is full width, so it is not inside this. */
@@ -27,6 +28,8 @@ const Page = ({ children }: { children: ReactNode }) => (
 export const Projects = () => {
 	const [projects, setProjects] = useState<Project[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	// Kept after it closes so the panel can slide away still showing what it was showing.
+	const [viewing, setViewing] = useState<{ project: Project; name: string; open: boolean } | null>(null);
 	const [selected, setSelected] = useState<{ project: Project; iteration: ProjectIteration; task?: string } | null>(null);
 	const [checkout, setCheckout] = useState<Checkout | null>(null);
 	const [creating, setCreating] = useState(false);
@@ -191,7 +194,7 @@ export const Projects = () => {
 				)}
 
 				{projects.map((project) => (
-					<Card key={project.id} className="gap-4 py-5">
+					<Card key={project.id} className="gap-4 py-5 has-data-[slot=card-footer]:pb-0">
 						<CardHeader className="px-5">
 							<CardTitle className="text-base">{project.title}</CardTitle>
 							<CardDescription className="flex items-center gap-1.5">
@@ -204,7 +207,7 @@ export const Projects = () => {
 										year: 'numeric',
 									})}`}
 							</CardDescription>
-							{(project.localOnly || project.openComments > 0 || project.records.length > 0) && (
+							{(project.localOnly || project.openComments > 0) && (
 								<CardAction className="flex flex-row items-center gap-2">
 									{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}
 									{project.openComments > 0 && (
@@ -220,26 +223,6 @@ export const Projects = () => {
 											</TooltipTrigger>
 											<TooltipContent>
 												{project.openComments} comment{project.openComments === 1 ? '' : 's'}
-											</TooltipContent>
-										</Tooltip>
-									)}
-									{project.records.length > 0 && (
-										<Tooltip>
-											<TooltipTrigger asChild>
-												<Badge
-													variant="secondary"
-													aria-label={`${project.records.length} file${project.records.length === 1 ? '' : 's'}: ${project.records.join(', ')}`}
-												>
-													<FileTextIcon />
-													{project.records.length}
-												</Badge>
-											</TooltipTrigger>
-											<TooltipContent>
-												<ul className="m-0 flex list-none flex-col gap-0.5 p-0 font-mono">
-													{project.records.map((record) => (
-														<li key={record}>{record}</li>
-													))}
-												</ul>
 											</TooltipContent>
 										</Tooltip>
 									)}
@@ -262,9 +245,26 @@ export const Projects = () => {
 								</div>
 							)}
 						</CardContent>
+						{project.records.length > 0 && (
+							<CardFooter className="flex-wrap gap-1 rounded-b-xl border-t bg-muted/50 px-3 py-2 [.border-t]:pt-2">
+								{project.records.map((record) => (
+									<Button key={record} variant="ghost" size="sm" onClick={() => setViewing({ project, name: record, open: true })}>
+										{record.replace(/\.[^.]+$/, '')}
+									</Button>
+								))}
+							</CardFooter>
+						)}
 					</Card>
 				))}
 			</Page>
+			{viewing && (
+				<RecordSheet
+					project={viewing.project}
+					name={viewing.name}
+					open={viewing.open}
+					onClose={() => setViewing({ ...viewing, open: false })}
+				/>
+			)}
 		</>
 	);
 };

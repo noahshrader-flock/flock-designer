@@ -471,3 +471,18 @@ describe('deleteComment', () => {
   });
 });
 
+
+describe('readRecord', () => {
+  it('reads one file of a project as text', async () => {
+    const { session, api } = fakeSession({
+      '/repos/acme/design/contents/projects/alpha/review.md': { content: b64('# Review\nnotes ✓') },
+    });
+    expect(await new DesignRepo(session, REF).readRecord('alpha', 'review.md')).toBe('# Review\nnotes ✓');
+    expect(api).toHaveBeenCalledWith('/repos/acme/design/contents/projects/alpha/review.md');
+  });
+
+  it('says so when GitHub returns something that is not a file', async () => {
+    const { session } = fakeSession({ '/repos/acme/design/contents/projects/alpha/docs': [] });
+    await expect(new DesignRepo(session, REF).readRecord('alpha', 'docs')).rejects.toThrow(/could not be read/);
+  });
+});

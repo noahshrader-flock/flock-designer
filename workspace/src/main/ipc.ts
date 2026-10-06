@@ -1,5 +1,5 @@
 import { type BrowserWindow, dialog, ipcMain, shell } from 'electron';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import {
 	CHANNELS,
@@ -37,7 +37,8 @@ import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anc
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
-import { mergeProjects, unionLocal } from '../shared/projects';
+import { isRecordName, mergeProjects, unionLocal } from '../shared/projects';
+import { resolveInside } from './services/paths';
 import type { CheckoutMemory } from './services/checkoutMemory';
 
 /**
@@ -461,6 +462,22 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 			// Nothing to do: the comments themselves were read fine.
 		}
 	};
+	/** A record is text a person reads; anything larger than this is not one, and is cut rather than sent whole. */
+	const MAX_RECORD = 400_000;
+	ipcMain.handle(
+		CHANNELS.readRecord,
+		guard(async (projectId: string, name: string): Promise<string> => {
+			if (!isRecordName(projectId) || !isRecordName(name)) throw new Error('That is not a file in a project.');
+			// This machine's copy first: it is the one being written, and may not be published yet.
+			const root = trustedRoot();
+			const recordsRoot = root === null ? null : recordsRootFor(root);
+			if (recordsRoot !== null) {
+				const path = resolveInside(recordsRoot, join(projectId, name));
+				if (existsSync(path) && statSync(path).isFile()) return readFileSync(path, 'utf8').slice(0, MAX_RECORD);
+			}
+			return (await designRepo.readRecord(projectId, name)).slice(0, MAX_RECORD);
+		}),
+	);
 	ipcMain.handle(
 		CHANNELS.readComments,
 		guard(async (projectId: string, branch: string): Promise<ReviewComment[]> => {

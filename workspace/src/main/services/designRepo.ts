@@ -93,6 +93,13 @@ export class DesignRepo {
     }
   }
 
+  /** One file from a project's folder, as text. */
+  async readRecord(id: string, name: string): Promise<string> {
+    const file = asRecord(await this.session.api(`${this.base}/contents/projects/${id}/${name}`));
+    if (typeof file.content !== 'string') throw new Error(`${name} could not be read from the design repository.`);
+    return Buffer.from(file.content, 'base64').toString('utf8');
+  }
+
   private async readBriefTitle(id: string, records: string[]): Promise<string | null> {
     if (!records.includes('brief.md')) return null;
     const file = asRecord(await this.session.api(`${this.base}/contents/projects/${id}/brief.md`));

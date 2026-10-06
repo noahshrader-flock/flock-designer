@@ -248,6 +248,8 @@ export interface WorkspaceApi {
 	/** Reviewer mode: everything below reads the design repo through the API. */
 	listProjects(): Promise<Result<Project[]>>;
 	readComments(projectId: string, iteration: string): Promise<Result<ReviewComment[]>>;
+	/** The text of one file in a project's folder (its brief, its review notes, …): this machine's copy if it has one, else GitHub's. */
+	readRecord(projectId: string, name: string): Promise<Result<string>>;
 	postComment(
 		projectId: string,
 		iteration: string,
@@ -508,6 +510,7 @@ export const CHANNELS = {
 	signOut: 'workspace:signOut',
 	listProjects: 'workspace:listProjects',
 	readComments: 'workspace:readComments',
+	readRecord: 'workspace:readRecord',
 	postComment: 'workspace:postComment',
 	signInChanged: 'workspace:event:signInChanged',
 	pageOpen: 'workspace:pageOpen',
