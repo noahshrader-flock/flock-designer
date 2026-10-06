@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AddressProblem, addressTask, prepareAddress } from '../src/main/services/address';
+import { AddressProblem, addressTask, prepareAddress, skillFor } from '../src/main/services/address';
 import { type AddressPhase, runAddress } from '../src/renderer/address';
 import type { AgentStatus, ReviewComment, Result } from '../src/shared/contract';
 
@@ -20,11 +20,12 @@ const comment = (id: number, over: Partial<ReviewComment> = {}): ReviewComment =
 
 describe('prepareAddress', () => {
 	let records: string;
-	const target = () => ({ recordsRoot: records, projectId: 'demo', iteration: { name: 'i1', branch: 'fd/demo/i1' } });
+	const target = () => ({ recordsRoot: records, projectId: 'demo', iteration: { name: 'i1', branch: 'fd/demo/i1' }, skill: '.flkd/skills/address-comments.md' });
 	const deps = (over: Partial<Parameters<typeof prepareAddress>[0]> = {}) => ({
 		readComments: vi.fn(async () => [comment(1), comment(2)]),
 		checkout: vi.fn(async () => ({ branch: 'fd/demo/i1' as string | null, clean: true })),
 		agentRunning: () => false,
+		skillPresent: () => true,
 		title: 'Demo',
 		now: () => new Date('2026-10-05T12:00:00Z'),
 		...over,
@@ -68,6 +69,13 @@ describe('prepareAddress', () => {
 		expect(existsSync(join(records, 'demo', 'comments.md'))).toBe(false);
 	});
 
+	it('refuses a checkout that does not have the skill, saying what to do, before reading or writing anything', async () => {
+		const d = deps({ skillPresent: () => false });
+		await expect(prepareAddress(d, target())).rejects.toThrow(/does not have \.flkd\/skills\/address-comments\.md.*Rebase/s);
+		expect(d.readComments).not.toHaveBeenCalled();
+		expect(existsSync(join(records, 'demo', 'comments.md'))).toBe(false);
+	});
+
 	it.each([
 		['another branch', { branch: 'fd/other/i1', clean: true }, /not fd\/demo\/i1/],
 		['no branch at all', { branch: null, clean: true }, /no branch/],
@@ -102,7 +110,12 @@ describe('prepareAddress', () => {
 
 describe('addressTask', () => {
 	it('is short and names what the app produced', () => {
-		expect(addressTask('/r/projects/demo/comments.md', 'fd/demo/i1').split('\n')).toHaveLength(3);
+		expect(addressTask('/r/projects/demo/comments.md', 'fd/demo/i1', 'x/skills/address-comments.md').split('\n')).toHaveLength(3);
+	});
+
+	it('finds the skill in the folder the repository declares for its agent context, not a folder this app assumes', () => {
+		expect(skillFor('.flkd')).toBe('.flkd/skills/address-comments.md');
+		expect(skillFor('.agent')).toBe('.agent/skills/address-comments.md');
 	});
 });
 
