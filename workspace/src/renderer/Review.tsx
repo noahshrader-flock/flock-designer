@@ -610,7 +610,7 @@ export const Review = ({
 			<div className="bg-card flex h-(--toolbar-height) shrink-0 items-center gap-4 border-b px-4">
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<Button size="icon" variant="ghost" aria-label="Back to projects" className="-ml-2" onClick={onBack}>
+						<Button size="icon" variant="ghost" aria-label="Back to projects" className="-mr-2 -ml-2" onClick={onBack}>
 							<ChevronLeftIcon />
 						</Button>
 					</TooltipTrigger>
