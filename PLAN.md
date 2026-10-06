@@ -167,15 +167,15 @@ called before 2026-10-05, so history still resolves.
 
 ### Phase 3 — Flock Designer: the whole team browses and comments
 
-*In progress. This is the current build.*
+*In progress. Done through 3.3.5; 3.4 is next.*
 
 | # | Step | Status | Evidence, or what it needs | Was |
 |---|---|---|---|---|
 | 3.1 | [Build the local authoring app](#31--build-the-workspace-local-loop-was-step-13) | ✔ Done | `158eab3`; confirmed working | step 13 |
-| 3.2 | [Sign in, and the comment store](#32--prove-sign-in-and-the-comment-store-was-c1) | ◐ Built — awaiting your check | Sign-in, the project list and **automatic publishing of iteration records** are built. **You:** raise the app's Contents permission to read and write, open an iteration and post one comment; then a second person signs in | C1 |
-| 3.2.5 | [Show who is on each project](#325--show-who-is-on-each-project) | ◐ Built — awaiting your check | Every project lists everyone who has committed to it, on any iteration. **You:** restart the app and look at the project list | added 2026-10-05 |
-| 3.3 | [Open a preview and comment on an element](#33--open-a-preview-and-comment-on-an-element-was-c2) | ◐ Built — awaiting your check | Click an element in a preview, comment, and see it marked on reopening. Verified in real Electron against a real click. **You:** try it on a prototype and say whether it feels right. Needs a security look | C2 |
-| 3.3.5 | [Prove it locally, start to finish](#335--prove-it-locally-start-to-finish) | ◐ Built — awaiting your walkthrough | **New prototype** in Projects creates the branch, runs the agent, runs the preview and opens it with pins. A real Coke prototype has been run through the app's own services and pinned. **You:** do it once end to end | added 2026-10-05 |
+| 3.2 | [Sign in, and the comment store](#32--prove-sign-in-and-the-comment-store-was-c1) | ✔ Done | Sign-in, the project list and automatic publishing of iteration records. Confirmed by Noah 2026-10-05 | C1 |
+| 3.2.5 | [Show who is on each project](#325--show-who-is-on-each-project) | ✔ Done | Every project lists everyone who has committed to it, on any iteration. Confirmed by Noah 2026-10-05 | added 2026-10-05 |
+| 3.3 | [Open a preview and comment on an element](#33--open-a-preview-and-comment-on-an-element-was-c2) | ✔ Done | Click an element in a preview, comment, and see it marked on reopening; verified in real Electron against a real click, and confirmed by Noah 2026-10-05. The security look is owed by Security (see *Waiting on other people*) | C2 |
+| 3.3.5 | [Prove it locally, start to finish](#335--prove-it-locally-start-to-finish) | ✔ Done | **New prototype** creates the branch, runs the agent and the preview, and opens it with pins. A real Coke prototype was run through the app's own services and pinned. Confirmed by Noah 2026-10-05 | added 2026-10-05 |
 | 3.4 | [Share for review](#34--share-for-review-was-c3) | ○ Not started — required | A hosted preview link, which feeds the same app, so a product manager can open an iteration and comment on it. Needs Coke engineering (CI) and a way for reviewers to read the design repository | C3 |
 | 3.5 | [Close the loop](#35--close-the-loop-was-c4) | ○ Not started — reshaped | Each comment carries its state, a small picture and the commit; Resolve in the sidebar; comments refresh on their own; one **Address N comments** button regenerates `comments.md` and starts the agent; an agent skill. Measured first: prototypes have almost no stable element names and the state was not recorded | C4 |
 | 3.6 | [Pilot and decision](#36--pilot-and-decision-was-c5) | ⏸ Needs people | Real projects reviewed by people outside design | C5 |
@@ -206,8 +206,8 @@ done it, and Claude never closes it. The work stops only at these points:
 | Stop | When | What I need | What I do meanwhile |
 |---|---|---|---|
 | 1 | Before 3.2 | **Cleared 2026-10-05** — Noah registered the GitHub App and sent its client ID | — |
-| 2 | End of 3.2 | **Partly cleared:** Noah signed in under company SSO. Still needed: one comment posted in the app, and a second person signing in | Start 3.3, which works against a local preview |
-| 3 | End of 3.3 | One reviewer saying whether commenting feels right, and a security look | Start 3.4 |
+| 2 | End of 3.2 | **Cleared 2026-10-05** — Noah confirmed 3.2 | — |
+| 3 | End of 3.3 | **Cleared 2026-10-05** — Noah confirmed 3.3. The security look is in *Waiting on other people* | — |
 | 4 | 3.4, end to end | Coke engineering merging the mock-data build | Finish and test the app side against a stub; draft the Coke change |
 | 5 | 3.6 | Real projects reviewed by people outside design | Nothing — this is the decision |
 
@@ -282,185 +282,6 @@ FUI's `.flkd/authoring/`, and the snapshot problem the resolution half was fight
   `@flocksafety/frontend-guild` — is the right process.
 
 **Done when:** the owner has approved both. Nothing here blocks the steps below.
-
-### 3.2 — Prove sign-in and the comment store (was C1)
-
-**Claude. Mechanical, plus one human check.** Built in the existing app. Everything later depends on
-two things being true that are *not yet verified*: that device-flow sign-in works for people in the
-company's GitHub org, and that issue comments are a workable comment store.
-
-- Rename the app **Flock Designer**; separate *author* features (need a checkout) from *reviewer*
-  features (need only a GitHub account).
-- **Sign in with GitHub by device flow**; keep the token in the OS keychain. Build against a
-  development **GitHub App** with device flow enabled and permission for Issues on the design repo
-  only. GitHub's docs confirm device flow needs no secret for GitHub Apps, and that a user token is
-  limited to what both the app and the user can do. (An OAuth app would need the `repo` scope, which
-  reaches every repository the user can access — Coke included.)
-- **List projects and their iterations** from the design repo through the API — no clone.
-- **Create, post to and read** one issue per iteration, with a label, for comments.
-- **Publish the iteration record automatically** *(added 2026-10-05, built)*. Creating or continuing
-  an iteration in the app writes `projects/<id>/iterations.json` to the design repo through the API,
-  so reviewers see it with no manual step. It merges by iteration name, so a stale checkout cannot
-  delete someone else's iteration, and it writes nothing when the record is unchanged. If the author
-  is signed out, or the app lacks permission, the local save still succeeds and the app says the
-  iteration has not been shared yet. The five older records were written by hand and are marked so.
-  **Needs the GitHub App's Contents permission raised from read-only to read and write**, then
-  approved on the installation.
-
-**Done when:** an account with only *read* access signs in, lists the projects, posts a comment on an
-iteration, and a second account sees it — verified against a test repository. **Human:** one sign-in
-with a real company account, to confirm the org's SSO behaves.
-
-**Needs:** one GitHub App client ID, registered by Noah for development. **Not in this step:** previews,
-anchoring, any server.
-
-### 3.2.5 — Show who is on each project
-
-**Claude. Built 2026-10-05; added because designers working directly in the codebase will be the main
-way in, and a reviewer needs to know whose work they are looking at.** The project list shows, for each
-project, everyone who has committed to it, so two designers on one project both appear.
-
-- **Where the names come from.** Code commits live in the Coke repo, which reviewers cannot see, so
-  the author's app records them. Opening or continuing an iteration reads the commit authors on that
-  branch beyond the trunk, and writes them into the iteration record as `contributors`, which is
-  published to the design repo with the rest of the record. The reviewer's app also reads the history
-  of the project's own design-repo folder, which catches whoever wrote the brief or the review. A
-  project's list is the union, alphabetical, with no duplicates.
-- **Names only, no emails.** The record lives in a shared repository.
-- **Avatar and username** *(added 2026-10-05)*. Each person shows as their GitHub profile picture and
-  username, with their initial where no account is known. A git name is not a GitHub login, so the
-  login is resolved without guessing, from three sources: a `…@users.noreply.github.com` address
-  names its account; the person running the app is signed in as themselves, so commits under their
-  own git identity carry their login; and the design repo's folder history links commits to
-  accounts. Most Flock commits use a company address, so a collaborator appears by name until they
-  open an iteration in the app once, after which their login is recorded. A login learned anywhere
-  applies to that person everywhere. Pictures load from GitHub's avatar host, the only network
-  fetch the window is allowed.
-- **Bots are left out.** Accounts ending `[bot]` are automation, not people.
-- **How current it is.** Refreshed when an iteration is opened or shared (3.4 also refreshes it), so
-  commits made since then appear at the next one. Names are matched case-insensitively; one person
-  who commits under two git names appears twice, which `git config user.name` fixes.
-- **Simple prototypes.** A prototype with no branch of its own still shows whoever committed to its
-  project folder.
-
-The five existing records were backfilled from the Coke branches (all Noah, so far).
-
-**Both ways in work the same** *(checked 2026-10-05)*. The app offers **New prototype** (a throwaway
-`fd/<project>/iN` branch) and **Work in the codebase** (the project's one `feature/<project>` branch).
-Before this check only the first existed: the app read the codebase branch pattern and never used it,
-so codebase work could only be started by hand and recorded by hand. Now both create the branch, write
-the record, publish it, and credit contributors identically. Starting codebase work on a branch that
-already exists adopts it and keeps its commits. Also fixed: numbering counted every record, so a
-codebase entry made the next prototype `i3` instead of `i2`. After the branch exists, everything
-downstream does not care which kind it is: the preview command, the agent task, comments (keyed by
-branch), the handoff gate and the project list.
-
-**Done when:** a project with commits from two people lists both in the app. **Human:** one look at
-the list.
-
-### 3.3 — Open a preview and comment on an element (was C2)
-
-**Claude. Built 2026-10-05; waits on a human feel check and a security look.** Built and tested
-against a local design-mode preview, so it did not wait on CI.
-
-**What exists.** An iteration opens its preview inside the app, with a numbered comment panel beside
-it. **C** (or the button) starts pin mode: the cursor becomes a crosshair, one click anywhere places a
-pin and is not delivered to the page, and **Escape** cancels. Nothing is highlighted: it is a pin, not
-an element picker. The pin shows at once (amber) while the comment is written, then turns blue and
-numbered once saved. **Click a pin and its comment is highlighted in the panel**; **drag one and it
-moves**, which saves the new position. You can drag only your own pins (GitHub refuses an edit to
-someone else's comment, which is the rule wanted), and a small wobble counts as a click. Under the pin the app still records the element it landed on, and where inside
-it, because that is what keeps the pin in place when the window is resized or the page reflows. The
-comment is posted with its anchor hidden in the comment body, and a plain "On /route · selector" line for anyone reading on
-GitHub. On reopening, each comment is placed again: *found* by its selector, *moved* when the
-selector no longer matches but its text does (the marker follows the text, and the panel says so), or
-*missing* when neither does (it stays as a page-level comment, and says so). Comments for another
-page of the preview wait for that page. A preview address is `https`, or `http` on this machine; an
-iteration with no recorded address offers a field to paste a local one, until 3.4 records it.
-
-**Verified three ways.** The in-page scripts in jsdom (selectors, text fallback, markup that tries
-to break out of the script); the anchor encoding; and `npm run smoke:page`, which drives the real
-view in real Electron with a genuine mouse click and checks isolation (the page can see no `window.workspace`,
-`require` or `process`), that the click is picked and not delivered, that the marker stays on its element
-after a resize, the moved and missing cases, and that the page cannot navigate the view away.
-
-
-- Show a project's preview in the app's own browser view.
-- Comment mode (**C**): click an element, write a comment, post it as an issue comment with its
-  anchor — route, selector (preferring `data-e2e-ref`), nearby text, viewport, commit, optional
-  crop.
-- Markers on reopening; a comment whose element is gone becomes a page-level comment that says so.
-- **Isolation:** the preview gets no bridge to the app. The app reads the page to resolve an element;
-  the page cannot call the app. This replaces the earlier rule against ever scripting a preview, which
-  was written for untrusted remote pages — it needs a security look before the step closes.
-
-**Done when:** on a real prototype, a comment placed on an element is still on that element after a
-reload and after resizing the window, and degrades correctly when the element is removed. **Human:**
-one reviewer places a comment and says whether it feels right.
-
-**Not in this step, and not wanted:** dragging a region. **Later, if needed:** thumbnails, notifications.
-
-### 3.3.5 — Prove it locally, start to finish
-
-**Claude. Added 2026-10-05 as the proof of concept.** The whole loop on one machine, with no hosting and
-no other people: **generate a prototype, see it in Flock Designer, comment on it, and (with 3.5) have the
-agent act on the comments.** If this works, putting the preview on a shared address is a small, separate
-conversation with Coke engineering, because it only changes where the address comes from.
-
-When the Author screen was hidden (2026-10-05) the app lost its only way to create work. Its services
-are still there; this step gives them a place, inside the Projects tab, without bringing back a second mode.
-
-- **Find the product checkout without being told** *(changed 2026-10-05)*. A repository Flock Designer can work in has a `.flkd/workspace.json`, so the app looks for that marker in the usual places (Documents/GitHub, GitHub, code, dev and so on, one level deep) and uses the most recently used match. Nothing to choose or register; *Change* is there if it picks wrong, and a folder picker only if nothing is found.
-- **New prototype** (and **work in the codebase**), from Projects: a project id and a line on what it
-  is trying. It creates the branch and the record through the services that already exist (3.2 and
-  the codebase route).
-- **Run the agent** on that request, with its output shown in the window, so a designer is not
-  watching a terminal.
-- **Run the preview** with the repository's declared command, and **open the iteration straight onto
-  it**: no pasting an address. The preview then behaves as in 3.3.
-- **Comments** are placed and kept as in 3.3. On one machine they need only the Issues permission the
-  app already has; publishing the record to the design repo is best-effort, as built.
-
-**Done when:** from the app, on this machine, a new prototype is created from a short request, the
-agent builds it, its preview opens in the app, and a pinned comment is placed and survives a restart.
-**Human:** you do this once, start to finish, and say where it was awkward.
-
-**Not in this step:** a hosted preview, other people's access, the list of GitHub repositories.
-
-**Built 2026-10-05.** **New prototype** (and *In the codebase*) in the Projects tab asks for a name and what
-to explore, creates the branch and record, runs the agent, then the preview, and opens it with pins.
-Any existing iteration also gets a **Build on this machine** panel: run or stop its preview, or ask the
-agent for a change, with the agent's progress shown in the window. The checkout is chosen once and
-remembered.
-
-**What checking it end to end turned up, all fixed:**
-- **No `claude` on this machine's PATH.** Claude Code here exists only inside the editor, so the app
-  looked for it on the PATH, then the usual install places, then the newest copy an editor bundles.
-- **The agent could not have run unattended.** It now runs in print mode with streamed output, may edit
-  and run the repository's own scripts and local git, but not push, switch branches or delete, and may
-  write to the project's folder in the design repository.
-- **The declared preview command could never run.** `start:prototype` exits unless given a project id and
-  the descriptor gave none. The descriptor now says `<project-id>`, which the app fills in as one argument
-  (Coke change).
-- **Running a preview broke the handoff gate.** It writes a generated `bootstrap.tsx` that the linter
-  failed and that broke the typecheck on any other branch, and stopping the app's preview left the dev
-  server holding port 3100. Coke now ignores the file in the linter and the script removes it, and its
-  server, when stopped (Coke changes).
-- **Generated element ids** such as `:r1:` are no longer used to find an element again.
-
-**Anything built on this machine shows in the project list.** The list is GitHub's projects merged with the
-local copy of the design repository, read straight from disk: a project folder with an iteration record
-in it is a project, however it got there (the app, or an agent in a terminal), and whether or not it has
-been shared. Work only on this machine is marked **Only on this machine**; an iteration made here for a
-project that is already shared is marked **local**. If GitHub cannot be reached, local work still shows.
-**Work is found from the branches themselves**, not only from records: a branch named the way the repository names work (`fd/<project>/iN`, `feature/<project>`) is an iteration whether or not a record exists, so codebase work started by an agent in a terminal appears with no step of its own, and its record is written when it is first opened. The design repository is found beside the product checkout; if it is not there the app says to clone it rather than creating a folder outside any repository.
-
-The Coke changes are three commits on `noah/flock-designer`, and the four prototype branches were rebased
-onto them (backups are `backup/pre-descriptor-…`); the handoff gate passes on the ones I re-ran.
-
-**Verified:** `npm run smoke:local` ran the real Users prototype from its declared command in real Electron,
-opened it in the preview view and placed a pin on it that was found again. **Not yet verified:** the agent
-building a *new* prototype from a request, which needs a real run and takes a few minutes.
 
 ### 3.4 — Share for review (was C3)
 
@@ -2913,6 +2734,189 @@ the one thing the tests could not answer, and it is the go/no-go below: **the an
 application; this only makes it easier, and the collaboration value arrives at step 14. It is the
 step most at risk of being built because it is on the list rather than because it is needed.
 
+
+#### 3.2 — Prove sign-in and the comment store (was C1)
+
+**Claude. Mechanical, plus one human check.** Built in the existing app. Everything later depends on
+two things being true that are *not yet verified*: that device-flow sign-in works for people in the
+company's GitHub org, and that issue comments are a workable comment store.
+
+- Rename the app **Flock Designer**; separate *author* features (need a checkout) from *reviewer*
+  features (need only a GitHub account).
+- **Sign in with GitHub by device flow**; keep the token in the OS keychain. Build against a
+  development **GitHub App** with device flow enabled and permission for Issues on the design repo
+  only. GitHub's docs confirm device flow needs no secret for GitHub Apps, and that a user token is
+  limited to what both the app and the user can do. (An OAuth app would need the `repo` scope, which
+  reaches every repository the user can access — Coke included.)
+- **List projects and their iterations** from the design repo through the API — no clone.
+- **Create, post to and read** one issue per iteration, with a label, for comments.
+- **Publish the iteration record automatically** *(added 2026-10-05, built)*. Creating or continuing
+  an iteration in the app writes `projects/<id>/iterations.json` to the design repo through the API,
+  so reviewers see it with no manual step. It merges by iteration name, so a stale checkout cannot
+  delete someone else's iteration, and it writes nothing when the record is unchanged. If the author
+  is signed out, or the app lacks permission, the local save still succeeds and the app says the
+  iteration has not been shared yet. The five older records were written by hand and are marked so.
+  **Needs the GitHub App's Contents permission raised from read-only to read and write**, then
+  approved on the installation.
+
+**Done when:** an account with only *read* access signs in, lists the projects, posts a comment on an
+iteration, and a second account sees it — verified against a test repository. **Human:** one sign-in
+with a real company account, to confirm the org's SSO behaves.
+
+**Needs:** one GitHub App client ID, registered by Noah for development. **Not in this step:** previews,
+anchoring, any server.
+
+#### 3.2.5 — Show who is on each project
+
+**Claude. Built 2026-10-05; added because designers working directly in the codebase will be the main
+way in, and a reviewer needs to know whose work they are looking at.** The project list shows, for each
+project, everyone who has committed to it, so two designers on one project both appear.
+
+- **Where the names come from.** Code commits live in the Coke repo, which reviewers cannot see, so
+  the author's app records them. Opening or continuing an iteration reads the commit authors on that
+  branch beyond the trunk, and writes them into the iteration record as `contributors`, which is
+  published to the design repo with the rest of the record. The reviewer's app also reads the history
+  of the project's own design-repo folder, which catches whoever wrote the brief or the review. A
+  project's list is the union, alphabetical, with no duplicates.
+- **Names only, no emails.** The record lives in a shared repository.
+- **Avatar and username** *(added 2026-10-05)*. Each person shows as their GitHub profile picture and
+  username, with their initial where no account is known. A git name is not a GitHub login, so the
+  login is resolved without guessing, from three sources: a `…@users.noreply.github.com` address
+  names its account; the person running the app is signed in as themselves, so commits under their
+  own git identity carry their login; and the design repo's folder history links commits to
+  accounts. Most Flock commits use a company address, so a collaborator appears by name until they
+  open an iteration in the app once, after which their login is recorded. A login learned anywhere
+  applies to that person everywhere. Pictures load from GitHub's avatar host, the only network
+  fetch the window is allowed.
+- **Bots are left out.** Accounts ending `[bot]` are automation, not people.
+- **How current it is.** Refreshed when an iteration is opened or shared (3.4 also refreshes it), so
+  commits made since then appear at the next one. Names are matched case-insensitively; one person
+  who commits under two git names appears twice, which `git config user.name` fixes.
+- **Simple prototypes.** A prototype with no branch of its own still shows whoever committed to its
+  project folder.
+
+The five existing records were backfilled from the Coke branches (all Noah, so far).
+
+**Both ways in work the same** *(checked 2026-10-05)*. The app offers **New prototype** (a throwaway
+`fd/<project>/iN` branch) and **Work in the codebase** (the project's one `feature/<project>` branch).
+Before this check only the first existed: the app read the codebase branch pattern and never used it,
+so codebase work could only be started by hand and recorded by hand. Now both create the branch, write
+the record, publish it, and credit contributors identically. Starting codebase work on a branch that
+already exists adopts it and keeps its commits. Also fixed: numbering counted every record, so a
+codebase entry made the next prototype `i3` instead of `i2`. After the branch exists, everything
+downstream does not care which kind it is: the preview command, the agent task, comments (keyed by
+branch), the handoff gate and the project list.
+
+**Done when:** a project with commits from two people lists both in the app. **Human:** one look at
+the list.
+
+#### 3.3 — Open a preview and comment on an element (was C2)
+
+**Claude. Built 2026-10-05; waits on a human feel check and a security look.** Built and tested
+against a local design-mode preview, so it did not wait on CI.
+
+**What exists.** An iteration opens its preview inside the app, with a numbered comment panel beside
+it. **C** (or the button) starts pin mode: the cursor becomes a crosshair, one click anywhere places a
+pin and is not delivered to the page, and **Escape** cancels. Nothing is highlighted: it is a pin, not
+an element picker. The pin shows at once (amber) while the comment is written, then turns blue and
+numbered once saved. **Click a pin and its comment is highlighted in the panel**; **drag one and it
+moves**, which saves the new position. You can drag only your own pins (GitHub refuses an edit to
+someone else's comment, which is the rule wanted), and a small wobble counts as a click. Under the pin the app still records the element it landed on, and where inside
+it, because that is what keeps the pin in place when the window is resized or the page reflows. The
+comment is posted with its anchor hidden in the comment body, and a plain "On /route · selector" line for anyone reading on
+GitHub. On reopening, each comment is placed again: *found* by its selector, *moved* when the
+selector no longer matches but its text does (the marker follows the text, and the panel says so), or
+*missing* when neither does (it stays as a page-level comment, and says so). Comments for another
+page of the preview wait for that page. A preview address is `https`, or `http` on this machine; an
+iteration with no recorded address offers a field to paste a local one, until 3.4 records it.
+
+**Verified three ways.** The in-page scripts in jsdom (selectors, text fallback, markup that tries
+to break out of the script); the anchor encoding; and `npm run smoke:page`, which drives the real
+view in real Electron with a genuine mouse click and checks isolation (the page can see no `window.workspace`,
+`require` or `process`), that the click is picked and not delivered, that the marker stays on its element
+after a resize, the moved and missing cases, and that the page cannot navigate the view away.
+
+
+- Show a project's preview in the app's own browser view.
+- Comment mode (**C**): click an element, write a comment, post it as an issue comment with its
+  anchor — route, selector (preferring `data-e2e-ref`), nearby text, viewport, commit, optional
+  crop.
+- Markers on reopening; a comment whose element is gone becomes a page-level comment that says so.
+- **Isolation:** the preview gets no bridge to the app. The app reads the page to resolve an element;
+  the page cannot call the app. This replaces the earlier rule against ever scripting a preview, which
+  was written for untrusted remote pages — it needs a security look before the step closes.
+
+**Done when:** on a real prototype, a comment placed on an element is still on that element after a
+reload and after resizing the window, and degrades correctly when the element is removed. **Human:**
+one reviewer places a comment and says whether it feels right.
+
+**Not in this step, and not wanted:** dragging a region. **Later, if needed:** thumbnails, notifications.
+
+#### 3.3.5 — Prove it locally, start to finish
+
+**Claude. Added 2026-10-05 as the proof of concept.** The whole loop on one machine, with no hosting and
+no other people: **generate a prototype, see it in Flock Designer, comment on it, and (with 3.5) have the
+agent act on the comments.** If this works, putting the preview on a shared address is a small, separate
+conversation with Coke engineering, because it only changes where the address comes from.
+
+When the Author screen was hidden (2026-10-05) the app lost its only way to create work. Its services
+are still there; this step gives them a place, inside the Projects tab, without bringing back a second mode.
+
+- **Find the product checkout without being told** *(changed 2026-10-05)*. A repository Flock Designer can work in has a `.flkd/workspace.json`, so the app looks for that marker in the usual places (Documents/GitHub, GitHub, code, dev and so on, one level deep) and uses the most recently used match. Nothing to choose or register; *Change* is there if it picks wrong, and a folder picker only if nothing is found.
+- **New prototype** (and **work in the codebase**), from Projects: a project id and a line on what it
+  is trying. It creates the branch and the record through the services that already exist (3.2 and
+  the codebase route).
+- **Run the agent** on that request, with its output shown in the window, so a designer is not
+  watching a terminal.
+- **Run the preview** with the repository's declared command, and **open the iteration straight onto
+  it**: no pasting an address. The preview then behaves as in 3.3.
+- **Comments** are placed and kept as in 3.3. On one machine they need only the Issues permission the
+  app already has; publishing the record to the design repo is best-effort, as built.
+
+**Done when:** from the app, on this machine, a new prototype is created from a short request, the
+agent builds it, its preview opens in the app, and a pinned comment is placed and survives a restart.
+**Human:** you do this once, start to finish, and say where it was awkward.
+
+**Not in this step:** a hosted preview, other people's access, the list of GitHub repositories.
+
+**Built 2026-10-05.** **New prototype** (and *In the codebase*) in the Projects tab asks for a name and what
+to explore, creates the branch and record, runs the agent, then the preview, and opens it with pins.
+Any existing iteration also gets a **Build on this machine** panel: run or stop its preview, or ask the
+agent for a change, with the agent's progress shown in the window. The checkout is chosen once and
+remembered.
+
+**What checking it end to end turned up, all fixed:**
+- **No `claude` on this machine's PATH.** Claude Code here exists only inside the editor, so the app
+  looked for it on the PATH, then the usual install places, then the newest copy an editor bundles.
+- **The agent could not have run unattended.** It now runs in print mode with streamed output, may edit
+  and run the repository's own scripts and local git, but not push, switch branches or delete, and may
+  write to the project's folder in the design repository.
+- **The declared preview command could never run.** `start:prototype` exits unless given a project id and
+  the descriptor gave none. The descriptor now says `<project-id>`, which the app fills in as one argument
+  (Coke change).
+- **Running a preview broke the handoff gate.** It writes a generated `bootstrap.tsx` that the linter
+  failed and that broke the typecheck on any other branch, and stopping the app's preview left the dev
+  server holding port 3100. Coke now ignores the file in the linter and the script removes it, and its
+  server, when stopped (Coke changes).
+- **Generated element ids** such as `:r1:` are no longer used to find an element again.
+
+**Anything built on this machine shows in the project list.** The list is GitHub's projects merged with the
+local copy of the design repository, read straight from disk: a project folder with an iteration record
+in it is a project, however it got there (the app, or an agent in a terminal), and whether or not it has
+been shared. Work only on this machine is marked **Only on this machine**; an iteration made here for a
+project that is already shared is marked **local**. If GitHub cannot be reached, local work still shows.
+**Work is found from the branches themselves**, not only from records: a branch named the way the repository names work (`fd/<project>/iN`, `feature/<project>`) is an iteration whether or not a record exists, so codebase work started by an agent in a terminal appears with no step of its own, and its record is written when it is first opened. The design repository is found beside the product checkout; if it is not there the app says to clone it rather than creating a folder outside any repository.
+
+The Coke changes are three commits on `noah/flock-designer`, and the four prototype branches were rebased
+onto them (backups are `backup/pre-descriptor-…`); the handoff gate passes on the ones I re-ran.
+
+**Verified:** `npm run smoke:local` ran the real Users prototype from its declared command in real Electron,
+opened it in the preview view and placed a pin on it that was found again. **Not yet verified:** the agent
+building a *new* prototype from a request, which needs a real run and takes a few minutes.
+
+*Marked Complete on 2026-10-05 on Noah's confirmation that these four steps were verified. Evidence is in the change log; items that were never seen by Claude are listed there.*
+
+
 # Appendix C — Superseded designs
 
 *Replaced on 2026-10-05 by the direction at the top of this document. Kept for the reasoning, and because several of its contracts — the comment shape, the one-PR-per-branch mechanics — still inform the steps above.*
@@ -3211,6 +3215,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 | Date | Change | Sections updated |
 |---|---|---|
 | 2026-10-05 | **Removed the checkout step.** Noah's point: setting up project context already ties Flock Designer to the codebase, so a designer should never be asked to choose a checkout, and working in the code should simply appear as a project. The app now finds the product repository by its own `.flkd/workspace.json` marker, and reads work from the repository's branches as well as from records, so unrecorded work appears and is recorded when first opened. Kept deliberately simple: no registry, no config file, nothing that can go stale; a *Change* link and a folder picker remain only as fallbacks. | 3.3.5; the app. |
+| 2026-10-05 | **3.2, 3.2.5, 3.3 and 3.3.5 marked Complete, and moved to Appendix B intact.** Noah said he believed everything before 3.4 had been verified, and asked for them to be marked. Recorded on his word, with the evidence that exists: tests (281 passing at the last full run), `smoke`, `smoke:page` (a real click, pins, isolation, keyboard hand-over) and `smoke:local` (the real Users prototype run from its declared command, pinned and found again), plus the real-app walkthrough of pin, comment box, save and sidebar. **Claude never saw, and the record should not imply:** a second person signing in; a real comment posted to GitHub by the final build (the test runs stubbed the post, so Noah's own use is the evidence); real macOS keyboard routing into the comment box; the agent building a *new* prototype from a request in a fresh run. The security look at pins, page scripts and the trust gate is still owed and stays in *Waiting on other people*. |
 | 2026-10-05 | **Refresh and an Address button added to 3.5; 3.4 is required again.** Noah's goal: a product manager sees an iteration and comments, and the designer pulls those comments and changes the prototype locally with the agent. Checking that against the plan found three gaps. (1) The app reads a thread's comments once, when the iteration opens, so a PM's later comment never appears; 3.5 now refreshes on window focus and about every 60 seconds while visible, and pages past the 100-comment read cap. (2) `comments.md` was regenerated only when the app read comments, so an agent started from a terminal could act on a stale file; 3.5 now has one sidebar button, **Address N comments**, that re-reads, regenerates and starts the agent in one click. (3) The PM could not see the prototype at all: hosted preview (3.4) had been deferred, and the design repository is private with one collaborator. **3.4 is moved from deferred to required** (still built after the local proof), with PM access to the repository named as a prerequisite. Plan only; nothing built. |
 | 2026-10-05 | **Local work now shows in the project list.** Noah expected anything built locally, a prototype or codebase work, to appear in Flock Designer. It did not: the list read only GitHub, so work appeared only after its record was pushed (and its title was just its id until the brief was too). The list now merges GitHub's projects with the local design repository's, marked *Only on this machine* or *local*, and still shows local work if GitHub is unreachable. | 3.3.5; the app. |
 | 2026-10-05 | **Built 3.3.5, the local proof.** From Projects, *New prototype* creates the branch and record, runs the agent, runs the preview and opens it with pins; existing iterations get a *Build on this machine* panel. Checking it against the real Coke checkout found five faults that would each have stopped the walkthrough: Claude Code was not on the PATH on this machine, the agent had no way to run unattended, the declared preview command exited without a project id, a running preview left a generated file that failed the linter and the typecheck on other branches, and a stopped preview left its server holding the port. All fixed (three Coke commits; the four prototype branches rebased, with backups). The one thing not run is the agent building a new prototype from scratch. | 3.3.5; the app; Coke's descriptor, biome config and start script. |
