@@ -178,7 +178,8 @@ pulled with the shadcn CLI in the **Nova** style (`"style": "radix-nova"` in `co
 is what ui.shadcn.com shows; the older `new-york` style looks different (shadowed cards, no card sizes).
 Nova needs `tw-animate-css` and `shadcn/tailwind.css` imported in `index.css` for its open and close
 animations. React 19, which is what shadcn targets. Additions are marked in place: `warning` and `success` variants on Alert, and
-`success` on Badge, which the stock theme has no colour for.
+`success` on Badge, which the stock theme has no colour for. One change to stock behaviour: dialogs sit 20% from the
+top instead of vertically centred, so one that changes height grows downward and does not jump.
 
 **When adding a component with `npx shadcn@latest add <name>`**, the CLI currently leaves the
 registry's placeholder `import { cn } from "cn"` unrewritten and installs an unrelated npm package
