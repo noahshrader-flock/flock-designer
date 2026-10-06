@@ -10,11 +10,18 @@ product would really do it, write that down for a person to check, and then buil
 
 ## What you are given
 
-- **The quick prototype's page**, at the path the task gives. Read it; never change it. Elements
-  marked `data-component="..."` say which real component they stand in for. `data-e2e-ref` names
-  are the parts people commented on. The comment at the top says what it was modelled on.
+- **The quick prototype's page**, at the path the task gives. Read it; never change it. What it marks:
+  - `data-component="..."`: the real component that part stands in for.
+  - `data-component="none"` with `data-gap="..."`: a part the product has no way to do today. Every one
+    of these is a decision, and goes under **Needs a decision**.
+  - A token name beside each colour and size in its styles: use the token, never the value.
+  - `data-e2e-ref`: the parts people commented on.
+  - The comment at the top: where in the product it sits, what it was modelled on, which person the
+    navigation shows, its states and its gaps.
 - **This repository**, on the project's codebase branch, and the project's records in the design
-  repository (the brief, any comments), as for any other codebase work.
+  repository (the brief, any comments), as for any other codebase work. **Read this product's Flock
+  Designer guidance as you would for any codebase work**: it says how the app is put together and which
+  patterns to use. The page approximated those; the guidance is the real thing.
 
 ## First: the audit
 
