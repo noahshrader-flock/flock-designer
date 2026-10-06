@@ -106,6 +106,11 @@ describe('running unattended', () => {
 		for (const bad of ['git push', 'git reset', 'git checkout', 'rm', 'curl']) expect(allowed).not.toContain(bad);
 	});
 
+	it('turns off the attribution line Claude Code adds to its commits, so the designer\'s history has none', () => {
+		const settings = JSON.parse(argv[argv.indexOf('--settings') + 1] ?? '{}');
+		expect(settings).toEqual({ attribution: { commit: '', pr: '' } });
+	});
+
 	it('lets it write to the design repository, and puts that list last so it swallows nothing', () => {
 		expect(argv.slice(-2)).toEqual(['--add-dir', '/design/projects']);
 	});

@@ -91,6 +91,14 @@ const ALLOWED_TOOLS = [
 ].join(',');
 
 /**
+ * Work the agent commits is the designer's own work, committed under their name, and carries no
+ * attribution line. Claude Code adds a `Co-Authored-By` trailer to its commits by default, which
+ * would put one in every iteration's history; this turns that off for the commits (and pull
+ * request text) of a run started from here.
+ */
+const SETTINGS = JSON.stringify({ attribution: { commit: '', pr: '' } });
+
+/**
  * Reads Claude Code's streamed JSON and returns what a person would want to
  * see: what it says, and which file it is touching. Everything else is noise.
  * A chunk can end mid-line, so the unfinished tail is kept for the next one.
@@ -137,6 +145,8 @@ export const claudeCodeAdapter: AgentAdapter = {
 		'--verbose',
 		'--permission-mode',
 		'acceptEdits',
+		'--settings',
+		SETTINGS,
 		'--allowedTools',
 		ALLOWED_TOOLS,
 		// Last: it takes a list, and would swallow anything after it.
