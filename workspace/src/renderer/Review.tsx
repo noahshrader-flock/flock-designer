@@ -600,8 +600,9 @@ export const Review = ({
 		: { top: 0, left: 0 };
 
 	return (
-		// Under the main bar, so its account menu is never covered.
-		<div className="bg-background fixed inset-x-0 top-(--nav-height) bottom-0 z-[1000] flex flex-col">
+		// Under the main bar, and under z-50: tooltips, menus and dialogs are portalled to the page at z-50, so a
+		// screen stacked above that hides all of them (the branch tooltip, the menu, the share dialog).
+		<div className="bg-background fixed inset-x-0 top-(--nav-height) bottom-0 z-40 flex flex-col">
 			{/* The toolbar: where you are, and the way back. Always visible, always fixed. */}
 			<div className="bg-card flex h-(--toolbar-height) shrink-0 items-center gap-4 border-b px-4">
 				<Tooltip>
