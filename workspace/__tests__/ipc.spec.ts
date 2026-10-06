@@ -178,8 +178,9 @@ describe('listProjects', () => {
 
 describe('where new work starts', () => {
 	it('lists the repositories on this machine without trusting any', async () => {
-		const r = await call(CHANNELS.listCheckouts);
-		expect(r).toEqual({ ok: true, value: [{ root: product, name: 'flock-coke', product: 'Test Product' }] });
+		// Signed out, so only what is on this machine; a clone with no GitHub remote goes by its folder name.
+		const r = await call(CHANNELS.listRepositories);
+		expect(r).toEqual({ ok: true, value: [{ name: 'flock-coke', root: product }] });
 		expect((await call(CHANNELS.listBaseBranches, product)).ok).toBe(false);
 	});
 

@@ -20,6 +20,7 @@ import type {
 	RunLogLine,
 	SignInState,
 	WorkspaceApi,
+	Repository,
 } from '../shared/contract';
 
 /**
@@ -49,7 +50,7 @@ const api: WorkspaceApi = {
 
 	listIterations: (root, projectId) => invoke<Iteration[]>(CHANNELS.listIterations, root, projectId),
 	createIteration: (root, projectId, note, kind, from) => invoke<Iteration>(CHANNELS.createIteration, root, projectId, note, kind, from),
-	listCheckouts: () => invoke<CheckoutSuggestion[]>(CHANNELS.listCheckouts),
+	listRepositories: () => invoke<Repository[]>(CHANNELS.listRepositories),
 	listBaseBranches: (root) => invoke<string[]>(CHANNELS.listBaseBranches, root),
 	continueIteration: (root, projectId, name) => invoke<Iteration>(CHANNELS.continueIteration, root, projectId, name),
 

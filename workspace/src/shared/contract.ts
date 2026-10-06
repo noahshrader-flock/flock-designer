@@ -183,8 +183,11 @@ export interface WorkspaceApi {
 	/** Creates the branch. Refuses if the tree is dirty; never discards work. */
 	/** Creates the branch from `from` (a local branch), or from the current branch when it is not given. */
 	createIteration(root: string, projectId: string, note: string, kind: IterationKind, from?: string): Promise<Result<Iteration>>;
-	/** Every product repository found on this machine. Listing one trusts nothing; `useCheckout` does. */
-	listCheckouts(): Promise<Result<CheckoutSuggestion[]>>;
+	/**
+	 * Every repository the signed-in person can see on GitHub, most recently pushed first, each with its clone on
+	 * this machine where there is one; then clones here GitHub did not list. Listing one trusts nothing.
+	 */
+	listRepositories(): Promise<Result<Repository[]>>;
 	/** The local branches of an opened repository, most recently worked on first: what new work can start from. */
 	listBaseBranches(root: string): Promise<Result<string[]>>;
 	/** Checks out an existing iteration's branch. */
@@ -336,6 +339,14 @@ export type SignInState =
  * difference between the two modes.
  */
 /** A repository discovery found, which the person has not accepted yet. */
+/** A repository new work could start in. */
+export interface Repository {
+	/** `owner/repo` on GitHub; a folder name for a clone with no GitHub remote. */
+	name: string;
+	/** Its clone on this machine, or null when it has none. */
+	root: string | null;
+}
+
 export interface CheckoutSuggestion {
   root: string;
   name: string;
@@ -494,7 +505,7 @@ export const CHANNELS = {
 	lastCheckout: 'workspace:lastCheckout',
 	suggestCheckout: 'workspace:suggestCheckout',
 	useCheckout: 'workspace:useCheckout',
-	listCheckouts: 'workspace:listCheckouts',
+	listRepositories: 'workspace:listRepositories',
 	listBaseBranches: 'workspace:listBaseBranches',
 	stopCommand: 'workspace:stopCommand',
 	commandStatus: 'workspace:commandStatus',

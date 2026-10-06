@@ -12,6 +12,7 @@ import {
 	type PageBounds,
 	type PageHoldReason,
 	type Project,
+	type Repository,
 	type PublishStatus,
 	type Result,
 	type ReviewComment,
@@ -24,6 +25,7 @@ import { readDescriptor } from './services/descriptor';
 import { branchCommit, branchExists, isRepository, readCheckout, recentBranches } from './services/git';
 import { assertUsableProjectId, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { findProductCheckouts, recordsRootFor } from './services/discovery';
+import { gitHubRepoOf, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
 import { classify, readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
 import { prepareAddress, readSkill } from './services/address';
@@ -210,16 +212,16 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 	);
 
 	ipcMain.handle(
-		CHANNELS.listCheckouts,
-		guard((): CheckoutSuggestion[] =>
-			findProductCheckouts().flatMap((root) => {
-				try {
-					return [{ root, name: basename(root), product: readDescriptor(root).product }];
-				} catch {
-					return []; // a descriptor we cannot read is not a repository we should offer
-				}
-			}),
-		),
+		CHANNELS.listRepositories,
+		guard(async (): Promise<Repository[]> => {
+			const clones = findProductCheckouts().map((root) => {
+				const origin = originOf(root);
+				return { root, repo: origin === null ? null : gitHubRepoOf(origin) };
+			});
+			// Signed out, or GitHub out of reach: what is on this machine can still be started in.
+			const remote = github.state().state === 'signedIn' ? await visibleRepositories(github).catch(() => []) : [];
+			return mergeRepositories(remote, clones);
+		}),
 	);
 
 	ipcMain.handle(

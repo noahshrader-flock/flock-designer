@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import type { Checkout, CheckoutSuggestion, IterationKind, Project, ProjectIteration } from '../shared/contract';
+import type { Checkout, IterationKind, Project, ProjectIteration, Repository } from '../shared/contract';
 import { slugify } from '../shared/projects';
+import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
 
 export interface Created {
@@ -15,16 +15,14 @@ export interface Created {
 	task: string;
 }
 
-/** The repository picker's last entry, which opens a folder picker instead of choosing a repository. */
-const OTHER = '\u0000other';
-
 /**
- * Starting something new: where it starts (a repository on this machine, and a branch in it), a name, and
- * what it should explore. Creating it makes the branch and the record; the agent and the preview follow on
- * their own.
+ * Starting something new: where it starts (a repository, and a branch in it), a name, and what it should
+ * explore. Creating it makes the branch and the record; the agent and the preview follow on their own.
  *
- * The repository starts on the one last used, and the branch on the one it has checked out, so the usual
- * case is two choices already made.
+ * The repositories are the ones GitHub shows the signed-in person, so the list follows their permissions;
+ * both lists can be searched by typing. The repository starts on the one last used, and the branch on the one
+ * it has checked out, so the usual case is two choices already made. Work is built in a clone, so a
+ * repository with none on this machine says so instead of offering branches.
  */
 export const NewWork = ({
 	open,
@@ -46,14 +44,17 @@ export const NewWork = ({
 	const [task, setTask] = useState('');
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [repos, setRepos] = useState<CheckoutSuggestion[]>([]);
+	const [repos, setRepos] = useState<Repository[]>([]);
+	// The repository chosen, by name. Null means the one in use.
+	const [picked, setPicked] = useState<string | null>(null);
 	const [branches, setBranches] = useState<string[]>([]);
 	const [from, setFrom] = useState<string | null>(null);
 	const id = slugify(name);
 
 	useEffect(() => {
 		if (!open) return;
-		void window.workspace.listCheckouts().then((r) => r.ok && setRepos(r.value));
+		setPicked(null);
+		void window.workspace.listRepositories().then((r) => r.ok && setRepos(r.value));
 	}, [open]);
 
 	// A new repository brings its own branches, and starts on the one it has checked out.
@@ -69,14 +70,24 @@ export const NewWork = ({
 	}, [open, checkout?.root, checkout?.branch]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// The one in use is always offered, even when it was opened by hand from somewhere discovery does not look.
-	const choices = checkout && !repos.some((r) => r.root === checkout.root) ? [{ root: checkout.root, name: checkout.name }, ...repos] : repos;
+	const choices: Repository[] =
+		checkout && !repos.some((r) => r.root === checkout.root) ? [{ name: checkout.name, root: checkout.root }, ...repos] : repos;
+	const inUse = choices.find((r) => r.root !== null && r.root === checkout?.root) ?? null;
+	const chosen = (picked === null ? inUse : choices.find((r) => r.name === picked)) ?? null;
+	// Chosen, and not the clone in use: either it is being switched to, or there is no clone to switch to.
+	const elsewhere = chosen !== null && chosen.root !== checkout?.root;
 
-	const pickRepo = async (root: string) => {
-		if (root === OTHER) return onChoose();
+	const pickRepo = async (name: string) => {
+		const repo = choices.find((r) => r.name === name);
+		if (!repo) return;
+		setPicked(repo.name);
 		setError(null);
-		const r = await window.workspace.useCheckout(root);
-		if (r.ok) onCheckout(r.value);
-		else setError(r.error);
+		if (repo.root === null || repo.root === checkout?.root) return;
+		const r = await window.workspace.useCheckout(repo.root);
+		if (r.ok) {
+			onCheckout(r.value);
+			setPicked(null);
+		} else setError(r.error);
 	};
 
 	const create = async (kind: IterationKind) => {
@@ -117,35 +128,39 @@ export const NewWork = ({
 						<>
 							<div className="flex flex-col gap-2">
 								<Label htmlFor="new-work-repo">Repository</Label>
-								<Select value={checkout?.root ?? ''} onValueChange={(v) => void pickRepo(v)} disabled={busy}>
-									<SelectTrigger id="new-work-repo" className="w-full">
-										<SelectValue placeholder="Choose a repository" />
-									</SelectTrigger>
-									<SelectContent>
-										{choices.map((r) => (
-											<SelectItem key={r.root} value={r.root}>
-												{r.name}
-											</SelectItem>
-										))}
-										<SelectSeparator />
-										<SelectItem value={OTHER}>Another folder…</SelectItem>
-									</SelectContent>
-								</Select>
+								<SearchSelect
+									id="new-work-repo"
+									items={choices.map((r) => r.name)}
+									value={chosen?.name ?? null}
+									onChange={(v) => void pickRepo(v)}
+									placeholder="Choose a repository"
+									search="Search repositories…"
+									empty="No repository matches."
+									disabled={busy}
+								/>
+								{elsewhere && chosen?.root === null && (
+									<p className="text-muted-foreground text-xs">
+										{chosen.name} is not on this machine, so there is nothing here to build it in. Clone it, then{' '}
+										<button type="button" className="text-primary cursor-pointer underline underline-offset-4" onClick={onChoose}>
+											point the app at it
+										</button>
+										.
+									</p>
+								)}
 							</div>
 							<div className="flex flex-col gap-2">
 								<Label htmlFor="new-work-from">Starts from</Label>
-								<Select value={from ?? ''} onValueChange={setFrom} disabled={busy || !checkout || branches.length === 0}>
-									<SelectTrigger id="new-work-from" className="w-full font-mono">
-										<SelectValue placeholder={checkout ? 'Choose a branch' : 'Choose a repository first'} />
-									</SelectTrigger>
-									<SelectContent>
-										{branches.map((b) => (
-											<SelectItem key={b} value={b} className="font-mono">
-												{b}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
+								<SearchSelect
+									id="new-work-from"
+									items={branches}
+									value={elsewhere ? null : from}
+									onChange={setFrom}
+									placeholder={checkout && !elsewhere ? 'Choose a branch' : 'Choose a repository first'}
+									search="Search branches…"
+									empty="No branch matches."
+									disabled={busy || elsewhere || branches.length === 0}
+									className="font-mono"
+								/>
 							</div>
 						</>
 					) : (
@@ -194,10 +209,10 @@ export const NewWork = ({
 					<Button variant="secondary" onClick={onClose} disabled={busy}>
 						Cancel
 					</Button>
-					<Button variant="secondary" onClick={() => void create('codebase')} disabled={busy || !checkout || !from || !id || !task.trim()}>
+					<Button variant="secondary" onClick={() => void create('codebase')} disabled={busy || !checkout || elsewhere || !from || !id || !task.trim()}>
 						In the codebase
 					</Button>
-					<Button onClick={() => void create('prototype')} disabled={busy || !checkout || !from || !id || !task.trim()}>
+					<Button onClick={() => void create('prototype')} disabled={busy || !checkout || elsewhere || !from || !id || !task.trim()}>
 						{busy ? 'Creating…' : 'Create prototype'}
 					</Button>
 				</DialogFooter>
