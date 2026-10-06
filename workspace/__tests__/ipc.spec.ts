@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -236,6 +236,44 @@ describe('where new work starts', () => {
 });
 
 describe('quick prototypes', () => {
+	/** The product's installed packages: its design system (the descriptor names it "x") and React. */
+	const installDesignSystem = () => {
+		const modules = join(product, 'node_modules');
+		// Ignored, as a real repository ignores it, so switching branches never takes it away.
+		writeFileSync(join(product, '.git', 'info', 'exclude'), 'node_modules\n');
+		mkdirSync(join(modules, 'x'), { recursive: true });
+		writeFileSync(join(modules, 'x', 'package.json'), JSON.stringify({ name: 'x', version: '1.2.3', main: 'index.js' }));
+		writeFileSync(join(modules, 'x', 'index.js'), "exports.Hello = () => require('react').createElement('h1', null, 'Real component');");
+		const appModules = join(__dirname, '..', 'node_modules');
+		for (const pkg of ['react', 'react-dom', 'scheduler']) if (!existsSync(join(modules, pkg))) symlinkSync(join(appModules, pkg), join(modules, pkg));
+	};
+	const writeSkill = () => {
+		mkdirSync(join(design, 'skills'), { recursive: true });
+		writeFileSync(join(design, 'skills', 'build-quick-prototype.md'), '# Build');
+	};
+	beforeEach(installDesignSystem);
+
+	it('say whether the real design system is installed here, and which version', async () => {
+		await call(CHANNELS.useCheckout, product);
+		expect(await call(CHANNELS.quickReadiness, product)).toEqual({ ok: true, value: { ready: true, designSystem: 'x', version: '1.2.3' } });
+		rmSync(join(product, 'node_modules'), { recursive: true, force: true });
+		expect((await call(CHANNELS.quickReadiness, product)).value).toMatchObject({ ready: false, why: 'not-installed', repository: 'flock-coke' });
+	});
+
+	it('are never started without the real design system, and say what to install', async () => {
+		await call(CHANNELS.useCheckout, product);
+		rmSync(join(product, 'node_modules'), { recursive: true, force: true });
+		const r = await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		expect(r.ok).toBe(false);
+		expect(r.error).toMatch(/npm ci/);
+		expect(existsSync(join(design, 'projects', 'demo'))).toBe(false);
+	});
+
+	it('are never started without a repository and branch to model them on', async () => {
+		await call(CHANNELS.useCheckout, product);
+		expect((await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list')).ok).toBe(false);
+	});
+
 	it('are never made as a branch', async () => {
 		await call(CHANNELS.useCheckout, product);
 		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'quick');
@@ -245,7 +283,7 @@ describe('quick prototypes', () => {
 
 	it('are recorded, saved and served through the clone on this machine', async () => {
 		await call(CHANNELS.useCheckout, product);
-		const made = await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list');
+		const made = await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		expect(made).toMatchObject({ ok: true, value: { name: 'q1', branch: 'quick/demo/q1' } });
 		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list\n');
 
@@ -263,8 +301,7 @@ describe('quick prototypes', () => {
 
 	it('record what they are modelled on, and give the agent that branch to read, never to change', async () => {
 		await call(CHANNELS.useCheckout, product);
-		mkdirSync(join(design, 'skills'), { recursive: true });
-		writeFileSync(join(design, 'skills', 'build-quick-prototype.md'), '# Build');
+		writeSkill();
 		g(product, 'checkout', '-q', '-b', 'noah/baseline');
 		writeFileSync(join(product, 'baseline.txt'), 'only on the baseline');
 		g(product, 'add', '.');
@@ -289,13 +326,13 @@ describe('quick prototypes', () => {
 		// On the branch already: the clone itself.
 		await call(CHANNELS.createQuick, 'demo', 'Demo', 'Another', { root: product, branch: 'develop' });
 		await call(CHANNELS.buildQuick, 'demo', 'q2', 'Another');
-		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([realpathSync(product), join(realpathSync(product), '.flkd')]);
+		const p = realpathSync(product);
+		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([p, join(p, '.flkd'), join(p, 'node_modules', 'x'), join(p, 'node_modules')]);
 	});
 
 	it('build once when asked twice at the same moment, as a screen opened twice does', async () => {
 		await call(CHANNELS.useCheckout, product);
-		mkdirSync(join(design, 'skills'), { recursive: true });
-		writeFileSync(join(design, 'skills', 'build-quick-prototype.md'), '# Build');
+		writeSkill();
 		g(product, 'checkout', '-q', '-b', 'noah/baseline');
 		g(product, 'checkout', '-q', 'develop');
 		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'noah/baseline' });
@@ -306,7 +343,7 @@ describe('quick prototypes', () => {
 
 	it('save a page that was built here but never saved, when it is opened', async () => {
 		await call(CHANNELS.useCheckout, product);
-		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list');
+		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		mkdirSync(join(home, 'quick', 'demo'), { recursive: true });
 		writeFileSync(join(home, 'quick', 'demo', 'q1.html'), '<h1>Built, left behind</h1>');
 		expect((await call(CHANNELS.openQuick, 'demo', 'q1')).ok).toBe(true);
@@ -315,8 +352,7 @@ describe('quick prototypes', () => {
 
 	it("take the product's guidance from the accepted checkout when the branch has none, as develop does not", async () => {
 		await call(CHANNELS.useCheckout, product);
-		mkdirSync(join(design, 'skills'), { recursive: true });
-		writeFileSync(join(design, 'skills', 'build-quick-prototype.md'), '# Build');
+		writeSkill();
 		g(product, 'checkout', '-q', '-b', 'bare-develop');
 		g(product, 'rm', '-rq', '.flkd');
 		g(product, 'commit', '-q', '-m', 'no setup on this branch');
@@ -329,20 +365,11 @@ describe('quick prototypes', () => {
 
 	it('write React when the product is installed here, then build it on save and keep the source beside the page', async () => {
 		await call(CHANNELS.useCheckout, product);
-		mkdirSync(join(design, 'skills'), { recursive: true });
-		writeFileSync(join(design, 'skills', 'build-quick-prototype.md'), '# Build');
-		// The product's installed packages: its design system (the descriptor names it "x") and React.
-		const modules = join(product, 'node_modules');
-		mkdirSync(join(modules, 'x'), { recursive: true });
-		writeFileSync(join(modules, 'x', 'package.json'), JSON.stringify({ name: 'x', main: 'index.js' }));
-		writeFileSync(join(modules, 'x', 'index.js'), "exports.Hello = () => require('react').createElement('h1', null, 'Real component');");
-		const appModules = join(__dirname, '..', 'node_modules');
-		for (const pkg of ['react', 'react-dom', 'scheduler']) symlinkSync(join(appModules, pkg), join(modules, pkg));
+		writeSkill();
 
 		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		await call(CHANNELS.buildQuick, 'demo', 'q1', 'A list');
 		const task = agentStart.mock.calls.at(-1)?.[2] as string;
-		expect(task).toContain('**Mode: React.**');
 		expect(task).toContain(`Write \`${join(home, 'quick', 'demo', 'q1.tsx')}\``);
 
 		// What the agent writes, then Save.
@@ -355,24 +382,37 @@ describe('quick prototypes', () => {
 		expect(readFileSync(join(design, 'projects', 'demo', 'quick', 'q1.tsx'), 'utf8')).toContain("from 'x'");
 	});
 
+	it('keep a large embedded file once beside the projects, and serve it beside the page', async () => {
+		await call(CHANNELS.useCheckout, product);
+		writeFileSync(join(product, 'node_modules', 'x', 'style.css'), `@font-face { font-family: X; src: url(data:font/woff2;base64,${'A'.repeat(30000)}); }`);
+		for (const name of ['q1', 'q2']) {
+			await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+			mkdirSync(join(home, 'quick', 'demo'), { recursive: true });
+			writeFileSync(join(home, 'quick', 'demo', `${name}.tsx`), "import 'x/style.css';\nimport { Hello } from 'x';\nexport default () => <Hello />;\n");
+			expect((await call(CHANNELS.saveQuick, 'demo', name)).ok).toBe(true);
+		}
+		const kept = readdirSync(join(design, 'projects', '_shared'));
+		expect(kept).toHaveLength(1);
+		const page = readFileSync(join(design, 'projects', 'demo', 'quick', 'q2.html'), 'utf8');
+		expect(page).toContain(`/_shared/${kept[0]?.replace('.datauri', '')}`);
+		expect(page).not.toContain('A'.repeat(1000));
+		const opened = await call(CHANNELS.openQuick, 'demo', 'q2');
+		const font = await fetch((opened.value as string).replace('/demo/q2/', `/_shared/${kept[0]?.replace('.datauri', '')}`));
+		expect(font.headers.get('content-type')).toBe('font/woff2');
+		// Kept beside the projects, never listed as one.
+		const listed = await call(CHANNELS.listProjects);
+		expect((listed.value as { id: string }[]).map((p) => p.id)).not.toContain('_shared');
+	});
+
 	it('refuse to save React that does not build, and say why', async () => {
 		await call(CHANNELS.useCheckout, product);
-		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list');
+		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		mkdirSync(join(home, 'quick', 'demo'), { recursive: true });
 		writeFileSync(join(home, 'quick', 'demo', 'q1.tsx'), "import { Nope } from 'not-installed';\nexport default () => <Nope />;\n");
 		const saved = await call(CHANNELS.saveQuick, 'demo', 'q1');
 		expect(saved.ok).toBe(false);
 		expect(saved.error).toMatch(/did not build[\s\S]*not-installed/);
 		expect(existsSync(join(design, 'projects', 'demo', 'quick', 'q1.html'))).toBe(false);
-	});
-
-	it('write HTML when the product is not installed here, and say so', async () => {
-		await call(CHANNELS.useCheckout, product);
-		mkdirSync(join(design, 'skills'), { recursive: true });
-		writeFileSync(join(design, 'skills', 'build-quick-prototype.md'), '# Build');
-		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-		await call(CHANNELS.buildQuick, 'demo', 'q1', 'A list');
-		expect(agentStart.mock.calls.at(-1)?.[2] as string).toContain('**Mode: HTML.**');
 	});
 
 	it('refuse a base that is not a branch of an accepted repository', async () => {

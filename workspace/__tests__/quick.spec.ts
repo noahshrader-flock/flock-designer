@@ -15,6 +15,7 @@ const memoryStore = (files: Record<string, string> = {}) => {
 	const writes: string[] = [];
 	const store: RecordStore = {
 		read: async (p) => files[p] ?? null,
+		has: async (p) => p in files,
 		write: async (p, c) => {
 			files[p] = c;
 			writes.push(p);
@@ -110,36 +111,26 @@ describe('what the agent is told', () => {
 		designSystemGuidance: '/c/fui',
 		installedDesignSystem: null,
 		sharedStandards: '/d/standards',
-		nodeModules: null,
+		nodeModules: '/c/node_modules',
 	};
-	const html = { kind: 'html' as const, page: '/q/users/q1.html' };
+	const build = { source: '/q/users/q1.tsx', page: '/q/users/q1.html', buildCommand: 'node /q/build-quick.mjs /e /q/users/q1.tsx /q/users/q1.html /c/node_modules /q/_shared' };
 
-	it('names the page file and every folder it may read, read-only, and puts the request last', () => {
-		const task = quickBuildTask({ skill: '# Skill', mode: html, sources, request: 'A users list' });
+	it('names the source to write, the exact command that checks it builds, and every folder it may read, read-only', () => {
+		const task = quickBuildTask({ skill: '# Skill', build, sources, request: 'A users list' });
 		expect(task.startsWith('# Skill')).toBe(true);
-		expect(task).toContain('`/q/users/q1.html`');
+		expect(task).toContain('Write `/q/users/q1.tsx`');
+		expect(task).toContain(`\`${build.buildCommand}\``);
 		expect(task).toContain('Read only: never change anything');
-		for (const dir of ['/q/source/coke', '/c/coke/.flkd', '/c/fui', '/d/standards']) expect(task).toContain(`\`${dir}\``);
+		for (const dir of ['/q/source/coke', '/c/coke/.flkd', '/c/fui', '/d/standards', '/c/node_modules']) expect(task).toContain(`\`${dir}\``);
 		expect(task.trimEnd().endsWith('A users list')).toBe(true);
 	});
 
 	it('says what is missing rather than leaving the agent to guess', () => {
-		expect(quickBuildTask({ skill: 's', mode: html, sources, request: 'r' })).toContain('The design system as installed:** not on this machine');
-		expect(quickBuildTask({ skill: 's', mode: html, sources: null, request: 'r' })).toContain('no product repository');
-	});
-
-	it('in React mode, names the source to write and the exact command that checks it builds', () => {
-		const react = { kind: 'react' as const, source: '/q/users/q1.tsx', page: '/q/users/q1.html', buildCommand: 'node /q/build-quick.mjs /e /q/users/q1.tsx /q/users/q1.html /c/node_modules' };
-		const task = quickBuildTask({ skill: 's', mode: react, sources: { ...sources, nodeModules: '/c/node_modules' }, request: 'r' });
-		expect(task).toContain('**Mode: React.**');
-		expect(task).toContain('Write `/q/users/q1.tsx`');
-		expect(task).toContain('`node /q/build-quick.mjs /e /q/users/q1.tsx /q/users/q1.html /c/node_modules`');
-		expect(task).toContain('`/c/node_modules`');
-		expect(quickBuildTask({ skill: 's', mode: html, sources, request: 'r' })).toContain('**Mode: HTML.**');
+		expect(quickBuildTask({ skill: 's', build, sources, request: 'r' })).toContain('The design system as installed:** not on this machine');
 	});
 
 	it('lets the agent read only the folders that exist', () => {
-		expect(quickReadable(sources)).toEqual(['/q/source/coke', '/c/coke/.flkd', '/c/fui', '/d/standards']);
+		expect(quickReadable(sources)).toEqual(['/q/source/coke', '/c/coke/.flkd', '/c/fui', '/d/standards', '/c/node_modules']);
 		expect(quickReadable(null)).toEqual([]);
 	});
 
@@ -169,6 +160,12 @@ describe('QuickServer', () => {
 			expect(res.headers.get('content-type')).toContain('text/html');
 			expect(await res.text()).toBe('<h1>Hi</h1>');
 			expect((await fetch(url.replace('/users/q1/', '/users/q2/'))).status).toBe(404);
+			// A shared file, served beside every page by its name, as the data it was embedded as.
+			server.share('0123456789abcdef', `data:font/woff2;base64,${Buffer.from('font bytes').toString('base64')}`);
+			const font = await fetch(url.replace('/users/q1/', '/_shared/0123456789abcdef'));
+			expect(font.headers.get('content-type')).toBe('font/woff2');
+			expect(await font.text()).toBe('font bytes');
+			expect(server.hasShared('0123456789abcdef')).toBe(true);
 			// Serving again replaces it.
 			await server.serve('users/q1', '<h1>Again</h1>');
 			expect(await (await fetch(url)).text()).toBe('<h1>Again</h1>');

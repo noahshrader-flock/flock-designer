@@ -22,6 +22,7 @@ import type {
 	WorkspaceApi,
 	Repository,
 	AgentReadiness,
+	QuickReadiness,
 } from '../shared/contract';
 
 /**
@@ -72,6 +73,7 @@ const api: WorkspaceApi = {
 	buildQuick: (projectId, name, request) => invoke<AgentStatus>(CHANNELS.buildQuick, projectId, name, request),
 	saveQuick: (projectId, name) => invoke<null>(CHANNELS.saveQuick, projectId, name),
 	openQuick: (projectId, name) => invoke<string>(CHANNELS.openQuick, projectId, name),
+	quickReadiness: (root) => invoke<QuickReadiness>(CHANNELS.quickReadiness, root),
 	prepareMoveToCode: (projectId, name) => invoke<string>(CHANNELS.prepareMoveToCode, projectId, name),
 	addressComments: (root, projectId, name, commentId) => invoke<AgentStatus>(CHANNELS.addressComments, root, projectId, name, commentId),
 	shareIteration: (root, projectId, name) => invoke<ShareStatus>(CHANNELS.shareIteration, root, projectId, name),

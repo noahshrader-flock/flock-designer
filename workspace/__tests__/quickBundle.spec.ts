@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { bundleCommand, esbuildEntry, runBundle, writeBundleScript } from '../src/main/services/quickBundle';
+import { bundleCommand, esbuildEntry, runBundle, sharedFilesOf, writeBundleScript } from '../src/main/services/quickBundle';
 
 // The app's own React stands in for the product's installed packages; a one-file package stands in for its design system.
 const appModules = join(__dirname, '..', 'node_modules');
@@ -36,7 +36,7 @@ describe('bundling a React quick prototype into one page', () => {
 			"/*\n * Usage tab, modelled on the Organization page.\n */\nimport '@acme/ds/style.css';\nimport { DSButton } from '@acme/ds';\nexport default function Prototype() { return <DSButton>Archive roles</DSButton>; }\n",
 		);
 		const out = join(dir, 'quick', 'demo', 'q1.html');
-		const r = await runBundle(script, esbuild as string, entry, out, modules, process.execPath);
+		const r = await runBundle(script, esbuild as string, entry, out, modules, join(dir, 'shared'), process.execPath);
 		expect(r).toMatchObject({ ok: true });
 		expect(r.output).toMatch(/^Built q1\.html \(\d+ KB\)\.$/);
 		const html = readFileSync(out, 'utf8');
@@ -46,20 +46,40 @@ describe('bundling a React quick prototype into one page', () => {
 		expect(html).not.toMatch(/<script[^>]+src=/);
 	});
 
+	it('keeps a large embedded file once, by its content, and points the page at it; small ones stay in the page', async () => {
+		const esbuild = esbuildEntry() as string;
+		const script = writeBundleScript(join(dir, 'quick'));
+		const big = 'data:font/woff2;base64,' + 'A'.repeat(30000);
+		const small = 'data:image/png;base64,' + 'B'.repeat(100);
+		writeFileSync(join(modules, '@acme', 'ds', 'style.css'), `@font-face { font-family: X; src: url(${big}); } .logo { background: url("${small}"); }`);
+		const entry = join(dir, 'quick', 'q1.tsx');
+		mkdirSync(join(dir, 'quick'), { recursive: true });
+		writeFileSync(entry, "import '@acme/ds/style.css';\nexport default () => null;\n");
+		const shared = join(dir, 'shared');
+		const r = await runBundle(script, esbuild, entry, join(dir, 'quick', 'q1.html'), modules, shared, process.execPath);
+		expect(r.ok).toBe(true);
+		const html = readFileSync(join(dir, 'quick', 'q1.html'), 'utf8');
+		const names = sharedFilesOf(html);
+		expect(names).toHaveLength(1);
+		expect(readFileSync(join(shared, `${names[0]}.datauri`), 'utf8')).toBe(big);
+		expect(html).not.toContain('A'.repeat(1000));
+		expect(html).toContain('B'.repeat(100));
+	});
+
 	it('says what is wrong when the prototype does not compile, and writes nothing', async () => {
 		const esbuild = esbuildEntry() as string;
 		const script = writeBundleScript(join(dir, 'quick'));
 		const entry = join(dir, 'quick', 'q1.tsx');
 		writeFileSync(entry, "import { Missing } from '@acme/nothing';\nexport default () => <Missing />;\n");
-		const r = await runBundle(script, esbuild, entry, join(dir, 'quick', 'q1.html'), modules, process.execPath);
+		const r = await runBundle(script, esbuild, entry, join(dir, 'quick', 'q1.html'), modules, join(dir, 'shared'), process.execPath);
 		expect(r.ok).toBe(false);
 		expect(r.output).toContain('@acme/nothing');
 		expect(existsSync(join(dir, 'quick', 'q1.html'))).toBe(false);
 	});
 
 	it('gives the agent one command it can run as it is', () => {
-		expect(bundleCommand('/q/build-quick.mjs', '/app/esbuild/main.js', '/q/a b/q1.tsx', '/q/q1.html', '/c/node_modules')).toBe(
-			'node /q/build-quick.mjs /app/esbuild/main.js "/q/a b/q1.tsx" /q/q1.html /c/node_modules',
+		expect(bundleCommand('/q/build-quick.mjs', '/app/esbuild/main.js', '/q/a b/q1.tsx', '/q/q1.html', '/c/node_modules', '/q/_shared')).toBe(
+			'node /q/build-quick.mjs /app/esbuild/main.js "/q/a b/q1.tsx" /q/q1.html /c/node_modules /q/_shared',
 		);
 	});
 });

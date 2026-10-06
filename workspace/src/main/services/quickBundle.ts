@@ -16,9 +16,10 @@ import { dirname, join } from 'node:path';
  */
 
 const SCRIPT = String.raw`
-import { readFileSync, writeFileSync } from 'node:fs';
-import { dirname, basename } from 'node:path';
-const [, , esbuildPath, entry, out, nodeModules] = process.argv;
+import { createHash } from 'node:crypto';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, basename, join } from 'node:path';
+const [, , esbuildPath, entry, out, nodeModules, shared] = process.argv;
 const { build } = await import(esbuildPath);
 const source = readFileSync(entry, 'utf8');
 // The comment the page opens with (what it shows, where it sits, its gaps) travels into the HTML for reviewers.
@@ -47,7 +48,19 @@ try {
 		logLevel: 'silent',
 	});
 	const js = result.outputFiles.filter((f) => f.path.endsWith('.js')).map((f) => f.text).join('\n');
-	const css = result.outputFiles.filter((f) => f.path.endsWith('.css')).map((f) => f.text).join('\n');
+	// Large embedded files (the design system's fonts are about 5 MB) are the same in every page. Each is kept once,
+	// named by its content, and the page points at it; the stylesheet itself, and so its order, is untouched.
+	mkdirSync(shared, { recursive: true });
+	const css = result.outputFiles
+		.filter((f) => f.path.endsWith('.css'))
+		.map((f) => f.text)
+		.join('\n')
+		.replace(/url\((["']?)(data:[^)"']+)\1\)/g, (whole, _q, uri) => {
+			if (uri.length < 20000) return whole;
+			const hash = createHash('sha256').update(uri).digest('hex').slice(0, 16);
+			writeFileSync(join(shared, hash + '.datauri'), uri);
+			return 'url(/_shared/' + hash + ')';
+		});
 	const safe = (s) => s.replace(/<\/(script|style)/gi, '<\\/$1');
 	const html =
 		'<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
@@ -80,8 +93,8 @@ export const writeBundleScript = (quickRoot: string): string => {
 };
 
 /** The exact command the agent runs to check its prototype builds. */
-export const bundleCommand = (script: string, esbuild: string, entry: string, out: string, nodeModules: string): string =>
-	['node', script, esbuild, entry, out, nodeModules].map((a) => (/^[\w./-]+$/.test(a) ? a : JSON.stringify(a))).join(' ');
+export const bundleCommand = (script: string, esbuild: string, entry: string, out: string, nodeModules: string, shared: string): string =>
+	['node', script, esbuild, entry, out, nodeModules, shared].map((a) => (/^[\w./-]+$/.test(a) ? a : JSON.stringify(a))).join(' ');
 
 /**
  * Builds `entry` into `out`. Resolves with what the build said, and whether it worked; never throws for a
@@ -93,12 +106,13 @@ export const runBundle = (
 	entry: string,
 	out: string,
 	nodeModules: string,
+	shared: string,
 	node: string = process.execPath,
 ): Promise<{ ok: boolean; output: string }> =>
 	new Promise((resolve) => {
 		mkdirSync(dirname(out), { recursive: true });
 		// Electron runs scripts as Node when told to; plain Node ignores the variable.
-		const child = spawn(node, [script, esbuild, entry, out, nodeModules], {
+		const child = spawn(node, [script, esbuild, entry, out, nodeModules, shared], {
 			env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
 			stdio: ['ignore', 'pipe', 'pipe'],
 		});
@@ -115,3 +129,7 @@ export const runBundle = (
 			resolve({ ok: code === 0, output: output.trim() });
 		});
 	});
+
+/** The shared files a page points at, by name, so they can be kept with it and served beside it. */
+export const sharedFilesOf = (html: string): string[] => [...new Set([...html.matchAll(/\/_shared\/([0-9a-f]{16})\b/g)].map((m) => m[1] as string))];
+export const isSharedName = (name: string): boolean => /^[0-9a-f]{16}$/.test(name);

@@ -160,6 +160,11 @@ export type AgentStatus =
  */
 export type IterationKind = 'prototype' | 'codebase' | 'quick';
 
+/** Whether a quick prototype can be built from a repository here: its design system installed, and the bundler present. */
+export type QuickReadiness =
+	| { ready: true; designSystem: string; version: string | null }
+	| { ready: false; why: 'not-installed' | 'no-bundler'; designSystem: string; repository: string };
+
 /** Something that could not be published, and why, in words a person can act on. */
 export interface PublishProblem {
 	what: string;
@@ -265,6 +270,8 @@ export interface WorkspaceApi {
 	buildQuick(projectId: string, name: string, request: string): Promise<Result<AgentStatus>>;
 	saveQuick(projectId: string, name: string): Promise<Result<null>>;
 	openQuick(projectId: string, name: string): Promise<Result<string>>;
+	/** Whether a quick prototype can be built from this repository on this machine, and with which design system version. */
+	quickReadiness(root: string): Promise<Result<QuickReadiness>>;
 	/** The task that moves a quick prototype into the codebase: an audit of it against the real code, then the work. */
 	prepareMoveToCode(projectId: string, name: string): Promise<Result<string>>;
 	/** Asked when new work is about to be started: is Claude Code installed here, and signed in? */
@@ -543,6 +550,7 @@ export const CHANNELS = {
 	saveQuick: 'workspace:saveQuick',
 	openQuick: 'workspace:openQuick',
 	prepareMoveToCode: 'workspace:prepareMoveToCode',
+	quickReadiness: 'workspace:quickReadiness',
 	addressComments: 'workspace:addressComments',
 	shareIteration: 'workspace:shareIteration',
 	shareStatus: 'workspace:shareStatus',

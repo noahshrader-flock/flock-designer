@@ -14,6 +14,8 @@ import { resolveInside } from './paths';
 export interface RecordStore {
 	/** A file in the design repository, by its path from the repository's root, or null. */
 	read(path: string): Promise<string | null>;
+	/** Whether a file is there, without fetching it: shared files run to megabytes. */
+	has(path: string): Promise<boolean>;
 	write(path: string, content: string, message: string): Promise<void>;
 }
 
@@ -23,6 +25,7 @@ export const cloneStore = (designRoot: string, published: () => void): RecordSto
 		const file = resolveInside(designRoot, path);
 		return existsSync(file) ? readFileSync(file, 'utf8') : null;
 	},
+	has: async (path) => existsSync(resolveInside(designRoot, path)),
 	write: async (path, content) => {
 		const file = resolveInside(designRoot, path);
 		mkdirSync(dirname(file), { recursive: true });
@@ -35,19 +38,19 @@ export const BUILD_SKILL = 'skills/build-quick-prototype.md';
 export const MOVE_SKILL = 'skills/move-to-code.md';
 
 /**
- * The size a page may be. A hand-written page is tens of kilobytes; one built from the real design system
- * carries its stylesheet and fonts, which for FUI is about 7 MB. Past this it is not a prototype page.
+ * The most a page may be: GitHub's own limit for a file (100 MB), with room to spare. Nothing of ours sits
+ * below it. A page built from the real design system is several MB, and a prototype with images can be far
+ * more; refusing one for being "too big" would leave someone unable to save what they made, which is the one
+ * thing this must not do.
  */
-export const MAX_PAGE = 16_000_000;
+export const MAX_PAGE = 90_000_000;
 
-/**
- * How a quick prototype is written. **React**, with the product's real design system, whenever the
- * product's packages are installed on this machine; otherwise **HTML**, drawn by hand to look like it.
- * Either way the result is one HTML file anyone can open.
- */
-export type QuickMode =
-	| { kind: 'react'; source: string; page: string; buildCommand: string }
-	| { kind: 'html'; page: string };
+/** Where a quick prototype is written, and the exact command that checks it builds. React, always: see the skill. */
+export interface QuickBuild {
+	source: string;
+	page: string;
+	buildCommand: string;
+}
 
 const records = (projectId: string) => `projects/${projectId}/iterations.json`;
 
@@ -139,13 +142,13 @@ export const quickReadable = (s: QuickSources | null): string[] =>
  */
 export const quickBuildTask = ({
 	skill,
-	mode,
+	build,
 	sources,
 	request,
 }: {
 	skill: string;
-	mode: QuickMode;
-	sources: QuickSources | null;
+	build: QuickBuild;
+	sources: QuickSources;
 	request: string;
 }): string => {
 	const line = (label: string, dir: string | null, missing: string) => (dir ? `- **${label}:** \`${dir}\`` : `- **${label}:** not on this machine. ${missing}`);
@@ -154,32 +157,18 @@ export const quickBuildTask = ({
 		'',
 		'## This run',
 		'',
-		...(mode.kind === 'react'
-			? [
-					'**Mode: React.** Write the prototype as one React file, using the product\'s real design system:',
-					'',
-					`- Write \`${mode.source}\`. That file is the whole prototype: nothing else you write is kept.`,
-					`- Check it builds, and build it again after every change, with exactly: \`${mode.buildCommand}\``,
-					`  It writes the page to \`${mode.page}\`. Do not finish while it reports an error.`,
-				]
-			: [
-					'**Mode: HTML.** The product\'s packages are not installed on this machine, so draw the page by hand:',
-					'',
-					`- Write the page to \`${mode.page}\`. That file is the whole prototype: nothing else you write is kept.`,
-				]),
+		`- Write \`${build.source}\`. That file is the whole prototype: nothing else you write is kept.`,
+		`- Check it builds, and build it again after every change, with exactly: \`${build.buildCommand}\``,
+		`  It writes the page to \`${build.page}\`. Do not finish while it reports an error.`,
 		'',
-		...(sources
-			? [
-					'What you may read. **Read only: never change anything in any of these.**',
-					'',
-					line("The product's code", sources.code, ''),
-					line("The product's guidance", sources.productGuidance, "Say so in your summary: the page cannot follow the product's structure without it."),
-					line('The design system (guidance and source)', sources.designSystemGuidance, "Use the installed design system and the product's own code for tokens and components."),
-					line('The design system as installed', sources.installedDesignSystem, 'Its version cannot be confirmed; say so.'),
-					line('Shared standards', sources.sharedStandards, ''),
-					...(sources.nodeModules ? [line("The product's installed packages", sources.nodeModules, '')] : []),
-				]
-			: ['There is no product repository on this machine, so build from the request and keep the design plain and neutral. Say so in your summary.']),
+		'What you may read. **Read only: never change anything in any of these.**',
+		'',
+		line("The product's code", sources.code, ''),
+		line("The product's guidance", sources.productGuidance, "Say so in your summary: the page cannot follow the product's structure without it."),
+		line('The design system (guidance and source)', sources.designSystemGuidance, "Use the installed design system and the product's own code for tokens and components."),
+		line('The design system as installed', sources.installedDesignSystem, 'Its version cannot be confirmed; say so.'),
+		line('Shared standards', sources.sharedStandards, ''),
+		line("The product's installed packages", sources.nodeModules, ''),
 		'',
 		'## What the person asked for',
 		'',

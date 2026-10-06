@@ -116,6 +116,17 @@ export class DesignRepo {
     }
   }
 
+  /** Whether a file is in the design repository. Over 1 MB GitHub sends only its details, so this stays cheap. */
+  async hasFile(path: string): Promise<boolean> {
+    try {
+      await this.session.api(`${this.base}/contents/${path}`);
+      return true;
+    } catch (err) {
+      if (err instanceof GitHubError && err.status === 404) return false;
+      throw err;
+    }
+  }
+
   /**
    * Creates or replaces a file in the design repository, as one commit by the signed-in person. Used
    * only where there is no clone on this machine to write into: one writer per machine.

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { AgentReadiness, Checkout, IterationKind, Project, ProjectIteration, Repository } from '../shared/contract';
+import { CircleCheckIcon } from 'lucide-react';
+import type { AgentReadiness, Checkout, IterationKind, Project, ProjectIteration, QuickReadiness, Repository } from '../shared/contract';
 import { freshIteration, slugify } from '../shared/projects';
 import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -16,9 +17,14 @@ const KINDS: { kind: NewKind; label: string; about: string }[] = [
 	{
 		kind: 'quick',
 		label: 'Quick prototype',
-		about: 'One page, made from your request and saved with the project, modelled on the branch below. Nothing in the codebase changes.',
+		about:
+			"One page built from the product's real components and shared as a single file. Needs the repository and its packages installed on this machine. Nothing runs and nothing in the codebase changes, so no environment setup.",
 	},
-	{ kind: 'codebase', label: 'Codebase feature', about: "Real work on the project's own feature branch, started from the branch below." },
+	{
+		kind: 'codebase',
+		label: 'Codebase feature',
+		about: "Real work on the project's own feature branch, started from the branch below. Needs the full setup: packages, environment variables, and the app able to run.",
+	},
 ];
 
 export interface Created {
@@ -99,6 +105,21 @@ export const NewWork = ({
 	// Building needs Claude Code; when it is plainly not ready, nothing is created.
 	const blocked = readiness.state === 'missing' || readiness.state === 'signedOut';
 
+	// Whether this repository can build a quick prototype here, asked as soon as there is one to ask about.
+	const [quick, setQuick] = useState<QuickReadiness | null>(null);
+	const askRoot = checkout && !elsewhere ? checkout.root : null;
+	useEffect(() => {
+		setQuick(null);
+		if (!open || kind !== 'quick' || askRoot === null) return;
+		let current = true;
+		void window.workspace.quickReadiness(askRoot).then((r) => current && r.ok && setQuick(r.value));
+		return () => {
+			current = false;
+		};
+	}, [open, kind, askRoot]);
+	// Nothing else decides this: no repository, or one without its packages, cannot make a quick prototype.
+	const quickBlocked = kind === 'quick' && (askRoot === null || (quick !== null && !quick.ready));
+
 	const pickRepo = async (name: string) => {
 		const repo = choices.find((r) => r.name === name);
 		if (!repo) return;
@@ -152,6 +173,13 @@ export const NewWork = ({
 						</TabsList>
 					</Tabs>
 					<p className="text-muted-foreground text-sm">{KINDS.find((k) => k.kind === kind)?.about}</p>
+					{kind === 'quick' && quick?.ready && (
+						<p className="text-success flex items-center gap-1.5 text-sm">
+							<CircleCheckIcon className="size-4 shrink-0" />
+							Real components available: {quick.designSystem}
+							{quick.version ? ` ${quick.version}` : ''}
+						</p>
+					)}
 				</div>
 				<DialogBody className="flex flex-col gap-4">
 					{checkout || choices.length > 0 ? (
@@ -170,9 +198,7 @@ export const NewWork = ({
 								/>
 								{elsewhere && chosen?.root === null && (
 									<p className="text-muted-foreground text-xs">
-										{kind === 'quick'
-											? `${chosen.name} is not on this machine, so the page is made from your request alone. To model it on the real code, clone it, then `
-											: `${chosen.name} is not on this machine, so there is nothing here to build it in. Clone it, then `}
+										{`${chosen.name} is not on this machine, so there is nothing here to build it from. Clone it, then `}
 										<button type="button" className="text-primary cursor-pointer underline underline-offset-4" onClick={onChoose}>
 											point the app at it
 										</button>
@@ -226,6 +252,21 @@ export const NewWork = ({
 							placeholder="A users list that flags people who have not signed in for 90 days."
 						/>
 					</div>
+					{kind === 'quick' && quick && !quick.ready && (
+						<Alert variant="warning">
+							<AlertTitle>{quick.why === 'not-installed' ? "The real components aren't installed here" : 'The page builder is missing'}</AlertTitle>
+							<AlertDescription>
+								{quick.why === 'not-installed' ? (
+									<>
+										A quick prototype is built from {quick.designSystem}, and it is not installed in {quick.repository} on this machine. Run{' '}
+										<code>npm ci</code> in it (this needs access to the private packages), then open this again.
+									</>
+								) : (
+									'Flock Designer cannot build pages on this machine. Reinstall the app and try again.'
+								)}
+							</AlertDescription>
+						</Alert>
+					)}
 					{readiness.state === 'missing' && (
 						<Alert variant="warning">
 							<AlertTitle>Claude Code is not installed</AlertTitle>
@@ -263,7 +304,7 @@ export const NewWork = ({
 					</Button>
 					<Button
 						onClick={() => void create()}
-						disabled={busy || blocked || !id || !task.trim() || (kind !== 'quick' && (!checkout || elsewhere || !from))}
+						disabled={busy || blocked || quickBlocked || !id || !task.trim() || !checkout || elsewhere || !from}
 					>
 						{busy ? 'Creating…' : `Create ${KINDS.find((k) => k.kind === kind)?.label.toLowerCase()}`}
 					</Button>

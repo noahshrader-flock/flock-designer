@@ -13,6 +13,7 @@ import {
 	type PageBounds,
 	type PageHoldReason,
 	type Person,
+	type QuickReadiness,
 	type Project,
 	type Repository,
 	type PublishStatus,
@@ -44,7 +45,7 @@ import { readFolderProjects } from './services/localProjects';
 import { isRecordName, mergeProjects, quickKey, quickPagePath, quickSourcePath, unionLocal } from '../shared/projects';
 import { resolveInside } from './services/paths';
 import { QuickServer } from './services/quickServer';
-import { bundleCommand, esbuildEntry, runBundle, writeBundleScript } from './services/quickBundle';
+import { bundleCommand, esbuildEntry, runBundle, sharedFilesOf, writeBundleScript } from './services/quickBundle';
 import {
 	BUILD_SKILL,
 	MAX_PAGE,
@@ -55,7 +56,7 @@ import {
 	moveToCodeTask,
 	quickBuildTask,
 	quickReadable,
-	type QuickMode,
+	type QuickBuild,
 	type QuickSources,
 	recordQuick,
 } from './services/quick';
@@ -542,7 +543,11 @@ export const registerIpc = ({
 		const recordsRoot = root === null ? null : recordsRootFor(root);
 		return recordsRoot !== null
 			? cloneStore(dirname(recordsRoot), () => void publisher.publish(true))
-			: { read: (path) => designRepo.readFile(path), write: (path, content, message) => designRepo.writeFile(path, content, message) };
+			: {
+					read: (path) => designRepo.readFile(path),
+					has: (path) => designRepo.hasFile(path),
+					write: (path, content, message) => designRepo.writeFile(path, content, message),
+				};
 	};
 	/** The folder an agent builds a project's quick prototypes in, and the page file inside it. */
 	const quickDir = (projectId: string): string => {
@@ -556,13 +561,42 @@ export const registerIpc = ({
 		return join(quickDir(projectId), `${name}.html`);
 	};
 	const quickSourceFile = (projectId: string, name: string): string => join(dirname(quickFile(projectId, name)), `${name}.tsx`);
-	/** React when the product's packages are installed here and the bundler is available; otherwise HTML. */
-	const quickMode = (projectId: string, name: string, sources: QuickSources | null): QuickMode => {
-		const page = quickFile(projectId, name);
-		const esbuild = esbuildEntry();
-		if (!sources?.nodeModules || esbuild === null) return { kind: 'html', page };
+	/**
+	 * Whether a quick prototype can be built from this accepted repository here: its design system installed, and the
+	 * bundler present. The page is always React with the real components, so without them there is nothing to build,
+	 * and the person is told what to install before anything is made, never handed a lesser page.
+	 */
+	const quickReadiness = (root: string): QuickReadiness => {
+		const canonical = opened.require(root);
+		const designSystem = readDescriptor(canonical).designSystem.package;
+		const pkg = join(canonical, 'node_modules', ...designSystem.split('/'));
+		if (!existsSync(join(pkg, 'package.json'))) return { ready: false, why: 'not-installed', designSystem, repository: basename(canonical) };
+		if (esbuildEntry() === null) return { ready: false, why: 'no-bundler', designSystem, repository: basename(canonical) };
+		let version: string | null = null;
+		try {
+			version = (JSON.parse(readFileSync(join(pkg, 'package.json'), 'utf8')) as { version?: string }).version ?? null;
+		} catch {
+			// A package.json that cannot be read still means it is installed.
+		}
+		return { ready: true, designSystem, version };
+	};
+	const quickBuildPlan = (projectId: string, name: string, sources: QuickSources | null): QuickBuild => {
+		const root = trustedRoot();
+		const ready = root === null ? null : quickReadiness(root);
+		if (!sources?.nodeModules || ready === null || !ready.ready) {
+			throw new Error(
+				ready !== null && !ready.ready && ready.why === 'not-installed'
+					? `Quick prototypes are built from the real design system, and ${ready.designSystem} is not installed in ${ready.repository}. Run npm ci there (it needs access to the private packages), then try again.`
+					: 'Quick prototypes are built from the real design system, so they need the product repository, with its packages installed, on this machine.',
+			);
+		}
 		const source = quickSourceFile(projectId, name);
-		return { kind: 'react', source, page, buildCommand: bundleCommand(writeBundleScript(quickRoot), esbuild, source, page, sources.nodeModules) };
+		const page = quickFile(projectId, name);
+		return {
+			source,
+			page,
+			buildCommand: bundleCommand(writeBundleScript(quickRoot), esbuildEntry() as string, source, page, sources.nodeModules, sharedDir),
+		};
 	};
 	/**
 	 * Builds a React prototype's page from its source, against the accepted checkout's installed packages.
@@ -572,8 +606,44 @@ export const registerIpc = ({
 		const root = trustedRoot();
 		const esbuild = esbuildEntry();
 		if (root === null || esbuild === null) throw new Error('This prototype is written in React, and building it needs the product repository installed on this machine.');
-		const r = await runBundle(writeBundleScript(quickRoot), esbuild, quickSourceFile(projectId, name), quickFile(projectId, name), join(opened.require(root), 'node_modules'));
+		const r = await runBundle(
+			writeBundleScript(quickRoot),
+			esbuild,
+			quickSourceFile(projectId, name),
+			quickFile(projectId, name),
+			join(opened.require(root), 'node_modules'),
+			sharedDir,
+		);
 		if (!r.ok) throw new Error(`The prototype did not build:\n${r.output.slice(0, 2000)}`);
+	};
+	/**
+	 * Large files pages share (the design system's fonts), each kept once by its content: here in the app's folder
+	 * as builds make them, and in the design repository beside the projects, where `_` keeps them off the list.
+	 */
+	const sharedDir = join(quickRoot, '_shared');
+	const sharedPath = (n: string): string => `projects/_shared/${n}.datauri`;
+	/**
+	 * Saves a page with what it needs: the shared files it points at that the design repository does not have yet
+	 * (first, so a page is never there without them), its React source, then the page.
+	 */
+	const keepQuick = async (projectId: string, name: string, html: string): Promise<void> => {
+		const store = recordStore();
+		for (const n of sharedFilesOf(html)) {
+			const local = join(sharedDir, `${n}.datauri`);
+			if (existsSync(local) && !(await store.has(sharedPath(n)))) await store.write(sharedPath(n), readFileSync(local, 'utf8'), `Shared file ${n}`);
+		}
+		const source = quickSourceFile(projectId, name);
+		if (existsSync(source)) await store.write(quickSourcePath(projectId, name), readFileSync(source, 'utf8'), `${projectId}: quick prototype ${name} source`);
+		await store.write(quickPagePath(projectId, name), html, `${projectId}: quick prototype ${name}`);
+	};
+	/** Makes the shared files a page points at available beside it: this machine's copy, else the design repository's. */
+	const serveShared = async (html: string): Promise<void> => {
+		for (const n of sharedFilesOf(html)) {
+			if (quickServer.hasShared(n)) continue;
+			const local = join(sharedDir, `${n}.datauri`);
+			const uri = existsSync(local) ? readFileSync(local, 'utf8') : ((await recordStore().read(sharedPath(n))) ?? (await designRepo.readFile(sharedPath(n))));
+			if (uri !== null) quickServer.share(n, uri);
+		}
 	};
 	/** The page: this machine's newest build first, then the saved one here, then GitHub's. */
 	const quickPage = async (projectId: string, name: string): Promise<string | null> => {
@@ -640,10 +710,15 @@ export const registerIpc = ({
 		return s.state === 'signedIn' ? { name: s.user.name ?? s.user.login, login: s.user.login } : null;
 	};
 
+	ipcMain.handle(CHANNELS.quickReadiness, guard((root: string) => quickReadiness(root)));
+
 	ipcMain.handle(
 		CHANNELS.createQuick,
 		guard(async (projectId: string, title: string, note: string, from: { root: string; branch: string } | null) => {
 			assertUsableProjectId(projectId);
+			// What it is modelled on is not optional: a quick prototype is built from a repository's real design system.
+			if (!from) throw new Error('A quick prototype is modelled on a branch of a repository on this machine. Choose one.');
+			if (!quickReadiness(from.root).ready) throw new Error('That repository has no design system installed here, so a quick prototype cannot be built from it. Run npm ci in it first.');
 			if (typeof title !== 'string' || !title.trim()) throw new Error('A quick prototype needs a name.');
 			// What it is modelled on: only a repository this person accepted, and a branch that exists in it.
 			let basedOn: Iteration['basedOn'];
@@ -667,8 +742,8 @@ export const registerIpc = ({
 			const skill = (await store.read(BUILD_SKILL)) ?? (await designRepo.readFile(BUILD_SKILL));
 			if (skill === null) throw new Error(`The design repository has no ${BUILD_SKILL}, which tells the agent how to build a quick prototype.`);
 			const sources = await once(`source:${projectId}`, () => quickSource(projectId, name));
-			const mode = quickMode(projectId, name, sources);
-			return agent.start(quickDir(projectId), projectId, quickBuildTask({ skill, mode, sources, request: String(request) }), {
+			const build = quickBuildPlan(projectId, name, sources);
+			return agent.start(quickDir(projectId), projectId, quickBuildTask({ skill, build, sources: sources as QuickSources, request: String(request) }), {
 				bare: true,
 				readOnly: quickReadable(sources),
 				work: quickKey(projectId, name),
@@ -685,9 +760,10 @@ export const registerIpc = ({
 			if (existsSync(source)) await buildQuickPage(projectId, name);
 			if (!existsSync(pageFile)) throw new Error('The agent finished without writing the page.');
 			const html = readFileSync(pageFile, 'utf8');
-			if (html.length > MAX_PAGE) throw new Error('The page the agent wrote is too large to be a prototype page.');
-			if (existsSync(source)) await recordStore().write(quickSourcePath(projectId, name), readFileSync(source, 'utf8'), `${projectId}: quick prototype ${name} source`);
-			await recordStore().write(quickPagePath(projectId, name), html, `${projectId}: quick prototype ${name}`);
+			if (html.length > MAX_PAGE) {
+				throw new Error(`This page is ${Math.round(html.length / 1_000_000)} MB, more than GitHub accepts for one file (100 MB), so it cannot be saved. It is still here and still opens on this machine. Large images or fonts embedded in the page are the usual cause.`);
+			}
+			await keepQuick(projectId, name, html);
 			return null;
 		}),
 	);
@@ -701,10 +777,9 @@ export const registerIpc = ({
 			// now: what this machine shows is what reviewers get, and no finished page is stranded on one machine.
 			const local = quickFile(projectId, name);
 			const path = quickPagePath(projectId, name);
-			if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html) {
-				await recordStore().write(path, html, `${projectId}: quick prototype ${name}`);
-			}
-			return quickServer.serve(`${projectId}/${name}`, html.slice(0, MAX_PAGE));
+			if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html) await keepQuick(projectId, name, html);
+			await serveShared(html);
+			return quickServer.serve(`${projectId}/${name}`, html);
 		}),
 	);
 
