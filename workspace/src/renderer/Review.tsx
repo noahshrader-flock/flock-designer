@@ -860,10 +860,18 @@ export const Review = ({
 									</FSTypography>
 								)}
 								{comments?.map((comment) => {
+									/**
+									 * Acted on, and waiting for this person's verdict. Such a comment is settled as far as
+									 * the work goes, so the card steps back: it is faded, it offers no second run, and it
+									 * says nothing about where its pin ended up -- the agent having just changed the very
+									 * element it pointed at, "no longer on the page" is the expected outcome, not news.
+									 * What is left is the comment, the commit, and the decision that is still theirs.
+									 */
+									const addressed = !comment.resolved && comment.addressedAt !== null;
 									// A resolved comment is not drawn on the page at all, so whatever was last said
 									// about placing it ("the element is no longer there") is about a pin that no
 									// longer exists, and saying it again would be about nothing.
-									const state = comment.resolved ? undefined : placed.get(comment.id);
+									const state = comment.resolved || addressed ? undefined : placed.get(comment.id);
 									const n = numberOf(comment.id);
 									return (
 										<FSBox
@@ -885,24 +893,26 @@ export const Review = ({
 												p: 1.5,
 												cursor: comment.anchor ? 'pointer' : 'default',
 												opacity: comment.resolved ? 0.65 : 1,
+												// What is left to do is faded, not the whole card: the two buttons that are
+												// still live stay at full strength, since they are the point of it being here.
+												'& .fd-faded': { opacity: addressed ? 0.6 : 1 },
 											}}
 										>
 											<FSStack spacing={0.5}>
 												<FSStack direction="row" spacing={1} alignItems="center">
 													{n > 0 && <FSChip variant="status" size="small" label={String(n)} />}
-													<FSTypography variant="subtitle2" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+													<FSTypography
+														className="fd-faded"
+														variant="subtitle2"
+														sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+													>
 														{comment.author}
 													</FSTypography>
 													{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
-													{/* Acted on, and waiting for this person to say whether that was what they meant. */}
-													{!comment.resolved && comment.addressedAt && (
-														<FSChip variant="status" size="small" color="warning" label="Addressed" />
-													)}
 												</FSStack>
-												{!comment.resolved && comment.addressedAt && (
+												{addressed && (
 													<FSTypography variant="caption" color="text.secondary">
-														The agent changed the code in <code>{comment.addressedAt.slice(0, 7)}</code>. Look at the preview, then
-														resolve this if it is what you meant.
+														The agent addressed this in <code>{comment.addressedAt?.slice(0, 7)}</code>
 													</FSTypography>
 												)}
 												{/* The actions get their own row. Three of them beside a name did not fit a narrow
@@ -910,7 +920,7 @@ export const Review = ({
 												<FSStack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}>
 													{/* One comment at a time: the designer picks the one that is a clear change, and
 													    leaves the ones that still need a decision. */}
-													{!comment.resolved && checkout && (
+													{!comment.resolved && !addressed && checkout && (
 														<FSButton
 															size="sm"
 															variant="ghost"
@@ -962,21 +972,24 @@ export const Review = ({
 														</FSButton>
 													</FSStack>
 												)}
-												<FSTypography variant="body2">{comment.body}</FSTypography>
+												<FSTypography className="fd-faded" variant="body2">
+													{comment.body}
+												</FSTypography>
 												{comment.picture && (
 													<img
+														className="fd-faded"
 														src={comment.picture}
 														alt={`The spot comment ${n || ''} was made on`}
 														style={{ width: '100%', maxWidth: 240, borderRadius: 4, border: '1px solid rgba(128,128,128,0.4)' }}
 													/>
 												)}
 												{comment.anchor?.state && (
-													<FSTypography variant="caption" color="text.secondary">
+													<FSTypography className="fd-faded" variant="caption" color="text.secondary">
 														State: {comment.anchor.state}
 													</FSTypography>
 												)}
 												{comment.anchor && state === 'elsewhere' && (
-													<FSTypography variant="caption" color="text.secondary">
+													<FSTypography className="fd-faded" variant="caption" color="text.secondary">
 														On {comment.anchor.route}
 													</FSTypography>
 												)}
