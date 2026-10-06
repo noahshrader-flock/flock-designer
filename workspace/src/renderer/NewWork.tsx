@@ -26,6 +26,7 @@ export interface Created {
  */
 export const NewWork = ({
 	open,
+	kind,
 	onClose,
 	checkout,
 	onChoose,
@@ -33,6 +34,8 @@ export const NewWork = ({
 	onCreated,
 }: {
 	open: boolean;
+	/** What is being made, chosen from the New menu before this opened. */
+	kind: IterationKind;
 	onClose: () => void;
 	checkout: Checkout | null;
 	onChoose: () => void;
@@ -127,7 +130,7 @@ export const NewWork = ({
 		<Dialog open={open} onOpenChange={(next) => !next && !busy && onClose()}>
 			<DialogContent className="sm:max-w-xl" showCloseButton={!busy}>
 				<DialogHeader>
-					<DialogTitle>New prototype</DialogTitle>
+					<DialogTitle>{kind === 'codebase' ? 'New in the codebase' : 'New prototype'}</DialogTitle>
 				</DialogHeader>
 				<div className="flex flex-col gap-4">
 					{checkout || choices.length > 0 ? (
@@ -235,11 +238,8 @@ export const NewWork = ({
 					<Button variant="secondary" onClick={onClose} disabled={busy}>
 						Cancel
 					</Button>
-					<Button variant="secondary" onClick={() => void create('codebase')} disabled={busy || blocked || !checkout || elsewhere || !from || !id || !task.trim()}>
-						In the codebase
-					</Button>
-					<Button onClick={() => void create('prototype')} disabled={busy || blocked || !checkout || elsewhere || !from || !id || !task.trim()}>
-						{busy ? 'Creating…' : 'Create prototype'}
+					<Button onClick={() => void create(kind)} disabled={busy || blocked || !checkout || elsewhere || !from || !id || !task.trim()}>
+						{busy ? 'Creating…' : kind === 'codebase' ? 'Create in the codebase' : 'Create prototype'}
 					</Button>
 				</DialogFooter>
 			</DialogContent>
