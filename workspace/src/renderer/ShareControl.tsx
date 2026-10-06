@@ -1,4 +1,4 @@
-import { CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, Share2Icon } from 'lucide-react';
+import { CodeIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, Share2Icon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared/contract';
 import { dialogView, isMine, stepText } from './shareView';
@@ -26,6 +26,8 @@ export const ShareControl = ({
 	canOpen,
 	onOpenInBrowser,
 	onOpenChange,
+	quick = false,
+	onMoveToCode,
 }: {
 	checkout: Checkout | null;
 	project: Project;
@@ -35,6 +37,10 @@ export const ShareControl = ({
 	onOpenInBrowser: () => void;
 	/** The preview is a native layer over this window, so the screen must know when the menu or dialog needs the space. */
 	onOpenChange: (open: boolean) => void;
+	/** A quick prototype: already where reviewers see it, so there is no sharing, only moving it into the code. */
+	quick?: boolean;
+	/** Offered when there is a product repository here to build it in. */
+	onMoveToCode?: () => void;
 }) => {
 	const [status, setStatus] = useState<ShareStatus>({ state: 'idle' });
 	const [open, setOpen] = useState(false);
@@ -93,7 +99,13 @@ export const ShareControl = ({
 					<TooltipContent>{running ? 'Sharing…' : 'More'}</TooltipContent>
 				</Tooltip>
 				<DropdownMenuContent align="end" className="w-auto">
-					{checkout && (
+					{quick && onMoveToCode && (
+						<DropdownMenuItem onSelect={onMoveToCode}>
+							<CodeIcon />
+							Build in the codebase
+						</DropdownMenuItem>
+					)}
+					{checkout && !quick && (
 						<DropdownMenuItem
 							onSelect={() => {
 								setPhase(running ? 'working' : 'confirm');

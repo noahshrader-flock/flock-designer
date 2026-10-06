@@ -100,6 +100,47 @@ export class DesignRepo {
     return Buffer.from(file.content, 'base64').toString('utf8');
   }
 
+  /** Any file in the design repository, as text, or null when there is none. */
+  async readFile(path: string): Promise<string | null> {
+    try {
+      const file = asRecord(await this.session.api(`${this.base}/contents/${path}`));
+      return typeof file.content === 'string' ? Buffer.from(file.content, 'base64').toString('utf8') : null;
+    } catch (err) {
+      if (err instanceof GitHubError && err.status === 404) return null;
+      throw err;
+    }
+  }
+
+  /**
+   * Creates or replaces a file in the design repository, as one commit by the signed-in person. Used
+   * only where there is no clone on this machine to write into: one writer per machine.
+   */
+  async writeFile(path: string, content: string, message: string): Promise<void> {
+    const put = async () => {
+      let sha: string | undefined;
+      try {
+        const have = asRecord(await this.session.api(`${this.base}/contents/${path}`));
+        sha = typeof have.sha === 'string' ? have.sha : undefined;
+      } catch (err) {
+        if (!(err instanceof GitHubError && err.status === 404)) throw err;
+      }
+      await this.session.api(`${this.base}/contents/${path}`, {
+        method: 'PUT',
+        body: { message, content: Buffer.from(content, 'utf8').toString('base64'), ...(sha ? { sha } : {}) },
+      });
+    };
+    try {
+      await put();
+    } catch (err) {
+      // Someone else changed it between the read and the write: read again and write once more.
+      if (err instanceof GitHubError && (err.status === 409 || err.status === 422)) return put();
+      if (err instanceof GitHubError && (err.status === 403 || err.status === 404)) {
+        throw new Error('Saving needs write access to the design repository. Ask someone who has it to add you.');
+      }
+      throw err;
+    }
+  }
+
   private async readBriefTitle(id: string, records: string[]): Promise<string | null> {
     if (!records.includes('brief.md')) return null;
     const file = asRecord(await this.session.api(`${this.base}/contents/projects/${id}/brief.md`));

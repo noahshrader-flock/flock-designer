@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { AgentReadiness, Checkout, IterationKind, Project, ProjectIteration, Repository } from '../shared/contract';
-import { slugify } from '../shared/projects';
+import { freshIteration, slugify } from '../shared/projects';
 import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
@@ -8,6 +8,12 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
+
+const TITLES: Record<IterationKind, string> = {
+	codebase: 'New codebase feature',
+	prototype: 'New prototype',
+	quick: 'New quick prototype',
+};
 
 export interface Created {
 	project: Project;
@@ -99,24 +105,19 @@ export const NewWork = ({
 		} else setError(r.error);
 	};
 
-	const create = async (kind: IterationKind) => {
-		if (!checkout || !id || !task.trim()) return;
+	const create = async () => {
+		if (!id || !task.trim()) return;
+		if (kind !== 'quick' && !checkout) return;
 		setBusy(true);
 		setError(null);
-		const r = await window.workspace.createIteration(checkout.root, id, task.trim().split('\n')[0] ?? '', kind, from ?? undefined);
+		const note = task.trim().split('\n')[0] ?? '';
+		const r =
+			kind === 'quick'
+				? await window.workspace.createQuick(id, name.trim(), note)
+				: await window.workspace.createIteration((checkout as Checkout).root, id, note, kind, from ?? undefined);
 		setBusy(false);
 		if (!r.ok) return setError(r.error);
-		const iteration: ProjectIteration = {
-			name: r.value.name,
-			branch: r.value.branch,
-			issueNumber: null,
-			previewUrl: null,
-			// Nothing is built yet, so there is nowhere to land: whoever builds it records the route.
-			route: null,
-			commit: r.value.commit,
-			contributors: r.value.contributors ?? [],
-			createdAt: r.value.createdAt,
-		};
+		const iteration = freshIteration(r.value);
 		onCreated({
 			project: { id, title: name.trim(), records: [], iterations: [iteration], people: [], openComments: 0 },
 			iteration,
@@ -130,10 +131,15 @@ export const NewWork = ({
 		<Dialog open={open} onOpenChange={(next) => !next && !busy && onClose()}>
 			<DialogContent className="sm:max-w-xl" showCloseButton={!busy}>
 				<DialogHeader>
-					<DialogTitle>{kind === 'codebase' ? 'New codebase feature' : 'New prototype'}</DialogTitle>
+					<DialogTitle>{TITLES[kind]}</DialogTitle>
 				</DialogHeader>
 				<div className="flex flex-col gap-4">
-					{checkout || choices.length > 0 ? (
+					{kind === 'quick' ? (
+						<p className="text-muted-foreground text-sm">
+							One page, made from your request and saved with the project. Nothing in the codebase changes
+							{checkout ? `; it looks at ${checkout.name} to match the product` : ''}. When it is right, move it into the code from its review screen.
+						</p>
+					) : checkout || choices.length > 0 ? (
 						<>
 							<div className="flex flex-col gap-2">
 								<Label htmlFor="new-work-repo">Repository</Label>
@@ -223,7 +229,7 @@ export const NewWork = ({
 							</AlertDescription>
 						</Alert>
 					)}
-					{checkout && checkout.clean === false && (
+					{kind !== 'quick' && checkout && checkout.clean === false && (
 						<Alert variant="warning">
 							<AlertDescription>There are uncommitted changes in this checkout. Commit or set them aside first.</AlertDescription>
 						</Alert>
@@ -238,8 +244,11 @@ export const NewWork = ({
 					<Button variant="secondary" onClick={onClose} disabled={busy}>
 						Cancel
 					</Button>
-					<Button onClick={() => void create(kind)} disabled={busy || blocked || !checkout || elsewhere || !from || !id || !task.trim()}>
-						{busy ? 'Creating…' : kind === 'codebase' ? 'Create codebase feature' : 'Create prototype'}
+					<Button
+						onClick={() => void create()}
+						disabled={busy || blocked || !id || !task.trim() || (kind !== 'quick' && (!checkout || elsewhere || !from))}
+					>
+						{busy ? 'Creating…' : `Create ${TITLES[kind].replace(/^New /, '')}`}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

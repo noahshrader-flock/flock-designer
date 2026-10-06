@@ -70,6 +70,7 @@ let runtimeStart: ReturnType<typeof vi.fn>;
 let memoryValue: string | null;
 let previewUrl: string | null;
 let deleteComment: ReturnType<typeof vi.fn>;
+let quickServer: InstanceType<typeof import('../src/main/services/quickServer')['QuickServer']>;
 
 beforeEach(async () => {
 	handlers.clear();
@@ -94,6 +95,7 @@ beforeEach(async () => {
 	memoryValue = null;
 	previewUrl = null;
 	deleteComment = vi.fn(async () => undefined);
+	quickServer = new (await import('../src/main/services/quickServer')).QuickServer();
 
 	registerIpc({
 		window: { webContents: { send: vi.fn() } } as never,
@@ -105,10 +107,15 @@ beforeEach(async () => {
 		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
 		memory: { read: () => memoryValue, write: (r: string) => { memoryValue = r; }, available: () => true } as never,
 		onPublishStatus: vi.fn(),
+		quickRoot: join(home, 'quick'),
+		quickServer,
 	});
 });
 
-afterEach(() => rmSync(home, { recursive: true, force: true }));
+afterEach(() => {
+	quickServer.close();
+	rmSync(home, { recursive: true, force: true });
+});
 
 describe('a repository must be opened before anything acts on it', () => {
 	it.each([
@@ -211,6 +218,40 @@ describe('where new work starts', () => {
 		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'prototype', '--orphan');
 		expect(r.ok).toBe(false);
 		expect(g(product, 'branch', '--list', 'fd/*').trim()).toBe('');
+	});
+});
+
+describe('quick prototypes', () => {
+	it('are never made as a branch', async () => {
+		await call(CHANNELS.useCheckout, product);
+		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'quick');
+		expect(r.ok).toBe(false);
+		expect(g(product, 'branch', '--list', '*demo*').trim()).toBe('');
+	});
+
+	it('are recorded, saved and served through the clone on this machine', async () => {
+		await call(CHANNELS.useCheckout, product);
+		const made = await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list');
+		expect(made).toMatchObject({ ok: true, value: { name: 'q1', branch: 'quick/demo/q1' } });
+		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list\n');
+
+		// Nothing to save until the agent has written the page.
+		expect((await call(CHANNELS.saveQuick, 'demo', 'q1')).ok).toBe(false);
+		mkdirSync(join(home, 'quick', 'demo'), { recursive: true });
+		writeFileSync(join(home, 'quick', 'demo', 'q1.html'), '<h1>Demo</h1>');
+		expect((await call(CHANNELS.saveQuick, 'demo', 'q1')).ok).toBe(true);
+		expect(readFileSync(join(design, 'projects', 'demo', 'quick', 'q1.html'), 'utf8')).toBe('<h1>Demo</h1>');
+
+		const opened = await call(CHANNELS.openQuick, 'demo', 'q1');
+		expect(opened.ok).toBe(true);
+		expect(await (await fetch(opened.value as string)).text()).toBe('<h1>Demo</h1>');
+	});
+
+	it('refuse names that are not theirs, before anything is read or written', async () => {
+		for (const [id, name] of [['demo', '../x'], ['demo', 'i1'], ['../demo', 'q1']]) {
+			expect((await call(CHANNELS.openQuick, id, name)).ok).toBe(false);
+			expect((await call(CHANNELS.saveQuick, id, name)).ok).toBe(false);
+		}
 	});
 });
 

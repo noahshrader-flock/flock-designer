@@ -1,4 +1,4 @@
-import type { Project, ProjectIteration } from './contract';
+import type { Iteration, Project, ProjectIteration } from './contract';
 
 /** The only shape a project id may take: lower-case words joined by single hyphens. */
 export const PROJECT_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -151,3 +151,31 @@ export const newestFirst = (a: ProjectIteration, b: ProjectIteration): number =>
  * are joined onto a folder or a repository address, so they are checked before they are used for either.
  */
 export const isRecordName = (n: unknown): n is string => typeof n === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(n) && !n.includes('..');
+
+/**
+ * A quick prototype: one self-contained page, made without a product repository, saved in the design
+ * repository beside the project's other records. It has no git branch. Its key, in the place a branch
+ * name goes (the iteration record, the review thread), is `quick/<project-id>/<name>`, which no
+ * repository's branch pattern makes, so it can never be mistaken for one.
+ */
+export const QUICK_PREFIX = 'quick/';
+export const isQuick = (branch: string): boolean => branch.startsWith(QUICK_PREFIX);
+export const quickKey = (projectId: string, name: string): string => `${QUICK_PREFIX}${projectId}/${name}`;
+/** Where the page is kept in the design repository. */
+export const quickPagePath = (projectId: string, name: string): string => `projects/${projectId}/quick/${name}.html`;
+/** `q1`, `q2`, …: one past the highest recorded, so a gap is never filled in. */
+export const nextQuickName = (names: string[]): string =>
+	`q${names.reduce((max, n) => Math.max(max, Number(/^q(\d+)$/.exec(n)?.[1] ?? 0)), 0) + 1}`;
+export const isQuickName = (name: string): boolean => /^q\d{1,4}$/.test(name);
+
+/** A just-made iteration as the screens show one: nothing shared or built yet, so nowhere to land. */
+export const freshIteration = (it: Iteration): ProjectIteration => ({
+	name: it.name,
+	branch: it.branch,
+	issueNumber: null,
+	previewUrl: null,
+	route: null,
+	commit: it.commit,
+	contributors: it.contributors ?? [],
+	createdAt: it.createdAt,
+});

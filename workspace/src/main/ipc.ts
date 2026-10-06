@@ -1,5 +1,6 @@
 import { type BrowserWindow, dialog, ipcMain, shell } from 'electron';
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import {
 	CHANNELS,
@@ -11,6 +12,7 @@ import {
 	PAGE_HOLD_REASONS,
 	type PageBounds,
 	type PageHoldReason,
+	type Person,
 	type Project,
 	type Repository,
 	type PublishStatus,
@@ -39,8 +41,20 @@ import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anc
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
-import { isRecordName, mergeProjects, unionLocal } from '../shared/projects';
+import { isRecordName, mergeProjects, quickPagePath, unionLocal } from '../shared/projects';
 import { resolveInside } from './services/paths';
+import { QuickServer } from './services/quickServer';
+import {
+	BUILD_SKILL,
+	MAX_PAGE,
+	MOVE_SKILL,
+	type RecordStore,
+	assertQuickName,
+	cloneStore,
+	moveToCodeTask,
+	quickBuildTask,
+	recordQuick,
+} from './services/quick';
 import type { CheckoutMemory } from './services/checkoutMemory';
 
 /**
@@ -81,9 +95,25 @@ export interface IpcContext {
 	memory: CheckoutMemory;
 	/** Told whenever publishing moves, so the window can show it. */
 	onPublishStatus: (status: PublishStatus) => void;
+	/** Where quick prototypes are built before they are saved: the app's own folder, never a repository. */
+	quickRoot?: string;
+	quickServer?: QuickServer;
 }
 
-export const registerIpc = ({ window, opened, runtime, agent, share, github, designRepo, page, memory, onPublishStatus }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
+export const registerIpc = ({
+	window,
+	opened,
+	runtime,
+	agent,
+	share,
+	github,
+	designRepo,
+	page,
+	memory,
+	onPublishStatus,
+	quickRoot = join(tmpdir(), 'flock-designer-quick'),
+	quickServer = new QuickServer(),
+}: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
 			throw new Error(`${root} is not a git repository.`);
@@ -246,6 +276,8 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 	ipcMain.handle(
 		CHANNELS.createIteration,
 		guard(async (root: string, projectId: string, note: string, kind: IterationKind, from?: string) => {
+			// A quick prototype has no branch; it is made by createQuick, never here.
+			if (kind !== 'prototype' && kind !== 'codebase') throw new Error('That kind of work is not made on a branch.');
 			const canonical = opened.require(root);
 			const descriptor = descriptorFor(root);
 			// Only ever a branch that exists here, so the window cannot pass git an option or a revision expression.
@@ -302,9 +334,11 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 			// prompt, and the agent runs unattended with edit permission, so an
 			// unchecked value here is prompt injection rather than argv injection.
 			assertUsableProjectId(projectId);
+			// A quick prototype being moved into the code is read from the app's own copy of it.
+			const quick = join(quickRoot, projectId);
 			return agent.start(opened.require(root), projectId, task, {
 				// The project's records live in the design repository, beside the product checkout.
-				addDirs: [recordsFor(opened.require(root))],
+				addDirs: [recordsFor(opened.require(root)), ...(existsSync(quick) ? [quick] : [])],
 			});
 		}),
 	);
@@ -487,6 +521,108 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 			// Nothing to do: the comments themselves were read fine.
 		}
 	};
+	/*
+	 * Quick prototypes. Everything they write goes to one place per machine: the design repository's
+	 * clone when there is one here, so the publisher sends it like every other record, and otherwise
+	 * GitHub directly.
+	 */
+	const recordStore = (): RecordStore => {
+		const root = trustedRoot();
+		const recordsRoot = root === null ? null : recordsRootFor(root);
+		return recordsRoot !== null
+			? cloneStore(dirname(recordsRoot), () => void publisher.publish(true))
+			: { read: (path) => designRepo.readFile(path), write: (path, content, message) => designRepo.writeFile(path, content, message) };
+	};
+	/** The folder an agent builds a project's quick prototypes in, and the page file inside it. */
+	const quickDir = (projectId: string): string => {
+		assertUsableProjectId(projectId);
+		const dir = join(quickRoot, projectId);
+		mkdirSync(dir, { recursive: true });
+		return dir;
+	};
+	const quickFile = (projectId: string, name: string): string => {
+		assertQuickName(name);
+		return join(quickDir(projectId), `${name}.html`);
+	};
+	/** The page: this machine's newest build first, then the saved one here, then GitHub's. */
+	const quickPage = async (projectId: string, name: string): Promise<string | null> => {
+		const local = quickFile(projectId, name);
+		if (existsSync(local)) return readFileSync(local, 'utf8');
+		const path = quickPagePath(projectId, name);
+		return (await recordStore().read(path)) ?? (await designRepo.readFile(path));
+	};
+	const readSkillFile = (designRoot: string, path: string): string | null => {
+		const file = join(designRoot, path);
+		return existsSync(file) ? readFileSync(file, 'utf8') : null;
+	};
+	const me = (): Person | null => {
+		const s = github.state();
+		return s.state === 'signedIn' ? { name: s.user.name ?? s.user.login, login: s.user.login } : null;
+	};
+
+	ipcMain.handle(
+		CHANNELS.createQuick,
+		guard(async (projectId: string, title: string, note: string) => {
+			assertUsableProjectId(projectId);
+			if (typeof title !== 'string' || !title.trim()) throw new Error('A quick prototype needs a name.');
+			return recordQuick(recordStore(), { projectId, title: title.slice(0, 200), note: String(note).slice(0, 2000), me: me() });
+		}),
+	);
+
+	ipcMain.handle(
+		CHANNELS.buildQuick,
+		guard(async (projectId: string, name: string, request: string) => {
+			const pageFile = quickFile(projectId, name);
+			const store = recordStore();
+			const skill = (await store.read(BUILD_SKILL)) ?? (await designRepo.readFile(BUILD_SKILL));
+			if (skill === null) throw new Error(`The design repository has no ${BUILD_SKILL}, which tells the agent how to build a quick prototype.`);
+			// Only the product this person accepted is offered for reading, and only for reading.
+			const product = trustedRoot();
+			return agent.start(quickDir(projectId), projectId, quickBuildTask({ skill, pageFile, product, request: String(request) }), {
+				bare: true,
+				readOnly: product ? [product] : [],
+			});
+		}),
+	);
+
+	ipcMain.handle(
+		CHANNELS.saveQuick,
+		guard(async (projectId: string, name: string): Promise<null> => {
+			const pageFile = quickFile(projectId, name);
+			if (!existsSync(pageFile)) throw new Error('The agent finished without writing the page.');
+			const html = readFileSync(pageFile, 'utf8');
+			if (html.length > MAX_PAGE) throw new Error('The page the agent wrote is too large to be a prototype page.');
+			await recordStore().write(quickPagePath(projectId, name), html, `${projectId}: quick prototype ${name}`);
+			return null;
+		}),
+	);
+
+	ipcMain.handle(
+		CHANNELS.openQuick,
+		guard(async (projectId: string, name: string): Promise<string> => {
+			const html = await quickPage(projectId, name);
+			if (html === null) throw new Error('This quick prototype has no page yet.');
+			return quickServer.serve(`${projectId}/${name}`, html.slice(0, MAX_PAGE));
+		}),
+	);
+
+	ipcMain.handle(
+		CHANNELS.prepareMoveToCode,
+		guard(async (projectId: string, name: string): Promise<string> => {
+			const root = trustedRoot();
+			if (root === null) throw new Error('Building in the codebase needs the product repository on this machine.');
+			const recordsRoot = recordsFor(opened.require(root));
+			const skill = readSkillFile(dirname(recordsRoot), MOVE_SKILL);
+			if (skill === null) throw new Error(`The design repository on this machine has no ${MOVE_SKILL}. Update it (git pull) and try again.`);
+			// The page is copied where the agent is allowed to read it, so it works from the version saved, wherever that is.
+			const html = await quickPage(projectId, name);
+			if (html === null) throw new Error('This quick prototype has no page yet.');
+			const pageFile = quickFile(projectId, name);
+			writeFileSync(pageFile, html);
+			return moveToCodeTask({ skill, pageFile, auditFile: join(recordsRoot, projectId, `audit-${name}.md`), name });
+		}),
+	);
+
 	/** A record is text a person reads; anything larger than this is not one, and is cut rather than sent whole. */
 	const MAX_RECORD = 400_000;
 	ipcMain.handle(

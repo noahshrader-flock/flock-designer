@@ -119,6 +119,7 @@ export const Projects = ({ menuOpen }: { menuOpen: boolean }) => {
 				onChoose={chooseCheckout}
 				task={selected.task}
 				menuOpen={menuOpen}
+				onOpen={(project, iteration, task) => setSelected({ project, iteration, task })}
 				onBack={() => {
 					setSelected(null);
 					void load();
@@ -157,7 +158,7 @@ export const Projects = ({ menuOpen }: { menuOpen: boolean }) => {
 							{(
 								[
 									['codebase', 'Codebase feature'],
-									['prototype', 'Prototype'],
+									['quick', 'Quick prototype'],
 								] as const
 							).map(([kind, label]) => (
 								<DropdownMenuItem

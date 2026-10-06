@@ -486,3 +486,40 @@ describe('readRecord', () => {
     await expect(new DesignRepo(session, REF).readRecord('alpha', 'docs')).rejects.toThrow(/could not be read/);
   });
 });
+
+describe('readFile and writeFile', () => {
+  const notFound = () => {
+    throw new GitHubError('Not Found', 404);
+  };
+
+  it('reads any file as text, and says null when there is none', async () => {
+    const { session } = fakeSession({ '/repos/acme/design/contents/skills/a.md': { content: b64('# A') }, '/repos/acme/design/contents/skills/b.md': notFound });
+    const repo = new DesignRepo(session, REF);
+    expect(await repo.readFile('skills/a.md')).toBe('# A');
+    expect(await repo.readFile('skills/b.md')).toBeNull();
+  });
+
+  it("creates a file, and replaces one with the sha it has", async () => {
+    const writes: unknown[] = [];
+    const api = vi.fn(async (path: string, init: { method?: string; body?: unknown } = {}) => {
+      if (init.method === 'PUT') return writes.push({ path, body: init.body }), {};
+      if (path.endsWith('new.html')) throw new GitHubError('Not Found', 404);
+      return { sha: 'abc' };
+    });
+    const repo = new DesignRepo({ api } as never, REF);
+    await repo.writeFile('projects/x/new.html', '<p>', 'm');
+    await repo.writeFile('projects/x/old.html', '<p>', 'm');
+    expect(writes).toEqual([
+      { path: '/repos/acme/design/contents/projects/x/new.html', body: { message: 'm', content: b64('<p>') } },
+      { path: '/repos/acme/design/contents/projects/x/old.html', body: { message: 'm', content: b64('<p>'), sha: 'abc' } },
+    ]);
+  });
+
+  it('says what access is needed when GitHub refuses the write', async () => {
+    const api = vi.fn(async (_path: string, init: { method?: string } = {}) => {
+      if (init.method === 'PUT') throw new GitHubError('Not Found', 404);
+      throw new GitHubError('Not Found', 404);
+    });
+    await expect(new DesignRepo({ api } as never, REF).writeFile('projects/x/a.html', 'x', 'm')).rejects.toThrow(/write access to the design repository/);
+  });
+});

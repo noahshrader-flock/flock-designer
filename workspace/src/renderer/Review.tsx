@@ -1,8 +1,9 @@
-import { ChevronLeftIcon, GitBranchIcon, MapPinIcon, MessageSquareIcon } from 'lucide-react';
+import { ChevronLeftIcon, GitBranchIcon, MapPinIcon, MessageSquareIcon, ZapIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
 import { latest } from '../shared/latest';
+import { freshIteration, isQuick } from '../shared/projects';
 import { People } from './People';
 import { Loading } from './Loading';
 import { ShareControl } from './ShareControl';
@@ -12,6 +13,7 @@ import { type AddressPhase, runAddress } from './address';
 import { routeWentWrong } from './localBuild';
 import { PANEL_STEP, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
 import { useLocalBuild } from './useLocalBuild';
+import { useQuickBuild } from './quickBuild';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -60,6 +62,7 @@ export const Review = ({
 	onChoose,
 	task,
 	menuOpen,
+	onOpen,
 }: {
 	project: Project;
 	iteration: ProjectIteration;
@@ -71,6 +74,8 @@ export const Review = ({
 	task?: string;
 	/** The account menu in the top bar is open, and drops over the preview. */
 	menuOpen: boolean;
+	/** Opens other work: where moving a quick prototype into the code goes next. */
+	onOpen: (project: Project, iteration: ProjectIteration, task: string) => void;
 }) => {
 	const [comments, setComments] = useState<ReviewComment[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -120,7 +125,11 @@ export const Review = ({
 	// Someone with the product repository builds it here, so what they see is their latest work.
 	// Everyone else, and anyone whose local build cannot run (a colleague's iteration they do not
 	// have), opens the shared preview. It may still be building: the screen says so.
-	const local = useLocalBuild({ checkout, project, iteration, task, enabled: !iteration.previewUrl || checkout !== null });
+	// A quick prototype is one page the app serves itself: there is nothing to check out or run.
+	const quick = isQuick(iteration.branch);
+	const localBuild = useLocalBuild({ checkout, project, iteration, task, enabled: !quick && (!iteration.previewUrl || checkout !== null) });
+	const quickBuild = useQuickBuild({ project, iteration, task, enabled: quick });
+	const local = quick ? quickBuild : localBuild;
 	const hostedUrl = iteration.previewUrl ?? null;
 	const useHosted = hostedUrl !== null && (checkout === null || local.phase.kind === 'failed');
 	const hosted = useHostedPreview(useHosted ? hostedUrl : null);
@@ -537,6 +546,20 @@ export const Review = ({
 	// What is still to be dealt with. Resolved comments stay listed, but are not the count.
 	const total = openComments(comments ?? []).length;
 
+	/**
+	 * A quick prototype moves into the code as the project's codebase work: the agent audits the page
+	 * against the real code first, then builds it, and that opens here as it would have from New.
+	 */
+	const moveToCode = async () => {
+		if (!checkout) return;
+		setError(null);
+		const task = await window.workspace.prepareMoveToCode(project.id, iteration.name);
+		if (!task.ok) return setError(task.error);
+		const made = await window.workspace.createIteration(checkout.root, project.id, `From quick prototype ${iteration.name}`, 'codebase');
+		if (!made.ok) return setError(made.error);
+		onOpen(project, freshIteration(made.value), task.value);
+	};
+
 	/** The agent is asked for one comment, from that comment's own button: never for a batch. */
 	const addressComment = async (commentId: number) => {
 		if (!checkout) return;
@@ -625,10 +648,14 @@ export const Review = ({
 				</h2>
 				<Tooltip delayDuration={300} onOpenChange={setBranchTip}>
 					<TooltipTrigger asChild>
-						<GitBranchIcon aria-label={`Branch ${iteration.branch}`} className="text-muted-foreground size-4 shrink-0" />
+						{quick ? (
+							<ZapIcon aria-label="Quick prototype" className="text-muted-foreground size-4 shrink-0" />
+						) : (
+							<GitBranchIcon aria-label={`Branch ${iteration.branch}`} className="text-muted-foreground size-4 shrink-0" />
+						)}
 					</TooltipTrigger>
-					<TooltipContent side="bottom" className="font-mono">
-						{iteration.branch}
+					<TooltipContent side="bottom" className={quick ? undefined : 'font-mono'}>
+						{quick ? 'Quick prototype, saved in the design repository' : iteration.branch}
 					</TooltipContent>
 				</Tooltip>
 				<People people={iteration.contributors} />
@@ -641,6 +668,8 @@ export const Review = ({
 					canOpen={opened}
 					onOpenInBrowser={() => void window.workspace.openPreviewInBrowser().then((r) => !r.ok && setError(r.error))}
 					onOpenChange={setShareOpen}
+					quick={quick}
+					onMoveToCode={checkout ? () => void moveToCode() : undefined}
 				/>
 
 				{/* One control, two halves: comment mode on the left, the list of comments on the right.
@@ -704,7 +733,7 @@ export const Review = ({
 										Open it anyway
 									</Button>
 								</>
-							) : !iteration.previewUrl && !checkout ? (
+							) : !quick && !iteration.previewUrl && !checkout ? (
 								<>
 									<p className="text-sm">Flock Designer needs your Coke repository to show this.</p>
 									<p className="text-muted-foreground text-sm">
@@ -726,7 +755,7 @@ export const Review = ({
 											The agent is writing it from your request. This takes a few minutes.
 										</p>
 									)}
-									{local.phase.kind === 'preview' && <p className="text-muted-foreground text-sm">The first time can take a minute.</p>}
+									{local.phase.kind === 'preview' && !quick && <p className="text-muted-foreground text-sm">The first time can take a minute.</p>}
 								</>
 							)}
 						</div>
@@ -875,7 +904,8 @@ export const Review = ({
 												<div className="flex flex-row flex-wrap items-center gap-2">
 													{/* One comment at a time: the designer picks the one that is a clear change, and
 													    leaves the ones that still need a decision. */}
-													{!comment.resolved && !addressed && checkout && (
+													{/* A quick prototype is acted on by moving it into the code, not comment by comment, for now. */}
+													{!comment.resolved && !addressed && checkout && !quick && (
 														<Button
 															size="sm"
 															variant="ghost"

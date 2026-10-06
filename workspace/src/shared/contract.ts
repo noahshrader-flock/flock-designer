@@ -152,7 +152,7 @@ export type AgentStatus =
  * The two ways in. A **prototype** is a throwaway attempt on its own `fd/` branch, numbered i1, i2, …
  * **Codebase** work is the real change on the project's one `feature/` branch.
  */
-export type IterationKind = 'prototype' | 'codebase';
+export type IterationKind = 'prototype' | 'codebase' | 'quick';
 
 /** Something that could not be published, and why, in words a person can act on. */
 export interface PublishProblem {
@@ -247,6 +247,17 @@ export interface WorkspaceApi {
 	/** Hands the task to the locally installed agent. Never bundles credentials. */
 	startAgent(root: string, projectId: string, task: string): Promise<Result<AgentStatus>>;
 	agentStatus(): Promise<Result<AgentStatus>>;
+	/**
+	 * Quick prototypes: one page, no product repository needed. Recording one makes the project too when
+	 * it is new; building runs the agent in the app's own folder; saving puts the page in the design
+	 * repository; opening serves it to the preview from this machine.
+	 */
+	createQuick(projectId: string, title: string, note: string): Promise<Result<Iteration>>;
+	buildQuick(projectId: string, name: string, request: string): Promise<Result<AgentStatus>>;
+	saveQuick(projectId: string, name: string): Promise<Result<null>>;
+	openQuick(projectId: string, name: string): Promise<Result<string>>;
+	/** The task that moves a quick prototype into the codebase: an audit of it against the real code, then the work. */
+	prepareMoveToCode(projectId: string, name: string): Promise<Result<string>>;
 	/** Asked when new work is about to be started: is Claude Code installed here, and signed in? */
 	agentReadiness(): Promise<Result<AgentReadiness>>;
 	onAgentLog(listener: (line: RunLogLine) => void): () => void;
@@ -517,6 +528,11 @@ export const CHANNELS = {
 	startAgent: 'workspace:startAgent',
 	agentStatus: 'workspace:agentStatus',
 	agentReadiness: 'workspace:agentReadiness',
+	createQuick: 'workspace:createQuick',
+	buildQuick: 'workspace:buildQuick',
+	saveQuick: 'workspace:saveQuick',
+	openQuick: 'workspace:openQuick',
+	prepareMoveToCode: 'workspace:prepareMoveToCode',
 	addressComments: 'workspace:addressComments',
 	shareIteration: 'workspace:shareIteration',
 	shareStatus: 'workspace:shareStatus',

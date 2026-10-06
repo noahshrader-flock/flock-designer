@@ -18,6 +18,14 @@ import type { AgentReadiness, AgentStatus, RunLogLine } from '../../shared/contr
 export interface AgentExtras {
 	/** Folders outside the repository the agent may also write to: the project's records in the design repository. */
 	addDirs?: string[];
+	/**
+	 * Folders the agent may read but never change: the product repository, for a quick prototype that
+	 * should look like it. Not working directories, so nothing there is edited even in accept-edits mode,
+	 * and an edit rule denies it outright as well.
+	 */
+	readOnly?: string[];
+	/** The task stands alone: it is not working in a repository, so there are no repository instructions to point at. */
+	bare?: boolean;
 }
 
 export interface AgentAdapter {
@@ -96,7 +104,19 @@ const ALLOWED_TOOLS = [
  * would put one in every iteration's history; this turns that off for the commits (and pull
  * request text) of a run started from here.
  */
-const SETTINGS = JSON.stringify({ attribution: { commit: '', pr: '' } });
+const settingsFor = (readOnly: string[]): string =>
+	JSON.stringify({
+		attribution: { commit: '', pr: '' },
+		// `//` is an absolute path in a permission rule; a single `/` would mean the settings' own folder.
+		...(readOnly.length
+			? {
+					permissions: {
+						allow: readOnly.map((d) => `Read(/${d}/**)`),
+						deny: readOnly.flatMap((d) => [`Edit(/${d}/**)`, `Write(/${d}/**)`]),
+					},
+				}
+			: {}),
+	});
 
 /**
  * Reads Claude Code's streamed JSON and returns what a person would want to
@@ -196,7 +216,7 @@ export const claudeCodeAdapter: AgentAdapter = {
 		'--permission-mode',
 		'acceptEdits',
 		'--settings',
-		SETTINGS,
+		settingsFor(extras?.readOnly ?? []),
 		'--allowedTools',
 		ALLOWED_TOOLS,
 		// Last: it takes a list, and would swallow anything after it.
@@ -248,7 +268,7 @@ export class AgentRunner {
 		if (this.current.state === 'running') {
 			return this.current;
 		}
-		const argv = this.deps.adapter.argvFor(this.taskFor(projectId, task), extras);
+		const argv = this.deps.adapter.argvFor(extras?.bare ? task : this.taskFor(projectId, task), extras);
 		const [file, ...args] = argv;
 		if (file === undefined) {
 			this.current = { state: 'unavailable', detail: 'The agent adapter produced no command.' };
