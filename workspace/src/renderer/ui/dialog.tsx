@@ -61,9 +61,9 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          // Changed from stock, which centres vertically: anchored 20% from the top instead, so a dialog whose
+          // Changed from stock, which centres vertically: anchored 5% from the top instead, so a dialog whose
           // content changes height (switching tabs) grows downward and its top edge stays where it is.
-          "fixed top-[20%] left-1/2 z-50 grid max-h-[calc(80dvh-1rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 overflow-y-auto gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-[5%] left-1/2 z-50 grid max-h-[90dvh] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 overflow-y-auto gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}
