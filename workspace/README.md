@@ -160,11 +160,20 @@ The code stays on its branch in the product repository, where it can actually ru
   the secret could do is select a pin, or move one of the viewer's own pins.
 - The window may load images from `avatars.githubusercontent.com`, and nothing else from the network.
 
-## Its own FUI version is not the product's
+## The app's interface is not the product's design system
 
-This app is built with its own pinned FUI. A context receipt shows the version the **opened
-repository** resolves, read from that repository's lockfile. They are unrelated facts, and showing
-one where the other belongs would make the receipt confidently wrong.
+This app is built with **shadcn/ui, Radix and Tailwind**, on the stock Neutral theme. It is
+deliberately not Flock's design system: the app is the tool, not the product, and the shell around a
+prototype should not claim to be any company's. It also means the app can be built for another
+product with nothing to re-skin.
+
+What a *prototype* uses is a separate question with a different answer: whichever design system its
+own product repository depends on. A context receipt shows the version the **opened repository**
+resolves, read from that repository's lockfile. The two are unrelated facts, and showing one where
+the other belongs would make the receipt confidently wrong.
+
+The components under `src/renderer/ui/` are vendored source, not a dependency: shadcn/ui is copied in
+and owned here, so it is edited directly rather than themed around.
 
 ## If the window shows "Invalid hook call" while developing
 
@@ -180,6 +189,9 @@ one React installed (`npm ls react` shows it deduplicated), so nothing is actual
 
 ## A note on npm
 
-`.npmrc` here points public packages at npmjs.org and `@flocksafety` at GitHub Packages. The
-machine-level `~/.npmrc` routes everything through Flock's CodeArtifact mirror, whose token expires
-and needs a browser login to refresh. Coke needs that mirror; this app does not.
+`.npmrc` here points everything at npmjs.org. The machine-level `~/.npmrc` routes everything through
+Flock's CodeArtifact mirror, whose token expires and needs a browser login to refresh. Coke needs
+that mirror; this app does not.
+
+It used to need a GitHub Packages token as well, for Flock's component library. That went when the
+interface moved to shadcn/ui, so a fresh clone now installs with **no Flock credentials at all**.

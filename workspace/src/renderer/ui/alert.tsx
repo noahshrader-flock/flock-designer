@@ -11,6 +11,8 @@ const alertVariants = cva(
 				destructive: 'text-destructive bg-card [&>svg]:text-current *:data-[slot=alert-description]:text-destructive/90',
 				// Not in the stock set: work held back, or a comment whose pin has moved.
 				warning: 'border-warning/40 bg-warning/10 text-foreground',
+				// Something finished and did what was asked, as against finishing and doing nothing.
+				success: 'border-success/40 bg-success/10 text-foreground',
 			},
 		},
 		defaultVariants: { variant: 'default' },

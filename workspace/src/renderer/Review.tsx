@@ -803,7 +803,7 @@ export const Review = ({
 									</>
 								)}
 								{address.kind === 'done' && (
-									<Alert variant={address.changed ? 'default' : 'default'}>
+									<Alert variant={address.changed ? 'success' : 'default'}>
 										<AlertDescription>
 											{address.changed
 												? 'The agent has finished. Look at the preview and the changes, then resolve what is done.'
@@ -972,8 +972,7 @@ export const Review = ({
 							<label htmlFor="comment-draft" className="text-sm font-medium">
 								Comment
 							</label>
-							{/* eslint-disable-next-line jsx-a11y/no-autofocus */}
-							<Textarea
+								<Textarea
 								id="comment-draft"
 								rows={3}
 								value={draft}

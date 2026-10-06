@@ -129,7 +129,7 @@ export const ShareControl = ({
 						)}
 						{view === 'ready' && status.state === 'ready' && (
 							<>
-								<Alert>
+								<Alert variant="success">
 									<AlertDescription>The preview is up.</AlertDescription>
 								</Alert>
 								<p className="text-sm break-all">

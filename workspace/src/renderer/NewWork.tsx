@@ -91,7 +91,6 @@ export const NewWork = ({
 						<label htmlFor="new-work-name" className="text-sm font-medium">
 							Name
 						</label>
-						{/* eslint-disable-next-line jsx-a11y/no-autofocus */}
 						<Input
 							id="new-work-name"
 							placeholder="Users — inactivity signal"
