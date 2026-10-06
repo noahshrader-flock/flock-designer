@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { Iteration, IterationKind, Person, WorkspaceDescriptor } from '../../shared/contract';
-import { branchAuthors, branchExists, checkoutBranch, createBranch, headCommit, localIdentity } from './git';
+import { branchAuthors, branchExists, branchStartedAt, checkoutBranch, createBranch, headCommit, localIdentity } from './git';
 import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
 import { PROJECT_ID } from '../../shared/projects';
@@ -183,7 +183,9 @@ const adoptUnrecorded = async (
 				? branchFor(descriptor, projectId, Number(name.slice(1)))
 				: null;
 	if (!branch || !(await branchExists(productRoot, branch))) return null;
-	return { projectId, name, branch, commit: null, createdAt: new Date().toISOString(), note: 'Found in the repository; recorded when first opened here.' };
+	// Dated from the work itself, not from the moment the app first needed a record for it.
+	const createdAt = (await branchStartedAt(productRoot, branch)) ?? new Date().toISOString();
+	return { projectId, name, branch, commit: null, createdAt, note: 'Found in the repository; recorded when first opened here.' };
 };
 
 /**

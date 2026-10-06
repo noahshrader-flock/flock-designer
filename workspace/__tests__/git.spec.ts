@@ -11,6 +11,7 @@ import {
 	createBranch,
 	isRepository,
 	listBranches,
+	branchStartedAt,
 	readCheckout,
 } from '../src/main/services/git';
 
@@ -203,3 +204,33 @@ describe('a lock held by something outside the app', () => {
 		unlinkSync(lock());
 	});
 });
+
+describe('branchStartedAt', () => {
+	const commitOn = (iso: string, file: string) => {
+		writeFileSync(join(root, file), file);
+		g('add', '.');
+		execFileSync('git', ['-C', root, 'commit', '-q', '-m', file], { env: { ...process.env, GIT_AUTHOR_DATE: iso, GIT_COMMITTER_DATE: iso } });
+	};
+
+	it('is the date of the first commit the branch has beyond the trunk', async () => {
+		g('checkout', '-q', '-b', 'feature/new-view');
+		commitOn('2026-10-01T09:00:00+00:00', 'one.txt');
+		commitOn('2026-10-04T09:00:00+00:00', 'two.txt');
+		commitOn('2026-10-06T09:00:00+00:00', 'three.txt');
+		expect(new Date((await branchStartedAt(root, 'feature/new-view')) as string).toISOString()).toBe('2026-10-01T09:00:00.000Z');
+	});
+
+	it('does not count commits the trunk already had', async () => {
+		commitOn('2026-09-01T09:00:00+00:00', 'trunk.txt');
+		g('checkout', '-q', '-b', 'feature/later');
+		commitOn('2026-10-03T09:00:00+00:00', 'mine.txt');
+		expect(new Date((await branchStartedAt(root, 'feature/later')) as string).toISOString()).toBe('2026-10-03T09:00:00.000Z');
+	});
+
+	it('falls back to the newest commit for a branch with nothing of its own yet, and to null for no branch', async () => {
+		g('checkout', '-q', '-b', 'feature/just-cut');
+		expect(await branchStartedAt(root, 'feature/just-cut')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+		expect(await branchStartedAt(root, 'feature/nope')).toBeNull();
+	});
+});
+

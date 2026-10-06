@@ -223,6 +223,15 @@ describe('recordedIteration: work started outside the app', () => {
 		expect((await readCheckout(root)).branch).toBe('feature/new-view'); // nothing was switched
 	});
 
+	it('dates adopted work from the work itself, not from when the app first needed a record', async () => {
+		g('checkout', '-q', '-b', 'feature/old-work');
+		writeFileSync(join(root, 'old.txt'), 'x');
+		g('add', '.');
+		execFileSync('git', ['-C', root, 'commit', '-q', '-m', 'old'], { env: { ...process.env, GIT_AUTHOR_DATE: '2026-09-02T08:00:00+00:00', GIT_COMMITTER_DATE: '2026-09-02T08:00:00+00:00' } });
+		const found = await recordedIteration(root, records, descriptor, 'old-work', 'codebase');
+		expect(new Date(found.createdAt).toISOString()).toBe('2026-09-02T08:00:00.000Z');
+	});
+
 	it('records a numbered prototype the same way', async () => {
 		g('checkout', '-q', '-b', 'fd/demo/i3');
 		const found = await recordedIteration(root, records, descriptor, 'demo', 'i3');

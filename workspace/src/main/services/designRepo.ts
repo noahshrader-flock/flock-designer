@@ -1,7 +1,7 @@
 import type { CommentAnchor, Iteration, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
 import { GitHubError } from './github';
 import { asPeople, mergePeople } from '../../shared/people';
-import { firstHeading, newestFirst } from '../../shared/projects';
+import { asDate, firstHeading, newestFirst } from '../../shared/projects';
 import { RESOLVED_MARK, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withResolved } from '../../shared/anchor';
 import type { GitHubSession } from './githubSession';
 
@@ -176,6 +176,7 @@ export class DesignRepo {
         previewUrl: typeof it.previewUrl === 'string' ? it.previewUrl : null,
         contributors: asPeople(it.contributors),
         commit: typeof it.commit === 'string' ? it.commit : null,
+        createdAt: asDate(it.createdAt),
       }))
       .sort(newestFirst);
   }

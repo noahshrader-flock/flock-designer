@@ -325,6 +325,11 @@ export interface ProjectIteration {
   /** The commit the iteration was last recorded at, so a comment can say what it was made against. */
   commit: string | null;
   contributors: Person[];
+  /**
+   * When the work was started, as an ISO date: its record's, or for work found only as a branch, its first
+   * commit. Null when neither is known. A project's date is its earliest iteration's, and orders the list.
+   */
+  createdAt: string | null;
   /** True when this iteration exists only on this machine. */
   localOnly?: boolean;
 }

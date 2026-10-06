@@ -3,11 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
-import { PROJECT_ID, mergeProjects, slugify } from '../src/shared/projects';
+import { PROJECT_ID, asDate, mergeProjects, newestProjectFirst, slugify, startedAt, unionLocal } from '../src/shared/projects';
 import { readFolderProjects, readLocalProjects } from '../src/main/services/localProjects';
 
 const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
-	name: 'i1', branch: 'fd/alpha/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], ...over,
+	name: 'i1', branch: 'fd/alpha/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], createdAt: null, ...over,
 });
 const project = (id: string, over: Partial<Project> = {}): Project => ({
 	id, title: id, records: [], iterations: [it1({ branch: `fd/${id}/i1` })], people: [], openComments: 0, ...over,
@@ -54,6 +54,58 @@ describe('mergeProjects', () => {
 	});
 });
 
+const started = (id: string, ...dates: Array<string | null>): Project =>
+	project(id, { iterations: dates.map((d, i) => it1({ name: `i${i + 1}`, branch: `fd/${id}/i${i + 1}`, createdAt: d })) });
+
+describe('the order of the project list', () => {
+	it('puts the most recently started project first', () => {
+		const merged = mergeProjects([started('old', '2026-09-01T10:00:00Z'), started('new', '2026-10-05T10:00:00Z'), started('mid', '2026-09-20T10:00:00Z')], []);
+		expect(merged.map((p) => p.id)).toEqual(['new', 'mid', 'old']);
+	});
+
+	it('dates a project by its first iteration, so adding iterations to an old project does not make it new', () => {
+		const merged = mergeProjects([started('long-running', '2026-09-01T00:00:00Z', '2026-10-05T00:00:00Z', '2026-10-06T00:00:00Z'), started('fresh', '2026-10-01T00:00:00Z')], []);
+		expect(merged.map((p) => p.id)).toEqual(['fresh', 'long-running']);
+		expect(startedAt(merged[1] as Project)).toBe('2026-09-01T00:00:00Z');
+	});
+
+	it('compares moments, not text, so different offsets and formats order correctly', () => {
+		const merged = mergeProjects([started('a', '2026-10-05T23:00:00-04:00'), started('b', '2026-10-06T02:00:00Z'), started('c', '2026-10-06T04:00:00Z')], []);
+		// a is 03:00Z on the 6th, b is 02:00Z, c is 04:00Z
+		expect(merged.map((p) => p.id)).toEqual(['c', 'a', 'b']);
+	});
+
+	it('puts a project whose start is unknown last, and breaks every tie by title so the list never shuffles', () => {
+		const list = [started('zeta', null), started('beta', '2026-10-01T00:00:00Z'), started('alpha', '2026-10-01T00:00:00Z'), started('omega', null)];
+		expect(mergeProjects(list, []).map((p) => p.id)).toEqual(['alpha', 'beta', 'omega', 'zeta']);
+		expect(mergeProjects([...list].reverse(), []).map((p) => p.id)).toEqual(['alpha', 'beta', 'omega', 'zeta']);
+	});
+
+	it('orders GitHub and local-only projects together', () => {
+		const merged = mergeProjects([started('shared', '2026-09-01T00:00:00Z')], [started('mine', '2026-10-05T00:00:00Z')]);
+		expect(merged.map((p) => p.id)).toEqual(['mine', 'shared']);
+	});
+
+	it('takes a date from the local side when GitHub has none, rather than losing the project\'s place', () => {
+		const merged = mergeProjects(
+			[started('alpha', null), started('beta', '2026-09-15T00:00:00Z')],
+			[started('alpha', '2026-10-05T00:00:00Z')],
+		);
+		expect(merged.map((p) => p.id)).toEqual(['alpha', 'beta']);
+	});
+
+	it('takes a date from a branch when the record has none', () => {
+		const records = [started('alpha', null)];
+		const branches = [started('alpha', '2026-10-05T00:00:00Z')];
+		expect(startedAt(unionLocal(records, branches)[0] as Project)).toBe('2026-10-05T00:00:00Z');
+	});
+
+	it('does not let an unreadable date count as a date', () => {
+		expect(['2026-10-05T10:00:00Z', 'yesterday', '', null, 5, undefined].map(asDate)).toEqual(['2026-10-05T10:00:00Z', null, null, null, null, null]);
+		expect(newestProjectFirst(started('a', null), started('b', null))).toBeLessThan(0);
+	});
+});
+
 describe('readLocalProjects', () => {
 	let root: string;
 	beforeEach(() => {
@@ -74,6 +126,13 @@ describe('readLocalProjects', () => {
 		const [p] = readLocalProjects(root);
 		expect(p).toMatchObject({ id: 'alpha', title: 'Alpha prototype', people: [{ name: 'Noah', login: 'noah' }] });
 		expect(p?.iterations[0]).toMatchObject({ name: 'i1', branch: 'fd/alpha/i1', commit: 'abc' });
+	});
+
+	it('reads when each iteration was started, and ignores a date that is not one', () => {
+		write('dated', { 'iterations.json': JSON.stringify([{ name: 'i1', branch: 'fd/dated/i1', createdAt: '2026-09-28T17:13:52-04:00' }, { name: 'i2', branch: 'fd/dated/i2', createdAt: 'not a date' }]) });
+		const [p] = readLocalProjects(root);
+		expect(p?.iterations.find((i) => i.name === 'i1')?.createdAt).toBe('2026-09-28T17:13:52-04:00');
+		expect(p?.iterations.find((i) => i.name === 'i2')?.createdAt).toBeNull();
 	});
 
 	it('names a project by its id when it has no brief yet', () => {

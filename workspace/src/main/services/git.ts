@@ -222,3 +222,17 @@ export const pushBranch = async (root: string, branch: string): Promise<{ pushed
 	const lines = out.split('\n').filter((l) => l.includes('refs/heads/'));
 	return { pushed: !lines.every((l) => l.startsWith('=')) };
 };
+
+/**
+ * When work on a branch began: the date of its first commit beyond the trunk, so a project an agent
+ * built in a terminal, which has no record to say, still has an honest start. If the trunk is not
+ * known, or the branch has nothing of its own, the newest commit stands in. Null if git cannot say.
+ */
+export const branchStartedAt = async (root: string, branch: string): Promise<string | null> => {
+	const base = await trunk(root);
+	const own = base !== null && base !== branch ? await git(root, ['log', '--format=%aI', `${base}..${branch}`]).catch(() => '') : '';
+	const dates = own.split('\n').filter(Boolean);
+	const oldest = dates[dates.length - 1];
+	if (oldest) return oldest;
+	return (await git(root, ['log', '-1', '--format=%aI', branch]).catch(() => '')) || null;
+};

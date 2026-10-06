@@ -1,7 +1,7 @@
 import type { Person, Project, ProjectIteration, WorkspaceDescriptor } from '../../shared/contract';
 import { mergePeople } from '../../shared/people';
 import { newestFirst } from '../../shared/projects';
-import { branchCommit, listBranches } from './git';
+import { branchCommit, branchStartedAt, listBranches } from './git';
 import { peopleOn } from './iterations';
 
 /**
@@ -74,6 +74,7 @@ export const readBranchProjects = async (
 					previewUrl: null,
 					commit: await branchCommit(productRoot, branch).catch(() => null),
 					contributors: people,
+					createdAt: await branchStartedAt(productRoot, branch).catch(() => null),
 				};
 				return { id: it.projectId, iteration };
 			}),

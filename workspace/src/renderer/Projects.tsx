@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Checkout, CheckoutSuggestion, Person, Project, ProjectIteration } from '../shared/contract';
 import { NewWork, type Created } from './NewWork';
 import { People } from './People';
+import { startedAt } from '../shared/projects';
 import { Review } from './Review';
 
 /**
@@ -165,6 +166,11 @@ export const Projects = () => {
 							<FSTypography variant="body2" color="text.secondary">
 								{project.id}
 							</FSTypography>
+							{startedAt(project) && (
+								<FSTypography variant="body2" color="text.secondary">
+									· Started {new Date(startedAt(project) as string).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+								</FSTypography>
+							)}
 							<FSBox flexGrow={1} />
 							{project.localOnly && <FSChip variant="status" size="small" label="Only on this machine" />}
 							{project.openComments > 0 && (

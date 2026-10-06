@@ -46,6 +46,17 @@ describe('listProjects', () => {
     ],
   };
 
+  it('reads when each iteration was started from its record, and treats anything else as unknown', async () => {
+    const { session } = fakeSession({
+      ...routes,
+      '/repos/acme/design/contents/projects/alpha/iterations.json': {
+        content: b64(JSON.stringify([...ITERATIONS.slice(0, 2).map((i, n) => ({ ...i, createdAt: n === 0 ? '2026-10-01T00:00:00Z' : 'someday' }))])),
+      },
+    });
+    const [alpha] = await new DesignRepo(session, REF).listProjects();
+    expect(alpha?.iterations.map((i) => [i.name, i.createdAt]).sort()).toEqual([['i1', '2026-10-01T00:00:00Z'], ['i2', null]]);
+  });
+
   it('lists project folders, skipping files and templates', async () => {
     const { session } = fakeSession(routes);
     expect((await new DesignRepo(session, REF).listProjects()).map((p) => p.id)).toEqual(['alpha']);

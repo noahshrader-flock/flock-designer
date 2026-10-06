@@ -57,6 +57,7 @@ export const NewWork = ({
 			previewUrl: null,
 			commit: r.value.commit,
 			contributors: r.value.contributors ?? [],
+			createdAt: r.value.createdAt,
 		};
 		onCreated({
 			project: { id, title: name.trim(), records: [], iterations: [iteration], people: [], openComments: 0 },
