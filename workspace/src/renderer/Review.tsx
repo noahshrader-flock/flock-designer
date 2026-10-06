@@ -5,6 +5,7 @@ import { forgetPosted, markersFor, mergeComments, numberComments, openComments, 
 import { latest } from '../shared/latest';
 import { People } from './People';
 import { ShareControl } from './ShareControl';
+import { Toolbar } from './Toolbar';
 import { useHostedPreview } from './hostedPreview';
 import { type AddressPhase, runAddress } from './address';
 import { routeWentWrong } from './localBuild';
@@ -607,7 +608,7 @@ export const Review = ({
 		// screen stacked above that hides all of them (the branch tooltip, the menu, the share dialog).
 		<div className="bg-background fixed inset-x-0 top-(--nav-height) bottom-0 z-40 flex flex-col">
 			{/* The toolbar: where you are, and the way back. Always visible, always fixed. */}
-			<div className="bg-card flex h-(--toolbar-height) shrink-0 items-center gap-4 border-b px-4">
+			<Toolbar>
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<Button size="icon" variant="ghost" aria-label="Back to projects" className="-mr-2 -ml-2" onClick={onBack}>
@@ -667,7 +668,7 @@ export const Review = ({
 						{total > 0 ? total : null}
 					</Button>
 				</div>
-			</div>
+			</Toolbar>
 
 			{/* Under the toolbar: the preview, and beside it the sidebar when it is open. */}
 			<div className="flex min-h-0 flex-1">

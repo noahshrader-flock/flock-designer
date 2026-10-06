@@ -37,11 +37,15 @@ export const App = () => {
 			<TopNav user={signIn.state === 'signedIn' ? signIn.user : null} onSignOut={signOut} />
 			{/* The bar is fixed, so the rest starts below it and scrolls on its own. */}
 			<div className="h-full overflow-y-auto pt-(--nav-height)">
-				<div className="mx-auto max-w-[1400px] p-6">
-					<ErrorBoundary>
-						{signIn.state === 'signedIn' ? <Projects /> : <SignIn state={signIn} onChanged={refreshSignIn} />}
-					</ErrorBoundary>
-				</div>
+				<ErrorBoundary>
+					{signIn.state === 'signedIn' ? (
+						<Projects />
+					) : (
+						<div className="mx-auto max-w-[1400px] p-6">
+							<SignIn state={signIn} onChanged={refreshSignIn} />
+						</div>
+					)}
+				</ErrorBoundary>
 			</div>
 		</div>
 	);

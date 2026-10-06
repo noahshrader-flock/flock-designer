@@ -1,15 +1,21 @@
 import { MessageSquareIcon } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { Checkout, CheckoutSuggestion, Person, Project, ProjectIteration } from '../shared/contract';
 import { NewWork, type Created } from './NewWork';
 import { People } from './People';
 import { PublishBanner, usePublishStatus } from './PublishStatus';
 import { startedAt } from '../shared/projects';
 import { Review } from './Review';
+import { Toolbar } from './Toolbar';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+
+/** The list's own padding and width, under the toolbar. The toolbar is full width, so it is not inside this. */
+const Page = ({ children }: { children: ReactNode }) => (
+	<div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6">{children}</div>
+);
 
 /**
  * Reviewer mode: every project in the design repository, read through the API.
@@ -74,7 +80,7 @@ export const Projects = () => {
 
 	if (error) {
 		return (
-			<div className="flex flex-col gap-4">
+			<Page>
 				<Alert variant="destructive">
 					<AlertDescription>{error}</AlertDescription>
 				</Alert>
@@ -83,12 +89,16 @@ export const Projects = () => {
 						Try again
 					</Button>
 				</div>
-			</div>
+			</Page>
 		);
 	}
 
 	if (!projects) {
-		return <p className="text-muted-foreground text-sm">Loading projects…</p>;
+		return (
+			<Page>
+				<p className="text-muted-foreground text-sm">Loading projects…</p>
+			</Page>
+		);
 	}
 
 	if (selected) {
@@ -110,12 +120,14 @@ export const Projects = () => {
 	}
 
 	return (
-		<div className="flex flex-col gap-4">
-			<div className="flex flex-row items-center gap-4">
-				<h2 className="text-xl font-semibold">Projects</h2>
+		<>
+			{/* Stays put while the list scrolls under it, as it does on a prototype's screen. */}
+			<Toolbar className="sticky top-0 z-40">
+				<h2 className="text-sm font-semibold">Projects</h2>
 				<div className="grow" />
 				{/* Refreshing is an explicit ask, so it also publishes, rather than waiting for the next trigger. */}
 				<Button
+					size="sm"
 					variant="secondary"
 					onClick={() => {
 						void window.workspace.publishNow().then((r) => r.ok && setPublishStatus(r.value));
@@ -124,101 +136,105 @@ export const Projects = () => {
 				>
 					Refresh
 				</Button>
-				<Button onClick={() => setCreating(true)}>New prototype</Button>
-			</div>
-			<PublishBanner status={publishStatus} onChange={setPublishStatus} />
-			{looked && !checkout && suggestion && (
-				<Alert>
-					<AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-						<span>
-							Found {suggestion.product} at {suggestion.root}. Use it for building and previewing here?
-						</span>
-						<span className="flex flex-row gap-2">
-							<Button size="sm" variant="secondary" onClick={chooseCheckout}>
-								Choose another
+				<Button size="sm" onClick={() => setCreating(true)}>
+					New prototype
+				</Button>
+			</Toolbar>
+			<Page>
+				<PublishBanner status={publishStatus} onChange={setPublishStatus} />
+				{looked && !checkout && suggestion && (
+					<Alert>
+						<AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+							<span>
+								Found {suggestion.product} at {suggestion.root}. Use it for building and previewing here?
+							</span>
+							<span className="flex flex-row gap-2">
+								<Button size="sm" variant="secondary" onClick={chooseCheckout}>
+									Choose another
+								</Button>
+								<Button size="sm" onClick={() => void useSuggestion(suggestion.root)}>
+									Use this one
+								</Button>
+							</span>
+						</AlertDescription>
+					</Alert>
+				)}
+				{looked && !checkout && !suggestion && (
+					<Alert>
+						<AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+							<span>Flock Designer could not find a Flock product repository on this machine. Point it at your Coke folder once.</span>
+							<Button size="sm" onClick={chooseCheckout}>
+								Find it
 							</Button>
-							<Button size="sm" onClick={() => void useSuggestion(suggestion.root)}>
-								Use this one
-							</Button>
-						</span>
-					</AlertDescription>
-				</Alert>
-			)}
-			{looked && !checkout && !suggestion && (
-				<Alert>
-					<AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-						<span>Flock Designer could not find a Flock product repository on this machine. Point it at your Coke folder once.</span>
-						<Button size="sm" onClick={chooseCheckout}>
-							Find it
-						</Button>
-					</AlertDescription>
-				</Alert>
-			)}
-			<NewWork
-				open={creating}
-				onClose={() => setCreating(false)}
-				checkout={checkout}
-				onChoose={chooseCheckout}
-				onCreated={(c: Created) => {
-					setCreating(false);
-					setSelected({ project: c.project, iteration: c.iteration, task: c.task });
-				}}
-			/>
+						</AlertDescription>
+					</Alert>
+				)}
+				<NewWork
+					open={creating}
+					onClose={() => setCreating(false)}
+					checkout={checkout}
+					onChoose={chooseCheckout}
+					onCreated={(c: Created) => {
+						setCreating(false);
+						setSelected({ project: c.project, iteration: c.iteration, task: c.task });
+					}}
+				/>
 
-			{projects.length === 0 && (
-				<p className="text-muted-foreground text-sm">
-					No projects yet. A project appears here once its folder exists in the design repository.
-				</p>
-			)}
+				{projects.length === 0 && (
+					<p className="text-muted-foreground text-sm">
+						No projects yet. A project appears here once its folder exists in the design repository.
+					</p>
+				)}
 
-			{projects.map((project) => (
-				<Card key={project.id} className="gap-4 py-5">
-					<CardHeader className="px-5">
-						<CardTitle className="text-base">{project.title}</CardTitle>
-						<CardDescription>
-							{project.id}
-							{startedAt(project) &&
-								` · Started ${new Date(startedAt(project) as string).toLocaleDateString(undefined, {
-									month: 'short',
-									day: 'numeric',
-									year: 'numeric',
-								})}`}
-						</CardDescription>
-						{(project.localOnly || project.openComments > 0) && (
-							<CardAction className="flex flex-row items-center gap-2">
-								{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}
-								{project.openComments > 0 && (
-									<Badge
-										variant="secondary"
-										aria-label={`${project.openComments} open comment${project.openComments === 1 ? '' : 's'}`}
-									>
-										<MessageSquareIcon />
-										{project.openComments}
-									</Badge>
-								)}
-							</CardAction>
-						)}
-					</CardHeader>
-					<CardContent className="flex flex-col gap-3 px-5">
-						<People people={project.people} empty="No contributors recorded yet" />
+				{projects.map((project) => (
+					<Card key={project.id} className="gap-4 py-5">
+						<CardHeader className="px-5">
+							<CardTitle className="text-base">{project.title}</CardTitle>
+							<CardDescription>
+								{project.id}
+								{startedAt(project) &&
+									` · Started ${new Date(startedAt(project) as string).toLocaleDateString(undefined, {
+										month: 'short',
+										day: 'numeric',
+										year: 'numeric',
+									})}`}
+							</CardDescription>
+							{(project.localOnly || project.openComments > 0) && (
+								<CardAction className="flex flex-row items-center gap-2">
+									{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}
+									{project.openComments > 0 && (
+										<Badge
+											variant="secondary"
+											aria-label={`${project.openComments} open comment${project.openComments === 1 ? '' : 's'}`}
+										>
+											<MessageSquareIcon />
+											{project.openComments}
+										</Badge>
+									)}
+								</CardAction>
+							)}
+						</CardHeader>
+						<CardContent className="flex flex-col gap-3 px-5">
+							<People people={project.people} empty="No contributors recorded yet" />
 
-						<p className="text-muted-foreground text-sm">{project.records.join(' · ') || 'no records yet'}</p>
+							<p className="text-muted-foreground text-sm">{project.records.join(' · ') || 'no records yet'}</p>
 
-						{project.iterations.length === 0 ? (
-							<p className="text-muted-foreground text-sm">No branches yet.</p>
-						) : (
-							<div className="flex flex-row flex-wrap gap-2">
-								{project.iterations.map((iteration) => (
-									<Button key={iteration.branch} variant="secondary" size="sm" onClick={() => setSelected({ project, iteration })}>
-										{iteration.name}
-										{iteration.localOnly && !project.localOnly ? ' · local' : ''}
-									</Button>
-								))}
-							</div>
-						)}
-					</CardContent>
-				</Card>
-			))}
-		</div>
+							{project.iterations.length === 0 ? (
+								<p className="text-muted-foreground text-sm">No branches yet.</p>
+							) : (
+								<div className="flex flex-row flex-wrap gap-2">
+									{project.iterations.map((iteration) => (
+										<Button key={iteration.branch} variant="secondary" size="sm" onClick={() => setSelected({ project, iteration })}>
+											{iteration.name}
+											{iteration.localOnly && !project.localOnly ? ' · local' : ''}
+										</Button>
+									))}
+								</div>
+							)}
+						</CardContent>
+					</Card>
+				))}
+			</Page>
+		</>
 	);
 };
