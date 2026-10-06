@@ -1,6 +1,6 @@
 import { type BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { existsSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import {
 	CHANNELS,
 	type Checkout,
@@ -12,10 +12,9 @@ import {
 	type PageBounds,
 	type PageHoldReason,
 	type Project,
-	type PublishOutcome,
+	type PublishStatus,
 	type Result,
 	type ReviewComment,
-	type SavedIteration,
 } from '../shared/contract';
 import { AgentRunner } from './services/agent';
 import { type ShareRunner, previewIsUp, pullRequestText } from './services/share';
@@ -29,6 +28,10 @@ import { classify, readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
 import { prepareAddress, readSkill } from './services/address';
 import { projectTitle, writeCommentsExport } from './services/commentsExport';
+import { syncRecords } from './services/designSync';
+import { syncBranches } from './services/branchSync';
+import { type PublishConsent } from './services/publishConsent';
+import { PublishManager, publishInOrder } from './services/publisher';
 import { DesignRepo } from './services/designRepo';
 import type { PageView } from './services/pageView';
 import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anchor';
@@ -74,9 +77,12 @@ export interface IpcContext {
 	designRepo: DesignRepo;
 	page: PageView;
 	memory: CheckoutMemory;
+	publishConsent: PublishConsent;
+	/** Told whenever publishing moves, so the window can show it. */
+	onPublishStatus: (status: PublishStatus) => void;
 }
 
-export const registerIpc = ({ window, opened, runtime, agent, share, github, designRepo, page, memory }: IpcContext): void => {
+export const registerIpc = ({ window, opened, runtime, agent, share, github, designRepo, page, memory, publishConsent, onPublishStatus }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
 			throw new Error(`${root} is not a git repository.`);
@@ -115,25 +121,43 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 	};
 
 	/**
-	 * Shares an iteration's record with reviewers. Best effort by design: the
-	 * designer's local work is already saved, so being signed out or lacking a
-	 * permission is reported, never raised.
+	 * Keeps the person's work published: branches, then records. It runs by itself (when the list is read, when
+	 * something is written, when the window is focused) and shows where it has got to, so nothing is left for
+	 * anyone to remember. See `PublishManager`.
 	 */
-	const publish = async (projectId: string, recordsRoot: string): Promise<PublishOutcome> => {
-		if (github.state().state !== 'signedIn') {
-			return { state: 'skipped', reason: 'Sign in to share this iteration with reviewers.' };
-		}
-		try {
-			await designRepo.publishIterations(projectId, readIterations(recordsRoot, projectId));
-			return { state: 'published' };
-		} catch (err) {
-			return { state: 'skipped', reason: err instanceof Error ? err.message : String(err) };
-		}
+	const publisher = new PublishManager(
+		{
+			consent: publishConsent,
+			context: async () => {
+				const root = trustedRoot();
+				const recordsRoot = root === null ? null : recordsRootFor(root);
+				if (root === null || recordsRoot === null) return null;
+				opened.require(root);
+				const descriptor = readDescriptor(root);
+				return {
+					run: () =>
+						publishInOrder(
+							() => syncBranches({ root, descriptor, projects: new Set(readFolderProjects(recordsRoot).map((p) => p.id)) }),
+							async (found) => {
+								// Reviewers find an iteration through its record, so work built in a terminal (a branch, a folder,
+								// and no record) is recorded here, then published with the rest.
+								for (const branch of found.mine) {
+									const work = classify(descriptor, branch);
+									if (work) await recordedIteration(root, recordsRoot, descriptor, work.projectId, work.name).catch(() => undefined);
+								}
+								return syncRecords(dirname(recordsRoot));
+							},
+						),
+				};
+			},
+		},
+		onPublishStatus,
+	);
+	// A record just written is published without anyone asking, and without holding up what they were doing.
+	const written = <T>(value: T): T => {
+		void publisher.publish(true);
+		return value;
 	};
-	const saved = async (it: Iteration, recordsRoot: string): Promise<SavedIteration> => ({
-		...it,
-		published: await publish(it.projectId, recordsRoot),
-	});
 
 	ipcMain.handle(
 		CHANNELS.chooseCheckout,
@@ -211,7 +235,7 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 				throw new Error('This repository has a detached HEAD. Check out a branch first.');
 			}
 			const recordsRoot = recordsFor(canonical);
-			return saved(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch, kind), recordsRoot);
+			return written(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch, kind));
 		}),
 	);
 
@@ -222,7 +246,7 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 			const recordsRoot = recordsFor(canonical);
 			const me = github.state();
 			const login = me.state === 'signedIn' ? me.user.login : null;
-			return saved(await continueIteration(canonical, recordsRoot, projectId, name, login, descriptorFor(root)), recordsRoot);
+			return written(await continueIteration(canonical, recordsRoot, projectId, name, login, descriptorFor(root)));
 		}),
 	);
 
@@ -319,14 +343,33 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 					...pullRequestText(projectId, name),
 				},
 				tools: realShareTools(canonical),
+				// Saved, then published, and only then is the link called ready: a reviewer cannot open what is not up yet.
 				record: async (url) => {
 					recordPreview(recordsRoot, projectId, name, url, shared);
-					return publish(projectId, recordsRoot);
+					await publisher.publish(true);
 				},
 			});
 		}),
 	);
 	ipcMain.handle(CHANNELS.shareStatus, guard(() => share.status()));
+
+	// Publishing. The only question it ever asks is whether it may, once.
+	ipcMain.handle(CHANNELS.publishStatus, guard(() => publisher.status()));
+	ipcMain.handle(
+		CHANNELS.setPublishConsent,
+		guard(async (allowed: unknown) => {
+			if (typeof allowed !== 'boolean') throw new Error('That is not a yes or a no.');
+			await publisher.setConsent(allowed);
+			return publisher.status();
+		}),
+	);
+	ipcMain.handle(
+		CHANNELS.publishNow,
+		guard(async () => {
+			await publisher.publish(true);
+			return publisher.status();
+		}),
+	);
 	ipcMain.handle(
 		CHANNELS.previewReachable,
 		guard(async (url: string): Promise<boolean> => {
@@ -395,6 +438,8 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 			} catch (err) {
 				if (local.length === 0) throw err;
 			}
+			// Reading the list is a good moment to make sure what it shows is published.
+			void publisher.publish();
 			return mergeProjects(remote, local);
 		}),
 	);
@@ -517,4 +562,6 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 		}),
 	);
 	ipcMain.handle(CHANNELS.pageFocusMarker, guard(async (id: number) => nothing(await page.focusMarker(Number(id)))));
+
+	return { publish: (force = false) => publisher.publish(force) };
 };

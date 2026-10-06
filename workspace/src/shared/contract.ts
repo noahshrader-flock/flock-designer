@@ -106,7 +106,7 @@ export interface Iteration {
 export type ShareStatus =
 	| { state: 'idle' }
 	| { state: 'running'; projectId: string; name: string; step: ShareStep; detail?: string }
-	| { state: 'ready'; projectId: string; name: string; url: string; prUrl: string; published: PublishOutcome }
+	| { state: 'ready'; projectId: string; name: string; url: string; prUrl: string }
 	| { state: 'failed'; projectId: string; name: string; message: string };
 
 export type ShareStep = 'pushing' | 'opening' | 'building';
@@ -144,11 +144,25 @@ export type AgentStatus =
  */
 export type IterationKind = 'prototype' | 'codebase';
 
-/** Whether an iteration's record reached the design repository, where reviewers read it. */
-export type PublishOutcome = { state: 'published' } | { state: 'skipped'; reason: string };
+/** Something that could not be published, and why, in words a person can act on. */
+export interface PublishProblem {
+	what: string;
+	why: string;
+}
 
-/** An iteration, plus what happened when its record was shared. The local save never depends on it. */
-export type SavedIteration = Iteration & { published: PublishOutcome };
+/**
+ * Whether the person's work is published, which is the app's job and nobody else's to remember:
+ * their work branches in the product repository, and their project records in the design repository.
+ * Nothing waits on the answer to consent; until it is given, nothing is published and this says so.
+ */
+export type PublishStatus =
+	| { state: 'needs-consent' }
+	| { state: 'off' }
+	/** Nothing to publish from here: no product repository, or no design repository beside it. */
+	| { state: 'unavailable' }
+	| { state: 'working' }
+	| { state: 'shared'; at: string }
+	| { state: 'held'; problems: PublishProblem[]; at: string };
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -162,9 +176,9 @@ export interface WorkspaceApi {
 
 	listIterations(root: string, projectId: string): Promise<Result<Iteration[]>>;
 	/** Creates the branch. Refuses if the tree is dirty; never discards work. */
-	createIteration(root: string, projectId: string, note: string, kind: IterationKind): Promise<Result<SavedIteration>>;
+	createIteration(root: string, projectId: string, note: string, kind: IterationKind): Promise<Result<Iteration>>;
 	/** Checks out an existing iteration's branch. */
-	continueIteration(root: string, projectId: string, name: string): Promise<Result<SavedIteration>>;
+	continueIteration(root: string, projectId: string, name: string): Promise<Result<Iteration>>;
 
 	/** `projectId` fills `<project-id>` in a command that serves one project. */
 	startCommand(root: string, commandId: string, projectId?: string): Promise<Result<PreviewStatus>>;
@@ -185,6 +199,14 @@ export interface WorkspaceApi {
 	commandStatus(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	onRunLog(listener: (line: RunLogLine) => void): () => void;
 	onPreviewStatus(listener: (status: PreviewStatus) => void): () => void;
+
+	/** Where publishing has got to. */
+	publishStatus(): Promise<Result<PublishStatus>>;
+	/** The one-time answer to "may Flock Designer publish my work automatically?" Answering starts a run. */
+	setPublishConsent(allowed: boolean): Promise<Result<PublishStatus>>;
+	/** Publish now, for the person who wants to see it done. Never needed: it happens by itself. */
+	publishNow(): Promise<Result<PublishStatus>>;
+	onPublishStatus(listener: (status: PublishStatus) => void): () => void;
 
 	/**
 	 * Pushes the iteration's branch, opens a draft pull request for it, waits for the repository's
@@ -441,6 +463,10 @@ export const CHANNELS = {
 	addressComments: 'workspace:addressComments',
 	shareIteration: 'workspace:shareIteration',
 	shareStatus: 'workspace:shareStatus',
+	publishStatus: 'workspace:publishStatus',
+	setPublishConsent: 'workspace:setPublishConsent',
+	publishNow: 'workspace:publishNow',
+	publishStatusChanged: 'workspace:event:publishStatus',
 	shareStatusChanged: 'workspace:event:shareStatus',
 	previewReachable: 'workspace:previewReachable',
 	runLog: 'workspace:event:runLog',

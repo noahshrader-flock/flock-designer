@@ -180,65 +180,6 @@ describe('comments', () => {
   });
 });
 
-describe('publishIterations', () => {
-  const FILE = '/repos/acme/design/contents/projects/alpha/iterations.json';
-  const local = [{ projectId: 'alpha', name: 'i1', branch: 'fd/alpha/i1', commit: 'abc', createdAt: '2026-10-01', note: '' }];
-  const decode = (w: { body?: unknown }) =>
-    JSON.parse(Buffer.from((w.body as { content: string }).content, 'base64').toString('utf8')) as Array<Record<string, unknown>>;
-
-  it('creates the record when the project has none', async () => {
-    // The first call is the read, which finds nothing; the write that follows succeeds.
-    let calls = 0;
-    const { session, writes } = fakeSession({
-      [FILE]: () => {
-        if (calls++ === 0) throw new GitHubError('Not found', 404);
-        return {};
-      },
-    });
-    await new DesignRepo(session, REF).publishIterations('alpha', local);
-    expect(writes).toHaveLength(1);
-    expect(writes[0]?.method).toBe('PUT');
-    expect((writes[0]?.body as { sha?: string }).sha).toBeUndefined();
-    expect(decode(writes[0]!).map((i) => i.name)).toEqual(['i1']);
-  });
-
-  it('keeps iterations and fields only the repository has, and sends the sha', async () => {
-    const remote = [
-      { ...local[0], commit: null, previewUrl: 'https://preview.test/i1' },
-      { projectId: 'alpha', name: 'i2', branch: 'fd/alpha/i2', commit: null, createdAt: '2026-10-02', note: 'theirs' },
-    ];
-    const { session, writes } = fakeSession({ [FILE]: { sha: 'old', content: b64(JSON.stringify(remote)) } });
-    await new DesignRepo(session, REF).publishIterations('alpha', local);
-    const written = decode(writes[0]!);
-    expect(written.map((i) => i.name)).toEqual(['i1', 'i2']);
-    expect(written[0]).toMatchObject({ commit: 'abc', previewUrl: 'https://preview.test/i1' });
-    expect((writes[0]?.body as { sha: string }).sha).toBe('old');
-  });
-
-  it('writes nothing when the record is already current', async () => {
-    const { session, writes } = fakeSession({ [FILE]: { sha: 's', content: b64(JSON.stringify(local)) } });
-    await new DesignRepo(session, REF).publishIterations('alpha', local);
-    expect(writes).toHaveLength(0);
-  });
-
-  it('reads again and merges once when someone else wrote first', async () => {
-    let reads = 0;
-    let puts = 0;
-    const api = vi.fn(async (_p: string, init: { method?: string; body?: unknown } = {}) => {
-      if (init.method === 'PUT') {
-        puts++;
-        if (puts === 1) throw new GitHubError('conflict', 409);
-        return {};
-      }
-      reads++;
-      return { sha: `s${reads}`, content: b64(JSON.stringify([])) };
-    });
-    await new DesignRepo({ api } as unknown as GitHubSession, REF).publishIterations('alpha', local);
-    expect(puts).toBe(2);
-    expect(reads).toBe(2);
-  });
-});
-
 describe('contributors', () => {
   it('shows everyone: code authors from the record plus people who committed to the folder', async () => {
     const records = [
@@ -275,17 +216,6 @@ describe('contributors', () => {
       },
     });
     expect((await new DesignRepo(session, REF).listProjects())[0]?.people).toEqual([]);
-  });
-
-  it('keeps people already recorded when publishing, rather than replacing them', async () => {
-    const FILE = '/repos/acme/design/contents/projects/alpha/iterations.json';
-    const base = { projectId: 'alpha', name: 'i1', branch: 'fd/alpha/i1', commit: null, createdAt: '', note: '' };
-    const { session, writes } = fakeSession({
-      [FILE]: { sha: 's', content: b64(JSON.stringify([{ ...base, contributors: [{ name: 'Grace Hopper', login: null }] }])) },
-    });
-    await new DesignRepo(session, REF).publishIterations('alpha', [{ ...base, contributors: [{ name: 'Ada Lovelace', login: null }] }]);
-    const written = JSON.parse(Buffer.from((writes[0]?.body as { content: string }).content, 'base64').toString('utf8'));
-    expect(written[0].contributors).toEqual([{ name: 'Ada Lovelace', login: null }, { name: 'Grace Hopper', login: null }]);
   });
 });
 

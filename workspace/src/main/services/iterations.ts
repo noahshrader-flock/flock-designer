@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { Iteration, IterationKind, Person, WorkspaceDescriptor } from '../../shared/contract';
-import { branchAuthors, branchExists, branchStartedAt, checkoutBranch, createBranch, headCommit, localIdentity } from './git';
+import { branchAuthors, branchExists, branchStartedAt, checkoutBranch, createBranch, headCommit, isSamePerson, localIdentity } from './git';
 import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
 import { PROJECT_ID } from '../../shared/projects';
@@ -138,10 +138,7 @@ export const createIteration = async (
 export const peopleOn = async (productRoot: string, branch: string, signedInLogin: string | null): Promise<Person[]> => {
 	const me = await localIdentity(productRoot);
 	return (await branchAuthors(productRoot, branch)).map((a) => {
-		const mine =
-			signedInLogin !== null &&
-			((me.email !== '' && a.email.toLowerCase() === me.email.toLowerCase()) ||
-				(me.name !== '' && a.name.toLowerCase() === me.name.toLowerCase()));
+		const mine = signedInLogin !== null && isSamePerson(me, a);
 		return { name: a.name, login: loginFromNoreply(a.email) ?? (mine ? signedInLogin : null) };
 	});
 };

@@ -167,7 +167,7 @@ describe('ShareRunner', () => {
 			request,
 			tools: h.tools,
 			timings,
-			record: async (url) => (recorded.push(url), { state: 'published' }),
+			record: async (url) => void recorded.push(url),
 		});
 		await flush();
 		expect(seen[0]).toMatchObject({ state: 'running', projectId: 'demo', name: 'i1' });
@@ -177,7 +177,6 @@ describe('ShareRunner', () => {
 			name: 'i1',
 			url: 'https://dev-coke-pr-42.example.test',
 			prUrl: 'https://github.test/o/r/pull/42',
-			published: { state: 'published' },
 		});
 		expect(recorded).toEqual(['https://dev-coke-pr-42.example.test']);
 	});
@@ -189,31 +188,24 @@ describe('ShareRunner', () => {
 			request,
 			tools: harness({ checkSequence: [[check('fail')]] }).tools,
 			timings,
-			record: async () => ((recorded = true), { state: 'published' }),
+			record: async () => void (recorded = true),
 		});
 		await flush();
 		expect(runner.status()).toMatchObject({ state: 'failed', message: expect.stringContaining('did not succeed') });
 		expect(recorded).toBe(false);
 	});
 
-	it('keeps a share that could not be published as a success with a reason, since the link exists', async () => {
-		const runner = new ShareRunner(() => undefined);
-		runner.start({ request, tools: harness().tools, timings, record: async () => ({ state: 'skipped', reason: 'Sign in to share this iteration with reviewers.' }) });
-		await flush();
-		expect(runner.status()).toMatchObject({ state: 'ready', published: { state: 'skipped' } });
-	});
-
 	it('does not start a second share while one is running', async () => {
 		const runner = new ShareRunner(() => undefined);
 		const h = harness({ checkSequence: [[check('pending')]], sleep: () => new Promise((r) => setTimeout(r, 5)) });
-		runner.start({ request, tools: h.tools, timings: { ...timings, timeoutMs: 10_000 }, record: async () => ({ state: 'published' }) });
-		expect(() => runner.start({ request, tools: h.tools, timings, record: async () => ({ state: 'published' }) })).toThrow(/Already sharing demo i1/);
+		runner.start({ request, tools: h.tools, timings: { ...timings, timeoutMs: 10_000 }, record: async () => undefined });
+		expect(() => runner.start({ request, tools: h.tools, timings, record: async () => undefined })).toThrow(/Already sharing demo i1/);
 		runner.stop();
 	});
 
 	it('can be shared again after it finishes', async () => {
 		const runner = new ShareRunner(() => undefined);
-		const job = { request, tools: harness().tools, timings, record: async () => ({ state: 'published' as const }) };
+		const job = { request, tools: harness().tools, timings, record: async () => undefined };
 		runner.start(job);
 		await flush();
 		runner.start({ ...job, tools: harness().tools });

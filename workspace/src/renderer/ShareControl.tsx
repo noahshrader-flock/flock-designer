@@ -142,15 +142,10 @@ export const ShareControl = ({
 										{status.url}
 									</FSLink>
 								</FSTypography>
-								{status.published.state === 'published' ? (
-									<FSTypography variant="body2" color="text.secondary">
-										Reviewers will see it on this iteration the next time they open the app.
-									</FSTypography>
-								) : (
-									<FSAlert severity="warning">
-										The link was saved here but not shared with reviewers: {status.published.reason}
-									</FSAlert>
-								)}
+								<FSTypography variant="body2" color="text.secondary">
+									Reviewers will see it on this iteration the next time they open the app. If anything stops it
+									reaching them, the publishing status on the Projects page says what.
+								</FSTypography>
 							</>
 						)}
 						{view === 'failed' && status.state === 'failed' && (

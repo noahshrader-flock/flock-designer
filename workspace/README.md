@@ -71,6 +71,7 @@ apply it until then. Point a development build elsewhere with
 | Invoke a locally installed agent | Hold model credentials, or carry its own prompts |
 | Read and write project records | Become the only place those records exist |
 | Show a prototype's preview in the window and place comments on elements | Let that preview call back into the app, or leave the preview's origin |
+| After a one-time yes, push the person's own work branches (`fd/*`, `feature/<project>`) and commit and push the design repository's `projects/` folder, by itself | Push anything else, force-push, publish a teammate's branch, or publish anything before that yes (a no is never asked again) |
 | Push an iteration's branch and open a **draft** pull request, as the designer, through their own `git` and `gh` | Force-push, open a pull request that is ready for review, merge one, or see the designer's GitHub token |
 
 ## How a repository joins

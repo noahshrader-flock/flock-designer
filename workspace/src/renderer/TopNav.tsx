@@ -11,6 +11,7 @@ import {
 } from '@flocksafety/flock-react-component-lib';
 import { useState } from 'react';
 import type { GitHubUser } from '../shared/contract';
+import { PublishLine, usePublishStatus } from './PublishStatus';
 
 /** Height of the bar, which the rest of the window is pushed down by. */
 export const NAV_HEIGHT = 56;
@@ -34,6 +35,7 @@ const onMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgen
  */
 export const TopNav = ({ user, onSignOut }: { user: GitHubUser | null; onSignOut: () => void }) => {
 	const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+	const [publishStatus, setPublishStatus] = usePublishStatus();
 
 	const setOpen = (el: HTMLElement | null) => {
 		setAnchor(el);
@@ -73,6 +75,11 @@ export const TopNav = ({ user, onSignOut }: { user: GitHubUser | null; onSignOut
 			)}
 
 			<FSBox sx={{ flexGrow: 1 }} />
+
+			{/* Where publishing is, on every screen: a problem must be visible wherever the person is working. */}
+			<FSBox sx={{ ...noDrag, mr: 2 }}>
+				<PublishLine status={publishStatus} onChange={setPublishStatus} />
+			</FSBox>
 
 			{user && (
 				<>

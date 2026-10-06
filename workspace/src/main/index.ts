@@ -5,6 +5,7 @@ import { registerIpc } from './ipc';
 import { AgentRunner } from './services/agent';
 import { DesignRepo } from './services/designRepo';
 import { CheckoutMemory } from './services/checkoutMemory';
+import { PublishConsent } from './services/publishConsent';
 import { PageView } from './services/pageView';
 import type { Fetcher } from './services/github';
 import { GitHubSession } from './services/githubSession';
@@ -116,7 +117,25 @@ void app.whenReady().then(() => {
 
 	const memory = new CheckoutMemory(CheckoutMemory.defaultPath(app.getPath('userData')));
 
-	registerIpc({ window, opened, runtime, agent, share, github, designRepo, page, memory });
+	const publishing = registerIpc({
+		window,
+		opened,
+		runtime,
+		agent,
+		share,
+		github,
+		designRepo,
+		page,
+		memory,
+		publishConsent: new PublishConsent(PublishConsent.defaultPath(app.getPath('userData'))),
+		onPublishStatus: (status) => window.webContents.send(CHANNELS.publishStatusChanged, status),
+	});
+	// Coming back to the window is a good moment to publish whatever was done while it was away.
+	window.on('focus', () => void publishing.publish());
+	// And now and then regardless, because work done in a terminal while this window sits in front would
+	// otherwise wait for the next time the window is focused.
+	const backstop = setInterval(() => void publishing.publish(), 5 * 60_000);
+	window.on('closed', () => clearInterval(backstop));
 
 	// Restores a previous session from the keychain without blocking the window.
 	void github.restore();

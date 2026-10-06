@@ -11,7 +11,7 @@ import type {
 	MarkerResult,
 	PickedPoint,
 	PinEvent,
-	SavedIteration,
+	PublishStatus,
 	ShareStatus,
 	PreviewStatus,
 	Project,
@@ -48,9 +48,8 @@ const api: WorkspaceApi = {
 	readContextReceipt: (root) => invoke<ContextReceipt>(CHANNELS.readContextReceipt, root),
 
 	listIterations: (root, projectId) => invoke<Iteration[]>(CHANNELS.listIterations, root, projectId),
-	createIteration: (root, projectId, note, kind) =>
-		invoke<SavedIteration>(CHANNELS.createIteration, root, projectId, note, kind),
-	continueIteration: (root, projectId, name) => invoke<SavedIteration>(CHANNELS.continueIteration, root, projectId, name),
+	createIteration: (root, projectId, note, kind) => invoke<Iteration>(CHANNELS.createIteration, root, projectId, note, kind),
+	continueIteration: (root, projectId, name) => invoke<Iteration>(CHANNELS.continueIteration, root, projectId, name),
 
 	startCommand: (root, commandId, projectId) => invoke<PreviewStatus>(CHANNELS.startCommand, root, commandId, projectId),
 	lastCheckout: () => invoke<Checkout | null>(CHANNELS.lastCheckout),
@@ -66,6 +65,10 @@ const api: WorkspaceApi = {
 	addressComments: (root, projectId, name) => invoke<AgentStatus>(CHANNELS.addressComments, root, projectId, name),
 	shareIteration: (root, projectId, name) => invoke<ShareStatus>(CHANNELS.shareIteration, root, projectId, name),
 	shareStatus: () => invoke<ShareStatus>(CHANNELS.shareStatus),
+	publishStatus: () => invoke<PublishStatus>(CHANNELS.publishStatus),
+	setPublishConsent: (allowed) => invoke<PublishStatus>(CHANNELS.setPublishConsent, allowed),
+	publishNow: () => invoke<PublishStatus>(CHANNELS.publishNow),
+	onPublishStatus: (listener) => subscribe<PublishStatus>(CHANNELS.publishStatusChanged, listener),
 	onShareStatus: (listener) => subscribe<ShareStatus>(CHANNELS.shareStatusChanged, listener),
 	previewReachable: (url) => invoke<boolean>(CHANNELS.previewReachable, url),
 	onAgentLog: (listener) => subscribe<RunLogLine>(CHANNELS.agentLog, listener),

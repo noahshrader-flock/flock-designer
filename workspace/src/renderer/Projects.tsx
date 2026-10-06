@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Checkout, CheckoutSuggestion, Person, Project, ProjectIteration } from '../shared/contract';
 import { NewWork, type Created } from './NewWork';
 import { People } from './People';
+import { PublishBanner, usePublishStatus } from './PublishStatus';
 import { startedAt } from '../shared/projects';
 import { Review } from './Review';
 
@@ -28,6 +29,7 @@ export const Projects = () => {
 	const [creating, setCreating] = useState(false);
 	const [looked, setLooked] = useState(false);
 	const [suggestion, setSuggestion] = useState<CheckoutSuggestion | null>(null);
+	const [publishStatus, setPublishStatus] = usePublishStatus();
 
 	// The checkout is chosen once and remembered.
 	useEffect(() => {
@@ -116,11 +118,20 @@ export const Projects = () => {
 					Projects
 				</FSTypography>
 				<FSBox flexGrow={1} />
-				<FSButton size="md" variant="secondary" onClick={load}>
+				{/* Refreshing is an explicit ask, so it also publishes, rather than waiting for the next trigger. */}
+				<FSButton
+					size="md"
+					variant="secondary"
+					onClick={() => {
+						void window.workspace.publishNow().then((r) => r.ok && setPublishStatus(r.value));
+						void load();
+					}}
+				>
 					Refresh
 				</FSButton>
 				<FSButton size="md" onClick={() => setCreating(true)}>New prototype</FSButton>
 			</FSStack>
+			<PublishBanner status={publishStatus} onChange={setPublishStatus} />
 			{looked && !checkout && suggestion && (
 				<FSAlert
 					severity="info"

@@ -151,7 +151,7 @@ describe('sharing through the real tools', () => {
 			request,
 			tools: realShareTools(work, fakeGh),
 			timings,
-			record: async (url) => (recordPreview(records, 'demo', 'i1', url), { state: 'published' }),
+			record: async (url) => void recordPreview(records, 'demo', 'i1', url),
 		});
 		const done = await settle(runner);
 
@@ -171,7 +171,7 @@ describe('sharing through the real tools', () => {
 		writeFileSync(join(dir, 'gh', 'list.json'), JSON.stringify([{ number: 9, url: 'https://github.test/o/r/pull/9' }]));
 		writeFileSync(join(dir, 'gh', 'checks-1.json'), checks('pass'));
 		const runner = new ShareRunner(() => undefined);
-		runner.start({ request, tools: realShareTools(work, fakeGh), timings, record: async () => ({ state: 'published' }) });
+		runner.start({ request, tools: realShareTools(work, fakeGh), timings, record: async () => undefined });
 		expect(await settle(runner)).toMatchObject({ state: 'ready', url: 'https://dev-coke-pr-9.example.test' });
 		expect(calls().some((c) => c.startsWith('pr create'))).toBe(false);
 	});
@@ -179,7 +179,7 @@ describe('sharing through the real tools', () => {
 	it('reports a failed deploy with the check and its log', async () => {
 		writeFileSync(join(dir, 'gh', 'checks-1.json'), checks('fail'));
 		const runner = new ShareRunner(() => undefined);
-		runner.start({ request, tools: realShareTools(work, fakeGh), timings, record: async () => ({ state: 'published' }) });
+		runner.start({ request, tools: realShareTools(work, fakeGh), timings, record: async () => undefined });
 		expect(await settle(runner)).toMatchObject({ state: 'failed', message: expect.stringContaining('run/1') });
 	});
 
@@ -187,19 +187,19 @@ describe('sharing through the real tools', () => {
 		writeFileSync(join(dir, 'gh', 'checks-1.json'), '[]');
 		writeFileSync(join(dir, 'gh', 'stderr'), "no checks reported on the 'fd/demo/i1' branch");
 		const runner = new ShareRunner(() => undefined);
-		runner.start({ request, tools: realShareTools(work, fakeGh), timings: { ...timings, startupMs: 40 }, record: async () => ({ state: 'published' }) });
+		runner.start({ request, tools: realShareTools(work, fakeGh), timings: { ...timings, startupMs: 40 }, record: async () => undefined });
 		expect(await settle(runner)).toMatchObject({ state: 'failed', message: expect.stringContaining('did not start') });
 	});
 
 	it('says what to install when the GitHub CLI is missing', async () => {
 		const runner = new ShareRunner(() => undefined);
-		runner.start({ request, tools: realShareTools(work, join(dir, 'no-such-gh')), timings, record: async () => ({ state: 'published' }) });
+		runner.start({ request, tools: realShareTools(work, join(dir, 'no-such-gh')), timings, record: async () => undefined });
 		expect(await settle(runner)).toMatchObject({ state: 'failed', message: expect.stringContaining('https://cli.github.com') });
 	});
 
 	it('still pushes before it finds out gh is unusable, so nothing is lost', async () => {
 		const runner = new ShareRunner(() => undefined);
-		runner.start({ request, tools: realShareTools(work, join(dir, 'no-such-gh')), timings, record: async () => ({ state: 'published' }) });
+		runner.start({ request, tools: realShareTools(work, join(dir, 'no-such-gh')), timings, record: async () => undefined });
 		await settle(runner);
 		expect(g(remote, 'rev-parse', '--verify', 'refs/heads/fd/demo/i1').trim()).toMatch(/^[0-9a-f]{40}$/);
 	});

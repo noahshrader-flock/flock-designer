@@ -1,4 +1,4 @@
-import type { IterationKind, PublishOutcome, ShareDescriptor, ShareStatus, ShareStep } from '../../shared/contract';
+import type { IterationKind, ShareDescriptor, ShareStatus, ShareStep } from '../../shared/contract';
 
 /**
  * Putting an iteration in front of someone who is not on this machine.
@@ -164,8 +164,8 @@ export const runShare = async (
 export interface ShareJob {
 	request: ShareRequest;
 	tools: ShareTools;
-	/** Saves the address in the iteration's record and shares the record. Its outcome is reported, never raised. */
-	record(url: string): Promise<PublishOutcome>;
+	/** Saves the address in the iteration's record and publishes it, so reviewers can open it. */
+	record(url: string): Promise<void>;
 	timings?: ShareTimings;
 }
 
@@ -214,8 +214,8 @@ export class ShareRunner {
 					job.timings,
 					() => this.live,
 				);
-				const published = await job.record(url);
-				this.set({ state: 'ready', projectId, name, url, prUrl, published });
+				await job.record(url);
+				this.set({ state: 'ready', projectId, name, url, prUrl });
 			} catch (err) {
 				this.set({ state: 'failed', projectId, name, message: err instanceof Error ? err.message : String(err) });
 			} finally {
