@@ -57,10 +57,14 @@
 	--border: oklch(0.922 0 0);
 	--input: oklch(0.922 0 0);
 	--ring: oklch(0.708 0 0);
-	/* Not in the stock theme: a warning, for work that is held back or a pin that moved. */
-	--warning: oklch(0.646 0.149 70);
-	--warning-foreground: oklch(0.145 0 0);
-	--success: oklch(0.59 0.13 155);
+	/*
+	 * Two meanings the stock theme has no colour for: something held back and wanting attention, and
+	 * something that finished and did what was asked. Taken from Tailwind's own palette rather than
+	 * picked by hand, so they sit in the same colour space as everything else and there is one name
+	 * per meaning instead of a colour chosen at each place that needs it.
+	 */
+	--warning: var(--color-amber-600);
+	--success: var(--color-green-600);
 }
 
 .dark {
@@ -82,14 +86,13 @@
 	--border: oklch(1 0 0 / 10%);
 	--input: oklch(1 0 0 / 15%);
 	--ring: oklch(0.556 0 0);
-	--warning: oklch(0.769 0.153 70);
-	--warning-foreground: oklch(0.145 0 0);
-	--success: oklch(0.7 0.13 155);
+	/* Lighter on a dark background, as the stock tokens do the same thing. */
+	--warning: var(--color-amber-400);
+	--success: var(--color-green-400);
 }
 
 @theme inline {
 	--color-warning: var(--warning);
-	--color-warning-foreground: var(--warning-foreground);
 	--color-success: var(--success);
 }
 

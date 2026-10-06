@@ -16,6 +16,26 @@ import type { MarkerRequest } from '../../shared/contract';
  * template literal.
  */
 
+/**
+ * The colours of the things this app draws *inside someone else's page*.
+ *
+ * Written as literals on purpose, and the only place in the app where that is right: these live in
+ * the previewed product's document, which has its own stylesheet and cannot see this app's theme. They
+ * are Tailwind's own values rather than anything chosen by hand -- blue-600 for a pin and the outline
+ * that shows what it will attach to, amber-500 for one not yet saved -- so they match the app around
+ * them. White and a plain shadow keep a pin legible on whatever it lands on.
+ */
+const INK = {
+	/** tailwind blue-600 */
+	pin: '#2563eb',
+	/** tailwind blue-600 at 8% */
+	pinWash: 'rgba(37,99,235,.08)',
+	/** tailwind amber-500: a pin being placed, not yet saved */
+	draft: '#f59e0b',
+	on: '#fff',
+	shadow: 'rgba(0,0,0,.45)',
+} as const;
+
 /** Shared by the pick and resolve scripts: how an element is found, and described. */
 const HELPERS = String.raw`
   var doc = document;
@@ -143,10 +163,10 @@ const HELPERS = String.raw`
   var hoverOutline = function () {
     var outline = doc.createElement('div');
     outline.setAttribute('data-fd-layer', 'hover');
-    outline.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483646;display:none;border:2px solid #2563eb;background:rgba(37,99,235,.08);border-radius:2px;box-sizing:border-box';
+    outline.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483646;display:none;border:2px solid ${INK.pin};background:${INK.pinWash};border-radius:2px;box-sizing:border-box';
     var chip = doc.createElement('div');
     chip.setAttribute('data-fd-layer', 'hover');
-    chip.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483647;display:none;background:#2563eb;color:#fff;font:600 11px/1.4 sans-serif;padding:2px 6px;border-radius:3px;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    chip.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483647;display:none;background:${INK.pin};color:${INK.on};font:600 11px/1.4 sans-serif;padding:2px 6px;border-radius:3px;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
     doc.documentElement.appendChild(outline);
     doc.documentElement.appendChild(chip);
     return {
@@ -356,10 +376,10 @@ ${HELPERS}
     var m = doc.createElement('div');
     m.style.cssText = 'position:fixed;width:0;height:0;pointer-events:none';
     var pin = doc.createElement('div');
-    pin.style.cssText = 'position:absolute;left:-14px;top:-33px;width:28px;height:28px;border-radius:50% 50% 50% 0;background:' + (p.draft ? '#f59e0b' : '#2563eb') + ';border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.45);transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;pointer-events:auto;cursor:' + (p.movable ? 'grab' : 'pointer');
+    pin.style.cssText = 'position:absolute;left:-14px;top:-33px;width:28px;height:28px;border-radius:50% 50% 50% 0;background:' + (p.draft ? '${INK.draft}' : '${INK.pin}') + ';border:2px solid ${INK.on};box-shadow:0 2px 6px ${INK.shadow};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;pointer-events:auto;cursor:' + (p.movable ? 'grab' : 'pointer');
     var label = doc.createElement('span');
     label.textContent = String(p.number);
-    label.style.cssText = 'transform:rotate(45deg);color:#fff;font:700 12px/1 sans-serif;pointer-events:none';
+    label.style.cssText = 'transform:rotate(45deg);color:${INK.on};font:700 12px/1 sans-serif;pointer-events:none';
     pin.appendChild(label);
     m.appendChild(pin);
     p.marker = m;

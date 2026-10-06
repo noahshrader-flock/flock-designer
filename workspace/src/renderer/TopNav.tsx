@@ -1,6 +1,7 @@
 import type { GitHubUser } from '../shared/contract';
 import { PublishLine, usePublishStatus } from './PublishStatus';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 
 const onMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgent);
@@ -44,14 +45,14 @@ export const TopNav = ({ user, onSignOut }: { user: GitHubUser | null; onSignOut
 
 			{user && (
 				<DropdownMenu onOpenChange={(open) => void window.workspace.pageHold('menu', open)}>
-					<DropdownMenuTrigger
-						className="app-no-drag hover:bg-accent flex cursor-pointer items-center gap-3 rounded-md border-0 bg-transparent px-2 py-1 font-[inherit] outline-none"
-					>
-						<Avatar>
-							<AvatarImage src={user.avatarUrl ?? undefined} alt={user.name ?? user.login} />
-							<AvatarFallback>{(user.name ?? user.login).charAt(0).toUpperCase()}</AvatarFallback>
-						</Avatar>
-						<span className="text-sm">{user.name ?? user.login}</span>
+					<DropdownMenuTrigger asChild>
+						<Button variant="ghost" className="app-no-drag h-auto gap-3 py-1 font-normal">
+							<Avatar size="sm">
+								<AvatarImage src={user.avatarUrl ?? undefined} alt={user.name ?? user.login} />
+								<AvatarFallback>{(user.name ?? user.login).charAt(0).toUpperCase()}</AvatarFallback>
+							</Avatar>
+							{user.name ?? user.login}
+						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end" className="min-w-[200px]">
 						<div className="px-2 py-1.5">
