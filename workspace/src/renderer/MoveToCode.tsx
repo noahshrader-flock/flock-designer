@@ -36,6 +36,8 @@ export const MoveToCode = ({
 	const [branches, setBranches] = useState<string[]>([]);
 	const [from, setFrom] = useState<string | null>(null);
 	const [agent, setAgent] = useState<AgentReadiness>({ state: 'unknown' });
+	// The agent does one piece of work at a time; this would otherwise queue behind another run unseen.
+	const [agentBusy, setAgentBusy] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +53,7 @@ export const MoveToCode = ({
 		});
 		void window.workspace.listBaseBranches(checkout.root).then((r) => current && r.ok && setBranches(r.value));
 		void window.workspace.agentReadiness().then((r) => current && r.ok && setAgent(r.value));
+		void window.workspace.agentStatus().then((r) => current && setAgentBusy(r.ok && r.value.state === 'running'));
 		return () => {
 			current = false;
 		};
@@ -65,7 +68,7 @@ export const MoveToCode = ({
 
 	const agentBlocked = agent.state === 'missing' || agent.state === 'signedOut';
 	const wrongRepository = plan !== null && plan.basedOn !== null && plan.basedOn.repository !== plan.repository;
-	const canStart = plan !== null && !plan.recorded && plan.clean && !agentBlocked && (plan.exists || from !== null) && !busy;
+	const canStart = plan !== null && !plan.recorded && plan.clean && !agentBlocked && !agentBusy && (plan.exists || from !== null) && !busy;
 
 	const start = async () => {
 		if (!plan) return;
@@ -129,6 +132,12 @@ export const MoveToCode = ({
 									? 'The code is written by Claude Code on this machine. Install it, sign in, then open this again.'
 									: 'Sign in with your Claude account, then open this again.'}
 							</AlertDescription>
+						</Alert>
+					)}
+					{agentBusy && !agentBlocked && (
+						<Alert variant="warning">
+							<AlertTitle>The agent is busy with other work</AlertTitle>
+							<AlertDescription>It does one thing at a time. Open this again when that work has finished.</AlertDescription>
 						</Alert>
 					)}
 

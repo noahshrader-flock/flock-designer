@@ -66,6 +66,7 @@ let registerIpc: typeof import('../src/main/ipc')['registerIpc'];
 let OpenedCheckouts: typeof import('../src/main/services/session')['OpenedCheckouts'];
 let opened: InstanceType<typeof OpenedCheckouts>;
 let agentStart: ReturnType<typeof vi.fn>;
+let agentStatus: ReturnType<typeof vi.fn>;
 let runtimeStart: ReturnType<typeof vi.fn>;
 let memoryValue: string | null;
 let previewUrl: string | null;
@@ -91,6 +92,7 @@ beforeEach(async () => {
 	({ OpenedCheckouts } = await import('../src/main/services/session'));
 	opened = new OpenedCheckouts();
 	agentStart = vi.fn(() => ({ state: 'idle' }));
+	agentStatus = vi.fn(() => ({ state: 'idle' }));
 	runtimeStart = vi.fn(async () => ({ state: 'stopped' }));
 	memoryValue = null;
 	previewUrl = null;
@@ -101,7 +103,7 @@ beforeEach(async () => {
 		window: { webContents: { send: vi.fn() } } as never,
 		opened,
 		runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
-		agent: { start: agentStart, status: vi.fn(() => ({ state: 'idle' })) } as never,
+		agent: { start: agentStart, status: agentStatus } as never,
 		github: { state: () => ({ state: 'signedOut' }) } as never,
 		designRepo: { listProjects: vi.fn(async () => []), deleteComment } as never,
 		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
@@ -556,6 +558,34 @@ describe('startAgent validates the project id', () => {
 		const r = await call(CHANNELS.startAgent, product, 'users-inactivity-signal', 'do it');
 		expect(r.ok).toBe(true);
 		expect(agentStart).toHaveBeenCalled();
+	});
+});
+
+describe('one agent, one piece of work', () => {
+	const branchHere = () => execFileSync('git', ['-C', product, 'branch', '--show-current']).toString().trim();
+
+	it('tags the run with the branch it works on, so a screen opened again finds it', async () => {
+		await call(CHANNELS.useCheckout, product);
+		await call(CHANNELS.startAgent, product, 'demo', 'do it');
+		expect((agentStart.mock.calls.at(-1)?.[3] as { work: string }).work).toBe(branchHere());
+	});
+
+	it('refuses while the agent is busy with other work, instead of waiting on it as if it were this', async () => {
+		await call(CHANNELS.useCheckout, product);
+		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now', work: 'quick/other/q1' });
+		const r = await call(CHANNELS.startAgent, product, 'demo', 'do it');
+		expect(r.ok).toBe(false);
+		expect(r.error).toMatch(/already working on something else/);
+		expect(agentStart).not.toHaveBeenCalled();
+	});
+
+	it('joins its own run when asked twice, rather than starting a second', async () => {
+		await call(CHANNELS.useCheckout, product);
+		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now', work: branchHere() });
+		const r = await call(CHANNELS.startAgent, product, 'demo', 'do it');
+		expect(r.ok).toBe(true);
+		expect(r.value).toMatchObject({ state: 'running' });
+		expect(agentStart).not.toHaveBeenCalled();
 	});
 });
 

@@ -29,10 +29,14 @@ export const useLocalBuild = ({
 	const agentDone = useRef(false);
 
 	useEffect(() => {
+		// What the agent said before this screen was opened, when the run is this branch's: picks up where it was left.
+		void window.workspace.agentRecent().then((r) => {
+			if (r.ok && r.value.work === iteration.branch) setLog((prev) => (prev.length ? prev : r.value.lines));
+		});
 		const add = (l: RunLogLine) => setLog((prev) => [...prev, l.text.replace(/\n$/, '')].slice(-200));
 		const offs = [window.workspace.onAgentLog(add), window.workspace.onRunLog(add)];
 		return () => offs.forEach((off) => off());
-	}, []);
+	}, [iteration.branch]);
 
 	const root = checkout?.root ?? null;
 	useEffect(() => {

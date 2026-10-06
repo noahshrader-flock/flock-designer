@@ -341,16 +341,27 @@ export const registerIpc = ({
 
 	ipcMain.handle(
 		CHANNELS.startAgent,
-		guard((root: string, projectId: string, task: string) => {
+		guard(async (root: string, projectId: string, task: string) => {
 			// Same rule startCommand applies. This one is interpolated into the agent's
 			// prompt, and the agent runs unattended with edit permission, so an
 			// unchecked value here is prompt injection rather than argv injection.
 			assertUsableProjectId(projectId);
+			const canonical = opened.require(root);
+			// The run is tagged with the branch it works on, so a screen opened again finds its own run.
+			const branch = (await readCheckout(canonical)).branch;
+			const now = agent.status();
+			if (now.state === 'running') {
+				// The same work asked twice (the screen opened twice) joins its run; anything else must not be
+				// mistaken for it, or the screen would wait on someone else's run and report this work as done.
+				if (branch !== null && now.work === branch) return now;
+				throw new Error('The agent is already working on something else. Wait for it to finish, then try again.');
+			}
 			// A quick prototype being moved into the code is read from the app's own copy of it.
 			const quick = join(quickRoot, projectId);
-			return agent.start(opened.require(root), projectId, task, {
+			return agent.start(canonical, projectId, task, {
 				// The project's records live in the design repository, beside the product checkout.
-				addDirs: [recordsFor(opened.require(root)), ...(existsSync(quick) ? [quick] : [])],
+				addDirs: [recordsFor(canonical), ...(existsSync(quick) ? [quick] : [])],
+				...(branch !== null ? { work: branch } : {}),
 			});
 		}),
 	);

@@ -147,11 +147,16 @@ export const runLocalBuild = async ({
 	}
 	if (!isLive()) return null;
 
-	if (task) {
+	// Opened again while its agent is still at work: wait on that run, as if the screen had never been left.
+	const now = await api.agentStatus();
+	const stillBuilding = now.ok && now.value.state === 'running' && now.value.work === iteration.branch;
+	if (task || stillBuilding) {
 		onPhase({ kind: 'agent' });
-		const started = await api.startAgent(root, project.id, task);
-		if (!started.ok) return fail(started.error);
-		if (started.value.state === 'unavailable') return fail(started.value.detail);
+		if (!stillBuilding) {
+			const started = await api.startAgent(root, project.id, task as string);
+			if (!started.ok) return fail(started.error);
+			if (started.value.state === 'unavailable') return fail(started.value.detail);
+		}
 		const outcome = await waitForAgent(api, isLive, pollMs);
 		if (outcome.kind === 'stopped') return null;
 		if (outcome.kind === 'failed') return fail(outcome.message);

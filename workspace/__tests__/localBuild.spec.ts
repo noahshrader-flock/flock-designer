@@ -165,6 +165,24 @@ describe('when nobody is looking any more', () => {
 		expect(a.continueIteration).not.toHaveBeenCalled();
 	});
 
+	it('waits on its own agent when opened again mid-build, without asking for the work twice', async () => {
+		let polls = 0;
+		const { a, calls } = api({
+			agentStatus: vi.fn(async () => ({ ok: true, value: ++polls < 3 ? { state: 'running', work: 'fd/users/i1' } : { state: 'finished', exitCode: 0 } })),
+		});
+		const { url, phases } = await run(a);
+		expect(calls).not.toContain('startAgent');
+		expect(phases.map((p) => p.kind)).toEqual(['agent', 'preview', 'running']);
+		expect(url).toBe('http://localhost:3100/');
+	});
+
+	it('does not mistake another work\'s run for its own', async () => {
+		const { a, calls } = api({ agentStatus: vi.fn(async () => ({ ok: true, value: { state: 'running', work: 'quick/other/q1' } })) });
+		const { phases } = await run(a);
+		expect(calls).not.toContain('startAgent');
+		expect(phases.map((p) => p.kind)).toEqual(['preview', 'running']);
+	});
+
 	it('stops polling an agent whose screen has gone', async () => {
 		let live = true;
 		let polls = 0;
