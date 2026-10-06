@@ -35,7 +35,7 @@ const onMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgen
  */
 export const TopNav = ({ user, onSignOut }: { user: GitHubUser | null; onSignOut: () => void }) => {
 	const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-	const [publishStatus, setPublishStatus] = usePublishStatus();
+	const [publishStatus] = usePublishStatus();
 
 	const setOpen = (el: HTMLElement | null) => {
 		setAnchor(el);
@@ -78,7 +78,7 @@ export const TopNav = ({ user, onSignOut }: { user: GitHubUser | null; onSignOut
 
 			{/* Where publishing is, on every screen: a problem must be visible wherever the person is working. */}
 			<FSBox sx={{ ...noDrag, mr: 2 }}>
-				<PublishLine status={publishStatus} onChange={setPublishStatus} />
+				<PublishLine status={publishStatus} />
 			</FSBox>
 
 			{user && (

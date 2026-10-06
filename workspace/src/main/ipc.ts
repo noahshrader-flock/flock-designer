@@ -30,7 +30,6 @@ import { prepareAddress, readSkill } from './services/address';
 import { projectTitle, writeCommentsExport } from './services/commentsExport';
 import { syncRecords } from './services/designSync';
 import { syncBranches } from './services/branchSync';
-import { type PublishConsent } from './services/publishConsent';
 import { PublishManager, publishInOrder } from './services/publisher';
 import { DesignRepo } from './services/designRepo';
 import type { PageView } from './services/pageView';
@@ -77,12 +76,11 @@ export interface IpcContext {
 	designRepo: DesignRepo;
 	page: PageView;
 	memory: CheckoutMemory;
-	publishConsent: PublishConsent;
 	/** Told whenever publishing moves, so the window can show it. */
 	onPublishStatus: (status: PublishStatus) => void;
 }
 
-export const registerIpc = ({ window, opened, runtime, agent, share, github, designRepo, page, memory, publishConsent, onPublishStatus }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
+export const registerIpc = ({ window, opened, runtime, agent, share, github, designRepo, page, memory, onPublishStatus }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
 			throw new Error(`${root} is not a git repository.`);
@@ -127,7 +125,6 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 	 */
 	const publisher = new PublishManager(
 		{
-			consent: publishConsent,
 			context: async () => {
 				const root = trustedRoot();
 				const recordsRoot = root === null ? null : recordsRootFor(root);
@@ -353,16 +350,8 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 	);
 	ipcMain.handle(CHANNELS.shareStatus, guard(() => share.status()));
 
-	// Publishing. The only question it ever asks is whether it may, once.
+	// Publishing happens by itself; these only report it, and let a person ask for it now.
 	ipcMain.handle(CHANNELS.publishStatus, guard(() => publisher.status()));
-	ipcMain.handle(
-		CHANNELS.setPublishConsent,
-		guard(async (allowed: unknown) => {
-			if (typeof allowed !== 'boolean') throw new Error('That is not a yes or a no.');
-			await publisher.setConsent(allowed);
-			return publisher.status();
-		}),
-	);
 	ipcMain.handle(
 		CHANNELS.publishNow,
 		guard(async () => {

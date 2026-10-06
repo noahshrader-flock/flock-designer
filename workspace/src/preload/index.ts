@@ -66,7 +66,6 @@ const api: WorkspaceApi = {
 	shareIteration: (root, projectId, name) => invoke<ShareStatus>(CHANNELS.shareIteration, root, projectId, name),
 	shareStatus: () => invoke<ShareStatus>(CHANNELS.shareStatus),
 	publishStatus: () => invoke<PublishStatus>(CHANNELS.publishStatus),
-	setPublishConsent: (allowed) => invoke<PublishStatus>(CHANNELS.setPublishConsent, allowed),
 	publishNow: () => invoke<PublishStatus>(CHANNELS.publishNow),
 	onPublishStatus: (listener) => subscribe<PublishStatus>(CHANNELS.publishStatusChanged, listener),
 	onShareStatus: (listener) => subscribe<ShareStatus>(CHANNELS.shareStatusChanged, listener),

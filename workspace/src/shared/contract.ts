@@ -153,11 +153,9 @@ export interface PublishProblem {
 /**
  * Whether the person's work is published, which is the app's job and nobody else's to remember:
  * their work branches in the product repository, and their project records in the design repository.
- * Nothing waits on the answer to consent; until it is given, nothing is published and this says so.
+ * It happens by itself, so this only reports.
  */
 export type PublishStatus =
-	| { state: 'needs-consent' }
-	| { state: 'off' }
 	/** Nothing to publish from here: no product repository, or no design repository beside it. */
 	| { state: 'unavailable' }
 	| { state: 'working' }
@@ -202,8 +200,6 @@ export interface WorkspaceApi {
 
 	/** Where publishing has got to. */
 	publishStatus(): Promise<Result<PublishStatus>>;
-	/** The one-time answer to "may Flock Designer publish my work automatically?" Answering starts a run. */
-	setPublishConsent(allowed: boolean): Promise<Result<PublishStatus>>;
 	/** Publish now, for the person who wants to see it done. Never needed: it happens by itself. */
 	publishNow(): Promise<Result<PublishStatus>>;
 	onPublishStatus(listener: (status: PublishStatus) => void): () => void;
@@ -464,7 +460,6 @@ export const CHANNELS = {
 	shareIteration: 'workspace:shareIteration',
 	shareStatus: 'workspace:shareStatus',
 	publishStatus: 'workspace:publishStatus',
-	setPublishConsent: 'workspace:setPublishConsent',
 	publishNow: 'workspace:publishNow',
 	publishStatusChanged: 'workspace:event:publishStatus',
 	shareStatusChanged: 'workspace:event:shareStatus',

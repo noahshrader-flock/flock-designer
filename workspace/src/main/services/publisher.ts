@@ -9,9 +9,10 @@ import type { SyncResult } from './designSync';
  * It starts when the app opens, when the window is focused, when the list is refreshed and after any
  * record is written, and overlapping requests collapse into one more run rather than queueing up.
  *
- * It asks nothing mid-flight and blocks nothing. Without the person's one-time yes it publishes nothing
- * and says so; with it, a failure is shown with its reason and retried on the next trigger. It is never
- * silent either way.
+ * It asks nothing and blocks nothing. Publishing is what this app is for, so there is no permission step:
+ * what protects the person is how narrow it is (their own branches, plain pushes, only the project records;
+ * see `branchSync` and `designSync`). A failure is shown with its reason and retried on the next trigger,
+ * never silent.
  */
 
 /**
@@ -33,7 +34,6 @@ export interface PublishContext {
 }
 
 export interface PublishDeps {
-	consent: { read(): boolean | null; write(allowed: boolean): void };
 	/** Null when this machine has no product repository, or no design repository beside it. */
 	context(): Promise<PublishContext | null>;
 	now?: () => Date;
@@ -52,8 +52,7 @@ export class PublishManager {
 		private readonly deps: PublishDeps,
 		private readonly onStatus: (status: PublishStatus) => void = () => undefined,
 	) {
-		const c = deps.consent.read();
-		this.current = c === null ? { state: 'needs-consent' } : c ? { state: 'unavailable' } : { state: 'off' };
+		this.current = { state: 'unavailable' };
 	}
 
 	status(): PublishStatus {
@@ -69,32 +68,11 @@ export class PublishManager {
 		return (this.deps.now ?? (() => new Date()))();
 	}
 
-	/** The person's answer. A yes starts a run at once; a no stops everything and is not asked again. */
-	setConsent(allowed: boolean): Promise<void> {
-		this.deps.consent.write(allowed);
-		if (!allowed) {
-			if (this.timer) clearTimeout(this.timer);
-			this.timer = null;
-			this.set({ state: 'off' });
-			return Promise.resolve();
-		}
-		return this.publish(true);
-	}
-
 	/**
 	 * Publishes now, or notes that it should, and resolves when the run that covers this request is done.
 	 * `force` skips the spacing between runs (a person asked, or something was just written).
 	 */
 	publish(force = false): Promise<void> {
-		const c = this.deps.consent.read();
-		if (c === null) {
-			this.set({ state: 'needs-consent' });
-			return Promise.resolve();
-		}
-		if (c === false) {
-			this.set({ state: 'off' });
-			return Promise.resolve();
-		}
 		if (this.running) {
 			this.again = true;
 			return this.running;

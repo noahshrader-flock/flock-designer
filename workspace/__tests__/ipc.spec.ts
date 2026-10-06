@@ -69,7 +69,6 @@ let agentStart: ReturnType<typeof vi.fn>;
 let runtimeStart: ReturnType<typeof vi.fn>;
 let memoryValue: string | null;
 let previewUrl: string | null;
-let consent: boolean | null;
 let deleteComment: ReturnType<typeof vi.fn>;
 
 beforeEach(async () => {
@@ -94,7 +93,6 @@ beforeEach(async () => {
 	runtimeStart = vi.fn(async () => ({ state: 'stopped' }));
 	memoryValue = null;
 	previewUrl = null;
-	consent = null;
 	deleteComment = vi.fn(async () => undefined);
 
 	registerIpc({
@@ -106,7 +104,6 @@ beforeEach(async () => {
 		designRepo: { listProjects: vi.fn(async () => []), deleteComment } as never,
 		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
 		memory: { read: () => memoryValue, write: (r: string) => { memoryValue = r; }, available: () => true } as never,
-		publishConsent: { read: () => consent, write: (v: boolean) => { consent = v; } } as never,
 		onPublishStatus: vi.fn(),
 	});
 });
@@ -318,32 +315,14 @@ describe('deleteComment', () => {
 	});
 });
 
-describe('publishing consent', () => {
-	it('starts by asking, and publishes nothing until answered', async () => {
-		expect((await call(CHANNELS.publishStatus)).value).toEqual({ state: 'needs-consent' });
-		await call(CHANNELS.listProjects);
-		expect((await call(CHANNELS.publishStatus)).value).toEqual({ state: 'needs-consent' });
-	});
-
-	it('records a yes, and a no, and reports where publishing is', async () => {
-		const no = await call(CHANNELS.setPublishConsent, false);
-		expect(no.value).toEqual({ state: 'off' });
-		expect(consent).toBe(false);
-		const yes = await call(CHANNELS.setPublishConsent, true);
-		expect(consent).toBe(true);
+describe('publishing', () => {
+	it('reports where it is, and needs nobody to switch it on', async () => {
 		// No product repository has been chosen in this window, so there is nothing to publish from here.
-		expect(yes.value).toEqual({ state: 'unavailable' });
+		expect((await call(CHANNELS.publishStatus)).value).toEqual({ state: 'unavailable' });
+		expect((await call(CHANNELS.publishNow)).value).toEqual({ state: 'unavailable' });
 	});
 
-	it.each(['yes', 1, 'true', null, undefined, {}, []])('refuses %p as an answer, and changes nothing', async (bad) => {
-		const r = await call(CHANNELS.setPublishConsent, bad);
-		expect(r.ok).toBe(false);
-		expect(consent).toBeNull();
-	});
-
-	it('does not publish when told to, if the answer was no', async () => {
-		await call(CHANNELS.setPublishConsent, false);
-		expect((await call(CHANNELS.publishNow)).value).toEqual({ state: 'off' });
+	it('has no way for the window to ask for permission or to switch publishing off, because there is none', () => {
+		expect(handlers.has('workspace:setPublishConsent')).toBe(false);
 	});
 });
-

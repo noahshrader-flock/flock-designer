@@ -1,14 +1,11 @@
-import { FSAlert, FSBox, FSButton, FSStack, FSTypography } from '@flocksafety/flock-react-component-lib';
+import { FSAlert, FSBox, FSButton, FSTypography } from '@flocksafety/flock-react-component-lib';
 import { useEffect, useState } from 'react';
 import type { PublishStatus as Status } from '../shared/contract';
 
 /**
- * Whether the person's work is published, said where they will see it, and the one question this ever asks.
- *
- * It is a banner in the page, not a dialog: nothing waits on it. Until the person answers, nothing is
- * published and the banner says so; the app carries on. After a yes, everything else is automatic and this
- * only reports. A failure names what could not be published and why, and clears itself when the next run
- * gets through.
+ * Whether the person's work is published, said where they will see it. Publishing happens by itself, so this
+ * only reports: a line in the top bar on every screen, and, if something could not be published, a banner
+ * that names what and why and clears itself on the next run that gets through.
  */
 export const usePublishStatus = (): [Status, (s: Status) => void] => {
 	const [status, setStatus] = useState<Status>({ state: 'unavailable' });
@@ -20,32 +17,6 @@ export const usePublishStatus = (): [Status, (s: Status) => void] => {
 };
 
 export const PublishBanner = ({ status, onChange }: { status: Status; onChange: (s: Status) => void }) => {
-	const answer = async (allowed: boolean) => {
-		const r = await window.workspace.setPublishConsent(allowed);
-		if (r.ok) onChange(r.value);
-	};
-
-	if (status.state === 'needs-consent') {
-		return (
-			<FSAlert
-				severity="info"
-				action={
-					<FSStack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
-						<FSButton size="md" variant="secondary" sx={{ whiteSpace: 'nowrap' }} onClick={() => void answer(false)}>
-							Not now
-						</FSButton>
-						<FSButton size="md" sx={{ whiteSpace: 'nowrap' }} onClick={() => void answer(true)}>
-							Publish automatically
-						</FSButton>
-					</FSStack>
-				}
-			>
-				Publish your work automatically? Flock Designer would push your prototype and codebase branches, and your project
-				notes, so reviewers can see them and nothing is left only on this machine. Until you choose, nothing is published.
-			</FSAlert>
-		);
-	}
-
 	if (status.state === 'held') {
 		return (
 			<FSAlert
@@ -79,8 +50,8 @@ export const PublishBanner = ({ status, onChange }: { status: Status; onChange: 
 	return null;
 };
 
-/** The small always-there line: where publishing is, in a few words. */
-export const PublishLine = ({ status, onChange }: { status: Status; onChange: (s: Status) => void }) => {
+/** The small always-there line: where publishing is, in a few words. Nothing to say when there is nothing to publish from here. */
+export const PublishLine = ({ status }: { status: Status }) => {
 	const text =
 		status.state === 'working'
 			? 'Publishing…'
@@ -88,20 +59,11 @@ export const PublishLine = ({ status, onChange }: { status: Status; onChange: (s
 				? 'Everything is published'
 				: status.state === 'held'
 					? 'Some work is not published'
-					: status.state === 'off'
-						? 'Automatic publishing is off'
-						: null;
+					: null;
 	if (text === null) return null;
 	return (
-		<FSStack direction="row" spacing={1} alignItems="center">
-			<FSTypography variant="caption" color={status.state === 'held' ? 'warning.dark' : 'text.secondary'}>
-				{text}
-			</FSTypography>
-			{status.state === 'off' && (
-				<FSButton size="sm" variant="ghost" onClick={() => void window.workspace.setPublishConsent(true).then((r) => r.ok && onChange(r.value))}>
-					Turn on
-				</FSButton>
-			)}
-		</FSStack>
+		<FSTypography variant="caption" color={status.state === 'held' ? 'warning.dark' : 'text.secondary'}>
+			{text}
+		</FSTypography>
 	);
 };

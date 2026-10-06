@@ -5,7 +5,6 @@ import { registerIpc } from './ipc';
 import { AgentRunner } from './services/agent';
 import { DesignRepo } from './services/designRepo';
 import { CheckoutMemory } from './services/checkoutMemory';
-import { PublishConsent } from './services/publishConsent';
 import { PageView } from './services/pageView';
 import type { Fetcher } from './services/github';
 import { GitHubSession } from './services/githubSession';
@@ -127,7 +126,6 @@ void app.whenReady().then(() => {
 		designRepo,
 		page,
 		memory,
-		publishConsent: new PublishConsent(PublishConsent.defaultPath(app.getPath('userData'))),
 		onPublishStatus: (status) => window.webContents.send(CHANNELS.publishStatusChanged, status),
 	});
 	// Coming back to the window is a good moment to publish whatever was done while it was away.
