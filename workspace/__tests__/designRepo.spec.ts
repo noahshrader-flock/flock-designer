@@ -459,3 +459,48 @@ describe('pictures on comments', () => {
   });
 });
 
+describe('reading past one page', () => {
+  const many = (n: number, from = 1) =>
+    Array.from({ length: n }, (_, i) => ({ id: from + i, user: { login: 'pm' }, body: `c${from + i}`, created_at: `2026-10-05T10:${String(Math.floor((from + i) / 60)).padStart(2, '0')}:${String((from + i) % 60).padStart(2, '0')}Z` }));
+  const thread = [{ number: 4, comments: 150, body: 'branch: `fd/alpha/i1`' }];
+
+  it('reads every comment on a thread of more than a hundred', async () => {
+    const { session, api } = fakeSession({
+      '/repos/acme/design/issues?state=all': thread,
+      '/repos/acme/design/issues/4/comments': (p: string) => (/[&?]page=1$/.test(p) ? many(100) : many(50, 101)),
+    });
+    const comments = await new DesignRepo(session, REF).readComments('alpha', 'fd/alpha/i1');
+    expect(comments).toHaveLength(150);
+    expect(new Set(comments.map((c) => c.id)).size).toBe(150);
+    expect(api.mock.calls.filter(([p]) => String(p).includes('/issues/4/comments')).length).toBe(2);
+  });
+
+  it('stops after a short page, without asking for another', async () => {
+    const { session, api } = fakeSession({ '/repos/acme/design/issues?state=all': thread, '/repos/acme/design/issues/4/comments': many(30) });
+    await new DesignRepo(session, REF).readComments('alpha', 'fd/alpha/i1');
+    expect(api.mock.calls.filter(([p]) => String(p).includes('/issues/4/comments')).length).toBe(1);
+  });
+
+  it('asks for one more page after exactly a hundred, and takes an empty one as the end', async () => {
+    const { session } = fakeSession({
+      '/repos/acme/design/issues?state=all': thread,
+      '/repos/acme/design/issues/4/comments': (p: string) => (/[&?]page=1$/.test(p) ? many(100) : []),
+    });
+    expect(await new DesignRepo(session, REF).readComments('alpha', 'fd/alpha/i1')).toHaveLength(100);
+  });
+
+  it('says so, rather than quietly dropping the rest, when a thread is longer than it will read', async () => {
+    const { session } = fakeSession({ '/repos/acme/design/issues?state=all': thread, '/repos/acme/design/issues/4/comments': many(100) });
+    await expect(new DesignRepo(session, REF).readComments('alpha', 'fd/alpha/i1')).rejects.toThrow(/more than 2000/);
+  });
+
+  it('finds a review thread that is on the second page of threads', async () => {
+    const filler = Array.from({ length: 100 }, (_, i) => ({ number: 1000 + i, comments: 0, body: `branch: \`fd/other/i${i}\`` }));
+    const { session } = fakeSession({
+      '/repos/acme/design/issues?state=all': (p: string) => (/[&?]page=1$/.test(p) ? filler : [{ number: 7, comments: 2, body: 'branch: `fd/alpha/i1`' }]),
+      '/repos/acme/design/issues/7/comments': [{ id: 1, user: { login: 'pm' }, body: 'late', created_at: 'now' }],
+    });
+    expect((await new DesignRepo(session, REF).readComments('alpha', 'fd/alpha/i1')).map((c) => c.body)).toEqual(['late']);
+  });
+});
+

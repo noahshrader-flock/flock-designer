@@ -17,6 +17,7 @@ import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
 import { Popover } from '@mui/material';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
+import { mergeComments, sameComments } from '../shared/comments';
 import { People } from './People';
 import { ShareControl } from './ShareControl';
 import { useHostedPreview } from './hostedPreview';
@@ -42,6 +43,9 @@ import { useLocalBuild } from './useLocalBuild';
 
 /** Height of the toolbar under the main bar. */
 export const TOOLBAR_HEIGHT = 44;
+
+/** How often an open iteration looks for new comments. */
+export const REFRESH_MS = 60_000;
 
 /** Where the comment box sits relative to the pin, whose body is drawn above its tip. */
 const BOX_OFFSET = { x: 22, y: -19 } as const;
@@ -125,14 +129,40 @@ export const Review = ({
 	// what was just posted is kept here and merged into whatever is read back.
 	const posted = useRef(new Map<number, ReviewComment>());
 
-	const load = useCallback(async () => {
-		const result = await window.workspace.readComments(project.id, iteration.branch);
-		if (!result.ok) return setError(result.error);
-		const have = new Set(result.value.map((c) => c.id));
-		const merged = [...result.value, ...[...posted.current.values()].filter((c) => !have.has(c.id))];
-		setComments(merged.sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
-	}, [project.id, iteration.branch]);
+	// `quiet` is for the background refresh below: a failed check in the background is not worth an error.
+	const reading = useRef(false);
+	const load = useCallback(
+		async (quiet = false) => {
+			// One read at a time: a slow one must not be overtaken by the next tick and then overwrite it.
+			if (reading.current) return;
+			reading.current = true;
+			try {
+				const result = await window.workspace.readComments(project.id, iteration.branch);
+				if (!result.ok) return quiet ? undefined : setError(result.error);
+				const next = mergeComments(result.value, posted.current.values());
+				// Nothing new means nothing changes, so a refresh does not redraw every pin.
+				setComments((prev) => (sameComments(prev, next) ? prev : next));
+			} finally {
+				reading.current = false;
+			}
+		},
+		[project.id, iteration.branch],
+	);
 	useEffect(() => void load(), [load]);
+
+	// A reviewer's comment made after this was opened should appear without anyone reopening it: when the
+	// window comes back into focus, and about once a minute while it is in front.
+	useEffect(() => {
+		const check = () => {
+			if (document.visibilityState === 'visible') void load(true);
+		};
+		const timer = setInterval(check, REFRESH_MS);
+		window.addEventListener('focus', check);
+		return () => {
+			clearInterval(timer);
+			window.removeEventListener('focus', check);
+		};
+	}, [load]);
 
 	// Numbers follow the order comments were made, and only anchored ones get one.
 	const anchored = useMemo(() => (comments ?? []).filter((c) => c.anchor), [comments]);
