@@ -1,4 +1,4 @@
-import type { ReviewComment } from './contract';
+import type { CommentAnchor, MarkerRequest, ReviewComment } from './contract';
 
 /**
  * What is read back from GitHub, plus what was just posted from this window.
@@ -41,3 +41,26 @@ export const sameComments = (a: ReviewComment[] | null, b: ReviewComment[]): boo
 			JSON.stringify(c.anchor) === JSON.stringify(o.anchor)
 		);
 	});
+
+/**
+ * The pins to draw: one per open comment that points at the page, plus the one being placed.
+ *
+ * **The draft pin exists only while its comment is being written.** A pin with no box to type in
+ * cannot be finished and cannot be dismissed, so it sits on the page looking like a comment that is
+ * not one -- which is what happened when backing out between placing the pin and the box opening.
+ * Drawing both from this one condition is what stops them disagreeing.
+ */
+export const markersFor = (
+	comments: ReviewComment[],
+	numbers: Map<number, number>,
+	me: string | null,
+	draft: { anchor: CommentAnchor; composing: boolean } | null,
+): MarkerRequest[] => {
+	const anchored = comments.filter((c) => c.anchor);
+	// Resolved comments have no pin, but keep their number, so "comment 3" never changes meaning.
+	const items = anchored.flatMap((c): MarkerRequest[] =>
+		c.resolved ? [] : [{ id: c.id, number: numbers.get(c.id) ?? 0, anchor: c.anchor as CommentAnchor, movable: c.author === me }],
+	);
+	if (draft?.composing) items.push({ id: -1, number: anchored.length + 1, anchor: draft.anchor, movable: true });
+	return items;
+};

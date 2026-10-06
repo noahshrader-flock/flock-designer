@@ -18,7 +18,7 @@ import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
 import { Popover } from '@mui/material';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
-import { mergeComments, numberComments, sameComments } from '../shared/comments';
+import { markersFor, mergeComments, numberComments, sameComments } from '../shared/comments';
 import { People } from './People';
 import { ShareControl } from './ShareControl';
 import { useHostedPreview } from './hostedPreview';
@@ -85,6 +85,8 @@ export const Review = ({
 	const [opened, setOpened] = useState(false);
 	const [route, setRoute] = useState<string | null>(null);
 	const [mode, setMode] = useState<Mode>('browse');
+	/** Whether a comment is being written. The draft pin and the box both hang off this one value. */
+	const composing = mode === 'composing';
 	const [commentMode, setCommentMode] = useState(false);
 	const [pending, setPending] = useState<CommentAnchor | null>(null);
 	const [pendingAt, setPendingAt] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -111,6 +113,8 @@ export const Review = ({
 	const [snapshot, setSnapshot] = useState<string | null>(null);
 	const held = useRef(false);
 	const pickActive = useRef(false);
+	/** Set when the person backs out while a pick is still being read, so its result is dropped. */
+	const pickCancelled = useRef(false);
 	const composer = useRef<HTMLDivElement>(null);
 
 	// Someone with the product repository builds it here, so what they see is their latest work.
@@ -184,7 +188,6 @@ export const Review = ({
 	}, [load]);
 
 	// The number on a pin and the number in the file the agent reads are the same number, counted once.
-	const anchored = useMemo(() => (comments ?? []).filter((c) => c.anchor), [comments]);
 	const numbers = useMemo(() => numberComments(comments ?? []), [comments]);
 	const numberOf = useCallback((id: number) => numbers.get(id) ?? 0, [numbers]);
 
@@ -255,15 +258,11 @@ export const Review = ({
 	// preview for the comment box must first make sure the picture includes them.
 	const drawMarkers = useCallback(async () => {
 		// Only your own pins can be dragged; GitHub would refuse anyone else's edit anyway.
-		// Resolved comments have no pin, but keep their number, so "comment 3" never changes meaning.
-		const items = anchored.flatMap((c) =>
-			c.resolved ? [] : [{ id: c.id, number: numbers.get(c.id) ?? 0, anchor: c.anchor as CommentAnchor, movable: c.author === me }],
-		);
 		// The pin being placed shows at once, before it is saved (id -1, amber).
-		if (pending) items.push({ id: -1, number: anchored.length + 1, anchor: pending, movable: true });
+		const items = markersFor(comments ?? [], numbers, me, pending ? { anchor: pending, composing } : null);
 		const r = await window.workspace.pageShowMarkers(items);
 		if (r.ok) setPlaced(new Map(r.value.map((m: MarkerResult) => [m.id, m.state])));
-	}, [anchored, numbers, pending, me]);
+	}, [comments, numbers, pending, composing, me]);
 
 	// ...and again whenever the comments, the page, or the route change.
 	useEffect(() => {
@@ -316,6 +315,13 @@ export const Review = ({
 			// The commit the branch is at *now*, so the comment says which version it was made against.
 			// The recorded one can be stale; it is only the fallback (and all a reviewer has).
 			const live = checkout ? await window.workspace.iterationCommit(checkout.root, project.id, iteration.name) : null;
+			// Reading the commit takes a moment, and Escape may have landed in it. Backing out while
+			// this was in flight means there is nothing to write on: setting the pin now would leave
+			// one on the page with no box, so the whole pick is dropped instead.
+			if (pickCancelled.current) {
+				pickCancelled.current = false;
+				return;
+			}
 			setPending({ ...r.value.anchor, commit: (live?.ok && live.value) || iteration.commit || '' });
 			setPendingAt(r.value.at);
 			setPendingPicture(r.value.picture);
@@ -334,11 +340,16 @@ export const Review = ({
 
 	const exitCommentMode = useCallback(() => {
 		setCommentMode(false);
-		if (pickActive.current) void window.workspace.pageCancelPick();
+		if (pickActive.current) {
+			// Same reason as in cancelCompose: a pick still being read must not land a pin afterwards.
+			pickCancelled.current = true;
+			void window.workspace.pageCancelPick();
+		}
 	}, []);
 
 	/** Abandons the comment being written, and the pin with it. Comment mode carries on. */
 	const cancelCompose = useCallback(() => {
+		if (pickActive.current) pickCancelled.current = true;
 		setPending(null);
 		setPendingPicture(null);
 		setDraft('');
@@ -370,7 +381,6 @@ export const Review = ({
 	 * is on screen before the live view is hidden, so there is no flash of empty window; and
 	 * a run counter drops the result of a freeze that was overtaken by the box closing again.
 	 */
-	const composing = mode === 'composing';
 	// The sharing dialog needs the same thing the comment box does: the space the preview occupies.
 	const frozen = composing || shareOpen;
 	const run = useRef(0);
@@ -792,9 +802,14 @@ export const Review = ({
 											<FSStack spacing={0.5}>
 												<FSStack direction="row" spacing={1} alignItems="center">
 													{n > 0 && <FSChip variant="status" size="small" label={String(n)} />}
-													<FSTypography variant="subtitle2">{comment.author}</FSTypography>
+													<FSTypography variant="subtitle2" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+														{comment.author}
+													</FSTypography>
 													{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
-													<FSBox sx={{ flexGrow: 1 }} />
+												</FSStack>
+												{/* The actions get their own row. Three of them beside a name did not fit a narrow
+												    panel, and ran together into one unreadable word. */}
+												<FSStack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}>
 													{/* One comment at a time: the designer picks the one that is a clear change, and
 													    leaves the ones that still need a decision. */}
 													{!comment.resolved && checkout && (

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { mergeComments, sameComments } from '../src/shared/comments';
-import type { ReviewComment } from '../src/shared/contract';
+import { markersFor, mergeComments, numberComments, sameComments } from '../src/shared/comments';
+import type { CommentAnchor, ReviewComment } from '../src/shared/contract';
 
 const c = (id: number, over: Partial<ReviewComment> = {}): ReviewComment => ({
 	id,
@@ -59,5 +59,43 @@ describe('sameComments', () => {
 
 	it('is false before anything has been read', () => {
 		expect(sameComments(null, [])).toBe(false);
+	});
+});
+
+describe('markersFor', () => {
+	const at = (route = '/users'): CommentAnchor => ({ route, selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' });
+	const pinned = (id: number, over: Partial<ReviewComment> = {}) => c(id, { anchor: at(), ...over });
+	const numbers = (list: ReviewComment[]) => numberComments(list);
+
+	it('draws a pin for each open comment that points at the page', () => {
+		const list = [pinned(1), pinned(2)];
+		expect(markersFor(list, numbers(list), 'a', null).map((m) => m.id)).toEqual([1, 2]);
+	});
+
+	it('leaves out a resolved comment and one that points at nothing', () => {
+		const list = [pinned(1, { resolved: true }), pinned(2), c(3)];
+		expect(markersFor(list, numbers(list), 'a', null).map((m) => m.id)).toEqual([2]);
+	});
+
+	it('only the viewer\'s own pins can be dragged', () => {
+		const list = [pinned(1, { author: 'me' }), pinned(2, { author: 'someone else' })];
+		const [mine, theirs] = markersFor(list, numbers(list), 'me', null);
+		expect(mine?.movable).toBe(true);
+		expect(theirs?.movable).toBe(false);
+	});
+
+	it('draws the pin being placed while its comment is being written', () => {
+		const list = [pinned(1)];
+		const items = markersFor(list, numbers(list), 'a', { anchor: at(), composing: true });
+		expect(items.map((m) => m.id)).toEqual([1, -1]);
+		expect(items.at(-1)).toMatchObject({ number: 2, movable: true });
+	});
+
+	it('never leaves a pin behind when there is no box to type in', () => {
+		// The bug this was written for: backing out between placing the pin and the box opening left an
+		// amber pin on the page that could be neither finished nor dismissed, looking like a comment
+		// that was not one. The pin and the box now hang off the same value.
+		const list = [pinned(1)];
+		expect(markersFor(list, numbers(list), 'a', { anchor: at(), composing: false }).map((m) => m.id)).toEqual([1]);
 	});
 });
