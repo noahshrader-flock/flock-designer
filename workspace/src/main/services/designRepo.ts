@@ -104,6 +104,11 @@ export class DesignRepo {
   async readFile(path: string): Promise<string | null> {
     try {
       const file = asRecord(await this.session.api(`${this.base}/contents/${path}`));
+      // Over 1 MB, the contents API leaves the content out; the blob it names carries it, up to 100 MB.
+      if (file.encoding === 'none' && typeof file.sha === 'string') {
+        const blob = asRecord(await this.session.api(`${this.base}/git/blobs/${file.sha}`));
+        return typeof blob.content === 'string' ? Buffer.from(blob.content, 'base64').toString('utf8') : null;
+      }
       return typeof file.content === 'string' ? Buffer.from(file.content, 'base64').toString('utf8') : null;
     } catch (err) {
       if (err instanceof GitHubError && err.status === 404) return null;

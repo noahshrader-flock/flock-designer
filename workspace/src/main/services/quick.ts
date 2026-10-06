@@ -34,8 +34,20 @@ export const cloneStore = (designRoot: string, published: () => void): RecordSto
 export const BUILD_SKILL = 'skills/build-quick-prototype.md';
 export const MOVE_SKILL = 'skills/move-to-code.md';
 
-/** The size a page may be. A prototype page is tens of kilobytes; past this it is not one. */
-export const MAX_PAGE = 2_000_000;
+/**
+ * The size a page may be. A hand-written page is tens of kilobytes; one built from the real design system
+ * carries its stylesheet and fonts, which for FUI is about 7 MB. Past this it is not a prototype page.
+ */
+export const MAX_PAGE = 16_000_000;
+
+/**
+ * How a quick prototype is written. **React**, with the product's real design system, whenever the
+ * product's packages are installed on this machine; otherwise **HTML**, drawn by hand to look like it.
+ * Either way the result is one HTML file anyone can open.
+ */
+export type QuickMode =
+	| { kind: 'react'; source: string; page: string; buildCommand: string }
+	| { kind: 'html'; page: string };
 
 const records = (projectId: string) => `projects/${projectId}/iterations.json`;
 
@@ -110,10 +122,16 @@ export interface QuickSources {
 	installedDesignSystem: string | null;
 	/** The standards every product shares. */
 	sharedStandards: string | null;
+	/** The product's installed packages, which a React prototype is built against. */
+	nodeModules: string | null;
 }
 
 export const quickReadable = (s: QuickSources | null): string[] =>
-	s ? [s.code, s.productGuidance, s.designSystemGuidance, s.installedDesignSystem, s.sharedStandards].filter((d): d is string => d !== null) : [];
+	s
+		? [s.code, s.productGuidance, s.designSystemGuidance, s.installedDesignSystem, s.sharedStandards, s.nodeModules].filter(
+				(d): d is string => d !== null,
+			)
+		: [];
 
 /**
  * What the agent is told for a quick prototype. The skill says how; this says where everything is. The
@@ -121,12 +139,12 @@ export const quickReadable = (s: QuickSources | null): string[] =>
  */
 export const quickBuildTask = ({
 	skill,
-	pageFile,
+	mode,
 	sources,
 	request,
 }: {
 	skill: string;
-	pageFile: string;
+	mode: QuickMode;
 	sources: QuickSources | null;
 	request: string;
 }): string => {
@@ -136,17 +154,30 @@ export const quickBuildTask = ({
 		'',
 		'## This run',
 		'',
-		`Write the page to \`${pageFile}\`. That file is the whole prototype: nothing else you write is kept.`,
+		...(mode.kind === 'react'
+			? [
+					'**Mode: React.** Write the prototype as one React file, using the product\'s real design system:',
+					'',
+					`- Write \`${mode.source}\`. That file is the whole prototype: nothing else you write is kept.`,
+					`- Check it builds, and build it again after every change, with exactly: \`${mode.buildCommand}\``,
+					`  It writes the page to \`${mode.page}\`. Do not finish while it reports an error.`,
+				]
+			: [
+					'**Mode: HTML.** The product\'s packages are not installed on this machine, so draw the page by hand:',
+					'',
+					`- Write the page to \`${mode.page}\`. That file is the whole prototype: nothing else you write is kept.`,
+				]),
 		'',
 		...(sources
 			? [
 					'What you may read. **Read only: never change anything in any of these.**',
 					'',
-					line('The product\'s code', sources.code, ''),
-					line("The product's guidance", sources.productGuidance, 'Say so in your summary: the page cannot follow the product\'s structure without it.'),
-					line("The design system (guidance and source)", sources.designSystemGuidance, 'Use the installed design system and the product\'s own code for tokens and components.'),
+					line("The product's code", sources.code, ''),
+					line("The product's guidance", sources.productGuidance, "Say so in your summary: the page cannot follow the product's structure without it."),
+					line('The design system (guidance and source)', sources.designSystemGuidance, "Use the installed design system and the product's own code for tokens and components."),
 					line('The design system as installed', sources.installedDesignSystem, 'Its version cannot be confirmed; say so.'),
 					line('Shared standards', sources.sharedStandards, ''),
+					...(sources.nodeModules ? [line("The product's installed packages", sources.nodeModules, '')] : []),
 				]
 			: ['There is no product repository on this machine, so build from the request and keep the design plain and neutral. Say so in your summary.']),
 		'',
@@ -163,9 +194,12 @@ export const moveToCodeTask = ({
 	auditFile,
 	name,
 	basedOn,
+	sourceFile,
 }: {
 	skill: string;
 	pageFile: string;
+	/** The React source, when the prototype was written in React. */
+	sourceFile?: string | null;
 	auditFile: string;
 	name: string;
 	basedOn?: Iteration['basedOn'];
@@ -178,6 +212,9 @@ export const moveToCodeTask = ({
 		'## This run',
 		'',
 		`The quick prototype's page is \`${pageFile}\`. Read it; do not change it.`,
+		...(sourceFile
+			? [`It was written in React with the real design system: its source is \`${sourceFile}\`. Start from that, not from the page.`]
+			: []),
 		basedOn
 			? `It was modelled on \`${basedOn.branch}\` of ${basedOn.repository}${basedOn.commit ? ` at ${basedOn.commit.slice(0, 7)}` : ''}; the code may have moved on since.`
 			: 'It was made without the product code to look at, so expect more of it to differ from how the product really works.',

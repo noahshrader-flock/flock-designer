@@ -163,6 +163,8 @@ export const isQuick = (branch: string): boolean => branch.startsWith(QUICK_PREF
 export const quickKey = (projectId: string, name: string): string => `${QUICK_PREFIX}${projectId}/${name}`;
 /** Where the page is kept in the design repository. */
 export const quickPagePath = (projectId: string, name: string): string => `projects/${projectId}/quick/${name}.html`;
+/** Its React source, kept beside the page when it was written with the real design system. */
+export const quickSourcePath = (projectId: string, name: string): string => `projects/${projectId}/quick/${name}.tsx`;
 /** `q1`, `q2`, …: one past the highest recorded, so a gap is never filled in. */
 export const nextQuickName = (names: string[]): string =>
 	`q${names.reduce((max, n) => Math.max(max, Number(/^q(\d+)$/.exec(n)?.[1] ?? 0)), 0) + 1}`;

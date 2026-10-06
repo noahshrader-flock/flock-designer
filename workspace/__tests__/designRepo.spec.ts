@@ -499,6 +499,14 @@ describe('readFile and writeFile', () => {
     expect(await repo.readFile('skills/b.md')).toBeNull();
   });
 
+  it('reads a file over 1 MB through its blob, as GitHub leaves its content out', async () => {
+    const { session } = fakeSession({
+      '/repos/acme/design/contents/projects/x/quick/q1.html': { encoding: 'none', content: '', sha: 'big1' },
+      '/repos/acme/design/git/blobs/big1': { content: b64('<html>a large page</html>'), encoding: 'base64' },
+    });
+    expect(await new DesignRepo(session, REF).readFile('projects/x/quick/q1.html')).toBe('<html>a large page</html>');
+  });
+
   it("creates a file, and replaces one with the sha it has", async () => {
     const writes: unknown[] = [];
     const api = vi.fn(async (path: string, init: { method?: string; body?: unknown } = {}) => {

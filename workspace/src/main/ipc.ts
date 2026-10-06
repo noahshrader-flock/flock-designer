@@ -41,9 +41,10 @@ import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anc
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
-import { isRecordName, mergeProjects, quickKey, quickPagePath, unionLocal } from '../shared/projects';
+import { isRecordName, mergeProjects, quickKey, quickPagePath, quickSourcePath, unionLocal } from '../shared/projects';
 import { resolveInside } from './services/paths';
 import { QuickServer } from './services/quickServer';
+import { bundleCommand, esbuildEntry, runBundle, writeBundleScript } from './services/quickBundle';
 import {
 	BUILD_SKILL,
 	MAX_PAGE,
@@ -54,6 +55,7 @@ import {
 	moveToCodeTask,
 	quickBuildTask,
 	quickReadable,
+	type QuickMode,
 	type QuickSources,
 	recordQuick,
 } from './services/quick';
@@ -553,9 +555,33 @@ export const registerIpc = ({
 		assertQuickName(name);
 		return join(quickDir(projectId), `${name}.html`);
 	};
+	const quickSourceFile = (projectId: string, name: string): string => join(dirname(quickFile(projectId, name)), `${name}.tsx`);
+	/** React when the product's packages are installed here and the bundler is available; otherwise HTML. */
+	const quickMode = (projectId: string, name: string, sources: QuickSources | null): QuickMode => {
+		const page = quickFile(projectId, name);
+		const esbuild = esbuildEntry();
+		if (!sources?.nodeModules || esbuild === null) return { kind: 'html', page };
+		const source = quickSourceFile(projectId, name);
+		return { kind: 'react', source, page, buildCommand: bundleCommand(writeBundleScript(quickRoot), esbuild, source, page, sources.nodeModules) };
+	};
+	/**
+	 * Builds a React prototype's page from its source, against the accepted checkout's installed packages.
+	 * Throws with what the build said, so a page that does not compile says why rather than showing an old one.
+	 */
+	const buildQuickPage = async (projectId: string, name: string): Promise<void> => {
+		const root = trustedRoot();
+		const esbuild = esbuildEntry();
+		if (root === null || esbuild === null) throw new Error('This prototype is written in React, and building it needs the product repository installed on this machine.');
+		const r = await runBundle(writeBundleScript(quickRoot), esbuild, quickSourceFile(projectId, name), quickFile(projectId, name), join(opened.require(root), 'node_modules'));
+		if (!r.ok) throw new Error(`The prototype did not build:\n${r.output.slice(0, 2000)}`);
+	};
 	/** The page: this machine's newest build first, then the saved one here, then GitHub's. */
 	const quickPage = async (projectId: string, name: string): Promise<string | null> => {
 		const local = quickFile(projectId, name);
+		const source = quickSourceFile(projectId, name);
+		// A source changed since its page was last built (or never built) is built first, unless its agent is still at it.
+		const stale = existsSync(source) && (!existsSync(local) || statSync(source).mtimeMs > statSync(local).mtimeMs);
+		if (stale && agent.status().state !== 'running') await buildQuickPage(projectId, name);
 		if (existsSync(local)) return readFileSync(local, 'utf8');
 		const path = quickPagePath(projectId, name);
 		return (await recordStore().read(path)) ?? (await designRepo.readFile(path));
@@ -585,16 +611,19 @@ export const registerIpc = ({
 		const descriptor = readDescriptor(canonical);
 		const pkg = descriptor.designSystem.package;
 		const designRoot = recordsRootFor(canonical);
+		const installedDesignSystem = dir(join(canonical, 'node_modules', ...pkg.split('/')));
 		return {
 			code,
-			// From the accepted checkout itself, which always has it: the branch the code is read from may
-			// predate it (develop has no Flock Designer files), and the page must still follow the product.
-			productGuidance: dir(join(canonical, descriptor.contextDir)),
+			// The guidance that goes with the code when the branch has it; otherwise the accepted checkout's,
+			// which always has it (develop has no Flock Designer files, and the page must still follow the product).
+			productGuidance: dir(join(code, descriptor.contextDir)) ?? dir(join(canonical, descriptor.contextDir)),
 			// The design system's checkout beside the product, named as its package is: its guidance and, as
 			// important for a page that redraws its components, its source.
 			designSystemGuidance: dir(join(dirname(canonical), basename(pkg))),
-			installedDesignSystem: dir(join(canonical, 'node_modules', ...pkg.split('/'))),
+			installedDesignSystem,
 			sharedStandards: designRoot === null ? null : dir(join(dirname(designRoot), 'standards')),
+			// Only worth building against when the design system itself is installed in them.
+			nodeModules: installedDesignSystem ? join(canonical, 'node_modules') : null,
 		};
 	};
 	/** Runs `work` once at a time per key: a second caller waits for the first and shares its answer. */
@@ -638,7 +667,8 @@ export const registerIpc = ({
 			const skill = (await store.read(BUILD_SKILL)) ?? (await designRepo.readFile(BUILD_SKILL));
 			if (skill === null) throw new Error(`The design repository has no ${BUILD_SKILL}, which tells the agent how to build a quick prototype.`);
 			const sources = await once(`source:${projectId}`, () => quickSource(projectId, name));
-			return agent.start(quickDir(projectId), projectId, quickBuildTask({ skill, pageFile, sources, request: String(request) }), {
+			const mode = quickMode(projectId, name, sources);
+			return agent.start(quickDir(projectId), projectId, quickBuildTask({ skill, mode, sources, request: String(request) }), {
 				bare: true,
 				readOnly: quickReadable(sources),
 				work: quickKey(projectId, name),
@@ -650,9 +680,13 @@ export const registerIpc = ({
 		CHANNELS.saveQuick,
 		guard(async (projectId: string, name: string): Promise<null> => {
 			const pageFile = quickFile(projectId, name);
+			const source = quickSourceFile(projectId, name);
+			// Written in React: the page is built from the source now, so what is saved is what the source makes.
+			if (existsSync(source)) await buildQuickPage(projectId, name);
 			if (!existsSync(pageFile)) throw new Error('The agent finished without writing the page.');
 			const html = readFileSync(pageFile, 'utf8');
 			if (html.length > MAX_PAGE) throw new Error('The page the agent wrote is too large to be a prototype page.');
+			if (existsSync(source)) await recordStore().write(quickSourcePath(projectId, name), readFileSync(source, 'utf8'), `${projectId}: quick prototype ${name} source`);
 			await recordStore().write(quickPagePath(projectId, name), html, `${projectId}: quick prototype ${name}`);
 			return null;
 		}),
@@ -687,9 +721,20 @@ export const registerIpc = ({
 			if (html === null) throw new Error('This quick prototype has no page yet.');
 			const pageFile = quickFile(projectId, name);
 			writeFileSync(pageFile, html);
+			// Its React source too, when it has one: real components are a far better start than a page.
+			const sourceFile = quickSourceFile(projectId, name);
+			const source = existsSync(sourceFile) ? readFileSync(sourceFile, 'utf8') : await recordStore().read(quickSourcePath(projectId, name));
+			if (source !== null) writeFileSync(sourceFile, source);
 			const raw = await recordStore().read(`projects/${projectId}/iterations.json`);
 			const basedOn = (JSON.parse(raw ?? '[]') as Iteration[]).find((i) => i.name === name)?.basedOn;
-			return moveToCodeTask({ skill, pageFile, auditFile: join(recordsRoot, projectId, `audit-${name}.md`), name, basedOn });
+			return moveToCodeTask({
+				skill,
+				pageFile,
+				sourceFile: source !== null ? sourceFile : null,
+				auditFile: join(recordsRoot, projectId, `audit-${name}.md`),
+				name,
+				basedOn,
+			});
 		}),
 	);
 
