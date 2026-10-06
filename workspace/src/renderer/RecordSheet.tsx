@@ -28,7 +28,7 @@ export const RecordSheet = ({ project, name, open, onClose }: { project: Project
 
 	return (
 		<Sheet open={open} onOpenChange={(next) => !next && onClose()}>
-			<SheetContent className="w-full sm:max-w-2xl">
+			<SheetContent className="inset-y-auto top-(--nav-height) h-[calc(100dvh-var(--nav-height))] w-full sm:max-w-2xl">
 				<SheetHeader>
 					<SheetTitle className="font-mono">{name}</SheetTitle>
 					<SheetDescription>{project.title}</SheetDescription>
