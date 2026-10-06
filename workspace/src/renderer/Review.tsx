@@ -124,6 +124,8 @@ export const Review = ({
 	// Asking the agent to act on the open comments. It is one agent: not while it is building this iteration.
 	const [address, setAddress] = useState<AddressPhase>({ kind: 'idle' });
 	const [addressLog, setAddressLog] = useState<string[]>([]);
+	// Which comment this run is for, so its own button says so. Null means every open one.
+	const [addressing, setAddressing] = useState<number | null>(null);
 	const addressLive = useRef(true);
 	useEffect(() => {
 		addressLive.current = true;
@@ -456,14 +458,17 @@ export const Review = ({
 	// What is still to be dealt with. Resolved comments stay listed, but are not the count.
 	const total = (comments ?? []).filter((c) => !c.resolved).length;
 
-	const addressComments = async () => {
+	/** With a comment's id, the agent is asked for that one alone; without, for every open one. */
+	const addressComments = async (commentId?: number) => {
 		if (!checkout) return;
 		setAddressLog([]);
+		setAddressing(commentId ?? null);
 		await runAddress({
 			api: window.workspace,
 			root: checkout.root,
 			projectId: project.id,
 			name: iteration.name,
+			commentId,
 			isLive: () => addressLive.current,
 			onPhase: (p) => addressLive.current && setAddress(p),
 		});
@@ -719,7 +724,9 @@ export const Review = ({
 								{address.kind === 'running' && (
 									<>
 										<FSTypography variant="caption" color="text.secondary">
-											The agent is working through them. The preview updates as it changes the code.
+											{addressing === null
+												? 'The agent is working through them. The preview updates as it changes the code.'
+												: 'The agent is working on that one comment. The preview updates as it changes the code.'}
 										</FSTypography>
 										{addressLog.length > 0 && (
 											<FSBox component="pre" sx={{ m: 0, p: 1, maxHeight: 140, overflow: 'auto', bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 1, fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -778,6 +785,21 @@ export const Review = ({
 													<FSTypography variant="subtitle2">{comment.author}</FSTypography>
 													{comment.resolved && <FSChip variant="status" size="small" color="success" label="Resolved" />}
 													<FSBox sx={{ flexGrow: 1 }} />
+													{/* One comment at a time: the designer picks the one that is a clear change, and
+													    leaves the ones that still need a decision. */}
+													{!comment.resolved && checkout && (
+														<FSButton
+															size="sm"
+															variant="ghost"
+															disabled={address.kind === 'running'}
+															onClick={(e: React.MouseEvent) => {
+																e.stopPropagation();
+																void addressComments(comment.id);
+															}}
+														>
+															{addressing === comment.id && address.kind === 'running' ? 'Working…' : 'Address'}
+														</FSButton>
+													)}
 													<FSButton
 														size="sm"
 														variant="ghost"

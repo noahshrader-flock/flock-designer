@@ -2,6 +2,7 @@ import type { ReviewComment } from '../../shared/contract';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { type ExportInput, writeCommentsExport } from './commentsExport';
+import { numberComments } from '../../shared/comments';
 
 /**
  * Everything that has to be true before the agent is asked to act on comments, in the order it
@@ -31,6 +32,8 @@ export interface AddressTarget {
 	recordsRoot: string;
 	projectId: string;
 	iteration: { name: string; branch: string };
+	/** The one comment to act on. Omitted to act on all the open ones. */
+	commentId?: number;
 }
 
 export class AddressProblem extends Error {
@@ -57,10 +60,18 @@ export const readSkill = (recordsRoot: string): string | null => {
 	}
 };
 
-export const addressTask = (commentsPath: string, branch: string, skill: string): string =>
+/**
+ * `only` is the number of the one comment to act on, when the designer picked one rather than the
+ * lot. The file still holds them all -- it is the project's file, and its pictures are kept in step
+ * with it -- so which one is named here, by the number the designer read off the pin.
+ */
+export const addressTask = (commentsPath: string, branch: string, skill: string, only?: number): string =>
 	[
-		'Address the open comments on this project.',
+		only === undefined ? 'Address the open comments on this project.' : `Address comment ${only} on this project, and only that one.`,
 		`The comments are in ${commentsPath}, written from GitHub a moment ago. Read it first.`,
+		...(only === undefined
+			? []
+			: [`Act on comment ${only} alone. The others are listed for context: leave them, and do not mention them except to say you left them.`]),
 		`This iteration's branch is ${branch}.`,
 		'',
 		'Follow these instructions:',
@@ -70,7 +81,7 @@ export const addressTask = (commentsPath: string, branch: string, skill: string)
 
 export const prepareAddress = async (
 	deps: AddressDeps,
-	{ recordsRoot, projectId, iteration }: AddressTarget,
+	{ recordsRoot, projectId, iteration, commentId }: AddressTarget,
 ): Promise<{ task: string; open: number; path: string }> => {
 	if (deps.agentRunning()) {
 		throw new AddressProblem('The agent is already working. Wait for it to finish, then try again.');
@@ -108,5 +119,16 @@ export const prepareAddress = async (
 	const written = writeCommentsExport(recordsRoot, input);
 	const open = comments.filter((c) => !c.resolved).length;
 	if (open === 0) throw new AddressProblem('There are no open comments to address.');
+
+	// One comment, when the designer picked one. The read above is the fresh truth, so this is also
+	// where a comment someone resolved or deleted a moment ago is caught.
+	if (commentId !== undefined) {
+		const chosen = comments.find((c) => c.id === commentId);
+		if (!chosen) throw new AddressProblem('That comment is no longer there. It may have been deleted since this screen was last read.');
+		if (chosen.resolved) throw new AddressProblem('That comment has been resolved already, so there is nothing to act on.');
+		const number = numberComments(comments).get(commentId);
+		if (number === undefined) throw new AddressProblem('That comment could not be numbered, so the agent cannot be told which one to act on.');
+		return { task: addressTask(written.path, iteration.branch, skill, number), open: 1, path: written.path };
+	}
 	return { task: addressTask(written.path, iteration.branch, skill), open, path: written.path };
 };

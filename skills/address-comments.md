@@ -47,7 +47,13 @@ For each open comment it gives:
    else; on real-code work it is the change boundary in the brief. If the repository has a boundary
    check, it enforces this.
 
-## For each open comment, in number order
+## Which comments to act on
+
+**The task says.** When it names one comment ("Address comment 3, and only that one"), act on that
+one alone: the file still lists the others so you can see the context, and leaving them is correct,
+not an omission. Otherwise work through every open comment, in number order.
+
+## For each comment you are acting on, in number order
 
 1. **Understand what is being asked.** Read the words, then open the picture. A comment can be a
    change ("make this primary"), a question ("why is this here?"), or a decision you cannot make.

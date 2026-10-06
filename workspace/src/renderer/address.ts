@@ -27,6 +27,7 @@ export const runAddress = async ({
 	root,
 	projectId,
 	name,
+	commentId,
 	isLive,
 	onPhase,
 	pollMs,
@@ -35,6 +36,8 @@ export const runAddress = async ({
 	root: string;
 	projectId: string;
 	name: string;
+	/** The one comment to act on, or every open one when omitted. */
+	commentId?: number;
 	isLive: () => boolean;
 	onPhase: (phase: AddressPhase) => void;
 	pollMs?: number;
@@ -43,7 +46,7 @@ export const runAddress = async ({
 	// Where the branch stood before the agent touched it. A failure to read it is not a reason to
 	// refuse to run: it only means this cannot tell afterwards whether anything was committed.
 	const before = await api.iterationCommit(root, projectId, name);
-	const started = await api.addressComments(root, projectId, name);
+	const started = await api.addressComments(root, projectId, name, commentId);
 	if (!started.ok) return onPhase({ kind: 'failed', message: started.error });
 	if (started.value.state === 'unavailable') return onPhase({ kind: 'failed', message: started.value.detail });
 

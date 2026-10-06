@@ -62,7 +62,7 @@ const api: WorkspaceApi = {
 
 	startAgent: (root, projectId, task) => invoke<AgentStatus>(CHANNELS.startAgent, root, projectId, task),
 	agentStatus: () => invoke<AgentStatus>(CHANNELS.agentStatus),
-	addressComments: (root, projectId, name) => invoke<AgentStatus>(CHANNELS.addressComments, root, projectId, name),
+	addressComments: (root, projectId, name, commentId) => invoke<AgentStatus>(CHANNELS.addressComments, root, projectId, name, commentId),
 	shareIteration: (root, projectId, name) => invoke<ShareStatus>(CHANNELS.shareIteration, root, projectId, name),
 	shareStatus: () => invoke<ShareStatus>(CHANNELS.shareStatus),
 	publishStatus: () => invoke<PublishStatus>(CHANNELS.publishStatus),
