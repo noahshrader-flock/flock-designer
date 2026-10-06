@@ -1,3 +1,4 @@
+import { MessageSquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { Checkout, CheckoutSuggestion, Person, Project, ProjectIteration } from '../shared/contract';
 import { NewWork, type Created } from './NewWork';
@@ -187,8 +188,12 @@ export const Projects = () => {
 							<CardAction className="flex flex-row items-center gap-2">
 								{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}
 								{project.openComments > 0 && (
-									<Badge variant="warning">
-										{project.openComments} comment{project.openComments === 1 ? '' : 's'}
+									<Badge
+										variant="secondary"
+										aria-label={`${project.openComments} open comment${project.openComments === 1 ? '' : 's'}`}
+									>
+										<MessageSquareIcon />
+										{project.openComments}
 									</Badge>
 								)}
 							</CardAction>

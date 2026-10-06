@@ -17,8 +17,7 @@ const badgeVariants = cva(
           "border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         ghost: "[a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         link: "text-primary underline-offset-4 [a&]:hover:underline",
-        // Added here, not in stock shadcn: a pending state and a done state, which the theme has no colour for.
-        warning: "bg-warning/20 text-foreground",
+        // Added here, not in stock shadcn: a done state, which the theme has no colour for.
         success: "bg-success/15 text-foreground",
       },
     },
