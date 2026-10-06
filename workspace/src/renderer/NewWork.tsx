@@ -130,7 +130,7 @@ export const NewWork = ({
 		<Dialog open={open} onOpenChange={(next) => !next && !busy && onClose()}>
 			<DialogContent className="sm:max-w-xl" showCloseButton={!busy}>
 				<DialogHeader>
-					<DialogTitle>{kind === 'codebase' ? 'New in the codebase' : 'New prototype'}</DialogTitle>
+					<DialogTitle>{kind === 'codebase' ? 'New codebase feature' : 'New prototype'}</DialogTitle>
 				</DialogHeader>
 				<div className="flex flex-col gap-4">
 					{checkout || choices.length > 0 ? (
@@ -239,7 +239,7 @@ export const NewWork = ({
 						Cancel
 					</Button>
 					<Button onClick={() => void create(kind)} disabled={busy || blocked || !checkout || elsewhere || !from || !id || !task.trim()}>
-						{busy ? 'Creating…' : kind === 'codebase' ? 'Create in the codebase' : 'Create prototype'}
+						{busy ? 'Creating…' : kind === 'codebase' ? 'Create codebase feature' : 'Create prototype'}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

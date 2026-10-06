@@ -156,8 +156,8 @@ export const Projects = ({ menuOpen }: { menuOpen: boolean }) => {
 						<DropdownMenuContent align="end" className="w-auto">
 							{(
 								[
-									['prototype', 'New prototype'],
-									['codebase', 'New in the codebase'],
+									['codebase', 'Codebase feature'],
+									['prototype', 'Prototype'],
 								] as const
 							).map(([kind, label]) => (
 								<DropdownMenuItem
