@@ -51,6 +51,31 @@ describe('numbering', () => {
 		expect([n.get(2), n.get(3), n.get(1)]).toEqual([1, 2, 3]);
 	});
 
+	it('keeps resolved comments as history, plainly marked, after the open ones', () => {
+		// So the file is the whole conversation: a designer opening it days later sees what was asked
+		// and what was settled, without it reading as work still to do.
+		const { markdown, open } = renderComments(input([comment(1, { resolved: true, body: 'Make this primary' }), comment(2, { body: 'Remove this subtext' })]));
+		expect(open).toBe(1);
+		expect(markdown).toContain('## Already resolved');
+		expect(markdown).toContain('Nothing in this section is work to do.');
+		expect(markdown).toContain('**Comment 1**');
+		expect(markdown).toContain('Make this primary');
+		// The resolved one is history, not an open heading the agent would work through.
+		expect(markdown).not.toContain('## Comment 1\n');
+		// And the open one still is.
+		expect(markdown).toContain('## Comment 2\n');
+		// The resolved section comes after every open comment.
+		expect(markdown.indexOf('## Already resolved')).toBeGreaterThan(markdown.indexOf('## Comment 2'));
+	});
+
+	it('says there is nothing to do, and still shows the history, when everything is resolved', () => {
+		const { markdown, open } = renderComments(input([comment(1, { resolved: true })]));
+		expect(open).toBe(0);
+		expect(markdown).toContain('There are no open comments.');
+		expect(markdown).toContain('1 already resolved, listed at the end.');
+		expect(markdown).toContain('## Already resolved');
+	});
+
 	it('gives the agent the same number the reviewer read off the pin', () => {
 		// A reviewer says "fix comment 2" having read it off a pin; the agent reads "Comment 2" out of
 		// this file. The window numbers its pins with this same function, so the two cannot drift.
@@ -60,8 +85,9 @@ describe('numbering', () => {
 		for (const c of comments.filter((x) => !x.resolved)) {
 			expect(markdown).toContain(`## Comment ${numbers.get(c.id)}\n`);
 		}
-		// The resolved one is not listed, and its number is not reused for anything else.
-		expect(markdown).not.toContain('comment 2');
+		// The resolved one gets no open heading of its own; it appears under the history instead.
+		expect(markdown).not.toContain(`## Comment ${numbers.get(2)}\n`);
+		expect(markdown).toContain(`- **Comment ${numbers.get(2)}**`);
 	});
 });
 
@@ -72,7 +98,7 @@ describe('renderComments', () => {
 		expect(markdown).toContain('## Comment 2');
 		expect(markdown).toContain('## Comment 3');
 		expect(markdown).not.toContain('## Comment 1');
-		expect(markdown).toContain('2 open comments; 1 resolved, not listed');
+		expect(markdown).toContain('2 open comments; 1 already resolved, listed at the end');
 	});
 
 	it('gives each comment what is needed to find the place: page, state, stable name, element, text and commit', () => {

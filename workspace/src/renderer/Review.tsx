@@ -131,7 +131,8 @@ export const Review = ({
 	}, []);
 	useEffect(() => {
 		if (address.kind !== 'running') return;
-		return window.workspace.onAgentLog((l) => setAddressLog((prev) => [...prev, l.text.replace(/\n$/, '')].slice(-40)));
+		// Enough that the summary at the end survives the tool lines that came before it.
+		return window.workspace.onAgentLog((l) => setAddressLog((prev) => [...prev, l.text.replace(/\n$/, '')].slice(-80)));
 	}, [address.kind]);
 
 	useEffect(() => {
@@ -728,11 +729,14 @@ export const Review = ({
 									</>
 								)}
 								{address.kind === 'done' && (
-									<FSAlert severity="success">
-										The agent has finished. Look at the preview and the changes, then resolve what is done.
+									<FSAlert severity={address.changed ? 'success' : 'info'}>
+										{address.changed
+											? 'The agent has finished. Look at the preview and the changes, then resolve what is done.'
+											: 'The agent finished without changing anything. What it says below is why — often the change is outside this iteration, or the comment needs a decision from you.'}
 										{addressLog.length > 0 && (
-											<FSBox component="pre" sx={{ m: 0, mt: 1, maxHeight: 200, overflow: 'auto', fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-												{addressLog.slice(-25).join('\n')}
+											<FSBox component="pre" sx={{ m: 0, mt: 1, maxHeight: address.changed ? 200 : 320, overflow: 'auto', fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+												{/* When nothing changed, what it said is the whole answer, so less of it is cut. */}
+												{addressLog.slice(address.changed ? -25 : -60).join('\n')}
 											</FSBox>
 										)}
 									</FSAlert>

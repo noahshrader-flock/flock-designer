@@ -105,6 +105,8 @@ const SETTINGS = JSON.stringify({ attribution: { commit: '', pr: '' } });
  */
 export const claudeStreamFormatter = (): ((chunk: string) => string[]) => {
 	let tail = '';
+	// The run's closing event repeats the agent's last message verbatim, so it is said once.
+	let lastSaid = '';
 	const describe = (line: string): string[] => {
 		let e: { type?: string; message?: { content?: unknown }; subtype?: string; is_error?: boolean; result?: string };
 		try {
@@ -114,7 +116,7 @@ export const claudeStreamFormatter = (): ((chunk: string) => string[]) => {
 		}
 		if (e.type === 'assistant' && Array.isArray(e.message?.content)) {
 			return (e.message.content as Array<Record<string, unknown>>).flatMap((b) => {
-				if (b.type === 'text' && typeof b.text === 'string') return b.text.trim() ? [b.text.trim()] : [];
+				if (b.type === 'text' && typeof b.text === 'string') return b.text.trim() ? [(lastSaid = b.text.trim())] : [];
 				if (b.type === 'tool_use') {
 					const input = (b.input ?? {}) as Record<string, unknown>;
 					const what = input.file_path ?? input.path ?? input.command ?? input.pattern ?? '';
@@ -123,7 +125,14 @@ export const claudeStreamFormatter = (): ((chunk: string) => string[]) => {
 				return [];
 			});
 		}
-		if (e.type === 'result') return [e.is_error ? `Stopped: ${e.result ?? e.subtype ?? 'error'}` : 'Finished.'];
+		// What the agent says at the end is the part a person most needs: it is where it explains what
+		// it changed and -- the case that matters -- why it changed nothing. Saying only "Finished."
+		// threw that away, so a considered refusal looked exactly like success.
+		if (e.type === 'result') {
+			const said = typeof e.result === 'string' ? e.result.trim() : '';
+			if (e.is_error) return [`Stopped: ${said || e.subtype || 'error'}`];
+			return said && said !== lastSaid ? [said, 'Finished.'] : ['Finished.'];
+		}
 		return [];
 	};
 	return (chunk) => {

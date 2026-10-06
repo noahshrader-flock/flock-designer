@@ -158,4 +158,23 @@ describe('reading the stream', () => {
 	it('reports a failed run as stopped', () => {
 		expect(claudeStreamFormatter()(`${JSON.stringify({ type: 'result', is_error: true, result: 'out of turns' })}\n`)).toEqual(['Stopped: out of turns']);
 	});
+
+	it('keeps what the agent said at the end, which is where it explains why it changed nothing', () => {
+		// From a real run: the agent found the text, saw it was outside this iteration's boundary, and
+		// said so without committing. Reporting only "Finished." threw that explanation away and sent
+		// the designer looking for a change that was never made.
+		const said = 'No changes were made. Comment 1 refers to text outside this iteration’s boundary.';
+		const lines = claudeStreamFormatter()(`${JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: said })}\n`);
+		expect(lines).toEqual([said, 'Finished.']);
+	});
+
+	it('says it once when the closing event repeats the last message, which is what the real stream does', () => {
+		const said = 'No changes were made.';
+		const f = claudeStreamFormatter();
+		const lines = f(
+			`${JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: said }] } })}\n` +
+				`${JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: said })}\n`,
+		);
+		expect(lines).toEqual([said, 'Finished.']);
+	});
 });

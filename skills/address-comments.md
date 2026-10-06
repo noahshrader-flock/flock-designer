@@ -16,8 +16,11 @@ Flock Designer rewrites it whenever it reads the comments, and its heading says 
 a comment was added since then, say so and ask them to open the iteration in Flock Designer, which brings it up to
 date;** do not act on a list you have been told is out of date.
 
-It lists the **open** comments only, in number order. A comment keeps its number when others are
-resolved, so "comment 3" always means the same one. For each it gives:
+It lists the **open** comments in number order, and then, under **Already resolved**, the ones that
+have been dealt with. **Act only on the open ones.** The resolved list is history, kept so a person
+reading the file later can see what was asked and settled; treat it as context, never as work to do.
+A comment keeps its number when others are resolved, so "comment 3" always means the same one.
+For each open comment it gives:
 
 | | |
 |---|---|

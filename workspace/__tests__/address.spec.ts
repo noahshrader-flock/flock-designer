@@ -134,10 +134,21 @@ describe('addressTask', () => {
 
 describe('runAddress', () => {
 	const ok = <T,>(value: T): Result<T> => ({ ok: true, value });
-	const run = async (api: Parameters<typeof runAddress>[0]['api'], isLive = () => true) => {
+	/** The branch stands still unless a test says otherwise, which is the interesting case. */
+	const commits = (...heads: Array<string | null>) => {
+		let i = 0;
+		return async () => ok(heads[Math.min(i++, heads.length - 1)] ?? null);
+	};
+	const run = async (
+		api: Omit<Parameters<typeof runAddress>[0]['api'], 'iterationCommit'> & { iterationCommit?: Parameters<typeof runAddress>[0]['api']['iterationCommit'] },
+		isLive = () => true,
+	) => {
 		const phases: AddressPhase[] = [];
-		await runAddress({ api, root: '/c', projectId: 'demo', name: 'i1', isLive, onPhase: (p) => phases.push(p), pollMs: 1 });
-		return phases.map((p) => p.kind);
+		await runAddress({
+			api: { iterationCommit: commits('abc'), ...api } as Parameters<typeof runAddress>[0]['api'],
+			root: '/c', projectId: 'demo', name: 'i1', isLive, onPhase: (p) => phases.push(p), pollMs: 1,
+		});
+		return phases;
 	};
 	const statuses = (...s: AgentStatus[]) => {
 		let i = 0;
@@ -149,15 +160,37 @@ describe('runAddress', () => {
 		const phases = await run({
 			addressComments: async () => ok(started),
 			agentStatus: statuses(started, started, { state: 'finished', exitCode: 0 }),
+			iterationCommit: commits('abc', 'def'),
 		});
-		expect(phases).toEqual(['running', 'done']);
+		expect(phases.map((p) => p.kind)).toEqual(['running', 'done']);
+		expect(phases[1]).toEqual({ kind: 'done', changed: true });
+	});
+
+	it('says the agent changed nothing when the branch did not move, which is not a failure', async () => {
+		// The agent read the comments and decided not to act: out of this iteration's boundary, or a
+		// decision only a person can make. It exits cleanly, so only the branch tells them apart.
+		const phases = await run({
+			addressComments: async () => ok(started),
+			agentStatus: statuses(started, { state: 'finished', exitCode: 0 }),
+			iterationCommit: commits('abc', 'abc'),
+		});
+		expect(phases[1]).toEqual({ kind: 'done', changed: false });
+	});
+
+	it('does not claim the branch stood still when it cannot be read', async () => {
+		const phases = await run({
+			addressComments: async () => ok(started),
+			agentStatus: statuses({ state: 'finished', exitCode: 0 }),
+			iterationCommit: async () => ({ ok: false, error: 'not a git repository' }),
+		});
+		expect(phases[1]).toEqual({ kind: 'done', changed: true });
 	});
 
 	it('says why when the request is refused, and never starts waiting', async () => {
 		const agentStatus = vi.fn();
 		const phases: AddressPhase[] = [];
 		await runAddress({
-			api: { addressComments: async () => ({ ok: false, error: 'There are uncommitted changes' }), agentStatus },
+			api: { addressComments: async () => ({ ok: false, error: 'There are uncommitted changes' }), agentStatus, iterationCommit: commits('abc') },
 			root: '/c', projectId: 'demo', name: 'i1', isLive: () => true, onPhase: (p) => phases.push(p), pollMs: 1,
 		});
 		expect(phases[1]).toEqual({ kind: 'failed', message: 'There are uncommitted changes' });
@@ -165,8 +198,8 @@ describe('runAddress', () => {
 	});
 
 	it('fails when the agent cannot run, or stops with an error', async () => {
-		expect(await run({ addressComments: async () => ok({ state: 'unavailable', detail: 'not installed' }), agentStatus: statuses(started) })).toEqual(['running', 'failed']);
-		expect(await run({ addressComments: async () => ok(started), agentStatus: statuses({ state: 'finished', exitCode: 1 }) })).toEqual(['running', 'failed']);
+		expect((await run({ addressComments: async () => ok({ state: 'unavailable', detail: 'not installed' }), agentStatus: statuses(started) })).map((p) => p.kind)).toEqual(['running', 'failed']);
+		expect((await run({ addressComments: async () => ok(started), agentStatus: statuses({ state: 'finished', exitCode: 1 }) })).map((p) => p.kind)).toEqual(['running', 'failed']);
 	});
 
 	it('stops quietly when nobody is looking any more', async () => {
@@ -175,6 +208,6 @@ describe('runAddress', () => {
 			{ addressComments: async () => ok(started), agentStatus: async () => ((live = false), ok(started)) },
 			() => live,
 		);
-		expect(phases).toEqual(['running']);
+		expect(phases.map((p) => p.kind)).toEqual(['running']);
 	});
 });
