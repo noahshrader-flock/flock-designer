@@ -23,6 +23,9 @@ const HELPERS = String.raw`
   var esc = function (v) { return (window.CSS && CSS.escape) ? CSS.escape(v) : String(v).replace(/[^\w-]/g, '\\$&'); };
   var unique = function (sel) { try { return doc.querySelectorAll(sel).length === 1; } catch (e) { return false; } };
   var route = function () { return location.pathname + location.hash; };
+  // Which state of the page a prototype is showing. Recorded with a comment and compared when the
+  // comment is placed again, so the two must read it the same way: one definition, used by both.
+  var pageState = function () { return location.search.slice(0, 200); };
   var segment = function (el) {
     var ref = el.getAttribute('data-e2e-ref');
     if (ref) return '[data-e2e-ref="' + ref.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"]';
@@ -124,7 +127,7 @@ const HELPERS = String.raw`
       commit: '',
       // Which state of the page: a prototype's switch lives in the query string, so a comment
       // made on Error is not mistaken for one made on Loaded.
-      state: location.search.slice(0, 200),
+      state: pageState(),
       offset: rect.width > 0 && rect.height > 0
         ? { x: (x - rect.left) / rect.width, y: (y - rect.top) / rect.height }
         : { x: 0, y: 0 }
@@ -281,7 +284,7 @@ ${HELPERS}
     var a = item.anchor;
     if (a.route !== current) { results.push({ id: item.id, state: 'elsewhere' }); return; }
     // Comments from before the state was recorded have none, and are shown wherever their element is.
-    if (a.state !== undefined && a.state !== location.search.slice(0, 200)) { results.push({ id: item.id, state: 'otherState' }); return; }
+    if (a.state !== undefined && a.state !== pageState()) { results.push({ id: item.id, state: 'otherState' }); return; }
     var el = null, state = 'found';
     try { var hits = doc.querySelectorAll(a.selector); if (hits.length === 1) el = hits[0]; } catch (e) {}
     if (!el && a.nearbyText.length >= 3) {
