@@ -181,7 +181,12 @@ export interface WorkspaceApi {
 
 	listIterations(root: string, projectId: string): Promise<Result<Iteration[]>>;
 	/** Creates the branch. Refuses if the tree is dirty; never discards work. */
-	createIteration(root: string, projectId: string, note: string, kind: IterationKind): Promise<Result<Iteration>>;
+	/** Creates the branch from `from` (a local branch), or from the current branch when it is not given. */
+	createIteration(root: string, projectId: string, note: string, kind: IterationKind, from?: string): Promise<Result<Iteration>>;
+	/** Every product repository found on this machine. Listing one trusts nothing; `useCheckout` does. */
+	listCheckouts(): Promise<Result<CheckoutSuggestion[]>>;
+	/** The local branches of an opened repository, most recently worked on first: what new work can start from. */
+	listBaseBranches(root: string): Promise<Result<string[]>>;
 	/** Checks out an existing iteration's branch. */
 	continueIteration(root: string, projectId: string, name: string): Promise<Result<Iteration>>;
 
@@ -489,6 +494,8 @@ export const CHANNELS = {
 	lastCheckout: 'workspace:lastCheckout',
 	suggestCheckout: 'workspace:suggestCheckout',
 	useCheckout: 'workspace:useCheckout',
+	listCheckouts: 'workspace:listCheckouts',
+	listBaseBranches: 'workspace:listBaseBranches',
 	stopCommand: 'workspace:stopCommand',
 	commandStatus: 'workspace:commandStatus',
 	startAgent: 'workspace:startAgent',

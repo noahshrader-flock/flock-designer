@@ -24,6 +24,12 @@ describe('finding the product repository', () => {
 	});
 	const product = (dir: string) => [`${dir}/.git`, `${dir}/.flkd/workspace.json`];
 
+	it('finds a repository once when two of the usual places are one folder, as GitHub and github are on macOS', () => {
+		const tree = { '/h/GitHub/flock-coke': product('/h/GitHub/flock-coke'), '/h/github/flock-coke': product('/h/github/flock-coke') };
+		const deps = { ...fake(tree), real: (p: string) => p.toLowerCase() };
+		expect(findProductCheckouts(deps)).toEqual(['/h/GitHub/flock-coke']);
+	});
+
 	it('finds a repository by the file that says it can be worked in, wherever the usual places put it', () => {
 		const deps = fake({ '/h/Documents/GitHub/flock-coke': product('/h/Documents/GitHub/flock-coke') });
 		expect(findProductCheckouts(deps)).toEqual(['/h/Documents/GitHub/flock-coke']);

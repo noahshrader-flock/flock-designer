@@ -48,7 +48,9 @@ const api: WorkspaceApi = {
 	readContextReceipt: (root) => invoke<ContextReceipt>(CHANNELS.readContextReceipt, root),
 
 	listIterations: (root, projectId) => invoke<Iteration[]>(CHANNELS.listIterations, root, projectId),
-	createIteration: (root, projectId, note, kind) => invoke<Iteration>(CHANNELS.createIteration, root, projectId, note, kind),
+	createIteration: (root, projectId, note, kind, from) => invoke<Iteration>(CHANNELS.createIteration, root, projectId, note, kind, from),
+	listCheckouts: () => invoke<CheckoutSuggestion[]>(CHANNELS.listCheckouts),
+	listBaseBranches: (root) => invoke<string[]>(CHANNELS.listBaseBranches, root),
 	continueIteration: (root, projectId, name) => invoke<Iteration>(CHANNELS.continueIteration, root, projectId, name),
 
 	startCommand: (root, commandId, projectId) => invoke<PreviewStatus>(CHANNELS.startCommand, root, commandId, projectId),

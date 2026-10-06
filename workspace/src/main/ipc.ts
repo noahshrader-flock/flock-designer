@@ -21,7 +21,7 @@ import { type ShareRunner, previewIsUp, pullRequestText } from './services/share
 import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
 import { readDescriptor } from './services/descriptor';
-import { branchCommit, isRepository, readCheckout } from './services/git';
+import { branchCommit, branchExists, isRepository, readCheckout, recentBranches } from './services/git';
 import { assertUsableProjectId, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { findProductCheckouts, recordsRootFor } from './services/discovery';
 import { classify, readBranchProjects } from './services/branchProjects';
@@ -209,6 +209,24 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 		}),
 	);
 
+	ipcMain.handle(
+		CHANNELS.listCheckouts,
+		guard((): CheckoutSuggestion[] =>
+			findProductCheckouts().flatMap((root) => {
+				try {
+					return [{ root, name: basename(root), product: readDescriptor(root).product }];
+				} catch {
+					return []; // a descriptor we cannot read is not a repository we should offer
+				}
+			}),
+		),
+	);
+
+	ipcMain.handle(
+		CHANNELS.listBaseBranches,
+		guard((root: string) => recentBranches(opened.require(root))),
+	);
+
 	ipcMain.handle(CHANNELS.openCheckout, guard((root: string) => openRepository(root)));
 
 	ipcMain.handle(
@@ -225,10 +243,14 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 
 	ipcMain.handle(
 		CHANNELS.createIteration,
-		guard(async (root: string, projectId: string, note: string, kind: IterationKind) => {
+		guard(async (root: string, projectId: string, note: string, kind: IterationKind, from?: string) => {
 			const canonical = opened.require(root);
 			const descriptor = descriptorFor(root);
-			const { branch } = await readCheckout(canonical);
+			// Only ever a branch that exists here, so the window cannot pass git an option or a revision expression.
+			if (from !== undefined && !(await branchExists(canonical, from))) {
+				throw new Error(`There is no branch called ${from} in ${basename(canonical)}.`);
+			}
+			const branch = from ?? (await readCheckout(canonical)).branch;
 			if (branch === null) {
 				throw new Error('This repository has a detached HEAD. Check out a branch first.');
 			}

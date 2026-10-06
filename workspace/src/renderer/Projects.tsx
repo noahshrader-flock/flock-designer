@@ -182,6 +182,7 @@ export const Projects = ({ menuOpen }: { menuOpen: boolean }) => {
 					onClose={() => setCreating(false)}
 					checkout={checkout}
 					onChoose={chooseCheckout}
+					onCheckout={setCheckout}
 					onCreated={(c: Created) => {
 						setCreating(false);
 						setSelected({ project: c.project, iteration: c.iteration, task: c.task });

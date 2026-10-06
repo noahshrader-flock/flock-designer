@@ -105,6 +105,12 @@ export const listBranches = async (root: string, prefix: string): Promise<string
 	return out === '' ? [] : out.split('\n');
 };
 
+/** Every local branch, the one most recently committed to first. */
+export const recentBranches = async (root: string): Promise<string[]> => {
+	const out = await git(root, ['for-each-ref', '--sort=-committerdate', '--format=%(refname:short)', 'refs/heads/']);
+	return out === '' ? [] : out.split('\n');
+};
+
 /**
  * Refuses to move HEAD while the tree is dirty.
  *

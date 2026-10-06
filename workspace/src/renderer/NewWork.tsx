@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import type { Checkout, IterationKind, Project, ProjectIteration } from '../shared/contract';
+import { useEffect, useState } from 'react';
+import type { Checkout, CheckoutSuggestion, IterationKind, Project, ProjectIteration } from '../shared/contract';
 import { slugify } from '../shared/projects';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
 
 export interface Created {
@@ -13,34 +15,75 @@ export interface Created {
 	task: string;
 }
 
+/** The repository picker's last entry, which opens a folder picker instead of choosing a repository. */
+const OTHER = '\u0000other';
+
 /**
- * Starting something new: a name, and what it should explore. Creating it makes
- * the branch and the record; the agent and the preview follow on their own.
+ * Starting something new: where it starts (a repository on this machine, and a branch in it), a name, and
+ * what it should explore. Creating it makes the branch and the record; the agent and the preview follow on
+ * their own.
+ *
+ * The repository starts on the one last used, and the branch on the one it has checked out, so the usual
+ * case is two choices already made.
  */
 export const NewWork = ({
 	open,
 	onClose,
 	checkout,
 	onChoose,
+	onCheckout,
 	onCreated,
 }: {
 	open: boolean;
 	onClose: () => void;
 	checkout: Checkout | null;
 	onChoose: () => void;
+	/** A repository picked from the list, now accepted. */
+	onCheckout: (checkout: Checkout) => void;
 	onCreated: (created: Created) => void;
 }) => {
 	const [name, setName] = useState('');
 	const [task, setTask] = useState('');
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [repos, setRepos] = useState<CheckoutSuggestion[]>([]);
+	const [branches, setBranches] = useState<string[]>([]);
+	const [from, setFrom] = useState<string | null>(null);
 	const id = slugify(name);
+
+	useEffect(() => {
+		if (!open) return;
+		void window.workspace.listCheckouts().then((r) => r.ok && setRepos(r.value));
+	}, [open]);
+
+	// A new repository brings its own branches, and starts on the one it has checked out.
+	useEffect(() => {
+		setBranches([]);
+		setFrom(checkout?.branch ?? null);
+		if (!open || !checkout) return;
+		let current = true;
+		void window.workspace.listBaseBranches(checkout.root).then((r) => current && r.ok && setBranches(r.value));
+		return () => {
+			current = false;
+		};
+	}, [open, checkout?.root, checkout?.branch]); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// The one in use is always offered, even when it was opened by hand from somewhere discovery does not look.
+	const choices = checkout && !repos.some((r) => r.root === checkout.root) ? [{ root: checkout.root, name: checkout.name }, ...repos] : repos;
+
+	const pickRepo = async (root: string) => {
+		if (root === OTHER) return onChoose();
+		setError(null);
+		const r = await window.workspace.useCheckout(root);
+		if (r.ok) onCheckout(r.value);
+		else setError(r.error);
+	};
 
 	const create = async (kind: IterationKind) => {
 		if (!checkout || !id || !task.trim()) return;
 		setBusy(true);
 		setError(null);
-		const r = await window.workspace.createIteration(checkout.root, id, task.trim().split('\n')[0] ?? '', kind);
+		const r = await window.workspace.createIteration(checkout.root, id, task.trim().split('\n')[0] ?? '', kind, from ?? undefined);
 		setBusy(false);
 		if (!r.ok) return setError(r.error);
 		const iteration: ProjectIteration = {
@@ -70,13 +113,41 @@ export const NewWork = ({
 					<DialogTitle>New prototype</DialogTitle>
 				</DialogHeader>
 				<div className="flex flex-col gap-4">
-					{checkout ? (
-						<p className="text-muted-foreground text-sm">
-							In {checkout.name}, on {checkout.branch ?? 'a detached HEAD'}. The new branch starts from there.{' '}
-							<button type="button" className="text-primary cursor-pointer underline underline-offset-4" onClick={onChoose}>
-								Change
-							</button>
-						</p>
+					{checkout || choices.length > 0 ? (
+						<>
+							<div className="flex flex-col gap-2">
+								<Label htmlFor="new-work-repo">Repository</Label>
+								<Select value={checkout?.root ?? ''} onValueChange={(v) => void pickRepo(v)} disabled={busy}>
+									<SelectTrigger id="new-work-repo" className="w-full">
+										<SelectValue placeholder="Choose a repository" />
+									</SelectTrigger>
+									<SelectContent>
+										{choices.map((r) => (
+											<SelectItem key={r.root} value={r.root}>
+												{r.name}
+											</SelectItem>
+										))}
+										<SelectSeparator />
+										<SelectItem value={OTHER}>Another folder…</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="flex flex-col gap-2">
+								<Label htmlFor="new-work-from">Starts from</Label>
+								<Select value={from ?? ''} onValueChange={setFrom} disabled={busy || !checkout || branches.length === 0}>
+									<SelectTrigger id="new-work-from" className="w-full font-mono">
+										<SelectValue placeholder={checkout ? 'Choose a branch' : 'Choose a repository first'} />
+									</SelectTrigger>
+									<SelectContent>
+										{branches.map((b) => (
+											<SelectItem key={b} value={b} className="font-mono">
+												{b}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						</>
 					) : (
 						<Alert>
 							<AlertDescription className="flex items-center justify-between gap-4">
@@ -88,9 +159,7 @@ export const NewWork = ({
 						</Alert>
 					)}
 					<div className="flex flex-col gap-2">
-						<label htmlFor="new-work-name" className="text-sm font-medium">
-							Name
-						</label>
+						<Label htmlFor="new-work-name">Name</Label>
 						<Input
 							id="new-work-name"
 							placeholder="Users — inactivity signal"
@@ -101,9 +170,7 @@ export const NewWork = ({
 						<p className="text-muted-foreground text-xs">{id ? `Project id: ${id}` : 'The id is made from the name.'}</p>
 					</div>
 					<div className="flex flex-col gap-2">
-						<label htmlFor="new-work-task" className="text-sm font-medium">
-							What should it explore?
-						</label>
+						<Label htmlFor="new-work-task">What should it explore?</Label>
 						<Textarea
 							id="new-work-task"
 							rows={4}
@@ -127,10 +194,10 @@ export const NewWork = ({
 					<Button variant="secondary" onClick={onClose} disabled={busy}>
 						Cancel
 					</Button>
-					<Button variant="secondary" onClick={() => void create('codebase')} disabled={busy || !checkout || !id || !task.trim()}>
+					<Button variant="secondary" onClick={() => void create('codebase')} disabled={busy || !checkout || !from || !id || !task.trim()}>
 						In the codebase
 					</Button>
-					<Button onClick={() => void create('prototype')} disabled={busy || !checkout || !id || !task.trim()}>
+					<Button onClick={() => void create('prototype')} disabled={busy || !checkout || !from || !id || !task.trim()}>
 						{busy ? 'Creating…' : 'Create prototype'}
 					</Button>
 				</DialogFooter>

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -21,6 +21,11 @@ export interface DiscoveryDeps {
 	list: (dir: string) => string[];
 	/** Last activity in a repository, as a timestamp. Larger is more recent. */
 	activity: (repo: string) => number;
+	/**
+	 * What a path is on disk. macOS folders are case-insensitive, so `GitHub` and `github` are one folder
+	 * reached two ways, and without this every repository in it was found twice.
+	 */
+	real?: (path: string) => string;
 }
 
 export const defaultDiscoveryDeps: DiscoveryDeps = {
@@ -31,6 +36,13 @@ export const defaultDiscoveryDeps: DiscoveryDeps = {
 			return readdirSync(dir);
 		} catch {
 			return [];
+		}
+	},
+	real: (path) => {
+		try {
+			return realpathSync.native(path);
+		} catch {
+			return path;
 		}
 	},
 	activity: (repo) => {
@@ -54,9 +66,12 @@ export const findProductCheckouts = (deps: DiscoveryDeps = defaultDiscoveryDeps)
 		for (const name of deps.list(base).slice(0, 500)) {
 			if (name.startsWith('.') || name === 'node_modules' || name === 'Library') continue;
 			const dir = join(base, name);
-			if (seen.has(dir)) continue;
-			seen.add(dir);
-			if (deps.exists(join(dir, '.git')) && deps.exists(join(dir, '.flkd', 'workspace.json'))) found.push(dir);
+			if (!deps.exists(join(dir, '.git')) || !deps.exists(join(dir, '.flkd', 'workspace.json'))) continue;
+			// The first way a repository was reached is the one kept, so its path reads as it was found.
+			const key = deps.real?.(dir) ?? dir;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			found.push(dir);
 		}
 	}
 	return found.sort((a, b) => deps.activity(b) - deps.activity(a));

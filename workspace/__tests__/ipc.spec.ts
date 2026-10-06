@@ -176,6 +176,43 @@ describe('listProjects', () => {
 	});
 });
 
+describe('where new work starts', () => {
+	it('lists the repositories on this machine without trusting any', async () => {
+		const r = await call(CHANNELS.listCheckouts);
+		expect(r).toEqual({ ok: true, value: [{ root: product, name: 'flock-coke', product: 'Test Product' }] });
+		expect((await call(CHANNELS.listBaseBranches, product)).ok).toBe(false);
+	});
+
+	it('lists the branches of an accepted repository, the latest worked on first', async () => {
+		await call(CHANNELS.useCheckout, product);
+		g(product, 'checkout', '-q', '-b', 'noah/baseline');
+		// A later commit than the first, by more than git's one-second resolution.
+		execFileSync('git', ['-C', product, 'commit', '-q', '--allow-empty', '-m', 'later'], {
+			env: { ...process.env, GIT_COMMITTER_DATE: '2099-01-01T00:00:00Z' },
+		});
+		g(product, 'checkout', '-q', 'develop');
+		const r = await call(CHANNELS.listBaseBranches, product);
+		expect(r).toEqual({ ok: true, value: ['noah/baseline', 'develop'] });
+	});
+
+	it('starts a prototype from the branch chosen, not the one checked out', async () => {
+		await call(CHANNELS.useCheckout, product);
+		g(product, 'checkout', '-q', '-b', 'noah/baseline');
+		g(product, 'commit', '-q', '--allow-empty', '-m', 'baseline only');
+		g(product, 'checkout', '-q', 'develop');
+		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'prototype', 'noah/baseline');
+		expect(r.ok).toBe(true);
+		expect(g(product, 'log', '-1', '--format=%s', 'fd/demo/i1').trim()).toBe('baseline only');
+	});
+
+	it('refuses a branch that does not exist, so nothing else reaches git', async () => {
+		await call(CHANNELS.useCheckout, product);
+		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'prototype', '--orphan');
+		expect(r.ok).toBe(false);
+		expect(g(product, 'branch', '--list', 'fd/*').trim()).toBe('');
+	});
+});
+
 describe('readRecord', () => {
 	it('refuses a name that is a path, before anything is read', async () => {
 		for (const name of ['../outside.md', 'a/b.md', '..']) {
