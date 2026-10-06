@@ -4,6 +4,7 @@ import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Proj
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
 import { latest } from '../shared/latest';
 import { People } from './People';
+import { Loading } from './Loading';
 import { ShareControl } from './ShareControl';
 import { Toolbar } from './Toolbar';
 import { useHostedPreview } from './hostedPreview';
@@ -14,7 +15,6 @@ import { useLocalBuild } from './useLocalBuild';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Spinner } from './ui/spinner';
 import { Textarea } from './ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
@@ -693,8 +693,7 @@ export const Review = ({
 								</Alert>
 							) : useHosted && hosted.state !== 'up' ? (
 								<>
-									<Spinner className="size-6" />
-									<p className="text-sm">This preview is still being built.</p>
+									<Loading>This preview is still being built.</Loading>
 									<p className="text-muted-foreground max-w-[480px] text-sm">
 										It opens here by itself as soon as it is ready. A new share takes a few minutes.
 									</p>
@@ -712,14 +711,13 @@ export const Review = ({
 								</>
 							) : (
 								<>
-									<Spinner className="size-6" />
-									<p className="text-sm">
+									<Loading>
 										{local.phase.kind === 'agent'
 											? `Building ${project.title}…`
 											: local.phase.kind === 'preview'
 												? 'Starting the preview…'
 												: 'Opening the preview…'}
-									</p>
+									</Loading>
 									{local.phase.kind === 'agent' && (
 										<p className="text-muted-foreground max-w-[480px] text-sm">
 											The agent is writing it from your request. This takes a few minutes.

@@ -1,6 +1,7 @@
 import { FolderIcon, MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { Checkout, CheckoutSuggestion, Person, Project, ProjectIteration } from '../shared/contract';
+import { LoadingScreen } from './Loading';
 import { NewWork, type Created } from './NewWork';
 import { People } from './People';
 import { PublishBanner, usePublishStatus } from './PublishStatus';
@@ -101,11 +102,7 @@ export const Projects = () => {
 	}
 
 	if (!projects) {
-		return (
-			<Page>
-				<p className="text-muted-foreground text-sm">Loading projects…</p>
-			</Page>
-		);
+		return <LoadingScreen>Loading projects…</LoadingScreen>;
 	}
 
 	if (selected) {
