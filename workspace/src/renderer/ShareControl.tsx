@@ -92,7 +92,7 @@ export const ShareControl = ({
 					</TooltipTrigger>
 					<TooltipContent>{running ? 'Sharing…' : 'More'}</TooltipContent>
 				</Tooltip>
-				<DropdownMenuContent align="end">
+				<DropdownMenuContent align="end" className="w-auto">
 					{checkout && (
 						<DropdownMenuItem
 							onSelect={() => {

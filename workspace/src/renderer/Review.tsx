@@ -59,6 +59,7 @@ export const Review = ({
 	checkout,
 	onChoose,
 	task,
+	menuOpen,
 }: {
 	project: Project;
 	iteration: ProjectIteration;
@@ -68,6 +69,8 @@ export const Review = ({
 	onChoose: () => void;
 	/** For work that was just created: what the agent builds before the preview starts. */
 	task?: string;
+	/** The account menu in the top bar is open, and drops over the preview. */
+	menuOpen: boolean;
 }) => {
 	const [comments, setComments] = useState<ReviewComment[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -434,7 +437,7 @@ export const Review = ({
 	 */
 	// The sharing dialog, the menu and the branch tooltip need the same thing the comment box does: the space
 	// the preview occupies.
-	const frozen = composing || shareOpen || branchTip;
+	const frozen = composing || shareOpen || branchTip || menuOpen;
 	const run = useRef(0);
 	useEffect(() => {
 		const mine = ++run.current;

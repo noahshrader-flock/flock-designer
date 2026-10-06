@@ -15,14 +15,23 @@ const onMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgen
  *
  * The preview is a native view that sits above all page content, so an open
  * account menu would be hidden behind it. While the menu is open the preview
- * is hidden, and shown again when it closes.
+ * steps aside (the review screen swaps it for a still picture), and returns when it closes.
  */
-export const TopNav = ({ user, onSignOut }: { user: GitHubUser | null; onSignOut: () => void }) => {
+export const TopNav = ({
+	user,
+	onSignOut,
+	onMenuOpenChange,
+}: {
+	user: GitHubUser | null;
+	onSignOut: () => void;
+	/** The screen under the bar needs to know, so a preview does not cover the menu. */
+	onMenuOpenChange: (open: boolean) => void;
+}) => {
 	const [publishStatus] = usePublishStatus();
 
 	return (
 		<header
-			className={`app-drag bg-card fixed inset-x-0 top-0 z-[1200] flex h-(--nav-height) items-center border-b ${
+			className={`app-drag bg-card fixed inset-x-0 top-0 z-40 flex h-(--nav-height) items-center border-b ${
 				// 108px leaves a clear gap after the macOS window buttons (they end near 76px);
 				// elsewhere the overlay controls sit on the right.
 				onMac ? 'pr-6 pl-[108px]' : 'pr-[150px] pl-6'
@@ -44,7 +53,7 @@ export const TopNav = ({ user, onSignOut }: { user: GitHubUser | null; onSignOut
 			</div>
 
 			{user && (
-				<DropdownMenu onOpenChange={(open) => void window.workspace.pageHold('menu', open)}>
+				<DropdownMenu onOpenChange={onMenuOpenChange}>
 					<DropdownMenuTrigger asChild>
 						<Button variant="ghost" className="app-no-drag h-auto gap-3 py-1 font-normal">
 							<Avatar size="sm">

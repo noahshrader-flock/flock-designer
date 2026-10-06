@@ -466,7 +466,7 @@ export interface PickedPoint {
 }
 
 /** Why the preview is hidden. A closed set, so the window cannot invent reasons. */
-export const PAGE_HOLD_REASONS = ['menu', 'popover', 'resize'] as const;
+export const PAGE_HOLD_REASONS = ['popover', 'resize'] as const;
 export type PageHoldReason = (typeof PAGE_HOLD_REASONS)[number];
 
 /** Where the preview sits, in the window's own coordinates. */

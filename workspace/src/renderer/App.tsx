@@ -15,6 +15,8 @@ import { TopNav } from './TopNav';
  * back as a GitHub-backed list of repositories rather than a folder picker.
  */
 export const App = () => {
+	// Open over the preview, which is a native layer: the screen under the bar has to make room for it.
+	const [menuOpen, setMenuOpen] = useState(false);
 	const [signIn, setSignIn] = useState<SignInState>({ state: 'signedOut' });
 
 	const refreshSignIn = useCallback(async () => {
@@ -34,12 +36,12 @@ export const App = () => {
 
 	return (
 		<div className="bg-background h-screen overflow-hidden">
-			<TopNav user={signIn.state === 'signedIn' ? signIn.user : null} onSignOut={signOut} />
+			<TopNav user={signIn.state === 'signedIn' ? signIn.user : null} onSignOut={signOut} onMenuOpenChange={setMenuOpen} />
 			{/* The bar is fixed, so the rest starts below it and scrolls on its own. */}
 			<div className="h-full overflow-y-auto pt-(--nav-height)">
 				<ErrorBoundary>
 					{signIn.state === 'signedIn' ? (
-						<Projects />
+						<Projects menuOpen={menuOpen} />
 					) : (
 						<div className="mx-auto max-w-[1400px] p-6">
 							<SignIn state={signIn} onChanged={refreshSignIn} />
