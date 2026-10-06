@@ -27,7 +27,7 @@ import { assertUsableProjectId, continueIteration, createIteration, readIteratio
 import { findProductCheckouts, recordsRootFor } from './services/discovery';
 import { readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
-import { prepareAddress, skillFor } from './services/address';
+import { prepareAddress, readSkill } from './services/address';
 import { projectTitle, writeCommentsExport } from './services/commentsExport';
 import { DesignRepo } from './services/designRepo';
 import type { PageView } from './services/pageView';
@@ -275,16 +275,15 @@ export const registerIpc = ({ window, opened, runtime, agent, share, github, des
 			const recordsRoot = recordsFor(canonical);
 			const iteration = readIterations(recordsRoot, projectId).find((i) => i.name === name);
 			if (!iteration) throw new Error(`${projectId} has no iteration called ${name}.`);
-			const skill = skillFor(descriptorFor(root).contextDir);
 			const prepared = await prepareAddress(
 				{
 					readComments: () => designRepo.readComments(projectId, iteration.branch),
 					checkout: () => readCheckout(canonical),
 					agentRunning: () => agent.status().state === 'running',
-					skillPresent: () => existsSync(join(canonical, skill)),
+					skill: () => readSkill(recordsRoot),
 					title: projectTitle(recordsRoot, projectId),
 				},
-				{ recordsRoot, projectId, iteration, skill },
+				{ recordsRoot, projectId, iteration },
 			);
 			return agent.start(canonical, projectId, prepared.task, { addDirs: [recordsRoot] });
 		}),

@@ -1,8 +1,8 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AddressProblem, addressTask, prepareAddress, skillFor } from '../src/main/services/address';
+import { AddressProblem, SKILL_FILE, addressTask, prepareAddress, readSkill } from '../src/main/services/address';
 import { type AddressPhase, runAddress } from '../src/renderer/address';
 import type { AgentStatus, ReviewComment, Result } from '../src/shared/contract';
 
@@ -20,12 +20,12 @@ const comment = (id: number, over: Partial<ReviewComment> = {}): ReviewComment =
 
 describe('prepareAddress', () => {
 	let records: string;
-	const target = () => ({ recordsRoot: records, projectId: 'demo', iteration: { name: 'i1', branch: 'fd/demo/i1' }, skill: '.flkd/skills/address-comments.md' });
+	const target = () => ({ recordsRoot: records, projectId: 'demo', iteration: { name: 'i1', branch: 'fd/demo/i1' } });
 	const deps = (over: Partial<Parameters<typeof prepareAddress>[0]> = {}) => ({
 		readComments: vi.fn(async () => [comment(1), comment(2)]),
 		checkout: vi.fn(async () => ({ branch: 'fd/demo/i1' as string | null, clean: true })),
 		agentRunning: () => false,
-		skillPresent: () => true,
+		skill: () => '# The skill\n\nFollow the rules.',
 		title: 'Demo',
 		now: () => new Date('2026-10-05T12:00:00Z'),
 		...over,
@@ -44,7 +44,9 @@ describe('prepareAddress', () => {
 		expect(readFileSync(out.path, 'utf8')).toContain('## Comment 2');
 		expect(out.task).toContain(out.path);
 		expect(out.task).toContain('fd/demo/i1');
-		expect(out.task).toContain('.flkd/skills/address-comments.md');
+		// The skill is in the task itself, so the agent cannot miss it and no product repository has to carry it.
+		expect(out.task).toContain('# The skill');
+		expect(out.task).toContain('Follow the rules.');
 	});
 
 	it('uses a comment made a moment ago, which is the whole point: the file is never older than the click', async () => {
@@ -69,9 +71,9 @@ describe('prepareAddress', () => {
 		expect(existsSync(join(records, 'demo', 'comments.md'))).toBe(false);
 	});
 
-	it('refuses a checkout that does not have the skill, saying what to do, before reading or writing anything', async () => {
-		const d = deps({ skillPresent: () => false });
-		await expect(prepareAddress(d, target())).rejects.toThrow(/does not have \.flkd\/skills\/address-comments\.md.*Rebase/s);
+	it('refuses an out-of-date design repository that lacks the skill, saying what to do, before reading or writing anything', async () => {
+		const d = deps({ skill: () => null });
+		await expect(prepareAddress(d, target())).rejects.toThrow(/design repository on this machine has no skills\/address-comments\.md.*git pull/s);
 		expect(d.readComments).not.toHaveBeenCalled();
 		expect(existsSync(join(records, 'demo', 'comments.md'))).toBe(false);
 	});
@@ -110,12 +112,23 @@ describe('prepareAddress', () => {
 
 describe('addressTask', () => {
 	it('is short and names what the app produced', () => {
-		expect(addressTask('/r/projects/demo/comments.md', 'fd/demo/i1', 'x/skills/address-comments.md').split('\n')).toHaveLength(3);
+		const task = addressTask('/r/projects/demo/comments.md', 'fd/demo/i1', 'SKILL TEXT');
+		expect(task.split('\n').slice(0, 3)).toEqual([
+			'Address the open comments on this project.',
+			'The comments are in /r/projects/demo/comments.md, written from GitHub a moment ago. Read it first.',
+			"This iteration's branch is fd/demo/i1.",
+		]);
+		expect(task.endsWith('SKILL TEXT')).toBe(true);
 	});
 
-	it('finds the skill in the folder the repository declares for its agent context, not a folder this app assumes', () => {
-		expect(skillFor('.flkd')).toBe('.flkd/skills/address-comments.md');
-		expect(skillFor('.agent')).toBe('.agent/skills/address-comments.md');
+	it('does not depend on any product: the skill is read from the design repository, whatever the product is', () => {
+		const design = mkdtempSync(join(tmpdir(), 'fdw-skill-'));
+		mkdirSync(join(design, 'projects'));
+		mkdirSync(join(design, 'skills'));
+		writeFileSync(join(design, SKILL_FILE), 'shared skill');
+		expect(readSkill(join(design, 'projects'))).toBe('shared skill');
+		expect(readSkill(join(design, 'nowhere', 'projects'))).toBeNull();
+		rmSync(design, { recursive: true, force: true });
 	});
 });
 

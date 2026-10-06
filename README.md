@@ -8,6 +8,10 @@ you are picking this up, start with its "Where we are" block.
 
 **`projects/`** — one folder per project. Drop in whatever context you have.
 
+**`skills/`** — workflows the agent follows that are the same in every product, such as acting on a
+reviewer's comments. The app puts the right one in the agent's task, so nobody has to find or install
+it, and a product repository does not carry a copy.
+
 **`standards/`** — the design standards that are not specific to any one product. The product's own
 patterns and boundaries stay in the product repository; these are the ones that hold anywhere. See
 [`standards/README.md`](standards/README.md) for how a product resolves them and which tier wins.
