@@ -287,11 +287,23 @@ ${HELPERS}
     if (a.state !== undefined && a.state !== pageState()) { results.push({ id: item.id, state: 'otherState' }); return; }
     var el = null, state = 'found';
     try { var hits = doc.querySelectorAll(a.selector); if (hits.length === 1) el = hits[0]; } catch (e) {}
+    // The selector did not match, so follow the text instead. The stored text is a prefix cut at 80
+    // characters, often mid-word, and the page may have changed a little since; so this takes the
+    // smallest element whose text *begins like* the stored text, rather than demanding the whole
+    // prefix still match. A comment that lands roughly in the right place is worth far more than one
+    // that disappears, which is what an exact match gave whenever a single character moved.
     if (!el && a.nearbyText.length >= 3) {
+      var want = a.nearbyText;
+      // Enough to identify the element, short enough to survive an edit further along the line.
+      var head = want.slice(0, Math.max(12, Math.min(40, want.length)));
       var best = null, bestLen = Infinity, all = doc.body ? doc.body.querySelectorAll('*') : [];
       for (var i = 0; i < all.length; i++) {
         var t = collapse(all[i].textContent);
-        if (t.indexOf(a.nearbyText) === 0 && t.length < bestLen) { best = all[i]; bestLen = t.length; }
+        if (t.length === 0) continue;
+        // Either side may be the longer: the stored text is a prefix of the live text, or the element's
+        // text was shortened since. The shortest element that still matches is the innermost one.
+        var hit = t.indexOf(want) === 0 || want.indexOf(t) === 0 || t.indexOf(head) === 0;
+        if (hit && t.length < bestLen) { best = all[i]; bestLen = t.length; }
       }
       if (best) { el = best; state = 'moved'; }
     }

@@ -145,6 +145,24 @@ describe('placing comments on reopening', () => {
 		expect(w.document.querySelector('[data-fd-layer]')).not.toBeNull();
 	});
 
+	it('still follows the text when the page changed a little since the comment', () => {
+		// The real case. The stored text is cut at 80 characters, often mid-word, and the page it was
+		// taken from has since changed slightly. Demanding the whole prefix still match made the pin
+		// disappear over a single character, which is how a comment on text still plainly on the page
+		// came back as "the element is no longer on the page".
+		const stored = '< Roles Compare Roles See what a user gains and loses when they move from one ro';
+		const w = page('<div><a>< Roles</a><h1>Compare Roles</h1><p>See what a user gains and loses when they move from one role to another.</p></div>');
+		const out = w.eval(resolveScript([req(1, { selector: '#root > div:nth-of-type(3)', nearbyText: stored })], 'nonce')) as Array<{ state: string }>;
+		expect(out[0]?.state).toBe('moved');
+		expect(w.document.querySelector('[data-fd-layer]')).not.toBeNull();
+	});
+
+	it('follows the text when the element was shortened, not only lengthened', () => {
+		const w = page('<section><p>Invite</p></section>');
+		const out = w.eval(resolveScript([req(1, { selector: '#gone', nearbyText: 'Invite users to the organisation' })], 'nonce')) as Array<{ state: string }>;
+		expect(out[0]?.state).toBe('moved');
+	});
+
 	it('degrades to a page-level comment when the element is gone', () => {
 		const w = page('<p>Nothing here</p>');
 		const out = w.eval(resolveScript([req(1, { selector: '#gone', nearbyText: 'Invite users' })], 'nonce')) as Array<{ state: string }>;
