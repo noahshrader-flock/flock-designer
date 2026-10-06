@@ -4,7 +4,7 @@ import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Proj
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
 import { latest } from '../shared/latest';
 import { freshIteration, isQuick, quickPagePath } from '../shared/projects';
-import { People } from './People';
+import { PeopleAvatars } from './People';
 import { AgentLog, Loading } from './Loading';
 import { ShareControl } from './ShareControl';
 import { Toolbar } from './Toolbar';
@@ -658,8 +658,8 @@ export const Review = ({
 						{quick ? quickPagePath(project.id, iteration.name) : iteration.branch}
 					</TooltipContent>
 				</Tooltip>
-				<People people={iteration.contributors} />
 				<div className="grow" />
+				<PeopleAvatars people={iteration.contributors} className="-mr-2" />
 
 				<ShareControl
 					checkout={checkout}
