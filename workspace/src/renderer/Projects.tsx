@@ -8,6 +8,7 @@ import { Review } from './Review';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
 /**
  * Reviewer mode: every project in the design repository, read through the API.
@@ -170,30 +171,30 @@ export const Projects = () => {
 			)}
 
 			{projects.map((project) => (
-				<div key={project.id} className="rounded-lg border p-4">
-					<div className="flex flex-col gap-2">
-						<div className="flex flex-row flex-wrap items-center gap-2">
-							<h3 className="text-base font-medium">{project.title}</h3>
-							<span className="text-muted-foreground text-sm">{project.id}</span>
-							{startedAt(project) && (
-								<span className="text-muted-foreground text-sm">
-									· Started{' '}
-									{new Date(startedAt(project) as string).toLocaleDateString(undefined, {
-										month: 'short',
-										day: 'numeric',
-										year: 'numeric',
-									})}
-								</span>
-							)}
-							<div className="grow" />
-							{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}
-							{project.openComments > 0 && (
-								<Badge variant="warning">
-									{project.openComments} comment{project.openComments === 1 ? '' : 's'}
-								</Badge>
-							)}
-						</div>
-
+				<Card key={project.id} className="gap-4 py-5">
+					<CardHeader className="px-5">
+						<CardTitle className="text-base">{project.title}</CardTitle>
+						<CardDescription>
+							{project.id}
+							{startedAt(project) &&
+								` · Started ${new Date(startedAt(project) as string).toLocaleDateString(undefined, {
+									month: 'short',
+									day: 'numeric',
+									year: 'numeric',
+								})}`}
+						</CardDescription>
+						{(project.localOnly || project.openComments > 0) && (
+							<CardAction className="flex flex-row items-center gap-2">
+								{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}
+								{project.openComments > 0 && (
+									<Badge variant="warning">
+										{project.openComments} comment{project.openComments === 1 ? '' : 's'}
+									</Badge>
+								)}
+							</CardAction>
+						)}
+					</CardHeader>
+					<CardContent className="flex flex-col gap-3 px-5">
 						<People people={project.people} empty="No contributors recorded yet" />
 
 						<p className="text-muted-foreground text-sm">{project.records.join(' · ') || 'no records yet'}</p>
@@ -210,8 +211,8 @@ export const Projects = () => {
 								))}
 							</div>
 						)}
-					</div>
-				</div>
+					</CardContent>
+				</Card>
 			))}
 		</div>
 	);
