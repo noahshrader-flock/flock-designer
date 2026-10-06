@@ -121,6 +121,8 @@ export const Review = ({
 	const useHosted = hostedUrl !== null && (checkout === null || local.phase.kind === 'failed');
 	const hosted = useHostedPreview(useHosted ? hostedUrl : null);
 	const [shareOpen, setShareOpen] = useState(false);
+	// The branch tooltip opens over the preview, which is a native layer above everything in this window.
+	const [branchTip, setBranchTip] = useState(false);
 
 	// Asking the agent to act on the open comments. It is one agent: not while it is building this iteration.
 	const [address, setAddress] = useState<AddressPhase>({ kind: 'idle' });
@@ -429,8 +431,9 @@ export const Review = ({
 	 * is on screen before the live view is hidden, so there is no flash of empty window; and
 	 * a run counter drops the result of a freeze that was overtaken by the box closing again.
 	 */
-	// The sharing dialog needs the same thing the comment box does: the space the preview occupies.
-	const frozen = composing || shareOpen;
+	// The sharing dialog, the menu and the branch tooltip need the same thing the comment box does: the space
+	// the preview occupies.
+	const frozen = composing || shareOpen || branchTip;
 	const run = useRef(0);
 	useEffect(() => {
 		const mine = ++run.current;
@@ -616,7 +619,7 @@ export const Review = ({
 				<h2 className="truncate text-sm font-semibold">
 					{project.title} — {iteration.name}
 				</h2>
-				<Tooltip>
+				<Tooltip delayDuration={300} onOpenChange={setBranchTip}>
 					<TooltipTrigger asChild>
 						<GitBranchIcon aria-label={`Branch ${iteration.branch}`} className="text-muted-foreground size-4 shrink-0" />
 					</TooltipTrigger>
