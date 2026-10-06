@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import type { Checkout } from '../../shared/contract';
@@ -112,6 +112,10 @@ export const listBranches = async (root: string, prefix: string): Promise<string
  */
 export const readTreeAt = async (root: string, dir: string, branch: string): Promise<string> => {
 	if (!(await branchExists(root, branch))) throw new GitProblem(`There is no branch called ${branch} in ${basename(root)}.`);
+	if (existsSync(dir) && !existsSync(join(dir, '.git'))) {
+		// Left half-made by an earlier attempt: it is the app's own copy, so it is cleared and made again.
+		rmSync(dir, { recursive: true, force: true });
+	}
 	if (existsSync(join(dir, '.git'))) {
 		// Its own copy, never edited, so anything left in it is discarded.
 		await git(dir, ['checkout', '--detach', '--force', `refs/heads/${branch}`]);

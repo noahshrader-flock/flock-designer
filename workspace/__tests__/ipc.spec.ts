@@ -276,6 +276,27 @@ describe('quick prototypes', () => {
 		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([realpathSync(product)]);
 	});
 
+	it('build once when asked twice at the same moment, as a screen opened twice does', async () => {
+		await call(CHANNELS.useCheckout, product);
+		mkdirSync(join(design, 'skills'), { recursive: true });
+		writeFileSync(join(design, 'skills', 'build-quick-prototype.md'), '# Build');
+		g(product, 'checkout', '-q', '-b', 'noah/baseline');
+		g(product, 'checkout', '-q', 'develop');
+		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'noah/baseline' });
+		const [a, b] = await Promise.all([call(CHANNELS.buildQuick, 'demo', 'q1', 'A list'), call(CHANNELS.buildQuick, 'demo', 'q1', 'A list')]);
+		expect(a.ok).toBe(true);
+		expect(b.ok).toBe(true);
+	});
+
+	it('save a page that was built here but never saved, when it is opened', async () => {
+		await call(CHANNELS.useCheckout, product);
+		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list');
+		mkdirSync(join(home, 'quick', 'demo'), { recursive: true });
+		writeFileSync(join(home, 'quick', 'demo', 'q1.html'), '<h1>Built, left behind</h1>');
+		expect((await call(CHANNELS.openQuick, 'demo', 'q1')).ok).toBe(true);
+		expect(readFileSync(join(design, 'projects', 'demo', 'quick', 'q1.html'), 'utf8')).toBe('<h1>Built, left behind</h1>');
+	});
+
 	it('refuse a base that is not a branch of an accepted repository', async () => {
 		await call(CHANNELS.useCheckout, product);
 		expect((await call(CHANNELS.createQuick, 'demo', 'Demo', 'x', { root: product, branch: 'nope' })).ok).toBe(false);

@@ -5,7 +5,7 @@ import { forgetPosted, markersFor, mergeComments, numberComments, openComments, 
 import { latest } from '../shared/latest';
 import { freshIteration, isQuick } from '../shared/projects';
 import { People } from './People';
-import { Loading } from './Loading';
+import { AgentLog, Loading } from './Loading';
 import { ShareControl } from './ShareControl';
 import { Toolbar } from './Toolbar';
 import { useHostedPreview } from './hostedPreview';
@@ -712,11 +712,7 @@ export const Review = ({
 									<Alert variant="destructive" className="max-w-[560px] text-left">
 										<AlertDescription>{local.phase.message}</AlertDescription>
 									</Alert>
-									{local.log.length > 0 && (
-										<pre className="bg-card m-0 max-h-[180px] w-full max-w-[560px] overflow-auto rounded-md border p-3 text-left text-[11px] wrap-anywhere whitespace-pre-wrap">
-											{local.log.slice(-15).join('\n')}
-										</pre>
-									)}
+									<AgentLog lines={local.log} />
 									<Button onClick={local.retry}>Try again</Button>
 								</>
 							) : error ? (
@@ -751,9 +747,12 @@ export const Review = ({
 												: 'Opening the preview…'}
 									</Loading>
 									{local.phase.kind === 'agent' && (
-										<p className="text-muted-foreground max-w-[480px] text-sm">
-											The agent is writing it from your request. This takes a few minutes.
-										</p>
+										<>
+											<p className="text-muted-foreground max-w-[480px] text-sm">
+												The agent is writing it from your request. This takes a few minutes.
+											</p>
+											<AgentLog lines={local.log} />
+										</>
 									)}
 									{local.phase.kind === 'preview' && !quick && <p className="text-muted-foreground text-sm">The first time can take a minute.</p>}
 								</>

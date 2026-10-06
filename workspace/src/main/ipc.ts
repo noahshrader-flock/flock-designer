@@ -572,6 +572,15 @@ export const registerIpc = ({
 		await readTreeAt(canonical, copy, basedOn.branch);
 		return copy;
 	};
+	/** Runs `work` once at a time per key: a second caller waits for the first and shares its answer. */
+	const inFlight = new Map<string, Promise<unknown>>();
+	const once = <T>(key: string, work: () => Promise<T>): Promise<T> => {
+		const running = inFlight.get(key) as Promise<T> | undefined;
+		if (running) return running;
+		const p = work().finally(() => inFlight.delete(key));
+		inFlight.set(key, p);
+		return p;
+	};
 	const me = (): Person | null => {
 		const s = github.state();
 		return s.state === 'signedIn' ? { name: s.user.name ?? s.user.login, login: s.user.login } : null;
@@ -597,10 +606,13 @@ export const registerIpc = ({
 		CHANNELS.buildQuick,
 		guard(async (projectId: string, name: string, request: string) => {
 			const pageFile = quickFile(projectId, name);
+			// The screen can ask twice (it is opened twice in development, and Try again asks again). One agent is
+			// already building: this request waits on that run rather than starting a second or failing.
+			if (agent.status().state === 'running') return agent.status();
 			const store = recordStore();
 			const skill = (await store.read(BUILD_SKILL)) ?? (await designRepo.readFile(BUILD_SKILL));
 			if (skill === null) throw new Error(`The design repository has no ${BUILD_SKILL}, which tells the agent how to build a quick prototype.`);
-			const product = await quickSource(projectId, name);
+			const product = await once(`source:${projectId}`, () => quickSource(projectId, name));
 			return agent.start(quickDir(projectId), projectId, quickBuildTask({ skill, pageFile, product, request: String(request) }), {
 				bare: true,
 				readOnly: product ? [product] : [],
@@ -625,6 +637,13 @@ export const registerIpc = ({
 		guard(async (projectId: string, name: string): Promise<string> => {
 			const html = await quickPage(projectId, name);
 			if (html === null) throw new Error('This quick prototype has no page yet.');
+			// A page built here but never saved (the screen was left, or gave up, while the agent finished) is saved
+			// now: what this machine shows is what reviewers get, and no finished page is stranded on one machine.
+			const local = quickFile(projectId, name);
+			const path = quickPagePath(projectId, name);
+			if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html) {
+				await recordStore().write(path, html, `${projectId}: quick prototype ${name}`);
+			}
 			return quickServer.serve(`${projectId}/${name}`, html.slice(0, MAX_PAGE));
 		}),
 	);
