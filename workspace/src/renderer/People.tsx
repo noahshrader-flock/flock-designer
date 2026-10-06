@@ -12,7 +12,7 @@ export const People = ({ people, empty }: { people: Person[]; empty?: string }) 
 		<div className="flex flex-row flex-wrap gap-4">
 			{people.map((p) => (
 				<div key={p.login ?? p.name} className="flex flex-row items-center gap-2">
-					<Avatar size="sm">
+					<Avatar size="sm" className="data-[size=sm]:size-5">
 						<AvatarImage src={avatarUrl(p.login) ?? undefined} alt={p.name} />
 						<AvatarFallback>{p.name.charAt(0).toUpperCase()}</AvatarFallback>
 					</Avatar>
