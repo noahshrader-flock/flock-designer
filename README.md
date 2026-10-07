@@ -23,6 +23,9 @@ something should be, and **codebase work**, the real change, built to ship. Each
 **Address** asks the agent to act on one comment; **Hand off** is the full check before an engineer takes the
 work. These and the rest are defined once, in [the plan's vocabulary](PLAN.md#vocabulary).
 
+The app is for **discovery**: a prototype is reviewed in it, by anyone with the app and a GitHub account.
+**Delivery** is engineering's, through their own pull requests and preview links.
+
 ## Starting a project
 
 Make a folder under `projects/`. Put whatever you already have into it — a markdown file, a PRD, a

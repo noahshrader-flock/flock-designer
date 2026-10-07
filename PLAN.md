@@ -34,8 +34,8 @@ the wider product process at readiness to build.
 > by a PM and an engineer, and then the decision to keep it, change it or stop. Phase 4 is rollout —
 > designer access and the design-system package — and it can start any time.
 >
-> **Still owed by Noah:** one real share (3.4), which needs Coke's draft change pushed; the security
-> look at anonymous preview addresses; and merging the Coke baseline commits for engineering.
+> **Still owed by Noah:** one real share (3.4), which needs Coke's draft change pushed (now optional: codebase
+> work is reviewed through engineering's own previews); and merging the Coke baseline commits for engineering.
 >
 > The detail for every finished step is in [Appendix B](#appendix-b--what-was-built-and-why), including
 > [what using 3.5 for real changed](#what-using-35-for-real-changed-2026-10-06) on 2026-10-06.
@@ -299,7 +299,12 @@ FUI's `.flkd/authoring/`, and the snapshot problem the resolution half was fight
 ### 3.6 — Pilot and decision (was C5)
 
 **Human.** Two or three real projects reviewed through the app by people **outside design** — a PM and
-an engineer at minimum.
+an engineer at minimum. **Scope (2026-10-07):** one loop. A designer makes a prototype; a PM opens it in the
+app and comments; Address acts on the comments; the prototype is moved into the code; Hand off gives an engineer
+the branch. A designer comfortable with the setup may also start codebase work directly. **Not in scope:**
+shared previews of codebase work (engineering's own PR previews cover delivery), and codebase iterations beyond
+I1. The check that matters most: a reviewer with a second GitHub account, no checkout and only the app can open a
+prototype and comment.
 
 **Done when:** the team decides to keep it, change it, or stop, on what happened: did they open it,
 did they comment, how long from share to first comment, what did they say about installing it.
@@ -458,7 +463,7 @@ none holds up the work in front of it.
 | Move the design repo from `noahshrader-flock` to the `flocksafety` org | Someone with org permission | Everyone else's access; rollout |
 | Register the GitHub App **for the org** and install it on the design repo | An org owner | Rollout |
 | `build:design` and CI for `fd/*` branches — **drafted**, with the prototype standards: commits `1ca7d523`, `e02c408c`, `ff5e3f71`, `65e9a700`, `c8f0447d` on Coke's `noah/flock-designer`, not pushed | Coke engineering, to merge it | 3.4 for every designer, not just those whose branch carries the change |
-| **Decide who may open a shared preview.** Coke's existing PR previews answer an anonymous request with the page (checked 2026-10-05: HTTP 200 from S3, no login), at an address that is just the pull request number. The plan's rule is no public access by default | Security / platform | 3.4: a design preview is mock data only, but is public to anyone with the link until this is decided |
+| **Decide who may open a shared preview.** *No longer needed for the pilot (2026-10-07): codebase work is reviewed through engineering's own PR previews, and prototypes are not hosted. It still stands if Share for review is kept.* Coke's existing PR previews answer an anonymous request with the page (checked 2026-10-05: HTTP 200 from S3, no login), at an address that is just the pull request number. The plan's rule is no public access by default | Security / platform | 3.4: a design preview is mock data only, but is public to anyone with the link until this is decided |
 | Read and write access to the **design repo** for PMs (not Coke) | GitHub admin, or Noah as owner | 3.4 and 3.6: a PM cannot comment without it |
 | How internal Mac apps are deployed here, what they require (usually signing), and the turnaround | IT | Rollout |
 | A security look at an app that reads SSO-protected pages and holds a token | Security | Closing 3.3 |
@@ -487,6 +492,7 @@ is met and the evidence is cited in the [change log](#change-log).
 | Acting on a comment | One comment at a time, from its own card; the agent marks it addressed with the commit, and **a person resolves it** | Comments are not alike, so a batch makes the clear ones wait on the unclear. The agent knows it changed something; only the person who wrote the comment knows whether that was what they meant — and an unresolved comment that is done costs one click, while a resolved comment that is wrong costs the signal |
 | Prototypes | **React only**, with the product's installed design system, bundled into one page kept in the project's folder (added 2026-10-06) | Hand-drawn HTML imitated the components and got the shell wrong twice; real components make that impossible and give the move into the code real code to start from. Without the packages it says what to install rather than make a lesser page |
 | Gaps in a prototype | Approximated and marked: `@standin`, `@mock`, `@remove` | A missing component or package never blocks an idea, and the move into the code reads each mark as a decision, a data task or a deletion |
+| Where review happens | A prototype is reviewed in the app; codebase work is reviewed by engineering in pull requests and their own preview links (2026-10-07) | The app is for discovery, the design-led conversation with product; delivery is engineering's, and they already have previews. This removes the need for anyone outside the team to open a hosted preview, and the pilot no longer waits on the preview-address security decision |
 | One kind of prototype | A page built from the real components, numbered `iN` on one count, and never a branch (2026-10-07) | Two implementations of one idea — pages and `fd/` branches — confused the people using it and the code alike. The `fd/` prototypes that exist still open, as older work |
 | Acting on a comment on a prototype | **Address**, as on codebase work: the agent changes the source and the page is saved; nothing is committed (2026-10-07) | The comment loop is what the pilot tests, and prototypes are its fast path; without it a reviewer's comment on one could only be acted on by hand |
 | Where an iteration opens | The route its record names, checked when recorded and again when it loads | A codebase branch runs the whole product, so without it the preview opens at the product's front door and a comment lands on work the iteration never touched |
@@ -722,6 +728,11 @@ These terms are easy to confuse and are used strictly throughout the set, in the
 | **Hand off** | The full check, once, before an engineer takes codebase work | `HANDOFF.md` on the branch |
 
 **Not used any more:** *quick prototype*, the earlier name for a prototype, and `qN`, its earlier numbering.
+
+**Where review happens (2026-10-07).** Flock Designer is for **discovery**, the design-led conversation with product about what something should be; engineering owns **delivery**.
+- **A prototype is reviewed in the app.** It is a saved page, so a reviewer needs only the app and a GitHub account: no link, no hosted preview, no checkout. Comments are pinned to it, and **Address** acts on them.
+- **Codebase work is reviewed in engineering's own way**, by pull request and the preview links engineering already sends. The app shows a designer their own codebase work running locally, and hands it off; it does not host it for others.
+- **What carries across** when a prototype is moved into the code: its marked gaps (`@standin`, `@mock`, `@remove`), which become the audit, and the brief. Whether the prototype's comments reach the engineer is something the pilot checks.
 
 **One identifier throughout.** A project gets one slug, `<project-id>`, at creation — for example `alerts-triage`. That same slug keys the branch (`fd/alerts-triage/i1`), the prototype directory (`src/prototypes/alerts-triage/`), the project folder (`flock-designer/projects/alerts-triage/`), and, from step 14, the project record (`project-knowledge/alerts-triage/`). The earlier `proto/<name>` branch convention observed on the Designer branch is superseded by `fd/<project-id>/iN`. *Since 2026-10-07 a prototype is not a branch at all; the slug keys its folder, `projects/<project-id>/prototypes/`, and the codebase branch, `feature/<project-id>`.*
 
@@ -3542,6 +3553,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-07 | **Where review happens is decided: discovery in the app, delivery in engineering's own tools.** Noah's framing: the app is for the design-led conversation with product, from early discovery into delivery, and once it is delivery engineers use the preview links they already send. So a prototype (a saved page, no link needed) is reviewed in the app, and codebase work is reviewed by pull request and engineering's previews; the app shows a designer their own codebase work and hands it off. The pilot is scoped to one loop on that basis, and the anonymous-preview security decision no longer blocks it. Share for review is built and left as is | Vocabulary, 3.6, Decisions, Waiting on other people, status block |
 | 2026-10-07 | **A cleanup pass over the day's changes.** What still described a prototype as a branch now says it is a page, with the branch read as older work: the project folder's tree and rules, the review row in The direction, the runtime modes, project memory and the iteration model. The app's labels match the vocabulary (Codebase work, Hand off), and the skills say where Address on a prototype differs | The direction, 3.7, 3.8, Open questions, Vocabulary, The project folder, The two runtime modes, Project memory, Iterations, preview, and review |
 | 2026-10-07 | **Prototypes are one idea, with one vocabulary, and Address works on them.** Ahead of the pilot, Noah wanted the complexity that is not needed gone. A *quick prototype* was a second implementation of a prototype beside the `fd/<id>/iN` branches; it is now simply a **prototype**, numbered `i1`, `i2` on one count, and none is made on a branch (the existing `fd/` ones still open). "Quick" is gone from the app, its storage (`projects/<id>/prototypes/`) and the agent files (`skills/build-prototype.md`); admin-usage's `q1` became `i1`. **Address** now works on a prototype's comments: the agent changes the source, the page is saved, nothing is committed. The terms are defined once, in Vocabulary, and the README points there. Older change-log rows keep the names they used | Status, Phase 3, 3.7, 3.8, Decisions, Not being built, Open questions, Vocabulary, The prototype directory, Git and iteration model, The two build paths |
 | 2026-10-06 | **Build in the codebase asks first.** Noah asked whether moving a quick prototype into the code was worth having, or duplicated a codebase feature. Worth it, and not a duplicate: quick prototype (cheap, for conversation), codebase feature (real from the start) and this (the bridge) are three jobs on one project, and the bridge reuses the codebase feature's branch and agent. It started at once, from whichever branch the checkout was on; it now confirms in a dialog that starts from the branch the prototype was modelled on and shows what would stop it. Set up so the auditor can be tested and refined next. | Phase 3 table (3.8); 3.8 |
