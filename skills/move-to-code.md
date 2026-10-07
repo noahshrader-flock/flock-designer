@@ -9,18 +9,12 @@ running the product. Most of it is the real thing; what is not is marked. It sho
 in real components. Your job is to put it where it really belongs in this product, write down what that
 takes for a person to check, and then build it properly.
 
-## Nobody is there to answer
+**This is codebase work, unattended:** `codebase-work.md` (in your task too) says how it runs and
+finishes: nobody to answer, the light check, commit as you go, reviews at Handoff. What follows is only
+what moving a prototype adds.
 
-This runs unattended, and it ends when you stop. Nobody can answer a question, confirm a plan or look
-at it later.
-
-- **Where this repository's own guidance says stop, ask or confirm, do not.** Put the question under
-  **Needs a decision**, build the nearest thing the product already has, and carry on.
 - **The agent that builds writes the audit.** If this repository hands the work to another agent, give it
   this file unchanged, with the paths the task names; do not paraphrase it.
-- **Finish before you stop.** Never end while anything you started is still going: another agent, a
-  background command, a server. Wait for each, in the foreground, or stop it. Work in progress when you
-  stop is lost.
 
 ## What you are given
 
@@ -84,18 +78,9 @@ and standards.
   not mix unrelated rows into a view people will review without saying so.
 - **Changing something other screens use** (a mock handler, a fixture, a shared component): show that
   each existing caller still gets what it got, with the request that caller really sends, and test it.
-- Record where the work is, as `skills/record-the-route.md` says, so it opens on the right page. The
-  task says where the shared skills are.
-- **When the work changes after the audit** (review findings, something found while building), update
-  the audit to match in the same commit. It is what people check the work against.
-- **Check it with the light check this repository names**, after each step, and fix what it finds. While
-  you work, run only the tests that cover what you changed, never the whole suite.
-- **Commit as you go,** not only at the end: work left uncommitted when the run stops is lost. Commit on
-  this branch, with **no `Co-Authored-By` or other attribution line.** Never push, never switch branches.
-- **The reviews and the full checks are not part of this run.** They happen once, at Handoff, when the
-  work is where it belongs. This run's job is to get it there, on the standards, and say what is left.
+- **When the work changes after the audit** (something found while building, later a review finding),
+  update the audit to match in the same commit. It is what people check the work against.
 
 ## When you have finished
 
-Say what you built, where, what is waiting in **Needs a decision**, and the light check's result. Point to
-the audit file, and say the reviews run at Handoff.
+As `codebase-work.md` says, and also: what is waiting in **Needs a decision**, and where the audit is.

@@ -13,8 +13,9 @@ blocks it, and tell the engineer what they are picking up.
 
 ## 1. Run the product's gate first
 
-The product's guidance names its handoff gate. Run it, and **fix what it names** until it passes. The
-gate reports; it does not decide. Most of what it finds needs judgement (a colour that is a deliberate
+The product's guidance names its handoff gate (the task gives the command). Run it, and **fix what it
+names**. A gate may also check for what the steps below write (the review record, the handoff note):
+those fail now and must pass at the last run. The gate reports; it does not decide. Most of what it finds needs judgement (a colour that is a deliberate
 exception, a check that legitimately cannot run here), so say which it is, and never edit a check to make
 it pass.
 
@@ -39,7 +40,6 @@ right. Say in the record which you did not fix, and why.
 
 - **Commit after each fix,** with the product's light check passing, not once at the end. A run that stops
   part way then loses one fix, not the whole pass.
-- When they are all in, run the gate again.
 - If the work changed in ways the audit does not say, **update the audit in the same commit.**
 
 **Changing a mock, fixture or component other screens use** needs one more check: each existing caller
@@ -52,19 +52,27 @@ Say in it that it is to be deleted when the work merges.
 
 **It tells them what the diff does not say. Not a summary of the diff, not a case for the work.**
 
+- **The job,** in a line: what decision or task this supports, and for whom.
 - **What they pick up.** Lead with the list of stand-ins that engineering swaps for the real thing
   (the product's guidance says what these are: for a product with a mock network layer, the stubbed
   endpoints). If nothing was stubbed, say so plainly.
 - **What is not real.** Which data is mocked, which behaviour is simulated, which states were never built.
+- **What the real data has to be:** what each stand-in would have to return, in the shape the view uses.
+  Usually the most valuable part: work built on realistic mock data has already specified that contract.
+- **Who sees what:** the permissions and roles the states depend on.
 - **Decisions you made that were not yours.** Every invented number, every convention chosen without a
   source, every question left open that you answered to keep moving. Lead with the one most likely to be
   wrong. Carry the audit's "Needs a decision" items across: each is still open.
+- **Where it departs from the product's own patterns,** and why.
 - **Anything a flag, permission or setup needs** before the work can be seen outside design mode.
 - **Which files are the feature,** with the exact `git diff` command that shows only those: a branch may
   carry unrelated work that has not merged.
 - **Accessibility as run or not run,** each with the reason. An unstated check reads as a passing one.
 
 If something is unfinished, say it is unfinished. Do not hedge.
+
+**Commit it, then run the gate a last time: it must pass.** If it cannot, say why, and that the work is
+not ready.
 
 ## When you have finished
 

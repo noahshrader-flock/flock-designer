@@ -33,6 +33,28 @@ A **quick prototype** is kept in its project's folder too, under `quick/`: one R
 built from it, so anyone can open it without the product. Large files those pages share are kept once in
 `projects/_shared/`, which is not a project.
 
+## What a product repository provides
+
+Everything here is shared; a product brings only what is true of it. To adopt Flock Designer, a repository
+provides, beside a checkout of this one and of its design system (the folder named as the package is):
+
+- **`.flkd/workspace.json`**, the app's contract with the product (`workspace/src/shared/contract.ts`,
+  `WorkspaceDescriptor`): its name, its context folder, where prototypes go, its branch names, its design
+  system package, and its commands. The app looks for these command ids:
+  - `preview` serves a prototype branch, `design-mode` serves the real product on mock data (each with
+    `servesPreviewOn`);
+  - `check-iteration`, the **light check**: fast, on what the branch changed, run after every step;
+  - `handoff`, the **gate**: takes `<project-id>`, and refuses until the work is fit for engineering.
+  Commands run through `npm`, `npx` or `node`.
+- **`.flkd/`**: a manifest (its conventions, accessibility target and who signs off), its builder agent and
+  two read-only reviewers (parity, and implementation), its own patterns and boundaries, and the product's
+  part of each shared skill, such as what its gate checks and what its engineers pick up.
+- **Its agent instructions** (`CLAUDE.md` or `AGENTS.md`) sending product work to that builder.
+
+**Coke's (`flock-coke`, branch `noah/flock-designer`) is the worked example:** copy its `.flkd/`, its
+`workspace.json` and its check scripts, and replace what is Coke's. Nothing here, or in the design system,
+changes for a new product.
+
 ## What is not here
 
 Code that runs inside the product. A codebase feature lives in the product repository it was built

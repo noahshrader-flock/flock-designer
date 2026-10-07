@@ -71,9 +71,9 @@ for the one you were given, and nothing about the rest beyond having left them.
 
 ## When you have finished with it
 
-1. **Check the work with the repository's own checks.** They are listed in `.flkd/workspace.json`
-   under `commands`: run the ones that check work (type checking, lint, tests, and any boundary
-   check), exactly as declared. Fix what is yours. Do not hand back work that does not pass; if a
+1. **Check the work with the repository's light check**, the `check-iteration` command in its
+   `.flkd/workspace.json`, exactly as declared. If it declares none, run its type check, lint and the
+   tests for what you changed, never the whole suite: the full checks are for Handoff. Fix what is yours. Do not hand back work that does not pass; if a
    check fails for a reason that was there before you started, say so rather than fixing it.
 2. **Commit**, on this branch, with a message that names the comment it addresses
    ("Address comment 2: ..."). **No `Co-Authored-By` or other attribution line:** the commit is the
