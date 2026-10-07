@@ -40,6 +40,7 @@ ended.
 |---|---|
 | flock-designer `ccbf80d` | Hand codebase work to VS Code: open the checkout, take a run over, continue its conversation |
 | flock-designer `1a2b00d` | No scheduling tools in headless runs; uncommitted changes mean unfinished; no branch switch under a running agent; shared skills and standards readable; read-only git allowed |
+| flock-designer `ab4eac7`, `33f7d2c`; Coke `7c4a6378` | **Review pass:** shared `skills/codebase-work.md` in every codebase task (Coke points at it, no copies); the README says what a product repository provides; Handoff tagged in the agent's status (survives a reopen), its verdict decided in main (last verdict line, HANDOFF.md written since the start); take over stops the run only once VS Code opened; read-only git narrowed; one definition of the work for both Coke checks; Coke validator 0 failures |
 | flock-designer `ed79bcb`, merged | **Phase 3:** Hand off to engineering in the app, its report, the uncommitted-changes warning; VS Code pieces renamed to editor |
 | flock-designer `1520ac1`, Coke `99ebaf62` | **Phase 2:** the shared handoff skill, Coke's handoff slimmed to its own gate, specs type-checked |
 | flock-designer `50751e9`, Coke `6b1ab916` | **Phase 1:** the light check, related tests only, reviews moved to Handoff, commit as you go |
