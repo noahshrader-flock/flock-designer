@@ -3,13 +3,20 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 
+export type Section = 'projects' | 'design-system';
+
+const SECTIONS: { id: Section; label: string }[] = [
+	{ id: 'projects', label: 'Projects' },
+	{ id: 'design-system', label: 'Design System' },
+];
+
 const onMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgent);
 
 /**
  * The top bar: fixed to the top of the window, always.
  *
  * Left to right: room for the macOS window buttons, the product name, the
- * sections, and the account. There is one section today, Projects. The window
+ * sections (Projects, Design System), and the account. The window
  * has no separate toolbar above this -- the bar is the toolbar.
  *
  * The preview is a native view that sits above all page content, so an open
@@ -18,10 +25,14 @@ const onMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgen
  */
 export const TopNav = ({
 	user,
+	section,
+	onSectionChange,
 	onSignOut,
 	onMenuOpenChange,
 }: {
 	user: GitHubUser | null;
+	section: Section;
+	onSectionChange: (section: Section) => void;
 	onSignOut: () => void;
 	/** The screen under the bar needs to know, so a preview does not cover the menu. */
 	onMenuOpenChange: (open: boolean) => void;
@@ -34,11 +45,27 @@ export const TopNav = ({
 				onMac ? 'pr-6 pl-[108px]' : 'pr-[150px] pl-6'
 			}`}
 		>
-			<span className="mr-6 text-base font-bold whitespace-nowrap">Flock Designer</span>
+			<span className="mr-10 text-base font-bold whitespace-nowrap">Flock Designer</span>
 
 			{user && (
-				<nav className="app-no-drag self-stretch">
-					<span className="border-foreground flex h-full items-center border-b-2 px-1 text-sm font-medium">Projects</span>
+				<nav className="app-no-drag flex gap-6 self-stretch">
+					{SECTIONS.map(({ id, label }) => (
+						<button
+							key={id}
+							type="button"
+							aria-current={section === id ? 'page' : undefined}
+							onClick={() => onSectionChange(id)}
+							// The underline is drawn over the bottom edge rather than as a border, so it takes no
+							// height and the label stays centered with the rest of the bar.
+							className={`relative flex h-full cursor-pointer items-center px-1 text-sm font-medium ${
+								section === id
+									? 'after:bg-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-0.5'
+									: 'text-muted-foreground hover:text-foreground'
+							}`}
+						>
+							{label}
+						</button>
+					))}
 				</nav>
 			)}
 

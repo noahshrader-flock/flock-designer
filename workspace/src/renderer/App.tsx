@@ -3,13 +3,14 @@ import type { SignInState } from '../shared/contract';
 import { Projects } from './Projects';
 import { SignIn } from './SignIn';
 import { ErrorBoundary } from './ErrorBoundary';
-import { TopNav } from './TopNav';
+import { TopNav, type Section } from './TopNav';
 
 /**
  * The window: a fixed top bar, and under it whatever the current section is.
  *
- * There is one section, Projects: every project in the design repository, with
- * its iterations and comments, read through the API with only a GitHub account.
+ * Projects: every project in the design repository, with its iterations and
+ * comments, read through the API with only a GitHub account. Design System is
+ * an empty view for now.
  * The earlier Author view (open a checkout, start the agent, run a preview) is
  * not shown; the services behind it are still in the main process, and it comes
  * back as a GitHub-backed list of repositories rather than a folder picker.
@@ -17,6 +18,7 @@ import { TopNav } from './TopNav';
 export const App = () => {
 	// Open over the preview, which is a native layer: the screen under the bar has to make room for it.
 	const [menuOpen, setMenuOpen] = useState(false);
+	const [section, setSection] = useState<Section>('projects');
 	const [signIn, setSignIn] = useState<SignInState>({ state: 'signedOut' });
 
 	const refreshSignIn = useCallback(async () => {
@@ -36,12 +38,19 @@ export const App = () => {
 
 	return (
 		<div className="bg-background h-screen overflow-hidden">
-			<TopNav user={signIn.state === 'signedIn' ? signIn.user : null} onSignOut={signOut} onMenuOpenChange={setMenuOpen} />
+			<TopNav user={signIn.state === 'signedIn' ? signIn.user : null} section={section} onSectionChange={setSection} onSignOut={signOut} onMenuOpenChange={setMenuOpen} />
 			{/* The bar is fixed, so the rest starts below it and scrolls on its own. */}
 			<div className="h-full overflow-y-auto pt-(--nav-height)">
 				<ErrorBoundary>
 					{signIn.state === 'signedIn' ? (
-						<Projects menuOpen={menuOpen} />
+						<>
+							{/* Stays mounted so an open review and the list's state survive a visit to the other tab.
+							    Hidden, its preview is a native layer that would still show, so it steps aside as for the menu. */}
+							<div hidden={section !== 'projects'}>
+								<Projects menuOpen={menuOpen || section !== 'projects'} />
+							</div>
+							{section === 'design-system' && <div className="h-full" />}
+						</>
 					) : (
 						<div className="mx-auto max-w-[1400px] p-6">
 							<SignIn state={signIn} onChanged={refreshSignIn} />
