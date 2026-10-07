@@ -19,11 +19,15 @@ export const useHandoff = (checkout: Checkout | null, iteration: ProjectIteratio
 		};
 	}, [root, iteration.branch, when]);
 
-	const report = (r: { ok: boolean; error?: string }) => !r.ok && onError(r.error ?? 'That did not open.');
+	/** Says whether it worked, so a screen that changes on success changes only then. */
+	const report = (r: { ok: boolean; error?: string }): boolean => {
+		if (!r.ok) onError(r.error ?? 'That did not open.');
+		return r.ok;
+	};
 	return {
 		available: root !== null,
 		...state,
-		openInEditor: () => root !== null && void window.workspace.openInEditor(root).then(report),
-		continueInClaude: () => root !== null && void window.workspace.continueInClaude(root, iteration.branch).then(report),
+		openInEditor: () => (root === null ? Promise.resolve(false) : window.workspace.openInEditor(root).then(report)),
+		continueInClaude: () => (root === null ? Promise.resolve(false) : window.workspace.continueInClaude(root, iteration.branch).then(report)),
 	};
 };

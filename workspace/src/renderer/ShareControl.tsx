@@ -43,7 +43,7 @@ export const ShareControl = ({
 	/** Offered when there is a product repository here to build it in. */
 	onMoveToCode?: () => void;
 	/** Codebase work, handed to the person's editor: the checkout, and the agent's conversation when there is one. */
-	handoff?: { editor: boolean; session: boolean; openInEditor: () => void; continueInClaude: () => void };
+	handoff?: { editor: boolean; session: boolean; openInEditor: () => unknown; continueInClaude: () => unknown };
 }) => {
 	const [status, setStatus] = useState<ShareStatus>({ state: 'idle' });
 	const [open, setOpen] = useState(false);

@@ -284,12 +284,20 @@ export const registerIpc = ({
 		),
 	);
 
+	/** Switching branches under a running agent changes the files it is working on mid-run. */
+	const assertAgentNotHere = (canonical: string): void => {
+		if (agent.runningIn(canonical)) {
+			throw new Error(`The agent is working in ${basename(canonical)} on another branch. Wait for it to finish, or take it over, then open this again.`);
+		}
+	};
+
 	ipcMain.handle(
 		CHANNELS.createIteration,
 		guard(async (root: string, projectId: string, note: string, kind: IterationKind, from?: string) => {
 			// A quick prototype has no branch; it is made by createQuick, never here.
 			if (kind !== 'prototype' && kind !== 'codebase') throw new Error('That kind of work is not made on a branch.');
 			const canonical = opened.require(root);
+			assertAgentNotHere(canonical);
 			const descriptor = descriptorFor(root);
 			// Only ever a branch that exists here, so the window cannot pass git an option or a revision expression.
 			if (from !== undefined && !(await branchExists(canonical, from))) {
@@ -314,6 +322,11 @@ export const registerIpc = ({
 		CHANNELS.continueIteration,
 		guard(async (root: string, projectId: string, name: string) => {
 			const canonical = opened.require(root);
+			// Opening the run's own work is fine: the checkout is already on its branch, so nothing moves.
+			if (agent.runningIn(canonical)) {
+				const wanted = await recordedIteration(canonical, recordsFor(canonical), descriptorFor(root), projectId, name);
+				if ((await readCheckout(canonical)).branch !== wanted.branch) assertAgentNotHere(canonical);
+			}
 			const recordsRoot = recordsFor(canonical);
 			const me = github.state();
 			const login = me.state === 'signedIn' ? me.user.login : null;
@@ -344,6 +357,27 @@ export const registerIpc = ({
 		}),
 	);
 
+	/**
+	 * What a codebase run may read besides the checkout: the shared skills and standards the product's guidance
+	 * points at, and the design system's own guidance beside it. Read only, and named in the task, since a folder
+	 * the agent has not been told about is one it never opens.
+	 */
+	const sharedGuidance = (canonical: string): { dirs: string[]; note: string } => {
+		const designRoot = recordsRootFor(canonical);
+		const pkg = readDescriptor(canonical).designSystem.package;
+		const named: Array<[string, string | null]> = [
+			['Shared skills (a `skills/…` path in any guidance is here)', designRoot === null ? null : join(dirname(designRoot), 'skills')],
+			['Shared standards', designRoot === null ? null : join(dirname(designRoot), 'standards')],
+			["The design system's checkout (its guidance and source)", join(dirname(canonical), basename(pkg))],
+		];
+		const found = named.filter((n): n is [string, string] => n[1] !== null && existsSync(n[1]));
+		if (!found.length) return { dirs: [], note: '' };
+		return {
+			dirs: found.map(([, d]) => d),
+			note: ['', '', '## Also yours to read (never change)', '', ...found.map(([what, d]) => `- ${what}: \`${d}\``)].join('\n'),
+		};
+	};
+
 	ipcMain.handle(
 		CHANNELS.startAgent,
 		guard(async (root: string, projectId: string, task: string) => {
@@ -364,9 +398,11 @@ export const registerIpc = ({
 			// A quick prototype being moved into the code is read from the app's own copy of it.
 			const quick = join(quickRoot, projectId);
 			const session = randomUUID();
-			const started = agent.start(canonical, projectId, task, {
+			const shared = sharedGuidance(canonical);
+			const started = agent.start(canonical, projectId, `${task}${shared.note}`, {
 				// The project's records live in the design repository, beside the product checkout.
 				addDirs: [recordsFor(canonical), ...(existsSync(quick) ? [quick] : [])],
+				readOnly: shared.dirs,
 				...(branch !== null ? { work: branch } : {}),
 				session,
 				name: `Flock Designer: ${projectId}`,
@@ -401,8 +437,7 @@ export const registerIpc = ({
 			const found = sessions.read(canonical, String(branch));
 			if (!found) throw new Error('There is no agent conversation for this work on this machine.');
 			// Taking over a run still going: one conversation has one writer, so the app's run stops first.
-			const now = agent.status();
-			if (now.state === 'running' && now.work === branch) agent.stop();
+			if (agent.runningSession() === found.session) agent.stop();
 			const editor = findEditor();
 			if (editor) {
 				await openSession(editor, found);
@@ -445,7 +480,13 @@ export const registerIpc = ({
 				{ recordsRoot, projectId, iteration, commentId },
 			);
 			const session = randomUUID();
-			const started = agent.start(canonical, projectId, prepared.task, { addDirs: [recordsRoot], session, name: `Flock Designer: ${projectId}` });
+			const shared = sharedGuidance(canonical);
+			const started = agent.start(canonical, projectId, `${prepared.task}${shared.note}`, {
+				addDirs: [recordsRoot],
+				readOnly: shared.dirs,
+				session,
+				name: `Flock Designer: ${projectId}`,
+			});
 			if (started.state === 'running') sessions.write(canonical, iteration.branch, session);
 			return started;
 		}),

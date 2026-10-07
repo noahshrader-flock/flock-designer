@@ -183,6 +183,16 @@ describe('when nobody is looking any more', () => {
 		expect(phases.map((p) => p.kind)).toEqual(['preview', 'running']);
 	});
 
+	it('does not call a run finished that left changes it never committed', async () => {
+		let opens = 0;
+		const { a, calls } = api({
+			openCheckout: vi.fn(async () => ({ ok: true, value: { root: '/r', name: 'coke', branch: 'fd/users/i1', clean: opens++ === 0 } })),
+		});
+		const { phases } = await run(a, { task: 'build it' });
+		expect(phases.at(-1)).toMatchObject({ kind: 'failed', message: expect.stringMatching(/did not commit/) });
+		expect(calls).not.toContain('startCommand');
+	});
+
 	it('stops polling an agent whose screen has gone', async () => {
 		let live = true;
 		let polls = 0;

@@ -70,6 +70,8 @@ let opened: InstanceType<typeof OpenedCheckouts>;
 let agentStart: ReturnType<typeof vi.fn>;
 let agentStatus: ReturnType<typeof vi.fn>;
 let agentStop: ReturnType<typeof vi.fn>;
+let agentRunningIn: ReturnType<typeof vi.fn>;
+let runningSession: string | null;
 let runtimeStart: ReturnType<typeof vi.fn>;
 let memoryValue: string | null;
 let previewUrl: string | null;
@@ -100,6 +102,8 @@ beforeEach(async () => {
 	agentStart = vi.fn(() => ({ state: 'idle' }));
 	agentStatus = vi.fn(() => ({ state: 'idle' }));
 	agentStop = vi.fn();
+	agentRunningIn = vi.fn(() => false);
+	runningSession = null;
 	runtimeStart = vi.fn(async () => ({ state: 'stopped' }));
 	memoryValue = null;
 	previewUrl = null;
@@ -110,7 +114,7 @@ beforeEach(async () => {
 		window: { webContents: { send: vi.fn() } } as never,
 		opened,
 		runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
-		agent: { start: agentStart, status: agentStatus, stop: agentStop } as never,
+		agent: { start: agentStart, status: agentStatus, stop: agentStop, runningIn: agentRunningIn, runningSession: () => runningSession } as never,
 		github: { state: () => ({ state: 'signedOut' }) } as never,
 		designRepo: { listProjects: vi.fn(async () => []), deleteComment } as never,
 		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
@@ -595,7 +599,7 @@ describe('one agent, one piece of work', () => {
 		expect(session).toMatch(/^[0-9a-f-]{36}$/);
 		expect((await call(CHANNELS.handoffState, product, branchHere())).value).toEqual({ editor: false, session: true });
 
-		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now', work: branchHere() });
+		runningSession = session;
 		const r = await call(CHANNELS.continueInClaude, product, branchHere());
 		expect(r.ok).toBe(true);
 		expect(agentStop).toHaveBeenCalled();
@@ -605,11 +609,30 @@ describe('one agent, one piece of work', () => {
 
 	it('leaves another work\'s run alone, and says when there is nothing to continue', async () => {
 		await call(CHANNELS.useCheckout, product);
-		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now', work: 'quick/other/q1' });
+		runningSession = 'aaaaaaaa-46ac-4823-9acb-716bcb37aa64';
 		const r = await call(CHANNELS.continueInClaude, product, 'feature/nothing-here');
 		expect(r.ok).toBe(false);
 		expect(r.error).toMatch(/no agent conversation/);
 		expect(agentStop).not.toHaveBeenCalled();
+	});
+
+	it('gives a codebase run the shared skills and standards to read, and says where they are', async () => {
+		mkdirSync(join(design, 'skills'), { recursive: true });
+		mkdirSync(join(design, 'standards'), { recursive: true });
+		await call(CHANNELS.useCheckout, product);
+		await call(CHANNELS.startAgent, product, 'demo', 'do it');
+		const [, , task, extras] = agentStart.mock.calls.at(-1) as [string, string, string, { readOnly: string[] }];
+		const real = realpathSync(design);
+		expect(extras.readOnly).toEqual(expect.arrayContaining([join(real, 'skills'), join(real, 'standards')]));
+		expect(task).toContain(join(real, 'skills'));
+	});
+
+	it('does not switch the checkout\'s branch under a running agent', async () => {
+		await call(CHANNELS.useCheckout, product);
+		agentRunningIn.mockReturnValue(true);
+		const r = await call(CHANNELS.createIteration, product, 'demo', 'note', 'prototype');
+		expect(r.ok).toBe(false);
+		expect(r.error).toMatch(/agent is working in flock-coke/);
 	});
 
 	it('joins its own run when asked twice, rather than starting a second', async () => {

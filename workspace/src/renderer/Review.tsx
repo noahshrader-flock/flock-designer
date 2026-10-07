@@ -730,7 +730,7 @@ export const Review = ({
 									<AgentLog lines={local.log} />
 									<div className="flex gap-2">
 										{handoff.session && (
-											<Button variant="secondary" onClick={handoff.continueInClaude}>
+											<Button variant="secondary" onClick={() => void handoff.continueInClaude()}>
 												Continue in Claude Code
 											</Button>
 										)}
@@ -776,17 +776,14 @@ export const Review = ({
 											<AgentLog lines={local.log} />
 											{handoff.available && (
 												<div className="flex gap-2">
-													<Button variant="secondary" onClick={handoff.openInEditor}>
+													<Button variant="secondary" onClick={() => void handoff.openInEditor()}>
 														{handoff.editor ? 'Open in VS Code' : 'Show in Finder'}
 													</Button>
 													{handoff.session && (
 														<Button
 															variant="secondary"
 															title="Stops the agent here and continues the same conversation in VS Code"
-															onClick={() => {
-																setHandedOff(true);
-																handoff.continueInClaude();
-															}}
+															onClick={() => void handoff.continueInClaude().then((ok) => ok && setHandedOff(true))}
 														>
 															Take over in Claude Code
 														</Button>

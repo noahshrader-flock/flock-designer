@@ -98,11 +98,24 @@ const ALLOWED_TOOLS = [
 	'Bash(git status:*)',
 	'Bash(git diff:*)',
 	'Bash(git log:*)',
+	// Reading other branches and the tree, which the guidance asks for and which change nothing.
+	'Bash(git show:*)',
+	'Bash(git rev-parse:*)',
+	'Bash(git branch:*)',
+	'Bash(git ls-files:*)',
+	'Bash(git ls-tree:*)',
+	'Bash(git grep:*)',
 	'Bash(git add:*)',
 	'Bash(git commit:*)',
 	'Bash(ls:*)',
 	'Bash(mkdir:*)',
 ].join(',');
+
+/**
+ * Nobody is there to answer a run started from here, and the run ends when the agent's turn does. These
+ * tools only make sense with someone around later: a reminder to come back would be work left half done.
+ */
+const DISALLOWED_TOOLS = ['ScheduleWakeup', 'CronCreate', 'CronDelete', 'RemoteTrigger', 'PushNotification', 'AskUserQuestion'].join(',');
 
 /**
  * Work the agent commits is the designer's own work, committed under their name, and carries no
@@ -225,6 +238,8 @@ export const claudeCodeAdapter: AgentAdapter = {
 		settingsFor(extras?.readOnly ?? []),
 		'--allowedTools',
 		ALLOWED_TOOLS,
+		'--disallowedTools',
+		DISALLOWED_TOOLS,
 		...(extras?.session ? ['--session-id', extras.session] : []),
 		...(extras?.name ? ['--name', extras.name] : []),
 		// Last: it takes a list, and would swallow anything after it.
@@ -247,6 +262,9 @@ export class AgentRunner {
 	private child: ChildProcess | null = null;
 	private current: AgentStatus = { state: 'idle' };
 	private work: string | null = null;
+	/** Where the run is, and its conversation: a checkout must not change branch under it, and only its own conversation is taken over. */
+	private root: string | null = null;
+	private session: string | null = null;
 	/** The run's recent lines, kept here so a screen that was left and opened again can pick up where it was. */
 	private recent: string[] = [];
 
@@ -310,6 +328,8 @@ export class AgentRunner {
 
 		this.child = child;
 		this.work = extras?.work ?? null;
+		this.root = root;
+		this.session = extras?.session ?? null;
 		this.recent = [];
 		this.current = { state: 'running', startedAt: new Date().toISOString(), ...(this.work ? { work: this.work } : {}) };
 
@@ -342,6 +362,16 @@ export class AgentRunner {
 		});
 
 		return this.current;
+	}
+
+	/** Whether a run is going on in this folder. */
+	runningIn(root: string): boolean {
+		return this.current.state === 'running' && this.root === root;
+	}
+
+	/** The conversation of the run that is going, if the app named it. */
+	runningSession(): string | null {
+		return this.current.state === 'running' ? this.session : null;
 	}
 
 	stop(): void {

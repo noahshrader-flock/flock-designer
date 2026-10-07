@@ -161,6 +161,12 @@ export const runLocalBuild = async ({
 		if (outcome.kind === 'stopped') return null;
 		if (outcome.kind === 'failed') return fail(outcome.message);
 		if (!isLive()) return null;
+		// A run that says it finished but left changes it never committed did not finish: what it was doing is
+		// not on the branch, and the preview would show half of it as if it were the work.
+		const after = await api.openCheckout(root);
+		if (after.ok && !after.value.clean) {
+			return fail('The agent stopped before it committed all of its work: there are changes in the checkout it did not commit. Continue in Claude Code to finish them.');
+		}
 	}
 
 	onPhase({ kind: 'preview' });
