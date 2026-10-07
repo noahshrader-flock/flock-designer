@@ -4,7 +4,7 @@
  * WHAT IT SHOWS
  *   Role Usage: how each role has actually been used over the last 90 days, so an org admin can decide which
  *   roles to clean up. Three parts, in order:
- *     1. Unused Roles: roles nobody has used in 90 days, with row-level and bulk Archive.
+ *     1. Unused Roles: roles nobody has used in 90 days, with Archive on each row.
  *     2. Usage by Role: one small chart per role (share of the role's users active each day, same 0-100% scale
  *        on every chart so roles compare honestly). Picking a card opens the side panel.
  *     3. Side panel: who holds the selected role and when each person was last active, with Archive Role.
@@ -91,7 +91,7 @@ import {
     useFSTheme,
     useSnackbar,
 } from '@flocksafety/flock-react-component-lib';
-import type { GridColDef, GridRowSelectionModel } from '@mui/x-data-grid-pro';
+import type { GridColDef } from '@mui/x-data-grid-pro';
 import { alpha } from '@mui/material/styles';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -739,7 +739,6 @@ const UsageTab = ({ pageState }: { pageState: PageState }) => {
     const snackbar = useSnackbar();
     const isLoading = pageState === 'loading';
     const [archived, setArchived] = useState<string[]>([]);
-    const [selection, setSelection] = useState<GridRowSelectionModel>([]);
     const [openRoleId, setOpenRoleId] = useState<string | null>(null);
     const [archiveIds, setArchiveIds] = useState<string[] | null>(
         pageState === 'archiving-assigned' ? ['legacy-investigator'] : null,
@@ -774,7 +773,6 @@ const UsageTab = ({ pageState }: { pageState: PageState }) => {
             const moved = archiveRoles.reduce((sum, r) => sum + r.users, 0);
             const target = ALL_ROLES.find((r) => r.id === moveToRoleId);
             setArchived((prev) => [...prev, ...archiveIds]);
-            setSelection((prev) => prev.filter((id) => !archiveIds.includes(String(id))));
             if (openRoleId && archiveIds.includes(openRoleId)) {
                 setOpenRoleId(null);
             }
@@ -857,36 +855,18 @@ const UsageTab = ({ pageState }: { pageState: PageState }) => {
             </FSBox>
 
             <FSBox component="section" aria-labelledby="unused-roles-heading">
-                <FSStack direction="row" alignItems="flex-end" spacing={2} sx={{ mb: 1 }}>
-                    <FSBox>
-                        <FSTypography variant="h6" component="h3" id="unused-roles-heading">
-                            Unused Roles
-                        </FSTypography>
-                        <FSTypography variant="body2" color="text.secondary">
-                            {isLoading
-                                ? 'Checking role activity.'
-                                : unusedRoles.length === 0
-                                  ? 'Nothing to clean up right now.'
-                                  : `${plural(unusedRoles.length, 'role')} had no activity in the last 90 days.`}
-                        </FSTypography>
-                    </FSBox>
-                    <FSBox flexGrow={1} />
-                    {!isLoading && unusedRoles.length > 0 && (
-                        <FSTooltip title={selection.length === 0 ? 'Select one or more roles to archive.' : ''}>
-                            <span>
-                                <FSButton
-                                    variant="destructiveSecondary"
-                                    data-e2e-ref="bulk-archive-button"
-                                    disabled={selection.length === 0}
-                                    startIcon={<FSSymbol name="archive" aria-hidden="true" />}
-                                    onClick={() => openArchive(selection.map(String))}
-                                >
-                                    Archive Selected{selection.length > 0 ? ` (${selection.length})` : ''}
-                                </FSButton>
-                            </span>
-                        </FSTooltip>
-                    )}
-                </FSStack>
+                <FSBox sx={{ mb: 1 }}>
+                    <FSTypography variant="h6" component="h3" id="unused-roles-heading">
+                        Unused Roles
+                    </FSTypography>
+                    <FSTypography variant="body2" color="text.secondary">
+                        {isLoading
+                            ? 'Checking role activity.'
+                            : unusedRoles.length === 0
+                              ? 'Nothing to clean up right now.'
+                              : `${plural(unusedRoles.length, 'role')} had no activity in the last 90 days.`}
+                    </FSTypography>
+                </FSBox>
                 {isLoading ? (
                     <FSStack spacing={1} data-e2e-ref="loading-state">
                         {Array.from({ length: 5 }, (_v, i) => (
@@ -900,12 +880,9 @@ const UsageTab = ({ pageState }: { pageState: PageState }) => {
                         <FSDataGrid
                             autoHeight
                             hideFooter
-                            checkboxSelection
                             disableRowSelectionOnClick
                             rows={unusedRoles}
                             columns={columns}
-                            rowSelectionModel={selection}
-                            onRowSelectionModelChange={setSelection}
                             initialState={{ sorting: { sortModel: [{ field: 'users', sort: 'desc' }] } }}
                         />
                     </FSBox>
