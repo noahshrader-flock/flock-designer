@@ -180,7 +180,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 				{looked && !checkout && !suggestion && (
 					<Alert>
 						<AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-							<span>Flock Designer could not find a Flock product repository on this machine. Point it at your Coke folder once.</span>
+							<span>Flock Designer could not find a Flock product repository on this machine. Point it at your product repository once.</span>
 							<Button size="sm" onClick={chooseCheckout}>
 								Find it
 							</Button>

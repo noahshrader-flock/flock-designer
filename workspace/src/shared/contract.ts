@@ -142,9 +142,12 @@ export type AgentReadiness = { state: 'ready' } | { state: 'missing' } | { state
 
 export type AgentStatus =
 	| { state: 'idle' }
-	/** `work`: which piece of work this run is for, so a screen opened again can tell its own run from another. */
-	| { state: 'running'; startedAt: string; work?: string }
-	| { state: 'finished'; exitCode: number; work?: string }
+	/**
+	 * `work`: which piece of work this run is for, so a screen opened again can tell its own run from another.
+	 * `purpose`: set for a Handoff, which ends in a report rather than a preview.
+	 */
+	| { state: 'running'; startedAt: string; work?: string; purpose?: 'handoff' }
+	| { state: 'finished'; exitCode: number; work?: string; purpose?: 'handoff' }
 	| { state: 'unavailable'; detail: string };
 
 /**
@@ -295,18 +298,18 @@ export interface WorkspaceApi {
 	/** Asked when new work is about to be started: is Claude Code installed here, and signed in? */
 	agentReadiness(): Promise<Result<AgentReadiness>>;
 	/**
-	 * The task for Handoff on a project's codebase work: the product's gate, both reviews, their fixes, and
-	 * HANDOFF.md. Refused unless the checkout is on the work's branch and the agent is free.
+	 * Starts Handoff on a project's codebase work: the product's gate, both reviews, their fixes, and HANDOFF.md.
+	 * Refused unless the checkout is on the work's branch and the agent is free.
 	 */
-	prepareHandoff(root: string, projectId: string): Promise<Result<string>>;
-	/** Whether the checkout's branch has a committed HANDOFF.md. */
-	handoffWritten(root: string): Promise<Result<boolean>>;
+	startHandoff(root: string, projectId: string): Promise<Result<AgentStatus>>;
+	/** Whether the last Handoff here found the work ready (its verdict, and HANDOFF.md committed since); null if unknown. */
+	handoffResult(root: string): Promise<Result<boolean | null>>;
 	/** Whether this work can be handed to the person here: VS Code with Claude Code, and a conversation to continue. */
 	editorState(root: string, branch: string): Promise<Result<{ editor: boolean; session: boolean }>>;
 	/** Opens the checkout in VS Code (or the folder, without it). */
 	openInEditor(root: string): Promise<Result<null>>;
-	/** Continues this branch's latest agent conversation in VS Code, stopping the app's run of it first if it is still going. */
-	continueInClaude(root: string, branch: string): Promise<Result<null>>;
+	/** Continues this branch's latest agent conversation in VS Code (or copies the command), taking over the app's run of it. */
+	continueInClaude(root: string, branch: string): Promise<Result<'editor' | 'terminal'>>;
 	onAgentLog(listener: (line: RunLogLine) => void): () => void;
 
 	/** Begins device-flow sign-in. Resolves as soon as there is a code to show. */
@@ -577,8 +580,8 @@ export const CHANNELS = {
 	agentRecent: 'workspace:agentRecent',
 	agentReadiness: 'workspace:agentReadiness',
 	editorState: 'workspace:editorState',
-	prepareHandoff: 'workspace:prepareHandoff',
-	handoffWritten: 'workspace:handoffWritten',
+	startHandoff: 'workspace:startHandoff',
+	handoffResult: 'workspace:handoffResult',
 	openInEditor: 'workspace:openInEditor',
 	continueInClaude: 'workspace:continueInClaude',
 	createQuick: 'workspace:createQuick',

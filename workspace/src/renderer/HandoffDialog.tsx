@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import type { Checkout, Project, ProjectIteration } from '../shared/contract';
+import type { ProjectIteration } from '../shared/contract';
+import { useAgentBusy } from './useAgentBusy';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
@@ -14,45 +14,20 @@ import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTi
 export const HandoffDialog = ({
 	open,
 	onClose,
-	project,
 	iteration,
-	checkout,
 	onStart,
 }: {
 	open: boolean;
 	onClose: () => void;
-	project: Project;
 	iteration: ProjectIteration;
-	checkout: Checkout;
-	onStart: (task: string) => void;
+	/** Starts it: the main process checks and starts the run, and a refusal is shown where the run would be. */
+	onStart: () => void;
 }) => {
-	const [agentBusy, setAgentBusy] = useState(false);
-	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
-	useEffect(() => {
-		if (!open) return;
-		let current = true;
-		setError(null);
-		void window.workspace.agentStatus().then((r) => current && setAgentBusy(r.ok && r.value.state === 'running'));
-		return () => {
-			current = false;
-		};
-	}, [open]);
-
-	const start = async () => {
-		setBusy(true);
-		setError(null);
-		const task = await window.workspace.prepareHandoff(checkout.root, project.id);
-		setBusy(false);
-		if (!task.ok) return setError(task.error);
-		onClose();
-		onStart(task.value);
-	};
+	const agentBusy = useAgentBusy(open);
 
 	return (
-		<Dialog open={open} onOpenChange={(next) => !next && !busy && onClose()}>
-			<DialogContent className="sm:max-w-xl" showCloseButton={!busy}>
+		<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+			<DialogContent className="sm:max-w-xl">
 				<DialogHeader>
 					<DialogTitle>Hand off to engineering</DialogTitle>
 				</DialogHeader>
@@ -75,18 +50,19 @@ export const HandoffDialog = ({
 							<li>A note for the engineer, HANDOFF.md, is written on the branch. Nothing is pushed.</li>
 						</ol>
 					</div>
-					{error && (
-						<Alert variant="destructive">
-							<AlertDescription className="wrap-anywhere whitespace-pre-wrap">{error}</AlertDescription>
-						</Alert>
-					)}
 				</DialogBody>
 				<DialogFooter>
-					<Button variant="secondary" onClick={onClose} disabled={busy}>
+					<Button variant="secondary" onClick={onClose}>
 						Cancel
 					</Button>
-					<Button onClick={() => void start()} disabled={busy || agentBusy}>
-						{busy ? 'Starting…' : 'Start handoff'}
+					<Button
+						onClick={() => {
+							onClose();
+							onStart();
+						}}
+						disabled={agentBusy}
+					>
+						Start handoff
 					</Button>
 				</DialogFooter>
 			</DialogContent>

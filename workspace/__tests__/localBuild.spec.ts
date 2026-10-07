@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
-import { type BuildApi, type BuildPhase, previewAddress, previewCommandFor, routeWentWrong, runLocalBuild, saysReady } from '../src/renderer/localBuild';
+import { type BuildApi, type BuildPhase, previewAddress, previewCommandFor, routeWentWrong, runLocalBuild } from '../src/renderer/localBuild';
 
 const iteration = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
 	name: 'i1', branch: 'fd/users/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], createdAt: null, route: null, ...over,
@@ -15,6 +15,7 @@ const api = (over: Partial<Record<keyof BuildApi, unknown>> = {}) => {
 		openCheckout: ok('openCheckout', { root: '/r', name: 'coke', branch: 'fd/users/i1', clean: true }),
 		continueIteration: ok('continueIteration', {}),
 		startAgent: ok('startAgent', { state: 'running', startedAt: 'now' }),
+		startHandoff: ok('startHandoff', { state: 'running', startedAt: 'now', work: 'fd/users/i1', purpose: 'handoff' }),
 		agentStatus: ok('agentStatus', { state: 'finished', exitCode: 0 }),
 		startCommand: ok('startCommand', { state: 'running', commandId: 'preview', url: 'http://localhost:3100/' }),
 		...over,
@@ -193,11 +194,27 @@ describe('when nobody is looking any more', () => {
 		expect(calls).not.toContain('startCommand');
 	});
 
-	it('ends a Handoff with a report, not a preview', async () => {
+	it('ends a Handoff with a report, not a preview, and has the main process start it', async () => {
 		const { a, calls } = api();
-		const { url, phases } = await run(a, { task: 'hand it off', then: 'report' });
+		const { url, phases } = await run(a, { handoff: true });
 		expect(url).toBeNull();
-		expect(phases.map((p) => p.kind)).toEqual(['agent', 'reported']);
+		expect(phases).toEqual([{ kind: 'agent', handoff: true }, { kind: 'reported' }]);
+		expect(calls).toContain('startHandoff');
+		expect(calls).not.toContain('startAgent');
+		expect(calls).not.toContain('startCommand');
+	});
+
+	it('picks a Handoff up again when opened mid-run, and still ends in its report', async () => {
+		let polls = 0;
+		const { a, calls } = api({
+			agentStatus: vi.fn(async () => ({
+				ok: true,
+				value: ++polls < 3 ? { state: 'running', work: 'fd/users/i1', purpose: 'handoff' } : { state: 'finished', exitCode: 0 },
+			})),
+		});
+		const { phases } = await run(a);
+		expect(phases).toEqual([{ kind: 'agent', handoff: true }, { kind: 'reported' }]);
+		expect(calls).not.toContain('startHandoff');
 		expect(calls).not.toContain('startCommand');
 	});
 
@@ -273,16 +290,3 @@ describe('routeWentWrong', () => {
 	});
 });
 
-describe('saysReady', () => {
-	it('is a line that starts with the verdict, however it is dressed', () => {
-		expect(saysReady(['Fixed three findings.', 'Ready for engineering\nThe gate passes.'])).toBe(true);
-		expect(saysReady(['**Ready for engineering**'])).toBe(true);
-		expect(saysReady(['`Ready for engineering`'])).toBe(true);
-	});
-
-	it('is not "Not ready", nor the words mid-sentence, nor nothing at all', () => {
-		expect(saysReady(['Not ready for engineering: the a11y scan fails.'])).toBe(false);
-		expect(saysReady(['It will be Ready for engineering once the flag exists.'])).toBe(false);
-		expect(saysReady([])).toBe(false);
-	});
-});

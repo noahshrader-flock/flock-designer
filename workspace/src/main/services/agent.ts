@@ -15,6 +15,9 @@ import type { AgentReadiness, AgentStatus, RunLogLine } from '../../shared/contr
  * what keeps the adapter replaceable when a second harness turns up.
  */
 
+/** Said wherever a second run is refused: the app runs one agent at a time. */
+export const AGENT_BUSY = 'The agent is already working on something else. Wait for it to finish, then try again.';
+
 export interface AgentExtras {
 	/** Folders outside the repository the agent may also write to: the project's records in the design repository. */
 	addDirs?: string[];
@@ -26,6 +29,8 @@ export interface AgentExtras {
 	readOnly?: string[];
 	/** Which piece of work this run is for (a quick prototype's key), carried on its status. */
 	work?: string;
+	/** A run that is a Handoff, so a screen opened again knows it ends in a report, not a preview. */
+	purpose?: 'handoff';
 	/** The task stands alone: it is not working in a repository, so there are no repository instructions to point at. */
 	bare?: boolean;
 	/** The conversation's ID, chosen by the app, so the person can continue it in their editor afterwards. */
@@ -86,9 +91,10 @@ export const locateClaude = (
 
 /**
  * What an unattended run may do without asking, because nobody is there to ask.
- * Edits are allowed (the prototype is the point). Commands are limited to
- * running the repository's own scripts and ordinary local git; nothing that
- * pushes, switches branch, or discards work is on the list.
+ * Edits are allowed (the work is the point). Commands are the repository's own
+ * scripts and local git that adds or reads; no git command that pushes, switches
+ * branch, or discards work is on the list. This is about git, not a sandbox:
+ * `npm`, `npx` and `node` run whatever the repository's scripts do.
  */
 const ALLOWED_TOOLS = [
 	'Bash(npm run:*)',
@@ -101,10 +107,11 @@ const ALLOWED_TOOLS = [
 	// Reading other branches and the tree, which the guidance asks for and which change nothing.
 	'Bash(git show:*)',
 	'Bash(git rev-parse:*)',
-	'Bash(git branch:*)',
+	// Only the forms that read: `git branch` itself also deletes, moves and forces.
+	'Bash(git branch --show-current)',
+	'Bash(git branch --list:*)',
 	'Bash(git ls-files:*)',
 	'Bash(git ls-tree:*)',
-	'Bash(git grep:*)',
 	'Bash(git add:*)',
 	'Bash(git commit:*)',
 	'Bash(ls:*)',
@@ -265,6 +272,12 @@ export class AgentRunner {
 	/** Where the run is, and its conversation: a checkout must not change branch under it, and only its own conversation is taken over. */
 	private root: string | null = null;
 	private session: string | null = null;
+	private purpose: 'handoff' | null = null;
+
+	/** What the status carries about the run, so a screen can tell its own run from another, and what kind it is. */
+	private tags(): { work?: string; purpose?: 'handoff' } {
+		return { ...(this.work ? { work: this.work } : {}), ...(this.purpose ? { purpose: this.purpose } : {}) };
+	}
 	/** The run's recent lines, kept here so a screen that was left and opened again can pick up where it was. */
 	private recent: string[] = [];
 
@@ -331,7 +344,8 @@ export class AgentRunner {
 		this.root = root;
 		this.session = extras?.session ?? null;
 		this.recent = [];
-		this.current = { state: 'running', startedAt: new Date().toISOString(), ...(this.work ? { work: this.work } : {}) };
+		this.purpose = extras?.purpose ?? null;
+		this.current = { state: 'running', startedAt: new Date().toISOString(), ...this.tags() };
 
 		const format = this.deps.adapter.formatter?.();
 		child.stdout?.on('data', (d: Buffer) => {
@@ -358,7 +372,7 @@ export class AgentRunner {
 			this.child = null;
 			// A crash and a clean finish are both "finished" with a code. The caller
 			// decides what a non-zero code means; this does not editorialise.
-			this.current = { state: 'finished', exitCode: code ?? -1, ...(this.work ? { work: this.work } : {}) };
+			this.current = { state: 'finished', exitCode: code ?? -1, ...this.tags() };
 		});
 
 		return this.current;
@@ -374,8 +388,8 @@ export class AgentRunner {
 		return this.current.state === 'running' ? this.session : null;
 	}
 
+	/** Asks the run to end. The status says finished once it has (the exit handler), not before. */
 	stop(): void {
 		this.child?.kill('SIGTERM');
-		this.child = null;
 	}
 }

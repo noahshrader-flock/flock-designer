@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AgentReadiness, Checkout, MoveToCodePlan, Project, ProjectIteration } from '../shared/contract';
 import { freshIteration } from '../shared/projects';
 import { SearchSelect } from './SearchSelect';
+import { useAgentBusy } from './useAgentBusy';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
@@ -36,8 +37,8 @@ export const MoveToCode = ({
 	const [branches, setBranches] = useState<string[]>([]);
 	const [from, setFrom] = useState<string | null>(null);
 	const [agent, setAgent] = useState<AgentReadiness>({ state: 'unknown' });
-	// The agent does one piece of work at a time; this would otherwise queue behind another run unseen.
-	const [agentBusy, setAgentBusy] = useState(false);
+	// The agent does one piece of work at a time; this would otherwise be refused behind another run.
+	const agentBusy = useAgentBusy(open);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +54,6 @@ export const MoveToCode = ({
 		});
 		void window.workspace.listBaseBranches(checkout.root).then((r) => current && r.ok && setBranches(r.value));
 		void window.workspace.agentReadiness().then((r) => current && r.ok && setAgent(r.value));
-		void window.workspace.agentStatus().then((r) => current && setAgentBusy(r.ok && r.value.state === 'running'));
 		return () => {
 			current = false;
 		};

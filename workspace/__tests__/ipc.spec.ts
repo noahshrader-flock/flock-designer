@@ -72,6 +72,7 @@ let agentStatus: ReturnType<typeof vi.fn>;
 let agentStop: ReturnType<typeof vi.fn>;
 let agentRunningIn: ReturnType<typeof vi.fn>;
 let runningSession: string | null;
+let recent: { work: string | null; lines: string[] };
 let runtimeStart: ReturnType<typeof vi.fn>;
 let memoryValue: string | null;
 let previewUrl: string | null;
@@ -104,6 +105,7 @@ beforeEach(async () => {
 	agentStop = vi.fn();
 	agentRunningIn = vi.fn(() => false);
 	runningSession = null;
+	recent = { work: null, lines: [] };
 	runtimeStart = vi.fn(async () => ({ state: 'stopped' }));
 	memoryValue = null;
 	previewUrl = null;
@@ -114,7 +116,7 @@ beforeEach(async () => {
 		window: { webContents: { send: vi.fn() } } as never,
 		opened,
 		runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
-		agent: { start: agentStart, status: agentStatus, stop: agentStop, runningIn: agentRunningIn, runningSession: () => runningSession } as never,
+		agent: { start: agentStart, status: agentStatus, stop: agentStop, runningIn: agentRunningIn, runningSession: () => runningSession, recentLines: () => recent } as never,
 		github: { state: () => ({ state: 'signedOut' }) } as never,
 		designRepo: { listProjects: vi.fn(async () => []), deleteComment } as never,
 		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
@@ -601,7 +603,7 @@ describe('one agent, one piece of work', () => {
 
 		runningSession = session;
 		const r = await call(CHANNELS.continueInClaude, product, branchHere());
-		expect(r.ok).toBe(true);
+		expect(r).toMatchObject({ ok: true, value: 'terminal' });
 		expect(agentStop).toHaveBeenCalled();
 		// Without VS Code, the same conversation from a terminal.
 		expect(copied).toContain(`--resume ${session}`);
@@ -625,6 +627,20 @@ describe('one agent, one piece of work', () => {
 		const real = realpathSync(design);
 		expect(extras.readOnly).toEqual(expect.arrayContaining([join(real, 'skills'), join(real, 'standards')]));
 		expect(task).toContain(join(real, 'skills'));
+	});
+
+	it('puts the shared rules for codebase work, and the light check, in a run on the codebase branch only', async () => {
+		mkdirSync(join(design, 'skills'), { recursive: true });
+		writeFileSync(join(design, 'skills', 'codebase-work.md'), '# Codebase work, unattended\n');
+		await call(CHANNELS.useCheckout, product);
+		await call(CHANNELS.startAgent, product, 'demo', 'do it');
+		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('Codebase work, unattended');
+		g(product, 'checkout', '-q', '-b', 'feature/demo');
+		await call(CHANNELS.startAgent, product, 'demo', 'do it');
+		const task = agentStart.mock.calls.at(-1)?.[2] as string;
+		expect(task).toContain('# Codebase work, unattended');
+		expect(task).toMatch(/names no light check/);
+		expect(task.indexOf('Codebase work')).toBeLessThan(task.indexOf('do it'));
 	});
 
 	it('does not switch the checkout\'s branch under a running agent', async () => {
@@ -652,41 +668,56 @@ describe('Handoff', () => {
 		writeFileSync(join(design, 'skills', 'handoff.md'), '# Hand work to engineering\nThe shared steps.\n');
 		const made = await call(CHANNELS.createIteration, product, 'demo', 'x', 'codebase', 'develop');
 		expect(made.ok).toBe(true);
+		agentStart.mockReturnValue({ state: 'running', startedAt: 'now', work: 'feature/demo', purpose: 'handoff' });
+	};
+	const commitHandoff = () => {
+		writeFileSync(join(product, 'HANDOFF.md'), '# Handoff\n');
+		g(product, 'add', 'HANDOFF.md');
+		g(product, '-c', 'user.name=t', '-c', 'user.email=t@x', 'commit', '-q', '-m', 'handoff');
 	};
 
-	it('asks for the shared skill, on the work\'s own branch, and says when the product names no gate', async () => {
+	it('starts the shared skill on the work\'s own branch, tagged as a Handoff, and says when the product names no gate', async () => {
 		await ready();
-		const r = await call(CHANNELS.prepareHandoff, product, 'demo');
+		const r = await call(CHANNELS.startHandoff, product, 'demo');
 		expect(r.ok).toBe(true);
-		const task = r.value as string;
+		const [, , task, extras] = agentStart.mock.calls.at(-1) as [string, string, string, { work: string; purpose: string; session: string }];
 		expect(task).toContain('The shared steps.');
 		expect(task).toContain('`feature/demo`');
 		expect(task).toMatch(/names no handoff gate/);
 		expect(task).toMatch(/Ready for engineering/);
+		expect(extras).toMatchObject({ work: 'feature/demo', purpose: 'handoff' });
+		// Its conversation is kept, so it can be continued in VS Code like any other run.
+		expect((await call(CHANNELS.editorState, product, 'feature/demo')).value).toMatchObject({ session: true });
 	});
 
 	it('refuses when the checkout is somewhere else, or the agent is busy', async () => {
 		await ready();
 		g(product, 'checkout', '-q', 'develop');
-		expect((await call(CHANNELS.prepareHandoff, product, 'demo')).error).toMatch(/Open feature\/demo first/);
+		expect((await call(CHANNELS.startHandoff, product, 'demo')).error).toMatch(/Open feature\/demo first/);
 		g(product, 'checkout', '-q', 'feature/demo');
 		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now' });
-		expect((await call(CHANNELS.prepareHandoff, product, 'demo')).error).toMatch(/already working/);
+		expect((await call(CHANNELS.startHandoff, product, 'demo')).error).toMatch(/already working/);
+		expect(agentStart).not.toHaveBeenCalled();
 	});
 
 	it('refuses a project with no codebase work', async () => {
 		await call(CHANNELS.useCheckout, product);
-		expect((await call(CHANNELS.prepareHandoff, product, 'demo')).ok).toBe(false);
+		expect((await call(CHANNELS.startHandoff, product, 'demo')).ok).toBe(false);
 	});
 
-	it('knows a handoff was written only once HANDOFF.md is committed on the branch', async () => {
+	it('is ready only when the run says so last and HANDOFF.md was committed since it started', async () => {
 		await ready();
-		expect((await call(CHANNELS.handoffWritten, product)).value).toBe(false);
-		writeFileSync(join(product, 'HANDOFF.md'), '# Handoff\n');
-		expect((await call(CHANNELS.handoffWritten, product)).value).toBe(false);
-		g(product, 'add', 'HANDOFF.md');
-		g(product, '-c', 'user.name=t', '-c', 'user.email=t@x', 'commit', '-q', '-m', 'handoff');
-		expect((await call(CHANNELS.handoffWritten, product)).value).toBe(true);
+		// A handoff note left from before does not count.
+		commitHandoff();
+		expect((await call(CHANNELS.handoffResult, product)).value).toBeNull();
+		await call(CHANNELS.startHandoff, product, 'demo');
+		recent = { work: 'feature/demo', lines: ['Ready for engineering once the gate passes.', 'Not ready', 'The a11y scan fails.'] };
+		expect((await call(CHANNELS.handoffResult, product)).value).toBe(false);
+		recent = { work: 'feature/demo', lines: ['Fixed it.', '**Ready for engineering**', 'The gate passes.'] };
+		expect((await call(CHANNELS.handoffResult, product)).value).toBe(false);
+		writeFileSync(join(product, 'HANDOFF.md'), '# Handoff, rewritten\n');
+		g(product, '-c', 'user.name=t', '-c', 'user.email=t@x', 'commit', '-q', '-am', 'handoff again');
+		expect((await call(CHANNELS.handoffResult, product)).value).toBe(true);
 	});
 });
 

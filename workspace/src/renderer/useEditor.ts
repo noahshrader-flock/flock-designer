@@ -24,10 +24,13 @@ export const useEditor = (checkout: Checkout | null, iteration: ProjectIteration
 		if (!r.ok) onError(r.error ?? 'That did not open.');
 		return r.ok;
 	};
+	const none = Promise.resolve(null);
 	return {
 		available: root !== null,
 		...state,
 		openInEditor: () => (root === null ? Promise.resolve(false) : window.workspace.openInEditor(root).then(report)),
-		continueInClaude: () => (root === null ? Promise.resolve(false) : window.workspace.continueInClaude(root, iteration.branch).then(report)),
+		/** Where the conversation went on (VS Code, or a copied terminal command), or null if it did not. */
+		continueInClaude: () =>
+			root === null ? none : window.workspace.continueInClaude(root, iteration.branch).then((r) => (report(r) && r.ok ? r.value : null)),
 	};
 };

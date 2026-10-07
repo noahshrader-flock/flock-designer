@@ -68,15 +68,18 @@ export const openFolder = (editor: string, folder: string): Promise<void> => run
  * Opens a session in VS Code's Claude Code panel. The folder first, because the extension looks a session up
  * in the window's own folder; then, once that window has had a moment to be the front one, the session.
  */
-export const openSession = async (editor: string, { session, root }: AgentSession, settle = 2500): Promise<void> => {
+export const openSession = async (editor: string, { session, root }: AgentSession, opened: () => void = () => undefined, settle = 2500): Promise<void> => {
 	if (!UUID.test(session)) throw new Error('That is not a session.');
 	await openFolder(editor, root);
+	// The folder is open, so the conversation can be continued there: whatever was holding it can let go now.
+	opened();
 	await new Promise((r) => setTimeout(r, settle));
 	await run('/usr/bin/open', [`vscode://anthropic.claude-code/open?session=${session}`]);
 };
 
 /** Without VS Code: the same conversation, from a terminal. */
 export const resumeCommand = (claude: string, { session, root }: AgentSession): string => {
+	if (!UUID.test(session)) throw new Error('That is not a session.');
 	const q = (s: string) => (/^[\w./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`);
 	return `cd ${q(root)} && ${q(claude)} --resume ${session}`;
 };

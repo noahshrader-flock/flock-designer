@@ -15,7 +15,8 @@ import type { Project, ProjectIteration, WorkspaceApi } from '../shared/contract
 
 export type BuildPhase =
 	| { kind: 'idle' }
-	| { kind: 'agent' }
+	/** `handoff`: the agent is doing a Handoff, which ends in a report, not a preview. */
+	| { kind: 'agent'; handoff?: boolean }
 	| { kind: 'preview' }
 	/** `uncommitted`: the checkout had changes nobody committed when it was opened, and no agent made them here. */
 	| { kind: 'running'; url: string; uncommitted?: boolean }
@@ -23,7 +24,7 @@ export type BuildPhase =
 	| { kind: 'reported' }
 	| { kind: 'failed'; message: string };
 
-export type BuildApi = Pick<WorkspaceApi, 'openCheckout' | 'continueIteration' | 'startAgent' | 'agentStatus' | 'startCommand'>;
+export type BuildApi = Pick<WorkspaceApi, 'openCheckout' | 'continueIteration' | 'startAgent' | 'startHandoff' | 'agentStatus' | 'startCommand'>;
 
 /**
  * From the iteration's own name, which the main process already normalised, rather than a
@@ -115,8 +116,8 @@ export interface BuildRun {
 	iteration: ProjectIteration;
 	/** What to ask the agent to build first, for work that was just created. Omit to go straight to the preview. */
 	task?: string;
-	/** What follows the agent: the preview (building), or a report and nothing else (Handoff). */
-	then?: 'preview' | 'report';
+	/** Run a Handoff instead: the main process starts it, and it ends in a report, not the preview. */
+	handoff?: boolean;
 	isLive: () => boolean;
 	onPhase: (phase: BuildPhase) => void;
 	/** How often the agent is asked how it is getting on. */
@@ -130,7 +131,7 @@ export const runLocalBuild = async ({
 	project,
 	iteration,
 	task,
-	then = 'preview',
+	handoff = false,
 	isLive,
 	onPhase,
 	pollMs = 1000,
@@ -153,13 +154,15 @@ export const runLocalBuild = async ({
 	}
 	if (!isLive()) return null;
 
-	// Opened again while its agent is still at work: wait on that run, as if the screen had never been left.
+	// Opened again while its agent is still at work: wait on that run, as if the screen had never been left, and
+	// end it the way it was started (a Handoff reports; anything else opens the preview).
 	const now = await api.agentStatus();
 	const stillBuilding = now.ok && now.value.state === 'running' && now.value.work === iteration.branch;
-	if (task || stillBuilding) {
-		onPhase({ kind: 'agent' });
+	const reporting = stillBuilding ? now.ok && now.value.state === 'running' && now.value.purpose === 'handoff' : handoff;
+	if (task || handoff || stillBuilding) {
+		onPhase({ kind: 'agent', ...(reporting ? { handoff: true } : {}) });
 		if (!stillBuilding) {
-			const started = await api.startAgent(root, project.id, task as string);
+			const started = handoff ? await api.startHandoff(root, project.id) : await api.startAgent(root, project.id, task as string);
 			if (!started.ok) return fail(started.error);
 			if (started.value.state === 'unavailable') return fail(started.value.detail);
 		}
@@ -173,13 +176,13 @@ export const runLocalBuild = async ({
 		if (after.ok && !after.value.clean) {
 			return fail('The agent stopped before it committed all of its work: there are changes in the checkout it did not commit. Continue in Claude Code to finish them.');
 		}
-		if (then === 'report') {
+		if (reporting) {
 			onPhase({ kind: 'reported' });
 			return null;
 		}
 	}
 	// Changes no agent here made (someone working by hand, or a run that stopped before this screen was open).
-	const uncommitted = !task && !stillBuilding && !opened.value.clean;
+	const uncommitted = !task && !handoff && !stillBuilding && !opened.value.clean;
 
 	onPhase({ kind: 'preview' });
 	const result = await api.startCommand(root, previewCommandFor(iteration), project.id);
@@ -193,8 +196,3 @@ export const runLocalBuild = async ({
 	return fail(result.value.state === 'failed' ? result.value.detail : 'The preview stopped before it was ready. Its output is below.');
 };
 
-/**
- * Whether a Handoff agent's last words say the work is ready: a line that starts `Ready for engineering`,
- * bold or quoted or not. "Not ready for engineering" does not count, nor does the phrase mid-sentence.
- */
-export const saysReady = (lines: string[]): boolean => lines.some((l) => /^\s*[*`_]*Ready for engineering\b/im.test(l));

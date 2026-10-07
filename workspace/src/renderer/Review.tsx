@@ -2,6 +2,7 @@ import { ChevronLeftIcon, FolderIcon, GitBranchIcon, MapPinIcon, MessageSquareIc
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
+import { READY_LINE } from '../shared/handoff';
 import { latest } from '../shared/latest';
 import { isQuick, quickPagePath } from '../shared/projects';
 import { HandoffDialog } from './HandoffDialog';
@@ -13,7 +14,7 @@ import { useOverlaps } from './overlays';
 import { Toolbar } from './Toolbar';
 import { useHostedPreview } from './hostedPreview';
 import { type AddressPhase, runAddress } from './address';
-import { routeWentWrong, saysReady } from './localBuild';
+import { routeWentWrong } from './localBuild';
 import { PANEL_STEP, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
 import { useLocalBuild } from './useLocalBuild';
 import { useEditor } from './useEditor';
@@ -137,7 +138,7 @@ export const Review = ({
 	// Codebase work can be handed to the person's own editor, and the agent's conversation with it.
 	const editor = useEditor(quick ? null : checkout, iteration, local.phase.kind, setError);
 	// Set when the person took the running agent over in VS Code: the screen waits for them, not for it.
-	const [handedOff, setHandedOff] = useState(false);
+	const [handedOff, setHandedOff] = useState<'editor' | 'terminal' | null>(null);
 	const hostedUrl = iteration.previewUrl ?? null;
 	const useHosted = hostedUrl !== null && (checkout === null || local.phase.kind === 'failed');
 	const hosted = useHostedPreview(useHosted ? hostedUrl : null);
@@ -147,8 +148,6 @@ export const Review = ({
 	const codebase = !quick && iteration.name === 'codebase';
 	const [handingOff, setHandingOff] = useState(false);
 	const [handoffReady, setHandoffReady] = useState<boolean | null>(null);
-	// Set while the agent's work on this screen is a Handoff, so the screen says that and not "building".
-	const [handoffRunning, setHandoffRunning] = useState(false);
 
 	// Asking the agent to act on the open comments. It is one agent: not while it is building this iteration.
 	const [address, setAddress] = useState<AddressPhase>({ kind: 'idle' });
@@ -277,18 +276,16 @@ export const Review = ({
 	}, [local.phase, open]);
 	// While the agent works on an open page (Handoff), and when it reports, the screen is its, not the page's.
 	useEffect(() => {
-		// Only once the run has ended: starting it passes through idle first.
-		if (['reported', 'failed', 'running'].includes(local.phase.kind)) setHandoffRunning(false);
 		if (local.phase.kind !== 'agent' && local.phase.kind !== 'reported') return;
 		setOpened(false);
 		void window.workspace.pageClose();
 	}, [local.phase.kind]);
-	// The verdict: the agent said so, and the note for the engineer is on the branch. Either alone is not enough.
+	// The verdict, from the main process: the run's last word, and HANDOFF.md committed since it started.
 	useEffect(() => {
 		if (local.phase.kind !== 'reported' || !checkout) return setHandoffReady(null);
-		const said = saysReady(local.log);
-		void window.workspace.handoffWritten(checkout.root).then((r) => setHandoffReady(said && r.ok && r.value));
-	}, [local.phase.kind, checkout]); // eslint-disable-line react-hooks/exhaustive-deps
+		void window.workspace.handoffResult(checkout.root).then((r) => setHandoffReady(r.ok ? r.value : null));
+	}, [local.phase.kind, checkout]);
+	const handingOffNow = local.phase.kind === 'agent' && local.phase.handoff === true;
 
 	useEffect(() => window.workspace.onPageRoute(setRoute), []);
 
@@ -733,13 +730,8 @@ export const Review = ({
 				<HandoffDialog
 					open={handingOff}
 					onClose={() => setHandingOff(false)}
-					project={project}
 					iteration={iteration}
-					checkout={checkout}
-					onStart={(next) => {
-						setHandoffRunning(true);
-						localBuild.runAgent(next, 'report');
-					}}
+					onStart={localBuild.handoff}
 				/>
 			)}
 			{checkout && quick && (
@@ -753,13 +745,17 @@ export const Review = ({
 						<div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
 							{handedOff ? (
 								<>
-									<p className="text-sm">The conversation continues in VS Code.</p>
+									<p className="text-sm">
+										{handedOff === 'editor'
+											? 'The conversation continues in VS Code.'
+											: 'The command to continue the conversation is copied: paste it into a terminal.'}
+									</p>
 									<p className="text-muted-foreground max-w-[480px] text-sm">
 										When the work is done there, open the preview to see it here and share it.
 									</p>
 									<Button
 										onClick={() => {
-											setHandedOff(false);
+											setHandedOff(null);
 											localBuild.skipAgent();
 										}}
 									>
@@ -769,7 +765,7 @@ export const Review = ({
 							) : local.phase.kind === 'reported' ? (
 								<>
 									<p className="text-sm font-semibold">
-										{handoffReady === null ? 'Handoff finished' : handoffReady ? 'Ready for engineering' : 'Not ready for engineering yet'}
+										{handoffReady === null ? 'Handoff finished' : handoffReady ? READY_LINE : 'Not ready for engineering yet'}
 									</p>
 									<p className="text-muted-foreground max-w-[480px] text-sm">
 										{handoffReady
@@ -793,6 +789,11 @@ export const Review = ({
 									</Alert>
 									<AgentLog lines={local.log} />
 									<div className="flex gap-2">
+										{editor.available && (
+											<Button variant="secondary" onClick={() => void editor.openInEditor()}>
+												{editor.editor ? 'Open in VS Code' : 'Show in Finder'}
+											</Button>
+										)}
 										{editor.session && (
 											<Button variant="secondary" onClick={() => void editor.continueInClaude()}>
 												Continue in Claude Code
@@ -817,16 +818,16 @@ export const Review = ({
 								</>
 							) : !quick && !iteration.previewUrl && !checkout ? (
 								<>
-									<p className="text-sm">Flock Designer needs your Coke repository to show this.</p>
+									<p className="text-sm">Flock Designer needs the product repository to show this.</p>
 									<p className="text-muted-foreground text-sm">
-										It could not find one on this machine. Point it at your Coke folder once.
+										It could not find one on this machine. Point it at your product repository once.
 									</p>
 									<Button onClick={onChoose}>Find it</Button>
 								</>
 							) : (
 								<>
 									<Loading>
-										{local.phase.kind === 'agent' && handoffRunning
+										{handingOffNow
 											? `Handing off ${project.title}…`
 											: local.phase.kind === 'agent'
 											? `Building ${project.title}…`
@@ -837,7 +838,7 @@ export const Review = ({
 									{local.phase.kind === 'agent' && (
 										<>
 											<p className="text-muted-foreground max-w-[480px] text-sm">
-												{handoffRunning
+												{handingOffNow
 													? 'The agent is running the full check, both reviews and the fixes they call for. This takes a while.'
 													: 'The agent is writing it from your request. This takes a few minutes.'}
 											</p>
@@ -851,7 +852,7 @@ export const Review = ({
 														<Button
 															variant="secondary"
 															title="Stops the agent here and continues the same conversation in VS Code"
-															onClick={() => void editor.continueInClaude().then((ok) => ok && setHandedOff(true))}
+															onClick={() => void editor.continueInClaude().then(setHandedOff)}
 														>
 															Take over in Claude Code
 														</Button>

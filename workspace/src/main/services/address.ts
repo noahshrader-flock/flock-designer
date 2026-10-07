@@ -1,3 +1,4 @@
+import { AGENT_BUSY } from './agent';
 import type { ReviewComment } from '../../shared/contract';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -82,7 +83,7 @@ export const prepareAddress = async (
 	{ recordsRoot, projectId, iteration, commentId }: AddressTarget,
 ): Promise<{ task: string; open: number; path: string }> => {
 	if (deps.agentRunning()) {
-		throw new AddressProblem('The agent is already working. Wait for it to finish, then try again.');
+		throw new AddressProblem(AGENT_BUSY);
 	}
 	// The skill is shared by every product and lives in the design repository, which has to be here anyway
 	// (the records are in it). Only an out-of-date copy of that repository can lack it.

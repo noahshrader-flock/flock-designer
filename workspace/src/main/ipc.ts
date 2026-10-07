@@ -22,13 +22,14 @@ import {
 	type Result,
 	type ReviewComment,
 } from '../shared/contract';
-import { AgentRunner, agentReadiness, locateClaude } from './services/agent';
+import { AGENT_BUSY, type AgentExtras, AgentRunner, agentReadiness, locateClaude } from './services/agent';
 import { SessionMemory, findEditor, openFolder, openSession, resumeCommand } from './services/editor';
-import { HANDOFF_FILE, HANDOFF_SKILL, gateCommand, handoffTask } from './services/engineeringHandoff';
+import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, codebaseWorkPreamble, commandLine, handoffTask } from './services/engineeringHandoff';
+import { lastVerdict } from '../shared/handoff';
 import { type ShareRunner, previewIsUp, pullRequestText } from './services/share';
 import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
-import { readDescriptor } from './services/descriptor';
+import { DESCRIPTOR_PATH, readDescriptor } from './services/descriptor';
 import { branchCommit, branchExists, isRepository, readCheckout, readTreeAt, recentBranches, runGit } from './services/git';
 import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { findProductCheckouts, recordsRootFor } from './services/discovery';
@@ -149,7 +150,7 @@ export const registerIpc = ({
 	 */
 	const trustedRoot = (): string | null => {
 		const saved = memory.read();
-		return saved !== null && isRepository(saved) && existsSync(join(saved, '.flkd', 'workspace.json')) ? saved : null;
+		return saved !== null && isRepository(saved) && existsSync(join(saved, DESCRIPTOR_PATH)) ? saved : null;
 	};
 
 	/** Where this checkout's design records go; an error that says what to do when the design repository is not beside it. */
@@ -288,7 +289,7 @@ export const registerIpc = ({
 	/** Switching branches under a running agent changes the files it is working on mid-run. */
 	const assertAgentNotHere = (canonical: string): void => {
 		if (agent.runningIn(canonical)) {
-			throw new Error(`The agent is working in ${basename(canonical)} on another branch. Wait for it to finish, or take it over, then open this again.`);
+			throw new Error(`The agent is working in ${basename(canonical)}, and this would change its branch. Wait for it to finish, or take it over, then try again.`);
 		}
 	};
 
@@ -379,6 +380,31 @@ export const registerIpc = ({
 		};
 	};
 
+	/**
+	 * Starts a run the person can come back to: tagged with its branch, its conversation named and kept (so it can
+	 * be continued in VS Code), and given the shared guidance to read. Every run in a product checkout starts here.
+	 */
+	const startTracked = (
+		canonical: string,
+		projectId: string,
+		task: string,
+		{ branch, addDirs, purpose }: { branch: string | null; addDirs: string[]; purpose?: AgentExtras['purpose'] },
+	) => {
+		const session = randomUUID();
+		const shared = sharedGuidance(canonical);
+		const started = agent.start(canonical, projectId, `${task}${shared.note}`, {
+			// The project's records live in the design repository, beside the product checkout.
+			addDirs,
+			readOnly: shared.dirs,
+			...(branch !== null ? { work: branch } : {}),
+			...(purpose ? { purpose } : {}),
+			session,
+			name: `Flock Designer: ${projectId}`,
+		});
+		if (started.state === 'running' && branch !== null) sessions.write(canonical, branch, session);
+		return started;
+	};
+
 	ipcMain.handle(
 		CHANNELS.startAgent,
 		guard(async (root: string, projectId: string, task: string) => {
@@ -387,29 +413,24 @@ export const registerIpc = ({
 			// unchecked value here is prompt injection rather than argv injection.
 			assertUsableProjectId(projectId);
 			const canonical = opened.require(root);
-			// The run is tagged with the branch it works on, so a screen opened again finds its own run.
 			const branch = (await readCheckout(canonical)).branch;
 			const now = agent.status();
 			if (now.state === 'running') {
 				// The same work asked twice (the screen opened twice) joins its run; anything else must not be
 				// mistaken for it, or the screen would wait on someone else's run and report this work as done.
 				if (branch !== null && now.work === branch) return now;
-				throw new Error('The agent is already working on something else. Wait for it to finish, then try again.');
+				throw new Error(AGENT_BUSY);
 			}
+			// On the project's codebase branch, the shared rules for unattended codebase work, and this product's light check.
+			const descriptor = descriptorFor(root);
+			const skill = branch === codebaseBranchFor(descriptor, projectId) ? readSkillFile(dirname(recordsFor(canonical)), CODEBASE_SKILL) : null;
+			const preamble = skill ? codebaseWorkPreamble(skill, commandLine(descriptor.commands, 'check-iteration', projectId)) : '';
 			// A quick prototype being moved into the code is read from the app's own copy of it.
 			const quick = join(quickRoot, projectId);
-			const session = randomUUID();
-			const shared = sharedGuidance(canonical);
-			const started = agent.start(canonical, projectId, `${task}${shared.note}`, {
-				// The project's records live in the design repository, beside the product checkout.
+			return startTracked(canonical, projectId, `${preamble}${task}`, {
+				branch,
 				addDirs: [recordsFor(canonical), ...(existsSync(quick) ? [quick] : [])],
-				readOnly: shared.dirs,
-				...(branch !== null ? { work: branch } : {}),
-				session,
-				name: `Flock Designer: ${projectId}`,
 			});
-			if (started.state === 'running' && branch !== null) sessions.write(canonical, branch, session);
-			return started;
 		}),
 	);
 
@@ -433,24 +454,28 @@ export const registerIpc = ({
 	);
 	ipcMain.handle(
 		CHANNELS.continueInClaude,
-		guard(async (root: string, branch: string) => {
+		guard(async (root: string, branch: string): Promise<'editor' | 'terminal'> => {
 			const canonical = opened.require(root);
 			const found = sessions.read(canonical, String(branch));
 			if (!found) throw new Error('There is no agent conversation for this work on this machine.');
-			// Taking over a run still going: one conversation has one writer, so the app's run stops first.
-			if (agent.runningSession() === found.session) agent.stop();
+			// Taking over a run still going: one conversation has one writer, so the app's run stops, but only once
+			// the way to continue it is there: a folder that would not open must not cost the run.
+			const takeOver = () => {
+				if (agent.runningSession() === found.session) agent.stop();
+			};
 			const editor = findEditor();
 			if (editor) {
-				await openSession(editor, found);
-				return null;
+				await openSession(editor, found, takeOver);
+				return 'editor';
 			}
 			clipboard.writeText(resumeCommand(locateClaude(), found));
+			takeOver();
 			await dialog.showMessageBox({
 				type: 'info',
 				message: 'The command to continue is copied',
 				detail: 'VS Code with the Claude Code extension is not installed here. Paste the command into a terminal to continue the same conversation.',
 			});
-			return null;
+			return 'terminal';
 		}),
 	);
 
@@ -480,16 +505,7 @@ export const registerIpc = ({
 				},
 				{ recordsRoot, projectId, iteration, commentId },
 			);
-			const session = randomUUID();
-			const shared = sharedGuidance(canonical);
-			const started = agent.start(canonical, projectId, `${prepared.task}${shared.note}`, {
-				addDirs: [recordsRoot],
-				readOnly: shared.dirs,
-				session,
-				name: `Flock Designer: ${projectId}`,
-			});
-			if (started.state === 'running') sessions.write(canonical, iteration.branch, session);
-			return started;
+			return startTracked(canonical, projectId, prepared.task, { branch: null, addDirs: [recordsRoot] });
 		}),
 	);
 
@@ -915,34 +931,48 @@ export const registerIpc = ({
 		}),
 	);
 
-	// Handoff: the task for the heavy pass on codebase work, asked for only once the work is open on its branch.
+	// Handoff: the heavy pass on codebase work, started here so the checks and the start are one step. Where the
+	// branch stood when it started is kept, so the verdict can tell a handoff written now from one left from before.
+	const handoffStarts = new Map<string, { branch: string; head: string }>();
 	ipcMain.handle(
-		CHANNELS.prepareHandoff,
-		guard(async (root: string, projectId: string): Promise<string> => {
+		CHANNELS.startHandoff,
+		guard(async (root: string, projectId: string) => {
 			assertUsableProjectId(projectId);
 			const canonical = opened.require(root);
 			const recordsRoot = recordsFor(canonical);
 			const descriptor = descriptorFor(root);
 			const iteration = await recordedIteration(canonical, recordsRoot, descriptor, projectId, 'codebase');
-			if ((await readCheckout(canonical)).branch !== iteration.branch) {
-				throw new Error(`Open ${iteration.branch} first: a handoff checks the work where it is.`);
-			}
-			const now = agent.status();
-			if (now.state === 'running') throw new Error('The agent is already working on something. Wait for it to finish, then try again.');
+			const here = await readCheckout(canonical);
+			if (here.branch !== iteration.branch) throw new Error(`Open ${iteration.branch} first: a handoff checks the work where it is.`);
+			if (agent.status().state === 'running') throw new Error(AGENT_BUSY);
 			const skill = readSkillFile(dirname(recordsRoot), HANDOFF_SKILL);
 			if (skill === null) throw new Error(`The design repository on this machine has no ${HANDOFF_SKILL}. Update it (git pull) and try again.`);
-			return handoffTask({ skill, projectId, branch: iteration.branch, gate: gateCommand(descriptor.commands, projectId) });
+			const task = handoffTask({
+				skill,
+				projectId,
+				branch: iteration.branch,
+				gate: commandLine(descriptor.commands, 'handoff', projectId),
+				lightCheck: commandLine(descriptor.commands, 'check-iteration', projectId),
+			});
+			handoffStarts.set(canonical, { branch: iteration.branch, head: (await runGit(canonical, ['rev-parse', 'HEAD'])).trim() });
+			return startTracked(canonical, projectId, task, { branch: iteration.branch, addDirs: [recordsRoot], purpose: 'handoff' });
 		}),
 	);
-	// Whether the branch carries a handoff for engineering: it is committed with the work, or it was not written.
+	/**
+	 * Whether the last Handoff here found the work ready: the run's own last verdict says so, and HANDOFF.md was
+	 * committed since it started. Null when this app did not start one on this branch (it was restarted since).
+	 */
 	ipcMain.handle(
-		CHANNELS.handoffWritten,
-		guard((root: string) =>
-			runGit(opened.require(root), ['cat-file', '-e', `HEAD:${HANDOFF_FILE}`]).then(
-				() => true,
-				() => false,
-			),
-		),
+		CHANNELS.handoffResult,
+		guard(async (root: string): Promise<boolean | null> => {
+			const canonical = opened.require(root);
+			const started = handoffStarts.get(canonical);
+			const here = await readCheckout(canonical);
+			const recent = agent.recentLines();
+			if (!started || started.branch !== here.branch || recent.work !== here.branch) return null;
+			const written = (await runGit(canonical, ['diff', '--name-only', started.head, 'HEAD', '--', HANDOFF_FILE])).trim() !== '';
+			return written && lastVerdict(recent.lines) === 'ready';
+		}),
 	);
 
 	ipcMain.handle(
