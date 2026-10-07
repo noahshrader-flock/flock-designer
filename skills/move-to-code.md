@@ -19,7 +19,8 @@ at it later.
 - **The agent that builds writes the audit.** If this repository hands the work to another agent, give it
   this file unchanged, with the paths the task names; do not paraphrase it.
 - **Finish before you stop.** Never end while anything you started is still going: another agent, a
-  background command, a server. Wait for each, or stop it. Work in progress when you stop is lost.
+  background command, a server. Wait for each, in the foreground, or stop it. Work in progress when you
+  stop is lost.
 
 ## What you are given
 
@@ -87,10 +88,14 @@ and standards.
   task says where the shared skills are.
 - **When the work changes after the audit** (review findings, something found while building), update
   the audit to match in the same commit. It is what people check the work against.
-- Check the work with the repository's own checks, then commit on this branch. If this repository has
-  the work reviewed, fix what the reviews block on, check again, and commit that too, before you finish. **No
-  `Co-Authored-By` or other attribution line.** Never push, never switch branches.
+- **Check it with the light check this repository names**, after each step, and fix what it finds. While
+  you work, run only the tests that cover what you changed, never the whole suite.
+- **Commit as you go,** not only at the end: work left uncommitted when the run stops is lost. Commit on
+  this branch, with **no `Co-Authored-By` or other attribution line.** Never push, never switch branches.
+- **The reviews and the full checks are not part of this run.** They happen once, at Handoff, when the
+  work is where it belongs. This run's job is to get it there, on the standards, and say what is left.
 
 ## When you have finished
 
-Say what you built, where, and what is waiting in **Needs a decision**. Point to the audit file.
+Say what you built, where, what is waiting in **Needs a decision**, and the light check's result. Point to
+the audit file, and say the reviews run at Handoff.
