@@ -22,6 +22,7 @@
 		"esbuild": "^0.25.12",
 		"lucide-react": "^1.52.0",
 		"luxon": "^3.4.4",
+		"markdown-to-jsx": "^9.10.3",
 		"radix-ui": "^1.7.0",
 		"react": "^19.3.0",
 		"react-dom": "^19.3.0",

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { Project } from '../shared/contract';
+import { RichText } from './RichText';
 import { Alert, AlertDescription } from './ui/alert';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from './ui/sheet';
 import { Spinner } from './ui/spinner';
 
 /**
  * One file from a project's folder, read out in a panel from the side: the brief, the review notes, the
- * list of iterations. Shown as the text it is; these are files people and agents write to be read as they are.
+ * list of iterations. Markdown files are shown as rich text; anything else as the text it is.
  */
 export const RecordSheet = ({ project, name, open, onClose }: { project: Project; name: string; open: boolean; onClose: () => void }) => {
 	const [text, setText] = useState<string | null>(null);
@@ -40,7 +41,14 @@ export const RecordSheet = ({ project, name, open, onClose }: { project: Project
 						</Alert>
 					)}
 					{text === null && !error && <Spinner />}
-					{text !== null && <pre className="m-0 font-mono text-xs wrap-anywhere whitespace-pre-wrap">{text || 'This file is empty.'}</pre>}
+					{text !== null &&
+						(!text ? (
+							<p className="text-muted-foreground text-sm">This file is empty.</p>
+						) : /\.(md|markdown)$/i.test(name) ? (
+							<RichText>{text}</RichText>
+						) : (
+							<pre className="m-0 font-mono text-xs wrap-anywhere whitespace-pre-wrap">{text}</pre>
+						))}
 				</div>
 			</SheetContent>
 		</Sheet>
