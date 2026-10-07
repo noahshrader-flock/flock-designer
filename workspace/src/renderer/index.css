@@ -102,6 +102,17 @@
 	* {
 		@apply border-border outline-ring/50;
 	}
+	/* Tailwind resets buttons to the arrow; anything pressable gets the hand, here once rather than per component. */
+	button:not(:disabled),
+	[role='button']:not([aria-disabled='true']),
+	[role='menuitem']:not([data-disabled]),
+	[role='tab'],
+	[role='switch'],
+	[role='checkbox'],
+	[role='radio'],
+	summary {
+		cursor: pointer;
+	}
 	body {
 		@apply bg-background text-foreground;
 		margin: 0;
