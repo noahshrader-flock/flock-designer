@@ -294,8 +294,15 @@ export interface WorkspaceApi {
 	prepareMoveToCode(projectId: string, name: string): Promise<Result<string>>;
 	/** Asked when new work is about to be started: is Claude Code installed here, and signed in? */
 	agentReadiness(): Promise<Result<AgentReadiness>>;
+	/**
+	 * The task for Handoff on a project's codebase work: the product's gate, both reviews, their fixes, and
+	 * HANDOFF.md. Refused unless the checkout is on the work's branch and the agent is free.
+	 */
+	prepareHandoff(root: string, projectId: string): Promise<Result<string>>;
+	/** Whether the checkout's branch has a committed HANDOFF.md. */
+	handoffWritten(root: string): Promise<Result<boolean>>;
 	/** Whether this work can be handed to the person here: VS Code with Claude Code, and a conversation to continue. */
-	handoffState(root: string, branch: string): Promise<Result<{ editor: boolean; session: boolean }>>;
+	editorState(root: string, branch: string): Promise<Result<{ editor: boolean; session: boolean }>>;
 	/** Opens the checkout in VS Code (or the folder, without it). */
 	openInEditor(root: string): Promise<Result<null>>;
 	/** Continues this branch's latest agent conversation in VS Code, stopping the app's run of it first if it is still going. */
@@ -569,7 +576,9 @@ export const CHANNELS = {
 	agentStatus: 'workspace:agentStatus',
 	agentRecent: 'workspace:agentRecent',
 	agentReadiness: 'workspace:agentReadiness',
-	handoffState: 'workspace:handoffState',
+	editorState: 'workspace:editorState',
+	prepareHandoff: 'workspace:prepareHandoff',
+	handoffWritten: 'workspace:handoffWritten',
 	openInEditor: 'workspace:openInEditor',
 	continueInClaude: 'workspace:continueInClaude',
 	createQuick: 'workspace:createQuick',

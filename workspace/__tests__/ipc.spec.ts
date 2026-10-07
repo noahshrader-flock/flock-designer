@@ -93,7 +93,7 @@ beforeEach(async () => {
 	// Discovery looks under the home directory; point it at a temporary one.
 	vi.doMock('node:os', async () => ({ ...(await vi.importActual<object>('node:os')), homedir: () => home }));
 	// Never another application from a test: VS Code is treated as not installed.
-	vi.doMock('../src/main/services/handoff', async () => ({ ...(await vi.importActual<object>('../src/main/services/handoff')), findEditor: () => null }));
+	vi.doMock('../src/main/services/editor', async () => ({ ...(await vi.importActual<object>('../src/main/services/editor')), findEditor: () => null }));
 	copied = '';
 
 	({ registerIpc } = await import('../src/main/ipc'));
@@ -593,11 +593,11 @@ describe('one agent, one piece of work', () => {
 	it('hands the agent\'s conversation over, and stops the app\'s run of it first so it has one writer', async () => {
 		await call(CHANNELS.useCheckout, product);
 		agentStart.mockReturnValue({ state: 'running', startedAt: 'now' });
-		expect((await call(CHANNELS.handoffState, product, branchHere())).value).toEqual({ editor: false, session: false });
+		expect((await call(CHANNELS.editorState, product, branchHere())).value).toEqual({ editor: false, session: false });
 		await call(CHANNELS.startAgent, product, 'demo', 'do it');
 		const session = (agentStart.mock.calls.at(-1)?.[3] as { session: string }).session;
 		expect(session).toMatch(/^[0-9a-f-]{36}$/);
-		expect((await call(CHANNELS.handoffState, product, branchHere())).value).toEqual({ editor: false, session: true });
+		expect((await call(CHANNELS.editorState, product, branchHere())).value).toEqual({ editor: false, session: true });
 
 		runningSession = session;
 		const r = await call(CHANNELS.continueInClaude, product, branchHere());
@@ -642,6 +642,51 @@ describe('one agent, one piece of work', () => {
 		expect(r.ok).toBe(true);
 		expect(r.value).toMatchObject({ state: 'running' });
 		expect(agentStart).not.toHaveBeenCalled();
+	});
+});
+
+describe('Handoff', () => {
+	const ready = async () => {
+		await call(CHANNELS.useCheckout, product);
+		mkdirSync(join(design, 'skills'), { recursive: true });
+		writeFileSync(join(design, 'skills', 'handoff.md'), '# Hand work to engineering\nThe shared steps.\n');
+		const made = await call(CHANNELS.createIteration, product, 'demo', 'x', 'codebase', 'develop');
+		expect(made.ok).toBe(true);
+	};
+
+	it('asks for the shared skill, on the work\'s own branch, and says when the product names no gate', async () => {
+		await ready();
+		const r = await call(CHANNELS.prepareHandoff, product, 'demo');
+		expect(r.ok).toBe(true);
+		const task = r.value as string;
+		expect(task).toContain('The shared steps.');
+		expect(task).toContain('`feature/demo`');
+		expect(task).toMatch(/names no handoff gate/);
+		expect(task).toMatch(/Ready for engineering/);
+	});
+
+	it('refuses when the checkout is somewhere else, or the agent is busy', async () => {
+		await ready();
+		g(product, 'checkout', '-q', 'develop');
+		expect((await call(CHANNELS.prepareHandoff, product, 'demo')).error).toMatch(/Open feature\/demo first/);
+		g(product, 'checkout', '-q', 'feature/demo');
+		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now' });
+		expect((await call(CHANNELS.prepareHandoff, product, 'demo')).error).toMatch(/already working/);
+	});
+
+	it('refuses a project with no codebase work', async () => {
+		await call(CHANNELS.useCheckout, product);
+		expect((await call(CHANNELS.prepareHandoff, product, 'demo')).ok).toBe(false);
+	});
+
+	it('knows a handoff was written only once HANDOFF.md is committed on the branch', async () => {
+		await ready();
+		expect((await call(CHANNELS.handoffWritten, product)).value).toBe(false);
+		writeFileSync(join(product, 'HANDOFF.md'), '# Handoff\n');
+		expect((await call(CHANNELS.handoffWritten, product)).value).toBe(false);
+		g(product, 'add', 'HANDOFF.md');
+		g(product, '-c', 'user.name=t', '-c', 'user.email=t@x', 'commit', '-q', '-m', 'handoff');
+		expect((await call(CHANNELS.handoffWritten, product)).value).toBe(true);
 	});
 });
 

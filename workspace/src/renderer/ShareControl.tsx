@@ -1,4 +1,4 @@
-import { CodeIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
+import { CodeIcon, PackageCheckIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared/contract';
 import { dialogView, isMine, stepText } from './shareView';
@@ -27,7 +27,8 @@ export const ShareControl = ({
 	onOpenInBrowser,
 	quick = false,
 	onMoveToCode,
-	handoff,
+	onHandoff,
+	editor,
 }: {
 	checkout: Checkout | null;
 	project: Project;
@@ -39,8 +40,10 @@ export const ShareControl = ({
 	quick?: boolean;
 	/** Offered when there is a product repository here to build it in. */
 	onMoveToCode?: () => void;
+	/** Codebase work: the once-only full check before an engineer picks it up. */
+	onHandoff?: () => void;
 	/** Codebase work, handed to the person's editor: the checkout, and the agent's conversation when there is one. */
-	handoff?: { editor: boolean; session: boolean; openInEditor: () => unknown; continueInClaude: () => unknown };
+	editor?: { editor: boolean; session: boolean; openInEditor: () => unknown; continueInClaude: () => unknown };
 }) => {
 	const [status, setStatus] = useState<ShareStatus>({ state: 'idle' });
 	const [open, setOpen] = useState(false);
@@ -112,14 +115,20 @@ export const ShareControl = ({
 							{running ? 'Sharing…' : url ? 'Update shared preview' : 'Share for review'}
 						</DropdownMenuItem>
 					)}
-					{handoff && (
-						<DropdownMenuItem onSelect={handoff.openInEditor}>
-							<SquareTerminalIcon />
-							{handoff.editor ? 'Open in VS Code' : 'Show in Finder'}
+					{onHandoff && (
+						<DropdownMenuItem onSelect={onHandoff}>
+							<PackageCheckIcon />
+							Hand off to engineering
 						</DropdownMenuItem>
 					)}
-					{handoff?.session && (
-						<DropdownMenuItem onSelect={handoff.continueInClaude}>
+					{editor && (
+						<DropdownMenuItem onSelect={editor.openInEditor}>
+							<SquareTerminalIcon />
+							{editor.editor ? 'Open in VS Code' : 'Show in Finder'}
+						</DropdownMenuItem>
+					)}
+					{editor?.session && (
+						<DropdownMenuItem onSelect={editor.continueInClaude}>
 							<MessageSquareShareIcon />
 							Continue in Claude Code
 						</DropdownMenuItem>

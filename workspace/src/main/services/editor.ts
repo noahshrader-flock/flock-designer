@@ -49,7 +49,7 @@ export class SessionMemory {
 	}
 }
 
-/** VS Code, when it is installed with the Claude Code extension: the one editor the handoff opens. */
+/** VS Code, when it is installed with the Claude Code extension: the one editor work is handed to. */
 export const findEditor = (home: string = homedir(), exists: (p: string) => boolean = existsSync): string | null => {
 	const app = ['/Applications/Visual Studio Code.app', join(home, 'Applications', 'Visual Studio Code.app')].find(exists);
 	if (!app) return null;

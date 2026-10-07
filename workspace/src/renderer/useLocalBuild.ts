@@ -27,6 +27,8 @@ export const useLocalBuild = ({
 	const [attempt, setAttempt] = useState(0);
 	// Once the agent has done its work, trying again must not ask it to do the work twice.
 	const agentDone = useRef(false);
+	// Work asked for on a screen already open (Handoff): run once, then back to how the screen was.
+	const followUp = useRef<{ task: string; then: 'preview' | 'report' } | null>(null);
 
 	useEffect(() => {
 		// What the agent said before this screen was opened, when the run is this branch's: picks up where it was left.
@@ -48,11 +50,15 @@ export const useLocalBuild = ({
 			root,
 			project,
 			iteration,
-			task: agentDone.current ? undefined : task,
+			...(followUp.current
+				? { task: followUp.current.task, then: followUp.current.then }
+				: { task: agentDone.current ? undefined : task }),
 			isLive: () => !cancelled,
 			onPhase: (p) => {
 				if (cancelled) return;
 				if (p.kind === 'preview' && task) agentDone.current = true;
+				// Its agent is done (or failed): trying again, or opening the preview, must not run it twice.
+				if (p.kind === 'reported' || p.kind === 'failed' || p.kind === 'preview') followUp.current = null;
 				setPhase(p);
 			},
 		});
@@ -69,6 +75,13 @@ export const useLocalBuild = ({
 		/** Straight to the preview: the work was finished somewhere else (the person took it over in their editor). */
 		skipAgent: () => {
 			agentDone.current = true;
+			followUp.current = null;
+			setAttempt((n) => n + 1);
+		},
+		/** Asks the agent for more work on this screen, then reports (Handoff) or comes back to the preview. */
+		runAgent: (next: string, then: 'preview' | 'report') => {
+			followUp.current = { task: next, then };
+			setLog([]);
 			setAttempt((n) => n + 1);
 		},
 	};
