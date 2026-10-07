@@ -141,7 +141,7 @@ export const NewWork = ({
 		const r =
 			kind === 'prototype'
 				? await window.workspace.createPrototype(id, name.trim(), task.trim(), checkout && !elsewhere && from ? { root: checkout.root, branch: from } : undefined)
-				: await window.workspace.createIteration((checkout as Checkout).root, id, note, kind, from ?? undefined);
+				: await window.workspace.createIteration((checkout as Checkout).root, id, note, from ?? undefined);
 		setBusy(false);
 		if (!r.ok) return setError(r.error);
 		const iteration = freshIteration(r.value);

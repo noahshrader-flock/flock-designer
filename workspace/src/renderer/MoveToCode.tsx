@@ -83,7 +83,6 @@ export const MoveToCode = ({
 			checkout.root,
 			project.id,
 			`From prototype ${iteration.name}`,
-			'codebase',
 			from ?? undefined,
 		);
 		setBusy(false);

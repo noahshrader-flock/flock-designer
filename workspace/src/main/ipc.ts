@@ -8,7 +8,6 @@ import {
 	type Checkout,
 	type CheckoutSuggestion,
 	type Iteration,
-	type IterationKind,
 	type MarkerRequest,
 	PAGE_HOLD_REASONS,
 	type PageBounds,
@@ -295,9 +294,8 @@ export const registerIpc = ({
 
 	ipcMain.handle(
 		CHANNELS.createIteration,
-		guard(async (root: string, projectId: string, note: string, kind: IterationKind, from?: string) => {
-			// A prototype has no branch; it is made by createPrototype, never here.
-			if (kind !== 'codebase') throw new Error('That kind of work is not made on a branch.');
+		// Codebase work only: a prototype has no branch, and is made by createPrototype.
+		guard(async (root: string, projectId: string, note: string, from?: string) => {
 			const canonical = opened.require(root);
 			assertAgentNotHere(canonical);
 			const descriptor = descriptorFor(root);
@@ -316,7 +314,7 @@ export const registerIpc = ({
 				throw new Error(`${branch} has no ${setup}, so work cannot start from it. Start from a branch that has the Flock Designer setup.`);
 			}
 			const recordsRoot = recordsFor(canonical);
-			return written(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch, kind));
+			return written(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch));
 		}),
 	);
 

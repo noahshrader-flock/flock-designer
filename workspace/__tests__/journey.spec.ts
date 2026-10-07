@@ -85,10 +85,10 @@ describe('from a request to a running preview', () => {
 		expect(receipt.contextFiles).toContain('.flkd/non-negotiables.md');
 		expect(receipt.problems).toEqual([]);
 
-		// 3. Create iteration 1. The branch is made for them.
-		const i1 = await createIteration(root, records, descriptor, 'inactive-users', 'first try', 'develop');
-		expect(i1.branch).toBe('fd/inactive-users/i1');
-		expect((await readCheckout(root)).branch).toBe('fd/inactive-users/i1');
+		// 3. Start the codebase work. The branch is made for them.
+		const work = await createIteration(root, records, descriptor, 'inactive-users', 'first try', 'develop');
+		expect(work.branch).toBe('feature/inactive-users');
+		expect((await readCheckout(root)).branch).toBe('feature/inactive-users');
 
 		// 4. Hand the task to the agent. Substituted here so the journey does not
 		//    depend on Claude Code being installed; the adapter boundary is the point.
@@ -123,12 +123,12 @@ describe('from a request to a running preview', () => {
 
 		// 8. The record survives leaving the branch, because it never lived on it.
 		g('checkout', '-q', 'develop');
-		expect(readIterations(records, 'inactive-users').map((i) => i.name)).toEqual(['i1']);
+		expect(readIterations(records, 'inactive-users').map((i) => i.name)).toEqual(['codebase']);
 
 		// 9. Come back to it later and the commit is recorded.
-		const back = await continueIteration(root, records, 'inactive-users', 'i1');
+		const back = await continueIteration(root, records, 'inactive-users', 'codebase');
 		expect(back.commit).toMatch(/^[0-9a-f]{40}$/);
-		expect((await readCheckout(root)).branch).toBe('fd/inactive-users/i1');
+		expect((await readCheckout(root)).branch).toBe('feature/inactive-users');
 	});
 
 	it('stops at the first real problem rather than half-doing the journey', async () => {

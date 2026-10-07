@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import type { Iteration, IterationKind, Person, WorkspaceDescriptor } from '../../shared/contract';
+import type { Iteration, Person, WorkspaceDescriptor } from '../../shared/contract';
 import { branchAuthors, branchExists, branchStartedAt, checkoutBranch, createBranch, headCommit, isSamePerson, localIdentity } from './git';
 import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
-import { PROJECT_ID, nextPrototypeNumber as nextNumber } from '../../shared/projects';
+import { PROJECT_ID } from '../../shared/projects';
 
 /**
  * Named attempts at the question, and the record of them.
@@ -26,7 +26,10 @@ export class IterationProblem extends Error {
 	}
 }
 
-/** `fd/<project-id>/i<n>` from the repository's own pattern, never hard-coded. */
+/**
+ * `fd/<project-id>/i<n>` from the repository's own pattern, never hard-coded. Prototypes were once made on these
+ * branches; they are no longer, and this is only for reading the ones that exist.
+ */
 export const branchFor = (descriptor: WorkspaceDescriptor, projectId: string, n: number): string =>
 	descriptor.branchPattern.prototype.replace('<project-id>', projectId).replace('<n>', String(n));
 
@@ -66,20 +69,16 @@ const writeIterations = (recordsRoot: string, projectId: string, iterations: Ite
 	writeFileSync(path, `${JSON.stringify(iterations, null, 2)}\n`);
 };
 
-/** The next prototype number, on the one count every prototype shares. Counting records would skip a number once a codebase entry exists. */
-const nextPrototypeNumber = (existing: Iteration[]): number => nextNumber(existing.map((i) => i.name));
-
 /** The one `feature/<project-id>` branch for real-code work. */
 export const codebaseBranchFor = (descriptor: WorkspaceDescriptor, projectId: string): string =>
 	descriptor.branchPattern.codebase.replace('<project-id>', projectId);
 
 /**
- * Starts work on a project, by either route. Both end the same way: a branch,
- * and a record of it in the design repository that reviewers can read.
+ * Starts codebase work on a project: its branch, and a record of it in the design repository that
+ * reviewers can read. (A prototype has no branch: it is made by `recordPrototype`.)
  *
- * A prototype always gets a new `fd/` branch. Codebase work is one branch per
- * project, so if it already exists -- someone started it by hand, which is how
- * the first ones were made -- it is adopted rather than refused, and recorded.
+ * Codebase work is one branch per project, so if it already exists -- someone started it by hand,
+ * which is how the first ones were made -- it is adopted rather than refused, and recorded.
  */
 export const createIteration = async (
 	productRoot: string,
@@ -88,30 +87,18 @@ export const createIteration = async (
 	projectId: string,
 	note: string,
 	from: string,
-	kind: IterationKind = 'prototype',
 ): Promise<Iteration> => {
 	const existing = readIterations(recordsRoot, projectId);
-	let name: string;
-	let branch: string;
-
-	if (kind === 'codebase') {
-		name = 'codebase';
-		branch = codebaseBranchFor(descriptor, projectId);
-		if (existing.some((i) => i.name === name)) {
-			throw new IterationProblem(`${projectId} already has codebase work recorded. Use Continue on it.`);
-		}
-		// Either way nothing is recorded unless the checkout succeeds, so the
-		// record cannot claim work that is not there.
-		if (await branchExists(productRoot, branch)) {
-			await checkoutBranch(productRoot, branch);
-		} else {
-			await createBranch(productRoot, branch, from);
-		}
+	const name = 'codebase';
+	const branch = codebaseBranchFor(descriptor, projectId);
+	if (existing.some((i) => i.name === name)) {
+		throw new IterationProblem(`${projectId} already has codebase work recorded. Use Continue on it.`);
+	}
+	// Either way nothing is recorded unless the checkout succeeds, so the
+	// record cannot claim work that is not there.
+	if (await branchExists(productRoot, branch)) {
+		await checkoutBranch(productRoot, branch);
 	} else {
-		name = `i${nextPrototypeNumber(existing)}`;
-		branch = branchFor(descriptor, projectId, nextPrototypeNumber(existing));
-		// The branch is created first. If it fails -- a dirty tree, a name already
-		// taken -- nothing has been recorded.
 		await createBranch(productRoot, branch, from);
 	}
 

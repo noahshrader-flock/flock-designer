@@ -215,7 +215,8 @@ export interface WorkspaceApi {
 	listIterations(root: string, projectId: string): Promise<Result<Iteration[]>>;
 	/** Creates the branch. Refuses if the tree is dirty; never discards work. */
 	/** Creates the branch from `from` (a local branch), or from the current branch when it is not given. */
-	createIteration(root: string, projectId: string, note: string, kind: IterationKind, from?: string): Promise<Result<Iteration>>;
+	/** Starts codebase work: its branch, and its record. A prototype is made by `createPrototype`. */
+	createIteration(root: string, projectId: string, note: string, from?: string): Promise<Result<Iteration>>;
 	/**
 	 * Every repository the signed-in person can see on GitHub, most recently pushed first, each with its clone on
 	 * this machine where there is one; then clones here GitHub did not list. Listing one trusts nothing.

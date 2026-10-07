@@ -138,7 +138,7 @@ describe('a repository must be opened before anything acts on it', () => {
 		[CHANNELS.listIterations, () => [product, 'demo']],
 		[CHANNELS.startCommand, () => [product, 'preview', 'demo']],
 		[CHANNELS.startAgent, () => [product, 'demo', 'do it']],
-		[CHANNELS.createIteration, () => [product, 'demo', 'note', 'codebase']],
+		[CHANNELS.createIteration, () => [product, 'demo', 'note']],
 	])('%s refuses a root this window never opened', async (channel, args) => {
 		const r = await call(channel, ...args());
 		expect(r.ok).toBe(false);
@@ -223,7 +223,7 @@ describe('where new work starts', () => {
 		g(product, 'checkout', '-q', '-b', 'noah/baseline');
 		g(product, 'commit', '-q', '--allow-empty', '-m', 'baseline only');
 		g(product, 'checkout', '-q', 'develop');
-		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'codebase', 'noah/baseline');
+		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'noah/baseline');
 		expect(r.ok).toBe(true);
 		expect(g(product, 'log', '-1', '--format=%s', 'feature/demo').trim()).toBe('baseline only');
 	});
@@ -236,7 +236,7 @@ describe('where new work starts', () => {
 		g(product, 'add', '.');
 		g(product, 'commit', '-q', '-m', 'no setup here');
 		g(product, 'checkout', '-q', '-f', 'develop');
-		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'codebase', 'bare');
+		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'bare');
 		expect(r.ok).toBe(false);
 		expect(r.error).toMatch(/has no \.flkd\/workspace\.json/);
 		expect(g(product, 'branch', '--show-current').trim()).toBe('develop');
@@ -244,7 +244,7 @@ describe('where new work starts', () => {
 
 	it('refuses a branch that does not exist, so nothing else reaches git', async () => {
 		await call(CHANNELS.useCheckout, product);
-		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'codebase', '--orphan');
+		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', '--orphan');
 		expect(r.ok).toBe(false);
 		expect(g(product, 'branch', '--list', 'fd/*').trim()).toBe('');
 	});
@@ -287,13 +287,6 @@ describe('prototypes', () => {
 	it('are never started without a repository and branch to model them on', async () => {
 		await call(CHANNELS.useCheckout, product);
 		expect((await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list')).ok).toBe(false);
-	});
-
-	it('are never made as a branch', async () => {
-		await call(CHANNELS.useCheckout, product);
-		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'prototype');
-		expect(r.ok).toBe(false);
-		expect(g(product, 'branch', '--list', '*demo*').trim()).toBe('');
 	});
 
 	it('are recorded, saved and served through the clone on this machine', async () => {
@@ -446,7 +439,7 @@ describe('prototypes', () => {
 
 		it('says when the project already has codebase work recorded', async () => {
 			await start();
-			await call(CHANNELS.createIteration, product, 'demo', 'x', 'codebase', 'develop');
+			await call(CHANNELS.createIteration, product, 'demo', 'x', 'develop');
 			g(product, 'checkout', '-q', 'develop');
 			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'i1')).value).toMatchObject({ recorded: true });
 		});
@@ -646,7 +639,7 @@ describe('one agent, one piece of work', () => {
 	it('does not switch the checkout\'s branch under a running agent', async () => {
 		await call(CHANNELS.useCheckout, product);
 		agentRunningIn.mockReturnValue(true);
-		const r = await call(CHANNELS.createIteration, product, 'demo', 'note', 'codebase');
+		const r = await call(CHANNELS.createIteration, product, 'demo', 'note');
 		expect(r.ok).toBe(false);
 		expect(r.error).toMatch(/agent is working in flock-coke/);
 	});
@@ -666,7 +659,7 @@ describe('Handoff', () => {
 		await call(CHANNELS.useCheckout, product);
 		mkdirSync(join(design, 'skills'), { recursive: true });
 		writeFileSync(join(design, 'skills', 'handoff.md'), '# Hand work to engineering\nThe shared steps.\n');
-		const made = await call(CHANNELS.createIteration, product, 'demo', 'x', 'codebase', 'develop');
+		const made = await call(CHANNELS.createIteration, product, 'demo', 'x', 'develop');
 		expect(made.ok).toBe(true);
 		agentStart.mockReturnValue({ state: 'running', startedAt: 'now', work: 'feature/demo', purpose: 'handoff' });
 	};
