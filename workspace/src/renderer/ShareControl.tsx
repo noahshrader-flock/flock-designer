@@ -25,7 +25,6 @@ export const ShareControl = ({
 	iteration,
 	canOpen,
 	onOpenInBrowser,
-	onOpenChange,
 	quick = false,
 	onMoveToCode,
 	handoff,
@@ -36,8 +35,6 @@ export const ShareControl = ({
 	/** Whether the page is up, so there is something to open. */
 	canOpen: boolean;
 	onOpenInBrowser: () => void;
-	/** The preview is a native layer over this window, so the screen must know when the menu or dialog needs the space. */
-	onOpenChange: (open: boolean) => void;
 	/** A quick prototype: already where reviewers see it, so there is no sharing, only moving it into the code. */
 	quick?: boolean;
 	/** Offered when there is a product repository here to build it in. */
@@ -62,11 +59,6 @@ export const ShareControl = ({
 	const url = mine && status.state === 'ready' ? status.url : iteration.previewUrl;
 	const view = dialogView(phase, status, mine);
 
-	useEffect(() => {
-		onOpenChange(open || menuOpen);
-	}, [open, menuOpen, onOpenChange]);
-	// Leaving with either open must hand the preview back.
-	useEffect(() => () => onOpenChange(false), [onOpenChange]);
 
 	const start = async () => {
 		if (!checkout) return;

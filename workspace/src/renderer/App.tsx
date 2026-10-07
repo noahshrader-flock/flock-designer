@@ -16,8 +16,6 @@ import { TopNav, type Section } from './TopNav';
  * back as a GitHub-backed list of repositories rather than a folder picker.
  */
 export const App = () => {
-	// Open over the preview, which is a native layer: the screen under the bar has to make room for it.
-	const [menuOpen, setMenuOpen] = useState(false);
 	const [section, setSection] = useState<Section>('projects');
 	const [signIn, setSignIn] = useState<SignInState>({ state: 'signedOut' });
 
@@ -38,16 +36,16 @@ export const App = () => {
 
 	return (
 		<div className="bg-background h-screen overflow-hidden">
-			<TopNav user={signIn.state === 'signedIn' ? signIn.user : null} section={section} onSectionChange={setSection} onSignOut={signOut} onMenuOpenChange={setMenuOpen} />
+			<TopNav user={signIn.state === 'signedIn' ? signIn.user : null} section={section} onSectionChange={setSection} onSignOut={signOut} />
 			{/* The bar is fixed, so the rest starts below it and scrolls on its own. */}
 			<div className="h-full overflow-y-auto pt-(--nav-height)">
 				<ErrorBoundary>
 					{signIn.state === 'signedIn' ? (
 						<>
 							{/* Stays mounted so an open review and the list's state survive a visit to the other tab.
-							    Hidden, its preview is a native layer that would still show, so it steps aside as for the menu. */}
+							    Hidden, its preview is a native layer that would still show, so it is told to step aside. */}
 							<div hidden={section !== 'projects'}>
-								<Projects menuOpen={menuOpen || section !== 'projects'} />
+								<Projects hidden={section !== 'projects'} />
 							</div>
 							{section === 'design-system' && <div className="h-full" />}
 						</>

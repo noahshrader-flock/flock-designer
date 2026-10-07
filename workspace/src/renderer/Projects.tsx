@@ -29,7 +29,7 @@ const Page = ({ children }: { children: ReactNode }) => (
  * Nothing here needs a checkout, git, or the product's toolchain -- that is the
  * whole point. A PM installs the app, signs in, and sees this.
  */
-export const Projects = ({ menuOpen }: { menuOpen: boolean }) => {
+export const Projects = ({ hidden }: { hidden: boolean }) => {
 	const [projects, setProjects] = useState<Project[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	// Kept after it closes so the panel can slide away still showing what it was showing.
@@ -118,7 +118,7 @@ export const Projects = ({ menuOpen }: { menuOpen: boolean }) => {
 				checkout={checkout}
 				onChoose={chooseCheckout}
 				task={selected.task}
-				menuOpen={menuOpen}
+				hidden={hidden}
 				onOpen={(project, iteration, task) => setSelected({ project, iteration, task })}
 				onBack={() => {
 					setSelected(null);

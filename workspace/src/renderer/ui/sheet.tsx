@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { useOverlayRef } from "@/overlays"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
 import { Button } from "@/ui/button"
@@ -31,6 +32,7 @@ function SheetOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Overlay>) {
+  const ref = useOverlayRef(props.ref)
   return (
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
@@ -39,6 +41,7 @@ function SheetOverlay({
         className
       )}
       {...props}
+      ref={ref}
     />
   )
 }

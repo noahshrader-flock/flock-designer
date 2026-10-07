@@ -8,6 +8,7 @@ import { MoveToCode } from './MoveToCode';
 import { PeopleAvatars } from './People';
 import { AgentLog, Loading } from './Loading';
 import { ShareControl } from './ShareControl';
+import { useOverlaps } from './overlays';
 import { Toolbar } from './Toolbar';
 import { useHostedPreview } from './hostedPreview';
 import { type AddressPhase, runAddress } from './address';
@@ -63,7 +64,7 @@ export const Review = ({
 	checkout,
 	onChoose,
 	task,
-	menuOpen,
+	hidden,
 	onOpen,
 }: {
 	project: Project;
@@ -74,8 +75,8 @@ export const Review = ({
 	onChoose: () => void;
 	/** For work that was just created: what the agent builds before the preview starts. */
 	task?: string;
-	/** The account menu in the top bar is open, and drops over the preview. */
-	menuOpen: boolean;
+	/** Another section is showing over this screen, so the preview has to step aside. */
+	hidden: boolean;
 	/** Opens other work: where moving a quick prototype into the code goes next. */
 	onOpen: (project: Project, iteration: ProjectIteration, task: string) => void;
 }) => {
@@ -139,11 +140,8 @@ export const Review = ({
 	const hostedUrl = iteration.previewUrl ?? null;
 	const useHosted = hostedUrl !== null && (checkout === null || local.phase.kind === 'failed');
 	const hosted = useHostedPreview(useHosted ? hostedUrl : null);
-	const [shareOpen, setShareOpen] = useState(false);
 	// Moving a quick prototype into the code is confirmed first, in a dialog (MoveToCode).
 	const [moving, setMoving] = useState(false);
-	// The branch tooltip opens over the preview, which is a native layer above everything in this window.
-	const [branchTip, setBranchTip] = useState(false);
 
 	// Asking the agent to act on the open comments. It is one agent: not while it is building this iteration.
 	const [address, setAddress] = useState<AddressPhase>({ kind: 'idle' });
@@ -452,9 +450,10 @@ export const Review = ({
 	 * is on screen before the live view is hidden, so there is no flash of empty window; and
 	 * a run counter drops the result of a freeze that was overtaken by the box closing again.
 	 */
-	// The sharing dialog, the menu and the branch tooltip need the same thing the comment box does: the space
-	// the preview occupies.
-	const frozen = composing || shareOpen || branchTip || menuOpen || moving;
+	// Anything drawn over the preview needs the space it occupies: the comment box here, and any tooltip, menu,
+	// dialog or sheet that lands on it (they register themselves, see overlays.ts).
+	const overlapped = useOverlaps(slot);
+	const frozen = composing || hidden || overlapped;
 	const run = useRef(0);
 	useEffect(() => {
 		const mine = ++run.current;
@@ -635,12 +634,12 @@ export const Review = ({
 							<ChevronLeftIcon />
 						</Button>
 					</TooltipTrigger>
-					<TooltipContent>Back to projects</TooltipContent>
+					<TooltipContent side="bottom">Back to projects</TooltipContent>
 				</Tooltip>
 				<h2 className="truncate text-sm font-semibold">
 					{project.title} — {iteration.name}
 				</h2>
-				<Tooltip delayDuration={300} onOpenChange={setBranchTip}>
+				<Tooltip delayDuration={300}>
 					<TooltipTrigger asChild>
 						{quick ? (
 							<FolderIcon aria-label={`Saved at ${quickPagePath(project.id, iteration.name)}`} className="text-muted-foreground size-4 shrink-0" />
@@ -661,7 +660,6 @@ export const Review = ({
 					iteration={iteration}
 					canOpen={opened}
 					onOpenInBrowser={() => void window.workspace.openPreviewInBrowser().then((r) => !r.ok && setError(r.error))}
-					onOpenChange={setShareOpen}
 					quick={quick}
 					onMoveToCode={checkout ? () => setMoving(true) : undefined}
 					handoff={handoff.available ? handoff : undefined}

@@ -19,23 +19,20 @@ const onMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgen
  * sections (Projects, Design System), and the account. The window
  * has no separate toolbar above this -- the bar is the toolbar.
  *
- * The preview is a native view that sits above all page content, so an open
- * account menu would be hidden behind it. While the menu is open the preview
- * steps aside (the review screen swaps it for a still picture), and returns when it closes.
+ * The preview is a native view that sits above all page content. The account menu
+ * needs nothing special for that: the review screen notices any pop-up over the
+ * preview (see overlays.ts) and swaps it for a still picture while it is open.
  */
 export const TopNav = ({
 	user,
 	section,
 	onSectionChange,
 	onSignOut,
-	onMenuOpenChange,
 }: {
 	user: GitHubUser | null;
 	section: Section;
 	onSectionChange: (section: Section) => void;
 	onSignOut: () => void;
-	/** The screen under the bar needs to know, so a preview does not cover the menu. */
-	onMenuOpenChange: (open: boolean) => void;
 }) => {
 	return (
 		<header
@@ -72,7 +69,7 @@ export const TopNav = ({
 			<div className="grow" />
 
 			{user && (
-				<DropdownMenu onOpenChange={onMenuOpenChange}>
+				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<Button variant="ghost" className="app-no-drag h-auto gap-3 py-1 font-normal">
 							<Avatar size="sm">

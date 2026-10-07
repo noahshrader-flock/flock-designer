@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { useOverlayRef } from "@/overlays"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { Button } from "@/ui/button"
@@ -35,6 +36,7 @@ function DialogOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+  const ref = useOverlayRef(props.ref)
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
@@ -43,6 +45,7 @@ function DialogOverlay({
         className
       )}
       {...props}
+      ref={ref}
     />
   )
 }

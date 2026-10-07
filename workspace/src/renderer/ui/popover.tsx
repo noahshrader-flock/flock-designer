@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { useOverlayRef } from "@/overlays"
 import { Popover as PopoverPrimitive } from "radix-ui"
 
 function Popover({
@@ -20,6 +21,7 @@ function PopoverContent({
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+  const ref = useOverlayRef(props.ref)
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
@@ -31,6 +33,7 @@ function PopoverContent({
           className
         )}
         {...props}
+        ref={ref}
       />
     </PopoverPrimitive.Portal>
   )
