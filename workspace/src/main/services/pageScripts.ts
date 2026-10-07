@@ -313,7 +313,9 @@ export const resolveScript = (items: MarkerRequest[], nonce: string): string => 
 ${HELPERS}
   var old = window.__fdMarkers;
   if (old) { old.stop(); }
-  var layer = doc.querySelector('[data-fd-layer]');
+  // The pins' own layer, not the first of the app's layers: comment mode keeps an outline on the page too, and
+  // a redraw that took that one left the old pins behind (a deleted comment's pin stayed on the page).
+  var layer = doc.querySelector('[data-fd-layer="pins"]');
   if (layer) layer.remove();
   var say = function (msg) { msg.n = nonce; console.debug('${MESSAGE_PREFIX}' + JSON.stringify(msg)); };
   var results = [], placed = [];
@@ -352,7 +354,7 @@ ${HELPERS}
   if (placed.length === 0) { window.__fdMarkers = undefined; return results; }
 
   layer = doc.createElement('div');
-  layer.setAttribute('data-fd-layer', '');
+  layer.setAttribute('data-fd-layer', 'pins');
   layer.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;z-index:2147483647;pointer-events:none';
 
   var place = function () {

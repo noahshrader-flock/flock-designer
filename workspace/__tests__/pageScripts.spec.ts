@@ -308,6 +308,25 @@ describe('pins that can be clicked and dragged', () => {
 	});
 });
 
+describe('redrawing the pins', () => {
+	const pins = (w: Window) => w.document.querySelectorAll('[data-fd-layer]:not([data-fd-layer="hover"])');
+
+	it('removes the pins that were there, even while a comment is being placed', () => {
+		const w = page(CARD);
+		const draw = (items: MarkerRequest[]) => w.eval(resolveScript(items, 'nonce'));
+		draw([req(1, { selector: '[data-e2e-ref="users-invite"]' })]);
+		// Comment mode puts its outline on the page, after the pins; a later redraw puts the pins after it.
+		void (w.eval(PICK_SCRIPT) as Promise<unknown>);
+		draw([req(1, { selector: '[data-e2e-ref="users-invite"]' })]);
+		expect(pins(w)).toHaveLength(1);
+		// The comment was deleted: nothing is left to draw, and nothing may be left on the page.
+		draw([]);
+		expect(pins(w)).toHaveLength(0);
+		// ...and the outline belongs to comment mode, which is still on.
+		expect(w.document.querySelectorAll('[data-fd-layer="hover"]').length).toBeGreaterThan(0);
+	});
+});
+
 describe('hiding the pins for a picture', () => {
 	it('hides the app\'s own pins and shows them again, leaving the page alone', async () => {
 		const w = page(CARD);
