@@ -24,9 +24,11 @@ vi.mock('electron', () => ({
 	ipcMain: {
 		handle: (channel: string, fn: (...args: unknown[]) => unknown) => handlers.set(channel, fn),
 	},
-	dialog: { showOpenDialog: vi.fn(async () => ({ canceled: true, filePaths: [] })) },
-	shell: { openExternal: vi.fn() },
+	dialog: { showOpenDialog: vi.fn(async () => ({ canceled: true, filePaths: [] })), showMessageBox: vi.fn(async () => ({ response: 0 })) },
+	shell: { openExternal: vi.fn(), openPath: vi.fn(async () => '') },
+	clipboard: { writeText: (t: string) => (copied = t) },
 }));
+let copied = '';
 
 const call = async (channel: string, ...args: unknown[]) => {
 	const fn = handlers.get(channel);
@@ -67,6 +69,7 @@ let OpenedCheckouts: typeof import('../src/main/services/session')['OpenedChecko
 let opened: InstanceType<typeof OpenedCheckouts>;
 let agentStart: ReturnType<typeof vi.fn>;
 let agentStatus: ReturnType<typeof vi.fn>;
+let agentStop: ReturnType<typeof vi.fn>;
 let runtimeStart: ReturnType<typeof vi.fn>;
 let memoryValue: string | null;
 let previewUrl: string | null;
@@ -87,12 +90,16 @@ beforeEach(async () => {
 
 	// Discovery looks under the home directory; point it at a temporary one.
 	vi.doMock('node:os', async () => ({ ...(await vi.importActual<object>('node:os')), homedir: () => home }));
+	// Never another application from a test: VS Code is treated as not installed.
+	vi.doMock('../src/main/services/handoff', async () => ({ ...(await vi.importActual<object>('../src/main/services/handoff')), findEditor: () => null }));
+	copied = '';
 
 	({ registerIpc } = await import('../src/main/ipc'));
 	({ OpenedCheckouts } = await import('../src/main/services/session'));
 	opened = new OpenedCheckouts();
 	agentStart = vi.fn(() => ({ state: 'idle' }));
 	agentStatus = vi.fn(() => ({ state: 'idle' }));
+	agentStop = vi.fn();
 	runtimeStart = vi.fn(async () => ({ state: 'stopped' }));
 	memoryValue = null;
 	previewUrl = null;
@@ -103,7 +110,7 @@ beforeEach(async () => {
 		window: { webContents: { send: vi.fn() } } as never,
 		opened,
 		runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
-		agent: { start: agentStart, status: agentStatus } as never,
+		agent: { start: agentStart, status: agentStatus, stop: agentStop } as never,
 		github: { state: () => ({ state: 'signedOut' }) } as never,
 		designRepo: { listProjects: vi.fn(async () => []), deleteComment } as never,
 		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
@@ -577,6 +584,32 @@ describe('one agent, one piece of work', () => {
 		expect(r.ok).toBe(false);
 		expect(r.error).toMatch(/already working on something else/);
 		expect(agentStart).not.toHaveBeenCalled();
+	});
+
+	it('hands the agent\'s conversation over, and stops the app\'s run of it first so it has one writer', async () => {
+		await call(CHANNELS.useCheckout, product);
+		agentStart.mockReturnValue({ state: 'running', startedAt: 'now' });
+		expect((await call(CHANNELS.handoffState, product, branchHere())).value).toEqual({ editor: false, session: false });
+		await call(CHANNELS.startAgent, product, 'demo', 'do it');
+		const session = (agentStart.mock.calls.at(-1)?.[3] as { session: string }).session;
+		expect(session).toMatch(/^[0-9a-f-]{36}$/);
+		expect((await call(CHANNELS.handoffState, product, branchHere())).value).toEqual({ editor: false, session: true });
+
+		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now', work: branchHere() });
+		const r = await call(CHANNELS.continueInClaude, product, branchHere());
+		expect(r.ok).toBe(true);
+		expect(agentStop).toHaveBeenCalled();
+		// Without VS Code, the same conversation from a terminal.
+		expect(copied).toContain(`--resume ${session}`);
+	});
+
+	it('leaves another work\'s run alone, and says when there is nothing to continue', async () => {
+		await call(CHANNELS.useCheckout, product);
+		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now', work: 'quick/other/q1' });
+		const r = await call(CHANNELS.continueInClaude, product, 'feature/nothing-here');
+		expect(r.ok).toBe(false);
+		expect(r.error).toMatch(/no agent conversation/);
+		expect(agentStop).not.toHaveBeenCalled();
 	});
 
 	it('joins its own run when asked twice, rather than starting a second', async () => {

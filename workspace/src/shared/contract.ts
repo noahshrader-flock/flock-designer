@@ -294,6 +294,12 @@ export interface WorkspaceApi {
 	prepareMoveToCode(projectId: string, name: string): Promise<Result<string>>;
 	/** Asked when new work is about to be started: is Claude Code installed here, and signed in? */
 	agentReadiness(): Promise<Result<AgentReadiness>>;
+	/** Whether this work can be handed to the person here: VS Code with Claude Code, and a conversation to continue. */
+	handoffState(root: string, branch: string): Promise<Result<{ editor: boolean; session: boolean }>>;
+	/** Opens the checkout in VS Code (or the folder, without it). */
+	openInEditor(root: string): Promise<Result<null>>;
+	/** Continues this branch's latest agent conversation in VS Code, stopping the app's run of it first if it is still going. */
+	continueInClaude(root: string, branch: string): Promise<Result<null>>;
 	onAgentLog(listener: (line: RunLogLine) => void): () => void;
 
 	/** Begins device-flow sign-in. Resolves as soon as there is a code to show. */
@@ -563,6 +569,9 @@ export const CHANNELS = {
 	agentStatus: 'workspace:agentStatus',
 	agentRecent: 'workspace:agentRecent',
 	agentReadiness: 'workspace:agentReadiness',
+	handoffState: 'workspace:handoffState',
+	openInEditor: 'workspace:openInEditor',
+	continueInClaude: 'workspace:continueInClaude',
 	createQuick: 'workspace:createQuick',
 	buildQuick: 'workspace:buildQuick',
 	saveQuick: 'workspace:saveQuick',

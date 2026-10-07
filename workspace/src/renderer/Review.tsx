@@ -14,6 +14,7 @@ import { type AddressPhase, runAddress } from './address';
 import { routeWentWrong } from './localBuild';
 import { PANEL_STEP, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
 import { useLocalBuild } from './useLocalBuild';
+import { useHandoff } from './useHandoff';
 import { useQuickBuild } from './quickBuild';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
@@ -131,6 +132,10 @@ export const Review = ({
 	const localBuild = useLocalBuild({ checkout, project, iteration, task, enabled: !quick && (!iteration.previewUrl || checkout !== null) });
 	const quickBuild = useQuickBuild({ project, iteration, task, enabled: quick });
 	const local = quick ? quickBuild : localBuild;
+	// Codebase work can be handed to the person's own editor, and the agent's conversation with it.
+	const handoff = useHandoff(quick ? null : checkout, iteration, local.phase.kind, setError);
+	// Set when the person took the running agent over in VS Code: the screen waits for them, not for it.
+	const [handedOff, setHandedOff] = useState(false);
 	const hostedUrl = iteration.previewUrl ?? null;
 	const useHosted = hostedUrl !== null && (checkout === null || local.phase.kind === 'failed');
 	const hosted = useHostedPreview(useHosted ? hostedUrl : null);
@@ -659,6 +664,7 @@ export const Review = ({
 					onOpenChange={setShareOpen}
 					quick={quick}
 					onMoveToCode={checkout ? () => setMoving(true) : undefined}
+					handoff={handoff.available ? handoff : undefined}
 				/>
 
 				{/* One control, two halves: comment mode on the left, the list of comments on the right.
@@ -701,13 +707,35 @@ export const Review = ({
 				<div ref={slot} className="bg-background relative min-w-0 flex-1 overflow-hidden">
 					{!opened && (
 						<div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
-							{local.phase.kind === 'failed' && !useHosted ? (
+							{handedOff ? (
+								<>
+									<p className="text-sm">The conversation continues in VS Code.</p>
+									<p className="text-muted-foreground max-w-[480px] text-sm">
+										When the work is done there, open the preview to see it here and share it.
+									</p>
+									<Button
+										onClick={() => {
+											setHandedOff(false);
+											localBuild.skipAgent();
+										}}
+									>
+										Open the preview
+									</Button>
+								</>
+							) : local.phase.kind === 'failed' && !useHosted ? (
 								<>
 									<Alert variant="destructive" className="max-w-[560px] text-left">
 										<AlertDescription>{local.phase.message}</AlertDescription>
 									</Alert>
 									<AgentLog lines={local.log} />
-									<Button onClick={local.retry}>Try again</Button>
+									<div className="flex gap-2">
+										{handoff.session && (
+											<Button variant="secondary" onClick={handoff.continueInClaude}>
+												Continue in Claude Code
+											</Button>
+										)}
+										<Button onClick={local.retry}>Try again</Button>
+									</div>
 								</>
 							) : error ? (
 								<Alert variant="destructive" className="max-w-[560px] text-left">
@@ -746,6 +774,25 @@ export const Review = ({
 												The agent is writing it from your request. This takes a few minutes.
 											</p>
 											<AgentLog lines={local.log} />
+											{handoff.available && (
+												<div className="flex gap-2">
+													<Button variant="secondary" onClick={handoff.openInEditor}>
+														{handoff.editor ? 'Open in VS Code' : 'Show in Finder'}
+													</Button>
+													{handoff.session && (
+														<Button
+															variant="secondary"
+															title="Stops the agent here and continues the same conversation in VS Code"
+															onClick={() => {
+																setHandedOff(true);
+																handoff.continueInClaude();
+															}}
+														>
+															Take over in Claude Code
+														</Button>
+													)}
+												</div>
+											)}
 										</>
 									)}
 									{local.phase.kind === 'preview' && !quick && <p className="text-muted-foreground text-sm">The first time can take a minute.</p>}

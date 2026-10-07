@@ -62,5 +62,14 @@ export const useLocalBuild = ({
 		// The iteration is identified by these, not by the object, which is new on every render of the parent.
 	}, [enabled, root, project.id, iteration.name, iteration.branch, task, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
 
-	return { phase, log, retry: () => setAttempt((n) => n + 1) };
+	return {
+		phase,
+		log,
+		retry: () => setAttempt((n) => n + 1),
+		/** Straight to the preview: the work was finished somewhere else (the person took it over in their editor). */
+		skipAgent: () => {
+			agentDone.current = true;
+			setAttempt((n) => n + 1);
+		},
+	};
 };

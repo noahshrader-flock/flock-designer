@@ -40,6 +40,14 @@ describe('the adapter boundary', () => {
 		expect(argv[argv.indexOf('-p') + 1]).toBe('a task with ; and && in it');
 	});
 
+	it('names the conversation with the ID the app chose, so it can be continued elsewhere', () => {
+		const argv = claudeCodeAdapter.argvFor('t', { session: '5ea94a82-46ac-4823-9acb-716bcb37aa64', name: 'Flock Designer: demo', addDirs: ['/r'] });
+		expect(argv[argv.indexOf('--session-id') + 1]).toBe('5ea94a82-46ac-4823-9acb-716bcb37aa64');
+		expect(argv[argv.indexOf('--name') + 1]).toBe('Flock Designer: demo');
+		// --add-dir takes a list, so it stays last.
+		expect(argv.at(-2)).toBe('--add-dir');
+	});
+
 	it('can be swapped without touching the runner, so the tool is replaceable', async () => {
 		const runner = new AgentRunner((l) => logs.push(l), {
 			spawnProcess: spawn,

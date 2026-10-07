@@ -28,6 +28,10 @@ export interface AgentExtras {
 	work?: string;
 	/** The task stands alone: it is not working in a repository, so there are no repository instructions to point at. */
 	bare?: boolean;
+	/** The conversation's ID, chosen by the app, so the person can continue it in their editor afterwards. */
+	session?: string;
+	/** What the conversation is called where it is listed, so it can be recognised there. */
+	name?: string;
 }
 
 export interface AgentAdapter {
@@ -221,6 +225,8 @@ export const claudeCodeAdapter: AgentAdapter = {
 		settingsFor(extras?.readOnly ?? []),
 		'--allowedTools',
 		ALLOWED_TOOLS,
+		...(extras?.session ? ['--session-id', extras.session] : []),
+		...(extras?.name ? ['--name', extras.name] : []),
 		// Last: it takes a list, and would swallow anything after it.
 		...(extras?.addDirs?.length ? ['--add-dir', ...extras.addDirs] : []),
 	],

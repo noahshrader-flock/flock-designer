@@ -1,4 +1,5 @@
-import { type BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { type BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron';
+import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
@@ -21,7 +22,8 @@ import {
 	type Result,
 	type ReviewComment,
 } from '../shared/contract';
-import { AgentRunner, agentReadiness } from './services/agent';
+import { AgentRunner, agentReadiness, locateClaude } from './services/agent';
+import { SessionMemory, findEditor, openFolder, openSession, resumeCommand } from './services/handoff';
 import { type ShareRunner, previewIsUp, pullRequestText } from './services/share';
 import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
@@ -104,6 +106,8 @@ export interface IpcContext {
 	/** Where quick prototypes are built before they are saved: the app's own folder, never a repository. */
 	quickRoot?: string;
 	quickServer?: QuickServer;
+	/** The latest agent conversation for each branch, so it can be continued in the person's editor. */
+	sessions?: SessionMemory;
 }
 
 export const registerIpc = ({
@@ -119,6 +123,7 @@ export const registerIpc = ({
 	onPublishStatus,
 	quickRoot = join(tmpdir(), 'flock-designer-quick'),
 	quickServer = new QuickServer(),
+	sessions = new SessionMemory(join(tmpdir(), 'flock-designer-agent-sessions.json')),
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
@@ -358,11 +363,58 @@ export const registerIpc = ({
 			}
 			// A quick prototype being moved into the code is read from the app's own copy of it.
 			const quick = join(quickRoot, projectId);
-			return agent.start(canonical, projectId, task, {
+			const session = randomUUID();
+			const started = agent.start(canonical, projectId, task, {
 				// The project's records live in the design repository, beside the product checkout.
 				addDirs: [recordsFor(canonical), ...(existsSync(quick) ? [quick] : [])],
 				...(branch !== null ? { work: branch } : {}),
+				session,
+				name: `Flock Designer: ${projectId}`,
 			});
+			if (started.state === 'running' && branch !== null) sessions.write(canonical, branch, session);
+			return started;
+		}),
+	);
+
+	// Handing the work to the person, in VS Code. Only ever on a click: it opens another application.
+	ipcMain.handle(
+		CHANNELS.handoffState,
+		guard((root: string, branch: string) => ({
+			editor: findEditor() !== null,
+			session: sessions.read(opened.require(root), String(branch)) !== null,
+		})),
+	);
+	ipcMain.handle(
+		CHANNELS.openInEditor,
+		guard(async (root: string) => {
+			const canonical = opened.require(root);
+			const editor = findEditor();
+			if (editor) await openFolder(editor, canonical);
+			else await shell.openPath(canonical);
+			return null;
+		}),
+	);
+	ipcMain.handle(
+		CHANNELS.continueInClaude,
+		guard(async (root: string, branch: string) => {
+			const canonical = opened.require(root);
+			const found = sessions.read(canonical, String(branch));
+			if (!found) throw new Error('There is no agent conversation for this work on this machine.');
+			// Taking over a run still going: one conversation has one writer, so the app's run stops first.
+			const now = agent.status();
+			if (now.state === 'running' && now.work === branch) agent.stop();
+			const editor = findEditor();
+			if (editor) {
+				await openSession(editor, found);
+				return null;
+			}
+			clipboard.writeText(resumeCommand(locateClaude(), found));
+			await dialog.showMessageBox({
+				type: 'info',
+				message: 'The command to continue is copied',
+				detail: 'VS Code with the Claude Code extension is not installed here. Paste the command into a terminal to continue the same conversation.',
+			});
+			return null;
 		}),
 	);
 
@@ -392,7 +444,10 @@ export const registerIpc = ({
 				},
 				{ recordsRoot, projectId, iteration, commentId },
 			);
-			return agent.start(canonical, projectId, prepared.task, { addDirs: [recordsRoot] });
+			const session = randomUUID();
+			const started = agent.start(canonical, projectId, prepared.task, { addDirs: [recordsRoot], session, name: `Flock Designer: ${projectId}` });
+			if (started.state === 'running') sessions.write(canonical, iteration.branch, session);
+			return started;
 		}),
 	);
 
