@@ -9,6 +9,18 @@ running the product. Most of it is the real thing; what is not is marked. It sho
 in real components. Your job is to put it where it really belongs in this product, write down what that
 takes for a person to check, and then build it properly.
 
+## Nobody is there to answer
+
+This runs unattended, and it ends when you stop. Nobody can answer a question, confirm a plan or look
+at it later.
+
+- **Where this repository's own guidance says stop, ask or confirm, do not.** Put the question under
+  **Needs a decision**, build the nearest thing the product already has, and carry on.
+- **The agent that builds writes the audit.** If this repository hands the work to another agent, give it
+  this file unchanged, with the paths the task names; do not paraphrase it.
+- **Finish before you stop.** Never end while anything you started is still going: another agent, a
+  background command, a server. Wait for each, or stop it. Work in progress when you stop is lost.
+
 ## What you are given
 
 - **The prototype's source**, at the path the task gives. Read it; never change it. Unmarked code is the
@@ -44,8 +56,20 @@ an engineer to read together, so write it in plain words, not code.
 4. **Data.** Every `@mock`: what the data really is, and where it comes from. This branch still uses mock
    data, in the way this repository already mocks things.
 5. **What you will build, and where.** The files you will change or add, inside the project's
-   change boundary in its brief.
+   change boundary in its brief. **If the brief has none, propose one here**, and count every mock,
+   fixture or file other screens also use as outside it (see below).
 6. **What you will not build**, and why.
+
+### What the prototype could not know
+
+It was made quickly, from what was on screen. Before you build, find out what the product already
+does around it, and put it in the audit:
+
+- **An action the product already has keeps its rules.** Where the prototype offers one (delete,
+  edit, assign), find every rule the product's own version applies: who may use it, which items it is
+  never offered on (read-only, in use, system), what it confirms. Carry them all over.
+- **Every state the data can be in,** including none at all, an error and a slow answer: not only the
+  states the prototype shows.
 
 ## Then: the work
 
@@ -55,9 +79,16 @@ and standards.
 - **Move the unmarked code in as written,** split into the files where it belongs. Act on every mark as
   its note says: build the decision for each `@standin`, wire each `@mock` the way this repository mocks
   data, and delete each `@remove`. A marked part with no note is a finding to report, not a guess to make.
-- Stay inside the change boundary. Mock data only.
-- Record where the work is, as `skills/record-the-route.md` says, so it opens on the right page.
-- Check the work with the repository's own checks, then commit on this branch. **No
+- Stay inside the change boundary. Mock data only. **Mock data reproduces the prototype's sample;** do
+  not mix unrelated rows into a view people will review without saying so.
+- **Changing something other screens use** (a mock handler, a fixture, a shared component): show that
+  each existing caller still gets what it got, with the request that caller really sends, and test it.
+- Record where the work is, as `skills/record-the-route.md` says, so it opens on the right page. The
+  task says where the shared skills are.
+- **When the work changes after the audit** (review findings, something found while building), update
+  the audit to match in the same commit. It is what people check the work against.
+- Check the work with the repository's own checks, then commit on this branch. If this repository has
+  the work reviewed, fix what the reviews block on, check again, and commit that too, before you finish. **No
   `Co-Authored-By` or other attribution line.** Never push, never switch branches.
 
 ## When you have finished
