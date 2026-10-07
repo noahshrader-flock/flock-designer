@@ -1,7 +1,9 @@
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Iteration, Person } from '../../shared/contract';
-import { firstHeading, isPrototypeName, nextPrototypeName, prototypeKey } from '../../shared/projects';
+import { firstHeading, isPrototypeName, nextPrototypeName, projectPath, prototypeKey } from '../../shared/projects';
+import { addressOpening } from './address';
 import { resolveInside } from './paths';
 
 /**
@@ -52,7 +54,6 @@ export interface PrototypeBuild {
 	buildCommand: string;
 }
 
-const records = (projectId: string) => `projects/${projectId}/iterations.json`;
 
 /**
  * Records a new prototype, and the project itself when this is its first work: a brief with its
@@ -69,14 +70,14 @@ export const recordPrototype = async (
 		now = new Date(),
 	}: { projectId: string; title: string; note: string; me: Person | null; basedOn?: Iteration['basedOn']; now?: Date },
 ): Promise<Iteration> => {
-	const raw = await store.read(records(projectId));
+	const raw = await store.read(projectPath(projectId, 'iterations.json'));
 	let existing: Iteration[] = [];
 	if (raw !== null) {
 		try {
 			const parsed = JSON.parse(raw) as unknown;
 			existing = Array.isArray(parsed) ? (parsed as Iteration[]) : [];
 		} catch {
-			throw new Error(`projects/${projectId}/iterations.json is not readable JSON, so nothing was added to it.`);
+			throw new Error(`${projectPath(projectId, 'iterations.json')} is not readable JSON, so nothing was added to it.`);
 		}
 	}
 	const name = nextPrototypeName(existing.map((i) => i.name));
@@ -92,12 +93,12 @@ export const recordPrototype = async (
 		...(me ? { contributors: [me] } : {}),
 		...(basedOn ? { basedOn } : {}),
 	};
-	const brief = `projects/${projectId}/brief.md`;
+	const brief = projectPath(projectId, 'brief.md');
 	const haveBrief = await store.read(brief);
 	if (haveBrief === null || firstHeading(haveBrief) === null) {
 		await store.write(brief, `# ${title.replace(/\s+/g, ' ').trim()}\n\n${note.trim()}\n`, `${projectId}: start the project`);
 	}
-	await store.write(records(projectId), `${JSON.stringify([...existing, iteration], null, 2)}\n`, `${projectId}: record prototype ${name}`);
+	await store.write(projectPath(projectId, 'iterations.json'), `${JSON.stringify([...existing, iteration], null, 2)}\n`, `${projectId}: record prototype ${name}`);
 	return iteration;
 };
 
@@ -106,9 +107,11 @@ export const assertPrototypeName = (name: string): void => {
 };
 
 /**
- * What the agent is told for a prototype. The skill says how; this says where. The request is the
- * person's own words, and comes last, after everything that frames it.
+ * Which version of a prototype's source this is, as a short hash: what tells the screen whether an agent changed it,
+ * and what a comment it changed records. A prototype has no commits, so this stands in for one.
  */
+export const prototypeVersionOf = (source: string): string => createHash('sha1').update(source).digest('hex').slice(0, 12);
+
 /**
  * What a prototype's agent may read, each a folder: the product's code (on the branch it is modelled
  * on), and the guidance the code is built to, in its three layers. Every one is optional: whatever this
@@ -136,10 +139,6 @@ export const prototypeReadable = (s: PrototypeSources | null): string[] =>
 			)
 		: [];
 
-/**
- * What the agent is told for a prototype. The skill says how; this says where everything is. The
- * request is the person's own words, and comes last, after everything that frames it.
- */
 /** What a prototype's agent may read, said the same way for building one and for changing one. */
 const readableLines = (sources: PrototypeSources): string[] => {
 	const line = (label: string, dir: string | null, missing: string) => (dir ? `- **${label}:** \`${dir}\`` : `- **${label}:** not on this machine. ${missing}`);
@@ -155,6 +154,10 @@ const readableLines = (sources: PrototypeSources): string[] => {
 	];
 };
 
+/**
+ * What the agent is told for a prototype. The skill says how; this says where everything is. The
+ * request is the person's own words, and comes last, after everything that frames it.
+ */
 export const prototypeBuildTask = ({
 	skill,
 	build,
@@ -165,8 +168,8 @@ export const prototypeBuildTask = ({
 	build: PrototypeBuild;
 	sources: PrototypeSources;
 	request: string;
-}): string => {
-	return [
+}): string =>
+	[
 		skill.trim(),
 		'',
 		'## This run',
@@ -181,7 +184,6 @@ export const prototypeBuildTask = ({
 		'',
 		request.trim(),
 	].join('\n');
-};
 
 /**
  * What the agent is told to act on one comment on a prototype. The same comments file and the same shared skill as
@@ -207,9 +209,7 @@ export const prototypeAddressTask = ({
 	name: string;
 }): string =>
 	[
-		`Address comment ${number} on prototype ${name}, and only that one.`,
-		`The comments are in ${commentsPath}, written from GitHub a moment ago. Read it first.`,
-		`Act on comment ${number} alone. The others are listed for context: leave them, and do not mention them except to say you left them.`,
+		...addressOpening(number, commentsPath, `prototype ${name}`),
 		'',
 		'## This run',
 		'',

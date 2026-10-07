@@ -1,4 +1,5 @@
-import type { Iteration, Project, ProjectIteration } from './contract';
+import type { Iteration, IterationKind, Project, ProjectIteration } from './contract';
+import { mergePeople } from './people';
 
 /** The only shape a project id may take: lower-case words joined by single hyphens. */
 export const PROJECT_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -23,8 +24,6 @@ export const slugify = (name: string): string =>
 		.replace(/[^a-z0-9]+/g, '-')
 		.slice(0, 60)
 		.replace(/^-+|-+$/g, '');
-
-import { mergePeople } from './people';
 
 /** A date from a record or from git, or null: anything that does not parse is not a date. */
 export const asDate = (v: unknown): string | null => (typeof v === 'string' && v !== '' && !Number.isNaN(Date.parse(v)) ? v : null);
@@ -140,9 +139,9 @@ export const unionLocal = (records: Project[], branches: Project[]): Project[] =
 	return [...byId.values()];
 };
 
-/** Prototype iterations newest first, then the codebase branch. */
+/** Prototype iterations newest first, then the codebase work. */
 export const newestFirst = (a: ProjectIteration, b: ProjectIteration): number => {
-	const codebase = (x: ProjectIteration) => (x.branch.startsWith('fd/') ? 0 : 1);
+	const codebase = (x: ProjectIteration) => (workKind(x) === 'codebase' ? 1 : 0);
 	return codebase(a) - codebase(b) || b.name.localeCompare(a.name, undefined, { numeric: true });
 };
 
@@ -153,43 +152,44 @@ export const newestFirst = (a: ProjectIteration, b: ProjectIteration): number =>
 export const isRecordName = (n: unknown): n is string => typeof n === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(n) && !n.includes('..');
 
 /**
- * A prototype as the app makes it now (internally still "prototype", the name its storage and key carry): one
- * self-contained page, made without a product repository, saved in the design
- * repository beside the project's other records. It has no git branch. Its key, in the place a branch
- * name goes (the iteration record, the review thread), is `prototype/<project-id>/<name>`, which no
- * repository's branch pattern makes, so it can never be mistaken for one.
+ * A prototype: one self-contained page, made without running the product, saved in the design repository beside
+ * the project's other records. It has no git branch. Its key, in the place a branch name goes (the iteration
+ * record, the review thread), is `prototype/<project-id>/<name>`, which no repository's branch pattern makes, so it
+ * can never be mistaken for one. (The older prototypes on `fd/` branches have a branch, not a key.)
  */
-export const PROTOTYPE_PREFIX = 'prototype/';
-export const isPrototype = (branch: string): boolean => branch.startsWith(PROTOTYPE_PREFIX);
+const PROTOTYPE_PREFIX = 'prototype/';
+export const isPrototypeKey = (branch: string): boolean => branch.startsWith(PROTOTYPE_PREFIX);
 export const prototypeKey = (projectId: string, name: string): string => `${PROTOTYPE_PREFIX}${projectId}/${name}`;
-/** Where the page is kept in the design repository. */
-export const prototypePagePath = (projectId: string, name: string): string => `projects/${projectId}/prototypes/${name}.html`;
-/** Its React source, kept beside the page when it was written with the real design system. */
-export const prototypeSourcePath = (projectId: string, name: string): string => `projects/${projectId}/prototypes/${name}.tsx`;
+/** A file in a project's folder in the design repository, by its path from the repository's root. */
+export const projectPath = (projectId: string, file: string): string => `projects/${projectId}/${file}`;
+/** Where a prototype's page is kept in the design repository. */
+export const prototypePagePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.html`);
+/** Its React source, kept beside the page. */
+export const prototypeSourcePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.tsx`);
+/** A prototype's name, `i1`, `i2`, …: the one pattern, wherever a name is checked or counted. */
+const PROTOTYPE_NAME = /^i(\d{1,4})$/;
+export const isPrototypeName = (name: string): boolean => PROTOTYPE_NAME.test(name);
 /**
- * Prototypes share one count, `i1`, `i2`, …, whichever way they were made: one past the highest recorded, so a gap
- * is never filled in.
+ * Prototypes share one count, whichever way they were made: one past the highest recorded, so a gap is never
+ * filled in.
  */
-export const nextPrototypeNumber = (names: string[]): number =>
-	names.reduce((max, n) => Math.max(max, Number(/^i(\d+)$/.exec(n)?.[1] ?? 0)), 0) + 1;
-export const nextPrototypeName = (names: string[]): string => `i${nextPrototypeNumber(names)}`;
-export const isPrototypeName = (name: string): boolean => /^i\d{1,4}$/.test(name);
+export const nextPrototypeName = (names: string[]): string =>
+	`i${names.reduce((max, n) => Math.max(max, Number(PROTOTYPE_NAME.exec(n)?.[1] ?? 0)), 0) + 1}`;
 
 /**
- * A project's work as the screens offer it: its **prototypes** (prototype pages and prototype branches alike: one-off
- * attempts, kept or carried into the code) and its **codebase** work, the real change. Each is newest first, so
+ * A project's work as the screens offer it: its **prototypes** (pages, and the older ones on `fd/` branches: attempts
+ * to decide what something should be, kept or carried into the code) and its **codebase** work, the real change. Each is newest first, so
  * the first is what "View prototype" and "View codebase" open, and the rest are the iterations to switch to.
  */
-export type WorkKind = 'prototype' | 'codebase';
-export const workKind = (i: Pick<ProjectIteration, 'name' | 'branch'>): WorkKind =>
-	!isPrototype(i.branch) && i.name === 'codebase' ? 'codebase' : 'prototype';
+export const workKind = (i: Pick<ProjectIteration, 'name' | 'branch'>): IterationKind =>
+	!isPrototypeKey(i.branch) && i.name === 'codebase' ? 'codebase' : 'prototype';
 /** How an iteration is named on screen. A project's codebase work is one branch, so it is its first iteration. */
 export const iterationLabel = (i: Pick<ProjectIteration, 'name' | 'branch'>): string =>
 	workKind(i) === 'codebase' ? 'I1' : i.name.toUpperCase();
 const newestStarted = (a: ProjectIteration, b: ProjectIteration): number =>
 	(b.createdAt ? Date.parse(b.createdAt) : -Infinity) - (a.createdAt ? Date.parse(a.createdAt) : -Infinity) ||
 	b.name.localeCompare(a.name, undefined, { numeric: true });
-export const workOf = (iterations: ProjectIteration[], kind: WorkKind): ProjectIteration[] =>
+export const workOf = (iterations: ProjectIteration[], kind: IterationKind): ProjectIteration[] =>
 	iterations.filter((i) => workKind(i) === kind).sort(newestStarted);
 
 /** A just-made iteration as the screens show one: nothing shared or built yet, so nowhere to land. */

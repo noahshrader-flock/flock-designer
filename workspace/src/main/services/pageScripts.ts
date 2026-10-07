@@ -279,8 +279,9 @@ ${HELPERS}
 })()`;
 
 /**
- * Hides or shows the app's own pins, and resolves once the page has painted that. A picture of
- * the spot is taken with them hidden, so it shows the thing that was clicked and not an earlier pin.
+ * Hides or shows the app's own layers (the pins, and the outline while one is being placed), and resolves once the
+ * page has painted that. A picture of the spot is taken with them hidden, so it shows the thing that was clicked and
+ * not an earlier pin.
  */
 export const layerVisibleScript = (visible: boolean): string => String.raw`(function (visible) {
   var layers = document.querySelectorAll('[data-fd-layer]');

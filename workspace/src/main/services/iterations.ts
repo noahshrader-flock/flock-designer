@@ -4,7 +4,7 @@ import type { Iteration, Person, WorkspaceDescriptor } from '../../shared/contra
 import { branchAuthors, branchExists, branchStartedAt, checkoutBranch, createBranch, headCommit, isSamePerson, localIdentity } from './git';
 import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
-import { PROJECT_ID } from '../../shared/projects';
+import { PROJECT_ID, isPrototypeName } from '../../shared/projects';
 
 /**
  * Named attempts at the question, and the record of them.
@@ -162,7 +162,7 @@ const adoptUnrecorded = async (
 	const branch =
 		name === 'codebase'
 			? codebaseBranchFor(descriptor, projectId)
-			: /^i\d+$/.test(name)
+			: isPrototypeName(name)
 				? branchFor(descriptor, projectId, Number(name.slice(1)))
 				: null;
 	if (!branch || !(await branchExists(productRoot, branch))) return null;

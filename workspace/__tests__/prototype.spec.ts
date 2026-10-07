@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
-import { isPrototype, nextPrototypeName, prototypeKey, prototypePagePath } from '../src/shared/projects';
+import { isPrototypeKey, nextPrototypeName, prototypeKey, prototypePagePath } from '../src/shared/projects';
 import { type RecordStore, cloneStore, moveToCodeTask, prototypeBuildTask, prototypeReadable, recordPrototype } from '../src/main/services/prototype';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { claudeCodeAdapter } from '../src/main/services/agent';
@@ -27,8 +27,8 @@ const memoryStore = (files: Record<string, string> = {}) => {
 describe('what a prototype is called', () => {
 	it('is keyed apart from every branch, and numbered one past the highest', () => {
 		expect(prototypeKey('users', 'i2')).toBe('prototype/users/i2');
-		expect(isPrototype('prototype/users/i2')).toBe(true);
-		expect(isPrototype('fd/users/i1')).toBe(false);
+		expect(isPrototypeKey('prototype/users/i2')).toBe(true);
+		expect(isPrototypeKey('fd/users/i1')).toBe(false);
 		expect(nextPrototypeName(['codebase'])).toBe('i1');
 		expect(nextPrototypeName(['i1', 'codebase'])).toBe('i2');
 		expect(nextPrototypeName(['i1', 'i3', 'i2'])).toBe('i4');

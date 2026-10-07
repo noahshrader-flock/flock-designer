@@ -1,8 +1,8 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AddressProblem, SKILL_FILE, addressTask, prepareAddress, readSkill } from '../src/main/services/address';
+import { AddressProblem, addressTask, prepareAddress } from '../src/main/services/address';
 import { type AddressPhase, runAddress } from '../src/renderer/address';
 import type { AgentStatus, ReviewComment, Result } from '../src/shared/contract';
 
@@ -146,15 +146,6 @@ describe('addressTask', () => {
 		expect(task.endsWith('SKILL TEXT')).toBe(true);
 	});
 
-	it('does not depend on any product: the skill is read from the design repository, whatever the product is', () => {
-		const design = mkdtempSync(join(tmpdir(), 'fdw-skill-'));
-		mkdirSync(join(design, 'projects'));
-		mkdirSync(join(design, 'skills'));
-		writeFileSync(join(design, SKILL_FILE), 'shared skill');
-		expect(readSkill(join(design, 'projects'))).toBe('shared skill');
-		expect(readSkill(join(design, 'nowhere', 'projects'))).toBeNull();
-		rmSync(design, { recursive: true, force: true });
-	});
 });
 
 describe('runAddress', () => {

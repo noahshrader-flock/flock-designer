@@ -15,8 +15,8 @@ import { Label } from './ui/label';
  * the full setup a prototype does not. So it asks first, shows what it will do and what would stop it, and starts
  * from the branch the prototype was modelled on rather than whichever one the checkout happens to be on.
  *
- * It is a codebase feature that starts with a source and an audit: the same branch and the same agent as a codebase
- * feature made from New, so there is one way to make that branch, not two.
+ * It is codebase work that starts with a source and an audit: the same branch and the same agent as codebase work
+ * started from New, so there is one way to make that branch, not two.
  */
 export const MoveToCode = ({
 	open,

@@ -38,11 +38,11 @@ kinds, switched at the top, both starting from a repository and a branch in it:
   the product's installed packages into one page, and both are kept in the project's folder
   (`prototypes/iN.tsx`, `prototypes/iN.html`). Large files the pages embed (the design system's fonts) are kept once,
   in `projects/_shared/`, and served beside every page. **Build in the codebase** (in the review menu) moves one into the code: it asks first, shows the branch it will create and what would stop it (uncommitted changes, an existing codebase branch, Claude Code not ready), and starts from the branch the prototype was modelled on.
-- **Codebase feature**: real work on the project's `feature/<project>` branch, which needs the full setup.
+- **Codebase work**: real work on the project's `feature/<project>` branch, which needs the full setup.
 
 Each runs the agent, then shows the result with pins. The product repository is **suggested** on its own
 — found in the usual places by its `.flkd/workspace.json` — and you accept it once with a click; after that it
-is remembered. Prototype branches (`fd/<project>/iN`) appear from the repository with no record needed;
+is remembered. Older prototype branches (`fd/<project>/iN`) appear from the repository with no record needed;
 a `feature/<project>` branch appears only when a project already has a record for it, because that is also
 how the whole product team names ticket branches. The design repository is expected beside the product one.
 The agent runs unattended: it may edit and run the repository's own scripts and local git, and nothing
@@ -139,7 +139,8 @@ someone's work requires knowing which branch to check out, and it needs a standi
 per-project state off `develop`. It also dirties the working tree, which then blocks the next
 iteration on its own bookkeeping — which is how the tests here caught it.
 
-The code stays on its branch in the product repository, where it can actually run.
+Codebase work's code stays on its branch in the product repository, where it can actually run; a prototype's
+source and page are in its project folder.
 
 ## Security posture
 

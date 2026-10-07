@@ -24,6 +24,14 @@ const Page = ({ children }: { children: ReactNode }) => (
 	<div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6">{children}</div>
 );
 
+/** When a project was started, as a date a person reads; nothing when it is not known. */
+const Started = ({ at }: { at: string | null }) =>
+	at === null ? null : (
+		<span className="text-muted-foreground text-sm">
+			Started <time dateTime={at}>{new Date(at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</time>
+		</span>
+	);
+
 /**
  * Reviewer mode: every project in the design repository, read through the API.
  *
@@ -88,7 +96,6 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 			await load();
 		}
 	}, [load]);
-
 
 	if (error) {
 		return (
@@ -213,65 +220,54 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 								<FolderIcon className="size-4 shrink-0" />
 								<span className="font-mono">{project.id}</span>
 							</CardDescription>
-							{(project.localOnly || project.openComments > 0 || project.records.length > 0) && (
-								<CardAction className="flex flex-row items-center gap-2">
-									{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}
-									{project.openComments > 0 && (
+							<CardAction className="flex flex-row items-center gap-2">
+								{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}
+								{project.openComments > 0 && (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<Badge
+												variant="secondary"
+												aria-label={`${project.openComments} open comment${project.openComments === 1 ? '' : 's'}`}
+											>
+												<MessageSquareIcon />
+												{project.openComments}
+											</Badge>
+										</TooltipTrigger>
+										<TooltipContent>
+											{project.openComments} open comment{project.openComments === 1 ? '' : 's'}
+										</TooltipContent>
+									</Tooltip>
+								)}
+								{project.records.length > 0 && (
+									<DropdownMenu>
 										<Tooltip>
 											<TooltipTrigger asChild>
-												<Badge
-													variant="secondary"
-													aria-label={`${project.openComments} open comment${project.openComments === 1 ? '' : 's'}`}
-												>
-													<MessageSquareIcon />
-													{project.openComments}
-												</Badge>
+												<DropdownMenuTrigger asChild>
+													<Button size="icon" variant="ghost" aria-label="More">
+														<EllipsisVerticalIcon />
+													</Button>
+												</DropdownMenuTrigger>
 											</TooltipTrigger>
-											<TooltipContent>
-												{project.openComments} comment{project.openComments === 1 ? '' : 's'}
-											</TooltipContent>
+											<TooltipContent>More</TooltipContent>
 										</Tooltip>
-									)}
-									{project.records.length > 0 && (
-										<DropdownMenu>
-											<Tooltip>
-												<TooltipTrigger asChild>
-													<DropdownMenuTrigger asChild>
-														<Button size="icon" variant="ghost" aria-label="More">
-															<EllipsisVerticalIcon />
-														</Button>
-													</DropdownMenuTrigger>
-												</TooltipTrigger>
-												<TooltipContent>More</TooltipContent>
-											</Tooltip>
-											<DropdownMenuContent align="end" className="w-auto">
-												{project.records.map((record) => (
-													<DropdownMenuItem key={record} onSelect={() => setViewing({ project, name: record, open: true })}>
-														{sentence(record.replace(/\.[^.]+$/, '').replace(/-/g, ' '))}
-													</DropdownMenuItem>
-												))}
-											</DropdownMenuContent>
-										</DropdownMenu>
-									)}
-								</CardAction>
-							)}
+										<DropdownMenuContent align="end" className="w-auto">
+											{project.records.map((record) => (
+												<DropdownMenuItem key={record} onSelect={() => setViewing({ project, name: record, open: true })}>
+													{sentence(record.replace(/\.[^.]+$/, '').replace(/-/g, ' '))}
+												</DropdownMenuItem>
+											))}
+										</DropdownMenuContent>
+									</DropdownMenu>
+								)}
+							</CardAction>
 						</CardHeader>
 						<CardFooter className="flex-wrap justify-between gap-2">
 							<div className="flex flex-row items-center gap-3">
 								<PeopleAvatars people={project.people} />
-								{startedAt(project) && (
-									<span className="text-muted-foreground text-sm">
-										Started{' '}
-										{new Date(startedAt(project) as string).toLocaleDateString(undefined, {
-											month: 'short',
-											day: 'numeric',
-											year: 'numeric',
-										})}
-									</span>
-								)}
+								<Started at={startedAt(project)} />
 							</div>
 							<div className="ml-auto flex flex-row flex-wrap items-center justify-end gap-2">
-								{project.iterations.length === 0 && <span className="text-muted-foreground px-2 text-sm">No branches yet.</span>}
+								{project.iterations.length === 0 && <span className="text-muted-foreground px-2 text-sm">Nothing made yet.</span>}
 								{/* One way into each kind of work, at its newest; the review screen switches between its iterations. */}
 								{(['prototype', 'codebase'] as const).map((kind) => {
 									const newest = workOf(project.iterations, kind)[0];

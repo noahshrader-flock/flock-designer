@@ -158,10 +158,11 @@ export type AgentStatus =
  * allowed -- returns this, so the renderer can say what happened.
  */
 /**
- * The two ways in. A **prototype** is a throwaway attempt on its own `fd/` branch, numbered i1, i2, …
- * **Codebase** work is the real change on the project's one `feature/` branch.
+ * The two kinds of work. A **prototype** is one page built from the real components, saved in the design
+ * repository and numbered i1, i2, … (the older ones made as code on `fd/` branches count as prototypes too).
+ * **Codebase** work is the real change, on the project's one `feature/` branch.
  */
-export type IterationKind = 'prototype' | 'codebase' | 'prototype';
+export type IterationKind = 'prototype' | 'codebase';
 
 /** What moving a prototype into the code would do here, so the person is told before it does it. */
 export interface MoveToCodePlan {
@@ -213,9 +214,10 @@ export interface WorkspaceApi {
 	readContextReceipt(root: string): Promise<Result<ContextReceipt>>;
 
 	listIterations(root: string, projectId: string): Promise<Result<Iteration[]>>;
-	/** Creates the branch. Refuses if the tree is dirty; never discards work. */
-	/** Creates the branch from `from` (a local branch), or from the current branch when it is not given. */
-	/** Starts codebase work: its branch, and its record. A prototype is made by `createPrototype`. */
+	/**
+	 * Starts codebase work: its branch, from `from` (a local branch) or else the current one, and its record. Refuses
+	 * if the tree is dirty; never discards work. A prototype is made by `createPrototype`.
+	 */
 	createIteration(root: string, projectId: string, note: string, from?: string): Promise<Result<Iteration>>;
 	/**
 	 * Every repository the signed-in person can see on GitHub, most recently pushed first, each with its clone on

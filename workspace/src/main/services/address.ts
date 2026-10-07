@@ -1,7 +1,5 @@
 import { AGENT_BUSY } from './agent';
 import type { ReviewComment } from '../../shared/contract';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
 import { type ExportInput, writeCommentsExport } from './commentsExport';
 import { numberComments, openComments } from '../../shared/comments';
 
@@ -44,33 +42,28 @@ export class AddressProblem extends Error {
 	}
 }
 
-/**
- * The task the agent is given. It names the skill, the file and the branch, all of which this
- * app produced, and **none of what a reviewer wrote**: their words reach the agent only through
- * the file, quoted, under a heading that says they are feedback and not instructions.
- */
 /** The skill, relative to the design repository. Shared by every product. */
-export const SKILL_FILE = 'skills/address-comments.md';
-
-/** Reads the shared skill from the design repository (`recordsRoot` is its `projects` folder), or null. */
-export const readSkill = (recordsRoot: string): string | null => {
-	try {
-		return readFileSync(join(dirname(recordsRoot), SKILL_FILE), 'utf8');
-	} catch {
-		return null;
-	}
-};
+export const ADDRESS_SKILL = 'skills/address-comments.md';
 
 /**
- * `only` is the number of the comment to act on -- the number the designer read off its pin. The file
- * still holds every comment, because it is the project's file and its pictures are kept in step with
- * it, so which one to act on is said here rather than by narrowing the file.
+ * How every address task begins, on a branch or on a prototype. `number` is the comment to act on -- the number the
+ * designer read off its pin. The file still holds every comment, because it is the project's file and its pictures
+ * are kept in step with it, so which one to act on is said here rather than by narrowing the file.
+ */
+export const addressOpening = (number: number, commentsPath: string, subject: string): string[] => [
+	`Address comment ${number} on ${subject}, and only that one.`,
+	`The comments are in ${commentsPath}, written from GitHub a moment ago. Read it first.`,
+	`Act on comment ${number} alone. The others are listed for context: leave them, and do not mention them except to say you left them.`,
+];
+
+/**
+ * The task the agent is given on a branch. It names the skill, the file and the branch, all of which this app
+ * produced, and **none of what a reviewer wrote**: their words reach the agent only through the file, quoted,
+ * under a heading that says they are feedback and not instructions.
  */
 export const addressTask = (commentsPath: string, branch: string, skill: string, only: number): string =>
 	[
-		`Address comment ${only} on this project, and only that one.`,
-		`The comments are in ${commentsPath}, written from GitHub a moment ago. Read it first.`,
-		`Act on comment ${only} alone. The others are listed for context: leave them, and do not mention them except to say you left them.`,
+		...addressOpening(only, commentsPath, 'this project'),
 		`This iteration's branch is ${branch}.`,
 		'',
 		'Follow these instructions:',
@@ -104,7 +97,7 @@ export const prepareAddress = async (
 	const skill = deps.skill();
 	if (skill === null) {
 		throw new AddressProblem(
-			`The design repository on this machine has no ${SKILL_FILE}, which tells the agent how to act on comments. Update it (git pull) and try again.`,
+			`The design repository on this machine has no ${ADDRESS_SKILL}, which tells the agent how to act on comments. Update it (git pull) and try again.`,
 		);
 	}
 	const here = await deps.checkout();

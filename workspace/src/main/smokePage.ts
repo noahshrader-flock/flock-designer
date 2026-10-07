@@ -88,7 +88,7 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	if ((await js<number>('window.__pressed')) !== 0) fail('the click reached the page');
 
 	if (picked !== null && (picked.anchor.tag !== 'button' || !(picked.anchor.inside ?? []).includes('Invite area'))) fail(`the kind and containers were not recorded: ${JSON.stringify(picked.anchor)}`);
-	if (await js<boolean>('document.querySelector("[data-fd-layer]") !== null')) fail('the outline was left on the page after the click');
+	if (await js<boolean>('document.querySelector("[data-fd-layer=hover]") !== null')) fail('the outline was left on the page after the click');
 
 	// 2c. Climbing to the container: the up arrow moves the outline to the section, and that is what is recorded.
 	console.log('smoke-page: step 2c');
@@ -126,7 +126,7 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	if (r[0]?.state !== 'found') fail(`expected found, got ${JSON.stringify(r)}`);
 	// The pin's tip is the wrapper's position, and it must be where the click was: inside the element.
 	const markerOnElement = () =>
-		js<boolean>(`(function(){var m=document.querySelector('[data-fd-layer] > div').getBoundingClientRect();var e=document.querySelector('[data-e2e-ref]').getBoundingClientRect();return m.left>=e.left-1&&m.left<=e.right+1&&m.top>=e.top-1&&m.top<=e.bottom+1;})()`);
+		js<boolean>(`(function(){var m=document.querySelector('[data-fd-layer="pins"] > div').getBoundingClientRect();var e=document.querySelector('[data-e2e-ref]').getBoundingClientRect();return m.left>=e.left-1&&m.left<=e.right+1&&m.top>=e.top-1&&m.top<=e.bottom+1;})()`);
 	if (!(await markerOnElement())) fail('the marker is not on the element');
 
 	// 3a. With a pin already on the page, a picture of that spot does not show the pin.
@@ -155,7 +155,7 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	if (!second?.picture) return fail('no picture with the second click');
 	const inPicture = blue(nativeImage.createFromDataURL(second.picture));
 	if (inPicture > 3) fail(`the picture shows the pin (${inPicture} blue pixels), but it should show the thing and not the pin`);
-	if ((await js<string>("document.querySelector('[data-fd-layer]').style.visibility")) !== 'visible') fail('the pins were left hidden after the picture');
+	if ((await js<string>("document.querySelector('[data-fd-layer=pins]').style.visibility")) !== 'visible') fail('the pins were left hidden after the picture');
 
 	// 3b. A pin can be clicked, and dragged, with the real mouse. The pin's body hangs above its tip.
 	const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -211,7 +211,7 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	await wc.loadURL(`${origin}/users?state=error`);
 	r = await page.showMarkers(items);
 	if (r[0]?.state !== 'otherState') fail(`expected otherState, got ${JSON.stringify(r)}`);
-	if (await js<boolean>("document.querySelector('[data-fd-layer]') !== null")) fail('a pin was drawn for a comment made in another state');
+	if (await js<boolean>("document.querySelector('[data-fd-layer=pins]') !== null")) fail('a pin was drawn for a comment made in another state');
 	const inState = page.pick();
 	await new Promise((res) => setTimeout(res, 200));
 	wc.sendInputEvent({ type: 'mouseDown', x: 100, y: 70, button: 'left', clickCount: 1 });

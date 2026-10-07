@@ -10,8 +10,8 @@ import { Spinner } from './ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /**
- * What can be done with this page beyond reviewing it, behind one menu: share it, open it in the
- * browser, copy its link.
+ * What can be done with this page beyond reviewing it, behind one menu: move a prototype into the code,
+ * share codebase work, open it in VS Code or continue the agent's conversation, open it in the browser, copy its link.
  *
  * Sharing is for people who are not on this machine: one click, then a dialog that says what is about
  * to happen, watches it, and ends with the address. Only someone with the product repository (an
@@ -44,7 +44,6 @@ export const ShareControl = ({
 }) => {
 	const [status, setStatus] = useState<ShareStatus>({ state: 'idle' });
 	const [open, setOpen] = useState(false);
-	const [menuOpen, setMenuOpen] = useState(false);
 	const [phase, setPhase] = useState<'confirm' | 'working'>('confirm');
 	const [error, setError] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
@@ -58,7 +57,9 @@ export const ShareControl = ({
 	const running = mine && status.state === 'running';
 	const url = mine && status.state === 'ready' ? status.url : iteration.previewUrl;
 	const view = dialogView(phase, status, mine);
-
+	// The menu's two groups: what you do to the work, then where you look at it.
+	const canMove = prototype && onMoveToCode;
+	const canShare = checkout && !prototype;
 
 	const start = async () => {
 		if (!checkout) return;
@@ -82,7 +83,7 @@ export const ShareControl = ({
 
 	return (
 		<>
-			<DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+			<DropdownMenu>
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<DropdownMenuTrigger asChild>
@@ -94,13 +95,13 @@ export const ShareControl = ({
 					<TooltipContent>{running ? 'Sharing…' : 'More'}</TooltipContent>
 				</Tooltip>
 				<DropdownMenuContent align="end" className="w-auto">
-					{prototype && onMoveToCode && (
+					{canMove && (
 						<DropdownMenuItem onSelect={onMoveToCode}>
 							<CodeIcon />
 							Build in the codebase
 						</DropdownMenuItem>
 					)}
-					{checkout && !prototype && (
+					{canShare && (
 						<DropdownMenuItem
 							onSelect={() => {
 								setPhase(running ? 'working' : 'confirm');
@@ -112,8 +113,8 @@ export const ShareControl = ({
 							{running ? 'Sharing…' : url ? 'Update shared preview' : 'Share for review'}
 						</DropdownMenuItem>
 					)}
-					{/* What you do to the work, then where you look at it; no line when the first group is empty. */}
-					{((prototype && onMoveToCode) || (checkout && !prototype)) && <DropdownMenuSeparator />}
+					{/* No line when the first group is empty. */}
+					{(canMove || canShare) && <DropdownMenuSeparator />}
 					{editor && (
 						<DropdownMenuItem onSelect={editor.openInEditor}>
 							<SquareTerminalIcon />

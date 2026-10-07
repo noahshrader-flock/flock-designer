@@ -29,7 +29,7 @@ export const HandoffDialog = ({
 		<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
 			<DialogContent className="sm:max-w-xl">
 				<DialogHeader>
-					<DialogTitle>Hand off to engineering</DialogTitle>
+					<DialogTitle>Hand off</DialogTitle>
 				</DialogHeader>
 				<DialogBody className="flex flex-col gap-4">
 					<p className="text-muted-foreground text-sm">

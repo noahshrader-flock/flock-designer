@@ -11,8 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Textarea } from './ui/textarea';
 
 /** What New makes. The older numbered prototype branches still open, but are no longer offered here. */
-type NewKind = Extract<IterationKind, 'prototype' | 'codebase'>;
-const KINDS: { kind: NewKind; label: string; about: string }[] = [
+const KINDS: { kind: IterationKind; label: string; about: string }[] = [
 	{
 		kind: 'prototype',
 		label: 'Prototype',
@@ -21,7 +20,7 @@ const KINDS: { kind: NewKind; label: string; about: string }[] = [
 	},
 	{
 		kind: 'codebase',
-		label: 'Codebase feature',
+		label: 'Codebase work',
 		about: "Real work on the project's own feature branch, started from the branch below. Needs the full setup: packages, environment variables, and the app able to run.",
 	},
 ];
@@ -33,9 +32,9 @@ export interface Created {
 }
 
 /**
- * Starting something new: what kind (a prototype or a codebase feature, switched at the top), where
+ * Starting something new: what kind (a prototype or codebase work, switched at the top), where
  * it starts (a repository, and a branch in it), a name, and what it should explore. Both kinds start from
- * the same two choices: a codebase feature branches from them, a prototype reads them to look like
+ * the same two choices: codebase work branches from them, a prototype reads them to look like
  * the product. Creating it makes the record (and the branch); the agent and the preview follow on their own.
  *
  * The repositories are the ones GitHub shows the signed-in person, so the list follows their permissions;
@@ -60,7 +59,7 @@ export const NewWork = ({
 	onCreated: (created: Created) => void;
 }) => {
 	// Kept between openings, so someone who makes one kind is not switched back each time.
-	const [kind, setKind] = useState<NewKind>('prototype');
+	const [kind, setKind] = useState<IterationKind>('prototype');
 	const [name, setName] = useState('');
 	const [task, setTask] = useState('');
 	const [busy, setBusy] = useState(false);
@@ -162,7 +161,7 @@ export const NewWork = ({
 				</DialogHeader>
 				{/* With the title: switching kind must stay in reach however far the form below has scrolled. */}
 				<div className="flex flex-col gap-4">
-					<Tabs value={kind} onValueChange={(v) => setKind(v as NewKind)}>
+					<Tabs value={kind} onValueChange={(v) => setKind(v as IterationKind)}>
 						<TabsList className="w-full">
 							{KINDS.map((k) => (
 								<TabsTrigger key={k.kind} value={k.kind} disabled={busy}>
@@ -191,7 +190,7 @@ export const NewWork = ({
 								{elsewhere && chosen?.root === null && (
 									<p className="text-muted-foreground text-xs">
 										{`${chosen.name} is not on this machine, so there is nothing here to build it from. Clone it, then `}
-										<button type="button" className="text-primary cursor-pointer underline underline-offset-4" onClick={onChoose}>
+										<button type="button" className="text-primary underline underline-offset-4" onClick={onChoose}>
 											point the app at it
 										</button>
 										.
@@ -298,7 +297,7 @@ export const NewWork = ({
 						onClick={() => void create()}
 						disabled={busy || blocked || prototypeBlocked || !id || !task.trim() || !checkout || elsewhere || !from}
 					>
-						{busy ? 'Creating…' : `Create ${KINDS.find((k) => k.kind === kind)?.label.toLowerCase()}`}
+						{busy ? 'Creating…' : kind === 'prototype' ? 'Create prototype' : 'Start codebase work'}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

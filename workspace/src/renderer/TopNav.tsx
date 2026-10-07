@@ -54,7 +54,7 @@ export const TopNav = ({
 							onClick={() => onSectionChange(id)}
 							// The underline is drawn over the bottom edge rather than as a border, so it takes no
 							// height and the label stays centered with the rest of the bar.
-							className={`relative flex h-full cursor-pointer items-center px-1 text-sm font-medium ${
+							className={`relative flex h-full items-center px-1 text-sm font-medium ${
 								section === id
 									? 'after:bg-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-0.5'
 									: 'text-muted-foreground hover:text-foreground'

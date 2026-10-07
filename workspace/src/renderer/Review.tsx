@@ -4,7 +4,7 @@ import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Proj
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
 import { READY_LINE } from '../shared/handoff';
 import { latest } from '../shared/latest';
-import { isPrototype, iterationLabel, prototypePagePath, workKind, workOf } from '../shared/projects';
+import { isPrototypeKey, iterationLabel, prototypePagePath, workKind, workOf } from '../shared/projects';
 import { HandoffDialog } from './HandoffDialog';
 import { MoveToCode } from './MoveToCode';
 import { AgentLog, Loading } from './Loading';
@@ -40,8 +40,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
  * and the box is drawn over that. Dragging the sidebar's divider hides the preview for the
  * length of the drag, because the pointer over a native view never reaches this window.
  */
-
-/** Height of the toolbar under the main bar. */
 
 /** How often an open iteration looks for new comments. */
 export const REFRESH_MS = 60_000;
@@ -130,8 +128,9 @@ export const Review = ({
 	// Someone with the product repository builds it here, so what they see is their latest work.
 	// Everyone else, and anyone whose local build cannot run (a colleague's iteration they do not
 	// have), opens the shared preview. It may still be building: the screen says so.
-	// A prototype is one page the app serves itself: there is nothing to check out or run.
-	const prototype = isPrototype(iteration.branch);
+	// A prototype is one page the app serves itself: there is nothing to check out or run. (An older prototype on an
+	// `fd/` branch is code, and opens like codebase work.)
+	const prototype = isPrototypeKey(iteration.branch);
 	const localBuild = useLocalBuild({ checkout, project, iteration, task, enabled: !prototype && (!iteration.previewUrl || checkout !== null) });
 	const prototypeBuild = usePrototypeBuild({ project, iteration, task, enabled: prototype });
 	const local = prototype ? prototypeBuild : localBuild;
@@ -144,10 +143,11 @@ export const Review = ({
 	const hosted = useHostedPreview(useHosted ? hostedUrl : null);
 	// Moving a prototype into the code is confirmed first, in a dialog (MoveToCode).
 	const [moving, setMoving] = useState(false);
-	// Handoff on codebase work: confirmed in a dialog, then run on this screen, ending in a report.
-	const codebase = !prototype && iteration.name === 'codebase';
+	const kind = workKind(iteration);
+	const codebase = kind === 'codebase';
 	// The other iterations of the same kind of work, to switch between without going back to the list.
-	const siblings = workOf(project.iterations, workKind(iteration));
+	const siblings = workOf(project.iterations, kind);
+	// Handoff on codebase work: confirmed in a dialog, then run on this screen, ending in a report.
 	const [handingOff, setHandingOff] = useState(false);
 	const [handoffReady, setHandoffReady] = useState<boolean | null>(null);
 
@@ -463,17 +463,17 @@ export const Review = ({
 		return () => window.removeEventListener('keydown', onKey);
 	}, [opened, mode, commentMode, cancelCompose, exitCommentMode]);
 
+	// Anything drawn over the preview needs the space it occupies: the comment box here, any tooltip, menu, dialog
+	// or sheet that lands on it (they register themselves, see overlays.ts), and another section showing instead.
+	const overlapped = useOverlaps(slot);
+	const frozen = composing || hidden || overlapped;
 	/**
-	 * Writing a comment: freeze the preview. Done: bring it back.
+	 * Frozen: the preview is swapped for a picture of itself. Thawed: the live view comes back.
 	 *
 	 * The order matters. Markers are drawn first so the picture includes the pin; the picture
 	 * is on screen before the live view is hidden, so there is no flash of empty window; and
 	 * a run counter drops the result of a freeze that was overtaken by the box closing again.
 	 */
-	// Anything drawn over the preview needs the space it occupies: the comment box here, and any tooltip, menu,
-	// dialog or sheet that lands on it (they register themselves, see overlays.ts).
-	const overlapped = useOverlaps(slot);
-	const frozen = composing || hidden || overlapped;
 	const run = useRef(0);
 	useEffect(() => {
 		const mine = ++run.current;
@@ -676,9 +676,8 @@ export const Review = ({
 					</TooltipTrigger>
 					<TooltipContent side="bottom">Back to projects</TooltipContent>
 				</Tooltip>
-				<h2 className="truncate text-sm font-semibold">
-					{project.title} — {iteration.name}
-				</h2>
+				{/* The iteration is named by the switcher beside the comments, which is always shown. */}
+				<h2 className="truncate text-sm font-semibold">{project.title}</h2>
 				<Tooltip delayDuration={300}>
 					<TooltipTrigger asChild>
 						{prototype ? (
@@ -707,12 +706,17 @@ export const Review = ({
 					)}
 					{/* Shown even with one iteration, so where you are, and that there can be more, is always visible. */}
 					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button size="sm" variant="outline" title="Switch iteration">
-								{iterationLabel(iteration)}
-								<ChevronDownIcon />
-							</Button>
-						</DropdownMenuTrigger>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<DropdownMenuTrigger asChild>
+									<Button size="sm" variant="outline" aria-label={`Iteration ${iterationLabel(iteration)}: switch iteration`}>
+										{iterationLabel(iteration)}
+										<ChevronDownIcon />
+									</Button>
+								</DropdownMenuTrigger>
+							</TooltipTrigger>
+							<TooltipContent>Switch iteration</TooltipContent>
+						</Tooltip>
 						<DropdownMenuContent align="end" className="w-auto">
 							<DropdownMenuRadioGroup
 								value={iteration.branch}
@@ -724,7 +728,7 @@ export const Review = ({
 								{siblings.map((i) => (
 									<DropdownMenuRadioItem key={i.branch} value={i.branch}>
 										{iterationLabel(i)}
-										{i.localOnly && !project.localOnly ? ' · local' : ''}
+										{i.localOnly && !project.localOnly ? ' · only on this machine' : ''}
 									</DropdownMenuRadioItem>
 								))}
 							</DropdownMenuRadioGroup>
@@ -774,7 +778,7 @@ export const Review = ({
 						onOpenInBrowser={() => void window.workspace.openPreviewInBrowser().then((r) => !r.ok && setError(r.error))}
 						prototype={prototype}
 						onMoveToCode={checkout ? () => setMoving(true) : undefined}
-							editor={editor.available ? editor : undefined}
+						editor={editor.available ? editor : undefined}
 					/>
 				</div>
 			</Toolbar>
