@@ -17,5 +17,13 @@
       "branch": "noah/flock-designer",
       "commit": "21c9b904d36c5bb78f48b433ca3ddef04d564a17"
     }
+  },
+  {
+    "projectId": "admin-usage",
+    "name": "codebase",
+    "branch": "feature/admin-usage",
+    "commit": null,
+    "createdAt": "2026-10-07T01:20:54.057Z",
+    "note": "From quick prototype q1"
   }
 ]
