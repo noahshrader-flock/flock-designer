@@ -1,10 +1,10 @@
 # Flock Designer
 
-Three things live here.
+Four things live here.
 
-**[`PLAN.md`](PLAN.md)** — the plan. What Flock Designer is, every contract, the 17-step sequence and
-where it currently stands, the decision gates, and the change log. **It is the single document**; if
-you are picking this up, start with its "Where we are" block.
+**[`flock-designer.md`](flock-designer.md)** — where everything stands. What Flock Designer is, what is built,
+how it works and why, every contract, and the change log. If you are picking this up, start with its "Where things
+stand" block. **[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)** is what is left to do; each fact is in only one of the two.
 
 **`projects/`** — one folder per project. Drop in whatever context you have.
 
@@ -21,7 +21,7 @@ patterns and boundaries stay in the product repository; these are the ones that 
 There are two kinds of work: a **prototype**, one page built from the product's real components to decide what
 something should be, and **codebase work**, the real change, built to ship. Each has iterations, `I1`, `I2`.
 **Address** asks the agent to act on one comment; **Hand off** is the full check before an engineer takes the
-work. These and the rest are defined once, in [the plan's vocabulary](PLAN.md#vocabulary).
+work. These and the rest are defined once, in [the vocabulary](flock-designer.md#vocabulary).
 
 The app is for **discovery**: a prototype is reviewed in it, by anyone with the app and a GitHub account.
 **Delivery** is engineering's, through their own pull requests and preview links.
