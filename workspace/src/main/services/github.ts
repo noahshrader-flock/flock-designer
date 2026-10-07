@@ -46,6 +46,8 @@ export interface StoredToken {
 export interface Fetcher {
   (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }): Promise<{
     status: number;
+    /** Present on a real response; GitHub puts the id support asks for in `x-github-request-id`. */
+    headers?: { get(name: string): string | null };
     json(): Promise<unknown>;
     text(): Promise<string>;
   }>;
@@ -191,7 +193,15 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): P
     throw new ReauthRequired();
   }
   if (res.status >= 400) {
-    const detail = asRecord(await res.json().catch(() => ({})));
+    // Read once as text: a body is read a single time, and when it is not JSON (a bare 500, a proxy's page) what
+    // it says is all there is to go on.
+    const raw = (await res.text().catch(() => '')).trim();
+    let detail: Record<string, unknown> = {};
+    try {
+      detail = asRecord(JSON.parse(raw));
+    } catch {
+      // Not JSON: `raw` is kept for the message below.
+    }
     const message = typeof detail.message === 'string' ? detail.message : '';
 
     // GitHub's own wording for a missing permission is "Resource not accessible
@@ -216,7 +226,12 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): P
       // Indistinguishable from a repository that does not exist, so say both.
       throw new GitHubError(`Not found, or this app is not installed on it: ${call.path}`, res.status);
     }
-    throw new GitHubError(message || `GitHub returned ${res.status}`, res.status);
+    // With no message of its own, say which call it was (saving one comment can take several), what came back,
+    // and the request id, so a failure that is GitHub's can be reported to them and one that is ours can be found.
+    const id = res.headers?.get('x-github-request-id');
+    const what = raw ? `: ${raw.replace(/\s+/g, ' ').slice(0, 200)}` : '';
+    const which = `${call.method ?? 'GET'} ${call.path.replace(/\?.*$/, '')}`;
+    throw new GitHubError(message || `GitHub returned ${res.status} for ${which}${what}${id ? ` (request ${id})` : ''}`, res.status);
   }
   // "No Content": a delete worked and there is nothing to read. Parsing it would fail a call that succeeded.
   if (res.status === 204) return null;

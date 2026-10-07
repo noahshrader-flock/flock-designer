@@ -150,6 +150,20 @@ describe('callApi', () => {
     await expect(callApi('tok', { path: '/repos/a/b/issues/comments/9', method: 'DELETE' }, fetcher)).resolves.toBeNull();
   });
 
+  it('says what a bare failure returned and its request id, since there is no message to pass on', async () => {
+    const fetcher: Fetcher = async () => ({
+      status: 500,
+      headers: { get: (n: string) => (n === 'x-github-request-id' ? 'AB12:34CD' : null) },
+      json: async () => {
+        throw new Error('not json');
+      },
+      text: async () => '<html>\n  Server Error\n</html>',
+    });
+    await expect(callApi('tok', { path: '/x', method: 'POST', body: {} }, fetcher)).rejects.toThrow(
+      'GitHub returned 500 for POST /x: <html> Server Error </html> (request AB12:34CD)',
+    );
+  });
+
   it("passes GitHub's own message through for other failures", async () => {
     const { fetcher } = stub([{ status: 422, body: { message: 'Validation failed' } }]);
     await expect(callApi('tok', { path: '/x' }, fetcher)).rejects.toThrow(GitHubError);
