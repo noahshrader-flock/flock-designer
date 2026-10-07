@@ -60,6 +60,10 @@ function DropdownMenuGroup({
   )
 }
 
+/**
+ * Every item in this app's menus leads with an icon (a lucide one, as the first child), so a menu reads the same
+ * wherever it opens. Radio and checkbox items are the exception: their own mark says whether they are chosen.
+ */
 function DropdownMenuItem({
   className,
   inset,

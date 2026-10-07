@@ -1,4 +1,4 @@
-import { EllipsisVerticalIcon, FolderIcon, MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
+import { EllipsisVerticalIcon, FileTextIcon, FolderIcon, MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { Checkout, CheckoutSuggestion, Project, ProjectIteration } from '../shared/contract';
 import { LoadingScreen } from './Loading';
@@ -253,6 +253,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 										<DropdownMenuContent align="end" className="w-auto">
 											{project.records.map((record) => (
 												<DropdownMenuItem key={record} onSelect={() => setViewing({ project, name: record, open: true })}>
+													<FileTextIcon />
 													{sentence(record.replace(/\.[^.]+$/, '').replace(/-/g, ' '))}
 												</DropdownMenuItem>
 											))}

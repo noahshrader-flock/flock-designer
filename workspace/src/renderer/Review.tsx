@@ -1,4 +1,18 @@
-import { ChevronDownIcon, ChevronLeftIcon, FolderIcon, GitBranchIcon, MapPinIcon, MessageSquareIcon, PackageCheckIcon, TriangleAlertIcon } from 'lucide-react';
+import {
+	ChevronDownIcon,
+	ChevronLeftIcon,
+	CircleCheckIcon,
+	EllipsisVerticalIcon,
+	FolderIcon,
+	GitBranchIcon,
+	MapPinIcon,
+	MessageSquareIcon,
+	PackageCheckIcon,
+	RotateCcwIcon,
+	Trash2Icon,
+	TriangleAlertIcon,
+	WandSparklesIcon,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
@@ -21,7 +35,7 @@ import { usePrototypeBuild } from './prototypeBuild';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Textarea } from './ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
@@ -1047,8 +1061,8 @@ export const Review = ({
 												setSelected(comment.id);
 												if (comment.anchor) void window.workspace.pageFocusMarker(comment.id);
 											}}
-											// An addressed comment fades its content and not the card: the two buttons that are
-											// still live stay at full strength, since they are the point of it being here.
+											// An addressed comment fades its content and not the card: the menu, which is
+											// still live, stays at full strength, since it is the point of it being here.
 											data-addressed={addressed}
 											className={`group rounded-lg border p-3 ${selected === comment.id ? 'border-primary bg-accent border-2' : ''} ${
 												comment.anchor ? 'cursor-pointer' : ''
@@ -1059,6 +1073,40 @@ export const Review = ({
 													{n > 0 && <Badge variant="secondary">{n}</Badge>}
 													<span className="group-data-[addressed=true]:opacity-60 min-w-0 truncate text-sm font-medium">{comment.author}</span>
 													{comment.resolved && <Badge variant="success">Resolved</Badge>}
+													{/* One comment at a time: the designer picks the one that is a clear change, and
+													    leaves the ones that still need a decision. */}
+													<DropdownMenu>
+														<DropdownMenuTrigger asChild>
+															<Button
+																size="icon-sm"
+																variant="ghost"
+																aria-label="Comment actions"
+																className="-my-1 -mr-1.5 ml-auto"
+																onClick={(e: React.MouseEvent) => e.stopPropagation()}
+															>
+																<EllipsisVerticalIcon />
+															</Button>
+														</DropdownMenuTrigger>
+														{/* The menu is drawn outside the card but its clicks still reach the card in React: they must not select it. */}
+														<DropdownMenuContent align="end" className="w-auto" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+															{/* The agent runs on this machine, against the product repository: without it there is nothing to build with. */}
+															{!comment.resolved && !addressed && checkout && (
+																<DropdownMenuItem disabled={address.kind === 'running'} onSelect={() => void addressComment(comment.id)}>
+																	<WandSparklesIcon />
+																	{addressing === comment.id && address.kind === 'running' ? 'Working…' : 'Address'}
+																</DropdownMenuItem>
+															)}
+															<DropdownMenuItem onSelect={() => void setResolved(comment, !comment.resolved)}>
+																{comment.resolved ? <RotateCcwIcon /> : <CircleCheckIcon />}
+																{comment.resolved ? 'Reopen' : 'Resolve'}
+															</DropdownMenuItem>
+															<DropdownMenuSeparator />
+															<DropdownMenuItem variant="destructive" onSelect={() => setConfirmingDelete(comment.id)}>
+																<Trash2Icon />
+																Delete
+															</DropdownMenuItem>
+														</DropdownMenuContent>
+													</DropdownMenu>
 												</div>
 												{addressed && (
 													<p className="text-muted-foreground text-xs">
@@ -1066,46 +1114,6 @@ export const Review = ({
 														{prototype ? 'The agent addressed this' : <>The agent addressed this in <code>{comment.addressedAt?.slice(0, 7)}</code></>}
 													</p>
 												)}
-												{/* The actions get their own row. Three of them beside a name did not fit a narrow
-												    panel, and ran together into one unreadable word. */}
-												<div className="flex flex-row flex-wrap items-center gap-2">
-													{/* One comment at a time: the designer picks the one that is a clear change, and
-													    leaves the ones that still need a decision. */}
-													{/* The agent runs on this machine, against the product repository: without it there is nothing to build with. */}
-													{!comment.resolved && !addressed && checkout && (
-														<Button
-															size="sm"
-															variant="ghost"
-															disabled={address.kind === 'running'}
-															onClick={(e: React.MouseEvent) => {
-																e.stopPropagation();
-																void addressComment(comment.id);
-															}}
-														>
-															{addressing === comment.id && address.kind === 'running' ? 'Working…' : 'Address'}
-														</Button>
-													)}
-													<Button
-														size="sm"
-														variant="ghost"
-														onClick={(e: React.MouseEvent) => {
-															e.stopPropagation();
-															void setResolved(comment, !comment.resolved);
-														}}
-													>
-														{comment.resolved ? 'Reopen' : 'Resolve'}
-													</Button>
-													<Button
-														size="sm"
-														variant="ghost"
-														onClick={(e: React.MouseEvent) => {
-															e.stopPropagation();
-															setConfirmingDelete(comment.id);
-														}}
-													>
-														Delete
-													</Button>
-												</div>
 												{confirmingDelete === comment.id && (
 													<div className="flex flex-row items-center gap-2" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
 														<span className="text-destructive grow text-xs">Delete this comment for good? It cannot be brought back.</span>

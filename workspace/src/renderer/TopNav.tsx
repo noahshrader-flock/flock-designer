@@ -1,3 +1,4 @@
+import { LogOutIcon } from 'lucide-react';
 import type { GitHubUser } from '../shared/contract';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
@@ -85,7 +86,10 @@ export const TopNav = ({
 							<p className="text-muted-foreground text-xs">@{user.login}</p>
 						</div>
 						<DropdownMenuSeparator />
-						<DropdownMenuItem onSelect={onSignOut}>Sign out</DropdownMenuItem>
+						<DropdownMenuItem onSelect={onSignOut}>
+							<LogOutIcon />
+							Sign out
+						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
 			)}
