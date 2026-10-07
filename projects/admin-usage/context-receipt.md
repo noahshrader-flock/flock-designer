@@ -38,4 +38,4 @@ to read `flock-coke`, `flock-designer/projects`, and the quick-prototype folder.
 - Login stands in for "used" (§1.3).
 - No feature flag (§1.5).
 - Who sees the tab, and who can delete (§1.6).
-- 15 sample roles are added to the roles response by the mock handler. The fixture file is not edited.
+- 16 sample roles are added to the roles response by the mock handler. The fixture file is not edited.
