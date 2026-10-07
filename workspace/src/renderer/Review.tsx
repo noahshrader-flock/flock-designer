@@ -681,6 +681,7 @@ export const Review = ({
 						variant={sidebarOpen ? 'default' : 'outline'}
 						aria-pressed={sidebarOpen}
 						aria-label="Show all comments"
+						disabled={!opened}
 						title={total > 0 ? `All comments (${total})` : 'All comments'}
 						className="rounded-l-none border-l-0"
 						onClick={() => setSidebarOpen((o) => !o)}
@@ -763,7 +764,8 @@ export const Review = ({
 					)}
 				</div>
 
-				{sidebarOpen && (
+				{/* There is nothing to comment on until the page is open, so the list waits for it too. */}
+				{sidebarOpen && opened && (
 					<>
 						{/* The divider. Drag it, or focus it and use the arrow keys. One pixel to look at, with a
 						    wider strip to grab that extends over the sidebar only: the other side is the native
