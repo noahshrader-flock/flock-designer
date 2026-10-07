@@ -1,9 +1,9 @@
-import { FolderIcon, MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
+import { EllipsisVerticalIcon, FolderIcon, MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { Checkout, CheckoutSuggestion, Project, ProjectIteration } from '../shared/contract';
 import { LoadingScreen } from './Loading';
 import { NewWork, type Created } from './NewWork';
-import { People } from './People';
+import { PeopleAvatars } from './People';
 import { PublishBanner, PublishLine, usePublishStatus } from './PublishStatus';
 import { startedAt } from '../shared/projects';
 import { RecordSheet } from './RecordSheet';
@@ -12,7 +12,8 @@ import { Toolbar } from './Toolbar';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /** A name as it reads on a button: the first letter capital, the rest as written. */
@@ -207,18 +208,12 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 				{projects.map((project) => (
 					<Card key={project.id}>
 						<CardHeader>
-							<CardTitle>{project.title}</CardTitle>
+							<CardTitle className="text-base font-semibold">{project.title}</CardTitle>
 							<CardDescription className="flex items-center gap-1.5">
 								<FolderIcon className="size-4 shrink-0" />
 								<span className="font-mono">{project.id}</span>
-								{startedAt(project) &&
-									` · Started ${new Date(startedAt(project) as string).toLocaleDateString(undefined, {
-										month: 'short',
-										day: 'numeric',
-										year: 'numeric',
-									})}`}
 							</CardDescription>
-							{(project.localOnly || project.openComments > 0) && (
+							{(project.localOnly || project.openComments > 0 || project.records.length > 0) && (
 								<CardAction className="flex flex-row items-center gap-2">
 									{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}
 									{project.openComments > 0 && (
@@ -237,26 +232,50 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 											</TooltipContent>
 										</Tooltip>
 									)}
+									{project.records.length > 0 && (
+										<DropdownMenu>
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<DropdownMenuTrigger asChild>
+														<Button size="icon" variant="ghost" aria-label="More">
+															<EllipsisVerticalIcon />
+														</Button>
+													</DropdownMenuTrigger>
+												</TooltipTrigger>
+												<TooltipContent>More</TooltipContent>
+											</Tooltip>
+											<DropdownMenuContent align="end" className="w-auto">
+												{project.records.map((record) => (
+													<DropdownMenuItem key={record} onSelect={() => setViewing({ project, name: record, open: true })}>
+														{sentence(record.replace(/\.[^.]+$/, '').replace(/-/g, ' '))}
+													</DropdownMenuItem>
+												))}
+											</DropdownMenuContent>
+										</DropdownMenu>
+									)}
 								</CardAction>
 							)}
 						</CardHeader>
-						<CardContent>
-							<People people={project.people} empty="No contributors recorded yet" />
-						</CardContent>
 						<CardFooter className="flex-wrap justify-between gap-2">
-							<div className="flex flex-row flex-wrap items-center gap-2">
+							<div className="flex flex-row items-center gap-3">
+								<PeopleAvatars people={project.people} />
+								{startedAt(project) && (
+									<span className="text-muted-foreground text-sm">
+										Started{' '}
+										{new Date(startedAt(project) as string).toLocaleDateString(undefined, {
+											month: 'short',
+											day: 'numeric',
+											year: 'numeric',
+										})}
+									</span>
+								)}
+							</div>
+							<div className="ml-auto flex flex-row flex-wrap items-center justify-end gap-2">
 								{project.iterations.length === 0 && <span className="text-muted-foreground px-2 text-sm">No branches yet.</span>}
 								{project.iterations.map((iteration) => (
-									<Button key={iteration.branch} variant="outline" size="sm" onClick={() => setSelected({ project, iteration })}>
+									<Button key={iteration.branch} onClick={() => setSelected({ project, iteration })}>
 										{sentence(iteration.name)}
 										{iteration.localOnly && !project.localOnly ? ' · local' : ''}
-									</Button>
-								))}
-							</div>
-							<div className="ml-auto flex flex-row flex-wrap items-center">
-								{project.records.map((record) => (
-									<Button key={record} variant="ghost" size="sm" onClick={() => setViewing({ project, name: record, open: true })}>
-										{sentence(record.replace(/\.[^.]+$/, '').replace(/-/g, ' '))}
 									</Button>
 								))}
 							</div>
