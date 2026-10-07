@@ -17,7 +17,10 @@ export type BuildPhase =
 	| { kind: 'idle' }
 	| { kind: 'agent' }
 	| { kind: 'preview' }
-	| { kind: 'running'; url: string }
+	/** `uncommitted`: the checkout had changes nobody committed when it was opened, and no agent made them here. */
+	| { kind: 'running'; url: string; uncommitted?: boolean }
+	/** The agent did work that ends in a report, not a preview (Handoff): its last words say how it went. */
+	| { kind: 'reported' }
 	| { kind: 'failed'; message: string };
 
 export type BuildApi = Pick<WorkspaceApi, 'openCheckout' | 'continueIteration' | 'startAgent' | 'agentStatus' | 'startCommand'>;
@@ -112,6 +115,8 @@ export interface BuildRun {
 	iteration: ProjectIteration;
 	/** What to ask the agent to build first, for work that was just created. Omit to go straight to the preview. */
 	task?: string;
+	/** What follows the agent: the preview (building), or a report and nothing else (Handoff). */
+	then?: 'preview' | 'report';
 	isLive: () => boolean;
 	onPhase: (phase: BuildPhase) => void;
 	/** How often the agent is asked how it is getting on. */
@@ -125,6 +130,7 @@ export const runLocalBuild = async ({
 	project,
 	iteration,
 	task,
+	then = 'preview',
 	isLive,
 	onPhase,
 	pollMs = 1000,
@@ -167,16 +173,28 @@ export const runLocalBuild = async ({
 		if (after.ok && !after.value.clean) {
 			return fail('The agent stopped before it committed all of its work: there are changes in the checkout it did not commit. Continue in Claude Code to finish them.');
 		}
+		if (then === 'report') {
+			onPhase({ kind: 'reported' });
+			return null;
+		}
 	}
+	// Changes no agent here made (someone working by hand, or a run that stopped before this screen was open).
+	const uncommitted = !task && !stillBuilding && !opened.value.clean;
 
 	onPhase({ kind: 'preview' });
 	const result = await api.startCommand(root, previewCommandFor(iteration), project.id);
 	if (!result.ok) return fail(result.error);
 	if (result.value.state === 'running') {
 		const url = previewAddress(result.value.url, iteration.route);
-		onPhase({ kind: 'running', url });
+		onPhase({ kind: 'running', url, ...(uncommitted ? { uncommitted } : {}) });
 		return url;
 	}
 	// `stopped` here means the process ended before it ever answered; its output is on screen.
 	return fail(result.value.state === 'failed' ? result.value.detail : 'The preview stopped before it was ready. Its output is below.');
 };
+
+/**
+ * Whether a Handoff agent's last words say the work is ready: a line that starts `Ready for engineering`,
+ * bold or quoted or not. "Not ready for engineering" does not count, nor does the phrase mid-sentence.
+ */
+export const saysReady = (lines: string[]): boolean => lines.some((l) => /^\s*[*`_]*Ready for engineering\b/im.test(l));

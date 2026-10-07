@@ -2,7 +2,7 @@ import { BrowserWindow, app, safeStorage, screen, shell } from 'electron';
 import { join } from 'node:path';
 import { CHANNELS } from '../shared/contract';
 import { registerIpc } from './ipc';
-import { SessionMemory } from './services/handoff';
+import { SessionMemory } from './services/editor';
 import { AgentRunner } from './services/agent';
 import { DesignRepo } from './services/designRepo';
 import { CheckoutMemory } from './services/checkoutMemory';

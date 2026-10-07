@@ -2,11 +2,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { SessionMemory, findEditor, resumeCommand } from '../src/main/services/handoff';
+import { SessionMemory, findEditor, resumeCommand } from '../src/main/services/editor';
 
 const dirs: string[] = [];
 const temp = () => {
-	const d = mkdtempSync(join(tmpdir(), 'fdw-handoff-'));
+	const d = mkdtempSync(join(tmpdir(), 'fdw-editor-'));
 	dirs.push(d);
 	return d;
 };

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
-import { type BuildApi, type BuildPhase, previewAddress, previewCommandFor, routeWentWrong, runLocalBuild } from '../src/renderer/localBuild';
+import { type BuildApi, type BuildPhase, previewAddress, previewCommandFor, routeWentWrong, runLocalBuild, saysReady } from '../src/renderer/localBuild';
 
 const iteration = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
 	name: 'i1', branch: 'fd/users/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], createdAt: null, route: null, ...over,
@@ -193,6 +193,20 @@ describe('when nobody is looking any more', () => {
 		expect(calls).not.toContain('startCommand');
 	});
 
+	it('ends a Handoff with a report, not a preview', async () => {
+		const { a, calls } = api();
+		const { url, phases } = await run(a, { task: 'hand it off', then: 'report' });
+		expect(url).toBeNull();
+		expect(phases.map((p) => p.kind)).toEqual(['agent', 'reported']);
+		expect(calls).not.toContain('startCommand');
+	});
+
+	it('says when the checkout has changes nobody here made, and still opens the preview', async () => {
+		const { a } = api({ openCheckout: vi.fn(async () => ({ ok: true, value: { root: '/r', name: 'coke', branch: 'fd/users/i1', clean: false } })) });
+		const { phases } = await run(a);
+		expect(phases.at(-1)).toMatchObject({ kind: 'running', uncommitted: true });
+	});
+
 	it('stops polling an agent whose screen has gone', async () => {
 		let live = true;
 		let polls = 0;
@@ -256,5 +270,19 @@ describe('routeWentWrong', () => {
 		expect(routeWentWrong('/roles/compare', '/roles/comparison')).not.toBeNull();
 		// A parameter was left unfilled, so the path never matched.
 		expect(routeWentWrong('/organization/:id/roles', '/')).not.toBeNull();
+	});
+});
+
+describe('saysReady', () => {
+	it('is a line that starts with the verdict, however it is dressed', () => {
+		expect(saysReady(['Fixed three findings.', 'Ready for engineering\nThe gate passes.'])).toBe(true);
+		expect(saysReady(['**Ready for engineering**'])).toBe(true);
+		expect(saysReady(['`Ready for engineering`'])).toBe(true);
+	});
+
+	it('is not "Not ready", nor the words mid-sentence, nor nothing at all', () => {
+		expect(saysReady(['Not ready for engineering: the a11y scan fails.'])).toBe(false);
+		expect(saysReady(['It will be Ready for engineering once the flag exists.'])).toBe(false);
+		expect(saysReady([])).toBe(false);
 	});
 });

@@ -23,7 +23,8 @@ import {
 	type ReviewComment,
 } from '../shared/contract';
 import { AgentRunner, agentReadiness, locateClaude } from './services/agent';
-import { SessionMemory, findEditor, openFolder, openSession, resumeCommand } from './services/handoff';
+import { SessionMemory, findEditor, openFolder, openSession, resumeCommand } from './services/editor';
+import { HANDOFF_FILE, HANDOFF_SKILL, gateCommand, handoffTask } from './services/engineeringHandoff';
 import { type ShareRunner, previewIsUp, pullRequestText } from './services/share';
 import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
@@ -414,7 +415,7 @@ export const registerIpc = ({
 
 	// Handing the work to the person, in VS Code. Only ever on a click: it opens another application.
 	ipcMain.handle(
-		CHANNELS.handoffState,
+		CHANNELS.editorState,
 		guard((root: string, branch: string) => ({
 			editor: findEditor() !== null,
 			session: sessions.read(opened.require(root), String(branch)) !== null,
@@ -912,6 +913,36 @@ export const registerIpc = ({
 				clean: here.clean,
 			};
 		}),
+	);
+
+	// Handoff: the task for the heavy pass on codebase work, asked for only once the work is open on its branch.
+	ipcMain.handle(
+		CHANNELS.prepareHandoff,
+		guard(async (root: string, projectId: string): Promise<string> => {
+			assertUsableProjectId(projectId);
+			const canonical = opened.require(root);
+			const recordsRoot = recordsFor(canonical);
+			const descriptor = descriptorFor(root);
+			const iteration = await recordedIteration(canonical, recordsRoot, descriptor, projectId, 'codebase');
+			if ((await readCheckout(canonical)).branch !== iteration.branch) {
+				throw new Error(`Open ${iteration.branch} first: a handoff checks the work where it is.`);
+			}
+			const now = agent.status();
+			if (now.state === 'running') throw new Error('The agent is already working on something. Wait for it to finish, then try again.');
+			const skill = readSkillFile(dirname(recordsRoot), HANDOFF_SKILL);
+			if (skill === null) throw new Error(`The design repository on this machine has no ${HANDOFF_SKILL}. Update it (git pull) and try again.`);
+			return handoffTask({ skill, projectId, branch: iteration.branch, gate: gateCommand(descriptor.commands, projectId) });
+		}),
+	);
+	// Whether the branch carries a handoff for engineering: it is committed with the work, or it was not written.
+	ipcMain.handle(
+		CHANNELS.handoffWritten,
+		guard((root: string) =>
+			runGit(opened.require(root), ['cat-file', '-e', `HEAD:${HANDOFF_FILE}`]).then(
+				() => true,
+				() => false,
+			),
+		),
 	);
 
 	ipcMain.handle(

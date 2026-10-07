@@ -6,14 +6,14 @@ import type { Checkout, ProjectIteration } from '../shared/contract';
  * there with everything it knew. Asked again whenever `when` changes, since a run that has just started
  * is what makes a conversation to continue.
  */
-export const useHandoff = (checkout: Checkout | null, iteration: ProjectIteration, when: unknown, onError: (message: string) => void) => {
+export const useEditor = (checkout: Checkout | null, iteration: ProjectIteration, when: unknown, onError: (message: string) => void) => {
 	const [state, setState] = useState({ editor: false, session: false });
 	const root = checkout?.root ?? null;
 
 	useEffect(() => {
 		if (root === null) return;
 		let current = true;
-		void window.workspace.handoffState(root, iteration.branch).then((r) => current && r.ok && setState(r.value));
+		void window.workspace.editorState(root, iteration.branch).then((r) => current && r.ok && setState(r.value));
 		return () => {
 			current = false;
 		};

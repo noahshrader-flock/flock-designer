@@ -1,9 +1,10 @@
-import { ChevronLeftIcon, FolderIcon, GitBranchIcon, MapPinIcon, MessageSquareIcon } from 'lucide-react';
+import { ChevronLeftIcon, FolderIcon, GitBranchIcon, MapPinIcon, MessageSquareIcon, TriangleAlertIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
 import { latest } from '../shared/latest';
 import { isQuick, quickPagePath } from '../shared/projects';
+import { HandoffDialog } from './HandoffDialog';
 import { MoveToCode } from './MoveToCode';
 import { PeopleAvatars } from './People';
 import { AgentLog, Loading } from './Loading';
@@ -11,10 +12,10 @@ import { ShareControl } from './ShareControl';
 import { Toolbar } from './Toolbar';
 import { useHostedPreview } from './hostedPreview';
 import { type AddressPhase, runAddress } from './address';
-import { routeWentWrong } from './localBuild';
+import { routeWentWrong, saysReady } from './localBuild';
 import { PANEL_STEP, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
 import { useLocalBuild } from './useLocalBuild';
-import { useHandoff } from './useHandoff';
+import { useEditor } from './useEditor';
 import { useQuickBuild } from './quickBuild';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
@@ -133,7 +134,7 @@ export const Review = ({
 	const quickBuild = useQuickBuild({ project, iteration, task, enabled: quick });
 	const local = quick ? quickBuild : localBuild;
 	// Codebase work can be handed to the person's own editor, and the agent's conversation with it.
-	const handoff = useHandoff(quick ? null : checkout, iteration, local.phase.kind, setError);
+	const editor = useEditor(quick ? null : checkout, iteration, local.phase.kind, setError);
 	// Set when the person took the running agent over in VS Code: the screen waits for them, not for it.
 	const [handedOff, setHandedOff] = useState(false);
 	const hostedUrl = iteration.previewUrl ?? null;
@@ -142,6 +143,12 @@ export const Review = ({
 	const [shareOpen, setShareOpen] = useState(false);
 	// Moving a quick prototype into the code is confirmed first, in a dialog (MoveToCode).
 	const [moving, setMoving] = useState(false);
+	// Handoff on codebase work: confirmed in a dialog, then run on this screen, ending in a report.
+	const codebase = !quick && iteration.name === 'codebase';
+	const [handingOff, setHandingOff] = useState(false);
+	const [handoffReady, setHandoffReady] = useState<boolean | null>(null);
+	// Set while the agent's work on this screen is a Handoff, so the screen says that and not "building".
+	const [handoffRunning, setHandoffRunning] = useState(false);
 	// The branch tooltip opens over the preview, which is a native layer above everything in this window.
 	const [branchTip, setBranchTip] = useState(false);
 
@@ -270,6 +277,20 @@ export const Review = ({
 	useEffect(() => {
 		if (local.phase.kind === 'running') void open(local.phase.url);
 	}, [local.phase, open]);
+	// While the agent works on an open page (Handoff), and when it reports, the screen is its, not the page's.
+	useEffect(() => {
+		// Only once the run has ended: starting it passes through idle first.
+		if (['reported', 'failed', 'running'].includes(local.phase.kind)) setHandoffRunning(false);
+		if (local.phase.kind !== 'agent' && local.phase.kind !== 'reported') return;
+		setOpened(false);
+		void window.workspace.pageClose();
+	}, [local.phase.kind]);
+	// The verdict: the agent said so, and the note for the engineer is on the branch. Either alone is not enough.
+	useEffect(() => {
+		if (local.phase.kind !== 'reported' || !checkout) return setHandoffReady(null);
+		const said = saysReady(local.log);
+		void window.workspace.handoffWritten(checkout.root).then((r) => setHandoffReady(said && r.ok && r.value));
+	}, [local.phase.kind, checkout]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => window.workspace.onPageRoute(setRoute), []);
 
@@ -454,7 +475,7 @@ export const Review = ({
 	 */
 	// The sharing dialog, the menu and the branch tooltip need the same thing the comment box does: the space
 	// the preview occupies.
-	const frozen = composing || shareOpen || branchTip || menuOpen || moving;
+	const frozen = composing || shareOpen || branchTip || menuOpen || moving || handingOff;
 	const run = useRef(0);
 	useEffect(() => {
 		const mine = ++run.current;
@@ -653,6 +674,17 @@ export const Review = ({
 					</TooltipContent>
 				</Tooltip>
 				<div className="grow" />
+				{local.phase.kind === 'running' && local.phase.uncommitted && (
+					<Button
+						size="sm"
+						variant="outline"
+						title={`${checkout?.name ?? 'The checkout'} has changes nobody committed. ${editor.session ? 'Continue in Claude Code to finish them' : 'Open it in VS Code to look'}, or commit them yourself.`}
+						onClick={() => void (editor.session ? editor.continueInClaude() : editor.openInEditor())}
+					>
+						<TriangleAlertIcon />
+						Uncommitted changes
+					</Button>
+				)}
 				<PeopleAvatars people={iteration.contributors} className="-mr-2" />
 
 				<ShareControl
@@ -664,7 +696,8 @@ export const Review = ({
 					onOpenChange={setShareOpen}
 					quick={quick}
 					onMoveToCode={checkout ? () => setMoving(true) : undefined}
-					handoff={handoff.available ? handoff : undefined}
+					onHandoff={checkout && codebase ? () => setHandingOff(true) : undefined}
+					editor={editor.available ? editor : undefined}
 				/>
 
 				{/* One control, two halves: comment mode on the left, the list of comments on the right.
@@ -698,6 +731,19 @@ export const Review = ({
 				</div>
 			</Toolbar>
 
+			{checkout && codebase && (
+				<HandoffDialog
+					open={handingOff}
+					onClose={() => setHandingOff(false)}
+					project={project}
+					iteration={iteration}
+					checkout={checkout}
+					onStart={(next) => {
+						setHandoffRunning(true);
+						localBuild.runAgent(next, 'report');
+					}}
+				/>
+			)}
 			{checkout && quick && (
 				<MoveToCode open={moving} onClose={() => setMoving(false)} project={project} iteration={iteration} checkout={checkout} onStarted={onOpen} />
 			)}
@@ -722,6 +768,26 @@ export const Review = ({
 										Open the preview
 									</Button>
 								</>
+							) : local.phase.kind === 'reported' ? (
+								<>
+									<p className="text-sm font-semibold">
+										{handoffReady === null ? 'Handoff finished' : handoffReady ? 'Ready for engineering' : 'Not ready for engineering yet'}
+									</p>
+									<p className="text-muted-foreground max-w-[480px] text-sm">
+										{handoffReady
+											? `HANDOFF.md is on ${iteration.branch}. Give the branch to an engineer when you are ready; nothing was pushed.`
+											: 'What the agent said is below: what it fixed, and what still stands in the way.'}
+									</p>
+									<AgentLog lines={local.log} />
+									<div className="flex gap-2">
+										{editor.session && (
+											<Button variant="secondary" onClick={() => void editor.continueInClaude()}>
+												Continue in Claude Code
+											</Button>
+										)}
+										<Button onClick={localBuild.skipAgent}>Open the preview</Button>
+									</div>
+								</>
 							) : local.phase.kind === 'failed' && !useHosted ? (
 								<>
 									<Alert variant="destructive" className="max-w-[560px] text-left">
@@ -729,8 +795,8 @@ export const Review = ({
 									</Alert>
 									<AgentLog lines={local.log} />
 									<div className="flex gap-2">
-										{handoff.session && (
-											<Button variant="secondary" onClick={() => void handoff.continueInClaude()}>
+										{editor.session && (
+											<Button variant="secondary" onClick={() => void editor.continueInClaude()}>
 												Continue in Claude Code
 											</Button>
 										)}
@@ -762,7 +828,9 @@ export const Review = ({
 							) : (
 								<>
 									<Loading>
-										{local.phase.kind === 'agent'
+										{local.phase.kind === 'agent' && handoffRunning
+											? `Handing off ${project.title}…`
+											: local.phase.kind === 'agent'
 											? `Building ${project.title}…`
 											: local.phase.kind === 'preview'
 												? 'Starting the preview…'
@@ -771,19 +839,21 @@ export const Review = ({
 									{local.phase.kind === 'agent' && (
 										<>
 											<p className="text-muted-foreground max-w-[480px] text-sm">
-												The agent is writing it from your request. This takes a few minutes.
+												{handoffRunning
+													? 'The agent is running the full check, both reviews and the fixes they call for. This takes a while.'
+													: 'The agent is writing it from your request. This takes a few minutes.'}
 											</p>
 											<AgentLog lines={local.log} />
-											{handoff.available && (
+											{editor.available && (
 												<div className="flex gap-2">
-													<Button variant="secondary" onClick={() => void handoff.openInEditor()}>
-														{handoff.editor ? 'Open in VS Code' : 'Show in Finder'}
+													<Button variant="secondary" onClick={() => void editor.openInEditor()}>
+														{editor.editor ? 'Open in VS Code' : 'Show in Finder'}
 													</Button>
-													{handoff.session && (
+													{editor.session && (
 														<Button
 															variant="secondary"
 															title="Stops the agent here and continues the same conversation in VS Code"
-															onClick={() => void handoff.continueInClaude().then((ok) => ok && setHandedOff(true))}
+															onClick={() => void editor.continueInClaude().then((ok) => ok && setHandedOff(true))}
 														>
 															Take over in Claude Code
 														</Button>
