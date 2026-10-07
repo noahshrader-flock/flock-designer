@@ -218,10 +218,10 @@ describe('what a run leaves behind for a screen opened again', () => {
 			adapter: { name: 'Echo', argvFor: () => ['node', '-e', 'console.log("one"); console.log("two")'] },
 			spawnProcess: spawn,
 		} as never);
-		const started = runner.start(tmpdir(), 'users', 't', { work: 'quick/users/q1' });
-		expect(started).toMatchObject({ state: 'running', work: 'quick/users/q1' });
+		const started = runner.start(tmpdir(), 'users', 't', { work: 'prototype/users/i1' });
+		expect(started).toMatchObject({ state: 'running', work: 'prototype/users/i1' });
 		for (let i = 0; i < 100 && runner.status().state === 'running'; i++) await new Promise((r) => setTimeout(r, 20));
-		expect(runner.status()).toMatchObject({ state: 'finished', work: 'quick/users/q1' });
-		expect(runner.recentLines()).toEqual({ work: 'quick/users/q1', lines: ['one', 'two'] });
+		expect(runner.status()).toMatchObject({ state: 'finished', work: 'prototype/users/i1' });
+		expect(runner.recentLines()).toEqual({ work: 'prototype/users/i1', lines: ['one', 'two'] });
 	});
 });

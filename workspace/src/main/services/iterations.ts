@@ -4,7 +4,7 @@ import type { Iteration, IterationKind, Person, WorkspaceDescriptor } from '../.
 import { branchAuthors, branchExists, branchStartedAt, checkoutBranch, createBranch, headCommit, isSamePerson, localIdentity } from './git';
 import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
-import { PROJECT_ID } from '../../shared/projects';
+import { PROJECT_ID, nextPrototypeNumber as nextNumber } from '../../shared/projects';
 
 /**
  * Named attempts at the question, and the record of them.
@@ -66,9 +66,8 @@ const writeIterations = (recordsRoot: string, projectId: string, iterations: Ite
 	writeFileSync(path, `${JSON.stringify(iterations, null, 2)}\n`);
 };
 
-/** The next prototype number: one past the highest `iN` recorded. Counting records would skip a number once a codebase entry exists. */
-const nextPrototypeNumber = (existing: Iteration[]): number =>
-	existing.reduce((max, i) => Math.max(max, Number(/^i(\d+)$/.exec(i.name)?.[1] ?? 0)), 0) + 1;
+/** The next prototype number, on the one count every prototype shares. Counting records would skip a number once a codebase entry exists. */
+const nextPrototypeNumber = (existing: Iteration[]): number => nextNumber(existing.map((i) => i.name));
 
 /** The one `feature/<project-id>` branch for real-code work. */
 export const codebaseBranchFor = (descriptor: WorkspaceDescriptor, projectId: string): string =>

@@ -153,22 +153,27 @@ export const newestFirst = (a: ProjectIteration, b: ProjectIteration): number =>
 export const isRecordName = (n: unknown): n is string => typeof n === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(n) && !n.includes('..');
 
 /**
- * A quick prototype: one self-contained page, made without a product repository, saved in the design
+ * A prototype as the app makes it now (internally still "prototype", the name its storage and key carry): one
+ * self-contained page, made without a product repository, saved in the design
  * repository beside the project's other records. It has no git branch. Its key, in the place a branch
- * name goes (the iteration record, the review thread), is `quick/<project-id>/<name>`, which no
+ * name goes (the iteration record, the review thread), is `prototype/<project-id>/<name>`, which no
  * repository's branch pattern makes, so it can never be mistaken for one.
  */
-export const QUICK_PREFIX = 'quick/';
-export const isQuick = (branch: string): boolean => branch.startsWith(QUICK_PREFIX);
-export const quickKey = (projectId: string, name: string): string => `${QUICK_PREFIX}${projectId}/${name}`;
+export const PROTOTYPE_PREFIX = 'prototype/';
+export const isPrototype = (branch: string): boolean => branch.startsWith(PROTOTYPE_PREFIX);
+export const prototypeKey = (projectId: string, name: string): string => `${PROTOTYPE_PREFIX}${projectId}/${name}`;
 /** Where the page is kept in the design repository. */
-export const quickPagePath = (projectId: string, name: string): string => `projects/${projectId}/quick/${name}.html`;
+export const prototypePagePath = (projectId: string, name: string): string => `projects/${projectId}/prototypes/${name}.html`;
 /** Its React source, kept beside the page when it was written with the real design system. */
-export const quickSourcePath = (projectId: string, name: string): string => `projects/${projectId}/quick/${name}.tsx`;
-/** `q1`, `q2`, …: one past the highest recorded, so a gap is never filled in. */
-export const nextQuickName = (names: string[]): string =>
-	`q${names.reduce((max, n) => Math.max(max, Number(/^q(\d+)$/.exec(n)?.[1] ?? 0)), 0) + 1}`;
-export const isQuickName = (name: string): boolean => /^q\d{1,4}$/.test(name);
+export const prototypeSourcePath = (projectId: string, name: string): string => `projects/${projectId}/prototypes/${name}.tsx`;
+/**
+ * Prototypes share one count, `i1`, `i2`, …, whichever way they were made: one past the highest recorded, so a gap
+ * is never filled in.
+ */
+export const nextPrototypeNumber = (names: string[]): number =>
+	names.reduce((max, n) => Math.max(max, Number(/^i(\d+)$/.exec(n)?.[1] ?? 0)), 0) + 1;
+export const nextPrototypeName = (names: string[]): string => `i${nextPrototypeNumber(names)}`;
+export const isPrototypeName = (name: string): boolean => /^i\d{1,4}$/.test(name);
 
 /** A just-made iteration as the screens show one: nothing shared or built yet, so nowhere to land. */
 export const freshIteration = (it: Iteration): ProjectIteration => ({

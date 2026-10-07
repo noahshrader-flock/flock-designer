@@ -3,11 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
-import { isQuick, nextQuickName, quickKey, quickPagePath } from '../src/shared/projects';
-import { type RecordStore, cloneStore, moveToCodeTask, quickBuildTask, quickReadable, recordQuick } from '../src/main/services/quick';
-import { QuickServer } from '../src/main/services/quickServer';
+import { isPrototype, nextPrototypeName, prototypeKey, prototypePagePath } from '../src/shared/projects';
+import { type RecordStore, cloneStore, moveToCodeTask, prototypeBuildTask, prototypeReadable, recordPrototype } from '../src/main/services/prototype';
+import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { claudeCodeAdapter } from '../src/main/services/agent';
-import { type QuickApi, runQuickBuild } from '../src/renderer/quickBuild';
+import { type PrototypeApi, runPrototypeBuild } from '../src/renderer/prototypeBuild';
 import type { BuildPhase } from '../src/renderer/localBuild';
 
 /** A design repository held in memory. */
@@ -24,25 +24,26 @@ const memoryStore = (files: Record<string, string> = {}) => {
 	return { store, files, writes };
 };
 
-describe('what a quick prototype is called', () => {
+describe('what a prototype is called', () => {
 	it('is keyed apart from every branch, and numbered one past the highest', () => {
-		expect(quickKey('users', 'q2')).toBe('quick/users/q2');
-		expect(isQuick('quick/users/q2')).toBe(true);
-		expect(isQuick('fd/users/i1')).toBe(false);
-		expect(nextQuickName(['i1', 'codebase'])).toBe('q1');
-		expect(nextQuickName(['q1', 'q3', 'i2'])).toBe('q4');
-		expect(quickPagePath('users', 'q1')).toBe('projects/users/quick/q1.html');
+		expect(prototypeKey('users', 'i2')).toBe('prototype/users/i2');
+		expect(isPrototype('prototype/users/i2')).toBe(true);
+		expect(isPrototype('fd/users/i1')).toBe(false);
+		expect(nextPrototypeName(['codebase'])).toBe('i1');
+		expect(nextPrototypeName(['i1', 'codebase'])).toBe('i2');
+		expect(nextPrototypeName(['i1', 'i3', 'i2'])).toBe('i4');
+		expect(prototypePagePath('users', 'i1')).toBe('projects/users/prototypes/i1.html');
 	});
 });
 
-describe('recordQuick', () => {
+describe('recordPrototype', () => {
 	const me = { name: 'Noah', login: 'noah' };
 	const now = new Date('2026-10-06T12:00:00Z');
 
-	it('starts a new project with its brief, then records the quick prototype', async () => {
+	it('starts a new project with its brief, then records the prototype', async () => {
 		const { store, files, writes } = memoryStore();
-		const it = await recordQuick(store, { projectId: 'users', title: 'Users — inactivity', note: 'flag inactive users', me, now });
-		expect(it).toMatchObject({ name: 'q1', branch: 'quick/users/q1', contributors: [me], createdAt: now.toISOString() });
+		const it = await recordPrototype(store, { projectId: 'users', title: 'Users — inactivity', note: 'flag inactive users', me, now });
+		expect(it).toMatchObject({ name: 'i1', branch: 'prototype/users/i1', contributors: [me], createdAt: now.toISOString() });
 		expect(files['projects/users/brief.md']).toBe('# Users — inactivity\n\nflag inactive users\n');
 		expect(it.note).toBe('flag inactive users');
 		expect(JSON.parse(files['projects/users/iterations.json'] as string)).toHaveLength(1);
@@ -53,18 +54,18 @@ describe('recordQuick', () => {
 	it("adds to an existing project's records and leaves its brief alone", async () => {
 		const { store, files } = memoryStore({
 			'projects/users/brief.md': '# Users\n\nThe real brief.\n',
-			'projects/users/iterations.json': JSON.stringify([{ name: 'i1', branch: 'fd/users/i1' }, { name: 'q1', branch: 'quick/users/q1' }]),
+			'projects/users/iterations.json': JSON.stringify([{ name: 'i1', branch: 'fd/users/i1' }, { name: 'i2', branch: 'prototype/users/i2' }]),
 		});
-		const it = await recordQuick(store, { projectId: 'users', title: 'Other', note: 'n', me: null, now });
-		expect(it.name).toBe('q2');
+		const it = await recordPrototype(store, { projectId: 'users', title: 'Other', note: 'n', me: null, now });
+		expect(it.name).toBe('i3');
 		expect(it.contributors).toBeUndefined();
 		expect(files['projects/users/brief.md']).toBe('# Users\n\nThe real brief.\n');
-		expect(JSON.parse(files['projects/users/iterations.json'] as string).map((i: { name: string }) => i.name)).toEqual(['i1', 'q1', 'q2']);
+		expect(JSON.parse(files['projects/users/iterations.json'] as string).map((i: { name: string }) => i.name)).toEqual(['i1', 'i2', 'i3']);
 	});
 
 	it('keeps the whole request in the brief, and its first line on the record', async () => {
 		const { store, files } = memoryStore();
-		const it = await recordQuick(store, { projectId: 'users', title: 'Users', note: 'Add a Usage tab.\n\nWho uses it: admins.\n', me, now });
+		const it = await recordPrototype(store, { projectId: 'users', title: 'Users', note: 'Add a Usage tab.\n\nWho uses it: admins.\n', me, now });
 		expect(files['projects/users/brief.md']).toBe('# Users\n\nAdd a Usage tab.\n\nWho uses it: admins.\n');
 		expect(it.note).toBe('Add a Usage tab.');
 	});
@@ -72,12 +73,12 @@ describe('recordQuick', () => {
 	it('keeps what it was modelled on', async () => {
 		const { store } = memoryStore();
 		const basedOn = { repository: 'flock-coke', branch: 'develop', commit: 'abc1234' };
-		expect((await recordQuick(store, { projectId: 'users', title: 't', note: 'n', me, basedOn, now })).basedOn).toEqual(basedOn);
+		expect((await recordPrototype(store, { projectId: 'users', title: 't', note: 'n', me, basedOn, now })).basedOn).toEqual(basedOn);
 	});
 
 	it('refuses to write over records it cannot read', async () => {
 		const { store, writes } = memoryStore({ 'projects/users/iterations.json': '{not json' });
-		await expect(recordQuick(store, { projectId: 'users', title: 't', note: 'n', me, now })).rejects.toThrow(/not readable JSON/);
+		await expect(recordPrototype(store, { projectId: 'users', title: 't', note: 'n', me, now })).rejects.toThrow(/not readable JSON/);
 		expect(writes).toEqual([]);
 	});
 });
@@ -87,18 +88,18 @@ describe('cloneStore', () => {
 	afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 	it('writes into the clone, then has the change published', async () => {
-		dir = mkdtempSync(join(tmpdir(), 'fd-quick-clone-'));
+		dir = mkdtempSync(join(tmpdir(), 'fd-prototype-clone-'));
 		const published = vi.fn();
 		const store = cloneStore(dir, published);
-		await store.write('projects/users/quick/q1.html', '<p>hi</p>', 'm');
-		expect(readFileSync(join(dir, 'projects/users/quick/q1.html'), 'utf8')).toBe('<p>hi</p>');
-		expect(await store.read('projects/users/quick/q1.html')).toBe('<p>hi</p>');
+		await store.write('projects/users/prototypes/i1.html', '<p>hi</p>', 'm');
+		expect(readFileSync(join(dir, 'projects/users/prototypes/i1.html'), 'utf8')).toBe('<p>hi</p>');
+		expect(await store.read('projects/users/prototypes/i1.html')).toBe('<p>hi</p>');
 		expect(await store.read('projects/users/nothing.md')).toBeNull();
 		expect(published).toHaveBeenCalledOnce();
 	});
 
 	it('never writes outside the clone', async () => {
-		dir = mkdtempSync(join(tmpdir(), 'fd-quick-clone-'));
+		dir = mkdtempSync(join(tmpdir(), 'fd-prototype-clone-'));
 		await expect(cloneStore(dir, vi.fn()).write('../outside.html', 'x', 'm')).rejects.toThrow();
 		expect(existsSync(join(dir, '..', 'outside.html'))).toBe(false);
 	});
@@ -113,12 +114,12 @@ describe('what the agent is told', () => {
 		sharedStandards: '/d/standards',
 		nodeModules: '/c/node_modules',
 	};
-	const build = { source: '/q/users/q1.tsx', page: '/q/users/q1.html', buildCommand: 'node /q/build-quick.mjs /e /q/users/q1.tsx /q/users/q1.html /c/node_modules /q/_shared' };
+	const build = { source: '/q/users/i1.tsx', page: '/q/users/i1.html', buildCommand: 'node /q/build-prototype.mjs /e /q/users/i1.tsx /q/users/i1.html /c/node_modules /q/_shared' };
 
 	it('names the source to write, the exact command that checks it builds, and every folder it may read, read-only', () => {
-		const task = quickBuildTask({ skill: '# Skill', build, sources, request: 'A users list' });
+		const task = prototypeBuildTask({ skill: '# Skill', build, sources, request: 'A users list' });
 		expect(task.startsWith('# Skill')).toBe(true);
-		expect(task).toContain('Write `/q/users/q1.tsx`');
+		expect(task).toContain('Write `/q/users/i1.tsx`');
 		expect(task).toContain(`\`${build.buildCommand}\``);
 		expect(task).toContain('Read only: never change anything');
 		for (const dir of ['/q/source/coke', '/c/coke/.flkd', '/c/fui', '/d/standards', '/c/node_modules']) expect(task).toContain(`\`${dir}\``);
@@ -126,17 +127,17 @@ describe('what the agent is told', () => {
 	});
 
 	it('says what is missing rather than leaving the agent to guess', () => {
-		expect(quickBuildTask({ skill: 's', build, sources, request: 'r' })).toContain('The design system as installed:** not on this machine');
+		expect(prototypeBuildTask({ skill: 's', build, sources, request: 'r' })).toContain('The design system as installed:** not on this machine');
 	});
 
 	it('lets the agent read only the folders that exist', () => {
-		expect(quickReadable(sources)).toEqual(['/q/source/coke', '/c/coke/.flkd', '/c/fui', '/d/standards', '/c/node_modules']);
-		expect(quickReadable(null)).toEqual([]);
+		expect(prototypeReadable(sources)).toEqual(['/q/source/coke', '/c/coke/.flkd', '/c/fui', '/d/standards', '/c/node_modules']);
+		expect(prototypeReadable(null)).toEqual([]);
 	});
 
 	it('asks for the audit before any code changes', () => {
-		const task = moveToCodeTask({ skill: 's', pageFile: '/q/q1.html', auditFile: '/d/projects/users/audit-q1.md', name: 'q1' });
-		expect(task).toContain('Write the audit to `/d/projects/users/audit-q1.md` before you change any code.');
+		const task = moveToCodeTask({ skill: 's', pageFile: '/q/i1.html', auditFile: '/d/projects/users/audit-i1.md', name: 'i1' });
+		expect(task).toContain('Write the audit to `/d/projects/users/audit-i1.md` before you change any code.');
 	});
 
 	it('lets the agent read the product but never change it', () => {
@@ -150,24 +151,24 @@ describe('what the agent is told', () => {
 	});
 });
 
-describe('QuickServer', () => {
+describe('PrototypeServer', () => {
 	it('serves a page it was given on this machine only, and nothing else', async () => {
-		const server = new QuickServer();
+		const server = new PrototypeServer();
 		try {
-			const url = await server.serve('users/q1', '<h1>Hi</h1>');
-			expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/users\/q1\/$/);
+			const url = await server.serve('users/i1', '<h1>Hi</h1>');
+			expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/users\/i1\/$/);
 			const res = await fetch(url);
 			expect(res.headers.get('content-type')).toContain('text/html');
 			expect(await res.text()).toBe('<h1>Hi</h1>');
-			expect((await fetch(url.replace('/users/q1/', '/users/q2/'))).status).toBe(404);
+			expect((await fetch(url.replace('/users/i1/', '/users/i2/'))).status).toBe(404);
 			// A shared file, served beside every page by its name, as the data it was embedded as.
 			server.share('0123456789abcdef', `data:font/woff2;base64,${Buffer.from('font bytes').toString('base64')}`);
-			const font = await fetch(url.replace('/users/q1/', '/_shared/0123456789abcdef'));
+			const font = await fetch(url.replace('/users/i1/', '/_shared/0123456789abcdef'));
 			expect(font.headers.get('content-type')).toBe('font/woff2');
 			expect(await font.text()).toBe('font bytes');
 			expect(server.hasShared('0123456789abcdef')).toBe(true);
 			// Serving again replaces it.
-			await server.serve('users/q1', '<h1>Again</h1>');
+			await server.serve('users/i1', '<h1>Again</h1>');
 			expect(await (await fetch(url)).text()).toBe('<h1>Again</h1>');
 		} finally {
 			server.close();
@@ -175,66 +176,66 @@ describe('QuickServer', () => {
 	});
 });
 
-describe('runQuickBuild', () => {
+describe('runPrototypeBuild', () => {
 	const project: Project = { id: 'users', title: 'Users', records: [], iterations: [], people: [], openComments: 0 };
-	const iteration: ProjectIteration = { name: 'q1', branch: 'quick/users/q1', issueNumber: null, previewUrl: null, commit: null, contributors: [], createdAt: null, route: null };
-	const api = (over: Partial<Record<keyof QuickApi, unknown>> = {}) => {
+	const iteration: ProjectIteration = { name: 'i1', branch: 'prototype/users/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], createdAt: null, route: null };
+	const api = (over: Partial<Record<keyof PrototypeApi, unknown>> = {}) => {
 		const calls: string[] = [];
 		const ok = (name: string, value: unknown) => vi.fn(async () => (calls.push(name), { ok: true as const, value }));
 		const a = {
-			buildQuick: ok('buildQuick', { state: 'running', startedAt: 'now' }),
+			buildPrototype: ok('buildPrototype', { state: 'running', startedAt: 'now' }),
 			agentStatus: ok('agentStatus', { state: 'finished', exitCode: 0 }),
-			saveQuick: ok('saveQuick', null),
-			openQuick: ok('openQuick', 'http://127.0.0.1:5000/users/q1/'),
+			savePrototype: ok('savePrototype', null),
+			openPrototype: ok('openPrototype', 'http://127.0.0.1:5000/users/i1/'),
 			...over,
-		} as unknown as QuickApi;
+		} as unknown as PrototypeApi;
 		return { a, calls };
 	};
-	const run = async (a: QuickApi, task?: string) => {
+	const run = async (a: PrototypeApi, task?: string) => {
 		const phases: BuildPhase[] = [];
-		const url = await runQuickBuild({ api: a, project, iteration, task, isLive: () => true, onPhase: (p) => phases.push(p), pollMs: 1 });
+		const url = await runPrototypeBuild({ api: a, project, iteration, task, isLive: () => true, onPhase: (p) => phases.push(p), pollMs: 1 });
 		return { url, phases: phases.map((p) => p.kind) };
 	};
 
 	it('builds, saves, then shows new work', async () => {
 		const { a, calls } = api();
 		const { url, phases } = await run(a, 'A users list');
-		expect(url).toBe('http://127.0.0.1:5000/users/q1/');
+		expect(url).toBe('http://127.0.0.1:5000/users/i1/');
 		expect(phases).toEqual(['agent', 'preview', 'running']);
-		expect(calls).toEqual(['agentStatus', 'buildQuick', 'agentStatus', 'saveQuick', 'openQuick']);
+		expect(calls).toEqual(['agentStatus', 'buildPrototype', 'agentStatus', 'savePrototype', 'openPrototype']);
 	});
 
 	it('only opens work that already exists', async () => {
 		const { a, calls } = api();
 		expect((await run(a)).phases).toEqual(['preview', 'running']);
-		expect(calls).toEqual(['agentStatus', 'openQuick']);
+		expect(calls).toEqual(['agentStatus', 'openPrototype']);
 	});
 
 	it('picks up a build still running when the screen is opened again, then saves and shows it', async () => {
 		let asked = 0;
 		const agentStatus = vi.fn(async () => ({
 			ok: true as const,
-			value: asked++ < 2 ? { state: 'running', startedAt: 'now', work: 'quick/users/q1' } : { state: 'finished', exitCode: 0, work: 'quick/users/q1' },
+			value: asked++ < 2 ? { state: 'running', startedAt: 'now', work: 'prototype/users/i1' } : { state: 'finished', exitCode: 0, work: 'prototype/users/i1' },
 		}));
 		const { a, calls } = api({ agentStatus });
 		const { url, phases } = await run(a);
 		expect(phases).toEqual(['agent', 'preview', 'running']);
-		expect(url).toBe('http://127.0.0.1:5000/users/q1/');
+		expect(url).toBe('http://127.0.0.1:5000/users/i1/');
 		// It waits on the run that is there; it never starts a second one.
-		expect(calls).not.toContain('buildQuick');
-		expect(calls).toContain('saveQuick');
+		expect(calls).not.toContain('buildPrototype');
+		expect(calls).toContain('savePrototype');
 	});
 
 	it("does not wait on another piece of work's run", async () => {
-		const { a, calls } = api({ agentStatus: vi.fn(async () => ({ ok: true as const, value: { state: 'running', startedAt: 'now', work: 'quick/other/q1' } })) });
+		const { a, calls } = api({ agentStatus: vi.fn(async () => ({ ok: true as const, value: { state: 'running', startedAt: 'now', work: 'prototype/other/i1' } })) });
 		expect((await run(a)).phases).toEqual(['preview', 'running']);
-		expect(calls).toEqual(['openQuick']);
+		expect(calls).toEqual(['openPrototype']);
 	});
 
 	it('does not show a page that could not be saved, and says why', async () => {
-		const { a } = api({ saveQuick: vi.fn(async () => ({ ok: false, error: 'Saving needs write access.' })) });
+		const { a } = api({ savePrototype: vi.fn(async () => ({ ok: false, error: 'Saving needs write access.' })) });
 		const phases: BuildPhase[] = [];
-		await runQuickBuild({ api: a, project, iteration, task: 't', isLive: () => true, onPhase: (p) => phases.push(p), pollMs: 1 });
+		await runPrototypeBuild({ api: a, project, iteration, task: 't', isLive: () => true, onPhase: (p) => phases.push(p), pollMs: 1 });
 		expect(phases.at(-1)).toEqual({ kind: 'failed', message: 'Saving needs write access.' });
 	});
 });

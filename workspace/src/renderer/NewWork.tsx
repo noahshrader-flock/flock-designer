@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { AgentReadiness, Checkout, IterationKind, Project, ProjectIteration, QuickReadiness, Repository } from '../shared/contract';
+import type { AgentReadiness, Checkout, IterationKind, Project, ProjectIteration, PrototypeReadiness, Repository } from '../shared/contract';
 import { freshIteration, slugify } from '../shared/projects';
 import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -11,11 +11,11 @@ import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Textarea } from './ui/textarea';
 
 /** What New makes. The older numbered prototype branches still open, but are no longer offered here. */
-type NewKind = Extract<IterationKind, 'quick' | 'codebase'>;
+type NewKind = Extract<IterationKind, 'prototype' | 'codebase'>;
 const KINDS: { kind: NewKind; label: string; about: string }[] = [
 	{
-		kind: 'quick',
-		label: 'Quick prototype',
+		kind: 'prototype',
+		label: 'Prototype',
 		about:
 			"One page built from the product's real components and shared as a single file. Needs the repository and its packages installed on this machine. Nothing runs and nothing in the codebase changes, so no environment setup.",
 	},
@@ -33,9 +33,9 @@ export interface Created {
 }
 
 /**
- * Starting something new: what kind (a quick prototype or a codebase feature, switched at the top), where
+ * Starting something new: what kind (a prototype or a codebase feature, switched at the top), where
  * it starts (a repository, and a branch in it), a name, and what it should explore. Both kinds start from
- * the same two choices: a codebase feature branches from them, a quick prototype reads them to look like
+ * the same two choices: a codebase feature branches from them, a prototype reads them to look like
  * the product. Creating it makes the record (and the branch); the agent and the preview follow on their own.
  *
  * The repositories are the ones GitHub shows the signed-in person, so the list follows their permissions;
@@ -60,7 +60,7 @@ export const NewWork = ({
 	onCreated: (created: Created) => void;
 }) => {
 	// Kept between openings, so someone who makes one kind is not switched back each time.
-	const [kind, setKind] = useState<NewKind>('quick');
+	const [kind, setKind] = useState<NewKind>('prototype');
 	const [name, setName] = useState('');
 	const [task, setTask] = useState('');
 	const [busy, setBusy] = useState(false);
@@ -104,20 +104,20 @@ export const NewWork = ({
 	// Building needs Claude Code; when it is plainly not ready, nothing is created.
 	const blocked = readiness.state === 'missing' || readiness.state === 'signedOut';
 
-	// Whether this repository can build a quick prototype here, asked as soon as there is one to ask about.
-	const [quick, setQuick] = useState<QuickReadiness | null>(null);
+	// Whether this repository can build a prototype here, asked as soon as there is one to ask about.
+	const [prototype, setPrototype] = useState<PrototypeReadiness | null>(null);
 	const askRoot = checkout && !elsewhere ? checkout.root : null;
 	useEffect(() => {
-		setQuick(null);
-		if (!open || kind !== 'quick' || askRoot === null) return;
+		setPrototype(null);
+		if (!open || kind !== 'prototype' || askRoot === null) return;
 		let current = true;
-		void window.workspace.quickReadiness(askRoot).then((r) => current && r.ok && setQuick(r.value));
+		void window.workspace.prototypeReadiness(askRoot).then((r) => current && r.ok && setPrototype(r.value));
 		return () => {
 			current = false;
 		};
 	}, [open, kind, askRoot]);
-	// Nothing else decides this: no repository, or one without its packages, cannot make a quick prototype.
-	const quickBlocked = kind === 'quick' && (askRoot === null || (quick !== null && !quick.ready));
+	// Nothing else decides this: no repository, or one without its packages, cannot make a prototype.
+	const prototypeBlocked = kind === 'prototype' && (askRoot === null || (prototype !== null && !prototype.ready));
 
 	const pickRepo = async (name: string) => {
 		const repo = choices.find((r) => r.name === name);
@@ -134,13 +134,13 @@ export const NewWork = ({
 
 	const create = async () => {
 		if (!id || !task.trim()) return;
-		if (kind !== 'quick' && !checkout) return;
+		if (kind !== 'prototype' && !checkout) return;
 		setBusy(true);
 		setError(null);
 		const note = task.trim().split('\n')[0] ?? '';
 		const r =
-			kind === 'quick'
-				? await window.workspace.createQuick(id, name.trim(), task.trim(), checkout && !elsewhere && from ? { root: checkout.root, branch: from } : undefined)
+			kind === 'prototype'
+				? await window.workspace.createPrototype(id, name.trim(), task.trim(), checkout && !elsewhere && from ? { root: checkout.root, branch: from } : undefined)
 				: await window.workspace.createIteration((checkout as Checkout).root, id, note, kind, from ?? undefined);
 		setBusy(false);
 		if (!r.ok) return setError(r.error);
@@ -244,13 +244,13 @@ export const NewWork = ({
 							placeholder="A users list that flags people who have not signed in for 90 days."
 						/>
 					</div>
-					{kind === 'quick' && quick && !quick.ready && (
+					{kind === 'prototype' && prototype && !prototype.ready && (
 						<Alert variant="warning">
-							<AlertTitle>{quick.why === 'not-installed' ? "The real components aren't installed here" : 'The page builder is missing'}</AlertTitle>
+							<AlertTitle>{prototype.why === 'not-installed' ? "The real components aren't installed here" : 'The page builder is missing'}</AlertTitle>
 							<AlertDescription>
-								{quick.why === 'not-installed' ? (
+								{prototype.why === 'not-installed' ? (
 									<>
-										A quick prototype is built from {quick.designSystem}, and it is not installed in {quick.repository} on this machine. Run{' '}
+										A prototype is built from {prototype.designSystem}, and it is not installed in {prototype.repository} on this machine. Run{' '}
 										<code>npm ci</code> in it (this needs access to the private packages), then open this again.
 									</>
 								) : (
@@ -279,7 +279,7 @@ export const NewWork = ({
 							</AlertDescription>
 						</Alert>
 					)}
-					{kind !== 'quick' && checkout && checkout.clean === false && (
+					{kind !== 'prototype' && checkout && checkout.clean === false && (
 						<Alert variant="warning">
 							<AlertDescription>There are uncommitted changes in this checkout. Commit or set them aside first.</AlertDescription>
 						</Alert>
@@ -296,7 +296,7 @@ export const NewWork = ({
 					</Button>
 					<Button
 						onClick={() => void create()}
-						disabled={busy || blocked || quickBlocked || !id || !task.trim() || !checkout || elsewhere || !from}
+						disabled={busy || blocked || prototypeBlocked || !id || !task.trim() || !checkout || elsewhere || !from}
 					>
 						{busy ? 'Creating…' : `Create ${KINDS.find((k) => k.kind === kind)?.label.toLowerCase()}`}
 					</Button>

@@ -1,13 +1,13 @@
 import { type Server, createServer } from 'node:http';
 
 /**
- * Serves quick prototypes to the review screen, from this process, on this machine only.
+ * Serves prototypes to the review screen, from this process, on this machine only.
  *
- * A quick prototype is one HTML page with nothing to run, so there is no dev server to start: the page
+ * A prototype is one HTML page with nothing to run, so there is no dev server to start: the page
  * is handed to this and given an address. It answers only on the loopback address, only for pages it
  * was given, and keeps nothing on disk. The preview shows it in its own sandboxed view, like any other.
  */
-export class QuickServer {
+export class PrototypeServer {
 	private server: Server | null = null;
 	private port = 0;
 	private readonly pages = new Map<string, string>();

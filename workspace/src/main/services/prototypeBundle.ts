@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 
 /**
- * Turns a quick prototype written in React into one HTML file anyone can open.
+ * Turns a prototype written in React into one HTML file anyone can open.
  *
  * The prototype is a single `.tsx` file that uses the product's real design system, resolved from the
  * product's own installed packages, so what reviewers see is the real components and not an imitation.
@@ -84,10 +84,10 @@ export const esbuildEntry = (): string | null => {
 	}
 };
 
-/** Writes the build script into the app's quick folder and says where it is. */
-export const writeBundleScript = (quickRoot: string): string => {
-	mkdirSync(quickRoot, { recursive: true });
-	const path = join(quickRoot, 'build-quick.mjs');
+/** Writes the build script into the app's prototype folder and says where it is. */
+export const writeBundleScript = (prototypesRoot: string): string => {
+	mkdirSync(prototypesRoot, { recursive: true });
+	const path = join(prototypesRoot, 'build-prototype.mjs');
 	writeFileSync(path, SCRIPT);
 	return path;
 };

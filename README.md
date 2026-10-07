@@ -29,7 +29,7 @@ Everything the agent writes for that project lands in the same folder — the br
 context, what it read before building, the review, and the decisions you confirmed. One project, one
 place, so picking up someone else's work means reading one folder.
 
-A **quick prototype** is kept in its project's folder too, under `quick/`: one React file and the page
+A **prototype** is kept in its project's folder too, under `prototypes/`: one React file and the page
 built from it, so anyone can open it without the product. Large files those pages share are kept once in
 `projects/_shared/`, which is not a project.
 

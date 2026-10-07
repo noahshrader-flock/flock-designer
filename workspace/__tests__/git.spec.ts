@@ -143,7 +143,7 @@ describe('two commands at once in one repository', () => {
 	// moment (React runs effects twice in development), and one `git checkout` hit the
 	// other's index.lock and failed, with "Another git process seems to be running".
 	it('do not collide: every one of them succeeds', async () => {
-		// Real checkouts are quick, so a collision needs a repository big enough that holding
+		// Real checkouts are prototype, so a collision needs a repository big enough that holding
 		// the lock takes a moment, and enough commands at once that two are bound to overlap.
 		mkdirSync(join(root, 'src'), { recursive: true });
 		for (let i = 0; i < 400; i++) writeFileSync(join(root, 'src', `f${i}.txt`), `${i}\n`.repeat(50));

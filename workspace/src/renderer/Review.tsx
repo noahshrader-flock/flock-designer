@@ -4,7 +4,7 @@ import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Proj
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
 import { READY_LINE } from '../shared/handoff';
 import { latest } from '../shared/latest';
-import { isQuick, quickPagePath } from '../shared/projects';
+import { isPrototype, prototypePagePath } from '../shared/projects';
 import { HandoffDialog } from './HandoffDialog';
 import { MoveToCode } from './MoveToCode';
 import { PeopleAvatars } from './People';
@@ -18,7 +18,7 @@ import { routeWentWrong } from './localBuild';
 import { PANEL_STEP, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
 import { useLocalBuild } from './useLocalBuild';
 import { useEditor } from './useEditor';
-import { useQuickBuild } from './quickBuild';
+import { usePrototypeBuild } from './prototypeBuild';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -79,7 +79,7 @@ export const Review = ({
 	task?: string;
 	/** Another section is showing over this screen, so the preview has to step aside. */
 	hidden: boolean;
-	/** Opens other work: where moving a quick prototype into the code goes next. */
+	/** Opens other work: where moving a prototype into the code goes next. */
 	onOpen: (project: Project, iteration: ProjectIteration, task: string) => void;
 }) => {
 	const [comments, setComments] = useState<ReviewComment[] | null>(null);
@@ -130,22 +130,22 @@ export const Review = ({
 	// Someone with the product repository builds it here, so what they see is their latest work.
 	// Everyone else, and anyone whose local build cannot run (a colleague's iteration they do not
 	// have), opens the shared preview. It may still be building: the screen says so.
-	// A quick prototype is one page the app serves itself: there is nothing to check out or run.
-	const quick = isQuick(iteration.branch);
-	const localBuild = useLocalBuild({ checkout, project, iteration, task, enabled: !quick && (!iteration.previewUrl || checkout !== null) });
-	const quickBuild = useQuickBuild({ project, iteration, task, enabled: quick });
-	const local = quick ? quickBuild : localBuild;
+	// A prototype is one page the app serves itself: there is nothing to check out or run.
+	const prototype = isPrototype(iteration.branch);
+	const localBuild = useLocalBuild({ checkout, project, iteration, task, enabled: !prototype && (!iteration.previewUrl || checkout !== null) });
+	const prototypeBuild = usePrototypeBuild({ project, iteration, task, enabled: prototype });
+	const local = prototype ? prototypeBuild : localBuild;
 	// Codebase work can be handed to the person's own editor, and the agent's conversation with it.
-	const editor = useEditor(quick ? null : checkout, iteration, local.phase.kind, setError);
+	const editor = useEditor(prototype ? null : checkout, iteration, local.phase.kind, setError);
 	// Set when the person took the running agent over in VS Code: the screen waits for them, not for it.
 	const [handedOff, setHandedOff] = useState<'editor' | 'terminal' | null>(null);
 	const hostedUrl = iteration.previewUrl ?? null;
 	const useHosted = hostedUrl !== null && (checkout === null || local.phase.kind === 'failed');
 	const hosted = useHostedPreview(useHosted ? hostedUrl : null);
-	// Moving a quick prototype into the code is confirmed first, in a dialog (MoveToCode).
+	// Moving a prototype into the code is confirmed first, in a dialog (MoveToCode).
 	const [moving, setMoving] = useState(false);
 	// Handoff on codebase work: confirmed in a dialog, then run on this screen, ending in a report.
-	const codebase = !quick && iteration.name === 'codebase';
+	const codebase = !prototype && iteration.name === 'codebase';
 	const [handingOff, setHandingOff] = useState(false);
 	const [handoffReady, setHandoffReady] = useState<boolean | null>(null);
 
@@ -659,14 +659,14 @@ export const Review = ({
 				</h2>
 				<Tooltip delayDuration={300}>
 					<TooltipTrigger asChild>
-						{quick ? (
-							<FolderIcon aria-label={`Saved at ${quickPagePath(project.id, iteration.name)}`} className="text-muted-foreground size-4 shrink-0" />
+						{prototype ? (
+							<FolderIcon aria-label={`Saved at ${prototypePagePath(project.id, iteration.name)}`} className="text-muted-foreground size-4 shrink-0" />
 						) : (
 							<GitBranchIcon aria-label={`Branch ${iteration.branch}`} className="text-muted-foreground size-4 shrink-0" />
 						)}
 					</TooltipTrigger>
 					<TooltipContent side="bottom" className="font-mono">
-						{quick ? quickPagePath(project.id, iteration.name) : iteration.branch}
+						{prototype ? prototypePagePath(project.id, iteration.name) : iteration.branch}
 					</TooltipContent>
 				</Tooltip>
 				<div className="grow" />
@@ -689,7 +689,7 @@ export const Review = ({
 					iteration={iteration}
 					canOpen={opened}
 					onOpenInBrowser={() => void window.workspace.openPreviewInBrowser().then((r) => !r.ok && setError(r.error))}
-					quick={quick}
+					prototype={prototype}
 					onMoveToCode={checkout ? () => setMoving(true) : undefined}
 					onHandoff={checkout && codebase ? () => setHandingOff(true) : undefined}
 					editor={editor.available ? editor : undefined}
@@ -734,7 +734,7 @@ export const Review = ({
 					onStart={localBuild.handoff}
 				/>
 			)}
-			{checkout && quick && (
+			{checkout && prototype && (
 				<MoveToCode open={moving} onClose={() => setMoving(false)} project={project} iteration={iteration} checkout={checkout} onStarted={onOpen} />
 			)}
 
@@ -816,7 +816,7 @@ export const Review = ({
 										Open it anyway
 									</Button>
 								</>
-							) : !quick && !iteration.previewUrl && !checkout ? (
+							) : !prototype && !iteration.previewUrl && !checkout ? (
 								<>
 									<p className="text-sm">Flock Designer needs the product repository to show this.</p>
 									<p className="text-muted-foreground text-sm">
@@ -861,7 +861,7 @@ export const Review = ({
 											)}
 										</>
 									)}
-									{local.phase.kind === 'preview' && !quick && <p className="text-muted-foreground text-sm">The first time can take a minute.</p>}
+									{local.phase.kind === 'preview' && !prototype && <p className="text-muted-foreground text-sm">The first time can take a minute.</p>}
 								</>
 							)}
 						</div>
@@ -1011,8 +1011,8 @@ export const Review = ({
 												<div className="flex flex-row flex-wrap items-center gap-2">
 													{/* One comment at a time: the designer picks the one that is a clear change, and
 													    leaves the ones that still need a decision. */}
-													{/* A quick prototype is acted on by moving it into the code, not comment by comment, for now. */}
-													{!comment.resolved && !addressed && checkout && !quick && (
+													{/* A prototype is acted on by moving it into the code, not comment by comment, for now. */}
+													{!comment.resolved && !addressed && checkout && !prototype && (
 														<Button
 															size="sm"
 															variant="ghost"

@@ -6,9 +6,9 @@ read because it happens to be nearby, and nothing about one kind of work leaks i
 
 | Work | Started by | Where the agent works | Entry file | Produces |
 |---|---|---|---|---|
-| **Quick prototype** | New → Quick prototype | The app's own folder. The product's code, guidance and installed packages are **read-only** | `skills/build-quick-prototype.md` (this repo) | One React file built from the real components, `projects/<id>/quick/qN.tsx`, and its page, `qN.html` |
+| **Prototype** | New → Prototype | The app's own folder. The product's code, guidance and installed packages are **read-only** | `skills/build-prototype.md` (this repo) | One React file built from the real components, `projects/<id>/prototypes/iN.tsx`, and its page, `iN.html` |
 | **Codebase feature** | New → Codebase feature | The product repository, on `feature/<id>` | `skills/codebase-work.md` (this repo), then the product's own agent instructions | Real code on the branch, passing the product's light check, committed as it goes |
-| **Move a quick prototype into the code** | Build in the codebase, on a quick prototype | The product repository, on `feature/<id>` | `skills/move-to-code.md` and `skills/codebase-work.md` (this repo), then the product's agent instructions | `projects/<id>/audit-qN.md` first (from the prototype's `@standin`, `@mock` and `@remove` marks), then real code |
+| **Move a prototype into the code** | Build in the codebase, on a prototype | The product repository, on `feature/<id>` | `skills/move-to-code.md` and `skills/codebase-work.md` (this repo), then the product's agent instructions | `projects/<id>/audit-iN.md` first (from the prototype's `@standin`, `@mock` and `@remove` marks), then real code |
 | **Hand off to engineering** | Handoff, on codebase work | The product repository, on `feature/<id>` | `skills/handoff.md` (this repo), then the product's gate and reviewers | The gate passing, `projects/<id>/review.md`, fixes committed, and `HANDOFF.md` on the branch |
 | **Address a comment** | Address, on one comment | The iteration's branch in the product repository | `skills/address-comments.md` (this repo) | One commit for that comment |
 | **Record where the work is** | Part of any codebase work | The design repository's records | `skills/record-the-route.md` (this repo) | A `route` on the iteration's record |

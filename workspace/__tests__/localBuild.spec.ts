@@ -178,7 +178,7 @@ describe('when nobody is looking any more', () => {
 	});
 
 	it('does not mistake another work\'s run for its own', async () => {
-		const { a, calls } = api({ agentStatus: vi.fn(async () => ({ ok: true, value: { state: 'running', work: 'quick/other/q1' } })) });
+		const { a, calls } = api({ agentStatus: vi.fn(async () => ({ ok: true, value: { state: 'running', work: 'prototype/other/i1' } })) });
 		const { phases } = await run(a);
 		expect(calls).not.toContain('startAgent');
 		expect(phases.map((p) => p.kind)).toEqual(['preview', 'running']);

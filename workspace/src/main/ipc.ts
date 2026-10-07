@@ -15,7 +15,7 @@ import {
 	type PageHoldReason,
 	type MoveToCodePlan,
 	type Person,
-	type QuickReadiness,
+	type PrototypeReadiness,
 	type Project,
 	type Repository,
 	type PublishStatus,
@@ -47,24 +47,24 @@ import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anc
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
-import { isRecordName, mergeProjects, quickKey, quickPagePath, quickSourcePath, unionLocal } from '../shared/projects';
+import { isRecordName, mergeProjects, prototypeKey, prototypePagePath, prototypeSourcePath, unionLocal } from '../shared/projects';
 import { resolveInside } from './services/paths';
-import { QuickServer } from './services/quickServer';
-import { bundleCommand, esbuildEntry, runBundle, sharedFilesOf, writeBundleScript } from './services/quickBundle';
+import { PrototypeServer } from './services/prototypeServer';
+import { bundleCommand, esbuildEntry, runBundle, sharedFilesOf, writeBundleScript } from './services/prototypeBundle';
 import {
 	BUILD_SKILL,
 	MAX_PAGE,
 	MOVE_SKILL,
 	type RecordStore,
-	assertQuickName,
+	assertPrototypeName,
 	cloneStore,
 	moveToCodeTask,
-	quickBuildTask,
-	quickReadable,
-	type QuickBuild,
-	type QuickSources,
-	recordQuick,
-} from './services/quick';
+	prototypeBuildTask,
+	prototypeReadable,
+	type PrototypeBuild,
+	type PrototypeSources,
+	recordPrototype,
+} from './services/prototype';
 import type { CheckoutMemory } from './services/checkoutMemory';
 
 /**
@@ -105,9 +105,9 @@ export interface IpcContext {
 	memory: CheckoutMemory;
 	/** Told whenever publishing moves, so the window can show it. */
 	onPublishStatus: (status: PublishStatus) => void;
-	/** Where quick prototypes are built before they are saved: the app's own folder, never a repository. */
-	quickRoot?: string;
-	quickServer?: QuickServer;
+	/** Where prototypes are built before they are saved: the app's own folder, never a repository. */
+	prototypesRoot?: string;
+	prototypeServer?: PrototypeServer;
 	/** The latest agent conversation for each branch, so it can be continued in the person's editor. */
 	sessions?: SessionMemory;
 }
@@ -123,8 +123,8 @@ export const registerIpc = ({
 	page,
 	memory,
 	onPublishStatus,
-	quickRoot = join(tmpdir(), 'flock-designer-quick'),
-	quickServer = new QuickServer(),
+	prototypesRoot = join(tmpdir(), 'flock-designer-prototype'),
+	prototypeServer = new PrototypeServer(),
 	sessions = new SessionMemory(join(tmpdir(), 'flock-designer-agent-sessions.json')),
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
@@ -296,8 +296,8 @@ export const registerIpc = ({
 	ipcMain.handle(
 		CHANNELS.createIteration,
 		guard(async (root: string, projectId: string, note: string, kind: IterationKind, from?: string) => {
-			// A quick prototype has no branch; it is made by createQuick, never here.
-			if (kind !== 'prototype' && kind !== 'codebase') throw new Error('That kind of work is not made on a branch.');
+			// A prototype has no branch; it is made by createPrototype, never here.
+			if (kind !== 'codebase') throw new Error('That kind of work is not made on a branch.');
 			const canonical = opened.require(root);
 			assertAgentNotHere(canonical);
 			const descriptor = descriptorFor(root);
@@ -425,11 +425,11 @@ export const registerIpc = ({
 			const descriptor = descriptorFor(root);
 			const skill = branch === codebaseBranchFor(descriptor, projectId) ? readSkillFile(dirname(recordsFor(canonical)), CODEBASE_SKILL) : null;
 			const preamble = skill ? codebaseWorkPreamble(skill, commandLine(descriptor.commands, 'check-iteration', projectId)) : '';
-			// A quick prototype being moved into the code is read from the app's own copy of it.
-			const quick = join(quickRoot, projectId);
+			// A prototype being moved into the code is read from the app's own copy of it.
+			const prototype = join(prototypesRoot, projectId);
 			return startTracked(canonical, projectId, `${preamble}${task}`, {
 				branch,
-				addDirs: [recordsFor(canonical), ...(existsSync(quick) ? [quick] : [])],
+				addDirs: [recordsFor(canonical), ...(existsSync(prototype) ? [prototype] : [])],
 			});
 		}),
 	);
@@ -659,7 +659,7 @@ export const registerIpc = ({
 		}
 	};
 	/*
-	 * Quick prototypes. Everything they write goes to one place per machine: the design repository's
+	 * Prototypes. Everything they write goes to one place per machine: the design repository's
 	 * clone when there is one here, so the publisher sends it like every other record, and otherwise
 	 * GitHub directly.
 	 */
@@ -674,24 +674,24 @@ export const registerIpc = ({
 					write: (path, content, message) => designRepo.writeFile(path, content, message),
 				};
 	};
-	/** The folder an agent builds a project's quick prototypes in, and the page file inside it. */
-	const quickDir = (projectId: string): string => {
+	/** The folder an agent builds a project's prototypes in, and the page file inside it. */
+	const prototypeDir = (projectId: string): string => {
 		assertUsableProjectId(projectId);
-		const dir = join(quickRoot, projectId);
+		const dir = join(prototypesRoot, projectId);
 		mkdirSync(dir, { recursive: true });
 		return dir;
 	};
-	const quickFile = (projectId: string, name: string): string => {
-		assertQuickName(name);
-		return join(quickDir(projectId), `${name}.html`);
+	const prototypeFile = (projectId: string, name: string): string => {
+		assertPrototypeName(name);
+		return join(prototypeDir(projectId), `${name}.html`);
 	};
-	const quickSourceFile = (projectId: string, name: string): string => join(dirname(quickFile(projectId, name)), `${name}.tsx`);
+	const prototypeSourceFile = (projectId: string, name: string): string => join(dirname(prototypeFile(projectId, name)), `${name}.tsx`);
 	/**
-	 * Whether a quick prototype can be built from this accepted repository here: its design system installed, and the
+	 * Whether a prototype can be built from this accepted repository here: its design system installed, and the
 	 * bundler present. The page is always React with the real components, so without them there is nothing to build,
 	 * and the person is told what to install before anything is made, never handed a lesser page.
 	 */
-	const quickReadiness = (root: string): QuickReadiness => {
+	const prototypeReadiness = (root: string): PrototypeReadiness => {
 		const canonical = opened.require(root);
 		const designSystem = readDescriptor(canonical).designSystem.package;
 		const pkg = join(canonical, 'node_modules', ...designSystem.split('/'));
@@ -705,37 +705,37 @@ export const registerIpc = ({
 		}
 		return { ready: true, designSystem, version };
 	};
-	const quickBuildPlan = (projectId: string, name: string, sources: QuickSources | null): QuickBuild => {
+	const prototypeBuildPlan = (projectId: string, name: string, sources: PrototypeSources | null): PrototypeBuild => {
 		const root = trustedRoot();
-		const ready = root === null ? null : quickReadiness(root);
+		const ready = root === null ? null : prototypeReadiness(root);
 		if (!sources?.nodeModules || ready === null || !ready.ready) {
 			throw new Error(
 				ready !== null && !ready.ready && ready.why === 'not-installed'
-					? `Quick prototypes are built from the real design system, and ${ready.designSystem} is not installed in ${ready.repository}. Run npm ci there (it needs access to the private packages), then try again.`
-					: 'Quick prototypes are built from the real design system, so they need the product repository, with its packages installed, on this machine.',
+					? `Prototypes are built from the real design system, and ${ready.designSystem} is not installed in ${ready.repository}. Run npm ci there (it needs access to the private packages), then try again.`
+					: 'Prototypes are built from the real design system, so they need the product repository, with its packages installed, on this machine.',
 			);
 		}
-		const source = quickSourceFile(projectId, name);
-		const page = quickFile(projectId, name);
+		const source = prototypeSourceFile(projectId, name);
+		const page = prototypeFile(projectId, name);
 		return {
 			source,
 			page,
-			buildCommand: bundleCommand(writeBundleScript(quickRoot), esbuildEntry() as string, source, page, sources.nodeModules, sharedDir),
+			buildCommand: bundleCommand(writeBundleScript(prototypesRoot), esbuildEntry() as string, source, page, sources.nodeModules, sharedDir),
 		};
 	};
 	/**
 	 * Builds a React prototype's page from its source, against the accepted checkout's installed packages.
 	 * Throws with what the build said, so a page that does not compile says why rather than showing an old one.
 	 */
-	const buildQuickPage = async (projectId: string, name: string): Promise<void> => {
+	const buildPrototypePage = async (projectId: string, name: string): Promise<void> => {
 		const root = trustedRoot();
 		const esbuild = esbuildEntry();
 		if (root === null || esbuild === null) throw new Error('This prototype is written in React, and building it needs the product repository installed on this machine.');
 		const r = await runBundle(
-			writeBundleScript(quickRoot),
+			writeBundleScript(prototypesRoot),
 			esbuild,
-			quickSourceFile(projectId, name),
-			quickFile(projectId, name),
+			prototypeSourceFile(projectId, name),
+			prototypeFile(projectId, name),
 			join(opened.require(root), 'node_modules'),
 			sharedDir,
 		);
@@ -745,40 +745,40 @@ export const registerIpc = ({
 	 * Large files pages share (the design system's fonts), each kept once by its content: here in the app's folder
 	 * as builds make them, and in the design repository beside the projects, where `_` keeps them off the list.
 	 */
-	const sharedDir = join(quickRoot, '_shared');
+	const sharedDir = join(prototypesRoot, '_shared');
 	const sharedPath = (n: string): string => `projects/_shared/${n}.datauri`;
 	/**
 	 * Saves a page with what it needs: the shared files it points at that the design repository does not have yet
 	 * (first, so a page is never there without them), its React source, then the page.
 	 */
-	const keepQuick = async (projectId: string, name: string, html: string): Promise<void> => {
+	const keepPrototype = async (projectId: string, name: string, html: string): Promise<void> => {
 		const store = recordStore();
 		for (const n of sharedFilesOf(html)) {
 			const local = join(sharedDir, `${n}.datauri`);
 			if (existsSync(local) && !(await store.has(sharedPath(n)))) await store.write(sharedPath(n), readFileSync(local, 'utf8'), `Shared file ${n}`);
 		}
-		const source = quickSourceFile(projectId, name);
-		if (existsSync(source)) await store.write(quickSourcePath(projectId, name), readFileSync(source, 'utf8'), `${projectId}: quick prototype ${name} source`);
-		await store.write(quickPagePath(projectId, name), html, `${projectId}: quick prototype ${name}`);
+		const source = prototypeSourceFile(projectId, name);
+		if (existsSync(source)) await store.write(prototypeSourcePath(projectId, name), readFileSync(source, 'utf8'), `${projectId}: prototype ${name} source`);
+		await store.write(prototypePagePath(projectId, name), html, `${projectId}: prototype ${name}`);
 	};
 	/** Makes the shared files a page points at available beside it: this machine's copy, else the design repository's. */
 	const serveShared = async (html: string): Promise<void> => {
 		for (const n of sharedFilesOf(html)) {
-			if (quickServer.hasShared(n)) continue;
+			if (prototypeServer.hasShared(n)) continue;
 			const local = join(sharedDir, `${n}.datauri`);
 			const uri = existsSync(local) ? readFileSync(local, 'utf8') : ((await recordStore().read(sharedPath(n))) ?? (await designRepo.readFile(sharedPath(n))));
-			if (uri !== null) quickServer.share(n, uri);
+			if (uri !== null) prototypeServer.share(n, uri);
 		}
 	};
 	/** The page: this machine's newest build first, then the saved one here, then GitHub's. */
-	const quickPage = async (projectId: string, name: string): Promise<string | null> => {
-		const local = quickFile(projectId, name);
-		const source = quickSourceFile(projectId, name);
+	const prototypePage = async (projectId: string, name: string): Promise<string | null> => {
+		const local = prototypeFile(projectId, name);
+		const source = prototypeSourceFile(projectId, name);
 		// A source changed since its page was last built (or never built) is built first, unless its agent is still at it.
 		const stale = existsSync(source) && (!existsSync(local) || statSync(source).mtimeMs > statSync(local).mtimeMs);
-		if (stale && agent.status().state !== 'running') await buildQuickPage(projectId, name);
+		if (stale && agent.status().state !== 'running') await buildPrototypePage(projectId, name);
 		if (existsSync(local)) return readFileSync(local, 'utf8');
-		const path = quickPagePath(projectId, name);
+		const path = prototypePagePath(projectId, name);
 		return (await recordStore().read(path)) ?? (await designRepo.readFile(path));
 	};
 	const readSkillFile = (designRoot: string, path: string): string | null => {
@@ -786,11 +786,11 @@ export const registerIpc = ({
 		return existsSync(file) ? readFileSync(file, 'utf8') : null;
 	};
 	/**
-	 * The product code a quick prototype is modelled on, as a folder the agent may read: the clone itself
+	 * The product code a prototype is modelled on, as a folder the agent may read: the clone itself
 	 * when it is on that branch already, otherwise the app's own read-only copy of the branch, so the
 	 * person's checkout is never switched. Null when there is nothing on this machine to read.
 	 */
-	const quickSource = async (projectId: string, name: string): Promise<QuickSources | null> => {
+	const prototypeSource = async (projectId: string, name: string): Promise<PrototypeSources | null> => {
 		const raw = await recordStore().read(`projects/${projectId}/iterations.json`);
 		const basedOn = (JSON.parse(raw ?? '[]') as Iteration[]).find((i) => i.name === name)?.basedOn;
 		const root = trustedRoot();
@@ -799,7 +799,7 @@ export const registerIpc = ({
 		const canonical = opened.require(root);
 		let code = canonical;
 		if ((await readCheckout(canonical)).branch !== basedOn.branch) {
-			code = join(quickRoot, 'source', basename(canonical));
+			code = join(prototypesRoot, 'source', basename(canonical));
 			await readTreeAt(canonical, code, basedOn.branch);
 		}
 		const dir = (p: string): string | null => (existsSync(p) ? p : null);
@@ -835,16 +835,16 @@ export const registerIpc = ({
 		return s.state === 'signedIn' ? { name: s.user.name ?? s.user.login, login: s.user.login } : null;
 	};
 
-	ipcMain.handle(CHANNELS.quickReadiness, guard((root: string) => quickReadiness(root)));
+	ipcMain.handle(CHANNELS.prototypeReadiness, guard((root: string) => prototypeReadiness(root)));
 
 	ipcMain.handle(
-		CHANNELS.createQuick,
+		CHANNELS.createPrototype,
 		guard(async (projectId: string, title: string, note: string, from: { root: string; branch: string } | null) => {
 			assertUsableProjectId(projectId);
-			// What it is modelled on is not optional: a quick prototype is built from a repository's real design system.
-			if (!from) throw new Error('A quick prototype is modelled on a branch of a repository on this machine. Choose one.');
-			if (!quickReadiness(from.root).ready) throw new Error('That repository has no design system installed here, so a quick prototype cannot be built from it. Run npm ci in it first.');
-			if (typeof title !== 'string' || !title.trim()) throw new Error('A quick prototype needs a name.');
+			// What it is modelled on is not optional: a prototype is built from a repository's real design system.
+			if (!from) throw new Error('A prototype is modelled on a branch of a repository on this machine. Choose one.');
+			if (!prototypeReadiness(from.root).ready) throw new Error('That repository has no design system installed here, so a prototype cannot be built from it. Run npm ci in it first.');
+			if (typeof title !== 'string' || !title.trim()) throw new Error('A prototype needs a name.');
 			// What it is modelled on: only a repository this person accepted, and a branch that exists in it.
 			let basedOn: Iteration['basedOn'];
 			if (from) {
@@ -852,59 +852,59 @@ export const registerIpc = ({
 				if (!(await branchExists(canonical, from.branch))) throw new Error(`There is no branch called ${from.branch} in ${basename(canonical)}.`);
 				basedOn = { repository: basename(canonical), branch: from.branch, commit: await branchCommit(canonical, from.branch).catch(() => null) };
 			}
-			return recordQuick(recordStore(), { projectId, title: title.slice(0, 200), note: String(note).slice(0, 8000), me: me(), basedOn });
+			return recordPrototype(recordStore(), { projectId, title: title.slice(0, 200), note: String(note).slice(0, 8000), me: me(), basedOn });
 		}),
 	);
 
 	ipcMain.handle(
-		CHANNELS.buildQuick,
+		CHANNELS.buildPrototype,
 		guard(async (projectId: string, name: string, request: string) => {
-			assertQuickName(name);
+			assertPrototypeName(name);
 			// The screen can ask twice (it is opened twice in development, and Try again asks again). One agent is
 			// already building: this request waits on that run rather than starting a second or failing.
 			if (agent.status().state === 'running') return agent.status();
 			const store = recordStore();
 			const skill = (await store.read(BUILD_SKILL)) ?? (await designRepo.readFile(BUILD_SKILL));
-			if (skill === null) throw new Error(`The design repository has no ${BUILD_SKILL}, which tells the agent how to build a quick prototype.`);
-			const sources = await once(`source:${projectId}`, () => quickSource(projectId, name));
-			const build = quickBuildPlan(projectId, name, sources);
-			return agent.start(quickDir(projectId), projectId, quickBuildTask({ skill, build, sources: sources as QuickSources, request: String(request) }), {
+			if (skill === null) throw new Error(`The design repository has no ${BUILD_SKILL}, which tells the agent how to build a prototype.`);
+			const sources = await once(`source:${projectId}`, () => prototypeSource(projectId, name));
+			const build = prototypeBuildPlan(projectId, name, sources);
+			return agent.start(prototypeDir(projectId), projectId, prototypeBuildTask({ skill, build, sources: sources as PrototypeSources, request: String(request) }), {
 				bare: true,
-				readOnly: quickReadable(sources),
-				work: quickKey(projectId, name),
+				readOnly: prototypeReadable(sources),
+				work: prototypeKey(projectId, name),
 			});
 		}),
 	);
 
 	ipcMain.handle(
-		CHANNELS.saveQuick,
+		CHANNELS.savePrototype,
 		guard(async (projectId: string, name: string): Promise<null> => {
-			const pageFile = quickFile(projectId, name);
-			const source = quickSourceFile(projectId, name);
+			const pageFile = prototypeFile(projectId, name);
+			const source = prototypeSourceFile(projectId, name);
 			// Written in React: the page is built from the source now, so what is saved is what the source makes.
-			if (existsSync(source)) await buildQuickPage(projectId, name);
+			if (existsSync(source)) await buildPrototypePage(projectId, name);
 			if (!existsSync(pageFile)) throw new Error('The agent finished without writing the page.');
 			const html = readFileSync(pageFile, 'utf8');
 			if (html.length > MAX_PAGE) {
 				throw new Error(`This page is ${Math.round(html.length / 1_000_000)} MB, more than GitHub accepts for one file (100 MB), so it cannot be saved. It is still here and still opens on this machine. Large images or fonts embedded in the page are the usual cause.`);
 			}
-			await keepQuick(projectId, name, html);
+			await keepPrototype(projectId, name, html);
 			return null;
 		}),
 	);
 
 	ipcMain.handle(
-		CHANNELS.openQuick,
+		CHANNELS.openPrototype,
 		guard(async (projectId: string, name: string): Promise<string> => {
-			const html = await quickPage(projectId, name);
-			if (html === null) throw new Error('This quick prototype has no page yet.');
+			const html = await prototypePage(projectId, name);
+			if (html === null) throw new Error('This prototype has no page yet.');
 			// A page built here but never saved (the screen was left, or gave up, while the agent finished) is saved
 			// now: what this machine shows is what reviewers get, and no finished page is stranded on one machine.
-			const local = quickFile(projectId, name);
-			const path = quickPagePath(projectId, name);
-			if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html) await keepQuick(projectId, name, html);
+			const local = prototypeFile(projectId, name);
+			const path = prototypePagePath(projectId, name);
+			if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html) await keepPrototype(projectId, name, html);
 			await serveShared(html);
-			return quickServer.serve(`${projectId}/${name}`, html);
+			return prototypeServer.serve(`${projectId}/${name}`, html);
 		}),
 	);
 
@@ -912,7 +912,7 @@ export const registerIpc = ({
 		CHANNELS.moveToCodePlan,
 		guard(async (root: string, projectId: string, name: string): Promise<MoveToCodePlan> => {
 			assertUsableProjectId(projectId);
-			assertQuickName(name);
+			assertPrototypeName(name);
 			const canonical = opened.require(root);
 			const branch = codebaseBranchFor(descriptorFor(root), projectId);
 			const raw = await recordStore().read(`projects/${projectId}/iterations.json`);
@@ -984,13 +984,13 @@ export const registerIpc = ({
 			const skill = readSkillFile(dirname(recordsRoot), MOVE_SKILL);
 			if (skill === null) throw new Error(`The design repository on this machine has no ${MOVE_SKILL}. Update it (git pull) and try again.`);
 			// The page is copied where the agent is allowed to read it, so it works from the version saved, wherever that is.
-			const html = await quickPage(projectId, name);
-			if (html === null) throw new Error('This quick prototype has no page yet.');
-			const pageFile = quickFile(projectId, name);
+			const html = await prototypePage(projectId, name);
+			if (html === null) throw new Error('This prototype has no page yet.');
+			const pageFile = prototypeFile(projectId, name);
 			writeFileSync(pageFile, html);
 			// Its React source too, when it has one: real components are a far better start than a page.
-			const sourceFile = quickSourceFile(projectId, name);
-			const source = existsSync(sourceFile) ? readFileSync(sourceFile, 'utf8') : await recordStore().read(quickSourcePath(projectId, name));
+			const sourceFile = prototypeSourceFile(projectId, name);
+			const source = existsSync(sourceFile) ? readFileSync(sourceFile, 'utf8') : await recordStore().read(prototypeSourcePath(projectId, name));
 			if (source !== null) writeFileSync(sourceFile, source);
 			const raw = await recordStore().read(`projects/${projectId}/iterations.json`);
 			const basedOn = (JSON.parse(raw ?? '[]') as Iteration[]).find((i) => i.name === name)?.basedOn;

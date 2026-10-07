@@ -77,7 +77,7 @@ let runtimeStart: ReturnType<typeof vi.fn>;
 let memoryValue: string | null;
 let previewUrl: string | null;
 let deleteComment: ReturnType<typeof vi.fn>;
-let quickServer: InstanceType<typeof import('../src/main/services/quickServer')['QuickServer']>;
+let prototypeServer: InstanceType<typeof import('../src/main/services/prototypeServer')['PrototypeServer']>;
 
 beforeEach(async () => {
 	handlers.clear();
@@ -110,7 +110,7 @@ beforeEach(async () => {
 	memoryValue = null;
 	previewUrl = null;
 	deleteComment = vi.fn(async () => undefined);
-	quickServer = new (await import('../src/main/services/quickServer')).QuickServer();
+	prototypeServer = new (await import('../src/main/services/prototypeServer')).PrototypeServer();
 
 	registerIpc({
 		window: { webContents: { send: vi.fn() } } as never,
@@ -122,13 +122,13 @@ beforeEach(async () => {
 		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
 		memory: { read: () => memoryValue, write: (r: string) => { memoryValue = r; }, available: () => true } as never,
 		onPublishStatus: vi.fn(),
-		quickRoot: join(home, 'quick'),
-		quickServer,
+		prototypesRoot: join(home, 'prototype'),
+		prototypeServer,
 	});
 });
 
 afterEach(() => {
-	quickServer.close();
+	prototypeServer.close();
 	rmSync(home, { recursive: true, force: true });
 });
 
@@ -138,7 +138,7 @@ describe('a repository must be opened before anything acts on it', () => {
 		[CHANNELS.listIterations, () => [product, 'demo']],
 		[CHANNELS.startCommand, () => [product, 'preview', 'demo']],
 		[CHANNELS.startAgent, () => [product, 'demo', 'do it']],
-		[CHANNELS.createIteration, () => [product, 'demo', 'note', 'prototype']],
+		[CHANNELS.createIteration, () => [product, 'demo', 'note', 'codebase']],
 	])('%s refuses a root this window never opened', async (channel, args) => {
 		const r = await call(channel, ...args());
 		expect(r.ok).toBe(false);
@@ -218,14 +218,14 @@ describe('where new work starts', () => {
 		expect(r).toEqual({ ok: true, value: ['noah/baseline', 'develop'] });
 	});
 
-	it('starts a prototype from the branch chosen, not the one checked out', async () => {
+	it('starts codebase work from the branch chosen, not the one checked out', async () => {
 		await call(CHANNELS.useCheckout, product);
 		g(product, 'checkout', '-q', '-b', 'noah/baseline');
 		g(product, 'commit', '-q', '--allow-empty', '-m', 'baseline only');
 		g(product, 'checkout', '-q', 'develop');
-		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'prototype', 'noah/baseline');
+		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'codebase', 'noah/baseline');
 		expect(r.ok).toBe(true);
-		expect(g(product, 'log', '-1', '--format=%s', 'fd/demo/i1').trim()).toBe('baseline only');
+		expect(g(product, 'log', '-1', '--format=%s', 'feature/demo').trim()).toBe('baseline only');
 	});
 
 	it('refuses a branch without the Flock Designer setup, which would strand the checkout', async () => {
@@ -244,13 +244,13 @@ describe('where new work starts', () => {
 
 	it('refuses a branch that does not exist, so nothing else reaches git', async () => {
 		await call(CHANNELS.useCheckout, product);
-		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'prototype', '--orphan');
+		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'codebase', '--orphan');
 		expect(r.ok).toBe(false);
 		expect(g(product, 'branch', '--list', 'fd/*').trim()).toBe('');
 	});
 });
 
-describe('quick prototypes', () => {
+describe('prototypes', () => {
 	/** The product's installed packages: its design system (the descriptor names it "x") and React. */
 	const installDesignSystem = () => {
 		const modules = join(product, 'node_modules');
@@ -264,21 +264,21 @@ describe('quick prototypes', () => {
 	};
 	const writeSkill = () => {
 		mkdirSync(join(design, 'skills'), { recursive: true });
-		writeFileSync(join(design, 'skills', 'build-quick-prototype.md'), '# Build');
+		writeFileSync(join(design, 'skills', 'build-prototype.md'), '# Build');
 	};
 	beforeEach(installDesignSystem);
 
 	it('say whether the real design system is installed here, and which version', async () => {
 		await call(CHANNELS.useCheckout, product);
-		expect(await call(CHANNELS.quickReadiness, product)).toEqual({ ok: true, value: { ready: true, designSystem: 'x', version: '1.2.3' } });
+		expect(await call(CHANNELS.prototypeReadiness, product)).toEqual({ ok: true, value: { ready: true, designSystem: 'x', version: '1.2.3' } });
 		rmSync(join(product, 'node_modules'), { recursive: true, force: true });
-		expect((await call(CHANNELS.quickReadiness, product)).value).toMatchObject({ ready: false, why: 'not-installed', repository: 'flock-coke' });
+		expect((await call(CHANNELS.prototypeReadiness, product)).value).toMatchObject({ ready: false, why: 'not-installed', repository: 'flock-coke' });
 	});
 
 	it('are never started without the real design system, and say what to install', async () => {
 		await call(CHANNELS.useCheckout, product);
 		rmSync(join(product, 'node_modules'), { recursive: true, force: true });
-		const r = await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		const r = await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		expect(r.ok).toBe(false);
 		expect(r.error).toMatch(/npm ci/);
 		expect(existsSync(join(design, 'projects', 'demo'))).toBe(false);
@@ -286,30 +286,30 @@ describe('quick prototypes', () => {
 
 	it('are never started without a repository and branch to model them on', async () => {
 		await call(CHANNELS.useCheckout, product);
-		expect((await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list')).ok).toBe(false);
+		expect((await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list')).ok).toBe(false);
 	});
 
 	it('are never made as a branch', async () => {
 		await call(CHANNELS.useCheckout, product);
-		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'quick');
+		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'prototype');
 		expect(r.ok).toBe(false);
 		expect(g(product, 'branch', '--list', '*demo*').trim()).toBe('');
 	});
 
 	it('are recorded, saved and served through the clone on this machine', async () => {
 		await call(CHANNELS.useCheckout, product);
-		const made = await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-		expect(made).toMatchObject({ ok: true, value: { name: 'q1', branch: 'quick/demo/q1' } });
+		const made = await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		expect(made).toMatchObject({ ok: true, value: { name: 'i1', branch: 'prototype/demo/i1' } });
 		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list\n');
 
 		// Nothing to save until the agent has written the page.
-		expect((await call(CHANNELS.saveQuick, 'demo', 'q1')).ok).toBe(false);
-		mkdirSync(join(home, 'quick', 'demo'), { recursive: true });
-		writeFileSync(join(home, 'quick', 'demo', 'q1.html'), '<h1>Demo</h1>');
-		expect((await call(CHANNELS.saveQuick, 'demo', 'q1')).ok).toBe(true);
-		expect(readFileSync(join(design, 'projects', 'demo', 'quick', 'q1.html'), 'utf8')).toBe('<h1>Demo</h1>');
+		expect((await call(CHANNELS.savePrototype, 'demo', 'i1')).ok).toBe(false);
+		mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
+		writeFileSync(join(home, 'prototype', 'demo', 'i1.html'), '<h1>Demo</h1>');
+		expect((await call(CHANNELS.savePrototype, 'demo', 'i1')).ok).toBe(true);
+		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'i1.html'), 'utf8')).toBe('<h1>Demo</h1>');
 
-		const opened = await call(CHANNELS.openQuick, 'demo', 'q1');
+		const opened = await call(CHANNELS.openPrototype, 'demo', 'i1');
 		expect(opened.ok).toBe(true);
 		expect(await (await fetch(opened.value as string)).text()).toBe('<h1>Demo</h1>');
 	});
@@ -323,24 +323,24 @@ describe('quick prototypes', () => {
 		g(product, 'commit', '-q', '-m', 'baseline');
 		g(product, 'checkout', '-q', 'develop');
 
-		const made = await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'noah/baseline' });
+		const made = await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'noah/baseline' });
 		expect(made).toMatchObject({ ok: true, value: { basedOn: { repository: 'flock-coke', branch: 'noah/baseline' } } });
 
-		await call(CHANNELS.buildQuick, 'demo', 'q1', 'A list');
+		await call(CHANNELS.buildPrototype, 'demo', 'i1', 'A list');
 		const extras = agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[]; bare: boolean };
 		expect(extras.bare).toBe(true);
 		// Another branch than the one checked out: the app's own copy of it, and the person's checkout untouched.
 		const copy = extras.readOnly[0] as string;
 		// The guidance goes with the code when that branch has it.
 		expect(extras.readOnly).toContain(join(copy, '.flkd'));
-		expect(copy.startsWith(join(home, 'quick'))).toBe(true);
+		expect(copy.startsWith(join(home, 'prototype'))).toBe(true);
 		expect(readFileSync(join(copy, 'baseline.txt'), 'utf8')).toBe('only on the baseline');
 		expect(g(product, 'branch', '--show-current').trim()).toBe('develop');
 		expect(existsSync(join(product, 'baseline.txt'))).toBe(false);
 
 		// On the branch already: the clone itself.
-		await call(CHANNELS.createQuick, 'demo', 'Demo', 'Another', { root: product, branch: 'develop' });
-		await call(CHANNELS.buildQuick, 'demo', 'q2', 'Another');
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'Another', { root: product, branch: 'develop' });
+		await call(CHANNELS.buildPrototype, 'demo', 'i2', 'Another');
 		const p = realpathSync(product);
 		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([p, join(p, '.flkd'), join(p, 'node_modules', 'x'), join(p, 'node_modules')]);
 	});
@@ -350,19 +350,19 @@ describe('quick prototypes', () => {
 		writeSkill();
 		g(product, 'checkout', '-q', '-b', 'noah/baseline');
 		g(product, 'checkout', '-q', 'develop');
-		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'noah/baseline' });
-		const [a, b] = await Promise.all([call(CHANNELS.buildQuick, 'demo', 'q1', 'A list'), call(CHANNELS.buildQuick, 'demo', 'q1', 'A list')]);
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'noah/baseline' });
+		const [a, b] = await Promise.all([call(CHANNELS.buildPrototype, 'demo', 'i1', 'A list'), call(CHANNELS.buildPrototype, 'demo', 'i1', 'A list')]);
 		expect(a.ok).toBe(true);
 		expect(b.ok).toBe(true);
 	});
 
 	it('save a page that was built here but never saved, when it is opened', async () => {
 		await call(CHANNELS.useCheckout, product);
-		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-		mkdirSync(join(home, 'quick', 'demo'), { recursive: true });
-		writeFileSync(join(home, 'quick', 'demo', 'q1.html'), '<h1>Built, left behind</h1>');
-		expect((await call(CHANNELS.openQuick, 'demo', 'q1')).ok).toBe(true);
-		expect(readFileSync(join(design, 'projects', 'demo', 'quick', 'q1.html'), 'utf8')).toBe('<h1>Built, left behind</h1>');
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
+		writeFileSync(join(home, 'prototype', 'demo', 'i1.html'), '<h1>Built, left behind</h1>');
+		expect((await call(CHANNELS.openPrototype, 'demo', 'i1')).ok).toBe(true);
+		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'i1.html'), 'utf8')).toBe('<h1>Built, left behind</h1>');
 	});
 
 	it("take the product's guidance from the accepted checkout when the branch has none, as develop does not", async () => {
@@ -372,8 +372,8 @@ describe('quick prototypes', () => {
 		g(product, 'rm', '-rq', '.flkd');
 		g(product, 'commit', '-q', '-m', 'no setup on this branch');
 		g(product, 'checkout', '-q', 'develop');
-		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'bare-develop' });
-		await call(CHANNELS.buildQuick, 'demo', 'q1', 'A list');
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'bare-develop' });
+		await call(CHANNELS.buildPrototype, 'demo', 'i1', 'A list');
 		const readOnly = (agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly;
 		expect(readOnly).toContain(join(realpathSync(product), '.flkd'));
 	});
@@ -382,37 +382,37 @@ describe('quick prototypes', () => {
 		await call(CHANNELS.useCheckout, product);
 		writeSkill();
 
-		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-		await call(CHANNELS.buildQuick, 'demo', 'q1', 'A list');
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		await call(CHANNELS.buildPrototype, 'demo', 'i1', 'A list');
 		const task = agentStart.mock.calls.at(-1)?.[2] as string;
-		expect(task).toContain(`Write \`${join(home, 'quick', 'demo', 'q1.tsx')}\``);
+		expect(task).toContain(`Write \`${join(home, 'prototype', 'demo', 'i1.tsx')}\``);
 
 		// What the agent writes, then Save.
-		writeFileSync(join(home, 'quick', 'demo', 'q1.tsx'), "/* A page made of the real thing. */\nimport { Hello } from 'x';\nexport default () => <Hello />;\n");
-		const saved = await call(CHANNELS.saveQuick, 'demo', 'q1');
+		writeFileSync(join(home, 'prototype', 'demo', 'i1.tsx'), "/* A page made of the real thing. */\nimport { Hello } from 'x';\nexport default () => <Hello />;\n");
+		const saved = await call(CHANNELS.savePrototype, 'demo', 'i1');
 		expect(saved).toEqual({ ok: true, value: null });
-		const page = readFileSync(join(design, 'projects', 'demo', 'quick', 'q1.html'), 'utf8');
+		const page = readFileSync(join(design, 'projects', 'demo', 'prototypes', 'i1.html'), 'utf8');
 		expect(page).toContain('A page made of the real thing.');
 		expect(page).toContain('<div id="root"></div>');
-		expect(readFileSync(join(design, 'projects', 'demo', 'quick', 'q1.tsx'), 'utf8')).toContain("from 'x'");
+		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'i1.tsx'), 'utf8')).toContain("from 'x'");
 	});
 
 	it('keep a large embedded file once beside the projects, and serve it beside the page', async () => {
 		await call(CHANNELS.useCheckout, product);
 		writeFileSync(join(product, 'node_modules', 'x', 'style.css'), `@font-face { font-family: X; src: url(data:font/woff2;base64,${'A'.repeat(30000)}); }`);
-		for (const name of ['q1', 'q2']) {
-			await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-			mkdirSync(join(home, 'quick', 'demo'), { recursive: true });
-			writeFileSync(join(home, 'quick', 'demo', `${name}.tsx`), "import 'x/style.css';\nimport { Hello } from 'x';\nexport default () => <Hello />;\n");
-			expect((await call(CHANNELS.saveQuick, 'demo', name)).ok).toBe(true);
+		for (const name of ['i1', 'i2']) {
+			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
+			writeFileSync(join(home, 'prototype', 'demo', `${name}.tsx`), "import 'x/style.css';\nimport { Hello } from 'x';\nexport default () => <Hello />;\n");
+			expect((await call(CHANNELS.savePrototype, 'demo', name)).ok).toBe(true);
 		}
 		const kept = readdirSync(join(design, 'projects', '_shared'));
 		expect(kept).toHaveLength(1);
-		const page = readFileSync(join(design, 'projects', 'demo', 'quick', 'q2.html'), 'utf8');
+		const page = readFileSync(join(design, 'projects', 'demo', 'prototypes', 'i2.html'), 'utf8');
 		expect(page).toContain(`/_shared/${kept[0]?.replace('.datauri', '')}`);
 		expect(page).not.toContain('A'.repeat(1000));
-		const opened = await call(CHANNELS.openQuick, 'demo', 'q2');
-		const font = await fetch((opened.value as string).replace('/demo/q2/', `/_shared/${kept[0]?.replace('.datauri', '')}`));
+		const opened = await call(CHANNELS.openPrototype, 'demo', 'i2');
+		const font = await fetch((opened.value as string).replace('/demo/i2/', `/_shared/${kept[0]?.replace('.datauri', '')}`));
 		expect(font.headers.get('content-type')).toBe('font/woff2');
 		// Kept beside the projects, never listed as one.
 		const listed = await call(CHANNELS.listProjects);
@@ -422,12 +422,12 @@ describe('quick prototypes', () => {
 	describe('moving into the code', () => {
 		const start = async () => {
 			await call(CHANNELS.useCheckout, product);
-			await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		};
 
 		it('says what it would do: the branch, whether it exists, and what the prototype was modelled on', async () => {
 			await start();
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'q1')).value).toEqual({
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'i1')).value).toEqual({
 				branch: 'feature/demo',
 				exists: false,
 				recorded: false,
@@ -441,50 +441,50 @@ describe('quick prototypes', () => {
 		it('says when the branch already exists here, so the work continues on it', async () => {
 			await start();
 			g(product, 'branch', 'feature/demo');
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'q1')).value).toMatchObject({ exists: true, recorded: false });
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'i1')).value).toMatchObject({ exists: true, recorded: false });
 		});
 
 		it('says when the project already has codebase work recorded', async () => {
 			await start();
 			await call(CHANNELS.createIteration, product, 'demo', 'x', 'codebase', 'develop');
 			g(product, 'checkout', '-q', 'develop');
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'q1')).value).toMatchObject({ recorded: true });
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'i1')).value).toMatchObject({ recorded: true });
 		});
 
 		it('says when uncommitted changes would stop it', async () => {
 			await start();
 			writeFileSync(join(product, 'README.md'), 'changed\n');
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'q1')).value).toMatchObject({ clean: false });
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'i1')).value).toMatchObject({ clean: false });
 		});
 
-		it('refuses a name that is not a quick prototype, and a repository that was not accepted', async () => {
+		it('refuses a name that is not a prototype, and a repository that was not accepted', async () => {
 			await start();
 			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', '../x')).ok).toBe(false);
-			expect((await call(CHANNELS.moveToCodePlan, home, 'demo', 'q1')).ok).toBe(false);
+			expect((await call(CHANNELS.moveToCodePlan, home, 'demo', 'i1')).ok).toBe(false);
 		});
 	});
 
 	it('refuse to save React that does not build, and say why', async () => {
 		await call(CHANNELS.useCheckout, product);
-		await call(CHANNELS.createQuick, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-		mkdirSync(join(home, 'quick', 'demo'), { recursive: true });
-		writeFileSync(join(home, 'quick', 'demo', 'q1.tsx'), "import { Nope } from 'not-installed';\nexport default () => <Nope />;\n");
-		const saved = await call(CHANNELS.saveQuick, 'demo', 'q1');
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
+		writeFileSync(join(home, 'prototype', 'demo', 'i1.tsx'), "import { Nope } from 'not-installed';\nexport default () => <Nope />;\n");
+		const saved = await call(CHANNELS.savePrototype, 'demo', 'i1');
 		expect(saved.ok).toBe(false);
 		expect(saved.error).toMatch(/did not build[\s\S]*not-installed/);
-		expect(existsSync(join(design, 'projects', 'demo', 'quick', 'q1.html'))).toBe(false);
+		expect(existsSync(join(design, 'projects', 'demo', 'prototypes', 'i1.html'))).toBe(false);
 	});
 
 	it('refuse a base that is not a branch of an accepted repository', async () => {
 		await call(CHANNELS.useCheckout, product);
-		expect((await call(CHANNELS.createQuick, 'demo', 'Demo', 'x', { root: product, branch: 'nope' })).ok).toBe(false);
-		expect((await call(CHANNELS.createQuick, 'demo', 'Demo', 'x', { root: home, branch: 'develop' })).ok).toBe(false);
+		expect((await call(CHANNELS.createPrototype, 'demo', 'Demo', 'x', { root: product, branch: 'nope' })).ok).toBe(false);
+		expect((await call(CHANNELS.createPrototype, 'demo', 'Demo', 'x', { root: home, branch: 'develop' })).ok).toBe(false);
 	});
 
 	it('refuse names that are not theirs, before anything is read or written', async () => {
-		for (const [id, name] of [['demo', '../x'], ['demo', 'i1'], ['../demo', 'q1']]) {
-			expect((await call(CHANNELS.openQuick, id, name)).ok).toBe(false);
-			expect((await call(CHANNELS.saveQuick, id, name)).ok).toBe(false);
+		for (const [id, name] of [['demo', '../x'], ['demo', 'codebase'], ['../demo', 'i1']]) {
+			expect((await call(CHANNELS.openPrototype, id, name)).ok).toBe(false);
+			expect((await call(CHANNELS.savePrototype, id, name)).ok).toBe(false);
 		}
 	});
 });
@@ -585,7 +585,7 @@ describe('one agent, one piece of work', () => {
 
 	it('refuses while the agent is busy with other work, instead of waiting on it as if it were this', async () => {
 		await call(CHANNELS.useCheckout, product);
-		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now', work: 'quick/other/q1' });
+		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now', work: 'prototype/other/i1' });
 		const r = await call(CHANNELS.startAgent, product, 'demo', 'do it');
 		expect(r.ok).toBe(false);
 		expect(r.error).toMatch(/already working on something else/);
@@ -646,7 +646,7 @@ describe('one agent, one piece of work', () => {
 	it('does not switch the checkout\'s branch under a running agent', async () => {
 		await call(CHANNELS.useCheckout, product);
 		agentRunningIn.mockReturnValue(true);
-		const r = await call(CHANNELS.createIteration, product, 'demo', 'note', 'prototype');
+		const r = await call(CHANNELS.createIteration, product, 'demo', 'note', 'codebase');
 		expect(r.ok).toBe(false);
 		expect(r.error).toMatch(/agent is working in flock-coke/);
 	});

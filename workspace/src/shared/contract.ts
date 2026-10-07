@@ -108,7 +108,7 @@ export interface Iteration {
 	 */
 	route?: string;
 	/**
-	 * For a quick prototype: the product code it was modelled on, so moving it into the code later knows
+	 * For a prototype: the product code it was modelled on, so moving it into the code later knows
 	 * what it was looking at. Absent when it was made without a repository on the machine.
 	 */
 	basedOn?: { repository: string; branch: string; commit: string | null };
@@ -161,9 +161,9 @@ export type AgentStatus =
  * The two ways in. A **prototype** is a throwaway attempt on its own `fd/` branch, numbered i1, i2, …
  * **Codebase** work is the real change on the project's one `feature/` branch.
  */
-export type IterationKind = 'prototype' | 'codebase' | 'quick';
+export type IterationKind = 'prototype' | 'codebase' | 'prototype';
 
-/** What moving a quick prototype into the code would do here, so the person is told before it does it. */
+/** What moving a prototype into the code would do here, so the person is told before it does it. */
 export interface MoveToCodePlan {
 	/** The project's one codebase branch, as this repository names it. */
 	branch: string;
@@ -179,8 +179,8 @@ export interface MoveToCodePlan {
 	clean: boolean;
 }
 
-/** Whether a quick prototype can be built from a repository here: its design system installed, and the bundler present. */
-export type QuickReadiness =
+/** Whether a prototype can be built from a repository here: its design system installed, and the bundler present. */
+export type PrototypeReadiness =
 	| { ready: true; designSystem: string; version: string | null }
 	| { ready: false; why: 'not-installed' | 'no-bundler'; designSystem: string; repository: string };
 
@@ -280,20 +280,20 @@ export interface WorkspaceApi {
 	/** The current or last run's recent lines, so a screen opened again can show where the agent has got to. */
 	agentRecent(): Promise<Result<{ work: string | null; lines: string[] }>>;
 	/**
-	 * Quick prototypes: one page, no product repository needed. Recording one makes the project too when
+	 * Prototypes: one page, no product repository needed. Recording one makes the project too when
 	 * it is new; building runs the agent in the app's own folder; saving puts the page in the design
 	 * repository; opening serves it to the preview from this machine.
 	 */
 	/** `from`: the repository on this machine and a branch in it to model the page on. */
-	createQuick(projectId: string, title: string, note: string, from?: { root: string; branch: string }): Promise<Result<Iteration>>;
-	buildQuick(projectId: string, name: string, request: string): Promise<Result<AgentStatus>>;
-	saveQuick(projectId: string, name: string): Promise<Result<null>>;
-	openQuick(projectId: string, name: string): Promise<Result<string>>;
-	/** What moving a quick prototype into the code would do in this checkout, asked before it is offered. */
+	createPrototype(projectId: string, title: string, note: string, from?: { root: string; branch: string }): Promise<Result<Iteration>>;
+	buildPrototype(projectId: string, name: string, request: string): Promise<Result<AgentStatus>>;
+	savePrototype(projectId: string, name: string): Promise<Result<null>>;
+	openPrototype(projectId: string, name: string): Promise<Result<string>>;
+	/** What moving a prototype into the code would do in this checkout, asked before it is offered. */
 	moveToCodePlan(root: string, projectId: string, name: string): Promise<Result<MoveToCodePlan>>;
-	/** Whether a quick prototype can be built from this repository on this machine, and with which design system version. */
-	quickReadiness(root: string): Promise<Result<QuickReadiness>>;
-	/** The task that moves a quick prototype into the codebase: an audit of it against the real code, then the work. */
+	/** Whether a prototype can be built from this repository on this machine, and with which design system version. */
+	prototypeReadiness(root: string): Promise<Result<PrototypeReadiness>>;
+	/** The task that moves a prototype into the codebase: an audit of it against the real code, then the work. */
 	prepareMoveToCode(projectId: string, name: string): Promise<Result<string>>;
 	/** Asked when new work is about to be started: is Claude Code installed here, and signed in? */
 	agentReadiness(): Promise<Result<AgentReadiness>>;
@@ -584,12 +584,12 @@ export const CHANNELS = {
 	handoffResult: 'workspace:handoffResult',
 	openInEditor: 'workspace:openInEditor',
 	continueInClaude: 'workspace:continueInClaude',
-	createQuick: 'workspace:createQuick',
-	buildQuick: 'workspace:buildQuick',
-	saveQuick: 'workspace:saveQuick',
-	openQuick: 'workspace:openQuick',
+	createPrototype: 'workspace:createPrototype',
+	buildPrototype: 'workspace:buildPrototype',
+	savePrototype: 'workspace:savePrototype',
+	openPrototype: 'workspace:openPrototype',
 	prepareMoveToCode: 'workspace:prepareMoveToCode',
-	quickReadiness: 'workspace:quickReadiness',
+	prototypeReadiness: 'workspace:prototypeReadiness',
 	moveToCodePlan: 'workspace:moveToCodePlan',
 	addressComments: 'workspace:addressComments',
 	shareIteration: 'workspace:shareIteration',

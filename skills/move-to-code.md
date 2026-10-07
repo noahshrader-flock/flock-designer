@@ -1,10 +1,10 @@
-# Move a quick prototype into the code
+# Move a prototype into the code
 
 **Shared by every product.** Nothing here names a product's tools or layout: where the repository
 differs, this says to read what it declares for itself. The app puts this file in the task when
-someone chooses **Build in the codebase** on a quick prototype.
+someone chooses **Build in the codebase** on a prototype.
 
-A quick prototype is one React file built from this product's real components, made fast and without
+A prototype is one React file built from this product's real components, made fast and without
 running the product. Most of it is the real thing; what is not is marked. It shows **what is wanted**,
 in real components. Your job is to put it where it really belongs in this product, write down what that
 takes for a person to check, and then build it properly.

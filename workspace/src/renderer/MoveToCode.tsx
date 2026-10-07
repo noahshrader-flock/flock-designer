@@ -9,7 +9,7 @@ import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTi
 import { Label } from './ui/label';
 
 /**
- * Moving a quick prototype into the code, said out loud before it happens.
+ * Moving a prototype into the code, said out loud before it happens.
  *
  * It changes the person's checkout (a new branch, switched to), runs an agent unattended on real files, and needs
  * the full setup a prototype does not. So it asks first, shows what it will do and what would stop it, and starts
@@ -82,7 +82,7 @@ export const MoveToCode = ({
 		const made = await window.workspace.createIteration(
 			checkout.root,
 			project.id,
-			`From quick prototype ${iteration.name}`,
+			`From prototype ${iteration.name}`,
 			'codebase',
 			from ?? undefined,
 		);

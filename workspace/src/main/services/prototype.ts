@@ -1,11 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Iteration, Person } from '../../shared/contract';
-import { firstHeading, isQuickName, nextQuickName, quickKey } from '../../shared/projects';
+import { firstHeading, isPrototypeName, nextPrototypeName, prototypeKey } from '../../shared/projects';
 import { resolveInside } from './paths';
 
 /**
- * Quick prototypes: what is recorded, where the page is kept, and what the agent is told.
+ * Prototypes: what is recorded, where the page is kept, and what the agent is told.
  *
  * **One writer per machine.** A machine with the design repository cloned writes into the clone and lets
  * the publisher send it, exactly as the other records go; one without a clone writes through GitHub's
@@ -34,7 +34,7 @@ export const cloneStore = (designRoot: string, published: () => void): RecordSto
 	},
 });
 
-export const BUILD_SKILL = 'skills/build-quick-prototype.md';
+export const BUILD_SKILL = 'skills/build-prototype.md';
 export const MOVE_SKILL = 'skills/move-to-code.md';
 
 /**
@@ -45,8 +45,8 @@ export const MOVE_SKILL = 'skills/move-to-code.md';
  */
 export const MAX_PAGE = 90_000_000;
 
-/** Where a quick prototype is written, and the exact command that checks it builds. React, always: see the skill. */
-export interface QuickBuild {
+/** Where a prototype is written, and the exact command that checks it builds. React, always: see the skill. */
+export interface PrototypeBuild {
 	source: string;
 	page: string;
 	buildCommand: string;
@@ -55,10 +55,10 @@ export interface QuickBuild {
 const records = (projectId: string) => `projects/${projectId}/iterations.json`;
 
 /**
- * Records a new quick prototype, and the project itself when this is its first work: a brief with its
+ * Records a new prototype, and the project itself when this is its first work: a brief with its
  * title, which is what the project list names it by. The page comes later, once the agent has made it.
  */
-export const recordQuick = async (
+export const recordPrototype = async (
 	store: RecordStore,
 	{
 		projectId,
@@ -79,11 +79,11 @@ export const recordQuick = async (
 			throw new Error(`projects/${projectId}/iterations.json is not readable JSON, so nothing was added to it.`);
 		}
 	}
-	const name = nextQuickName(existing.map((i) => i.name));
+	const name = nextPrototypeName(existing.map((i) => i.name));
 	const iteration: Iteration = {
 		projectId,
 		name,
-		branch: quickKey(projectId, name),
+		branch: prototypeKey(projectId, name),
 		commit: null,
 		createdAt: now.toISOString(),
 		// The record carries the gist; the brief carries the whole request, which is what reviewers and the
@@ -97,24 +97,24 @@ export const recordQuick = async (
 	if (haveBrief === null || firstHeading(haveBrief) === null) {
 		await store.write(brief, `# ${title.replace(/\s+/g, ' ').trim()}\n\n${note.trim()}\n`, `${projectId}: start the project`);
 	}
-	await store.write(records(projectId), `${JSON.stringify([...existing, iteration], null, 2)}\n`, `${projectId}: record quick prototype ${name}`);
+	await store.write(records(projectId), `${JSON.stringify([...existing, iteration], null, 2)}\n`, `${projectId}: record prototype ${name}`);
 	return iteration;
 };
 
-export const assertQuickName = (name: string): void => {
-	if (!isQuickName(name)) throw new Error(`"${name}" is not a quick prototype.`);
+export const assertPrototypeName = (name: string): void => {
+	if (!isPrototypeName(name)) throw new Error(`"${name}" is not a prototype.`);
 };
 
 /**
- * What the agent is told for a quick prototype. The skill says how; this says where. The request is the
+ * What the agent is told for a prototype. The skill says how; this says where. The request is the
  * person's own words, and comes last, after everything that frames it.
  */
 /**
- * What a quick prototype's agent may read, each a folder: the product's code (on the branch it is modelled
+ * What a prototype's agent may read, each a folder: the product's code (on the branch it is modelled
  * on), and the guidance the code is built to, in its three layers. Every one is optional: whatever this
  * machine does not have is left out, and the task says so rather than letting the agent guess.
  */
-export interface QuickSources {
+export interface PrototypeSources {
 	/** The product's code, on the branch the prototype is modelled on. */
 	code: string;
 	/** The product's own Flock Designer guidance: how its app is put together, its patterns, its rules. */
@@ -129,7 +129,7 @@ export interface QuickSources {
 	nodeModules: string | null;
 }
 
-export const quickReadable = (s: QuickSources | null): string[] =>
+export const prototypeReadable = (s: PrototypeSources | null): string[] =>
 	s
 		? [s.code, s.productGuidance, s.designSystemGuidance, s.installedDesignSystem, s.sharedStandards, s.nodeModules].filter(
 				(d): d is string => d !== null,
@@ -137,18 +137,18 @@ export const quickReadable = (s: QuickSources | null): string[] =>
 		: [];
 
 /**
- * What the agent is told for a quick prototype. The skill says how; this says where everything is. The
+ * What the agent is told for a prototype. The skill says how; this says where everything is. The
  * request is the person's own words, and comes last, after everything that frames it.
  */
-export const quickBuildTask = ({
+export const prototypeBuildTask = ({
 	skill,
 	build,
 	sources,
 	request,
 }: {
 	skill: string;
-	build: QuickBuild;
-	sources: QuickSources;
+	build: PrototypeBuild;
+	sources: PrototypeSources;
 	request: string;
 }): string => {
 	const line = (label: string, dir: string | null, missing: string) => (dir ? `- **${label}:** \`${dir}\`` : `- **${label}:** not on this machine. ${missing}`);
@@ -176,7 +176,7 @@ export const quickBuildTask = ({
 	].join('\n');
 };
 
-/** What the agent is told when a quick prototype moves into the codebase: audit first, then build. */
+/** What the agent is told when a prototype moves into the codebase: audit first, then build. */
 export const moveToCodeTask = ({
 	skill,
 	pageFile,
@@ -194,13 +194,13 @@ export const moveToCodeTask = ({
 	basedOn?: Iteration['basedOn'];
 }): string =>
 	[
-		`Build quick prototype ${name} of this project into the codebase.`,
+		`Build prototype ${name} of this project into the codebase.`,
 		'',
 		skill.trim(),
 		'',
 		'## This run',
 		'',
-		`The quick prototype's page is \`${pageFile}\`. Read it; do not change it.`,
+		`The prototype's page is \`${pageFile}\`. Read it; do not change it.`,
 		...(sourceFile
 			? [`It was written in React with the real design system: its source is \`${sourceFile}\`. Start from that, not from the page.`]
 			: []),

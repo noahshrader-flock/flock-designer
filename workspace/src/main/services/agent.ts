@@ -22,12 +22,12 @@ export interface AgentExtras {
 	/** Folders outside the repository the agent may also write to: the project's records in the design repository. */
 	addDirs?: string[];
 	/**
-	 * Folders the agent may read but never change: the product repository, for a quick prototype that
+	 * Folders the agent may read but never change: the product repository, for a prototype that
 	 * should look like it. Not working directories, so nothing there is edited even in accept-edits mode,
 	 * and an edit rule denies it outright as well.
 	 */
 	readOnly?: string[];
-	/** Which piece of work this run is for (a quick prototype's key), carried on its status. */
+	/** Which piece of work this run is for (a prototype's key), carried on its status. */
 	work?: string;
 	/** A run that is a Handoff, so a screen opened again knows it ends in a report, not a preview. */
 	purpose?: 'handoff';

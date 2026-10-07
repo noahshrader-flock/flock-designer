@@ -25,7 +25,7 @@ export const ShareControl = ({
 	iteration,
 	canOpen,
 	onOpenInBrowser,
-	quick = false,
+	prototype = false,
 	onMoveToCode,
 	onHandoff,
 	editor,
@@ -36,8 +36,8 @@ export const ShareControl = ({
 	/** Whether the page is up, so there is something to open. */
 	canOpen: boolean;
 	onOpenInBrowser: () => void;
-	/** A quick prototype: already where reviewers see it, so there is no sharing, only moving it into the code. */
-	quick?: boolean;
+	/** A prototype: already where reviewers see it, so there is no sharing, only moving it into the code. */
+	prototype?: boolean;
 	/** Offered when there is a product repository here to build it in. */
 	onMoveToCode?: () => void;
 	/** Codebase work: the once-only full check before an engineer picks it up. */
@@ -97,13 +97,13 @@ export const ShareControl = ({
 					<TooltipContent>{running ? 'Sharing…' : 'More'}</TooltipContent>
 				</Tooltip>
 				<DropdownMenuContent align="end" className="w-auto">
-					{quick && onMoveToCode && (
+					{prototype && onMoveToCode && (
 						<DropdownMenuItem onSelect={onMoveToCode}>
 							<CodeIcon />
 							Build in the codebase
 						</DropdownMenuItem>
 					)}
-					{checkout && !quick && (
+					{checkout && !prototype && (
 						<DropdownMenuItem
 							onSelect={() => {
 								setPhase(running ? 'working' : 'confirm');

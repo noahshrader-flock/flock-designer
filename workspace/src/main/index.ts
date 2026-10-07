@@ -8,7 +8,7 @@ import { DesignRepo } from './services/designRepo';
 import { CheckoutMemory } from './services/checkoutMemory';
 import { PageView } from './services/pageView';
 import { MIN_WINDOW, type WindowState, WindowMemory, restoreState } from './services/windowMemory';
-import { QuickServer } from './services/quickServer';
+import { PrototypeServer } from './services/prototypeServer';
 import type { Fetcher } from './services/github';
 import { GitHubSession } from './services/githubSession';
 import { RuntimeManager } from './services/runtime';
@@ -149,7 +149,7 @@ void app.whenReady().then(() => {
 		window.webContents.send('workspace:event:pinEvent', e),
 	);
 
-	const quickServer = new QuickServer();
+	const prototypeServer = new PrototypeServer();
 	const memory = new CheckoutMemory(CheckoutMemory.defaultPath(app.getPath('userData')));
 
 	const publishing = registerIpc({
@@ -163,11 +163,11 @@ void app.whenReady().then(() => {
 		page,
 		memory,
 		onPublishStatus: (status) => window.webContents.send(CHANNELS.publishStatusChanged, status),
-		quickRoot: join(app.getPath('userData'), 'quick'),
-		quickServer,
+		prototypesRoot: join(app.getPath('userData'), 'prototypes'),
+		prototypeServer,
 		sessions: new SessionMemory(SessionMemory.defaultPath(app.getPath('userData'))),
 	});
-	window.on('closed', () => quickServer.close());
+	window.on('closed', () => prototypeServer.close());
 	// Coming back to the window is a good moment to publish whatever was done while it was away.
 	window.on('focus', () => void publishing.publish());
 	// And now and then regardless, because work done in a terminal while this window sits in front would

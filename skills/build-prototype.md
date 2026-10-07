@@ -1,10 +1,10 @@
-# Build a quick prototype
+# Build a prototype
 
 **Shared by every product.** Nothing here names a product's tools, layout or components: each product
 says those for itself, in its own guidance, and this tells you to read it. The app puts this file in the
-task when someone chooses **New → Quick prototype**, so nobody has to find it.
+task when someone chooses **New → Prototype**, so nobody has to find it.
 
-A quick prototype is a fast version of an idea, built from the product's **real components**: one page
+A prototype is a fast version of an idea, built from the product's **real components**: one page
 someone can open, click through and comment on, made without touching the product's code and without
 running it. **Fast is not loose.** It will be moved into the real code later, and that step reads what you
 write here, so it has to be the product as it really is, with the idea placed inside it.

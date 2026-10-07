@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Project, ProjectIteration, RunLogLine, WorkspaceApi } from '../shared/contract';
-import { quickKey } from '../shared/projects';
+import { prototypeKey } from '../shared/projects';
 import { type BuildPhase, waitForAgent } from './localBuild';
 
 /**
- * Getting a quick prototype onto the screen: built by the agent first when it was only just asked for,
+ * Getting a prototype onto the screen: built by the agent first when it was only just asked for,
  * saved to the design repository, then served from this machine. The same phases as a local build, so
  * the review screen shows either the same way.
  */
-export type QuickApi = Pick<WorkspaceApi, 'buildQuick' | 'agentStatus' | 'saveQuick' | 'openQuick'>;
+export type PrototypeApi = Pick<WorkspaceApi, 'buildPrototype' | 'agentStatus' | 'savePrototype' | 'openPrototype'>;
 
-export const runQuickBuild = async ({
+export const runPrototypeBuild = async ({
 	api,
 	project,
 	iteration,
@@ -19,7 +19,7 @@ export const runQuickBuild = async ({
 	onPhase,
 	pollMs = 1000,
 }: {
-	api: QuickApi;
+	api: PrototypeApi;
 	project: Project;
 	iteration: ProjectIteration;
 	task?: string;
@@ -33,11 +33,11 @@ export const runQuickBuild = async ({
 	};
 	// Opened again while its agent is still building it: wait on that run, as if the screen had never been left.
 	const now = await api.agentStatus();
-	const stillBuilding = now.ok && now.value.state === 'running' && now.value.work === quickKey(project.id, iteration.name);
+	const stillBuilding = now.ok && now.value.state === 'running' && now.value.work === prototypeKey(project.id, iteration.name);
 	if (task || stillBuilding) {
 		onPhase({ kind: 'agent' });
 		if (!stillBuilding) {
-			const started = await api.buildQuick(project.id, iteration.name, task as string);
+			const started = await api.buildPrototype(project.id, iteration.name, task as string);
 			if (!started.ok) return fail(started.error);
 			if (started.value.state === 'unavailable') return fail(started.value.detail);
 		}
@@ -45,12 +45,12 @@ export const runQuickBuild = async ({
 		if (outcome.kind === 'stopped') return null;
 		if (outcome.kind === 'failed') return fail(outcome.message);
 		// Saved before it is shown, so what is on screen is what reviewers will see.
-		const saved = await api.saveQuick(project.id, iteration.name);
+		const saved = await api.savePrototype(project.id, iteration.name);
 		if (!saved.ok) return fail(saved.error);
 		if (!isLive()) return null;
 	}
 	onPhase({ kind: 'preview' });
-	const opened = await api.openQuick(project.id, iteration.name);
+	const opened = await api.openPrototype(project.id, iteration.name);
 	if (!isLive()) return null;
 	if (!opened.ok) return fail(opened.error);
 	onPhase({ kind: 'running', url: opened.value });
@@ -58,7 +58,7 @@ export const runQuickBuild = async ({
 };
 
 /** The hook the review screen uses, shaped like `useLocalBuild` so the screen treats both alike. */
-export const useQuickBuild = ({
+export const usePrototypeBuild = ({
 	project,
 	iteration,
 	task,
@@ -79,7 +79,7 @@ export const useQuickBuild = ({
 		if (!enabled) return;
 		// What the agent said before this screen was opened, when the run is this prototype's: picks up where it was left.
 		void window.workspace.agentRecent().then((r) => {
-			if (r.ok && r.value.work === quickKey(project.id, iteration.name)) setLog((prev) => (prev.length ? prev : r.value.lines));
+			if (r.ok && r.value.work === prototypeKey(project.id, iteration.name)) setLog((prev) => (prev.length ? prev : r.value.lines));
 		});
 		return window.workspace.onAgentLog((l: RunLogLine) => setLog((prev) => [...prev, l.text.replace(/\n$/, '')].slice(-200)));
 	}, [enabled, project.id, iteration.name]);
@@ -88,7 +88,7 @@ export const useQuickBuild = ({
 		if (!enabled) return;
 		let cancelled = false;
 		setPhase({ kind: 'idle' });
-		void runQuickBuild({
+		void runPrototypeBuild({
 			api: window.workspace,
 			project,
 			iteration,
