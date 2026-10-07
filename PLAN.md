@@ -94,7 +94,7 @@ recommendation, the accessibility target, or anything in Part I's purpose, princ
 
 **Flock Designer becomes where the team looks at each other's work and comments on it.**
 
-The authoring half exists: a designer builds a prototype in the real codebase with the agent and
+The authoring half exists: a designer builds a prototype, or codebase work, with the agent and
 shares it. What is missing is the other half — someone who did not build it opens it, sees what it
 is, and says what they think, **without installing a toolchain, cloning anything, or learning git.**
 That is the function [Magic Patterns](https://www.magicpatterns.com/docs/documentation/collaboration/inline-comments)
@@ -121,7 +121,7 @@ list of repositories rather than a folder picker.
 | Who you are | GitHub sign-in by **device flow** through a **GitHub App** — no client secret, so no server — whose token can touch only the design repo's issues. SSO is between GitHub and Okta; the app never touches it |
 | Projects and iterations | The design repo, read through the API |
 | Comments | **Issue comments in the design repo, one issue per iteration.** Read access is enough to comment; authors keep edit access. Keeps PMs out of the Coke repo |
-| The prototype | A preview CI builds from the iteration's branch — which **must be a mock-data build** |
+| What is reviewed | A prototype: its saved page, which the app serves. Codebase work: a preview CI builds from its branch — which **must be a mock-data build** |
 | The durable record | Exported to `review.md` in the project folder, so the agent reads comments with no app |
 
 **How a comment is anchored.** Click an element, as Magic Patterns does — its docs say comments are
@@ -306,7 +306,7 @@ did they comment, how long from share to first comment, what did they say about 
 
 ### 3.7 — Prototypes
 
-**Human.** Built 2026-10-06 at Noah's request. **What sets it apart from a codebase feature is what it
+**Human.** Built 2026-10-06 at Noah's request. **What sets it apart from codebase work is what it
 needs:** the repository and its packages installed, and nothing else. It never runs the product, so no
 environment variables, no backend, no mock-data service.
 
@@ -345,7 +345,7 @@ accurate than the two hand-drawn runs, in less than their eight minutes, and it 
 **Human.** **Build in the codebase**, on a prototype, starts the project's codebase work with the
 prototype's source. It asks first: the branch it will create or continue, the branch it starts from (the one
 the prototype was modelled on), and anything that would stop it (uncommitted changes, codebase work already
-recorded, Claude Code not ready). It is the same branch and agent as a codebase feature made from New. The agent writes `projects/<id>/audit-iN.md` first, built from the marks: each
+recorded, Claude Code not ready). It is the same branch and agent as codebase work started from New. The agent writes `projects/<id>/audit-iN.md` first, built from the marks: each
 `@standin` a decision, each `@mock` a data task, each `@remove` a deletion. Then it moves the unmarked code
 into the files where it belongs. Skill: `skills/move-to-code.md`.
 
@@ -557,7 +557,7 @@ Decisions already settled in this plan are not repeated here. What remains genui
   before those are known.
 - When does a review need real-shell validation rather than a reconstructed host? Step 2.3 should produce a rule of thumb rather than a policy written in advance.
 - Which visual or interaction checks can be automated without making the workflow slow enough that designers route around it.
-- Whether prototype branches should expire from the product repository after some period, given that they never merge and accumulate indefinitely.
+- Whether the older `fd/` prototype branches should expire from the product repository after some period, given that they never merge and accumulate indefinitely.
 - How the team protects the distinction between a prototype that is credible and code that is production-ready, once previews are easy to share widely.
 
 ---
@@ -702,7 +702,7 @@ It also shows component gaps flowing into Design System component work, Design S
 
 ### Vocabulary
 
-These terms are easy to confuse and are used strictly throughout the set, in the app, and in the agent files. **This is the one place they are defined**; the repository's README points here. The file layouts behind them are defined in the plan's [project folder](#the-project-folder) and [prototype directory](#the-prototype-directory) contracts.
+These terms are easy to confuse and are used strictly throughout the set, in the app, and in the agent files. **This is the one place they are defined**; the repository's README points here. The file layouts behind them are defined in the plan's [project folder](#the-project-folder) contract, and for prototypes in [3.7](#37--prototypes) (older prototype branches: [prototype directory](#the-prototype-directory)).
 
 **Two kinds of work, and nothing else:** a **prototype**, to decide what something should be, and **codebase work**, to build it. A prototype can be moved into the code, or codebase work can be started directly.
 
@@ -1107,6 +1107,10 @@ flock-designer/projects/<project-id>/
                         and resolved FUI version
   review.md             one section per iteration: evidence, parity and implementation
                         findings, the accessibility section, open questions
+  prototypes/           each prototype's page and its React source: iN.html, iN.tsx
+  audit-iN.md           Move into the code: what each marked gap in prototype iN needs
+  comments.md           the comments from GitHub, for the agent to read; generated,
+                        never edited
   decisions.md          only what you confirmed
   log.md                the agent's working notes, labelled as machine-generated
   handoff.md            Handoff only: the hardening report and the rewrite plan
@@ -1120,7 +1124,7 @@ Rules:
 - The change boundary is declared once, in `brief.md`, and echoed in the context receipt. It names the files, components, routes, states, and interaction paths in scope.
 - Nothing enters `decisions.md` until you have confirmed it. Agent drafts go to `log.md`.
 - **The agent writes these files; designers are never asked to fill them in.** Your part is to drop in what you have, confirm the brief, and confirm decisions.
-- Prototype code does not live here. It stays in the product repository on its `fd/<project-id>/iN` branch, where it can actually run. The folder holds the thinking; the branch holds the code.
+- A prototype's source and page live here, under `prototypes/`. Codebase work's code stays on its `feature/<project-id>` branch in the product repository, where it can actually run: the folder holds the thinking, the branch holds the code. (Older prototypes' code is on their `fd/<project-id>/iN` branches.)
 
 **Why here and not on the branch.** An earlier version of this plan kept these records in
 `.flkd/projects/` on the prototype branch, which meant picking up someone's work required knowing
@@ -1213,6 +1217,9 @@ after it pointed at `src/prototypes/`, so the second path was never exercised, a
 
 Two modes, not forced into one. Both produce reviewable evidence; neither is production.
 
+> **Since 2026-10-07 a prototype is a page the app serves itself, not a run of this harness ([3.7](#37--prototypes)).**
+> The harness serves the older `fd/` prototype branches.
+
 **Prototype harness** — the workhorse. The fastest, safest place to shape a view or thin flow, using the directory contract above.
 
 **Real-shell design mode** — for Test work when the question is about a real app surface: shell placement, navigation, surrounding density, or page-level behavior. Also the standard way a designer runs the product at all.
@@ -1279,7 +1286,7 @@ It gives reviewers a shared object to react to, and prevents a screenshot from b
 
 **Implemented in:** `flock-designer/projects/<project-id>/`. **Step 14** adds the shared record.
 
-A project is keyed by one `<project-id>` slug used for its branch, prototype directory, and project folder alike.
+A project is keyed by one `<project-id>` slug used for its codebase branch, its prototypes' folder, and its project folder alike.
 
 **The [project folder](#the-project-folder) is the whole model.** One folder per project in `flocksafety/flock-designer`, holding the context you supplied and every record the agent wrote.
 
@@ -1301,6 +1308,9 @@ Workspace writes to the record at project creation, on an intentional iteration 
 Staging it this way keeps every step before 14 free of any dependency on a repository that does not yet exist, and puts the access-model conversation exactly where distributed review makes it unavoidable.
 
 ### Iterations, preview, and review
+
+> **Since 2026-10-07 a prototype's iterations are pages, not branches ([3.7](#37--prototypes)).** What follows
+> describes the older `fd/` prototype branches and codebase work's one branch.
 
 **Implemented in:** **Partly** — branch and iteration model in `flock-coke/.flkd/manifest.md`. Draft PR, shared preview, and anchored comments are step 14.
 
@@ -3532,6 +3542,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-07 | **A cleanup pass over the day's changes.** What still described a prototype as a branch now says it is a page, with the branch read as older work: the project folder's tree and rules, the review row in The direction, the runtime modes, project memory and the iteration model. The app's labels match the vocabulary (Codebase work, Hand off), and the skills say where Address on a prototype differs | The direction, 3.7, 3.8, Open questions, Vocabulary, The project folder, The two runtime modes, Project memory, Iterations, preview, and review |
 | 2026-10-07 | **Prototypes are one idea, with one vocabulary, and Address works on them.** Ahead of the pilot, Noah wanted the complexity that is not needed gone. A *quick prototype* was a second implementation of a prototype beside the `fd/<id>/iN` branches; it is now simply a **prototype**, numbered `i1`, `i2` on one count, and none is made on a branch (the existing `fd/` ones still open). "Quick" is gone from the app, its storage (`projects/<id>/prototypes/`) and the agent files (`skills/build-prototype.md`); admin-usage's `q1` became `i1`. **Address** now works on a prototype's comments: the agent changes the source, the page is saved, nothing is committed. The terms are defined once, in Vocabulary, and the README points there. Older change-log rows keep the names they used | Status, Phase 3, 3.7, 3.8, Decisions, Not being built, Open questions, Vocabulary, The prototype directory, Git and iteration model, The two build paths |
 | 2026-10-06 | **Build in the codebase asks first.** Noah asked whether moving a quick prototype into the code was worth having, or duplicated a codebase feature. Worth it, and not a duplicate: quick prototype (cheap, for conversation), codebase feature (real from the start) and this (the bridge) are three jobs on one project, and the bridge reuses the codebase feature's branch and agent. It started at once, from whichever branch the checkout was on; it now confirms in a dialog that starts from the branch the prototype was modelled on and shows what would stop it. Set up so the auditor can be tested and refined next. | Phase 3 table (3.8); 3.8 |
 | 2026-10-06 | **The first React quick prototype ran, and met 3.7's bar on the evidence.** admin-usage q1, based on `noah/flock-designer`: the real `FSUniversalNav` with the reference's twelve links, `FSDataGrid`, `FSDrawer`, `FSDialog` and `FSSymbol`, no raw colours, 13 marks each with an "On move" note; about 6 minutes against about 8, 51 KB of source against 80 KB of HTML, built first time. Two findings went into the files: a state must show the situation at rest (its dialog opened with a dropdown already expanded), and a prototype keeps the product's colour mode (it renders dark on a dark Mac, as Coke does, since `FSApp` follows the system). **Open:** whether Coke means to support dark mode. 3.7 is left for Noah to close. | Phase 3 table (3.7) |

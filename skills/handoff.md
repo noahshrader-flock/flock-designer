@@ -2,7 +2,7 @@
 
 **Shared by every product.** Nothing here names a product's tools, commands or standards: each product
 says those for itself, in its own guidance, and this tells you to read it. Used when codebase work is
-handed to engineering: the app's **Handoff** puts this file in the task, so nobody has to find it.
+handed to engineering: the app's **Hand off** puts this file in the task, so nobody has to find it.
 
 Handoff is the one place the heavy checks happen. While work is being built, only a light check runs, so
 that building stays fast; **this is where it is proved fit for an engineer.** Take the time. Do not hand

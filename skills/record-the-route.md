@@ -40,8 +40,8 @@ In the design repository, `projects/<project-id>/iterations.json`, on this itera
 
 - **New work:** when the view first loads, as part of building it.
 - **Existing work:** if you change where a view is reached, update the route in the same commit.
-- **Prototypes** (`fd/<project-id>/iN`) do not need one: they serve one prototype, which already
-  opens on itself.
+- **Prototypes** do not need one: a prototype is one page, and an older prototype branch (`fd/<project-id>/iN`)
+  serves one prototype. Each already opens on itself.
 
 If you cannot tell which route is right, leave it out and say so. A wrong landing place is worse than
 none: none opens where it always did.

@@ -2,7 +2,9 @@
 
 **Shared by every product.** Nothing here names a product's tools, layout or components: each product
 says those for itself, in its own guidance, and this tells you to read it. The app puts this file in the
-task when someone chooses **New → Prototype**, so nobody has to find it.
+task when someone chooses **New → Prototype**, so nobody has to find it. It is also in the task, after
+`address-comments.md`, when someone presses **Address** on a prototype's comment: then that file decides what you
+change and what you say at the end, and this one is how the change is made.
 
 A prototype is a fast version of an idea, built from the product's **real components**: one page
 someone can open, click through and comment on, made without touching the product's code and without

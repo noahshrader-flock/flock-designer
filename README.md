@@ -48,7 +48,7 @@ provides, beside a checkout of this one and of its design system (the folder nam
 - **`.flkd/workspace.json`**, the app's contract with the product (`workspace/src/shared/contract.ts`,
   `WorkspaceDescriptor`): its name, its context folder, where prototypes go, its branch names, its design
   system package, and its commands. The app looks for these command ids:
-  - `preview` serves a prototype branch, `design-mode` serves the real product on mock data (each with
+  - `preview` serves an older prototype branch, `design-mode` serves the real product on mock data (each with
     `servesPreviewOn`);
   - `check-iteration`, the **light check**: fast, on what the branch changed, run after every step;
   - `handoff`, the **gate**: takes `<project-id>`, and refuses until the work is fit for engineering.
@@ -64,5 +64,5 @@ changes for a new product.
 
 ## What is not here
 
-Code that runs inside the product. A codebase feature lives in the product repository it was built
+Code that runs inside the product. Codebase work lives in the product repository it was built
 against, on its own branch, where it can actually run.

@@ -1,13 +1,13 @@
 # Which instructions each kind of work follows
 
-**Shared by every product.** One row per kind of work. Each starts from one entry file, and every entry
+**Shared by every product.** One row per kind of work. Each starts from the entry files listed, and every entry
 file sends the agent to the same three layers of guidance underneath it, in the same order. Nothing is
 read because it happens to be nearby, and nothing about one kind of work leaks into another's file.
 
 | Work | Started by | Where the agent works | Entry file | Produces |
 |---|---|---|---|---|
 | **Prototype** | New → Prototype | The app's own folder. The product's code, guidance and installed packages are **read-only** | `skills/build-prototype.md` (this repo) | One React file built from the real components, `projects/<id>/prototypes/iN.tsx`, and its page, `iN.html` |
-| **Codebase feature** | New → Codebase feature | The product repository, on `feature/<id>` | `skills/codebase-work.md` (this repo), then the product's own agent instructions | Real code on the branch, passing the product's light check, committed as it goes |
+| **Codebase work** | New → Codebase work | The product repository, on `feature/<id>` | `skills/codebase-work.md` (this repo), then the product's own agent instructions | Real code on the branch, passing the product's light check, committed as it goes |
 | **Move a prototype into the code** | Build in the codebase, on a prototype | The product repository, on `feature/<id>` | `skills/move-to-code.md` and `skills/codebase-work.md` (this repo), then the product's agent instructions | `projects/<id>/audit-iN.md` first (from the prototype's `@standin`, `@mock` and `@remove` marks), then real code |
 | **Hand off** | Hand off, on codebase work | The product repository, on `feature/<id>` | `skills/handoff.md` (this repo), then the product's gate and reviewers | The gate passing, `projects/<id>/review.md`, fixes committed, and `HANDOFF.md` on the branch |
 | **Address a comment** | Address, on one comment | Codebase work: the iteration's branch in the product repository. A prototype: the app's own folder, where it was built | `skills/address-comments.md` (this repo); on a prototype, `skills/build-prototype.md` too | Codebase work: one commit for that comment. A prototype: its page changed and saved, no commit |
