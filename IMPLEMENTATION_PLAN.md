@@ -40,7 +40,7 @@ ended.
 |---|---|
 | flock-designer `ccbf80d` | Hand codebase work to VS Code: open the checkout, take a run over, continue its conversation |
 | flock-designer `1a2b00d` | No scheduling tools in headless runs; uncommitted changes mean unfinished; no branch switch under a running agent; shared skills and standards readable; read-only git allowed |
-| flock-designer `ed79bcb` (branch `noah/phase3`, unmerged) | **Phase 3:** Hand off to engineering in the app, its report, the uncommitted-changes warning; VS Code pieces renamed to editor |
+| flock-designer `ed79bcb`, merged | **Phase 3:** Hand off to engineering in the app, its report, the uncommitted-changes warning; VS Code pieces renamed to editor |
 | flock-designer `1520ac1`, Coke `99ebaf62` | **Phase 2:** the shared handoff skill, Coke's handoff slimmed to its own gate, specs type-checked |
 | flock-designer `50751e9`, Coke `6b1ab916` | **Phase 1:** the light check, related tests only, reviews moved to Handoff, commit as you go |
 | flock-designer `fe04eff` | `move-to-code`: unattended, finish before stopping, existing actions keep their rules, every data state owed, shared mocks checked against callers |
@@ -85,17 +85,13 @@ telling it which command.
 
 | # | Item | Status |
 |---|---|---|
-| 3.1 | A **Handoff** item in the More menu for codebase work. It starts an agent run with `skills/handoff.md` as its task, tags it with the branch, saves its session (so Continue in Claude Code works), and refuses while the agent is busy | **done** on branch `noah/phase3` (`ed79bcb`), not merged: see the note below |
+| 3.1 | A **Handoff** item in the More menu for codebase work. It starts an agent run with `skills/handoff.md` as its task, tags it with the branch, saves its session (so Continue in Claude Code works), and refuses while the agent is busy | **done** (`ed79bcb`, merged) |
 | 3.2 | Show the outcome: ready, or what still blocks, taken from the run's last message and whether the branch is clean. A run that leaves uncommitted changes is reported unfinished, as build runs already are | **done** (`ed79bcb`): "Ready for engineering" only when the agent says so and `HANDOFF.md` is committed |
 | 3.3 | Opening codebase work that has uncommitted changes with no agent running says so, and offers Continue in Claude Code. Today the warning appears only while the app waits on a run | **done** (`ed79bcb`): an "Uncommitted changes" button in the toolbar |
 | 3.4 | Tests for the above; typecheck (with unused locals), the test suite, the build and the smoke boot | **done** (`ed79bcb`): 740 tests, typecheck, build, smoke; the screens driven end to end with a fake workspace |
 
 **Done when:** from a codebase iteration, choosing Handoff runs the gate, the reviews and the fixes
 
-> **Not merged yet (2026-10-06).** Uncommitted work in this repo, apparently another session's, reworks
-> how overlays freeze the preview (`overlays.ts`, `useOverlaps`) and touches the same lines in `Review.tsx` and
-> `ShareControl.tsx`. Merge `noah/phase3` once that work is committed. Expected conflict: the `frozen` line, where
-> `|| handingOff` can simply go, since dialogs register themselves there.
 unattended, and the screen says whether it is ready.
 
 ## Phase 4: Finish `admin-usage` as the first real Handoff
