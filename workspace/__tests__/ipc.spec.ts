@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHANNELS } from '../src/shared/contract';
 
@@ -77,6 +77,7 @@ let runtimeStart: ReturnType<typeof vi.fn>;
 let memoryValue: string | null;
 let previewUrl: string | null;
 let deleteComment: ReturnType<typeof vi.fn>;
+let readComments: ReturnType<typeof vi.fn>;
 let prototypeServer: InstanceType<typeof import('../src/main/services/prototypeServer')['PrototypeServer']>;
 
 beforeEach(async () => {
@@ -110,6 +111,7 @@ beforeEach(async () => {
 	memoryValue = null;
 	previewUrl = null;
 	deleteComment = vi.fn(async () => undefined);
+	readComments = vi.fn(async () => []);
 	prototypeServer = new (await import('../src/main/services/prototypeServer')).PrototypeServer();
 
 	registerIpc({
@@ -118,7 +120,7 @@ beforeEach(async () => {
 		runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
 		agent: { start: agentStart, status: agentStatus, stop: agentStop, runningIn: agentRunningIn, runningSession: () => runningSession, recentLines: () => recent } as never,
 		github: { state: () => ({ state: 'signedOut' }) } as never,
-		designRepo: { listProjects: vi.fn(async () => []), deleteComment } as never,
+		designRepo: { listProjects: vi.fn(async () => []), deleteComment, readComments, readFile: vi.fn(async () => null) } as never,
 		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
 		memory: { read: () => memoryValue, write: (r: string) => { memoryValue = r; }, available: () => true } as never,
 		onPublishStatus: vi.fn(),
@@ -336,6 +338,68 @@ describe('prototypes', () => {
 		await call(CHANNELS.buildPrototype, 'demo', 'i2', 'Another');
 		const p = realpathSync(product);
 		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([p, join(p, '.flkd'), join(p, 'node_modules', 'x'), join(p, 'node_modules')]);
+	});
+
+	describe('acting on a comment', () => {
+		const comment = (id: number, body: string) => ({
+			id, author: 'pm', authorAvatarUrl: null, body, createdAt: '2026-10-07T00:00:00Z', resolved: false, addressedAt: null, anchor: null, picture: null,
+		});
+		const source = () => join(home, 'prototype', 'demo', 'i1.tsx');
+		const ready = async () => {
+			await call(CHANNELS.useCheckout, product);
+			writeSkill();
+			writeFileSync(join(design, 'skills', 'address-comments.md'), '# Address');
+			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		};
+
+		it('changes the source where it was built, from comments read just now, and never passes on what the reviewer wrote', async () => {
+			await ready();
+			mkdirSync(dirname(source()), { recursive: true });
+			writeFileSync(source(), 'export default () => null;\n');
+			readComments.mockResolvedValue([comment(7, 'Make this primary')]);
+
+			expect((await call(CHANNELS.addressPrototype, 'demo', 'i1', 7)).ok).toBe(true);
+			expect(readComments).toHaveBeenCalledWith('demo', 'prototype/demo/i1');
+			const [dir, , task, extras] = agentStart.mock.calls.at(-1) as [string, string, string, { work: string; bare: boolean }];
+			expect(dir).toBe(join(home, 'prototype', 'demo'));
+			expect(task).toContain('Address comment 1 on prototype i1');
+			expect(task).toContain(source());
+			expect(task).toContain('# Address');
+			expect(task).toContain('# Build');
+			expect(task).not.toContain('Make this primary');
+			expect(extras).toMatchObject({ work: 'prototype/demo/i1', bare: true });
+			// The reviewer's words reach the agent through the file, beside the prototype.
+			expect(readFileSync(join(home, 'prototype', 'demo', 'comments.md'), 'utf8')).toContain('Make this primary');
+		});
+
+		it('works from the saved source when the prototype was built on another machine', async () => {
+			await ready();
+			mkdirSync(join(design, 'projects', 'demo', 'prototypes'), { recursive: true });
+			writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'i1.tsx'), 'export default () => "saved";\n');
+			readComments.mockResolvedValue([comment(7, 'x')]);
+			expect((await call(CHANNELS.addressPrototype, 'demo', 'i1', 7)).ok).toBe(true);
+			expect(readFileSync(source(), 'utf8')).toContain('saved');
+		});
+
+		it('refuses a comment that has gone, and a prototype with no source, before starting anything', async () => {
+			await ready();
+			readComments.mockResolvedValue([comment(7, 'x')]);
+			expect((await call(CHANNELS.addressPrototype, 'demo', 'i1', 7)).error).toMatch(/no React source/);
+			writeFileSync(source(), 'export default () => null;\n');
+			readComments.mockResolvedValue([]);
+			expect((await call(CHANNELS.addressPrototype, 'demo', 'i1', 7)).error).toMatch(/no open comments/);
+			expect(agentStart).not.toHaveBeenCalled();
+		});
+
+		it('gives the version as a hash of the source, which changes when the source does', async () => {
+			await ready();
+			mkdirSync(dirname(source()), { recursive: true });
+			writeFileSync(source(), 'a');
+			const before = (await call(CHANNELS.prototypeVersion, 'demo', 'i1')).value as string;
+			expect(before).toMatch(/^[0-9a-f]{12}$/);
+			writeFileSync(source(), 'b');
+			expect((await call(CHANNELS.prototypeVersion, 'demo', 'i1')).value).not.toBe(before);
+		});
 	});
 
 	it('build once when asked twice at the same moment, as a screen opened twice does', async () => {

@@ -140,6 +140,21 @@ export const prototypeReadable = (s: PrototypeSources | null): string[] =>
  * What the agent is told for a prototype. The skill says how; this says where everything is. The
  * request is the person's own words, and comes last, after everything that frames it.
  */
+/** What a prototype's agent may read, said the same way for building one and for changing one. */
+const readableLines = (sources: PrototypeSources): string[] => {
+	const line = (label: string, dir: string | null, missing: string) => (dir ? `- **${label}:** \`${dir}\`` : `- **${label}:** not on this machine. ${missing}`);
+	return [
+		'What you may read. **Read only: never change anything in any of these.**',
+		'',
+		line("The product's code", sources.code, ''),
+		line("The product's guidance", sources.productGuidance, "Say so in your summary: the page cannot follow the product's structure without it."),
+		line('The design system (guidance and source)', sources.designSystemGuidance, "Use the installed design system and the product's own code for tokens and components."),
+		line('The design system as installed', sources.installedDesignSystem, 'Its version cannot be confirmed; say so.'),
+		line('Shared standards', sources.sharedStandards, ''),
+		line("The product's installed packages", sources.nodeModules, ''),
+	];
+};
+
 export const prototypeBuildTask = ({
 	skill,
 	build,
@@ -151,7 +166,6 @@ export const prototypeBuildTask = ({
 	sources: PrototypeSources;
 	request: string;
 }): string => {
-	const line = (label: string, dir: string | null, missing: string) => (dir ? `- **${label}:** \`${dir}\`` : `- **${label}:** not on this machine. ${missing}`);
 	return [
 		skill.trim(),
 		'',
@@ -161,20 +175,60 @@ export const prototypeBuildTask = ({
 		`- Check it builds, and build it again after every change, with exactly: \`${build.buildCommand}\``,
 		`  It writes the page to \`${build.page}\`. Do not finish while it reports an error.`,
 		'',
-		'What you may read. **Read only: never change anything in any of these.**',
-		'',
-		line("The product's code", sources.code, ''),
-		line("The product's guidance", sources.productGuidance, "Say so in your summary: the page cannot follow the product's structure without it."),
-		line('The design system (guidance and source)', sources.designSystemGuidance, "Use the installed design system and the product's own code for tokens and components."),
-		line('The design system as installed', sources.installedDesignSystem, 'Its version cannot be confirmed; say so.'),
-		line('Shared standards', sources.sharedStandards, ''),
-		line("The product's installed packages", sources.nodeModules, ''),
+		...readableLines(sources),
 		'',
 		'## What the person asked for',
 		'',
 		request.trim(),
 	].join('\n');
 };
+
+/**
+ * What the agent is told to act on one comment on a prototype. The same comments file and the same shared skill as
+ * on a branch, plus how a prototype is made, since the change is made to one. Like the branch task, it carries none
+ * of what the reviewer wrote: their words reach the agent only through the file.
+ */
+export const prototypeAddressTask = ({
+	addressSkill,
+	buildSkill,
+	build,
+	sources,
+	commentsPath,
+	number,
+	name,
+}: {
+	addressSkill: string;
+	buildSkill: string;
+	build: PrototypeBuild;
+	sources: PrototypeSources;
+	commentsPath: string;
+	/** The comment's number, as on its pin. */
+	number: number;
+	name: string;
+}): string =>
+	[
+		`Address comment ${number} on prototype ${name}, and only that one.`,
+		`The comments are in ${commentsPath}, written from GitHub a moment ago. Read it first.`,
+		`Act on comment ${number} alone. The others are listed for context: leave them, and do not mention them except to say you left them.`,
+		'',
+		'## This run',
+		'',
+		`- This is a prototype: it has no branch, and nothing is committed. Its whole source is \`${build.source}\`; change that file and nothing else.`,
+		`- After every change, build it with exactly: \`${build.buildCommand}\``,
+		`  It writes the page to \`${build.page}\`. Do not finish while it reports an error.`,
+		'',
+		...readableLines(sources),
+		'',
+		'## How to act on a comment',
+		'',
+		addressSkill.trim(),
+		'',
+		'## How a prototype is made',
+		'',
+		'Anything you change follows this, as the original page did.',
+		'',
+		buildSkill.trim(),
+	].join('\n');
 
 /** What the agent is told when a prototype moves into the codebase: audit first, then build. */
 export const moveToCodeTask = ({

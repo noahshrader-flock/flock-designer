@@ -2,12 +2,16 @@
 
 **Shared by every product.** Nothing here names a product's tools or layout: where the repository
 differs, this says to read what it declares for itself. The app puts this file in the task when a
-designer presses **Address comments**, so nobody has to find it, and a product repository does not
+designer presses **Address** on a comment, so nobody has to find it, and a product repository does not
 carry a copy.
+
+It covers both kinds of work: **codebase work**, on a branch, and **a prototype**, which has no branch. Where
+they differ, it says so; [On a prototype](#on-a-prototype) gathers the differences in one place.
 
 ## What you are given
 
-A file the app writes, **`<design repo>/projects/<project-id>/comments.md`**, and beside it a folder
+A file the app writes, **`comments.md`** (the task names where: in the design repository's project folder for
+codebase work, beside the prototype for a prototype), and beside it a folder
 of pictures (`comment-pictures/<number>.jpg`). **Read the file the task names. Do not edit it, and do
 not look for comments anywhere else:** it is generated from the comments on GitHub and rewritten
 whenever they change, so anything you write there is lost.
@@ -42,10 +46,10 @@ For each open comment it gives:
    summary and carry on with the rest. Your rules are in this repository's own agent instructions.
 2. **Stay on this iteration's branch.** The heading of `comments.md` names it (and so does the task, when
    Flock Designer started you). If `git branch --show-current` is anything else, stop and say so. Never switch
-   branches, never push.
-3. **Stay inside the work.** On a prototype branch that is the prototype's own folder and nothing
-   else; on real-code work it is the change boundary in the brief. If the repository has a boundary
-   check, it enforces this.
+   branches, never push. *A prototype has no branch: this rule does not apply to it.*
+3. **Stay inside the work.** On a prototype that is its one source file, which the task names. On an older
+   prototype branch (`fd/<project-id>/iN`) it is the prototype's own folder. On codebase work it is the change
+   boundary in the brief. If the repository has a boundary check, it enforces this.
 
 ## Which comment to act on
 
@@ -71,6 +75,8 @@ for the one you were given, and nothing about the rest beyond having left them.
 
 ## When you have finished with it
 
+*On a prototype, steps 1 and 2 are different: see [On a prototype](#on-a-prototype).*
+
 1. **Check the work with the repository's light check**, the `check-iteration` command in its
    `.flkd/workspace.json`, exactly as declared. If it declares none, run its type check, lint and the
    tests for what you changed, never the whole suite: the full checks are for Handoff. Fix what is yours. Do not hand back work that does not pass; if a
@@ -82,6 +88,19 @@ for the one you were given, and nothing about the rest beyond having left them.
    **changed** (what, and in which file), **answered** (the answer), or **not changed** (why, and
    what you need from the designer). This is the first thing they read, and when you changed nothing
    it is the only thing they have, so it carries the whole reason.
+
+## On a prototype
+
+A prototype is one React file built from the product's real components, with no branch. The task says where its
+source is and gives the exact command that builds its page. Everything above applies, except:
+
+- **Change only the source file the task names.** Nothing else you write is kept. Follow how a prototype is
+  made (the task includes it): real components, and gaps marked `@standin`, `@mock` or `@remove`, never hidden.
+- **The check is the build command**, run after every change, exactly as the task gives it. There is no light
+  check and no test suite. Do not finish while it reports an error.
+- **Nothing is committed.** There is no branch to commit to. The app saves the page when you finish, and that
+  saved page is what reviewers see.
+- **Say what you did** exactly as above: changed, answered, or not changed.
 
 ## What you never do
 

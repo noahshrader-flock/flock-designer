@@ -288,6 +288,10 @@ export interface WorkspaceApi {
 	/** `from`: the repository on this machine and a branch in it to model the page on. */
 	createPrototype(projectId: string, title: string, note: string, from?: { root: string; branch: string }): Promise<Result<Iteration>>;
 	buildPrototype(projectId: string, name: string, request: string): Promise<Result<AgentStatus>>;
+	/** Starts the agent on one comment on a prototype. There is no batch. */
+	addressPrototype(projectId: string, name: string, commentId: number): Promise<Result<AgentStatus>>;
+	/** A short hash of the prototype's source: the version, where a branch would have a commit. */
+	prototypeVersion(projectId: string, name: string): Promise<Result<string | null>>;
 	savePrototype(projectId: string, name: string): Promise<Result<null>>;
 	openPrototype(projectId: string, name: string): Promise<Result<string>>;
 	/** What moving a prototype into the code would do in this checkout, asked before it is offered. */
@@ -587,6 +591,8 @@ export const CHANNELS = {
 	continueInClaude: 'workspace:continueInClaude',
 	createPrototype: 'workspace:createPrototype',
 	buildPrototype: 'workspace:buildPrototype',
+	addressPrototype: 'workspace:addressPrototype',
+	prototypeVersion: 'workspace:prototypeVersion',
 	savePrototype: 'workspace:savePrototype',
 	openPrototype: 'workspace:openPrototype',
 	prepareMoveToCode: 'workspace:prepareMoveToCode',

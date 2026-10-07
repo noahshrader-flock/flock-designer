@@ -78,6 +78,20 @@ export const addressTask = (commentsPath: string, branch: string, skill: string,
 		skill.trim(),
 	].join('\n');
 
+/**
+ * The number of the one comment to act on, from a read made just now. The fresh read is what catches a comment
+ * someone resolved or deleted a moment ago, rather than the agent being sent after one that is no longer there.
+ */
+export const chooseComment = (comments: ReviewComment[], commentId: number): number => {
+	if (openComments(comments).length === 0) throw new AddressProblem('There are no open comments to address.');
+	const chosen = comments.find((c) => c.id === commentId);
+	if (!chosen) throw new AddressProblem('That comment is no longer there. It may have been deleted since this screen was last read.');
+	if (chosen.resolved) throw new AddressProblem('That comment has been resolved already, so there is nothing to act on.');
+	const number = numberComments(comments).get(commentId);
+	if (number === undefined) throw new AddressProblem('That comment could not be numbered, so the agent cannot be told which one to act on.');
+	return number;
+};
+
 export const prepareAddress = async (
 	deps: AddressDeps,
 	{ recordsRoot, projectId, iteration, commentId }: AddressTarget,
@@ -116,15 +130,6 @@ export const prepareAddress = async (
 	};
 	// Written even when nothing is open, so the file never keeps listing comments that have since been resolved.
 	const written = writeCommentsExport(recordsRoot, input);
-	const open = openComments(comments).length;
-	if (open === 0) throw new AddressProblem('There are no open comments to address.');
-
-	// The read above is the fresh truth, so this is also where a comment someone resolved or deleted a
-	// moment ago is caught, rather than the agent being sent after one that is no longer there.
-	const chosen = comments.find((c) => c.id === commentId);
-	if (!chosen) throw new AddressProblem('That comment is no longer there. It may have been deleted since this screen was last read.');
-	if (chosen.resolved) throw new AddressProblem('That comment has been resolved already, so there is nothing to act on.');
-	const number = numberComments(comments).get(commentId);
-	if (number === undefined) throw new AddressProblem('That comment could not be numbered, so the agent cannot be told which one to act on.');
+	const number = chooseComment(comments, commentId);
 	return { task: addressTask(written.path, iteration.branch, skill, number), open: 1, path: written.path };
 };

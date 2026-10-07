@@ -580,8 +580,17 @@ export const Review = ({
 		setAddressing(commentId);
 		// Typed wider than it is assigned: the compiler cannot see that the callback below runs.
 		let outcome = { kind: 'idle' } as AddressPhase;
+		const api = window.workspace;
 		await runAddress({
-			api: window.workspace,
+			// A prototype has no branch: the agent changes its source in the app's folder, and its version is a hash of
+			// that source rather than a commit. Everything else, waiting and reporting, is the same.
+			api: prototype
+				? {
+						agentStatus: api.agentStatus,
+						addressComments: (_root, projectId, name, id) => api.addressPrototype(projectId, name, id),
+						iterationCommit: (_root, projectId, name) => api.prototypeVersion(projectId, name),
+					}
+				: api,
 			root: checkout.root,
 			projectId: project.id,
 			name: iteration.name,
@@ -593,6 +602,17 @@ export const Review = ({
 			},
 		});
 		if (!addressLive.current) return;
+		// A changed prototype is saved and shown again, as after it was first built: what is on screen, and what
+		// reviewers open, is the changed page. A page that no longer builds says why, in place of the success.
+		if (prototype && outcome.kind === 'done' && outcome.changed) {
+			const saved = await window.workspace.savePrototype(project.id, iteration.name);
+			if (!addressLive.current) return;
+			if (!saved.ok) {
+				setAddress({ kind: 'failed', message: saved.error });
+				return void load(true);
+			}
+			local.retry();
+		}
 		// A change was made, and it is waiting to be looked at. Marked on the comment itself, so it
 		// survives the app closing, whoever wrote the comment can see it was acted on, and nobody has
 		// to remember which comments were handled. Never resolved here: whether the change is what was
@@ -960,7 +980,9 @@ export const Review = ({
 								{address.kind === 'running' && (
 									<>
 										<p className="text-muted-foreground text-xs">
-											The agent is working on that comment. The preview updates as it changes the code.
+											{prototype
+												? 'The agent is working on that comment. The page is rebuilt and saved when it finishes.'
+												: 'The agent is working on that comment. The preview updates as it changes the code.'}
 										</p>
 										{addressLog.length > 0 && (
 											<pre className="bg-background m-0 max-h-[140px] overflow-auto rounded-md border p-2 text-[11px] wrap-anywhere whitespace-pre-wrap">
@@ -1036,7 +1058,8 @@ export const Review = ({
 												</div>
 												{addressed && (
 													<p className="text-muted-foreground text-xs">
-														The agent addressed this in <code>{comment.addressedAt?.slice(0, 7)}</code>
+														{/* A prototype's version is a hash of its source, which means nothing to a person; a commit does. */}
+														{prototype ? 'The agent addressed this' : <>The agent addressed this in <code>{comment.addressedAt?.slice(0, 7)}</code></>}
 													</p>
 												)}
 												{/* The actions get their own row. Three of them beside a name did not fit a narrow
@@ -1044,8 +1067,8 @@ export const Review = ({
 												<div className="flex flex-row flex-wrap items-center gap-2">
 													{/* One comment at a time: the designer picks the one that is a clear change, and
 													    leaves the ones that still need a decision. */}
-													{/* A prototype is acted on by moving it into the code, not comment by comment, for now. */}
-													{!comment.resolved && !addressed && checkout && !prototype && (
+													{/* The agent runs on this machine, against the product repository: without it there is nothing to build with. */}
+													{!comment.resolved && !addressed && checkout && (
 														<Button
 															size="sm"
 															variant="ghost"

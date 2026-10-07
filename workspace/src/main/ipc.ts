@@ -1,5 +1,5 @@
 import { type BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
@@ -35,7 +35,7 @@ import { findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
 import { classify, readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
-import { prepareAddress, readSkill } from './services/address';
+import { SKILL_FILE as ADDRESS_SKILL, chooseComment, prepareAddress, readSkill } from './services/address';
 import { projectTitle, writeCommentsExport } from './services/commentsExport';
 import { syncRecords } from './services/designSync';
 import { syncBranches } from './services/branchSync';
@@ -46,7 +46,7 @@ import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anc
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
-import { isRecordName, mergeProjects, prototypeKey, prototypePagePath, prototypeSourcePath, unionLocal } from '../shared/projects';
+import { firstHeading, isRecordName, mergeProjects, prototypeKey, prototypePagePath, prototypeSourcePath, unionLocal } from '../shared/projects';
 import { resolveInside } from './services/paths';
 import { PrototypeServer } from './services/prototypeServer';
 import { bundleCommand, esbuildEntry, runBundle, sharedFilesOf, writeBundleScript } from './services/prototypeBundle';
@@ -58,6 +58,7 @@ import {
 	assertPrototypeName,
 	cloneStore,
 	moveToCodeTask,
+	prototypeAddressTask,
 	prototypeBuildTask,
 	prototypeReadable,
 	type PrototypeBuild,
@@ -871,6 +872,61 @@ export const registerIpc = ({
 				readOnly: prototypeReadable(sources),
 				work: prototypeKey(projectId, name),
 			});
+		}),
+	);
+
+	/**
+	 * Acting on one comment on a prototype. The same steps as on a branch -- comments read from GitHub now, the file
+	 * written from that read, then the agent started -- but the agent changes the prototype's source in the app's own
+	 * folder, where it was built, and nothing is committed. The screen saves the page afterwards, as after a build.
+	 */
+	ipcMain.handle(
+		CHANNELS.addressPrototype,
+		guard(async (projectId: string, name: string, commentId: number) => {
+			assertPrototypeName(name);
+			if (!Number.isSafeInteger(commentId)) throw new Error('That is not a comment.');
+			if (agent.status().state === 'running') throw new Error(AGENT_BUSY);
+			const store = recordStore();
+			const read = async (path: string) => (await store.read(path)) ?? (await designRepo.readFile(path));
+			const addressSkill = await read(ADDRESS_SKILL);
+			const buildSkill = await read(BUILD_SKILL);
+			if (addressSkill === null || buildSkill === null) {
+				throw new Error(`The design repository has no ${addressSkill === null ? ADDRESS_SKILL : BUILD_SKILL}, which the agent needs to change a prototype.`);
+			}
+			const sources = await once(`source:${projectId}`, () => prototypeSource(projectId, name));
+			const build = prototypeBuildPlan(projectId, name, sources);
+			// The source to change: this machine's, or the saved one when it was built somewhere else.
+			if (!existsSync(build.source)) {
+				const saved = await read(prototypeSourcePath(projectId, name));
+				if (saved === null) throw new Error('This prototype has no React source saved, so there is nothing for the agent to change.');
+				writeFileSync(build.source, saved);
+			}
+			const key = prototypeKey(projectId, name);
+			// Read now, not earlier: this is what makes the file current.
+			const comments = await designRepo.readComments(projectId, key);
+			const brief = await read(`projects/${projectId}/brief.md`);
+			const written = writeCommentsExport(prototypesRoot, {
+				projectId,
+				title: (brief === null ? null : firstHeading(brief)) ?? projectId,
+				iteration: { name, branch: key },
+				comments,
+				generatedAt: new Date(),
+			});
+			const number = chooseComment(comments, commentId);
+			const task = prototypeAddressTask({ addressSkill, buildSkill, build, sources: sources as PrototypeSources, commentsPath: written.path, number, name });
+			return agent.start(prototypeDir(projectId), projectId, task, { bare: true, readOnly: prototypeReadable(sources), work: key });
+		}),
+	);
+	/**
+	 * Which version of a prototype's source this is, as a short hash: what tells the screen whether an agent changed
+	 * it, and what a comment it changed records. A prototype has no commits, so this stands in for one.
+	 */
+	ipcMain.handle(
+		CHANNELS.prototypeVersion,
+		guard(async (projectId: string, name: string): Promise<string | null> => {
+			const local = prototypeSourceFile(projectId, name);
+			const source = existsSync(local) ? readFileSync(local, 'utf8') : await recordStore().read(prototypeSourcePath(projectId, name));
+			return source === null ? null : createHash('sha1').update(source).digest('hex').slice(0, 12);
 		}),
 	);
 
