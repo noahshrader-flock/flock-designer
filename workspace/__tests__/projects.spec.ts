@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
-import { PROJECT_ID, asDate, isRecordName, asRoute, mergeProjects, newestProjectFirst, slugify, startedAt, unionLocal } from '../src/shared/projects';
+import { PROJECT_ID, asDate, isRecordName, asRoute, mergeProjects, newestProjectFirst, slugify, startedAt, unionLocal, workOf } from '../src/shared/projects';
 import { readFolderProjects } from '../src/main/services/localProjects';
 
 const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
@@ -239,5 +239,26 @@ describe('isRecordName', () => {
 
 	it('refuses anything that is a path, a hidden file or not a name, since it is joined onto a folder and an address', () => {
 		for (const n of ['../brief.md', 'a/b.md', '..', '.env', '', 'a..b', 'brief.md\n', 7, null]) expect(isRecordName(n)).toBe(false);
+	});
+});
+
+describe('workOf', () => {
+	const iterations = [
+		it1({ name: 'codebase', branch: 'feature/alpha', createdAt: '2026-10-03T00:00:00Z' }),
+		it1({ name: 'i1', branch: 'fd/alpha/i1', createdAt: '2026-10-01T00:00:00Z' }),
+		it1({ name: 'i2', branch: 'prototype/alpha/i2', createdAt: '2026-10-02T00:00:00Z' }),
+		it1({ name: 'i3', branch: 'prototype/alpha/i3', createdAt: null }),
+	];
+
+	it('counts prototype pages and prototype branches as prototypes, newest first, undated last', () => {
+		expect(workOf(iterations, 'prototype').map((i) => i.name)).toEqual(['i2', 'i1', 'i3']);
+	});
+
+	it('keeps codebase work on its own', () => {
+		expect(workOf(iterations, 'codebase').map((i) => i.name)).toEqual(['codebase']);
+	});
+
+	it('does not take a prototype page named codebase for codebase work', () => {
+		expect(workOf([it1({ name: 'codebase', branch: 'prototype/alpha/codebase' })], 'codebase')).toEqual([]);
 	});
 });

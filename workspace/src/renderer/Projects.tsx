@@ -5,7 +5,7 @@ import { LoadingScreen } from './Loading';
 import { NewWork, type Created } from './NewWork';
 import { PeopleAvatars } from './People';
 import { PublishBanner, PublishLine, usePublishStatus } from './PublishStatus';
-import { startedAt } from '../shared/projects';
+import { startedAt, workOf } from '../shared/projects';
 import { RecordSheet } from './RecordSheet';
 import { Review } from './Review';
 import { Toolbar } from './Toolbar';
@@ -272,12 +272,17 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 							</div>
 							<div className="ml-auto flex flex-row flex-wrap items-center justify-end gap-2">
 								{project.iterations.length === 0 && <span className="text-muted-foreground px-2 text-sm">No branches yet.</span>}
-								{project.iterations.map((iteration) => (
-									<Button key={iteration.branch} onClick={() => setSelected({ project, iteration })}>
-										{sentence(iteration.name)}
-										{iteration.localOnly && !project.localOnly ? ' · local' : ''}
-									</Button>
-								))}
+								{/* One way into each kind of work, at its newest; the review screen switches between its iterations. */}
+								{(['prototype', 'codebase'] as const).map((kind) => {
+									const newest = workOf(project.iterations, kind)[0];
+									return (
+										newest && (
+											<Button key={kind} onClick={() => setSelected({ project, iteration: newest })}>
+												{kind === 'prototype' ? 'View prototype' : 'View codebase'}
+											</Button>
+										)
+									);
+								})}
 							</div>
 						</CardFooter>
 					</Card>

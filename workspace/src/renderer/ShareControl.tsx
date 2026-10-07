@@ -1,11 +1,11 @@
-import { CodeIcon, PackageCheckIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
+import { CodeIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared/contract';
 import { dialogView, isMine, stepText } from './shareView';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Spinner } from './ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
@@ -27,7 +27,6 @@ export const ShareControl = ({
 	onOpenInBrowser,
 	prototype = false,
 	onMoveToCode,
-	onHandoff,
 	editor,
 }: {
 	checkout: Checkout | null;
@@ -40,8 +39,6 @@ export const ShareControl = ({
 	prototype?: boolean;
 	/** Offered when there is a product repository here to build it in. */
 	onMoveToCode?: () => void;
-	/** Codebase work: the once-only full check before an engineer picks it up. */
-	onHandoff?: () => void;
 	/** Codebase work, handed to the person's editor: the checkout, and the agent's conversation when there is one. */
 	editor?: { editor: boolean; session: boolean; openInEditor: () => unknown; continueInClaude: () => unknown };
 }) => {
@@ -89,7 +86,7 @@ export const ShareControl = ({
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<DropdownMenuTrigger asChild>
-							<Button size="icon-sm" variant="outline" aria-label="More" disabled={!canOpen} className="-mr-2">
+							<Button size="icon-sm" variant="outline" aria-label="More" disabled={!canOpen}>
 								{running ? <Spinner /> : <EllipsisVerticalIcon />}
 							</Button>
 						</DropdownMenuTrigger>
@@ -115,12 +112,8 @@ export const ShareControl = ({
 							{running ? 'Sharing…' : url ? 'Update shared preview' : 'Share for review'}
 						</DropdownMenuItem>
 					)}
-					{onHandoff && (
-						<DropdownMenuItem onSelect={onHandoff}>
-							<PackageCheckIcon />
-							Hand off to engineering
-						</DropdownMenuItem>
-					)}
+					{/* What you do to the work, then where you look at it; no line when the first group is empty. */}
+					{((prototype && onMoveToCode) || (checkout && !prototype)) && <DropdownMenuSeparator />}
 					{editor && (
 						<DropdownMenuItem onSelect={editor.openInEditor}>
 							<SquareTerminalIcon />

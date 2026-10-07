@@ -1,13 +1,12 @@
-import { ChevronLeftIcon, FolderIcon, GitBranchIcon, MapPinIcon, MessageSquareIcon, TriangleAlertIcon } from 'lucide-react';
+import { ChevronDownIcon, ChevronLeftIcon, FolderIcon, GitBranchIcon, MapPinIcon, MessageSquareIcon, PackageCheckIcon, TriangleAlertIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
 import { READY_LINE } from '../shared/handoff';
 import { latest } from '../shared/latest';
-import { isPrototype, prototypePagePath } from '../shared/projects';
+import { isPrototype, iterationLabel, prototypePagePath, workKind, workOf } from '../shared/projects';
 import { HandoffDialog } from './HandoffDialog';
 import { MoveToCode } from './MoveToCode';
-import { PeopleAvatars } from './People';
 import { AgentLog, Loading } from './Loading';
 import { ShareControl } from './ShareControl';
 import { useOverlaps } from './overlays';
@@ -22,6 +21,7 @@ import { usePrototypeBuild } from './prototypeBuild';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Textarea } from './ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
@@ -80,7 +80,7 @@ export const Review = ({
 	/** Another section is showing over this screen, so the preview has to step aside. */
 	hidden: boolean;
 	/** Opens other work: where moving a prototype into the code goes next. */
-	onOpen: (project: Project, iteration: ProjectIteration, task: string) => void;
+	onOpen: (project: Project, iteration: ProjectIteration, task?: string) => void;
 }) => {
 	const [comments, setComments] = useState<ReviewComment[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -146,6 +146,8 @@ export const Review = ({
 	const [moving, setMoving] = useState(false);
 	// Handoff on codebase work: confirmed in a dialog, then run on this screen, ending in a report.
 	const codebase = !prototype && iteration.name === 'codebase';
+	// The other iterations of the same kind of work, to switch between without going back to the list.
+	const siblings = workOf(project.iterations, workKind(iteration));
 	const [handingOff, setHandingOff] = useState(false);
 	const [handoffReady, setHandoffReady] = useState<boolean | null>(null);
 
@@ -670,59 +672,90 @@ export const Review = ({
 					</TooltipContent>
 				</Tooltip>
 				<div className="grow" />
-				{local.phase.kind === 'running' && local.phase.uncommitted && (
-					<Button
-						size="sm"
-						variant="outline"
-						title={`${checkout?.name ?? 'The checkout'} has changes nobody committed. ${editor.session ? 'Continue in Claude Code to finish them' : 'Open it in VS Code to look'}, or commit them yourself.`}
-						onClick={() => void (editor.session ? editor.continueInClaude() : editor.openInEditor())}
-					>
-						<TriangleAlertIcon />
-						Uncommitted changes
-					</Button>
-				)}
-				<PeopleAvatars people={iteration.contributors} className="-mr-2" />
-
-				<ShareControl
-					checkout={checkout}
-					project={project}
-					iteration={iteration}
-					canOpen={opened}
-					onOpenInBrowser={() => void window.workspace.openPreviewInBrowser().then((r) => !r.ok && setError(r.error))}
-					prototype={prototype}
-					onMoveToCode={checkout ? () => setMoving(true) : undefined}
-					onHandoff={checkout && codebase ? () => setHandingOff(true) : undefined}
-					editor={editor.available ? editor : undefined}
-				/>
-
-				{/* One control, two halves: comment mode on the left, the list of comments on the right.
-				    A pressed half is filled rather than outlined, so which mode is on is readable at a glance. */}
-				<div className="flex items-center">
-					<Button
-						size="sm"
-						variant={commentMode ? 'default' : 'outline'}
-						aria-pressed={commentMode}
-						disabled={!opened}
-						title="Comment: click anywhere on the page to leave one (C)"
-						className="rounded-r-none"
-						onClick={() => (commentMode ? exitCommentMode() : setCommentMode(true))}
-					>
-						<MapPinIcon />
-						Comment
-					</Button>
-					<Button
-						size="sm"
-						variant={sidebarOpen ? 'default' : 'outline'}
-						aria-pressed={sidebarOpen}
-						aria-label="Show all comments"
-						disabled={!opened}
-						title={total > 0 ? `All comments (${total})` : 'All comments'}
-						className="rounded-l-none border-l-0"
-						onClick={() => setSidebarOpen((o) => !o)}
-					>
-						<MessageSquareIcon />
-						{total > 0 ? total : null}
-					</Button>
+				{/* What you can do here, evenly spaced: tighter than the toolbar's own gap, so it reads as one group. */}
+				<div className="flex items-center gap-2">
+					{local.phase.kind === 'running' && local.phase.uncommitted && (
+						<Button
+							size="sm"
+							variant="ghost"
+							title={`${checkout?.name ?? 'The checkout'} has changes nobody committed. ${editor.session ? 'Continue in Claude Code to finish them' : 'Open it in VS Code to look'}, or commit them yourself.`}
+							onClick={() => void (editor.session ? editor.continueInClaude() : editor.openInEditor())}
+						>
+							<TriangleAlertIcon />
+							Uncommitted changes
+						</Button>
+					)}
+					{/* Shown even with one iteration, so where you are, and that there can be more, is always visible. */}
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button size="sm" variant="outline" title="Switch iteration">
+								{iterationLabel(iteration)}
+								<ChevronDownIcon />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end" className="w-auto">
+							<DropdownMenuRadioGroup
+								value={iteration.branch}
+								onValueChange={(branch) => {
+									const next = siblings.find((i) => i.branch === branch);
+									if (next && branch !== iteration.branch) onOpen(project, next);
+								}}
+							>
+								{siblings.map((i) => (
+									<DropdownMenuRadioItem key={i.branch} value={i.branch}>
+										{iterationLabel(i)}
+										{i.localOnly && !project.localOnly ? ' · local' : ''}
+									</DropdownMenuRadioItem>
+								))}
+							</DropdownMenuRadioGroup>
+						</DropdownMenuContent>
+					</DropdownMenu>
+					{/* One control, two halves: comment mode on the left, the list of comments on the right.
+					    A pressed half is filled rather than outlined, so which mode is on is readable at a glance. */}
+					<div className="flex items-center">
+						<Button
+							size="sm"
+							variant={commentMode ? 'default' : 'outline'}
+							aria-pressed={commentMode}
+							disabled={!opened}
+							title="Comment: click anywhere on the page to leave one (C)"
+							className="rounded-r-none"
+							onClick={() => (commentMode ? exitCommentMode() : setCommentMode(true))}
+						>
+							<MapPinIcon />
+							Comment
+						</Button>
+						<Button
+							size="sm"
+							variant={sidebarOpen ? 'default' : 'outline'}
+							aria-pressed={sidebarOpen}
+							aria-label="Show all comments"
+							disabled={!opened}
+							title={total > 0 ? `All comments (${total})` : 'All comments'}
+							className="rounded-l-none border-l-0"
+							onClick={() => setSidebarOpen((o) => !o)}
+						>
+							<MessageSquareIcon />
+							{total > 0 ? total : null}
+						</Button>
+					</div>
+					{/* Codebase work's next step, so it is the one filled button. */}
+					{checkout && codebase && (
+						<Button size="sm" onClick={() => setHandingOff(true)}>
+							<PackageCheckIcon />
+							Hand off
+						</Button>
+					)}
+					<ShareControl
+						checkout={checkout}
+						project={project}
+						iteration={iteration}
+						canOpen={opened}
+						onOpenInBrowser={() => void window.workspace.openPreviewInBrowser().then((r) => !r.ok && setError(r.error))}
+						prototype={prototype}
+						onMoveToCode={checkout ? () => setMoving(true) : undefined}
+							editor={editor.available ? editor : undefined}
+					/>
 				</div>
 			</Toolbar>
 

@@ -175,6 +175,23 @@ export const nextPrototypeNumber = (names: string[]): number =>
 export const nextPrototypeName = (names: string[]): string => `i${nextPrototypeNumber(names)}`;
 export const isPrototypeName = (name: string): boolean => /^i\d{1,4}$/.test(name);
 
+/**
+ * A project's work as the screens offer it: its **prototypes** (prototype pages and prototype branches alike: one-off
+ * attempts, kept or carried into the code) and its **codebase** work, the real change. Each is newest first, so
+ * the first is what "View prototype" and "View codebase" open, and the rest are the iterations to switch to.
+ */
+export type WorkKind = 'prototype' | 'codebase';
+export const workKind = (i: Pick<ProjectIteration, 'name' | 'branch'>): WorkKind =>
+	!isPrototype(i.branch) && i.name === 'codebase' ? 'codebase' : 'prototype';
+/** How an iteration is named on screen. A project's codebase work is one branch, so it is its first iteration. */
+export const iterationLabel = (i: Pick<ProjectIteration, 'name' | 'branch'>): string =>
+	workKind(i) === 'codebase' ? 'I1' : i.name.toUpperCase();
+const newestStarted = (a: ProjectIteration, b: ProjectIteration): number =>
+	(b.createdAt ? Date.parse(b.createdAt) : -Infinity) - (a.createdAt ? Date.parse(a.createdAt) : -Infinity) ||
+	b.name.localeCompare(a.name, undefined, { numeric: true });
+export const workOf = (iterations: ProjectIteration[], kind: WorkKind): ProjectIteration[] =>
+	iterations.filter((i) => workKind(i) === kind).sort(newestStarted);
+
 /** A just-made iteration as the screens show one: nothing shared or built yet, so nowhere to land. */
 export const freshIteration = (it: Iteration): ProjectIteration => ({
 	name: it.name,
