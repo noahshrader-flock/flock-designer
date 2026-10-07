@@ -1,7 +1,7 @@
-# Audit: quick prototype q1 into the codebase
+# Audit: prototype i1 into the codebase
 
 Project `admin-usage` · branch `feature/admin-usage` (at `370fba8e`, the same commit as `noah/flock-designer`) ·
-prototype source `quick/admin-usage/q1.tsx`, modelled on `noah/flock-designer` at `21c9b90` · FUI 5.5.4 (installed
+prototype source `prototypes/admin-usage/i1.tsx`, modelled on `noah/flock-designer` at `21c9b90` · FUI 5.5.4 (installed
 package) · written 2026-10-06, before any code was changed.
 
 This is for a designer and an engineer to read together. Section 1 is what needs a person. Everything after it is

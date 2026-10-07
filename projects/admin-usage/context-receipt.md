@@ -1,4 +1,4 @@
-# Context receipt: admin-usage (codebase, from quick prototype q1)
+# Context receipt: admin-usage (codebase, from prototype i1)
 
 **Pinned:** `feature/admin-usage` at `370fba8e`, the same commit as the baseline `noah/flock-designer`, with a clean
 tree. The prototype was modelled on `21c9b90`, one commit earlier; that commit changed Flock Designer docs only.
@@ -7,7 +7,7 @@ checked against the installed `.d.ts` files and then by `tsc`.
 
 **Could not read:** the sibling FUI `.flkd/` (`component-usage.md`, `tokens-and-styling.md`), the shared standards in
 `../flock-designer/standards/`, and `../flock-designer/skills/record-the-route.md`. This session only has permission
-to read `flock-coke`, `flock-designer/projects`, and the quick-prototype folder. To make up for it:
+to read `flock-coke`, `flock-designer/projects`, and the prototype folder. To make up for it:
 - the prototype already compiled against these components;
 - `tsc` checks every prop against the installed types;
 - the route is recorded the way `role-comparison/iterations.json` records it.
@@ -16,7 +16,7 @@ to read `flock-coke`, `flock-designer/projects`, and the quick-prototype folder.
 - **Path:** codebase, because the branch is `feature/admin-usage`.
 - **Scope:** the whole feature with every state, as the task "Build in the codebase" asks.
 - **Did not stop after this receipt for corrections:** the task said to build and commit, and reviews follow.
-  Open questions are in `audit-q1.md` §1.
+  Open questions are in `audit-i1.md` §1.
 
 **Sources:**
 - `src/components/org/upsertOrgPage.tsx`: the host page and its tab gating.
@@ -31,7 +31,7 @@ to read `flock-coke`, `flock-designer/projects`, and the quick-prototype folder.
   `dashboard-patterns` (no chart exists in Coke), `layout-and-routing`, `product-native-ui`, `non-negotiables` §1b.
 - `role-comparison` on `feature/role-comparison`: precedent for the MSW test harness.
 
-**Boundary:** the brief declares none. The inferred boundary is in `audit-q1.md` §5. Please confirm it.
+**Boundary:** the brief declares none. The inferred boundary is in `audit-i1.md` §5. Please confirm it.
 
 **Assumptions:**
 - Delete stands in for Archive (§1.1).

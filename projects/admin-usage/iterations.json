@@ -1,8 +1,8 @@
 [
   {
     "projectId": "admin-usage",
-    "name": "q1",
-    "branch": "quick/admin-usage/q1",
+    "name": "i1",
+    "branch": "prototype/admin-usage/i1",
     "commit": null,
     "createdAt": "2026-10-06T23:20:22.781Z",
     "note": "Add a new tab called \"Usage\" to the Organization page, after the last existing tab in the tab bar.",
@@ -24,7 +24,7 @@
     "branch": "feature/admin-usage",
     "commit": "110961775d06d954880114810e95f3c4c68f995a",
     "createdAt": "2026-10-07T01:20:54.057Z",
-    "note": "From quick prototype q1",
+    "note": "From prototype i1",
     "route": "/organization/79adf41c-d97b-11e9-a45c-73e7540252eb?tab=usage",
     "contributors": [
       {
