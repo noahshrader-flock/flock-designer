@@ -24,9 +24,11 @@ the wider product process at readiness to build.
 > **21 of 25 steps are done.** The full list, every step marked off in order, is
 > [The sequence](#the-sequence): Phases 1 to 4, numbered 1.1 to 4.3.
 >
-> **New on 2026-10-06: quick prototypes.** [3.7](#37--quick-prototypes) builds one shareable page from the
-> product's real components with no environment setup, and [3.8](#38--move-a-quick-prototype-into-the-code)
-> moves one into the code. Both are built and tested; each needs its first real run.
+> **Prototypes (2026-10-06; one idea since 2026-10-07).** [3.7](#37--prototypes) builds one shareable page from
+> the product's real components with no environment setup, and [3.8](#38--move-a-prototype-into-the-code)
+> moves one into the code. Both are built and tested; each needs its first real run. What was a *quick
+> prototype* is now simply a **prototype**, numbered `i1`, `i2`; none is made on a branch any more, and
+> **Address** works on a prototype's comments.
 >
 > **What remains needs other people, not code.** 3.6 is the pilot: two or three real projects reviewed
 > by a PM and an engineer, and then the decision to keep it, change it or stop. Phase 4 is rollout —
@@ -176,7 +178,7 @@ called before 2026-10-05, so history still resolves.
 
 ### Phase 3 — Flock Designer: the whole team browses and comments
 
-*Done through 3.5. 3.7 and 3.8, quick prototypes, are built and need their first real runs. 3.6, the pilot, needs other people. One real share (3.4) is still owed by Noah, which needs Coke's draft change pushed.*
+*Done through 3.5. 3.7 and 3.8, prototypes, are built and need their first real runs. 3.6, the pilot, needs other people. One real share (3.4) is still owed by Noah, which needs Coke's draft change pushed.*
 
 | # | Step | Status | Evidence, or what it needs | Was |
 |---|---|---|---|---|
@@ -188,8 +190,8 @@ called before 2026-10-05, so history still resolves.
 | 3.4 | [Share for review](#34--share-for-review-was-c3) | ✔ Done | One click pushes the branch, opens a draft pull request, waits for the deploy and records the address. Verified end to end in real Electron against a throwaway remote and a stand-in `gh`. **Still owed by you:** one real share, which needs Coke's draft change pushed | C3 |
 | 3.5 | [Close the loop](#35--close-the-loop-was-c4) | ✔ Done | A comment carries its commit, state, element and a picture; **Address** on each comment reads it fresh, writes `comments.md` and starts a real agent, which marks the comment addressed with the commit it made. Run for real against Coke on 2026-10-06 | C4 |
 | 3.6 | [Pilot and decision](#36--pilot-and-decision-was-c5) | ⏸ Needs people | Real projects reviewed by people outside design | C5 |
-| 3.7 | [Quick prototypes](#37--quick-prototypes) | ◐ Built — run once, awaiting Noah's call | First React run 2026-10-06 (admin-usage q1): the real shell and components, about 6 minutes, 51 KB of source, built first time. Closing it is Noah's judgement (**human**) | added 2026-10-06 |
-| 3.8 | [Move a quick prototype into the code](#38--move-a-quick-prototype-into-the-code) | ◐ Built — awaiting a real run | Confirmed in a dialog, then an audit from the prototype's marks, then real code on `feature/<project>`; never yet run (**human**) | added 2026-10-06 |
+| 3.7 | [Prototypes](#37--prototypes) | ◐ Built — run once, awaiting Noah's call | First React run 2026-10-06 (admin-usage, then named q1, now i1): the real shell and components, about 6 minutes, 51 KB of source, built first time. Closing it is Noah's judgement (**human**) | added 2026-10-06 |
+| 3.8 | [Move a prototype into the code](#38--move-a-prototype-into-the-code) | ◐ Built — awaiting a real run | Confirmed in a dialog, then an audit from the prototype's marks, then real code on `feature/<project>`; never yet run (**human**) | added 2026-10-06 |
 
 **The goal is the whole loop across two people:** a product manager sees an iteration and comments, and the designer pulls those comments and changes the prototype locally with the agent. **3.4 is the PM's half** (without a hosted preview and read access to the design repository the PM has nothing to open); **3.5 is the designer's half** (comments the agent can act on). Both are built. What is left is 3.6: running it with people outside design, and deciding.
 
@@ -302,16 +304,16 @@ an engineer at minimum.
 **Done when:** the team decides to keep it, change it, or stop, on what happened: did they open it,
 did they comment, how long from share to first comment, what did they say about installing it.
 
-### 3.7 — Quick prototypes
+### 3.7 — Prototypes
 
 **Human.** Built 2026-10-06 at Noah's request. **What sets it apart from a codebase feature is what it
 needs:** the repository and its packages installed, and nothing else. It never runs the product, so no
 environment variables, no backend, no mock-data service.
 
-**New → Quick prototype**, from a repository and a branch, has the agent write **one React file** with the
+**New → Prototype**, from a repository and a branch, has the agent write **one React file** with the
 product's real components, reading the product's code, guidance and installed packages read-only. The app
 bundles it (esbuild, against the product's own `node_modules`) into **one page**, and keeps both in
-`projects/<id>/quick/`. The page opens in the review screen from a small server in the app, and comments
+`projects/<id>/prototypes/`. The page opens in the review screen from a small server in the app, and comments
 pin to it as on any iteration. **There is no hand-drawn mode:** without the design system installed the
 dialog says what to install and will not start.
 
@@ -323,23 +325,31 @@ one comment line above the part: `@standin` (cannot be done today), `@mock` (sta
 files are kept once, by content, in `projects/_shared/`, and served beside every page: a page costs about
 0.5 MB in git. The only size limit is GitHub's.
 
-Where it lives: `workspace/src/main/services/quick.ts`, `quickBundle.ts`, `quickServer.ts`; the skill
-`skills/build-quick-prototype.md`; Coke's mount recipe and shell reference in
+**One idea, one count (2026-10-07).** This was first called a *quick prototype*, named `q1`, `q2`, beside the
+older prototypes that were code on `fd/<id>/iN` branches. Two implementations of one idea confused the people
+using it and the code alike, so they are one thing now: a prototype is this page, numbered `i1`, `i2` on one
+count with the older ones, and none is made on a branch (the `fd/` ones that exist still open, as older work).
+The only other kind of work is **codebase work**. **Address** works on a prototype's comments as on codebase
+work: the agent changes the source where it was built, checks it with the build command, and the app saves the
+page; nothing is committed, and the comment records a hash of the source where a branch would record a commit.
+
+Where it lives: `workspace/src/main/services/prototype.ts`, `prototypeBundle.ts`, `prototypeServer.ts`; the skill
+`skills/build-prototype.md` (and, for Address, `skills/address-comments.md`); Coke's mount recipe and shell reference in
 `.flkd/composition/product-shell-recreation.md` (on `noah/flock-designer`).
 
 **Done when:** a real run, from Noah's machine on `noah/flock-designer`, produces a page clearly more
 accurate than the two hand-drawn runs, in less than their eight minutes, and it builds.
 
-### 3.8 — Move a quick prototype into the code
+### 3.8 — Move a prototype into the code
 
-**Human.** **Build in the codebase**, on a quick prototype, starts the project's codebase work with the
+**Human.** **Build in the codebase**, on a prototype, starts the project's codebase work with the
 prototype's source. It asks first: the branch it will create or continue, the branch it starts from (the one
 the prototype was modelled on), and anything that would stop it (uncommitted changes, codebase work already
-recorded, Claude Code not ready). It is the same branch and agent as a codebase feature made from New. The agent writes `projects/<id>/audit-qN.md` first, built from the marks: each
+recorded, Claude Code not ready). It is the same branch and agent as a codebase feature made from New. The agent writes `projects/<id>/audit-iN.md` first, built from the marks: each
 `@standin` a decision, each `@mock` a data task, each `@remove` a deletion. Then it moves the unmarked code
 into the files where it belongs. Skill: `skills/move-to-code.md`.
 
-**Done when:** one quick prototype from 3.7 is moved into the code and the audit and branch are judged
+**Done when:** one prototype from 3.7 is moved into the code and the audit and branch are judged
 by Noah to be a better start than a hand-drawn page would have been.
 
 ### 4.1 — Designer environment access (was step 18)
@@ -475,8 +485,10 @@ is met and the evidence is cited in the [change log](#change-log).
 | Persistence | Branches kept; previews expire; comments and the record kept in the design repo | A comment must outlive the preview it was made on |
 | Component gaps | Through the [learning loop](#the-learning-loop) | Unchanged |
 | Acting on a comment | One comment at a time, from its own card; the agent marks it addressed with the commit, and **a person resolves it** | Comments are not alike, so a batch makes the clear ones wait on the unclear. The agent knows it changed something; only the person who wrote the comment knows whether that was what they meant — and an unresolved comment that is done costs one click, while a resolved comment that is wrong costs the signal |
-| Quick prototypes | **React only**, with the product's installed design system, bundled into one page kept in the project's folder (added 2026-10-06) | Hand-drawn HTML imitated the components and got the shell wrong twice; real components make that impossible and give the move into the code real code to start from. Without the packages it says what to install rather than make a lesser page |
-| Gaps in a quick prototype | Approximated and marked: `@standin`, `@mock`, `@remove` | A missing component or package never blocks an idea, and the move into the code reads each mark as a decision, a data task or a deletion |
+| Prototypes | **React only**, with the product's installed design system, bundled into one page kept in the project's folder (added 2026-10-06) | Hand-drawn HTML imitated the components and got the shell wrong twice; real components make that impossible and give the move into the code real code to start from. Without the packages it says what to install rather than make a lesser page |
+| Gaps in a prototype | Approximated and marked: `@standin`, `@mock`, `@remove` | A missing component or package never blocks an idea, and the move into the code reads each mark as a decision, a data task or a deletion |
+| One kind of prototype | A page built from the real components, numbered `iN` on one count, and never a branch (2026-10-07) | Two implementations of one idea — pages and `fd/` branches — confused the people using it and the code alike. The `fd/` prototypes that exist still open, as older work |
+| Acting on a comment on a prototype | **Address**, as on codebase work: the agent changes the source and the page is saved; nothing is committed (2026-10-07) | The comment loop is what the pilot tests, and prototypes are its fast path; without it a reviewer's comment on one could only be acted on by hand |
 | Where an iteration opens | The route its record names, checked when recorded and again when it loads | A codebase branch runs the whole product, so without it the preview opens at the product's front door and a comment lands on work the iteration never touched |
 
 **Dropped from the earlier design:** capture storage (no screenshots to host) and
@@ -510,7 +522,7 @@ automating handoff inside the app (`npm run handoff` already does it). See
 | Any visual canvas, embedded editor, Figma import, or model-provider integration | Never in this plan |
 | Blocking a comment outside the iteration's scope | A PM may legitimately comment on a breadcrumb or a neighbouring page, and for codebase work the app cannot reliably know the boundary — it is prose in `brief.md`. A false "you cannot comment here" is worse than a comment the agent declines, with its reason now shown. **Marking** such a comment is worth doing once the boundary is machine-readable; deferred 2026-10-06 |
 | Committing `comments.md` for its history | GitHub already holds authorship, edits and resolution. A committed generated file adds merge conflicts between two people commenting at once, and looks authoritative while going stale. The history lives in the file itself instead: resolved comments are listed, marked, under their own heading |
-| A design-system pack for people without the product installed | Would let anyone make a quick prototype with no install (about 70 MB of built packages, shared). Deferred until a real 3.7 run proves the approach; it also needs a decision on keeping the design system's built files in the design repository |
+| A design-system pack for people without the product installed | Would let anyone make a prototype with no install (about 70 MB of built packages, shared). Deferred until a real 3.7 run proves the approach; it also needs a decision on keeping the design system's built files in the design repository |
 | A browser extension for commenting | Would let reviewers comment in their own browser on login-gated previews. Deferred: the app covers review while shared previews are anonymous, and it is a second client |
 | A React component chain in the anchor | Not verified against Coke's React version, and the element's kind and its named containers already carry the meaning |
 
@@ -522,8 +534,8 @@ Decisions already settled in this plan are not repeated here. What remains genui
 2026-10-05).*
 
 - **Is Mac enough for now?** Windows roughly doubles the distribution work. Decide before 3.6.
-- **May a quick prototype carry the MUI X licence key?** Without it, `FSDataGrid` shows a "Missing license key" watermark. It is the prototype, not a bug, but it is visible. The key comes from Coke's environment, and a prototype is kept in the design repository.
-- **When does `.flkd/` reach `develop`?** Coke's Flock Designer guidance is only on `noah/flock-designer`. A quick prototype reads it from the branch it is based on when that branch has it, otherwise from the accepted checkout's working tree.
+- **May a prototype carry the MUI X licence key?** Without it, `FSDataGrid` shows a "Missing license key" watermark. It is the prototype, not a bug, but it is visible. The key comes from Coke's environment, and a prototype is kept in the design repository.
+- **When does `.flkd/` reach `develop`?** Coke's Flock Designer guidance is only on `noah/flock-designer`. A prototype reads it from the branch it is based on when that branch has it, otherwise from the accepted checkout's working tree.
 - **How much of Coke should carry stable names?** Measured 2026-10-06: **131 `data-e2e-ref` across 49 of 344
   component files**, mostly on leaf elements rather than containers. A pin on an element with no stable name of
   its own is only as durable as its nearest named ancestor, so this is the ceiling on how well a comment survives
@@ -690,7 +702,9 @@ It also shows component gaps flowing into Design System component work, Design S
 
 ### Vocabulary
 
-These terms are easy to confuse and are used strictly throughout the set. The file layouts behind them are defined in the plan's [project folder](#the-project-folder) and [prototype directory](#the-prototype-directory) contracts.
+These terms are easy to confuse and are used strictly throughout the set, in the app, and in the agent files. **This is the one place they are defined**; the repository's README points here. The file layouts behind them are defined in the plan's [project folder](#the-project-folder) and [prototype directory](#the-prototype-directory) contracts.
+
+**Two kinds of work, and nothing else:** a **prototype**, to decide what something should be, and **codebase work**, to build it. A prototype can be moved into the code, or codebase work can be started directly.
 
 | Term | What it is | Where it lives |
 |---|---|---|
@@ -700,9 +714,16 @@ These terms are easy to confuse and are used strictly throughout the set. The fi
 | **Review record** | Per-iteration evidence, product parity findings, implementation findings, the accessibility section, and open questions | `review.md` in the project folder |
 | **Project folder** | The directory holding every record a project produces, one per project | `flock-designer/projects/<project-id>/` |
 | **Project record** | The proposed shareable project narrative, from step 14, for a designer who does not have the branch | `project-knowledge/<project-id>/` in the proposed `flock-design-knowledge` repository |
-| **Prototype** | The runnable source itself, and nothing else | `src/prototypes/<project-id>/` on an `fd/<project-id>/iN` branch |
+| **Prototype** | One page built from the product's real components, for deciding what something should be. Never a branch. Earlier prototypes were code on `fd/<project-id>/iN` branches (`src/prototypes/<project-id>/`); those still open, as older work, and none is made any more | `projects/<project-id>/prototypes/iN.tsx` and `iN.html` in the design repository |
+| **Codebase work** | The real change, built to ship: every state, tests, real routing, backend stubbed. Engineering takes the branch | The product's `feature/<project-id>` branch |
+| **Iteration** | One version of a piece of work, shown as `I1`, `I2`. Prototypes have as many as are made, on one count; codebase work has one (`I1`) for now | The project's `iterations.json` |
+| **Address** | Asking the agent to act on one comment. It changes the work and marks the comment addressed; **a person resolves it** | The comment's own card |
+| **Move into the code** | Starting codebase work from a prototype: an audit of its marked gaps first, then real code | `audit-iN.md` in the project folder, then the `feature/` branch |
+| **Hand off** | The full check, once, before an engineer takes codebase work | `HANDOFF.md` on the branch |
 
-**One identifier throughout.** A project gets one slug, `<project-id>`, at creation — for example `alerts-triage`. That same slug keys the branch (`fd/alerts-triage/i1`), the prototype directory (`src/prototypes/alerts-triage/`), the project folder (`flock-designer/projects/alerts-triage/`), and, from step 14, the project record (`project-knowledge/alerts-triage/`). The earlier `proto/<name>` branch convention observed on the Designer branch is superseded by `fd/<project-id>/iN`.
+**Not used any more:** *quick prototype*, the earlier name for a prototype, and `qN`, its earlier numbering.
+
+**One identifier throughout.** A project gets one slug, `<project-id>`, at creation — for example `alerts-triage`. That same slug keys the branch (`fd/alerts-triage/i1`), the prototype directory (`src/prototypes/alerts-triage/`), the project folder (`flock-designer/projects/alerts-triage/`), and, from step 14, the project record (`project-knowledge/alerts-triage/`). The earlier `proto/<name>` branch convention observed on the Designer branch is superseded by `fd/<project-id>/iN`. *Since 2026-10-07 a prototype is not a branch at all; the slug keys its folder, `projects/<project-id>/prototypes/`, and the codebase branch, `feature/<project-id>`.*
 
 **Figma is reference-only.** Flock Designer reads Figma and FigJam as links and exported images inside a brief. There is no Figma API integration, import pipeline, or design-to-code conversion in any phase of the plan.
 
@@ -1040,6 +1061,10 @@ as a passing check, which is the failure the whole evidence model exists to prev
 
 ### The prototype directory
 
+> **Older prototypes only (2026-10-07).** This is where a prototype's code lived when prototypes were made on
+> `fd/<project-id>/iN` branches. A prototype is now one page kept in the design repository ([3.7](#37--prototypes)),
+> and nothing new is made here; the ones that exist still open.
+
 **Implemented in:** `flock-coke/.flkd/manifest.md` — "Prototype configuration"; `flock-coke/src/prototypes/README.md`.
 
 The canonical shape, keyed by `<project-id>`, the same slug used for the branch and the project folder.
@@ -1105,6 +1130,10 @@ before any code is written.
 
 ### Git and iteration model
 
+> **Since 2026-10-07 only codebase work is a branch.** A prototype is a page kept in the design repository, numbered
+> `iN` ([3.7](#37--prototypes)). What follows is how prototype branches were drawn; it still describes the
+> `fd/<project-id>/iN` branches that exist, and codebase work's one branch.
+
 **Implemented in:** `flock-coke/.flkd/manifest.md` — "Prototype configuration"; enforced in `.flkd/agents/implementation-reviewer.md`.
 
 - Start from the selected baseline and create a project namespace only after confirmation: `fd/<project-id>/i1`, `fd/<project-id>/i2`, and so on.
@@ -1121,6 +1150,11 @@ before any code is written.
 
 **Implemented in:** `flock-coke/.flkd/standards/non-negotiables.md` §0 and §1b; the agent's path
 decision. Added 2026-09-29.
+
+> **Since 2026-10-07 the prototype path is a page, not a branch.** A prototype is one React file built from the
+> real components and kept in the design repository ([3.7](#37--prototypes)); nothing new is made on
+> `fd/<project-id>/iN`. The codebase column below still holds. The prototype column, and the path rule for an
+> `fd/` branch, describe the older prototype branches, which still open.
 
 **This is the thing the plan always described and only half-built.** Two paths, not two tools:
 
@@ -3498,6 +3532,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-07 | **Prototypes are one idea, with one vocabulary, and Address works on them.** Ahead of the pilot, Noah wanted the complexity that is not needed gone. A *quick prototype* was a second implementation of a prototype beside the `fd/<id>/iN` branches; it is now simply a **prototype**, numbered `i1`, `i2` on one count, and none is made on a branch (the existing `fd/` ones still open). "Quick" is gone from the app, its storage (`projects/<id>/prototypes/`) and the agent files (`skills/build-prototype.md`); admin-usage's `q1` became `i1`. **Address** now works on a prototype's comments: the agent changes the source, the page is saved, nothing is committed. The terms are defined once, in Vocabulary, and the README points there. Older change-log rows keep the names they used | Status, Phase 3, 3.7, 3.8, Decisions, Not being built, Open questions, Vocabulary, The prototype directory, Git and iteration model, The two build paths |
 | 2026-10-06 | **Build in the codebase asks first.** Noah asked whether moving a quick prototype into the code was worth having, or duplicated a codebase feature. Worth it, and not a duplicate: quick prototype (cheap, for conversation), codebase feature (real from the start) and this (the bridge) are three jobs on one project, and the bridge reuses the codebase feature's branch and agent. It started at once, from whichever branch the checkout was on; it now confirms in a dialog that starts from the branch the prototype was modelled on and shows what would stop it. Set up so the auditor can be tested and refined next. | Phase 3 table (3.8); 3.8 |
 | 2026-10-06 | **The first React quick prototype ran, and met 3.7's bar on the evidence.** admin-usage q1, based on `noah/flock-designer`: the real `FSUniversalNav` with the reference's twelve links, `FSDataGrid`, `FSDrawer`, `FSDialog` and `FSSymbol`, no raw colours, 13 marks each with an "On move" note; about 6 minutes against about 8, 51 KB of source against 80 KB of HTML, built first time. Two findings went into the files: a state must show the situation at rest (its dialog opened with a dropdown already expanded), and a prototype keeps the product's colour mode (it renders dark on a dark Mac, as Coke does, since `FSApp` follows the system). **Open:** whether Coke means to support dark mode. 3.7 is left for Noah to close. | Phase 3 table (3.7) |
 | 2026-10-06 | **Quick prototypes: React only, built from the real design system, with gaps marked rather than refused (3.7, 3.8 added).** Noah wanted designers in the codebase without the cost of the environment: a quick prototype needs the repository and its packages, never the running product. Two real hand-drawn runs on the Admin usage idea showed why HTML was the wrong medium: the first had no app shell at all, because Coke's guidance lived only on `noah/flock-designer` and the skill never pointed at it; the second drew the top bar black from cookie advice written for coded prototypes, took its colours from legacy SCSS and hand-built the data grid. Now the agent writes one React file with real components, which the app bundles against the product's installed packages into one page, and the move into the code reads its `@standin`, `@mock` and `@remove` marks. Hand-drawn mode was removed at Noah's call: without the packages the dialog says what to install. The design system's ~5 MB of fonts are kept once in `projects/_shared/`, so a page costs about 0.5 MB in git. Coke's guidance gained a dated shell reference from a real screenshot and the React mount recipe (`21c9b904`, unpushed). Also fixed while testing: a build race that stranded a finished page, a codebase feature able to start from a branch with no `.flkd/`. | Where we are; Phase 3 table; 3.7; 3.8; Decisions; Not being built; Open questions |

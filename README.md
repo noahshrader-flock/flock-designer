@@ -16,6 +16,13 @@ it, and a product repository does not carry a copy.
 patterns and boundaries stay in the product repository; these are the ones that hold anywhere. See
 [`standards/README.md`](standards/README.md) for how a product resolves them and which tier wins.
 
+## The words
+
+There are two kinds of work: a **prototype**, one page built from the product's real components to decide what
+something should be, and **codebase work**, the real change, built to ship. Each has iterations, `I1`, `I2`.
+**Address** asks the agent to act on one comment; **Hand off** is the full check before an engineer takes the
+work. These and the rest are defined once, in [the plan's vocabulary](PLAN.md#vocabulary).
+
 ## Starting a project
 
 Make a folder under `projects/`. Put whatever you already have into it — a markdown file, a PRD, a
