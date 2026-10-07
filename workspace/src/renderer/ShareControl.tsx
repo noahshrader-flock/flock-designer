@@ -91,7 +91,7 @@ export const ShareControl = ({
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<DropdownMenuTrigger asChild>
-							<Button size="icon-sm" variant="outline" aria-label="More" className="-mr-2">
+							<Button size="icon-sm" variant="outline" aria-label="More" disabled={!canOpen} className="-mr-2">
 								{running ? <Spinner /> : <EllipsisVerticalIcon />}
 							</Button>
 						</DropdownMenuTrigger>
@@ -117,7 +117,7 @@ export const ShareControl = ({
 							{running ? 'Sharing…' : url ? 'Update shared preview' : 'Share for review'}
 						</DropdownMenuItem>
 					)}
-					<DropdownMenuItem disabled={!canOpen} onSelect={onOpenInBrowser}>
+					<DropdownMenuItem onSelect={onOpenInBrowser}>
 						<ExternalLinkIcon />
 						Open in browser
 					</DropdownMenuItem>
