@@ -288,8 +288,7 @@ export const useComments = ({
 		const r = await store.post(draft.trim(), pending, pendingPicture);
 		setPosting(false);
 		if (r.ok) {
-			changes.current++;
-			posted.current.set(r.value.id, r.value);
+			showChanged(r.value);
 			setDraft('');
 			setPending(null);
 			setPendingPicture(null);
