@@ -185,7 +185,14 @@ export interface MoveToCodePlan {
 /** Whether a prototype can be built from a repository here: its design system installed, and the bundler present. */
 export type PrototypeReadiness =
 	| { ready: true; designSystem: string; version: string | null }
-	| { ready: false; why: 'not-installed' | 'no-bundler'; designSystem: string; repository: string };
+	| {
+			ready: false;
+			why: 'not-installed' | 'no-bundler';
+			designSystem: string;
+			repository: string;
+			/** The repository declares how it installs (`install`), so the app can run it when asked. */
+			canInstall?: boolean;
+	  };
 
 /** Something that could not be published, and why, in words a person can act on. */
 export interface PublishProblem {
@@ -261,6 +268,11 @@ export interface WorkspaceApi {
 	cloneRepository(repository: string): Promise<Result<Checkout>>;
 	/** Stops a clone that is running. What it made is removed. */
 	cancelClone(): Promise<Result<null>>;
+	/** Runs the install command the repository declares (`install`), and nothing else. Its output arrives through `onInstallLine`. */
+	installPackages(root: string): Promise<Result<null>>;
+	/** Stops an install that is running. */
+	cancelInstall(): Promise<Result<null>>;
+	onInstallLine(listener: (line: string) => void): () => void;
 	onCloneProgress(listener: (progress: CloneProgress) => void): () => void;
 	stopCommand(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	commandStatus(root: string, commandId: string): Promise<Result<PreviewStatus>>;
@@ -665,6 +677,9 @@ export const CHANNELS = {
 	clonePlan: 'workspace:clonePlan',
 	cloneRepository: 'workspace:cloneRepository',
 	cancelClone: 'workspace:cancelClone',
+	installPackages: 'workspace:installPackages',
+	cancelInstall: 'workspace:cancelInstall',
+	installLine: 'workspace:event:installLine',
 	cloneProgress: 'workspace:event:cloneProgress',
 	listRepositories: 'workspace:listRepositories',
 	listBaseBranches: 'workspace:listBaseBranches',

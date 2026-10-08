@@ -148,6 +148,7 @@ export const NewWork = ({
 			closedWhileCloning.current = true;
 			void window.workspace.cancelClone();
 		}
+		// An install is left to finish: stopping npm part way leaves the packages half there.
 		onClose();
 	};
 
@@ -160,6 +161,8 @@ export const NewWork = ({
 	// Whether this repository can build a prototype here, asked as soon as there is one to ask about.
 	const [prototype, setPrototype] = useState<PrototypeReadiness | null>(null);
 	const askRoot = checkout && !elsewhere ? checkout.root : null;
+	// Asked again once its packages are installed from here.
+	const [installed, setInstalled] = useState(0);
 	useEffect(() => {
 		setPrototype(null);
 		if (!open || kind !== 'prototype' || askRoot === null) return;
@@ -168,7 +171,20 @@ export const NewWork = ({
 		return () => {
 			current = false;
 		};
-	}, [open, kind, askRoot]);
+	}, [open, kind, askRoot, installed]);
+
+	// Installing its packages, with the command the repository declares: the last line it printed while it runs.
+	const [installing, setInstalling] = useState<string | null>(null);
+	useEffect(() => window.workspace.onInstallLine((line) => setInstalling((now) => (now === null ? null : line))), []);
+	const install = async () => {
+		if (askRoot === null) return;
+		setError(null);
+		setInstalling('Starting…');
+		const r = await window.workspace.installPackages(askRoot);
+		setInstalling(null);
+		if (!r.ok) return setError(r.error);
+		setInstalled((n) => n + 1);
+	};
 	// Nothing else decides this: no repository, or one without its packages, cannot make a prototype.
 	const prototypeBlocked = kind === 'prototype' && (askRoot === null || (prototype !== null && !prototype.ready));
 
@@ -304,7 +320,24 @@ export const NewWork = ({
 						<Alert variant="warning">
 							<AlertTitle>{prototype.why === 'not-installed' ? "The real components aren't installed here" : 'The page builder is missing'}</AlertTitle>
 							<AlertDescription>
-								{prototype.why === 'not-installed' ? (
+								{prototype.why === 'not-installed' && prototype.canInstall ? (
+									<div className="flex flex-col items-start gap-3">
+										<span>
+											A prototype is built from {prototype.designSystem}, and {prototype.repository}'s packages are not installed on this machine yet.
+										</span>
+										{installing === null ? (
+											<Button onClick={() => void install()}>Install packages</Button>
+										) : (
+											<div className="flex w-full items-center gap-2">
+												<Spinner />
+												<span className="min-w-0 grow truncate">{installing}</span>
+												<Button size="sm" variant="outline" onClick={() => void window.workspace.cancelInstall()}>
+													Stop
+												</Button>
+											</div>
+										)}
+									</div>
+								) : prototype.why === 'not-installed' ? (
 									<>
 										A prototype is built from {prototype.designSystem}, and it is not installed in {prototype.repository} on this machine. Run{' '}
 										<code>npm ci</code> in it (this needs access to the private packages), then open this again.

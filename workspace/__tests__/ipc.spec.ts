@@ -249,6 +249,35 @@ describe('where clones go', () => {
 		});
 	});
 
+	describe('installing its packages', () => {
+		const withInstall = (script: string) => {
+			const dir = join(home, 'GitHub', 'flock-installs');
+			makeProduct(dir, [{ id: 'install', label: 'Install', argv: [process.execPath, '-e', script] }]);
+			return dir;
+		};
+
+		it('runs the install command the repository declares, after which its design system is there', async () => {
+			const dir = withInstall("const fs = require('fs'); fs.mkdirSync('node_modules/x', { recursive: true }); fs.writeFileSync('node_modules/x/package.json', '{\"name\":\"x\",\"version\":\"1.0.0\"}'); console.log('added 1 package');");
+			await call(CHANNELS.useCheckout, dir);
+			expect((await call(CHANNELS.prototypeReadiness, dir)).value).toMatchObject({ ready: false, why: 'not-installed', canInstall: true });
+			expect(await call(CHANNELS.installPackages, dir)).toEqual({ ok: true, value: null });
+			expect((await call(CHANNELS.prototypeReadiness, dir)).value).not.toMatchObject({ why: 'not-installed' });
+		});
+
+		it('runs nothing for a repository that declares no install, and says so', async () => {
+			await call(CHANNELS.useCheckout, product);
+			expect((await call(CHANNELS.prototypeReadiness, product)).value).toMatchObject({ ready: false, why: 'not-installed', canInstall: false });
+			expect((await call(CHANNELS.installPackages, product)).error).toMatch(/"install" is not a command this repository declares/);
+		});
+
+		it('waits while the agent is working in it', async () => {
+			const dir = withInstall("console.log('x')");
+			await call(CHANNELS.useCheckout, dir);
+			agentRunningIn.mockReturnValue(true);
+			expect((await call(CHANNELS.installPackages, dir)).error).toMatch(/agent is working in flock-installs/);
+		});
+	});
+
 	describe('starting from a branch only on GitHub', () => {
 		it('starts codebase work from it, making it local first', async () => {
 			// The product, cloned: its other branch is only on its origin.

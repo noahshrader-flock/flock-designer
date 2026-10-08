@@ -54,7 +54,9 @@ provides, beside a checkout of this one and of its design system (the folder nam
   - `preview` serves an older prototype branch, `design-mode` serves the real product on mock data (each with
     `servesPreviewOn`);
   - `check-iteration`, the **light check**: fast, on what the branch changed, run after every step;
-  - `handoff`, the **gate**: takes `<project-id>`, and refuses until the work is fit for engineering.
+  - `handoff`, the **gate**: takes `<project-id>`, and refuses until the work is fit for engineering;
+  - `install` installs its packages (`npm ci`), run from the New modal when they are missing and the person asks.
+    Without it the modal says what to run instead.
   Commands run through `npm`, `npx` or `node`.
 - **`.flkd/`**: a manifest (its conventions, accessibility target and who signs off), its builder agent and
   two read-only reviewers (parity, and implementation), its own patterns and boundaries, and the product's

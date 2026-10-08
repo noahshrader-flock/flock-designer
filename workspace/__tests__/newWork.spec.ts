@@ -98,6 +98,44 @@ describe('what it starts from', () => {
 	});
 });
 
+describe('installing its packages', () => {
+	const notInstalled = (canInstall: boolean) => ({ ready: false, why: 'not-installed', designSystem: '@flocksafety/fui', repository: 'flock-coke', canInstall });
+
+	it('offers to install them when the repository says how, shows how far it has got, then asks again whether it is ready', async () => {
+		let line: ((l: string) => void) | null = null;
+		let finish: (v: unknown) => void = () => undefined;
+		let asked = 0;
+		const { app } = await open({
+			prototypeReadiness: async () => (asked++, ok(asked > 1 ? { ready: true, designSystem: '@flocksafety/fui', version: '1' } : notInstalled(true))),
+			installPackages: () => new Promise((r) => (finish = r)),
+			onInstallLine: (l: (s: string) => void) => ((line = l), () => undefined),
+		});
+		expect(text()).toContain("flock-coke's packages are not installed on this machine yet");
+		await press(button('Install packages'));
+		await act(async () => line?.('added 812 packages in 41s'));
+		expect(text()).toContain('added 812 packages in 41s');
+		expect(button('Stop')).toBeTruthy();
+		await act(async () => finish(ok(null)));
+		await settle();
+		expect(app.calls.installPackages).toEqual([[HERE.root]]);
+		expect(text()).not.toContain('not installed');
+	});
+
+	it('says why an install failed, and offers it again', async () => {
+		await open({ prototypeReadiness: async () => ok(notInstalled(true)), installPackages: async () => fail('npm on this computer is not signed in to GitHub Packages') });
+		await press(button('Install packages'));
+		await settle();
+		expect(text()).toContain('not signed in to GitHub Packages');
+		expect(button('Install packages')).toBeTruthy();
+	});
+
+	it('says what to run, with no button, when the repository does not say how it installs', async () => {
+		await open({ prototypeReadiness: async () => ok(notInstalled(false)) });
+		expect(text()).toContain('Run npm ci in it');
+		expect(() => button('Install packages')).toThrow(/0 buttons/);
+	});
+});
+
 describe('a repository with no clone on this machine', () => {
 	it('offers one button, with where it goes under it, the design repository when it comes too, and a way to change it', async () => {
 		await open({ clonePlan: async () => ok({ ...PLAN, design: { state: 'free', path: '/h/GitHub/flock-designer' } }) });

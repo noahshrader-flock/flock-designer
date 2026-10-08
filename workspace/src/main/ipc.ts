@@ -30,10 +30,11 @@ import { lastVerdict } from '../shared/handoff';
 import { type ShareRunner, previewIsUp, pullRequestText } from './services/share';
 import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
-import { DESCRIPTOR_PATH, readDescriptor } from './services/descriptor';
+import { DESCRIPTOR_PATH, findCommand, readDescriptor } from './services/descriptor';
 import { branchCommit, branchExists, branchesWithFile, ensureLocalBranch, isRepository, readCheckout, recentBranches, runGit } from './services/git';
 import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { Cloner } from './services/clone';
+import { INSTALL_COMMAND, Installer } from './services/install';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
@@ -131,6 +132,7 @@ export interface IpcContext {
 	cloneFolders?: CloneFolderMemory;
 	/** Clones what the New modal asks for. Given for tests, to clone from this machine instead of GitHub. */
 	cloner?: Cloner;
+	installer?: Installer;
 }
 
 export const registerIpc = ({
@@ -149,6 +151,7 @@ export const registerIpc = ({
 	sessions = new SessionMemory(join(tmpdir(), 'flock-designer-agent-sessions.json')),
 	cloneFolders = new CloneFolderMemory(join(tmpdir(), 'flock-designer-clone-folder.json')),
 	cloner = new Cloner(),
+	installer = new Installer(),
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
@@ -819,7 +822,36 @@ export const registerIpc = ({
 		esbuild: esbuildEntry,
 	});
 	/** Whether a prototype can be built from this accepted repository here. */
-	const prototypeReadiness = (root: string): PrototypeReadiness => work.readiness(opened.require(root));
+	const prototypeReadiness = (root: string): PrototypeReadiness => {
+		const readiness = work.readiness(opened.require(root));
+		return readiness.ready ? readiness : { ...readiness, canInstall: descriptorFor(root).commands.some((c) => c.id === INSTALL_COMMAND) };
+	};
+
+	// Installing a repository's packages, from the New modal: only the command it declares, one at a time, stoppable.
+	let installing: AbortController | null = null;
+	ipcMain.handle(
+		CHANNELS.installPackages,
+		guard(async (root: string): Promise<null> => {
+			const canonical = opened.require(root);
+			// Its packages change under a running agent otherwise.
+			if (agent.runningIn(canonical)) throw new Error(`The agent is working in ${basename(canonical)}. Install the packages when it has finished.`);
+			const command = findCommand(descriptorFor(root), INSTALL_COMMAND);
+			const stop = (installing = new AbortController());
+			try {
+				await installer.install(canonical, command, (line) => window.webContents.send(CHANNELS.installLine, line), stop.signal);
+			} finally {
+				installing = null;
+			}
+			return null;
+		}),
+	);
+	ipcMain.handle(
+		CHANNELS.cancelInstall,
+		guard(() => {
+			installing?.abort();
+			return null;
+		}),
+	);
 	/** What building a prototype and changing one share: what it is modelled on, read once, and how it is built. */
 	const prototypeRun = async (projectId: string, name: string, modelledOn = name) =>
 		work.buildPlan(projectId, name, await once(`source:${projectId}`, () => work.sources(projectId, modelledOn)));
