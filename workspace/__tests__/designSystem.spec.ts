@@ -2,6 +2,7 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DesignSystem } from '../src/renderer/DesignSystem';
+import { TooltipProvider } from '../src/renderer/ui/tooltip';
 import type { Catalog, CatalogComponent, CatalogUpdate } from '../src/shared/contract';
 import { button, fail, fakeApp, ok, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
@@ -71,8 +72,10 @@ describe('the list', () => {
 		await open(() => ok(ready()));
 		expect(groups()).toEqual(['Buttons', 'Surfaces', 'Popovers', 'Ungrouped']);
 		expect(rows()).toEqual(['FSButton', 'FSCard', 'FSCardContent', 'FSPopovers', 'FSApp']);
-		expect(text()).toContain('develop · fc2658f');
+		expect(document.querySelector('[aria-label="Branch develop"]')).not.toBeNull();
 		expect(text()).toContain('5 components');
+		// No commit, no date, and nothing about being up to date: only a problem is said.
+		expect(text()).not.toMatch(/fc2658f|2026|Oct|up to date|Checking GitHub/i);
 		expect(text()).not.toContain('Chromatic');
 	});
 
@@ -117,6 +120,18 @@ describe('finding a component', () => {
 		expect(text()).toContain('No components match.');
 	});
 
+	it('puts the count and Refresh in the row with search and the switcher, to its right, and none in the toolbar', async () => {
+		await open(() => ok(ready()));
+		const tabs = document.querySelector('[role="tablist"]')!;
+		const row = tabs.closest('div.flex-wrap')!;
+		expect(row.contains(document.querySelector('input[aria-label="Search components"]'))).toBe(true);
+		const refresh = button('Refresh');
+		expect(row.contains(refresh)).toBe(true);
+		expect(tabs.compareDocumentPosition(refresh) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		const toolbar = document.querySelector('h2')!.parentElement!;
+		expect(toolbar.textContent).toBe('FUI');
+	});
+
 	it('has no filter for components without a story', async () => {
 		await open(() => ok(ready()));
 		expect([...document.querySelectorAll('button')].some((b) => /without a story/i.test(b.textContent ?? ''))).toBe(false);
@@ -141,7 +156,7 @@ describe('keeping it current', () => {
 		await settle();
 		expect(app.calls.designSystemCatalog).toEqual([[false], [true]]);
 		expect(rows()).toContain('FSChip');
-		expect(text()).toContain('Up to date with GitHub');
+		expect(text()).not.toContain('Could not update');
 	});
 
 	it('says a fetch is running while it is', async () => {
@@ -151,17 +166,20 @@ describe('keeping it current', () => {
 		});
 		(window as unknown as { workspace: unknown }).workspace = app.api;
 		current = await render(createElement(DesignSystem, { hidden: false }));
-		expect(text()).toContain('Checking GitHub for changes…');
+		// Only the button says so: a running fetch is not a problem.
 		expect(button('Refreshing…').disabled).toBe(true);
+		expect(text()).not.toMatch(/Checking GitHub|Could not update/);
 		await act(async () => finish(ready('unchanged')));
 		await settle();
-		expect(text()).toContain('Up to date with GitHub');
+		expect(button('Refresh').disabled).toBe(false);
 	});
 
-	it('keeps the list when the update fails, and says why on one line', async () => {
+	it('keeps the list when the update fails, and says so beside Refresh, with the reason on hover', async () => {
 		await open(() => ok(ready({ failed: 'Could not reach GitHub. Check the internet connection.' })));
 		expect(rows()).toHaveLength(5);
-		expect(text()).toContain('Could not update: Could not reach GitHub. Check the internet connection. Showing develop as of');
+		const problem = [...document.querySelectorAll('[role="status"]')].find((e) => e.textContent === 'Could not update from GitHub')!;
+		expect(problem.getAttribute('title')).toBe('Could not reach GitHub. Check the internet connection.');
+		expect(problem.nextElementSibling?.textContent).toBe('Refresh');
 	});
 
 	it('asks again, waiting for GitHub, when Refresh is pressed', async () => {
@@ -177,10 +195,10 @@ describe('keeping it current', () => {
 		(window as unknown as { workspace: unknown }).workspace = app.api;
 		current = await render(createElement(DesignSystem, { hidden: true }));
 		expect(app.calls.designSystemCatalog).toBeUndefined();
-		await act(async () => current!.root.render(createElement(DesignSystem, { hidden: false })));
+		await act(async () => current!.root.render(createElement(TooltipProvider, null, createElement(DesignSystem, { hidden: false }))));
 		await settle();
-		await act(async () => current!.root.render(createElement(DesignSystem, { hidden: true })));
-		await act(async () => current!.root.render(createElement(DesignSystem, { hidden: false })));
+		await act(async () => current!.root.render(createElement(TooltipProvider, null, createElement(DesignSystem, { hidden: true }))));
+		await act(async () => current!.root.render(createElement(TooltipProvider, null, createElement(DesignSystem, { hidden: false }))));
 		await settle();
 		expect(app.calls.designSystemCatalog).toEqual([[false]]);
 	});

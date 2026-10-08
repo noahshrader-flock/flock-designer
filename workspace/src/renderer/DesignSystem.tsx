@@ -1,4 +1,4 @@
-import { RefreshCwIcon, SearchIcon } from 'lucide-react';
+import { GitBranchIcon, RefreshCwIcon, SearchIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { isGap } from '../shared/catalog';
 import type { Catalog, CatalogComponent, CatalogUpdate } from '../shared/contract';
@@ -9,23 +9,19 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 type Kind = 'all' | 'components' | 'composite';
 
 const Page = ({ children }: { children: ReactNode }) => <div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6">{children}</div>;
 
-const day = (at: string): string => new Date(at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-
-/** How current the list is, in one line. A failed update is said here, never as an error: the list stays. */
-const UpdateLine = ({ update, committedAt }: { update: CatalogUpdate; committedAt: string }) => {
-	if (update === 'updating') return <span className="text-muted-foreground text-sm">Checking GitHub for changes…</span>;
-	if (update === 'updated' || update === 'unchanged') return <span className="text-muted-foreground text-sm">Up to date with GitHub</span>;
-	return (
-		<span className="text-muted-foreground text-sm" role="status">
-			Could not update: {update.failed} Showing develop as of {day(committedAt)}.
+/** Said only when something is wrong, as the Projects screen does: a failed update is a line, never an error. */
+const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
+	typeof update === 'object' ? (
+		<span className="text-warning text-xs" role="status" title={update.failed}>
+			Could not update from GitHub
 		</span>
-	);
-};
+	) : null;
 
 /** A link out. The window opens nothing itself: the app hands an https address to the system's browser. */
 const Out = ({ href, children }: { href: string; children: ReactNode }) => (
@@ -167,16 +163,14 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		<>
 			<Toolbar className="sticky top-0 z-40">
 				<h2 className="text-sm font-semibold">FUI</h2>
-				<span className="text-muted-foreground text-sm">
-					develop · <span className="font-mono">{catalog.commit.slice(0, 7)}</span> · {day(catalog.committedAt)}
-				</span>
-				<UpdateLine update={catalog.update} committedAt={catalog.committedAt} />
-				<div className="grow" />
-				<span className="text-muted-foreground text-sm">{catalog.components.length} components</span>
-				<Button size="sm" variant="ghost" disabled={refreshing} onClick={() => void refresh()}>
-					<RefreshCwIcon className={refreshing ? 'animate-spin' : undefined} />
-					{refreshing ? 'Refreshing…' : 'Refresh'}
-				</Button>
+				<Tooltip delayDuration={300}>
+					<TooltipTrigger asChild>
+						<GitBranchIcon aria-label="Branch develop" className="text-muted-foreground size-4 shrink-0" />
+					</TooltipTrigger>
+					<TooltipContent side="bottom" className="font-mono">
+						develop
+					</TooltipContent>
+				</Tooltip>
 			</Toolbar>
 			<Page>
 				{error && (
@@ -196,6 +190,15 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 							<TabsTrigger value="composite">Composite</TabsTrigger>
 						</TabsList>
 					</Tabs>
+					<div className="grow" />
+					<div className="flex items-center gap-2">
+						<span className="text-muted-foreground text-sm">{catalog.components.length} components</span>
+						<UpdateProblem update={catalog.update} />
+						<Button size="sm" variant="ghost" disabled={refreshing} onClick={() => void refresh()}>
+							<RefreshCwIcon className={refreshing ? 'animate-spin' : undefined} />
+							{refreshing ? 'Refreshing…' : 'Refresh'}
+						</Button>
+					</div>
 				</div>
 				{catalog.components.length === 0 ? (
 					<p className="text-muted-foreground text-sm">
