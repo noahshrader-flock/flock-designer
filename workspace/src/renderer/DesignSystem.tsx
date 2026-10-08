@@ -8,10 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
-
-type Kind = 'all' | 'components' | 'composite';
 
 const Page = ({ children }: { children: ReactNode }) => <div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6">{children}</div>;
 
@@ -85,7 +82,6 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [error, setError] = useState<string | null>(null);
 	const [refreshing, setRefreshing] = useState(false);
 	const [query, setQuery] = useState('');
-	const [kind, setKind] = useState<Kind>('all');
 	const started = useRef(false);
 
 	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {
@@ -122,10 +118,9 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		const q = query.trim().toLowerCase();
 		return catalog.components.filter(
 			(c) =>
-				(kind === 'all' || (kind === 'composite') === c.composite) &&
 				(q === '' || c.name.toLowerCase().includes(q) || (c.subtitle ?? '').toLowerCase().includes(q)),
 		);
-	}, [catalog, query, kind]);
+	}, [catalog, query]);
 
 	if (error && catalog === null) {
 		return (
@@ -171,6 +166,10 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 						develop
 					</TooltipContent>
 				</Tooltip>
+				<div className="relative ml-2 w-72">
+					<SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+					<Input className="h-7 pl-8" placeholder="Search components" aria-label="Search components" value={query} onChange={(e) => setQuery(e.target.value)} />
+				</div>
 				<div className="grow" />
 				{/* Where syncing is on the Projects screen: the problem, if there is one, beside the button. */}
 				<div className="flex items-center gap-2">
@@ -187,20 +186,6 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 						<AlertDescription>{error}</AlertDescription>
 					</Alert>
 				)}
-				<div className="flex flex-wrap items-center gap-3">
-					<div className="relative w-72">
-						<SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-						<Input className="pl-8" placeholder="Search components" aria-label="Search components" value={query} onChange={(e) => setQuery(e.target.value)} />
-					</div>
-					<Tabs value={kind} onValueChange={(v) => setKind(v as Kind)}>
-						<TabsList>
-							<TabsTrigger value="all">All</TabsTrigger>
-							<TabsTrigger value="components">Components</TabsTrigger>
-							<TabsTrigger value="composite">Composite</TabsTrigger>
-						</TabsList>
-					</Tabs>
-					<span className="text-muted-foreground text-sm">{catalog.components.length} components</span>
-				</div>
 				{catalog.components.length === 0 ? (
 					<p className="text-muted-foreground text-sm">
 						No components were found on develop, in src/components or src/compositeComponents.

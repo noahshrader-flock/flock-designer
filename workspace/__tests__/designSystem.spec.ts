@@ -73,7 +73,6 @@ describe('the list', () => {
 		expect(groups()).toEqual(['Buttons', 'Surfaces', 'Popovers', 'Ungrouped']);
 		expect(rows()).toEqual(['FSButton', 'FSCard', 'FSCardContent', 'FSPopovers', 'FSApp']);
 		expect(document.querySelector('[aria-label="Branch develop"]')).not.toBeNull();
-		expect(text()).toContain('5 components');
 		// No commit, no date, and nothing about being up to date: only a problem is said.
 		expect(text()).not.toMatch(/fc2658f|2026|Oct|up to date|Checking GitHub/i);
 		expect(text()).not.toContain('Chromatic');
@@ -120,32 +119,27 @@ describe('finding a component', () => {
 		expect(text()).toContain('No components match.');
 	});
 
-	it('keeps Refresh in the toolbar at the right, as Projects does, and the count right after the switcher', async () => {
+	it('has the search in the toolbar beside the name and branch, and Refresh at its right, as Projects does', async () => {
 		await open(() => ok(ready()));
 		const toolbar = document.querySelector('h2')!.parentElement!;
+		const search = document.querySelector('input[aria-label="Search components"]')!;
+		expect(toolbar.contains(search)).toBe(true);
 		expect(toolbar.contains(button('Refresh'))).toBe(true);
 		expect(toolbar.textContent).toBe('FUIRefresh');
-		const tabs = document.querySelector('[role="tablist"]')!;
-		const count = [...document.querySelectorAll('span')].find((e) => e.textContent === '5 components')!;
-		expect(toolbar.contains(count)).toBe(false);
-		expect(tabs.closest('[data-slot="tabs"]')!.nextElementSibling).toBe(count);
+		expect(toolbar.querySelector('h2')!.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(search.compareDocumentPosition(button('Refresh')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+	});
+
+	it('has no switcher between components and composites, and no count', async () => {
+		await open(() => ok(ready()));
+		expect(document.querySelector('[role="tablist"]')).toBeNull();
+		expect(text()).not.toMatch(/\d+ components/);
+		expect(rows()).toHaveLength(5);
 	});
 
 	it('has no filter for components without a story', async () => {
 		await open(() => ok(ready()));
 		expect([...document.querySelectorAll('button')].some((b) => /without a story/i.test(b.textContent ?? ''))).toBe(false);
-	});
-
-	it('shows composites or components alone', async () => {
-		await open(() => ok(ready()));
-		const tab = (name: string) => [...document.querySelectorAll('[role="tab"]')].find((t) => t.textContent === name)!;
-		// Radix tabs change on pointer down and on focus, not on a click.
-		await act(async () => void tab('Composite').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 })));
-		await settle();
-		expect(rows()).toEqual(['FSPopovers']);
-		await act(async () => void tab('Components').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 })));
-		await settle();
-		expect(rows()).toEqual(['FSButton', 'FSCard', 'FSCardContent', 'FSApp']);
 	});
 });
 
