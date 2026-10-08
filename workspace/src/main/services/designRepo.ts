@@ -82,7 +82,6 @@ export class DesignRepo {
           records,
           iterations,
           people,
-          openComments: iterations.reduce((n, it) => n + (issues.get(it.branch)?.openComments ?? 0), 0),
         };
       }),
     );
@@ -230,7 +229,7 @@ export class DesignRepo {
   private async readIterations(
     id: string,
     records: string[],
-    issues: Map<string, { number: number }>,
+    issues: Map<string, { number: number; openComments: number }>,
   ): Promise<ProjectIteration[]> {
     if (!records.includes('iterations.json')) return [];
     const file = asRecord(await this.session.api(`${this.base}/contents/projects/${id}/iterations.json`));
@@ -250,6 +249,7 @@ export class DesignRepo {
         name: String(it.name),
         branch: String(it.branch),
         issueNumber: issues.get(String(it.branch))?.number ?? null,
+        openComments: issues.get(String(it.branch))?.openComments ?? 0,
         previewUrl: typeof it.previewUrl === 'string' ? it.previewUrl : null,
         contributors: asPeople(it.contributors),
         commit: typeof it.commit === 'string' ? it.commit : null,

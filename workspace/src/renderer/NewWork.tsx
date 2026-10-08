@@ -198,7 +198,7 @@ export const NewWork = ({
 		if (!r.ok) return setError(r.error);
 		const iteration = freshIteration(r.value);
 		onCreated({
-			project: { id, title: name.trim(), records: [], iterations: [iteration], people: [], openComments: 0 },
+			project: { id, title: name.trim(), records: [], iterations: [iteration], people: [] },
 			iteration,
 			task: task.trim(),
 		});

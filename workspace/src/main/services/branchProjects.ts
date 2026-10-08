@@ -71,6 +71,7 @@ export const readBranchProjects = async (
 					name: it.name,
 					branch,
 					issueNumber: null,
+					openComments: 0,
 					previewUrl: null,
 					// Found as a branch, with no record to say where its work is.
 					route: null,
@@ -91,6 +92,5 @@ export const readBranchProjects = async (
 		records: [],
 		iterations: its.sort(newestFirst),
 		people: mergePeople(...its.map((i) => i.contributors)),
-		openComments: 0,
 	}));
 };

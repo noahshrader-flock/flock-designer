@@ -576,8 +576,6 @@ export interface Project {
   iterations: ProjectIteration[];
   /** Everyone who has committed to the project: code on any iteration, or its design-repo folder. */
   people: Person[];
-  /** Open comment count across the project's iterations. */
-  openComments: number;
   /** True when the project exists only on this machine: built here, not yet shared. */
   localOnly?: boolean;
 }
@@ -587,6 +585,8 @@ export interface ProjectIteration {
   branch: string;
   /** The issue that carries this iteration's comments, once one exists. */
   issueNumber: number | null;
+  /** How many comments are open on this iteration: 0 for work with no thread yet, or only on this machine. */
+  openComments: number;
   /** Preview URL recorded when the iteration was shared, if any. */
   previewUrl: string | null;
   /** The commit the iteration was last recorded at, so a comment can say what it was made against. */

@@ -14,6 +14,7 @@ const iteration = (more: Partial<ProjectIteration> = {}): ProjectIteration => ({
 	name: 'v1-i1',
 	branch: 'fd/admin-usage/v1-i1',
 	issueNumber: null,
+	openComments: 0,
 	previewUrl: null,
 	commit: null,
 	contributors: [],
@@ -29,7 +30,6 @@ const project = (more: Partial<Project> = {}): Project => ({
 	records: [],
 	iterations: [],
 	people: [],
-	openComments: 0,
 	...more,
 });
 
@@ -95,15 +95,18 @@ describe('the cover', () => {
 		expect(bottom!.textContent).toBe('Admin usage');
 	});
 
-	it('says what to know at a glance across from the menu: only on this machine, open comments', async () => {
-		await show(project({ localOnly: true, openComments: 3, iterations: [CODEBASE] }));
-		const top = cover().children[0]!;
-		expect(top.textContent).toContain('Only on this machine');
-		expect(top.querySelector('[aria-label="3 open comments"]')).not.toBeNull();
+	it('says across from the menu when the project is only on this machine', async () => {
+		await show(project({ localOnly: true, iterations: [CODEBASE] }));
+		expect(cover().children[0]!.textContent).toContain('Only on this machine');
 		await unmountAll(current!.root);
-		await show(project({ openComments: 1 }));
-		expect(cover().querySelector('[aria-label="1 open comment"]')).not.toBeNull();
+		await show(project({ iterations: [CODEBASE] }));
 		expect(text()).not.toContain('Only on this machine');
+	});
+
+	it('has no comment count on the cover: the counts are on the ways in', async () => {
+		await show(project({ iterations: [iteration({ openComments: 4 })] }));
+		expect(cover().querySelector('[aria-label*="open comment"]')).toBeNull();
+		expect(cover().querySelector('.lucide-message-square')).toBeNull();
 	});
 });
 
@@ -124,15 +127,16 @@ describe('the menu', () => {
 });
 
 describe('the footer', () => {
+	const ways = () => [...footer().querySelectorAll('button')];
+
 	it('stacks View prototype, then View codebase under it, each with its icon, and opens each', async () => {
 		const { onOpen } = await show(project({ iterations: [PROTOTYPE, CODEBASE] }));
-		const items = [...footer().querySelectorAll('button')];
-		expect(items.map((b) => b.textContent)).toEqual(['View prototype', 'View codebase']);
-		expect(items.every((b) => b.querySelector('svg'))).toBe(true);
+		expect(ways().map((b) => b.textContent)).toEqual(['View prototype', 'View codebase']);
+		expect(ways().every((b) => b.querySelector('svg'))).toBe(true);
 		expect(footer().className.split(' ')).toContain('flex-col');
-		items[1]!.click();
+		ways()[1]!.click();
 		expect(onOpen).toHaveBeenCalledWith(CODEBASE);
-		items[0]!.click();
+		ways()[0]!.click();
 		expect(onOpen).toHaveBeenCalledWith(PROTOTYPE);
 	});
 
@@ -141,20 +145,62 @@ describe('the footer', () => {
 		['codebase work alone', [CODEBASE], ['View codebase']],
 	])('has only what exists: %s', async (_, iterations, labels) => {
 		await show(project({ iterations }));
-		expect([...footer().querySelectorAll('button')].map((b) => b.textContent)).toEqual(labels);
+		expect(ways().map((b) => b.textContent)).toEqual(labels);
 		expect(text()).not.toContain('Nothing made yet.');
 	});
 
 	it('opens the newest of each kind', async () => {
 		const older = iteration({ name: 'v1-i1', createdAt: '2026-09-01T10:00:00Z' });
 		const { onOpen } = await show(project({ iterations: [older, PROTOTYPE] }));
-		(footer().querySelector('button') as HTMLButtonElement).click();
+		ways()[0]!.click();
 		expect(onOpen).toHaveBeenCalledWith(PROTOTYPE);
 	});
 
 	it('says nothing is made when it is not, with no buttons', async () => {
 		await show(project());
 		expect(footer().textContent).toBe('Nothing made yet.');
-		expect(footer().querySelector('button')).toBeNull();
+		expect(ways()).toHaveLength(0);
+	});
+
+	it('shows how many comments are open on each way in, at its far right, with no background', async () => {
+		await show(project({ iterations: [iteration({ ...PROTOTYPE, openComments: 3 }), iteration({ ...CODEBASE, openComments: 1 })] }));
+		const [prototype, codebase] = ways();
+		const count = (b: Element) => b.querySelector('[aria-label*="open comment"]')!;
+		expect(count(prototype!).getAttribute('aria-label')).toBe('3 open comments');
+		expect(count(prototype!).textContent).toBe('3');
+		expect(count(codebase!).getAttribute('aria-label')).toBe('1 open comment');
+		for (const b of [prototype!, codebase!]) {
+			expect(count(b).className.split(' ')).toContain('ml-auto');
+			expect(count(b).className).not.toMatch(/\bbg-/);
+			expect(count(b).querySelector('.lucide-message-square')).not.toBeNull();
+			expect(b.lastElementChild).toBe(count(b));
+		}
+	});
+
+	it('counts a kind’s comments across all of its iterations, and shows none when there are none', async () => {
+		const first = iteration({ name: 'v1-i1', createdAt: '2026-09-01T10:00:00Z', openComments: 2 });
+		const second = iteration({ ...PROTOTYPE, openComments: 3 });
+		await show(project({ iterations: [first, second, CODEBASE] }));
+		const [prototype, codebase] = ways();
+		expect(prototype!.querySelector('[aria-label*="open comment"]')!.textContent).toBe('5');
+		expect(codebase!.querySelector('[aria-label*="open comment"]')).toBeNull();
+	});
+
+	it('is always as tall as two ways in, so on every card the footer starts at the same line', async () => {
+		// A blank place, as tall as a way in, stands for each one that is not there.
+		const blanks = () => [...footer().children].filter((c) => c.getAttribute('aria-hidden') === 'true');
+		await show(project({ iterations: [PROTOTYPE, CODEBASE] }));
+		expect(blanks()).toHaveLength(0);
+		await unmountAll(current!.root);
+		await show(project({ iterations: [PROTOTYPE] }));
+		expect(footer().children).toHaveLength(2);
+		expect(blanks()).toHaveLength(1);
+		expect(footer().children[0]).toBe(ways()[0]);
+		expect(blanks()[0]!.className).toBe('h-8');
+		await unmountAll(current!.root);
+		await show(project());
+		expect(footer().children).toHaveLength(2);
+		expect(blanks()).toHaveLength(1);
+		expect(footer().children[0]!.textContent).toBe('Nothing made yet.');
 	});
 });

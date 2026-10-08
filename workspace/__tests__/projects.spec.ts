@@ -27,10 +27,10 @@ import {
 import { readFolderProjects } from '../src/main/services/localProjects';
 
 const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
-	name: 'i1', branch: 'fd/alpha/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], createdAt: null, ...over,
+	name: 'i1', branch: 'fd/alpha/i1', issueNumber: null, openComments: 0, previewUrl: null, commit: null, contributors: [], createdAt: null, ...over,
 });
 const project = (id: string, over: Partial<Project> = {}): Project => ({
-	id, title: id, records: [], iterations: [it1({ branch: `fd/${id}/i1` })], people: [], openComments: 0, ...over,
+	id, title: id, records: [], iterations: [it1({ branch: `fd/${id}/i1` })], people: [], ...over,
 });
 
 describe('mergeProjects', () => {
@@ -42,11 +42,12 @@ describe('mergeProjects', () => {
 
 	it('does not duplicate a project both sides know, and lets GitHub lead', () => {
 		const merged = mergeProjects(
-			[project('alpha', { title: 'Alpha, as shared', openComments: 3 })],
+			[project('alpha', { title: 'Alpha, as shared', iterations: [it1({ openComments: 3 })] })],
 			[project('alpha', { title: 'Alpha, locally' })],
 		);
 		expect(merged).toHaveLength(1);
-		expect(merged[0]).toMatchObject({ title: 'Alpha, as shared', openComments: 3, localOnly: false });
+		expect(merged[0]).toMatchObject({ title: 'Alpha, as shared', localOnly: false });
+		expect(merged[0]?.iterations[0]?.openComments).toBe(3);
 	});
 
 	it('adds an iteration made here to a project that is already shared', () => {

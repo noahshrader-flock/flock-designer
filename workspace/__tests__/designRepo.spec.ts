@@ -117,7 +117,10 @@ describe('listProjects', () => {
     const [alpha] = await new DesignRepo(session, REF).listProjects();
     expect(alpha?.iterations.find((i) => i.branch === 'fd/alpha/i2')?.issueNumber).toBe(7);
     expect(alpha?.iterations.find((i) => i.branch === 'fd/alpha/i1')?.issueNumber).toBeNull();
-    expect(alpha?.openComments).toBe(3);
+    // Each iteration carries its own count: the one with the thread has the thread's comments, the other none.
+    expect(alpha?.iterations.find((i) => i.branch === 'fd/alpha/i2')?.openComments).toBe(3);
+    expect(alpha?.iterations.find((i) => i.branch === 'fd/alpha/i1')?.openComments).toBe(0);
+    expect(alpha).not.toHaveProperty('openComments');
   });
 
   it('only ever calls the repository API', async () => {

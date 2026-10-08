@@ -280,6 +280,7 @@ export const freshIteration = (it: Iteration): ProjectIteration => ({
 	name: it.name,
 	branch: it.branch,
 	issueNumber: null,
+	openComments: 0,
 	previewUrl: null,
 	route: null,
 	commit: it.commit,

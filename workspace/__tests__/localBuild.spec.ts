@@ -5,7 +5,7 @@ import { type BuildApi, type BuildPhase, previewAddress, previewCommandFor, rout
 const iteration = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
 	name: 'i1', branch: 'fd/users/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], createdAt: null, route: null, ...over,
 });
-const project: Project = { id: 'users', title: 'Users', records: [], iterations: [], people: [], openComments: 0 };
+const project: Project = { id: 'users', title: 'Users', records: [], iterations: [], people: [] };
 
 /** A workspace that does what a healthy one does, with any step overridable. */
 const api = (over: Partial<Record<keyof BuildApi, unknown>> = {}) => {

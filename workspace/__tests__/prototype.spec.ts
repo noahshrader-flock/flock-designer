@@ -183,7 +183,7 @@ describe('PrototypeServer', () => {
 });
 
 describe('runPrototypeBuild', () => {
-	const project: Project = { id: 'users', title: 'Users', records: [], iterations: [], people: [], openComments: 0 };
+	const project: Project = { id: 'users', title: 'Users', records: [], iterations: [], people: [] };
 	const iteration: ProjectIteration = { name: 'i1', branch: 'prototype/users/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], createdAt: null, route: null };
 	const api = (over: Partial<Record<keyof PrototypeApi, unknown>> = {}) => {
 		const calls: string[] = [];

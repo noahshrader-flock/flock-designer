@@ -38,6 +38,7 @@ export const readFolderProjects = (recordsRoot: string): Project[] => {
 						name: String(it.name),
 						branch: String(it.branch),
 						issueNumber: null,
+						openComments: 0,
 						previewUrl: typeof it.previewUrl === 'string' ? it.previewUrl : null,
 						commit: typeof it.commit === 'string' ? it.commit : null,
 						contributors: asPeople(it.contributors),
@@ -52,7 +53,6 @@ export const readFolderProjects = (recordsRoot: string): Project[] => {
 				records,
 				iterations,
 				people: mergePeople(...iterations.map((i) => i.contributors)),
-				openComments: 0,
 			};
 		});
 };
