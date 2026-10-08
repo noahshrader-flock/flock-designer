@@ -2,6 +2,7 @@ import { FileTextIcon, FolderIcon, MessageSquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { Checkout, CheckoutSuggestion, Project, ProjectIteration } from '../shared/contract';
 import { LoadingScreen } from './Loading';
+import { CardGrid } from './CardGrid';
 import { MoreMenu } from './MoreMenu';
 import { NewWork, type Created } from './NewWork';
 import { Page } from './Page';
@@ -206,66 +207,70 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 					</p>
 				)}
 
-				{projects.map((project) => (
-					<Card key={project.id}>
-						<CardHeader>
-							<CardTitle className="text-base font-semibold">{project.title}</CardTitle>
-							<CardDescription className="flex items-center gap-1.5">
-								<FolderIcon className="size-4 shrink-0" />
-								<span className="font-mono">{project.id}</span>
-							</CardDescription>
-							<CardAction className="flex flex-row items-center gap-2">
-								{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}
-								{project.openComments > 0 && (
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<Badge
-												variant="secondary"
-												aria-label={`${project.openComments} open comment${project.openComments === 1 ? '' : 's'}`}
-											>
-												<MessageSquareIcon />
-												{project.openComments}
-											</Badge>
-										</TooltipTrigger>
-										<TooltipContent>
-											{project.openComments} open comment{project.openComments === 1 ? '' : 's'}
-										</TooltipContent>
-									</Tooltip>
-								)}
-								{project.records.length > 0 && (
-									<MoreMenu>
-										{project.records.map((record) => (
-											<DropdownMenuItem key={record} onSelect={() => setViewing({ project, name: record, open: true })}>
-												<FileTextIcon />
-												{sentence(record.replace(/\.[^.]+$/, '').replace(/-/g, ' '))}
-											</DropdownMenuItem>
-										))}
-									</MoreMenu>
-								)}
-							</CardAction>
-						</CardHeader>
-						<CardFooter className="flex-wrap justify-between gap-2">
-							<div className="flex flex-row items-center gap-3">
-								<PeopleAvatars people={project.people} />
-								<Started at={startedAt(project)} />
-							</div>
-							<div className="ml-auto flex flex-row flex-wrap items-center justify-end gap-2">
-								{project.iterations.length === 0 && <span className="text-muted-foreground px-2 text-sm">Nothing made yet.</span>}
-								{/* One way into each kind of work, at its newest; the review screen switches between its iterations. */}
-								{(['prototype', 'codebase'] as const).map((kind) => {
-									const newest = workOf(project.iterations, kind)[0];
-									return (
-										newest && (
-											<Button key={kind} onClick={() => setSelected({ project, iteration: newest })}>
-												{kind === 'prototype' ? 'View prototype' : 'View codebase'}
-											</Button>
-										)
-									);
-								})}
-							</div>
-						</CardFooter>
-					</Card>
-				))}
+				{projects.length > 0 && (
+					<CardGrid>
+						{projects.map((project) => (
+							<Card key={project.id}>
+								<CardHeader>
+									<CardTitle className="text-base font-semibold">{project.title}</CardTitle>
+									<CardDescription className="flex items-center gap-1.5">
+										<FolderIcon className="size-4 shrink-0" />
+										<span className="font-mono">{project.id}</span>
+									</CardDescription>
+									<CardAction className="flex flex-row items-center gap-2">
+										{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}
+										{project.openComments > 0 && (
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<Badge
+														variant="secondary"
+														aria-label={`${project.openComments} open comment${project.openComments === 1 ? '' : 's'}`}
+													>
+														<MessageSquareIcon />
+														{project.openComments}
+													</Badge>
+												</TooltipTrigger>
+												<TooltipContent>
+													{project.openComments} open comment{project.openComments === 1 ? '' : 's'}
+												</TooltipContent>
+											</Tooltip>
+										)}
+										{project.records.length > 0 && (
+											<MoreMenu>
+												{project.records.map((record) => (
+													<DropdownMenuItem key={record} onSelect={() => setViewing({ project, name: record, open: true })}>
+														<FileTextIcon />
+														{sentence(record.replace(/\.[^.]+$/, '').replace(/-/g, ' '))}
+													</DropdownMenuItem>
+												))}
+											</MoreMenu>
+										)}
+									</CardAction>
+								</CardHeader>
+								<CardFooter className="mt-auto flex-wrap justify-between gap-2">
+									<div className="flex flex-row items-center gap-3">
+										<PeopleAvatars people={project.people} />
+										<Started at={startedAt(project)} />
+									</div>
+									<div className="ml-auto flex flex-row flex-wrap items-center justify-end gap-2">
+										{project.iterations.length === 0 && <span className="text-muted-foreground px-2 text-sm">Nothing made yet.</span>}
+										{/* One way into each kind of work, at its newest; the review screen switches between its iterations. */}
+										{(['prototype', 'codebase'] as const).map((kind) => {
+											const newest = workOf(project.iterations, kind)[0];
+											return (
+												newest && (
+													<Button key={kind} onClick={() => setSelected({ project, iteration: newest })}>
+														{kind === 'prototype' ? 'View prototype' : 'View codebase'}
+													</Button>
+												)
+											);
+										})}
+									</div>
+								</CardFooter>
+							</Card>
+						))}
+					</CardGrid>
+				)}
 			</Page>
 			{viewing && (
 				<RecordSheet
