@@ -32,10 +32,10 @@ else. This plan keeps everything inside the company's GitHub:
 1. **Viewing a page requires signing in to GitHub, and having access.** A prototype page is never public. Only a
    person who is signed in to GitHub and has read access to the design repository can open it; anyone else gets a
    sign-in or a "not found." This is private GitHub Pages (visibility **private**, not public), and the plan treats it as
-   a gate, not a setting to hope is right: the publish step checks it before any link exists (Phase 2).
+   a gate, not a setting to hope is right: the publish step checks it before any link exists (M5b).
 2. **The agent that makes a prototype hands back the link.** Whether it was started from the app or from Claude Code
    in VS Code, it finishes by packaging and publishing the prototype, and its final summary includes the link and who
-   can open it. Nobody has to remember a step (Phase 3).
+   can open it. Nobody has to remember a step (M2 and M6).
 
 3. **A prototype always has a page, and the page follows the project.** Making a prototype is not finished until it
    has a page, and that is done by the app and the agent, never left for someone to remember. The site mirrors the
@@ -52,7 +52,7 @@ else. This plan keeps everything inside the company's GitHub:
    ```
 
    **A version is a different idea; an iteration is a refinement of one version.** The two words are used strictly
-   (Phase 1).
+   (M1).
 
 **A consequence worth stating:** requirement 1 cannot be met from a public repository, because a public repository's
 Pages site is public. The sandbox's site reported `"public": true` for exactly that reason. The publish step's check
@@ -65,7 +65,7 @@ refuses to give out a link while the repo or its site is public.
 | **Who can view or comment** | **Anyone who views or comments has signed in to GitHub.** There is no anonymous path (Noah, 2026-10-07) | Prototypes show the product's UI and are for the company; viewing is private Pages, commenting is a signed-in action |
 | **Versions and iterations** | A **version** is a different idea for the same brief (V1, V2, V3); an **iteration** is a refinement of one version (I1, I2, I3). Page addresses are `/<project>/v1/i2/` (Noah, 2026-10-07) | A designer explores several ideas and then refines one. One flat count could not say which iteration belonged to which idea |
 | **When a new iteration starts** | An iteration is frozen once someone other than its author comments on it; the next change becomes the next iteration of that version (recommended 2026-10-07, accepted for small iterations) | Keeps what people commented on intact without an iteration per comment, and needs no step from anyone |
-| **Getting the org repo and private Pages** | In hand: Noah is handling the request with the GitHub admins (2026-10-07) | Phase 0 |
+| **Getting the org repo and private Pages** | In hand: Noah is handling the request with the GitHub admins (2026-10-07) | M0 |
 
 **Recommended, not yet confirmed:** publish from `main`; the publish command waits up to about three minutes for the
 deployment; one allowed publish command in a settings file that ships in the repo; GitHub's own notifications plus a
@@ -93,13 +93,13 @@ stateless sign-in service, needing security's approval, with the extension as th
 | **The Pages API says whether a site is public** (`"public": true` on the sandbox's public site) | `gh api repos/noahshrader-flock/prototype-pages-sandbox/pages` | The publish step can check this before it hands out a link |
 | **The app publishes only `projects/`, as plain pushes, to the design repo's current branch** | Read from `designSync.ts` and `publisher.ts` | The Pages deployment has to run from that branch, or from a workflow that is allowed to. GitHub restricts Pages deployments to the default branch unless the environment allows others (GitHub's default; **not checked here**) |
 | **The prototype skill ends at "say what you made."** Nothing publishes, and the build command is injected by the app | `skills/build-prototype.md`; `prototypeBuildPlan` in `ipc.ts` | From Claude Code in VS Code there is no app to supply the build command or push, so both have to live in one command that does not need the app |
-| **A comment made in the page's format reads back through the app's own code** | The app's `renderComments` turned a sandbox comment into the `comments.md` the agent reads, with page, element kind, section, selector and nearby text | The format is right; the round trip into the app itself is what Phase 6 proves |
+| **A comment made in the page's format reads back through the app's own code** | The app's `renderComments` turned a sandbox comment into the `comments.md` the agent reads, with page, element kind, section, selector and nearby text | The format is right; the round trip into the app itself is what M8 proves |
 | **The app finds a prototype's thread by the `branch:` line** in the issue's description (for a prototype, `prototype/<id>/<name>`) | `designRepo.ts` | The page posts to the thread that already exists for that iteration, never a new one |
 
 **What the sandbox taught (2026-10-07).** A public test repo (`prototype-pages-sandbox`) proved publishing and
 reading comments back, but its commenting was a thin layer of its own around the app's engine: a native prompt for a
 token, no pin dragging, no cards or card menu, no screenshot. That was not the product's experience, and it is the
-reason Phase 4 exists: **one comments experience, two adapters**, never a second copy of it.
+reason M4 exists: **one comments experience, two adapters**, never a second copy of it.
 
 ## The shape of it
 
@@ -127,174 +127,288 @@ reason Phase 4 exists: **one comments experience, two adapters**, never a second
 - **Not in the page:** Address, Hand off, Build in the codebase, and anything that runs an agent. Those stay in the
   app, which is where the agent and the checkout are.
 
-## Phases
+## How the work is cut
 
-Each phase ends with something Noah can see. A phase whose check needs a person is not closed by Claude.
+**Ten milestones, each small enough to finish, test and commit on its own, and each leaving the app working.** None
+depends on a later one. Sizes are estimates for the work, to be corrected after M1: **S** is a few hours, **M** about a
+day, **L** several days.
 
-### Phase 0: Prerequisites (needs other people)
+**Rules for every milestone**
+- **Tests first.** Before code moves, the behavior being kept or added is pinned by tests that fail without it.
+- **The app keeps working** after each milestone: the existing tests pass, and nothing the app does today changes
+  unless the milestone says so.
+- **One commit per milestone,** with the plan and `flock-designer.md` updated in the same change: the finished
+  milestone moves to the state document with its evidence, and leaves this file.
+- **No data on GitHub is edited** by a milestone unless it says so and says how to undo it.
+- **A milestone is Ready** when its scope is fixed, the files it touches are known, its tests are named, its done-when
+  can be seen, and no open question blocks it. The table below says which are.
+
+## Order of work
+
+| # | Milestone | Needs | Size | Risk | Ready? |
+|---|---|---|---|---|---|
+| **M0** | **The asks:** org repo, private Pages, access, security (in parallel, not code) | Admins, security | n/a | n/a | **In progress, Noah** |
+| **M1** | **The version model in code** (`v1-i2`; old names read as V1) | Nothing | M | Low | **Ready** |
+| **M2** | **Make prototypes without the app** (new-prototype and build-and-save as shared commands) | M1 | L | Medium | After M1; one open question |
+| **M3** | **Address starts the next iteration** when the current one has outside comments | M1, M2 | M | Medium | After M2 |
+| **M4** | **One comments experience,** taken out of the review screen | M1 | L | **High** | Ready after M1 (tests first) |
+| **M5a** | **The site, assembled locally:** project pages, `latest` links, index | M1 | M | Low | Ready after M1 |
+| **M5b** | **Publish for real:** the publish command, the private gate, the deploy, **Open page** | M0, M2, M5a | L | Medium | **Blocked on M0** |
+| **M6** | **The agent hands back the link** | M2, M5b | S | Low | Blocked |
+| **M7** | **Comments on the page** (shared components, browser adapter, test sign-in) | M4, M5b | L | Medium | Blocked |
+| **M8** | **The round trip, proved** | M7 | S | Low | Blocked |
+| **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | Blocked on a decision |
+| **M10** | **Parity and the smaller things we agreed** | M7 | M | Low | Later |
+
+**Start here: M1.** It needs no one, everything else depends on it, and the cost of getting it wrong is highest.
+**While the admins answer (M0), M1 to M5a can all be built.** They are the foundation and none of them touches the
+org, Pages or the real repository. M5b onward waits for M0.
+
+```text
+M0 (asks, in parallel) ─────────────────────────────┐
+                                                    ▼
+M1 versions ─┬─► M2 commands ─► M3 address ─►      M5b publish ─► M6 agent link
+             ├─► M4 comments extraction ───────────► M7 page comments ─► M8 round trip ─► M9 sign-in ─► M10
+             └─► M5a site assembly ──────────────────┘
+```
+
+## Milestones
+
+### M0: The asks (other people, in parallel throughout)
 
 | # | Item | Who | Status |
 |---|---|---|---|
-| 0.1 | Move `flock-designer` into the `flocksafety` org, private, with **Maintain** for Noah | An org owner | **Requested 2026-10-07** through the access form |
-| 0.2 | Confirm the org allows **private** GitHub Pages, and that Noah can publish from that repo | GitHub admin | Asked with 0.1 |
+| 0.1 | Move `flock-designer` into the `flocksafety` org, private, with **Maintain** for Noah | An org owner | **Noah is handling it (2026-10-07)** |
+| 0.2 | Confirm the org allows **private** GitHub Pages, and that Noah can publish from that repo | GitHub admin | With 0.1 |
 | 0.3 | Give the **design** team read access to the repo, so teammates can open its pages | GitHub admin | With 0.1 |
-| 0.4 | Install the app's GitHub App on the repo in its new place, and point the app at it | Claude, once 0.1 is done | Not started |
-| 0.5 | **Delete the public sandbox repo** (`noahshrader-flock/prototype-pages-sandbox`). Its page bundles the app's pick and pin code | Claude, on Noah's word | Waiting on Noah |
-| 0.6 | Confirm the Pages site can be set to **private** (access limited to people with read access), and that a deployment from the branch the app pushes is allowed | GitHub admin | Asked with 0.2 |
+| 0.4 | Which branch publishes (`main`, recommended), and whether designers can push `projects/` to it | GitHub admin | With 0.1 |
+| 0.5 | Confirm the Pages site can be set to **private** (access limited to people with read access) | GitHub admin | With 0.2 |
+| 0.6 | **Security's view on a small sign-in service** for commenting (see M9). The longest lead item, so it starts now | Security / platform | Not started |
+| 0.7 | Install the app's GitHub App on the repo in its new place, and point the app at it | Claude, once 0.1 is done | Not started |
+| 0.8 | **Delete the public sandbox repo** (`noahshrader-flock/prototype-pages-sandbox`). Its page bundles the app's pick and pin code | Claude, on Noah's word | Waiting on Noah |
 
-**Done when:** the repo is in the org, private Pages is allowed, and the app works against the repo in its new place.
+**Done when:** the repo is in the org, private Pages is allowed, the design team can read it, and the app works
+against the repo in its new place.
 
-### Phase 1: Versions and iterations (before any page exists)
+### M1: The version model in code
 
-**Why first:** a page address is shared as a link. Publish them flat and add versions later, and every link already
-sent breaks. The structure and the names are settled before the first page goes out.
+**Goal.** Versions (different ideas) and iterations (refinements) exist in the app's data and display, without touching
+any existing data. **Why first:** page addresses are shared as links, and everything after this uses the names.
 
-- **Two words, used strictly.** A **version** is a different idea for the same brief, side by side (V1, V2, V3). An
-  **iteration** is a refinement of one version, in order (I1, I2, I3). The app, the skills and the plan's vocabulary
-  all use them this way, and nothing calls an iteration a version.
-- **The records:** each iteration record names its version, and iteration numbers restart in each version. The review
-  thread for each page is found by its key, `prototype/<project>/<version>/<iteration>`, so the key changes with it. The
-  saved files move to `projects/<id>/prototypes/v1/i2.tsx` and `i2.html`.
-- **Existing prototypes become V1.** One migration moves them: the records, the saved files and the review threads'
-  `branch:` lines, so comments already made stay attached. (`admin-usage` I1 becomes V1 · I1.)
-- **Making them:** a new prototype is V1 · I1. When the designer asks for **another version** (or "three versions"),
-  the agent builds V2 · I1, V3 · I1 from the same brief, optionally "based on V1" when the designer says so. Each
-  takes a build of about six minutes, run one after another in one request.
-- **Refining:** within a version, an iteration is frozen once someone else comments on it, and the next change starts
-  the next iteration (see *Decisions made*). Nobody names or numbers anything.
-- **The app:** labels read "V2 · I3"; the switcher has two levels (the version, then its iterations); the project's
-  card lists its versions. A designer can mark one version as **selected**; Build in the codebase then starts from its
-  newest iteration, and asks when none is selected.
-- **Skills and tests:** the prototype and address skills, `new-prototype` (Phase 3), and the tests that check names
-  and counts.
+**The design, kept as simple as it can be.** A version is part of the iteration's **name**.
 
-**Done when:** `admin-usage` shows as V1 · I1 in the app with its comments intact, asking for "another version" produces
-V2 · I1 under the same project, and the switcher moves between versions and iterations.
+| | Today | After M1 |
+|---|---|---|
+| A new prototype | `i1` | `v1-i1` |
+| A refinement of it | `i2` | `v1-i2` |
+| A different idea | `i3` (one flat count) | `v2-i1` |
+| An existing prototype | `i1` | **still `i1`, read as V1 · I1.** Its key, files and review thread do not change |
 
-### Phase 2: One publish command, a private gate, and the link in the app
+Because the key (`prototype/<project>/<name>`), the file names (`prototypes/<name>.tsx` and `.html`) and the review
+thread all follow the name, **nothing on GitHub or on disk has to be migrated**: old names are read as version 1, and
+only new work uses the new form. A page address is worked out from the name (`v1-i2` becomes `/v1/i2/`, and `i1`
+becomes `/v1/i1/`).
 
-No comments on the page yet. This phase proves that a prototype becomes a private page, and that nothing can
-publish a public one.
+**What changes**
+- **`shared/projects.ts`:** one place that reads a name (version, iteration, whether it is the old form), writes one,
+  and finds the next iteration of a version and the next version. `isPrototypeName`, `nextPrototypeName`, `workOf` and
+  `iterationLabel` use it. The label reads **V1 · I2**.
+- **The main process and the app** (`prototype.ts`, `ipc.ts`, `iterations.ts`, `prototypeBuild.ts`): names are checked by
+  the one reader. No behavior changes.
+- **The review screen:** the switcher becomes two levels (the version, then its iterations). With one version it shows
+  as today. Codebase work keeps its label.
+- **Not in M1:** making a second version (M2), the next-iteration rule (M3), a "selected" version (M10), pages (M5).
 
-- **One publish command**, callable without the app running, that every route uses. Given a project and an
-  iteration it: builds the prototype's source into its page with the same bundler the app uses; rewrites the
-  `/_shared/` font path (or copies `_shared/` to the site root); saves the page and its source under
-  `projects/<id>/prototypes/`; commits **only those files**; pushes with the same narrow rules as the app's publisher
-  (only `projects/`, plain pushes, never anything else that is waiting); waits for the Pages deployment; and prints
-  the link. The app's own save and the agent both call it, so there is one way a prototype becomes a page.
-- **The private gate, before anything is pushed or any link is printed.** The command asks GitHub whether the
-  repository is private and whether its Pages site is private (the Pages API's `public` field). If either is public
-  it stops, says why, and prints **no link**.
-- **The check afterwards.** Once deployed, it requests the link with no credentials and expects not to get the page
-  (a sign-in or a "not found"). If an anonymous request gets the page, it says the site is public and tells the person
-  not to share the link.
-- **The site is assembled when it is deployed, from what is in the repository.** The workflow takes every saved page
-  (every project, every iteration), wraps each in the comments viewer, and writes the project pages, the `latest`
-  links and the index. So changing the viewer never means re-saving a prototype, a saved prototype stays exactly as
-  built, and two people publishing from different machines can never overwrite each other's pages, because the site is
-  always rebuilt from the repository and deploys queue instead of cancelling.
-- **The project page** shows the project's title (from its brief), then its versions side by side, each with its
-  iterations, newest first: name, date, who made it, how many comments it has, and a link, with the selected version
-  marked. Inside any page there is a two-level switcher (version, then iteration), as in the app. Codebase work is not on this site (delivery is engineering's), and the project page says where it is when
-  there is some.
-- **The page's address** is read from GitHub (the Pages API gives the site's URL; a private site has its own domain)
-  and kept by the app. Never typed in.
-- **Open page** in the app's review screen, beside the iteration switcher, for a prototype whose page is published.
-  Its link carries the iteration and a version, so a new iteration never shows an old cached page.
-- **A "not published yet" state** while the deployment runs (about a minute and a half in testing).
+**Tests first:** a table of names (old and new, good and bad), next-iteration and next-version counts including the old
+form, and labels. The existing prototype, address and records tests must pass unchanged.
 
-**Done when:** from the app, Noah opens `admin-usage` I1 on its private page; a teammate with access opens the same
-link; someone without access cannot; and the command refuses to publish when the repo is made public.
+**Done when:** `admin-usage` shows as V1 · I1 with its comments intact; a test project with `v1-i1`, `v1-i2` and `v2-i1`
+lists them by version in the switcher; all existing tests pass; no existing file, record or thread changed.
 
-### Phase 3: The agent makes the prototype, publishes it, and hands back the link
+**Undo:** revert the commit. Nothing outside the code moved.
 
-This is what makes it work from Claude Code in VS Code, where there is no app. **Today some of making a prototype
-exists only inside the app** (creating the project folder, the iteration record, the brief and the next name, `i1`,
-`i2`), so an agent in VS Code could not make a prototype that has a place in the structure. Both halves move into
-shared commands that do not need the app.
+### M2: Make prototypes without the app
+
+**Goal.** An agent in Claude Code in VS Code can make a prototype that has a place in the structure, with no app
+running. Today part of making a prototype lives only in the app: the project folder and brief, the iteration record,
+the next name, the build and the save.
 
 - **Two shared commands:** **new-prototype** (the project folder and brief if it is the first, the iteration record,
-  and the next version or iteration name) and **publish-prototype** (Phase 2). The app calls them too, so there is one
-  way to make a prototype and one way to publish it.
-- **The prototype skill ends with publishing:** when the build finishes, the agent runs the publish command and puts the
-  **link** in its final summary, with the iteration and who can open it ("anyone signed in to GitHub with read access
-  to the design repository"). It never states a link it did not get from the command.
-- **The other files that must say so,** so it always happens and nobody has to remember: the **address** skill (after a
-  prototype's comment is acted on, the page is published again, or a new iteration is, see the open question), the
-  product repositories' own Flock Designer agent files (they point to the shared skill and carry no copy), and the
-  "when to use the Flock Designer" routing in each product's `CLAUDE.md`.
-- **From VS Code,** the agent needs what a designer there already has: the product checkout with packages, the design
-  repository's clone beside it, and GitHub's command line signed in. The commands find the build tools themselves.
-- **A narrow permission:** agents never push, and that rule stays. The publish command is the one named exception,
-  allowed as that command only, and it can only push `projects/` (Phase 2). Nothing else the agent runs may push.
+  the next name: the first prototype is `v1-i1`, "another version" is the next `vN-i1`) and the **build-and-save** step
+  that already exists in the app (build the source into its page with the same bundler, save page and source into the
+  design repository's clone). The app calls the same code, so there is one way to make a prototype.
+- **Taken out of `ipc.ts`:** the logic of `createPrototype`, `prototypeBuildPlan`, `buildPrototypePage` and
+  `keepPrototype` moves into a service with no Electron in it, taking explicit paths, which the app and a command-line
+  wrapper both call.
+- **"Another version" and "three versions":** one request builds V2 · I1, V3 · I1 from the same brief, one after
+  another (about six minutes each), optionally "based on V1" when the designer says so.
+- **Not in M2:** publishing to Pages (M5b), the link in the summary (M6).
+
+**One open question:** how the command reaches an agent in VS Code. Recommended: a **single pre-built file committed in
+the design repository** (the tool built from the app's source by one script, with a test that fails if it is stale), so
+a designer needs nothing installed beyond the repo and the product checkout.
+
+**Tests first:** the service against a temporary design repository and a stub bundler: records, names, files; a second
+version; the app's handlers still produce the same results.
+
+**Done when:** from Claude Code in VS Code, asking for a prototype creates `v1-i1` in the design repository clone,
+builds and saves its page, and the app shows it; asking for "another version" makes `v2-i1`.
+
+**Undo:** revert the commit; the app's own handlers call the same code, so it is exercised by the existing flow.
+
+### M3: Address starts the next iteration
+
+**Goal.** What people commented on is never changed under them, without an iteration per comment.
+
+- **The rule:** an iteration is frozen once someone other than its author comments on it. The first Address after that
+  starts the next iteration of the same version: the source is copied to `vN-iM+1`, the record is added, and the change
+  is made there. Further Address runs edit that new iteration until someone else comments on it.
+- **The comment** that was acted on is marked "addressed in V1 · I2" (today the mark records a hash of the source, as a
+  prototype has no commit).
+- **The app and the command** both follow it, through M2's shared service.
+
+**Tests first:** an iteration with no outside comments is edited in place; one with an outside comment is left
+untouched and a new one appears; the mark points at the new iteration.
+
+**Done when:** Noah comments as a second person on `v1-i1`, runs Address, and sees `v1-i1` unchanged, `v1-i2` with the
+change, and the comment marked as addressed there.
+
+### M4: One comments experience, taken out of the review screen
+
+**Goal.** The comments experience exists once, so a page can use it later. **No visible change in the app.** This is
+the riskiest piece of work in the plan: `Review.tsx` is about 1,200 lines, and the comments are mixed with the native
+preview, the agent runs and about twenty calls into the app's main process.
+
+- **4a. Pin the behavior first.** Tests that drive the review screen with a fake app interface and fix what it does
+  today: loading and merging comments, posting, resolving, deleting with confirmation, Address, pin clicks and moves,
+  selecting a comment. **Nothing moves until these pass against the current code.**
+- **4b. Move the pure parts** (`pageScripts.ts`) from `main/services/` to `shared/`. They have no Electron in them.
+- **4c. Define the two interfaces:** the *comments* (read, post, resolve, delete, move a pin, mark addressed, who the
+  viewer is) and the *page surface* (pick an element, show pins, focus a pin, report a pin's click or move, take a
+  picture of the spot).
+- **4d. Extract the components:** the side panel, the cards and their menu, the inline comment box, the comment-mode
+  control and the pin-event handling, written against the two interfaces.
+- **4e. The app's own adapter:** what it does today (IPC, the native preview, `capturePage`) behind those interfaces.
+  Address, Hand off and anything that runs an agent stay in the app and are not part of the shared components.
+
+**Done when:** the 4a tests pass before and after; `Review.tsx` is much smaller; the app behaves as before in a manual
+run through comment, pin, resolve, delete and Address; new tests drive the comment components through a fake adapter.
+
+**Undo:** each sub-step is its own commit and the app works after each, so any can be reverted without the others.
+
+### M5a: The site, assembled locally
+
+**Goal.** The structure of the site exists and can be seen, before anything is published.
+
+- **A site generator** that takes the saved pages in the repository (every project, every version, every iteration) and
+  writes the site: each page wrapped in a slim viewer bar (project, two-level switcher, back to the project), a
+  **project page** (the title from its brief, versions side by side, each with its iterations newest first, with date,
+  author and comment count), `/<project>/<version>/latest/`, `/<project>/latest/`, and the index of projects.
+- **Fonts and paths:** the `/_shared/` font path is rewritten so a page works from a sub-path.
+- **Built from the repository,** so two people publishing never overwrite each other, and rebuilt in full each time.
+- **Seen locally,** served from a folder and checked in a browser, using dummy prototypes with invented content.
+
+**Tests first:** the generator against a fixture repository with two projects, two versions and three iterations.
+
+**Done when:** Noah opens the generated site locally and moves between the index, a project, its versions and
+iterations, and `latest`.
+
+**Undo:** nothing outside the code is touched.
+
+### M5b: Publish for real (blocked on M0)
+
+**Goal.** A prototype becomes a private page, and nothing can publish a public one.
+
+- **One publish command,** callable without the app, that every route uses. Given a project and an iteration it saves
+  and commits **only `projects/` files**, pushes with the same narrow rules as the app's publisher (plain pushes, never
+  anything else that is waiting), waits for the Pages deployment, and prints the link.
+- **The private gate, before anything is pushed or any link is printed:** it asks GitHub whether the repository and its
+  Pages site are private (the Pages API's `public` field). If either is public it stops, says why, and prints **no
+  link**.
+- **The check afterwards:** it requests the link with no credentials and expects not to get the page. If it does, it
+  says the site is public and tells the person not to share it.
+- **The workflow** that runs M5a's generator and deploys, queued and not cancelled, from the branch M0 settles.
+- **The page's address** is read from GitHub and kept by the app, never typed in. **Open page** appears in the review
+  screen beside the switcher; its link carries a version, so a new iteration never shows a cached page.
+- **A "not published yet" state** while the deployment runs (about a minute and a half in testing).
+
+**Tests first:** the gate and the anonymous check against a fake GitHub (public repo, public site, private both, a page
+that comes back for an anonymous request); the command's narrow push.
+
+**Done when:** from the app, Noah opens `admin-usage` on its private page; a teammate with access opens the same link;
+someone without access cannot; and the command refuses to publish when the repo is made public.
+
+**Undo:** the workflow can be disabled, and a page removed by deleting its files and redeploying.
+
+### M6: The agent hands back the link
+
+**Goal.** From Claude Code in VS Code, the agent finishes a prototype and gives you the link.
+
+- **The prototype skill ends with publishing:** the agent runs the publish command and puts the **link** in its final
+  summary, with the version and iteration and who can open it ("anyone signed in to GitHub with read access to the
+  design repository"). It never states a link it did not get from the command.
+- **The other files that must say so,** so it always happens: the address skill (publishing after a change), each
+  product repository's Flock Designer agent file (pointing to the shared skill, no copy), and the routing in each
+  product's `CLAUDE.md`.
+- **A narrow permission:** agents never push, and that stays. The publish command is the one named exception, allowed
+  as that command only in a settings file that ships in the repo, and it can only push `projects/`.
 - **When publishing cannot happen** (private Pages not allowed, GitHub's command line not signed in, no access), the
-  agent says so plainly and why, and still finishes the prototype, with a standalone file to share instead. It never
-  leaves the summary without saying whether there is a link.
-- **From the app,** the agent's run does the same, and the app shows the link where **Open page** is.
-- **Waiting:** the command waits for the deployment (with a limit), so the link in the summary works when it is read;
-  on a timeout it says the link will work shortly.
+  agent says so plainly and why, and still finishes the prototype with a standalone file to share. It never leaves the
+  summary without saying whether there is a link.
+- **The agent checks the thread when it starts,** and says "2 new comments since you last looked."
 
-**Done when:** Noah asks the Flock Designer agent for a prototype from Claude Code in VS Code, a project and iteration
-record exist, and the agent's final message includes a link that opens the private page for someone with access, under
-its project, beside any earlier iterations.
+**Done when:** Noah asks the Flock Designer agent for a prototype from Claude Code in VS Code, and its final message
+includes a link that opens the private page for someone with access, under its project and beside any earlier versions.
 
-### Phase 4: One comments experience, taken out of the review screen
+### M7: Comments on the page
 
-No visible change in the app. This is what stops a second version being written.
+**Goal.** A teammate opens the link and comments with the app's own experience.
 
-- Move `pageScripts.ts` from `main/services/` to `shared/`.
-- Take the comments out of `Review.tsx` into their own components: the side panel, the cards and their menu (Address,
-  Resolve or Reopen, Delete), the inline comment box, the comment-mode control, and the pin events.
-- Define the two interfaces above, and give the app its **Electron adapter**, which is what it does today.
-- Address stays a capability the Electron adapter has and the browser one does not, so its menu item appears only in
-  the app.
-
-**Done when:** the app behaves exactly as before, the existing tests pass, and new tests drive the comment components
-through a fake adapter.
-
-### Phase 5: Comments on the page
-
-- **A small viewer around the prototype**: the page loads the built prototype and the shared comment components, with
-  the **browser adapter**.
-- **The trigger:** to be designed together before it is built. The starting point is the app's own: a Comment control
-  with the comment count beside it, opening the side panel. No native prompts.
-- **Signing in, for testing only:** a proper dialog, in the app's style, that takes a fine-grained GitHub token with
-  Issues read and write on the design repo, keeps it in that browser, and says so. It is a stopgap for Noah and a few
-  testers, never the answer for everyone (Phase 7 is).
-- **The picture of the spot:** the app takes it with Electron's `capturePage`, which a page does not have. The first
-  version posts without a picture, and says so on the card; Phase 8 adds it.
+- **A viewer around the prototype:** the slim bar from M5a, the prototype in a frame beneath it, and M4's shared
+  components with the **browser adapter** (the GitHub API, the pick and pin scripts run in the page).
+- **The trigger:** the app's own pattern, a Comment control with the count, opening the side panel from the right.
+  No native prompts.
+- **Signing in, for testing only:** a proper dialog in the app's style that takes a fine-grained GitHub token with Issues
+  read and write on the design repository, keeps it in that browser, and says so. A stopgap for Noah and a few
+  testers; M9 is the answer for everyone.
+- **No picture of the spot yet** (it needs `capturePage`, which a page does not have); the card says so. M10 adds it.
 
 **Done when:** on a prototype's page, Noah picks an element, writes a comment in the inline box, sees the numbered pin
 and the card in the side panel, and the comment is on the iteration's review issue.
 
-### Phase 6: The round trip, proved
+### M8: The round trip, proved
 
-- Comment on the page; in the app, the comment appears (within a minute, or at once when the window comes back into
-  focus, or with Sync). The pin is in the same place in both, on the same element.
-- Resolve it in the app; the page shows it resolved. Delete one on the page; it goes from the app.
-- Run **Address** on the page's comment from the app, and see the page update once the new iteration is published.
+- Comment on the page; in the app it appears (within a minute, on focus, or with Sync), the pin in the same place on
+  the same element.
+- Resolve it in the app and the page shows it resolved; delete one on the page and it goes from the app.
+- Run **Address** from the app on a comment made on the page, and see the next iteration appear and publish (M3, M6).
 - A test that drives both adapters against one fake GitHub, so the round trip is checked on every change.
 
 **Done when:** Noah watches a comment made on the page appear in the app, and acts on it there.
 
-### Phase 7: Signing in for everyone else (a decision first)
+### M9: Signing in for everyone (a decision first)
 
-The page cannot sign a person in by itself. One of these does it; each is a decision with a cost:
+Anyone who views or comments is signed in to GitHub (decided). Viewing is covered by private Pages. For commenting, a
+page cannot sign a person in by itself (GitHub's sign-in refuses calls from a page); one of these does it:
 
 | Option | What a reviewer does | Cost |
 |---|---|---|
-| **A browser extension** | Installs it once; it signs in with GitHub's device flow, as the app does, and gives the page a token | An install, deployed to people's browsers. No server |
-| **A small sign-in service** | Clicks "Sign in with GitHub" on the page | A server to own, approve and secure, which the plan has avoided so far |
-| **Stay with the token dialog** | Creates a token in GitHub's settings | Fine for a few testers, not for PMs and directors |
+| **A small, stateless sign-in service** (recommended) | Clicks "Sign in with GitHub" on the page | A server to own, approve and secure. It holds no data: it only exchanges GitHub's sign-in code for a token |
+| **A browser extension** | Installs it once; it signs in with GitHub's device flow, as the app does | An install, deployed to people's browsers. No server |
+| **The token dialog** | Creates a token in GitHub's settings | Fine for a few testers, not for PMs and directors |
 
 **Done when:** a PM with access signs in from the page in one step and comments.
 
-### Phase 8: Parity and polish
+### M10: Parity and the smaller things we agreed
 
-- The **picture of the spot** in the browser (a page-capture library, or the extension's own screenshot).
-- **Moving a pin** you made, as in the app.
-- The page's own **states** (default, empty, loading) carried into each comment, as the app does.
-- A comment's card says when it was made on the page, and by whom, as cards in the app do.
+- The **picture of the spot** in the browser; **moving a pin** you made; the page's own **states** carried into each
+  comment; a card that says when it was made on the page and by whom.
+- A **selected version** marker: the project page highlights it, `/<project>/latest/` follows it, and Build in the
+  codebase starts from its newest iteration.
+- An **unpublish** command (remove an iteration's files, push, redeploy), with Pages switched off by an admin as the
+  emergency switch.
+- The project page's plain **"Built in code" link** to the branch or pull request when there is codebase work.
+- The viewer readable on a phone, with "best on a computer" for the prototype.
 
 ## Out of scope
 
@@ -307,33 +421,25 @@ The page cannot sign a person in by itself. One of these does it; each is a deci
 
 | Risk | Why it matters | Mitigation |
 |---|---|---|
-| **Private Pages not allowed** in the org | Phase 2 cannot happen as written | Asked in Phase 0; without it, nothing here goes ahead, and the app stays the way to review |
-| **Two comment experiences drifting apart** | The reason the sandbox failed | Phase 4: one set of components, two adapters, and the round-trip test in Phase 6 |
-| **Tokens in a browser** | A token kept in a browser can be read by anything running on that page | Fine-grained, one repository, Issues only, and only for testing; Phase 7 replaces it |
+| **Private Pages not allowed** in the org | M5b cannot happen as written | Asked in M0; without it, nothing here goes ahead, and the app stays the way to review |
+| **Two comment experiences drifting apart** | The reason the sandbox failed | M4: one set of components, two adapters, and the round-trip test in M8 |
+| **Tokens in a browser** | A token kept in a browser can be read by anything running on that page | Fine-grained, one repository, Issues only, and only for testing; M9 replaces it |
 | **Cached pages** | A teammate sees the old iteration and comments on it | The link carries a version; each comment carries the iteration it was made on |
-| **A page is made public by mistake** (the repo flipped to public, or the site set to public) | The link then opens for anyone, which is the opposite of requirement 1 | The publish gate (Phase 2) refuses to hand out a link while either is public, and checks again after deploying |
-| **An agent pushes to the design repository** | Agents are told never to push | Only the one publish command, only `projects/`, only plain pushes (Phase 3); nothing else may push |
-| **A link goes out that someone cannot open** | A director gets a "not found" and thinks it is broken | The summary says who can open it; the design team has read access (Phase 0) before links go to anyone |
+| **A page is made public by mistake** (the repo flipped to public, or the site set to public) | The link then opens for anyone, which is the opposite of requirement 1 | The publish gate (M5b) refuses to hand out a link while either is public, and checks again after deploying |
+| **An agent pushes to the design repository** | Agents are told never to push | Only the one publish command, only `projects/`, only plain pushes (M6); nothing else may push |
+| **A link goes out that someone cannot open** | A director gets a "not found" and thinks it is broken | The summary says who can open it; the design team has read access (M0) before links go to anyone |
 | **Page size** | A page is about 2 MB, plus the 5 MB fonts once | Fonts are kept once on the site, not inlined into every page |
 | **Rate limits** | GitHub allows 5,000 API calls an hour per signed-in person | Comments are read when a page opens and when it comes back into focus, not continuously |
 
 ## Open questions
 
-- **Which branch publishes?** The app pushes `projects/` to the design repo's current branch. Pages deployments are
-  restricted to the default branch unless the environment allows others. Options: allow the app's branch in the Pages
-  environment, or publish from a workflow that runs on that branch. Needs the admin's answer (Phase 0).
-- **Does the publish command wait for the deployment,** and for how long, before the agent's summary goes back?
-- **What permission lets an agent run the publish command and nothing else that pushes,** in the repositories where
-  agents run?
+Most of what was open is now settled in a milestone or marked recommended in *Decisions made*. What remains:
 
-- **How a designer working in VS Code finds out a comment arrived:** GitHub's notifications on the review thread, the
-  app's refresh, or something else.
-- **Taking a page down quickly** if something should not have been published (delete the files and redeploy, and who
-  can do it).
-- **How to tell whether people use it:** Pages has no analytics, so comment counts per iteration are the signal.
-- **What the project page links to** when there is codebase work for the project (the pull request), given the design
-  team may not have access to the product repository.
-- **The viewer on a phone,** since PMs and directors may open a link from one.
-- **The trigger UI** on the page: where it sits, and how it looks beside a prototype that has its own top bar.
-- **Which sign-in mechanism** for everyone (Phase 7): the small service or the extension, and who would own it. That it requires GitHub is decided.
-- Whether comments made on a page should carry a mark saying so, for the agent and for the person reading them.
+- **How the command reaches an agent in VS Code** (M2). Recommended: one pre-built file committed in the design
+  repository, with a test that fails when it is stale.
+- **The trigger's exact look** on the page (M7). The pattern is set (a slim bar above the prototype, the Comment
+  control with its count, the side panel from the right); the visual detail is designed together when M7 starts.
+- **Which sign-in mechanism** for everyone (M9): the small service or the extension, and who would own it. That it
+  requires GitHub is decided.
+- **What the label for codebase work becomes** beside "V1 · I2". It keeps its present label until there is a reason to
+  change it.
