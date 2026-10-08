@@ -12,9 +12,6 @@ import { button, cards, menuItem, openMenu, press, render, settle, typeInto, unm
  * against a GitHub that answers as its API does, with the real pick and pin scripts running in the prototype's frame.
  */
 
-
-
-
 let gh: ReturnType<typeof fakeGitHub>;
 let current: Awaited<ReturnType<typeof render>> | null = null;
 const open = async () => {
@@ -54,29 +51,17 @@ describe("the page's bar", () => {
 	});
 });
 
-describe('signing in, for testing', () => {
-	it('asks for a token, checks it can read the repository, and keeps it in this browser', async () => {
+describe('signing in', () => {
+	it('is paused: the button says to comment in the app for now, and keeps nothing', async () => {
 		await open();
 		await press(button('Sign in to comment'));
 		await settle();
-		expect(document.body.textContent).toContain('Issues: read and write');
-		expect(document.body.textContent).toContain('kept in this browser only');
-		await typeInto(document.querySelector('input[aria-label="GitHub token"]') as HTMLInputElement, 'good-token');
-		await press(button('Sign in'));
+		expect(document.body.textContent).toContain('comment on this prototype in Flock Designer');
+		expect(document.querySelector('input')).toBeNull();
+		await press(button('OK'));
 		await settle();
-		expect(savedToken()).toBe('good-token');
-		expect(button('Comment')).toBeTruthy();
-	});
-
-	it('says why a token is refused, and keeps nothing', async () => {
-		await open();
-		await press(button('Sign in to comment'));
-		await settle();
-		await typeInto(document.querySelector('input[aria-label="GitHub token"]') as HTMLInputElement, 'bad');
-		await press(button('Sign in'));
-		await settle();
-		expect(document.body.textContent).toMatch(/Sign in to GitHub again|Bad credentials/);
 		expect(savedToken()).toBeNull();
+		expect(button('Sign in to comment')).toBeTruthy();
 	});
 
 	it('forgets the token on signing out', async () => {

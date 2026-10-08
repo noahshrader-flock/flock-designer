@@ -12,8 +12,7 @@ import { IterationSwitcher } from '../renderer/IterationSwitcher';
 import { Toolbar } from '../renderer/Toolbar';
 import { Alert, AlertDescription } from '../renderer/ui/alert';
 import { Button } from '../renderer/ui/button';
-import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../renderer/ui/dialog';
-import { Input } from '../renderer/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../renderer/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../renderer/ui/tooltip';
 import { browserComments, framePage, saveToken, savedToken, tokenApi } from './browserAdapter';
 
@@ -79,24 +78,25 @@ const PageBar = ({ config, slots, children }: { config: ViewerConfig; slots: Vie
 };
 
 export const Viewer = ({ config, slots }: { config: ViewerConfig; slots: ViewerSlots }) => {
+	// A token kept in this browser is what the sign-in will leave; until it exists, only tests leave one.
 	const [token, setToken] = useState<string | null>(savedToken);
-	const [signingIn, setSigningIn] = useState(false);
-	const signIn = (t: string | null) => {
-		saveToken(t);
-		setToken(t);
+	const [paused, setPaused] = useState(false);
+	const signOut = () => {
+		saveToken(null);
+		setToken(null);
 	};
 	return (
 		<>
 			{token ? (
-				<Commenting key={token} config={config} slots={slots} token={token} onSignOut={() => signIn(null)} />
+				<Commenting key={token} config={config} slots={slots} token={token} onSignOut={signOut} />
 			) : (
 				<PageBar config={config} slots={slots}>
-					<Button size="sm" variant="outline" onClick={() => setSigningIn(true)}>
+					<Button size="sm" variant="outline" onClick={() => setPaused(true)}>
 						Sign in to comment
 					</Button>
 				</PageBar>
 			)}
-			<SignIn config={config} open={signingIn} onClose={() => setSigningIn(false)} onToken={signIn} />
+			<CommentingPaused open={paused} onClose={() => setPaused(false)} />
 		</>
 	);
 };
@@ -178,60 +178,19 @@ const Commenting = ({ config, slots, token, onSignOut }: { config: ViewerConfig;
 };
 
 /**
- * Signing in, for testing only: a fine-grained token, kept in this browser. Everyone else will sign in with GitHub
- * itself (M9 of the Pages plan); a page cannot do that on its own.
+ * Commenting from a page is paused until signing in with GitHub works from one (M9 of the Pages plan): the button is
+ * kept where it will be, and says where to comment meanwhile.
  */
-const SignIn = ({ config, open, onClose, onToken }: { config: ViewerConfig; open: boolean; onClose: () => void; onToken: (t: string) => void }) => {
-	const [value, setValue] = useState('');
-	const [error, setError] = useState<string | null>(null);
-	const [checking, setChecking] = useState(false);
-	const check = async () => {
-		setChecking(true);
-		setError(null);
-		try {
-			// Asked of GitHub before it is kept: a token that cannot read this repository's issues is said to be so now.
-			await tokenApi(value.trim()).api(`/repos/${config.owner}/${config.repo}/issues?per_page=1`);
-			onToken(value.trim());
-			setValue('');
-			onClose();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : String(err));
-		} finally {
-			setChecking(false);
-		}
-	};
-	return (
-		<Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-			<DialogContent className="sm:max-w-lg">
-				<DialogHeader>
-					<DialogTitle>Sign in to comment</DialogTitle>
-					<DialogDescription>For testing, until signing in with GitHub works from a page.</DialogDescription>
-				</DialogHeader>
-				<DialogBody className="flex flex-col gap-3">
-					<p className="text-sm">
-						Paste a{' '}
-						<a className="underline" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">
-							fine-grained GitHub token
-						</a>{' '}
-						with <strong>Issues: read and write</strong> on {config.owner}/{config.repo}, and nothing else.
-					</p>
-					<p className="text-muted-foreground text-sm">It is kept in this browser only, and sent only to GitHub. Sign out to forget it.</p>
-					<Input type="password" autoComplete="off" aria-label="GitHub token" value={value} onChange={(e) => setValue(e.target.value)} />
-					{error && (
-						<Alert variant="destructive">
-							<AlertDescription>{error}</AlertDescription>
-						</Alert>
-					)}
-				</DialogBody>
-				<DialogFooter>
-					<Button variant="secondary" onClick={onClose}>
-						Cancel
-					</Button>
-					<Button onClick={() => void check()} disabled={checking || !value.trim()}>
-						{checking ? 'Checking…' : 'Sign in'}
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
-	);
-};
+const CommentingPaused = ({ open, onClose }: { open: boolean; onClose: () => void }) => (
+	<Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+		<DialogContent className="sm:max-w-md">
+			<DialogHeader>
+				<DialogTitle>Commenting here is coming</DialogTitle>
+				<DialogDescription>For now, comment on this prototype in Flock Designer.</DialogDescription>
+			</DialogHeader>
+			<DialogFooter>
+				<Button onClick={onClose}>OK</Button>
+			</DialogFooter>
+		</DialogContent>
+	</Dialog>
+);
