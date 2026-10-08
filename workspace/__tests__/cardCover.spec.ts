@@ -24,11 +24,13 @@ describe('the card cover', () => {
 		expect(cover!.className.split(' ')).toContain('w-full');
 	});
 
-	it('holds what it is given, and is an empty, quiet area without it', async () => {
-		current = await render(createElement(CardCover, null, createElement('span', null, 'picture')));
-		expect(document.body.querySelector('.aspect-\\[1920\\/1080\\]')!.textContent).toBe('picture');
-		await unmountAll(current.root);
-		current = await render(createElement(CardCover));
-		expect(document.body.querySelector('.aspect-\\[1920\\/1080\\]')!.textContent).toBe('');
+	it('is the card’s own colour, with its content spread top to bottom', async () => {
+		current = await render(createElement(CardCover, null, createElement('span', null, 'top'), createElement('span', null, 'bottom')));
+		const cover = document.body.querySelector('.aspect-\\[1920\\/1080\\]')!;
+		expect(cover.textContent).toBe('topbottom');
+		const classes = cover.className.split(' ');
+		expect(classes).toEqual(expect.arrayContaining(['flex', 'flex-col', 'justify-between']));
+		// No colour of its own: the card's shows through.
+		expect(classes.filter((c) => /^(bg|text)-/.test(c))).toEqual([]);
 	});
 });

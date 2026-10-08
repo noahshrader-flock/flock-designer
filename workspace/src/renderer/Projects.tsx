@@ -1,37 +1,17 @@
-import { FileTextIcon, FolderIcon, MessageSquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { Checkout, CheckoutSuggestion, Project, ProjectIteration } from '../shared/contract';
 import { LoadingScreen } from './Loading';
-import { CardCover } from './CardCover';
 import { CardGrid } from './CardGrid';
-import { MoreMenu } from './MoreMenu';
 import { NewWork, type Created } from './NewWork';
 import { Page } from './Page';
-import { PeopleAvatars } from './People';
+import { ProjectCard } from './ProjectCard';
 import { PublishBanner, PublishLine, usePublishStatus } from './PublishStatus';
-import { startedAt, workOf } from '../shared/projects';
 import { RecordSheet } from './RecordSheet';
 import { Review } from './Review';
 import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertDescription } from './ui/alert';
-import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { DropdownMenuItem } from './ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
-
-/** A name as it reads on a button: the first letter capital, the rest as written. */
-const sentence = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
-
-
-/** When a project was started, as a date a person reads; nothing when it is not known. */
-const Started = ({ at }: { at: string | null }) =>
-	at === null ? null : (
-		<span className="text-muted-foreground text-sm">
-			Started <time dateTime={at}>{new Date(at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</time>
-		</span>
-	);
 
 /**
  * Reviewer mode: every project in the design repository, read through the API.
@@ -211,67 +191,12 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 				{projects.length > 0 && (
 					<CardGrid>
 						{projects.map((project) => (
-							<Card key={project.id} className="pt-0">
-								<CardCover>
-									<FolderIcon className="size-8" />
-								</CardCover>
-								<CardHeader>
-									<CardTitle className="text-base font-semibold">{project.title}</CardTitle>
-									<CardDescription className="flex items-center gap-1.5">
-										<FolderIcon className="size-4 shrink-0" />
-										<span className="font-mono">{project.id}</span>
-									</CardDescription>
-									<CardAction className="flex flex-row items-center gap-2">
-										{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}
-										{project.openComments > 0 && (
-											<Tooltip>
-												<TooltipTrigger asChild>
-													<Badge
-														variant="secondary"
-														aria-label={`${project.openComments} open comment${project.openComments === 1 ? '' : 's'}`}
-													>
-														<MessageSquareIcon />
-														{project.openComments}
-													</Badge>
-												</TooltipTrigger>
-												<TooltipContent>
-													{project.openComments} open comment{project.openComments === 1 ? '' : 's'}
-												</TooltipContent>
-											</Tooltip>
-										)}
-										{project.records.length > 0 && (
-											<MoreMenu>
-												{project.records.map((record) => (
-													<DropdownMenuItem key={record} onSelect={() => setViewing({ project, name: record, open: true })}>
-														<FileTextIcon />
-														{sentence(record.replace(/\.[^.]+$/, '').replace(/-/g, ' '))}
-													</DropdownMenuItem>
-												))}
-											</MoreMenu>
-										)}
-									</CardAction>
-								</CardHeader>
-								<CardFooter className="mt-auto flex-wrap justify-between gap-2">
-									<div className="flex flex-row items-center gap-3">
-										<PeopleAvatars people={project.people} />
-										<Started at={startedAt(project)} />
-									</div>
-									<div className="ml-auto flex flex-row flex-wrap items-center justify-end gap-2">
-										{project.iterations.length === 0 && <span className="text-muted-foreground px-2 text-sm">Nothing made yet.</span>}
-										{/* One way into each kind of work, at its newest; the review screen switches between its iterations. */}
-										{(['prototype', 'codebase'] as const).map((kind) => {
-											const newest = workOf(project.iterations, kind)[0];
-											return (
-												newest && (
-													<Button key={kind} onClick={() => setSelected({ project, iteration: newest })}>
-														{kind === 'prototype' ? 'View prototype' : 'View codebase'}
-													</Button>
-												)
-											);
-										})}
-									</div>
-								</CardFooter>
-							</Card>
+							<ProjectCard
+								key={project.id}
+								project={project}
+								onOpen={(iteration) => setSelected({ project, iteration })}
+								onViewRecord={(name) => setViewing({ project, name, open: true })}
+							/>
 						))}
 					</CardGrid>
 				)}

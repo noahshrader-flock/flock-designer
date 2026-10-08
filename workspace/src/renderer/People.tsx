@@ -1,26 +1,30 @@
 import type { Person } from '../shared/contract';
 import { avatarUrl } from '../shared/people';
-import { Avatar, AvatarFallback, AvatarGroup, AvatarImage } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /**
- * Each person as their picture, overlapping, with their name on hover, so who it is is never lost for the
- * want of words.
+ * Who a project is by: the first person's picture and name, and how many others there are, whose names are on hover. The
+ * first person is the one the project's record names first, who started it.
  */
-export const PeopleAvatars = ({ people, className }: { people: Person[]; className?: string }) =>
-	people.length === 0 ? null : (
-		<AvatarGroup className={className}>
-			{people.map((p) => (
-				<Tooltip key={p.login ?? p.name}>
+export const PeopleLine = ({ people }: { people: Person[] }) => {
+	const [first, ...others] = people;
+	if (first === undefined) return null;
+	return (
+		<span className="flex min-w-0 items-center gap-2">
+			<Avatar size="sm">
+				<AvatarImage src={avatarUrl(first.login) ?? undefined} alt="" />
+				<AvatarFallback>{first.name.charAt(0).toUpperCase()}</AvatarFallback>
+			</Avatar>
+			<span className="truncate text-sm">{first.name}</span>
+			{others.length > 0 && (
+				<Tooltip>
 					<TooltipTrigger asChild>
-						{/* The ring is set here: a tooltip trigger replaces the avatar's own slot name, which the group's ring rule keys off. */}
-						<Avatar size="sm" className="ring-background ring-2 data-[size=sm]:size-5">
-							<AvatarImage src={avatarUrl(p.login) ?? undefined} alt={p.name} />
-							<AvatarFallback>{p.name.charAt(0).toUpperCase()}</AvatarFallback>
-						</Avatar>
+						<span className="text-muted-foreground text-xs">+{others.length}</span>
 					</TooltipTrigger>
-					<TooltipContent>{p.login ?? p.name}</TooltipContent>
+					<TooltipContent>{others.map((p) => p.name).join(', ')}</TooltipContent>
 				</Tooltip>
-			))}
-		</AvatarGroup>
+			)}
+		</span>
 	);
+};
