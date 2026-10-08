@@ -15,7 +15,7 @@
  *   today. It is a standalone page, not a tab on another page.
  *
  * MODELLED ON
- *   src/components/role/rolesPage.tsx (page frame, title and description, count line) and
+ *   src/components/role/rolesPage.tsx (page frame, title, count line) and
  *   src/components/alerts/alertPreferences/alertSourcesAccordion.tsx (the product's one grouped list: an FSAccordion
  *   per source, name as an h3 and a "n Enabled Topics" line in the summary, a table inside). The empty state follows
  *   rolesListSlotComponents.tsx RolesListInitialEmptyState.
@@ -41,7 +41,7 @@
  *       (rolesListSlotComponents.tsx RolesListFilteredEmptyState). This one says why and offers the way out.
  *   @mock
  *     - The alerts, devices, plates and people.
- *     - The organization and the 30-day window ending 2026-10-08.
+ *     - The 30-day window ending 2026-10-08.
  *     - The top-bar app links and account menus (copied from the 2026-10-06 reference, not from the account).
  *     - The Admin sub-nav (a customer admin's; computed from permissions in the real app).
  *   @remove
@@ -154,9 +154,6 @@ const ALERTS: AlertRow[] = SEEDS.map((s, i) => ({
     status: s.status,
     handledBy: s.handledBy,
 }));
-
-// @mock: organization name. On move: comes from the organization.
-const ORG_NAME = 'Alder Creek Police Department';
 
 const formatReceived = (ms: number) =>
     new Date(ms).toLocaleString('en-US', {
@@ -379,9 +376,6 @@ const AlertHistoryPage = ({ initialState }: { initialState: PageState }) => {
                 <FSBox sx={{ marginBottom: '1.25rem' }}>
                     <FSTypography variant="h4" component="h1" gutterBottom sx={{ marginTop: '0.75rem' }}>
                         Alert History
-                    </FSTypography>
-                    <FSTypography gutterBottom>
-                        Alerts sent to {ORG_NAME} in the last 30 days, grouped by the device that raised them. Hello
                     </FSTypography>
                 </FSBox>
 
