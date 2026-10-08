@@ -214,13 +214,19 @@ becomes `/v1/i1/`).
   and finds the next iteration of a version and the next version. `isPrototypeName`, `nextPrototypeName`, `workOf` and
   `iterationLabel` use it. The label reads **V1 · I2**.
 - **The main process and the app** (`prototype.ts`, `ipc.ts`, `iterations.ts`, `prototypeBuild.ts`): names are checked by
-  the one reader. No behavior changes.
+  the one reader. No behavior changes. **Checked in the code (2026-10-07):** a name is *matched* in only one place that
+  matters (`PROTOTYPE_NAME` in `shared/projects.ts`) and is used as an opaque label everywhere else, so the change is
+  small. Two places need care:
+  - `iterations.ts` adopts older `fd/<id>/iN` branches by reading the number out of the name. That path must accept
+    **only the old form**, or a name like `v1-i2` would be read as a nonsense branch number.
+  - `MoveToCode.tsx` shows the raw name to a person ("This moves i1 into…", "From prototype i1"). It must show the label
+    (V1 · I1).
 - **The review screen:** the switcher becomes two levels (the version, then its iterations). With one version it shows
   as today. Codebase work keeps its label.
 - **Not in M1:** making a second version (M2), the next-iteration rule (M3), a "selected" version (M10), pages (M5).
 
 **Tests first:** a table of names (old and new, good and bad), next-iteration and next-version counts including the old
-form, and labels. The existing prototype, address and records tests must pass unchanged.
+form, labels, and that an old `fd/` branch is adopted only for an old-form name. The existing prototype, address and records tests must pass unchanged.
 
 **Done when:** `admin-usage` shows as V1 · I1 with its comments intact; a test project with `v1-i1`, `v1-i2` and `v2-i1`
 lists them by version in the switcher; all existing tests pass; no existing file, record or thread changed.
