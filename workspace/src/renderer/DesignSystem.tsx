@@ -171,6 +171,15 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 						develop
 					</TooltipContent>
 				</Tooltip>
+				<div className="grow" />
+				{/* Where syncing is on the Projects screen: the problem, if there is one, beside the button. */}
+				<div className="flex items-center gap-2">
+					<UpdateProblem update={catalog.update} />
+					<Button size="sm" variant="ghost" disabled={refreshing} onClick={() => void refresh()}>
+						<RefreshCwIcon className={refreshing ? 'animate-spin' : undefined} />
+						{refreshing ? 'Refreshing…' : 'Refresh'}
+					</Button>
+				</div>
 			</Toolbar>
 			<Page>
 				{error && (
@@ -190,15 +199,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 							<TabsTrigger value="composite">Composite</TabsTrigger>
 						</TabsList>
 					</Tabs>
-					<div className="grow" />
-					<div className="flex items-center gap-2">
-						<span className="text-muted-foreground text-sm">{catalog.components.length} components</span>
-						<UpdateProblem update={catalog.update} />
-						<Button size="sm" variant="ghost" disabled={refreshing} onClick={() => void refresh()}>
-							<RefreshCwIcon className={refreshing ? 'animate-spin' : undefined} />
-							{refreshing ? 'Refreshing…' : 'Refresh'}
-						</Button>
-					</div>
+					<span className="text-muted-foreground text-sm">{catalog.components.length} components</span>
 				</div>
 				{catalog.components.length === 0 ? (
 					<p className="text-muted-foreground text-sm">

@@ -120,16 +120,15 @@ describe('finding a component', () => {
 		expect(text()).toContain('No components match.');
 	});
 
-	it('puts the count and Refresh in the row with search and the switcher, to its right, and none in the toolbar', async () => {
+	it('keeps Refresh in the toolbar at the right, as Projects does, and the count right after the switcher', async () => {
 		await open(() => ok(ready()));
-		const tabs = document.querySelector('[role="tablist"]')!;
-		const row = tabs.closest('div.flex-wrap')!;
-		expect(row.contains(document.querySelector('input[aria-label="Search components"]'))).toBe(true);
-		const refresh = button('Refresh');
-		expect(row.contains(refresh)).toBe(true);
-		expect(tabs.compareDocumentPosition(refresh) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		const toolbar = document.querySelector('h2')!.parentElement!;
-		expect(toolbar.textContent).toBe('FUI');
+		expect(toolbar.contains(button('Refresh'))).toBe(true);
+		expect(toolbar.textContent).toBe('FUIRefresh');
+		const tabs = document.querySelector('[role="tablist"]')!;
+		const count = [...document.querySelectorAll('span')].find((e) => e.textContent === '5 components')!;
+		expect(toolbar.contains(count)).toBe(false);
+		expect(tabs.closest('[data-slot="tabs"]')!.nextElementSibling).toBe(count);
 	});
 
 	it('has no filter for components without a story', async () => {
@@ -180,6 +179,7 @@ describe('keeping it current', () => {
 		const problem = [...document.querySelectorAll('[role="status"]')].find((e) => e.textContent === 'Could not update from GitHub')!;
 		expect(problem.getAttribute('title')).toBe('Could not reach GitHub. Check the internet connection.');
 		expect(problem.nextElementSibling?.textContent).toBe('Refresh');
+		expect(document.querySelector('h2')!.parentElement!.contains(problem)).toBe(true);
 	});
 
 	it('asks again, waiting for GitHub, when Refresh is pressed', async () => {
