@@ -3,7 +3,8 @@ import type { AgentReadiness, Checkout, IterationKind, Project, ProjectIteration
 import { freshIteration, slugify } from '../shared/projects';
 import { CloneHere, useClone, Working } from './Clone';
 import { SearchSelect } from './SearchSelect';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { InfoIcon } from 'lucide-react';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
@@ -262,12 +263,14 @@ export const NewWork = ({
 						</>
 					) : (
 						<Alert>
-							<AlertDescription className="flex items-center justify-between gap-4">
-								<span>Flock Designer could not find a Flock product repository on this machine.</span>
-								<Button size="sm" onClick={onChoose}>
+							<InfoIcon />
+							<AlertTitle>No product repository found</AlertTitle>
+							<AlertDescription>Flock Designer could not find a Flock product repository on this machine.</AlertDescription>
+							<AlertAction>
+								<Button variant="outline" size="xs" onClick={onChoose}>
 									Find it
 								</Button>
-							</AlertDescription>
+							</AlertAction>
 						</Alert>
 					)}
 					<div className="flex flex-col gap-2">

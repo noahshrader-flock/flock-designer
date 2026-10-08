@@ -1,4 +1,4 @@
-import { ChevronRightIcon, GitBranchIcon } from 'lucide-react';
+import { ChevronRightIcon, GitBranchIcon, InfoIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Catalog, CatalogComponent, CatalogUpdate } from '../shared/contract';
 import { ComponentPage } from './ComponentPage';
@@ -8,7 +8,7 @@ import { Page } from './Page';
 import { SearchSelect } from './SearchSelect';
 import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
@@ -33,15 +33,20 @@ const Row = ({ component, onOpen }: { component: CatalogComponent; onOpen: () =>
 	</li>
 );
 
-/** What a person sees in place of the list when there is no list, and what to do about it. */
-const Notice = ({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) => (
+/** What a person sees in place of the list when there is no list, and, when there is a way to, a Try again. */
+const Notice = ({ title, children, onRetry }: { title: string; children: ReactNode; onRetry?: () => void }) => (
 	<Page>
 		<Alert>
+			<InfoIcon />
 			<AlertTitle>{title}</AlertTitle>
-			<AlertDescription className="flex flex-col items-start gap-3">
-				<span>{children}</span>
-				{action}
-			</AlertDescription>
+			<AlertDescription>{children}</AlertDescription>
+			{onRetry && (
+				<AlertAction>
+					<Button variant="outline" size="xs" onClick={onRetry}>
+						Try again
+					</Button>
+				</AlertAction>
+			)}
 		</Alert>
 	</Page>
 );
@@ -97,7 +102,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 
 	if (error && catalog === null) {
 		return (
-			<Notice title="Could not read the component library" action={<Button variant="secondary" size="sm" onClick={() => void sync()}>Try again</Button>}>
+			<Notice title="Could not read the component library" onRetry={() => void sync()}>
 				{error}
 			</Notice>
 		);
@@ -110,7 +115,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	}
 	if (catalog.state === 'no-branch') {
 		return (
-			<Notice title={`This clone has no ${catalog.branch} branch`} action={<Button variant="secondary" size="sm" onClick={() => void sync()}>Try again</Button>}>
+			<Notice title={`This clone has no ${catalog.branch} branch`} onRetry={() => void sync()}>
 				The clone at {catalog.root} has no {catalog.branch} branch from GitHub to read, and no other branch is read in its place.
 				Check it is a clone of the library, and that this computer can reach GitHub.
 			</Notice>

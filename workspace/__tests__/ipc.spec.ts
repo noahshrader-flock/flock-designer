@@ -73,6 +73,8 @@ let readComments: ReturnType<typeof vi.fn>;
 let setAddressed: ReturnType<typeof vi.fn>;
 let githubState: unknown;
 let githubApi: ReturnType<typeof vi.fn>;
+/** What the design repository's project list says, for the tests of the list. */
+let designRepoProjects: unknown[] = [];
 let prototypeServer: InstanceType<typeof import('../src/main/services/prototypeServer')['PrototypeServer']>;
 
 beforeEach(async () => {
@@ -110,6 +112,7 @@ beforeEach(async () => {
 	setAddressed = vi.fn(async (id: number, commit: string | null, iteration: string | null) => ({ id, addressedAt: commit, addressedIn: iteration }));
 	githubState = { state: 'signedOut' };
 	githubApi = vi.fn(async (path: string) => Promise.reject(new Error(`not faked: ${path}`)));
+	designRepoProjects = [];
 	prototypeServer = new (await import('../src/main/services/prototypeServer')).PrototypeServer();
 
 	registerIpc({
@@ -118,7 +121,7 @@ beforeEach(async () => {
 		runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
 		agent: { start: agentStart, status: agentStatus, stop: agentStop, runningIn: agentRunningIn, runningSession: () => runningSession, recentLines: () => recent } as never,
 		github: { state: () => githubState, api: (...a: unknown[]) => githubApi(...a) } as never,
-		designRepo: { listProjects: vi.fn(async () => []), deleteComment, readComments, setAddressed, readFile: vi.fn(async () => null) } as never,
+		designRepo: { listProjects: vi.fn(async () => designRepoProjects), deleteComment, readComments, setAddressed, readFile: vi.fn(async () => null) } as never,
 		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
 		memory: { read: () => memoryValue, write: (r: string) => { memoryValue = r; }, available: () => true } as never,
 		onPublishStatus: vi.fn(),
@@ -458,6 +461,19 @@ describe('discovery suggests; it does not trust', () => {
 });
 
 describe('listProjects', () => {
+	it('names every person by their GitHub profile, however git named them, and joins them when they are one account', async () => {
+		const iteration = (people: { name: string; login: string | null }[]) => ({
+			name: 'i1', branch: 'fd/alpha/i1', issueNumber: null, openComments: 0, previewUrl: null, commit: null, contributors: people, createdAt: null, route: null,
+		});
+		const shared = { id: 'alpha', title: 'Alpha', records: [], iterations: [iteration([{ name: 'noahshrader-flock', login: 'noahshrader-flock' }])], people: [{ name: 'noahshrader-flock', login: 'noahshrader-flock' }, { name: 'Noah Shrader', login: 'noahshrader-flock' }] };
+		designRepoProjects = [shared];
+		githubApi.mockImplementation(async (path: string) => (path === '/users/noahshrader-flock' ? { login: 'noahshrader-flock', name: 'Noah Shrader' } : Promise.reject(new Error(`not faked: ${path}`))));
+		const r = await call(CHANNELS.listProjects);
+		const [alpha] = r.value as { people: unknown[]; iterations: { contributors: unknown[] }[] }[];
+		expect(alpha!.people).toEqual([{ name: 'Noah Shrader', login: 'noahshrader-flock' }]);
+		expect(alpha!.iterations[0]!.contributors).toEqual([{ name: 'Noah Shrader', login: 'noahshrader-flock' }]);
+	});
+
 	it('reads nothing from a repository that was never accepted', async () => {
 		writeFileSync(join(design, 'projects', 'x.txt'), 'x');
 		const r = await call(CHANNELS.listProjects);

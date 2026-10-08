@@ -1,4 +1,5 @@
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { TriangleAlertIcon } from 'lucide-react';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { useEffect, useRef, useState } from 'react';
 import type { PublishStatus as Status } from '../shared/contract';
@@ -32,24 +33,20 @@ export const PublishBanner = ({ status: current, onChange }: { status: Status; o
 	if (status.state === 'held') {
 		return (
 			<Alert variant="warning">
+				<TriangleAlertIcon />
 				<AlertTitle>Some of your work is not synced yet</AlertTitle>
 				<AlertDescription>
-					<ul className="m-0 list-disc pl-5">
-						{status.problems.map((p) => (
-							<li key={`${p.what}:${p.why}`} className="text-sm">
-								<b className="text-foreground">{p.what}:</b> {p.why}
-							</li>
-						))}
-					</ul>
-					<Button
-						variant="secondary"
-						size="sm"
-						className="mt-2 shrink-0"
-						onClick={() => void window.workspace.publishNow().then((r) => r.ok && onChange(r.value))}
-					>
+					{status.problems.map((p) => (
+						<p key={`${p.what}:${p.why}`}>
+							{p.what}: {p.why}
+						</p>
+					))}
+				</AlertDescription>
+				<AlertAction>
+					<Button variant="outline" size="xs" onClick={() => void window.workspace.publishNow().then((r) => r.ok && onChange(r.value))}>
 						Try again
 					</Button>
-				</AlertDescription>
+				</AlertAction>
 			</Alert>
 		);
 	}

@@ -1,4 +1,4 @@
-import { BookOpenIcon, CodeIcon } from 'lucide-react';
+import { BookOpenIcon, CodeIcon, TriangleAlertIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { PREVIEW_HEIGHT, previewAddress } from '../shared/catalog';
 import type { CatalogComponent, StoryPreview } from '../shared/contract';
@@ -6,7 +6,7 @@ import { BackButton } from './BackButton';
 import { Loading } from './Loading';
 import { MoreMenu } from './MoreMenu';
 import { Page } from './Page';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { DropdownMenuItem } from './ui/dropdown-menu';
@@ -84,12 +84,6 @@ export const ComponentPage = ({
 		void build();
 	}, [build, commit]);
 
-	const tryAgain = (
-		<Button variant="secondary" size="sm" onClick={() => void build()}>
-			Try again
-		</Button>
-	);
-
 	return (
 		<Page>
 			<div className="flex items-start gap-3">
@@ -113,17 +107,20 @@ export const ComponentPage = ({
 				</Card>
 			) : (
 				<Alert variant={preview.state === 'no-packages' ? 'warning' : 'destructive'}>
+					<TriangleAlertIcon />
 					<AlertTitle>Previews could not be built</AlertTitle>
-					<AlertDescription className="flex flex-col items-start gap-3">
-						<span>
-							{preview.state === 'no-packages'
-								? `The library's packages are not installed in ${preview.root}. Run npm install there, then try again.`
-								: preview.state === 'no-library'
-									? 'There is no design system library connected.'
-									: preview.error}
-						</span>
-						{tryAgain}
+					<AlertDescription>
+						{preview.state === 'no-packages'
+							? `The library's packages are not installed in ${preview.root}. Run npm install there, then try again.`
+							: preview.state === 'no-library'
+								? 'There is no design system library connected.'
+								: preview.error}
 					</AlertDescription>
+					<AlertAction>
+						<Button variant="outline" size="xs" onClick={() => void build()}>
+							Try again
+						</Button>
+					</AlertAction>
 				</Alert>
 			)}
 		</Page>

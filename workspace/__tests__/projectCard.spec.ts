@@ -68,8 +68,9 @@ describe('the cover', () => {
 		expect(person.querySelector('[data-slot="avatar"]')!.getAttribute('data-size')).toBe('xs');
 		expect(bottom!.children[0]!.className.split(' ')).toContain('text-lg');
 		expect(bottom!.children[0]!.className).not.toContain('text-right');
-		// Stacked top to bottom, as written: not reversed.
+		// Stacked top to bottom, as written: not reversed, with room between the name and the person.
 		expect(bottom!.className.split(' ')).toContain('flex-col');
+		expect(bottom!.className.split(' ')).toContain('gap-2');
 		expect(cover().querySelector('svg.lucide-folder')).toBeNull();
 		expect(text()).not.toContain('admin-usage');
 		expect(cover().className).not.toMatch(/\bbg-/);

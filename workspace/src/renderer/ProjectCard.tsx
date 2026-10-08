@@ -61,7 +61,7 @@ export const ProjectCard = ({
 						</MoreMenu>
 					)}
 				</div>
-				<div className="flex min-w-0 flex-col gap-1">
+				<div className="flex min-w-0 flex-col gap-2">
 					<CardTitle className="line-clamp-2 text-lg font-semibold">{project.title}</CardTitle>
 					<PeopleLine people={project.people} />
 				</div>

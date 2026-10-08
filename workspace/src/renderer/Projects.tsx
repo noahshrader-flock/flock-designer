@@ -10,7 +10,8 @@ import { RecordSheet } from './RecordSheet';
 import { Review } from './Review';
 import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
-import { Alert, AlertDescription } from './ui/alert';
+import { InfoIcon } from 'lucide-react';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 
 /**
@@ -162,12 +163,14 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 				)}
 				{looked && !checkout && !suggestion && (
 					<Alert>
-						<AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-							<span>Flock Designer could not find a Flock product repository on this machine. Point it at your product repository once.</span>
-							<Button size="sm" onClick={chooseCheckout}>
+						<InfoIcon />
+						<AlertTitle>No product repository found</AlertTitle>
+						<AlertDescription>Flock Designer could not find a Flock product repository on this machine. Point it at yours once.</AlertDescription>
+						<AlertAction>
+							<Button variant="outline" size="xs" onClick={chooseCheckout}>
 								Find it
 							</Button>
-						</AlertDescription>
+						</AlertAction>
 					</Alert>
 				)}
 				<NewWork

@@ -36,6 +36,7 @@ import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIter
 import { type Cloned, Cloner, type GitProgress, notClonedOver } from './services/clone';
 import { INSTALL_COMMAND, Installer } from './services/install';
 import { connectLibrary, DesignLibrary, DesignSystemMemory, libraryFinder } from './services/designLibrary';
+import { ProfileNames } from './services/profileNames';
 import { StoryPreviews } from './services/storyPreviews';
 import { isDesignSystem } from '../shared/catalog';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
@@ -763,6 +764,8 @@ export const registerIpc = ({
 		}),
 	);
 
+	/** Names people by their GitHub profile, once each, so a person is the same name wherever they appear. */
+	const profiles = new ProfileNames((path) => github.api(path));
 	// Reviewer mode: read through the API, never a checkout.
 	// Everything on GitHub plus everything built on this machine. Work made here
 	// must appear here, shared or not, so the two are merged; if GitHub cannot be
@@ -800,7 +803,7 @@ export const registerIpc = ({
 			}
 			// Reading the list is a good moment to make sure what it shows is published.
 			void publisher.publish();
-			return mergeProjects(remote, local);
+			return profiles.nameEveryone(mergeProjects(remote, local));
 		}),
 	);
 	/**
