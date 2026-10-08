@@ -50,3 +50,9 @@ page: the link the publish command printed, or, when it printed none, why. Never
 
 Say who can open the page in the publish command's words: it says when the site is public, as it is while the design
 repository is.
+
+## Taking a page down
+
+Only when the person asks for an iteration to come off its page:
+`node ../flock-designer/workspace/bin/flkd.mjs unpublish --project <id> --name <v1-i2>`. It removes the saved page and
+source, pushes, and deploys the site without it; the record and comments stay. Pass on what it printed.

@@ -42,7 +42,7 @@ const smokeMode = process.argv.includes('--smoke');
  */
 const GITHUB_CLIENT_ID = process.env.FLOCK_DESIGNER_CLIENT_ID ?? 'Iv23li2z9ayhXhGdFXCm';
 
-const DEFAULT_SIZE = { width: 1260, height: 780 };
+const DEFAULT_SIZE = { width: 1160, height: 700 };
 
 const createWindow = (): BrowserWindow => {
 	// A check run for testing must neither read nor change how the person's own window is kept.

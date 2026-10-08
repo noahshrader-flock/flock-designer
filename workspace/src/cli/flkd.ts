@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import type { Iteration, Person, ReviewComment } from '../shared/contract';
@@ -10,11 +10,12 @@ import { writeCommentsExport } from '../main/services/commentsExport';
 import { DESCRIPTOR_PATH } from '../main/services/descriptor';
 import { DESIGN_REPO, DesignRepo, type GitHubApi } from '../main/services/designRepo';
 import { recordsRootFor } from '../main/services/discovery';
+import { assertUsableProjectId } from '../main/services/iterations';
 import { readCheckout, runGit } from '../main/services/git';
-import { BUILD_SKILL, cloneStore, prototypeBuildTask } from '../main/services/prototype';
+import { BUILD_SKILL, assertPrototypeName, cloneStore, prototypeBuildTask } from '../main/services/prototype';
 import { shellLine } from '../main/services/prototypeBundle';
 import { prototypeWork, whereTheChangeGoes } from '../main/services/prototypeWork';
-import { publish, recordsFrom } from '../main/services/pages';
+import { publish, recordsFrom, unpublish } from '../main/services/pages';
 import { buildSite } from '../site/buildSite';
 import { serveSite } from '../site/serveSite';
 
@@ -71,13 +72,16 @@ const USAGE = `Usage:
   flkd save-prototype --project <id> --name <v1-i1> [--product <dir>]
   flkd build-site [--out <dir>] [--serve]
   flkd publish --project <id> --name <v1-i1>
+  flkd unpublish --project <id> --name <v1-i1>
 
 new-prototype records the next version (v1-i1 for a new project, then v2-i1, v3-i1) and prints the task: where to
 write the prototype and how to check it builds. change-prototype does the same for a change to one: in its version's
 newest iteration, or in the next when others have commented on that. save-prototype builds it and saves page and
 source to the design repository. --note-file <path> may stand in for --note. --title is needed only for a new project.
 build-site writes the site prototypes are published as, from the design repository, and --serve shows it here. publish
-pushes the records, deploys the site and prints the iteration's link, and says who can open it.`;
+pushes the records, deploys the site and prints the iteration's link, and says who can open it. unpublish takes an
+iteration off the site: its saved page and source are removed, here and in the design repository, and the site is
+deployed without it. Its record and comments are kept.`;
 
 class UsageError extends Error {}
 
@@ -169,11 +173,19 @@ const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): P
 };
 
 /** Publishes one saved iteration to its page, and prints the link. */
-const publishPage = async (deps: CliDeps, values: { project?: string; name?: string }): Promise<number> => {
+/** The project and iteration a page command is for, checked as names before any path is made of them. */
+const pageOf = (values: { project?: string; name?: string }): { projectId: string; name: string } => {
 	const projectId = values.project;
 	const name = values.name;
 	if (!projectId) throw new UsageError('Say which project, with --project.');
 	if (!name) throw new UsageError('Say which prototype, with --name.');
+	assertUsableProjectId(projectId);
+	assertPrototypeName(name);
+	return { projectId, name };
+};
+
+const publishPage = async (deps: CliDeps, values: { project?: string; name?: string }): Promise<number> => {
+	const { projectId, name } = pageOf(values);
 	const designRoot = await designOf(deps.cwd);
 	if (!existsSync(join(designRoot, prototypePagePath(projectId, name)))) {
 		throw new Error(`${projectId} ${name} has no saved page in the design repository. Save it first (save-prototype), then publish.`);
@@ -190,6 +202,31 @@ const publishPage = async (deps: CliDeps, values: { project?: string; name?: str
 		log: deps.out,
 	});
 	deps.out(published.url);
+	return 0;
+};
+
+const unpublishPage = async (deps: CliDeps, values: { project?: string; name?: string }): Promise<number> => {
+	const { projectId, name } = pageOf(values);
+	const designRoot = await designOf(deps.cwd);
+	if (!existsSync(join(designRoot, prototypePagePath(projectId, name)))) {
+		throw new Error(`${projectId} ${name} has no saved page in the design repository, so it is not on the site.`);
+	}
+	if (!deps.github) throw new Error("Unpublishing goes through GitHub's command line, gh, which is missing or not signed in here. Run gh auth login, then try again.");
+	await unpublish({
+		github: deps.github,
+		ref: DESIGN_REPO,
+		...(await recordsFrom(designRoot)),
+		projectId,
+		name,
+		// This machine's copies too: the app saves a page it finds here and not in the repository, which would put it back.
+		removePage: async () => {
+			for (const path of [prototypePagePath(projectId, name), prototypeSourcePath(projectId, name)]) rmSync(join(designRoot, path), { force: true });
+			for (const ext of ['html', 'tsx']) rmSync(join(deps.prototypesRoot, projectId, `${name}.${ext}`), { force: true });
+		},
+		fetchAnonymously: deps.fetchAnonymously,
+		sleep: deps.sleep,
+		log: deps.out,
+	});
 	return 0;
 };
 
@@ -217,12 +254,13 @@ const taskText = (lead: string, task: string, save: string, publish: string): st
 export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 	try {
 		const [command, ...rest] = argv;
-		if (!['new-prototype', 'change-prototype', 'save-prototype', 'build-site', 'publish'].includes(command ?? '')) {
+		if (!['new-prototype', 'change-prototype', 'save-prototype', 'build-site', 'publish', 'unpublish'].includes(command ?? '')) {
 			throw new UsageError(command ? `There is no command called ${command}.` : 'Say which command.');
 		}
 		const values = optionsOf(rest);
 		if (command === 'build-site') return await site(deps, values);
 		if (command === 'publish') return await publishPage(deps, values);
+		if (command === 'unpublish') return await unpublishPage(deps, values);
 		const projectId = values.project;
 		if (!projectId) throw new UsageError('Say which project, with --project.');
 

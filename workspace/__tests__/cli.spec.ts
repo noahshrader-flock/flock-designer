@@ -258,6 +258,60 @@ describe('publish', () => {
 	});
 });
 
+describe('unpublish', () => {
+	const saved = async () => {
+		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
+		writeFileSync(join(prototypes, 'demo', 'v1-i1.tsx'), "import { Hello } from 'x';\nexport default () => <Hello />;\n");
+		await run('save-prototype', '--project', 'demo', '--name', 'v1-i1');
+		out = [];
+	};
+
+	it('refuses a name that is not one, before any path is made of it', async () => {
+		expect(await main(['unpublish', '--project', '../x', '--name', 'v1-i1'], deps(design))).toBe(1);
+		expect(await main(['unpublish', '--project', 'demo', '--name', '../../x'], deps(design))).toBe(1);
+	});
+
+	it('takes off only a page that is saved, and needs GitHub to be asked', async () => {
+		expect(await main(['unpublish', '--project', 'demo', '--name', 'v1-i1'], deps(design))).toBe(1);
+		expect(err.join('\n')).toMatch(/no saved page[\s\S]*not on the site/);
+		await saved();
+		expect(await main(['unpublish', '--project', 'demo', '--name', 'v1-i1'], deps(design))).toBe(1);
+		expect(err.join('\n')).toMatch(/gh auth login/);
+		expect(existsSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'))).toBe(true);
+	});
+
+	it('removes the page and source, here and in the design repository, pushes, and keeps the record', async () => {
+		await saved();
+		// GitHub: a bare repository to push to, and an API whose site deploys at once.
+		const remote = join(home, 'remote.git');
+		g(home, 'init', '-q', '--bare', remote);
+		g(design, 'add', '-A');
+		g(design, 'commit', '-q', '-m', 'Saved');
+		const branch = g(design, 'symbolic-ref', '--short', 'HEAD').trim();
+		g(design, 'remote', 'add', 'origin', remote);
+		g(design, 'push', '-q', '-u', 'origin', branch);
+		let dispatched = false;
+		github = {
+			api: async (path: string) => {
+				if (/^\/repos\/[^/]+\/[^/]+$/.test(path)) return { private: true, default_branch: branch };
+				if (path.endsWith('/pages')) return { html_url: 'https://acme.github.io/design/', public: false };
+				if (path.endsWith('/dispatches')) return void (dispatched = true);
+				if (path.includes('/runs')) return { workflow_runs: dispatched ? [{ id: 2, status: 'completed', conclusion: 'success', html_url: 'run/2' }] : [] };
+				throw new Error(`not faked: ${path}`);
+			},
+		};
+		const quick = { ...deps(design), sleep: async () => undefined, fetchAnonymously: async () => ({ status: 404 }) };
+		expect(await main(['unpublish', '--project', 'demo', '--name', 'v1-i1'], quick)).toBe(0);
+		for (const f of ['v1-i1.html', 'v1-i1.tsx']) {
+			expect(existsSync(join(design, 'projects', 'demo', 'prototypes', f))).toBe(false);
+			expect(existsSync(join(prototypes, 'demo', f))).toBe(false);
+		}
+		expect(iterations().map((i) => i.name)).toEqual(['v1-i1']);
+		expect(g(remote, 'ls-tree', '-r', '--name-only', branch)).not.toContain('v1-i1.html');
+		expect(out.join('\n')).toContain('https://acme.github.io/design/demo/v1/i1/');
+	});
+});
+
 describe('the command', () => {
 	it('is started by its own skill, never by the build skill every prototype task carries', () => {
 		const skills = join(__dirname, '..', '..', 'skills');

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, whyPublic } from '../src/main/services/pages';
+import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, unpublish, whyPublic } from '../src/main/services/pages';
 
 /**
  * Publishing a prototype to its page (M5b of the Pages plan), against a fake GitHub. What matters most is what it will
@@ -195,5 +195,59 @@ describe('whether an iteration is on its page', () => {
 		const none = { api: vi.fn(async (path: string) => (path === '/repos/acme/design' ? { private: true } : Promise.reject(Object.assign(new Error('Not Found'), { status: 404 })))) };
 		expect(await pageStatus(none, REF, 'demo', 'v1-i2')).toEqual({ state: 'none' });
 		expect(await pageStatus(site(), REF, 'demo', 'codebase')).toEqual({ state: 'none' });
+	});
+});
+
+describe('unpublishing', () => {
+	const take = (gh: ReturnType<typeof fakeGitHub>, more: Partial<Parameters<typeof unpublish>[0]> = {}) => {
+		const order: string[] = [];
+		const log: string[] = [];
+		const done = unpublish({
+			github: { api: gh.api },
+			ref: REF,
+			recordsBranch: 'main',
+			projectId: 'demo',
+			name: 'v1-i2',
+			removePage: async () => void order.push('removed'),
+			pushRecords: async () => (order.push('pushed'), { published: ['demo'], problems: [] }),
+			fetchAnonymously: async () => ({ status: 404 }),
+			sleep: async () => undefined,
+			log: (l) => log.push(l),
+			...more,
+		});
+		return { done, order, log };
+	};
+
+	it('removes the page, pushes that, deploys the site without it, and checks it is gone', async () => {
+		const gh = fakeGitHub({ repoPrivate: false, sitePublic: true });
+		const { done, order, log } = take(gh);
+		expect(await done).toEqual({ url: `${SITE}demo/v1/i2/`, gone: true });
+		expect(order).toEqual(['removed', 'pushed']);
+		expect(gh.calls.find((c) => c.method === 'POST')?.path).toBe(`/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/dispatches`);
+		expect(log.join('\n')).toMatch(/Taken off the site[\s\S]*record and comments are kept/);
+	});
+
+	it('says to ask for Pages to be switched off when the page still opens', async () => {
+		const { done, log } = take(fakeGitHub(), { fetchAnonymously: async () => ({ status: 200 }) });
+		expect(await done).toMatchObject({ gone: false });
+		expect(log.join('\n')).toMatch(/still opens[\s\S]*switch Pages off/);
+	});
+
+	it('removes nothing when there is no site, or the records are on a branch the site is not built from', async () => {
+		for (const [gh, more] of [
+			[fakeGitHub({ pages: false }), {}],
+			[fakeGitHub(), { recordsBranch: 'noah/elsewhere' }],
+		] as const) {
+			const { done, order } = take(gh, more);
+			await expect(done).rejects.toThrow();
+			expect(order).toEqual([]);
+		}
+	});
+
+	it('says the page is still on the site when the records cannot be pushed', async () => {
+		const gh = fakeGitHub();
+		const { done } = take(gh, { pushRecords: async () => ({ published: [], problems: [{ what: 'Project records', why: 'Could not reach GitHub.' }] }) });
+		await expect(done).rejects.toThrow(/removed here[\s\S]*site still has it[\s\S]*Could not reach GitHub/);
+		expect(gh.calls.some((c) => c.method === 'POST')).toBe(false);
 	});
 });
