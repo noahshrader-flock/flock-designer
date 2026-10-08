@@ -2,65 +2,81 @@ import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
-import {
-	isGap,
-	literalField,
-	readCatalog,
-	storybookId,
-	storybookUrl,
-	STORYBOOK_URL,
-	UNGROUPED,
-	type CatalogReads,
-} from '../src/main/services/componentCatalog';
+import { DESIGN_SYSTEMS, type DesignSystem } from '../src/shared/catalog';
+import { isStoryFile, literalField, readCatalog, sidebarOrder, storybookId, storybookUrl, UNGROUPED, type CatalogReads } from '../src/main/services/componentCatalog';
 import { libraryReads } from '../src/main/services/designLibrary';
 
 /** A library made of files in memory. A file whose text is null cannot be read. */
 const library = (files: Record<string, string | null>): CatalogReads => ({
-	listFiles: async (dir) => Object.keys(files).filter((f) => f.startsWith(`${dir}/`)),
+	listFiles: async (dir) => Object.keys(files).filter((f) => dir === '' || f.startsWith(`${dir}/`)),
 	readFile: async (path) => {
 		const text = files[path];
 		if (text === null || text === undefined) throw new Error(`cannot read ${path}`);
 		return text;
 	},
 });
+const DS: DesignSystem = { repository: 'acme/ui', branch: 'main', storybook: 'https://sb.example/' };
+const story = (title: string, extra = '') => `const meta = {\n  title: '${title}',\n  parameters: {${extra}\n  },\n};\nexport default meta;\n`;
 
-const story = (title: string, extra = '') => `import type { Meta } from '@storybook/react-vite';
-const meta: Meta = {
-  title: '${title}',
-  component: X,
-  parameters: {${extra}
-  },
-};
-export default meta;
-`;
-
-describe('reading a story', () => {
-	it('reads a standard story in full', async () => {
-		const [c] = await readCatalog(
+describe('what is a component', () => {
+	it('is every Storybook story file, wherever it is, by any of the script extensions, and no docs page', async () => {
+		const catalog = await readCatalog(
 			library({
-				'src/components/FSButton/index.tsx': '',
-				'src/components/FSButton/FSButton.stories.tsx': story(
-					'Buttons/FSButton',
-					`
-    componentSubtitle: 'Buttons allow users to take actions.',
-    urls: { githubUrl: 'https://example.com/old', figmaPageUrl: 'https://www.figma.com/design/abc' },`,
-				),
+				'src/components/Button/Button.stories.tsx': story('Buttons/Button'),
+				'lib/anywhere/deep/Card.stories.jsx': story('Surfaces/Card'),
+				'packages/x/Chip.stories.ts': story('Data/Chip'),
+				'src/Intro.mdx': '# Welcome',
+				'src/components/Button/index.tsx': '',
+				'src/stories.tsx': '',
 			}),
+			DS,
+		);
+		expect(catalog.map((c) => c.id).sort()).toEqual(['lib/anywhere/deep/Card.stories.jsx', 'packages/x/Chip.stories.ts', 'src/components/Button/Button.stories.tsx']);
+		expect(['a.stories.js', 'a.stories.mjs', 'a.stories.tsx'].every(isStoryFile)).toBe(true);
+		expect(['a.stories.mdx', 'a.story.tsx', 'stories.tsx'].some(isStoryFile)).toBe(false);
+	});
+
+	it('names and groups a component by its Storybook title, and links it to the library’s own Storybook and source', async () => {
+		const [c] = await readCatalog(
+			library({ 'src/components/FSButton/FSButton.stories.tsx': story('Buttons/FSButton', "\n    componentSubtitle: 'Buttons allow users to take actions.',") }),
+			DESIGN_SYSTEMS[0]!,
 		);
 		expect(c).toEqual({
-			id: 'components/FSButton',
+			id: 'src/components/FSButton/FSButton.stories.tsx',
 			name: 'FSButton',
 			group: 'Buttons',
-			composite: false,
 			subtitle: 'Buttons allow users to take actions.',
-			stories: [{ file: 'src/components/FSButton/FSButton.stories.tsx', title: 'Buttons/FSButton', storybook: `${STORYBOOK_URL}?path=/docs/buttons-fsbutton--docs` }],
-			figma: 'https://www.figma.com/design/abc',
+			storybook: 'https://develop--6617f3c579abb5c5e780fddc.chromatic.com/?path=/docs/buttons-fsbutton--docs',
 			source: 'https://github.com/flocksafety/flock-react-component-lib/tree/develop/src/components/FSButton',
-			partOf: null,
 		});
 	});
 
-	it('reads a subtitle written on the line after its key, as FSDialog does', () => {
+	it('takes the name from the last part of a deeper title, and the group from the first', async () => {
+		const [c] = await readCatalog(library({ 'a/FormInput.stories.tsx': story('Inputs/Composite Components/FSInputModal/FSFormInput') }), DS);
+		expect(c).toMatchObject({ name: 'FSFormInput', group: 'Inputs' });
+	});
+
+	it('names a story with no readable title by its file, Ungrouped, with no Storybook link', async () => {
+		const [c] = await readCatalog(library({ 'src/Odd/Odd.stories.tsx': 'const meta = { title: `Odd/${x}` };' }), DS);
+		expect(c).toMatchObject({ name: 'Odd', group: UNGROUPED, storybook: null, source: 'https://github.com/acme/ui/tree/main/src/Odd' });
+	});
+
+	it('leaves out Storybook links for a library with no hosted Storybook', async () => {
+		const [c] = await readCatalog(library({ 'a/B.stories.tsx': story('X/B') }), { ...DS, storybook: null });
+		expect(c?.storybook).toBeNull();
+	});
+
+	it('keeps a story file that cannot be read, without what it would have said', async () => {
+		const catalog = await readCatalog(library({ 'a/Broken.stories.tsx': null, 'a/Fine.stories.tsx': story('X/Fine') }), DS);
+		expect(catalog.map((c) => [c.name, c.group])).toEqual([
+			['Fine', 'X'],
+			['Broken', UNGROUPED],
+		]);
+	});
+});
+
+describe('reading a story', () => {
+	it('reads a subtitle written on the line after its key', () => {
 		expect(literalField("    componentSubtitle:\n      'Dialogs inform users.',", 'componentSubtitle')).toBe('Dialogs inform users.');
 	});
 
@@ -72,111 +88,52 @@ describe('reading a story', () => {
 		expect(literalField('title: `Buttons/FSButton`,', 'title')).toBe('Buttons/FSButton');
 		expect(literalField("title: 'It\\'s here',", 'title')).toBe("It's here");
 	});
-
-	it('puts a story with no readable title in Ungrouped, under its folder name, with no Storybook link', async () => {
-		const [c] = await readCatalog(library({ 'src/components/FSOdd/FSOdd.stories.tsx': 'const meta = { title: `Odd/${x}` };' }));
-		expect(c).toMatchObject({ name: 'FSOdd', group: UNGROUPED, stories: [{ title: null, storybook: null }] });
-	});
-
-	it('keeps a component whose story cannot be read, without what the story would have said', async () => {
-		const catalog = await readCatalog(
-			library({ 'src/components/FSBroken/FSBroken.stories.tsx': null, 'src/components/FSButton/FSButton.stories.tsx': story('Buttons/FSButton') }),
-		);
-		expect(catalog.map((c) => c.name)).toEqual(['FSButton', 'FSBroken']);
-		expect(catalog[1]).toMatchObject({ group: UNGROUPED, subtitle: null, stories: [{ title: null }] });
-	});
-
-	it('builds Source from the folder even when the story has no githubUrl', async () => {
-		const [c] = await readCatalog(library({ 'src/compositeComponents/FSEmptyState/FSEmptyState.stories.tsx': story('Layout/Composite Components/FSEmptyState') }));
-		expect(c?.source).toBe('https://github.com/flocksafety/flock-react-component-lib/tree/develop/src/compositeComponents/FSEmptyState');
-		expect(c?.figma).toBeNull();
-		expect(c?.composite).toBe(true);
-	});
 });
 
-describe('which folders are components', () => {
-	it('takes folders starting with fs in any case, and skips other folders and loose files', async () => {
+describe('the order', () => {
+	const PREVIEW = `const preview = {
+  parameters: {
+    options: {
+      storySort: {
+        order: [
+          'Welcome',
+          'Design Tokens',
+          ['Color', 'Elevation'],
+          'Popovers',
+          "Inputs",
+          'Buttons',
+        ],
+      },
+    },
+  },
+};`;
+
+	it('reads the top level of the sidebar order the library’s Storybook sets, not a group’s own', () => {
+		expect(sidebarOrder(PREVIEW)).toEqual(['Welcome', 'Design Tokens', 'Popovers', 'Inputs', 'Buttons']);
+		expect(sidebarOrder('export default {};')).toEqual([]);
+	});
+
+	it('puts groups in the sidebar’s order, others after it alphabetically, Ungrouped last, and names alphabetically', async () => {
 		const catalog = await readCatalog(
 			library({
-				'src/components/FsDateTimeRangePicker/FsDateTimeRangePicker.stories.tsx': story('Inputs/FSDateTimeRangePicker'),
-				'src/components/pickerTimezone/index.tsx': '',
-				'src/components/flock-theme.css': '',
-				'src/components/index.ts': '',
+				'.storybook/preview.tsx': PREVIEW,
+				'a/Zeta.stories.tsx': story('Popovers/Zeta'),
+				'a/Alpha.stories.tsx': story('Popovers/Alpha'),
+				'a/Field.stories.tsx': story('Inputs/Field'),
+				'a/primary.stories.tsx': story('Buttons/primary'),
+				'a/Big.stories.tsx': story('Buttons/Big'),
+				'a/Loose.stories.tsx': 'const meta = {};',
+				'a/Utils.stories.tsx': story('Utils/Util'),
 			}),
+			DS,
 		);
-		expect(catalog.map((c) => c.id)).toEqual(['components/FsDateTimeRangePicker']);
+		// The library's order, which is not alphabetical: Popovers, Inputs, Buttons.
+		expect(catalog.map((c) => `${c.group}/${c.name}`)).toEqual(['Popovers/Alpha', 'Popovers/Zeta', 'Inputs/Field', 'Buttons/Big', 'Buttons/primary', 'Utils/Util', `${UNGROUPED}/Loose`]);
 	});
 
-	it('finds every story in a folder, nested ones included', async () => {
-		const catalog = await readCatalog(
-			library({
-				'src/compositeComponents/FSPopovers/fsPopoverHeader.stories.tsx': story('Popovers/PopoverHeader'),
-				'src/compositeComponents/FSPopovers/fsMapPopoverContainer.stories.tsx': story('Popovers/MapPopoverContainer'),
-				'src/compositeComponents/FSInputModal/FSFormInput/fsFormInput.stories.tsx': story('Inputs/Composite Components/FSInputModal/FSFormInput'),
-			}),
-		);
-		const popovers = catalog.find((c) => c.name === 'FSPopovers');
-		expect(popovers?.stories.map((s) => s.title)).toEqual(['Popovers/MapPopoverContainer', 'Popovers/PopoverHeader']);
-		expect(catalog.find((c) => c.name === 'FSInputModal')?.stories).toHaveLength(1);
-	});
-});
-
-describe('parts and gaps', () => {
-	const files = {
-		'src/components/FSCard/FSCard.stories.tsx': story('Surfaces/FSCard'),
-		'src/components/FSCardContent/index.tsx': '',
-		'src/components/FSList/FSList.stories.tsx': story('Data Display/FSList'),
-		'src/components/FSListItem/index.tsx': '',
-		'src/components/FSListItemText/index.tsx': '',
-		'src/components/FSApp/index.tsx': '',
-	};
-
-	it('makes a story-less component a part of the one with a story whose name is the longest prefix of its own', async () => {
-		const catalog = await readCatalog(library(files));
-		const byName = Object.fromEntries(catalog.map((c) => [c.name, c]));
-		expect(byName.FSCardContent).toMatchObject({ partOf: 'components/FSCard', group: 'Surfaces' });
-		// FSListItem has no story, so it cannot be a parent: FSListItemText belongs to FSList.
-		expect(byName.FSListItemText).toMatchObject({ partOf: 'components/FSList', group: 'Data Display' });
-		expect(isGap(byName.FSCardContent!)).toBe(false);
-	});
-
-	it('picks the longest prefix when two components with stories match', async () => {
-		const catalog = await readCatalog(
-			library({
-				'src/components/FSList/FSList.stories.tsx': story('Data Display/FSList'),
-				'src/components/FSListItem/FSListItem.stories.tsx': story('Data Display/FSListItem'),
-				'src/components/FSListItemText/index.tsx': '',
-			}),
-		);
-		expect(catalog.find((c) => c.name === 'FSListItemText')?.partOf).toBe('components/FSListItem');
-	});
-
-	it('marks a story-less component with no parent as a gap', async () => {
-		const app = (await readCatalog(library(files))).find((c) => c.name === 'FSApp')!;
-		expect(app).toMatchObject({ partOf: null, group: UNGROUPED });
-		expect(isGap(app)).toBe(true);
-	});
-
-	it('lists each part straight after its parent', async () => {
-		expect((await readCatalog(library(files))).map((c) => c.name)).toEqual(['FSList', 'FSListItem', 'FSListItemText', 'FSCard', 'FSCardContent', 'FSApp']);
-	});
-});
-
-describe('order', () => {
-	it("puts groups in Storybook's order, any other group after them alphabetically, and Ungrouped last", async () => {
-		const catalog = await readCatalog(
-			library({
-				'src/components/FSTable/FSTable.stories.tsx': story('Tables/FSTable'),
-				'src/components/FSUtil/FSUtil.stories.tsx': story('Utils/FSUtil'),
-				'src/components/FSNoTitle/FSNoTitle.stories.tsx': 'const meta = {};',
-				'src/components/FSPop/FSPop.stories.tsx': story('Popovers/FSPop'),
-				'src/components/FSInput/FSInput.stories.tsx': story('Inputs/FSInput'),
-				'src/components/FSButtonB/FSButtonB.stories.tsx': story('Buttons/FSButtonB'),
-				'src/components/FSButtonA/FSButtonA.stories.tsx': story('Buttons/FSButtonA'),
-			}),
-		);
-		expect(catalog.map((c) => c.group)).toEqual(['Buttons', 'Buttons', 'Inputs', 'Tables', 'Popovers', 'Utils', UNGROUPED]);
-		expect(catalog[0]?.name).toBe('FSButtonA');
+	it('orders alphabetically when the library sets no sidebar order', async () => {
+		const catalog = await readCatalog(library({ 'a/B.stories.tsx': story('Zed/B'), 'a/A.stories.tsx': story('Alpha/A') }), DS);
+		expect(catalog.map((c) => c.group)).toEqual(['Alpha', 'Zed']);
 	});
 });
 
@@ -188,48 +145,54 @@ describe("Storybook's id rule", () => {
 		['Design Tokens/Spacing & Shape', 'design-tokens-spacing-shape'],
 	])('%s is %s', (title, id) => {
 		expect(storybookId(title)).toBe(id);
-		expect(storybookUrl(title)).toBe(`${STORYBOOK_URL}?path=/docs/${id}--docs`);
+		expect(storybookUrl('https://sb.example/', title)).toBe(`https://sb.example/?path=/docs/${id}--docs`);
 	});
 });
 
 /**
- * The reader against the real library's `origin/develop`, not a fixture. Skipped, loudly, when the library is not
- * checked out beside this repository.
+ * The reader against the real library's branch, not a fixture. Skipped, loudly, when the library is not checked out
+ * beside this repository.
  */
-const LIBRARY = '/Users/noah.shrader/Documents/GitHub/flock-react-component-lib';
-const git = (...args: string[]) => execFileSync('git', ['-C', LIBRARY, ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-const hasDevelop = (() => {
-	if (!existsSync(`${LIBRARY}/.git`)) return false;
+const REAL = '/Users/noah.shrader/Documents/GitHub/flock-react-component-lib';
+const FUI = DESIGN_SYSTEMS[0]!;
+const git = (...args: string[]) => execFileSync('git', ['-C', REAL, ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+const hasBranch = (() => {
+	if (!existsSync(`${REAL}/.git`)) return false;
 	try {
-		git('rev-parse', '--verify', '--quiet', 'refs/remotes/origin/develop');
+		git('rev-parse', '--verify', '--quiet', `refs/remotes/origin/${FUI.branch}`);
 		return true;
 	} catch {
 		return false;
 	}
 })();
 
-describe.skipIf(!hasDevelop)('against the real library on origin/develop', () => {
+describe.skipIf(!hasBranch)('against the real library', () => {
 	// The app's own reads (one `cat-file --batch` for the stories), so this checks them on the real library too.
-	const reads = libraryReads(LIBRARY);
+	const reads = libraryReads(REAL, `refs/remotes/origin/${FUI.branch}`);
 
-	it('finds the components, with the six real gaps by name', async () => {
-		const catalog = await readCatalog(reads);
-		expect(catalog.filter((c) => !c.composite).length).toBeGreaterThan(70);
-		expect(catalog.filter((c) => c.composite).length).toBeGreaterThan(15);
-		expect(catalog.filter((c) => c.partOf !== null).length).toBeGreaterThan(20);
-		expect(catalog.filter(isGap).map((c) => c.name).sort()).toEqual(['FSApp', 'FSInputAdornment', 'FSLoadingButton', 'FSRadioButton', 'FSTab', 'FSTreeItem']);
+	it('lists every story file Storybook has, and nothing else', async () => {
+		const catalog = await readCatalog(reads, FUI);
+		const stories = git('ls-tree', '-r', '--name-only', `refs/remotes/origin/${FUI.branch}`).split('\n').filter(isStoryFile);
+		expect(catalog.map((c) => c.id).sort()).toEqual(stories.sort());
+		expect(catalog.length).toBeGreaterThan(70);
 	});
 
-	it('reads every story title, so nothing on develop is Ungrouped', async () => {
-		const catalog = await readCatalog(reads);
-		expect(catalog.filter((c) => c.stories.some((s) => s.title === null)).map((c) => c.name)).toEqual([]);
-		expect(catalog.filter((c) => c.group === UNGROUPED && !isGap(c)).map((c) => c.name)).toEqual([]);
+	it('reads every story title, in the sidebar order the library sets', async () => {
+		const catalog = await readCatalog(reads, FUI);
+		expect(catalog.filter((c) => c.group === UNGROUPED).map((c) => c.id)).toEqual([]);
+		const groups = [...new Set(catalog.map((c) => c.group))];
+		// The library's own sidebar order, which is not alphabetical: Inputs before Data Display, Surfaces before Layout.
+		expect(groups.indexOf('Buttons')).toBeLessThan(groups.indexOf('Inputs'));
+		expect(groups.indexOf('Inputs')).toBeLessThan(groups.indexOf('Data Display'));
+		expect(groups.indexOf('Surfaces')).toBeLessThan(groups.indexOf('Layout'));
 	});
 
 	it("builds every Storybook id exactly as the library's own Storybook does", async () => {
-		const csf = createRequire(`${LIBRARY}/package.json`)('storybook/internal/csf') as { toId: (kind: string, name: string) => string };
-		const titles = (await readCatalog(reads)).flatMap((c) => c.stories.map((s) => s.title!));
-		expect(titles.length).toBeGreaterThan(70);
-		for (const title of titles) expect(`${storybookId(title)}--docs`).toBe(csf.toId(title, 'Docs'));
+		const csf = createRequire(`${REAL}/package.json`)('storybook/internal/csf') as { toId: (kind: string, name: string) => string };
+		const catalog = await readCatalog(reads, FUI);
+		for (const c of catalog) {
+			const title = literalField(await reads.readFile(c.id), 'title')!;
+			expect(c.storybook).toBe(`${FUI.storybook}?path=/docs/${csf.toId(title, 'Docs')}`);
+		}
 	});
 });

@@ -14,31 +14,20 @@ import { button, fail, fakeApp, ok, openMenu, press, render, settle, unmountAll 
 
 const BASE = 'http://127.0.0.1:4000/previews-abc/';
 const component = (more: Partial<CatalogComponent> = {}): CatalogComponent => ({
-	id: 'components/FSButton',
+	id: 'src/components/FSButton/FSButton.stories.tsx',
 	name: 'FSButton',
 	group: 'Buttons',
-	composite: false,
 	subtitle: 'Buttons allow users to take actions.',
-	stories: [{ file: 'src/components/FSButton/FSButton.stories.tsx', title: 'Buttons/FSButton', storybook: 'https://sb.example/button' }],
-	figma: null,
+	storybook: 'https://sb.example/button',
 	source: 'https://github.com/x/FSButton',
-	partOf: null,
 	...more,
-});
-const POPOVERS = component({
-	id: 'compositeComponents/FSPopovers',
-	name: 'FSPopovers',
-	stories: [
-		{ file: 'src/compositeComponents/FSPopovers/a.stories.tsx', title: 'Popovers/PopoverHeader', storybook: 'https://sb.example/a' },
-		{ file: 'src/compositeComponents/FSPopovers/b.stories.tsx', title: null, storybook: null },
-	],
 });
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
 const show = async (c: CatalogComponent, answer: () => Promise<ReturnType<typeof ok<StoryPreview>> | ReturnType<typeof fail>> = async () => ok({ state: 'ready', base: BASE }), more: Record<string, unknown> = {}) => {
 	const app = fakeApp({ storyPreview: answer });
 	(window as unknown as { workspace: unknown }).workspace = app.api;
-	const props = { component: c, parent: null, commit: 'c1', onBack: vi.fn(), onOpen: vi.fn(), ...more };
+	const props = { component: c, commit: 'c1', onBack: vi.fn(), ...more };
 	current = await render(createElement(ComponentPage, props));
 	return { app, props };
 };
@@ -63,24 +52,10 @@ describe('the page', () => {
 		]);
 	});
 
-	it('names each Storybook link by its story when there are several, and leaves out a story with no address', async () => {
-		await show(
-			component({
-				id: 'compositeComponents/FSPopovers',
-				name: 'FSPopovers',
-				stories: [
-					{ file: 'a.stories.tsx', title: 'Popovers/PopoverHeader', storybook: 'https://sb.example/header' },
-					{ file: 'b.stories.tsx', title: 'Popovers/PopoverLineItem', storybook: 'https://sb.example/line' },
-					{ file: 'c.stories.tsx', title: null, storybook: null },
-				],
-			}),
-		);
-		const items = await openMenu(button('More for FSPopovers'));
-		expect(items.map((i) => [i.textContent, i.getAttribute('href')])).toEqual([
-			['Storybook: PopoverHeader', 'https://sb.example/header'],
-			['Storybook: PopoverLineItem', 'https://sb.example/line'],
-			['Source', 'https://github.com/x/FSButton'],
-		]);
+	it('leaves the Storybook link out for a library with no hosted Storybook', async () => {
+		await show(component({ storybook: null }));
+		const items = await openMenu(button('More for FSButton'));
+		expect(items.map((i) => i.textContent)).toEqual(['Source']);
 		expect(items.every((i) => i.getAttribute('target') === '_blank' && i.getAttribute('rel') === 'noreferrer')).toBe(true);
 	});
 
@@ -92,23 +67,12 @@ describe('the page', () => {
 });
 
 describe('the previews', () => {
-	it('shows each story file in a sandboxed frame of the built page, asked for once', async () => {
-		const { app } = await show(POPOVERS);
+	it('shows the component’s story file in a sandboxed frame of the built page, asked for once', async () => {
+		const { app } = await show(component());
 		expect(app.calls.storyPreview).toHaveLength(1);
-		expect(frames().map((f) => f.getAttribute('src'))).toEqual([
-			previewAddress(BASE, 'src/compositeComponents/FSPopovers/a.stories.tsx'),
-			previewAddress(BASE, 'src/compositeComponents/FSPopovers/b.stories.tsx'),
-		]);
+		expect(frames().map((f) => f.getAttribute('src'))).toEqual([previewAddress(BASE, 'src/components/FSButton/FSButton.stories.tsx')]);
 		// An origin of its own (the local server's), so the library can load; scripts, and nothing else.
-		expect(frames().every((f) => f.getAttribute('sandbox') === 'allow-scripts allow-same-origin')).toBe(true);
-		// A file with several stories names each frame; one without a title is named by its file.
-		expect([...document.querySelectorAll('[data-slot="card-title"]')].map((t) => t.textContent)).toEqual(['PopoverHeader', 'b']);
-	});
-
-	it('names no frame when the component has one story file', async () => {
-		await show(component());
-		expect(frames()).toHaveLength(1);
-		expect(document.querySelector('[data-slot="card-title"]')).toBeNull();
+		expect(frames()[0]!.getAttribute('sandbox')).toBe('allow-scripts allow-same-origin');
 	});
 
 	it('says it is building while the build runs', async () => {
@@ -155,21 +119,5 @@ describe('the previews', () => {
 		await settle();
 		expect(text()).toContain('git broke');
 		expect(app.calls.storyPreview).toHaveLength(3);
-	});
-});
-
-describe('a component with no stories', () => {
-	it('builds nothing, and sends a part to its parent', async () => {
-		const parent = component({ id: 'components/FSCard', name: 'FSCard' });
-		const { app, props } = await show(component({ id: 'components/FSCardContent', name: 'FSCardContent', stories: [], partOf: 'components/FSCard' }), undefined, { parent });
-		expect(app.calls.storyPreview).toBeUndefined();
-		expect(text()).toContain('A part of FSCard, shown in its stories.');
-		await press(button('FSCard'));
-		expect(props.onOpen).toHaveBeenCalledWith('components/FSCard');
-	});
-
-	it('says a gap has no stories to preview', async () => {
-		await show(component({ name: 'FSApp', stories: [] }));
-		expect(text()).toContain('This component has no stories to preview.');
 	});
 });

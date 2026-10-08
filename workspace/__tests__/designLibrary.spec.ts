@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { DESIGN_SYSTEMS } from '../src/shared/catalog';
 import type { Catalog } from '../src/shared/contract';
 import { connectLibrary, DesignLibrary, fetchProblem, findLibrary, LIBRARY, locateLibrary, readLibrary, updateLibrary, whyNotLibrary } from '../src/main/services/designLibrary';
 import { FolderMemory } from '../src/main/services/folderMemory';
@@ -100,7 +101,8 @@ describe('finding the library', () => {
 describe('reading develop', () => {
 	it('reads origin/develop, with its commit and date', async () => {
 		const c = ready(await readLibrary(clone, 'unchanged'));
-		expect(c.components.map((x) => x.id)).toEqual(['components/FSButton']);
+		expect(c.components.map((x) => x.id)).toEqual(['src/components/FSButton/FSButton.stories.tsx']);
+		expect(c.branch).toBe('develop');
 		expect(c.commit).toBe(g(remote, 'rev-parse', 'develop').trim());
 		expect(Number.isNaN(Date.parse(c.committedAt))).toBe(false);
 	});
@@ -129,7 +131,7 @@ describe('reading develop', () => {
 
 	it('says there is no develop, and reads no other branch instead', async () => {
 		g(clone, 'update-ref', '-d', 'refs/remotes/origin/develop');
-		expect(await readLibrary(clone, 'unchanged')).toEqual({ state: 'no-develop', root: clone });
+		expect(await readLibrary(clone, 'unchanged')).toEqual({ state: 'no-branch', root: clone, branch: 'develop' });
 	});
 
 	it('reads every story in a folder, many at once, the same as reading each', async () => {
@@ -137,9 +139,10 @@ describe('reading develop', () => {
 		pushDevelop({ ...many, 'src/compositeComponents/FSPopovers/a.stories.tsx': story('Popovers/A’s “quoted”'), 'src/compositeComponents/FSPopovers/b.stories.tsx': story('Popovers/B') });
 		await updateLibrary(clone);
 		const c = ready(await readLibrary(clone, 'unchanged'));
-		expect(c.components).toHaveLength(32);
-		expect(c.components.every((x) => x.stories.every((s) => s.title !== null))).toBe(true);
-		expect(c.components.find((x) => x.name === 'FSPopovers')?.stories.map((s) => s.title)).toEqual(['Popovers/A’s “quoted”', 'Popovers/B']);
+		// Each story file is a component, as Storybook lists them: the two in one folder are two.
+		expect(c.components).toHaveLength(33);
+		expect(c.components.every((x) => x.group !== 'Ungrouped')).toBe(true);
+		expect(c.components.filter((x) => x.group === 'Popovers').map((x) => x.name)).toEqual(['A’s “quoted”', 'B']);
 	});
 });
 
@@ -179,7 +182,7 @@ describe('bringing develop up to date', () => {
 		['remote: Repository not found.\nfatal: repository ... not found', /gh auth setup-git/],
 		['git@github.com: Permission denied (publickey).', /gh auth setup-git/],
 		['fatal: unable to access ...: Could not resolve host: github.com', /internet connection/],
-		["fatal: couldn't find remote ref refs/heads/develop", /no develop branch/],
+		["fatal: couldn't find remote ref refs/heads/develop", /no such branch/],
 		['fatal: something else', /Git could not update the library: something else/],
 	])('says %s in words', (stderr, words) => {
 		expect(fetchProblem(stderr)).toMatch(words);
@@ -282,5 +285,51 @@ describe('connecting the library', () => {
 		await connectLibrary(clone, kept);
 		g(clone, 'remote', 'set-url', 'origin', 'https://github.com/flocksafety/flock-coke.git');
 		expect(locateLibrary(kept, () => null)).toEqual({ root: null, lost: clone });
+	});
+});
+
+describe('another design system', () => {
+	// A second library, set up like any other Storybook library: its own repository, `main` as its branch, no hosted Storybook.
+	const OTHER = { repository: 'acme/ui-kit', branch: 'main', storybook: null };
+	const OTHER_URL = `https://github.com/${OTHER.repository}.git`;
+	let other: string;
+	let otherUpstream: string;
+	beforeEach(() => {
+		DESIGN_SYSTEMS.push(OTHER);
+		const bare = join(home, 'other.git');
+		otherUpstream = join(home, 'other-upstream');
+		other = join(home, 'GitHub', 'ui-kit');
+		g(home, 'init', '-q', '--bare', '-b', 'main', bare);
+		g(home, 'init', '-q', '-b', 'main', otherUpstream);
+		g(otherUpstream, 'remote', 'add', 'origin', bare);
+		write(otherUpstream, { 'packages/button/Button.stories.jsx': story('Actions/Button'), 'packages/button/index.jsx': '' });
+		commit(otherUpstream, 'first');
+		g(otherUpstream, 'push', '-q', 'origin', 'main');
+		g(home, 'clone', '-q', bare, other);
+		g(other, 'remote', 'set-url', 'origin', OTHER_URL);
+		g(other, 'config', `url.${bare}.insteadOf`, OTHER_URL);
+	});
+	afterEach(() => void DESIGN_SYSTEMS.splice(DESIGN_SYSTEMS.indexOf(OTHER), 1));
+
+	it('is found, read on its own branch, and lists its stories wherever they are, with nothing written for it', async () => {
+		expect(findLibrary({ home, exists: (p) => p === join(other, '.git'), list: (d) => (d === join(home, 'GitHub') ? ['ui-kit'] : []), activity: () => 0 })).toBe(other);
+		const c = ready(await readLibrary(other, 'unchanged'));
+		expect(c.branch).toBe('main');
+		expect(c.components).toEqual([
+			{ id: 'packages/button/Button.stories.jsx', name: 'Button', group: 'Actions', subtitle: null, storybook: null, source: 'https://github.com/acme/ui-kit/tree/main/packages/button' },
+		]);
+	});
+
+	it('is brought up to date on its own branch, and a story added there is in the list', async () => {
+		write(otherUpstream, { 'packages/card/Card.stories.tsx': story('Surfaces/Card') });
+		commit(otherUpstream, 'card');
+		g(otherUpstream, 'push', '-q', 'origin', 'main');
+		expect(await updateLibrary(other)).toBe('updated');
+		expect(ready(await readLibrary(other, 'updated')).components.map((x) => x.name)).toEqual(['Button', 'Card']);
+	});
+
+	it('says it has no copy of its own branch, naming that branch', async () => {
+		g(other, 'update-ref', '-d', 'refs/remotes/origin/main');
+		expect(await readLibrary(other, 'unchanged')).toEqual({ state: 'no-branch', root: other, branch: 'main' });
 	});
 });

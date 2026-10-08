@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PREVIEW_HEIGHT, previewAddress } from '../src/shared/catalog';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { buildPreviews, hasPackages, notInstalled, previewEntry, StoryPreviews, unresolved } from '../src/main/services/storyPreviews';
+import { DESIGN_SYSTEMS } from '../src/shared/catalog';
 import { g } from './fixtures';
 
 /**
@@ -67,6 +68,9 @@ const makeLibrary = (files: Record<string, string>, packages = true) => {
 	commit(upstream, 'library');
 	g(upstream, 'push', '-q', 'origin', 'develop');
 	g(home, 'clone', '-q', join(home, 'remote.git'), clone);
+	// A clone as a person has one: its origin is the library on GitHub, and git is told to reach that here.
+	g(clone, 'remote', 'set-url', 'origin', `https://github.com/${DESIGN_SYSTEMS[0]!.repository}.git`);
+	g(clone, 'config', `url.${join(home, 'remote.git')}.insteadOf`, `https://github.com/${DESIGN_SYSTEMS[0]!.repository}.git`);
 	if (packages) {
 		mkdirSync(join(clone, 'node_modules', '@storybook'), { recursive: true });
 		for (const p of ['react', 'react-dom', 'scheduler']) symlinkSync(join(APP_MODULES, p), join(clone, 'node_modules', p), 'junction');
@@ -126,6 +130,16 @@ describe('building the previews', () => {
 		expect([...root.querySelectorAll('[data-story]')].map((s) => s.getAttribute('data-story'))).toEqual(['Default', 'Other']);
 		expect(root.textContent).toContain('One');
 		expect(root.textContent).not.toContain('Two');
+	});
+
+	it('builds a library with no Storybook preview set-up, rendering its stories plainly', async () => {
+		const { ['.storybook/preview.tsx']: _, ...noPreview } = LIBRARY;
+		makeLibrary(noPreview);
+		const root = await render(await ready(previews()), 'src/components/FSTwo/FSTwo.stories.tsx');
+		expect(root.textContent).toContain('Two');
+		// Nothing was looked for that is not there: no preview set-up is imported, so none had to be set aside.
+		const site = join(folder, readdirSync(folder)[0]!, 'site');
+		expect(readdirSync(site).filter((f) => f.endsWith('.js')).some((f) => readFileSync(join(site, f), 'utf8').includes('Not installed here'))).toBe(false);
 	});
 
 	it('tells the page that frames it how tall it is, and nothing else', async () => {
@@ -260,10 +274,11 @@ describe('leaving the library alone', () => {
 
 describe('the page', () => {
 	it('lists the story files it can show, once each, and nothing per component', () => {
-		const entry = previewEntry('/lib', ['src/a/A.stories.tsx', 'src/b/B.stories.tsx']);
+		const entry = previewEntry('/lib', ['src/a/A.stories.tsx', 'src/b/B.stories.tsx'], '/lib/.storybook/preview.tsx');
 		expect(entry.match(/"src\/a\/A\.stories\.tsx":/g)).toHaveLength(1);
 		expect(entry.match(/"src\/b\/B\.stories\.tsx":/g)).toHaveLength(1);
-		expect(entry).toContain('"/lib/.storybook/preview"');
+		expect(entry).toContain('"/lib/.storybook/preview.tsx"');
+		expect(previewEntry('/lib', [], null)).not.toMatch(/preview|setProjectAnnotations\(/);
 		expect(entry).not.toMatch(/FSButton|FSCard/);
 	});
 

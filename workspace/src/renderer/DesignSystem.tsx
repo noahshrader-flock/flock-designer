@@ -1,6 +1,5 @@
 import { ChevronRightIcon, GitBranchIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { isGap } from '../shared/catalog';
 import type { Catalog, CatalogComponent, CatalogUpdate } from '../shared/contract';
 import { ComponentPage } from './ComponentPage';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
@@ -10,7 +9,6 @@ import { SearchSelect } from './SearchSelect';
 import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
@@ -23,22 +21,11 @@ const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
 	) : null;
 
 /** A component in the list: the whole row opens it, and the chevron says so. Its links are on its own page. */
-const Row = ({ component, part, onOpen }: { component: CatalogComponent; part: boolean; onOpen: () => void }) => (
+const Row = ({ component, onOpen }: { component: CatalogComponent; onOpen: () => void }) => (
 	<li data-component={component.id}>
-		<button
-			type="button"
-			className={`hover:bg-muted/50 flex w-full items-center gap-4 py-3 pr-4 text-left ${part ? 'pl-10' : 'pl-4'}`}
-			onClick={onOpen}
-		>
+		<button type="button" className="hover:bg-muted/50 flex w-full items-center gap-4 px-4 py-3 text-left" onClick={onOpen}>
 			<span className="flex min-w-0 grow flex-col gap-0.5">
-				<span className="flex items-center gap-2">
-					<span className={part ? 'text-sm' : 'text-sm font-medium'}>{component.name}</span>
-					{isGap(component) && (
-						<Badge variant="outline" className="text-muted-foreground">
-							No story
-						</Badge>
-					)}
-				</span>
+				<span className="text-sm font-medium">{component.name}</span>
 				{component.subtitle && <span className="text-muted-foreground text-sm">{component.subtitle}</span>}
 			</span>
 			<ChevronRightIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />
@@ -61,8 +48,8 @@ const Notice = ({ title, children, action }: { title: string; children: ReactNod
 
 /**
  * The Design System tab: the component library as its `develop` branch has it, from a clone on this machine
- * (DESIGN_SYSTEM_PLAN.md). The list, by default; a component, once one is opened from its row or the toolbar's finder,
- * with its stories live. Not a second Storybook: docs and controls stay there, behind each component's links.
+ * (DESIGN_SYSTEM_PLAN.md), as its Storybook lists it. The list, by default; a component, once one is opened from its row
+ * or the toolbar's finder, with its stories live. Not a second Storybook: docs and controls stay there, behind each component's links.
  *
  * It reads once when first shown, at once from what the clone has, then again when GitHub has been asked for changes;
  * after that only when Sync is pressed. It stays mounted while hidden, and the list stays mounted while a component is
@@ -121,10 +108,10 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 			<ConnectDesignSystem repository={catalog.repository} lost={catalog.lost} onConnected={() => void firstRead()} />
 		);
 	}
-	if (catalog.state === 'no-develop') {
+	if (catalog.state === 'no-branch') {
 		return (
-			<Notice title="This clone has no develop branch" action={<Button variant="secondary" size="sm" onClick={() => void sync()}>Try again</Button>}>
-				The clone at {catalog.root} has no develop branch from GitHub to read, and no other branch is read in its place.
+			<Notice title={`This clone has no ${catalog.branch} branch`} action={<Button variant="secondary" size="sm" onClick={() => void sync()}>Try again</Button>}>
+				The clone at {catalog.root} has no {catalog.branch} branch from GitHub to read, and no other branch is read in its place.
 				Check it is a clone of the library, and that this computer can reach GitHub.
 			</Notice>
 		);
@@ -146,10 +133,10 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 				<h2 className="text-sm font-semibold">FUI</h2>
 				<Tooltip delayDuration={300}>
 					<TooltipTrigger asChild>
-						<GitBranchIcon aria-label="Branch develop" className="text-muted-foreground size-4 shrink-0" />
+						<GitBranchIcon aria-label={`Branch ${catalog.branch}`} className="text-muted-foreground size-4 shrink-0" />
 					</TooltipTrigger>
 					<TooltipContent side="bottom" className="font-mono">
-						develop
+						{catalog.branch}
 					</TooltipContent>
 				</Tooltip>
 				<div className="ml-2 w-72">
@@ -172,10 +159,8 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 			{opened && (
 				<ComponentPage
 					component={opened}
-					parent={opened.partOf === null ? null : (byId.get(opened.partOf) ?? null)}
 					commit={catalog.commit}
 					onBack={() => setOpen(null)}
-					onOpen={setOpen}
 				/>
 			)}
 			{/* Kept while a component is open, so going back finds the list where it was. */}
@@ -188,7 +173,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 					)}
 					{catalog.components.length === 0 ? (
 						<p className="text-muted-foreground text-sm">
-							No components were found on develop, in src/components or src/compositeComponents.
+							The library's Storybook has no stories on {catalog.branch}, so there are no components to list.
 						</p>
 					) : (
 						groups.map(({ group, rows }) => (
@@ -198,7 +183,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 								</h3>
 								<ul className="bg-card divide-y rounded-lg border">
 									{rows.map((c) => (
-										<Row key={c.id} component={c} part={c.partOf !== null} onOpen={() => setOpen(c.id)} />
+										<Row key={c.id} component={c} onOpen={() => setOpen(c.id)} />
 									))}
 								</ul>
 							</section>

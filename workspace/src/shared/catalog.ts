@@ -1,13 +1,27 @@
-import type { CatalogComponent } from './contract';
+/**
+ * A design system library the Design System tab accepts: the repository, the branch that is its source of truth, and
+ * where its Storybook is hosted, if anywhere. Everything the tab knows about a library that it cannot read from the
+ * library itself. A second design system is one more entry.
+ */
+export interface DesignSystem {
+	/** `owner/repo` on GitHub. */
+	repository: string;
+	/** The branch the tab reads and previews, as GitHub has it. */
+	branch: string;
+	/** The hosted Storybook's address, ending in `/`, or null when it has none: the Storybook links are then left out. */
+	storybook: string | null;
+}
 
-/** No story, and not a part of one that has one: a real gap in the library's stories. */
-export const isGap = (c: CatalogComponent): boolean => c.stories.length === 0 && c.partOf === null;
+export const DESIGN_SYSTEMS: DesignSystem[] = [
+	{ repository: 'flocksafety/flock-react-component-lib', branch: 'develop', storybook: 'https://develop--6617f3c579abb5c5e780fddc.chromatic.com/' },
+];
 
-/** The design system libraries the Design System tab accepts, by `owner/repo`. One today; a second is one more entry. */
-export const DESIGN_SYSTEMS = ['flocksafety/flock-react-component-lib'];
+/** The design system whose repository is `repo` (`owner/repo`, any case), or null. */
+export const designSystemNamed = (repo: string | null): DesignSystem | null =>
+	repo === null ? null : (DESIGN_SYSTEMS.find((d) => d.repository.toLowerCase() === repo.toLowerCase()) ?? null);
 
-/** Whether `repo` (`owner/repo`, any case) is a design system library: by name when one is chosen to clone, by `origin` when one is found. */
-export const isDesignSystem = (repo: string | null): boolean => repo !== null && DESIGN_SYSTEMS.some((d) => d.toLowerCase() === repo.toLowerCase());
+/** Whether `repo` is a design system library: by name when one is chosen to clone, by `origin` when one is found. */
+export const isDesignSystem = (repo: string | null): boolean => designSystemNamed(repo) !== null;
 
 /** The one thing a preview page tells the frame holding it: its height, under this name. */
 export const PREVIEW_HEIGHT = 'flockPreviewHeight';

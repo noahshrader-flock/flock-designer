@@ -212,35 +212,25 @@ export type PublishStatus =
 	| { state: 'shared'; at: string }
 	| { state: 'held'; problems: PublishProblem[]; at: string };
 
-/** A story of a library component, read from `origin/develop` (DESIGN_SYSTEM_PLAN.md). */
-export interface CatalogStory {
-	/** The story file, from the library's root. */
-	file: string;
-	/** Its Storybook title (`Buttons/FSButton`), or null when the file does not give one as plain text. */
-	title: string | null;
-	/** The story's docs page on the hosted Storybook, or null without a title. */
-	storybook: string | null;
-}
-
+/**
+ * A component as the library's Storybook has it: one story file, named and grouped by its Storybook title. Storybook is
+ * the source of truth for what is a component, so a component with no stories is not one here either.
+ */
 export interface CatalogComponent {
-	/** The folder under `src/`, which is the component's identity: `components/FSButton`. */
+	/** The story file, from the library's root (`src/components/FSButton/FSButton.stories.tsx`): its identity. */
 	id: string;
-	/** The folder's name. */
+	/** The last part of its Storybook title (`FSButton`), or the file's name when the title cannot be read. */
 	name: string;
-	/** The first part of its story's title (`Buttons`); a part takes its parent's; `Ungrouped` when there is none. */
+	/** The first part of its Storybook title (`Buttons`); `Ungrouped` when there is none. */
 	group: string;
-	/** Under `src/compositeComponents`. */
-	composite: boolean;
 	subtitle: string | null;
-	stories: CatalogStory[];
-	figma: string | null;
-	/** The folder on GitHub, built from the path, so it is there for every component. */
+	/** Its docs page on the hosted Storybook, or null without a title or a hosted Storybook. */
+	storybook: string | null;
+	/** Its folder on GitHub, on the branch the tab reads. */
 	source: string;
-	/** For a component with no story that belongs to one that has one (`FSCardContent` to `FSCard`), the parent's id. */
-	partOf: string | null;
 }
 
-/** The previews of the library's stories, built from `develop` (DESIGN_SYSTEM_PLAN.md, P1). */
+/** The previews of the library's stories, built from its branch (DESIGN_SYSTEM_PLAN.md, P1). */
 export type StoryPreview =
 	/** Built: a story file's page is `base` with `?file=<its path>`. */
 	| { state: 'ready'; base: string }
@@ -250,7 +240,7 @@ export type StoryPreview =
 	/** No library connected or found. */
 	| { state: 'no-library' };
 
-/** How the library's `develop` was brought up to date for this read. */
+/** How the library's branch was brought up to date for this read. */
 export type CatalogUpdate =
 	/** A fetch is running; ask again with `refresh` for its outcome. */
 	| 'updating'
@@ -259,16 +249,16 @@ export type CatalogUpdate =
 	/** The fetch did not work, said in words; the list is what was already here. */
 	| { failed: string };
 
-/** The Design System tab's list: the component library as its `develop` branch has it, or why there is none. */
+/** The Design System tab's list: the component library as its branch has it on GitHub, or why there is none. */
 export type Catalog =
-	| { state: 'ready'; commit: string; committedAt: string; update: CatalogUpdate; components: CatalogComponent[] }
+	| { state: 'ready'; branch: string; commit: string; committedAt: string; update: CatalogUpdate; components: CatalogComponent[] }
 	/**
 	 * No clone of the library on this machine. `repository` is `owner/repo`; `lost` is the folder connected before, when it
 	 * is no longer there or no longer the library.
 	 */
 	| { state: 'no-clone'; repository: string; lost: string | null }
-	/** A clone with no `origin/develop` to read. Another branch is never read instead. */
-	| { state: 'no-develop'; root: string };
+	/** A clone with no copy of its design system's branch from GitHub to read. Another branch is never read instead. */
+	| { state: 'no-branch'; root: string; branch: string };
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -314,8 +304,8 @@ export interface WorkspaceApi {
 	/** Accepts a suggested repository. This is the step that trusts it. */
 	useCheckout(root: string): Promise<Result<Checkout>>;
 	/**
-	 * The component library's catalog, from its clone's `origin/develop`. Without `refresh` it answers at once with what
-	 * the clone already has and starts bringing `develop` up to date; with it, it waits for that and answers with the
+	 * The component library's catalog, from its clone's copy of its branch on GitHub. Without `refresh` it answers at once
+	 * with what the clone already has and starts bringing the branch up to date; with it, it waits for that and answers with the
 	 * outcome. Nothing in the clone's branches or files is changed.
 	 */
 	designSystemCatalog(refresh: boolean): Promise<Result<Catalog>>;
@@ -329,7 +319,7 @@ export interface WorkspaceApi {
 	 * repository that is a design system is cloned; `cancelClone` stops it.
 	 */
 	cloneDesignSystem(repository: string): Promise<Result<null>>;
-	/** The previews of the library's stories, built from `develop` once per commit; waits for the build. */
+	/** The previews of the library's stories, built from its branch once per commit; waits for the build. */
 	storyPreview(): Promise<Result<StoryPreview>>;
 	/** Where this person's clones go: the folder they chose, or the default. */
 	cloneFolder(): Promise<Result<string>>;

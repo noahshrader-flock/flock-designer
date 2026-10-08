@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { DESIGN_SYSTEMS, isDesignSystem } from '../../shared/catalog';
+import { DESIGN_SYSTEMS, designSystemNamed, isDesignSystem, type DesignSystem } from '../../shared/catalog';
 import type { Catalog, CatalogUpdate } from '../../shared/contract';
-import { readCatalog, type CatalogReads } from './componentCatalog';
+import { isStoryFile, readCatalog, type CatalogReads } from './componentCatalog';
 import { defaultDiscoveryDeps, findRepositories, type DiscoveryDeps } from './discovery';
 import { FolderMemory } from './folderMemory';
 import { runGit } from './git';
@@ -11,21 +11,27 @@ import { gitHubRepoOf, originOf } from './repositories';
 /**
  * The component library on this machine, for the Design System tab: connected or found, kept up to date, and read.
  *
- * **`develop` is the source of truth** (DESIGN_SYSTEM_PLAN.md, decision 4), so what is read is git's copy of GitHub's
- * `develop`, `origin/develop`, and never the folder: whatever branch the clone has checked out, and whatever is
- * unfinished in it, makes no difference. Bringing it up to date is a fetch of that one ref, which moves no branch and
- * writes no file. Nothing is checked out, and no code from the library is run.
+ * **Its branch on GitHub is the source of truth** (`develop` for FUI; each design system names its own, in
+ * `DESIGN_SYSTEMS`), so what is read is git's copy of it, `origin/<branch>`, and never the folder: whatever branch the
+ * clone has checked out, and whatever is unfinished in it, makes no difference. Bringing it up to date is a fetch of that
+ * one ref, which moves no branch and writes no file. Nothing is checked out, and no code from the library is run.
  */
 
-export const LIBRARY = DESIGN_SYSTEMS[0]!;
-export const DEVELOP = 'refs/remotes/origin/develop';
+/** The design system the Connect screen offers by name: the first, and today the only, one. */
+export const LIBRARY = DESIGN_SYSTEMS[0]!.repository;
 const FETCH_TIMEOUT_MS = 120_000;
+
+/** Git's copy of a design system's branch on GitHub. */
+export const branchRef = (library: DesignSystem): string => `refs/remotes/origin/${library.branch}`;
 
 /** The repository a folder's `origin` points at on GitHub (`owner/repo`), read from its `.git/config` as a file, or null. */
 const repositoryOf = (dir: string, origin: (dir: string) => string | null): string | null => {
 	const remote = origin(dir);
 	return remote === null ? null : gitHubRepoOf(remote);
 };
+
+/** The design system a clone is of, by its `origin`, or null when it is none of them. */
+export const libraryAt = (root: string, origin: (dir: string) => string | null = originOf): DesignSystem | null => designSystemNamed(repositoryOf(root, origin));
 
 /**
  * Why a folder cannot be the design system library, in words, or null when it can: it is a clone whose `origin` is the
@@ -68,12 +74,13 @@ export const locateLibrary = (memory: FolderMemory, find: () => string | null, c
 	return { root: found, lost: found === null ? connected : null };
 };
 
-/** Connects a folder the person chose: refused, in words, unless it is the library with a `develop` from GitHub to read. */
+/** Connects a folder the person chose: refused, in words, unless it is a design system with its branch from GitHub to read. */
 export const connectLibrary = async (dir: string, memory: FolderMemory): Promise<void> => {
 	const why = whyNotLibrary(dir);
 	if (why !== null) throw new Error(why);
-	if ((await developCommit(dir)) === null) {
-		throw new Error(`${dir} is a clone of ${LIBRARY}, but has no develop branch from GitHub to read. Check this computer can reach GitHub, then try again.`);
+	if ((await libraryCommit(dir)) === null) {
+		const { repository, branch } = libraryAt(dir)!;
+		throw new Error(`${dir} is a clone of ${repository}, but has no ${branch} branch from GitHub to read. Check this computer can reach GitHub, then try again.`);
 	}
 	memory.write(dir);
 };
@@ -86,40 +93,44 @@ export const fetchProblem = (stderr: string): string => {
 	if (/Could not resolve host|Failed to connect|Connection (timed out|refused|reset)|Network is unreachable|unable to access|timed out|SIGTERM/i.test(stderr)) {
 		return 'Could not reach GitHub. Check the internet connection.';
 	}
-	if (/couldn't find remote ref|no such ref/i.test(stderr)) return 'GitHub has no develop branch for the library.';
+	if (/couldn't find remote ref|no such ref/i.test(stderr)) return "GitHub has no such branch for the library.";
 	const said = stderr.trim().split('\n').pop()?.replace(/^fatal:\s*/, '') ?? '';
 	return `Git could not update the library: ${said || 'it stopped without saying why.'}`;
 };
 
-/** The commit `origin/develop` is at, or null when the clone has none. */
-export const developCommit = async (root: string): Promise<string | null> => {
+/** The commit the clone's copy of its design system's branch is at, or null when it has none (or is not a design system). */
+export const libraryCommit = async (root: string): Promise<string | null> => {
+	const library = libraryAt(root);
+	if (library === null) return null;
 	try {
-		return (await runGit(root, ['rev-parse', '--verify', '--quiet', `${DEVELOP}^{commit}`])) || null;
+		return (await runGit(root, ['rev-parse', '--verify', '--quiet', `${branchRef(library)}^{commit}`])) || null;
 	} catch {
 		return null;
 	}
 };
 
 /**
- * Brings `origin/develop` up to date from GitHub, and nothing else: an explicit refspec, so no other ref moves, no tags,
- * no submodules. Never throws; a failure is said in words.
+ * Brings the clone's copy of its design system's branch up to date from GitHub, and nothing else: an explicit refspec,
+ * so no other ref moves, no tags, no submodules. Never throws; a failure is said in words.
  */
 export const updateLibrary = async (root: string): Promise<Exclude<CatalogUpdate, 'updating'>> => {
-	const before = await developCommit(root);
+	const library = libraryAt(root);
+	if (library === null) return { failed: 'This folder is not a clone of a design system library.' };
+	const before = await libraryCommit(root);
 	try {
-		await runGit(root, ['fetch', '--quiet', '--no-tags', '--no-recurse-submodules', 'origin', `+refs/heads/develop:${DEVELOP}`], FETCH_TIMEOUT_MS);
+		await runGit(root, ['fetch', '--quiet', '--no-tags', '--no-recurse-submodules', 'origin', `+refs/heads/${library.branch}:${branchRef(library)}`], FETCH_TIMEOUT_MS);
 	} catch (err) {
 		return { failed: fetchProblem((err as Error).message) };
 	}
-	return (await developCommit(root)) === before ? 'unchanged' : 'updated';
+	return (await libraryCommit(root)) === before ? 'unchanged' : 'updated';
 };
 
 /**
- * The catalog's two reads, on `origin/develop` through git. Listing a folder also reads every story in it with one
+ * The catalog's two reads, on `ref` (a commit, or the copy of a branch) through git. Listing also reads every story it lists with one
  * `git cat-file --batch`, so the files the catalog asks for next are already here: one git process for eighty stories,
  * not eighty. A file not read that way is read on its own.
  */
-export const libraryReads = (root: string, ref: string = DEVELOP): CatalogReads => {
+export const libraryReads = (root: string, ref: string): CatalogReads => {
 	const read = new Map<string, Promise<Map<string, string>>>();
 	const readStories = async (paths: string[]): Promise<Map<string, string>> => {
 		// A header no story can contain, then the object as git stores it; `%(rest)` gives back the path asked for.
@@ -135,8 +146,8 @@ export const libraryReads = (root: string, ref: string = DEVELOP): CatalogReads 
 	};
 	return {
 		listFiles: async (dir) => {
-			const files = (await runGit(root, ['ls-tree', '-r', '--name-only', ref, '--', dir])).split('\n').filter(Boolean);
-			const stories = files.filter((f) => /\.stories\.tsx$/.test(f) && !/\s/.test(f));
+			const files = (await runGit(root, ['ls-tree', '-r', '--name-only', ref, ...(dir === '' ? [] : ['--', dir])])).split('\n').filter(Boolean);
+			const stories = files.filter((f) => isStoryFile(f) && !/\s/.test(f));
 			if (stories.length > 0) read.set(dir, readStories(stories).catch(() => new Map()));
 			return files;
 		},
@@ -150,12 +161,14 @@ export const libraryReads = (root: string, ref: string = DEVELOP): CatalogReads 
 	};
 };
 
-/** The catalog as `origin/develop` has it now, with `update` as given. */
+/** The catalog as the clone's copy of its design system's branch has it now, with `update` as given. */
 export const readLibrary = async (root: string, update: CatalogUpdate): Promise<Catalog> => {
-	const commit = await developCommit(root);
-	if (commit === null) return { state: 'no-develop', root };
+	const library = libraryAt(root);
+	if (library === null) return { state: 'no-clone', repository: LIBRARY, lost: root };
+	const commit = await libraryCommit(root);
+	if (commit === null) return { state: 'no-branch', root, branch: library.branch };
 	const committedAt = await runGit(root, ['log', '-1', '--format=%cI', commit]);
-	return { state: 'ready', commit, committedAt, update, components: await readCatalog(libraryReads(root)) };
+	return { state: 'ready', branch: library.branch, commit, committedAt, update, components: await readCatalog(libraryReads(root, commit), library) };
 };
 
 export interface DesignLibraryDeps {

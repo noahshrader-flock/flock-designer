@@ -144,11 +144,11 @@ describe('the Design System catalog', () => {
 		expect(await call(CHANNELS.designSystemCatalog, product)).toEqual(none);
 	});
 
-	it('finds a clone of the library in the usual folders by its origin, and says when it has no develop', async () => {
+	it('finds a clone of the library in the usual folders by its origin, and says when it has no copy of its branch', async () => {
 		const lib = join(home, 'GitHub', 'fui');
 		g(home, 'init', '-q', lib);
 		g(lib, 'remote', 'add', 'origin', 'git@github.com:flocksafety/flock-react-component-lib.git');
-		expect(await call(CHANNELS.designSystemCatalog, false)).toEqual({ ok: true, value: { state: 'no-develop', root: lib } });
+		expect(await call(CHANNELS.designSystemCatalog, false)).toEqual({ ok: true, value: { state: 'no-branch', root: lib, branch: 'develop' } });
 	});
 
 	it('has no previews to build when there is no library, and takes nothing from the window', async () => {

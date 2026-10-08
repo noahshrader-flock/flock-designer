@@ -11,37 +11,28 @@ import { button, fail, fakeApp, ok, press, render, settle, typeInto, unmountAll 
  * out, against a fake app.
  */
 
+/** A component as the catalog gives it: one story file, as Storybook lists it. */
 const component = (name: string, more: Partial<CatalogComponent> = {}): CatalogComponent => ({
-	id: `components/${name}`,
+	id: `src/components/${name}/${name}.stories.tsx`,
 	name,
 	group: 'Buttons',
-	composite: false,
 	subtitle: null,
-	stories: [{ file: `src/components/${name}/${name}.stories.tsx`, title: `Buttons/${name}`, storybook: `https://sb.example/${name}` }],
-	figma: null,
+	storybook: `https://sb.example/${name}`,
 	source: `https://github.com/x/${name}`,
-	partOf: null,
 	...more,
 });
 
 const COMPONENTS: CatalogComponent[] = [
-	component('FSButton', { subtitle: 'Buttons allow users to take actions.', figma: 'https://figma.example/button' }),
+	component('FSButton', { subtitle: 'Buttons allow users to take actions.' }),
 	component('FSCard', { group: 'Surfaces', subtitle: 'Cards contain content.' }),
-	component('FSCardContent', { group: 'Surfaces', stories: [], partOf: 'components/FSCard' }),
-	component('FSPopovers', {
-		id: 'compositeComponents/FSPopovers',
-		group: 'Popovers',
-		composite: true,
-		stories: [
-			{ file: 'a.stories.tsx', title: 'Popovers/PopoverHeader', storybook: 'https://sb.example/header' },
-			{ file: 'b.stories.tsx', title: 'Popovers/PopoverLineItem', storybook: 'https://sb.example/line' },
-		],
-	}),
-	component('FSApp', { group: 'Ungrouped', stories: [] }),
+	component('FSCardHeader', { group: 'Surfaces' }),
+	component('PopoverHeader', { id: 'src/compositeComponents/FSPopovers/a.stories.tsx', group: 'Popovers' }),
+	component('Loose', { group: 'Ungrouped', storybook: null }),
 ];
 
 const ready = (update: CatalogUpdate = 'unchanged', components = COMPONENTS): Catalog => ({
 	state: 'ready',
+	branch: 'develop',
 	commit: 'fc2658f0123456789',
 	committedAt: '2026-10-07T19:03:13Z',
 	update,
@@ -55,8 +46,10 @@ const open = async (answers: (refresh: boolean) => ReturnType<typeof ok<Catalog>
 	current = await render(createElement(DesignSystem, { hidden }));
 	return app;
 };
-const rows = () => [...document.querySelectorAll('[data-component]')].map((li) => li.getAttribute('data-component')!.split('/')[1]);
-const row = (name: string) => document.querySelector(`[data-component$="/${name}"]`) as HTMLElement;
+/** A row's component, by the name it shows. */
+const nameOf = (li: Element) => li.querySelector('.font-medium')?.textContent ?? '';
+const rows = () => [...document.querySelectorAll('[data-component]')].map(nameOf);
+const row = (name: string) => [...document.querySelectorAll('[data-component]')].find((li) => nameOf(li) === name) as HTMLElement;
 const groups = () => [...document.querySelectorAll('section')].map((s) => s.getAttribute('aria-label'));
 const text = () => document.body.textContent ?? '';
 
@@ -70,7 +63,7 @@ describe('the list', () => {
 	it('shows the components grouped, in the catalog’s order, with the header', async () => {
 		await open(() => ok(ready()));
 		expect(groups()).toEqual(['Buttons', 'Surfaces', 'Popovers', 'Ungrouped']);
-		expect(rows()).toEqual(['FSButton', 'FSCard', 'FSCardContent', 'FSPopovers', 'FSApp']);
+		expect(rows()).toEqual(['FSButton', 'FSCard', 'FSCardHeader', 'PopoverHeader', 'Loose']);
 		expect(document.querySelector('[aria-label="Branch develop"]')).not.toBeNull();
 		// No commit, no date, and nothing about being up to date: only a problem is said.
 		expect(text()).not.toMatch(/fc2658f|2026|Oct|up to date|Checking GitHub/i);
@@ -87,12 +80,15 @@ describe('the list', () => {
 		expect(text()).not.toMatch(/Storybook|Source/);
 	});
 
-	it('marks a gap “No story”, and a part sits under its parent with no mark', async () => {
+	it('names the branch it shows, from the library, not a fixed one', async () => {
+		await open(() => ok({ ...ready(), branch: 'main' }));
+		expect(document.querySelector('[aria-label="Branch main"]')).not.toBeNull();
+	});
+
+	it('marks no component as missing a story: every component in the list is one of Storybook’s', async () => {
 		await open(() => ok(ready()));
-		expect(row('FSApp').textContent).toContain('No story');
-		expect(row('FSCardContent').textContent).not.toContain('No story');
-		expect(row('FSCardContent').querySelector('button')!.className).toContain('pl-10');
-		expect(rows().indexOf('FSCardContent')).toBe(rows().indexOf('FSCard') + 1);
+		expect(text()).not.toContain('No story');
+		expect(rows().every((name) => !row(name).querySelector('button')!.className.includes('pl-10'))).toBe(true);
 	});
 });
 
@@ -104,11 +100,11 @@ describe('finding a component', () => {
 		await open(() => ok(ready()));
 		await press(finder());
 		await settle();
-		expect(choices()).toEqual(['FSButton', 'FSCard', 'FSCardContent', 'FSPopovers', 'FSApp']);
+		expect(choices()).toEqual(['FSButton', 'FSCard', 'FSCardHeader', 'PopoverHeader', 'Loose']);
 		const search = document.querySelector('[cmdk-input]') as HTMLInputElement;
 		await typeInto(search, 'card');
 		await settle();
-		expect(choices().filter((c) => c === 'FSCard' || c === 'FSCardContent')).toHaveLength(2);
+		expect(choices().filter((c) => c === 'FSCard' || c === 'FSCardHeader')).toHaveLength(2);
 		await typeInto(search, 'nothing like it');
 		await settle();
 		expect(text()).toContain('No component matches.');
@@ -118,10 +114,10 @@ describe('finding a component', () => {
 		await open(() => ok(ready()));
 		await press(finder());
 		await settle();
-		await act(async () => void [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === 'FSPopovers')!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+		await act(async () => void [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === 'PopoverHeader')!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
 		await settle();
-		expect(document.querySelector('h3')?.textContent).toBe('FSPopovers');
-		expect(document.querySelector('[role="combobox"]')?.textContent).toBe('FSPopovers');
+		expect(document.querySelector('h3')?.textContent).toBe('PopoverHeader');
+		expect(document.querySelector('[role="combobox"]')?.textContent).toBe('PopoverHeader');
 	});
 
 	it('has the finder in the toolbar beside the name and branch, and Sync at its right, as Projects does', async () => {
@@ -275,15 +271,15 @@ describe('when there is no list', () => {
 		expect(rows()).toHaveLength(5);
 	});
 
-	it('says the clone has no develop, naming the clone, and reads no other branch', async () => {
-		await open(() => ok({ state: 'no-develop', root: '/h/GitHub/fui' }));
+	it('says the clone has no copy of its branch, naming the clone and the branch, and reads no other', async () => {
+		await open(() => ok({ state: 'no-branch', root: '/h/GitHub/fui', branch: 'develop' }));
 		expect(text()).toContain('This clone has no develop branch');
 		expect(text()).toContain('/h/GitHub/fui');
 	});
 
-	it('says where it looked when develop has no components', async () => {
+	it('says the library’s Storybook has no stories when the branch has none', async () => {
 		await open(() => ok(ready('unchanged', [])));
-		expect(text()).toContain('No components were found on develop, in src/components or src/compositeComponents.');
+		expect(text()).toContain("The library's Storybook has no stories on develop, so there are no components to list.");
 	});
 
 	it('says what went wrong when the read fails, and tries again', async () => {

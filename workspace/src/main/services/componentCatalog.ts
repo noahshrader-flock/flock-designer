@@ -1,29 +1,30 @@
 /**
- * The component library's catalog: what is in `flock-react-component-lib`, read from its files as they are, for the
- * Design System tab. An index of the library, never a copy of it: no story is run, nothing is compiled, and what the
- * tab shows beyond a name, a line and three links is Storybook's to show.
+ * The component library's catalog, as its Storybook has it, for the Design System tab. **Storybook is the source of
+ * truth:** a component is a story file, wherever it is in the repository, named and grouped by its Storybook title and
+ * ordered as the library's own `.storybook/preview` orders its sidebar. Nothing here knows how one library lays out its
+ * folders or names its components, so a story added to the library is in the list, and a library set up like any other
+ * Storybook library reads the same way. An index of the library, never a copy: no story is run here, nothing is compiled.
  *
- * The reads are passed in, so this decides only what the files mean. In the app they read `origin/develop` through git
- * (DESIGN_SYSTEM_PLAN.md, S2); in the tests they read a fixture.
+ * The reads are passed in, so this decides only what the files mean. In the app they read the library's branch on
+ * GitHub through git (`designLibrary.ts`); in the tests they read a fixture.
  */
+import { dirname } from 'node:path';
+import type { DesignSystem } from '../../shared/catalog';
+import type { CatalogComponent } from '../../shared/contract';
 
-import type { CatalogComponent, CatalogStory } from '../../shared/contract';
-
-/** How the catalog reads the library: every file under a folder (paths from the library's root), and one file's text. */
+/** How the catalog reads the library: every file under a folder (`''` for all of it, paths from the root), and one file's text. */
 export interface CatalogReads {
 	listFiles(dir: string): Promise<string[]>;
 	readFile(path: string): Promise<string>;
 }
 
-export { isGap } from '../../shared/catalog';
-
-export const STORYBOOK_URL = 'https://develop--6617f3c579abb5c5e780fddc.chromatic.com/';
-const SOURCE_URL = 'https://github.com/flocksafety/flock-react-component-lib/tree/develop/src/';
-const AREAS = ['components', 'compositeComponents'] as const;
 export const UNGROUPED = 'Ungrouped';
 
-/** Storybook's sidebar order, from the library's `.storybook/preview.tsx`. Any other group sorts after, alphabetically. */
-export const GROUP_ORDER = ['Buttons', 'Inputs', 'Data Display', 'Feedback', 'Surfaces', 'Navigation', 'Layout', 'Tables'];
+/** A Storybook story file, by Storybook's own convention: `*.stories.` and a script extension. Docs pages (`.mdx`) are not components. */
+export const isStoryFile = (path: string): boolean => /\.stories\.(js|jsx|mjs|ts|tsx)$/.test(path);
+
+/** The library's Storybook preview set-up, where its sidebar order lives. */
+const isPreviewFile = (path: string): boolean => /^\.storybook\/preview\.(js|jsx|mjs|ts|tsx)$/.test(path);
 
 /** Storybook's own id rule (`sanitize` in `storybook/internal/csf`): lowercased, punctuation and spaces as one `-`. */
 export const storybookId = (part: string): string =>
@@ -34,11 +35,11 @@ export const storybookId = (part: string): string =>
 		.replace(/^-+/, '')
 		.replace(/-+$/, '');
 
-/** The docs page for a story title on the hosted Storybook. */
-export const storybookUrl = (title: string): string => `${STORYBOOK_URL}?path=/docs/${storybookId(title)}--docs`;
+/** The docs page for a story title on a hosted Storybook at `base`. */
+export const storybookUrl = (base: string, title: string): string => `${base}?path=/docs/${storybookId(title)}--docs`;
 
 /**
- * The first value of `key` in a story's text, only when it is a plain string literal. A template with `${}` in it, a
+ * The first value of `key` in a file's text, only when it is a plain string literal. A template with `${}` in it, a
  * variable or a call is "not given": the catalog never guesses.
  */
 export const literalField = (text: string, key: string): string | null => {
@@ -48,90 +49,67 @@ export const literalField = (text: string, key: string): string | null => {
 	return value === '' ? null : value;
 };
 
-const groupRank = (group: string): number => {
-	if (group === UNGROUPED) return GROUP_ORDER.length + 2;
-	const i = GROUP_ORDER.indexOf(group);
-	return i === -1 ? GROUP_ORDER.length + 1 : i;
+/**
+ * The top level of the sidebar order in a Storybook preview set-up (`parameters.options.storySort.order`), as written:
+ * its string literals, and not those in the nested lists that order a group's own entries. Empty when it has none.
+ */
+export const sidebarOrder = (preview: string): string[] => {
+	const start = /\border\s*:\s*\[/.exec(preview);
+	if (!start) return [];
+	const order: string[] = [];
+	let depth = 1;
+	for (let i = start.index + start[0].length; i < preview.length && depth > 0; i++) {
+		const c = preview[i]!;
+		if (c === '[') depth++;
+		else if (c === ']') depth--;
+		else if ((c === "'" || c === '"') && depth === 1) {
+			const end = preview.indexOf(c, i + 1);
+			if (end === -1) break;
+			order.push(preview.slice(i + 1, end));
+			i = end;
+		}
+	}
+	return order;
 };
 
-const readStory = async (reads: CatalogReads, file: string): Promise<{ story: CatalogStory; subtitle: string | null; figma: string | null }> => {
-	let text = '';
+const read = async (reads: CatalogReads, path: string): Promise<string> => {
 	try {
-		text = await reads.readFile(file);
+		return await reads.readFile(path);
 	} catch {
-		// One unreadable story leaves its component in the list, without what the story would have said.
+		// One unreadable file leaves its component in the list, without what the file would have said.
+		return '';
 	}
-	const title = literalField(text, 'title');
-	return {
-		story: { file, title, storybook: title === null ? null : storybookUrl(title) },
-		subtitle: literalField(text, 'componentSubtitle'),
-		figma: literalField(text, 'figmaPageUrl'),
-	};
 };
 
 /**
- * Every component in the library, in the order the tab shows them: groups in Storybook's order, components
- * alphabetically, each part straight after its parent.
- *
- * A component is a folder under `src/components` or `src/compositeComponents` whose name starts with `fs` in any case
- * (one is spelled `FsDateTimeRangePicker`); anything else there (`pickerTimezone`, the `.css` files) is not one. Its
- * stories are every `*.stories.tsx` anywhere under the folder.
+ * Every component in the library, in the order its Storybook shows them: groups in the sidebar's order, any other group
+ * after them alphabetically and `Ungrouped` last, and components alphabetically within a group.
  */
-export const readCatalog = async (reads: CatalogReads): Promise<CatalogComponent[]> => {
-	const found: CatalogComponent[] = [];
-	for (const area of AREAS) {
-		const files = await reads.listFiles(`src/${area}`);
-		const folders = new Map<string, string[]>();
-		for (const file of files) {
-			const parts = file.split('/');
-			// src/<area>/<folder>/<file...>: a file directly in the area is not a component.
-			if (parts.length < 4 || parts[0] !== 'src' || parts[1] !== area) continue;
-			const folder = parts[2]!;
-			if (!/^fs/i.test(folder)) continue;
-			const list = folders.get(folder) ?? [];
-			list.push(file);
-			folders.set(folder, list);
-		}
-		const inArea: CatalogComponent[] = [];
-		for (const [name, list] of folders) {
-			const storyFiles = list.filter((f) => /\.stories\.tsx$/.test(f)).sort();
-			const read = await Promise.all(storyFiles.map((f) => readStory(reads, f)));
-			const title = read.find((r) => r.story.title !== null)?.story.title ?? null;
-			inArea.push({
-				id: `${area}/${name}`,
-				name,
-				group: title === null ? UNGROUPED : title.split('/')[0]!.trim() || UNGROUPED,
-				composite: area === 'compositeComponents',
-				subtitle: read.find((r) => r.subtitle !== null)?.subtitle ?? null,
-				stories: read.map((r) => r.story),
-				figma: read.find((r) => r.figma !== null)?.figma ?? null,
-				source: `${SOURCE_URL}${area}/${name}`,
-				partOf: null,
-			});
-		}
-		// A component with no story is a part of the one with a story whose name is the longest proper prefix of its own.
-		const withStory = inArea.filter((c) => c.stories.length > 0);
-		for (const c of inArea) {
-			if (c.stories.length > 0) continue;
-			const parent = withStory
-				.filter((p) => p.name.length < c.name.length && c.name.toLowerCase().startsWith(p.name.toLowerCase()))
-				.sort((a, b) => b.name.length - a.name.length)[0];
-			if (parent) {
-				c.partOf = parent.id;
-				c.group = parent.group;
-			}
-		}
-		found.push(...inArea);
-	}
-
-	const byId = new Map(found.map((c) => [c.id, c]));
-	const key = (c: CatalogComponent) => {
-		const head = c.partOf === null ? c : byId.get(c.partOf)!;
-		return { rank: groupRank(c.group), group: c.group, head: head.name.toLowerCase(), part: c.partOf === null ? 0 : 1, name: c.name.toLowerCase() };
-	};
-	return found.sort((a, b) => {
-		const x = key(a);
-		const y = key(b);
-		return x.rank - y.rank || x.group.localeCompare(y.group) || x.head.localeCompare(y.head) || x.part - y.part || x.name.localeCompare(y.name);
-	});
+export const readCatalog = async (reads: CatalogReads, library: DesignSystem): Promise<CatalogComponent[]> => {
+	const files = await reads.listFiles('');
+	const preview = files.find(isPreviewFile);
+	const order = preview === undefined ? [] : sidebarOrder(await read(reads, preview));
+	const components = await Promise.all(
+		files.filter(isStoryFile).map(async (file): Promise<CatalogComponent> => {
+			const text = await read(reads, file);
+			const title = literalField(text, 'title');
+			const parts = title?.split('/').map((p) => p.trim()) ?? [];
+			return {
+				id: file,
+				name: parts.at(-1) || file.split('/').pop()!.replace(/\.stories\.\w+$/, ''),
+				group: parts.length > 1 ? parts[0]! : UNGROUPED,
+				subtitle: literalField(text, 'componentSubtitle'),
+				storybook: title !== null && library.storybook !== null ? storybookUrl(library.storybook, title) : null,
+				source: `https://github.com/${library.repository}/tree/${library.branch}/${dirname(file)}`,
+			};
+		}),
+	);
+	const rank = (group: string) => (group === UNGROUPED ? order.length + 2 : order.includes(group) ? order.indexOf(group) : order.length + 1);
+	return components.sort(
+		(a, b) =>
+			rank(a.group) - rank(b.group) ||
+			a.group.localeCompare(b.group) ||
+			a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) ||
+			a.id.localeCompare(b.id),
+	);
 };
