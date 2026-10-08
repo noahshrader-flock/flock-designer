@@ -19,6 +19,9 @@ node ../flock-designer/workspace/bin/flkd.mjs new-prototype --project <id> --tit
 - **"Based on V1"**: say so in the note, and start from that version's newest source,
   `../flock-designer/projects/<id>/prototypes/v1-i<n>.tsx` (the highest `n`), changing what the new idea changes.
   Without that, a new version starts from the brief.
+- **`--note`** is the idea, in the person's own words: it becomes the project's brief, which reviewers read. Leave
+  out instructions about how to make it ("mock data only", "a prototype, not codebase work"): the skills already
+  say those.
 - It is modelled on the branch the repository is on; `--from <branch>` names another.
 
 If it says something must be installed first, tell the person what, and stop.

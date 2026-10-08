@@ -30,6 +30,9 @@ is kept.
   customer data, credentials, licence keys or anything copied from production, and no network requests.
 - **Check it builds** with the command the task gives, after every change. Do not finish while it reports
   an error: a prototype that does not build cannot be saved.
+- **If you look at the page yourself** (a screenshot of the built file, say), its icons show as their names
+  ("search", "close"): the design system's fonts are kept beside the page and served by Flock Designer, not
+  embedded in it. That is expected. Do not change the page for it or spend time on it.
 
 ## Before you write anything: read, in this order
 
@@ -104,3 +107,6 @@ when the prototype moves into the code:
 
 Say in a few lines what you made, where in the product it sits, which screen you modelled it on, and every
 `@standin`: what the page shows that the product cannot do today. That is the first thing the person reads.
+
+A prototype has no review pass of its own: people review it in Flock Designer, and the product's reviewers run when
+codebase work is handed off. Do not run them, or list them as not run.
