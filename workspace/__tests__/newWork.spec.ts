@@ -108,6 +108,20 @@ describe('a repository with no clone on this machine', () => {
 		expect(() => button('Stop')).toThrow(/0 buttons/);
 	});
 
+	it('asks what it starts from only once it is cloned, not before', async () => {
+		let finish: (v: unknown) => void = () => undefined;
+		const made = { root: '/h/GitHub/flock-ops', name: 'flock-ops', branch: 'develop', clean: true };
+		await open({ cloneRepository: () => new Promise((r) => (finish = r)) }, {});
+		expect(text()).toContain('Starts from');
+		await chooseRepository('flocksafety/flock-ops');
+		expect(text()).not.toContain('Starts from');
+		await press(button('Clone and continue'));
+		expect(text()).not.toContain('Starts from');
+		await act(async () => finish(ok(made)));
+		await settle();
+		expect(text()).toContain('Starts from');
+	});
+
 	it('says why a clone failed, and can be tried again', async () => {
 		await open({ cloneRepository: async () => fail('GitHub would not let git on this computer clone flocksafety/flock-ops') });
 		await chooseRepository('flocksafety/flock-ops');

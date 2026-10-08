@@ -42,7 +42,7 @@ export interface Created {
  * both lists can be searched by typing. The repository starts on the one last used, and the branch on the one
  * it has checked out, so the usual case is two choices already made. Work is built in a clone, so a
  * repository with none on this machine is cloned from here: where it will go is shown, and can be changed, before
- * anything is downloaded, and once it is cloned the form carries on with it.
+ * anything is downloaded, and once it is cloned the form carries on with it, and only then asks what it starts from.
  */
 export const NewWork = ({
 	open,
@@ -244,20 +244,23 @@ export const NewWork = ({
 									/>
 								)}
 							</div>
-							<div className="flex flex-col gap-2">
-								<Label htmlFor="new-work-from">Starts from</Label>
-								<SearchSelect
-									id="new-work-from"
-									items={branches}
-									value={elsewhere ? null : from}
-									onChange={setFrom}
-									placeholder={checkout && !elsewhere ? 'Choose a branch' : 'Choose a repository first'}
-									search="Search branches…"
-									empty="No branch matches."
-									disabled={busy || elsewhere || branches.length === 0}
-									className="font-mono"
-								/>
-							</div>
+							{/* After the clone, not before: there is nothing to start from until it is here. */}
+							{toClone === null && (
+								<div className="flex flex-col gap-2">
+									<Label htmlFor="new-work-from">Starts from</Label>
+									<SearchSelect
+										id="new-work-from"
+										items={branches}
+										value={elsewhere ? null : from}
+										onChange={setFrom}
+										placeholder={checkout && !elsewhere ? 'Choose a branch' : 'Choose a repository first'}
+										search="Search branches…"
+										empty="No branch matches."
+										disabled={busy || elsewhere || branches.length === 0}
+										className="font-mono"
+									/>
+								</div>
+							)}
 						</>
 					) : (
 						<Alert>
@@ -395,7 +398,7 @@ const CloneHere = ({
 					<AlertDescription>{taken.why} Nothing is cloned over it: change where clones go, or move it.</AlertDescription>
 				</Alert>
 			)}
-			<Button size="sm" onClick={onClone} disabled={taken !== undefined}>
+			<Button onClick={onClone} disabled={taken !== undefined}>
 				{place.state === 'cloned' ? 'Use it and continue' : 'Clone and continue'}
 			</Button>
 			<p className="text-muted-foreground text-xs">
