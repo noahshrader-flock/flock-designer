@@ -51,7 +51,7 @@ import { firstHeading, isRecordName, iterationLabel, mergeProjects, projectPath,
 import { resolveInside } from './services/paths';
 import { PrototypeServer } from './services/prototypeServer';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
-import { type PrototypeChange, prototypeWork } from './services/prototypeWork';
+import { type PrototypeChange, prototypeWork, whereTheChangeGoes } from './services/prototypeWork';
 import {
 	BUILD_SKILL,
 	MOVE_SKILL,
@@ -786,7 +786,8 @@ export const registerIpc = ({
 	const finishPrototypeChanges = async (projectId: string): Promise<void> => {
 		if (agent.status().state === 'running') return;
 		for (const [commentId, pending] of [...prototypeChanges]) {
-			// What does not build stays on this machine, as the screen said when the run ended.
+			// One that does not build is left as it is on this machine, unrecorded: nobody is watching to be told why, and
+			// the next Address on it starts again from what people saw.
 			if (pending.projectId === projectId) await finishPrototypeChange(commentId).catch(() => undefined);
 		}
 	};
@@ -817,9 +818,9 @@ export const registerIpc = ({
 			);
 			// Modelled on what the iteration it comes from was: a new one has no record of its own yet.
 			const { build, sources } = await prototypeRun(projectId, change.target, change.from.name);
-			const into = change.target === name ? null : { target: change.target, copyOf: change.fresh ? change.from.name : null };
 			prototypeChanges.set(commentId, { projectId, change });
-			return startPrototypeAgent(projectId, name, sources, prototypeAddressTask({ addressSkill, buildSkill, build, sources, commentsPath: written.path, number, name, into }));
+			const where = whereTheChangeGoes(change, name);
+			return startPrototypeAgent(projectId, name, sources, prototypeAddressTask({ addressSkill, buildSkill, build, sources, commentsPath: written.path, number, name, where }));
 		}),
 	);
 	ipcMain.handle(

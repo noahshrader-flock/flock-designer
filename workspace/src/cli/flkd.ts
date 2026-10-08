@@ -11,7 +11,7 @@ import { recordsRootFor } from '../main/services/discovery';
 import { readCheckout, runGit } from '../main/services/git';
 import { BUILD_SKILL, cloneStore, prototypeBuildTask } from '../main/services/prototype';
 import { shellLine } from '../main/services/prototypeBundle';
-import { prototypeWork } from '../main/services/prototypeWork';
+import { prototypeWork, whereTheChangeGoes } from '../main/services/prototypeWork';
 
 /**
  * `flkd`: making a prototype from Claude Code in VS Code, with no app running.
@@ -85,12 +85,6 @@ const meOf = async (designRoot: string, github: GitHubApi | null): Promise<Perso
 	const login = loginFromNoreply(await read('user.email')) ?? (await github?.api('/user').then((u) => (u as { login?: unknown }).login).catch(() => null));
 	return { name, login: typeof login === 'string' ? login : null };
 };
-
-/**
- * Stands for a commenter who could not be read (GitHub's command line is missing or signed out). Not anyone's login, so
- * the iteration counts as commented on, and a change goes in a new one rather than changing what people may have seen.
- */
-const UNREAD = '';
 
 const OPTIONS = {
 	project: { type: 'string' },
@@ -180,27 +174,16 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		if (command === 'change-prototype') {
 			const name = values.name;
 			if (!name) throw new UsageError('Say which prototype, with --name.');
+			// Who has commented, read through GitHub's command line; not known (null) when it is missing or signed out.
 			const repo = deps.github ? new DesignRepo(deps.github, DESIGN_REPO) : null;
-			let unread = false;
-			const authorsOf = async (it: Iteration): Promise<string[]> => {
-				if (repo) {
-					try {
-						return (await repo.readComments(projectId, it.branch)).map((c) => c.author);
-					} catch {
-						// Read below as not known.
-					}
-				}
-				unread = true;
-				return [UNREAD];
-			};
+			const authorsOf = async (it: Iteration): Promise<string[] | null> =>
+				repo ? (await repo.readComments(projectId, it.branch).catch(() => null))?.map((c) => c.author) ?? null : null;
 			const change = await work.startChange(projectId, name, authorsOf);
 			const text = await buildTask(skill, change.target, change.from.name, note);
-			const where = change.fresh
-				? unread
-					? `Its comments could not be read (is GitHub's command line, gh, signed in?), so ${change.from.name} is left as it is, in case people have seen it: the change is in ${change.target}, a copy of it, not recorded until it is saved.`
-					: `Others have commented on ${change.from.name}, so it is left as they saw it: the change is in ${change.target}, a copy of it, not recorded until it is saved.`
-				: `The change is made in ${change.target}, the newest iteration of its version.`;
-			deps.out(taskText(`${where} The file to change already holds it as it is: change it, rather than starting again. Your task follows.`, text, saveCommand(change.target)));
+			const where = whereTheChangeGoes(change, name) ?? `The change is made in ${change.target}: change it, rather than starting again.`;
+			const unsaved = change.fresh ? ` ${change.target} is recorded when it is saved.` : '';
+			const signIn = change.unread ? ' (GitHub\'s command line, gh, is missing or not signed in.)' : '';
+			deps.out(taskText(`${where}${signIn}${unsaved} Your task follows.`, text, saveCommand(change.target)));
 			return 0;
 		}
 

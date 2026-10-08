@@ -38,6 +38,8 @@ node ../flock-designer/workspace/bin/flkd.mjs change-prototype --project <id> --
 - **It decides where the change goes**, and says so: in that iteration, or, when someone other than its makers has
   commented on it, in the version's next iteration (`v1-i2`), so what they commented on is never changed under them.
   Say which in your summary.
+- **Save each change before starting another:** a change not yet saved is only on this machine, and the next
+  `change-prototype` would start again from what people saw.
 - A different idea is a new version: `new-prototype`, as above.
 
 ## Then build it

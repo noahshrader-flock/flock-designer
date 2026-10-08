@@ -1,5 +1,8 @@
 import type { Person } from './contract';
 
+/** An automated GitHub account (`github-actions[bot]`): not a person, so never a contributor or a reviewer. */
+export const isBot = (login: string): boolean => /\[bot\]$/i.test(login);
+
 /** A person's avatar, which GitHub serves for any login. Null when we only know a git name. */
 export const avatarUrl = (login: string | null): string | null =>
 	login ? `https://avatars.githubusercontent.com/${encodeURIComponent(login)}?size=64` : null;

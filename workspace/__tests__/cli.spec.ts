@@ -150,7 +150,7 @@ describe('change-prototype', () => {
 		signedIn({ 'v1-i1': ['test-person'] });
 		await made();
 		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1-i1', '--note', 'Make the title bigger')).toBe(0);
-		expect(out.join('\n')).toMatch(/change is made in v1-i1, the newest iteration/);
+		expect(out.join('\n')).toMatch(/The change is made in v1-i1: change it/);
 		expect(out.join('\n')).toContain('flkd save-prototype --project demo --name v1-i1');
 		writeFileSync(local('v1-i1'), page('bigger'));
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
@@ -177,7 +177,7 @@ describe('change-prototype', () => {
 	it('when the comments cannot be read, never changes what people may have seen', async () => {
 		await made();
 		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1-i1', '--note', 'Bigger')).toBe(0);
-		expect(out.join('\n')).toMatch(/could not be read[\s\S]*the change is in v1-i2/);
+		expect(out.join('\n')).toMatch(/could not be read[\s\S]*change is made in v1-i2[\s\S]*gh, is missing or not signed in/);
 	});
 
 	it('makes nothing when the change was not made', async () => {

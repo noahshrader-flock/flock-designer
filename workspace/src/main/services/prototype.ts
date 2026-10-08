@@ -224,7 +224,7 @@ export const prototypeAddressTask = ({
 	commentsPath,
 	number,
 	name,
-	into = null,
+	where = null,
 }: {
 	addressSkill: string;
 	buildSkill: string;
@@ -235,11 +235,8 @@ export const prototypeAddressTask = ({
 	number: number;
 	/** The iteration the comment is on. */
 	name: string;
-	/**
-	 * The iteration the change is made in, when it is not the one commented on: the version's newest, or its next,
-	 * started as a copy of `from` because others had commented on that.
-	 */
-	into?: { target: string; copyOf: string | null } | null;
+	/** Where the change is made, when that is not the iteration commented on: see `whereTheChangeGoes`. */
+	where?: string | null;
 }): string =>
 	[
 		...addressOpening(number, commentsPath, `prototype ${name}`),
@@ -247,11 +244,7 @@ export const prototypeAddressTask = ({
 		'## This run',
 		'',
 		`- This is a prototype: it has no branch, and nothing is committed. Its whole source is \`${build.source}\`; change that file and nothing else.`,
-		...(into?.copyOf
-			? [`- Others have commented on ${into.copyOf}, so it stays as they saw it. The change is made in ${into.target}, the next iteration, which starts as a copy of it: that is the file above.`]
-			: into
-				? [`- The comment is on ${name}, but ${into.target} is the newest iteration of this version, so the change is made there: that is the file above.`]
-				: []),
+		...(where ? [`- The comment is on ${name}. ${where}`] : []),
 		`- After every change, build it with exactly: \`${build.buildCommand}\``,
 		`  It writes the page to \`${build.page}\`. Do not finish while it reports an error.`,
 		'',

@@ -337,6 +337,8 @@ describe('versions and iterations in a prototype\'s name', () => {
 		expect(hasOutsideComments(undefined, ['noah-s'])).toBe(true);
 		expect(hasOutsideComments([{ name: 'Noah', login: null }], ['noah-s'])).toBe(true);
 		expect(hasOutsideComments(undefined, [])).toBe(false);
+		// A bot saw nothing.
+		expect(hasOutsideComments([noah], ['github-actions[bot]'])).toBe(false);
 	});
 
 	it('labels them for people as V and I', () => {

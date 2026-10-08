@@ -1,6 +1,6 @@
 import type { CommentAnchor, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
 import { GitHubError } from './github';
-import { asPeople, mergePeople } from '../../shared/people';
+import { asPeople, isBot, mergePeople } from '../../shared/people';
 import { asDate, asRoute, firstHeading, newestFirst } from '../../shared/projects';
 import { RESOLVED_MARK, addressedAt, addressedIn, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withAddressed, withResolved } from '../../shared/anchor';
 import type { GitHubSession } from './githubSession';
@@ -37,7 +37,6 @@ export type GitHubApi = Pick<GitHubSession, 'api'>;
 const asRecord = (v: unknown): Record<string, unknown> => (typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {});
 const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 
-const isBot = (name: string): boolean => /\[bot\]$/i.test(name);
 
 export class DesignRepo {
   constructor(

@@ -1,5 +1,5 @@
 import type { Iteration, IterationKind, Person, Project, ProjectIteration } from './contract';
-import { mergePeople } from './people';
+import { isBot, mergePeople } from './people';
 
 /** The only shape a project id may take: lower-case words joined by single hyphens. */
 export const PROJECT_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -206,11 +206,11 @@ export const latestIterationName = (names: string[], version: number): string | 
  * Whether anyone but an iteration's makers has commented on it. Once someone has, the iteration is **frozen**: what
  * they commented on is never changed under them, and the next change is made in the next iteration. Makers are known
  * by their GitHub login, as comment authors are; a maker with none is not anyone's, so an iteration whose makers are
- * unknown is frozen by any comment rather than changed under it.
+ * unknown is frozen by any comment rather than changed under it. A bot is not someone who saw it.
  */
 export const hasOutsideComments = (makers: Person[] | undefined, authors: string[]): boolean => {
 	const own = new Set((makers ?? []).flatMap((p) => (p.login ? [p.login.toLowerCase()] : [])));
-	return authors.some((a) => !own.has(a.toLowerCase()));
+	return authors.some((a) => !isBot(a) && !own.has(a.toLowerCase()));
 };
 
 /**

@@ -39,7 +39,23 @@ export interface PrototypeChange {
 	target: string;
 	fresh: boolean;
 	before: string;
+	/** Who has commented on `from` could not be read, so it was taken as commented on. */
+	unread: boolean;
 }
+
+/**
+ * Where a change is made, as the agent making it is told, in the same words from the app and the command. Null when
+ * there is nothing to say: the change is made in the iteration the agent was pointed at.
+ */
+export const whereTheChangeGoes = (change: PrototypeChange, pointedAt: string): string | null => {
+	if (change.fresh) {
+		const why = change.unread
+			? `Who has commented on ${change.from.name} could not be read, so it is left as it is, in case people have seen it`
+			: `Others have commented on ${change.from.name}, so it stays as they saw it`;
+		return `${why}. The change is made in ${change.target}, its next iteration, which starts as a copy of it: change that copy, rather than starting again.`;
+	}
+	return change.target === pointedAt ? null : `${change.target} is the newest iteration of this version, so the change is made there.`;
+};
 
 /** What starting a prototype needs: the product branch it is modelled on, and the person's own words. */
 export interface PrototypeStart {
@@ -255,9 +271,10 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 * Where a change to a prototype goes, and its source made ready there. The change goes to the newest iteration of
 	 * the prototype's version, so later changes build on earlier ones, unless anyone but its makers has commented on
 	 * that iteration: then what they commented on is left as it is, and the change starts the next iteration from it.
-	 * `authorsOf` says who has commented on an iteration. Nothing is recorded yet: see `finishChange`.
+	 * `authorsOf` says who has commented on an iteration, or null when that cannot be read: then it is taken as
+	 * commented on. Nothing is recorded yet: see `finishChange`.
 	 */
-	const startChange = async (projectId: string, name: string, authorsOf: (iteration: Iteration) => Promise<string[]>): Promise<PrototypeChange> => {
+	const startChange = async (projectId: string, name: string, authorsOf: (iteration: Iteration) => Promise<string[] | null>): Promise<PrototypeChange> => {
 		const version = versionOf(name);
 		const all = await records(projectId);
 		const names = all.map((i) => i.name);
@@ -265,7 +282,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (!from) throw new Error(`${projectId} has no prototype called ${name}.`);
 		const source = await sourceText(projectId, from.name);
 		if (source === null) throw new Error('This prototype has no React source saved, so there is nothing for the agent to change.');
-		const fresh = hasOutsideComments(from.contributors, await authorsOf(from));
+		const authors = await authorsOf(from);
+		const fresh = authors === null || hasOutsideComments(from.contributors, authors);
 		const target = fresh ? nextIterationName(names, version) : from.name;
 		const local = sourceFile(projectId, target);
 		if (fresh) {
@@ -276,7 +294,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			// Built on another machine: its saved source is what is changed.
 			writeFileSync(local, source);
 		}
-		return { from, target, fresh, before: prototypeVersionOf(source) };
+		return { from, target, fresh, before: prototypeVersionOf(source), unread: authors === null };
 	};
 
 	/**
@@ -292,7 +310,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const from = all.find((i) => i.name === latestIterationName(names, version));
 		if (!from || nextIterationName(names, version) !== name) throw new Error(`${projectId} has no ${name}, and it is not the next iteration of anything.`);
 		const source = await sourceText(projectId, from.name);
-		return { from, target: name, fresh: true, before: source === null ? '' : prototypeVersionOf(source) };
+		return { from, target: name, fresh: true, before: source === null ? '' : prototypeVersionOf(source), unread: false };
 	};
 
 	/**
