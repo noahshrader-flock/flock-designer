@@ -71,6 +71,19 @@ library):**
 | **Vite and the React plugin were the library's own installed copies in the spike.** The app already depends on `@vitejs/plugin-react` and `electron-vite` (which carries Vite); it does not have `sass` | P1 uses **the app's own** Vite and plugin, and adds `sass` to the app, so building runs none of the library's installed tools in the app's process. The library's code runs only in the preview page, which is sandboxed (`pageView.ts`) |
 | **The clone's packages are installed for whatever branch it has checked out,** not necessarily for `develop` | A dependency `develop` added since would fail the build for the components that use it: said on those cards, not as a broken tab. And a clone with no packages installed cannot build at all: P1 says so and offers the app's existing installer |
 
+**Read for tokens and for embedding Storybook (2026-10-08, from `origin/develop` and a scratch build; nothing written to
+the library):**
+
+| Fact | What it means here |
+|---|---|
+| **Colors are two layers of TypeScript.** Ten colour families ("tones", about 20 steps each) in `src/colors/tones/*.ts` (`pineGreen[50]`), and palette roles (`primary`, `primaryContainer`, `secondary`, `surface0`, the priority colours, each with `main`, `light`, `dark`, `contrastText`) in `src/colors/theme/light.ts`, `dark.ts` and `shared.ts`, which point at the tones (`primary.main = pineGreen[50]`) | Flat objects of literals, readable as text as stories are. A colour control maps cleanly: change a role or a tone, and what reads it follows |
+| **Components read the roles through the MUI theme at run time,** made by `createFSTheme(mode)` in `src/utils/theme.ts` | A change of theme reaches every component with nothing per component |
+| **The library's own `FSApp` wrapper takes a `theme` prop** (`<FSApp theme={...}>`), and the library's `.storybook/preview.tsx` already wraps every story in `FSApp` | The hook for a changed theme **already exists**: P1 builds nothing to reserve for it |
+| **Spacing and radius are set once in the theme** (spacing 8, radius 8), **but about a dozen component styles hardcode `8px` and `360px`** instead of reading them | A radius control would move most things and not those. A library cleanup for the Design System owner; the tab need not work around it |
+| **Some component styles are built from the palette when the theme is created** (`getFSVariantStyles(palette)`) | A theme changed afterwards may not reach those. To check, cheaply, when tokens are built (T1); not a P1 concern |
+| **The 259-variable CSS file** (`flock-colors.css`) **is "kept for backward compatibility"** by the library's own words | Not a source for tokens; ignored |
+| **The library's own Storybook cannot be built from `develop` alone.** A build from a `git archive` of `develop` failed on `../symbols.generated`, a file the library generates at install time and does not keep in git (it is missing from the clone on Noah's checked-out branch too) | Embedding Storybook means running the clone's own dev server on whatever branch is checked out: not `develop`, not read-only, and a server to start and stop. Why decision 15 chooses the build in decision 8 |
+
 **Left unmeasured, deliberately:** how long a fetch takes on a slow network. It runs while the tab shows the list it
 already has (decision 4), so a slow fetch costs nothing the person waits on.
 
@@ -87,6 +100,8 @@ already has (decision 4), so a slow fetch costs nothing the person waits on.
 | 8 | **How is a preview made?** | **Storybook's portable stories** (`composeStories` and `setProjectAnnotations` from `@storybook/react`, made for rendering stories outside Storybook), with the library's own `.storybook/preview.tsx`, so every story gets the FUI theme and decorators it has in Storybook. **One build of every story per `develop` commit,** with Vite, from a copy of `develop` made with `git archive` into the app's folder and the clone's installed packages; cached until `develop` moves | Measured (spike, below): every story builds in 5.5 s, the same as one, so one build serves the whole tab. `git archive` leaves no trace in the clone (a worktree would add one to its `.git`). No Storybook server, no second copy of anything |
 | 9 | **Where is a preview shown?** | **Click a component, and it opens on its own page in the tab:** its name, subtitle and links, then **each of its stories as a card**, named, rendered live, each in its own frame. Back returns to the list where it was | One frame per story, as Storybook's own preview does: a dialog or drawer renders into the page's body, so on a shared page they cover each other (the spike showed 359 stories, ten of them blank because they open into the body). A frame also keeps one broken story from taking the others down |
 | 10 | **Pictures in the list itself?** | **Not yet.** After P2 is used, P3 adds a small picture of each component's first story to its row, taken once per `develop` commit | The list stays fast and useful without them; the component page is where seeing it matters. Pictures cost a render of every component, which is worth doing once people have asked for it |
+| 15 | **Embed Storybook for the preview instead?** | **No, not for reading** (Noah and Claude, 2026-10-08). The preview renders **the library's own stories** with the library's own `FSApp`, as decision 8 says, and Storybook stays where docs, controls and prop tables live | It costs nothing per component: the catalog already lists every story file, and the generated entry imports them all, so **a new component appears with nothing added here**. It is not a second Storybook: no docs, no controls, no rewritten stories. Embedding Storybook needs its dev server on the working tree (see the facts above). **It is the right tool for the later editing stage** (edit a branch, watch Storybook update, open the pull request), and the preview build runs on a branch as well as on `develop`, so choosing this now closes nothing |
+| 16 | **Where do token controls go?** | **A separate later step, T1, after P2,** not inside P2 (Noah, 2026-10-08: "a P2 step"; kept apart so P2 stays small). Nothing for it is built in P1 | The library's `FSApp` already takes a theme, so T1 needs no hook from P1. Keeping it out of P2 keeps the component page about seeing a component |
 | 11 | **How does the tab get a library when it has none?** | **A centred "Connect the design system" screen, laid out like the GitHub sign-in,** with two tabs: **Clone** and **Locate** (P0). Whichever is used, the connection is **remembered** (the folder's path, in the app's own settings, as the checkout and the clone folder are) and checked every time the app starts | Noah, 2026-10-08: connecting is something a person does on purpose, once, like signing in, and the app remembers it. Locate lets someone who already has the library anywhere on the computer use that clone, and Clone gives everyone else one with no terminal |
 | 12 | **Does the app still find a clone by itself?** | **Yes** (Noah, 2026-10-08), **as a convenience.** What is remembered wins; otherwise a clone of the library in the clone folder or the usual places is used, with no screen. The Connect screen shows only when neither exists, or the remembered folder is gone | A designer with the library already in `~/Documents/GitHub` should not have to say so, and Noah's own reason: **a connection can be removed and replaced later,** which a find-by-itself rule does not get in the way of. Finding trusts nothing: the app only reads git's copy of `develop` from it (decision 4) |
 | 13 | **What may be connected?** | **The design system library, and nothing else; no forks** (Noah, 2026-10-08). It is recognised in **one place**, `isDesignSystem`, over a short list of accepted repositories with one entry, `flocksafety/flock-react-component-lib`: **by name** when a repository is chosen in Clone (so nothing is downloaded that would be refused), and **by the folder's `origin`** when one is located or found (any remote form, any case, any folder name). A clone of a fork has a different `origin`, so it is refused with the others | The tab shows one library, and a refusal comes before anything is built on a wrong folder. A second design system later is one more line in that list, not a new rule |
@@ -108,6 +123,7 @@ nothing on GitHub changed.
 | **P1** | **Build the previews:** one page of every story from `develop`, cached by commit, one story per address | P0, decision 8 | M | **Medium** |
 | **P2** | **The component page:** click a row, see its stories as live cards | P1, decision 9 | M | Medium |
 | **P3** | **Pictures in the list:** a small picture of each component on its row | P2, decision 10 | M | Low |
+| **T1** | **Adjust tokens in the preview:** colours, spacing and radius, seen live, written nowhere | P2, decision 16 | L | Medium |
 
 ### S1: The catalog reader (done 2026-10-08)
 
@@ -166,7 +182,10 @@ New `services/storyPreviews.ts`, in the main process.
 
 - **The copy:** `git archive <origin/develop commit> src .storybook package.json` unpacked into the app's own folder
   (`<userData>/story-previews/<commit>/`), with `node_modules` a link to the clone's. Nothing is written in the clone.
-- **The entry:** generated, importing every story file from S1's catalog, `composeStories` and `.storybook/preview.tsx`.
+- **The entry:** generated, importing every story file from S1's catalog, `composeStories` and `.storybook/preview.tsx`,
+  which wraps each story in the library's own `FSApp` and so its theme. **Nothing is kept up per component:** the list of
+  stories is the catalog's, so a component added to `develop` is in the next build. **No theme slot is built:** `FSApp`
+  already takes a `theme`, which is what T1 will pass.
   The page reads its address (`?story=<file>:<export>`) and renders that one story, alone, in a small error boundary
   that shows the error instead of a blank. `?component=<id>` lists the component's stories for P2.
 - **The build:** the app's own Vite and `@vitejs/plugin-react`, plus `sass` added to the app, the `react-image-gallery`
@@ -209,6 +228,24 @@ New `services/storyPreviews.ts`, in the main process.
   clicked, shows none.
 - **Not specified further until P2 has been used:** whether people want it is the question it answers.
 
+### T1: Adjust tokens in the preview
+
+**Not built, and not specified in detail until P2 has been used.** What it is, so P1 and P2 leave the way clear (they
+already do): like Claude Design, the app looks at the connected library and shows **what can be adjusted**, as
+controls, and the preview shows the change live.
+
+- **Found, not listed:** the app reads the library's tone files and palette files (decision above: flat TypeScript
+  literals, read as text) and builds the controls from what it finds. A colour added to the library appears; nothing is
+  maintained here.
+- **The controls a designer would expect:** a colour with a picker and its hex for each palette role and tone, light and
+  dark; spacing and radius as a slider with its value; typography later. Grouped as the library groups them.
+- **Seen, not saved:** a change builds a theme (MUI's `createTheme` over the library's `createFSTheme`) and passes it to
+  `FSApp` in the preview. No file in the library is touched, and **Reset** puts it back. Saving a change to a branch and
+  opening a pull request is the editing plan's, using the same change.
+- **To check when it is built (cheap, one spike):** how far a changed theme reaches the component styles that were built
+  from the palette at creation, and the `8px` and `360px` values that ignore the theme. Whatever does not follow is
+  said in the control ("not used by every component"), and is a list for the Design System owner.
+
 ## What this leaves ready for editing (not built)
 
 Nothing below is built, and nothing is shaped now except the first line.
@@ -216,6 +253,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 | Later step | What it will use from version 1 |
 |---|---|
 | **Pick a component to adjust** | `CatalogComponent.id` (the folder path), `stories`, `partOf` |
+| **Try a token change** | T1: the same preview with a changed theme. The change is a few lines in the tone or palette file, which is what a pull request would carry |
 | **Make the change with the agent** | The authoring standards already in the library (`.flkd/authoring/components.md`, `stories.md`), the same agent run as prototypes |
 | **Start from `develop`** | `origin/develop`, already fetched and current; a branch for the component is made from it, as prototypes make theirs, so the catalog and the work start from the same commit |
 | **See it** | P1's preview build, run on the person's branch instead of `develop`: the same page, the same cards, showing the change |
@@ -231,8 +269,8 @@ Nothing below is built, and nothing is shaped now except the first line.
 - **Editing, branching and pull requests** (above).
 - **Embedding or running Storybook, and controls or prop tables.** Previews render the stories as written; changing
   their arguments is Storybook's.
-- **Tokens, colors, icons and the `uxDocs` pages.** They are not components; a second catalog for them is a separate
-  decision.
+- **Tokens, colors, icons and the `uxDocs` pages in the list.** They are not components, so the list does not show them.
+  Adjusting tokens is T1; icons and the `uxDocs` pages are not planned.
 - **Any branch but `develop`, and any tagged version of the library.** Branches are the later expansion of this plan.
 - **Reading the library over the GitHub API** (a person with no clone). A second reader of the same function, built if
   asked for.
@@ -254,12 +292,14 @@ Nothing below is built, and nothing is shaped now except the first line.
 | **Locate connects something that is not the library** | The tab would show the wrong list | Decision 13: the folder's `origin` is checked before it is connected, and again on every read |
 | **The tab becomes a second Storybook** | The thing Noah said not to do | Requirement 2 is the test for every addition: previews show the stories as written, and anything about controlling or documenting them links to Storybook |
 | **A preview build fails on `develop`** (a dependency `develop` added that the clone has not installed, or a story that only builds in Storybook's own setup) | No previews at all, or blank cards | One build fails as a whole: the page says so with the error and **Install packages**. A single story that throws is shown with its error in its own card. The real-library test runs every story file |
+| **A theme change does not reach every component (T1)** | A colour control that moves some things and not others looks broken | Checked before T1 is built, and said in the control for what does not follow; the hardcoded `8px` and `360px` are a library cleanup |
 | **Building runs code** | Trust | The app's own Vite, plugin and Sass run in its process; the library's code runs only in the sandboxed preview view, which has no bridge to the app (`pageView.ts`), as prototypes do |
 | **A build is slow or large** | A wait the first time, and disk | 5.5 s measured; built once per `develop` commit, in the background, with the old one removed. 7.3 MB a build |
 
 ## Next
 
-**S1 to S3 and P0 are done. P1 is Ready:** scope fixed, files known, tests named. Then P2; P3 waits for P2 to be used.
+**S1 to S3 and P0 are done. P1 is Ready:** scope fixed, files known, tests named, and the choice between rendering the
+library's stories and embedding Storybook made (decision 15). Then P2; P3 and T1 wait for P2 to be used.
 
 **By hand, Noah:** look at the tab in the running app (built, not yet seen), and open one Storybook link from it (it
 needs Chromatic access).
