@@ -111,6 +111,9 @@ describe('the order', () => {
 	it('reads the top level of the sidebar order the library’s Storybook sets, not a group’s own', () => {
 		expect(sidebarOrder(PREVIEW)).toEqual(['Welcome', 'Design Tokens', 'Popovers', 'Inputs', 'Buttons']);
 		expect(sidebarOrder('export default {};')).toEqual([]);
+		// Only the order inside storySort is the sidebar's: another setting called order, before it or without it, is not.
+		expect(sidebarOrder(`const steps = { order: ['first'] };\n${PREVIEW}`)).toEqual(['Welcome', 'Design Tokens', 'Popovers', 'Inputs', 'Buttons']);
+		expect(sidebarOrder("const steps = { order: ['first'] };")).toEqual([]);
 	});
 
 	it('puts groups in the sidebar’s order, others after it alphabetically, Ungrouped last, and names alphabetically', async () => {

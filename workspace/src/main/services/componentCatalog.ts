@@ -20,11 +20,15 @@ export interface CatalogReads {
 
 export const UNGROUPED = 'Ungrouped';
 
-/** A Storybook story file, by Storybook's own convention: `*.stories.` and a script extension. Docs pages (`.mdx`) are not components. */
-export const isStoryFile = (path: string): boolean => /\.stories\.(js|jsx|mjs|ts|tsx)$/.test(path);
+/** The script extensions Storybook reads stories and its set-up from. */
+export const SCRIPT_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js', 'mjs'];
+const STORY_FILE = new RegExp(`\\.stories\\.(${SCRIPT_EXTENSIONS.join('|')})$`);
 
-/** The library's Storybook preview set-up, where its sidebar order lives. */
-const isPreviewFile = (path: string): boolean => /^\.storybook\/preview\.(js|jsx|mjs|ts|tsx)$/.test(path);
+/** A Storybook story file, by Storybook's own convention: `*.stories.` and a script extension. Docs pages (`.mdx`) are not components. */
+export const isStoryFile = (path: string): boolean => STORY_FILE.test(path);
+
+/** The library's Storybook preview set-up, where its sidebar order lives: `.storybook/preview` with a script extension. */
+export const PREVIEW_CANDIDATES = SCRIPT_EXTENSIONS.map((e) => `.storybook/preview.${e}`);
 
 /** Storybook's own id rule (`sanitize` in `storybook/internal/csf`): lowercased, punctuation and spaces as one `-`. */
 export const storybookId = (part: string): string =>
@@ -51,11 +55,14 @@ export const literalField = (text: string, key: string): string | null => {
 
 /**
  * The top level of the sidebar order in a Storybook preview set-up (`parameters.options.storySort.order`), as written:
- * its string literals, and not those in the nested lists that order a group's own entries. Empty when it has none.
+ * its string literals, and not those in the nested lists that order a group's own entries. Only an `order` inside
+ * `storySort` counts. Empty when it has none.
  */
 export const sidebarOrder = (preview: string): string[] => {
-	const start = /\border\s*:\s*\[/.exec(preview);
+	const sort = preview.indexOf('storySort');
+	const start = sort === -1 ? null : /\border\s*:\s*\[/.exec(preview.slice(sort));
 	if (!start) return [];
+	preview = preview.slice(sort);
 	const order: string[] = [];
 	let depth = 1;
 	for (let i = start.index + start[0].length; i < preview.length && depth > 0; i++) {
@@ -87,7 +94,7 @@ const read = async (reads: CatalogReads, path: string): Promise<string> => {
  */
 export const readCatalog = async (reads: CatalogReads, library: DesignSystem): Promise<CatalogComponent[]> => {
 	const files = await reads.listFiles('');
-	const preview = files.find(isPreviewFile);
+	const preview = PREVIEW_CANDIDATES.find((p) => files.includes(p));
 	const order = preview === undefined ? [] : sidebarOrder(await read(reads, preview));
 	const components = await Promise.all(
 		files.filter(isStoryFile).map(async (file): Promise<CatalogComponent> => {

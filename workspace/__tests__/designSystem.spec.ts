@@ -120,6 +120,19 @@ describe('finding a component', () => {
 		expect(document.querySelector('[role="combobox"]')?.textContent).toBe('PopoverHeader');
 	});
 
+	it('shows a name two components share with its group in the finder, and opens the one chosen', async () => {
+		await open(() =>
+			ok(ready('unchanged', [component('Overview', { id: 'a/Overview.stories.tsx', group: 'Buttons' }), component('Overview', { id: 'b/Overview.stories.tsx', group: 'Surfaces', subtitle: 'The surfaces one.' })])),
+		);
+		await press(finder());
+		await settle();
+		expect(choices()).toEqual(['Buttons / Overview', 'Surfaces / Overview']);
+		await act(async () => void [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === 'Surfaces / Overview')!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+		await settle();
+		expect(text()).toContain('The surfaces one.');
+		expect(document.querySelector('[role="combobox"]')?.textContent).toBe('Surfaces / Overview');
+	});
+
 	it('has the finder in the toolbar beside the name and branch, and Sync at its right, as Projects does', async () => {
 		await open(() => ok(ready()));
 		const toolbar = document.querySelector('h2')!.parentElement!;

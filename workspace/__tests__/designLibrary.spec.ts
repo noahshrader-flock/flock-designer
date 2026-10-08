@@ -182,10 +182,10 @@ describe('bringing develop up to date', () => {
 		['remote: Repository not found.\nfatal: repository ... not found', /gh auth setup-git/],
 		['git@github.com: Permission denied (publickey).', /gh auth setup-git/],
 		['fatal: unable to access ...: Could not resolve host: github.com', /internet connection/],
-		["fatal: couldn't find remote ref refs/heads/develop", /no such branch/],
+		["fatal: couldn't find remote ref refs/heads/develop", /GitHub has no develop branch/],
 		['fatal: something else', /Git could not update the library: something else/],
 	])('says %s in words', (stderr, words) => {
-		expect(fetchProblem(stderr)).toMatch(words);
+		expect(fetchProblem(stderr, 'develop')).toMatch(words);
 	});
 });
 

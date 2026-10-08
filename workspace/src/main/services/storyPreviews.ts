@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { PREVIEW_FILE, PREVIEW_HEIGHT } from '../../shared/catalog';
 import type { StoryPreview } from '../../shared/contract';
-import { readCatalog } from './componentCatalog';
+import type { DesignSystem } from '../../shared/catalog';
+import { PREVIEW_CANDIDATES, readCatalog } from './componentCatalog';
 import { libraryAt, libraryCommit, libraryReads } from './designLibrary';
 import { runGit } from './git';
 import type { Plugin } from 'esbuild';
@@ -135,7 +136,7 @@ export const buildPreviews = async (library: string, storyFiles: string[], site:
 	const [{ build }, sass] = await Promise.all([import('esbuild'), import('sass')]);
 	const nodeModules = join(library, 'node_modules');
 	const entry = join(library, 'preview-entry.tsx');
-	const preview = ['tsx', 'ts', 'jsx', 'js', 'mjs'].map((e) => join(library, '.storybook', `preview.${e}`)).find((f) => existsSync(f)) ?? null;
+	const preview = PREVIEW_CANDIDATES.map((p) => join(library, p)).find((f) => existsSync(f)) ?? null;
 	writeFileSync(entry, previewEntry(library, storyFiles, preview));
 	mkdirSync(site, { recursive: true });
 	// Fonts and pictures are written as files beside the page: exactly the kinds the server will send.
@@ -199,12 +200,13 @@ export class StoryPreviews {
 
 	async preview(): Promise<StoryPreview> {
 		const root = this.deps.find();
-		if (root === null) return { state: 'no-library' };
-		const commit = await libraryCommit(root);
-		if (commit === null) return { state: 'failed', error: `The library has no ${libraryAt(root)?.branch ?? 'design system'} branch from GitHub to build.` };
+		const library = root === null ? null : libraryAt(root);
+		if (root === null || library === null) return { state: 'no-library' };
+		const commit = await libraryCommit(root, library);
+		if (commit === null) return { state: 'failed', error: `The library has no ${library.branch} branch from GitHub to build.` };
 		if (!hasPackages(root)) return { state: 'no-packages', root };
 		if (this.current?.commit !== commit) {
-			const build = this.build(root, commit);
+			const build = this.build(root, library, commit);
 			this.current = { commit, build };
 			// A build that did not work is tried again on the next ask.
 			void build.then((b) => b.state !== 'ready' && this.current?.build === build && (this.current = null));
@@ -212,16 +214,16 @@ export class StoryPreviews {
 		return this.current.build;
 	}
 
-	private async build(root: string, commit: string): Promise<StoryPreview> {
+	private async build(root: string, library: DesignSystem, commit: string): Promise<StoryPreview> {
 		const dir = join(this.deps.folder, commit);
 		const site = join(dir, 'site');
 		try {
 			if (!existsSync(join(site, 'index.html'))) {
 				rmSync(dir, { recursive: true, force: true });
-				const library = join(dir, 'library');
-				await copyAt(root, commit, library);
-				const stories = (await readCatalog(libraryReads(root, commit), libraryAt(root)!)).map((c) => c.id);
-				await (this.deps.build ?? buildPreviews)(library, stories, site);
+				const copy = join(dir, 'library');
+				await copyAt(root, commit, copy);
+				const stories = (await readCatalog(libraryReads(root, commit), library)).map((c) => c.id);
+				await (this.deps.build ?? buildPreviews)(copy, stories, site);
 			}
 			// Only the build for this commit is kept, and served.
 			for (const old of readdirSync(this.deps.folder)) {

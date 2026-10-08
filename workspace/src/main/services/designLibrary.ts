@@ -78,30 +78,28 @@ export const locateLibrary = (memory: FolderMemory, find: () => string | null, c
 export const connectLibrary = async (dir: string, memory: FolderMemory): Promise<void> => {
 	const why = whyNotLibrary(dir);
 	if (why !== null) throw new Error(why);
-	if ((await libraryCommit(dir)) === null) {
-		const { repository, branch } = libraryAt(dir)!;
-		throw new Error(`${dir} is a clone of ${repository}, but has no ${branch} branch from GitHub to read. Check this computer can reach GitHub, then try again.`);
+	const library = libraryAt(dir)!; // whyNotLibrary took it only if it is one
+	if ((await libraryCommit(dir, library)) === null) {
+		throw new Error(`${dir} is a clone of ${library.repository}, but has no ${library.branch} branch from GitHub to read. Check this computer can reach GitHub, then try again.`);
 	}
 	memory.write(dir);
 };
 
-/** What git said when a fetch failed, in words a person can act on. */
-export const fetchProblem = (stderr: string): string => {
+/** What git said when a fetch of `branch` failed, in words a person can act on. */
+export const fetchProblem = (stderr: string, branch: string): string => {
 	if (/Authentication failed|could not read (Username|Password)|terminal prompts disabled|Repository not found|Permission denied \(publickey\)|403/i.test(stderr)) {
 		return 'GitHub would not let git on this computer read the library: git is not signed in to GitHub, or this account cannot read it. Run `gh auth setup-git` in a terminal (with the GitHub CLI signed in), or sign in to git.';
 	}
 	if (/Could not resolve host|Failed to connect|Connection (timed out|refused|reset)|Network is unreachable|unable to access|timed out|SIGTERM/i.test(stderr)) {
 		return 'Could not reach GitHub. Check the internet connection.';
 	}
-	if (/couldn't find remote ref|no such ref/i.test(stderr)) return "GitHub has no such branch for the library.";
+	if (/couldn't find remote ref|no such ref/i.test(stderr)) return `GitHub has no ${branch} branch for the library.`;
 	const said = stderr.trim().split('\n').pop()?.replace(/^fatal:\s*/, '') ?? '';
 	return `Git could not update the library: ${said || 'it stopped without saying why.'}`;
 };
 
-/** The commit the clone's copy of its design system's branch is at, or null when it has none (or is not a design system). */
-export const libraryCommit = async (root: string): Promise<string | null> => {
-	const library = libraryAt(root);
-	if (library === null) return null;
+/** The commit a clone's copy of its design system's branch is at, or null when it has none. */
+export const libraryCommit = async (root: string, library: DesignSystem): Promise<string | null> => {
 	try {
 		return (await runGit(root, ['rev-parse', '--verify', '--quiet', `${branchRef(library)}^{commit}`])) || null;
 	} catch {
@@ -116,13 +114,13 @@ export const libraryCommit = async (root: string): Promise<string | null> => {
 export const updateLibrary = async (root: string): Promise<Exclude<CatalogUpdate, 'updating'>> => {
 	const library = libraryAt(root);
 	if (library === null) return { failed: 'This folder is not a clone of a design system library.' };
-	const before = await libraryCommit(root);
+	const before = await libraryCommit(root, library);
 	try {
 		await runGit(root, ['fetch', '--quiet', '--no-tags', '--no-recurse-submodules', 'origin', `+refs/heads/${library.branch}:${branchRef(library)}`], FETCH_TIMEOUT_MS);
 	} catch (err) {
-		return { failed: fetchProblem((err as Error).message) };
+		return { failed: fetchProblem((err as Error).message, library.branch) };
 	}
-	return (await libraryCommit(root)) === before ? 'unchanged' : 'updated';
+	return (await libraryCommit(root, library)) === before ? 'unchanged' : 'updated';
 };
 
 /**
@@ -165,7 +163,7 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 export const readLibrary = async (root: string, update: CatalogUpdate): Promise<Catalog> => {
 	const library = libraryAt(root);
 	if (library === null) return { state: 'no-clone', repository: LIBRARY, lost: root };
-	const commit = await libraryCommit(root);
+	const commit = await libraryCommit(root, library);
 	if (commit === null) return { state: 'no-branch', root, branch: library.branch };
 	const committedAt = await runGit(root, ['log', '-1', '--format=%cI', commit]);
 	return { state: 'ready', branch: library.branch, commit, committedAt, update, components: await readCatalog(libraryReads(root, commit), library) };

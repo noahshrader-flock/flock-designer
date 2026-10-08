@@ -118,6 +118,9 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	}
 
 	const byId = new Map(catalog.components.map((c) => [c.id, c]));
+	// The finder picks by what it shows, so a name two components share is shown with its group.
+	const shared = new Set(catalog.components.map((c) => c.name).filter((n, i, all) => all.indexOf(n) !== i));
+	const label = (c: CatalogComponent) => (shared.has(c.name) ? `${c.group} / ${c.name}` : c.name);
 	// A component a sync removed is closed rather than shown from a list that no longer has it.
 	const opened = open === null ? undefined : byId.get(open);
 	const groups: { group: string; rows: CatalogComponent[] }[] = [];
@@ -141,9 +144,9 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 				</Tooltip>
 				<div className="ml-2 w-72">
 					<SearchSelect
-						items={catalog.components.map((c) => c.name)}
-						value={opened?.name ?? null}
-						onChange={(name) => setOpen(catalog.components.find((c) => c.name === name)?.id ?? null)}
+						items={catalog.components.map(label)}
+						value={opened ? label(opened) : null}
+						onChange={(chosen) => setOpen(catalog.components.find((c) => label(c) === chosen)?.id ?? null)}
 						placeholder="Find a component"
 						search="Search components…"
 						empty="No component matches."
