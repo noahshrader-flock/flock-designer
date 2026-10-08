@@ -1,7 +1,8 @@
 # Design System plan: surface the component library in the app, and leave room to change it
 
 **Written 2026-10-08. Every decision is made and every unknown I could measure was measured the same day. S1 to S3 are built
-(2026-10-08); S4 is not. Previews (P1 to P3) were added the same evening, at Noah's request, after a working spike.** The plan for filling the **Design System** tab (an empty view today, `renderer/App.tsx`) with the components
+(2026-10-08); P0 (**Connect the design system**, which replaces S4) and P1 to P3 (previews) were added the same evening, at
+Noah's request, and are not built.** The plan for filling the **Design System** tab (an empty view today, `renderer/App.tsx`) with the components
 from `flock-react-component-lib` (FUI), without copying Storybook and without building the editing yet.
 
 This is the detail behind one candidate in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), which points here and does
@@ -77,7 +78,7 @@ already has (decision 4), so a slow fetch costs nothing the person waits on.
 
 | # | Question | Decided | Why |
 |---|---|---|---|
-| 1 | **Where does the catalog read from?** | **A local clone of the library** (Noah: design is to contribute to the design system, so the clone is what that needs), found by its `origin` remote (`flocksafety/flock-react-component-lib`) in the usual folders and the clone folder. When there is none, the tab says so and offers the existing clone | Matches what editing needs later; no GitHub App change. A GitHub API reader is a second implementation of the same function, built only if people without a clone need the tab |
+| 1 | **Where does the catalog read from?** | **A local clone of the library** (Noah: design is to contribute to the design system, so the clone is what that needs), found by its `origin` remote (`flocksafety/flock-react-component-lib`) in the usual folders and the clone folder. When there is none, the tab shows **Connect the design system** (decision 11): clone it, or locate a clone already on the computer | Matches what editing needs later; no GitHub App change. A GitHub API reader is a second implementation of the same function, built only if people without a clone need the tab |
 | 2 | **How are stories read?** | **The `meta` block as text,** by a small, tested reader for four string fields: `title`, `componentSubtitle`, `githubUrl`, `figmaPageUrl`. No TypeScript compiler, no running Storybook | All 80 titles are literals; a standard, documented shape; milliseconds; nothing installed in the library. A story that departs from it still appears, under its folder name in `Ungrouped`, never missing |
 | 3 | **What does a row link to?** | **Storybook** (built from the title; one per story, usually one) and **Source** (always: built from the folder path, `https://github.com/flocksafety/flock-react-component-lib/tree/develop/src/<folder>`, never from `githubUrl`) | `githubUrl` is on 30 of 80 stories; the folder path is on all of them and cannot be wrong. **No Figma link** (Noah, 2026-10-08): the reader still reads `figmaPageUrl`, and the tab does not show it |
 | 4 | **Which branch is read, and how is it kept current?** | **`develop`, read as `origin/develop`** (Noah: `develop` is the source of truth). **The app fetches that one ref when the tab opens and when the person presses Refresh,** and reads git's copy, not the folder. No local branch and no file is touched, so the person's checked-out branch and unfinished work make no difference. The header shows `develop`, the short commit and its date, and "Updated just now" or "Could not update: <reason>, showing <date>". Branches built on top of `develop` are the later expansion of this plan | A local `develop` was measured eight days stale; reading `origin/develop` and fetching it is what makes "the source of truth" true without making anyone remember a step (requirement 3). The list shows at once from what is already there, and the fetch replaces it if it brought anything. A failed fetch (offline, no credentials) never blanks the tab |
@@ -86,11 +87,15 @@ already has (decision 4), so a slow fetch costs nothing the person waits on.
 | 8 | **How is a preview made?** | **Storybook's portable stories** (`composeStories` and `setProjectAnnotations` from `@storybook/react`, made for rendering stories outside Storybook), with the library's own `.storybook/preview.tsx`, so every story gets the FUI theme and decorators it has in Storybook. **One build of every story per `develop` commit,** with Vite, from a copy of `develop` made with `git archive` into the app's folder and the clone's installed packages; cached until `develop` moves | Measured (spike, below): every story builds in 5.5 s, the same as one, so one build serves the whole tab. `git archive` leaves no trace in the clone (a worktree would add one to its `.git`). No Storybook server, no second copy of anything |
 | 9 | **Where is a preview shown?** | **Click a component, and it opens on its own page in the tab:** its name, subtitle and links, then **each of its stories as a card**, named, rendered live, each in its own frame. Back returns to the list where it was | One frame per story, as Storybook's own preview does: a dialog or drawer renders into the page's body, so on a shared page they cover each other (the spike showed 359 stories, ten of them blank because they open into the body). A frame also keeps one broken story from taking the others down |
 | 10 | **Pictures in the list itself?** | **Not yet.** After P2 is used, P3 adds a small picture of each component's first story to its row, taken once per `develop` commit | The list stays fast and useful without them; the component page is where seeing it matters. Pictures cost a render of every component, which is worth doing once people have asked for it |
+| 11 | **How does the tab get a library when it has none?** | **A centred "Connect the design system" screen, laid out like the GitHub sign-in,** with two tabs: **Clone** and **Locate** (P0). Whichever is used, the connection is **remembered** (the folder's path, in the app's own settings, as the checkout and the clone folder are) and checked every time the app starts | Noah, 2026-10-08: connecting is something a person does on purpose, once, like signing in, and the app remembers it. Locate lets someone who already has the library anywhere on the computer use that clone, and Clone gives everyone else one with no terminal |
+| 12 | **Does the app still find a clone by itself?** | **Yes, as a convenience.** What is remembered wins; otherwise a clone of the library in the clone folder or the usual places is used, with no screen. The Connect screen shows only when neither exists, or the remembered folder is gone | A designer with the library already in `~/Documents/GitHub` should not have to say so. Finding trusts nothing: the app only reads git's copy of `develop` from it (decision 4) |
+| 13 | **What may be connected?** | **A clone whose `origin` is `flocksafety/flock-react-component-lib`, and nothing else** (same rule as finding it: any remote form, any case, any folder name). Locate checks it before connecting and says why when it is refused | The tab shows one library. A folder that is some other repository, or not a repository, or a clone of a fork, cannot be connected and does not fail later |
+| 14 | **What does Clone offer?** | **The library only, not a search of repositories.** One button, the place it goes with **Change** (the clone folder every clone uses), progress and **Stop**, as the New modal's clone does. It uses the same `Cloner`; only the library is accepted, and only if the person's GitHub list has it | The design system tab has one library; a repository picker would only let someone clone the wrong thing. If the library is not on their list, the Clone tab says to ask for access, and Locate still works |
 | 7 | **In what order are groups and rows?** | **Groups in Storybook's order** (a short list in one place, then others alphabetically); **rows alphabetically,** parts under their parent | People know Storybook's sidebar. The list is a copy of one setting, so a new group sorts last and nothing breaks if it changes |
 
 ## Milestones
 
-**Four small milestones, each finished, tested and committed on its own, each leaving the app working.** Same rules as
+**Small milestones, each finished, tested and committed on its own, each leaving the app working.** Same rules as
 the other plans: a test first for every behaviour, one commit each, the state document updated in the same change, and
 nothing on GitHub changed.
 
@@ -99,8 +104,8 @@ nothing on GitHub changed.
 | **S1** (done) | **The catalog reader:** a pure function that turns what `origin/develop` holds into a list of components | Decisions 2, 3, 5, 7 | S | Low |
 | **S2** (done) | **Finding the library, bringing it up to date, and reading it:** locate the clone, fetch `origin/develop`, read it through git; one named operation on the contract | S1, decisions 1, 4 | M | Low |
 | **S3** (done) | **The tab:** grouped list, search, links, header, the four states | S2, decisions 3, 5 to 7 | M | Low |
-| **S4** | **Clone the library from the tab,** when there is no clone | S3, the existing `Cloner` | S | Medium |
-| **P1** | **Build the previews:** one page of every story from `develop`, cached by commit, one story per address | S2, decision 8 | M | **Medium** |
+| **P0** | **Connect the design system:** the centred screen with **Clone** and **Locate**, and a connection that is remembered. **Replaces S4** | S2, S3, decisions 11 to 14 | M | Medium |
+| **P1** | **Build the previews:** one page of every story from `develop`, cached by commit, one story per address | P0, decision 8 | M | **Medium** |
 | **P2** | **The component page:** click a row, see its stories as live cards | P1, decision 9 | M | Medium |
 | **P3** | **Pictures in the list:** a small picture of each component on its row | P2, decision 10 | M | Low |
 
@@ -133,23 +138,74 @@ one line. **Where it differs from the plan:** `CatalogUpdate` has a fourth value
 **Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
 short: `renderer/DesignSystem.tsx`, mounted in `App.tsx` and kept mounted while hidden; the toolbar, the Chromatic line,
 search, the kind tabs, **Without a story (n)**, grouped rows with their links, and every state; the two-step first read
-and Refresh. **For S4:** the `no-clone` state is a `Notice` in `DesignSystem.tsx` saying to clone it by hand; S4 gives it
-the clone button and, when the clone finishes, calls the same first read again. **Where it differs from the plan:**
+and Refresh. **For P0:** the `no-clone` state is a `Notice` in `DesignSystem.tsx` saying to clone it by hand; P0 replaces
+it with the Connect screen and, when a connection is made, calls the same first read again. **Where it differs from the plan:**
 none in what it does. The `Ungrouped` count the risks table mentions is not a separate figure in the header: a
 component with no readable title appears in an **Ungrouped** group like any other, with its count beside the heading.
 **Not seen in the running app yet** (Noah's own session was running; nothing was launched against his settings).
 
-### S4: Clone the library from the tab
+### P0: Connect the design system
 
-- In the `no-clone` state, one button, **Clone flock-react-component-lib**, with the existing line under it saying where
-  it goes and **Change**. It uses `Cloner` and the clone folder exactly as the New modal does, with progress and **Stop**,
-  and the tab reads the catalog when it finishes.
-- **Offered only if the library is on the person's GitHub list** (`visibleRepositories`), the rule `Cloner` already
-  enforces; if it is not, the tab says to ask for access to it.
-- **Not done here:** installing the library's packages. Reading stories needs none.
-- **Tests:** the offer appears only in `no-clone`; the clone goes where `clonePlace` says; a clone that already exists is
-  used, not redone; Stop leaves nothing behind (the `Cloner` tests already pin the last two, so these assert the tab
-  wires them, not the behaviour again).
+**Replaces S4**, which was only a clone button. What the person sees, laid out like the GitHub sign-in (`SignIn.tsx`):
+centred in the space under the bar, a heading **Connect the design system**, one line saying what it is for ("Flock
+Designer reads the component library from a copy on this computer"), and two tabs under it.
+
+- **Clone** (the default when the library is not on the person's computer, which is what a new designer has):
+  - The library named (`flocksafety/flock-react-component-lib`), **where it will go** (`~/Documents/GitHub/flock-react-component-lib`)
+    with **Change**, which opens the system's folder picker and sets the clone folder every clone uses, and one button,
+    **Clone**.
+  - Progress and **Stop** while it runs, as in the New modal. When it finishes the connection is made, and the screen is
+    replaced by the list.
+  - A clone already there is used, not redone; anything else in the way is said and never cloned over (`clonePlace`,
+    `notClonedOver`). A library not on the person's GitHub list says to ask for access, and the button is not offered.
+    A refusal from git (not signed in, offline, no space) is said in the existing words.
+  - It uses the same `Cloner`, `clonePlace`, `CloneFolderMemory` and `cloneProgress` event. It does **not** clone the
+    design repository beside it, check for Flock Designer setup, or accept the clone as a product checkout: the library
+    is read, not worked in, and none of that applies. `planClone` is split so the New modal and this share the listing
+    and the place, and differ only in what follows.
+- **Locate:** a line ("Choose the folder on this computer where you cloned the library") and a **Browse** button,
+  which opens the system's folder picker **in the main process**: the window never names a folder. The folder is checked
+  before anything is connected (decision 13), and said in words if not: not a git repository; a clone of a different
+  repository (named); the right repository but with no `develop` on GitHub's side to read. On success it is connected and
+  the screen is replaced by the list.
+- **The connection** (`designSystem.json` in the app's settings folder, beside `checkout.json`): the folder's path,
+  kept as a hint and **re-checked on every read**, as the checkout is. If it is gone, moved, or no longer a clone of the
+  library, the tab treats it as not connected, says so on the Connect screen ("The folder you chose before is no longer
+  there: <path>"), and falls back to finding one (decision 12) before showing the screen.
+- **The contract:** `designSystemCatalog` is unchanged. Its `no-clone` answer gains `lost: string | null` (a folder that
+  was connected and is gone). Two new operations: `locateDesignSystem(): Result<boolean>` (picker, check, connect; false
+  if the person cancels) and `cloneDesignSystem(): Result<null>` (clone and connect; progress on the existing event; Stop
+  is the existing `cancelClone`). Both are added to `contract.ts`, `CHANNELS`, the preload and `ipc.ts` with `guard`.
+- **What it does not do:** install the library's packages (reading stories needs none; previews, P1, do), change or
+  disconnect a connection later (see *Questions*), or connect more than one library.
+- **Tests:** **services:** a folder that is a clone of the library connects, with any remote form and any case; a folder
+  that is another repository, a plain folder, a folder with no `.git`, and a clone of a fork are each refused with their
+  own words and connect nothing; the connection is remembered and read back; a remembered folder that is gone gives
+  `lost` and the screen, and one that still exists is used with no screen; a remembered folder wins over one found by
+  itself; a connection that no longer points at the library is dropped. **Clone:** it clones the library and only the
+  library into the clone folder, connects it, and clones no design repository; a library not on the list is refused with
+  nothing made; a taken folder is refused and left alone; Stop leaves nothing behind (the `Cloner` tests already pin
+  these, so the new ones assert the wiring). **IPC:** the window sends no path to either operation, and the picker's
+  result is checked before it is connected. **Screen:** the Connect screen shows in `no-clone` with Clone as the default
+  tab, and Locate switches to Browse; Change opens the clone folder picker; progress and Stop show and work; a refusal's
+  words are shown; on connecting, the list replaces the screen with no second click; `lost` is said. **Seen by Noah before
+  it is marked done:** Clone from nothing, Locate on the real clone, and a connection surviving a restart.
+
+## Questions for Noah before P0 is built
+
+Each has a recommendation, so a silence is a yes.
+
+1. **Is Clone fixed to the library, or a picker of repositories?** Recommended: **fixed** (decision 14). The tab shows
+   one library, and a picker would let someone clone the wrong thing. A picker is the New modal's job.
+2. **Does the app still find a clone by itself when none was connected?** Recommended: **yes** (decision 12). Otherwise a
+   designer who already has the library in the usual place is asked to connect something they already have.
+3. **Can a connection be changed or removed later?** Recommended: **not in P0.** What is connected is always a clone of
+   the same library, so a wrong choice costs nothing, and the only real case (the folder was moved or deleted) is handled
+   by the screen coming back. The toolbar is simple on purpose. If wanted, the lightest place is a **Disconnect** item on
+   a menu on the branch icon.
+4. **Should a clone of a fork be connectable?** Recommended: **no** (decision 13). The library's work is done on branches
+   of the one repository (its branches are on `origin`), so no one needs a fork; allowing one means `origin/develop`
+   would be the fork's.
 
 ### P1: Build the previews
 
@@ -240,7 +296,9 @@ Nothing below is built, and nothing is shaped now except the first line.
 | **The hosted Storybook address changes** (Chromatic URLs are per project and branch) | Every Storybook link breaks at once | One constant in one file; the address is in the library's `README.md`, and the Design System owner is asked to say if it moves |
 | **The fetch fails: offline, no credentials, a protected network** | The list could be old and look current | The header always shows the commit date, and a failed fetch is a visible line with the reason. Nothing blanks |
 | **A person's git is not signed in to GitHub** | Fetch and clone both fail | Fails fast (`GIT_TERMINAL_PROMPT=0`), with the fix named (`gh auth setup-git`), as the clone plan does |
-| **A person has no access to the library** | They see the tab and no components | `no-clone` says so and says whom to ask; they are no worse off than before |
+| **A person has no access to the library** | They see the tab and no components | The Connect screen's Clone tab says to ask for access, and Locate still works if they have a copy; they are no worse off than before |
+| **A connected folder is moved or deleted** | The tab would show an error or nothing | The connection is re-checked on every read; a missing folder returns the Connect screen with what was lost, never a blank tab |
+| **Locate connects something that is not the library** | The tab would show the wrong list | Decision 13: the folder's `origin` is checked before it is connected, and again on every read |
 | **The tab becomes a second Storybook** | The thing Noah said not to do | Requirement 2 is the test for every addition: previews show the stories as written, and anything about controlling or documenting them links to Storybook |
 | **A preview build fails on `develop`** (a dependency `develop` added that the clone has not installed, or a story that only builds in Storybook's own setup) | No previews at all, or blank cards | One build fails as a whole: the page says so with the error and **Install packages**. A single story that throws is shown with its error in its own card. The real-library test runs every story file |
 | **Building runs code** | Trust | The app's own Vite, plugin and Sass run in its process; the library's code runs only in the sandboxed preview view, which has no bridge to the app (`pageView.ts`), as prototypes do |
@@ -248,8 +306,8 @@ Nothing below is built, and nothing is shaped now except the first line.
 
 ## Next
 
-**S1 to S3 are done. S4 and P1 are Ready:** scope fixed, files known, tests named. They do not depend on each other;
-P1 first if previews matter more than the clone button, which they seem to. Then P2. P3 waits for P2 to be used.
+**S1 to S3 are done. P0 is next, then P1, P2 and P3.** P0 is Ready once Noah has seen the four questions above (each has
+a recommendation, and silence is a yes). P1 needs P0 only because it needs a connected library; P3 waits for P2 to be used.
 
 **By hand, Noah:** look at the tab in the running app (built, not yet seen), and open one Storybook link from it (it
 needs Chromatic access).
