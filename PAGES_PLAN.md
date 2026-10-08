@@ -153,7 +153,7 @@ day, **L** several days.
 | **M2** | **Make prototypes without the app** (new-prototype and build-and-save as shared commands) | M1 | L | Medium | **Done 2026-10-08** (its real run is Noah's), see [flock-designer.md](flock-designer.md#change-log) |
 | **M3** | **Address starts the next iteration** when the current one has outside comments | M1, M2 | M | Medium | **Done 2026-10-08** (its real run is Noah's), see [flock-designer.md](flock-designer.md#change-log) |
 | **M4** | **One comments experience,** taken out of the review screen | M1 | L | **High** | **Done 2026-10-08** (its manual run is Noah's), see [flock-designer.md](flock-designer.md#change-log) |
-| **M5a** | **The site, assembled locally:** project pages, `latest` links, index | M1 | M | Low | Ready after M1 |
+| **M5a** | **The site, assembled locally:** project pages, `latest` links, index | M1 | M | Low | **Done 2026-10-08** (Noah's look is his), see [flock-designer.md](flock-designer.md#change-log) |
 | **M5b** | **Publish for real:** the publish command, the private gate, the deploy, **Open page** | M2, M5a (M0 for the private result) | L | Medium | **Buildable and testable now on the public repo;** the private result waits on M0 |
 | **M6** | **The agent hands back the link** | M2, M5b | S | Low | After M5b |
 | **M7** | **Comments on the page** (shared components, browser adapter, test sign-in) | M4, M5b | L | Medium | After M4 and M5b |
@@ -161,7 +161,7 @@ day, **L** several days.
 | **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | Blocked on a decision |
 | **M10** | **Parity and the smaller things we agreed** | M7 | M | Low | Later |
 
-**M1 to M4 are done (2026-10-08). Next: M5a,** on the fastest path below.
+**M1 to M5a are done (2026-10-08). Next: M5b,** publishing for real, buildable now on the public repo in its test mode.
 
 **The repo is public for now (Noah's decision, 2026-10-07), so the whole flow can be built and tested before the admins
 answer.** Public Pages needs no login to view, so what it cannot show is that an anonymous viewer is blocked. That
@@ -249,24 +249,22 @@ short, one commit per step, the app working after each:
 
 **What is left of "done when" is Noah's:** a manual run through comment, pin, resolve, delete and Address in the app.
 
-### M5a: The site, assembled locally
+### M5a: The site, assembled locally (done 2026-10-08)
 
-**Goal.** The structure of the site exists and can be seen, before anything is published.
+**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+short: `flkd build-site` writes the site from the design repository (`workspace/src/site/buildSite.ts`, nothing of the
+app in it), and `--serve` shows it on this machine. Each iteration is its saved page in a frame under a slim bar (the
+project, and one switcher grouped by version); each project page has its versions side by side, iterations newest
+first, with date, author and comment count (through `gh`); `latest` addresses redirect to the newest iteration as of
+the build; the fonts are written as real files and found by relative path; every link is relative. It is rebuilt in
+full each time, and only ever clears a folder it made.
 
-- **A site generator** that takes the saved pages in the repository (every project, every version, every iteration) and
-  writes the site: each page wrapped in a slim viewer bar (project, two-level switcher, back to the project), a
-  **project page** (the title from its brief, versions side by side, each with its iterations newest first, with date,
-  author and comment count), `/<project>/<version>/latest/`, `/<project>/latest/`, and the index of projects.
-- **Fonts and paths:** the `/_shared/` font path is rewritten so a page works from a sub-path.
-- **Built from the repository,** so two people publishing never overwrite each other, and rebuilt in full each time.
-- **Seen locally,** served from a folder and checked in a browser, using dummy prototypes with invented content.
+**For M5b:** the workflow has to run the generator, which today needs the workspace's packages for its bundler; a
+build that needs none is part of M5b. **"Selected version"** (M10) is not here: `/<project>/latest/` follows the newest
+version.
 
-**Tests first:** the generator against a fixture repository with two projects, two versions and three iterations.
-
-**Done when:** Noah opens the generated site locally and moves between the index, a project, its versions and
-iterations, and `latest`.
-
-**Undo:** nothing outside the code is touched.
+**What is left of "done when" is Noah's:** `node workspace/bin/flkd.mjs build-site --serve` from the design repository,
+then move between the index, a project, its versions and iterations, and `latest` in a browser.
 
 ### M5b: Publish for real (blocked on M0)
 

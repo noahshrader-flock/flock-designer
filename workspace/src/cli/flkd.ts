@@ -12,6 +12,8 @@ import { readCheckout, runGit } from '../main/services/git';
 import { BUILD_SKILL, cloneStore, prototypeBuildTask } from '../main/services/prototype';
 import { shellLine } from '../main/services/prototypeBundle';
 import { prototypeWork, whereTheChangeGoes } from '../main/services/prototypeWork';
+import { buildSite } from '../site/buildSite';
+import { serveSite } from '../site/serveSite';
 
 /**
  * `flkd`: making a prototype from Claude Code in VS Code, with no app running.
@@ -54,11 +56,13 @@ const USAGE = `Usage:
   flkd new-prototype --project <id> --note <what to make> [--title <project title>] [--from <branch>] [--product <dir>]
   flkd change-prototype --project <id> --name <v1-i1> --note <what to change> [--product <dir>]
   flkd save-prototype --project <id> --name <v1-i1> [--product <dir>]
+  flkd build-site [--out <dir>] [--serve]
 
 new-prototype records the next version (v1-i1 for a new project, then v2-i1, v3-i1) and prints the task: where to
 write the prototype and how to check it builds. change-prototype does the same for a change to one: in its version's
 newest iteration, or in the next when others have commented on that. save-prototype builds it and saves page and
-source to the design repository. --note-file <path> may stand in for --note. --title is needed only for a new project.`;
+source to the design repository. --note-file <path> may stand in for --note. --title is needed only for a new project.
+build-site writes the site prototypes are published as, from the design repository, and --serve shows it here.`;
 
 class UsageError extends Error {}
 
@@ -94,6 +98,8 @@ const OPTIONS = {
 	title: { type: 'string' },
 	from: { type: 'string' },
 	product: { type: 'string' },
+	out: { type: 'string' },
+	serve: { type: 'boolean' },
 } as const;
 
 /** The options, or a usage error that says which one was wrong. */
@@ -103,6 +109,35 @@ const optionsOf = (args: string[]) => {
 	} catch (e) {
 		throw new UsageError(e instanceof Error ? e.message : String(e));
 	}
+};
+
+/** The design repository: the one being worked in, or the one beside the product repository being worked in. */
+const designOf = async (cwd: string): Promise<string> => {
+	let root: string;
+	try {
+		root = realpathSync((await runGit(cwd, ['rev-parse', '--show-toplevel'])).trim());
+	} catch {
+		throw new Error('This is not inside a repository. Run it from the design repository, or a product repository beside it.');
+	}
+	if (existsSync(join(root, 'projects')) && existsSync(join(root, 'skills'))) return root;
+	const records = recordsRootFor(root);
+	if (records === null) throw new Error(`There is no design repository beside ${root}. Clone flock-designer into the same folder.`);
+	return dirname(records);
+};
+
+/** Builds the site from the design repository, with each iteration's comment count when GitHub can be asked. */
+const site = async (deps: CliDeps, out: string | undefined, serve: boolean): Promise<number> => {
+	const designRoot = await designOf(deps.cwd);
+	const outDir = out ? resolve(deps.cwd, out) : join(deps.prototypesRoot, '_site');
+	const comments = deps.github ? await new DesignRepo(deps.github, DESIGN_REPO).commentCounts().catch(() => undefined) : undefined;
+	const built = buildSite({ designRoot, outDir, comments });
+	const pages = built.projects.reduce((n, p) => n + p.pages, 0);
+	deps.out(`Built ${pages} ${pages === 1 ? 'page' : 'pages'} in ${built.projects.length} ${built.projects.length === 1 ? 'project' : 'projects'} at ${outDir}.${comments ? '' : ' Comment counts are left out: GitHub could not be asked (is gh signed in?).'}`);
+	if (serve) {
+		const { url } = await serveSite(outDir);
+		deps.out(`Serving it at ${url} on this machine only. Stop with Ctrl-C.`);
+	}
+	return 0;
 };
 
 /** What the agent is told: the skill and this run, then how to save it. */
@@ -121,10 +156,11 @@ const taskText = (lead: string, task: string, save: string): string =>
 export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 	try {
 		const [command, ...rest] = argv;
-		if (command !== 'new-prototype' && command !== 'change-prototype' && command !== 'save-prototype') {
+		if (command !== 'new-prototype' && command !== 'change-prototype' && command !== 'save-prototype' && command !== 'build-site') {
 			throw new UsageError(command ? `There is no command called ${command}.` : 'Say which command.');
 		}
 		const values = optionsOf(rest);
+		if (command === 'build-site') return await site(deps, values.out, values.serve === true);
 		const projectId = values.project;
 		if (!projectId) throw new UsageError('Say which project, with --project.');
 

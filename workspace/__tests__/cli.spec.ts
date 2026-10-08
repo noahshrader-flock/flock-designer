@@ -197,6 +197,33 @@ describe('change-prototype', () => {
 	});
 });
 
+describe('build-site', () => {
+	const saved = async () => {
+		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
+		writeFileSync(join(prototypes, 'demo', 'v1-i1.tsx'), "import { Hello } from 'x';\nexport default () => <Hello />;\n");
+		await run('save-prototype', '--project', 'demo', '--name', 'v1-i1');
+		out = [];
+	};
+
+	it('builds the site from the design repository beside the product, into the app folder by default', async () => {
+		await saved();
+		expect(await run('build-site')).toBe(0);
+		expect(readFileSync(join(prototypes, '_site', 'demo', 'v1', 'i1', 'page.html'), 'utf8')).toContain('Real component');
+		expect(readFileSync(join(prototypes, '_site', 'index.html'), 'utf8')).toContain('Demo');
+		expect(out.join('\n')).toMatch(/Built 1 page in 1 project[\s\S]*Comment counts are left out/);
+	});
+
+	it('counts each iteration\'s comments when GitHub can be asked, and builds from the design repository itself too', async () => {
+		await saved();
+		github = {
+			api: async (path: string) => (/\/issues\?/.test(path) ? [{ number: 1, body: 'branch: `prototype/demo/v1-i1`', comments: 2 }] : []),
+		};
+		const site = join(home, 'elsewhere-site');
+		expect(await main(['build-site', '--out', site], deps(design))).toBe(0);
+		expect(readFileSync(join(site, 'demo', 'index.html'), 'utf8')).toContain('2 comments');
+	});
+});
+
 describe('the command', () => {
 	it('is started by its own skill, never by the build skill every prototype task carries', () => {
 		const skills = join(__dirname, '..', '..', 'skills');

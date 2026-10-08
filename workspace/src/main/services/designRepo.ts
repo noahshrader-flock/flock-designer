@@ -315,6 +315,11 @@ export class DesignRepo {
     };
   }
 
+  /** How many comments each iteration's thread has, by the iteration's key: what the published site shows. */
+  async commentCounts(): Promise<Map<string, number>> {
+    return new Map([...(await this.listReviewIssues())].map(([branch, thread]) => [branch, thread.openComments]));
+  }
+
   async readComments(projectId: string, branch: string): Promise<ReviewComment[]> {
     const issue = (await this.listReviewIssues()).get(branch);
     if (!issue) return [];
