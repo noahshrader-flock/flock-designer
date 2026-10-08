@@ -160,7 +160,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 					</Button>
 				</div>
 			</Toolbar>
-			<Page>
+			<Page wide>
 				<PublishBanner status={publishStatus} onChange={setPublishStatus} />
 				{looked && !checkout && suggestion && (
 					<Alert>

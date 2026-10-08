@@ -27,6 +27,6 @@ describe('the card grid', () => {
 	it('is one column, then two, three, four and five as the space grows', async () => {
 		current = await render(createElement(CardGrid, null, createElement('p', null, 'one')));
 		const classes = document.querySelector('p')!.parentElement!.className.split(' ');
-		expect(classes).toEqual(expect.arrayContaining(['grid', 'grid-cols-1', '@2xl:grid-cols-2', '@4xl:grid-cols-3', '@6xl:grid-cols-4', '@7xl:grid-cols-5']));
+		expect(classes).toEqual(expect.arrayContaining(['grid', 'grid-cols-1', '@3xl:grid-cols-2', '@5xl:grid-cols-3', '@min-[84rem]:grid-cols-4', '@min-[104rem]:grid-cols-5']));
 	});
 });
