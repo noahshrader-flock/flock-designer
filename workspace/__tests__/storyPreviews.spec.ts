@@ -134,7 +134,7 @@ describe('building the previews', () => {
 	it('builds every story file of develop once, serves the page and its files, and compiles Sass', async () => {
 		makeLibrary(LIBRARY);
 		const base = await ready(previews());
-		expect(base).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/previews-[0-9a-f]{12}\/$/);
+		expect(base).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/previews-[0-9a-f]{12}-[0-9a-f]{7}\/$/);
 		expect((await fetch(base)).status).toBe(200);
 		expect((await fetch(`${base}entry.js`)).headers.get('content-type')).toContain('javascript');
 		const css = await (await fetch(`${base}entry.css`)).text();

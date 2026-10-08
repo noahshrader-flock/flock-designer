@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -87,13 +88,24 @@ import('storybook/preview-api').then(async ({ addons }) => {
 });`
 		: ''
 }
-const Live = ({ Story }) => {
+// A story that only sets args, with no render of its own, has a value it sets (a switch's checked, a field's value)
+// held by React for good, so a click does nothing. It is given as where the component starts instead, by React's own
+// rule for every form control: checked as defaultChecked, value as defaultValue. A story that draws itself is left as
+// it is: it holds its own values, as with useArgs.
+const STARTING = { checked: 'defaultChecked', value: 'defaultValue' };
+const startingValues = (args) => {
+	const given = {};
+	for (const [key, start] of Object.entries(STARTING)) if (key in args) Object.assign(given, { [key]: undefined, [start]: args[key] });
+	return given;
+};
+
+const Live = ({ Story, drawsItself }) => {
 	const [args, setArgs] = useState({});
 	useEffect(() => {
 		argsOf.set(Story.id, setArgs);
 		return () => argsOf.delete(Story.id);
 	}, []);
-	return h(Story, args);
+	return h(Story, { ...(drawsItself ? {} : startingValues(Story.args ?? {})), ...args });
 };
 
 const spaced = (name) => name.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
@@ -106,10 +118,11 @@ const load = files[new URLSearchParams(location.search).get(${JSON.stringify(PRE
 if (!load) fail('There is no such story file in this build.');
 else load().then((m) => {
 	const stories = Object.entries(composeStories(m));
+	const drawsItself = (name) => typeof m[name] === 'function' || typeof m[name]?.render === 'function' || typeof m.default?.render === 'function';
 	root.render(h(Fragment, null, ...stories.map(([name, Story]) =>
 		h('section', { key: name, className: 'fd-story', 'data-story': name },
 			h('h4', { className: 'fd-name' }, spaced(name)),
-			h(Boundary, null, h(Live, { Story }))))));
+			h(Boundary, null, h(Live, { Story, drawsItself: drawsItself(name) }))))));
 }, fail);
 `;
 
@@ -207,7 +220,13 @@ const copyAt = async (root: string, commit: string, library: string): Promise<vo
 };
 
 /** The address a commit's build is served at, under the app's local server. */
-const serveKey = (commit: string): string => `previews-${commit.slice(0, 12)}`;
+const serveKey = (build: string): string => `previews-${build.slice(0, 20)}`;
+
+/**
+ * How this app builds a preview, as one short fingerprint: the page, its script and the build's set-up. A build is kept
+ * for a commit **and** this, so a newer app never shows a build an older one made from the same commit.
+ */
+const RECIPE = createHash('sha256').update(`${PAGE}${previewEntry.toString()}${libraryBuild.toString()}`).digest('hex').slice(0, 8);
 
 export interface StoryPreviewsDeps {
 	/** The library's clone, or null when none is connected or found. */
@@ -243,7 +262,8 @@ export class StoryPreviews {
 	}
 
 	private async build(root: string, library: DesignSystem, commit: string): Promise<StoryPreview> {
-		const dir = join(this.deps.folder, commit);
+		const build = `${commit.slice(0, 12)}-${RECIPE}`;
+		const dir = join(this.deps.folder, build);
 		const site = join(dir, 'site');
 		try {
 			if (!existsSync(join(site, 'index.html'))) {
@@ -255,11 +275,11 @@ export class StoryPreviews {
 			}
 			// Only the build for this commit is kept, and served.
 			for (const old of readdirSync(this.deps.folder)) {
-				if (old === commit) continue;
+				if (old === build) continue;
 				this.deps.server.stopServing(serveKey(old));
 				rmSync(join(this.deps.folder, old), { recursive: true, force: true });
 			}
-			return { state: 'ready', base: await this.deps.server.serveFolder(serveKey(commit), site) };
+			return { state: 'ready', base: await this.deps.server.serveFolder(serveKey(build), site) };
 		} catch (err) {
 			rmSync(dir, { recursive: true, force: true });
 			return { state: 'failed', error: err instanceof Error ? err.message : String(err) };
