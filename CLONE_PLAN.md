@@ -1,6 +1,6 @@
 # Clone plan: pick a repository the app does not have yet, and say where it goes
 
-**Written 2026-10-08; decisions made the same day (Noah accepted every recommendation). Nothing here is built.** The plan for letting a designer start work in a repository that is not on
+**Written 2026-10-08; decisions made the same day (Noah accepted every recommendation). C1 is built.** The plan for letting a designer start work in a repository that is not on
 their computer: choose it from the list, see where it will be placed, and have the app put it there.
 
 This is the detail behind one item in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) (*After the pilot: candidates*,
@@ -56,25 +56,19 @@ each, the state document updated in the same change, and no data on GitHub is ch
 
 | # | Milestone | Needs | Size | Risk |
 |---|---|---|---|---|
-| **C1** | **Where clones go:** the clone folder (setting, default, picker), the path a repository would be placed at, and discovery reading it | Nothing | S | Low |
+| **C1** (done) | **Where clones go:** the clone folder (setting, default, picker), the path a repository would be placed at, and discovery reading it | Nothing | S | Low |
 | **C2** | **The clone itself:** a service that clones a named repository into a folder, with progress and cancel | C1, decision 3 | M | **Medium** |
 | **C3** | **The dialog:** choose a repository with no clone, see where it goes and change it, confirm, watch it, and carry on into the work | C2, decisions 2, 4 | M | Medium |
 | **C4** | **What it starts from:** branches for a repository with no clone (from GitHub), remote-only branches usable as a base, and the "no setup on this branch" answer | C3, decision 5 | M | Medium |
 | **C5** | **After the clone:** say what is missing to build (packages, access to private packages), and, if wanted, install them with progress | C3 | L | **High** |
 
-### C1: Where clones go
+### C1: Where clones go (done 2026-10-08)
 
-- **A clone-folder setting,** kept with the app's other settings (as the window and the trusted checkout are). Its
-  default is computed from discovery's own folder list, so the two can never disagree.
-- **Discovery reads it,** added first to the folders it looks through, so a clone placed in a chosen folder is found.
-- **One function says where a repository would go:** `<clone folder>/<repo name>`, and says whether that path is free
-  (absent, or an empty folder), taken by a clone of the same repository (use it, do not clone), or taken by something else
-  (refuse, say what is there).
-- **The folder is chosen with the system's picker in the main process,** as Open already is. The window never sends a
-  path to create.
-- **Tests:** the default under each combination of existing folders; a chosen folder found by discovery; a taken path
-  matched to the same repository by its `origin` (the existing `originOf`) and refused when it is another; a Windows-style
-  path.
+**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+short: `services/cloneFolder.ts` keeps the folder, gives the default, and says where a repository would go
+(`clonePlace`); discovery looks there first; `cloneFolder` and `chooseCloneFolder` are the two channels. **For C3:** the
+window has no use of them yet, and no channel returns a place; C3 adds both. **One refinement to decision 1:** the
+default is beside the repository last worked in when there is one, since the design repository has to sit beside it.
 
 ### C2: The clone itself
 
@@ -156,4 +150,4 @@ each, the state document updated in the same change, and no data on GitHub is ch
 
 ## Next
 
-**C1 to C4 are Ready:** scope fixed, files known, tests named, no open question. Build in order, one commit each. C5 waits.
+**C1 is done. C2 to C4 are Ready:** scope fixed, files known, tests named, no open question. Build in order, one commit each. C5 waits.
