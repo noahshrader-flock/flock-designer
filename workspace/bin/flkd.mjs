@@ -37,7 +37,7 @@ try {
 	const { build } = await import(pathToFileURL(esbuild).href);
 	const file = join(out, 'flkd.mjs');
 	await build({ entryPoints: [join(workspace, 'src', 'cli', 'flkd.ts')], outfile: file, bundle: true, platform: 'node', format: 'esm', logLevel: 'error' });
-	const { main } = await import(pathToFileURL(file).href);
+	const { main, ghApi } = await import(pathToFileURL(file).href);
 	process.exitCode = await main(process.argv.slice(2), {
 		cwd: process.cwd(),
 		out: (text) => console.log(text),
@@ -45,6 +45,7 @@ try {
 		prototypesRoot: join(appData, pkg.productName ?? pkg.name, 'prototypes'),
 		esbuild,
 		self: ['node', fileURLToPath(import.meta.url)],
+		github: ghApi(),
 	});
 } finally {
 	rmSync(out, { recursive: true, force: true });

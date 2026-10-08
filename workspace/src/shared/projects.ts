@@ -1,4 +1,4 @@
-import type { Iteration, IterationKind, Project, ProjectIteration } from './contract';
+import type { Iteration, IterationKind, Person, Project, ProjectIteration } from './contract';
 import { mergePeople } from './people';
 
 /** The only shape a project id may take: lower-case words joined by single hyphens. */
@@ -193,6 +193,25 @@ export const nextPrototypeName = (names: string[]): string =>
 /** A refinement of a version: its next iteration, one past the highest it has had. */
 export const nextIterationName = (names: string[], version: number): string =>
 	prototypeName(version, parsedNames(names).filter((p) => p.version === version).reduce((max, p) => Math.max(max, p.iteration), 0) + 1);
+/** A version's newest iteration, by the name it was recorded under, or null when the version has none. */
+export const latestIterationName = (names: string[], version: number): string | null => {
+	let best: { name: string; iteration: number } | null = null;
+	for (const name of names) {
+		const p = parsePrototypeName(name);
+		if (p && p.version === version && (best === null || p.iteration > best.iteration)) best = { name, iteration: p.iteration };
+	}
+	return best?.name ?? null;
+};
+/**
+ * Whether anyone but an iteration's makers has commented on it. Once someone has, the iteration is **frozen**: what
+ * they commented on is never changed under them, and the next change is made in the next iteration. Makers are known
+ * by their GitHub login, as comment authors are; a maker with none is not anyone's, so an iteration whose makers are
+ * unknown is frozen by any comment rather than changed under it.
+ */
+export const hasOutsideComments = (makers: Person[] | undefined, authors: string[]): boolean => {
+	const own = new Set((makers ?? []).flatMap((p) => (p.login ? [p.login.toLowerCase()] : [])));
+	return authors.some((a) => !own.has(a.toLowerCase()));
+};
 
 /**
  * A project's work as the screens offer it: its **prototypes** (pages, and the older ones on `fd/` branches: attempts

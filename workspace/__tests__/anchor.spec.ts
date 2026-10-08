@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RESOLVED_MARK, addressedAt, assertPreviewUrl, composeBody, isResolved, parseAnchor, parsePicture, sanitizeAnchor, sanitizePicture, stripAnchor, withAddressed, withResolved } from '../src/shared/anchor';
+import { RESOLVED_MARK, addressedAt, addressedIn, assertPreviewUrl, composeBody, isResolved, parseAnchor, parsePicture, sanitizeAnchor, sanitizePicture, stripAnchor, withAddressed, withResolved } from '../src/shared/anchor';
 import type { CommentAnchor } from '../src/shared/contract';
 
 const anchor: CommentAnchor = {
@@ -105,6 +105,20 @@ describe('addressed marker', () => {
     expect(stripAnchor(marked)).toBe('Remove this text');
     // And on a comment with no anchor at all.
     expect(stripAnchor(withAddressed('Just a note', 'abc1234'))).toBe('Just a note');
+  });
+
+  it("on a prototype, says which iteration the change is in, and only ever a prototype's name", () => {
+    const marked = withAddressed(anchored(), 'abc1234def56', 'v1-i2');
+    expect(addressedAt(marked)).toBe('abc1234def56');
+    expect(addressedIn(marked)).toBe('v1-i2');
+    expect(stripAnchor(marked)).toBe('Remove this text');
+    expect(addressedIn(withAddressed('x', 'abc1234'))).toBeNull();
+    expect(addressedIn(withAddressed('x', 'abc1234', 'codebase'))).toBeNull();
+    expect(withAddressed('x', 'abc1234', '--> <script>')).toBe(withAddressed('x', 'abc1234'));
+    // Moved on again: the mark is replaced, never doubled.
+    const again = withAddressed(marked, 'fedcba987654', 'v1-i3');
+    expect(addressedIn(again)).toBe('v1-i3');
+    expect(again.match(/fd-addressed/g)).toHaveLength(1);
   });
 
   it('sits alongside the resolved marker without disturbing it', () => {

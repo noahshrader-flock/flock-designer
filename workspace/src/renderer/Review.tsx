@@ -18,7 +18,7 @@ import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Proj
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
 import { READY_LINE } from '../shared/handoff';
 import { latest } from '../shared/latest';
-import { byVersion, isPrototypeKey, iterationLabel, parsePrototypeName, prototypePagePath, workKind, workOf } from '../shared/projects';
+import { byVersion, freshIteration, isPrototypeKey, iterationLabel, parsePrototypeName, prototypeKey, prototypePagePath, workKind, workOf } from '../shared/projects';
 import { HandoffDialog } from './HandoffDialog';
 import { MoveToCode } from './MoveToCode';
 import { AgentLog, Loading } from './Loading';
@@ -26,7 +26,7 @@ import { ShareControl } from './ShareControl';
 import { useOverlaps } from './overlays';
 import { Toolbar } from './Toolbar';
 import { useHostedPreview } from './hostedPreview';
-import { type AddressPhase, runAddress } from './address';
+import { type AddressPhase, runAddress, runPrototypeAddress } from './address';
 import { routeWentWrong } from './localBuild';
 import { PANEL_STEP, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
 import { useLocalBuild } from './useLocalBuild';
@@ -597,6 +597,22 @@ export const Review = ({
 	// What is still to be dealt with. Resolved comments stay listed, but are not the count.
 	const total = openComments(comments ?? []).length;
 
+	/** A prototype iteration of this project, by name, as people read it. */
+	const labelOf = (name: string): string => iterationLabel({ name, branch: prototypeKey(project.id, name) });
+	/** Where an Address run on this prototype put its change, when that is another iteration than this one. */
+	const changedElsewhere =
+		address.kind === 'done' && address.changed && address.prototype && address.prototype.iteration !== iteration.name ? address.prototype : null;
+	const openChanged = () => {
+		if (!changedElsewhere) return;
+		const known = siblings.find((i) => i.name === changedElsewhere.iteration);
+		if (known) return onOpen(project, known);
+		// Just made: the list this screen was opened from has not got it yet.
+		if (changedElsewhere.made) {
+			const made = freshIteration(changedElsewhere.made);
+			onOpen({ ...project, iterations: [...project.iterations, made] }, made);
+		}
+	};
+
 	/** The agent is asked for one comment, from that comment's own button: never for a batch. */
 	const addressComment = async (commentId: number) => {
 		if (!checkout) return;
@@ -604,39 +620,26 @@ export const Review = ({
 		setAddressing(commentId);
 		// Typed wider than it is assigned: the compiler cannot see that the callback below runs.
 		let outcome = { kind: 'idle' } as AddressPhase;
-		const api = window.workspace;
-		await runAddress({
-			// A prototype has no branch: the agent changes its source in the app's folder, and its version is a hash of
-			// that source rather than a commit. Everything else, waiting and reporting, is the same.
-			api: prototype
-				? {
-						agentStatus: api.agentStatus,
-						addressComments: (_root, projectId, name, id) => api.addressPrototype(projectId, name, id),
-						iterationCommit: (_root, projectId, name) => api.prototypeVersion(projectId, name),
-					}
-				: api,
-			root: checkout.root,
-			projectId: project.id,
-			name: iteration.name,
-			commentId,
-			isLive: () => addressLive.current,
-			onPhase: (p) => {
-				outcome = p;
-				if (addressLive.current) setAddress(p);
-			},
-		});
-		if (!addressLive.current) return;
-		// A changed prototype is saved and shown again, as after it was first built: what is on screen, and what
-		// reviewers open, is the changed page. A page that no longer builds says why, in place of the success.
-		if (prototype && outcome.kind === 'done' && outcome.changed) {
-			const saved = await window.workspace.savePrototype(project.id, iteration.name);
+		const isLive = () => addressLive.current;
+		const onPhase = (p: AddressPhase) => {
+			outcome = p;
+			if (addressLive.current) setAddress(p);
+		};
+		if (prototype) {
+			// A prototype has no branch. The main process says where the change went (this iteration, or its next one
+			// when others had commented on this), builds and saves it, and marks the comment with where it is.
+			await runPrototypeAddress({ api: window.workspace, projectId: project.id, name: iteration.name, commentId, isLive, onPhase });
 			if (!addressLive.current) return;
-			if (!saved.ok) {
-				setAddress({ kind: 'failed', message: saved.error });
-				return void load(true);
+			if (outcome.kind === 'done' && outcome.prototype) {
+				changes.current++;
+				posted.current.set(outcome.prototype.comment.id, outcome.prototype.comment);
+				// Changed here: what is on screen, and what reviewers open, is the changed page.
+				if (outcome.changed && outcome.prototype.iteration === iteration.name) local.retry();
 			}
-			local.retry();
+			return void load(true);
 		}
+		await runAddress({ api: window.workspace, root: checkout.root, projectId: project.id, name: iteration.name, commentId, isLive, onPhase });
+		if (!addressLive.current) return;
 		// A change was made, and it is waiting to be looked at. Marked on the comment itself, so it
 		// survives the app closing, whoever wrote the comment can see it was acted on, and nobody has
 		// to remember which comments were handled. Never resolved here: whether the change is what was
@@ -1036,7 +1039,15 @@ export const Review = ({
 								{address.kind === 'done' && (
 									<Alert variant={address.changed ? 'success' : 'default'}>
 										<AlertDescription>
-											{address.changed
+											{changedElsewhere ? (
+												<>
+													Others had commented on {iterationLabel(iteration)}, so it stays as they saw it. The change is in{' '}
+													{labelOf(changedElsewhere.iteration)}.{' '}
+													<Button size="sm" variant="link" className="h-auto p-0" onClick={openChanged}>
+														Open {labelOf(changedElsewhere.iteration)}
+													</Button>
+												</>
+											) : address.changed
 												? 'The agent has finished. Look at the preview and the changes, then resolve what is done.'
 												: 'The agent finished without changing anything. What it says below is why — often the change is outside this iteration, or the comment needs a decision from you.'}
 											{addressLog.length > 0 && (
@@ -1135,7 +1146,11 @@ export const Review = ({
 												{addressed && (
 													<p className="text-muted-foreground text-xs">
 														{/* A prototype's version is a hash of its source, which means nothing to a person; a commit does. */}
-														{prototype ? 'The agent addressed this' : <>The agent addressed this in <code>{comment.addressedAt?.slice(0, 7)}</code></>}
+														{prototype
+															? comment.addressedIn && comment.addressedIn !== iteration.name
+																? `The agent addressed this in ${labelOf(comment.addressedIn)}`
+																: 'The agent addressed this'
+															: <>The agent addressed this in <code>{comment.addressedAt?.slice(0, 7)}</code></>}
 													</p>
 												)}
 												{confirmingDelete === comment.id && (

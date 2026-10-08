@@ -13,6 +13,8 @@ import {
 	mergeProjects,
 	newestProjectFirst,
 	nextIterationName,
+	latestIterationName,
+	hasOutsideComments,
 	nextPrototypeName,
 	byVersion,
 	parsePrototypeName,
@@ -318,6 +320,23 @@ describe('versions and iterations in a prototype\'s name', () => {
 		expect(nextIterationName(['v1-i1', 'v2-i1'], 2)).toBe('v2-i2');
 		expect(nextIterationName(['i1', 'i2'], 1)).toBe('v1-i3');
 		expect(nextIterationName([], 1)).toBe('v1-i1');
+	});
+
+	it("finds a version's newest iteration, old names included", () => {
+		expect(latestIterationName(['v1-i1', 'v1-i3', 'v1-i2', 'v2-i1'], 1)).toBe('v1-i3');
+		expect(latestIterationName(['i1', 'i2', 'v2-i1'], 1)).toBe('i2');
+		expect(latestIterationName(['v1-i1', 'codebase'], 2)).toBeNull();
+	});
+
+	it('freezes an iteration once anyone but its makers comments on it', () => {
+		const noah = { name: 'Noah', login: 'Noah-S' };
+		expect(hasOutsideComments([noah], [])).toBe(false);
+		expect(hasOutsideComments([noah], ['noah-s', 'NOAH-S'])).toBe(false);
+		expect(hasOutsideComments([noah], ['noah-s', 'pm'])).toBe(true);
+		// Makers nobody can name are no one's: a comment from anyone freezes their work rather than having it changed under it.
+		expect(hasOutsideComments(undefined, ['noah-s'])).toBe(true);
+		expect(hasOutsideComments([{ name: 'Noah', login: null }], ['noah-s'])).toBe(true);
+		expect(hasOutsideComments(undefined, [])).toBe(false);
 	});
 
 	it('labels them for people as V and I', () => {

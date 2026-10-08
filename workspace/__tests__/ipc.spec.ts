@@ -55,6 +55,8 @@ let memoryValue: string | null;
 let previewUrl: string | null;
 let deleteComment: ReturnType<typeof vi.fn>;
 let readComments: ReturnType<typeof vi.fn>;
+let setAddressed: ReturnType<typeof vi.fn>;
+let githubState: unknown;
 let prototypeServer: InstanceType<typeof import('../src/main/services/prototypeServer')['PrototypeServer']>;
 
 beforeEach(async () => {
@@ -89,6 +91,8 @@ beforeEach(async () => {
 	previewUrl = null;
 	deleteComment = vi.fn(async () => undefined);
 	readComments = vi.fn(async () => []);
+	setAddressed = vi.fn(async (id: number, commit: string | null, iteration: string | null) => ({ id, addressedAt: commit, addressedIn: iteration }));
+	githubState = { state: 'signedOut' };
 	prototypeServer = new (await import('../src/main/services/prototypeServer')).PrototypeServer();
 
 	registerIpc({
@@ -96,8 +100,8 @@ beforeEach(async () => {
 		opened,
 		runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
 		agent: { start: agentStart, status: agentStatus, stop: agentStop, runningIn: agentRunningIn, runningSession: () => runningSession, recentLines: () => recent } as never,
-		github: { state: () => ({ state: 'signedOut' }) } as never,
-		designRepo: { listProjects: vi.fn(async () => []), deleteComment, readComments, readFile: vi.fn(async () => null) } as never,
+		github: { state: () => githubState } as never,
+		designRepo: { listProjects: vi.fn(async () => []), deleteComment, readComments, setAddressed, readFile: vi.fn(async () => null) } as never,
 		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
 		memory: { read: () => memoryValue, write: (r: string) => { memoryValue = r; }, available: () => true } as never,
 		onPublishStatus: vi.fn(),
@@ -307,64 +311,164 @@ describe('prototypes', () => {
 	});
 
 	describe('acting on a comment', () => {
-		const comment = (id: number, body: string) => ({
-			id, author: 'pm', authorAvatarUrl: null, body, createdAt: '2026-10-07T00:00:00Z', resolved: false, addressedAt: null, anchor: null, picture: null,
+		const comment = (id: number, body: string, author = 'pm') => ({
+			id, author, authorAvatarUrl: null, body, createdAt: '2026-10-07T00:00:00Z', resolved: false, addressedAt: null, addressedIn: null, anchor: null, picture: null,
 		});
-		const source = () => join(home, 'prototype', 'demo', 'v1-i1.tsx');
+		const local = (name: string) => join(home, 'prototype', 'demo', `${name}.tsx`);
+		const saved = (file: string) => join(design, 'projects', 'demo', 'prototypes', file);
+		const records = () => JSON.parse(readFileSync(join(design, 'projects', 'demo', 'iterations.json'), 'utf8')) as { name: string; contributors?: unknown; basedOn?: unknown }[];
+		const page = (text: string) => `import { Hello } from 'x';\nexport default () => <><Hello /><p>${text}</p></>;\n`;
+		/** Comments by iteration: v1-i1's thread, and any other's. */
+		const threads = (byName: Record<string, ReturnType<typeof comment>[]>) =>
+			readComments.mockImplementation(async (_p: string, key: string) => byName[key.split('/').at(-1) as string] ?? []);
+		/** A v1-i1 Noah made, signed in, with a source. */
 		const ready = async () => {
+			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
 			await call(CHANNELS.useCheckout, product);
 			writeSkill();
 			writeFileSync(join(design, 'skills', 'address-comments.md'), '# Address');
 			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+			mkdirSync(dirname(local('v1-i1')), { recursive: true });
+			writeFileSync(local('v1-i1'), page('first'));
 		};
+		const task = () => agentStart.mock.calls.at(-1)?.[2] as string;
 
 		it('changes the source where it was built, from comments read just now, and never passes on what the reviewer wrote', async () => {
 			await ready();
-			mkdirSync(dirname(source()), { recursive: true });
-			writeFileSync(source(), 'export default () => null;\n');
-			readComments.mockResolvedValue([comment(7, 'Make this primary')]);
+			threads({ 'v1-i1': [comment(7, 'Make this primary', 'noah')] });
 
 			expect((await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7)).ok).toBe(true);
 			expect(readComments).toHaveBeenCalledWith('demo', 'prototype/demo/v1-i1');
-			const [dir, , task, extras] = agentStart.mock.calls.at(-1) as [string, string, string, { work: string; bare: boolean }];
+			const [dir, , text, extras] = agentStart.mock.calls.at(-1) as [string, string, string, { work: string; bare: boolean }];
 			expect(dir).toBe(join(home, 'prototype', 'demo'));
-			expect(task).toContain('Address comment 1 on prototype v1-i1');
-			expect(task).toContain(source());
-			expect(task).toContain('# Address');
-			expect(task).toContain('# Build');
-			expect(task).not.toContain('Make this primary');
+			expect(text).toContain('Address comment 1 on prototype v1-i1');
+			expect(text).toContain(local('v1-i1'));
+			expect(text).toContain('# Address');
+			expect(text).toContain('# Build');
+			expect(text).not.toContain('Make this primary');
+			expect(text).not.toContain('Others have commented');
 			expect(extras).toMatchObject({ work: 'prototype/demo/v1-i1', bare: true });
 			// The reviewer's words reach the agent through the file, beside the prototype.
 			expect(readFileSync(join(home, 'prototype', 'demo', 'comments.md'), 'utf8')).toContain('Make this primary');
 		});
 
+		it('with no one else commenting, changes the iteration in place, saves it, and marks the comment', async () => {
+			await ready();
+			threads({ 'v1-i1': [comment(7, 'x', 'noah')] });
+			await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7);
+			writeFileSync(local('v1-i1'), page('changed'));
+
+			const done = await call(CHANNELS.finishPrototypeAddress, 7);
+			expect(done).toMatchObject({ ok: true, value: { changed: true, iteration: 'v1-i1', made: null } });
+			expect(readFileSync(saved('v1-i1.html'), 'utf8')).toContain('changed');
+			expect(records().map((r) => r.name)).toEqual(['v1-i1']);
+			expect(setAddressed).toHaveBeenCalledWith(7, expect.stringMatching(/^[0-9a-f]{12}$/), 'v1-i1');
+		});
+
+		it('once someone else has commented, leaves the iteration as they saw it and makes the change in the next', async () => {
+			await ready();
+			threads({ 'v1-i1': [comment(7, 'x', 'pm')] });
+			expect((await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7)).ok).toBe(true);
+			// The agent is given the next iteration, as a copy, and told why.
+			expect(task()).toContain(local('v1-i2'));
+			expect(task()).toContain('Others have commented on v1-i1');
+			expect(readFileSync(local('v1-i2'), 'utf8')).toBe(page('first'));
+			writeFileSync(local('v1-i2'), page('changed'));
+
+			const done = await call(CHANNELS.finishPrototypeAddress, 7);
+			expect(done).toMatchObject({ ok: true, value: { changed: true, iteration: 'v1-i2', made: { name: 'v1-i2', branch: 'prototype/demo/v1-i2' } } });
+			expect(readFileSync(local('v1-i1'), 'utf8')).toBe(page('first'));
+			expect(existsSync(saved('v1-i1.html'))).toBe(false);
+			expect(readFileSync(saved('v1-i2.html'), 'utf8')).toContain('changed');
+			const [first, next] = records();
+			expect(next).toMatchObject({ name: 'v1-i2', contributors: [{ login: 'noah' }], basedOn: first?.basedOn });
+			expect(setAddressed).toHaveBeenCalledWith(7, expect.stringMatching(/^[0-9a-f]{12}$/), 'v1-i2');
+		});
+
+		it('builds on the newest iteration of the version, until someone comments on that one too', async () => {
+			await ready();
+			threads({ 'v1-i1': [comment(7, 'x', 'pm'), comment(8, 'y', 'pm')] });
+			await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7);
+			writeFileSync(local('v1-i2'), page('second'));
+			await call(CHANNELS.finishPrototypeAddress, 7);
+
+			// A second comment on v1-i1: v1-i2 has none from anyone else, so it is changed in place.
+			await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 8);
+			expect(task()).toContain(local('v1-i2'));
+			expect(task()).toContain('v1-i2 is the newest iteration of this version');
+			expect(task()).not.toContain('Others have commented');
+			writeFileSync(local('v1-i2'), page('third'));
+			expect((await call(CHANNELS.finishPrototypeAddress, 8)).value).toMatchObject({ changed: true, iteration: 'v1-i2', made: null });
+
+			// Someone comments on v1-i2: the next change starts v1-i3.
+			threads({ 'v1-i1': [comment(7, 'x', 'pm'), comment(8, 'y', 'pm')], 'v1-i2': [comment(9, 'z', 'pm')] });
+			await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 8);
+			expect(readFileSync(local('v1-i3'), 'utf8')).toBe(page('third'));
+		});
+
+		it('makes no iteration when nothing changed, and clears the mark', async () => {
+			await ready();
+			threads({ 'v1-i1': [comment(7, 'x', 'pm')] });
+			await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7);
+			expect((await call(CHANNELS.finishPrototypeAddress, 7)).value).toMatchObject({ changed: false, made: null });
+			expect(existsSync(local('v1-i2'))).toBe(false);
+			expect(records().map((r) => r.name)).toEqual(['v1-i1']);
+			expect(setAddressed).toHaveBeenCalledWith(7, null, null);
+		});
+
+		it('is not lost when the screen was left before the agent finished: it is saved when the prototype is opened', async () => {
+			await ready();
+			threads({ 'v1-i1': [comment(7, 'x', 'pm')] });
+			await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7);
+			writeFileSync(local('v1-i2'), page('changed'));
+			expect((await call(CHANNELS.openPrototype, 'demo', 'v1-i1')).ok).toBe(true);
+			expect(records().map((r) => r.name)).toEqual(['v1-i1', 'v1-i2']);
+			expect(setAddressed).toHaveBeenCalledWith(7, expect.any(String), 'v1-i2');
+			expect((await call(CHANNELS.finishPrototypeAddress, 7)).ok).toBe(false);
+		});
+
+		it('finishes a change left waiting before starting another, so neither is lost', async () => {
+			await ready();
+			threads({ 'v1-i1': [comment(7, 'x', 'pm'), comment(8, 'y', 'pm')] });
+			await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7);
+			writeFileSync(local('v1-i2'), page('second'));
+			// The screen was left; the next Address is on another comment.
+			await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 8);
+			expect(records().map((r) => r.name)).toEqual(['v1-i1', 'v1-i2']);
+			// v1-i2 is Noah's and no one else has commented on it, so the second change builds on the first.
+			expect(task()).toContain(local('v1-i2'));
+			expect(readFileSync(local('v1-i2'), 'utf8')).toBe(page('second'));
+		});
+
+		it('records nothing when the changed source does not build, and says why', async () => {
+			await ready();
+			threads({ 'v1-i1': [comment(7, 'x', 'pm')] });
+			await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7);
+			writeFileSync(local('v1-i2'), "import { Nope } from 'not-installed';\nexport default () => <Nope />;\n");
+			expect((await call(CHANNELS.finishPrototypeAddress, 7)).error).toMatch(/did not build/);
+			expect(records().map((r) => r.name)).toEqual(['v1-i1']);
+			expect(setAddressed).not.toHaveBeenCalled();
+		});
+
 		it('works from the saved source when the prototype was built on another machine', async () => {
 			await ready();
+			rmSync(local('v1-i1'));
 			mkdirSync(join(design, 'projects', 'demo', 'prototypes'), { recursive: true });
-			writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.tsx'), 'export default () => "saved";\n');
-			readComments.mockResolvedValue([comment(7, 'x')]);
+			writeFileSync(saved('v1-i1.tsx'), 'export default () => "saved";\n');
+			threads({ 'v1-i1': [comment(7, 'x', 'noah')] });
 			expect((await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7)).ok).toBe(true);
-			expect(readFileSync(source(), 'utf8')).toContain('saved');
+			expect(readFileSync(local('v1-i1'), 'utf8')).toContain('saved');
 		});
 
 		it('refuses a comment that has gone, and a prototype with no source, before starting anything', async () => {
 			await ready();
-			readComments.mockResolvedValue([comment(7, 'x')]);
+			rmSync(local('v1-i1'));
+			threads({ 'v1-i1': [comment(7, 'x')] });
 			expect((await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7)).error).toMatch(/no React source/);
-			writeFileSync(source(), 'export default () => null;\n');
-			readComments.mockResolvedValue([]);
+			writeFileSync(local('v1-i1'), page('first'));
+			threads({});
 			expect((await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7)).error).toMatch(/no open comments/);
 			expect(agentStart).not.toHaveBeenCalled();
-		});
-
-		it('gives the version as a hash of the source, which changes when the source does', async () => {
-			await ready();
-			mkdirSync(dirname(source()), { recursive: true });
-			writeFileSync(source(), 'a');
-			const before = (await call(CHANNELS.prototypeVersion, 'demo', 'v1-i1')).value as string;
-			expect(before).toMatch(/^[0-9a-f]{12}$/);
-			writeFileSync(source(), 'b');
-			expect((await call(CHANNELS.prototypeVersion, 'demo', 'v1-i1')).value).not.toBe(before);
 		});
 	});
 

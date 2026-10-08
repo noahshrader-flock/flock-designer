@@ -2,7 +2,7 @@ import type { CommentAnchor, Person, Project, ProjectIteration, ReviewComment } 
 import { GitHubError } from './github';
 import { asPeople, mergePeople } from '../../shared/people';
 import { asDate, asRoute, firstHeading, newestFirst } from '../../shared/projects';
-import { RESOLVED_MARK, addressedAt, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withAddressed, withResolved } from '../../shared/anchor';
+import { RESOLVED_MARK, addressedAt, addressedIn, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withAddressed, withResolved } from '../../shared/anchor';
 import type { GitHubSession } from './githubSession';
 
 /**
@@ -25,6 +25,15 @@ export interface DesignRepoRef {
   repo: string;
 }
 
+/** Where projects and review threads live, for the app and the flkd command alike. */
+export const DESIGN_REPO: DesignRepoRef = {
+  owner: process.env.FLOCK_DESIGNER_REPO_OWNER ?? 'noahshrader-flock',
+  repo: process.env.FLOCK_DESIGNER_REPO_NAME ?? 'flock-designer',
+};
+
+/** All this needs of a GitHub session: a signed-in call to its API. */
+export type GitHubApi = Pick<GitHubSession, 'api'>;
+
 const asRecord = (v: unknown): Record<string, unknown> => (typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {});
 const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 
@@ -32,7 +41,7 @@ const isBot = (name: string): boolean => /\[bot\]$/i.test(name);
 
 export class DesignRepo {
   constructor(
-    private readonly session: GitHubSession,
+    private readonly session: GitHubApi,
     private readonly ref: DesignRepoRef,
   ) {}
 
@@ -301,6 +310,7 @@ export class DesignRepo {
       createdAt: String(raw.created_at ?? ''),
       resolved: isResolved(body),
       addressedAt: addressedAt(body),
+      addressedIn: addressedIn(body),
       anchor: parseAnchor(body),
       picture: parsePicture(body),
     };
@@ -352,17 +362,19 @@ export class DesignRepo {
   }
 
   /**
-   * Records that the agent acted on a comment, with the commit it made. Clears the mark when the
-   * commit is null, which is what re-addressing a comment that changed nothing should do.
+   * Records that the agent acted on a comment, with the commit it made (on a prototype, the hash of its source, and
+   * the iteration it is in). Clears the mark when the commit is null, which is what re-addressing a comment that
+   * changed nothing should do.
    *
    * This never resolves anything: it says a change is waiting to be looked at. The person decides.
    */
-  async setAddressed(commentId: number, commit: string | null): Promise<ReviewComment> {
+  async setAddressed(commentId: number, commit: string | null, iteration: string | null = null): Promise<ReviewComment> {
     const path = `${this.base}/issues/comments/${commentId}`;
     const current = asRecord(await this.session.api(path));
     const body = String(current.body ?? '');
-    if (addressedAt(body) === commit) return this.toComment(current);
-    const updated = await this.session.api(path, { method: 'PATCH', body: { body: withAddressed(body, commit) } });
+    const marked = withAddressed(body, commit, iteration);
+    if (marked === body) return this.toComment(current);
+    const updated = await this.session.api(path, { method: 'PATCH', body: { body: marked } });
     return this.toComment(asRecord(updated));
   }
 

@@ -1,8 +1,8 @@
-# Start a prototype from Claude Code
+# Start or change a prototype from Claude Code
 
-**Shared by every product.** For an agent in Claude Code, in a product repository, asked for a prototype. The app is
-not needed: this starts it with the same code the app runs, so it appears in Flock Designer like any other. Started
-from the app, a prototype never needs this file.
+**Shared by every product.** For an agent in Claude Code, in a product repository, asked for a prototype or for a
+change to one. The app is not needed: this uses the same code the app runs, so the work appears in Flock Designer like
+any other. Started from the app, a prototype never needs this file.
 
 ## Start it
 
@@ -25,6 +25,20 @@ node ../flock-designer/workspace/bin/flkd.mjs new-prototype --project <id> --tit
 - It is modelled on the branch the repository is on; `--from <branch>` names another.
 
 If it says something must be installed first, tell the person what, and stop.
+
+## Or change one
+
+When asked to change a prototype that exists (a refinement of the same idea, not a different one), run:
+
+```bash
+node ../flock-designer/workspace/bin/flkd.mjs change-prototype --project <id> --name <v1-i1> --note "<what they asked to change>"
+```
+
+- **`--name`** is any iteration of the version to change; the change goes in that version's newest iteration.
+- **It decides where the change goes**, and says so: in that iteration, or, when someone other than its makers has
+  commented on it, in the version's next iteration (`v1-i2`), so what they commented on is never changed under them.
+  Say which in your summary.
+- A different idea is a new version: `new-prototype`, as above.
 
 ## Then build it
 

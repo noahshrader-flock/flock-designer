@@ -55,8 +55,42 @@ export interface PrototypeBuild {
 }
 
 
+/** A project's iteration records. A file that cannot be read is refused rather than written over. */
+export const readRecords = async (store: RecordStore, projectId: string): Promise<Iteration[]> => {
+	const raw = await store.read(projectPath(projectId, 'iterations.json'));
+	if (raw === null) return [];
+	try {
+		const parsed = JSON.parse(raw) as unknown;
+		return Array.isArray(parsed) ? (parsed as Iteration[]) : [];
+	} catch {
+		throw new Error(`${projectPath(projectId, 'iterations.json')} is not readable JSON, so nothing was added to it.`);
+	}
+};
+
+/** Adds one prototype's record to its project's. */
+const addRecord = async (
+	store: RecordStore,
+	existing: Iteration[],
+	{ projectId, name, note, me, basedOn, now }: { projectId: string; name: string; note: string; me: Person | null; basedOn?: Iteration['basedOn']; now: Date },
+): Promise<Iteration> => {
+	const iteration: Iteration = {
+		projectId,
+		name,
+		branch: prototypeKey(projectId, name),
+		commit: null,
+		createdAt: now.toISOString(),
+		// The record carries the gist; the brief carries the whole request, which is what reviewers and the
+		// move into the code read.
+		note: note.trim().split('\n')[0] ?? '',
+		...(me ? { contributors: [me] } : {}),
+		...(basedOn ? { basedOn } : {}),
+	};
+	await store.write(projectPath(projectId, 'iterations.json'), `${JSON.stringify([...existing, iteration], null, 2)}\n`, `${projectId}: record prototype ${name}`);
+	return iteration;
+};
+
 /**
- * Records a new prototype, and the project itself when this is its first work: a brief with its
+ * Records a new prototype, the next version, and the project itself when this is its first work: a brief with its
  * title, which is what the project list names it by. The page comes later, once the agent has made it.
  */
 export const recordPrototype = async (
@@ -70,36 +104,28 @@ export const recordPrototype = async (
 		now = new Date(),
 	}: { projectId: string; title: string; note: string; me: Person | null; basedOn?: Iteration['basedOn']; now?: Date },
 ): Promise<Iteration> => {
-	const raw = await store.read(projectPath(projectId, 'iterations.json'));
-	let existing: Iteration[] = [];
-	if (raw !== null) {
-		try {
-			const parsed = JSON.parse(raw) as unknown;
-			existing = Array.isArray(parsed) ? (parsed as Iteration[]) : [];
-		} catch {
-			throw new Error(`${projectPath(projectId, 'iterations.json')} is not readable JSON, so nothing was added to it.`);
-		}
-	}
+	const existing = await readRecords(store, projectId);
 	const name = nextPrototypeName(existing.map((i) => i.name));
-	const iteration: Iteration = {
-		projectId,
-		name,
-		branch: prototypeKey(projectId, name),
-		commit: null,
-		createdAt: now.toISOString(),
-		// The record carries the gist; the brief carries the whole request, which is what reviewers and the
-		// move into the code read.
-		note: note.trim().split('\n')[0] ?? '',
-		...(me ? { contributors: [me] } : {}),
-		...(basedOn ? { basedOn } : {}),
-	};
 	const brief = projectPath(projectId, 'brief.md');
 	const haveBrief = await store.read(brief);
 	if (haveBrief === null || firstHeading(haveBrief) === null) {
 		await store.write(brief, `# ${title.replace(/\s+/g, ' ').trim()}\n\n${note.trim()}\n`, `${projectId}: start the project`);
 	}
-	await store.write(projectPath(projectId, 'iterations.json'), `${JSON.stringify([...existing, iteration], null, 2)}\n`, `${projectId}: record prototype ${name}`);
-	return iteration;
+	return addRecord(store, existing, { projectId, name, note, me, basedOn, now });
+};
+
+/**
+ * Records a refinement of a prototype: the next iteration of its version, named before it was made (its files are
+ * already under that name), modelled on what the iteration it came from was. Refused when that name is taken.
+ */
+export const recordIteration = async (
+	store: RecordStore,
+	{ projectId, name, from, note, me, now = new Date() }: { projectId: string; name: string; from: Iteration; note: string; me: Person | null; now?: Date },
+): Promise<Iteration> => {
+	assertPrototypeName(name);
+	const existing = await readRecords(store, projectId);
+	if (existing.some((i) => i.name === name)) throw new Error(`${projectId} already has a ${name}. Try again: the change will go in the next iteration.`);
+	return addRecord(store, existing, { projectId, name, note, me, basedOn: from.basedOn, now });
 };
 
 export const assertPrototypeName = (name: string): void => {
@@ -198,6 +224,7 @@ export const prototypeAddressTask = ({
 	commentsPath,
 	number,
 	name,
+	into = null,
 }: {
 	addressSkill: string;
 	buildSkill: string;
@@ -206,7 +233,13 @@ export const prototypeAddressTask = ({
 	commentsPath: string;
 	/** The comment's number, as on its pin. */
 	number: number;
+	/** The iteration the comment is on. */
 	name: string;
+	/**
+	 * The iteration the change is made in, when it is not the one commented on: the version's newest, or its next,
+	 * started as a copy of `from` because others had commented on that.
+	 */
+	into?: { target: string; copyOf: string | null } | null;
 }): string =>
 	[
 		...addressOpening(number, commentsPath, `prototype ${name}`),
@@ -214,6 +247,11 @@ export const prototypeAddressTask = ({
 		'## This run',
 		'',
 		`- This is a prototype: it has no branch, and nothing is committed. Its whole source is \`${build.source}\`; change that file and nothing else.`,
+		...(into?.copyOf
+			? [`- Others have commented on ${into.copyOf}, so it stays as they saw it. The change is made in ${into.target}, the next iteration, which starts as a copy of it: that is the file above.`]
+			: into
+				? [`- The comment is on ${name}, but ${into.target} is the newest iteration of this version, so the change is made there: that is the file above.`]
+				: []),
 		`- After every change, build it with exactly: \`${build.buildCommand}\``,
 		`  It writes the page to \`${build.page}\`. Do not finish while it reports an error.`,
 		'',

@@ -18,9 +18,10 @@ let design: string;
 let prototypes: string;
 let out: string[];
 let err: string[];
+let github: { api: (path: string) => Promise<unknown> } | null;
 
 const esbuild = createRequire(__filename).resolve('esbuild');
-const deps = (cwd: string) => ({ cwd, out: (t: string) => out.push(t), err: (t: string) => err.push(t), prototypesRoot: prototypes, esbuild, self: ['flkd'] });
+const deps = (cwd: string) => ({ cwd, out: (t: string) => out.push(t), err: (t: string) => err.push(t), prototypesRoot: prototypes, esbuild, self: ['flkd'], github });
 const run = (...argv: string[]) => main(argv, deps(product));
 const iterations = () => JSON.parse(readFileSync(join(design, 'projects', 'demo', 'iterations.json'), 'utf8')) as { name: string }[];
 
@@ -31,6 +32,7 @@ beforeEach(() => {
 	prototypes = join(home, 'app', 'prototypes');
 	out = [];
 	err = [];
+	github = null;
 
 	mkdirSync(product);
 	makeProduct(product);
@@ -116,6 +118,82 @@ describe('save-prototype', () => {
 
 	it('refuses a name that is not a prototype', async () => {
 		expect(await run('save-prototype', '--project', 'demo', '--name', '../../etc')).toBe(1);
+	});
+});
+
+describe('change-prototype', () => {
+	const local = (name: string) => join(prototypes, 'demo', `${name}.tsx`);
+	const page = (text: string) => `import { Hello } from 'x';\nexport default () => <><Hello /><p>${text}</p></>;\n`;
+	/** GitHub as its API answers: who the person is, and each iteration's review thread with its commenters. */
+	const signedIn = (threads: Record<string, string[]>) => {
+		const names = Object.keys(threads);
+		github = {
+			api: async (path: string) => {
+				if (path === '/user') return { login: 'test-person' };
+				const thread = /\/issues\/(\d+)\/comments/.exec(path);
+				if (thread) {
+					return (threads[names[Number(thread[1]) - 1] as string] ?? []).map((login, i) => ({ id: i + 1, body: 'x', user: { login }, created_at: '2026-10-08T00:00:00Z' }));
+				}
+				if (/\/issues\?/.test(path)) return names.map((name, i) => ({ number: i + 1, body: `branch: \`prototype/demo/${name}\``, comments: 1 }));
+				throw new Error(`not faked: ${path}`);
+			},
+		};
+	};
+	const made = async () => {
+		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
+		writeFileSync(local('v1-i1'), page('first'));
+		await run('save-prototype', '--project', 'demo', '--name', 'v1-i1');
+		out = [];
+	};
+
+	it('changes the newest iteration in place when only its maker has commented', async () => {
+		signedIn({ 'v1-i1': ['test-person'] });
+		await made();
+		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1-i1', '--note', 'Make the title bigger')).toBe(0);
+		expect(out.join('\n')).toMatch(/change is made in v1-i1, the newest iteration/);
+		expect(out.join('\n')).toContain('flkd save-prototype --project demo --name v1-i1');
+		writeFileSync(local('v1-i1'), page('bigger'));
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
+		expect(iterations().map((i) => i.name)).toEqual(['v1-i1']);
+	});
+
+	it('makes the change in the next iteration once someone else has commented, recorded only when saved', async () => {
+		signedIn({ 'v1-i1': ['test-person', 'pm'] });
+		await made();
+		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1-i1', '--note', 'Make the title bigger')).toBe(0);
+		expect(out.join('\n')).toMatch(/Others have commented on v1-i1/);
+		expect(out.join('\n')).toContain(`Write \`${local('v1-i2')}\``);
+		expect(out.join('\n')).toContain('flkd save-prototype --project demo --name v1-i2');
+		expect(readFileSync(local('v1-i2'), 'utf8')).toBe(page('first'));
+		expect(iterations().map((i) => i.name)).toEqual(['v1-i1']);
+
+		writeFileSync(local('v1-i2'), page('bigger'));
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i2')).toBe(0);
+		expect(iterations()).toMatchObject([{ name: 'v1-i1' }, { name: 'v1-i2', contributors: [{ name: 'Test Person', login: 'test-person' }] }]);
+		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i2.html'), 'utf8')).toContain('bigger');
+		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), 'utf8')).toContain('first');
+	});
+
+	it('when the comments cannot be read, never changes what people may have seen', async () => {
+		await made();
+		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1-i1', '--note', 'Bigger')).toBe(0);
+		expect(out.join('\n')).toMatch(/could not be read[\s\S]*the change is in v1-i2/);
+	});
+
+	it('makes nothing when the change was not made', async () => {
+		signedIn({ 'v1-i1': ['pm'] });
+		await made();
+		await run('change-prototype', '--project', 'demo', '--name', 'v1-i1', '--note', 'Bigger');
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i2')).toBe(0);
+		expect(out.at(-1)).toMatch(/nothing was made or saved/);
+		expect(iterations().map((i) => i.name)).toEqual(['v1-i1']);
+		expect(existsSync(local('v1-i2'))).toBe(false);
+	});
+
+	it('refuses to save a name that is not the next iteration of anything', async () => {
+		await made();
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i5')).toBe(1);
+		expect(err.join('\n')).toMatch(/not the next iteration/);
 	});
 });
 

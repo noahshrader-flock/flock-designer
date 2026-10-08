@@ -151,7 +151,7 @@ day, **L** several days.
 | **M0** | **The asks:** org repo, private Pages, access, security (in parallel, not code) | Admins, security | n/a | n/a | **In progress, Noah** |
 | **M1** | **The version model in code** (`v1-i2`; old names read as V1) | Nothing | M | Low | **Done 2026-10-08**, see [flock-designer.md](flock-designer.md#change-log) |
 | **M2** | **Make prototypes without the app** (new-prototype and build-and-save as shared commands) | M1 | L | Medium | **Done 2026-10-08** (its real run is Noah's), see [flock-designer.md](flock-designer.md#change-log) |
-| **M3** | **Address starts the next iteration** when the current one has outside comments | M1, M2 | M | Medium | After M2 |
+| **M3** | **Address starts the next iteration** when the current one has outside comments | M1, M2 | M | Medium | **Done 2026-10-08** (its real run is Noah's), see [flock-designer.md](flock-designer.md#change-log) |
 | **M4** | **One comments experience,** taken out of the review screen | M1 | L | **High** | Ready after M1 (tests first) |
 | **M5a** | **The site, assembled locally:** project pages, `latest` links, index | M1 | M | Low | Ready after M1 |
 | **M5b** | **Publish for real:** the publish command, the private gate, the deploy, **Open page** | M2, M5a (M0 for the private result) | L | Medium | **Buildable and testable now on the public repo;** the private result waits on M0 |
@@ -161,7 +161,7 @@ day, **L** several days.
 | **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | Blocked on a decision |
 | **M10** | **Parity and the smaller things we agreed** | M7 | M | Low | Later |
 
-**M1 and M2 are done (2026-10-08). Next: M5a,** on the fastest path below; M3 and M4 are ready too.
+**M1 to M3 are done (2026-10-08). Next: M5a,** on the fastest path below; M4 is ready too.
 
 **The repo is public for now (Noah's decision, 2026-10-07), so the whole flow can be built and tested before the admins
 answer.** Public Pages needs no login to view, so what it cannot show is that an anonymous viewer is blocked. That
@@ -219,22 +219,17 @@ no built copy to go stale.
 Claude Code for a prototype, then for another version, and check both open in the app. It writes to the real design
 clone, and the app publishes it to the public repo the next time it is open.
 
-### M3: Address starts the next iteration
+### M3: Address starts the next iteration (done 2026-10-08)
 
-**Goal.** What people commented on is never changed under them, without an iteration per comment.
+**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08) and its
+3.7. In short: a change goes in the version's newest iteration, or, once someone other than that iteration's makers
+has commented on it, in the next iteration, started as a copy and recorded only when the change is made and builds.
+The comment is marked "addressed in V1 · I2". The app's Address and `flkd change-prototype` share the rule; the
+command reads who commented through GitHub's command line, and treats the iteration as frozen when it cannot.
 
-- **The rule:** an iteration is frozen once someone other than its author comments on it. The first Address after that
-  starts the next iteration of the same version: the source is copied to `vN-iM+1`, the record is added, and the change
-  is made there. Further Address runs edit that new iteration until someone else comments on it.
-- **The comment** that was acted on is marked "addressed in V1 · I2" (today the mark records a hash of the source, as a
-  prototype has no commit).
-- **The app and the command** both follow it, through M2's shared service.
-
-**Tests first:** an iteration with no outside comments is edited in place; one with an outside comment is left
-untouched and a new one appears; the mark points at the new iteration.
-
-**Done when:** Noah comments as a second person on `v1-i1`, runs Address, and sees `v1-i1` unchanged, `v1-i2` with the
-change, and the comment marked as addressed there.
+**What is left of "done when" is Noah's:** comment on a prototype as a second GitHub account, run Address, and see
+`v1-i1` unchanged, `v1-i2` with the change, and the comment marked as addressed there. Coke's routing for a change
+asked for in Claude Code is on `noah/flock-designer-m3`, to fast-forward into `noah/flock-designer`.
 
 ### M4: One comments experience, taken out of the review screen
 

@@ -4,7 +4,7 @@ import { CHANNELS } from '../shared/contract';
 import { registerIpc } from './ipc';
 import { SessionMemory } from './services/editor';
 import { AgentRunner } from './services/agent';
-import { DesignRepo } from './services/designRepo';
+import { DESIGN_REPO, DesignRepo } from './services/designRepo';
 import { CheckoutMemory } from './services/checkoutMemory';
 import { PageView } from './services/pageView';
 import { MIN_WINDOW, type WindowState, WindowMemory, restoreState } from './services/windowMemory';
@@ -41,12 +41,6 @@ const smokeMode = process.argv.includes('--smoke');
  * a repository the app is not installed on; verified 2026-10-05.
  */
 const GITHUB_CLIENT_ID = process.env.FLOCK_DESIGNER_CLIENT_ID ?? 'Iv23li2z9ayhXhGdFXCm';
-
-/** Where projects and review threads live. */
-const DESIGN_REPO = {
-	owner: process.env.FLOCK_DESIGNER_REPO_OWNER ?? 'noahshrader-flock',
-	repo: process.env.FLOCK_DESIGNER_REPO_NAME ?? 'flock-designer',
-};
 
 const DEFAULT_SIZE = { width: 1260, height: 780 };
 

@@ -290,10 +290,17 @@ export interface WorkspaceApi {
 	/** `from`: the repository on this machine and a branch in it to model the page on. */
 	createPrototype(projectId: string, title: string, note: string, from?: { root: string; branch: string }): Promise<Result<Iteration>>;
 	buildPrototype(projectId: string, name: string, request: string): Promise<Result<AgentStatus>>;
-	/** Starts the agent on one comment on a prototype. There is no batch. */
+	/**
+	 * Starts the agent on one comment on a prototype. There is no batch. The change goes in the newest iteration of the
+	 * prototype's version, or, when others have commented on that, in the next one.
+	 */
 	addressPrototype(projectId: string, name: string, commentId: number): Promise<Result<AgentStatus>>;
-	/** A short hash of the prototype's source: the version, where a branch would have a commit. */
-	prototypeVersion(projectId: string, name: string): Promise<Result<string | null>>;
+	/**
+	 * Once that agent has finished: a changed prototype is built, recorded when it is a new iteration, and saved, and the
+	 * comment is marked with where the change is. Says whether anything changed, in which iteration, the new
+	 * iteration's record when one was made, and the comment as it is marked now.
+	 */
+	finishPrototypeAddress(commentId: number): Promise<Result<PrototypeAddressed>>;
 	savePrototype(projectId: string, name: string): Promise<Result<null>>;
 	openPrototype(projectId: string, name: string): Promise<Result<string>>;
 	/** What moving a prototype into the code would do in this checkout, asked before it is offered. */
@@ -475,6 +482,14 @@ export interface Person {
 }
 
 /** One reviewer comment, stored as a GitHub issue comment. */
+/** How an Address run on a prototype ended: see `finishPrototypeAddress`. */
+export interface PrototypeAddressed {
+	changed: boolean;
+	iteration: string;
+	made: Iteration | null;
+	comment: ReviewComment;
+}
+
 export interface ReviewComment {
   id: number;
   author: string;
@@ -487,6 +502,8 @@ export interface ReviewComment {
    * says a change is waiting for the person's verdict, which only they can give.
    */
   addressedAt: string | null;
+  /** On a prototype, the iteration that change is in: the next one, when others had commented on this one. */
+  addressedIn: string | null;
   /** Present once C2 anchors comments to an element; absent for page-level ones. */
   anchor: CommentAnchor | null;
   /** A small picture of the spot, as a JPEG data URL, taken when the comment was placed. Absent on older comments. */
@@ -594,7 +611,7 @@ export const CHANNELS = {
 	createPrototype: 'workspace:createPrototype',
 	buildPrototype: 'workspace:buildPrototype',
 	addressPrototype: 'workspace:addressPrototype',
-	prototypeVersion: 'workspace:prototypeVersion',
+	finishPrototypeAddress: 'workspace:finishPrototypeAddress',
 	savePrototype: 'workspace:savePrototype',
 	openPrototype: 'workspace:openPrototype',
 	prepareMoveToCode: 'workspace:prepareMoveToCode',

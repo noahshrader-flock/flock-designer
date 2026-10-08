@@ -14,6 +14,7 @@ import {
 	type PageHoldReason,
 	type MoveToCodePlan,
 	type Person,
+	type PrototypeAddressed,
 	type PrototypeReadiness,
 	type Project,
 	type Repository,
@@ -46,11 +47,11 @@ import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anc
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
-import { firstHeading, isRecordName, mergeProjects, projectPath, prototypeKey, prototypePagePath, unionLocal, workKind } from '../shared/projects';
+import { firstHeading, isRecordName, iterationLabel, mergeProjects, projectPath, prototypeKey, prototypePagePath, unionLocal, workKind } from '../shared/projects';
 import { resolveInside } from './services/paths';
 import { PrototypeServer } from './services/prototypeServer';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
-import { prototypeWork } from './services/prototypeWork';
+import { type PrototypeChange, prototypeWork } from './services/prototypeWork';
 import {
 	BUILD_SKILL,
 	MOVE_SKILL,
@@ -61,7 +62,6 @@ import {
 	prototypeAddressTask,
 	prototypeBuildTask,
 	prototypeReadable,
-	prototypeVersionOf,
 	type PrototypeSources,
 } from './services/prototype';
 import type { CheckoutMemory } from './services/checkoutMemory';
@@ -705,8 +705,8 @@ export const registerIpc = ({
 	/** Whether a prototype can be built from this accepted repository here. */
 	const prototypeReadiness = (root: string): PrototypeReadiness => work.readiness(opened.require(root));
 	/** What building a prototype and changing one share: what it is modelled on, read once, and how it is built. */
-	const prototypeRun = async (projectId: string, name: string) =>
-		work.buildPlan(projectId, name, await once(`source:${projectId}`, () => work.sources(projectId, name)));
+	const prototypeRun = async (projectId: string, name: string, modelledOn = name) =>
+		work.buildPlan(projectId, name, await once(`source:${projectId}`, () => work.sources(projectId, modelledOn)));
 	/** Its agent, in the folder it was built in, reading the product read-only, and nothing committed. */
 	const startPrototypeAgent = (projectId: string, name: string, sources: PrototypeSources, task: string) =>
 		agent.start(work.dir(projectId), projectId, task, { bare: true, readOnly: prototypeReadable(sources), work: prototypeKey(projectId, name) });
@@ -763,8 +763,33 @@ export const registerIpc = ({
 	/**
 	 * Acting on one comment on a prototype. The same steps as on a branch -- comments read from GitHub now, the file
 	 * written from that read, then the agent started -- but the agent changes the prototype's source in the app's own
-	 * folder, where it was built, and nothing is committed. The screen saves the page afterwards, as after a build.
+	 * folder, where it was built, and nothing is committed. What others commented on is never changed under them: the
+	 * service says which iteration the change goes in (`startChange`), and `finishPrototypeAddress` records and saves it.
 	 */
+	const prototypeChanges = new Map<number, { projectId: string; change: PrototypeChange }>();
+	/**
+	 * Finishes one: a changed prototype built, recorded when new, and saved, and the comment marked with where the change
+	 * is. Run by the screen when the agent ends, and when the prototype is opened again, so a change made while the screen
+	 * was left is never stranded.
+	 */
+	const finishPrototypeChange = async (commentId: number): Promise<PrototypeAddressed> => {
+		const pending = prototypeChanges.get(commentId);
+		if (!pending) throw new Error('There is no change to this comment waiting to be saved.');
+		if (agent.status().state === 'running') throw new Error(AGENT_BUSY);
+		prototypeChanges.delete(commentId);
+		const { projectId, change } = pending;
+		const { version, made } = await work.finishChange(projectId, change, me(), `For a comment on ${iterationLabel(change.from)}`);
+		// Either way: a run that changed nothing clears the mark an earlier one left.
+		const comment = await designRepo.setAddressed(commentId, version, version === null ? null : change.target);
+		return { changed: version !== null, iteration: change.target, made, comment };
+	};
+	const finishPrototypeChanges = async (projectId: string): Promise<void> => {
+		if (agent.status().state === 'running') return;
+		for (const [commentId, pending] of [...prototypeChanges]) {
+			// What does not build stays on this machine, as the screen said when the run ended.
+			if (pending.projectId === projectId) await finishPrototypeChange(commentId).catch(() => undefined);
+		}
+	};
 	ipcMain.handle(
 		CHANNELS.addressPrototype,
 		guard(async (projectId: string, name: string, commentId: number) => {
@@ -772,14 +797,11 @@ export const registerIpc = ({
 			assertPrototypeName(name);
 			if (!Number.isSafeInteger(commentId)) throw new Error('That is not a comment.');
 			if (agent.status().state === 'running') throw new Error(AGENT_BUSY);
+			// One left from a run whose screen was closed is finished first, or this run would start from the same copy.
+			await finishPrototypeChanges(projectId);
 			const addressSkill = await readSkillText(ADDRESS_SKILL);
 			const buildSkill = await readSkillText(BUILD_SKILL);
-			const { build, sources } = await prototypeRun(projectId, name);
-			// The source to change: this machine's, or the saved one when it was built somewhere else.
-			const source = await work.sourceText(projectId, name);
-			if (source === null) throw new Error('This prototype has no React source saved, so there is nothing for the agent to change.');
-			if (!existsSync(build.source)) writeFileSync(build.source, source);
-			// Read now, not earlier: this is what makes the file current.
+			// Read now, not earlier: this is what makes the file current, and what says who has commented.
 			const comments = await designRepo.readComments(projectId, prototypeKey(projectId, name));
 			const brief = await readDesignFile(projectPath(projectId, 'brief.md'));
 			const written = writeCommentsExport(prototypesRoot, {
@@ -790,15 +812,19 @@ export const registerIpc = ({
 				generatedAt: new Date(),
 			});
 			const number = chooseComment(comments, commentId);
-			return startPrototypeAgent(projectId, name, sources, prototypeAddressTask({ addressSkill, buildSkill, build, sources, commentsPath: written.path, number, name }));
+			const change = await work.startChange(projectId, name, async (it) =>
+				(it.name === name ? comments : await designRepo.readComments(projectId, it.branch)).map((c) => c.author),
+			);
+			// Modelled on what the iteration it comes from was: a new one has no record of its own yet.
+			const { build, sources } = await prototypeRun(projectId, change.target, change.from.name);
+			const into = change.target === name ? null : { target: change.target, copyOf: change.fresh ? change.from.name : null };
+			prototypeChanges.set(commentId, { projectId, change });
+			return startPrototypeAgent(projectId, name, sources, prototypeAddressTask({ addressSkill, buildSkill, build, sources, commentsPath: written.path, number, name, into }));
 		}),
 	);
 	ipcMain.handle(
-		CHANNELS.prototypeVersion,
-		guard(async (projectId: string, name: string): Promise<string | null> => {
-			const source = await work.sourceText(projectId, name);
-			return source === null ? null : prototypeVersionOf(source);
-		}),
+		CHANNELS.finishPrototypeAddress,
+		guard((commentId: number): Promise<PrototypeAddressed> => finishPrototypeChange(commentId)),
 	);
 
 	ipcMain.handle(
@@ -812,6 +838,7 @@ export const registerIpc = ({
 	ipcMain.handle(
 		CHANNELS.openPrototype,
 		guard(async (projectId: string, name: string): Promise<string> => {
+			await finishPrototypeChanges(projectId);
 			const html = await prototypePage(projectId, name);
 			if (html === null) throw new Error('This prototype has no page yet.');
 			// A page built here but never saved (the screen was left, or gave up, while the agent finished) is saved

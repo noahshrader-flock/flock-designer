@@ -23,6 +23,7 @@ import type {
 	AgentReadiness,
 	PrototypeReadiness,
 	MoveToCodePlan,
+	PrototypeAddressed,
 } from '../shared/contract';
 
 /**
@@ -77,7 +78,7 @@ const api: WorkspaceApi = {
 	createPrototype: (projectId, title, note, from) => invoke<Iteration>(CHANNELS.createPrototype, projectId, title, note, from ?? null),
 	buildPrototype: (projectId, name, request) => invoke<AgentStatus>(CHANNELS.buildPrototype, projectId, name, request),
 	addressPrototype: (projectId, name, commentId) => invoke<AgentStatus>(CHANNELS.addressPrototype, projectId, name, commentId),
-	prototypeVersion: (projectId, name) => invoke<string | null>(CHANNELS.prototypeVersion, projectId, name),
+	finishPrototypeAddress: (commentId) => invoke<PrototypeAddressed>(CHANNELS.finishPrototypeAddress, commentId),
 	savePrototype: (projectId, name) => invoke<null>(CHANNELS.savePrototype, projectId, name),
 	openPrototype: (projectId, name) => invoke<string>(CHANNELS.openPrototype, projectId, name),
 	prototypeReadiness: (root) => invoke<PrototypeReadiness>(CHANNELS.prototypeReadiness, root),

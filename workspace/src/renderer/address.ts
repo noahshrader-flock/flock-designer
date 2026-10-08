@@ -1,4 +1,4 @@
-import type { WorkspaceApi } from '../shared/contract';
+import type { PrototypeAddressed, WorkspaceApi } from '../shared/contract';
 import { waitForAgent } from './localBuild';
 
 /**
@@ -17,7 +17,7 @@ export type AddressPhase =
 	 * needs a decision only a person can make -- finishes exactly as cleanly as one that rewrote half
 	 * the view. Reporting both as "finished" sent people looking for a change that was never made.
 	 */
-	| { kind: 'done'; changed: boolean; commit: string | null }
+	| { kind: 'done'; changed: boolean; commit: string | null; prototype?: PrototypeAddressed }
 	| { kind: 'failed'; message: string };
 
 export type AddressApi = Pick<WorkspaceApi, 'addressComments' | 'agentStatus' | 'iterationCommit'>;
@@ -59,4 +59,41 @@ export const runAddress = async ({
 	// The commit to show beside the comment, when there is one and it is this run's.
 	const commit = moved && after.ok ? after.value : null;
 	onPhase({ kind: 'done', changed: moved, commit });
+};
+
+export type PrototypeAddressApi = Pick<WorkspaceApi, 'addressPrototype' | 'agentStatus' | 'finishPrototypeAddress'>;
+
+/**
+ * The same, on a prototype. It has no commits, so where the change went and whether there was one are the main
+ * process's to say once the agent has finished: it may be in the next iteration, when others had commented on this one.
+ */
+export const runPrototypeAddress = async ({
+	api,
+	projectId,
+	name,
+	commentId,
+	isLive,
+	onPhase,
+	pollMs,
+}: {
+	api: PrototypeAddressApi;
+	projectId: string;
+	name: string;
+	commentId: number;
+	isLive: () => boolean;
+	onPhase: (phase: AddressPhase) => void;
+	pollMs?: number;
+}): Promise<void> => {
+	onPhase({ kind: 'running' });
+	const started = await api.addressPrototype(projectId, name, commentId);
+	if (!started.ok) return onPhase({ kind: 'failed', message: started.error });
+	if (started.value.state === 'unavailable') return onPhase({ kind: 'failed', message: started.value.detail });
+
+	const outcome = await waitForAgent(api, isLive, pollMs);
+	// Left before it ended: the change is finished when the prototype is next opened.
+	if (outcome.kind === 'stopped') return;
+	if (outcome.kind === 'failed') return onPhase({ kind: 'failed', message: outcome.message });
+	const finished = await api.finishPrototypeAddress(commentId);
+	if (!finished.ok) return onPhase({ kind: 'failed', message: finished.error });
+	onPhase({ kind: 'done', changed: finished.value.changed, commit: null, prototype: finished.value });
 };
