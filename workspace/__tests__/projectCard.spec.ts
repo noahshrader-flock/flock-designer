@@ -64,6 +64,9 @@ describe('the cover', () => {
 		const person = bottom!.children[1]!;
 		expect(person.querySelector('[data-slot="avatar"]')).not.toBeNull();
 		expect(person.querySelector('.truncate')!.textContent).toBe('Noah Shrader');
+		// One size down from the design system's small avatar, and the name one size up from base.
+		expect(person.querySelector('[data-slot="avatar"]')!.getAttribute('data-size')).toBe('xs');
+		expect(bottom!.children[0]!.className.split(' ')).toContain('text-lg');
 		expect(bottom!.children[0]!.className).not.toContain('text-right');
 		// Stacked top to bottom, as written: not reversed.
 		expect(bottom!.className.split(' ')).toContain('flex-col');

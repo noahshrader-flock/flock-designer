@@ -62,7 +62,7 @@ export const ProjectCard = ({
 					)}
 				</div>
 				<div className="flex min-w-0 flex-col gap-1">
-					<CardTitle className="line-clamp-2 text-base font-semibold">{project.title}</CardTitle>
+					<CardTitle className="line-clamp-2 text-lg font-semibold">{project.title}</CardTitle>
 					<PeopleLine people={project.people} />
 				</div>
 			</CardCover>
