@@ -119,15 +119,15 @@ describe('finding a component', () => {
 		expect(text()).toContain('No components match.');
 	});
 
-	it('has the search in the toolbar beside the name and branch, and Refresh at its right, as Projects does', async () => {
+	it('has the search in the toolbar beside the name and branch, and Sync at its right, as Projects does', async () => {
 		await open(() => ok(ready()));
 		const toolbar = document.querySelector('h2')!.parentElement!;
 		const search = document.querySelector('input[aria-label="Search components"]')!;
 		expect(toolbar.contains(search)).toBe(true);
-		expect(toolbar.contains(button('Refresh'))).toBe(true);
-		expect(toolbar.textContent).toBe('FUIRefresh');
+		expect(toolbar.contains(button('Sync'))).toBe(true);
+		expect(toolbar.textContent).toBe('FUISync');
 		expect(toolbar.querySelector('h2')!.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(search.compareDocumentPosition(button('Refresh')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(search.compareDocumentPosition(button('Sync')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 	});
 
 	it('has no switcher between components and composites, and no count', async () => {
@@ -160,26 +160,26 @@ describe('keeping it current', () => {
 		(window as unknown as { workspace: unknown }).workspace = app.api;
 		current = await render(createElement(DesignSystem, { hidden: false }));
 		// Only the button says so: a running fetch is not a problem.
-		expect(button('Refreshing…').disabled).toBe(true);
+		expect(button('Syncing…').disabled).toBe(true);
 		expect(text()).not.toMatch(/Checking GitHub|Could not update/);
 		await act(async () => finish(ready('unchanged')));
 		await settle();
-		expect(button('Refresh').disabled).toBe(false);
+		expect(button('Sync').disabled).toBe(false);
 	});
 
-	it('keeps the list when the update fails, and says so beside Refresh, with the reason on hover', async () => {
+	it('keeps the list when the update fails, and says so beside Sync, with the reason on hover', async () => {
 		await open(() => ok(ready({ failed: 'Could not reach GitHub. Check the internet connection.' })));
 		expect(rows()).toHaveLength(5);
 		const problem = [...document.querySelectorAll('[role="status"]')].find((e) => e.textContent === 'Could not update from GitHub')!;
 		expect(problem.getAttribute('title')).toBe('Could not reach GitHub. Check the internet connection.');
-		expect(problem.nextElementSibling?.textContent).toBe('Refresh');
+		expect(problem.nextElementSibling?.textContent).toBe('Sync');
 		expect(document.querySelector('h2')!.parentElement!.contains(problem)).toBe(true);
 	});
 
-	it('asks again, waiting for GitHub, when Refresh is pressed', async () => {
+	it('asks again, waiting for GitHub, when Sync is pressed', async () => {
 		const app = await open(() => ok(ready()));
 		expect(app.calls.designSystemCatalog).toEqual([[false]]);
-		await press(button('Refresh'));
+		await press(button('Sync'));
 		await settle();
 		expect(app.calls.designSystemCatalog).toEqual([[false], [true]]);
 	});
@@ -200,7 +200,7 @@ describe('keeping it current', () => {
 	it('keeps the list when a refresh fails, and says the error above it', async () => {
 		let n = 0;
 		await open(() => (n++ === 0 ? ok(ready()) : fail('git broke')));
-		await press(button('Refresh'));
+		await press(button('Sync'));
 		await settle();
 		expect(rows()).toHaveLength(5);
 		expect(text()).toContain('git broke');

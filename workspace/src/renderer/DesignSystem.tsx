@@ -1,9 +1,10 @@
-import { GitBranchIcon, RefreshCwIcon, SearchIcon } from 'lucide-react';
+import { GitBranchIcon, SearchIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { isGap } from '../shared/catalog';
 import type { Catalog, CatalogComponent, CatalogUpdate } from '../shared/contract';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { LoadingScreen } from './Loading';
+import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
@@ -76,12 +77,12 @@ const Notice = ({ title, children, action }: { title: string; children: ReactNod
  * is shown (Storybook) and written (Source).
  *
  * It reads once when first shown, at once from what the clone has, then again when GitHub has been asked for changes;
- * after that only when Refresh is pressed. It stays mounted while hidden, so the search and the scroll survive.
+ * after that only when Sync is pressed. It stays mounted while hidden, so the search and the scroll survive.
  */
 export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [catalog, setCatalog] = useState<Catalog | null>(null);
 	const [error, setError] = useState<string | null>(null);
-	const [refreshing, setRefreshing] = useState(false);
+	const [syncing, setSyncing] = useState(false);
 	const [query, setQuery] = useState('');
 	const started = useRef(false);
 
@@ -96,20 +97,20 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		return r.value;
 	}, []);
 
-	const refresh = useCallback(async () => {
-		setRefreshing(true);
+	const sync = useCallback(async () => {
+		setSyncing(true);
 		try {
 			await ask(true);
 		} finally {
-			setRefreshing(false);
+			setSyncing(false);
 		}
 	}, [ask]);
 
 	// The first answer is what the clone already has; the second is after GitHub was asked for changes.
 	const firstRead = useCallback(async () => {
 		const first = await ask(false);
-		if (first?.state === 'ready' && first.update === 'updating') void refresh();
-	}, [ask, refresh]);
+		if (first?.state === 'ready' && first.update === 'updating') void sync();
+	}, [ask, sync]);
 
 	useEffect(() => {
 		if (hidden || started.current) return;
@@ -128,7 +129,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 
 	if (error && catalog === null) {
 		return (
-			<Notice title="Could not read the component library" action={<Button variant="secondary" size="sm" onClick={() => void refresh()}>Try again</Button>}>
+			<Notice title="Could not read the component library" action={<Button variant="secondary" size="sm" onClick={() => void sync()}>Try again</Button>}>
 				{error}
 			</Notice>
 		);
@@ -141,7 +142,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	}
 	if (catalog.state === 'no-develop') {
 		return (
-			<Notice title="This clone has no develop branch" action={<Button variant="secondary" size="sm" onClick={() => void refresh()}>Try again</Button>}>
+			<Notice title="This clone has no develop branch" action={<Button variant="secondary" size="sm" onClick={() => void sync()}>Try again</Button>}>
 				The clone at {catalog.root} has no develop branch from GitHub to read, and no other branch is read in its place.
 				Check it is a clone of the library, and that this computer can reach GitHub.
 			</Notice>
@@ -175,10 +176,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 				{/* Where syncing is on the Projects screen: the problem, if there is one, beside the button. */}
 				<div className="flex items-center gap-2">
 					<UpdateProblem update={catalog.update} />
-					<Button size="sm" variant="ghost" disabled={refreshing} onClick={() => void refresh()}>
-						<RefreshCwIcon className={refreshing ? 'animate-spin' : undefined} />
-						{refreshing ? 'Refreshing…' : 'Refresh'}
-					</Button>
+					<SyncButton syncing={syncing} onClick={() => void sync()} />
 				</div>
 			</Toolbar>
 			<Page>

@@ -1,4 +1,4 @@
-import { EllipsisVerticalIcon, FileTextIcon, FolderIcon, MessageSquareIcon, RefreshCwIcon } from 'lucide-react';
+import { EllipsisVerticalIcon, FileTextIcon, FolderIcon, MessageSquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { Checkout, CheckoutSuggestion, Project, ProjectIteration } from '../shared/contract';
 import { LoadingScreen } from './Loading';
@@ -8,6 +8,7 @@ import { PublishBanner, PublishLine, usePublishStatus } from './PublishStatus';
 import { startedAt, workOf } from '../shared/projects';
 import { RecordSheet } from './RecordSheet';
 import { Review } from './Review';
+import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
@@ -146,20 +147,15 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 					{/* Where syncing is, beside the button that starts it, so the two always read together. */}
 					<PublishLine status={publishStatus} />
 					{/* Sync sends what is waiting and reads what is new, rather than waiting for the next trigger. */}
-					<Button
-						size="sm"
-						variant="ghost"
-						disabled={syncing}
+					<SyncButton
+						syncing={syncing}
 						onClick={() => {
 							setSyncClicked(true);
 							void Promise.all([window.workspace.publishNow().then((r) => r.ok && setPublishStatus(r.value)), load()]).finally(() =>
 								setSyncClicked(false),
 							);
 						}}
-					>
-						<RefreshCwIcon className={syncing ? 'animate-spin' : undefined} />
-						{syncing ? 'Syncing…' : 'Sync'}
-					</Button>
+					/>
 					<Button size="sm" onClick={() => setCreating(true)}>
 						New
 					</Button>
