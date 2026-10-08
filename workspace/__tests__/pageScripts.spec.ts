@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
-import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, layerVisibleScript, resolveScript } from '../src/main/services/pageScripts';
+import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, layerVisibleScript, resolveScript } from '../src/shared/pageScripts';
 import type { CommentAnchor, MarkerRequest } from '../src/shared/contract';
 
 const page = (html: string, url = 'http://localhost:3000/users#/list') => {

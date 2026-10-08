@@ -1,4 +1,4 @@
-import type { MarkerRequest } from '../../shared/contract';
+import type { MarkerRequest } from './contract';
 
 /**
  * The code the app runs *inside* a preview page, as source strings.

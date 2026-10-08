@@ -2,7 +2,7 @@ import { type BrowserWindow, WebContentsView, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
 import type { MarkerRequest, MarkerResult, PageBounds, PageHoldReason, PickedPoint, PinEvent } from '../../shared/contract';
 import { assertPreviewUrl, sanitizeAnchor } from '../../shared/anchor';
-import { CANCEL_PICK_SCRIPT, MESSAGE_PREFIX, PICK_SCRIPT, ROUTE_SCRIPT, focusScript, layerVisibleScript, resolveScript } from './pageScripts';
+import { CANCEL_PICK_SCRIPT, MESSAGE_PREFIX, PICK_SCRIPT, ROUTE_SCRIPT, focusScript, layerVisibleScript, resolveScript } from '../../shared/pageScripts';
 import { type Box, cropRect, frameRect, toPicture } from './picture';
 
 /**
