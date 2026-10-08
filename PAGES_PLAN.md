@@ -37,6 +37,18 @@ else. This plan keeps everything inside the company's GitHub:
    in VS Code, it finishes by packaging and publishing the prototype, and its final summary includes the link and who
    can open it. Nobody has to remember a step (Phase 2).
 
+3. **A prototype always has a page, and the page follows the project.** Making a prototype is not finished until it
+   has a page, and that is done by the app and the agent, never left for someone to remember. The site mirrors the
+   project structure in the design repository, so every iteration of a project sits together:
+
+   ```text
+   /                            index of projects
+   /<project-id>/               the project: brief title, every iteration, newest first
+   /<project-id>/i1/            iteration 1 (the prototype, with its comments)
+   /<project-id>/i2/            iteration 2
+   /<project-id>/latest/        always the newest iteration, so a link shared once never goes stale
+   ```
+
 **A consequence worth stating:** requirement 1 cannot be met from a public repository, because a public repository's
 Pages site is public. The sandbox's site reported `"public": true` for exactly that reason. The publish step's check
 refuses to give out a link while the repo or its site is public.
@@ -128,6 +140,15 @@ publish a public one.
 - **The check afterwards.** Once deployed, it requests the link with no credentials and expects not to get the page
   (a sign-in or a "not found"). If an anonymous request gets the page, it says the site is public and tells the person
   not to share the link.
+- **The site is assembled when it is deployed, from what is in the repository.** The workflow takes every saved page
+  (every project, every iteration), wraps each in the comments viewer, and writes the project pages, the `latest`
+  links and the index. So changing the viewer never means re-saving a prototype, a saved prototype stays exactly as
+  built, and two people publishing from different machines can never overwrite each other's pages, because the site is
+  always rebuilt from the repository and deploys queue instead of cancelling.
+- **The project page** shows the project's title (from its brief), then each iteration, newest first: its name, date,
+  who made it, how many comments it has, and a link. Inside any iteration there is a switcher to the others, as in
+  the app. Codebase work is not on this site (delivery is engineering's), and the project page says where it is when
+  there is some.
 - **The page's address** is read from GitHub (the Pages API gives the site's URL; a private site has its own domain)
   and kept by the app. Never typed in.
 - **Open page** in the app's review screen, beside the iteration switcher, for a prototype whose page is published.
@@ -137,25 +158,37 @@ publish a public one.
 **Done when:** from the app, Noah opens `admin-usage` I1 on its private page; a teammate with access opens the same
 link; someone without access cannot; and the command refuses to publish when the repo is made public.
 
-### Phase 2: The agent hands back the link
+### Phase 2: The agent makes the prototype, publishes it, and hands back the link
 
-This is what makes it work from Claude Code in VS Code, where there is no app.
+This is what makes it work from Claude Code in VS Code, where there is no app. **Today some of making a prototype
+exists only inside the app** (creating the project folder, the iteration record, the brief and the next name, `i1`,
+`i2`), so an agent in VS Code could not make a prototype that has a place in the structure. Both halves move into
+shared commands that do not need the app.
 
-- **The prototype skill gets a final step:** when the build finishes, run the publish command, then put the **link**
-  in the final summary, with the iteration and who can open it ("anyone signed in to GitHub with read access to the
-  design repository"). It never states a link it did not get from the command, and if publishing failed it says so
-  and what is needed.
+- **Two shared commands:** **new-prototype** (the project folder and brief if it is the first, the iteration record,
+  and the next name on the one count) and **publish-prototype** (Phase 1). The app calls them too, so there is one
+  way to make a prototype and one way to publish it.
+- **The prototype skill ends with publishing:** when the build finishes, the agent runs the publish command and puts the
+  **link** in its final summary, with the iteration and who can open it ("anyone signed in to GitHub with read access
+  to the design repository"). It never states a link it did not get from the command.
+- **The other files that must say so,** so it always happens and nobody has to remember: the **address** skill (after a
+  prototype's comment is acted on, the page is published again, or a new iteration is, see the open question), the
+  product repositories' own Flock Designer agent files (they point to the shared skill and carry no copy), and the
+  "when to use the Flock Designer" routing in each product's `CLAUDE.md`.
 - **From VS Code,** the agent needs what a designer there already has: the product checkout with packages, the design
-  repository's clone beside it, and GitHub's command line signed in. The publish command finds the build tools itself,
-  since there is no app to inject them.
+  repository's clone beside it, and GitHub's command line signed in. The commands find the build tools themselves.
 - **A narrow permission:** agents never push, and that rule stays. The publish command is the one named exception,
   allowed as that command only, and it can only push `projects/` (Phase 1). Nothing else the agent runs may push.
+- **When publishing cannot happen** (private Pages not allowed, GitHub's command line not signed in, no access), the
+  agent says so plainly and why, and still finishes the prototype, with a standalone file to share instead. It never
+  leaves the summary without saying whether there is a link.
 - **From the app,** the agent's run does the same, and the app shows the link where **Open page** is.
 - **Waiting:** the command waits for the deployment (with a limit), so the link in the summary works when it is read;
   on a timeout it says the link will work shortly.
 
-**Done when:** Noah asks the Flock Designer agent for a prototype from Claude Code in VS Code, and its final message
-includes a link that opens the private page for someone with access.
+**Done when:** Noah asks the Flock Designer agent for a prototype from Claude Code in VS Code, a project and iteration
+record exist, and the agent's final message includes a link that opens the private page for someone with access, under
+its project, beside any earlier iterations.
 
 ### Phase 3: One comments experience, taken out of the review screen
 
@@ -245,7 +278,17 @@ The page cannot sign a person in by itself. One of these does it; each is a deci
 - **What permission lets an agent run the publish command and nothing else that pushes,** in the repositories where
   agents run?
 
+- **Address on a prototype: change the iteration in place, or make the next iteration?** In place keeps one page but
+  changes it under the people who commented. A new iteration keeps what they saw and fits the `i1`, `i2`, `i3`
+  structure. Leaning to a new iteration for a round of changes, and in place only for a small fix.
+- **How a designer working in VS Code finds out a comment arrived:** GitHub's notifications on the review thread, the
+  app's refresh, or something else.
+- **Taking a page down quickly** if something should not have been published (delete the files and redeploy, and who
+  can do it).
+- **How to tell whether people use it:** Pages has no analytics, so comment counts per iteration are the signal.
+- **What the project page links to** when there is codebase work for the project (the pull request), given the design
+  team may not have access to the product repository.
+- **The viewer on a phone,** since PMs and directors may open a link from one.
 - **The trigger UI** on the page: where it sits, and how it looks beside a prototype that has its own top bar.
 - **Which sign-in** for everyone (Phase 6), and who would own it.
-- Whether a page should show **every iteration** of a prototype (a switcher, as in the app) or only the one linked.
 - Whether comments made on a page should carry a mark saying so, for the agent and for the person reading them.
