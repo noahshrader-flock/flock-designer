@@ -152,7 +152,7 @@ day, **L** several days.
 | **M1** | **The version model in code** (`v1-i2`; old names read as V1) | Nothing | M | Low | **Done 2026-10-08**, see [flock-designer.md](flock-designer.md#change-log) |
 | **M2** | **Make prototypes without the app** (new-prototype and build-and-save as shared commands) | M1 | L | Medium | **Done 2026-10-08** (its real run is Noah's), see [flock-designer.md](flock-designer.md#change-log) |
 | **M3** | **Address starts the next iteration** when the current one has outside comments | M1, M2 | M | Medium | **Done 2026-10-08** (its real run is Noah's), see [flock-designer.md](flock-designer.md#change-log) |
-| **M4** | **One comments experience,** taken out of the review screen | M1 | L | **High** | Ready after M1 (tests first) |
+| **M4** | **One comments experience,** taken out of the review screen | M1 | L | **High** | **Done 2026-10-08** (its manual run is Noah's), see [flock-designer.md](flock-designer.md#change-log) |
 | **M5a** | **The site, assembled locally:** project pages, `latest` links, index | M1 | M | Low | Ready after M1 |
 | **M5b** | **Publish for real:** the publish command, the private gate, the deploy, **Open page** | M2, M5a (M0 for the private result) | L | Medium | **Buildable and testable now on the public repo;** the private result waits on M0 |
 | **M6** | **The agent hands back the link** | M2, M5b | S | Low | After M5b |
@@ -161,7 +161,7 @@ day, **L** several days.
 | **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | Blocked on a decision |
 | **M10** | **Parity and the smaller things we agreed** | M7 | M | Low | Later |
 
-**M1 to M3 are done (2026-10-08). Next: M5a,** on the fastest path below; M4 is ready too.
+**M1 to M4 are done (2026-10-08). Next: M5a,** on the fastest path below.
 
 **The repo is public for now (Noah's decision, 2026-10-07), so the whole flow can be built and tested before the admins
 answer.** Public Pages needs no login to view, so what it cannot show is that an anonymous viewer is blocked. That
@@ -231,28 +231,23 @@ command reads who commented through GitHub's command line, and treats the iterat
 `v1-i1` unchanged, `v1-i2` with the change, and the comment marked as addressed there. Coke's routing for a change
 asked for in Claude Code is on `noah/flock-designer-m3`, to fast-forward into `noah/flock-designer`.
 
-### M4: One comments experience, taken out of the review screen
+### M4: One comments experience, taken out of the review screen (done 2026-10-08)
 
-**Goal.** The comments experience exists once, so a page can use it later. **No visible change in the app.** This is
-the riskiest piece of work in the plan: `Review.tsx` is about 1,200 lines, and the comments are mixed with the native
-preview, the agent runs and about twenty calls into the app's main process.
+**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+short, one commit per step, the app working after each:
 
-- **4a. Pin the behavior first.** Tests that drive the review screen with a fake app interface and fix what it does
-  today: loading and merging comments, posting, resolving, deleting with confirmation, Address, pin clicks and moves,
-  selecting a comment. **Nothing moves until these pass against the current code.**
-- **4b. Move the pure parts** (`pageScripts.ts`) from `main/services/` to `shared/`. They have no Electron in them.
-- **4c. Define the two interfaces:** the *comments* (read, post, resolve, delete, move a pin, mark addressed, who the
-  viewer is) and the *page surface* (pick an element, show pins, focus a pin, report a pin's click or move, take a
-  picture of the spot).
-- **4d. Extract the components:** the side panel, the cards and their menu, the inline comment box, the comment-mode
-  control and the pin-event handling, written against the two interfaces.
-- **4e. The app's own adapter:** what it does today (IPC, the native preview, `capturePage`) behind those interfaces.
-  Address, Hand off and anything that runs an agent stay in the app and are not part of the shared components.
+- **4a:** the review screen rendered for real in jsdom against a fake app, with 17 tests of what it does with comments.
+  They passed before anything moved and pass after. One found a bug, fixed separately: comments that could not be read
+  on opening said nothing.
+- **4b:** `pageScripts.ts` is in `shared/`.
+- **4c:** `CommentStore` and `PageSurface` (`renderer/comments/surfaces.ts`), with the app's adapter for each
+  (`appAdapter.ts`). Mark-addressed is not in the store: Address stays the app's, and its result comes back as a
+  changed comment, like any other.
+- **4d, 4e:** `useComments` and three parts drawn from it (`CommentList`, `CommentBox`, `CommentControl`). The review
+  screen gives them the app's adapters, adds Address to a card's menu, and says on a card what the agent did.
+  `Review.tsx` is 781 lines, down from 1,231. New tests drive the parts through a store and page that are not the app's.
 
-**Done when:** the 4a tests pass before and after; `Review.tsx` is much smaller; the app behaves as before in a manual
-run through comment, pin, resolve, delete and Address; new tests drive the comment components through a fake adapter.
-
-**Undo:** each sub-step is its own commit and the app works after each, so any can be reverted without the others.
+**What is left of "done when" is Noah's:** a manual run through comment, pin, resolve, delete and Address in the app.
 
 ### M5a: The site, assembled locally
 
