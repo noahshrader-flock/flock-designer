@@ -52,9 +52,14 @@ const PAGE = `<!doctype html>
 /**
  * The page's script: the story file named in its address, every story in it by name, each in its own error boundary so
  * one that throws does not take the others down. It tells the frame's owner its height, and nothing else.
+ *
+ * **A story behaves as it does in Storybook, no more.** Portable stories leave out the one part of Storybook's preview
+ * that redraws a story when it updates its own args (`useArgs`), so a story wired that way (tabs, selects, drawers in
+ * FUI) would not respond; the page supplies just that. A story that pins a value without it does not respond in
+ * Storybook either, and does not here: making it respond is the story's to do, in the library.
  */
-export const previewEntry = (library: string, storyFiles: string[], preview: string | null): string => `
-import { Component, Fragment, createElement as h } from 'react';
+export const previewEntry = (library: string, storyFiles: string[], { preview, argsChannel }: { preview: string | null; argsChannel: boolean }): string => `
+import { Component, Fragment, createElement as h, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { composeStories, setProjectAnnotations } from '@storybook/react';
 ${preview === null ? '' : `import * as preview from ${JSON.stringify(preview)};
@@ -70,6 +75,27 @@ class Boundary extends Component {
 	render() { return this.state.error ? h('pre', { className: 'fd-error' }, String(this.state.error?.message ?? this.state.error)) : this.props.children; }
 }
 
+const argsOf = new Map();
+${
+	argsChannel
+		? `// What Storybook's preview does when a story calls useArgs' updateArgs or resetArgs, which portable stories leave out:
+// the story is drawn again with its args as updated. Nothing else, so a story behaves here as it does in Storybook.
+import('storybook/preview-api').then(async ({ addons }) => {
+	const { RESET_STORY_ARGS, UPDATE_STORY_ARGS } = await import('storybook/internal/core-events');
+	addons.getChannel().on(UPDATE_STORY_ARGS, ({ storyId, updatedArgs }) => argsOf.get(storyId)?.((args) => ({ ...args, ...updatedArgs })));
+	addons.getChannel().on(RESET_STORY_ARGS, ({ storyId }) => argsOf.get(storyId)?.({}));
+});`
+		: ''
+}
+const Live = ({ Story }) => {
+	const [args, setArgs] = useState({});
+	useEffect(() => {
+		argsOf.set(Story.id, setArgs);
+		return () => argsOf.delete(Story.id);
+	}, []);
+	return h(Story, args);
+};
+
 const spaced = (name) => name.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
 const root = createRoot(document.getElementById('root'));
 const fail = (error) => root.render(h('pre', { className: 'fd-error' }, String(error?.message ?? error)));
@@ -83,7 +109,7 @@ else load().then((m) => {
 	root.render(h(Fragment, null, ...stories.map(([name, Story]) =>
 		h('section', { key: name, className: 'fd-story', 'data-story': name },
 			h('h4', { className: 'fd-name' }, spaced(name)),
-			h(Boundary, null, h(Story))))));
+			h(Boundary, null, h(Live, { Story }))))));
 }, fail);
 `;
 
@@ -137,7 +163,9 @@ export const buildPreviews = async (library: string, storyFiles: string[], site:
 	const nodeModules = join(library, 'node_modules');
 	const entry = join(library, 'preview-entry.tsx');
 	const preview = PREVIEW_CANDIDATES.map((p) => join(library, p)).find((f) => existsSync(f)) ?? null;
-	writeFileSync(entry, previewEntry(library, storyFiles, preview));
+	// Storybook 9 and later are one package, \`storybook\`, which carries the channel \`useArgs\` speaks on; older ones are not.
+	const argsChannel = existsSync(join(nodeModules, 'storybook', 'package.json'));
+	writeFileSync(entry, previewEntry(library, storyFiles, { preview, argsChannel }));
 	mkdirSync(site, { recursive: true });
 	// Fonts and pictures are written as files beside the page: exactly the kinds the server will send.
 	const assets = Object.fromEntries(Object.keys(ASSET_TYPES).map((e) => [e, 'file' as const]));

@@ -191,7 +191,9 @@ allow-same-origin">`** (checked in a real Electron window, 2026-10-08): the libr
 which throws in a frame with no origin of its own, so the page drew nothing. With `allow-same-origin` the frame has the
 local server's origin, which is not the app window's, so the window still cannot be reached from it (that was checked
 too) and nothing has to be shared with another origin. The combination is only unsafe when the frame shares its
-parent's origin, which it never does here. **Where it differs from the plan:** no Vite, no
+parent's origin, which it never does here. **Stories respond as in Storybook, no more** (2026-10-08): the page supplies the one
+part of Storybook's preview portable stories leave out, redrawing a story that updates its own args with `useArgs`, and
+nothing for stories that only pin a value (they do not respond in Storybook either; that is the story's to change). **Where it differs from the plan:** no Vite, no
 `Install packages` step and no `no-packages` fix beyond saying to run `npm install` in the library: the build needs no
 registry, and sets aside only what the clone has not installed. **Not seen in the app yet:** P2 is the first thing that
 shows it.

@@ -59,7 +59,25 @@ const LIBRARY = {
 /** What Storybook's `composeStories` does for plain components, and nothing more. */
 const FAKE_STORYBOOK = {
 	'node_modules/@storybook/react/package.json': '{"name":"@storybook/react","version":"0.0.0","main":"index.js"}',
-	'node_modules/@storybook/react/index.js': `exports.setProjectAnnotations = () => {};\nexports.composeStories = (m) => Object.fromEntries(Object.entries(m).filter(([k]) => k !== 'default').map(([k, v]) => [k, v]));\n`,
+	// A component as is, or a story object drawn from its render and args, with the id and args Storybook gives a story.
+	'node_modules/@storybook/react/index.js': `exports.setProjectAnnotations = () => {};
+exports.composeStories = (m) => Object.fromEntries(Object.entries(m).filter(([k]) => k !== 'default').map(([k, v]) => {
+	if (typeof v === 'function') return [k, v];
+	const story = (props) => v.render({ ...v.args, ...props });
+	return [k, Object.assign(story, { id: 'story-' + k.toLowerCase(), args: v.args })];
+}));
+`,
+};
+
+/** Storybook's channel as its preview has it: what a story's `useArgs` sends `updateStoryArgs` on. */
+const FAKE_STORYBOOK_CHANNEL = {
+	'node_modules/storybook/package.json': '{"name":"storybook","version":"0.0.0","type":"module","exports":{"./preview-api":"./preview-api.js","./internal/core-events":"./core-events.js"}}',
+	// ES modules, as the real package ships them.
+	'node_modules/storybook/preview-api.js': `const listeners = {};
+const channel = { on: (e, f) => (listeners[e] ??= []).push(f), emit: (e, ...a) => (listeners[e] ?? []).forEach((f) => f(...a)) };
+export const addons = { getChannel: () => channel };
+`,
+	'node_modules/storybook/core-events.js': "export const UPDATE_STORY_ARGS = 'updateStoryArgs';\nexport const RESET_STORY_ARGS = 'resetStoryArgs';\n",
 };
 
 /** A clone of a library whose `develop` has `files`, with packages installed (React from the app, Storybook faked). */
@@ -140,6 +158,29 @@ describe('building the previews', () => {
 		// Nothing was looked for that is not there: no preview set-up is imported, so none had to be set aside.
 		const site = join(folder, readdirSync(folder)[0]!, 'site');
 		expect(readdirSync(site).filter((f) => f.endsWith('.js')).some((f) => readFileSync(join(site, f), 'utf8').includes('Not installed here'))).toBe(false);
+	});
+
+	it('redraws a story that updates its own args, as Storybook does, and leaves one that only pins a value alone', async () => {
+		makeLibrary({
+			...LIBRARY,
+			'src/components/FSTwo/FSTwo.stories.tsx': story(
+				'Inputs/FSTwo',
+				`import { addons } from 'storybook/preview-api';
+export const Counting = { args: { value: 1 }, render: (args) => <button onClick={() => addons.getChannel().emit('updateStoryArgs', { storyId: 'story-counting', updatedArgs: { value: args.value + 1 } })}>value {args.value}</button> };
+export const Pinned = { args: { checked: true }, render: (args) => <input type="checkbox" checked={args.checked} onChange={() => {}} /> };`,
+			),
+		});
+		write(clone, FAKE_STORYBOOK_CHANNEL);
+		const root = await render(await ready(previews()), 'src/components/FSTwo/FSTwo.stories.tsx');
+		const counting = root.querySelector('[data-story="Counting"] button') as HTMLButtonElement;
+		expect(counting.textContent).toBe('value 1');
+		await vi.waitFor(async () => {
+			counting.click();
+			expect(counting.textContent).not.toBe('value 1');
+		});
+		const pinned = root.querySelector('[data-story="Pinned"] input') as HTMLInputElement;
+		pinned.click();
+		expect(pinned.checked).toBe(true);
 	});
 
 	it('tells the page that frames it how tall it is, and nothing else', async () => {
@@ -274,11 +315,13 @@ describe('leaving the library alone', () => {
 
 describe('the page', () => {
 	it('lists the story files it can show, once each, and nothing per component', () => {
-		const entry = previewEntry('/lib', ['src/a/A.stories.tsx', 'src/b/B.stories.tsx'], '/lib/.storybook/preview.tsx');
+		const entry = previewEntry('/lib', ['src/a/A.stories.tsx', 'src/b/B.stories.tsx'], { preview: '/lib/.storybook/preview.tsx', argsChannel: true });
 		expect(entry.match(/"src\/a\/A\.stories\.tsx":/g)).toHaveLength(1);
 		expect(entry.match(/"src\/b\/B\.stories\.tsx":/g)).toHaveLength(1);
 		expect(entry).toContain('"/lib/.storybook/preview.tsx"');
-		expect(previewEntry('/lib', [], null)).not.toMatch(/preview|setProjectAnnotations\(/);
+		// No preview set-up, no Storybook channel: neither is looked for.
+		expect(previewEntry('/lib', [], { preview: null, argsChannel: false })).not.toMatch(/import \* as preview|setProjectAnnotations\(preview|storybook\/preview-api/);
+		expect(entry).toContain("import('storybook/preview-api')");
 		expect(entry).not.toMatch(/FSButton|FSCard/);
 	});
 
