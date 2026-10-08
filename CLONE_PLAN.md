@@ -1,6 +1,6 @@
 # Clone plan: pick a repository the app does not have yet, and say where it goes
 
-**Written 2026-10-08; decisions made the same day (Noah accepted every recommendation). C1 to C4 are built.** The plan for letting a designer start work in a repository that is not on
+**Written 2026-10-08; decisions made the same day (Noah accepted every recommendation). C1 to C5 are built.** The plan for letting a designer start work in a repository that is not on
 their computer: choose it from the list, see where it will be placed, and have the app put it there.
 
 This is the detail behind one item in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) (*After the pilot: candidates*,
@@ -65,7 +65,7 @@ each, the state document updated in the same change, and no data on GitHub is ch
 | **C2** (done) | **The clone itself:** a service that clones a named repository into a folder, with progress and cancel | C1, decision 3 | M | **Medium** |
 | **C3** (done) | **The New modal:** choose a repository with no clone, see where it goes and change it, confirm, watch it, and carry on into the work | C2, decisions 2, 4 | M | Medium |
 | **C4** (done) | **What it starts from:** branches for a repository with no clone (from GitHub), remote-only branches usable as a base, and the "no setup on this branch" answer | C3, decision 5 | M | Medium |
-| **C5** | **After the clone:** say what is missing to build (packages, access to private packages), and, if wanted, install them with progress | C3 | L | **High** |
+| **C5** (done) | **After the clone:** say what is missing to build (packages, access to private packages), and, if wanted, install them with progress | C3 | L | **High** |
 
 ### C1: Where clones go (done 2026-10-08)
 
@@ -109,16 +109,15 @@ of GitHub before the clone (Starts from appears only after it, Noah's call), and
 good branch rather than left where git put it, because the app reads the setup from the files there. **Not yet seen in
 the running app.**
 
-### C5: After the clone
+### C5: After the clone (done 2026-10-08)
 
-**The least settled, and the highest risk,** because installing packages touches the product's private registry:
-
-- **Say what is missing** with the existing readiness check, in the same dialog: packages not installed, or not
-  installable here, and what to ask for (the candidate item already says: detect missing access to the private packages
-  and say what to ask for).
-- **Install with progress, if wanted.** `npm ci` in a repository the person just accepted runs that repository's install
-  scripts. That is a larger trust decision than cloning, and the registry credentials are the person's own. **Do not
-  decide here;** decide it when C1 to C4 are in people's hands, on what they get stuck on.
+**Done, ahead of the pilot at Noah's request.** What it built, and the evidence, is in
+[flock-designer.md](flock-designer.md#change-log) (2026-10-08). **The trust question was settled by the app's own rule:**
+it runs only commands a repository declares, so installing is the repository's declared `install` command (Coke's:
+`npm ci`), run when the person presses **Install packages** in the New modal's not-installed warning, with their own
+registry sign-in. A repository that declares none is told what to run, as before. Coke's declaration is `5265e262` on
+`noah/flock-designer-c5` (which includes `-m6`), for Noah to fast-forward. **Not yet seen in the running app**, and
+not yet run against GitHub Packages.
 
 ## Out of scope
 
@@ -143,8 +142,8 @@ the running app.**
 ## Also decided (Noah, 2026-10-08)
 
 - **The clone folder is per person.** A repository does not suggest where files go on a computer.
-- **C5 is not built before the pilot reports.** C1 to C4 first; what stops people decides whether installing is built.
+- **C5 is not built before the pilot reports.** Revised by Noah the same day: built.
 
 ## Next
 
-**C1 to C4 are done.** C5 waits for the pilot, as decided. What is left is Noah's run by hand: clone a repository he does not have from the New modal, and clone Coke and see it land on a branch with the setup.
+**C1 to C5 are done.** What is left is Noah's: fast-forward Coke's `noah/flock-designer` to `noah/flock-designer-c5`, then by hand: clone a repository he does not have from the New modal, clone Coke and see it land on a branch with the setup, and install its packages from there.
