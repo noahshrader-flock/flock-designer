@@ -6,8 +6,8 @@ import type { Project, ProjectIteration } from '../src/shared/contract';
 import { button, menuItem, openMenu, render, unmountAll } from './reviewHarness';
 
 /**
- * A project card in the Projects grid: its menu at the top right, its name at the bottom right of the cover, who it is
- * by and what to know at a glance underneath. Against the card on its own.
+ * A project card in the Projects grid: on the cover, its menu at the top right and its name at the bottom left with who
+ * it is by directly under it; in the footer, a stacked list of the ways in. Against the card on its own.
  */
 
 const iteration = (more: Partial<ProjectIteration> = {}): ProjectIteration => ({
@@ -42,6 +42,9 @@ const show = async (p: Project, handlers: { onOpen?: () => void; onViewRecord?: 
 };
 const text = () => document.body.textContent ?? '';
 const kebab = () => button('More for Admin usage');
+const cover = () => document.querySelector('.aspect-\\[1920\\/1080\\]')!;
+const footer = () => document.querySelector('[data-slot="card-footer"]')!;
+const NOAH = { name: 'Noah Shrader', login: 'noah' };
 
 afterEach(async () => {
 	if (current) await unmountAll(current.root);
@@ -50,36 +53,87 @@ afterEach(async () => {
 });
 
 describe('the cover', () => {
-	it('has the project’s name at its bottom right, the menu at its top right, and nothing else: no folder, no id', async () => {
-		await show(project({ iterations: [CODEBASE] }));
-		const cover = document.querySelector('.aspect-\\[1920\\/1080\\]')!;
-		const [top, name] = [...cover.children];
-		expect(top!.className).toContain('justify-end');
+	it('has the name at its bottom left with the person directly under it, and the menu at its top right', async () => {
+		await show(project({ records: ['brief.md'], people: [NOAH] }));
+		const [top, bottom] = [...cover().children];
 		expect(top!.contains(kebab())).toBe(true);
-		expect(name!.textContent).toBe('Admin usage');
-		expect(name!.className).toContain('text-right');
-		expect(cover.querySelector('svg.lucide-folder')).toBeNull();
+		// Last in the top row, which spreads its two ends: badges at the left, the menu at the right.
+		expect(top!.className).toContain('justify-between');
+		expect(top!.lastElementChild!.contains(kebab())).toBe(true);
+		expect(bottom!.children[0]!.textContent).toBe('Admin usage');
+		const person = bottom!.children[1]!;
+		expect(person.querySelector('[data-slot="avatar"]')).not.toBeNull();
+		expect(person.querySelector('.truncate')!.textContent).toBe('Noah Shrader');
+		expect(bottom!.children[0]!.className).not.toContain('text-right');
+		// Stacked top to bottom, as written: not reversed.
+		expect(bottom!.className.split(' ')).toContain('flex-col');
+		expect(cover().querySelector('svg.lucide-folder')).toBeNull();
 		expect(text()).not.toContain('admin-usage');
-		expect(cover.className).not.toMatch(/\bbg-/);
+		expect(cover().className).not.toMatch(/\bbg-/);
 	});
 
-	it('keeps the name at the bottom when there is no menu to put at the top', async () => {
+	it('has the person’s avatar and name, and no date', async () => {
+		await show(project({ iterations: [CODEBASE], people: [NOAH] }));
+		expect(cover().querySelector('[data-slot="avatar"]')).not.toBeNull();
+		expect(text()).not.toMatch(/Started|2026|Oct/);
+		expect(document.querySelector('time')).toBeNull();
+	});
+
+	it('says how many others there are, and names them on hover', async () => {
+		await show(project({ people: [NOAH, { name: 'Sam Lee', login: 'sam' }, { name: 'Ava Cho', login: null }] }));
+		expect(text()).toContain('Noah Shrader');
+		expect(text()).toContain('+2');
+		expect(text()).not.toContain('Sam Lee');
+	});
+
+	it('has no avatar when there are no people, and the name stays at the bottom with nothing at the top', async () => {
 		await show(project());
-		const cover = document.querySelector('.aspect-\\[1920\\/1080\\]')!;
-		expect(cover.children).toHaveLength(2);
-		expect(cover.children[0]!.children).toHaveLength(0);
-		expect(document.querySelector('[aria-label^="More for"]')).toBeNull();
+		expect(document.querySelector('[data-slot="avatar"]')).toBeNull();
+		const [top, bottom] = [...cover().children];
+		expect(top!.children).toHaveLength(1);
+		expect(top!.textContent).toBe('');
+		expect(bottom!.textContent).toBe('Admin usage');
+	});
+
+	it('says what to know at a glance across from the menu: only on this machine, open comments', async () => {
+		await show(project({ localOnly: true, openComments: 3, iterations: [CODEBASE] }));
+		const top = cover().children[0]!;
+		expect(top.textContent).toContain('Only on this machine');
+		expect(top.querySelector('[aria-label="3 open comments"]')).not.toBeNull();
+		await unmountAll(current!.root);
+		await show(project({ openComments: 1 }));
+		expect(cover().querySelector('[aria-label="1 open comment"]')).not.toBeNull();
+		expect(text()).not.toContain('Only on this machine');
 	});
 });
 
 describe('the menu', () => {
-	it('opens what is made, each with its icon, and only what is made', async () => {
-		const { onOpen } = await show(project({ iterations: [PROTOTYPE, CODEBASE] }));
+	it('is the project’s records, each with its icon, and opens one', async () => {
+		const { onViewRecord } = await show(project({ iterations: [CODEBASE], records: ['brief.md', 'design-notes.md'] }));
 		const items = await openMenu(kebab());
-		expect(items.map((i) => i.textContent)).toEqual(['View prototype', 'View codebase']);
+		expect(items.map((i) => i.textContent)).toEqual(['Brief', 'Design notes']);
 		expect(items.every((i) => i.querySelector('svg'))).toBe(true);
-		menuItem(items, 'View codebase').click();
+		menuItem(items, 'Design notes').click();
+		expect(onViewRecord).toHaveBeenCalledWith('design-notes.md');
+	});
+
+	it('is not there when there are no records: the ways in are in the footer', async () => {
+		await show(project({ iterations: [PROTOTYPE, CODEBASE] }));
+		expect(document.querySelector('[aria-label^="More for"]')).toBeNull();
+	});
+});
+
+describe('the footer', () => {
+	it('stacks View prototype, then View codebase under it, each with its icon, and opens each', async () => {
+		const { onOpen } = await show(project({ iterations: [PROTOTYPE, CODEBASE] }));
+		const items = [...footer().querySelectorAll('button')];
+		expect(items.map((b) => b.textContent)).toEqual(['View prototype', 'View codebase']);
+		expect(items.every((b) => b.querySelector('svg'))).toBe(true);
+		expect(footer().className.split(' ')).toContain('flex-col');
+		items[1]!.click();
 		expect(onOpen).toHaveBeenCalledWith(CODEBASE);
+		items[0]!.click();
+		expect(onOpen).toHaveBeenCalledWith(PROTOTYPE);
 	});
 
 	it.each([
@@ -87,76 +141,20 @@ describe('the menu', () => {
 		['codebase work alone', [CODEBASE], ['View codebase']],
 	])('has only what exists: %s', async (_, iterations, labels) => {
 		await show(project({ iterations }));
-		expect((await openMenu(kebab())).map((i) => i.textContent)).toEqual(labels);
+		expect([...footer().querySelectorAll('button')].map((b) => b.textContent)).toEqual(labels);
+		expect(text()).not.toContain('Nothing made yet.');
 	});
 
 	it('opens the newest of each kind', async () => {
 		const older = iteration({ name: 'v1-i1', createdAt: '2026-09-01T10:00:00Z' });
 		const { onOpen } = await show(project({ iterations: [older, PROTOTYPE] }));
-		menuItem(await openMenu(kebab()), 'View prototype').click();
+		(footer().querySelector('button') as HTMLButtonElement).click();
 		expect(onOpen).toHaveBeenCalledWith(PROTOTYPE);
 	});
 
-	it('lists the project’s records after them, set apart, and opens one', async () => {
-		const { onViewRecord } = await show(project({ iterations: [CODEBASE], records: ['brief.md', 'design-notes.md'] }));
-		const items = await openMenu(kebab());
-		expect(items.map((i) => i.textContent)).toEqual(['View codebase', 'Brief', 'Design notes']);
-		expect(document.querySelector('[role="separator"]')).not.toBeNull();
-		menuItem(items, 'Design notes').click();
-		expect(onViewRecord).toHaveBeenCalledWith('design-notes.md');
-	});
-
-	it('has only the records when nothing is made, with no separator', async () => {
-		await show(project({ records: ['brief.md'] }));
-		expect((await openMenu(kebab())).map((i) => i.textContent)).toEqual(['Brief']);
-		expect(document.querySelector('[role="separator"]')).toBeNull();
-	});
-});
-
-describe('under the cover', () => {
-	it('has the first person’s avatar and name, and no date', async () => {
-		await show(project({ iterations: [CODEBASE], people: [{ name: 'Noah Shrader', login: 'noah' }] }));
-		expect(text()).toContain('Noah Shrader');
-		expect(document.querySelector('[data-slot="avatar"]')).not.toBeNull();
-		expect(text()).not.toMatch(/Started|2026|Oct/);
-		expect(document.querySelector('time')).toBeNull();
-	});
-
-	it('says how many others there are, and names them on hover', async () => {
-		await show(
-			project({
-				iterations: [CODEBASE],
-				people: [
-					{ name: 'Noah Shrader', login: 'noah' },
-					{ name: 'Sam Lee', login: 'sam' },
-					{ name: 'Ava Cho', login: null },
-				],
-			}),
-		);
-		expect(text()).toContain('Noah Shrader');
-		expect(text()).toContain('+2');
-		expect(text()).not.toContain('Sam Lee');
-	});
-
-	it('says nothing about people when there are none', async () => {
-		await show(project({ iterations: [CODEBASE] }));
-		expect(document.querySelector('[data-slot="avatar"]')).toBeNull();
-	});
-
-	it('says what to know at a glance: only on this machine, open comments, or that nothing is made', async () => {
-		await show(project({ localOnly: true, openComments: 3 }));
-		expect(text()).toContain('Only on this machine');
-		expect(document.querySelector('[aria-label="3 open comments"]')).not.toBeNull();
-		expect(text()).toContain('Nothing made yet.');
-		await unmountAll(current!.root);
-		await show(project({ iterations: [CODEBASE], openComments: 1 }));
-		expect(document.querySelector('[aria-label="1 open comment"]')).not.toBeNull();
-		expect(text()).not.toContain('Nothing made yet.');
-		expect(text()).not.toContain('Only on this machine');
-	});
-
-	it('has no buttons: the way in is the menu', async () => {
-		await show(project({ iterations: [PROTOTYPE, CODEBASE] }));
-		expect([...document.querySelectorAll('button')].map((b) => b.getAttribute('aria-label'))).toEqual(['More for Admin usage']);
+	it('says nothing is made when it is not, with no buttons', async () => {
+		await show(project());
+		expect(footer().textContent).toBe('Nothing made yet.');
+		expect(footer().querySelector('button')).toBeNull();
 	});
 });
