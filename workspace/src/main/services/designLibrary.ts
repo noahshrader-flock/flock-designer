@@ -9,7 +9,7 @@ import { runGit } from './git';
 import { gitHubRepoOf, originOf } from './repositories';
 
 /**
- * The component library on this machine, for the Design System tab: found, kept up to date, and read.
+ * The component library on this machine, for the Design System tab: connected or found, kept up to date, and read.
  *
  * **`develop` is the source of truth** (DESIGN_SYSTEM_PLAN.md, decision 4), so what is read is git's copy of GitHub's
  * `develop`, `origin/develop`, and never the folder: whatever branch the clone has checked out, and whatever is
@@ -43,7 +43,13 @@ export const findLibrary = (deps: DiscoveryDeps & { origin?: (dir: string) => st
 	findRepositories(deps, (dir) => isDesignSystem(repositoryOf(dir, deps.origin ?? originOf)))[0] ?? null;
 
 /** The design system the person connected, kept in the app's settings beside the checkout. */
-export const designSystemMemory = (userData: string): FolderMemory => new FolderMemory(join(userData, 'design-system.json'), 'folder');
+export class DesignSystemMemory extends FolderMemory {
+	constructor(file: string) {
+		super(file, 'folder');
+	}
+
+	static defaultPath = (userData: string): string => join(userData, 'design-system.json');
+}
 
 /** Where the library is now, and the folder connected before if it is no longer the library (moved, deleted, changed). */
 export interface LibraryLocation {

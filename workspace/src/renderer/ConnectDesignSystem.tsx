@@ -57,7 +57,15 @@ export const ConnectDesignSystem = ({ repository, lost, onConnected }: { reposit
 						<AlertDescription>The folder connected before is no longer the library, or is no longer there: {lost}</AlertDescription>
 					</Alert>
 				)}
-				<Tabs value={how} onValueChange={(v) => setHow(v as How)} className="items-center">
+				{/* What went wrong belongs to the tab it went wrong in. */}
+				<Tabs
+					value={how}
+					onValueChange={(v) => {
+						setHow(v as How);
+						setError(null);
+					}}
+					className="items-center"
+				>
 					<TabsList>
 						<TabsTrigger value="clone" disabled={clone.cloning !== null}>
 							Clone

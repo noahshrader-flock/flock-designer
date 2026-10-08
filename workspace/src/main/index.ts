@@ -7,7 +7,7 @@ import { AgentRunner } from './services/agent';
 import { DESIGN_REPO, DesignRepo } from './services/designRepo';
 import { CheckoutMemory } from './services/checkoutMemory';
 import { CloneFolderMemory } from './services/cloneFolder';
-import { designSystemMemory } from './services/designLibrary';
+import { DesignSystemMemory } from './services/designLibrary';
 import { PageView } from './services/pageView';
 import { MIN_WINDOW, type WindowState, WindowMemory, restoreState } from './services/windowMemory';
 import { PrototypeServer } from './services/prototypeServer';
@@ -163,7 +163,7 @@ void app.whenReady().then(() => {
 		prototypeServer,
 		sessions: new SessionMemory(SessionMemory.defaultPath(app.getPath('userData'))),
 		cloneFolders: new CloneFolderMemory(CloneFolderMemory.defaultPath(app.getPath('userData'))),
-		designSystems: designSystemMemory(app.getPath('userData')),
+		designSystems: new DesignSystemMemory(DesignSystemMemory.defaultPath(app.getPath('userData'))),
 	});
 	window.on('closed', () => prototypeServer.close());
 	// Coming back to the window is a good moment to publish whatever was done while it was away.

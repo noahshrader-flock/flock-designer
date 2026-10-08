@@ -35,8 +35,7 @@ import { branchCommit, branchExists, branchesWithFile, ensureLocalBranch, isRepo
 import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { type Cloned, Cloner, type GitProgress, notClonedOver } from './services/clone';
 import { INSTALL_COMMAND, Installer } from './services/install';
-import { connectLibrary, DesignLibrary, libraryFinder } from './services/designLibrary';
-import { FolderMemory } from './services/folderMemory';
+import { connectLibrary, DesignLibrary, DesignSystemMemory, libraryFinder } from './services/designLibrary';
 import { isDesignSystem } from '../shared/catalog';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
@@ -139,7 +138,7 @@ export interface IpcContext {
 	/** The component library for the Design System tab. Given for tests, to read a library made for them. */
 	designLibrary?: DesignLibrary;
 	/** The design system the person connected. */
-	designSystems?: FolderMemory;
+	designSystems?: DesignSystemMemory;
 }
 
 export const registerIpc = ({
@@ -160,7 +159,7 @@ export const registerIpc = ({
 	cloner = new Cloner(),
 	installer = new Installer(),
 	designLibrary,
-	designSystems = new FolderMemory(join(tmpdir(), 'flock-designer-design-system.json'), 'folder'),
+	designSystems = new DesignSystemMemory(join(tmpdir(), 'flock-designer-design-system.json')),
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
@@ -306,7 +305,12 @@ export const registerIpc = ({
 	ipcMain.handle(
 		CHANNELS.locateDesignSystem,
 		guard(async (): Promise<boolean> => {
-			const { canceled, filePaths } = await dialog.showOpenDialog(window, { title: 'Choose the design system library', properties: ['openDirectory'] });
+			// Opened where clones go, which is where a clone of the library most likely is.
+			const { canceled, filePaths } = await dialog.showOpenDialog(window, {
+				title: 'Choose the design system library',
+				defaultPath: cloneFolder(),
+				properties: ['openDirectory'],
+			});
 			const chosen = filePaths[0];
 			if (canceled || chosen === undefined) return false;
 			await connectLibrary(chosen, designSystems);

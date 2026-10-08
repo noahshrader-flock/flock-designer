@@ -105,6 +105,16 @@ describe('Locate', () => {
 	});
 });
 
+it('clears what went wrong in one tab when the other is chosen', async () => {
+	await open({ locateDesignSystem: async () => fail('/x is not a git repository.') });
+	await tab('Locate');
+	await press(button('Browse…'));
+	await settle();
+	expect(text()).toContain('/x is not a git repository.');
+	await tab('Clone');
+	expect(text()).not.toContain('/x is not a git repository.');
+});
+
 it('says a folder connected before is lost', async () => {
 	await open({}, '/h/Old/fui');
 	expect(text()).toContain('is no longer there: /h/Old/fui');

@@ -126,7 +126,7 @@ beforeEach(async () => {
 		prototypeServer,
 		cloneFolders: new (await import('../src/main/services/cloneFolder')).CloneFolderMemory(join(home, 'clone-folder.json')),
 		cloner: new (await import('../src/main/services/clone')).Cloner({ urlOf: (r) => cloneSources[r] ?? 'file:///nowhere' }),
-		designSystems: new (await import('../src/main/services/folderMemory')).FolderMemory(join(home, 'design-system.json'), 'folder'),
+		designSystems: new (await import('../src/main/services/designLibrary')).DesignSystemMemory(join(home, 'design-system.json')),
 	});
 });
 
@@ -182,6 +182,8 @@ describe('the Design System catalog', () => {
 			g(home, 'clone', '-q', GITHUB, chosen);
 			(await picker()).mockResolvedValueOnce({ canceled: false, filePaths: [chosen] } as never);
 			expect(await call(CHANNELS.locateDesignSystem)).toEqual({ ok: true, value: true });
+			// The picker opens where clones go.
+			expect((await picker()).mock.calls.at(-1)?.[1]).toMatchObject({ defaultPath: join(home, 'GitHub'), properties: ['openDirectory'] });
 			expect(await ready()).toMatchObject({ state: 'ready', components: [{ name: 'FSButton' }] });
 			expect(JSON.parse(readFileSync(join(home, 'design-system.json'), 'utf8'))).toEqual({ folder: chosen });
 		});
