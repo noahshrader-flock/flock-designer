@@ -73,14 +73,13 @@ describe('the list', () => {
 		expect(rows()).toEqual(['FSButton', 'FSCard', 'FSCardContent', 'FSPopovers', 'FSApp']);
 		expect(text()).toContain('develop · fc2658f');
 		expect(text()).toContain('5 components');
-		expect(text()).toContain('needs Chromatic access');
+		expect(text()).not.toContain('Chromatic');
 	});
 
-	it('links each component to Storybook, Figma when there is one, and Source; a link not known is not there', async () => {
+	it('links each component to Storybook and Source, never Figma; a link not known is not there', async () => {
 		await open(() => ok(ready()));
 		expect(links('FSButton')).toEqual([
 			['Storybook', 'https://sb.example/FSButton'],
-			['Figma', 'https://figma.example/button'],
 			['Source', 'https://github.com/x/FSButton'],
 		]);
 		expect(links('FSCard').map(([t]) => t)).toEqual(['Storybook', 'Source']);
@@ -118,12 +117,9 @@ describe('finding a component', () => {
 		expect(text()).toContain('No components match.');
 	});
 
-	it('shows only the gaps, which leaves the parts out', async () => {
+	it('has no filter for components without a story', async () => {
 		await open(() => ok(ready()));
-		await press(button('Without a story (1)'));
-		expect(rows()).toEqual(['FSApp']);
-		await press(button('Without a story (1)'));
-		expect(rows()).toHaveLength(5);
+		expect([...document.querySelectorAll('button')].some((b) => /without a story/i.test(b.textContent ?? ''))).toBe(false);
 	});
 
 	it('shows composites or components alone', async () => {

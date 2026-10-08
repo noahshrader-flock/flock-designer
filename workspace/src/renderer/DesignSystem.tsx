@@ -58,7 +58,6 @@ const Row = ({ component, part }: { component: CatalogComponent; part: boolean }
 					</Out>
 				),
 			)}
-			{component.figma && <Out href={component.figma}>Figma</Out>}
 			<Out href={component.source}>Source</Out>
 		</div>
 	</li>
@@ -80,7 +79,7 @@ const Notice = ({ title, children, action }: { title: string; children: ReactNod
 /**
  * The Design System tab: the component library as its `develop` branch has it, from a clone on this machine
  * (DESIGN_SYSTEM_PLAN.md). An index, not a second Storybook: each component is a name, a line and links to where it
- * is shown (Storybook), drawn (Figma) and written (Source).
+ * is shown (Storybook) and written (Source).
  *
  * It reads once when first shown, at once from what the clone has, then again when GitHub has been asked for changes;
  * after that only when Refresh is pressed. It stays mounted while hidden, so the search and the scroll survive.
@@ -91,7 +90,6 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [refreshing, setRefreshing] = useState(false);
 	const [query, setQuery] = useState('');
 	const [kind, setKind] = useState<Kind>('all');
-	const [gapsOnly, setGapsOnly] = useState(false);
 	const started = useRef(false);
 
 	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {
@@ -129,10 +127,9 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		return catalog.components.filter(
 			(c) =>
 				(kind === 'all' || (kind === 'composite') === c.composite) &&
-				(!gapsOnly || isGap(c)) &&
 				(q === '' || c.name.toLowerCase().includes(q) || (c.subtitle ?? '').toLowerCase().includes(q)),
 		);
-	}, [catalog, query, kind, gapsOnly]);
+	}, [catalog, query, kind]);
 
 	if (error && catalog === null) {
 		return (
@@ -159,7 +156,6 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		);
 	}
 
-	const gaps = catalog.components.filter(isGap).length;
 	const groups: { group: string; rows: CatalogComponent[] }[] = [];
 	for (const c of shown) {
 		const last = groups[groups.length - 1];
@@ -183,7 +179,6 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 				</Button>
 			</Toolbar>
 			<Page>
-				<p className="text-muted-foreground text-sm">Storybook links open the hosted Storybook, which needs Chromatic access.</p>
 				{error && (
 					<Alert variant="destructive">
 						<AlertDescription>{error}</AlertDescription>
@@ -201,9 +196,6 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 							<TabsTrigger value="composite">Composite</TabsTrigger>
 						</TabsList>
 					</Tabs>
-					<Button size="sm" variant={gapsOnly ? 'secondary' : 'ghost'} aria-pressed={gapsOnly} onClick={() => setGapsOnly((g) => !g)}>
-						Without a story ({gaps})
-					</Button>
 				</div>
 				{catalog.components.length === 0 ? (
 					<p className="text-muted-foreground text-sm">
