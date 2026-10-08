@@ -6,6 +6,7 @@ import { prototypeAddressed } from '../renderer/comments/addressed';
 import { CommentBox } from '../renderer/comments/CommentBox';
 import { CommentControl } from '../renderer/comments/CommentControl';
 import { CommentList } from '../renderer/comments/CommentList';
+import { CommentsHeading } from '../renderer/comments/CommentsHeading';
 import { useComments } from '../renderer/comments/useComments';
 import { Alert, AlertDescription } from '../renderer/ui/alert';
 import { Button } from '../renderer/ui/button';
@@ -72,14 +73,21 @@ const Commenting = ({ config, slots, token, onSignOut }: { config: ViewerConfig;
 	// The prototype is up once its frame has loaded, and again after every load: its pins are drawn then.
 	useEffect(() => {
 		const frame = slots.frame;
+		const moved = () => void page.route().then(setRoute);
+		// Each load is a new document, listened to for moves within it; the last is let go on leaving.
+		let listening: Window | null = null;
 		const loaded = () => {
 			setOpened(true);
-			void page.route().then(setRoute);
-			frame.contentWindow?.addEventListener('hashchange', () => void page.route().then(setRoute));
+			moved();
+			listening = frame.contentWindow;
+			listening?.addEventListener('hashchange', moved);
 		};
 		if (frame.contentDocument?.readyState === 'complete') loaded();
 		frame.addEventListener('load', loaded);
-		return () => frame.removeEventListener('load', loaded);
+		return () => {
+			frame.removeEventListener('load', loaded);
+			listening?.removeEventListener('hashchange', moved);
+		};
 	}, [slots.frame, page]);
 
 	const comments = useComments({ store, page, opened, route, setError, onPinClick: () => setListOpen(true) });
@@ -95,13 +103,12 @@ const Commenting = ({ config, slots, token, onSignOut }: { config: ViewerConfig;
 			{listOpen &&
 				createPortal(
 					<div className="bg-card flex h-full w-[360px] flex-col gap-4 overflow-y-auto border-l p-4">
-						<div className="flex items-center gap-2">
-							<h3 className="grow text-sm font-semibold">{comments.total > 0 ? `Comments (${comments.total})` : 'Comments'}</h3>
+						<CommentsHeading comments={comments}>
 							<Button size="sm" variant="ghost" title="Forget the token kept in this browser" onClick={onSignOut}>
 								<LogOutIcon />
 								Sign out
 							</Button>
-						</div>
+						</CommentsHeading>
 						{error && !comments.composing && (
 							<Alert variant="destructive">
 								<AlertDescription>{error}</AlertDescription>

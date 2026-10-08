@@ -88,7 +88,7 @@ export const framePage = (frame: HTMLIFrameElement): PageSurface & { route(): Pr
 			listeners.add(listener);
 			return () => void listeners.delete(listener);
 		},
-		/** Where in the prototype it is, as the pins read it. */
+		/** Where the frame is now: when it changes, the pins are drawn again. */
 		route: async () => String((await run<unknown>(ROUTE_SCRIPT)) ?? ''),
 	};
 };

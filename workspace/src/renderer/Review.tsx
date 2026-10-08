@@ -15,6 +15,7 @@ import { byVersion, freshIteration, isPrototypeKey, iterationLabel, parsePrototy
 import { CommentBox } from './comments/CommentBox';
 import { CommentControl } from './comments/CommentControl';
 import { CommentList } from './comments/CommentList';
+import { CommentsHeading } from './comments/CommentsHeading';
 import { prototypeAddressed } from './comments/addressed';
 import { appComments, appPage } from './comments/appAdapter';
 import { useComments } from './comments/useComments';
@@ -728,7 +729,7 @@ export const Review = ({
 						{/* Inline on purpose: the width is wherever the person dragged the divider, a runtime value. */}
 						<div className="bg-card flex min-h-0 shrink-0 flex-col" style={{ width: panelWidth }}>
 							<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-								<h3 className="text-sm font-semibold">{comments.total > 0 ? `Comments (${comments.total})` : 'Comments'}</h3>
+								<CommentsHeading comments={comments} />
 								{error && opened && !composing && (
 									<Alert variant="destructive">
 										<AlertDescription>{error}</AlertDescription>
