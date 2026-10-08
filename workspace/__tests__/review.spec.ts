@@ -122,6 +122,21 @@ describe('writing a comment', () => {
 		expect(app.calls.pageCancelPick).toHaveLength(1);
 	});
 
+	it('takes the first click after comment mode was left and entered again', async () => {
+		const app = fakeApp();
+		await open(app);
+		await press(button('Comment'));
+		await settle();
+		// Left while it was waiting for a click, then entered again.
+		await press(button('Comment'));
+		await settle();
+		await press(button('Comment'));
+		await settle();
+		await app.click();
+		await settle();
+		expect(document.querySelector('#comment-draft')).not.toBeNull();
+	});
+
 	it('keeps the box open and says why when saving fails', async () => {
 		const app = fakeApp({ postComment: async () => fail('Not signed in') });
 		await open(app);

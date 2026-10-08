@@ -210,6 +210,8 @@ export const useComments = ({
 		// which reads as someone pressing Escape.
 		if (pickActive.current) return;
 		pickActive.current = true;
+		// A new pick: a backing-out meant for one before it is not this one's, or its first click would be dropped.
+		pickCancelled.current = false;
 		setError(null);
 		setMode('picking');
 		const r = await page.pick();

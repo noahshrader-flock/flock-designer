@@ -157,11 +157,11 @@ day, **L** several days.
 | **M5b** | **Publish for real:** the publish command, the deploy, **Open page** | M2, M5a (M0 for the private result) | L | Medium | **Built and run 2026-10-08**, see [flock-designer.md](flock-designer.md#change-log) |
 | **M6** | **The agent hands back the link** | M2, M5b | S | Low | **Built 2026-10-08**, see [flock-designer.md](flock-designer.md#change-log) |
 | **M7** | **Comments on the page** (shared components, browser adapter, test sign-in) | M4, M5b | L | Medium | **Built 2026-10-08**; its real run needs the site published, see [flock-designer.md](flock-designer.md#change-log) |
-| **M8** | **The round trip, proved** | M7 | S | Low | After M7 |
+| **M8** | **The round trip, proved** | M7 | S | Low | **Built 2026-10-08**; the hand run is Noah's, see [flock-designer.md](flock-designer.md#change-log) |
 | **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | Blocked on a decision |
 | **M10** | **Parity and the smaller things we agreed** | M7 | M | Low | Later |
 
-**M1 to M5a are done, and M5b to M7 are built (2026-10-08).** The site is published (public while the repo is). The private result waits on M0. Next: M8, the round trip.
+**M1 to M5a are done, and M5b to M8 are built (2026-10-08).** The site is published (public while the repo is). The private result waits on M0. Next: M9, signing in for everyone, which waits on a decision.
 
 **The repo is public for now (Noah's decision, 2026-10-07), so the whole flow can be built and tested before the admins
 answer.** Public Pages needs no login to view, so what it cannot show is that an anonymous viewer is blocked. That
@@ -338,15 +338,20 @@ reason. The command uses `gh`, which has them.
 **What is left of "done when" is Noah's:** on the published page, sign in with a token, pick an element, write the
 comment, see its pin and card, and see it on the iteration's review issue. It needs the site published first (M5b).
 
-### M8: The round trip, proved
+### M8: The round trip, proved (built 2026-10-08)
 
-- Comment on the page; in the app it appears (within a minute, on focus, or with Sync), the pin in the same place on
-  the same element.
-- Resolve it in the app and the page shows it resolved; delete one on the page and it goes from the app.
-- Run **Address** from the app on a comment made on the page, and see the next iteration appear and publish (M3, M6).
-- A test that drives both adapters against one fake GitHub, so the round trip is checked on every change.
+**Built:** `workspace/__tests__/roundTrip.spec.ts` runs the page's viewer and the app's review screen against one fake
+GitHub, each the real thing (the app's calls go through its own `DesignRepo`, as its main process does), and checks on
+every change: a comment made on the page is in the app, by its author, pinned on the same element; it appears in an app
+already open when its window comes to the front; resolved in the app it is resolved on the page, its pin gone; deleted
+on the page it is gone from the app; addressed from the app, the page says so and where the change is. Address making
+the next iteration and publishing it are the app's own tests (M3, M6).
 
-**Done when:** Noah watches a comment made on the page appear in the app, and acts on it there.
+**Found by it and fixed:** after leaving comment mode while it waited for a click, the first click on entering it again
+was dropped, in the app and on the page alike.
+
+**What is left of "done when" is Noah's:** on the published page, comment as a second person (a token for another
+GitHub account), and watch it appear in the app and act on it there.
 
 ### M9: Signing in for everyone (a decision first)
 

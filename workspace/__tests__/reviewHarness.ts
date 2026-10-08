@@ -30,6 +30,11 @@ export const fakeApp = (overrides: Impl = {}) => {
 		pageSnapshot: async () => ok(null),
 		// A pick waits for a click on the page, which `click` below gives it.
 		pagePick: () => new Promise((resolve) => (picked = resolve)),
+		// As the page does: a pick waiting for a click ends with nothing picked.
+		pageCancelPick: async () => {
+			picked?.(ok(null));
+			return ok(null);
+		},
 		onPinEvent: (l: (e: PinEvent) => void) => {
 			pinListener = l;
 			return () => void (pinListener = null);
