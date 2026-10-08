@@ -1,0 +1,21 @@
+[
+  {
+    "projectId": "alert-history",
+    "name": "v1-i1",
+    "branch": "prototype/alert-history/v1-i1",
+    "commit": null,
+    "createdAt": "2026-10-08T12:08:24.685Z",
+    "note": "An \"Alert history\" view for the admin area: a table of recent alerts with a status filter, plus an empty state when the filter matches nothing. Mock data only. Prototype, not codebase work.",
+    "contributors": [
+      {
+        "name": "Noah Shrader",
+        "login": null
+      }
+    ],
+    "basedOn": {
+      "repository": "flock-coke",
+      "branch": "noah/flock-designer",
+      "commit": "8089eb7f3e07fff9967648aa6226f52a5d911abe"
+    }
+  }
+]
