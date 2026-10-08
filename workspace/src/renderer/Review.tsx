@@ -1073,18 +1073,11 @@ export const Review = ({
 									<p className="text-muted-foreground text-sm">No comments yet. Choose Comment, then click anywhere on the page.</p>
 								)}
 								{comments?.map((comment) => {
-									/**
-									 * Acted on and still open: one addressed before the app resolved them with the run, still waiting for the
-									 * person's verdict. Such a comment is settled as far as the work goes, so the card steps back: it is faded, it
-									 * offers no second run, and it says nothing about where its pin ended up -- the agent having just changed the
-									 * very element it pointed at, "no longer on the page" is the expected outcome, not news. A comment addressed
-									 * now is resolved, so it is drawn as any resolved one, with the line saying what the agent did.
-									 */
-									const addressed = !comment.resolved && comment.addressedAt !== null;
 									// A resolved comment is not drawn on the page at all, so whatever was last said
 									// about placing it ("the element is no longer there") is about a pin that no
-									// longer exists, and saying it again would be about nothing.
-									const state = comment.resolved || addressed ? undefined : placed.get(comment.id);
+									// longer exists, and saying it again would be about nothing. One the agent addressed
+									// is resolved with it, so this covers that too.
+									const state = comment.resolved ? undefined : placed.get(comment.id);
 									const n = numberOf(comment.id);
 									return (
 										<div
@@ -1097,17 +1090,14 @@ export const Review = ({
 												setSelected(comment.id);
 												if (comment.anchor) void window.workspace.pageFocusMarker(comment.id);
 											}}
-											// An addressed comment fades its content and not the card: the menu, which is
-											// still live, stays at full strength, since it is the point of it being here.
-											data-addressed={addressed}
-											className={`group rounded-lg border p-3 ${selected === comment.id ? 'border-primary bg-accent border-2' : ''} ${
+											className={`rounded-lg border p-3 ${selected === comment.id ? 'border-primary bg-accent border-2' : ''} ${
 												comment.anchor ? 'cursor-pointer' : ''
 											} ${comment.resolved ? 'opacity-65' : ''}`}
 										>
 											<div className="flex flex-col gap-1.5">
 												<div className="flex flex-row items-center gap-2">
 													{n > 0 && <Badge variant="secondary">{n}</Badge>}
-													<span className="group-data-[addressed=true]:opacity-60 min-w-0 truncate text-sm font-medium">{comment.author}</span>
+													<span className="min-w-0 truncate text-sm font-medium">{comment.author}</span>
 													{comment.resolved && <Badge variant="success">Resolved</Badge>}
 													{/* One comment at a time: the designer picks the one that is a clear change, and
 													    leaves the ones that still need a decision. */}
@@ -1126,7 +1116,7 @@ export const Review = ({
 														{/* The menu is drawn outside the card but its clicks still reach the card in React: they must not select it. */}
 														<DropdownMenuContent align="end" className="w-auto" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
 															{/* The agent runs on this machine, against the product repository: without it there is nothing to build with. */}
-															{!comment.resolved && !addressed && checkout && (
+															{!comment.resolved && checkout && (
 																<DropdownMenuItem disabled={address.kind === 'running'} onSelect={() => void addressComment(comment.id)}>
 																	<WandSparklesIcon />
 																	{addressing === comment.id && address.kind === 'running' ? 'Working…' : 'Address'}
@@ -1165,19 +1155,19 @@ export const Review = ({
 														</Button>
 													</div>
 												)}
-												<p className="group-data-[addressed=true]:opacity-60 text-sm">{comment.body}</p>
+												<p className="text-sm">{comment.body}</p>
 												{comment.picture && (
 													<img
-														className="group-data-[addressed=true]:opacity-60 max-w-[240px] rounded border"
+														className="max-w-[240px] rounded border"
 														src={comment.picture}
 														alt={`The spot comment ${n || ''} was made on`}
 													/>
 												)}
 												{comment.anchor?.state && (
-													<span className="group-data-[addressed=true]:opacity-60 text-muted-foreground text-xs">State: {comment.anchor.state}</span>
+													<span className="text-muted-foreground text-xs">State: {comment.anchor.state}</span>
 												)}
 												{comment.anchor && state === 'elsewhere' && (
-													<span className="group-data-[addressed=true]:opacity-60 text-muted-foreground text-xs">On {comment.anchor.route}</span>
+													<span className="text-muted-foreground text-xs">On {comment.anchor.route}</span>
 												)}
 												{state && NOTE[state] && <span className="text-warning text-xs">{NOTE[state]}</span>}
 											</div>

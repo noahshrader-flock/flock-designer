@@ -355,6 +355,16 @@ describe('setResolved', () => {
     expect((writes[0]?.body as { body: string }).body).toBe('Looks off');
   });
 
+  it("reopens one the agent addressed as an ordinary open comment, so it can be addressed again", async () => {
+    const { addressedAt, isResolved, withAddressed, withResolved } = await import('../src/shared/anchor');
+    const { session, writes } = fakeSession({ [COMMENT]: { id: 70, user: { login: 'pm' }, created_at: 't', body: withResolved(withAddressed('Looks off', 'abc1234', 'v1-i2'), true) } });
+    await new DesignRepo(session, REF).setResolved(70, false);
+    const sent = (writes[0]?.body as { body: string }).body;
+    expect(isResolved(sent)).toBe(false);
+    expect(addressedAt(sent)).toBeNull();
+    expect(sent).toBe('Looks off');
+  });
+
   it('writes nothing when the comment is already in the state asked for', async () => {
     const { session, writes } = fakeSession({ [COMMENT]: { id: 70, user: { login: 'pm' }, created_at: 't', body: 'Looks off' } });
     await new DesignRepo(session, REF).setResolved(70, false);

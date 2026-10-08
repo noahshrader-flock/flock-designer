@@ -348,15 +348,17 @@ export class DesignRepo {
   /**
    * Marks a comment resolved, or open again. GitHub decides who may: the comment's author,
    * or anyone who can write to the repository, so nothing is enforced here.
+   *
+   * Reopening also clears the agent's mark: a comment reopened is one whose change was not what was meant, so it is
+   * open as any other, with its pin, and Address can be run on it again.
    */
   async setResolved(commentId: number, resolved: boolean): Promise<ReviewComment> {
     const path = `${this.base}/issues/comments/${commentId}`;
     const current = asRecord(await this.session.api(path));
-    if (isResolved(String(current.body ?? '')) === resolved) return this.toComment(current);
-    const updated = await this.session.api(path, {
-      method: 'PATCH',
-      body: { body: withResolved(String(current.body ?? ''), resolved) },
-    });
+    const body = String(current.body ?? '');
+    const next = resolved ? withResolved(body, true) : withAddressed(withResolved(body, false), null);
+    if (isResolved(next) === isResolved(body) && addressedAt(next) === addressedAt(body)) return this.toComment(current);
+    const updated = await this.session.api(path, { method: 'PATCH', body: { body: next } });
     return this.toComment(asRecord(updated));
   }
 
