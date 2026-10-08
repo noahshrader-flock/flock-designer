@@ -32,10 +32,10 @@ else. This plan keeps everything inside the company's GitHub:
 1. **Viewing a page requires signing in to GitHub, and having access.** A prototype page is never public. Only a
    person who is signed in to GitHub and has read access to the design repository can open it; anyone else gets a
    sign-in or a "not found." This is private GitHub Pages (visibility **private**, not public), and the plan treats it as
-   a gate, not a setting to hope is right: the publish step checks it before any link exists (Phase 1).
+   a gate, not a setting to hope is right: the publish step checks it before any link exists (Phase 2).
 2. **The agent that makes a prototype hands back the link.** Whether it was started from the app or from Claude Code
    in VS Code, it finishes by packaging and publishing the prototype, and its final summary includes the link and who
-   can open it. Nobody has to remember a step (Phase 2).
+   can open it. Nobody has to remember a step (Phase 3).
 
 3. **A prototype always has a page, and the page follows the project.** Making a prototype is not finished until it
    has a page, and that is done by the app and the agent, never left for someone to remember. The site mirrors the
@@ -43,15 +43,36 @@ else. This plan keeps everything inside the company's GitHub:
 
    ```text
    /                            index of projects
-   /<project-id>/               the project: brief title, every iteration, newest first
-   /<project-id>/i1/            iteration 1 (the prototype, with its comments)
-   /<project-id>/i2/            iteration 2
-   /<project-id>/latest/        always the newest iteration, so a link shared once never goes stale
+   /<project-id>/               the project: its versions side by side, each with its iterations
+   /<project-id>/v1/i1/         version 1, iteration 1 (the prototype, with its comments)
+   /<project-id>/v1/i2/         version 1 after a refinement
+   /<project-id>/v2/i1/         a different idea for the same brief: version 2
+   /<project-id>/v1/latest/     the newest iteration of version 1, so a link shared once never goes stale
+   /<project-id>/latest/        the selected version's newest iteration, or the newest version's if none is selected
    ```
+
+   **A version is a different idea; an iteration is a refinement of one version.** The two words are used strictly
+   (Phase 1).
 
 **A consequence worth stating:** requirement 1 cannot be met from a public repository, because a public repository's
 Pages site is public. The sandbox's site reported `"public": true` for exactly that reason. The publish step's check
 refuses to give out a link while the repo or its site is public.
+
+## Decisions made
+
+| Decision | Choice | Why |
+|---|---|---|
+| **Who can view or comment** | **Anyone who views or comments has signed in to GitHub.** There is no anonymous path (Noah, 2026-10-07) | Prototypes show the product's UI and are for the company; viewing is private Pages, commenting is a signed-in action |
+| **Versions and iterations** | A **version** is a different idea for the same brief (V1, V2, V3); an **iteration** is a refinement of one version (I1, I2, I3). Page addresses are `/<project>/v1/i2/` (Noah, 2026-10-07) | A designer explores several ideas and then refines one. One flat count could not say which iteration belonged to which idea |
+| **When a new iteration starts** | An iteration is frozen once someone other than its author comments on it; the next change becomes the next iteration of that version (recommended 2026-10-07, accepted for small iterations) | Keeps what people commented on intact without an iteration per comment, and needs no step from anyone |
+| **Getting the org repo and private Pages** | In hand: Noah is handling the request with the GitHub admins (2026-10-07) | Phase 0 |
+
+**Recommended, not yet confirmed:** publish from `main`; the publish command waits up to about three minutes for the
+deployment; one allowed publish command in a settings file that ships in the repo; GitHub's own notifications plus a
+check when the agent starts; an "unpublish" command; no analytics; a plain link to the code's branch or pull request on
+the project page; the viewer readable on a phone but not built for commenting from one; a slim bar above the prototype
+as the trigger; no mark on comments made on a page. **The sign-in for everyone** is recommended to be a small
+stateless sign-in service, needing security's approval, with the extension as the fallback.
 
 ## What is known (checked on 2026-10-07)
 
@@ -72,13 +93,13 @@ refuses to give out a link while the repo or its site is public.
 | **The Pages API says whether a site is public** (`"public": true` on the sandbox's public site) | `gh api repos/noahshrader-flock/prototype-pages-sandbox/pages` | The publish step can check this before it hands out a link |
 | **The app publishes only `projects/`, as plain pushes, to the design repo's current branch** | Read from `designSync.ts` and `publisher.ts` | The Pages deployment has to run from that branch, or from a workflow that is allowed to. GitHub restricts Pages deployments to the default branch unless the environment allows others (GitHub's default; **not checked here**) |
 | **The prototype skill ends at "say what you made."** Nothing publishes, and the build command is injected by the app | `skills/build-prototype.md`; `prototypeBuildPlan` in `ipc.ts` | From Claude Code in VS Code there is no app to supply the build command or push, so both have to live in one command that does not need the app |
-| **A comment made in the page's format reads back through the app's own code** | The app's `renderComments` turned a sandbox comment into the `comments.md` the agent reads, with page, element kind, section, selector and nearby text | The format is right; the round trip into the app itself is what Phase 5 proves |
+| **A comment made in the page's format reads back through the app's own code** | The app's `renderComments` turned a sandbox comment into the `comments.md` the agent reads, with page, element kind, section, selector and nearby text | The format is right; the round trip into the app itself is what Phase 6 proves |
 | **The app finds a prototype's thread by the `branch:` line** in the issue's description (for a prototype, `prototype/<id>/<name>`) | `designRepo.ts` | The page posts to the thread that already exists for that iteration, never a new one |
 
 **What the sandbox taught (2026-10-07).** A public test repo (`prototype-pages-sandbox`) proved publishing and
 reading comments back, but its commenting was a thin layer of its own around the app's engine: a native prompt for a
 token, no pin dragging, no cards or card menu, no screenshot. That was not the product's experience, and it is the
-reason Phase 3 exists: **one comments experience, two adapters**, never a second version.
+reason Phase 4 exists: **one comments experience, two adapters**, never a second copy of it.
 
 ## The shape of it
 
@@ -123,7 +144,34 @@ Each phase ends with something Noah can see. A phase whose check needs a person 
 
 **Done when:** the repo is in the org, private Pages is allowed, and the app works against the repo in its new place.
 
-### Phase 1: One publish command, a private gate, and the link in the app
+### Phase 1: Versions and iterations (before any page exists)
+
+**Why first:** a page address is shared as a link. Publish them flat and add versions later, and every link already
+sent breaks. The structure and the names are settled before the first page goes out.
+
+- **Two words, used strictly.** A **version** is a different idea for the same brief, side by side (V1, V2, V3). An
+  **iteration** is a refinement of one version, in order (I1, I2, I3). The app, the skills and the plan's vocabulary
+  all use them this way, and nothing calls an iteration a version.
+- **The records:** each iteration record names its version, and iteration numbers restart in each version. The review
+  thread for each page is found by its key, `prototype/<project>/<version>/<iteration>`, so the key changes with it. The
+  saved files move to `projects/<id>/prototypes/v1/i2.tsx` and `i2.html`.
+- **Existing prototypes become V1.** One migration moves them: the records, the saved files and the review threads'
+  `branch:` lines, so comments already made stay attached. (`admin-usage` I1 becomes V1 · I1.)
+- **Making them:** a new prototype is V1 · I1. When the designer asks for **another version** (or "three versions"),
+  the agent builds V2 · I1, V3 · I1 from the same brief, optionally "based on V1" when the designer says so. Each
+  takes a build of about six minutes, run one after another in one request.
+- **Refining:** within a version, an iteration is frozen once someone else comments on it, and the next change starts
+  the next iteration (see *Decisions made*). Nobody names or numbers anything.
+- **The app:** labels read "V2 · I3"; the switcher has two levels (the version, then its iterations); the project's
+  card lists its versions. A designer can mark one version as **selected**; Build in the codebase then starts from its
+  newest iteration, and asks when none is selected.
+- **Skills and tests:** the prototype and address skills, `new-prototype` (Phase 3), and the tests that check names
+  and counts.
+
+**Done when:** `admin-usage` shows as V1 · I1 in the app with its comments intact, asking for "another version" produces
+V2 · I1 under the same project, and the switcher moves between versions and iterations.
+
+### Phase 2: One publish command, a private gate, and the link in the app
 
 No comments on the page yet. This phase proves that a prototype becomes a private page, and that nothing can
 publish a public one.
@@ -145,9 +193,9 @@ publish a public one.
   links and the index. So changing the viewer never means re-saving a prototype, a saved prototype stays exactly as
   built, and two people publishing from different machines can never overwrite each other's pages, because the site is
   always rebuilt from the repository and deploys queue instead of cancelling.
-- **The project page** shows the project's title (from its brief), then each iteration, newest first: its name, date,
-  who made it, how many comments it has, and a link. Inside any iteration there is a switcher to the others, as in
-  the app. Codebase work is not on this site (delivery is engineering's), and the project page says where it is when
+- **The project page** shows the project's title (from its brief), then its versions side by side, each with its
+  iterations, newest first: name, date, who made it, how many comments it has, and a link, with the selected version
+  marked. Inside any page there is a two-level switcher (version, then iteration), as in the app. Codebase work is not on this site (delivery is engineering's), and the project page says where it is when
   there is some.
 - **The page's address** is read from GitHub (the Pages API gives the site's URL; a private site has its own domain)
   and kept by the app. Never typed in.
@@ -158,7 +206,7 @@ publish a public one.
 **Done when:** from the app, Noah opens `admin-usage` I1 on its private page; a teammate with access opens the same
 link; someone without access cannot; and the command refuses to publish when the repo is made public.
 
-### Phase 2: The agent makes the prototype, publishes it, and hands back the link
+### Phase 3: The agent makes the prototype, publishes it, and hands back the link
 
 This is what makes it work from Claude Code in VS Code, where there is no app. **Today some of making a prototype
 exists only inside the app** (creating the project folder, the iteration record, the brief and the next name, `i1`,
@@ -166,7 +214,7 @@ exists only inside the app** (creating the project folder, the iteration record,
 shared commands that do not need the app.
 
 - **Two shared commands:** **new-prototype** (the project folder and brief if it is the first, the iteration record,
-  and the next name on the one count) and **publish-prototype** (Phase 1). The app calls them too, so there is one
+  and the next version or iteration name) and **publish-prototype** (Phase 2). The app calls them too, so there is one
   way to make a prototype and one way to publish it.
 - **The prototype skill ends with publishing:** when the build finishes, the agent runs the publish command and puts the
   **link** in its final summary, with the iteration and who can open it ("anyone signed in to GitHub with read access
@@ -178,7 +226,7 @@ shared commands that do not need the app.
 - **From VS Code,** the agent needs what a designer there already has: the product checkout with packages, the design
   repository's clone beside it, and GitHub's command line signed in. The commands find the build tools themselves.
 - **A narrow permission:** agents never push, and that rule stays. The publish command is the one named exception,
-  allowed as that command only, and it can only push `projects/` (Phase 1). Nothing else the agent runs may push.
+  allowed as that command only, and it can only push `projects/` (Phase 2). Nothing else the agent runs may push.
 - **When publishing cannot happen** (private Pages not allowed, GitHub's command line not signed in, no access), the
   agent says so plainly and why, and still finishes the prototype, with a standalone file to share instead. It never
   leaves the summary without saying whether there is a link.
@@ -190,7 +238,7 @@ shared commands that do not need the app.
 record exist, and the agent's final message includes a link that opens the private page for someone with access, under
 its project, beside any earlier iterations.
 
-### Phase 3: One comments experience, taken out of the review screen
+### Phase 4: One comments experience, taken out of the review screen
 
 No visible change in the app. This is what stops a second version being written.
 
@@ -204,7 +252,7 @@ No visible change in the app. This is what stops a second version being written.
 **Done when:** the app behaves exactly as before, the existing tests pass, and new tests drive the comment components
 through a fake adapter.
 
-### Phase 4: Comments on the page
+### Phase 5: Comments on the page
 
 - **A small viewer around the prototype**: the page loads the built prototype and the shared comment components, with
   the **browser adapter**.
@@ -212,14 +260,14 @@ through a fake adapter.
   with the comment count beside it, opening the side panel. No native prompts.
 - **Signing in, for testing only:** a proper dialog, in the app's style, that takes a fine-grained GitHub token with
   Issues read and write on the design repo, keeps it in that browser, and says so. It is a stopgap for Noah and a few
-  testers, never the answer for everyone (Phase 6 is).
+  testers, never the answer for everyone (Phase 7 is).
 - **The picture of the spot:** the app takes it with Electron's `capturePage`, which a page does not have. The first
-  version posts without a picture, and says so on the card; Phase 7 adds it.
+  version posts without a picture, and says so on the card; Phase 8 adds it.
 
 **Done when:** on a prototype's page, Noah picks an element, writes a comment in the inline box, sees the numbered pin
 and the card in the side panel, and the comment is on the iteration's review issue.
 
-### Phase 5: The round trip, proved
+### Phase 6: The round trip, proved
 
 - Comment on the page; in the app, the comment appears (within a minute, or at once when the window comes back into
   focus, or with Sync). The pin is in the same place in both, on the same element.
@@ -229,7 +277,7 @@ and the card in the side panel, and the comment is on the iteration's review iss
 
 **Done when:** Noah watches a comment made on the page appear in the app, and acts on it there.
 
-### Phase 6: Signing in for everyone else (a decision first)
+### Phase 7: Signing in for everyone else (a decision first)
 
 The page cannot sign a person in by itself. One of these does it; each is a decision with a cost:
 
@@ -241,7 +289,7 @@ The page cannot sign a person in by itself. One of these does it; each is a deci
 
 **Done when:** a PM with access signs in from the page in one step and comments.
 
-### Phase 7: Parity and polish
+### Phase 8: Parity and polish
 
 - The **picture of the spot** in the browser (a page-capture library, or the extension's own screenshot).
 - **Moving a pin** you made, as in the app.
@@ -259,12 +307,12 @@ The page cannot sign a person in by itself. One of these does it; each is a deci
 
 | Risk | Why it matters | Mitigation |
 |---|---|---|
-| **Private Pages not allowed** in the org | Phase 1 cannot happen as written | Asked in Phase 0; without it, nothing here goes ahead, and the app stays the way to review |
-| **Two comment experiences drifting apart** | The reason the sandbox failed | Phase 3: one set of components, two adapters, and the round-trip test in Phase 5 |
-| **Tokens in a browser** | A token kept in a browser can be read by anything running on that page | Fine-grained, one repository, Issues only, and only for testing; Phase 6 replaces it |
+| **Private Pages not allowed** in the org | Phase 2 cannot happen as written | Asked in Phase 0; without it, nothing here goes ahead, and the app stays the way to review |
+| **Two comment experiences drifting apart** | The reason the sandbox failed | Phase 4: one set of components, two adapters, and the round-trip test in Phase 6 |
+| **Tokens in a browser** | A token kept in a browser can be read by anything running on that page | Fine-grained, one repository, Issues only, and only for testing; Phase 7 replaces it |
 | **Cached pages** | A teammate sees the old iteration and comments on it | The link carries a version; each comment carries the iteration it was made on |
-| **A page is made public by mistake** (the repo flipped to public, or the site set to public) | The link then opens for anyone, which is the opposite of requirement 1 | The publish gate (Phase 1) refuses to hand out a link while either is public, and checks again after deploying |
-| **An agent pushes to the design repository** | Agents are told never to push | Only the one publish command, only `projects/`, only plain pushes (Phase 2); nothing else may push |
+| **A page is made public by mistake** (the repo flipped to public, or the site set to public) | The link then opens for anyone, which is the opposite of requirement 1 | The publish gate (Phase 2) refuses to hand out a link while either is public, and checks again after deploying |
+| **An agent pushes to the design repository** | Agents are told never to push | Only the one publish command, only `projects/`, only plain pushes (Phase 3); nothing else may push |
 | **A link goes out that someone cannot open** | A director gets a "not found" and thinks it is broken | The summary says who can open it; the design team has read access (Phase 0) before links go to anyone |
 | **Page size** | A page is about 2 MB, plus the 5 MB fonts once | Fonts are kept once on the site, not inlined into every page |
 | **Rate limits** | GitHub allows 5,000 API calls an hour per signed-in person | Comments are read when a page opens and when it comes back into focus, not continuously |
@@ -278,9 +326,6 @@ The page cannot sign a person in by itself. One of these does it; each is a deci
 - **What permission lets an agent run the publish command and nothing else that pushes,** in the repositories where
   agents run?
 
-- **Address on a prototype: change the iteration in place, or make the next iteration?** In place keeps one page but
-  changes it under the people who commented. A new iteration keeps what they saw and fits the `i1`, `i2`, `i3`
-  structure. Leaning to a new iteration for a round of changes, and in place only for a small fix.
 - **How a designer working in VS Code finds out a comment arrived:** GitHub's notifications on the review thread, the
   app's refresh, or something else.
 - **Taking a page down quickly** if something should not have been published (delete the files and redeploy, and who
@@ -290,5 +335,5 @@ The page cannot sign a person in by itself. One of these does it; each is a deci
   team may not have access to the product repository.
 - **The viewer on a phone,** since PMs and directors may open a link from one.
 - **The trigger UI** on the page: where it sits, and how it looks beside a prototype that has its own top bar.
-- **Which sign-in** for everyone (Phase 6), and who would own it.
+- **Which sign-in mechanism** for everyone (Phase 7): the small service or the extension, and who would own it. That it requires GitHub is decided.
 - Whether comments made on a page should carry a mark saying so, for the agent and for the person reading them.
