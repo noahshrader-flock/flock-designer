@@ -10,7 +10,12 @@ Installing packages is C5 below, and may be a plan of its own. What is built sta
 
 ## What it is for
 
-Today the New work dialog lists every repository the person can see on GitHub, matched to its clone on this machine.
+**Cloning lives in the New modal, and only there** (Noah, 2026-10-08): the **New** button on the Projects screen,
+which starts a prototype or codebase work and already has the Repository and "starts from" choices. That is where a
+person creating a project picks a repository, and so where they clone one. No other screen clones (Build in the
+codebase, Open, the review screen); they work in a repository that is already here.
+
+Today the New modal lists every repository the person can see on GitHub, matched to its clone on this machine.
 For one with no clone it says *"is not on this machine, so there is nothing here to build it from. Clone it, then …"*.
 The person leaves the app, clones in a terminal into a folder the app happens to look in, and comes back. That is the
 largest setup step for someone who does not live in a terminal, and it is also where a clone ends up in a place the app
@@ -58,7 +63,7 @@ each, the state document updated in the same change, and no data on GitHub is ch
 |---|---|---|---|---|
 | **C1** (done) | **Where clones go:** the clone folder (setting, default, picker), the path a repository would be placed at, and discovery reading it | Nothing | S | Low |
 | **C2** | **The clone itself:** a service that clones a named repository into a folder, with progress and cancel | C1, decision 3 | M | **Medium** |
-| **C3** | **The dialog:** choose a repository with no clone, see where it goes and change it, confirm, watch it, and carry on into the work | C2, decisions 2, 4 | M | Medium |
+| **C3** | **The New modal:** choose a repository with no clone, see where it goes and change it, confirm, watch it, and carry on into the work | C2, decisions 2, 4 | M | Medium |
 | **C4** | **What it starts from:** branches for a repository with no clone (from GitHub), remote-only branches usable as a base, and the "no setup on this branch" answer | C3, decision 5 | M | Medium |
 | **C5** | **After the clone:** say what is missing to build (packages, access to private packages), and, if wanted, install them with progress | C3 | L | **High** |
 
@@ -84,7 +89,10 @@ default is beside the repository last worked in when there is one, since the des
 - **Tests,** against a bare repository on this machine standing in for GitHub: it clones; it refuses a taken folder and
   leaves it untouched; cancel leaves nothing behind; a name not in the list is refused; a refusal says how to fix it.
 
-### C3: The dialog
+### C3: The New modal
+
+All of it in `renderer/NewWork.tsx`, the **New** modal opened from the Projects screen, in its existing Repository field
+and "starts from" choice; no new screen and no second entry point.
 
 - **A repository with no clone is chosen like any other.** Where today the dialog says "Clone it, then …", it shows
   **"Will be placed in `~/Documents/GitHub/flock-coke`"** with a **Change** button (the picker from C1), and, if the
@@ -92,7 +100,7 @@ default is beside the repository last worked in when there is one, since the des
 - **The confirmation names the owner and the trust** (decision 4). One button, **Clone and continue**, runs C2 with
   progress in the dialog, then accepts the repository as `useCheckout` does today, and carries on into the work the
   dialog was opened for.
-- **Same for prototype and codebase work,** since both begin in the dialog. A prototype is built in the app's own
+- **Same for prototype and codebase work,** since both begin in the New modal. A prototype is built in the app's own
   folder, but from the repository's files, so it still needs the clone.
 - **The new channel is narrow:** it takes a repository name and a choice of "use the default folder or the one picked",
   never a path from the window.
