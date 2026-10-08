@@ -1,12 +1,14 @@
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import type { Person } from '../shared/contract';
+import { loginFromNoreply } from '../shared/people';
 import { firstHeading, projectPath, prototypePagePath, prototypeSourcePath } from '../shared/projects';
 import { DESCRIPTOR_PATH } from '../main/services/descriptor';
 import { recordsRootFor } from '../main/services/discovery';
 import { readCheckout, runGit } from '../main/services/git';
 import { BUILD_SKILL, cloneStore, prototypeBuildTask } from '../main/services/prototype';
+import { shellLine } from '../main/services/prototypeBundle';
 import { prototypeWork } from '../main/services/prototypeWork';
 
 /**
@@ -26,7 +28,7 @@ export interface CliDeps {
 	/** The bundler's entry point, or null when it is not installed here. */
 	esbuild: string | null;
 	/** How to run this command again, for the step the agent is told to take next. */
-	self: string;
+	self: string[];
 }
 
 const USAGE = `Usage:
@@ -43,7 +45,7 @@ class UsageError extends Error {}
 const productOf = async (cwd: string, named: string | undefined): Promise<string> => {
 	let root: string;
 	try {
-		root = realpathSync(named ?? (await runGit(cwd, ['rev-parse', '--show-toplevel'])).trim());
+		root = realpathSync(named ? resolve(cwd, named) : (await runGit(cwd, ['rev-parse', '--show-toplevel'])).trim());
 	} catch {
 		throw new Error(named ? `There is no folder at ${named}.` : 'This is not inside a product repository. Run it from one, or pass --product.');
 	}
@@ -51,35 +53,40 @@ const productOf = async (cwd: string, named: string | undefined): Promise<string
 	return root;
 };
 
-/** Who is making it, as git knows them here. No GitHub sign-in from the command line, so no login. */
-const meOf = async (root: string): Promise<Person | null> => {
-	const name = (await runGit(root, ['config', 'user.name']).catch(() => '')).trim();
-	return name ? { name, login: null } : null;
+/**
+ * Who is making it, as git knows them in the design repository, where the record is written. There is no GitHub
+ * sign-in here, so the login is only known from a GitHub noreply address; records join people by name either way.
+ */
+const meOf = async (designRoot: string): Promise<Person | null> => {
+	const read = async (key: string) => (await runGit(designRoot, ['config', key]).catch(() => '')).trim();
+	const name = await read('user.name');
+	return name ? { name, login: loginFromNoreply(await read('user.email')) } : null;
+};
+
+const OPTIONS = {
+	project: { type: 'string' },
+	name: { type: 'string' },
+	note: { type: 'string' },
+	'note-file': { type: 'string' },
+	title: { type: 'string' },
+	from: { type: 'string' },
+	product: { type: 'string' },
+} as const;
+
+/** The options, or a usage error that says which one was wrong. */
+const optionsOf = (args: string[]) => {
+	try {
+		return parseArgs({ args, options: OPTIONS, strict: true }).values;
+	} catch (e) {
+		throw new UsageError(e instanceof Error ? e.message : String(e));
+	}
 };
 
 export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 	try {
 		const [command, ...rest] = argv;
 		if (command !== 'new-prototype' && command !== 'save-prototype') throw new UsageError(command ? `There is no command called ${command}.` : 'Say which command.');
-		let parsed;
-		try {
-			parsed = parseArgs({
-				args: rest,
-				options: {
-					project: { type: 'string' },
-					name: { type: 'string' },
-					note: { type: 'string' },
-					'note-file': { type: 'string' },
-					title: { type: 'string' },
-					from: { type: 'string' },
-					product: { type: 'string' },
-				},
-				strict: true,
-			});
-		} catch (e) {
-			throw new UsageError(e instanceof Error ? e.message : String(e));
-		}
-		const { values } = parsed;
+		const values = optionsOf(rest);
 		const projectId = values.project;
 		if (!projectId) throw new UsageError('Say which project, with --project.');
 
@@ -100,23 +107,24 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			const name = values.name;
 			if (!name) throw new UsageError('Say which prototype, with --name.');
 			await work.save(projectId, name);
-			deps.out(`Saved ${prototypeSourcePath(projectId, name)} and ${prototypePagePath(projectId, name)} in ${designRoot}. Flock Designer shows it now, and publishes it the next time it is open.`);
+			deps.out(
+				`Saved ${prototypeSourcePath(projectId, name)} and ${prototypePagePath(projectId, name)} in ${designRoot}. It is in Flock Designer (press Sync if the app is already open), which publishes it the next time it is open.`,
+			);
 			return 0;
 		}
 
-		const note = values['note-file'] ? readFileSync(values['note-file'], 'utf8') : values.note;
+		const note = values['note-file'] ? readFileSync(resolve(deps.cwd, values['note-file']), 'utf8') : values.note;
 		if (!note?.trim()) throw new UsageError('Say what to make, with --note or --note-file.');
 		const brief = await store.read(projectPath(projectId, 'brief.md'));
 		const title = values.title ?? (brief === null ? null : firstHeading(brief));
 		if (!title) throw new UsageError(`${projectId} is a new project, so it needs a title: --title.`);
-		const skill = await store.read(BUILD_SKILL);
-		if (skill === null) throw new Error(`The design repository has no ${BUILD_SKILL}. Update it (git pull) and try again.`);
+		const skill = await work.skill(BUILD_SKILL);
 		const branch = values.from ?? (await readCheckout(root)).branch;
 		if (!branch) throw new UsageError('This checkout is not on a branch, so say which branch to model it on, with --from.');
 
-		const iteration = await work.start(root, { projectId, title, note, branch, me: await meOf(root) });
+		const iteration = await work.start(root, { projectId, title, note, branch, me: await meOf(designRoot) });
 		const { build, sources } = work.buildPlan(projectId, iteration.name, await work.sources(projectId, iteration.name));
-		const save = `${deps.self} save-prototype --project ${projectId} --name ${iteration.name} --product ${JSON.stringify(root)}`;
+		const save = shellLine([...deps.self, 'save-prototype', '--project', projectId, '--name', iteration.name, '--product', root]);
 		deps.out(
 			[
 				`Recorded ${projectId} ${iteration.name}, modelled on ${branch}. Your task follows.`,

@@ -41,10 +41,18 @@ export interface PrototypeStart {
 	me: Person | null;
 }
 
+const NO_PRODUCT = 'Prototypes are built from the real design system, so they need the product repository, with its packages installed, on this machine.';
+
 export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	const { prototypesRoot } = ctx;
 
-	/** The folder an agent builds a project's prototypes in, and the page file inside it. */
+	/** Where a prototype's page or source is on this machine. Saying so makes no folder. */
+	const localFile = (projectId: string, name: string, ext: 'html' | 'tsx'): string => {
+		assertUsableProjectId(projectId);
+		assertPrototypeName(name);
+		return join(prototypesRoot, projectId, `${name}.${ext}`);
+	};
+	/** The folder an agent builds a project's prototypes in, made when asked for, and the page and source inside it. */
 	const dir = (projectId: string): string => {
 		assertUsableProjectId(projectId);
 		const d = join(prototypesRoot, projectId);
@@ -52,16 +60,31 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return d;
 	};
 	const file = (projectId: string, name: string): string => {
-		assertPrototypeName(name);
-		return join(dir(projectId), `${name}.html`);
+		dir(projectId);
+		return localFile(projectId, name, 'html');
 	};
-	const sourceFile = (projectId: string, name: string): string => join(dirname(file(projectId, name)), `${name}.tsx`);
+	const sourceFile = (projectId: string, name: string): string => {
+		dir(projectId);
+		return localFile(projectId, name, 'tsx');
+	};
 	/**
 	 * Large files pages share (the design system's fonts), each kept once by its content: here as builds make them,
 	 * and in the design repository beside the projects, where `_` keeps them off the list.
 	 */
 	const sharedDir = join(prototypesRoot, '_shared');
 	const sharedPath = (n: string): string => `projects/_shared/${n}.datauri`;
+	/** A shared file's content: this machine's copy, else the design repository's. */
+	const sharedText = async (n: string): Promise<string | null> => {
+		const local = join(sharedDir, `${n}.datauri`);
+		return existsSync(local) ? readFileSync(local, 'utf8') : ctx.readDesignFile(sharedPath(n));
+	};
+
+	/** A shared skill, which an agent's task is built from. Only an out-of-date design repository can lack one. */
+	const skill = async (path: string): Promise<string> => {
+		const text = await ctx.readDesignFile(path);
+		if (text === null) throw new Error(`The design repository has no ${path}, which the agent's task is built from. Update it (git pull) and try again.`);
+		return text;
+	};
 
 	/** A prototype's record, from its project's iterations.json. */
 	const record = async (projectId: string, name: string): Promise<Iteration | undefined> => {
@@ -70,9 +93,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 	/** A prototype's React source: this machine's newest, else the saved one. Reading it makes no folder. */
 	const sourceText = async (projectId: string, name: string): Promise<string | null> => {
-		assertUsableProjectId(projectId);
-		assertPrototypeName(name);
-		const local = join(prototypesRoot, projectId, `${name}.tsx`);
+		const local = localFile(projectId, name, 'tsx');
 		return existsSync(local) ? readFileSync(local, 'utf8') : ctx.readDesignFile(prototypeSourcePath(projectId, name));
 	};
 
@@ -94,6 +115,15 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		}
 		return { ready: true, designSystem, version };
 	};
+	/** Why a prototype cannot be built here, in words that say what to do; null when it can. */
+	const notReady = (root: string | null): string | null => {
+		if (root === null) return NO_PRODUCT;
+		const ready = readiness(root);
+		if (ready.ready) return null;
+		return ready.why === 'not-installed'
+			? `Prototypes are built from the real design system, and ${ready.designSystem} is not installed in ${ready.repository}. Run npm ci there (it needs access to the private packages), then try again.`
+			: "Prototypes are built with Flock Designer's own bundler, which is not installed. Run npm ci in flock-designer/workspace, then try again.";
+	};
 
 	/**
 	 * Starts a prototype: the project's brief if it is new, the iteration record and its name (the next version, so a
@@ -102,7 +132,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 */
 	const start = async (root: string, { projectId, title, note, branch, me }: PrototypeStart): Promise<Iteration> => {
 		assertUsableProjectId(projectId);
-		if (!readiness(root).ready) throw new Error('That repository has no design system installed here, so a prototype cannot be built from it. Run npm ci in it first.');
+		const why = notReady(root);
+		if (why !== null) throw new Error(why);
 		if (typeof title !== 'string' || !title.trim()) throw new Error('A prototype needs a name.');
 		if (!(await branchExists(root, branch))) throw new Error(`There is no branch called ${branch} in ${basename(root)}.`);
 		const basedOn = { repository: basename(root), branch, commit: await branchCommit(root, branch).catch(() => null) };
@@ -147,15 +178,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 
 	/** Where the agent writes the prototype, and the exact command that checks it builds. */
 	const buildPlan = (projectId: string, name: string, found: PrototypeSources | null): { build: PrototypeBuild; sources: PrototypeSources } => {
-		const root = ctx.productRoot();
-		const ready = root === null ? null : readiness(root);
-		if (!found?.nodeModules || ready === null || !ready.ready) {
-			throw new Error(
-				ready !== null && !ready.ready && ready.why === 'not-installed'
-					? `Prototypes are built from the real design system, and ${ready.designSystem} is not installed in ${ready.repository}. Run npm ci there (it needs access to the private packages), then try again.`
-					: 'Prototypes are built from the real design system, so they need the product repository, with its packages installed, on this machine.',
-			);
-		}
+		const why = notReady(ctx.productRoot());
+		if (why !== null || !found?.nodeModules) throw new Error(why ?? NO_PRODUCT);
 		const source = sourceFile(projectId, name);
 		const page = file(projectId, name);
 		return {
@@ -170,9 +194,9 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 */
 	const buildPage = async (projectId: string, name: string): Promise<void> => {
 		const root = ctx.productRoot();
-		const esbuild = ctx.esbuild();
-		if (root === null || esbuild === null) throw new Error('This prototype is written in React, and building it needs the product repository installed on this machine.');
-		const r = await runBundle(writeBundleScript(prototypesRoot), esbuild, sourceFile(projectId, name), file(projectId, name), join(root, 'node_modules'), sharedDir);
+		const why = notReady(root);
+		if (why !== null || root === null) throw new Error(why ?? NO_PRODUCT);
+		const r = await runBundle(writeBundleScript(prototypesRoot), ctx.esbuild() as string, sourceFile(projectId, name), file(projectId, name), join(root, 'node_modules'), sharedDir);
 		if (!r.ok) throw new Error(`The prototype did not build:\n${r.output.slice(0, 2000)}`);
 	};
 
@@ -218,7 +242,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return ctx.readDesignFile(prototypePagePath(projectId, name));
 	};
 
-	return { dir, file, sourceFile, sharedDir, sharedPath, record, sourceText, readiness, start, sources, buildPlan, buildPage, keep, save, page };
+	return { dir, file, sourceFile, sharedText, skill, record, sourceText, readiness, start, sources, buildPlan, buildPage, keep, save, page };
 };
 
 export type PrototypeWork = ReturnType<typeof prototypeWork>;

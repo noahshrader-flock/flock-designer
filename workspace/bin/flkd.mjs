@@ -6,7 +6,7 @@
  * never be a different version from the app beside it, and there is no built copy to fall out of date. The same
  * bundler builds the prototypes, so nothing is needed here that making one in the app does not already need.
  */
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -23,7 +23,8 @@ try {
 	process.exit(1);
 }
 
-/** The app's own prototype folder: where Electron keeps its data for an app called flock-designer. */
+/** The app's own prototype folder: where Electron keeps the app's data, named as the app's package names it. */
+const pkg = JSON.parse(readFileSync(join(workspace, 'package.json'), 'utf8'));
 const appData =
 	process.platform === 'darwin'
 		? join(homedir(), 'Library', 'Application Support')
@@ -37,14 +38,13 @@ try {
 	const file = join(out, 'flkd.mjs');
 	await build({ entryPoints: [join(workspace, 'src', 'cli', 'flkd.ts')], outfile: file, bundle: true, platform: 'node', format: 'esm', logLevel: 'error' });
 	const { main } = await import(pathToFileURL(file).href);
-	const self = ['node', fileURLToPath(import.meta.url)].map((a) => (/^[\w./-]+$/.test(a) ? a : JSON.stringify(a))).join(' ');
 	process.exitCode = await main(process.argv.slice(2), {
 		cwd: process.cwd(),
 		out: (text) => console.log(text),
 		err: (text) => console.error(text),
-		prototypesRoot: join(appData, 'flock-designer', 'prototypes'),
+		prototypesRoot: join(appData, pkg.productName ?? pkg.name, 'prototypes'),
 		esbuild,
-		self,
+		self: ['node', fileURLToPath(import.meta.url)],
 	});
 } finally {
 	rmSync(out, { recursive: true, force: true });

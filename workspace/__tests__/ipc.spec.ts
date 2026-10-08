@@ -1,10 +1,11 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHANNELS } from '../src/shared/contract';
+import { g, installDesignSystem, makeProduct } from './fixtures';
 
 /**
  * The IPC layer itself: which handlers demand that a repository was actually
@@ -40,30 +41,6 @@ let product: string;
 let design: string;
 let home: string;
 
-const g = (root: string, ...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
-
-const makeProduct = (dir: string) => {
-	mkdirSync(join(dir, '.flkd'), { recursive: true });
-	writeFileSync(
-		join(dir, '.flkd', 'workspace.json'),
-		JSON.stringify({
-			version: 1,
-			product: 'Test Product',
-			contextDir: '.flkd',
-			prototypeRoot: 'src/prototypes',
-			branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
-			commands: [{ id: 'preview', label: 'Run', argv: ['node', '-e', 'setTimeout(()=>{},1e4)'], servesPreviewOn: 3999 }],
-			designSystem: { package: 'x' },
-		}),
-	);
-	g(dir, 'init', '-q', '-b', 'develop');
-	g(dir, 'config', 'user.email', 't@example.test');
-	g(dir, 'config', 'user.name', 'Test');
-	writeFileSync(join(dir, 'README.md'), '# r\n');
-	g(dir, 'add', '.');
-	g(dir, 'commit', '-q', '-m', 'first');
-};
-
 let registerIpc: typeof import('../src/main/ipc')['registerIpc'];
 let OpenedCheckouts: typeof import('../src/main/services/session')['OpenedCheckouts'];
 let opened: InstanceType<typeof OpenedCheckouts>;
@@ -90,7 +67,7 @@ beforeEach(async () => {
 	mkdirSync(product, { recursive: true });
 	mkdirSync(join(design, '.git'), { recursive: true });
 	mkdirSync(join(design, 'projects'), { recursive: true });
-	makeProduct(product);
+	makeProduct(product, [{ id: 'preview', label: 'Run', argv: ['node', '-e', 'setTimeout(()=>{},1e4)'], servesPreviewOn: 3999 }]);
 
 	// Discovery looks under the home directory; point it at a temporary one.
 	vi.doMock('node:os', async () => ({ ...(await vi.importActual<object>('node:os')), homedir: () => home }));
@@ -253,22 +230,11 @@ describe('where new work starts', () => {
 });
 
 describe('prototypes', () => {
-	/** The product's installed packages: its design system (the descriptor names it "x") and React. */
-	const installDesignSystem = () => {
-		const modules = join(product, 'node_modules');
-		// Ignored, as a real repository ignores it, so switching branches never takes it away.
-		writeFileSync(join(product, '.git', 'info', 'exclude'), 'node_modules\n');
-		mkdirSync(join(modules, 'x'), { recursive: true });
-		writeFileSync(join(modules, 'x', 'package.json'), JSON.stringify({ name: 'x', version: '1.2.3', main: 'index.js' }));
-		writeFileSync(join(modules, 'x', 'index.js'), "exports.Hello = () => require('react').createElement('h1', null, 'Real component');");
-		const appModules = join(__dirname, '..', 'node_modules');
-		for (const pkg of ['react', 'react-dom', 'scheduler']) if (!existsSync(join(modules, pkg))) symlinkSync(join(appModules, pkg), join(modules, pkg));
-	};
 	const writeSkill = () => {
 		mkdirSync(join(design, 'skills'), { recursive: true });
 		writeFileSync(join(design, 'skills', 'build-prototype.md'), '# Build');
 	};
-	beforeEach(installDesignSystem);
+	beforeEach(() => installDesignSystem(product));
 
 	it('say whether the real design system is installed here, and which version', async () => {
 		await call(CHANNELS.useCheckout, product);

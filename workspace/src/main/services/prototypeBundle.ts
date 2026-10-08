@@ -92,9 +92,12 @@ export const writeBundleScript = (prototypesRoot: string): string => {
 	return path;
 };
 
+/** A command as one line an agent can run, each argument quoted only when it needs to be. */
+export const shellLine = (args: string[]): string => args.map((a) => (/^[\w./-]+$/.test(a) ? a : JSON.stringify(a))).join(' ');
+
 /** The exact command the agent runs to check its prototype builds. */
 export const bundleCommand = (script: string, esbuild: string, entry: string, out: string, nodeModules: string, shared: string): string =>
-	['node', script, esbuild, entry, out, nodeModules, shared].map((a) => (/^[\w./-]+$/.test(a) ? a : JSON.stringify(a))).join(' ');
+	shellLine(['node', script, esbuild, entry, out, nodeModules, shared]);
 
 /**
  * Builds `entry` into `out`. Resolves with what the build said, and whether it worked; never throws for a

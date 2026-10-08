@@ -686,12 +686,8 @@ export const registerIpc = ({
 		const here = await recordStore().read(path);
 		return here !== null || designClone() === null ? here : designRepo.readFile(path);
 	};
-	/** A shared skill, which the agent's task is built from. Only an out-of-date design repository can lack one. */
-	const readSkillText = async (path: string): Promise<string> => {
-		const text = await readDesignFile(path);
-		if (text === null) throw new Error(`The design repository has no ${path}, which the agent's task is built from. Update it (git pull) and try again.`);
-		return text;
-	};
+	/** A shared skill, which the agent's task is built from: read as the flkd command reads it. */
+	const readSkillText = (path: string): Promise<string> => work.skill(path);
 	/**
 	 * Making prototypes: the same code the flkd command runs from Claude Code, given this app's folder, the repository
 	 * this person accepted, and this app's store.
@@ -718,8 +714,7 @@ export const registerIpc = ({
 	const serveShared = async (html: string): Promise<void> => {
 		for (const n of sharedFilesOf(html)) {
 			if (prototypeServer.hasShared(n)) continue;
-			const local = join(work.sharedDir, `${n}.datauri`);
-			const uri = existsSync(local) ? readFileSync(local, 'utf8') : await readDesignFile(work.sharedPath(n));
+			const uri = await work.sharedText(n);
 			if (uri !== null) prototypeServer.share(n, uri);
 		}
 	};

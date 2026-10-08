@@ -207,8 +207,8 @@ are not made yet**: M3 makes them, with the freeze rule.
 
 **Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08) and its
 3.7. In short: one service makes prototypes, called by the app and by `flkd` (`new-prototype`, `save-prototype`), which
-an agent runs from Claude Code in the product repository. The shared skill says how, including "another version" and
-"based on V1", and Coke's agent file sends a new prototype there.
+an agent runs from Claude Code in the product repository. Its own skill, `skills/start-prototype.md`, says how,
+including "another version" and "based on V1", and Coke's agent file sends a new prototype there.
 
 **The open question was answered differently from the recommendation:** not a pre-built file committed in the repo,
 but a launcher that builds the command from the app's source each time it runs. The build needs esbuild either way,

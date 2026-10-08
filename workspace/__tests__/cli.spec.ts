@@ -1,10 +1,11 @@
-import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { main } from '../src/cli/flkd';
+import { g, installDesignSystem, makeProduct } from './fixtures';
 
 /**
  * `flkd`, the command an agent runs from Claude Code in VS Code to make a prototype with no app running. Against a
@@ -18,10 +19,9 @@ let prototypes: string;
 let out: string[];
 let err: string[];
 
-const g = (root: string, ...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
 const esbuild = createRequire(__filename).resolve('esbuild');
-const run = (...argv: string[]) =>
-	main(argv, { cwd: product, out: (t) => out.push(t), err: (t) => err.push(t), prototypesRoot: prototypes, esbuild, self: 'flkd' });
+const deps = (cwd: string) => ({ cwd, out: (t: string) => out.push(t), err: (t: string) => err.push(t), prototypesRoot: prototypes, esbuild, self: ['flkd'] });
+const run = (...argv: string[]) => main(argv, deps(product));
 const iterations = () => JSON.parse(readFileSync(join(design, 'projects', 'demo', 'iterations.json'), 'utf8')) as { name: string }[];
 
 beforeEach(() => {
@@ -32,36 +32,15 @@ beforeEach(() => {
 	out = [];
 	err = [];
 
-	mkdirSync(join(product, '.flkd'), { recursive: true });
-	writeFileSync(
-		join(product, '.flkd', 'workspace.json'),
-		JSON.stringify({
-			version: 1,
-			product: 'Test Product',
-			contextDir: '.flkd',
-			prototypeRoot: 'src/prototypes',
-			branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
-			commands: [],
-			designSystem: { package: 'x' },
-		}),
-	);
-	writeFileSync(join(product, '.gitignore'), 'node_modules\n');
-	g(product, 'init', '-q', '-b', 'develop');
-	g(product, 'config', 'user.email', 't@example.test');
-	g(product, 'config', 'user.name', 'Test Person');
-	g(product, 'add', '.');
-	g(product, 'commit', '-q', '-m', 'first');
+	mkdirSync(product);
+	makeProduct(product);
+	installDesignSystem(product);
 
-	// The real design system, as far as a build can tell: a package called x that renders React.
-	const modules = join(product, 'node_modules');
-	mkdirSync(join(modules, 'x'), { recursive: true });
-	writeFileSync(join(modules, 'x', 'package.json'), JSON.stringify({ name: 'x', version: '1.2.3', main: 'index.js' }));
-	writeFileSync(join(modules, 'x', 'index.js'), "exports.Hello = () => require('react').createElement('h1', null, 'Real component');");
-	for (const pkg of ['react', 'react-dom', 'scheduler']) symlinkSync(join(__dirname, '..', 'node_modules', pkg), join(modules, pkg));
-
-	mkdirSync(join(design, '.git'), { recursive: true });
-	mkdirSync(join(design, 'projects'), { recursive: true });
+	// The design repository: who is making the prototype is read from its git identity, the record being written there.
 	mkdirSync(join(design, 'skills'), { recursive: true });
+	g(design, 'init', '-q');
+	g(design, 'config', 'user.name', 'Test Person');
+	g(design, 'config', 'user.email', '123+test-person@users.noreply.github.com');
 	writeFileSync(join(design, 'skills', 'build-prototype.md'), '# Build a prototype\n');
 });
 
@@ -72,7 +51,7 @@ describe('new-prototype', () => {
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list of cameras')).toBe(0);
 
 		expect(iterations()).toMatchObject([
-			{ name: 'v1-i1', branch: 'prototype/demo/v1-i1', basedOn: { repository: 'flock-coke', branch: 'develop' }, contributors: [{ name: 'Test Person', login: null }] },
+			{ name: 'v1-i1', branch: 'prototype/demo/v1-i1', basedOn: { repository: 'flock-coke', branch: 'develop' }, contributors: [{ name: 'Test Person', login: 'test-person' }] },
 		]);
 		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list of cameras\n');
 
@@ -81,7 +60,7 @@ describe('new-prototype', () => {
 		expect(task).toContain(`Write \`${join(prototypes, 'demo', 'v1-i1.tsx')}\``);
 		expect(task).toContain(join(prototypes, 'build-prototype.mjs'));
 		expect(task).toContain('A list of cameras');
-		expect(task).toContain(`flkd save-prototype --project demo --name v1-i1 --product "${product}"`);
+		expect(task).toContain(`flkd save-prototype --project demo --name v1-i1 --product ${product}`);
 	});
 
 	it('makes the next version for a project that has one, keeping its brief', async () => {
@@ -96,7 +75,7 @@ describe('new-prototype', () => {
 		g(product, 'branch', 'noah/baseline');
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list', '--from', 'noah/baseline')).toBe(0);
 		expect(iterations()[0]).toMatchObject({ basedOn: { branch: 'noah/baseline' } });
-		expect((await run('new-prototype', '--project', 'demo', '--note', 'A list', '--from', 'nope')) !== 0).toBe(true);
+		expect(await run('new-prototype', '--project', 'demo', '--note', 'A list', '--from', 'nope')).toBe(1);
 		expect(err.join('\n')).toMatch(/no branch called nope/);
 	});
 
@@ -124,7 +103,7 @@ describe('save-prototype', () => {
 		const saved = join(design, 'projects', 'demo', 'prototypes');
 		expect(readFileSync(join(saved, 'v1-i1.tsx'), 'utf8')).toContain("from 'x'");
 		expect(readFileSync(join(saved, 'v1-i1.html'), 'utf8')).toContain('Real component');
-		expect(out.at(-1)).toMatch(/Flock Designer shows it now/);
+		expect(out.at(-1)).toMatch(/It is in Flock Designer/);
 	});
 
 	it('says what the build said when the source does not compile, and saves nothing', async () => {
@@ -141,6 +120,15 @@ describe('save-prototype', () => {
 });
 
 describe('the command', () => {
+	it('is started by its own skill, never by the build skill every prototype task carries', () => {
+		const skills = join(__dirname, '..', '..', 'skills');
+		// The build skill is in the task of every agent the app starts too, which must never start another prototype.
+		expect(readFileSync(join(skills, 'build-prototype.md'), 'utf8')).not.toMatch(/new-prototype|flkd\.mjs/);
+		// The starting skill names the launcher as it sits beside a product repository.
+		expect(readFileSync(join(skills, 'start-prototype.md'), 'utf8')).toContain('node ../flock-designer/workspace/bin/flkd.mjs new-prototype');
+		expect(existsSync(join(__dirname, '..', 'bin', 'flkd.mjs'))).toBe(true);
+	});
+
 	it('refuses what it does not know, and says how it is used', async () => {
 		expect(await run('make-it')).toBe(2);
 		expect(await run('new-prototype', '--project', 'demo', '--colour', 'blue')).toBe(2);
@@ -150,16 +138,11 @@ describe('the command', () => {
 	it('runs outside a product repository only when told which one', async () => {
 		const elsewhere = mkdtempSync(join(tmpdir(), 'fdw-cli-elsewhere-'));
 		try {
-			const r = await main(['new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list'], {
-				cwd: elsewhere,
-				out: (t) => out.push(t),
-				err: (t) => err.push(t),
-				prototypesRoot: prototypes,
-				esbuild,
-				self: 'flkd',
-			});
-			expect(r).toBe(1);
+			const argv = ['new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list'];
+			expect(await main(argv, deps(elsewhere))).toBe(1);
 			expect(err.join('\n')).toMatch(/not inside a product repository/);
+			expect(await main([...argv, '--product', product], deps(elsewhere))).toBe(0);
+			expect(iterations().map((i) => i.name)).toEqual(['v1-i1']);
 		} finally {
 			rmSync(elsewhere, { recursive: true, force: true });
 		}

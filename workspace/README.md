@@ -17,7 +17,7 @@ npm run smoke     # boot the real app and prove the window opens
 ```
 
 **Without the app:** `node bin/flkd.mjs` makes a prototype from Claude Code in VS Code (`new-prototype`,
-`save-prototype`), with the same code the app runs. `skills/build-prototype.md` tells an agent when to use it.
+`save-prototype`), with the same code the app runs. `skills/start-prototype.md` tells an agent how to use it.
 
 ## What the window shows
 
