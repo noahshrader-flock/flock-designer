@@ -35,6 +35,7 @@ import { branchCommit, branchExists, branchesWithFile, ensureLocalBranch, isRepo
 import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { Cloner, type GitProgress, notClonedOver } from './services/clone';
 import { INSTALL_COMMAND, Installer } from './services/install';
+import { DesignLibrary, libraryFinder } from './services/designLibrary';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, listedAs, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
@@ -133,6 +134,8 @@ export interface IpcContext {
 	/** Clones what the New modal asks for. Given for tests, to clone from this machine instead of GitHub. */
 	cloner?: Cloner;
 	installer?: Installer;
+	/** The component library for the Design System tab. Given for tests, to read a library made for them. */
+	designLibrary?: DesignLibrary;
 }
 
 export const registerIpc = ({
@@ -152,6 +155,7 @@ export const registerIpc = ({
 	cloneFolders = new CloneFolderMemory(join(tmpdir(), 'flock-designer-clone-folder.json')),
 	cloner = new Cloner(),
 	installer = new Installer(),
+	designLibrary,
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
@@ -289,6 +293,10 @@ export const registerIpc = ({
 	);
 
 	ipcMain.handle(CHANNELS.cloneFolder, guard(cloneFolder));
+
+	// The window says only whether to wait for the update; where the library is, it is never told and never asks.
+	const library = designLibrary ?? new DesignLibrary({ find: libraryFinder(cloneFolder) });
+	ipcMain.handle(CHANNELS.designSystemCatalog, guard((refresh: unknown) => library.catalog(refresh === true)));
 	// Chosen with the system's picker, here: the window never names a folder to put files in.
 	ipcMain.handle(
 		CHANNELS.chooseCloneFolder,

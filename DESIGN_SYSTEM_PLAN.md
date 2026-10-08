@@ -1,7 +1,7 @@
 # Design System plan: surface the component library in the app, and leave room to change it
 
-**Written 2026-10-08. Every decision is made and every unknown I could measure was measured the same day. S1 is built
-(2026-10-08); S2 to S4 are not.** The plan for filling the **Design System** tab (an empty view today, `renderer/App.tsx`) with the components
+**Written 2026-10-08. Every decision is made and every unknown I could measure was measured the same day. S1 and S2 are built
+(2026-10-08); S3 and S4 are not.** The plan for filling the **Design System** tab (an empty view today, `renderer/App.tsx`) with the components
 from `flock-react-component-lib` (FUI), without copying Storybook and without building the editing yet.
 
 This is the detail behind one candidate in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), which points here and does
@@ -76,7 +76,7 @@ nothing on GitHub changed.
 | # | Milestone | Needs | Size | Risk |
 |---|---|---|---|---|
 | **S1** (done) | **The catalog reader:** a pure function that turns what `origin/develop` holds into a list of components | Decisions 2, 3, 5, 7 | S | Low |
-| **S2** | **Finding the library, bringing it up to date, and reading it:** locate the clone, fetch `origin/develop`, read it through git; one named operation on the contract | S1, decisions 1, 4 | M | Low |
+| **S2** (done) | **Finding the library, bringing it up to date, and reading it:** locate the clone, fetch `origin/develop`, read it through git; one named operation on the contract | S1, decisions 1, 4 | M | Low |
 | **S3** | **The tab:** grouped list, search, links, header, the four states | S2, decisions 3, 5 to 7 | M | Low |
 | **S4** | **Clone the library from the tab,** when there is no clone | S3, the existing `Cloner` | S | Medium |
 
@@ -91,30 +91,18 @@ with `execFileSync`, and S2 moves it into `git.ts`'s runner. **Where it differs 
 the first `title` in the file, which on every story today is the `meta` block's; a story that put another `title:`
 first would show that one, and the real-library test would catch it as a wrong group only if it changed the group.
 
-### S2: Finding the library, bringing it up to date, and reading it
+### S2: Finding the library, bringing it up to date, and reading it (done 2026-10-08)
 
-- **`findLibrary()`** looks through discovery's folders and the clone folder for a repository whose `origin` is the
-  library, using `originOf` and `gitHubRepoOf`. It reads `.git/config` as a file and runs nothing in it, as
-  `repositories.ts` does for clones the person has not accepted.
-- **`updateLibrary(root)`** runs `git fetch origin develop` through `git.ts`, and nothing else. It returns the outcome
-  (`updated`, `unchanged`, or a plain reason: no network, no credentials with the fix named, as `cloneProblem` does for a
-  clone). It never throws into the tab.
-- **Reading** is `git ls-tree` and `git show` on `refs/remotes/origin/develop`, wired into S1's two reads, plus the
-  commit and its date for the header. No checkout, no worktree, no file written.
-- **Trust:** the same as discovery listing a clone the person already has. The app runs no code from the library; git's
-  read commands run no hooks, and `fetch` runs none of the library's.
-- **One new operation,** `designSystemCatalog(refresh: boolean): Promise<Result<Catalog>>`, where `Catalog` is
-  `{ state: 'ready'; commit; committedAt; update: 'updated' | 'unchanged' | { failed: string }; components }`
-  `| { state: 'no-clone'; repository } | { state: 'no-develop' }`. Added to `contract.ts`, `CHANNELS`, the preload and
-  `ipc.ts` with the usual `guard`. The window sends no path. **The first call returns what is already in the clone
-  without waiting for a fetch; the fetch runs after, and a second call (the same operation, `refresh: true`) returns the
-  result.** That is decision 4's "shows at once, and replaces it".
-- **Tests:** a clone whose origin matches is found, one that does not is not, SSH, `https` with a token and `.git` forms
-  are found; none gives `no-clone`; a clone with no `origin/develop` gives `no-develop`, never another branch; **a clone
-  with another branch checked out and uncommitted changes gives `origin/develop`'s list and leaves the branch, the
-  files and `HEAD` exactly as they were** (the test compares before and after); a fetch that fails (no credentials, no
-  network) returns the list it has and the reason; a fetch that finds new commits changes the list and the header; and
-  `ipc.spec.ts` shows the window can ask nothing the contract lacks.
+**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+short: `services/designLibrary.ts` finds the clone by its origin (`findLibrary`), reads `origin/develop` through git
+(`libraryReads`, with the stories in one `cat-file --batch`), fetches only that ref (`updateLibrary`), and `DesignLibrary`
+answers the new `designSystemCatalog(refresh)` channel. **For S3:** call it with `false` when the tab is first shown
+(the list comes back at once, with `update: 'updating'`), then at once with `true` and replace the list with the
+answer; Refresh calls it with `true`. The types are `Catalog`, `CatalogComponent` and `CatalogUpdate` in `contract.ts`;
+`isGap` is in `componentCatalog.ts`, which the window cannot import, so S3 either moves it to `shared/` or repeats its
+one line. **Where it differs from the plan:** `CatalogUpdate` has a fourth value, `'updating'`, for the first answer, and
+`no-develop` carries the clone's path so the tab can say which clone. **Not tried:** a fetch from the real GitHub
+(a `--dry-run` was, on 2026-10-08); the first open of the tab will do one.
 
 ### S3: The tab
 
@@ -194,7 +182,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 
 ## Next
 
-**S1 is done. S2 is Ready:** scope fixed, files known, tests named. Build S2 to S4 in order, one commit each.
+**S1 and S2 are done. S3 is Ready:** scope fixed, files known, tests named. Build S3 and S4 in order, one commit each.
 
 **Before S3 ships, two things by hand:** open one Storybook link from the tab against the hosted Storybook (someone with
 Chromatic access), and say whether `develop`'s date in the header reads right on a clone that has not been touched for

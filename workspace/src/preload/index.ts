@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { CHANNELS } from '../shared/contract';
 import type {
+	Catalog,
 	AgentStatus,
 	Checkout,
 	ClonePlan,
@@ -65,6 +66,7 @@ const api: WorkspaceApi = {
 	lastCheckout: () => invoke<Checkout | null>(CHANNELS.lastCheckout),
 	suggestCheckout: () => invoke<CheckoutSuggestion | null>(CHANNELS.suggestCheckout),
 	useCheckout: (root) => invoke<Checkout>(CHANNELS.useCheckout, root),
+	designSystemCatalog: (refresh) => invoke<Catalog>(CHANNELS.designSystemCatalog, refresh),
 	cloneFolder: () => invoke<string>(CHANNELS.cloneFolder),
 	chooseCloneFolder: () => invoke<string | null>(CHANNELS.chooseCloneFolder),
 	clonePlan: (repository) => invoke<ClonePlan>(CHANNELS.clonePlan, repository),

@@ -121,6 +121,21 @@ afterEach(() => {
 	rmSync(home, { recursive: true, force: true });
 });
 
+describe('the Design System catalog', () => {
+	it('says there is no clone of the library when none is here, and takes no path from the window', async () => {
+		expect(await call(CHANNELS.designSystemCatalog, false)).toEqual({ ok: true, value: { state: 'no-clone', repository: 'flocksafety/flock-react-component-lib' } });
+		// Whatever the window sends, it is only "wait for the update or not": a path is not a place to read.
+		expect(await call(CHANNELS.designSystemCatalog, product)).toEqual({ ok: true, value: { state: 'no-clone', repository: 'flocksafety/flock-react-component-lib' } });
+	});
+
+	it('finds a clone of the library in the usual folders by its origin, and says when it has no develop', async () => {
+		const lib = join(home, 'GitHub', 'fui');
+		g(home, 'init', '-q', lib);
+		g(lib, 'remote', 'add', 'origin', 'git@github.com:flocksafety/flock-react-component-lib.git');
+		expect(await call(CHANNELS.designSystemCatalog, false)).toEqual({ ok: true, value: { state: 'no-develop', root: lib } });
+	});
+});
+
 describe('where clones go', () => {
 	const picker = async () => vi.mocked((await import('electron')).dialog.showOpenDialog);
 

@@ -12,6 +12,7 @@ import {
 	UNGROUPED,
 	type CatalogReads,
 } from '../src/main/services/componentCatalog';
+import { libraryReads } from '../src/main/services/designLibrary';
 
 /** A library made of files in memory. A file whose text is null cannot be read. */
 const library = (files: Record<string, string | null>): CatalogReads => ({
@@ -208,10 +209,8 @@ const hasDevelop = (() => {
 })();
 
 describe.skipIf(!hasDevelop)('against the real library on origin/develop', () => {
-	const reads: CatalogReads = {
-		listFiles: async (dir) => git('ls-tree', '-r', '--name-only', 'refs/remotes/origin/develop', '--', dir).split('\n').filter(Boolean),
-		readFile: async (path) => git('show', `refs/remotes/origin/develop:${path}`),
-	};
+	// The app's own reads (one `cat-file --batch` for the stories), so this checks them on the real library too.
+	const reads = libraryReads(LIBRARY);
 
 	it('finds the components, with the six real gaps by name', async () => {
 		const catalog = await readCatalog(reads);

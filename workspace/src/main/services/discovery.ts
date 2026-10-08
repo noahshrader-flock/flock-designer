@@ -61,7 +61,14 @@ export const defaultDiscoveryDeps: DiscoveryDeps = {
 	},
 };
 
-export const findProductCheckouts = (deps: DiscoveryDeps = defaultDiscoveryDeps): string[] => {
+export const findProductCheckouts = (deps: DiscoveryDeps = defaultDiscoveryDeps): string[] =>
+	findRepositories(deps, (dir) => deps.exists(join(dir, '.flkd', 'workspace.json')));
+
+/**
+ * The clones in the usual places (and first the folders given) that `accept` takes, most recently used first. What
+ * `accept` is given is a folder with a `.git`, which it may read as files; nothing is run in it.
+ */
+export const findRepositories = (deps: DiscoveryDeps, accept: (dir: string) => boolean): string[] => {
 	const seen = new Set<string>();
 	const found: string[] = [];
 	for (const base of [...(deps.folders ?? []), ...ROOTS.map((root) => (root === '' ? deps.home : join(deps.home, root)))]) {
@@ -69,7 +76,7 @@ export const findProductCheckouts = (deps: DiscoveryDeps = defaultDiscoveryDeps)
 		for (const name of deps.list(base).slice(0, 500)) {
 			if (name.startsWith('.') || name === 'node_modules' || name === 'Library') continue;
 			const dir = join(base, name);
-			if (!deps.exists(join(dir, '.git')) || !deps.exists(join(dir, '.flkd', 'workspace.json'))) continue;
+			if (!deps.exists(join(dir, '.git')) || !accept(dir)) continue;
 			// The first way a repository was reached is the one kept, so its path reads as it was found.
 			const key = deps.real?.(dir) ?? dir;
 			if (seen.has(key)) continue;

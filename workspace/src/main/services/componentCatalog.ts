@@ -7,37 +7,12 @@
  * (DESIGN_SYSTEM_PLAN.md, S2); in the tests they read a fixture.
  */
 
+import type { CatalogComponent, CatalogStory } from '../../shared/contract';
+
 /** How the catalog reads the library: every file under a folder (paths from the library's root), and one file's text. */
 export interface CatalogReads {
 	listFiles(dir: string): Promise<string[]>;
 	readFile(path: string): Promise<string>;
-}
-
-export interface CatalogStory {
-	/** The story file, from the library's root. */
-	file: string;
-	/** Its Storybook title (`Buttons/FSButton`), or null when the file does not give one as plain text. */
-	title: string | null;
-	/** The story's docs page on the hosted Storybook, or null without a title. */
-	storybook: string | null;
-}
-
-export interface CatalogComponent {
-	/** The folder under `src/`, which is the component's identity: `components/FSButton`. */
-	id: string;
-	/** The folder's name. */
-	name: string;
-	/** The first part of its story's title (`Buttons`); a part takes its parent's; `Ungrouped` when there is none. */
-	group: string;
-	/** Under `src/compositeComponents`. */
-	composite: boolean;
-	subtitle: string | null;
-	stories: CatalogStory[];
-	figma: string | null;
-	/** The folder on GitHub, built from the path, so it is there for every component. */
-	source: string;
-	/** For a component with no story that belongs to one that has one (`FSCardContent` to `FSCard`), the parent's id. */
-	partOf: string | null;
 }
 
 /** No story, and not a part of one that has one: a real gap in the library's stories. */

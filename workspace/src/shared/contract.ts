@@ -212,6 +212,51 @@ export type PublishStatus =
 	| { state: 'shared'; at: string }
 	| { state: 'held'; problems: PublishProblem[]; at: string };
 
+/** A story of a library component, read from `origin/develop` (DESIGN_SYSTEM_PLAN.md). */
+export interface CatalogStory {
+	/** The story file, from the library's root. */
+	file: string;
+	/** Its Storybook title (`Buttons/FSButton`), or null when the file does not give one as plain text. */
+	title: string | null;
+	/** The story's docs page on the hosted Storybook, or null without a title. */
+	storybook: string | null;
+}
+
+export interface CatalogComponent {
+	/** The folder under `src/`, which is the component's identity: `components/FSButton`. */
+	id: string;
+	/** The folder's name. */
+	name: string;
+	/** The first part of its story's title (`Buttons`); a part takes its parent's; `Ungrouped` when there is none. */
+	group: string;
+	/** Under `src/compositeComponents`. */
+	composite: boolean;
+	subtitle: string | null;
+	stories: CatalogStory[];
+	figma: string | null;
+	/** The folder on GitHub, built from the path, so it is there for every component. */
+	source: string;
+	/** For a component with no story that belongs to one that has one (`FSCardContent` to `FSCard`), the parent's id. */
+	partOf: string | null;
+}
+
+/** How the library's `develop` was brought up to date for this read. */
+export type CatalogUpdate =
+	/** A fetch is running; ask again with `refresh` for its outcome. */
+	| 'updating'
+	| 'updated'
+	| 'unchanged'
+	/** The fetch did not work, said in words; the list is what was already here. */
+	| { failed: string };
+
+/** The Design System tab's list: the component library as its `develop` branch has it, or why there is none. */
+export type Catalog =
+	| { state: 'ready'; commit: string; committedAt: string; update: CatalogUpdate; components: CatalogComponent[] }
+	/** No clone of the library on this machine. `repository` is `owner/repo`. */
+	| { state: 'no-clone'; repository: string }
+	/** A clone with no `origin/develop` to read. Another branch is never read instead. */
+	| { state: 'no-develop'; root: string };
+
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export interface WorkspaceApi {
@@ -255,6 +300,12 @@ export interface WorkspaceApi {
 	suggestCheckout(): Promise<Result<CheckoutSuggestion | null>>;
 	/** Accepts a suggested repository. This is the step that trusts it. */
 	useCheckout(root: string): Promise<Result<Checkout>>;
+	/**
+	 * The component library's catalog, from its clone's `origin/develop`. Without `refresh` it answers at once with what
+	 * the clone already has and starts bringing `develop` up to date; with it, it waits for that and answers with the
+	 * outcome. Nothing in the clone's branches or files is changed.
+	 */
+	designSystemCatalog(refresh: boolean): Promise<Result<Catalog>>;
 	/** Where this person's clones go: the folder they chose, or the default. */
 	cloneFolder(): Promise<Result<string>>;
 	/** Asks for the clone folder with the system's folder picker, and keeps it. Null if the person cancels. */
@@ -672,6 +723,7 @@ export const CHANNELS = {
 	lastCheckout: 'workspace:lastCheckout',
 	suggestCheckout: 'workspace:suggestCheckout',
 	useCheckout: 'workspace:useCheckout',
+	designSystemCatalog: 'workspace:designSystemCatalog',
 	cloneFolder: 'workspace:cloneFolder',
 	chooseCloneFolder: 'workspace:chooseCloneFolder',
 	clonePlan: 'workspace:clonePlan',
