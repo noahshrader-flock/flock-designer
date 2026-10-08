@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
+import { sanitizeAnchor } from '../src/shared/anchor';
 import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, SINGLE_PAGE, layerVisibleScript, resolveScript } from '../src/shared/pageScripts';
 import type { CommentAnchor, MarkerRequest } from '../src/shared/contract';
 
@@ -148,6 +149,15 @@ describe('a prototype, which is one page wherever it is served', () => {
 		w.eval(SINGLE_PAGE);
 		expect((w.eval(resolveScript([req(1, { route: '/demo/v1-i1/#/list', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('elsewhere');
 		expect((w.eval(resolveScript([req(1, { route: '/x/#/settings', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('found');
+	});
+
+	it('gives a picked spot an address a comment can be saved with, wherever the page is served', async () => {
+		const w = page(CARD, 'https://acme.github.io/design/demo/v1/i1/page.html');
+		w.eval(SINGLE_PAGE);
+		const picked = w.eval(PICK_SCRIPT) as Promise<unknown>;
+		click(w, w.document.querySelector('[data-e2e-ref="users-invite"]') as Element);
+		const anchor = sanitizeAnchor(await picked);
+		expect(anchor?.route).toBe('/');
 	});
 
 	it('is a real app otherwise, where the path is the place', () => {

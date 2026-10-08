@@ -3,7 +3,6 @@ import { GitHubError } from './github';
 import { asPeople, isBot, mergePeople } from '../../shared/people';
 import { asDate, asRoute, firstHeading, newestFirst } from '../../shared/projects';
 import { RESOLVED_MARK, addressedAt, addressedIn, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withAddressed, withResolved } from '../../shared/anchor';
-import type { GitHubSession } from './githubSession';
 import { asArray, asRecord } from '../../shared/json';
 
 /**
@@ -27,13 +26,20 @@ export interface DesignRepoRef {
 }
 
 /** Where projects and review threads live, for the app and the flkd command alike. */
+const env: Record<string, string | undefined> = typeof process === 'undefined' ? {} : process.env;
+/** (In a browser, where the published site's comments run this, there is no environment: the page says which.) */
 export const DESIGN_REPO: DesignRepoRef = {
-  owner: process.env.FLOCK_DESIGNER_REPO_OWNER ?? 'noahshrader-flock',
-  repo: process.env.FLOCK_DESIGNER_REPO_NAME ?? 'flock-designer',
+  owner: env.FLOCK_DESIGNER_REPO_OWNER ?? 'noahshrader-flock',
+  repo: env.FLOCK_DESIGNER_REPO_NAME ?? 'flock-designer',
 };
 
-/** All this needs of a GitHub session: a signed-in call to its API. */
-export type GitHubApi = Pick<GitHubSession, 'api'>;
+/**
+ * All this needs of GitHub: a signed-in call to its API. The app's session is one; so is `gh` on the command line, and a
+ * token in a browser on the published site.
+ */
+export interface GitHubApi {
+  api(path: string, init?: { method?: string; body?: unknown }): Promise<unknown>;
+}
 
 
 

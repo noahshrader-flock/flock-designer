@@ -162,6 +162,29 @@ describe('building', () => {
 	});
 });
 
+describe('comments on the page', () => {
+	it('carries the viewer on every iteration, told which iteration it is, with room for it in the bar and beside the frame', () => {
+		const viewer = join(root, 'viewer');
+		mkdirSync(viewer);
+		writeFileSync(join(viewer, 'viewer.js'), 'console.log(1)');
+		writeFileSync(join(viewer, 'viewer.css'), 'a{}');
+		build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } });
+		expect(readFileSync(join(out, '_viewer', 'viewer.js'), 'utf8')).toBe('console.log(1)');
+		const html = read('alpha/v1/i2/index.html');
+		expect(html).toContain('<script type="module" src="../../../_viewer/viewer.js"></script>');
+		expect(html).toContain('href="../../../_viewer/viewer.css"');
+		const config = JSON.parse(/<script type="application\/json" id="flkd-config">([^<]*)<\/script>/.exec(html)?.[1] ?? 'null');
+		expect(config).toEqual({ owner: 'acme', repo: 'design', projectId: 'alpha', name: 'v1-i2' });
+		for (const id of ['flkd-bar', 'flkd-panel', 'flkd-frame']) expect(html).toContain(`id="${id}"`);
+	});
+
+	it('leaves the pages as they were without it', () => {
+		build();
+		expect(read('alpha/v1/i2/index.html')).not.toContain('viewer.js');
+		expect(existsSync(join(out, '_viewer'))).toBe(false);
+	});
+});
+
 describe('a public test', () => {
 	it('says PUBLIC TEST on every page of the site, and leaves the prototypes themselves alone', () => {
 		build({ publicTest: true });
@@ -182,6 +205,10 @@ describe('serving it here, to look at', () => {
 			expect((await get('alpha/v1/i2/')).headers.get('content-type')).toContain('text/html');
 			expect(await (await get('alpha/v1/i2/page.html')).text()).toContain('Alpha one, refined');
 			expect((await get(`_shared/${HASH}.woff2`)).headers.get('content-type')).toBe('font/woff2');
+			writeFileSync(join(out, 'x.js'), '1');
+			writeFileSync(join(out, 'x.css'), 'a{}');
+			expect((await get('x.js')).headers.get('content-type')).toContain('text/javascript');
+			expect((await get('x.css')).headers.get('content-type')).toContain('text/css');
 			// Without its slash a folder's relative links would point one level up, so it is sent to the slashed address.
 			const bare = await get('alpha/v1/i2');
 			expect(bare.status).toBe(301);

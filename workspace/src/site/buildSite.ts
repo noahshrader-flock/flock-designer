@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Iteration } from '../shared/contract';
 import { firstHeading, isPrototypeKey, iterationLabel, parsePrototypeName, sitePath } from '../shared/projects';
@@ -29,6 +29,11 @@ export interface SiteInput {
 	comments?: Map<string, number>;
 	/** Published to a site anyone can open, as a test: every page says so. */
 	publicTest?: boolean;
+	/**
+	 * Comments on each iteration's page: the built viewer (`viewer.js`, `viewer.css`), and the repository whose review
+	 * threads they are. Without it the pages are as they were, with nothing to comment with.
+	 */
+	viewer?: { dir: string; ref: { owner: string; repo: string } };
 }
 
 export interface SiteSummary {
@@ -135,9 +140,13 @@ h1 { font-size: 22px; font-weight: 600; margin: 0 0 20px; }
 .bar { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-bottom: 1px solid #8884; font-size: 14px; box-sizing: border-box; }
 .bar .grow { flex: 1; }
 .bar select { font: inherit; padding: 4px 6px; }
-iframe { display: block; width: 100%; height: calc(100vh - 44px); border: 0; }
+/* The prototype, and beside it the comments' panel when it is open. */
+.stage { display: flex; height: calc(100vh - 44px); }
+.stage iframe { display: block; flex: 1; min-width: 0; height: 100%; border: 0; }
+.slot { display: flex; align-items: center; gap: 8px; }
+#flkd-panel:empty { display: none; }
 .public-test { height: 32px; line-height: 32px; box-sizing: border-box; background: #b00020; color: #fff; font-size: 13px; font-weight: 600; text-align: center; }
-.public-test ~ iframe { height: calc(100vh - 76px); }
+.public-test ~ .stage { height: calc(100vh - 76px); }
 `;
 
 /** On every page of a site published as a public test, so nobody mistakes it for a private one. */
@@ -185,8 +194,15 @@ const projectPage = (p: SiteProject, comments: Map<string, number> | undefined):
 			.join('\n')}\n</div>\n</main>`,
 	);
 
-/** One iteration: its page in a frame, so the page's own styles never reach the bar, under the bar. */
-const viewerPage = (p: SiteProject, current: Page): string => {
+/** What the comments on an iteration's page are told about it, safe inside a script element. */
+const viewerConfig = (ref: { owner: string; repo: string }, p: SiteProject, current: Page): string =>
+	JSON.stringify({ owner: ref.owner, repo: ref.repo, projectId: p.id, name: current.record.name }).replace(/</g, '\\u003c');
+
+/**
+ * One iteration: its page in a frame, so the page's own styles never reach the bar, under the bar. With the viewer, the
+ * bar has a slot for the Comment control and the frame a panel beside it, which the viewer draws into.
+ */
+const viewerPage = (p: SiteProject, current: Page, viewer: SiteInput['viewer']): string => {
 	const options = p.versions
 		.map(
 			(v) =>
@@ -195,9 +211,14 @@ const viewerPage = (p: SiteProject, current: Page): string => {
 					.join('')}</optgroup>`,
 		)
 		.join('');
+	// The viewer's own styles first, so the site's own win for the bar they share.
+	const head = viewer
+		? `<link rel="stylesheet" href="../../../_viewer/viewer.css">\n<script type="application/json" id="flkd-config">${viewerConfig(viewer.ref, p, current)}</script>\n<script type="module" src="../../../_viewer/viewer.js"></script>\n`
+		: '';
 	return shell(
 		`${p.title} · ${labelOf(current)}`,
-		`<header class="bar">\n<a href="../../">${escape(p.title)}</a>\n<span class="grow"></span>\n<select aria-label="Version and iteration" onchange="location.href=this.value">${options}</select>\n</header>\n<iframe src="page.html" title="${escape(`${p.title}, ${labelOf(current)}`)}"></iframe>`,
+		`<header class="bar">\n<a href="../../">${escape(p.title)}</a>\n<span class="grow"></span>\n<span class="slot" id="flkd-bar"></span>\n<select aria-label="Version and iteration" onchange="location.href=this.value">${options}</select>\n</header>\n<div class="stage">\n<iframe id="flkd-frame" src="page.html" title="${escape(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="flkd-panel"></aside>\n</div>`,
+		head,
 	);
 };
 
@@ -211,7 +232,7 @@ const clearOut = (outDir: string): void => {
 	writeFileSync(join(outDir, MARK), 'Built by Flock Designer. This folder is cleared and rebuilt each time.\n');
 };
 
-export const buildSite = ({ designRoot, outDir, comments, publicTest = false }: SiteInput): SiteSummary => {
+export const buildSite = ({ designRoot, outDir, comments, publicTest = false, viewer }: SiteInput): SiteSummary => {
 	const projects = readProjects(designRoot);
 	clearOut(outDir);
 	// The site's own pages, with the banner first when this is a public test. A prototype's page is never touched.
@@ -221,6 +242,10 @@ export const buildSite = ({ designRoot, outDir, comments, publicTest = false }: 
 		writeFileSync(file, publicTest ? html.replace('<body>\n', `<body>\n${BANNER}`) : html);
 	};
 	const shared = writeShared(designRoot, outDir);
+	if (viewer) {
+		mkdirSync(join(outDir, '_viewer'), { recursive: true });
+		for (const f of ['viewer.js', 'viewer.css']) copyFileSync(join(viewer.dir, f), join(outDir, '_viewer', f));
+	}
 	// A page sits three folders down (<project>/v1/i2/), and finds the shared files from there.
 	const relink = (html: string): string =>
 		html.replace(/\/_shared\/([0-9a-f]{16})\b/g, (whole, hash: string) => (shared.has(hash) ? `../../../_shared/${shared.get(hash)}` : whole));
@@ -234,7 +259,7 @@ export const buildSite = ({ designRoot, outDir, comments, publicTest = false }: 
 			for (const pg of v.pages) {
 				const at = join(dir, pg.path);
 				mkdirSync(at, { recursive: true });
-				write(join(at, 'index.html'), viewerPage(p, pg));
+				write(join(at, 'index.html'), viewerPage(p, pg, viewer));
 				writeFileSync(join(at, 'page.html'), relink(readFileSync(join(designRoot, 'projects', p.id, 'prototypes', `${pg.record.name}.html`), 'utf8')));
 			}
 			const newest = v.pages[0] as Page;

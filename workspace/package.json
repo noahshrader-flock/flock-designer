@@ -6,9 +6,9 @@
 	"main": "./out/main/index.js",
 	"scripts": {
 		"dev": "electron-vite dev",
-		"build": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && electron-vite build",
+		"build": "npm run typecheck && electron-vite build",
 		"start": "electron-vite preview",
-		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.viewer.json",
 		"test": "vitest run",
 		"smoke": "npm run build && node scripts/smoke-boot.mjs",
 		"smoke:page": "npm run build && node scripts/smoke-page.mjs",

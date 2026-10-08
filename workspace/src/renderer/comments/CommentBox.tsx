@@ -11,7 +11,18 @@ const BOX_OFFSET = { x: 22, y: -19 } as const;
  * is in the window: the pin is placed in the page, the box in the window, so the box is put at window coordinates rather
  * than anchored to an element.
  */
-export const CommentBox = ({ comments, origin, error }: { comments: Comments; origin: { top: number; left: number }; error: string | null }) => (
+export const CommentBox = ({
+	comments,
+	origin,
+	error,
+	note,
+}: {
+	comments: Comments;
+	origin: { top: number; left: number };
+	error: string | null;
+	/** Said under the box, about what this comment will and will not carry. */
+	note?: string;
+}) => (
 	<>
 		{/* Clicking away is the same as cancelling, as it was when this was a popover. */}
 		<div className="fixed inset-0 z-[1100]" onClick={comments.cancelCompose} />
@@ -34,6 +45,7 @@ export const CommentBox = ({ comments, origin, error }: { comments: Comments; or
 					Comment
 				</label>
 				<Textarea id="comment-draft" rows={3} value={comments.draft} onChange={(e) => comments.setDraft(e.target.value)} autoFocus />
+				{note && <p className="text-muted-foreground text-xs">{note}</p>}
 				<div className="flex flex-row justify-end gap-2">
 					<Button variant="secondary" onClick={comments.cancelCompose} disabled={comments.posting}>
 						Cancel

@@ -187,9 +187,10 @@ export const menuItem = (items: HTMLElement[], name: string): HTMLElement => {
 /** The cards in the comments sidebar, as their text. */
 export const cards = (): HTMLElement[] =>
 	[...document.querySelectorAll<HTMLElement>('button[aria-label="Comment actions"]')].map((b) => b.closest('.rounded-lg') as HTMLElement);
-export const typeInto = (el: HTMLTextAreaElement, text: string) =>
+export const typeInto = (el: HTMLTextAreaElement | HTMLInputElement, text: string) =>
 	act(async () => {
-		const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+		// The value as React sees it typed: through the element's own kind's setter, not the one React wraps.
+		const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value')?.set;
 		setter?.call(el, text);
 		el.dispatchEvent(new Event('input', { bubbles: true }));
 	});

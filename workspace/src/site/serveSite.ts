@@ -5,6 +5,9 @@ import { isInside } from '../main/services/paths';
 
 const TYPES: Record<string, string> = {
 	'.html': 'text/html; charset=utf-8',
+	// A browser runs a script, or applies a stylesheet, only when it is served as one.
+	'.js': 'text/javascript; charset=utf-8',
+	'.css': 'text/css; charset=utf-8',
 	'.woff2': 'font/woff2',
 	'.woff': 'font/woff',
 	'.ttf': 'font/ttf',

@@ -47,6 +47,12 @@ try {
 		// As it would be typed where it is run, so the commands it prints match what a repository's settings allow.
 		self: ['node', relative(process.cwd(), fileURLToPath(import.meta.url))],
 		github: ghApi(),
+		// The comments on the site's pages: built with the app's own Vite, from its own source.
+		buildViewer: async () => {
+			const { build } = await import('vite');
+			await build({ configFile: join(workspace, 'viewer.vite.config.ts') });
+			return join(workspace, 'out', 'viewer');
+		},
 	});
 } finally {
 	rmSync(out, { recursive: true, force: true });

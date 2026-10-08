@@ -41,6 +41,8 @@ export interface CliDeps {
 	/** Asks for a page with no credentials: whether a published page opens for anyone. */
 	fetchAnonymously?: (url: string) => Promise<{ status: number }>;
 	sleep?: (ms: number) => Promise<void>;
+	/** Builds the comments viewer the site's pages carry, and says where it is. Absent where it cannot be built. */
+	buildViewer?: () => Promise<string>;
 }
 
 /** GitHub's API through its command line, `gh`, signed in as the person running this. */
@@ -162,9 +164,22 @@ const site = async (deps: CliDeps, values: { out?: string; serve?: boolean; gate
 		publicTest = gate.publicTest;
 	}
 	const comments = deps.github ? await new DesignRepo(deps.github, DESIGN_REPO).commentCounts().catch(() => undefined) : undefined;
-	const built = buildSite({ designRoot, outDir, comments, publicTest });
+	// The pages work without it, and say nothing is missing: so it is said here when it could not be built.
+	let viewerDir: string | null = null;
+	let noViewer = ' Its pages have no comments: the viewer was not built here.';
+	if (deps.buildViewer) {
+		try {
+			viewerDir = await deps.buildViewer();
+			noViewer = '';
+		} catch (err) {
+			noViewer = ` Its pages have no comments: the viewer did not build (${err instanceof Error ? err.message.split('\n')[0] : String(err)}).`;
+		}
+	}
+	const built = buildSite({ designRoot, outDir, comments, publicTest, viewer: viewerDir ? { dir: viewerDir, ref: DESIGN_REPO } : undefined });
 	const pages = built.projects.reduce((n, p) => n + p.pages, 0);
-	deps.out(`Built ${pages} ${pages === 1 ? 'page' : 'pages'} in ${built.projects.length} ${built.projects.length === 1 ? 'project' : 'projects'} at ${outDir}.${comments ? '' : ' Comment counts are left out: GitHub could not be asked (is gh signed in?).'}`);
+	deps.out(
+		`Built ${pages} ${pages === 1 ? 'page' : 'pages'} in ${built.projects.length} ${built.projects.length === 1 ? 'project' : 'projects'} at ${outDir}.${noViewer}${comments ? '' : ' Comment counts are left out: GitHub could not be asked (is gh signed in?).'}`,
+	);
 	if (values.serve) {
 		const { url } = await serveSite(outDir);
 		deps.out(`Serving it at ${url} on this machine only. Stop with Ctrl-C.`);

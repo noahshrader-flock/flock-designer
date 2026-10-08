@@ -15,6 +15,7 @@ import { byVersion, freshIteration, isPrototypeKey, iterationLabel, parsePrototy
 import { CommentBox } from './comments/CommentBox';
 import { CommentControl } from './comments/CommentControl';
 import { CommentList } from './comments/CommentList';
+import { prototypeAddressed } from './comments/addressed';
 import { appComments, appPage } from './comments/appAdapter';
 import { useComments } from './comments/useComments';
 import { HandoffDialog } from './HandoffDialog';
@@ -804,7 +805,7 @@ export const Review = ({
 									addressed={(comment) =>
 										// A prototype's version is a hash of its source, which means nothing to a person; a commit does.
 										prototype ? (
-											comment.addressedIn && comment.addressedIn !== iteration.name ? `The agent addressed this in ${labelOf(comment.addressedIn)}` : 'The agent addressed this'
+											prototypeAddressed(comment, project.id, iteration.name)
 										) : (
 											<>
 												The agent addressed this in <code>{comment.addressedAt?.slice(0, 7)}</code>

@@ -47,7 +47,7 @@ const HELPERS = String.raw`
   // its # says where in it a comment is; its driver says when it is one (SINGLE_PAGE). Anything else is a real app,
   // where the path is the place.
   var single = !!window.__fdSinglePage;
-  var place = function (r) { if (!single) return r; var i = String(r).indexOf('#'); return i < 0 ? '' : String(r).slice(i); };
+  var place = function (r) { if (!single) return r; var i = String(r).indexOf('#'); return i < 0 ? '/' : '/' + String(r).slice(i); };
   var route = function () { return place(location.pathname + location.hash); };
   // Which state of the page a prototype is showing. Recorded with a comment and compared when the
   // comment is placed again, so the two must read it the same way: one definition, used by both.

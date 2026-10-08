@@ -156,12 +156,12 @@ day, **L** several days.
 | **M5a** | **The site, assembled locally:** project pages, `latest` links, index | M1 | M | Low | **Done 2026-10-08** (Noah's look is his), see [flock-designer.md](flock-designer.md#change-log) |
 | **M5b** | **Publish for real:** the publish command, the private gate, the deploy, **Open page** | M2, M5a (M0 for the private result) | L | Medium | **Built 2026-10-08; first real publish waits on Noah's go-ahead**, see [flock-designer.md](flock-designer.md#change-log) |
 | **M6** | **The agent hands back the link** | M2, M5b | S | Low | **Built 2026-10-08**; its real run waits on M0 (or a public test), see [flock-designer.md](flock-designer.md#change-log) |
-| **M7** | **Comments on the page** (shared components, browser adapter, test sign-in) | M4, M5b | L | Medium | After M4 and M5b |
+| **M7** | **Comments on the page** (shared components, browser adapter, test sign-in) | M4, M5b | L | Medium | **Built 2026-10-08**; its real run needs the site published, see [flock-designer.md](flock-designer.md#change-log) |
 | **M8** | **The round trip, proved** | M7 | S | Low | After M7 |
 | **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | Blocked on a decision |
 | **M10** | **Parity and the smaller things we agreed** | M7 | M | Low | Later |
 
-**M1 to M5a are done, and M5b and M6 are built (2026-10-08).** Their real runs wait on Noah: a public-test publish now, the private result after M0. Next: M7.
+**M1 to M5a are done, and M5b to M7 are built (2026-10-08).** Their real runs wait on Noah: a public-test publish now, the private result after M0. Next: M8, the round trip.
 
 **The repo is public for now (Noah's decision, 2026-10-07), so the whole flow can be built and tested before the admins
 answer.** Public Pages needs no login to view, so what it cannot show is that an anonymous viewer is blocked. That
@@ -317,21 +317,25 @@ starting the publish workflow needs **Actions: read and write**, and reading the
 read** and **Deployments: read**. Until then the review screen says **Page unknown**, with GitHub's refusal as the
 reason. The command uses `gh`, which has them.
 
-### M7: Comments on the page
+### M7: Comments on the page (built 2026-10-08)
 
-**Goal.** A teammate opens the link and comments with the app's own experience.
+**Built.** What, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In short:
 
-- **A viewer around the prototype:** the slim bar from M5a, the prototype in a frame beneath it, and M4's shared
-  components with the **browser adapter** (the GitHub API, the pick and pin scripts run in the page).
-- **The trigger:** the app's own pattern, a Comment control with the count, opening the side panel from the right.
-  No native prompts.
-- **Signing in, for testing only:** a proper dialog in the app's style that takes a fine-grained GitHub token with Issues
-  read and write on the design repository, keeps it in that browser, and says so. A stopgap for Noah and a few
-  testers; M9 is the answer for everyone.
-- **No picture of the spot yet** (it needs `capturePage`, which a page does not have); the card says so. M10 adds it.
+- **The viewer** (`workspace/src/viewer/`): the app's own comments parts from M4 (the Comment control and its count in
+  the page's bar, the side panel from the right, the box beside the pin, the cards and their menu), in the app's own
+  look, built with the app's Vite into one script and stylesheet that the site puts beside every page. A page without
+  it is as it was.
+- **The browser adapter:** GitHub through the app's own code (`DesignRepo`, `callApi`) given a token, so threads are
+  found and written as the app writes them; the page is the prototype's frame, where the same pick and pin scripts run.
+- **Signing in, for testing:** a dialog in the app's style taking a fine-grained token with Issues read and write on
+  the design repository, checked against it before it is kept, kept in that browser only, and forgotten on Sign out.
+- **No picture of the spot:** the comment box says so.
+- **Found on the way and fixed:** a pin was placed by the page's address, which is not the same in the app and on the
+  site, so comments made in one would never have their pins in the other. A prototype is one page, so only what follows
+  its `#` places a pin now, in both.
 
-**Done when:** on a prototype's page, Noah picks an element, writes a comment in the inline box, sees the numbered pin
-and the card in the side panel, and the comment is on the iteration's review issue.
+**What is left of "done when" is Noah's:** on the published page, sign in with a token, pick an element, write the
+comment, see its pin and card, and see it on the iteration's review issue. It needs the site published first (M5b).
 
 ### M8: The round trip, proved
 

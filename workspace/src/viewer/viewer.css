@@ -1,0 +1,2 @@
+/* The app's own look, so the comments on a published page are the app's: the same theme, the same parts. */
+@import '../renderer/index.css';
