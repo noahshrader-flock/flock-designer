@@ -47,7 +47,7 @@ const Notice = ({ title, children, action }: { title: string; children: ReactNod
 );
 
 /**
- * The Design System tab: the component library as its `develop` branch has it, from a clone on this machine
+ * The Design System tab: the component library as its branch has it on GitHub, from a clone on this machine
  * (DESIGN_SYSTEM_PLAN.md), as its Storybook lists it. The list, by default; a component, once one is opened from its row
  * or the toolbar's finder, with its stories live. Not a second Storybook: docs and controls stay there, behind each component's links.
  *

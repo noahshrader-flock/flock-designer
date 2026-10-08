@@ -88,16 +88,11 @@ import('storybook/preview-api').then(async ({ addons }) => {
 });`
 		: ''
 }
-// A story that only sets args, with no render of its own, has a value it sets (a switch's checked, a field's value)
-// held by React for good, so a click does nothing. It is given as where the component starts instead, by React's own
-// rule for every form control: checked as defaultChecked, value as defaultValue. A story that draws itself is left as
-// it is: it holds its own values, as with useArgs.
-const STARTING = { checked: 'defaultChecked', value: 'defaultValue' };
-const startingValues = (args) => {
-	const given = {};
-	for (const [key, start] of Object.entries(STARTING)) if (key in args) Object.assign(given, { [key]: undefined, [start]: args[key] });
-	return given;
-};
+// A story that only sets args, with no render of its own, and sets \`checked\` (a switch, a checkbox) has it held by React
+// for good, so a click does nothing. It is given as where the control starts instead, by React's own rule for a checkable
+// control: \`defaultChecked\`. Only \`checked\`, which means one thing: \`value\` is also what a label shows (FUI's
+// PopoverLineItem), so it is left alone. A story that draws itself holds its own values, as with useArgs.
+const startingValues = (args) => ('checked' in args ? { checked: undefined, defaultChecked: args.checked } : {});
 
 const Live = ({ Story, drawsItself }) => {
 	const [args, setArgs] = useState({});

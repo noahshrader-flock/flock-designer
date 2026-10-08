@@ -61,9 +61,12 @@ const FAKE_STORYBOOK = {
 	'node_modules/@storybook/react/package.json': '{"name":"@storybook/react","version":"0.0.0","main":"index.js"}',
 	// A component as is, or a story object drawn from its render and args, with the id and args Storybook gives a story.
 	'node_modules/@storybook/react/index.js': `exports.setProjectAnnotations = () => {};
+const { createElement } = require('react');
 exports.composeStories = (m) => Object.fromEntries(Object.entries(m).filter(([k]) => k !== 'default').map(([k, v]) => {
 	if (typeof v === 'function') return [k, v];
-	const story = (props) => v.render({ ...v.args, ...props });
+	// As Storybook does: the story's render, else the file's, else its component drawn with the args.
+	const render = v.render ?? m.default?.render ?? ((args) => createElement(m.default.component, args));
+	const story = (props) => render({ ...v.args, ...props });
 	return [k, Object.assign(story, { id: 'story-' + k.toLowerCase(), args: v.args })];
 }));
 `,
@@ -183,6 +186,37 @@ export const Pinned = { args: { checked: true }, render: (args) => <input type="
 		expect(pinned.checked).toBe(true);
 	});
 
+	it('lets a control respond whose story only sets checked, and leaves alone a story that draws itself and a value', async () => {
+		makeLibrary({
+			...LIBRARY,
+			'src/components/FSTwo/FSTwo.stories.tsx': `const Box = (props) => <input type="checkbox" {...props} />;
+const Line = ({ value }) => <span>shows {value}</span>;
+export default { title: 'Inputs/FSTwo', component: Box };
+export const Checked = { args: { checked: true } };
+export const Drawn = { args: { checked: true }, render: (args) => <input type="checkbox" checked={args.checked} onChange={() => {}} /> };
+export const Shown = { args: { value: 'Connected' } };
+Shown.render = (args) => <Line {...args} />;`,
+			// A label-and-value display, like FUI's PopoverLineItem: its story only sets args, and value is what it shows.
+			'src/components/FSLine/FSLine.stories.tsx': `const Line = ({ label, value }) => <span>{label}: {value}</span>;
+export default { title: 'Data/FSLine', component: Line };
+export const Status = { args: { label: 'Network', value: 'Connected' } };`,
+		});
+		const root = await render(await ready(previews()), 'src/components/FSTwo/FSTwo.stories.tsx');
+		const box = (story: string) => root.querySelector(`[data-story="${story}"] input`) as HTMLInputElement;
+		// Only checked: it starts checked, and a click unchecks it.
+		expect(box('Checked').checked).toBe(true);
+		box('Checked').click();
+		expect(box('Checked').checked).toBe(false);
+		// A story that draws itself holds its own value, as in Storybook: it starts as it says, and stays.
+		expect(box('Drawn').checked).toBe(true);
+		box('Drawn').click();
+		expect(box('Drawn').checked).toBe(true);
+		expect(root.querySelector('[data-story="Shown"]')?.textContent).toContain('shows Connected');
+		// A value is what the component is given, never turned into a starting value: the display still shows it.
+		const line = await render(await ready(previews()), 'src/components/FSLine/FSLine.stories.tsx');
+		expect(line.querySelector('[data-story="Status"]')?.textContent).toContain('Network: Connected');
+	});
+
 	it('tells the page that frames it how tall it is, and nothing else', async () => {
 		makeLibrary(LIBRARY);
 		const heard: unknown[] = [];
@@ -261,6 +295,18 @@ describe('keeping them', () => {
 		expect((await fetch(first)).status).toBe(404);
 		expect((await fetch(second)).status).toBe(200);
 		expect(readFileSync(join(folder, readdirSync(folder)[0]!, 'library', 'src/components/FSThree/FSThree.stories.tsx'), 'utf8')).toContain('Three');
+	});
+
+	it('does not reuse a build an older app made from the same commit', async () => {
+		makeLibrary(LIBRARY);
+		const commit = g(clone, 'rev-parse', 'refs/remotes/origin/develop').trim();
+		const stale = join(folder, `${commit.slice(0, 12)}-00000000`, 'site');
+		write(stale, { 'index.html': 'an older app’s page' });
+		const build = vi.fn(buildPreviews);
+		const base = await ready(previews({ build }));
+		expect(build).toHaveBeenCalledOnce();
+		expect(await (await fetch(base)).text()).not.toContain('an older app’s page');
+		expect(readdirSync(folder)).toHaveLength(1);
 	});
 
 	it('tries again, and does not remember, a build that failed', async () => {

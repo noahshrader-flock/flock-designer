@@ -191,9 +191,12 @@ allow-same-origin">`** (checked in a real Electron window, 2026-10-08): the libr
 which throws in a frame with no origin of its own, so the page drew nothing. With `allow-same-origin` the frame has the
 local server's origin, which is not the app window's, so the window still cannot be reached from it (that was checked
 too) and nothing has to be shared with another origin. The combination is only unsafe when the frame shares its
-parent's origin, which it never does here. **Stories respond as in Storybook, no more** (2026-10-08): the page supplies the one
-part of Storybook's preview portable stories leave out, redrawing a story that updates its own args with `useArgs`, and
-nothing for stories that only pin a value (they do not respond in Storybook either; that is the story's to change). **Where it differs from the plan:** no Vite, no
+parent's origin, which it never does here. **Stories respond** (2026-10-08): the page supplies the one part of Storybook's preview
+portable stories leave out, redrawing a story that updates its own args with `useArgs` (tabs, selects, drawers); and a
+story that only sets args, with no render of its own, gets a `checked` it sets as `defaultChecked`, React's own rule for
+a checkable control, so a switch or checkbox responds. Only `checked`: `value` is also what a display shows (FUI's
+PopoverLineItem), so it is never touched. A build is kept per commit **and** per how the app builds (a fingerprint of
+the page, its script and the build's set-up), so a newer app never shows a build an older one made. **Where it differs from the plan:** no Vite, no
 `Install packages` step and no `no-packages` fix beyond saying to run `npm install` in the library: the build needs no
 registry, and sets aside only what the clone has not installed. **Not seen in the app yet:** P2 is the first thing that
 shows it.
@@ -279,8 +282,10 @@ Nothing below is built, and nothing is shaped now except the first line.
 
 ## Next
 
-**S1 to S3 and P0 to P2 are done.** T1 (token controls) waits for P2 to be used, as decided. P3 (pictures in the list) was
-dropped (decision 10).
+**S1 to S3 and P0 to P2 are done,** with Storybook as the source of truth for what a component is (decision 17), and
+stories responding as they should. **T1 (token controls) is next,** and waits for Noah to say so. P3 was dropped
+(decision 10).
 
-**By hand, Noah:** look at the tab in the running app (built, not yet seen), and open one Storybook link from it (it
-needs Chromatic access).
+**By hand, Noah:** restart the dev session (the main process changed), open the Design System tab, and try a few
+components: FSToggle and FSCheckbox (they switch), FSTabs (they move), FSPopovers' entries, FSSelect (the note about
+what is not installed here, until `npm install` is run in the library), and Back.
