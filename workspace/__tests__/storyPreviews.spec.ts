@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { TextEncoder as NodeTextEncoder } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { PREVIEW_HEIGHT, previewAddress } from '../src/shared/catalog';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { buildPreviews, hasPackages, notInstalled, previewEntry, StoryPreviews, unresolved } from '../src/main/services/storyPreviews';
 import { g } from './fixtures';
@@ -80,9 +81,9 @@ const ready = async (p: StoryPreviews) => {
 };
 /** Renders the page served at `base` for one story file in this DOM window, as the preview frame does: what it drew. */
 const render = async (base: string, file: string): Promise<HTMLElement> => {
-	expect((await fetch(`${base}?file=${encodeURIComponent(file)}`)).status).toBe(200);
+	expect((await fetch(previewAddress(base, file))).status).toBe(200);
 	document.body.innerHTML = '<div id="root"></div>';
-	window.history.pushState({}, '', `/?file=${encodeURIComponent(file)}`);
+	window.history.pushState({}, '', previewAddress('/', file));
 	const entry = join(folder, readdirSync(folder)[0]!, 'site', 'entry.js');
 	// The built page is modules in chunks, which a DOM window cannot load itself: joined into one script, as built, and run.
 	const { build } = await import('esbuild');
@@ -135,7 +136,7 @@ describe('building the previews', () => {
 		await render(await ready(previews()), 'src/components/FSOne/FSOne.stories.tsx');
 		await vi.waitFor(() => expect(heard.length).toBeGreaterThan(0));
 		window.removeEventListener('message', listen);
-		expect(heard.every((m) => Object.keys(m as object).join() === 'flockPreviewHeight' && typeof (m as { flockPreviewHeight: unknown }).flockPreviewHeight === 'number')).toBe(true);
+		expect(heard.every((m) => Object.keys(m as object).join() === PREVIEW_HEIGHT && typeof (m as Record<string, unknown>)[PREVIEW_HEIGHT] === 'number')).toBe(true);
 	});
 
 	it('shows a story that throws as its error, and the others still render', async () => {

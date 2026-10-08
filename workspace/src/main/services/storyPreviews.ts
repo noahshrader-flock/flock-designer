@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import { PREVIEW_FILE, PREVIEW_HEIGHT } from '../../shared/catalog';
 import type { StoryPreview } from '../../shared/contract';
 import { readCatalog } from './componentCatalog';
 import { developCommit, libraryReads } from './designLibrary';
@@ -72,10 +73,10 @@ class Boundary extends Component {
 const spaced = (name) => name.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
 const root = createRoot(document.getElementById('root'));
 const fail = (error) => root.render(h('pre', { className: 'fd-error' }, String(error?.message ?? error)));
-const tell = () => parent.postMessage({ flockPreviewHeight: Math.ceil(document.documentElement.scrollHeight) }, '*');
+const tell = () => parent.postMessage({ ${PREVIEW_HEIGHT}: Math.ceil(document.documentElement.scrollHeight) }, '*');
 new ResizeObserver(tell).observe(document.body);
 
-const load = files[new URLSearchParams(location.search).get('file')];
+const load = files[new URLSearchParams(location.search).get(${JSON.stringify(PREVIEW_FILE)})];
 if (!load) fail('There is no such story file in this build.');
 else load().then((m) => {
 	const stories = Object.entries(composeStories(m));

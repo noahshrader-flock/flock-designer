@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { PREVIEW_HEIGHT, previewAddress } from '../src/shared/catalog';
 import { ComponentPage } from '../src/renderer/ComponentPage';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
 import type { CatalogComponent, StoryPreview } from '../src/shared/contract';
@@ -74,8 +75,8 @@ describe('the previews', () => {
 		const { app } = await show(POPOVERS);
 		expect(app.calls.storyPreview).toHaveLength(1);
 		expect(frames().map((f) => f.getAttribute('src'))).toEqual([
-			`${BASE}?file=${encodeURIComponent('src/compositeComponents/FSPopovers/a.stories.tsx')}`,
-			`${BASE}?file=${encodeURIComponent('src/compositeComponents/FSPopovers/b.stories.tsx')}`,
+			previewAddress(BASE, 'src/compositeComponents/FSPopovers/a.stories.tsx'),
+			previewAddress(BASE, 'src/compositeComponents/FSPopovers/b.stories.tsx'),
 		]);
 		// An origin of its own (the local server's), so the library can load; scripts, and nothing else.
 		expect(frames().every((f) => f.getAttribute('sandbox') === 'allow-scripts allow-same-origin')).toBe(true);
@@ -103,13 +104,13 @@ describe('the previews', () => {
 		await show(component());
 		const frame = frames()[0]!;
 		const tell = (data: unknown, source: MessageEventSource | null) => act(async () => void window.dispatchEvent(new MessageEvent('message', { data, source })));
-		await tell({ flockPreviewHeight: 640 }, frame.contentWindow);
+		await tell({ [PREVIEW_HEIGHT]: 640 }, frame.contentWindow);
 		expect(frame.style.height).toBe('640px');
-		await tell({ flockPreviewHeight: 99 }, window);
-		await tell({ flockPreviewHeight: 'tall' }, frame.contentWindow);
-		await tell({ flockPreviewHeight: Infinity }, frame.contentWindow);
+		await tell({ [PREVIEW_HEIGHT]: 99 }, window);
+		await tell({ [PREVIEW_HEIGHT]: 'tall' }, frame.contentWindow);
+		await tell({ [PREVIEW_HEIGHT]: Infinity }, frame.contentWindow);
 		expect(frame.style.height).toBe('640px');
-		await tell({ flockPreviewHeight: 1e9 }, frame.contentWindow);
+		await tell({ [PREVIEW_HEIGHT]: 1e9 }, frame.contentWindow);
 		expect(frame.style.height).toBe('4000px');
 	});
 

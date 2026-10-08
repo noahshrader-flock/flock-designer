@@ -1,8 +1,8 @@
 # Design System plan: surface the component library in the app, and leave room to change it
 
 **Written 2026-10-08. Every decision is made and every unknown I could measure was measured the same day. S1 to S3 are built
-(2026-10-08), and P0 (**Connect the design system**, which replaced S4) the same evening. P1 to P3 (previews) are not
-built.** The plan for filling the **Design System** tab (an empty view today, `renderer/App.tsx`) with the components
+(2026-10-08), and P0 (**Connect the design system**, which replaced S4) the same evening. P1 and P2 (previews) were built the same day.
+P3 (pictures in the list) was dropped.** The plan for filling the **Design System** tab (`renderer/DesignSystem.tsx`) with the components
 from `flock-react-component-lib` (FUI), without copying Storybook and without building the editing yet.
 
 This is the detail behind one candidate in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), which points here and does
@@ -27,7 +27,7 @@ it.
    own folder, keyed by the `develop` commit it was built from, and thrown away when that moves on. (Same rule as
    [step 1.7](flock-designer.md#17--stop-copying-the-design-system-point-at-it-was-d1): point at it, do not copy it.)
 2. **Storybook stays where controls, prop tables and docs live.** The app renders a component's stories as they are
-   written, to show what it looks like (P1 to P3), and links to Storybook for everything else. It does not embed or run
+   written, to show what it looks like (P1, P2), and links to Storybook for everything else. It does not embed or run
    Storybook, and it never writes a story of its own.
 3. **Nothing is a step someone must remember.** The catalog is read from the library as it is, and brought up to date by
    the app itself; no generate step, no committed index file.
@@ -99,7 +99,7 @@ already has (decision 4), so a slow fetch costs nothing the person waits on.
 | 6 | **What does the tab say about Chromatic access?** | **Nothing, for now** (Noah, 2026-10-08) | It was one line under the header; removed with the **Without a story** filter, which Noah also did not want. The **No story** badge on a gap stays |
 | 8 | **How is a preview made?** | **Storybook's portable stories** (`composeStories` and `setProjectAnnotations` from `@storybook/react`, made for rendering stories outside Storybook), with the library's own `.storybook/preview.tsx`, so every story gets the FUI theme and decorators it has in Storybook. **One build of every story per `develop` commit,** by the app's own esbuild and Sass, from a copy of `develop` made with `git archive` into the app's folder and **the clone's own installed packages**; cached until `develop` moves | Measured: every story builds in 1.8 s, the same as one, so one build serves the whole tab. `git archive` leaves no trace in the clone (a worktree would add one to its `.git`). No Storybook server, no second copy of anything, and no network or login |
 | 9 | **Where is a preview shown?** | **Click a component (its row, or the toolbar's finder), and it opens on its own page in the tab:** its name, subtitle and links, then **each of its story files in a card**, live, in a frame of its own, as tall as it renders. Back returns to the list where it was. **Built (P2) as frames in the window, not the native preview view:** each frame is sandboxed to the local server's origin, which is not the window's | One frame per story file: a dialog or drawer renders into its frame's body, and one broken file cannot take the others down. Frames in the window need none of the native view's workarounds (a picture of the page under every menu), and the window's own menus draw over them as over anything else |
-| 10 | **Pictures in the list itself?** | **Not yet.** After P2 is used, P3 adds a small picture of each component's first story to its row, taken once per `develop` commit | The list stays fast and useful without them; the component page is where seeing it matters. Pictures cost a render of every component, which is worth doing once people have asked for it |
+| 10 | **Pictures in the list itself?** | **No** (Noah, 2026-10-08: "I just wanted the actual components"). P3 is dropped | The components are seen live on their own page (P2). Pictures would have been a second way to render every component, with files kept per commit and blank or misleading pictures for anything that opens on a click |
 | 15 | **Embed Storybook for the preview instead?** | **No, not for reading** (Noah and Claude, 2026-10-08). The preview renders **the library's own stories** with the library's own `FSApp`, as decision 8 says, and Storybook stays where docs, controls and prop tables live | It costs nothing per component: the catalog already lists every story file, and the generated entry imports them all, so **a new component appears with nothing added here**. It is not a second Storybook: no docs, no controls, no rewritten stories. Embedding Storybook needs its dev server on the working tree (see the facts above). **It is the right tool for the later editing stage** (edit a branch, watch Storybook update, open the pull request), and the preview build runs on a branch as well as on `develop`, so choosing this now closes nothing |
 | 16 | **Where do token controls go?** | **A separate later step, T1, after P2,** not inside P2 (Noah, 2026-10-08: "a P2 step"; kept apart so P2 stays small). Nothing for it is built in P1 | The library's `FSApp` already takes a theme, so T1 needs no hook from P1. Keeping it out of P2 keeps the component page about seeing a component |
 | 11 | **How does the tab get a library when it has none?** | **A centred "Connect the design system" screen, laid out like the GitHub sign-in,** with two tabs: **Clone** and **Locate** (P0). Whichever is used, the connection is **remembered** (the folder's path, in the app's own settings, as the checkout and the clone folder are) and checked every time the app starts | Noah, 2026-10-08: connecting is something a person does on purpose, once, like signing in, and the app remembers it. Locate lets someone who already has the library anywhere on the computer use that clone, and Clone gives everyone else one with no terminal |
@@ -122,7 +122,6 @@ nothing on GitHub changed.
 | **P0** (done) | **Connect the design system:** the centred screen with **Clone** and **Locate**, and a connection that is remembered. **Replaces S4** | S2, S3, decisions 11 to 14 | M | Medium |
 | **P1** (done) | **Build the previews:** one page of every story from `develop`, cached by commit, one story per address | P0, decision 8 | M | **Medium** |
 | **P2** (done) | **The component page:** click a row, see its stories as live cards | P1, decision 9 | M | Medium |
-| **P3** | **Pictures in the list:** a small picture of each component on its row | P2, decision 10 | M | Low |
 | **T1** | **Adjust tokens in the preview:** colours, spacing and radius, seen live, written nowhere | P2, decision 16 | L | Medium |
 
 ### S1: The catalog reader (done 2026-10-08)
@@ -208,13 +207,6 @@ opens on a click is not marked "Opens on click", and shows as it does in Storybo
 running app yet; Noah to try:** open FSButton, FSPopovers (several files), FSSelect (the note about what is not
 installed) and FSDrawer (opens on a click), and Back.
 
-### P3: Pictures in the list
-
-- After a build, the app takes a picture of each component's first story in an offscreen view, kept beside the build
-  for that commit, and each row shows it small, at the left. A component with no story, or whose story is blank until
-  clicked, shows none.
-- **Not specified further until P2 has been used:** whether people want it is the question it answers.
-
 ### T1: Adjust tokens in the preview
 
 **Not built, and not specified in detail until P2 has been used.** What it is, so P1 and P2 leave the way clear (they
@@ -285,7 +277,8 @@ Nothing below is built, and nothing is shaped now except the first line.
 
 ## Next
 
-**S1 to S3 and P0 to P2 are done.** P3 (pictures in the list) and T1 (token controls) wait for P2 to be used, as decided.
+**S1 to S3 and P0 to P2 are done.** T1 (token controls) waits for P2 to be used, as decided. P3 (pictures in the list) was
+dropped (decision 10).
 
 **By hand, Noah:** look at the tab in the running app (built, not yet seen), and open one Storybook link from it (it
 needs Chromatic access).

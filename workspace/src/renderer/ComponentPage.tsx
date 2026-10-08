@@ -1,12 +1,15 @@
-import { BookOpenIcon, ChevronLeftIcon, CodeIcon, EllipsisVerticalIcon } from 'lucide-react';
+import { BookOpenIcon, CodeIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { PREVIEW_HEIGHT, previewAddress } from '../shared/catalog';
 import type { CatalogComponent, CatalogStory, StoryPreview } from '../shared/contract';
+import { BackButton } from './BackButton';
 import { Loading } from './Loading';
+import { MoreMenu } from './MoreMenu';
+import { Page } from './Page';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { DropdownMenuItem } from './ui/dropdown-menu';
 
 /** The part of a story's title after its group, so a folder with several stories says which is which. */
 const storyName = (story: CatalogStory): string => story.title?.split('/').pop() ?? story.file.split('/').pop()!.replace(/\.stories\.tsx$/, '');
@@ -23,30 +26,18 @@ const Out = ({ href, icon, children }: { href: string; icon: ReactNode; children
 
 /** A component's links, Storybook (one per story) and Source, in the More menu the project cards use. */
 export const ComponentLinks = ({ component }: { component: CatalogComponent }) => (
-	<DropdownMenu>
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<DropdownMenuTrigger asChild>
-					<Button size="icon" variant="ghost" aria-label={`More for ${component.name}`}>
-						<EllipsisVerticalIcon />
-					</Button>
-				</DropdownMenuTrigger>
-			</TooltipTrigger>
-			<TooltipContent>More</TooltipContent>
-		</Tooltip>
-		<DropdownMenuContent align="end" className="w-auto">
-			{component.stories.map((s) =>
-				s.storybook === null ? null : (
-					<Out key={s.file} href={s.storybook} icon={<BookOpenIcon />}>
-						{component.stories.length > 1 ? `Storybook: ${storyName(s)}` : 'Storybook'}
-					</Out>
-				),
-			)}
-			<Out href={component.source} icon={<CodeIcon />}>
-				Source
-			</Out>
-		</DropdownMenuContent>
-	</DropdownMenu>
+	<MoreMenu label={`More for ${component.name}`}>
+		{component.stories.map((s) =>
+			s.storybook === null ? null : (
+				<Out key={s.file} href={s.storybook} icon={<BookOpenIcon />}>
+					{component.stories.length > 1 ? `Storybook: ${storyName(s)}` : 'Storybook'}
+				</Out>
+			),
+		)}
+		<Out href={component.source} icon={<CodeIcon />}>
+			Source
+		</Out>
+	</MoreMenu>
 );
 
 /** The tallest a frame grows to; past that it scrolls inside. A page saying more is not believed. */
@@ -64,7 +55,7 @@ const StoryFrame = ({ src, title }: { src: string; title: string }) => {
 	useEffect(() => {
 		const heard = (e: MessageEvent) => {
 			if (e.source !== frame.current?.contentWindow) return;
-			const h = (e.data as { flockPreviewHeight?: unknown } | null)?.flockPreviewHeight;
+			const h = (e.data as Record<string, unknown> | null)?.[PREVIEW_HEIGHT];
 			if (typeof h === 'number' && Number.isFinite(h)) setHeight(Math.min(Math.max(Math.ceil(h), 40), MAX_FRAME));
 		};
 		window.addEventListener('message', heard);
@@ -92,12 +83,12 @@ export const ComponentPage = ({
 	onBack: () => void;
 	onOpen: (id: string) => void;
 }) => {
-	const [preview, setPreview] = useState<StoryPreview | { state: 'building' } | { state: 'error'; error: string }>({ state: 'building' });
+	const [preview, setPreview] = useState<StoryPreview | { state: 'building' }>({ state: 'building' });
 
 	const build = useCallback(async () => {
 		setPreview({ state: 'building' });
 		const r = await window.workspace.storyPreview();
-		setPreview(r.ok ? r.value : { state: 'error', error: r.error });
+		setPreview(r.ok ? r.value : { state: 'failed', error: r.error });
 	}, []);
 	useEffect(() => {
 		if (component.stories.length > 0) void build();
@@ -110,16 +101,9 @@ export const ComponentPage = ({
 	);
 
 	return (
-		<div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6">
+		<Page>
 			<div className="flex items-start gap-3">
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Button size="icon" variant="ghost" aria-label="Back to components" className="-ml-2" onClick={onBack}>
-							<ChevronLeftIcon />
-						</Button>
-					</TooltipTrigger>
-					<TooltipContent side="bottom">Back to components</TooltipContent>
-				</Tooltip>
+				<BackButton label="Back to components" className="-ml-2" onClick={onBack} />
 				<div className="flex min-w-0 grow flex-col gap-0.5 pt-1">
 					<h3 className="text-base font-semibold">{component.name}</h3>
 					{component.subtitle && <p className="text-muted-foreground text-sm">{component.subtitle}</p>}
@@ -154,7 +138,7 @@ export const ComponentPage = ({
 							</CardHeader>
 						)}
 						<CardContent className="px-0">
-							<StoryFrame src={`${preview.base}?file=${encodeURIComponent(story.file)}`} title={`${component.name}: ${storyName(story)}`} />
+							<StoryFrame src={previewAddress(preview.base, story.file)} title={`${component.name}: ${storyName(story)}`} />
 						</CardContent>
 					</Card>
 				))
@@ -173,6 +157,6 @@ export const ComponentPage = ({
 					</AlertDescription>
 				</Alert>
 			)}
-		</div>
+		</Page>
 	);
 };

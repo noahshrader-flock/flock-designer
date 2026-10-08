@@ -1,8 +1,10 @@
-import { EllipsisVerticalIcon, FileTextIcon, FolderIcon, MessageSquareIcon } from 'lucide-react';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { FileTextIcon, FolderIcon, MessageSquareIcon } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Checkout, CheckoutSuggestion, Project, ProjectIteration } from '../shared/contract';
 import { LoadingScreen } from './Loading';
+import { MoreMenu } from './MoreMenu';
 import { NewWork, type Created } from './NewWork';
+import { Page } from './Page';
 import { PeopleAvatars } from './People';
 import { PublishBanner, PublishLine, usePublishStatus } from './PublishStatus';
 import { startedAt, workOf } from '../shared/projects';
@@ -14,16 +16,12 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { DropdownMenuItem } from './ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /** A name as it reads on a button: the first letter capital, the rest as written. */
 const sentence = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** The list's own padding and width, under the toolbar. The toolbar is full width, so it is not inside this. */
-const Page = ({ children }: { children: ReactNode }) => (
-	<div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6">{children}</div>
-);
 
 /** When a project was started, as a date a person reads; nothing when it is not known. */
 const Started = ({ at }: { at: string | null }) =>
@@ -235,26 +233,14 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 									</Tooltip>
 								)}
 								{project.records.length > 0 && (
-									<DropdownMenu>
-										<Tooltip>
-											<TooltipTrigger asChild>
-												<DropdownMenuTrigger asChild>
-													<Button size="icon" variant="ghost" aria-label="More">
-														<EllipsisVerticalIcon />
-													</Button>
-												</DropdownMenuTrigger>
-											</TooltipTrigger>
-											<TooltipContent>More</TooltipContent>
-										</Tooltip>
-										<DropdownMenuContent align="end" className="w-auto">
-											{project.records.map((record) => (
-												<DropdownMenuItem key={record} onSelect={() => setViewing({ project, name: record, open: true })}>
-													<FileTextIcon />
-													{sentence(record.replace(/\.[^.]+$/, '').replace(/-/g, ' '))}
-												</DropdownMenuItem>
-											))}
-										</DropdownMenuContent>
-									</DropdownMenu>
+									<MoreMenu>
+										{project.records.map((record) => (
+											<DropdownMenuItem key={record} onSelect={() => setViewing({ project, name: record, open: true })}>
+												<FileTextIcon />
+												{sentence(record.replace(/\.[^.]+$/, '').replace(/-/g, ' '))}
+											</DropdownMenuItem>
+										))}
+									</MoreMenu>
 								)}
 							</CardAction>
 						</CardHeader>

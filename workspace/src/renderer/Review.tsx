@@ -1,5 +1,4 @@
 import {
-	ChevronLeftIcon,
 	ExternalLinkIcon,
 	FolderIcon,
 	GitBranchIcon,
@@ -34,6 +33,7 @@ import { MoveToCode } from './MoveToCode';
 import { AgentLog, Loading } from './Loading';
 import { ShareControl } from './ShareControl';
 import { useOverlaps } from './overlays';
+import { BackButton } from './BackButton';
 import { Toolbar } from './Toolbar';
 import { useHostedPreview } from './hostedPreview';
 import { type AddressPhase, runAddress, runPrototypeAddress } from './address';
@@ -439,14 +439,7 @@ export const Review = ({
 		<div className="bg-background fixed inset-x-0 top-(--nav-height) bottom-0 z-40 flex flex-col">
 			{/* The toolbar: where you are, and the way back. Always visible, always fixed. */}
 			<Toolbar>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Button size="icon" variant="ghost" aria-label="Back to projects" className="-mr-2 -ml-2" onClick={onBack}>
-							<ChevronLeftIcon />
-						</Button>
-					</TooltipTrigger>
-					<TooltipContent side="bottom">Back to projects</TooltipContent>
-				</Tooltip>
+				<BackButton label="Back to projects" className="-mr-2 -ml-2" onClick={onBack} />
 				{/* The iteration is named by the switcher beside the comments, which is always shown. */}
 				<h2 className="truncate text-sm font-semibold">{project.title}</h2>
 				<Tooltip delayDuration={300}>

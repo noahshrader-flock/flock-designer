@@ -5,6 +5,7 @@ import type { Catalog, CatalogComponent, CatalogUpdate } from '../shared/contrac
 import { ComponentLinks, ComponentPage } from './ComponentPage';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { LoadingScreen } from './Loading';
+import { Page } from './Page';
 import { SearchSelect } from './SearchSelect';
 import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
@@ -12,8 +13,6 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
-
-const Page = ({ children }: { children: ReactNode }) => <div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6">{children}</div>;
 
 /** Said only when something is wrong, as the Projects screen does: a failed update is a line, never an error. */
 const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
