@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import type { ClonePlace } from '../../shared/contract';
 import { CODE_FOLDERS } from './discovery';
 import { gitHubRepoOf, originOf } from './repositories';
 
@@ -58,15 +59,6 @@ export const defaultCloneFolder = ({ home, exists, clones }: CloneFolderDeps): s
 export const cloneFolderOf = (memory: Pick<CloneFolderMemory, 'read'>, deps: CloneFolderDeps): string => memory.read() ?? defaultCloneFolder(deps);
 
 export const defaultCloneFolderDeps = (clones: string[]): CloneFolderDeps => ({ home: homedir(), exists: existsSync, clones });
-
-/** Where a repository would be placed, and whether it can be. */
-export type ClonePlace =
-	/** Nothing there, or an empty folder: it can be cloned here. */
-	| { state: 'free'; path: string }
-	/** A clone of this same repository is already there: use it, do not clone again. */
-	| { state: 'cloned'; path: string }
-	/** Something else is there. It is never cloned over. */
-	| { state: 'taken'; path: string; why: string };
 
 export interface ClonePlaceDeps {
 	exists: (p: string) => boolean;

@@ -250,6 +250,16 @@ export interface WorkspaceApi {
 	cloneFolder(): Promise<Result<string>>;
 	/** Asks for the clone folder with the system's folder picker, and keeps it. Null if the person cancels. */
 	chooseCloneFolder(): Promise<Result<string | null>>;
+	/** What cloning a repository from the person's GitHub list would do: where it goes, and whether the design repository comes too. */
+	clonePlan(repository: string): Promise<Result<ClonePlan>>;
+	/**
+	 * Clones it into the clone folder (and the design repository beside it, when missing), then opens it as `useCheckout`
+	 * does. Only a repository the person's GitHub list returned; never to a path the window names.
+	 */
+	cloneRepository(repository: string): Promise<Result<Checkout>>;
+	/** Stops a clone that is running. What it made is removed. */
+	cancelClone(): Promise<Result<null>>;
+	onCloneProgress(listener: (progress: CloneProgress) => void): () => void;
 	stopCommand(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	commandStatus(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	onRunLog(listener: (line: RunLogLine) => void): () => void;
@@ -441,6 +451,31 @@ export interface Repository {
 	root: string | null;
 }
 
+/** Where a repository would be placed in the clone folder, and whether it can be. */
+export type ClonePlace =
+	/** Nothing there, or an empty folder: it can be cloned here. */
+	| { state: 'free'; path: string }
+	/** A clone of this same repository is already there: it is used, not cloned again. */
+	| { state: 'cloned'; path: string }
+	/** Something else is there. It is never cloned over. */
+	| { state: 'taken'; path: string; why: string };
+
+/** What cloning a repository would do, said before it is done. */
+export interface ClonePlan {
+	/** `owner/repo`, as GitHub names it. */
+	repository: string;
+	place: ClonePlace;
+	/** The design repository, when it is not beside it yet: cloned too, since the work's records go there. */
+	design: ClonePlace | null;
+}
+
+/** Where a clone has got to: which repository, git's phase ("Receiving objects"), and how far through it. */
+export interface CloneProgress {
+	repository: string;
+	step: string;
+	percent: number | null;
+}
+
 export interface CheckoutSuggestion {
   root: string;
   name: string;
@@ -623,6 +658,10 @@ export const CHANNELS = {
 	useCheckout: 'workspace:useCheckout',
 	cloneFolder: 'workspace:cloneFolder',
 	chooseCloneFolder: 'workspace:chooseCloneFolder',
+	clonePlan: 'workspace:clonePlan',
+	cloneRepository: 'workspace:cloneRepository',
+	cancelClone: 'workspace:cancelClone',
+	cloneProgress: 'workspace:event:cloneProgress',
 	listRepositories: 'workspace:listRepositories',
 	listBaseBranches: 'workspace:listBaseBranches',
 	stopCommand: 'workspace:stopCommand',

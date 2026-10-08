@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import type { AgentReadiness, Checkout, IterationKind, Project, ProjectIteration, PrototypeReadiness, Repository } from '../shared/contract';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { AgentReadiness, Checkout, ClonePlan, CloneProgress, IterationKind, Project, ProjectIteration, PrototypeReadiness, Repository } from '../shared/contract';
 import { freshIteration, slugify } from '../shared/projects';
 import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Spinner } from './ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Textarea } from './ui/textarea';
 
@@ -40,7 +41,8 @@ export interface Created {
  * The repositories are the ones GitHub shows the signed-in person, so the list follows their permissions;
  * both lists can be searched by typing. The repository starts on the one last used, and the branch on the one
  * it has checked out, so the usual case is two choices already made. Work is built in a clone, so a
- * repository with none on this machine says so instead of offering branches.
+ * repository with none on this machine is cloned from here: where it will go is shown, and can be changed, before
+ * anything is downloaded, and once it is cloned the form carries on with it.
  */
 export const NewWork = ({
 	open,
@@ -71,10 +73,14 @@ export const NewWork = ({
 	const [branches, setBranches] = useState<string[]>([]);
 	const [from, setFrom] = useState<string | null>(null);
 	const id = slugify(name);
+	// Cloning a repository with no clone here: what it would do, and, while it runs, how far it has got.
+	const [clonePlan, setClonePlan] = useState<ClonePlan | null>(null);
+	const [cloning, setCloning] = useState<CloneProgress | 'starting' | null>(null);
 
 	useEffect(() => {
 		if (!open) return;
 		setPicked(null);
+		setError(null);
 		void window.workspace.listRepositories().then((r) => r.ok && setRepos(r.value));
 		// Asked now, not after the branch is made: an agent that cannot start would leave an empty iteration behind.
 		void window.workspace.agentReadiness().then((r) => r.ok && setReadiness(r.value));
@@ -99,6 +105,47 @@ export const NewWork = ({
 	const chosen = (picked === null ? inUse : choices.find((r) => r.name === picked)) ?? null;
 	// Chosen, and not the clone in use: either it is being switched to, or there is no clone to switch to.
 	const elsewhere = chosen !== null && chosen.root !== checkout?.root;
+
+	// A repository with no clone here: asked where it would go, and again when the clone folder is changed.
+	const toClone = elsewhere && chosen?.root === null ? chosen.name : null;
+	const askPlan = useCallback(() => {
+		setClonePlan(null);
+		if (toClone === null) return;
+		void window.workspace.clonePlan(toClone).then((r) => (r.ok ? setClonePlan(r.value) : setError(r.error)));
+	}, [toClone]);
+	useEffect(askPlan, [askPlan]);
+	// Only while one runs: a line arriving after it ended does not bring it back.
+	useEffect(() => window.workspace.onCloneProgress((p) => setCloning((c) => (c === null ? null : p))), []);
+
+	const changeFolder = async () => {
+		const r = await window.workspace.chooseCloneFolder();
+		if (!r.ok) return setError(r.error);
+		if (r.value !== null) askPlan();
+	};
+	const clone = async () => {
+		if (toClone === null) return;
+		setError(null);
+		setCloning('starting');
+		const r = await window.workspace.cloneRepository(toClone);
+		setCloning(null);
+		// Stopped by closing the modal: nobody is there to be told it was stopped.
+		if (closedWhileCloning.current) return void (closedWhileCloning.current = false);
+		if (!r.ok) return setError(r.error);
+		// Found and accepted: the form carries on with it, and the list shows it as here now.
+		onCheckout(r.value);
+		setPicked(null);
+		void window.workspace.listRepositories().then((l) => l.ok && setRepos(l.value));
+	};
+	// Closing while it clones stops the clone, which leaves nothing behind.
+	const closedWhileCloning = useRef(false);
+	const close = () => {
+		if (busy) return;
+		if (cloning !== null) {
+			closedWhileCloning.current = true;
+			void window.workspace.cancelClone();
+		}
+		onClose();
+	};
 
 	// Building needs Claude Code; when it is plainly not ready, nothing is created.
 	const blocked = readiness.state === 'missing' || readiness.state === 'signedOut';
@@ -154,7 +201,7 @@ export const NewWork = ({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={(next) => !next && !busy && onClose()}>
+		<Dialog open={open} onOpenChange={(next) => !next && close()}>
 			<DialogContent className="sm:max-w-xl" showCloseButton={!busy}>
 				<DialogHeader>
 					<DialogTitle>New</DialogTitle>
@@ -185,16 +232,17 @@ export const NewWork = ({
 									placeholder="Choose a repository"
 									search="Search repositories…"
 									empty="No repository matches."
-									disabled={busy}
+									disabled={busy || cloning !== null}
 								/>
-								{elsewhere && chosen?.root === null && (
-									<p className="text-muted-foreground text-xs">
-										{`${chosen.name} is not on this machine, so there is nothing here to build it from. Clone it, then `}
-										<button type="button" className="text-primary underline underline-offset-4" onClick={onChoose}>
-											point the app at it
-										</button>
-										.
-									</p>
+								{toClone !== null && clonePlan && (
+									<CloneHere
+										plan={clonePlan}
+										cloning={cloning}
+										onChangeFolder={() => void changeFolder()}
+										onClone={() => void clone()}
+										onStop={() => void window.workspace.cancelClone()}
+										onChoose={onChoose}
+									/>
 								)}
 							</div>
 							<div className="flex flex-col gap-2">
@@ -290,7 +338,7 @@ export const NewWork = ({
 					)}
 				</DialogBody>
 				<DialogFooter>
-					<Button variant="secondary" onClick={onClose} disabled={busy}>
+					<Button variant="secondary" onClick={close} disabled={busy}>
 						Cancel
 					</Button>
 					<Button
@@ -302,5 +350,78 @@ export const NewWork = ({
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
+	);
+};
+
+/**
+ * A repository with no clone on this machine, cloned from the New modal: where it will go (and the design repository
+ * beside it, when that is missing too), that cloning it trusts it, and one button. Nothing is downloaded until it is
+ * pressed, and while it runs it says how far it has got and can be stopped.
+ */
+const CloneHere = ({
+	plan,
+	cloning,
+	onChangeFolder,
+	onClone,
+	onStop,
+	onChoose,
+}: {
+	plan: ClonePlan;
+	cloning: CloneProgress | 'starting' | null;
+	onChangeFolder: () => void;
+	onClone: () => void;
+	onStop: () => void;
+	onChoose: () => void;
+}) => {
+	const { place, design } = plan;
+	const taken = [place, design].find((p) => p?.state === 'taken');
+	const name = plan.repository.split('/')[1];
+	return (
+		<div className="flex flex-col gap-2 text-xs">
+			<div className="flex items-center justify-between gap-2">
+				<p className="text-muted-foreground min-w-0 break-all">
+					{place.state === 'cloned' ? 'Already cloned in ' : 'Will be placed in '}
+					<code>{place.path}</code>
+				</p>
+				<Button size="sm" variant="outline" onClick={onChangeFolder} disabled={cloning !== null}>
+					Change
+				</Button>
+			</div>
+			{design?.state === 'free' && (
+				<p className="text-muted-foreground">
+					<code>flock-designer</code>, which holds the project records, is cloned beside it.
+				</p>
+			)}
+			<p className="text-muted-foreground">
+				{plan.repository} is cloned with your own git sign-in. Using it lets Flock Designer run the commands {name} lists for
+				itself. Already have it somewhere else?{' '}
+				<button type="button" className="text-primary underline underline-offset-4" onClick={onChoose}>
+					Point the app at it
+				</button>
+				.
+			</p>
+			{taken?.state === 'taken' && (
+				<Alert variant="warning">
+					<AlertDescription>{taken.why} Nothing is cloned over it: choose another folder, or move it.</AlertDescription>
+				</Alert>
+			)}
+			{cloning === null ? (
+				<Button size="sm" className="self-start" onClick={onClone} disabled={taken !== undefined}>
+					{place.state === 'cloned' ? 'Use it and continue' : 'Clone and continue'}
+				</Button>
+			) : (
+				<div className="flex items-center gap-2">
+					<Spinner />
+					<span className="grow">
+						{cloning === 'starting'
+							? `Cloning ${name}…`
+							: `Cloning ${cloning.repository.split('/')[1]}: ${cloning.step}${cloning.percent === null ? '' : ` ${cloning.percent}%`}`}
+					</span>
+					<Button size="sm" variant="outline" onClick={onStop}>
+						Stop
+					</Button>
+				</div>
+			)}
+		</div>
 	);
 };

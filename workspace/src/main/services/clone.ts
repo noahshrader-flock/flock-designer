@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
+import type { CloneProgress } from '../../shared/contract';
 import { clonePlace } from './cloneFolder';
 
 /**
@@ -21,10 +22,7 @@ export interface CloneRequest {
 }
 
 /** Where git has got to: its phase as it says it ("Receiving objects"), and how far through that phase. */
-export interface CloneProgress {
-	step: string;
-	percent: number | null;
-}
+export type GitProgress = Omit<CloneProgress, 'repository'>;
 
 export type Cloned = { path: string; cloned: boolean };
 
@@ -59,7 +57,7 @@ export const cloneProblem = (repository: string, stderr: string): string => {
 };
 
 /** A line of git's progress, as `--progress` writes it: `Receiving objects:  45% (450/1000), 1.20 MiB | 2.00 MiB/s`. */
-export const readProgress = (line: string): CloneProgress | null => {
+export const readProgress = (line: string): GitProgress | null => {
 	const m = /^(?:remote: )?([A-Z][a-z]+(?: [a-z]+)*):\s+(\d{1,3})%/.exec(line.trim());
 	return m ? { step: m[1] as string, percent: Number(m[2]) } : null;
 };
@@ -82,7 +80,7 @@ export class Cloner {
 
 	constructor(private readonly deps: CloneDeps = {}) {}
 
-	async clone(req: CloneRequest, onProgress: (p: CloneProgress) => void = () => undefined, signal?: AbortSignal): Promise<Cloned> {
+	async clone(req: CloneRequest, onProgress: (p: GitProgress) => void = () => undefined, signal?: AbortSignal): Promise<Cloned> {
 		if (this.running !== null) throw new CloneProblem(`Already cloning ${this.running}. Wait for it to finish.`);
 		// Only a repository the person's own list returned: the window cannot name one.
 		const listed = req.visible.find((r) => r.toLowerCase() === req.repository.toLowerCase());
@@ -115,7 +113,7 @@ export class Cloner {
 		}
 	}
 
-	private run(repository: string, dest: string, onProgress: (p: CloneProgress) => void, signal?: AbortSignal): Promise<void> {
+	private run(repository: string, dest: string, onProgress: (p: GitProgress) => void, signal?: AbortSignal): Promise<void> {
 		const url = (this.deps.urlOf ?? ((r) => `https://github.com/${r}.git`))(repository);
 		return new Promise((done, fail) => {
 			const child = spawn(this.deps.git ?? 'git', ['clone', '--progress', '--no-recurse-submodules', '--', url, dest], {

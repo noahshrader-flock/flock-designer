@@ -30,6 +30,8 @@ vi.mock('electron', () => ({
 	clipboard: { writeText: (t: string) => (copied = t) },
 }));
 let copied = '';
+/** Where each repository is cloned from in a test: this machine, standing in for GitHub. */
+let cloneSources: Record<string, string> = {};
 
 const call = async (channel: string, ...args: unknown[]) => {
 	const fn = handlers.get(channel);
@@ -110,6 +112,7 @@ beforeEach(async () => {
 		prototypesRoot: join(home, 'prototype'),
 		prototypeServer,
 		cloneFolders: new (await import('../src/main/services/cloneFolder')).CloneFolderMemory(join(home, 'clone-folder.json')),
+		cloner: new (await import('../src/main/services/clone')).Cloner({ urlOf: (r) => cloneSources[r] ?? 'file:///nowhere' }),
 	});
 });
 
@@ -134,6 +137,76 @@ describe('where clones go', () => {
 		expect((await call(CHANNELS.cloneFolder)).value).toBe(elsewhere);
 		expect((await call(CHANNELS.listRepositories)).value).toContainEqual(expect.objectContaining({ root: join(elsewhere, 'flock-other') }));
 		expect((await call(CHANNELS.useCheckout, join(elsewhere, 'flock-other'))).ok).toBe(true);
+	});
+
+	describe('cloning from the New modal', () => {
+		const bare = (name: string, make: (dir: string) => void) => {
+			const source = join(home, 'sources', name);
+			make(source);
+			g(home, 'clone', '-q', '--bare', source, `${source}.git`);
+			return `file://${source}.git`;
+		};
+		const signedIn = (repos: string[]) => {
+			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
+			githubApi.mockImplementation(async (path: string) => (path.startsWith('/user/repos') ? repos.map((full_name) => ({ full_name })) : Promise.reject(new Error(`not faked: ${path}`))));
+		};
+		const elsewhere = async () => {
+			(await picker()).mockResolvedValueOnce({ canceled: false, filePaths: [join(home, 'Work')] } as never);
+			await call(CHANNELS.chooseCloneFolder);
+		};
+
+		it('clones a repository from the person’s list and the design repository beside it, then opens it', async () => {
+			signedIn(['flocksafety/flock-ops']);
+			cloneSources = {
+				'flocksafety/flock-ops': bare('flock-ops', (d) => makeProduct(d)),
+				'noahshrader-flock/flock-designer': bare('flock-designer', (d) => {
+					mkdirSync(join(d, 'projects'), { recursive: true });
+					writeFileSync(join(d, 'projects', '.keep'), '');
+					g(d, 'init', '-q', '-b', 'main');
+					g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'add', '.');
+					g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'records');
+				}),
+			};
+			await elsewhere();
+			const plan = (await call(CHANNELS.clonePlan, 'FlockSafety/flock-ops')).value;
+			expect(plan).toEqual({
+				repository: 'flocksafety/flock-ops',
+				place: { state: 'free', path: join(home, 'Work', 'flock-ops') },
+				design: { state: 'free', path: join(home, 'Work', 'flock-designer') },
+			});
+			const opened = await call(CHANNELS.cloneRepository, 'flocksafety/flock-ops');
+			expect(opened).toMatchObject({ ok: true, value: { name: 'flock-ops', branch: 'develop' } });
+			expect(existsSync(join(home, 'Work', 'flock-designer', 'projects', '.keep'))).toBe(true);
+			// Its origin as a real clone's would read: GitHub, not this machine's stand-in.
+			g(join(home, 'Work', 'flock-ops'), 'remote', 'set-url', 'origin', 'https://github.com/flocksafety/flock-ops.git');
+			// Found where it went, so it is listed as here.
+			expect((await call(CHANNELS.listRepositories)).value).toContainEqual({ name: 'flocksafety/flock-ops', root: join(home, 'Work', 'flock-ops') });
+		});
+
+		it('refuses a repository the person’s list does not have, with nothing made', async () => {
+			signedIn(['flocksafety/flock-ops']);
+			await elsewhere();
+			expect((await call(CHANNELS.cloneRepository, 'someone/secret')).error).toMatch(/not one of the repositories your GitHub account can see/);
+			expect(existsSync(join(home, 'Work'))).toBe(false);
+		});
+
+		it('says when what it cloned has no Flock Designer setup on its branch, and does not open it', async () => {
+			signedIn(['flocksafety/plain']);
+			cloneSources = {
+				'flocksafety/plain': bare('plain', (d) => {
+					mkdirSync(d, { recursive: true });
+					writeFileSync(join(d, 'README.md'), '# plain\n');
+					g(d, 'init', '-q', '-b', 'develop');
+					g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'add', '.');
+					g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'first');
+				}),
+			};
+			// The design repository is already beside it here, a clone of it as its origin says, so only the product is cloned.
+			writeFileSync(join(home, 'GitHub', 'flock-designer', '.git', 'config'), '[remote "origin"]\n\turl = https://github.com/noahshrader-flock/flock-designer.git\n');
+			const r = await call(CHANNELS.cloneRepository, 'flocksafety/plain');
+			expect(r.error).toMatch(/is cloned in [\s\S]*has no Flock Designer setup/);
+			expect(existsSync(join(home, 'GitHub', 'plain', 'README.md'))).toBe(true);
+		});
 	});
 
 	it('is left as it was when the picker is cancelled', async () => {

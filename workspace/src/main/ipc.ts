@@ -7,6 +7,7 @@ import {
 	CHANNELS,
 	type Checkout,
 	type CheckoutSuggestion,
+	type ClonePlan,
 	type MarkerRequest,
 	PAGE_HOLD_REASONS,
 	type PageBounds,
@@ -32,7 +33,8 @@ import { buildContextReceipt } from './services/contextReceipt';
 import { DESCRIPTOR_PATH, readDescriptor } from './services/descriptor';
 import { branchCommit, branchExists, isRepository, readCheckout, recentBranches, runGit } from './services/git';
 import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
-import { CloneFolderMemory, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
+import { Cloner } from './services/clone';
+import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
 import { classify, readBranchProjects } from './services/branchProjects';
@@ -127,6 +129,8 @@ export interface IpcContext {
 	sessions?: SessionMemory;
 	/** Where this person's clones go, once they choose. */
 	cloneFolders?: CloneFolderMemory;
+	/** Clones what the New modal asks for. Given for tests, to clone from this machine instead of GitHub. */
+	cloner?: Cloner;
 }
 
 export const registerIpc = ({
@@ -144,6 +148,7 @@ export const registerIpc = ({
 	prototypeServer = new PrototypeServer(),
 	sessions = new SessionMemory(join(tmpdir(), 'flock-designer-agent-sessions.json')),
 	cloneFolders = new CloneFolderMemory(join(tmpdir(), 'flock-designer-clone-folder.json')),
+	cloner = new Cloner(),
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
@@ -297,6 +302,52 @@ export const registerIpc = ({
 		}),
 	);
 
+	/**
+	 * Cloning, from the New modal: only a repository the person's own GitHub list returned (the last list shown, or asked
+	 * again), only into the clone folder, and the design repository beside it when it is missing.
+	 */
+	let visible: string[] = [];
+	let cloning: AbortController | null = null;
+	const DESIGN = `${DESIGN_REPO.owner}/${DESIGN_REPO.repo}`;
+	const planClone = async (repository: string): Promise<ClonePlan> => {
+		if (visible.length === 0 && github.state().state === 'signedIn') visible = await visibleRepositories(github);
+		const listed = visible.find((r) => r.toLowerCase() === String(repository).toLowerCase());
+		if (listed === undefined) throw new Error(`${repository} is not one of the repositories your GitHub account can see. Sign in to GitHub in Flock Designer, then try again.`);
+		const folder = cloneFolder();
+		const design = clonePlace(folder, DESIGN);
+		return { repository: listed, place: clonePlace(folder, listed), design: design.state === 'cloned' ? null : design };
+	};
+	ipcMain.handle(CHANNELS.clonePlan, guard(planClone));
+	ipcMain.handle(
+		CHANNELS.cloneRepository,
+		guard(async (repository: string): Promise<Checkout> => {
+			const plan = await planClone(repository);
+			for (const p of [plan.place, plan.design]) if (p?.state === 'taken') throw new Error(`${p.why} Nothing was cloned over it.`);
+			const folder = cloneFolder();
+			const stop = (cloning = new AbortController());
+			const progress = (of: string) => (p: { step: string; percent: number | null }) => window.webContents.send(CHANNELS.cloneProgress, { repository: of, ...p });
+			let product: string;
+			try {
+				product = (await cloner.clone({ repository: plan.repository, visible, folder }, progress(plan.repository), stop.signal)).path;
+				if (plan.design) await cloner.clone({ repository: DESIGN, visible: [DESIGN], folder }, progress(DESIGN), stop.signal);
+			} finally {
+				cloning = null;
+			}
+			// Cloned, but on a branch this app cannot work in: said now, rather than at Start.
+			if (!existsSync(join(product, DESCRIPTOR_PATH))) {
+				throw new Error(`${plan.repository} is cloned in ${product}, but the branch it is on has no Flock Designer setup (${DESCRIPTOR_PATH}), so it cannot be used yet.`);
+			}
+			return openRepository(product);
+		}),
+	);
+	ipcMain.handle(
+		CHANNELS.cancelClone,
+		guard(() => {
+			cloning?.abort();
+			return null;
+		}),
+	);
+
 	ipcMain.handle(
 		CHANNELS.listRepositories,
 		guard(async (): Promise<Repository[]> => {
@@ -306,6 +357,7 @@ export const registerIpc = ({
 			});
 			// Signed out, or GitHub out of reach: what is on this machine can still be started in.
 			const remote = github.state().state === 'signedIn' ? await visibleRepositories(github).catch(() => []) : [];
+			if (remote.length > 0) visible = remote;
 			return mergeRepositories(remote, clones);
 		}),
 	);
