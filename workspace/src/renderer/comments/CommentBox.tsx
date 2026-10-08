@@ -17,9 +17,8 @@ export const CommentBox = ({ comments, origin, error }: { comments: Comments; or
 		<div className="fixed inset-0 z-[1100]" onClick={comments.cancelCompose} />
 		<div
 			onKeyDown={(e: React.KeyboardEvent) => {
-				// Cmd or Ctrl and Enter saves, as in the tools people already use.
+				// Cmd or Ctrl and Enter saves, as in the tools people already use. Escape is the screen's, as everywhere.
 				if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void comments.post();
-				if (e.key === 'Escape') comments.cancelCompose();
 			}}
 			className="bg-popover fixed z-[1101] w-[300px] max-w-[calc(100vw-16px)] rounded-lg border p-4 shadow-lg"
 			// Inline on purpose: measured from the pin.

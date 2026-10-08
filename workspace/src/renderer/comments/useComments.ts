@@ -5,7 +5,7 @@ import { latest } from '../../shared/latest';
 import type { CommentStore, PageSurface } from './surfaces';
 
 /** How often an open iteration looks for new comments. */
-export const REFRESH_MS = 60_000;
+const REFRESH_MS = 60_000;
 
 type Mode = 'browse' | 'picking' | 'composing';
 
@@ -171,21 +171,10 @@ export const useComments = ({
 		if (opened) void drawMarkers();
 	}, [opened, drawMarkers, route, redraw]);
 
-	// A pin on the page was clicked or dropped somewhere new. Held in refs, so the listener is added once and always
-	// acts with what is current.
+	// A pin on the page was clicked or dropped somewhere new. The screen's callback is held in a ref, since it is a new
+	// function each render; everything else here changes only with the iteration, which listens afresh.
 	const pinClick = useRef(onPinClick);
 	pinClick.current = onPinClick;
-	const afterMove = useRef<(r: Awaited<ReturnType<CommentStore['move']>>) => void>(() => undefined);
-	afterMove.current = (r) => {
-		if (r.ok) {
-			showChanged(r.value);
-			// The comment now points somewhere else, and the file the agent reads says where.
-			void load(true);
-		} else {
-			setError(r.error);
-		}
-		setRedraw((n) => n + 1); // either way, draw the pin from what is saved
-	};
 	useEffect(
 		() =>
 			// Stopped on leaving: the handler for an iteration the person has left must not act on its comment ids.
@@ -200,10 +189,19 @@ export const useComments = ({
 					// The unsaved pin: just remember where it now is.
 					setPending((p) => (p ? { ...e.anchor, commit: p.commit } : p));
 				} else {
-					void store.move(e.id, e.anchor).then((r) => afterMove.current(r));
+					void store.move(e.id, e.anchor).then((r) => {
+						if (r.ok) {
+							showChanged(r.value);
+							// The comment now points somewhere else, and the file the agent reads says where.
+							void load(true);
+						} else {
+							setError(r.error);
+						}
+						setRedraw((n) => n + 1); // either way, draw the pin from what is saved
+					});
 				}
 			}),
-		[page, store],
+		[page, store, showChanged, load, setError],
 	);
 
 	/** Waits for one click on the page. */
