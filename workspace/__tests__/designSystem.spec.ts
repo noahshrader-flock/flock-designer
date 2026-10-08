@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DesignSystem } from '../src/renderer/DesignSystem';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
 import type { Catalog, CatalogComponent, CatalogUpdate } from '../src/shared/contract';
-import { button, fail, fakeApp, ok, press, render, settle, typeInto, unmountAll } from './reviewHarness';
+import { button, fail, fakeApp, key, ok, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
 /**
  * The Design System tab (S3 of the design system plan): the component library's catalog as a grouped list with links
@@ -57,7 +57,14 @@ const open = async (answers: (refresh: boolean) => ReturnType<typeof ok<Catalog>
 };
 const rows = () => [...document.querySelectorAll('[data-component]')].map((li) => li.getAttribute('data-component')!.split('/')[1]);
 const row = (name: string) => document.querySelector(`[data-component$="/${name}"]`) as HTMLElement;
-const links = (name: string) => [...row(name).querySelectorAll('a')].map((a) => [a.textContent, a.getAttribute('href')]);
+/** The links in a row's More menu, which has to be opened to have any. Closed again, so the next row can be opened. */
+const links = async (name: string) => {
+	const items = await openMenu(button(`More for ${name}`, row(name)));
+	const found = items.map((i) => [i.textContent, i.getAttribute('href')]);
+	await key('Escape');
+	await settle();
+	return found;
+};
 const groups = () => [...document.querySelectorAll('section')].map((s) => s.getAttribute('aria-label'));
 const text = () => document.body.textContent ?? '';
 
@@ -81,18 +88,25 @@ describe('the list', () => {
 
 	it('links each component to Storybook and Source, never Figma; a link not known is not there', async () => {
 		await open(() => ok(ready()));
-		expect(links('FSButton')).toEqual([
+		expect(await links('FSButton')).toEqual([
 			['Storybook', 'https://sb.example/FSButton'],
 			['Source', 'https://github.com/x/FSButton'],
 		]);
-		expect(links('FSCard').map(([t]) => t)).toEqual(['Storybook', 'Source']);
-		expect(links('FSApp').map(([t]) => t)).toEqual(['Source']);
-		expect([...document.querySelectorAll('a')].every((a) => a.getAttribute('target') === '_blank')).toBe(true);
+		expect((await links('FSCard')).map(([t]) => t)).toEqual(['Storybook', 'Source']);
+		expect((await links('FSApp')).map(([t]) => t)).toEqual(['Source']);
+	});
+
+	it('keeps the links in a More menu on each row, opening in the browser, and none on the row itself', async () => {
+		await open(() => ok(ready()));
+		expect(row('FSButton').querySelectorAll('a')).toHaveLength(0);
+		expect(rows().every((name) => button(`More for ${name}`, row(name)))).toBe(true);
+		const items = await openMenu(button('More for FSButton', row('FSButton')));
+		expect(items.every((i) => i.getAttribute('target') === '_blank' && i.getAttribute('rel') === 'noreferrer')).toBe(true);
 	});
 
 	it('gives a folder with several stories a link to each, by name', async () => {
 		await open(() => ok(ready()));
-		expect(links('FSPopovers').slice(0, 2)).toEqual([
+		expect((await links('FSPopovers')).slice(0, 2)).toEqual([
 			['Storybook: PopoverHeader', 'https://sb.example/header'],
 			['Storybook: PopoverLineItem', 'https://sb.example/line'],
 		]);

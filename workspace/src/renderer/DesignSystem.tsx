@@ -1,4 +1,4 @@
-import { GitBranchIcon } from 'lucide-react';
+import { BookOpenIcon, CodeIcon, EllipsisVerticalIcon, GitBranchIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { isGap } from '../shared/catalog';
 import type { Catalog, CatalogComponent, CatalogUpdate } from '../shared/contract';
@@ -10,6 +10,7 @@ import { Toolbar } from './Toolbar';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 const Page = ({ children }: { children: ReactNode }) => <div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6">{children}</div>;
@@ -22,11 +23,14 @@ const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
 		</span>
 	) : null;
 
-/** A link out. The window opens nothing itself: the app hands an https address to the system's browser. */
-const Out = ({ href, children }: { href: string; children: ReactNode }) => (
-	<a href={href} target="_blank" rel="noreferrer" className="text-primary text-sm underline-offset-4 hover:underline">
-		{children}
-	</a>
+/** A link out, as a menu item. The window opens nothing itself: the app hands an https address to the system's browser. */
+const Out = ({ href, icon, children }: { href: string; icon: ReactNode; children: ReactNode }) => (
+	<DropdownMenuItem asChild>
+		<a href={href} target="_blank" rel="noreferrer">
+			{icon}
+			{children}
+		</a>
+	</DropdownMenuItem>
 );
 
 /** The part of a story's title after its group, so a folder with several stories says which is which. */
@@ -45,16 +49,30 @@ const Row = ({ component, part, picked }: { component: CatalogComponent; part: b
 			</span>
 			{component.subtitle && <span className="text-muted-foreground text-sm">{component.subtitle}</span>}
 		</div>
-		<div className="flex shrink-0 flex-wrap justify-end gap-x-4 gap-y-1">
-			{component.stories.map((s) =>
-				s.storybook === null ? null : (
-					<Out key={s.file} href={s.storybook}>
-						{component.stories.length > 1 ? `Storybook: ${storyName(s.title)}` : 'Storybook'}
-					</Out>
-				),
-			)}
-			<Out href={component.source}>Source</Out>
-		</div>
+		<DropdownMenu>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<DropdownMenuTrigger asChild>
+						<Button size="icon" variant="ghost" aria-label={`More for ${component.name}`}>
+							<EllipsisVerticalIcon />
+						</Button>
+					</DropdownMenuTrigger>
+				</TooltipTrigger>
+				<TooltipContent>More</TooltipContent>
+			</Tooltip>
+			<DropdownMenuContent align="end" className="w-auto">
+				{component.stories.map((s) =>
+					s.storybook === null ? null : (
+						<Out key={s.file} href={s.storybook} icon={<BookOpenIcon />}>
+							{component.stories.length > 1 ? `Storybook: ${storyName(s.title)}` : 'Storybook'}
+						</Out>
+					),
+				)}
+				<Out href={component.source} icon={<CodeIcon />}>
+					Source
+				</Out>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	</li>
 );
 
