@@ -463,11 +463,11 @@ export const Review = ({
 						<Button
 							size="sm"
 							variant="outline"
-							title={page.public ? 'Its page, on a site anyone can open: a public test' : 'Its page, for people signed in to GitHub with access'}
+							title="Its page on the published site"
 							onClick={() => void window.workspace.openPublishedPage(project.id, iteration.name).then((r) => !r.ok && setError(r.error))}
 						>
 							<ExternalLinkIcon />
-							{page.public ? 'Open page (public)' : 'Open page'}
+							Open page
 						</Button>
 					)}
 					{page.state === 'publishing' && (

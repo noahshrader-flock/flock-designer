@@ -154,19 +154,19 @@ day, **L** several days.
 | **M3** | **Address starts the next iteration** when the current one has outside comments | M1, M2 | M | Medium | **Done 2026-10-08** (its real run is Noah's), see [flock-designer.md](flock-designer.md#change-log) |
 | **M4** | **One comments experience,** taken out of the review screen | M1 | L | **High** | **Done 2026-10-08** (its manual run is Noah's), see [flock-designer.md](flock-designer.md#change-log) |
 | **M5a** | **The site, assembled locally:** project pages, `latest` links, index | M1 | M | Low | **Done 2026-10-08** (Noah's look is his), see [flock-designer.md](flock-designer.md#change-log) |
-| **M5b** | **Publish for real:** the publish command, the private gate, the deploy, **Open page** | M2, M5a (M0 for the private result) | L | Medium | **Built 2026-10-08; first real publish waits on Noah's go-ahead**, see [flock-designer.md](flock-designer.md#change-log) |
-| **M6** | **The agent hands back the link** | M2, M5b | S | Low | **Built 2026-10-08**; its real run waits on M0 (or a public test), see [flock-designer.md](flock-designer.md#change-log) |
+| **M5b** | **Publish for real:** the publish command, the deploy, **Open page** | M2, M5a (M0 for the private result) | L | Medium | **Built and run 2026-10-08**, see [flock-designer.md](flock-designer.md#change-log) |
+| **M6** | **The agent hands back the link** | M2, M5b | S | Low | **Built 2026-10-08**, see [flock-designer.md](flock-designer.md#change-log) |
 | **M7** | **Comments on the page** (shared components, browser adapter, test sign-in) | M4, M5b | L | Medium | **Built 2026-10-08**; its real run needs the site published, see [flock-designer.md](flock-designer.md#change-log) |
 | **M8** | **The round trip, proved** | M7 | S | Low | After M7 |
 | **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | Blocked on a decision |
 | **M10** | **Parity and the smaller things we agreed** | M7 | M | Low | Later |
 
-**M1 to M5a are done, and M5b to M7 are built (2026-10-08).** Their real runs wait on Noah: a public-test publish now, the private result after M0. Next: M8, the round trip.
+**M1 to M5a are done, and M5b to M7 are built (2026-10-08).** The site is published (public while the repo is). The private result waits on M0. Next: M8, the round trip.
 
 **The repo is public for now (Noah's decision, 2026-10-07), so the whole flow can be built and tested before the admins
 answer.** Public Pages needs no login to view, so what it cannot show is that an anonymous viewer is blocked. That
 single result is what M0 unlocks, by moving the repo into the org as a private repository with private Pages.
-**The fastest path to seeing it work end to end:** M1, then M2, then M5a, then M5b in its public test mode, then M6
+**The fastest path to seeing it work end to end:** M1, then M2, then M5a, then M5b, then M6
 (a prototype becomes a link, handed back by the agent); then M4, M7 and M8 (comments on the page, reaching the app).
 M9 is a decision and is not needed for the test: testers use a token.
 
@@ -271,15 +271,17 @@ then move between the index, a project, its versions and iterations, and `latest
 **Built.** What, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In short:
 
 - **`flkd publish --project <id> --name <v1-i1>`** (`workspace/src/main/services/pages.ts`, nothing of the app in it):
-  the gate first, then the records pushed by the app's own records sync (only `projects/`, and nothing at all if
-  anything else is waiting), then the workflow asked to deploy and waited on, then the iteration's link, then a request
-  for it with no credentials, with a plain warning if it opened when it should not have.
-- **The gate** asks GitHub whether the repository and its Pages site are private; unknown counts as public. A public one
-  is published only with `--public-test "publish where anyone can see it"`, typed for that run, and then every page of
-  the site says PUBLIC TEST.
-- **The workflow** (`.github/workflows/publish-prototypes.yml`) runs only when asked, never on a push, queues rather than
-  cancels, and builds with `--gate`, so it checks for itself whoever asked. It installs the generator's packages without
-  the app's binaries (rehearsed: 2 seconds from a warm cache, no Electron download).
+  the records pushed by the app's own records sync (only `projects/`, and nothing at all if anything else is waiting),
+  then the workflow asked to deploy and waited on, then the iteration's link, then a request for it with no
+  credentials.
+- **Who can open it is said, not enforced.** It asks GitHub whether the repository and its Pages site are private
+  (unknown counts as public), and says in its note when they are not: while the repository is public, anyone with the
+  link can open the page. If a site GitHub called private opens for anyone, it warns plainly and says not to share it.
+  (An earlier version refused to publish to a public site except with a typed phrase, and put PUBLIC TEST on every
+  page. Noah removed both on 2026-10-08: the repository is public only briefly.)
+- **The workflow** (`.github/workflows/publish-prototypes.yml`) runs only when asked, never on a push, takes no options,
+  and queues rather than cancels. It installs the generator's packages without the app's binaries (rehearsed: 2
+  seconds from a warm cache, no Electron download).
 - **In the app,** the review screen shows **Open page** beside the switcher once the iteration is on its page (the last
   deploy includes the last change to it, asked of GitHub), with a link that names that deploy, and **Not published yet**
   when it is saved but not deployed. The main process works out the address and opens it; the window never hands it one.
@@ -297,11 +299,10 @@ without cannot, and the command refuses when the repository is public.
 
 - **From Claude Code,** the task `flkd new-prototype` and `change-prototype` print ends: save, publish, then end with
   the link exactly as the command printed it, which version and iteration, and who can open it; or, with no link, why,
-  in the command's words. The agent never gives a link the command did not print, and never adds `--public-test`
-  unless the person wrote its phrase. `change-prototype` first says how many open comments the iteration has, and puts
+  in the command's words. The agent never gives a link the command did not print. `change-prototype` first says how many open comments the iteration has, and puts
   them in a file to read.
 - **From the app,** a prototype the app built and a change Address made are published by the app itself, in the
-  background, through the same code and the same gate (never as a public test). The review screen says
+  background, through the same code. The review screen says
   **Publishing…**, then **Open page**, or **Not published yet** with the reason it stopped.
 - **The narrow permission:** Coke's `.claude/settings.json` allows the four `flkd` commands and nothing else
   (`7dba10c3`, on `noah/flock-designer-m6`). Publishing is the only one that pushes, and only `projects/`.
@@ -386,8 +387,7 @@ page cannot sign a person in by itself (GitHub's sign-in refuses calls from a pa
 | **Two comment experiences drifting apart** | The reason the sandbox failed | M4: one set of components, two adapters, and the round-trip test in M8 |
 | **Tokens in a browser** | A token kept in a browser can be read by anything running on that page | Fine-grained, one repository, Issues only, and only for testing; M9 replaces it |
 | **Cached pages** | A teammate sees the old iteration and comments on it | The link carries a version; each comment carries the iteration it was made on |
-| **The public test mode is left on** | Pages stay public with product UI on them | The option must be typed each time, every page and summary says PUBLIC TEST, and it is deleted when the repo moves to the org. A personal account's Pages site also goes down the moment the repo is made private again |
-| **A page is made public by mistake** (the repo flipped to public, or the site set to public) | The link then opens for anyone, which is the opposite of requirement 1 | The publish gate (M5b) refuses to hand out a link while either is public, and checks again after deploying |
+| **A page is made public by mistake** (the repo flipped to public, or the site set to public) | The link then opens for anyone, which is the opposite of requirement 1 | Publishing says in its note when either is public, and checks the link with no credentials after deploying, warning if a site GitHub called private opens for anyone. It does not refuse (Noah, 2026-10-08) |
 | **An agent pushes to the design repository** | Agents are told never to push | Only the one publish command, only `projects/`, only plain pushes (M6); nothing else may push |
 | **A link goes out that someone cannot open** | A director gets a "not found" and thinks it is broken | The summary says who can open it; the design team has read access (M0) before links go to anyone |
 | **Page size** | A page is about 2 MB, plus the 5 MB fonts once | Fonts are kept once on the site, not inlined into every page |

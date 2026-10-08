@@ -9,14 +9,10 @@ import { asRecord } from '../../shared/json';
  * Publishing a prototype to its page on the design repository's GitHub Pages site: the one way it is done, from the
  * command an agent runs and anything else that publishes. Nothing of the app is in it.
  *
- * **It never hands out a link to a page anyone can open.** Before anything is pushed it asks GitHub whether the
- * repository and its site are private, and stops if either is not. The one way past is a public test, asked for in so
- * many words each time (never a default, never remembered), and then every page says PUBLIC TEST on it. Afterwards it
- * asks for the page with no credentials, and says plainly if it opened.
+ * **It says who can open the page.** The site is meant to be private, where viewing needs a GitHub sign-in. While the
+ * repository is public, it is not, and publishing says so in its note rather than stopping. Afterwards it asks for the
+ * page with no credentials, and says plainly if it opened.
  */
-
-/** What has to be typed to publish to a site anyone can open. Long enough that nobody types it by accident. */
-export const PUBLIC_TEST_PHRASE = 'publish where anyone can see it';
 
 /** The workflow that builds the site from the repository and deploys it. It runs only when asked. */
 export const PUBLISH_WORKFLOW = 'publish-prototypes.yml';
@@ -46,21 +42,8 @@ export const readVisibility = async (github: GitHubApi, ref: DesignRepoRef): Pro
 	return { repoPrivate: repo.private === true, defaultBranch: String(repo.default_branch ?? ''), site };
 };
 
-export type Gate = { ok: true; url: string; publicTest: boolean } | { ok: false; why: string };
-
-/** Whether publishing may go ahead. `publicTest` is the person's own word for this run, already checked. */
-export const passGate = (v: SiteVisibility, publicTest: boolean): Gate => {
-	if (!v.site?.url) return { ok: false, why: 'The design repository has no GitHub Pages site, so there is nowhere to publish. No link was made.' };
-	const what = !v.repoPrivate ? 'the repository is public' : v.site.public ? 'its Pages site is public' : null;
-	if (what === null) return { ok: true, url: v.site.url, publicTest: false };
-	if (!publicTest) {
-		return {
-			ok: false,
-			why: `Nothing was published: ${what}, so anyone could open the page. No link was made. Prototypes are published only where viewing needs a GitHub sign-in.`,
-		};
-	}
-	return { ok: true, url: v.site.url, publicTest: true };
-};
+/** Why anyone could open the site, or null when GitHub says it is private. Unknown counts as public. */
+export const whyPublic = (v: SiteVisibility): string | null => (!v.repoPrivate ? 'the repository is public' : v.site?.public ? 'its Pages site is public' : null);
 
 interface Run {
 	id: number;
@@ -99,7 +82,7 @@ export const pageStatus = async (github: GitHubApi, ref: DesignRepoRef, projectI
 		// The deploy is the change itself or after it.
 		if (status !== 'ahead' && status !== 'identical') return { state: 'unpublished' };
 	}
-	return { state: 'published', url: `${vis.site.url.replace(/\/?$/, '/')}${path}?v=${deployed.slice(0, 7)}`, public: !vis.repoPrivate || vis.site.public };
+	return { state: 'published', url: `${vis.site.url.replace(/\/?$/, '/')}${path}?v=${deployed.slice(0, 7)}` };
 };
 
 /** No credentials, and GitHub's sign-in redirect not followed: a 200 means the page opens for anyone. */
@@ -126,8 +109,6 @@ export interface PublishInput {
 	recordsBranch?: string;
 	projectId: string;
 	name: string;
-	/** The person typed the phrase for this run. */
-	publicTest: boolean;
 	/** Commits and pushes the records (only `projects/`), as the app's publisher does. */
 	pushRecords: () => Promise<SyncResult>;
 	/** Asks for a page with no credentials at all. Given for tests; otherwise `fetchAnonymously`. */
@@ -142,8 +123,6 @@ export interface Published {
 	url: string;
 	/** The page opened with no credentials. */
 	public: boolean;
-	/** Published as a public test, with the banner on it. */
-	publicTest: boolean;
 }
 
 export const publish = async ({
@@ -152,7 +131,6 @@ export const publish = async ({
 	recordsBranch,
 	projectId,
 	name,
-	publicTest,
 	pushRecords,
 	fetchAnonymously: anonymous = fetchAnonymously,
 	sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
@@ -163,10 +141,9 @@ export const publish = async ({
 	if (path === null) throw new Error(`"${name}" is not a prototype, so it has no page to publish.`);
 	const base = `/repos/${ref.owner}/${ref.repo}`;
 
-	// 1. The gate, before anything leaves this machine.
+	// 1. Where it is going, before anything leaves this machine.
 	const visibility = await readVisibility(github, ref);
-	const gate = passGate(visibility, publicTest);
-	if (!gate.ok) throw new Error(gate.why);
+	if (!visibility.site?.url) throw new Error('The design repository has no GitHub Pages site, so there is nowhere to publish. No link was made.');
 	const branch = visibility.defaultBranch;
 	if (recordsBranch === '') throw new Error('Nothing was published: the design repository here is not on a branch.');
 	if (recordsBranch !== undefined && recordsBranch !== branch) {
@@ -185,7 +162,7 @@ export const publish = async ({
 	try {
 		await github.api(`${base}/actions/workflows/${PUBLISH_WORKFLOW}/dispatches`, {
 			method: 'POST',
-			body: { ref: branch, inputs: { public_test: String(gate.publicTest) } },
+			body: { ref: branch },
 		});
 	} catch (err) {
 		if (notFound(err)) throw new Error(`The workflow that publishes the site (.github/workflows/${PUBLISH_WORKFLOW}) is not on GitHub yet, on the repository's default branch. Push it, then publish again.`);
@@ -203,14 +180,15 @@ export const publish = async ({
 	if (mine.conclusion !== 'success') throw new Error(`The deploy did not finish (${mine.conclusion}). What went wrong is at ${mine.html_url}. No link was made.`);
 
 	// 4. The link, and whether it opens for someone who is not signed in.
-	const url = `${gate.url.replace(/\/?$/, '/')}${path}`;
+	const url = `${visibility.site.url.replace(/\/?$/, '/')}${path}`;
 	const opened = (await anonymous(url)).status === 200;
-	if (gate.publicTest) {
-		log(`PUBLIC TEST: this page is on a public site, and anyone with the link can open it. It says PUBLIC TEST on it. ${url}`);
+	const why = whyPublic(visibility);
+	if (why !== null) {
+		log(`Published. Note that ${why}, so anyone with the link can open this page, signed in or not. ${url}`);
 	} else if (opened) {
 		log(`This page opens for anyone, signed in or not, although GitHub said the site was private. Do not share it; check the repository's Pages settings. ${url}`);
 	} else {
 		log(`Published. It opens for people signed in to GitHub with access to ${ref.owner}/${ref.repo}: ${url}`);
 	}
-	return { url, public: opened, publicTest: gate.publicTest };
+	return { url, public: opened };
 };

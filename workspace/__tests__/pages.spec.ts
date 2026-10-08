@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { PUBLIC_TEST_PHRASE, PUBLISH_WORKFLOW, pageStatus, passGate, publish, readVisibility } from '../src/main/services/pages';
+import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, whyPublic } from '../src/main/services/pages';
 
 /**
  * Publishing a prototype to its page (M5b of the Pages plan), against a fake GitHub. What matters most is what it will
@@ -49,7 +49,6 @@ const run = (gh: ReturnType<typeof fakeGitHub>, more: Partial<Parameters<typeof 
 		recordsBranch: 'main',
 		projectId: 'demo',
 		name: 'v1-i2',
-		publicTest: false,
 		pushRecords,
 		fetchAnonymously: anonymous,
 		sleep: async () => undefined,
@@ -59,36 +58,16 @@ const run = (gh: ReturnType<typeof fakeGitHub>, more: Partial<Parameters<typeof 
 	return { done, log, pushRecords, anonymous };
 };
 
-describe('the private gate', () => {
+describe('where the page is going', () => {
 	it('reads whether the repository and its site are private', async () => {
 		expect(await readVisibility({ api: fakeGitHub().api }, REF)).toMatchObject({ repoPrivate: true, site: { url: SITE, public: false } });
 		expect(await readVisibility({ api: fakeGitHub({ pages: false }).api }, REF)).toMatchObject({ repoPrivate: true, site: null });
 	});
 
-	it('lets a private repository with a private site through', () => {
-		expect(passGate({ repoPrivate: true, site: { url: SITE, public: false } }, false)).toEqual({ ok: true, url: SITE, publicTest: false });
-	});
-
-	it('stops when the repository or the site is public, and says which', () => {
-		const repo = passGate({ repoPrivate: false, site: { url: SITE, public: true } }, false);
-		expect(repo).toMatchObject({ ok: false });
-		expect((repo as { why: string }).why).toMatch(/repository is public/);
-		const site = passGate({ repoPrivate: true, site: { url: SITE, public: true } }, false);
-		expect((site as { why: string }).why).toMatch(/site is public/);
-	});
-
-	it('lets a public one through only as a public test, said so', () => {
-		expect(passGate({ repoPrivate: false, site: { url: SITE, public: true } }, true)).toEqual({ ok: true, url: SITE, publicTest: true });
-		// A private site passed the option is not a public test: no banner.
-		expect(passGate({ repoPrivate: true, site: { url: SITE, public: false } }, true)).toEqual({ ok: true, url: SITE, publicTest: false });
-	});
-
-	it('stops when there is no site at all', () => {
-		expect((passGate({ repoPrivate: true, site: null }, false) as { why: string }).why).toMatch(/no GitHub Pages site/);
-	});
-
-	it('is passed a public test only by typing the phrase', () => {
-		expect(PUBLIC_TEST_PHRASE.split(' ').length).toBeGreaterThan(2);
+	it('says why anyone could open the site, or nothing when GitHub says it is private', () => {
+		expect(whyPublic({ repoPrivate: true, defaultBranch: 'main', site: { url: SITE, public: false } })).toBeNull();
+		expect(whyPublic({ repoPrivate: false, defaultBranch: 'main', site: { url: SITE, public: true } })).toMatch(/repository is public/);
+		expect(whyPublic({ repoPrivate: true, defaultBranch: 'main', site: { url: SITE, public: true } })).toMatch(/site is public/);
 	});
 });
 
@@ -96,32 +75,33 @@ describe('publishing', () => {
 	it('pushes the records, asks for the deploy, waits for it, and gives the link to the iteration', async () => {
 		const gh = fakeGitHub();
 		const { done, pushRecords, anonymous } = run(gh);
-		expect(await done).toEqual({ url: `${SITE}demo/v1/i2/`, public: false, publicTest: false });
+		expect(await done).toEqual({ url: `${SITE}demo/v1/i2/`, public: false });
 		expect(pushRecords).toHaveBeenCalledOnce();
 		const dispatch = gh.calls.find((c) => c.method === 'POST');
-		expect(dispatch).toMatchObject({ path: `/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/dispatches`, body: { ref: 'main', inputs: { public_test: 'false' } } });
+		expect(dispatch).toMatchObject({ path: `/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/dispatches`, body: { ref: 'main' } });
 		expect(anonymous).toHaveBeenCalledWith(`${SITE}demo/v1/i2/`);
 	});
 
-	it('pushes and deploys nothing, and gives no link, when the gate stops it', async () => {
+	it('goes ahead while the repository is public, and says so in its note', async () => {
 		const gh = fakeGitHub({ repoPrivate: false, sitePublic: true });
+		const { done, log, pushRecords } = run(gh, { fetchAnonymously: async () => ({ status: 200 }) });
+		expect(await done).toEqual({ url: `${SITE}demo/v1/i2/`, public: true });
+		expect(pushRecords).toHaveBeenCalledOnce();
+		expect(log.join('\n')).toMatch(/Note that the repository is public, so anyone with the link can open this page/);
+		expect(log.join('\n')).not.toMatch(/PUBLIC TEST/);
+	});
+
+	it('has nowhere to go without a Pages site, and pushes nothing', async () => {
+		const gh = fakeGitHub({ pages: false });
 		const { done, pushRecords } = run(gh);
-		await expect(done).rejects.toThrow(/public[\s\S]*No link/);
+		await expect(done).rejects.toThrow(/no GitHub Pages site[\s\S]*No link/);
 		expect(pushRecords).not.toHaveBeenCalled();
 		expect(gh.calls.some((c) => c.method === 'POST')).toBe(false);
 	});
 
-	it('as a public test, deploys with the banner and says the page is public', async () => {
-		const gh = fakeGitHub({ repoPrivate: false, sitePublic: true });
-		const { done, log } = run(gh, { publicTest: true, fetchAnonymously: async () => ({ status: 200 }) });
-		expect(await done).toMatchObject({ public: true, publicTest: true });
-		expect(gh.calls.find((c) => c.method === 'POST')?.body).toMatchObject({ inputs: { public_test: 'true' } });
-		expect(log.join('\n')).toMatch(/PUBLIC TEST[\s\S]*anyone/);
-	});
-
 	it('says plainly when a page it was told is private opens for anyone, and not to share it', async () => {
 		const { done, log } = run(fakeGitHub(), { fetchAnonymously: async () => ({ status: 200 }) });
-		expect(await done).toMatchObject({ public: true, publicTest: false });
+		expect(await done).toMatchObject({ public: true });
 		expect(log.join('\n')).toMatch(/opens for anyone[\s\S]*Do not share/);
 	});
 
@@ -149,8 +129,8 @@ describe('publishing', () => {
 		expect(pushRecords).not.toHaveBeenCalled();
 	});
 
-	it('asks the gate before anything about this machine, and refuses a clone on no branch after it', async () => {
-		await expect(run(fakeGitHub({ repoPrivate: false, sitePublic: true }), { recordsBranch: '' }).done).rejects.toThrow(/repository is public/);
+	it('asks where it is going before anything about this machine, and refuses a clone on no branch after it', async () => {
+		await expect(run(fakeGitHub({ pages: false }), { recordsBranch: '' }).done).rejects.toThrow(/no GitHub Pages site/);
 		const { done, pushRecords } = run(fakeGitHub(), { recordsBranch: '' });
 		await expect(done).rejects.toThrow(/not on a branch/);
 		expect(pushRecords).not.toHaveBeenCalled();
@@ -170,9 +150,9 @@ describe('the workflow that deploys the site', () => {
 		expect(workflow).not.toMatch(/^\s+(push|pull_request|schedule):/m);
 	});
 
-	it('checks for itself that the site is private, and takes a public test only as the phrase', () => {
-		expect(workflow).toContain('build-site --out _site --gate');
-		expect(workflow).toContain(`--public-test "${PUBLIC_TEST_PHRASE}"`);
+	it('takes no options, and builds the site from the repository as it is', () => {
+		expect(workflow).not.toMatch(/inputs:/);
+		expect(workflow).toContain('build-site --out _site');
 	});
 
 	it('never cancels a publish that is waiting', () => {
@@ -201,7 +181,7 @@ describe('whether an iteration is on its page', () => {
 	const status = (gh: { api: ReturnType<typeof vi.fn> }) => pageStatus(gh, REF, 'demo', 'v1-i2');
 
 	it('is published when the last deploy includes the last change to its page, with a link that names that deploy', async () => {
-		expect(await status(site())).toEqual({ state: 'published', url: `${SITE}demo/v1/i2/?v=ddddddd`, public: false });
+		expect(await status(site())).toEqual({ state: 'published', url: `${SITE}demo/v1/i2/?v=ddddddd` });
 		// The one still deploying is not counted: it may yet fail.
 	});
 
@@ -209,10 +189,6 @@ describe('whether an iteration is on its page', () => {
 		expect(await status(site({ compare: 'behind' }))).toEqual({ state: 'unpublished' });
 		expect(await status(site({ changed: null }))).toEqual({ state: 'unpublished' });
 		expect(await status(site({ deployments: false }))).toEqual({ state: 'unpublished' });
-	});
-
-	it('says when the site is public', async () => {
-		expect(await status(site({ repoPrivate: false }))).toMatchObject({ state: 'published', public: true });
 	});
 
 	it('has nothing to say without a site, or for something that is not a prototype', async () => {

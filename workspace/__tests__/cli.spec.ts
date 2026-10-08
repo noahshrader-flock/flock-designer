@@ -233,44 +233,20 @@ describe('build-site', () => {
 });
 
 describe('publish', () => {
-	const PHRASE = 'publish where anyone can see it';
 	const saved = async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
 		writeFileSync(join(prototypes, 'demo', 'v1-i1.tsx'), "import { Hello } from 'x';\nexport default () => <Hello />;\n");
 		await run('save-prototype', '--project', 'demo', '--name', 'v1-i1');
 		out = [];
 	};
-	/** GitHub with a public repository and site, as the real one is now. Nothing past the gate is faked: it must not be reached. */
-	const publicRepo = () => {
-		const calls: string[] = [];
-		github = {
-			api: async (path: string, init?: { method?: string }) => {
-				calls.push(`${init?.method ?? 'GET'} ${path}`);
-				if (path === '/repos/noahshrader-flock/flock-designer') return { private: false };
-				if (path === '/repos/noahshrader-flock/flock-designer/pages') return { html_url: 'https://x.github.io/flock-designer/', public: true };
-				throw new Error(`not faked: ${path}`);
-			},
-		};
-		return calls;
-	};
-
-	it('stops at the gate when the repository is public, having pushed and deployed nothing', async () => {
+	it('has no public-test option any more: a page says who can open it, and nothing else is asked', async () => {
 		await saved();
-		const calls = publicRepo();
-		expect(await main(['publish', '--project', 'demo', '--name', 'v1-i1'], deps(design))).toBe(1);
-		expect(err.join('\n')).toMatch(/repository is public[\s\S]*No link/);
-		expect(calls.every((c) => c.startsWith('GET'))).toBe(true);
-	});
-
-	it('takes a public test only as the phrase, typed exactly', async () => {
-		await saved();
-		publicRepo();
 		expect(await main(['publish', '--project', 'demo', '--name', 'v1-i1', '--public-test', 'yes'], deps(design))).toBe(2);
-		expect(err.join('\n')).toContain(PHRASE);
+		expect(err.join('\n')).toMatch(/Unknown option '--public-test'/);
+		expect(await main(['build-site', '--out', join(home, 's'), '--gate'], deps(design))).toBe(2);
 	});
 
 	it('publishes only a page that has been saved', async () => {
-		publicRepo();
 		expect(await main(['publish', '--project', 'demo', '--name', 'v1-i1'], deps(design))).toBe(1);
 		expect(err.join('\n')).toMatch(/no saved page[\s\S]*save-prototype/);
 	});
@@ -279,16 +255,6 @@ describe('publish', () => {
 		await saved();
 		expect(await main(['publish', '--project', 'demo', '--name', 'v1-i1'], deps(design))).toBe(1);
 		expect(err.join('\n')).toMatch(/gh auth login/);
-	});
-
-	it('builds the site behind the same gate when the workflow asks it to', async () => {
-		await saved();
-		publicRepo();
-		const site = join(home, 'gated-site');
-		expect(await main(['build-site', '--out', site, '--gate'], deps(design))).toBe(1);
-		expect(existsSync(join(site, 'index.html'))).toBe(false);
-		expect(await main(['build-site', '--out', site, '--gate', '--public-test', PHRASE], deps(design))).toBe(0);
-		expect(readFileSync(join(site, 'index.html'), 'utf8')).toContain('PUBLIC TEST');
 	});
 });
 

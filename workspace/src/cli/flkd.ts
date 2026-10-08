@@ -14,7 +14,7 @@ import { readCheckout, runGit } from '../main/services/git';
 import { BUILD_SKILL, cloneStore, prototypeBuildTask } from '../main/services/prototype';
 import { shellLine } from '../main/services/prototypeBundle';
 import { prototypeWork, whereTheChangeGoes } from '../main/services/prototypeWork';
-import { PUBLIC_TEST_PHRASE, passGate, publish, readVisibility, recordsFrom } from '../main/services/pages';
+import { publish, recordsFrom } from '../main/services/pages';
 import { buildSite } from '../site/buildSite';
 import { serveSite } from '../site/serveSite';
 
@@ -69,17 +69,15 @@ const USAGE = `Usage:
   flkd new-prototype --project <id> --note <what to make> [--title <project title>] [--from <branch>] [--product <dir>]
   flkd change-prototype --project <id> --name <v1-i1> --note <what to change> [--product <dir>]
   flkd save-prototype --project <id> --name <v1-i1> [--product <dir>]
-  flkd build-site [--out <dir>] [--serve] [--gate] [--public-test <phrase>]
-  flkd publish --project <id> --name <v1-i1> [--public-test <phrase>]
+  flkd build-site [--out <dir>] [--serve]
+  flkd publish --project <id> --name <v1-i1>
 
 new-prototype records the next version (v1-i1 for a new project, then v2-i1, v3-i1) and prints the task: where to
 write the prototype and how to check it builds. change-prototype does the same for a change to one: in its version's
 newest iteration, or in the next when others have commented on that. save-prototype builds it and saves page and
 source to the design repository. --note-file <path> may stand in for --note. --title is needed only for a new project.
-build-site writes the site prototypes are published as, from the design repository, and --serve shows it here; --gate
-stops it when the repository or its site is public. publish pushes the records, deploys the site and prints the
-iteration's link, only when both are private. Either goes ahead on a public site only with --public-test and, typed
-exactly, "${PUBLIC_TEST_PHRASE}"; every page then says PUBLIC TEST.`;
+build-site writes the site prototypes are published as, from the design repository, and --serve shows it here. publish
+pushes the records, deploys the site and prints the iteration's link, and says who can open it.`;
 
 class UsageError extends Error {}
 
@@ -117,8 +115,6 @@ const OPTIONS = {
 	product: { type: 'string' },
 	out: { type: 'string' },
 	serve: { type: 'boolean' },
-	gate: { type: 'boolean' },
-	'public-test': { type: 'string' },
 } as const;
 
 /** The options, or a usage error that says which one was wrong. */
@@ -144,25 +140,10 @@ const designOf = async (cwd: string): Promise<string> => {
 	return dirname(records);
 };
 
-/** The person's word, for this run only, that a public site is meant: the phrase, exactly. */
-const publicTestOf = (typed: string | undefined): boolean => {
-	if (typed === undefined) return false;
-	if (typed !== PUBLIC_TEST_PHRASE) throw new UsageError(`--public-test is given only by typing, exactly: "${PUBLIC_TEST_PHRASE}".`);
-	return true;
-};
-
 /** Builds the site from the design repository, with each iteration's comment count when GitHub can be asked. */
-const site = async (deps: CliDeps, values: { out?: string; serve?: boolean; gate?: boolean; 'public-test'?: string }): Promise<number> => {
+const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): Promise<number> => {
 	const designRoot = await designOf(deps.cwd);
 	const outDir = values.out ? resolve(deps.cwd, values.out) : join(deps.prototypesRoot, '_site');
-	let publicTest = publicTestOf(values['public-test']);
-	if (values.gate) {
-		// What the publishing workflow runs: it checks for itself, rather than trust whoever asked for it.
-		if (!deps.github) throw new Error('--gate needs GitHub, to ask whether the site is private, and GitHub cannot be asked here.');
-		const gate = passGate(await readVisibility(deps.github, DESIGN_REPO), publicTest);
-		if (!gate.ok) throw new Error(gate.why);
-		publicTest = gate.publicTest;
-	}
 	const comments = deps.github ? await new DesignRepo(deps.github, DESIGN_REPO).commentCounts().catch(() => undefined) : undefined;
 	// The pages work without it, and say nothing is missing: so it is said here when it could not be built.
 	let viewerDir: string | null = null;
@@ -175,7 +156,7 @@ const site = async (deps: CliDeps, values: { out?: string; serve?: boolean; gate
 			noViewer = ` Its pages have no comments: the viewer did not build (${err instanceof Error ? err.message.split('\n')[0] : String(err)}).`;
 		}
 	}
-	const built = buildSite({ designRoot, outDir, comments, publicTest, viewer: viewerDir ? { dir: viewerDir, ref: DESIGN_REPO } : undefined });
+	const built = buildSite({ designRoot, outDir, comments, viewer: viewerDir ? { dir: viewerDir, ref: DESIGN_REPO } : undefined });
 	const pages = built.projects.reduce((n, p) => n + p.pages, 0);
 	deps.out(
 		`Built ${pages} ${pages === 1 ? 'page' : 'pages'} in ${built.projects.length} ${built.projects.length === 1 ? 'project' : 'projects'} at ${outDir}.${noViewer}${comments ? '' : ' Comment counts are left out: GitHub could not be asked (is gh signed in?).'}`,
@@ -188,12 +169,11 @@ const site = async (deps: CliDeps, values: { out?: string; serve?: boolean; gate
 };
 
 /** Publishes one saved iteration to its page, and prints the link. */
-const publishPage = async (deps: CliDeps, values: { project?: string; name?: string; 'public-test'?: string }): Promise<number> => {
+const publishPage = async (deps: CliDeps, values: { project?: string; name?: string }): Promise<number> => {
 	const projectId = values.project;
 	const name = values.name;
 	if (!projectId) throw new UsageError('Say which project, with --project.');
 	if (!name) throw new UsageError('Say which prototype, with --name.');
-	const publicTest = publicTestOf(values['public-test']);
 	const designRoot = await designOf(deps.cwd);
 	if (!existsSync(join(designRoot, prototypePagePath(projectId, name)))) {
 		throw new Error(`${projectId} ${name} has no saved page in the design repository. Save it first (save-prototype), then publish.`);
@@ -205,7 +185,6 @@ const publishPage = async (deps: CliDeps, values: { project?: string; name?: str
 		...(await recordsFrom(designRoot)),
 		projectId,
 		name,
-		publicTest,
 		fetchAnonymously: deps.fetchAnonymously,
 		sleep: deps.sleep,
 		log: deps.out,
@@ -229,8 +208,7 @@ const taskText = (lead: string, task: string, save: string, publish: string): st
 		'',
 		`1. Save it, with exactly: \`${save}\``,
 		`2. Publish it, with exactly: \`${publish}\``,
-		'   It prints the page\'s link, or says why there is none. Add `--public-test` only if the person has written its phrase',
-		'   in this conversation, for this prototype.',
+		'   It prints the page\'s link, or says why there is none.',
 		'3. Say what you made, as the skill says. End with the page: the link exactly as the command printed it, which version',
 		'   and iteration it is (V1 · I2), and who can open it, in the command\'s words. If it printed no link, say so, and why,',
 		'   in its words, and that the prototype is saved in Flock Designer. Never give a link the command did not print.',

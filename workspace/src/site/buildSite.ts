@@ -27,8 +27,6 @@ export interface SiteInput {
 	outDir: string;
 	/** How many comments each iteration has, by its key (`prototype/<project>/<name>`), when they could be read. */
 	comments?: Map<string, number>;
-	/** Published to a site anyone can open, as a test: every page says so. */
-	publicTest?: boolean;
 	/**
 	 * Comments on each iteration's page: the built viewer (`viewer.js`, `viewer.css`), and the repository whose review
 	 * threads they are. Without it the pages are as they were, with nothing to comment with.
@@ -145,12 +143,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0 0 20px; }
 .stage iframe { display: block; flex: 1; min-width: 0; height: 100%; border: 0; }
 .slot { display: flex; align-items: center; gap: 8px; }
 #flkd-panel:empty { display: none; }
-.public-test { height: 32px; line-height: 32px; box-sizing: border-box; background: #b00020; color: #fff; font-size: 13px; font-weight: 600; text-align: center; }
-.public-test ~ .stage { height: calc(100vh - 76px); }
 `;
-
-/** On every page of a site published as a public test, so nobody mistakes it for a private one. */
-const BANNER = '<div class="public-test" role="alert">PUBLIC TEST: this site is public, and anyone with the link can open it.</div>\n';
 
 const shell = (title: string, body: string, head = ''): string =>
 	`<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>${escape(title)}</title>\n${head}<style>${STYLE}</style>\n</head>\n<body>\n${body}\n</body>\n</html>\n`;
@@ -232,15 +225,9 @@ const clearOut = (outDir: string): void => {
 	writeFileSync(join(outDir, MARK), 'Built by Flock Designer. This folder is cleared and rebuilt each time.\n');
 };
 
-export const buildSite = ({ designRoot, outDir, comments, publicTest = false, viewer }: SiteInput): SiteSummary => {
+export const buildSite = ({ designRoot, outDir, comments, viewer }: SiteInput): SiteSummary => {
 	const projects = readProjects(designRoot);
 	clearOut(outDir);
-	// The site's own pages, with the banner first when this is a public test. A prototype's page is never touched.
-	const write = (file: string, html: string) => {
-		// On a public site, a page without the banner must never go out: stop rather than write it.
-		if (publicTest && !html.includes('<body>\n')) throw new Error(`The PUBLIC TEST banner could not be put on ${file}, so the site was not built.`);
-		writeFileSync(file, publicTest ? html.replace('<body>\n', `<body>\n${BANNER}`) : html);
-	};
 	const shared = writeShared(designRoot, outDir);
 	if (viewer) {
 		mkdirSync(join(outDir, '_viewer'), { recursive: true });
@@ -250,26 +237,26 @@ export const buildSite = ({ designRoot, outDir, comments, publicTest = false, vi
 	const relink = (html: string): string =>
 		html.replace(/\/_shared\/([0-9a-f]{16})\b/g, (whole, hash: string) => (shared.has(hash) ? `../../../_shared/${shared.get(hash)}` : whole));
 
-	write(join(outDir, 'index.html'), indexPage(projects));
+	writeFileSync(join(outDir, 'index.html'), indexPage(projects));
 	for (const p of projects) {
 		const dir = join(outDir, p.id);
 		mkdirSync(dir, { recursive: true });
-		write(join(dir, 'index.html'), projectPage(p, comments));
+		writeFileSync(join(dir, 'index.html'), projectPage(p, comments));
 		for (const v of p.versions) {
 			for (const pg of v.pages) {
 				const at = join(dir, pg.path);
 				mkdirSync(at, { recursive: true });
-				write(join(at, 'index.html'), viewerPage(p, pg, viewer));
+				writeFileSync(join(at, 'index.html'), viewerPage(p, pg, viewer));
 				writeFileSync(join(at, 'page.html'), relink(readFileSync(join(designRoot, 'projects', p.id, 'prototypes', `${pg.record.name}.html`), 'utf8')));
 			}
 			const newest = v.pages[0] as Page;
 			mkdirSync(join(dir, `v${v.version}`, 'latest'), { recursive: true });
-			write(join(dir, `v${v.version}`, 'latest', 'index.html'), redirect(`${p.title} · ${labelOf(newest)}`, `../i${newest.iteration}/`));
+			writeFileSync(join(dir, `v${v.version}`, 'latest', 'index.html'), redirect(`${p.title} · ${labelOf(newest)}`, `../i${newest.iteration}/`));
 		}
 		const newestVersion = p.versions.at(-1) as SiteProject['versions'][number];
 		const newest = newestVersion.pages[0] as Page;
 		mkdirSync(join(dir, 'latest'), { recursive: true });
-		write(join(dir, 'latest', 'index.html'), redirect(`${p.title} · ${labelOf(newest)}`, `../${newest.path}`));
+		writeFileSync(join(dir, 'latest', 'index.html'), redirect(`${p.title} · ${labelOf(newest)}`, `../${newest.path}`));
 	}
 	return { projects: projects.map((p) => ({ id: p.id, title: p.title, pages: p.versions.reduce((n, v) => n + v.pages.length, 0) })) };
 };

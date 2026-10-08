@@ -48,5 +48,5 @@ It prints your task: `build-prototype.md`, where to write the prototype, the com
 that saves it, and the one that publishes it to its page. Do exactly that, and finish as that skill says, ending with the
 page: the link the publish command printed, or, when it printed none, why. Never give a link it did not print.
 
-A page is published only where viewing it needs a GitHub sign-in. While the design repository is public, publishing
-says so and makes no link, and that is the expected answer: say it, and that the prototype is saved in Flock Designer.
+Say who can open the page in the publish command's words: it says when the site is public, as it is while the design
+repository is.

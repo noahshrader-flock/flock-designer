@@ -846,8 +846,8 @@ export const registerIpc = ({
 	};
 	/**
 	 * Publishes what the app itself just made (a prototype it built, or a change Address made), in the background, as
-	 * the agent publishes from Claude Code: the same code, the same gate. Never as a public test: that is asked for in
-	 * words, on the command line. What stopped it is kept, so the screen can say why the page is not published.
+	 * the agent publishes from Claude Code: the same code. What stopped it is kept, so the screen can say why the page
+	 * is not published.
 	 */
 	const publishing = new Map<string, Promise<void>>();
 	const publishStopped = new Map<string, string>();
@@ -855,7 +855,7 @@ export const registerIpc = ({
 		const key = prototypeKey(projectId, name);
 		if (publishing.has(key) || github.state().state !== 'signedIn') return;
 		const run = (async () => {
-			await publish({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())), projectId, name, publicTest: false });
+			await publish({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())), projectId, name });
 		})()
 			.then(() => void publishStopped.delete(key))
 			.catch((err: unknown) => void publishStopped.set(key, err instanceof Error ? err.message : String(err)))

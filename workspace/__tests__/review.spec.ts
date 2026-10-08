@@ -253,15 +253,10 @@ describe('pins and cards', () => {
 
 describe('its published page', () => {
 	it('offers to open it once it is published, through the main process, which works out the address itself', async () => {
-		const app = fakeApp({ publishedPage: async () => ok({ state: 'published', url: 'https://x.github.io/d/demo/v1/i1/?v=abc1234', public: false }) });
+		const app = fakeApp({ publishedPage: async () => ok({ state: 'published', url: 'https://x.github.io/d/demo/v1/i1/?v=abc1234' }) });
 		await open(app);
 		await press(button('Open page'));
 		expect(app.calls.openPublishedPage?.[0]).toEqual(['demo', 'v1-i1']);
-	});
-
-	it('says so when the site is public', async () => {
-		await open(fakeApp({ publishedPage: async () => ok({ state: 'published', url: 'https://x', public: true }) }));
-		expect(button('Open page (public)')).toBeTruthy();
 	});
 
 	it('says while it is being published, and why it was not, when a publish was stopped', async () => {

@@ -313,7 +313,7 @@ describe('prototypes', () => {
 	});
 
 	describe('publishing what the app made', () => {
-		it('publishes a prototype it saved, by itself, and says why the page is not published when the gate stops it', async () => {
+		it('publishes a prototype it saved, by itself, and says why the page is not published when that stops', async () => {
 			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
 			githubApi.mockImplementation(async (path: string) => {
 				if (path === '/repos/noahshrader-flock/flock-designer') return { private: false, default_branch: 'main' };
@@ -334,8 +334,9 @@ describe('prototypes', () => {
 				await new Promise((r) => setTimeout(r, 10));
 				status = (await call(CHANNELS.publishedPage, 'demo', 'v1-i1')).value as typeof status;
 			}
-			expect(status).toEqual({ state: 'unpublished', why: expect.stringMatching(/repository is public[\s\S]*No link/) });
-			// Nothing went past the gate: no push, no deploy.
+			// This clone is not on a branch, which is what stops it: said, not swallowed.
+			expect(status).toEqual({ state: 'unpublished', why: expect.stringMatching(/not on a branch/) });
+			// Nothing was pushed or deployed.
 			expect(githubApi.mock.calls.every(([, init]) => !(init as { method?: string } | undefined)?.method)).toBe(true);
 		});
 
