@@ -1,6 +1,6 @@
 # Clone plan: pick a repository the app does not have yet, and say where it goes
 
-**Written 2026-10-08; decisions made the same day (Noah accepted every recommendation). C1 is built.** The plan for letting a designer start work in a repository that is not on
+**Written 2026-10-08; decisions made the same day (Noah accepted every recommendation). C1 and C2 are built.** The plan for letting a designer start work in a repository that is not on
 their computer: choose it from the list, see where it will be placed, and have the app put it there.
 
 This is the detail behind one item in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) (*After the pilot: candidates*,
@@ -62,7 +62,7 @@ each, the state document updated in the same change, and no data on GitHub is ch
 | # | Milestone | Needs | Size | Risk |
 |---|---|---|---|---|
 | **C1** (done) | **Where clones go:** the clone folder (setting, default, picker), the path a repository would be placed at, and discovery reading it | Nothing | S | Low |
-| **C2** | **The clone itself:** a service that clones a named repository into a folder, with progress and cancel | C1, decision 3 | M | **Medium** |
+| **C2** (done) | **The clone itself:** a service that clones a named repository into a folder, with progress and cancel | C1, decision 3 | M | **Medium** |
 | **C3** | **The New modal:** choose a repository with no clone, see where it goes and change it, confirm, watch it, and carry on into the work | C2, decisions 2, 4 | M | Medium |
 | **C4** | **What it starts from:** branches for a repository with no clone (from GitHub), remote-only branches usable as a base, and the "no setup on this branch" answer | C3, decision 5 | M | Medium |
 | **C5** | **After the clone:** say what is missing to build (packages, access to private packages), and, if wanted, install them with progress | C3 | L | **High** |
@@ -75,19 +75,13 @@ short: `services/cloneFolder.ts` keeps the folder, gives the default, and says w
 window has no use of them yet, and no channel returns a place; C3 adds both. **One refinement to decision 1:** the
 default is beside the repository last worked in when there is one, since the design repository has to sit beside it.
 
-### C2: The clone itself
+### C2: The clone itself (done 2026-10-08)
 
-- **`cloneRepository`** in its own service: a repository name that **must be one the person's GitHub list returned**
-  (`owner/repo` checked against the same pattern `gitHubRepoOf` uses, then against the list), a destination from C1,
-  `git clone --progress --no-recurse-submodules`, argv only, no shell.
-- **Never over anything.** It creates the folder itself, and refuses a destination that exists and is not empty. On
-  failure or cancel it removes **only the folder it created**, and only when it is still what it created.
-- **Progress and cancel:** git's progress lines are read from its error output and passed to the window as a step and a
-  percentage; cancel stops git. One clone at a time, as the agent runs one at a time.
-- **Refusals in words a person can act on:** git not installed (with where to get it, on Mac and Windows), access
-  refused (decision 3's message), no network, disk full, the destination taken.
-- **Tests,** against a bare repository on this machine standing in for GitHub: it clones; it refuses a taken folder and
-  leaves it untouched; cancel leaves nothing behind; a name not in the list is refused; a refusal says how to fix it.
+**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+short: `services/clone.ts`'s `Cloner` clones `owner/repo`, only one the person's list returned, into the place
+`clonePlace` gives, never over anything, cleaning up only the folder it made; it reads git's progress, stops on cancel,
+and runs one at a time. **For C3:** it has no channel yet. C3 makes one `Cloner` in the main process, gives it the list
+from `visibleRepositories` and the clone folder, sends progress to the window, and cancels it when the modal closes.
 
 ### C3: The New modal
 
@@ -158,4 +152,4 @@ and "starts from" choice; no new screen and no second entry point.
 
 ## Next
 
-**C1 is done. C2 to C4 are Ready:** scope fixed, files known, tests named, no open question. Build in order, one commit each. C5 waits.
+**C1 and C2 are done. C3 and C4 are Ready:** scope fixed, files known, tests named, no open question. Build in order, one commit each. C5 waits.
