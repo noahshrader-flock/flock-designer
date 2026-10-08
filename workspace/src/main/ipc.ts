@@ -1030,7 +1030,8 @@ export const registerIpc = ({
 	// The preview. Every argument is re-checked here: the window is trusted less
 	// than the main process, and the preview less than the window.
 	const nothing = (_done?: unknown): null => null;
-	ipcMain.handle(CHANNELS.pageOpen, guard(async (url: string) => nothing(await page.open(String(url)))));
+	// A prototype is one page: the app's own server says which addresses are its, never the window.
+	ipcMain.handle(CHANNELS.pageOpen, guard(async (url: string) => nothing(await page.open(String(url), { singlePage: prototypeServer.owns(String(url)) }))));
 	ipcMain.handle(CHANNELS.pageClose, guard(() => nothing(page.close())));
 	// The page the preview is on, in the person's own browser. The address comes from the preview itself, never
 	// from the window, and goes through the same check as opening one: this app's own web addresses only.

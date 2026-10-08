@@ -1,8 +1,8 @@
 import { type BrowserWindow, WebContentsView, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
 import type { MarkerRequest, MarkerResult, PageBounds, PageHoldReason, PickedPoint, PinEvent } from '../../shared/contract';
-import { assertPreviewUrl, sanitizeAnchor } from '../../shared/anchor';
-import { CANCEL_PICK_SCRIPT, MESSAGE_PREFIX, PICK_SCRIPT, ROUTE_SCRIPT, focusScript, layerVisibleScript, resolveScript } from '../../shared/pageScripts';
+import { assertPreviewUrl } from '../../shared/anchor';
+import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, ROUTE_SCRIPT, SINGLE_PAGE, focusScript, layerVisibleScript, readMarkers, readPick, readPinMessage, resolveScript } from '../../shared/pageScripts';
 import { type Box, cropRect, frameRect, toPicture } from './picture';
 
 /**
@@ -48,7 +48,6 @@ const settled = async (wc: Electron.WebContents, ms: number): Promise<boolean> =
 	return realPageIsUp(wc);
 };
 
-const MARKER_STATES = new Set(['found', 'moved', 'missing', 'elsewhere', 'otherState']);
 
 export class PageView {
 	private view: WebContentsView | null = null;
@@ -67,8 +66,12 @@ export class PageView {
 	/** Secret for this preview, so only the app's own pins can speak for it. Rotated on every open. */
 	private nonce = randomUUID();
 
-	async open(rawUrl: string): Promise<void> {
+	/** A prototype, which is one page: every script run in it is told so (see SINGLE_PAGE). */
+	private singlePage = false;
+
+	async open(rawUrl: string, { singlePage = false }: { singlePage?: boolean } = {}): Promise<void> {
 		const url = assertPreviewUrl(rawUrl);
+		this.singlePage = singlePage;
 		this.close();
 		this.nonce = randomUUID();
 
@@ -201,7 +204,7 @@ export class PageView {
 		const wc = this.view?.webContents;
 		if (!wc || wc.isDestroyed()) return undefined;
 		try {
-			return (await wc.executeJavaScript(code, true)) as T;
+			return (await wc.executeJavaScript(this.singlePage ? SINGLE_PAGE + code : code, true)) as T;
 		} catch {
 			return undefined;
 		}
@@ -214,23 +217,9 @@ export class PageView {
 		this.picking = true;
 		this.view.webContents.focus();
 		try {
-			const raw = await this.run<unknown>(PICK_SCRIPT);
-			if (raw === null || raw === undefined) return null; // cancelled
-			const anchor = sanitizeAnchor(raw);
-			const at = (raw as { at?: { x?: unknown; y?: unknown } }).at;
-			// Said aloud, never swallowed: a click that silently did nothing is
-			// indistinguishable from a comment that was lost.
-			if (!anchor) throw new Error('That spot could not be pinned. Try clicking somewhere else on the page.');
-			// Only used to place a box, so a nonsense value just means the box goes in a corner.
-			const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(100_000, v)) : 0);
-			const where = { x: n(at?.x), y: n(at?.y) };
-			// The element's own box, from the page: only numbers, only if it is a real size.
-			const b = (raw as { box?: Record<string, unknown> }).box;
-			const box: Box | null =
-				b && [b.x, b.y, b.width, b.height].every((v) => typeof v === 'number' && Number.isFinite(v)) && (b.width as number) > 0 && (b.height as number) > 0
-					? { x: b.x as number, y: b.y as number, width: b.width as number, height: b.height as number }
-					: null;
-			return { anchor, at: where, box, picture: await this.pictureAt(where, box) };
+			const spot = readPick(await this.run<unknown>(PICK_SCRIPT));
+			if (spot === null) return null; // cancelled
+			return { ...spot, picture: await this.pictureAt(spot.at, spot.box) };
 		} finally {
 			this.picking = false;
 		}
@@ -261,14 +250,7 @@ export class PageView {
 
 	/** Draws markers and reports how each comment was placed. Never trusts the reply's shape. */
 	async showMarkers(items: MarkerRequest[]): Promise<MarkerResult[]> {
-		const raw = await this.run<unknown>(resolveScript(items, this.nonce));
-		const wanted = new Set(items.map((i) => i.id));
-		return (Array.isArray(raw) ? raw : []).flatMap((r): MarkerResult[] => {
-			const rec = r as { id?: unknown; state?: unknown };
-			return typeof rec.id === 'number' && wanted.has(rec.id) && typeof rec.state === 'string' && MARKER_STATES.has(rec.state)
-				? [{ id: rec.id, state: rec.state as MarkerResult['state'] }]
-				: [];
-		});
+		return readMarkers(await this.run<unknown>(resolveScript(items, this.nonce)), items);
 	}
 
 	/**
@@ -277,19 +259,8 @@ export class PageView {
 	 * secret and has exactly the shape of a click or a move.
 	 */
 	private heard(message: string): void {
-		if (!message.startsWith(MESSAGE_PREFIX)) return;
-		let m: { n?: unknown; t?: unknown; id?: unknown; anchor?: unknown };
-		try {
-			m = JSON.parse(message.slice(MESSAGE_PREFIX.length));
-		} catch {
-			return;
-		}
-		if (m.n !== this.nonce || typeof m.id !== 'number' || !Number.isInteger(m.id)) return;
-		if (m.t === 'click') this.onPin({ kind: 'click', id: m.id });
-		else if (m.t === 'move') {
-			const anchor = sanitizeAnchor(m.anchor);
-			if (anchor) this.onPin({ kind: 'move', id: m.id, anchor });
-		}
+		const event = readPinMessage(message, this.nonce);
+		if (event) this.onPin(event);
 	}
 
 	async focusMarker(id: number): Promise<void> {

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
-import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, layerVisibleScript, resolveScript } from '../src/shared/pageScripts';
+import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, SINGLE_PAGE, layerVisibleScript, resolveScript } from '../src/shared/pageScripts';
 import type { CommentAnchor, MarkerRequest } from '../src/shared/contract';
 
 const page = (html: string, url = 'http://localhost:3000/users#/list') => {
@@ -128,6 +128,32 @@ const req = (id: number, anchor: Partial<CommentAnchor>): MarkerRequest => ({
 	id,
 	number: id,
 	anchor: { route: '/users#/list', selector: 'x', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '', ...anchor },
+});
+
+describe('a prototype, which is one page wherever it is served', () => {
+	const invite = '[data-e2e-ref="users-invite"]';
+	it('places a comment made where the app served it, on the published site, and the other way round', () => {
+		// Made in the app, at its own server's address; shown on the site, at the site's.
+		const site = page(CARD, 'https://acme.github.io/design/demo/v1/i1/page.html');
+		site.eval(SINGLE_PAGE);
+		const out = site.eval(resolveScript([req(1, { route: '/demo/v1-i1/', selector: invite })], 'nonce')) as Array<{ state: string }>;
+		expect(out[0]?.state).toBe('found');
+		const app = page(CARD, 'http://127.0.0.1:5000/demo/v1-i1/');
+		app.eval(SINGLE_PAGE);
+		expect((app.eval(resolveScript([req(1, { route: '/design/demo/v1/i1/page.html', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('found');
+	});
+
+	it('still tells apart what follows its #, where a prototype keeps a place within itself', () => {
+		const w = page(CARD, 'https://acme.github.io/design/demo/v1/i1/page.html#/settings');
+		w.eval(SINGLE_PAGE);
+		expect((w.eval(resolveScript([req(1, { route: '/demo/v1-i1/#/list', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('elsewhere');
+		expect((w.eval(resolveScript([req(1, { route: '/x/#/settings', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('found');
+	});
+
+	it('is a real app otherwise, where the path is the place', () => {
+		const w = page(CARD, 'http://localhost:3000/users#/list');
+		expect((w.eval(resolveScript([req(1, { route: '/roles#/list', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('elsewhere');
+	});
 });
 
 describe('placing comments on reopening', () => {

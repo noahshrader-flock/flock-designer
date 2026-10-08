@@ -1,4 +1,5 @@
-import type { MarkerRequest } from './contract';
+import { sanitizeAnchor } from './anchor';
+import type { CommentAnchor, MarkerRequest, MarkerResult, PinEvent } from './contract';
 
 /**
  * The code the app runs *inside* a preview page, as source strings.
@@ -42,7 +43,12 @@ const HELPERS = String.raw`
   var collapse = function (t) { return String(t || '').replace(/\s+/g, ' ').trim(); };
   var esc = function (v) { return (window.CSS && CSS.escape) ? CSS.escape(v) : String(v).replace(/[^\w-]/g, '\\$&'); };
   var unique = function (sel) { try { return doc.querySelectorAll(sel).length === 1; } catch (e) { return false; } };
-  var route = function () { return location.pathname + location.hash; };
+  // A prototype is one page wherever it is served (the app's own server, the published site), so only what follows
+  // its # says where in it a comment is; its driver says when it is one (SINGLE_PAGE). Anything else is a real app,
+  // where the path is the place.
+  var single = !!window.__fdSinglePage;
+  var place = function (r) { if (!single) return r; var i = String(r).indexOf('#'); return i < 0 ? '' : String(r).slice(i); };
+  var route = function () { return place(location.pathname + location.hash); };
   // Which state of the page a prototype is showing. Recorded with a comment and compared when the
   // comment is placed again, so the two must read it the same way: one definition, used by both.
   var pageState = function () { return location.search.slice(0, 200); };
@@ -323,7 +329,7 @@ ${HELPERS}
   var current = route();
   items.forEach(function (item) {
     var a = item.anchor;
-    if (a.route !== current) { results.push({ id: item.id, state: 'elsewhere' }); return; }
+    if (place(a.route) !== current) { results.push({ id: item.id, state: 'elsewhere' }); return; }
     // Comments from before the state was recorded have none, and are shown wherever their element is.
     if (a.state !== undefined && a.state !== pageState()) { results.push({ id: item.id, state: 'otherState' }); return; }
     var el = null, state = 'found';
@@ -452,3 +458,75 @@ export const focusScript = (id: number): string =>
 	`window.__fdMarkers && window.__fdMarkers.focus(${Number.isInteger(id) ? id : -1})`;
 
 export const ROUTE_SCRIPT = 'location.pathname + location.hash';
+
+/**
+ * Put before any script run on a prototype: it is one page, so a comment is placed by what follows its #, not by the
+ * address it happens to be served at. The same comment then has its pin in the app and on the published site.
+ */
+export const SINGLE_PAGE = 'window.__fdSinglePage = true;';
+
+/*
+ * Reading what the scripts answer. A page can say anything, so each answer is taken only in exactly the shape the
+ * scripts give: the same readers for every driver (the app's preview, the published site's frame), so they agree.
+ */
+
+/** Where a pick landed: the anchor, the point (only for placing the comment box), and the element's own box. */
+export interface PickedSpot {
+	anchor: CommentAnchor;
+	at: { x: number; y: number };
+	box: { x: number; y: number; width: number; height: number } | null;
+}
+
+/**
+ * The answer to PICK_SCRIPT: null when the pick was cancelled. Throws, to be said aloud, when the spot could not be
+ * pinned: a click that silently did nothing is indistinguishable from a comment that was lost.
+ */
+export const readPick = (raw: unknown): PickedSpot | null => {
+	if (raw === null || raw === undefined) return null;
+	const anchor = sanitizeAnchor(raw);
+	if (!anchor) throw new Error('That spot could not be pinned. Try clicking somewhere else on the page.');
+	const at = (raw as { at?: { x?: unknown; y?: unknown } }).at;
+	// Only used to place a box, so a nonsense value just means the box goes in a corner.
+	const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(100_000, v)) : 0);
+	// The element's own box, from the page: only numbers, only if it is a real size.
+	const b = (raw as { box?: Record<string, unknown> }).box;
+	const box =
+		b && [b.x, b.y, b.width, b.height].every((v) => typeof v === 'number' && Number.isFinite(v)) && (b.width as number) > 0 && (b.height as number) > 0
+			? { x: b.x as number, y: b.y as number, width: b.width as number, height: b.height as number }
+			: null;
+	return { anchor, at: { x: n(at?.x), y: n(at?.y) }, box };
+};
+
+const MARKER_STATES = new Set(['found', 'moved', 'missing', 'elsewhere', 'otherState']);
+
+/** The answer to resolveScript: how each pin asked for was placed, and nothing else. */
+export const readMarkers = (raw: unknown, items: MarkerRequest[]): MarkerResult[] => {
+	const wanted = new Set(items.map((i) => i.id));
+	return (Array.isArray(raw) ? raw : []).flatMap((r): MarkerResult[] => {
+		const rec = r as { id?: unknown; state?: unknown };
+		return typeof rec.id === 'number' && wanted.has(rec.id) && typeof rec.state === 'string' && MARKER_STATES.has(rec.state)
+			? [{ id: rec.id, state: rec.state as MarkerResult['state'] }]
+			: [];
+	});
+};
+
+/**
+ * A pin's report, from the page's console. It counts only if it carries the secret its pins were drawn with and has
+ * exactly the shape of a click or a move.
+ */
+export const readPinMessage = (message: string, nonce: string): PinEvent | null => {
+	if (!message.startsWith(MESSAGE_PREFIX)) return null;
+	let m: { n?: unknown; t?: unknown; id?: unknown; anchor?: unknown };
+	try {
+		m = JSON.parse(message.slice(MESSAGE_PREFIX.length));
+	} catch {
+		return null;
+	}
+	if (m.n !== nonce || typeof m.id !== 'number' || !Number.isInteger(m.id)) return null;
+	if (m.t === 'click') return { kind: 'click', id: m.id };
+	if (m.t === 'move') {
+		const anchor = sanitizeAnchor(m.anchor);
+		return anchor ? { kind: 'move', id: m.id, anchor } : null;
+	}
+	return null;
+};

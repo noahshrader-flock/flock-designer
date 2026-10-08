@@ -27,6 +27,11 @@ export class PrototypeServer {
 	}
 
 	/** The address the page can be opened at. Serving it again replaces what was there. */
+	/** Whether an address is one of the pages this serves: a prototype, which is one page. */
+	owns(url: string): boolean {
+		return this.port !== 0 && url.startsWith(`http://127.0.0.1:${this.port}/`);
+	}
+
 	async serve(key: string, html: string): Promise<string> {
 		this.pages.set(`/${key}/`, html);
 		if (!this.server) await this.listen();
