@@ -140,7 +140,7 @@ describe('a repository with no clone on this machine', () => {
 	it('offers one button, with where it goes under it, the design repository when it comes too, and a way to change it', async () => {
 		await open({ clonePlan: async () => ok({ ...PLAN, design: { state: 'free', path: '/h/GitHub/flock-designer' } }) });
 		await chooseRepository('flocksafety/flock-ops');
-		expect(button('Clone and continue')).toBeTruthy();
+		expect(button('Clone repository')).toBeTruthy();
 		expect(text()).toContain('Into ~/GitHub/flock-ops, with flock-designer beside it · Change');
 		await unmountAll((current as NonNullable<typeof current>).root);
 		await open();
@@ -165,7 +165,7 @@ describe('a repository with no clone on this machine', () => {
 		const made = { root: '/h/GitHub/flock-ops', name: 'flock-ops', branch: 'develop', clean: true };
 		const { app, seen } = await open({ cloneRepository: () => new Promise((r) => (finish = r)) });
 		await chooseRepository('flocksafety/flock-ops');
-		await press(button('Clone and continue'));
+		await press(button('Clone repository'));
 		await act(async () => progress?.({ repository: 'flocksafety/flock-ops', step: 'Receiving objects', percent: 45 }));
 		expect(text()).toContain('Cloning flock-ops: Receiving objects 45%');
 		expect(button('Stop')).toBeTruthy();
@@ -183,40 +183,61 @@ describe('a repository with no clone on this machine', () => {
 		expect(text()).toContain('Starts from');
 		await chooseRepository('flocksafety/flock-ops');
 		expect(text()).not.toContain('Starts from');
-		await press(button('Clone and continue'));
+		await press(button('Clone repository'));
 		expect(text()).not.toContain('Starts from');
 		await act(async () => finish(ok(made)));
 		await settle();
 		expect(text()).toContain('Starts from');
 	});
 
-	it('says why a clone failed, and can be tried again', async () => {
+	it('says why a clone failed where the button is, and can be tried again', async () => {
 		await open({ cloneRepository: async () => fail('GitHub would not let git on this computer clone flocksafety/flock-ops') });
 		await chooseRepository('flocksafety/flock-ops');
-		await press(button('Clone and continue'));
+		await press(button('Clone repository'));
 		await settle();
 		expect(text()).toContain('GitHub would not let git on this computer clone');
-		expect(button('Clone and continue').disabled).toBe(false);
+		expect(button('Clone repository').disabled).toBe(false);
+	});
+
+	it('says, once cloned, why it cannot be used, and where it is now, with no button left to press', async () => {
+		let cloned = false;
+		await open({
+			clonePlan: async () => ok(cloned ? { ...PLAN, place: { state: 'cloned', path: '/h/GitHub/flock-ops' } } : PLAN),
+			cloneRepository: async () => ((cloned = true), fail("Cloned, but no branch of flock-ops has the Flock Designer setup (.flkd/workspace.json), so it can't be used here yet.")),
+		});
+		await chooseRepository('flocksafety/flock-ops');
+		await press(button('Clone repository'));
+		await settle();
+		expect(text()).toContain('Already in ~/GitHub/flock-ops');
+		expect(text()).toContain('no branch of flock-ops has the Flock Designer setup');
+		expect(() => button(/Clone repository|Use repository/)).toThrow(/0 buttons/);
+	});
+
+	it('shows where it goes under the repository, before the button', async () => {
+		await open();
+		await chooseRepository('flocksafety/flock-ops');
+		const where = [...document.querySelectorAll('p')].find((p) => p.textContent?.startsWith('Into ')) as HTMLElement;
+		expect(where.compareDocumentPosition(button('Clone repository')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 	});
 
 	it('will not clone over something else in the way, and says what it is', async () => {
 		await open({ clonePlan: async () => ok({ ...PLAN, place: { state: 'taken', path: '/h/GitHub/flock-ops', why: '/h/GitHub/flock-ops already exists, and is not a clone of flocksafety/flock-ops.' } }) });
 		await chooseRepository('flocksafety/flock-ops');
 		expect(text()).toContain('is not a clone of flocksafety/flock-ops');
-		expect(button('Clone and continue').disabled).toBe(true);
+		expect(() => button('Clone repository')).toThrow(/0 buttons/);
 	});
 
 	it('uses a clone of it already there, rather than cloning it again', async () => {
 		await open({ clonePlan: async () => ok({ ...PLAN, place: { state: 'cloned', path: '/h/GitHub/flock-ops' } }) });
 		await chooseRepository('flocksafety/flock-ops');
 		expect(text()).toContain('Already in ~/GitHub/flock-ops');
-		expect(button('Use it and continue')).toBeTruthy();
+		expect(button('Use repository')).toBeTruthy();
 	});
 
 	it('stops the clone when the modal is closed while it runs', async () => {
 		const { app, seen } = await open({ cloneRepository: () => new Promise(() => undefined) });
 		await chooseRepository('flocksafety/flock-ops');
-		await press(button('Clone and continue'));
+		await press(button('Clone repository'));
 		await press(button('Cancel'));
 		expect(app.calls.cancelClone).toHaveLength(1);
 		expect(seen.closed).toBe(1);
@@ -225,6 +246,6 @@ describe('a repository with no clone on this machine', () => {
 	it('says nothing about cloning for the repository in use', async () => {
 		const { app } = await open();
 		expect(app.calls.clonePlan).toBeUndefined();
-		expect(text()).not.toContain('Clone and continue');
+		expect(text()).not.toContain('Clone repository');
 	});
 });

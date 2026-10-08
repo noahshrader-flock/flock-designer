@@ -113,12 +113,17 @@ export const NewWork = ({
 
 	// A repository with no clone here: asked where it would go, and again when the clone folder is changed.
 	const toClone = elsewhere && chosen?.root === null ? chosen.name : null;
+	// Why a clone could not be used, said where the button was: the repository is cloned, and cannot be worked in here.
+	const [cloneError, setCloneError] = useState<string | null>(null);
 	const askPlan = useCallback(() => {
-		setClonePlan(null);
 		if (toClone === null) return;
 		void window.workspace.clonePlan(toClone).then((r) => (r.ok ? setClonePlan(r.value) : setError(r.error)));
 	}, [toClone]);
-	useEffect(askPlan, [askPlan]);
+	useEffect(() => {
+		setClonePlan(null);
+		setCloneError(null);
+		askPlan();
+	}, [askPlan]);
 	// Only while one runs: a line arriving after it ended does not bring it back.
 	useEffect(
 		() =>
@@ -131,7 +136,9 @@ export const NewWork = ({
 	const changeFolder = async () => {
 		const r = await window.workspace.chooseCloneFolder();
 		if (!r.ok) return setError(r.error);
-		if (r.value !== null) askPlan();
+		if (r.value === null) return;
+		setCloneError(null);
+		askPlan();
 	};
 	const clone = async () => {
 		if (toClone === null) return;
@@ -141,7 +148,11 @@ export const NewWork = ({
 		setCloning(null);
 		// Stopped by closing the modal: nobody is there to be told it was stopped.
 		if (closedWhileCloning.current) return void (closedWhileCloning.current = false);
-		if (!r.ok) return setError(r.error);
+		if (!r.ok) {
+			// Said in place of the button, and where it now is (cloned, most often) asked again.
+			setCloneError(r.error);
+			return askPlan();
+		}
 		// Found and accepted: the form carries on with it, and the list shows it as here now.
 		onCheckout(r.value);
 		setPicked(null);
@@ -268,6 +279,7 @@ export const NewWork = ({
 									<CloneHere
 										plan={clonePlan}
 										cloning={cloning}
+										error={cloneError}
 										onChangeFolder={() => void changeFolder()}
 										onClone={() => void clone()}
 										onStop={() => void window.workspace.cancelClone()}
@@ -413,29 +425,23 @@ export const NewWork = ({
 const CloneHere = ({
 	plan,
 	cloning,
+	error,
 	onChangeFolder,
 	onClone,
 	onStop,
 }: {
 	plan: ClonePlan;
 	cloning: string | null;
+	/** Why the last clone could not be used: shown instead of the button. */
+	error: string | null;
 	onChangeFolder: () => void;
 	onClone: () => void;
 	onStop: () => void;
 }) => {
 	const { place, design } = plan;
 	const taken = [place, design].find((p) => p?.state === 'taken');
-	if (cloning !== null) return <Working text={cloning} onStop={onStop} />;
 	return (
-		<div className="flex flex-col items-start gap-2">
-			{taken?.state === 'taken' && (
-				<Alert variant="warning">
-					<AlertDescription>{taken.why} Nothing is cloned over it: change where clones go, or move it.</AlertDescription>
-				</Alert>
-			)}
-			<Button onClick={onClone} disabled={taken !== undefined}>
-				{place.state === 'cloned' ? 'Use it and continue' : 'Clone and continue'}
-			</Button>
+		<div className="flex flex-col items-start gap-3">
 			<p className="text-muted-foreground text-xs">
 				{place.state === 'cloned' ? 'Already in ' : 'Into '}
 				<code className="break-all">{plan.where}</code>
@@ -445,10 +451,29 @@ const CloneHere = ({
 					</>
 				)}
 				{' · '}
-				<button type="button" className="text-primary underline underline-offset-4" onClick={onChangeFolder}>
+				<button type="button" className="text-primary underline underline-offset-4" onClick={onChangeFolder} disabled={cloning !== null}>
 					Change
 				</button>
 			</p>
+			{cloning === null && error !== null && (
+				<Alert variant="warning">
+					<AlertDescription>{error}</AlertDescription>
+				</Alert>
+			)}
+			{cloning === null && taken?.state === 'taken' && (
+				<Alert variant="warning">
+					<AlertDescription>{taken.why} Nothing is cloned over it: change where clones go, or move it.</AlertDescription>
+				</Alert>
+			)}
+			{cloning !== null ? (
+				<Working text={cloning} onStop={onStop} />
+			) : (
+				// Gone once it is cloned and could not be used: there is nothing to try again. A clone that failed can be.
+				!taken &&
+				!(error !== null && place.state === 'cloned') && (
+					<Button onClick={onClone}>{place.state === 'cloned' ? 'Use repository' : 'Clone repository'}</Button>
+				)
+			)}
 		</div>
 	);
 };

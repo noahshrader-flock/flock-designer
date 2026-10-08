@@ -244,7 +244,7 @@ describe('where clones go', () => {
 			};
 			designBeside();
 			const r = await call(CHANNELS.cloneRepository, 'flocksafety/plain');
-			expect(r.error).toMatch(/is cloned in [\s\S]*none of its branches has a Flock Designer setup/);
+			expect(r.error).toMatch(/Cloned, but no branch of plain has the Flock Designer setup/);
 			expect(existsSync(join(home, 'GitHub', 'plain', 'README.md'))).toBe(true);
 		});
 	});

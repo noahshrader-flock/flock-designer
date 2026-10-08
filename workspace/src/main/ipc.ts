@@ -356,7 +356,7 @@ export const registerIpc = ({
 		const here = (await readCheckout(root)).branch ?? 'no branch';
 		const good = (await branchesWithFile(root, DESCRIPTOR_PATH))[0];
 		if (good === undefined) {
-			throw new Error(`${repository} is cloned in ${root}, but none of its branches has a Flock Designer setup (${DESCRIPTOR_PATH}), so it cannot be used yet.`);
+			throw new Error(`Cloned, but no branch of ${repository.split('/')[1]} has the Flock Designer setup (${DESCRIPTOR_PATH}), so it can't be used here yet.`);
 		}
 		if (!fresh) throw new Error(`${root} is on ${here}, which has no Flock Designer setup. Switch it to ${good}, which has it, then try again.`);
 		await ensureLocalBranch(root, good);
