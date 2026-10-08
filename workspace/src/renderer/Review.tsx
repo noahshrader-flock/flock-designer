@@ -177,8 +177,9 @@ export const Review = ({
 			setOpened(true);
 			// The page is up, so this is the first moment pins can be drawn on it. Read again rather
 			// than draw whatever the read on arrival happened to return: that one raced the preview
-			// starting, and a reviewer may have commented in between.
-			void load(true);
+			// starting, and a reviewer may have commented in between. Asked for, not a background read:
+			// opening cleared what the first one said, so if this fails too it has to say so.
+			void load();
 		} else {
 			setOpened(false);
 			setError(r.error);

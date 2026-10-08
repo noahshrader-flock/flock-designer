@@ -58,6 +58,12 @@ describe('reading comments', () => {
 		expect(cardFor('Done').textContent).toContain('3');
 	});
 
+	it('says why when they cannot be read on opening, opening the sidebar to say it', async () => {
+		await open(fakeApp({ readComments: async () => fail('GitHub is down') }));
+		expect(button('Show all comments').getAttribute('aria-pressed')).toBe('true');
+		expect(document.body.textContent).toContain('GitHub is down');
+	});
+
 	it('says so when there are none', async () => {
 		await open(fakeApp());
 		await sidebar();
