@@ -50,7 +50,7 @@ bar, and looks at a partial clone only if it is slow.
 | 1 | **Where does a clone go by default?** | A **clone folder** setting. Default: the first of discovery's folders that exists (`~/Documents/GitHub`, then `~/GitHub`, …), else `~/Documents/GitHub`, made. The person can change it with the system's folder picker, once, and it is remembered. Each repository is `<folder>/<repo name>` | Discovery already looks there, so a clone is found with no extra step, and it reads as where people already keep code |
 | 2 | **Does cloning a product repository also clone the design repository beside it?** | **Yes, shown in the confirmation** ("also `flock-designer`, which holds the project records"), skipped when it is already there | Codebase work cannot start without it, and one confirmation beats a second failure |
 | 3 | **How does it sign in to clone a private repository?** | **The person's own git credentials,** the same as push, with a message that says how to fix a refusal (`gh auth setup-git`, or sign in to git). One path, no token handed to git | The app's token is the GitHub App's and only reaches repositories it is installed on; the person's git already works for their work. Alternative: `gh repo clone`, which `flkd` already needs, at the cost of a second way to do the same thing |
-| 4 | **What does the person confirm before a clone is trusted?** | The dialog names the repository **and its owner**, the folder, and says the app will be able to run the commands that repository lists. **One click clones and accepts it** | Choosing a repository from their own GitHub list and confirming it is the same act as picking a folder in the Open dialog, which already trusts it |
+| 4 | **What does the person confirm before a clone is trusted?** | **One click clones and accepts it.** The repository field already names it with its owner, and the line under the button says where it goes. **Revised by Noah, 2026-10-08:** no sentence about trust, which said too much for the modal | Choosing a repository from their own GitHub list and confirming it is the same act as picking a folder in the Open dialog, which already trusts it |
 | 5 | **A repository whose default branch has no `.flkd/workspace.json`** (Coke's `develop`) | Clone it, then say plainly: "this repository has no Flock Designer setup on `develop`; `noah/flock-designer` has it" and offer the branches that do, rather than failing on Start | The branch list is the answer, and the existing check already refuses a branch without it |
 
 ## Milestones
@@ -86,9 +86,10 @@ from `visibleRepositories` and the clone folder, sends progress to the window, a
 ### C3: The New modal (done 2026-10-08)
 
 **Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
-short: in the **New** modal, a repository with no clone says **Will be placed in** its path with **Change**, that
-`flock-designer` comes too when it is missing, and that using it trusts the commands it lists; **Clone and continue**
-clones with progress and **Stop**, then the form carries on with it. A clone already there is **Use it and continue**;
+short: in the **New** modal, a repository with no clone shows **Clone and continue**, and under it one line: where it
+goes (`Into ~/Documents/GitHub/<repo>`), `with flock-designer beside it` when that comes too, and **Change**. It clones
+with progress and **Stop**, then the form carries on with it. No "Point the app at it": clones in the usual places
+and the clone folder are found by themselves. A clone already there is **Use it and continue**;
 anything else in the way is said and never cloned over. Closing the modal stops a clone. **Where it differs from the
 plan:** the modal does not create the work by itself after cloning; it carries on with the repository in use, and the
 person presses Create, as for any repository. **For C4:** a clone whose checked-out branch has no setup is refused
