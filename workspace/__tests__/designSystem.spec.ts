@@ -50,7 +50,7 @@ const ready = (update: CatalogUpdate = 'unchanged', components = COMPONENTS): Ca
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
 const open = async (answers: (refresh: boolean) => ReturnType<typeof ok<Catalog>> | ReturnType<typeof fail>, hidden = false) => {
-	const app = fakeApp({ designSystemCatalog: async (refresh: boolean) => answers(refresh) });
+	const app = fakeApp({ designSystemCatalog: async (refresh: boolean) => answers(refresh), storyPreview: async () => ok({ state: 'ready', base: 'http://127.0.0.1:1/p/' }) });
 	(window as unknown as { workspace: unknown }).workspace = app.api;
 	current = await render(createElement(DesignSystem, { hidden }));
 	return app;
@@ -69,7 +69,6 @@ const groups = () => [...document.querySelectorAll('section')].map((s) => s.getA
 const text = () => document.body.textContent ?? '';
 
 afterEach(async () => {
-	delete (HTMLElement.prototype as unknown as { scrollIntoView?: unknown }).scrollIntoView;
 	if (current) await unmountAll(current.root);
 	current = null;
 	document.body.innerHTML = '';
@@ -116,7 +115,7 @@ describe('the list', () => {
 		await open(() => ok(ready()));
 		expect(row('FSApp').textContent).toContain('No story');
 		expect(row('FSCardContent').textContent).not.toContain('No story');
-		expect(row('FSCardContent').className).toContain('pl-10');
+		expect(row('FSCardContent').querySelector('button')!.className).toContain('pl-10');
 		expect(rows().indexOf('FSCardContent')).toBe(rows().indexOf('FSCard') + 1);
 	});
 });
@@ -139,21 +138,14 @@ describe('finding a component', () => {
 		expect(text()).toContain('No component matches.');
 	});
 
-	it('brings the chosen component into view and marks it, leaving the whole list in place', async () => {
+	it('opens the component chosen in the finder on its own page, and the finder names it', async () => {
 		await open(() => ok(ready()));
-		const scrolled = vi.fn();
-		(HTMLElement.prototype as unknown as { scrollIntoView: unknown }).scrollIntoView = function (this: HTMLElement) {
-			scrolled(this.getAttribute('data-component'));
-		};
 		await press(finder());
 		await settle();
 		await act(async () => void [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === 'FSPopovers')!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
 		await settle();
-		expect(scrolled).toHaveBeenCalledWith('compositeComponents/FSPopovers');
-		expect(row('FSPopovers').getAttribute('aria-current')).toBe('true');
-		expect(row('FSButton').getAttribute('aria-current')).toBeNull();
-		expect(rows()).toHaveLength(5);
-		expect(button('FSPopovers')).toBeTruthy();
+		expect(document.querySelector('h3')?.textContent).toBe('FSPopovers');
+		expect(document.querySelector('[role="combobox"]')?.textContent).toBe('FSPopovers');
 	});
 
 	it('has the finder in the toolbar beside the name and branch, and Sync at its right, as Projects does', async () => {
@@ -178,6 +170,46 @@ describe('finding a component', () => {
 	it('has no filter for components without a story', async () => {
 		await open(() => ok(ready()));
 		expect([...document.querySelectorAll('button')].some((b) => /without a story/i.test(b.textContent ?? ''))).toBe(false);
+	});
+});
+
+describe('opening a component', () => {
+	const listShown = () => !document.querySelector('[data-component]')!.closest('[hidden]');
+
+	it('shows the list by default, and opens a component from a click anywhere on its row', async () => {
+		await open(() => ok(ready()));
+		expect(listShown()).toBe(true);
+		await press(row('FSButton').querySelector('button')!);
+		expect(listShown()).toBe(false);
+		expect(document.querySelector('h3')?.textContent).toBe('FSButton');
+		expect(text()).toContain('Buttons allow users to take actions.');
+	});
+
+	it('does not open the component when its More menu is used', async () => {
+		await open(() => ok(ready()));
+		await openMenu(button('More for FSButton', row('FSButton')));
+		expect(listShown()).toBe(true);
+	});
+
+	it('goes back to the list, where it was, with Back', async () => {
+		await open(() => ok(ready()));
+		const list = document.querySelector('[data-component]')!.closest('div')!;
+		await press(row('FSCard').querySelector('button')!);
+		await press(button('Back to components'));
+		expect(listShown()).toBe(true);
+		// The same list, not a new one: what was scrolled stays scrolled.
+		expect(document.querySelector('[data-component]')!.closest('div')).toBe(list);
+		expect(button('Find a component')).toBeTruthy();
+	});
+
+	it('closes a component that a sync removed, back to the list', async () => {
+		let n = 0;
+		await open(() => ok(n++ === 0 ? ready() : ready('updated', COMPONENTS.filter((c) => c.name !== 'FSCard'))));
+		await press(row('FSCard').querySelector('button')!);
+		await press(button('Sync'));
+		await settle();
+		expect(listShown()).toBe(true);
+		expect(rows()).not.toContain('FSCard');
 	});
 });
 

@@ -98,7 +98,7 @@ already has (decision 4), so a slow fetch costs nothing the person waits on.
 | 5 | **Are parts (`FSCardContent`) listed?** | **Yes, under their parent, quiet.** A component with no story is a **part** when another component **with** a story has a name that is a proper prefix of it (longest match: `FSListItemText` belongs to `FSList`, `FSTableBody` to `FSTable`). It is shown beneath its parent with no "No story" mark. A component with no story and no such parent is a **gap** and is marked | Computed on `develop`: 25 parts and six gaps, which matches what the Design System owner would say by eye. The mark means something |
 | 6 | **What does the tab say about Chromatic access?** | **Nothing, for now** (Noah, 2026-10-08) | It was one line under the header; removed with the **Without a story** filter, which Noah also did not want. The **No story** badge on a gap stays |
 | 8 | **How is a preview made?** | **Storybook's portable stories** (`composeStories` and `setProjectAnnotations` from `@storybook/react`, made for rendering stories outside Storybook), with the library's own `.storybook/preview.tsx`, so every story gets the FUI theme and decorators it has in Storybook. **One build of every story per `develop` commit,** by the app's own esbuild and Sass, from a copy of `develop` made with `git archive` into the app's folder and **the clone's own installed packages**; cached until `develop` moves | Measured: every story builds in 1.8 s, the same as one, so one build serves the whole tab. `git archive` leaves no trace in the clone (a worktree would add one to its `.git`). No Storybook server, no second copy of anything, and no network or login |
-| 9 | **Where is a preview shown?** | **Click a component, and it opens on its own page in the tab:** its name, subtitle and links, then **each of its stories as a card**, named, rendered live, each in its own frame. Back returns to the list where it was | One frame per story, as Storybook's own preview does: a dialog or drawer renders into the page's body, so on a shared page they cover each other (the spike showed 359 stories, ten of them blank because they open into the body). A frame also keeps one broken story from taking the others down |
+| 9 | **Where is a preview shown?** | **Click a component (its row, or the toolbar's finder), and it opens on its own page in the tab:** its name, subtitle and links, then **each of its story files in a card**, live, in a frame of its own, as tall as it renders. Back returns to the list where it was. **Built (P2) as frames in the window, not the native preview view:** each frame is sandboxed to the local server's origin, which is not the window's | One frame per story file: a dialog or drawer renders into its frame's body, and one broken file cannot take the others down. Frames in the window need none of the native view's workarounds (a picture of the page under every menu), and the window's own menus draw over them as over anything else |
 | 10 | **Pictures in the list itself?** | **Not yet.** After P2 is used, P3 adds a small picture of each component's first story to its row, taken once per `develop` commit | The list stays fast and useful without them; the component page is where seeing it matters. Pictures cost a render of every component, which is worth doing once people have asked for it |
 | 15 | **Embed Storybook for the preview instead?** | **No, not for reading** (Noah and Claude, 2026-10-08). The preview renders **the library's own stories** with the library's own `FSApp`, as decision 8 says, and Storybook stays where docs, controls and prop tables live | It costs nothing per component: the catalog already lists every story file, and the generated entry imports them all, so **a new component appears with nothing added here**. It is not a second Storybook: no docs, no controls, no rewritten stories. Embedding Storybook needs its dev server on the working tree (see the facts above). **It is the right tool for the later editing stage** (edit a branch, watch Storybook update, open the pull request), and the preview build runs on a branch as well as on `develop`, so choosing this now closes nothing |
 | 16 | **Where do token controls go?** | **A separate later step, T1, after P2,** not inside P2 (Noah, 2026-10-08: "a P2 step"; kept apart so P2 stays small). Nothing for it is built in P1 | The library's `FSApp` already takes a theme, so T1 needs no hook from P1. Keeping it out of P2 keeps the component page about seeing a component |
@@ -121,7 +121,7 @@ nothing on GitHub changed.
 | **S3** (done) | **The tab:** grouped list, search, links, header, the four states | S2, decisions 3, 5 to 7 | M | Low |
 | **P0** (done) | **Connect the design system:** the centred screen with **Clone** and **Locate**, and a connection that is remembered. **Replaces S4** | S2, S3, decisions 11 to 14 | M | Medium |
 | **P1** (done) | **Build the previews:** one page of every story from `develop`, cached by commit, one story per address | P0, decision 8 | M | **Medium** |
-| **P2** | **The component page:** click a row, see its stories as live cards | P1, decision 9 | M | Medium |
+| **P2** (done) | **The component page:** click a row, see its stories as live cards | P1, decision 9 | M | Medium |
 | **P3** | **Pictures in the list:** a small picture of each component on its row | P2, decision 10 | M | Low |
 | **T1** | **Adjust tokens in the preview:** colours, spacing and radius, seen live, written nowhere | P2, decision 16 | L | Medium |
 
@@ -196,23 +196,17 @@ parent's origin, which it never does here. **Where it differs from the plan:** n
 registry, and sets aside only what the clone has not installed. **Not seen in the app yet:** P2 is the first thing that
 shows it.
 
-### P2: The component page
+### P2: The component page (done 2026-10-08)
 
-- **Choosing a component** opens it in the tab, from **a click on its row** or **from the toolbar's finder** (built
-  2026-10-08: the same searchable dropdown as the New modal's repository picker, listing every component; today it
-  scrolls to the component's row and marks it, and in P2 it opens the component's page instead). The component page: a back arrow, the name, the subtitle, **Storybook** and **Source**,
-  then **a card for each story**: its name (`Default`, `All Variants`, spaced from the export's name) and the story,
-  live, in its own frame, as tall as it renders.
-- **The frames live in one preview view,** the sandboxed native view prototypes already use (`PageView`), showing a page
-  the app serves (`?component=<id>`) that holds the cards. The window draws the header; the view draws the stories.
-  Going back hides the view and returns to the list at the same scroll and search.
-- **While building:** the page says so with the component's name; it shows the cards when the build is ready, without
-  being asked again. **No packages** and **failed** are said on the page with what to do.
-- **A story that is blank until clicked** (a closed menu or dialog) says "Opens on click" under its card; one that fails
-  shows its error in its card, and the rest still render.
-- **Tests:** a click opens the component and Back returns to the list where it was; each state; the view is asked for
-  the right address and shown, then hidden; and, in the real app against a made library, a card for each story that
-  rendered. **Seen by Noah before it is marked done.**
+**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+short: `renderer/ComponentPage.tsx` (the page, the shared More menu `ComponentLinks`, and `StoryFrame`), opened from a
+row or the finder in `renderer/DesignSystem.tsx`, which keeps the list mounted underneath. **Where it differs from the
+plan:** the stories are frames in the window, not the native preview view (decision 9), so there is no picture of the
+page under menus and nothing to place over a native layer; there are no cards per story, but one per story file, with
+the file's stories drawn by name inside it, since the names come from Storybook itself (decision in P1); a story that
+opens on a click is not marked "Opens on click", and shows as it does in Storybook's own canvas. **Not seen in the
+running app yet; Noah to try:** open FSButton, FSPopovers (several files), FSSelect (the note about what is not
+installed) and FSDrawer (opens on a click), and Back.
 
 ### P3: Pictures in the list
 
@@ -291,8 +285,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 
 ## Next
 
-**S1 to S3, P0 and P1 are done. P2 is Ready:** the previews exist and are served; P2 is the first thing that shows them (the
-component page, and the row opening it). P3 and T1 wait for P2 to be used.
+**S1 to S3 and P0 to P2 are done.** P3 (pictures in the list) and T1 (token controls) wait for P2 to be used, as decided.
 
 **By hand, Noah:** look at the tab in the running app (built, not yet seen), and open one Storybook link from it (it
 needs Chromatic access).

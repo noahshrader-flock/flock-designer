@@ -1,7 +1,8 @@
-import { BookOpenIcon, CodeIcon, EllipsisVerticalIcon, GitBranchIcon } from 'lucide-react';
+import { GitBranchIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { isGap } from '../shared/catalog';
 import type { Catalog, CatalogComponent, CatalogUpdate } from '../shared/contract';
+import { ComponentLinks, ComponentPage } from './ComponentPage';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { LoadingScreen } from './Loading';
 import { SearchSelect } from './SearchSelect';
@@ -10,7 +11,6 @@ import { Toolbar } from './Toolbar';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 const Page = ({ children }: { children: ReactNode }) => <div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6">{children}</div>;
@@ -23,22 +23,10 @@ const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
 		</span>
 	) : null;
 
-/** A link out, as a menu item. The window opens nothing itself: the app hands an https address to the system's browser. */
-const Out = ({ href, icon, children }: { href: string; icon: ReactNode; children: ReactNode }) => (
-	<DropdownMenuItem asChild>
-		<a href={href} target="_blank" rel="noreferrer">
-			{icon}
-			{children}
-		</a>
-	</DropdownMenuItem>
-);
-
-/** The part of a story's title after its group, so a folder with several stories says which is which. */
-const storyName = (title: string | null): string => title?.split('/').pop() ?? 'Storybook';
-
-const Row = ({ component, part, picked }: { component: CatalogComponent; part: boolean; picked: boolean }) => (
-	<li className={`flex items-start gap-4 py-3 pr-4 ${part ? 'pl-10' : 'pl-4'} ${picked ? 'bg-muted' : ''}`} data-component={component.id} aria-current={picked || undefined}>
-		<div className="flex min-w-0 grow flex-col gap-0.5">
+/** A component in the list: the whole row opens it, and its links are in the More menu at the right. */
+const Row = ({ component, part, onOpen }: { component: CatalogComponent; part: boolean; onOpen: () => void }) => (
+	<li className="hover:bg-muted/50 flex items-center gap-2 pr-2" data-component={component.id}>
+		<button type="button" className={`flex min-w-0 grow flex-col gap-0.5 py-3 text-left ${part ? 'pl-10' : 'pl-4'}`} onClick={onOpen}>
 			<span className="flex items-center gap-2">
 				<span className={part ? 'text-sm' : 'text-sm font-medium'}>{component.name}</span>
 				{isGap(component) && (
@@ -48,31 +36,8 @@ const Row = ({ component, part, picked }: { component: CatalogComponent; part: b
 				)}
 			</span>
 			{component.subtitle && <span className="text-muted-foreground text-sm">{component.subtitle}</span>}
-		</div>
-		<DropdownMenu>
-			<Tooltip>
-				<TooltipTrigger asChild>
-					<DropdownMenuTrigger asChild>
-						<Button size="icon" variant="ghost" aria-label={`More for ${component.name}`}>
-							<EllipsisVerticalIcon />
-						</Button>
-					</DropdownMenuTrigger>
-				</TooltipTrigger>
-				<TooltipContent>More</TooltipContent>
-			</Tooltip>
-			<DropdownMenuContent align="end" className="w-auto">
-				{component.stories.map((s) =>
-					s.storybook === null ? null : (
-						<Out key={s.file} href={s.storybook} icon={<BookOpenIcon />}>
-							{component.stories.length > 1 ? `Storybook: ${storyName(s.title)}` : 'Storybook'}
-						</Out>
-					),
-				)}
-				<Out href={component.source} icon={<CodeIcon />}>
-					Source
-				</Out>
-			</DropdownMenuContent>
-		</DropdownMenu>
+		</button>
+		<ComponentLinks component={component} />
 	</li>
 );
 
@@ -91,19 +56,19 @@ const Notice = ({ title, children, action }: { title: string; children: ReactNod
 
 /**
  * The Design System tab: the component library as its `develop` branch has it, from a clone on this machine
- * (DESIGN_SYSTEM_PLAN.md). An index, not a second Storybook: each component is a name, a line and links to where it
- * is shown (Storybook) and written (Source).
+ * (DESIGN_SYSTEM_PLAN.md). The list, by default; a component, once one is opened from its row or the toolbar's finder,
+ * with its stories live. Not a second Storybook: docs and controls stay there, behind each component's links.
  *
  * It reads once when first shown, at once from what the clone has, then again when GitHub has been asked for changes;
- * after that only when Sync is pressed. It stays mounted while hidden, so the search and the scroll survive.
+ * after that only when Sync is pressed. It stays mounted while hidden, and the list stays mounted while a component is
+ * open, so the scroll survives both.
  */
 export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [catalog, setCatalog] = useState<Catalog | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [syncing, setSyncing] = useState(false);
-	// The component chosen in the toolbar's list: brought into view, and marked, in the list below.
-	const [picked, setPicked] = useState<string | null>(null);
-	const list = useRef<HTMLDivElement>(null);
+	// The component open on its own page, by id; the list when there is none.
+	const [open, setOpen] = useState<string | null>(null);
 	const started = useRef(false);
 
 	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {
@@ -138,12 +103,6 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		void firstRead();
 	}, [hidden, firstRead]);
 
-	const pick = (name: string) => {
-		setPicked(name);
-		const id = catalog?.state === 'ready' ? catalog.components.find((c) => c.name === name)?.id : undefined;
-		list.current?.querySelector(`[data-component="${id}"]`)?.scrollIntoView?.({ block: 'center' });
-	};
-
 	if (error && catalog === null) {
 		return (
 			<Notice title="Could not read the component library" action={<Button variant="secondary" size="sm" onClick={() => void sync()}>Try again</Button>}>
@@ -166,6 +125,9 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		);
 	}
 
+	const byId = new Map(catalog.components.map((c) => [c.id, c]));
+	// A component a sync removed is closed rather than shown from a list that no longer has it.
+	const opened = open === null ? undefined : byId.get(open);
 	const groups: { group: string; rows: CatalogComponent[] }[] = [];
 	for (const c of catalog.components) {
 		const last = groups[groups.length - 1];
@@ -188,8 +150,8 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 				<div className="ml-2 w-72">
 					<SearchSelect
 						items={catalog.components.map((c) => c.name)}
-						value={picked}
-						onChange={pick}
+						value={opened?.name ?? null}
+						onChange={(name) => setOpen(catalog.components.find((c) => c.name === name)?.id ?? null)}
 						placeholder="Find a component"
 						search="Search components…"
 						empty="No component matches."
@@ -202,13 +164,23 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 					<SyncButton syncing={syncing} onClick={() => void sync()} />
 				</div>
 			</Toolbar>
-			<Page>
-				{error && (
-					<Alert variant="destructive">
-						<AlertDescription>{error}</AlertDescription>
-					</Alert>
-				)}
-				<div ref={list} className="contents">
+			{opened && (
+				<ComponentPage
+					component={opened}
+					parent={opened.partOf === null ? null : (byId.get(opened.partOf) ?? null)}
+					commit={catalog.commit}
+					onBack={() => setOpen(null)}
+					onOpen={setOpen}
+				/>
+			)}
+			{/* Kept while a component is open, so going back finds the list where it was. */}
+			<div hidden={opened !== undefined}>
+				<Page>
+					{error && (
+						<Alert variant="destructive">
+							<AlertDescription>{error}</AlertDescription>
+						</Alert>
+					)}
 					{catalog.components.length === 0 ? (
 						<p className="text-muted-foreground text-sm">
 							No components were found on develop, in src/components or src/compositeComponents.
@@ -221,14 +193,14 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 								</h3>
 								<ul className="bg-card divide-y rounded-lg border">
 									{rows.map((c) => (
-										<Row key={c.id} component={c} part={c.partOf !== null} picked={c.name === picked} />
+										<Row key={c.id} component={c} part={c.partOf !== null} onOpen={() => setOpen(c.id)} />
 									))}
 								</ul>
 							</section>
 						))
 					)}
-				</div>
-			</Page>
+				</Page>
+			</div>
 		</>
 	);
 };
