@@ -1,6 +1,6 @@
 # Clone plan: pick a repository the app does not have yet, and say where it goes
 
-**Written 2026-10-08; decisions made the same day (Noah accepted every recommendation). C1 to C3 are built.** The plan for letting a designer start work in a repository that is not on
+**Written 2026-10-08; decisions made the same day (Noah accepted every recommendation). C1 to C4 are built.** The plan for letting a designer start work in a repository that is not on
 their computer: choose it from the list, see where it will be placed, and have the app put it there.
 
 This is the detail behind one item in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) (*After the pilot: candidates*,
@@ -64,7 +64,7 @@ each, the state document updated in the same change, and no data on GitHub is ch
 | **C1** (done) | **Where clones go:** the clone folder (setting, default, picker), the path a repository would be placed at, and discovery reading it | Nothing | S | Low |
 | **C2** (done) | **The clone itself:** a service that clones a named repository into a folder, with progress and cancel | C1, decision 3 | M | **Medium** |
 | **C3** (done) | **The New modal:** choose a repository with no clone, see where it goes and change it, confirm, watch it, and carry on into the work | C2, decisions 2, 4 | M | Medium |
-| **C4** | **What it starts from:** branches for a repository with no clone (from GitHub), remote-only branches usable as a base, and the "no setup on this branch" answer | C3, decision 5 | M | Medium |
+| **C4** (done) | **What it starts from:** branches for a repository with no clone (from GitHub), remote-only branches usable as a base, and the "no setup on this branch" answer | C3, decision 5 | M | Medium |
 | **C5** | **After the clone:** say what is missing to build (packages, access to private packages), and, if wanted, install them with progress | C3 | L | **High** |
 
 ### C1: Where clones go (done 2026-10-08)
@@ -97,22 +97,17 @@ person presses Create, as for any repository. **For C4:** a clone whose checked-
 with a plain message today ("is cloned in …, but the branch it is on has no Flock Designer setup"); C4 turns that into
 the branches that have it. **Not yet seen in the running app.**
 
-### C4: What it starts from
+### C4: What it starts from (done 2026-10-08)
 
-- **Branches for a repository with no clone,** asked of GitHub (`/repos/<owner>/<repo>/branches`), so the base-branch
-  choice works before anything is downloaded; the default branch first.
-- **A remote-only branch can be a base.** After a clone only the default branch exists locally, and starting work needs
-  a local one. Choosing another makes the local branch from `origin/<branch>` first, with no checkout, so it never
-  moves the person's working branch. The list for a clone shows local and remote branches together.
-- **Start them at a good place** (Noah, 2026-10-08): the branch field appears only after the clone, with a default
-  that works: the clone's checked-out branch when it has the setup file, else the most recently updated branch that has
-  it. **This is also what lets Coke be cloned at all:** today `cloneRepository` refuses to open a clone whose checked-out
-  branch (`develop`) has no `.flkd/workspace.json`. C4 stops refusing, opens the clone, and lets the branch field do the
-  work.
-- **The "no setup here" answer** (decision 5): after the clone, if the chosen base has no `.flkd/workspace.json`, say so
-  and offer the branches that do, instead of failing at Start.
-- **Tests:** a remote-only branch chosen as the base starts work from it and leaves HEAD where it was; a base without the
-  setup file is explained, not attempted.
+**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+short: the branches work can start from include ones only on GitHub, made local (tracking `origin`, nothing checked
+out) when chosen, for codebase work and prototypes; a fresh clone whose checked-out branch has no setup is put on the
+most recently committed branch that has it, so cloning Coke lands on `noah/flock-designer`; a clone the person already
+had is never moved, and they are told which branch to switch it to; the New modal says, for codebase work, when the
+branch has no setup, names ones that do, and will not start. **Where it differs from the plan:** branches are not asked
+of GitHub before the clone (Starts from appears only after it, Noah's call), and a fresh clone is checked out on the
+good branch rather than left where git put it, because the app reads the setup from the files there. **Not yet seen in
+the running app.**
 
 ### C5: After the clone
 
@@ -152,4 +147,4 @@ the branches that have it. **Not yet seen in the running app.**
 
 ## Next
 
-**C1 to C3 are done. C4 is Ready:** scope fixed, files known, tests named, no open question. Build in order, one commit each. C5 waits.
+**C1 to C4 are done.** C5 waits for the pilot, as decided. What is left is Noah's run by hand: clone a repository he does not have from the New modal, and clone Coke and see it land on a branch with the setup.
