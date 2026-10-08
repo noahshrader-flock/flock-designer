@@ -120,6 +120,16 @@ describe('a project', () => {
 	});
 });
 
+describe('on a phone', () => {
+	it('keeps the prototype at a computer’s width, to scroll across, and says it is best on a computer', () => {
+		build();
+		const html = read('alpha/v1/i2/index.html');
+		expect(html).toContain('<meta name="viewport" content="width=device-width, initial-scale=1">');
+		expect(html).toContain('<p class="small-screen">Best on a computer');
+		expect(html).toMatch(/@media \(max-width: 767px\) \{[^}]*\.small-screen \{ display: block; \}[\s\S]*\.stage iframe \{ min-width: 1024px; \}/);
+	});
+});
+
 describe('latest', () => {
 	it("goes to a version's newest iteration, and to the newest version's", () => {
 		build();

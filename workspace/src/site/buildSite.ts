@@ -146,10 +146,18 @@ h1 { font-size: 22px; font-weight: 600; margin: 0 0 20px; }
 .version { min-width: 220px; flex: 0 0 auto; }
 .version h2 { font-size: 15px; font-weight: 600; margin: 0 0 8px; }
 .version.selected .list a { border-color: currentColor; }
-/* The prototype, under the app's own toolbar, and beside it the comments' panel when it is open. */
-.stage { display: flex; height: calc(100vh - var(--toolbar-height, 2.75rem)); }
+/* An iteration fills the window: the app's own toolbar, then the prototype, and beside it the comments' panel when it is open. */
+.viewer { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+.stage { display: flex; flex: 1; min-height: 0; }
 .stage iframe { display: block; flex: 1; min-width: 0; height: 100%; border: 0; }
 #flkd-panel:empty { display: none; }
+/* A prototype is made for a computer's screen: on a phone it keeps that width, to scroll across, and says so. */
+.small-screen { display: none; margin: 0; padding: 6px 16px; font-size: 13px; border-bottom: 1px solid #8884; }
+@media (max-width: 767px) {
+	.small-screen { display: block; }
+	.stage { overflow-x: auto; }
+	.stage iframe { min-width: 1024px; }
+}
 `;
 
 const shell = (title: string, body: string, head = ''): string =>
@@ -217,7 +225,7 @@ const viewerPage = (p: SiteProject, current: Page, viewer: SiteInput['viewer']):
 		: '';
 	return shell(
 		`${p.title} · ${labelOf(current)}`,
-		`<header id="flkd-bar"><a href="../../">${escape(p.title)}</a></header>\n<div class="stage">\n<iframe id="flkd-frame" src="page.html" title="${escape(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="flkd-panel"></aside>\n</div>`,
+		`<div class="viewer">\n<header id="flkd-bar"><a href="../../">${escape(p.title)}</a></header>\n<p class="small-screen">Best on a computer: this prototype is made for a wider screen. Scroll across to see all of it.</p>\n<div class="stage">\n<iframe id="flkd-frame" src="page.html" title="${escape(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="flkd-panel"></aside>\n</div>\n</div>`,
 		head,
 	);
 };

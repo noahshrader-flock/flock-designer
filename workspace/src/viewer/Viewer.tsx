@@ -91,7 +91,8 @@ export const Viewer = ({ config, slots }: { config: ViewerConfig; slots: ViewerS
 				<Commenting key={token} config={config} slots={slots} token={token} onSignOut={signOut} />
 			) : (
 				<PageBar config={config} slots={slots}>
-					<Button size="sm" variant="outline" onClick={() => setPaused(true)}>
+					{/* Not on a phone: commenting needs a computer, and the bar's room goes to the title and the switcher. */}
+					<Button size="sm" variant="outline" className="max-sm:hidden" onClick={() => setPaused(true)}>
 						Sign in to comment
 					</Button>
 				</PageBar>
