@@ -284,6 +284,39 @@ into the files where it belongs. Skill: `skills/move-to-code.md`.
 
 **Its first real run** is in [the plan](IMPLEMENTATION_PLAN.md).
 
+### 3.9 — Clone a repository from New (built 2026-10-08)
+
+**Human.** In the **New** modal (Projects → New), the only place the app clones, a repository with no clone on this
+machine is chosen like any other. Under the Repository field it says where it will go (`Into ~/Documents/GitHub/<repo>`,
+`with flock-designer beside it` when the design repository is missing too) with **Change**, then **Clone repository**
+(**Use repository** for a clone already there). It clones with git's progress and **Stop**; closing the modal stops it.
+Once cloned, the form carries on with it: **Starts from** appears only then, with the repository's branches, local and
+only-on-GitHub alike. When a prototype's packages are missing and the repository declares how it installs, the
+not-installed warning offers **Install packages**, with progress and Stop.
+
+**How it decides.** Agreed with Noah on 2026-10-08:
+- **Where:** one clone folder per person, chosen only with the system's folder picker and remembered. The default is
+  beside the repository last worked in, else the first usual code folder that exists, else `~/Documents/GitHub`. The
+  app looks there first for repositories, so a clone is found by itself.
+- **Never over anything:** a clone of the same repository already there is used; anything else is said and left alone.
+  A failed or stopped clone removes only the folder it made.
+- **What may be cloned:** only a repository the person's own GitHub list returned, plus the design repository beside it.
+  It signs in with the person's own git, as push does. With no terminal to ask in, it fails at once, and says to run
+  `gh auth setup-git`.
+- **The setup:** the app reads a repository's setup (`.flkd/workspace.json`) from the files there.
+  - A fresh clone whose branch lacks it (Coke's `develop`) is moved to the most recently committed branch that has it.
+  - A clone the person already had is never moved: they are told which branch to switch to.
+  - A repository with the setup on no branch says so where the button was.
+  - Codebase work started from a branch without the setup is refused in the modal, which names the branches that have
+    it.
+- **Installing:** only the command the repository declares (`install`; Coke's is `npm ci`), as every command the app
+  runs is, with the person's own registry sign-in. When GitHub Packages refuses, it gives the `npm login` to run.
+- **Not built:** moving, deleting or updating clones; repositories not on GitHub; signing anyone in to git or npm.
+
+**Code:** `services/cloneFolder.ts` (the folder and the place), `services/clone.ts` (`Cloner`), `services/install.ts`
+(`Installer`), both on `services/streamed.ts`; branch helpers in `services/git.ts`; the modal is `renderer/NewWork.tsx`.
+The build history is in the Change log (2026-10-08, "clone plan" C1 to C5).
+
 ## Decisions made
 
 | Decision | Choice | Why |
@@ -3360,6 +3393,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-08 | **The clone plan is done, and its file removed.** C1 to C5 are built; how cloning works, and the decisions behind it, are now section 3.9 here. What is still Noah's (Coke's fast-forward to `noah/flock-designer-c5`, the hand runs, installing against GitHub Packages, and the unmeasured Coke clone time) is on the item in IMPLEMENTATION_PLAN.md. The plan's last text is in `.archive/CLONE_PLAN-2026-10-08-final/` | 3.9, IMPLEMENTATION_PLAN.md |
 | 2026-10-08 | **The New modal's clone, from Noah's first real run.** He cloned `flock-core-fedramp20x`, which has no Flock Designer setup on any branch; the app said so, but in the error at the bottom of the modal, out of sight, and the clone block stayed unchanged, so it seemed nothing had happened. Now: the place (`Into ~/…`, with Change) is under the repository field and before the button; the button is **Clone repository** (**Use repository** for a clone already there); after a clone the place is asked again (**Already in ~/…**); a clone that cannot be used says why where the button was ("Cloned, but no branch of … has the Flock Designer setup, so it can't be used here yet"), with no button left; a clone that failed says why and keeps the button to try again; something in the way shows no button. A clone that can be used goes on, as before, to Starts from with its branches. Checked: 965 tests (new: the failed-then-unusable case, the order of the place and the button), build. **Still to see in the running app** | Change log |
 | 2026-10-08 | **Quality pass on the clone plan (C1 to C5).** Centralised: one runner for long jobs whose output is shown (`services/streamed.ts`, `runStreamed`), used by the clone and the install, which had each spawned and told a stop from a missing program their own way; one test of whether a repository is in a list without case (`listedAs`), used by the clone, the main process and `clonePlace`; one message for something in the way (`notClonedOver`); the batch branch check goes through the git runner, which now takes input, instead of a copy of its settings; one progress row in the New modal for clone and install (`Working`). Fixed: the clone handler worked the clone folder out twice per clone, each time scanning the usual folders. Net 8 lines fewer. Checked: 963 tests, typecheck, build | Change log |
 | 2026-10-08 | **Installing a repository's packages from the New modal (C5 of the clone plan, built ahead of the pilot at Noah's request).** The trust question the plan left open is answered by the app's own rule, that it runs only what a repository declares: a new command id, `install` (README's list of command ids), which Coke declares as `npm ci` (`5265e262` on Coke's `noah/flock-designer-c5`, from `-m6`, made in a temporary worktree). `services/install.ts`: `Installer` runs that command's argv in the repository with the person's own environment and registry sign-in, passes each line on, stops on cancel, and runs one at a time; the `installPackages` channel refuses a repository that declares none, and waits while the agent works in it. Refusals in words: GitHub Packages not signed in (with the `npm login --auth-type=legacy --registry=https://npm.pkg.github.com` to run, and the token needing to read packages and be authorised for SSO), another registry by name, no npm (with the Node version `.nvmrc` asks for), offline, disk full, the wrong Node. Prototype readiness now says whether the repository can install (`canInstall`). The New modal's not-installed warning offers **Install packages** when it can, shows the last line printed with **Stop**, and asks readiness again when done; without a declared install it still says to run `npm ci`. Closing the modal leaves an install to finish, since stopping npm part way leaves packages half there. Checked: 963 tests (new: the installer with a stand-in npm, its refusals, stop and one at a time; the channel running a declared install after which the design system is there, refusing an undeclared one and while the agent works; the modal's button, progress, failure and the case with no declared install), typecheck, build. **Not yet run against GitHub Packages, nor seen in the running app** | CLONE_PLAN.md, PAGES_PLAN.md, README.md |
