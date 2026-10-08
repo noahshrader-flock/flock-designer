@@ -1,0 +1,141 @@
+import { spawn } from 'node:child_process';
+import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
+import { clonePlace } from './cloneFolder';
+
+/**
+ * Cloning a repository the person chose from their own GitHub list into their clone folder (C2 of the clone plan).
+ *
+ * **Never over anything.** The place is asked of `clonePlace` first: a clone of the same repository already there is
+ * used, anything else there is refused. The folder is made here, and on a failure or a cancel only that folder is
+ * removed, and only while it is still the folder this made. Git signs in as the person's own git does, as it does for
+ * a push; with no terminal to ask in, it fails at once rather than waiting, and the message says how to fix it.
+ */
+
+export interface CloneRequest {
+	/** `owner/repo`, which must be in `visible`. */
+	repository: string;
+	/** The repositories the person's GitHub list returned. Only these are cloned. */
+	visible: string[];
+	/** The clone folder: the repository goes in `<folder>/<repo>`. */
+	folder: string;
+}
+
+/** Where git has got to: its phase as it says it ("Receiving objects"), and how far through that phase. */
+export interface CloneProgress {
+	step: string;
+	percent: number | null;
+}
+
+export type Cloned = { path: string; cloned: boolean };
+
+export interface CloneDeps {
+	/** The address git clones from. GitHub's, except in tests. */
+	urlOf?: (repository: string) => string;
+	/** The git to run. */
+	git?: string;
+}
+
+export class CloneProblem extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'CloneProblem';
+	}
+}
+
+const GIT_MISSING =
+	'Git is not installed on this computer, and cloning needs it. On a Mac, install it with `xcode-select --install` in Terminal, or from https://git-scm.com. On Windows, install Git for Windows from https://git-scm.com. Then try again.';
+
+/** What git said, in words a person can act on. `repository` names what was being cloned. */
+export const cloneProblem = (repository: string, stderr: string): string => {
+	const said = stderr.trim().split('\n').filter((l) => !/^(Cloning into|remote: (Enumerating|Counting|Compressing|Total))/.test(l)).pop() ?? '';
+	if (/Authentication failed|could not read (Username|Password)|terminal prompts disabled|Repository not found|Permission denied \(publickey\)|403/i.test(stderr)) {
+		return `GitHub would not let git on this computer clone ${repository}: git is not signed in to GitHub, or this account cannot read it. Run \`gh auth setup-git\` in a terminal (with the GitHub CLI signed in), or sign in to git, then try again.`;
+	}
+	if (/Could not resolve host|Failed to connect|Connection (timed out|refused|reset)|Network is unreachable|unable to access/i.test(stderr)) {
+		return `Could not reach GitHub to clone ${repository}. Check the internet connection, then try again.`;
+	}
+	if (/No space left on device|disk full/i.test(stderr)) return `There is not enough disk space to clone ${repository}. Free some, then try again.`;
+	return `Could not clone ${repository}: ${said || 'git stopped without saying why.'}`;
+};
+
+/** A line of git's progress, as `--progress` writes it: `Receiving objects:  45% (450/1000), 1.20 MiB | 2.00 MiB/s`. */
+export const readProgress = (line: string): CloneProgress | null => {
+	const m = /^(?:remote: )?([A-Z][a-z]+(?: [a-z]+)*):\s+(\d{1,3})%/.exec(line.trim());
+	return m ? { step: m[1] as string, percent: Number(m[2]) } : null;
+};
+
+const sameFolder = (dir: string, made: { dev: number; ino: number }): boolean => {
+	try {
+		const s = statSync(dir);
+		return s.isDirectory() && s.dev === made.dev && s.ino === made.ino;
+	} catch {
+		return false;
+	}
+};
+
+/**
+ * One clone at a time, as the agent does one piece of work at a time: a second is refused while one runs. `signal`
+ * cancels it; a cancelled clone leaves nothing behind.
+ */
+export class Cloner {
+	private running: string | null = null;
+
+	constructor(private readonly deps: CloneDeps = {}) {}
+
+	async clone(req: CloneRequest, onProgress: (p: CloneProgress) => void = () => undefined, signal?: AbortSignal): Promise<Cloned> {
+		if (this.running !== null) throw new CloneProblem(`Already cloning ${this.running}. Wait for it to finish.`);
+		// Only a repository the person's own list returned: the window cannot name one.
+		const listed = req.visible.find((r) => r.toLowerCase() === req.repository.toLowerCase());
+		if (listed === undefined) throw new CloneProblem(`${req.repository} is not one of the repositories your GitHub account can see.`);
+		const place = clonePlace(req.folder, listed);
+		if (place.state === 'cloned') return { path: place.path, cloned: false };
+		if (place.state === 'taken') throw new CloneProblem(`${place.why} Nothing was cloned over it. Choose another folder for clones, or move it.`);
+
+		this.running = listed;
+		const dest = place.path;
+		// Made here, so this is the folder removed if it fails; an empty one already there is the person's, and stays.
+		let made: { dev: number; ino: number } | null = null;
+		try {
+			mkdirSync(req.folder, { recursive: true });
+			if (!existsSync(dest)) {
+				mkdirSync(dest);
+				const s = statSync(dest);
+				made = { dev: s.dev, ino: s.ino };
+			}
+			await this.run(listed, dest, onProgress, signal);
+			return { path: dest, cloned: true };
+		} catch (err) {
+			if (made !== null && sameFolder(dest, made)) rmSync(dest, { recursive: true, force: true });
+			if (signal?.aborted) throw new CloneProblem(`Cloning ${listed} was stopped. Nothing was left behind.`);
+			if (err instanceof CloneProblem) throw err;
+			if ((err as NodeJS.ErrnoException).code === 'ENOSPC') throw new CloneProblem(cloneProblem(listed, 'No space left on device'));
+			throw new CloneProblem(`Could not clone ${listed}: ${err instanceof Error ? err.message : String(err)}`);
+		} finally {
+			this.running = null;
+		}
+	}
+
+	private run(repository: string, dest: string, onProgress: (p: CloneProgress) => void, signal?: AbortSignal): Promise<void> {
+		const url = (this.deps.urlOf ?? ((r) => `https://github.com/${r}.git`))(repository);
+		return new Promise((done, fail) => {
+			const child = spawn(this.deps.git ?? 'git', ['clone', '--progress', '--no-recurse-submodules', '--', url, dest], {
+				// Never wait for a password typed into a window that has no terminal: fail, and say how to sign in.
+				env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+				stdio: ['ignore', 'ignore', 'pipe'],
+				...(signal ? { signal } : {}),
+			});
+			let stderr = '';
+			child.stderr.setEncoding('utf8');
+			child.stderr.on('data', (chunk: string) => {
+				stderr = (stderr + chunk).slice(-16_000);
+				// Progress is rewritten in place with carriage returns; each piece is a line.
+				for (const piece of chunk.split(/[\r\n]/)) {
+					const p = readProgress(piece);
+					if (p) onProgress(p);
+				}
+			});
+			child.on('error', (err: NodeJS.ErrnoException) => fail(err.code === 'ENOENT' ? new CloneProblem(GIT_MISSING) : err));
+			child.on('close', (code) => (code === 0 ? done() : fail(new CloneProblem(cloneProblem(repository, stderr)))));
+		});
+	}
+}
