@@ -18,7 +18,7 @@ import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Proj
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
 import { READY_LINE } from '../shared/handoff';
 import { latest } from '../shared/latest';
-import { isPrototypeKey, iterationLabel, prototypePagePath, workKind, workOf } from '../shared/projects';
+import { byVersion, isPrototypeKey, iterationLabel, parsePrototypeName, prototypePagePath, workKind, workOf } from '../shared/projects';
 import { HandoffDialog } from './HandoffDialog';
 import { MoveToCode } from './MoveToCode';
 import { AgentLog, Loading } from './Loading';
@@ -35,7 +35,16 @@ import { usePrototypeBuild } from './prototypeBuild';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import { Textarea } from './ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
@@ -739,12 +748,26 @@ export const Review = ({
 									if (next && branch !== iteration.branch) onOpen(project, next);
 								}}
 							>
-								{siblings.map((i) => (
-									<DropdownMenuRadioItem key={i.branch} value={i.branch}>
-										{iterationLabel(i)}
-										{i.localOnly && !project.localOnly ? ' · only on this machine' : ''}
-									</DropdownMenuRadioItem>
-								))}
+								{/* Prototypes by version, then their iterations; codebase work is one list, as before. */}
+								{kind === 'prototype'
+									? byVersion(siblings).map((group, n) => (
+											<div key={group.version}>
+												{n > 0 && <DropdownMenuSeparator />}
+												<DropdownMenuLabel className="text-muted-foreground text-xs">V{group.version}</DropdownMenuLabel>
+												{group.iterations.map((i) => (
+													<DropdownMenuRadioItem key={i.branch} value={i.branch}>
+														I{parsePrototypeName(i.name)?.iteration}
+														{i.localOnly && !project.localOnly ? ' · only on this machine' : ''}
+													</DropdownMenuRadioItem>
+												))}
+											</div>
+										))
+									: siblings.map((i) => (
+											<DropdownMenuRadioItem key={i.branch} value={i.branch}>
+												{iterationLabel(i)}
+												{i.localOnly && !project.localOnly ? ' · only on this machine' : ''}
+											</DropdownMenuRadioItem>
+										))}
 							</DropdownMenuRadioGroup>
 						</DropdownMenuContent>
 					</DropdownMenu>

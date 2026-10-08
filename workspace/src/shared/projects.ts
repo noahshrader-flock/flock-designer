@@ -166,15 +166,33 @@ export const projectPath = (projectId: string, file: string): string => `project
 export const prototypePagePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.html`);
 /** Its React source, kept beside the page. */
 export const prototypeSourcePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.tsx`);
-/** A prototype's name, `i1`, `i2`, …: the one pattern, wherever a name is checked or counted. */
-const PROTOTYPE_NAME = /^i(\d{1,4})$/;
-export const isPrototypeName = (name: string): boolean => PROTOTYPE_NAME.test(name);
 /**
- * Prototypes share one count, whichever way they were made: one past the highest recorded, so a gap is never
- * filled in.
+ * A prototype's name says which **version** it belongs to (a different idea for the same brief) and which
+ * **iteration** of that version it is (a refinement): `v2-i3`. Names from before versions, `i1`, `i2`, are version 1,
+ * and keep the key, files and review thread they have always had: nothing is renamed. This is the one place a name is
+ * read, so everything that checks or counts one agrees.
  */
+const PROTOTYPE_NAME = /^(?:v([1-9]\d{0,2})-)?i([1-9]\d{0,3})$/;
+export interface PrototypeName {
+	version: number;
+	iteration: number;
+	/** Written before versions existed (`i1`): read as version 1. */
+	legacy: boolean;
+}
+export const parsePrototypeName = (name: string): PrototypeName | null => {
+	const m = PROTOTYPE_NAME.exec(name);
+	return m ? { version: Number(m[1] ?? 1), iteration: Number(m[2]), legacy: m[1] === undefined } : null;
+};
+export const isPrototypeName = (name: string): boolean => parsePrototypeName(name) !== null;
+/** A name in the new form. Only reading accepts the old one. */
+export const prototypeName = (version: number, iteration: number): string => `v${version}-i${iteration}`;
+const parsedNames = (names: string[]): PrototypeName[] => names.map(parsePrototypeName).filter((p): p is PrototypeName => p !== null);
+/** A new idea for the project: the first iteration of the next version, one past the highest, so no number is reused. */
 export const nextPrototypeName = (names: string[]): string =>
-	`i${names.reduce((max, n) => Math.max(max, Number(PROTOTYPE_NAME.exec(n)?.[1] ?? 0)), 0) + 1}`;
+	prototypeName(parsedNames(names).reduce((max, p) => Math.max(max, p.version), 0) + 1, 1);
+/** A refinement of a version: its next iteration, one past the highest it has had. */
+export const nextIterationName = (names: string[], version: number): string =>
+	prototypeName(version, parsedNames(names).filter((p) => p.version === version).reduce((max, p) => Math.max(max, p.iteration), 0) + 1);
 
 /**
  * A project's work as the screens offer it: its **prototypes** (pages, and the older ones on `fd/` branches: attempts
@@ -183,9 +201,29 @@ export const nextPrototypeName = (names: string[]): string =>
  */
 export const workKind = (i: Pick<ProjectIteration, 'name' | 'branch'>): IterationKind =>
 	!isPrototypeKey(i.branch) && i.name === 'codebase' ? 'codebase' : 'prototype';
-/** How an iteration is named on screen. A project's codebase work is one branch, so it is its first iteration. */
-export const iterationLabel = (i: Pick<ProjectIteration, 'name' | 'branch'>): string =>
-	workKind(i) === 'codebase' ? 'I1' : i.name.toUpperCase();
+/**
+ * How an iteration is named on screen: `V2 · I3`. A project's codebase work is one branch, so it is its first
+ * iteration, and keeps that label.
+ */
+export const iterationLabel = (i: Pick<ProjectIteration, 'name' | 'branch'>): string => {
+	if (workKind(i) === 'codebase') return 'I1';
+	const p = parsePrototypeName(i.name);
+	return p ? `V${p.version} · I${p.iteration}` : i.name.toUpperCase();
+};
+/**
+ * A project's prototypes, version by version, for the switcher and the project page. Versions appear in the order of
+ * their first iteration in the list given (so a newest-first list puts the newest idea first), iterations in the order
+ * given within each.
+ */
+export const byVersion = (iterations: ProjectIteration[]): { version: number; iterations: ProjectIteration[] }[] => {
+	const groups = new Map<number, ProjectIteration[]>();
+	for (const it of iterations) {
+		const p = parsePrototypeName(it.name);
+		if (!p) continue;
+		groups.set(p.version, [...(groups.get(p.version) ?? []), it]);
+	}
+	return [...groups].map(([version, its]) => ({ version, iterations: its }));
+};
 const newestStarted = (a: ProjectIteration, b: ProjectIteration): number =>
 	(b.createdAt ? Date.parse(b.createdAt) : -Infinity) - (a.createdAt ? Date.parse(a.createdAt) : -Infinity) ||
 	b.name.localeCompare(a.name, undefined, { numeric: true });

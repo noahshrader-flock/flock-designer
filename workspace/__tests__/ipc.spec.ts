@@ -294,17 +294,17 @@ describe('prototypes', () => {
 	it('are recorded, saved and served through the clone on this machine', async () => {
 		await call(CHANNELS.useCheckout, product);
 		const made = await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-		expect(made).toMatchObject({ ok: true, value: { name: 'i1', branch: 'prototype/demo/i1' } });
+		expect(made).toMatchObject({ ok: true, value: { name: 'v1-i1', branch: 'prototype/demo/v1-i1' } });
 		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list\n');
 
 		// Nothing to save until the agent has written the page.
-		expect((await call(CHANNELS.savePrototype, 'demo', 'i1')).ok).toBe(false);
+		expect((await call(CHANNELS.savePrototype, 'demo', 'v1-i1')).ok).toBe(false);
 		mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
-		writeFileSync(join(home, 'prototype', 'demo', 'i1.html'), '<h1>Demo</h1>');
-		expect((await call(CHANNELS.savePrototype, 'demo', 'i1')).ok).toBe(true);
-		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'i1.html'), 'utf8')).toBe('<h1>Demo</h1>');
+		writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<h1>Demo</h1>');
+		expect((await call(CHANNELS.savePrototype, 'demo', 'v1-i1')).ok).toBe(true);
+		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), 'utf8')).toBe('<h1>Demo</h1>');
 
-		const opened = await call(CHANNELS.openPrototype, 'demo', 'i1');
+		const opened = await call(CHANNELS.openPrototype, 'demo', 'v1-i1');
 		expect(opened.ok).toBe(true);
 		expect(await (await fetch(opened.value as string)).text()).toBe('<h1>Demo</h1>');
 	});
@@ -321,7 +321,7 @@ describe('prototypes', () => {
 		const made = await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'noah/baseline' });
 		expect(made).toMatchObject({ ok: true, value: { basedOn: { repository: 'flock-coke', branch: 'noah/baseline' } } });
 
-		await call(CHANNELS.buildPrototype, 'demo', 'i1', 'A list');
+		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
 		const extras = agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[]; bare: boolean };
 		expect(extras.bare).toBe(true);
 		// Another branch than the one checked out: the app's own copy of it, and the person's checkout untouched.
@@ -335,7 +335,7 @@ describe('prototypes', () => {
 
 		// On the branch already: the clone itself.
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'Another', { root: product, branch: 'develop' });
-		await call(CHANNELS.buildPrototype, 'demo', 'i2', 'Another');
+		await call(CHANNELS.buildPrototype, 'demo', 'v2-i1', 'Another');
 		const p = realpathSync(product);
 		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([p, join(p, '.flkd'), join(p, 'node_modules', 'x'), join(p, 'node_modules')]);
 	});
@@ -344,7 +344,7 @@ describe('prototypes', () => {
 		const comment = (id: number, body: string) => ({
 			id, author: 'pm', authorAvatarUrl: null, body, createdAt: '2026-10-07T00:00:00Z', resolved: false, addressedAt: null, anchor: null, picture: null,
 		});
-		const source = () => join(home, 'prototype', 'demo', 'i1.tsx');
+		const source = () => join(home, 'prototype', 'demo', 'v1-i1.tsx');
 		const ready = async () => {
 			await call(CHANNELS.useCheckout, product);
 			writeSkill();
@@ -358,16 +358,16 @@ describe('prototypes', () => {
 			writeFileSync(source(), 'export default () => null;\n');
 			readComments.mockResolvedValue([comment(7, 'Make this primary')]);
 
-			expect((await call(CHANNELS.addressPrototype, 'demo', 'i1', 7)).ok).toBe(true);
-			expect(readComments).toHaveBeenCalledWith('demo', 'prototype/demo/i1');
+			expect((await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7)).ok).toBe(true);
+			expect(readComments).toHaveBeenCalledWith('demo', 'prototype/demo/v1-i1');
 			const [dir, , task, extras] = agentStart.mock.calls.at(-1) as [string, string, string, { work: string; bare: boolean }];
 			expect(dir).toBe(join(home, 'prototype', 'demo'));
-			expect(task).toContain('Address comment 1 on prototype i1');
+			expect(task).toContain('Address comment 1 on prototype v1-i1');
 			expect(task).toContain(source());
 			expect(task).toContain('# Address');
 			expect(task).toContain('# Build');
 			expect(task).not.toContain('Make this primary');
-			expect(extras).toMatchObject({ work: 'prototype/demo/i1', bare: true });
+			expect(extras).toMatchObject({ work: 'prototype/demo/v1-i1', bare: true });
 			// The reviewer's words reach the agent through the file, beside the prototype.
 			expect(readFileSync(join(home, 'prototype', 'demo', 'comments.md'), 'utf8')).toContain('Make this primary');
 		});
@@ -375,19 +375,19 @@ describe('prototypes', () => {
 		it('works from the saved source when the prototype was built on another machine', async () => {
 			await ready();
 			mkdirSync(join(design, 'projects', 'demo', 'prototypes'), { recursive: true });
-			writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'i1.tsx'), 'export default () => "saved";\n');
+			writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.tsx'), 'export default () => "saved";\n');
 			readComments.mockResolvedValue([comment(7, 'x')]);
-			expect((await call(CHANNELS.addressPrototype, 'demo', 'i1', 7)).ok).toBe(true);
+			expect((await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7)).ok).toBe(true);
 			expect(readFileSync(source(), 'utf8')).toContain('saved');
 		});
 
 		it('refuses a comment that has gone, and a prototype with no source, before starting anything', async () => {
 			await ready();
 			readComments.mockResolvedValue([comment(7, 'x')]);
-			expect((await call(CHANNELS.addressPrototype, 'demo', 'i1', 7)).error).toMatch(/no React source/);
+			expect((await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7)).error).toMatch(/no React source/);
 			writeFileSync(source(), 'export default () => null;\n');
 			readComments.mockResolvedValue([]);
-			expect((await call(CHANNELS.addressPrototype, 'demo', 'i1', 7)).error).toMatch(/no open comments/);
+			expect((await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7)).error).toMatch(/no open comments/);
 			expect(agentStart).not.toHaveBeenCalled();
 		});
 
@@ -395,10 +395,10 @@ describe('prototypes', () => {
 			await ready();
 			mkdirSync(dirname(source()), { recursive: true });
 			writeFileSync(source(), 'a');
-			const before = (await call(CHANNELS.prototypeVersion, 'demo', 'i1')).value as string;
+			const before = (await call(CHANNELS.prototypeVersion, 'demo', 'v1-i1')).value as string;
 			expect(before).toMatch(/^[0-9a-f]{12}$/);
 			writeFileSync(source(), 'b');
-			expect((await call(CHANNELS.prototypeVersion, 'demo', 'i1')).value).not.toBe(before);
+			expect((await call(CHANNELS.prototypeVersion, 'demo', 'v1-i1')).value).not.toBe(before);
 		});
 	});
 
@@ -408,7 +408,7 @@ describe('prototypes', () => {
 		g(product, 'checkout', '-q', '-b', 'noah/baseline');
 		g(product, 'checkout', '-q', 'develop');
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'noah/baseline' });
-		const [a, b] = await Promise.all([call(CHANNELS.buildPrototype, 'demo', 'i1', 'A list'), call(CHANNELS.buildPrototype, 'demo', 'i1', 'A list')]);
+		const [a, b] = await Promise.all([call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list'), call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list')]);
 		expect(a.ok).toBe(true);
 		expect(b.ok).toBe(true);
 	});
@@ -417,9 +417,9 @@ describe('prototypes', () => {
 		await call(CHANNELS.useCheckout, product);
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
-		writeFileSync(join(home, 'prototype', 'demo', 'i1.html'), '<h1>Built, left behind</h1>');
-		expect((await call(CHANNELS.openPrototype, 'demo', 'i1')).ok).toBe(true);
-		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'i1.html'), 'utf8')).toBe('<h1>Built, left behind</h1>');
+		writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<h1>Built, left behind</h1>');
+		expect((await call(CHANNELS.openPrototype, 'demo', 'v1-i1')).ok).toBe(true);
+		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), 'utf8')).toBe('<h1>Built, left behind</h1>');
 	});
 
 	it("take the product's guidance from the accepted checkout when the branch has none, as develop does not", async () => {
@@ -430,7 +430,7 @@ describe('prototypes', () => {
 		g(product, 'commit', '-q', '-m', 'no setup on this branch');
 		g(product, 'checkout', '-q', 'develop');
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'bare-develop' });
-		await call(CHANNELS.buildPrototype, 'demo', 'i1', 'A list');
+		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
 		const readOnly = (agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly;
 		expect(readOnly).toContain(join(realpathSync(product), '.flkd'));
 	});
@@ -440,24 +440,24 @@ describe('prototypes', () => {
 		writeSkill();
 
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-		await call(CHANNELS.buildPrototype, 'demo', 'i1', 'A list');
+		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
 		const task = agentStart.mock.calls.at(-1)?.[2] as string;
-		expect(task).toContain(`Write \`${join(home, 'prototype', 'demo', 'i1.tsx')}\``);
+		expect(task).toContain(`Write \`${join(home, 'prototype', 'demo', 'v1-i1.tsx')}\``);
 
 		// What the agent writes, then Save.
-		writeFileSync(join(home, 'prototype', 'demo', 'i1.tsx'), "/* A page made of the real thing. */\nimport { Hello } from 'x';\nexport default () => <Hello />;\n");
-		const saved = await call(CHANNELS.savePrototype, 'demo', 'i1');
+		writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.tsx'), "/* A page made of the real thing. */\nimport { Hello } from 'x';\nexport default () => <Hello />;\n");
+		const saved = await call(CHANNELS.savePrototype, 'demo', 'v1-i1');
 		expect(saved).toEqual({ ok: true, value: null });
-		const page = readFileSync(join(design, 'projects', 'demo', 'prototypes', 'i1.html'), 'utf8');
+		const page = readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), 'utf8');
 		expect(page).toContain('A page made of the real thing.');
 		expect(page).toContain('<div id="root"></div>');
-		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'i1.tsx'), 'utf8')).toContain("from 'x'");
+		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.tsx'), 'utf8')).toContain("from 'x'");
 	});
 
 	it('keep a large embedded file once beside the projects, and serve it beside the page', async () => {
 		await call(CHANNELS.useCheckout, product);
 		writeFileSync(join(product, 'node_modules', 'x', 'style.css'), `@font-face { font-family: X; src: url(data:font/woff2;base64,${'A'.repeat(30000)}); }`);
-		for (const name of ['i1', 'i2']) {
+		for (const name of ['v1-i1', 'v2-i1']) {
 			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 			writeFileSync(join(home, 'prototype', 'demo', `${name}.tsx`), "import 'x/style.css';\nimport { Hello } from 'x';\nexport default () => <Hello />;\n");
@@ -465,11 +465,11 @@ describe('prototypes', () => {
 		}
 		const kept = readdirSync(join(design, 'projects', '_shared'));
 		expect(kept).toHaveLength(1);
-		const page = readFileSync(join(design, 'projects', 'demo', 'prototypes', 'i2.html'), 'utf8');
+		const page = readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v2-i1.html'), 'utf8');
 		expect(page).toContain(`/_shared/${kept[0]?.replace('.datauri', '')}`);
 		expect(page).not.toContain('A'.repeat(1000));
-		const opened = await call(CHANNELS.openPrototype, 'demo', 'i2');
-		const font = await fetch((opened.value as string).replace('/demo/i2/', `/_shared/${kept[0]?.replace('.datauri', '')}`));
+		const opened = await call(CHANNELS.openPrototype, 'demo', 'v2-i1');
+		const font = await fetch((opened.value as string).replace('/demo/v2-i1/', `/_shared/${kept[0]?.replace('.datauri', '')}`));
 		expect(font.headers.get('content-type')).toBe('font/woff2');
 		// Kept beside the projects, never listed as one.
 		const listed = await call(CHANNELS.listProjects);
@@ -484,7 +484,7 @@ describe('prototypes', () => {
 
 		it('says what it would do: the branch, whether it exists, and what the prototype was modelled on', async () => {
 			await start();
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'i1')).value).toEqual({
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'v1-i1')).value).toEqual({
 				branch: 'feature/demo',
 				exists: false,
 				recorded: false,
@@ -498,26 +498,26 @@ describe('prototypes', () => {
 		it('says when the branch already exists here, so the work continues on it', async () => {
 			await start();
 			g(product, 'branch', 'feature/demo');
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'i1')).value).toMatchObject({ exists: true, recorded: false });
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'v1-i1')).value).toMatchObject({ exists: true, recorded: false });
 		});
 
 		it('says when the project already has codebase work recorded', async () => {
 			await start();
 			await call(CHANNELS.createIteration, product, 'demo', 'x', 'develop');
 			g(product, 'checkout', '-q', 'develop');
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'i1')).value).toMatchObject({ recorded: true });
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'v1-i1')).value).toMatchObject({ recorded: true });
 		});
 
 		it('says when uncommitted changes would stop it', async () => {
 			await start();
 			writeFileSync(join(product, 'README.md'), 'changed\n');
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'i1')).value).toMatchObject({ clean: false });
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'v1-i1')).value).toMatchObject({ clean: false });
 		});
 
 		it('refuses a name that is not a prototype, and a repository that was not accepted', async () => {
 			await start();
 			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', '../x')).ok).toBe(false);
-			expect((await call(CHANNELS.moveToCodePlan, home, 'demo', 'i1')).ok).toBe(false);
+			expect((await call(CHANNELS.moveToCodePlan, home, 'demo', 'v1-i1')).ok).toBe(false);
 		});
 	});
 
@@ -525,11 +525,11 @@ describe('prototypes', () => {
 		await call(CHANNELS.useCheckout, product);
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
-		writeFileSync(join(home, 'prototype', 'demo', 'i1.tsx'), "import { Nope } from 'not-installed';\nexport default () => <Nope />;\n");
-		const saved = await call(CHANNELS.savePrototype, 'demo', 'i1');
+		writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.tsx'), "import { Nope } from 'not-installed';\nexport default () => <Nope />;\n");
+		const saved = await call(CHANNELS.savePrototype, 'demo', 'v1-i1');
 		expect(saved.ok).toBe(false);
 		expect(saved.error).toMatch(/did not build[\s\S]*not-installed/);
-		expect(existsSync(join(design, 'projects', 'demo', 'prototypes', 'i1.html'))).toBe(false);
+		expect(existsSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'))).toBe(false);
 	});
 
 	it('refuse a base that is not a branch of an accepted repository', async () => {
@@ -539,7 +539,7 @@ describe('prototypes', () => {
 	});
 
 	it('refuse names that are not theirs, before anything is read or written', async () => {
-		for (const [id, name] of [['demo', '../x'], ['demo', 'codebase'], ['../demo', 'i1']]) {
+		for (const [id, name] of [['demo', '../x'], ['demo', 'codebase'], ['../demo', 'v1-i1']]) {
 			expect((await call(CHANNELS.openPrototype, id, name)).ok).toBe(false);
 			expect((await call(CHANNELS.savePrototype, id, name)).ok).toBe(false);
 		}

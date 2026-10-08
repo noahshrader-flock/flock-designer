@@ -4,7 +4,7 @@ import type { Iteration, Person, WorkspaceDescriptor } from '../../shared/contra
 import { branchAuthors, branchExists, branchStartedAt, checkoutBranch, createBranch, headCommit, isSamePerson, localIdentity } from './git';
 import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
-import { PROJECT_ID, isPrototypeName } from '../../shared/projects';
+import { PROJECT_ID, parsePrototypeName } from '../../shared/projects';
 
 /**
  * Named attempts at the question, and the record of them.
@@ -159,11 +159,14 @@ const adoptUnrecorded = async (
 	projectId: string,
 	name: string,
 ): Promise<Iteration | null> => {
+	// Only an old-form name (`i3`) can be an older prototype branch (`fd/<id>/i3`). A versioned name is a page,
+	// never a branch, so it is never read as one.
+	const old = parsePrototypeName(name);
 	const branch =
 		name === 'codebase'
 			? codebaseBranchFor(descriptor, projectId)
-			: isPrototypeName(name)
-				? branchFor(descriptor, projectId, Number(name.slice(1)))
+			: old?.legacy
+				? branchFor(descriptor, projectId, old.iteration)
 				: null;
 	if (!branch || !(await branchExists(productRoot, branch))) return null;
 	// Dated from the work itself, not from the moment the app first needed a record for it.

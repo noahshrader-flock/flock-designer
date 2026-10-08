@@ -222,6 +222,13 @@ describe('recordedIteration: work started outside the app', () => {
 		expect(found).toMatchObject({ name: 'i3', branch: 'fd/demo/i3' });
 	});
 
+	it('never reads a version name as an older prototype branch', async () => {
+		// An fd/ branch exists, but a name in the new form is a page, never a branch: no record is invented for it.
+		g('checkout', '-q', '-b', 'fd/demo/i2');
+		await expect(recordedIteration(root, records, descriptor, 'demo', 'v1-i2')).rejects.toThrow(/no iteration called v1-i2/);
+		expect(readIterations(records, 'demo')).toEqual([]);
+	});
+
 	it('returns an existing record as it is, and does not write a second', async () => {
 		await oldPrototype(1);
 		const before = readFileSync(join(records, 'demo', 'iterations.json'), 'utf8');

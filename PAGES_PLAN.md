@@ -149,7 +149,7 @@ day, **L** several days.
 | # | Milestone | Needs | Size | Risk | Ready? |
 |---|---|---|---|---|---|
 | **M0** | **The asks:** org repo, private Pages, access, security (in parallel, not code) | Admins, security | n/a | n/a | **In progress, Noah** |
-| **M1** | **The version model in code** (`v1-i2`; old names read as V1) | Nothing | M | Low | **Ready** |
+| **M1** | **The version model in code** (`v1-i2`; old names read as V1) | Nothing | M | Low | **Done 2026-10-08**, see [flock-designer.md](flock-designer.md#change-log) |
 | **M2** | **Make prototypes without the app** (new-prototype and build-and-save as shared commands) | M1 | L | Medium | After M1; one open question |
 | **M3** | **Address starts the next iteration** when the current one has outside comments | M1, M2 | M | Medium | After M2 |
 | **M4** | **One comments experience,** taken out of the review screen | M1 | L | **High** | Ready after M1 (tests first) |
@@ -161,7 +161,7 @@ day, **L** several days.
 | **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | Blocked on a decision |
 | **M10** | **Parity and the smaller things we agreed** | M7 | M | Low | Later |
 
-**Start here: M1.** It needs no one, everything else depends on it, and the cost of getting it wrong is highest.
+**M1 is done (2026-10-08). Next: M2,** which M3 depends on, or M4 or M5a, which only needed M1.
 
 **The repo is public for now (Noah's decision, 2026-10-07), so the whole flow can be built and tested before the admins
 answer.** Public Pages needs no login to view, so what it cannot show is that an anonymous viewer is blocked. That
@@ -196,48 +196,12 @@ M1 versions ─┬─► M2 commands ─► M3 address ─►      M5b publish �
 **Done when:** the repo is in the org, private Pages is allowed, the design team can read it, and the app works
 against the repo in its new place.
 
-### M1: The version model in code
+### M1: The version model in code (done 2026-10-08)
 
-**Goal.** Versions (different ideas) and iterations (refinements) exist in the app's data and display, without touching
-any existing data. **Why first:** page addresses are shared as links, and everything after this uses the names.
-
-**The design, kept as simple as it can be.** A version is part of the iteration's **name**.
-
-| | Today | After M1 |
-|---|---|---|
-| A new prototype | `i1` | `v1-i1` |
-| A refinement of it | `i2` | `v1-i2` |
-| A different idea | `i3` (one flat count) | `v2-i1` |
-| An existing prototype | `i1` | **still `i1`, read as V1 · I1.** Its key, files and review thread do not change |
-
-Because the key (`prototype/<project>/<name>`), the file names (`prototypes/<name>.tsx` and `.html`) and the review
-thread all follow the name, **nothing on GitHub or on disk has to be migrated**: old names are read as version 1, and
-only new work uses the new form. A page address is worked out from the name (`v1-i2` becomes `/v1/i2/`, and `i1`
-becomes `/v1/i1/`).
-
-**What changes**
-- **`shared/projects.ts`:** one place that reads a name (version, iteration, whether it is the old form), writes one,
-  and finds the next iteration of a version and the next version. `isPrototypeName`, `nextPrototypeName`, `workOf` and
-  `iterationLabel` use it. The label reads **V1 · I2**.
-- **The main process and the app** (`prototype.ts`, `ipc.ts`, `iterations.ts`, `prototypeBuild.ts`): names are checked by
-  the one reader. No behavior changes. **Checked in the code (2026-10-07):** a name is *matched* in only one place that
-  matters (`PROTOTYPE_NAME` in `shared/projects.ts`) and is used as an opaque label everywhere else, so the change is
-  small. Two places need care:
-  - `iterations.ts` adopts older `fd/<id>/iN` branches by reading the number out of the name. That path must accept
-    **only the old form**, or a name like `v1-i2` would be read as a nonsense branch number.
-  - `MoveToCode.tsx` shows the raw name to a person ("This moves i1 into…", "From prototype i1"). It must show the label
-    (V1 · I1).
-- **The review screen:** the switcher becomes two levels (the version, then its iterations). With one version it shows
-  as today. Codebase work keeps its label.
-- **Not in M1:** making a second version (M2), the next-iteration rule (M3), a "selected" version (M10), pages (M5).
-
-**Tests first:** a table of names (old and new, good and bad), next-iteration and next-version counts including the old
-form, labels, and that an old `fd/` branch is adopted only for an old-form name. The existing prototype, address and records tests must pass unchanged.
-
-**Done when:** `admin-usage` shows as V1 · I1 with its comments intact; a test project with `v1-i1`, `v1-i2` and `v2-i1`
-lists them by version in the switcher; all existing tests pass; no existing file, record or thread changed.
-
-**Undo:** revert the commit. Nothing outside the code moved.
+**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08) and its
+Vocabulary. In short: names are `v<version>-i<iteration>`, read in one place; older `i1` names are version 1 with nothing
+migrated; a new prototype on a project is its next version; the switcher groups by version. **Refinements (`v1-i2`)
+are not made yet**: M3 makes them, with the freeze rule.
 
 ### M2: Make prototypes without the app
 

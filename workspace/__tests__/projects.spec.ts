@@ -3,7 +3,25 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
-import { PROJECT_ID, asDate, isRecordName, asRoute, mergeProjects, newestProjectFirst, slugify, startedAt, unionLocal, workOf } from '../src/shared/projects';
+import {
+	PROJECT_ID,
+	asDate,
+	asRoute,
+	isPrototypeName,
+	isRecordName,
+	iterationLabel,
+	mergeProjects,
+	newestProjectFirst,
+	nextIterationName,
+	nextPrototypeName,
+	byVersion,
+	parsePrototypeName,
+	prototypeName,
+	slugify,
+	startedAt,
+	unionLocal,
+	workOf,
+} from '../src/shared/projects';
 import { readFolderProjects } from '../src/main/services/localProjects';
 
 const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
@@ -260,5 +278,72 @@ describe('workOf', () => {
 
 	it('does not take a prototype page named codebase for codebase work', () => {
 		expect(workOf([it1({ name: 'codebase', branch: 'prototype/alpha/codebase' })], 'codebase')).toEqual([]);
+	});
+});
+
+describe('versions and iterations in a prototype\'s name', () => {
+	it.each([
+		['v1-i1', { version: 1, iteration: 1, legacy: false }],
+		['v2-i3', { version: 2, iteration: 3, legacy: false }],
+		['v12-i40', { version: 12, iteration: 40, legacy: false }],
+		// Names from before versions are version 1: the same key, files and thread as always.
+		['i1', { version: 1, iteration: 1, legacy: true }],
+		['i7', { version: 1, iteration: 7, legacy: true }],
+	])('reads %s', (name, parsed) => {
+		expect(parsePrototypeName(name)).toEqual(parsed);
+		expect(isPrototypeName(name)).toBe(true);
+	});
+
+	it.each(['codebase', 'v1', 'v1-', 'v1-i', 'v0-i1', 'v1-i0', 'i0', 'V1-I1', 'v1_i1', 'q1', '../i1', 'v1-i1x', ''])('refuses %s', (name) => {
+		expect(parsePrototypeName(name)).toBeNull();
+		expect(isPrototypeName(name)).toBe(false);
+	});
+
+	it('writes names in the new form only', () => {
+		expect(prototypeName(1, 1)).toBe('v1-i1');
+		expect(prototypeName(3, 2)).toBe('v3-i2');
+	});
+
+	it('starts a new idea as the next version, counting older names as version 1', () => {
+		expect(nextPrototypeName([])).toBe('v1-i1');
+		expect(nextPrototypeName(['codebase'])).toBe('v1-i1');
+		expect(nextPrototypeName(['i1'])).toBe('v2-i1');
+		expect(nextPrototypeName(['i1', 'i2', 'codebase'])).toBe('v2-i1');
+		expect(nextPrototypeName(['v1-i1', 'v1-i2', 'v3-i1'])).toBe('v4-i1');
+	});
+
+	it('refines a version as its next iteration, never reusing a number', () => {
+		expect(nextIterationName(['v1-i1'], 1)).toBe('v1-i2');
+		expect(nextIterationName(['v1-i1', 'v1-i3', 'v2-i1'], 1)).toBe('v1-i4');
+		expect(nextIterationName(['v1-i1', 'v2-i1'], 2)).toBe('v2-i2');
+		expect(nextIterationName(['i1', 'i2'], 1)).toBe('v1-i3');
+		expect(nextIterationName([], 1)).toBe('v1-i1');
+	});
+
+	it('labels them for people as V and I', () => {
+		const p = (name: string, branch = `prototype/demo/${name}`) => ({ name, branch });
+		expect(iterationLabel(p('v2-i3'))).toBe('V2 · I3');
+		expect(iterationLabel(p('i1'))).toBe('V1 · I1');
+		expect(iterationLabel(p('i2', 'fd/demo/i2'))).toBe('V1 · I2');
+		// Codebase work keeps the label it has today.
+		expect(iterationLabel({ name: 'codebase', branch: 'feature/demo' })).toBe('I1');
+	});
+});
+
+describe('byVersion', () => {
+	const it1 = (name: string, createdAt: string): ProjectIteration => ({
+		name, branch: `prototype/demo/${name}`, issueNumber: null, previewUrl: null, commit: null, contributors: [], createdAt, route: null,
+	});
+
+	it('groups a project\'s prototypes by version, keeping the order it was given', () => {
+		const newestFirst = [it1('v2-i1', '2026-10-05'), it1('v1-i2', '2026-10-04'), it1('i1', '2026-10-01')];
+		expect(byVersion(newestFirst).map((g) => [g.version, g.iterations.map((i) => i.name)])).toEqual([
+			[2, ['v2-i1']],
+			[1, ['v1-i2', 'i1']],
+		]);
+	});
+
+	it('leaves out anything that is not a prototype name', () => {
+		expect(byVersion([it1('codebase', '2026-10-05')])).toEqual([]);
 	});
 });

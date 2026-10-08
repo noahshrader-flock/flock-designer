@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { AgentReadiness, Checkout, MoveToCodePlan, Project, ProjectIteration } from '../shared/contract';
-import { freshIteration } from '../shared/projects';
+import { freshIteration, iterationLabel } from '../shared/projects';
 import { SearchSelect } from './SearchSelect';
 import { useAgentBusy } from './useAgentBusy';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -82,7 +82,7 @@ export const MoveToCode = ({
 		const made = await window.workspace.createIteration(
 			checkout.root,
 			project.id,
-			`From prototype ${iteration.name}`,
+			`From prototype ${iterationLabel(iteration)}`,
 			from ?? undefined,
 		);
 		setBusy(false);
@@ -99,7 +99,7 @@ export const MoveToCode = ({
 				</DialogHeader>
 				<DialogBody className="flex flex-col gap-4">
 					<p className="text-muted-foreground text-sm">
-						This moves {iteration.name} into {checkout.name} as real work. It needs the full setup: packages, environment variables, and the app able to run.
+						This moves {iterationLabel(iteration)} into {checkout.name} as real work. It needs the full setup: packages, environment variables, and the app able to run.
 					</p>
 
 					{plan?.recorded && (
