@@ -340,6 +340,24 @@ describe('prototypes', () => {
 			expect(githubApi.mock.calls.every(([, init]) => !(init as { method?: string } | undefined)?.method)).toBe(true);
 		});
 
+		it('publishes once more when asked again while it runs, so a version selected meanwhile is not missed', async () => {
+			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
+			const asked = () => githubApi.mock.calls.filter(([path]) => path === '/repos/noahshrader-flock/flock-designer').length;
+			githubApi.mockImplementation(async (path: string) => {
+				if (path === '/repos/noahshrader-flock/flock-designer') return { private: false, default_branch: 'main' };
+				if (path === '/repos/noahshrader-flock/flock-designer/pages') return { html_url: 'https://x.github.io/flock-designer/', public: true };
+				throw new Error(`not faked: ${path}`);
+			});
+			await call(CHANNELS.useCheckout, product);
+			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
+			writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<h1>Demo</h1>');
+			await call(CHANNELS.savePrototype, 'demo', 'v1-i1');
+			await call(CHANNELS.selectVersion, 'demo', 1);
+			for (let i = 0; i < 50 && asked() < 2; i++) await new Promise((r) => setTimeout(r, 10));
+			expect(asked()).toBe(2);
+		});
+
 		it('says nothing about a page when nobody is signed in to GitHub', async () => {
 			await call(CHANNELS.useCheckout, product);
 			expect((await call(CHANNELS.publishedPage, 'demo', 'v1-i1')).value).toEqual({ state: 'none' });

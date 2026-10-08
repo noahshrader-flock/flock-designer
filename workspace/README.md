@@ -16,10 +16,11 @@ npm test          # 88 tests
 npm run smoke     # boot the real app and prove the window opens
 ```
 
-**Without the app:** `node bin/flkd.mjs` makes a prototype from Claude Code in VS Code (`new-prototype`,
-`save-prototype`), with the same code the app runs. `skills/start-prototype.md` tells an agent how to use it. `node bin/flkd.mjs build-site --serve` builds the site
-prototypes are published as, and shows it on this machine; `publish` puts an iteration on it, only when the repository
-and its site are private.
+**Without the app:** `node bin/flkd.mjs` makes and changes a prototype from Claude Code in VS Code (`new-prototype`,
+`change-prototype`, `save-prototype`), with the same code the app runs. `skills/start-prototype.md` tells an agent how to
+use it. `node bin/flkd.mjs build-site --serve` builds the site prototypes are published as, and shows it on this machine;
+`publish` puts an iteration on it and says who can open it, and `unpublish` takes one off. Run it with no command for
+the full usage.
 
 ## What the window shows
 

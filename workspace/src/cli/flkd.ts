@@ -14,7 +14,7 @@ import { assertUsableProjectId } from '../main/services/iterations';
 import { readCheckout, runGit } from '../main/services/git';
 import { BUILD_SKILL, assertPrototypeName, cloneStore, prototypeBuildTask } from '../main/services/prototype';
 import { shellLine } from '../main/services/prototypeBundle';
-import { prototypeWork, whereTheChangeGoes } from '../main/services/prototypeWork';
+import { localPrototypeFile, prototypeWork, whereTheChangeGoes } from '../main/services/prototypeWork';
 import { publish, recordsFrom, unpublish } from '../main/services/pages';
 import { buildSite } from '../site/buildSite';
 import { serveSite } from '../site/serveSite';
@@ -172,60 +172,57 @@ const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): P
 	return 0;
 };
 
-/** Publishes one saved iteration to its page, and prints the link. */
-/** The project and iteration a page command is for, checked as names before any path is made of them. */
-const pageOf = (values: { project?: string; name?: string }): { projectId: string; name: string } => {
+/**
+ * A saved iteration a page command is for, and GitHub to ask: its names checked before any path is made of them, its
+ * page saved in the design repository, and GitHub's command line signed in. `doing` says which, for the messages.
+ */
+const savedPage = async (deps: CliDeps, values: { project?: string; name?: string }, doing: 'Publishing' | 'Unpublishing') => {
 	const projectId = values.project;
 	const name = values.name;
 	if (!projectId) throw new UsageError('Say which project, with --project.');
 	if (!name) throw new UsageError('Say which prototype, with --name.');
 	assertUsableProjectId(projectId);
 	assertPrototypeName(name);
-	return { projectId, name };
-};
-
-const publishPage = async (deps: CliDeps, values: { project?: string; name?: string }): Promise<number> => {
-	const { projectId, name } = pageOf(values);
 	const designRoot = await designOf(deps.cwd);
 	if (!existsSync(join(designRoot, prototypePagePath(projectId, name)))) {
-		throw new Error(`${projectId} ${name} has no saved page in the design repository. Save it first (save-prototype), then publish.`);
+		throw new Error(
+			doing === 'Publishing'
+				? `${projectId} ${name} has no saved page in the design repository. Save it first (save-prototype), then publish.`
+				: `${projectId} ${name} has no saved page in the design repository, so it is not on the site.`,
+		);
 	}
-	if (!deps.github) throw new Error("Publishing goes through GitHub's command line, gh, which is missing or not signed in here. Run gh auth login, then publish again.");
-	const published = await publish({
+	if (!deps.github) throw new Error(`${doing} goes through GitHub's command line, gh, which is missing or not signed in here. Run gh auth login, then try again.`);
+	return {
 		github: deps.github,
 		ref: DESIGN_REPO,
 		...(await recordsFrom(designRoot)),
 		projectId,
 		name,
+		designRoot,
 		fetchAnonymously: deps.fetchAnonymously,
 		sleep: deps.sleep,
 		log: deps.out,
-	});
+	};
+};
+
+/** Publishes one saved iteration to its page, and prints the link. */
+const publishPage = async (deps: CliDeps, values: { project?: string; name?: string }): Promise<number> => {
+	const published = await publish(await savedPage(deps, values, 'Publishing'));
 	deps.out(published.url);
 	return 0;
 };
 
+/** Takes one iteration off the site. */
 const unpublishPage = async (deps: CliDeps, values: { project?: string; name?: string }): Promise<number> => {
-	const { projectId, name } = pageOf(values);
-	const designRoot = await designOf(deps.cwd);
-	if (!existsSync(join(designRoot, prototypePagePath(projectId, name)))) {
-		throw new Error(`${projectId} ${name} has no saved page in the design repository, so it is not on the site.`);
-	}
-	if (!deps.github) throw new Error("Unpublishing goes through GitHub's command line, gh, which is missing or not signed in here. Run gh auth login, then try again.");
+	const page = await savedPage(deps, values, 'Unpublishing');
+	const { projectId, name, designRoot } = page;
 	await unpublish({
-		github: deps.github,
-		ref: DESIGN_REPO,
-		...(await recordsFrom(designRoot)),
-		projectId,
-		name,
+		...page,
 		// This machine's copies too: the app saves a page it finds here and not in the repository, which would put it back.
 		removePage: async () => {
 			for (const path of [prototypePagePath(projectId, name), prototypeSourcePath(projectId, name)]) rmSync(join(designRoot, path), { force: true });
-			for (const ext of ['html', 'tsx']) rmSync(join(deps.prototypesRoot, projectId, `${name}.${ext}`), { force: true });
+			for (const ext of ['html', 'tsx'] as const) rmSync(localPrototypeFile(deps.prototypesRoot, projectId, name, ext), { force: true });
 		},
-		fetchAnonymously: deps.fetchAnonymously,
-		sleep: deps.sleep,
-		log: deps.out,
 	});
 	return 0;
 };

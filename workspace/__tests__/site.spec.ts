@@ -175,6 +175,12 @@ describe('built in code', () => {
 		build();
 		expect(read('alpha/index.html')).not.toContain('Built in code');
 	});
+
+	it("does not take a prototype's pull request for codebase work", () => {
+		project('alpha', '# Alpha\n', [record('v1-i1', { pullRequest: 'https://github.com/o/r/pull/5' })], { 'v1-i1': page('Alpha') });
+		build();
+		expect(read('alpha/index.html')).not.toContain('Built in code');
+	});
 });
 
 describe('building', () => {

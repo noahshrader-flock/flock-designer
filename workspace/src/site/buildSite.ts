@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Iteration } from '../shared/contract';
-import { firstHeading, isPrototypeKey, iterationLabel, parsePrototypeName, parseSelectedVersion, sitePath } from '../shared/projects';
+import { firstHeading, isPrototypeKey, iterationLabel, parsePrototypeName, parseSelectedVersion, selectedVersionPath, sitePath, workKind } from '../shared/projects';
 import { parseIterations } from '../shared/records';
 
 /**
@@ -98,7 +98,8 @@ const readProjects = (designRoot: string): SiteProject[] => {
 		const byVersion = new Map<number, Page[]>();
 		for (const p of pages) byVersion.set(p.version, [...(byVersion.get(p.version) ?? []), p]);
 		const brief = existsSync(join(dir, 'brief.md')) ? readFileSync(join(dir, 'brief.md'), 'utf8') : '';
-		const chosen = existsSync(join(dir, 'selected.json')) ? parseSelectedVersion(readFileSync(join(dir, 'selected.json'), 'utf8')) : null;
+		const selectedFile = join(designRoot, selectedVersionPath(id));
+		const chosen = existsSync(selectedFile) ? parseSelectedVersion(readFileSync(selectedFile, 'utf8')) : null;
 		return [
 			{
 				id,
@@ -107,7 +108,7 @@ const readProjects = (designRoot: string): SiteProject[] => {
 					.sort(([a], [b]) => a - b)
 					.map(([version, ps]) => ({ version, pages: ps.sort((a, b) => b.iteration - a.iteration) })),
 				selected: chosen !== null && byVersion.has(chosen) ? chosen : null,
-				builtInCode: records.map((r) => r.pullRequest).find((u): u is string => typeof u === 'string' && PULL_REQUEST.test(u)) ?? null,
+				builtInCode: records.find((r) => workKind(r) === 'codebase' && typeof r.pullRequest === 'string' && PULL_REQUEST.test(r.pullRequest))?.pullRequest ?? null,
 			},
 		];
 	});

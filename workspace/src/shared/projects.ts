@@ -169,11 +169,13 @@ export const prototypePagePath = (projectId: string, name: string): string => pr
  * Kept in its own file, so choosing one never touches the iterations' records.
  */
 export const selectedVersionPath = (projectId: string): string => projectPath(projectId, 'selected.json');
+/** A version's number: a whole number from 1. */
+export const isVersion = (n: unknown): n is number => Number.isSafeInteger(n) && (n as number) > 0;
 /** The file's version, or null when there is none, or it is anything else. */
 export const parseSelectedVersion = (text: string | null): number | null => {
 	try {
 		const version: unknown = text === null ? null : (JSON.parse(text) as { version?: unknown }).version;
-		return Number.isSafeInteger(version) && (version as number) > 0 ? (version as number) : null;
+		return isVersion(version) ? version : null;
 	} catch {
 		return null;
 	}

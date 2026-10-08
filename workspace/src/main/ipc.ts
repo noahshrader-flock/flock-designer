@@ -49,6 +49,7 @@ import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
 import {
 	isRecordName,
+	isVersion,
 	iterationLabel,
 	latestIterationName,
 	mergeProjects,
@@ -864,15 +865,21 @@ export const registerIpc = ({
 	 */
 	const publishing = new Map<string, Promise<void>>();
 	const publishStopped = new Map<string, string>();
+	// Asked for again while one runs: what changed since may have missed its push, so one more runs after it.
+	const publishAgain = new Set<string>();
 	const publishInBackground = (projectId: string, name: string): void => {
 		const key = prototypeKey(projectId, name);
-		if (publishing.has(key) || github.state().state !== 'signedIn') return;
+		if (github.state().state !== 'signedIn') return;
+		if (publishing.has(key)) return void publishAgain.add(key);
 		const run = (async () => {
 			await publish({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())), projectId, name });
 		})()
 			.then(() => void publishStopped.delete(key))
 			.catch((err: unknown) => void publishStopped.set(key, err instanceof Error ? err.message : String(err)))
-			.finally(() => publishing.delete(key));
+			.finally(() => {
+				publishing.delete(key);
+				if (publishAgain.delete(key)) publishInBackground(projectId, name);
+			});
 		publishing.set(key, run);
 	};
 	ipcMain.handle(CHANNELS.publishedPage, guard((projectId: string, name: string) => publishedPage(projectId, name)));
@@ -910,7 +917,7 @@ export const registerIpc = ({
 		CHANNELS.selectVersion,
 		guard(async (projectId: string, version: number | null): Promise<null> => {
 			assertUsableProjectId(projectId);
-			if (version !== null && !(Number.isSafeInteger(version) && version > 0)) throw new Error('That is not a version.');
+			if (version !== null && !isVersion(version)) throw new Error('That is not a version.');
 			const names = (await work.records(projectId)).map((r) => r.name);
 			const versions = names.flatMap((n) => parsePrototypeName(n)?.version ?? []);
 			if (version !== null && !versions.includes(version)) throw new Error(`${projectId} has no V${version}.`);

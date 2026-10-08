@@ -71,15 +71,17 @@ export interface PrototypeStart {
 
 const NO_PRODUCT = 'Prototypes are built from the real design system, so they need the product repository, with its packages installed, on this machine.';
 
+/** Where a prototype's page or source is on this machine, in the app's prototype folder. Saying so makes no folder. */
+export const localPrototypeFile = (prototypesRoot: string, projectId: string, name: string, ext: 'html' | 'tsx'): string => {
+	assertUsableProjectId(projectId);
+	assertPrototypeName(name);
+	return join(prototypesRoot, projectId, `${name}.${ext}`);
+};
+
 export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	const { prototypesRoot } = ctx;
 
-	/** Where a prototype's page or source is on this machine. Saying so makes no folder. */
-	const localFile = (projectId: string, name: string, ext: 'html' | 'tsx'): string => {
-		assertUsableProjectId(projectId);
-		assertPrototypeName(name);
-		return join(prototypesRoot, projectId, `${name}.${ext}`);
-	};
+	const localFile = (projectId: string, name: string, ext: 'html' | 'tsx'): string => localPrototypeFile(prototypesRoot, projectId, name, ext);
 	/** The folder an agent builds a project's prototypes in, made when asked for, and the page and source inside it. */
 	const dir = (projectId: string): string => {
 		assertUsableProjectId(projectId);

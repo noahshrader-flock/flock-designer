@@ -166,7 +166,7 @@ const deploy = async (
 	// 1. Where it is going, before anything leaves this machine.
 	const visibility = await readVisibility(github, ref);
 	const site = visibility.site?.url;
-	if (!site) throw new Error(`The design repository has no GitHub Pages site, so there is nowhere to publish.${noLink}`);
+	if (!site) throw new Error(`${nothing}: the design repository has no GitHub Pages site.${noLink}`);
 	const branch = visibility.defaultBranch;
 	if (recordsBranch === '') throw new Error(`${nothing}: the design repository here is not on a branch.`);
 	if (recordsBranch !== undefined && recordsBranch !== branch) {
