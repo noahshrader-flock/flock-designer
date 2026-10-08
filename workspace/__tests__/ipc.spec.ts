@@ -172,6 +172,7 @@ describe('where clones go', () => {
 			expect(plan).toEqual({
 				repository: 'flocksafety/flock-ops',
 				place: { state: 'free', path: join(home, 'Work', 'flock-ops') },
+				where: '~/Work/flock-ops',
 				design: { state: 'free', path: join(home, 'Work', 'flock-designer') },
 			});
 			const opened = await call(CHANNELS.cloneRepository, 'flocksafety/flock-ops');

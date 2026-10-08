@@ -18,6 +18,7 @@ const REPOS = [
 const PLAN: ClonePlan = {
 	repository: 'flocksafety/flock-ops',
 	place: { state: 'free', path: '/h/GitHub/flock-ops' },
+	where: '~/GitHub/flock-ops',
 	design: null,
 };
 
@@ -68,24 +69,27 @@ afterEach(async () => {
 });
 
 describe('a repository with no clone on this machine', () => {
-	it('says where it will be placed, with a way to change it, and that the design repository comes too when missing', async () => {
+	it('offers one button, with where it goes under it, the design repository when it comes too, and a way to change it', async () => {
 		await open({ clonePlan: async () => ok({ ...PLAN, design: { state: 'free', path: '/h/GitHub/flock-designer' } }) });
 		await chooseRepository('flocksafety/flock-ops');
-		expect(text()).toContain('Will be placed in /h/GitHub/flock-ops');
-		expect(button('Change')).toBeTruthy();
-		expect(text()).toContain('flock-designer, which holds the project records, is cloned beside it');
-		// The trust is said before anything is cloned.
-		expect(text()).toMatch(/lets Flock Designer run the commands flock-ops lists/);
+		expect(button('Clone and continue')).toBeTruthy();
+		expect(text()).toContain('Into ~/GitHub/flock-ops, with flock-designer beside it · Change');
+		await unmountAll((current as NonNullable<typeof current>).root);
+		await open();
+		await chooseRepository('flocksafety/flock-ops');
+		expect(text()).toContain('Into ~/GitHub/flock-ops · Change');
+		// Nothing to point the app at by hand: clones in the usual places and the clone folder are found by themselves.
+		expect(text()).not.toContain('Point the app at it');
 	});
 
 	it('asks again where it goes once the folder is changed with the picker', async () => {
 		let asked = 0;
-		const { app } = await open({ clonePlan: async () => (asked++, ok(asked > 1 ? { ...PLAN, place: { state: 'free', path: '/Volumes/w/flock-ops' } } : PLAN)), chooseCloneFolder: async () => ok('/Volumes/w') });
+		const { app } = await open({ clonePlan: async () => (asked++, ok(asked > 1 ? { ...PLAN, place: { state: 'free', path: '/Volumes/w/flock-ops' }, where: '/Volumes/w/flock-ops' } : PLAN)), chooseCloneFolder: async () => ok('/Volumes/w') });
 		await chooseRepository('flocksafety/flock-ops');
 		await press(button('Change'));
 		await settle();
 		expect(app.calls.chooseCloneFolder).toHaveLength(1);
-		expect(text()).toContain('Will be placed in /Volumes/w/flock-ops');
+		expect(text()).toContain('Into /Volumes/w/flock-ops');
 	});
 
 	it('clones once, shows how far it has got, then carries on with it as the repository in use', async () => {
@@ -123,7 +127,7 @@ describe('a repository with no clone on this machine', () => {
 	it('uses a clone of it already there, rather than cloning it again', async () => {
 		await open({ clonePlan: async () => ok({ ...PLAN, place: { state: 'cloned', path: '/h/GitHub/flock-ops' } }) });
 		await chooseRepository('flocksafety/flock-ops');
-		expect(text()).toContain('Already cloned in /h/GitHub/flock-ops');
+		expect(text()).toContain('Already in ~/GitHub/flock-ops');
 		expect(button('Use it and continue')).toBeTruthy();
 	});
 
@@ -139,6 +143,6 @@ describe('a repository with no clone on this machine', () => {
 	it('says nothing about cloning for the repository in use', async () => {
 		const { app } = await open();
 		expect(app.calls.clonePlan).toBeUndefined();
-		expect(text()).not.toContain('Will be placed in');
+		expect(text()).not.toContain('Clone and continue');
 	});
 });

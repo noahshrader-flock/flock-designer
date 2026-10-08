@@ -465,6 +465,8 @@ export interface ClonePlan {
 	/** `owner/repo`, as GitHub names it. */
 	repository: string;
 	place: ClonePlace;
+	/** The place as a person reads it: `~/Documents/GitHub/flock-coke`. */
+	where: string;
 	/** The design repository, when it is not beside it yet: cloned too, since the work's records go there. */
 	design: ClonePlace | null;
 }

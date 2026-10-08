@@ -1,8 +1,8 @@
 import { type BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { homedir, tmpdir } from 'node:os';
+import { basename, dirname, join, sep } from 'node:path';
 import {
 	CHANNELS,
 	type Checkout,
@@ -315,7 +315,10 @@ export const registerIpc = ({
 		if (listed === undefined) throw new Error(`${repository} is not one of the repositories your GitHub account can see. Sign in to GitHub in Flock Designer, then try again.`);
 		const folder = cloneFolder();
 		const design = clonePlace(folder, DESIGN);
-		return { repository: listed, place: clonePlace(folder, listed), design: design.state === 'cloned' ? null : design };
+		const place = clonePlace(folder, listed);
+		const home = homedir();
+		const where = place.path.startsWith(home + sep) ? `~${place.path.slice(home.length)}` : place.path;
+		return { repository: listed, place, where, design: design.state === 'cloned' ? null : design };
 	};
 	ipcMain.handle(CHANNELS.clonePlan, guard(planClone));
 	ipcMain.handle(

@@ -241,7 +241,6 @@ export const NewWork = ({
 										onChangeFolder={() => void changeFolder()}
 										onClone={() => void clone()}
 										onStop={() => void window.workspace.cancelClone()}
-										onChoose={onChoose}
 									/>
 								)}
 							</div>
@@ -354,9 +353,9 @@ export const NewWork = ({
 };
 
 /**
- * A repository with no clone on this machine, cloned from the New modal: where it will go (and the design repository
- * beside it, when that is missing too), that cloning it trusts it, and one button. Nothing is downloaded until it is
- * pressed, and while it runs it says how far it has got and can be stopped.
+ * A repository with no clone on this machine, cloned from the New modal: one button, and under it where it goes (with
+ * the design repository, when that is missing too) and a way to change that. Nothing is downloaded until it is
+ * pressed; while it runs it says how far it has got, and can be stopped.
  */
 const CloneHere = ({
 	plan,
@@ -364,64 +363,54 @@ const CloneHere = ({
 	onChangeFolder,
 	onClone,
 	onStop,
-	onChoose,
 }: {
 	plan: ClonePlan;
 	cloning: CloneProgress | 'starting' | null;
 	onChangeFolder: () => void;
 	onClone: () => void;
 	onStop: () => void;
-	onChoose: () => void;
 }) => {
 	const { place, design } = plan;
 	const taken = [place, design].find((p) => p?.state === 'taken');
 	const name = plan.repository.split('/')[1];
-	return (
-		<div className="flex flex-col gap-2 text-xs">
-			<div className="flex items-center justify-between gap-2">
-				<p className="text-muted-foreground min-w-0 break-all">
-					{place.state === 'cloned' ? 'Already cloned in ' : 'Will be placed in '}
-					<code>{place.path}</code>
-				</p>
-				<Button size="sm" variant="outline" onClick={onChangeFolder} disabled={cloning !== null}>
-					Change
+	if (cloning !== null) {
+		return (
+			<div className="flex items-center gap-2 text-xs">
+				<Spinner />
+				<span className="grow">
+					{cloning === 'starting'
+						? `Cloning ${name}…`
+						: `Cloning ${cloning.repository.split('/')[1]}: ${cloning.step}${cloning.percent === null ? '' : ` ${cloning.percent}%`}`}
+				</span>
+				<Button size="sm" variant="outline" onClick={onStop}>
+					Stop
 				</Button>
 			</div>
-			{design?.state === 'free' && (
-				<p className="text-muted-foreground">
-					<code>flock-designer</code>, which holds the project records, is cloned beside it.
-				</p>
-			)}
-			<p className="text-muted-foreground">
-				{plan.repository} is cloned with your own git sign-in. Using it lets Flock Designer run the commands {name} lists for
-				itself. Already have it somewhere else?{' '}
-				<button type="button" className="text-primary underline underline-offset-4" onClick={onChoose}>
-					Point the app at it
-				</button>
-				.
-			</p>
+		);
+	}
+	return (
+		<div className="flex flex-col items-start gap-2">
 			{taken?.state === 'taken' && (
 				<Alert variant="warning">
-					<AlertDescription>{taken.why} Nothing is cloned over it: choose another folder, or move it.</AlertDescription>
+					<AlertDescription>{taken.why} Nothing is cloned over it: change where clones go, or move it.</AlertDescription>
 				</Alert>
 			)}
-			{cloning === null ? (
-				<Button size="sm" className="self-start" onClick={onClone} disabled={taken !== undefined}>
-					{place.state === 'cloned' ? 'Use it and continue' : 'Clone and continue'}
-				</Button>
-			) : (
-				<div className="flex items-center gap-2">
-					<Spinner />
-					<span className="grow">
-						{cloning === 'starting'
-							? `Cloning ${name}…`
-							: `Cloning ${cloning.repository.split('/')[1]}: ${cloning.step}${cloning.percent === null ? '' : ` ${cloning.percent}%`}`}
-					</span>
-					<Button size="sm" variant="outline" onClick={onStop}>
-						Stop
-					</Button>
-				</div>
-			)}
+			<Button size="sm" onClick={onClone} disabled={taken !== undefined}>
+				{place.state === 'cloned' ? 'Use it and continue' : 'Clone and continue'}
+			</Button>
+			<p className="text-muted-foreground text-xs">
+				{place.state === 'cloned' ? 'Already in ' : 'Into '}
+				<code className="break-all">{plan.where}</code>
+				{design?.state === 'free' && (
+					<>
+						, with <code>flock-designer</code> beside it
+					</>
+				)}
+				{' · '}
+				<button type="button" className="text-primary underline underline-offset-4" onClick={onChangeFolder}>
+					Change
+				</button>
+			</p>
 		</div>
 	);
 };
