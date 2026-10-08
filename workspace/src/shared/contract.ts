@@ -252,8 +252,11 @@ export type CatalogUpdate =
 /** The Design System tab's list: the component library as its `develop` branch has it, or why there is none. */
 export type Catalog =
 	| { state: 'ready'; commit: string; committedAt: string; update: CatalogUpdate; components: CatalogComponent[] }
-	/** No clone of the library on this machine. `repository` is `owner/repo`. */
-	| { state: 'no-clone'; repository: string }
+	/**
+	 * No clone of the library on this machine. `repository` is `owner/repo`; `lost` is the folder connected before, when it
+	 * is no longer there or no longer the library.
+	 */
+	| { state: 'no-clone'; repository: string; lost: string | null }
 	/** A clone with no `origin/develop` to read. Another branch is never read instead. */
 	| { state: 'no-develop'; root: string };
 
@@ -306,6 +309,16 @@ export interface WorkspaceApi {
 	 * outcome. Nothing in the clone's branches or files is changed.
 	 */
 	designSystemCatalog(refresh: boolean): Promise<Result<Catalog>>;
+	/**
+	 * Connects the design system from a folder the person chooses with the system's folder picker, after checking it is a
+	 * clone of the library. False if they cancel; refused, in words, if it is not the library.
+	 */
+	locateDesignSystem(): Promise<Result<boolean>>;
+	/**
+	 * Clones the design system library into the clone folder, with progress on `onCloneProgress`, and connects it. Only a
+	 * repository that is a design system is cloned; `cancelClone` stops it.
+	 */
+	cloneDesignSystem(repository: string): Promise<Result<null>>;
 	/** Where this person's clones go: the folder they chose, or the default. */
 	cloneFolder(): Promise<Result<string>>;
 	/** Asks for the clone folder with the system's folder picker, and keeps it. Null if the person cancels. */
@@ -724,6 +737,8 @@ export const CHANNELS = {
 	suggestCheckout: 'workspace:suggestCheckout',
 	useCheckout: 'workspace:useCheckout',
 	designSystemCatalog: 'workspace:designSystemCatalog',
+	locateDesignSystem: 'workspace:locateDesignSystem',
+	cloneDesignSystem: 'workspace:cloneDesignSystem',
 	cloneFolder: 'workspace:cloneFolder',
 	chooseCloneFolder: 'workspace:chooseCloneFolder',
 	clonePlan: 'workspace:clonePlan',

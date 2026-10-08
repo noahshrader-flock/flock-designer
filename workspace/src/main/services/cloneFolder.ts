@@ -1,8 +1,9 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import type { ClonePlace } from '../../shared/contract';
 import { CODE_FOLDERS } from './discovery';
+import { FolderMemory } from './folderMemory';
 import { gitHubRepoOf, listedAs, originOf } from './repositories';
 
 /**
@@ -12,29 +13,12 @@ import { gitHubRepoOf, listedAs, originOf } from './repositories';
  *
  * Only the path is kept, and only as a preference: what may be cloned, and where exactly, is decided again each time.
  */
-export class CloneFolderMemory {
-	constructor(private readonly file: string) {}
+export class CloneFolderMemory extends FolderMemory {
+	constructor(file: string) {
+		super(file, 'folder');
+	}
 
 	static defaultPath = (userData: string): string => path.join(userData, 'clone-folder.json');
-
-	/** The folder chosen, or null when none was, or what was kept is not an absolute path. */
-	read(): string | null {
-		try {
-			const parsed = JSON.parse(readFileSync(this.file, 'utf8')) as { folder?: unknown };
-			return typeof parsed.folder === 'string' && path.isAbsolute(parsed.folder) ? parsed.folder : null;
-		} catch {
-			return null;
-		}
-	}
-
-	write(folder: string): void {
-		try {
-			mkdirSync(path.dirname(this.file), { recursive: true });
-			writeFileSync(this.file, JSON.stringify({ folder }));
-		} catch {
-			// Not remembering is an inconvenience: the person is asked again, or the default is used.
-		}
-	}
 }
 
 export interface CloneFolderDeps {

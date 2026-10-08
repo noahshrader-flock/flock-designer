@@ -1,6 +1,10 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { DESIGN_SYSTEMS, isDesignSystem } from '../../shared/catalog';
 import type { Catalog, CatalogUpdate } from '../../shared/contract';
 import { readCatalog, type CatalogReads } from './componentCatalog';
 import { defaultDiscoveryDeps, findRepositories, type DiscoveryDeps } from './discovery';
+import { FolderMemory } from './folderMemory';
 import { runGit } from './git';
 import { gitHubRepoOf, originOf } from './repositories';
 
@@ -13,19 +17,59 @@ import { gitHubRepoOf, originOf } from './repositories';
  * writes no file. Nothing is checked out, and no code from the library is run.
  */
 
-export const LIBRARY = 'flocksafety/flock-react-component-lib';
+export const LIBRARY = DESIGN_SYSTEMS[0]!;
 export const DEVELOP = 'refs/remotes/origin/develop';
 const FETCH_TIMEOUT_MS = 120_000;
 
+/** The repository a folder's `origin` points at on GitHub (`owner/repo`), read from its `.git/config` as a file, or null. */
+const repositoryOf = (dir: string, origin: (dir: string) => string | null): string | null => {
+	const remote = origin(dir);
+	return remote === null ? null : gitHubRepoOf(remote);
+};
+
+/**
+ * Why a folder cannot be the design system library, in words, or null when it can: it is a clone whose `origin` is the
+ * library. A clone of a fork has a different `origin`, so it is refused like any other repository.
+ */
+export const whyNotLibrary = (dir: string, origin: (dir: string) => string | null = originOf, exists: (p: string) => boolean = existsSync): string | null => {
+	if (!exists(join(dir, '.git'))) return `${dir} is not a git repository. Choose the folder you cloned ${LIBRARY} into.`;
+	const repo = repositoryOf(dir, origin);
+	if (repo === null) return `${dir} is not a clone of a GitHub repository. Choose the folder you cloned ${LIBRARY} into.`;
+	return isDesignSystem(repo) ? null : `${dir} is a clone of ${repo}, not ${LIBRARY}.`;
+};
+
 /** The library's clones in the usual places, and first the folders given (the clone folder), most recently used first. */
-export const findLibrary = (deps: DiscoveryDeps & { origin?: (dir: string) => string | null } = defaultDiscoveryDeps): string | null => {
-	const origin = deps.origin ?? originOf;
-	return (
-		findRepositories(deps, (dir) => {
-			const remote = origin(dir);
-			return remote !== null && gitHubRepoOf(remote)?.toLowerCase() === LIBRARY;
-		})[0] ?? null
-	);
+export const findLibrary = (deps: DiscoveryDeps & { origin?: (dir: string) => string | null } = defaultDiscoveryDeps): string | null =>
+	findRepositories(deps, (dir) => isDesignSystem(repositoryOf(dir, deps.origin ?? originOf)))[0] ?? null;
+
+/** The design system the person connected, kept in the app's settings beside the checkout. */
+export const designSystemMemory = (userData: string): FolderMemory => new FolderMemory(join(userData, 'design-system.json'), 'folder');
+
+/** Where the library is now, and the folder connected before if it is no longer the library (moved, deleted, changed). */
+export interface LibraryLocation {
+	root: string | null;
+	lost: string | null;
+}
+
+/**
+ * The connected folder while it is still the library; otherwise one found by itself in the usual places (decision 12), and
+ * the connected folder, if there was one, said to be lost.
+ */
+export const locateLibrary = (memory: FolderMemory, find: () => string | null, check: (dir: string) => string | null = whyNotLibrary): LibraryLocation => {
+	const connected = memory.read();
+	if (connected !== null && check(connected) === null) return { root: connected, lost: null };
+	const found = find();
+	return { root: found, lost: found === null ? connected : null };
+};
+
+/** Connects a folder the person chose: refused, in words, unless it is the library with a `develop` from GitHub to read. */
+export const connectLibrary = async (dir: string, memory: FolderMemory): Promise<void> => {
+	const why = whyNotLibrary(dir);
+	if (why !== null) throw new Error(why);
+	if ((await developCommit(dir)) === null) {
+		throw new Error(`${dir} is a clone of ${LIBRARY}, but has no develop branch from GitHub to read. Check this computer can reach GitHub, then try again.`);
+	}
+	memory.write(dir);
 };
 
 /** What git said when a fetch failed, in words a person can act on. */
@@ -109,8 +153,8 @@ export const readLibrary = async (root: string, update: CatalogUpdate): Promise<
 };
 
 export interface DesignLibraryDeps {
-	/** Where the library's clone is now, or null. Asked on every call, so a clone made since is found. */
-	find: () => string | null;
+	/** Where the library's clone is now. Asked on every call, so a clone made or connected since is found. */
+	find: () => LibraryLocation;
 	update?: (root: string) => Promise<Exclude<CatalogUpdate, 'updating'>>;
 	read?: (root: string, update: CatalogUpdate) => Promise<Catalog>;
 }
@@ -128,8 +172,8 @@ export class DesignLibrary {
 	constructor(private readonly deps: DesignLibraryDeps) {}
 
 	async catalog(refresh: boolean): Promise<Catalog> {
-		const root = this.deps.find();
-		if (root === null) return { state: 'no-clone', repository: LIBRARY };
+		const { root, lost } = this.deps.find();
+		if (root === null) return { state: 'no-clone', repository: LIBRARY, lost };
 		const read = this.deps.read ?? readLibrary;
 		if (refresh) return read(root, await this.fetch(root));
 		// Read before fetching: git runs one command at a time per repository, so the list waits for nothing.
@@ -153,6 +197,6 @@ export class DesignLibrary {
 	}
 }
 
-/** Where to look for the library: the clone folder first, then the usual places. */
-export const libraryFinder = (cloneFolder: () => string, deps: DiscoveryDeps = defaultDiscoveryDeps) => () =>
-	findLibrary({ ...deps, folders: [cloneFolder()] });
+/** Where the library is: the one connected, else one found in the clone folder first, then the usual places. */
+export const libraryFinder = (memory: FolderMemory, cloneFolder: () => string, deps: DiscoveryDeps = defaultDiscoveryDeps) => (): LibraryLocation =>
+	locateLibrary(memory, () => findLibrary({ ...deps, folders: [cloneFolder()] }));

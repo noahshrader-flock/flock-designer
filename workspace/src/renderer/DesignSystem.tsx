@@ -2,6 +2,7 @@ import { GitBranchIcon, RefreshCwIcon, SearchIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { isGap } from '../shared/catalog';
 import type { Catalog, CatalogComponent, CatalogUpdate } from '../shared/contract';
+import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { LoadingScreen } from './Loading';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -104,14 +105,17 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		}
 	}, [ask]);
 
+	// The first answer is what the clone already has; the second is after GitHub was asked for changes.
+	const firstRead = useCallback(async () => {
+		const first = await ask(false);
+		if (first?.state === 'ready' && first.update === 'updating') void refresh();
+	}, [ask, refresh]);
+
 	useEffect(() => {
 		if (hidden || started.current) return;
 		started.current = true;
-		void ask(false).then((first) => {
-			// The first answer is what the clone already has; the second is after GitHub was asked for changes.
-			if (first?.state === 'ready' && first.update === 'updating') void refresh();
-		});
-	}, [hidden, ask, refresh]);
+		void firstRead();
+	}, [hidden, firstRead]);
 
 	const shown = useMemo(() => {
 		if (catalog?.state !== 'ready') return [];
@@ -132,10 +136,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	if (catalog === null) return <LoadingScreen>Reading the component library…</LoadingScreen>;
 	if (catalog.state === 'no-clone') {
 		return (
-			<Notice title="The component library is not on this computer">
-				The Design System tab reads {catalog.repository} from a clone on this computer. Clone it into the folder where your
-				other repositories are, then come back to this tab.
-			</Notice>
+			<ConnectDesignSystem repository={catalog.repository} lost={catalog.lost} onConnected={() => void firstRead()} />
 		);
 	}
 	if (catalog.state === 'no-develop') {

@@ -215,10 +215,24 @@ describe('when there is no list', () => {
 		expect(text()).toContain('Reading the component library…');
 	});
 
-	it('says the library is not on this computer, naming it', async () => {
-		await open(() => ok({ state: 'no-clone', repository: 'flocksafety/flock-react-component-lib' }));
-		expect(text()).toContain('The component library is not on this computer');
-		expect(text()).toContain('flocksafety/flock-react-component-lib');
+	it('shows the Connect screen when there is no library, and the list once one is connected', async () => {
+		let connected = false;
+		const app = fakeApp({
+			designSystemCatalog: async () => ok(connected ? ready() : { state: 'no-clone', repository: 'flocksafety/flock-react-component-lib', lost: null }),
+			listRepositories: async () => ok([]),
+			locateDesignSystem: async () => {
+				connected = true;
+				return ok(true);
+			},
+		});
+		(window as unknown as { workspace: unknown }).workspace = app.api;
+		current = await render(createElement(DesignSystem, { hidden: false }));
+		expect(text()).toContain('Connect the design system');
+		const locate = [...document.querySelectorAll('[role="tab"]')].find((t) => t.textContent === 'Locate')!;
+		await act(async () => void locate.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 })));
+		await press(button('Browse…'));
+		await settle();
+		expect(rows()).toHaveLength(5);
 	});
 
 	it('says the clone has no develop, naming the clone, and reads no other branch', async () => {

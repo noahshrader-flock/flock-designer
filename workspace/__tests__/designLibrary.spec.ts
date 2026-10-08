@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Catalog } from '../src/shared/contract';
-import { DesignLibrary, fetchProblem, findLibrary, LIBRARY, readLibrary, updateLibrary } from '../src/main/services/designLibrary';
+import { connectLibrary, DesignLibrary, fetchProblem, findLibrary, LIBRARY, locateLibrary, readLibrary, updateLibrary, whyNotLibrary } from '../src/main/services/designLibrary';
+import { FolderMemory } from '../src/main/services/folderMemory';
 import type { DiscoveryDeps } from '../src/main/services/discovery';
 import { g } from './fixtures';
 
@@ -189,14 +190,14 @@ describe('what the tab is told', () => {
 	const catalogOf = (update: string): Catalog => ({ state: 'ready', commit: 'c', committedAt: 'd', update: update as never, components: [] });
 
 	it('says there is no clone, naming the library', async () => {
-		expect(await new DesignLibrary({ find: () => null }).catalog(false)).toEqual({ state: 'no-clone', repository: LIBRARY });
+		expect(await new DesignLibrary({ find: () => ({ root: null, lost: '/gone' }) }).catalog(false)).toEqual({ state: 'no-clone', repository: LIBRARY, lost: '/gone' });
 	});
 
 	it('answers at once with what the clone has, then the next ask with refresh waits for the one fetch it started', async () => {
 		let finish: (o: 'updated') => void = () => undefined;
 		let fetches = 0;
 		const library = new DesignLibrary({
-			find: () => clone,
+			find: () => ({ root: clone, lost: null }),
 			update: () => {
 				fetches++;
 				return new Promise((r) => (finish = r));
@@ -219,11 +220,67 @@ describe('what the tab is told', () => {
 	});
 
 	it('end to end: a new component on GitHub appears after the refresh', async () => {
-		const library = new DesignLibrary({ find: () => clone });
+		const library = new DesignLibrary({ find: () => ({ root: clone, lost: null }) });
 		pushDevelop({ 'src/components/FSChip/FSChip.stories.tsx': story('Data Display/FSChip') });
 		expect(ready(await library.catalog(false)).components.map((x) => x.name)).toEqual(['FSButton']);
 		const refreshed = ready(await library.catalog(true));
 		expect(refreshed.update).toBe('updated');
 		expect(refreshed.components.map((x) => x.name)).toEqual(['FSButton', 'FSChip']);
+	});
+});
+
+describe('connecting the library', () => {
+	const at = (tree: Record<string, string | null>) => ({
+		origin: (dir: string) => tree[dir] ?? null,
+		exists: (p: string) => Object.keys(tree).some((dir) => p === `${dir}/.git`),
+	});
+	const why = (dir: string, tree: Record<string, string | null>) => whyNotLibrary(dir, at(tree).origin, at(tree).exists);
+
+	it('takes a clone whose origin is the library, in any form and case', () => {
+		expect(why('/a', { '/a': 'git@github.com:FlockSafety/flock-react-component-lib.git' })).toBeNull();
+		expect(why('/a', { '/a': 'https://github.com/flocksafety/flock-react-component-lib' })).toBeNull();
+	});
+
+	it('refuses, in words, a plain folder, a clone of nothing on GitHub, another repository and a fork', () => {
+		expect(why('/plain', {})).toMatch(/is not a git repository/);
+		expect(why('/a', { '/a': null })).toMatch(/is not a clone of a GitHub repository/);
+		expect(why('/a', { '/a': 'https://github.com/flocksafety/flock-coke.git' })).toBe(`/a is a clone of flocksafety/flock-coke, not ${LIBRARY}.`);
+		expect(why('/a', { '/a': 'https://github.com/someone/flock-react-component-lib.git' })).toMatch(/is a clone of someone\/flock-react-component-lib, not/);
+	});
+
+	const memory = (kept: string | null) => ({ read: () => kept, write: () => undefined }) as unknown as FolderMemory;
+	const libraryAt = (good: string[]) => (dir: string) => (good.includes(dir) ? null : 'not it');
+
+	it('uses the connected folder while it is the library, over one found by itself', () => {
+		expect(locateLibrary(memory('/connected'), () => '/found', libraryAt(['/connected', '/found']))).toEqual({ root: '/connected', lost: null });
+	});
+
+	it('finds one by itself when nothing is connected, or the connected one is gone, and says what was lost only when none is found', () => {
+		expect(locateLibrary(memory(null), () => '/found', libraryAt(['/found']))).toEqual({ root: '/found', lost: null });
+		expect(locateLibrary(memory('/moved'), () => '/found', libraryAt(['/found']))).toEqual({ root: '/found', lost: null });
+		expect(locateLibrary(memory('/moved'), () => null, libraryAt([]))).toEqual({ root: null, lost: '/moved' });
+		expect(locateLibrary(memory(null), () => null, libraryAt([]))).toEqual({ root: null, lost: null });
+	});
+
+	it('connects a real clone of the library and remembers it, and the remembered one is read back', async () => {
+		const kept = new FolderMemory(join(home, 'settings', 'design-system.json'), 'folder');
+		await connectLibrary(clone, kept);
+		expect(kept.read()).toBe(clone);
+		expect(locateLibrary(kept, () => null)).toEqual({ root: clone, lost: null });
+	});
+
+	it('connects nothing when the folder is not the library, or has no develop to read', async () => {
+		const kept = new FolderMemory(join(home, 'settings', 'design-system.json'), 'folder');
+		await expect(connectLibrary(upstream, kept)).rejects.toThrow(/is not a clone of a GitHub repository/);
+		g(clone, 'update-ref', '-d', 'refs/remotes/origin/develop');
+		await expect(connectLibrary(clone, kept)).rejects.toThrow(/has no develop branch from GitHub/);
+		expect(kept.read()).toBeNull();
+	});
+
+	it('drops a connection that no longer points at the library', async () => {
+		const kept = new FolderMemory(join(home, 'settings', 'design-system.json'), 'folder');
+		await connectLibrary(clone, kept);
+		g(clone, 'remote', 'set-url', 'origin', 'https://github.com/flocksafety/flock-coke.git');
+		expect(locateLibrary(kept, () => null)).toEqual({ root: null, lost: clone });
 	});
 });

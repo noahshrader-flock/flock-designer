@@ -1,8 +1,8 @@
 # Design System plan: surface the component library in the app, and leave room to change it
 
 **Written 2026-10-08. Every decision is made and every unknown I could measure was measured the same day. S1 to S3 are built
-(2026-10-08); P0 (**Connect the design system**, which replaces S4) and P1 to P3 (previews) were added the same evening, at
-Noah's request, and are not built.** The plan for filling the **Design System** tab (an empty view today, `renderer/App.tsx`) with the components
+(2026-10-08), and P0 (**Connect the design system**, which replaced S4) the same evening. P1 to P3 (previews) are not
+built.** The plan for filling the **Design System** tab (an empty view today, `renderer/App.tsx`) with the components
 from `flock-react-component-lib` (FUI), without copying Storybook and without building the editing yet.
 
 This is the detail behind one candidate in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), which points here and does
@@ -104,7 +104,7 @@ nothing on GitHub changed.
 | **S1** (done) | **The catalog reader:** a pure function that turns what `origin/develop` holds into a list of components | Decisions 2, 3, 5, 7 | S | Low |
 | **S2** (done) | **Finding the library, bringing it up to date, and reading it:** locate the clone, fetch `origin/develop`, read it through git; one named operation on the contract | S1, decisions 1, 4 | M | Low |
 | **S3** (done) | **The tab:** grouped list, search, links, header, the four states | S2, decisions 3, 5 to 7 | M | Low |
-| **P0** | **Connect the design system:** the centred screen with **Clone** and **Locate**, and a connection that is remembered. **Replaces S4** | S2, S3, decisions 11 to 14 | M | Medium |
+| **P0** (done) | **Connect the design system:** the centred screen with **Clone** and **Locate**, and a connection that is remembered. **Replaces S4** | S2, S3, decisions 11 to 14 | M | Medium |
 | **P1** | **Build the previews:** one page of every story from `develop`, cached by commit, one story per address | P0, decision 8 | M | **Medium** |
 | **P2** | **The component page:** click a row, see its stories as live cards | P1, decision 9 | M | Medium |
 | **P3** | **Pictures in the list:** a small picture of each component on its row | P2, decision 10 | M | Low |
@@ -144,57 +144,15 @@ none in what it does. The `Ungrouped` count the risks table mentions is not a se
 component with no readable title appears in an **Ungrouped** group like any other, with its count beside the heading.
 **Not seen in the running app yet** (Noah's own session was running; nothing was launched against his settings).
 
-### P0: Connect the design system
+### P0: Connect the design system (done 2026-10-08)
 
-**Replaces S4**, which was only a clone button. What the person sees, laid out like the GitHub sign-in (`SignIn.tsx`):
-centred in the space under the bar, a heading **Connect the design system**, one line saying what it is for ("Flock
-Designer reads the component library from a copy on this computer"), and two tabs under it.
-
-- **Clone** (the default when the library is not on the person's computer, which is what a new designer has): the
-  **same repository picker and clone panel as the New modal** (decision 14), not a copy of them.
-  - The picker lists the person's repositories, with the library found for them (it is the one entry the tab accepts).
-    Choosing anything else says "That is not the design system library" under the picker and offers nothing.
-  - Choosing the library shows **where it will go** (`~/Documents/GitHub/flock-react-component-lib`) with **Change**,
-    which opens the system's folder picker and sets the clone folder every clone uses, and **Clone**. Progress and **Stop**
-    while it runs. When it finishes the connection is made, and the screen is replaced by the list.
-  - A clone already there is used, not redone; anything else in the way is said and never cloned over (`clonePlan`,
-    `notClonedOver`). A library not on the person's GitHub list is not in the picker, so the screen says to ask for access.
-    A refusal from git (not signed in, offline, no space) is said in the existing words.
-  - **What changes underneath:** `NewWork.tsx`'s `CloneHere` and `Working` move to their own file and the repository
-    picker's loading and clone logic into one hook, used by both screens. `clonePlan` returns no design repository for the
-    design system (nothing to put beside it). A new `cloneDesignSystem(repository)` clones through the same `Cloner`, but
-    refuses anything `isDesignSystem` does not accept, and does not look for Flock Designer setup, open the clone as a
-    product checkout, or clone the design repository: the library is read, not worked in.
-- **Locate:** a line ("Choose the folder on this computer where you cloned the library") and a **Browse** button,
-  which opens the system's folder picker **in the main process**: the window never names a folder. The folder is checked
-  before anything is connected (decision 13), and said in words if not: not a git repository; a clone of a different
-  repository (named), including a fork; the right repository but with no `develop` on GitHub's side to read. On success it is connected and
-  the screen is replaced by the list.
-- **The connection** (`designSystem.json` in the app's settings folder, beside `checkout.json`): the folder's path,
-  kept as a hint and **re-checked on every read**, as the checkout is. If it is gone, moved, or no longer a clone of the
-  library, the tab treats it as not connected, says so on the Connect screen ("The folder you chose before is no longer
-  there: <path>"), and falls back to finding one (decision 12) before showing the screen.
-- **The contract:** `designSystemCatalog` is unchanged. Its `no-clone` answer gains `lost: string | null` (a folder that
-  was connected and is gone). Two new operations: `locateDesignSystem(): Result<boolean>` (picker, check, connect; false
-  if the person cancels) and `cloneDesignSystem(repository): Result<null>` (the repository is checked by name, then
-  cloned and connected; progress on the existing event; Stop is the existing `cancelClone`). Both are added to `contract.ts`, `CHANNELS`, the preload and `ipc.ts` with `guard`.
-- **What it does not do:** install the library's packages (reading stories needs none; previews, P1, do), **remove or
-  replace a connection** (Noah, 2026-10-08: not now; later a connection can be removed and a new one put in), or connect
-  more than one library.
-- **Tests:** **services:** a folder that is a clone of the library connects, with any remote form and any case; a folder
-  that is another repository, a plain folder, a folder with no `.git`, and a clone of a fork are each refused with their
-  own words and connect nothing; the connection is remembered and read back; a remembered folder that is gone gives
-  `lost` and the screen, and one that still exists is used with no screen; a remembered folder wins over one found by
-  itself; a connection that no longer points at the library is dropped. **Clone:** it clones the library and only the
-  library into the clone folder, connects it, and clones no design repository; **any other repository, including a fork
-  of the library, is refused by name with nothing made and nothing downloaded**; a library not on the list is refused with
-  nothing made; a taken folder is refused and left alone; Stop leaves nothing behind (the `Cloner` tests already pin
-  these, so the new ones assert the wiring). **IPC:** the window sends no path to either operation, and the picker's
-  result is checked before it is connected. **Screen:** the Connect screen shows in `no-clone` with Clone as the default
-  tab, and Locate switches to Browse; the picker is the New modal's (the same component, tested once for both), and
-  choosing another repository says so and offers no button; Change opens the clone folder picker; progress and Stop show and work; a refusal's
-  words are shown; on connecting, the list replaces the screen with no second click; `lost` is said. **The New modal's own clone tests all
-  still pass unchanged**, which is what proves the sharing. **Seen by Noah before it is marked done:** Clone from nothing, Locate on the real clone, and a connection surviving a restart.
+**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+short: `renderer/ConnectDesignSystem.tsx` (Clone and Locate), `connectLibrary`, `locateLibrary` and `whyNotLibrary` in
+`services/designLibrary.ts`, the `locateDesignSystem` and `cloneDesignSystem` channels, and, shared on the way,
+`services/folderMemory.ts`, `renderer/Clone.tsx`, `cloneAsPlanned` in `ipc.ts` and `isDesignSystem` in
+`shared/catalog.ts`. **Where it differs from the plan:** none in what it does. **For P1:** the library's folder is
+`LibraryLocation.root`, from `libraryFinder`, the same place the catalog reads it. **Not seen in the running app yet;
+Noah to try:** Clone from nothing, Locate on the real clone, and the connection surviving a restart.
 
 ## Settled before P0 (Noah, 2026-10-08)
 
@@ -301,8 +259,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 
 ## Next
 
-**S1 to S3 are done. P0 is Ready:** scope fixed, files known, tests named, nothing open. Then P1, P2 and P3. P1 needs P0
-only because it needs a connected library; P3 waits for P2 to be used.
+**S1 to S3 and P0 are done. P1 is Ready:** scope fixed, files known, tests named. Then P2; P3 waits for P2 to be used.
 
 **By hand, Noah:** look at the tab in the running app (built, not yet seen), and open one Storybook link from it (it
 needs Chromatic access).

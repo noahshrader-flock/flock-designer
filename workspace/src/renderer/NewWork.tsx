@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AgentReadiness, Checkout, ClonePlan, IterationKind, Project, ProjectIteration, PrototypeReadiness, Repository } from '../shared/contract';
+import { useEffect, useRef, useState } from 'react';
+import type { AgentReadiness, Checkout, IterationKind, Project, ProjectIteration, PrototypeReadiness, Repository } from '../shared/contract';
 import { freshIteration, slugify } from '../shared/projects';
+import { CloneHere, useClone, Working } from './Clone';
 import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Spinner } from './ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Textarea } from './ui/textarea';
 
@@ -75,10 +75,6 @@ export const NewWork = ({
 	// Those with the Flock Designer setup: codebase work starts only from one of these. Null until known.
 	const [withSetup, setWithSetup] = useState<string[] | null>(null);
 	const id = slugify(name);
-	// Cloning a repository with no clone here: what it would do, and, while it runs, how far it has got.
-	const [clonePlan, setClonePlan] = useState<ClonePlan | null>(null);
-	// What the clone is doing, as it is shown, while one runs.
-	const [cloning, setCloning] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!open) return;
@@ -113,46 +109,15 @@ export const NewWork = ({
 
 	// A repository with no clone here: asked where it would go, and again when the clone folder is changed.
 	const toClone = elsewhere && chosen?.root === null ? chosen.name : null;
-	// Why a clone could not be used, said where the button was: the repository is cloned, and cannot be worked in here.
-	const [cloneError, setCloneError] = useState<string | null>(null);
-	const askPlan = useCallback(() => {
-		if (toClone === null) return;
-		void window.workspace.clonePlan(toClone).then((r) => (r.ok ? setClonePlan(r.value) : setError(r.error)));
-	}, [toClone]);
-	useEffect(() => {
-		setClonePlan(null);
-		setCloneError(null);
-		askPlan();
-	}, [askPlan]);
-	// Only while one runs: a line arriving after it ended does not bring it back.
-	useEffect(
-		() =>
-			window.workspace.onCloneProgress((p) =>
-				setCloning((c) => (c === null ? null : `Cloning ${p.repository.split('/')[1]}: ${p.step}${p.percent === null ? '' : ` ${p.percent}%`}`)),
-			),
-		[],
-	);
-
-	const changeFolder = async () => {
-		const r = await window.workspace.chooseCloneFolder();
-		if (!r.ok) return setError(r.error);
-		if (r.value === null) return;
-		setCloneError(null);
-		askPlan();
-	};
+	// Cloning it: what it would do, and, while it runs, how far it has got.
+	const cloneState = useClone(toClone, setError);
+	const cloning = cloneState.cloning;
 	const clone = async () => {
-		if (toClone === null) return;
 		setError(null);
-		setCloning(`Cloning ${toClone.split('/')[1]}…`);
-		const r = await window.workspace.cloneRepository(toClone);
-		setCloning(null);
+		const r = await cloneState.run(window.workspace.cloneRepository);
 		// Stopped by closing the modal: nobody is there to be told it was stopped.
 		if (closedWhileCloning.current) return void (closedWhileCloning.current = false);
-		if (!r.ok) {
-			// Said in place of the button, and where it now is (cloned, most often) asked again.
-			setCloneError(r.error);
-			return askPlan();
-		}
+		if (!r?.ok) return;
 		// Found and accepted: the form carries on with it, and the list shows it as here now.
 		onCheckout(r.value);
 		setPicked(null);
@@ -275,16 +240,7 @@ export const NewWork = ({
 									empty="No repository matches."
 									disabled={busy || cloning !== null}
 								/>
-								{toClone !== null && clonePlan && (
-									<CloneHere
-										plan={clonePlan}
-										cloning={cloning}
-										error={cloneError}
-										onChangeFolder={() => void changeFolder()}
-										onClone={() => void clone()}
-										onStop={() => void window.workspace.cancelClone()}
-									/>
-								)}
+								{toClone !== null && <CloneHere clone={cloneState} onClone={() => void clone()} />}
 							</div>
 							{/* After the clone, not before: there is nothing to start from until it is here. */}
 							{toClone === null && (
@@ -416,75 +372,3 @@ export const NewWork = ({
 		</Dialog>
 	);
 };
-
-/**
- * A repository with no clone on this machine, cloned from the New modal: one button, and under it where it goes (with
- * the design repository, when that is missing too) and a way to change that. Nothing is downloaded until it is
- * pressed; while it runs it says how far it has got, and can be stopped.
- */
-const CloneHere = ({
-	plan,
-	cloning,
-	error,
-	onChangeFolder,
-	onClone,
-	onStop,
-}: {
-	plan: ClonePlan;
-	cloning: string | null;
-	/** Why the last clone could not be used: shown instead of the button. */
-	error: string | null;
-	onChangeFolder: () => void;
-	onClone: () => void;
-	onStop: () => void;
-}) => {
-	const { place, design } = plan;
-	const taken = [place, design].find((p) => p?.state === 'taken');
-	return (
-		<div className="flex flex-col items-start gap-3">
-			<p className="text-muted-foreground text-xs">
-				{place.state === 'cloned' ? 'Already in ' : 'Into '}
-				<code className="break-all">{plan.where}</code>
-				{design?.state === 'free' && (
-					<>
-						, with <code>flock-designer</code> beside it
-					</>
-				)}
-				{' · '}
-				<button type="button" className="text-primary underline underline-offset-4" onClick={onChangeFolder} disabled={cloning !== null}>
-					Change
-				</button>
-			</p>
-			{cloning === null && error !== null && (
-				<Alert variant="warning">
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
-			)}
-			{cloning === null && taken?.state === 'taken' && (
-				<Alert variant="warning">
-					<AlertDescription>{taken.why} Nothing is cloned over it: change where clones go, or move it.</AlertDescription>
-				</Alert>
-			)}
-			{cloning !== null ? (
-				<Working text={cloning} onStop={onStop} />
-			) : (
-				// Gone once it is cloned and could not be used: there is nothing to try again. A clone that failed can be.
-				!taken &&
-				!(error !== null && place.state === 'cloned') && (
-					<Button onClick={onClone}>{place.state === 'cloned' ? 'Use repository' : 'Clone repository'}</Button>
-				)
-			)}
-		</div>
-	);
-};
-
-/** A long job running from the modal (a clone, an install): what it is doing now, and a way to stop it. */
-const Working = ({ text, onStop }: { text: string; onStop: () => void }) => (
-	<div className="flex w-full items-center gap-2 text-xs">
-		<Spinner />
-		<span className="min-w-0 grow truncate">{text}</span>
-		<Button size="sm" variant="outline" onClick={onStop}>
-			Stop
-		</Button>
-	</div>
-);

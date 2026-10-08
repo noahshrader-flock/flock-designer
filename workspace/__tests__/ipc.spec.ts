@@ -33,6 +33,19 @@ let copied = '';
 /** Where each repository is cloned from in a test: this machine, standing in for GitHub. */
 let cloneSources: Record<string, string> = {};
 
+/** A repository made by `make`, as a bare one to clone from: this machine standing in for GitHub. */
+const bare = (name: string, make: (dir: string) => void) => {
+	const source = join(home, 'sources', name);
+	make(source);
+	g(home, 'clone', '-q', '--bare', source, `${source}.git`);
+	return `file://${source}.git`;
+};
+/** Signed in to GitHub, with `repos` as the person's list. */
+const signedIn = (repos: string[]) => {
+	githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
+	githubApi.mockImplementation(async (path: string) => (path.startsWith('/user/repos') ? repos.map((full_name) => ({ full_name })) : Promise.reject(new Error(`not faked: ${path}`))));
+};
+
 const call = async (channel: string, ...args: unknown[]) => {
 	const fn = handlers.get(channel);
 	if (!fn) throw new Error(`no handler registered for ${channel}`);
@@ -113,6 +126,7 @@ beforeEach(async () => {
 		prototypeServer,
 		cloneFolders: new (await import('../src/main/services/cloneFolder')).CloneFolderMemory(join(home, 'clone-folder.json')),
 		cloner: new (await import('../src/main/services/clone')).Cloner({ urlOf: (r) => cloneSources[r] ?? 'file:///nowhere' }),
+		designSystems: new (await import('../src/main/services/folderMemory')).FolderMemory(join(home, 'design-system.json'), 'folder'),
 	});
 });
 
@@ -123,9 +137,10 @@ afterEach(() => {
 
 describe('the Design System catalog', () => {
 	it('says there is no clone of the library when none is here, and takes no path from the window', async () => {
-		expect(await call(CHANNELS.designSystemCatalog, false)).toEqual({ ok: true, value: { state: 'no-clone', repository: 'flocksafety/flock-react-component-lib' } });
+		const none = { ok: true, value: { state: 'no-clone', repository: 'flocksafety/flock-react-component-lib', lost: null } };
+		expect(await call(CHANNELS.designSystemCatalog, false)).toEqual(none);
 		// Whatever the window sends, it is only "wait for the update or not": a path is not a place to read.
-		expect(await call(CHANNELS.designSystemCatalog, product)).toEqual({ ok: true, value: { state: 'no-clone', repository: 'flocksafety/flock-react-component-lib' } });
+		expect(await call(CHANNELS.designSystemCatalog, product)).toEqual(none);
 	});
 
 	it('finds a clone of the library in the usual folders by its origin, and says when it has no develop', async () => {
@@ -133,6 +148,79 @@ describe('the Design System catalog', () => {
 		g(home, 'init', '-q', lib);
 		g(lib, 'remote', 'add', 'origin', 'git@github.com:flocksafety/flock-react-component-lib.git');
 		expect(await call(CHANNELS.designSystemCatalog, false)).toEqual({ ok: true, value: { state: 'no-develop', root: lib } });
+	});
+
+	describe('connecting it', () => {
+		const LIB = 'flocksafety/flock-react-component-lib';
+		const GITHUB = `https://github.com/${LIB}.git`;
+		const picker = async () => vi.mocked((await import('electron')).dialog.showOpenDialog);
+		const library = (d: string) => {
+			mkdirSync(join(d, 'src', 'components', 'FSButton'), { recursive: true });
+			writeFileSync(join(d, 'src', 'components', 'FSButton', 'FSButton.stories.tsx'), "const meta = { title: 'Buttons/FSButton' };\n");
+			g(d, 'init', '-q', '-b', 'develop');
+			g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'add', '.');
+			g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'library');
+		};
+		/** A clone as a person has one: its origin is GitHub, and git is told to reach that here. */
+		let reachGitHubHere: string;
+		beforeEach(() => {
+			reachGitHubHere = bare('fui', library);
+			// Git reads these as configuration, so every git the app runs reaches GitHub's address here instead.
+			Object.assign(process.env, { GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: `url.${reachGitHubHere}.insteadOf`, GIT_CONFIG_VALUE_0: GITHUB });
+		});
+		afterEach(() => {
+			for (const k of ['GIT_CONFIG_COUNT', 'GIT_CONFIG_KEY_0', 'GIT_CONFIG_VALUE_0']) delete process.env[k];
+		});
+		const ready = async () => {
+			// The second read waits for the fetch the first one started, so nothing is left running in the folder.
+			await call(CHANNELS.designSystemCatalog, false);
+			return (await call(CHANNELS.designSystemCatalog, true)).value as { state: string; components?: { name: string }[] };
+		};
+
+		it('locates a folder the person chooses, checks it is the library, and remembers it', async () => {
+			const chosen = join(home, 'Elsewhere', 'my-fui');
+			g(home, 'clone', '-q', GITHUB, chosen);
+			(await picker()).mockResolvedValueOnce({ canceled: false, filePaths: [chosen] } as never);
+			expect(await call(CHANNELS.locateDesignSystem)).toEqual({ ok: true, value: true });
+			expect(await ready()).toMatchObject({ state: 'ready', components: [{ name: 'FSButton' }] });
+			expect(JSON.parse(readFileSync(join(home, 'design-system.json'), 'utf8'))).toEqual({ folder: chosen });
+		});
+
+		it('refuses a folder that is not the library, and connects nothing; a cancel is not an error', async () => {
+			(await picker()).mockResolvedValueOnce({ canceled: false, filePaths: [product] } as never);
+			expect((await call(CHANNELS.locateDesignSystem)).error).toMatch(/is not a clone of a GitHub repository|is a clone of/);
+			(await picker()).mockResolvedValueOnce({ canceled: true, filePaths: [] } as never);
+			expect(await call(CHANNELS.locateDesignSystem)).toEqual({ ok: true, value: false });
+			expect(existsSync(join(home, 'design-system.json'))).toBe(false);
+		});
+
+		it('says a connected folder that is gone was lost', async () => {
+			const chosen = join(home, 'Elsewhere', 'my-fui');
+			g(home, 'clone', '-q', GITHUB, chosen);
+			(await picker()).mockResolvedValueOnce({ canceled: false, filePaths: [chosen] } as never);
+			await call(CHANNELS.locateDesignSystem);
+			await ready();
+			rmSync(chosen, { recursive: true, force: true });
+			expect((await call(CHANNELS.designSystemCatalog, false)).value).toEqual({ state: 'no-clone', repository: LIB, lost: chosen });
+		});
+
+		it('clones the library into the clone folder with no design repository beside it, and connects it', async () => {
+			signedIn([LIB, 'flocksafety/flock-ops']);
+			cloneSources = { [LIB]: GITHUB };
+			const plan = (await call(CHANNELS.clonePlan, LIB)).value;
+			expect(plan).toMatchObject({ repository: LIB, place: { state: 'free', path: join(home, 'GitHub', 'flock-react-component-lib') }, design: null });
+			expect(await call(CHANNELS.cloneDesignSystem, LIB)).toEqual({ ok: true, value: null });
+			expect(await ready()).toMatchObject({ state: 'ready', components: [{ name: 'FSButton' }] });
+			expect(JSON.parse(readFileSync(join(home, 'design-system.json'), 'utf8'))).toEqual({ folder: join(home, 'GitHub', 'flock-react-component-lib') });
+		});
+
+		it('refuses any other repository by name, cloning nothing', async () => {
+			signedIn([LIB, 'flocksafety/flock-ops', 'someone/flock-react-component-lib']);
+			for (const other of ['flocksafety/flock-ops', 'someone/flock-react-component-lib']) {
+				expect((await call(CHANNELS.cloneDesignSystem, other)).error).toBe(`${other} is not the design system library.`);
+			}
+			expect(readdirSync(join(home, 'GitHub')).sort()).toEqual(['flock-coke', 'flock-designer']);
+		});
 	});
 });
 
@@ -155,16 +243,6 @@ describe('where clones go', () => {
 	});
 
 	describe('cloning from the New modal', () => {
-		const bare = (name: string, make: (dir: string) => void) => {
-			const source = join(home, 'sources', name);
-			make(source);
-			g(home, 'clone', '-q', '--bare', source, `${source}.git`);
-			return `file://${source}.git`;
-		};
-		const signedIn = (repos: string[]) => {
-			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
-			githubApi.mockImplementation(async (path: string) => (path.startsWith('/user/repos') ? repos.map((full_name) => ({ full_name })) : Promise.reject(new Error(`not faked: ${path}`))));
-		};
 		const elsewhere = async () => {
 			(await picker()).mockResolvedValueOnce({ canceled: false, filePaths: [join(home, 'Work')] } as never);
 			await call(CHANNELS.chooseCloneFolder);

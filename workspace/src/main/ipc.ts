@@ -33,9 +33,11 @@ import { buildContextReceipt } from './services/contextReceipt';
 import { DESCRIPTOR_PATH, findCommand, readDescriptor } from './services/descriptor';
 import { branchCommit, branchExists, branchesWithFile, ensureLocalBranch, isRepository, readCheckout, recentBranches, runGit } from './services/git';
 import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
-import { Cloner, type GitProgress, notClonedOver } from './services/clone';
+import { type Cloned, Cloner, type GitProgress, notClonedOver } from './services/clone';
 import { INSTALL_COMMAND, Installer } from './services/install';
-import { DesignLibrary, libraryFinder } from './services/designLibrary';
+import { connectLibrary, DesignLibrary, libraryFinder } from './services/designLibrary';
+import { FolderMemory } from './services/folderMemory';
+import { isDesignSystem } from '../shared/catalog';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, listedAs, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
@@ -136,6 +138,8 @@ export interface IpcContext {
 	installer?: Installer;
 	/** The component library for the Design System tab. Given for tests, to read a library made for them. */
 	designLibrary?: DesignLibrary;
+	/** The design system the person connected. */
+	designSystems?: FolderMemory;
 }
 
 export const registerIpc = ({
@@ -156,6 +160,7 @@ export const registerIpc = ({
 	cloner = new Cloner(),
 	installer = new Installer(),
 	designLibrary,
+	designSystems = new FolderMemory(join(tmpdir(), 'flock-designer-design-system.json'), 'folder'),
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
@@ -295,8 +300,19 @@ export const registerIpc = ({
 	ipcMain.handle(CHANNELS.cloneFolder, guard(cloneFolder));
 
 	// The window says only whether to wait for the update; where the library is, it is never told and never asks.
-	const library = designLibrary ?? new DesignLibrary({ find: libraryFinder(cloneFolder) });
+	const library = designLibrary ?? new DesignLibrary({ find: libraryFinder(designSystems, cloneFolder) });
 	ipcMain.handle(CHANNELS.designSystemCatalog, guard((refresh: unknown) => library.catalog(refresh === true)));
+	// Chosen with the system's picker, here, and checked before it is kept: the window never names a folder.
+	ipcMain.handle(
+		CHANNELS.locateDesignSystem,
+		guard(async (): Promise<boolean> => {
+			const { canceled, filePaths } = await dialog.showOpenDialog(window, { title: 'Choose the design system library', properties: ['openDirectory'] });
+			const chosen = filePaths[0];
+			if (canceled || chosen === undefined) return false;
+			await connectLibrary(chosen, designSystems);
+			return true;
+		}),
+	);
 	// Chosen with the system's picker, here: the window never names a folder to put files in.
 	ipcMain.handle(
 		CHANNELS.chooseCloneFolder,
@@ -329,29 +345,45 @@ export const registerIpc = ({
 		const place = clonePlace(folder, listed);
 		const home = homedir();
 		const where = place.path.startsWith(home + sep) ? `~${place.path.slice(home.length)}` : place.path;
-		return { repository: listed, place, where, design: design.state === 'cloned' ? null : design };
+		// The design system is read, not worked in, so it needs no design repository beside it.
+		return { repository: listed, place, where, design: design.state === 'cloned' || isDesignSystem(listed) ? null : design };
 	};
 	ipcMain.handle(CHANNELS.clonePlan, guard((repository: string) => planClone(repository, cloneFolder())));
+	/**
+	 * Clones what `planClone` says, with its progress sent to the window and `cancelClone` able to stop it: the repository,
+	 * and the design repository beside it when the plan has one. Where it went, and whether it was cloned or already there.
+	 */
+	const cloneAsPlanned = async (repository: string): Promise<Cloned & { repository: string }> => {
+		const folder = cloneFolder();
+		const plan = await planClone(repository, folder);
+		// Both asked first, so the product is not cloned only for the design repository to be in the way.
+		for (const p of [plan.place, plan.design]) if (p?.state === 'taken') throw new Error(notClonedOver(p.why));
+		const stop = (cloning = new AbortController());
+		const progress = (of: string) => (p: GitProgress) => window.webContents.send(CHANNELS.cloneProgress, { repository: of, ...p });
+		try {
+			const cloned = await cloner.clone({ repository: plan.repository, visible, folder }, progress(plan.repository), stop.signal);
+			// The design repository is the app's own, named here, never by the window: it is the whole list it may clone.
+			if (plan.design) await cloner.clone({ repository: DESIGN, visible: [DESIGN], folder }, progress(DESIGN), stop.signal);
+			return { ...cloned, repository: plan.repository };
+		} finally {
+			cloning = null;
+		}
+	};
 	ipcMain.handle(
 		CHANNELS.cloneRepository,
 		guard(async (repository: string): Promise<Checkout> => {
-			const folder = cloneFolder();
-			const plan = await planClone(repository, folder);
-			// Both asked first, so the product is not cloned only for the design repository to be in the way.
-			for (const p of [plan.place, plan.design]) if (p?.state === 'taken') throw new Error(notClonedOver(p.why));
-			const stop = (cloning = new AbortController());
-			const progress = (of: string) => (p: GitProgress) => window.webContents.send(CHANNELS.cloneProgress, { repository: of, ...p });
-			let product: string;
-			let fresh: boolean;
-			try {
-				({ path: product, cloned: fresh } = await cloner.clone({ repository: plan.repository, visible, folder }, progress(plan.repository), stop.signal));
-				// The design repository is the app's own, named here, never by the window: it is the whole list it may clone.
-				if (plan.design) await cloner.clone({ repository: DESIGN, visible: [DESIGN], folder }, progress(DESIGN), stop.signal);
-			} finally {
-				cloning = null;
-			}
-			await startAtSetup(plan.repository, product, fresh);
+			const { path: product, cloned: fresh, repository: listed } = await cloneAsPlanned(repository);
+			await startAtSetup(listed, product, fresh);
 			return openRepository(product);
+		}),
+	);
+	// Only a design system, refused by name before anything is downloaded; then connected like a folder that was located.
+	ipcMain.handle(
+		CHANNELS.cloneDesignSystem,
+		guard(async (repository: string): Promise<null> => {
+			if (!isDesignSystem(repository)) throw new Error(`${repository} is not the design system library.`);
+			await connectLibrary((await cloneAsPlanned(repository)).path, designSystems);
+			return null;
 		}),
 	);
 	/**
