@@ -2,6 +2,7 @@ import { FileTextIcon, FolderIcon, MessageSquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { Checkout, CheckoutSuggestion, Project, ProjectIteration } from '../shared/contract';
 import { LoadingScreen } from './Loading';
+import { CardCover } from './CardCover';
 import { CardGrid } from './CardGrid';
 import { MoreMenu } from './MoreMenu';
 import { NewWork, type Created } from './NewWork';
@@ -210,7 +211,10 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 				{projects.length > 0 && (
 					<CardGrid>
 						{projects.map((project) => (
-							<Card key={project.id}>
+							<Card key={project.id} className="pt-0">
+								<CardCover>
+									<FolderIcon className="size-8" />
+								</CardCover>
 								<CardHeader>
 									<CardTitle className="text-base font-semibold">{project.title}</CardTitle>
 									<CardDescription className="flex items-center gap-1.5">
