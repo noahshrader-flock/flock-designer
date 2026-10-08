@@ -14,8 +14,7 @@ import { readCheckout, runGit } from '../main/services/git';
 import { BUILD_SKILL, cloneStore, prototypeBuildTask } from '../main/services/prototype';
 import { shellLine } from '../main/services/prototypeBundle';
 import { prototypeWork, whereTheChangeGoes } from '../main/services/prototypeWork';
-import { syncRecords } from '../main/services/designSync';
-import { PUBLIC_TEST_PHRASE, passGate, publish, readVisibility } from '../main/services/pages';
+import { PUBLIC_TEST_PHRASE, passGate, publish, readVisibility, recordsFrom } from '../main/services/pages';
 import { buildSite } from '../site/buildSite';
 import { serveSite } from '../site/serveSite';
 
@@ -63,8 +62,6 @@ export const ghApi = (): GitHubApi => ({
 		}),
 });
 
-/** No credentials, and no following GitHub's sign-in redirect: a 200 means the page opens for anyone. */
-const anonymousFetch = async (url: string): Promise<{ status: number }> => ({ status: (await fetch(url, { redirect: 'manual' })).status });
 
 const USAGE = `Usage:
   flkd new-prototype --project <id> --note <what to make> [--title <project title>] [--from <branch>] [--product <dir>]
@@ -187,17 +184,14 @@ const publishPage = async (deps: CliDeps, values: { project?: string; name?: str
 		throw new Error(`${projectId} ${name} has no saved page in the design repository. Save it first (save-prototype), then publish.`);
 	}
 	if (!deps.github) throw new Error("Publishing goes through GitHub's command line, gh, which is missing or not signed in here. Run gh auth login, then publish again.");
-	const recordsBranch = (await runGit(designRoot, ['symbolic-ref', '--short', 'HEAD']).catch(() => '')).trim();
-	if (!recordsBranch) throw new Error('The design repository is not on a branch, so there is nothing to publish from.');
 	const published = await publish({
 		github: deps.github,
 		ref: DESIGN_REPO,
-		recordsBranch,
+		...(await recordsFrom(designRoot)),
 		projectId,
 		name,
 		publicTest,
-		pushRecords: () => syncRecords(designRoot),
-		fetchAnonymously: deps.fetchAnonymously ?? anonymousFetch,
+		fetchAnonymously: deps.fetchAnonymously,
 		sleep: deps.sleep,
 		log: deps.out,
 	});
@@ -302,10 +296,9 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			const open = openComments(read.comments ?? []);
 			let said = '';
 			if (open.length > 0) {
-				const brief = await store.read(projectPath(projectId, 'brief.md'));
 				const written = writeCommentsExport(deps.prototypesRoot, {
 					projectId,
-					title: (brief === null ? null : firstHeading(brief)) ?? projectId,
+					title: await work.title(projectId),
 					iteration: { name: change.from.name, branch: change.from.branch },
 					comments: read.comments ?? [],
 					generatedAt: new Date(),

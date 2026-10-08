@@ -154,19 +154,22 @@ export const Review = ({
 	// The prototype's published page, when there is one: asked again whenever the window comes back to the front, since
 	// a publish (from the command, or by someone else) happens outside this screen.
 	const [page, setPage] = useState<PageStatus>({ state: 'none' });
+	const checkPage = useCallback(
+		() => void window.workspace.publishedPage(project.id, iteration.name).then((r) => r.ok && setPage(r.value)),
+		[project.id, iteration.name],
+	);
 	useEffect(() => {
 		if (!prototype) return;
-		const check = () => void window.workspace.publishedPage(project.id, iteration.name).then((r) => r.ok && setPage(r.value));
-		check();
-		window.addEventListener('focus', check);
-		return () => window.removeEventListener('focus', check);
-	}, [prototype, project.id, iteration.name, address.kind]);
+		checkPage();
+		window.addEventListener('focus', checkPage);
+		return () => window.removeEventListener('focus', checkPage);
+	}, [prototype, checkPage, address.kind]);
 	// While it is being published, looked at again until it is done: a deploy takes a minute or two.
 	useEffect(() => {
 		if (page.state !== 'publishing') return;
-		const t = setTimeout(() => void window.workspace.publishedPage(project.id, iteration.name).then((r) => r.ok && setPage(r.value)), 10_000);
+		const t = setTimeout(checkPage, 10_000);
 		return () => clearTimeout(t);
-	}, [page, project.id, iteration.name]);
+	}, [page, checkPage]);
 
 	// The comments: read, drawn as pins, and left, against the app's GitHub and its native preview.
 	const commentStore = useMemo(

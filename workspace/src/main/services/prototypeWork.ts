@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import type { Iteration, Person, PrototypeReadiness } from '../../shared/contract';
-import { hasOutsideComments, latestIterationName, nextIterationName, parsePrototypeName, projectPath, prototypePagePath, prototypeSourcePath } from '../../shared/projects';
+import { firstHeading, hasOutsideComments, latestIterationName, nextIterationName, parsePrototypeName, projectPath, prototypePagePath, prototypeSourcePath } from '../../shared/projects';
 import { readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
 import { branchCommit, branchExists, readCheckout, readTreeAt } from './git';
@@ -122,6 +122,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (parsed === null) throw new Error(`${projectPath(projectId, 'iterations.json')} is not a readable list of records.`);
 		return parsed;
 	};
+	/** A project's title, from its brief: what people know it by. Its id when the brief has none. */
+	const title = async (projectId: string): Promise<string> => firstHeading((await ctx.readDesignFile(projectPath(projectId, 'brief.md'))) ?? '') ?? projectId;
 	/** A prototype's record. */
 	const record = async (projectId: string, name: string): Promise<Iteration | undefined> => (await records(projectId)).find((i) => i.name === name);
 	/** A prototype's React source: this machine's newest, else the saved one. Reading it makes no folder. */
@@ -354,7 +356,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return ctx.readDesignFile(prototypePagePath(projectId, name));
 	};
 
-	return { dir, file, sourceFile, sharedText, skill, records, record, sourceText, readiness, start, sources, buildPlan, buildPage, keep, save, page, startChange, resumeChange, finishChange };
+	return { dir, file, sourceFile, sharedText, skill, title, records, record, sourceText, readiness, start, sources, buildPlan, buildPage, keep, save, page, startChange, resumeChange, finishChange };
 };
 
 export type PrototypeWork = ReturnType<typeof prototypeWork>;

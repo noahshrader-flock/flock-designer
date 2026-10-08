@@ -47,12 +47,12 @@ import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anc
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
-import { firstHeading, isRecordName, iterationLabel, mergeProjects, projectPath, prototypeKey, prototypePagePath, unionLocal, workKind } from '../shared/projects';
+import { isRecordName, iterationLabel, mergeProjects, prototypeKey, prototypePagePath, unionLocal, workKind } from '../shared/projects';
 import { resolveInside } from './services/paths';
 import { PrototypeServer } from './services/prototypeServer';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
 import { type PrototypeChange, prototypeWork, whereTheChangeGoes } from './services/prototypeWork';
-import { pageStatus, publish } from './services/pages';
+import { pageStatus, publish, recordsFrom } from './services/pages';
 import {
 	BUILD_SKILL,
 	MOVE_SKILL,
@@ -806,10 +806,9 @@ export const registerIpc = ({
 			const buildSkill = await readSkillText(BUILD_SKILL);
 			// Read now, not earlier: this is what makes the file current, and what says who has commented.
 			const comments = await designRepo.readComments(projectId, prototypeKey(projectId, name));
-			const brief = await readDesignFile(projectPath(projectId, 'brief.md'));
 			const written = writeCommentsExport(prototypesRoot, {
 				projectId,
-				title: (brief === null ? null : firstHeading(brief)) ?? projectId,
+				title: await work.title(projectId),
 				iteration: { name, branch: prototypeKey(projectId, name) },
 				comments,
 				generatedAt: new Date(),
@@ -855,20 +854,8 @@ export const registerIpc = ({
 	const publishInBackground = (projectId: string, name: string): void => {
 		const key = prototypeKey(projectId, name);
 		if (publishing.has(key) || github.state().state !== 'signedIn') return;
-		const clone = designClone();
 		const run = (async () => {
-			const recordsBranch = clone ? (await runGit(clone, ['symbolic-ref', '--short', 'HEAD']).catch(() => '')).trim() || undefined : undefined;
-			await publish({
-				github,
-				ref: DESIGN_REPO,
-				recordsBranch,
-				projectId,
-				name,
-				publicTest: false,
-				// Without a clone, records were written to GitHub directly: nothing waits to be pushed.
-				pushRecords: async () => (clone ? syncRecords(clone) : { published: [], problems: [] }),
-				fetchAnonymously: async (url) => ({ status: (await fetch(url, { redirect: 'manual' })).status }),
-			});
+			await publish({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())), projectId, name, publicTest: false });
 		})()
 			.then(() => void publishStopped.delete(key))
 			.catch((err: unknown) => void publishStopped.set(key, err instanceof Error ? err.message : String(err)))

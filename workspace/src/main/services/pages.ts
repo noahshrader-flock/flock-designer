@@ -1,7 +1,8 @@
 import type { PageStatus } from '../../shared/contract';
 import { prototypePagePath, sitePath } from '../../shared/projects';
 import type { DesignRepoRef, GitHubApi } from './designRepo';
-import type { SyncResult } from './designSync';
+import { type SyncResult, syncRecords } from './designSync';
+import { runGit } from './git';
 import { asRecord } from '../../shared/json';
 
 /**
@@ -101,6 +102,20 @@ export const pageStatus = async (github: GitHubApi, ref: DesignRepoRef, projectI
 	return { state: 'published', url: `${vis.site.url.replace(/\/?$/, '/')}${path}?v=${deployed.slice(0, 7)}`, public: !vis.repoPrivate || vis.site.public };
 };
 
+/** No credentials, and GitHub's sign-in redirect not followed: a 200 means the page opens for anyone. */
+export const fetchAnonymously = async (url: string): Promise<{ status: number }> => ({ status: (await fetch(url, { redirect: 'manual' })).status });
+
+/**
+ * How the records reach GitHub from where publishing runs: from a clone, by its records sync (only `projects/`), on the
+ * branch it is on; with no clone they were written to GitHub directly, and nothing waits.
+ */
+export const recordsFrom = async (clone: string | null): Promise<Pick<PublishInput, 'recordsBranch' | 'pushRecords'>> => {
+	if (clone === null) return { pushRecords: async () => ({ published: [], problems: [] }) };
+	// '' when it is on no branch: refused by publish, after the gate has had its say.
+	const recordsBranch = (await runGit(clone, ['symbolic-ref', '--short', 'HEAD']).catch(() => '')).trim();
+	return { recordsBranch, pushRecords: () => syncRecords(clone) };
+};
+
 export interface PublishInput {
 	github: GitHubApi;
 	ref: DesignRepoRef;
@@ -115,8 +130,8 @@ export interface PublishInput {
 	publicTest: boolean;
 	/** Commits and pushes the records (only `projects/`), as the app's publisher does. */
 	pushRecords: () => Promise<SyncResult>;
-	/** Asks for a page with no credentials at all. */
-	fetchAnonymously: (url: string) => Promise<{ status: number }>;
+	/** Asks for a page with no credentials at all. Given for tests; otherwise `fetchAnonymously`. */
+	fetchAnonymously?: (url: string) => Promise<{ status: number }>;
 	sleep?: (ms: number) => Promise<void>;
 	log?: (line: string) => void;
 	/** How long the deploy may take, all told. */
@@ -139,7 +154,7 @@ export const publish = async ({
 	name,
 	publicTest,
 	pushRecords,
-	fetchAnonymously,
+	fetchAnonymously: anonymous = fetchAnonymously,
 	sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
 	log = () => undefined,
 	timeoutMs = 10 * 60_000,
@@ -153,6 +168,7 @@ export const publish = async ({
 	const gate = passGate(visibility, publicTest);
 	if (!gate.ok) throw new Error(gate.why);
 	const branch = visibility.defaultBranch;
+	if (recordsBranch === '') throw new Error('Nothing was published: the design repository here is not on a branch.');
 	if (recordsBranch !== undefined && recordsBranch !== branch) {
 		throw new Error(`Nothing was published: the site is built from ${branch}, and the design repository here is on ${recordsBranch}. Switch it to ${branch}, then publish again.`);
 	}
@@ -188,7 +204,7 @@ export const publish = async ({
 
 	// 4. The link, and whether it opens for someone who is not signed in.
 	const url = `${gate.url.replace(/\/?$/, '/')}${path}`;
-	const opened = (await fetchAnonymously(url)).status === 200;
+	const opened = (await anonymous(url)).status === 200;
 	if (gate.publicTest) {
 		log(`PUBLIC TEST: this page is on a public site, and anyone with the link can open it. It says PUBLIC TEST on it. ${url}`);
 	} else if (opened) {

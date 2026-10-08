@@ -149,6 +149,13 @@ describe('publishing', () => {
 		expect(pushRecords).not.toHaveBeenCalled();
 	});
 
+	it('asks the gate before anything about this machine, and refuses a clone on no branch after it', async () => {
+		await expect(run(fakeGitHub({ repoPrivate: false, sitePublic: true }), { recordsBranch: '' }).done).rejects.toThrow(/repository is public/);
+		const { done, pushRecords } = run(fakeGitHub(), { recordsBranch: '' });
+		await expect(done).rejects.toThrow(/not on a branch/);
+		expect(pushRecords).not.toHaveBeenCalled();
+	});
+
 	it('refuses a name that is not a prototype', async () => {
 		const { done } = run(fakeGitHub(), { name: 'codebase' });
 		await expect(done).rejects.toThrow(/not a prototype/);
