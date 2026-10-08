@@ -15,8 +15,7 @@ export interface CatalogReads {
 	readFile(path: string): Promise<string>;
 }
 
-/** No story, and not a part of one that has one: a real gap in the library's stories. */
-export const isGap = (c: CatalogComponent): boolean => c.stories.length === 0 && c.partOf === null;
+export { isGap } from '../../shared/catalog';
 
 export const STORYBOOK_URL = 'https://develop--6617f3c579abb5c5e780fddc.chromatic.com/';
 const SOURCE_URL = 'https://github.com/flocksafety/flock-react-component-lib/tree/develop/src/';

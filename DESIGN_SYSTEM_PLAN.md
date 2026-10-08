@@ -1,7 +1,7 @@
 # Design System plan: surface the component library in the app, and leave room to change it
 
-**Written 2026-10-08. Every decision is made and every unknown I could measure was measured the same day. S1 and S2 are built
-(2026-10-08); S3 and S4 are not.** The plan for filling the **Design System** tab (an empty view today, `renderer/App.tsx`) with the components
+**Written 2026-10-08. Every decision is made and every unknown I could measure was measured the same day. S1 to S3 are built
+(2026-10-08); S4 is not.** The plan for filling the **Design System** tab (an empty view today, `renderer/App.tsx`) with the components
 from `flock-react-component-lib` (FUI), without copying Storybook and without building the editing yet.
 
 This is the detail behind one candidate in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), which points here and does
@@ -77,7 +77,7 @@ nothing on GitHub changed.
 |---|---|---|---|---|
 | **S1** (done) | **The catalog reader:** a pure function that turns what `origin/develop` holds into a list of components | Decisions 2, 3, 5, 7 | S | Low |
 | **S2** (done) | **Finding the library, bringing it up to date, and reading it:** locate the clone, fetch `origin/develop`, read it through git; one named operation on the contract | S1, decisions 1, 4 | M | Low |
-| **S3** | **The tab:** grouped list, search, links, header, the four states | S2, decisions 3, 5 to 7 | M | Low |
+| **S3** (done) | **The tab:** grouped list, search, links, header, the four states | S2, decisions 3, 5 to 7 | M | Low |
 | **S4** | **Clone the library from the tab,** when there is no clone | S3, the existing `Cloner` | S | Medium |
 
 ### S1: The catalog reader (done 2026-10-08)
@@ -104,27 +104,16 @@ one line. **Where it differs from the plan:** `CatalogUpdate` has a fourth value
 `no-develop` carries the clone's path so the tab can say which clone. **Not tried:** a fetch from the real GitHub
 (a `--dry-run` was, on 2026-10-08); the first open of the tab will do one.
 
-### S3: The tab
+### S3: The tab (done 2026-10-08)
 
-`renderer/DesignSystem.tsx`, shown for `section === 'design-system'`. Existing UI primitives only (`ui/card`, `ui/badge`,
-`ui/input`, `ui/tabs`, `ui/tooltip`).
-
-- **Header:** "FUI", `develop` with the short commit and date, the update line (decision 4), the count, a **Refresh**
-  button and the search field. Under it, the Chromatic line (decision 6).
-- **Body:** components grouped, in a list, not a gallery. Each row: the name, the subtitle, and its links: **Storybook**
-  (one per story), **Figma** when there is one, **Source**. A link that is not known is absent, not disabled. A gap has
-  a quiet "No story" mark; a part has none and sits under its parent.
-- **Filters:** All / Components / Composite, and a way to show only the gaps, which is the useful view for the Design
-  System owner.
-- **States, all four** (the standards require them): loading (while the first read runs), empty (nothing found,
-  saying where it looked), error (the read failed, with the message), and `no-clone` and `no-develop` (what they mean and
-  what to do). A failed update is **a line, not an error**: the list stays.
-- **Stays mounted when hidden,** like Projects, so the search and scroll survive a visit to the other tab. It updates when
-  it is first opened and when Refresh is pressed, not on every visit.
-- **Links open in the system browser,** through whatever the app uses for external addresses, never in the window.
-- **Tests:** rows and groups for a fixed catalog; search narrows by name and by subtitle; the gaps filter; parts
-  sit under their parent and carry no mark; each of the states renders; a failed update keeps the list and shows the
-  reason; a missing link renders no anchor; Refresh asks again.
+**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+short: `renderer/DesignSystem.tsx`, mounted in `App.tsx` and kept mounted while hidden; the toolbar, the Chromatic line,
+search, the kind tabs, **Without a story (n)**, grouped rows with their links, and every state; the two-step first read
+and Refresh. **For S4:** the `no-clone` state is a `Notice` in `DesignSystem.tsx` saying to clone it by hand; S4 gives it
+the clone button and, when the clone finishes, calls the same first read again. **Where it differs from the plan:**
+none in what it does. The `Ungrouped` count the risks table mentions is not a separate figure in the header: a
+component with no readable title appears in an **Ungrouped** group like any other, with its count beside the heading.
+**Not seen in the running app yet** (Noah's own session was running; nothing was launched against his settings).
 
 ### S4: Clone the library from the tab
 
@@ -182,7 +171,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 
 ## Next
 
-**S1 and S2 are done. S3 is Ready:** scope fixed, files known, tests named. Build S3 and S4 in order, one commit each.
+**S1 to S3 are done. S4 is Ready:** scope fixed, files known, tests named.
 
 **Before S3 ships, two things by hand:** open one Storybook link from the tab against the hosted Storybook (someone with
 Chromatic access), and say whether `develop`'s date in the header reads right on a clone that has not been touched for

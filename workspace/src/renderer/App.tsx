@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { SignInState } from '../shared/contract';
 import { Projects } from './Projects';
 import { SignIn } from './SignIn';
+import { DesignSystem } from './DesignSystem';
 import { ErrorBoundary } from './ErrorBoundary';
 import { TopNav, type Section } from './TopNav';
 
@@ -9,8 +10,8 @@ import { TopNav, type Section } from './TopNav';
  * The window: a fixed top bar, and under it whatever the current section is.
  *
  * Projects: every project in the design repository, with its iterations and
- * comments, read through the API with only a GitHub account. Design System is
- * an empty view for now.
+ * comments, read through the API with only a GitHub account. Design System: the
+ * component library's components, from its clone's develop branch.
  * The earlier Author view (open a checkout, start the agent, run a preview) is
  * not shown; the services behind it are still in the main process, and it comes
  * back as a GitHub-backed list of repositories rather than a folder picker.
@@ -47,7 +48,10 @@ export const App = () => {
 							<div hidden={section !== 'projects'}>
 								<Projects hidden={section !== 'projects'} />
 							</div>
-							{section === 'design-system' && <div className="h-full" />}
+							{/* Stays mounted too, so the search and the scroll survive a visit to Projects. */}
+							<div hidden={section !== 'design-system'}>
+								<DesignSystem hidden={section !== 'design-system'} />
+							</div>
 						</>
 					) : (
 						<div className="mx-auto max-w-[1400px] p-6">
