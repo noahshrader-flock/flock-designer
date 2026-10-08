@@ -140,11 +140,13 @@ export const recordPreview = (
 	previewUrl: string,
 	/** The commit that was shared, so a reviewer's comment says what it was made against. */
 	commit?: string,
+	/** The pull request the preview was built from. */
+	pullRequest?: string,
 ): Iteration => {
 	const iterations = readIterations(recordsRoot, projectId);
 	const found = iterations.find((i) => i.name === name);
 	if (!found) throw new IterationProblem(`${projectId} has no iteration called ${name}.`);
-	const updated = { ...found, previewUrl, ...(commit ? { commit } : {}) };
+	const updated = { ...found, previewUrl, ...(commit ? { commit } : {}), ...(pullRequest ? { pullRequest } : {}) };
 	writeIterations(recordsRoot, projectId, iterations.map((i) => (i.name === name ? updated : i)));
 	return updated;
 };

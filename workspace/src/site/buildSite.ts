@@ -55,7 +55,12 @@ interface SiteProject {
 	versions: { version: number; pages: Page[] }[];
 	/** The version the team chose, when it has pages. */
 	selected: number | null;
+	/** Its codebase work's pull request, once that has been shared. */
+	builtInCode: string | null;
 }
+
+/** Only a GitHub pull request's address is linked: the record is a file in the repository, not a place to send people. */
+const PULL_REQUEST = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+$/;
 
 const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 /** Text as it is safe in HTML, in an element or an attribute. */
@@ -102,6 +107,7 @@ const readProjects = (designRoot: string): SiteProject[] => {
 					.sort(([a], [b]) => a - b)
 					.map(([version, ps]) => ({ version, pages: ps.sort((a, b) => b.iteration - a.iteration) })),
 				selected: chosen !== null && byVersion.has(chosen) ? chosen : null,
+				builtInCode: records.map((r) => r.pullRequest).find((u): u is string => typeof u === 'string' && PULL_REQUEST.test(u)) ?? null,
 			},
 		];
 	});
@@ -172,7 +178,7 @@ const indexPage = (projects: SiteProject[]): string =>
 const projectPage = (p: SiteProject, comments: Map<string, number> | undefined): string =>
 	shell(
 		p.title,
-		`<main>\n<p class="muted"><a href="../">All prototypes</a></p>\n<h1>${escape(p.title)}</h1>\n<div class="versions">\n${p.versions
+		`<main>\n<p class="muted"><a href="../">All prototypes</a></p>\n<h1>${escape(p.title)}</h1>\n${p.builtInCode ? `<p><a href="${escape(p.builtInCode)}">Built in code</a></p>\n` : ''}<div class="versions">\n${p.versions
 			.map(
 				(v) =>
 					`<section class="version${v.version === p.selected ? ' selected' : ''}">\n<h2>V${v.version}${v.version === p.selected ? ' <span class="muted">· Selected</span>' : ''}</h2>\n<ul class="list">\n${v.pages

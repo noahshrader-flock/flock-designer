@@ -161,13 +161,13 @@ describe('ShareRunner', () => {
 	it('reports running, then ready with what happened to the record', async () => {
 		const seen: ShareStatus[] = [];
 		const runner = new ShareRunner((s) => seen.push(s));
-		const recorded: string[] = [];
+		const recorded: string[][] = [];
 		const h = harness();
 		runner.start({
 			request,
 			tools: h.tools,
 			timings,
-			record: async (url) => void recorded.push(url),
+			record: async (url, prUrl) => void recorded.push([url, prUrl]),
 		});
 		await flush();
 		expect(seen[0]).toMatchObject({ state: 'running', projectId: 'demo', name: 'i1' });
@@ -178,7 +178,7 @@ describe('ShareRunner', () => {
 			url: 'https://dev-coke-pr-42.example.test',
 			prUrl: 'https://github.test/o/r/pull/42',
 		});
-		expect(recorded).toEqual(['https://dev-coke-pr-42.example.test']);
+		expect(recorded).toEqual([['https://dev-coke-pr-42.example.test', 'https://github.test/o/r/pull/42']]);
 	});
 
 	it('reports a failure, and records nothing', async () => {

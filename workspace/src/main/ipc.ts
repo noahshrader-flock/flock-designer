@@ -554,8 +554,8 @@ export const registerIpc = ({
 				},
 				tools: realShareTools(canonical),
 				// Saved, then published, and only then is the link called ready: a reviewer cannot open what is not up yet.
-				record: async (url) => {
-					recordPreview(recordsRoot, projectId, name, url, shared);
+				record: async (url, prUrl) => {
+					recordPreview(recordsRoot, projectId, name, url, shared, prUrl);
 					await publisher.publish(true);
 				},
 			});

@@ -100,6 +100,8 @@ export interface Iteration {
 	contributors?: Person[];
 	/** Where a reviewer can open this iteration, once it has been shared. */
 	previewUrl?: string;
+	/** Codebase work's pull request, once it has been shared: what the project's page links to as built in code. */
+	pullRequest?: string;
 	/**
 	 * Where this iteration's work is in the running app, as a path within it (`/roles/compare`).
 	 * Written by whoever built the work, so opening the iteration lands on what was changed rather

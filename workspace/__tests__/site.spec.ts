@@ -148,6 +148,25 @@ describe('the selected version', () => {
 	});
 });
 
+describe('built in code', () => {
+	const withCodebase = (pullRequest: string) =>
+		project('alpha', '# Alpha\n', [record('v1-i1'), { name: 'codebase', branch: 'feature/alpha', commit: null, note: '', pullRequest }], { 'v1-i1': page('Alpha') });
+
+	it("links the project page to its codebase work's pull request, once it has been shared", () => {
+		withCodebase('https://github.com/o/r/pull/5');
+		build();
+		expect(read('alpha/index.html')).toContain('<a href="https://github.com/o/r/pull/5">Built in code</a>');
+	});
+
+	it('says nothing without codebase work, and links nowhere but a pull request', () => {
+		build();
+		expect(read('alpha/index.html')).not.toContain('Built in code');
+		withCodebase('javascript:alert(1)');
+		build();
+		expect(read('alpha/index.html')).not.toContain('Built in code');
+	});
+});
+
 describe('building', () => {
 	it('links only within itself, so it works from any address it is served at', () => {
 		build();

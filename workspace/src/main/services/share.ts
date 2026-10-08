@@ -164,8 +164,8 @@ export const runShare = async (
 export interface ShareJob {
 	request: ShareRequest;
 	tools: ShareTools;
-	/** Saves the address in the iteration's record and publishes it, so reviewers can open it. */
-	record(url: string): Promise<void>;
+	/** Saves the address, and the pull request it was built from, in the iteration's record and publishes it, so reviewers can open it. */
+	record(url: string, prUrl: string): Promise<void>;
 	timings?: ShareTimings;
 }
 
@@ -214,7 +214,7 @@ export class ShareRunner {
 					job.timings,
 					() => this.live,
 				);
-				await job.record(url);
+				await job.record(url, prUrl);
 				this.set({ state: 'ready', projectId, name, url, prUrl });
 			} catch (err) {
 				this.set({ state: 'failed', projectId, name, message: err instanceof Error ? err.message : String(err) });
