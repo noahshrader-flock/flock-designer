@@ -161,14 +161,14 @@ day, **L** several days.
 | **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | **Decided: a small sign-in function; waiting on approval** |
 | **M10** | **Parity and the smaller things we agreed** | M7 | M | Low | Later |
 
-**M1 to M5a are done, and M5b to M8 are built (2026-10-08).** The site is published (public while the repo is). The private result waits on M0. M9 is decided and waits on approval. Next: M10.
+**M1 to M5a are done, and M5b to M8 are built (2026-10-08).** The site is published (public while the repo is). The private result waits on M0. M9 is decided and waits on approval. M10's parts that are not about comments are built; the rest is paused with M9.
 
 **The repo is public for now (Noah's decision, 2026-10-07), so the whole flow can be built and tested before the admins
 answer.** Public Pages needs no login to view, so what it cannot show is that an anonymous viewer is blocked. That
 single result is what M0 unlocks, by moving the repo into the org as a private repository with private Pages.
 **The fastest path to seeing it work end to end:** M1, then M2, then M5a, then M5b, then M6
 (a prototype becomes a link, handed back by the agent); then M4, M7 and M8 (comments on the page, reaching the app).
-M9 is a decision and is not needed for the test: testers use a token.
+M9 is a decision; until it is built, comments are made in the app.
 
 ```text
 M0 (asks, in parallel) ─────────────────────────────┐
@@ -328,18 +328,16 @@ reason. The command uses `gh`, which has them.
   it is as it was.
 - **The browser adapter:** GitHub through the app's own code (`DesignRepo`, `callApi`) given a token, so threads are
   found and written as the app writes them; the page is the prototype's frame, where the same pick and pin scripts run.
-- **Signing in, for testing:** a dialog in the app's style taking a fine-grained token with Issues read and write on
-  the design repository, checked against it before it is kept, kept in that browser only, and forgotten on Sign out.
+- **Signing in, for testing:** a dialog taking a fine-grained token. **Removed 2026-10-08** with the pause: the page's
+  **Sign in to comment** button stays where it will be, and says to comment in Flock Designer for now. The commenting
+  behind it stays, for the sign-in function and the round-trip test, which hands the page a token itself.
 - **No picture of the spot:** the comment box says so.
 - **Found on the way and fixed:** a pin was placed by the page's address, which is not the same in the app and on the
   site, so comments made in one would never have their pins in the other. A prototype is one page, so only what follows
   its `#` places a pin now, in both.
 
-**Paused 2026-10-08 (see M9):** what is built stays, and the page still takes a fine-grained token for testers, but nothing more
-is done on comments in the browser until the sign-in function is approved.
-
-**What is left of "done when" is Noah's:** on the published page, sign in with a token, pick an element, write the
-comment, see its pin and card, and see it on the iteration's review issue. It needs the site published first (M5b).
+**Paused 2026-10-08 (see M9):** what is built stays, except the token dialog, and nothing more is done on comments in
+the browser until the sign-in function is approved. "Done when" is checked by hand once it is.
 
 ### M8: The round trip, proved (built 2026-10-08)
 
@@ -380,8 +378,8 @@ with nothing installed. **Waiting on Noah's approvals** (security, and where it 
 | Moving off GitHub Pages | Loses GitHub's own sign-in for viewing; another vendor; revisit only if M0 refuses private Pages |
 | Replacing the Electron app with an extension | Kept the app: one build across Mac and Windows and any browser, already built |
 
-**Until then:** testers sign in on the page with a fine-grained token (M7); everyone else comments in the app, where the
-same comments are. **Opening the page from the app already signed in** (the app's **Open page** handing the page its
+**Until then:** everyone comments in the app; the page's **Sign in to comment** says so (the token dialog for testers
+was removed on 2026-10-08). **Opening the page from the app already signed in** (the app's **Open page** handing the page its
 sign-in) was proposed as the short-term demo; it was stopped before it was built, as handing a person's GitHub token to
 a page through its address is a security decision to make deliberately, not by default. Noah's call whether to do it.
 
@@ -396,12 +394,21 @@ and the sign-in function that allows it is waiting on approval. **Not paused:** 
 
 - The **picture of the spot** in the browser; **moving a pin** you made; the page's own **states** carried into each
   comment; a card that says when it was made on the page and by whom.
-- A **selected version** marker: the project page highlights it, `/<project>/latest/` follows it, and Build in the
-  codebase starts from its newest iteration.
-- An **unpublish** command (remove an iteration's files, push, redeploy), with Pages switched off by an admin as the
-  emergency switch.
-- The project page's plain **"Built in code" link** to the branch or pull request when there is codebase work.
-- The viewer readable on a phone, with "best on a computer" for the prototype.
+- A **selected version** marker. **Built 2026-10-08:** chosen in the app from the review screen's More menu (Select V2,
+  Unselect V2), kept in `projects/<id>/selected.json` apart from the records, and published when chosen. The project
+  page marks it Selected, `/<project>/latest/` leads to its newest iteration (the newest version's when none is, or
+  the chosen one has no page), and Build in the codebase starts from its newest iteration wherever the screen is.
+- An **unpublish** command, with Pages switched off by an admin as the emergency switch. **Built 2026-10-08:**
+  `flkd unpublish --project <id> --name <v1-i2>` checks where the site is first, then removes the saved page and source
+  (in the design repository, and this machine's copies, which the app would otherwise save back), pushes, deploys the
+  site without it, and checks a public page is gone. The record and comments are kept. It is in the start skill, only
+  for when the person asks; Coke's permission list does not allow it, so the agent asks first.
+- The project page's plain **"Built in code" link.** **Built 2026-10-08, to the pull request only:** sharing codebase
+  work now keeps its pull request's address in the record, and the project page links to it. A branch that has not
+  been shared has no link: the record does not say which GitHub repository it is in.
+- The viewer readable on a phone. **Built 2026-10-08:** the bar keeps the way back, the title and the switcher (not the
+  sign-in button); under it, "Best on a computer"; the prototype keeps a computer's width (1024px) and scrolls across.
+  Checked in Chrome at 390px wide.
 
 ## Out of scope
 
