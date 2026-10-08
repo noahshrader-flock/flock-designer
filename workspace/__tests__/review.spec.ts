@@ -264,6 +264,14 @@ describe('its published page', () => {
 		expect(button('Open page (public)')).toBeTruthy();
 	});
 
+	it('says while it is being published, and why it was not, when a publish was stopped', async () => {
+		await open(fakeApp({ publishedPage: async () => ok({ state: 'publishing' }) }));
+		expect(button('Publishing…').disabled).toBe(true);
+		await unmountAll((current as NonNullable<typeof current>).root);
+		await open(fakeApp({ publishedPage: async () => ok({ state: 'unpublished', why: 'the repository is public' }) }));
+		expect(button('Not published yet').parentElement?.getAttribute('title')).toBe('the repository is public');
+	});
+
 	it('says it is not published yet when it is saved but not deployed, and says nothing without a site', async () => {
 		await open(fakeApp({ publishedPage: async () => ok({ state: 'unpublished' }) }));
 		expect(button('Not published yet').disabled).toBe(true);

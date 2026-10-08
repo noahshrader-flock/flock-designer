@@ -160,7 +160,13 @@ export const Review = ({
 		check();
 		window.addEventListener('focus', check);
 		return () => window.removeEventListener('focus', check);
-	}, [prototype, project.id, iteration.name]);
+	}, [prototype, project.id, iteration.name, address.kind]);
+	// While it is being published, looked at again until it is done: a deploy takes a minute or two.
+	useEffect(() => {
+		if (page.state !== 'publishing') return;
+		const t = setTimeout(() => void window.workspace.publishedPage(project.id, iteration.name).then((r) => r.ok && setPage(r.value)), 10_000);
+		return () => clearTimeout(t);
+	}, [page, project.id, iteration.name]);
 
 	// The comments: read, drawn as pins, and left, against the app's GitHub and its native preview.
 	const commentStore = useMemo(
@@ -459,10 +465,18 @@ export const Review = ({
 							{page.public ? 'Open page (public)' : 'Open page'}
 						</Button>
 					)}
-					{page.state === 'unpublished' && (
-						<Button size="sm" variant="outline" disabled title="Saved, but not on its page yet: it appears there once it is published">
-							Not published yet
+					{page.state === 'publishing' && (
+						<Button size="sm" variant="outline" disabled title="Being put on its page. This takes a minute or two.">
+							Publishing…
 						</Button>
+					)}
+					{(page.state === 'unpublished' || page.state === 'unavailable') && (
+						// The reason is on a wrapper: a disabled button does not show its own.
+						<span title={page.why ?? 'Saved, but not on its page yet: it appears there once it is published'}>
+							<Button size="sm" variant="outline" disabled>
+								{page.state === 'unavailable' ? 'Page unknown' : 'Not published yet'}
+							</Button>
+						</span>
 					)}
 					{/* Shown even with one iteration, so where you are, and that there can be more, is always visible. */}
 					<DropdownMenu>

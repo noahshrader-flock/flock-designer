@@ -44,5 +44,10 @@ node ../flock-designer/workspace/bin/flkd.mjs change-prototype --project <id> --
 
 ## Then build it
 
-It prints your task: `build-prototype.md`, where to write the prototype, the command that checks it builds, and the
-command that saves it. Do exactly that, and finish as that skill says.
+It prints your task: `build-prototype.md`, where to write the prototype, the command that checks it builds, the command
+that saves it, and the one that publishes it to its page. Do exactly that, and finish as that skill says, ending with the
+page: the link the publish command printed, or, when it printed none, why. Never give a link it did not print.
+
+A page is published only where viewing it needs a GitHub sign-in. While the design repository is public, publishing
+says so and makes no link, and that is the expected answer: say it, and that the prototype is saved in Flock Designer. A
+public test (`--public-test`) is the person's to ask for, by writing its phrase themselves; never add it unasked.

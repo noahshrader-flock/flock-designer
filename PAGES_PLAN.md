@@ -155,13 +155,13 @@ day, **L** several days.
 | **M4** | **One comments experience,** taken out of the review screen | M1 | L | **High** | **Done 2026-10-08** (its manual run is Noah's), see [flock-designer.md](flock-designer.md#change-log) |
 | **M5a** | **The site, assembled locally:** project pages, `latest` links, index | M1 | M | Low | **Done 2026-10-08** (Noah's look is his), see [flock-designer.md](flock-designer.md#change-log) |
 | **M5b** | **Publish for real:** the publish command, the private gate, the deploy, **Open page** | M2, M5a (M0 for the private result) | L | Medium | **Built 2026-10-08; first real publish waits on Noah's go-ahead**, see [flock-designer.md](flock-designer.md#change-log) |
-| **M6** | **The agent hands back the link** | M2, M5b | S | Low | After M5b |
+| **M6** | **The agent hands back the link** | M2, M5b | S | Low | **Built 2026-10-08**; its real run waits on M0 (or a public test), see [flock-designer.md](flock-designer.md#change-log) |
 | **M7** | **Comments on the page** (shared components, browser adapter, test sign-in) | M4, M5b | L | Medium | After M4 and M5b |
 | **M8** | **The round trip, proved** | M7 | S | Low | After M7 |
 | **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | Blocked on a decision |
 | **M10** | **Parity and the smaller things we agreed** | M7 | M | Low | Later |
 
-**M1 to M5a are done, and M5b is built (2026-10-08).** Its first real publish, in the public test mode, waits on Noah. Then M6.
+**M1 to M5a are done, and M5b and M6 are built (2026-10-08).** Their real runs wait on Noah: a public-test publish now, the private result after M0. Next: M7.
 
 **The repo is public for now (Noah's decision, 2026-10-07), so the whole flow can be built and tested before the admins
 answer.** Public Pages needs no login to view, so what it cannot show is that an anonymous viewer is blocked. That
@@ -291,25 +291,31 @@ the app shows the result.
 banner. Then, once M0 makes the repository private, the private result: a teammate with access opens the link, someone
 without cannot, and the command refuses when the repository is public.
 
-### M6: The agent hands back the link
+### M6: The agent hands back the link (built 2026-10-08)
 
-**Goal.** From Claude Code in VS Code, the agent finishes a prototype and gives you the link.
+**Built.** What, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In short:
 
-- **The prototype skill ends with publishing:** the agent runs the publish command and puts the **link** in its final
-  summary, with the version and iteration and who can open it ("anyone signed in to GitHub with read access to the
-  design repository"). It never states a link it did not get from the command.
-- **The other files that must say so,** so it always happens: the address skill (publishing after a change), each
-  product repository's Flock Designer agent file (pointing to the shared skill, no copy), and the routing in each
-  product's `CLAUDE.md`.
-- **A narrow permission:** agents never push, and that stays. The publish command is the one named exception, allowed
-  as that command only in a settings file that ships in the repo, and it can only push `projects/`.
-- **When publishing cannot happen** (private Pages not allowed, GitHub's command line not signed in, no access), the
-  agent says so plainly and why, and still finishes the prototype with a standalone file to share. It never leaves the
-  summary without saying whether there is a link.
-- **The agent checks the thread when it starts,** and says "2 new comments since you last looked."
+- **From Claude Code,** the task `flkd new-prototype` and `change-prototype` print ends: save, publish, then end with
+  the link exactly as the command printed it, which version and iteration, and who can open it; or, with no link, why,
+  in the command's words. The agent never gives a link the command did not print, and never adds `--public-test`
+  unless the person wrote its phrase. `change-prototype` first says how many open comments the iteration has, and puts
+  them in a file to read.
+- **From the app,** a prototype the app built and a change Address made are published by the app itself, in the
+  background, through the same code and the same gate (never as a public test). The review screen says
+  **Publishing…**, then **Open page**, or **Not published yet** with the reason it stopped.
+- **The narrow permission:** Coke's `.claude/settings.json` allows the four `flkd` commands and nothing else
+  (`7dba10c3`, on `noah/flock-designer-m6`). Publishing is the only one that pushes, and only `projects/`.
 
-**Done when:** Noah asks the Flock Designer agent for a prototype from Claude Code in VS Code, and its final message
-includes a link that opens the private page for someone with access, under its project and beside any earlier versions.
+**Where it differs from the plan:** the address skill is unchanged. In the app, the app publishes after Address; from
+Claude Code a change goes through `change-prototype`, whose task already ends with publishing. "New comments since you
+last looked" is the open comments: nothing records when someone last looked. A page that cannot be published is
+reported as saved in Flock Designer, not handed over as a standalone file: the saved page needs the shared fonts beside
+it, so on its own it would show icons as words.
+
+**Needs Noah, before the app's side works:** the Flock Designer GitHub App's permissions. It has Issues and Contents;
+starting the publish workflow needs **Actions: read and write**, and reading the site and its deploys needs **Pages:
+read** and **Deployments: read**. Until then the review screen says **Page unknown**, with GitHub's refusal as the
+reason. The command uses `gh`, which has them.
 
 ### M7: Comments on the page
 

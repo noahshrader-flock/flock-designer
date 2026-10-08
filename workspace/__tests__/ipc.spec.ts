@@ -57,6 +57,7 @@ let deleteComment: ReturnType<typeof vi.fn>;
 let readComments: ReturnType<typeof vi.fn>;
 let setAddressed: ReturnType<typeof vi.fn>;
 let githubState: unknown;
+let githubApi: ReturnType<typeof vi.fn>;
 let prototypeServer: InstanceType<typeof import('../src/main/services/prototypeServer')['PrototypeServer']>;
 
 beforeEach(async () => {
@@ -93,6 +94,7 @@ beforeEach(async () => {
 	readComments = vi.fn(async () => []);
 	setAddressed = vi.fn(async (id: number, commit: string | null, iteration: string | null) => ({ id, addressedAt: commit, addressedIn: iteration }));
 	githubState = { state: 'signedOut' };
+	githubApi = vi.fn(async (path: string) => Promise.reject(new Error(`not faked: ${path}`)));
 	prototypeServer = new (await import('../src/main/services/prototypeServer')).PrototypeServer();
 
 	registerIpc({
@@ -100,7 +102,7 @@ beforeEach(async () => {
 		opened,
 		runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
 		agent: { start: agentStart, status: agentStatus, stop: agentStop, runningIn: agentRunningIn, runningSession: () => runningSession, recentLines: () => recent } as never,
-		github: { state: () => githubState } as never,
+		github: { state: () => githubState, api: (...a: unknown[]) => githubApi(...a) } as never,
 		designRepo: { listProjects: vi.fn(async () => []), deleteComment, readComments, setAddressed, readFile: vi.fn(async () => null) } as never,
 		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
 		memory: { read: () => memoryValue, write: (r: string) => { memoryValue = r; }, available: () => true } as never,
@@ -308,6 +310,39 @@ describe('prototypes', () => {
 		await call(CHANNELS.buildPrototype, 'demo', 'v2-i1', 'Another');
 		const p = realpathSync(product);
 		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([p, join(p, '.flkd'), join(p, 'node_modules', 'x'), join(p, 'node_modules')]);
+	});
+
+	describe('publishing what the app made', () => {
+		it('publishes a prototype it saved, by itself, and says why the page is not published when the gate stops it', async () => {
+			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
+			githubApi.mockImplementation(async (path: string) => {
+				if (path === '/repos/noahshrader-flock/flock-designer') return { private: false, default_branch: 'main' };
+				if (path === '/repos/noahshrader-flock/flock-designer/pages') return { html_url: 'https://x.github.io/flock-designer/', public: true };
+				// Never deployed, and the page not on GitHub yet.
+				if (path.startsWith('/repos/noahshrader-flock/flock-designer/deployments?')) return [];
+				if (path.startsWith('/repos/noahshrader-flock/flock-designer/commits?')) return [];
+				throw new Error(`not faked: ${path}`);
+			});
+			await call(CHANNELS.useCheckout, product);
+			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
+			writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<h1>Demo</h1>');
+			expect((await call(CHANNELS.savePrototype, 'demo', 'v1-i1')).ok).toBe(true);
+			// It runs on its own; the screen asks how it is going.
+			let status = (await call(CHANNELS.publishedPage, 'demo', 'v1-i1')).value as { state: string; why?: string };
+			for (let i = 0; i < 50 && status.state === 'publishing'; i++) {
+				await new Promise((r) => setTimeout(r, 10));
+				status = (await call(CHANNELS.publishedPage, 'demo', 'v1-i1')).value as typeof status;
+			}
+			expect(status).toEqual({ state: 'unpublished', why: expect.stringMatching(/repository is public[\s\S]*No link/) });
+			// Nothing went past the gate: no push, no deploy.
+			expect(githubApi.mock.calls.every(([, init]) => !(init as { method?: string } | undefined)?.method)).toBe(true);
+		});
+
+		it('says nothing about a page when nobody is signed in to GitHub', async () => {
+			await call(CHANNELS.useCheckout, product);
+			expect((await call(CHANNELS.publishedPage, 'demo', 'v1-i1')).value).toEqual({ state: 'none' });
+		});
 	});
 
 	describe('acting on a comment', () => {

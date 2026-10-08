@@ -104,8 +104,11 @@ export const pageStatus = async (github: GitHubApi, ref: DesignRepoRef, projectI
 export interface PublishInput {
 	github: GitHubApi;
 	ref: DesignRepoRef;
-	/** The design repository's branch, which the site is deployed from. */
-	branch: string;
+	/**
+	 * The branch the records are pushed to, when they are pushed from a clone. The site is deployed from the repository's
+	 * default branch, so records anywhere else would never reach it: that is refused.
+	 */
+	recordsBranch?: string;
 	projectId: string;
 	name: string;
 	/** The person typed the phrase for this run. */
@@ -131,7 +134,7 @@ export interface Published {
 export const publish = async ({
 	github,
 	ref,
-	branch,
+	recordsBranch,
 	projectId,
 	name,
 	publicTest,
@@ -146,8 +149,13 @@ export const publish = async ({
 	const base = `/repos/${ref.owner}/${ref.repo}`;
 
 	// 1. The gate, before anything leaves this machine.
-	const gate = passGate(await readVisibility(github, ref), publicTest);
+	const visibility = await readVisibility(github, ref);
+	const gate = passGate(visibility, publicTest);
 	if (!gate.ok) throw new Error(gate.why);
+	const branch = visibility.defaultBranch;
+	if (recordsBranch !== undefined && recordsBranch !== branch) {
+		throw new Error(`Nothing was published: the site is built from ${branch}, and the design repository here is on ${recordsBranch}. Switch it to ${branch}, then publish again.`);
+	}
 
 	// 2. The records, and only the records.
 	const pushed = await pushRecords();

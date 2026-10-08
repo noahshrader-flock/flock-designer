@@ -52,7 +52,7 @@ import { resolveInside } from './services/paths';
 import { PrototypeServer } from './services/prototypeServer';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
 import { type PrototypeChange, prototypeWork, whereTheChangeGoes } from './services/prototypeWork';
-import { pageStatus } from './services/pages';
+import { pageStatus, publish } from './services/pages';
 import {
 	BUILD_SKILL,
 	MOVE_SKILL,
@@ -782,6 +782,7 @@ export const registerIpc = ({
 		const { version, made } = await work.finishChange(projectId, change, me(), `For a comment on ${iterationLabel(change.from)}`);
 		// Either way: a run that changed nothing clears the mark an earlier one left.
 		const comment = await designRepo.setAddressed(commentId, version, version === null ? null : change.target);
+		if (version !== null) publishInBackground(projectId, change.target);
 		return { changed: version !== null, iteration: change.target, made, comment };
 	};
 	const finishPrototypeChanges = async (projectId: string): Promise<void> => {
@@ -831,7 +832,48 @@ export const registerIpc = ({
 	const publishedPage = async (projectId: string, name: string): Promise<PageStatus> => {
 		assertUsableProjectId(projectId);
 		assertPrototypeName(name);
-		return github.state().state === 'signedIn' ? pageStatus(github, DESIGN_REPO, projectId, name) : { state: 'none' };
+		if (github.state().state !== 'signedIn') return { state: 'none' };
+		const key = prototypeKey(projectId, name);
+		if (publishing.has(key)) return { state: 'publishing' };
+		let status: PageStatus;
+		try {
+			status = await pageStatus(github, DESIGN_REPO, projectId, name);
+		} catch (err) {
+			// Most often the app's GitHub permission: reading the site and its deploys needs Pages and Deployments.
+			return { state: 'unavailable', why: `GitHub would not say whether this is published: ${err instanceof Error ? err.message : String(err)}` };
+		}
+		const stopped = publishStopped.get(key);
+		return status.state === 'unpublished' && stopped ? { state: 'unpublished', why: stopped } : status;
+	};
+	/**
+	 * Publishes what the app itself just made (a prototype it built, or a change Address made), in the background, as
+	 * the agent publishes from Claude Code: the same code, the same gate. Never as a public test: that is asked for in
+	 * words, on the command line. What stopped it is kept, so the screen can say why the page is not published.
+	 */
+	const publishing = new Map<string, Promise<void>>();
+	const publishStopped = new Map<string, string>();
+	const publishInBackground = (projectId: string, name: string): void => {
+		const key = prototypeKey(projectId, name);
+		if (publishing.has(key) || github.state().state !== 'signedIn') return;
+		const clone = designClone();
+		const run = (async () => {
+			const recordsBranch = clone ? (await runGit(clone, ['symbolic-ref', '--short', 'HEAD']).catch(() => '')).trim() || undefined : undefined;
+			await publish({
+				github,
+				ref: DESIGN_REPO,
+				recordsBranch,
+				projectId,
+				name,
+				publicTest: false,
+				// Without a clone, records were written to GitHub directly: nothing waits to be pushed.
+				pushRecords: async () => (clone ? syncRecords(clone) : { published: [], problems: [] }),
+				fetchAnonymously: async (url) => ({ status: (await fetch(url, { redirect: 'manual' })).status }),
+			});
+		})()
+			.then(() => void publishStopped.delete(key))
+			.catch((err: unknown) => void publishStopped.set(key, err instanceof Error ? err.message : String(err)))
+			.finally(() => publishing.delete(key));
+		publishing.set(key, run);
 	};
 	ipcMain.handle(CHANNELS.publishedPage, guard((projectId: string, name: string) => publishedPage(projectId, name)));
 	ipcMain.handle(
@@ -852,6 +894,7 @@ export const registerIpc = ({
 		CHANNELS.savePrototype,
 		guard(async (projectId: string, name: string): Promise<null> => {
 			await work.save(projectId, name);
+			publishInBackground(projectId, name);
 			return null;
 		}),
 	);

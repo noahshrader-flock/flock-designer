@@ -63,6 +63,9 @@ describe('new-prototype', () => {
 		expect(task).toContain(join(prototypes, 'build-prototype.mjs'));
 		expect(task).toContain('A list of cameras');
 		expect(task).toContain(`flkd save-prototype --project demo --name v1-i1 --product ${product}`);
+		// It finishes by publishing, and with the link the command printed, or why there is none.
+		expect(task).toContain('flkd publish --project demo --name v1-i1');
+		expect(task).toMatch(/Never give a link the command did not print/);
 	});
 
 	it('makes the next version for a project that has one, keeping its brief', async () => {
@@ -162,7 +165,12 @@ describe('change-prototype', () => {
 		await made();
 		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1-i1', '--note', 'Make the title bigger')).toBe(0);
 		expect(out.join('\n')).toMatch(/Others have commented on v1-i1/);
+		// What they said is read first, from a file, and the person is told how much there is.
+		const said = /2 open comments on v1-i1, in (\S+?): read them first/.exec(out.join('\n'));
+		expect(said).not.toBeNull();
+		expect(readFileSync(said?.[1] as string, 'utf8')).toContain('feedback');
 		expect(out.join('\n')).toContain(`Write \`${local('v1-i2')}\``);
+		expect(out.join('\n')).toContain('flkd publish --project demo --name v1-i2');
 		expect(out.join('\n')).toContain('flkd save-prototype --project demo --name v1-i2');
 		expect(readFileSync(local('v1-i2'), 'utf8')).toBe(page('first'));
 		expect(iterations().map((i) => i.name)).toEqual(['v1-i1']);

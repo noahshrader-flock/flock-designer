@@ -488,9 +488,15 @@ export interface Person {
 /** One reviewer comment, stored as a GitHub issue comment. */
 /**
  * Whether a prototype iteration is on the published site: `published` with its link (and whether the site is public),
- * `unpublished` when it is saved but not deployed yet, `none` when there is no site to be on.
+ * `publishing` while it is being put there, `unpublished` when it is saved but not deployed (with why, when a publish
+ * was tried and stopped), `unavailable` when GitHub would not say, and `none` when there is no site to be on.
  */
-export type PageStatus = { state: 'none' } | { state: 'unpublished' } | { state: 'published'; url: string; public: boolean };
+export type PageStatus =
+	| { state: 'none' }
+	| { state: 'publishing' }
+	| { state: 'unpublished'; why?: string }
+	| { state: 'unavailable'; why: string }
+	| { state: 'published'; url: string; public: boolean };
 
 /** How an Address run on a prototype ended: see `finishPrototypeAddress`. */
 export interface PrototypeAddressed {

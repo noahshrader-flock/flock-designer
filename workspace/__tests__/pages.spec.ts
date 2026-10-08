@@ -18,7 +18,7 @@ const fakeGitHub = ({ repoPrivate = true, sitePublic = false, pages = true, conc
 	let polls = 0;
 	const api = vi.fn(async (path: string, init: { method?: string; body?: unknown } = {}) => {
 		calls.push({ path, method: init.method ?? 'GET', body: init.body });
-		if (path === '/repos/acme/design') return { private: repoPrivate, visibility: repoPrivate ? 'private' : 'public' };
+		if (path === '/repos/acme/design') return { private: repoPrivate, visibility: repoPrivate ? 'private' : 'public', default_branch: 'main' };
 		if (path === '/repos/acme/design/pages') {
 			if (!pages) throw Object.assign(new Error('Not Found'), { status: 404 });
 			return { html_url: SITE, public: sitePublic, build_type: 'workflow' };
@@ -46,7 +46,7 @@ const run = (gh: ReturnType<typeof fakeGitHub>, more: Partial<Parameters<typeof 
 	const done = publish({
 		github: { api: gh.api },
 		ref: REF,
-		branch: 'main',
+		recordsBranch: 'main',
 		projectId: 'demo',
 		name: 'v1-i2',
 		publicTest: false,
@@ -140,6 +140,13 @@ describe('publishing', () => {
 	it('says the workflow is missing when GitHub has none to run', async () => {
 		const { done } = run(fakeGitHub({ workflow: false }));
 		await expect(done).rejects.toThrow(new RegExp(`${PUBLISH_WORKFLOW}[\\s\\S]*not on GitHub`));
+	});
+
+	it('refuses records on a branch the site is not built from, before pushing them', async () => {
+		const gh = fakeGitHub();
+		const { done, pushRecords } = run(gh, { recordsBranch: 'noah/elsewhere' });
+		await expect(done).rejects.toThrow(/built from main[\s\S]*noah\/elsewhere/);
+		expect(pushRecords).not.toHaveBeenCalled();
 	});
 
 	it('refuses a name that is not a prototype', async () => {

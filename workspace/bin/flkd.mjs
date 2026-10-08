@@ -9,7 +9,7 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { homedir, tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -44,7 +44,8 @@ try {
 		err: (text) => console.error(text),
 		prototypesRoot: join(appData, pkg.productName ?? pkg.name, 'prototypes'),
 		esbuild,
-		self: ['node', fileURLToPath(import.meta.url)],
+		// As it would be typed where it is run, so the commands it prints match what a repository's settings allow.
+		self: ['node', relative(process.cwd(), fileURLToPath(import.meta.url))],
 		github: ghApi(),
 	});
 } finally {
