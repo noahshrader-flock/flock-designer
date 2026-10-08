@@ -207,7 +207,9 @@ New `services/storyPreviews.ts`, in the main process.
 
 ### P2: The component page
 
-- **Clicking a row** opens the component in the tab: a back arrow, the name, the subtitle, **Storybook** and **Source**,
+- **Choosing a component** opens it in the tab, from **a click on its row** or **from the toolbar's finder** (built
+  2026-10-08: the same searchable dropdown as the New modal's repository picker, listing every component; today it
+  scrolls to the component's row and marks it, and in P2 it opens the component's page instead). The component page: a back arrow, the name, the subtitle, **Storybook** and **Source**,
   then **a card for each story**: its name (`Default`, `All Variants`, spaced from the export's name) and the story,
   live, in its own frame, as tall as it renders.
 - **The frames live in one preview view,** the sandboxed native view prototypes already use (`PageView`), showing a page

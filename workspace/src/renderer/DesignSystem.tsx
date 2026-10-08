@@ -1,15 +1,15 @@
-import { GitBranchIcon, SearchIcon } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { GitBranchIcon } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { isGap } from '../shared/catalog';
 import type { Catalog, CatalogComponent, CatalogUpdate } from '../shared/contract';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { LoadingScreen } from './Loading';
+import { SearchSelect } from './SearchSelect';
 import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 const Page = ({ children }: { children: ReactNode }) => <div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6">{children}</div>;
@@ -32,8 +32,8 @@ const Out = ({ href, children }: { href: string; children: ReactNode }) => (
 /** The part of a story's title after its group, so a folder with several stories says which is which. */
 const storyName = (title: string | null): string => title?.split('/').pop() ?? 'Storybook';
 
-const Row = ({ component, part }: { component: CatalogComponent; part: boolean }) => (
-	<li className={`flex items-start gap-4 py-3 pr-4 ${part ? 'pl-10' : 'pl-4'}`} data-component={component.id}>
+const Row = ({ component, part, picked }: { component: CatalogComponent; part: boolean; picked: boolean }) => (
+	<li className={`flex items-start gap-4 py-3 pr-4 ${part ? 'pl-10' : 'pl-4'} ${picked ? 'bg-muted' : ''}`} data-component={component.id} aria-current={picked || undefined}>
 		<div className="flex min-w-0 grow flex-col gap-0.5">
 			<span className="flex items-center gap-2">
 				<span className={part ? 'text-sm' : 'text-sm font-medium'}>{component.name}</span>
@@ -83,7 +83,9 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [catalog, setCatalog] = useState<Catalog | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [syncing, setSyncing] = useState(false);
-	const [query, setQuery] = useState('');
+	// The component chosen in the toolbar's list: brought into view, and marked, in the list below.
+	const [picked, setPicked] = useState<string | null>(null);
+	const list = useRef<HTMLDivElement>(null);
 	const started = useRef(false);
 
 	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {
@@ -118,14 +120,11 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		void firstRead();
 	}, [hidden, firstRead]);
 
-	const shown = useMemo(() => {
-		if (catalog?.state !== 'ready') return [];
-		const q = query.trim().toLowerCase();
-		return catalog.components.filter(
-			(c) =>
-				(q === '' || c.name.toLowerCase().includes(q) || (c.subtitle ?? '').toLowerCase().includes(q)),
-		);
-	}, [catalog, query]);
+	const pick = (name: string) => {
+		setPicked(name);
+		const id = catalog?.state === 'ready' ? catalog.components.find((c) => c.name === name)?.id : undefined;
+		list.current?.querySelector(`[data-component="${id}"]`)?.scrollIntoView?.({ block: 'center' });
+	};
 
 	if (error && catalog === null) {
 		return (
@@ -150,7 +149,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	}
 
 	const groups: { group: string; rows: CatalogComponent[] }[] = [];
-	for (const c of shown) {
+	for (const c of catalog.components) {
 		const last = groups[groups.length - 1];
 		if (last?.group === c.group) last.rows.push(c);
 		else groups.push({ group: c.group, rows: [c] });
@@ -168,9 +167,15 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 						develop
 					</TooltipContent>
 				</Tooltip>
-				<div className="relative ml-2 w-72">
-					<SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-					<Input className="h-7 pl-8" placeholder="Search components" aria-label="Search components" value={query} onChange={(e) => setQuery(e.target.value)} />
+				<div className="ml-2 w-72">
+					<SearchSelect
+						items={catalog.components.map((c) => c.name)}
+						value={picked}
+						onChange={pick}
+						placeholder="Find a component"
+						search="Search components…"
+						empty="No component matches."
+					/>
 				</div>
 				<div className="grow" />
 				{/* Where syncing is on the Projects screen: the problem, if there is one, beside the button. */}
@@ -185,26 +190,26 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 						<AlertDescription>{error}</AlertDescription>
 					</Alert>
 				)}
-				{catalog.components.length === 0 ? (
-					<p className="text-muted-foreground text-sm">
-						No components were found on develop, in src/components or src/compositeComponents.
-					</p>
-				) : groups.length === 0 ? (
-					<p className="text-muted-foreground text-sm">No components match.</p>
-				) : (
-					groups.map(({ group, rows }) => (
-						<section key={group} className="flex flex-col gap-2" aria-label={group}>
-							<h3 className="text-sm font-semibold">
-								{group} <span className="text-muted-foreground font-normal">{rows.length}</span>
-							</h3>
-							<ul className="bg-card divide-y rounded-lg border">
-								{rows.map((c) => (
-									<Row key={c.id} component={c} part={c.partOf !== null} />
-								))}
-							</ul>
-						</section>
-					))
-				)}
+				<div ref={list} className="contents">
+					{catalog.components.length === 0 ? (
+						<p className="text-muted-foreground text-sm">
+							No components were found on develop, in src/components or src/compositeComponents.
+						</p>
+					) : (
+						groups.map(({ group, rows }) => (
+							<section key={group} className="flex flex-col gap-2" aria-label={group}>
+								<h3 className="text-sm font-semibold">
+									{group} <span className="text-muted-foreground font-normal">{rows.length}</span>
+								</h3>
+								<ul className="bg-card divide-y rounded-lg border">
+									{rows.map((c) => (
+										<Row key={c.id} component={c} part={c.partOf !== null} picked={c.name === picked} />
+									))}
+								</ul>
+							</section>
+						))
+					)}
+				</div>
 			</Page>
 		</>
 	);

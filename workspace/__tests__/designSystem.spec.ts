@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, createElement } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DesignSystem } from '../src/renderer/DesignSystem';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
 import type { Catalog, CatalogComponent, CatalogUpdate } from '../src/shared/contract';
@@ -62,6 +62,7 @@ const groups = () => [...document.querySelectorAll('section')].map((s) => s.getA
 const text = () => document.body.textContent ?? '';
 
 afterEach(async () => {
+	delete (HTMLElement.prototype as unknown as { scrollIntoView?: unknown }).scrollIntoView;
 	if (current) await unmountAll(current.root);
 	current = null;
 	document.body.innerHTML = '';
@@ -107,27 +108,50 @@ describe('the list', () => {
 });
 
 describe('finding a component', () => {
-	it('narrows by name and by subtitle', async () => {
+	const finder = () => button('Find a component');
+	const choices = () => [...document.querySelectorAll('[cmdk-item]')].map((i) => i.textContent);
+
+	it('lists every component in a searchable dropdown, the New modal’s own, and narrows it as you type', async () => {
 		await open(() => ok(ready()));
-		const search = document.querySelector('input[aria-label="Search components"]') as HTMLInputElement;
-		await typeInto(search, 'popover');
-		expect(rows()).toEqual(['FSPopovers']);
-		// The subtitle, in any case.
-		await typeInto(search, 'CONTAIN CONTENT');
-		expect(rows()).toEqual(['FSCard']);
+		await press(finder());
+		await settle();
+		expect(choices()).toEqual(['FSButton', 'FSCard', 'FSCardContent', 'FSPopovers', 'FSApp']);
+		const search = document.querySelector('[cmdk-input]') as HTMLInputElement;
+		await typeInto(search, 'card');
+		await settle();
+		expect(choices().filter((c) => c === 'FSCard' || c === 'FSCardContent')).toHaveLength(2);
 		await typeInto(search, 'nothing like it');
-		expect(text()).toContain('No components match.');
+		await settle();
+		expect(text()).toContain('No component matches.');
 	});
 
-	it('has the search in the toolbar beside the name and branch, and Sync at its right, as Projects does', async () => {
+	it('brings the chosen component into view and marks it, leaving the whole list in place', async () => {
+		await open(() => ok(ready()));
+		const scrolled = vi.fn();
+		(HTMLElement.prototype as unknown as { scrollIntoView: unknown }).scrollIntoView = function (this: HTMLElement) {
+			scrolled(this.getAttribute('data-component'));
+		};
+		await press(finder());
+		await settle();
+		await act(async () => void [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === 'FSPopovers')!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+		await settle();
+		expect(scrolled).toHaveBeenCalledWith('compositeComponents/FSPopovers');
+		expect(row('FSPopovers').getAttribute('aria-current')).toBe('true');
+		expect(row('FSButton').getAttribute('aria-current')).toBeNull();
+		expect(rows()).toHaveLength(5);
+		expect(button('FSPopovers')).toBeTruthy();
+	});
+
+	it('has the finder in the toolbar beside the name and branch, and Sync at its right, as Projects does', async () => {
 		await open(() => ok(ready()));
 		const toolbar = document.querySelector('h2')!.parentElement!;
-		const search = document.querySelector('input[aria-label="Search components"]')!;
-		expect(toolbar.contains(search)).toBe(true);
+		expect(toolbar.contains(finder())).toBe(true);
 		expect(toolbar.contains(button('Sync'))).toBe(true);
-		expect(toolbar.textContent).toBe('FUISync');
-		expect(toolbar.querySelector('h2')!.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(search.compareDocumentPosition(button('Sync')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(toolbar.textContent).toBe('FUIFind a componentSync');
+		expect(toolbar.querySelector('h2')!.compareDocumentPosition(finder()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(finder().compareDocumentPosition(button('Sync')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		// The old search box is gone.
+		expect(document.querySelector('input[aria-label="Search components"]')).toBeNull();
 	});
 
 	it('has no switcher between components and composites, and no count', async () => {
