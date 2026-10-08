@@ -301,6 +301,10 @@ export interface WorkspaceApi {
 	 * iteration's record when one was made, and the comment as it is marked now.
 	 */
 	finishPrototypeAddress(commentId: number): Promise<Result<PrototypeAddressed>>;
+	/** Whether the iteration is on its published page, asked of GitHub. */
+	publishedPage(projectId: string, name: string): Promise<Result<PageStatus>>;
+	/** Opens the iteration's published page in the person's browser. Its address is worked out there, not taken from here. */
+	openPublishedPage(projectId: string, name: string): Promise<Result<null>>;
 	savePrototype(projectId: string, name: string): Promise<Result<null>>;
 	openPrototype(projectId: string, name: string): Promise<Result<string>>;
 	/** What moving a prototype into the code would do in this checkout, asked before it is offered. */
@@ -482,6 +486,12 @@ export interface Person {
 }
 
 /** One reviewer comment, stored as a GitHub issue comment. */
+/**
+ * Whether a prototype iteration is on the published site: `published` with its link (and whether the site is public),
+ * `unpublished` when it is saved but not deployed yet, `none` when there is no site to be on.
+ */
+export type PageStatus = { state: 'none' } | { state: 'unpublished' } | { state: 'published'; url: string; public: boolean };
+
 /** How an Address run on a prototype ended: see `finishPrototypeAddress`. */
 export interface PrototypeAddressed {
 	changed: boolean;
@@ -612,6 +622,8 @@ export const CHANNELS = {
 	buildPrototype: 'workspace:buildPrototype',
 	addressPrototype: 'workspace:addressPrototype',
 	finishPrototypeAddress: 'workspace:finishPrototypeAddress',
+	publishedPage: 'workspace:publishedPage',
+	openPublishedPage: 'workspace:openPublishedPage',
 	savePrototype: 'workspace:savePrototype',
 	openPrototype: 'workspace:openPrototype',
 	prepareMoveToCode: 'workspace:prepareMoveToCode',

@@ -1,6 +1,7 @@
 import {
 	ChevronDownIcon,
 	ChevronLeftIcon,
+	ExternalLinkIcon,
 	FolderIcon,
 	GitBranchIcon,
 	PackageCheckIcon,
@@ -8,7 +9,7 @@ import {
 	WandSparklesIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Checkout, Project, ProjectIteration } from '../shared/contract';
+import type { Checkout, PageStatus, Project, ProjectIteration } from '../shared/contract';
 import { READY_LINE } from '../shared/handoff';
 import { byVersion, freshIteration, isPrototypeKey, iterationLabel, parsePrototypeName, prototypeKey, prototypePagePath, workKind, workOf } from '../shared/projects';
 import { CommentBox } from './comments/CommentBox';
@@ -149,6 +150,17 @@ export const Review = ({
 		// Enough that the summary at the end survives the tool lines that came before it.
 		return window.workspace.onAgentLog((l) => setAddressLog((prev) => [...prev, l.text.replace(/\n$/, '')].slice(-80)));
 	}, [address.kind]);
+
+	// The prototype's published page, when there is one: asked again whenever the window comes back to the front, since
+	// a publish (from the command, or by someone else) happens outside this screen.
+	const [page, setPage] = useState<PageStatus>({ state: 'none' });
+	useEffect(() => {
+		if (!prototype) return;
+		const check = () => void window.workspace.publishedPage(project.id, iteration.name).then((r) => r.ok && setPage(r.value));
+		check();
+		window.addEventListener('focus', check);
+		return () => window.removeEventListener('focus', check);
+	}, [prototype, project.id, iteration.name]);
 
 	// The comments: read, drawn as pins, and left, against the app's GitHub and its native preview.
 	const commentStore = useMemo(
@@ -434,6 +446,22 @@ export const Review = ({
 						>
 							<TriangleAlertIcon />
 							Uncommitted changes
+						</Button>
+					)}
+					{page.state === 'published' && (
+						<Button
+							size="sm"
+							variant="outline"
+							title={page.public ? 'Its page, on a site anyone can open: a public test' : 'Its page, for people signed in to GitHub with access'}
+							onClick={() => void window.workspace.openPublishedPage(project.id, iteration.name).then((r) => !r.ok && setError(r.error))}
+						>
+							<ExternalLinkIcon />
+							{page.public ? 'Open page (public)' : 'Open page'}
+						</Button>
+					)}
+					{page.state === 'unpublished' && (
+						<Button size="sm" variant="outline" disabled title="Saved, but not on its page yet: it appears there once it is published">
+							Not published yet
 						</Button>
 					)}
 					{/* Shown even with one iteration, so where you are, and that there can be more, is always visible. */}

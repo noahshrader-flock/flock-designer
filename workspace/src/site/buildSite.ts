@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Iteration } from '../shared/contract';
-import { firstHeading, isPrototypeKey, parsePrototypeName } from '../shared/projects';
+import { firstHeading, isPrototypeKey, parsePrototypeName, sitePath } from '../shared/projects';
 
 /**
  * The site prototypes are published as, built from the design repository: every project with a saved page, every
@@ -26,6 +26,8 @@ export interface SiteInput {
 	outDir: string;
 	/** How many comments each iteration has, by its key (`prototype/<project>/<name>`), when they could be read. */
 	comments?: Map<string, number>;
+	/** Published to a site anyone can open, as a test: every page says so. */
+	publicTest?: boolean;
 }
 
 export interface SiteSummary {
@@ -39,6 +41,8 @@ interface Page {
 	record: Iteration;
 	version: number;
 	iteration: number;
+	/** Where it is from its project's folder: `v1/i2/`. */
+	path: string;
 }
 interface SiteProject {
 	id: string;
@@ -50,7 +54,6 @@ interface SiteProject {
 const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 /** Text as it is safe in HTML, in an element or an attribute. */
 const escape = (s: string): string => s.replace(/[&<>"']/g, (c) => ENTITIES[c] as string);
-const pathOf = (p: Page): string => `v${p.version}/i${p.iteration}/`;
 const labelOf = (p: Page): string => `V${p.version} · I${p.iteration}`;
 const dateOf = (iso: string | undefined): string | null => {
 	const d = iso ? new Date(iso) : null;
@@ -78,7 +81,10 @@ const readProjects = (designRoot: string): SiteProject[] => {
 		const pages = records.flatMap((record): Page[] => {
 			const name = parsePrototypeName(record.name);
 			const saved = existsSync(join(dir, 'prototypes', `${record.name}.html`));
-			return name && isPrototypeKey(record.branch) && saved ? [{ record, version: name.version, iteration: name.iteration }] : [];
+			const at = sitePath(id, record.name);
+			return name && at && isPrototypeKey(record.branch) && saved
+				? [{ record, version: name.version, iteration: name.iteration, path: at.slice(id.length + 1) }]
+				: [];
 		});
 		if (pages.length === 0) return [];
 		const byVersion = new Map<number, Page[]>();
@@ -132,7 +138,12 @@ h1 { font-size: 22px; font-weight: 600; margin: 0 0 20px; }
 .bar .grow { flex: 1; }
 .bar select { font: inherit; padding: 4px 6px; }
 iframe { display: block; width: 100%; height: calc(100vh - 44px); border: 0; }
+.public-test { height: 32px; line-height: 32px; box-sizing: border-box; background: #b00020; color: #fff; font-size: 13px; font-weight: 600; text-align: center; }
+.public-test ~ iframe { height: calc(100vh - 76px); }
 `;
+
+/** On every page of a site published as a public test, so nobody mistakes it for a private one. */
+const BANNER = '<div class="public-test" role="alert">PUBLIC TEST: this site is public, and anyone with the link can open it.</div>\n';
 
 const shell = (title: string, body: string, head = ''): string =>
 	`<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>${escape(title)}</title>\n${head}<style>${STYLE}</style>\n</head>\n<body>\n${body}\n</body>\n</html>\n`;
@@ -169,7 +180,7 @@ const projectPage = (p: SiteProject, comments: Map<string, number> | undefined):
 							const author = pg.record.contributors?.[0]?.name;
 							const count = comments?.get(pg.record.branch);
 							const facts = [date, author, count === undefined ? null : `${count} ${count === 1 ? 'comment' : 'comments'}`].filter(Boolean);
-							return `<li><a href="${pathOf(pg)}"><strong>I${pg.iteration}</strong>${facts.length ? `<br><span class="muted">${facts.map((f) => escape(String(f))).join(' · ')}</span>` : ''}</a></li>`;
+							return `<li><a href="${pg.path}"><strong>I${pg.iteration}</strong>${facts.length ? `<br><span class="muted">${facts.map((f) => escape(String(f))).join(' · ')}</span>` : ''}</a></li>`;
 						})
 						.join('\n')}\n</ul>\n</section>`,
 			)
@@ -182,7 +193,7 @@ const viewerPage = (p: SiteProject, current: Page): string => {
 		.map(
 			(v) =>
 				`<optgroup label="V${v.version}">${v.pages
-					.map((pg) => `<option value="../../${pathOf(pg)}"${pg === current ? ' selected' : ''}>V${pg.version} · I${pg.iteration}</option>`)
+					.map((pg) => `<option value="../../${pg.path}"${pg === current ? ' selected' : ''}>V${pg.version} · I${pg.iteration}</option>`)
 					.join('')}</optgroup>`,
 		)
 		.join('');
@@ -202,34 +213,36 @@ const clearOut = (outDir: string): void => {
 	writeFileSync(join(outDir, MARK), 'Built by Flock Designer. This folder is cleared and rebuilt each time.\n');
 };
 
-export const buildSite = ({ designRoot, outDir, comments }: SiteInput): SiteSummary => {
+export const buildSite = ({ designRoot, outDir, comments, publicTest = false }: SiteInput): SiteSummary => {
 	const projects = readProjects(designRoot);
 	clearOut(outDir);
+	// The site's own pages, with the banner first when this is a public test. A prototype's page is never touched.
+	const write = (file: string, html: string) => writeFileSync(file, publicTest ? html.replace('<body>\n', `<body>\n${BANNER}`) : html);
 	const shared = writeShared(designRoot, outDir);
 	// A page sits three folders down (<project>/v1/i2/), and finds the shared files from there.
 	const relink = (html: string): string =>
 		html.replace(/\/_shared\/([0-9a-f]{16})\b/g, (whole, hash: string) => (shared.has(hash) ? `../../../_shared/${shared.get(hash)}` : whole));
 
-	writeFileSync(join(outDir, 'index.html'), indexPage(projects));
+	write(join(outDir, 'index.html'), indexPage(projects));
 	for (const p of projects) {
 		const dir = join(outDir, p.id);
 		mkdirSync(dir, { recursive: true });
-		writeFileSync(join(dir, 'index.html'), projectPage(p, comments));
+		write(join(dir, 'index.html'), projectPage(p, comments));
 		for (const v of p.versions) {
 			for (const pg of v.pages) {
-				const at = join(dir, `v${pg.version}`, `i${pg.iteration}`);
+				const at = join(dir, pg.path);
 				mkdirSync(at, { recursive: true });
-				writeFileSync(join(at, 'index.html'), viewerPage(p, pg));
+				write(join(at, 'index.html'), viewerPage(p, pg));
 				writeFileSync(join(at, 'page.html'), relink(readFileSync(join(designRoot, 'projects', p.id, 'prototypes', `${pg.record.name}.html`), 'utf8')));
 			}
 			const newest = v.pages[0] as Page;
 			mkdirSync(join(dir, `v${v.version}`, 'latest'), { recursive: true });
-			writeFileSync(join(dir, `v${v.version}`, 'latest', 'index.html'), redirect(`${p.title} · ${labelOf(newest)}`, `../i${newest.iteration}/`));
+			write(join(dir, `v${v.version}`, 'latest', 'index.html'), redirect(`${p.title} · ${labelOf(newest)}`, `../i${newest.iteration}/`));
 		}
 		const newestVersion = p.versions.at(-1) as SiteProject['versions'][number];
 		const newest = newestVersion.pages[0] as Page;
 		mkdirSync(join(dir, 'latest'), { recursive: true });
-		writeFileSync(join(dir, 'latest', 'index.html'), redirect(`${p.title} · ${labelOf(newest)}`, `../${pathOf(newest)}`));
+		write(join(dir, 'latest', 'index.html'), redirect(`${p.title} · ${labelOf(newest)}`, `../${newest.path}`));
 	}
 	return { projects: projects.map((p) => ({ id: p.id, title: p.title, pages: p.versions.reduce((n, v) => n + v.pages.length, 0) })) };
 };

@@ -25,6 +25,7 @@ export const fakeApp = (overrides: Impl = {}) => {
 		openPrototype: async () => ok('http://127.0.0.1:9/demo/v1-i1'),
 		readComments: async () => ok([]),
 		shareStatus: async () => ok({ state: 'idle' }),
+		publishedPage: async () => ok({ state: 'none' }),
 		pageShowMarkers: async (items: { id: number }[]) => ok(items.map((i) => ({ id: i.id, state: 'found' }))),
 		pageSnapshot: async () => ok(null),
 		// A pick waits for a click on the page, which `click` below gives it.

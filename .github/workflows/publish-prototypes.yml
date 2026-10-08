@@ -1,0 +1,59 @@
+# Publishes the prototypes site: built from the repository as it is, then deployed to GitHub Pages.
+#
+# Run only when asked (flkd publish asks), never on a push, so nothing reaches the site unless someone published it.
+# The build checks for itself that the repository and its site are private, and stops if not, unless this run is a
+# public test, when every page says PUBLIC TEST. See workspace/src/main/services/pages.ts.
+name: Publish prototypes
+
+on:
+  workflow_dispatch:
+    inputs:
+      public_test:
+        description: Publish although the site is public. Every page says PUBLIC TEST.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: read
+  pages: write
+  id-token: write
+
+# One at a time, and none cancelled: a later publish waits for the one before, so no page is lost.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+      # The generator's packages only: no scripts, so none of the app's own binaries are downloaded.
+      - name: Install
+        run: npm ci --ignore-scripts
+        working-directory: workspace
+      - name: Build the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLOCK_DESIGNER_REPO_OWNER: ${{ github.repository_owner }}
+          FLOCK_DESIGNER_REPO_NAME: ${{ github.event.repository.name }}
+        run: node workspace/bin/flkd.mjs build-site --out _site --gate ${{ inputs.public_test && '--public-test "publish where anyone can see it"' || '' }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -12,6 +12,8 @@ import { readCheckout, runGit } from '../main/services/git';
 import { BUILD_SKILL, cloneStore, prototypeBuildTask } from '../main/services/prototype';
 import { shellLine } from '../main/services/prototypeBundle';
 import { prototypeWork, whereTheChangeGoes } from '../main/services/prototypeWork';
+import { syncRecords } from '../main/services/designSync';
+import { PUBLIC_TEST_PHRASE, passGate, publish, readVisibility } from '../main/services/pages';
 import { buildSite } from '../site/buildSite';
 import { serveSite } from '../site/serveSite';
 
@@ -33,36 +35,50 @@ export interface CliDeps {
 	esbuild: string | null;
 	/** How to run this command again, for the step the agent is told to take next. */
 	self: string[];
-	/** GitHub, as its own command line is signed in to it, or null: who commented on a prototype is read through it. */
+	/** GitHub, as its own command line is signed in to it, or null: comments, the site and publishing go through it. */
 	github: GitHubApi | null;
+	/** Asks for a page with no credentials: whether a published page opens for anyone. */
+	fetchAnonymously?: (url: string) => Promise<{ status: number }>;
+	sleep?: (ms: number) => Promise<void>;
 }
 
-/** GitHub's API through its command line, `gh`, signed in as the person running this. Read-only here. */
+/** GitHub's API through its command line, `gh`, signed in as the person running this. */
 export const ghApi = (): GitHubApi => ({
-	api: (path) =>
-		new Promise((done, fail) =>
-			execFile('gh', ['api', path], { maxBuffer: 64 * 1024 * 1024 }, (err, stdout) => {
-				if (err) return fail(err);
+	api: (path, init = {}) =>
+		new Promise((done, fail) => {
+			const args = ['api', path, ...(init.method ? ['--method', init.method] : []), ...(init.body !== undefined ? ['--input', '-'] : [])];
+			const child = execFile('gh', args, { maxBuffer: 64 * 1024 * 1024 }, (err, stdout, stderr) => {
+				// What GitHub said, and its status, so a 404 can be told from anything else.
+				if (err) return fail(Object.assign(new Error(stderr.trim() || err.message), { status: Number(/HTTP (\d{3})/.exec(stderr)?.[1]) || undefined }));
+				if (!stdout.trim()) return done(null);
 				try {
 					done(JSON.parse(stdout));
 				} catch (e) {
 					fail(e);
 				}
-			}),
-		),
+			});
+			if (init.body !== undefined) child.stdin?.end(JSON.stringify(init.body));
+		}),
 });
+
+/** No credentials, and no following GitHub's sign-in redirect: a 200 means the page opens for anyone. */
+const anonymousFetch = async (url: string): Promise<{ status: number }> => ({ status: (await fetch(url, { redirect: 'manual' })).status });
 
 const USAGE = `Usage:
   flkd new-prototype --project <id> --note <what to make> [--title <project title>] [--from <branch>] [--product <dir>]
   flkd change-prototype --project <id> --name <v1-i1> --note <what to change> [--product <dir>]
   flkd save-prototype --project <id> --name <v1-i1> [--product <dir>]
-  flkd build-site [--out <dir>] [--serve]
+  flkd build-site [--out <dir>] [--serve] [--gate] [--public-test <phrase>]
+  flkd publish --project <id> --name <v1-i1> [--public-test <phrase>]
 
 new-prototype records the next version (v1-i1 for a new project, then v2-i1, v3-i1) and prints the task: where to
 write the prototype and how to check it builds. change-prototype does the same for a change to one: in its version's
 newest iteration, or in the next when others have commented on that. save-prototype builds it and saves page and
 source to the design repository. --note-file <path> may stand in for --note. --title is needed only for a new project.
-build-site writes the site prototypes are published as, from the design repository, and --serve shows it here.`;
+build-site writes the site prototypes are published as, from the design repository, and --serve shows it here; --gate
+stops it when the repository or its site is public. publish pushes the records, deploys the site and prints the
+iteration's link, only when both are private. Either goes ahead on a public site only with --public-test and, typed
+exactly, "${PUBLIC_TEST_PHRASE}"; every page then says PUBLIC TEST.`;
 
 class UsageError extends Error {}
 
@@ -100,6 +116,8 @@ const OPTIONS = {
 	product: { type: 'string' },
 	out: { type: 'string' },
 	serve: { type: 'boolean' },
+	gate: { type: 'boolean' },
+	'public-test': { type: 'string' },
 } as const;
 
 /** The options, or a usage error that says which one was wrong. */
@@ -125,18 +143,63 @@ const designOf = async (cwd: string): Promise<string> => {
 	return dirname(records);
 };
 
+/** The person's word, for this run only, that a public site is meant: the phrase, exactly. */
+const publicTestOf = (typed: string | undefined): boolean => {
+	if (typed === undefined) return false;
+	if (typed !== PUBLIC_TEST_PHRASE) throw new UsageError(`--public-test is given only by typing, exactly: "${PUBLIC_TEST_PHRASE}".`);
+	return true;
+};
+
 /** Builds the site from the design repository, with each iteration's comment count when GitHub can be asked. */
-const site = async (deps: CliDeps, out: string | undefined, serve: boolean): Promise<number> => {
+const site = async (deps: CliDeps, values: { out?: string; serve?: boolean; gate?: boolean; 'public-test'?: string }): Promise<number> => {
 	const designRoot = await designOf(deps.cwd);
-	const outDir = out ? resolve(deps.cwd, out) : join(deps.prototypesRoot, '_site');
+	const outDir = values.out ? resolve(deps.cwd, values.out) : join(deps.prototypesRoot, '_site');
+	let publicTest = publicTestOf(values['public-test']);
+	if (values.gate) {
+		// What the publishing workflow runs: it checks for itself, rather than trust whoever asked for it.
+		if (!deps.github) throw new Error('--gate needs GitHub, to ask whether the site is private, and GitHub cannot be asked here.');
+		const gate = passGate(await readVisibility(deps.github, DESIGN_REPO), publicTest);
+		if (!gate.ok) throw new Error(gate.why);
+		publicTest = gate.publicTest;
+	}
 	const comments = deps.github ? await new DesignRepo(deps.github, DESIGN_REPO).commentCounts().catch(() => undefined) : undefined;
-	const built = buildSite({ designRoot, outDir, comments });
+	const built = buildSite({ designRoot, outDir, comments, publicTest });
 	const pages = built.projects.reduce((n, p) => n + p.pages, 0);
 	deps.out(`Built ${pages} ${pages === 1 ? 'page' : 'pages'} in ${built.projects.length} ${built.projects.length === 1 ? 'project' : 'projects'} at ${outDir}.${comments ? '' : ' Comment counts are left out: GitHub could not be asked (is gh signed in?).'}`);
-	if (serve) {
+	if (values.serve) {
 		const { url } = await serveSite(outDir);
 		deps.out(`Serving it at ${url} on this machine only. Stop with Ctrl-C.`);
 	}
+	return 0;
+};
+
+/** Publishes one saved iteration to its page, and prints the link. */
+const publishPage = async (deps: CliDeps, values: { project?: string; name?: string; 'public-test'?: string }): Promise<number> => {
+	const projectId = values.project;
+	const name = values.name;
+	if (!projectId) throw new UsageError('Say which project, with --project.');
+	if (!name) throw new UsageError('Say which prototype, with --name.');
+	const publicTest = publicTestOf(values['public-test']);
+	const designRoot = await designOf(deps.cwd);
+	if (!existsSync(join(designRoot, prototypePagePath(projectId, name)))) {
+		throw new Error(`${projectId} ${name} has no saved page in the design repository. Save it first (save-prototype), then publish.`);
+	}
+	if (!deps.github) throw new Error("Publishing goes through GitHub's command line, gh, which is missing or not signed in here. Run gh auth login, then publish again.");
+	const branch = (await runGit(designRoot, ['symbolic-ref', '--short', 'HEAD']).catch(() => '')).trim();
+	if (!branch) throw new Error('The design repository is not on a branch, so there is nothing to publish from.');
+	const published = await publish({
+		github: deps.github,
+		ref: DESIGN_REPO,
+		branch,
+		projectId,
+		name,
+		publicTest,
+		pushRecords: () => syncRecords(designRoot),
+		fetchAnonymously: deps.fetchAnonymously ?? anonymousFetch,
+		sleep: deps.sleep,
+		log: deps.out,
+	});
+	deps.out(published.url);
 	return 0;
 };
 
@@ -156,11 +219,12 @@ const taskText = (lead: string, task: string, save: string): string =>
 export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 	try {
 		const [command, ...rest] = argv;
-		if (command !== 'new-prototype' && command !== 'change-prototype' && command !== 'save-prototype' && command !== 'build-site') {
+		if (!['new-prototype', 'change-prototype', 'save-prototype', 'build-site', 'publish'].includes(command ?? '')) {
 			throw new UsageError(command ? `There is no command called ${command}.` : 'Say which command.');
 		}
 		const values = optionsOf(rest);
-		if (command === 'build-site') return await site(deps, values.out, values.serve === true);
+		if (command === 'build-site') return await site(deps, values);
+		if (command === 'publish') return await publishPage(deps, values);
 		const projectId = values.project;
 		if (!projectId) throw new UsageError('Say which project, with --project.');
 

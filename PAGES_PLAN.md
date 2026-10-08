@@ -154,14 +154,14 @@ day, **L** several days.
 | **M3** | **Address starts the next iteration** when the current one has outside comments | M1, M2 | M | Medium | **Done 2026-10-08** (its real run is Noah's), see [flock-designer.md](flock-designer.md#change-log) |
 | **M4** | **One comments experience,** taken out of the review screen | M1 | L | **High** | **Done 2026-10-08** (its manual run is Noah's), see [flock-designer.md](flock-designer.md#change-log) |
 | **M5a** | **The site, assembled locally:** project pages, `latest` links, index | M1 | M | Low | **Done 2026-10-08** (Noah's look is his), see [flock-designer.md](flock-designer.md#change-log) |
-| **M5b** | **Publish for real:** the publish command, the private gate, the deploy, **Open page** | M2, M5a (M0 for the private result) | L | Medium | **Buildable and testable now on the public repo;** the private result waits on M0 |
+| **M5b** | **Publish for real:** the publish command, the private gate, the deploy, **Open page** | M2, M5a (M0 for the private result) | L | Medium | **Built 2026-10-08; first real publish waits on Noah's go-ahead**, see [flock-designer.md](flock-designer.md#change-log) |
 | **M6** | **The agent hands back the link** | M2, M5b | S | Low | After M5b |
 | **M7** | **Comments on the page** (shared components, browser adapter, test sign-in) | M4, M5b | L | Medium | After M4 and M5b |
 | **M8** | **The round trip, proved** | M7 | S | Low | After M7 |
 | **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | Blocked on a decision |
 | **M10** | **Parity and the smaller things we agreed** | M7 | M | Low | Later |
 
-**M1 to M5a are done (2026-10-08). Next: M5b,** publishing for real, buildable now on the public repo in its test mode.
+**M1 to M5a are done, and M5b is built (2026-10-08).** Its first real publish, in the public test mode, waits on Noah. Then M6.
 
 **The repo is public for now (Noah's decision, 2026-10-07), so the whole flow can be built and tested before the admins
 answer.** Public Pages needs no login to view, so what it cannot show is that an anonymous viewer is blocked. That
@@ -266,34 +266,30 @@ version.
 **What is left of "done when" is Noah's:** `node workspace/bin/flkd.mjs build-site --serve` from the design repository,
 then move between the index, a project, its versions and iterations, and `latest` in a browser.
 
-### M5b: Publish for real (blocked on M0)
+### M5b: Publish for real (built 2026-10-08; the private result waits on M0)
 
-**Goal.** A prototype becomes a private page, and nothing can publish a public one.
+**Built.** What, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In short:
 
-- **One publish command,** callable without the app, that every route uses. Given a project and an iteration it saves
-  and commits **only `projects/` files**, pushes with the same narrow rules as the app's publisher (plain pushes, never
-  anything else that is waiting), waits for the Pages deployment, and prints the link.
-- **The private gate, before anything is pushed or any link is printed:** it asks GitHub whether the repository and its
-  Pages site are private (the Pages API's `public` field). If either is public it stops, says why, and prints **no
-  link**.
-- **A public test mode, for as long as the repo is public.** The gate can be passed only with an explicit option that
-  has to be typed (never a default and never remembered), and when it is used every published page carries a visible
-  **PUBLIC TEST** banner and the agent's summary says so. It exists so the flow can be tried end to end before the repo
-  is private; it is removed once the repo is in the org.
-- **The check afterwards:** it requests the link with no credentials and expects not to get the page. If it does, it
-  says the site is public and tells the person not to share it.
-- **The workflow** that runs M5a's generator and deploys, queued and not cancelled, from the branch M0 settles.
-- **The page's address** is read from GitHub and kept by the app, never typed in. **Open page** appears in the review
-  screen beside the switcher; its link carries a version, so a new iteration never shows a cached page.
-- **A "not published yet" state** while the deployment runs (about a minute and a half in testing).
+- **`flkd publish --project <id> --name <v1-i1>`** (`workspace/src/main/services/pages.ts`, nothing of the app in it):
+  the gate first, then the records pushed by the app's own records sync (only `projects/`, and nothing at all if
+  anything else is waiting), then the workflow asked to deploy and waited on, then the iteration's link, then a request
+  for it with no credentials, with a plain warning if it opened when it should not have.
+- **The gate** asks GitHub whether the repository and its Pages site are private; unknown counts as public. A public one
+  is published only with `--public-test "publish where anyone can see it"`, typed for that run, and then every page of
+  the site says PUBLIC TEST.
+- **The workflow** (`.github/workflows/publish-prototypes.yml`) runs only when asked, never on a push, queues rather than
+  cancels, and builds with `--gate`, so it checks for itself whoever asked. It installs the generator's packages without
+  the app's binaries (rehearsed: 2 seconds from a warm cache, no Electron download).
+- **In the app,** the review screen shows **Open page** beside the switcher once the iteration is on its page (the last
+  deploy includes the last change to it, asked of GitHub), with a link that names that deploy, and **Not published yet**
+  when it is saved but not deployed. The main process works out the address and opens it; the window never hands it one.
 
-**Tests first:** the gate and the anonymous check against a fake GitHub (public repo, public site, private both, a page
-that comes back for an anonymous request); the command's narrow push.
+**What was not built, and why:** publishing from inside the app. The plan's routes are the command and the agent (M6);
+the app shows the result.
 
-**Done when:** from the app, Noah opens `admin-usage` on its private page; a teammate with access opens the same link;
-someone without access cannot; and the command refuses to publish when the repo is made public.
-
-**Undo:** the workflow can be disabled, and a page removed by deleting its files and redeploying.
+**What is left:** the first real publish, which pushes the workflow and puts a page on the public site, with the
+banner. Then, once M0 makes the repository private, the private result: a teammate with access opens the link, someone
+without cannot, and the command refuses when the repository is public.
 
 ### M6: The agent hands back the link
 

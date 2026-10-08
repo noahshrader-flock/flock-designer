@@ -251,6 +251,28 @@ describe('pins and cards', () => {
 	});
 });
 
+describe('its published page', () => {
+	it('offers to open it once it is published, through the main process, which works out the address itself', async () => {
+		const app = fakeApp({ publishedPage: async () => ok({ state: 'published', url: 'https://x.github.io/d/demo/v1/i1/?v=abc1234', public: false }) });
+		await open(app);
+		await press(button('Open page'));
+		expect(app.calls.openPublishedPage?.[0]).toEqual(['demo', 'v1-i1']);
+	});
+
+	it('says so when the site is public', async () => {
+		await open(fakeApp({ publishedPage: async () => ok({ state: 'published', url: 'https://x', public: true }) }));
+		expect(button('Open page (public)')).toBeTruthy();
+	});
+
+	it('says it is not published yet when it is saved but not deployed, and says nothing without a site', async () => {
+		await open(fakeApp({ publishedPage: async () => ok({ state: 'unpublished' }) }));
+		expect(button('Not published yet').disabled).toBe(true);
+		await unmountAll((current as NonNullable<typeof current>).root);
+		await open(fakeApp());
+		expect(() => button(/Open page|Not published/)).toThrow(/0 buttons/);
+	});
+});
+
 describe('Address', () => {
 	it('runs on one comment, and shows it resolved with where the change went', async () => {
 		let c = comment(1, 'Remove this');

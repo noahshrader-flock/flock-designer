@@ -193,6 +193,15 @@ export const nextPrototypeName = (names: string[]): string =>
 /** A refinement of a version: its next iteration, one past the highest it has had. */
 export const nextIterationName = (names: string[], version: number): string =>
 	prototypeName(version, parsedNames(names).filter((p) => p.version === version).reduce((max, p) => Math.max(max, p.iteration), 0) + 1);
+/**
+ * Where an iteration is on the published site, from the site's root: `<project>/v1/i2/`. The one place the site's
+ * addresses are made, for the site itself, the command that publishes it and the app that opens it. Null for a name
+ * that is not a prototype's.
+ */
+export const sitePath = (projectId: string, name: string): string | null => {
+	const p = parsePrototypeName(name);
+	return p ? `${projectId}/v${p.version}/i${p.iteration}/` : null;
+};
 /** A version's newest iteration, by the name it was recorded under, or null when the version has none. */
 export const latestIterationName = (names: string[], version: number): string | null => {
 	let best: { name: string; iteration: number } | null = null;

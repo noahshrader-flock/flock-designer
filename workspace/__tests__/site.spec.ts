@@ -162,6 +162,16 @@ describe('building', () => {
 	});
 });
 
+describe('a public test', () => {
+	it('says PUBLIC TEST on every page of the site, and leaves the prototypes themselves alone', () => {
+		build({ publicTest: true });
+		for (const path of ['index.html', 'alpha/index.html', 'alpha/v1/i2/index.html', 'alpha/latest/index.html']) expect(read(path)).toContain('PUBLIC TEST');
+		expect(read('alpha/v1/i2/page.html')).not.toContain('PUBLIC TEST');
+		build();
+		expect(read('index.html')).not.toContain('PUBLIC TEST');
+	});
+});
+
 describe('serving it here, to look at', () => {
 	it('serves the site, with the types a browser needs, and nothing outside it', async () => {
 		build();

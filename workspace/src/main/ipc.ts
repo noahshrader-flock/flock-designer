@@ -14,6 +14,7 @@ import {
 	type PageHoldReason,
 	type MoveToCodePlan,
 	type Person,
+	type PageStatus,
 	type PrototypeAddressed,
 	type PrototypeReadiness,
 	type Project,
@@ -41,7 +42,7 @@ import { projectTitle, writeCommentsExport } from './services/commentsExport';
 import { syncRecords } from './services/designSync';
 import { syncBranches } from './services/branchSync';
 import { PublishManager, publishInOrder } from './services/publisher';
-import { DesignRepo } from './services/designRepo';
+import { DESIGN_REPO, DesignRepo } from './services/designRepo';
 import type { PageView } from './services/pageView';
 import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anchor';
 import type { GitHubSession } from './services/githubSession';
@@ -52,6 +53,7 @@ import { resolveInside } from './services/paths';
 import { PrototypeServer } from './services/prototypeServer';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
 import { type PrototypeChange, prototypeWork, whereTheChangeGoes } from './services/prototypeWork';
+import { pageStatus } from './services/pages';
 import {
 	BUILD_SKILL,
 	MOVE_SKILL,
@@ -821,6 +823,25 @@ export const registerIpc = ({
 			prototypeChanges.set(commentId, { projectId, change });
 			const where = whereTheChangeGoes(change, name);
 			return startPrototypeAgent(projectId, name, sources, prototypeAddressTask({ addressSkill, buildSkill, build, sources, commentsPath: written.path, number, name, where }));
+		}),
+	);
+	/**
+	 * The iteration's published page. Asked of GitHub as the person signed in to the app; nothing to say when they are
+	 * not. Opening it works the address out again here, so the window never hands this an address to open.
+	 */
+	const publishedPage = async (projectId: string, name: string): Promise<PageStatus> => {
+		assertUsableProjectId(projectId);
+		assertPrototypeName(name);
+		return github.state().state === 'signedIn' ? pageStatus(github, DESIGN_REPO, projectId, name) : { state: 'none' };
+	};
+	ipcMain.handle(CHANNELS.publishedPage, guard((projectId: string, name: string) => publishedPage(projectId, name)));
+	ipcMain.handle(
+		CHANNELS.openPublishedPage,
+		guard(async (projectId: string, name: string): Promise<null> => {
+			const status = await publishedPage(projectId, name);
+			if (status.state !== 'published') throw new Error('This iteration is not on its page yet.');
+			await shell.openExternal(assertPreviewUrl(status.url));
+			return null;
 		}),
 	);
 	ipcMain.handle(
