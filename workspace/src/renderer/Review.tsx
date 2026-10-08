@@ -393,9 +393,7 @@ export const Review = ({
 			} else {
 				void window.workspace.moveComment(e.id, e.anchor).then((r) => {
 					if (r.ok) {
-						changes.current++;
-						posted.current.set(r.value.id, r.value);
-						setComments((cs) => (cs ?? []).map((c) => (c.id === r.value.id ? { ...c, anchor: r.value.anchor } : c)));
+						showChanged(r.value);
 						// The comment now points somewhere else, and the file the agent reads says where.
 						void load(true);
 					} else {
@@ -613,6 +611,16 @@ export const Review = ({
 		}
 	};
 
+	/**
+	 * A comment as GitHub now has it, after this window changed it (resolved, reopened, addressed): shown at once, so its
+	 * pin comes or goes without waiting for the next read, and kept until a read includes the change.
+	 */
+	const showChanged = (comment: ReviewComment) => {
+		changes.current++;
+		posted.current.set(comment.id, comment);
+		setComments((cs) => (cs ?? []).map((c) => (c.id === comment.id ? comment : c)));
+	};
+
 	/** The agent is asked for one comment, from that comment's own button: never for a batch. */
 	const addressComment = async (commentId: number) => {
 		if (!checkout) return;
@@ -631,8 +639,7 @@ export const Review = ({
 			await runPrototypeAddress({ api: window.workspace, projectId: project.id, name: iteration.name, commentId, isLive, onPhase });
 			if (!addressLive.current) return;
 			if (outcome.kind === 'done' && outcome.prototype) {
-				changes.current++;
-				posted.current.set(outcome.prototype.comment.id, outcome.prototype.comment);
+				showChanged(outcome.prototype.comment);
 				// Changed here: what is on screen, and what reviewers open, is the changed page.
 				if (outcome.changed && outcome.prototype.iteration === iteration.name) local.retry();
 			}
@@ -647,10 +654,7 @@ export const Review = ({
 			// Either way: a later run that changed nothing clears the mark an earlier one left, so a
 			// card never shows a change waiting that is no longer there.
 			const marked = await window.workspace.markAddressed(commentId, outcome.changed ? outcome.commit : null);
-			if (marked.ok) {
-				changes.current++;
-				posted.current.set(marked.value.id, marked.value);
-			}
+			if (marked.ok) showChanged(marked.value);
 		}
 		// The agent may have changed the code, and a reviewer may have written meanwhile.
 		void load(true);
@@ -676,9 +680,7 @@ export const Review = ({
 		setError(null);
 		const r = await window.workspace.resolveComment(comment.id, resolved);
 		if (!r.ok) return setError(r.error);
-		changes.current++;
-		posted.current.set(r.value.id, r.value);
-		setComments((cs) => (cs ?? []).map((c) => (c.id === r.value.id ? r.value : c)));
+		showChanged(r.value);
 		// Same as deleting: the file the agent reads lists the open comments, and this is no longer one.
 		void load(true);
 	};

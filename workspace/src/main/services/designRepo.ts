@@ -373,6 +373,7 @@ export class DesignRepo {
     const current = asRecord(await this.session.api(path));
     const body = String(current.body ?? '');
     const addressed = withAddressed(body, commit, iteration);
+    // Resolved only when a change was recorded: `withAddressed` writes only a real commit.
     const marked = addressedAt(addressed) === null ? addressed : withResolved(addressed, true);
     // Judged by what the marks say, not by the text: rewriting them can reorder a body that already says it.
     const same = addressedAt(marked) === addressedAt(body) && addressedIn(marked) === addressedIn(body) && isResolved(marked) === isResolved(body);
