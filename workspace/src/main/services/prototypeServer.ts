@@ -2,12 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { type Server, createServer } from 'node:http';
 import { extname, join, normalize, sep } from 'node:path';
 
-/** What a built folder holds, by extension: the page, its script and styles, and the fonts and pictures they use. */
-const TYPES: Record<string, string> = {
-	'.html': 'text/html; charset=utf-8',
-	'.js': 'text/javascript; charset=utf-8',
-	'.css': 'text/css; charset=utf-8',
-	'.json': 'application/json',
+/** The fonts and pictures a built folder may hold, by extension: what a build may write as files beside its page. */
+export const ASSET_TYPES: Record<string, string> = {
 	'.woff2': 'font/woff2',
 	'.woff': 'font/woff',
 	'.ttf': 'font/ttf',
@@ -17,12 +13,22 @@ const TYPES: Record<string, string> = {
 	'.gif': 'image/gif',
 };
 
+/** What a built folder holds, by extension: the page, its script and styles, and its assets. Nothing else is served. */
+const TYPES: Record<string, string> = {
+	'.html': 'text/html; charset=utf-8',
+	'.js': 'text/javascript; charset=utf-8',
+	'.css': 'text/css; charset=utf-8',
+	...ASSET_TYPES,
+};
+
 /**
- * Serves prototypes to the review screen, from this process, on this machine only.
+ * Serves prototypes to the review screen, and the component previews to the Design System tab, from this process, on
+ * this machine only.
  *
  * A prototype is one HTML page with nothing to run, so there is no dev server to start: the page
  * is handed to this and given an address. It answers only on the loopback address, only for pages it
  * was given, and keeps nothing on disk. The preview shows it in its own sandboxed view, like any other.
+ * The component previews are a built folder, served whole (`serveFolder`) and read from disk.
  */
 export class PrototypeServer {
 	private server: Server | null = null;
@@ -59,7 +65,8 @@ export class PrototypeServer {
 
 	/**
 	 * Serves a built folder at `/<key>/`, its `index.html` at the root, every other file by its path under it. Nothing
-	 * outside the folder is reachable. Files are sent to any origin, since a preview frame is sandboxed into one of its own.
+	 * outside the folder is reachable. A preview frame loads it from this origin, which is not the app window's, so the
+	 * page and its scripts are same-origin to the frame and nothing has to be shared with any other origin.
 	 */
 	async serveFolder(key: string, dir: string): Promise<string> {
 		this.folders.set(key, dir);
@@ -67,15 +74,20 @@ export class PrototypeServer {
 		return `http://127.0.0.1:${this.port}/${key}/`;
 	}
 
+	/** Stops serving a folder: its address answers 404 from now on. */
+	stopServing(key: string): void {
+		this.folders.delete(key);
+	}
+
 	private async fromFolder(path: string): Promise<{ type: string; body: Buffer } | null> {
 		const [, key, ...rest] = path.split('/');
 		const dir = key === undefined ? undefined : this.folders.get(key);
 		if (dir === undefined) return null;
-		const file = normalize(join(dir, decodeURIComponent(rest.join('/')) || 'index.html'));
-		if (!file.startsWith(dir + sep)) return null;
-		const type = TYPES[extname(file)];
-		if (type === undefined) return null;
 		try {
+			// A malformed address is not found, like any other that is not a file under the folder.
+			const file = normalize(join(dir, decodeURIComponent(rest.join('/')) || 'index.html'));
+			const type = TYPES[extname(file)];
+			if (!file.startsWith(dir + sep) || type === undefined) return null;
 			return { type, body: await readFile(file) };
 		} catch {
 			return null;
@@ -95,7 +107,7 @@ export class PrototypeServer {
 				if (html === undefined && req.method === 'GET' && this.folders.size > 0) {
 					void this.fromFolder(path).then((found) => {
 						if (found === null) return void res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
-						res.writeHead(200, { 'Content-Type': found.type, 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' }).end(found.body);
+						res.writeHead(200, { 'Content-Type': found.type, 'Cache-Control': 'no-store' }).end(found.body);
 					});
 					return;
 				}

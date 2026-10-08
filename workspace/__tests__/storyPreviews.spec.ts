@@ -78,17 +78,17 @@ const ready = async (p: StoryPreviews) => {
 	if (r.state !== 'ready') throw new Error(`not ready: ${JSON.stringify(r)}`);
 	return r.base;
 };
-/** Renders one story file's page in this jsdom window, as the preview frame does, and gives what it drew. */
+/** Renders the page served at `base` for one story file in this DOM window, as the preview frame does: what it drew. */
 const render = async (base: string, file: string): Promise<HTMLElement> => {
+	expect((await fetch(`${base}?file=${encodeURIComponent(file)}`)).status).toBe(200);
 	document.body.innerHTML = '<div id="root"></div>';
 	window.history.pushState({}, '', `/?file=${encodeURIComponent(file)}`);
-	const entry = join(folder, ...[(await readdirSync(folder))[0]!, 'site', 'entry.js']);
+	const entry = join(folder, readdirSync(folder)[0]!, 'site', 'entry.js');
 	// The built page is modules in chunks, which a DOM window cannot load itself: joined into one script, as built, and run.
 	const { build } = await import('esbuild');
 	const joined = await build({ entryPoints: [entry], bundle: true, write: false, format: 'iife', logLevel: 'silent' });
 	(0, eval)(joined.outputFiles[0]!.text);
 	await vi.waitFor(() => expect(document.querySelector('#root')!.children.length).toBeGreaterThan(0), { timeout: 5000 });
-	void base;
 	return document.querySelector('#root') as HTMLElement;
 };
 
@@ -159,10 +159,10 @@ describe('building the previews', () => {
 		expect(two.querySelector('.fd-error')?.textContent).toContain(notInstalled('../../icons/symbols.generated'));
 	});
 
-	it('does not set aside a build error that is not a missing import', async () => {
+	it('does not set aside a build error that is not a missing import, and names the file as the library does', async () => {
 		makeLibrary({ ...LIBRARY, 'src/components/FSTwo/FSTwo.stories.tsx': story('Inputs/FSTwo', 'export const Default = () => <p>;') });
 		const r = await previews().preview();
-		expect(r).toMatchObject({ state: 'failed', error: expect.stringContaining('FSTwo.stories.tsx') });
+		expect(r).toMatchObject({ state: 'failed', error: expect.stringMatching(/^src\/components\/FSTwo\/FSTwo\.stories\.tsx: /) });
 	});
 
 	it('says every error as it is when the build has a real error beside a missing import, setting nothing aside', async () => {
@@ -196,8 +196,11 @@ describe('keeping them', () => {
 		commit(upstream, 'three');
 		g(upstream, 'push', '-q', 'origin', 'develop');
 		g(clone, 'fetch', '-q', 'origin', 'develop');
+		const forget = vi.spyOn(server, 'stopServing');
 		const second = await ready(p);
 		expect(second).not.toBe(first);
+		// The old address is forgotten by the server, not only emptied on disk.
+		expect(forget).toHaveBeenCalledWith(new URL(first).pathname.split('/')[1]);
 		expect(readdirSync(folder)).toHaveLength(1);
 		expect((await fetch(first)).status).toBe(404);
 		expect((await fetch(second)).status).toBe(200);
@@ -284,6 +287,18 @@ describe('serving a built folder', () => {
 		expect((await fetch(`${base}%2e%2e/outside.html`)).status).toBe(404);
 		expect((await fetch(base.replace('/k1/', '/other/'))).status).toBe(404);
 		expect((await fetch(base, { method: 'POST' })).status).toBe(404);
+		expect((await fetch(`${base}%E0%A4%A`)).status).toBe(404);
+		server.stopServing('k1');
+		expect((await fetch(base)).status).toBe(404);
+	});
+
+	it('shares its files with no other origin', async () => {
+		const dir = join(home, 'site');
+		write(dir, { 'entry.js': 'x' });
+		const base = await server.serveFolder('k1', dir);
+		for (const origin of ['null', 'https://example.com']) {
+			expect((await fetch(`${base}entry.js`, { headers: { Origin: origin } })).headers.get('access-control-allow-origin')).toBeNull();
+		}
 	});
 });
 

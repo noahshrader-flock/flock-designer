@@ -186,7 +186,12 @@ installed in the clone) or `failed` (with the build's own words). A story file's
 draws every story in it, each by name in its own error boundary, telling the frame that holds it how tall it is
 (`postMessage({ flockPreviewHeight })`). The window's frame source is allowed in its security policy. **For P2:** the
 channel waits for the build (about two seconds the first time, then at once), so the window shows "Building…" while it
-waits; `CatalogComponent.stories[].file` is the `file` to ask for. **Where it differs from the plan:** no Vite, no
+waits; `CatalogComponent.stories[].file` is the `file` to ask for. **The frame must be `<iframe sandbox="allow-scripts
+allow-same-origin">`** (checked in a real Electron window, 2026-10-08): the library reads `document.cookie` as it loads,
+which throws in a frame with no origin of its own, so the page drew nothing. With `allow-same-origin` the frame has the
+local server's origin, which is not the app window's, so the window still cannot be reached from it (that was checked
+too) and nothing has to be shared with another origin. The combination is only unsafe when the frame shares its
+parent's origin, which it never does here. **Where it differs from the plan:** no Vite, no
 `Install packages` step and no `no-packages` fix beyond saying to run `npm install` in the library: the build needs no
 registry, and sets aside only what the clone has not installed. **Not seen in the app yet:** P2 is the first thing that
 shows it.
