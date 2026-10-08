@@ -381,7 +381,7 @@ const AlertHistoryPage = ({ initialState }: { initialState: PageState }) => {
                         Alert History
                     </FSTypography>
                     <FSTypography gutterBottom>
-                        Alerts sent to {ORG_NAME} in the last 30 days, grouped by the device that raised them.
+                        Alerts sent to {ORG_NAME} in the last 30 days, grouped by the device that raised them. Hello
                     </FSTypography>
                 </FSBox>
 
