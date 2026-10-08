@@ -25,7 +25,7 @@ const Out = ({ href, icon, children }: { href: string; icon: ReactNode; children
 );
 
 /** A component's links, Storybook (one per story) and Source, in the More menu the project cards use. */
-export const ComponentLinks = ({ component }: { component: CatalogComponent }) => (
+const ComponentLinks = ({ component }: { component: CatalogComponent }) => (
 	<MoreMenu label={`More for ${component.name}`}>
 		{component.stories.map((s) =>
 			s.storybook === null ? null : (

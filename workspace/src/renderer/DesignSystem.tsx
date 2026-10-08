@@ -1,8 +1,8 @@
-import { GitBranchIcon } from 'lucide-react';
+import { ChevronRightIcon, GitBranchIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { isGap } from '../shared/catalog';
 import type { Catalog, CatalogComponent, CatalogUpdate } from '../shared/contract';
-import { ComponentLinks, ComponentPage } from './ComponentPage';
+import { ComponentPage } from './ComponentPage';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { LoadingScreen } from './Loading';
 import { Page } from './Page';
@@ -22,21 +22,27 @@ const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
 		</span>
 	) : null;
 
-/** A component in the list: the whole row opens it, and its links are in the More menu at the right. */
+/** A component in the list: the whole row opens it, and the chevron says so. Its links are on its own page. */
 const Row = ({ component, part, onOpen }: { component: CatalogComponent; part: boolean; onOpen: () => void }) => (
-	<li className="hover:bg-muted/50 flex items-center gap-2 pr-2" data-component={component.id}>
-		<button type="button" className={`flex min-w-0 grow flex-col gap-0.5 py-3 text-left ${part ? 'pl-10' : 'pl-4'}`} onClick={onOpen}>
-			<span className="flex items-center gap-2">
-				<span className={part ? 'text-sm' : 'text-sm font-medium'}>{component.name}</span>
-				{isGap(component) && (
-					<Badge variant="outline" className="text-muted-foreground">
-						No story
-					</Badge>
-				)}
+	<li data-component={component.id}>
+		<button
+			type="button"
+			className={`hover:bg-muted/50 flex w-full items-center gap-4 py-3 pr-4 text-left ${part ? 'pl-10' : 'pl-4'}`}
+			onClick={onOpen}
+		>
+			<span className="flex min-w-0 grow flex-col gap-0.5">
+				<span className="flex items-center gap-2">
+					<span className={part ? 'text-sm' : 'text-sm font-medium'}>{component.name}</span>
+					{isGap(component) && (
+						<Badge variant="outline" className="text-muted-foreground">
+							No story
+						</Badge>
+					)}
+				</span>
+				{component.subtitle && <span className="text-muted-foreground text-sm">{component.subtitle}</span>}
 			</span>
-			{component.subtitle && <span className="text-muted-foreground text-sm">{component.subtitle}</span>}
+			<ChevronRightIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />
 		</button>
-		<ComponentLinks component={component} />
 	</li>
 );
 

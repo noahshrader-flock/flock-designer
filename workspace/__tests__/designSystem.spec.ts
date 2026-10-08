@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DesignSystem } from '../src/renderer/DesignSystem';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
 import type { Catalog, CatalogComponent, CatalogUpdate } from '../src/shared/contract';
-import { button, fail, fakeApp, key, ok, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
+import { button, fail, fakeApp, ok, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
 /**
  * The Design System tab (S3 of the design system plan): the component library's catalog as a grouped list with links
@@ -57,14 +57,6 @@ const open = async (answers: (refresh: boolean) => ReturnType<typeof ok<Catalog>
 };
 const rows = () => [...document.querySelectorAll('[data-component]')].map((li) => li.getAttribute('data-component')!.split('/')[1]);
 const row = (name: string) => document.querySelector(`[data-component$="/${name}"]`) as HTMLElement;
-/** The links in a row's More menu, which has to be opened to have any. Closed again, so the next row can be opened. */
-const links = async (name: string) => {
-	const items = await openMenu(button(`More for ${name}`, row(name)));
-	const found = items.map((i) => [i.textContent, i.getAttribute('href')]);
-	await key('Escape');
-	await settle();
-	return found;
-};
 const groups = () => [...document.querySelectorAll('section')].map((s) => s.getAttribute('aria-label'));
 const text = () => document.body.textContent ?? '';
 
@@ -85,30 +77,14 @@ describe('the list', () => {
 		expect(text()).not.toContain('Chromatic');
 	});
 
-	it('links each component to Storybook and Source, never Figma; a link not known is not there', async () => {
+	it('has a forward chevron on each row and no menu: the links are on the component page', async () => {
 		await open(() => ok(ready()));
-		expect(await links('FSButton')).toEqual([
-			['Storybook', 'https://sb.example/FSButton'],
-			['Source', 'https://github.com/x/FSButton'],
-		]);
-		expect((await links('FSCard')).map(([t]) => t)).toEqual(['Storybook', 'Source']);
-		expect((await links('FSApp')).map(([t]) => t)).toEqual(['Source']);
-	});
-
-	it('keeps the links in a More menu on each row, opening in the browser, and none on the row itself', async () => {
-		await open(() => ok(ready()));
-		expect(row('FSButton').querySelectorAll('a')).toHaveLength(0);
-		expect(rows().every((name) => button(`More for ${name}`, row(name)))).toBe(true);
-		const items = await openMenu(button('More for FSButton', row('FSButton')));
-		expect(items.every((i) => i.getAttribute('target') === '_blank' && i.getAttribute('rel') === 'noreferrer')).toBe(true);
-	});
-
-	it('gives a folder with several stories a link to each, by name', async () => {
-		await open(() => ok(ready()));
-		expect((await links('FSPopovers')).slice(0, 2)).toEqual([
-			['Storybook: PopoverHeader', 'https://sb.example/header'],
-			['Storybook: PopoverLineItem', 'https://sb.example/line'],
-		]);
+		for (const name of rows()) {
+			expect(row(name).querySelector('svg.lucide-chevron-right')).not.toBeNull();
+			expect(row(name).querySelector('[aria-haspopup]')).toBeNull();
+			expect(row(name).querySelectorAll('a')).toHaveLength(0);
+		}
+		expect(text()).not.toMatch(/Storybook|Source/);
 	});
 
 	it('marks a gap “No story”, and a part sits under its parent with no mark', async () => {
@@ -183,12 +159,6 @@ describe('opening a component', () => {
 		expect(listShown()).toBe(false);
 		expect(document.querySelector('h3')?.textContent).toBe('FSButton');
 		expect(text()).toContain('Buttons allow users to take actions.');
-	});
-
-	it('does not open the component when its More menu is used', async () => {
-		await open(() => ok(ready()));
-		await openMenu(button('More for FSButton', row('FSButton')));
-		expect(listShown()).toBe(true);
 	});
 
 	it('goes back to the list, where it was, with Back', async () => {

@@ -63,6 +63,27 @@ describe('the page', () => {
 		]);
 	});
 
+	it('names each Storybook link by its story when there are several, and leaves out a story with no address', async () => {
+		await show(
+			component({
+				id: 'compositeComponents/FSPopovers',
+				name: 'FSPopovers',
+				stories: [
+					{ file: 'a.stories.tsx', title: 'Popovers/PopoverHeader', storybook: 'https://sb.example/header' },
+					{ file: 'b.stories.tsx', title: 'Popovers/PopoverLineItem', storybook: 'https://sb.example/line' },
+					{ file: 'c.stories.tsx', title: null, storybook: null },
+				],
+			}),
+		);
+		const items = await openMenu(button('More for FSPopovers'));
+		expect(items.map((i) => [i.textContent, i.getAttribute('href')])).toEqual([
+			['Storybook: PopoverHeader', 'https://sb.example/header'],
+			['Storybook: PopoverLineItem', 'https://sb.example/line'],
+			['Source', 'https://github.com/x/FSButton'],
+		]);
+		expect(items.every((i) => i.getAttribute('target') === '_blank' && i.getAttribute('rel') === 'noreferrer')).toBe(true);
+	});
+
 	it('goes back with Back', async () => {
 		const { props } = await show(component());
 		await press(button('Back to components'));
