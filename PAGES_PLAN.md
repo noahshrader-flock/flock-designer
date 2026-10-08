@@ -158,10 +158,10 @@ day, **L** several days.
 | **M6** | **The agent hands back the link** | M2, M5b | S | Low | **Built 2026-10-08**, see [flock-designer.md](flock-designer.md#change-log) |
 | **M7** | **Comments on the page** (shared components, browser adapter, test sign-in) | M4, M5b | L | Medium | **Built 2026-10-08**; its real run needs the site published, see [flock-designer.md](flock-designer.md#change-log) |
 | **M8** | **The round trip, proved** | M7 | S | Low | **Built 2026-10-08**; the hand run is Noah's, see [flock-designer.md](flock-designer.md#change-log) |
-| **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | Blocked on a decision |
+| **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | **Decided: a small sign-in function; waiting on approval** |
 | **M10** | **Parity and the smaller things we agreed** | M7 | M | Low | Later |
 
-**M1 to M5a are done, and M5b to M8 are built (2026-10-08).** The site is published (public while the repo is). The private result waits on M0. Next: M9, signing in for everyone, which waits on a decision.
+**M1 to M5a are done, and M5b to M8 are built (2026-10-08).** The site is published (public while the repo is). The private result waits on M0. M9 is decided and waits on approval. Next: M10.
 
 **The repo is public for now (Noah's decision, 2026-10-07), so the whole flow can be built and tested before the admins
 answer.** Public Pages needs no login to view, so what it cannot show is that an anonymous viewer is blocked. That
@@ -353,16 +353,34 @@ was dropped, in the app and on the page alike.
 **What is left of "done when" is Noah's:** on the published page, comment as a second person (a token for another
 GitHub account), and watch it appear in the app and act on it there.
 
-### M9: Signing in for everyone (a decision first)
+### M9: Signing in for everyone (decided 2026-10-08; waiting on approval)
 
-Anyone who views or comments is signed in to GitHub (decided). Viewing is covered by private Pages. For commenting, a
-page cannot sign a person in by itself (GitHub's sign-in refuses calls from a page); one of these does it:
+Anyone who views or comments is signed in to GitHub (decided). Viewing is covered by private Pages (M0). Comments on the
+page need the page itself to know who the person is, and it cannot find that out on its own: **tested 2026-10-08**, both
+of GitHub's sign-in endpoints (`/login/oauth/access_token`, `/login/device/code`) refuse calls from a web page, so a
+github.io page cannot complete a sign-in by itself. GitHub's docs for private Pages say nothing of handing the page an
+identity or a token, and a community answer says there is no way to.
 
-| Option | What a reviewer does | Cost |
-|---|---|---|
-| **A small, stateless sign-in service** (recommended) | Clicks "Sign in with GitHub" on the page | A server to own, approve and secure. It holds no data: it only exchanges GitHub's sign-in code for a token |
-| **A browser extension** | Installs it once; it signs in with GitHub's device flow, as the app does | An install, deployed to people's browsers. No server |
-| **The token dialog** | Creates a token in GitHub's settings | Fine for a few testers, not for PMs and directors |
+**Decided (Noah, 2026-10-08): a small, stateless sign-in function, hosted under the company's account.** It only swaps
+GitHub's one-time sign-in code for a token, holding the GitHub App's secret; it keeps no data and no logs of tokens. The
+page then signs people in with one click, or none (it can send them to GitHub and back automatically), in any browser,
+with nothing installed. **Waiting on Noah's approvals** (security, and where it is hosted); it is written then.
+
+**Considered and set aside, with why:**
+
+| Option | Why not |
+|---|---|
+| Only GitHub, no function | Not possible: GitHub's sign-in refuses a page (tested) |
+| A browser extension | An install, and one per browser family (Chrome and Edge share one; Firefox and Safari do not) |
+| The page asks the app on the same computer | Only for people with the app running; Chrome asks for "local network access", Safari blocks it |
+| Anonymous comments with a typed name | Still needs a server holding a shared credential, open to anyone; breaks the M3 freeze rule and who may resolve |
+| Moving off GitHub Pages | Loses GitHub's own sign-in for viewing; another vendor; revisit only if M0 refuses private Pages |
+| Replacing the Electron app with an extension | Kept the app: one build across Mac and Windows and any browser, already built |
+
+**Until then:** testers sign in on the page with a fine-grained token (M7); everyone else comments in the app, where the
+same comments are. **Opening the page from the app already signed in** (the app's **Open page** handing the page its
+sign-in) was proposed as the short-term demo; it was stopped before it was built, as handing a person's GitHub token to
+a page through its address is a security decision to make deliberately, not by default. Noah's call whether to do it.
 
 **Done when:** a PM with access signs in from the page in one step and comments.
 
