@@ -89,7 +89,8 @@ from `visibleRepositories` and the clone folder, sends progress to the window, a
 short: in the **New** modal, a repository with no clone shows **Clone and continue**, and under it one line: where it
 goes (`Into ~/Documents/GitHub/<repo>`), `with flock-designer beside it` when that comes too, and **Change**. It clones
 with progress and **Stop**, then the form carries on with it. No "Point the app at it": clones in the usual places
-and the clone folder are found by themselves. A clone already there is **Use it and continue**;
+and the clone folder are found by themselves. **Starts from is not shown until the clone is done** (Noah, 2026-10-08), not
+grayed out; the button is the normal size. A clone already there is **Use it and continue**;
 anything else in the way is said and never cloned over. Closing the modal stops a clone. **Where it differs from the
 plan:** the modal does not create the work by itself after cloning; it carries on with the repository in use, and the
 person presses Create, as for any repository. **For C4:** a clone whose checked-out branch has no setup is refused
@@ -103,6 +104,11 @@ the branches that have it. **Not yet seen in the running app.**
 - **A remote-only branch can be a base.** After a clone only the default branch exists locally, and starting work needs
   a local one. Choosing another makes the local branch from `origin/<branch>` first, with no checkout, so it never
   moves the person's working branch. The list for a clone shows local and remote branches together.
+- **Start them at a good place** (Noah, 2026-10-08): the branch field appears only after the clone, with a default
+  that works: the clone's checked-out branch when it has the setup file, else the most recently updated branch that has
+  it. **This is also what lets Coke be cloned at all:** today `cloneRepository` refuses to open a clone whose checked-out
+  branch (`develop`) has no `.flkd/workspace.json`. C4 stops refusing, opens the clone, and lets the branch field do the
+  work.
 - **The "no setup here" answer** (decision 5): after the clone, if the chosen base has no `.flkd/workspace.json`, say so
   and offer the branches that do, instead of failing at Start.
 - **Tests:** a remote-only branch chosen as the base starts work from it and leaves HEAD where it was; a base without the
