@@ -6,9 +6,9 @@ describe('the publishing line', () => {
 		expect(publishLineText({ state: 'unavailable' })).toBeNull();
 	});
 
-	it('says where publishing has got to while it is working', () => {
-		expect(publishLineText({ state: 'working' })).toBe('Syncing…');
-		expect(publishLineText({ state: 'shared', at: '2026-10-06T12:00:00Z' })).toBe('Everything is synced');
+	it('says nothing when everything is synced or a sync is running', () => {
+		expect(publishLineText({ state: 'working' })).toBeNull();
+		expect(publishLineText({ state: 'shared', at: '2026-10-06T12:00:00Z' })).toBeNull();
 	});
 
 	it('names the one thing that is held back, rather than saying some work is not synced', () => {

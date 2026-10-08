@@ -57,9 +57,8 @@ export const PublishBanner = ({ status: current, onChange }: { status: Status; o
 };
 
 /**
- * The small always-there line: where syncing is, in a few words. One word for it everywhere (this line, the
- * Sync button, the banner), so what the button starts is what the line says is happening. Nothing to say when there is
- * nothing to publish from here.
+ * The small line beside the Sync button. It shows only when something is held back; when all is well, or a sync is
+ * running (the button says so), there is nothing to say.
  *
  * When something is held back, it names it. "Some work is not published" followed a person across
  * every screen without saying which work or what to do about it, so it read as nagging about
@@ -68,8 +67,6 @@ export const PublishBanner = ({ status: current, onChange }: { status: Status; o
  * hover without leaving the screen.
  */
 export const publishLineText = (status: Status): string | null => {
-	if (status.state === 'working') return 'Syncing…';
-	if (status.state === 'shared') return 'Everything is synced';
 	if (status.state !== 'held') return null;
 	const held = status.problems;
 	if (held.length === 1) return `Not synced: ${held[0]?.what}`;
