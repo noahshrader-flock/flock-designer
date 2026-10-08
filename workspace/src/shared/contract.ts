@@ -240,6 +240,16 @@ export interface CatalogComponent {
 	partOf: string | null;
 }
 
+/** The previews of the library's stories, built from `develop` (DESIGN_SYSTEM_PLAN.md, P1). */
+export type StoryPreview =
+	/** Built: a story file's page is `base` with `?file=<its path>`. */
+	| { state: 'ready'; base: string }
+	/** The clone has no packages installed to build from. */
+	| { state: 'no-packages'; root: string }
+	| { state: 'failed'; error: string }
+	/** No library connected or found. */
+	| { state: 'no-library' };
+
 /** How the library's `develop` was brought up to date for this read. */
 export type CatalogUpdate =
 	/** A fetch is running; ask again with `refresh` for its outcome. */
@@ -319,6 +329,8 @@ export interface WorkspaceApi {
 	 * repository that is a design system is cloned; `cancelClone` stops it.
 	 */
 	cloneDesignSystem(repository: string): Promise<Result<null>>;
+	/** The previews of the library's stories, built from `develop` once per commit; waits for the build. */
+	storyPreview(): Promise<Result<StoryPreview>>;
 	/** Where this person's clones go: the folder they chose, or the default. */
 	cloneFolder(): Promise<Result<string>>;
 	/** Asks for the clone folder with the system's folder picker, and keeps it. Null if the person cancels. */
@@ -739,6 +751,7 @@ export const CHANNELS = {
 	designSystemCatalog: 'workspace:designSystemCatalog',
 	locateDesignSystem: 'workspace:locateDesignSystem',
 	cloneDesignSystem: 'workspace:cloneDesignSystem',
+	storyPreview: 'workspace:storyPreview',
 	cloneFolder: 'workspace:cloneFolder',
 	chooseCloneFolder: 'workspace:chooseCloneFolder',
 	clonePlan: 'workspace:clonePlan',

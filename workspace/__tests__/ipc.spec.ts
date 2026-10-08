@@ -127,6 +127,7 @@ beforeEach(async () => {
 		cloneFolders: new (await import('../src/main/services/cloneFolder')).CloneFolderMemory(join(home, 'clone-folder.json')),
 		cloner: new (await import('../src/main/services/clone')).Cloner({ urlOf: (r) => cloneSources[r] ?? 'file:///nowhere' }),
 		designSystems: new (await import('../src/main/services/designLibrary')).DesignSystemMemory(join(home, 'design-system.json')),
+		storyPreviewsRoot: join(home, 'story-previews'),
 	});
 });
 
@@ -148,6 +149,11 @@ describe('the Design System catalog', () => {
 		g(home, 'init', '-q', lib);
 		g(lib, 'remote', 'add', 'origin', 'git@github.com:flocksafety/flock-react-component-lib.git');
 		expect(await call(CHANNELS.designSystemCatalog, false)).toEqual({ ok: true, value: { state: 'no-develop', root: lib } });
+	});
+
+	it('has no previews to build when there is no library, and takes nothing from the window', async () => {
+		expect(await call(CHANNELS.storyPreview)).toEqual({ ok: true, value: { state: 'no-library' } });
+		expect(await call(CHANNELS.storyPreview, '/etc', 'x')).toEqual({ ok: true, value: { state: 'no-library' } });
 	});
 
 	describe('connecting it', () => {

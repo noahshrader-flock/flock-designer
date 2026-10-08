@@ -36,6 +36,7 @@ import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIter
 import { type Cloned, Cloner, type GitProgress, notClonedOver } from './services/clone';
 import { INSTALL_COMMAND, Installer } from './services/install';
 import { connectLibrary, DesignLibrary, DesignSystemMemory, libraryFinder } from './services/designLibrary';
+import { StoryPreviews } from './services/storyPreviews';
 import { isDesignSystem } from '../shared/catalog';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
@@ -139,6 +140,8 @@ export interface IpcContext {
 	designLibrary?: DesignLibrary;
 	/** The design system the person connected. */
 	designSystems?: DesignSystemMemory;
+	/** Where the previews of the library's stories are built: the app's own folder, never the library's. */
+	storyPreviewsRoot?: string;
 }
 
 export const registerIpc = ({
@@ -160,6 +163,7 @@ export const registerIpc = ({
 	installer = new Installer(),
 	designLibrary,
 	designSystems = new DesignSystemMemory(join(tmpdir(), 'flock-designer-design-system.json')),
+	storyPreviewsRoot = join(tmpdir(), 'flock-designer-story-previews'),
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
@@ -299,8 +303,11 @@ export const registerIpc = ({
 	ipcMain.handle(CHANNELS.cloneFolder, guard(cloneFolder));
 
 	// The window says only whether to wait for the update; where the library is, it is never told and never asks.
-	const library = designLibrary ?? new DesignLibrary({ find: libraryFinder(designSystems, cloneFolder) });
+	const findLibrary = libraryFinder(designSystems, cloneFolder);
+	const library = designLibrary ?? new DesignLibrary({ find: findLibrary });
 	ipcMain.handle(CHANNELS.designSystemCatalog, guard((refresh: unknown) => library.catalog(refresh === true)));
+	const previews = new StoryPreviews({ find: () => findLibrary().root, folder: storyPreviewsRoot, server: prototypeServer });
+	ipcMain.handle(CHANNELS.storyPreview, guard(() => previews.preview()));
 	// Chosen with the system's picker, here, and checked before it is kept: the window never names a folder.
 	ipcMain.handle(
 		CHANNELS.locateDesignSystem,

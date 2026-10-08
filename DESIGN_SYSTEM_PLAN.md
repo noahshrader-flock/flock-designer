@@ -68,8 +68,8 @@ library):**
 | **All 80 story files build in one page in 5.5 s** (7.3 MB, of which 3.9 MB is the icon font), and **all 359 stories render**, none failing to compose | One build per `develop` commit serves every component page |
 | **Ten stories render blank on one shared page:** `FSDialog`, `FSDrawer` (7), `FSMenu`, `FSPipWindow`, which open into the page's body or a new window | Decision 9's one frame per story. Some (a closed menu) will still be blank until clicked, as they are in Storybook's own canvas, and a card says "Opens on click" rather than looking broken: P2 |
 | **Three things the library's Storybook gets from its own setup had to be given:** a Sass compiler (some components import `.scss`), an alias for `react-image-gallery`'s stylesheet (its package hides the path), and an empty stand-in for `.mdx` files (the docs template `preview.tsx` imports) | P1's build config. Each is one line, and each is tested |
-| **Vite and the React plugin were the library's own installed copies in the spike.** The app already depends on `@vitejs/plugin-react` and `electron-vite` (which carries Vite); it does not have `sass` | P1 uses **the app's own** Vite and plugin, and adds `sass` to the app, so building runs none of the library's installed tools in the app's process. The library's code runs only in the preview page, which is sandboxed (`pageView.ts`) |
-| **The clone's packages are installed for whatever branch it has checked out,** not necessarily for `develop` | A dependency `develop` added since would fail the build for the components that use it: said on those cards, not as a broken tab. And a clone with no packages installed cannot build at all: P1 says so and offers the app's existing installer |
+| **The build is the app's own esbuild plus Sass, not Vite** (measured 2026-10-08 against `develop`: all story files in **1.8 s**, against 5.5 s with Vite, **362 stories rendering**) | The app already depends on `esbuild`; P1 adds `sass`, with no new audit finding. No library tool runs in the app. The library's code runs only in the sandboxed preview view |
+| **`develop`'s own packages cannot be installed from here without a registry login:** npm goes through Flock's internal registry (CodeArtifact), and the login on this machine had expired (HTTP 401 on every package, public ones too) | **Not needed.** Built against the clone's own installed packages, `develop` needs only one thing missing: `src/icons/symbols.generated.ts`, a file the library generates at install time (from a package its generator, not its components, imports) and does not keep in git. Only `FSSelect` uses it. A build sets aside exactly what it cannot resolve, once, and a story that reaches for it says "Not installed here: … Run npm install in the library" in its own card. **No npm, no registry, no login** |
 
 **Read for tokens and for embedding Storybook (2026-10-08, from `origin/develop` and a scratch build; nothing written to
 the library):**
@@ -97,7 +97,7 @@ already has (decision 4), so a slow fetch costs nothing the person waits on.
 | 4 | **Which branch is read, and how is it kept current?** | **`develop`, read as `origin/develop`** (Noah: `develop` is the source of truth). **The app fetches that one ref when the tab opens and when the person presses Sync,** and reads git's copy, not the folder. No local branch and no file is touched, so the person's checked-out branch and unfinished work make no difference. The header shows `develop`, the short commit and its date, and "Updated just now" or "Could not update: <reason>, showing <date>". Branches built on top of `develop` are the later expansion of this plan | A local `develop` was measured eight days stale; reading `origin/develop` and fetching it is what makes "the source of truth" true without making anyone remember a step (requirement 3). The list shows at once from what is already there, and the fetch replaces it if it brought anything. A failed fetch (offline, no credentials) never blanks the tab |
 | 5 | **Are parts (`FSCardContent`) listed?** | **Yes, under their parent, quiet.** A component with no story is a **part** when another component **with** a story has a name that is a proper prefix of it (longest match: `FSListItemText` belongs to `FSList`, `FSTableBody` to `FSTable`). It is shown beneath its parent with no "No story" mark. A component with no story and no such parent is a **gap** and is marked | Computed on `develop`: 25 parts and six gaps, which matches what the Design System owner would say by eye. The mark means something |
 | 6 | **What does the tab say about Chromatic access?** | **Nothing, for now** (Noah, 2026-10-08) | It was one line under the header; removed with the **Without a story** filter, which Noah also did not want. The **No story** badge on a gap stays |
-| 8 | **How is a preview made?** | **Storybook's portable stories** (`composeStories` and `setProjectAnnotations` from `@storybook/react`, made for rendering stories outside Storybook), with the library's own `.storybook/preview.tsx`, so every story gets the FUI theme and decorators it has in Storybook. **One build of every story per `develop` commit,** with Vite, from a copy of `develop` made with `git archive` into the app's folder and the clone's installed packages; cached until `develop` moves | Measured (spike, below): every story builds in 5.5 s, the same as one, so one build serves the whole tab. `git archive` leaves no trace in the clone (a worktree would add one to its `.git`). No Storybook server, no second copy of anything |
+| 8 | **How is a preview made?** | **Storybook's portable stories** (`composeStories` and `setProjectAnnotations` from `@storybook/react`, made for rendering stories outside Storybook), with the library's own `.storybook/preview.tsx`, so every story gets the FUI theme and decorators it has in Storybook. **One build of every story per `develop` commit,** by the app's own esbuild and Sass, from a copy of `develop` made with `git archive` into the app's folder and **the clone's own installed packages**; cached until `develop` moves | Measured: every story builds in 1.8 s, the same as one, so one build serves the whole tab. `git archive` leaves no trace in the clone (a worktree would add one to its `.git`). No Storybook server, no second copy of anything, and no network or login |
 | 9 | **Where is a preview shown?** | **Click a component, and it opens on its own page in the tab:** its name, subtitle and links, then **each of its stories as a card**, named, rendered live, each in its own frame. Back returns to the list where it was | One frame per story, as Storybook's own preview does: a dialog or drawer renders into the page's body, so on a shared page they cover each other (the spike showed 359 stories, ten of them blank because they open into the body). A frame also keeps one broken story from taking the others down |
 | 10 | **Pictures in the list itself?** | **Not yet.** After P2 is used, P3 adds a small picture of each component's first story to its row, taken once per `develop` commit | The list stays fast and useful without them; the component page is where seeing it matters. Pictures cost a render of every component, which is worth doing once people have asked for it |
 | 15 | **Embed Storybook for the preview instead?** | **No, not for reading** (Noah and Claude, 2026-10-08). The preview renders **the library's own stories** with the library's own `FSApp`, as decision 8 says, and Storybook stays where docs, controls and prop tables live | It costs nothing per component: the catalog already lists every story file, and the generated entry imports them all, so **a new component appears with nothing added here**. It is not a second Storybook: no docs, no controls, no rewritten stories. Embedding Storybook needs its dev server on the working tree (see the facts above). **It is the right tool for the later editing stage** (edit a branch, watch Storybook update, open the pull request), and the preview build runs on a branch as well as on `develop`, so choosing this now closes nothing |
@@ -120,7 +120,7 @@ nothing on GitHub changed.
 | **S2** (done) | **Finding the library, bringing it up to date, and reading it:** locate the clone, fetch `origin/develop`, read it through git; one named operation on the contract | S1, decisions 1, 4 | M | Low |
 | **S3** (done) | **The tab:** grouped list, search, links, header, the four states | S2, decisions 3, 5 to 7 | M | Low |
 | **P0** (done) | **Connect the design system:** the centred screen with **Clone** and **Locate**, and a connection that is remembered. **Replaces S4** | S2, S3, decisions 11 to 14 | M | Medium |
-| **P1** | **Build the previews:** one page of every story from `develop`, cached by commit, one story per address | P0, decision 8 | M | **Medium** |
+| **P1** (done) | **Build the previews:** one page of every story from `develop`, cached by commit, one story per address | P0, decision 8 | M | **Medium** |
 | **P2** | **The component page:** click a row, see its stories as live cards | P1, decision 9 | M | Medium |
 | **P3** | **Pictures in the list:** a small picture of each component on its row | P2, decision 10 | M | Low |
 | **T1** | **Adjust tokens in the preview:** colours, spacing and radius, seen live, written nowhere | P2, decision 16 | L | Medium |
@@ -176,34 +176,20 @@ Clone reuses the New modal's picker and clone panel (decision 14); the app still
 no forks (decision 13); and removing or replacing a connection is not in P0, but is expected later, which is why
 decision 12's automatic find stays out of its way. Nothing is open.
 
-### P1: Build the previews
+### P1: Build the previews (done 2026-10-08)
 
-New `services/storyPreviews.ts`, in the main process.
-
-- **The copy:** `git archive <origin/develop commit> src .storybook package.json` unpacked into the app's own folder
-  (`<userData>/story-previews/<commit>/`), with `node_modules` a link to the clone's. Nothing is written in the clone.
-- **The entry:** generated, importing every story file from S1's catalog, `composeStories` and `.storybook/preview.tsx`,
-  which wraps each story in the library's own `FSApp` and so its theme. **Nothing is kept up per component:** the list of
-  stories is the catalog's, so a component added to `develop` is in the next build. **No theme slot is built:** `FSApp`
-  already takes a `theme`, which is what T1 will pass.
-  The page reads its address (`?story=<file>:<export>`) and renders that one story, alone, in a small error boundary
-  that shows the error instead of a blank. `?component=<id>` lists the component's stories for P2.
-- **The build:** the app's own Vite and `@vitejs/plugin-react`, plus `sass` added to the app, the `react-image-gallery`
-  alias and the `.mdx` stand-in. Run in a child process, so a slow build never blocks the window. One build at a time
-  per commit; a second ask waits for it.
-- **The cache:** a build is kept for its commit and served by the app's existing `PrototypeServer` on `127.0.0.1`. When
-  `develop` moves, the next ask builds the new commit and the old folder is removed.
-- **What it says:** building (with how long the last one took), built, or why not: no packages installed in the clone
-  (with **Install packages**, the existing installer), or the build's own error.
-- **One new operation,** `storyPreview(): Promise<Result<StoryPreviews>>`: `{ state: 'building' } | { state: 'ready';
-  base: string } | { state: 'no-packages' } | { state: 'failed'; error }`. `base` is the local address; the window
-  adds `?story=` itself and sends nothing else.
-- **Tests:** against a small library made in the test (a bare `develop` with two components, one importing `.scss`, one
-  story that throws), with packages linked from the app's own `node_modules`: the build renders each story alone at its
-  address; a throwing story shows its error and the other renders; the cache is reused for the same commit and rebuilt
-  for a new one, and the old one removed; no packages gives `no-packages`; the clone's files, branches and `.git` are
-  untouched (compared before and after). **One test against the real library** (skipped when it is not here): every
-  story file composes.
+**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+short: `services/storyPreviews.ts` (`StoryPreviews`) builds one page of every story file of `develop`, once per commit,
+into the app's own folder, and `PrototypeServer.serveFolder` serves it on this machine only; the new `storyPreview`
+channel answers `ready` (with the page's address), `no-library`, `no-packages` (React or Storybook's stories not
+installed in the clone) or `failed` (with the build's own words). A story file's page is `<base>?file=<path>`, and
+draws every story in it, each by name in its own error boundary, telling the frame that holds it how tall it is
+(`postMessage({ flockPreviewHeight })`). The window's frame source is allowed in its security policy. **For P2:** the
+channel waits for the build (about two seconds the first time, then at once), so the window shows "Building…" while it
+waits; `CatalogComponent.stories[].file` is the `file` to ask for. **Where it differs from the plan:** no Vite, no
+`Install packages` step and no `no-packages` fix beyond saying to run `npm install` in the library: the build needs no
+registry, and sets aside only what the clone has not installed. **Not seen in the app yet:** P2 is the first thing that
+shows it.
 
 ### P2: The component page
 
@@ -293,15 +279,15 @@ Nothing below is built, and nothing is shaped now except the first line.
 | **A connected folder is moved or deleted** | The tab would show an error or nothing | The connection is re-checked on every read; a missing folder returns the Connect screen with what was lost, never a blank tab |
 | **Locate connects something that is not the library** | The tab would show the wrong list | Decision 13: the folder's `origin` is checked before it is connected, and again on every read |
 | **The tab becomes a second Storybook** | The thing Noah said not to do | Requirement 2 is the test for every addition: previews show the stories as written, and anything about controlling or documenting them links to Storybook |
-| **A preview build fails on `develop`** (a dependency `develop` added that the clone has not installed, or a story that only builds in Storybook's own setup) | No previews at all, or blank cards | One build fails as a whole: the page says so with the error and **Install packages**. A single story that throws is shown with its error in its own card. The real-library test runs every story file |
+| **A preview build fails on `develop`** (a story that only builds in Storybook's own setup, or a real error in the library) | No previews at all, or blank cards | A package or generated file the clone lacks is set aside, and only the stories that use it say so. Any other build error is said as it is. A single story that throws is shown with its error in its own card. The real-library test builds every story file |
 | **A theme change does not reach every component (T1)** | A colour control that moves some things and not others looks broken | Checked before T1 is built, and said in the control for what does not follow; the hardcoded `8px` and `360px` are a library cleanup |
-| **Building runs code** | Trust | The app's own Vite, plugin and Sass run in its process; the library's code runs only in the sandboxed preview view, which has no bridge to the app (`pageView.ts`), as prototypes do |
+| **Building runs code** | Trust | The app's own esbuild and Sass run in its process, on a copy of `develop` taken out of git; the library's code runs only in the sandboxed preview view, which has no bridge to the app (`pageView.ts`), as prototypes do. The page's only message out is its height |
 | **A build is slow or large** | A wait the first time, and disk | 5.5 s measured; built once per `develop` commit, in the background, with the old one removed. 7.3 MB a build |
 
 ## Next
 
-**S1 to S3 and P0 are done. P1 is Ready:** scope fixed, files known, tests named, and the choice between rendering the
-library's stories and embedding Storybook made (decision 15). Then P2; P3 and T1 wait for P2 to be used.
+**S1 to S3, P0 and P1 are done. P2 is Ready:** the previews exist and are served; P2 is the first thing that shows them (the
+component page, and the row opening it). P3 and T1 wait for P2 to be used.
 
 **By hand, Noah:** look at the tab in the running app (built, not yet seen), and open one Storybook link from it (it
 needs Chromatic access).

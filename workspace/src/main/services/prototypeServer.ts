@@ -1,4 +1,21 @@
+import { readFile } from 'node:fs/promises';
 import { type Server, createServer } from 'node:http';
+import { extname, join, normalize, sep } from 'node:path';
+
+/** What a built folder holds, by extension: the page, its script and styles, and the fonts and pictures they use. */
+const TYPES: Record<string, string> = {
+	'.html': 'text/html; charset=utf-8',
+	'.js': 'text/javascript; charset=utf-8',
+	'.css': 'text/css; charset=utf-8',
+	'.json': 'application/json',
+	'.woff2': 'font/woff2',
+	'.woff': 'font/woff',
+	'.ttf': 'font/ttf',
+	'.svg': 'image/svg+xml',
+	'.png': 'image/png',
+	'.jpg': 'image/jpeg',
+	'.gif': 'image/gif',
+};
 
 /**
  * Serves prototypes to the review screen, from this process, on this machine only.
@@ -11,6 +28,8 @@ export class PrototypeServer {
 	private server: Server | null = null;
 	private port = 0;
 	private readonly pages = new Map<string, string>();
+	/** Built folders served whole (the component previews), by the key their address starts with. */
+	private readonly folders = new Map<string, string>();
 	/** Large files pages share (fonts, mostly), by content name, as the data they were embedded as. */
 	private readonly shared = new Map<string, { type: string; body: Buffer }>();
 
@@ -38,6 +57,31 @@ export class PrototypeServer {
 		return `http://127.0.0.1:${this.port}/${key}/`;
 	}
 
+	/**
+	 * Serves a built folder at `/<key>/`, its `index.html` at the root, every other file by its path under it. Nothing
+	 * outside the folder is reachable. Files are sent to any origin, since a preview frame is sandboxed into one of its own.
+	 */
+	async serveFolder(key: string, dir: string): Promise<string> {
+		this.folders.set(key, dir);
+		if (!this.server) await this.listen();
+		return `http://127.0.0.1:${this.port}/${key}/`;
+	}
+
+	private async fromFolder(path: string): Promise<{ type: string; body: Buffer } | null> {
+		const [, key, ...rest] = path.split('/');
+		const dir = key === undefined ? undefined : this.folders.get(key);
+		if (dir === undefined) return null;
+		const file = normalize(join(dir, decodeURIComponent(rest.join('/')) || 'index.html'));
+		if (!file.startsWith(dir + sep)) return null;
+		const type = TYPES[extname(file)];
+		if (type === undefined) return null;
+		try {
+			return { type, body: await readFile(file) };
+		} catch {
+			return null;
+		}
+	}
+
 	private listen(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			const server = createServer((req, res) => {
@@ -48,6 +92,13 @@ export class PrototypeServer {
 					return;
 				}
 				const html = req.method === 'GET' ? this.pages.get(path) : undefined;
+				if (html === undefined && req.method === 'GET' && this.folders.size > 0) {
+					void this.fromFolder(path).then((found) => {
+						if (found === null) return void res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
+						res.writeHead(200, { 'Content-Type': found.type, 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' }).end(found.body);
+					});
+					return;
+				}
 				if (html === undefined) {
 					res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
 					return;

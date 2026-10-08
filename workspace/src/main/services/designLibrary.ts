@@ -92,7 +92,7 @@ export const fetchProblem = (stderr: string): string => {
 };
 
 /** The commit `origin/develop` is at, or null when the clone has none. */
-const developCommit = async (root: string): Promise<string | null> => {
+export const developCommit = async (root: string): Promise<string | null> => {
 	try {
 		return (await runGit(root, ['rev-parse', '--verify', '--quiet', `${DEVELOP}^{commit}`])) || null;
 	} catch {
@@ -119,12 +119,12 @@ export const updateLibrary = async (root: string): Promise<Exclude<CatalogUpdate
  * `git cat-file --batch`, so the files the catalog asks for next are already here: one git process for eighty stories,
  * not eighty. A file not read that way is read on its own.
  */
-export const libraryReads = (root: string): CatalogReads => {
+export const libraryReads = (root: string, ref: string = DEVELOP): CatalogReads => {
 	const read = new Map<string, Promise<Map<string, string>>>();
 	const readStories = async (paths: string[]): Promise<Map<string, string>> => {
 		// A header no story can contain, then the object as git stores it; `%(rest)` gives back the path asked for.
 		const mark = `@@flock-designer-${Math.random().toString(36).slice(2)}@@`;
-		const out = await runGit(root, ['cat-file', `--batch=${mark} %(objecttype) %(rest)`], undefined, undefined, paths.map((p) => `${DEVELOP}:${p} ${p}\n`).join(''));
+		const out = await runGit(root, ['cat-file', `--batch=${mark} %(objecttype) %(rest)`], undefined, undefined, paths.map((p) => `${ref}:${p} ${p}\n`).join(''));
 		const files = new Map<string, string>();
 		for (const chunk of `\n${out}`.split(`\n${mark} `).slice(1)) {
 			const newline = chunk.indexOf('\n');
@@ -135,7 +135,7 @@ export const libraryReads = (root: string): CatalogReads => {
 	};
 	return {
 		listFiles: async (dir) => {
-			const files = (await runGit(root, ['ls-tree', '-r', '--name-only', DEVELOP, '--', dir])).split('\n').filter(Boolean);
+			const files = (await runGit(root, ['ls-tree', '-r', '--name-only', ref, '--', dir])).split('\n').filter(Boolean);
 			const stories = files.filter((f) => /\.stories\.tsx$/.test(f) && !/\s/.test(f));
 			if (stories.length > 0) read.set(dir, readStories(stories).catch(() => new Map()));
 			return files;
@@ -145,7 +145,7 @@ export const libraryReads = (root: string): CatalogReads => {
 				const text = (await batch).get(path);
 				if (text !== undefined) return text;
 			}
-			return runGit(root, ['show', `${DEVELOP}:${path}`]);
+			return runGit(root, ['show', `${ref}:${path}`]);
 		},
 	};
 };

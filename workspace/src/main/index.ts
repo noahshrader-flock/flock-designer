@@ -164,6 +164,7 @@ void app.whenReady().then(() => {
 		sessions: new SessionMemory(SessionMemory.defaultPath(app.getPath('userData'))),
 		cloneFolders: new CloneFolderMemory(CloneFolderMemory.defaultPath(app.getPath('userData'))),
 		designSystems: new DesignSystemMemory(DesignSystemMemory.defaultPath(app.getPath('userData'))),
+		storyPreviewsRoot: join(app.getPath('userData'), 'story-previews'),
 	});
 	window.on('closed', () => prototypeServer.close());
 	// Coming back to the window is a good moment to publish whatever was done while it was away.

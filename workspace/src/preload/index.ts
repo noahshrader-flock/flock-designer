@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { CHANNELS } from '../shared/contract';
 import type {
 	Catalog,
+	StoryPreview,
 	AgentStatus,
 	Checkout,
 	ClonePlan,
@@ -69,6 +70,7 @@ const api: WorkspaceApi = {
 	designSystemCatalog: (refresh) => invoke<Catalog>(CHANNELS.designSystemCatalog, refresh),
 	locateDesignSystem: () => invoke<boolean>(CHANNELS.locateDesignSystem),
 	cloneDesignSystem: (repository) => invoke<null>(CHANNELS.cloneDesignSystem, repository),
+	storyPreview: () => invoke<StoryPreview>(CHANNELS.storyPreview),
 	cloneFolder: () => invoke<string>(CHANNELS.cloneFolder),
 	chooseCloneFolder: () => invoke<string | null>(CHANNELS.chooseCloneFolder),
 	clonePlan: (repository) => invoke<ClonePlan>(CHANNELS.clonePlan, repository),
