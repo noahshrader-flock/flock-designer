@@ -29,6 +29,12 @@ export const originOf = (root: string, read: (path: string) => string = (p) => r
 	return /^\s*url\s*=\s*(.+)$/m.exec(section)?.[1]?.trim() ?? null;
 };
 
+/** `repository` as `list` names it, matched without case as GitHub matches names, or undefined when it is not there. */
+export const listedAs = (list: string[], repository: string): string | undefined => {
+	const wanted = String(repository).toLowerCase();
+	return list.find((r) => r.toLowerCase() === wanted);
+};
+
 /**
  * GitHub's list (most recently pushed first, as GitHub returns it) with each repository's clone filled in,
  * then the clones GitHub did not list. Names compare without case, as GitHub's do.

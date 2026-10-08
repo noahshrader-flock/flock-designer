@@ -33,11 +33,11 @@ import { buildContextReceipt } from './services/contextReceipt';
 import { DESCRIPTOR_PATH, findCommand, readDescriptor } from './services/descriptor';
 import { branchCommit, branchExists, branchesWithFile, ensureLocalBranch, isRepository, readCheckout, recentBranches, runGit } from './services/git';
 import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
-import { Cloner } from './services/clone';
+import { Cloner, type GitProgress, notClonedOver } from './services/clone';
 import { INSTALL_COMMAND, Installer } from './services/install';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
-import { gitHubRepoOf, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
+import { gitHubRepoOf, listedAs, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
 import { classify, readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
 import { ADDRESS_SKILL, chooseComment, prepareAddress } from './services/address';
@@ -312,30 +312,32 @@ export const registerIpc = ({
 	let visible: string[] = [];
 	let cloning: AbortController | null = null;
 	const DESIGN = `${DESIGN_REPO.owner}/${DESIGN_REPO.repo}`;
-	const planClone = async (repository: string): Promise<ClonePlan> => {
+	/** What cloning `repository` into `folder` would do. */
+	const planClone = async (repository: string, folder: string): Promise<ClonePlan> => {
 		if (visible.length === 0 && github.state().state === 'signedIn') visible = await visibleRepositories(github);
-		const listed = visible.find((r) => r.toLowerCase() === String(repository).toLowerCase());
+		const listed = listedAs(visible, repository);
 		if (listed === undefined) throw new Error(`${repository} is not one of the repositories your GitHub account can see. Sign in to GitHub in Flock Designer, then try again.`);
-		const folder = cloneFolder();
 		const design = clonePlace(folder, DESIGN);
 		const place = clonePlace(folder, listed);
 		const home = homedir();
 		const where = place.path.startsWith(home + sep) ? `~${place.path.slice(home.length)}` : place.path;
 		return { repository: listed, place, where, design: design.state === 'cloned' ? null : design };
 	};
-	ipcMain.handle(CHANNELS.clonePlan, guard(planClone));
+	ipcMain.handle(CHANNELS.clonePlan, guard((repository: string) => planClone(repository, cloneFolder())));
 	ipcMain.handle(
 		CHANNELS.cloneRepository,
 		guard(async (repository: string): Promise<Checkout> => {
-			const plan = await planClone(repository);
-			for (const p of [plan.place, plan.design]) if (p?.state === 'taken') throw new Error(`${p.why} Nothing was cloned over it.`);
 			const folder = cloneFolder();
+			const plan = await planClone(repository, folder);
+			// Both asked first, so the product is not cloned only for the design repository to be in the way.
+			for (const p of [plan.place, plan.design]) if (p?.state === 'taken') throw new Error(notClonedOver(p.why));
 			const stop = (cloning = new AbortController());
-			const progress = (of: string) => (p: { step: string; percent: number | null }) => window.webContents.send(CHANNELS.cloneProgress, { repository: of, ...p });
+			const progress = (of: string) => (p: GitProgress) => window.webContents.send(CHANNELS.cloneProgress, { repository: of, ...p });
 			let product: string;
 			let fresh: boolean;
 			try {
 				({ path: product, cloned: fresh } = await cloner.clone({ repository: plan.repository, visible, folder }, progress(plan.repository), stop.signal));
+				// The design repository is the app's own, named here, never by the window: it is the whole list it may clone.
 				if (plan.design) await cloner.clone({ repository: DESIGN, visible: [DESIGN], folder }, progress(DESIGN), stop.signal);
 			} finally {
 				cloning = null;

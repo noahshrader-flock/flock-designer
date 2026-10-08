@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AgentReadiness, Checkout, ClonePlan, CloneProgress, IterationKind, Project, ProjectIteration, PrototypeReadiness, Repository } from '../shared/contract';
+import type { AgentReadiness, Checkout, ClonePlan, IterationKind, Project, ProjectIteration, PrototypeReadiness, Repository } from '../shared/contract';
 import { freshIteration, slugify } from '../shared/projects';
 import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -77,7 +77,8 @@ export const NewWork = ({
 	const id = slugify(name);
 	// Cloning a repository with no clone here: what it would do, and, while it runs, how far it has got.
 	const [clonePlan, setClonePlan] = useState<ClonePlan | null>(null);
-	const [cloning, setCloning] = useState<CloneProgress | 'starting' | null>(null);
+	// What the clone is doing, as it is shown, while one runs.
+	const [cloning, setCloning] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!open) return;
@@ -119,7 +120,13 @@ export const NewWork = ({
 	}, [toClone]);
 	useEffect(askPlan, [askPlan]);
 	// Only while one runs: a line arriving after it ended does not bring it back.
-	useEffect(() => window.workspace.onCloneProgress((p) => setCloning((c) => (c === null ? null : p))), []);
+	useEffect(
+		() =>
+			window.workspace.onCloneProgress((p) =>
+				setCloning((c) => (c === null ? null : `Cloning ${p.repository.split('/')[1]}: ${p.step}${p.percent === null ? '' : ` ${p.percent}%`}`)),
+			),
+		[],
+	);
 
 	const changeFolder = async () => {
 		const r = await window.workspace.chooseCloneFolder();
@@ -129,7 +136,7 @@ export const NewWork = ({
 	const clone = async () => {
 		if (toClone === null) return;
 		setError(null);
-		setCloning('starting');
+		setCloning(`Cloning ${toClone.split('/')[1]}…`);
 		const r = await window.workspace.cloneRepository(toClone);
 		setCloning(null);
 		// Stopped by closing the modal: nobody is there to be told it was stopped.
@@ -328,13 +335,7 @@ export const NewWork = ({
 										{installing === null ? (
 											<Button onClick={() => void install()}>Install packages</Button>
 										) : (
-											<div className="flex w-full items-center gap-2">
-												<Spinner />
-												<span className="min-w-0 grow truncate">{installing}</span>
-												<Button size="sm" variant="outline" onClick={() => void window.workspace.cancelInstall()}>
-													Stop
-												</Button>
-											</div>
+											<Working text={installing} onStop={() => void window.workspace.cancelInstall()} />
 										)}
 									</div>
 								) : prototype.why === 'not-installed' ? (
@@ -417,29 +418,14 @@ const CloneHere = ({
 	onStop,
 }: {
 	plan: ClonePlan;
-	cloning: CloneProgress | 'starting' | null;
+	cloning: string | null;
 	onChangeFolder: () => void;
 	onClone: () => void;
 	onStop: () => void;
 }) => {
 	const { place, design } = plan;
 	const taken = [place, design].find((p) => p?.state === 'taken');
-	const name = plan.repository.split('/')[1];
-	if (cloning !== null) {
-		return (
-			<div className="flex items-center gap-2 text-xs">
-				<Spinner />
-				<span className="grow">
-					{cloning === 'starting'
-						? `Cloning ${name}…`
-						: `Cloning ${cloning.repository.split('/')[1]}: ${cloning.step}${cloning.percent === null ? '' : ` ${cloning.percent}%`}`}
-				</span>
-				<Button size="sm" variant="outline" onClick={onStop}>
-					Stop
-				</Button>
-			</div>
-		);
-	}
+	if (cloning !== null) return <Working text={cloning} onStop={onStop} />;
 	return (
 		<div className="flex flex-col items-start gap-2">
 			{taken?.state === 'taken' && (
@@ -466,3 +452,14 @@ const CloneHere = ({
 		</div>
 	);
 };
+
+/** A long job running from the modal (a clone, an install): what it is doing now, and a way to stop it. */
+const Working = ({ text, onStop }: { text: string; onStop: () => void }) => (
+	<div className="flex w-full items-center gap-2 text-xs">
+		<Spinner />
+		<span className="min-w-0 grow truncate">{text}</span>
+		<Button size="sm" variant="outline" onClick={onStop}>
+			Stop
+		</Button>
+	</div>
+);

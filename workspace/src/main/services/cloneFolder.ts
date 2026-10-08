@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import type { ClonePlace } from '../../shared/contract';
 import { CODE_FOLDERS } from './discovery';
-import { gitHubRepoOf, originOf } from './repositories';
+import { gitHubRepoOf, listedAs, originOf } from './repositories';
 
 /**
  * Where this person's clones go: one folder, theirs to choose, which discovery looks through first, so a repository the
@@ -97,7 +97,7 @@ export const clonePlace = (folder: string, repository: string, deps: ClonePlaceD
 	if (!deps.exists(at) || deps.list(at).length === 0) return { state: 'free', path: at };
 	const origin = deps.exists((deps.paths ?? path).join(at, '.git')) ? deps.origin(at) : null;
 	const repo = origin === null ? null : gitHubRepoOf(origin);
-	if (repo !== null && repo.toLowerCase() === repository.toLowerCase()) return { state: 'cloned', path: at };
+	if (repo !== null && listedAs([repo], repository) !== undefined) return { state: 'cloned', path: at };
 	return {
 		state: 'taken',
 		path: at,

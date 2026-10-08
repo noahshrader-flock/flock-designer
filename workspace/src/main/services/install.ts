@@ -1,7 +1,7 @@
-import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { WorkspaceCommand } from '../../shared/contract';
+import { NotStarted, Stopped, runStreamed } from './streamed';
 
 /**
  * Installing a repository's packages from the New modal (C5 of the clone plan).
@@ -60,33 +60,21 @@ export class Installer {
 		if (file === undefined) throw new InstallProblem('The repository declares an install command with nothing in it.');
 		this.running = root;
 		try {
-			await new Promise<void>((done, fail) => {
-				const child = spawn(file, args, { cwd: root, shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: process.env, ...(signal ? { signal } : {}) });
-				let output = '';
-				const read = (chunk: Buffer) => {
-					const text = chunk.toString('utf8');
-					output = (output + text).slice(-32_000);
+			const { code, output } = await runStreamed(file, args, {
+				cwd: root,
+				signal,
+				onText: (text) => {
 					for (const line of text.split(/[\r\n]+/)) if (line.trim()) onLine(line.trim());
-				};
-				child.stdout.on('data', read);
-				child.stderr.on('data', read);
-				child.on('error', (err: NodeJS.ErrnoException) => {
-					if (signal?.aborted) return fail(new InstallProblem('The install was stopped. Run it again to finish it.'));
-					const node = nodeVersionOf(root);
-					fail(
-						new InstallProblem(
-							err.code === 'ENOENT'
-								? `${file} was not found on this computer. Install Node.js${node ? ` (this repository asks for ${node})` : ''} from https://nodejs.org, then try again.`
-								: `Could not run ${file}: ${err.message}`,
-						),
-					);
-				});
-				child.on('close', (code) => {
-					if (signal?.aborted) return fail(new InstallProblem('The install was stopped. Run it again to finish it.'));
-					if (code === 0) done();
-					else fail(new InstallProblem(installProblem(output, nodeVersionOf(root))));
-				});
+				},
 			});
+			if (code !== 0) throw new InstallProblem(installProblem(output, nodeVersionOf(root)));
+		} catch (err) {
+			if (err instanceof Stopped) throw new InstallProblem('The install was stopped. Run it again to finish it.');
+			if (err instanceof NotStarted && err.missing) {
+				const node = nodeVersionOf(root);
+				throw new InstallProblem(`${file} was not found on this computer. Install Node.js${node ? ` (this repository asks for ${node})` : ''} from https://nodejs.org, then try again.`);
+			}
+			throw err instanceof InstallProblem || !(err instanceof Error) ? err : new InstallProblem(err.message);
 		} finally {
 			this.running = null;
 		}

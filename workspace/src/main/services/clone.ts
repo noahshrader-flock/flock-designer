@@ -1,7 +1,8 @@
-import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
 import type { CloneProgress } from '../../shared/contract';
 import { clonePlace } from './cloneFolder';
+import { listedAs } from './repositories';
+import { NotStarted, Stopped, runStreamed } from './streamed';
 
 /**
  * Cloning a repository the person chose from their own GitHub list into their clone folder (C2 of the clone plan).
@@ -43,6 +44,9 @@ export class CloneProblem extends Error {
 const GIT_MISSING =
 	'Git is not installed on this computer, and cloning needs it. On a Mac, install it with `xcode-select --install` in Terminal, or from https://git-scm.com. On Windows, install Git for Windows from https://git-scm.com. Then try again.';
 
+/** What is said when something is in the way: it is never cloned over. */
+export const notClonedOver = (why: string): string => `${why} Nothing was cloned over it. Change where clones go, or move it.`;
+
 /** What git said, in words a person can act on. `repository` names what was being cloned. */
 export const cloneProblem = (repository: string, stderr: string): string => {
 	const said = stderr.trim().split('\n').filter((l) => !/^(Cloning into|remote: (Enumerating|Counting|Compressing|Total))/.test(l)).pop() ?? '';
@@ -83,11 +87,11 @@ export class Cloner {
 	async clone(req: CloneRequest, onProgress: (p: GitProgress) => void = () => undefined, signal?: AbortSignal): Promise<Cloned> {
 		if (this.running !== null) throw new CloneProblem(`Already cloning ${this.running}. Wait for it to finish.`);
 		// Only a repository the person's own list returned: the window cannot name one.
-		const listed = req.visible.find((r) => r.toLowerCase() === req.repository.toLowerCase());
+		const listed = listedAs(req.visible, req.repository);
 		if (listed === undefined) throw new CloneProblem(`${req.repository} is not one of the repositories your GitHub account can see.`);
 		const place = clonePlace(req.folder, listed);
 		if (place.state === 'cloned') return { path: place.path, cloned: false };
-		if (place.state === 'taken') throw new CloneProblem(`${place.why} Nothing was cloned over it. Choose another folder for clones, or move it.`);
+		if (place.state === 'taken') throw new CloneProblem(notClonedOver(place.why));
 
 		this.running = listed;
 		const dest = place.path;
@@ -104,7 +108,8 @@ export class Cloner {
 			return { path: dest, cloned: true };
 		} catch (err) {
 			if (made !== null && sameFolder(dest, made)) rmSync(dest, { recursive: true, force: true });
-			if (signal?.aborted) throw new CloneProblem(`Cloning ${listed} was stopped. Nothing was left behind.`);
+			if (err instanceof Stopped) throw new CloneProblem(`Cloning ${listed} was stopped. Nothing was left behind.`);
+			if (err instanceof NotStarted && err.missing) throw new CloneProblem(GIT_MISSING);
 			if (err instanceof CloneProblem) throw err;
 			if ((err as NodeJS.ErrnoException).code === 'ENOSPC') throw new CloneProblem(cloneProblem(listed, 'No space left on device'));
 			throw new CloneProblem(`Could not clone ${listed}: ${err instanceof Error ? err.message : String(err)}`);
@@ -113,27 +118,20 @@ export class Cloner {
 		}
 	}
 
-	private run(repository: string, dest: string, onProgress: (p: GitProgress) => void, signal?: AbortSignal): Promise<void> {
+	private async run(repository: string, dest: string, onProgress: (p: GitProgress) => void, signal?: AbortSignal): Promise<void> {
 		const url = (this.deps.urlOf ?? ((r) => `https://github.com/${r}.git`))(repository);
-		return new Promise((done, fail) => {
-			const child = spawn(this.deps.git ?? 'git', ['clone', '--progress', '--no-recurse-submodules', '--', url, dest], {
-				// Never wait for a password typed into a window that has no terminal: fail, and say how to sign in.
-				env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
-				stdio: ['ignore', 'ignore', 'pipe'],
-				...(signal ? { signal } : {}),
-			});
-			let stderr = '';
-			child.stderr.setEncoding('utf8');
-			child.stderr.on('data', (chunk: string) => {
-				stderr = (stderr + chunk).slice(-16_000);
-				// Progress is rewritten in place with carriage returns; each piece is a line.
-				for (const piece of chunk.split(/[\r\n]/)) {
+		const { code, output } = await runStreamed(this.deps.git ?? 'git', ['clone', '--progress', '--no-recurse-submodules', '--', url, dest], {
+			// Never wait for a password typed into a window that has no terminal: fail, and say how to sign in.
+			env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+			signal,
+			// Progress is rewritten in place with carriage returns; each piece is a line.
+			onText: (text) => {
+				for (const piece of text.split(/[\r\n]/)) {
 					const p = readProgress(piece);
 					if (p) onProgress(p);
 				}
-			});
-			child.on('error', (err: NodeJS.ErrnoException) => fail(err.code === 'ENOENT' ? new CloneProblem(GIT_MISSING) : err));
-			child.on('close', (code) => (code === 0 ? done() : fail(new CloneProblem(cloneProblem(repository, stderr)))));
+			},
 		});
+		if (code !== 0) throw new CloneProblem(cloneProblem(repository, output));
 	}
 }

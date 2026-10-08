@@ -29,16 +29,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const isLockContention = (detail: string): boolean => /index\.lock|Unable to create .*\.lock|another git process/i.test(detail);
 
-const attempt = async (root: string, args: string[], timeoutMs?: number, env?: Record<string, string>): Promise<string> => {
+const attempt = async (root: string, args: string[], timeoutMs?: number, env?: Record<string, string>, input?: string): Promise<string> => {
 	// `--no-optional-locks`: a read-only command (status, log, rev-parse) would otherwise
 	// refresh the index in the background and take the same lock a checkout needs. Git
 	// documents this flag for exactly the case of a tool polling a repository.
-	const { stdout } = await run('git', ['--no-optional-locks', '-C', root, ...args], {
+	const running = run('git', ['--no-optional-locks', '-C', root, ...args], {
 		maxBuffer: 16 * 1024 * 1024,
 		...(timeoutMs ? { timeout: timeoutMs } : {}),
 		// Never wait for someone to type a password into a window that has no terminal.
 		env: { ...process.env, GIT_TERMINAL_PROMPT: '0', ...env },
 	});
+	// What a command reads from its input (`cat-file --batch-check`), given all at once.
+	if (input !== undefined) running.child.stdin?.end(input);
+	const { stdout } = await running;
 	return stdout.trim();
 };
 
@@ -50,12 +53,12 @@ const attempt = async (root: string, args: string[], timeoutMs?: number, env?: R
  * to this", and deleting one under a live process corrupts the index. The error says what
  * to check instead.
  */
-const git = (root: string, args: string[], timeoutMs?: number, env?: Record<string, string>): Promise<string> => {
+const git = (root: string, args: string[], timeoutMs?: number, env?: Record<string, string>, input?: string): Promise<string> => {
 	const run1 = async (): Promise<string> => {
 		let lastDetail = '';
 		for (let i = 0; i < 4; i++) {
 			try {
-				return await attempt(root, args, timeoutMs, env);
+				return await attempt(root, args, timeoutMs, env, input);
 			} catch (err) {
 				lastDetail = (err as { stderr?: string; message: string }).stderr?.trim() || (err as Error).message;
 				if (!isLockContention(lastDetail)) throw new GitProblem(lastDetail);
@@ -160,9 +163,7 @@ export const recentBranches = async (root: string): Promise<string[]> => (await 
 export const branchesWithFile = async (root: string, file: string): Promise<string[]> => {
 	const bases = await baseRefs(root);
 	if (bases.length === 0) return [];
-	const asked = run('git', ['--no-optional-locks', '-C', root, 'cat-file', '--batch-check'], { maxBuffer: 16 * 1024 * 1024, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } });
-	asked.child.stdin?.end(`${bases.map((b) => `${b.ref}:${file}`).join('\n')}\n`);
-	const lines = (await asked).stdout.split('\n');
+	const lines = (await git(root, ['cat-file', '--batch-check'], undefined, undefined, `${bases.map((b) => `${b.ref}:${file}`).join('\n')}\n`)).split('\n');
 	// Found: `<object> blob <size>`. Not there: `<what was asked> missing`.
 	return bases.filter((_, i) => /^[0-9a-f]{40,64} blob /.test(lines[i] ?? '')).map((b) => b.name);
 };
