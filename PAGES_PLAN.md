@@ -335,6 +335,9 @@ reason. The command uses `gh`, which has them.
   site, so comments made in one would never have their pins in the other. A prototype is one page, so only what follows
   its `#` places a pin now, in both.
 
+**Paused 2026-10-08 (see M9):** what is built stays, and the page still takes a fine-grained token for testers, but nothing more
+is done on comments in the browser until the sign-in function is approved.
+
 **What is left of "done when" is Noah's:** on the published page, sign in with a token, pick an element, write the
 comment, see its pin and card, and see it on the iteration's review issue. It needs the site published first (M5b).
 
@@ -385,6 +388,11 @@ a page through its address is a security decision to make deliberately, not by d
 **Done when:** a PM with access signs in from the page in one step and comments.
 
 ### M10: Parity and the smaller things we agreed
+
+**Paused with the comments in the browser (2026-10-08, see M9):** the picture of the spot, moving a pin, the page's states
+carried into each comment, and the card saying when and by whom. They only matter once people can comment on the page,
+and the sign-in function that allows it is waiting on approval. **Not paused:** the selected version, unpublish, the
+"Built in code" link, and the viewer on a phone.
 
 - The **picture of the spot** in the browser; **moving a pin** you made; the page's own **states** carried into each
   comment; a card that says when it was made on the page and by whom.
