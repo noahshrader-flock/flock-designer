@@ -640,10 +640,9 @@ export const Review = ({
 		}
 		await runAddress({ api: window.workspace, root: checkout.root, projectId: project.id, name: iteration.name, commentId, isLive, onPhase });
 		if (!addressLive.current) return;
-		// A change was made, and it is waiting to be looked at. Marked on the comment itself, so it
-		// survives the app closing, whoever wrote the comment can see it was acted on, and nobody has
-		// to remember which comments were handled. Never resolved here: whether the change is what was
-		// meant is the one thing the agent cannot know.
+		// A change was made. Marked on the comment itself, and resolved with it, so it survives the app closing,
+		// whoever wrote the comment can see it was acted on, and its pin does not stay behind pointing at what was
+		// just changed. The person can reopen it if the change is not what they meant.
 		if (outcome.kind === 'done') {
 			// Either way: a later run that changed nothing clears the mark an earlier one left, so a
 			// card never shows a change waiting that is no longer there.
@@ -1073,11 +1072,11 @@ export const Review = ({
 								)}
 								{comments?.map((comment) => {
 									/**
-									 * Acted on, and waiting for this person's verdict. Such a comment is settled as far as
-									 * the work goes, so the card steps back: it is faded, it offers no second run, and it
-									 * says nothing about where its pin ended up -- the agent having just changed the very
-									 * element it pointed at, "no longer on the page" is the expected outcome, not news.
-									 * What is left is the comment, the commit, and the decision that is still theirs.
+									 * Acted on and still open: one addressed before the app resolved them with the run, still waiting for the
+									 * person's verdict. Such a comment is settled as far as the work goes, so the card steps back: it is faded, it
+									 * offers no second run, and it says nothing about where its pin ended up -- the agent having just changed the
+									 * very element it pointed at, "no longer on the page" is the expected outcome, not news. A comment addressed
+									 * now is resolved, so it is drawn as any resolved one, with the line saying what the agent did.
 									 */
 									const addressed = !comment.resolved && comment.addressedAt !== null;
 									// A resolved comment is not drawn on the page at all, so whatever was last said
@@ -1143,7 +1142,7 @@ export const Review = ({
 														</DropdownMenuContent>
 													</DropdownMenu>
 												</div>
-												{addressed && (
+												{comment.addressedAt !== null && (
 													<p className="text-muted-foreground text-xs">
 														{/* A prototype's version is a hash of its source, which means nothing to a person; a commit does. */}
 														{prototype

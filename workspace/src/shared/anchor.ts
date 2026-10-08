@@ -77,12 +77,11 @@ export const withResolved = (body: string, resolved: boolean): string => {
 };
 
 /**
- * Marks a comment the agent has acted on, with the commit it made.
+ * Marks a comment the agent has acted on, with the commit it made. The app resolves the comment with it (see
+ * `setAddressed`), so its pin leaves the page; the mark is what is left to say what was done, and where.
  *
- * Not the same as resolved, and deliberately not a step towards it: the agent knows it changed
- * something, but only the person who wrote the comment knows whether that was what they meant. This
- * says "there is a change here waiting for your verdict", so nobody has to remember which comments
- * were handled, while the verdict itself stays theirs.
+ * Before 2026-10-08 the two were kept apart, so a comment could be addressed and still open, waiting for the person's
+ * verdict. Those still read correctly: an addressed comment that is open is shown as it was.
  *
  * Kept in the body like the resolved mark, so it survives the app restarting and is visible to
  * anyone else reading the thread on GitHub. On a prototype it also says which iteration the change is in, since one

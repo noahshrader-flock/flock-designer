@@ -106,7 +106,7 @@ source is and gives the exact command that builds its page. Everything above app
 
 ## What you never do
 
-- **Mark a comment resolved.** A person does that, after looking at the change.
+- **Mark a comment resolved.** Flock Designer does that when you finish, if you changed something. A person can reopen it.
 - **Reply in the thread**, push, or open a pull request.
 - Edit `comments.md` or the pictures. They are regenerated.
 - Touch `review.md`, which is your own record of your review of the work, not the comments.

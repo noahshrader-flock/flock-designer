@@ -362,17 +362,21 @@ export class DesignRepo {
 
   /**
    * Records that the agent acted on a comment, with the commit it made (on a prototype, the hash of its source, and
-   * the iteration it is in). Clears the mark when the commit is null, which is what re-addressing a comment that
-   * changed nothing should do.
+   * the iteration it is in), and resolves it in the same write: its pin leaves the page, where it would otherwise point
+   * at what the agent just changed or removed. The person can still reopen it, and the mark stays to say what was done.
    *
-   * This never resolves anything: it says a change is waiting to be looked at. The person decides.
+   * Clears the mark when the commit is null, which is what re-addressing a comment that changed nothing should do. That
+   * leaves the comment open or resolved as the person had it.
    */
   async setAddressed(commentId: number, commit: string | null, iteration: string | null = null): Promise<ReviewComment> {
     const path = `${this.base}/issues/comments/${commentId}`;
     const current = asRecord(await this.session.api(path));
     const body = String(current.body ?? '');
-    const marked = withAddressed(body, commit, iteration);
-    if (marked === body) return this.toComment(current);
+    const addressed = withAddressed(body, commit, iteration);
+    const marked = addressedAt(addressed) === null ? addressed : withResolved(addressed, true);
+    // Judged by what the marks say, not by the text: rewriting them can reorder a body that already says it.
+    const same = addressedAt(marked) === addressedAt(body) && addressedIn(marked) === addressedIn(body) && isResolved(marked) === isResolved(body);
+    if (same) return this.toComment(current);
     const updated = await this.session.api(path, { method: 'PATCH', body: { body: marked } });
     return this.toComment(asRecord(updated));
   }

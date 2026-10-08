@@ -370,6 +370,50 @@ describe('setResolved', () => {
   });
 });
 
+describe('setAddressed', () => {
+  const COMMENT = '/repos/acme/design/issues/comments/70';
+  const SHA = 'abc1234def56';
+  const comment = (body: string) => ({ [COMMENT]: { id: 70, user: { login: 'pm' }, created_at: 't', body } });
+  const sentBody = (writes: Array<{ body?: unknown }>) => (writes[0]?.body as { body: string }).body;
+
+  it('resolves the comment in the same write that records the change, so its pin leaves the page at once', async () => {
+    const { isResolved, addressedAt, addressedIn } = await import('../src/shared/anchor');
+    const { session, writes } = fakeSession(comment('Remove this'));
+    await new DesignRepo(session, REF).setAddressed(70, SHA, 'v1-i2');
+    expect(writes).toHaveLength(1);
+    expect(isResolved(sentBody(writes))).toBe(true);
+    expect(addressedAt(sentBody(writes))).toBe(SHA);
+    expect(addressedIn(sentBody(writes))).toBe('v1-i2');
+  });
+
+  it('resolves a comment on a branch too, which has a commit and no iteration', async () => {
+    const { isResolved, addressedAt } = await import('../src/shared/anchor');
+    const { session, writes } = fakeSession(comment('Remove this'));
+    await new DesignRepo(session, REF).setAddressed(70, SHA);
+    expect(isResolved(sentBody(writes))).toBe(true);
+    expect(addressedAt(sentBody(writes))).toBe(SHA);
+  });
+
+  it('writes nothing when it is already recorded and resolved', async () => {
+    const { withAddressed, withResolved } = await import('../src/shared/anchor');
+    const { session, writes } = fakeSession(comment(withResolved(withAddressed('Remove this', SHA, 'v1-i2'), true)));
+    await new DesignRepo(session, REF).setAddressed(70, SHA, 'v1-i2');
+    expect(writes).toEqual([]);
+  });
+
+  it('when a run changed nothing, clears the mark and leaves open or resolved as the person had it', async () => {
+    const { isResolved, addressedAt, withAddressed } = await import('../src/shared/anchor');
+    const open = fakeSession(comment(withAddressed('Remove this', SHA)));
+    await new DesignRepo(open.session, REF).setAddressed(70, null);
+    expect(addressedAt(sentBody(open.writes))).toBeNull();
+    expect(isResolved(sentBody(open.writes))).toBe(false);
+    // Reopened by the person since: nothing here closes it again.
+    const reopened = fakeSession(comment('Remove this'));
+    await new DesignRepo(reopened.session, REF).setAddressed(70, null);
+    expect(reopened.writes).toEqual([]);
+  });
+});
+
 describe('pictures on comments', () => {
   const picture = `data:image/jpeg;base64,${Buffer.from('a small picture').toString('base64')}`;
   const anchor = { route: '/users', selector: 'main', nearbyText: 'x', viewport: { width: 1, height: 1 }, commit: '' };
