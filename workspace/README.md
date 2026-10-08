@@ -16,6 +16,9 @@ npm test          # 88 tests
 npm run smoke     # boot the real app and prove the window opens
 ```
 
+**Without the app:** `node bin/flkd.mjs` makes a prototype from Claude Code in VS Code (`new-prototype`,
+`save-prototype`), with the same code the app runs. `skills/build-prototype.md` tells an agent when to use it.
+
 ## What the window shows
 
 A fixed top bar (there is no native title bar; on macOS the window buttons sit inside it): **Flock

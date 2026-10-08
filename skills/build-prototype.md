@@ -6,6 +6,27 @@ task when someone chooses **New → Prototype**, so nobody has to find it. It is
 `address-comments.md`, when someone presses **Address** on a prototype's comment: then that file decides what you
 change and what you say at the end, and this one is how the change is made.
 
+## Asked for one in Claude Code, without the app
+
+If someone asks you for a prototype in their product repository, the app is not needed. From the product
+repository, run:
+
+```bash
+node ../flock-designer/workspace/bin/flkd.mjs new-prototype --project <id> --title "<project title>" --note "<what they asked for>"
+```
+
+- **`<id>`** is the project's folder in `../flock-designer/projects/`: the existing one when this continues a
+  project, otherwise a short kebab-case name for it (`admin-usage`). `--title` is needed only for a new project.
+- **Each run is a new version** (`v1-i1`, then `v2-i1`): run it again for "another version" or "a different
+  idea", once per version asked for, finishing each before starting the next.
+- **"Based on V1"**: start from that version's newest source, `../flock-designer/projects/<id>/prototypes/v1-i<n>.tsx`
+  (the highest `n`), and change what the new idea changes. Without that, a new version starts from the brief.
+- It is modelled on the branch the repository is on; `--from <branch>` names another.
+
+It prints your task: this file again, where to write the prototype, the command that checks it builds, and the
+command that saves it. Do exactly that, then finish as below. If it says something must be installed first, tell
+the person what, and stop.
+
 A prototype is a fast version of an idea, built from the product's **real components**: one page
 someone can open, click through and comment on, made without touching the product's code and without
 running it. **Fast is not loose.** It will be moved into the real code later, and that step reads what you

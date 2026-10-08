@@ -23,7 +23,8 @@ the wider product process at readiness to build.
 > - **Prototypes.** A designer describes an idea and the agent builds one page from the product's real components
 >   (the installed design system and the product's own patterns), without running the product. It is saved in the
 >   design repository, named by version and iteration (`v1-i1`, `v1-i2`, `v2-i1`), and what the page could not do is
->   marked in it. ([3.7](#37--prototypes))
+>   marked in it. It is made from the app, or by asking for one in Claude Code in VS Code with no app open.
+>   ([3.7](#37--prototypes))
 > - **Review.** Anyone with the app and a GitHub account opens a prototype and comments on an element. Comments live
 >   on GitHub and are readable by the agent as `comments.md`, so nothing depends on the app being open.
 > - **Address.** The agent acts on one comment at a time, on a prototype or on codebase work, and says what it did.
@@ -39,7 +40,7 @@ the wider product process at readiness to build.
 > ([Vocabulary](#vocabulary))
 >
 > **What is not yet proven.** One person has used it. Prototypes and the move into the code have each had a first
-> real run; Address on a prototype, and review by someone with no checkout, have not. **Everything still to do,
+> real run; Address on a prototype, review by someone with no checkout, and a prototype made from Claude Code have not. **Everything still to do,
 > with who it needs, is in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)**, and nothing in it is repeated here.
 >
 > The detail for every finished step is in [Appendix B](#appendix-b--what-was-built-and-why), including
@@ -241,7 +242,18 @@ The only other kind of work is **codebase work**. **Address** works on a prototy
 work: the agent changes the source where it was built, checks it with the build command, and the app saves the
 page; nothing is committed, and the comment records a hash of the source where a branch would record a commit.
 
-Where it lives: `workspace/src/main/services/prototype.ts`, `prototypeBundle.ts`, `prototypeServer.ts`; the skill
+**Without the app (2026-10-08, M2 of the [Pages plan](PAGES_PLAN.md)).** Making a prototype is one service with
+nothing of the app in it: starting one (brief, record, next name), what its agent may read, the build and the save.
+The app calls it, and so does **`flkd`**, which an agent runs from Claude Code in the product repository:
+`new-prototype` records the next version and prints the task (the skill, where to write, the build command, the save
+command); `save-prototype` builds the page and saves it with its source into the design repository's clone. Both use
+the app's own prototype folder, so either can finish what the other started, and the app publishes what was saved
+the next time it is open. `workspace/bin/flkd.mjs` builds the command from the app's source each time, with the
+esbuild the app installed, so it cannot drift from the app; it needs `npm ci` in `workspace/`, as the app does. The
+skill says when to run it; Coke's agent file sends a new prototype there (Coke `bc70bf48` on `noah/flock-designer`).
+
+Where it lives: `workspace/src/main/services/prototype.ts`, `prototypeWork.ts` (shared with `src/cli/flkd.ts`, run by
+`bin/flkd.mjs`), `prototypeBundle.ts`, `prototypeServer.ts`; the skill
 `skills/build-prototype.md` (and, for Address, `skills/address-comments.md`); Coke's mount recipe and shell reference in
 `.flkd/composition/product-shell-recreation.md` (on `noah/flock-designer`).
 
@@ -3334,6 +3346,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-08 | **Prototypes can be made without the app (M2 of the Pages plan).** Making a prototype is one service with nothing of the app in it (`prototypeWork.ts`). The app's handlers call it, and so does `flkd`, a command an agent runs from Claude Code in the product repository (`new-prototype`: the next version recorded and the task printed; `save-prototype`: built and saved into the design clone). It is built from the app's source each run with the app's esbuild (`workspace/bin/flkd.mjs`), so it cannot drift from the app; no product repository has esbuild of its own (Coke's Vite uses Rolldown), which is why it is not a committed pre-built file as the plan first recommended. The shared skill says when to run it, for another version, and for one based on V1; Coke's agent file and `CLAUDE.md` send a new prototype there (Coke `bc70bf48`, unpushed). Checked: 777 tests (new: the command against a temporary product and design repository with the real bundler, including the agent's whole journey through the launcher, running the commands it prints), typecheck, build, Coke's guidance validator (0 failures). **Not yet run for real from VS Code** | Where things stand, 3.7 |
 | 2026-10-08 | **Versions and iterations are in the app (M1 of the Pages plan).** A prototype's name now carries its version and iteration, `v2-i3`, read in one place (`parsePrototypeName` in `shared/projects.ts`) and shown as **V2 · I3**; the switcher groups iterations under their version. A new prototype on a project is its next version (`v2-i1`); refinements (`v1-i2`) come with M3. **Nothing was migrated:** names from before versions (`i1`) are read as version 1 with the same key, files and review thread, and only an old-form name can be read as an older `fd/` branch. Checked: 766 tests (new: the name table, next version and next iteration, labels, grouping, and that a versioned name is never taken for an `fd/` branch), typecheck, build | Where things stand, Vocabulary |
 | 2026-10-07 | **The plan and the state of things are two documents, and each fact lives in one.** Noah asked for this document to be the full context of where everything is, and the implementation plan to be what is left. So: this document keeps the direction, what is built, the decisions made, what is not being built, and the appendices; [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) holds the pilot, the first real runs of what is built, the handoff proof, setup and access, the decisions owed, the questions, risks and success measures, and a list of candidates for after the pilot. The finished handoff work (the light check, the shared handoff skill, Handoff in the app) moved here into Appendix B. The rule that stops the three-document problem coming back is in *How to maintain this document*: a finished item moves once, and is never mirrored. Backups of both files as they were are in `.archive/pre-consolidation-2026-10-07/` | Everything: the plan sections moved out, the status tables now list built steps only, Appendix B gained the finished handoff work |
 | 2026-10-07 | **Where review happens is decided: discovery in the app, delivery in engineering's own tools.** Noah's framing: the app is for the design-led conversation with product, from early discovery into delivery, and once it is delivery engineers use the preview links they already send. So a prototype (a saved page, no link needed) is reviewed in the app, and codebase work is reviewed by pull request and engineering's previews; the app shows a designer their own codebase work and hands it off. The pilot is scoped to one loop on that basis, and the anonymous-preview security decision no longer blocks it. Share for review is built and left as is | Vocabulary, 3.6, Decisions, Waiting on other people, status block |

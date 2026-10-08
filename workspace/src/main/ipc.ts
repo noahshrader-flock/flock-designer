@@ -1,6 +1,6 @@
 import { type BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import {
@@ -29,7 +29,7 @@ import { type ShareRunner, previewIsUp, pullRequestText } from './services/share
 import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
 import { DESCRIPTOR_PATH, readDescriptor } from './services/descriptor';
-import { branchCommit, branchExists, isRepository, readCheckout, readTreeAt, recentBranches, runGit } from './services/git';
+import { branchCommit, branchExists, isRepository, readCheckout, recentBranches, runGit } from './services/git';
 import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
@@ -46,13 +46,13 @@ import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anc
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
-import { firstHeading, isRecordName, mergeProjects, projectPath, prototypeKey, prototypePagePath, prototypeSourcePath, unionLocal, workKind } from '../shared/projects';
+import { firstHeading, isRecordName, mergeProjects, projectPath, prototypeKey, prototypePagePath, unionLocal, workKind } from '../shared/projects';
 import { resolveInside } from './services/paths';
 import { PrototypeServer } from './services/prototypeServer';
-import { bundleCommand, esbuildEntry, runBundle, sharedFilesOf, writeBundleScript } from './services/prototypeBundle';
+import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
+import { prototypeWork } from './services/prototypeWork';
 import {
 	BUILD_SKILL,
-	MAX_PAGE,
 	MOVE_SKILL,
 	type RecordStore,
 	assertPrototypeName,
@@ -62,9 +62,7 @@ import {
 	prototypeBuildTask,
 	prototypeReadable,
 	prototypeVersionOf,
-	type PrototypeBuild,
 	type PrototypeSources,
-	recordPrototype,
 } from './services/prototype';
 import type { CheckoutMemory } from './services/checkoutMemory';
 
@@ -694,165 +692,39 @@ export const registerIpc = ({
 		if (text === null) throw new Error(`The design repository has no ${path}, which the agent's task is built from. Update it (git pull) and try again.`);
 		return text;
 	};
-	/** A prototype's record, from its project's iterations.json. */
-	const prototypeRecord = async (projectId: string, name: string): Promise<Iteration | undefined> => {
-		const raw = await readDesignFile(projectPath(projectId, 'iterations.json'));
-		return (JSON.parse(raw ?? '[]') as Iteration[]).find((i) => i.name === name);
-	};
-	/** A prototype's React source: this machine's newest, else the saved one. Reading it makes no folder. */
-	const prototypeSourceText = async (projectId: string, name: string): Promise<string | null> => {
-		assertUsableProjectId(projectId);
-		assertPrototypeName(name);
-		const local = join(prototypesRoot, projectId, `${name}.tsx`);
-		return existsSync(local) ? readFileSync(local, 'utf8') : readDesignFile(prototypeSourcePath(projectId, name));
-	};
-	/** The folder an agent builds a project's prototypes in, and the page file inside it. */
-	const prototypeDir = (projectId: string): string => {
-		assertUsableProjectId(projectId);
-		const dir = join(prototypesRoot, projectId);
-		mkdirSync(dir, { recursive: true });
-		return dir;
-	};
-	const prototypeFile = (projectId: string, name: string): string => {
-		assertPrototypeName(name);
-		return join(prototypeDir(projectId), `${name}.html`);
-	};
-	const prototypeSourceFile = (projectId: string, name: string): string => join(dirname(prototypeFile(projectId, name)), `${name}.tsx`);
 	/**
-	 * Whether a prototype can be built from this accepted repository here: its design system installed, and the
-	 * bundler present. The page is always React with the real components, so without them there is nothing to build,
-	 * and the person is told what to install before anything is made, never handed a lesser page.
+	 * Making prototypes: the same code the flkd command runs from Claude Code, given this app's folder, the repository
+	 * this person accepted, and this app's store.
 	 */
-	const prototypeReadiness = (root: string): PrototypeReadiness => {
-		const canonical = opened.require(root);
-		const designSystem = readDescriptor(canonical).designSystem.package;
-		const pkg = join(canonical, 'node_modules', ...designSystem.split('/'));
-		if (!existsSync(join(pkg, 'package.json'))) return { ready: false, why: 'not-installed', designSystem, repository: basename(canonical) };
-		if (esbuildEntry() === null) return { ready: false, why: 'no-bundler', designSystem, repository: basename(canonical) };
-		let version: string | null = null;
-		try {
-			version = (JSON.parse(readFileSync(join(pkg, 'package.json'), 'utf8')) as { version?: string }).version ?? null;
-		} catch {
-			// A package.json that cannot be read still means it is installed.
-		}
-		return { ready: true, designSystem, version };
-	};
-	const prototypeBuildPlan = (projectId: string, name: string, sources: PrototypeSources | null): { build: PrototypeBuild; sources: PrototypeSources } => {
-		const root = trustedRoot();
-		const ready = root === null ? null : prototypeReadiness(root);
-		if (!sources?.nodeModules || ready === null || !ready.ready) {
-			throw new Error(
-				ready !== null && !ready.ready && ready.why === 'not-installed'
-					? `Prototypes are built from the real design system, and ${ready.designSystem} is not installed in ${ready.repository}. Run npm ci there (it needs access to the private packages), then try again.`
-					: 'Prototypes are built from the real design system, so they need the product repository, with its packages installed, on this machine.',
-			);
-		}
-		const source = prototypeSourceFile(projectId, name);
-		const page = prototypeFile(projectId, name);
-		return {
-			build: { source, page, buildCommand: bundleCommand(writeBundleScript(prototypesRoot), esbuildEntry() as string, source, page, sources.nodeModules, sharedDir) },
-			sources,
-		};
-	};
+	const work = prototypeWork({
+		prototypesRoot,
+		productRoot: () => {
+			const root = trustedRoot();
+			return root === null ? null : opened.require(root);
+		},
+		store: recordStore,
+		readDesignFile,
+		esbuild: esbuildEntry,
+	});
+	/** Whether a prototype can be built from this accepted repository here. */
+	const prototypeReadiness = (root: string): PrototypeReadiness => work.readiness(opened.require(root));
 	/** What building a prototype and changing one share: what it is modelled on, read once, and how it is built. */
 	const prototypeRun = async (projectId: string, name: string) =>
-		prototypeBuildPlan(projectId, name, await once(`source:${projectId}`, () => prototypeSource(projectId, name)));
+		work.buildPlan(projectId, name, await once(`source:${projectId}`, () => work.sources(projectId, name)));
 	/** Its agent, in the folder it was built in, reading the product read-only, and nothing committed. */
 	const startPrototypeAgent = (projectId: string, name: string, sources: PrototypeSources, task: string) =>
-		agent.start(prototypeDir(projectId), projectId, task, { bare: true, readOnly: prototypeReadable(sources), work: prototypeKey(projectId, name) });
-	/**
-	 * Builds a React prototype's page from its source, against the accepted checkout's installed packages.
-	 * Throws with what the build said, so a page that does not compile says why rather than showing an old one.
-	 */
-	const buildPrototypePage = async (projectId: string, name: string): Promise<void> => {
-		const root = trustedRoot();
-		const esbuild = esbuildEntry();
-		if (root === null || esbuild === null) throw new Error('This prototype is written in React, and building it needs the product repository installed on this machine.');
-		const r = await runBundle(
-			writeBundleScript(prototypesRoot),
-			esbuild,
-			prototypeSourceFile(projectId, name),
-			prototypeFile(projectId, name),
-			join(opened.require(root), 'node_modules'),
-			sharedDir,
-		);
-		if (!r.ok) throw new Error(`The prototype did not build:\n${r.output.slice(0, 2000)}`);
-	};
-	/**
-	 * Large files pages share (the design system's fonts), each kept once by its content: here in the app's folder
-	 * as builds make them, and in the design repository beside the projects, where `_` keeps them off the list.
-	 */
-	const sharedDir = join(prototypesRoot, '_shared');
-	const sharedPath = (n: string): string => `projects/_shared/${n}.datauri`;
-	/**
-	 * Saves a page with what it needs: the shared files it points at that the design repository does not have yet
-	 * (first, so a page is never there without them), its React source, then the page.
-	 */
-	const keepPrototype = async (projectId: string, name: string, html: string): Promise<void> => {
-		const store = recordStore();
-		for (const n of sharedFilesOf(html)) {
-			const local = join(sharedDir, `${n}.datauri`);
-			if (existsSync(local) && !(await store.has(sharedPath(n)))) await store.write(sharedPath(n), readFileSync(local, 'utf8'), `Shared file ${n}`);
-		}
-		const source = prototypeSourceFile(projectId, name);
-		if (existsSync(source)) await store.write(prototypeSourcePath(projectId, name), readFileSync(source, 'utf8'), `${projectId}: prototype ${name} source`);
-		await store.write(prototypePagePath(projectId, name), html, `${projectId}: prototype ${name}`);
-	};
+		agent.start(work.dir(projectId), projectId, task, { bare: true, readOnly: prototypeReadable(sources), work: prototypeKey(projectId, name) });
 	/** Makes the shared files a page points at available beside it: this machine's copy, else the design repository's. */
 	const serveShared = async (html: string): Promise<void> => {
 		for (const n of sharedFilesOf(html)) {
 			if (prototypeServer.hasShared(n)) continue;
-			const local = join(sharedDir, `${n}.datauri`);
-			const uri = existsSync(local) ? readFileSync(local, 'utf8') : await readDesignFile(sharedPath(n));
+			const local = join(work.sharedDir, `${n}.datauri`);
+			const uri = existsSync(local) ? readFileSync(local, 'utf8') : await readDesignFile(work.sharedPath(n));
 			if (uri !== null) prototypeServer.share(n, uri);
 		}
 	};
-	/** The page: this machine's newest build first, then the saved one here, then GitHub's. */
-	const prototypePage = async (projectId: string, name: string): Promise<string | null> => {
-		const local = prototypeFile(projectId, name);
-		const source = prototypeSourceFile(projectId, name);
-		// A source changed since its page was last built (or never built) is built first, unless its agent is still at it.
-		const stale = existsSync(source) && (!existsSync(local) || statSync(source).mtimeMs > statSync(local).mtimeMs);
-		if (stale && agent.status().state !== 'running') await buildPrototypePage(projectId, name);
-		if (existsSync(local)) return readFileSync(local, 'utf8');
-		return readDesignFile(prototypePagePath(projectId, name));
-	};
-	/**
-	 * The product code a prototype is modelled on, as a folder the agent may read: the clone itself
-	 * when it is on that branch already, otherwise the app's own read-only copy of the branch, so the
-	 * person's checkout is never switched. Null when there is nothing on this machine to read.
-	 */
-	const prototypeSource = async (projectId: string, name: string): Promise<PrototypeSources | null> => {
-		const basedOn = (await prototypeRecord(projectId, name))?.basedOn;
-		const root = trustedRoot();
-		// Only the repository this person accepted, and only the one the prototype was based on.
-		if (!basedOn || root === null || basename(root) !== basedOn.repository) return null;
-		const canonical = opened.require(root);
-		let code = canonical;
-		if ((await readCheckout(canonical)).branch !== basedOn.branch) {
-			// `_`, as no project id can begin, so the copy never shares a folder with a project's prototypes.
-			code = join(prototypesRoot, '_source', basename(canonical));
-			await readTreeAt(canonical, code, basedOn.branch);
-		}
-		const dir = (p: string): string | null => (existsSync(p) ? p : null);
-		const descriptor = readDescriptor(canonical);
-		const pkg = descriptor.designSystem.package;
-		const designRoot = recordsRootFor(canonical);
-		const installedDesignSystem = dir(join(canonical, 'node_modules', ...pkg.split('/')));
-		return {
-			code,
-			// The guidance that goes with the code when the branch has it; otherwise the accepted checkout's,
-			// which always has it (develop has no Flock Designer files, and the page must still follow the product).
-			productGuidance: dir(join(code, descriptor.contextDir)) ?? dir(join(canonical, descriptor.contextDir)),
-			// The design system's checkout beside the product, named as its package is: its guidance and, as
-			// important for a page that redraws its components, its source.
-			designSystemGuidance: dir(join(dirname(canonical), basename(pkg))),
-			installedDesignSystem,
-			sharedStandards: designRoot === null ? null : dir(join(dirname(designRoot), 'standards')),
-			// Only worth building against when the design system itself is installed in them.
-			nodeModules: installedDesignSystem ? join(canonical, 'node_modules') : null,
-		};
-	};
+	/** The page: this machine's newest build first (built again when its source changed), then the saved one. */
+	const prototypePage = (projectId: string, name: string): Promise<string | null> => work.page(projectId, name, agent.status().state === 'running');
 	/** Runs `work` once at a time per key: a second caller waits for the first and shares its answer. */
 	const inFlight = new Map<string, Promise<unknown>>();
 	const once = <T>(key: string, work: () => Promise<T>): Promise<T> => {
@@ -872,19 +744,10 @@ export const registerIpc = ({
 	ipcMain.handle(
 		CHANNELS.createPrototype,
 		guard(async (projectId: string, title: string, note: string, from: { root: string; branch: string } | null) => {
-			assertUsableProjectId(projectId);
 			// What it is modelled on is not optional: a prototype is built from a repository's real design system.
 			if (!from) throw new Error('A prototype is modelled on a branch of a repository on this machine. Choose one.');
-			if (!prototypeReadiness(from.root).ready) throw new Error('That repository has no design system installed here, so a prototype cannot be built from it. Run npm ci in it first.');
-			if (typeof title !== 'string' || !title.trim()) throw new Error('A prototype needs a name.');
-			// What it is modelled on: only a repository this person accepted, and a branch that exists in it.
-			let basedOn: Iteration['basedOn'];
-			if (from) {
-				const canonical = opened.require(from.root);
-				if (!(await branchExists(canonical, from.branch))) throw new Error(`There is no branch called ${from.branch} in ${basename(canonical)}.`);
-				basedOn = { repository: basename(canonical), branch: from.branch, commit: await branchCommit(canonical, from.branch).catch(() => null) };
-			}
-			return recordPrototype(recordStore(), { projectId, title: title.slice(0, 200), note: String(note).slice(0, 8000), me: me(), basedOn });
+			// Only a repository this person accepted.
+			return work.start(opened.require(from.root), { projectId, title, note, branch: from.branch, me: me() });
 		}),
 	);
 
@@ -918,7 +781,7 @@ export const registerIpc = ({
 			const buildSkill = await readSkillText(BUILD_SKILL);
 			const { build, sources } = await prototypeRun(projectId, name);
 			// The source to change: this machine's, or the saved one when it was built somewhere else.
-			const source = await prototypeSourceText(projectId, name);
+			const source = await work.sourceText(projectId, name);
 			if (source === null) throw new Error('This prototype has no React source saved, so there is nothing for the agent to change.');
 			if (!existsSync(build.source)) writeFileSync(build.source, source);
 			// Read now, not earlier: this is what makes the file current.
@@ -938,7 +801,7 @@ export const registerIpc = ({
 	ipcMain.handle(
 		CHANNELS.prototypeVersion,
 		guard(async (projectId: string, name: string): Promise<string | null> => {
-			const source = await prototypeSourceText(projectId, name);
+			const source = await work.sourceText(projectId, name);
 			return source === null ? null : prototypeVersionOf(source);
 		}),
 	);
@@ -946,16 +809,7 @@ export const registerIpc = ({
 	ipcMain.handle(
 		CHANNELS.savePrototype,
 		guard(async (projectId: string, name: string): Promise<null> => {
-			const pageFile = prototypeFile(projectId, name);
-			const source = prototypeSourceFile(projectId, name);
-			// Written in React: the page is built from the source now, so what is saved is what the source makes.
-			if (existsSync(source)) await buildPrototypePage(projectId, name);
-			if (!existsSync(pageFile)) throw new Error('The agent finished without writing the page.');
-			const html = readFileSync(pageFile, 'utf8');
-			if (html.length > MAX_PAGE) {
-				throw new Error(`This page is ${Math.round(html.length / 1_000_000)} MB, more than GitHub accepts for one file (100 MB), so it cannot be saved. It is still here and still opens on this machine. Large images or fonts embedded in the page are the usual cause.`);
-			}
-			await keepPrototype(projectId, name, html);
+			await work.save(projectId, name);
 			return null;
 		}),
 	);
@@ -967,9 +821,9 @@ export const registerIpc = ({
 			if (html === null) throw new Error('This prototype has no page yet.');
 			// A page built here but never saved (the screen was left, or gave up, while the agent finished) is saved
 			// now: what this machine shows is what reviewers get, and no finished page is stranded on one machine.
-			const local = prototypeFile(projectId, name);
+			const local = work.file(projectId, name);
 			const path = prototypePagePath(projectId, name);
-			if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html) await keepPrototype(projectId, name, html);
+			if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html) await work.keep(projectId, name, html);
 			await serveShared(html);
 			return prototypeServer.serve(`${projectId}/${name}`, html);
 		}),
@@ -1051,13 +905,13 @@ export const registerIpc = ({
 			// The page is copied where the agent is allowed to read it, so it works from the version saved, wherever that is.
 			const html = await prototypePage(projectId, name);
 			if (html === null) throw new Error('This prototype has no page yet.');
-			const pageFile = prototypeFile(projectId, name);
+			const pageFile = work.file(projectId, name);
 			writeFileSync(pageFile, html);
 			// Its React source too, when it has one: real components are a far better start than a page.
-			const sourceFile = prototypeSourceFile(projectId, name);
-			const source = await prototypeSourceText(projectId, name);
+			const sourceFile = work.sourceFile(projectId, name);
+			const source = await work.sourceText(projectId, name);
 			if (source !== null) writeFileSync(sourceFile, source);
-			const basedOn = (await prototypeRecord(projectId, name))?.basedOn;
+			const basedOn = (await work.record(projectId, name))?.basedOn;
 			return moveToCodeTask({
 				skill,
 				pageFile,

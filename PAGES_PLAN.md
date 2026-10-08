@@ -150,7 +150,7 @@ day, **L** several days.
 |---|---|---|---|---|---|
 | **M0** | **The asks:** org repo, private Pages, access, security (in parallel, not code) | Admins, security | n/a | n/a | **In progress, Noah** |
 | **M1** | **The version model in code** (`v1-i2`; old names read as V1) | Nothing | M | Low | **Done 2026-10-08**, see [flock-designer.md](flock-designer.md#change-log) |
-| **M2** | **Make prototypes without the app** (new-prototype and build-and-save as shared commands) | M1 | L | Medium | After M1; one open question |
+| **M2** | **Make prototypes without the app** (new-prototype and build-and-save as shared commands) | M1 | L | Medium | **Done 2026-10-08** (its real run is Noah's), see [flock-designer.md](flock-designer.md#change-log) |
 | **M3** | **Address starts the next iteration** when the current one has outside comments | M1, M2 | M | Medium | After M2 |
 | **M4** | **One comments experience,** taken out of the review screen | M1 | L | **High** | Ready after M1 (tests first) |
 | **M5a** | **The site, assembled locally:** project pages, `latest` links, index | M1 | M | Low | Ready after M1 |
@@ -161,7 +161,7 @@ day, **L** several days.
 | **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | Blocked on a decision |
 | **M10** | **Parity and the smaller things we agreed** | M7 | M | Low | Later |
 
-**M1 is done (2026-10-08). Next: M2,** which M3 depends on, or M4 or M5a, which only needed M1.
+**M1 and M2 are done (2026-10-08). Next: M5a,** on the fastest path below; M3 and M4 are ready too.
 
 **The repo is public for now (Noah's decision, 2026-10-07), so the whole flow can be built and tested before the admins
 answer.** Public Pages needs no login to view, so what it cannot show is that an anonymous viewer is blocked. That
@@ -203,34 +203,21 @@ Vocabulary. In short: names are `v<version>-i<iteration>`, read in one place; ol
 migrated; a new prototype on a project is its next version; the switcher groups by version. **Refinements (`v1-i2`)
 are not made yet**: M3 makes them, with the freeze rule.
 
-### M2: Make prototypes without the app
+### M2: Make prototypes without the app (done 2026-10-08)
 
-**Goal.** An agent in Claude Code in VS Code can make a prototype that has a place in the structure, with no app
-running. Today part of making a prototype lives only in the app: the project folder and brief, the iteration record,
-the next name, the build and the save.
+**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08) and its
+3.7. In short: one service makes prototypes, called by the app and by `flkd` (`new-prototype`, `save-prototype`), which
+an agent runs from Claude Code in the product repository. The shared skill says how, including "another version" and
+"based on V1", and Coke's agent file sends a new prototype there.
 
-- **Two shared commands:** **new-prototype** (the project folder and brief if it is the first, the iteration record,
-  the next name: the first prototype is `v1-i1`, "another version" is the next `vN-i1`) and the **build-and-save** step
-  that already exists in the app (build the source into its page with the same bundler, save page and source into the
-  design repository's clone). The app calls the same code, so there is one way to make a prototype.
-- **Taken out of `ipc.ts`:** the logic of `createPrototype`, `prototypeBuildPlan`, `buildPrototypePage` and
-  `keepPrototype` moves into a service with no Electron in it, taking explicit paths, which the app and a command-line
-  wrapper both call.
-- **"Another version" and "three versions":** one request builds V2 · I1, V3 · I1 from the same brief, one after
-  another (about six minutes each), optionally "based on V1" when the designer says so.
-- **Not in M2:** publishing to Pages (M5b), the link in the summary (M6).
+**The open question was answered differently from the recommendation:** not a pre-built file committed in the repo,
+but a launcher that builds the command from the app's source each time it runs. The build needs esbuild either way,
+and no product repository has it (Coke's Vite uses Rolldown), so the app's install is needed anyway; this way there is
+no built copy to go stale.
 
-**One open question:** how the command reaches an agent in VS Code. Recommended: a **single pre-built file committed in
-the design repository** (the tool built from the app's source by one script, with a test that fails if it is stale), so
-a designer needs nothing installed beyond the repo and the product checkout.
-
-**Tests first:** the service against a temporary design repository and a stub bundler: records, names, files; a second
-version; the app's handlers still produce the same results.
-
-**Done when:** from Claude Code in VS Code, asking for a prototype creates `v1-i1` in the design repository clone,
-builds and saves its page, and the app shows it; asking for "another version" makes `v2-i1`.
-
-**Undo:** revert the commit; the app's own handlers call the same code, so it is exercised by the existing flow.
+**What is left of "done when" is Noah's:** the real run. In Coke on `noah/flock-designer` (it has the new routing), ask
+Claude Code for a prototype, then for another version, and check both open in the app. It writes to the real design
+clone, and the app publishes it to the public repo the next time it is open.
 
 ### M3: Address starts the next iteration
 
