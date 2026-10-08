@@ -1,6 +1,6 @@
 # Clone plan: pick a repository the app does not have yet, and say where it goes
 
-**Written 2026-10-08; decisions made the same day (Noah accepted every recommendation). C1 and C2 are built.** The plan for letting a designer start work in a repository that is not on
+**Written 2026-10-08; decisions made the same day (Noah accepted every recommendation). C1 to C3 are built.** The plan for letting a designer start work in a repository that is not on
 their computer: choose it from the list, see where it will be placed, and have the app put it there.
 
 This is the detail behind one item in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) (*After the pilot: candidates*,
@@ -63,7 +63,7 @@ each, the state document updated in the same change, and no data on GitHub is ch
 |---|---|---|---|---|
 | **C1** (done) | **Where clones go:** the clone folder (setting, default, picker), the path a repository would be placed at, and discovery reading it | Nothing | S | Low |
 | **C2** (done) | **The clone itself:** a service that clones a named repository into a folder, with progress and cancel | C1, decision 3 | M | **Medium** |
-| **C3** | **The New modal:** choose a repository with no clone, see where it goes and change it, confirm, watch it, and carry on into the work | C2, decisions 2, 4 | M | Medium |
+| **C3** (done) | **The New modal:** choose a repository with no clone, see where it goes and change it, confirm, watch it, and carry on into the work | C2, decisions 2, 4 | M | Medium |
 | **C4** | **What it starts from:** branches for a repository with no clone (from GitHub), remote-only branches usable as a base, and the "no setup on this branch" answer | C3, decision 5 | M | Medium |
 | **C5** | **After the clone:** say what is missing to build (packages, access to private packages), and, if wanted, install them with progress | C3 | L | **High** |
 
@@ -83,24 +83,17 @@ short: `services/clone.ts`'s `Cloner` clones `owner/repo`, only one the person's
 and runs one at a time. **For C3:** it has no channel yet. C3 makes one `Cloner` in the main process, gives it the list
 from `visibleRepositories` and the clone folder, sends progress to the window, and cancels it when the modal closes.
 
-### C3: The New modal
+### C3: The New modal (done 2026-10-08)
 
-All of it in `renderer/NewWork.tsx`, the **New** modal opened from the Projects screen, in its existing Repository field
-and "starts from" choice; no new screen and no second entry point.
-
-- **A repository with no clone is chosen like any other.** Where today the dialog says "Clone it, then …", it shows
-  **"Will be placed in `~/Documents/GitHub/flock-coke`"** with a **Change** button (the picker from C1), and, if the
-  design repository is missing, a line saying it comes too (decision 2).
-- **The confirmation names the owner and the trust** (decision 4). One button, **Clone and continue**, runs C2 with
-  progress in the dialog, then accepts the repository as `useCheckout` does today, and carries on into the work the
-  dialog was opened for.
-- **Same for prototype and codebase work,** since both begin in the New modal. A prototype is built in the app's own
-  folder, but from the repository's files, so it still needs the clone.
-- **The new channel is narrow:** it takes a repository name and a choice of "use the default folder or the one picked",
-  never a path from the window.
-- **Tests:** the review-harness style already used for the dialog, against a fake app: choosing a repository with no
-  clone shows the place and the change button; confirming calls clone once; a failure is shown and the dialog stays
-  usable; a clone made is found and accepted.
+**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+short: in the **New** modal, a repository with no clone says **Will be placed in** its path with **Change**, that
+`flock-designer` comes too when it is missing, and that using it trusts the commands it lists; **Clone and continue**
+clones with progress and **Stop**, then the form carries on with it. A clone already there is **Use it and continue**;
+anything else in the way is said and never cloned over. Closing the modal stops a clone. **Where it differs from the
+plan:** the modal does not create the work by itself after cloning; it carries on with the repository in use, and the
+person presses Create, as for any repository. **For C4:** a clone whose checked-out branch has no setup is refused
+with a plain message today ("is cloned in …, but the branch it is on has no Flock Designer setup"); C4 turns that into
+the branches that have it. **Not yet seen in the running app.**
 
 ### C4: What it starts from
 
@@ -152,4 +145,4 @@ and "starts from" choice; no new screen and no second entry point.
 
 ## Next
 
-**C1 and C2 are done. C3 and C4 are Ready:** scope fixed, files known, tests named, no open question. Build in order, one commit each. C5 waits.
+**C1 to C3 are done. C4 is Ready:** scope fixed, files known, tests named, no open question. Build in order, one commit each. C5 waits.
