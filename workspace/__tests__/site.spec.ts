@@ -78,16 +78,14 @@ describe('the index', () => {
 });
 
 describe('an iteration', () => {
-	it('is its saved page, inside a bar that names the project and switches versions and iterations', () => {
+	it('is its saved page under a bar that is a link back to the project, which the viewer replaces with the app\'s own', () => {
 		build();
 		const viewer = read('alpha/v1/i2/index.html');
 		expect(viewer).toContain('<iframe');
 		expect(viewer).toContain('src="page.html"');
-		expect(viewer).toContain('href="../../"');
-		expect(viewer).toContain('Alerts &lt;history&gt;');
-		// Every iteration of every version is a step away.
-		for (const link of ['../../v1/i1/', '../../v1/i2/', '../../v2/i1/']) expect(viewer).toContain(`value="${link}"`);
-		expect(viewer).toMatch(/V1 · I2/);
+		expect(viewer).toContain('<header id="flkd-bar"><a href="../../">Alerts &lt;history&gt;</a></header>');
+		// Nothing of the bar is styled or built here: no select of its own, no styles for one.
+		expect(viewer).not.toMatch(/<select|class="bar"|\.bar\b/);
 		expect(read('alpha/v1/i2/page.html')).toContain('Alpha one, refined');
 	});
 
@@ -174,7 +172,20 @@ describe('comments on the page', () => {
 		expect(html).toContain('<script type="module" src="../../../_viewer/viewer.js"></script>');
 		expect(html).toContain('href="../../../_viewer/viewer.css"');
 		const config = JSON.parse(/<script type="application\/json" id="flkd-config">([^<]*)<\/script>/.exec(html)?.[1] ?? 'null');
-		expect(config).toEqual({ owner: 'acme', repo: 'design', projectId: 'alpha', name: 'v1-i2' });
+		expect(config).toEqual({
+			owner: 'acme',
+			repo: 'design',
+			projectId: 'alpha',
+			name: 'v1-i2',
+			title: 'Alerts <history>',
+			projectHref: '../../',
+			// Every iteration of every version is a step away, from this page.
+			iterations: [
+				{ name: 'v1-i2', href: '../../v1/i2/' },
+				{ name: 'v1-i1', href: '../../v1/i1/' },
+				{ name: 'v2-i1', href: '../../v2/i1/' },
+			],
+		});
 		for (const id of ['flkd-bar', 'flkd-panel', 'flkd-frame']) expect(html).toContain(`id="${id}"`);
 	});
 

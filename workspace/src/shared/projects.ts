@@ -243,8 +243,8 @@ export const iterationLabel = (i: Pick<ProjectIteration, 'name' | 'branch'>): st
  * their first iteration in the list given (so a newest-first list puts the newest idea first), iterations in the order
  * given within each.
  */
-export const byVersion = (iterations: ProjectIteration[]): { version: number; iterations: ProjectIteration[] }[] => {
-	const groups = new Map<number, ProjectIteration[]>();
+export const byVersion = <T extends { name: string }>(iterations: T[]): { version: number; iterations: T[] }[] => {
+	const groups = new Map<number, T[]>();
 	for (const it of iterations) {
 		const p = parsePrototypeName(it.name);
 		if (!p) continue;

@@ -10,7 +10,19 @@ import { button, cards, menuItem, openMenu, press, render, settle, typeInto, unm
  * against a GitHub that answers as its API does, with the real pick and pin scripts running in the prototype's frame.
  */
 
-const CONFIG = { owner: 'acme', repo: 'design', projectId: 'demo', name: 'v1-i1' };
+const CONFIG = {
+	owner: 'acme',
+	repo: 'design',
+	projectId: 'demo',
+	name: 'v1-i1',
+	title: 'Alert history',
+	projectHref: '../../',
+	iterations: [
+		{ name: 'v1-i2', href: '../../v1/i2/' },
+		{ name: 'v1-i1', href: '../../v1/i1/' },
+		{ name: 'v2-i1', href: '../../v2/i1/' },
+	],
+};
 const TOKEN_KEY = 'flock-designer.github-token';
 
 /** GitHub's API, as far as comments go: review threads found by label and branch line, and their comments. */
@@ -61,7 +73,7 @@ const fakeGitHub = () => {
 
 /** The page the site builds, as far as the viewer is concerned: the bar's slot, the panel, and the prototype's frame. */
 const sitePage = () => {
-	document.body.innerHTML = '<header><span id="flkd-bar"></span></header><div><iframe id="flkd-frame"></iframe><aside id="flkd-panel"></aside></div>';
+	document.body.innerHTML = '<header id="flkd-bar"></header><div><iframe id="flkd-frame"></iframe><aside id="flkd-panel"></aside></div>';
 	const frame = document.getElementById('flkd-frame') as HTMLIFrameElement;
 	const doc = frame.contentDocument as Document;
 	doc.body.innerHTML = '<main><h1>Alert history</h1><button data-e2e-ref="clear-filter-button">Clear Filter</button></main>';
@@ -92,6 +104,26 @@ afterEach(async () => {
 	if (current) await unmountAll(current.root);
 	current = null;
 	vi.unstubAllGlobals();
+});
+
+describe("the page's bar", () => {
+	it("is the app's own: the way back, the project, and the iteration switcher with its versions", async () => {
+		await open();
+		expect(document.querySelector('a[href="../../"]')).not.toBeNull();
+		expect(document.body.textContent).toContain('Alert history');
+		await openMenu(button('Iteration V1 · I1: switch iteration'));
+		// The same menu the app has: versions as headings, iterations under them, this one chosen.
+		const options = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
+		expect(options.map((i) => i.textContent?.trim())).toEqual(['I2', 'I1', 'I1']);
+		expect(document.body.textContent).toMatch(/V1[\s\S]*V2/);
+		expect(options.map((o) => o.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
+	});
+
+	it('is there before anyone signs in, beside the way to', async () => {
+		await open();
+		expect(button('Sign in to comment')).toBeTruthy();
+		expect(button('Iteration V1 · I1: switch iteration')).toBeTruthy();
+	});
 });
 
 describe('signing in, for testing', () => {

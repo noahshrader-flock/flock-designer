@@ -1,5 +1,5 @@
-import { LogOutIcon } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { ChevronLeftIcon, LogOutIcon } from 'lucide-react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { prototypeKey } from '../shared/projects';
 import { prototypeAddressed } from '../renderer/comments/addressed';
@@ -8,16 +8,20 @@ import { CommentControl } from '../renderer/comments/CommentControl';
 import { CommentList } from '../renderer/comments/CommentList';
 import { CommentsHeading } from '../renderer/comments/CommentsHeading';
 import { useComments } from '../renderer/comments/useComments';
+import { IterationSwitcher } from '../renderer/IterationSwitcher';
+import { Toolbar } from '../renderer/Toolbar';
 import { Alert, AlertDescription } from '../renderer/ui/alert';
 import { Button } from '../renderer/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../renderer/ui/dialog';
 import { Input } from '../renderer/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../renderer/ui/tooltip';
 import { browserComments, framePage, saveToken, savedToken, tokenApi } from './browserAdapter';
 
 /**
- * Commenting on a prototype's published page, with the app's own comments experience: the Comment control and its
- * count in the page's bar, the side panel from the right, the box beside the pin. Drawn into the page the site built,
- * so the page works as it is without this, and gains comments with it.
+ * A prototype's published page, as the app shows one: its bar (the app's own toolbar, back button, title and iteration
+ * switcher), the Comment control and its count, the side panel from the right, the box beside the pin. All of it the
+ * app's own parts. Drawn into the page the site built, which holds only a link back to the project until this takes
+ * over, so the page still works without it.
  */
 
 /** What the site writes into each iteration's page for this. */
@@ -26,14 +30,53 @@ export interface ViewerConfig {
 	repo: string;
 	projectId: string;
 	name: string;
+	title: string;
+	/** Where the project's own page is, from this one. */
+	projectHref: string;
+	/** Every iteration of the project that has a page, and where each is from this one. */
+	iterations: { name: string; href: string }[];
 }
 
-/** What is drawn where: the bar's slot, the panel's, and the prototype's frame. */
+/** What is drawn where: the bar, the comments' panel, and the prototype's frame. */
 export interface ViewerSlots {
 	bar: HTMLElement;
 	panel: HTMLElement;
 	frame: HTMLIFrameElement;
 }
+
+/** The page's bar. `children` is what comes last: the Comment control, or signing in. */
+const PageBar = ({ config, slots, children }: { config: ViewerConfig; slots: ViewerSlots; children: ReactNode }) => {
+	const iterations = useMemo(
+		() => config.iterations.map((i) => ({ ...i, branch: prototypeKey(config.projectId, i.name) })),
+		[config.iterations, config.projectId],
+	);
+	return createPortal(
+		<Toolbar>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Button size="icon" variant="ghost" aria-label="Back to the project" className="-mr-2 -ml-2" asChild>
+						<a href={config.projectHref}>
+							<ChevronLeftIcon />
+						</a>
+					</Button>
+				</TooltipTrigger>
+				<TooltipContent side="bottom">Back to the project</TooltipContent>
+			</Tooltip>
+			<h2 className="truncate text-sm font-semibold">{config.title}</h2>
+			<div className="grow" />
+			<div className="flex items-center gap-2">
+				<IterationSwitcher
+					current={{ name: config.name, branch: prototypeKey(config.projectId, config.name) }}
+					siblings={iterations}
+					grouped
+					onSelect={(next) => void (location.href = next.href)}
+				/>
+				{children}
+			</div>
+		</Toolbar>,
+		slots.bar,
+	);
+};
 
 export const Viewer = ({ config, slots }: { config: ViewerConfig; slots: ViewerSlots }) => {
 	const [token, setToken] = useState<string | null>(savedToken);
@@ -47,12 +90,11 @@ export const Viewer = ({ config, slots }: { config: ViewerConfig; slots: ViewerS
 			{token ? (
 				<Commenting key={token} config={config} slots={slots} token={token} onSignOut={() => signIn(null)} />
 			) : (
-				createPortal(
+				<PageBar config={config} slots={slots}>
 					<Button size="sm" variant="outline" onClick={() => setSigningIn(true)}>
 						Sign in to comment
-					</Button>,
-					slots.bar,
-				)
+					</Button>
+				</PageBar>
 			)}
 			<SignIn config={config} open={signingIn} onClose={() => setSigningIn(false)} onToken={signIn} />
 		</>
@@ -99,7 +141,9 @@ const Commenting = ({ config, slots, token, onSignOut }: { config: ViewerConfig;
 	const frameBox = slots.frame.getBoundingClientRect();
 	return (
 		<>
-			{createPortal(<CommentControl comments={comments} listOpen={listOpen} onToggleList={() => setListOpen((o) => !o)} disabled={!opened} />, slots.bar)}
+			<PageBar config={config} slots={slots}>
+				<CommentControl comments={comments} listOpen={listOpen} onToggleList={() => setListOpen((o) => !o)} disabled={!opened} />
+			</PageBar>
 			{listOpen &&
 				createPortal(
 					<div className="bg-card flex h-full w-[360px] flex-col gap-4 overflow-y-auto border-l p-4">

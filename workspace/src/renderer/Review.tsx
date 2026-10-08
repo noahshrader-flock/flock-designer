@@ -1,5 +1,4 @@
 import {
-	ChevronDownIcon,
 	ChevronLeftIcon,
 	ExternalLinkIcon,
 	FolderIcon,
@@ -11,7 +10,8 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, PageStatus, Project, ProjectIteration } from '../shared/contract';
 import { READY_LINE } from '../shared/handoff';
-import { byVersion, freshIteration, isPrototypeKey, iterationLabel, parsePrototypeName, prototypeKey, prototypePagePath, workKind, workOf } from '../shared/projects';
+import { freshIteration, isPrototypeKey, iterationLabel, prototypeKey, prototypePagePath, workKind, workOf } from '../shared/projects';
+import { IterationSwitcher } from './IterationSwitcher';
 import { CommentBox } from './comments/CommentBox';
 import { CommentControl } from './comments/CommentControl';
 import { CommentList } from './comments/CommentList';
@@ -34,17 +34,7 @@ import { useEditor } from './useEditor';
 import { usePrototypeBuild } from './prototypeBuild';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+import { DropdownMenuItem } from './ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /**
@@ -483,50 +473,13 @@ export const Review = ({
 							</Button>
 						</span>
 					)}
-					{/* Shown even with one iteration, so where you are, and that there can be more, is always visible. */}
-					<DropdownMenu>
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<DropdownMenuTrigger asChild>
-									<Button size="sm" variant="outline" aria-label={`Iteration ${iterationLabel(iteration)}: switch iteration`}>
-										{iterationLabel(iteration)}
-										<ChevronDownIcon />
-									</Button>
-								</DropdownMenuTrigger>
-							</TooltipTrigger>
-							<TooltipContent>Switch iteration</TooltipContent>
-						</Tooltip>
-						<DropdownMenuContent align="end" className="w-auto">
-							<DropdownMenuRadioGroup
-								value={iteration.branch}
-								onValueChange={(branch) => {
-									const next = siblings.find((i) => i.branch === branch);
-									if (next && branch !== iteration.branch) onOpen(project, next);
-								}}
-							>
-								{/* Prototypes by version, then their iterations; codebase work is one list, as before. */}
-								{kind === 'prototype'
-									? byVersion(siblings).map((group, n) => (
-											<DropdownMenuGroup key={group.version}>
-												{n > 0 && <DropdownMenuSeparator />}
-												<DropdownMenuLabel className="text-muted-foreground text-xs">V{group.version}</DropdownMenuLabel>
-												{group.iterations.map((i) => (
-													<DropdownMenuRadioItem key={i.branch} value={i.branch}>
-														I{parsePrototypeName(i.name)?.iteration}
-														{i.localOnly && !project.localOnly ? ' · only on this machine' : ''}
-													</DropdownMenuRadioItem>
-												))}
-											</DropdownMenuGroup>
-										))
-									: siblings.map((i) => (
-											<DropdownMenuRadioItem key={i.branch} value={i.branch}>
-												{iterationLabel(i)}
-												{i.localOnly && !project.localOnly ? ' · only on this machine' : ''}
-											</DropdownMenuRadioItem>
-										))}
-							</DropdownMenuRadioGroup>
-						</DropdownMenuContent>
-					</DropdownMenu>
+					<IterationSwitcher
+						current={iteration}
+						siblings={siblings}
+						grouped={kind === 'prototype'}
+						onSelect={(next) => onOpen(project, next)}
+						note={(i) => (i.localOnly && !project.localOnly ? ' · only on this machine' : '')}
+					/>
 					<CommentControl comments={comments} listOpen={sidebarOpen} onToggleList={() => setSidebarOpen((o) => !o)} disabled={!opened} />
 					{/* Codebase work's next step, so it is the one filled button. */}
 					{checkout && codebase && (

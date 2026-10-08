@@ -135,13 +135,9 @@ h1 { font-size: 22px; font-weight: 600; margin: 0 0 20px; }
 .versions { display: flex; gap: 16px; align-items: flex-start; overflow-x: auto; }
 .version { min-width: 220px; flex: 0 0 auto; }
 .version h2 { font-size: 15px; font-weight: 600; margin: 0 0 8px; }
-.bar { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-bottom: 1px solid #8884; font-size: 14px; box-sizing: border-box; }
-.bar .grow { flex: 1; }
-.bar select { font: inherit; padding: 4px 6px; }
-/* The prototype, and beside it the comments' panel when it is open. */
-.stage { display: flex; height: calc(100vh - 44px); }
+/* The prototype, under the app's own toolbar, and beside it the comments' panel when it is open. */
+.stage { display: flex; height: calc(100vh - var(--toolbar-height, 2.75rem)); }
 .stage iframe { display: block; flex: 1; min-width: 0; height: 100%; border: 0; }
-.slot { display: flex; align-items: center; gap: 8px; }
 #flkd-panel:empty { display: none; }
 `;
 
@@ -187,30 +183,30 @@ const projectPage = (p: SiteProject, comments: Map<string, number> | undefined):
 			.join('\n')}\n</div>\n</main>`,
 	);
 
-/** What the comments on an iteration's page are told about it, safe inside a script element. */
+/** What the page's bar and comments are told, safe inside a script element: which iteration this is, and where the others are. */
 const viewerConfig = (ref: { owner: string; repo: string }, p: SiteProject, current: Page): string =>
-	JSON.stringify({ owner: ref.owner, repo: ref.repo, projectId: p.id, name: current.record.name }).replace(/</g, '\\u003c');
+	JSON.stringify({
+		owner: ref.owner,
+		repo: ref.repo,
+		projectId: p.id,
+		name: current.record.name,
+		title: p.title,
+		projectHref: '../../',
+		iterations: p.versions.flatMap((v) => v.pages.map((pg) => ({ name: pg.record.name, href: `../../${pg.path}` }))),
+	}).replace(/</g, '\\u003c');
 
 /**
- * One iteration: its page in a frame, so the page's own styles never reach the bar, under the bar. With the viewer, the
- * bar has a slot for the Comment control and the frame a panel beside it, which the viewer draws into.
+ * One iteration: its page in a frame, so the page's own styles never reach the bar, under the bar. The bar is the
+ * app's own, drawn by the viewer (the switcher, comments); until it takes over, and where it never does, the bar is a
+ * link back to the project, and nothing about it is styled here.
  */
 const viewerPage = (p: SiteProject, current: Page, viewer: SiteInput['viewer']): string => {
-	const options = p.versions
-		.map(
-			(v) =>
-				`<optgroup label="V${v.version}">${v.pages
-					.map((pg) => `<option value="../../${pg.path}"${pg === current ? ' selected' : ''}>${escape(labelOf(pg))}</option>`)
-					.join('')}</optgroup>`,
-		)
-		.join('');
-	// The viewer's own styles first, so the site's own win for the bar they share.
 	const head = viewer
 		? `<link rel="stylesheet" href="../../../_viewer/viewer.css">\n<script type="application/json" id="flkd-config">${viewerConfig(viewer.ref, p, current)}</script>\n<script type="module" src="../../../_viewer/viewer.js"></script>\n`
 		: '';
 	return shell(
 		`${p.title} · ${labelOf(current)}`,
-		`<header class="bar">\n<a href="../../">${escape(p.title)}</a>\n<span class="grow"></span>\n<span class="slot" id="flkd-bar"></span>\n<select aria-label="Version and iteration" onchange="location.href=this.value">${options}</select>\n</header>\n<div class="stage">\n<iframe id="flkd-frame" src="page.html" title="${escape(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="flkd-panel"></aside>\n</div>`,
+		`<header id="flkd-bar"><a href="../../">${escape(p.title)}</a></header>\n<div class="stage">\n<iframe id="flkd-frame" src="page.html" title="${escape(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="flkd-panel"></aside>\n</div>`,
 		head,
 	);
 };
