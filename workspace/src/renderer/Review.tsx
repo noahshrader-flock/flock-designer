@@ -38,6 +38,7 @@ import { Button } from './ui/button';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuRadioGroup,
@@ -751,7 +752,7 @@ export const Review = ({
 								{/* Prototypes by version, then their iterations; codebase work is one list, as before. */}
 								{kind === 'prototype'
 									? byVersion(siblings).map((group, n) => (
-											<div key={group.version}>
+											<DropdownMenuGroup key={group.version}>
 												{n > 0 && <DropdownMenuSeparator />}
 												<DropdownMenuLabel className="text-muted-foreground text-xs">V{group.version}</DropdownMenuLabel>
 												{group.iterations.map((i) => (
@@ -760,7 +761,7 @@ export const Review = ({
 														{i.localOnly && !project.localOnly ? ' · only on this machine' : ''}
 													</DropdownMenuRadioItem>
 												))}
-											</div>
+											</DropdownMenuGroup>
 										))
 									: siblings.map((i) => (
 											<DropdownMenuRadioItem key={i.branch} value={i.branch}>
