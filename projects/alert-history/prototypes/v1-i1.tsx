@@ -1,5 +1,5 @@
 /**
- * Alert History, a new page in the Admin area.
+ * Alert History New, a new page in the Admin area.
  *
  * WHAT IT SHOWS
  *   A table of the alerts an organization received in the last 30 days, newest first, with a Status filter above it.
@@ -8,7 +8,7 @@
  *   nothing, the table body becomes an empty state that says why and offers Clear Filter.
  *
  * WHERE IT SITS
- *   Admin > Alert History, a new item in the Admin sub-nav directly after "Alerts & FlockOS". No such route exists
+ *   Admin > Alert History New, a new item in the Admin sub-nav directly after "Alerts & FlockOS". No such route exists
  *   today. It is a standalone page, not a tab on another page.
  *
  * MODELLED ON
@@ -28,7 +28,7 @@
  *
  * MARKS
  *   @standin
- *     - The Alert History page and its sub-nav item. The product has no alert history today.
+ *     - The Alert History New page and its sub-nav item. The product has no alert history today.
  *     - Alert status (New, Acknowledged, Resolved, Dismissed) and "Handled By". The product has no alert status or
  *       handling workflow; the meaning of each status is a product decision.
  *     - The empty state's Clear Filter action. The product's filtered-empty state is one line with no action
@@ -164,11 +164,11 @@ const USER_DETAILS_ITEM = {
 };
 
 // @mock: sub-nav for a customer's own org admin. On move: computed by useAdminSubNavItems from permissions.
-// @standin: the "Alert History" item. It does not exist today. On move: add it to useAdminSubNavItems behind its permission.
+// @standin: the "Alert History New" item. It does not exist today. On move: add it to useAdminSubNavItems behind its permission.
 const SUB_NAV_ITEMS = [
     'Profile', 'Organization', 'Devices', 'Roles', 'Users', 'Zones', 'Transparency Portal', 'Integrations',
-    'Alerts & FlockOS', 'Alert History', 'Billing', 'Contact Directory',
-].map((title) => ({ title, value: `/${title}`, isBold: title === 'Alert History' }));
+    'Alerts & FlockOS', 'Alert History New', 'Billing', 'Contact Directory',
+].map((title) => ({ title, value: `/${title}`, isBold: title === 'Alert History New' }));
 
 // ---------------------------------------------------------------------------------------------------------------
 // Page
@@ -278,7 +278,7 @@ const AlertHistoryPage = ({ initialState }: { initialState: PageState }) => {
                 {/* Recreated locally: the real PageTitle pulls in Redux, analytics and permissions. */}
                 <FSBox sx={{ marginBottom: '1.25rem' }}>
                     <FSTypography variant="h4" component="h1" gutterBottom sx={{ marginTop: '0.75rem' }}>
-                        Alert History
+                        Alert History New
                     </FSTypography>
                 </FSBox>
 
@@ -305,7 +305,7 @@ const AlertHistoryPage = ({ initialState }: { initialState: PageState }) => {
 
                 <FSBox data-e2e-ref="alerts-table">
                     <FSDataGrid
-                        aria-label="Alert history"
+                        aria-label="Alert history new"
                         autoHeight={!isEmpty}
                         rows={rows}
                         columns={COLUMNS}
