@@ -280,9 +280,6 @@ const AlertHistoryPage = ({ initialState }: { initialState: PageState }) => {
                     <FSTypography variant="h4" component="h1" gutterBottom sx={{ marginTop: '0.75rem' }}>
                         Alert History
                     </FSTypography>
-                    <FSTypography gutterBottom>
-                        Alerts sent to {ORG_NAME} in the last 30 days, and how each one was handled.
-                    </FSTypography>
                 </FSBox>
 
                 <FSStack spacing={1} sx={{ mb: 1 }} data-e2e-ref="alerts-toolbar">
