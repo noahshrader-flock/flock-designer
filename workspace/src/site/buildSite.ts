@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Iteration } from '../shared/contract';
-import { firstHeading, isPrototypeKey, iterationLabel, parsePrototypeName, sitePath } from '../shared/projects';
+import { firstHeading, isPrototypeKey, iterationLabel, parsePrototypeName, parseSelectedVersion, sitePath } from '../shared/projects';
 import { parseIterations } from '../shared/records';
 
 /**
@@ -13,7 +13,7 @@ import { parseIterations } from '../shared/records';
  * /<project>/             its versions side by side, each with its iterations
  * /<project>/v1/i2/       one iteration: its page, under a bar that names the project and switches between them
  * /<project>/v1/latest/   the newest iteration of version 1
- * /<project>/latest/      the newest version's newest iteration
+ * /<project>/latest/      the selected version's newest iteration, or else the newest version's
  * ```
  *
  * **Built from the repository, in full, every time,** so two people publishing never overwrite each other's pages, and
@@ -53,6 +53,8 @@ interface SiteProject {
 	title: string;
 	/** Oldest version first; each version's iterations newest first. */
 	versions: { version: number; pages: Page[] }[];
+	/** The version the team chose, when it has pages. */
+	selected: number | null;
 }
 
 const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -91,6 +93,7 @@ const readProjects = (designRoot: string): SiteProject[] => {
 		const byVersion = new Map<number, Page[]>();
 		for (const p of pages) byVersion.set(p.version, [...(byVersion.get(p.version) ?? []), p]);
 		const brief = existsSync(join(dir, 'brief.md')) ? readFileSync(join(dir, 'brief.md'), 'utf8') : '';
+		const chosen = existsSync(join(dir, 'selected.json')) ? parseSelectedVersion(readFileSync(join(dir, 'selected.json'), 'utf8')) : null;
 		return [
 			{
 				id,
@@ -98,6 +101,7 @@ const readProjects = (designRoot: string): SiteProject[] => {
 				versions: [...byVersion.entries()]
 					.sort(([a], [b]) => a - b)
 					.map(([version, ps]) => ({ version, pages: ps.sort((a, b) => b.iteration - a.iteration) })),
+				selected: chosen !== null && byVersion.has(chosen) ? chosen : null,
 			},
 		];
 	});
@@ -135,6 +139,7 @@ h1 { font-size: 22px; font-weight: 600; margin: 0 0 20px; }
 .versions { display: flex; gap: 16px; align-items: flex-start; overflow-x: auto; }
 .version { min-width: 220px; flex: 0 0 auto; }
 .version h2 { font-size: 15px; font-weight: 600; margin: 0 0 8px; }
+.version.selected .list a { border-color: currentColor; }
 /* The prototype, under the app's own toolbar, and beside it the comments' panel when it is open. */
 .stage { display: flex; height: calc(100vh - var(--toolbar-height, 2.75rem)); }
 .stage iframe { display: block; flex: 1; min-width: 0; height: 100%; border: 0; }
@@ -170,7 +175,7 @@ const projectPage = (p: SiteProject, comments: Map<string, number> | undefined):
 		`<main>\n<p class="muted"><a href="../">All prototypes</a></p>\n<h1>${escape(p.title)}</h1>\n<div class="versions">\n${p.versions
 			.map(
 				(v) =>
-					`<section class="version">\n<h2>V${v.version}</h2>\n<ul class="list">\n${v.pages
+					`<section class="version${v.version === p.selected ? ' selected' : ''}">\n<h2>V${v.version}${v.version === p.selected ? ' <span class="muted">· Selected</span>' : ''}</h2>\n<ul class="list">\n${v.pages
 						.map((pg) => {
 							const date = dateOf(pg.record.createdAt);
 							const author = pg.record.contributors?.[0]?.name;
@@ -249,7 +254,7 @@ export const buildSite = ({ designRoot, outDir, comments, viewer }: SiteInput): 
 			mkdirSync(join(dir, `v${v.version}`, 'latest'), { recursive: true });
 			writeFileSync(join(dir, `v${v.version}`, 'latest', 'index.html'), redirect(`${p.title} · ${labelOf(newest)}`, `../i${newest.iteration}/`));
 		}
-		const newestVersion = p.versions.at(-1) as SiteProject['versions'][number];
+		const newestVersion = (p.versions.find((v) => v.version === p.selected) ?? p.versions.at(-1)) as SiteProject['versions'][number];
 		const newest = newestVersion.pages[0] as Page;
 		mkdirSync(join(dir, 'latest'), { recursive: true });
 		writeFileSync(join(dir, 'latest', 'index.html'), redirect(`${p.title} · ${labelOf(newest)}`, `../${newest.path}`));

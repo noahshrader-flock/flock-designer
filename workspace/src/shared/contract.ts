@@ -306,6 +306,10 @@ export interface WorkspaceApi {
 	/** Opens the iteration's published page in the person's browser. Its address is worked out there, not taken from here. */
 	openPublishedPage(projectId: string, name: string): Promise<Result<null>>;
 	savePrototype(projectId: string, name: string): Promise<Result<null>>;
+	/** The project's selected version, or null when none is. */
+	selectedVersion(projectId: string): Promise<Result<number | null>>;
+	/** Selects a version (null: none), and publishes it: the site's `latest` follows it. */
+	selectVersion(projectId: string, version: number | null): Promise<Result<null>>;
 	openPrototype(projectId: string, name: string): Promise<Result<string>>;
 	/** What moving a prototype into the code would do in this checkout, asked before it is offered. */
 	moveToCodePlan(root: string, projectId: string, name: string): Promise<Result<MoveToCodePlan>>;
@@ -631,6 +635,8 @@ export const CHANNELS = {
 	publishedPage: 'workspace:publishedPage',
 	openPublishedPage: 'workspace:openPublishedPage',
 	savePrototype: 'workspace:savePrototype',
+	selectedVersion: 'workspace:selectedVersion',
+	selectVersion: 'workspace:selectVersion',
 	openPrototype: 'workspace:openPrototype',
 	prepareMoveToCode: 'workspace:prepareMoveToCode',
 	prototypeReadiness: 'workspace:prototypeReadiness',

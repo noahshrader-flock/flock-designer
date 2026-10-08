@@ -129,6 +129,25 @@ describe('latest', () => {
 	});
 });
 
+describe('the selected version', () => {
+	it('is marked on the project page, and latest leads to its newest iteration', () => {
+		writeFileSync(join(design, 'projects', 'alpha', 'selected.json'), '{ "version": 1 }\n');
+		build();
+		expect(read('alpha/index.html')).toMatch(/class="version selected">\n<h2>V1 <span class="muted">· Selected<\/span>/);
+		expect(read('alpha/index.html')).toContain('<section class="version">\n<h2>V2</h2>');
+		expect(read('alpha/latest/index.html')).toContain('url=../v1/i2/');
+	});
+
+	it('is ignored when it has no pages, or is not a version', () => {
+		for (const text of ['{ "version": 9 }', 'nonsense', '{ "version": "1" }']) {
+			writeFileSync(join(design, 'projects', 'alpha', 'selected.json'), text);
+			build();
+			expect(read('alpha/index.html')).not.toContain('Selected');
+			expect(read('alpha/latest/index.html')).toContain('url=../v2/i1/');
+		}
+	});
+});
+
 describe('building', () => {
 	it('links only within itself, so it works from any address it is served at', () => {
 		build();

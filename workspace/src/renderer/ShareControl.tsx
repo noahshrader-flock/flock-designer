@@ -1,4 +1,4 @@
-import { CodeIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
+import { CircleCheckIcon, CodeIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared/contract';
 import { dialogView, isMine, stepText } from './shareView';
@@ -27,6 +27,7 @@ export const ShareControl = ({
 	onOpenInBrowser,
 	prototype = false,
 	onMoveToCode,
+	selection,
 	editor,
 }: {
 	checkout: Checkout | null;
@@ -39,6 +40,8 @@ export const ShareControl = ({
 	prototype?: boolean;
 	/** Offered when there is a product repository here to build it in. */
 	onMoveToCode?: () => void;
+	/** A prototype's version, and whether it is the project's selected one, to select it or not. */
+	selection?: { version: number; selected: boolean; onToggle: () => void };
 	/** Codebase work, handed to the person's editor: the checkout, and the agent's conversation when there is one. */
 	editor?: { editor: boolean; session: boolean; openInEditor: () => unknown; continueInClaude: () => unknown };
 }) => {
@@ -60,6 +63,7 @@ export const ShareControl = ({
 	// The menu's two groups: what you do to the work, then where you look at it.
 	const canMove = prototype && onMoveToCode;
 	const canShare = checkout && !prototype;
+	const canSelect = prototype && selection;
 
 	const start = async () => {
 		if (!checkout) return;
@@ -95,6 +99,12 @@ export const ShareControl = ({
 					<TooltipContent>{running ? 'Sharing…' : 'More'}</TooltipContent>
 				</Tooltip>
 				<DropdownMenuContent align="end" className="w-auto">
+					{canSelect && (
+						<DropdownMenuItem onSelect={selection.onToggle}>
+							<CircleCheckIcon />
+							{selection.selected ? `Unselect V${selection.version}` : `Select V${selection.version}`}
+						</DropdownMenuItem>
+					)}
 					{canMove && (
 						<DropdownMenuItem onSelect={onMoveToCode}>
 							<CodeIcon />
@@ -114,7 +124,7 @@ export const ShareControl = ({
 						</DropdownMenuItem>
 					)}
 					{/* No line when the first group is empty. */}
-					{(canMove || canShare) && <DropdownMenuSeparator />}
+					{(canSelect || canMove || canShare) && <DropdownMenuSeparator />}
 					{editor && (
 						<DropdownMenuItem onSelect={editor.openInEditor}>
 							<SquareTerminalIcon />

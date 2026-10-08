@@ -3,7 +3,27 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Review } from '../src/renderer/Review';
 import type { MarkerRequest, ReviewComment } from '../src/shared/contract';
-import { afterAgentCheck, button, cardFor, cards, comment, fail, fakeApp, key, menuItem, ok, openMenu, press, render, reviewProps, settle, typeInto, unmountAll } from './reviewHarness';
+import {
+	PROJECT,
+	PROTOTYPE,
+	afterAgentCheck,
+	button,
+	cardFor,
+	cards,
+	comment,
+	fail,
+	fakeApp,
+	key,
+	menuItem,
+	ok,
+	openMenu,
+	press,
+	render,
+	reviewProps,
+	settle,
+	typeInto,
+	unmountAll,
+} from './reviewHarness';
 
 /**
  * What the review screen does with comments, pinned before its comments are taken out of it (M4 of the Pages plan), and
@@ -283,6 +303,35 @@ describe('its published page', () => {
 		await unmountAll((current as NonNullable<typeof current>).root);
 		await open(fakeApp());
 		expect(() => button(/Open page|Not published/)).toThrow(/0 buttons/);
+	});
+});
+
+describe('the selected version', () => {
+	const prototypes = ['v2-i2', 'v2-i1', 'v1-i1'].map((name) => ({ ...PROTOTYPE, name, branch: `prototype/demo/${name}` }));
+
+	it('is chosen from the menu, and unchosen', async () => {
+		const app = fakeApp();
+		await open(app);
+		await press(menuItem(await openMenu(button('More')), 'Select V1'));
+		await settle();
+		expect(app.calls.selectVersion?.[0]).toEqual(['demo', 1]);
+		await press(menuItem(await openMenu(button('More')), 'Unselect V1'));
+		await settle();
+		expect(app.calls.selectVersion?.[1]).toEqual(['demo', null]);
+	});
+
+	it('is where Build in the codebase starts, from its newest iteration, wherever the screen is', async () => {
+		const app = fakeApp({
+			selectedVersion: async () => ok(2),
+			agentReadiness: async () => ok({ state: 'ready' }),
+			listBaseBranches: async () => ok(['develop']),
+			moveToCodePlan: async () => ok({ branch: 'feature/demo', exists: false, recorded: false, repository: 'flock-coke', basedOn: null, current: 'develop', clean: true }),
+		});
+		await open(app, { project: { ...PROJECT, iterations: prototypes } });
+		await press(menuItem(await openMenu(button('More')), 'Build in the codebase'));
+		await settle();
+		expect(document.body.textContent).toContain('This moves V2 · I2 into flock-coke');
+		expect(app.calls.moveToCodePlan?.[0]).toEqual(['/c/flock-coke', 'demo', 'v2-i2']);
 	});
 });
 

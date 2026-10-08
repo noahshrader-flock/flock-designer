@@ -47,7 +47,20 @@ import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anc
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
-import { isRecordName, iterationLabel, mergeProjects, prototypeKey, prototypePagePath, unionLocal, workKind } from '../shared/projects';
+import {
+	isRecordName,
+	iterationLabel,
+	latestIterationName,
+	mergeProjects,
+	parsePrototypeName,
+	parseSelectedVersion,
+	prototypeKey,
+	prototypePagePath,
+	selectedVersionPath,
+	selectedVersionText,
+	unionLocal,
+	workKind,
+} from '../shared/projects';
 import { resolveInside } from './services/paths';
 import { PrototypeServer } from './services/prototypeServer';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
@@ -882,6 +895,33 @@ export const registerIpc = ({
 		guard(async (projectId: string, name: string): Promise<null> => {
 			await work.save(projectId, name);
 			publishInBackground(projectId, name);
+			return null;
+		}),
+	);
+
+	ipcMain.handle(
+		CHANNELS.selectedVersion,
+		guard(async (projectId: string): Promise<number | null> => {
+			assertUsableProjectId(projectId);
+			return parseSelectedVersion(await readDesignFile(selectedVersionPath(projectId)));
+		}),
+	);
+	ipcMain.handle(
+		CHANNELS.selectVersion,
+		guard(async (projectId: string, version: number | null): Promise<null> => {
+			assertUsableProjectId(projectId);
+			if (version !== null && !(Number.isSafeInteger(version) && version > 0)) throw new Error('That is not a version.');
+			const names = (await work.records(projectId)).map((r) => r.name);
+			const versions = names.flatMap((n) => parsePrototypeName(n)?.version ?? []);
+			if (version !== null && !versions.includes(version)) throw new Error(`${projectId} has no V${version}.`);
+			await recordStore().write(
+				selectedVersionPath(projectId),
+				selectedVersionText(version),
+				version === null ? `${projectId}: no version selected` : `${projectId}: V${version} selected`,
+			);
+			// The site's latest follows it, so it is published, by the iteration latest now leads to.
+			const newest = latestIterationName(names, version ?? Math.max(...versions));
+			if (newest !== null) publishInBackground(projectId, newest);
 			return null;
 		}),
 	);

@@ -10,7 +10,17 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, PageStatus, Project, ProjectIteration } from '../shared/contract';
 import { READY_LINE } from '../shared/handoff';
-import { freshIteration, isPrototypeKey, iterationLabel, prototypeKey, prototypePagePath, workKind, workOf } from '../shared/projects';
+import {
+	freshIteration,
+	isPrototypeKey,
+	iterationLabel,
+	latestIterationName,
+	parsePrototypeName,
+	prototypeKey,
+	prototypePagePath,
+	workKind,
+	workOf,
+} from '../shared/projects';
 import { IterationSwitcher } from './IterationSwitcher';
 import { CommentBox } from './comments/CommentBox';
 import { CommentControl } from './comments/CommentControl';
@@ -123,6 +133,22 @@ export const Review = ({
 	const codebase = kind === 'codebase';
 	// The other iterations of the same kind of work, to switch between without going back to the list.
 	const siblings = workOf(project.iterations, kind);
+	// The version the team chose, from the menu: the site's latest leads to it, and Build in the codebase starts from
+	// its newest iteration, wherever this screen is.
+	const version = prototype ? (parsePrototypeName(iteration.name)?.version ?? null) : null;
+	const [selected, setSelected] = useState<number | null>(null);
+	useEffect(() => {
+		if (prototype) void window.workspace.selectedVersion(project.id).then((r) => r.ok && setSelected(r.value));
+	}, [prototype, project.id]);
+	const toggleSelected = async () => {
+		const next = selected === version ? null : version;
+		const r = await window.workspace.selectVersion(project.id, next);
+		if (!r.ok) return setError(r.error);
+		setSelected(next);
+	};
+	const prototypes = [iteration, ...siblings];
+	const newestSelected = selected === null ? null : latestIterationName(prototypes.map((p) => p.name), selected);
+	const buildFrom = prototypes.find((p) => p.name === newestSelected) ?? iteration;
 	// Handoff on codebase work: confirmed in a dialog, then run on this screen, ending in a report.
 	const [handingOff, setHandingOff] = useState(false);
 	const [handoffReady, setHandoffReady] = useState<boolean | null>(null);
@@ -496,6 +522,7 @@ export const Review = ({
 						onOpenInBrowser={() => void window.workspace.openPreviewInBrowser().then((r) => !r.ok && setError(r.error))}
 						prototype={prototype}
 						onMoveToCode={checkout ? () => setMoving(true) : undefined}
+						selection={version !== null ? { version, selected: selected === version, onToggle: () => void toggleSelected() } : undefined}
 						editor={editor.available ? editor : undefined}
 					/>
 				</div>
@@ -510,7 +537,7 @@ export const Review = ({
 				/>
 			)}
 			{checkout && prototype && (
-				<MoveToCode open={moving} onClose={() => setMoving(false)} project={project} iteration={iteration} checkout={checkout} onStarted={onOpen} />
+				<MoveToCode open={moving} onClose={() => setMoving(false)} project={project} iteration={buildFrom} checkout={checkout} onStarted={onOpen} />
 			)}
 
 			{/* Under the toolbar: the preview, and beside it the sidebar when it is open. */}

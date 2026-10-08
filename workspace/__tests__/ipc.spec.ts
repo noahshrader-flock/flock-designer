@@ -582,6 +582,20 @@ describe('prototypes', () => {
 		expect((listed.value as { id: string }[]).map((p) => p.id)).not.toContain('_shared');
 	});
 
+	it('select a version in its own file in the design repository, read it back, and refuse one the project does not have', async () => {
+		await call(CHANNELS.useCheckout, product);
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		expect((await call(CHANNELS.selectedVersion, 'demo')).value).toBeNull();
+		expect(await call(CHANNELS.selectVersion, 'demo', 1)).toEqual({ ok: true, value: null });
+		expect(JSON.parse(readFileSync(join(design, 'projects', 'demo', 'selected.json'), 'utf8'))).toEqual({ version: 1 });
+		expect((await call(CHANNELS.selectedVersion, 'demo')).value).toBe(1);
+		expect((await call(CHANNELS.selectVersion, 'demo', 3)).ok).toBe(false);
+		expect((await call(CHANNELS.selectVersion, 'demo', 1.5)).ok).toBe(false);
+		expect((await call(CHANNELS.selectVersion, '../x', 1)).ok).toBe(false);
+		await call(CHANNELS.selectVersion, 'demo', null);
+		expect((await call(CHANNELS.selectedVersion, 'demo')).value).toBeNull();
+	});
+
 	describe('moving into the code', () => {
 		const start = async () => {
 			await call(CHANNELS.useCheckout, product);
