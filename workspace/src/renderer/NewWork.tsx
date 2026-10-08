@@ -72,6 +72,8 @@ export const NewWork = ({
 	const [picked, setPicked] = useState<string | null>(null);
 	const [branches, setBranches] = useState<string[]>([]);
 	const [from, setFrom] = useState<string | null>(null);
+	// Those with the Flock Designer setup: codebase work starts only from one of these. Null until known.
+	const [withSetup, setWithSetup] = useState<string[] | null>(null);
 	const id = slugify(name);
 	// Cloning a repository with no clone here: what it would do, and, while it runs, how far it has got.
 	const [clonePlan, setClonePlan] = useState<ClonePlan | null>(null);
@@ -89,10 +91,12 @@ export const NewWork = ({
 	// A new repository brings its own branches, and starts on the one it has checked out.
 	useEffect(() => {
 		setBranches([]);
+		setWithSetup(null);
 		setFrom(checkout?.branch ?? null);
 		if (!open || !checkout) return;
 		let current = true;
 		void window.workspace.listBaseBranches(checkout.root).then((r) => current && r.ok && setBranches(r.value));
+		void window.workspace.branchesWithSetup(checkout.root).then((r) => current && r.ok && setWithSetup(r.value));
 		return () => {
 			current = false;
 		};
@@ -146,6 +150,9 @@ export const NewWork = ({
 		}
 		onClose();
 	};
+
+	// Codebase work is built where the setup is: a branch without it is said now, with ones that have it, not at Start.
+	const noSetup = kind === 'codebase' && from !== null && withSetup !== null && !withSetup.includes(from);
 
 	// Building needs Claude Code; when it is plainly not ready, nothing is created.
 	const blocked = readiness.state === 'missing' || readiness.state === 'signedOut';
@@ -328,6 +335,15 @@ export const NewWork = ({
 							</AlertDescription>
 						</Alert>
 					)}
+					{noSetup && (
+						<Alert variant="warning">
+							<AlertDescription>
+								{withSetup.length > 0
+									? `${from} has no Flock Designer setup, so codebase work cannot start from it. These do: ${withSetup.slice(0, 3).join(', ')}.`
+									: `No branch of ${checkout?.name ?? 'this repository'} has the Flock Designer setup, so codebase work cannot start in it yet.`}
+							</AlertDescription>
+						</Alert>
+					)}
 					{kind !== 'prototype' && checkout && checkout.clean === false && (
 						<Alert variant="warning">
 							<AlertDescription>There are uncommitted changes in this checkout. Commit or set them aside first.</AlertDescription>
@@ -345,7 +361,7 @@ export const NewWork = ({
 					</Button>
 					<Button
 						onClick={() => void create()}
-						disabled={busy || blocked || prototypeBlocked || !id || !task.trim() || !checkout || elsewhere || !from}
+						disabled={busy || blocked || prototypeBlocked || noSetup || !id || !task.trim() || !checkout || elsewhere || !from}
 					>
 						{busy ? 'Creating…' : kind === 'prototype' ? 'Create prototype' : 'Start codebase work'}
 					</Button>

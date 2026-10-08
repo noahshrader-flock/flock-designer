@@ -31,7 +31,7 @@ import { type ShareRunner, previewIsUp, pullRequestText } from './services/share
 import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
 import { DESCRIPTOR_PATH, readDescriptor } from './services/descriptor';
-import { branchCommit, branchExists, isRepository, readCheckout, recentBranches, runGit } from './services/git';
+import { branchCommit, branchExists, branchesWithFile, ensureLocalBranch, isRepository, readCheckout, recentBranches, runGit } from './services/git';
 import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { Cloner } from './services/clone';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
@@ -330,19 +330,33 @@ export const registerIpc = ({
 			const stop = (cloning = new AbortController());
 			const progress = (of: string) => (p: { step: string; percent: number | null }) => window.webContents.send(CHANNELS.cloneProgress, { repository: of, ...p });
 			let product: string;
+			let fresh: boolean;
 			try {
-				product = (await cloner.clone({ repository: plan.repository, visible, folder }, progress(plan.repository), stop.signal)).path;
+				({ path: product, cloned: fresh } = await cloner.clone({ repository: plan.repository, visible, folder }, progress(plan.repository), stop.signal));
 				if (plan.design) await cloner.clone({ repository: DESIGN, visible: [DESIGN], folder }, progress(DESIGN), stop.signal);
 			} finally {
 				cloning = null;
 			}
-			// Cloned, but on a branch this app cannot work in: said now, rather than at Start.
-			if (!existsSync(join(product, DESCRIPTOR_PATH))) {
-				throw new Error(`${plan.repository} is cloned in ${product}, but the branch it is on has no Flock Designer setup (${DESCRIPTOR_PATH}), so it cannot be used yet.`);
-			}
+			await startAtSetup(plan.repository, product, fresh);
 			return openRepository(product);
 		}),
 	);
+	/**
+	 * A clone is used on a branch with the Flock Designer setup, since the app reads it from the files there. A clone just
+	 * made is moved to the most recently committed branch that has it (it holds nothing of the person's yet); one that
+	 * was already there is the person's, so it is never moved, and they are told which branch to switch it to.
+	 */
+	const startAtSetup = async (repository: string, root: string, fresh: boolean): Promise<void> => {
+		if (existsSync(join(root, DESCRIPTOR_PATH))) return;
+		const here = (await readCheckout(root)).branch ?? 'no branch';
+		const good = (await branchesWithFile(root, DESCRIPTOR_PATH))[0];
+		if (good === undefined) {
+			throw new Error(`${repository} is cloned in ${root}, but none of its branches has a Flock Designer setup (${DESCRIPTOR_PATH}), so it cannot be used yet.`);
+		}
+		if (!fresh) throw new Error(`${root} is on ${here}, which has no Flock Designer setup. Switch it to ${good}, which has it, then try again.`);
+		await ensureLocalBranch(root, good);
+		await runGit(root, ['checkout', '-q', good]);
+	};
 	ipcMain.handle(
 		CHANNELS.cancelClone,
 		guard(() => {
@@ -368,6 +382,10 @@ export const registerIpc = ({
 	ipcMain.handle(
 		CHANNELS.listBaseBranches,
 		guard((root: string) => recentBranches(opened.require(root))),
+	);
+	ipcMain.handle(
+		CHANNELS.branchesWithSetup,
+		guard((root: string) => branchesWithFile(opened.require(root), DESCRIPTOR_PATH)),
 	);
 
 	ipcMain.handle(CHANNELS.openCheckout, guard((root: string) => openRepository(root)));
@@ -398,10 +416,9 @@ export const registerIpc = ({
 			const canonical = opened.require(root);
 			assertAgentNotHere(canonical);
 			const descriptor = descriptorFor(root);
-			// Only ever a branch that exists here, so the window cannot pass git an option or a revision expression.
-			if (from !== undefined && !(await branchExists(canonical, from))) {
-				throw new Error(`There is no branch called ${from} in ${basename(canonical)}.`);
-			}
+			// Only ever a branch that exists here or on GitHub, so the window cannot pass git an option or a revision
+			// expression. One only on GitHub (as most are in a fresh clone) is made local, with nothing checked out.
+			if (from !== undefined) await ensureLocalBranch(canonical, from);
 			const branch = from ?? (await readCheckout(canonical)).branch;
 			if (branch === null) {
 				throw new Error('This repository has a detached HEAD. Check out a branch first.');
@@ -840,8 +857,10 @@ export const registerIpc = ({
 		guard(async (projectId: string, title: string, note: string, from: { root: string; branch: string } | null) => {
 			// What it is modelled on is not optional: a prototype is built from a repository's real design system.
 			if (!from) throw new Error('A prototype is modelled on a branch of a repository on this machine. Choose one.');
-			// Only a repository this person accepted.
-			return work.start(opened.require(from.root), { projectId, title, note, branch: from.branch, me: me() });
+			// Only a repository this person accepted, and a branch in it, made local when it is only on GitHub.
+			const root = opened.require(from.root);
+			await ensureLocalBranch(root, from.branch);
+			return work.start(root, { projectId, title, note, branch: from.branch, me: me() });
 		}),
 	);
 

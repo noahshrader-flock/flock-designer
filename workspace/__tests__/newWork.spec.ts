@@ -3,7 +3,7 @@ import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { NewWork } from '../src/renderer/NewWork';
 import type { ClonePlan, CloneProgress } from '../src/shared/contract';
-import { button, fail, fakeApp, ok, press, render, settle, unmountAll } from './reviewHarness';
+import { button, fail, fakeApp, ok, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
 /**
  * Cloning from the New modal (C3 of the clone plan): a repository with no clone here is chosen like any other, says
@@ -66,6 +66,36 @@ const text = () => document.body.textContent ?? '';
 afterEach(async () => {
 	if (current) await unmountAll(current.root);
 	current = null;
+});
+
+describe('what it starts from', () => {
+	const codebase = async () => {
+		const tab = [...document.querySelectorAll<HTMLElement>('[role="tab"]')].find((t) => t.textContent === 'Codebase work') as HTMLElement;
+		await act(async () => {
+			tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+			tab.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerType: 'mouse' }));
+		});
+		await settle();
+	};
+	const fill = async () => {
+		await typeInto(document.getElementById('new-work-name') as HTMLInputElement, 'Ops list');
+		await typeInto(document.getElementById('new-work-task') as HTMLTextAreaElement, 'A list');
+	};
+
+	it('says, for codebase work, when the branch has no Flock Designer setup, names ones that do, and will not start', async () => {
+		await open({ listBaseBranches: async () => ok(['develop', 'noah/flock-designer']), branchesWithSetup: async () => ok(['noah/flock-designer']) });
+		await codebase();
+		await fill();
+		expect(text()).toContain('develop has no Flock Designer setup, so codebase work cannot start from it. These do: noah/flock-designer.');
+		expect(button('Start codebase work').disabled).toBe(true);
+	});
+
+	it('says nothing of it for a prototype, which can be modelled on any branch', async () => {
+		await open({ listBaseBranches: async () => ok(['develop', 'noah/flock-designer']), branchesWithSetup: async () => ok(['noah/flock-designer']) });
+		await fill();
+		expect(text()).not.toContain('has no Flock Designer setup');
+		expect(button('Create prototype').disabled).toBe(false);
+	});
 });
 
 describe('a repository with no clone on this machine', () => {

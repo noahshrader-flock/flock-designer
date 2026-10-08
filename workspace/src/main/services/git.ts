@@ -126,10 +126,58 @@ export const readTreeAt = async (root: string, dir: string, branch: string): Pro
 	return git(dir, ['rev-parse', 'HEAD']);
 };
 
-/** Every local branch, the one most recently committed to first. */
-export const recentBranches = async (root: string): Promise<string[]> => {
-	const out = await git(root, ['for-each-ref', '--sort=-committerdate', '--format=%(refname:short)', 'refs/heads/']);
-	return out === '' ? [] : out.split('\n');
+/** How many branches are offered to start from: past this, the most recently committed to are enough. */
+const MAX_BASES = 300;
+
+/**
+ * The branches work can start from, the one most recently committed to first: local ones, and ones only on GitHub
+ * (`origin`), which a fresh clone has few of locally. Each by its name, with the ref it is read from: the local branch
+ * when there is one, since that is what work starts from.
+ */
+const baseRefs = async (root: string): Promise<{ name: string; ref: string }[]> => {
+	const out = await git(root, ['for-each-ref', '--sort=-committerdate', '--format=%(refname)', 'refs/heads/', 'refs/remotes/origin/']);
+	const refs = out === '' ? [] : out.split('\n');
+	const local = new Set(refs.filter((r) => r.startsWith('refs/heads/')).map((r) => r.slice('refs/heads/'.length)));
+	const seen = new Set<string>();
+	const bases: { name: string; ref: string }[] = [];
+	for (const ref of refs) {
+		const name = ref.startsWith('refs/heads/') ? ref.slice('refs/heads/'.length) : ref.slice('refs/remotes/origin/'.length);
+		if (name === 'HEAD' || seen.has(name)) continue;
+		seen.add(name);
+		bases.push({ name, ref: local.has(name) ? `refs/heads/${name}` : ref });
+		if (bases.length === MAX_BASES) break;
+	}
+	return bases;
+};
+
+/** Every branch work can start from, local or only on GitHub, the one most recently committed to first. */
+export const recentBranches = async (root: string): Promise<string[]> => (await baseRefs(root)).map((b) => b.name);
+
+/**
+ * Which of the branches work can start from have `file`, asked of git once however many there are, in the same
+ * order. How the ones that can be worked in (they carry the setup file) are told from the ones that cannot.
+ */
+export const branchesWithFile = async (root: string, file: string): Promise<string[]> => {
+	const bases = await baseRefs(root);
+	if (bases.length === 0) return [];
+	const asked = run('git', ['--no-optional-locks', '-C', root, 'cat-file', '--batch-check'], { maxBuffer: 16 * 1024 * 1024, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } });
+	asked.child.stdin?.end(`${bases.map((b) => `${b.ref}:${file}`).join('\n')}\n`);
+	const lines = (await asked).stdout.split('\n');
+	// Found: `<object> blob <size>`. Not there: `<what was asked> missing`.
+	return bases.filter((_, i) => /^[0-9a-f]{40,64} blob /.test(lines[i] ?? '')).map((b) => b.name);
+};
+
+/**
+ * A branch to start from, made local when it is only on GitHub: a local branch tracking `origin/<branch>`, with no
+ * checkout, so the person's current branch never moves. Throws when it is on neither.
+ */
+export const ensureLocalBranch = async (root: string, branch: string): Promise<void> => {
+	if (await branchExists(root, branch)) return;
+	// Only ever the name of a branch git has, so it cannot be read as an option.
+	const remote = `refs/remotes/origin/${branch}`;
+	const onGitHub = !branch.startsWith('-') && (await git(root, ['rev-parse', '--verify', '--quiet', remote]).then(() => true, () => false));
+	if (!onGitHub) throw new GitProblem(`There is no branch called ${branch} in ${basename(root)}.`);
+	await git(root, ['branch', '--track', branch, remote]);
 };
 
 /**

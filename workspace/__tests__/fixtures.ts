@@ -6,8 +6,8 @@ import { join } from 'node:path';
 
 export const g = (root: string, ...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
 
-/** A product repository Flock Designer can open, on `develop`, with one commit. Its design system is called x. */
-export const makeProduct = (dir: string, commands: unknown[] = []) => {
+/** The Flock Designer setup file a product repository carries, written into `dir`. Its design system is called x. */
+export const makeProductFiles = (dir: string, commands: unknown[] = []) => {
 	mkdirSync(join(dir, '.flkd'), { recursive: true });
 	writeFileSync(
 		join(dir, '.flkd', 'workspace.json'),
@@ -21,6 +21,11 @@ export const makeProduct = (dir: string, commands: unknown[] = []) => {
 			designSystem: { package: 'x' },
 		}),
 	);
+};
+
+/** A product repository Flock Designer can open, on `develop`, with one commit. Its design system is called x. */
+export const makeProduct = (dir: string, commands: unknown[] = []) => {
+	makeProductFiles(dir, commands);
 	g(dir, 'init', '-q', '-b', 'develop');
 	g(dir, 'config', 'user.email', 't@example.test');
 	g(dir, 'config', 'user.name', 'Test');

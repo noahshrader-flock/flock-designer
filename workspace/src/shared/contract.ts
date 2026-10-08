@@ -226,8 +226,10 @@ export interface WorkspaceApi {
 	 * this machine where there is one; then clones here GitHub did not list. Listing one trusts nothing.
 	 */
 	listRepositories(): Promise<Result<Repository[]>>;
-	/** The local branches of an opened repository, most recently worked on first: what new work can start from. */
+	/** The branches of an opened repository, here or only on GitHub, most recently worked on first: what new work can start from. */
 	listBaseBranches(root: string): Promise<Result<string[]>>;
+	/** Of those, the ones with the Flock Designer setup, which codebase work can start from. */
+	branchesWithSetup(root: string): Promise<Result<string[]>>;
 	/** Checks out an existing iteration's branch. */
 	continueIteration(root: string, projectId: string, name: string): Promise<Result<Iteration>>;
 
@@ -666,6 +668,7 @@ export const CHANNELS = {
 	cloneProgress: 'workspace:event:cloneProgress',
 	listRepositories: 'workspace:listRepositories',
 	listBaseBranches: 'workspace:listBaseBranches',
+	branchesWithSetup: 'workspace:branchesWithSetup',
 	stopCommand: 'workspace:stopCommand',
 	commandStatus: 'workspace:commandStatus',
 	startAgent: 'workspace:startAgent',

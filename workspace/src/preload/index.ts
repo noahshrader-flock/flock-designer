@@ -58,6 +58,7 @@ const api: WorkspaceApi = {
 	createIteration: (root, projectId, note, from) => invoke<Iteration>(CHANNELS.createIteration, root, projectId, note, from),
 	listRepositories: () => invoke<Repository[]>(CHANNELS.listRepositories),
 	listBaseBranches: (root) => invoke<string[]>(CHANNELS.listBaseBranches, root),
+	branchesWithSetup: (root) => invoke<string[]>(CHANNELS.branchesWithSetup, root),
 	continueIteration: (root, projectId, name) => invoke<Iteration>(CHANNELS.continueIteration, root, projectId, name),
 
 	startCommand: (root, commandId, projectId) => invoke<PreviewStatus>(CHANNELS.startCommand, root, commandId, projectId),

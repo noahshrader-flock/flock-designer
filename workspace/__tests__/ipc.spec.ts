@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHANNELS } from '../src/shared/contract';
-import { g, installDesignSystem, makeProduct } from './fixtures';
+import { g, installDesignSystem, makeProduct, makeProductFiles } from './fixtures';
 
 /**
  * The IPC layer itself: which handlers demand that a repository was actually
@@ -191,7 +191,47 @@ describe('where clones go', () => {
 			expect(existsSync(join(home, 'Work'))).toBe(false);
 		});
 
-		it('says when what it cloned has no Flock Designer setup on its branch, and does not open it', async () => {
+		/** A repository like Coke: `develop` (its default) without the setup, and a branch with it. */
+		const likeCoke = (d: string) => {
+			mkdirSync(d, { recursive: true });
+			const c = (...a: string[]) => g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', ...a);
+			g(d, 'init', '-q', '-b', 'develop');
+			writeFileSync(join(d, 'README.md'), '# coke\n');
+			c('add', '.');
+			c('commit', '-q', '-m', 'first');
+			g(d, 'checkout', '-q', '-b', 'noah/flock-designer');
+			makeProductFiles(d);
+			c('add', '.');
+			c('commit', '-q', '-m', 'setup');
+			g(d, 'checkout', '-q', 'develop');
+		};
+		const designBeside = () =>
+			writeFileSync(join(home, 'GitHub', 'flock-designer', '.git', 'config'), '[remote "origin"]\n\turl = https://github.com/noahshrader-flock/flock-designer.git\n');
+
+		it('puts a fresh clone on the branch with the setup when its default has none, and opens it there', async () => {
+			signedIn(['flocksafety/coke']);
+			cloneSources = { 'flocksafety/coke': bare('coke', likeCoke) };
+			designBeside();
+			const r = await call(CHANNELS.cloneRepository, 'flocksafety/coke');
+			expect(r).toMatchObject({ ok: true, value: { name: 'coke', branch: 'noah/flock-designer', clean: true } });
+			// What it starts from includes the branches only on GitHub, and says which can take codebase work.
+			const root = join(home, 'GitHub', 'coke');
+			expect(((await call(CHANNELS.listBaseBranches, root)).value as string[]).sort()).toEqual(['develop', 'noah/flock-designer']);
+			expect((await call(CHANNELS.branchesWithSetup, root)).value).toEqual(['noah/flock-designer']);
+		});
+
+		it('never moves a clone the person already had, and says which branch to switch it to', async () => {
+			signedIn(['flocksafety/coke']);
+			const source = bare('coke', likeCoke);
+			designBeside();
+			g(home, 'clone', '-q', source, join(home, 'GitHub', 'coke'));
+			g(join(home, 'GitHub', 'coke'), 'remote', 'set-url', 'origin', 'https://github.com/flocksafety/coke.git');
+			const r = await call(CHANNELS.cloneRepository, 'flocksafety/coke');
+			expect(r.error).toMatch(/is on develop, which has no Flock Designer setup\. Switch it to noah\/flock-designer/);
+			expect(g(join(home, 'GitHub', 'coke'), 'branch', '--show-current').trim()).toBe('develop');
+		});
+
+		it('says when no branch of what it cloned has the setup', async () => {
 			signedIn(['flocksafety/plain']);
 			cloneSources = {
 				'flocksafety/plain': bare('plain', (d) => {
@@ -202,11 +242,24 @@ describe('where clones go', () => {
 					g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'first');
 				}),
 			};
-			// The design repository is already beside it here, a clone of it as its origin says, so only the product is cloned.
-			writeFileSync(join(home, 'GitHub', 'flock-designer', '.git', 'config'), '[remote "origin"]\n\turl = https://github.com/noahshrader-flock/flock-designer.git\n');
+			designBeside();
 			const r = await call(CHANNELS.cloneRepository, 'flocksafety/plain');
-			expect(r.error).toMatch(/is cloned in [\s\S]*has no Flock Designer setup/);
+			expect(r.error).toMatch(/is cloned in [\s\S]*none of its branches has a Flock Designer setup/);
 			expect(existsSync(join(home, 'GitHub', 'plain', 'README.md'))).toBe(true);
+		});
+	});
+
+	describe('starting from a branch only on GitHub', () => {
+		it('starts codebase work from it, making it local first', async () => {
+			// The product, cloned: its other branch is only on its origin.
+			g(product, 'branch', 'noah/elsewhere');
+			const clone = join(home, 'GitHub', 'coke-clone');
+			g(home, 'clone', '-q', product, clone);
+			await call(CHANNELS.openCheckout, clone);
+			expect(g(clone, 'branch', '--list', 'noah/elsewhere').trim()).toBe('');
+			const r = await call(CHANNELS.createIteration, clone, 'demo', 'note', 'noah/elsewhere');
+			expect(r.ok).toBe(true);
+			expect(g(clone, 'rev-parse', '--abbrev-ref', 'noah/elsewhere@{u}').trim()).toBe('origin/noah/elsewhere');
 		});
 	});
 
