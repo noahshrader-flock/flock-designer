@@ -1,24 +1,21 @@
 import {
 	ChevronDownIcon,
 	ChevronLeftIcon,
-	CircleCheckIcon,
-	EllipsisVerticalIcon,
 	FolderIcon,
 	GitBranchIcon,
-	MapPinIcon,
-	MessageSquareIcon,
 	PackageCheckIcon,
-	RotateCcwIcon,
-	Trash2Icon,
 	TriangleAlertIcon,
 	WandSparklesIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Checkout, CommentAnchor, MarkerResult, MarkerState, PinEvent, Project, ProjectIteration, ReviewComment } from '../shared/contract';
-import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../shared/comments';
+import type { Checkout, Project, ProjectIteration } from '../shared/contract';
 import { READY_LINE } from '../shared/handoff';
-import { latest } from '../shared/latest';
 import { byVersion, freshIteration, isPrototypeKey, iterationLabel, parsePrototypeName, prototypeKey, prototypePagePath, workKind, workOf } from '../shared/projects';
+import { CommentBox } from './comments/CommentBox';
+import { CommentControl } from './comments/CommentControl';
+import { CommentList } from './comments/CommentList';
+import { appComments, appPage } from './comments/appAdapter';
+import { useComments } from './comments/useComments';
 import { HandoffDialog } from './HandoffDialog';
 import { MoveToCode } from './MoveToCode';
 import { AgentLog, Loading } from './Loading';
@@ -33,7 +30,6 @@ import { useLocalBuild } from './useLocalBuild';
 import { useEditor } from './useEditor';
 import { usePrototypeBuild } from './prototypeBuild';
 import { Alert, AlertDescription } from './ui/alert';
-import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import {
 	DropdownMenu,
@@ -46,7 +42,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { Textarea } from './ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /**
@@ -64,22 +59,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
  * and the box is drawn over that. Dragging the sidebar's divider hides the preview for the
  * length of the drag, because the pointer over a native view never reaches this window.
  */
-
-/** How often an open iteration looks for new comments. */
-export const REFRESH_MS = 60_000;
-
-/** Where the comment box sits relative to the pin, whose body is drawn above its tip. */
-const BOX_OFFSET = { x: 22, y: -19 } as const;
-
-type Mode = 'browse' | 'picking' | 'composing';
-
-const NOTE: Record<MarkerState, string | null> = {
-	found: null,
-	moved: 'The element changed, so this follows its text.',
-	missing: 'The element is no longer on the page, so this is shown as a page comment.',
-	elsewhere: null,
-	otherState: 'Made in a different state of this page. Switch to that state to see where it was.',
-};
 
 export const Review = ({
 	project,
@@ -104,7 +83,6 @@ export const Review = ({
 	/** Opens other work: where moving a prototype into the code goes next. */
 	onOpen: (project: Project, iteration: ProjectIteration, task?: string) => void;
 }) => {
-	const [comments, setComments] = useState<ReviewComment[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	/**
 	 * Something went wrong is only useful if it can be seen. Errors are shown in the sidebar, which
@@ -116,22 +94,7 @@ export const Review = ({
 	}, [error]);
 	const [opened, setOpened] = useState(false);
 	const [route, setRoute] = useState<string | null>(null);
-	const [mode, setMode] = useState<Mode>('browse');
-	/** Whether a comment is being written. The draft pin and the box both hang off this one value. */
-	const composing = mode === 'composing';
-	const [commentMode, setCommentMode] = useState(false);
-	const [pending, setPending] = useState<CommentAnchor | null>(null);
-	const [pendingAt, setPendingAt] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-	// The picture of the spot, taken at the click, that goes with the comment being written.
-	const [pendingPicture, setPendingPicture] = useState<string | null>(null);
-	const [draft, setDraft] = useState('');
-	const [posting, setPosting] = useState(false);
-	const [placed, setPlaced] = useState<Map<number, MarkerState>>(new Map());
 	const slot = useRef<HTMLDivElement>(null);
-	const [me, setMe] = useState<string | null>(null);
-	const [selected, setSelected] = useState<number | null>(null);
-	const [redraw, setRedraw] = useState(0);
-	const cards = useRef(new Map<number, HTMLElement>());
 
 	// The sidebar: closed until asked for. Its width is the person's to set, and is remembered.
 	const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -144,10 +107,6 @@ export const Review = ({
 	const [ready, setReady] = useState(false);
 	const [snapshot, setSnapshot] = useState<string | null>(null);
 	const held = useRef(false);
-	const pickActive = useRef(false);
-	/** Set when the person backs out while a pick is still being read, so its result is dropped. */
-	const pickCancelled = useRef(false);
-	const composer = useRef<HTMLDivElement>(null);
 
 	// Someone with the product repository builds it here, so what they see is their latest work.
 	// Everyone else, and anyone whose local build cannot run (a colleague's iteration they do not
@@ -191,85 +150,21 @@ export const Review = ({
 		return window.workspace.onAgentLog((l) => setAddressLog((prev) => [...prev, l.text.replace(/\n$/, '')].slice(-80)));
 	}, [address.kind]);
 
-	useEffect(() => {
-		void window.workspace.signInState().then((r) => {
-			if (r.ok && r.value.state === 'signedIn') setMe(r.value.user.login);
-		});
-	}, []);
-
-	// Comments posted in this window. GitHub's listings can trail a new comment, so
-	// what was just posted is kept here and merged into whatever is read back.
-	const posted = useRef(new Map<number, ReviewComment>());
-
-	/**
-	 * Reading the comments. `quiet` is for the background refresh: a failed check nobody asked for is
-	 * not worth an error on screen.
-	 *
-	 * One read at a time, and never a lost one -- see `latest`. The bug it fixes was visible: opening
-	 * an iteration reads on arrival and again once the preview is up, and while a request made during
-	 * a read was simply dropped, the comments stayed as the first read left them until something else
-	 * happened to ask. Posting a comment looked like what made an earlier one appear.
-	 */
-	/** True when someone asked for this read, so a failure is worth saying. Background reads are silent. */
-	const asked = useRef(false);
-	/**
-	 * Counts the changes made from this window.
-	 *
-	 * GitHub answers a read as things stood *when the read began*. Resolve, move or delete something
-	 * while one is in flight and that answer is already out of date when it lands: applying it puts
-	 * the change back the way it was, and the comment reopens or the pin jumps back. So each change
-	 * bumps this, and a read whose generation has moved on is dropped. The change stands, and the next
-	 * read brings GitHub's own account of it.
-	 */
-	const changes = useRef(0);
-	const read = useCallback(async () => {
-		const loud = asked.current;
-		const at = changes.current;
-		asked.current = false;
-		const result = await window.workspace.readComments(project.id, iteration.branch);
-		if (!result.ok) {
-			if (loud) setError(result.error);
-			return;
-		}
-		// Something was changed here while this was in flight, so this answer predates it.
-		if (changes.current !== at) return;
-		// A read that worked clears a complaint from one that did not.
-		if (loud) setError(null);
-		// A comment GitHub has returned no longer needs its local copy; keeping one would hold back a
-		// later change to it there.
-		forgetPosted(posted.current, result.value);
-		const next = mergeComments(result.value, posted.current.values());
-		// Nothing new means nothing changes, so a refresh does not redraw every pin.
-		setComments((prev) => (sameComments(prev, next) ? prev : next));
-	}, [project.id, iteration.branch]);
-	const runRead = useMemo(() => latest(read), [read]);
-	const load = useCallback(
-		(quiet = false) => {
-			if (!quiet) asked.current = true;
-			return runRead();
-		},
-		[runRead],
+	// The comments: read, drawn as pins, and left, against the app's GitHub and its native preview.
+	const commentStore = useMemo(
+		() => appComments(window.workspace, { projectId: project.id, branch: iteration.branch, name: iteration.name, commit: iteration.commit, checkout }),
+		[project.id, iteration.branch, iteration.name, iteration.commit, checkout],
 	);
-
-	useEffect(() => void load(), [load]);
-
-	// A reviewer's comment made after this was opened should appear without anyone reopening it: when the
-	// window comes back into focus, and about once a minute while it is in front.
-	useEffect(() => {
-		const check = () => {
-			if (document.visibilityState === 'visible') void load(true);
-		};
-		const timer = setInterval(check, REFRESH_MS);
-		window.addEventListener('focus', check);
-		return () => {
-			clearInterval(timer);
-			window.removeEventListener('focus', check);
-		};
-	}, [load]);
-
-	// The number on a pin and the number in the file the agent reads are the same number, counted once.
-	const numbers = useMemo(() => numberComments(comments ?? []), [comments]);
-	const numberOf = useCallback((id: number) => numbers.get(id) ?? 0, [numbers]);
+	const commentPage = useMemo(() => appPage(window.workspace), []);
+	const comments = useComments({
+		store: commentStore,
+		page: commentPage,
+		opened,
+		route,
+		setError,
+		onPinClick: () => setSidebarOpen(true), // the comment is in the sidebar, so show it
+	});
+	const { composing, load } = comments;
 
 	// Only the newest open counts: an older one that finishes late must not undo, or complain about, a newer one.
 	const openRun = useRef(0);
@@ -350,141 +245,6 @@ export const Review = ({
 		};
 	}, [opened]);
 
-	// Put the markers on the page. A function, not just an effect, because freezing the
-	// preview for the comment box must first make sure the picture includes them.
-	const drawRun = useRef(0);
-	const drawMarkers = useCallback(async () => {
-		// Only your own pins can be dragged; GitHub would refuse anyone else's edit anyway.
-		// The pin being placed shows at once, before it is saved (id -1, amber).
-		const items = markersFor(comments ?? [], numbers, me, pending ? { anchor: pending, composing } : null);
-		// Several of the things this depends on can change inside one round trip to the page, so an
-		// older draw must not report its results over a newer one's: what is on the page would then be
-		// described by a list that is no longer what was drawn.
-		const mine = ++drawRun.current;
-		const r = await window.workspace.pageShowMarkers(items);
-		if (mine !== drawRun.current) return;
-		if (!r.ok) {
-			// Said, not swallowed. The pins on the page are now whatever was there before, which may be
-			// a different set from the comments listed beside them; silence would leave that looking
-			// deliberate.
-			setPlaced(new Map());
-			setError(r.error);
-			return;
-		}
-		setPlaced(new Map(r.value.map((m: MarkerResult) => [m.id, m.state])));
-	}, [comments, numbers, pending, composing, me]);
-
-	// ...and again whenever the comments, the page, or the route change.
-	useEffect(() => {
-		if (opened) void drawMarkers();
-	}, [opened, drawMarkers, route, redraw]);
-
-	// A pin on the page was clicked or dropped somewhere new.
-	useEffect(() => {
-		const off = window.workspace.onPinEvent((e: PinEvent) => {
-			if (e.kind === 'click') {
-				if (e.id < 0) return;
-				setSelected(e.id);
-				setSidebarOpen(true); // the comment is in the sidebar, so show it
-				setTimeout(() => cards.current.get(e.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 250);
-			} else if (e.id < 0) {
-				// The unsaved pin: just remember where it now is.
-				setPending((p) => (p ? { ...e.anchor, commit: p.commit } : p));
-			} else {
-				void window.workspace.moveComment(e.id, e.anchor).then((r) => {
-					if (r.ok) {
-						showChanged(r.value);
-						// The comment now points somewhere else, and the file the agent reads says where.
-						void load(true);
-					} else {
-						setError(r.error);
-					}
-					setRedraw((n) => n + 1); // either way, draw the pin from what is saved
-				});
-			}
-		});
-		// Without this, the handler for an iteration the person has left stays live
-		// and keeps acting on that iteration's comment ids.
-		return off;
-	}, []);
-
-	/** Waits for one click on the page. */
-	const pick = useCallback(async () => {
-		// Only one at a time: React runs every effect twice in development, and a second
-		// pick would cancel the first, which reads as someone pressing Escape.
-		if (pickActive.current) return;
-		pickActive.current = true;
-		setError(null);
-		setMode('picking');
-		const r = await window.workspace.pagePick();
-		pickActive.current = false;
-		if (!r.ok) {
-			setError(r.error);
-			setMode('browse');
-			setCommentMode(false);
-		} else if (r.value) {
-			// The commit the branch is at *now*, so the comment says which version it was made against.
-			// The recorded one can be stale; it is only the fallback (and all a reviewer has).
-			const live = checkout ? await window.workspace.iterationCommit(checkout.root, project.id, iteration.name) : null;
-			// Reading the commit takes a moment, and Escape may have landed in it. Backing out while
-			// this was in flight means there is nothing to write on: setting the pin now would leave
-			// one on the page with no box, so the whole pick is dropped instead.
-			if (pickCancelled.current) {
-				pickCancelled.current = false;
-				return;
-			}
-			setPending({ ...r.value.anchor, commit: (live?.ok && live.value) || iteration.commit || '' });
-			setPendingAt(r.value.at);
-			setPendingPicture(r.value.picture);
-			setMode('composing');
-		} else {
-			// Cancelled: Escape on the page, or comment mode switched off.
-			setMode('browse');
-			setCommentMode(false);
-		}
-	}, [iteration.commit, iteration.name, project.id, checkout]);
-
-	// Comment mode stays on: as soon as one comment is done, the next click is waited for.
-	useEffect(() => {
-		if (commentMode && opened && mode === 'browse') void pick();
-	}, [commentMode, opened, mode, pick]);
-
-	const exitCommentMode = useCallback(() => {
-		setCommentMode(false);
-		if (pickActive.current) {
-			// Same reason as in cancelCompose: a pick still being read must not land a pin afterwards.
-			pickCancelled.current = true;
-			void window.workspace.pageCancelPick();
-		}
-	}, []);
-
-	/** Abandons the comment being written, and the pin with it. Comment mode carries on. */
-	const cancelCompose = useCallback(() => {
-		if (pickActive.current) pickCancelled.current = true;
-		setPending(null);
-		setPendingPicture(null);
-		setDraft('');
-		setError(null);
-		setMode('browse');
-	}, []);
-
-	// C turns comment mode on and off; Escape backs out of whatever is happening.
-	useEffect(() => {
-		const onKey = (e: KeyboardEvent) => {
-			const t = e.target as HTMLElement | null;
-			const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
-			if (e.key === 'Escape') {
-				if (mode === 'composing') cancelCompose();
-				else if (commentMode) exitCommentMode();
-				return;
-			}
-			if (typing || e.metaKey || e.ctrlKey || !opened) return;
-			if (e.key.toLowerCase() === 'c') (commentMode ? exitCommentMode : () => setCommentMode(true))();
-		};
-		window.addEventListener('keydown', onKey);
-		return () => window.removeEventListener('keydown', onKey);
-	}, [opened, mode, commentMode, cancelCompose, exitCommentMode]);
-
 	// Anything drawn over the preview needs the space it occupies: the comment box here, any tooltip, menu, dialog
 	// or sheet that lands on it (they register themselves, see overlays.ts), and another section showing instead.
 	const overlapped = useOverlaps(slot);
@@ -513,7 +273,7 @@ export const Review = ({
 			return;
 		}
 		void (async () => {
-			await drawMarkers();
+			await comments.drawMarkers();
 			const snap = await window.workspace.pageSnapshot();
 			if (mine !== run.current) return;
 			setSnapshot(snap.ok ? snap.value : null);
@@ -574,27 +334,6 @@ export const Review = ({
 		});
 	};
 
-	const post = async () => {
-		if (!draft.trim() || !pending) return;
-		setPosting(true);
-		const r = await window.workspace.postComment(project.id, iteration.branch, draft.trim(), pending, pendingPicture);
-		setPosting(false);
-		if (r.ok) {
-			changes.current++;
-			posted.current.set(r.value.id, r.value);
-			setDraft('');
-			setPending(null);
-			setPendingPicture(null);
-			setMode('browse'); // comment mode is still on, so the next click is waited for
-			await load();
-		} else {
-			setError(r.error);
-		}
-	};
-
-	// What is still to be dealt with. Resolved comments stay listed, but are not the count.
-	const total = openComments(comments ?? []).length;
-
 	/** A prototype iteration of this project, by name, as people read it. */
 	const labelOf = (name: string): string => iterationLabel({ name, branch: prototypeKey(project.id, name) });
 	/** Where an Address run on this prototype put its change, when that is another iteration than this one. */
@@ -609,16 +348,6 @@ export const Review = ({
 			const made = freshIteration(changedElsewhere.made);
 			onOpen({ ...project, iterations: [...project.iterations, made] }, made);
 		}
-	};
-
-	/**
-	 * A comment as GitHub now has it, after this window changed it (resolved, reopened, addressed): shown at once, so its
-	 * pin comes or goes without waiting for the next read, and kept until a read includes the change.
-	 */
-	const showChanged = (comment: ReviewComment) => {
-		changes.current++;
-		posted.current.set(comment.id, comment);
-		setComments((cs) => (cs ?? []).map((c) => (c.id === comment.id ? comment : c)));
 	};
 
 	/** The agent is asked for one comment, from that comment's own button: never for a batch. */
@@ -639,7 +368,7 @@ export const Review = ({
 			await runPrototypeAddress({ api: window.workspace, projectId: project.id, name: iteration.name, commentId, isLive, onPhase });
 			if (!addressLive.current) return;
 			if (outcome.kind === 'done' && outcome.prototype) {
-				showChanged(outcome.prototype.comment);
+				comments.showChanged(outcome.prototype.comment);
 				// Changed here: what is on screen, and what reviewers open, is the changed page.
 				if (outcome.changed && outcome.prototype.iteration === iteration.name) local.retry();
 			}
@@ -654,41 +383,15 @@ export const Review = ({
 			// Either way: a later run that changed nothing clears the mark an earlier one left, so a
 			// card never shows a change waiting that is no longer there.
 			const marked = await window.workspace.markAddressed(commentId, outcome.changed ? outcome.commit : null);
-			if (marked.ok) showChanged(marked.value);
+			if (marked.ok) comments.showChanged(marked.value);
 		}
 		// The agent may have changed the code, and a reviewer may have written meanwhile.
 		void load(true);
 	};
 
-	// Deleting cannot be undone, so it asks first, on the card itself (a dialog would have to take the preview's place).
-	const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
-	const removeComment = async (comment: ReviewComment) => {
-		setError(null);
-		const r = await window.workspace.deleteComment(comment.id);
-		if (!r.ok) return setError(r.error);
-		// Forgotten here too: comments just posted from this window are kept until a read includes them,
-		// and one that stayed would come back on the next refresh.
-		changes.current++;
-		posted.current.delete(comment.id);
-		setConfirmingDelete(null);
-		setSelected((s) => (s === comment.id ? null : s));
-		setComments((cs) => (cs ?? []).filter((c) => c.id !== comment.id));
-		void load(true); // brings comments.md up to date too
-	};
-
-	const setResolved = async (comment: ReviewComment, resolved: boolean) => {
-		setError(null);
-		const r = await window.workspace.resolveComment(comment.id, resolved);
-		if (!r.ok) return setError(r.error);
-		showChanged(r.value);
-		// Same as deleting: the file the agent reads lists the open comments, and this is no longer one.
-		void load(true);
-	};
-	// Where the comment box goes: beside the pin, in window coordinates.
+	// Where the comment box goes: from the top left of the preview, in window coordinates.
 	const slotBox = slot.current?.getBoundingClientRect();
-	const boxPosition = slotBox
-		? { top: slotBox.top + pendingAt.y + BOX_OFFSET.y, left: slotBox.left + pendingAt.x + BOX_OFFSET.x }
-		: { top: 0, left: 0 };
+	const origin = slotBox ? { top: slotBox.top, left: slotBox.left } : { top: 0, left: 0 };
 
 	return (
 		// Under the main bar, and under z-50: tooltips, menus and dialogs are portalled to the page at z-50, so a
@@ -776,35 +479,7 @@ export const Review = ({
 							</DropdownMenuRadioGroup>
 						</DropdownMenuContent>
 					</DropdownMenu>
-					{/* One control, two halves: comment mode on the left, the list of comments on the right.
-					    A pressed half is filled rather than outlined, so which mode is on is readable at a glance. */}
-					<div className="flex items-center">
-						<Button
-							size="sm"
-							variant={commentMode ? 'default' : 'outline'}
-							aria-pressed={commentMode}
-							disabled={!opened}
-							title="Comment: click anywhere on the page to leave one (C)"
-							className="rounded-r-none"
-							onClick={() => (commentMode ? exitCommentMode() : setCommentMode(true))}
-						>
-							<MapPinIcon />
-							Comment
-						</Button>
-						<Button
-							size="sm"
-							variant={sidebarOpen ? 'default' : 'outline'}
-							aria-pressed={sidebarOpen}
-							aria-label="Show all comments"
-							disabled={!opened}
-							title={total > 0 ? `All comments (${total})` : 'All comments'}
-							className="rounded-l-none border-l-0"
-							onClick={() => setSidebarOpen((o) => !o)}
-						>
-							<MessageSquareIcon />
-							{total > 0 ? total : null}
-						</Button>
-					</div>
+					<CommentControl comments={comments} listOpen={sidebarOpen} onToggleList={() => setSidebarOpen((o) => !o)} disabled={!opened} />
 					{/* Codebase work's next step, so it is the one filled button. */}
 					{checkout && codebase && (
 						<Button size="sm" onClick={() => setHandingOff(true)}>
@@ -1006,7 +681,7 @@ export const Review = ({
 						{/* Inline on purpose: the width is wherever the person dragged the divider, a runtime value. */}
 						<div className="bg-card flex min-h-0 shrink-0 flex-col" style={{ width: panelWidth }}>
 							<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-								<h3 className="text-sm font-semibold">{total > 0 ? `Comments (${total})` : 'Comments'}</h3>
+								<h3 className="text-sm font-semibold">{comments.total > 0 ? `Comments (${comments.total})` : 'Comments'}</h3>
 								{error && opened && !composing && (
 									<Alert variant="destructive">
 										<AlertDescription>{error}</AlertDescription>
@@ -1069,111 +744,28 @@ export const Review = ({
 										<AlertDescription>{address.message}</AlertDescription>
 									</Alert>
 								)}
-								{comments?.length === 0 && (
-									<p className="text-muted-foreground text-sm">No comments yet. Choose Comment, then click anywhere on the page.</p>
-								)}
-								{comments?.map((comment) => {
-									// A resolved comment is not drawn on the page at all, so whatever was last said
-									// about placing it ("the element is no longer there") is about a pin that no
-									// longer exists, and saying it again would be about nothing. One the agent addressed
-									// is resolved with it, so this covers that too.
-									const state = comment.resolved ? undefined : placed.get(comment.id);
-									const n = numberOf(comment.id);
-									return (
-										<div
-											key={comment.id}
-											ref={(el: HTMLDivElement | null) => {
-												if (el) cards.current.set(comment.id, el);
-												else cards.current.delete(comment.id);
-											}}
-											onClick={() => {
-												setSelected(comment.id);
-												if (comment.anchor) void window.workspace.pageFocusMarker(comment.id);
-											}}
-											className={`rounded-lg border p-3 ${selected === comment.id ? 'border-primary bg-accent border-2' : ''} ${
-												comment.anchor ? 'cursor-pointer' : ''
-											} ${comment.resolved ? 'opacity-65' : ''}`}
-										>
-											<div className="flex flex-col gap-1.5">
-												<div className="flex flex-row items-center gap-2">
-													{n > 0 && <Badge variant="secondary">{n}</Badge>}
-													<span className="min-w-0 truncate text-sm font-medium">{comment.author}</span>
-													{comment.resolved && <Badge variant="success">Resolved</Badge>}
-													{/* One comment at a time: the designer picks the one that is a clear change, and
-													    leaves the ones that still need a decision. */}
-													<DropdownMenu>
-														<DropdownMenuTrigger asChild>
-															<Button
-																size="icon-sm"
-																variant="ghost"
-																aria-label="Comment actions"
-																className="-my-1 -mr-1.5 ml-auto"
-																onClick={(e: React.MouseEvent) => e.stopPropagation()}
-															>
-																<EllipsisVerticalIcon />
-															</Button>
-														</DropdownMenuTrigger>
-														{/* The menu is drawn outside the card but its clicks still reach the card in React: they must not select it. */}
-														<DropdownMenuContent align="end" className="w-auto" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-															{/* The agent runs on this machine, against the product repository: without it there is nothing to build with. */}
-															{!comment.resolved && checkout && (
-																<DropdownMenuItem disabled={address.kind === 'running'} onSelect={() => void addressComment(comment.id)}>
-																	<WandSparklesIcon />
-																	{addressing === comment.id && address.kind === 'running' ? 'Working…' : 'Address'}
-																</DropdownMenuItem>
-															)}
-															<DropdownMenuItem onSelect={() => void setResolved(comment, !comment.resolved)}>
-																{comment.resolved ? <RotateCcwIcon /> : <CircleCheckIcon />}
-																{comment.resolved ? 'Reopen' : 'Resolve'}
-															</DropdownMenuItem>
-															<DropdownMenuSeparator />
-															<DropdownMenuItem variant="destructive" onSelect={() => setConfirmingDelete(comment.id)}>
-																<Trash2Icon />
-																Delete
-															</DropdownMenuItem>
-														</DropdownMenuContent>
-													</DropdownMenu>
-												</div>
-												{comment.addressedAt !== null && (
-													<p className="text-muted-foreground text-xs">
-														{/* A prototype's version is a hash of its source, which means nothing to a person; a commit does. */}
-														{prototype
-															? comment.addressedIn && comment.addressedIn !== iteration.name
-																? `The agent addressed this in ${labelOf(comment.addressedIn)}`
-																: 'The agent addressed this'
-															: <>The agent addressed this in <code>{comment.addressedAt?.slice(0, 7)}</code></>}
-													</p>
-												)}
-												{confirmingDelete === comment.id && (
-													<div className="flex flex-row items-center gap-2" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-														<span className="text-destructive grow text-xs">Delete this comment for good? It cannot be brought back.</span>
-														<Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(null)}>
-															Keep
-														</Button>
-														<Button size="sm" variant="destructive" onClick={() => void removeComment(comment)}>
-															Delete
-														</Button>
-													</div>
-												)}
-												<p className="text-sm">{comment.body}</p>
-												{comment.picture && (
-													<img
-														className="max-w-[240px] rounded border"
-														src={comment.picture}
-														alt={`The spot comment ${n || ''} was made on`}
-													/>
-												)}
-												{comment.anchor?.state && (
-													<span className="text-muted-foreground text-xs">State: {comment.anchor.state}</span>
-												)}
-												{comment.anchor && state === 'elsewhere' && (
-													<span className="text-muted-foreground text-xs">On {comment.anchor.route}</span>
-												)}
-												{state && NOTE[state] && <span className="text-warning text-xs">{NOTE[state]}</span>}
-											</div>
-										</div>
-									);
-								})}
+								<CommentList
+									comments={comments}
+									actions={(comment) =>
+										// The agent runs on this machine, against the product repository: without it there is nothing to build with.
+										!comment.resolved && checkout ? (
+											<DropdownMenuItem disabled={address.kind === 'running'} onSelect={() => void addressComment(comment.id)}>
+												<WandSparklesIcon />
+												{addressing === comment.id && address.kind === 'running' ? 'Working…' : 'Address'}
+											</DropdownMenuItem>
+										) : null
+									}
+									addressed={(comment) =>
+										// A prototype's version is a hash of its source, which means nothing to a person; a commit does.
+										prototype ? (
+											comment.addressedIn && comment.addressedIn !== iteration.name ? `The agent addressed this in ${labelOf(comment.addressedIn)}` : 'The agent addressed this'
+										) : (
+											<>
+												The agent addressed this in <code>{comment.addressedAt?.slice(0, 7)}</code>
+											</>
+										)
+									}
+								/>
 							</div>
 						</div>
 					</>
@@ -1183,49 +775,7 @@ export const Review = ({
 			{/* The comment box, beside the pin that was just placed. Positioned at window coordinates
 			    rather than anchored to an element: the pin it belongs to is inside the native preview,
 			    which is not part of this document. */}
-			{composing && ready && boxPosition && (
-				<>
-					{/* Clicking away is the same as cancelling, as it was when this was a popover. */}
-					<div className="fixed inset-0 z-[1100]" onClick={cancelCompose} />
-					<div
-						ref={composer}
-						onKeyDown={(e: React.KeyboardEvent) => {
-							// Cmd or Ctrl and Enter saves, as in the tools people already use.
-							if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void post();
-							if (e.key === 'Escape') cancelCompose();
-						}}
-						className="bg-popover fixed z-[1101] w-[300px] max-w-[calc(100vw-16px)] rounded-lg border p-4 shadow-lg"
-						// Inline on purpose: measured from the pin, which lives in the native preview.
-						style={{ top: boxPosition.top, left: boxPosition.left }}
-					>
-						<div className="flex flex-col gap-3">
-							{error && (
-								<Alert variant="destructive">
-									<AlertDescription>{error}</AlertDescription>
-								</Alert>
-							)}
-							<label htmlFor="comment-draft" className="text-sm font-medium">
-								Comment
-							</label>
-								<Textarea
-								id="comment-draft"
-								rows={3}
-								value={draft}
-								onChange={(e) => setDraft(e.target.value)}
-								autoFocus
-							/>
-							<div className="flex flex-row justify-end gap-2">
-								<Button variant="secondary" onClick={cancelCompose} disabled={posting}>
-									Cancel
-								</Button>
-								<Button onClick={() => void post()} disabled={posting || !draft.trim()}>
-									{posting ? 'Saving…' : 'Save'}
-								</Button>
-							</div>
-						</div>
-					</div>
-				</>
-			)}
+			{composing && ready && <CommentBox comments={comments} origin={origin} error={error} />}
 		</div>
 	);
 };
