@@ -189,6 +189,19 @@ export const menuItem = (items: HTMLElement[], name: string): HTMLElement => {
 	return hit;
 };
 
+/** The card of the comment that says this. */
+export const cardFor = (text: string): HTMLElement => {
+	const c = cards().find((el) => el.textContent?.includes(text));
+	if (!c) throw new Error(`no card for ${text}: ${cards().map((x) => x.textContent).join(' | ')}`);
+	return c;
+};
+
+/** Long enough for the agent to be asked how it is getting on, which the screens do once a second. */
+export const afterAgentCheck = async () => {
+	await new Promise((r) => setTimeout(r, 1100));
+	await settle();
+};
+
 /** The cards in the comments sidebar, as their text. */
 export const cards = (): HTMLElement[] =>
 	[...document.querySelectorAll<HTMLElement>('button[aria-label="Comment actions"]')].map((b) => b.closest('.rounded-lg') as HTMLElement);

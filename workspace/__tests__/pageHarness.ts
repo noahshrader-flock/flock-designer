@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import { button, press, settle, typeInto } from './reviewHarness';
 
 /**
  * The published page, for tests: GitHub as its API answers for comments, and the page the site builds, as far as the
@@ -71,18 +72,39 @@ export const fakeGitHub = () => {
 	return { fetch, issues, calls };
 };
 
+/** A prototype in a frame, as the page and the app's preview both show one: a heading, and a named button. */
+export const prototypeIn = (frame: HTMLIFrameElement): Document => {
+	const doc = frame.contentDocument as Document;
+	doc.body.innerHTML = '<main><h1>Alert history</h1><button data-e2e-ref="clear-filter-button">Clear Filter</button></main>';
+	// What the pin scripts reach for that jsdom does not have.
+	const fw = frame.contentWindow as unknown as { Element: { prototype: Record<string, unknown> } };
+	fw.Element.prototype.scrollIntoView = () => undefined;
+	fw.Element.prototype.animate = () => undefined;
+	return doc;
+};
+
 /** The page the site builds, as far as the viewer is concerned: the bar's slot, the panel, and the prototype's frame. */
 export const sitePage = () => {
 	document.body.innerHTML = '<header id="flkd-bar"></header><div><iframe id="flkd-frame"></iframe><aside id="flkd-panel"></aside></div>';
 	const frame = document.getElementById('flkd-frame') as HTMLIFrameElement;
-	const doc = frame.contentDocument as Document;
-	doc.body.innerHTML = '<main><h1>Alert history</h1><button data-e2e-ref="clear-filter-button">Clear Filter</button></main>';
-	const fw = frame.contentWindow as unknown as Record<string, unknown>;
-	(fw.Element as { prototype: Record<string, unknown> }).prototype.scrollIntoView = () => undefined;
-	(fw.Element as { prototype: Record<string, unknown> }).prototype.animate = () => undefined;
+	const doc = prototypeIn(frame);
 	return {
 		frame,
 		doc,
 		slots: { bar: document.getElementById('flkd-bar') as HTMLElement, panel: document.getElementById('flkd-panel') as HTMLElement, frame },
 	};
+};
+
+/** A comment made on the page, as a reviewer makes one: Comment, a click on the prototype, the words, Save, and done. */
+export const commentOnPage = async (doc: Document, selector: string, words: string) => {
+	await press(button('Comment'));
+	await settle();
+	await press(doc.querySelector(selector) as Element);
+	await settle();
+	await typeInto(document.querySelector('#comment-draft') as HTMLTextAreaElement, words);
+	await press(button('Save'));
+	await settle();
+	// Comment mode carries on, waiting for the next click: the reviewer is done.
+	await press(button('Comment'));
+	await settle();
 };

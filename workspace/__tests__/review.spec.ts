@@ -3,7 +3,7 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Review } from '../src/renderer/Review';
 import type { MarkerRequest, ReviewComment } from '../src/shared/contract';
-import { button, cards, comment, fail, fakeApp, key, menuItem, ok, openMenu, press, render, reviewProps, settle, typeInto, unmountAll } from './reviewHarness';
+import { afterAgentCheck, button, cardFor, cards, comment, fail, fakeApp, key, menuItem, ok, openMenu, press, render, reviewProps, settle, typeInto, unmountAll } from './reviewHarness';
 
 /**
  * What the review screen does with comments, pinned before its comments are taken out of it (M4 of the Pages plan), and
@@ -27,11 +27,6 @@ const sidebar = async () => {
 };
 /** The pins the screen last asked the page to draw. */
 const pins = (app: ReturnType<typeof fakeApp>): MarkerRequest[] => (app.calls.pageShowMarkers?.at(-1)?.[0] as MarkerRequest[]) ?? [];
-const cardFor = (text: string) => {
-	const c = cards().find((el) => el.textContent?.includes(text));
-	if (!c) throw new Error(`no card for ${text}`);
-	return c;
-};
 const choose = async (text: string, item: string) => {
 	const items = await openMenu(button('Comment actions', cardFor(text)));
 	await press(menuItem(items, item));
@@ -304,9 +299,7 @@ describe('Address', () => {
 		await open(app);
 		await sidebar();
 		await choose('Remove this', 'Address');
-		// The agent is asked how it is getting on once a second.
-		await new Promise((r) => setTimeout(r, 1100));
-		await settle();
+		await afterAgentCheck();
 		expect(app.calls.addressPrototype?.[0]).toEqual(['demo', 'v1-i1', 1]);
 		expect(app.calls.finishPrototypeAddress?.[0]).toEqual([1]);
 		expect(cardFor('Remove this').textContent).toContain('Resolved');

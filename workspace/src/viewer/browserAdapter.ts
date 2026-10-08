@@ -17,7 +17,8 @@ export const tokenApi = (token: string, fetcher: Fetcher = fetch as unknown as F
 	api: (path, init = {}) => callApi(token, { path, ...init }, fetcher),
 });
 
-const result = async <T>(work: Promise<T>): Promise<Result<T>> => {
+/** What the app's calls answer with: the value, or what went wrong, never a throw. */
+export const asResult = async <T>(work: Promise<T>): Promise<Result<T>> => {
 	try {
 		return { ok: true, value: await work };
 	} catch (err) {
@@ -29,12 +30,12 @@ const result = async <T>(work: Promise<T>): Promise<Result<T>> => {
 export const browserComments = (github: GitHubApi, ref: DesignRepoRef, { projectId, branch }: { projectId: string; branch: string }): CommentStore => {
 	const repo = new DesignRepo(github, ref);
 	return {
-		read: () => result(repo.readComments(projectId, branch)),
+		read: () => asResult(repo.readComments(projectId, branch)),
 		// No picture of the spot: a page cannot take one of itself.
-		post: (body, anchor) => result(repo.postComment(projectId, branch, body, anchor, null)),
-		resolve: (id, resolved) => result(repo.setResolved(id, resolved)),
-		remove: (id) => result(repo.deleteComment(id).then(() => null)),
-		move: (id, anchor) => result(repo.moveComment(id, anchor)),
+		post: (body, anchor) => asResult(repo.postComment(projectId, branch, body, anchor, null)),
+		resolve: (id, resolved) => asResult(repo.setResolved(id, resolved)),
+		remove: (id) => asResult(repo.deleteComment(id).then(() => null)),
+		move: (id, anchor) => asResult(repo.moveComment(id, anchor)),
 		viewer: async () => {
 			try {
 				const login = asRecord(await github.api('/user')).login;
@@ -80,9 +81,9 @@ export const framePage = (frame: HTMLIFrameElement): PageSurface & { route(): Pr
 		}
 	};
 	return {
-		pick: () => result(run<unknown>(PICK_SCRIPT).then((raw) => readPick(raw)).then((spot) => (spot ? { ...spot, picture: null } : null))),
+		pick: () => asResult(run<unknown>(PICK_SCRIPT).then((raw) => readPick(raw)).then((spot) => (spot ? { ...spot, picture: null } : null))),
 		cancelPick: () => run(CANCEL_PICK_SCRIPT),
-		showMarkers: (items) => result(run<unknown>(resolveScript(items, nonce)).then((raw) => readMarkers(raw, items))),
+		showMarkers: (items) => asResult(run<unknown>(resolveScript(items, nonce)).then((raw) => readMarkers(raw, items))),
 		focusMarker: (id) => run(focusScript(id)),
 		onPinEvent: (listener) => {
 			listeners.add(listener);

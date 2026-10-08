@@ -3,7 +3,8 @@ import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { composeBody } from '../src/shared/anchor';
 import { Viewer } from '../src/viewer/Viewer';
-import { PAGE_CONFIG as CONFIG, fakeGitHub, sitePage } from './pageHarness';
+import { saveToken, savedToken } from '../src/viewer/browserAdapter';
+import { PAGE_CONFIG as CONFIG, commentOnPage, fakeGitHub, sitePage } from './pageHarness';
 import { button, cards, menuItem, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
 /**
@@ -11,7 +12,6 @@ import { button, cards, menuItem, openMenu, press, render, settle, typeInto, unm
  * against a GitHub that answers as its API does, with the real pick and pin scripts running in the prototype's frame.
  */
 
-const TOKEN_KEY = 'flock-designer.github-token';
 
 
 
@@ -64,7 +64,7 @@ describe('signing in, for testing', () => {
 		await typeInto(document.querySelector('input[aria-label="GitHub token"]') as HTMLInputElement, 'good-token');
 		await press(button('Sign in'));
 		await settle();
-		expect(localStorage.getItem(TOKEN_KEY)).toBe('good-token');
+		expect(savedToken()).toBe('good-token');
 		expect(button('Comment')).toBeTruthy();
 	});
 
@@ -76,23 +76,23 @@ describe('signing in, for testing', () => {
 		await press(button('Sign in'));
 		await settle();
 		expect(document.body.textContent).toMatch(/Sign in to GitHub again|Bad credentials/);
-		expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+		expect(savedToken()).toBeNull();
 	});
 
 	it('forgets the token on signing out', async () => {
-		localStorage.setItem(TOKEN_KEY, 'good-token');
+		saveToken('good-token');
 		await open();
 		await press(button('Show all comments'));
 		await settle();
 		await press(button('Sign out'));
 		await settle();
-		expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+		expect(savedToken()).toBeNull();
 		expect(button('Sign in to comment')).toBeTruthy();
 	});
 });
 
 describe('commenting on the page', () => {
-	beforeEach(() => localStorage.setItem(TOKEN_KEY, 'good-token'));
+	beforeEach(() => saveToken('good-token'));
 
 	it('picks an element in the prototype, writes the comment in the box, and puts it on the iteration’s thread with its pin', async () => {
 		const { doc } = await open();
@@ -123,13 +123,7 @@ describe('commenting on the page', () => {
 
 	it('resolves a comment from its card, taking its pin off the prototype', async () => {
 		const { doc } = await open();
-		await press(button('Comment'));
-		await settle();
-		await press(doc.querySelector('h1') as Element);
-		await settle();
-		await typeInto(document.querySelector('#comment-draft') as HTMLTextAreaElement, 'Bigger');
-		await press(button('Save'));
-		await settle();
+		await commentOnPage(doc, 'h1', 'Bigger');
 		await press(button('Show all comments'));
 		await settle();
 		await press(menuItem(await openMenu(button('Comment actions')), 'Resolve'));
