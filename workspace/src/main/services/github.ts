@@ -1,4 +1,5 @@
 import type { DeviceCodeStart, GitHubUser } from '../../shared/contract';
+import { asRecord } from '../../shared/json';
 
 /**
  * GitHub's device flow, and the slice of the REST API the app uses.
@@ -53,8 +54,6 @@ export interface Fetcher {
   }>;
 }
 
-const asRecord = (value: unknown): Record<string, unknown> =>
-  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 
 /** Step one: ask GitHub for a code the person types into github.com/login/device. */
 export const startDeviceFlow = async (clientId: string, fetcher: Fetcher): Promise<DeviceCodeStart> => {

@@ -1,3 +1,4 @@
+import type { Iteration } from './contract';
 import { asPeople, mergePeople } from './people';
 
 /**
@@ -13,6 +14,12 @@ import { asPeople, mergePeople } from './people';
  */
 
 type Rec = Record<string, unknown>;
+
+/**
+ * A project's `iterations.json`, read: a list of records, each with a name, or null when it is anything else. The one
+ * place the file is judged, so everything that reads it agrees on what a readable one is.
+ */
+export const parseIterations = (text: string): Iteration[] | null => parse(text) as Iteration[] | null;
 
 const parse = (text: string): Rec[] | null => {
 	try {

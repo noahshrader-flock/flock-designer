@@ -7,7 +7,6 @@ import {
 	CHANNELS,
 	type Checkout,
 	type CheckoutSuggestion,
-	type Iteration,
 	type MarkerRequest,
 	PAGE_HOLD_REASONS,
 	type PageBounds,
@@ -880,8 +879,7 @@ export const registerIpc = ({
 			assertPrototypeName(name);
 			const canonical = opened.require(root);
 			const branch = codebaseBranchFor(descriptorFor(root), projectId);
-			const raw = await readDesignFile(projectPath(projectId, 'iterations.json'));
-			const records = JSON.parse(raw ?? '[]') as Iteration[];
+			const records = await work.records(projectId);
 			const basedOn = records.find((i) => i.name === name)?.basedOn;
 			const here = await readCheckout(canonical);
 			return {

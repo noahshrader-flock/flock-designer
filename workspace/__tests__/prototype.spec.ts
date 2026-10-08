@@ -78,7 +78,13 @@ describe('recordPrototype', () => {
 
 	it('refuses to write over records it cannot read', async () => {
 		const { store, writes } = memoryStore({ 'projects/users/iterations.json': '{not json' });
-		await expect(recordPrototype(store, { projectId: 'users', title: 't', note: 'n', me, now })).rejects.toThrow(/not readable JSON/);
+		await expect(recordPrototype(store, { projectId: 'users', title: 't', note: 'n', me, now })).rejects.toThrow(/not a readable list of records/);
+		expect(writes).toEqual([]);
+	});
+
+	it('refuses records that are readable but not a list, rather than writing a list over them', async () => {
+		const { store, writes } = memoryStore({ 'projects/users/iterations.json': '{"name":"i1"}' });
+		await expect(recordPrototype(store, { projectId: 'users', title: 't', note: 'n', me, now })).rejects.toThrow(/not a readable list/);
 		expect(writes).toEqual([]);
 	});
 });

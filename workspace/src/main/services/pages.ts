@@ -2,6 +2,7 @@ import type { PageStatus } from '../../shared/contract';
 import { prototypePagePath, sitePath } from '../../shared/projects';
 import type { DesignRepoRef, GitHubApi } from './designRepo';
 import type { SyncResult } from './designSync';
+import { asRecord } from '../../shared/json';
 
 /**
  * Publishing a prototype to its page on the design repository's GitHub Pages site: the one way it is done, from the
@@ -27,7 +28,6 @@ export interface SiteVisibility {
 	site: { url: string; public: boolean } | null;
 }
 
-const asRecord = (v: unknown): Record<string, unknown> => (typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {});
 const notFound = (err: unknown): boolean => asRecord(err).status === 404 || /\b404\b|Not Found/.test(err instanceof Error ? err.message : String(err));
 
 export const readVisibility = async (github: GitHubApi, ref: DesignRepoRef): Promise<SiteVisibility> => {

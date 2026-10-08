@@ -5,6 +5,7 @@ import type { Iteration, Person } from '../../shared/contract';
 import { firstHeading, isPrototypeName, nextPrototypeName, projectPath, prototypeKey } from '../../shared/projects';
 import { addressOpening } from './address';
 import { resolveInside } from './paths';
+import { parseIterations } from '../../shared/records';
 
 /**
  * Prototypes: what is recorded, where the page is kept, and what the agent is told.
@@ -59,12 +60,9 @@ export interface PrototypeBuild {
 export const readRecords = async (store: RecordStore, projectId: string): Promise<Iteration[]> => {
 	const raw = await store.read(projectPath(projectId, 'iterations.json'));
 	if (raw === null) return [];
-	try {
-		const parsed = JSON.parse(raw) as unknown;
-		return Array.isArray(parsed) ? (parsed as Iteration[]) : [];
-	} catch {
-		throw new Error(`${projectPath(projectId, 'iterations.json')} is not readable JSON, so nothing was added to it.`);
-	}
+	const records = parseIterations(raw);
+	if (records === null) throw new Error(`${projectPath(projectId, 'iterations.json')} is not a readable list of records, so nothing was added to it.`);
+	return records;
 };
 
 /** Adds one prototype's record to its project's. */

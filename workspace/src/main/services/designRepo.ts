@@ -4,6 +4,7 @@ import { asPeople, isBot, mergePeople } from '../../shared/people';
 import { asDate, asRoute, firstHeading, newestFirst } from '../../shared/projects';
 import { RESOLVED_MARK, addressedAt, addressedIn, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withAddressed, withResolved } from '../../shared/anchor';
 import type { GitHubSession } from './githubSession';
+import { asArray, asRecord } from '../../shared/json';
 
 /**
  * The design repository, read through the API.
@@ -34,8 +35,6 @@ export const DESIGN_REPO: DesignRepoRef = {
 /** All this needs of a GitHub session: a signed-in call to its API. */
 export type GitHubApi = Pick<GitHubSession, 'api'>;
 
-const asRecord = (v: unknown): Record<string, unknown> => (typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {});
-const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 
 
 export class DesignRepo {

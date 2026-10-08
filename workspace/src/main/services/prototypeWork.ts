@@ -8,6 +8,7 @@ import { branchCommit, branchExists, readCheckout, readTreeAt } from './git';
 import { assertUsableProjectId } from './iterations';
 import { MAX_PAGE, type PrototypeBuild, type PrototypeSources, type RecordStore, assertPrototypeName, prototypeVersionOf, recordIteration, recordPrototype } from './prototype';
 import { bundleCommand, runBundle, sharedFilesOf, writeBundleScript } from './prototypeBundle';
+import { parseIterations } from '../../shared/records';
 
 /**
  * Making a prototype, with nothing of the app in it: starting one (its record, its brief, its name), what its agent
@@ -113,10 +114,13 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return text;
 	};
 
-	/** A project's prototype records, from its iterations.json. */
+	/** A project's records, from its iterations.json: none when it has none, and an error when the file is not readable. */
 	const records = async (projectId: string): Promise<Iteration[]> => {
 		const raw = await ctx.readDesignFile(projectPath(projectId, 'iterations.json'));
-		return JSON.parse(raw ?? '[]') as Iteration[];
+		if (raw === null) return [];
+		const parsed = parseIterations(raw);
+		if (parsed === null) throw new Error(`${projectPath(projectId, 'iterations.json')} is not a readable list of records.`);
+		return parsed;
 	};
 	/** A prototype's record. */
 	const record = async (projectId: string, name: string): Promise<Iteration | undefined> => (await records(projectId)).find((i) => i.name === name);
@@ -350,7 +354,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return ctx.readDesignFile(prototypePagePath(projectId, name));
 	};
 
-	return { dir, file, sourceFile, sharedText, skill, record, sourceText, readiness, start, sources, buildPlan, buildPage, keep, save, page, startChange, resumeChange, finishChange };
+	return { dir, file, sourceFile, sharedText, skill, records, record, sourceText, readiness, start, sources, buildPlan, buildPage, keep, save, page, startChange, resumeChange, finishChange };
 };
 
 export type PrototypeWork = ReturnType<typeof prototypeWork>;

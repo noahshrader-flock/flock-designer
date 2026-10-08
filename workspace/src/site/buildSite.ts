@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Iteration } from '../shared/contract';
-import { firstHeading, isPrototypeKey, parsePrototypeName, sitePath } from '../shared/projects';
+import { firstHeading, isPrototypeKey, iterationLabel, parsePrototypeName, sitePath } from '../shared/projects';
+import { parseIterations } from '../shared/records';
 
 /**
  * The site prototypes are published as, built from the design repository: every project with a saved page, every
@@ -54,7 +55,7 @@ interface SiteProject {
 const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 /** Text as it is safe in HTML, in an element or an attribute. */
 const escape = (s: string): string => s.replace(/[&<>"']/g, (c) => ENTITIES[c] as string);
-const labelOf = (p: Page): string => `V${p.version} · I${p.iteration}`;
+const labelOf = (p: Page): string => iterationLabel(p.record);
 const dateOf = (iso: string | undefined): string | null => {
 	const d = iso ? new Date(iso) : null;
 	return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : null;
@@ -71,13 +72,10 @@ const readProjects = (designRoot: string): SiteProject[] => {
 		: [];
 	return ids.flatMap((id): SiteProject[] => {
 		const dir = join(projectsDir, id);
-		let records: Iteration[] = [];
-		try {
-			const parsed = JSON.parse(readFileSync(join(dir, 'iterations.json'), 'utf8')) as unknown;
-			records = Array.isArray(parsed) ? (parsed as Iteration[]) : [];
-		} catch {
-			return [];
-		}
+		// A project whose records cannot be read has nothing to show; the rest of the site is still built.
+		const path = join(dir, 'iterations.json');
+		const records = existsSync(path) ? parseIterations(readFileSync(path, 'utf8')) : null;
+		if (records === null) return [];
 		const pages = records.flatMap((record): Page[] => {
 			const name = parsePrototypeName(record.name);
 			const saved = existsSync(join(dir, 'prototypes', `${record.name}.html`));
@@ -193,7 +191,7 @@ const viewerPage = (p: SiteProject, current: Page): string => {
 		.map(
 			(v) =>
 				`<optgroup label="V${v.version}">${v.pages
-					.map((pg) => `<option value="../../${pg.path}"${pg === current ? ' selected' : ''}>V${pg.version} · I${pg.iteration}</option>`)
+					.map((pg) => `<option value="../../${pg.path}"${pg === current ? ' selected' : ''}>${escape(labelOf(pg))}</option>`)
 					.join('')}</optgroup>`,
 		)
 		.join('');
@@ -217,7 +215,11 @@ export const buildSite = ({ designRoot, outDir, comments, publicTest = false }: 
 	const projects = readProjects(designRoot);
 	clearOut(outDir);
 	// The site's own pages, with the banner first when this is a public test. A prototype's page is never touched.
-	const write = (file: string, html: string) => writeFileSync(file, publicTest ? html.replace('<body>\n', `<body>\n${BANNER}`) : html);
+	const write = (file: string, html: string) => {
+		// On a public site, a page without the banner must never go out: stop rather than write it.
+		if (publicTest && !html.includes('<body>\n')) throw new Error(`The PUBLIC TEST banner could not be put on ${file}, so the site was not built.`);
+		writeFileSync(file, publicTest ? html.replace('<body>\n', `<body>\n${BANNER}`) : html);
+	};
 	const shared = writeShared(designRoot, outDir);
 	// A page sits three folders down (<project>/v1/i2/), and finds the shared files from there.
 	const relink = (html: string): string =>
