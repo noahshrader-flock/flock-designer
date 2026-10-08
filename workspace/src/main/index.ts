@@ -6,6 +6,7 @@ import { SessionMemory } from './services/editor';
 import { AgentRunner } from './services/agent';
 import { DESIGN_REPO, DesignRepo } from './services/designRepo';
 import { CheckoutMemory } from './services/checkoutMemory';
+import { CloneFolderMemory } from './services/cloneFolder';
 import { PageView } from './services/pageView';
 import { MIN_WINDOW, type WindowState, WindowMemory, restoreState } from './services/windowMemory';
 import { PrototypeServer } from './services/prototypeServer';
@@ -160,6 +161,7 @@ void app.whenReady().then(() => {
 		prototypesRoot: join(app.getPath('userData'), 'prototypes'),
 		prototypeServer,
 		sessions: new SessionMemory(SessionMemory.defaultPath(app.getPath('userData'))),
+		cloneFolders: new CloneFolderMemory(CloneFolderMemory.defaultPath(app.getPath('userData'))),
 	});
 	window.on('closed', () => prototypeServer.close());
 	// Coming back to the window is a good moment to publish whatever was done while it was away.

@@ -109,12 +109,38 @@ beforeEach(async () => {
 		onPublishStatus: vi.fn(),
 		prototypesRoot: join(home, 'prototype'),
 		prototypeServer,
+		cloneFolders: new (await import('../src/main/services/cloneFolder')).CloneFolderMemory(join(home, 'clone-folder.json')),
 	});
 });
 
 afterEach(() => {
 	prototypeServer.close();
 	rmSync(home, { recursive: true, force: true });
+});
+
+describe('where clones go', () => {
+	const picker = async () => vi.mocked((await import('electron')).dialog.showOpenDialog);
+
+	it('is beside the repository found on this machine until the person chooses', async () => {
+		expect((await call(CHANNELS.cloneFolder)).value).toBe(join(home, 'GitHub'));
+	});
+
+	it('is chosen with the system’s folder picker and kept, and a repository there is found and can be used', async () => {
+		const elsewhere = join(home, 'Work', 'repos');
+		makeProduct(join(elsewhere, 'flock-other'), []);
+		expect((await call(CHANNELS.listRepositories)).value).not.toContainEqual(expect.objectContaining({ root: join(elsewhere, 'flock-other') }));
+		(await picker()).mockResolvedValueOnce({ canceled: false, filePaths: [elsewhere] } as never);
+		expect((await call(CHANNELS.chooseCloneFolder)).value).toBe(elsewhere);
+		expect((await call(CHANNELS.cloneFolder)).value).toBe(elsewhere);
+		expect((await call(CHANNELS.listRepositories)).value).toContainEqual(expect.objectContaining({ root: join(elsewhere, 'flock-other') }));
+		expect((await call(CHANNELS.useCheckout, join(elsewhere, 'flock-other'))).ok).toBe(true);
+	});
+
+	it('is left as it was when the picker is cancelled', async () => {
+		(await picker()).mockResolvedValueOnce({ canceled: true, filePaths: [] } as never);
+		expect((await call(CHANNELS.chooseCloneFolder)).value).toBeNull();
+		expect((await call(CHANNELS.cloneFolder)).value).toBe(join(home, 'GitHub'));
+	});
 });
 
 describe('a repository must be opened before anything acts on it', () => {

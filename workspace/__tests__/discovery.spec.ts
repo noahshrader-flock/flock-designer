@@ -30,6 +30,12 @@ describe('finding the product repository', () => {
 		expect(findProductCheckouts(deps)).toEqual(['/h/GitHub/flock-coke']);
 	});
 
+	it('looks first in the folder this person’s clones go in, wherever that is', () => {
+		const deps = { ...fake({ '/Volumes/work/flock-coke': product('/Volumes/work/flock-coke') }), folders: ['/Volumes/work'] };
+		expect(findProductCheckouts(deps)).toEqual(['/Volumes/work/flock-coke']);
+		expect(findProductCheckouts({ ...deps, folders: [] })).toEqual([]);
+	});
+
 	it('finds a repository by the file that says it can be worked in, wherever the usual places put it', () => {
 		const deps = fake({ '/h/Documents/GitHub/flock-coke': product('/h/Documents/GitHub/flock-coke') });
 		expect(findProductCheckouts(deps)).toEqual(['/h/Documents/GitHub/flock-coke']);

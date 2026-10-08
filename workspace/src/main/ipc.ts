@@ -32,7 +32,8 @@ import { buildContextReceipt } from './services/contextReceipt';
 import { DESCRIPTOR_PATH, readDescriptor } from './services/descriptor';
 import { branchCommit, branchExists, isRepository, readCheckout, recentBranches, runGit } from './services/git';
 import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
-import { findProductCheckouts, recordsRootFor } from './services/discovery';
+import { CloneFolderMemory, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
+import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
 import { classify, readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
@@ -124,6 +125,8 @@ export interface IpcContext {
 	prototypeServer?: PrototypeServer;
 	/** The latest agent conversation for each branch, so it can be continued in the person's editor. */
 	sessions?: SessionMemory;
+	/** Where this person's clones go, once they choose. */
+	cloneFolders?: CloneFolderMemory;
 }
 
 export const registerIpc = ({
@@ -140,6 +143,7 @@ export const registerIpc = ({
 	prototypesRoot = join(tmpdir(), 'flock-designer-prototypes'),
 	prototypeServer = new PrototypeServer(),
 	sessions = new SessionMemory(join(tmpdir(), 'flock-designer-agent-sessions.json')),
+	cloneFolders = new CloneFolderMemory(join(tmpdir(), 'flock-designer-clone-folder.json')),
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
@@ -151,6 +155,14 @@ export const registerIpc = ({
 	};
 
 	const descriptorFor = (root: string) => readDescriptor(opened.require(root));
+
+	/** The product repositories on this machine: discovery's usual places, and first the folder this person's clones go in. */
+	const productCheckouts = (): string[] => {
+		const chosen = cloneFolders.read();
+		return findProductCheckouts({ ...defaultDiscoveryDeps, ...(chosen ? { folders: [chosen] } : {}) });
+	};
+	/** Where clones go: the folder chosen, else beside the repository last worked in, else a usual code folder. */
+	const cloneFolder = (): string => cloneFolderOf(cloneFolders, defaultCloneFolderDeps(productCheckouts()));
 
 	/**
 	 * The product checkout this person has already accepted, or null.
@@ -245,7 +257,7 @@ export const registerIpc = ({
 		CHANNELS.suggestCheckout,
 		guard((): CheckoutSuggestion | null => {
 			if (trustedRoot() !== null) return null;
-			const root = findProductCheckouts()[0];
+			const root = productCheckouts()[0];
 			if (root === undefined) return null;
 			try {
 				return { root, name: basename(root), product: readDescriptor(root).product };
@@ -261,17 +273,34 @@ export const registerIpc = ({
 		guard(async (root: string): Promise<Checkout> => {
 			// Only ever a repository discovery itself found, so the renderer cannot
 			// name an arbitrary directory and have it trusted.
-			if (!findProductCheckouts().includes(root)) {
+			if (!productCheckouts().includes(root)) {
 				throw new Error('That is not a repository Flock Designer found on this machine.');
 			}
 			return openRepository(root);
 		}),
 	);
 
+	ipcMain.handle(CHANNELS.cloneFolder, guard(cloneFolder));
+	// Chosen with the system's picker, here: the window never names a folder to put files in.
+	ipcMain.handle(
+		CHANNELS.chooseCloneFolder,
+		guard(async (): Promise<string | null> => {
+			const { canceled, filePaths } = await dialog.showOpenDialog(window, {
+				title: 'Choose where repositories are cloned',
+				defaultPath: cloneFolder(),
+				properties: ['openDirectory', 'createDirectory'],
+			});
+			const chosen = filePaths[0];
+			if (canceled || chosen === undefined) return null;
+			cloneFolders.write(chosen);
+			return chosen;
+		}),
+	);
+
 	ipcMain.handle(
 		CHANNELS.listRepositories,
 		guard(async (): Promise<Repository[]> => {
-			const clones = findProductCheckouts().map((root) => {
+			const clones = productCheckouts().map((root) => {
 				const origin = originOf(root);
 				return { root, repo: origin === null ? null : gitHubRepoOf(origin) };
 			});

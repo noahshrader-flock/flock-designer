@@ -246,6 +246,10 @@ export interface WorkspaceApi {
 	suggestCheckout(): Promise<Result<CheckoutSuggestion | null>>;
 	/** Accepts a suggested repository. This is the step that trusts it. */
 	useCheckout(root: string): Promise<Result<Checkout>>;
+	/** Where this person's clones go: the folder they chose, or the default. */
+	cloneFolder(): Promise<Result<string>>;
+	/** Asks for the clone folder with the system's folder picker, and keeps it. Null if the person cancels. */
+	chooseCloneFolder(): Promise<Result<string | null>>;
 	stopCommand(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	commandStatus(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	onRunLog(listener: (line: RunLogLine) => void): () => void;
@@ -617,6 +621,8 @@ export const CHANNELS = {
 	lastCheckout: 'workspace:lastCheckout',
 	suggestCheckout: 'workspace:suggestCheckout',
 	useCheckout: 'workspace:useCheckout',
+	cloneFolder: 'workspace:cloneFolder',
+	chooseCloneFolder: 'workspace:chooseCloneFolder',
 	listRepositories: 'workspace:listRepositories',
 	listBaseBranches: 'workspace:listBaseBranches',
 	stopCommand: 'workspace:stopCommand',

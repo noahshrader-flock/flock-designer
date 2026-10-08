@@ -12,8 +12,10 @@ import { join } from 'node:path';
  * most recently used match wins; the person can change it, but is not asked.
  */
 
-/** Relative to the home folder. `''` is the home folder itself. */
-const ROOTS = ['Documents/GitHub', 'GitHub', 'github', 'Documents', 'code', 'dev', 'src', 'repos', 'projects', 'workspace', 'Developer', ''];
+/** Folders, relative to the home folder, that hold nothing but code. Where a clone goes when none is chosen. */
+export const CODE_FOLDERS = ['Documents/GitHub', 'GitHub', 'github', 'code', 'dev', 'src', 'repos', 'projects', 'workspace', 'Developer'];
+/** Where discovery looks, relative to the home folder: the code folders, then Documents and the home folder itself. */
+const ROOTS = [...CODE_FOLDERS, 'Documents', ''];
 
 export interface DiscoveryDeps {
 	home: string;
@@ -26,6 +28,8 @@ export interface DiscoveryDeps {
 	 * reached two ways, and without this every repository in it was found twice.
 	 */
 	real?: (path: string) => string;
+	/** Folders looked through first, given in full: the one this person's clones go in. */
+	folders?: string[];
 }
 
 export const defaultDiscoveryDeps: DiscoveryDeps = {
@@ -60,8 +64,7 @@ export const defaultDiscoveryDeps: DiscoveryDeps = {
 export const findProductCheckouts = (deps: DiscoveryDeps = defaultDiscoveryDeps): string[] => {
 	const seen = new Set<string>();
 	const found: string[] = [];
-	for (const root of ROOTS) {
-		const base = root === '' ? deps.home : join(deps.home, root);
+	for (const base of [...(deps.folders ?? []), ...ROOTS.map((root) => (root === '' ? deps.home : join(deps.home, root)))]) {
 		// A bounded look: a folder with thousands of entries is not where clones live.
 		for (const name of deps.list(base).slice(0, 500)) {
 			if (name.startsWith('.') || name === 'node_modules' || name === 'Library') continue;
