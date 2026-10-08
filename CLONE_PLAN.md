@@ -1,6 +1,6 @@
 # Clone plan: pick a repository the app does not have yet, and say where it goes
 
-**Written 2026-10-08. Nothing here is built.** The plan for letting a designer start work in a repository that is not on
+**Written 2026-10-08; decisions made the same day (Noah accepted every recommendation). Nothing here is built.** The plan for letting a designer start work in a repository that is not on
 their computer: choose it from the list, see where it will be placed, and have the app put it there.
 
 This is the detail behind one item in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) (*After the pilot: candidates*,
@@ -38,9 +38,9 @@ cannot find. This plan keeps the whole thing in the dialog:
 **Not measured:** how big the Coke clone is and how long it takes. The plan assumes a plain full clone, with a progress
 bar, and looks at a partial clone only if it is slow.
 
-## Decisions to make (recommended, Noah's call)
+## Decisions (made by Noah, 2026-10-08: all recommendations accepted)
 
-| # | Question | Recommended | Why |
+| # | Question | Decided | Why |
 |---|---|---|---|
 | 1 | **Where does a clone go by default?** | A **clone folder** setting. Default: the first of discovery's folders that exists (`~/Documents/GitHub`, then `~/GitHub`, …), else `~/Documents/GitHub`, made. The person can change it with the system's folder picker, once, and it is remembered. Each repository is `<folder>/<repo name>` | Discovery already looks there, so a clone is found with no extra step, and it reads as where people already keep code |
 | 2 | **Does cloning a product repository also clone the design repository beside it?** | **Yes, shown in the confirmation** ("also `flock-designer`, which holds the project records"), skipped when it is already there | Codebase work cannot start without it, and one confirmation beats a second failure |
@@ -56,7 +56,7 @@ each, the state document updated in the same change, and no data on GitHub is ch
 
 | # | Milestone | Needs | Size | Risk |
 |---|---|---|---|---|
-| **C1** | **Where clones go:** the clone folder (setting, default, picker), the path a repository would be placed at, and discovery reading it | Decision 1 | S | Low |
+| **C1** | **Where clones go:** the clone folder (setting, default, picker), the path a repository would be placed at, and discovery reading it | Nothing | S | Low |
 | **C2** | **The clone itself:** a service that clones a named repository into a folder, with progress and cancel | C1, decision 3 | M | **Medium** |
 | **C3** | **The dialog:** choose a repository with no clone, see where it goes and change it, confirm, watch it, and carry on into the work | C2, decisions 2, 4 | M | Medium |
 | **C4** | **What it starts from:** branches for a repository with no clone (from GitHub), remote-only branches usable as a base, and the "no setup on this branch" answer | C3, decision 5 | M | Medium |
@@ -149,10 +149,11 @@ each, the state document updated in the same change, and no data on GitHub is ch
 | **A clone of a repository with no setup** (Coke's `develop`) | "Cloned, and still cannot start" | Decision 5: said at once, with the branches that work |
 | **Mac and Windows differ** (paths, git on the PATH) | One build for both is the reason the app stays | Path logic in one function with tests for both; git-missing message for both |
 
-## Open questions for Noah
+## Also decided (Noah, 2026-10-08)
 
-- The five decisions above, mainly **1** (the default folder) and **3** (git's own credentials or `gh repo clone`).
-- **Should the clone folder be per person, or something the product repository can suggest** in its
-  `.flkd/workspace.json`? Recommended: per person. A repository suggesting where files go on a computer is more than it
-  should decide.
-- **Is C5 wanted before the pilot reports?** Recommended: no. Build C1 to C4, and let what stops people decide it.
+- **The clone folder is per person.** A repository does not suggest where files go on a computer.
+- **C5 is not built before the pilot reports.** C1 to C4 first; what stops people decides whether installing is built.
+
+## Next
+
+**C1 to C4 are Ready:** scope fixed, files known, tests named, no open question. Build in order, one commit each. C5 waits.
