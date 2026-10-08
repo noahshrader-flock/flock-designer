@@ -153,16 +153,21 @@ day, **L** several days.
 | **M3** | **Address starts the next iteration** when the current one has outside comments | M1, M2 | M | Medium | After M2 |
 | **M4** | **One comments experience,** taken out of the review screen | M1 | L | **High** | Ready after M1 (tests first) |
 | **M5a** | **The site, assembled locally:** project pages, `latest` links, index | M1 | M | Low | Ready after M1 |
-| **M5b** | **Publish for real:** the publish command, the private gate, the deploy, **Open page** | M0, M2, M5a | L | Medium | **Blocked on M0** |
-| **M6** | **The agent hands back the link** | M2, M5b | S | Low | Blocked |
-| **M7** | **Comments on the page** (shared components, browser adapter, test sign-in) | M4, M5b | L | Medium | Blocked |
-| **M8** | **The round trip, proved** | M7 | S | Low | Blocked |
+| **M5b** | **Publish for real:** the publish command, the private gate, the deploy, **Open page** | M2, M5a (M0 for the private result) | L | Medium | **Buildable and testable now on the public repo;** the private result waits on M0 |
+| **M6** | **The agent hands back the link** | M2, M5b | S | Low | After M5b |
+| **M7** | **Comments on the page** (shared components, browser adapter, test sign-in) | M4, M5b | L | Medium | After M4 and M5b |
+| **M8** | **The round trip, proved** | M7 | S | Low | After M7 |
 | **M9** | **Signing in for everyone** | M0 (security), M7 | L | **High** | Blocked on a decision |
 | **M10** | **Parity and the smaller things we agreed** | M7 | M | Low | Later |
 
 **Start here: M1.** It needs no one, everything else depends on it, and the cost of getting it wrong is highest.
-**While the admins answer (M0), M1 to M5a can all be built.** They are the foundation and none of them touches the
-org, Pages or the real repository. M5b onward waits for M0.
+
+**The repo is public for now (Noah's decision, 2026-10-07), so the whole flow can be built and tested before the admins
+answer.** Public Pages needs no login to view, so what it cannot show is that an anonymous viewer is blocked. That
+single result is what M0 unlocks, by moving the repo into the org as a private repository with private Pages.
+**The fastest path to seeing it work end to end:** M1, then M2, then M5a, then M5b in its public test mode, then M6
+(a prototype becomes a link, handed back by the agent); then M4, M7 and M8 (comments on the page, reaching the app).
+M9 is a decision and is not needed for the test: testers use a token.
 
 ```text
 M0 (asks, in parallel) ─────────────────────────────┐
@@ -331,6 +336,10 @@ iterations, and `latest`.
 - **The private gate, before anything is pushed or any link is printed:** it asks GitHub whether the repository and its
   Pages site are private (the Pages API's `public` field). If either is public it stops, says why, and prints **no
   link**.
+- **A public test mode, for as long as the repo is public.** The gate can be passed only with an explicit option that
+  has to be typed (never a default and never remembered), and when it is used every published page carries a visible
+  **PUBLIC TEST** banner and the agent's summary says so. It exists so the flow can be tried end to end before the repo
+  is private; it is removed once the repo is in the org.
 - **The check afterwards:** it requests the link with no credentials and expects not to get the page. If it does, it
   says the site is public and tells the person not to share it.
 - **The workflow** that runs M5a's generator and deploys, queued and not cancelled, from the branch M0 settles.
@@ -431,6 +440,7 @@ page cannot sign a person in by itself (GitHub's sign-in refuses calls from a pa
 | **Two comment experiences drifting apart** | The reason the sandbox failed | M4: one set of components, two adapters, and the round-trip test in M8 |
 | **Tokens in a browser** | A token kept in a browser can be read by anything running on that page | Fine-grained, one repository, Issues only, and only for testing; M9 replaces it |
 | **Cached pages** | A teammate sees the old iteration and comments on it | The link carries a version; each comment carries the iteration it was made on |
+| **The public test mode is left on** | Pages stay public with product UI on them | The option must be typed each time, every page and summary says PUBLIC TEST, and it is deleted when the repo moves to the org. A personal account's Pages site also goes down the moment the repo is made private again |
 | **A page is made public by mistake** (the repo flipped to public, or the site set to public) | The link then opens for anyone, which is the opposite of requirement 1 | The publish gate (M5b) refuses to hand out a link while either is public, and checks again after deploying |
 | **An agent pushes to the design repository** | Agents are told never to push | Only the one publish command, only `projects/`, only plain pushes (M6); nothing else may push |
 | **A link goes out that someone cannot open** | A director gets a "not found" and thinks it is broken | The summary says who can open it; the design team has read access (M0) before links go to anyone |
