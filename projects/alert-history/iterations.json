@@ -36,5 +36,14 @@
       "branch": "noah/flock-designer",
       "commit": "8089eb7f3e07fff9967648aa6226f52a5d911abe"
     }
+  },
+  {
+    "projectId": "alert-history",
+    "name": "codebase",
+    "branch": "feature/alert-history",
+    "commit": null,
+    "createdAt": "2026-10-09T04:01:12.810Z",
+    "note": "From prototype V2 · I1",
+    "repository": "flocksafety/flock-coke"
   }
 ]
