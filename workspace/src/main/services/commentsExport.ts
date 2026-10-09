@@ -4,6 +4,7 @@ import type { ReviewComment } from '../../shared/contract';
 import { assertUsableProjectId } from './iterations';
 import { numberComments, openComments, resolvedComments } from '../../shared/comments';
 import { firstHeading, isPrototypeKey } from '../../shared/projects';
+import { plural } from '../../shared/plural';
 import { resolveInside } from './paths';
 
 /**
@@ -66,7 +67,7 @@ export const renderComments = ({ projectId, title, iteration, comments, generate
 		'',
 		open.length === 0
 			? `There are no open comments.${resolved > 0 ? ` ${resolved} already resolved, listed at the end.` : ''}`
-			: `${open.length} open comment${open.length === 1 ? '' : 's'}${resolved > 0 ? `; ${resolved} already resolved, listed at the end` : ''}. A comment keeps its number when others are resolved.`,
+			: `${plural(open.length, 'open comment')}${resolved > 0 ? `; ${resolved} already resolved, listed at the end` : ''}. A comment keeps its number when others are resolved.`,
 	];
 
 	for (const c of open) {

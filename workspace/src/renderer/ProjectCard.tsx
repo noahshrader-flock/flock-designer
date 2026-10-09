@@ -1,14 +1,12 @@
 import { ExternalLinkIcon, MessageSquareIcon } from 'lucide-react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import type { Project, ProjectIteration } from '../shared/contract';
+import { plural } from '../shared/plural';
 import { byVersion, projectCodeLink, workOf } from '../shared/projects';
 import { CardCover } from './CardCover';
 import { PeopleLine } from './People';
 import { Badge } from './ui/badge';
 import { Card, CardFooter, CardTitle } from './ui/card';
-
-/** A count and what it counts: `1 version`, `2 versions`. */
-const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /** How many comments a project's prototypes have, all of them together. */
 const commentsOn = (prototypes: ProjectIteration[]): number => prototypes.reduce((n, it) => n + it.openComments, 0);
@@ -18,9 +16,9 @@ const Aside = ({ children }: { children: ReactNode }) => <span className="text-m
 
 /**
  * A project in the Projects grid. The cover, in the card's own colour, has the project's name at its bottom left (and at
- * its top whether it is only on this machine). The footer has who it is by at the left and, at the right in the grey of
- * the comment count, how many comments its prototypes have (or Built in code, or Nothing made yet). It is the same height
- * on every card, so a row of cards lines up.
+ * its top whether it is only on this machine). The footer has who it is by at the left and, at the right in grey, how
+ * many versions the project has and how many comments its prototypes have (or Built in code, or Nothing made yet). It is
+ * the same height on every card, so a row of cards lines up.
  *
  * **The whole card opens the project at its newest prototype**, which is the app's work: it is for prototypes. A project
  * with only codebase work is not opened here (that work is done in the codebase): its footer says Built in code, and the

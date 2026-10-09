@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PublishProblem } from '../../shared/contract';
+import { plural } from '../../shared/plural';
 import { mergeIterationRecords } from '../../shared/records';
 import { runGit } from './git';
 
@@ -83,7 +84,7 @@ export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 	const outside = lines(await g('diff', '--name-only', `${upstream}..HEAD`)).filter((f) => !f.startsWith('projects/'));
 	if (outside.length > 0) {
 		return held(
-			`${outside.length} change${outside.length === 1 ? '' : 's'} outside the project records (${outside.slice(0, 3).join(', ')}${outside.length > 3 ? ', …' : ''}) are waiting to be pushed, and a push would carry them. Records are held back; push those yourself, and records will flow again.`,
+			`${plural(outside.length, 'change')} outside the project records (${outside.slice(0, 3).join(', ')}${outside.length > 3 ? ', …' : ''}) are waiting to be pushed, and a push would carry them. Records are held back; push those yourself, and records will flow again.`,
 		);
 	}
 
