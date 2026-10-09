@@ -1,0 +1,21 @@
+[
+  {
+    "projectId": "zone-coverage",
+    "name": "v1-i1",
+    "branch": "prototype/zone-coverage/v1-i1",
+    "commit": null,
+    "createdAt": "2026-10-09T11:46:32.643Z",
+    "note": "A Zone coverage page under Zones in the admin area. An admin sees every zone in their organization as a table: zone name, number of cameras in the zone, number of those cameras that are offline, and when the zone last had an alert. A search box for zones, a filter for has offline cameras, and an empty state when no zone matches the search or filter.",
+    "contributors": [
+      {
+        "name": "Noah Shrader",
+        "login": "noahshrader-flock"
+      }
+    ],
+    "basedOn": {
+      "repository": "flock-coke",
+      "branch": "noah/flock-designer",
+      "commit": "becdfc67bd0fb50864825d4fc8cdb4fcdf53e0f8"
+    }
+  }
+]
