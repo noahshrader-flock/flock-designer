@@ -129,6 +129,16 @@ describe('the groups', () => {
 		expect(rows()).toHaveLength(6);
 	});
 
+	it('have headers that stick to the top of the panel while the group is shown, each within its own group', async () => {
+		await show();
+		for (const item of document.querySelectorAll<HTMLElement>('[data-token-group]')) {
+			// The header is what sticks, on the panel's own background so what scrolls under it is hidden, and the item is its limit.
+			expect(item.className.split(' ')).toEqual(expect.arrayContaining(['[&>h3]:sticky', '[&>h3]:-top-4', '[&>h3]:pt-4', '[&>h3]:z-10', '[&>h3]:bg-card']));
+			expect(item.firstElementChild?.tagName).toBe('H3');
+			expect(item.className).not.toContain('overflow');
+		}
+	});
+
 	it('close and open again on a press, each on its own', async () => {
 		await show();
 		await press(group('Light'));

@@ -98,6 +98,13 @@ const Sets = ({ tokens }: { tokens: DesignToken[] }) => (
 	</div>
 );
 
+/**
+ * A group's header stays at the top of the panel's scroll for as long as the group's tokens are shown, and is pushed off by
+ * the next group's, as a section header is on iOS: it sticks within its own item, so it leaves when the item does. The
+ * panel's content is padded (`p-4`), so the header reaches up into that padding (`-top-4`, `pt-4`) and nothing shows above it.
+ */
+const STICKY_HEADER = '[&>h3]:bg-card [&>h3]:sticky [&>h3]:-top-4 [&>h3]:z-10 [&>h3]:pt-4';
+
 /** One category's tab: its own search, then its tokens. What is typed is the panel's, so it is there when the tab is back. */
 const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tokens: DesignToken[]; query: string; onQuery: (query: string) => void }) => {
 	// Every group is open until the person closes it, so a group the library gains, or a search finds, is open too.
@@ -118,7 +125,7 @@ const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tok
 			) : (
 				<Accordion type="multiple" value={names.filter((g) => !closed.includes(g))} onValueChange={(open) => setClosed(names.filter((g) => !open.includes(g)))}>
 					{groups.map(([group, inGroup]) => (
-						<AccordionItem key={group} value={group} data-token-group>
+						<AccordionItem key={group} value={group} data-token-group className={STICKY_HEADER}>
 							<AccordionTrigger>
 								<span className="flex items-baseline gap-2">
 									<span data-name>{group}</span>
