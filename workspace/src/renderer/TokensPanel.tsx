@@ -4,7 +4,7 @@ import type { DesignToken, DesignTokens } from '../shared/contract';
 import { plural } from '../shared/plural';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Input } from './ui/input';
+import { SearchField } from './SearchField';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 /**
@@ -108,7 +108,7 @@ const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tok
 	const groups = inOrder(shown, (t) => t.group);
 	return (
 		<div className="flex flex-col gap-3">
-			<Input type="search" aria-label={`Search ${category.toLowerCase()}`} placeholder="Search" value={query} onChange={(e) => onQuery(e.target.value)} />
+			<SearchField label={`Search ${category.toLowerCase()}`} value={query} onChange={onQuery} />
 			{shown.length === 0 ? (
 				<p className="text-muted-foreground text-sm">No token matches.</p>
 			) : groups.length === 1 ? (
@@ -145,7 +145,7 @@ export const TokensPanel = ({ tokens }: { tokens: DesignTokens }) => {
 	if (tokens.source === null || categories.length === 0) {
 		return (
 			<div className="p-4">
-				<p className="text-muted-foreground text-sm">No tokens were found in this library. Looked in {tokens.looked.join(', ')}.</p>
+				<p className="text-muted-foreground text-sm">No tokens were found in this library. Looked for {tokens.looked.join(', ')}.</p>
 			</div>
 		);
 	}

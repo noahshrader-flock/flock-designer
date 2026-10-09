@@ -4,10 +4,14 @@ import { PANEL_STEP, type PanelWidths, clampPanelWidth, loadPanelWidth, savePane
 /**
  * A side panel at the right of a screen, with a divider to resize it: drag it, or focus it and use the arrow keys. Its
  * width is the panel's own (`PanelWidths`), remembered, and kept within the window as it is resized. One component, so
- * the review screen's comments and a component's tokens resize the same way.
+ * the review screen's comments and the Design System tab's tokens resize the same way.
  *
  * `onResizing` is told when a drag starts and ends, for a screen with something that must step aside meanwhile (the
  * review screen's native preview).
+ *
+ * **Not shadcn's Resizable, on purpose.** That one resizes panes in proportion and follows the pointer across both of
+ * them; the review screen's preview is a native view, which never passes the pointer back to the window, so a drag that
+ * crosses it is lost. This one keeps a width in pixels, grabs only over its own side, and holds the pointer while dragging.
  */
 export const ResizablePanel = ({
 	panel,

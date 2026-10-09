@@ -158,6 +158,20 @@ describe('a set, open', () => {
 });
 
 describe('searching', () => {
+	it('is the app’s own search box, with its icon, as on the Projects screen', async () => {
+		await show();
+		const box = search('Colour') as HTMLInputElement;
+		expect(box.closest('[data-slot="input-group"]')?.querySelector('.lucide-search')).not.toBeNull();
+		expect(box.placeholder).toBe('Search colour');
+	});
+
+	it('clears with Escape', async () => {
+		await show();
+		await typeInto(search('Colour') as HTMLInputElement, 'primary');
+		await act(async () => void (search('Colour') as HTMLInputElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+		expect((search('Colour') as HTMLInputElement).value).toBe('');
+	});
+
 	it('is in each tab, with its own box, and shows only what matches in that tab, opened to it', async () => {
 		await show();
 		await typeInto(search('Colour') as HTMLInputElement, 'primary');
@@ -199,9 +213,9 @@ describe('what it could not read', () => {
 	});
 
 	it('is said plainly when no tokens were found, with where it looked', async () => {
-		await show({ source: null, tokens: [], problems: [], looked: ['src/colors/tones/index.ts'] });
+		await show({ source: null, tokens: [], problems: [], looked: ['theme files', 'CSS variables', 'token files'] });
 		expect(text()).toContain('No tokens were found in this library.');
-		expect(text()).toContain('src/colors/tones/index.ts');
+		expect(text()).toContain('Looked for theme files, CSS variables, token files.');
 		expect(tabs()).toHaveLength(0);
 		expect(document.querySelector('input[type="search"]')).toBeNull();
 	});

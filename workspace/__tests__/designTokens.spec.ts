@@ -189,20 +189,38 @@ describe('what it cannot read', () => {
 		expect(find(list, 'tone.red.40')?.value).toBe('#BA1A1A');
 		expect(list.problems).toEqual([{ file: 'src/colors/tones/red.ts', line: 4, reason: "red 0 is '000000', not a hex colour, so this step is not read" }]);
 	});
-
-	it('names a tone file it cannot find, and reads the others', async () => {
-		const files = { ...LIBRARY };
-		delete files['src/colors/tones/red.ts'];
-		const list = await readTokens(reads(files));
-		expect(find(list, 'tone.pineGreen.50')).toBeDefined();
-		expect(list.problems[0]).toEqual({ file: 'src/colors/tones/red.ts', reason: expect.stringContaining('could not be read') });
-	});
 });
 
 describe('a library laid out differently', () => {
-	it('gives no tokens, says where it looked, and nothing is guessed', async () => {
+	it('finds tone families, palettes and the theme wherever the library keeps them, by their shape and not their folder', async () => {
+		const list = await readTokens(
+			reads({
+				'src/tokens/brand.ts': tone('brand', [['50', '#336699'], ['10', '#001122']]),
+				'src/tokens/modes.ts': "export const light = {\n  mode: 'light',\n  primary: { main: brand[50] },\n};\n",
+				'src/theme/index.ts': 'export const theme = createTheme({\n  spacing: 4,\n  shape: { borderRadius: 6 },\n});\n',
+			}),
+		);
+		expect(list.source).toBe('theme files');
+		expect(find(list, 'tone.brand.50')?.value).toBe('#336699');
+		expect(find(list, 'palette.light.primary.main')).toMatchObject({ value: '#336699', ref: { tone: 'brand', step: '50' } });
+		expect(find(list, 'spacing')?.value).toBe('4px');
+		expect(find(list, 'radius')?.value).toBe('6px');
+	});
+
+	it('leaves alone what is neither tones nor a palette, and does not call it a problem', async () => {
+		const list = await readTokens(reads({ ...LIBRARY, 'src/colors/customPalette.ts': "export const customPalette = { brandName: 'Flock', shades: 3 };\n" }));
+		expect(list.problems).toEqual([]);
+		expect(list.tokens.some((t) => t.source.file === 'src/colors/customPalette.ts')).toBe(false);
+	});
+
+	it('does not read tests, stories or built files as the library’s tokens', async () => {
+		const list = await readTokens(reads({ ...LIBRARY, 'src/colors/tones/pineGreen.stories.tsx': tone('storyGreen', [['50', '#00FF00']]), 'dist/colors.js': tone('builtGreen', [['50', '#00FF00']]) }));
+		expect(list.tokens.some((t) => t.set === 'storyGreen' || t.set === 'builtGreen')).toBe(false);
+	});
+
+	it('gives no tokens, says what it looked for, and nothing is guessed', async () => {
 		const list = await readTokens(reads({ 'src/index.ts': 'export {};\n' }));
-		expect(list).toEqual({ source: null, tokens: [], problems: [], looked: ['src/colors/tones/index.ts'] });
+		expect(list).toEqual({ source: null, tokens: [], problems: [], looked: ['theme files', 'CSS variables', 'token files'] });
 	});
 
 	it('says which way it read them when it does', async () => {

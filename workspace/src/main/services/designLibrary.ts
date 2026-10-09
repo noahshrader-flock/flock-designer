@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { DESIGN_SYSTEMS, designSystemNamed, isDesignSystem, type DesignSystem } from '../../shared/catalog';
+import { DESIGN_SYSTEMS, designSystemNamed, isDesignSystem, isTokenGroup, type DesignSystem } from '../../shared/catalog';
 import type { Catalog, CatalogUpdate } from '../../shared/contract';
 import { isStoryFile, readCatalog, type CatalogReads } from './componentCatalog';
 import { readTokens } from './designTokens';
@@ -125,7 +125,7 @@ export const updateLibrary = async (root: string): Promise<Exclude<CatalogUpdate
 };
 
 /**
- * The catalog's two reads, on `ref` (a commit, or the copy of a branch) through git. Listing also reads every story it lists with one
+ * The library's two reads, for the catalog and the tokens, on `ref` (a commit, or the copy of a branch) through git. Listing also reads every story it lists with one
  * `git cat-file --batch`, so the files the catalog asks for next are already here: one git process for eighty stories,
  * not eighty. A file not read that way is read on its own.
  */
@@ -143,13 +143,16 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 		}
 		return files;
 	};
+	// A folder is listed once: the catalog and the tokens both list the whole library, from the same commit.
+	const listed = new Map<string, Promise<string[]>>();
+	const list = async (dir: string): Promise<string[]> => {
+		const files = (await runGit(root, ['ls-tree', '-r', '--name-only', ref, ...(dir === '' ? [] : ['--', dir])])).split('\n').filter(Boolean);
+		const stories = files.filter((f) => isStoryFile(f) && !/\s/.test(f));
+		if (stories.length > 0) read.set(dir, readStories(stories).catch(() => new Map()));
+		return files;
+	};
 	return {
-		listFiles: async (dir) => {
-			const files = (await runGit(root, ['ls-tree', '-r', '--name-only', ref, ...(dir === '' ? [] : ['--', dir])])).split('\n').filter(Boolean);
-			const stories = files.filter((f) => isStoryFile(f) && !/\s/.test(f));
-			if (stories.length > 0) read.set(dir, readStories(stories).catch(() => new Map()));
-			return files;
-		},
+		listFiles: (dir) => listed.get(dir) ?? listed.set(dir, list(dir)).get(dir)!,
 		readFile: async (path) => {
 			for (const batch of read.values()) {
 				const text = (await batch).get(path);
@@ -171,8 +174,8 @@ export const readLibrary = async (root: string, update: CatalogUpdate): Promise<
 	const reads = libraryReads(root, commit);
 	const [components, tokens] = await Promise.all([readCatalog(reads, library), readTokens(reads)]);
 	// The library's own token pages leave the list only when the panel has the tokens to show instead (decision 22).
-	const listed = tokens.source !== null && library.tokenGroup !== null ? components.filter((c) => c.group !== library.tokenGroup) : components;
-	return { state: 'ready', branch: library.branch, commit, committedAt, update, components: listed, tokens };
+	const shown = tokens.source !== null ? components.filter((c) => !isTokenGroup(c.group)) : components;
+	return { state: 'ready', branch: library.branch, commit, committedAt, update, components: shown, tokens };
 };
 
 export interface DesignLibraryDeps {

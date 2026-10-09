@@ -10,11 +10,11 @@ import { PublishBanner, PublishLine, usePublishStatus } from './PublishStatus';
 import { Review } from './Review';
 import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
-import { InfoIcon, SearchIcon } from 'lucide-react';
+import { InfoIcon } from 'lucide-react';
 import { type ProjectOrder, matchesProject, sortProjects } from '../shared/projects';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
-import { InputGroup, InputGroupAddon, InputGroupInput } from './ui/input-group';
+import { SearchField } from './SearchField';
 
 /**
  * Reviewer mode: every project in the design repository, read through the API.
@@ -134,19 +134,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 				<h2 className="text-sm font-semibold">Projects</h2>
 				{projects.length > 0 && (
 					<div className="flex items-center gap-2">
-						<InputGroup className="w-64">
-							<InputGroupAddon>
-								<SearchIcon />
-							</InputGroupAddon>
-							<InputGroupInput
-								type="search"
-								aria-label="Search projects"
-								placeholder="Search projects"
-								value={search}
-								onChange={(e) => setSearch(e.target.value)}
-								onKeyDown={(e) => e.key === 'Escape' && setSearch('')}
-							/>
-						</InputGroup>
+						<SearchField label="Search projects" value={search} onChange={setSearch} className="w-64" />
 						<ProjectSort order={order} onChange={setOrder} />
 					</div>
 				)}

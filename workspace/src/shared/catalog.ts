@@ -10,15 +10,10 @@ export interface DesignSystem {
 	branch: string;
 	/** The hosted Storybook's address, ending in `/`, or null when it has none: the Storybook links are then left out. */
 	storybook: string | null;
-	/**
-	 * The Storybook group whose pages show the library's tokens. Taken out of the components list once its tokens are
-	 * read, since the tokens panel shows them from the source (decision 22); left in when none are found.
-	 */
-	tokenGroup: string | null;
 }
 
 export const DESIGN_SYSTEMS: DesignSystem[] = [
-	{ repository: 'flocksafety/flock-react-component-lib', branch: 'develop', storybook: 'https://develop--6617f3c579abb5c5e780fddc.chromatic.com/', tokenGroup: 'Design Tokens' },
+	{ repository: 'flocksafety/flock-react-component-lib', branch: 'develop', storybook: 'https://develop--6617f3c579abb5c5e780fddc.chromatic.com/' },
 ];
 
 /** The design system whose repository is `repo` (`owner/repo`, any case), or null. */
@@ -27,6 +22,12 @@ export const designSystemNamed = (repo: string | null): DesignSystem | null =>
 
 /** Whether `repo` is a design system library: by name when one is chosen to clone, by `origin` when one is found. */
 export const isDesignSystem = (repo: string | null): boolean => designSystemNamed(repo) !== null;
+
+/**
+ * Whether a Storybook group holds the library's token pages (`Design Tokens`, `Tokens`): they are documentation of the
+ * tokens, not components, so they leave the list once the tokens panel shows the same from the source (decision 22).
+ */
+export const isTokenGroup = (group: string): boolean => /\btokens?\b/i.test(group);
 
 /** The one thing a preview page tells the frame holding it: its height, under this name. */
 export const PREVIEW_HEIGHT = 'flockPreviewHeight';

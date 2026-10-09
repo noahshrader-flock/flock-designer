@@ -148,6 +148,12 @@ describe('reading develop', () => {
 			expect(c.components.map((x) => x.name)).toContain('FSButton');
 		});
 
+		it('take out a token group however the library names it', async () => {
+			pushDevelop({ ...TOKEN_FILES, 'src/docs/Tokens.stories.tsx': story('Tokens/Spacing') });
+			await updateLibrary(clone);
+			expect(ready(await readLibrary(clone, 'unchanged')).components.map((x) => x.group)).not.toContain('Tokens');
+		});
+
 		it('leave those pages in the list when no tokens were found, so the tokens are never in neither place', async () => {
 			pushDevelop({ 'src/uxDocs/designTokens/PaletteColors.stories.tsx': story('Design Tokens/Color Palette') });
 			await updateLibrary(clone);
