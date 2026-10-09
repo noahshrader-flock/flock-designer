@@ -20,7 +20,6 @@ export const CommentControl = ({
 }) => (
 	<div className="flex items-center">
 		<Button
-			size="sm"
 			variant={comments.commentMode ? 'default' : 'outline'}
 			aria-pressed={comments.commentMode}
 			disabled={disabled}
@@ -32,7 +31,6 @@ export const CommentControl = ({
 			Comment
 		</Button>
 		<Button
-			size="sm"
 			variant={listOpen ? 'default' : 'outline'}
 			aria-pressed={listOpen}
 			aria-label="Show all comments"

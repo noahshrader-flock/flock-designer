@@ -459,7 +459,6 @@ export const Review = ({
 				<div className="flex items-center gap-2">
 					{local.phase.kind === 'running' && local.phase.uncommitted && (
 						<Button
-							size="sm"
 							variant="ghost"
 							title={`${checkout?.name ?? 'The checkout'} has changes nobody committed. ${editor.session ? 'Continue in Claude Code to finish them' : 'Open it in VS Code to look'}, or commit them yourself.`}
 							onClick={() => void (editor.session ? editor.continueInClaude() : editor.openInEditor())}
@@ -470,7 +469,6 @@ export const Review = ({
 					)}
 					{page.state === 'published' && (
 						<Button
-							size="sm"
 							variant="outline"
 							title="Its page on the published site"
 							onClick={() => void window.workspace.openPublishedPage(project.id, iteration.name).then((r) => !r.ok && setError(r.error))}
@@ -480,14 +478,14 @@ export const Review = ({
 						</Button>
 					)}
 					{page.state === 'publishing' && (
-						<Button size="sm" variant="outline" disabled title="Being put on its page. This takes a minute or two.">
+						<Button variant="outline" disabled title="Being put on its page. This takes a minute or two.">
 							Publishing…
 						</Button>
 					)}
 					{(page.state === 'unpublished' || page.state === 'unavailable') && (
 						// The reason is on a wrapper: a disabled button does not show its own.
 						<span title={page.why ?? 'Saved, but not on its page yet: it appears there once it is published'}>
-							<Button size="sm" variant="outline" disabled>
+							<Button variant="outline" disabled>
 								{page.state === 'unavailable' ? 'Page unknown' : 'Not published yet'}
 							</Button>
 						</span>
@@ -502,7 +500,7 @@ export const Review = ({
 					<CommentControl comments={comments} listOpen={sidebarOpen} onToggleList={() => setSidebarOpen((o) => !o)} disabled={!opened} />
 					{/* Codebase work's next step, so it is the one filled button. */}
 					{checkout && codebase && (
-						<Button size="sm" onClick={() => setHandingOff(true)}>
+						<Button onClick={() => setHandingOff(true)}>
 							<PackageCheckIcon />
 							Hand off
 						</Button>

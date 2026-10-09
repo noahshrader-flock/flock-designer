@@ -44,7 +44,7 @@ export const IterationSwitcher = <T extends Switchable>({
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<DropdownMenuTrigger asChild>
-					<Button size="sm" variant="outline" aria-label={`Iteration ${iterationLabel(current)}: switch iteration`}>
+					<Button variant="outline" aria-label={`Iteration ${iterationLabel(current)}: switch iteration`}>
 						{iterationLabel(current)}
 						<ChevronDownIcon />
 					</Button>

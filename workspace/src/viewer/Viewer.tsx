@@ -92,7 +92,7 @@ export const Viewer = ({ config, slots }: { config: ViewerConfig; slots: ViewerS
 			) : (
 				<PageBar config={config} slots={slots}>
 					{/* Not on a phone: commenting needs a computer, and the bar's room goes to the title and the switcher. */}
-					<Button size="sm" variant="outline" className="max-sm:hidden" onClick={() => setPaused(true)}>
+					<Button variant="outline" className="max-sm:hidden" onClick={() => setPaused(true)}>
 						Sign in to comment
 					</Button>
 				</PageBar>

@@ -167,7 +167,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 							);
 						}}
 					/>
-					<Button size="sm" onClick={() => setCreating(true)}>
+					<Button onClick={() => setCreating(true)}>
 						New
 					</Button>
 				</div>

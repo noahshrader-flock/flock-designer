@@ -17,7 +17,7 @@ export const ProjectSort = ({ order, onChange }: { order: ProjectOrder; onChange
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<DropdownMenuTrigger asChild>
-						<Button size="sm" variant="outline" aria-label={`Sort projects: ${label}`}>
+						<Button variant="outline" aria-label={`Sort projects: ${label}`}>
 							{label}
 							<ChevronDownIcon />
 						</Button>
