@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { SessionMemory, findEditor, resumeCommand } from '../src/main/services/editor';
+import { SessionMemory, claudeLink, findEditor, resumeCommand, startCommand } from '../src/main/services/editor';
 
 const dirs: string[] = [];
 const temp = () => {
@@ -47,5 +47,25 @@ describe('finding the editor', () => {
 describe('the terminal command', () => {
 	it('runs from the folder the conversation belongs to, quoted', () => {
 		expect(resumeCommand('/bin/claude', { session: id, root: "/Users/a b/it's" })).toBe(`cd '/Users/a b/it'\\''s' && /bin/claude --resume ${id}`);
+	});
+});
+
+describe('a conversation opened in VS Code', () => {
+	it('is Claude Code’s own link: a session to continue, or a new one with its first prompt', () => {
+		expect(claudeLink({ session: id })).toBe(`vscode://anthropic.claude-code/open?session=${id}`);
+		const link = claudeLink({ prompt: 'Build V1 · I2 into the codebase: read /tmp/a b.md & do it' });
+		expect(link.startsWith('vscode://anthropic.claude-code/open?prompt=')).toBe(true);
+		// Read back as the extension reads it.
+		expect(new URLSearchParams(link.split('?')[1]).get('prompt')).toBe('Build V1 · I2 into the codebase: read /tmp/a b.md & do it');
+	});
+
+	it('is never made with something that is not a session', () => {
+		expect(() => claudeLink({ session: 'x; rm -rf ~' })).toThrow(/not a session/);
+	});
+});
+
+describe('a new conversation from a terminal', () => {
+	it('starts Claude Code in the repository with the first prompt, quoted', () => {
+		expect(startCommand('/bin/claude', "/Users/a b/flock-coke", "Read /tmp/it's.md")).toBe(`cd '/Users/a b/flock-coke' && /bin/claude 'Read /tmp/it'\\''s.md'`);
 	});
 });

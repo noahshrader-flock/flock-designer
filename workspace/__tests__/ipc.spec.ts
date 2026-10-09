@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHANNELS } from '../src/shared/contract';
 import { g, installDesignSystem, makeProduct, makeProductFiles } from './fixtures';
@@ -953,6 +953,51 @@ describe('prototypes', () => {
 		expect((await call(CHANNELS.selectVersion, '../x', 1)).ok).toBe(false);
 		await call(CHANNELS.selectVersion, 'demo', null);
 		expect((await call(CHANNELS.selectedVersion, 'demo')).value).toBeNull();
+	});
+
+	describe('Build in the codebase, handed to Claude Code', () => {
+		const saved = async () => {
+			await call(CHANNELS.useCheckout, product);
+			mkdirSync(join(design, 'skills'), { recursive: true });
+			writeFileSync(join(design, 'skills', 'move-to-code.md'), '# Move a prototype into the code\n\nAudit first.');
+			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
+			writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<h1>Demo</h1>');
+			expect((await call(CHANNELS.savePrototype, 'demo', 'v1-i1')).ok).toBe(true);
+		};
+
+		it('makes the branch and the record, writes the task beside the prototype, and gives the command to start it', async () => {
+			await saved();
+			const r = await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop');
+			expect(r.ok).toBe(true);
+			// Codebase work, as any: its branch checked out, and its record.
+			expect(g(product, 'branch', '--show-current').trim()).toBe('feature/demo');
+			const records = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'iterations.json'), 'utf8')) as { name: string; note: string }[];
+			expect(records.find((i) => i.name === 'codebase')?.note).toBe('From prototype V1 · I1');
+			// The task: the skill, the page to start from, where the audit goes.
+			const taskFile = join(home, 'prototype', 'demo', 'v1-i1-into-code.md');
+			const task = readFileSync(taskFile, 'utf8');
+			expect(task).toContain('Audit first.');
+			expect(task).toContain(join(home, 'prototype', 'demo', 'v1-i1.html'));
+			expect(task).toContain(join(design, 'projects', 'demo', 'audit-v1-i1.md'));
+			// No VS Code in a test: the command that starts it in a terminal, on the clipboard, pointing at the task.
+			const { value } = r as { value: { editor: boolean; command: string } };
+			expect(value.editor).toBe(false);
+			expect(copied).toBe(value.command);
+			expect(value.command).toMatch(new RegExp(`^cd .*${basename(product)} && .*claude `));
+			expect(value.command).toContain(taskFile);
+			// Nothing is run in the app.
+			expect(agentStart).not.toHaveBeenCalled();
+		});
+
+		it('writes nothing for the agent when the work cannot start', async () => {
+			await saved();
+			writeFileSync(join(product, 'README.md'), 'changed\n');
+			const r = await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop');
+			expect(r.error).toMatch(/uncommitted changes/);
+			expect(existsSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'))).toBe(false);
+			expect(copied).toBe('');
+		});
 	});
 
 	describe('moving into the code', () => {

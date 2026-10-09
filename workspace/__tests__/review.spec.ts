@@ -380,6 +380,39 @@ describe('Build in the codebase', () => {
 		expect((document.getElementById('move-from') as HTMLElement).textContent).toBe('noah/flock-designer');
 	});
 
+	it('hands the building to Claude Code in VS Code, and says so, rather than running it here', async () => {
+		const app = await dialog(['develop']);
+		app.impl.buildInClaude = async () => ok({ editor: true, command: null });
+		await press(button('Create branch and open in Claude Code'));
+		await settle();
+		expect(app.calls.buildInClaude).toEqual([['/c/flock-coke', 'demo', 'v1-i1', 'develop']]);
+		expect(document.body.textContent).toContain('It is in Claude Code in VS Code now, on feature/demo');
+		// The extension types the prompt in; the person sends it.
+		expect(document.body.textContent).toContain('Press Enter there to start it');
+		// Nothing is run, or shown running, in the app.
+		expect(app.calls.startAgent).toBeUndefined();
+		expect(app.calls.prepareMoveToCode).toBeUndefined();
+		await press(button('Done'));
+	});
+
+	it('gives the command for a terminal when VS Code with Claude Code is not here', async () => {
+		const app = await dialog(['develop']);
+		app.impl.buildInClaude = async () => ok({ editor: false, command: "cd /c/flock-coke && claude 'Build prototype V1 · I1'" });
+		await press(button('Create branch and open in Claude Code'));
+		await settle();
+		expect(document.body.textContent).toContain('the command that starts it in a terminal is on your clipboard');
+		expect(document.body.textContent).toContain("cd /c/flock-coke && claude 'Build prototype V1 · I1'");
+	});
+
+	it('says why it could not start, and stays open to try again', async () => {
+		const app = await dialog(['develop']);
+		app.impl.buildInClaude = async () => fail('There are uncommitted changes in flock-coke.');
+		await press(button('Create branch and open in Claude Code'));
+		await settle();
+		expect(document.body.textContent).toContain('There are uncommitted changes in flock-coke.');
+		expect(button('Create branch and open in Claude Code').disabled).toBe(false);
+	});
+
 	it('starts from what the prototype was modelled on, when that has the setup', async () => {
 		await dialog(['noah/flock-designer', 'develop']);
 		expect((document.getElementById('move-from') as HTMLElement).textContent).toBe('develop');

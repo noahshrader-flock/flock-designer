@@ -7,6 +7,7 @@ import {
 	CHANNELS,
 	type Checkout,
 	type CheckoutSuggestion,
+	type BuildInClaude,
 	type ClonePlan,
 	type MarkerRequest,
 	PAGE_HOLD_REASONS,
@@ -24,7 +25,7 @@ import {
 	type ReviewComment,
 } from '../shared/contract';
 import { AGENT_BUSY, type AgentExtras, AgentRunner, agentReadiness, locateClaude } from './services/agent';
-import { SessionMemory, findEditor, openFolder, openSession, resumeCommand } from './services/editor';
+import { SessionMemory, findEditor, openFolder, openPrompt, openSession, resumeCommand, startCommand } from './services/editor';
 import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, codebaseWorkPreamble, commandLine, handoffTask } from './services/engineeringHandoff';
 import { lastVerdict } from '../shared/handoff';
 import { type ShareRunner, previewIsUp, pullRequestText } from './services/share';
@@ -473,27 +474,29 @@ export const registerIpc = ({
 	ipcMain.handle(
 		CHANNELS.createIteration,
 		// Codebase work only: a prototype has no branch, and is made by createPrototype.
-		guard(async (root: string, projectId: string, note: string, from?: string) => {
-			const canonical = opened.require(root);
-			assertAgentNotHere(canonical);
-			const descriptor = descriptorFor(root);
-			// Only ever a branch that exists here or on GitHub, so the window cannot pass git an option or a revision
-			// expression. One only on GitHub (as most are in a fresh clone) is made local, with nothing checked out.
-			if (from !== undefined) await ensureLocalBranch(canonical, from);
-			const branch = from ?? (await readCheckout(canonical)).branch;
-			if (branch === null) {
-				throw new Error('This repository has a detached HEAD. Check out a branch first.');
-			}
-			// Work is built where the product's Flock Designer setup is. A branch without it (develop, before the
-			// setup is merged there) would leave the checkout on a branch this app can no longer work in.
-			const setup = `${descriptor.contextDir}/workspace.json`;
-			if (!(await runGit(canonical, ['cat-file', '-e', `refs/heads/${branch}:${setup}`]).then(() => true, () => false))) {
-				throw new Error(`${branch} has no ${setup}, so work cannot start from it. Start from a branch that has the Flock Designer setup.`);
-			}
-			const recordsRoot = recordsFor(canonical);
-			return written(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch));
-		}),
+		guard((root: string, projectId: string, note: string, from?: string) => startCodebaseWork(root, projectId, note, from)),
 	);
+	/** Codebase work's branch, checked out, and its record: from `from`, or the branch the checkout is on. */
+	async function startCodebaseWork(root: string, projectId: string, note: string, from?: string) {
+		const canonical = opened.require(root);
+		assertAgentNotHere(canonical);
+		const descriptor = descriptorFor(root);
+		// Only ever a branch that exists here or on GitHub, so the window cannot pass git an option or a revision
+		// expression. One only on GitHub (as most are in a fresh clone) is made local, with nothing checked out.
+		if (from !== undefined) await ensureLocalBranch(canonical, from);
+		const branch = from ?? (await readCheckout(canonical)).branch;
+		if (branch === null) {
+			throw new Error('This repository has a detached HEAD. Check out a branch first.');
+		}
+		// Work is built where the product's Flock Designer setup is. A branch without it (develop, before the
+		// setup is merged there) would leave the checkout on a branch this app can no longer work in.
+		const setup = `${descriptor.contextDir}/workspace.json`;
+		if (!(await runGit(canonical, ['cat-file', '-e', `refs/heads/${branch}:${setup}`]).then(() => true, () => false))) {
+			throw new Error(`${branch} has no ${setup}, so work cannot start from it. Start from a branch that has the Flock Designer setup.`);
+		}
+		const recordsRoot = recordsFor(canonical);
+		return written(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch));
+	}
 
 	ipcMain.handle(
 		CHANNELS.continueIteration,
@@ -1240,31 +1243,53 @@ export const registerIpc = ({
 		}),
 	);
 
+	/**
+	 * Build in the codebase, from a prototype: its branch and record are made here, as all codebase work's are, and the
+	 * building is handed to Claude Code in the product repository, where the person watches it and can step in. The
+	 * task is written beside the prototype's own copy (the skill, the page and source to start from, where the audit
+	 * goes); the conversation starts with a line pointing at it. In VS Code when it has Claude Code; otherwise the
+	 * command that starts it in a terminal is put on the clipboard.
+	 */
 	ipcMain.handle(
-		CHANNELS.prepareMoveToCode,
-		guard(async (projectId: string, name: string): Promise<string> => {
-			const root = trustedRoot();
-			if (root === null) throw new Error('Building in the codebase needs the product repository on this machine.');
-			const recordsRoot = recordsFor(opened.require(root));
+		CHANNELS.buildInClaude,
+		guard(async (root: string, projectId: string, name: string, from?: string): Promise<BuildInClaude> => {
+			assertUsableProjectId(projectId);
+			assertPrototypeName(name);
+			const canonical = opened.require(root);
+			const recordsRoot = recordsFor(canonical);
 			const skill = await readSkillText(MOVE_SKILL);
-			// The page is copied where the agent is allowed to read it, so it works from the version saved, wherever that is.
+			// The page and its source are copied where the agent can read them, so it works from the version saved.
 			const html = await prototypePage(projectId, name);
 			if (html === null) throw new Error('This prototype has no page yet.');
 			const pageFile = work.file(projectId, name);
-			writeFileSync(pageFile, html);
-			// Its React source too, when it has one: real components are a far better start than a page.
 			const sourceFile = work.sourceFile(projectId, name);
 			const source = await work.sourceText(projectId, name);
+			const label = iterationLabel({ name, branch: prototypeKey(projectId, name) });
+			// The branch first: nothing is written for the agent if the work cannot start (a dirty tree, work already there).
+			await startCodebaseWork(root, projectId, `From prototype ${label}`, from);
+			writeFileSync(pageFile, html);
 			if (source !== null) writeFileSync(sourceFile, source);
-			const basedOn = (await work.record(projectId, name))?.basedOn;
-			return moveToCodeTask({
-				skill,
-				pageFile,
-				sourceFile: source !== null ? sourceFile : null,
-				auditFile: join(recordsRoot, projectId, `audit-${name}.md`),
-				name,
-				basedOn,
-			});
+			const taskFile = join(dirname(pageFile), `${name}-into-code.md`);
+			writeFileSync(
+				taskFile,
+				moveToCodeTask({
+					skill,
+					pageFile,
+					sourceFile: source !== null ? sourceFile : null,
+					auditFile: join(recordsRoot, projectId, `audit-${name}.md`),
+					name,
+					basedOn: (await work.record(projectId, name))?.basedOn,
+				}),
+			);
+			const prompt = `Build prototype ${label} of ${projectId} into this codebase. Your task, with the skill to follow and the prototype's files, is in ${taskFile}: read it and do what it says.`;
+			const editor = findEditor();
+			if (editor) {
+				await openPrompt(editor, canonical, prompt);
+				return { editor: true, command: null };
+			}
+			const command = startCommand(locateClaude(), canonical, prompt);
+			clipboard.writeText(command);
+			return { editor: false, command };
 		}),
 	);
 

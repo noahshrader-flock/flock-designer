@@ -168,6 +168,12 @@ export type AgentStatus =
  */
 export type IterationKind = 'prototype' | 'codebase';
 
+/** Where Build in the codebase handed the building: VS Code's Claude Code panel, or a command to start it in a terminal. */
+export interface BuildInClaude {
+	editor: boolean;
+	command: string | null;
+}
+
 /** What moving a prototype into the code would do here, so the person is told before it does it. */
 export interface MoveToCodePlan {
 	/** The project's one codebase branch, as this repository names it. */
@@ -414,7 +420,12 @@ export interface WorkspaceApi {
 	/** Whether a prototype can be built from this repository on this machine, and with which design system version. */
 	prototypeReadiness(root: string): Promise<Result<PrototypeReadiness>>;
 	/** The task that moves a prototype into the codebase: an audit of it against the real code, then the work. */
-	prepareMoveToCode(projectId: string, name: string): Promise<Result<string>>;
+	/**
+	 * Build in the codebase, from a prototype: makes the project's codebase branch (from `from`) and its record, then
+	 * hands the building to Claude Code in the repository: VS Code's panel when it is here (`editor`), or the command
+	 * that starts it in a terminal, put on the clipboard (`command`).
+	 */
+	buildInClaude(root: string, projectId: string, name: string, from?: string): Promise<Result<BuildInClaude>>;
 	/** Asked when new work is about to be started: is Claude Code installed here, and signed in? */
 	agentReadiness(): Promise<Result<AgentReadiness>>;
 	/**
@@ -786,7 +797,7 @@ export const CHANNELS = {
 	selectedVersion: 'workspace:selectedVersion',
 	selectVersion: 'workspace:selectVersion',
 	openPrototype: 'workspace:openPrototype',
-	prepareMoveToCode: 'workspace:prepareMoveToCode',
+	buildInClaude: 'workspace:buildInClaude',
 	prototypeReadiness: 'workspace:prototypeReadiness',
 	moveToCodePlan: 'workspace:moveToCodePlan',
 	addressComments: 'workspace:addressComments',

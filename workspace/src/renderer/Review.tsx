@@ -543,7 +543,7 @@ export const Review = ({
 				/>
 			)}
 			{checkout && prototype && (
-				<MoveToCode open={moving} onClose={() => setMoving(false)} project={project} iteration={buildFrom} checkout={checkout} onStarted={onOpen} />
+				<MoveToCode open={moving} onClose={() => setMoving(false)} project={project} iteration={buildFrom} checkout={checkout} />
 			)}
 
 			{/* Under the toolbar: the preview, and beside it the sidebar when it is open. */}

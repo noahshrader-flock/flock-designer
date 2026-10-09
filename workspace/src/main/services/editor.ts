@@ -65,21 +65,43 @@ const run = (file: string, args: string[]): Promise<void> =>
 export const openFolder = (editor: string, folder: string): Promise<void> => run('/usr/bin/open', ['-a', editor, folder]);
 
 /**
- * Opens a session in VS Code's Claude Code panel. The folder first, because the extension looks a session up
- * in the window's own folder; then, once that window has had a moment to be the front one, the session.
+ * The Claude Code extension's own link: a conversation to continue (`session`), or a new one with its first prompt
+ * (`prompt`). The extension reads both from the link's query.
  */
-export const openSession = async (editor: string, { session, root }: AgentSession, opened: () => void = () => undefined, settle = 2500): Promise<void> => {
-	if (!UUID.test(session)) throw new Error('That is not a session.');
+export const claudeLink = (open: { session: string } | { prompt: string }): string => {
+	if ('session' in open && !UUID.test(open.session)) throw new Error('That is not a session.');
+	return `vscode://anthropic.claude-code/open?${new URLSearchParams(open).toString()}`;
+};
+
+/**
+ * Opens a conversation in VS Code's Claude Code panel. The folder first, because the extension looks a session up in
+ * the window's own folder, and a new one starts there; then, once that window has had a moment to be the front one,
+ * the conversation.
+ */
+const openConversation = async (editor: string, root: string, link: string, opened: () => void, settle: number): Promise<void> => {
 	await openFolder(editor, root);
-	// The folder is open, so the conversation can be continued there: whatever was holding it can let go now.
+	// The folder is open, so the conversation can be had there: whatever was holding it can let go now.
 	opened();
 	await new Promise((r) => setTimeout(r, settle));
-	await run('/usr/bin/open', [`vscode://anthropic.claude-code/open?session=${session}`]);
+	await run('/usr/bin/open', [link]);
 };
+
+/** Continues a session in VS Code's Claude Code panel. */
+export const openSession = (editor: string, { session, root }: AgentSession, opened: () => void = () => undefined, settle = 2500): Promise<void> =>
+	openConversation(editor, root, claudeLink({ session }), opened, settle);
+
+/** Starts a new conversation in VS Code's Claude Code panel, in `root`, with its first prompt. */
+export const openPrompt = (editor: string, root: string, prompt: string, settle = 2500): Promise<void> =>
+	openConversation(editor, root, claudeLink({ prompt }), () => undefined, settle);
+
+/** Quoted for a shell, when it is anything but plain. */
+const q = (s: string) => (/^[\w./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`);
 
 /** Without VS Code: the same conversation, from a terminal. */
 export const resumeCommand = (claude: string, { session, root }: AgentSession): string => {
 	if (!UUID.test(session)) throw new Error('That is not a session.');
-	const q = (s: string) => (/^[\w./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`);
 	return `cd ${q(root)} && ${q(claude)} --resume ${session}`;
 };
+
+/** Without VS Code: a new conversation, from a terminal, in `root`, with its first prompt. */
+export const startCommand = (claude: string, root: string, prompt: string): string => `cd ${q(root)} && ${q(claude)} ${q(prompt)}`;
