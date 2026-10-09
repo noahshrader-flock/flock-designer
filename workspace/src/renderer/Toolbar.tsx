@@ -6,5 +6,5 @@ import type { ReactNode } from 'react';
  * same line under it. Its height is the window's `--toolbar-height`, which the screens below it count on.
  */
 export const Toolbar = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
-	<div className={`bg-card flex h-(--toolbar-height) shrink-0 items-center gap-4 border-b px-4 ${className}`}>{children}</div>
+	<div className={`bg-card flex h-(--toolbar-height) shrink-0 items-center gap-4 border-b px-(--page-padding) ${className}`}>{children}</div>
 );

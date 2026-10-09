@@ -42,7 +42,7 @@ const Notice = ({ title, children, onRetry }: { title: string; children: ReactNo
 			<AlertDescription>{children}</AlertDescription>
 			{onRetry && (
 				<AlertAction>
-					<Button variant="outline" size="xs" onClick={onRetry}>
+					<Button variant="outline" onClick={onRetry}>
 						Try again
 					</Button>
 				</AlertAction>

@@ -167,7 +167,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 						<AlertTitle>No product repository found</AlertTitle>
 						<AlertDescription>Flock Designer could not find a Flock product repository on this machine. Point it at yours once.</AlertDescription>
 						<AlertAction>
-							<Button variant="outline" size="xs" onClick={chooseCheckout}>
+							<Button variant="outline" onClick={chooseCheckout}>
 								Find it
 							</Button>
 						</AlertAction>

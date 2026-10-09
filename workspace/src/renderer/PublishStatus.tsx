@@ -43,7 +43,7 @@ export const PublishBanner = ({ status: current, onChange }: { status: Status; o
 					))}
 				</AlertDescription>
 				<AlertAction>
-					<Button variant="outline" size="xs" onClick={() => void window.workspace.publishNow().then((r) => r.ok && onChange(r.value))}>
+					<Button variant="outline" onClick={() => void window.workspace.publishNow().then((r) => r.ok && onChange(r.value))}>
 						Try again
 					</Button>
 				</AlertAction>

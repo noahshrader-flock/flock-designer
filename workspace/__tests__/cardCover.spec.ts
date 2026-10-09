@@ -32,5 +32,7 @@ describe('the card cover', () => {
 		expect(classes).toEqual(expect.arrayContaining(['flex', 'flex-col', 'justify-between']));
 		// No colour of its own: the card's shows through.
 		expect(classes.filter((c) => /^(bg|text)-/.test(c))).toEqual([]);
+		// Its left edge is where a footer's icons start: the footer's 8px and a button's 10px, 18px.
+		expect(classes).toContain('pl-4.5');
 	});
 });

@@ -117,7 +117,7 @@ export const ComponentPage = ({
 								: preview.error}
 					</AlertDescription>
 					<AlertAction>
-						<Button variant="outline" size="xs" onClick={() => void build()}>
+						<Button variant="outline" onClick={() => void build()}>
 							Try again
 						</Button>
 					</AlertAction>

@@ -6,5 +6,5 @@ import type { ReactNode } from 'react';
  * readable line.
  */
 export const Page = ({ children, wide = false }: { children: ReactNode; wide?: boolean }) => (
-	<div className={`mx-auto flex flex-col gap-4 p-6 ${wide ? '' : 'max-w-[1400px]'}`}>{children}</div>
+	<div className={`mx-auto flex flex-col gap-4 p-(--page-padding) ${wide ? '' : 'max-w-[1400px]'}`}>{children}</div>
 );

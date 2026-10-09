@@ -131,6 +131,8 @@
 :root {
 	--nav-height: 3.5rem;
 	--toolbar-height: 2.75rem;
+	/* How far content sits from the window's left and right edges: a screen's cards and its toolbar's name and buttons, so they line up. */
+	--page-padding: 1.5rem;
 }
 
 /*

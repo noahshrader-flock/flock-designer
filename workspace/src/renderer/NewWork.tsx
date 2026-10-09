@@ -267,7 +267,7 @@ export const NewWork = ({
 							<AlertTitle>No product repository found</AlertTitle>
 							<AlertDescription>Flock Designer could not find a Flock product repository on this machine.</AlertDescription>
 							<AlertAction>
-								<Button variant="outline" size="xs" onClick={onChoose}>
+								<Button variant="outline" onClick={onChoose}>
 									Find it
 								</Button>
 							</AlertAction>
