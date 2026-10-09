@@ -42,7 +42,7 @@
  *     - Role holders and their last-active dates.
  *     - The top-bar app links and account menus (copied from the 2026-10-06 reference, not from the account).
  *   @remove
- *     - The state switcher in the bottom-left corner.
+ *     - Picking the state from ?state= (readState). The bar above the page offers the states.
  *     - The placeholder shown when any tab other than Usage is clicked.
  *     - The simulated delays (panel load, archive request).
  */
@@ -704,12 +704,14 @@ const RoleHoldersDrawer = ({
 // Usage tab
 // ---------------------------------------------------------------------------------------------------------------
 
-type PageState = 'default' | 'empty' | 'loading' | 'archiving-assigned';
-const PAGE_STATES: PageState[] = ['default', 'empty', 'loading', 'archiving-assigned'];
+// The states, for the bar above the page to offer; the first is what the page opens in.
+export const states = ['default', 'empty', 'loading', 'archiving-assigned'] as const;
+type PageState = (typeof states)[number];
 
+// @remove: picks the state from ?state=. On move: delete.
 const readState = (): PageState => {
     const value = new URLSearchParams(window.location.search).get('state');
-    return PAGE_STATES.includes(value as PageState) ? (value as PageState) : 'default';
+    return states.includes(value as PageState) ? (value as PageState) : 'default';
 };
 
 const UnusedRolesEmptyState = () => (
@@ -1005,7 +1007,7 @@ const OrganizationPage = ({ pageState }: { pageState: PageState }) => {
                             </FSTabs>
                         </FSBox>
                         {tab === 'usage' ? (
-                            <UsageTab key={pageState} pageState={pageState} />
+                            <UsageTab pageState={pageState} />
                         ) : (
                             // @remove: the other tabs are not part of this prototype. On move: delete.
                             <FSBox sx={{ padding: 3 }}>
@@ -1022,50 +1024,13 @@ const OrganizationPage = ({ pageState }: { pageState: PageState }) => {
     );
 };
 
-// @remove: state switcher for reviewers. On move: delete.
-const StateSwitcher = ({ value, onChange }: { value: PageState; onChange: (s: PageState) => void }) => (
-    <FSStack
-        direction="row"
-        spacing={0.5}
-        alignItems="center"
-        data-e2e-ref="state-switcher"
-        sx={({ palette }) => ({
-            position: 'fixed',
-            left: 8,
-            bottom: 8,
-            zIndex: 2000,
-            p: 0.5,
-            borderRadius: 1,
-            border: 1,
-            borderColor: 'divider',
-            bgcolor: palette.surface1.main,
-        })}
-    >
-        <FSTypography variant="caption" color="text.secondary" sx={{ px: 1 }}>
-            State
-        </FSTypography>
-        {PAGE_STATES.map((s) => (
-            <FSButton key={s} size="sm" variant={s === value ? 'secondaryActive' : 'ghost'} onClick={() => onChange(s)}>
-                {s}
-            </FSButton>
-        ))}
-    </FSStack>
-);
-
 export default function Page() {
-    const [pageState, setPageState] = useState<PageState>(readState);
-    const changeState = (s: PageState) => {
-        const url = new URL(window.location.href);
-        url.searchParams.set('state', s);
-        window.history.replaceState(null, '', url);
-        setPageState(s);
-    };
+    const pageState = readState();
 
     return (
         <FSApp>
             <div className="app-container">
-                <OrganizationPage key={pageState} pageState={pageState} />
-                <StateSwitcher value={pageState} onChange={changeState} />
+                <OrganizationPage pageState={pageState} />
             </div>
         </FSApp>
     );
