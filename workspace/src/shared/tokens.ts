@@ -44,6 +44,16 @@ export const describeChange = (tokens: DesignToken[], edits: TokenEdit[]): strin
 	});
 };
 
+/** Whether two changes are the same, whatever their order: the same tokens, each pointed at or given the same. */
+export const sameChange = (a: TokenEdit[], b: TokenEdit[]): boolean => {
+	const key = (edits: TokenEdit[]) =>
+		edits
+			.map((e) => `${e.path}\u0000${'ref' in e ? `ref ${e.ref}` : `value ${e.value}`}`)
+			.sort()
+			.join('\n');
+	return key(a) === key(b);
+};
+
 /** Whether `value` is one a token of this kind can be given. */
 export const fitsKind = (kind: DesignToken['kind'], value: string): boolean => (kind === 'color' ? HEX_COLOR : DIMENSION).test(value);
 

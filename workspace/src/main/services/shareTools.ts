@@ -19,8 +19,8 @@ const run = promisify(execFile);
 
 
 const NOT_INSTALLED =
-	'Sharing uses the GitHub CLI (gh), which was not found on this machine. Install it from https://cli.github.com, run `gh auth login` in a terminal, then share again.';
-const NOT_SIGNED_IN = 'The GitHub CLI is installed but not signed in. Run `gh auth login` in a terminal, then share again.';
+	'Pull requests are opened with the GitHub CLI (gh), which was not found on this machine. Install it from https://cli.github.com, run `gh auth login` in a terminal, then try again.';
+const NOT_SIGNED_IN = 'The GitHub CLI is installed but not signed in. Run `gh auth login` in a terminal, then try again.';
 
 /** A `gh` run that failed, keeping what it printed: some failures still carry the answer. */
 class GhFailure extends ShareProblem {

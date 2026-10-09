@@ -491,7 +491,7 @@ describe('naming and reach (T3)', () => {
 });
 
 describe('saving and proposing a change (T4, T5)', () => {
-	const BRANCH = { branch: 'dsnr/tokens-20261009-ab12', base: 'c1', saves: 1, saved: [{ path: 'tone.pineGreen.50', value: '#000000' }], pullRequest: null };
+	const BRANCH = { branch: 'dsnr/tokens-20261009-ab12', saves: 1, saved: [{ path: 'tone.pineGreen.50', value: '#000000' }], pullRequest: null };
 	const branchShown = () => document.querySelector<HTMLElement>('[data-token-branch]');
 	const changedList = () => document.querySelector<HTMLElement>('[data-changed-tokens]');
 	const changeTone = async () => {
@@ -560,6 +560,16 @@ describe('saving and proposing a change (T4, T5)', () => {
 		await settle();
 		expect(made.at(-1)).toEqual(BRANCH.saved);
 		expect(branchShown()?.textContent).toContain('dsnr/tokens-20261009-ab12');
+	});
+
+	it('does not start over when the branch could not be forgotten, and says why: it would only come back', async () => {
+		await show(TOKENS, true, { tokenBranch: async () => ok(BRANCH), forgetTokenBranch: async () => fail('The disk is full') });
+		await settle();
+		await press(button('Start over'));
+		await settle();
+		expect(branchShown()?.textContent).toContain('dsnr/tokens-20261009-ab12');
+		expect(branchShown()?.querySelector('[role="alert"]')?.textContent).toBe('The disk is full');
+		expect(made.at(-1)).toEqual(BRANCH.saved);
 	});
 
 	it('starts over: forgets the branch and empties the change, leaving the branch and its pull request where they are', async () => {

@@ -304,8 +304,7 @@ export type TokenEdit = { path: string } & TokenChange;
 export interface TokenBranch {
 	/** The branch, always `dsnr/tokens-…`: DSNR writes to no other. */
 	branch: string;
-	/** The library's commit the change is made on, and the change as last saved. */
-	base: string;
+	/** The change as last saved, and how many saves the branch has. */
 	saved: TokenEdit[];
 	saves: number;
 	/** The draft pull request, and Chromatic's build of it once the library's CI has linked one. */

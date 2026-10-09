@@ -305,7 +305,7 @@ export const pushBranch = async (root: string, branch: string): Promise<{ pushed
 		const detail = err instanceof Error ? err.message : String(err);
 		if (/rejected|non-fast-forward|fetch first/i.test(detail)) {
 			throw new GitProblem(
-				`${branch} has changes on the remote that this machine does not have, so it was not pushed. Pull them first, then share again.\n\n${detail}`,
+				`${branch} has changes on the remote that this machine does not have, so it was not pushed. Pull them first, then try again.\n\n${detail}`,
 			);
 		}
 		throw new GitProblem(`Could not push ${branch} to origin.\n\n${detail}`);

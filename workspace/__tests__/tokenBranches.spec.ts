@@ -92,7 +92,8 @@ describe('saving a change (T4)', () => {
 		expect(b.branch.startsWith('dsnr/tokens-20261009-')).toBe(true);
 		expect(b).toMatchObject({ saves: 1, saved: [{ path: 'tone.brand.50', value: '#0A6B52' }], pullRequest: null });
 		const develop = g(clone, 'rev-parse', 'origin/develop').trim();
-		expect(b.base).toBe(develop);
+		// The window is told the branch and the change, not the commits DSNR keeps to make its saves from.
+		expect(Object.keys(b).sort()).toEqual(['branch', 'pullRequest', 'saved', 'saves']);
 		expect(g(clone, 'rev-parse', `${b.branch}^`).trim()).toBe(develop);
 		expect(at(b.branch, 'src/colors/tones/brand.ts')).toContain("50: '#0A6B52'");
 		// Only the token's file: everything else as develop has it.
@@ -117,7 +118,7 @@ describe('saving a change (T4)', () => {
 		]);
 		const second = await branches().save([{ path: 'palette.light.primary.main', ref: 'tone.brand.20' }]);
 		expect(second).toMatchObject({ branch: first.branch, saves: 2 });
-		expect(g(clone, 'rev-list', '--count', `${first.base}..${second.branch}`).trim()).toBe('2');
+		expect(g(clone, 'rev-list', '--count', `origin/develop..${second.branch}`).trim()).toBe('2');
 		expect(at(second.branch, 'src/colors/theme/light.ts')).toContain('main: brand[20]');
 		expect(at(second.branch, 'src/colors/tones/brand.ts')).toBe(THEME['src/colors/tones/brand.ts']);
 		expect(at(second.branch, 'src/utils/theme.ts')).toBe(THEME['src/utils/theme.ts']);

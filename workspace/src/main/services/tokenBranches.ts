@@ -24,6 +24,7 @@ import { describeChange } from '../../shared/tokens';
 import { libraryCommit, systemReads } from './designLibrary';
 import { readTokens } from './designTokens';
 import { branchExists, runGit } from './git';
+import type { CatalogReads } from './componentCatalog';
 import type { ShareTools } from './share';
 import { editedFiles } from './tokenEdits';
 
@@ -33,8 +34,11 @@ export const TOKEN_BRANCH = /^dsnr\/tokens-\d{8}-[0-9a-f]{4}$/;
 /** A new branch's name: the day, and four letters so two on one day differ. */
 const newBranch = (now: Date): string => `dsnr/tokens-${now.toISOString().slice(0, 10).replace(/-/g, '')}-${randomBytes(2).toString('hex')}`;
 
-/** What a branch keeps for itself, beyond what is shown: the commit it was last saved at, to move it only from there. */
-type Kept = TokenBranch & { tip: string };
+/**
+ * What DSNR keeps of a branch beyond what is shown: the library's commit the change is made on (`base`), and the commit
+ * the branch was last saved at (`tip`), to move it only from there.
+ */
+type Kept = TokenBranch & { base: string; tip: string };
 
 /**
  * A commit of `base`'s tree with `files` as given, whose parent is `parent`: made without a working copy or the
@@ -57,6 +61,10 @@ export const commitFiles = async (root: string, base: string, parent: string, fi
 		rmSync(env.GIT_INDEX_FILE, { force: true });
 	}
 };
+
+/** What a save's commit says: how many tokens it changes, and each, in the panel's words. */
+export const commitMessage = (lines: string[]): string =>
+	[`Design tokens: ${lines.length === 0 ? 'back as the library has them' : `${lines.length} changed`}`, '', ...lines, '', 'Saved from DSNR.'].join('\n');
 
 /** What a pull request for a change says: the tokens it changes, and that it was opened from DSNR, as a draft. */
 export const proposalText = (lines: string[]): { title: string; body: string } => ({
@@ -113,14 +121,7 @@ export class TokenBranches {
 
 		const reads = await systemReads(system, base);
 		const files = await editedFiles(reads, edits);
-		const lines = describeChange((await readTokens(reads)).tokens, edits);
-		const message = [
-			`Design tokens: ${edits.length === 0 ? 'back as the library has them' : `${edits.length} changed`}`,
-			'',
-			...lines,
-			'',
-			'Saved from DSNR.',
-		].join('\n');
+		const message = commitMessage(await describedAt(reads, edits));
 
 		const branch = kept?.branch ?? newBranch(this.deps.now?.() ?? new Date());
 		const parent = kept?.tip ?? base;
@@ -150,8 +151,7 @@ export class TokenBranches {
 		const tools = this.deps.tools(system.root);
 		await tools.push(kept.branch);
 		const open = await tools.findPr(kept.branch);
-		const reads = await systemReads(system, kept.base);
-		const { title, body } = proposalText(describeChange((await readTokens(reads)).tokens, kept.saved));
+		const { title, body } = proposalText(await describedAt(await systemReads(system, kept.base), kept.saved));
 		const pr = open ?? (await tools.createDraftPr(kept.branch, title, body));
 		const next: Kept = { ...kept, pullRequest: { number: pr.number, url: pr.url, chromatic: kept.pullRequest?.chromatic ?? null } };
 		this.keep(system.id, next);
@@ -209,5 +209,8 @@ export class TokenBranches {
 	}
 }
 
-/** A branch as the window sees it: without the commit DSNR keeps to move it from. */
-const shown = ({ tip: _tip, ...branch }: Kept): TokenBranch => branch;
+/** A branch as the window sees it: without the commits DSNR keeps to make its saves from. */
+const shown = ({ tip: _tip, base: _base, ...branch }: Kept): TokenBranch => branch;
+
+/** A change in words, against the tokens as the library has them at a commit. */
+const describedAt = async (reads: CatalogReads, edits: TokenEdit[]): Promise<string[]> => describeChange((await readTokens(reads)).tokens, edits);

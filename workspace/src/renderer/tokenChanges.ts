@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo } from 'react';
 import type { DesignToken, TokenChange, TokenEdit } from '../shared/contract';
-import { placeOf, withEdits } from '../shared/tokens';
+import { placeOf, sameChange, withEdits } from '../shared/tokens';
 
 /**
  * The change to the tokens as the tokens panel holds it (T3 of the design system plan): the tokens as changed, and how to
@@ -37,9 +37,6 @@ export const useTokenChanges = (): TokenChanges => {
 
 const familyOf = (t: DesignToken): string => `${t.group}/${t.set}`;
 
-const sameEdit = (a: TokenEdit | undefined, b: TokenEdit | undefined): boolean =>
-	a === b || (a !== undefined && b !== undefined && a.path === b.path && ('ref' in a ? 'ref' in b && a.ref === b.ref : 'value' in b && a.value === b.value));
-
 /**
  * `edits` with `token` changed to `to`: the edit of its place replaced, and none kept that leaves it as the library has
  * it. The same list, not a copy, when nothing would change, so the same change again builds nothing.
@@ -52,7 +49,7 @@ const changed = (edits: TokenEdit[], read: Map<string, DesignToken>, token: Desi
 	const asRead = to === null || ('ref' in to ? token.ref?.path === to.ref : token.ref === undefined && token.value.toLowerCase() === to.value.toLowerCase());
 	const now = edits.find(atPlace);
 	const next: TokenEdit | undefined = asRead ? undefined : { path: token.path, ...(to as TokenChange) };
-	if (sameEdit(now, next)) return edits;
+	if (sameChange(now ? [now] : [], next ? [next] : [])) return edits;
 	return next ? [...edits.filter((e) => !atPlace(e)), next] : edits.filter((e) => !atPlace(e));
 };
 

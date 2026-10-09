@@ -3,7 +3,7 @@ import type { CatalogReads } from '../src/main/services/componentCatalog';
 import { readTokens } from '../src/main/services/designTokens';
 import { editedFiles, tokenEditsOf } from '../src/main/services/tokenEdits';
 import type { DesignToken, TokenEdit } from '../src/shared/contract';
-import { AA_TEXT, contrastPartner, contrastRatio, pointingAt, withEdits } from '../src/shared/tokens';
+import { AA_TEXT, contrastPartner, contrastRatio, pointingAt, sameChange, withEdits } from '../src/shared/tokens';
 
 /**
  * A change to the library's tokens (T3 of the design system plan, decisions 19, 26 and 27): what it does to the list,
@@ -71,6 +71,17 @@ describe('what a change does to the list', () => {
 		expect(main).toMatchObject({ value: '#20A080', ref: { path: 'tone.g.60' } });
 		expect(border?.value).toBe('#123456');
 		expect(border?.ref).toBeUndefined();
+	});
+
+	it('is the same change whatever the order of its edits, and not when one token is pointed or given differently', () => {
+		const a = [
+			{ path: 'tone.g.50', value: '#000000' },
+			{ path: 'palette.light.primary.main', ref: 'tone.g.60' },
+		];
+		expect(sameChange(a, [...a].reverse())).toBe(true);
+		expect(sameChange(a, [a[0] as TokenEdit])).toBe(false);
+		expect(sameChange([{ path: 'x', value: 'tone.g.60' }], [{ path: 'x', ref: 'tone.g.60' }])).toBe(false);
+		expect(sameChange([], [])).toBe(true);
 	});
 
 	it('says what points at a token: what a change to it moves', () => {

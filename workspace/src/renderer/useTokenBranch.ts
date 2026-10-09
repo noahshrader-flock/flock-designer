@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Result, TokenBranch, TokenEdit } from '../shared/contract';
+import { sameChange } from '../shared/tokens';
 
 /** How often a proposed change looks for Chromatic's build, and for how long, after which it is left to the pull request. */
 const CHROMATIC_EVERY_MS = 20_000;
 const CHROMATIC_FOR_MS = 30 * 60_000;
-
-/** Whether two changes are the same, whatever their order. */
-export const sameChange = (a: TokenEdit[], b: TokenEdit[]): boolean => {
-	const key = (edits: TokenEdit[]) => JSON.stringify([...edits].sort((x, y) => x.path.localeCompare(y.path)));
-	return key(a) === key(b);
-};
 
 /** The branch a change is kept on, as the tokens panel shows it, and what can be done with it. */
 export interface TokenBranchControls {
@@ -77,11 +72,13 @@ export const useTokenBranch = (shown: string | null, edits: TokenEdit[], setEdit
 		error,
 		save: () => void run('saving', () => window.workspace.saveTokens(edits)),
 		propose: () => void run('proposing', () => window.workspace.proposeTokens()),
-		startOver: () => {
-			void window.workspace.forgetTokenBranch();
-			setBranch(null);
-			setError(null);
-			setEdits([]);
-		},
+		// Only once it is forgotten: a branch still kept would come back the next time.
+		startOver: () =>
+			void window.workspace.forgetTokenBranch().then((r) => {
+				if (!r.ok) return setError(r.error);
+				setBranch(null);
+				setError(null);
+				setEdits([]);
+			}),
 	};
 };
