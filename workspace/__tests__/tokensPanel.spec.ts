@@ -47,13 +47,16 @@ afterEach(async () => {
 	document.body.innerHTML = '';
 });
 
-/** The groups' and the sets' triggers, as shown. */
-const triggers = (level: 'group' | 'set') => [...document.querySelectorAll<HTMLElement>(`[data-token-${level}] > h3 button, [data-token-${level}] > h4 button`)];
-const trigger = (level: 'group' | 'set', name: string) => {
-	const t = triggers(level).find((b) => b.querySelector('[data-name]')?.textContent === name);
-	if (!t) throw new Error(`no ${level} ${name}: ${triggers(level).map((b) => b.textContent).join(' | ')}`);
+/** The groups' triggers, as shown: the only accordion in the panel, and only on a tab with several groups. */
+const groups = () => [...document.querySelectorAll<HTMLElement>('[data-token-group] > h3 button')];
+const group = (name: string) => {
+	const t = groups().find((b) => b.querySelector('[data-name]')?.textContent === name);
+	if (!t) throw new Error(`no group ${name}: ${groups().map((b) => b.textContent).join(' | ')}`);
 	return t;
 };
+/** The sets shown, each a plain heading over its rows, never closed up behind another trigger. */
+const sets = () => [...document.querySelectorAll<HTMLElement>('[data-token-set]')];
+const setNames = () => sets().map((e) => e.querySelector('[data-set-name]')?.textContent);
 /** The tabs, and choosing one as a press does (tabs switch as the pointer goes down). */
 const tabs = () => [...document.querySelectorAll<HTMLElement>('[role="tab"]')];
 const tab = (name: string) => tabs().find((t) => t.textContent === name) as HTMLElement;
@@ -80,19 +83,19 @@ describe('the tabs', () => {
 
 	it('switch, each showing only its own tokens', async () => {
 		await show();
-		expect(triggers('group').map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['Tones', 'Light', 'Dark']);
+		expect(groups().map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['Tones', 'Light', 'Dark']);
 		await choose('Spacing');
 		await settle();
 		expect(tab('Spacing').getAttribute('aria-selected')).toBe('true');
-		expect(triggers('set').map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['spacing']);
-		expect(triggers('group')).toHaveLength(0);
+		expect(setNames()).toEqual(['spacing']);
+		expect(groups()).toHaveLength(0);
 	});
 });
 
 describe('the groups', () => {
 	it('on the Color tab are the library’s, in order, each with its count, and all closed at first', async () => {
 		await show();
-		expect(triggers('group').map((t) => [t.querySelector('[data-name]')?.textContent, t.querySelector('[data-count]')?.textContent])).toEqual([
+		expect(groups().map((t) => [t.querySelector('[data-name]')?.textContent, t.querySelector('[data-count]')?.textContent])).toEqual([
 			['Tones', '3'],
 			['Light', '2'],
 			['Dark', '1'],
@@ -100,60 +103,57 @@ describe('the groups', () => {
 		expect(rows()).toHaveLength(0);
 	});
 
-	it('are not shown for a tab with only one, which would say its own name twice: its sets are', async () => {
+	it('open straight to their sets, each its name over its colors, with no second accordion inside', async () => {
+		await show();
+		await press(group('Tones'));
+		await settle();
+		expect(setNames()).toEqual(['pineGreen', 'red']);
+		// Every color of every set is listed already: nothing is left to open.
+		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual(['tone.pineGreen.50', 'tone.pineGreen.20', 'tone.red.40']);
+		expect(document.querySelectorAll('[data-token-group] [data-slot="accordion"]')).toHaveLength(0);
+		expect(document.querySelectorAll('[data-slot="accordion-item"]')).toHaveLength(3);
+	});
+
+	it('are not shown for a tab with only one, which would say its own name twice: its sets are, already open', async () => {
 		await show();
 		await choose('Shape');
 		await settle();
-		expect(triggers('group')).toHaveLength(0);
-		expect(triggers('set').map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['radius']);
-	});
-
-	it('open to their sets, each with a strip of its colors and the file it is written in', async () => {
-		await show();
-		await press(trigger('group', 'Tones'));
-		await settle();
-		const pine = trigger('set', 'pineGreen');
-		expect([...pine.querySelectorAll<HTMLElement>('[data-swatch]')].map((s) => s.style.backgroundColor)).toEqual(['rgb(16, 128, 98)', 'rgb(24, 55, 47)']);
-		expect(pine.closest('[data-token-set]')?.textContent).toContain('src/colors/tones/pineGreen.ts');
-		expect(rows()).toHaveLength(0);
+		expect(groups()).toHaveLength(0);
+		expect(document.querySelector('[data-slot="accordion"]')).toBeNull();
+		expect(setNames()).toEqual(['radius']);
+		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual(['radius']);
 	});
 });
 
-describe('a set, open', () => {
-	it('lists its tokens: name, value, and a swatch of the color', async () => {
+describe('a set', () => {
+	it('lists its tokens: a swatch of the color at the left, its name, and the value at the right', async () => {
 		await show();
-		await press(trigger('group', 'Tones'));
+		await press(group('Tones'));
 		await settle();
-		await press(trigger('set', 'pineGreen'));
-		await settle();
-		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual(['tone.pineGreen.50', 'tone.pineGreen.20']);
 		const step = row('tone.pineGreen.50') as HTMLElement;
-		expect(step.textContent).toContain('50');
-		expect(step.textContent).toContain('#108062');
+		expect(step.firstElementChild?.getAttribute('data-swatch')).not.toBeNull();
 		expect(step.querySelector<HTMLElement>('[data-swatch]')?.style.backgroundColor).toBe('rgb(16, 128, 98)');
+		expect(step.textContent).toContain('50');
+		expect(step.lastElementChild?.textContent).toBe('#108062');
 		// Where it is written, line and all, for whoever wants to find it.
 		expect(step.getAttribute('title')).toBe('src/colors/tones/pineGreen.ts:3');
 	});
 
 	it('says which tone a palette role points at, and its opacity', async () => {
 		await show();
-		await press(trigger('group', 'Light'));
-		await settle();
-		await press(trigger('set', 'primaryBorder'));
+		await press(group('Light'));
 		await settle();
 		expect(row('palette.light.primaryBorder.main')?.textContent).toContain('pineGreen 20 at 40%');
-		await press(trigger('set', 'primary'));
-		await settle();
 		expect(row('palette.light.primary.main')?.textContent).toContain('pineGreen 50');
 	});
 
-	it('shows a dimension as its value', async () => {
+	it('shows a dimension as its value, with no swatch', async () => {
 		await show();
 		await choose('Shape');
 		await settle();
-		await press(trigger('set', 'radius'));
-		await settle();
-		expect(row('radius')?.textContent).toContain('8px');
+		const radius = row('radius') as HTMLElement;
+		expect(radius.textContent).toContain('8px');
+		expect(radius.querySelector('[data-swatch]')).toBeNull();
 	});
 });
 
@@ -176,7 +176,7 @@ describe('searching', () => {
 		await show();
 		await typeInto(search('Color') as HTMLInputElement, 'primary');
 		await settle();
-		expect(triggers('group').map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['Light', 'Dark']);
+		expect(groups().map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['Light', 'Dark']);
 		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual(['palette.light.primary.main', 'palette.light.primaryBorder.main', 'palette.dark.primary.main']);
 	});
 
@@ -187,7 +187,7 @@ describe('searching', () => {
 		await choose('Spacing');
 		await settle();
 		expect((search('Spacing') as HTMLInputElement).value).toBe('');
-		expect(triggers('set')).toHaveLength(1);
+		expect(sets()).toHaveLength(1);
 		await choose('Color');
 		await settle();
 		expect((search('Color') as HTMLInputElement).value).toBe('primary');

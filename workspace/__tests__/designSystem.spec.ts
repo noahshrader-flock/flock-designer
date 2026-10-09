@@ -64,7 +64,8 @@ const open = async (answers: (refresh: boolean) => ReturnType<typeof ok<Catalog>
 const nameOf = (li: Element) => li.querySelector('.font-medium')?.textContent ?? '';
 const rows = () => [...document.querySelectorAll('[data-component]')].map(nameOf);
 const row = (name: string) => [...document.querySelectorAll('[data-component]')].find((li) => nameOf(li) === name) as HTMLElement;
-const groups = () => [...document.querySelectorAll('section')].map((s) => s.getAttribute('aria-label'));
+/** The component list's groups: not the tokens panel's sets, which are sections too. */
+const groups = () => [...document.querySelectorAll('section:not([data-token-set])')].map((s) => s.getAttribute('aria-label'));
 const text = () => document.body.textContent ?? '';
 
 afterEach(async () => {

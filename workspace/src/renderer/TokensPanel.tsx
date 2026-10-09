@@ -10,11 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 /**
  * The library's tokens, in the panel at the right of the Design System tab (T2 of the design system plan), read only:
  * the list T1 reads, in line tabs by category (Color, Spacing, Shape: the reader says which each token is on, so a
- * category the library gains is a tab with nothing else changed), each tab with its own search. Within a tab the tokens
- * are in groups (the tones, each mode's palette) and sets, closed until opened, so 600 tokens are a short list; a tab
- * with one group shows its sets directly. A set shows a strip of its colors and the file it is written in; open, each
- * token shows its value, and a palette role the tone it points at. What the library has that is not read is said above
- * the tabs. T3 adds the controls to these rows.
+ * category the library gains is a tab with nothing else changed), each tab with its own search. **One accordion at most:**
+ * a tab with several groups (Color has Tones, Light and Dark) has them as an accordion, closed until opened; a set is
+ * never closed up behind a second one, but a plain heading over its tokens, each a swatch at the left and its value at the
+ * right. A tab with one group shows its sets straight away. What the library has that is not read is said above the tabs.
+ * T3 adds the controls to these rows.
  */
 
 /** Tokens in the order they came, by `key`, keeping the first-seen order of the keys. */
@@ -55,54 +55,32 @@ const TokenRow = ({ token }: { token: DesignToken }) => (
 	</li>
 );
 
-/** The sets of one group (or of a tab with one), each closed until opened. */
-const Sets = ({ tokens, open, onOpen }: { tokens: DesignToken[]; open: string[]; onOpen: (open: string[]) => void }) => (
-	<Accordion type="multiple" value={open} onValueChange={onOpen}>
-		{inOrder(tokens, setKey).map(([key, inSet]) => {
-			const first = inSet[0] as DesignToken;
-			return (
-				<AccordionItem key={key} value={key} data-token-set>
-					<AccordionTrigger className="py-2 font-normal">
-						<span className="flex min-w-0 flex-col gap-1">
-							<span data-name className="text-sm">
-								{first.set}
-							</span>
-							{first.kind === 'color' ? (
-								<span className="flex flex-wrap gap-0.5">
-									{inSet.map((t) => (
-										<Swatch key={t.path} value={t.value} size="size-3" />
-									))}
-								</span>
-							) : (
-								<span className="text-muted-foreground font-mono text-xs">{first.value}</span>
-							)}
-							<span className="text-muted-foreground truncate font-mono text-xs">{first.source.file}</span>
-						</span>
-					</AccordionTrigger>
-					<AccordionContent>
-						<ul className="flex flex-col">
-							{inSet.map((t) => (
-								<TokenRow key={t.path} token={t} />
-							))}
-						</ul>
-					</AccordionContent>
-				</AccordionItem>
-			);
-		})}
-	</Accordion>
+/** The sets of a group (or of a tab with one): each its name as a heading over its tokens, all listed. */
+const Sets = ({ tokens }: { tokens: DesignToken[] }) => (
+	<div className="flex flex-col gap-4">
+		{inOrder(tokens, setKey).map(([key, inSet]) => (
+			<section key={key} data-token-set aria-label={(inSet[0] as DesignToken).set} className="flex flex-col gap-1">
+				<h4 data-set-name className="text-sm font-medium">
+					{(inSet[0] as DesignToken).set}
+				</h4>
+				<ul className="flex flex-col">
+					{inSet.map((t) => (
+						<TokenRow key={t.path} token={t} />
+					))}
+				</ul>
+			</section>
+		))}
+	</div>
 );
 
 /** One category's tab: its own search, then its tokens. What is typed is the panel's, so it is there when the tab is back. */
 const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tokens: DesignToken[]; query: string; onQuery: (query: string) => void }) => {
 	const [groupsOpen, setGroupsOpen] = useState<string[]>([]);
-	const [setsOpen, setSetsOpen] = useState<string[]>([]);
 	const q = query.trim().toLowerCase();
 	const shown = useMemo(() => (q === '' ? tokens : tokens.filter((t) => searchable(t).includes(q))), [tokens, q]);
-	// A search opens everything it found; closing a group afterwards is the person's.
+	// A search opens every group it found; closing one afterwards is the person's.
 	useEffect(() => {
-		if (q === '') return;
-		setGroupsOpen([...new Set(shown.map((t) => t.group))]);
-		setSetsOpen([...new Set(shown.map(setKey))]);
+		if (q !== '') setGroupsOpen([...new Set(shown.map((t) => t.group))]);
 	}, [q, shown]);
 
 	const groups = inOrder(shown, (t) => t.group);
@@ -113,7 +91,7 @@ const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tok
 				<p className="text-muted-foreground text-sm">No token matches.</p>
 			) : groups.length === 1 ? (
 				// One group would say the tab's own name again, so its sets are shown directly.
-				<Sets tokens={shown} open={setsOpen} onOpen={setSetsOpen} />
+				<Sets tokens={shown} />
 			) : (
 				<Accordion type="multiple" value={groupsOpen} onValueChange={setGroupsOpen}>
 					{groups.map(([group, inGroup]) => (
@@ -126,8 +104,8 @@ const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tok
 									</span>
 								</span>
 							</AccordionTrigger>
-							<AccordionContent className="pl-2">
-								<Sets tokens={inGroup} open={setsOpen} onOpen={setSetsOpen} />
+							<AccordionContent>
+								<Sets tokens={inGroup} />
 							</AccordionContent>
 						</AccordionItem>
 					))}
