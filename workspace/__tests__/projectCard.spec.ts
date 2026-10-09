@@ -76,9 +76,10 @@ describe('the footer', () => {
 		expect(left!.querySelector('[data-slot="avatar"]')!.getAttribute('data-size')).toBe('xs');
 		expect(left!.querySelector('.truncate')!.textContent).toBe('Noah Shrader');
 		// Every prototype's comments, together.
-		expect(right!.getAttribute('aria-label')).toBe('5 comments');
-		expect(right!.textContent).toBe('5');
-		expect(right!.querySelector('.lucide-message-square')).not.toBeNull();
+		const comments = right!.querySelector('[aria-label$="comments"], [aria-label$="comment"]')!;
+		expect(comments.getAttribute('aria-label')).toBe('5 comments');
+		expect(comments.textContent).toBe('5');
+		expect(comments.querySelector('.lucide-message-square')).not.toBeNull();
 		expect(footer().className.split(' ')).toContain('justify-between');
 	});
 
@@ -91,15 +92,15 @@ describe('the footer', () => {
 
 	it('counts one comment as one, and none as none', async () => {
 		await show(project({ iterations: [iteration({ ...NEWEST, openComments: 1 })] }));
-		expect(footer().children[1]!.getAttribute('aria-label')).toBe('1 comment');
+		expect(footer().querySelector('[aria-label="1 comment"]')).not.toBeNull();
 		await unmountAll(current!.root);
 		await show(project({ iterations: [NEWEST] }));
-		expect(footer().children[1]!.getAttribute('aria-label')).toBe('0 comments');
+		expect(footer().querySelector('[aria-label="0 comments"]')).not.toBeNull();
 	});
 
 	it('does not count comments on codebase work: the card is about its prototypes', async () => {
 		await show(project({ iterations: [iteration({ ...NEWEST, openComments: 2 }), iteration({ ...CODEBASE, openComments: 7 })] }));
-		expect(footer().children[1]!.getAttribute('aria-label')).toBe('2 comments');
+		expect(footer().querySelector('[aria-label="2 comments"]')).not.toBeNull();
 	});
 
 	it('is the same height on every card, so a row of cards lines up', async () => {
@@ -109,6 +110,41 @@ describe('the footer', () => {
 		await show(project());
 		expect(footer().className).toBe(withPeople);
 		expect(withPeople.split(' ')).toContain('h-12');
+	});
+});
+
+describe('how many versions it has', () => {
+	const at = () => footer().children[1]!;
+	const v = (name: string) => iteration({ name, branch: `prototype/admin-usage/${name}` });
+
+	it('says so before the comments, with a bullet between, all in the grey of the comment count', async () => {
+		await show(project({ iterations: [v('v1-i1'), v('v2-i1')] }));
+		expect(at().textContent).toBe('2 versions•0');
+		expect(at().className.split(' ')).toContain('text-muted-foreground');
+		const [versions, bullet, comments] = [...at().children];
+		expect(versions!.textContent).toBe('2 versions');
+		expect(bullet!.textContent).toBe('•');
+		expect(bullet!.getAttribute('aria-hidden')).toBe('true');
+		expect(comments!.getAttribute('aria-label')).toBe('0 comments');
+	});
+
+	it('says 1 version for one, and counts versions, not the iterations in them', async () => {
+		await show(project({ iterations: [v('v1-i1'), v('v1-i2'), v('v1-i3')] }));
+		expect(at().children[0]!.textContent).toBe('1 version');
+		await unmountAll(current!.root);
+		await show(project({ iterations: [v('v1-i1'), v('v1-i2'), v('v2-i1'), v('v2-i2'), v('v3-i1')] }));
+		expect(at().children[0]!.textContent).toBe('3 versions');
+	});
+
+	it('counts an older prototype named i1 as version 1, and ignores codebase work', async () => {
+		await show(project({ iterations: [iteration({ name: 'i1', branch: 'fd/admin-usage/i1' }), v('v2-i1'), CODEBASE] }));
+		expect(at().children[0]!.textContent).toBe('2 versions');
+	});
+
+	it('is not there for codebase work alone, which has no versions', async () => {
+		await show(project({ iterations: [CODEBASE] }));
+		expect(footer().textContent).not.toMatch(/version/);
+		expect(footer().textContent).not.toContain('•');
 	});
 });
 

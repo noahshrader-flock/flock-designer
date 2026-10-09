@@ -1,21 +1,20 @@
 import { ExternalLinkIcon, MessageSquareIcon } from 'lucide-react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import type { Project, ProjectIteration } from '../shared/contract';
-import { projectCodeLink, workOf } from '../shared/projects';
+import { byVersion, projectCodeLink, workOf } from '../shared/projects';
 import { CardCover } from './CardCover';
 import { PeopleLine } from './People';
 import { Badge } from './ui/badge';
 import { Card, CardFooter, CardTitle } from './ui/card';
 
+/** A count and what it counts: `1 version`, `2 versions`. */
+const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
+
 /** How many comments a project's prototypes have, all of them together. */
 const commentsOn = (prototypes: ProjectIteration[]): number => prototypes.reduce((n, it) => n + it.openComments, 0);
 
 /** What the footer says at its right, in the grey of the comment count. */
-const Aside = ({ children, label }: { children: ReactNode; label?: string }) => (
-	<span className="text-muted-foreground flex shrink-0 items-center gap-1 text-sm" aria-label={label}>
-		{children}
-	</span>
-);
+const Aside = ({ children }: { children: ReactNode }) => <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-sm">{children}</span>;
 
 /**
  * A project in the Projects grid. The cover, in the card's own colour, has the project's name at its bottom left (and at
@@ -34,6 +33,8 @@ export const ProjectCard = ({ project, onOpen }: { project: Project; onOpen: (it
 	const codebase = workOf(project.iterations, 'codebase').length > 0;
 	const link = projectCodeLink(project);
 	const comments = commentsOn(prototypes);
+	// Different ideas, not the iterations in each: V1 · I1 and V1 · I2 are one version.
+	const versions = byVersion(prototypes).length;
 	// What pressing the card does: into the newest prototype, or out to the codebase work on GitHub. Or nothing.
 	const go = newest !== undefined ? () => onOpen(newest) : link !== null ? () => void window.open(link, '_blank', 'noreferrer') : null;
 	const way =
@@ -66,9 +67,13 @@ export const ProjectCard = ({ project, onOpen }: { project: Project; onOpen: (it
 			<CardFooter className="mt-auto flex h-12 items-center justify-between gap-2 pr-3 pl-4.5">
 				{project.people.length > 0 ? <PeopleLine people={project.people} /> : <span />}
 				{newest ? (
-					<Aside label={`${comments} comment${comments === 1 ? '' : 's'}`}>
-						<MessageSquareIcon className="size-3.5" />
-						{comments}
+					<Aside>
+						<span>{plural(versions, 'version')}</span>
+						<span aria-hidden>•</span>
+						<span className="flex items-center gap-1" aria-label={plural(comments, 'comment')}>
+							<MessageSquareIcon className="size-3.5" />
+							{comments}
+						</span>
 					</Aside>
 				) : codebase ? (
 					<Aside>Built in code</Aside>
