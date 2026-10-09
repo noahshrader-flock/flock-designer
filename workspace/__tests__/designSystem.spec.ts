@@ -178,13 +178,14 @@ describe('finding a component', () => {
 		expect(document.querySelector('[role="dialog"]')?.textContent).toContain('src/colors/tones/neutral.ts:15');
 	});
 
-	it('has the design system’s name and branch, then Sync and More at the toolbar’s right, and nothing else', async () => {
+	it('has the design system’s name and branch, then Sync, the panel’s Tokens and Component, and More at the toolbar’s right, and nothing else', async () => {
 		await open(() => ok(ready()));
 		const toolbar = switcher().parentElement!;
-		expect(toolbar.textContent).toBe('Flock React Component LibSync');
-		expect(toolbar.contains(button('More for Flock React Component Lib'))).toBe(true);
-		expect(switcher().compareDocumentPosition(button('Sync')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect([...toolbar.querySelectorAll('button')].some((b) => b.textContent === 'Tokens')).toBe(false);
+		expect(toolbar.textContent).toBe('Flock React Component LibSyncTokensComponent');
+		const inOrder = (a: Element, b: Element) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
+		expect(inOrder(switcher(), button('Sync'))).toBeTruthy();
+		expect(inOrder(button('Sync'), panelView('Tokens'))).toBeTruthy();
+		expect(inOrder(panelView('Component'), button('More for Flock React Component Lib'))).toBeTruthy();
 	});
 
 	it('has no switcher between components and composites, and no count', async () => {
@@ -237,6 +238,87 @@ describe('the design systems connected (P4)', () => {
 	});
 });
 
+/** The side panel's two views, as a button group in the toolbar: its buttons by name. */
+const panelView = (name: 'Tokens' | 'Component') => [...document.querySelectorAll<HTMLElement>('[aria-label="Side panel"] [data-slot="toggle-group-item"]')].find((b) => b.textContent === name) as HTMLElement;
+const shownView = () => [...document.querySelectorAll<HTMLElement>('[aria-label="Side panel"] [data-slot="toggle-group-item"]')].find((b) => b.getAttribute('aria-checked') === 'true')?.textContent;
+const tokensShown = () => !document.querySelector('[data-panel="tokens"]')!.hasAttribute('hidden');
+const componentPanel = () => document.querySelector<HTMLElement>('[data-panel="component"]');
+
+describe('the side panel’s views', () => {
+	it('start on Tokens, with Component off until a component is open', async () => {
+		await open(() => ok(ready()));
+		expect(shownView()).toBe('Tokens');
+		expect(panelView('Component').hasAttribute('disabled')).toBe(true);
+		expect(tokensShown()).toBe(true);
+		expect(componentPanel()).toBeNull();
+	});
+
+	it('switch to Component the moment a component is opened, from the list or from the finder', async () => {
+		await open(() => ok(ready()));
+		await press(row('FSButton').querySelector('button')!);
+		expect(shownView()).toBe('Component');
+		expect(panelView('Component').hasAttribute('disabled')).toBe(false);
+		expect(tokensShown()).toBe(false);
+		expect(componentPanel()?.textContent).toContain('FSButton');
+		await press(button('Back to components'));
+		await press(button('Find a component'));
+		await settle();
+		const item = [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === 'FSCard') as Element;
+		await act(async () => void item.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+		await settle();
+		expect(shownView()).toBe('Component');
+		expect(componentPanel()?.textContent).toContain('FSCard');
+	});
+
+	it('can be toggled back to Tokens and to Component while a component is open', async () => {
+		await open(() => ok(ready()));
+		await press(row('FSButton').querySelector('button')!);
+		await press(panelView('Tokens'));
+		expect(shownView()).toBe('Tokens');
+		expect(tokensShown()).toBe(true);
+		expect(componentPanel()).toBeNull();
+		await press(panelView('Component'));
+		expect(shownView()).toBe('Component');
+		// The one shown stays shown when pressed again.
+		await press(panelView('Component'));
+		expect(shownView()).toBe('Component');
+	});
+
+	it('go back to Tokens, and Component off, when the component is left', async () => {
+		await open(() => ok(ready()));
+		await press(row('FSButton').querySelector('button')!);
+		await press(button('Back to components'));
+		expect(shownView()).toBe('Tokens');
+		expect(panelView('Component').hasAttribute('disabled')).toBe(true);
+		expect(tokensShown()).toBe(true);
+		// Opening another goes to Component again, even after Tokens was chosen for the last one.
+		await press(row('FSButton').querySelector('button')!);
+		await press(panelView('Tokens'));
+		await press(button('Back to components'));
+		await press(row('FSCard').querySelector('button')!);
+		expect(shownView()).toBe('Component');
+	});
+
+	it('go back to Tokens when a sync removes the open component', async () => {
+		let n = 0;
+		await open(() => ok(n++ === 0 ? ready() : ready('updated', COMPONENTS.filter((c) => c.name !== 'FSCard'))));
+		await press(row('FSCard').querySelector('button')!);
+		await press(button('Sync'));
+		await settle();
+		expect(shownView()).toBe('Tokens');
+		expect(panelView('Component').hasAttribute('disabled')).toBe(true);
+	});
+
+	it('keep the tokens panel as it was left: its search, its tab, and what was changed, while a component is looked at', async () => {
+		await open(() => ok(ready()));
+		const search = document.querySelector('input[aria-label="Search color"]') as HTMLInputElement;
+		await typeInto(search, 'pine');
+		await press(row('FSButton').querySelector('button')!);
+		await press(panelView('Tokens'));
+		expect((document.querySelector('input[aria-label="Search color"]') as HTMLInputElement).value).toBe('pine');
+	});
+});
+
 describe('the tokens panel', () => {
 	const divider = () => document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]') as HTMLElement | null;
 	const panel = () => divider()?.nextElementSibling as HTMLElement | undefined;
@@ -262,10 +344,15 @@ describe('the tokens panel', () => {
 		expect(panel()).toBe(before);
 	});
 
-	it('is always there: nothing in the toolbar hides it', async () => {
+	it('is always there: nothing in the toolbar hides it, only chooses what it shows', async () => {
 		await open(() => ok(ready()));
 		expect(divider()).not.toBeNull();
-		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Tokens' || b.getAttribute('aria-pressed') !== null)).toBe(false);
+		// The toolbar's Tokens and Component choose what it shows, one of the two always: neither hides it.
+		await press(row('FSButton').querySelector('button')!);
+		expect(divider()).not.toBeNull();
+		await press(panelView('Tokens'));
+		expect(divider()).not.toBeNull();
+		expect(shownView()).toBe('Tokens');
 	});
 
 	/** Changes the one tone in the panel, as a person does: its row, then its picker, closed on a color. */

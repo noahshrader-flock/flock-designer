@@ -2,6 +2,7 @@ import { ChevronDownIcon, ChevronRightIcon, GitBranchIcon, InfoIcon, PlusIcon, T
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem, ConnectedDesignSystems, Result, TokenEdit } from '../shared/contract';
 import { ComponentPage } from './ComponentPage';
+import { ComponentPanel } from './ComponentPanel';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { LoadingScreen } from './Loading';
 import { MoreMenu } from './MoreMenu';
@@ -11,6 +12,7 @@ import { ResizablePanel } from './ResizablePanel';
 import { SearchSelect } from './SearchSelect';
 import { SyncButton } from './SyncButton';
 import { TokensPanel } from './TokensPanel';
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
@@ -91,6 +93,29 @@ const DesignSystemSwitcher = ({
 	</DropdownMenu>
 );
 
+type PanelView = 'tokens' | 'component';
+
+/**
+ * Which the side panel shows, as a button group like a prototype's states: the tokens, or the component that is open.
+ * Component is off while none is open, as there is nothing to show.
+ */
+const PanelSwitcher = ({ view, canShowComponent, onSelect }: { view: PanelView; canShowComponent: boolean; onSelect: (view: PanelView) => void }) => (
+	<ToggleGroup
+		type="single"
+		variant="outline"
+		spacing={0}
+		aria-label="Side panel"
+		value={view}
+		// Pressing the one shown would unpress it, leaving none shown: it stays.
+		onValueChange={(next) => (next === 'tokens' || next === 'component') && next !== view && onSelect(next)}
+	>
+		<ToggleGroupItem value="tokens">Tokens</ToggleGroupItem>
+		<ToggleGroupItem value="component" disabled={!canShowComponent}>
+			Component
+		</ToggleGroupItem>
+	</ToggleGroup>
+);
+
 /** What a person sees in place of the list when there is no list, and, when there is a way to, a Try again. */
 const Notice = ({ title, children, onRetry }: { title: string; children: ReactNode; onRetry?: () => void }) => (
 	<Page>
@@ -113,7 +138,10 @@ const Notice = ({ title, children, onRetry }: { title: string; children: ReactNo
  * The Design System tab: the design system connected, as its branch has it on GitHub, from a clone on this machine
  * (DESIGN_SYSTEM_PLAN.md). Its toolbar names it, switches between those connected and removes one (P4); with none, the
  * Connect screen. The components view is the list, by default, with a finder above it, and a component once one is opened,
- * with its stories live. At the right, always, the tokens panel (T2), where a change to the tokens is tried (T3): the
+ * with its stories live. At the right, always, the side panel: the tokens (T2), where a change to the tokens is tried (T3), or,
+ * once a component is opened, that component, by a button group in the toolbar. Opening a component switches the panel to it,
+ * leaving it switches back to the tokens, and either can be chosen while the component is open. The tokens panel is only
+ * hidden meanwhile, so its search, tab and open groups are as they were left. The
  * change is the tab's, so the panel makes it and an open component's previews are built with it. It is kept nowhere: a
  * design system shown afresh starts with none, and a sync keeps only the edits of tokens the library still has. Not a
  * second Storybook: docs and controls stay there, behind each component's links.
@@ -126,8 +154,14 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [catalog, setCatalog] = useState<Catalog | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [syncing, setSyncing] = useState(false);
-	// The component open on its own page, by id; the list when there is none.
+	// The component open on its own page, by id; the list when there is none. And what the side panel shows: opening or
+	// leaving a component sets both, so the panel follows without anything watching for it.
 	const [open, setOpen] = useState<string | null>(null);
+	const [view, setView] = useState<PanelView>('tokens');
+	const openComponent = useCallback((id: string | null) => {
+		setOpen(id);
+		setView(id === null ? 'tokens' : 'component');
+	}, []);
 	// The design systems connected, and which is shown (P4); and whether another is being connected.
 	const [systems, setSystems] = useState<ConnectedDesignSystems>({ systems: [], current: null });
 	const [adding, setAdding] = useState(false);
@@ -178,12 +212,12 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	// Another one shown (connected, switched to, or the one shown removed): read afresh, at its list.
 	const showAnother = useCallback(async () => {
 		setAdding(false);
-		setOpen(null);
+		openComponent(null);
 		setCatalog(null);
 		setEdits([]);
 		await listSystems();
 		await firstRead();
-	}, [listSystems, firstRead]);
+	}, [openComponent, listSystems, firstRead]);
 	// Switching to one, or removing the one shown: either way another is shown, or what went wrong is said.
 	const thenShow = async (done: Promise<Result<null>>) => {
 		const r = await done;
@@ -223,8 +257,8 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	if (catalog.state === 'no-branch') {
 		return (
 			<Notice title={`This clone has no ${catalog.branch} branch`} onRetry={() => void sync()}>
-				The clone at {catalog.root} has no {catalog.branch} branch from GitHub to read, and no other branch is read in its place.
-				Check it is a clone of the library, and that this computer can reach GitHub.
+				The clone at {catalog.root} has no {catalog.branch} branch from GitHub to read, and no other branch is read in its place. Check it is a clone of the
+				library, and that this computer can reach GitHub.
 			</Notice>
 		);
 	}
@@ -235,6 +269,8 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const label = (c: CatalogComponent) => (shared.has(c.name) ? `${c.group} / ${c.name}` : c.name);
 	// A component a sync removed is closed rather than shown from a list that no longer has it.
 	const opened = open === null ? undefined : byId.get(open);
+	// With none open (a sync removed it) there is nothing but the tokens to show.
+	const panel: PanelView = opened ? view : 'tokens';
 	const groups: { group: string; rows: CatalogComponent[] }[] = [];
 	for (const c of catalog.components) {
 		const last = groups[groups.length - 1];
@@ -259,6 +295,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 				<div className="flex items-center gap-2">
 					<UpdateProblem update={catalog.update} />
 					<SyncButton syncing={syncing} onClick={() => void sync()} />
+					<PanelSwitcher view={panel} canShowComponent={opened !== undefined} onSelect={setView} />
 					{shown && (
 						<MoreMenu label={`More for ${shown.name}`}>
 							<DropdownMenuItem variant="destructive" onSelect={() => void remove(shown.id)}>
@@ -273,7 +310,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 			    which does not move when either changes. */}
 			<div className="flex h-[calc(100dvh-var(--nav-height)-var(--toolbar-height))]">
 				<div className="min-w-0 flex-1 overflow-y-auto">
-					{opened && <ComponentPage component={opened} commit={catalog.commit} edits={edits} onBack={() => setOpen(null)} />}
+					{opened && <ComponentPage component={opened} commit={catalog.commit} edits={edits} onBack={() => openComponent(null)} />}
 					{/* Kept while a component is open, so going back finds the list where it was. */}
 					<div hidden={opened !== undefined}>
 						<Page>
@@ -282,7 +319,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 								<SearchSelect
 									items={catalog.components.map(label)}
 									value={null}
-									onChange={(chosen) => setOpen(catalog.components.find((c) => label(c) === chosen)?.id ?? null)}
+									onChange={(chosen) => openComponent(catalog.components.find((c) => label(c) === chosen)?.id ?? null)}
 									placeholder="Find a component"
 									search="Search components…"
 									empty="No component matches."
@@ -294,9 +331,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 								</Alert>
 							)}
 							{catalog.components.length === 0 ? (
-								<p className="text-muted-foreground text-sm">
-									The library's Storybook has no stories on {catalog.branch}, so there are no components to list.
-								</p>
+								<p className="text-muted-foreground text-sm">The library's Storybook has no stories on {catalog.branch}, so there are no components to list.</p>
 							) : (
 								groups.map(({ group, rows }) => (
 									<section key={group} className="flex flex-col gap-2" aria-label={group}>
@@ -305,18 +340,22 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 										</h3>
 										<ul className="bg-card divide-y rounded-lg border">
 											{rows.map((c) => (
-												<Row key={c.id} component={c} onOpen={() => setOpen(c.id)} />
+												<Row key={c.id} component={c} onOpen={() => openComponent(c.id)} />
 											))}
 										</ul>
 									</section>
 								))
 							)}
 						</Page>
+					</div>
 				</div>
-				</div>
-				{/* Always there (decision 21), whichever screen is open, and not hidden by anything in the toolbar. */}
+				{/* Always there (decision 21), whichever screen is open: the tokens, or the component open when that is chosen.
+				    The tokens are hidden, not left, so what was typed and opened in them is as it was. */}
 				<ResizablePanel panel={TOKENS_PANEL} label="Resize the tokens panel">
-					<TokensPanel tokens={catalog.tokens} edits={edits} onEdits={setEdits} live={opened !== undefined} />
+					<div data-panel="tokens" hidden={panel !== 'tokens'} className="flex min-h-0 flex-1 flex-col">
+						<TokensPanel tokens={catalog.tokens} edits={edits} onEdits={setEdits} live={opened !== undefined} />
+					</div>
+					{panel === 'component' && opened && <ComponentPanel component={opened} />}
 				</ResizablePanel>
 			</div>
 		</>
