@@ -1,4 +1,5 @@
-import { ChevronDownIcon } from 'lucide-react';
+import { ChevronDownIcon, HistoryIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { byVersion, iterationLabel, latestIterationName, parsePrototypeName } from '../shared/projects';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from './ui/dropdown-menu';
@@ -10,13 +11,18 @@ export interface Switchable {
 	branch: string;
 }
 
-/** One dropdown: a button that says where you are, and the menu of the choices, with this one chosen. */
+/**
+ * One dropdown: a button that says where you are (or an icon, when the menu says it), and the menu of the choices, with
+ * this one checked. A long menu scrolls.
+ */
 const Pick = ({
 	what,
 	label,
 	value,
 	choices,
 	onChange,
+	icon,
+	tip = `Switch ${what}`,
 }: {
 	/** What it picks, for its tooltip and its name for assistive technology: "version", "iteration", "state". */
 	what: 'version' | 'iteration' | 'state';
@@ -25,20 +31,27 @@ const Pick = ({
 	value: string;
 	choices: { value: string; label: string }[];
 	onChange: (value: string) => void;
+	/** Drawn instead of the label, which is then only in its name for assistive technology. */
+	icon?: ReactNode;
+	tip?: string;
 }) => (
 	<DropdownMenu>
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<DropdownMenuTrigger asChild>
-					<Button variant="outline" aria-label={`${what[0]!.toUpperCase()}${what.slice(1)} ${label}: switch ${what}`}>
-						{label}
-						<ChevronDownIcon />
+					<Button variant="outline" size={icon ? 'icon' : 'default'} aria-label={`${what[0]!.toUpperCase()}${what.slice(1)} ${label}: switch ${what}`}>
+						{icon ?? (
+							<>
+								{label}
+								<ChevronDownIcon />
+							</>
+						)}
 					</Button>
 				</DropdownMenuTrigger>
 			</TooltipTrigger>
-			<TooltipContent>Switch {what}</TooltipContent>
+			<TooltipContent>{tip}</TooltipContent>
 		</Tooltip>
-		<DropdownMenuContent align="end" className="w-auto">
+		<DropdownMenuContent align="end" className="max-h-72 w-auto">
 			<DropdownMenuRadioGroup value={value} onValueChange={(next) => next !== value && onChange(next)}>
 				{choices.map((c) => (
 					<DropdownMenuRadioItem key={c.value} value={c.value}>
@@ -50,12 +63,15 @@ const Pick = ({
 	</DropdownMenu>
 );
 
+/** The iteration is picked from its history: a clock icon, the menu newest first with the one shown checked. */
+const HISTORY = { icon: <HistoryIcon />, tip: 'History' };
+
 /**
- * Switching between a project's work. Prototypes have two dropdowns, as they have two ideas of "another": **the version**
- * (a different idea; going to one opens its newest iteration) and, beside it, **the iteration** (a refinement, among
- * those of the version you are on). Codebase work is one list. Both are shown even with one of each, so where you are,
- * and that there can be more, is always visible. One component, so the app's review screen and a prototype's
- * published page carry the same ones.
+ * Switching between a project's work. Prototypes have two, as they have two ideas of "another": **the version** (a
+ * different idea; going to one opens its newest iteration), a dropdown saying which, and beside it **the iteration** (a
+ * refinement, among those of the version you are on), a history button whose menu has them newest first. Codebase work
+ * is the history button alone. Both are shown even with one of each, so that there can be more is always visible. One
+ * component, so the app's review screen and a prototype's published page carry the same ones.
  */
 export const IterationSwitcher = <T extends Switchable>({
 	current,
@@ -81,6 +97,7 @@ export const IterationSwitcher = <T extends Switchable>({
 		return (
 			<Pick
 				what="iteration"
+				{...HISTORY}
 				label={iterationLabel(current)}
 				value={current.branch}
 				choices={siblings.map((i) => ({ value: i.branch, label: `${iterationLabel(i)}${note?.(i) ?? ''}` }))}
@@ -108,6 +125,7 @@ export const IterationSwitcher = <T extends Switchable>({
 			/>
 			<Pick
 				what="iteration"
+				{...HISTORY}
 				label={`I${here.iteration}`}
 				value={current.branch}
 				choices={(versions.find((v) => v.version === here.version)?.iterations ?? []).map((i) => ({

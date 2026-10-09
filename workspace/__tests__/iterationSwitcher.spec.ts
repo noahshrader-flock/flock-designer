@@ -34,10 +34,20 @@ const choices = async (trigger: Element): Promise<HTMLElement[]> => {
 const names = (items: HTMLElement[]) => items.map((i) => i.textContent?.trim());
 
 describe('for prototypes', () => {
-	it('has two dropdowns, one for the version and one for the iteration, each saying where you are', async () => {
+	it('has a dropdown for the version, saying which, and a history button for the iteration', async () => {
 		await show('v1-i2');
 		expect(button('Version V1: switch version').textContent).toBe('V1');
-		expect(button('Iteration I2: switch iteration').textContent).toBe('I2');
+		// The iteration is a history icon, not words: its name is for assistive technology and its menu says which.
+		const history = button('Iteration I2: switch iteration');
+		expect(history.textContent).toBe('');
+		expect(history.querySelector('.lucide-history')).not.toBeNull();
+		expect(history.getAttribute('data-size')).toBe('icon');
+	});
+
+	it('scrolls its history when there are many iterations', async () => {
+		await show('v1-i2');
+		await choices(button('Iteration I2: switch iteration'));
+		expect(document.querySelector('[data-slot="dropdown-menu-content"]')?.className.split(' ')).toContain('max-h-72');
 	});
 
 	it('lists every version in the version dropdown, with this one chosen, and nothing of iterations', async () => {
@@ -107,7 +117,7 @@ describe('for codebase work', () => {
 		const codebase = { name: 'codebase', branch: 'feature/demo' };
 		await show('codebase', { current: codebase, siblings: [codebase], grouped: false });
 		expect(document.querySelector('[aria-label^="Version"]')).toBeNull();
-		expect(button('Iteration I1: switch iteration').textContent).toBe('I1');
+		expect(button('Iteration I1: switch iteration').querySelector('.lucide-history')).not.toBeNull();
 	});
 });
 
