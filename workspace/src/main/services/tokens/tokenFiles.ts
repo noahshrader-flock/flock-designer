@@ -6,7 +6,7 @@
  */
 import type { DesignToken, TokenProblem } from '../../../shared/contract';
 import { lineAt } from './objectLiteral';
-import { DIMENSION, type TokenSource, capitalized, categoryOf } from './source';
+import { DIMENSION, type TokenSource, capitalized, categoryOf, semanticFirst } from './source';
 
 const TOKEN_FILE = /(\.tokens\.json|(^|\/)(design-)?tokens?\.json|(^|\/)(design-)?tokens\/.+\.json)$/i;
 
@@ -84,6 +84,8 @@ export const tokenFiles: TokenSource = {
 				source: { file: raw.file, line: raw.line },
 			});
 		}
-		return tokens.length === 0 && problems.length === 0 ? null : { source: tokenFiles.name, tokens, problems };
+		// A token that names another is the semantic one; the ones with a value of their own are the primitives.
+		const named = (t: DesignToken) => /^\{[^{}]+\}$/.test(String(raws.get(t.path)?.value));
+		return tokens.length === 0 && problems.length === 0 ? null : { source: tokenFiles.name, tokens: semanticFirst(tokens, (t) => !named(t)), problems };
 	},
 };

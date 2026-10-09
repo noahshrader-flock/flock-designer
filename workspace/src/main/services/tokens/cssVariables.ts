@@ -6,7 +6,7 @@
  */
 import type { DesignToken } from '../../../shared/contract';
 import { lineAt } from './objectLiteral';
-import { DIMENSION, type TokenSource, capitalized, categoryOf } from './source';
+import { DIMENSION, type TokenSource, capitalized, categoryOf, semanticFirst } from './source';
 
 const STYLESHEET = /\.(css|scss|less|pcss)$/;
 const COLOR = /^(#[0-9a-f]{3,8}|(rgba?|hsla?|oklch|oklab|lab|lch|hwb|color)\(.*\))$/i;
@@ -67,6 +67,7 @@ export const cssVariables: TokenSource = {
 				});
 			}
 		}
-		return tokens.length === 0 ? null : { source: cssVariables.name, tokens, problems: [] };
+		// A scale's steps (`--color-red-500`) are the primitives; the variables named for what they are for come first.
+		return tokens.length === 0 ? null : { source: cssVariables.name, tokens: semanticFirst(tokens, (t) => /^\d+$/.test(t.name)), problems: [] };
 	},
 };

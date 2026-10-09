@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../shared/contract';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { SearchField } from './SearchField';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { PanelTabs, PanelTabsContent, PanelTabsList, PanelTabsTrigger } from './PanelTabs';
 
 /**
  * The library's tokens, in the panel at the right of the Design System tab (T2 of the design system plan), read only:
@@ -10,8 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
  * category the library gains is a tab with nothing else changed), each tab with its own search. **One accordion at most:**
  * a tab with several groups (Color has Tones, Light and Dark) has them as an accordion, closed until opened; a set is
  * never closed up behind a second one, but a plain heading over its tokens, each a swatch at the left and its value at the
- * right. A tab with one group shows its sets straight away. The tabs rest on a bottom border. What the library has that is
- * not read is told beside Sync (`TokenProblems`), not here, so the panel keeps its room. T3 adds the controls to these rows.
+ * right. A tab with one group shows its sets straight away. The tabs are the panel's (`PanelTabs`): edge to edge on a
+ * bottom border, the padding on the content under them. What the library has that is not read is told beside Sync
+ * (`TokenProblems`), not here, so the panel keeps its room. T3 adds the controls to these rows.
  */
 
 /** Tokens in the order they came, by `key`, keeping the first-seen order of the keys. */
@@ -128,22 +129,19 @@ export const TokensPanel = ({ tokens }: { tokens: DesignTokens }) => {
 	// A category the library no longer has is not kept: the first is shown.
 	const active = categories.some(([c]) => c === current) ? (current as string) : (categories[0] as [string, DesignToken[]])[0];
 	return (
-		<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-			<Tabs value={active} onValueChange={setCurrent} className="gap-0">
-				{/* Resting on a bottom border: the line between the tabs and what is under them (the active tab's underline sits on it). */}
-				<TabsList variant="line" className="w-full border-b">
-					{categories.map(([category]) => (
-						<TabsTrigger key={category} value={category}>
-							{category}
-						</TabsTrigger>
-					))}
-				</TabsList>
-				{categories.map(([category, inCategory]) => (
-					<TabsContent key={category} value={category} className="mt-4">
-						<TokensTab category={category} tokens={inCategory} query={queries[category] ?? ''} onQuery={(query) => setQueries((all) => ({ ...all, [category]: query }))} />
-					</TabsContent>
+		<PanelTabs value={active} onValueChange={setCurrent}>
+			<PanelTabsList>
+				{categories.map(([category]) => (
+					<PanelTabsTrigger key={category} value={category}>
+						{category}
+					</PanelTabsTrigger>
 				))}
-			</Tabs>
-		</div>
+			</PanelTabsList>
+			{categories.map(([category, inCategory]) => (
+				<PanelTabsContent key={category} value={category}>
+					<TokensTab category={category} tokens={inCategory} query={queries[category] ?? ''} onQuery={(query) => setQueries((all) => ({ ...all, [category]: query }))} />
+				</PanelTabsContent>
+			))}
+		</PanelTabs>
 	);
 };

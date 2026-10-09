@@ -55,6 +55,12 @@ describe('CSS variables', () => {
 }
 `;
 
+	it('put the semantic variables before a Tailwind scale’s steps, which are the raw colors', async () => {
+		const css = ':root {\n  --color-red-500: #ff0000;\n  --primary: #00ff00;\n  --color-red-600: #cc0000;\n}\n';
+		const list = await readTokens(reads({ 'src/styles/globals.css': css }));
+		expect(list.tokens.map((t) => t.path)).toEqual(['css.light.primary', 'css.light.color-red-500', 'css.light.color-red-600']);
+	});
+
 	it('are read as tokens when the library has no theme files, each mode from its own block', async () => {
 		const list = await readTokens(reads({ 'src/styles/globals.css': CSS }));
 		expect(list.source).toBe('CSS variables');
@@ -106,6 +112,12 @@ describe('design token files', () => {
 		expect(find(list, 'color.red.500')).toMatchObject({ kind: 'color', category: 'Color', group: 'Color', set: 'color.red', name: '500', value: '#ff0000' });
 		expect(find(list, 'spacing.sm')).toMatchObject({ kind: 'dimension', category: 'Spacing', value: '4px' });
 		expect(find(list, 'radius.md')).toMatchObject({ kind: 'dimension', category: 'Shape', value: '6px' });
+	});
+
+	it('put the tokens that name another before the raw ones they name', async () => {
+		const list = await readTokens(reads({ 'tokens/base.tokens.json': TOKENS }));
+		const colors = list.tokens.filter((t) => t.category === 'Color').map((t) => t.path);
+		expect(colors).toEqual(['color.brand', 'color.red.500']);
 	});
 
 	it('follow a reference to the token it names, and leave out the kinds the panel does not show', async () => {

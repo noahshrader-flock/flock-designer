@@ -154,10 +154,11 @@ describe('the categories', () => {
 	it('say which tab a token belongs on: every color is Color, spacing is Spacing, and radius is Shape', async () => {
 		const list = await readTokens(reads(LIBRARY));
 		const categories = new Map(list.tokens.map((t) => [t.group, t.category]));
+		// The semantic ones first (what a color is for, in each mode), the raw tones they point at last.
 		expect([...categories]).toEqual([
-			['Tones', 'Color'],
 			['Light', 'Color'],
 			['Dark', 'Color'],
+			['Tones', 'Color'],
 			['Spacing', 'Spacing'],
 			['Radius', 'Shape'],
 		]);
@@ -257,6 +258,12 @@ describe.skipIf(!hasBranch)('against the real library', () => {
 		expect(find(list, 'palette.light.priority0.main')?.source.file).toBe('src/colors/theme/shared.ts');
 		expect(find(list, 'spacing')?.value).toBe('8px');
 		expect(find(list, 'radius')?.value).toBe('8px');
+	});
+
+	it('puts the semantic colors, light and dark, before the raw tones they are made from', async () => {
+		const list = await readTokens(real);
+		const groups = [...new Set(list.tokens.filter((t) => t.category === 'Color').map((t) => t.group))];
+		expect(groups).toEqual(['Light', 'Dark', 'Tones']);
 	});
 
 	it('gives every color as a hex, every token once', async () => {

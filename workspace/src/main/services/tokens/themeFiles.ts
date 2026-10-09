@@ -7,7 +7,7 @@
  */
 import type { DesignToken, TokenProblem } from '../../../shared/contract';
 import { type Entry, exportedObjects, lineAt, literal, parseObject } from './objectLiteral';
-import { type TokenSource, capitalized, categoryOf } from './source';
+import { type TokenSource, capitalized, categoryOf, semanticFirst } from './source';
 
 const SCRIPT = /\.(ts|tsx|js|jsx|mjs)$/;
 const THEME_PATH = /(^|\/)(colou?rs?|tokens?|themes?|palettes?|tones?)(\/|\.|$)/i;
@@ -137,6 +137,7 @@ export const themeFiles: TokenSource = {
 				break;
 			}
 		}
-		return { source: themeFiles.name, tokens, problems };
+		// The tones are the primitives the palettes are made from: after them.
+		return { source: themeFiles.name, tokens: semanticFirst(tokens, (t) => t.group === 'Tones'), problems };
 	},
 };

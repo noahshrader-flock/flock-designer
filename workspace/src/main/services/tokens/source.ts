@@ -29,6 +29,18 @@ export const categoryOf = (kind: DesignToken['kind'], name: string): string | nu
 	return null;
 };
 
+/**
+ * The tokens in the order the panel shows them: **within each category, the semantic ones first** (what a color is for,
+ * such as `primary` or a surface, in each mode) and the primitives last (the raw scales and tones they are made from).
+ * The panel shows tabs and groups in the order they first appear, so this is where that order is decided, once, the same
+ * for every source; each source says which of its own tokens are primitive. The categories keep their order.
+ */
+export const semanticFirst = (tokens: DesignToken[], isPrimitive: (t: DesignToken) => boolean): DesignToken[] => {
+	const byCategory = new Map<string, DesignToken[]>();
+	for (const t of tokens) byCategory.set(t.category, [...(byCategory.get(t.category) ?? []), t]);
+	return [...byCategory.values()].flatMap((own) => [...own.filter((t) => !isPrimitive(t)), ...own.filter(isPrimitive)]);
+};
+
 /** A word as a heading has it: `light` is `Light`. */
 export const capitalized = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
 

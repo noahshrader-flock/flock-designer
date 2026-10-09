@@ -67,12 +67,22 @@ const row = (path: string) => document.querySelector<HTMLElement>(`[data-token="
 const text = () => document.body.textContent ?? '';
 
 describe('the tabs', () => {
+	it('run edge to edge across the panel: nothing around them is padded, only the content under them is', async () => {
+		await show();
+		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
+		const panel = list.closest('[data-slot="panel-tabs"]') as HTMLElement;
+		expect(panel).not.toBeNull();
+		// No ancestor between the strip and the panel's edge has padding of its own.
+		for (let el = list.parentElement; el && el !== panel.parentElement; el = el.parentElement) expect(el.className, el.tagName).not.toMatch(/(^|\s)p[xtblr]?-\d/);
+		// The padding is the content's, which also scrolls on its own, so the strip stays at the top.
+		const content = document.querySelector('[data-slot="tabs-content"]') as HTMLElement;
+		expect(content.className.split(' ')).toEqual(expect.arrayContaining(['p-4', 'overflow-y-auto']));
+	});
+
 	it('rest on a bottom border, so there is a line between them and what is under them', async () => {
 		await show();
 		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
 		expect(list.className.split(' ')).toEqual(expect.arrayContaining(['border-b', 'w-full']));
-		// And the content starts below it, with its own room: the line is not touching the search box.
-		expect(list.nextElementSibling?.className).toContain('mt-');
 	});
 
 	it('are the categories the library has, in order, as line tabs, with no heading or count above them', async () => {
