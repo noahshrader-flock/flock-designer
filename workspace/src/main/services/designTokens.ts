@@ -21,6 +21,9 @@ import { tokenFiles } from './tokens/tokenFiles';
 /** The ways tokens are found, in the order they are tried. */
 const SOURCES: TokenSource[] = [themeFiles, cssVariables, tokenFiles];
 
+/** The source a list of tokens was read by, which is also the one that writes a change to them. */
+export const sourceNamed = (name: string | null): TokenSource | undefined => SOURCES.find((s) => s.name === name);
+
 /** The library's tokens, from the first source that finds any; none, and what it looked for, when no source does. */
 export const readTokens = async (reads: CatalogReads): Promise<DesignTokens> => {
 	const files = (await reads.listFiles('')).filter(isLibraryFile);

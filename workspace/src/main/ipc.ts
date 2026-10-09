@@ -42,6 +42,7 @@ import { DesignLibrary } from './services/designLibrary';
 import { DesignSystemsMemory } from './services/designSystems';
 import { ProfileNames } from './services/profileNames';
 import { StoryPreviews } from './services/storyPreviews';
+import { tokenEditsOf } from './services/tokenEdits';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, listedAs, mergeRepositories, originOf, reachableRepositories } from './services/repositories';
@@ -330,7 +331,8 @@ export const registerIpc = ({
 		folder: storyPreviewsRoot,
 		server: prototypeServer,
 	});
-	ipcMain.handle(CHANNELS.storyPreview, guard(() => previews.preview()));
+	// A change to try is only ever a list of token edits, checked here and again before anything is written (T3).
+	ipcMain.handle(CHANNELS.storyPreview, guard((edits: unknown) => previews.preview(tokenEditsOf(edits))));
 	ipcMain.handle(CHANNELS.designSystems, guard(() => designSystems.read()));
 	ipcMain.handle(CHANNELS.selectDesignSystem, guard((id: string) => (designSystems.select(String(id)), null)));
 	ipcMain.handle(CHANNELS.removeDesignSystem, guard((id: string) => (designSystems.remove(String(id)), null)));

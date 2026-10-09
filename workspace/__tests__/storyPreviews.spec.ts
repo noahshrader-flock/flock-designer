@@ -326,6 +326,87 @@ describe('keeping them', () => {
 	});
 });
 
+describe('trying a change to the tokens (T3)', () => {
+	/** A library whose story draws with its theme: a tone, a palette role pointing at it, and the story using the role. */
+	const THEMED = {
+		...LIBRARY,
+		'src/colors/tones/brand.ts': "export const brand = {\n  50: '#108062',\n  20: '#18372F',\n};\n",
+		'src/colors/theme/light.ts': "import { brand } from '../tones/brand';\n\nexport const lightPalette = {\n  mode: 'light',\n  primary: { main: brand[50] },\n};\n",
+		'src/components/FSTwo/FSTwo.stories.tsx': story(
+			'Inputs/FSTwo',
+			"import { lightPalette } from '../../colors/theme/light';\nexport const Default = () => <p style={{ color: lightPalette.primary.main }}>Two</p>;",
+		),
+	};
+	/** Every script a build at `base` wrote, as one text: where a color the stories use ends up. */
+	const scripts = (base: string) => {
+		const key = new URL(base).pathname.split('/')[1] as string;
+		const dir = join(folder, readdirSync(folder)[0]!, key.startsWith('trial-') ? 'trial' : 'site');
+		return readdirSync(dir, { recursive: true })
+			.map(String)
+			.filter((f) => f.endsWith('.js'))
+			.map((f) => readFileSync(join(dir, f), 'utf8'))
+			.join('\n');
+	};
+
+	it('builds the stories again with the token changed, at an address of its own, and leaves the commit’s build as it was', async () => {
+		makeLibrary(THEMED);
+		const p = previews();
+		const base = await ready(p);
+		const r = await p.preview([{ path: 'tone.brand.50', value: '#0A6B52' }]);
+		if (r.state !== 'ready') throw new Error(JSON.stringify(r));
+		expect(r.base).not.toBe(base);
+		expect((await fetch(r.base)).status).toBe(200);
+		expect(scripts(r.base)).toContain('#0A6B52');
+		expect(scripts(base)).not.toContain('#0A6B52');
+		// Written nowhere: not the copy the build is made from, and not the clone.
+		const copy = join(folder, readdirSync(folder)[0]!, 'library', 'src/colors/tones/brand.ts');
+		expect(readFileSync(copy, 'utf8')).toContain("50: '#108062'");
+		expect(readFileSync(join(clone, 'src/colors/tones/brand.ts'), 'utf8')).toContain("50: '#108062'");
+	}, 30_000);
+
+	it('points a role elsewhere, gives each change a new address, and stops serving the last', async () => {
+		makeLibrary(THEMED);
+		const p = previews();
+		await ready(p);
+		const first = await p.preview([{ path: 'tone.brand.50', value: '#0A6B52' }]);
+		const second = await p.preview([{ path: 'palette.light.primary.main', ref: 'tone.brand.20' }]);
+		if (first.state !== 'ready' || second.state !== 'ready') throw new Error('not ready');
+		expect(second.base).not.toBe(first.base);
+		expect((await fetch(first.base)).status).toBe(404);
+		expect(scripts(second.base)).toContain('#18372F');
+		expect(scripts(second.base)).not.toContain('#0A6B52');
+	}, 30_000);
+
+	it('is left by asking with no change: the commit’s own build, as it was', async () => {
+		makeLibrary(THEMED);
+		const p = previews();
+		const base = await ready(p);
+		await p.preview([{ path: 'tone.brand.50', value: '#0A6B52' }]);
+		expect(await p.preview([])).toEqual({ state: 'ready', base });
+	}, 30_000);
+
+	it('builds only the newest change when several come while one builds, and answers each with it', async () => {
+		makeLibrary(THEMED);
+		const p = previews();
+		await ready(p);
+		const serve = vi.spyOn(server, 'serveFolder');
+		const answers = await Promise.all(['#111111', '#222222', '#333333'].map((value) => p.preview([{ path: 'tone.brand.50', value }])));
+		expect(new Set(answers.map((a) => JSON.stringify(a))).size).toBe(1);
+		expect(serve.mock.calls.length).toBeLessThanOrEqual(2);
+		const last = answers[0];
+		if (last?.state !== 'ready') throw new Error('not ready');
+		expect(scripts(last.base)).toContain('#333333');
+	}, 30_000);
+
+	it('says why a change cannot be made, and builds nothing for it', async () => {
+		makeLibrary(THEMED);
+		const p = previews();
+		const base = await ready(p);
+		expect(await p.preview([{ path: 'tone.brand.50', value: 'red' }])).toEqual({ state: 'failed', error: expect.stringContaining('not a hex color') });
+		expect(await p.preview([])).toEqual({ state: 'ready', base });
+	});
+});
+
 describe('what it says when it cannot', () => {
 	it('says there is no library, no packages, or no develop', async () => {
 		makeLibrary(LIBRARY, false);
@@ -439,4 +520,24 @@ describe.skipIf(!realDevelop)('against the real library on origin/develop', () =
 			real.close();
 		}
 	}, 120_000);
+
+	it('tries a change to a tone on it, and each change after the first is quick', async () => {
+		const real = new PrototypeServer();
+		try {
+			const p = new StoryPreviews({ system: connected(REAL), folder, server: real });
+			expect((await p.preview()).state).toBe('ready');
+			const times: number[] = [];
+			for (const value of ['#0A6B52', '#0B7055', '#0C7558']) {
+				const started = performance.now();
+				const r = await p.preview([{ path: 'tone.pineGreen.50', value }]);
+				times.push(Math.round(performance.now() - started));
+				expect(r.state).toBe('ready');
+			}
+			console.log(`trying a change on the real library: ${times.join(' ms, ')} ms`);
+			// The first opens the build; each after is esbuild's rebuild with the Sass already compiled.
+			expect(Math.max(...times.slice(1))).toBeLessThan(3000);
+		} finally {
+			real.close();
+		}
+	}, 180_000);
 });

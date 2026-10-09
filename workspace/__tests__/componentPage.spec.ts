@@ -27,7 +27,7 @@ let current: Awaited<ReturnType<typeof render>> | null = null;
 const show = async (c: CatalogComponent, answer: () => Promise<ReturnType<typeof ok<StoryPreview>> | ReturnType<typeof fail>> = async () => ok({ state: 'ready', base: BASE }), more: Record<string, unknown> = {}) => {
 	const app = fakeApp({ storyPreview: answer });
 	(window as unknown as { workspace: unknown }).workspace = app.api;
-	const props = { component: c, commit: 'c1', onBack: vi.fn(), ...more };
+	const props = { component: c, commit: 'c1', edits: [], onBack: vi.fn(), ...more };
 	current = await render(createElement(ComponentPage, props));
 	return { app, props };
 };
@@ -119,5 +119,54 @@ describe('the previews', () => {
 		await settle();
 		expect(text()).toContain('git broke');
 		expect(app.calls.storyPreview).toHaveLength(3);
+	});
+});
+
+describe('with a change to the tokens (T3)', () => {
+	const TRIAL = 'http://127.0.0.1:4000/trial-1-abc/';
+	const edits = [{ path: 'tone.pineGreen.50', value: '#0A6B52' }];
+	const rerender = (props: Record<string, unknown>) =>
+		act(async () => current!.root.render(createElement(TooltipProvider, null, createElement(ComponentPage, props as Parameters<typeof ComponentPage>[0]))));
+
+	it('builds the previews with the change, keeping the stories shown while it builds, and shows the new build', async () => {
+		let finish: (v: ReturnType<typeof ok<StoryPreview>>) => void = () => undefined;
+		const answers = [async () => ok<StoryPreview>({ state: 'ready', base: BASE }), () => new Promise<ReturnType<typeof ok<StoryPreview>>>((r) => (finish = r))];
+		const { app, props } = await show(component(), () => (answers.shift() as () => Promise<ReturnType<typeof ok<StoryPreview>>>)());
+		await rerender({ ...props, edits });
+		await settle();
+		expect(app.calls.storyPreview?.at(-1)).toEqual([edits]);
+		expect(frames()).toHaveLength(1);
+		expect(text()).toContain('Building…');
+		await act(async () => finish(ok({ state: 'ready', base: TRIAL })));
+		await settle();
+		expect(text()).not.toContain('Building…');
+		expect(frames()[0]?.getAttribute('src')).toBe(previewAddress(TRIAL, 'src/components/FSButton/FSButton.stories.tsx'));
+	});
+
+	it('says why a change could not be tried, above the stories, which stay', async () => {
+		let answer: ReturnType<typeof ok<StoryPreview>> = ok({ state: 'ready', base: BASE });
+		const { props } = await show(component(), async () => answer);
+		answer = ok({ state: 'failed', error: 'The theme sets radius as a whole number of pixels.' });
+		await rerender({ ...props, edits });
+		await settle();
+		expect(text()).toContain('This change could not be tried');
+		expect(text()).toContain('whole number of pixels');
+		expect(frames()[0]?.getAttribute('src')).toBe(previewAddress(BASE, 'src/components/FSButton/FSButton.stories.tsx'));
+	});
+
+	it('shows only the answer to the newest change, whichever comes back first', async () => {
+		const pending: ((v: ReturnType<typeof ok<StoryPreview>>) => void)[] = [];
+		let first = true;
+		const { props } = await show(component(), () => {
+			if (first) return ((first = false), Promise.resolve(ok<StoryPreview>({ state: 'ready', base: BASE })));
+			return new Promise((r) => pending.push(r));
+		});
+		await rerender({ ...props, edits });
+		await rerender({ ...props, edits: [{ path: 'tone.pineGreen.50', value: '#000000' }] });
+		await settle();
+		await act(async () => pending[1]?.(ok({ state: 'ready', base: 'http://127.0.0.1:4000/trial-2-abc/' })));
+		await act(async () => pending[0]?.(ok({ state: 'ready', base: TRIAL })));
+		await settle();
+		expect(frames()[0]?.getAttribute('src')).toContain('trial-2-abc');
 	});
 });

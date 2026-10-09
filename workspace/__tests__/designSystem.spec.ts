@@ -264,6 +264,45 @@ describe('the tokens panel', () => {
 		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Tokens' || b.getAttribute('aria-pressed') !== null)).toBe(false);
 	});
 
+	/** Changes the one tone in the panel, as a person does: its row, then its picker, closed on a color. */
+	const changeTone = async (value: string) => {
+		await press(panel()?.querySelector('[data-token="tone.pineGreen.50"] button') as HTMLElement);
+		await settle();
+		const picker = document.querySelector('[data-token-editor] input[type="color"]') as HTMLInputElement;
+		await act(async () => {
+			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(picker, value);
+			picker.dispatchEvent(new Event('change', { bubbles: true }));
+		});
+		await settle();
+	};
+
+	it('makes the change an open component’s previews are built with, and leaves it for none (T3)', async () => {
+		const app = await open(() => ok(ready()));
+		await press(row('FSButton').querySelector('button')!);
+		await settle();
+		await changeTone('#000000');
+		expect(app.calls.storyPreview?.at(-1)).toEqual([[{ path: 'tone.pineGreen.50', value: '#000000' }]]);
+		await press(button('Reset all'));
+		await settle();
+		expect(app.calls.storyPreview?.at(-1)).toEqual([[]]);
+	});
+
+	it('keeps a change while components are opened and closed, and drops it when another design system is shown', async () => {
+		const app = await open(() => ok(ready()));
+		await changeTone('#000000');
+		await press(row('FSButton').querySelector('button')!);
+		await settle();
+		// Opened after the change: built with it from the start.
+		expect(app.calls.storyPreview?.at(-1)).toEqual([[{ path: 'tone.pineGreen.50', value: '#000000' }]]);
+		await press(button('Back to components'));
+		expect(document.querySelector('[data-changed-tokens]')).not.toBeNull();
+		await openMenu(switcher());
+		await press([...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')][1] as HTMLElement);
+		await settle();
+		expect(app.calls.selectDesignSystem).toEqual([[ACME.id]]);
+		expect(document.querySelector('[data-changed-tokens]')).toBeNull();
+	});
+
 	it('is not drawn while the library is not connected, where there is nothing to show', async () => {
 		await open(() => ok({ state: 'none' }));
 		expect(divider()).toBeNull();

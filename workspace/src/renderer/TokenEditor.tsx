@@ -1,0 +1,315 @@
+import { RotateCcwIcon } from 'lucide-react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import type { DesignToken, TokenEdit } from '../shared/contract';
+import { plural } from '../shared/plural';
+import { AA_TEXT, contrastPartner, contrastRatio, placeOf, pointingAt, writtenWith } from '../shared/tokens';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Slider } from './ui/slider';
+
+/**
+ * Changing a token (T3 of the design system plan): what opens from a row of the tokens panel, chosen by what the token is
+ * and whether it points at another (decision 20), and the list of what has been changed. **Not an editor** (decision
+ * 27): a change is tried in the previews and kept nowhere, and what it does is said where it is made: the contrast it
+ * leaves, and what else it moves.
+ *
+ * - **A token that points at another** (`primary.main` is `pineGreen[50]`) is pointed at another step of the same tone,
+ *   which keeps the link. Its own color is the second choice, plainly marked, since it cuts the link.
+ * - **A color with no pointer** (a tone step, a plain role) is a color picker and its hex.
+ * - **A dimension** (the base spacing, the base radius) is a slider and its number.
+ *
+ * Each is applied when it is let go of (the picker closed, the slider released, the hex entered): building again takes
+ * about a second, so a change is not built on every movement.
+ */
+
+/** What a token is changed to: pointed at another token, by its path, or given a value of its own. */
+export type ChangeTo = { ref: string } | { value: string };
+
+/** What every row and the editor share: the tokens as changed, as read, the change, and how to change one. */
+export interface TokenChanges {
+	/** The tokens with the change made (`withEdits`): what the panel shows. */
+	shown: DesignToken[];
+	/** As the library has them, by path. */
+	read: Map<string, DesignToken>;
+	edits: TokenEdit[];
+	/** Changes a token, by its path (`null`: back as it was). A change back to what the library has is no change. */
+	change: (token: DesignToken, to: ChangeTo | null) => void;
+	/** Every token back as the library has it. */
+	clear: () => void;
+}
+
+export const TokenChangesContext = createContext<TokenChanges | null>(null);
+
+export const useTokenChanges = (): TokenChanges => {
+	const changes = useContext(TokenChangesContext);
+	if (!changes) throw new Error('A token row is shown only in the tokens panel.');
+	return changes;
+};
+
+/** The change, made by `change`: any edit of the same place replaced, and none kept that leaves a token as it was. */
+export const changed = (edits: TokenEdit[], read: Map<string, DesignToken>, token: DesignToken, to: ChangeTo | null): TokenEdit[] => {
+	const others = edits.filter((e) => {
+		const t = read.get(e.path);
+		return t === undefined || placeOf(t) !== placeOf(token);
+	});
+	if (to === null) return others;
+	const asRead = 'ref' in to ? token.ref?.path === to.ref : token.ref === undefined && token.value.toLowerCase() === to.value.toLowerCase();
+	return asRead ? others : [...others, { path: token.path, ...to } as TokenEdit];
+};
+
+/** Whether a token is changed: edited, or written in a place that is. */
+export const isChanged = (changes: TokenChanges, token: DesignToken): boolean =>
+	changes.edits.some((e) => {
+		const t = changes.read.get(e.path);
+		return t !== undefined && placeOf(t) === placeOf(token);
+	});
+
+/** A token as a person names it: `primary main`, `pineGreen 50`. */
+export const nameOf = (t: DesignToken): string => `${t.set} ${t.name}`;
+
+/** A token named with where it is shown: `Light primary main`, `Tones pineGreen 50`, `Radius base` (not `Radius radius base`). */
+export const labelOf = (t: DesignToken): string => (t.set.toLowerCase() === t.group.toLowerCase() ? `${t.group} ${t.name}` : `${t.group} ${nameOf(t)}`);
+
+/** An opacity written after a tone (`66`), as a person reads it (`40%`). */
+export const opacity = (alpha: string): string => `${Math.round((parseInt(alpha, 16) / 255) * 100)}%`;
+
+/** A color, as a small square. Its color is the token's own, a runtime value, so it is inline. */
+export const Swatch = ({ value, size = 'size-4' }: { value: string; size?: string }) => (
+	<span data-swatch className={`${size} shrink-0 rounded-sm border`} style={{ backgroundColor: value }} />
+);
+
+/** A pair's contrast as WCAG states it, and whether it is enough for text. */
+export const ContrastNote = ({ ratio, className = '' }: { ratio: number; className?: string }) => (
+	<span data-contrast={ratio} className={`${ratio < AA_TEXT ? 'text-warning' : 'text-muted-foreground'} ${className}`}>
+		{ratio}:1
+	</span>
+);
+
+/**
+ * A color picker and its hex. The picker applies when it is closed; the hex when Enter is pressed or it is left, and only
+ * a hex is applied. An opacity the color had is kept: the picker has none.
+ */
+const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string) => void }) => {
+	const alpha = value.length === 9 ? value.slice(7) : '';
+	const [hex, setHex] = useState(value.slice(0, 7));
+	const picker = useRef<HTMLInputElement>(null);
+	useEffect(() => setHex(value.slice(0, 7)), [value]);
+	// The browser's own `change`: when the picker is closed, not on every color it passes through.
+	useEffect(() => {
+		const el = picker.current;
+		const done = () => el && onCommit(`${el.value.toUpperCase()}${alpha}`);
+		el?.addEventListener('change', done);
+		return () => el?.removeEventListener('change', done);
+	}, [onCommit, alpha]);
+	const commit = () => {
+		if (/^#[0-9a-f]{6}$/i.test(hex.trim())) onCommit(`${hex.trim().toUpperCase()}${alpha}`);
+		else setHex(value.slice(0, 7));
+	};
+	return (
+		<div className="flex items-center gap-2">
+			<input
+				ref={picker}
+				type="color"
+				aria-label="Pick a color"
+				value={/^#[0-9a-f]{6}$/i.test(hex) ? hex.toLowerCase() : value.slice(0, 7).toLowerCase()}
+				onChange={(e) => setHex(e.target.value.toUpperCase())}
+				className="size-8 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
+			/>
+			<Input
+				aria-label="Hex"
+				value={hex}
+				spellCheck={false}
+				className="font-mono"
+				onChange={(e) => setHex(e.target.value)}
+				onBlur={commit}
+				onKeyDown={(e) => e.key === 'Enter' && commit()}
+			/>
+		</div>
+	);
+};
+
+/** A length as a slider and its number, applied when the slider is let go of. Its range is from its kind, not the token. */
+const DimensionField = ({ token, value, onCommit }: { token: DesignToken; value: string; onCommit: (length: string) => void }) => {
+	const [, number = '0', unit = 'px'] = /^(-?\d*\.?\d+)(px|rem|em)$/.exec(value) ?? [];
+	const [n, setN] = useState(Number(number));
+	useEffect(() => setN(Number(number)), [number]);
+	// From nothing to twice what the library has, at least a useful span: whole pixels, or eighths of a rem.
+	const px = unit === 'px';
+	const read = Number(/^(-?\d*\.?\d+)/.exec(token.value)?.[1] ?? number);
+	const max = Math.max(px ? 32 : 2, read * 2);
+	return (
+		<div className="flex items-center gap-3">
+			<Slider
+				aria-label={nameOf(token)}
+				min={0}
+				max={max}
+				step={px ? 1 : 0.125}
+				value={[n]}
+				onValueChange={([v]) => setN(v as number)}
+				onValueCommit={([v]) => onCommit(`${v}${unit}`)}
+			/>
+			<span className="w-16 shrink-0 text-right font-mono text-xs">
+				{n}
+				{unit}
+			</span>
+		</div>
+	);
+};
+
+/**
+ * Another step of the tone a token points at, as swatches: pressing one points the token at it. The step it points at
+ * now is pressed.
+ */
+const StepPicker = ({ token, target }: { token: DesignToken; target: DesignToken }) => {
+	const { shown, change } = useTokenChanges();
+	const steps = shown.filter((t) => t.group === target.group && t.set === target.set);
+	return (
+		<div role="group" aria-label={`Steps of ${target.set}`} className="flex flex-wrap gap-1">
+			{steps.map((s) => (
+				<button
+					key={s.path}
+					type="button"
+					aria-label={nameOf(s)}
+					aria-pressed={token.ref?.path === s.path}
+					title={`${nameOf(s)} · ${s.value}`}
+					onClick={() => change(token, { ref: s.path })}
+					className="hover:bg-muted aria-pressed:ring-ring flex w-9 flex-col items-center gap-0.5 rounded-md p-1 text-[10px] aria-pressed:ring-2"
+				>
+					<Swatch value={s.value} size="size-6" />
+					{s.name}
+				</button>
+			))}
+		</div>
+	);
+};
+
+/** What changing a token also moves: the tokens that point at it, and any written in the same place. */
+const Reach = ({ token }: { token: DesignToken }) => {
+	const { shown } = useTokenChanges();
+	const users = pointingAt(shown, token.path);
+	const also = writtenWith(shown, token);
+	// A step of a family roles point at says so even when none points at this one: it can be changed freely.
+	const pointedInto = users.length > 0 || shown.some((t) => t.ref && shown.find((s) => s.path === t.ref?.path)?.set === token.set);
+	if (!pointedInto && also.length === 0) return null;
+	return (
+		<div data-reach className="text-muted-foreground flex flex-col gap-1 text-xs">
+			{pointedInto && <p title={users.map(labelOf).join('\n')}>{users.length > 0 ? `Used by ${plural(users.length, 'role')}` : 'Not used by any role'}</p>}
+			{also.length > 0 && <p>Also changes {also.map(labelOf).join(', ')}: written in one place.</p>}
+		</div>
+	);
+};
+
+/** The contrast a color leaves with the one it is read with, and whether that is enough for text. */
+const Contrast = ({ token }: { token: DesignToken }) => {
+	const { shown } = useTokenChanges();
+	const partner = contrastPartner(token, shown);
+	const ratio = partner ? contrastRatio(token.value, partner.value) : null;
+	if (!partner || ratio === null) return null;
+	return (
+		<p className="text-xs">
+			Contrast with {partner.name}: <ContrastNote ratio={ratio} className="font-medium" />
+			<span className="text-muted-foreground">{ratio < AA_TEXT ? `, below AA, which asks ${AA_TEXT}:1 for text` : ', passes AA for text'}</span>
+		</p>
+	);
+};
+
+/** What opens from a row: the token, its control, what it reaches and the contrast it leaves, and Reset when changed. */
+export const TokenEditor = ({ token }: { token: DesignToken }) => {
+	const changes = useTokenChanges();
+	const { read, shown, change } = changes;
+	const asRead = read.get(token.path) ?? token;
+	// A token given a color of its own still has the tone it pointed at, to go back to.
+	const pointer = token.ref ?? asRead.ref;
+	const target = pointer && shown.find((t) => t.path === pointer.path);
+	const [custom, setCustom] = useState(token.ref === undefined);
+	const edited = isChanged(changes, token);
+	return (
+		<div className="flex flex-col gap-3" data-token-editor={token.path}>
+			<div className="flex flex-col gap-0.5">
+				<p className="text-sm font-medium">{labelOf(token)}</p>
+				<p className="text-muted-foreground font-mono text-xs">
+					{token.source.file}:{token.source.line}
+				</p>
+			</div>
+			{token.kind === 'dimension' ? (
+				<DimensionField token={asRead} value={token.value} onCommit={(value) => change(token, { value })} />
+			) : target ? (
+				<div className="flex flex-col gap-2">
+					<p className="text-muted-foreground text-xs">
+						{token.ref
+							? `Points at ${nameOf(target)}${pointer?.alpha ? ` at ${opacity(pointer.alpha)}` : ''}`
+							: `Was ${nameOf(target)}; now a color of its own`}
+					</p>
+					<StepPicker token={token} target={target} />
+					{custom ? (
+						<div className="flex flex-col gap-1.5">
+							<ColorField value={token.value} onCommit={(value) => change(token, { value })} />
+							<p className="text-muted-foreground text-xs">A custom color replaces the pointer: a later change to {target.set} will not reach it.</p>
+						</div>
+					) : (
+						<Button variant="ghost" size="sm" className="-ml-2 self-start" onClick={() => setCustom(true)}>
+							Use a custom color
+						</Button>
+					)}
+				</div>
+			) : (
+				<ColorField value={token.value} onCommit={(value) => change(token, { value })} />
+			)}
+			<Contrast token={token} />
+			<Reach token={token} />
+			{edited && (
+				<Button variant="outline" size="sm" className="self-start" onClick={() => change(token, null)}>
+					<RotateCcwIcon />
+					Reset
+				</Button>
+			)}
+		</div>
+	);
+};
+
+/** How a token reads, in a word: what it points at, or its value. */
+const valueOf = (t: DesignToken, shown: DesignToken[]): string => {
+	const target = t.ref && shown.find((s) => s.path === t.ref?.path);
+	return target ? nameOf(target) : t.value;
+};
+
+/**
+ * What has been changed, above the tabs: each change, from what the library has to what it is now, with a reset for each
+ * and for all. Nothing is saved; on the list there is nothing live, so it says to open a component.
+ */
+export const ChangedTokens = ({ live }: { live: boolean }) => {
+	const { edits, read, shown, change, clear } = useTokenChanges();
+	if (edits.length === 0) return null;
+	const byPath = new Map(shown.map((t) => [t.path, t]));
+	return (
+		<section aria-label="Changed" data-changed-tokens className="flex flex-col gap-2 border-b p-4">
+			<div className="flex items-center justify-between">
+				<h3 className="text-sm font-semibold">
+					Changed <span className="text-muted-foreground font-normal">{edits.length}</span>
+				</h3>
+				<Button variant="ghost" size="sm" className="-mr-2" onClick={clear}>
+					Reset all
+				</Button>
+			</div>
+			<ul className="flex flex-col">
+				{edits.map((e) => {
+					const was = read.get(e.path) as DesignToken;
+					const now = byPath.get(e.path) as DesignToken;
+					return (
+						<li key={e.path} data-change={e.path} className="flex items-center gap-2 py-1 text-sm">
+							{now.kind === 'color' && <Swatch value={now.value} />}
+							<span className="min-w-0 truncate">{labelOf(was)}</span>
+							<span className="text-muted-foreground ml-auto shrink-0 font-mono text-xs">
+								{valueOf(was, shown)} → {valueOf(now, shown)}
+							</span>
+							<Button variant="ghost" size="icon-sm" aria-label={`Reset ${labelOf(was)}`} onClick={() => change(was, null)}>
+								<RotateCcwIcon />
+							</Button>
+						</li>
+					);
+				})}
+			</ul>
+			<p className="text-muted-foreground text-xs">{live ? 'Tried in the previews. Nothing is saved.' : 'Open a component to see them. Nothing is saved.'}</p>
+		</section>
+	);
+};

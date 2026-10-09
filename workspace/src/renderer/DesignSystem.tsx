@@ -1,6 +1,6 @@
 import { ChevronDownIcon, ChevronRightIcon, GitBranchIcon, InfoIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem, ConnectedDesignSystems, Result } from '../shared/contract';
+import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem, ConnectedDesignSystems, Result, TokenEdit } from '../shared/contract';
 import { ComponentPage } from './ComponentPage';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { LoadingScreen } from './Loading';
@@ -114,8 +114,10 @@ const Notice = ({ title, children, onRetry }: { title: string; children: ReactNo
  * The Design System tab: the design system connected, as its branch has it on GitHub, from a clone on this machine
  * (DESIGN_SYSTEM_PLAN.md). Its toolbar names it, switches between those connected and removes one (P4); with none, the
  * Connect screen. The components view is the list, by default, with a finder above it, and a component once one is opened,
- * with its stories live. At the right, always, the tokens panel (T2). Not a second Storybook: docs and controls stay
- * there, behind each component's links.
+ * with its stories live. At the right, always, the tokens panel (T2), where a change to the tokens is tried (T3): the
+ * change is the tab's, so the panel makes it and an open component's previews are built with it. It is kept nowhere: a
+ * design system shown afresh starts with none, and a sync keeps only the edits of tokens the library still has. Not a
+ * second Storybook: docs and controls stay there, behind each component's links.
  *
  * It reads once when first shown, at once from what the clone has, then again when GitHub has been asked for changes;
  * after that only when Sync is pressed. It stays mounted while hidden, and the list stays mounted while a component is
@@ -130,6 +132,8 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	// The design systems connected, and which is shown (P4); and whether another is being connected.
 	const [systems, setSystems] = useState<ConnectedDesignSystems>({ systems: [], current: null });
 	const [adding, setAdding] = useState(false);
+	// The change to the tokens being tried (T3).
+	const [edits, setEdits] = useState<TokenEdit[]>([]);
 	const started = useRef(false);
 
 	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {
@@ -140,6 +144,8 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		}
 		setError(null);
 		setCatalog(r.value);
+		const paths = new Set(r.value.state === 'ready' ? r.value.tokens.tokens.map((t) => t.path) : []);
+		setEdits((all) => (all.every((e) => paths.has(e.path)) ? all : all.filter((e) => paths.has(e.path))));
 		return r.value;
 	}, []);
 
@@ -175,6 +181,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		setAdding(false);
 		setOpen(null);
 		setCatalog(null);
+		setEdits([]);
 		await listSystems();
 		await firstRead();
 	}, [listSystems, firstRead]);
@@ -268,7 +275,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 			    which does not move when either changes. */}
 			<div className="flex h-[calc(100dvh-var(--nav-height)-var(--toolbar-height))]">
 				<div className="min-w-0 flex-1 overflow-y-auto">
-					{opened && <ComponentPage component={opened} commit={catalog.commit} onBack={() => setOpen(null)} />}
+					{opened && <ComponentPage component={opened} commit={catalog.commit} edits={edits} onBack={() => setOpen(null)} />}
 					{/* Kept while a component is open, so going back finds the list where it was. */}
 					<div hidden={opened !== undefined}>
 						<Page>
@@ -311,7 +318,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 				</div>
 				{/* Always there (decision 21), whichever screen is open, and not hidden by anything in the toolbar. */}
 				<ResizablePanel panel={TOKENS_PANEL} label="Resize the tokens panel">
-					<TokensPanel tokens={catalog.tokens} />
+					<TokensPanel tokens={catalog.tokens} edits={edits} onEdits={setEdits} live={opened !== undefined} />
 				</ResizablePanel>
 			</div>
 		</>

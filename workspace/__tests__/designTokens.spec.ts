@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { designSystemOf } from '../src/shared/catalog';
 import { libraryReads } from '../src/main/services/designLibrary';
 import { readTokens } from '../src/main/services/designTokens';
+import { editedFiles } from '../src/main/services/tokenEdits';
 import type { CatalogReads } from '../src/main/services/componentCatalog';
 
 /**
@@ -123,15 +124,15 @@ describe('the palette roles', () => {
 			set: 'primary',
 			name: 'main',
 			value: '#108062',
-			ref: { tone: 'pineGreen', step: '50' },
+			ref: { path: 'tone.pineGreen.50' },
 			source: { file: 'src/colors/theme/light.ts', line: 9 },
 		});
-		expect(find(list, 'palette.dark.primary.main')).toMatchObject({ group: 'Dark', value: '#FFFFFF', ref: { tone: 'pineGreen', step: '100' } });
+		expect(find(list, 'palette.dark.primary.main')).toMatchObject({ group: 'Dark', value: '#FFFFFF', ref: { path: 'tone.pineGreen.100' } });
 	});
 
 	it('keep a tone’s opacity, written after it', async () => {
 		const list = await readTokens(reads(LIBRARY));
-		expect(find(list, 'palette.light.primaryBorder.main')).toMatchObject({ value: '#18372F66', ref: { tone: 'pineGreen', step: '20', alpha: '66' } });
+		expect(find(list, 'palette.light.primaryBorder.main')).toMatchObject({ value: '#18372F66', ref: { path: 'tone.pineGreen.20', alpha: '66' } });
 	});
 
 	it('include the roles both modes share, read from where they are written', async () => {
@@ -203,7 +204,7 @@ describe('a library laid out differently', () => {
 		);
 		expect(list.source).toBe('theme files');
 		expect(find(list, 'tone.brand.50')?.value).toBe('#336699');
-		expect(find(list, 'palette.light.primary.main')).toMatchObject({ value: '#336699', ref: { tone: 'brand', step: '50' } });
+		expect(find(list, 'palette.light.primary.main')).toMatchObject({ value: '#336699', ref: { path: 'tone.brand.50' } });
 		expect(find(list, 'spacing')?.value).toBe('4px');
 		expect(find(list, 'radius')?.value).toBe('6px');
 	});
@@ -252,8 +253,8 @@ describe.skipIf(!hasBranch)('against the real library', () => {
 		expect(list.problems.every((p) => p.file.startsWith('src/colors/tones/'))).toBe(true);
 		expect(new Set(list.tokens.filter((t) => t.group === 'Tones').map((t) => t.set)).size).toBeGreaterThanOrEqual(11);
 		expect(find(list, 'tone.pineGreen.50')?.value).toBe('#108062');
-		expect(find(list, 'palette.light.primary.main')).toMatchObject({ value: '#108062', ref: { tone: 'pineGreen', step: '50' } });
-		expect(find(list, 'palette.dark.primary.main')?.ref?.tone).toBe('pineGreen');
+		expect(find(list, 'palette.light.primary.main')).toMatchObject({ value: '#108062', ref: { path: 'tone.pineGreen.50' } });
+		expect(find(list, 'palette.dark.primary.main')?.ref?.path).toMatch(/^tone\.pineGreen\./);
 		expect(find(list, 'palette.light.primaryBorder.main')?.ref?.alpha).toBe('66');
 		expect(find(list, 'palette.light.priority0.main')?.source.file).toBe('src/colors/theme/shared.ts');
 		expect(find(list, 'spacing')?.value).toBe('8px');
@@ -270,5 +271,25 @@ describe.skipIf(!hasBranch)('against the real library', () => {
 		const list = await readTokens(real);
 		for (const t of list.tokens.filter((x) => x.kind === 'color')) expect(t.value, t.path).toMatch(/^#([0-9A-F]{6}|[0-9A-F]{8})$/i);
 		expect(new Set(list.tokens.map((t) => t.path)).size).toBe(list.tokens.length);
+	});
+});
+
+describe.skipIf(!hasBranch)('changing the real library’s tokens (T3)', () => {
+	it('writes a tone, a role pointed at another step, a role’s own color, and the spacing, each reading back exactly', async () => {
+		const real = libraryReads(REAL, `refs/remotes/origin/${FUI.branch}`);
+		const written = await editedFiles(real, [
+			{ path: 'tone.pineGreen.50', value: '#0A6B52' },
+			{ path: 'palette.dark.primary.main', ref: 'tone.pineGreen.60' },
+			{ path: 'palette.light.priority0.main', value: '#123456' },
+			{ path: 'spacing', value: '6px' },
+		]);
+		// The tone, the dark palette, the palette both modes share (so Light and Dark priority0 change together), the theme.
+		expect([...written.keys()]).toEqual(expect.arrayContaining(['src/colors/tones/pineGreen.ts', 'src/colors/theme/dark.ts', 'src/colors/theme/shared.ts']));
+		expect(written.size).toBe(4);
+		// Only the token's own text changes: one line in each file.
+		for (const [file, text] of written) {
+			const before = (await real.readFile(file)).split('\n');
+			expect(text.split('\n').filter((line, i) => line !== before[i])).toHaveLength(1);
+		}
 	});
 });

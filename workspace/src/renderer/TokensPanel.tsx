@@ -1,18 +1,38 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { DesignToken, DesignTokens } from '../shared/contract';
+import { useMemo, useEffect, useState } from 'react';
+import type { DesignToken, DesignTokens, TokenEdit } from '../shared/contract';
+import { contrastPartner, contrastRatio, isForeground, withEdits } from '../shared/tokens';
+import {
+	ChangedTokens,
+	ContrastNote,
+	Swatch,
+	TokenChangesContext,
+	TokenEditor,
+	changed,
+	isChanged,
+	labelOf,
+	nameOf,
+	opacity,
+	useTokenChanges,
+	type TokenChanges,
+} from './TokenEditor';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { SearchField } from './SearchField';
 import { PanelTabs, PanelTabsContent, PanelTabsList, PanelTabsTrigger } from './PanelTabs';
 
 /**
- * The library's tokens, in the panel at the right of the Design System tab (T2 of the design system plan), read only:
- * the list T1 reads, in line tabs by category (Color, Spacing, Shape: the reader says which each token is on, so a
+ * The library's tokens, in the panel at the right of the Design System tab (T2 and T3 of the design system plan): the
+ * list T1 reads, in line tabs by category (Color, Spacing, Shape: the reader says which each token is on, so a
  * category the library gains is a tab with nothing else changed), each tab with its own search. **One accordion at most:**
  * a tab with several groups (Color has Tones, Light and Dark) has them as an accordion, closed until opened; a set is
  * never closed up behind a second one, but a plain heading over its tokens, each a swatch at the left and its value at the
  * right. A tab with one group shows its sets straight away. The tabs are the panel's (`PanelTabs`): edge to edge on a
  * bottom border, the padding on the content under them. What the library has that is not read is told beside Sync
- * (`TokenProblems`), not here, so the panel keeps its room. T3 adds the controls to these rows.
+ * (`TokenProblems`), not here, so the panel keeps its room.
+ *
+ * **A change is tried here** (T3): a row opens its token's control (`TokenEditor`), every row shows the tokens as changed,
+ * a pair's contrast is on its row, and what has been changed is listed above the tabs with its resets. The change is
+ * the tab's (`edits`): the component page builds its previews with it.
  */
 
 /** Tokens in the order they came, by `key`, keeping the first-seen order of the keys. */
@@ -28,30 +48,48 @@ const inOrder = <K extends string>(tokens: DesignToken[], key: (t: DesignToken) 
 
 const setKey = (t: DesignToken) => `${t.group}/${t.set}`;
 
-/** An opacity written after a tone (`66`), as a person reads it (`40%`). */
-const opacity = (alpha: string) => `${Math.round((parseInt(alpha, 16) / 255) * 100)}%`;
+/** What a token is, in words, for the search to look through: what it points at too. */
+const searchable = (t: DesignToken) => [t.path, t.group, t.set, t.name, t.value, t.ref?.path ?? ''].join(' ').toLowerCase();
 
-/** What a token is, in words, for the search to look through. */
-const searchable = (t: DesignToken) => [t.path, t.group, t.set, t.name, t.value, t.ref?.tone ?? ''].join(' ').toLowerCase();
-
-/** A color, as a small square. Its color is the token's own, a runtime value, so it is inline. */
-const Swatch = ({ value, size = 'size-4' }: { value: string; size?: string }) => (
-	<span data-swatch className={`${size} shrink-0 rounded-sm border`} style={{ backgroundColor: value }} />
-);
-
-const TokenRow = ({ token }: { token: DesignToken }) => (
-	<li data-token={token.path} title={`${token.source.file}:${token.source.line}`} className="flex items-center gap-2 py-1 text-sm">
-		{token.kind === 'color' && <Swatch value={token.value} />}
-		<span className="min-w-0 truncate">{token.name}</span>
-		{token.ref && (
-			<span className="text-muted-foreground truncate text-xs">
-				{token.ref.tone} {token.ref.step}
-				{token.ref.alpha && ` at ${opacity(token.ref.alpha)}`}
-			</span>
-		)}
-		<span className="text-muted-foreground ml-auto shrink-0 font-mono text-xs">{token.value}</span>
-	</li>
-);
+/**
+ * A token's row: its swatch, name, what it points at, the contrast of its pair when it is the one read under the other,
+ * and its value, as changed. Pressing it opens its control, beside the panel, over the components it changes.
+ */
+const TokenRow = ({ token }: { token: DesignToken }) => {
+	const changes = useTokenChanges();
+	const target = token.ref && changes.shown.find((t) => t.path === token.ref?.path);
+	const partner = isForeground(token) ? undefined : contrastPartner(token, changes.shown);
+	const ratio = partner ? contrastRatio(token.value, partner.value) : null;
+	const edited = isChanged(changes, token);
+	return (
+		<li data-token={token.path} data-changed={edited || undefined} title={`${token.source.file}:${token.source.line}`}>
+			<Popover>
+				<PopoverTrigger asChild>
+					<button
+						type="button"
+						aria-label={`Change ${labelOf(token)}`}
+						className="hover:bg-muted/50 data-[state=open]:bg-muted -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left text-sm"
+					>
+						{token.kind === 'color' && <Swatch value={token.value} />}
+						<span className={`min-w-0 truncate ${edited ? 'font-medium' : ''}`}>{token.name}</span>
+						{target && (
+							<span className="text-muted-foreground truncate text-xs">
+								{nameOf(target)}
+								{token.ref?.alpha && ` at ${opacity(token.ref.alpha)}`}
+							</span>
+						)}
+						{ratio !== null && <ContrastNote ratio={ratio} className="shrink-0 text-xs" />}
+						<span className="text-muted-foreground ml-auto shrink-0 font-mono text-xs">{token.value}</span>
+						{edited && <span data-changed-mark aria-label="Changed" className="bg-primary size-1.5 shrink-0 rounded-full" />}
+					</button>
+				</PopoverTrigger>
+				<PopoverContent side="left" align="start" className="w-72">
+					<TokenEditor token={token} />
+				</PopoverContent>
+			</Popover>
+		</li>
+	);
+};
 
 /** The sets of a group (or of a tab with one): each its name as a heading over its tokens, all listed. */
 const Sets = ({ tokens }: { tokens: DesignToken[] }) => (
@@ -113,10 +151,37 @@ const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tok
 	);
 };
 
-export const TokensPanel = ({ tokens }: { tokens: DesignTokens }) => {
+export const TokensPanel = ({
+	tokens,
+	edits,
+	onEdits,
+	live,
+}: {
+	tokens: DesignTokens;
+	/** The change being tried, and what changes it. */
+	edits: TokenEdit[];
+	onEdits: (edits: TokenEdit[]) => void;
+	/** Whether a component is open, so a change is seen as it is made. */
+	live: boolean;
+}) => {
 	const [current, setCurrent] = useState<string | null>(null);
 	const [queries, setQueries] = useState<Record<string, string>>({});
-	const categories = useMemo(() => inOrder(tokens.tokens, (t) => t.category), [tokens.tokens]);
+	const changes = useMemo((): TokenChanges => {
+		const read = new Map(tokens.tokens.map((t) => [t.path, t]));
+		return {
+			shown: withEdits(tokens.tokens, edits),
+			read,
+			edits,
+			// Always against the token as the library has it, whichever way it is shown.
+			change: (token, to) => {
+				const next = changed(edits, read, read.get(token.path) ?? token, to);
+				// The same change again (a step already chosen, a hex left as it was) builds nothing.
+				if (JSON.stringify(next) !== JSON.stringify(edits)) onEdits(next);
+			},
+			clear: () => onEdits([]),
+		};
+	}, [tokens.tokens, edits, onEdits]);
+	const categories = useMemo(() => inOrder(changes.shown, (t) => t.category), [changes.shown]);
 
 	if (tokens.source === null || categories.length === 0) {
 		return (
@@ -129,19 +194,27 @@ export const TokensPanel = ({ tokens }: { tokens: DesignTokens }) => {
 	// A category the library no longer has is not kept: the first is shown.
 	const active = categories.some(([c]) => c === current) ? (current as string) : (categories[0] as [string, DesignToken[]])[0];
 	return (
-		<PanelTabs value={active} onValueChange={setCurrent}>
-			<PanelTabsList>
-				{categories.map(([category]) => (
-					<PanelTabsTrigger key={category} value={category}>
-						{category}
-					</PanelTabsTrigger>
+		<TokenChangesContext.Provider value={changes}>
+			<ChangedTokens live={live} />
+			<PanelTabs value={active} onValueChange={setCurrent}>
+				<PanelTabsList>
+					{categories.map(([category]) => (
+						<PanelTabsTrigger key={category} value={category}>
+							{category}
+						</PanelTabsTrigger>
+					))}
+				</PanelTabsList>
+				{categories.map(([category, inCategory]) => (
+					<PanelTabsContent key={category} value={category}>
+						<TokensTab
+							category={category}
+							tokens={inCategory}
+							query={queries[category] ?? ''}
+							onQuery={(query) => setQueries((all) => ({ ...all, [category]: query }))}
+						/>
+					</PanelTabsContent>
 				))}
-			</PanelTabsList>
-			{categories.map(([category, inCategory]) => (
-				<PanelTabsContent key={category} value={category}>
-					<TokensTab category={category} tokens={inCategory} query={queries[category] ?? ''} onQuery={(query) => setQueries((all) => ({ ...all, [category]: query }))} />
-				</PanelTabsContent>
-			))}
-		</PanelTabs>
+			</PanelTabs>
+		</TokenChangesContext.Provider>
 	);
 };

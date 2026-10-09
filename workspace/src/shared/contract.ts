@@ -279,10 +279,21 @@ export interface DesignToken {
 	name: string;
 	/** A color as a hex (eight digits when it has an opacity), a dimension with its unit (`8px`). */
 	value: string;
-	/** A palette role's tone, and the opacity written after it. */
-	ref?: { tone: string; step: string; alpha?: string };
+	/**
+	 * The token it points at, when it is written as a pointer (a palette role's `pineGreen[50]`, a CSS `var(--ring)`, a
+	 * token file's `{color.red.500}`), by that token's `path`, and the opacity written after it. Its `value` is then the
+	 * pointed-at token's, with the opacity.
+	 */
+	ref?: { path: string; alpha?: string };
 	source: { file: string; line: number };
 }
+
+/**
+ * One token changed (T3, decision 19): pointed at another token (`ref`, a path, which keeps the link), or given a value
+ * of its own (`value`: a color as a hex, a dimension with its unit), which replaces any pointer. A change is a list of
+ * these, one per token, and nothing else.
+ */
+export type TokenEdit = { path: string; ref: string } | { path: string; value: string };
 
 /** Something in the library's token files that is not read, with where it is. */
 export interface TokenProblem {
@@ -405,8 +416,11 @@ export interface WorkspaceApi {
 	selectDesignSystem(id: string): Promise<Result<null>>;
 	/** Removes one connected: nothing on disk is deleted, only the connection. */
 	removeDesignSystem(id: string): Promise<Result<null>>;
-	/** The previews of the library's stories, built from its branch once per commit; waits for the build. */
-	storyPreview(): Promise<Result<StoryPreview>>;
+	/**
+	 * The previews of the library's stories, built from its branch once per commit; waits for the build. With `edits`, the
+	 * same stories built with those tokens changed (T3), written nowhere; with none, as the branch has them.
+	 */
+	storyPreview(edits: TokenEdit[]): Promise<Result<StoryPreview>>;
 	/** Where this person's clones go: the folder they chose, or the default. */
 	cloneFolder(): Promise<Result<string>>;
 	/** Asks for the clone folder with the system's folder picker, and keeps it. Null if the person cancels. */

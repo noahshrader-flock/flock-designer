@@ -76,7 +76,7 @@ const api: WorkspaceApi = {
 	chooseDesignSystem: (repository, folder) => invoke<DesignSystemConnection>(CHANNELS.chooseDesignSystem, repository, folder),
 	selectDesignSystem: (id) => invoke<null>(CHANNELS.selectDesignSystem, id),
 	removeDesignSystem: (id) => invoke<null>(CHANNELS.removeDesignSystem, id),
-	storyPreview: () => invoke<StoryPreview>(CHANNELS.storyPreview),
+	storyPreview: (edits) => invoke<StoryPreview>(CHANNELS.storyPreview, edits),
 	cloneFolder: () => invoke<string>(CHANNELS.cloneFolder),
 	chooseCloneFolder: () => invoke<string | null>(CHANNELS.chooseCloneFolder),
 	clonePlan: (repository, forDesignSystem) => invoke<ClonePlan>(CHANNELS.clonePlan, repository, forDesignSystem === true),

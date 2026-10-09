@@ -4,10 +4,14 @@
  * '#108062', … }`), a palette is an exported object with a `mode` (`lightPalette = { mode: 'light', primary: { main:
  * pineGreen[50] } }`), and the theme's spacing and radius are its `spacing` and its `shape.borderRadius`. Only files
  * whose path says colors, tokens, themes, palettes or tones are read; any other object in them is left alone.
+ *
+ * **A change is written as the library writes it** (decision 26): a tone step's hex as a quoted hex, a role pointed at
+ * another step of its tone as `pineGreen[60]` (with its opacity, as before), a role given its own color as a quoted hex,
+ * and the spacing or radius as its number of pixels.
  */
 import type { DesignToken, TokenProblem } from '../../../shared/contract';
-import { type Entry, exportedObjects, lineAt, literal, parseObject } from './objectLiteral';
-import { type TokenSource, capitalized, categoryOf, semanticFirst } from './source';
+import { type Entry, entryAt, exportedObjects, lineAt, literal, parseObject, replaced } from './objectLiteral';
+import { type TokenSource, capitalized, categoryOf, notWhereRead, semanticFirst } from './source';
 
 const SCRIPT = /\.(ts|tsx|js|jsx|mjs)$/;
 const THEME_PATH = /(^|\/)(colou?rs?|tokens?|themes?|palettes?|tones?)(\/|\.|$)/i;
@@ -22,7 +26,8 @@ const colorOf = (text: string, tones: Map<string, Map<string, string>>): { value
 	const [tone, step, alpha] = m[1] ? [m[1], m[2] as string, undefined] : [m[3] as string, m[4] as string, m[5]];
 	const value = tones.get(tone)?.get(step);
 	if (value === undefined) return `${text} points at a tone step the library does not have`;
-	return { value: alpha ? `${value}${alpha.toUpperCase()}` : value, ref: alpha ? { tone, step, alpha } : { tone, step } };
+	const path = `tone.${tone}.${step}`;
+	return { value: alpha ? `${value}${alpha.toUpperCase()}` : value, ref: alpha ? { path, alpha } : { path } };
 };
 
 /** An object of numbered steps, at least one of them a hex color: a tone family. */
@@ -37,16 +42,28 @@ const modeOf = (entries: Entry[]): string | null => {
 	return mode?.kind === 'value' ? (/^(['"])(\w+)\1/.exec(mode.text)?.[2] ?? null) : null;
 };
 
-/** A whole number a theme sets: `const spacing = 8;`, or `spacing: 8` in `createTheme({ … })`; with its line. */
-const themeNumber = (text: string, key: string, inside: RegExp): { value: string; line: number } | null => {
+/** The theme's numbers the panel shows, by token path: the key a theme sets each with, and the object it is set in. */
+const THEME_NUMBERS: { path: string; key: string; inside: RegExp }[] = [
+	{ path: 'spacing', key: 'spacing', inside: /createTheme\(\s*\{/ },
+	{ path: 'radius', key: 'borderRadius', inside: /\bshape\b[^={]*[=:]\s*\{/ },
+];
+
+/**
+ * A whole number a theme sets: `const spacing = 8;`, or `spacing: 8` in `createTheme({ … })`; with its line, and where
+ * the number is written.
+ */
+const themeNumber = (text: string, { key, inside }: (typeof THEME_NUMBERS)[number]): { value: string; line: number; span: [number, number] } | null => {
 	const constant = new RegExp(`\\bconst\\s+${key}\\s*=\\s*(\\d+)\\s*;`).exec(text);
-	if (constant) return { value: constant[1] as string, line: lineAt(text, constant.index) };
+	if (constant) {
+		const at = constant.index + (constant[0].length - constant[0].replace(/^.*?=\s*/, '').length);
+		return { value: constant[1] as string, line: lineAt(text, constant.index), span: [at, at + (constant[1] as string).length] };
+	}
 	const open = inside.exec(text);
 	if (!open) return null;
 	const { node } = parseObject(text, open.index + open[0].length - 1);
 	const entry = node.kind === 'object' ? node.entries.find((e) => e.key === key) : undefined;
 	const value = entry?.value.kind === 'value' ? /^\d+$/.exec(entry.value.text)?.[0] : undefined;
-	return value && entry ? { value, line: entry.line } : null;
+	return value && entry ? { value, line: entry.line, span: entry.span } : null;
 };
 
 export const themeFiles: TokenSource = {
@@ -125,13 +142,10 @@ export const themeFiles: TokenSource = {
 		if (tones.size === 0 && palettes.length === 0) return null;
 
 		// The theme's base spacing and radius, in pixels, from the first file that sets them.
-		const theme: [string, RegExp][] = [
-			['spacing', /createTheme\(\s*\{/],
-			['radius', /\bshape\b[^={]*[=:]\s*\{/],
-		];
-		for (const [name, inside] of theme) {
+		for (const number of THEME_NUMBERS) {
+			const name = number.path;
 			for (const [file, text] of texts) {
-				const found = themeNumber(text, name === 'radius' ? 'borderRadius' : name, inside);
+				const found = themeNumber(text, number);
 				if (!found) continue;
 				tokens.push({ path: name, kind: 'dimension', category: categoryOf('dimension', name) as string, group: capitalized(name), set: name, name: 'base', value: `${found.value}px`, source: { file, line: found.line } });
 				break;
@@ -139,5 +153,26 @@ export const themeFiles: TokenSource = {
 		}
 		// The tones are the primitives the palettes are made from: after them.
 		return { source: themeFiles.name, tokens: semanticFirst(tokens, (t) => t.group === 'Tones'), problems };
+	},
+
+	edit: (text, token, to) => {
+		if (token.kind === 'dimension') {
+			const number = THEME_NUMBERS.find((n) => n.path === token.path);
+			const found = number && themeNumber(text, number);
+			if (!found || found.line !== token.source.line) throw notWhereRead(token);
+			const px = 'value' in to ? /^(\d+)px$/.exec(to.value)?.[1] : undefined;
+			if (px === undefined) throw new Error(`The theme sets ${token.path} as a whole number of pixels, so it cannot be ${'value' in to ? to.value : 'a pointer'}.`);
+			return replaced(text, found.span, px);
+		}
+		const entry = entryAt(text, token.name, token.source.line);
+		if (!entry || entry.value.kind !== 'value') throw notWhereRead(token);
+		if ('value' in to) return replaced(text, entry.span, `'${to.value.toUpperCase()}'`);
+		// A role points at a tone step; the tone must already be in the file, which is what makes it reachable there.
+		const step = /^tone\.(\w+)\.(\d+)$/.exec(to.ref.path);
+		if (!step) throw new Error(`${token.path} can point only at a tone step, not at ${to.ref.path}.`);
+		const [tone, at] = [step[1] as string, step[2] as string];
+		if (!new RegExp(`\\b${tone}\\b`).test(text)) throw new Error(`${token.source.file} does not use ${tone}, so ${token.path} cannot point at it there.`);
+		const alpha = token.ref?.alpha;
+		return replaced(text, entry.span, alpha ? `\`\${${tone}[${at}]}${alpha}\`` : `${tone}[${at}]`);
 	},
 };

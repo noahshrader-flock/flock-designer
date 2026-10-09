@@ -1,15 +1,28 @@
 /**
  * What every way of finding a library's tokens shares (decision 18): the shape of a source, which of the library's files
- * are its own, and the one rule for which tab a token is on. A source decides only what its files mean.
+ * are its own, and the one rule for which tab a token is on. A source decides only what its files mean, and how a change
+ * is written back into them (decision 26).
  */
 import type { DesignToken, DesignTokens } from '../../../shared/contract';
 import type { CatalogReads } from '../componentCatalog';
 
-/** A way a library can keep its tokens: given the library's own files, the list when it finds tokens there, else `null`. */
+/** What a token is changed to: pointed at another token, or given a value of its own (checked for its kind already). */
+export type TokenChange = { ref: DesignToken } | { value: string };
+
+/**
+ * A way a library can keep its tokens: given the library's own files, the list when it finds tokens there, else `null`;
+ * and the text of a token's file with the token changed, written as the library writes it, in its place and nowhere
+ * else. A source that cannot write a change says why, by throwing.
+ */
 export interface TokenSource {
 	name: string;
 	read(reads: CatalogReads, files: string[]): Promise<Omit<DesignTokens, 'looked'> | null>;
+	edit(text: string, token: DesignToken, to: TokenChange): string;
 }
+
+/** What a writer says when the place a token was read from is not there to write to. */
+export const notWhereRead = (token: DesignToken): Error =>
+	new Error(`${token.path} is not written where it was read (${token.source.file}:${token.source.line}), so it was not changed.`);
 
 /**
  * The library's own files: not what is installed, built or generated, and not its tests or stories, which use tokens
@@ -43,6 +56,3 @@ export const semanticFirst = (tokens: DesignToken[], isPrimitive: (t: DesignToke
 
 /** A word as a heading has it: `light` is `Light`. */
 export const capitalized = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
-
-/** A CSS length the panel shows as a dimension: `8px`, `0.25rem`, `1.5em`. */
-export const DIMENSION = /^-?\d*\.?\d+(px|rem|em)$/;

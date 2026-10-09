@@ -174,9 +174,12 @@ describe('the Design System tab', () => {
 		expect(await call(CHANNELS.designSystems)).toEqual({ ok: true, value: { systems: [], current: null } });
 	});
 
-	it('has no previews to build when there is no design system, and takes nothing from the window', async () => {
+	it('has no previews to build when there is no design system, and takes only a list of token edits from the window', async () => {
 		expect(await call(CHANNELS.storyPreview)).toEqual({ ok: true, value: { state: 'no-library' } });
-		expect(await call(CHANNELS.storyPreview, '/etc', 'x')).toEqual({ ok: true, value: { state: 'no-library' } });
+		expect(await call(CHANNELS.storyPreview, [{ path: 'spacing', value: '6px' }])).toEqual({ ok: true, value: { state: 'no-library' } });
+		// A path, or code where a value goes, is not a change.
+		expect(await call(CHANNELS.storyPreview, '/etc', 'x')).toMatchObject({ ok: false });
+		expect(await call(CHANNELS.storyPreview, [{ path: 'spacing', value: 6 }])).toMatchObject({ ok: false });
 	});
 
 	describe('connecting one (P4)', () => {

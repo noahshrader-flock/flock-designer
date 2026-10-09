@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-import { act, createElement } from 'react';
+import { act, createElement, useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { TokensPanel } from '../src/renderer/TokensPanel';
-import type { DesignToken, DesignTokens } from '../src/shared/contract';
-import { press, render, settle, typeInto, unmountAll } from './reviewHarness';
+import type { DesignToken, DesignTokens, TokenEdit } from '../src/shared/contract';
+import { button, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
 /**
  * The tokens panel (T2 of the design system plan), read only: the list T1 reads, in collapsible groups, each set of
@@ -29,17 +29,24 @@ const TOKENS: DesignTokens = {
 		color('tone.pineGreen.50', 'Tones', 'pineGreen', '50', '#108062'),
 		color('tone.pineGreen.20', 'Tones', 'pineGreen', '20', '#18372F'),
 		color('tone.red.40', 'Tones', 'red', '40', '#BA1A1A'),
-		color('palette.light.primary.main', 'Light', 'primary', 'main', '#108062', { ref: { tone: 'pineGreen', step: '50' } }),
-		color('palette.light.primaryBorder.main', 'Light', 'primaryBorder', 'main', '#18372F66', { ref: { tone: 'pineGreen', step: '20', alpha: '66' } }),
-		color('palette.dark.primary.main', 'Dark', 'primary', 'main', '#C7E7DD', { ref: { tone: 'pineGreen', step: '90' } }),
+		color('palette.light.primary.main', 'Light', 'primary', 'main', '#108062', { ref: { path: 'tone.pineGreen.50' } }),
+		color('palette.light.primaryBorder.main', 'Light', 'primaryBorder', 'main', '#18372F66', { ref: { path: 'tone.pineGreen.20', alpha: '66' } }),
+		color('palette.dark.primary.main', 'Dark', 'primary', 'main', '#C7E7DD', { ref: { path: 'tone.pineGreen.90' } }),
 		{ path: 'spacing', kind: 'dimension', category: 'Spacing', group: 'Spacing', set: 'spacing', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 2 } },
 		{ path: 'radius', kind: 'dimension', category: 'Shape', group: 'Radius', set: 'radius', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 5 } },
 	],
 };
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
-const show = async (tokens: DesignTokens = TOKENS) => {
-	current = await render(createElement(TokensPanel, { tokens }));
+/** Every change the panel made, newest last: the tab keeps the change, as `DesignSystem` does. */
+let made: TokenEdit[][] = [];
+const Tab = ({ tokens, live }: { tokens: DesignTokens; live: boolean }) => {
+	const [edits, setEdits] = useState<TokenEdit[]>([]);
+	return createElement(TokensPanel, { tokens, edits, live, onEdits: (e: TokenEdit[]) => (made.push(e), setEdits(e)) });
+};
+const show = async (tokens: DesignTokens = TOKENS, live = true) => {
+	made = [];
+	current = await render(createElement(Tab, { tokens, live }));
 };
 afterEach(async () => {
 	if (current) await unmountAll(current.root);
@@ -148,13 +155,13 @@ describe('a set', () => {
 		await show();
 		await press(group('Tones'));
 		await settle();
-		const step = row('tone.pineGreen.50') as HTMLElement;
+		const step = row('tone.pineGreen.50')?.querySelector('button') as HTMLElement;
 		expect(step.firstElementChild?.getAttribute('data-swatch')).not.toBeNull();
 		expect(step.querySelector<HTMLElement>('[data-swatch]')?.style.backgroundColor).toBe('rgb(16, 128, 98)');
 		expect(step.textContent).toContain('50');
 		expect(step.lastElementChild?.textContent).toBe('#108062');
 		// Where it is written, line and all, for whoever wants to find it.
-		expect(step.getAttribute('title')).toBe('src/colors/tones/pineGreen.ts:3');
+		expect(row('tone.pineGreen.50')?.getAttribute('title')).toBe('src/colors/tones/pineGreen.ts:3');
 	});
 
 	it('says which tone a palette role points at, and its opacity', async () => {
@@ -237,5 +244,223 @@ describe('what it could not read', () => {
 		expect(text()).toContain('Looked for theme files, CSS variables, token files.');
 		expect(tabs()).toHaveLength(0);
 		expect(document.querySelector('input[type="search"]')).toBeNull();
+	});
+});
+
+describe('changing a token (T3)', () => {
+	/** Opens a token's control from its row, as a press does, on its tab and in its group. */
+	const open = async (path: string, groupName?: string) => {
+		if (groupName) {
+			await press(group(groupName));
+			await settle();
+		}
+		await press(row(path)?.querySelector('button') as HTMLElement);
+		await settle();
+		return document.querySelector<HTMLElement>(`[data-token-editor="${path}"]`) as HTMLElement;
+	};
+	const changedList = () => document.querySelector<HTMLElement>('[data-changed-tokens]');
+	/** Sets a color input as a person picking one does, then closes the picker (its `change`). */
+	const pick = (input: HTMLInputElement, value: string, close = true) =>
+		act(async () => {
+			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value);
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+			if (close) input.dispatchEvent(new Event('change', { bubbles: true }));
+		});
+
+	it('opens from a row, beside the panel: no control is on a row until it is opened', async () => {
+		await show();
+		await press(group('Light'));
+		await settle();
+		expect(document.querySelector('input[type="color"]')).toBeNull();
+		const editor = await open('palette.light.primary.main');
+		expect(editor.textContent).toContain('Light primary main');
+		expect(editor.textContent).toContain('src/colors/theme/light.ts:3');
+	});
+
+	it('points a role at another step of its tone by default, which keeps the link', async () => {
+		await show();
+		const editor = await open('palette.light.primary.main', 'Light');
+		expect(editor.textContent).toContain('Points at pineGreen 50');
+		const steps = [...editor.querySelectorAll<HTMLButtonElement>('[aria-label="Steps of pineGreen"] button')];
+		expect(steps.map((s) => s.getAttribute('aria-label'))).toEqual(['pineGreen 50', 'pineGreen 20']);
+		expect(steps.map((s) => s.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+		// No color picker until it is asked for: a custom color is the second choice.
+		expect(editor.querySelector('input[type="color"]')).toBeNull();
+		await press(steps[1] as HTMLButtonElement);
+		await settle();
+		expect(made.at(-1)).toEqual([{ path: 'palette.light.primary.main', ref: 'tone.pineGreen.20' }]);
+		expect(row('palette.light.primary.main')?.textContent).toContain('pineGreen 20');
+		expect(row('palette.light.primary.main')?.textContent).toContain('#18372F');
+		expect(row('palette.light.primary.main')?.hasAttribute('data-changed')).toBe(true);
+	});
+
+	it('gives a role a custom color only when asked, saying it cuts the link', async () => {
+		await show();
+		const editor = await open('palette.light.primary.main', 'Light');
+		await press(button('Use a custom color', editor));
+		await settle();
+		expect(editor.textContent).toContain('A custom color replaces the pointer: a later change to pineGreen will not reach it.');
+		const hex = editor.querySelector<HTMLInputElement>('input[aria-label="Hex"]') as HTMLInputElement;
+		await typeInto(hex, '#123456');
+		await act(async () => void hex.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+		await settle();
+		expect(made.at(-1)).toEqual([{ path: 'palette.light.primary.main', value: '#123456' }]);
+		expect(row('palette.light.primary.main')?.textContent).not.toContain('pineGreen');
+	});
+
+	it('changes a tone with a picker and its hex, when the picker is closed, and the roles that point at it follow', async () => {
+		await show();
+		const editor = await open('tone.pineGreen.50', 'Tones');
+		expect(editor.textContent).toContain('Used by 1 role');
+		const picker = editor.querySelector<HTMLInputElement>('input[type="color"]') as HTMLInputElement;
+		// Moving through colors builds nothing: only closing the picker does.
+		await pick(picker, '#0a6b52', false);
+		expect(made).toEqual([]);
+		await pick(picker, '#0a6b52');
+		expect(made.at(-1)).toEqual([{ path: 'tone.pineGreen.50', value: '#0A6B52' }]);
+		await press(group('Light'));
+		await settle();
+		expect(row('palette.light.primary.main')?.textContent).toContain('#0A6B52');
+	});
+
+	it('refuses a hex that is not one, and keeps what it was', async () => {
+		await show();
+		const editor = await open('tone.pineGreen.50', 'Tones');
+		const hex = editor.querySelector<HTMLInputElement>('input[aria-label="Hex"]') as HTMLInputElement;
+		await typeInto(hex, 'green');
+		await act(async () => void hex.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+		await settle();
+		expect(made).toEqual([]);
+		expect(hex.value).toBe('#108062');
+	});
+
+	it('changes a dimension with a slider and its number, when the slider is let go of', async () => {
+		await show();
+		await choose('Spacing');
+		const editor = await open('spacing');
+		const thumb = editor.querySelector<HTMLElement>('[role="slider"]') as HTMLElement;
+		expect(thumb.getAttribute('aria-label')).toBe('spacing base');
+		expect(thumb.getAttribute('aria-valuemax')).toBe('32');
+		await act(async () => void thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })));
+		await settle();
+		expect(made.at(-1)).toEqual([{ path: 'spacing', value: '9px' }]);
+	});
+
+	it('lists what was changed above the tabs, from what it was to what it is, with a reset for each and for all', async () => {
+		await show();
+		const editor = await open('palette.light.primary.main', 'Light');
+		await press(editor.querySelector('[aria-label="pineGreen 20"]') as HTMLElement);
+		await settle();
+		const list = changedList() as HTMLElement;
+		expect(list.compareDocumentPosition(tabs()[0] as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(list.querySelector('h3')?.textContent).toBe('Changed 1');
+		expect(list.querySelector('[data-change="palette.light.primary.main"]')?.textContent).toContain('pineGreen 50 → pineGreen 20');
+		expect(list.textContent).toContain('Tried in the previews. Nothing is saved.');
+		await press(button('Reset Light primary main'));
+		await settle();
+		expect(made.at(-1)).toEqual([]);
+		expect(changedList()).toBeNull();
+	});
+
+	it('resets every change at once', async () => {
+		await show();
+		await open('tone.pineGreen.50', 'Tones');
+		await pick(document.querySelector('input[type="color"]') as HTMLInputElement, '#000000');
+		await press(button('Change Tones red 40'));
+		await settle();
+		await pick(document.querySelector('[data-token-editor="tone.red.40"] input[type="color"]') as HTMLInputElement, '#FFFFFF');
+		expect(made.at(-1)).toHaveLength(2);
+		await press(button('Reset all'));
+		await settle();
+		expect(made.at(-1)).toEqual([]);
+	});
+
+	it('makes no change, and so builds nothing, when the same change is made again', async () => {
+		await show();
+		const editor = await open('palette.light.primary.main', 'Light');
+		await press(editor.querySelector('[aria-label="pineGreen 50"]') as HTMLElement);
+		await settle();
+		const hex = (await open('tone.pineGreen.50', 'Tones')).querySelector<HTMLInputElement>('input[aria-label="Hex"]') as HTMLInputElement;
+		await act(async () => void hex.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
+		await settle();
+		expect(made).toEqual([]);
+	});
+
+	it('is no change when a token is changed back to what the library has', async () => {
+		await show();
+		const editor = await open('palette.light.primary.main', 'Light');
+		await press(editor.querySelector('[aria-label="pineGreen 20"]') as HTMLElement);
+		await settle();
+		await press(document.querySelector('[data-token-editor="palette.light.primary.main"] [aria-label="pineGreen 50"]') as HTMLElement);
+		await settle();
+		expect(made.at(-1)).toEqual([]);
+	});
+
+	it('says to open a component when none is open, as nothing on the list shows a change', async () => {
+		await show(TOKENS, false);
+		await open('tone.pineGreen.50', 'Tones');
+		await pick(document.querySelector('input[type="color"]') as HTMLInputElement, '#000000');
+		expect(changedList()?.textContent).toContain('Open a component to see them. Nothing is saved.');
+	});
+
+	describe('what it says a change does', () => {
+		const PAIR: DesignTokens = {
+			...TOKENS,
+			tokens: [
+				color('palette.light.primary.main', 'Light', 'primary', 'main', '#108062'),
+				color('palette.light.primary.contrastText', 'Light', 'primary', 'contrastText', '#FFFFFF'),
+				// Written once, in a palette both modes spread in: one place, two tokens.
+				color('palette.light.info.main', 'Light', 'info', 'main', '#0000FF', { source: { file: 'src/colors/theme/shared.ts', line: 4 } }),
+				color('palette.dark.info.main', 'Dark', 'info', 'main', '#0000FF', { source: { file: 'src/colors/theme/shared.ts', line: 4 } }),
+			],
+		};
+
+		it('shows a pair’s contrast on the row read under the other, and warns below AA', async () => {
+			await show(PAIR);
+			await press(group('Light'));
+			await settle();
+			const ratio = () => row('palette.light.primary.main')?.querySelector<HTMLElement>('[data-contrast]');
+			expect(ratio()?.textContent).toBe('4.8:1');
+			expect(ratio()?.className).toContain('text-muted-foreground');
+			expect(row('palette.light.primary.contrastText')?.querySelector('[data-contrast]')).toBeNull();
+			const editor = await open('palette.light.primary.main');
+			expect(editor.textContent).toContain('Contrast with contrastText: 4.8:1, passes AA for text');
+			await pick(editor.querySelector('input[type="color"]') as HTMLInputElement, '#BBBBBB');
+			expect(ratio()?.textContent).toBe('1.9:1');
+			expect(ratio()?.className).toContain('text-warning');
+			expect(document.querySelector('[data-token-editor]')?.textContent).toContain('below AA, which asks 4.5:1 for text');
+		});
+
+		it('says when a token is written in one place with another, and marks both as changed', async () => {
+			await show(PAIR);
+			const editor = await open('palette.light.info.main', 'Light');
+			expect(editor.textContent).toContain('Also changes Dark info main: written in one place.');
+			await pick(editor.querySelector('input[type="color"]') as HTMLInputElement, '#00FF00');
+			await press(group('Dark'));
+			await settle();
+			expect(row('palette.dark.info.main')?.hasAttribute('data-changed')).toBe(true);
+			expect(row('palette.dark.info.main')?.textContent).toContain('#00FF00');
+		});
+	});
+});
+
+describe('naming and reach (T3)', () => {
+	it('names a token with where it is shown, without saying a word twice', async () => {
+		await show();
+		await choose('Shape');
+		expect(row('radius')?.querySelector('button')?.getAttribute('aria-label')).toBe('Change Radius base');
+	});
+
+	it('says a step of a family roles point at is used by none, when none points at it', async () => {
+		await show();
+		await press(group('Tones'));
+		await settle();
+		await press(row('tone.pineGreen.20')?.querySelector('button') as HTMLElement);
+		await settle();
+		// primaryBorder points at pineGreen 20; red is a family no role points into, so it says nothing.
+		expect(document.querySelector('[data-token-editor="tone.pineGreen.20"] [data-reach]')?.textContent).toBe('Used by 1 role');
+		await press(row('tone.red.40')?.querySelector('button') as HTMLElement);
+		await settle();
+		expect(document.querySelector('[data-token-editor="tone.red.40"] [data-reach]')).toBeNull();
 	});
 });
