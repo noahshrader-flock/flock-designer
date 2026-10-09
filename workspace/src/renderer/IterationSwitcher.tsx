@@ -1,6 +1,7 @@
 import { ChevronDownIcon, HistoryIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { byVersion, iterationLabel, latestIterationName, parsePrototypeName } from '../shared/projects';
+import { stateLabel } from '../shared/prototypeStates';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
@@ -164,7 +165,7 @@ export const StateSwitcher = ({ states, current, onSelect }: { states: string[];
 		>
 			{states.map((s) => (
 				<ToggleGroupItem key={s} value={s}>
-					{s}
+					{stateLabel(s)}
 				</ToggleGroupItem>
 			))}
 		</ToggleGroup>

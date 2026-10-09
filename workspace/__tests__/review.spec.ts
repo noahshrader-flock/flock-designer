@@ -522,18 +522,18 @@ describe('the prototype’s states', () => {
 	const withStates = (states: string[]) => fakeApp({ openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1/', states }) });
 
 	it('are a group of buttons in the bar, and pressing one opens the preview in it', async () => {
-		const app = withStates(['default', 'no-match', 'panel']);
+		const app = withStates(['default', 'filtered', 'panel']);
 		await open(app);
 		await settle();
 		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/']);
-		expect(stateButtons().map((s) => s.textContent)).toEqual(['default', 'no-match', 'panel']);
-		expect(shownState()).toBe('default');
-		await press(state('no-match'));
+		expect(stateButtons().map((s) => s.textContent)).toEqual(['Default', 'Filtered', 'Panel']);
+		expect(shownState()).toBe('Default');
+		await press(state('Filtered'));
 		await settle();
-		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/?state=no-match']);
-		expect(shownState()).toBe('no-match');
+		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/?state=filtered']);
+		expect(shownState()).toBe('Filtered');
 		// The first is the page as it opens.
-		await press(state('default'));
+		await press(state('Default'));
 		await settle();
 		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/']);
 	});
@@ -552,7 +552,7 @@ describe('the prototype’s states', () => {
 		await open(app);
 		await settle();
 		await sidebar();
-		expect(cardFor('On the panel').textContent).toContain('State: panel');
+		expect(cardFor('On the panel').textContent).toContain('State: Panel');
 		expect(cardFor('On the panel').textContent).not.toContain('?state=');
 		expect(cardFor('On the page as it opens').textContent).not.toContain('State:');
 		expect(cardFor('Before states were recorded').textContent).not.toContain('State:');
@@ -573,10 +573,10 @@ describe('the prototype’s states', () => {
 			await open(app);
 			await settle();
 			await sidebar();
-			await press(button('Show in panel', cardFor('On the panel')));
+			await press(button('Show in Panel', cardFor('On the panel')));
 			await settle();
 			expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/?state=panel']);
-			expect(shownState()).toBe('panel');
+			expect(shownState()).toBe('Panel');
 			// Pressing it is not choosing the comment.
 			expect(cardFor('On the panel').className).not.toContain('border-primary');
 		});
@@ -586,7 +586,7 @@ describe('the prototype’s states', () => {
 			await open(app);
 			await settle();
 			await sidebar();
-			await press(button('Show in default', cardFor('On the panel')));
+			await press(button('Show in Default', cardFor('On the panel')));
 			await settle();
 			expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/']);
 		});
@@ -595,7 +595,7 @@ describe('the prototype’s states', () => {
 			await open(elsewhere('?state=gone'));
 			await settle();
 			await sidebar();
-			expect([...cardFor('On the panel').querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Show in gone');
+			expect([...cardFor('On the panel').querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Show in Gone');
 			expect(cardFor('On the panel').textContent).toContain('Made in a different state of this page, so it is not pinned here.');
 		});
 	});

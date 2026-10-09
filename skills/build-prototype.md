@@ -90,11 +90,13 @@ when the prototype moves into the code:
 - **Give the things people will comment on a stable name**, `data-e2e-ref="<name>"`, in plain words:
   `invite-button`, `members-table`, `empty-state`.
 - **Say which states it has, and draw no way between them.** List them as
-  `export const states = ['default', 'no-match', 'panel'] as const;`, plain lowercase names, the first
-  being the one most people should see first. The page reads its state from `?state=<name>` (the first
-  when there is none). The bar above the page, in the app and on the published page, offers the list,
-  so a switcher drawn in the page is never needed and covers what it shows. The build reads the list
-  as written, so keep it a plain list of names; one it cannot read fails the build and says why.
+  `export const states = ['default', 'filtered', 'panel'] as const;`, **each one lowercase word** (letters
+  and digits, no hyphens: `filtered`, not `no-match`), the first being the one most people should see
+  first. The bar shows each with a capital (Filtered), so write the name only as it goes in the address.
+  The page reads its state from `?state=<name>` (the first when there is none). The bar above the page,
+  in the app and on the published page, offers the list as a row of buttons, so a switcher drawn in the
+  page is never needed and covers what it shows. The build reads the list as written, so keep it a
+  plain list of one-word names; one it cannot read fails the build and says why.
 - **A state shows the situation at rest.** A dialog open, yes; a menu or dropdown inside it already
   expanded, no. Anything that closes on the next click hides what the state exists to show.
 - **Start the file with a block comment** that says what the page shows, where in the product it sits,

@@ -91,9 +91,9 @@ describe('bundling a React prototype into one page', () => {
 		const page = 'export default function Prototype() { return null; }\n';
 
 		it('are written into the page, in order, for the bar to offer', async () => {
-			const r = await build(`export const states = ['default', 'no-match', "panel-error"] as const;\n${page}`);
+			const r = await build(`export const states = ['default', 'filtered', "failed"] as const;\n${page}`);
 			expect(r.ok).toBe(true);
-			expect(statesOf(r.html as string)).toEqual(['default', 'no-match', 'panel-error']);
+			expect(statesOf(r.html as string)).toEqual(['default', 'filtered', 'failed']);
 		});
 
 		it('may be typed, and laid over several lines', async () => {
@@ -107,10 +107,11 @@ describe('bundling a React prototype into one page', () => {
 		});
 
 		it('fail the build, saying why, when the list is not plain names, or names one twice', async () => {
-			for (const states of ["['default', 'Has Spaces']", "['default', name]", "['default', 'empty', 'default']", '[]', 'makeStates()']) {
+			for (const states of ["['default', 'Has Spaces']", "['default', 'no-match']", "['default', name]", "['default', 'empty', 'default']", '[]', 'makeStates()']) {
 				const r = await build(`const name = 'x';\nexport const states = ${states};\n${page}`);
 				expect(r.ok, states).toBe(false);
 				expect(r.output).toContain('export const states');
+				expect(r.output).toContain('each one word');
 				expect(r.html).toBeNull();
 			}
 		});

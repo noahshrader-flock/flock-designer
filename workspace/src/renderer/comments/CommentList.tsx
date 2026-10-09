@@ -1,7 +1,7 @@
 import { CircleCheckIcon, EllipsisVerticalIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import type { MarkerState, ReviewComment } from '../../shared/contract';
-import { stateOfQuery } from '../../shared/prototypeStates';
+import { stateLabel, stateOfQuery } from '../../shared/prototypeStates';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -111,7 +111,7 @@ export const CommentList = ({
 							)}
 							<p className="text-sm">{comment.body}</p>
 							{comment.picture && <img className="max-w-[240px] rounded border" src={comment.picture} alt={`The spot comment ${n || ''} was made on`} />}
-							{madeIn && <span className="text-muted-foreground text-xs">State: {madeIn}</span>}
+							{madeIn && <span className="text-muted-foreground text-xs">State: {stateLabel(madeIn)}</span>}
 							{comment.anchor && state === 'elsewhere' && <span className="text-muted-foreground text-xs">On {comment.anchor.route}</span>}
 							{state && NOTE[state] && <span className="text-warning text-xs">{NOTE[state]}</span>}
 							{showIn && (
@@ -125,7 +125,7 @@ export const CommentList = ({
 										onShowState?.(madeIn);
 									}}
 								>
-									Show in {showIn}
+									Show in {stateLabel(showIn)}
 								</Button>
 							)}
 						</div>

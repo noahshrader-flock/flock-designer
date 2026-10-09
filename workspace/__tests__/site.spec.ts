@@ -246,10 +246,10 @@ describe('comments on the page', () => {
 		const viewer = join(root, 'viewer');
 		mkdirSync(viewer);
 		for (const f of ['viewer.js', 'viewer.css']) writeFileSync(join(viewer, f), '');
-		writeFileSync(join(design, 'projects', 'alpha', 'prototypes', 'v2-i1.html'), page('Alpha two').replace('<head>', '<head><meta name="flkd-states" content="default,no-match,panel">'));
+		writeFileSync(join(design, 'projects', 'alpha', 'prototypes', 'v2-i1.html'), page('Alpha two').replace('<head>', '<head><meta name="flkd-states" content="default,filtered,panel">'));
 		build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } });
 		const config = JSON.parse(/<script type="application\/json" id="flkd-config">([^<]*)<\/script>/.exec(read('alpha/v2/i1/index.html'))?.[1] ?? 'null');
-		expect(config.states).toEqual(['default', 'no-match', 'panel']);
+		expect(config.states).toEqual(['default', 'filtered', 'panel']);
 	});
 
 	it('leaves the pages as they were without it', () => {

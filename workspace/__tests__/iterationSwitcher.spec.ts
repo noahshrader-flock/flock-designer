@@ -122,7 +122,7 @@ describe('for codebase work', () => {
 });
 
 describe('a prototype’s states', () => {
-	const STATES = ['default', 'no-match', 'panel'];
+	const STATES = ['default', 'filtered', 'panel'];
 	const showStates = async (more: Record<string, unknown> = {}) => {
 		const onSelect = vi.fn();
 		current = await render(createElement(StateSwitcher, { states: STATES, current: null, onSelect, ...more } as never));
@@ -132,36 +132,36 @@ describe('a prototype’s states', () => {
 	it('are a group of buttons, one each, in the prototype’s own order', async () => {
 		await showStates();
 		expect(stateGroup()).not.toBeNull();
-		expect(stateButtons().map((b) => b.textContent)).toEqual(STATES);
+		expect(stateButtons().map((b) => b.textContent)).toEqual(['Default', 'Filtered', 'Panel']);
 	});
 
 	it('press the one you are on, the first until another is chosen', async () => {
 		await showStates();
-		expect(shownState()).toBe('default');
+		expect(shownState()).toBe('Default');
 		expect(stateButtons().map((b) => b.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
 		await unmountAll(current!.root);
 		await showStates({ current: 'panel' });
-		expect(shownState()).toBe('panel');
+		expect(shownState()).toBe('Panel');
 	});
 
 	it('go to the state chosen, and back to the first as the one the page opens in', async () => {
 		const onSelect = await showStates({ current: 'panel' });
-		await press(state('no-match'));
-		expect(onSelect).toHaveBeenLastCalledWith('no-match');
-		await press(state('default'));
+		await press(state('Filtered'));
+		expect(onSelect).toHaveBeenLastCalledWith('filtered');
+		await press(state('Default'));
 		expect(onSelect).toHaveBeenLastCalledWith(null);
 	});
 
 	it('do nothing when the one you are on is pressed again, rather than leaving none shown', async () => {
 		const onSelect = await showStates({ current: 'panel' });
-		await press(state('panel'));
+		await press(state('Panel'));
 		expect(onSelect).not.toHaveBeenCalled();
-		expect(shownState()).toBe('panel');
+		expect(shownState()).toBe('Panel');
 	});
 
 	it('show the first for a state the prototype no longer has, as the page then does', async () => {
 		await showStates({ current: 'gone' });
-		expect(shownState()).toBe('default');
+		expect(shownState()).toBe('Default');
 	});
 
 	it('are the normal size of the bar, joined into one control, and are not words in a menu', async () => {

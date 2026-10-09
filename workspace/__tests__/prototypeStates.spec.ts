@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { stateOfQuery, statesOf, withState } from '../src/shared/prototypeStates';
+import { stateLabel, stateOfQuery, statesOf, withState } from '../src/shared/prototypeStates';
 
 /** A prototype's states, as its built page lists them, and the address of each. */
 
 describe('statesOf', () => {
 	it('reads the list the build wrote into the page, in order', () => {
-		expect(statesOf('<head>\n<meta name="flkd-states" content="default,no-match,panel-error">\n</head>')).toEqual(['default', 'no-match', 'panel-error']);
+		expect(statesOf('<head>\n<meta name="flkd-states" content="default,filtered,failed">\n</head>')).toEqual(['default', 'filtered', 'failed']);
 	});
 
 	it('is none for a page with no list, or one that is not a list of names', () => {
@@ -13,10 +13,22 @@ describe('statesOf', () => {
 		expect(statesOf('<meta name="flkd-states" content="">')).toEqual([]);
 		expect(statesOf('<meta name="flkd-states" content="default,Has Spaces">')).toEqual([]);
 	});
+
+	it('is none for a list with a name of more than one word: a state is one word', () => {
+		expect(statesOf('<meta name="flkd-states" content="default,no-match">')).toEqual([]);
+	});
+});
+
+describe('stateLabel', () => {
+	it('starts the name with a capital, which is how it is shown; the name itself, in the address, stays as it is', () => {
+		expect(stateLabel('default')).toBe('Default');
+		expect(stateLabel('filtered')).toBe('Filtered');
+		expect(stateLabel('404')).toBe('404');
+	});
 });
 
 describe('stateOfQuery', () => {
-	const STATES = ['default', 'no-match', 'panel'];
+	const STATES = ['default', 'filtered', 'panel'];
 
 	it('is the state’s name, from the query a comment recorded', () => {
 		expect(stateOfQuery('?state=panel', STATES)).toBe('panel');
@@ -37,11 +49,11 @@ describe('stateOfQuery', () => {
 describe('withState', () => {
 	it('asks for the state in the address', () => {
 		expect(withState('http://127.0.0.1:9/demo/v1-i1/', 'panel')).toBe('http://127.0.0.1:9/demo/v1-i1/?state=panel');
-		expect(withState('page.html', 'no-match')).toBe('page.html?state=no-match');
+		expect(withState('page.html', 'filtered')).toBe('page.html?state=filtered');
 	});
 
 	it('is the page’s own address for the state it opens in, and replaces a state already asked for', () => {
 		expect(withState('page.html?state=panel', null)).toBe('page.html');
-		expect(withState('page.html?state=panel', 'no-match')).toBe('page.html?state=no-match');
+		expect(withState('page.html?state=panel', 'filtered')).toBe('page.html?state=filtered');
 	});
 });

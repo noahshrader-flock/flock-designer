@@ -47,7 +47,7 @@ describe('the top bar', () => {
 	});
 
 	it('counts a prototype’s states among them, each the normal size', async () => {
-		const app = fakeApp({ openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1/', states: ['default', 'no-match', 'panel'] }) });
+		const app = fakeApp({ openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1/', states: ['default', 'filtered', 'panel'] }) });
 		(window as unknown as { workspace: unknown }).workspace = app.api;
 		current = await render(createElement(Review, reviewProps() as never));
 		await settle();

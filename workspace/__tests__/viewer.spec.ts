@@ -66,19 +66,19 @@ describe('the states of the page', () => {
 	};
 
 	it('are a group of buttons between the version and the history, and pressing one opens the page in it', async () => {
-		const { frame } = await withStates(['default', 'no-match', 'panel']);
-		expect(stateButtons().map((i) => i.textContent)).toEqual(['default', 'no-match', 'panel']);
-		expect(shownState()).toBe('default');
+		const { frame } = await withStates(['default', 'filtered', 'panel']);
+		expect(stateButtons().map((i) => i.textContent)).toEqual(['Default', 'Filtered', 'Panel']);
+		expect(shownState()).toBe('Default');
 		// In the bar's order: the version, the states, then the history.
 		const before = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 		expect(before(button('Version V1: switch version'), stateGroup() as Element)).toBe(true);
 		expect(before(stateGroup() as Element, button('Iteration I1: switch iteration'))).toBe(true);
-		await press(state('panel'));
+		await press(state('Panel'));
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?state=panel');
-		expect(shownState()).toBe('panel');
+		expect(shownState()).toBe('Panel');
 		// Back to the first is the page as it opens.
-		await press(state('default'));
+		await press(state('Default'));
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html');
 	});
@@ -103,10 +103,10 @@ describe('the states of the page', () => {
 		await press(button('Show all comments'));
 		await settle();
 		const card = cards().find((c) => c.textContent?.includes('On the panel')) as HTMLElement;
-		await press(button('Show in panel', card));
+		await press(button('Show in Panel', card));
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?state=panel');
-		expect(shownState()).toBe('panel');
+		expect(shownState()).toBe('Panel');
 	});
 
 	it('are not offered for a page with one, or a page built before pages said', async () => {
