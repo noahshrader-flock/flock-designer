@@ -10,7 +10,6 @@ import { TOKENS_PANEL } from './panelWidth';
 import { ResizablePanel } from './ResizablePanel';
 import { SearchSelect } from './SearchSelect';
 import { SyncButton } from './SyncButton';
-import { TokenProblems } from './TokenProblems';
 import { TokensPanel } from './TokensPanel';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
@@ -259,7 +258,6 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 				{/* Where syncing is on the Projects screen: the problem, if there is one, beside the button. */}
 				<div className="flex items-center gap-2">
 					<UpdateProblem update={catalog.update} />
-					<TokenProblems problems={catalog.tokens.problems} />
 					<SyncButton syncing={syncing} onClick={() => void sync()} />
 					{shown && (
 						<MoreMenu label={`More for ${shown.name}`}>

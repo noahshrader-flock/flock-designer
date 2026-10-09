@@ -231,10 +231,16 @@ describe('searching', () => {
 });
 
 describe('what it could not read', () => {
-	it('is not said in the panel, which keeps its room: it is told beside Sync, in a dialog', async () => {
+	it('is one alert above the tabs, its details in a dialog and not in the panel, which keeps its room', async () => {
 		await show({ ...TOKENS, problems: [{ file: 'src/colors/tones/neutral.ts', line: 10, reason: "neutral 94 is '@ECEEEB', not a hex color, so this step is not read" }] });
-		expect(text()).not.toContain('could not be read');
+		const alert = document.querySelector('[role="alert"]') as HTMLElement;
+		expect(alert.textContent).toBe('1 value couldn’t be readView');
+		expect(alert.compareDocumentPosition(tabs()[0] as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(text()).not.toContain('neutral.ts:10');
+	});
+
+	it('is not there when everything was read', async () => {
+		await show();
 		expect(document.querySelector('[role="alert"]')).toBeNull();
 	});
 
@@ -242,6 +248,7 @@ describe('what it could not read', () => {
 		await show({ source: null, tokens: [], problems: [], looked: ['theme files', 'CSS variables', 'token files'] });
 		expect(text()).toContain('No tokens were found in this library.');
 		expect(text()).toContain('Looked for theme files, CSS variables, token files.');
+		expect(document.querySelector('[role="alert"]')).toBeNull();
 		expect(tabs()).toHaveLength(0);
 		expect(document.querySelector('input[type="search"]')).toBeNull();
 	});

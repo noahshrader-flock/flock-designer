@@ -158,18 +158,22 @@ describe('finding a component', () => {
 		expect(finder().closest('[hidden]')).toBeNull();
 	});
 
-	it('says in the toolbar, beside Sync, how many values of the library could not be read, and nothing when all were', async () => {
+	it('says in an alert at the top of the tokens panel, above its tabs, how many values could not be read, and nothing when all were', async () => {
 		await open(() => ok(ready()));
 		expect(document.body.textContent).not.toContain('couldn’t be read');
 		await unmountAll(current!.root);
 		const problems = [{ file: 'src/colors/tones/neutral.ts', line: 10, reason: 'one' }, { file: 'src/colors/tones/neutral.ts', line: 15, reason: 'two' }];
 		await open(() => ok({ ...ready(), tokens: { ...TOKENS, problems } }));
-		const said = button('2 values couldn’t be read');
-		expect(said.parentElement).toBe(button('Sync').parentElement);
-		expect(said.compareDocumentPosition(button('Sync')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		const alert = document.querySelector('[role="alert"]') as HTMLElement;
+		expect(alert.querySelector('[data-slot="alert-title"]')?.textContent).toBe('2 values couldn’t be read');
+		// In the panel at the right, before its tabs; not in the toolbar, which has only Sync and More beside the name.
+		const panel = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')?.nextElementSibling as HTMLElement;
+		expect(panel.contains(alert)).toBe(true);
+		expect(alert.compareDocumentPosition(panel.querySelector('[role="tablist"]')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(switcher().parentElement?.contains(alert)).toBe(false);
 		// Its details are in the dialog it opens, not in the panel.
-		expect(document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')?.nextElementSibling?.textContent).not.toContain('neutral.ts');
-		await press(said);
+		expect(panel.textContent).not.toContain('neutral.ts');
+		await press(button('View', alert));
 		await settle();
 		expect(document.querySelector('[role="dialog"]')?.textContent).toContain('src/colors/tones/neutral.ts:15');
 	});

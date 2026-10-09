@@ -1,25 +1,34 @@
 import { TriangleAlertIcon } from 'lucide-react';
 import type { TokenProblem } from '../shared/contract';
 import { plural } from '../shared/plural';
+import { Alert, AlertAction, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 
 /**
- * What the library has that DSNR could not read (T2 of the design system plan): said only when there is something, as one
- * small button beside Sync, so the tokens panel keeps its room, and in a dialog when it is pressed, each with the file
- * and line it is at. The rest of the tokens are shown; what is listed here is skipped, never guessed.
+ * What the library has that DSNR could not read (T2 of the design system plan): said only when there is something, as
+ * shadcn's own default alert as it comes, neutral (the icon, a title saying how many, and a View action), above the tabs of the tokens
+ * panel, and in a dialog when View is pressed, each with the file and line it is at. The rest of the tokens are shown;
+ * what is listed here is skipped, never guessed.
  */
 export const TokenProblems = ({ problems }: { problems: TokenProblem[] }) => {
 	if (problems.length === 0) return null;
 	const said = `${plural(problems.length, 'value')} couldn’t be read`;
 	return (
 		<Dialog>
-			<DialogTrigger asChild>
-				<Button variant="ghost" className="text-warning hover:text-warning">
+			<div className="p-4">
+				<Alert>
 					<TriangleAlertIcon />
-					{said}
-				</Button>
-			</DialogTrigger>
+					<AlertTitle>{said}</AlertTitle>
+					<AlertAction>
+						<DialogTrigger asChild>
+							<Button variant="outline" size="xs">
+								View
+							</Button>
+						</DialogTrigger>
+					</AlertAction>
+				</Alert>
+			</div>
 			<DialogContent className="sm:max-w-xl" showCloseButton={false}>
 				<DialogHeader>
 					<DialogTitle>{said}</DialogTitle>

@@ -6,8 +6,8 @@ import type { TokenProblem } from '../src/shared/contract';
 import { button, press, render, settle, unmountAll } from './reviewHarness';
 
 /**
- * What the library has that DSNR could not read (T2 of the design system plan), told beside Sync as one small line, and
- * in a dialog, shadcn's own, when it is pressed: each with its file and line, so the Design System tab's panel keeps its room.
+ * What the library has that DSNR could not read (T2 of the design system plan), told in one alert that is shadcn's own as it
+ * comes: the icon, a title saying how many, and a View action that opens a dialog with each, its file and line.
  */
 
 const PROBLEMS: TokenProblem[] = [
@@ -33,19 +33,27 @@ describe('what could not be read', () => {
 		expect(document.body.textContent).toBe('');
 	});
 
-	it('is one small button saying how many, in a warning color, and singular for one', async () => {
+	it('is the stock default alert, neutral, with nothing of its own on it: the icon, a title saying how many, and a View action', async () => {
 		await show(PROBLEMS);
-		expect(button('3 values couldn’t be read').getAttribute('data-variant')).toBe('ghost');
-		expect(button('3 values couldn’t be read').className.split(' ')).toContain('text-warning');
-		await unmountAll(current!.root);
-		await show(PROBLEMS.slice(0, 1));
-		expect(button('1 value couldn’t be read')).toBeTruthy();
+		const alert = document.querySelector<HTMLElement>('[role="alert"]') as HTMLElement;
+		expect(alert.getAttribute('data-slot')).toBe('alert');
+		// Only what the component sets: no class passed in, so every look of it is shadcn's.
+		expect(alert.className).toContain('bg-card');
+		expect(alert.className).not.toMatch(/warning|destructive|\b(flex|rounded-none|border-x-0|py-1)\b/);
+		expect([...alert.children].map((c) => `${c.tagName}:${c.getAttribute('data-slot') ?? ''}`)).toEqual(['svg:', 'DIV:alert-title', 'DIV:alert-action']);
+		expect(alert.querySelector('[data-slot="alert-title"]')?.textContent).toBe('3 values couldn’t be read');
+		expect(alert.querySelector('[data-slot="alert-action"]')?.textContent).toBe('View');
 	});
 
-	it('opens a dialog on a press, saying what it is and listing each with its file and line', async () => {
+	it('says one value in the singular', async () => {
+		await show(PROBLEMS.slice(0, 1));
+		expect(document.querySelector('[data-slot="alert-title"]')?.textContent).toBe('1 value couldn’t be read');
+	});
+
+	it('opens a dialog from View, saying what it is and listing each with its file and line', async () => {
 		await show(PROBLEMS);
 		expect(dialog()).toBeNull();
-		await press(button('3 values couldn’t be read'));
+		await press(button('View'));
 		await settle();
 		expect(dialog()?.textContent).toContain('3 values couldn’t be read');
 		expect(dialog()?.textContent).toContain('The rest of the tokens are shown');
@@ -59,7 +67,7 @@ describe('what could not be read', () => {
 
 	it('closes from its one Close button, in the footer, shadcn’s own', async () => {
 		await show(PROBLEMS);
-		await press(button('3 values couldn’t be read'));
+		await press(button('View'));
 		await settle();
 		// One way to close, not a corner button as well.
 		expect([...(dialog()?.querySelectorAll('button') ?? [])].map((b) => b.textContent)).toEqual(['Close']);

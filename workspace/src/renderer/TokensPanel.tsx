@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { DesignToken, DesignTokens, TokenEdit } from '../shared/contract';
 import { contrastPartner, contrastRatio, isForeground } from '../shared/tokens';
 import { ChangedTokens, ContrastNote, Swatch, TokenEditor } from './TokenEditor';
+import { TokenProblems } from './TokenProblems';
 import { TokenChangesProvider, labelOf, nameOf, opacity, useTokenChanges, useTokenChangesFor } from './tokenChanges';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -15,8 +16,8 @@ import { PanelTabs, PanelTabsContent, PanelTabsList, PanelTabsTrigger } from './
  * a tab with several groups (Color has Tones, Light and Dark) has them as an accordion, closed until opened; a set is
  * never closed up behind a second one, but a plain heading over its tokens, each a swatch at the left and its value at the
  * right. A tab with one group shows its sets straight away. The tabs are the panel's (`PanelTabs`): edge to edge on a
- * bottom border, the padding on the content under them. What the library has that is not read is told beside Sync
- * (`TokenProblems`), not here, so the panel keeps its room.
+ * bottom border, the padding on the content under them. What the library has that is not read is one alert above the
+ * tabs (`TokenProblems`), its details in a dialog, so the panel keeps its room.
  *
  * **A change is tried here** (T3): a row opens its token's control (`TokenEditor`), every row shows the tokens as changed,
  * a pair's contrast is on its row, and what has been changed is listed above the tabs with its resets. The change is
@@ -159,9 +160,12 @@ export const TokensPanel = ({
 
 	if (tokens.source === null || categories.length === 0) {
 		return (
-			<div className="p-4">
-				<p className="text-muted-foreground text-sm">No tokens were found in this library. Looked for {tokens.looked.join(', ')}.</p>
-			</div>
+			<>
+				<TokenProblems problems={tokens.problems} />
+				<div className="p-4">
+					<p className="text-muted-foreground text-sm">No tokens were found in this library. Looked for {tokens.looked.join(', ')}.</p>
+				</div>
+			</>
 		);
 	}
 
@@ -169,6 +173,7 @@ export const TokensPanel = ({
 	const active = categories.some(([c]) => c === current) ? (current as string) : (categories[0] as [string, DesignToken[]])[0];
 	return (
 		<TokenChangesProvider value={changes}>
+			<TokenProblems problems={tokens.problems} />
 			<ChangedTokens live={live} />
 			<PanelTabs value={active} onValueChange={setCurrent}>
 				<PanelTabsList>
