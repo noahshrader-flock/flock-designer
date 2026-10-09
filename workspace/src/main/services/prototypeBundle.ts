@@ -33,7 +33,7 @@ if (/^export const states\b/m.test(source)) {
 	const name = new RegExp(${JSON.stringify(STATE_NAME.source)});
 	states = (list?.[1] ?? '').split(',').map((s) => s.trim()).filter(Boolean).map((s) => /^(['"])(.*)\1$/.exec(s)?.[2] ?? '');
 	if (states.length === 0 || states.some((s) => !name.test(s)) || new Set(states).size !== states.length) {
-		console.error("export const states must be a list of lowercase names, each one word (letters and digits, no hyphens), each once, the first what the page opens in: export const states = ['default', 'empty'] as const;");
+		console.error("export const states must be a list of one-word names (lowercase letters and digits, no hyphens), none twice, the first what the page opens in: export const states = ['default', 'empty'] as const;");
 		process.exit(1);
 	}
 }

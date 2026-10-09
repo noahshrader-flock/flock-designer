@@ -111,7 +111,7 @@ describe('bundling a React prototype into one page', () => {
 				const r = await build(`const name = 'x';\nexport const states = ${states};\n${page}`);
 				expect(r.ok, states).toBe(false);
 				expect(r.output).toContain('export const states');
-				expect(r.output).toContain('each one word');
+				expect(r.output).toContain('one-word names');
 				expect(r.html).toBeNull();
 			}
 		});
