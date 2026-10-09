@@ -30,7 +30,12 @@ const COMPONENTS: CatalogComponent[] = [
 	component('Loose', { group: 'Ungrouped', storybook: null }),
 ];
 
-const TOKENS: DesignTokens = { source: 'theme files', looked: [], problems: [], tokens: [] };
+const TOKENS: DesignTokens = {
+	source: 'theme files',
+	looked: [],
+	problems: [],
+	tokens: [{ path: 'tone.pineGreen.50', kind: 'colour', group: 'Tones', set: 'pineGreen', name: '50', value: '#108062', source: { file: 'src/colors/tones/pineGreen.ts', line: 3 } }],
+};
 
 const ready = (update: CatalogUpdate = 'unchanged', components = COMPONENTS): Catalog => ({
 	state: 'ready',
@@ -136,12 +141,12 @@ describe('finding a component', () => {
 		expect(document.querySelector('[role="combobox"]')?.textContent).toBe('Surfaces / Overview');
 	});
 
-	it('has the finder in the toolbar beside the name and branch, and Sync at its right, as Projects does', async () => {
+	it('has the finder in the toolbar beside the name and branch, then Tokens, and Sync at its right, as Projects does', async () => {
 		await open(() => ok(ready()));
 		const toolbar = document.querySelector('h2')!.parentElement!;
 		expect(toolbar.contains(finder())).toBe(true);
 		expect(toolbar.contains(button('Sync'))).toBe(true);
-		expect(toolbar.textContent).toBe('FUIFind a componentSync');
+		expect(toolbar.textContent).toBe('FUIFind a componentTokensSync');
 		expect(toolbar.querySelector('h2')!.compareDocumentPosition(finder()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(finder().compareDocumentPosition(button('Sync')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		// The old search box is gone.
@@ -158,6 +163,46 @@ describe('finding a component', () => {
 	it('has no filter for components without a story', async () => {
 		await open(() => ok(ready()));
 		expect([...document.querySelectorAll('button')].some((b) => /without a story/i.test(b.textContent ?? ''))).toBe(false);
+	});
+});
+
+describe('the tokens panel', () => {
+	const divider = () => document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]') as HTMLElement | null;
+	const panel = () => divider()?.nextElementSibling as HTMLElement | undefined;
+
+	it('is at the right of the tab, with the library’s tokens, on the list, without opening anything', async () => {
+		await open(() => ok(ready()));
+		expect(panel()?.textContent).toContain('1 token');
+		expect(panel()?.textContent).toContain('Tones');
+		// The last thing on the row, at the right, with the list before it.
+		expect(divider()?.parentElement?.lastElementChild).toBe(panel());
+		expect(divider()?.previousElementSibling?.contains(document.querySelector('[data-component]'))).toBe(true);
+	});
+
+	it('stays when a component is opened, and when it is closed again, as one panel', async () => {
+		await open(() => ok(ready()));
+		const before = panel();
+		await press(row('FSButton').querySelector('button')!);
+		expect(panel()).toBe(before);
+		expect(divider()?.previousElementSibling?.textContent).toContain('FSButton');
+		await press(button('Back to components'));
+		expect(panel()).toBe(before);
+	});
+
+	it('is hidden and shown again by the Tokens button in the toolbar, which says whether it is shown', async () => {
+		await open(() => ok(ready()));
+		expect(button('Tokens').getAttribute('aria-pressed')).toBe('true');
+		await press(button('Tokens'));
+		expect(divider()).toBeNull();
+		expect(button('Tokens').getAttribute('aria-pressed')).toBe('false');
+		await press(button('Tokens'));
+		expect(divider()).not.toBeNull();
+	});
+
+	it('is not drawn while the library is not connected, where there is nothing to show', async () => {
+		await open(() => ok({ state: 'no-clone', repository: 'flocksafety/flock-react-component-lib', lost: null }));
+		expect(divider()).toBeNull();
+		expect(document.body.textContent).not.toContain('1 token');
 	});
 });
 
@@ -182,18 +227,6 @@ describe('opening a component', () => {
 		// The same list, not a new one: what was scrolled stays scrolled.
 		expect(document.querySelector('[data-component]')!.closest('div')).toBe(list);
 		expect(button('Find a component')).toBeTruthy();
-	});
-
-	it('keeps the tokens panel open from one component to the next, as it was left', async () => {
-		await open(() => ok(ready()));
-		await press(row('FSButton').querySelector('button')!);
-		await press(button('Tokens'));
-		expect(document.querySelector('[aria-label="Resize the tokens panel"]')).not.toBeNull();
-		await press(button('Back to components'));
-		await press(row('FSCard').querySelector('button')!);
-		expect(document.querySelector('[aria-label="Resize the tokens panel"]')).not.toBeNull();
-		await press(button('Tokens'));
-		expect(document.querySelector('[aria-label="Resize the tokens panel"]')).toBeNull();
 	});
 
 	it('closes a component that a sync removed, back to the list', async () => {
@@ -236,7 +269,9 @@ describe('keeping it current', () => {
 		expect(rows()).toHaveLength(5);
 		const problem = [...document.querySelectorAll('[role="status"]')].find((e) => e.textContent === 'Could not update from GitHub')!;
 		expect(problem.getAttribute('title')).toBe('Could not reach GitHub. Check the internet connection.');
-		expect(problem.nextElementSibling?.textContent).toBe('Sync');
+		// Beside the buttons: Tokens, then Sync.
+		expect(problem.nextElementSibling?.textContent).toBe('Tokens');
+		expect(problem.nextElementSibling?.nextElementSibling?.textContent).toBe('Sync');
 		expect(document.querySelector('h2')!.parentElement!.contains(problem)).toBe(true);
 	});
 

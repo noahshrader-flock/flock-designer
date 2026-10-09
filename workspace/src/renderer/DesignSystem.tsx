@@ -1,12 +1,15 @@
-import { ChevronRightIcon, GitBranchIcon, InfoIcon } from 'lucide-react';
+import { ChevronRightIcon, GitBranchIcon, InfoIcon, SwatchBookIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Catalog, CatalogComponent, CatalogUpdate } from '../shared/contract';
 import { ComponentPage } from './ComponentPage';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { LoadingScreen } from './Loading';
 import { Page } from './Page';
+import { TOKENS_PANEL } from './panelWidth';
+import { ResizablePanel } from './ResizablePanel';
 import { SearchSelect } from './SearchSelect';
 import { SyncButton } from './SyncButton';
+import { TokensPanel } from './TokensPanel';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
@@ -66,8 +69,8 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [syncing, setSyncing] = useState(false);
 	// The component open on its own page, by id; the list when there is none.
 	const [open, setOpen] = useState<string | null>(null);
-	// Whether the tokens panel is open, kept here so it stays as it was from one component to the next.
-	const [tokensOpen, setTokensOpen] = useState(false);
+	// The tokens panel at the right of the tab (decision 21): shown unless it was hidden, whichever screen is open.
+	const [tokensOpen, setTokensOpen] = useState(true);
 	const started = useRef(false);
 
 	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {
@@ -163,46 +166,52 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 				{/* Where syncing is on the Projects screen: the problem, if there is one, beside the button. */}
 				<div className="flex items-center gap-2">
 					<UpdateProblem update={catalog.update} />
+					<Button variant="outline" aria-pressed={tokensOpen} onClick={() => setTokensOpen((o) => !o)}>
+						<SwatchBookIcon />
+						Tokens
+					</Button>
 					<SyncButton syncing={syncing} onClick={() => void sync()} />
 				</div>
 			</Toolbar>
-			{opened && (
-				<ComponentPage
-					component={opened}
-					commit={catalog.commit}
-					onBack={() => setOpen(null)}
-					tokens={catalog.tokens}
-					tokensOpen={tokensOpen}
-					onTokensOpen={setTokensOpen}
-				/>
-			)}
-			{/* Kept while a component is open, so going back finds the list where it was. */}
-			<div hidden={opened !== undefined}>
-				<Page>
-					{error && (
-						<Alert variant="destructive">
-							<AlertDescription>{error}</AlertDescription>
-						</Alert>
-					)}
-					{catalog.components.length === 0 ? (
-						<p className="text-muted-foreground text-sm">
-							The library's Storybook has no stories on {catalog.branch}, so there are no components to list.
-						</p>
-					) : (
-						groups.map(({ group, rows }) => (
-							<section key={group} className="flex flex-col gap-2" aria-label={group}>
-								<h3 className="text-sm font-semibold">
-									{group} <span className="text-muted-foreground font-normal">{rows.length}</span>
-								</h3>
-								<ul className="bg-card divide-y rounded-lg border">
-									{rows.map((c) => (
-										<Row key={c.id} component={c} onOpen={() => setOpen(c.id)} />
-									))}
-								</ul>
-							</section>
-						))
-					)}
-				</Page>
+			{/* The tab under its bars: the list or a component, which scrolls on its own, and at the right the tokens panel,
+			    which does not move when either changes. */}
+			<div className="flex h-[calc(100dvh-var(--nav-height)-var(--toolbar-height))]">
+				<div className="min-w-0 flex-1 overflow-y-auto">
+					{opened && <ComponentPage component={opened} commit={catalog.commit} onBack={() => setOpen(null)} />}
+					{/* Kept while a component is open, so going back finds the list where it was. */}
+					<div hidden={opened !== undefined}>
+						<Page>
+							{error && (
+								<Alert variant="destructive">
+									<AlertDescription>{error}</AlertDescription>
+								</Alert>
+							)}
+							{catalog.components.length === 0 ? (
+								<p className="text-muted-foreground text-sm">
+									The library's Storybook has no stories on {catalog.branch}, so there are no components to list.
+								</p>
+							) : (
+								groups.map(({ group, rows }) => (
+									<section key={group} className="flex flex-col gap-2" aria-label={group}>
+										<h3 className="text-sm font-semibold">
+											{group} <span className="text-muted-foreground font-normal">{rows.length}</span>
+										</h3>
+										<ul className="bg-card divide-y rounded-lg border">
+											{rows.map((c) => (
+												<Row key={c.id} component={c} onOpen={() => setOpen(c.id)} />
+											))}
+										</ul>
+									</section>
+								))
+							)}
+						</Page>
+				</div>
+				</div>
+				{tokensOpen && (
+					<ResizablePanel panel={TOKENS_PANEL} label="Resize the tokens panel">
+						<TokensPanel tokens={catalog.tokens} />
+					</ResizablePanel>
+				)}
 			</div>
 		</>
 	);

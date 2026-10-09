@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PREVIEW_HEIGHT, previewAddress } from '../src/shared/catalog';
 import { ComponentPage } from '../src/renderer/ComponentPage';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
-import type { CatalogComponent, DesignTokens, StoryPreview } from '../src/shared/contract';
+import type { CatalogComponent, StoryPreview } from '../src/shared/contract';
 import { button, fail, fakeApp, ok, openMenu, press, render, settle, unmountAll } from './reviewHarness';
 
 /**
@@ -23,18 +23,11 @@ const component = (more: Partial<CatalogComponent> = {}): CatalogComponent => ({
 	...more,
 });
 
-const TOKENS: DesignTokens = {
-	source: 'theme files',
-	looked: ['src/colors/tones/index.ts'],
-	problems: [],
-	tokens: [{ path: 'tone.pineGreen.50', kind: 'colour', group: 'Tones', set: 'pineGreen', name: '50', value: '#108062', source: { file: 'src/colors/tones/pineGreen.ts', line: 3 } }],
-};
-
 let current: Awaited<ReturnType<typeof render>> | null = null;
 const show = async (c: CatalogComponent, answer: () => Promise<ReturnType<typeof ok<StoryPreview>> | ReturnType<typeof fail>> = async () => ok({ state: 'ready', base: BASE }), more: Record<string, unknown> = {}) => {
 	const app = fakeApp({ storyPreview: answer });
 	(window as unknown as { workspace: unknown }).workspace = app.api;
-	const props = { component: c, commit: 'c1', onBack: vi.fn(), tokens: TOKENS, tokensOpen: false, onTokensOpen: vi.fn(), ...more };
+	const props = { component: c, commit: 'c1', onBack: vi.fn(), ...more };
 	current = await render(createElement(ComponentPage, props));
 	return { app, props };
 };
@@ -70,35 +63,6 @@ describe('the page', () => {
 		const { props } = await show(component());
 		await press(button('Back to components'));
 		expect(props.onBack).toHaveBeenCalledOnce();
-	});
-});
-
-describe('the tokens panel', () => {
-	it('opens from the Tokens button in the page’s header, which says whether it is open', async () => {
-		const { props } = await show(component());
-		expect(button('Tokens').getAttribute('aria-pressed')).toBe('false');
-		expect(document.querySelector('[aria-label="Resize the tokens panel"]')).toBeNull();
-		await press(button('Tokens'));
-		expect(props.onTokensOpen).toHaveBeenCalledWith(true);
-	});
-
-	it('is at the right of the page, resizable, with the library’s tokens in it, beside the previews', async () => {
-		await show(component(), undefined, { tokensOpen: true });
-		expect(button('Tokens').getAttribute('aria-pressed')).toBe('true');
-		const divider = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]') as HTMLElement;
-		expect(divider).not.toBeNull();
-		// The page first, then the divider, then the panel: the panel is the last thing on the row, at the right.
-		const panel = divider.nextElementSibling as HTMLElement;
-		expect(panel.textContent).toContain('1 token');
-		expect(panel.textContent).toContain('Tones');
-		expect(divider.previousElementSibling?.contains(frames()[0] ?? null)).toBe(true);
-		expect(divider.parentElement?.lastElementChild).toBe(panel);
-	});
-
-	it('closes from the same button', async () => {
-		const { props } = await show(component(), undefined, { tokensOpen: true });
-		await press(button('Tokens'));
-		expect(props.onTokensOpen).toHaveBeenCalledWith(false);
 	});
 });
 
