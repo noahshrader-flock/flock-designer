@@ -23,9 +23,9 @@
  *   Billing and Contact Directory are kept from that reference, but they depend on the billing permission, so a
  *   customer admin may not see them.
  *
- * STATES  (?state=default | no-match)
+ * STATES  (?state=default | filtered)
  *   default   all 14 zones, no search, no filter.
- *   no-match  search "Riverside" with "Has offline cameras" on. Riverside has no offline cameras, so nothing matches.
+ *   filtered  search "Riverside" with "Has offline cameras" on. Riverside has no offline cameras, so nothing matches.
  *
  * MARKS
  *   @standin
@@ -151,7 +151,7 @@ const SUB_NAV_ITEMS = [
 // ---------------------------------------------------------------------------------------------------------------
 
 // The states, for the bar above the page to offer; the first is what the page opens in.
-export const states = ['default', 'no-match'] as const;
+export const states = ['default', 'filtered'] as const;
 type PageState = (typeof states)[number];
 
 // @remove: picks the state from ?state=. On move: delete.
@@ -229,8 +229,8 @@ const NoMatchingZones = ({ onClear }: { onClear: () => void }) => (
 );
 
 const ZoneCoveragePage = ({ initialState }: { initialState: PageState }) => {
-    const [search, setSearch] = useState(initialState === 'no-match' ? 'Riverside' : '');
-    const [offlineOnly, setOfflineOnly] = useState(initialState === 'no-match');
+    const [search, setSearch] = useState(initialState === 'filtered' ? 'Riverside' : '');
+    const [offlineOnly, setOfflineOnly] = useState(initialState === 'filtered');
 
     const rows = useMemo(() => {
         const term = search.trim().toLowerCase();

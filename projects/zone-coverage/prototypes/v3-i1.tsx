@@ -4,7 +4,7 @@
  * WHAT IT SHOWS
  *   Everything from version 2, unchanged: the Zones page frame with the [Zones] [Zone Coverage] tabs, zone cards grouped
  *   by health worst first (Offline, Degraded, Healthy), the health rules, search, the "Has offline cameras" filter and the
- *   no-match empty state. New in this version: each offline camera listed on a card has a "Fix" button. Fix opens a
+ *   filtered empty state. New in this version: each offline camera listed on a card has a "Fix" button. Fix opens a
  *   small side panel (the product's drawer) for that camera with three things: when it was last seen, its network
  *   status, and a "Notify the site contact" button. The button sends nothing: it shows a confirmation that says so.
  *   The panel has three outcomes, all mocked: details shown, no details for this camera (empty), and details failed
@@ -43,13 +43,13 @@
  *   Billing and Contact Directory are kept from that reference, but they depend on the billing permission, so a
  *   customer admin may not see them.
  *
- * STATES  (?state=default | no-match | panel | panel-empty | panel-error)
+ * STATES  (?state=default | filtered | panel | missing | failed)
  *   default      all 14 zones, no search, no filter: 2 offline, 4 degraded, 8 healthy. Fix works on every offline
  *                camera and shows details.
- *   no-match     search "Riverside" with "Has offline cameras" on. Riverside has no offline cameras, so nothing matches.
+ *   filtered     search "Riverside" with "Has offline cameras" on. Riverside has no offline cameras, so nothing matches.
  *   panel        the panel open on Jefferson Elementary Front (School Zone South), details shown.
- *   panel-empty  the panel open with no details for the camera. Fix on any camera shows this in this state.
- *   panel-error  the panel open with the details failing to load. Fix on any camera shows this in this state; Retry
+ *   missing      the panel open with no details for the camera. Fix on any camera shows this in this state.
+ *   failed       the panel open with the details failing to load. Fix on any camera shows this in this state; Retry
  *                loads them.
  *
  * MARKS
@@ -646,7 +646,7 @@ const NoMatchingZones = ({ onClear }: { onClear: () => void }) => (
 // ---------------------------------------------------------------------------------------------------------------
 
 // The states, for the bar above the page to offer; the first is what the page opens in.
-export const states = ['default', 'no-match', 'panel', 'panel-empty', 'panel-error'] as const;
+export const states = ['default', 'filtered', 'panel', 'missing', 'failed'] as const;
 type PageState = (typeof states)[number];
 
 // @remove: picks the state from ?state=. On move: delete.
@@ -656,8 +656,8 @@ const readState = (): PageState => {
 };
 
 const ZoneCoveragePage = ({ initialState }: { initialState: PageState }) => {
-    const [search, setSearch] = useState(initialState === 'no-match' ? 'Riverside' : '');
-    const [offlineOnly, setOfflineOnly] = useState(initialState === 'no-match');
+    const [search, setSearch] = useState(initialState === 'filtered' ? 'Riverside' : '');
+    const [offlineOnly, setOfflineOnly] = useState(initialState === 'filtered');
 
     const visible = useMemo(() => {
         const term = search.trim().toLowerCase();
@@ -666,19 +666,21 @@ const ZoneCoveragePage = ({ initialState }: { initialState: PageState }) => {
         );
     }, [search, offlineOnly]);
 
+    // The states with the panel open: it is shown with its details, with none, or failing to load.
+    const panelState = initialState === 'panel' || initialState === 'missing' || initialState === 'failed';
     // @mock: the camera the panel is open on in the panel states: the first offline camera on the page.
     const [panelTarget, setPanelTarget] = useState<PanelTarget | null>(() => {
-        if (!initialState.startsWith('panel')) {
+        if (!panelState) {
             return null;
         }
         const zone = ZONES.find((z) => z.id === 'zone-8');
         const camera = zone?.offlineCameras[0];
         return zone && camera ? { zone, camera } : null;
     });
-    const [panelOpen, setPanelOpen] = useState(initialState.startsWith('panel'));
-    // @mock: what the panel's details request returns. In the panel-empty and panel-error states every camera does that.
+    const [panelOpen, setPanelOpen] = useState(panelState);
+    // @mock: what the panel's details request returns. In the missing and failed states every camera does that.
     const [outcome, setOutcome] = useState<PanelOutcome>(
-        initialState === 'panel-empty' ? 'empty' : initialState === 'panel-error' ? 'error' : 'details',
+        initialState === 'missing' ? 'empty' : initialState === 'failed' ? 'error' : 'details',
     );
     const [panelLoading, setPanelLoading] = useState(false);
     const retryTimer = useRef<number>();

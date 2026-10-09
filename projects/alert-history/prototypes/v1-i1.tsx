@@ -22,9 +22,9 @@
  *   .flkd/knowledge/references/admin-shell-roles-2026-10-06.png. Billing and Contact Directory are kept from that
  *   reference, but they depend on the billing permission, so a customer admin may not see them.
  *
- * STATES  (?state=default | filtered-empty)
+ * STATES  (?state=default | filtered)
  *   default         all 24 alerts, no filter.
- *   filtered-empty  the Status filter is set to Dismissed, which matches nothing: the empty state.
+ *   filtered  the Status filter is set to Dismissed, which matches nothing: the empty state.
  *
  * MARKS
  *   @standin
@@ -175,7 +175,7 @@ const SUB_NAV_ITEMS = [
 // ---------------------------------------------------------------------------------------------------------------
 
 // The states, for the bar above the page to offer; the first is what the page opens in.
-export const states = ['default', 'filtered-empty'] as const;
+export const states = ['default', 'filtered'] as const;
 type PageState = (typeof states)[number];
 
 // @remove: picks the state from ?state=. On move: delete.
@@ -253,7 +253,7 @@ const NoMatchingAlerts = ({ status, onClear }: { status: StatusFilter; onClear: 
 );
 
 const AlertHistoryPage = ({ initialState }: { initialState: PageState }) => {
-    const [status, setStatus] = useState<StatusFilter>(initialState === 'filtered-empty' ? 'Dismissed' : 'All');
+    const [status, setStatus] = useState<StatusFilter>(initialState === 'filtered' ? 'Dismissed' : 'All');
 
     const rows = useMemo(() => (status === 'All' ? ALERTS : ALERTS.filter((a) => a.status === status)), [status]);
     const countFor = (s: AlertStatus) => ALERTS.filter((a) => a.status === s).length;

@@ -25,11 +25,11 @@
  *   .flkd/knowledge/references/admin-shell-roles-2026-10-06.png. Billing and Contact Directory are kept from that
  *   reference, but they depend on the billing permission, so a customer admin may not see them.
  *
- * STATES  (?state=default | empty | loading | archiving-assigned)
+ * STATES  (?state=default | empty | loading | archiving)
  *   default             5 unused roles, 12 used roles.
  *   empty               every role was used in the last 90 days, so the Unused Roles section is its empty state.
  *   loading             content-shaped skeletons for the list and the chart cards.
- *   archiving-assigned  the Archive dialog open for "Legacy Investigator", which is still assigned to 40 people.
+ *   archiving           the Archive dialog open for "Legacy Investigator", which is still assigned to 40 people.
  *
  * MARKS
  *   @standin
@@ -705,7 +705,7 @@ const RoleHoldersDrawer = ({
 // ---------------------------------------------------------------------------------------------------------------
 
 // The states, for the bar above the page to offer; the first is what the page opens in.
-export const states = ['default', 'empty', 'loading', 'archiving-assigned'] as const;
+export const states = ['default', 'empty', 'loading', 'archiving'] as const;
 type PageState = (typeof states)[number];
 
 // @remove: picks the state from ?state=. On move: delete.
@@ -743,7 +743,7 @@ const UsageTab = ({ pageState }: { pageState: PageState }) => {
     const [archived, setArchived] = useState<string[]>([]);
     const [openRoleId, setOpenRoleId] = useState<string | null>(null);
     const [archiveIds, setArchiveIds] = useState<string[] | null>(
-        pageState === 'archiving-assigned' ? ['legacy-investigator'] : null,
+        pageState === 'archiving' ? ['legacy-investigator'] : null,
     );
     const [archiving, setArchiving] = useState(false);
 
