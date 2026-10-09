@@ -65,6 +65,18 @@ export const startedAt = (p: Pick<Project, 'iterations'>): string | null =>
 		.filter((d): d is string => d !== null)
 		.sort((a, b) => Date.parse(a) - Date.parse(b))[0] ?? null;
 
+/**
+ * Whether a project is what a search is for: every word typed is somewhere in its name, its id, or the name or
+ * GitHub login of someone who worked on it, without regard to case. Plain text, never a pattern; an empty search is
+ * every project.
+ */
+export const matchesProject = (project: Project, search: string): boolean => {
+	const words = search.toLowerCase().split(/\s+/).filter(Boolean);
+	if (words.length === 0) return true;
+	const text = [project.title, project.id, ...project.people.flatMap((p) => [p.name, p.login ?? ''])].join('\n').toLowerCase();
+	return words.every((w) => text.includes(w));
+};
+
 /** Newest project first. A project with no known date goes last, and ties fall back to the title so the order never shuffles. */
 export const newestProjectFirst = (a: Project, b: Project): number => {
 	const da = startedAt(a);

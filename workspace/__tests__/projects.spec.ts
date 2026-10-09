@@ -8,6 +8,7 @@ import {
 	asDate,
 	asRoute,
 	isPrototypeName,
+	matchesProject,
 	isRecordName,
 	iterationLabel,
 	mergeProjects,
@@ -367,5 +368,34 @@ describe('byVersion', () => {
 
 	it('leaves out anything that is not a prototype name', () => {
 		expect(byVersion([it1('codebase', '2026-10-05')])).toEqual([]);
+	});
+});
+
+describe('matchesProject', () => {
+	const alerts = project('alert-history', { title: 'Alert history', people: [{ name: 'Noah Shrader', login: 'noahshrader-flock' }, { name: 'Pat Reviewer', login: null }] });
+
+	it('matches everything for an empty search, and for one of only spaces', () => {
+		expect(matchesProject(alerts, '')).toBe(true);
+		expect(matchesProject(alerts, '   ')).toBe(true);
+	});
+
+	it('matches a part of the name, the id, or a person, without regard to case', () => {
+		expect(matchesProject(alerts, 'HISTORY')).toBe(true);
+		expect(matchesProject(alerts, 'alert-hist')).toBe(true);
+		expect(matchesProject(alerts, 'noah')).toBe(true);
+		expect(matchesProject(alerts, 'noahshrader-flock')).toBe(true);
+		expect(matchesProject(alerts, 'reviewer')).toBe(true);
+	});
+
+	it('needs every word to match, in any order, so narrowing a search narrows the list', () => {
+		expect(matchesProject(alerts, 'history alert')).toBe(true);
+		expect(matchesProject(alerts, 'alert noah')).toBe(true);
+		expect(matchesProject(alerts, 'alert admin')).toBe(false);
+	});
+
+	it('matches nothing it does not have, and reads what is typed as text, not as a pattern', () => {
+		expect(matchesProject(alerts, 'roles')).toBe(false);
+		expect(matchesProject(alerts, '.*')).toBe(false);
+		expect(matchesProject(alerts, '(')).toBe(false);
 	});
 });

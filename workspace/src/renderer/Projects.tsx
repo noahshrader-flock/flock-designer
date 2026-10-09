@@ -10,9 +10,11 @@ import { RecordSheet } from './RecordSheet';
 import { Review } from './Review';
 import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
-import { InfoIcon } from 'lucide-react';
+import { InfoIcon, SearchIcon } from 'lucide-react';
+import { matchesProject } from '../shared/projects';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
+import { InputGroup, InputGroupAddon, InputGroupInput } from './ui/input-group';
 
 /**
  * Reviewer mode: every project in the design repository, read through the API.
@@ -28,6 +30,8 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 	const [selected, setSelected] = useState<{ project: Project; iteration: ProjectIteration; task?: string } | null>(null);
 	const [checkout, setCheckout] = useState<Checkout | null>(null);
 	const [creating, setCreating] = useState(false);
+	// What is typed in the search beside the name of the screen: the cards are narrowed to what matches.
+	const [search, setSearch] = useState('');
 	const [looked, setLooked] = useState(false);
 	const [suggestion, setSuggestion] = useState<CheckoutSuggestion | null>(null);
 	const [publishStatus, setPublishStatus] = usePublishStatus();
@@ -118,11 +122,28 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 		);
 	}
 
+	const matching = projects.filter((p) => matchesProject(p, search));
+
 	return (
 		<>
 			{/* Stays put while the list scrolls under it, as it does on a prototype's screen. */}
 			<Toolbar className="sticky top-0 z-40">
 				<h2 className="text-sm font-semibold">Projects</h2>
+				{projects.length > 0 && (
+					<InputGroup className="w-64">
+						<InputGroupAddon>
+							<SearchIcon />
+						</InputGroupAddon>
+						<InputGroupInput
+							type="search"
+							aria-label="Search projects"
+							placeholder="Search projects"
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							onKeyDown={(e) => e.key === 'Escape' && setSearch('')}
+						/>
+					</InputGroup>
+				)}
 				<div className="grow" />
 				<div className="flex items-center gap-2">
 					{/* Where syncing is, beside the button that starts it, so the two always read together. */}
@@ -191,9 +212,18 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 					</p>
 				)}
 
-				{projects.length > 0 && (
+				{matching.length === 0 && projects.length > 0 && (
+					<p className="text-muted-foreground text-sm">
+						No project matches “{search.trim()}”.{' '}
+						<button type="button" className="text-primary underline underline-offset-4" onClick={() => setSearch('')}>
+							Clear search
+						</button>
+					</p>
+				)}
+
+				{matching.length > 0 && (
 					<CardGrid>
-						{projects.map((project) => (
+						{matching.map((project) => (
 							<ProjectCard
 								key={project.id}
 								project={project}
