@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { CHANNELS } from '../shared/contract';
 import type {
 	BuildInClaude,
-	ConnectedDesignSystem,
+	ConnectedDesignSystems,
 	DesignSystemConnection,
 	OpenedPrototype,
 	Catalog,
@@ -71,7 +71,7 @@ const api: WorkspaceApi = {
 	suggestCheckout: () => invoke<CheckoutSuggestion | null>(CHANNELS.suggestCheckout),
 	useCheckout: (root) => invoke<Checkout>(CHANNELS.useCheckout, root),
 	designSystemCatalog: (refresh) => invoke<Catalog>(CHANNELS.designSystemCatalog, refresh),
-	designSystems: () => invoke<{ systems: ConnectedDesignSystem[]; current: string | null }>(CHANNELS.designSystems),
+	designSystems: () => invoke<ConnectedDesignSystems>(CHANNELS.designSystems),
 	connectDesignSystem: (repository) => invoke<DesignSystemConnection>(CHANNELS.connectDesignSystem, repository),
 	chooseDesignSystem: (repository, folder) => invoke<DesignSystemConnection>(CHANNELS.chooseDesignSystem, repository, folder),
 	selectDesignSystem: (id) => invoke<null>(CHANNELS.selectDesignSystem, id),

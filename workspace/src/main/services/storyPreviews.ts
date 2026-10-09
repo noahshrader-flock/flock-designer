@@ -229,8 +229,8 @@ const serveKey = (build: string): string => `previews-${build.slice(0, 26)}`;
 const RECIPE = createHash('sha256').update(`${PAGE}${previewEntry.toString()}${libraryBuild.toString()}`).digest('hex').slice(0, 8);
 
 export interface StoryPreviewsDeps {
-	/** The design system shown, with its branch, or null when none is connected or it cannot be read. */
-	system: () => Promise<(ConnectedDesignSystem & { branch: string }) | null>;
+	/** The design system shown, or null when none is connected or its clone is gone. */
+	system: () => ConnectedDesignSystem | null;
 	/** The app's own folder for builds. */
 	folder: string;
 	server: PrototypeServer;
@@ -246,7 +246,7 @@ export class StoryPreviews {
 	constructor(private readonly deps: StoryPreviewsDeps) {}
 
 	async preview(): Promise<StoryPreview> {
-		const system = await this.deps.system();
+		const system = this.deps.system();
 		if (system === null) return { state: 'no-library' };
 		const { root, branch, folder } = system;
 		const commit = await libraryCommit(root, branch);
@@ -264,7 +264,7 @@ export class StoryPreviews {
 		return this.current.build;
 	}
 
-	private async build(system: ConnectedDesignSystem & { branch: string }, commit: string): Promise<StoryPreview> {
+	private async build(system: ConnectedDesignSystem, commit: string): Promise<StoryPreview> {
 		const { root, folder } = system;
 		const build = `${commit.slice(0, 12)}-${createHash('sha256').update(folder).digest('hex').slice(0, 4)}-${RECIPE}`;
 		const dir = join(this.deps.folder, build);

@@ -15,7 +15,6 @@ import {
 	type PageHoldReason,
 	type MoveToCodePlan,
 	type DesignSystemConnection,
-	type FoundDesignSystem,
 	type OpenedPrototype,
 	type Person,
 	type PageStatus,
@@ -39,8 +38,8 @@ import { branchCommit, branchExists, branchesWithFile, ensureLocalBranch, isRepo
 import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { type Cloned, Cloner, type GitProgress, notClonedOver } from './services/clone';
 import { INSTALL_COMMAND, Installer } from './services/install';
-import { DesignLibrary, libraryCommit, libraryReads } from './services/designLibrary';
-import { DesignSystemsMemory, defaultBranch, designSystemId, findDesignSystems } from './services/designSystems';
+import { DesignLibrary } from './services/designLibrary';
+import { DesignSystemsMemory } from './services/designSystems';
 import { ProfileNames } from './services/profileNames';
 import { StoryPreviews } from './services/storyPreviews';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
@@ -311,8 +310,8 @@ export const registerIpc = ({
 	const library = designLibrary ?? new DesignLibrary({ systems: designSystems });
 	ipcMain.handle(CHANNELS.designSystemCatalog, guard((refresh: unknown) => library.catalog(refresh === true)));
 	const previews = new StoryPreviews({
-		system: async () => {
-			const shown = await library.current();
+		system: () => {
+			const shown = library.current();
 			return typeof shown === 'string' ? null : shown;
 		},
 		folder: storyPreviewsRoot,
@@ -387,48 +386,17 @@ export const registerIpc = ({
 		}),
 	);
 	// Only a design system, refused by name before anything is downloaded; then connected like a folder that was located.
-	/**
-	 * Connecting a design system (P4): accepted by what is found in it, not by its name (decisions 23 to 25). What a
-	 * repository with several had found is kept until one is chosen, so the window names only a folder it was offered.
-	 */
-	const offered = new Map<string, { root: string; branch: string; found: FoundDesignSystem[] }>();
-	const keep = (repository: string, root: string, branch: string, found: FoundDesignSystem): DesignSystemConnection => {
-		const id = designSystemId(repository, found.folder);
-		designSystems.add({ id, name: found.name, repository, root, folder: found.folder, branch });
-		offered.delete(repository);
-		return { state: 'connected', id };
-	};
-	const connectAt = async (repository: string, root: string): Promise<DesignSystemConnection> => {
-		const branch = await defaultBranch(root);
-		if (branch === null) throw new Error(`GitHub did not say which branch of ${repository} is its default, so it cannot be read.`);
-		const update = await library.fetch(root, branch);
-		const commit = await libraryCommit(root, branch);
-		if (commit === null) throw new Error(typeof update === 'object' ? update.failed : `${repository} has no ${branch} branch from GitHub to read.`);
-		const found = await findDesignSystems(libraryReads(root, commit), repository);
-		if (found.length === 0) {
-			throw new Error(`No design system was found in ${repository}: it has no Storybook stories, and no tokens in theme files, CSS variables or token files.`);
-		}
-		if (found.length > 1) {
-			offered.set(repository, { root, branch, found });
-			return { state: 'choose', repository, found };
-		}
-		return keep(repository, root, branch, found[0] as FoundDesignSystem);
-	};
+	// Connecting a design system (P4): cloned or used where it is, then looked in (`DesignLibrary.connect`).
 	ipcMain.handle(
 		CHANNELS.connectDesignSystem,
 		guard(async (repository: string): Promise<DesignSystemConnection> => {
 			const cloned = await cloneAsPlanned(String(repository), true);
-			return connectAt(cloned.repository, cloned.path);
+			return library.connect(cloned.repository, cloned.path);
 		}),
 	);
 	ipcMain.handle(
 		CHANNELS.chooseDesignSystem,
-		guard((repository: string, folder: string): DesignSystemConnection => {
-			const at = offered.get(String(repository));
-			const found = at?.found.find((f) => f.folder === folder);
-			if (!at || !found) throw new Error('That is not one of the design systems found in the repository. Connect it again.');
-			return keep(String(repository), at.root, at.branch, found);
-		}),
+		guard((repository: string, folder: string): DesignSystemConnection => library.choose(String(repository), String(folder))),
 	);
 	/**
 	 * A clone is used on a branch with the DSNR setup, since the app reads it from the files there. A clone just

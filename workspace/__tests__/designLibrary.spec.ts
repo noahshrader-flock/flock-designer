@@ -10,7 +10,7 @@ import { g } from './fixtures';
 const LIBRARY = 'flocksafety/flock-react-component-lib';
 const GITHUB_URL = `https://github.com/${LIBRARY}.git`;
 /** The library as connected: the whole repository, on develop, at `root`. */
-const at = (root: string, more: Partial<ConnectedDesignSystem> = {}): ConnectedDesignSystem & { branch: string } => ({ id: LIBRARY, name: 'FUI', repository: LIBRARY, root, folder: '', branch: 'develop', ...more }) as ConnectedDesignSystem & { branch: string };
+const at = (root: string, more: Partial<ConnectedDesignSystem> = {}): ConnectedDesignSystem => ({ id: LIBRARY, name: 'FUI', repository: LIBRARY, root, folder: '', branch: 'develop', ...more });
 const story = (title: string) => `const meta = {\n  title: '${title}',\n};\nexport default meta;\n`;
 
 let home: string;
@@ -208,11 +208,6 @@ describe('what the tab is told', () => {
 		expect(await new DesignLibrary({ systems: memory(at(join(home, 'gone'))) }).catalog(false)).toEqual({ state: 'lost', name: 'FUI', root: join(home, 'gone') });
 	});
 
-	it('finds the branch of one kept by an earlier version, its repository’s default, and keeps it', async () => {
-		const systems = memory(at(clone, { branch: null as never }));
-		expect(ready(await new DesignLibrary({ systems }).catalog(false)).branch).toBe('develop');
-		expect(systems.current()?.branch).toBe('develop');
-	});
 
 	it('answers at once with what the clone has, then the next ask with refresh waits for the one fetch it started', async () => {
 		let finish: (o: 'updated') => void = () => undefined;

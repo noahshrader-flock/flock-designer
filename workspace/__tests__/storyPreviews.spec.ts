@@ -11,7 +11,7 @@ import { g } from './fixtures';
 
 /** The library as connected (P4): the whole repository, on develop, at `root`. */
 const REPOSITORY = 'flocksafety/flock-react-component-lib';
-const connected = (root: string) => async () => ({ id: REPOSITORY, name: 'FUI', repository: REPOSITORY, root, folder: '', branch: 'develop' });
+const connected = (root: string) => () => ({ id: REPOSITORY, name: 'FUI', repository: REPOSITORY, root, folder: '', branch: 'develop' });
 
 /**
  * The previews of the library's stories (P1 of the design system plan), against a small library made here: a bare
@@ -329,7 +329,7 @@ describe('keeping them', () => {
 describe('what it says when it cannot', () => {
 	it('says there is no library, no packages, or no develop', async () => {
 		makeLibrary(LIBRARY, false);
-		expect(await previews({ system: async () => null }).preview()).toEqual({ state: 'no-library' });
+		expect(await previews({ system: () => null }).preview()).toEqual({ state: 'no-library' });
 		expect(await previews().preview()).toEqual({ state: 'no-packages', root: clone });
 		g(clone, 'update-ref', '-d', 'refs/remotes/origin/develop');
 		expect(await previews().preview()).toMatchObject({ state: 'failed', error: expect.stringContaining('no develop') });

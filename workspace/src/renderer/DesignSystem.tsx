@@ -1,6 +1,6 @@
 import { ChevronDownIcon, ChevronRightIcon, GitBranchIcon, InfoIcon, PlusIcon, SwatchBookIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem } from '../shared/contract';
+import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem, ConnectedDesignSystems, Result } from '../shared/contract';
 import { ComponentPage } from './ComponentPage';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { LoadingScreen } from './Loading';
@@ -127,7 +127,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	// The tokens panel at the right of the tab (decision 21): shown unless it was hidden, whichever screen is open.
 	const [tokensOpen, setTokensOpen] = useState(true);
 	// The design systems connected, and which is shown (P4); and whether another is being connected.
-	const [systems, setSystems] = useState<{ systems: ConnectedDesignSystem[]; current: string | null }>({ systems: [], current: null });
+	const [systems, setSystems] = useState<ConnectedDesignSystems>({ systems: [], current: null });
 	const [adding, setAdding] = useState(false);
 	const started = useRef(false);
 
@@ -177,16 +177,14 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		await listSystems();
 		await firstRead();
 	}, [listSystems, firstRead]);
-	const select = async (id: string) => {
-		const r = await window.workspace.selectDesignSystem(id);
+	// Switching to one, or removing the one shown: either way another is shown, or what went wrong is said.
+	const thenShow = async (done: Promise<Result<null>>) => {
+		const r = await done;
 		if (r.ok) void showAnother();
 		else setError(r.error);
 	};
-	const remove = async (id: string) => {
-		const r = await window.workspace.removeDesignSystem(id);
-		if (r.ok) void showAnother();
-		else setError(r.error);
-	};
+	const select = (id: string) => thenShow(window.workspace.selectDesignSystem(id));
+	const remove = (id: string) => thenShow(window.workspace.removeDesignSystem(id));
 	const shown = systems.systems.find((s) => s.id === systems.current) ?? null;
 
 	if (error && catalog === null) {

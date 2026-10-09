@@ -3,7 +3,7 @@ import { dirname, isAbsolute } from 'node:path';
 
 /**
  * One folder the app remembers for a person, in its own small file in the app's settings: the product checkout they
- * chose, where their clones go, the design system they connected.
+ * chose, where their clones go. (The design systems connected are a list, kept by `DesignSystemsMemory`.)
  *
  * Only the path is kept, and only as a hint: whoever reads it checks it again before using it, so a stale or edited file
  * can do nothing the person could not have done themselves. Not remembering is an inconvenience, never a failure.

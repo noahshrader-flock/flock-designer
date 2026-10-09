@@ -164,14 +164,14 @@ describe('the ones connected', () => {
 		expect(memory.read()).toEqual({ systems: [], current: null });
 	});
 
-	it('reads what an earlier version kept, one connected folder, as that design system', () => {
+	it('reads what an earlier version kept, one connected folder, as that design system: FUI, which it took alone, on develop', () => {
 		const clone = join(dir, 'fui');
 		mkdirSync(clone);
 		execFileSync('git', ['-C', clone, 'init', '-q']);
 		execFileSync('git', ['-C', clone, 'remote', 'add', 'origin', 'git@github.com:flocksafety/flock-react-component-lib.git']);
 		writeFileSync(file, JSON.stringify({ folder: clone }));
 		expect(new DesignSystemsMemory(file).read()).toEqual({
-			systems: [{ id: 'flocksafety/flock-react-component-lib', name: 'flock-react-component-lib', repository: 'flocksafety/flock-react-component-lib', root: clone, folder: '', branch: null }],
+			systems: [{ id: 'flocksafety/flock-react-component-lib', name: 'flock-react-component-lib', repository: 'flocksafety/flock-react-component-lib', root: clone, folder: '', branch: 'develop' }],
 			current: 'flocksafety/flock-react-component-lib',
 		});
 	});

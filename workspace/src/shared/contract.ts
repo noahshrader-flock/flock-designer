@@ -230,7 +230,7 @@ export type PublishStatus =
 
 /**
  * A design system the person connected (P4 of the design system plan): a repository, the folder in it the design system
- * is (`''` for the whole repository), and the branch read, its default (`null` until it is found).
+ * is (`''` for the whole repository), and the branch read, its default.
  */
 export interface ConnectedDesignSystem {
 	/** Its repository, and in a monorepo `:folder`: what the switcher and Remove name it by. */
@@ -242,7 +242,13 @@ export interface ConnectedDesignSystem {
 	/** Its clone on this computer. */
 	root: string;
 	folder: string;
-	branch: string | null;
+	branch: string;
+}
+
+/** The design systems connected, and the one shown (its `id`, or null when none is). */
+export interface ConnectedDesignSystems {
+	systems: ConnectedDesignSystem[];
+	current: string | null;
 }
 
 /** A place in a repository a design system is (decision 25): its folder, what it has, and what it is called. */
@@ -386,7 +392,7 @@ export interface WorkspaceApi {
 	 */
 	designSystemCatalog(refresh: boolean): Promise<Result<Catalog>>;
 	/** The design systems connected, and which is shown (P4). */
-	designSystems(): Promise<Result<{ systems: ConnectedDesignSystem[]; current: string | null }>>;
+	designSystems(): Promise<Result<ConnectedDesignSystems>>;
 	/**
 	 * Connects a design system from one of the person's repositories: cloned into the clone folder (with progress on
 	 * `onCloneProgress`, `cancelClone` stopping it) or used where it already is, its default branch read, and the design

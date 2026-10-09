@@ -5,9 +5,9 @@
  * and when several do, the person chooses. Its branch is the repository's default (decision 24). Several can be
  * connected, one shown at a time, and each is remembered.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute } from 'node:path';
-import type { ConnectedDesignSystem, FoundDesignSystem } from '../../shared/contract';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, join } from 'node:path';
+import type { ConnectedDesignSystem, ConnectedDesignSystems, FoundDesignSystem } from '../../shared/contract';
 import { isStoryFile, type CatalogReads } from './componentCatalog';
 import { readTokens } from './designTokens';
 import { runGit } from './git';
@@ -106,25 +106,25 @@ export const repositoryAt = (root: string): string | null => {
 /**
  * The design systems a person connected, and which is shown, in their own small file in the app's settings. What is kept
  * is a hint: whoever reads it checks the folder is still there. A file kept by an earlier version (one connected folder,
- * `{ "folder": … }`) is read as that one design system, its repository's whole folder, on its default branch.
+ * `{ "folder": … }`) is read as that one design system: that version took only FUI, whose branch is `develop`.
  */
 export class DesignSystemsMemory {
 	constructor(private readonly file: string) {}
 
-	static defaultPath = (userData: string): string => `${userData}/design-system.json`;
+	static defaultPath = (userData: string): string => join(userData, 'design-system.json');
 
-	read(): { systems: ConnectedDesignSystem[]; current: string | null } {
+	read(): ConnectedDesignSystems {
 		try {
 			const kept = JSON.parse(readFileSync(this.file, 'utf8')) as { systems?: unknown; current?: unknown; folder?: unknown };
 			if (typeof kept.folder === 'string' && isAbsolute(kept.folder) && kept.systems === undefined) {
 				const repository = repositoryAt(kept.folder);
 				if (repository === null) return { systems: [], current: null };
 				const id = designSystemId(repository, '');
-				return { systems: [{ id, name: repository.split('/')[1] as string, repository, root: kept.folder, folder: '', branch: null }], current: id };
+				return { systems: [{ id, name: repository.split('/')[1] as string, repository, root: kept.folder, folder: '', branch: 'develop' }], current: id };
 			}
 			const systems = (Array.isArray(kept.systems) ? kept.systems : []).filter(
 				(s): s is ConnectedDesignSystem =>
-					typeof s?.id === 'string' && typeof s.name === 'string' && typeof s.repository === 'string' && typeof s.root === 'string' && isAbsolute(s.root) && typeof s.folder === 'string' && (s.branch === null || typeof s.branch === 'string'),
+					typeof s?.id === 'string' && typeof s.name === 'string' && typeof s.repository === 'string' && typeof s.root === 'string' && isAbsolute(s.root) && typeof s.folder === 'string' && typeof s.branch === 'string',
 			);
 			const current = typeof kept.current === 'string' && systems.some((s) => s.id === kept.current) ? kept.current : (systems[0]?.id ?? null);
 			return { systems, current };
@@ -166,7 +166,4 @@ export class DesignSystemsMemory {
 		const left = systems.filter((s) => s.id !== id);
 		this.write(left, current === id ? (left[0]?.id ?? null) : current);
 	}
-
-	/** Whether the folder of one connected is still on this computer. */
-	static isThere = (system: ConnectedDesignSystem): boolean => existsSync(system.root);
 }
