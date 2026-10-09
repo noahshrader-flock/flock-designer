@@ -98,7 +98,7 @@ export const defaultBranch = async (root: string): Promise<string | null> => {
 };
 
 /** The repository a clone's `origin` is on GitHub (`owner/repo`), or null. */
-export const repositoryAt = (root: string): string | null => {
+const repositoryAt = (root: string): string | null => {
 	const remote = originOf(root);
 	return remote === null ? null : gitHubRepoOf(remote);
 };

@@ -19,7 +19,7 @@ import { runGit } from './git';
 const FETCH_TIMEOUT_MS = 120_000;
 
 /** Git's copy of a branch on GitHub. */
-export const branchRef = (branch: string): string => `refs/remotes/origin/${branch}`;
+const branchRef = (branch: string): string => `refs/remotes/origin/${branch}`;
 
 /** What git said when a fetch of `branch` failed, in words a person can act on. */
 export const fetchProblem = (stderr: string, branch: string): string => {

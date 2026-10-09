@@ -111,9 +111,11 @@ const Notice = ({ title, children, onRetry }: { title: string; children: ReactNo
 );
 
 /**
- * The Design System tab: the component library as its branch has it on GitHub, from a clone on this machine
- * (DESIGN_SYSTEM_PLAN.md), as its Storybook lists it. The list, by default; a component, once one is opened from its row
- * or the toolbar's finder, with its stories live. Not a second Storybook: docs and controls stay there, behind each component's links.
+ * The Design System tab: the design system connected, as its branch has it on GitHub, from a clone on this machine
+ * (DESIGN_SYSTEM_PLAN.md). Its toolbar names it, switches between those connected and removes one (P4); with none, the
+ * Connect screen. The components view is the list, by default, with a finder above it, and a component once one is opened,
+ * with its stories live. At the right, always, the tokens panel (T2). Not a second Storybook: docs and controls stay
+ * there, behind each component's links.
  *
  * It reads once when first shown, at once from what the clone has, then again when GitHub has been asked for changes;
  * after that only when Sync is pressed. It stays mounted while hidden, and the list stays mounted while a component is
