@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { DesignToken, DesignTokens, TokenEdit } from '../shared/contract';
 import { contrastPartner, contrastRatio, isForeground } from '../shared/tokens';
 import { ChangedTokens, ContrastNote, Swatch, TokenEditor } from './TokenEditor';
@@ -13,7 +13,7 @@ import { PanelTabs, PanelTabsContent, PanelTabsList, PanelTabsTrigger } from './
  * The library's tokens, in the panel at the right of the Design System tab (T2 and T3 of the design system plan): the
  * list T1 reads, in line tabs by category (Color, Spacing, Shape: the reader says which each token is on, so a
  * category the library gains is a tab with nothing else changed), each tab with its own search. **One accordion at most:**
- * a tab with several groups (Color has Tones, Light and Dark) has them as an accordion, closed until opened; a set is
+ * a tab with several groups (Color has Tones, Light and Dark) has them as an accordion, open until closed; a set is
  * never closed up behind a second one, but a plain heading over its tokens, each a swatch at the left and its value at the
  * right. A tab with one group shows its sets straight away. The tabs are the panel's (`PanelTabs`): edge to edge on a
  * bottom border, the padding on the content under them. What the library has that is not read is one alert above the
@@ -100,15 +100,13 @@ const Sets = ({ tokens }: { tokens: DesignToken[] }) => (
 
 /** One category's tab: its own search, then its tokens. What is typed is the panel's, so it is there when the tab is back. */
 const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tokens: DesignToken[]; query: string; onQuery: (query: string) => void }) => {
-	const [groupsOpen, setGroupsOpen] = useState<string[]>([]);
+	// Every group is open until the person closes it, so a group the library gains, or a search finds, is open too.
+	const [closed, setClosed] = useState<string[]>([]);
 	const q = query.trim().toLowerCase();
 	const shown = useMemo(() => (q === '' ? tokens : tokens.filter((t) => searchable(t).includes(q))), [tokens, q]);
-	// A search opens every group it found; closing one afterwards is the person's.
-	useEffect(() => {
-		if (q !== '') setGroupsOpen([...new Set(shown.map((t) => t.group))]);
-	}, [q, shown]);
 
 	const groups = inOrder(shown, (t) => t.group);
+	const names = groups.map(([group]) => group);
 	return (
 		<div className="flex flex-col gap-3">
 			<SearchField label={`Search ${category.toLowerCase()}`} value={query} onChange={onQuery} />
@@ -118,7 +116,7 @@ const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tok
 				// One group would say the tab's own name again, so its sets are shown directly.
 				<Sets tokens={shown} />
 			) : (
-				<Accordion type="multiple" value={groupsOpen} onValueChange={setGroupsOpen}>
+				<Accordion type="multiple" value={names.filter((g) => !closed.includes(g))} onValueChange={(open) => setClosed(names.filter((g) => !open.includes(g)))}>
 					{groups.map(([group, inGroup]) => (
 						<AccordionItem key={group} value={group} data-token-group>
 							<AccordionTrigger>

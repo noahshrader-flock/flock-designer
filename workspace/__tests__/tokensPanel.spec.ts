@@ -118,23 +118,40 @@ describe('the tabs', () => {
 });
 
 describe('the groups', () => {
-	it('on the Color tab are the library’s, in order, each with its count, and all closed at first', async () => {
+	it('on the Color tab are the library’s, in order, each with its count, and all open at first', async () => {
 		await show();
 		expect(groups().map((t) => [t.querySelector('[data-name]')?.textContent, t.querySelector('[data-count]')?.textContent])).toEqual([
 			['Tones', '3'],
 			['Light', '2'],
 			['Dark', '1'],
 		]);
-		expect(rows()).toHaveLength(0);
+		expect(groups().map((t) => t.getAttribute('aria-expanded'))).toEqual(['true', 'true', 'true']);
+		expect(rows()).toHaveLength(6);
+	});
+
+	it('close and open again on a press, each on its own', async () => {
+		await show();
+		await press(group('Light'));
+		await settle();
+		expect(groups().map((t) => t.getAttribute('aria-expanded'))).toEqual(['true', 'false', 'true']);
+		expect(rows().map((r) => r.getAttribute('data-token'))).not.toContain('palette.light.primary.main');
+		await press(group('Light'));
+		await settle();
+		expect(group('Light').getAttribute('aria-expanded')).toBe('true');
 	});
 
 	it('open straight to their sets, each its name over its colors, with no second accordion inside', async () => {
 		await show();
-		await press(group('Tones'));
-		await settle();
-		expect(setNames()).toEqual(['pineGreen', 'red']);
+		expect(setNames()).toEqual(['pineGreen', 'red', 'primary', 'primaryBorder', 'primary']);
 		// Every color of every set is listed already: nothing is left to open.
-		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual(['tone.pineGreen.50', 'tone.pineGreen.20', 'tone.red.40']);
+		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual([
+			'tone.pineGreen.50',
+			'tone.pineGreen.20',
+			'tone.red.40',
+			'palette.light.primary.main',
+			'palette.light.primaryBorder.main',
+			'palette.dark.primary.main',
+		]);
 		expect(document.querySelectorAll('[data-token-group] [data-slot="accordion"]')).toHaveLength(0);
 		expect(document.querySelectorAll('[data-slot="accordion-item"]')).toHaveLength(3);
 	});
@@ -153,8 +170,6 @@ describe('the groups', () => {
 describe('a set', () => {
 	it('lists its tokens: a swatch of the color at the left, its name, and the value at the right', async () => {
 		await show();
-		await press(group('Tones'));
-		await settle();
 		const step = row('tone.pineGreen.50')?.querySelector('button') as HTMLElement;
 		expect(step.firstElementChild?.getAttribute('data-swatch')).not.toBeNull();
 		expect(step.querySelector<HTMLElement>('[data-swatch]')?.style.backgroundColor).toBe('rgb(16, 128, 98)');
@@ -166,8 +181,6 @@ describe('a set', () => {
 
 	it('says which tone a palette role points at, and its opacity', async () => {
 		await show();
-		await press(group('Light'));
-		await settle();
 		expect(row('palette.light.primaryBorder.main')?.textContent).toContain('pineGreen 20 at 40%');
 		expect(row('palette.light.primary.main')?.textContent).toContain('pineGreen 50');
 	});
@@ -197,7 +210,7 @@ describe('searching', () => {
 		expect((search('Color') as HTMLInputElement).value).toBe('');
 	});
 
-	it('is in each tab, with its own box, and shows only what matches in that tab, opened to it', async () => {
+	it('is in each tab, with its own box, and shows only what matches in that tab', async () => {
 		await show();
 		await typeInto(search('Color') as HTMLInputElement, 'primary');
 		await settle();
@@ -255,12 +268,8 @@ describe('what it could not read', () => {
 });
 
 describe('changing a token (T3)', () => {
-	/** Opens a token's control from its row, as a press does, on its tab and in its group. */
-	const open = async (path: string, groupName?: string) => {
-		if (groupName) {
-			await press(group(groupName));
-			await settle();
-		}
+	/** Opens a token's control from its row, as a press does. */
+	const open = async (path: string) => {
 		await press(row(path)?.querySelector('button') as HTMLElement);
 		await settle();
 		return document.querySelector<HTMLElement>(`[data-token-editor="${path}"]`) as HTMLElement;
@@ -276,8 +285,6 @@ describe('changing a token (T3)', () => {
 
 	it('opens from a row, beside the panel: no control is on a row until it is opened', async () => {
 		await show();
-		await press(group('Light'));
-		await settle();
 		expect(document.querySelector('input[type="color"]')).toBeNull();
 		const editor = await open('palette.light.primary.main');
 		expect(editor.textContent).toContain('Light primary main');
@@ -286,7 +293,7 @@ describe('changing a token (T3)', () => {
 
 	it('points a role at another step of its tone by default, which keeps the link', async () => {
 		await show();
-		const editor = await open('palette.light.primary.main', 'Light');
+		const editor = await open('palette.light.primary.main');
 		expect(editor.textContent).toContain('Points at pineGreen 50');
 		const steps = [...editor.querySelectorAll<HTMLButtonElement>('[aria-label="Steps of pineGreen"] button')];
 		expect(steps.map((s) => s.getAttribute('aria-label'))).toEqual(['pineGreen 50', 'pineGreen 20']);
@@ -303,7 +310,7 @@ describe('changing a token (T3)', () => {
 
 	it('gives a role a custom color only when asked, saying it cuts the link', async () => {
 		await show();
-		const editor = await open('palette.light.primary.main', 'Light');
+		const editor = await open('palette.light.primary.main');
 		await press(button('Use a custom color', editor));
 		await settle();
 		expect(editor.textContent).toContain('A custom color replaces the pointer: a later change to pineGreen will not reach it.');
@@ -317,7 +324,7 @@ describe('changing a token (T3)', () => {
 
 	it('changes a tone with a picker and its hex, when the picker is closed, and the roles that point at it follow', async () => {
 		await show();
-		const editor = await open('tone.pineGreen.50', 'Tones');
+		const editor = await open('tone.pineGreen.50');
 		expect(editor.textContent).toContain('Used by 1 role');
 		const picker = editor.querySelector<HTMLInputElement>('input[type="color"]') as HTMLInputElement;
 		// Moving through colors builds nothing: only closing the picker does.
@@ -325,14 +332,12 @@ describe('changing a token (T3)', () => {
 		expect(made).toEqual([]);
 		await pick(picker, '#0a6b52');
 		expect(made.at(-1)).toEqual([{ path: 'tone.pineGreen.50', value: '#0A6B52' }]);
-		await press(group('Light'));
-		await settle();
 		expect(row('palette.light.primary.main')?.textContent).toContain('#0A6B52');
 	});
 
 	it('refuses a hex that is not one, and keeps what it was', async () => {
 		await show();
-		const editor = await open('tone.pineGreen.50', 'Tones');
+		const editor = await open('tone.pineGreen.50');
 		const hex = editor.querySelector<HTMLInputElement>('input[aria-label="Hex"]') as HTMLInputElement;
 		await typeInto(hex, 'green');
 		await act(async () => void hex.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
@@ -355,7 +360,7 @@ describe('changing a token (T3)', () => {
 
 	it('lists what was changed above the tabs, from what it was to what it is, with a reset for each and for all', async () => {
 		await show();
-		const editor = await open('palette.light.primary.main', 'Light');
+		const editor = await open('palette.light.primary.main');
 		await press(editor.querySelector('[aria-label="pineGreen 20"]') as HTMLElement);
 		await settle();
 		const list = changedList() as HTMLElement;
@@ -371,7 +376,7 @@ describe('changing a token (T3)', () => {
 
 	it('resets every change at once', async () => {
 		await show();
-		await open('tone.pineGreen.50', 'Tones');
+		await open('tone.pineGreen.50');
 		await pick(document.querySelector('input[type="color"]') as HTMLInputElement, '#000000');
 		await press(button('Change Tones red 40'));
 		await settle();
@@ -384,10 +389,10 @@ describe('changing a token (T3)', () => {
 
 	it('makes no change, and so builds nothing, when the same change is made again', async () => {
 		await show();
-		const editor = await open('palette.light.primary.main', 'Light');
+		const editor = await open('palette.light.primary.main');
 		await press(editor.querySelector('[aria-label="pineGreen 50"]') as HTMLElement);
 		await settle();
-		const hex = (await open('tone.pineGreen.50', 'Tones')).querySelector<HTMLInputElement>('input[aria-label="Hex"]') as HTMLInputElement;
+		const hex = (await open('tone.pineGreen.50')).querySelector<HTMLInputElement>('input[aria-label="Hex"]') as HTMLInputElement;
 		await act(async () => void hex.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
 		await settle();
 		expect(made).toEqual([]);
@@ -395,7 +400,7 @@ describe('changing a token (T3)', () => {
 
 	it('is no change when a token is changed back to what the library has', async () => {
 		await show();
-		const editor = await open('palette.light.primary.main', 'Light');
+		const editor = await open('palette.light.primary.main');
 		await press(editor.querySelector('[aria-label="pineGreen 20"]') as HTMLElement);
 		await settle();
 		await press(document.querySelector('[data-token-editor="palette.light.primary.main"] [aria-label="pineGreen 50"]') as HTMLElement);
@@ -405,7 +410,7 @@ describe('changing a token (T3)', () => {
 
 	it('says to open a component when none is open, as nothing on the list shows a change', async () => {
 		await show(TOKENS, false);
-		await open('tone.pineGreen.50', 'Tones');
+		await open('tone.pineGreen.50');
 		await pick(document.querySelector('input[type="color"]') as HTMLInputElement, '#000000');
 		expect(changedList()?.textContent).toContain('Open a component to see them. Nothing is saved.');
 	});
@@ -424,8 +429,6 @@ describe('changing a token (T3)', () => {
 
 		it('shows a pair’s contrast on the row read under the other, and warns below AA', async () => {
 			await show(PAIR);
-			await press(group('Light'));
-			await settle();
 			const ratio = () => row('palette.light.primary.main')?.querySelector<HTMLElement>('[data-contrast]');
 			expect(ratio()?.textContent).toBe('4.8:1');
 			expect(ratio()?.className).toContain('text-muted-foreground');
@@ -440,11 +443,9 @@ describe('changing a token (T3)', () => {
 
 		it('says when a token is written in one place with another, and marks both as changed', async () => {
 			await show(PAIR);
-			const editor = await open('palette.light.info.main', 'Light');
+			const editor = await open('palette.light.info.main');
 			expect(editor.textContent).toContain('Also changes Dark info main: written in one place.');
 			await pick(editor.querySelector('input[type="color"]') as HTMLInputElement, '#00FF00');
-			await press(group('Dark'));
-			await settle();
 			expect(row('palette.dark.info.main')?.hasAttribute('data-changed')).toBe(true);
 			expect(row('palette.dark.info.main')?.textContent).toContain('#00FF00');
 		});
@@ -460,8 +461,6 @@ describe('naming and reach (T3)', () => {
 
 	it('says a step of a family roles point at is used by none, when none points at it', async () => {
 		await show();
-		await press(group('Tones'));
-		await settle();
 		await press(row('tone.pineGreen.20')?.querySelector('button') as HTMLElement);
 		await settle();
 		// primaryBorder points at pineGreen 20; red is a family no role points into, so it says nothing.
