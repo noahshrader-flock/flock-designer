@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { PUBLISH_WORKFLOW, pageBehind, pageStatus, publish, readVisibility, unpublish, whyPublic } from '../src/main/services/pages';
+import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, redeploySite, siteBehind, unpublish, whyPublic } from '../src/main/services/pages';
 
 /**
  * Publishing a prototype to its page (M5b of the Pages plan), against a fake GitHub. What matters most is what it will
@@ -272,7 +272,7 @@ describe('unpublishing', () => {
 	});
 });
 
-describe('a page on GitHub that the site does not have yet', () => {
+describe('what GitHub has that the site does not have yet', () => {
 	const WORKFLOW_RUNS = `/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/runs?per_page=5`;
 	const github = ({ files = [{ filename: 'projects/demo/prototypes/v1-i2.html', status: 'modified' }] as { filename: string; status: string }[], runs = [{ status: 'completed' }] as { status: string }[], deployed = true, pages = true } = {}) => ({
 		api: vi.fn(async (path: string) => {
@@ -290,22 +290,53 @@ describe('a page on GitHub that the site does not have yet', () => {
 	});
 
 	it('is found by what changed since the last deploy: one call, whichever page it was', async () => {
-		expect(await pageBehind(github(), REF)).toEqual({ projectId: 'demo', name: 'v1-i2' });
+		expect(await siteBehind(github(), REF)).toEqual({ kind: 'page', projectId: 'demo', name: 'v1-i2' });
 	});
 
 	it('is nothing when only things the site does not show have changed', async () => {
-		const files = [{ filename: 'projects/demo/comments.md', status: 'modified' }, { filename: 'skills/x.md', status: 'added' }, { filename: 'projects/demo/prototypes/v1-i2.tsx', status: 'modified' }];
-		expect(await pageBehind(github({ files }), REF)).toBeNull();
+		const files = [
+			{ filename: 'projects/demo/comments.md', status: 'modified' },
+			{ filename: 'skills/x.md', status: 'added' },
+			{ filename: 'projects/demo/prototypes/v1-i2.tsx', status: 'modified' },
+			// The app's own screens and its main process, which the site is not built from.
+			{ filename: 'workspace/src/main/ipc.ts', status: 'modified' },
+			{ filename: 'workspace/__tests__/viewer.spec.ts', status: 'modified' },
+			{ filename: 'IMPLEMENTATION_PLAN.md', status: 'modified' },
+		];
+		expect(await siteBehind(github({ files }), REF)).toBeNull();
+	});
+
+	it.each([
+		'workspace/src/viewer/Viewer.tsx',
+		'workspace/src/renderer/IterationSwitcher.tsx',
+		'workspace/src/renderer/comments/CommentList.tsx',
+		'workspace/src/renderer/ui/button.tsx',
+		'workspace/src/renderer/index.css',
+		'workspace/src/shared/projects.ts',
+		'workspace/src/site/buildSite.ts',
+		'workspace/src/main/services/designRepo.ts',
+		'workspace/src/cli/flkd.ts',
+		'workspace/viewer.vite.config.ts',
+		'workspace/bin/flkd.mjs',
+		'workspace/package-lock.json',
+		'.github/workflows/publish-prototypes.yml',
+	])('is the site built differently when %s changes: a deploy with no page to name', async (filename) => {
+		expect(await siteBehind(github({ files: [{ filename, status: 'modified' }] }), REF)).toEqual({ kind: 'code' });
+	});
+
+	it('names the page when a page and the way the site is built both changed: one deploy does both', async () => {
+		const files = [{ filename: 'workspace/src/viewer/Viewer.tsx', status: 'modified' }, { filename: 'projects/demo/prototypes/v1-i2.html', status: 'modified' }];
+		expect(await siteBehind(github({ files }), REF)).toEqual({ kind: 'page', projectId: 'demo', name: 'v1-i2' });
 	});
 
 	it('waits while a deploy is already on its way, and has nothing to compare before the first deploy', async () => {
-		expect(await pageBehind(github({ runs: [{ status: 'in_progress' }] }), REF)).toBeNull();
-		expect(await pageBehind(github({ runs: [{ status: 'completed' }, { status: 'queued' }] }), REF)).toBeNull();
-		expect(await pageBehind(github({ deployed: false }), REF)).toBeNull();
+		expect(await siteBehind(github({ runs: [{ status: 'in_progress' }] }), REF)).toBeNull();
+		expect(await siteBehind(github({ runs: [{ status: 'completed' }, { status: 'queued' }] }), REF)).toBeNull();
+		expect(await siteBehind(github({ deployed: false }), REF)).toBeNull();
 	});
 
 	it('is nothing without a Pages site', async () => {
-		expect(await pageBehind(github({ pages: false }), REF)).toBeNull();
+		expect(await siteBehind(github({ pages: false }), REF)).toBeNull();
 	});
 });
 
@@ -317,5 +348,22 @@ describe('when GitHub will not start the deploy', () => {
 		);
 		const { done } = run(gh, { github: { api: refuse } });
 		await expect(done).rejects.toThrow(/Flock Designer's GitHub App is not allowed to start the deploy[\s\S]*Actions: read and write/);
+	});
+});
+
+describe('deploying the site with no page to name', () => {
+	it('pushes the records, deploys, and waits, as publishing does', async () => {
+		const gh = fakeGitHub();
+		const pushRecords = vi.fn(async () => ({ published: [], problems: [] }));
+		await redeploySite({ github: { api: gh.api }, ref: REF, recordsBranch: 'main', pushRecords, sleep: async () => undefined });
+		expect(pushRecords).toHaveBeenCalledOnce();
+		expect(gh.calls.find((c) => c.method === 'POST')).toMatchObject({ path: `/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/dispatches`, body: { ref: 'main' } });
+	});
+
+	it('stops where publishing does: no site, the wrong branch, a failed deploy', async () => {
+		const input = (gh: ReturnType<typeof fakeGitHub>, more = {}) => ({ github: { api: gh.api }, ref: REF, recordsBranch: 'main', pushRecords: async () => ({ published: [], problems: [] }), sleep: async () => undefined, ...more });
+		await expect(redeploySite(input(fakeGitHub({ pages: false })))).rejects.toThrow(/no GitHub Pages site/);
+		await expect(redeploySite(input(fakeGitHub(), { recordsBranch: 'noah/elsewhere' }))).rejects.toThrow(/built from main/);
+		await expect(redeploySite(input(fakeGitHub({ conclusion: 'failure' })))).rejects.toThrow(/did not finish/);
 	});
 });

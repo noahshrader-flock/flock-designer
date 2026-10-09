@@ -720,6 +720,37 @@ describe('prototypes', () => {
 			expect(status).toEqual({ state: 'unpublished', why: expect.stringMatching(/not on a branch/) });
 		});
 
+		describe('when only what the site is built from changed', () => {
+			const base = '/repos/noahshrader-flock/flock-designer';
+			const deployed = 'd'.repeat(40);
+			const behindBy = async (filename: string) => {
+				githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
+				githubApi.mockImplementation(async (path: string) => {
+					if (path === base) return { private: false, default_branch: 'main' };
+					if (path === `${base}/pages`) return { html_url: 'https://x.github.io/flock-designer/', public: true };
+					if (path.startsWith(`${base}/actions/workflows/`) && path.includes('/runs')) return { workflow_runs: [{ status: 'completed' }] };
+					if (path.startsWith(`${base}/deployments?`)) return [{ id: 6, sha: deployed }];
+					if (path === `${base}/deployments/6/statuses?per_page=1`) return [{ state: 'success' }];
+					if (path === `${base}/compare/${deployed}...main`) return { files: [{ filename, status: 'modified' }] };
+					throw new Error(`not faked: ${path}`);
+				});
+				await call(CHANNELS.useCheckout, product);
+				githubApi.mockClear();
+				await call(CHANNELS.publishNow);
+				await new Promise((r) => setTimeout(r, 400));
+				return githubApi.mock.calls.filter(([path]) => String(path) === base).length;
+			};
+
+			it('deploys the site by itself, with no page to name: it asks where the site is again, to deploy', async () => {
+				// Once to find it was behind, once more in the deploy it then starts (which stops there: no branch here).
+				expect(await behindBy('workspace/src/viewer/Viewer.tsx')).toBe(2);
+			});
+
+			it('does nothing for a change the site is not built from', async () => {
+				expect(await behindBy('workspace/src/main/ipc.ts')).toBe(1);
+			});
+		});
+
 		it('says nothing about a page when nobody is signed in to GitHub', async () => {
 			await call(CHANNELS.useCheckout, product);
 			expect((await call(CHANNELS.publishedPage, 'demo', 'v1-i1')).value).toEqual({ state: 'none' });

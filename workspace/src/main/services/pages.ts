@@ -88,12 +88,30 @@ export const pageStatus = async (github: GitHubApi, ref: DesignRepoRef, projectI
 };
 
 /**
- * A page that is on GitHub and not on the site yet, found without anyone asking after it: what changed since the last
- * deploy is read in one call, and the first prototype page in it is the one named. Null when the site has what GitHub
- * has, when a deploy is already on its way (it will take what is there), or when there is nothing to compare with yet.
- * One deploy builds the whole site, so one page named is enough to bring every page up to date.
+ * What the site is built from, besides the pages: the viewer on every page (and the app's own parts it is made of), the
+ * generator, the workflow that runs it, and the packages it installs. A change to any of these changes how the pages
+ * look and work, so the site needs a deploy as much as it does for a new page. The renderer folder is all of it, not
+ * only what the viewer imports: one deploy too many after an edit to a screen the site does not carry costs a minute
+ * of the workflow, and a list of imports kept by hand would one day miss one.
  */
-export const pageBehind = async (github: GitHubApi, ref: DesignRepoRef): Promise<{ projectId: string; name: string } | null> => {
+const SITE_SOURCES = [
+	/^workspace\/src\/(site|viewer|renderer|shared)\//,
+	/^workspace\/src\/main\/services\/(designRepo|github|paths)\.ts$/,
+	/^workspace\/src\/cli\/flkd\.ts$/,
+	/^workspace\/(bin\/|viewer\.vite\.config\.ts$|package-lock\.json$)/,
+	/^\.github\/workflows\/publish-prototypes\.yml$/,
+];
+
+/** What GitHub has that the site does not: a prototype page, or a change to how the site is built (`code`). */
+export type SiteBehind = { kind: 'page'; projectId: string; name: string } | { kind: 'code' };
+
+/**
+ * Whether the site is behind GitHub, found without anyone asking: what changed since the last deploy is read in one
+ * call. A prototype page in it is named (one deploy builds the whole site, so one is enough); otherwise a change to what
+ * the site is built from is `code`. Null when the site has what GitHub has, when a deploy is already on its way (it will
+ * take what is there), or when there is nothing to compare with yet.
+ */
+export const siteBehind = async (github: GitHubApi, ref: DesignRepoRef): Promise<SiteBehind | null> => {
 	const vis = await readVisibility(github, ref);
 	if (!vis.site?.url) return null;
 	const base = `/repos/${ref.owner}/${ref.repo}`;
@@ -101,11 +119,14 @@ export const pageBehind = async (github: GitHubApi, ref: DesignRepoRef): Promise
 	if (asArray(runs).some((r) => asRecord(r).status !== 'completed')) return null;
 	const deployed = await deployedSha(github, base);
 	if (deployed === null) return null;
+	let code = false;
 	for (const f of asArray(asRecord(await github.api(`${base}/compare/${deployed}...${vis.defaultBranch}`)).files)) {
-		const m = /^projects\/([^/]+)\/prototypes\/([^/]+)\.html$/.exec(String(asRecord(f).filename));
-		if (m?.[1] && m[2]) return { projectId: m[1], name: m[2] };
+		const file = String(asRecord(f).filename);
+		const m = /^projects\/([^/]+)\/prototypes\/([^/]+)\.html$/.exec(file);
+		if (m?.[1] && m[2]) return { kind: 'page', projectId: m[1], name: m[2] };
+		code ||= SITE_SOURCES.some((s) => s.test(file));
 	}
-	return null;
+	return code ? { kind: 'code' } : null;
 };
 
 /** No credentials, and GitHub's sign-in redirect not followed: a 200 means the page opens for anyone. */
@@ -248,6 +269,11 @@ const deploy = async (
 	}
 	if (mine.conclusion !== 'success') throw new Error(`The deploy did not finish (${mine.conclusion}). What went wrong is at ${mine.html_url}.${noLink}`);
 	return { visibility, site: site.replace(/\/?$/, '/') };
+};
+
+/** Deploys the site as GitHub has it, with no page to name or link to: the records pushed, the deploy waited on. */
+export const redeploySite = async (input: DeployInput): Promise<void> => {
+	await deploy(input, 'published');
 };
 
 export const publish = async (input: PublishInput): Promise<Published> => {

@@ -69,7 +69,7 @@ import { resolveInside } from './services/paths';
 import { PrototypeServer } from './services/prototypeServer';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
 import { type PrototypeChange, prototypeWork, whereTheChangeGoes } from './services/prototypeWork';
-import { pageBehind, pageStatus, publish, recordsFrom } from './services/pages';
+import { pageStatus, publish, recordsFrom, redeploySite, siteBehind } from './services/pages';
 import {
 	BUILD_SKILL,
 	MOVE_SKILL,
@@ -1110,27 +1110,30 @@ export const registerIpc = ({
 		if (github.state().state !== 'signedIn' || publishing.size > 0 || Date.now() - lastCatchUp < gap) return;
 		lastCatchUp = Date.now();
 		try {
-			const behind = await pageBehind(github, DESIGN_REPO);
-			if (behind) publishInBackground(behind.projectId, behind.name);
+			const behind = await siteBehind(github, DESIGN_REPO);
+			if (behind?.kind === 'page') publishInBackground(behind.projectId, behind.name);
+			else if (behind?.kind === 'code') redeployInBackground();
 		} catch {
 			// GitHub would not say: the review screen says so for the page being looked at.
 		}
 	};
-	const publishInBackground = (projectId: string, name: string): void => {
-		const key = prototypeKey(projectId, name);
+	/** Runs a deploy in the background under `key`, one at a time for a key, and once more if asked again meanwhile. */
+	const inBackground = (key: string, deploy: () => Promise<unknown>): void => {
 		if (github.state().state !== 'signedIn') return;
 		if (publishing.has(key)) return void publishAgain.add(key);
-		const run = (async () => {
-			await publish({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())), projectId, name });
-		})()
+		const run = deploy()
 			.then(() => void publishStopped.delete(key))
 			.catch((err: unknown) => void publishStopped.set(key, err instanceof Error ? err.message : String(err)))
 			.finally(() => {
 				publishing.delete(key);
-				if (publishAgain.delete(key)) publishInBackground(projectId, name);
+				if (publishAgain.delete(key)) inBackground(key, deploy);
 			});
 		publishing.set(key, run);
 	};
+	const publishInBackground = (projectId: string, name: string): void =>
+		inBackground(prototypeKey(projectId, name), async () => publish({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())), projectId, name }));
+	/** The site, when what it is built from changed and no page did: it has no page of its own to key on. */
+	const redeployInBackground = (): void => inBackground('the site', async () => redeploySite({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())) }));
 	ipcMain.handle(CHANNELS.publishedPage, guard((projectId: string, name: string) => publishedPage(projectId, name)));
 	ipcMain.handle(
 		CHANNELS.openPublishedPage,
