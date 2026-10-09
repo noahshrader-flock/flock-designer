@@ -87,8 +87,10 @@ org repo, since a public page there would break requirement 1.
 - **The Flock Designer GitHub App's permissions** (needed before the app's side of publishing works): **Actions: read
   and write** (starts the publish workflow), **Pages: read**, **Deployments: read**. Until then the review screen says
   **Page unknown**. The `flkd` command uses `gh`, which has them.
-- **Fast-forward Coke's `noah/flock-designer` to `noah/flock-designer-c5`**, which holds `7dba10c3` (`.claude/settings.json`
-  allowing the four `flkd` commands) and `5265e262` (the `install` command, for the clone plan's C5). `unpublish` is deliberately not on that list: the agent asks first.
+- **Fast-forward Coke's `noah/flock-designer` to `noah/flock-designer-path`**, which holds `7dba10c3` (`.claude/settings.json`
+  allowing the four `flkd` commands), `5265e262` (the `install` command, for the clone plan's C5) and `30edaa36` (a request
+  that names its path starts at once, and one that does not is asked in a panel). **Then work from that branch:**
+  `feature/alert-history` was cut before the settings file and the new routing, so a Claude Code run there has neither. `unpublish` is deliberately not on that list: the agent asks first.
 - **The hand runs** (the code is tested; none of these has been run for real):
   - M2: in Coke on `noah/flock-designer`, ask Claude Code for a prototype, then another version; check both open in the
     app.
