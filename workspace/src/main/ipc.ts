@@ -498,6 +498,20 @@ export const registerIpc = ({
 		return written(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch));
 	}
 
+	/**
+	 * Codebase work already started, picked up: its branch made local if it is only on GitHub, and the checkout moved to
+	 * it. A checkout already on it is left exactly as it is, uncommitted work and all, since that is the work in
+	 * progress; moving from another branch needs a clean one, so nothing is carried or lost.
+	 */
+	async function continueCodebaseWork(root: string, projectId: string, branch: string) {
+		const canonical = opened.require(root);
+		assertAgentNotHere(canonical);
+		await ensureLocalBranch(canonical, branch);
+		if ((await readCheckout(canonical)).branch === branch) return;
+		const me = github.state();
+		await continueIteration(canonical, recordsFor(canonical), projectId, 'codebase', me.state === 'signedIn' ? me.user.login : null, descriptorFor(root));
+	}
+
 	ipcMain.handle(
 		CHANNELS.continueIteration,
 		guard(async (root: string, projectId: string, name: string) => {
@@ -1244,8 +1258,8 @@ export const registerIpc = ({
 	);
 
 	/**
-	 * Build in the codebase, from a prototype: its branch and record are made here, as all codebase work's are, and the
-	 * building is handed to Claude Code in the product repository, where the person watches it and can step in. The
+	 * Build, from a prototype: its branch and record are made here, as all codebase work's are (or, when the work was
+	 * started before, picked up where it is), and the building is handed to Claude Code in the product repository, where the person watches it and can step in. The
 	 * task is written beside the prototype's own copy (the skill, the page and source to start from, where the audit
 	 * goes); the conversation starts with a line pointing at it. In VS Code when it has Claude Code; otherwise the
 	 * command that starts it in a terminal is put on the clipboard.
@@ -1265,8 +1279,12 @@ export const registerIpc = ({
 			const sourceFile = work.sourceFile(projectId, name);
 			const source = await work.sourceText(projectId, name);
 			const label = iterationLabel({ name, branch: prototypeKey(projectId, name) });
-			// The branch first: nothing is written for the agent if the work cannot start (a dirty tree, work already there).
-			await startCodebaseWork(root, projectId, `From prototype ${label}`, from);
+			// The branch first: nothing is written for the agent if the work cannot start (a dirty tree, work not found).
+			// Work already started, here or recorded, is continued where it is; it is not started a second time.
+			const branch = codebaseBranchFor(descriptorFor(root), projectId);
+			const continuing = (await work.records(projectId)).some((i) => i.name === 'codebase') || (await branchExists(canonical, branch));
+			if (continuing) await continueCodebaseWork(root, projectId, branch);
+			else await startCodebaseWork(root, projectId, `From prototype ${label}`, from);
 			writeFileSync(pageFile, html);
 			if (source !== null) writeFileSync(sourceFile, source);
 			const taskFile = join(dirname(pageFile), `${name}-into-code.md`);
@@ -1281,7 +1299,9 @@ export const registerIpc = ({
 					basedOn: (await work.record(projectId, name))?.basedOn,
 				}),
 			);
-			const prompt = `Build prototype ${label} of ${projectId} into this codebase. Your task, with the skill to follow and the prototype's files, is in ${taskFile}: read it and do what it says.`;
+			const prompt = continuing
+				? `Continue building prototype ${label} of ${projectId} into this codebase, on ${branch}. Some of it may be done already, so look at the branch and the audit first. Your task, with the skill to follow and the prototype's files, is in ${taskFile}: read it and do what it says.`
+				: `Build prototype ${label} of ${projectId} into this codebase. Your task, with the skill to follow and the prototype's files, is in ${taskFile}: read it and do what it says.`;
 			const editor = findEditor();
 			if (editor) {
 				await openPrompt(editor, canonical, prompt);

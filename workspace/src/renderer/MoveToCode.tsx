@@ -65,13 +65,18 @@ export const MoveToCode = ({
 	}, [plan, branches]);
 
 	const wrongRepository = plan !== null && plan.basedOn !== null && plan.basedOn.repository !== plan.repository;
-	const canStart = plan !== null && !plan.recorded && plan.clean && (plan.exists || from !== null) && !busy;
+	// Work already started, recorded or on a branch here, is continued where it is: not started a second time.
+	const continuing = plan !== null && (plan.recorded || plan.exists);
+	// A new branch, or moving to the branch from another, needs a clean checkout. Already on it, whatever is uncommitted
+	// is the work in progress, and is left alone.
+	const needsClean = plan !== null && (!continuing || plan.current !== plan.branch);
+	const canStart = plan !== null && (!needsClean || plan.clean) && (continuing || from !== null) && !busy;
 
 	const start = async () => {
 		if (!plan) return;
 		setBusy(true);
 		setError(null);
-		const r = await window.workspace.buildInClaude(checkout.root, project.id, iteration.name, plan.exists ? undefined : (from ?? undefined));
+		const r = await window.workspace.buildInClaude(checkout.root, project.id, iteration.name, continuing ? undefined : (from ?? undefined));
 		setBusy(false);
 		if (!r.ok) return setError(r.error);
 		setHanded(r.value);
@@ -113,18 +118,14 @@ export const MoveToCode = ({
 								needs the full setup: packages, environment variables, and the app able to run.
 							</p>
 
-							{plan?.recorded && (
-								<Alert variant="warning">
-									<AlertTitle>This project already has codebase work</AlertTitle>
-									<AlertDescription>
-										It is on {plan.branch}. Open it from the project list; a second one is not started.
-									</AlertDescription>
-								</Alert>
-							)}
-							{plan && !plan.recorded && !plan.clean && (
+							{plan && needsClean && !plan.clean && (
 								<Alert variant="warning">
 									<AlertTitle>There are uncommitted changes in {plan.repository}</AlertTitle>
-									<AlertDescription>The work starts on a new branch, which needs a clean checkout. Commit or set them aside first.</AlertDescription>
+									<AlertDescription>
+										{continuing
+											? `Your checkout is on ${plan.current ?? 'no branch'}, and moving it to ${plan.branch} needs a clean checkout. Commit or set them aside first.`
+											: 'The work starts on a new branch, which needs a clean checkout. Commit or set them aside first.'}
+									</AlertDescription>
 								</Alert>
 							)}
 							{wrongRepository && plan?.basedOn && (
@@ -134,11 +135,11 @@ export const MoveToCode = ({
 									</AlertDescription>
 								</Alert>
 							)}
-							{plan && !plan.recorded && (
+							{plan && (
 								<>
 									<div className="flex flex-col gap-2">
-										<Label htmlFor="move-from">{plan.exists ? 'Continues' : 'Starts from'}</Label>
-										{plan.exists ? (
+										<Label htmlFor="move-from">{continuing ? 'Continues' : 'Starts from'}</Label>
+										{continuing ? (
 											<p className="font-mono text-sm">{plan.branch}</p>
 										) : (
 											<SearchSelect
@@ -154,8 +155,8 @@ export const MoveToCode = ({
 											/>
 										)}
 										<p className="text-muted-foreground text-xs">
-											{plan.exists
-												? `${plan.branch} is already here, so the work continues on it and your checkout moves to it.`
+											{continuing
+												? `${plan.branch} already has this project’s codebase work, so Claude Code picks it up there.${plan.current === plan.branch ? '' : ' Your checkout moves to it.'}`
 												: `Creates ${plan.branch} from this branch and moves your checkout to it.`}
 										</p>
 									</div>
@@ -164,7 +165,11 @@ export const MoveToCode = ({
 										<p className="text-sm font-medium">What happens</p>
 										<ol className="text-muted-foreground m-0 list-decimal pl-5 text-sm">
 											<li>Claude Code opens in {checkout.name} on {plan.branch}, with the task in a new conversation.</li>
-											<li>The agent reads the prototype's source and its marks, and writes an audit first: a decision for each stand-in, a data task for each mock, a deletion for each removal.</li>
+											<li>
+												{continuing
+													? 'The agent looks at what is already on the branch and its audit, then carries on from there.'
+													: "The agent reads the prototype's source and its marks, and writes an audit first: a decision for each stand-in, a data task for each mock, a deletion for each removal."}
+											</li>
 											<li>Then it builds the real thing in the files where it belongs, and commits on {plan.branch}. You see all of it there.</li>
 										</ol>
 									</div>
@@ -182,7 +187,7 @@ export const MoveToCode = ({
 								Cancel
 							</Button>
 							<Button onClick={() => void start()} disabled={!canStart}>
-								{busy ? 'Opening…' : plan?.exists ? 'Continue on the branch in Claude Code' : 'Create branch and open in Claude Code'}
+								{busy ? 'Opening…' : continuing ? 'Continue in Claude Code' : 'Build in Claude Code'}
 							</Button>
 						</DialogFooter>
 					</>

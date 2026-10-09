@@ -120,7 +120,7 @@ export const ShareControl = ({
 						{canMove && (
 							<DropdownMenuItem onSelect={onMoveToCode}>
 								<CodeIcon />
-								Build in the codebase
+								Build
 							</DropdownMenuItem>
 						)}
 						{canShare && (

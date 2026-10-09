@@ -990,6 +990,60 @@ describe('prototypes', () => {
 			expect(agentStart).not.toHaveBeenCalled();
 		});
 
+		describe('coming back to codebase work already started', () => {
+			const started = async () => {
+				await saved();
+				expect((await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
+				g(product, 'checkout', '-q', 'develop');
+				copied = '';
+			};
+
+			it('continues on its branch with a prompt that says to look at what is there, and makes no second record', async () => {
+				await started();
+				const r = await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1');
+				expect(r.ok).toBe(true);
+				expect(g(product, 'branch', '--show-current').trim()).toBe('feature/demo');
+				const records = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'iterations.json'), 'utf8')) as { name: string }[];
+				expect(records.filter((i) => i.name === 'codebase')).toHaveLength(1);
+				const { value } = r as { value: { command: string } };
+				expect(value.command).toContain('Continue building prototype V1');
+				expect(value.command).toContain('feature/demo');
+				expect(value.command).toContain('v1-i1-into-code.md');
+			});
+
+			it('leaves uncommitted work alone when the checkout is already on the branch', async () => {
+				await started();
+				g(product, 'checkout', '-q', 'feature/demo');
+				writeFileSync(join(product, 'README.md'), 'work in progress\n');
+				const r = await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1');
+				expect(r.ok).toBe(true);
+				expect(readFileSync(join(product, 'README.md'), 'utf8')).toBe('work in progress\n');
+			});
+
+			it('will not move a dirty checkout to the branch from another, and says why', async () => {
+				await started();
+				writeFileSync(join(product, 'README.md'), 'changed\n');
+				const r = await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1');
+				expect(r.error).toMatch(/uncommitted changes/);
+				expect(g(product, 'branch', '--show-current').trim()).toBe('develop');
+				expect(copied).toBe('');
+			});
+
+			it('picks up a branch that is only on GitHub when its record is here', async () => {
+				await started();
+				// As on another machine: the work is pushed, and this clone has no local branch for it.
+				const remote = join(home, 'remote.git');
+				g(home, 'init', '-q', '--bare', remote);
+				g(product, 'remote', 'add', 'origin', remote);
+				g(product, 'push', '-q', 'origin', 'feature/demo', 'develop');
+				g(product, 'fetch', '-q', 'origin');
+				g(product, 'branch', '-q', '-D', 'feature/demo');
+				const r = await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1');
+				expect(r.ok).toBe(true);
+				expect(g(product, 'branch', '--show-current').trim()).toBe('feature/demo');
+			});
+		});
+
 		it('writes nothing for the agent when the work cannot start', async () => {
 			await saved();
 			writeFileSync(join(product, 'README.md'), 'changed\n');
