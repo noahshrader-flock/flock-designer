@@ -53,7 +53,12 @@ repository so anyone can follow that link (see [flock-designer.md, 3.8](flock-de
    opens codebase work any more; only the older `fd/` prototypes (step 4) still open through that screen. The Hand off
    dialog and its report can go now: nothing reaches them.
 4. **Check the older prototypes made as code on `fd/` branches,** which open through that screen: make them records
-   with a link, or keep a way to see them, depending on whether anyone still uses them.
+   with a link, or keep a way to see them, depending on whether anyone still uses them. **They are four projects:**
+   alert-notification-prefs, orgs-list-signals, role-removal-blast-radius and users-inactivity-signal (each `i1`).
+   Noah's call; it is what keeps the codebase screen, and the Hand off woven into it, in the app.
+5. **VS Code on Windows.** It is found only where a Mac keeps it, so on Windows Build gives the terminal command (now
+   quoted for Windows). Finding VS Code there, and opening the conversation in it, is the next step if anyone builds on
+   Windows.
 
 ### 3.6 — Pilot and decision (was C5)
 
