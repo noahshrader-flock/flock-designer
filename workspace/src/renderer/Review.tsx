@@ -521,6 +521,15 @@ export const Review = ({
 				</div>
 			</Toolbar>
 
+			{/* Said where it can be seen: a reason kept only in a disabled button's tooltip goes unread. */}
+			{page.state === 'unpublished' && page.why && (
+				<Alert variant="warning" className="rounded-none border-x-0">
+					<AlertDescription>
+						This is saved, but not on its page yet. It was not published because: {page.why} It is tried again by itself.
+					</AlertDescription>
+				</Alert>
+			)}
+
 			{checkout && codebase && (
 				<HandoffDialog
 					open={handingOff}

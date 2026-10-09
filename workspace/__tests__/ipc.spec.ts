@@ -657,6 +657,37 @@ describe('prototypes', () => {
 			expect(asked()).toBe(2);
 		});
 
+		it('publishes a page that is on GitHub and not on the site, by itself, whenever the publisher runs', async () => {
+			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
+			const base = '/repos/noahshrader-flock/flock-designer';
+			const deployed = 'd'.repeat(40);
+			githubApi.mockImplementation(async (path: string) => {
+				if (path === base) return { private: false, default_branch: 'main' };
+				if (path === `${base}/pages`) return { html_url: 'https://x.github.io/flock-designer/', public: true };
+				if (path.startsWith(`${base}/actions/workflows/`) && path.includes('/runs')) return { workflow_runs: [{ status: 'completed' }] };
+				if (path.startsWith(`${base}/deployments?`)) return [{ id: 6, sha: deployed }];
+				if (path === `${base}/deployments/6/statuses?per_page=1`) return [{ state: 'success' }];
+				if (path === `${base}/compare/${deployed}...main`) return { files: [{ filename: 'projects/demo/prototypes/v1-i1.html', status: 'modified' }] };
+				if (path.startsWith(`${base}/commits?`)) return [{ sha: 'c'.repeat(40) }];
+				if (path.startsWith(`${base}/compare/`)) return { status: 'behind' };
+				throw new Error(`not faked: ${path}`);
+			});
+			await call(CHANNELS.useCheckout, product);
+			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+			githubApi.mockClear();
+			// Nothing was saved, and nobody asked after the page: the publisher's own cycle is what starts it.
+			await call(CHANNELS.publishNow);
+			for (let i = 0; i < 100 && !githubApi.mock.calls.some(([path]) => String(path) === `${base}/compare/${deployed}...main`); i++) await new Promise((r) => setTimeout(r, 10));
+			expect(githubApi.mock.calls.map(([path]) => String(path))).toContain(`${base}/compare/${deployed}...main`);
+			// A publish was started for that page: this clone is on no branch, which is what stops it, said not swallowed.
+			let status = (await call(CHANNELS.publishedPage, 'demo', 'v1-i1')).value as { state: string; why?: string };
+			for (let i = 0; i < 100 && status.state === 'publishing'; i++) {
+				await new Promise((r) => setTimeout(r, 10));
+				status = (await call(CHANNELS.publishedPage, 'demo', 'v1-i1')).value as typeof status;
+			}
+			expect(status).toEqual({ state: 'unpublished', why: expect.stringMatching(/not on a branch/) });
+		});
+
 		it('says nothing about a page when nobody is signed in to GitHub', async () => {
 			await call(CHANNELS.useCheckout, product);
 			expect((await call(CHANNELS.publishedPage, 'demo', 'v1-i1')).value).toEqual({ state: 'none' });

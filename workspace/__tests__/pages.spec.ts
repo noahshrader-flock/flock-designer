@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, unpublish, whyPublic } from '../src/main/services/pages';
+import { PUBLISH_WORKFLOW, pageBehind, pageStatus, publish, readVisibility, unpublish, whyPublic } from '../src/main/services/pages';
 
 /**
  * Publishing a prototype to its page (M5b of the Pages plan), against a fake GitHub. What matters most is what it will
@@ -249,5 +249,53 @@ describe('unpublishing', () => {
 		const { done } = take(gh, { pushRecords: async () => ({ published: [], problems: [{ what: 'Project records', why: 'Could not reach GitHub.' }] }) });
 		await expect(done).rejects.toThrow(/removed here[\s\S]*site still has it[\s\S]*Could not reach GitHub/);
 		expect(gh.calls.some((c) => c.method === 'POST')).toBe(false);
+	});
+});
+
+describe('a page on GitHub that the site does not have yet', () => {
+	const WORKFLOW_RUNS = `/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/runs?per_page=5`;
+	const github = ({ files = [{ filename: 'projects/demo/prototypes/v1-i2.html', status: 'modified' }] as { filename: string; status: string }[], runs = [{ status: 'completed' }] as { status: string }[], deployed = true, pages = true } = {}) => ({
+		api: vi.fn(async (path: string) => {
+			if (path === '/repos/acme/design') return { private: true, default_branch: 'main' };
+			if (path === '/repos/acme/design/pages') {
+				if (!pages) throw Object.assign(new Error('Not Found'), { status: 404 });
+				return { html_url: SITE, public: false };
+			}
+			if (path === WORKFLOW_RUNS) return { workflow_runs: runs };
+			if (path.startsWith('/repos/acme/design/deployments?')) return deployed ? [{ id: 6, sha: 'd'.repeat(40) }] : [];
+			if (path === '/repos/acme/design/deployments/6/statuses?per_page=1') return [{ state: 'success' }];
+			if (path === `/repos/acme/design/compare/${'d'.repeat(40)}...main`) return { files };
+			throw new Error(`not faked: ${path}`);
+		}),
+	});
+
+	it('is found by what changed since the last deploy: one call, whichever page it was', async () => {
+		expect(await pageBehind(github(), REF)).toEqual({ projectId: 'demo', name: 'v1-i2' });
+	});
+
+	it('is nothing when only things the site does not show have changed', async () => {
+		const files = [{ filename: 'projects/demo/comments.md', status: 'modified' }, { filename: 'skills/x.md', status: 'added' }, { filename: 'projects/demo/prototypes/v1-i2.tsx', status: 'modified' }];
+		expect(await pageBehind(github({ files }), REF)).toBeNull();
+	});
+
+	it('waits while a deploy is already on its way, and has nothing to compare before the first deploy', async () => {
+		expect(await pageBehind(github({ runs: [{ status: 'in_progress' }] }), REF)).toBeNull();
+		expect(await pageBehind(github({ runs: [{ status: 'completed' }, { status: 'queued' }] }), REF)).toBeNull();
+		expect(await pageBehind(github({ deployed: false }), REF)).toBeNull();
+	});
+
+	it('is nothing without a Pages site', async () => {
+		expect(await pageBehind(github({ pages: false }), REF)).toBeNull();
+	});
+});
+
+describe('when GitHub will not start the deploy', () => {
+	it('says what the app is missing, in words that can be acted on, when its permission is refused', async () => {
+		const gh = fakeGitHub();
+		const refuse = vi.fn(async (path: string, init?: { method?: string; body?: unknown }) =>
+			path.endsWith('/dispatches') ? Promise.reject(Object.assign(new Error('Resource not accessible by integration'), { status: 403 })) : gh.api(path, init as never),
+		);
+		const { done } = run(gh, { github: { api: refuse } });
+		await expect(done).rejects.toThrow(/Flock Designer's GitHub App is not allowed to start the deploy[\s\S]*Actions: read and write/);
 	});
 });

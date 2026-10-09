@@ -3,7 +3,7 @@ import { prototypePagePath, sitePath } from '../../shared/projects';
 import type { DesignRepoRef, GitHubApi } from './designRepo';
 import { type SyncResult, syncRecords } from './designSync';
 import { runGit } from './git';
-import { asRecord } from '../../shared/json';
+import { asArray, asRecord } from '../../shared/json';
 
 /**
  * Publishing a prototype to its page on the design repository's GitHub Pages site: the one way it is done, from the
@@ -25,6 +25,7 @@ export interface SiteVisibility {
 	site: { url: string; public: boolean } | null;
 }
 
+const forbidden = (err: unknown): boolean => asRecord(err).status === 403 || /\b403\b|not accessible by integration/i.test(err instanceof Error ? err.message : String(err));
 const notFound = (err: unknown): boolean => asRecord(err).status === 404 || /\b404\b|Not Found/.test(err instanceof Error ? err.message : String(err));
 
 export const readVisibility = async (github: GitHubApi, ref: DesignRepoRef): Promise<SiteVisibility> => {
@@ -57,21 +58,22 @@ interface Run {
  * GitHub, so it is the same for someone with no clone. The link carries the deploy it is from, so a page opened after a
  * new one never shows an old copy. `none` when there is no site, or no page to be on it.
  */
+/** The commit the newest finished deploy of the site was built from, or null when none has. One still running may yet fail. */
+const deployedSha = async (github: GitHubApi, base: string): Promise<string | null> => {
+	for (const d of ((await github.api(`${base}/deployments?environment=github-pages&per_page=5`)) as { id: number; sha: string }[] | null) ?? []) {
+		const [latest] = ((await github.api(`${base}/deployments/${d.id}/statuses?per_page=1`)) as { state: string }[] | null) ?? [];
+		if (latest?.state === 'success') return d.sha;
+	}
+	return null;
+};
+
 export const pageStatus = async (github: GitHubApi, ref: DesignRepoRef, projectId: string, name: string): Promise<PageStatus> => {
 	const path = sitePath(projectId, name);
 	if (path === null) return { state: 'none' };
 	const vis = await readVisibility(github, ref);
 	if (!vis.site?.url) return { state: 'none' };
 	const base = `/repos/${ref.owner}/${ref.repo}`;
-	// The newest deploy that finished: one still running may yet fail.
-	let deployed: string | null = null;
-	for (const d of ((await github.api(`${base}/deployments?environment=github-pages&per_page=5`)) as { id: number; sha: string }[] | null) ?? []) {
-		const [latest] = ((await github.api(`${base}/deployments/${d.id}/statuses?per_page=1`)) as { state: string }[] | null) ?? [];
-		if (latest?.state === 'success') {
-			deployed = d.sha;
-			break;
-		}
-	}
+	const deployed = await deployedSha(github, base);
 	const [changed] =
 		((await github.api(`${base}/commits?path=${encodeURIComponent(prototypePagePath(projectId, name))}&sha=${encodeURIComponent(vis.defaultBranch)}&per_page=1`)) as
 			| { sha: string }[]
@@ -83,6 +85,27 @@ export const pageStatus = async (github: GitHubApi, ref: DesignRepoRef, projectI
 		if (status !== 'ahead' && status !== 'identical') return { state: 'unpublished' };
 	}
 	return { state: 'published', url: `${vis.site.url.replace(/\/?$/, '/')}${path}?v=${deployed.slice(0, 7)}` };
+};
+
+/**
+ * A page that is on GitHub and not on the site yet, found without anyone asking after it: what changed since the last
+ * deploy is read in one call, and the first prototype page in it is the one named. Null when the site has what GitHub
+ * has, when a deploy is already on its way (it will take what is there), or when there is nothing to compare with yet.
+ * One deploy builds the whole site, so one page named is enough to bring every page up to date.
+ */
+export const pageBehind = async (github: GitHubApi, ref: DesignRepoRef): Promise<{ projectId: string; name: string } | null> => {
+	const vis = await readVisibility(github, ref);
+	if (!vis.site?.url) return null;
+	const base = `/repos/${ref.owner}/${ref.repo}`;
+	const { workflow_runs: runs } = asRecord(await github.api(`${base}/actions/workflows/${PUBLISH_WORKFLOW}/runs?per_page=5`));
+	if (asArray(runs).some((r) => asRecord(r).status !== 'completed')) return null;
+	const deployed = await deployedSha(github, base);
+	if (deployed === null) return null;
+	for (const f of asArray(asRecord(await github.api(`${base}/compare/${deployed}...${vis.defaultBranch}`)).files)) {
+		const m = /^projects\/([^/]+)\/prototypes\/([^/]+)\.html$/.exec(String(asRecord(f).filename));
+		if (m?.[1] && m[2]) return { projectId: m[1], name: m[2] };
+	}
+	return null;
 };
 
 /** No credentials, and GitHub's sign-in redirect not followed: a 200 means the page opens for anyone. */
@@ -192,6 +215,7 @@ const deploy = async (
 			body: { ref: branch },
 		});
 	} catch (err) {
+		if (forbidden(err)) throw new Error("Flock Designer's GitHub App is not allowed to start the deploy. Its permissions need Actions: read and write (and Pages and Deployments: read), approved on the installation. Publishing from the command line still works.");
 		if (notFound(err)) throw new Error(`The workflow that publishes the site (.github/workflows/${PUBLISH_WORKFLOW}) is not on GitHub yet, on the repository's default branch. Push it, then try again.`);
 		throw err;
 	}

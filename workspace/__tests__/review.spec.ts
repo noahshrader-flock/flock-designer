@@ -295,6 +295,8 @@ describe('its published page', () => {
 		await unmountAll((current as NonNullable<typeof current>).root);
 		await open(fakeApp({ publishedPage: async () => ok({ state: 'unpublished', why: 'the repository is public' }) }));
 		expect(button('Not published yet').parentElement?.getAttribute('title')).toBe('the repository is public');
+		// And said on the screen, not only in the button's tooltip.
+		expect(document.body.textContent).toContain('It was not published because: the repository is public');
 	});
 
 	it('says it is not published yet when it is saved but not deployed, and says nothing without a site', async () => {

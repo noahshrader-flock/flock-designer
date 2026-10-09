@@ -74,7 +74,7 @@ import { resolveInside } from './services/paths';
 import { PrototypeServer } from './services/prototypeServer';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
 import { type PrototypeChange, prototypeWork, whereTheChangeGoes } from './services/prototypeWork';
-import { pageStatus, publish, recordsFrom } from './services/pages';
+import { pageBehind, pageStatus, publish, recordsFrom } from './services/pages';
 import {
 	BUILD_SKILL,
 	MOVE_SKILL,
@@ -225,8 +225,8 @@ export const registerIpc = ({
 				opened.require(root);
 				const descriptor = readDescriptor(root);
 				return {
-					run: () =>
-						publishInOrder(
+					run: async () => {
+						const done = await publishInOrder(
 							() => syncBranches({ root, descriptor, projects: new Set(readFolderProjects(recordsRoot).map((p) => p.id)) }),
 							async (found) => {
 								// Reviewers find an iteration through its record, so work built in a terminal (a branch, a folder,
@@ -237,7 +237,11 @@ export const registerIpc = ({
 								}
 								return syncRecords(dirname(recordsRoot));
 							},
-						),
+						);
+						// Whatever is on GitHub and not yet on the site goes up too, however it got there.
+						void catchUpPages();
+						return done;
+					},
 				};
 			},
 		},
@@ -1058,6 +1062,25 @@ export const registerIpc = ({
 	const publishStopped = new Map<string, string>();
 	// Asked for again while one runs: what changed since may have missed its push, so one more runs after it.
 	const publishAgain = new Set<string>();
+	/**
+	 * Brings the site up to date with what GitHub has, by itself: on every cycle of the publisher (opening, focusing,
+	 * refreshing, any record written), if a page was pushed and no deploy has it, one is started. A page can reach GitHub
+	 * without a deploy (an edit made outside a save, a deploy that failed, a push from another machine), and nothing else
+	 * would ever notice. Asked at most once a minute, and after a deploy that failed, once every ten, so a permission that
+	 * is missing is not retried on every focus.
+	 */
+	let lastCatchUp = 0;
+	const catchUpPages = async (): Promise<void> => {
+		const gap = publishStopped.size > 0 ? 10 * 60_000 : 60_000;
+		if (github.state().state !== 'signedIn' || publishing.size > 0 || Date.now() - lastCatchUp < gap) return;
+		lastCatchUp = Date.now();
+		try {
+			const behind = await pageBehind(github, DESIGN_REPO);
+			if (behind) publishInBackground(behind.projectId, behind.name);
+		} catch {
+			// GitHub would not say: the review screen says so for the page being looked at.
+		}
+	};
 	const publishInBackground = (projectId: string, name: string): void => {
 		const key = prototypeKey(projectId, name);
 		if (github.state().state !== 'signedIn') return;
