@@ -348,6 +348,11 @@ describe('the project’s documents, in More', () => {
 		expect(order(divider, menuItem(all, 'Brief'))).toBeTruthy();
 	});
 
+	it('has More as a ghost button, as every vertical-ellipsis button is', async () => {
+		await open(fakeApp(), records);
+		expect(button('More').getAttribute('data-variant')).toBe('ghost');
+	});
+
 	it('open the document in the panel from the side, read from the design repository', async () => {
 		const app = fakeApp({ readRecord: async () => ok('# Brief\n\nA list of alerts.') });
 		await open(app, records);

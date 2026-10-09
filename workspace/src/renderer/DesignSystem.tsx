@@ -1,4 +1,4 @@
-import { ChevronDownIcon, ChevronRightIcon, GitBranchIcon, InfoIcon, PlusIcon, SwatchBookIcon, Trash2Icon } from 'lucide-react';
+import { ChevronDownIcon, ChevronRightIcon, GitBranchIcon, InfoIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem, ConnectedDesignSystems, Result } from '../shared/contract';
 import { ComponentPage } from './ComponentPage';
@@ -124,8 +124,6 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [syncing, setSyncing] = useState(false);
 	// The component open on its own page, by id; the list when there is none.
 	const [open, setOpen] = useState<string | null>(null);
-	// The tokens panel at the right of the tab (decision 21): shown unless it was hidden, whichever screen is open.
-	const [tokensOpen, setTokensOpen] = useState(true);
 	// The design systems connected, and which is shown (P4); and whether another is being connected.
 	const [systems, setSystems] = useState<ConnectedDesignSystems>({ systems: [], current: null });
 	const [adding, setAdding] = useState(false);
@@ -247,24 +245,10 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 						{catalog.branch}
 					</TooltipContent>
 				</Tooltip>
-				<div className="ml-2 w-72">
-					<SearchSelect
-						items={catalog.components.map(label)}
-						value={opened ? label(opened) : null}
-						onChange={(chosen) => setOpen(catalog.components.find((c) => label(c) === chosen)?.id ?? null)}
-						placeholder="Find a component"
-						search="Search components…"
-						empty="No component matches."
-					/>
-				</div>
 				<div className="grow" />
 				{/* Where syncing is on the Projects screen: the problem, if there is one, beside the button. */}
 				<div className="flex items-center gap-2">
 					<UpdateProblem update={catalog.update} />
-					<Button variant="outline" aria-pressed={tokensOpen} onClick={() => setTokensOpen((o) => !o)}>
-						<SwatchBookIcon />
-						Tokens
-					</Button>
 					<SyncButton syncing={syncing} onClick={() => void sync()} />
 					{shown && (
 						<MoreMenu label={`More for ${shown.name}`}>
@@ -284,6 +268,17 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 					{/* Kept while a component is open, so going back finds the list where it was. */}
 					<div hidden={opened !== undefined}>
 						<Page>
+							{/* The components view's own: it finds a component to open, so it goes when one is open. */}
+							<div className="w-72">
+								<SearchSelect
+									items={catalog.components.map(label)}
+									value={null}
+									onChange={(chosen) => setOpen(catalog.components.find((c) => label(c) === chosen)?.id ?? null)}
+									placeholder="Find a component"
+									search="Search components…"
+									empty="No component matches."
+								/>
+							</div>
 							{error && (
 								<Alert variant="destructive">
 									<AlertDescription>{error}</AlertDescription>
@@ -310,11 +305,10 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 						</Page>
 				</div>
 				</div>
-				{tokensOpen && (
-					<ResizablePanel panel={TOKENS_PANEL} label="Resize the tokens panel">
-						<TokensPanel tokens={catalog.tokens} />
-					</ResizablePanel>
-				)}
+				{/* Always there (decision 21), whichever screen is open, and not hidden by anything in the toolbar. */}
+				<ResizablePanel panel={TOKENS_PANEL} label="Resize the tokens panel">
+					<TokensPanel tokens={catalog.tokens} />
+				</ResizablePanel>
 			</div>
 		</>
 	);

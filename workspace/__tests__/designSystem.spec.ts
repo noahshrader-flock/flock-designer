@@ -125,14 +125,15 @@ describe('finding a component', () => {
 		expect(text()).toContain('No component matches.');
 	});
 
-	it('opens the component chosen in the finder on its own page, and the finder names it', async () => {
+	it('opens the component chosen in the finder on its own page', async () => {
 		await open(() => ok(ready()));
 		await press(finder());
 		await settle();
 		await act(async () => void [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === 'PopoverHeader')!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
 		await settle();
 		expect(document.querySelector('h3')?.textContent).toBe('PopoverHeader');
-		expect(document.querySelector('[role="combobox"]')?.textContent).toBe('PopoverHeader');
+		// The finder is the list's, so it goes with the list and comes back with it.
+		expect(finder().closest('[hidden]')).not.toBeNull();
 	});
 
 	it('shows a name two components share with its group in the finder, and opens the one chosen', async () => {
@@ -145,20 +146,25 @@ describe('finding a component', () => {
 		await act(async () => void [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === 'Surfaces / Overview')!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
 		await settle();
 		expect(text()).toContain('The surfaces one.');
-		expect(document.querySelector('[role="combobox"]')?.textContent).toBe('Surfaces / Overview');
 	});
 
-	it('has the finder in the toolbar beside the design system’s name and branch, then Tokens, Sync and More at its right', async () => {
+	it('is in the components view, above the list, and not in the toolbar', async () => {
 		await open(() => ok(ready()));
 		const toolbar = switcher().parentElement!;
-		expect(toolbar.contains(finder())).toBe(true);
-		expect(toolbar.contains(button('Sync'))).toBe(true);
-		expect(toolbar.textContent).toBe('Flock React Component LibFind a componentTokensSync');
+		expect(toolbar.contains(finder())).toBe(false);
+		// Above the first group, in the same place as the list it searches.
+		const first = document.querySelector('section[aria-label="Buttons"]') as HTMLElement;
+		expect(finder().compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(finder().closest('[hidden]')).toBeNull();
+	});
+
+	it('has the design system’s name and branch, then Sync and More at the toolbar’s right, and nothing else', async () => {
+		await open(() => ok(ready()));
+		const toolbar = switcher().parentElement!;
+		expect(toolbar.textContent).toBe('Flock React Component LibSync');
 		expect(toolbar.contains(button('More for Flock React Component Lib'))).toBe(true);
-		expect(switcher().compareDocumentPosition(finder()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(finder().compareDocumentPosition(button('Sync')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		// The old search box is gone.
-		expect(document.querySelector('input[aria-label="Search components"]')).toBeNull();
+		expect(switcher().compareDocumentPosition(button('Sync')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect([...toolbar.querySelectorAll('button')].some((b) => b.textContent === 'Tokens')).toBe(false);
 	});
 
 	it('has no switcher between components and composites, and no count', async () => {
@@ -236,14 +242,10 @@ describe('the tokens panel', () => {
 		expect(panel()).toBe(before);
 	});
 
-	it('is hidden and shown again by the Tokens button in the toolbar, which says whether it is shown', async () => {
+	it('is always there: nothing in the toolbar hides it', async () => {
 		await open(() => ok(ready()));
-		expect(button('Tokens').getAttribute('aria-pressed')).toBe('true');
-		await press(button('Tokens'));
-		expect(divider()).toBeNull();
-		expect(button('Tokens').getAttribute('aria-pressed')).toBe('false');
-		await press(button('Tokens'));
 		expect(divider()).not.toBeNull();
+		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Tokens' || b.getAttribute('aria-pressed') !== null)).toBe(false);
 	});
 
 	it('is not drawn while the library is not connected, where there is nothing to show', async () => {
@@ -316,9 +318,8 @@ describe('keeping it current', () => {
 		expect(rows()).toHaveLength(5);
 		const problem = [...document.querySelectorAll('[role="status"]')].find((e) => e.textContent === 'Could not update from GitHub')!;
 		expect(problem.getAttribute('title')).toBe('Could not reach GitHub. Check the internet connection.');
-		// Beside the buttons: Tokens, then Sync.
-		expect(problem.nextElementSibling?.textContent).toBe('Tokens');
-		expect(problem.nextElementSibling?.nextElementSibling?.textContent).toBe('Sync');
+		// Beside Sync, which is beside More.
+		expect(problem.nextElementSibling?.textContent).toBe('Sync');
 		expect(switcher().parentElement!.contains(problem)).toBe(true);
 	});
 

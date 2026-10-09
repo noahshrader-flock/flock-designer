@@ -44,6 +44,24 @@ describe('Cancel', () => {
 	});
 });
 
+describe('the vertical ellipsis', () => {
+	const files = (dir: string): string[] =>
+		readdirSync(dir).flatMap((n) => (statSync(join(dir, n)).isDirectory() ? files(join(dir, n)) : n.endsWith('.tsx') ? [join(dir, n)] : []));
+
+	it('is a ghost button wherever one is drawn: the Button holding the icon says variant="ghost"', () => {
+		const wrong: string[] = [];
+		for (const f of ['src/renderer', 'src/viewer'].flatMap((d) => files(join(__dirname, '..', d))).filter((p) => !p.includes(join('renderer', 'ui')))) {
+			const text = readFileSync(f, 'utf8');
+			for (const m of text.matchAll(/<EllipsisVerticalIcon/g)) {
+				// The Button that holds it: the last one opened before the icon.
+				const button = text.slice(text.lastIndexOf('<Button', m.index), m.index);
+				if (!/variant="ghost"/.test(button)) wrong.push(f.replace(`${join(__dirname, '..')}/`, ''));
+			}
+		}
+		expect(wrong).toEqual([]);
+	});
+});
+
 describe('Sync', () => {
 	it('is an outline button, spinning and disabled while it runs', async () => {
 		current = await render(createElement(SyncButton, { syncing: false, onClick: () => undefined }));

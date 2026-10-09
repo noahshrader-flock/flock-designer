@@ -26,6 +26,7 @@ export const fakeApp = (overrides: Impl = {}) => {
 		readComments: async () => ok([]),
 		// No design system connected, unless a test says otherwise.
 		designSystems: async () => ok({ systems: [], current: null }),
+		listRepositories: async () => ok({ repositories: [], reach: 'account' }),
 		shareStatus: async () => ok({ state: 'idle' }),
 		publishedPage: async () => ok({ state: 'none' }),
 		pageShowMarkers: async (items: { id: number }[]) => ok(items.map((i) => ({ id: i.id, state: 'found' }))),

@@ -96,7 +96,7 @@ export const ShareControl = ({
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<DropdownMenuTrigger asChild>
-							<Button size="icon" variant="outline" aria-label="More" disabled={!canOpen && !documents}>
+							<Button size="icon" variant="ghost" aria-label="More" disabled={!canOpen && !documents}>
 								{running ? <Spinner /> : <EllipsisVerticalIcon />}
 							</Button>
 						</DropdownMenuTrigger>
