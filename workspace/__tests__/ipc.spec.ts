@@ -394,6 +394,26 @@ describe('where clones go', () => {
 			expect((await call(CHANNELS.branchesWithSetup, root)).value).toEqual(['noah/flock-designer']);
 		});
 
+		it('clones, for new work, a repository only the person’s own account reaches, as the design system’s Connect does', async () => {
+			// The app's GitHub App is not installed on it; the person's own GitHub command line, signed in as them, lists it.
+			signedIn(['flocksafety/flock-ops']);
+			personRepos = ['flocksafety/coke'];
+			cloneSources = { 'flocksafety/coke': bare('coke', likeCoke) };
+			designBeside();
+			const listed = (await call(CHANNELS.listRepositories)).value as { repositories: { name: string }[]; reach: string };
+			expect(listed.repositories.map((r) => r.name)).toContain('flocksafety/coke');
+			expect(listed.reach).toBe('account');
+			expect(await call(CHANNELS.cloneRepository, 'flocksafety/coke')).toMatchObject({ ok: true, value: { name: 'coke' } });
+		});
+
+		it('refuses, for new work, a repository the command line lists when it is signed in as someone else', async () => {
+			signedIn(['flocksafety/flock-ops']);
+			personRepos = ['flocksafety/coke'];
+			personLogin = 'someone';
+			cloneSources = { 'flocksafety/coke': bare('coke', likeCoke) };
+			expect((await call(CHANNELS.cloneRepository, 'flocksafety/coke')).error).toMatch(/not one of the repositories your GitHub account can see/);
+		});
+
 		it('never moves a clone the person already had, and says which branch to switch it to', async () => {
 			signedIn(['flocksafety/coke']);
 			const source = bare('coke', likeCoke);
