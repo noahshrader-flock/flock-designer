@@ -23,7 +23,7 @@
  *   reference, but they depend on the billing permission, so a customer admin may not see them.
  *
  * STATES  (?state=default | filtered)
- *   default         all 24 alerts, no filter.
+ *   default   all 24 alerts, no filter.
  *   filtered  the Status filter is set to Dismissed, which matches nothing: the empty state.
  *
  * MARKS

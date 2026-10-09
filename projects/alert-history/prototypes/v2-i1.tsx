@@ -27,7 +27,7 @@
  *   reference, but they depend on the billing permission, so a customer admin may not see them.
  *
  * STATES  (?state=default | filtered)
- *   default         all 24 alerts across 8 devices, no filter. The first group (most in need of attention) is open.
+ *   default   all 24 alerts across 8 devices, no filter. The first group (most in need of attention) is open.
  *   filtered  the Status filter is set to Dismissed, which matches nothing: the empty state.
  *
  * MARKS
