@@ -76,7 +76,7 @@ describe('new-prototype', () => {
 		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe(brief);
 	});
 
-	it('is modelled on the branch named, when there is one', async () => {
+	it('is modeled on the branch named, when there is one', async () => {
 		g(product, 'branch', 'noah/baseline');
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list', '--from', 'noah/baseline')).toBe(0);
 		expect(iterations()[0]).toMatchObject({ basedOn: { branch: 'noah/baseline' } });
@@ -390,7 +390,7 @@ describe('the command', () => {
 
 	it('refuses what it does not know, and says how it is used', async () => {
 		expect(await run('make-it')).toBe(2);
-		expect(await run('new-prototype', '--project', 'demo', '--colour', 'blue')).toBe(2);
+		expect(await run('new-prototype', '--project', 'demo', '--color', 'blue')).toBe(2);
 		expect(err.join('\n')).toMatch(/Usage/);
 	});
 

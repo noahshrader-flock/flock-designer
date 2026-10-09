@@ -24,7 +24,7 @@ export interface CommentStore {
 
 /** The page being commented on. The app's is its native preview. */
 export interface PageSurface {
-	/** Waits for one click on the page: where it landed, or null when it was cancelled. */
+	/** Waits for one click on the page: where it landed, or null when it was canceled. */
 	pick(): Promise<Result<PickedPoint | null>>;
 	cancelPick(): Promise<unknown>;
 	/** Draws the pins, and says how each was placed. */

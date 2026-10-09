@@ -9,10 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 /**
  * The library's tokens, in the panel at the right of the Design System tab (T2 of the design system plan), read only:
- * the list T1 reads, in line tabs by category (Colour, Spacing, Shape: the reader says which each token is on, so a
+ * the list T1 reads, in line tabs by category (Color, Spacing, Shape: the reader says which each token is on, so a
  * category the library gains is a tab with nothing else changed), each tab with its own search. Within a tab the tokens
  * are in groups (the tones, each mode's palette) and sets, closed until opened, so 600 tokens are a short list; a tab
- * with one group shows its sets directly. A set shows a strip of its colours and the file it is written in; open, each
+ * with one group shows its sets directly. A set shows a strip of its colors and the file it is written in; open, each
  * token shows its value, and a palette role the tone it points at. What the library has that is not read is said above
  * the tabs. T3 adds the controls to these rows.
  */
@@ -36,14 +36,14 @@ const opacity = (alpha: string) => `${Math.round((parseInt(alpha, 16) / 255) * 1
 /** What a token is, in words, for the search to look through. */
 const searchable = (t: DesignToken) => [t.path, t.group, t.set, t.name, t.value, t.ref?.tone ?? ''].join(' ').toLowerCase();
 
-/** A colour, as a small square. Its colour is the token's own, a runtime value, so it is inline. */
+/** A color, as a small square. Its color is the token's own, a runtime value, so it is inline. */
 const Swatch = ({ value, size = 'size-4' }: { value: string; size?: string }) => (
 	<span data-swatch className={`${size} shrink-0 rounded-sm border`} style={{ backgroundColor: value }} />
 );
 
 const TokenRow = ({ token }: { token: DesignToken }) => (
 	<li data-token={token.path} title={`${token.source.file}:${token.source.line}`} className="flex items-center gap-2 py-1 text-sm">
-		{token.kind === 'colour' && <Swatch value={token.value} />}
+		{token.kind === 'color' && <Swatch value={token.value} />}
 		<span className="min-w-0 truncate">{token.name}</span>
 		{token.ref && (
 			<span className="text-muted-foreground truncate text-xs">
@@ -67,7 +67,7 @@ const Sets = ({ tokens, open, onOpen }: { tokens: DesignToken[]; open: string[];
 							<span data-name className="text-sm">
 								{first.set}
 							</span>
-							{first.kind === 'colour' ? (
+							{first.kind === 'color' ? (
 								<span className="flex flex-wrap gap-0.5">
 									{inSet.map((t) => (
 										<Swatch key={t.path} value={t.value} size="size-3" />

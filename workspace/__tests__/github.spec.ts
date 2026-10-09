@@ -67,7 +67,7 @@ describe('pollForToken', () => {
 
   it.each([
     ['expired_token', /expired/i],
-    ['access_denied', /cancelled/i],
+    ['access_denied', /canceled/i],
   ])('stops on %s with a message a person can act on', async (error, expected) => {
     const { fetcher } = stub([{ body: { error } }]);
     await expect(pollForToken('id', start, fetcher, noWait)).rejects.toThrow(expected);

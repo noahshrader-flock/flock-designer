@@ -59,7 +59,7 @@ A metric with no baseline isn't information.
 - Direct. Say what happens.
 - No exclamation marks.
 - No "Oops", "Whoops", "Uh oh".
-- No apologising for normal system behaviour.
+- No apologizing for normal system behavior.
 - Second person for instructions ("Choose a role"), not first person ("I want to...").
 
 ## Length

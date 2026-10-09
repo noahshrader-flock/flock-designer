@@ -12,7 +12,7 @@ import { Label } from './ui/label';
  * Moving a prototype into the code, said out loud before it happens.
  *
  * It changes the person's checkout (a new branch, switched to) and needs the full setup a prototype does not. So it
- * asks first, shows what it will do and what would stop it, and starts from the branch the prototype was modelled on
+ * asks first, shows what it will do and what would stop it, and starts from the branch the prototype was modeled on
  * rather than whichever one the checkout happens to be on.
  *
  * The building is not done here: it is handed to Claude Code in the repository (VS Code's panel, or a terminal), where
@@ -57,7 +57,7 @@ export const MoveToCode = ({
 		};
 	}, [open, checkout.root, project.id, iteration.name]);
 
-	// Starts from what the prototype was modelled on, when that can be started from; else from where the checkout is,
+	// Starts from what the prototype was modeled on, when that can be started from; else from where the checkout is,
 	// when that can; else from the newest branch that can.
 	useEffect(() => {
 		if (!plan) return;
@@ -132,7 +132,7 @@ export const MoveToCode = ({
 							{wrongRepository && plan?.basedOn && (
 								<Alert>
 									<AlertDescription>
-										The prototype was modelled on {plan.basedOn.repository}, and this is {plan.repository}.
+										The prototype was modeled on {plan.basedOn.repository}, and this is {plan.repository}.
 									</AlertDescription>
 								</Alert>
 							)}

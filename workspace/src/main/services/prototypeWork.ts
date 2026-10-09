@@ -16,12 +16,12 @@ import { parseIterations } from '../../shared/records';
  *
  * **One way to make a prototype.** The app calls this, and so does the `dsnr` command an agent runs from Claude Code
  * in VS Code, where there is no app. Everything it needs is passed in, so neither caller can make a prototype the
- * other would not recognise.
+ * other would not recognize.
  */
 export interface PrototypeWorkContext {
 	/** The folder prototypes are built in, on this machine: the app's own, which the command uses too. */
 	prototypesRoot: string;
-	/** The product checkout prototypes are modelled on and built against, as a real path, or null when there is none. */
+	/** The product checkout prototypes are modeled on and built against, as a real path, or null when there is none. */
 	productRoot: () => string | null;
 	/** Where records, pages and sources are written: the design repository's clone, or GitHub. */
 	store: () => RecordStore;
@@ -58,7 +58,7 @@ export const whereTheChangeGoes = (change: PrototypeChange, pointedAt: string): 
 	return change.target === pointedAt ? null : `${change.target} is the newest iteration of this version, so the change is made there.`;
 };
 
-/** What starting a prototype needs: the product branch it is modelled on, and the person's own words. */
+/** What starting a prototype needs: the product branch it is modeled on, and the person's own words. */
 export interface PrototypeStart {
 	projectId: string;
 	/** The project's title, written into its brief when the project is new. */
@@ -164,7 +164,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 
 	/**
 	 * Starts a prototype: the project's brief if it is new, the iteration record and its name (the next version, so a
-	 * new prototype is a new idea). What it is modelled on is not optional: a prototype is built from a repository's
+	 * new prototype is a new idea). What it is modeled on is not optional: a prototype is built from a repository's
 	 * real design system, on a branch that exists here.
 	 */
 	const start = async (root: string, { projectId, title, note, branch, me }: PrototypeStart): Promise<Iteration> => {
@@ -178,7 +178,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 
 	/**
-	 * The product code a prototype is modelled on, as a folder the agent may read: the checkout itself when it is on
+	 * The product code a prototype is modeled on, as a folder the agent may read: the checkout itself when it is on
 	 * that branch already, otherwise a read-only copy of the branch, so the person's checkout is never switched. Null
 	 * when there is nothing on this machine to read.
 	 */

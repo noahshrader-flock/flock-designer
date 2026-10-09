@@ -18,16 +18,16 @@ write here, so it has to be the product as it really is, with the idea placed in
 is kept.
 
 - **Its default export is the whole page,** shell included, mounted the way the product's own entry
-  mounts the app: the same root providers and global stylesheets, in the same order, and the same colour
+  mounts the app: the same root providers and global stylesheets, in the same order, and the same color
   mode. If the product follows the system's light or dark setting, so does the prototype; do not pin one.
   The product's guidance says what those are; if it does not, read the product's entry file.
 - **Import only installed packages:** the design system, and what the product itself depends on. Never
   import the product's own source files: they pull in its state, routing and services. Copy the little you
   need, and say where it came from.
 - **Real components, used as the product uses them,** with the design system's theme tokens for every
-  colour and size.
+  color and size.
 - **Mock data only, and believable** for this product: real-looking names, counts and dates. Never real
-  customer data, credentials, licence keys or anything copied from production, and no network requests.
+  customer data, credentials, license keys or anything copied from production, and no network requests.
 - **Check it builds** with the command the task gives, after every change. Do not finish while it reports
   an error: a prototype that does not build cannot be saved.
 - **If you look at the page yourself** (a screenshot of the built file, say), its icons show as their names
@@ -62,7 +62,7 @@ active, the page frame and header, and the tabs or sub-navigation the view sits 
   invent the list.
 - **Navigation is a product statement.** Show what one realistic person would see, say which person, and
   prefer the person the request is about.
-- **Neighbouring content at low detail**, and **no chrome the product does not have**: no "new" badges,
+- **Neighboring content at low detail**, and **no chrome the product does not have**: no "new" badges,
   banners or decorations unless asked.
 
 ## Never stop for something missing: approximate it, and mark it
@@ -100,7 +100,7 @@ when the prototype moves into the code:
 - **A state shows the situation at rest.** A dialog open, yes; a menu or dropdown inside it already
   expanded, no. Anything that closes on the next click hides what the state exists to show.
 - **Start the file with a block comment** that says what the page shows, where in the product it sits,
-  which real screen it was modelled on, which person the navigation shows, its states, and **every mark**
+  which real screen it was modeled on, which person the navigation shows, its states, and **every mark**
   in the file, grouped by kind. It is carried into the page for reviewers.
 
 ## The rules
@@ -111,7 +111,7 @@ when the prototype moves into the code:
 
 ## When you have finished
 
-Say in a few lines what you made, where in the product it sits, which screen you modelled it on, and every
+Say in a few lines what you made, where in the product it sits, which screen you modeled it on, and every
 `@standin`: what the page shows that the product cannot do today. That is the first thing the person reads.
 
 A prototype has no review pass of its own: people review it in DSNR, and the product's reviewers run when

@@ -91,7 +91,7 @@ const tokenFromResponse = (body: Record<string, unknown>, now: number): StoredTo
 });
 
 /**
- * Step two: poll until the person authorises, or the attempt ends.
+ * Step two: poll until the person authorizes, or the attempt ends.
  *
  * `authorization_pending` is the normal case and means keep waiting;
  * `slow_down` means GitHub wants a longer interval and is not an error.
@@ -132,7 +132,7 @@ export const pollForToken = async (
       case 'expired_token':
         throw new GitHubError('The sign-in code expired. Start again.');
       case 'access_denied':
-        throw new GitHubError('Sign-in was cancelled on GitHub.');
+        throw new GitHubError('Sign-in was canceled on GitHub.');
       default:
         throw new GitHubError(
           typeof body.error_description === 'string' ? body.error_description : 'GitHub refused the sign-in.',

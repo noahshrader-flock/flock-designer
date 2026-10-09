@@ -10,10 +10,10 @@ import { press, render, settle, typeInto, unmountAll } from './reviewHarness';
  * tokens with its swatches and where it is written, and a search. Against the panel on its own.
  */
 
-const colour = (path: string, group: string, set: string, name: string, value: string, more: Partial<DesignToken> = {}): DesignToken => ({
+const color = (path: string, group: string, set: string, name: string, value: string, more: Partial<DesignToken> = {}): DesignToken => ({
 	path,
-	kind: 'colour',
-	category: 'Colour',
+	kind: 'color',
+	category: 'Color',
 	group,
 	set,
 	name,
@@ -26,12 +26,12 @@ const TOKENS: DesignTokens = {
 	looked: ['src/colors/tones/index.ts'],
 	problems: [],
 	tokens: [
-		colour('tone.pineGreen.50', 'Tones', 'pineGreen', '50', '#108062'),
-		colour('tone.pineGreen.20', 'Tones', 'pineGreen', '20', '#18372F'),
-		colour('tone.red.40', 'Tones', 'red', '40', '#BA1A1A'),
-		colour('palette.light.primary.main', 'Light', 'primary', 'main', '#108062', { ref: { tone: 'pineGreen', step: '50' } }),
-		colour('palette.light.primaryBorder.main', 'Light', 'primaryBorder', 'main', '#18372F66', { ref: { tone: 'pineGreen', step: '20', alpha: '66' } }),
-		colour('palette.dark.primary.main', 'Dark', 'primary', 'main', '#C7E7DD', { ref: { tone: 'pineGreen', step: '90' } }),
+		color('tone.pineGreen.50', 'Tones', 'pineGreen', '50', '#108062'),
+		color('tone.pineGreen.20', 'Tones', 'pineGreen', '20', '#18372F'),
+		color('tone.red.40', 'Tones', 'red', '40', '#BA1A1A'),
+		color('palette.light.primary.main', 'Light', 'primary', 'main', '#108062', { ref: { tone: 'pineGreen', step: '50' } }),
+		color('palette.light.primaryBorder.main', 'Light', 'primaryBorder', 'main', '#18372F66', { ref: { tone: 'pineGreen', step: '20', alpha: '66' } }),
+		color('palette.dark.primary.main', 'Dark', 'primary', 'main', '#C7E7DD', { ref: { tone: 'pineGreen', step: '90' } }),
 		{ path: 'spacing', kind: 'dimension', category: 'Spacing', group: 'Spacing', set: 'spacing', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 2 } },
 		{ path: 'radius', kind: 'dimension', category: 'Shape', group: 'Radius', set: 'radius', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 5 } },
 	],
@@ -66,7 +66,7 @@ const text = () => document.body.textContent ?? '';
 describe('the tabs', () => {
 	it('are the categories the library has, in order, as line tabs, with no heading or count above them', async () => {
 		await show();
-		expect(tabs().map((t) => t.textContent)).toEqual(['Colour', 'Spacing', 'Shape']);
+		expect(tabs().map((t) => t.textContent)).toEqual(['Color', 'Spacing', 'Shape']);
 		expect(tabs().map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false']);
 		expect(document.querySelector('[data-slot="tabs-list"]')?.getAttribute('data-variant')).toBe('line');
 		expect(text()).not.toContain('8 tokens');
@@ -75,7 +75,7 @@ describe('the tabs', () => {
 
 	it('are made from the tokens, so a category the library gains is a tab with nothing else changed', async () => {
 		await show({ ...TOKENS, tokens: [...TOKENS.tokens, { path: 'shadow.1', kind: 'dimension', category: 'Shadow', group: 'Elevation', set: 'elevation', name: '1', value: '0 1px 2px', source: { file: 'src/utils/theme.ts', line: 9 } }] });
-		expect(tabs().map((t) => t.textContent)).toEqual(['Colour', 'Spacing', 'Shape', 'Shadow']);
+		expect(tabs().map((t) => t.textContent)).toEqual(['Color', 'Spacing', 'Shape', 'Shadow']);
 	});
 
 	it('switch, each showing only its own tokens', async () => {
@@ -90,7 +90,7 @@ describe('the tabs', () => {
 });
 
 describe('the groups', () => {
-	it('on the Colour tab are the library’s, in order, each with its count, and all closed at first', async () => {
+	it('on the Color tab are the library’s, in order, each with its count, and all closed at first', async () => {
 		await show();
 		expect(triggers('group').map((t) => [t.querySelector('[data-name]')?.textContent, t.querySelector('[data-count]')?.textContent])).toEqual([
 			['Tones', '3'],
@@ -108,7 +108,7 @@ describe('the groups', () => {
 		expect(triggers('set').map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['radius']);
 	});
 
-	it('open to their sets, each with a strip of its colours and the file it is written in', async () => {
+	it('open to their sets, each with a strip of its colors and the file it is written in', async () => {
 		await show();
 		await press(trigger('group', 'Tones'));
 		await settle();
@@ -120,7 +120,7 @@ describe('the groups', () => {
 });
 
 describe('a set, open', () => {
-	it('lists its tokens: name, value, and a swatch of the colour', async () => {
+	it('lists its tokens: name, value, and a swatch of the color', async () => {
 		await show();
 		await press(trigger('group', 'Tones'));
 		await settle();
@@ -160,21 +160,21 @@ describe('a set, open', () => {
 describe('searching', () => {
 	it('is the app’s own search box, with its icon, as on the Projects screen', async () => {
 		await show();
-		const box = search('Colour') as HTMLInputElement;
+		const box = search('Color') as HTMLInputElement;
 		expect(box.closest('[data-slot="input-group"]')?.querySelector('.lucide-search')).not.toBeNull();
-		expect(box.placeholder).toBe('Search colour');
+		expect(box.placeholder).toBe('Search color');
 	});
 
 	it('clears with Escape', async () => {
 		await show();
-		await typeInto(search('Colour') as HTMLInputElement, 'primary');
-		await act(async () => void (search('Colour') as HTMLInputElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
-		expect((search('Colour') as HTMLInputElement).value).toBe('');
+		await typeInto(search('Color') as HTMLInputElement, 'primary');
+		await act(async () => void (search('Color') as HTMLInputElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+		expect((search('Color') as HTMLInputElement).value).toBe('');
 	});
 
 	it('is in each tab, with its own box, and shows only what matches in that tab, opened to it', async () => {
 		await show();
-		await typeInto(search('Colour') as HTMLInputElement, 'primary');
+		await typeInto(search('Color') as HTMLInputElement, 'primary');
 		await settle();
 		expect(triggers('group').map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['Light', 'Dark']);
 		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual(['palette.light.primary.main', 'palette.light.primaryBorder.main', 'palette.dark.primary.main']);
@@ -182,24 +182,24 @@ describe('searching', () => {
 
 	it('is kept apart: what is typed in one tab leaves the others as they were, and is there when you come back', async () => {
 		await show();
-		await typeInto(search('Colour') as HTMLInputElement, 'primary');
+		await typeInto(search('Color') as HTMLInputElement, 'primary');
 		await settle();
 		await choose('Spacing');
 		await settle();
 		expect((search('Spacing') as HTMLInputElement).value).toBe('');
 		expect(triggers('set')).toHaveLength(1);
-		await choose('Colour');
+		await choose('Color');
 		await settle();
-		expect((search('Colour') as HTMLInputElement).value).toBe('primary');
+		expect((search('Color') as HTMLInputElement).value).toBe('primary');
 		expect(rows()).toHaveLength(3);
 	});
 
-	it('finds a colour by its value, and says when nothing matches', async () => {
+	it('finds a color by its value, and says when nothing matches', async () => {
 		await show();
-		await typeInto(search('Colour') as HTMLInputElement, '#ba1a1a');
+		await typeInto(search('Color') as HTMLInputElement, '#ba1a1a');
 		await settle();
 		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual(['tone.red.40']);
-		await typeInto(search('Colour') as HTMLInputElement, 'nothing like this');
+		await typeInto(search('Color') as HTMLInputElement, 'nothing like this');
 		await settle();
 		expect(text()).toContain('No token matches.');
 	});
@@ -207,9 +207,9 @@ describe('searching', () => {
 
 describe('what it could not read', () => {
 	it('is said at the top, each with its file and line', async () => {
-		await show({ ...TOKENS, problems: [{ file: 'src/colors/tones/neutral.ts', line: 10, reason: "neutral 94 is '@ECEEEB', not a hex colour, so this step is not read" }] });
+		await show({ ...TOKENS, problems: [{ file: 'src/colors/tones/neutral.ts', line: 10, reason: "neutral 94 is '@ECEEEB', not a hex color, so this step is not read" }] });
 		expect(text()).toContain('1 value in the library could not be read');
-		expect(text()).toContain("src/colors/tones/neutral.ts:10 neutral 94 is '@ECEEEB', not a hex colour");
+		expect(text()).toContain("src/colors/tones/neutral.ts:10 neutral 94 is '@ECEEEB', not a hex color");
 	});
 
 	it('is said plainly when no tokens were found, with where it looked', async () => {

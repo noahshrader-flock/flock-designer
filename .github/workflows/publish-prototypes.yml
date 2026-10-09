@@ -13,7 +13,7 @@ permissions:
   pages: write
   id-token: write
 
-# One at a time, and none cancelled: a later publish waits for the one before, so no page is lost.
+# One at a time, and none canceled: a later publish waits for the one before, so no page is lost.
 concurrency:
   group: pages
   cancel-in-progress: false

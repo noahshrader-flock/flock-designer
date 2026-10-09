@@ -30,7 +30,7 @@ export type BuildPhase =
 export type BuildApi = Pick<WorkspaceApi, 'openCheckout' | 'continueIteration' | 'startAgent' | 'startHandoff' | 'agentStatus' | 'startCommand'>;
 
 /**
- * From the iteration's own name, which the main process already normalised, rather than a
+ * From the iteration's own name, which the main process already normalized, rather than a
  * hard-coded branch prefix: the repository declares how its branches are named.
  */
 export const previewCommandFor = (iteration: ProjectIteration): string =>

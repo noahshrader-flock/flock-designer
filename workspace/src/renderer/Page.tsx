@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 /**
- * A screen's content under its toolbar: one centred column, the same width and padding on every screen. A screen of
+ * A screen's content under its toolbar: one centered column, the same width and padding on every screen. A screen of
  * cards in a grid is `wide`: it uses the window's width, since a grid needs room for its columns where text needs a
  * readable line.
  */

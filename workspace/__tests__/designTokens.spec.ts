@@ -84,14 +84,14 @@ export const sharedPalette = {
 const find = (list: Awaited<ReturnType<typeof readTokens>>, path: string) => list.tokens.find((t) => t.path === path);
 
 describe('the tones', () => {
-	it('are every family the index exports, each step with its colour, in the file’s order', async () => {
+	it('are every family the index exports, each step with its color, in the file’s order', async () => {
 		const list = await readTokens(reads(LIBRARY));
 		const tones = list.tokens.filter((t) => t.group === 'Tones');
 		expect(tones.map((t) => t.path)).toEqual(['tone.pineGreen.100', 'tone.pineGreen.50', 'tone.pineGreen.20', 'tone.red.40', 'tone.red.0']);
 		expect(find(list, 'tone.pineGreen.50')).toEqual({
 			path: 'tone.pineGreen.50',
-			kind: 'colour',
-			category: 'Colour',
+			kind: 'color',
+			category: 'Color',
 			group: 'Tones',
 			set: 'pineGreen',
 			name: '50',
@@ -113,12 +113,12 @@ describe('the tones', () => {
 });
 
 describe('the palette roles', () => {
-	it('are each mode’s, pointing at the tone they use, with its colour', async () => {
+	it('are each mode’s, pointing at the tone they use, with its color', async () => {
 		const list = await readTokens(reads(LIBRARY));
 		expect(find(list, 'palette.light.primary.main')).toEqual({
 			path: 'palette.light.primary.main',
-			kind: 'colour',
-			category: 'Colour',
+			kind: 'color',
+			category: 'Color',
 			group: 'Light',
 			set: 'primary',
 			name: 'main',
@@ -151,13 +151,13 @@ describe('spacing and radius', () => {
 });
 
 describe('the categories', () => {
-	it('say which tab a token belongs on: every colour is Colour, spacing is Spacing, and radius is Shape', async () => {
+	it('say which tab a token belongs on: every color is Color, spacing is Spacing, and radius is Shape', async () => {
 		const list = await readTokens(reads(LIBRARY));
 		const categories = new Map(list.tokens.map((t) => [t.group, t.category]));
 		expect([...categories]).toEqual([
-			['Tones', 'Colour'],
-			['Light', 'Colour'],
-			['Dark', 'Colour'],
+			['Tones', 'Color'],
+			['Light', 'Color'],
+			['Dark', 'Color'],
 			['Spacing', 'Spacing'],
 			['Radius', 'Shape'],
 		]);
@@ -183,11 +183,11 @@ describe('what it cannot read', () => {
 		expect(find(list, 'palette.light.priority0.main')).toBeUndefined();
 	});
 
-	it('names a step whose colour is not a hex, with what is written, and reads the rest', async () => {
+	it('names a step whose color is not a hex, with what is written, and reads the rest', async () => {
 		const list = await readTokens(reads({ ...LIBRARY, 'src/colors/tones/red.ts': tone('red', [['40', '#BA1A1A'], ['0', '000000']]) }));
 		expect(find(list, 'tone.red.0')).toBeUndefined();
 		expect(find(list, 'tone.red.40')?.value).toBe('#BA1A1A');
-		expect(list.problems).toEqual([{ file: 'src/colors/tones/red.ts', line: 4, reason: "red 0 is '000000', not a hex colour, so this step is not read" }]);
+		expect(list.problems).toEqual([{ file: 'src/colors/tones/red.ts', line: 4, reason: "red 0 is '000000', not a hex color, so this step is not read" }]);
 	});
 });
 
@@ -247,7 +247,7 @@ describe.skipIf(!hasBranch)('against the real library', () => {
 	it('reads every tone, both palettes, spacing and radius; all it cannot read is a tone step written wrong in the library', async () => {
 		const list = await readTokens(real);
 		// On 2026-10-09, three of neutral's steps: 94 is '@ECEEEB', 70 'AEB0B2' and 4 '0B0F0D'. The library's to fix; never guessed here.
-		expect(list.problems.map((p) => p.reason)).toEqual(list.problems.map(() => expect.stringMatching(/not a hex colour/)));
+		expect(list.problems.map((p) => p.reason)).toEqual(list.problems.map(() => expect.stringMatching(/not a hex color/)));
 		expect(list.problems.every((p) => p.file.startsWith('src/colors/tones/'))).toBe(true);
 		expect(new Set(list.tokens.filter((t) => t.group === 'Tones').map((t) => t.set)).size).toBeGreaterThanOrEqual(11);
 		expect(find(list, 'tone.pineGreen.50')?.value).toBe('#108062');
@@ -259,9 +259,9 @@ describe.skipIf(!hasBranch)('against the real library', () => {
 		expect(find(list, 'radius')?.value).toBe('8px');
 	});
 
-	it('gives every colour as a hex, every token once', async () => {
+	it('gives every color as a hex, every token once', async () => {
 		const list = await readTokens(real);
-		for (const t of list.tokens.filter((x) => x.kind === 'colour')) expect(t.value, t.path).toMatch(/^#([0-9A-F]{6}|[0-9A-F]{8})$/i);
+		for (const t of list.tokens.filter((x) => x.kind === 'color')) expect(t.value, t.path).toMatch(/^#([0-9A-F]{6}|[0-9A-F]{8})$/i);
 		expect(new Set(list.tokens.map((t) => t.path)).size).toBe(list.tokens.length);
 	});
 });

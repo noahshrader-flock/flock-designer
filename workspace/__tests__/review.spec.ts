@@ -400,7 +400,7 @@ describe('Build', () => {
 	};
 
 	it('offers only branches with the DSNR setup, and starts from one of them', async () => {
-		// The prototype was modelled on develop, which has no setup: the newest that has it is chosen.
+		// The prototype was modeled on develop, which has no setup: the newest that has it is chosen.
 		await dialog(['noah/flock-designer', 'feature/other']);
 		expect((document.getElementById('move-from') as HTMLElement).textContent).toBe('noah/flock-designer');
 	});
@@ -487,7 +487,7 @@ describe('Build', () => {
 		});
 	});
 
-	it('starts from what the prototype was modelled on, when that has the setup', async () => {
+	it('starts from what the prototype was modeled on, when that has the setup', async () => {
 		await dialog(['noah/flock-designer', 'develop']);
 		expect((document.getElementById('move-from') as HTMLElement).textContent).toBe('develop');
 	});

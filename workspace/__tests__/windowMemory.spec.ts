@@ -13,7 +13,7 @@ describe('restoreState', () => {
 		expect(restoreState({ x: 100, y: 80, width: 1400, height: 900 }, [laptop], fallback)).toEqual({ x: 100, y: 80, width: 1400, height: 900 });
 	});
 
-	it('remembers being maximised', () => {
+	it('remembers being maximized', () => {
 		expect(restoreState({ x: 0, y: 0, width: 1200, height: 800, maximized: true }, [laptop], fallback).maximized).toBe(true);
 	});
 

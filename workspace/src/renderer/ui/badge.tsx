@@ -18,7 +18,7 @@ const badgeVariants = cva(
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
-        // Added here, not in stock shadcn: a done state, which the theme has no colour for.
+        // Added here, not in stock shadcn: a done state, which the theme has no color for.
         success: "bg-success/15 text-foreground",
       },
     },

@@ -67,7 +67,7 @@ const createWindow = (): BrowserWindow => {
 		show: !smokeMode && !process.argv.includes('--smoke-page') && !process.argv.includes('--smoke-local'),
 		title: 'DSNR',
 		// No native title bar: the app's own top bar is the toolbar. On macOS the window
-		// buttons stay, inset to sit centred in it; elsewhere the system draws its
+		// buttons stay, inset to sit centered in it; elsewhere the system draws its
 		// controls over the bar's right edge.
 		titleBarStyle: 'hidden',
 		...(process.platform === 'darwin'
@@ -85,7 +85,7 @@ const createWindow = (): BrowserWindow => {
 
 	if (!testing) {
 		if (state.maximized) window.maximize();
-		// The size it has when not maximised or full screen, so un-maximising returns to it. Saved shortly after
+		// The size it has when not maximized or full screen, so un-maximizing returns to it. Saved shortly after
 		// the last change, not on every pixel of a drag, and once more on the way out.
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		const save = () => {

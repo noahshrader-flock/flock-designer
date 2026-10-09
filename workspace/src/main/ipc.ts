@@ -960,9 +960,9 @@ export const registerIpc = ({
 			return null;
 		}),
 	);
-	/** What building a prototype and changing one share: what it is modelled on, read once, and how it is built. */
-	const prototypeRun = async (projectId: string, name: string, modelledOn = name) =>
-		work.buildPlan(projectId, name, await once(`source:${projectId}`, () => work.sources(projectId, modelledOn)));
+	/** What building a prototype and changing one share: what it is modeled on, read once, and how it is built. */
+	const prototypeRun = async (projectId: string, name: string, modeledOn = name) =>
+		work.buildPlan(projectId, name, await once(`source:${projectId}`, () => work.sources(projectId, modeledOn)));
 	/** Its agent, in the folder it was built in, reading the product read-only, and nothing committed. */
 	const startPrototypeAgent = (projectId: string, name: string, sources: PrototypeSources, task: string) =>
 		agent.start(work.dir(projectId), projectId, task, { bare: true, readOnly: prototypeReadable(sources), work: prototypeKey(projectId, name) });
@@ -995,8 +995,8 @@ export const registerIpc = ({
 	ipcMain.handle(
 		CHANNELS.createPrototype,
 		guard(async (projectId: string, title: string, note: string, from: { root: string; branch: string } | null) => {
-			// What it is modelled on is not optional: a prototype is built from a repository's real design system.
-			if (!from) throw new Error('A prototype is modelled on a branch of a repository on this machine. Choose one.');
+			// What it is modeled on is not optional: a prototype is built from a repository's real design system.
+			if (!from) throw new Error('A prototype is modeled on a branch of a repository on this machine. Choose one.');
 			// Only a repository this person accepted, and a branch in it, made local when it is only on GitHub.
 			const root = opened.require(from.root);
 			await ensureLocalBranch(root, from.branch);
@@ -1074,7 +1074,7 @@ export const registerIpc = ({
 			const change = await work.startChange(projectId, name, async (it) =>
 				(it.name === name ? comments : await designRepo.readComments(projectId, it.branch)).map((c) => c.author),
 			);
-			// Modelled on what the iteration it comes from was: a new one has no record of its own yet.
+			// Modeled on what the iteration it comes from was: a new one has no record of its own yet.
 			const { build, sources } = await prototypeRun(projectId, change.target, change.from.name);
 			prototypeChanges.set(commentId, { projectId, change });
 			const where = whereTheChangeGoes(change, name);

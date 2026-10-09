@@ -1,6 +1,6 @@
 /**
  * The design library's tokens, as one list (T1 of the design system plan): what the Design System tab shows and, later,
- * lets a person adjust. **Found, not listed:** read from the library's own files, so a colour added to the library is
+ * lets a person adjust. **Found, not listed:** read from the library's own files, so a color added to the library is
  * here with nothing written in this app. Read as text, never run, as the catalog reads stories (`componentCatalog.ts`).
  *
  * **In layers, behind one reader** (decision 18): each way a library can keep its tokens is a source (`tokens/`), tried

@@ -10,7 +10,7 @@ import { button, fail, fakeApp, ok, press, render, settle, unmountAll } from './
 
 /**
  * The alerts that hold a button use the shadcn Alert as it is made: an icon, a title, a description, and the button in
- * the alert's own action slot, with no layout or colour classes of the app's laid over any of it.
+ * the alert's own action slot, with no layout or color classes of the app's laid over any of it.
  */
 
 let current: Awaited<ReturnType<typeof render>> | null = null;

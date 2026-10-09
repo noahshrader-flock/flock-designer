@@ -72,7 +72,7 @@ export const visibleRepositories = async (session: Pick<GitHubSession, 'api'>, m
 
 /**
  * Every repository the signed-in person's account reaches: what their own GitHub sign-in sees (its command line, when it
- * is here and signed in; every organisation's repositories, as their account does), then any the app's sign-in sees that
+ * is here and signed in; every organization's repositories, as their account does), then any the app's sign-in sees that
  * it did not. The app's own sign-in is a GitHub App, which sees only the repositories it is installed on; this is how a
  * repository the person can open on GitHub is never missing here. **The command line's list is taken only when it is
  * signed in as the same person as the app** (`login`): another account's repositories are not this person's. Each named

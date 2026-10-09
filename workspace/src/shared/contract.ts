@@ -112,7 +112,7 @@ export interface Iteration {
 	 */
 	route?: string;
 	/**
-	 * For a prototype: the product code it was modelled on, so moving it into the code later knows
+	 * For a prototype: the product code it was modeled on, so moving it into the code later knows
 	 * what it was looking at. Absent when it was made without a repository on the machine.
 	 */
 	basedOn?: { repository: string; branch: string; commit: string | null };
@@ -191,7 +191,7 @@ export interface MoveToCodePlan {
 	/** The work was started before (its branch is here, or it is recorded): Build continues it rather than starting a second. */
 	started: boolean;
 	repository: string;
-	/** What the prototype was modelled on, if it says. */
+	/** What the prototype was modeled on, if it says. */
 	basedOn: { repository: string; branch: string } | null;
 	/** The checkout's current branch, and whether it is free of uncommitted changes (which blocks creating a branch). */
 	current: string | null;
@@ -269,15 +269,15 @@ export type DesignSystemConnection = { state: 'connected'; id: string } | { stat
 export interface DesignToken {
 	/** Its identity: `tone.pineGreen.50`, `palette.light.primary.main`, `spacing`, `radius`. */
 	path: string;
-	kind: 'colour' | 'dimension';
-	/** Its tab in the tokens panel: `Colour`, `Spacing`, `Shape`. A category the reader adds is a tab with no other change. */
+	kind: 'color' | 'dimension';
+	/** Its tab in the tokens panel: `Color`, `Spacing`, `Shape`. A category the reader adds is a tab with no other change. */
 	category: string;
 	/** Where it is shown within its tab: `Tones`, `Light`, `Dark`, `Spacing`, `Radius`. */
 	group: string;
 	/** Its family or role (`pineGreen`, `primary`), and its step or variant (`50`, `main`). */
 	set: string;
 	name: string;
-	/** A colour as a hex (eight digits when it has an opacity), a dimension with its unit (`8px`). */
+	/** A color as a hex (eight digits when it has an opacity), a dimension with its unit (`8px`). */
 	value: string;
 	/** A palette role's tone, and the opacity written after it. */
 	ref?: { tone: string; step: string; alpha?: string };
@@ -563,7 +563,7 @@ export interface WorkspaceApi {
 	 */
 	pageSnapshot(): Promise<Result<string | null>>;
 
-	/** Comment mode: resolves with the next element clicked, or null if cancelled. */
+	/** Comment mode: resolves with the next element clicked, or null if canceled. */
 	pagePick(): Promise<Result<PickedPoint | null>>;
 	pageCancelPick(): Promise<Result<null>>;
 	pageShowMarkers(items: MarkerRequest[]): Promise<Result<MarkerResult[]>>;

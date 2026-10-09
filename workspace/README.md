@@ -43,7 +43,7 @@ kinds, switched at the top, both starting from a repository and a branch in it:
   they are, and will not start without them. The agent writes one React file, the app bundles it against
   the product's installed packages into one page, and both are kept in the project's folder
   (`prototypes/v1-i1.tsx`, `prototypes/v1-i1.html`: the version and the iteration; older ones are `i1`). Large files the pages embed (the design system's fonts) are kept once,
-  in `projects/_shared/`, and served beside every page. **Build in the codebase** (in the review menu) moves one into the code: it asks first, shows the branch it will create and what would stop it (uncommitted changes, an existing codebase branch, Claude Code not ready), and starts from the branch the prototype was modelled on.
+  in `projects/_shared/`, and served beside every page. **Build in the codebase** (in the review menu) moves one into the code: it asks first, shows the branch it will create and what would stop it (uncommitted changes, an existing codebase branch, Claude Code not ready), and starts from the branch the prototype was modeled on.
 - **Codebase work**: real work on the project's `feature/<project>` branch, which needs the full setup.
 
 Each runs the agent, then shows the result with pins. The product repository is **suggested** on its own
@@ -197,8 +197,8 @@ pulled with the shadcn CLI in the **Nova** style (`"style": "radix-nova"` in `co
 is what ui.shadcn.com shows; the older `new-york` style looks different (shadowed cards, no card sizes).
 Nova needs `tw-animate-css` and `shadcn/tailwind.css` imported in `index.css` for its open and close
 animations. React 19, which is what shadcn targets. Additions are marked in place: `warning` and `success` variants on Alert, and
-`success` on Badge, which the stock theme has no colour for. One change to stock behaviour: dialogs sit 10% from the
-top instead of vertically centred, so one that changes height grows downward and does not jump. `DialogBody` is also ours: the part that scrolls, so the header and footer stay fixed. The dialog and sheet backdrops start below the top bar, so the bar is never dimmed or covered.
+`success` on Badge, which the stock theme has no color for. One change to stock behavior: dialogs sit 10% from the
+top instead of vertically centered, so one that changes height grows downward and does not jump. `DialogBody` is also ours: the part that scrolls, so the header and footer stay fixed. The dialog and sheet backdrops start below the top bar, so the bar is never dimmed or covered.
 
 **When adding a component with `npx shadcn@latest add <name>`**, the CLI currently leaves the
 registry's placeholder `import { cn } from "cn"` unrewritten and installs an unrelated npm package

@@ -52,7 +52,7 @@ export const useComments = ({
 	const [posting, setPosting] = useState(false);
 	const pickActive = useRef(false);
 	/** Set when the person backs out while a pick is still being read, so its result is dropped. */
-	const pickCancelled = useRef(false);
+	const pickCanceled = useRef(false);
 
 	useEffect(() => {
 		void store.viewer().then(setMe);
@@ -211,7 +211,7 @@ export const useComments = ({
 		if (pickActive.current) return;
 		pickActive.current = true;
 		// A new pick: a backing-out meant for one before it is not this one's, or its first click would be dropped.
-		pickCancelled.current = false;
+		pickCanceled.current = false;
 		setError(null);
 		setMode('picking');
 		const r = await page.pick();
@@ -224,8 +224,8 @@ export const useComments = ({
 			const version = await store.version();
 			// That takes a moment, and Escape may have landed in it. Backing out while this was in flight means there is
 			// nothing to write on: setting the pin now would leave one on the page with no box, so the pick is dropped.
-			if (pickCancelled.current) {
-				pickCancelled.current = false;
+			if (pickCanceled.current) {
+				pickCanceled.current = false;
 				return;
 			}
 			setPending({ ...r.value.anchor, commit: version });
@@ -233,7 +233,7 @@ export const useComments = ({
 			setPendingPicture(r.value.picture);
 			setMode('composing');
 		} else {
-			// Cancelled: Escape on the page, or comment mode switched off.
+			// Canceled: Escape on the page, or comment mode switched off.
 			setMode('browse');
 			setCommentMode(false);
 		}
@@ -248,7 +248,7 @@ export const useComments = ({
 		setCommentMode(false);
 		if (pickActive.current) {
 			// Same reason as in cancelCompose: a pick still being read must not land a pin afterwards.
-			pickCancelled.current = true;
+			pickCanceled.current = true;
 			void page.cancelPick();
 		}
 	}, [page]);
@@ -256,7 +256,7 @@ export const useComments = ({
 
 	/** Abandons the comment being written, and the pin with it. Comment mode carries on. */
 	const cancelCompose = useCallback(() => {
-		if (pickActive.current) pickCancelled.current = true;
+		if (pickActive.current) pickCanceled.current = true;
 		setPending(null);
 		setPendingPicture(null);
 		setDraft('');

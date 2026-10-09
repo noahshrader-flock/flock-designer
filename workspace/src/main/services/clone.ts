@@ -77,7 +77,7 @@ const sameFolder = (dir: string, made: { dev: number; ino: number }): boolean =>
 
 /**
  * One clone at a time, as the agent does one piece of work at a time: a second is refused while one runs. `signal`
- * cancels it; a cancelled clone leaves nothing behind.
+ * cancels it; a canceled clone leaves nothing behind.
  */
 export class Cloner {
 	private running: string | null = null;

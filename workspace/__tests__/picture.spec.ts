@@ -50,7 +50,7 @@ describe('toPicture', () => {
 describe('cropRect', () => {
 	const view = { width: 1000, height: 700 };
 
-	it('centres on the click', () => {
+	it('centers on the click', () => {
 		expect(cropRect({ x: 500, y: 350 }, view)).toEqual({ x: 260, y: 200, width: 480, height: 300 });
 	});
 
@@ -79,7 +79,7 @@ describe('frameRect', () => {
 		expect(frameRect({ x: 100, y: 400, width: 600, height: 20 }, view)).toEqual({ x: 76, y: 350, width: 648, height: 120 });
 	});
 
-	it('gives a tiny element a readable minimum, centred on it', () => {
+	it('gives a tiny element a readable minimum, centered on it', () => {
 		const r = frameRect({ x: 500, y: 300, width: 10, height: 10 }, view);
 		expect([r.width, r.height]).toEqual([200, 120]);
 		expect(r.x + r.width / 2).toBeCloseTo(505, 0);

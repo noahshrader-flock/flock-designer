@@ -6,7 +6,7 @@ true by the end of it. Most prototypes should never graduate, and that's the sys
 
 ## Two paths, two ways to hand over
 
-- **A prototype is never merged.** It is one page kept in the design repository, optimised for answering a
+- **A prototype is never merged.** It is one page kept in the design repository, optimized for answering a
   design question fast, with mock data and no plumbing; merging it would import every shortcut as tech debt on
   day one. **Moving it into the code** (`../skills/move-to-code.md`) starts codebase work from it, and that
   codebase work is what is handed over. **What transfers** is the resolved design: component choices, layout,

@@ -34,7 +34,7 @@ const TOKENS: DesignTokens = {
 	source: 'theme files',
 	looked: [],
 	problems: [],
-	tokens: [{ path: 'tone.pineGreen.50', kind: 'colour', category: 'Colour', group: 'Tones', set: 'pineGreen', name: '50', value: '#108062', source: { file: 'src/colors/tones/pineGreen.ts', line: 3 } }],
+	tokens: [{ path: 'tone.pineGreen.50', kind: 'color', category: 'Color', group: 'Tones', set: 'pineGreen', name: '50', value: '#108062', source: { file: 'src/colors/tones/pineGreen.ts', line: 3 } }],
 };
 
 const ready = (update: CatalogUpdate = 'unchanged', components = COMPONENTS): Catalog => ({
@@ -216,10 +216,10 @@ describe('the tokens panel', () => {
 
 	it('is at the right of the tab, with the library’s tokens, on the list, without opening anything', async () => {
 		await open(() => ok(ready()));
-		expect(panel()?.querySelector('[role="tab"]')?.textContent).toBe('Colour');
+		expect(panel()?.querySelector('[role="tab"]')?.textContent).toBe('Color');
 		// One group on the tab, so its sets are shown straight away.
 		expect(panel()?.textContent).toContain('pineGreen');
-		expect(panel()?.querySelector('input[aria-label="Search colour"]')).not.toBeNull();
+		expect(panel()?.querySelector('input[aria-label="Search color"]')).not.toBeNull();
 		// The last thing on the row, at the right, with the list before it.
 		expect(divider()?.parentElement?.lastElementChild).toBe(panel());
 		expect(divider()?.previousElementSibling?.contains(document.querySelector('[data-component]'))).toBe(true);
@@ -248,7 +248,7 @@ describe('the tokens panel', () => {
 	it('is not drawn while the library is not connected, where there is nothing to show', async () => {
 		await open(() => ok({ state: 'none' }));
 		expect(divider()).toBeNull();
-		expect(document.querySelector('[role="tab"][aria-selected]')?.textContent).not.toBe('Colour');
+		expect(document.querySelector('[role="tab"][aria-selected]')?.textContent).not.toBe('Color');
 	});
 });
 

@@ -19,8 +19,8 @@ const reads = (files: Record<string, string>): CatalogReads => ({
 const find = (list: Awaited<ReturnType<typeof readTokens>>, path: string) => list.tokens.find((t) => t.path === path);
 
 describe('which tab a token is on', () => {
-	it('is Colour for a colour, Shape for a radius, Spacing for spacing, and nothing for a size it cannot place', () => {
-		expect(categoryOf('colour', 'primary')).toBe('Colour');
+	it('is Color for a color, Shape for a radius, Spacing for spacing, and nothing for a size it cannot place', () => {
+		expect(categoryOf('color', 'primary')).toBe('Color');
 		expect(categoryOf('dimension', 'radius-md')).toBe('Shape');
 		expect(categoryOf('dimension', 'rounded')).toBe('Shape');
 		expect(categoryOf('dimension', 'spacing')).toBe('Spacing');
@@ -58,13 +58,13 @@ describe('CSS variables', () => {
 	it('are read as tokens when the library has no theme files, each mode from its own block', async () => {
 		const list = await readTokens(reads({ 'src/styles/globals.css': CSS }));
 		expect(list.source).toBe('CSS variables');
-		expect(find(list, 'css.light.background')).toMatchObject({ kind: 'colour', category: 'Colour', group: 'Light', value: '#ffffff', source: { file: 'src/styles/globals.css', line: 2 } });
+		expect(find(list, 'css.light.background')).toMatchObject({ kind: 'color', category: 'Color', group: 'Light', value: '#ffffff', source: { file: 'src/styles/globals.css', line: 2 } });
 		expect(find(list, 'css.dark.background')).toMatchObject({ group: 'Dark', value: 'hsl(0 0% 4%)' });
 		expect(find(list, 'css.light.primary')?.value).toBe('oklch(0.205 0 0)');
 		expect(find(list, 'css.light.ring')?.value).toBe('rgb(10 20 30)');
 	});
 
-	it('follow a variable to the colour it points at', async () => {
+	it('follow a variable to the color it points at', async () => {
 		const list = await readTokens(reads({ 'src/styles/globals.css': CSS }));
 		expect(find(list, 'css.dark.primary')?.value).toBe('#333333');
 	});
@@ -103,7 +103,7 @@ describe('design token files', () => {
 	it('are read as tokens in the standard format, with the type each group says', async () => {
 		const list = await readTokens(reads({ 'tokens/base.tokens.json': TOKENS }));
 		expect(list.source).toBe('token files');
-		expect(find(list, 'color.red.500')).toMatchObject({ kind: 'colour', category: 'Colour', group: 'Color', set: 'color.red', name: '500', value: '#ff0000' });
+		expect(find(list, 'color.red.500')).toMatchObject({ kind: 'color', category: 'Color', group: 'Color', set: 'color.red', name: '500', value: '#ff0000' });
 		expect(find(list, 'spacing.sm')).toMatchObject({ kind: 'dimension', category: 'Spacing', value: '4px' });
 		expect(find(list, 'radius.md')).toMatchObject({ kind: 'dimension', category: 'Shape', value: '6px' });
 	});

@@ -487,7 +487,7 @@ describe('where clones go', () => {
 		});
 	});
 
-	it('is left as it was when the picker is cancelled', async () => {
+	it('is left as it was when the picker is canceled', async () => {
 		(await picker()).mockResolvedValueOnce({ canceled: true, filePaths: [] } as never);
 		expect((await call(CHANNELS.chooseCloneFolder)).value).toBeNull();
 		expect((await call(CHANNELS.cloneFolder)).value).toBe(join(home, 'GitHub'));
@@ -557,7 +557,7 @@ describe('discovery suggests; it does not trust', () => {
 		await call(CHANNELS.useCheckout, product);
 		const r = await call(CHANNELS.lastCheckout);
 		expect(r.ok).toBe(true);
-		// The gate canonicalises, and macOS temp dirs are symlinks.
+		// The gate canonicalizes, and macOS temp dirs are symlinks.
 		expect((r.value as { root: string }).root).toBe(realpathSync(product));
 	});
 });
@@ -689,7 +689,7 @@ describe('prototypes', () => {
 		expect(await (await fetch(`${again.url}?state=empty`)).text()).toContain('<h1>Demo</h1>');
 	});
 
-	it('record what they are modelled on, and give the agent that branch to read, never to change', async () => {
+	it('record what they are modeled on, and give the agent that branch to read, never to change', async () => {
 		await call(CHANNELS.useCheckout, product);
 		writeSkill();
 		g(product, 'checkout', '-q', '-b', 'noah/baseline');
@@ -1199,7 +1199,7 @@ describe('prototypes', () => {
 			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		};
 
-		it('says what it would do: the branch, whether it exists, and what the prototype was modelled on', async () => {
+		it('says what it would do: the branch, whether it exists, and what the prototype was modeled on', async () => {
 			await start();
 			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'v1-i1')).value).toEqual({
 				branch: 'feature/demo',

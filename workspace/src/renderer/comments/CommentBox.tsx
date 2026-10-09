@@ -25,7 +25,7 @@ export const CommentBox = ({
 	note?: string;
 }) => (
 	<>
-		{/* Clicking away is the same as cancelling, as it was when this was a popover. */}
+		{/* Clicking away is the same as canceling, as it was when this was a popover. */}
 		<div className="fixed inset-0 z-[1100]" onClick={comments.cancelCompose} />
 		<div
 			onKeyDown={(e: React.KeyboardEvent) => {

@@ -34,7 +34,7 @@ describe('bundling a React prototype into one page', () => {
 		mkdirSync(join(dir, 'prototype', 'demo'), { recursive: true });
 		writeFileSync(
 			entry,
-			"/*\n * Usage tab, modelled on the Organization page.\n */\nimport '@acme/ds/style.css';\nimport { DSButton } from '@acme/ds';\nexport default function Prototype() { return <DSButton>Archive roles</DSButton>; }\n",
+			"/*\n * Usage tab, modeled on the Organization page.\n */\nimport '@acme/ds/style.css';\nimport { DSButton } from '@acme/ds';\nexport default function Prototype() { return <DSButton>Archive roles</DSButton>; }\n",
 		);
 		const out = join(dir, 'prototype', 'demo', 'i1.html');
 		const r = await runBundle(script, esbuild as string, entry, out, modules, join(dir, 'shared'), process.execPath);
@@ -42,7 +42,7 @@ describe('bundling a React prototype into one page', () => {
 		expect(r.output).toMatch(/^Built i1\.html \(\d+ KB\)\.$/);
 		const html = readFileSync(out, 'utf8');
 		expect(html).toContain('<div id="root"></div>');
-		expect(html).toContain('Usage tab, modelled on the Organization page.');
+		expect(html).toContain('Usage tab, modeled on the Organization page.');
 		expect(html).toMatch(/\.ds-button\s*\{\s*color:\s*teal/);
 		expect(html).not.toMatch(/<script[^>]+src=/);
 	});

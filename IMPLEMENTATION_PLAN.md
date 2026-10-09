@@ -241,7 +241,7 @@ Nothing here blocks the pilot.
 | 1 | How design mode turns a new view's flag on | Guidance now says to add it to the LaunchDarkly mock in `src/mocks/handlers.ts`; engineering may prefer another way |
 | 2 | Coke's `.github/instructions` still says to use `src/…` imports, which crash the app on load | Engineering's file; agents may not edit `.github/` |
 | 3 | Does Coke support dark mode? | Prototypes render dark on a dark Mac |
-| 4 | May prototypes carry the MUI X licence key? | The grid shows a watermark without it |
+| 4 | May prototypes carry the MUI X license key? | The grid shows a watermark without it |
 | 5 | When does `.dsnr` go onto `develop`? | Agents read guidance from the code branch, else the accepted checkout |
 | 6 | Pin a model per agent, or use a different one for the reviewers? | Not planned unless asked. Today every agent uses the default |
 | 7 | **Keep or remove Share for review** (the draft pull request and deploy preview in the More menu) | Built and working, but it reaches into delivery, which is engineering's. Decide after the pilot |
@@ -258,7 +258,7 @@ none holds up the work in front of it.
 |---|---|---|
 | Name the Design System owner | Noah | 1.1, 1.5 and 4.2 |
 | Move the design repo from `noahshrader-flock` to the `flocksafety` org | Someone with org permission | Everyone else's access; rollout |
-| Register the GitHub App **for the org** and install it on **all of the organisation's repositories**, with Actions (read and write), Pages and Deployments (read) | An org owner | Rollout. Until then the app's own sign-in sees only the repositories it is installed on: the repository pickers add the person's own GitHub command line's list (same account only) and say when a list is only the app's. **Once it is installed on all of them, the command line's list is not needed and is removed**, so the app has one GitHub identity |
+| Register the GitHub App **for the org** and install it on **all of the organization's repositories**, with Actions (read and write), Pages and Deployments (read) | An org owner | Rollout. Until then the app's own sign-in sees only the repositories it is installed on: the repository pickers add the person's own GitHub command line's list (same account only) and say when a list is only the app's. **Once it is installed on all of them, the command line's list is not needed and is removed**, so the app has one GitHub identity |
 | `build:design` and CI for `fd/*` branches — **drafted**, with the prototype standards: commits `1ca7d523`, `e02c408c`, `ff5e3f71`, `65e9a700`, `c8f0447d` on Coke's `noah/flock-designer`, not pushed | Coke engineering, to merge it | 3.4 for every designer, not just those whose branch carries the change |
 | **Decide who may open a shared preview.** *No longer needed for the pilot (2026-10-07): codebase work is reviewed through engineering's own PR previews, and prototypes are not hosted. It still stands if Share for review is kept.* Coke's existing PR previews answer an anonymous request with the page (checked 2026-10-05: HTTP 200 from S3, no login), at an address that is just the pull request number. The plan's rule is no public access by default | Security / platform | 3.4: a design preview is mock data only, but is public to anyone with the link until this is decided |
 | Read and write access to the **design repo** for PMs (not Coke) | GitHub admin, or Noah as owner | 3.4 and 3.6: a PM cannot comment without it |
@@ -320,7 +320,7 @@ Decisions already settled in this plan are not repeated here. What remains genui
 2026-10-05).*
 
 - **Is Mac enough for now?** Windows roughly doubles the distribution work. Decide before 3.6.
-- **May a prototype carry the MUI X licence key?** Without it, `FSDataGrid` shows a "Missing license key" watermark. It is the prototype, not a bug, but it is visible. The key comes from Coke's environment, and a prototype is kept in the design repository.
+- **May a prototype carry the MUI X license key?** Without it, `FSDataGrid` shows a "Missing license key" watermark. It is the prototype, not a bug, but it is visible. The key comes from Coke's environment, and a prototype is kept in the design repository.
 - **When does `.dsnr/` reach `develop`?** Coke's DSNR guidance is only on `noah/flock-designer`. A prototype reads it from the branch it is based on when that branch has it, otherwise from the accepted checkout's working tree.
 - **How much of Coke should carry stable names?** Measured 2026-10-06: **131 `data-e2e-ref` across 49 of 344
   component files**, mostly on leaf elements rather than containers. A pin on an element with no stable name of

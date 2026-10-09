@@ -1,12 +1,12 @@
 /**
  * Tokens kept in design token files, the standard JSON format (the Design Tokens Community Group's, which Style
  * Dictionary and Tokens Studio write): a token is an object with a `$value`, its kind the `$type` it has or its group
- * has. Colours, and lengths whose name says spacing or radius, are read; other kinds (typography, shadows, durations) are
+ * has. Colors, and lengths whose name says spacing or radius, are read; other kinds (typography, shadows, durations) are
  * left out until the panel shows them. A value that names another token (`{color.red.500}`) is that token's value.
  */
 import type { DesignToken, TokenProblem } from '../../../shared/contract';
 import { lineAt } from './objectLiteral';
-import { DIMENSION, type TokenSource, capitalised, categoryOf } from './source';
+import { DIMENSION, type TokenSource, capitalized, categoryOf } from './source';
 
 const TOKEN_FILE = /(\.tokens\.json|(^|\/)(design-)?tokens?\.json|(^|\/)(design-)?tokens\/.+\.json)$/i;
 
@@ -68,19 +68,19 @@ export const tokenFiles: TokenSource = {
 		const tokens: DesignToken[] = [];
 		for (const [path, raw] of raws) {
 			const value = resolve(raw.value);
-			const colour = raw.type === 'color' && typeof value === 'string' ? value : null;
+			const color = raw.type === 'color' && typeof value === 'string' ? value : null;
 			const length = raw.type === 'dimension' ? lengthOf(value) : null;
-			const kind = colour !== null ? 'colour' : length !== null ? 'dimension' : null;
+			const kind = color !== null ? 'color' : length !== null ? 'dimension' : null;
 			const category = kind === null ? null : categoryOf(kind, path);
 			if (kind === null || category === null) continue;
 			tokens.push({
 				path,
 				kind,
 				category,
-				group: capitalised(raw.path[0] as string),
+				group: capitalized(raw.path[0] as string),
 				set: raw.path.slice(0, -1).join('.') || path,
 				name: raw.path[raw.path.length - 1] as string,
-				value: (colour ?? length) as string,
+				value: (color ?? length) as string,
 				source: { file: raw.file, line: raw.line },
 			});
 		}

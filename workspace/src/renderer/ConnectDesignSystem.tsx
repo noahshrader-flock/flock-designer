@@ -10,7 +10,7 @@ import { Button } from './ui/button';
 import { Label } from './ui/label';
 
 /**
- * Connecting a design system (P4 of the design system plan), centred in the window like the GitHub sign-in: one of the
+ * Connecting a design system (P4 of the design system plan), centered in the window like the GitHub sign-in: one of the
  * person's repositories, from the clone's own picker, and **Connect**, which clones it (or uses it where it already is)
  * and looks in it. **Any repository** (decision 23): it is accepted when a design system is found in it, Storybook
  * stories or tokens (decision 25), refused in words when none is, and when a monorepo has several the person chooses

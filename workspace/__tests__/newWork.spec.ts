@@ -82,7 +82,7 @@ describe('what it makes', () => {
 		expect(() => button('Start codebase work')).toThrow(/0 buttons/);
 	});
 
-	it('is modelled on any branch, and makes a prototype from it', async () => {
+	it('is modeled on any branch, and makes a prototype from it', async () => {
 		const made = { projectId: 'ops-list', name: 'v1-i1', branch: 'prototype/ops-list/v1-i1', commit: null, createdAt: '2026-10-08T00:00:00Z', note: 'A list' };
 		const { app } = await open({ listBaseBranches: async () => ok(['develop', 'noah/flock-designer']), createPrototype: async () => ok(made) });
 		await fill();

@@ -15,7 +15,7 @@ blocks it, and tell the engineer what they are picking up.
 
 The product's guidance names its handoff gate (the task gives the command). Run it, and **fix what it
 names**. A gate may also check for what the steps below write (the review record, the handoff note):
-those fail now and must pass at the last run. The gate reports; it does not decide. Most of what it finds needs judgement (a colour that is a deliberate
+those fail now and must pass at the last run. The gate reports; it does not decide. Most of what it finds needs judgment (a color that is a deliberate
 exception, a check that legitimately cannot run here), so say which it is, and never edit a check to make
 it pass.
 
@@ -56,7 +56,7 @@ Say in it that it is to be deleted when the work merges.
 - **What they pick up.** Lead with the list of stand-ins that engineering swaps for the real thing
   (the product's guidance says what these are: for a product with a mock network layer, the stubbed
   endpoints). If nothing was stubbed, say so plainly.
-- **What is not real.** Which data is mocked, which behaviour is simulated, which states were never built.
+- **What is not real.** Which data is mocked, which behavior is simulated, which states were never built.
 - **What the real data has to be:** what each stand-in would have to return, in the shape the view uses.
   Usually the most valuable part: work built on realistic mock data has already specified that contract.
 - **Who sees what:** the permissions and roles the states depend on.

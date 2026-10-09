@@ -6,7 +6,7 @@ import { STATES_META } from './prototypeStates';
  * The code the app runs *inside* a preview page, as source strings.
  *
  * Strings, not functions: a bundler rewrites function bodies, and a rewritten
- * body cannot be serialised into another process. Each script returns its result
+ * body cannot be serialized into another process. Each script returns its result
  * to the app. The page is given no function to call; the one thing a pin needs to
  * say back -- "I was clicked", "I was moved" -- goes out as a console message
  * carrying a per-preview secret, which the app listens for and validates. The
@@ -19,7 +19,7 @@ import { STATES_META } from './prototypeStates';
  */
 
 /**
- * The colours of the things this app draws *inside someone else's page*.
+ * The colors of the things this app draws *inside someone else's page*.
  *
  * Written as literals on purpose, and the only place in the app where that is right: these live in
  * the previewed product's document, which has its own stylesheet and cannot see this app's theme. They
@@ -485,7 +485,7 @@ export interface PickedSpot {
 }
 
 /**
- * The answer to PICK_SCRIPT: null when the pick was cancelled. Throws, to be said aloud, when the spot could not be
+ * The answer to PICK_SCRIPT: null when the pick was canceled. Throws, to be said aloud, when the spot could not be
  * pinned: a click that silently did nothing is indistinguishable from a comment that was lost.
  */
 export const readPick = (raw: unknown): PickedSpot | null => {

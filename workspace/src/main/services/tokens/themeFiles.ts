@@ -1,20 +1,20 @@
 /**
  * Tokens kept as a JavaScript or TypeScript theme, as MUI libraries keep them (FUI among them). **Found by their shape,
- * not by where they are:** a tone family is an exported object of numbered steps with hex colours (`pineGreen = { 50:
+ * not by where they are:** a tone family is an exported object of numbered steps with hex colors (`pineGreen = { 50:
  * '#108062', … }`), a palette is an exported object with a `mode` (`lightPalette = { mode: 'light', primary: { main:
  * pineGreen[50] } }`), and the theme's spacing and radius are its `spacing` and its `shape.borderRadius`. Only files
- * whose path says colours, tokens, themes, palettes or tones are read; any other object in them is left alone.
+ * whose path says colors, tokens, themes, palettes or tones are read; any other object in them is left alone.
  */
 import type { DesignToken, TokenProblem } from '../../../shared/contract';
 import { type Entry, exportedObjects, lineAt, literal, parseObject } from './objectLiteral';
-import { type TokenSource, capitalised, categoryOf } from './source';
+import { type TokenSource, capitalized, categoryOf } from './source';
 
 const SCRIPT = /\.(ts|tsx|js|jsx|mjs)$/;
 const THEME_PATH = /(^|\/)(colou?rs?|tokens?|themes?|palettes?|tones?)(\/|\.|$)/i;
 const HEX = /^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
-/** A colour as a palette writes it: a tone step (`pineGreen[50]`), the same with an opacity after it, or a hex. */
-const colourOf = (text: string, tones: Map<string, Map<string, string>>): { value: string; ref?: DesignToken['ref'] } | string => {
+/** A color as a palette writes it: a tone step (`pineGreen[50]`), the same with an opacity after it, or a hex. */
+const colorOf = (text: string, tones: Map<string, Map<string, string>>): { value: string; ref?: DesignToken['ref'] } | string => {
 	const hex = literal(text);
 	if (hex !== null && HEX.test(hex)) return { value: hex.toUpperCase() };
 	const m = /^(?:(\w+)\[(\d+)\]|`\$\{(\w+)\[(\d+)\]\}([0-9a-fA-F]{2})`)$/.exec(text);
@@ -25,7 +25,7 @@ const colourOf = (text: string, tones: Map<string, Map<string, string>>): { valu
 	return { value: alpha ? `${value}${alpha.toUpperCase()}` : value, ref: alpha ? { tone, step, alpha } : { tone, step } };
 };
 
-/** An object of numbered steps, at least one of them a hex colour: a tone family. */
+/** An object of numbered steps, at least one of them a hex color: a tone family. */
 const isTones = (entries: Entry[]): boolean =>
 	entries.length > 0 &&
 	entries.every((e) => e.key !== null && /^\d+$/.test(e.key)) &&
@@ -63,7 +63,7 @@ export const themeFiles: TokenSource = {
 		const objects = new Map<string, { file: string; entries: Entry[] }>();
 		for (const [file, text] of texts) for (const [name, entries] of exportedObjects(text)) objects.set(name, { file, entries });
 
-		// The tone families, each step with its colour, in the file's order.
+		// The tone families, each step with its color, in the file's order.
 		const tones = new Map<string, Map<string, string>>();
 		for (const [name, { file, entries }] of objects) {
 			if (!isTones(entries)) continue;
@@ -72,11 +72,11 @@ export const themeFiles: TokenSource = {
 				const hex = e.value.kind === 'value' ? literal(e.value.text) : null;
 				if (hex === null || !HEX.test(hex)) {
 					const written = e.value.kind === 'value' ? e.value.text : 'an object';
-					problems.push({ file, line: e.line, reason: `${name} ${e.key} is ${written}, not a hex colour, so this step is not read` });
+					problems.push({ file, line: e.line, reason: `${name} ${e.key} is ${written}, not a hex color, so this step is not read` });
 					continue;
 				}
 				steps.set(e.key as string, hex.toUpperCase());
-				tokens.push({ path: `tone.${name}.${e.key}`, kind: 'colour', category: 'Colour', group: 'Tones', set: name, name: e.key as string, value: hex.toUpperCase(), source: { file, line: e.line } });
+				tokens.push({ path: `tone.${name}.${e.key}`, kind: 'color', category: 'Color', group: 'Tones', set: name, name: e.key as string, value: hex.toUpperCase(), source: { file, line: e.line } });
 			}
 			tones.set(name, steps);
 		}
@@ -99,16 +99,16 @@ export const themeFiles: TokenSource = {
 				}
 				if (e.key === 'mode') continue;
 				if (e.value.kind !== 'object') {
-					problems.push({ file: object.file, line: e.line, reason: `${e.key}: a role is an object of colours, so it is not read` });
+					problems.push({ file: object.file, line: e.line, reason: `${e.key}: a role is an object of colors, so it is not read` });
 					continue;
 				}
 				for (const v of e.value.entries) {
-					const colour = v.value.kind === 'value' ? colourOf(v.value.text, tones) : `${v.key}: an object where a colour belongs`;
-					if (typeof colour === 'string') {
-						problems.push({ file: object.file, line: v.line, reason: colour });
+					const color = v.value.kind === 'value' ? colorOf(v.value.text, tones) : `${v.key}: an object where a color belongs`;
+					if (typeof color === 'string') {
+						problems.push({ file: object.file, line: v.line, reason: color });
 						continue;
 					}
-					roles.push({ kind: 'colour', set: e.key as string, name: v.key as string, ...colour, source: { file: object.file, line: v.line } });
+					roles.push({ kind: 'color', set: e.key as string, name: v.key as string, ...color, source: { file: object.file, line: v.line } });
 				}
 			}
 			resolved.set(name, roles);
@@ -120,7 +120,7 @@ export const themeFiles: TokenSource = {
 			.filter((p): p is { name: string; mode: string } => p.mode !== null)
 			.sort((a, b) => (a.mode === 'light' ? -1 : b.mode === 'light' ? 1 : a.mode.localeCompare(b.mode)));
 		for (const { name, mode } of palettes) {
-			for (const r of rolesOf(name)) tokens.push({ path: `palette.${mode}.${r.set}.${r.name}`, category: 'Colour', group: capitalised(mode), ...r });
+			for (const r of rolesOf(name)) tokens.push({ path: `palette.${mode}.${r.set}.${r.name}`, category: 'Color', group: capitalized(mode), ...r });
 		}
 		if (tones.size === 0 && palettes.length === 0) return null;
 
@@ -133,7 +133,7 @@ export const themeFiles: TokenSource = {
 			for (const [file, text] of texts) {
 				const found = themeNumber(text, name === 'radius' ? 'borderRadius' : name, inside);
 				if (!found) continue;
-				tokens.push({ path: name, kind: 'dimension', category: categoryOf('dimension', name) as string, group: capitalised(name), set: name, name: 'base', value: `${found.value}px`, source: { file, line: found.line } });
+				tokens.push({ path: name, kind: 'dimension', category: categoryOf('dimension', name) as string, group: capitalized(name), set: name, name: 'base', value: `${found.value}px`, source: { file, line: found.line } });
 				break;
 			}
 		}

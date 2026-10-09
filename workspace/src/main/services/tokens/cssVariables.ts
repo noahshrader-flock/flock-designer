@@ -1,15 +1,15 @@
 /**
  * Tokens kept as CSS variables, as shadcn and Tailwind design systems keep them: `--primary: oklch(…)` in `:root`, the
  * dark values in `.dark`, a Tailwind scale in `@theme` (`--color-red-500`). A variable is a token when its value is a
- * colour, or a length whose name says spacing or radius (`categoryOf`); every other variable (a font size, a z-index, a
- * duration) is left out, not guessed. A value that names another variable (`var(--ring)`) is the colour it points at.
+ * color, or a length whose name says spacing or radius (`categoryOf`); every other variable (a font size, a z-index, a
+ * duration) is left out, not guessed. A value that names another variable (`var(--ring)`) is the color it points at.
  */
 import type { DesignToken } from '../../../shared/contract';
 import { lineAt } from './objectLiteral';
-import { DIMENSION, type TokenSource, capitalised, categoryOf } from './source';
+import { DIMENSION, type TokenSource, capitalized, categoryOf } from './source';
 
 const STYLESHEET = /\.(css|scss|less|pcss)$/;
-const COLOUR = /^(#[0-9a-f]{3,8}|(rgba?|hsla?|oklch|oklab|lab|lch|hwb|color)\(.*\))$/i;
+const COLOR = /^(#[0-9a-f]{3,8}|(rgba?|hsla?|oklch|oklab|lab|lch|hwb|color)\(.*\))$/i;
 
 interface Variable {
 	value: string;
@@ -50,7 +50,7 @@ export const cssVariables: TokenSource = {
 		for (const [mode, vars] of modes) {
 			for (const [name, v] of vars) {
 				const value = resolve(v.value, mode);
-				const kind = COLOUR.test(value) ? 'colour' : DIMENSION.test(value) ? 'dimension' : null;
+				const kind = COLOR.test(value) ? 'color' : DIMENSION.test(value) ? 'dimension' : null;
 				const category = kind === null ? null : categoryOf(kind, name);
 				if (kind === null || category === null) continue;
 				// A scale's steps are one set: `--color-red-500` is step 500 of `color-red`.
@@ -59,7 +59,7 @@ export const cssVariables: TokenSource = {
 					path: `css.${mode}.${name}`,
 					kind,
 					category,
-					group: kind === 'colour' ? capitalised(mode) : category,
+					group: kind === 'color' ? capitalized(mode) : category,
 					set: step ? (step[1] as string) : name,
 					name: step ? (step[2] as string) : name,
 					value,

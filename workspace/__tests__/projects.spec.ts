@@ -244,7 +244,7 @@ describe('slugify', () => {
 	it('makes an id the main process will accept, however long the name', () => {
 		// This used to truncate mid-word and leave a trailing hyphen, which the
 		// dialog showed as valid and createIteration then rejected.
-		const long = 'Users list inactivity signal for organisation administrator review';
+		const long = 'Users list inactivity signal for organization administrator review';
 		expect(PROJECT_ID.test(slugify(long))).toBe(true);
 		expect(PROJECT_ID.test(slugify(`${'a'.repeat(59)} b`))).toBe(true);
 	});
@@ -453,7 +453,7 @@ describe('merging when a project was last updated', () => {
 });
 
 describe('how a project’s document is named in a menu', () => {
-	it('drops the extension, turns dashes into spaces, and capitalises the first letter only', () => {
+	it('drops the extension, turns dashes into spaces, and capitalizes the first letter only', () => {
 		expect(recordLabel('brief.md')).toBe('Brief');
 		expect(recordLabel('design-notes.md')).toBe('Design notes');
 		expect(recordLabel('audit-i1.md')).toBe('Audit i1');

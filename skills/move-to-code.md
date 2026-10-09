@@ -27,7 +27,7 @@ what moving a prototype adds.
   - `@remove`: scaffolding that exists only so the prototype ran (a state switcher, a hand-made shell).
     Delete it.
   - `data-e2e-ref`: the parts people commented on. Keep them where this product's code supports them.
-  - The block comment at the top: where in the product it sits, what it was modelled on, which person
+  - The block comment at the top: where in the product it sits, what it was modeled on, which person
     the navigation shows, its states, and every mark, grouped by kind.
 - **Its built page**, at the path the task gives, to see what reviewers saw.
 - **This repository**, on the project's codebase branch, and the project's records in the design
@@ -46,7 +46,7 @@ an engineer to read together, so write it in plain words, not code.
 2. **What the page shows.** The screens, states and interactions, in a few lines.
 3. **Where each part goes.** The prototype is one file; the product is not. For each part: the file it
    belongs in, and what it is wired to (routing, state, permissions, flags). Where the prototype's version
-   differs from the product's own way (a colour, a spacing, a behaviour), the product's own wins unless a
+   differs from the product's own way (a color, a spacing, a behavior), the product's own wins unless a
    decision above says otherwise.
 4. **Data.** Every `@mock`: what the data really is, and where it comes from. This branch still uses mock
    data, in the way this repository already mocks things.

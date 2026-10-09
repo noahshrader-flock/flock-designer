@@ -6,7 +6,7 @@ import { button, fakeApp, ok, press, render, settle, unmountAll } from './review
 
 /**
  * The signed-out screen: Sign in with GitHub, and the code to type once it has started, in the middle of the window,
- * across and down (under the fixed top bar, but centred on the window, not on what is left of it). Layout is read off
+ * across and down (under the fixed top bar, but centered on the window, not on what is left of it). Layout is read off
  * the classes, as jsdom has none.
  */
 
@@ -23,16 +23,16 @@ const signedOut = () => {
 };
 
 describe('the sign-in screen', () => {
-	it('is centred in the window both ways, as the one thing on it', async () => {
+	it('is centered in the window both ways, as the one thing on it', async () => {
 		signedOut();
 		current = await render(createElement(App));
 		const heading = [...document.querySelectorAll('h1')].find((h) => h.textContent === 'DSNR') as HTMLElement;
 		const column = heading.parentElement?.parentElement as HTMLElement;
-		const centre = column.parentElement as HTMLElement;
+		const center = column.parentElement as HTMLElement;
 		// The area under the bar fills it, and puts its one child in the middle across and down.
-		expect(classes(centre)).toEqual(expect.arrayContaining(['flex', 'min-h-full', 'items-center', 'justify-center']));
+		expect(classes(center)).toEqual(expect.arrayContaining(['flex', 'min-h-full', 'items-center', 'justify-center']));
 		// The bar's height is left clear below as well as above, so the middle is the window's, not what is under the bar.
-		expect(classes(centre)).toContain('pb-(--nav-height)');
+		expect(classes(center)).toContain('pb-(--nav-height)');
 	});
 
 	it('sits in that middle by its own width, with no margin pushing it off the top', async () => {

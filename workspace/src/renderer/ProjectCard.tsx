@@ -11,12 +11,12 @@ import { Card, CardFooter, CardTitle } from './ui/card';
 /** How many comments a project's prototypes have, all of them together. */
 const commentsOn = (prototypes: ProjectIteration[]): number => prototypes.reduce((n, it) => n + it.openComments, 0);
 
-/** What the footer says at its right, in the grey of the comment count. */
+/** What the footer says at its right, in the gray of the comment count. */
 const Aside = ({ children }: { children: ReactNode }) => <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-sm">{children}</span>;
 
 /**
- * A project in the Projects grid. The cover, in the card's own colour, has the project's name at its bottom left (and at
- * its top whether it is only on this machine). The footer has who it is by at the left and, at the right in grey, how
+ * A project in the Projects grid. The cover, in the card's own color, has the project's name at its bottom left (and at
+ * its top whether it is only on this machine). The footer has who it is by at the left and, at the right in gray, how
  * many versions the project has and how many comments its prototypes have (or Built in code, or Nothing made yet). It is
  * the same height on every card, so a row of cards lines up.
  *

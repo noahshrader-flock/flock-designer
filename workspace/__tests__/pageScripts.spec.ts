@@ -107,7 +107,7 @@ describe('picking an element', () => {
 		expect(pressed).toBe(0);
 	});
 
-	it('leaves the page as it found it, and gives null when cancelled', async () => {
+	it('leaves the page as it found it, and gives null when canceled', async () => {
 		const w = page(CARD);
 		const before = w.document.documentElement.outerHTML;
 		const picked = w.eval(PICK_SCRIPT) as Promise<unknown>;
@@ -195,7 +195,7 @@ describe('placing comments on reopening', () => {
 
 	it('follows the text when the element was shortened, not only lengthened', () => {
 		const w = page('<section><p>Invite</p></section>');
-		const out = w.eval(resolveScript([req(1, { selector: '#gone', nearbyText: 'Invite users to the organisation' })], 'nonce')) as Array<{ state: string }>;
+		const out = w.eval(resolveScript([req(1, { selector: '#gone', nearbyText: 'Invite users to the organization' })], 'nonce')) as Array<{ state: string }>;
 		expect(out[0]?.state).toBe('moved');
 	});
 
@@ -521,7 +521,7 @@ describe('choosing what a pin attaches to', () => {
 		expect((await p2).inside).toEqual([]);
 	});
 
-	it('takes the outline and its label away when the click is made, and when it is cancelled, leaving the page as it was', async () => {
+	it('takes the outline and its label away when the click is made, and when it is canceled, leaving the page as it was', async () => {
 		const w = page(FORM);
 		const sub = w.document.getElementById('sub') as HTMLElement;
 		const picked = w.eval(PICK_SCRIPT) as Promise<unknown>;
@@ -533,10 +533,10 @@ describe('choosing what a pin attaches to', () => {
 		expect(w.document.querySelector('[data-fd-layer]')).toBeNull();
 		expect(w.document.querySelector('style[data-fd]')).toBeNull();
 
-		const cancelled = w.eval(PICK_SCRIPT) as Promise<unknown>;
+		const canceled = w.eval(PICK_SCRIPT) as Promise<unknown>;
 		move(w);
 		press(w, 'Escape');
-		expect(await cancelled).toBeNull();
+		expect(await canceled).toBeNull();
 		expect(w.document.querySelector('[data-fd-layer]')).toBeNull();
 	});
 

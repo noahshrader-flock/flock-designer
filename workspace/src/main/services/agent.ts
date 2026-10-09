@@ -35,7 +35,7 @@ export interface AgentExtras {
 	bare?: boolean;
 	/** The conversation's ID, chosen by the app, so the person can continue it in their editor afterwards. */
 	session?: string;
-	/** What the conversation is called where it is listed, so it can be recognised there. */
+	/** What the conversation is called where it is listed, so it can be recognized there. */
 	name?: string;
 }
 
@@ -371,7 +371,7 @@ export class AgentRunner {
 		child.on('exit', (code) => {
 			this.child = null;
 			// A crash and a clean finish are both "finished" with a code. The caller
-			// decides what a non-zero code means; this does not editorialise.
+			// decides what a non-zero code means; this does not editorialize.
 			this.current = { state: 'finished', exitCode: code ?? -1, ...this.tags() };
 		});
 

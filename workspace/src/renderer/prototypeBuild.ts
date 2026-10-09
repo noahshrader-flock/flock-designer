@@ -86,22 +86,22 @@ export const usePrototypeBuild = ({
 
 	useEffect(() => {
 		if (!enabled) return;
-		let cancelled = false;
+		let canceled = false;
 		setPhase({ kind: 'idle' });
 		void runPrototypeBuild({
 			api: window.workspace,
 			project,
 			iteration,
 			task: built.current ? undefined : task,
-			isLive: () => !cancelled,
+			isLive: () => !canceled,
 			onPhase: (p) => {
-				if (cancelled) return;
+				if (canceled) return;
 				if (p.kind === 'preview' && task) built.current = true;
 				setPhase(p);
 			},
 		});
 		return () => {
-			cancelled = true;
+			canceled = true;
 		};
 	}, [enabled, project.id, iteration.name, task, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -90,7 +90,7 @@ export const renderComments = ({ projectId, title, iteration, comments, generate
 		const match = c.picture ? /^data:image\/jpeg;base64,(.+)$/.exec(c.picture) : null;
 		if (match?.[1]) {
 			pictures.set(`${n}.jpg`, Buffer.from(match[1], 'base64'));
-			lines.push(`- **Picture:** \`${PICTURES_DIR}/${n}.jpg\` (the spot is the centre of it)`);
+			lines.push(`- **Picture:** \`${PICTURES_DIR}/${n}.jpg\` (the spot is the center of it)`);
 		}
 	}
 

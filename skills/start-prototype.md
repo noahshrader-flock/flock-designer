@@ -23,7 +23,7 @@ node ../flock-designer/workspace/bin/dsnr.mjs new-prototype --project <id> --tit
 - **`--note`** is the idea, in the person's own words: it becomes the project's brief, which reviewers read. Leave
   out instructions about how to make it ("mock data only", "a prototype, not codebase work"): the skills already
   say those.
-- It is modelled on the branch the repository is on; `--from <branch>` names another.
+- It is modeled on the branch the repository is on; `--from <branch>` names another.
 
 If you were sent here, the path is decided: it is a prototype. Do not ask whether to prototype or build it in the
 codebase.

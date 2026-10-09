@@ -190,7 +190,7 @@ describe('comments', () => {
     expect(await new DesignRepo(session, REF).readComments('alpha', 'fd/alpha/i9')).toEqual([]);
   });
 
-  it('creates the thread on the first comment, labelled and naming its branch', async () => {
+  it('creates the thread on the first comment, labeled and naming its branch', async () => {
     const { session, writes } = fakeSession({
       '/repos/acme/design/issues?state=all': [],
       '/repos/acme/design/issues': { number: 12 },

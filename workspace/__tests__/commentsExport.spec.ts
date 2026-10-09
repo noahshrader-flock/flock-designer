@@ -158,7 +158,7 @@ describe('renderComments', () => {
 	it('carries the picture as a file reference, and as bytes for the files to be written', () => {
 		const { markdown, pictures } = renderComments(input([comment(1), comment(2, { picture: picture('jpeg-bytes') })]));
 		expect(markdown).toContain('`comment-pictures/2.jpg`');
-		expect(markdown).toContain('the spot is the centre of it');
+		expect(markdown).toContain('the spot is the center of it');
 		expect(pictures.get('2.jpg')?.toString()).toBe('jpeg-bytes');
 	});
 

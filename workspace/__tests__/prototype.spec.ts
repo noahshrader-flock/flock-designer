@@ -70,7 +70,7 @@ describe('recordPrototype', () => {
 		expect(it.note).toBe('Add a Usage tab.');
 	});
 
-	it('keeps what it was modelled on', async () => {
+	it('keeps what it was modeled on', async () => {
 		const { store } = memoryStore();
 		const basedOn = { repository: 'flock-coke', branch: 'develop', commit: 'abc1234' };
 		expect((await recordPrototype(store, { projectId: 'users', title: 't', note: 'n', me, basedOn, now })).basedOn).toEqual(basedOn);

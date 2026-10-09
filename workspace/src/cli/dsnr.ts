@@ -264,8 +264,8 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		const saveCommand = (name: string) => shellLine([...deps.self, 'save-prototype', '--project', projectId, '--name', name, '--product', root]);
 		const publishCommand = (name: string) => shellLine([...deps.self, 'publish', '--project', projectId, '--name', name]);
 		/** The build skill and this run: where to write, and how to check it builds. */
-		const buildTask = async (skill: string, name: string, modelledOn: string, request: string): Promise<string> => {
-			const { build, sources } = work.buildPlan(projectId, name, await work.sources(projectId, modelledOn));
+		const buildTask = async (skill: string, name: string, modeledOn: string, request: string): Promise<string> => {
+			const { build, sources } = work.buildPlan(projectId, name, await work.sources(projectId, modeledOn));
 			return prototypeBuildTask({ skill, build, sources, request });
 		};
 
@@ -333,7 +333,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 
 		const iteration = await work.start(root, { projectId, title, note, branch, me: await meOf(designRoot, deps.github) });
 		const text = await buildTask(skill, iteration.name, iteration.name, note);
-		deps.out(taskText(`Recorded ${projectId} ${iteration.name}, modelled on ${branch}. Your task follows.`, text, saveCommand(iteration.name), publishCommand(iteration.name)));
+		deps.out(taskText(`Recorded ${projectId} ${iteration.name}, modeled on ${branch}. Your task follows.`, text, saveCommand(iteration.name), publishCommand(iteration.name)));
 		return 0;
 	} catch (err) {
 		deps.err(err instanceof UsageError ? `${err.message}\n\n${USAGE}` : `dsnr: ${err instanceof Error ? err.message : String(err)}`);

@@ -37,7 +37,7 @@ For each open comment it gives:
 | **Inside** | The named areas the element sits in, outermost first (`Notification settings › Email`). Use it to find the right component when the element's own text is generic |
 | **Text near it** | The text the element held. Search the work's folder for it |
 | **Made against commit** | The version of the code the person was looking at (on a prototype, a short hash of its source). If it is not the current one, the code may have moved since |
-| **Picture** | The pinned element, framed with a little room around it, taken at the moment of the click. **The pinned element is the centre of the picture.** It supports the fields above; when the two disagree, trust the stable name and the text. Open it |
+| **Picture** | The pinned element, framed with a little room around it, taken at the moment of the click. **The pinned element is the center of the picture.** It supports the fields above; when the two disagree, trust the stable name and the text. Open it |
 
 ## The rules
 

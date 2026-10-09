@@ -51,7 +51,7 @@ happen, no exclamation marks, numbers get units and a baseline.
 
 ## Density and layout
 
-Full guidance: **`layout-judgment.md`** — rhythm, grouping, scan path, responsive behaviour. The rule
+Full guidance: **`layout-judgment.md`** — rhythm, grouping, scan path, responsive behavior. The rule
 worth repeating here: **cut content before shrinking spacing.**
 
 ## Consistency beats local optimization

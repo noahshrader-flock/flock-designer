@@ -9,7 +9,7 @@ export const RepositoryReachNote = ({ reach }: { reach: RepositoryReach | null }
 	reach === 'app' ? (
 		<p className="text-muted-foreground text-xs">
 			Only the repositories DSNR’s GitHub App is installed on are listed. To see every one your account can reach, sign in to
-			GitHub’s command line as this account (<code>gh auth login</code>), or ask an owner of your organisation to install the
+			GitHub’s command line as this account (<code>gh auth login</code>), or ask an owner of your organization to install the
 			app on all its repositories.
 		</p>
 	) : null;

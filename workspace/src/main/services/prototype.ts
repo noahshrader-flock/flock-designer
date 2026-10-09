@@ -114,7 +114,7 @@ export const recordPrototype = async (
 
 /**
  * Records a refinement of a prototype: the next iteration of its version, named before it was made (its files are
- * already under that name), modelled on what the iteration it came from was. Refused when that name is taken.
+ * already under that name), modeled on what the iteration it came from was. Refused when that name is taken.
  */
 export const recordIteration = async (
 	store: RecordStore,
@@ -137,12 +137,12 @@ export const assertPrototypeName = (name: string): void => {
 export const prototypeVersionOf = (source: string): string => createHash('sha1').update(source).digest('hex').slice(0, 12);
 
 /**
- * What a prototype's agent may read, each a folder: the product's code (on the branch it is modelled
+ * What a prototype's agent may read, each a folder: the product's code (on the branch it is modeled
  * on), and the guidance the code is built to, in its three layers. Every one is optional: whatever this
  * machine does not have is left out, and the task says so rather than letting the agent guess.
  */
 export interface PrototypeSources {
-	/** The product's code, on the branch the prototype is modelled on. */
+	/** The product's code, on the branch the prototype is modeled on. */
 	code: string;
 	/** The product's own DSNR guidance: how its app is put together, its patterns, its rules. */
 	productGuidance: string | null;
@@ -301,7 +301,7 @@ export const moveToCodeTask = ({
 			? [`It was written in React with the real design system: its source is \`${sourceFile}\`. Start from that, not from the page.`]
 			: []),
 		basedOn
-			? `It was modelled on \`${basedOn.branch}\` of ${basedOn.repository}${basedOn.commit ? ` at ${basedOn.commit.slice(0, 7)}` : ''}; the code may have moved on since.`
+			? `It was modeled on \`${basedOn.branch}\` of ${basedOn.repository}${basedOn.commit ? ` at ${basedOn.commit.slice(0, 7)}` : ''}; the code may have moved on since.`
 			: 'It was made without the product code to look at, so expect more of it to differ from how the product really works.',
 		`Write the audit to \`${auditFile}\` before you change any code.`,
 	].join('\n');

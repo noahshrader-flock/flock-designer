@@ -136,7 +136,7 @@ export class PageView {
 				last = err;
 				// Closed or replaced on purpose: not this load's to finish.
 				if (wc.isDestroyed() || this.view?.webContents !== wc) throw err;
-				// A cancelled or failed navigation may have been followed by the page arriving anyway.
+				// A canceled or failed navigation may have been followed by the page arriving anyway.
 				if (await settled(wc, SETTLE_MS)) return;
 				await sleep(RETRY_MS);
 			}
@@ -210,7 +210,7 @@ export class PageView {
 		}
 	}
 
-	/** Waits for one click. Null if cancelled, or if the page changed under it. */
+	/** Waits for one click. Null if canceled, or if the page changed under it. */
 	async pick(): Promise<PickedPoint | null> {
 		if (!this.view) throw new Error('There is no preview open.');
 		if (this.picking) await this.cancelPick();
@@ -218,7 +218,7 @@ export class PageView {
 		this.view.webContents.focus();
 		try {
 			const spot = readPick(await this.run<unknown>(PICK_SCRIPT));
-			if (spot === null) return null; // cancelled
+			if (spot === null) return null; // canceled
 			return { ...spot, picture: await this.pictureAt(spot.at, spot.box) };
 		} finally {
 			this.picking = false;

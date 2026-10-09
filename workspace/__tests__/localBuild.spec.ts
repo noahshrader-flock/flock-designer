@@ -152,7 +152,7 @@ describe('when nobody is looking any more', () => {
 	});
 
 	it('does not switch branches for a screen that has already gone', async () => {
-		// React runs every effect twice in development, cancelling the first run. If that run
+		// React runs every effect twice in development, canceling the first run. If that run
 		// still switched branches, two checkouts ran at once and one hit git's lock.
 		let live = true;
 		const { a } = api({

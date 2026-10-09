@@ -43,7 +43,7 @@ export const useLocalBuild = ({
 	const root = checkout?.root ?? null;
 	useEffect(() => {
 		if (!enabled || root === null) return;
-		let cancelled = false;
+		let canceled = false;
 		setPhase({ kind: 'idle' });
 		void runLocalBuild({
 			api: window.workspace,
@@ -51,9 +51,9 @@ export const useLocalBuild = ({
 			project,
 			iteration,
 			...(handoffAsked.current ? { handoff: true } : { task: agentDone.current ? undefined : task }),
-			isLive: () => !cancelled,
+			isLive: () => !canceled,
 			onPhase: (p) => {
-				if (cancelled) return;
+				if (canceled) return;
 				if (p.kind === 'preview' && task) agentDone.current = true;
 				// Its agent is done (or failed): trying again, or opening the preview, must not run it twice.
 				if (p.kind === 'reported' || p.kind === 'failed' || p.kind === 'preview') handoffAsked.current = false;
@@ -61,7 +61,7 @@ export const useLocalBuild = ({
 			},
 		});
 		return () => {
-			cancelled = true;
+			canceled = true;
 		};
 		// The iteration is identified by these, not by the object, which is new on every render of the parent.
 	}, [enabled, root, project.id, iteration.name, iteration.branch, task, attempt]); // eslint-disable-line react-hooks/exhaustive-deps

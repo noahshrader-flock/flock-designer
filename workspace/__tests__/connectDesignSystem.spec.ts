@@ -6,7 +6,7 @@ import type { ClonePlan } from '../src/shared/contract';
 import { button, fail, fakeApp, ok, press, render, settle, unmountAll } from './reviewHarness';
 
 /**
- * Connecting a design system (P4 of the design system plan): centred like the GitHub sign-in, one of the person's
+ * Connecting a design system (P4 of the design system plan): centered like the GitHub sign-in, one of the person's
  * repositories, from the clone's own picker, and Connect. Any repository: it is accepted by what is found in it, refused
  * in words when nothing is, and a monorepo with several is chosen from. Against a fake app.
  */
@@ -48,12 +48,12 @@ afterEach(async () => {
 });
 
 describe('the screen', () => {
-	it('says what it is for, centred in the window, with the person’s repositories to choose from and nothing chosen', async () => {
+	it('says what it is for, centered in the window, with the person’s repositories to choose from and nothing chosen', async () => {
 		await open();
 		expect(document.querySelector('h1')?.textContent).toBe('Connect your design system');
 		expect(text()).toContain('Choose the repository your design system is in.');
-		const centre = document.querySelector('h1')!.parentElement!.parentElement!;
-		expect(centre.className.split(' ')).toEqual(expect.arrayContaining(['flex', 'items-center', 'justify-center']));
+		const center = document.querySelector('h1')!.parentElement!.parentElement!;
+		expect(center.className.split(' ')).toEqual(expect.arrayContaining(['flex', 'items-center', 'justify-center']));
 		expect(button('Choose a repository')).toBeTruthy();
 		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Connect')).toBe(false);
 	});

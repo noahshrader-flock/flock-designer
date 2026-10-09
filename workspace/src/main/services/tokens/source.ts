@@ -19,18 +19,18 @@ export const isLibraryFile = (path: string): boolean =>
 	!/(^|\/)(node_modules|dist|build|out|coverage|storybook-static|\.storybook|__tests__|__mocks__)\//.test(path) && !/\.(stories|test|spec)\.\w+$/.test(path);
 
 /**
- * The tab a token is on, from its kind and its name: every colour is Colour, a radius is Shape, spacing is Spacing. A
+ * The tab a token is on, from its kind and its name: every color is Color, a radius is Shape, spacing is Spacing. A
  * size that is none of these (a font size, a width, a breakpoint) is `null`, and is left out rather than placed by guess.
  */
 export const categoryOf = (kind: DesignToken['kind'], name: string): string | null => {
-	if (kind === 'colour') return 'Colour';
+	if (kind === 'color') return 'Color';
 	if (/radius|rounded|corner/i.test(name)) return 'Shape';
 	if (/spacing|space|gap|gutter|inset/i.test(name)) return 'Spacing';
 	return null;
 };
 
 /** A word as a heading has it: `light` is `Light`. */
-export const capitalised = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
+export const capitalized = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
 
 /** A CSS length the panel shows as a dimension: `8px`, `0.25rem`, `1.5em`. */
 export const DIMENSION = /^-?\d*\.?\d+(px|rem|em)$/;

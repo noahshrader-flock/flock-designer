@@ -117,7 +117,7 @@ describe('how many versions it has', () => {
 	const at = () => footer().children[1]!;
 	const v = (name: string) => iteration({ name, branch: `prototype/admin-usage/${name}` });
 
-	it('says so before the comments, with a bullet between, all in the grey of the comment count', async () => {
+	it('says so before the comments, with a bullet between, all in the gray of the comment count', async () => {
 		await show(project({ iterations: [v('v1-i1'), v('v2-i1')] }));
 		expect(at().textContent).toBe('2 versions•0');
 		expect(at().className.split(' ')).toContain('text-muted-foreground');
@@ -174,7 +174,7 @@ describe('opening it', () => {
 describe('a project with only codebase work', () => {
 	const LINK = 'https://github.com/flocksafety/flock-coke/tree/feature/admin-usage';
 
-	it('says Built in code in the grey of the comment count, with no icon beside it', async () => {
+	it('says Built in code in the gray of the comment count, with no icon beside it', async () => {
 		await show(project({ iterations: [CODEBASE], people: [NOAH] }));
 		const [left, right] = [...footer().children];
 		expect(left!.querySelector('.truncate')!.textContent).toBe('Noah Shrader');
@@ -184,7 +184,7 @@ describe('a project with only codebase work', () => {
 		expect(footer().querySelector('a')).toBeNull();
 	});
 
-	it('has the external-link icon at the top right of the card, in that grey', async () => {
+	it('has the external-link icon at the top right of the card, in that gray', async () => {
 		await show(project({ iterations: [CODEBASE] }));
 		const top = cover().children[0]!;
 		const icon = top.querySelector('.lucide-external-link')!;

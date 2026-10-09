@@ -26,13 +26,13 @@ describe('the card cover', () => {
 		expect(cover!.className.split(' ')).toContain('w-full');
 	});
 
-	it('is the card’s own colour, with its content spread top to bottom', async () => {
+	it('is the card’s own color, with its content spread top to bottom', async () => {
 		current = await render(createElement(CardCover, null, createElement('span', null, 'top'), createElement('span', null, 'bottom')));
 		const cover = document.body.querySelector('[data-slot="card-cover"]')!;
 		expect(cover.textContent).toBe('topbottom');
 		const classes = cover.className.split(' ');
 		expect(classes).toEqual(expect.arrayContaining(['flex', 'flex-col', 'justify-between']));
-		// No colour of its own: the card's shows through.
+		// No color of its own: the card's shows through.
 		expect(classes.filter((c) => /^(bg|text)-/.test(c))).toEqual([]);
 		// Its left edge is where the footer's content starts, 18px.
 		expect(classes).toContain('pl-4.5');
