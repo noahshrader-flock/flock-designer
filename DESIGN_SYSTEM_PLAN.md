@@ -97,7 +97,7 @@ the library):**
 **Left unmeasured, deliberately:** how long a fetch takes on a slow network. It runs while the tab shows the list it
 already has (decision 4), so a slow fetch costs nothing the person waits on.
 
-## Decisions (all made; 1, 4 and 11 to 14 by Noah, 2026-10-08, and 20 on 2026-10-09; the rest settled in this plan and cheap to change. 18 and 19 are proposed, 2026-10-09, for Noah to confirm)
+## Decisions (all made; 1, 4 and 11 to 14 by Noah, 2026-10-08, and 20 on 2026-10-09; the rest settled in this plan and cheap to change. 18, 19 and 21 are proposed, 2026-10-09, for Noah to confirm)
 
 | # | Question | Decided | Why |
 |---|---|---|---|
@@ -115,6 +115,7 @@ already has (decision 4), so a slow fetch costs nothing the person waits on.
 | 18 | **How are tokens found?** | **By layers, behind one reader** (proposed 2026-10-09): (1) the library's own theme files, which is all FUI has (tones, palette roles, the theme's spacing and radius); (2) CSS variables or Tailwind's `@theme`; (3) a token JSON file in the standard format; (4) an agent reading what is there, when none of the first three finds anything. **Only layer 1 is built,** because decision 13 allows one library; each other is a small reader that returns the same list, added when a second design system is accepted | Claude Design reads tokens from the code's stylesheet and says nothing of other sources, and libraries differ. One list means no screen learns where a token came from |
 | 19 | **What is a change?** | **A short list of token overrides (path and value), and nothing else** (proposed 2026-10-09). The preview applies it as a theme, **Reset** is the empty list, and the branch step writes the same list into the files. The controls produce it, a typed value does, and the agent could later | One representation, so seeing a change, undoing it and saving it are the same change at three moments, and nothing is kept in two shapes |
 | 20 | **Controls, or only words?** | **Controls** (Noah, 2026-10-09: "I do like the sliders and controllers as long as we can do this cleanly"), **built from the kind of token, not token by token:** one colour control (a picker and its hex) and one dimension control (a slider and its number), each token getting the one its kind says, with its range from the kind. Claude Design changes things only by chat; asking in words comes later (T6) and makes the same list | "Cleanly" means no code per token: a token the reader finds gets its control with nothing written, and a new kind of token is one new control |
+| 21 | **Where do the tokens live on the screen?** | **In a resizable panel at the right of the component page** (Noah's idea, 2026-10-09; the side and the page are proposed, for Noah to confirm), with the components beside it. It is the review screen's own panel, opened by a button as comments are, and its width is remembered by the same code (`panelWidth.ts`), **stored separately** from the comments panel's, with a larger largest width since swatch rows need room. One panel for browsing and for editing, in collapsible groups, so there is no separate Tokens page. Not on the list page, which has no live components to react | A change is seen where it is made: one control, and every card on the page moves. Dragging the panel wider is how the whole palette is browsed, so nothing like a "wide" switch is built |
 | 17 | **What is a component?** | **Whatever the library's Storybook lists** (Noah, 2026-10-08: "using Storybook as that source of truth … anytime you add something that has Storybook in it, it would just get the list from the Storybook"). Every `*.stories.(js|jsx|mjs|ts|tsx)` file on the design system's branch, anywhere in the repository, is one component, named by the last part of its title and grouped by the first, in the order decision 7 gives. **What the app cannot read from the library is in its entry in `DESIGN_SYSTEMS`:** the repository, the branch that is its source of truth, and the hosted Storybook address, if any | It is what makes the tab automatic for any Storybook library: no folder layout, naming or location is assumed, a story added to the library is in the list, and a second design system is one more entry (shown by a test with a library on `main`, stories under `packages/`, and no hosted Storybook). It also removed a layer: the folder rules, parts, gaps and their marks |
 | 11 | **How does the tab get a library when it has none?** | **A centred "Connect the design system" screen, laid out like the GitHub sign-in,** with two tabs: **Clone** and **Locate** (P0). Whichever is used, the connection is **remembered** (the folder's path, in the app's own settings, as the checkout and the clone folder are) and checked every time the app starts | Noah, 2026-10-08: connecting is something a person does on purpose, once, like signing in, and the app remembers it. Locate lets someone who already has the library anywhere on the computer use that clone, and Clone gives everyone else one with no terminal |
 | 12 | **Does the app still find a clone by itself?** | **Yes** (Noah, 2026-10-08), **as a convenience.** What is remembered wins; otherwise a clone of the library in the clone folder or the usual places is used, with no screen. The Connect screen shows only when neither exists, or the remembered folder is gone | A designer with the library already in `~/Documents/GitHub` should not have to say so, and Noah's own reason: **a connection can be removed and replaced later,** which a find-by-itself rule does not get in the way of. Finding trusts nothing: the app only reads git's copy of `develop` from it (decision 4) |
@@ -137,8 +138,8 @@ nothing on GitHub changed.
 | **P1** (done) | **Build the previews:** one page of every story from `develop`, cached by commit, one story per address | P0, decision 8 | M | **Medium** |
 | **P2** (done) | **The component page:** click a row, see its stories as live cards | P1, decision 9 | M | Medium |
 | **T1** | **Find the tokens:** a reader that returns the library's tokens as one typed list (colours, spacing, radius), found and not listed | P2, decisions 16, 18 | M | Low |
-| **T2** | **Show the tokens:** a Tokens page in the tab, as cards: colour tones, palette roles (light and dark), spacing, radius, each with its value and where it comes from | T1 | M | Low |
-| **T3** | **Adjust tokens, seen live, written nowhere:** a control for each token, from its kind; the change is the overrides list, applied as a theme in the preview; Reset | T2, decisions 19, 20 | L | Medium |
+| **T2** | **Show the tokens, in a panel:** a resizable panel at the right of the component page, in collapsible groups: colour tones, palette roles (light and dark), spacing, radius, each with its value and where it comes from; searchable | T1, decision 21 | M | Low |
+| **T3** | **Adjust tokens in the same panel, seen live, written nowhere:** a control on each row, from its kind; a **Changed** group at the top with a reset for each and for all; the change is the overrides list, applied as a theme to every card on the page | T2, decisions 19, 20 | L | Medium |
 | **T4** | **Try it on a branch:** each save is a commit on a new branch of the library, so the branch's history is the iterations; the preview can run on the branch | T3 | L | Medium |
 | **T5** | **Propose it:** a draft pull request from that branch, with Chromatic's link | T4 | M | Medium |
 | **T6** (candidate) | **Ask in words:** "make the primary a little warmer" produces the same overrides list | T3 | S | Low |
@@ -238,7 +239,7 @@ connected library and shows **what can be adjusted**; it goes further, in that a
 live, and carried to a branch and a pull request.
 
 **How it stays clean (the rule for every T step):**
-- **One list of tokens** (T1). The Tokens page and the controls take it, and none knows where a token came from
+- **One list of tokens** (T1). The panel and its controls take it, and none knows where a token came from
   (decision 18).
 - **One kind of control for one kind of token** (decision 20): a colour (a picker and its hex), a dimension (a slider
   and its number). The range comes from the kind (a radius from zero, spacing as a multiple of the base), never
@@ -256,23 +257,28 @@ colour added to the library appears. A file it cannot read is named, and the res
 (as `componentCatalog.spec.ts` does), and fixtures for a family added, a role pointing at a tone, and a file that
 departs from the standard.
 
-**T2: Show the tokens.** A Tokens page in the tab, beside the components: cards for the tone families (a swatch for
-each step, with its name and hex), the palette roles (light and dark, with `main`, `light`, `dark` and `contrastText`),
-spacing and radius, each saying where it comes from. **Decision owed (Noah):** the library's two Storybook token pages
-(the colour palette and the colour primitives) are in the components list today. Once T2 shows the same from the
-source, are they hidden from the list, or kept? Their stories stay in the library either way.
+**T2: Show the tokens, in a panel.** A **resizable panel at the right of the component page** (decision 21), opened by a
+button as the comments panel is, with the components beside it. It reads the list T1 returns, in collapsible groups:
+the tone families (a swatch for each step, with its name and hex), the palette roles (light and dark, with `main`,
+`light`, `dark` and `contrastText`), spacing and radius, each saying where it comes from, with a search. It uses the
+review screen's panel and its width code (`panelWidth.ts`), kept apart from the comments panel's width and allowed
+wider. Read only here. *Tests:* the groups and rows from a fixture list; opening, closing and the remembered width;
+search; nothing shown on the list page. **Decision owed (Noah):** the library's two Storybook token pages (the colour
+palette and the colour primitives) are in the components list today. Once the panel shows the same from the source, are
+they hidden from the list, or kept? Their stories stay in the library either way.
 
-**T3: Adjust tokens, seen live, written nowhere.** **First, the one cheap spike:** how far a changed theme reaches the
-component styles built from the palette when the theme is created (`getFSVariantStyles(palette)`), and the `8px` and
-`360px` values that ignore the theme. The answer is kept **for each token** and said on its control ("not used by every
-component"); the rest is a list for the Design System owner. Then each token gets the control its kind says, a change
-builds a theme (MUI's `createTheme` over the library's `createFSTheme`) and passes it to `FSApp` in the preview frames,
-and **Reset** empties the list. It shows on the component page and the Tokens page both. No file is touched.
+**T3: Adjust tokens in the same panel, seen live, written nowhere.** **First, the one cheap spike:** how far a changed
+theme reaches the component styles built from the palette when the theme is created (`getFSVariantStyles(palette)`),
+and the `8px` and `360px` values that ignore the theme. The answer is kept **for each token** and said on its row
+("not used by every component"); the rest is a list for the Design System owner. Then each row gets the control its kind
+says (decision 20), and a **Changed** group at the top lists what has been adjusted, with a reset for each and one for
+all. A change builds a theme (MUI's `createTheme` over the library's `createFSTheme`) and passes it to `FSApp` in the
+preview frames, so every card on the page moves at once, and **Reset** empties the list. No file is touched.
 
 **T4: Try it on a branch.** Starts from `origin/develop` and makes a branch in the library as prototypes make theirs,
 in a separate working copy, so the person's checkout is never touched. Saving writes the overrides list into the tone and
 palette files as an exact text edit of the literal, read back and compared before it is kept, and each save is one
-commit, so the branch's history is the list of iterations (and the History button can read it). The preview build runs
+commit, so the branch's history is the list of iterations (and the History button can read it). The panel's foot gets **Save to branch**. The preview build runs
 on the branch instead of `develop`.
 
 **T5: Propose it.** A draft pull request from the branch through the existing share path (`share.ts`,
@@ -329,7 +335,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 | **A preview build fails on `develop`** (a story that only builds in Storybook's own setup, or a real error in the library) | No previews at all, or blank cards | A package or generated file the clone lacks is set aside, and only the stories that use it say so. Any other build error is said as it is. A single story that throws is shown with its error in its own card. The real-library test builds every story file |
 | **A theme change does not reach every component (T3)** | A colour control that moves some things and not others looks broken | Checked for each token before T3 is built, and said on the control for what does not follow; the hardcoded `8px` and `360px` are a library cleanup |
 | **A token that quietly does not arrive** (Claude Design's own failure: the cards look right while tokens are missing) | A control that moves nothing, and is trusted | T3's spike and its note for each token, and a test that a changed value reaches a rendered component |
-| **The reader finds nothing, or the wrong thing, in a library laid out differently** | An empty or misleading Tokens page | It says "no tokens found" and where it looked. Layer 1 is FUI's only; the others come with a second library (decision 18) |
+| **The reader finds nothing, or the wrong thing, in a library laid out differently** | An empty or misleading panel | It says "no tokens found" and where it looked. Layer 1 is FUI's only; the others come with a second library (decision 18) |
 | **Writing a change into a source file breaks it (T4)** | A branch that does not compile | An exact edit of the literal, read back and compared before it is kept; the preview build runs on the branch, so a broken one shows at once |
 | **A slider makes an unusable value** | Unreadable text, or a radius of nothing everywhere | Ranges come from the kind, with sensible bounds, and Reset is one press |
 | **Building runs code** | Trust | The app's own esbuild and Sass run in its process, on a copy of `develop` taken out of git; the library's code runs only in the sandboxed preview view, which has no bridge to the app (`pageView.ts`), as prototypes do. The page's only message out is its height |
@@ -338,7 +344,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 ## Next
 
 **S1 to S3 and P0 to P2 are done,** with Storybook as the source of truth for what a component is (decision 17), and
-stories responding as they should. **T1 (find the tokens) is next,** and waits for Noah to say so; T2 and T3 follow it, and T4 to T6 are laid out but not specified. P3 was dropped
+stories responding as they should. **T1 (find the tokens) is next,** and waits for Noah to say so; T2 and T3 (the panel, then its controls) follow it, and T4 to T6 are laid out but not specified. P3 was dropped
 (decision 10).
 
 **By hand, Noah:** restart the dev session (the main process changed), open the Design System tab, and try a few
