@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { designSystemOf, isTokenGroup } from '../../shared/catalog';
-import type { Catalog, CatalogUpdate, ConnectedDesignSystem, DesignSystemConnection, FoundDesignSystem } from '../../shared/contract';
+import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem, DesignSystemConnection, DesignTokens, FoundDesignSystem } from '../../shared/contract';
 import { isStoryFile, readCatalog, type CatalogReads } from './componentCatalog';
 import { readTokens } from './designTokens';
 import { type DesignSystemsMemory, defaultBranch, designSystemId, filesOf, findDesignSystems, within } from './designSystems';
@@ -104,6 +104,13 @@ export const systemReads = async (system: ConnectedDesignSystem, commit: string)
 	return within(all, filesOf(await all.listFiles(''), system.folder));
 };
 
+/**
+ * The components the tab lists: the library's own token pages leave the list only when the panel has the tokens to show
+ * instead (decision 22). The one rule, for the list and for what is drawn to find each component's tokens (T6).
+ */
+export const listedComponents = (components: CatalogComponent[], tokens: DesignTokens): CatalogComponent[] =>
+	tokens.source !== null ? components.filter((c) => !isTokenGroup(c.group)) : components;
+
 /** The catalog as the clone's copy of the design system's branch has it now, with `update` as given. */
 export const readLibrary = async (system: ConnectedDesignSystem, update: CatalogUpdate): Promise<Catalog> => {
 	const { root, branch } = system;
@@ -113,9 +120,7 @@ export const readLibrary = async (system: ConnectedDesignSystem, update: Catalog
 	// The components and the tokens, from the same reads of the same commit.
 	const reads = await systemReads(system, commit);
 	const [components, tokens] = await Promise.all([readCatalog(reads, designSystemOf(system)), readTokens(reads)]);
-	// The library's own token pages leave the list only when the panel has the tokens to show instead (decision 22).
-	const shown = tokens.source !== null ? components.filter((c) => !isTokenGroup(c.group)) : components;
-	return { state: 'ready', branch, commit, committedAt, update, components: shown, tokens };
+	return { state: 'ready', branch, commit, committedAt, update, components: listedComponents(components, tokens), tokens };
 };
 
 export interface DesignLibraryDeps {

@@ -65,9 +65,14 @@ const PAGE = `<!doctype html>
 export const previewEntry = (library: string, storyFiles: string[], { preview, argsChannel }: { preview: string | null; argsChannel: boolean }): string => `
 import { Component, Fragment, createElement as h, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import { composeStories, setProjectAnnotations } from '@storybook/react';
-${preview === null ? '' : `import * as preview from ${JSON.stringify(preview)};
-setProjectAnnotations(preview);`}
+${
+	preview === null
+		? ''
+		: `import * as preview from ${JSON.stringify(preview)};
+setProjectAnnotations(preview);`
+}
 
 const files = {
 ${storyFiles.map((f) => `\t${JSON.stringify(f)}: () => import(${JSON.stringify(join(library, f))}),`).join('\n')}
@@ -112,16 +117,23 @@ const fail = (error) => root.render(h('pre', { className: 'fd-error' }, String(e
 const tell = () => parent.postMessage({ ${PREVIEW_HEIGHT}: Math.ceil(document.documentElement.scrollHeight) }, '*');
 new ResizeObserver(tell).observe(document.body);
 
-const load = files[new URLSearchParams(location.search).get(${JSON.stringify(PREVIEW_FILE)})];
-if (!load) fail('There is no such story file in this build.');
-else load().then((m) => {
-	const stories = Object.entries(composeStories(m));
-	const drawsItself = (name) => typeof m[name] === 'function' || typeof m[name]?.render === 'function' || typeof m.default?.render === 'function';
-	root.render(h(Fragment, null, ...stories.map(([name, Story]) =>
-		h('section', { key: name, className: 'fd-story', 'data-story': name },
-			h('h4', { className: 'fd-name' }, spaced(name)),
-			h(Boundary, null, h(Live, { Story, drawsItself: drawsItself(name) }))))));
-}, fail);
+// One story file drawn in place of the last, resolved once it is on the page. What reads every story (T6) draws them one
+// after another in one page this way, rather than loading the page again for each.
+const show = (file) => {
+	const load = files[file];
+	if (!load) return Promise.resolve(fail('There is no such story file in this build.'));
+	return load().then((m) => {
+		const stories = Object.entries(composeStories(m));
+		const drawsItself = (name) => typeof m[name] === 'function' || typeof m[name]?.render === 'function' || typeof m.default?.render === 'function';
+		// Drawn at once, not at the next frame: a page drawn where nobody sees it gets no frames.
+		flushSync(() => root.render(h(Fragment, { key: file }, ...stories.map(([name, Story]) =>
+			h('section', { key: name, className: 'fd-story', 'data-story': name },
+				h('h4', { className: 'fd-name' }, spaced(name)),
+				h(Boundary, null, h(Live, { Story, drawsItself: drawsItself(name) })))))));
+	}, fail);
+};
+window.__dsnrShow = show;
+show(new URLSearchParams(location.search).get(${JSON.stringify(PREVIEW_FILE)}));
 `;
 
 /** Whether the clone has the packages a preview is built from: React, and Storybook's portable stories. */
@@ -184,13 +196,16 @@ interface Edited {
 const escapedForRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** How esbuild reads a file a change gives the text of, by its extension. */
-const loaderOf = (path: string): Loader => (({ '.ts': 'ts', '.tsx': 'tsx', '.jsx': 'jsx', '.css': 'css', '.json': 'json' }) as Record<string, Loader>)[extname(path)] ?? 'js';
+const loaderOf = (path: string): Loader =>
+	(({ '.ts': 'ts', '.tsx': 'tsx', '.jsx': 'jsx', '.css': 'css', '.json': 'json' }) as Record<string, Loader>)[extname(path)] ?? 'js';
 
 /** The library's Sass, compiled as its own Storybook set-up compiles it, with its packages to import from. */
-const sassFor = (sass: typeof import('sass'), nodeModules: string): CompileSass => (path, text) =>
-	text === undefined
-		? sass.compile(path, { loadPaths: [nodeModules] }).css
-		: sass.compileString(text, { loadPaths: [dirname(path), nodeModules], url: pathToFileURL(path) }).css;
+const sassFor =
+	(sass: typeof import('sass'), nodeModules: string): CompileSass =>
+	(path, text) =>
+		text === undefined
+			? sass.compile(path, { loadPaths: [nodeModules] }).css
+			: sass.compileString(text, { loadPaths: [dirname(path), nodeModules], url: pathToFileURL(path) }).css;
 
 type BuildErrors = { errors: { text: string; location?: { file: string } | null }[] };
 
@@ -225,7 +240,12 @@ const settled = async (attempt: (missing: ReadonlySet<string>) => Promise<BuildE
 	let result = await attempt(new Set());
 	if (result.errors.length > 0 && result.errors.every((e) => /Could not resolve/.test(e.text))) result = await attempt(unresolved(result.errors));
 	if (result.errors.length > 0) {
-		throw new Error(result.errors.slice(0, 5).map((e) => (e.location ? `${e.location.file}: ${e.text}` : e.text)).join('\n'));
+		throw new Error(
+			result.errors
+				.slice(0, 5)
+				.map((e) => (e.location ? `${e.location.file}: ${e.text}` : e.text))
+				.join('\n'),
+		);
 	}
 };
 
@@ -339,7 +359,11 @@ const keptReads = (reads: CatalogReads): CatalogReads => {
 	const lists = new Map<string, Promise<string[]>>();
 	const files = new Map<string, Promise<string>>();
 	const kept = <T>(m: Map<string, Promise<T>>, k: string, read: () => Promise<T>): Promise<T> => {
-		if (!m.has(k)) m.set(k, read().catch((err) => (m.delete(k), Promise.reject(err))));
+		if (!m.has(k))
+			m.set(
+				k,
+				read().catch((err) => (m.delete(k), Promise.reject(err))),
+			);
 		return m.get(k) as Promise<T>;
 	};
 	return { listFiles: (dir) => kept(lists, dir, () => reads.listFiles(dir)), readFile: (path) => kept(files, path, () => reads.readFile(path)) };
@@ -359,6 +383,8 @@ export class StoryPreviews {
 	/** The newest change asked for, and the building of it, while one is building. */
 	private wanted: TokenEdit[] = [];
 	private trying: Promise<StoryPreview> | null = null;
+	/** The address the commit's tagged build (T6) was last served at. */
+	private taggedServed: string | null = null;
 
 	constructor(private readonly deps: StoryPreviewsDeps) {}
 
@@ -405,6 +431,10 @@ export class StoryPreviews {
 			}
 			// Only the build for this commit is kept, and served; a change tried on another is closed with it.
 			if (this.trial !== null && this.trial.dir !== dir) await this.endTrial();
+			if (this.taggedServed !== null && this.taggedServed !== `tagged-${basename(dir).slice(0, 12)}`) {
+				this.deps.server.stopServing(this.taggedServed);
+				this.taggedServed = null;
+			}
 			for (const old of readdirSync(this.deps.folder)) {
 				if (old === basename(dir)) continue;
 				this.deps.server.stopServing(serveKey(old));
@@ -432,12 +462,10 @@ export class StoryPreviews {
 		const at = this.current;
 		if (at === null) return { state: 'no-library' };
 		try {
-			const reads = await at.reads();
-			const files = await editedFiles(reads, edits);
+			const files = await editedFiles(await at.reads(), edits);
 			if (this.trial?.dir !== at.dir) {
 				await this.endTrial();
-				const tokenFiles = [...new Set((await readTokens(reads)).tokens.map((t) => t.source.file))];
-				this.trial = { dir: at.dir, builder: await trialBuild(join(at.dir, 'library'), tokenFiles, join(at.dir, 'trial')), served: null, tries: 0 };
+				this.trial = { dir: at.dir, builder: await this.builderFor(at, 'trial'), served: null, tries: 0 };
 			}
 			const trial = this.trial;
 			await trial.builder.build(files);
@@ -450,6 +478,37 @@ export class StoryPreviews {
 		} catch (err) {
 			return { state: 'failed', error: err instanceof Error ? err.message : String(err) };
 		}
+	}
+
+	/**
+	 * The commit's previews built once with `edits` (T6's tags), at an address of their own: beside the change being tried,
+	 * which is the person's, never in its place. Only the last is served.
+	 */
+	async tagged(edits: TokenEdit[]): Promise<StoryPreview> {
+		const base = await this.base();
+		const at = this.current;
+		if (base.state !== 'ready' || at === null) return base;
+		try {
+			const files = await editedFiles(await at.reads(), edits);
+			const builder = await this.builderFor(at, 'tagged');
+			try {
+				await builder.build(files);
+			} finally {
+				await builder.dispose();
+			}
+			const key = `tagged-${basename(at.dir).slice(0, 12)}`;
+			if (this.taggedServed !== null && this.taggedServed !== key) this.deps.server.stopServing(this.taggedServed);
+			this.taggedServed = key;
+			return { state: 'ready', base: await this.deps.server.serveFolder(key, join(at.dir, 'tagged')) };
+		} catch (err) {
+			return { state: 'failed', error: err instanceof Error ? err.message : String(err) };
+		}
+	}
+
+	/** A build of the commit's copy with token files given in place of theirs, into `site` beside the commit's own build. */
+	private async builderFor(at: Built, site: string): Promise<TrialBuild> {
+		const tokenFiles = [...new Set((await readTokens(await at.reads())).tokens.map((t) => t.source.file))];
+		return trialBuild(join(at.dir, 'library'), tokenFiles, join(at.dir, site));
 	}
 
 	private async endTrial(): Promise<void> {

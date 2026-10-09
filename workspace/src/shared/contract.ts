@@ -298,6 +298,23 @@ export type TokenChange = { ref: string } | { value: string };
 export type TokenEdit = { path: string } & TokenChange;
 
 /**
+ * Which tokens a component draws with (T6, decision 29), found by drawing every story with every token tagged: each
+ * token it uses and how often, the values it sets itself (not tokens), and how many of its colors are worked out from a
+ * token rather than being one (a hover's darker shade). `sharedWith` is, for each token it uses, the other story files
+ * that use it too. Asked for by story file; `building` the first time for a commit, while every story is drawn.
+ */
+export type ComponentTokens =
+	| { state: 'building' }
+	| { state: 'failed'; error: string }
+	| {
+			state: 'ready';
+			uses: { path: string; uses: number }[];
+			sharedWith: Record<string, string[]>;
+			notTokens: { kind: 'color' | 'radius' | 'spacing'; value: string; uses: number }[];
+			derived: number;
+	  };
+
+/**
  * Where a change to the tokens is kept (T4 and T5): a branch of the library DSNR made for it, each save one commit on it,
  * and the draft pull request it is proposed in once it is.
  */
@@ -437,6 +454,8 @@ export interface WorkspaceApi {
 	 * same stories built with those tokens changed (T3), written nowhere; with none, as the branch has them.
 	 */
 	storyPreview(edits: TokenEdit[]): Promise<Result<StoryPreview>>;
+	/** Which tokens a component draws with, by its story file (T6); `building` while every story is drawn, the first time. */
+	componentTokens(file: string): Promise<Result<ComponentTokens>>;
 	/** The branch a change to the shown design system's tokens is kept on, or null when none has been saved (T4). */
 	tokenBranch(): Promise<Result<TokenBranch | null>>;
 	/** Saves the change as one commit on its branch, made on the first save; pushed when it is proposed (T4). */
@@ -897,6 +916,7 @@ export const CHANNELS = {
 	selectDesignSystem: 'workspace:selectDesignSystem',
 	removeDesignSystem: 'workspace:removeDesignSystem',
 	storyPreview: 'workspace:storyPreview',
+	componentTokens: 'workspace:componentTokens',
 	tokenBranch: 'workspace:tokenBranch',
 	saveTokens: 'workspace:saveTokens',
 	proposeTokens: 'workspace:proposeTokens',

@@ -5,6 +5,7 @@ import { TokensPanel } from '../src/renderer/TokensPanel';
 import type { DesignToken, DesignTokens, TokenEdit } from '../src/shared/contract';
 import { button, fail, fakeApp, ok, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 import { useTokenBranch } from '../src/renderer/useTokenBranch';
+import { TokenChangesProvider, useTokenChangesFor } from '../src/renderer/tokenChanges';
 
 /**
  * The tokens panel (T2 of the design system plan), read only: the list T1 reads, in collapsible groups, each set of
@@ -45,7 +46,9 @@ const Tab = ({ tokens, live }: { tokens: DesignTokens; live: boolean }) => {
 	const [edits, setEdits] = useState<TokenEdit[]>([]);
 	const onEdits = (e: TokenEdit[]) => (made.push(e), setEdits(e));
 	const branch = useTokenBranch('acme/ui', edits, onEdits);
-	return createElement(TokensPanel, { tokens, edits, live, onEdits, branch });
+	// The change is the tab's, given to the panel as `DesignSystem` gives it.
+	const changes = useTokenChangesFor(tokens.tokens, edits, onEdits);
+	return createElement(TokenChangesProvider, { value: changes }, createElement(TokensPanel, { tokens, live, branch }));
 };
 /** The app the panel saves and proposes through: a stand-in, so nothing is written or opened. */
 let app: ReturnType<typeof fakeApp>;

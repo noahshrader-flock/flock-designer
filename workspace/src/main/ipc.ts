@@ -44,6 +44,7 @@ import { ProfileNames } from './services/profileNames';
 import { StoryPreviews } from './services/storyPreviews';
 import { tokenEditsOf } from './services/tokenEdits';
 import { TokenBranches } from './services/tokenBranches';
+import { ComponentTokens, type Measure } from './services/componentTokens';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, listedAs, mergeRepositories, originOf, reachableRepositories } from './services/repositories';
@@ -153,6 +154,8 @@ export interface IpcContext {
 	/** Which branch each design system's change to its tokens is kept on (T4); and the GitHub tools it is proposed with. */
 	tokenBranchesFile?: string;
 	tokenBranchTools?: (root: string) => ShareTools;
+	/** How stories are drawn to read what they draw (T6): hidden windows, in the app. */
+	measureStories?: Measure;
 }
 
 export const registerIpc = ({
@@ -178,6 +181,9 @@ export const registerIpc = ({
 	storyPreviewsRoot = join(tmpdir(), 'dsnr-story-previews'),
 	tokenBranchesFile = join(tmpdir(), 'dsnr-token-branches.json'),
 	tokenBranchTools = (root: string) => realShareTools(root),
+	measureStories = async () => {
+		throw new Error('Stories can be drawn only in the app.');
+	},
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
@@ -336,6 +342,15 @@ export const registerIpc = ({
 	const previews = new StoryPreviews({ system: shownSystem, folder: storyPreviewsRoot, server: prototypeServer });
 	// A change is only ever a list of token edits, checked here and again before anything is written (T3, T4).
 	ipcMain.handle(CHANNELS.storyPreview, guard((edits: unknown) => previews.preview(tokenEditsOf(edits))));
+	// Which tokens a component draws with (T6): the window names a story file, and only a story file of the library is answered.
+	const componentTokens = new ComponentTokens({ system: shownSystem, previews, measure: measureStories });
+	ipcMain.handle(
+		CHANNELS.componentTokens,
+		guard((file: unknown) => {
+			if (typeof file !== 'string' || file.length === 0 || file.length > 500) throw new Error('A component is asked for by its story file.');
+			return componentTokens.of(file);
+		}),
+	);
 	const tokenBranches = new TokenBranches({ system: shownSystem, file: tokenBranchesFile, tools: tokenBranchTools });
 	ipcMain.handle(CHANNELS.tokenBranch, guard(() => tokenBranches.current()));
 	ipcMain.handle(CHANNELS.saveTokens, guard((edits: unknown) => tokenBranches.save(tokenEditsOf(edits))));

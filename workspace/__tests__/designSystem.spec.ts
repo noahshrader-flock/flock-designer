@@ -270,6 +270,14 @@ describe('the side panel’s views', () => {
 		expect(componentPanel()?.textContent).toContain('FSCard');
 	});
 
+	it('show, as Component, the tokens the open component draws with, asked for by its story file', async () => {
+		const app = await open(() => ok(ready()));
+		await press(row('FSButton').querySelector('button')!);
+		await settle();
+		expect(app.calls.componentTokens).toEqual([['src/components/FSButton/FSButton.stories.tsx']]);
+		expect(componentPanel()?.textContent).toContain('Finding the tokens FSButton draws with…');
+	});
+
 	it('can be toggled back to Tokens and to Component while a component is open', async () => {
 		await open(() => ok(ready()));
 		await press(row('FSButton').querySelector('button')!);

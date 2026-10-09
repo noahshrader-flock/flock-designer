@@ -182,6 +182,12 @@ describe('the Design System tab', () => {
 		expect(await call(CHANNELS.storyPreview, [{ path: 'spacing', value: 6 }])).toMatchObject({ ok: false });
 	});
 
+	it('says which tokens a component draws with only for a story file, and has none to say with no design system', async () => {
+		expect(await call(CHANNELS.componentTokens, 'src/components/A/A.stories.tsx')).toEqual({ ok: true, value: { state: 'failed', error: 'There is no design system connected.' } });
+		expect(await call(CHANNELS.componentTokens, { path: '/etc' })).toMatchObject({ ok: false, error: expect.stringContaining('by its story file') });
+		expect(await call(CHANNELS.componentTokens, '')).toMatchObject({ ok: false });
+	});
+
 	it('has no branch for a change to the tokens when there is no design system, saves and proposes nothing, and takes only edits', async () => {
 		expect(await call(CHANNELS.tokenBranch)).toEqual({ ok: true, value: null });
 		expect(await call(CHANNELS.saveTokens, [{ path: 'spacing', value: '6px' }])).toMatchObject({ ok: false, error: expect.stringContaining('no design system connected') });

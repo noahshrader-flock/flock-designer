@@ -29,6 +29,8 @@ export const fakeApp = (overrides: Impl = {}) => {
 		listRepositories: async () => ok({ repositories: [], reach: 'account' }),
 		// No change to the tokens saved, unless a test says otherwise.
 		tokenBranch: async () => ok(null),
+		// Every story still being drawn, unless a test says otherwise.
+		componentTokens: async () => ok({ state: 'building' }),
 		shareStatus: async () => ok({ state: 'idle' }),
 		publishedPage: async () => ok({ state: 'none' }),
 		pageShowMarkers: async (items: { id: number }[]) => ok(items.map((i) => ({ id: i.id, state: 'found' }))),

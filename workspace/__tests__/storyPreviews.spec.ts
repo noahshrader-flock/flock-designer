@@ -398,6 +398,28 @@ describe('trying a change to the tokens (T3)', () => {
 		expect(scripts(last.base)).toContain('#333333');
 	}, 30_000);
 
+	it('builds the commit’s previews with T6’s tags beside the change being tried, never in its place', async () => {
+		makeLibrary(THEMED);
+		const p = previews();
+		await ready(p);
+		const trying = await p.preview([{ path: 'tone.brand.50', value: '#0A6B52' }]);
+		const tagged = await p.tagged([{ path: 'tone.brand.50', value: '#00015A' }]);
+		if (trying.state !== 'ready' || tagged.state !== 'ready') throw new Error('not ready');
+		expect(new URL(tagged.base).pathname).toMatch(/^\/tagged-/);
+		const dir = join(folder, readdirSync(folder)[0]!);
+		const read = (site: string) =>
+			readdirSync(join(dir, site), { recursive: true })
+				.map(String)
+				.filter((f) => f.endsWith('.js'))
+				.map((f) => readFileSync(join(dir, site, f), 'utf8'))
+				.join('\n');
+		expect(read('tagged')).toContain('#00015A');
+		// The person's change is still what their frames show.
+		expect((await fetch(trying.base)).status).toBe(200);
+		expect(read('trial')).toContain('#0A6B52');
+		expect(read('trial')).not.toContain('#00015A');
+	}, 30_000);
+
 	it('says why a change cannot be made, and builds nothing for it', async () => {
 		makeLibrary(THEMED);
 		const p = previews();

@@ -159,7 +159,7 @@ nothing on GitHub changed.
 | **T3** (done) | **Try a change safely, with contrast and reach shown:** a change is an edit to the token's literal, and the previews rebuild with it when it is released (decision 26); a linked role is re-pointed to another tone step, a tone or plain color has a picker and hex, with "use a custom color" as the rare second choice (decision 20); the contrast ratio and "used by N roles" are on the row (decision 27); a **Changed** group at the top with a reset for each and for all; nothing is kept past the session | T2, decisions 19, 20, 26, 27 | L | Medium |
 | **T4** (done) | **Try it on a branch:** each save writes the same edits (T3's writer) to a new branch of the library, one commit each, so the branch's history is the iterations; the preview can run on the branch | T3 | M | Medium |
 | **T5** (done) | **Propose it:** a draft pull request from that branch, with Chromatic's link | T4 | M | Medium |
-| **T6** | **Show a component's tokens, and who shares them:** every token tagged with a unique value, built once, each story rendered and read back (decision 29); the Component view shows **Made from** (the component's tokens, as the same rows with the same editor), **Shared with** (the other components that use a token) and **Not tokens** (what is set in the component); run in the background once per library commit, in both modes | T3, decision 29 | M | Medium |
+| **T6** (done) | **Show a component's tokens, and who shares them:** every token tagged with a unique value, built once, each story rendered and read back (decision 29); the Component view shows **Made from** (the component's tokens, as the same rows with the same editor), **Shared with** (the other components that use a token) and **Not tokens** (what is set in the component); run in the background once per library commit, in both modes | T3, decision 29 | M | Medium |
 | **T7** (candidate) | **Ask in words:** "make the primary a little warmer" produces the same list of edits | T3 | S | Low |
 
 ### S1: The catalog reader (done 2026-10-08)
@@ -316,7 +316,19 @@ trimmed, so a file written back would have lost its last newline; files are now 
 a branch's base stays the commit its first save was made on, even after the library's branch moves; and the previews
 are of the change on the library's current commit, not of the branch itself.
 
-**T6: Show a component's tokens, and who shares them.** Decision 29 says how; this is what is built. **The tagging:** one edit for each place a token is written (a shared Light and Dark role is one place, tagged as Light), through `editedFiles` and one `StoryPreviews` build; colors tagged by index into the red and green of a fixed blue, spacing and radius by sizes **no hardcoded value is likely to equal** (the spike used 7 and 11 pixels, and a hardcoded `-11px` margin on FSCheckbox collided with the radius tag: larger odd primes, and a size is only read as a token where it is a multiple). **The reading:** the preview page, which already tells its owner its height, also reports what each story draws (background, text and border colors; radii; padding, margins and gaps), so no second way to load a story is built; a color decodes by its tag, a size by being a multiple of one. **Both modes:** a page follows the system's light or dark setting, which changed between two runs of the spike, so the mode is set and every story rendered in each. **The index:** component to tokens and token to components, kept for the library's commit, built in the background after its previews, and the panel says while it is not there yet. **The Component view:** **Made from**, **Shared with** (under each token, the other components that draw with it) and **Not tokens** (the values a component sets itself, with its file, for the Design System owner); a token row opens the editor T3 made, so a change is a token's, and what else moves is on the row before it is made. **Known limits:** a color a library derives from a token (MUI's hover, darker than `main`) decodes as no token; a state no story shows is not read; tokens are read only for color, spacing and radius; 500 tags at once in a window's change, so the index builds its own list without that limit. **First, before building the panel:** render all 83 story files, to time it and to see how much of the library the tags reach.
+**T6: Show a component's tokens, and who shares them (done 2026-10-09).** What it built, and the evidence, is in
+[dsnr.md](dsnr.md#change-log) (2026-10-09). In short (decision 29): `services/componentTokens.ts` tags every token
+(`tagsFor`: a color by its number, a length by a prime number of pixels), has the previews built once with the tags
+beside the change being tried (`StoryPreviews.tagged`), draws every listed component's story file tagged in light and
+dark and plain in light (`services/storyMeasure.ts`: hidden, sandboxed windows, the mode set per window, the page loaded
+once per window and each file drawn in it in turn), and reads back what each drew (`decode`). The index is kept for the
+library's commit and built on the first ask. The Component view (`ComponentPanel`) shows **Made from** as the tokens
+panel's own rows, with each token's uses and the other components that share it, and **Not tokens**. **Measured on FUI:**
+the whole library, 83 story files drawn three times, in **7.4 s** (2.7 s for the tagged build, 4.2 s for the drawing);
+the radius token is shared by FSButton and 44 other components, `primary.main` by 35. **Known limits:** a color worked
+out from a token (a hover's darker shade) is counted, not named; a state no story shows is not read; tokens only for
+color, spacing and radius; lengths in `em` are not tagged; a role both modes share is named as Light in light and Dark in
+dark.
 
 **T7 (candidate): Ask in words.** Words produce the same list, through the agent and the library's authoring standards;
 nothing else changes. Built only if the controls leave a gap.
@@ -381,7 +393,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 ## Next
 
 **S1 to S3 and P0 to P2 are done,** with Storybook as the source of truth for what a component is (decision 17), and
-stories responding as they should. **T1 to T5 and P4 are done (the tokens, read, in the panel, a change tried on them, kept on a branch and proposed as a draft pull request; any repository connected).** **The spike for T6 (a component's tokens, found by tagging) is done and worked (decision 29); T6 waits for Noah's go, and a designer trying T1 to T5 on a real task is the other next step.** T7 is a candidate only. P3 was dropped
+stories responding as they should. **T1 to T5 and P4 are done (the tokens, read, in the panel, a change tried on them, kept on a branch and proposed as a draft pull request; any repository connected).** **T6 is done too (a component's tokens, and who shares them, found by tagging; decision 29).** The next step is a designer trying T1 to T6 on a real task. T7 is a candidate only. P3 was dropped
 (decision 10).
 
 **By hand, Noah:** restart the dev session (the main process changed), open the Design System tab, and try a few

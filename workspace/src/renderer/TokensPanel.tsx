@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
-import type { DesignToken, DesignTokens, TokenEdit } from '../shared/contract';
+import { type ReactNode, useMemo, useState } from 'react';
+import type { DesignToken, DesignTokens } from '../shared/contract';
 import { contrastPartner, contrastRatio, isForeground } from '../shared/tokens';
 import { ChangedTokens, ContrastNote, Swatch, TokenEditor } from './TokenEditor';
 import { TokenProblems } from './TokenProblems';
 import type { TokenBranchControls } from './useTokenBranch';
-import { TokenChangesProvider, labelOf, nameOf, opacity, useTokenChanges, useTokenChangesFor } from './tokenChanges';
+import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { SearchField } from './SearchField';
@@ -22,11 +22,11 @@ import { PanelTabs, PanelTabsContent, PanelTabsList, PanelTabsTrigger } from './
  *
  * **A change is tried here** (T3): a row opens its token's control (`TokenEditor`), every row shows the tokens as changed,
  * a pair's contrast is on its row, and what has been changed is listed above the tabs with its resets. The change is
- * the tab's (`edits`): the component page builds its previews with it.
+ * the tab's, given to every panel that shows tokens (`useTokenChanges`): the component page builds its previews with it.
  */
 
 /** Tokens in the order they came, by `key`, keeping the first-seen order of the keys. */
-const inOrder = <K extends string>(tokens: DesignToken[], key: (t: DesignToken) => K): [K, DesignToken[]][] => {
+export const inOrder = <K extends string>(tokens: DesignToken[], key: (t: DesignToken) => K): [K, DesignToken[]][] => {
 	const by = new Map<K, DesignToken[]>();
 	for (const t of tokens) {
 		const list = by.get(key(t));
@@ -45,7 +45,7 @@ const searchable = (t: DesignToken) => [t.path, t.group, t.set, t.name, t.value,
  * A token's row: its swatch, name, what it points at, the contrast of its pair when it is the one read under the other,
  * and its value, as changed. Pressing it opens its control, beside the panel, over the components it changes.
  */
-const TokenRow = ({ token }: { token: DesignToken }) => {
+export const TokenRow = ({ token, note }: { token: DesignToken; note?: ReactNode }) => {
 	const changes = useTokenChanges();
 	const target = changes.target(token);
 	const partner = isForeground(token) ? undefined : contrastPartner(token, changes.shown);
@@ -77,12 +77,13 @@ const TokenRow = ({ token }: { token: DesignToken }) => {
 					<TokenEditor token={token} />
 				</PopoverContent>
 			</Popover>
+			{note && <div className="text-muted-foreground pb-1 text-xs">{note}</div>}
 		</li>
 	);
 };
 
-/** The sets of a group (or of a tab with one): each its name as a heading over its tokens, all listed. */
-const Sets = ({ tokens }: { tokens: DesignToken[] }) => (
+/** The sets of a group (or of a tab with one): each its name as a heading over its tokens, all listed, each with `noteFor` its own. */
+export const Sets = ({ tokens, noteFor }: { tokens: DesignToken[]; noteFor?: (token: DesignToken) => ReactNode }) => (
 	<div className="flex flex-col gap-4">
 		{inOrder(tokens, setKey).map(([key, inSet]) => (
 			<section key={key} data-token-set aria-label={(inSet[0] as DesignToken).set} className="flex flex-col gap-1">
@@ -91,7 +92,7 @@ const Sets = ({ tokens }: { tokens: DesignToken[] }) => (
 				</h4>
 				<ul className="flex flex-col">
 					{inSet.map((t) => (
-						<TokenRow key={t.path} token={t} />
+						<TokenRow key={t.path} token={t} note={noteFor?.(t)} />
 					))}
 				</ul>
 			</section>
@@ -149,15 +150,10 @@ const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tok
 
 export const TokensPanel = ({
 	tokens,
-	edits,
-	onEdits,
 	live,
 	branch,
 }: {
 	tokens: DesignTokens;
-	/** The change being tried, and what changes it. */
-	edits: TokenEdit[];
-	onEdits: (edits: TokenEdit[]) => void;
 	/** Whether a component is open, so a change is seen as it is made. */
 	live: boolean;
 	/** The branch the change is kept on, and saving and proposing it (T4, T5). */
@@ -165,7 +161,7 @@ export const TokensPanel = ({
 }) => {
 	const [current, setCurrent] = useState<string | null>(null);
 	const [queries, setQueries] = useState<Record<string, string>>({});
-	const changes = useTokenChangesFor(tokens.tokens, edits, onEdits);
+	const changes = useTokenChanges();
 	const categories = useMemo(() => inOrder(changes.shown, (t) => t.category), [changes.shown]);
 
 	if (tokens.source === null || categories.length === 0) {
@@ -182,7 +178,7 @@ export const TokensPanel = ({
 	// A category the library no longer has is not kept: the first is shown.
 	const active = categories.some(([c]) => c === current) ? (current as string) : (categories[0] as [string, DesignToken[]])[0];
 	return (
-		<TokenChangesProvider value={changes}>
+		<>
 			<TokenProblems problems={tokens.problems} />
 			<ChangedTokens live={live} branch={branch} />
 			<PanelTabs value={active} onValueChange={setCurrent}>
@@ -204,6 +200,6 @@ export const TokensPanel = ({
 					</PanelTabsContent>
 				))}
 			</PanelTabs>
-		</TokenChangesProvider>
+		</>
 	);
 };

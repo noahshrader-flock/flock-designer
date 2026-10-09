@@ -1,0 +1,229 @@
+/**
+ * Which tokens each component draws with, and so which components share a token (T6 of the design system plan,
+ * decision 29). **Found by tagging, for any library the token writers support:** every token is given a value nothing
+ * else has, the previews are built once with those values (`StoryPreviews.tagged`), every story is drawn, and what it
+ * draws is read back: a color that is a tag, or a size that is a whole multiple of one, names its token exactly. Nothing
+ * is read from the components' own source, which every library writes differently.
+ *
+ * Each story is drawn three times: tagged, in light and in dark, for the tokens it uses in each mode; and as the library
+ * has it, in light, so a color that is in both is one the component sets itself (not a token), and a color only in the
+ * tagged drawing is one worked out from a token (a hover's darker shade), which is counted but cannot be named.
+ *
+ * Kept for the library's commit: the first ask starts it in the background and says `building`; later asks for that
+ * commit answer at once.
+ */
+import type { ComponentTokens as Answer, ConnectedDesignSystem, DesignToken, StoryPreview, TokenEdit } from '../../shared/contract';
+import { designSystemOf } from '../../shared/catalog';
+import { lengthParts, placeOf, writtenWith } from '../../shared/tokens';
+import { readCatalog } from './componentCatalog';
+import { libraryCommit, listedComponents, systemReads } from './designLibrary';
+import { readTokens } from './designTokens';
+
+/** What a story draws, as counts of each computed value: its colors (background, text, border), radii and spacing. */
+export interface Drawn {
+	colors: Record<string, number>;
+	radii: Record<string, number>;
+	spacing: Record<string, number>;
+}
+
+export type Mode = 'light' | 'dark';
+
+/**
+ * Draws story files from a build of the previews (its `base`), in a mode, and says what each drew, in the order given;
+ * null for one that would not draw. Several runs at once.
+ */
+export type Measure = (runs: { base: string; mode: Mode; files: string[] }[]) => Promise<(Drawn | null)[][]>;
+
+/** A tag's blue, the same for every color tag: its red and green are the token's number. */
+const TAG_BLUE = 0x5a;
+
+/**
+ * Sizes for spacing and radius tags: primes over 8, so a whole multiple of up to 8 of one is never a multiple of another,
+ * and none is a size a library is likely to write by hand.
+ */
+const TAG_SIZES = [13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127];
+/** The largest multiple of a size tag read as that token: a theme's spacing is used up to a few times over. */
+const MOST_MULTIPLE = 8;
+
+export interface Tags {
+	edits: TokenEdit[];
+	/** A color tag (`#00015A`), and a size tag in pixels, to the token it was given to. */
+	colors: Map<string, string>;
+	sizes: { px: number; path: string }[];
+}
+
+/**
+ * A tag for every token: one edit for each place a token is written (a role both modes share is one place), a color by
+ * its number, a length by a prime number of pixels (of a rem's sixteenths for one written in rem). A length in `em`, whose
+ * pixels depend on where it is used, is left untagged, as are sizes past the primes there are.
+ */
+export const tagsFor = (tokens: DesignToken[]): Tags => {
+	const edits: TokenEdit[] = [];
+	const colors = new Map<string, string>();
+	const sizes: Tags['sizes'] = [];
+	const places = new Set<string>();
+	for (const t of tokens) {
+		if (places.has(placeOf(t))) continue;
+		places.add(placeOf(t));
+		if (t.kind === 'color') {
+			const n = colors.size + 1;
+			const value = `#${[(n >> 8) & 255, n & 255, TAG_BLUE].map((c) => c.toString(16).padStart(2, '0')).join('')}`.toUpperCase();
+			colors.set(value, t.path);
+			edits.push({ path: t.path, value });
+			continue;
+		}
+		const px = TAG_SIZES[sizes.length];
+		const unit = lengthParts(t.value)?.unit;
+		if (px === undefined || (unit !== 'px' && unit !== 'rem')) continue;
+		sizes.push({ px, path: t.path });
+		edits.push({ path: t.path, value: unit === 'px' ? `${px}px` : `${px / 16}rem` });
+	}
+	return { edits, colors, sizes };
+};
+
+/** A computed color (`rgb(0, 1, 90)`, `rgba(0, 1, 90, 0.4)`) as the tag it would be, whatever its opacity. */
+const asTag = (color: string): string | null => {
+	const m = /^rgba?\((\d+), (\d+), (\d+)/.exec(color);
+	if (!m || Number(m[3]) !== TAG_BLUE) return null;
+	return `#${[m[1], m[2], m[3]].map((c) => Number(c).toString(16).padStart(2, '0')).join('')}`.toUpperCase();
+};
+
+/** The size tag a computed size (`26px`) is a whole multiple of, if any. */
+const sizeToken = (value: string, sizes: Tags['sizes']): string | null => {
+	const px = Math.abs(Number(/^(-?[\d.]+)px$/.exec(value)?.[1] ?? NaN));
+	if (!Number.isFinite(px) || px === 0) return null;
+	return sizes.find((s) => px % s.px === 0 && px / s.px <= MOST_MULTIPLE)?.path ?? null;
+};
+
+/** Nothing worth saying: no color, no size, or a gap left as CSS has it (`normal`). */
+const isNothing = (value: string): boolean => ['rgba(0, 0, 0, 0)', 'transparent', '0px', 'normal', 'auto', ''].includes(value);
+
+const add = (m: Map<string, number>, k: string, n: number) => m.set(k, (m.get(k) ?? 0) + n);
+
+/** One component's tokens, from its story drawn tagged (in each mode) and as the library has it. */
+export interface FileUse {
+	uses: Map<string, number>;
+	notTokens: { kind: 'color' | 'radius' | 'spacing'; value: string; uses: number }[];
+	derived: number;
+}
+
+/**
+ * What a story's drawings say about its tokens. In dark, a tag given to a role both modes share (tagged once, as Light)
+ * is the Dark token written in that place.
+ */
+export const decode = (tagged: Partial<Record<Mode, Drawn>>, plain: Drawn | undefined, tags: Tags, tokens: DesignToken[]): FileUse => {
+	const byPath = new Map(tokens.map((t) => [t.path, t]));
+	const inMode = (path: string, mode: Mode): string => {
+		const t = byPath.get(path);
+		const dark = mode === 'dark' && t && t.group !== 'Dark' ? writtenWith(tokens, t).find((w) => w.group === 'Dark') : undefined;
+		return dark?.path ?? path;
+	};
+	const uses = new Map<string, number>();
+	const notTokens = new Map<string, number>();
+	let derived = 0;
+	for (const mode of ['light', 'dark'] as const) {
+		const drawn = tagged[mode];
+		if (!drawn) continue;
+		for (const [color, n] of Object.entries(drawn.colors)) {
+			if (isNothing(color)) continue;
+			const tag = asTag(color);
+			const path = tag ? tags.colors.get(tag) : undefined;
+			if (path) add(uses, inMode(path, mode), n);
+			// What the component sets itself and what is worked out from a token, told apart in light, beside the plain drawing.
+			else if (mode === 'light' && plain?.colors[color]) add(notTokens, `color ${color}`, n);
+			else if (mode === 'light') derived += n;
+		}
+		for (const [kind, values] of [
+			['radius', drawn.radii],
+			['spacing', drawn.spacing],
+		] as const) {
+			for (const [value, n] of Object.entries(values)) {
+				if (isNothing(value)) continue;
+				const path = sizeToken(value, tags.sizes);
+				if (path) add(uses, inMode(path, mode), n);
+				else if (mode === 'light') add(notTokens, `${kind} ${value}`, n);
+			}
+		}
+	}
+	return {
+		uses,
+		notTokens: [...notTokens]
+			.map(([key, n]) => ({ kind: key.slice(0, key.indexOf(' ')) as 'color' | 'radius' | 'spacing', value: key.slice(key.indexOf(' ') + 1), uses: n }))
+			.sort((a, b) => b.uses - a.uses),
+		derived,
+	};
+};
+
+/** What the index needs of the previews: the commit's own build, and one built with the tags. */
+export interface TaggedPreviews {
+	preview(): Promise<StoryPreview>;
+	tagged(edits: TokenEdit[]): Promise<StoryPreview>;
+}
+
+export interface ComponentTokensDeps {
+	system: () => ConnectedDesignSystem | null;
+	previews: TaggedPreviews;
+	measure: Measure;
+}
+
+type Index = { files: Map<string, FileUse> } | { error: string };
+
+/** The index of what every component draws with, for the commit the library's branch is at. */
+export class ComponentTokens {
+	private index: { key: string; done: Index | null } | null = null;
+
+	constructor(private readonly deps: ComponentTokensDeps) {}
+
+	async of(file: string): Promise<Answer> {
+		const system = this.deps.system();
+		if (system === null) return { state: 'failed', error: 'There is no design system connected.' };
+		const commit = await libraryCommit(system.root, system.branch);
+		if (commit === null) return { state: 'failed', error: `The library has no ${system.branch} branch from GitHub to read.` };
+		const key = `${commit}:${system.folder}`;
+		if (this.index?.key !== key) {
+			const index: { key: string; done: Index | null } = { key, done: null };
+			this.index = index;
+			void this.build(system, commit).then(
+				(files) => (index.done = { files }),
+				(err: Error) => (index.done = { error: err.message }),
+			);
+		}
+		const done = this.index.done;
+		if (done === null) return { state: 'building' };
+		if ('error' in done) {
+			// One that did not work is tried again on the next ask.
+			this.index = null;
+			return { state: 'failed', error: done.error };
+		}
+		const use = done.files.get(file);
+		if (!use) return { state: 'failed', error: `${file} is not one of the library's story files.` };
+		const sharedWith: Record<string, string[]> = {};
+		for (const path of use.uses.keys()) sharedWith[path] = [...done.files].filter(([f, u]) => f !== file && u.uses.has(path)).map(([f]) => f);
+		return {
+			state: 'ready',
+			uses: [...use.uses].map(([path, uses]) => ({ path, uses })).sort((a, b) => b.uses - a.uses),
+			sharedWith,
+			notTokens: use.notTokens,
+			derived: use.derived,
+		};
+	}
+
+	private async build(system: ConnectedDesignSystem, commit: string): Promise<Map<string, FileUse>> {
+		const reads = await systemReads(system, commit);
+		const [read, catalog] = await Promise.all([readTokens(reads), readCatalog(reads, designSystemOf(system))]);
+		const { tokens } = read;
+		// The components the tab lists, so a token page is never said to share a token.
+		const files = listedComponents(catalog, read).map((c) => c.id);
+		const tags = tagsFor(tokens);
+		const [plain, tagged] = [await this.deps.previews.preview(), await this.deps.previews.tagged(tags.edits)];
+		if (plain.state !== 'ready')
+			throw new Error(plain.state === 'failed' ? plain.error : 'The previews could not be built, so the components could not be drawn.');
+		if (tagged.state !== 'ready') throw new Error(tagged.state === 'failed' ? tagged.error : 'The previews could not be built with the tags.');
+		const [light, dark, asIs] = await this.deps.measure([
+			{ base: tagged.base, mode: 'light', files },
+			{ base: tagged.base, mode: 'dark', files },
+			{ base: plain.base, mode: 'light', files },
+		]);
+		return new Map(files.map((f, i) => [f, decode({ light: light?.[i] ?? undefined, dark: dark?.[i] ?? undefined }, asIs?.[i] ?? undefined, tags, tokens)]));
+	}
+}

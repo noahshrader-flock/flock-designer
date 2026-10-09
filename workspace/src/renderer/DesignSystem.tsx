@@ -1,6 +1,15 @@
 import { ChevronDownIcon, ChevronRightIcon, GitBranchIcon, InfoIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem, ConnectedDesignSystems, Result, TokenEdit } from '../shared/contract';
+import type {
+	Catalog,
+	CatalogComponent,
+	CatalogUpdate,
+	ConnectedDesignSystem,
+	ConnectedDesignSystems,
+	DesignToken,
+	Result,
+	TokenEdit,
+} from '../shared/contract';
 import { ComponentPage } from './ComponentPage';
 import { ComponentPanel } from './ComponentPanel';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
@@ -13,6 +22,7 @@ import { SearchSelect } from './SearchSelect';
 import { SyncButton } from './SyncButton';
 import { TokensPanel } from './TokensPanel';
 import { useTokenBranch } from './useTokenBranch';
+import { TokenChangesProvider, useTokenChangesFor } from './tokenChanges';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
@@ -96,6 +106,9 @@ const DesignSystemSwitcher = ({
 
 type PanelView = 'tokens' | 'component';
 
+/** No tokens, the same each time, while the library is not read. */
+const NO_TOKENS: DesignToken[] = [];
+
 /**
  * Which the side panel shows, as a button group like a prototype's states: the tokens, or the component that is open.
  * Component is off while none is open, as there is nothing to show.
@@ -170,6 +183,8 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [edits, setEdits] = useState<TokenEdit[]>([]);
 	// Where it is kept, once saved (T4), and proposed (T5).
 	const branch = useTokenBranch(systems.current, edits, setEdits);
+	// The change as every panel that shows tokens sees it: the tokens view and the component view alike.
+	const changes = useTokenChangesFor(catalog?.state === 'ready' ? catalog.tokens.tokens : NO_TOKENS, edits, setEdits);
 	const started = useRef(false);
 
 	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {
@@ -355,10 +370,12 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 				{/* Always there (decision 21), whichever screen is open: the tokens, or the component open when that is chosen.
 				    The tokens are hidden, not left, so what was typed and opened in them is as it was. */}
 				<ResizablePanel panel={TOKENS_PANEL} label="Resize the tokens panel">
-					<div data-panel="tokens" hidden={panel !== 'tokens'} className="flex min-h-0 flex-1 flex-col">
-						<TokensPanel tokens={catalog.tokens} edits={edits} onEdits={setEdits} live={opened !== undefined} branch={branch} />
-					</div>
-					{panel === 'component' && opened && <ComponentPanel component={opened} />}
+					<TokenChangesProvider value={changes}>
+						<div data-panel="tokens" hidden={panel !== 'tokens'} className="flex min-h-0 flex-1 flex-col">
+							<TokensPanel tokens={catalog.tokens} live={opened !== undefined} branch={branch} />
+						</div>
+						{panel === 'component' && opened && <ComponentPanel key={opened.id} component={opened} components={catalog.components} />}
+					</TokenChangesProvider>
 				</ResizablePanel>
 			</div>
 		</>

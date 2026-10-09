@@ -9,6 +9,7 @@ import { DESIGN_REPO, DesignRepo } from './services/designRepo';
 import { CheckoutMemory } from './services/checkoutMemory';
 import { CloneFolderMemory } from './services/cloneFolder';
 import { DesignSystemsMemory } from './services/designSystems';
+import { measureInWindows } from './services/storyMeasure';
 import { PageView } from './services/pageView';
 import { MIN_WINDOW, type WindowState, WindowMemory, restoreState } from './services/windowMemory';
 import { PrototypeServer } from './services/prototypeServer';
@@ -171,6 +172,7 @@ void app.whenReady().then(() => {
 		designSystems: new DesignSystemsMemory(DesignSystemsMemory.defaultPath(app.getPath('userData'))),
 		storyPreviewsRoot: join(app.getPath('userData'), 'story-previews'),
 		tokenBranchesFile: join(app.getPath('userData'), 'token-branches.json'),
+		measureStories: measureInWindows,
 	});
 	window.on('closed', () => prototypeServer.close());
 	// Coming back to the window is a good moment to publish whatever was done while it was away.
