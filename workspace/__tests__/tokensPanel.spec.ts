@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { createElement } from 'react';
+import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { TokensPanel } from '../src/renderer/TokensPanel';
 import type { DesignToken, DesignTokens } from '../src/shared/contract';
@@ -13,6 +13,7 @@ import { press, render, settle, typeInto, unmountAll } from './reviewHarness';
 const colour = (path: string, group: string, set: string, name: string, value: string, more: Partial<DesignToken> = {}): DesignToken => ({
 	path,
 	kind: 'colour',
+	category: 'Colour',
 	group,
 	set,
 	name,
@@ -31,8 +32,8 @@ const TOKENS: DesignTokens = {
 		colour('palette.light.primary.main', 'Light', 'primary', 'main', '#108062', { ref: { tone: 'pineGreen', step: '50' } }),
 		colour('palette.light.primaryBorder.main', 'Light', 'primaryBorder', 'main', '#18372F66', { ref: { tone: 'pineGreen', step: '20', alpha: '66' } }),
 		colour('palette.dark.primary.main', 'Dark', 'primary', 'main', '#C7E7DD', { ref: { tone: 'pineGreen', step: '90' } }),
-		{ path: 'spacing', kind: 'dimension', group: 'Spacing', set: 'spacing', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 2 } },
-		{ path: 'radius', kind: 'dimension', group: 'Radius', set: 'radius', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 5 } },
+		{ path: 'spacing', kind: 'dimension', category: 'Spacing', group: 'Spacing', set: 'spacing', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 2 } },
+		{ path: 'radius', kind: 'dimension', category: 'Shape', group: 'Radius', set: 'radius', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 5 } },
 	],
 };
 
@@ -53,22 +54,58 @@ const trigger = (level: 'group' | 'set', name: string) => {
 	if (!t) throw new Error(`no ${level} ${name}: ${triggers(level).map((b) => b.textContent).join(' | ')}`);
 	return t;
 };
+/** The tabs, and choosing one as a press does (tabs switch as the pointer goes down). */
+const tabs = () => [...document.querySelectorAll<HTMLElement>('[role="tab"]')];
+const tab = (name: string) => tabs().find((t) => t.textContent === name) as HTMLElement;
+const choose = (name: string) => act(async () => void tab(name).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 })));
+const search = (category: string) => document.querySelector<HTMLInputElement>(`input[aria-label="Search ${category.toLowerCase()}"]`);
 const rows = () => [...document.querySelectorAll<HTMLElement>('[data-token]')];
 const row = (path: string) => document.querySelector<HTMLElement>(`[data-token="${path}"]`);
 const text = () => document.body.textContent ?? '';
 
+describe('the tabs', () => {
+	it('are the categories the library has, in order, as line tabs, with no heading or count above them', async () => {
+		await show();
+		expect(tabs().map((t) => t.textContent)).toEqual(['Colour', 'Spacing', 'Shape']);
+		expect(tabs().map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false']);
+		expect(document.querySelector('[data-slot="tabs-list"]')?.getAttribute('data-variant')).toBe('line');
+		expect(text()).not.toContain('8 tokens');
+		expect([...document.querySelectorAll('h3')].map((h) => h.textContent)).not.toContain('Tokens');
+	});
+
+	it('are made from the tokens, so a category the library gains is a tab with nothing else changed', async () => {
+		await show({ ...TOKENS, tokens: [...TOKENS.tokens, { path: 'shadow.1', kind: 'dimension', category: 'Shadow', group: 'Elevation', set: 'elevation', name: '1', value: '0 1px 2px', source: { file: 'src/utils/theme.ts', line: 9 } }] });
+		expect(tabs().map((t) => t.textContent)).toEqual(['Colour', 'Spacing', 'Shape', 'Shadow']);
+	});
+
+	it('switch, each showing only its own tokens', async () => {
+		await show();
+		expect(triggers('group').map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['Tones', 'Light', 'Dark']);
+		await choose('Spacing');
+		await settle();
+		expect(tab('Spacing').getAttribute('aria-selected')).toBe('true');
+		expect(triggers('set').map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['spacing']);
+		expect(triggers('group')).toHaveLength(0);
+	});
+});
+
 describe('the groups', () => {
-	it('are the library’s, in order, each with its count, and all closed at first', async () => {
+	it('on the Colour tab are the library’s, in order, each with its count, and all closed at first', async () => {
 		await show();
 		expect(triggers('group').map((t) => [t.querySelector('[data-name]')?.textContent, t.querySelector('[data-count]')?.textContent])).toEqual([
 			['Tones', '3'],
 			['Light', '2'],
 			['Dark', '1'],
-			['Spacing', '1'],
-			['Radius', '1'],
 		]);
 		expect(rows()).toHaveLength(0);
-		expect(text()).toContain('8 tokens');
+	});
+
+	it('are not shown for a tab with only one, which would say its own name twice: its sets are', async () => {
+		await show();
+		await choose('Shape');
+		await settle();
+		expect(triggers('group')).toHaveLength(0);
+		expect(triggers('set').map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['radius']);
 	});
 
 	it('open to their sets, each with a strip of its colours and the file it is written in', async () => {
@@ -112,7 +149,7 @@ describe('a set, open', () => {
 
 	it('shows a dimension as its value', async () => {
 		await show();
-		await press(trigger('group', 'Radius'));
+		await choose('Shape');
 		await settle();
 		await press(trigger('set', 'radius'));
 		await settle();
@@ -121,21 +158,34 @@ describe('a set, open', () => {
 });
 
 describe('searching', () => {
-	it('shows only what matches, opened to it', async () => {
+	it('is in each tab, with its own box, and shows only what matches in that tab, opened to it', async () => {
 		await show();
-		await typeInto(document.querySelector('input[aria-label="Search tokens"]') as HTMLInputElement, 'primary');
+		await typeInto(search('Colour') as HTMLInputElement, 'primary');
 		await settle();
 		expect(triggers('group').map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['Light', 'Dark']);
 		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual(['palette.light.primary.main', 'palette.light.primaryBorder.main', 'palette.dark.primary.main']);
 	});
 
+	it('is kept apart: what is typed in one tab leaves the others as they were, and is there when you come back', async () => {
+		await show();
+		await typeInto(search('Colour') as HTMLInputElement, 'primary');
+		await settle();
+		await choose('Spacing');
+		await settle();
+		expect((search('Spacing') as HTMLInputElement).value).toBe('');
+		expect(triggers('set')).toHaveLength(1);
+		await choose('Colour');
+		await settle();
+		expect((search('Colour') as HTMLInputElement).value).toBe('primary');
+		expect(rows()).toHaveLength(3);
+	});
+
 	it('finds a colour by its value, and says when nothing matches', async () => {
 		await show();
-		const search = document.querySelector('input[aria-label="Search tokens"]') as HTMLInputElement;
-		await typeInto(search, '#ba1a1a');
+		await typeInto(search('Colour') as HTMLInputElement, '#ba1a1a');
 		await settle();
 		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual(['tone.red.40']);
-		await typeInto(search, 'nothing like this');
+		await typeInto(search('Colour') as HTMLInputElement, 'nothing like this');
 		await settle();
 		expect(text()).toContain('No token matches.');
 	});
@@ -152,6 +202,7 @@ describe('what it could not read', () => {
 		await show({ source: null, tokens: [], problems: [], looked: ['src/colors/tones/index.ts'] });
 		expect(text()).toContain('No tokens were found in this library.');
 		expect(text()).toContain('src/colors/tones/index.ts');
-		expect(document.querySelector('input[aria-label="Search tokens"]')).toBeNull();
+		expect(tabs()).toHaveLength(0);
+		expect(document.querySelector('input[type="search"]')).toBeNull();
 	});
 });

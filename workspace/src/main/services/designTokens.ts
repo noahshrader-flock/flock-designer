@@ -196,13 +196,13 @@ const themeFiles: TokenSource = {
 					continue;
 				}
 				steps.set(e.key, hex.toUpperCase());
-				tokens.push({ path: `tone.${name}.${e.key}`, kind: 'colour', group: 'Tones', set: name, name: e.key, value: hex.toUpperCase(), source: { file, line: e.line } });
+				tokens.push({ path: `tone.${name}.${e.key}`, kind: 'colour', category: 'Colour', group: 'Tones', set: name, name: e.key, value: hex.toUpperCase(), source: { file, line: e.line } });
 			}
 			tones.set(name, steps);
 		}
 
 		// Each palette file's roles, resolved once: a file both modes spread in is read, and its problems said, once.
-		type Role = Omit<DesignToken, 'path' | 'group'>;
+		type Role = Omit<DesignToken, 'path' | 'category' | 'group'>;
 		const files = (await reads.listFiles(PALETTE_DIR)).filter((f) => /\.ts$/.test(f) && !f.endsWith('/index.ts')).sort();
 		const objects = new Map<string, { file: string; entries: Entry[] }>();
 		for (const file of files) {
@@ -251,7 +251,7 @@ const themeFiles: TokenSource = {
 			.sort((a, b) => (a.mode === 'light' ? -1 : b.mode === 'light' ? 1 : a.mode.localeCompare(b.mode)));
 		for (const { name, mode } of palettes) {
 			const group = mode.charAt(0).toUpperCase() + mode.slice(1);
-			for (const r of rolesOf(name)) tokens.push({ path: `palette.${mode}.${r.set}.${r.name}`, group, ...r });
+			for (const r of rolesOf(name)) tokens.push({ path: `palette.${mode}.${r.set}.${r.name}`, category: 'Colour', group, ...r });
 		}
 
 		// The theme's base spacing and radius, in pixels.
@@ -259,17 +259,18 @@ const themeFiles: TokenSource = {
 		if (theme !== null) {
 			const shape = /\bconst\s+shape\b[^=]*=\s*\{/.exec(theme);
 			const radius = shape ? /\bborderRadius\s*:\s*(\d+)\s*[,}\n]/.exec(theme.slice(shape.index)) : null;
-			const found: [string, RegExpExecArray | null, number][] = [
-				['spacing', /\bconst\s+spacing\s*=\s*(\d+)\s*;/.exec(theme), 0],
-				['radius', radius, shape?.index ?? 0],
+			// What each is called, the tab it is on, and what the theme calls its group.
+			const found: [string, string, RegExpExecArray | null, number][] = [
+				['spacing', 'Spacing', /\bconst\s+spacing\s*=\s*(\d+)\s*;/.exec(theme), 0],
+				['radius', 'Shape', radius, shape?.index ?? 0],
 			];
-			for (const [name, m, offset] of found) {
+			for (const [name, category, m, offset] of found) {
 				if (!m) {
 					problems.push({ file: THEME_FILE, reason: `the theme's ${name} was not found as a number` });
 					continue;
 				}
 				const group = name.charAt(0).toUpperCase() + name.slice(1);
-				tokens.push({ path: name, kind: 'dimension', group, set: name, name: 'base', value: `${m[1]}px`, source: { file: THEME_FILE, line: lineAt(theme, offset + m.index) } });
+				tokens.push({ path: name, kind: 'dimension', category, group, set: name, name: 'base', value: `${m[1]}px`, source: { file: THEME_FILE, line: lineAt(theme, offset + m.index) } });
 			}
 		}
 		return { source: themeFiles.name, tokens, problems, looked: themeFiles.looksAt };

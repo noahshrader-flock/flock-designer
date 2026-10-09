@@ -34,7 +34,7 @@ const TOKENS: DesignTokens = {
 	source: 'theme files',
 	looked: [],
 	problems: [],
-	tokens: [{ path: 'tone.pineGreen.50', kind: 'colour', group: 'Tones', set: 'pineGreen', name: '50', value: '#108062', source: { file: 'src/colors/tones/pineGreen.ts', line: 3 } }],
+	tokens: [{ path: 'tone.pineGreen.50', kind: 'colour', category: 'Colour', group: 'Tones', set: 'pineGreen', name: '50', value: '#108062', source: { file: 'src/colors/tones/pineGreen.ts', line: 3 } }],
 };
 
 const ready = (update: CatalogUpdate = 'unchanged', components = COMPONENTS): Catalog => ({
@@ -155,7 +155,10 @@ describe('finding a component', () => {
 
 	it('has no switcher between components and composites, and no count', async () => {
 		await open(() => ok(ready()));
-		expect(document.querySelector('[role="tablist"]')).toBeNull();
+		// Not in the list: the only tabs are the tokens panel's, at the right of the divider.
+		const list = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')!.previousElementSibling!;
+		expect(list.querySelector('[role="tablist"]')).toBeNull();
+		expect(document.querySelectorAll('[role="tablist"]')).toHaveLength(1);
 		expect(text()).not.toMatch(/\d+ components/);
 		expect(rows()).toHaveLength(5);
 	});
@@ -172,8 +175,10 @@ describe('the tokens panel', () => {
 
 	it('is at the right of the tab, with the library’s tokens, on the list, without opening anything', async () => {
 		await open(() => ok(ready()));
-		expect(panel()?.textContent).toContain('1 token');
-		expect(panel()?.textContent).toContain('Tones');
+		expect(panel()?.querySelector('[role="tab"]')?.textContent).toBe('Colour');
+		// One group on the tab, so its sets are shown straight away.
+		expect(panel()?.textContent).toContain('pineGreen');
+		expect(panel()?.querySelector('input[aria-label="Search colour"]')).not.toBeNull();
 		// The last thing on the row, at the right, with the list before it.
 		expect(divider()?.parentElement?.lastElementChild).toBe(panel());
 		expect(divider()?.previousElementSibling?.contains(document.querySelector('[data-component]'))).toBe(true);
@@ -202,7 +207,7 @@ describe('the tokens panel', () => {
 	it('is not drawn while the library is not connected, where there is nothing to show', async () => {
 		await open(() => ok({ state: 'no-clone', repository: 'flocksafety/flock-react-component-lib', lost: null }));
 		expect(divider()).toBeNull();
-		expect(document.body.textContent).not.toContain('1 token');
+		expect(document.querySelector('[role="tab"][aria-selected]')?.textContent).not.toBe('Colour');
 	});
 });
 

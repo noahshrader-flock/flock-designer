@@ -236,7 +236,9 @@ export interface DesignToken {
 	/** Its identity: `tone.pineGreen.50`, `palette.light.primary.main`, `spacing`, `radius`. */
 	path: string;
 	kind: 'colour' | 'dimension';
-	/** Where it is shown: `Tones`, `Light`, `Dark`, `Spacing`, `Radius`. */
+	/** Its tab in the tokens panel: `Colour`, `Spacing`, `Shape`. A category the reader adds is a tab with no other change. */
+	category: string;
+	/** Where it is shown within its tab: `Tones`, `Light`, `Dark`, `Spacing`, `Radius`. */
 	group: string;
 	/** Its family or role (`pineGreen`, `primary`), and its step or variant (`50`, `main`). */
 	set: string;

@@ -91,6 +91,7 @@ describe('the tones', () => {
 		expect(find(list, 'tone.pineGreen.50')).toEqual({
 			path: 'tone.pineGreen.50',
 			kind: 'colour',
+			category: 'Colour',
 			group: 'Tones',
 			set: 'pineGreen',
 			name: '50',
@@ -117,6 +118,7 @@ describe('the palette roles', () => {
 		expect(find(list, 'palette.light.primary.main')).toEqual({
 			path: 'palette.light.primary.main',
 			kind: 'colour',
+			category: 'Colour',
 			group: 'Light',
 			set: 'primary',
 			name: 'main',
@@ -143,8 +145,22 @@ describe('the palette roles', () => {
 describe('spacing and radius', () => {
 	it('are the theme’s, as dimensions in pixels', async () => {
 		const list = await readTokens(reads(LIBRARY));
-		expect(find(list, 'spacing')).toEqual({ path: 'spacing', kind: 'dimension', group: 'Spacing', set: 'spacing', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 2 } });
-		expect(find(list, 'radius')).toEqual({ path: 'radius', kind: 'dimension', group: 'Radius', set: 'radius', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 5 } });
+		expect(find(list, 'spacing')).toEqual({ path: 'spacing', kind: 'dimension', category: 'Spacing', group: 'Spacing', set: 'spacing', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 2 } });
+		expect(find(list, 'radius')).toEqual({ path: 'radius', kind: 'dimension', category: 'Shape', group: 'Radius', set: 'radius', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 5 } });
+	});
+});
+
+describe('the categories', () => {
+	it('say which tab a token belongs on: every colour is Colour, spacing is Spacing, and radius is Shape', async () => {
+		const list = await readTokens(reads(LIBRARY));
+		const categories = new Map(list.tokens.map((t) => [t.group, t.category]));
+		expect([...categories]).toEqual([
+			['Tones', 'Colour'],
+			['Light', 'Colour'],
+			['Dark', 'Colour'],
+			['Spacing', 'Spacing'],
+			['Radius', 'Shape'],
+		]);
 	});
 });
 
