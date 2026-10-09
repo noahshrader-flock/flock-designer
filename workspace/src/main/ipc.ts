@@ -235,7 +235,7 @@ export const registerIpc = ({
 							},
 						);
 						// Whatever is on GitHub and not yet on the site goes up too, however it got there.
-						void catchUpPages();
+						void catchUpSite();
 						return done;
 					},
 				};
@@ -1099,13 +1099,15 @@ export const registerIpc = ({
 	const publishAgain = new Set<string>();
 	/**
 	 * Brings the site up to date with what GitHub has, by itself: on every cycle of the publisher (opening, focusing,
-	 * refreshing, any record written), if a page was pushed and no deploy has it, one is started. A page can reach GitHub
-	 * without a deploy (an edit made outside a save, a deploy that failed, a push from another machine), and nothing else
-	 * would ever notice. Asked at most once a minute, and after a deploy that failed, once every ten, so a permission that
-	 * is missing is not retried on every focus.
+	 * refreshing, any record written), if a page was pushed, or what the site is built from changed, and no deploy has
+	 * it, one is started. That can reach GitHub without a deploy (an edit made outside a save, a deploy that failed, a
+	 * push from another machine), and nothing else would ever notice. Asked at most once a minute, and after a deploy
+	 * that failed, once every ten, so a permission that is missing is not retried on every focus. A failed deploy of
+	 * the site alone is only remembered for that pause: a page's failure is shown on its screen, and the cause (the
+	 * permission) shows there too the next time a page is published.
 	 */
 	let lastCatchUp = 0;
-	const catchUpPages = async (): Promise<void> => {
+	const catchUpSite = async (): Promise<void> => {
 		const gap = publishStopped.size > 0 ? 10 * 60_000 : 60_000;
 		if (github.state().state !== 'signedIn' || publishing.size > 0 || Date.now() - lastCatchUp < gap) return;
 		lastCatchUp = Date.now();
