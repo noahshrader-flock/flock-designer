@@ -4,10 +4,10 @@ import { existsSync, mkdirSync, readdirSync, rmSync, symlinkSync, writeFileSync 
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { PREVIEW_FILE, PREVIEW_HEIGHT } from '../../shared/catalog';
-import type { StoryPreview } from '../../shared/contract';
-import type { DesignSystem } from '../../shared/catalog';
+import { designSystemOf } from '../../shared/catalog';
+import type { ConnectedDesignSystem, StoryPreview } from '../../shared/contract';
 import { PREVIEW_CANDIDATES, readCatalog } from './componentCatalog';
-import { libraryAt, libraryCommit, libraryReads } from './designLibrary';
+import { libraryCommit, systemReads } from './designLibrary';
 import { runGit } from './git';
 import type { Plugin } from 'esbuild';
 import { ASSET_TYPES, type PrototypeServer } from './prototypeServer';
@@ -203,19 +203,24 @@ export const buildPreviews = async (library: string, storyFiles: string[], site:
 	writeFileSync(join(site, 'index.html'), PAGE);
 };
 
-/** A copy of the library at `commit`, taken out of git (its files as committed, which is small: no packages), with the clone's packages linked in. */
-const copyAt = async (root: string, commit: string, library: string): Promise<void> => {
+/**
+ * A copy of the library at `commit`, taken out of git (its files as committed, which is small: no packages), with the
+ * clone's packages linked in: the repository's, and in a monorepo the design system package's own when it has them.
+ */
+const copyAt = async (root: string, commit: string, library: string, folder: string): Promise<void> => {
 	mkdirSync(library, { recursive: true });
 	const tar = `${library}.tar`;
 	await runGit(root, ['archive', '--format=tar', '-o', tar, commit]);
 	await run('tar', ['-xf', tar, '-C', library]);
 	rmSync(tar, { force: true });
 	// A junction on Windows, a symbolic link elsewhere: the packages are read where the clone has them.
-	symlinkSync(join(root, 'node_modules'), join(library, 'node_modules'), 'junction');
+	for (const at of folder === '' ? [''] : ['', folder]) {
+		if (existsSync(join(root, at, 'node_modules'))) symlinkSync(join(root, at, 'node_modules'), join(library, at, 'node_modules'), 'junction');
+	}
 };
 
 /** The address a commit's build is served at, under the app's local server. */
-const serveKey = (build: string): string => `previews-${build.slice(0, 20)}`;
+const serveKey = (build: string): string => `previews-${build.slice(0, 26)}`;
 
 /**
  * How this app builds a preview, as one short fingerprint: the page, its script and the build's set-up. A build is kept
@@ -224,8 +229,8 @@ const serveKey = (build: string): string => `previews-${build.slice(0, 20)}`;
 const RECIPE = createHash('sha256').update(`${PAGE}${previewEntry.toString()}${libraryBuild.toString()}`).digest('hex').slice(0, 8);
 
 export interface StoryPreviewsDeps {
-	/** The library's clone, or null when none is connected or found. */
-	find: () => string | null;
+	/** The design system shown, with its branch, or null when none is connected or it cannot be read. */
+	system: () => Promise<(ConnectedDesignSystem & { branch: string }) | null>;
 	/** The app's own folder for builds. */
 	folder: string;
 	server: PrototypeServer;
@@ -241,31 +246,35 @@ export class StoryPreviews {
 	constructor(private readonly deps: StoryPreviewsDeps) {}
 
 	async preview(): Promise<StoryPreview> {
-		const root = this.deps.find();
-		const library = root === null ? null : libraryAt(root);
-		if (root === null || library === null) return { state: 'no-library' };
-		const commit = await libraryCommit(root, library);
-		if (commit === null) return { state: 'failed', error: `The library has no ${library.branch} branch from GitHub to build.` };
-		if (!hasPackages(root)) return { state: 'no-packages', root };
-		if (this.current?.commit !== commit) {
-			const build = this.build(root, library, commit);
-			this.current = { commit, build };
+		const system = await this.deps.system();
+		if (system === null) return { state: 'no-library' };
+		const { root, branch, folder } = system;
+		const commit = await libraryCommit(root, branch);
+		if (commit === null) return { state: 'failed', error: `The library has no ${branch} branch from GitHub to build.` };
+		// The packages are the repository's, or in a monorepo the design system package's own.
+		if (!hasPackages(root) && !(folder !== '' && hasPackages(join(root, folder)))) return { state: 'no-packages', root };
+		// A build is of one design system at one commit: two packages of one repository are two builds.
+		const key = `${commit}:${folder}`;
+		if (this.current?.commit !== key) {
+			const build = this.build(system, commit);
+			this.current = { commit: key, build };
 			// A build that did not work is tried again on the next ask.
 			void build.then((b) => b.state !== 'ready' && this.current?.build === build && (this.current = null));
 		}
 		return this.current.build;
 	}
 
-	private async build(root: string, library: DesignSystem, commit: string): Promise<StoryPreview> {
-		const build = `${commit.slice(0, 12)}-${RECIPE}`;
+	private async build(system: ConnectedDesignSystem & { branch: string }, commit: string): Promise<StoryPreview> {
+		const { root, folder } = system;
+		const build = `${commit.slice(0, 12)}-${createHash('sha256').update(folder).digest('hex').slice(0, 4)}-${RECIPE}`;
 		const dir = join(this.deps.folder, build);
 		const site = join(dir, 'site');
 		try {
 			if (!existsSync(join(site, 'index.html'))) {
 				rmSync(dir, { recursive: true, force: true });
 				const copy = join(dir, 'library');
-				await copyAt(root, commit, copy);
-				const stories = (await readCatalog(libraryReads(root, commit), library)).map((c) => c.id);
+				await copyAt(root, commit, copy, folder);
+				const stories = (await readCatalog(await systemReads(system, commit), designSystemOf(system))).map((c) => c.id);
 				await (this.deps.build ?? buildPreviews)(copy, stories, site);
 			}
 			// Only the build for this commit is kept, and served.

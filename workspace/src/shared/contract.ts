@@ -229,6 +229,34 @@ export type PublishStatus =
 	| { state: 'held'; problems: PublishProblem[]; at: string };
 
 /**
+ * A design system the person connected (P4 of the design system plan): a repository, the folder in it the design system
+ * is (`''` for the whole repository), and the branch read, its default (`null` until it is found).
+ */
+export interface ConnectedDesignSystem {
+	/** Its repository, and in a monorepo `:folder`: what the switcher and Remove name it by. */
+	id: string;
+	/** What it is called: its Storybook's brand title, else its package's name, else the repository's. */
+	name: string;
+	/** `owner/repo` on GitHub. */
+	repository: string;
+	/** Its clone on this computer. */
+	root: string;
+	folder: string;
+	branch: string | null;
+}
+
+/** A place in a repository a design system is (decision 25): its folder, what it has, and what it is called. */
+export interface FoundDesignSystem {
+	folder: string;
+	components: number;
+	tokens: number;
+	name: string;
+}
+
+/** Connecting a repository: connected, or several design systems found in it to choose from. */
+export type DesignSystemConnection = { state: 'connected'; id: string } | { state: 'choose'; repository: string; found: FoundDesignSystem[] };
+
+/**
  * A design token the library has (T1 of the design system plan), as read from its own files: what the Design System tab
  * shows, and what a change names (by `path`).
  */
@@ -306,11 +334,10 @@ export type CatalogUpdate =
 export type Catalog =
 	/** `tokens`: the library's, read on the same commit (`DesignTokens`). */
 	| { state: 'ready'; branch: string; commit: string; committedAt: string; update: CatalogUpdate; components: CatalogComponent[]; tokens: DesignTokens }
-	/**
-	 * No clone of the library on this machine. `repository` is `owner/repo`; `lost` is the folder connected before, when it
-	 * is no longer there or no longer the library.
-	 */
-	| { state: 'no-clone'; repository: string; lost: string | null }
+	/** No design system is connected. */
+	| { state: 'none' }
+	/** The one shown is connected, but its clone is no longer at `root`. */
+	| { state: 'lost'; name: string; root: string }
 	/** A clone with no copy of its design system's branch from GitHub to read. Another branch is never read instead. */
 	| { state: 'no-branch'; root: string; branch: string };
 
@@ -358,16 +385,20 @@ export interface WorkspaceApi {
 	 * outcome. Nothing in the clone's branches or files is changed.
 	 */
 	designSystemCatalog(refresh: boolean): Promise<Result<Catalog>>;
+	/** The design systems connected, and which is shown (P4). */
+	designSystems(): Promise<Result<{ systems: ConnectedDesignSystem[]; current: string | null }>>;
 	/**
-	 * Connects the design system from a folder the person chooses with the system's folder picker, after checking it is a
-	 * clone of the library. False if they cancel; refused, in words, if it is not the library.
+	 * Connects a design system from one of the person's repositories: cloned into the clone folder (with progress on
+	 * `onCloneProgress`, `cancelClone` stopping it) or used where it already is, its default branch read, and the design
+	 * system found in it. Refused, in words, when there is none; several to choose from when there are.
 	 */
-	locateDesignSystem(): Promise<Result<boolean>>;
-	/**
-	 * Clones the design system library into the clone folder, with progress on `onCloneProgress`, and connects it. Only a
-	 * repository that is a design system is cloned; `cancelClone` stops it.
-	 */
-	cloneDesignSystem(repository: string): Promise<Result<null>>;
+	connectDesignSystem(repository: string): Promise<Result<DesignSystemConnection>>;
+	/** Connects one of the design systems `connectDesignSystem` found in a repository, by its folder. */
+	chooseDesignSystem(repository: string, folder: string): Promise<Result<DesignSystemConnection>>;
+	/** Shows another of those connected. */
+	selectDesignSystem(id: string): Promise<Result<null>>;
+	/** Removes one connected: nothing on disk is deleted, only the connection. */
+	removeDesignSystem(id: string): Promise<Result<null>>;
 	/** The previews of the library's stories, built from its branch once per commit; waits for the build. */
 	storyPreview(): Promise<Result<StoryPreview>>;
 	/** Where this person's clones go: the folder they chose, or the default. */
@@ -375,7 +406,8 @@ export interface WorkspaceApi {
 	/** Asks for the clone folder with the system's folder picker, and keeps it. Null if the person cancels. */
 	chooseCloneFolder(): Promise<Result<string | null>>;
 	/** What cloning a repository from the person's GitHub list would do: where it goes, and whether the design repository comes too. */
-	clonePlan(repository: string): Promise<Result<ClonePlan>>;
+	/** `forDesignSystem`: a design system is read, not worked in, so it is cloned with no design repository beside it. */
+	clonePlan(repository: string, forDesignSystem?: boolean): Promise<Result<ClonePlan>>;
 	/**
 	 * Clones it into the clone folder (and the design repository beside it, when missing), then opens it as `useCheckout`
 	 * does. Only a repository the person's GitHub list returned; never to a path the window names.
@@ -802,8 +834,11 @@ export const CHANNELS = {
 	suggestCheckout: 'workspace:suggestCheckout',
 	useCheckout: 'workspace:useCheckout',
 	designSystemCatalog: 'workspace:designSystemCatalog',
-	locateDesignSystem: 'workspace:locateDesignSystem',
-	cloneDesignSystem: 'workspace:cloneDesignSystem',
+	designSystems: 'workspace:designSystems',
+	connectDesignSystem: 'workspace:connectDesignSystem',
+	chooseDesignSystem: 'workspace:chooseDesignSystem',
+	selectDesignSystem: 'workspace:selectDesignSystem',
+	removeDesignSystem: 'workspace:removeDesignSystem',
 	storyPreview: 'workspace:storyPreview',
 	cloneFolder: 'workspace:cloneFolder',
 	chooseCloneFolder: 'workspace:chooseCloneFolder',

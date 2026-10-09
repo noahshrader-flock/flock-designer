@@ -14,6 +14,8 @@ import {
 	type PageBounds,
 	type PageHoldReason,
 	type MoveToCodePlan,
+	type DesignSystemConnection,
+	type FoundDesignSystem,
 	type OpenedPrototype,
 	type Person,
 	type PageStatus,
@@ -37,10 +39,10 @@ import { branchCommit, branchExists, branchesWithFile, ensureLocalBranch, isRepo
 import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { type Cloned, Cloner, type GitProgress, notClonedOver } from './services/clone';
 import { INSTALL_COMMAND, Installer } from './services/install';
-import { connectLibrary, DesignLibrary, DesignSystemMemory, libraryFinder } from './services/designLibrary';
+import { DesignLibrary, libraryCommit, libraryReads } from './services/designLibrary';
+import { DesignSystemsMemory, defaultBranch, designSystemId, findDesignSystems } from './services/designSystems';
 import { ProfileNames } from './services/profileNames';
 import { StoryPreviews } from './services/storyPreviews';
-import { isDesignSystem } from '../shared/catalog';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, listedAs, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
@@ -138,7 +140,7 @@ export interface IpcContext {
 	/** The component library for the Design System tab. Given for tests, to read a library made for them. */
 	designLibrary?: DesignLibrary;
 	/** The design system the person connected. */
-	designSystems?: DesignSystemMemory;
+	designSystems?: DesignSystemsMemory;
 	/** Where the previews of the library's stories are built: the app's own folder, never the library's. */
 	storyPreviewsRoot?: string;
 }
@@ -161,7 +163,7 @@ export const registerIpc = ({
 	cloner = new Cloner(),
 	installer = new Installer(),
 	designLibrary,
-	designSystems = new DesignSystemMemory(join(tmpdir(), 'dsnr-design-system.json')),
+	designSystems = new DesignSystemsMemory(join(tmpdir(), 'dsnr-design-system.json')),
 	storyPreviewsRoot = join(tmpdir(), 'dsnr-story-previews'),
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
@@ -305,28 +307,21 @@ export const registerIpc = ({
 
 	ipcMain.handle(CHANNELS.cloneFolder, guard(cloneFolder));
 
-	// The window says only whether to wait for the update; where the library is, it is never told and never asks.
-	const findLibrary = libraryFinder(designSystems, cloneFolder);
-	const library = designLibrary ?? new DesignLibrary({ find: findLibrary });
+	// The window says only whether to wait for the update; where the design system is, it is never told and never asks.
+	const library = designLibrary ?? new DesignLibrary({ systems: designSystems });
 	ipcMain.handle(CHANNELS.designSystemCatalog, guard((refresh: unknown) => library.catalog(refresh === true)));
-	const previews = new StoryPreviews({ find: () => findLibrary().root, folder: storyPreviewsRoot, server: prototypeServer });
+	const previews = new StoryPreviews({
+		system: async () => {
+			const shown = await library.current();
+			return typeof shown === 'string' ? null : shown;
+		},
+		folder: storyPreviewsRoot,
+		server: prototypeServer,
+	});
 	ipcMain.handle(CHANNELS.storyPreview, guard(() => previews.preview()));
-	// Chosen with the system's picker, here, and checked before it is kept: the window never names a folder.
-	ipcMain.handle(
-		CHANNELS.locateDesignSystem,
-		guard(async (): Promise<boolean> => {
-			// Opened where clones go, which is where a clone of the library most likely is.
-			const { canceled, filePaths } = await dialog.showOpenDialog(window, {
-				title: 'Choose the design system library',
-				defaultPath: cloneFolder(),
-				properties: ['openDirectory'],
-			});
-			const chosen = filePaths[0];
-			if (canceled || chosen === undefined) return false;
-			await connectLibrary(chosen, designSystems);
-			return true;
-		}),
-	);
+	ipcMain.handle(CHANNELS.designSystems, guard(() => designSystems.read()));
+	ipcMain.handle(CHANNELS.selectDesignSystem, guard((id: string) => (designSystems.select(String(id)), null)));
+	ipcMain.handle(CHANNELS.removeDesignSystem, guard((id: string) => (designSystems.remove(String(id)), null)));
 	// Chosen with the system's picker, here: the window never names a folder to put files in.
 	ipcMain.handle(
 		CHANNELS.chooseCloneFolder,
@@ -351,7 +346,7 @@ export const registerIpc = ({
 	let cloning: AbortController | null = null;
 	const DESIGN = `${DESIGN_REPO.owner}/${DESIGN_REPO.repo}`;
 	/** What cloning `repository` into `folder` would do. */
-	const planClone = async (repository: string, folder: string): Promise<ClonePlan> => {
+	const planClone = async (repository: string, folder: string, forDesignSystem = false): Promise<ClonePlan> => {
 		if (visible.length === 0 && github.state().state === 'signedIn') visible = await visibleRepositories(github);
 		const listed = listedAs(visible, repository);
 		if (listed === undefined) throw new Error(`${repository} is not one of the repositories your GitHub account can see. Sign in to GitHub in DSNR, then try again.`);
@@ -360,16 +355,16 @@ export const registerIpc = ({
 		const home = homedir();
 		const where = place.path.startsWith(home + sep) ? `~${place.path.slice(home.length)}` : place.path;
 		// The design system is read, not worked in, so it needs no design repository beside it.
-		return { repository: listed, place, where, design: design.state === 'cloned' || isDesignSystem(listed) ? null : design };
+		return { repository: listed, place, where, design: design.state === 'cloned' || forDesignSystem ? null : design };
 	};
-	ipcMain.handle(CHANNELS.clonePlan, guard((repository: string) => planClone(repository, cloneFolder())));
+	ipcMain.handle(CHANNELS.clonePlan, guard((repository: string, forDesignSystem: unknown) => planClone(repository, cloneFolder(), forDesignSystem === true)));
 	/**
 	 * Clones what `planClone` says, with its progress sent to the window and `cancelClone` able to stop it: the repository,
 	 * and the design repository beside it when the plan has one. Where it went, and whether it was cloned or already there.
 	 */
-	const cloneAsPlanned = async (repository: string): Promise<Cloned & { repository: string }> => {
+	const cloneAsPlanned = async (repository: string, forDesignSystem = false): Promise<Cloned & { repository: string }> => {
 		const folder = cloneFolder();
-		const plan = await planClone(repository, folder);
+		const plan = await planClone(repository, folder, forDesignSystem);
 		// Both asked first, so the product is not cloned only for the design repository to be in the way.
 		for (const p of [plan.place, plan.design]) if (p?.state === 'taken') throw new Error(notClonedOver(p.why));
 		const stop = (cloning = new AbortController());
@@ -392,12 +387,47 @@ export const registerIpc = ({
 		}),
 	);
 	// Only a design system, refused by name before anything is downloaded; then connected like a folder that was located.
+	/**
+	 * Connecting a design system (P4): accepted by what is found in it, not by its name (decisions 23 to 25). What a
+	 * repository with several had found is kept until one is chosen, so the window names only a folder it was offered.
+	 */
+	const offered = new Map<string, { root: string; branch: string; found: FoundDesignSystem[] }>();
+	const keep = (repository: string, root: string, branch: string, found: FoundDesignSystem): DesignSystemConnection => {
+		const id = designSystemId(repository, found.folder);
+		designSystems.add({ id, name: found.name, repository, root, folder: found.folder, branch });
+		offered.delete(repository);
+		return { state: 'connected', id };
+	};
+	const connectAt = async (repository: string, root: string): Promise<DesignSystemConnection> => {
+		const branch = await defaultBranch(root);
+		if (branch === null) throw new Error(`GitHub did not say which branch of ${repository} is its default, so it cannot be read.`);
+		const update = await library.fetch(root, branch);
+		const commit = await libraryCommit(root, branch);
+		if (commit === null) throw new Error(typeof update === 'object' ? update.failed : `${repository} has no ${branch} branch from GitHub to read.`);
+		const found = await findDesignSystems(libraryReads(root, commit), repository);
+		if (found.length === 0) {
+			throw new Error(`No design system was found in ${repository}: it has no Storybook stories, and no tokens in theme files, CSS variables or token files.`);
+		}
+		if (found.length > 1) {
+			offered.set(repository, { root, branch, found });
+			return { state: 'choose', repository, found };
+		}
+		return keep(repository, root, branch, found[0] as FoundDesignSystem);
+	};
 	ipcMain.handle(
-		CHANNELS.cloneDesignSystem,
-		guard(async (repository: string): Promise<null> => {
-			if (!isDesignSystem(repository)) throw new Error(`${repository} is not the design system library.`);
-			await connectLibrary((await cloneAsPlanned(repository)).path, designSystems);
-			return null;
+		CHANNELS.connectDesignSystem,
+		guard(async (repository: string): Promise<DesignSystemConnection> => {
+			const cloned = await cloneAsPlanned(String(repository), true);
+			return connectAt(cloned.repository, cloned.path);
+		}),
+	);
+	ipcMain.handle(
+		CHANNELS.chooseDesignSystem,
+		guard((repository: string, folder: string): DesignSystemConnection => {
+			const at = offered.get(String(repository));
+			const found = at?.found.find((f) => f.folder === folder);
+			if (!at || !found) throw new Error('That is not one of the design systems found in the repository. Connect it again.');
+			return keep(String(repository), at.root, at.branch, found);
 		}),
 	);
 	/**

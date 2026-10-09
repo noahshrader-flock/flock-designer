@@ -7,8 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PREVIEW_HEIGHT, previewAddress } from '../src/shared/catalog';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { buildPreviews, hasPackages, notInstalled, previewEntry, StoryPreviews, unresolved } from '../src/main/services/storyPreviews';
-import { DESIGN_SYSTEMS } from '../src/shared/catalog';
 import { g } from './fixtures';
+
+/** The library as connected (P4): the whole repository, on develop, at `root`. */
+const REPOSITORY = 'flocksafety/flock-react-component-lib';
+const connected = (root: string) => async () => ({ id: REPOSITORY, name: 'FUI', repository: REPOSITORY, root, folder: '', branch: 'develop' });
 
 /**
  * The previews of the library's stories (P1 of the design system plan), against a small library made here: a bare
@@ -90,15 +93,15 @@ const makeLibrary = (files: Record<string, string>, packages = true) => {
 	g(upstream, 'push', '-q', 'origin', 'develop');
 	g(home, 'clone', '-q', join(home, 'remote.git'), clone);
 	// A clone as a person has one: its origin is the library on GitHub, and git is told to reach that here.
-	g(clone, 'remote', 'set-url', 'origin', `https://github.com/${DESIGN_SYSTEMS[0]!.repository}.git`);
-	g(clone, 'config', `url.${join(home, 'remote.git')}.insteadOf`, `https://github.com/${DESIGN_SYSTEMS[0]!.repository}.git`);
+	g(clone, 'remote', 'set-url', 'origin', `https://github.com/${REPOSITORY}.git`);
+	g(clone, 'config', `url.${join(home, 'remote.git')}.insteadOf`, `https://github.com/${REPOSITORY}.git`);
 	if (packages) {
 		mkdirSync(join(clone, 'node_modules', '@storybook'), { recursive: true });
 		for (const p of ['react', 'react-dom', 'scheduler']) symlinkSync(join(APP_MODULES, p), join(clone, 'node_modules', p), 'junction');
 		write(clone, FAKE_STORYBOOK);
 	}
 };
-const previews = (more: Partial<ConstructorParameters<typeof StoryPreviews>[0]> = {}) => new StoryPreviews({ find: () => clone, folder, server, ...more });
+const previews = (more: Partial<ConstructorParameters<typeof StoryPreviews>[0]> = {}) => new StoryPreviews({ system: connected(clone), folder, server, ...more });
 const ready = async (p: StoryPreviews) => {
 	const r = await p.preview();
 	if (r.state !== 'ready') throw new Error(`not ready: ${JSON.stringify(r)}`);
@@ -137,7 +140,8 @@ describe('building the previews', () => {
 	it('builds every story file of develop once, serves the page and its files, and compiles Sass', async () => {
 		makeLibrary(LIBRARY);
 		const base = await ready(previews());
-		expect(base).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/previews-[0-9a-f]{12}-[0-9a-f]{7}\/$/);
+		// The commit, which package of the repository (a monorepo has several), and how this app builds.
+		expect(base).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/previews-[0-9a-f]{12}-[0-9a-f]{4}-[0-9a-f]{8}\/$/);
 		expect((await fetch(base)).status).toBe(200);
 		expect((await fetch(`${base}entry.js`)).headers.get('content-type')).toContain('javascript');
 		const css = await (await fetch(`${base}entry.css`)).text();
@@ -325,7 +329,7 @@ describe('keeping them', () => {
 describe('what it says when it cannot', () => {
 	it('says there is no library, no packages, or no develop', async () => {
 		makeLibrary(LIBRARY, false);
-		expect(await previews({ find: () => null }).preview()).toEqual({ state: 'no-library' });
+		expect(await previews({ system: async () => null }).preview()).toEqual({ state: 'no-library' });
 		expect(await previews().preview()).toEqual({ state: 'no-packages', root: clone });
 		g(clone, 'update-ref', '-d', 'refs/remotes/origin/develop');
 		expect(await previews().preview()).toMatchObject({ state: 'failed', error: expect.stringContaining('no develop') });
@@ -425,7 +429,7 @@ describe.skipIf(!realDevelop)('against the real library on origin/develop', () =
 	it('builds every story file with the clone’s own packages, and serves it', async () => {
 		const real = new PrototypeServer();
 		try {
-			const r = await new StoryPreviews({ find: () => REAL, folder, server: real }).preview();
+			const r = await new StoryPreviews({ system: connected(REAL), folder, server: real }).preview();
 			expect(r.state).toBe('ready');
 			if (r.state !== 'ready') return;
 			expect((await fetch(r.base)).status).toBe(200);

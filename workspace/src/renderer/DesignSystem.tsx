@@ -1,9 +1,10 @@
-import { ChevronRightIcon, GitBranchIcon, InfoIcon, SwatchBookIcon } from 'lucide-react';
+import { ChevronDownIcon, ChevronRightIcon, GitBranchIcon, InfoIcon, PlusIcon, SwatchBookIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Catalog, CatalogComponent, CatalogUpdate } from '../shared/contract';
+import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem } from '../shared/contract';
 import { ComponentPage } from './ComponentPage';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { LoadingScreen } from './Loading';
+import { MoreMenu } from './MoreMenu';
 import { Page } from './Page';
 import { TOKENS_PANEL } from './panelWidth';
 import { ResizablePanel } from './ResizablePanel';
@@ -13,6 +14,15 @@ import { TokensPanel } from './TokensPanel';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /** Said only when something is wrong, as the Projects screen does: a failed update is a line, never an error. */
@@ -34,6 +44,51 @@ const Row = ({ component, onOpen }: { component: CatalogComponent; onOpen: () =>
 			<ChevronRightIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />
 		</button>
 	</li>
+);
+
+/**
+ * Which design system is shown (P4): its name (its Storybook's brand, else its package's or repository's), the
+ * repository under it in the menu, every one connected to switch to, and a way to connect another.
+ */
+const DesignSystemSwitcher = ({
+	systems,
+	shown,
+	onSelect,
+	onAdd,
+}: {
+	systems: ConnectedDesignSystem[];
+	shown: ConnectedDesignSystem | null;
+	onSelect: (id: string) => void;
+	onAdd: () => void;
+}) => (
+	<DropdownMenu>
+		<DropdownMenuTrigger asChild>
+			<Button variant="ghost" className="-ml-2.5 font-semibold" aria-label={`Design system ${shown?.name ?? ''}: switch design system`}>
+				{shown?.name ?? 'Design system'}
+				<ChevronDownIcon />
+			</Button>
+		</DropdownMenuTrigger>
+		<DropdownMenuContent align="start" className="w-auto min-w-64">
+			<DropdownMenuRadioGroup value={shown?.id ?? ''} onValueChange={(id) => id !== shown?.id && onSelect(id)}>
+				{systems.map((s) => (
+					<DropdownMenuRadioItem key={s.id} value={s.id}>
+						<span className="flex flex-col gap-0.5">
+							<span>{s.name}</span>
+							<span className="text-muted-foreground text-xs">
+								{s.repository}
+								{s.folder !== '' && ` · ${s.folder}`}
+							</span>
+						</span>
+					</DropdownMenuRadioItem>
+				))}
+			</DropdownMenuRadioGroup>
+			<DropdownMenuSeparator />
+			<DropdownMenuItem onSelect={onAdd}>
+				<PlusIcon />
+				Connect a design system
+			</DropdownMenuItem>
+		</DropdownMenuContent>
+	</DropdownMenu>
 );
 
 /** What a person sees in place of the list when there is no list, and, when there is a way to, a Try again. */
@@ -71,6 +126,9 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [open, setOpen] = useState<string | null>(null);
 	// The tokens panel at the right of the tab (decision 21): shown unless it was hidden, whichever screen is open.
 	const [tokensOpen, setTokensOpen] = useState(true);
+	// The design systems connected, and which is shown (P4); and whether another is being connected.
+	const [systems, setSystems] = useState<{ systems: ConnectedDesignSystem[]; current: string | null }>({ systems: [], current: null });
+	const [adding, setAdding] = useState(false);
 	const started = useRef(false);
 
 	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {
@@ -99,11 +157,37 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		if (first?.state === 'ready' && first.update === 'updating') void sync();
 	}, [ask, sync]);
 
+	const listSystems = useCallback(async () => {
+		const r = await window.workspace.designSystems();
+		if (r.ok) setSystems(r.value);
+	}, []);
+
 	useEffect(() => {
 		if (hidden || started.current) return;
 		started.current = true;
+		void listSystems();
 		void firstRead();
-	}, [hidden, firstRead]);
+	}, [hidden, firstRead, listSystems]);
+
+	// Another one shown (connected, switched to, or the one shown removed): read afresh, at its list.
+	const showAnother = useCallback(async () => {
+		setAdding(false);
+		setOpen(null);
+		setCatalog(null);
+		await listSystems();
+		await firstRead();
+	}, [listSystems, firstRead]);
+	const select = async (id: string) => {
+		const r = await window.workspace.selectDesignSystem(id);
+		if (r.ok) void showAnother();
+		else setError(r.error);
+	};
+	const remove = async (id: string) => {
+		const r = await window.workspace.removeDesignSystem(id);
+		if (r.ok) void showAnother();
+		else setError(r.error);
+	};
+	const shown = systems.systems.find((s) => s.id === systems.current) ?? null;
 
 	if (error && catalog === null) {
 		return (
@@ -112,10 +196,23 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 			</Notice>
 		);
 	}
+	// Connecting another, with a way back to the one shown.
+	if (adding) return <ConnectDesignSystem onConnected={() => void showAnother()} onCancel={() => setAdding(false)} />;
 	if (catalog === null) return <LoadingScreen>Reading the component library…</LoadingScreen>;
-	if (catalog.state === 'no-clone') {
+	if (catalog.state === 'none') return <ConnectDesignSystem onConnected={() => void showAnother()} />;
+	if (catalog.state === 'lost') {
 		return (
-			<ConnectDesignSystem repository={catalog.repository} lost={catalog.lost} onConnected={() => void firstRead()} />
+			<Notice title={`${catalog.name} is no longer on this computer`}>
+				Its copy was at {catalog.root}. Remove it, then connect it again, or connect another.
+				<div className="mt-3 flex gap-2">
+					<Button variant="outline" onClick={() => shown && void remove(shown.id)}>
+						Remove {catalog.name}
+					</Button>
+					<Button variant="ghost" onClick={() => setAdding(true)}>
+						Connect a design system
+					</Button>
+				</div>
+			</Notice>
 		);
 	}
 	if (catalog.state === 'no-branch') {
@@ -143,7 +240,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	return (
 		<>
 			<Toolbar className="sticky top-0 z-40">
-				<h2 className="text-sm font-semibold">FUI</h2>
+				<DesignSystemSwitcher systems={systems.systems} shown={shown} onSelect={(id) => void select(id)} onAdd={() => setAdding(true)} />
 				<Tooltip delayDuration={300}>
 					<TooltipTrigger asChild>
 						<GitBranchIcon aria-label={`Branch ${catalog.branch}`} className="text-muted-foreground size-4 shrink-0" />
@@ -171,6 +268,14 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 						Tokens
 					</Button>
 					<SyncButton syncing={syncing} onClick={() => void sync()} />
+					{shown && (
+						<MoreMenu label={`More for ${shown.name}`}>
+							<DropdownMenuItem variant="destructive" onSelect={() => void remove(shown.id)}>
+								<Trash2Icon />
+								Remove {shown.name}
+							</DropdownMenuItem>
+						</MoreMenu>
+					)}
 				</div>
 			</Toolbar>
 			{/* The tab under its bars: the list or a component, which scrolls on its own, and at the right the tokens panel,

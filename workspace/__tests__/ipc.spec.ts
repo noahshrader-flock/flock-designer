@@ -148,7 +148,7 @@ beforeEach(async () => {
 		prototypeServer,
 		cloneFolders: new (await import('../src/main/services/cloneFolder')).CloneFolderMemory(join(home, 'clone-folder.json')),
 		cloner: new (await import('../src/main/services/clone')).Cloner({ urlOf: (r) => cloneSources[r] ?? 'file:///nowhere' }),
-		designSystems: new (await import('../src/main/services/designLibrary')).DesignSystemMemory(join(home, 'design-system.json')),
+		designSystems: new (await import('../src/main/services/designSystems')).DesignSystemsMemory(join(home, 'design-system.json')),
 		storyPreviewsRoot: join(home, 'story-previews'),
 	});
 });
@@ -158,98 +158,120 @@ afterEach(() => {
 	rmSync(home, { recursive: true, force: true });
 });
 
-describe('the Design System catalog', () => {
-	it('says there is no clone of the library when none is here, and takes no path from the window', async () => {
-		const none = { ok: true, value: { state: 'no-clone', repository: 'flocksafety/flock-react-component-lib', lost: null } };
-		expect(await call(CHANNELS.designSystemCatalog, false)).toEqual(none);
+describe('the Design System tab', () => {
+	it('says no design system is connected when none is, and takes no path from the window', async () => {
+		expect(await call(CHANNELS.designSystemCatalog, false)).toEqual({ ok: true, value: { state: 'none' } });
 		// Whatever the window sends, it is only "wait for the update or not": a path is not a place to read.
-		expect(await call(CHANNELS.designSystemCatalog, product)).toEqual(none);
+		expect(await call(CHANNELS.designSystemCatalog, product)).toEqual({ ok: true, value: { state: 'none' } });
+		expect(await call(CHANNELS.designSystems)).toEqual({ ok: true, value: { systems: [], current: null } });
 	});
 
-	it('finds a clone of the library in the usual folders by its origin, and says when it has no copy of its branch', async () => {
-		const lib = join(home, 'GitHub', 'fui');
-		g(home, 'init', '-q', lib);
-		g(lib, 'remote', 'add', 'origin', 'git@github.com:flocksafety/flock-react-component-lib.git');
-		expect(await call(CHANNELS.designSystemCatalog, false)).toEqual({ ok: true, value: { state: 'no-branch', root: lib, branch: 'develop' } });
-	});
-
-	it('has no previews to build when there is no library, and takes nothing from the window', async () => {
+	it('has no previews to build when there is no design system, and takes nothing from the window', async () => {
 		expect(await call(CHANNELS.storyPreview)).toEqual({ ok: true, value: { state: 'no-library' } });
 		expect(await call(CHANNELS.storyPreview, '/etc', 'x')).toEqual({ ok: true, value: { state: 'no-library' } });
 	});
 
-	describe('connecting it', () => {
-		const LIB = 'flocksafety/flock-react-component-lib';
-		const GITHUB = `https://github.com/${LIB}.git`;
-		const picker = async () => vi.mocked((await import('electron')).dialog.showOpenDialog);
-		const library = (d: string) => {
-			mkdirSync(join(d, 'src', 'components', 'FSButton'), { recursive: true });
-			writeFileSync(join(d, 'src', 'components', 'FSButton', 'FSButton.stories.tsx'), "const meta = { title: 'Buttons/FSButton' };\n");
-			g(d, 'init', '-q', '-b', 'develop');
+	describe('connecting one (P4)', () => {
+		const commitAll = (d: string) => {
 			g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'add', '.');
-			g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'library');
+			g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'first');
 		};
-		/** A clone as a person has one: its origin is GitHub, and git is told to reach that here. */
-		let reachGitHubHere: string;
-		beforeEach(() => {
-			reachGitHubHere = bare('fui', library);
-			// Git reads these as configuration, so every git the app runs reaches GitHub's address here instead.
-			Object.assign(process.env, { GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: `url.${reachGitHubHere}.insteadOf`, GIT_CONFIG_VALUE_0: GITHUB });
-		});
-		afterEach(() => {
-			for (const k of ['GIT_CONFIG_COUNT', 'GIT_CONFIG_KEY_0', 'GIT_CONFIG_VALUE_0']) delete process.env[k];
-		});
+		/** A repository on GitHub, as a bare one here, with these files on its default branch. */
+		const repository = (name: string, files: Record<string, string>, branch = 'develop') =>
+			bare(name, (d) => {
+				for (const [path, text] of Object.entries(files)) {
+					mkdirSync(dirname(join(d, path)), { recursive: true });
+					writeFileSync(join(d, path), text);
+				}
+				g(home, 'init', '-q', '-b', branch, d);
+				commitAll(d);
+			});
+		const story = (title: string) => `export default { title: '${title}' };\n`;
+		const LIB = 'flocksafety/flock-react-component-lib';
 		const ready = async () => {
 			// The second read waits for the fetch the first one started, so nothing is left running in the folder.
 			await call(CHANNELS.designSystemCatalog, false);
 			return (await call(CHANNELS.designSystemCatalog, true)).value as { state: string; components?: { name: string }[] };
 		};
 
-		it('locates a folder the person chooses, checks it is the library, and remembers it', async () => {
-			const chosen = join(home, 'Elsewhere', 'my-fui');
-			g(home, 'clone', '-q', GITHUB, chosen);
-			(await picker()).mockResolvedValueOnce({ canceled: false, filePaths: [chosen] } as never);
-			expect(await call(CHANNELS.locateDesignSystem)).toEqual({ ok: true, value: true });
-			// The picker opens where clones go.
-			expect((await picker()).mock.calls.at(-1)?.[1]).toMatchObject({ defaultPath: join(home, 'GitHub'), properties: ['openDirectory'] });
-			expect(await ready()).toMatchObject({ state: 'ready', components: [{ name: 'FSButton' }] });
-			expect(JSON.parse(readFileSync(join(home, 'design-system.json'), 'utf8'))).toEqual({ folder: chosen });
-		});
-
-		it('refuses a folder that is not the library, and connects nothing; a cancel is not an error', async () => {
-			(await picker()).mockResolvedValueOnce({ canceled: false, filePaths: [product] } as never);
-			expect((await call(CHANNELS.locateDesignSystem)).error).toMatch(/is not a clone of a GitHub repository|is a clone of/);
-			(await picker()).mockResolvedValueOnce({ canceled: true, filePaths: [] } as never);
-			expect(await call(CHANNELS.locateDesignSystem)).toEqual({ ok: true, value: false });
-			expect(existsSync(join(home, 'design-system.json'))).toBe(false);
-		});
-
-		it('says a connected folder that is gone was lost', async () => {
-			const chosen = join(home, 'Elsewhere', 'my-fui');
-			g(home, 'clone', '-q', GITHUB, chosen);
-			(await picker()).mockResolvedValueOnce({ canceled: false, filePaths: [chosen] } as never);
-			await call(CHANNELS.locateDesignSystem);
-			await ready();
-			rmSync(chosen, { recursive: true, force: true });
-			expect((await call(CHANNELS.designSystemCatalog, false)).value).toEqual({ state: 'no-clone', repository: LIB, lost: chosen });
-		});
-
-		it('clones the library into the clone folder with no design repository beside it, and connects it', async () => {
+		it('clones a repository the person can reach, with no design repository beside it, finds the design system in it, and shows it', async () => {
 			signedIn([LIB, 'flocksafety/flock-ops']);
-			cloneSources = { [LIB]: GITHUB };
-			const plan = (await call(CHANNELS.clonePlan, LIB)).value;
-			expect(plan).toMatchObject({ repository: LIB, place: { state: 'free', path: join(home, 'GitHub', 'flock-react-component-lib') }, design: null });
-			expect(await call(CHANNELS.cloneDesignSystem, LIB)).toEqual({ ok: true, value: null });
-			expect(await ready()).toMatchObject({ state: 'ready', components: [{ name: 'FSButton' }] });
-			expect(JSON.parse(readFileSync(join(home, 'design-system.json'), 'utf8'))).toEqual({ folder: join(home, 'GitHub', 'flock-react-component-lib') });
+			cloneSources = { [LIB]: repository('fui', { 'src/components/FSButton/FSButton.stories.tsx': story('Buttons/FSButton') }) };
+			expect((await call(CHANNELS.clonePlan, LIB, true)).value).toMatchObject({ repository: LIB, design: null });
+			expect(await call(CHANNELS.connectDesignSystem, LIB)).toEqual({ ok: true, value: { state: 'connected', id: LIB } });
+			expect(await ready()).toMatchObject({ state: 'ready', branch: 'develop', components: [{ name: 'FSButton' }] });
+			expect((await call(CHANNELS.designSystems)).value).toEqual({
+				systems: [{ id: LIB, name: 'flock-react-component-lib', repository: LIB, root: join(home, 'GitHub', 'flock-react-component-lib'), folder: '', branch: 'develop' }],
+				current: LIB,
+			});
 		});
 
-		it('refuses any other repository by name, cloning nothing', async () => {
-			signedIn([LIB, 'flocksafety/flock-ops', 'someone/flock-react-component-lib']);
-			for (const other of ['flocksafety/flock-ops', 'someone/flock-react-component-lib']) {
-				expect((await call(CHANNELS.cloneDesignSystem, other)).error).toBe(`${other} is not the design system library.`);
-			}
-			expect(readdirSync(join(home, 'GitHub')).sort()).toEqual(['flock-coke', 'flock-designer']);
+		it('connects any repository with a design system in it, on its own default branch: there is no list of accepted ones', async () => {
+			const OTHER = 'acme/brand-kit';
+			signedIn([OTHER]);
+			cloneSources = { [OTHER]: repository('brand', { 'styles/tokens.css': ':root {\n  --primary: #ff0000;\n}\n', 'package.json': '{ "name": "@acme/brand" }' }, 'main') };
+			expect(await call(CHANNELS.connectDesignSystem, OTHER)).toEqual({ ok: true, value: { state: 'connected', id: OTHER } });
+			expect(await ready()).toMatchObject({ state: 'ready', branch: 'main', components: [] });
+			expect(((await call(CHANNELS.designSystemCatalog, false)).value as { tokens: { source: string } }).tokens.source).toBe('CSS variables');
+			expect(((await call(CHANNELS.designSystems)).value as { systems: { name: string }[] }).systems[0]?.name).toBe('brand');
+		});
+
+		it('refuses, in words, a repository with no design system in it, and connects nothing', async () => {
+			signedIn(['flocksafety/flock-ops']);
+			cloneSources = { 'flocksafety/flock-ops': repository('ops', { 'README.md': '# ops\n' }) };
+			expect((await call(CHANNELS.connectDesignSystem, 'flocksafety/flock-ops')).error).toBe(
+				'No design system was found in flocksafety/flock-ops: it has no Storybook stories, and no tokens in theme files, CSS variables or token files.',
+			);
+			expect((await call(CHANNELS.designSystems)).value).toEqual({ systems: [], current: null });
+		});
+
+		it('offers the design systems of a monorepo to choose from, and connects the one chosen, by a folder it offered only', async () => {
+			const MONO = 'acme/acme';
+			signedIn([MONO]);
+			cloneSources = {
+				[MONO]: repository('mono', {
+					'package.json': '{ "name": "acme" }',
+					'packages/ui/package.json': '{ "name": "@acme/ui" }',
+					'packages/ui/Button.stories.tsx': story('Buttons/Button'),
+					'packages/marketing/package.json': '{ "name": "@acme/marketing" }',
+					'packages/marketing/Hero.stories.tsx': story('Hero/Hero'),
+				}),
+			};
+			const r = (await call(CHANNELS.connectDesignSystem, MONO)).value as { state: string; found: { folder: string }[] };
+			expect(r.state).toBe('choose');
+			expect(r.found.map((f) => f.folder)).toEqual(['packages/marketing', 'packages/ui']);
+			expect((await call(CHANNELS.chooseDesignSystem, MONO, 'packages/elsewhere')).error).toMatch(/not one of the design systems found/);
+			expect(await call(CHANNELS.chooseDesignSystem, MONO, 'packages/ui')).toEqual({ ok: true, value: { state: 'connected', id: 'acme/acme:packages/ui' } });
+			// Only that package: the marketing one's story is not in its list.
+			expect(await ready()).toMatchObject({ state: 'ready', components: [{ name: 'Button' }] });
+		});
+
+		it('switches between those connected, and removing the last goes back to none', async () => {
+			signedIn([LIB, 'acme/brand-kit']);
+			cloneSources = {
+				[LIB]: repository('fui', { 'a/A.stories.tsx': story('A/A') }),
+				'acme/brand-kit': repository('brand', { 'styles/tokens.css': ':root { --primary: #ff0000; }\n' }),
+			};
+			await call(CHANNELS.connectDesignSystem, LIB);
+			await call(CHANNELS.connectDesignSystem, 'acme/brand-kit');
+			expect(((await call(CHANNELS.designSystems)).value as { current: string }).current).toBe('acme/brand-kit');
+			await call(CHANNELS.selectDesignSystem, LIB);
+			expect(await ready()).toMatchObject({ components: [{ name: 'A' }] });
+			await call(CHANNELS.removeDesignSystem, LIB);
+			expect(((await call(CHANNELS.designSystems)).value as { current: string }).current).toBe('acme/brand-kit');
+			await call(CHANNELS.removeDesignSystem, 'acme/brand-kit');
+			expect((await call(CHANNELS.designSystemCatalog, false)).value).toEqual({ state: 'none' });
+			// Removing keeps the clone: only the connection goes.
+			expect(existsSync(join(home, 'GitHub', 'flock-react-component-lib'))).toBe(true);
+		});
+
+		it('says a connected one whose clone is gone is no longer on this computer', async () => {
+			signedIn([LIB]);
+			cloneSources = { [LIB]: repository('fui', { 'a/A.stories.tsx': story('A/A') }) };
+			await call(CHANNELS.connectDesignSystem, LIB);
+			await ready();
+			rmSync(join(home, 'GitHub', 'flock-react-component-lib'), { recursive: true, force: true });
+			expect((await call(CHANNELS.designSystemCatalog, false)).value).toEqual({ state: 'lost', name: 'flock-react-component-lib', root: join(home, 'GitHub', 'flock-react-component-lib') });
 		});
 	});
 });

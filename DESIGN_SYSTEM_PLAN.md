@@ -125,7 +125,7 @@ already has (decision 4), so a slow fetch costs nothing the person waits on.
 | 20 | **Controls, or only words?** | **Controls** (Noah, 2026-10-09: "I do like the sliders and controllers as long as we can do this cleanly"), **built from the kind of token, not token by token:** one colour control (a picker and its hex) and one dimension control (a slider and its number), each token getting the one its kind says, with its range from the kind. Claude Design changes things only by chat; asking in words comes later (T6) and makes the same list | "Cleanly" means no code per token: a token the reader finds gets its control with nothing written, and a new kind of token is one new control |
 | 21 | **Where do the tokens live on the screen?** | **In a resizable panel at the right of the Design System tab, always there** (Noah, 2026-10-09: "it should just always be under the design system tab, on the right side"; **this replaces** the earlier "component page only", which he confirmed and then reversed on seeing it). It sits beside the list and beside a component alike, and does not move when either changes. **Open when the tab is, with a Tokens button in the toolbar to hide it and show it again.** It is the review screen's own panel (`ResizablePanel`), its width remembered by the same code (`panelWidth.ts`), **stored separately** from the comments panel's, with a larger largest width since swatch rows need room. One panel for browsing and for editing, so there is no separate Tokens page. **In line tabs by category (Colour, Spacing, Shape), each tab with its own search** (Noah, 2026-10-09); the third is Shape because radius is the theme's shape, where shadows and the like would also go; the reader names each token's category, so one the library gains is a tab with nothing else changed | A change is seen where it is made: one control, and every card on a component's page moves. Dragging the panel wider is how the whole palette is browsed, so nothing like a "wide" switch is built |
 | 22 | **The Storybook token pages in the components list** | **Hidden from it** (Noah, 2026-10-09: "hidden from the components list because they're moving to the sidebar"), **when T2 ships,** not before, so the tokens are never in neither place | The panel shows the same from the source, with the controls. Their stories stay in the library, and the list still shows what the library's Storybook lists as components |
-| 23 | **What may be connected?** | **Any repository the person can reach** (Noah, 2026-10-09: "as flexible as possible"; **replaces 12 and 13**). Chosen from the same repository picker the clone uses, or located as a folder; **there is no list of accepted libraries,** so the app does not gate by name or refuse forks. It is accepted or rejected by what it finds in it (decision 25). One is connected at a time and remembered; nothing is found by itself | The gate was FUI's name in a list in code, which a monorepo, a fork or another company's library could never pass. What the app needs is a design system, and it can see for itself whether there is one. Building and previewing still run only in the sandboxed frame, as before |
+| 23 | **What may be connected?** | **Any repository the person can reach** (Noah, 2026-10-09: "as flexible as possible"; **replaces 12 and 13**). Chosen from the same repository picker the clone uses, or located as a folder; **there is no list of accepted libraries,** so the app does not gate by name or refuse forks. It is accepted or rejected by what it finds in it (decision 25). **Several can be connected, one shown at a time** (Noah, 2026-10-09: a switcher in the toolbar, with the design system's name, and Remove in the More menu; when none is left, the Connect screen); all are remembered, and nothing is found by itself. **Connect is the repository picker and one button,** centred like the sign-in; Locate (choosing a folder) is not offered, as the repository picker already finds a copy that is on the computer | The gate was FUI's name in a list in code, which a monorepo, a fork or another company's library could never pass. What the app needs is a design system, and it can see for itself whether there is one. Building and previewing still run only in the sandboxed frame, as before |
 | 24 | **Which branch is read?** | **The repository's default branch,** found when it is connected (Noah, 2026-10-09; **changes 4**). Read as git's copy of it, fetched when the tab opens and on Sync, as before. A branch picker on the Connect screen can come later | For FUI the default is `develop`, so nothing changes for it. A fixed branch in a list does not exist any more |
 | 25 | **What is a design system, and where is it in a monorepo?** | **A folder with Storybook stories or tokens, either** (Noah, 2026-10-09). When connected the app looks for folders that have stories or tokens: **one place, and it is used; several (two packages, say), and the person chooses,** the choice remembered with the repository. **Rejected, with what it looked for,** when it finds neither. The design system's folder then scopes the list, the tokens and the previews, so an app's own theme in the same repository is not taken for it | Detecting from the contents is what lets any repository connect (23). The scope is what makes a monorepo safe to read: tokens are found by their shape, and without it the first source to find any, anywhere, wins |
 | 17 | **What is a component?** | **Whatever the library's Storybook lists** (Noah, 2026-10-08: "using Storybook as that source of truth … anytime you add something that has Storybook in it, it would just get the list from the Storybook"). Every `*.stories.(js|jsx|mjs|ts|tsx)` file on the design system's branch, anywhere in the repository, is one component, named by the last part of its title and grouped by the first, in the order decision 7 gives. **What the app cannot read from the library is in its entry in `DESIGN_SYSTEMS`:** the repository, the branch that is its source of truth, and the hosted Storybook address, if any | It is what makes the tab automatic for any Storybook library: no folder layout, naming or location is assumed, a story added to the library is in the list, and a second design system is one more entry (shown by a test with a library on `main`, stories under `packages/`, and no hosted Storybook). It also removed a layer: the folder rules, parts, gaps and their marks |
@@ -149,7 +149,7 @@ nothing on GitHub changed.
 | **P0** (done) | **Connect the design system:** the centred screen with **Clone** and **Locate**, and a connection that is remembered. **Replaces S4** | S2, S3, decisions 11 to 14 | M | Medium |
 | **P1** (done) | **Build the previews:** one page of every story from `develop`, cached by commit, one story per address | P0, decision 8 | M | **Medium** |
 | **P2** (done) | **The component page:** click a row, see its stories as live cards | P1, decision 9 | M | Medium |
-| **P4** | **Connect any repository:** the picker offers every repository the person can reach, the connection is accepted by what is found in it (stories or tokens), a monorepo's design system folder is found, or chosen when there are several, and scopes the list, tokens and previews; the default branch is read. **Replaces the accepted list** | P0, decisions 23 to 25 | L | **Medium** |
+| **P4** (done) | **Connect any repository:** the picker offers every repository the person can reach, the connection is accepted by what is found in it (stories or tokens), a monorepo's design system folder is found, or chosen when there are several, and scopes the list, tokens and previews; the default branch is read. **Replaces the accepted list** | P0, decisions 23 to 25 | L | **Medium** |
 | **T1** (done) | **Find the tokens:** a reader that returns the library's tokens as one typed list (colours, spacing, radius), found and not listed | P2, decisions 16, 18 | M | Low |
 | **T2** (done) | **Show the tokens, in a panel:** a resizable panel at the right of the tab, always there, in line tabs by category (Colour, Spacing, Shape), each with its own search and its tokens in collapsible groups, each with its value and where it comes from | T1, decision 21 | M | Low |
 | **T3** | **Adjust tokens in the same panel, seen live, written nowhere:** a control on each row, from its kind; a **Changed** group at the top with a reset for each and for all; the change is the overrides list, applied as a theme to every card on the page | T2, decisions 19, 20 | L | Medium |
@@ -245,32 +245,14 @@ opens on a click is not marked "Opens on click", and shows as it does in Storybo
 running app yet; Noah to try:** open FSButton, FSPopovers (several files), FSSelect (the note about what is not
 installed) and FSDrawer (opens on a click), and Back.
 
-### P4: Connect any repository
+### P4: Connect any repository (done 2026-10-09)
 
-**Not built.** Decisions 23 to 25. The Connect screen stays (P0): **Clone** and **Locate**, one connection, remembered.
-What changes is what it accepts. Each step has a test first, is committed on its own, and leaves the app working.
-
-1. **Accept by contents.** `findDesignSystems(reads)` returns the folders of a repository that have Storybook stories or
-   tokens, by the same readers the tab already uses (`readCatalog`'s story finding and `readTokens`'s sources), each on
-   the reads scoped to that folder. None: rejected, saying what it looked for (stories, theme files, CSS variables, token
-   files). *Tests:* a repository of one design system, a monorepo with an app beside it, one with two packages, one with
-   stories only, one with tokens only, one with neither.
-2. **Scope.** `scoped(reads, folder)` gives the catalog, the tokens and the previews their folder as their root, so
-   paths in the list, the panel and a comment are the design system's own. *Tests:* each reader on a folder of a repository
-   reads the same as on a repository of only that folder.
-3. **The connection is more than a folder.** The remembered connection is the folder, the repository it came from and the
-   design system's folder in it (`DesignSystemMemory` keeps JSON, not one path), and the branch is the repository's
-   default (decision 24). The `DesignSystem` the tab works from (`shared/catalog.ts`) is made from it. **The list of
-   accepted repositories, `DESIGN_SYSTEMS`, `designSystemNamed` and `isDesignSystem`, go.** A hosted Storybook address is
-   kept only as a hint for a repository the app knows one for (FUI's), so its links still appear, and left out otherwise.
-4. **The screen.** Clone's picker offers every repository the person can reach and no longer refuses one; Locate takes any
-   git folder. After either, the app looks (step 1): rejected is said in words, one place connects, several are shown to
-   choose from, and the choice is remembered. The connection can be changed later from the tab.
-5. **FUI, as it is.** The same connection is made for FUI with nothing different to do, and its list, tokens and previews
-   read as before. *Tests:* the real library, as `componentCatalog.spec.ts` does.
-
-**What is not known until it is tried:** the previews of a library inside a monorepo (see Risks), and the tab's default
-branch for a repository GitHub does not name one for.
+**Done.** What it built, and the evidence, is in [dsnr.md](dsnr.md#change-log) (2026-10-09). In short: the design
+systems connected are a list (`services/designSystems.ts`'s `DesignSystemsMemory`), one shown; connecting clones or uses
+a repository, reads its default branch, and finds its design systems with `findDesignSystems` (each package with
+stories or tokens of its own); the library service and the previews read the one shown, scoped to its package. **Left
+for a real monorepo:** its previews (Risks); everything else is tested on fixtures, and FUI reads as before. **Not done,
+by choice:** a branch picker (the default branch is read), and Locate.
 
 ### T1 to T6: tokens, from finding them to proposing a change
 
@@ -384,7 +366,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 ## Next
 
 **S1 to S3 and P0 to P2 are done,** with Storybook as the source of truth for what a component is (decision 17), and
-stories responding as they should. **T1 and T2 are done (the tokens, read, in the panel). P4 (connect any repository) and T3 (the controls, seen live) are the next two, in an order Noah chooses;** T4 to T6 are laid out but not specified. P3 was dropped
+stories responding as they should. **T1, T2 and P4 are done (the tokens, read, in the panel; any repository connected). T3 (the controls, seen live) is next, and waits for Noah to say so;** T4 to T6 are laid out but not specified. P3 was dropped
 (decision 10).
 
 **By hand, Noah:** restart the dev session (the main process changed), open the Design System tab, and try a few

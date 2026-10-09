@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DESIGN_SYSTEMS } from '../src/shared/catalog';
+import { designSystemOf } from '../src/shared/catalog';
 import { libraryReads } from '../src/main/services/designLibrary';
 import { readTokens } from '../src/main/services/designTokens';
 import type { CatalogReads } from '../src/main/services/componentCatalog';
@@ -230,7 +230,7 @@ describe('a library laid out differently', () => {
 
 /** The reader against the real library's `develop`, as the app reads it. Skipped, loudly, when it is not checked out. */
 const REAL = '/Users/noah.shrader/Documents/GitHub/flock-react-component-lib';
-const FUI = DESIGN_SYSTEMS[0]!;
+const FUI = designSystemOf({ repository: 'flocksafety/flock-react-component-lib', branch: 'develop' });
 const hasBranch = (() => {
 	if (!existsSync(`${REAL}/.git`)) return false;
 	try {

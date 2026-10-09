@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
-import { DESIGN_SYSTEMS, type DesignSystem } from '../src/shared/catalog';
+import { designSystemOf, type DesignSystem } from '../src/shared/catalog';
 import { isStoryFile, literalField, readCatalog, sidebarOrder, storybookId, storybookUrl, UNGROUPED, type CatalogReads } from '../src/main/services/componentCatalog';
 import { libraryReads } from '../src/main/services/designLibrary';
 
@@ -39,7 +39,7 @@ describe('what is a component', () => {
 	it('names and groups a component by its Storybook title, and links it to the library’s own Storybook and source', async () => {
 		const [c] = await readCatalog(
 			library({ 'src/components/FSButton/FSButton.stories.tsx': story('Buttons/FSButton', "\n    componentSubtitle: 'Buttons allow users to take actions.',") }),
-			DESIGN_SYSTEMS[0]!,
+			designSystemOf({ repository: 'flocksafety/flock-react-component-lib', branch: 'develop' }),
 		);
 		expect(c).toEqual({
 			id: 'src/components/FSButton/FSButton.stories.tsx',
@@ -157,7 +157,7 @@ describe("Storybook's id rule", () => {
  * beside this repository.
  */
 const REAL = '/Users/noah.shrader/Documents/GitHub/flock-react-component-lib';
-const FUI = DESIGN_SYSTEMS[0]!;
+const FUI = designSystemOf({ repository: 'flocksafety/flock-react-component-lib', branch: 'develop' });
 const git = (...args: string[]) => execFileSync('git', ['-C', REAL, ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 const hasBranch = (() => {
 	if (!existsSync(`${REAL}/.git`)) return false;

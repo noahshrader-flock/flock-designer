@@ -24,6 +24,8 @@ export const fakeApp = (overrides: Impl = {}) => {
 		signInState: async () => ok({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
 		openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1', states: [] }),
 		readComments: async () => ok([]),
+		// No design system connected, unless a test says otherwise.
+		designSystems: async () => ok({ systems: [], current: null }),
 		shareStatus: async () => ok({ state: 'idle' }),
 		publishedPage: async () => ok({ state: 'none' }),
 		pageShowMarkers: async (items: { id: number }[]) => ok(items.map((i) => ({ id: i.id, state: 'found' }))),

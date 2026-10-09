@@ -8,7 +8,7 @@ import { AgentRunner } from './services/agent';
 import { DESIGN_REPO, DesignRepo } from './services/designRepo';
 import { CheckoutMemory } from './services/checkoutMemory';
 import { CloneFolderMemory } from './services/cloneFolder';
-import { DesignSystemMemory } from './services/designLibrary';
+import { DesignSystemsMemory } from './services/designSystems';
 import { PageView } from './services/pageView';
 import { MIN_WINDOW, type WindowState, WindowMemory, restoreState } from './services/windowMemory';
 import { PrototypeServer } from './services/prototypeServer';
@@ -168,7 +168,7 @@ void app.whenReady().then(() => {
 		prototypeServer,
 		sessions: new SessionMemory(SessionMemory.defaultPath(app.getPath('userData'))),
 		cloneFolders: new CloneFolderMemory(CloneFolderMemory.defaultPath(app.getPath('userData'))),
-		designSystems: new DesignSystemMemory(DesignSystemMemory.defaultPath(app.getPath('userData'))),
+		designSystems: new DesignSystemsMemory(DesignSystemsMemory.defaultPath(app.getPath('userData'))),
 		storyPreviewsRoot: join(app.getPath('userData'), 'story-previews'),
 	});
 	window.on('closed', () => prototypeServer.close());

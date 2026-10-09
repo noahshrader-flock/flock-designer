@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DesignSystem } from '../src/renderer/DesignSystem';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
 import type { Catalog, CatalogComponent, CatalogUpdate, DesignTokens } from '../src/shared/contract';
-import { button, fail, fakeApp, ok, press, render, settle, typeInto, unmountAll } from './reviewHarness';
+import { button, fail, fakeApp, menuItem, ok, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
 /**
  * The Design System tab (S3 of the design system plan): the component library's catalog as a grouped list with links
@@ -47,9 +47,15 @@ const ready = (update: CatalogUpdate = 'unchanged', components = COMPONENTS): Ca
 	tokens: TOKENS,
 });
 
+/** The design systems connected (P4): FUI, by its Storybook's brand, and a second one. */
+const FUI_SYSTEM = { id: 'flocksafety/flock-react-component-lib', name: 'Flock React Component Lib', repository: 'flocksafety/flock-react-component-lib', root: '/h/GitHub/flock-react-component-lib', folder: '', branch: 'develop' };
+const ACME = { id: 'acme/acme:packages/ui', name: 'Acme UI', repository: 'acme/acme', root: '/h/GitHub/acme', folder: 'packages/ui', branch: 'main' };
+const SYSTEMS = { systems: [FUI_SYSTEM, ACME], current: FUI_SYSTEM.id };
+const switcher = (name = FUI_SYSTEM.name) => button(`Design system ${name}: switch design system`);
+
 let current: Awaited<ReturnType<typeof render>> | null = null;
-const open = async (answers: (refresh: boolean) => ReturnType<typeof ok<Catalog>> | ReturnType<typeof fail>, hidden = false) => {
-	const app = fakeApp({ designSystemCatalog: async (refresh: boolean) => answers(refresh), storyPreview: async () => ok({ state: 'ready', base: 'http://127.0.0.1:1/p/' }) });
+const open = async (answers: (refresh: boolean) => ReturnType<typeof ok<Catalog>> | ReturnType<typeof fail>, hidden = false, more: Record<string, (...a: never[]) => unknown> = {}) => {
+	const app = fakeApp({ designSystemCatalog: async (refresh: boolean) => answers(refresh), designSystems: async () => ok(SYSTEMS), storyPreview: async () => ok({ state: 'ready', base: 'http://127.0.0.1:1/p/' }), ...more });
 	(window as unknown as { workspace: unknown }).workspace = app.api;
 	current = await render(createElement(DesignSystem, { hidden }));
 	return app;
@@ -141,13 +147,14 @@ describe('finding a component', () => {
 		expect(document.querySelector('[role="combobox"]')?.textContent).toBe('Surfaces / Overview');
 	});
 
-	it('has the finder in the toolbar beside the name and branch, then Tokens, and Sync at its right, as Projects does', async () => {
+	it('has the finder in the toolbar beside the design system’s name and branch, then Tokens, Sync and More at its right', async () => {
 		await open(() => ok(ready()));
-		const toolbar = document.querySelector('h2')!.parentElement!;
+		const toolbar = switcher().parentElement!;
 		expect(toolbar.contains(finder())).toBe(true);
 		expect(toolbar.contains(button('Sync'))).toBe(true);
-		expect(toolbar.textContent).toBe('FUIFind a componentTokensSync');
-		expect(toolbar.querySelector('h2')!.compareDocumentPosition(finder()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(toolbar.textContent).toBe('Flock React Component LibFind a componentTokensSync');
+		expect(toolbar.contains(button('More for Flock React Component Lib'))).toBe(true);
+		expect(switcher().compareDocumentPosition(finder()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(finder().compareDocumentPosition(button('Sync')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		// The old search box is gone.
 		expect(document.querySelector('input[aria-label="Search components"]')).toBeNull();
@@ -166,6 +173,40 @@ describe('finding a component', () => {
 	it('has no filter for components without a story', async () => {
 		await open(() => ok(ready()));
 		expect([...document.querySelectorAll('button')].some((b) => /without a story/i.test(b.textContent ?? ''))).toBe(false);
+	});
+});
+
+describe('the design systems connected (P4)', () => {
+	it('are switched between from the name in the toolbar, each with its repository, the one shown checked', async () => {
+		const app = await open(() => ok(ready()));
+		const items = await openMenu(switcher());
+		const radios = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
+		expect(radios.map((r) => r.textContent)).toEqual(['Flock React Component Libflocksafety/flock-react-component-lib', 'Acme UIacme/acme · packages/ui']);
+		expect(radios.map((r) => r.getAttribute('aria-checked'))).toEqual(['true', 'false']);
+		expect(menuItem(items, 'Connect a design system')).toBeTruthy();
+		await press(radios[1] as HTMLElement);
+		await settle();
+		expect(app.calls.selectDesignSystem).toEqual([[ACME.id]]);
+		// Read afresh for the one now shown.
+		expect((app.calls.designSystemCatalog ?? []).length).toBeGreaterThan(1);
+	});
+
+	it('connect another from the switcher, with Cancel back to the one shown', async () => {
+		await open(() => ok(ready()), false, { listRepositories: async () => ok([]) });
+		await press(menuItem(await openMenu(switcher()), 'Connect a design system'));
+		await settle();
+		expect(text()).toContain('Connect your design system');
+		await press(button('Cancel'));
+		await settle();
+		expect(rows()).toHaveLength(5);
+	});
+
+	it('remove the one shown from the More menu, and nothing on disk is said to be deleted', async () => {
+		const app = await open(() => ok(ready()));
+		const items = await openMenu(button('More for Flock React Component Lib'));
+		await press(menuItem(items, 'Remove Flock React Component Lib'));
+		await settle();
+		expect(app.calls.removeDesignSystem).toEqual([[FUI_SYSTEM.id]]);
 	});
 });
 
@@ -205,7 +246,7 @@ describe('the tokens panel', () => {
 	});
 
 	it('is not drawn while the library is not connected, where there is nothing to show', async () => {
-		await open(() => ok({ state: 'no-clone', repository: 'flocksafety/flock-react-component-lib', lost: null }));
+		await open(() => ok({ state: 'none' }));
 		expect(divider()).toBeNull();
 		expect(document.querySelector('[role="tab"][aria-selected]')?.textContent).not.toBe('Colour');
 	});
@@ -277,7 +318,7 @@ describe('keeping it current', () => {
 		// Beside the buttons: Tokens, then Sync.
 		expect(problem.nextElementSibling?.textContent).toBe('Tokens');
 		expect(problem.nextElementSibling?.nextElementSibling?.textContent).toBe('Sync');
-		expect(document.querySelector('h2')!.parentElement!.contains(problem)).toBe(true);
+		expect(switcher().parentElement!.contains(problem)).toBe(true);
 	});
 
 	it('asks again, waiting for GitHub, when Sync is pressed', async () => {
@@ -319,24 +360,40 @@ describe('when there is no list', () => {
 		expect(text()).toContain('Reading the component library…');
 	});
 
-	it('shows the Connect screen when there is no library, and the list once one is connected', async () => {
+	it('shows the Connect screen when none is connected, and the list once one is', async () => {
 		let connected = false;
 		const app = fakeApp({
-			designSystemCatalog: async () => ok(connected ? ready() : { state: 'no-clone', repository: 'flocksafety/flock-react-component-lib', lost: null }),
-			listRepositories: async () => ok([]),
-			locateDesignSystem: async () => {
+			designSystemCatalog: async () => ok(connected ? ready() : { state: 'none' }),
+			designSystems: async () => ok(connected ? SYSTEMS : { systems: [], current: null }),
+			listRepositories: async () => ok([{ name: FUI_SYSTEM.repository, root: null }]),
+			clonePlan: async () => ok({ repository: FUI_SYSTEM.repository, place: { state: 'cloned', path: FUI_SYSTEM.root }, where: '~/GitHub/flock-react-component-lib', design: null }),
+			connectDesignSystem: async () => {
 				connected = true;
-				return ok(true);
+				return ok({ state: 'connected', id: FUI_SYSTEM.id });
 			},
 		});
 		(window as unknown as { workspace: unknown }).workspace = app.api;
 		current = await render(createElement(DesignSystem, { hidden: false }));
-		expect(text()).toContain('Connect the design system');
-		const locate = [...document.querySelectorAll('[role="tab"]')].find((t) => t.textContent === 'Locate')!;
-		await act(async () => void locate.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 })));
-		await press(button('Browse…'));
+		expect(text()).toContain('Connect your design system');
+		// Nothing to cancel back to.
+		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Cancel')).toBe(false);
+		await press(button('Choose a repository'));
+		await settle();
+		await act(async () => void [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === FUI_SYSTEM.repository)!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+		await settle();
+		await press(button('Connect'));
 		await settle();
 		expect(rows()).toHaveLength(5);
+		expect(switcher()).toBeTruthy();
+	});
+
+	it('says the one shown is no longer on this computer, with a way to remove it', async () => {
+		const app = await open(() => ok({ state: 'lost', name: 'Flock React Component Lib', root: '/h/GitHub/flock-react-component-lib' }));
+		expect(text()).toContain('Flock React Component Lib is no longer on this computer');
+		expect(text()).toContain('/h/GitHub/flock-react-component-lib');
+		await press(button('Remove Flock React Component Lib'));
+		await settle();
+		expect(app.calls.removeDesignSystem).toEqual([[FUI_SYSTEM.id]]);
 	});
 
 	it('says the clone has no copy of its branch, naming the clone and the branch, and reads no other', async () => {

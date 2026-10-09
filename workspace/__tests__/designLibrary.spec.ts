@@ -2,14 +2,15 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { DESIGN_SYSTEMS } from '../src/shared/catalog';
-import type { Catalog } from '../src/shared/contract';
-import { connectLibrary, DesignLibrary, fetchProblem, findLibrary, LIBRARY, locateLibrary, readLibrary, updateLibrary, whyNotLibrary } from '../src/main/services/designLibrary';
-import { FolderMemory } from '../src/main/services/folderMemory';
-import type { DiscoveryDeps } from '../src/main/services/discovery';
+import type { Catalog, ConnectedDesignSystem } from '../src/shared/contract';
+import { DesignLibrary, fetchProblem, readLibrary, updateLibrary } from '../src/main/services/designLibrary';
+import { DesignSystemsMemory } from '../src/main/services/designSystems';
 import { g } from './fixtures';
 
+const LIBRARY = 'flocksafety/flock-react-component-lib';
 const GITHUB_URL = `https://github.com/${LIBRARY}.git`;
+/** The library as connected: the whole repository, on develop, at `root`. */
+const at = (root: string, more: Partial<ConnectedDesignSystem> = {}): ConnectedDesignSystem & { branch: string } => ({ id: LIBRARY, name: 'FUI', repository: LIBRARY, root, folder: '', branch: 'develop', ...more }) as ConnectedDesignSystem & { branch: string };
 const story = (title: string) => `const meta = {\n  title: '${title}',\n};\nexport default meta;\n`;
 
 let home: string;
@@ -56,51 +57,9 @@ beforeEach(() => {
 
 afterEach(() => rmSync(home, { recursive: true, force: true }));
 
-describe('finding the library', () => {
-	const deps = (tree: Record<string, string | null>): DiscoveryDeps & { origin: (dir: string) => string | null } => ({
-		home: '/h',
-		exists: (p) => Object.keys(tree).some((dir) => p === `${dir}/.git`),
-		list: (dir) => Object.keys(tree).filter((d) => d.startsWith(`${dir}/`) && !d.slice(dir.length + 1).includes('/')).map((d) => d.slice(dir.length + 1)),
-		activity: () => 0,
-		origin: (dir) => tree[dir] ?? null,
-	});
-
-	it.each([
-		['https', 'https://github.com/flocksafety/flock-react-component-lib.git'],
-		['https with a token', 'https://x-access-token:abc@github.com/flocksafety/flock-react-component-lib'],
-		['ssh', 'git@github.com:flocksafety/flock-react-component-lib.git'],
-		['ssh://', 'ssh://git@github.com/flocksafety/flock-react-component-lib'],
-		['a different case', 'https://github.com/FlockSafety/Flock-React-Component-Lib.git'],
-	])('finds a clone whose origin is the library, written as %s, under any folder name', (_, url) => {
-		expect(findLibrary(deps({ '/h/GitHub/fui': url }))).toBe('/h/GitHub/fui');
-	});
-
-	it('does not take a clone of another repository, or a fork, or one with no origin', () => {
-		expect(
-			findLibrary(
-				deps({
-					'/h/GitHub/flock-coke': 'https://github.com/flocksafety/flock-coke.git',
-					'/h/GitHub/flock-react-component-lib': 'https://github.com/someone/flock-react-component-lib.git',
-					'/h/GitHub/loose': null,
-				}),
-			),
-		).toBeNull();
-	});
-
-	it('looks in the clone folder first', () => {
-		const tree = { '/elsewhere/fui': GITHUB_URL };
-		expect(findLibrary(deps(tree))).toBeNull();
-		expect(findLibrary({ ...deps(tree), folders: ['/elsewhere'] })).toBe('/elsewhere/fui');
-	});
-
-	it('reads the real .git/config of a clone', () => {
-		expect(findLibrary({ home, exists: (p) => p === join(clone, '.git'), list: (d) => (d === join(home, 'GitHub') ? ['flock-react-component-lib'] : []), activity: () => 0 })).toBe(clone);
-	});
-});
-
 describe('reading develop', () => {
 	it('reads origin/develop, with its commit and date', async () => {
-		const c = ready(await readLibrary(clone, 'unchanged'));
+		const c = ready(await readLibrary(at(clone), 'unchanged'));
 		expect(c.components.map((x) => x.id)).toEqual(['src/components/FSButton/FSButton.stories.tsx']);
 		expect(c.branch).toBe('develop');
 		expect(c.commit).toBe(g(remote, 'rev-parse', 'develop').trim());
@@ -115,9 +74,9 @@ describe('reading develop', () => {
 		const before = { head: g(clone, 'rev-parse', 'HEAD'), branch: g(clone, 'branch', '--show-current'), status: g(clone, 'status', '--porcelain'), refs: g(clone, 'for-each-ref') };
 		const unsaved = readFileSync(join(clone, 'src/components/FSButton/FSButton.stories.tsx'), 'utf8');
 
-		const c = ready(await readLibrary(clone, 'unchanged'));
+		const c = ready(await readLibrary(at(clone), 'unchanged'));
 		expect(c.components.map((x) => [x.name, x.group])).toEqual([['FSButton', 'Buttons']]);
-		await updateLibrary(clone);
+		await updateLibrary(clone, 'develop');
 
 		expect({ head: g(clone, 'rev-parse', 'HEAD'), branch: g(clone, 'branch', '--show-current'), status: g(clone, 'status', '--porcelain'), refs: g(clone, 'for-each-ref') }).toEqual(before);
 		expect(readFileSync(join(clone, 'src/components/FSButton/FSButton.stories.tsx'), 'utf8')).toBe(unsaved);
@@ -134,51 +93,57 @@ describe('reading develop', () => {
 
 		it('are read beside the components, from the same commit', async () => {
 			pushDevelop(TOKEN_FILES);
-			await updateLibrary(clone);
-			const c = ready(await readLibrary(clone, 'unchanged'));
+			await updateLibrary(clone, 'develop');
+			const c = ready(await readLibrary(at(clone), 'unchanged'));
 			expect(c.tokens.source).toBe('theme files');
 			expect(c.tokens.tokens.find((t) => t.path === 'palette.light.primary.main')?.value).toBe('#108062');
 		});
 
 		it('take the library’s token pages out of the components list, as the panel shows them instead (decision 22)', async () => {
 			pushDevelop(TOKEN_FILES);
-			await updateLibrary(clone);
-			const c = ready(await readLibrary(clone, 'unchanged'));
+			await updateLibrary(clone, 'develop');
+			const c = ready(await readLibrary(at(clone), 'unchanged'));
 			expect(c.components.map((x) => x.group)).not.toContain('Design Tokens');
 			expect(c.components.map((x) => x.name)).toContain('FSButton');
 		});
 
 		it('take out a token group however the library names it', async () => {
 			pushDevelop({ ...TOKEN_FILES, 'src/docs/Tokens.stories.tsx': story('Tokens/Spacing') });
-			await updateLibrary(clone);
-			expect(ready(await readLibrary(clone, 'unchanged')).components.map((x) => x.group)).not.toContain('Tokens');
+			await updateLibrary(clone, 'develop');
+			expect(ready(await readLibrary(at(clone), 'unchanged')).components.map((x) => x.group)).not.toContain('Tokens');
 		});
 
 		it('leave those pages in the list when no tokens were found, so the tokens are never in neither place', async () => {
 			pushDevelop({ 'src/uxDocs/designTokens/PaletteColors.stories.tsx': story('Design Tokens/Color Palette') });
-			await updateLibrary(clone);
-			const c = ready(await readLibrary(clone, 'unchanged'));
+			await updateLibrary(clone, 'develop');
+			const c = ready(await readLibrary(at(clone), 'unchanged'));
 			expect(c.tokens.source).toBeNull();
 			expect(c.components.map((x) => x.name)).toContain('Color Palette');
 		});
 	});
 
+	it('reads only the design system’s own package in a monorepo, not an app beside it', async () => {
+		pushDevelop({ 'package.json': '{}', 'packages/ui/package.json': '{}', 'packages/ui/Card.stories.tsx': story('Cards/Card'), 'apps/web/package.json': '{}', 'apps/web/Page.stories.tsx': story('Pages/Page') });
+		await updateLibrary(clone, 'develop');
+		expect(ready(await readLibrary(at(clone, { folder: 'packages/ui' }), 'unchanged')).components.map((x) => x.name)).toEqual(['Card']);
+	});
+
 	it('reads develop from GitHub, not a local develop that is behind or ahead of it', async () => {
 		write(clone, { 'src/components/FSLocal/FSLocal.stories.tsx': story('Inputs/FSLocal') });
 		commit(clone, 'local only, on develop');
-		expect(ready(await readLibrary(clone, 'unchanged')).components.map((x) => x.name)).toEqual(['FSButton']);
+		expect(ready(await readLibrary(at(clone), 'unchanged')).components.map((x) => x.name)).toEqual(['FSButton']);
 	});
 
 	it('says there is no develop, and reads no other branch instead', async () => {
 		g(clone, 'update-ref', '-d', 'refs/remotes/origin/develop');
-		expect(await readLibrary(clone, 'unchanged')).toEqual({ state: 'no-branch', root: clone, branch: 'develop' });
+		expect(await readLibrary(at(clone), 'unchanged')).toEqual({ state: 'no-branch', root: clone, branch: 'develop' });
 	});
 
 	it('reads every story in a folder, many at once, the same as reading each', async () => {
 		const many = Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`src/components/FSItem${i}/FSItem${i}.stories.tsx`, story(`Data Display/FSItem${i}`)]));
 		pushDevelop({ ...many, 'src/compositeComponents/FSPopovers/a.stories.tsx': story('Popovers/A’s “quoted”'), 'src/compositeComponents/FSPopovers/b.stories.tsx': story('Popovers/B') });
-		await updateLibrary(clone);
-		const c = ready(await readLibrary(clone, 'unchanged'));
+		await updateLibrary(clone, 'develop');
+		const c = ready(await readLibrary(at(clone), 'unchanged'));
 		// Each story file is a component, as Storybook lists them: the two in one folder are two.
 		expect(c.components).toHaveLength(33);
 		expect(c.components.every((x) => x.group !== 'Ungrouped')).toBe(true);
@@ -188,16 +153,16 @@ describe('reading develop', () => {
 
 describe('bringing develop up to date', () => {
 	it('fetches new commits on develop, and the list and the header change', async () => {
-		const before = ready(await readLibrary(clone, 'unchanged'));
+		const before = ready(await readLibrary(at(clone), 'unchanged'));
 		pushDevelop({ 'src/components/FSChip/FSChip.stories.tsx': story('Data Display/FSChip') });
-		expect(await updateLibrary(clone)).toBe('updated');
-		const after = ready(await readLibrary(clone, 'updated'));
+		expect(await updateLibrary(clone, 'develop')).toBe('updated');
+		const after = ready(await readLibrary(at(clone), 'updated'));
 		expect(after.components.map((x) => x.name)).toEqual(['FSButton', 'FSChip']);
 		expect(after.commit).not.toBe(before.commit);
 	});
 
 	it('says unchanged when there was nothing new', async () => {
-		expect(await updateLibrary(clone)).toBe('unchanged');
+		expect(await updateLibrary(clone, 'develop')).toBe('unchanged');
 	});
 
 	it('moves no other ref: a branch on GitHub is not fetched', async () => {
@@ -205,16 +170,16 @@ describe('bringing develop up to date', () => {
 		write(upstream, { 'x.txt': 'x' });
 		commit(upstream, 'other');
 		g(upstream, 'push', '-q', 'origin', 'other');
-		await updateLibrary(clone);
+		await updateLibrary(clone, 'develop');
 		expect(g(clone, 'for-each-ref', '--format=%(refname)', 'refs/remotes/origin/other')).toBe('');
 	});
 
 	it('says why when it cannot fetch, and the list it has is still read', async () => {
 		g(clone, 'config', `url.${join(home, 'gone.git')}.insteadOf`, GITHUB_URL);
 		g(clone, 'config', '--unset', `url.${remote}.insteadOf`);
-		const outcome = await updateLibrary(clone);
+		const outcome = await updateLibrary(clone, 'develop');
 		expect(outcome).toEqual({ failed: expect.stringMatching(/^(Git could not update the library|GitHub would not let)/) });
-		expect(ready(await readLibrary(clone, outcome)).components.map((x) => x.name)).toEqual(['FSButton']);
+		expect(ready(await readLibrary(at(clone), outcome)).components.map((x) => x.name)).toEqual(['FSButton']);
 	});
 
 	it.each([
@@ -232,15 +197,28 @@ describe('bringing develop up to date', () => {
 describe('what the tab is told', () => {
 	const catalogOf = (update: string): Catalog => ({ state: 'ready', commit: 'c', committedAt: 'd', update: update as never, components: [] });
 
-	it('says there is no clone, naming the library', async () => {
-		expect(await new DesignLibrary({ find: () => ({ root: null, lost: '/gone' }) }).catalog(false)).toEqual({ state: 'no-clone', repository: LIBRARY, lost: '/gone' });
+	const memory = (system: ConnectedDesignSystem | null) => {
+		const m = new DesignSystemsMemory(join(home, 'design-system.json'));
+		if (system) m.add(system);
+		return m;
+	};
+
+	it('says none is connected, or that the one shown is gone from this computer', async () => {
+		expect(await new DesignLibrary({ systems: memory(null) }).catalog(false)).toEqual({ state: 'none' });
+		expect(await new DesignLibrary({ systems: memory(at(join(home, 'gone'))) }).catalog(false)).toEqual({ state: 'lost', name: 'FUI', root: join(home, 'gone') });
+	});
+
+	it('finds the branch of one kept by an earlier version, its repository’s default, and keeps it', async () => {
+		const systems = memory(at(clone, { branch: null as never }));
+		expect(ready(await new DesignLibrary({ systems }).catalog(false)).branch).toBe('develop');
+		expect(systems.current()?.branch).toBe('develop');
 	});
 
 	it('answers at once with what the clone has, then the next ask with refresh waits for the one fetch it started', async () => {
 		let finish: (o: 'updated') => void = () => undefined;
 		let fetches = 0;
 		const library = new DesignLibrary({
-			find: () => ({ root: clone, lost: null }),
+			systems: memory(at(clone)),
 			update: () => {
 				fetches++;
 				return new Promise((r) => (finish = r));
@@ -263,7 +241,7 @@ describe('what the tab is told', () => {
 	});
 
 	it('end to end: a new component on GitHub appears after the refresh', async () => {
-		const library = new DesignLibrary({ find: () => ({ root: clone, lost: null }) });
+		const library = new DesignLibrary({ systems: memory(at(clone)) });
 		pushDevelop({ 'src/components/FSChip/FSChip.stories.tsx': story('Data Display/FSChip') });
 		expect(ready(await library.catalog(false)).components.map((x) => x.name)).toEqual(['FSButton']);
 		const refreshed = ready(await library.catalog(true));
@@ -272,104 +250,3 @@ describe('what the tab is told', () => {
 	});
 });
 
-describe('connecting the library', () => {
-	const at = (tree: Record<string, string | null>) => ({
-		origin: (dir: string) => tree[dir] ?? null,
-		exists: (p: string) => Object.keys(tree).some((dir) => p === `${dir}/.git`),
-	});
-	const why = (dir: string, tree: Record<string, string | null>) => whyNotLibrary(dir, at(tree).origin, at(tree).exists);
-
-	it('takes a clone whose origin is the library, in any form and case', () => {
-		expect(why('/a', { '/a': 'git@github.com:FlockSafety/flock-react-component-lib.git' })).toBeNull();
-		expect(why('/a', { '/a': 'https://github.com/flocksafety/flock-react-component-lib' })).toBeNull();
-	});
-
-	it('refuses, in words, a plain folder, a clone of nothing on GitHub, another repository and a fork', () => {
-		expect(why('/plain', {})).toMatch(/is not a git repository/);
-		expect(why('/a', { '/a': null })).toMatch(/is not a clone of a GitHub repository/);
-		expect(why('/a', { '/a': 'https://github.com/flocksafety/flock-coke.git' })).toBe(`/a is a clone of flocksafety/flock-coke, not ${LIBRARY}.`);
-		expect(why('/a', { '/a': 'https://github.com/someone/flock-react-component-lib.git' })).toMatch(/is a clone of someone\/flock-react-component-lib, not/);
-	});
-
-	const memory = (kept: string | null) => ({ read: () => kept, write: () => undefined }) as unknown as FolderMemory;
-	const libraryAt = (good: string[]) => (dir: string) => (good.includes(dir) ? null : 'not it');
-
-	it('uses the connected folder while it is the library, over one found by itself', () => {
-		expect(locateLibrary(memory('/connected'), () => '/found', libraryAt(['/connected', '/found']))).toEqual({ root: '/connected', lost: null });
-	});
-
-	it('finds one by itself when nothing is connected, or the connected one is gone, and says what was lost only when none is found', () => {
-		expect(locateLibrary(memory(null), () => '/found', libraryAt(['/found']))).toEqual({ root: '/found', lost: null });
-		expect(locateLibrary(memory('/moved'), () => '/found', libraryAt(['/found']))).toEqual({ root: '/found', lost: null });
-		expect(locateLibrary(memory('/moved'), () => null, libraryAt([]))).toEqual({ root: null, lost: '/moved' });
-		expect(locateLibrary(memory(null), () => null, libraryAt([]))).toEqual({ root: null, lost: null });
-	});
-
-	it('connects a real clone of the library and remembers it, and the remembered one is read back', async () => {
-		const kept = new FolderMemory(join(home, 'settings', 'design-system.json'), 'folder');
-		await connectLibrary(clone, kept);
-		expect(kept.read()).toBe(clone);
-		expect(locateLibrary(kept, () => null)).toEqual({ root: clone, lost: null });
-	});
-
-	it('connects nothing when the folder is not the library, or has no develop to read', async () => {
-		const kept = new FolderMemory(join(home, 'settings', 'design-system.json'), 'folder');
-		await expect(connectLibrary(upstream, kept)).rejects.toThrow(/is not a clone of a GitHub repository/);
-		g(clone, 'update-ref', '-d', 'refs/remotes/origin/develop');
-		await expect(connectLibrary(clone, kept)).rejects.toThrow(/has no develop branch from GitHub/);
-		expect(kept.read()).toBeNull();
-	});
-
-	it('drops a connection that no longer points at the library', async () => {
-		const kept = new FolderMemory(join(home, 'settings', 'design-system.json'), 'folder');
-		await connectLibrary(clone, kept);
-		g(clone, 'remote', 'set-url', 'origin', 'https://github.com/flocksafety/flock-coke.git');
-		expect(locateLibrary(kept, () => null)).toEqual({ root: null, lost: clone });
-	});
-});
-
-describe('another design system', () => {
-	// A second library, set up like any other Storybook library: its own repository, `main` as its branch, no hosted Storybook.
-	const OTHER = { repository: 'acme/ui-kit', branch: 'main', storybook: null };
-	const OTHER_URL = `https://github.com/${OTHER.repository}.git`;
-	let other: string;
-	let otherUpstream: string;
-	beforeEach(() => {
-		DESIGN_SYSTEMS.push(OTHER);
-		const bare = join(home, 'other.git');
-		otherUpstream = join(home, 'other-upstream');
-		other = join(home, 'GitHub', 'ui-kit');
-		g(home, 'init', '-q', '--bare', '-b', 'main', bare);
-		g(home, 'init', '-q', '-b', 'main', otherUpstream);
-		g(otherUpstream, 'remote', 'add', 'origin', bare);
-		write(otherUpstream, { 'packages/button/Button.stories.jsx': story('Actions/Button'), 'packages/button/index.jsx': '' });
-		commit(otherUpstream, 'first');
-		g(otherUpstream, 'push', '-q', 'origin', 'main');
-		g(home, 'clone', '-q', bare, other);
-		g(other, 'remote', 'set-url', 'origin', OTHER_URL);
-		g(other, 'config', `url.${bare}.insteadOf`, OTHER_URL);
-	});
-	afterEach(() => void DESIGN_SYSTEMS.splice(DESIGN_SYSTEMS.indexOf(OTHER), 1));
-
-	it('is found, read on its own branch, and lists its stories wherever they are, with nothing written for it', async () => {
-		expect(findLibrary({ home, exists: (p) => p === join(other, '.git'), list: (d) => (d === join(home, 'GitHub') ? ['ui-kit'] : []), activity: () => 0 })).toBe(other);
-		const c = ready(await readLibrary(other, 'unchanged'));
-		expect(c.branch).toBe('main');
-		expect(c.components).toEqual([
-			{ id: 'packages/button/Button.stories.jsx', name: 'Button', group: 'Actions', subtitle: null, storybook: null, source: 'https://github.com/acme/ui-kit/tree/main/packages/button' },
-		]);
-	});
-
-	it('is brought up to date on its own branch, and a story added there is in the list', async () => {
-		write(otherUpstream, { 'packages/card/Card.stories.tsx': story('Surfaces/Card') });
-		commit(otherUpstream, 'card');
-		g(otherUpstream, 'push', '-q', 'origin', 'main');
-		expect(await updateLibrary(other)).toBe('updated');
-		expect(ready(await readLibrary(other, 'updated')).components.map((x) => x.name)).toEqual(['Button', 'Card']);
-	});
-
-	it('says it has no copy of its own branch, naming that branch', async () => {
-		g(other, 'update-ref', '-d', 'refs/remotes/origin/main');
-		expect(await readLibrary(other, 'unchanged')).toEqual({ state: 'no-branch', root: other, branch: 'main' });
-	});
-});

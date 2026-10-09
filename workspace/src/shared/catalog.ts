@@ -1,7 +1,7 @@
 /**
- * A design system library the Design System tab accepts: the repository, the branch that is its source of truth, and
- * where its Storybook is hosted, if anywhere. Everything the tab knows about a library that it cannot read from the
- * library itself. A second design system is one more entry.
+ * The design system the Design System tab reads, as the catalog needs it: the repository, the branch that is its source
+ * of truth (the repository's default, decision 24), and where its Storybook is hosted, if anywhere. Made from what was
+ * connected (`ConnectedDesignSystem`); nothing here decides what may be connected (decision 23).
  */
 export interface DesignSystem {
 	/** `owner/repo` on GitHub. */
@@ -12,16 +12,20 @@ export interface DesignSystem {
 	storybook: string | null;
 }
 
-export const DESIGN_SYSTEMS: DesignSystem[] = [
-	{ repository: 'flocksafety/flock-react-component-lib', branch: 'develop', storybook: 'https://develop--6617f3c579abb5c5e780fddc.chromatic.com/' },
-];
+/**
+ * Where a repository's Storybook is hosted, for the ones the app knows: a hint, since a library does not say it in its
+ * files. Any other design system has no Storybook links, and is read the same in every other way.
+ */
+const HOSTED_STORYBOOKS: Record<string, string> = {
+	'flocksafety/flock-react-component-lib': 'https://develop--6617f3c579abb5c5e780fddc.chromatic.com/',
+};
 
-/** The design system whose repository is `repo` (`owner/repo`, any case), or null. */
-export const designSystemNamed = (repo: string | null): DesignSystem | null =>
-	repo === null ? null : (DESIGN_SYSTEMS.find((d) => d.repository.toLowerCase() === repo.toLowerCase()) ?? null);
-
-/** Whether `repo` is a design system library: by name when one is chosen to clone, by `origin` when one is found. */
-export const isDesignSystem = (repo: string | null): boolean => designSystemNamed(repo) !== null;
+/** The design system the catalog reads, from what was connected. */
+export const designSystemOf = ({ repository, branch }: { repository: string; branch: string }): DesignSystem => ({
+	repository,
+	branch,
+	storybook: HOSTED_STORYBOOKS[repository.toLowerCase()] ?? null,
+});
 
 /**
  * Whether a Storybook group holds the library's token pages (`Design Tokens`, `Tokens`): they are documentation of the
