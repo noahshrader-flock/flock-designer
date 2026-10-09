@@ -43,13 +43,15 @@ prototype, and a project with only codebase work links to it on GitHub (**Built 
 repository so anyone can follow that link (see [flock-designer.md, 3.8](flock-designer.md#38--move-a-prototype-into-the-code)).
 
 **Left:**
-1. **Decide where Build in the codebase's run shows.** Today it starts the agent in the app and opens the codebase
-   screen to show the run, the last way into that screen. Recommended: hand it to Claude Code in the product
-   repository, as prototypes are made from there (a `flkd` command and skill that print the task and record the work).
+1. ~~Decide where Build in the codebase's run shows.~~ **Done 2026-10-08:** it is handed to Claude Code in VS Code (or
+   a terminal), where the agent is watched. **Noah's run by hand:** Build in the codebase on a prototype, press Enter
+   in the conversation VS Code opens, and see the audit and the code made there.
 2. **Confirm Hand off works from Claude Code alone** (the repository's `npm run handoff` and the shared handoff skill),
    then remove the app's Hand off dialog and report.
 3. **Then remove the codebase screen and what only it uses:** the preview runtime and local build, Share for review
-   (its pull request and CI wait), the editor hand-over buttons, and the pushing of work branches.
+   (its pull request and CI wait), the editor hand-over buttons, and the pushing of work branches. Nothing in the app
+   opens codebase work any more; only the older `fd/` prototypes (step 4) still open through that screen. The Hand off
+   dialog and its report can go now: nothing reaches them.
 4. **Check the older prototypes made as code on `fd/` branches,** which open through that screen: make them records
    with a link, or keep a way to see them, depending on whether anyone still uses them.
 
