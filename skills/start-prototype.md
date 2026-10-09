@@ -13,7 +13,8 @@ node ../flock-designer/workspace/bin/flkd.mjs new-prototype --project <id> --tit
 ```
 
 - **`<id>`** is the project's folder in `../flock-designer/projects/`: the existing one when this continues a
-  project, otherwise a short kebab-case name for it (`admin-usage`). `--title` is needed only for a new project.
+  project, otherwise a short kebab-case name for it (`admin-usage`) that you choose from the request: do not ask the
+  person about it. `--title` is needed only for a new project.
 - **Each run is a new version** (`v1-i1`, then `v2-i1`): run it again for "another version" or "a different idea",
   once per version asked for, finishing each before starting the next.
 - **"Based on V1"**: say so in the note, and start from that version's newest source,
@@ -23,6 +24,9 @@ node ../flock-designer/workspace/bin/flkd.mjs new-prototype --project <id> --tit
   out instructions about how to make it ("mock data only", "a prototype, not codebase work"): the skills already
   say those.
 - It is modelled on the branch the repository is on; `--from <branch>` names another.
+
+If you were sent here, the path is decided: it is a prototype. Do not ask whether to prototype or build it in the
+codebase.
 
 If it says something must be installed first, tell the person what, and stop.
 
