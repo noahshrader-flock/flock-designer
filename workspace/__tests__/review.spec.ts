@@ -515,6 +515,26 @@ describe('the prototype’s states', () => {
 		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/']);
 	});
 
+	it('name the state a comment was made in, on its card, and nothing for the first', async () => {
+		const anchor = { route: '/', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
+		const app = fakeApp({
+			openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1/', states: ['default', 'panel'] }),
+			readComments: async () =>
+				ok([
+					comment(1, 'On the panel', { anchor: { ...anchor, state: '?state=panel' } }),
+					comment(2, 'On the page as it opens', { anchor: { ...anchor, state: '?state=default' } }),
+					comment(3, 'Before states were recorded', { anchor }),
+				]),
+		});
+		await open(app);
+		await settle();
+		await sidebar();
+		expect(cardFor('On the panel').textContent).toContain('State: panel');
+		expect(cardFor('On the panel').textContent).not.toContain('?state=');
+		expect(cardFor('On the page as it opens').textContent).not.toContain('State:');
+		expect(cardFor('Before states were recorded').textContent).not.toContain('State:');
+	});
+
 	it('are not offered for a prototype with one, or none', async () => {
 		await open(withStates(['default']));
 		await settle();

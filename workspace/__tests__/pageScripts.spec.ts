@@ -5,8 +5,8 @@ import { sanitizeAnchor } from '../src/shared/anchor';
 import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, SINGLE_PAGE, layerVisibleScript, resolveScript } from '../src/shared/pageScripts';
 import type { CommentAnchor, MarkerRequest } from '../src/shared/contract';
 
-const page = (html: string, url = 'http://localhost:3000/users#/list') => {
-	const dom = new JSDOM(`<!doctype html><html><head></head><body>${html}</body></html>`, {
+const page = (html: string, url = 'http://localhost:3000/users#/list', head = '') => {
+	const dom = new JSDOM(`<!doctype html><html><head>${head}</head><body>${html}</body></html>`, {
 		url,
 		runScripts: 'outside-only',
 		pretendToBeVisual: true,
@@ -239,6 +239,37 @@ describe('placing comments on reopening', () => {
 	it('still draws comments from before the state was recorded, wherever they are', () => {
 		const w = page(CARD, 'http://localhost:3000/users?state=error#/list');
 		expect((w.eval(resolveScript([req(1, { selector: 'main' })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('found');
+	});
+
+	describe('on a prototype, which lists its states', () => {
+		const TAG = '<meta name="flkd-states" content="default,panel">';
+		const at = (query: string) => page(CARD, `http://localhost:3000/demo/v1-i1/${query}`, TAG);
+		const placed = (w: ReturnType<typeof page>, state: string) =>
+			(w.eval(resolveScript([req(1, { route: '/demo/v1-i1/', selector: 'main', state })], 'nonce')) as Array<{ state: string }>)[0]?.state;
+
+		it('counts its first state asked for by name as the page as it opens, either way round', () => {
+			// Made after the bar a prototype once drew switched back to the first state, which it wrote as ?state=default.
+			expect(placed(at(''), '?state=default')).toBe('found');
+			expect(placed(at('?state=default'), '')).toBe('found');
+		});
+
+		it('still tells its other states apart', () => {
+			expect(placed(at(''), '?state=panel')).toBe('otherState');
+			expect(placed(at('?state=panel'), '?state=default')).toBe('otherState');
+			expect(placed(at('?state=panel'), '?state=panel')).toBe('found');
+		});
+
+		it('records a comment made in its first state as made in no state', async () => {
+			const w = at('?state=default');
+			const picked = w.eval(PICK_SCRIPT) as Promise<CommentAnchor>;
+			click(w, w.document.querySelector('main')!);
+			expect((await picked).state).toBe('');
+		});
+	});
+
+	it('compares the query as it is on a page that lists no states, such as a real app', () => {
+		const w = page(CARD, 'http://localhost:3000/users#/list');
+		expect((w.eval(resolveScript([req(1, { selector: 'main', state: '?state=default' })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('otherState');
 	});
 
 	it('replaces earlier markers, and clears them when given nothing', () => {

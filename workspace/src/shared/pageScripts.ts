@@ -1,5 +1,6 @@
 import { sanitizeAnchor } from './anchor';
 import type { CommentAnchor, MarkerRequest, MarkerResult, PinEvent } from './contract';
+import { STATES_META } from './prototypeStates';
 
 /**
  * The code the app runs *inside* a preview page, as source strings.
@@ -51,7 +52,13 @@ const HELPERS = String.raw`
   var route = function () { return place(location.pathname + location.hash); };
   // Which state of the page a prototype is showing. Recorded with a comment and compared when the
   // comment is placed again, so the two must read it the same way: one definition, used by both.
-  var pageState = function () { return location.search.slice(0, 200); };
+  // A prototype lists its states in its own tag, the first being the page as it opens; that one asked for by
+  // name (?state=default, as the bars prototypes once drew wrote it) is the same as no query
+  // (stateOfQuery in shared/prototypeStates says so for the app). A page with no tag is compared as it is.
+  var statesTag = doc.querySelector('meta[name="${STATES_META}"]');
+  var firstState = statesTag ? String(statesTag.getAttribute('content') || '').split(',')[0] : null;
+  var asState = function (q) { return firstState && q === '?state=' + firstState ? '' : q; };
+  var pageState = function () { return asState(location.search.slice(0, 200)); };
   var segment = function (el) {
     var ref = el.getAttribute('data-e2e-ref');
     if (ref) return '[data-e2e-ref="' + ref.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"]';
@@ -331,7 +338,7 @@ ${HELPERS}
     var a = item.anchor;
     if (place(a.route) !== current) { results.push({ id: item.id, state: 'elsewhere' }); return; }
     // Comments from before the state was recorded have none, and are shown wherever their element is.
-    if (a.state !== undefined && a.state !== pageState()) { results.push({ id: item.id, state: 'otherState' }); return; }
+    if (a.state !== undefined && asState(a.state) !== pageState()) { results.push({ id: item.id, state: 'otherState' }); return; }
     var el = null, state = 'found';
     try { var hits = doc.querySelectorAll(a.selector); if (hits.length === 1) el = hits[0]; } catch (e) {}
     // The selector did not match, so follow the text instead. The stored text is a prefix cut at 80

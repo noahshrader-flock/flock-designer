@@ -189,6 +189,7 @@ const Commenting = ({
 						)}
 						<CommentList
 							comments={comments}
+							states={config.states}
 							addressed={(c) => prototypeAddressed(c, config.projectId, config.name)}
 						/>
 					</div>,

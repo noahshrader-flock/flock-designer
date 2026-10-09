@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { statesOf, withState } from '../src/shared/prototypeStates';
+import { stateOfQuery, statesOf, withState } from '../src/shared/prototypeStates';
 
 /** A prototype's states, as its built page lists them, and the address of each. */
 
@@ -12,6 +12,25 @@ describe('statesOf', () => {
 		expect(statesOf('<h1>Demo</h1>')).toEqual([]);
 		expect(statesOf('<meta name="flkd-states" content="">')).toEqual([]);
 		expect(statesOf('<meta name="flkd-states" content="default,Has Spaces">')).toEqual([]);
+	});
+});
+
+describe('stateOfQuery', () => {
+	const STATES = ['default', 'no-match', 'panel'];
+
+	it('is the state’s name, from the query a comment recorded', () => {
+		expect(stateOfQuery('?state=panel', STATES)).toBe('panel');
+	});
+
+	it('is nothing for the state the page opens in, asked for by name or not at all', () => {
+		expect(stateOfQuery('', STATES)).toBeNull();
+		// As the bars prototypes once drew wrote it, on switching back.
+		expect(stateOfQuery('?state=default', STATES)).toBeNull();
+	});
+
+	it('is the query as it was for anything else, such as a real app’s', () => {
+		expect(stateOfQuery('?tab=usage&state=error', [])).toBe('?tab=usage&state=error');
+		expect(stateOfQuery('?state=error', [])).toBe('error');
 	});
 });
 

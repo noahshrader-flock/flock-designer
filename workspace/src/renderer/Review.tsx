@@ -764,6 +764,7 @@ export const Review = ({
 								)}
 								<CommentList
 									comments={comments}
+									states={local.phase.kind === 'running' ? local.phase.states : undefined}
 									actions={(comment) =>
 										// The agent runs on this machine, against the product repository: without it there is nothing to build with.
 										!comment.resolved && checkout ? (

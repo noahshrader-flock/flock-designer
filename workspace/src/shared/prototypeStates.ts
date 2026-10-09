@@ -18,6 +18,19 @@ export const statesOf = (html: string): string[] => {
 	return names.every((n) => STATE_NAME.test(n)) ? names : [];
 };
 
+/**
+ * The state a comment was made in, from the query it recorded (`anchor.state`): the state's name, or `null` for the
+ * state the page opens in, whether asked for by name (`?state=default`, as the bars prototypes once drew wrote it) or
+ * not at all. Anything else (a real app's query) is given back as it was. The page scripts compare states by the same
+ * rule (`pageScripts.ts`).
+ */
+export const stateOfQuery = (query: string, states: string[]): string | null => {
+	if (query === '') return null;
+	const name = /^\?state=([^&]*)$/.exec(query)?.[1];
+	if (name === undefined || !STATE_NAME.test(name)) return query;
+	return name === states[0] ? null : name;
+};
+
 /** The page's address in a state; `null` is the one it opens in, which is the page's own address. */
 export const withState = (url: string, state: string | null): string => {
 	const [base] = url.split('?') as [string];

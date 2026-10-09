@@ -1,6 +1,7 @@
 import { CircleCheckIcon, EllipsisVerticalIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import type { MarkerState, ReviewComment } from '../../shared/contract';
+import { stateOfQuery } from '../../shared/prototypeStates';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -18,16 +19,19 @@ const NOTE: Record<MarkerState, string | null> = {
 /**
  * Every comment on the iteration, as cards: who wrote it, what it says, the spot it was made on, and a menu to resolve
  * or delete it. `actions` puts more at the top of a card's menu (the app's Address), and `addressed` says on a card
- * what the agent did with it, both left to the screen this sits in.
+ * what the agent did with it, both left to the screen this sits in. `states` are the prototype's, so a card can name
+ * the state it was made in.
  */
 export const CommentList = ({
 	comments,
 	actions,
 	addressed,
+	states = [],
 }: {
 	comments: Comments;
 	actions?: (comment: ReviewComment) => ReactNode;
 	addressed?: (comment: ReviewComment) => ReactNode;
+	states?: string[];
 }) => {
 	// Deleting cannot be undone, so it asks first, on the card itself (a dialog would have to take the preview's place).
 	const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
@@ -42,6 +46,7 @@ export const CommentList = ({
 				const state = comment.resolved ? undefined : comments.placed.get(comment.id);
 				const n = comments.numberOf(comment.id);
 				const note = comment.addressedAt !== null ? addressed?.(comment) : null;
+				const madeIn = comment.anchor?.state === undefined ? null : stateOfQuery(comment.anchor.state, states);
 				return (
 					<div
 						key={comment.id}
@@ -101,7 +106,7 @@ export const CommentList = ({
 							)}
 							<p className="text-sm">{comment.body}</p>
 							{comment.picture && <img className="max-w-[240px] rounded border" src={comment.picture} alt={`The spot comment ${n || ''} was made on`} />}
-							{comment.anchor?.state && <span className="text-muted-foreground text-xs">State: {comment.anchor.state}</span>}
+							{madeIn && <span className="text-muted-foreground text-xs">State: {madeIn}</span>}
 							{comment.anchor && state === 'elsewhere' && <span className="text-muted-foreground text-xs">On {comment.anchor.route}</span>}
 							{state && NOTE[state] && <span className="text-warning text-xs">{NOTE[state]}</span>}
 						</div>
