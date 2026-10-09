@@ -94,14 +94,23 @@ export const openSession = (editor: string, { session, root }: AgentSession, ope
 export const openPrompt = (editor: string, root: string, prompt: string, settle = 2500): Promise<void> =>
 	openConversation(editor, root, claudeLink({ prompt }), () => undefined, settle);
 
-/** Quoted for a shell, when it is anything but plain. */
-const q = (s: string) => (/^[\w./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`);
+/**
+ * One word for the person's own terminal, quoted as that platform's shell reads it: a Mac's (and Linux's) takes single
+ * quotes, and only when the word is not plain; Windows' takes double quotes.
+ */
+const quote = (s: string, platform: NodeJS.Platform): string =>
+	platform === 'win32' ? `"${s.replace(/"/g, '\\"')}"` : /^[\w./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;
+
+/** In `root`, run `claude` with `args` (already quoted): Windows needs `cd /d` to change drive too. */
+const terminalLine = (root: string, claude: string, args: string, platform: NodeJS.Platform): string =>
+	`cd ${platform === 'win32' ? '/d ' : ''}${quote(root, platform)} && ${quote(claude, platform)} ${args}`;
 
 /** Without VS Code: the same conversation, from a terminal. */
-export const resumeCommand = (claude: string, { session, root }: AgentSession): string => {
+export const resumeCommand = (claude: string, { session, root }: AgentSession, platform: NodeJS.Platform = process.platform): string => {
 	if (!UUID.test(session)) throw new Error('That is not a session.');
-	return `cd ${q(root)} && ${q(claude)} --resume ${session}`;
+	return terminalLine(root, claude, `--resume ${session}`, platform);
 };
 
 /** Without VS Code: a new conversation, from a terminal, in `root`, with its first prompt. */
-export const startCommand = (claude: string, root: string, prompt: string): string => `cd ${q(root)} && ${q(claude)} ${q(prompt)}`;
+export const startCommand = (claude: string, root: string, prompt: string, platform: NodeJS.Platform = process.platform): string =>
+	terminalLine(root, claude, quote(prompt, platform), platform);

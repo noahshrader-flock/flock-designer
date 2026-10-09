@@ -1210,13 +1210,14 @@ export const registerIpc = ({
 			assertUsableProjectId(projectId);
 			assertPrototypeName(name);
 			const canonical = opened.require(root);
-			const { branch, exists, recorded, records } = await codebaseWorkOf(root, projectId);
+			const { branch, exists, recorded, started, records } = await codebaseWorkOf(root, projectId);
 			const basedOn = records.find((i) => i.name === name)?.basedOn;
 			const here = await readCheckout(canonical);
 			return {
 				branch,
 				exists,
 				recorded,
+				started,
 				repository: basename(canonical),
 				basedOn: basedOn ? { repository: basedOn.repository, branch: basedOn.branch } : null,
 				current: here.branch,

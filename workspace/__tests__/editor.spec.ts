@@ -69,3 +69,12 @@ describe('a new conversation from a terminal', () => {
 		expect(startCommand('/bin/claude', "/Users/a b/flock-coke", "Read /tmp/it's.md")).toBe(`cd '/Users/a b/flock-coke' && /bin/claude 'Read /tmp/it'\\''s.md'`);
 	});
 });
+
+describe('the terminal commands on Windows', () => {
+	it('change drive and folder, and quote the Windows way', () => {
+		expect(startCommand('C:\\Users\\pat\\.local\\bin\\claude.exe', 'D:\\code\\flock coke', 'Read "C:\\a b.md" now', 'win32')).toBe(
+			'cd /d "D:\\code\\flock coke" && "C:\\Users\\pat\\.local\\bin\\claude.exe" "Read \\"C:\\a b.md\\" now"',
+		);
+		expect(resumeCommand('claude', { session: id, root: 'D:\\code\\coke' }, 'win32')).toBe(`cd /d "D:\\code\\coke" && "claude" --resume ${id}`);
+	});
+});

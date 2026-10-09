@@ -180,8 +180,10 @@ export interface MoveToCodePlan {
 	branch: string;
 	/** That branch already exists in this checkout: the work continues on it rather than starting a new one. */
 	exists: boolean;
-	/** The project already has codebase work recorded, so there is nothing to start. */
+	/** The project already has codebase work recorded. */
 	recorded: boolean;
+	/** The work was started before (its branch is here, or it is recorded): Build continues it rather than starting a second. */
+	started: boolean;
 	repository: string;
 	/** What the prototype was modelled on, if it says. */
 	basedOn: { repository: string; branch: string } | null;

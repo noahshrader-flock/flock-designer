@@ -65,8 +65,8 @@ export const MoveToCode = ({
 	}, [plan, branches]);
 
 	const wrongRepository = plan !== null && plan.basedOn !== null && plan.basedOn.repository !== plan.repository;
-	// Work already started, recorded or on a branch here, is continued where it is: not started a second time.
-	const continuing = plan !== null && (plan.recorded || plan.exists);
+	// Work already started is continued where it is: not started a second time.
+	const continuing = plan?.started ?? false;
 	// A new branch, or moving to the branch from another, needs a clean checkout. Already on it, whatever is uncommitted
 	// is the work in progress, and is left alone.
 	const needsClean = plan !== null && (!continuing || plan.current !== plan.branch);

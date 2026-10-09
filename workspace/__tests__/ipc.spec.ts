@@ -1078,6 +1078,7 @@ describe('prototypes', () => {
 				branch: 'feature/demo',
 				exists: false,
 				recorded: false,
+				started: false,
 				repository: 'flock-coke',
 				basedOn: { repository: 'flock-coke', branch: 'develop' },
 				current: 'develop',
@@ -1088,14 +1089,14 @@ describe('prototypes', () => {
 		it('says when the branch already exists here, so the work continues on it', async () => {
 			await start();
 			g(product, 'branch', 'feature/demo');
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'v1-i1')).value).toMatchObject({ exists: true, recorded: false });
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'v1-i1')).value).toMatchObject({ exists: true, recorded: false, started: true });
 		});
 
 		it('says when the project already has codebase work recorded', async () => {
 			await start();
 			await codebaseWork();
 			g(product, 'checkout', '-q', 'develop');
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'v1-i1')).value).toMatchObject({ recorded: true });
+			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'v1-i1')).value).toMatchObject({ recorded: true, started: true });
 		});
 
 		it('says when uncommitted changes would stop it', async () => {

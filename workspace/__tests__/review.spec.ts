@@ -365,7 +365,7 @@ describe('the project’s documents, in More', () => {
 });
 
 describe('Build', () => {
-	const plan = { branch: 'feature/demo', exists: false, recorded: false, repository: 'flock-coke', basedOn: { repository: 'flock-coke', branch: 'develop' }, current: 'develop', clean: true };
+	const plan = { branch: 'feature/demo', exists: false, recorded: false, started: false, repository: 'flock-coke', basedOn: { repository: 'flock-coke', branch: 'develop' }, current: 'develop', clean: true };
 	const dialog = async (withSetup: string[], more: Partial<typeof plan> = {}) => {
 		const app = fakeApp({ agentReadiness: async () => ok({ state: 'ready' }), moveToCodePlan: async () => ok({ ...plan, ...more }), branchesWithSetup: async () => ok(withSetup) });
 		await open(app);
@@ -426,7 +426,7 @@ describe('Build', () => {
 	});
 
 	describe('for a project that already has codebase work', () => {
-		const started = { recorded: true, exists: true, current: 'develop' };
+		const started = { recorded: true, exists: true, started: true, current: 'develop' };
 
 		it('continues it in Claude Code, on its branch, instead of refusing a second', async () => {
 			const app = await dialog(['develop'], started);
@@ -444,7 +444,7 @@ describe('Build', () => {
 		});
 
 		it('continues it when only the record is here, the branch being on GitHub or another machine', async () => {
-			await dialog(['develop'], { recorded: true, exists: false });
+			await dialog(['develop'], { recorded: true, exists: false, started: true });
 			expect(button('Continue in Claude Code').disabled).toBe(false);
 		});
 
@@ -487,7 +487,7 @@ describe('the selected version', () => {
 			selectedVersion: async () => ok(2),
 			agentReadiness: async () => ok({ state: 'ready' }),
 			branchesWithSetup: async () => ok(['develop']),
-			moveToCodePlan: async () => ok({ branch: 'feature/demo', exists: false, recorded: false, repository: 'flock-coke', basedOn: null, current: 'develop', clean: true }),
+			moveToCodePlan: async () => ok({ branch: 'feature/demo', exists: false, recorded: false, started: false, repository: 'flock-coke', basedOn: null, current: 'develop', clean: true }),
 		});
 		await open(app, { project: { ...PROJECT, iterations: prototypes } });
 		await press(menuItem(await openMenu(button('More')), 'Build'));
