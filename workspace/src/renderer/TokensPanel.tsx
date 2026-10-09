@@ -100,10 +100,11 @@ const Sets = ({ tokens }: { tokens: DesignToken[] }) => (
 
 /**
  * A group's header stays at the top of the panel's scroll for as long as the group's tokens are shown, and is pushed off by
- * the next group's, as a section header is on iOS: it sticks within its own item, so it leaves when the item does. The
- * panel's content is padded (`p-4`), so the header reaches up into that padding (`-top-4`, `pt-4`) and nothing shows above it.
+ * the next group's, as a section header is on iOS: it sticks within its own item, so it leaves when the item does. It
+ * sticks at 0, flush under the tabs, because the scrolling content has no padding above it (`pt-0` below; the tab's own
+ * `pt-4` is what is scrolled), so nothing shows above it.
  */
-const STICKY_HEADER = '[&>h3]:bg-card [&>h3]:sticky [&>h3]:-top-4 [&>h3]:z-10 [&>h3]:pt-4';
+const STICKY_HEADER = '[&>h3]:bg-card [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10';
 
 /** One category's tab: its own search, then its tokens. What is typed is the panel's, so it is there when the tab is back. */
 const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tokens: DesignToken[]; query: string; onQuery: (query: string) => void }) => {
@@ -115,7 +116,7 @@ const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tok
 	const groups = inOrder(shown, (t) => t.group);
 	const names = groups.map(([group]) => group);
 	return (
-		<div className="flex flex-col gap-3">
+		<div className="flex flex-col gap-3 pt-4">
 			<SearchField label={`Search ${category.toLowerCase()}`} value={query} onChange={onQuery} />
 			{shown.length === 0 ? (
 				<p className="text-muted-foreground text-sm">No token matches.</p>
@@ -189,7 +190,7 @@ export const TokensPanel = ({
 					))}
 				</PanelTabsList>
 				{categories.map(([category, inCategory]) => (
-					<PanelTabsContent key={category} value={category}>
+					<PanelTabsContent key={category} value={category} className="pt-0">
 						<TokensTab
 							category={category}
 							tokens={inCategory}

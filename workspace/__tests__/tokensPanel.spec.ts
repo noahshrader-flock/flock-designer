@@ -133,9 +133,11 @@ describe('the groups', () => {
 		await show();
 		for (const item of document.querySelectorAll<HTMLElement>('[data-token-group]')) {
 			// The header is what sticks, on the panel's own background so what scrolls under it is hidden, and the item is its limit.
-			expect(item.className.split(' ')).toEqual(expect.arrayContaining(['[&>h3]:sticky', '[&>h3]:-top-4', '[&>h3]:pt-4', '[&>h3]:z-10', '[&>h3]:bg-card']));
+			expect(item.className.split(' ')).toEqual(expect.arrayContaining(['[&>h3]:sticky', '[&>h3]:top-0', '[&>h3]:z-10', '[&>h3]:bg-card']));
 			expect(item.firstElementChild?.tagName).toBe('H3');
 			expect(item.className).not.toContain('overflow');
+			// Flush under the tabs: the scrolling content has nothing above it that a stuck header could leave a gap for.
+			expect(item.closest('[role="tabpanel"]')?.className.split(' ')).toContain('pt-0');
 		}
 	});
 
