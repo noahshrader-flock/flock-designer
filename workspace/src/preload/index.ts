@@ -101,6 +101,7 @@ const api: WorkspaceApi = {
 	finishPrototypeAddress: (commentId) => invoke<PrototypeAddressed>(CHANNELS.finishPrototypeAddress, commentId),
 	publishedPage: (projectId, name) => invoke<PageStatus>(CHANNELS.publishedPage, projectId, name),
 	openPublishedPage: (projectId, name) => invoke<null>(CHANNELS.openPublishedPage, projectId, name),
+	publishPage: (projectId, name) => invoke<PageStatus>(CHANNELS.publishPage, projectId, name),
 	savePrototype: (projectId, name) => invoke<null>(CHANNELS.savePrototype, projectId, name),
 	openPrototype: (projectId, name) => invoke<OpenedPrototype>(CHANNELS.openPrototype, projectId, name),
 	prototypeReadiness: (root) => invoke<PrototypeReadiness>(CHANNELS.prototypeReadiness, root),

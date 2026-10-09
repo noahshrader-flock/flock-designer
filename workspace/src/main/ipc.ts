@@ -1149,6 +1149,16 @@ export const registerIpc = ({
 		}),
 	);
 	ipcMain.handle(
+		CHANNELS.publishPage,
+		guard(async (projectId: string, name: string): Promise<PageStatus> => {
+			assertUsableProjectId(projectId);
+			assertPrototypeName(name);
+			if (github.state().state !== 'signedIn') throw new Error('Sign in to GitHub to publish.');
+			publishInBackground(projectId, name);
+			return publishedPage(projectId, name);
+		}),
+	);
+	ipcMain.handle(
 		CHANNELS.finishPrototypeAddress,
 		guard((commentId: number): Promise<PrototypeAddressed> => finishPrototypeChange(commentId)),
 	);

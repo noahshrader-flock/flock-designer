@@ -1,4 +1,5 @@
 import {
+	CloudUploadIcon,
 	ExternalLinkIcon,
 	FolderIcon,
 	GitBranchIcon,
@@ -168,6 +169,8 @@ export const Review = ({
 		window.addEventListener('focus', checkPage);
 		return () => window.removeEventListener('focus', checkPage);
 	}, [prototype, checkPage, address.kind]);
+	const publish = () =>
+		void window.workspace.publishPage(project.id, iteration.name).then((r) => (r.ok ? setPage(r.value) : setError(r.error)));
 	// While it is being published, looked at again until it is done: a deploy takes a minute or two.
 	useEffect(() => {
 		if (page.state !== 'publishing') return;
@@ -457,7 +460,6 @@ export const Review = ({
 					)}
 					{page.state === 'published' && (
 						<Button
-							variant="outline"
 							title="Its page on the published site"
 							onClick={() => void window.workspace.openPublishedPage(project.id, iteration.name).then((r) => !r.ok && setError(r.error))}
 						>
@@ -471,12 +473,11 @@ export const Review = ({
 						</Button>
 					)}
 					{(page.state === 'unpublished' || page.state === 'unavailable') && (
-						// The reason is on a wrapper: a disabled button does not show its own.
-						<span title={page.why ?? 'Saved, but not on its page yet: it appears there once it is published'}>
-							<Button variant="outline" disabled>
-								{page.state === 'unavailable' ? 'Page unknown' : 'Not published yet'}
-							</Button>
-						</span>
+						// Publishing happens by itself; this is asking for it now, after it stopped or before it would.
+						<Button variant="outline" title={page.why ?? 'Saved, but not on its page yet'} onClick={publish}>
+							<CloudUploadIcon />
+							Publish
+						</Button>
 					)}
 					<IterationSwitcher
 						current={iteration}
@@ -512,7 +513,7 @@ export const Review = ({
 			{page.state === 'unpublished' && page.why && (
 				<Alert variant="warning" className="rounded-none border-x-0">
 					<AlertDescription>
-						This is saved, but not on its page yet. It was not published because: {page.why} It is tried again by itself.
+						This is saved, but not on its page yet. It was not published because: {page.why} It is tried again by itself, or press Publish.
 					</AlertDescription>
 				</Alert>
 			)}

@@ -412,6 +412,11 @@ export interface WorkspaceApi {
 	publishedPage(projectId: string, name: string): Promise<Result<PageStatus>>;
 	/** Opens the iteration's published page in the person's browser. Its address is worked out there, not taken from here. */
 	openPublishedPage(projectId: string, name: string): Promise<Result<null>>;
+	/**
+	 * Publishes the iteration now: the same publish that runs by itself when it is saved, asked for after one stopped, or
+	 * before it would. Says how the page stands once it has started.
+	 */
+	publishPage(projectId: string, name: string): Promise<Result<PageStatus>>;
 	savePrototype(projectId: string, name: string): Promise<Result<null>>;
 	openPrototype(projectId: string, name: string): Promise<Result<OpenedPrototype>>;
 	/** What moving a prototype into the code would do in this checkout, asked before it is offered. */
@@ -791,6 +796,7 @@ export const CHANNELS = {
 	finishPrototypeAddress: 'workspace:finishPrototypeAddress',
 	publishedPage: 'workspace:publishedPage',
 	openPublishedPage: 'workspace:openPublishedPage',
+	publishPage: 'workspace:publishPage',
 	savePrototype: 'workspace:savePrototype',
 	openPrototype: 'workspace:openPrototype',
 	buildInClaude: 'workspace:buildInClaude',

@@ -282,29 +282,50 @@ describe('pins and cards', () => {
 });
 
 describe('its published page', () => {
-	it('offers to open it once it is published, through the main process, which works out the address itself', async () => {
+	it('offers to open it once it is published, as the filled button, through the main process, which works out the address itself', async () => {
 		const app = fakeApp({ publishedPage: async () => ok({ state: 'published', url: 'https://x.github.io/d/demo/v1/i1/?v=abc1234' }) });
 		await open(app);
+		expect(button('Open page').getAttribute('data-variant')).toBe('default');
 		await press(button('Open page'));
 		expect(app.calls.openPublishedPage?.[0]).toEqual(['demo', 'v1-i1']);
 	});
 
-	it('says while it is being published, and why it was not, when a publish was stopped', async () => {
+	it('offers to publish it when it is saved but not on its page, and says it is under way once asked', async () => {
+		const app = fakeApp({ publishedPage: async () => ok({ state: 'unpublished' }), publishPage: async () => ok({ state: 'publishing' }) });
+		await open(app);
+		expect(button('Publish').getAttribute('data-variant')).toBe('outline');
+		expect(button('Publish').disabled).toBe(false);
+		await press(button('Publish'));
+		await settle();
+		expect(app.calls.publishPage?.[0]).toEqual(['demo', 'v1-i1']);
+		expect(button('Publishing…').disabled).toBe(true);
+		expect(() => button('Publish')).toThrow(/0 buttons/);
+	});
+
+	it('says why a publish stopped, on the screen and on the button, and that Publish tries again', async () => {
+		await open(fakeApp({ publishedPage: async () => ok({ state: 'unpublished', why: 'the repository is public.' }) }));
+		expect(button('Publish').getAttribute('title')).toBe('the repository is public.');
+		expect(document.body.textContent).toContain('It was not published because: the repository is public. It is tried again by itself, or press Publish.');
+	});
+
+	it('offers to publish it too when GitHub would not say whether it is, with why on the button', async () => {
+		await open(fakeApp({ publishedPage: async () => ok({ state: 'unavailable', why: 'GitHub would not say.' }) }));
+		expect(button('Publish').getAttribute('title')).toBe('GitHub would not say.');
+	});
+
+	it('says while it is being published, and says nothing without a site', async () => {
 		await open(fakeApp({ publishedPage: async () => ok({ state: 'publishing' }) }));
 		expect(button('Publishing…').disabled).toBe(true);
 		await unmountAll((current as NonNullable<typeof current>).root);
-		await open(fakeApp({ publishedPage: async () => ok({ state: 'unpublished', why: 'the repository is public' }) }));
-		expect(button('Not published yet').parentElement?.getAttribute('title')).toBe('the repository is public');
-		// And said on the screen, not only in the button's tooltip.
-		expect(document.body.textContent).toContain('It was not published because: the repository is public');
+		await open(fakeApp());
+		expect(() => button(/Open page|Publish/)).toThrow(/0 buttons/);
 	});
 
-	it('says it is not published yet when it is saved but not deployed, and says nothing without a site', async () => {
-		await open(fakeApp({ publishedPage: async () => ok({ state: 'unpublished' }) }));
-		expect(button('Not published yet').disabled).toBe(true);
-		await unmountAll((current as NonNullable<typeof current>).root);
-		await open(fakeApp());
-		expect(() => button(/Open page|Not published/)).toThrow(/0 buttons/);
+	it('shows what stopped it when asking to publish fails', async () => {
+		await open(fakeApp({ publishedPage: async () => ok({ state: 'unpublished' }), publishPage: async () => fail('Sign in to GitHub to publish.') }));
+		await press(button('Publish'));
+		await settle();
+		expect(document.body.textContent).toContain('Sign in to GitHub to publish.');
 	});
 });
 

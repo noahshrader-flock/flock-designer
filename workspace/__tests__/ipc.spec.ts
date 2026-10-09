@@ -758,6 +758,37 @@ describe('prototypes', () => {
 			});
 		});
 
+		it('publishes a prototype when asked, as it does by itself, and says it is under way', async () => {
+			githubApi.mockImplementation(async (path: string) => {
+				if (path === '/repos/noahshrader-flock/flock-designer') return { private: false, default_branch: 'main' };
+				if (path === '/repos/noahshrader-flock/flock-designer/pages') return { html_url: 'https://x.github.io/flock-designer/', public: true };
+				if (path.startsWith('/repos/noahshrader-flock/flock-designer/deployments?')) return [];
+				if (path.startsWith('/repos/noahshrader-flock/flock-designer/commits?')) return [];
+				throw new Error(`not faked: ${path}`);
+			});
+			await call(CHANNELS.useCheckout, product);
+			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
+			writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<h1>Demo</h1>');
+			// Saved while signed out, so nothing was published by itself.
+			await call(CHANNELS.savePrototype, 'demo', 'v1-i1');
+			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
+			expect((await call(CHANNELS.publishPage, 'demo', 'v1-i1')).value).toEqual({ state: 'publishing' });
+			let status = (await call(CHANNELS.publishedPage, 'demo', 'v1-i1')).value as { state: string; why?: string };
+			for (let i = 0; i < 50 && status.state === 'publishing'; i++) {
+				await new Promise((r) => setTimeout(r, 10));
+				status = (await call(CHANNELS.publishedPage, 'demo', 'v1-i1')).value as typeof status;
+			}
+			// The same publish as the one that runs by itself, stopped the same way here: this clone is on no branch.
+			expect(status).toEqual({ state: 'unpublished', why: expect.stringMatching(/not on a branch/) });
+		});
+
+		it('publishes only a prototype it can name', async () => {
+			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
+			expect((await call(CHANNELS.publishPage, '../x', 'v1-i1')).ok).toBe(false);
+			expect((await call(CHANNELS.publishPage, 'demo', 'codebase')).ok).toBe(false);
+		});
+
 		it('says nothing about a page when nobody is signed in to GitHub', async () => {
 			await call(CHANNELS.useCheckout, product);
 			expect((await call(CHANNELS.publishedPage, 'demo', 'v1-i1')).value).toEqual({ state: 'none' });
