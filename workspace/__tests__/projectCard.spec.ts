@@ -136,22 +136,61 @@ describe('opening it', () => {
 });
 
 describe('a project with only codebase work', () => {
-	it('links to it on GitHub, and is not a way into the app', async () => {
-		const { onOpen } = await show(project({ iterations: [CODEBASE], people: [NOAH] }));
-		const link = footer().querySelector('a')!;
-		expect(link.textContent).toBe('Built in code');
-		expect(link.getAttribute('href')).toBe('https://github.com/flocksafety/flock-coke/tree/feature/admin-usage');
-		expect(link.getAttribute('target')).toBe('_blank');
-		expect(card().getAttribute('role')).toBeNull();
-		await press(card());
-		expect(onOpen).not.toHaveBeenCalled();
-		expect(footer().textContent).toContain('Noah Shrader');
+	const LINK = 'https://github.com/flocksafety/flock-coke/tree/feature/admin-usage';
+
+	it('says Built in code in the grey of the comment count, with no icon beside it', async () => {
+		await show(project({ iterations: [CODEBASE], people: [NOAH] }));
+		const [left, right] = [...footer().children];
+		expect(left!.querySelector('.truncate')!.textContent).toBe('Noah Shrader');
+		expect(right!.textContent).toBe('Built in code');
+		expect(right!.className.split(' ')).toContain('text-muted-foreground');
+		expect(right!.querySelector('svg')).toBeNull();
+		expect(footer().querySelector('a')).toBeNull();
 	});
 
-	it('says it is built in code, with no link, when its record does not say where', async () => {
-		await show(project({ iterations: [iteration({ ...CODEBASE, repository: null })] }));
-		expect(footer().querySelector('a')).toBeNull();
-		expect(footer().textContent).toContain('Built in code');
+	it('has the external-link icon at the top right of the card, in that grey', async () => {
+		await show(project({ iterations: [CODEBASE] }));
+		const top = cover().children[0]!;
+		const icon = top.querySelector('.lucide-external-link')!;
+		expect(icon).not.toBeNull();
+		expect(top.lastElementChild!.contains(icon)).toBe(true);
+		expect(top.className.split(' ')).toContain('justify-between');
+		expect(icon.closest('.text-muted-foreground')).not.toBeNull();
+	});
+
+	it('is the whole card a way to GitHub: it opens the link, in the browser, and is not a way into the app', async () => {
+		const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+		try {
+			const { onOpen } = await show(project({ iterations: [CODEBASE] }));
+			expect(card().getAttribute('role')).toBe('link');
+			expect(card().getAttribute('aria-label')).toBe('Open Admin usage on GitHub');
+			await press(card());
+			expect(open).toHaveBeenCalledWith(LINK, '_blank', 'noreferrer');
+			expect(onOpen).not.toHaveBeenCalled();
+			card().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+			expect(open).toHaveBeenCalledTimes(2);
+		} finally {
+			open.mockRestore();
+		}
+	});
+
+	it('says Built in code, with no icon and nothing to open, when its record does not say where', async () => {
+		const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+		try {
+			await show(project({ iterations: [iteration({ ...CODEBASE, repository: null })] }));
+			expect(footer().textContent).toContain('Built in code');
+			expect(cover().querySelector('.lucide-external-link')).toBeNull();
+			expect(card().getAttribute('role')).toBeNull();
+			await press(card());
+			expect(open).not.toHaveBeenCalled();
+		} finally {
+			open.mockRestore();
+		}
+	});
+
+	it('has no external-link icon on a project with a prototype: it opens in the app', async () => {
+		await show(project({ iterations: [NEWEST, CODEBASE] }));
+		expect(card().querySelector('.lucide-external-link')).toBeNull();
 	});
 });
 
