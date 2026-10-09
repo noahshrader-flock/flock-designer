@@ -249,6 +249,7 @@ describe('what is refused', () => {
 		expect(tokenEditsOf([{ path: 'a', value: '#000000' }, { path: 'b', ref: 'c' }])).toEqual([{ path: 'a', value: '#000000' }, { path: 'b', ref: 'c' }]);
 		expect(() => tokenEditsOf('a')).toThrow();
 		expect(() => tokenEditsOf([{ path: 'a' }])).toThrow();
+		expect(() => tokenEditsOf(['a', null])).toThrow('A token edit names a token');
 		expect(() => tokenEditsOf([{ path: 'a', ref: 'b', value: '#000000' }])).toThrow();
 		expect(() => tokenEditsOf([{ path: 'a', value: 7 }])).toThrow();
 		expect(() => tokenEditsOf(Array.from({ length: 501 }, () => ({ path: 'a', value: '#000000' })))).toThrow();

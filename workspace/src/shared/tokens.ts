@@ -10,7 +10,13 @@ import type { DesignToken, TokenEdit } from './contract';
 export const HEX_COLOR = /^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
 /** A CSS length the panel shows as a dimension: `8px`, `0.25rem`, `1.5em`. */
-export const DIMENSION = /^-?\d*\.?\d+(px|rem|em)$/;
+export const DIMENSION = /^(-?\d*\.?\d+)(px|rem|em)$/;
+
+/** A length's number and unit (`8px` is 8 and `px`), or null when it is not one. */
+export const lengthParts = (value: string): { number: number; unit: 'px' | 'rem' | 'em' } | null => {
+	const m = DIMENSION.exec(value);
+	return m ? { number: Number(m[1]), unit: m[2] as 'px' | 'rem' | 'em' } : null;
+};
 
 /** Whether `value` is one a token of this kind can be given. */
 export const fitsKind = (kind: DesignToken['kind'], value: string): boolean => (kind === 'color' ? HEX_COLOR : DIMENSION).test(value);
@@ -31,13 +37,17 @@ export const writtenWith = (tokens: DesignToken[], token: DesignToken): DesignTo
  */
 export const withEdits = (tokens: DesignToken[], edits: TokenEdit[]): DesignToken[] => {
 	const byPath = new Map(tokens.map((t) => [t.path, t]));
-	const at = new Map(edits.flatMap((e) => (byPath.has(e.path) ? [[placeOf(byPath.get(e.path) as DesignToken), e] as const] : [])));
-	const edited = new Map(tokens.flatMap((t) => (at.has(placeOf(t)) ? [[t.path, at.get(placeOf(t)) as TokenEdit] as const] : [])));
+	// Each edit by the place it changes, so every token written there takes it.
+	const editAt = new Map<string, TokenEdit>();
+	for (const e of edits) {
+		const t = byPath.get(e.path);
+		if (t) editAt.set(placeOf(t), e);
+	}
 	const done = new Map<string, DesignToken>();
 	const resolve = (t: DesignToken, depth: number): DesignToken => {
 		const known = done.get(t.path);
 		if (known) return known;
-		const edit = edited.get(t.path);
+		const edit = editAt.get(placeOf(t));
 		let next = t;
 		if (edit && 'value' in edit) {
 			const { ref: _pointer, ...own } = t;

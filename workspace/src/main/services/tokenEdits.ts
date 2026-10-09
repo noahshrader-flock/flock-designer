@@ -22,7 +22,7 @@ export const tokenEditsOf = (sent: unknown): TokenEdit[] => {
 	const isText = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 200;
 	if (!Array.isArray(sent) || sent.length > MOST_EDITS) throw new Error('A change is a list of token edits.');
 	return sent.map((e: unknown) => {
-		const o = (e ?? {}) as Record<string, unknown>;
+		const o = typeof e === 'object' && e !== null ? (e as Record<string, unknown>) : {};
 		if (isText(o.path) && isText(o.ref) && !('value' in o)) return { path: o.path, ref: o.ref };
 		if (isText(o.path) && isText(o.value) && !('ref' in o)) return { path: o.path, value: o.value };
 		throw new Error('A token edit names a token and either the token it points at or its new value.');
@@ -80,7 +80,7 @@ export const editedFiles = async (reads: CatalogReads, edits: TokenEdit[]): Prom
 		const token = byPath.get(edit.path) as DesignToken;
 		const { file } = token.source;
 		const text = texts.get(file) ?? (await reads.readFile(file));
-		texts.set(file, source.edit(text, token, 'ref' in edit ? { ref: byPath.get(edit.ref) as DesignToken } : { value: edit.value }));
+		texts.set(file, source.edit(text, token, edit));
 	}
 
 	const after = await readTokens(withTexts(reads, texts));

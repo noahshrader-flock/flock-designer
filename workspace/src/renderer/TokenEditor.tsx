@@ -1,15 +1,17 @@
 import { RotateCcwIcon } from 'lucide-react';
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import type { DesignToken, TokenEdit } from '../shared/contract';
+import { useEffect, useRef, useState } from 'react';
+import type { DesignToken } from '../shared/contract';
 import { plural } from '../shared/plural';
-import { AA_TEXT, contrastPartner, contrastRatio, placeOf, pointingAt, writtenWith } from '../shared/tokens';
+import { AA_TEXT, contrastPartner, contrastRatio, lengthParts, pointingAt, writtenWith } from '../shared/tokens';
+import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Slider } from './ui/slider';
 
 /**
  * Changing a token (T3 of the design system plan): what opens from a row of the tokens panel, chosen by what the token is
- * and whether it points at another (decision 20), and the list of what has been changed. **Not an editor** (decision
+ * and whether it points at another (decision 20), and the list of what has been changed. The change itself is
+ * `tokenChanges.ts`'s; this is how it is shown and made. **Not an editor** (decision
  * 27): a change is tried in the previews and kept nowhere, and what it does is said where it is made: the contrast it
  * leaves, and what else it moves.
  *
@@ -24,54 +26,6 @@ import { Slider } from './ui/slider';
 
 /** What a token is changed to: pointed at another token, by its path, or given a value of its own. */
 export type ChangeTo = { ref: string } | { value: string };
-
-/** What every row and the editor share: the tokens as changed, as read, the change, and how to change one. */
-export interface TokenChanges {
-	/** The tokens with the change made (`withEdits`): what the panel shows. */
-	shown: DesignToken[];
-	/** As the library has them, by path. */
-	read: Map<string, DesignToken>;
-	edits: TokenEdit[];
-	/** Changes a token, by its path (`null`: back as it was). A change back to what the library has is no change. */
-	change: (token: DesignToken, to: ChangeTo | null) => void;
-	/** Every token back as the library has it. */
-	clear: () => void;
-}
-
-export const TokenChangesContext = createContext<TokenChanges | null>(null);
-
-export const useTokenChanges = (): TokenChanges => {
-	const changes = useContext(TokenChangesContext);
-	if (!changes) throw new Error('A token row is shown only in the tokens panel.');
-	return changes;
-};
-
-/** The change, made by `change`: any edit of the same place replaced, and none kept that leaves a token as it was. */
-export const changed = (edits: TokenEdit[], read: Map<string, DesignToken>, token: DesignToken, to: ChangeTo | null): TokenEdit[] => {
-	const others = edits.filter((e) => {
-		const t = read.get(e.path);
-		return t === undefined || placeOf(t) !== placeOf(token);
-	});
-	if (to === null) return others;
-	const asRead = 'ref' in to ? token.ref?.path === to.ref : token.ref === undefined && token.value.toLowerCase() === to.value.toLowerCase();
-	return asRead ? others : [...others, { path: token.path, ...to } as TokenEdit];
-};
-
-/** Whether a token is changed: edited, or written in a place that is. */
-export const isChanged = (changes: TokenChanges, token: DesignToken): boolean =>
-	changes.edits.some((e) => {
-		const t = changes.read.get(e.path);
-		return t !== undefined && placeOf(t) === placeOf(token);
-	});
-
-/** A token as a person names it: `primary main`, `pineGreen 50`. */
-export const nameOf = (t: DesignToken): string => `${t.set} ${t.name}`;
-
-/** A token named with where it is shown: `Light primary main`, `Tones pineGreen 50`, `Radius base` (not `Radius radius base`). */
-export const labelOf = (t: DesignToken): string => (t.set.toLowerCase() === t.group.toLowerCase() ? `${t.group} ${t.name}` : `${t.group} ${nameOf(t)}`);
-
-/** An opacity written after a tone (`66`), as a person reads it (`40%`). */
-export const opacity = (alpha: string): string => `${Math.round((parseInt(alpha, 16) / 255) * 100)}%`;
 
 /** A color, as a small square. Its color is the token's own, a runtime value, so it is inline. */
 export const Swatch = ({ value, size = 'size-4' }: { value: string; size?: string }) => (
@@ -89,6 +43,7 @@ export const ContrastNote = ({ ratio, className = '' }: { ratio: number; classNa
  * A color picker and its hex. The picker applies when it is closed; the hex when Enter is pressed or it is left, and only
  * a hex is applied. An opacity the color had is kept: the picker has none.
  */
+const HEX6 = /^#[0-9a-f]{6}$/i;
 const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string) => void }) => {
 	const alpha = value.length === 9 ? value.slice(7) : '';
 	const [hex, setHex] = useState(value.slice(0, 7));
@@ -102,7 +57,7 @@ const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string
 		return () => el?.removeEventListener('change', done);
 	}, [onCommit, alpha]);
 	const commit = () => {
-		if (/^#[0-9a-f]{6}$/i.test(hex.trim())) onCommit(`${hex.trim().toUpperCase()}${alpha}`);
+		if (HEX6.test(hex.trim())) onCommit(`${hex.trim().toUpperCase()}${alpha}`);
 		else setHex(value.slice(0, 7));
 	};
 	return (
@@ -111,7 +66,7 @@ const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string
 				ref={picker}
 				type="color"
 				aria-label="Pick a color"
-				value={/^#[0-9a-f]{6}$/i.test(hex) ? hex.toLowerCase() : value.slice(0, 7).toLowerCase()}
+				value={(HEX6.test(hex) ? hex : value.slice(0, 7)).toLowerCase()}
 				onChange={(e) => setHex(e.target.value.toUpperCase())}
 				className="size-8 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
 			/>
@@ -130,13 +85,12 @@ const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string
 
 /** A length as a slider and its number, applied when the slider is let go of. Its range is from its kind, not the token. */
 const DimensionField = ({ token, value, onCommit }: { token: DesignToken; value: string; onCommit: (length: string) => void }) => {
-	const [, number = '0', unit = 'px'] = /^(-?\d*\.?\d+)(px|rem|em)$/.exec(value) ?? [];
-	const [n, setN] = useState(Number(number));
-	useEffect(() => setN(Number(number)), [number]);
+	const { number, unit } = lengthParts(value) ?? { number: 0, unit: 'px' };
+	const [n, setN] = useState(number);
+	useEffect(() => setN(number), [number]);
 	// From nothing to twice what the library has, at least a useful span: whole pixels, or eighths of a rem.
 	const px = unit === 'px';
-	const read = Number(/^(-?\d*\.?\d+)/.exec(token.value)?.[1] ?? number);
-	const max = Math.max(px ? 32 : 2, read * 2);
+	const max = Math.max(px ? 32 : 2, (lengthParts(token.value)?.number ?? number) * 2);
 	return (
 		<div className="flex items-center gap-3">
 			<Slider
@@ -185,11 +139,11 @@ const StepPicker = ({ token, target }: { token: DesignToken; target: DesignToken
 
 /** What changing a token also moves: the tokens that point at it, and any written in the same place. */
 const Reach = ({ token }: { token: DesignToken }) => {
-	const { shown } = useTokenChanges();
+	const { shown, isPointedInto } = useTokenChanges();
 	const users = pointingAt(shown, token.path);
 	const also = writtenWith(shown, token);
 	// A step of a family roles point at says so even when none points at this one: it can be changed freely.
-	const pointedInto = users.length > 0 || shown.some((t) => t.ref && shown.find((s) => s.path === t.ref?.path)?.set === token.set);
+	const pointedInto = users.length > 0 || isPointedInto(token);
 	if (!pointedInto && also.length === 0) return null;
 	return (
 		<div data-reach className="text-muted-foreground flex flex-col gap-1 text-xs">
@@ -215,14 +169,12 @@ const Contrast = ({ token }: { token: DesignToken }) => {
 
 /** What opens from a row: the token, its control, what it reaches and the contrast it leaves, and Reset when changed. */
 export const TokenEditor = ({ token }: { token: DesignToken }) => {
-	const changes = useTokenChanges();
-	const { read, shown, change } = changes;
+	const { read, byPath, change, isChanged } = useTokenChanges();
 	const asRead = read.get(token.path) ?? token;
 	// A token given a color of its own still has the tone it pointed at, to go back to.
 	const pointer = token.ref ?? asRead.ref;
-	const target = pointer && shown.find((t) => t.path === pointer.path);
+	const target = pointer && byPath.get(pointer.path);
 	const [custom, setCustom] = useState(token.ref === undefined);
-	const edited = isChanged(changes, token);
 	return (
 		<div className="flex flex-col gap-3" data-token-editor={token.path}>
 			<div className="flex flex-col gap-0.5">
@@ -257,7 +209,7 @@ export const TokenEditor = ({ token }: { token: DesignToken }) => {
 			)}
 			<Contrast token={token} />
 			<Reach token={token} />
-			{edited && (
+			{isChanged(token) && (
 				<Button variant="outline" size="sm" className="self-start" onClick={() => change(token, null)}>
 					<RotateCcwIcon />
 					Reset
@@ -267,20 +219,18 @@ export const TokenEditor = ({ token }: { token: DesignToken }) => {
 	);
 };
 
-/** How a token reads, in a word: what it points at, or its value. */
-const valueOf = (t: DesignToken, shown: DesignToken[]): string => {
-	const target = t.ref && shown.find((s) => s.path === t.ref?.path);
-	return target ? nameOf(target) : t.value;
-};
-
 /**
  * What has been changed, above the tabs: each change, from what the library has to what it is now, with a reset for each
  * and for all. Nothing is saved; on the list there is nothing live, so it says to open a component.
  */
 export const ChangedTokens = ({ live }: { live: boolean }) => {
-	const { edits, read, shown, change, clear } = useTokenChanges();
+	const { edits, read, byPath, target, change, clear } = useTokenChanges();
 	if (edits.length === 0) return null;
-	const byPath = new Map(shown.map((t) => [t.path, t]));
+	/** How a token reads, in a word: what it points at, or its value. */
+	const valueOf = (t: DesignToken) => {
+		const pointed = target(t);
+		return pointed ? nameOf(pointed) : t.value;
+	};
 	return (
 		<section aria-label="Changed" data-changed-tokens className="flex flex-col gap-2 border-b p-4">
 			<div className="flex items-center justify-between">
@@ -300,7 +250,7 @@ export const ChangedTokens = ({ live }: { live: boolean }) => {
 							{now.kind === 'color' && <Swatch value={now.value} />}
 							<span className="min-w-0 truncate">{labelOf(was)}</span>
 							<span className="text-muted-foreground ml-auto shrink-0 font-mono text-xs">
-								{valueOf(was, shown)} → {valueOf(now, shown)}
+								{valueOf(was)} → {valueOf(now)}
 							</span>
 							<Button variant="ghost" size="icon-sm" aria-label={`Reset ${labelOf(was)}`} onClick={() => change(was, null)}>
 								<RotateCcwIcon />

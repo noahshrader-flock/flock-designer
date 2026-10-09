@@ -7,7 +7,7 @@
  * theme files use (JSON is an object literal too). A change is written in the token's `$value`, in the shape it had.
  */
 import type { DesignToken, TokenProblem } from '../../../shared/contract';
-import { DIMENSION } from '../../../shared/tokens';
+import { DIMENSION, lengthParts } from '../../../shared/tokens';
 import { type Entry, parseObject, replaced } from './objectLiteral';
 import { type TokenSource, capitalized, categoryOf, notWhereRead, semanticFirst } from './source';
 
@@ -118,9 +118,9 @@ export const tokenFiles: TokenSource = {
 		const at = entriesOf(text);
 		const own = at.get(`${token.path}.$value`);
 		if (!own || at.get(token.path)?.line !== token.source.line) throw notWhereRead(token);
-		if ('ref' in to) return replaced(text, own.span, JSON.stringify(`{${to.ref.path}}`));
+		if ('ref' in to) return replaced(text, own.span, JSON.stringify(`{${to.ref}}`));
 		// A length written as `{ "value": 4, "unit": "px" }` keeps that shape; anything else is written as a string.
-		const length = own.value.kind === 'object' ? /^(-?\d*\.?\d+)(px|rem|em)$/.exec(to.value) : null;
-		return replaced(text, own.span, length ? `{ "value": ${Number(length[1])}, "unit": "${length[2]}" }` : JSON.stringify(to.value));
+		const length = own.value.kind === 'object' ? lengthParts(to.value) : null;
+		return replaced(text, own.span, length ? `{ "value": ${length.number}, "unit": "${length.unit}" }` : JSON.stringify(to.value));
 	},
 };

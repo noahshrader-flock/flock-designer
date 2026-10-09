@@ -95,6 +95,6 @@ export const cssVariables: TokenSource = {
 		const m = new RegExp(`(?<![\\w-])(--${variableOf(token.path)}\\s*:\\s*)([^;]*?)\\s*;`).exec(lines[token.source.line - 1] ?? '');
 		if (!m) throw notWhereRead(token);
 		const from = start + m.index + (m[1] as string).length;
-		return replaced(text, [from, from + (m[2] as string).length], 'value' in to ? to.value : `var(--${variableOf(to.ref.path)})`);
+		return replaced(text, [from, from + (m[2] as string).length], 'value' in to ? to.value : `var(--${variableOf(to.ref)})`);
 	},
 };

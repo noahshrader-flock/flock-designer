@@ -329,8 +329,6 @@ export interface StoryPreviewsDeps {
 interface Built {
 	key: string;
 	build: Promise<StoryPreview>;
-	system: ConnectedDesignSystem;
-	commit: string;
 	dir: string;
 	/** The design system's files at the commit, each read once: a commit's files never change, and a change reads them all. */
 	reads: () => Promise<CatalogReads>;
@@ -384,23 +382,25 @@ export class StoryPreviews {
 		const key = `${commit}:${folder}`;
 		if (this.current?.key !== key) {
 			const dir = join(this.deps.folder, `${commit.slice(0, 12)}-${createHash('sha256').update(folder).digest('hex').slice(0, 4)}-${RECIPE}`);
-			const build = this.build(system, commit, dir);
-			let reads: Promise<CatalogReads> | null = null;
-			this.current = { key, build, system, commit, dir, reads: () => (reads ??= systemReads(system, commit).then(keptReads)) };
+			// Read when first needed: a build already on disk, and no change tried, needs none.
+			let reading: Promise<CatalogReads> | null = null;
+			const reads = () => (reading ??= systemReads(system, commit).then(keptReads));
+			const build = this.build(system, commit, dir, reads);
+			this.current = { key, build, dir, reads };
 			// A build that did not work is tried again on the next ask.
 			void build.then((b) => b.state !== 'ready' && this.current?.build === build && (this.current = null));
 		}
 		return this.current.build;
 	}
 
-	private async build(system: ConnectedDesignSystem, commit: string, dir: string): Promise<StoryPreview> {
+	private async build(system: ConnectedDesignSystem, commit: string, dir: string, reads: () => Promise<CatalogReads>): Promise<StoryPreview> {
 		const site = join(dir, 'site');
 		try {
 			if (!existsSync(join(site, 'index.html'))) {
 				rmSync(dir, { recursive: true, force: true });
 				const copy = join(dir, 'library');
 				await copyAt(system.root, commit, copy, system.folder);
-				const stories = (await readCatalog(await systemReads(system, commit), designSystemOf(system))).map((c) => c.id);
+				const stories = (await readCatalog(await reads(), designSystemOf(system))).map((c) => c.id);
 				await (this.deps.build ?? buildPreviews)(copy, stories, site);
 			}
 			// Only the build for this commit is kept, and served; a change tried on another is closed with it.

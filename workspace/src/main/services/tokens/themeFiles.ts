@@ -168,8 +168,8 @@ export const themeFiles: TokenSource = {
 		if (!entry || entry.value.kind !== 'value') throw notWhereRead(token);
 		if ('value' in to) return replaced(text, entry.span, `'${to.value.toUpperCase()}'`);
 		// A role points at a tone step; the tone must already be in the file, which is what makes it reachable there.
-		const step = /^tone\.(\w+)\.(\d+)$/.exec(to.ref.path);
-		if (!step) throw new Error(`${token.path} can point only at a tone step, not at ${to.ref.path}.`);
+		const step = /^tone\.(\w+)\.(\d+)$/.exec(to.ref);
+		if (!step) throw new Error(`${token.path} can point only at a tone step, not at ${to.ref}.`);
 		const [tone, at] = [step[1] as string, step[2] as string];
 		if (!new RegExp(`\\b${tone}\\b`).test(text)) throw new Error(`${token.source.file} does not use ${tone}, so ${token.path} cannot point at it there.`);
 		const alpha = token.ref?.alpha;

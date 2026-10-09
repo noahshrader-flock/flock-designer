@@ -289,11 +289,13 @@ export interface DesignToken {
 }
 
 /**
- * One token changed (T3, decision 19): pointed at another token (`ref`, a path, which keeps the link), or given a value
- * of its own (`value`: a color as a hex, a dimension with its unit), which replaces any pointer. A change is a list of
- * these, one per token, and nothing else.
+ * What a token is changed to (T3, decision 19): pointed at another token (`ref`, its path, which keeps the link), or given
+ * a value of its own (`value`: a color as a hex, a dimension with its unit), which replaces any pointer.
  */
-export type TokenEdit = { path: string; ref: string } | { path: string; value: string };
+export type TokenChange = { ref: string } | { value: string };
+
+/** One token changed. A change is a list of these, one per token, and nothing else. */
+export type TokenEdit = { path: string } & TokenChange;
 
 /** Something in the library's token files that is not read, with where it is. */
 export interface TokenProblem {

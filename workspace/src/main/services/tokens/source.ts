@@ -3,16 +3,13 @@
  * are its own, and the one rule for which tab a token is on. A source decides only what its files mean, and how a change
  * is written back into them (decision 26).
  */
-import type { DesignToken, DesignTokens } from '../../../shared/contract';
+import type { DesignToken, DesignTokens, TokenChange } from '../../../shared/contract';
 import type { CatalogReads } from '../componentCatalog';
-
-/** What a token is changed to: pointed at another token, or given a value of its own (checked for its kind already). */
-export type TokenChange = { ref: DesignToken } | { value: string };
 
 /**
  * A way a library can keep its tokens: given the library's own files, the list when it finds tokens there, else `null`;
  * and the text of a token's file with the token changed, written as the library writes it, in its place and nowhere
- * else. A source that cannot write a change says why, by throwing.
+ * else (the change is checked for the token's kind already). A source that cannot write a change says why, by throwing.
  */
 export interface TokenSource {
 	name: string;

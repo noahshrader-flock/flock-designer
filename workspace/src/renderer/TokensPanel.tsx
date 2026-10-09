@@ -1,20 +1,8 @@
-import { useMemo, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { DesignToken, DesignTokens, TokenEdit } from '../shared/contract';
-import { contrastPartner, contrastRatio, isForeground, withEdits } from '../shared/tokens';
-import {
-	ChangedTokens,
-	ContrastNote,
-	Swatch,
-	TokenChangesContext,
-	TokenEditor,
-	changed,
-	isChanged,
-	labelOf,
-	nameOf,
-	opacity,
-	useTokenChanges,
-	type TokenChanges,
-} from './TokenEditor';
+import { contrastPartner, contrastRatio, isForeground } from '../shared/tokens';
+import { ChangedTokens, ContrastNote, Swatch, TokenEditor } from './TokenEditor';
+import { TokenChangesProvider, labelOf, nameOf, opacity, useTokenChanges, useTokenChangesFor } from './tokenChanges';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { SearchField } from './SearchField';
@@ -57,10 +45,10 @@ const searchable = (t: DesignToken) => [t.path, t.group, t.set, t.name, t.value,
  */
 const TokenRow = ({ token }: { token: DesignToken }) => {
 	const changes = useTokenChanges();
-	const target = token.ref && changes.shown.find((t) => t.path === token.ref?.path);
+	const target = changes.target(token);
 	const partner = isForeground(token) ? undefined : contrastPartner(token, changes.shown);
 	const ratio = partner ? contrastRatio(token.value, partner.value) : null;
-	const edited = isChanged(changes, token);
+	const edited = changes.isChanged(token);
 	return (
 		<li data-token={token.path} data-changed={edited || undefined} title={`${token.source.file}:${token.source.line}`}>
 			<Popover>
@@ -166,21 +154,7 @@ export const TokensPanel = ({
 }) => {
 	const [current, setCurrent] = useState<string | null>(null);
 	const [queries, setQueries] = useState<Record<string, string>>({});
-	const changes = useMemo((): TokenChanges => {
-		const read = new Map(tokens.tokens.map((t) => [t.path, t]));
-		return {
-			shown: withEdits(tokens.tokens, edits),
-			read,
-			edits,
-			// Always against the token as the library has it, whichever way it is shown.
-			change: (token, to) => {
-				const next = changed(edits, read, read.get(token.path) ?? token, to);
-				// The same change again (a step already chosen, a hex left as it was) builds nothing.
-				if (JSON.stringify(next) !== JSON.stringify(edits)) onEdits(next);
-			},
-			clear: () => onEdits([]),
-		};
-	}, [tokens.tokens, edits, onEdits]);
+	const changes = useTokenChangesFor(tokens.tokens, edits, onEdits);
 	const categories = useMemo(() => inOrder(changes.shown, (t) => t.category), [changes.shown]);
 
 	if (tokens.source === null || categories.length === 0) {
@@ -194,7 +168,7 @@ export const TokensPanel = ({
 	// A category the library no longer has is not kept: the first is shown.
 	const active = categories.some(([c]) => c === current) ? (current as string) : (categories[0] as [string, DesignToken[]])[0];
 	return (
-		<TokenChangesContext.Provider value={changes}>
+		<TokenChangesProvider value={changes}>
 			<ChangedTokens live={live} />
 			<PanelTabs value={active} onValueChange={setCurrent}>
 				<PanelTabsList>
@@ -215,6 +189,6 @@ export const TokensPanel = ({
 					</PanelTabsContent>
 				))}
 			</PanelTabs>
-		</TokenChangesContext.Provider>
+		</TokenChangesProvider>
 	);
 };
