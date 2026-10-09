@@ -258,6 +258,72 @@ describe('publish', () => {
 	});
 });
 
+describe('publish opens the page the first time', () => {
+	const saved = async () => {
+		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
+		writeFileSync(join(prototypes, 'demo', 'v1-i1.tsx'), "import { Hello } from 'x';\nexport default () => <Hello />;\n");
+		await run('save-prototype', '--project', 'demo', '--name', 'v1-i1');
+		out = [];
+		// GitHub: a bare repository to push to, and an API whose site deploys at once.
+		const remote = join(home, 'remote.git');
+		g(home, 'init', '-q', '--bare', remote);
+		g(design, 'add', '-A');
+		g(design, 'commit', '-q', '-m', 'Saved');
+		const branch = g(design, 'symbolic-ref', '--short', 'HEAD').trim();
+		g(design, 'remote', 'add', 'origin', remote);
+		g(design, 'push', '-q', '-u', 'origin', branch);
+		return branch;
+	};
+	/** A GitHub whose site is deployed at once, and either already has the page or does not. */
+	const site = (branch: string, onSite: boolean) => {
+		let dispatched = false;
+		return {
+			api: async (path: string) => {
+				if (/^\/repos\/[^/]+\/[^/]+$/.test(path)) return { private: true, default_branch: branch };
+				if (path.endsWith('/pages')) return { html_url: 'https://acme.github.io/design/', public: false };
+				if (path.endsWith('/dispatches')) return void (dispatched = true);
+				if (path.includes('/actions/workflows/')) return { workflow_runs: dispatched ? [{ id: 2, status: 'completed', conclusion: 'success', html_url: 'run/2' }] : [] };
+				if (path.includes('/deployments?')) return [{ id: 6, sha: 'd'.repeat(40) }];
+				if (path.includes('/deployments/6/statuses')) return [{ state: 'success' }];
+				if (path.includes('/commits?')) return onSite ? [{ sha: 'c'.repeat(40) }] : [];
+				throw new Error(`not faked: ${path}`);
+			},
+		};
+	};
+	const publishWith = (branch: string, onSite: boolean, more: string[] = []) => {
+		const opened: string[] = [];
+		const quick = { ...deps(design), github: site(branch, onSite), sleep: async () => undefined, fetchAnonymously: async () => ({ status: 404 }), open: (u: string) => void opened.push(u) };
+		return main(['publish', '--project', 'demo', '--name', 'v1-i1', ...more], quick).then((code) => ({ code, opened }));
+	};
+
+	it('opens the link it printed the first time the page goes up, and only that', async () => {
+		const branch = await saved();
+		const { code, opened } = await publishWith(branch, false);
+		expect(code).toBe(0);
+		expect(opened).toEqual(['https://acme.github.io/design/demo/v1/i1/']);
+		expect(out.at(-1)).toBe(opened[0]);
+	});
+
+	it('does not open it for a change to a page that is already on the site', async () => {
+		const branch = await saved();
+		expect((await publishWith(branch, true)).opened).toEqual([]);
+	});
+
+	it('does not open it when told not to', async () => {
+		const branch = await saved();
+		expect((await publishWith(branch, false, ['--no-open'])).opened).toEqual([]);
+	});
+
+	it('does not open anything when the deploy fails', async () => {
+		const branch = await saved();
+		const opened: string[] = [];
+		const failing = { api: async (path: string) => (path.endsWith('/dispatches') ? Promise.reject(Object.assign(new Error('Not Found'), { status: 404 })) : site(branch, false).api(path)) };
+		const code = await main(['publish', '--project', 'demo', '--name', 'v1-i1'], { ...deps(design), github: failing, sleep: async () => undefined, open: (u: string) => void opened.push(u) });
+		expect(code).toBe(1);
+		expect(opened).toEqual([]);
+	});
+});
+
 describe('unpublish', () => {
 	const saved = async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');

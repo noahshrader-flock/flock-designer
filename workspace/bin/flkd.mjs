@@ -37,7 +37,7 @@ try {
 	const { build } = await import(pathToFileURL(esbuild).href);
 	const file = join(out, 'flkd.mjs');
 	await build({ entryPoints: [join(workspace, 'src', 'cli', 'flkd.ts')], outfile: file, bundle: true, platform: 'node', format: 'esm', logLevel: 'error' });
-	const { main, ghApi } = await import(pathToFileURL(file).href);
+	const { main, ghApi, openInBrowser } = await import(pathToFileURL(file).href);
 	process.exitCode = await main(process.argv.slice(2), {
 		cwd: process.cwd(),
 		out: (text) => console.log(text),
@@ -47,6 +47,7 @@ try {
 		// As it would be typed where it is run, so the commands it prints match what a repository's settings allow.
 		self: ['node', relative(process.cwd(), fileURLToPath(import.meta.url))],
 		github: ghApi(),
+		open: openInBrowser,
 		// The comments on the site's pages: built with the app's own Vite, from its own source.
 		buildViewer: async () => {
 			const { build } = await import('vite');

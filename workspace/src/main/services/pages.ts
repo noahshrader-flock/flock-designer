@@ -170,7 +170,25 @@ export interface Published {
 	url: string;
 	/** The page opened with no credentials. */
 	public: boolean;
+	/** This page was not on the site before: its first time. False when it was, and when that could not be told. */
+	first: boolean;
 }
+
+/**
+ * Whether the last deploy of the site already had this page, asked of that deploy's commit. Only a clear "no" counts:
+ * when GitHub cannot say, it is not the first time, so nothing is made of a guess (a browser tab opened by mistake).
+ */
+const isFirstTime = async (github: GitHubApi, ref: DesignRepoRef, projectId: string, name: string): Promise<boolean> => {
+	const base = `/repos/${ref.owner}/${ref.repo}`;
+	try {
+		const deployed = await deployedSha(github, base);
+		if (deployed === null) return true;
+		const onIt = await github.api(`${base}/commits?sha=${deployed}&path=${encodeURIComponent(prototypePagePath(projectId, name))}&per_page=1`);
+		return asArray(onIt).length === 0;
+	} catch {
+		return false;
+	}
+};
 
 /**
  * What a publish and an unpublish share: where the site is, checked before anything leaves this machine; then `change`
@@ -236,6 +254,8 @@ export const publish = async (input: PublishInput): Promise<Published> => {
 	const { ref, projectId, name, fetchAnonymously: anonymous = fetchAnonymously, log = () => undefined } = input;
 	const path = sitePath(projectId, name);
 	if (path === null) throw new Error(`"${name}" is not a prototype, so it has no page to publish.`);
+	// Asked before the deploy: after it, every page that was published is on the site.
+	const first = await isFirstTime(input.github, ref, projectId, name);
 	const { visibility, site } = await deploy(input, 'published');
 
 	// 4. The link, and whether it opens for someone who is not signed in.
@@ -249,5 +269,5 @@ export const publish = async (input: PublishInput): Promise<Published> => {
 	} else {
 		log(`Published. It opens for people signed in to GitHub with access to ${ref.owner}/${ref.repo}: ${url}`);
 	}
-	return { url, public: opened };
+	return { url, public: opened, first };
 };

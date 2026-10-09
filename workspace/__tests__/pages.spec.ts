@@ -12,7 +12,7 @@ const REF = { owner: 'acme', repo: 'design' };
 const SITE = 'https://acme.github.io/design/';
 
 /** GitHub as its API answers. Runs appear one poll after the dispatch, and finish on the next. */
-const fakeGitHub = ({ repoPrivate = true, sitePublic = false, pages = true, conclusion = 'success', workflow = true } = {}) => {
+const fakeGitHub = ({ repoPrivate = true, sitePublic = false, pages = true, conclusion = 'success', workflow = true, onSite = true as boolean | 'no-deploy' } = {}) => {
 	const calls: { path: string; method: string; body?: unknown }[] = [];
 	const runs: { id: number; status: string; conclusion: string | null; html_url: string }[] = [{ id: 1, status: 'completed', conclusion: 'success', html_url: 'run/1' }];
 	let polls = 0;
@@ -23,6 +23,10 @@ const fakeGitHub = ({ repoPrivate = true, sitePublic = false, pages = true, conc
 			if (!pages) throw Object.assign(new Error('Not Found'), { status: 404 });
 			return { html_url: SITE, public: sitePublic, build_type: 'workflow' };
 		}
+		// What the site was last built from, and whether this page was in it.
+		if (path.startsWith('/repos/acme/design/deployments?')) return onSite === 'no-deploy' ? [] : [{ id: 6, sha: 'd'.repeat(40) }];
+		if (path === '/repos/acme/design/deployments/6/statuses?per_page=1') return [{ state: 'success' }];
+		if (path.startsWith('/repos/acme/design/commits?')) return onSite === true ? [{ sha: 'c'.repeat(40) }] : [];
 		if (path === `/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/dispatches`) {
 			if (!workflow) throw Object.assign(new Error('Not Found'), { status: 404 });
 			runs.unshift({ id: 2, status: 'queued', conclusion: null, html_url: 'run/2' });
@@ -75,17 +79,33 @@ describe('publishing', () => {
 	it('pushes the records, asks for the deploy, waits for it, and gives the link to the iteration', async () => {
 		const gh = fakeGitHub();
 		const { done, pushRecords, anonymous } = run(gh);
-		expect(await done).toEqual({ url: `${SITE}demo/v1/i2/`, public: false });
+		expect(await done).toEqual({ url: `${SITE}demo/v1/i2/`, public: false, first: false });
 		expect(pushRecords).toHaveBeenCalledOnce();
 		const dispatch = gh.calls.find((c) => c.method === 'POST');
 		expect(dispatch).toMatchObject({ path: `/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/dispatches`, body: { ref: 'main' } });
 		expect(anonymous).toHaveBeenCalledWith(`${SITE}demo/v1/i2/`);
 	});
 
+	it('says whether this is the first time the page goes up: not on the last deploy, or no deploy yet', async () => {
+		expect(await run(fakeGitHub()).done).toMatchObject({ first: false });
+		expect(await run(fakeGitHub({ onSite: false })).done).toMatchObject({ first: true });
+		expect(await run(fakeGitHub({ onSite: 'no-deploy' })).done).toMatchObject({ first: true });
+		// Asked of the last deploy, with the commits that touched this page.
+		const gh = fakeGitHub({ onSite: false });
+		await run(gh).done;
+		expect(gh.calls.map((c) => c.path).find((p) => p.startsWith('/repos/acme/design/commits?'))).toContain(`sha=${'d'.repeat(40)}&path=projects%2Fdemo%2Fprototypes%2Fv1-i2.html`);
+	});
+
+	it('does not count it as the first time when it cannot tell, so nothing opens by mistake', async () => {
+		const gh = fakeGitHub();
+		const unsure = { api: vi.fn(async (path: string, init?: never) => (path.startsWith('/repos/acme/design/deployments?') ? Promise.reject(new Error('Forbidden')) : gh.api(path, init))) };
+		expect(await run(gh, { github: unsure }).done).toMatchObject({ first: false });
+	});
+
 	it('goes ahead while the repository is public, and says so in its note', async () => {
 		const gh = fakeGitHub({ repoPrivate: false, sitePublic: true });
 		const { done, log, pushRecords } = run(gh, { fetchAnonymously: async () => ({ status: 200 }) });
-		expect(await done).toEqual({ url: `${SITE}demo/v1/i2/`, public: true });
+		expect(await done).toEqual({ url: `${SITE}demo/v1/i2/`, public: true, first: false });
 		expect(pushRecords).toHaveBeenCalledOnce();
 		expect(log.join('\n')).toMatch(/Note that the repository is public, so anyone with the link can open this page/);
 		expect(log.join('\n')).not.toMatch(/PUBLIC TEST/);

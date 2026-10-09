@@ -48,6 +48,9 @@ It prints your task: `build-prototype.md`, where to write the prototype, the com
 that saves it, and the one that publishes it to its page. Do exactly that, and finish as that skill says, ending with the
 page: the link the publish command printed, or, when it printed none, why. Never give a link it did not print.
 
+The command opens the page in the person's browser the first time a page goes up, and not for later changes to it;
+you do nothing for that, and say nothing of it unless they ask. Pass `--no-open` only if they ask for no tab.
+
 Say who can open the page in the publish command's words: it says when the site is public, as it is while the design
 repository is.
 

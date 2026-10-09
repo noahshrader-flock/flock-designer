@@ -42,11 +42,15 @@ export interface CliDeps {
 	/** Asks for a page with no credentials: whether a published page opens for anyone. */
 	fetchAnonymously?: (url: string) => Promise<{ status: number }>;
 	sleep?: (ms: number) => Promise<void>;
+	/** Opens an address in the person's browser. Absent where there is none to open (a test, a machine with no display). */
+	open?: (url: string) => void;
 	/** Builds the comments viewer the site's pages carry, and says where it is. Absent where it cannot be built. */
 	buildViewer?: () => Promise<string>;
 }
 
 /** GitHub's API through its command line, `gh`, signed in as the person running this. */
+export { openInBrowser } from '../main/services/openBrowser';
+
 export const ghApi = (): GitHubApi => ({
 	api: (path, init = {}) =>
 		new Promise((done, fail) => {
@@ -71,7 +75,7 @@ const USAGE = `Usage:
   flkd change-prototype --project <id> --name <v1-i1> --note <what to change> [--product <dir>]
   flkd save-prototype --project <id> --name <v1-i1> [--product <dir>]
   flkd build-site [--out <dir>] [--serve]
-  flkd publish --project <id> --name <v1-i1>
+  flkd publish --project <id> --name <v1-i1> [--no-open]
   flkd unpublish --project <id> --name <v1-i1>
 
 new-prototype records the next version (v1-i1 for a new project, then v2-i1, v3-i1) and prints the task: where to
@@ -79,7 +83,8 @@ write the prototype and how to check it builds. change-prototype does the same f
 newest iteration, or in the next when others have commented on that. save-prototype builds it and saves page and
 source to the design repository. --note-file <path> may stand in for --note. --title is needed only for a new project.
 build-site writes the site prototypes are published as, from the design repository, and --serve shows it here. publish
-pushes the records, deploys the site and prints the iteration's link, and says who can open it. unpublish takes an
+pushes the records, deploys the site and prints the iteration's link, and says who can open it; the first time a page
+goes up the link is also opened in the browser, unless --no-open. unpublish takes an
 iteration off the site: its saved page and source are removed, here and in the design repository, and the site is
 deployed without it. Its record and comments are kept.`;
 
@@ -119,6 +124,7 @@ const OPTIONS = {
 	product: { type: 'string' },
 	out: { type: 'string' },
 	serve: { type: 'boolean' },
+	'no-open': { type: 'boolean' },
 } as const;
 
 /** The options, or a usage error that says which one was wrong. */
@@ -206,9 +212,11 @@ const savedPage = async (deps: CliDeps, values: { project?: string; name?: strin
 };
 
 /** Publishes one saved iteration to its page, and prints the link. */
-const publishPage = async (deps: CliDeps, values: { project?: string; name?: string }): Promise<number> => {
+const publishPage = async (deps: CliDeps, values: { project?: string; name?: string; 'no-open'?: boolean }): Promise<number> => {
 	const published = await publish(await savedPage(deps, values, 'Publishing'));
 	deps.out(published.url);
+	// Once, the first time this page goes up: the person sees what was made, and a later change does not open another tab.
+	if (published.first && !values['no-open']) deps.open?.(published.url);
 	return 0;
 };
 
