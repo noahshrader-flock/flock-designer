@@ -22,7 +22,7 @@ export const fakeApp = (overrides: Impl = {}) => {
 		agentStatus: async () => ok({ state: 'idle' }),
 		agentRecent: async () => ok({ work: null, lines: [] }),
 		signInState: async () => ok({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
-		openPrototype: async () => ok('http://127.0.0.1:9/demo/v1-i1'),
+		openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1', states: [] }),
 		readComments: async () => ok([]),
 		shareStatus: async () => ok({ state: 'idle' }),
 		publishedPage: async () => ok({ state: 'none' }),

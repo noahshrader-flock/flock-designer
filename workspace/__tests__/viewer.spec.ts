@@ -57,6 +57,40 @@ describe("the page's bar", () => {
 	});
 });
 
+describe('the states of the page', () => {
+	const withStates = async (states: string[]) => {
+		const page = sitePage();
+		page.frame.setAttribute('src', 'page.html');
+		current = await render(createElement(Viewer, { config: { ...CONFIG, states }, slots: page.slots }));
+		return page;
+	};
+
+	it('are a dropdown beside the iteration, and choosing one opens the page in it', async () => {
+		const { frame } = await withStates(['default', 'no-match', 'panel']);
+		await openMenu(button('State default: switch state'));
+		const states = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
+		expect(states.map((i) => i.textContent?.trim())).toEqual(['default', 'no-match', 'panel']);
+		await press(states[2] as HTMLElement);
+		await settle();
+		expect(frame.getAttribute('src')).toBe('page.html?state=panel');
+		expect(button('State panel: switch state')).toBeTruthy();
+		// Back to the first is the page as it opens.
+		await openMenu(button('State panel: switch state'));
+		await press(document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')[0] as HTMLElement);
+		await settle();
+		expect(frame.getAttribute('src')).toBe('page.html');
+	});
+
+	it('are not offered for a page with one, or a page built before pages said', async () => {
+		await withStates(['default']);
+		expect(document.querySelector('[aria-label^="State"]')).toBeNull();
+		await unmountAll(current!.root);
+		current = await render(createElement(Viewer, { config: CONFIG, slots: sitePage().slots }));
+		expect(document.querySelector('[aria-label^="State"]')).toBeNull();
+		expect(button('Iteration I1: switch iteration')).toBeTruthy();
+	});
+});
+
 describe('signing in', () => {
 	it('is paused: the button says to comment in the app for now, and keeps nothing', async () => {
 		await open();

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { bundleCommand, esbuildEntry, runBundle, sharedFilesOf, writeBundleScript } from '../src/main/services/prototypeBundle';
+import { statesOf } from '../src/shared/prototypeStates';
 
 // The app's own React stands in for the product's installed packages; a one-file package stands in for its design system.
 const appModules = join(__dirname, '..', 'node_modules');
@@ -75,6 +76,44 @@ describe('bundling a React prototype into one page', () => {
 		expect(r.ok).toBe(false);
 		expect(r.output).toContain('@acme/nothing');
 		expect(existsSync(join(dir, 'prototype', 'i1.html'))).toBe(false);
+	});
+
+	describe('the states it says it has', () => {
+		const build = async (source: string) => {
+			const script = writeBundleScript(join(dir, 'prototype'));
+			const entry = join(dir, 'prototype', 'i1.tsx');
+			const out = join(dir, 'prototype', 'i1.html');
+			mkdirSync(join(dir, 'prototype'), { recursive: true });
+			writeFileSync(entry, source);
+			const r = await runBundle(script, esbuildEntry() as string, entry, out, modules, join(dir, 'shared'), process.execPath);
+			return { ...r, html: existsSync(out) ? readFileSync(out, 'utf8') : null };
+		};
+		const page = 'export default function Prototype() { return null; }\n';
+
+		it('are written into the page, in order, for the bar to offer', async () => {
+			const r = await build(`export const states = ['default', 'no-match', "panel-error"] as const;\n${page}`);
+			expect(r.ok).toBe(true);
+			expect(statesOf(r.html as string)).toEqual(['default', 'no-match', 'panel-error']);
+		});
+
+		it('may be typed, and laid over several lines', async () => {
+			const r = await build(`export const states: readonly string[] = [\n\t'default',\n\t'empty',\n];\n${page}`);
+			expect(statesOf(r.html as string)).toEqual(['default', 'empty']);
+		});
+
+		it('are none when it says none', async () => {
+			const r = await build(page);
+			expect(r.html).not.toContain('flkd-states');
+		});
+
+		it('fail the build, saying why, when the list is not plain names, or names one twice', async () => {
+			for (const states of ["['default', 'Has Spaces']", "['default', name]", "['default', 'empty', 'default']", '[]', 'makeStates()']) {
+				const r = await build(`const name = 'x';\nexport const states = ${states};\n${page}`);
+				expect(r.ok, states).toBe(false);
+				expect(r.output).toContain('export const states');
+				expect(r.html).toBeNull();
+			}
+		});
 	});
 
 	it('gives the agent one command it can run as it is', () => {

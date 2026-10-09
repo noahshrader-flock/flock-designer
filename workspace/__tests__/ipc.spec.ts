@@ -607,8 +607,15 @@ describe('prototypes', () => {
 		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), 'utf8')).toBe('<h1>Demo</h1>');
 
 		const opened = await call(CHANNELS.openPrototype, 'demo', 'v1-i1');
-		expect(opened.ok).toBe(true);
-		expect(await (await fetch(opened.value as string)).text()).toBe('<h1>Demo</h1>');
+		expect(opened).toMatchObject({ ok: true, value: { states: [] } });
+		expect(await (await fetch((opened.value as { url: string }).url)).text()).toBe('<h1>Demo</h1>');
+
+		// With the states the page says it has, for the bar to offer; the page is the same in each, asked for in it.
+		writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<meta name="flkd-states" content="default,empty"><h1>Demo</h1>');
+		expect((await call(CHANNELS.savePrototype, 'demo', 'v1-i1')).ok).toBe(true);
+		const again = (await call(CHANNELS.openPrototype, 'demo', 'v1-i1')).value as { url: string; states: string[] };
+		expect(again.states).toEqual(['default', 'empty']);
+		expect(await (await fetch(`${again.url}?state=empty`)).text()).toContain('<h1>Demo</h1>');
 	});
 
 	it('record what they are modelled on, and give the agent that branch to read, never to change', async () => {
@@ -986,7 +993,7 @@ describe('prototypes', () => {
 		expect(page).toContain(`/_shared/${kept[0]?.replace('.datauri', '')}`);
 		expect(page).not.toContain('A'.repeat(1000));
 		const opened = await call(CHANNELS.openPrototype, 'demo', 'v2-i1');
-		const font = await fetch((opened.value as string).replace('/demo/v2-i1/', `/_shared/${kept[0]?.replace('.datauri', '')}`));
+		const font = await fetch((opened.value as { url: string }).url.replace('/demo/v2-i1/', `/_shared/${kept[0]?.replace('.datauri', '')}`));
 		expect(font.headers.get('content-type')).toBe('font/woff2');
 		// Kept beside the projects, never listed as one.
 		const listed = await call(CHANNELS.listProjects);

@@ -493,6 +493,36 @@ describe('there is no selected version', () => {
 	});
 });
 
+describe('the prototype’s states', () => {
+	const withStates = (states: string[]) => fakeApp({ openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1/', states }) });
+
+	it('are a dropdown in the bar, and choosing one opens the preview in it', async () => {
+		const app = withStates(['default', 'no-match', 'panel']);
+		await open(app);
+		await settle();
+		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/']);
+		await openMenu(button('State default: switch state'));
+		const states = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
+		expect(states.map((s) => s.textContent?.trim())).toEqual(['default', 'no-match', 'panel']);
+		await press(states[1] as HTMLElement);
+		await settle();
+		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/?state=no-match']);
+		expect(button('State no-match: switch state')).toBeTruthy();
+		// The first is the page as it opens.
+		await openMenu(button('State no-match: switch state'));
+		await press(document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')[0] as HTMLElement);
+		await settle();
+		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/']);
+	});
+
+	it('are not offered for a prototype with one, or none', async () => {
+		await open(withStates(['default']));
+		await settle();
+		expect(document.querySelector('[aria-label^="State"]')).toBeNull();
+		expect(button('Iteration I1: switch iteration')).toBeTruthy();
+	});
+});
+
 describe('Address', () => {
 	it('runs on one comment, and shows it resolved with where the change went', async () => {
 		let c = comment(1, 'Remove this');

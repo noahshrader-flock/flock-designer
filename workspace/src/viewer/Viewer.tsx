@@ -2,13 +2,14 @@ import { ChevronLeftIcon, LogOutIcon } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { prototypeKey } from '../shared/projects';
+import { withState } from '../shared/prototypeStates';
 import { prototypeAddressed } from '../renderer/comments/addressed';
 import { CommentBox } from '../renderer/comments/CommentBox';
 import { CommentControl } from '../renderer/comments/CommentControl';
 import { CommentList } from '../renderer/comments/CommentList';
 import { CommentsHeading } from '../renderer/comments/CommentsHeading';
 import { useComments } from '../renderer/comments/useComments';
-import { IterationSwitcher } from '../renderer/IterationSwitcher';
+import { IterationSwitcher, StateSwitcher } from '../renderer/IterationSwitcher';
 import { Toolbar } from '../renderer/Toolbar';
 import { Alert, AlertDescription } from '../renderer/ui/alert';
 import { Button } from '../renderer/ui/button';
@@ -17,10 +18,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../renderer/ui/tooltip'
 import { browserComments, framePage, saveToken, savedToken, tokenApi } from './browserAdapter';
 
 /**
- * A prototype's published page, as the app shows one: its bar (the app's own toolbar, back button, title and iteration
- * switcher), the Comment control and its count, the side panel from the right, the box beside the pin. All of it the
- * app's own parts. Drawn into the page the site built, which holds only a link back to the project until this takes
- * over, so the page still works without it.
+ * A prototype's published page, as the app shows one: its bar (the app's own toolbar, back button, title, version and
+ * iteration switchers, and the page's states when it has more than one), the Comment control and its count, the side
+ * panel from the right, the box beside the pin. All of it the app's own parts. Drawn into the page the site built, which
+ * holds only a link back to the project until this takes over, so the page still works without it.
  */
 
 /** What the site writes into each iteration's page for this. */
@@ -34,6 +35,8 @@ export interface ViewerConfig {
 	projectHref: string;
 	/** Every iteration of the project that has a page, and where each is from this one. */
 	iterations: { name: string; href: string }[];
+	/** The states the page has (`shared/prototypeStates`); not there on a page built before pages said. */
+	states?: string[];
 }
 
 /** What is drawn where: the bar, the comments' panel, and the prototype's frame. */
@@ -43,8 +46,11 @@ export interface ViewerSlots {
 	frame: HTMLIFrameElement;
 }
 
+/** The state the frame shows, and choosing another; kept above the bar, which is drawn again on signing in or out. */
+type Showing = { state: string | null; onState: (state: string | null) => void };
+
 /** The page's bar. `children` is what comes last: the Comment control, or signing in. */
-const PageBar = ({ config, slots, children }: { config: ViewerConfig; slots: ViewerSlots; children: ReactNode }) => {
+const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; slots: ViewerSlots; showing: Showing; children: ReactNode }) => {
 	const iterations = useMemo(
 		() => config.iterations.map((i) => ({ ...i, branch: prototypeKey(config.projectId, i.name) })),
 		[config.iterations, config.projectId],
@@ -70,6 +76,7 @@ const PageBar = ({ config, slots, children }: { config: ViewerConfig; slots: Vie
 					grouped
 					onSelect={(next) => void (location.href = next.href)}
 				/>
+				<StateSwitcher states={config.states ?? []} current={showing.state} onSelect={showing.onState} />
 				{children}
 			</div>
 		</Toolbar>,
@@ -81,6 +88,15 @@ export const Viewer = ({ config, slots }: { config: ViewerConfig; slots: ViewerS
 	// A token kept in this browser is what the sign-in will leave; until it exists, only tests leave one.
 	const [token, setToken] = useState<string | null>(savedToken);
 	const [paused, setPaused] = useState(false);
+	// The frame opens in the page's first state; another is the same page, asked for in it.
+	const [state, setState] = useState<string | null>(null);
+	const showing: Showing = {
+		state,
+		onState: (next) => {
+			setState(next);
+			slots.frame.src = withState(slots.frame.getAttribute('src') ?? 'page.html', next);
+		},
+	};
 	const signOut = () => {
 		saveToken(null);
 		setToken(null);
@@ -88,9 +104,9 @@ export const Viewer = ({ config, slots }: { config: ViewerConfig; slots: ViewerS
 	return (
 		<>
 			{token ? (
-				<Commenting key={token} config={config} slots={slots} token={token} onSignOut={signOut} />
+				<Commenting key={token} config={config} slots={slots} showing={showing} token={token} onSignOut={signOut} />
 			) : (
-				<PageBar config={config} slots={slots}>
+				<PageBar config={config} slots={slots} showing={showing}>
 					{/* Not on a phone: commenting needs a computer, and the bar's room goes to the title and the switcher. */}
 					<Button variant="outline" className="max-sm:hidden" onClick={() => setPaused(true)}>
 						Sign in to comment
@@ -102,7 +118,19 @@ export const Viewer = ({ config, slots }: { config: ViewerConfig; slots: ViewerS
 	);
 };
 
-const Commenting = ({ config, slots, token, onSignOut }: { config: ViewerConfig; slots: ViewerSlots; token: string; onSignOut: () => void }) => {
+const Commenting = ({
+	config,
+	slots,
+	showing,
+	token,
+	onSignOut,
+}: {
+	config: ViewerConfig;
+	slots: ViewerSlots;
+	showing: Showing;
+	token: string;
+	onSignOut: () => void;
+}) => {
 	const store = useMemo(
 		() => browserComments(tokenApi(token), { owner: config.owner, repo: config.repo }, { projectId: config.projectId, branch: prototypeKey(config.projectId, config.name) }),
 		[token, config],
@@ -142,7 +170,7 @@ const Commenting = ({ config, slots, token, onSignOut }: { config: ViewerConfig;
 	const frameBox = slots.frame.getBoundingClientRect();
 	return (
 		<>
-			<PageBar config={config} slots={slots}>
+			<PageBar config={config} slots={slots} showing={showing}>
 				<CommentControl comments={comments} listOpen={listOpen} onToggleList={() => setListOpen((o) => !o)} disabled={!opened} />
 			</PageBar>
 			{listOpen &&

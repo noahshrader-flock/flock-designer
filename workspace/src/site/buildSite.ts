@@ -2,6 +2,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync,
 import { join } from 'node:path';
 import type { Iteration } from '../shared/contract';
 import { firstHeading, isPrototypeKey, iterationLabel, parsePrototypeName, projectCodeLink, sitePath } from '../shared/projects';
+import { statesOf } from '../shared/prototypeStates';
 import { parseIterations } from '../shared/records';
 
 /**
@@ -195,8 +196,11 @@ const projectPage = (p: SiteProject, comments: Map<string, number> | undefined):
 			.join('\n')}\n</div>\n</main>`,
 	);
 
-/** What the page's bar and comments are told, safe inside a script element: which iteration this is, and where the others are. */
-const viewerConfig = (ref: { owner: string; repo: string }, p: SiteProject, current: Page): string =>
+/**
+ * What the page's bar and comments are told, safe inside a script element: which iteration this is, where the others
+ * are, and the states the page has.
+ */
+const viewerConfig = (ref: { owner: string; repo: string }, p: SiteProject, current: Page, states: string[]): string =>
 	JSON.stringify({
 		owner: ref.owner,
 		repo: ref.repo,
@@ -205,6 +209,7 @@ const viewerConfig = (ref: { owner: string; repo: string }, p: SiteProject, curr
 		title: p.title,
 		projectHref: '../../',
 		iterations: p.versions.flatMap((v) => v.pages.map((pg) => ({ name: pg.record.name, href: `../../${pg.path}` }))),
+		states,
 	}).replace(/</g, '\\u003c');
 
 /**
@@ -212,9 +217,9 @@ const viewerConfig = (ref: { owner: string; repo: string }, p: SiteProject, curr
  * app's own, drawn by the viewer (the switcher, comments); until it takes over, and where it never does, the bar is a
  * link back to the project, and nothing about it is styled here.
  */
-const viewerPage = (p: SiteProject, current: Page, viewer: SiteInput['viewer']): string => {
+const viewerPage = (p: SiteProject, current: Page, viewer: SiteInput['viewer'], states: string[]): string => {
 	const head = viewer
-		? `<link rel="stylesheet" href="../../../_viewer/viewer.css">\n<script type="application/json" id="flkd-config">${viewerConfig(viewer.ref, p, current)}</script>\n<script type="module" src="../../../_viewer/viewer.js"></script>\n`
+		? `<link rel="stylesheet" href="../../../_viewer/viewer.css">\n<script type="application/json" id="flkd-config">${viewerConfig(viewer.ref, p, current, states)}</script>\n<script type="module" src="../../../_viewer/viewer.js"></script>\n`
 		: '';
 	return shell(
 		`${p.title} · ${labelOf(current)}`,
@@ -254,8 +259,9 @@ export const buildSite = ({ designRoot, outDir, comments, viewer }: SiteInput): 
 			for (const pg of v.pages) {
 				const at = join(dir, pg.path);
 				mkdirSync(at, { recursive: true });
-				writeFileSync(join(at, 'index.html'), viewerPage(p, pg, viewer));
-				writeFileSync(join(at, 'page.html'), relink(readFileSync(join(designRoot, 'projects', p.id, 'prototypes', `${pg.record.name}.html`), 'utf8')));
+				const html = readFileSync(join(designRoot, 'projects', p.id, 'prototypes', `${pg.record.name}.html`), 'utf8');
+				writeFileSync(join(at, 'index.html'), viewerPage(p, pg, viewer, statesOf(html)));
+				writeFileSync(join(at, 'page.html'), relink(html));
 			}
 			const newest = v.pages[0] as Page;
 			mkdirSync(join(dir, `v${v.version}`, 'latest'), { recursive: true });

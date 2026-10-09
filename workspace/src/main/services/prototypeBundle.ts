@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
+import { STATE_NAME, STATES_META } from '../../shared/prototypeStates';
 
 /**
  * Turns a prototype written in React into one HTML file anyone can open.
@@ -24,6 +25,18 @@ const { build } = await import(esbuildPath);
 const source = readFileSync(entry, 'utf8');
 // The comment the page opens with (what it shows, where it sits, its gaps) travels into the HTML for reviewers.
 const lead = /^\s*\/\*([\s\S]*?)\*\//.exec(source)?.[1]?.replace(/^\s*\* ?/gm, '').trim() ?? '';
+// The states it says it has (export const states = ['default', ...], the first what it opens in) go into the page as a
+// tag, for the bar to offer. Read from the source as written, not run: a list that is not plain names fails the build.
+let states = [];
+if (/^export const states\b/m.test(source)) {
+	const list = /^export const states\b[^=\n]*=\s*\[([^\]]*)\]/m.exec(source);
+	const name = new RegExp(${JSON.stringify(STATE_NAME.source)});
+	states = (list?.[1] ?? '').split(',').map((s) => s.trim()).filter(Boolean).map((s) => /^(['"])(.*)\1$/.exec(s)?.[2] ?? '');
+	if (states.length === 0 || states.some((s) => !name.test(s)) || new Set(states).size !== states.length) {
+		console.error("export const states must be a list of lowercase names, each once, the first what the page opens in: export const states = ['default', 'empty'] as const;");
+		process.exit(1);
+	}
+}
 const fileLoaders = Object.fromEntries(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.woff', '.woff2', '.ttf', '.eot'].map((e) => [e, 'dataurl']));
 try {
 	const result = await build({
@@ -65,6 +78,7 @@ try {
 	const html =
 		'<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
 		(lead ? '<!--\n' + lead.replace(/--/g, '- -') + '\n-->\n' : '') +
+		(states.length ? '<meta name=${JSON.stringify(STATES_META)} content="' + states.join(',') + '">\n' : '') +
 		'<style>' + safe(css) + '</style>\n</head>\n<body>\n<div id="root"></div>\n<script>' + safe(js) + '</script>\n</body>\n</html>\n';
 	writeFileSync(out, html);
 	console.log('Built ' + basename(out) + ' (' + Math.round(html.length / 1024) + ' KB).');

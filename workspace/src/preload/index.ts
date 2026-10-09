@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { CHANNELS } from '../shared/contract';
 import type {
 	BuildInClaude,
+	OpenedPrototype,
 	Catalog,
 	StoryPreview,
 	AgentStatus,
@@ -101,7 +102,7 @@ const api: WorkspaceApi = {
 	publishedPage: (projectId, name) => invoke<PageStatus>(CHANNELS.publishedPage, projectId, name),
 	openPublishedPage: (projectId, name) => invoke<null>(CHANNELS.openPublishedPage, projectId, name),
 	savePrototype: (projectId, name) => invoke<null>(CHANNELS.savePrototype, projectId, name),
-	openPrototype: (projectId, name) => invoke<string>(CHANNELS.openPrototype, projectId, name),
+	openPrototype: (projectId, name) => invoke<OpenedPrototype>(CHANNELS.openPrototype, projectId, name),
 	prototypeReadiness: (root) => invoke<PrototypeReadiness>(CHANNELS.prototypeReadiness, root),
 	moveToCodePlan: (root, projectId, name) => invoke<MoveToCodePlan>(CHANNELS.moveToCodePlan, root, projectId, name),
 	buildInClaude: (root, projectId, name, from) => invoke<BuildInClaude>(CHANNELS.buildInClaude, root, projectId, name, from),

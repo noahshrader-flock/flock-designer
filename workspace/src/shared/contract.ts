@@ -174,6 +174,12 @@ export interface BuildInClaude {
 	command: string | null;
 }
 
+/** A prototype served to the review screen: where it is, and the states it has (`shared/prototypeStates`). */
+export interface OpenedPrototype {
+	url: string;
+	states: string[];
+}
+
 /** What moving a prototype into the code would do here, so the person is told before it does it. */
 export interface MoveToCodePlan {
 	/** The project's one codebase branch, as this repository names it. */
@@ -407,7 +413,7 @@ export interface WorkspaceApi {
 	/** Opens the iteration's published page in the person's browser. Its address is worked out there, not taken from here. */
 	openPublishedPage(projectId: string, name: string): Promise<Result<null>>;
 	savePrototype(projectId: string, name: string): Promise<Result<null>>;
-	openPrototype(projectId: string, name: string): Promise<Result<string>>;
+	openPrototype(projectId: string, name: string): Promise<Result<OpenedPrototype>>;
 	/** What moving a prototype into the code would do in this checkout, asked before it is offered. */
 	moveToCodePlan(root: string, projectId: string, name: string): Promise<Result<MoveToCodePlan>>;
 	/** Whether a prototype can be built from this repository on this machine, and with which design system version. */

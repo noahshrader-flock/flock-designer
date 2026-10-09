@@ -78,7 +78,7 @@ when the prototype moves into the code:
 |---|---|---|
 | `@standin` | Something the product cannot do today, approximated | `// @standin: 90-day line chart, inline SVG. No chart component exists. On move: decide a chart library, or drop it.` |
 | `@mock` | Data standing in for something real | `// @mock: role usage per day. No endpoint exists. On move: replace with the usage endpoint once defined.` |
-| `@remove` | Scaffolding that exists only so the prototype runs | `// @remove: state switcher. On move: delete.` |
+| `@remove` | Scaffolding that exists only so the prototype runs | `// @remove: picks the state from ?state=. On move: delete; the real page has real data.` |
 
 - **Name the replacement when the product's guidance names one** ("On move: use `FSSymbol`"); otherwise say
   what decision is needed. Never leave the "on move" part out.
@@ -89,8 +89,12 @@ when the prototype moves into the code:
 
 - **Give the things people will comment on a stable name**, `data-e2e-ref="<name>"`, in plain words:
   `invite-button`, `members-table`, `empty-state`.
-- **States are a query parameter** (`?state=<name>`), the default being the one most people should see
-  first. A small, clearly secondary switcher is fine, marked `@remove`.
+- **Say which states it has, and draw no way between them.** List them as
+  `export const states = ['default', 'no-match', 'panel'] as const;`, plain lowercase names, the first
+  being the one most people should see first. The page reads its state from `?state=<name>` (the first
+  when there is none). The bar above the page, in the app and on the published page, offers the list,
+  so a switcher drawn in the page is never needed and covers what it shows. The build reads the list
+  as written, so keep it a plain list of names; one it cannot read fails the build and says why.
 - **A state shows the situation at rest.** A dialog open, yes; a menu or dropdown inside it already
   expanded, no. Anything that closes on the next click hides what the state exists to show.
 - **Start the file with a block comment** that says what the page shows, where in the product it sits,

@@ -14,6 +14,7 @@ import {
 	type PageBounds,
 	type PageHoldReason,
 	type MoveToCodePlan,
+	type OpenedPrototype,
 	type Person,
 	type PageStatus,
 	type PrototypeAddressed,
@@ -68,6 +69,7 @@ import {
 import { resolveInside } from './services/paths';
 import { PrototypeServer } from './services/prototypeServer';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
+import { statesOf } from '../shared/prototypeStates';
 import { type PrototypeChange, prototypeWork, whereTheChangeGoes } from './services/prototypeWork';
 import { pageStatus, publish, recordsFrom, redeploySite, siteBehind } from './services/pages';
 import {
@@ -1162,7 +1164,7 @@ export const registerIpc = ({
 
 	ipcMain.handle(
 		CHANNELS.openPrototype,
-		guard(async (projectId: string, name: string): Promise<string> => {
+		guard(async (projectId: string, name: string): Promise<OpenedPrototype> => {
 			await finishPrototypeChanges(projectId);
 			const html = await prototypePage(projectId, name);
 			if (html === null) throw new Error('This prototype has no page yet.');
@@ -1172,7 +1174,7 @@ export const registerIpc = ({
 			const path = prototypePagePath(projectId, name);
 			if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html) await work.keep(projectId, name, html);
 			await serveShared(html);
-			return prototypeServer.serve(`${projectId}/${name}`, html);
+			return { url: await prototypeServer.serve(`${projectId}/${name}`, html), states: statesOf(html) };
 		}),
 	);
 

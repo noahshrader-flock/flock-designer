@@ -192,7 +192,7 @@ describe('runPrototypeBuild', () => {
 			buildPrototype: ok('buildPrototype', { state: 'running', startedAt: 'now' }),
 			agentStatus: ok('agentStatus', { state: 'finished', exitCode: 0 }),
 			savePrototype: ok('savePrototype', null),
-			openPrototype: ok('openPrototype', 'http://127.0.0.1:5000/users/i1/'),
+			openPrototype: ok('openPrototype', { url: 'http://127.0.0.1:5000/users/i1/', states: ['default', 'empty'] }),
 			...over,
 		} as unknown as PrototypeApi;
 		return { a, calls };
@@ -209,6 +209,12 @@ describe('runPrototypeBuild', () => {
 		expect(url).toBe('http://127.0.0.1:5000/users/i1/');
 		expect(phases).toEqual(['agent', 'preview', 'running']);
 		expect(calls).toEqual(['agentStatus', 'buildPrototype', 'agentStatus', 'savePrototype', 'openPrototype']);
+	});
+
+	it('shows the page with the states it has', async () => {
+		const phases: BuildPhase[] = [];
+		await runPrototypeBuild({ api: api().a, project, iteration, isLive: () => true, onPhase: (p) => phases.push(p), pollMs: 1 });
+		expect(phases.at(-1)).toEqual({ kind: 'running', url: 'http://127.0.0.1:5000/users/i1/', states: ['default', 'empty'] });
 	});
 
 	it('only opens work that already exists', async () => {

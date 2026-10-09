@@ -18,9 +18,9 @@ const Pick = ({
 	choices,
 	onChange,
 }: {
-	/** What it picks, for its tooltip and its name for assistive technology: "version", "iteration". */
-	what: 'version' | 'iteration';
-	/** The button's own words: `V2`, `I1`. */
+	/** What it picks, for its tooltip and its name for assistive technology: "version", "iteration", "state". */
+	what: 'version' | 'iteration' | 'state';
+	/** The button's own words: `V2`, `I1`, `default`. */
 	label: string;
 	value: string;
 	choices: { value: string; label: string }[];
@@ -30,7 +30,7 @@ const Pick = ({
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<DropdownMenuTrigger asChild>
-					<Button variant="outline" aria-label={`${what === 'version' ? 'Version' : 'Iteration'} ${label}: switch ${what}`}>
+					<Button variant="outline" aria-label={`${what[0]!.toUpperCase()}${what.slice(1)} ${label}: switch ${what}`}>
 						{label}
 						<ChevronDownIcon />
 					</Button>
@@ -117,5 +117,25 @@ export const IterationSwitcher = <T extends Switchable>({
 				onChange={go}
 			/>
 		</>
+	);
+};
+
+/**
+ * A prototype's states (see `shared/prototypeStates`): beside the version and the iteration, the way of seeing this one
+ * that is on screen. Not there with fewer than two, as there is nothing to switch to. `null` is the first, the state
+ * the page opens in, so choosing it goes back to the page's own address.
+ */
+export const StateSwitcher = ({ states, current, onSelect }: { states: string[]; current: string | null; onSelect: (state: string | null) => void }) => {
+	if (states.length < 2) return null;
+	// One it no longer has (it was built again without it) shows as the page does: in the first.
+	const here = current !== null && states.includes(current) ? current : (states[0] as string);
+	return (
+		<Pick
+			what="state"
+			label={here}
+			value={here}
+			choices={states.map((s) => ({ value: s, label: s }))}
+			onChange={(s) => onSelect(s === states[0] ? null : s)}
+		/>
 	);
 };

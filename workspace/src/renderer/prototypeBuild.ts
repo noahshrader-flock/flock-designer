@@ -53,8 +53,8 @@ export const runPrototypeBuild = async ({
 	const opened = await api.openPrototype(project.id, iteration.name);
 	if (!isLive()) return null;
 	if (!opened.ok) return fail(opened.error);
-	onPhase({ kind: 'running', url: opened.value });
-	return opened.value;
+	onPhase({ kind: 'running', url: opened.value.url, states: opened.value.states });
+	return opened.value.url;
 };
 
 /** The hook the review screen uses, shaped like `useLocalBuild` so the screen treats both alike. */

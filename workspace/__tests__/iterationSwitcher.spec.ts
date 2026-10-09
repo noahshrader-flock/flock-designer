@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { IterationSwitcher } from '../src/renderer/IterationSwitcher';
+import { IterationSwitcher, StateSwitcher } from '../src/renderer/IterationSwitcher';
 import { button, press, render, settle, unmountAll } from './reviewHarness';
 
 /**
@@ -108,5 +108,50 @@ describe('for codebase work', () => {
 		await show('codebase', { current: codebase, siblings: [codebase], grouped: false });
 		expect(document.querySelector('[aria-label^="Version"]')).toBeNull();
 		expect(button('Iteration I1: switch iteration').textContent).toBe('I1');
+	});
+});
+
+describe('a prototype’s states', () => {
+	const STATES = ['default', 'no-match', 'panel'];
+	const showStates = async (more: Record<string, unknown> = {}) => {
+		const onSelect = vi.fn();
+		current = await render(createElement(StateSwitcher, { states: STATES, current: null, onSelect, ...more } as never));
+		return onSelect;
+	};
+
+	it('are a dropdown saying which one you are on, the first until another is chosen', async () => {
+		await showStates();
+		expect(button('State default: switch state').textContent).toBe('default');
+		await unmountAll(current!.root);
+		await showStates({ current: 'panel' });
+		expect(button('State panel: switch state').textContent).toBe('panel');
+	});
+
+	it('lists every state, in the prototype’s own order, with this one chosen', async () => {
+		await showStates({ current: 'no-match' });
+		const items = await choices(button('State no-match: switch state'));
+		expect(names(items)).toEqual(STATES);
+		expect(items.map((i) => i.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
+	});
+
+	it('goes to the state chosen, and back to the first as the one it opens in', async () => {
+		const onSelect = await showStates({ current: 'panel' });
+		await press((await choices(button('State panel: switch state')))[1]!);
+		expect(onSelect).toHaveBeenLastCalledWith('no-match');
+		await press((await choices(button('State panel: switch state')))[0]!);
+		expect(onSelect).toHaveBeenLastCalledWith(null);
+	});
+
+	it('says the first for a state the prototype no longer has, as the page then shows', async () => {
+		await showStates({ current: 'gone' });
+		expect(button('State default: switch state')).toBeTruthy();
+	});
+
+	it('is not there for a prototype with one state, or none: there is nothing to switch to', async () => {
+		await showStates({ states: ['default'] });
+		expect(document.querySelector('[aria-label^="State"]')).toBeNull();
+		await unmountAll(current!.root);
+		await showStates({ states: [] });
+		expect(document.querySelector('[aria-label^="State"]')).toBeNull();
 	});
 });

@@ -9,6 +9,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, PageStatus, Project, ProjectIteration } from '../shared/contract';
 import { READY_LINE } from '../shared/handoff';
+import { withState } from '../shared/prototypeStates';
 import {
 	freshIteration,
 	isPrototypeKey,
@@ -18,7 +19,7 @@ import {
 	workKind,
 	workOf,
 } from '../shared/projects';
-import { IterationSwitcher } from './IterationSwitcher';
+import { IterationSwitcher, StateSwitcher } from './IterationSwitcher';
 import { CommentBox } from './comments/CommentBox';
 import { CommentControl } from './comments/CommentControl';
 import { CommentList } from './comments/CommentList';
@@ -216,10 +217,11 @@ export const Review = ({
 	}, [hostedUrl, hosted.state, open]);
 	useEffect(() => () => void window.workspace.pageClose(), []);
 
-	// When the preview is up, show it.
+	// When the preview is up, show it, in the state chosen: the first, which is the page's own address, until another is.
+	const [state, setState] = useState<string | null>(null);
 	useEffect(() => {
-		if (local.phase.kind === 'running') void open(local.phase.url);
-	}, [local.phase, open]);
+		if (local.phase.kind === 'running') void open(withState(local.phase.url, state));
+	}, [local.phase, state, open]);
 	// While the agent works on an open page (Handoff), and when it reports, the screen is its, not the page's.
 	useEffect(() => {
 		if (local.phase.kind !== 'agent' && local.phase.kind !== 'reported') return;
@@ -482,6 +484,7 @@ export const Review = ({
 						onSelect={(next) => onOpen(project, next)}
 						note={(i) => (i.localOnly && !project.localOnly ? ' · only on this machine' : '')}
 					/>
+					<StateSwitcher states={local.phase.kind === 'running' ? (local.phase.states ?? []) : []} current={state} onSelect={setState} />
 					<CommentControl comments={comments} listOpen={sidebarOpen} onToggleList={() => setSidebarOpen((o) => !o)} disabled={!opened} />
 					{/* Codebase work's next step, so it is the one filled button. */}
 					{checkout && codebase && (

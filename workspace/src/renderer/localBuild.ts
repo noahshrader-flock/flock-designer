@@ -18,8 +18,11 @@ export type BuildPhase =
 	/** `handoff`: the agent is doing a Handoff, which ends in a report, not a preview. */
 	| { kind: 'agent'; handoff?: boolean }
 	| { kind: 'preview' }
-	/** `uncommitted`: the checkout had changes nobody committed when it was opened, and no agent made them here. */
-	| { kind: 'running'; url: string; uncommitted?: boolean }
+	/**
+	 * `uncommitted`: the checkout had changes nobody committed when it was opened, and no agent made them here. `states`:
+	 * a prototype's, which the screen offers (`shared/prototypeStates`).
+	 */
+	| { kind: 'running'; url: string; uncommitted?: boolean; states?: string[] }
 	/** The agent did work that ends in a report, not a preview (Handoff): its last words say how it went. */
 	| { kind: 'reported' }
 	| { kind: 'failed'; message: string };
