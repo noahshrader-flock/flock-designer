@@ -39,7 +39,8 @@ import { Toolbar } from './Toolbar';
 import { useHostedPreview } from './hostedPreview';
 import { type AddressPhase, runAddress, runPrototypeAddress } from './address';
 import { routeWentWrong } from './localBuild';
-import { PANEL_STEP, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
+import { COMMENTS_PANEL } from './panelWidth';
+import { ResizablePanel } from './ResizablePanel';
 import { useLocalBuild } from './useLocalBuild';
 import { useEditor } from './useEditor';
 import { usePrototypeBuild } from './prototypeBuild';
@@ -102,10 +103,7 @@ export const Review = ({
 
 	// The sidebar: closed until asked for. Its width is the person's to set, and is remembered.
 	const [sidebarOpen, setSidebarOpen] = useState(false);
-	const [panelWidth, setPanelWidth] = useState(() => loadPanelWidth(window.innerWidth));
-	const [resizing, setResizing] = useState(false);
 	// A ref as well as state: pointer events can arrive faster than a render.
-	const dragging = useRef(false);
 
 	// The comment box needs the preview out of the way; this is that handshake.
 	const [ready, setReady] = useState(false);
@@ -318,11 +316,9 @@ export const Review = ({
 		})();
 	}, [frozen, opened]); // eslint-disable-line react-hooks/exhaustive-deps
 
-	// Dragging the divider hides the preview for the length of the drag.
-	useEffect(() => {
-		void window.workspace.pageHold('resize', resizing);
-		return () => void window.workspace.pageHold('resize', false);
-	}, [resizing]);
+	// Dragging the divider hides the preview for the length of the drag (`ResizablePanel` says when); a hold left on
+	// is let go on the way out.
+	useEffect(() => () => void window.workspace.pageHold('resize', false), []);
 
 	// Letting go on the way out matters: the holds live in the main process, and a preview
 	// left hidden would stay hidden for the next iteration too.
@@ -333,37 +329,6 @@ export const Review = ({
 		[],
 	);
 
-	// A narrower window may no longer have room for the width that was set.
-	useEffect(() => {
-		const fit = () => setPanelWidth((w) => clampPanelWidth(w, window.innerWidth));
-		window.addEventListener('resize', fit);
-		return () => window.removeEventListener('resize', fit);
-	}, []);
-
-	const startResize = (e: React.PointerEvent<HTMLElement>) => {
-		e.preventDefault();
-		try {
-			// Keeps the drag attached to the divider if the pointer strays off it.
-			e.currentTarget.setPointerCapture(e.pointerId);
-		} catch {
-			// Resizing still works without capture; it just follows the pointer less tightly.
-		}
-		dragging.current = true;
-		setResizing(true);
-	};
-	// The sidebar's right edge is the window's, so its width is how far the pointer is from it.
-	const moveResize = (e: React.PointerEvent<HTMLElement>) => {
-		if (dragging.current) setPanelWidth(clampPanelWidth(window.innerWidth - e.clientX, window.innerWidth));
-	};
-	const endResize = () => {
-		if (!dragging.current) return;
-		dragging.current = false;
-		setResizing(false);
-		setPanelWidth((w) => {
-			savePanelWidth(w);
-			return w;
-		});
-	};
 
 	/** A prototype iteration of this project, by name, as people read it. */
 	const labelOf = (name: string): string => iterationLabel({ name, branch: prototypeKey(project.id, name) });
@@ -674,124 +639,97 @@ export const Review = ({
 
 				{/* There is nothing to comment on until the page is open, so the list waits for it too. */}
 				{sidebarOpen && opened && (
-					<>
-						{/* The divider. Drag it, or focus it and use the arrow keys. One pixel to look at, with a
-						    wider strip to grab that extends over the sidebar only: the other side is the native
-						    preview, which never passes the pointer to this window. */}
-						<div
-							role="separator"
-							aria-orientation="vertical"
-							aria-label="Resize the comments sidebar"
-							aria-valuenow={panelWidth}
-							tabIndex={0}
-							onPointerDown={startResize}
-							onPointerMove={moveResize}
-							onPointerUp={endResize}
-							onPointerCancel={endResize}
-							onKeyDown={(e: React.KeyboardEvent) => {
-								if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-								e.preventDefault();
-								const next = clampPanelWidth(panelWidth + (e.key === 'ArrowLeft' ? PANEL_STEP : -PANEL_STEP), window.innerWidth);
-								setPanelWidth(next);
-								savePanelWidth(next);
-							}}
-							className={`relative w-px shrink-0 touch-none outline-none transition-colors after:absolute after:inset-y-0 after:left-0 after:w-[7px] after:cursor-col-resize after:content-[''] hover:bg-primary focus-visible:bg-primary ${
-								resizing ? 'bg-primary' : 'bg-border'
-							}`}
-						/>
-						{/* Inline on purpose: the width is wherever the person dragged the divider, a runtime value. */}
-						<div className="bg-card flex min-h-0 shrink-0 flex-col" style={{ width: panelWidth }}>
-							<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-								<CommentsHeading comments={comments} />
-								{error && opened && !composing && (
-									<Alert variant="destructive">
-										<AlertDescription>{error}</AlertDescription>
-									</Alert>
-								)}
-								{/* The recorded route did not load. Said once, plainly: the page on screen is not the
-								    work, so a comment made here would be about something this iteration never touched. */}
-								{wrongRoute && !composing && (
-									<Alert variant="warning">
-										<AlertDescription>
-											This iteration records its work at <code>{wrongRoute.asked}</code>, but the preview opened{' '}
-											<code>{wrongRoute.landedOn}</code>. The page you are looking at may not be the work. The route may have
-											moved, or something redirected it.
-										</AlertDescription>
-									</Alert>
-								)}
-								{address.kind === 'running' && (
-									<>
-										<p className="text-muted-foreground text-xs">
-											{prototype
-												? 'The agent is working on that comment. The page is rebuilt and saved when it finishes.'
-												: 'The agent is working on that comment. The preview updates as it changes the code.'}
-										</p>
+					<ResizablePanel panel={COMMENTS_PANEL} label="Resize the comments sidebar" onResizing={(r) => void window.workspace.pageHold('resize', r)}>
+						<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+							<CommentsHeading comments={comments} />
+							{error && opened && !composing && (
+								<Alert variant="destructive">
+									<AlertDescription>{error}</AlertDescription>
+								</Alert>
+							)}
+							{/* The recorded route did not load. Said once, plainly: the page on screen is not the
+							    work, so a comment made here would be about something this iteration never touched. */}
+							{wrongRoute && !composing && (
+								<Alert variant="warning">
+									<AlertDescription>
+										This iteration records its work at <code>{wrongRoute.asked}</code>, but the preview opened{' '}
+										<code>{wrongRoute.landedOn}</code>. The page you are looking at may not be the work. The route may have
+										moved, or something redirected it.
+									</AlertDescription>
+								</Alert>
+							)}
+							{address.kind === 'running' && (
+								<>
+									<p className="text-muted-foreground text-xs">
+										{prototype
+											? 'The agent is working on that comment. The page is rebuilt and saved when it finishes.'
+											: 'The agent is working on that comment. The preview updates as it changes the code.'}
+									</p>
+									{addressLog.length > 0 && (
+										<pre className="bg-background m-0 max-h-[140px] overflow-auto rounded-md border p-2 text-[11px] wrap-anywhere whitespace-pre-wrap">
+											{addressLog.slice(-8).join('\n')}
+										</pre>
+									)}
+								</>
+							)}
+							{address.kind === 'done' && (
+								<Alert variant={address.changed ? 'success' : 'default'}>
+									<AlertDescription>
+										{changedElsewhere ? (
+											<>
+												Others had commented on {iterationLabel(iteration)}, so it stays as they saw it. The change is in{' '}
+												{labelOf(changedElsewhere.iteration)}.{' '}
+												<Button size="sm" variant="link" className="h-auto p-0" onClick={openChanged}>
+													Open {labelOf(changedElsewhere.iteration)}
+												</Button>
+											</>
+										) : address.changed
+											? 'The agent has finished. Look at the preview and the changes, then resolve what is done.'
+											: 'The agent finished without changing anything. What it says below is why — often the change is outside this iteration, or the comment needs a decision from you.'}
 										{addressLog.length > 0 && (
-											<pre className="bg-background m-0 max-h-[140px] overflow-auto rounded-md border p-2 text-[11px] wrap-anywhere whitespace-pre-wrap">
-												{addressLog.slice(-8).join('\n')}
+											<pre
+												className={`m-0 mt-2 overflow-auto text-[11px] wrap-anywhere whitespace-pre-wrap ${
+													address.changed ? 'max-h-[200px]' : 'max-h-[320px]'
+												}`}
+											>
+												{/* When nothing changed, what it said is the whole answer, so less of it is cut. */}
+												{addressLog.slice(address.changed ? -25 : -60).join('\n')}
 											</pre>
 										)}
-									</>
-								)}
-								{address.kind === 'done' && (
-									<Alert variant={address.changed ? 'success' : 'default'}>
-										<AlertDescription>
-											{changedElsewhere ? (
-												<>
-													Others had commented on {iterationLabel(iteration)}, so it stays as they saw it. The change is in{' '}
-													{labelOf(changedElsewhere.iteration)}.{' '}
-													<Button size="sm" variant="link" className="h-auto p-0" onClick={openChanged}>
-														Open {labelOf(changedElsewhere.iteration)}
-													</Button>
-												</>
-											) : address.changed
-												? 'The agent has finished. Look at the preview and the changes, then resolve what is done.'
-												: 'The agent finished without changing anything. What it says below is why — often the change is outside this iteration, or the comment needs a decision from you.'}
-											{addressLog.length > 0 && (
-												<pre
-													className={`m-0 mt-2 overflow-auto text-[11px] wrap-anywhere whitespace-pre-wrap ${
-														address.changed ? 'max-h-[200px]' : 'max-h-[320px]'
-													}`}
-												>
-													{/* When nothing changed, what it said is the whole answer, so less of it is cut. */}
-													{addressLog.slice(address.changed ? -25 : -60).join('\n')}
-												</pre>
-											)}
-										</AlertDescription>
-									</Alert>
-								)}
-								{address.kind === 'failed' && (
-									<Alert variant="destructive">
-										<AlertDescription>{address.message}</AlertDescription>
-									</Alert>
-								)}
-								<CommentList
-									comments={comments}
-									states={states}
-									onShowState={setShownState}
-									actions={(comment) =>
-										// The agent runs on this machine, against the product repository: without it there is nothing to build with.
-										!comment.resolved && checkout ? (
-											<DropdownMenuItem disabled={address.kind === 'running'} onSelect={() => void addressComment(comment.id)}>
-												<WandSparklesIcon />
-												{addressing === comment.id && address.kind === 'running' ? 'Working…' : 'Address'}
-											</DropdownMenuItem>
-										) : null
-									}
-									addressed={(comment) =>
-										// A prototype's version is a hash of its source, which means nothing to a person; a commit does.
-										prototype ? (
-											prototypeAddressed(comment, project.id, iteration.name)
-										) : (
-											<>
-												The agent addressed this in <code>{comment.addressedAt?.slice(0, 7)}</code>
-											</>
-										)
-									}
-								/>
-							</div>
+									</AlertDescription>
+								</Alert>
+							)}
+							{address.kind === 'failed' && (
+								<Alert variant="destructive">
+									<AlertDescription>{address.message}</AlertDescription>
+								</Alert>
+							)}
+							<CommentList
+								comments={comments}
+								states={states}
+								onShowState={setShownState}
+								actions={(comment) =>
+									// The agent runs on this machine, against the product repository: without it there is nothing to build with.
+									!comment.resolved && checkout ? (
+										<DropdownMenuItem disabled={address.kind === 'running'} onSelect={() => void addressComment(comment.id)}>
+											<WandSparklesIcon />
+											{addressing === comment.id && address.kind === 'running' ? 'Working…' : 'Address'}
+										</DropdownMenuItem>
+									) : null
+								}
+								addressed={(comment) =>
+									// A prototype's version is a hash of its source, which means nothing to a person; a commit does.
+									prototype ? (
+										prototypeAddressed(comment, project.id, iteration.name)
+									) : (
+										<>
+											The agent addressed this in <code>{comment.addressedAt?.slice(0, 7)}</code>
+										</>
+									)
+								}
+							/>
 						</div>
-					</>
+					</ResizablePanel>
 				)}
 			</div>
 

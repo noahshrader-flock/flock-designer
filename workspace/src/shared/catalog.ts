@@ -10,10 +10,15 @@ export interface DesignSystem {
 	branch: string;
 	/** The hosted Storybook's address, ending in `/`, or null when it has none: the Storybook links are then left out. */
 	storybook: string | null;
+	/**
+	 * The Storybook group whose pages show the library's tokens. Taken out of the components list once its tokens are
+	 * read, since the tokens panel shows them from the source (decision 22); left in when none are found.
+	 */
+	tokenGroup: string | null;
 }
 
 export const DESIGN_SYSTEMS: DesignSystem[] = [
-	{ repository: 'flocksafety/flock-react-component-lib', branch: 'develop', storybook: 'https://develop--6617f3c579abb5c5e780fddc.chromatic.com/' },
+	{ repository: 'flocksafety/flock-react-component-lib', branch: 'develop', storybook: 'https://develop--6617f3c579abb5c5e780fddc.chromatic.com/', tokenGroup: 'Design Tokens' },
 ];
 
 /** The design system whose repository is `repo` (`owner/repo`, any case), or null. */

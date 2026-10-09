@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { DESIGN_SYSTEMS, designSystemNamed, isDesignSystem, type DesignSystem } from '../../shared/catalog';
 import type { Catalog, CatalogUpdate } from '../../shared/contract';
 import { isStoryFile, readCatalog, type CatalogReads } from './componentCatalog';
+import { readTokens } from './designTokens';
 import { defaultDiscoveryDeps, findRepositories, type DiscoveryDeps } from './discovery';
 import { FolderMemory } from './folderMemory';
 import { runGit } from './git';
@@ -166,7 +167,12 @@ export const readLibrary = async (root: string, update: CatalogUpdate): Promise<
 	const commit = await libraryCommit(root, library);
 	if (commit === null) return { state: 'no-branch', root, branch: library.branch };
 	const committedAt = await runGit(root, ['log', '-1', '--format=%cI', commit]);
-	return { state: 'ready', branch: library.branch, commit, committedAt, update, components: await readCatalog(libraryReads(root, commit), library) };
+	// The components and the tokens, from the same reads of the same commit.
+	const reads = libraryReads(root, commit);
+	const [components, tokens] = await Promise.all([readCatalog(reads, library), readTokens(reads)]);
+	// The library's own token pages leave the list only when the panel has the tokens to show instead (decision 22).
+	const listed = tokens.source !== null && library.tokenGroup !== null ? components.filter((c) => c.group !== library.tokenGroup) : components;
+	return { state: 'ready', branch: library.branch, commit, committedAt, update, components: listed, tokens };
 };
 
 export interface DesignLibraryDeps {

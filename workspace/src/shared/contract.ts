@@ -302,7 +302,8 @@ export type CatalogUpdate =
 
 /** The Design System tab's list: the component library as its branch has it on GitHub, or why there is none. */
 export type Catalog =
-	| { state: 'ready'; branch: string; commit: string; committedAt: string; update: CatalogUpdate; components: CatalogComponent[] }
+	/** `tokens`: the library's, read on the same commit (`DesignTokens`). */
+	| { state: 'ready'; branch: string; commit: string; committedAt: string; update: CatalogUpdate; components: CatalogComponent[]; tokens: DesignTokens }
 	/**
 	 * No clone of the library on this machine. `repository` is `owner/repo`; `lost` is the folder connected before, when it
 	 * is no longer there or no longer the library.

@@ -66,6 +66,8 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [syncing, setSyncing] = useState(false);
 	// The component open on its own page, by id; the list when there is none.
 	const [open, setOpen] = useState<string | null>(null);
+	// Whether the tokens panel is open, kept here so it stays as it was from one component to the next.
+	const [tokensOpen, setTokensOpen] = useState(false);
 	const started = useRef(false);
 
 	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {
@@ -169,6 +171,9 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 					component={opened}
 					commit={catalog.commit}
 					onBack={() => setOpen(null)}
+					tokens={catalog.tokens}
+					tokensOpen={tokensOpen}
+					onTokensOpen={setTokensOpen}
 				/>
 			)}
 			{/* Kept while a component is open, so going back finds the list where it was. */}

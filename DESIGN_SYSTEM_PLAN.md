@@ -2,7 +2,7 @@
 
 **Written 2026-10-08. Every decision is made and every unknown I could measure was measured the same day. S1 to S3 are built
 (2026-10-08), and P0 (**Connect the design system**, which replaced S4) the same evening. P1 and P2 (previews) were built the same day.
-P3 (pictures in the list) was dropped.** Tokens (T1 to T6) were laid out on 2026-10-09, after reading how Claude Design does it; T1 was built the same day. The plan for filling the **Design System** tab (`renderer/DesignSystem.tsx`) with the components
+P3 (pictures in the list) was dropped.** Tokens (T1 to T6) were laid out on 2026-10-09, after reading how Claude Design does it; T1 and T2 were built the same day. The plan for filling the **Design System** tab (`renderer/DesignSystem.tsx`) with the components
 from `flock-react-component-lib` (FUI), without copying Storybook and without building the editing yet.
 
 This is the detail behind one candidate in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), which points here and does
@@ -147,7 +147,7 @@ nothing on GitHub changed.
 | **P1** (done) | **Build the previews:** one page of every story from `develop`, cached by commit, one story per address | P0, decision 8 | M | **Medium** |
 | **P2** (done) | **The component page:** click a row, see its stories as live cards | P1, decision 9 | M | Medium |
 | **T1** (done) | **Find the tokens:** a reader that returns the library's tokens as one typed list (colours, spacing, radius), found and not listed | P2, decisions 16, 18 | M | Low |
-| **T2** | **Show the tokens, in a panel:** a resizable panel at the right of the component page, in collapsible groups: colour tones, palette roles (light and dark), spacing, radius, each with its value and where it comes from; searchable | T1, decision 21 | M | Low |
+| **T2** (done) | **Show the tokens, in a panel:** a resizable panel at the right of the component page, in collapsible groups: colour tones, palette roles (light and dark), spacing, radius, each with its value and where it comes from; searchable | T1, decision 21 | M | Low |
 | **T3** | **Adjust tokens in the same panel, seen live, written nowhere:** a control on each row, from its kind; a **Changed** group at the top with a reset for each and for all; the change is the overrides list, applied as a theme to every card on the page | T2, decisions 19, 20 | L | Medium |
 | **T4** | **Try it on a branch:** each save is a commit on a new branch of the library, so the branch's history is the iterations; the preview can run on the branch | T3 | L | Medium |
 | **T5** | **Propose it:** a draft pull request from that branch, with Chromatic's link | T4 | M | Medium |
@@ -261,18 +261,14 @@ live, and carried to a branch and a pull request.
 **T1: Find the tokens (done 2026-10-09).** What it built, and the evidence, is in [dsnr.md](dsnr.md#change-log)
 (2026-10-09). In short: `services/designTokens.ts`'s `readTokens(reads)` takes the catalog's reads and returns
 `DesignTokens` (`shared/contract.ts`): one list of `DesignToken`s, what was not read with its file and line, and how
-they were found. **For T2:** the panel takes that list as it is, grouped by `group` and `set`; nothing is wired to the
-tab yet, so T2 adds one read of it beside the catalog's (`designLibrary.ts`), on the same commit. **The library has
-three steps written wrong,** which the panel should show as the reader reports them (see "What is known").
+they were found. **The library has three steps written wrong,** which the panel shows as the reader reports them (see "What
+is known").
 
-**T2: Show the tokens, in a panel.** A **resizable panel at the right of the component page** (decision 21), opened by a
-button as the comments panel is, with the components beside it. It reads the list T1 returns, in collapsible groups:
-the tone families (a swatch for each step, with its name and hex), the palette roles (light and dark, with `main`,
-`light`, `dark` and `contrastText`), spacing and radius, each saying where it comes from, with a search. It uses the
-review screen's panel and its width code (`panelWidth.ts`), kept apart from the comments panel's width and allowed
-wider. Read only here. *Tests:* the groups and rows from a fixture list; opening, closing and the remembered width;
-search; nothing shown on the list page. **The library's two Storybook token pages** (the colour palette and the colour primitives) **are hidden from the
-components list** once the panel shows the same from the source (decision 22). Their stories stay in the library.
+**T2: Show the tokens, in a panel (done 2026-10-09).** What it built, and the evidence, is in
+[dsnr.md](dsnr.md#change-log) (2026-10-09). In short: **Tokens** in a component page's header opens
+`TokensPanel` in the shared `ResizablePanel` at the right, with its own width (`TOKENS_PANEL`); the tokens come with the
+catalog (`Catalog.tokens`), and the library's `Design Tokens` pages are out of the list (decision 22). **For T3:** the
+controls go on `TokenRow`, one per kind; the theme goes to the frames on the same page.
 
 **T3: Adjust tokens in the same panel, seen live, written nowhere.** **First, the one cheap spike:** how far a changed
 theme reaches the component styles built from the palette when the theme is created (`getFSVariantStyles(palette)`),
@@ -351,7 +347,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 ## Next
 
 **S1 to S3 and P0 to P2 are done,** with Storybook as the source of truth for what a component is (decision 17), and
-stories responding as they should. **T1 (find the tokens) is done. T2 (the panel, read only) is next,** and waits for Noah to say so; T3 (its controls) follows, and T4 to T6 are laid out but not specified. P3 was dropped
+stories responding as they should. **T1 and T2 are done (the tokens, read, in the panel). T3 (the controls, seen live) is next,** and waits for Noah to say so; T4 to T6 are laid out but not specified. P3 was dropped
 (decision 10).
 
 **By hand, Noah:** restart the dev session (the main process changed), open the Design System tab, and try a few

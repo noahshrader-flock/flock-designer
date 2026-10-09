@@ -3,7 +3,7 @@ import { act, createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DesignSystem } from '../src/renderer/DesignSystem';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
-import type { Catalog, CatalogComponent, CatalogUpdate } from '../src/shared/contract';
+import type { Catalog, CatalogComponent, CatalogUpdate, DesignTokens } from '../src/shared/contract';
 import { button, fail, fakeApp, ok, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
 /**
@@ -30,6 +30,8 @@ const COMPONENTS: CatalogComponent[] = [
 	component('Loose', { group: 'Ungrouped', storybook: null }),
 ];
 
+const TOKENS: DesignTokens = { source: 'theme files', looked: [], problems: [], tokens: [] };
+
 const ready = (update: CatalogUpdate = 'unchanged', components = COMPONENTS): Catalog => ({
 	state: 'ready',
 	branch: 'develop',
@@ -37,6 +39,7 @@ const ready = (update: CatalogUpdate = 'unchanged', components = COMPONENTS): Ca
 	committedAt: '2026-10-07T19:03:13Z',
 	update,
 	components,
+	tokens: TOKENS,
 });
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
@@ -179,6 +182,18 @@ describe('opening a component', () => {
 		// The same list, not a new one: what was scrolled stays scrolled.
 		expect(document.querySelector('[data-component]')!.closest('div')).toBe(list);
 		expect(button('Find a component')).toBeTruthy();
+	});
+
+	it('keeps the tokens panel open from one component to the next, as it was left', async () => {
+		await open(() => ok(ready()));
+		await press(row('FSButton').querySelector('button')!);
+		await press(button('Tokens'));
+		expect(document.querySelector('[aria-label="Resize the tokens panel"]')).not.toBeNull();
+		await press(button('Back to components'));
+		await press(row('FSCard').querySelector('button')!);
+		expect(document.querySelector('[aria-label="Resize the tokens panel"]')).not.toBeNull();
+		await press(button('Tokens'));
+		expect(document.querySelector('[aria-label="Resize the tokens panel"]')).toBeNull();
 	});
 
 	it('closes a component that a sync removed, back to the list', async () => {

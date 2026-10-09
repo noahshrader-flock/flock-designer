@@ -123,6 +123,40 @@ describe('reading develop', () => {
 		expect(readFileSync(join(clone, 'src/components/FSButton/FSButton.stories.tsx'), 'utf8')).toBe(unsaved);
 	});
 
+	describe('its tokens (T2)', () => {
+		const TOKEN_FILES = {
+			'src/colors/tones/index.ts': "export { pineGreen } from './pineGreen';\n",
+			'src/colors/tones/pineGreen.ts': "export const pineGreen = {\n  50: '#108062',\n};\n",
+			'src/colors/theme/light.ts': "export const lightPalette = {\n  mode: 'light' as PaletteMode,\n  primary: {\n    main: pineGreen[50],\n  },\n};\n",
+			'src/uxDocs/designTokens/PaletteColors.stories.tsx': story('Design Tokens/Color Palette'),
+			'src/uxDocs/designTokens/PrimitiveColors.stories.tsx': story('Design Tokens/Color Primitives'),
+		};
+
+		it('are read beside the components, from the same commit', async () => {
+			pushDevelop(TOKEN_FILES);
+			await updateLibrary(clone);
+			const c = ready(await readLibrary(clone, 'unchanged'));
+			expect(c.tokens.source).toBe('theme files');
+			expect(c.tokens.tokens.find((t) => t.path === 'palette.light.primary.main')?.value).toBe('#108062');
+		});
+
+		it('take the library’s token pages out of the components list, as the panel shows them instead (decision 22)', async () => {
+			pushDevelop(TOKEN_FILES);
+			await updateLibrary(clone);
+			const c = ready(await readLibrary(clone, 'unchanged'));
+			expect(c.components.map((x) => x.group)).not.toContain('Design Tokens');
+			expect(c.components.map((x) => x.name)).toContain('FSButton');
+		});
+
+		it('leave those pages in the list when no tokens were found, so the tokens are never in neither place', async () => {
+			pushDevelop({ 'src/uxDocs/designTokens/PaletteColors.stories.tsx': story('Design Tokens/Color Palette') });
+			await updateLibrary(clone);
+			const c = ready(await readLibrary(clone, 'unchanged'));
+			expect(c.tokens.source).toBeNull();
+			expect(c.components.map((x) => x.name)).toContain('Color Palette');
+		});
+	});
+
 	it('reads develop from GitHub, not a local develop that is behind or ahead of it', async () => {
 		write(clone, { 'src/components/FSLocal/FSLocal.stories.tsx': story('Inputs/FSLocal') });
 		commit(clone, 'local only, on develop');
