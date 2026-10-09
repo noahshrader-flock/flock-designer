@@ -1,9 +1,6 @@
-import { TriangleAlertIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../shared/contract';
-import { plural } from '../shared/plural';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { SearchField } from './SearchField';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
@@ -13,8 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
  * category the library gains is a tab with nothing else changed), each tab with its own search. **One accordion at most:**
  * a tab with several groups (Color has Tones, Light and Dark) has them as an accordion, closed until opened; a set is
  * never closed up behind a second one, but a plain heading over its tokens, each a swatch at the left and its value at the
- * right. A tab with one group shows its sets straight away. What the library has that is not read is said above the tabs.
- * T3 adds the controls to these rows.
+ * right. A tab with one group shows its sets straight away. The tabs rest on a bottom border. What the library has that is
+ * not read is told beside Sync (`TokenProblems`), not here, so the panel keeps its room. T3 adds the controls to these rows.
  */
 
 /** Tokens in the order they came, by `key`, keeping the first-seen order of the keys. */
@@ -132,27 +129,9 @@ export const TokensPanel = ({ tokens }: { tokens: DesignTokens }) => {
 	const active = categories.some(([c]) => c === current) ? (current as string) : (categories[0] as [string, DesignToken[]])[0];
 	return (
 		<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-			{tokens.problems.length > 0 && (
-				<Alert variant="warning">
-					<TriangleAlertIcon />
-					<AlertTitle>{plural(tokens.problems.length, 'value')} in the library could not be read</AlertTitle>
-					<AlertDescription>
-						<ul className="flex flex-col gap-1">
-							{tokens.problems.map((p) => (
-								<li key={`${p.file}:${p.line ?? ''}:${p.reason}`}>
-									<span className="font-mono">
-										{p.file}
-										{p.line !== undefined && `:${p.line}`}
-									</span>{' '}
-									{p.reason}
-								</li>
-							))}
-						</ul>
-					</AlertDescription>
-				</Alert>
-			)}
-			<Tabs value={active} onValueChange={setCurrent}>
-				<TabsList variant="line" className="w-full">
+			<Tabs value={active} onValueChange={setCurrent} className="gap-0">
+				{/* Resting on a bottom border: the line between the tabs and what is under them (the active tab's underline sits on it). */}
+				<TabsList variant="line" className="w-full border-b">
 					{categories.map(([category]) => (
 						<TabsTrigger key={category} value={category}>
 							{category}
@@ -160,7 +139,7 @@ export const TokensPanel = ({ tokens }: { tokens: DesignTokens }) => {
 					))}
 				</TabsList>
 				{categories.map(([category, inCategory]) => (
-					<TabsContent key={category} value={category}>
+					<TabsContent key={category} value={category} className="mt-4">
 						<TokensTab category={category} tokens={inCategory} query={queries[category] ?? ''} onQuery={(query) => setQueries((all) => ({ ...all, [category]: query }))} />
 					</TabsContent>
 				))}

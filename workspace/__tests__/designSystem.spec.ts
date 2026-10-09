@@ -158,6 +158,22 @@ describe('finding a component', () => {
 		expect(finder().closest('[hidden]')).toBeNull();
 	});
 
+	it('says in the toolbar, beside Sync, how many values of the library could not be read, and nothing when all were', async () => {
+		await open(() => ok(ready()));
+		expect(document.body.textContent).not.toContain('couldn’t be read');
+		await unmountAll(current!.root);
+		const problems = [{ file: 'src/colors/tones/neutral.ts', line: 10, reason: 'one' }, { file: 'src/colors/tones/neutral.ts', line: 15, reason: 'two' }];
+		await open(() => ok({ ...ready(), tokens: { ...TOKENS, problems } }));
+		const said = button('2 values couldn’t be read');
+		expect(said.parentElement).toBe(button('Sync').parentElement);
+		expect(said.compareDocumentPosition(button('Sync')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		// Its details are in the dialog it opens, not in the panel.
+		expect(document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')?.nextElementSibling?.textContent).not.toContain('neutral.ts');
+		await press(said);
+		await settle();
+		expect(document.querySelector('[role="dialog"]')?.textContent).toContain('src/colors/tones/neutral.ts:15');
+	});
+
 	it('has the design system’s name and branch, then Sync and More at the toolbar’s right, and nothing else', async () => {
 		await open(() => ok(ready()));
 		const toolbar = switcher().parentElement!;

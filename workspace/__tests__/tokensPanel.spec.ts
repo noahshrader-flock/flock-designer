@@ -67,6 +67,14 @@ const row = (path: string) => document.querySelector<HTMLElement>(`[data-token="
 const text = () => document.body.textContent ?? '';
 
 describe('the tabs', () => {
+	it('rest on a bottom border, so there is a line between them and what is under them', async () => {
+		await show();
+		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
+		expect(list.className.split(' ')).toEqual(expect.arrayContaining(['border-b', 'w-full']));
+		// And the content starts below it, with its own room: the line is not touching the search box.
+		expect(list.nextElementSibling?.className).toContain('mt-');
+	});
+
 	it('are the categories the library has, in order, as line tabs, with no heading or count above them', async () => {
 		await show();
 		expect(tabs().map((t) => t.textContent)).toEqual(['Color', 'Spacing', 'Shape']);
@@ -206,10 +214,11 @@ describe('searching', () => {
 });
 
 describe('what it could not read', () => {
-	it('is said at the top, each with its file and line', async () => {
+	it('is not said in the panel, which keeps its room: it is told beside Sync, in a dialog', async () => {
 		await show({ ...TOKENS, problems: [{ file: 'src/colors/tones/neutral.ts', line: 10, reason: "neutral 94 is '@ECEEEB', not a hex color, so this step is not read" }] });
-		expect(text()).toContain('1 value in the library could not be read');
-		expect(text()).toContain("src/colors/tones/neutral.ts:10 neutral 94 is '@ECEEEB', not a hex color");
+		expect(text()).not.toContain('could not be read');
+		expect(text()).not.toContain('neutral.ts:10');
+		expect(document.querySelector('[role="alert"]')).toBeNull();
 	});
 
 	it('is said plainly when no tokens were found, with where it looked', async () => {
