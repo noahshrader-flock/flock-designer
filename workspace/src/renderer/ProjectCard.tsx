@@ -1,4 +1,4 @@
-import { FileTextIcon, FolderIcon, GitBranchIcon, MessageSquareIcon } from 'lucide-react';
+import { FileTextIcon, FolderIcon, GitBranchIcon, MessageSquareIcon, type LucideIcon } from 'lucide-react';
 import type { Project, ProjectIteration } from '../shared/contract';
 import { workOf } from '../shared/projects';
 import { CardCover } from './CardCover';
@@ -8,6 +8,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardFooter, CardTitle } from './ui/card';
 import { DropdownMenuItem } from './ui/dropdown-menu';
+import { Separator } from './ui/separator';
 
 /** A name as it reads in a menu: the first letter capital, the rest as written. */
 const sentence = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
@@ -19,6 +20,20 @@ const WAY_HEIGHT = 'h-8';
 
 /** How many comments are open on this kind of work, across all of its iterations. */
 const openIn = (iterations: ProjectIteration[]): number => iterations.reduce((n, it) => n + it.openComments, 0);
+
+/** One way into a kind of work: its icon and name, and at the far right how many comments are open on it. */
+const Way = ({ iteration, label, Icon, comments, onOpen }: { iteration: ProjectIteration; label: string; Icon: LucideIcon; comments: number; onOpen: (iteration: ProjectIteration) => void }) => (
+	<Button variant="ghost" className="justify-start" onClick={() => onOpen(iteration)}>
+		<Icon />
+		{label}
+		{comments > 0 && (
+			<span className="text-muted-foreground ml-auto flex items-center gap-1 text-xs" aria-label={`${comments} open comment${comments === 1 ? '' : 's'}`}>
+				<MessageSquareIcon className="size-3.5" />
+				{comments}
+			</span>
+		)}
+	</Button>
+);
 
 /**
  * A project in the Projects grid. The top is a cover in the card's own colour: at its top right the project's menu (its
@@ -67,22 +82,10 @@ export const ProjectCard = ({
 				</div>
 			</CardCover>
 			<CardFooter className="mt-auto flex-col items-stretch gap-0.5 p-2">
-				{ways.map(({ iteration, label, Icon, comments }) => (
-					<Button key={label} variant="ghost" className="justify-start" onClick={() => onOpen(iteration)}>
-						<Icon />
-						{label}
-						{comments > 0 && (
-							<span className="text-muted-foreground ml-auto flex items-center gap-1 text-xs" aria-label={`${comments} open comment${comments === 1 ? '' : 's'}`}>
-								<MessageSquareIcon className="size-3.5" />
-								{comments}
-							</span>
-						)}
-					</Button>
-				))}
-				{ways.length === 0 && <span className={`text-muted-foreground flex items-center px-2 text-sm ${WAY_HEIGHT}`}>Nothing made yet.</span>}
-				{Array.from({ length: WAYS_IN - Math.max(ways.length, 1) }, (_, blank) => (
-					<span key={blank} aria-hidden className={WAY_HEIGHT} />
-				))}
+				{/* Two places, each a way in or a blank as tall as one, with a divider between that shows when both are ways in. */}
+				{ways[0] ? <Way {...ways[0]} onOpen={onOpen} /> : <span className={`text-muted-foreground flex items-center px-2 text-sm ${WAY_HEIGHT}`}>Nothing made yet.</span>}
+				<Separator className={ways.length === WAYS_IN ? '' : 'invisible'} />
+				{ways[1] ? <Way {...ways[1]} onOpen={onOpen} /> : <span aria-hidden className={WAY_HEIGHT} />}
 			</CardFooter>
 		</Card>
 	);

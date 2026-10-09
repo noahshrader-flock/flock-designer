@@ -190,21 +190,44 @@ describe('the footer', () => {
 		expect(codebase!.querySelector('[aria-label*="open comment"]')).toBeNull();
 	});
 
-	it('is always as tall as two ways in, so on every card the footer starts at the same line', async () => {
-		// A blank place, as tall as a way in, stands for each one that is not there.
+	it('is always the same three places, so on every card the footer starts at the same line', async () => {
+		// A way in or a blank as tall as one; a divider; a way in or a blank. The same count and heights on every card.
 		const blanks = () => [...footer().children].filter((c) => c.getAttribute('aria-hidden') === 'true');
 		await show(project({ iterations: [PROTOTYPE, CODEBASE] }));
+		expect(footer().children).toHaveLength(3);
 		expect(blanks()).toHaveLength(0);
 		await unmountAll(current!.root);
 		await show(project({ iterations: [PROTOTYPE] }));
-		expect(footer().children).toHaveLength(2);
-		expect(blanks()).toHaveLength(1);
+		expect(footer().children).toHaveLength(3);
 		expect(footer().children[0]).toBe(ways()[0]);
+		expect(footer().children[2]).toBe(blanks()[0]);
 		expect(blanks()[0]!.className).toBe('h-8');
 		await unmountAll(current!.root);
 		await show(project());
-		expect(footer().children).toHaveLength(2);
-		expect(blanks()).toHaveLength(1);
+		expect(footer().children).toHaveLength(3);
 		expect(footer().children[0]!.textContent).toBe('Nothing made yet.');
+		expect(footer().children[2]).toBe(blanks()[0]);
+	});
+
+	it('has a subtle divider between the two ways in, the design system’s separator', async () => {
+		await show(project({ iterations: [PROTOTYPE, CODEBASE] }));
+		const divider = footer().querySelector('[data-slot="separator"]')!;
+		expect(divider).not.toBeNull();
+		expect([...footer().children].indexOf(divider)).toBe(1);
+		expect(divider.getAttribute('data-orientation')).toBe('horizontal');
+		expect(divider.className.split(' ')).not.toContain('invisible');
+		expect(divider.className).toMatch(/\bbg-border\b/);
+		expect(divider.className).not.toMatch(/bg-(red|blue|black|white)/);
+	});
+
+	it.each([
+		['a prototype alone', [PROTOTYPE]],
+		['codebase work alone', [CODEBASE]],
+		['nothing made', []],
+	])('keeps the divider’s room but does not show it with %s', async (_, iterations) => {
+		await show(project({ iterations }));
+		const divider = footer().querySelector('[data-slot="separator"]')!;
+		expect(divider.className.split(' ')).toContain('invisible');
+		expect([...footer().children].indexOf(divider)).toBe(1);
 	});
 });
