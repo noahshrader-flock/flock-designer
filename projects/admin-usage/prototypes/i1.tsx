@@ -22,7 +22,7 @@
  * WHO THE NAVIGATION SHOWS
  *   A customer's own org admin (not a Flock admin): no "Organizations List" in the sub-nav and no
  *   "< Organization List" back link. Top bar and the rest of the sub-nav are from
- *   .flkd/knowledge/references/admin-shell-roles-2026-10-06.png. Billing and Contact Directory are kept from that
+ *   .dsnr/knowledge/references/admin-shell-roles-2026-10-06.png. Billing and Contact Directory are kept from that
  *   reference, but they depend on the billing permission, so a customer admin may not see them.
  *
  * STATES  (?state=default | empty | loading | archiving)
@@ -240,7 +240,7 @@ const ORG_TYPE_LABEL = 'LAW ENFORCEMENT';
 const ORG_NAME = 'Alder Creek Police Department';
 
 // @mock: top-bar links come from the signed-in account (loggedInUser.nav), which has no current fixture. Copied
-// from .flkd/knowledge/references/admin-shell-roles-2026-10-06.png.
+// from .dsnr/knowledge/references/admin-shell-roles-2026-10-06.png.
 const EXTERNAL_APP_LINKS = [
     'Search', 'Alerts', 'Patrol', 'FlockOS', 'Nova', 'VMS', 'Devices', 'Sharing', 'Insights', 'Evidence', 'Admin',
     'Planning Center',

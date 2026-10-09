@@ -31,7 +31,7 @@
  *   src/components/role/rolesList/rolesListSlotComponents.tsx (search, "{n} of {total}" count, filtered-empty state),
  *   src/components/alerts/alertsPage.tsx (FSTabs under the page title),
  *   src/components/integrationsPage/integrationCard/index.tsx (the card),
- *   .flkd/product-patterns/pattern-inventory.md "Status display" (FSChip variant="status").
+ *   .dsnr/product-patterns/pattern-inventory.md "Status display" (FSChip variant="status").
  *   The side panel: FSDrawer + FSDrawerHeader + FSDrawerContent, opened the way
  *   src/components/role/rolesList/rolesListFiltersDrawer.tsx opens its drawer (anchor="right", size, header with Close).
  *   Panel error: pattern-inventory.md "Errors" (FSAlert severity="error" with a Retry FSAlertButton).
@@ -39,7 +39,7 @@
  *
  * WHO THE NAVIGATION SHOWS
  *   A customer's own org admin (not a Flock admin): no "Organizations List" in the sub-nav and no "< Organization" back
- *   link. Top bar and the rest of the sub-nav are from .flkd/knowledge/references/admin-shell-roles-2026-10-06.png.
+ *   link. Top bar and the rest of the sub-nav are from .dsnr/knowledge/references/admin-shell-roles-2026-10-06.png.
  *   Billing and Contact Directory are kept from that reference, but they depend on the billing permission, so a
  *   customer admin may not see them.
  *
@@ -248,7 +248,7 @@ const formatOfflineFor = (ms: number) => {
 };
 
 // @mock: top-bar links come from the signed-in account (loggedInUser.nav), which has no current fixture. Copied
-// from .flkd/knowledge/references/admin-shell-roles-2026-10-06.png.
+// from .dsnr/knowledge/references/admin-shell-roles-2026-10-06.png.
 const EXTERNAL_APP_LINKS = [
     'Search', 'Alerts', 'Patrol', 'FlockOS', 'Nova', 'VMS', 'Devices', 'Sharing', 'Insights', 'Evidence', 'Admin',
     'Planning Center',
