@@ -40,8 +40,9 @@ through engineering's pull requests and previews.
 | M10 the smaller things | **Built:** unpublish, "Built in code" link, the viewer on a phone (a selected version was built and removed on 2026-10-09). **Paused with M9:** the comment-related parts |
 | M0 the asks | **In progress, Noah** |
 
-The site is live and public while the repository is: `https://noahshrader-flock.github.io/flock-designer/`. It does
-**not** yet have the M10 changes ("Built in code", the phone layout); redeploy when wanted.
+The site is live and public while the repository is: `https://noahshrader-flock.github.io/flock-designer/`. **It keeps up
+by itself (2026-10-09):** every time the app syncs it deploys when GitHub has a prototype page the site lacks, or a change
+to what the site is built from (the viewer and the components it is made of, the generator, the workflow, its packages).
 
 ## What is still known to bind
 
@@ -139,7 +140,6 @@ Only matter once people can comment on the page. Built when M9 is:
 
 ## Still open
 
-- **Whether to redeploy the live site** with the M10 changes.
 - **The site's index and project pages are hand-styled,** not the design system (the page's bar is the app's own,
   built from its components). Undecided whether to rebuild them from the design system.
 - **Selection in the app is read when the screen opens,** not again when the window returns to the front, so someone
