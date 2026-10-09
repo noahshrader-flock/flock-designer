@@ -1,31 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import type { AgentReadiness, Checkout, IterationKind, Project, ProjectIteration, PrototypeReadiness, Repository } from '../shared/contract';
+import type { AgentReadiness, Checkout, Project, ProjectIteration, PrototypeReadiness, Repository } from '../shared/contract';
 import { freshIteration, slugify } from '../shared/projects';
 import { CloneHere, useClone, Working } from './Clone';
 import { SearchSelect } from './SearchSelect';
 import { InfoIcon } from 'lucide-react';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
-import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Textarea } from './ui/textarea';
 
-/** What New makes. The older numbered prototype branches still open, but are no longer offered here. */
-const KINDS: { kind: IterationKind; label: string; about: string }[] = [
-	{
-		kind: 'prototype',
-		label: 'Prototype',
-		about:
-			"One page built from the product's real components and shared as a single file. Needs the repository and its packages installed on this machine. Nothing runs and nothing in the codebase changes, so no environment setup.",
-	},
-	{
-		kind: 'codebase',
-		label: 'Codebase work',
-		about: "Real work on the project's own feature branch, started from the branch below. Needs the full setup: packages, environment variables, and the app able to run.",
-	},
-];
+/** What New makes, said under its title. The app is for prototypes: codebase work is started in the codebase. */
+const ABOUT =
+	"One page built from the product's real components and shared as a single file. Needs the repository and its packages installed on this machine. Nothing runs and nothing in the codebase changes, so no environment setup.";
 
 export interface Created {
 	project: Project;
@@ -34,10 +22,10 @@ export interface Created {
 }
 
 /**
- * Starting something new: what kind (a prototype or codebase work, switched at the top), where
- * it starts (a repository, and a branch in it), a name, and what it should explore. Both kinds start from
- * the same two choices: codebase work branches from them, a prototype reads them to look like
- * the product. Creating it makes the record (and the branch); the agent and the preview follow on their own.
+ * Starting a prototype: where it starts (a repository, and a branch in it, which it reads to look like the
+ * product), a name, and what it should explore. Creating it makes the record; the agent and the preview follow on
+ * their own. Codebase work is not started here: that is done in the codebase, and a prototype moves into it with
+ * Build in the codebase.
  *
  * The repositories are the ones GitHub shows the signed-in person, so the list follows their permissions;
  * both lists can be searched by typing. The repository starts on the one last used, and the branch on the one
@@ -61,8 +49,6 @@ export const NewWork = ({
 	onCheckout: (checkout: Checkout) => void;
 	onCreated: (created: Created) => void;
 }) => {
-	// Kept between openings, so someone who makes one kind is not switched back each time.
-	const [kind, setKind] = useState<IterationKind>('prototype');
 	const [name, setName] = useState('');
 	const [task, setTask] = useState('');
 	const [busy, setBusy] = useState(false);
@@ -73,8 +59,6 @@ export const NewWork = ({
 	const [picked, setPicked] = useState<string | null>(null);
 	const [branches, setBranches] = useState<string[]>([]);
 	const [from, setFrom] = useState<string | null>(null);
-	// Those with the Flock Designer setup: codebase work starts only from one of these. Null until known.
-	const [withSetup, setWithSetup] = useState<string[] | null>(null);
 	const id = slugify(name);
 
 	useEffect(() => {
@@ -89,12 +73,10 @@ export const NewWork = ({
 	// A new repository brings its own branches, and starts on the one it has checked out.
 	useEffect(() => {
 		setBranches([]);
-		setWithSetup(null);
 		setFrom(checkout?.branch ?? null);
 		if (!open || !checkout) return;
 		let current = true;
 		void window.workspace.listBaseBranches(checkout.root).then((r) => current && r.ok && setBranches(r.value));
-		void window.workspace.branchesWithSetup(checkout.root).then((r) => current && r.ok && setWithSetup(r.value));
 		return () => {
 			current = false;
 		};
@@ -136,9 +118,6 @@ export const NewWork = ({
 		onClose();
 	};
 
-	// Codebase work is built where the setup is: a branch without it is said now, with ones that have it, not at Start.
-	const noSetup = kind === 'codebase' && from !== null && withSetup !== null && !withSetup.includes(from);
-
 	// Building needs Claude Code; when it is plainly not ready, nothing is created.
 	const blocked = readiness.state === 'missing' || readiness.state === 'signedOut';
 
@@ -149,13 +128,13 @@ export const NewWork = ({
 	const [installed, setInstalled] = useState(0);
 	useEffect(() => {
 		setPrototype(null);
-		if (!open || kind !== 'prototype' || askRoot === null) return;
+		if (!open || askRoot === null) return;
 		let current = true;
 		void window.workspace.prototypeReadiness(askRoot).then((r) => current && r.ok && setPrototype(r.value));
 		return () => {
 			current = false;
 		};
-	}, [open, kind, askRoot, installed]);
+	}, [open, askRoot, installed]);
 
 	// Installing its packages, with the command the repository declares: the last line it printed while it runs.
 	const [installing, setInstalling] = useState<string | null>(null);
@@ -170,7 +149,7 @@ export const NewWork = ({
 		setInstalled((n) => n + 1);
 	};
 	// Nothing else decides this: no repository, or one without its packages, cannot make a prototype.
-	const prototypeBlocked = kind === 'prototype' && (askRoot === null || (prototype !== null && !prototype.ready));
+	const prototypeBlocked = askRoot === null || (prototype !== null && !prototype.ready);
 
 	const pickRepo = async (name: string) => {
 		const repo = choices.find((r) => r.name === name);
@@ -187,14 +166,9 @@ export const NewWork = ({
 
 	const create = async () => {
 		if (!id || !task.trim()) return;
-		if (kind !== 'prototype' && !checkout) return;
 		setBusy(true);
 		setError(null);
-		const note = task.trim().split('\n')[0] ?? '';
-		const r =
-			kind === 'prototype'
-				? await window.workspace.createPrototype(id, name.trim(), task.trim(), checkout && !elsewhere && from ? { root: checkout.root, branch: from } : undefined)
-				: await window.workspace.createIteration((checkout as Checkout).root, id, note, from ?? undefined);
+		const r = await window.workspace.createPrototype(id, name.trim(), task.trim(), checkout && !elsewhere && from ? { root: checkout.root, branch: from } : undefined);
 		setBusy(false);
 		if (!r.ok) return setError(r.error);
 		const iteration = freshIteration(r.value);
@@ -211,21 +185,9 @@ export const NewWork = ({
 		<Dialog open={open} onOpenChange={(next) => !next && close()}>
 			<DialogContent className="sm:max-w-xl" showCloseButton={!busy}>
 				<DialogHeader>
-					<DialogTitle>New</DialogTitle>
+					<DialogTitle>New prototype</DialogTitle>
+					<DialogDescription>{ABOUT}</DialogDescription>
 				</DialogHeader>
-				{/* With the title: switching kind must stay in reach however far the form below has scrolled. */}
-				<div className="flex flex-col gap-4">
-					<Tabs value={kind} onValueChange={(v) => setKind(v as IterationKind)}>
-						<TabsList className="w-full">
-							{KINDS.map((k) => (
-								<TabsTrigger key={k.kind} value={k.kind} disabled={busy}>
-									{k.label}
-								</TabsTrigger>
-							))}
-						</TabsList>
-					</Tabs>
-					<p className="text-muted-foreground text-sm">{KINDS.find((k) => k.kind === kind)?.about}</p>
-				</div>
 				<DialogBody className="flex flex-col gap-4">
 					{checkout || choices.length > 0 ? (
 						<>
@@ -294,7 +256,7 @@ export const NewWork = ({
 							placeholder="A users list that flags people who have not signed in for 90 days."
 						/>
 					</div>
-					{kind === 'prototype' && prototype && !prototype.ready && (
+					{prototype && !prototype.ready && (
 						<Alert variant="warning">
 							<AlertTitle>{prototype.why === 'not-installed' ? "The real components aren't installed here" : 'The page builder is missing'}</AlertTitle>
 							<AlertDescription>
@@ -340,20 +302,6 @@ export const NewWork = ({
 							</AlertDescription>
 						</Alert>
 					)}
-					{noSetup && (
-						<Alert variant="warning">
-							<AlertDescription>
-								{withSetup.length > 0
-									? `${from} has no Flock Designer setup, so codebase work cannot start from it. These do: ${withSetup.slice(0, 3).join(', ')}.`
-									: `No branch of ${checkout?.name ?? 'this repository'} has the Flock Designer setup, so codebase work cannot start in it yet.`}
-							</AlertDescription>
-						</Alert>
-					)}
-					{kind !== 'prototype' && checkout && checkout.clean === false && (
-						<Alert variant="warning">
-							<AlertDescription>There are uncommitted changes in this checkout. Commit or set them aside first.</AlertDescription>
-						</Alert>
-					)}
 					{error && (
 						<Alert variant="destructive">
 							<AlertDescription>{error}</AlertDescription>
@@ -366,9 +314,9 @@ export const NewWork = ({
 					</Button>
 					<Button
 						onClick={() => void create()}
-						disabled={busy || blocked || prototypeBlocked || noSetup || !id || !task.trim() || !checkout || elsewhere || !from}
+						disabled={busy || blocked || prototypeBlocked || !id || !task.trim() || !checkout || elsewhere || !from}
 					>
-						{busy ? 'Creating…' : kind === 'prototype' ? 'Create prototype' : 'Start codebase work'}
+						{busy ? 'Creating…' : 'Create prototype'}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

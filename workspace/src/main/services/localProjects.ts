@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Project, ProjectIteration } from '../../shared/contract';
 import { asPeople, mergePeople } from '../../shared/people';
-import { asDate, asRoute, firstHeading, newestFirst } from '../../shared/projects';
+import { asDate, asGitHubRepository, asPullRequest, asRoute, firstHeading, newestFirst } from '../../shared/projects';
 
 const readJson = (path: string): unknown => {
 	try {
@@ -40,6 +40,8 @@ export const readFolderProjects = (recordsRoot: string): Project[] => {
 						issueNumber: null,
 						openComments: 0,
 						previewUrl: typeof it.previewUrl === 'string' ? it.previewUrl : null,
+repository: asGitHubRepository(it.repository),
+pullRequest: asPullRequest(it.pullRequest),
 						commit: typeof it.commit === 'string' ? it.commit : null,
 						contributors: asPeople(it.contributors),
 						createdAt: asDate(it.createdAt),

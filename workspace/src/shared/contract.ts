@@ -102,6 +102,8 @@ export interface Iteration {
 	previewUrl?: string;
 	/** Codebase work's pull request, once it has been shared: what the project's page links to as built in code. */
 	pullRequest?: string;
+	/** Codebase work's repository on GitHub (`owner/repo`), from the checkout it was started in, so it can be linked to. */
+	repository?: string;
 	/**
 	 * Where this iteration's work is in the running app, as a path within it (`/roles/compare`).
 	 * Written by whoever built the work, so opening the iteration lands on what was changed rather
@@ -610,6 +612,9 @@ export interface ProjectIteration {
   route: string | null;
   /** True when this iteration exists only on this machine. */
   localOnly?: boolean;
+  /** Codebase work: its repository on GitHub (`owner/repo`) and its pull request, when the record says. Read with `codeLink`. */
+  repository?: string | null;
+  pullRequest?: string | null;
 }
 
 /** Someone who has committed to a project. The login is known only when we could resolve one. */

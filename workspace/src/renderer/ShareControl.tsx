@@ -1,7 +1,7 @@
-import { CircleCheckIcon, CodeIcon, FileTextIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
+import { CircleCheckIcon, CodeIcon, FileTextIcon, GitBranchIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared/contract';
-import { recordLabel } from '../shared/projects';
+import { codeLink, recordLabel, workOf } from '../shared/projects';
 import { dialogView, isMine, stepText } from './shareView';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
@@ -68,8 +68,11 @@ export const ShareControl = ({
 	const canMove = prototype && onMoveToCode;
 	const canShare = checkout && !prototype;
 	const canSelect = prototype && selection;
-	// The project's documents are always there to read, whether or not the page is up.
-	const documents = onViewRecord !== undefined && project.records.length > 0;
+	// Where the project's codebase work is on GitHub, and its documents: always there, whether or not the page is up.
+	const codebase = workOf(project.iterations, 'codebase')[0];
+	const builtInCode = codebase ? codeLink(codebase) : null;
+	const records = onViewRecord !== undefined ? project.records : [];
+	const documents = builtInCode !== null || records.length > 0;
 
 	const start = async () => {
 		if (!checkout) return;
@@ -158,12 +161,20 @@ export const ShareControl = ({
 						)}
 						</>
 					)}
-					{/* The project's documents, after the ways to look at the work. */}
+					{/* Where its codebase work is, and the project's documents, after the ways to look at the work. */}
 					{documents && (
 						<>
 							{canOpen && <DropdownMenuSeparator />}
-							{project.records.map((record) => (
-								<DropdownMenuItem key={record} onSelect={() => onViewRecord(record)}>
+							{builtInCode && (
+								<DropdownMenuItem asChild>
+									<a href={builtInCode} target="_blank" rel="noreferrer">
+										<GitBranchIcon />
+										Built in code
+									</a>
+								</DropdownMenuItem>
+							)}
+							{records.map((record) => (
+								<DropdownMenuItem key={record} onSelect={() => onViewRecord?.(record)}>
 									<FileTextIcon />
 									{recordLabel(record)}
 								</DropdownMenuItem>

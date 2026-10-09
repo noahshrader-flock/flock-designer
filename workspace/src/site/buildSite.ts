@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Iteration } from '../shared/contract';
-import { firstHeading, isPrototypeKey, iterationLabel, parsePrototypeName, parseSelectedVersion, selectedVersionPath, sitePath, workKind } from '../shared/projects';
+import { codeLink, firstHeading, isPrototypeKey, iterationLabel, parsePrototypeName, parseSelectedVersion, selectedVersionPath, sitePath, workKind } from '../shared/projects';
 import { parseIterations } from '../shared/records';
 
 /**
@@ -55,12 +55,10 @@ interface SiteProject {
 	versions: { version: number; pages: Page[] }[];
 	/** The version the team chose, when it has pages. */
 	selected: number | null;
-	/** Its codebase work's pull request, once that has been shared. */
+	/** Where its codebase work is on GitHub (`codeLink`): its pull request, else its branch. */
 	builtInCode: string | null;
 }
 
-/** Only a GitHub pull request's address is linked: the record is a file in the repository, not a place to send people. */
-const PULL_REQUEST = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+$/;
 
 const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 /** Text as it is safe in HTML, in an element or an attribute. */
@@ -108,7 +106,7 @@ const readProjects = (designRoot: string): SiteProject[] => {
 					.sort(([a], [b]) => a - b)
 					.map(([version, ps]) => ({ version, pages: ps.sort((a, b) => b.iteration - a.iteration) })),
 				selected: chosen !== null && byVersion.has(chosen) ? chosen : null,
-				builtInCode: records.find((r) => workKind(r) === 'codebase' && typeof r.pullRequest === 'string' && PULL_REQUEST.test(r.pullRequest))?.pullRequest ?? null,
+				builtInCode: records.filter((r) => workKind(r) === 'codebase').map(codeLink).find((link) => link !== null) ?? null,
 			},
 		];
 	});

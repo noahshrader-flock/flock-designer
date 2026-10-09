@@ -68,33 +68,29 @@ afterEach(async () => {
 	current = null;
 });
 
-describe('what it starts from', () => {
-	const codebase = async () => {
-		const tab = [...document.querySelectorAll<HTMLElement>('[role="tab"]')].find((t) => t.textContent === 'Codebase work') as HTMLElement;
-		await act(async () => {
-			tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
-			tab.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerType: 'mouse' }));
-		});
-		await settle();
-	};
+describe('what it makes', () => {
 	const fill = async () => {
 		await typeInto(document.getElementById('new-work-name') as HTMLInputElement, 'Ops list');
 		await typeInto(document.getElementById('new-work-task') as HTMLTextAreaElement, 'A list');
 	};
 
-	it('says, for codebase work, when the branch has no Flock Designer setup, names ones that do, and will not start', async () => {
-		await open({ listBaseBranches: async () => ok(['develop', 'noah/flock-designer']), branchesWithSetup: async () => ok(['noah/flock-designer']) });
-		await codebase();
-		await fill();
-		expect(text()).toContain('develop has no Flock Designer setup, so codebase work cannot start from it. These do: noah/flock-designer.');
-		expect(button('Start codebase work').disabled).toBe(true);
+	it('is a prototype only: no choice of codebase work, which is started in the codebase', async () => {
+		await open();
+		expect(document.querySelector('[role="tab"]')).toBeNull();
+		expect(text()).not.toContain('Codebase work');
+		expect(text()).toContain('New prototype');
+		expect(() => button('Start codebase work')).toThrow(/0 buttons/);
 	});
 
-	it('says nothing of it for a prototype, which can be modelled on any branch', async () => {
-		await open({ listBaseBranches: async () => ok(['develop', 'noah/flock-designer']), branchesWithSetup: async () => ok(['noah/flock-designer']) });
+	it('is modelled on any branch, and makes a prototype from it', async () => {
+		const made = { projectId: 'ops-list', name: 'v1-i1', branch: 'prototype/ops-list/v1-i1', commit: null, createdAt: '2026-10-08T00:00:00Z', note: 'A list' };
+		const { app } = await open({ listBaseBranches: async () => ok(['develop', 'noah/flock-designer']), createPrototype: async () => ok(made) });
 		await fill();
-		expect(text()).not.toContain('has no Flock Designer setup');
 		expect(button('Create prototype').disabled).toBe(false);
+		await press(button('Create prototype'));
+		await settle();
+		expect(app.calls.createPrototype?.[0]).toEqual(['ops-list', 'Ops list', 'A list', { root: HERE.root, branch: 'develop' }]);
+		expect(app.calls.createIteration).toBeUndefined();
 	});
 });
 

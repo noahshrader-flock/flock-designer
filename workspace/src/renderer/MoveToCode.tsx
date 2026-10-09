@@ -52,18 +52,20 @@ export const MoveToCode = ({
 			if (r.ok) setPlan(r.value);
 			else setError(r.error);
 		});
-		void window.workspace.listBaseBranches(checkout.root).then((r) => current && r.ok && setBranches(r.value));
+		// Only branches with the Flock Designer setup: codebase work cannot start anywhere else.
+		void window.workspace.branchesWithSetup(checkout.root).then((r) => current && r.ok && setBranches(r.value));
 		void window.workspace.agentReadiness().then((r) => current && r.ok && setAgent(r.value));
 		return () => {
 			current = false;
 		};
 	}, [open, checkout.root, project.id, iteration.name]);
 
-	// Starts from what the prototype was modelled on, when that branch is here; otherwise from where the checkout is.
+	// Starts from what the prototype was modelled on, when that can be started from; else from where the checkout is,
+	// when that can; else from the newest branch that can.
 	useEffect(() => {
 		if (!plan) return;
-		const modelled = plan.basedOn?.branch;
-		setFrom(modelled && branches.includes(modelled) ? modelled : plan.current);
+		const startable = [plan.basedOn?.branch, plan.current].find((b): b is string => b !== undefined && b !== null && branches.includes(b));
+		setFrom(startable ?? branches[0] ?? null);
 	}, [plan, branches]);
 
 	const agentBlocked = agent.state === 'missing' || agent.state === 'signedOut';

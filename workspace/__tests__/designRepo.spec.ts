@@ -111,6 +111,17 @@ describe('listProjects', () => {
     expect(alpha?.iterations.map((i) => i.name)).toEqual(['i2', 'i1', 'codebase']);
   });
 
+  it('carries where codebase work is on GitHub through, and drops what is not a repository or a link', async () => {
+    const records = [
+      { ...ITERATIONS[2], repository: 'flocksafety/flock-coke', pullRequest: 'https://github.com/flocksafety/flock-coke/pull/3' },
+      { ...ITERATIONS[0], repository: 42, pullRequest: 'nope' },
+    ];
+    const { session } = fakeSession({ ...routes, '/repos/acme/design/contents/projects/alpha/iterations.json': { content: b64(JSON.stringify(records)) } });
+    const [alpha] = await new DesignRepo(session, REF).listProjects();
+    expect(alpha?.iterations.find((i) => i.name === 'codebase')).toMatchObject({ repository: 'flocksafety/flock-coke', pullRequest: 'https://github.com/flocksafety/flock-coke/pull/3' });
+    expect(alpha?.iterations.find((i) => i.name === 'i1')).toMatchObject({ repository: null, pullRequest: null });
+  });
+
   it('carries a recorded preview link through', async () => {
     const { session } = fakeSession(routes);
     const [alpha] = await new DesignRepo(session, REF).listProjects();

@@ -1,74 +1,74 @@
-import { FolderIcon, GitBranchIcon, MessageSquareIcon, type LucideIcon } from 'lucide-react';
+import { ExternalLinkIcon, MessageSquareIcon } from 'lucide-react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import type { Project, ProjectIteration } from '../shared/contract';
-import { workOf } from '../shared/projects';
+import { codeLink, workOf } from '../shared/projects';
 import { CardCover } from './CardCover';
 import { PeopleLine } from './People';
 import { Badge } from './ui/badge';
-import { Button } from './ui/button';
 import { Card, CardFooter, CardTitle } from './ui/card';
-import { Separator } from './ui/separator';
 
-/** One way into each kind of work: a prototype, and codebase work. */
-const WAYS_IN = 2;
-/** The height of one way in: a ghost button, which a blank place in the footer is made as tall as. */
-const WAY_HEIGHT = 'h-8';
+/** How many comments a project's prototypes have, all of them together. */
+const commentsOn = (prototypes: ProjectIteration[]): number => prototypes.reduce((n, it) => n + it.openComments, 0);
 
-/** How many comments are open on this kind of work, across all of its iterations. */
-const openIn = (iterations: ProjectIteration[]): number => iterations.reduce((n, it) => n + it.openComments, 0);
-
-/** One way into a kind of work: its icon and name, and at the far right how many comments are open on it. */
-const Way = ({ iteration, label, Icon, comments, onOpen }: { iteration: ProjectIteration; label: string; Icon: LucideIcon; comments: number; onOpen: (iteration: ProjectIteration) => void }) => (
-	<Button variant="ghost" className="justify-start" onClick={() => onOpen(iteration)}>
-		<Icon />
-		{label}
-		{comments > 0 && (
-			<span className="text-muted-foreground ml-auto flex items-center gap-1 text-xs" aria-label={`${comments} open comment${comments === 1 ? '' : 's'}`}>
-				<MessageSquareIcon className="size-3.5" />
-				{comments}
-			</span>
-		)}
-	</Button>
-);
+/** What the footer says at its right when there is no prototype to count comments on. */
+const Aside = ({ children }: { children: ReactNode }) => <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-sm">{children}</span>;
 
 /**
- * A project in the Projects grid. The top is a cover in the card's own colour: at its top whether it is only on this
- * machine; at its bottom left the project's name, with who it is by directly under it. Its documents are not here: they
- * are in the More menu of its own screen. The footer is a stacked list of the ways in: view the newest prototype, and
- * under it the newest codebase work, each only when it exists and each with how many comments are open on that work at
- * its far right. The footer always has room for both, so on every card in a grid it starts at the same line, with a blank
- * place under a way in that is not there, and the cards in a row are the same height.
+ * A project in the Projects grid. The cover, in the card's own colour, has the project's name at its bottom left (and at
+ * its top whether it is only on this machine). The footer has who it is by at the left and how many comments its
+ * prototypes have at the right, and is the same height on every card, so a row of cards lines up.
+ *
+ * **The whole card opens the project at its newest prototype**, which is the app's work: it is for prototypes. A project
+ * with only codebase work is not opened here (that work is done in the codebase); its footer links to it on GitHub, for
+ * anyone with access, whether or not they have the repository.
  */
-export const ProjectCard = ({
-	project,
-	onOpen,
-}: {
-	project: Project;
-	/** One way into each kind of work, at its newest; the review screen switches between its iterations. */
-	onOpen: (iteration: ProjectIteration) => void;
-}) => {
+export const ProjectCard = ({ project, onOpen }: { project: Project; onOpen: (iteration: ProjectIteration) => void }) => {
 	const prototypes = workOf(project.iterations, 'prototype');
-	const codebases = workOf(project.iterations, 'codebase');
-	const ways = [
-		prototypes[0] && { iteration: prototypes[0], label: 'View prototype', Icon: FolderIcon, comments: openIn(prototypes) },
-		codebases[0] && { iteration: codebases[0], label: 'View codebase', Icon: GitBranchIcon, comments: openIn(codebases) },
-	].filter((way) => way !== undefined);
+	const newest = prototypes[0];
+	const codebase = workOf(project.iterations, 'codebase')[0];
+	const link = codebase ? codeLink(codebase) : null;
+	const comments = commentsOn(prototypes);
+	const way =
+		newest === undefined
+			? {}
+			: {
+					role: 'button',
+					tabIndex: 0,
+					'aria-label': `Open ${project.title}`,
+					onClick: () => onOpen(newest),
+					onKeyDown: (e: KeyboardEvent) => {
+						if (e.key !== 'Enter' && e.key !== ' ') return;
+						e.preventDefault();
+						onOpen(newest);
+					},
+				};
 	return (
-		<Card className="pt-0">
+		<Card
+			className={`pt-0 ${newest ? 'hover:bg-accent/40 focus-visible:ring-ring/50 cursor-pointer transition-colors outline-none focus-visible:ring-3' : ''}`}
+			{...way}
+		>
 			<CardCover>
 				{/* Always there, so the name stays at the bottom when there is nothing to put at the top. */}
-				<div className="flex items-start justify-between gap-2">
-					<span className="flex flex-wrap items-center gap-2">{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}</span>
-				</div>
-				<div className="flex min-w-0 flex-col gap-2">
-					<CardTitle className="line-clamp-2 text-lg font-semibold">{project.title}</CardTitle>
-					<PeopleLine people={project.people} />
-				</div>
+				<div className="flex flex-wrap items-center gap-2">{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}</div>
+				<CardTitle className="line-clamp-2 text-lg font-semibold">{project.title}</CardTitle>
 			</CardCover>
-			<CardFooter className="mt-auto flex-col items-stretch gap-0.5 p-2">
-				{/* Two places, each a way in or a blank as tall as one, with a divider between that shows when both are ways in. */}
-				{ways[0] ? <Way {...ways[0]} onOpen={onOpen} /> : <span className={`text-muted-foreground flex items-center px-2 text-sm ${WAY_HEIGHT}`}>Nothing made yet.</span>}
-				<Separator className={ways.length === WAYS_IN ? '' : 'invisible'} />
-				{ways[1] ? <Way {...ways[1]} onOpen={onOpen} /> : <span aria-hidden className={WAY_HEIGHT} />}
+			<CardFooter className="mt-auto flex h-12 items-center justify-between gap-2 pr-3 pl-4.5">
+				{project.people.length > 0 ? <PeopleLine people={project.people} /> : <span />}
+				{newest ? (
+					<span className="text-muted-foreground flex shrink-0 items-center gap-1 text-sm" aria-label={`${comments} comment${comments === 1 ? '' : 's'}`}>
+						<MessageSquareIcon className="size-3.5" />
+						{comments}
+					</span>
+				) : link ? (
+					<a className="text-primary flex shrink-0 items-center gap-1.5 text-sm underline-offset-4 hover:underline" href={link} target="_blank" rel="noreferrer">
+						<ExternalLinkIcon className="size-3.5" />
+						Built in code
+					</a>
+				) : codebase ? (
+					<Aside>Built in code</Aside>
+				) : (
+					<Aside>Nothing made yet</Aside>
+				)}
 			</CardFooter>
 		</Card>
 	);

@@ -348,11 +348,41 @@ describe('the project’s documents, in More', () => {
 		expect(button('More').disabled).toBe(true);
 	});
 
+	it('begin with where the codebase work is on GitHub, when the project has some', async () => {
+		const codebase = { ...PROTOTYPE, name: 'codebase', branch: 'feature/demo', repository: 'flocksafety/flock-coke' };
+		await open(fakeApp(), { project: { ...PROJECT, records: ['brief.md'], iterations: [PROTOTYPE, codebase] } });
+		const all = await items();
+		expect(all.map((i) => i.textContent?.trim()).slice(-3)).toEqual(['Open in browser', 'Built in code', 'Brief']);
+		expect(menuItem(all, 'Built in code').getAttribute('href')).toBe('https://github.com/flocksafety/flock-coke/tree/feature/demo');
+	});
+
 	it('leave the menu as it was, with no divider at the end, for a project that has none', async () => {
 		await open(fakeApp());
 		const names = (await items()).map((i) => i.textContent?.trim());
 		expect(names.at(-1)).toBe('Open in browser');
 		expect(document.querySelectorAll('[role="separator"]')).toHaveLength(1);
+	});
+});
+
+describe('Build in the codebase', () => {
+	const plan = { branch: 'feature/demo', exists: false, recorded: false, repository: 'flock-coke', basedOn: { repository: 'flock-coke', branch: 'develop' }, current: 'develop', clean: true };
+	const dialog = async (withSetup: string[]) => {
+		const app = fakeApp({ agentReadiness: async () => ok({ state: 'ready' }), moveToCodePlan: async () => ok(plan), branchesWithSetup: async () => ok(withSetup) });
+		await open(app);
+		await press(menuItem(await openMenu(button('More')), 'Build in the codebase'));
+		await settle();
+		return app;
+	};
+
+	it('offers only branches with the Flock Designer setup, and starts from one of them', async () => {
+		// The prototype was modelled on develop, which has no setup: the newest that has it is chosen.
+		await dialog(['noah/flock-designer', 'feature/other']);
+		expect((document.getElementById('move-from') as HTMLElement).textContent).toBe('noah/flock-designer');
+	});
+
+	it('starts from what the prototype was modelled on, when that has the setup', async () => {
+		await dialog(['noah/flock-designer', 'develop']);
+		expect((document.getElementById('move-from') as HTMLElement).textContent).toBe('develop');
 	});
 });
 
@@ -374,7 +404,7 @@ describe('the selected version', () => {
 		const app = fakeApp({
 			selectedVersion: async () => ok(2),
 			agentReadiness: async () => ok({ state: 'ready' }),
-			listBaseBranches: async () => ok(['develop']),
+			branchesWithSetup: async () => ok(['develop']),
 			moveToCodePlan: async () => ok({ branch: 'feature/demo', exists: false, recorded: false, repository: 'flock-coke', basedOn: null, current: 'develop', clean: true }),
 		});
 		await open(app, { project: { ...PROJECT, iterations: prototypes } });

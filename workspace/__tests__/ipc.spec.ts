@@ -403,6 +403,17 @@ describe('where clones go', () => {
 	});
 });
 
+describe('codebase work recorded before records named its repository', () => {
+	it('is linked to the repository of the checkout it is on, when that checkout is here', async () => {
+		g(product, 'remote', 'add', 'origin', 'https://github.com/flocksafety/flock-coke.git');
+		await call(CHANNELS.useCheckout, product);
+		mkdirSync(join(design, 'projects', 'old-work'), { recursive: true });
+		writeFileSync(join(design, 'projects', 'old-work', 'iterations.json'), JSON.stringify([{ projectId: 'old-work', name: 'codebase', branch: 'feature/old-work', commit: null, createdAt: '2026-09-01T00:00:00Z', note: '' }]));
+		const projects = (await call(CHANNELS.listProjects)).value as { id: string; iterations: { name: string; repository?: string | null }[] }[];
+		expect(projects.find((p) => p.id === 'old-work')?.iterations[0]?.repository).toBe('flocksafety/flock-coke');
+	});
+});
+
 describe('a repository must be opened before anything acts on it', () => {
 	it.each([
 		[CHANNELS.readContextReceipt, () => [product]],

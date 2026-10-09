@@ -1,7 +1,7 @@
 import type { CommentAnchor, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
 import { GitHubError } from './github';
 import { asPeople, isBot, mergePeople } from '../../shared/people';
-import { asDate, asRoute, firstHeading, latestDate, newestFirst } from '../../shared/projects';
+import { asDate, asGitHubRepository, asPullRequest, asRoute, firstHeading, latestDate, newestFirst } from '../../shared/projects';
 import { RESOLVED_MARK, addressedAt, addressedIn, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withAddressed, withResolved } from '../../shared/anchor';
 import { asArray, asRecord } from '../../shared/json';
 
@@ -266,6 +266,8 @@ export class DesignRepo {
         issueNumber: issues.get(String(it.branch))?.number ?? null,
         openComments: issues.get(String(it.branch))?.openComments ?? 0,
         previewUrl: typeof it.previewUrl === 'string' ? it.previewUrl : null,
+        repository: asGitHubRepository(it.repository),
+        pullRequest: asPullRequest(it.pullRequest),
         contributors: asPeople(it.contributors),
         commit: typeof it.commit === 'string' ? it.commit : null,
         createdAt: asDate(it.createdAt),

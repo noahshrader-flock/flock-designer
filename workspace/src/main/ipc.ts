@@ -783,6 +783,8 @@ export const registerIpc = ({
 			const me = github.state();
 			const login = me.state === 'signedIn' ? me.user.login : null;
 			let local: Project[] = [];
+			// The checkout's repository on GitHub, for codebase work recorded before records named it.
+			let here: { repository: string; branchOf: (projectId: string) => string } | null = null;
 			if (root !== null) {
 				opened.require(root);
 				const recordsRoot = recordsRootFor(root);
@@ -798,6 +800,10 @@ export const registerIpc = ({
 				).catch(() => []);
 				// A folder with nothing built yet is a notes folder, not work in progress.
 				local = unionLocal(folders, branches).filter((p) => p.iterations.length > 0);
+				const origin = originOf(root);
+				const repository = origin === null ? null : gitHubRepoOf(origin);
+				const descriptor = readDescriptor(root);
+				if (repository) here = { repository, branchOf: (projectId) => codebaseBranchFor(descriptor, projectId) };
 			}
 			let remote: Project[] = [];
 			try {
@@ -807,7 +813,13 @@ export const registerIpc = ({
 			}
 			// Reading the list is a good moment to make sure what it shows is published.
 			void publisher.publish();
-			return profiles.nameEveryone(mergeProjects(remote, local));
+			const merged = mergeProjects(remote, local);
+			// Work on this checkout's codebase branch for a project is in this checkout's repository.
+			const located = here === null ? merged : merged.map((p) => ({
+				...p,
+				iterations: p.iterations.map((it) => (workKind(it) === 'codebase' && !it.repository && it.branch === here.branchOf(p.id) ? { ...it, repository: here.repository } : it)),
+			}));
+			return profiles.nameEveryone(located);
 		}),
 	);
 	/**

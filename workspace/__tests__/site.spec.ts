@@ -176,6 +176,12 @@ describe('built in code', () => {
 		expect(read('alpha/index.html')).not.toContain('Built in code');
 	});
 
+	it('links to the branch when the record names its repository but has no pull request', () => {
+		project('alpha', '# Alpha\n', [record('v1-i1'), { name: 'codebase', branch: 'feature/alpha', commit: null, note: '', repository: 'flocksafety/flock-coke' }], { 'v1-i1': page('Alpha') });
+		build();
+		expect(read('alpha/index.html')).toContain('<a href="https://github.com/flocksafety/flock-coke/tree/feature/alpha">Built in code</a>');
+	});
+
 	it("does not take a prototype's pull request for codebase work", () => {
 		project('alpha', '# Alpha\n', [record('v1-i1', { pullRequest: 'https://github.com/o/r/pull/5' })], { 'v1-i1': page('Alpha') });
 		build();

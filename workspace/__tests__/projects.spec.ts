@@ -8,6 +8,7 @@ import {
 	asDate,
 	asRoute,
 	isPrototypeName,
+	codeLink,
 	lastUpdated,
 	matchesProject,
 	isRecordName,
@@ -457,5 +458,26 @@ describe('how a project’s document is named in a menu', () => {
 		expect(recordLabel('design-notes.md')).toBe('Design notes');
 		expect(recordLabel('audit-i1.md')).toBe('Audit i1');
 		expect(recordLabel('iterations.json')).toBe('Iterations');
+	});
+});
+
+describe('the link to codebase work on GitHub', () => {
+	const work = (more: Partial<ProjectIteration> = {}): ProjectIteration => it1({ name: 'codebase', branch: 'feature/alpha', ...more });
+
+	it('is its pull request when one is recorded', () => {
+		expect(codeLink(work({ repository: 'flocksafety/flock-coke', pullRequest: 'https://github.com/flocksafety/flock-coke/pull/12' }))).toBe('https://github.com/flocksafety/flock-coke/pull/12');
+	});
+
+	it('is otherwise its branch, in the repository the record names', () => {
+		expect(codeLink(work({ repository: 'flocksafety/flock-coke' }))).toBe('https://github.com/flocksafety/flock-coke/tree/feature/alpha');
+		expect(codeLink(work({ repository: 'flocksafety/flock-coke', branch: 'feature/a b' }))).toBe('https://github.com/flocksafety/flock-coke/tree/feature/a%20b');
+	});
+
+	it('is nothing without a repository, or with anything that is not a GitHub repository or pull request', () => {
+		expect(codeLink(work())).toBeNull();
+		expect(codeLink(work({ repository: '../x' }))).toBeNull();
+		expect(codeLink(work({ repository: 'a/b/c' }))).toBeNull();
+		expect(codeLink(work({ pullRequest: 'javascript:alert(1)' }))).toBeNull();
+		expect(codeLink(work({ repository: 'o/r', pullRequest: 'https://evil.test/o/r/pull/1' }))).toBe('https://github.com/o/r/tree/feature/alpha');
 	});
 });

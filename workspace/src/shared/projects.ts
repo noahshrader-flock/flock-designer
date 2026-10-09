@@ -141,7 +141,15 @@ export const mergeProjects = (remote: Project[], local: Project[]): Project[] =>
 		for (const li of l.iterations) {
 			const ri = have.get(li.branch);
 			if (!ri) have.set(li.branch, { ...li, localOnly: true });
-			else have.set(li.branch, { ...ri, commit: ri.commit ?? li.commit, createdAt: ri.createdAt ?? li.createdAt, contributors: mergePeople(ri.contributors, li.contributors) });
+			else
+				have.set(li.branch, {
+					...ri,
+					commit: ri.commit ?? li.commit,
+					createdAt: ri.createdAt ?? li.createdAt,
+					repository: ri.repository ?? li.repository ?? null,
+					pullRequest: ri.pullRequest ?? li.pullRequest ?? null,
+					contributors: mergePeople(ri.contributors, li.contributors),
+				});
 		}
 		byId.set(l.id, {
 			...r,
@@ -190,6 +198,25 @@ export const newestFirst = (a: ProjectIteration, b: ProjectIteration): number =>
  * One plain file or folder name, never a path. Project ids and record names reach the main process from the window and
  * are joined onto a folder or a repository address, so they are checked before they are used for either.
  */
+/** A repository on GitHub, by its `owner/repo`: GitHub's own characters, and never `.` or `..`. */
+const isGitHubRepository = (s: unknown): s is string => typeof s === 'string' && /^[\w.-]+\/[\w.-]+$/.test(s) && !s.split('/').some((p) => p === '.' || p === '..');
+const PULL_REQUEST = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+$/;
+/** A repository as a record gives it, or null when it is anything else. */
+export const asGitHubRepository = (v: unknown): string | null => (isGitHubRepository(v) ? v : null);
+/** A pull request's address as a record gives it, or null when it is not one of GitHub's. */
+export const asPullRequest = (v: unknown): string | null => (typeof v === 'string' && PULL_REQUEST.test(v) ? v : null);
+
+/**
+ * Where codebase work is on GitHub, for anyone to open whether or not they have the repository: its pull request when
+ * one is recorded, else its branch in the repository the record names. Null when the record says neither.
+ */
+export const codeLink = (it: { branch: string; repository?: string | null; pullRequest?: string | null }): string | null => {
+	const pr = asPullRequest(it.pullRequest);
+	if (pr) return pr;
+	const repo = asGitHubRepository(it.repository);
+	return repo ? `https://github.com/${repo}/tree/${it.branch.split('/').map(encodeURIComponent).join('/')}` : null;
+};
+
 /** A project file as it reads in a menu: `design-notes.md` is "Design notes". */
 export const recordLabel = (name: string): string => {
 	const words = name.replace(/\.[^.]+$/, '').replace(/-/g, ' ');

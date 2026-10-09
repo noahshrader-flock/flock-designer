@@ -79,6 +79,18 @@ describe('branchFor', () => {
 });
 
 describe('createIteration', () => {
+	it('records which GitHub repository the work is in, from the checkout’s origin, so it can be linked to', async () => {
+		g('remote', 'add', 'origin', 'git@github.com:FlockSafety/flock-coke.git');
+		const made = await createIteration(root, records, descriptor, 'demo', 'first try', 'develop');
+		expect(made.repository).toBe('FlockSafety/flock-coke');
+		expect(readIterations(records, 'demo')[0]?.repository).toBe('FlockSafety/flock-coke');
+	});
+
+	it('records no repository for a checkout with no GitHub origin', async () => {
+		const made = await createIteration(root, records, descriptor, 'demo', 'first try', 'develop');
+		expect(made).not.toHaveProperty('repository');
+	});
+
 	it('records the work in the design repository, not in the product checkout', async () => {
 		await createIteration(root, records, descriptor, 'demo', 'first try', 'develop');
 		// The record lives with the design record, NOT in the product checkout --

@@ -4,6 +4,7 @@ import type { Iteration, Person, WorkspaceDescriptor } from '../../shared/contra
 import { branchAuthors, branchExists, branchStartedAt, checkoutBranch, createBranch, headCommit, isSamePerson, localIdentity } from './git';
 import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
+import { gitHubRepoOf, originOf } from './repositories';
 import { PROJECT_ID, parsePrototypeName } from '../../shared/projects';
 
 /**
@@ -102,6 +103,9 @@ export const createIteration = async (
 		await createBranch(productRoot, branch, from);
 	}
 
+	// Where it is on GitHub, so the project links to it for people without the repository.
+	const origin = originOf(productRoot);
+	const repository = origin === null ? null : gitHubRepoOf(origin);
 	const iteration: Iteration = {
 		projectId,
 		name,
@@ -109,6 +113,7 @@ export const createIteration = async (
 		commit: null,
 		createdAt: new Date().toISOString(),
 		note,
+		...(repository ? { repository } : {}),
 	};
 	writeIterations(recordsRoot, projectId, [...existing, iteration]);
 	return iteration;
