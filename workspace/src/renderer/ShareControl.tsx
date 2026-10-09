@@ -1,7 +1,7 @@
 import { CircleCheckIcon, CodeIcon, FileTextIcon, GitBranchIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared/contract';
-import { codeLink, recordLabel, workOf } from '../shared/projects';
+import { projectCodeLink, recordLabel } from '../shared/projects';
 import { dialogView, isMine, stepText } from './shareView';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
@@ -69,8 +69,7 @@ export const ShareControl = ({
 	const canShare = checkout && !prototype;
 	const canSelect = prototype && selection;
 	// Where the project's codebase work is on GitHub, and its documents: always there, whether or not the page is up.
-	const codebase = workOf(project.iterations, 'codebase')[0];
-	const builtInCode = codebase ? codeLink(codebase) : null;
+	const builtInCode = projectCodeLink(project);
 	const records = onViewRecord !== undefined ? project.records : [];
 	const documents = builtInCode !== null || records.length > 0;
 
@@ -111,54 +110,54 @@ export const ShareControl = ({
 					{/* What can be done with the work needs its page up; the documents do not. */}
 					{canOpen && (
 						<>
-						{canSelect && (
-							<DropdownMenuItem onSelect={selection.onToggle}>
-								<CircleCheckIcon />
-								{selection.selected ? `Unselect V${selection.version}` : `Select V${selection.version}`}
+							{canSelect && (
+								<DropdownMenuItem onSelect={selection.onToggle}>
+									<CircleCheckIcon />
+									{selection.selected ? `Unselect V${selection.version}` : `Select V${selection.version}`}
+								</DropdownMenuItem>
+							)}
+							{canMove && (
+								<DropdownMenuItem onSelect={onMoveToCode}>
+									<CodeIcon />
+									Build
+								</DropdownMenuItem>
+							)}
+							{canShare && (
+								<DropdownMenuItem
+									onSelect={() => {
+										setPhase(running ? 'working' : 'confirm');
+										setError(null);
+										setOpen(true);
+									}}
+								>
+									<Share2Icon />
+									{running ? 'Sharing…' : url ? 'Update shared preview' : 'Share for review'}
+								</DropdownMenuItem>
+							)}
+							{/* No line when the first group is empty. */}
+							{(canSelect || canMove || canShare) && <DropdownMenuSeparator />}
+							{editor && (
+								<DropdownMenuItem onSelect={editor.openInEditor}>
+									<SquareTerminalIcon />
+									{editor.editor ? 'Open in VS Code' : 'Show in Finder'}
+								</DropdownMenuItem>
+							)}
+							{editor?.session && (
+								<DropdownMenuItem onSelect={editor.continueInClaude}>
+									<MessageSquareShareIcon />
+									Continue in Claude Code
+								</DropdownMenuItem>
+							)}
+							<DropdownMenuItem onSelect={onOpenInBrowser}>
+								<ExternalLinkIcon />
+								Open in browser
 							</DropdownMenuItem>
-						)}
-						{canMove && (
-							<DropdownMenuItem onSelect={onMoveToCode}>
-								<CodeIcon />
-								Build
-							</DropdownMenuItem>
-						)}
-						{canShare && (
-							<DropdownMenuItem
-								onSelect={() => {
-									setPhase(running ? 'working' : 'confirm');
-									setError(null);
-									setOpen(true);
-								}}
-							>
-								<Share2Icon />
-								{running ? 'Sharing…' : url ? 'Update shared preview' : 'Share for review'}
-							</DropdownMenuItem>
-						)}
-						{/* No line when the first group is empty. */}
-						{(canSelect || canMove || canShare) && <DropdownMenuSeparator />}
-						{editor && (
-							<DropdownMenuItem onSelect={editor.openInEditor}>
-								<SquareTerminalIcon />
-								{editor.editor ? 'Open in VS Code' : 'Show in Finder'}
-							</DropdownMenuItem>
-						)}
-						{editor?.session && (
-							<DropdownMenuItem onSelect={editor.continueInClaude}>
-								<MessageSquareShareIcon />
-								Continue in Claude Code
-							</DropdownMenuItem>
-						)}
-						<DropdownMenuItem onSelect={onOpenInBrowser}>
-							<ExternalLinkIcon />
-							Open in browser
-						</DropdownMenuItem>
-						{url && (
-							<DropdownMenuItem onSelect={() => void copy()}>
-								<CopyIcon />
-								{copied ? 'Copied' : 'Copy preview link'}
-							</DropdownMenuItem>
-						)}
+							{url && (
+								<DropdownMenuItem onSelect={() => void copy()}>
+									<CopyIcon />
+									{copied ? 'Copied' : 'Copy preview link'}
+								</DropdownMenuItem>
+							)}
 						</>
 					)}
 					{/* Where its codebase work is, and the project's documents, after the ways to look at the work. */}

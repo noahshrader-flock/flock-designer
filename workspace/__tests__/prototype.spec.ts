@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
 import { isPrototypeKey, nextPrototypeName, prototypeKey, prototypePagePath } from '../src/shared/projects';
-import { type RecordStore, cloneStore, moveToCodeTask, prototypeBuildTask, prototypeReadable, recordPrototype } from '../src/main/services/prototype';
+import { type RecordStore, cloneStore, moveToCodePrompt, moveToCodeTask, prototypeBuildTask, prototypeReadable, recordPrototype } from '../src/main/services/prototype';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { claudeCodeAdapter } from '../src/main/services/agent';
 import { type PrototypeApi, runPrototypeBuild } from '../src/renderer/prototypeBuild';
@@ -243,5 +243,21 @@ describe('runPrototypeBuild', () => {
 		const phases: BuildPhase[] = [];
 		await runPrototypeBuild({ api: a, project, iteration, task: 't', isLive: () => true, onPhase: (p) => phases.push(p), pollMs: 1 });
 		expect(phases.at(-1)).toEqual({ kind: 'failed', message: 'Saving needs write access.' });
+	});
+});
+
+describe('the first line of a Build conversation', () => {
+	const at = { label: 'V2 · I1', projectId: 'alert-history', taskFile: '/app/prototypes/alert-history/v2-i1-into-code.md' };
+
+	it('says what to build and points at the task, for new work', () => {
+		expect(moveToCodePrompt({ ...at, continuing: null })).toBe(
+			"Build prototype V2 · I1 of alert-history into this codebase. Your task, with the skill to follow and the prototype's files, is in /app/prototypes/alert-history/v2-i1-into-code.md: read it and do what it says.",
+		);
+	});
+
+	it('says to look at what is on the branch first, for work started before', () => {
+		const prompt = moveToCodePrompt({ ...at, continuing: 'feature/alert-history' });
+		expect(prompt).toMatch(/^Continue building prototype V2 · I1 of alert-history into this codebase, on feature\/alert-history\. Some of it may be done already, so look at the branch and the audit first\./);
+		expect(prompt).toContain('is in /app/prototypes/alert-history/v2-i1-into-code.md: read it and do what it says.');
 	});
 });

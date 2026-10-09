@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Iteration } from '../shared/contract';
-import { codeLink, firstHeading, isPrototypeKey, iterationLabel, parsePrototypeName, parseSelectedVersion, selectedVersionPath, sitePath, workKind } from '../shared/projects';
+import { firstHeading, isPrototypeKey, iterationLabel, parsePrototypeName, parseSelectedVersion, projectCodeLink, selectedVersionPath, sitePath } from '../shared/projects';
 import { parseIterations } from '../shared/records';
 
 /**
@@ -106,7 +106,7 @@ const readProjects = (designRoot: string): SiteProject[] => {
 					.sort(([a], [b]) => a - b)
 					.map(([version, ps]) => ({ version, pages: ps.sort((a, b) => b.iteration - a.iteration) })),
 				selected: chosen !== null && byVersion.has(chosen) ? chosen : null,
-				builtInCode: records.filter((r) => workKind(r) === 'codebase').map(codeLink).find((link) => link !== null) ?? null,
+				builtInCode: projectCodeLink({ iterations: records }),
 			},
 		];
 	});

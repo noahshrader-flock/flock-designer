@@ -217,6 +217,12 @@ export const codeLink = (it: { branch: string; repository?: string | null; pullR
 	return repo ? `https://github.com/${repo}/tree/${it.branch.split('/').map(encodeURIComponent).join('/')}` : null;
 };
 
+/** Where a project's codebase work is on GitHub (`codeLink`), or null when it has none, or its record does not say. */
+export const projectCodeLink = (project: { iterations: { name: string; branch: string; repository?: string | null; pullRequest?: string | null }[] }): string | null => {
+	const codebase = project.iterations.find((it) => workKind(it) === 'codebase');
+	return codebase ? codeLink(codebase) : null;
+};
+
 /** A project file as it reads in a menu: `design-notes.md` is "Design notes". */
 export const recordLabel = (name: string): string => {
 	const words = name.replace(/\.[^.]+$/, '').replace(/-/g, ' ');

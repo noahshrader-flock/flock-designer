@@ -56,6 +56,25 @@ let product: string;
 let design: string;
 let home: string;
 
+/** A saved prototype, v1-i1 of demo, in `root`, with the skill Build needs: what Build moves into the code. */
+const savedPrototype = async (root = product) => {
+	await call(CHANNELS.useCheckout, root);
+	mkdirSync(join(design, 'skills'), { recursive: true });
+	writeFileSync(join(design, 'skills', 'move-to-code.md'), '# Move a prototype into the code\n\nAudit first.');
+	await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root, branch: 'develop' });
+	mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
+	writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<h1>Demo</h1>');
+	expect((await call(CHANNELS.savePrototype, 'demo', 'v1-i1')).ok).toBe(true);
+};
+/** Build on that prototype, from `from`: how codebase work is started from the window. */
+const build = (root: string, from?: string) => call(CHANNELS.buildInClaude, root, 'demo', 'v1-i1', from);
+/** Codebase work for demo, recorded and checked out, as Build or an agent in a terminal would leave it. */
+const codebaseWork = async () => {
+	const { createIteration } = await import('../src/main/services/iterations');
+	const { readDescriptor } = await import('../src/main/services/descriptor');
+	await createIteration(product, join(design, 'projects'), readDescriptor(product), 'demo', 'x', 'develop');
+};
+
 let registerIpc: typeof import('../src/main/ipc')['registerIpc'];
 let OpenedCheckouts: typeof import('../src/main/services/session')['OpenedCheckouts'];
 let opened: InstanceType<typeof OpenedCheckouts>;
@@ -389,8 +408,9 @@ describe('where clones go', () => {
 			const clone = join(home, 'GitHub', 'coke-clone');
 			g(home, 'clone', '-q', product, clone);
 			await call(CHANNELS.openCheckout, clone);
+			await savedPrototype(clone);
 			expect(g(clone, 'branch', '--list', 'noah/elsewhere').trim()).toBe('');
-			const r = await call(CHANNELS.createIteration, clone, 'demo', 'note', 'noah/elsewhere');
+			const r = await build(clone, 'noah/elsewhere');
 			expect(r.ok).toBe(true);
 			expect(g(clone, 'rev-parse', '--abbrev-ref', 'noah/elsewhere@{u}').trim()).toBe('origin/noah/elsewhere');
 		});
@@ -420,7 +440,7 @@ describe('a repository must be opened before anything acts on it', () => {
 		[CHANNELS.listIterations, () => [product, 'demo']],
 		[CHANNELS.startCommand, () => [product, 'preview', 'demo']],
 		[CHANNELS.startAgent, () => [product, 'demo', 'do it']],
-		[CHANNELS.createIteration, () => [product, 'demo', 'note']],
+		[CHANNELS.buildInClaude, () => [product, 'demo', 'v1-i1']],
 	])('%s refuses a root this window never opened', async (channel, args) => {
 		const r = await call(channel, ...args());
 		expect(r.ok).toBe(false);
@@ -514,32 +534,32 @@ describe('where new work starts', () => {
 	});
 
 	it('starts codebase work from the branch chosen, not the one checked out', async () => {
-		await call(CHANNELS.useCheckout, product);
+		await savedPrototype();
 		g(product, 'checkout', '-q', '-b', 'noah/baseline');
 		g(product, 'commit', '-q', '--allow-empty', '-m', 'baseline only');
 		g(product, 'checkout', '-q', 'develop');
-		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'noah/baseline');
+		const r = await build(product, 'noah/baseline');
 		expect(r.ok).toBe(true);
 		expect(g(product, 'log', '-1', '--format=%s', 'feature/demo').trim()).toBe('baseline only');
 	});
 
 	it('refuses a branch without the Flock Designer setup, which would strand the checkout', async () => {
-		await call(CHANNELS.useCheckout, product);
+		await savedPrototype();
 		g(product, 'checkout', '-q', '--orphan', 'bare');
 		g(product, 'rm', '-rfq', '.');
 		writeFileSync(join(product, 'x.txt'), 'x');
 		g(product, 'add', '.');
 		g(product, 'commit', '-q', '-m', 'no setup here');
 		g(product, 'checkout', '-q', '-f', 'develop');
-		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', 'bare');
+		const r = await build(product, 'bare');
 		expect(r.ok).toBe(false);
 		expect(r.error).toMatch(/has no \.flkd\/workspace\.json/);
 		expect(g(product, 'branch', '--show-current').trim()).toBe('develop');
 	});
 
 	it('refuses a branch that does not exist, so nothing else reaches git', async () => {
-		await call(CHANNELS.useCheckout, product);
-		const r = await call(CHANNELS.createIteration, product, 'demo', 'try', '--orphan');
+		await savedPrototype();
+		const r = await build(product, '--orphan');
 		expect(r.ok).toBe(false);
 		expect(g(product, 'branch', '--list', 'fd/*').trim()).toBe('');
 	});
@@ -956,15 +976,7 @@ describe('prototypes', () => {
 	});
 
 	describe('Build in the codebase, handed to Claude Code', () => {
-		const saved = async () => {
-			await call(CHANNELS.useCheckout, product);
-			mkdirSync(join(design, 'skills'), { recursive: true });
-			writeFileSync(join(design, 'skills', 'move-to-code.md'), '# Move a prototype into the code\n\nAudit first.');
-			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
-			writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<h1>Demo</h1>');
-			expect((await call(CHANNELS.savePrototype, 'demo', 'v1-i1')).ok).toBe(true);
-		};
+		const saved = () => savedPrototype();
 
 		it('makes the branch and the record, writes the task beside the prototype, and gives the command to start it', async () => {
 			await saved();
@@ -1081,7 +1093,7 @@ describe('prototypes', () => {
 
 		it('says when the project already has codebase work recorded', async () => {
 			await start();
-			await call(CHANNELS.createIteration, product, 'demo', 'x', 'develop');
+			await codebaseWork();
 			g(product, 'checkout', '-q', 'develop');
 			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'v1-i1')).value).toMatchObject({ recorded: true });
 		});
@@ -1279,9 +1291,9 @@ describe('one agent, one piece of work', () => {
 	});
 
 	it('does not switch the checkout\'s branch under a running agent', async () => {
-		await call(CHANNELS.useCheckout, product);
+		await savedPrototype();
 		agentRunningIn.mockReturnValue(true);
-		const r = await call(CHANNELS.createIteration, product, 'demo', 'note');
+		const r = await build(product, 'develop');
 		expect(r.ok).toBe(false);
 		expect(r.error).toMatch(/agent is working in flock-coke/);
 	});
@@ -1301,8 +1313,7 @@ describe('Handoff', () => {
 		await call(CHANNELS.useCheckout, product);
 		mkdirSync(join(design, 'skills'), { recursive: true });
 		writeFileSync(join(design, 'skills', 'handoff.md'), '# Hand work to engineering\nThe shared steps.\n');
-		const made = await call(CHANNELS.createIteration, product, 'demo', 'x', 'develop');
-		expect(made.ok).toBe(true);
+		await codebaseWork();
 		agentStart.mockReturnValue({ state: 'running', startedAt: 'now', work: 'feature/demo', purpose: 'handoff' });
 	};
 	const commitHandoff = () => {

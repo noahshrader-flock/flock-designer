@@ -90,7 +90,6 @@ describe('what it makes', () => {
 		await press(button('Create prototype'));
 		await settle();
 		expect(app.calls.createPrototype?.[0]).toEqual(['ops-list', 'Ops list', 'A list', { root: HERE.root, branch: 'develop' }]);
-		expect(app.calls.createIteration).toBeUndefined();
 	});
 });
 

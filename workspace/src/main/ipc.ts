@@ -82,6 +82,7 @@ import {
 	type RecordStore,
 	assertPrototypeName,
 	cloneStore,
+	moveToCodePrompt,
 	moveToCodeTask,
 	prototypeAddressTask,
 	prototypeBuildTask,
@@ -471,12 +472,10 @@ export const registerIpc = ({
 		}
 	};
 
-	ipcMain.handle(
-		CHANNELS.createIteration,
-		// Codebase work only: a prototype has no branch, and is made by createPrototype.
-		guard((root: string, projectId: string, note: string, from?: string) => startCodebaseWork(root, projectId, note, from)),
-	);
-	/** Codebase work's branch, checked out, and its record: from `from`, or the branch the checkout is on. */
+	/**
+	 * Codebase work's branch, checked out, and its record: from `from`, or the branch the checkout is on. Only Build
+	 * starts codebase work from the app, so there is no channel for it of its own.
+	 */
 	async function startCodebaseWork(root: string, projectId: string, note: string, from?: string) {
 		const canonical = opened.require(root);
 		assertAgentNotHere(canonical);
@@ -496,6 +495,19 @@ export const registerIpc = ({
 		}
 		const recordsRoot = recordsFor(canonical);
 		return written(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch));
+	}
+
+	/**
+	 * A project's codebase work as this checkout and the records know it: its branch, whether that branch is here, and
+	 * whether it is recorded. Started when either is true; Build then continues it rather than starting a second.
+	 */
+	async function codebaseWorkOf(root: string, projectId: string) {
+		const canonical = opened.require(root);
+		const branch = codebaseBranchFor(descriptorFor(root), projectId);
+		const records = await work.records(projectId);
+		const exists = await branchExists(canonical, branch);
+		const recorded = records.some((i) => i.name === 'codebase');
+		return { branch, exists, recorded, started: exists || recorded, records };
 	}
 
 	/**
@@ -1198,14 +1210,13 @@ export const registerIpc = ({
 			assertUsableProjectId(projectId);
 			assertPrototypeName(name);
 			const canonical = opened.require(root);
-			const branch = codebaseBranchFor(descriptorFor(root), projectId);
-			const records = await work.records(projectId);
+			const { branch, exists, recorded, records } = await codebaseWorkOf(root, projectId);
 			const basedOn = records.find((i) => i.name === name)?.basedOn;
 			const here = await readCheckout(canonical);
 			return {
 				branch,
-				exists: await branchExists(canonical, branch),
-				recorded: records.some((i) => i.name === 'codebase'),
+				exists,
+				recorded,
 				repository: basename(canonical),
 				basedOn: basedOn ? { repository: basedOn.repository, branch: basedOn.branch } : null,
 				current: here.branch,
@@ -1281,8 +1292,7 @@ export const registerIpc = ({
 			const label = iterationLabel({ name, branch: prototypeKey(projectId, name) });
 			// The branch first: nothing is written for the agent if the work cannot start (a dirty tree, work not found).
 			// Work already started, here or recorded, is continued where it is; it is not started a second time.
-			const branch = codebaseBranchFor(descriptorFor(root), projectId);
-			const continuing = (await work.records(projectId)).some((i) => i.name === 'codebase') || (await branchExists(canonical, branch));
+			const { branch, started: continuing } = await codebaseWorkOf(root, projectId);
 			if (continuing) await continueCodebaseWork(root, projectId, branch);
 			else await startCodebaseWork(root, projectId, `From prototype ${label}`, from);
 			writeFileSync(pageFile, html);
@@ -1299,9 +1309,7 @@ export const registerIpc = ({
 					basedOn: (await work.record(projectId, name))?.basedOn,
 				}),
 			);
-			const prompt = continuing
-				? `Continue building prototype ${label} of ${projectId} into this codebase, on ${branch}. Some of it may be done already, so look at the branch and the audit first. Your task, with the skill to follow and the prototype's files, is in ${taskFile}: read it and do what it says.`
-				: `Build prototype ${label} of ${projectId} into this codebase. Your task, with the skill to follow and the prototype's files, is in ${taskFile}: read it and do what it says.`;
+			const prompt = moveToCodePrompt({ label, projectId, taskFile, continuing: continuing ? branch : null });
 			const editor = findEditor();
 			if (editor) {
 				await openPrompt(editor, canonical, prompt);

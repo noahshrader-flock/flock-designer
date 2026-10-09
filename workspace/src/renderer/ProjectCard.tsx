@@ -1,7 +1,7 @@
 import { ExternalLinkIcon, MessageSquareIcon } from 'lucide-react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import type { Project, ProjectIteration } from '../shared/contract';
-import { codeLink, workOf } from '../shared/projects';
+import { projectCodeLink, workOf } from '../shared/projects';
 import { CardCover } from './CardCover';
 import { PeopleLine } from './People';
 import { Badge } from './ui/badge';
@@ -31,8 +31,8 @@ const Aside = ({ children, label }: { children: ReactNode; label?: string }) => 
 export const ProjectCard = ({ project, onOpen }: { project: Project; onOpen: (iteration: ProjectIteration) => void }) => {
 	const prototypes = workOf(project.iterations, 'prototype');
 	const newest = prototypes[0];
-	const codebase = workOf(project.iterations, 'codebase')[0];
-	const link = codebase ? codeLink(codebase) : null;
+	const codebase = workOf(project.iterations, 'codebase').length > 0;
+	const link = projectCodeLink(project);
 	const comments = commentsOn(prototypes);
 	// What pressing the card does: into the newest prototype, or out to the codebase work on GitHub. Or nothing.
 	const go = newest !== undefined ? () => onOpen(newest) : link !== null ? () => void window.open(link, '_blank', 'noreferrer') : null;

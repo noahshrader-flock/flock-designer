@@ -2,6 +2,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import type { ClonePlace } from '../../shared/contract';
+import { asGitHubRepository } from '../../shared/projects';
 import { CODE_FOLDERS } from './discovery';
 import { FolderMemory } from './folderMemory';
 import { gitHubRepoOf, listedAs, originOf } from './repositories';
@@ -65,18 +66,13 @@ export const defaultClonePlaceDeps: ClonePlaceDeps = {
 	origin: (root) => originOf(root),
 };
 
-/** An owner's or a repository's name: GitHub's own characters only, and never `.` or `..`. */
-const isName = (s: string | undefined): s is string => s !== undefined && /^[\w.-]+$/.test(s) && s !== '.' && s !== '..';
-
 /**
  * Where `owner/repo` would be placed in `folder`: `<folder>/<repo>`. Throws for anything that is not a GitHub repository
  * name, so no path is ever made of one.
  */
 export const clonePlace = (folder: string, repository: string, deps: ClonePlaceDeps = defaultClonePlaceDeps): ClonePlace => {
-	const [owner, name, ...rest] = repository.split('/');
-	if (!isName(owner) || !isName(name) || rest.length > 0) {
-		throw new Error(`"${repository}" is not a GitHub repository name.`);
-	}
+	const name = asGitHubRepository(repository)?.split('/')[1];
+	if (name === undefined) throw new Error(`"${repository}" is not a GitHub repository name.`);
 	const at = (deps.paths ?? path).join(folder, name);
 	if (!deps.exists(at) || deps.list(at).length === 0) return { state: 'free', path: at };
 	const origin = deps.exists((deps.paths ?? path).join(at, '.git')) ? deps.origin(at) : null;

@@ -260,6 +260,19 @@ export const prototypeAddressTask = ({
 	].join('\n');
 
 /** What the agent is told when a prototype moves into the codebase: audit first, then build. */
+/**
+ * The first line of the Claude Code conversation that builds a prototype into the code: short, pointing at the task
+ * written beside the prototype. `continuing` is the branch, when the work was started before: then it says to look at
+ * what is there first.
+ */
+export const moveToCodePrompt = ({ label, projectId, taskFile, continuing }: { label: string; projectId: string; taskFile: string; continuing: string | null }): string =>
+	[
+		continuing
+			? `Continue building prototype ${label} of ${projectId} into this codebase, on ${continuing}. Some of it may be done already, so look at the branch and the audit first.`
+			: `Build prototype ${label} of ${projectId} into this codebase.`,
+		`Your task, with the skill to follow and the prototype's files, is in ${taskFile}: read it and do what it says.`,
+	].join(' ');
+
 export const moveToCodeTask = ({
 	skill,
 	pageFile,
