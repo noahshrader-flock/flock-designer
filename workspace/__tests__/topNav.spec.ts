@@ -26,6 +26,29 @@ const tabs = () => [...document.querySelectorAll<HTMLElement>('[role="tab"]')];
 /** Tabs switch as the pointer goes down, as a person's press does. */
 const choose = (tab: HTMLElement) => act(async () => void tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 })));
 
+describe('the bar', () => {
+	const header = () => document.querySelector('header') as HTMLElement;
+
+	it('has the name at the left, the sections in the exact center, and the account at the far right', async () => {
+		await show();
+		// Three columns, the outer two equal: the middle one is centered whatever the widths of the others.
+		expect(header().className.split(' ')).toEqual(expect.arrayContaining(['grid', 'grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]']));
+		// The room for the window's buttons is on the outer columns: padding on the bar would move the center off the window's.
+		expect(header().className).not.toMatch(/\bp[lrx]-/);
+		const [left, middle, right] = [...header().children] as HTMLElement[];
+		expect(left?.textContent).toBe('DSNR');
+		expect(middle?.querySelector('[role="tablist"]')).not.toBeNull();
+		expect(right?.textContent).toContain('Noah Shrader');
+		expect(right?.className.split(' ')).toContain('justify-self-end');
+	});
+
+	it('keeps the columns before signing in, with only the name', async () => {
+		await show({ user: null });
+		expect([...header().children]).toHaveLength(3);
+		expect(header().textContent).toBe('DSNR');
+	});
+});
+
 describe('the sections', () => {
 	it('are two tabs, Projects and Design System, with the one you are in selected', async () => {
 		await show();

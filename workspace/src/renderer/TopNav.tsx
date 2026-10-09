@@ -17,9 +17,9 @@ const onMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgen
 /**
  * The top bar: fixed to the top of the window, always.
  *
- * Left to right: room for the macOS window buttons, the product name, the
- * sections (Projects, Design System) as tabs in the pill look, and the account. The window
- * has no separate toolbar above this -- the bar is the toolbar.
+ * Left to right: room for the macOS window buttons and the product name, the sections (Projects, Design System) as
+ * tabs in the pill look, exactly in the center, and the account at the far right. The window has no separate toolbar
+ * above this -- the bar is the toolbar.
  *
  * The preview is a native view that sits above all page content. The account menu
  * needs nothing special for that: the review screen notices any pop-up over the
@@ -38,15 +38,14 @@ export const TopNav = ({
 }) => {
 	return (
 		<header
-			className={`app-drag bg-card fixed inset-x-0 top-0 z-40 flex h-(--nav-height) items-center border-b ${
-				// 108px leaves a clear gap after the macOS window buttons (they end near 76px);
-				// elsewhere the overlay controls sit on the right.
-				onMac ? 'pr-6 pl-[108px]' : 'pr-[150px] pl-6'
-			}`}
+			// Three columns, the outer two equal, so the sections are centered on the window whatever is at either side. The
+			// room for the window's own buttons is on the columns, not the bar, or it would move the center.
+			className="app-drag bg-card fixed inset-x-0 top-0 z-40 grid h-(--nav-height) grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center border-b"
 		>
-			<span className="mr-10 text-base font-bold whitespace-nowrap">DSNR</span>
+			{/* 108px leaves a clear gap after the macOS window buttons (they end near 76px); elsewhere the overlay controls sit on the right. */}
+			<span className={`text-base font-bold whitespace-nowrap ${onMac ? 'pl-[108px]' : 'pl-6'}`}>DSNR</span>
 
-			{user && (
+			{user ? (
 				<Tabs value={section} onValueChange={(next) => onSectionChange(next as Section)} className="app-no-drag">
 					<TabsList>
 						{SECTIONS.map(({ id, label }) => (
@@ -56,34 +55,36 @@ export const TopNav = ({
 						))}
 					</TabsList>
 				</Tabs>
+			) : (
+				<div />
 			)}
 
-			<div className="grow" />
-
-			{user && (
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button variant="ghost" className="app-no-drag h-auto gap-3 py-1 font-normal">
-							<Avatar size="sm">
-								<AvatarImage src={user.avatarUrl ?? undefined} alt={user.name ?? user.login} />
-								<AvatarFallback>{(user.name ?? user.login).charAt(0).toUpperCase()}</AvatarFallback>
-							</Avatar>
-							{user.name ?? user.login}
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end" className="min-w-[200px]">
-						<div className="px-2 py-1.5">
-							<p className="text-sm font-medium">{user.name ?? user.login}</p>
-							<p className="text-muted-foreground text-xs">@{user.login}</p>
-						</div>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem onSelect={onSignOut}>
-							<LogOutIcon />
-							Sign out
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			)}
+			<div className={`justify-self-end ${onMac ? 'pr-6' : 'pr-[150px]'}`}>
+				{user && (
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="ghost" className="app-no-drag h-auto gap-3 py-1 font-normal">
+								<Avatar size="sm">
+									<AvatarImage src={user.avatarUrl ?? undefined} alt={user.name ?? user.login} />
+									<AvatarFallback>{(user.name ?? user.login).charAt(0).toUpperCase()}</AvatarFallback>
+								</Avatar>
+								{user.name ?? user.login}
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end" className="min-w-[200px]">
+							<div className="px-2 py-1.5">
+								<p className="text-sm font-medium">{user.name ?? user.login}</p>
+								<p className="text-muted-foreground text-xs">@{user.login}</p>
+							</div>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem onSelect={onSignOut}>
+								<LogOutIcon />
+								Sign out
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				)}
+			</div>
 		</header>
 	);
 };
