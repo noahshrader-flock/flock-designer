@@ -652,7 +652,7 @@ type PageState = (typeof states)[number];
 // @remove: picks the state from ?state=. On move: delete.
 const readState = (): PageState => {
     const value = new URLSearchParams(window.location.search).get('state');
-    return states.includes(value as PageState) ? (value as PageState) : 'default';
+    return states.includes(value as PageState) ? (value as PageState) : states[0];
 };
 
 const ZoneCoveragePage = ({ initialState }: { initialState: PageState }) => {
