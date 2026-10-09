@@ -1,16 +1,7 @@
 import { ChevronDownIcon } from 'lucide-react';
-import { byVersion, iterationLabel, parsePrototypeName } from '../shared/projects';
+import { byVersion, iterationLabel, latestIterationName, parsePrototypeName } from '../shared/projects';
 import { Button } from './ui/button';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuLabel,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /** What the switcher needs to know of an iteration: how it is named, and which it is. */
@@ -19,12 +10,52 @@ export interface Switchable {
 	branch: string;
 }
 
+/** One dropdown: a button that says where you are, and the menu of the choices, with this one chosen. */
+const Pick = ({
+	what,
+	label,
+	value,
+	choices,
+	onChange,
+}: {
+	/** What it picks, for its tooltip and its name for assistive technology: "version", "iteration". */
+	what: 'version' | 'iteration';
+	/** The button's own words: `V2`, `I1`. */
+	label: string;
+	value: string;
+	choices: { value: string; label: string }[];
+	onChange: (value: string) => void;
+}) => (
+	<DropdownMenu>
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<DropdownMenuTrigger asChild>
+					<Button variant="outline" aria-label={`${what === 'version' ? 'Version' : 'Iteration'} ${label}: switch ${what}`}>
+						{label}
+						<ChevronDownIcon />
+					</Button>
+				</DropdownMenuTrigger>
+			</TooltipTrigger>
+			<TooltipContent>Switch {what}</TooltipContent>
+		</Tooltip>
+		<DropdownMenuContent align="end" className="w-auto">
+			<DropdownMenuRadioGroup value={value} onValueChange={(next) => next !== value && onChange(next)}>
+				{choices.map((c) => (
+					<DropdownMenuRadioItem key={c.value} value={c.value}>
+						{c.label}
+					</DropdownMenuRadioItem>
+				))}
+			</DropdownMenuRadioGroup>
+		</DropdownMenuContent>
+	</DropdownMenu>
+);
+
 /**
- * Switching between a project's iterations: the button that says which one this is, and the menu of the others. One
- * component, so the app's review screen and a prototype's published page carry the same one.
- *
- * Prototypes are listed by version, then their iterations (`grouped`); codebase work is one list. It is shown even with
- * one iteration, so where you are, and that there can be more, is always visible.
+ * Switching between a project's work. Prototypes have two dropdowns, as they have two ideas of "another": **the version**
+ * (a different idea; going to one opens its newest iteration) and, beside it, **the iteration** (a refinement, among
+ * those of the version you are on). Codebase work is one list. Both are shown even with one of each, so where you are,
+ * and that there can be more, is always visible. One component, so the app's review screen and a prototype's
+ * published page carry the same ones.
  */
 export const IterationSwitcher = <T extends Switchable>({
 	current,
@@ -35,51 +66,56 @@ export const IterationSwitcher = <T extends Switchable>({
 }: {
 	current: Switchable;
 	siblings: T[];
+	/** Prototypes: a dropdown for versions and one for iterations. Codebase work: one list. */
 	grouped: boolean;
 	onSelect: (next: T) => void;
 	/** Said after an iteration's name in the menu, when there is something to say about it. */
 	note?: (iteration: T) => string;
-}) => (
-	<DropdownMenu>
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<DropdownMenuTrigger asChild>
-					<Button variant="outline" aria-label={`Iteration ${iterationLabel(current)}: switch iteration`}>
-						{iterationLabel(current)}
-						<ChevronDownIcon />
-					</Button>
-				</DropdownMenuTrigger>
-			</TooltipTrigger>
-			<TooltipContent>Switch iteration</TooltipContent>
-		</Tooltip>
-		<DropdownMenuContent align="end" className="w-auto">
-			<DropdownMenuRadioGroup
+}) => {
+	const go = (branch: string) => {
+		const next = siblings.find((i) => i.branch === branch);
+		if (next && branch !== current.branch) onSelect(next);
+	};
+	const here = parsePrototypeName(current.name);
+	if (!grouped || here === null) {
+		return (
+			<Pick
+				what="iteration"
+				label={iterationLabel(current)}
 				value={current.branch}
-				onValueChange={(branch) => {
-					const next = siblings.find((i) => i.branch === branch);
-					if (next && branch !== current.branch) onSelect(next);
+				choices={siblings.map((i) => ({ value: i.branch, label: `${iterationLabel(i)}${note?.(i) ?? ''}` }))}
+				onChange={go}
+			/>
+		);
+	}
+	// Newest first, whatever order they were given in: the app and the published page then always agree.
+	const versions = byVersion(siblings)
+		.map((v) => ({ ...v, iterations: [...v.iterations].sort((a, b) => (parsePrototypeName(b.name)?.iteration ?? 0) - (parsePrototypeName(a.name)?.iteration ?? 0)) }))
+		.sort((a, b) => b.version - a.version);
+	return (
+		<>
+			<Pick
+				what="version"
+				label={`V${here.version}`}
+				value={String(here.version)}
+				choices={versions.map((v) => ({ value: String(v.version), label: `V${v.version}` }))}
+				// A version opens at its newest iteration.
+				onChange={(v) => {
+					const newest = latestIterationName(siblings.map((i) => i.name), Number(v));
+					const next = siblings.find((i) => i.name === newest);
+					if (next) go(next.branch);
 				}}
-			>
-				{grouped
-					? byVersion(siblings).map((group, n) => (
-							<DropdownMenuGroup key={group.version}>
-								{n > 0 && <DropdownMenuSeparator />}
-								<DropdownMenuLabel className="text-muted-foreground text-xs">V{group.version}</DropdownMenuLabel>
-								{group.iterations.map((i) => (
-									<DropdownMenuRadioItem key={i.branch} value={i.branch}>
-										I{parsePrototypeName(i.name)?.iteration}
-										{note?.(i) ?? ''}
-									</DropdownMenuRadioItem>
-								))}
-							</DropdownMenuGroup>
-						))
-					: siblings.map((i) => (
-							<DropdownMenuRadioItem key={i.branch} value={i.branch}>
-								{iterationLabel(i)}
-								{note?.(i) ?? ''}
-							</DropdownMenuRadioItem>
-						))}
-			</DropdownMenuRadioGroup>
-		</DropdownMenuContent>
-	</DropdownMenu>
-);
+			/>
+			<Pick
+				what="iteration"
+				label={`I${here.iteration}`}
+				value={current.branch}
+				choices={(versions.find((v) => v.version === here.version)?.iterations ?? []).map((i) => ({
+					value: i.branch,
+					label: `I${parsePrototypeName(i.name)?.iteration}${note?.(i) ?? ''}`,
+				}))}
+				onChange={go}
+			/>
+		</>
+	);
+};

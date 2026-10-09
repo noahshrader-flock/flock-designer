@@ -32,22 +32,28 @@ afterEach(async () => {
 });
 
 describe("the page's bar", () => {
-	it("is the app's own: the way back, the project, and the iteration switcher with its versions", async () => {
+	it("is the app's own: the way back, the project, and a dropdown for the version and one for the iteration", async () => {
 		await open();
 		expect(document.querySelector('a[href="../../"]')).not.toBeNull();
 		expect(document.body.textContent).toContain('Alert history');
-		await openMenu(button('Iteration V1 · I1: switch iteration'));
-		// The same menu the app has: versions as headings, iterations under them, this one chosen.
-		const options = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
-		expect(options.map((i) => i.textContent?.trim())).toEqual(['I2', 'I1', 'I1']);
-		expect(document.body.textContent).toMatch(/V1[\s\S]*V2/);
-		expect(options.map((o) => o.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
+		// The versions in one menu, with this one chosen; the iterations of this version in the other.
+		await openMenu(button('Version V1: switch version'));
+		const versions = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
+		expect(versions.map((i) => i.textContent?.trim())).toEqual(['V2', 'V1']);
+		expect(versions.map((o) => o.getAttribute('aria-checked'))).toEqual(['false', 'true']);
+		await press(versions[1] as HTMLElement);
+		await settle();
+		await openMenu(button('Iteration I1: switch iteration'));
+		const iterations = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
+		expect(iterations.map((i) => i.textContent?.trim())).toEqual(['I2', 'I1']);
+		expect(iterations.map((o) => o.getAttribute('aria-checked'))).toEqual(['false', 'true']);
 	});
 
 	it('is there before anyone signs in, beside the way to', async () => {
 		await open();
 		expect(button('Sign in to comment')).toBeTruthy();
-		expect(button('Iteration V1 · I1: switch iteration')).toBeTruthy();
+		expect(button('Iteration I1: switch iteration')).toBeTruthy();
+		expect(button('Version V1: switch version')).toBeTruthy();
 	});
 });
 
