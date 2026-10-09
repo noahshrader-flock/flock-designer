@@ -322,10 +322,10 @@ are of the change on the library's current commit, not of the branch itself.
 beside the change being tried (`StoryPreviews.tagged`), draws every listed component's story file tagged in light and
 dark and plain in light (`services/storyMeasure.ts`: hidden, sandboxed windows, the mode set per window, the page loaded
 once per window and each file drawn in it in turn), and reads back what each drew (`decode`). The index is kept for the
-library's commit and built on the first ask. The Component view (`ComponentPanel`) shows **Made from** as the tokens
+library's commit, and **got ready in the background** (below) so it is there by the first ask. The Component view (`ComponentPanel`) shows **Made from** as the tokens
 panel's own rows, with each token's uses and the other components that share it, and **Not tokens**. **Measured on FUI:**
 the whole library, 83 story files drawn three times, in **7.4 s** (2.7 s for the tagged build, 4.2 s for the drawing);
-the radius token is shared by FSButton and 44 other components, `primary.main` by 35. **Known limits:** a color worked
+the radius token is shared by FSButton and 44 other components, `primary.main` by 35. **Background:** three seconds after the app opens, and again whenever the library has been read (it may have moved), the main process builds the previews and the index for the shown design system, three windows at a time; cold on FUI it is ready in about 14 s, after which a component's first ask is answered in tens of milliseconds. Asking before it is ready waits for the same build. **Known limits:** a color worked
 out from a token (a hover's darker shade) is counted, not named; a state no story shows is not read; tokens only for
 color, spacing and radius; lengths in `em` are not tagged; a role both modes share is named as Light in light and Dark in
 dark.

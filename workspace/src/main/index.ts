@@ -173,6 +173,8 @@ void app.whenReady().then(() => {
 		storyPreviewsRoot: join(app.getPath('userData'), 'story-previews'),
 		tokenBranchesFile: join(app.getPath('userData'), 'token-branches.json'),
 		measureStories: measureInWindows,
+		// A little after the window is up, so opening the app is not slowed by getting the design system ready.
+		warmAfterMs: 3000,
 	});
 	window.on('closed', () => prototypeServer.close());
 	// Coming back to the window is a good moment to publish whatever was done while it was away.

@@ -156,6 +156,12 @@ export interface IpcContext {
 	tokenBranchTools?: (root: string) => ShareTools;
 	/** How stories are drawn to read what they draw (T6): hidden windows, in the app. */
 	measureStories?: Measure;
+	/**
+	 * Which tokens each component draws with (T6), and so what is got ready in the background: given for tests.
+	 * `warmAfterMs`: when to start getting the shown design system ready after the app opens; not at all when absent.
+	 */
+	componentTokens?: Pick<ComponentTokens, 'of' | 'warm'>;
+	warmAfterMs?: number;
 }
 
 export const registerIpc = ({
@@ -184,6 +190,8 @@ export const registerIpc = ({
 	measureStories = async () => {
 		throw new Error('Stories can be drawn only in the app.');
 	},
+	componentTokens: injectedComponentTokens,
+	warmAfterMs,
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
@@ -334,16 +342,27 @@ export const registerIpc = ({
 
 	// The window says only whether to wait for the update; where the design system is, it is never told and never asks.
 	const library = designLibrary ?? new DesignLibrary({ systems: designSystems });
-	ipcMain.handle(CHANNELS.designSystemCatalog, guard((refresh: unknown) => library.catalog(refresh === true)));
 	const shownSystem = () => {
 		const shown = library.current();
 		return typeof shown === 'string' ? null : shown;
 	};
 	const previews = new StoryPreviews({ system: shownSystem, folder: storyPreviewsRoot, server: prototypeServer });
+	// Which tokens a component draws with (T6): the window names a story file, and only a story file of the library is answered.
+	const componentTokens = injectedComponentTokens ?? new ComponentTokens({ system: shownSystem, previews, measure: measureStories });
+	// The previews and the index are got ready in the background, so a component opened later is drawn at once: as the app
+	// opens, and whenever the library has been read (it may have moved). For a commit already ready it is nothing.
+	const warm = () => void componentTokens.warm();
+	if (warmAfterMs !== undefined) setTimeout(warm, warmAfterMs).unref();
+	ipcMain.handle(
+		CHANNELS.designSystemCatalog,
+		guard(async (refresh: unknown) => {
+			const catalog = await library.catalog(refresh === true);
+			if (catalog.state === 'ready') warm();
+			return catalog;
+		}),
+	);
 	// A change is only ever a list of token edits, checked here and again before anything is written (T3, T4).
 	ipcMain.handle(CHANNELS.storyPreview, guard((edits: unknown) => previews.preview(tokenEditsOf(edits))));
-	// Which tokens a component draws with (T6): the window names a story file, and only a story file of the library is answered.
-	const componentTokens = new ComponentTokens({ system: shownSystem, previews, measure: measureStories });
 	ipcMain.handle(
 		CHANNELS.componentTokens,
 		guard((file: unknown) => {

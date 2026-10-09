@@ -10,7 +10,7 @@ import { PREVIEW_SHOW, previewAddress } from '../../shared/catalog';
 import type { Drawn, Measure, Mode } from './componentTokens';
 import { keepToOrigin, sandboxedPreferences } from './sandboxedPage';
 
-/** How many windows draw each set of pages, and how long one story may take. */
+/** How many windows draw a run's files at once, and how long one story may take. */
 const WINDOWS_PER_RUN = 3;
 const STORY_MS = 15_000;
 /** The windows' session: their own, in memory only. */
@@ -80,12 +80,17 @@ const drawShare = async (base: string, mode: Mode, files: string[]): Promise<(Dr
 	}
 };
 
-export const measureInWindows: Measure = async (runs) =>
-	Promise.all(
-		runs.map(async ({ base, mode, files }) => {
-			// Each window takes every third file, so the slow ones are spread out.
-			const shares = Array.from({ length: Math.min(WINDOWS_PER_RUN, files.length) }, (_, w) => files.filter((_, i) => i % WINDOWS_PER_RUN === w));
-			const drawn = await Promise.all(shares.map((share) => drawShare(base, mode, share)));
-			return files.map((_, i) => drawn[i % WINDOWS_PER_RUN]?.[Math.floor(i / WINDOWS_PER_RUN)] ?? null);
-		}),
-	);
+/**
+ * One run after another, each in a few windows: this runs in the background as the app opens, so it takes a few windows at
+ * a time and not all of them at once.
+ */
+export const measureInWindows: Measure = async (runs) => {
+	const results: (Drawn | null)[][] = [];
+	for (const { base, mode, files } of runs) {
+		// Each window takes every third file, so the slow ones are spread out.
+		const shares = Array.from({ length: Math.min(WINDOWS_PER_RUN, files.length) }, (_, w) => files.filter((_, i) => i % WINDOWS_PER_RUN === w));
+		const drawn = await Promise.all(shares.map((share) => drawShare(base, mode, share)));
+		results.push(files.map((_, i) => drawn[i % WINDOWS_PER_RUN]?.[Math.floor(i / WINDOWS_PER_RUN)] ?? null));
+	}
+	return results;
+};

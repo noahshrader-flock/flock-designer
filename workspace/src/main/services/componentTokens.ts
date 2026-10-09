@@ -175,27 +175,24 @@ export interface ComponentTokensDeps {
 /** Each story file's tokens, or null for one that did not draw, of which nothing can be said. */
 type Index = { files: Map<string, FileUse | null> } | { error: string };
 
+/** The index for one commit: `done` once it is built or has failed, and `finished` for whoever waits for that. */
+interface Building {
+	key: string;
+	done: Index | null;
+	finished: Promise<void>;
+}
+
 /** The index of what every component draws with, for the commit the library's branch is at. */
 export class ComponentTokens {
-	private index: { key: string; done: Index | null } | null = null;
+	private index: Building | null = null;
 
 	constructor(private readonly deps: ComponentTokensDeps) {}
 
 	async of(file: string): Promise<Answer> {
 		const system = this.deps.system();
-		if (system === null) return { state: 'failed', error: 'There is no design system connected.' };
-		const commit = await libraryCommit(system.root, system.branch);
-		if (commit === null) return { state: 'failed', error: `The library has no ${system.branch} branch from GitHub to read.` };
-		const key = `${commit}:${system.folder}`;
-		if (this.index?.key !== key) {
-			const index: { key: string; done: Index | null } = { key, done: null };
-			this.index = index;
-			void this.build(system, commit).then(
-				(files) => (index.done = { files }),
-				(err: Error) => (index.done = { error: err.message }),
-			);
-		}
-		const done = this.index.done;
+		const started = await this.started();
+		if ('error' in started) return { state: 'failed', error: started.error };
+		const done = started.index.done;
 		if (done === null) return { state: 'building' };
 		if ('error' in done) {
 			// One that did not work is tried again on the next ask.
@@ -214,6 +211,34 @@ export class ComponentTokens {
 			notTokens: use.notTokens,
 			derived: use.derived,
 		};
+	}
+
+	/**
+	 * Gets the index for the commit the library is at ready in the background, without waiting for a component to be asked
+	 * for, so it is there by the time one is. Resolves once it is built, or has failed; never rejects, since a failure is said
+	 * to whoever asks for a component, and tried again then.
+	 */
+	async warm(): Promise<void> {
+		const started = await this.started().catch(() => null);
+		if (started !== null && !('error' in started)) await started.index.finished;
+	}
+
+	/** The index for the commit the library's branch is at, started if it is not, or why there is none. */
+	private async started(): Promise<{ index: Building } | { error: string }> {
+		const system = this.deps.system();
+		if (system === null) return { error: 'There is no design system connected.' };
+		const commit = await libraryCommit(system.root, system.branch);
+		if (commit === null) return { error: `The library has no ${system.branch} branch from GitHub to read.` };
+		const key = `${commit}:${system.folder}`;
+		if (this.index?.key !== key) {
+			const index: Building = { key, done: null, finished: Promise.resolve() };
+			index.finished = this.build(system, commit).then(
+				(files) => void (index.done = { files }),
+				(err: Error) => void (index.done = { error: err.message }),
+			);
+			this.index = index;
+		}
+		return { index: this.index };
 	}
 
 	private async build(system: ConnectedDesignSystem, commit: string): Promise<Map<string, FileUse | null>> {

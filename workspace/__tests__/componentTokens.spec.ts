@@ -236,6 +236,29 @@ describe('the index', () => {
 		expect(await i.of('src/components/A/A.stories.tsx')).toMatchObject({ state: 'ready', sharedWith: { 'palette.light.primary.main': [] } });
 	});
 
+	it('is got ready in the background without a component being asked for, so the first ask is answered at once', async () => {
+		const i = index();
+		await i.warm();
+		expect(asked).toHaveLength(1);
+		expect(await i.of('src/components/A/A.stories.tsx')).toMatchObject({ state: 'ready' });
+		// Warmed again, or asked for, for the same commit: nothing is drawn twice.
+		await i.warm();
+		await i.of('src/components/B/B.stories.tsx');
+		expect(asked).toHaveLength(1);
+		expect(builds).toHaveLength(1);
+	});
+
+	it('waits for the one already building when warmed again, and never fails: a failure is said to whoever asks', async () => {
+		const i = index({ measure: async () => Promise.reject(new Error('no windows')) });
+		await expect(Promise.all([i.warm(), i.warm()])).resolves.toEqual([undefined, undefined]);
+		expect(await i.of('src/components/A/A.stories.tsx')).toEqual({ state: 'failed', error: 'no windows' });
+	});
+
+	it('does nothing when there is no design system, or it has no branch to read', async () => {
+		await expect(index({ system: () => null }).warm()).resolves.toBeUndefined();
+		expect(asked).toHaveLength(0);
+	});
+
 	it('has nothing to say when no design system is connected', async () => {
 		expect(await index({ system: () => null }).of('x')).toEqual({ state: 'failed', error: 'There is no design system connected.' });
 	});

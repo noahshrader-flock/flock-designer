@@ -98,6 +98,9 @@ let githubState: unknown;
 let githubApi: ReturnType<typeof vi.fn>;
 /** What the design repository's project list says, for the tests of the list. */
 let designRepoProjects: unknown[] = [];
+let warm: ReturnType<typeof vi.fn>;
+let ask: ReturnType<typeof vi.fn>;
+let register: (more?: Record<string, unknown>) => void;
 let prototypeServer: InstanceType<typeof import('../src/main/services/prototypeServer')['PrototypeServer']>;
 
 beforeEach(async () => {
@@ -140,7 +143,13 @@ beforeEach(async () => {
 	designRepoProjects = [];
 	prototypeServer = new (await import('../src/main/services/prototypeServer')).PrototypeServer();
 
-	registerIpc({
+	warm = vi.fn(async () => undefined);
+	ask = vi.fn(async () => ({ state: 'building' }));
+	const { CloneFolderMemory } = await import('../src/main/services/cloneFolder');
+	const { Cloner } = await import('../src/main/services/clone');
+	const { DesignSystemsMemory } = await import('../src/main/services/designSystems');
+	register = (more: Record<string, unknown> = {}) =>
+		registerIpc({
 		window: { webContents: { send: vi.fn() } } as never,
 		opened,
 		runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
@@ -152,13 +161,17 @@ beforeEach(async () => {
 		onPublishStatus: vi.fn(),
 		prototypesRoot: join(home, 'prototype'),
 		prototypeServer,
-		cloneFolders: new (await import('../src/main/services/cloneFolder')).CloneFolderMemory(join(home, 'clone-folder.json')),
-		cloner: new (await import('../src/main/services/clone')).Cloner({ urlOf: (r) => cloneSources[r] ?? 'file:///nowhere' }),
-		designSystems: new (await import('../src/main/services/designSystems')).DesignSystemsMemory(join(home, 'design-system.json')),
+		cloneFolders: new CloneFolderMemory(join(home, 'clone-folder.json')),
+		cloner: new Cloner({ urlOf: (r) => cloneSources[r] ?? 'file:///nowhere' }),
+		designSystems: new DesignSystemsMemory(join(home, 'design-system.json')),
 		// The person's own GitHub (its command line): never the real one here.
 		personGitHub: { api: async (path: string) => (path === '/user' ? { login: personLogin } : path.startsWith('/user/repos') ? personRepos.map((full_name) => ({ full_name })) : []) },
 		storyPreviewsRoot: join(home, 'story-previews'),
+		// What is got ready in the background is only counted here, never drawn.
+		componentTokens: { of: ask, warm } as never,
+		...more,
 	});
+	register();
 });
 
 afterEach(() => {
@@ -182,10 +195,31 @@ describe('the Design System tab', () => {
 		expect(await call(CHANNELS.storyPreview, [{ path: 'spacing', value: 6 }])).toMatchObject({ ok: false });
 	});
 
-	it('says which tokens a component draws with only for a story file, and has none to say with no design system', async () => {
-		expect(await call(CHANNELS.componentTokens, 'src/components/A/A.stories.tsx')).toEqual({ ok: true, value: { state: 'failed', error: 'There is no design system connected.' } });
+	describe('getting the design system ready in the background', () => {
+		it('does nothing when the app opens with no one asking, unless it is told to start after a while', async () => {
+			expect(warm).not.toHaveBeenCalled();
+			register({ warmAfterMs: 10 });
+			await vi.waitFor(() => expect(warm).toHaveBeenCalledOnce());
+		});
+
+		it('starts again whenever the library has been read, which may have moved it, and not when there is no library', async () => {
+			await call(CHANNELS.designSystemCatalog, false);
+			expect(warm).not.toHaveBeenCalled();
+			const ready = { state: 'ready', components: [], tokens: { source: null, tokens: [], problems: [], looked: [] } };
+			register({ designLibrary: { catalog: async () => ready, current: () => 'none' } });
+			await call(CHANNELS.designSystemCatalog, true);
+			expect(warm).toHaveBeenCalledOnce();
+			expect(await call(CHANNELS.designSystemCatalog, false)).toMatchObject({ ok: true, value: { state: 'ready' } });
+			expect(warm).toHaveBeenCalledTimes(2);
+		});
+	});
+
+	it('asks which tokens a component draws with only by a story file, and by nothing else the window sends', async () => {
+		expect(await call(CHANNELS.componentTokens, 'src/components/A/A.stories.tsx')).toEqual({ ok: true, value: { state: 'building' } });
+		expect(ask).toHaveBeenCalledWith('src/components/A/A.stories.tsx');
 		expect(await call(CHANNELS.componentTokens, { path: '/etc' })).toMatchObject({ ok: false, error: expect.stringContaining('by its story file') });
 		expect(await call(CHANNELS.componentTokens, '')).toMatchObject({ ok: false });
+		expect(ask).toHaveBeenCalledOnce();
 	});
 
 	it('has no branch for a change to the tokens when there is no design system, saves and proposes nothing, and takes only edits', async () => {
