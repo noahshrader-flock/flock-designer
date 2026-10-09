@@ -3,6 +3,7 @@ import type { GitHubUser } from '../shared/contract';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 
 export type Section = 'projects' | 'design-system';
 
@@ -17,7 +18,7 @@ const onMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgen
  * The top bar: fixed to the top of the window, always.
  *
  * Left to right: room for the macOS window buttons, the product name, the
- * sections (Projects, Design System), and the account. The window
+ * sections (Projects, Design System) as tabs in the pill look, and the account. The window
  * has no separate toolbar above this -- the bar is the toolbar.
  *
  * The preview is a native view that sits above all page content. The account menu
@@ -46,25 +47,15 @@ export const TopNav = ({
 			<span className="mr-10 text-base font-bold whitespace-nowrap">Flock Designer</span>
 
 			{user && (
-				<nav className="app-no-drag flex gap-6 self-stretch">
-					{SECTIONS.map(({ id, label }) => (
-						<button
-							key={id}
-							type="button"
-							aria-current={section === id ? 'page' : undefined}
-							onClick={() => onSectionChange(id)}
-							// The underline is drawn over the bottom edge rather than as a border, so it takes no
-							// height and the label stays centered with the rest of the bar.
-							className={`relative flex h-full items-center px-1 text-sm font-medium ${
-								section === id
-									? 'after:bg-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-0.5'
-									: 'text-muted-foreground hover:text-foreground'
-							}`}
-						>
-							{label}
-						</button>
-					))}
-				</nav>
+				<Tabs value={section} onValueChange={(next) => onSectionChange(next as Section)} className="app-no-drag">
+					<TabsList>
+						{SECTIONS.map(({ id, label }) => (
+							<TabsTrigger key={id} value={id} className="px-3">
+								{label}
+							</TabsTrigger>
+						))}
+					</TabsList>
+				</Tabs>
 			)}
 
 			<div className="grow" />
