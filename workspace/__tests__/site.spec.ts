@@ -83,7 +83,7 @@ describe('an iteration', () => {
 		const viewer = read('alpha/v1/i2/index.html');
 		expect(viewer).toContain('<iframe');
 		expect(viewer).toContain('src="page.html"');
-		expect(viewer).toContain('<header id="flkd-bar"><a href="../../">Alerts &lt;history&gt;</a></header>');
+		expect(viewer).toContain('<header id="dsnr-bar"><a href="../../">Alerts &lt;history&gt;</a></header>');
 		// Nothing of the bar is styled or built here: no select of its own, no styles for one.
 		expect(viewer).not.toMatch(/<select|class="bar"|\.bar\b/);
 		expect(read('alpha/v1/i2/page.html')).toContain('Alpha one, refined');
@@ -222,7 +222,7 @@ describe('comments on the page', () => {
 		const html = read('alpha/v1/i2/index.html');
 		expect(html).toContain('<script type="module" src="../../../_viewer/viewer.js"></script>');
 		expect(html).toContain('href="../../../_viewer/viewer.css"');
-		const config = JSON.parse(/<script type="application\/json" id="flkd-config">([^<]*)<\/script>/.exec(html)?.[1] ?? 'null');
+		const config = JSON.parse(/<script type="application\/json" id="dsnr-config">([^<]*)<\/script>/.exec(html)?.[1] ?? 'null');
 		expect(config).toEqual({
 			owner: 'acme',
 			repo: 'design',
@@ -239,16 +239,16 @@ describe('comments on the page', () => {
 			// This page says it has none.
 			states: [],
 		});
-		for (const id of ['flkd-bar', 'flkd-panel', 'flkd-frame']) expect(html).toContain(`id="${id}"`);
+		for (const id of ['dsnr-bar', 'dsnr-panel', 'dsnr-frame']) expect(html).toContain(`id="${id}"`);
 	});
 
 	it('tells it the states the page has, for its bar to offer', () => {
 		const viewer = join(root, 'viewer');
 		mkdirSync(viewer);
 		for (const f of ['viewer.js', 'viewer.css']) writeFileSync(join(viewer, f), '');
-		writeFileSync(join(design, 'projects', 'alpha', 'prototypes', 'v2-i1.html'), page('Alpha two').replace('<head>', '<head><meta name="flkd-states" content="default,filtered,panel">'));
+		writeFileSync(join(design, 'projects', 'alpha', 'prototypes', 'v2-i1.html'), page('Alpha two').replace('<head>', '<head><meta name="dsnr-states" content="default,filtered,panel">'));
 		build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } });
-		const config = JSON.parse(/<script type="application\/json" id="flkd-config">([^<]*)<\/script>/.exec(read('alpha/v2/i1/index.html'))?.[1] ?? 'null');
+		const config = JSON.parse(/<script type="application\/json" id="dsnr-config">([^<]*)<\/script>/.exec(read('alpha/v2/i1/index.html'))?.[1] ?? 'null');
 		expect(config.states).toEqual(['default', 'filtered', 'panel']);
 	});
 

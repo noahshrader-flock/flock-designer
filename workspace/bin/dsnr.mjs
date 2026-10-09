@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Runs `flkd` (src/cli/flkd.ts): making a prototype from Claude Code in VS Code, with no app running.
+ * Runs `dsnr` (src/cli/dsnr.ts): making a prototype from Claude Code in VS Code, with no app running.
  *
  * It is built from the app's own source each time it runs, with the bundler the app already installed, so it can
  * never be a different version from the app beside it, and there is no built copy to fall out of date. The same
@@ -19,11 +19,11 @@ let esbuild;
 try {
 	esbuild = createRequire(join(workspace, 'package.json')).resolve('esbuild');
 } catch {
-	console.error(`flkd: Flock Designer's packages are not installed. Run npm ci in ${workspace}, then try again.`);
+	console.error(`dsnr: DSNR's packages are not installed. Run npm ci in ${workspace}, then try again.`);
 	process.exit(1);
 }
 
-/** The app's own prototype folder: where Electron keeps the app's data, named as the app's package names it. */
+/** The app's own prototype folder: where Electron keeps the app's data, named by the package's `settingsFolder` (the app sets it the same way). */
 const pkg = JSON.parse(readFileSync(join(workspace, 'package.json'), 'utf8'));
 const appData =
 	process.platform === 'darwin'
@@ -32,17 +32,17 @@ const appData =
 			? (process.env.APPDATA ?? join(homedir(), 'AppData', 'Roaming'))
 			: (process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config'));
 
-const out = mkdtempSync(join(tmpdir(), 'flkd-'));
+const out = mkdtempSync(join(tmpdir(), 'dsnr-'));
 try {
 	const { build } = await import(pathToFileURL(esbuild).href);
-	const file = join(out, 'flkd.mjs');
-	await build({ entryPoints: [join(workspace, 'src', 'cli', 'flkd.ts')], outfile: file, bundle: true, platform: 'node', format: 'esm', logLevel: 'error' });
+	const file = join(out, 'dsnr.mjs');
+	await build({ entryPoints: [join(workspace, 'src', 'cli', 'dsnr.ts')], outfile: file, bundle: true, platform: 'node', format: 'esm', logLevel: 'error' });
 	const { main, ghApi, openInBrowser } = await import(pathToFileURL(file).href);
 	process.exitCode = await main(process.argv.slice(2), {
 		cwd: process.cwd(),
 		out: (text) => console.log(text),
 		err: (text) => console.error(text),
-		prototypesRoot: join(appData, pkg.productName ?? pkg.name, 'prototypes'),
+		prototypesRoot: join(appData, pkg.settingsFolder, 'prototypes'),
 		esbuild,
 		// As it would be typed where it is run, so the commands it prints match what a repository's settings allow.
 		self: ['node', relative(process.cwd(), fileURLToPath(import.meta.url))],

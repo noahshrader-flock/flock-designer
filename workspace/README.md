@@ -1,4 +1,4 @@
-# Flock Designer
+# DSNR
 
 A local coordination layer over real Flock product repositories. It opens a checkout, shows what was
 grounded before anything is generated, creates and continues iteration branches, hands a task to the
@@ -16,9 +16,9 @@ npm test          # 88 tests
 npm run smoke     # boot the real app and prove the window opens
 ```
 
-**Without the app:** `node bin/flkd.mjs` makes and changes a prototype from Claude Code in VS Code (`new-prototype`,
+**Without the app:** `node bin/dsnr.mjs` makes and changes a prototype from Claude Code in VS Code (`new-prototype`,
 `change-prototype`, `save-prototype`), with the same code the app runs. `skills/start-prototype.md` tells an agent how to
-use it. `node bin/flkd.mjs build-site --serve` builds the site prototypes are published as, and shows it on this machine;
+use it. `node bin/dsnr.mjs build-site --serve` builds the site prototypes are published as, and shows it on this machine;
 `publish` puts an iteration on it and says who can open it, and `unpublish` takes one off. Run it with no command for
 the full usage.
 
@@ -47,7 +47,7 @@ kinds, switched at the top, both starting from a repository and a branch in it:
 - **Codebase work**: real work on the project's `feature/<project>` branch, which needs the full setup.
 
 Each runs the agent, then shows the result with pins. The product repository is **suggested** on its own
-— found in the usual places by its `.flkd/workspace.json` — and you accept it once with a click; after that it
+— found in the usual places by its `.dsnr/workspace.json` — and you accept it once with a click; after that it
 is remembered. Older prototype branches (`fd/<project>/iN`) appear from the repository with no record needed;
 a `feature/<project>` branch appears only when a project already has a record for it, because that is also
 how the whole product team names ticket branches. The design repository is expected beside the product one.
@@ -75,7 +75,7 @@ repository, and carry two repository permissions:
 
 Changing a permission later also requires approving the update on the installation; GitHub does not
 apply it until then. Point a development build elsewhere with
-`FLOCK_DESIGNER_CLIENT_ID`, `FLOCK_DESIGNER_REPO_OWNER` and `FLOCK_DESIGNER_REPO_NAME`.
+`DSNR_CLIENT_ID`, `DSNR_REPO_OWNER` and `DSNR_REPO_NAME`.
 
 ## What it can and cannot do
 
@@ -94,14 +94,14 @@ apply it until then. Point a development build elsewhere with
 
 ## How a repository joins
 
-A repository declares itself in `.flkd/workspace.json`. Nothing about any product is compiled into
+A repository declares itself in `.dsnr/workspace.json`. Nothing about any product is compiled into
 this app.
 
 ```json
 {
   "version": 1,
   "product": "Coke (Flock Admin)",
-  "contextDir": ".flkd",
+  "contextDir": ".dsnr",
   "prototypeRoot": "src/prototypes",
   "branchPattern": { "prototype": "fd/<project-id>/i<n>", "codebase": "feature/<project-id>" },
   "commands": [
@@ -155,7 +155,7 @@ source and page are in its project folder.
   `invoke(channel, …)`, so a capability without a method is a capability it does not have.
 - Every root is checked against the repositories this window actually opened. The renderer cannot
   name a directory and have the main process act on it.
-- **Discovery suggests; it never trusts.** A repository's own `.flkd/workspace.json` is the list of
+- **Discovery suggests; it never trusts.** A repository's own `.dsnr/workspace.json` is the list of
   commands the app may run in it, so finding that file on disk grants nothing: the repository is
   offered, and accepting it is what admits it. `useCheckout` will only accept a path discovery itself
   found, and a remembered choice is restored only if the person made one. `__tests__/ipc.spec.ts`

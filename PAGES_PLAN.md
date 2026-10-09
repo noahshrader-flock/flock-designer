@@ -6,7 +6,7 @@ comment side panel. Every comment goes to the same GitHub issue the app already 
 
 This is the detail behind one item in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md). **This file holds only what is
 still to do or decide.** What is built, how it works and the evidence for it is in
-[flock-designer.md](flock-designer.md) (its Vocabulary, section 3.7, and the Change log, 2026-10-08, one row per
+[dsnr.md](dsnr.md) (its Vocabulary, section 3.7, and the Change log, 2026-10-08, one row per
 milestone). When something here is done, its result moves there and it leaves this file.
 
 ## What it is for
@@ -79,17 +79,17 @@ Checked on 2026-10-07 and 2026-10-08. Only what the open work depends on.
 the repo in its new place. Then the private result of publishing is checked: a teammate with access opens a link,
 someone without cannot, and an anonymous request is turned away.
 
-**Decided when it lands:** whether `flkd publish` should **refuse** to publish while the repository or site is public,
+**Decided when it lands:** whether `dsnr publish` should **refuse** to publish while the repository or site is public,
 as it once did (removed 2026-10-08 because the repo is public only briefly). Recommended: bring the refusal back for the
 org repo, since a public page there would break requirement 1.
 
 ### Also waiting on Noah
 
-- **The Flock Designer GitHub App's permissions** (needed before the app's side of publishing works): **Actions: read
+- **The DSNR GitHub App's permissions** (needed before the app's side of publishing works): **Actions: read
   and write** (starts the publish workflow), **Pages: read**, **Deployments: read**. Until then a publish from the app
-  stops, and the review screen says why, with **Publish** to try again. The `flkd` command uses `gh`, which has them.
+  stops, and the review screen says why, with **Publish** to try again. The `dsnr` command uses `gh`, which has them.
 - **Fast-forward Coke's `noah/flock-designer` to `noah/flock-designer-path`**, which holds `7dba10c3` (`.claude/settings.json`
-  allowing the four `flkd` commands), `5265e262` (the `install` command, for the clone plan's C5) and `30edaa36` (a request
+  allowing the four `dsnr` commands), `5265e262` (the `install` command, for the clone plan's C5) and `30edaa36` (a request
   that names its path starts at once, and one that does not is asked in a panel). **Then work from that branch:**
   `feature/alert-history` was cut before the settings file and the new routing, so a Claude Code run there has neither. `unpublish` is deliberately not on that list: the agent asks first.
 - **The hand runs** (the code is tested; none of these has been run for real):
@@ -98,7 +98,7 @@ org repo, since a public page there would break requirement 1.
   - M3: comment as a second GitHub account, run Address, see `v1-i1` unchanged, `v1-i2` with the change, and the comment
     marked addressed there.
   - M4: comment, pin, resolve, delete and Address in the app.
-  - M5a: `node workspace/bin/flkd.mjs build-site --serve` from the design repository; move between the index, a
+  - M5a: `node workspace/bin/dsnr.mjs build-site --serve` from the design repository; move between the index, a
     project, its versions and iterations, and `latest`.
   - M10: select a version and watch `latest` move; unpublish a test iteration; the project page's "Built in code"
     after sharing codebase work.

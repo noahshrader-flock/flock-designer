@@ -10,7 +10,7 @@ import { continueIteration, readIterations } from '../src/main/services/iteratio
 import { unionLocal } from '../src/shared/projects';
 
 const descriptor: WorkspaceDescriptor = {
-	version: 1, product: 'Coke', contextDir: '.flkd', prototypeRoot: 'src/prototypes',
+	version: 1, product: 'Coke', contextDir: '.dsnr', prototypeRoot: 'src/prototypes',
 	branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
 	commands: [], designSystem: { package: 'x' },
 };
@@ -22,7 +22,7 @@ describe('finding the product repository', () => {
 		list: (dir) => Object.keys(tree).filter((d) => d.startsWith(`${dir}/`) && !d.slice(dir.length + 1).includes('/')).map((d) => d.slice(dir.length + 1)),
 		activity: (r) => activity[r] ?? 0,
 	});
-	const product = (dir: string) => [`${dir}/.git`, `${dir}/.flkd/workspace.json`];
+	const product = (dir: string) => [`${dir}/.git`, `${dir}/.dsnr/workspace.json`];
 
 	it('finds a repository once when two of the usual places are one folder, as GitHub and github are on macOS', () => {
 		const tree = { '/h/GitHub/flock-coke': product('/h/GitHub/flock-coke'), '/h/github/flock-coke': product('/h/github/flock-coke') };
@@ -44,7 +44,7 @@ describe('finding the product repository', () => {
 	it('ignores repositories without the marker, and folders that are not repositories', () => {
 		const deps = fake({
 			'/h/Documents/GitHub/other': ['/h/Documents/GitHub/other/.git'],
-			'/h/Documents/GitHub/loose': ['/h/Documents/GitHub/loose/.flkd/workspace.json'],
+			'/h/Documents/GitHub/loose': ['/h/Documents/GitHub/loose/.dsnr/workspace.json'],
 		});
 		expect(findProductCheckouts(deps)).toEqual([]);
 	});

@@ -144,7 +144,7 @@ export const prototypeVersionOf = (source: string): string => createHash('sha1')
 export interface PrototypeSources {
 	/** The product's code, on the branch the prototype is modelled on. */
 	code: string;
-	/** The product's own Flock Designer guidance: how its app is put together, its patterns, its rules. */
+	/** The product's own DSNR guidance: how its app is put together, its patterns, its rules. */
 	productGuidance: string | null;
 	/** The design system's checkout: its guidance (in its context folder) and its components' source. */
 	designSystemGuidance: string | null;

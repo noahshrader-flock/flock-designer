@@ -5,17 +5,17 @@ import { stateLabel, stateOfQuery, statesOf, withState } from '../src/shared/pro
 
 describe('statesOf', () => {
 	it('reads the list the build wrote into the page, in order', () => {
-		expect(statesOf('<head>\n<meta name="flkd-states" content="default,filtered,failed">\n</head>')).toEqual(['default', 'filtered', 'failed']);
+		expect(statesOf('<head>\n<meta name="dsnr-states" content="default,filtered,failed">\n</head>')).toEqual(['default', 'filtered', 'failed']);
 	});
 
 	it('is none for a page with no list, or one that is not a list of names', () => {
 		expect(statesOf('<h1>Demo</h1>')).toEqual([]);
-		expect(statesOf('<meta name="flkd-states" content="">')).toEqual([]);
-		expect(statesOf('<meta name="flkd-states" content="default,Has Spaces">')).toEqual([]);
+		expect(statesOf('<meta name="dsnr-states" content="">')).toEqual([]);
+		expect(statesOf('<meta name="dsnr-states" content="default,Has Spaces">')).toEqual([]);
 	});
 
 	it('is none for a list with a name of more than one word: a state is one word', () => {
-		expect(statesOf('<meta name="flkd-states" content="default,no-match">')).toEqual([]);
+		expect(statesOf('<meta name="dsnr-states" content="default,no-match">')).toEqual([]);
 	});
 });
 

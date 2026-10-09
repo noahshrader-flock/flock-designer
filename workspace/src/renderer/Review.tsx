@@ -613,7 +613,7 @@ export const Review = ({
 								</>
 							) : !prototype && !iteration.previewUrl && !checkout ? (
 								<>
-									<p className="text-sm">Flock Designer needs the product repository to show this.</p>
+									<p className="text-sm">DSNR needs the product repository to show this.</p>
 									<p className="text-muted-foreground text-sm">
 										It could not find one on this machine. Point it at your product repository once.
 									</p>

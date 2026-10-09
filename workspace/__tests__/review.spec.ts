@@ -399,7 +399,7 @@ describe('Build', () => {
 		return app;
 	};
 
-	it('offers only branches with the Flock Designer setup, and starts from one of them', async () => {
+	it('offers only branches with the DSNR setup, and starts from one of them', async () => {
 		// The prototype was modelled on develop, which has no setup: the newest that has it is chosen.
 		await dialog(['noah/flock-designer', 'feature/other']);
 		expect((document.getElementById('move-from') as HTMLElement).textContent).toBe('noah/flock-designer');

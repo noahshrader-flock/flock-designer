@@ -9,7 +9,7 @@ import type { PreviewStatus, RunLogLine, WorkspaceDescriptor } from '../src/shar
 const descriptor: WorkspaceDescriptor = {
 	version: 1,
 	product: 'Test',
-	contextDir: '.flkd',
+	contextDir: '.dsnr',
 	prototypeRoot: 'src/prototypes',
 	branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
 	commands: [

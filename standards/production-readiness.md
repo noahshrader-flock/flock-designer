@@ -24,10 +24,10 @@ true by the end of it. Most prototypes should never graduate, and that's the sys
 | **Boundaries intact** | The implementation review is clean: no production plumbing on a prototype, nothing outside the change boundary |
 | **Verifies clean** | The product's handoff gate passes |
 | **Parity reviewed** | The parity review ran, and its blocking findings are resolved |
-| **Accessibility** | Meets the conformance target in the consuming product's `.flkd/manifest.md` |
+| **Accessibility** | Meets the conformance target in the consuming product's `.dsnr/manifest.md` |
 | **Open questions listed** | Everything guessed at, written down |
 
-Who signs off is named in the consuming product's `.flkd/manifest.md`. If it isn't, that's a gap to close before the first
+Who signs off is named in the consuming product's `.dsnr/manifest.md`. If it isn't, that's a gap to close before the first
 graduation, not after.
 
 What the engineer is told is in `../skills/handoff.md` (the handoff note), not repeated here.

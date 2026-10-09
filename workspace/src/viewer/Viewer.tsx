@@ -222,7 +222,7 @@ const CommentingPaused = ({ open, onClose }: { open: boolean; onClose: () => voi
 		<DialogContent className="sm:max-w-md">
 			<DialogHeader>
 				<DialogTitle>Commenting here is coming</DialogTitle>
-				<DialogDescription>For now, comment on this prototype in Flock Designer.</DialogDescription>
+				<DialogDescription>For now, comment on this prototype in DSNR.</DialogDescription>
 			</DialogHeader>
 			<DialogFooter>
 				<Button onClick={onClose}>OK</Button>

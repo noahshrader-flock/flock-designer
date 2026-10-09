@@ -50,7 +50,7 @@ export const MoveToCode = ({
 			if (r.ok) setPlan(r.value);
 			else setError(r.error);
 		});
-		// Only branches with the Flock Designer setup: codebase work cannot start anywhere else.
+		// Only branches with the DSNR setup: codebase work cannot start anywhere else.
 		void window.workspace.branchesWithSetup(checkout.root).then((r) => current && r.ok && setBranches(r.value));
 		return () => {
 			current = false;

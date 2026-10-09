@@ -14,7 +14,7 @@ import { g, installDesignSystem, makeProduct, makeProductFiles } from './fixture
  * This file exists because of a real regression. `lastCheckout` was written to
  * fall back to a home-directory scan and open whatever it found, which admitted
  * a repository nobody had chosen into the trusted set -- and a repository's own
- * `.flkd/workspace.json` is the list of commands the app will run in it. Every
+ * `.dsnr/workspace.json` is the list of commands the app will run in it. Every
  * service was unit-tested and the whole suite stayed green, because nothing
  * tested the wiring. These tests assert the gate, not the services behind it.
  */
@@ -350,7 +350,7 @@ describe('where clones go', () => {
 			g(home, 'clone', '-q', source, join(home, 'GitHub', 'coke'));
 			g(join(home, 'GitHub', 'coke'), 'remote', 'set-url', 'origin', 'https://github.com/flocksafety/coke.git');
 			const r = await call(CHANNELS.cloneRepository, 'flocksafety/coke');
-			expect(r.error).toMatch(/is on develop, which has no Flock Designer setup\. Switch it to noah\/flock-designer/);
+			expect(r.error).toMatch(/is on develop, which has no DSNR setup\. Switch it to noah\/flock-designer/);
 			expect(g(join(home, 'GitHub', 'coke'), 'branch', '--show-current').trim()).toBe('develop');
 		});
 
@@ -367,7 +367,7 @@ describe('where clones go', () => {
 			};
 			designBeside();
 			const r = await call(CHANNELS.cloneRepository, 'flocksafety/plain');
-			expect(r.error).toMatch(/Cloned, but no branch of plain has the Flock Designer setup/);
+			expect(r.error).toMatch(/Cloned, but no branch of plain has the DSNR setup/);
 			expect(existsSync(join(home, 'GitHub', 'plain', 'README.md'))).toBe(true);
 		});
 	});
@@ -543,7 +543,7 @@ describe('where new work starts', () => {
 		expect(g(product, 'log', '-1', '--format=%s', 'feature/demo').trim()).toBe('baseline only');
 	});
 
-	it('refuses a branch without the Flock Designer setup, which would strand the checkout', async () => {
+	it('refuses a branch without the DSNR setup, which would strand the checkout', async () => {
 		await savedPrototype();
 		g(product, 'checkout', '-q', '--orphan', 'bare');
 		g(product, 'rm', '-rfq', '.');
@@ -553,7 +553,7 @@ describe('where new work starts', () => {
 		g(product, 'checkout', '-q', '-f', 'develop');
 		const r = await build(product, 'bare');
 		expect(r.ok).toBe(false);
-		expect(r.error).toMatch(/has no \.flkd\/workspace\.json/);
+		expect(r.error).toMatch(/has no \.dsnr\/workspace\.json/);
 		expect(g(product, 'branch', '--show-current').trim()).toBe('develop');
 	});
 
@@ -611,7 +611,7 @@ describe('prototypes', () => {
 		expect(await (await fetch((opened.value as { url: string }).url)).text()).toBe('<h1>Demo</h1>');
 
 		// With the states the page says it has, for the bar to offer; the page is the same in each, asked for in it.
-		writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<meta name="flkd-states" content="default,empty"><h1>Demo</h1>');
+		writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<meta name="dsnr-states" content="default,empty"><h1>Demo</h1>');
 		expect((await call(CHANNELS.savePrototype, 'demo', 'v1-i1')).ok).toBe(true);
 		const again = (await call(CHANNELS.openPrototype, 'demo', 'v1-i1')).value as { url: string; states: string[] };
 		expect(again.states).toEqual(['default', 'empty']);
@@ -636,7 +636,7 @@ describe('prototypes', () => {
 		// Another branch than the one checked out: the app's own copy of it, and the person's checkout untouched.
 		const copy = extras.readOnly[0] as string;
 		// The guidance goes with the code when that branch has it.
-		expect(extras.readOnly).toContain(join(copy, '.flkd'));
+		expect(extras.readOnly).toContain(join(copy, '.dsnr'));
 		expect(copy.startsWith(join(home, 'prototype'))).toBe(true);
 		expect(readFileSync(join(copy, 'baseline.txt'), 'utf8')).toBe('only on the baseline');
 		expect(g(product, 'branch', '--show-current').trim()).toBe('develop');
@@ -646,7 +646,7 @@ describe('prototypes', () => {
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'Another', { root: product, branch: 'develop' });
 		await call(CHANNELS.buildPrototype, 'demo', 'v2-i1', 'Another');
 		const p = realpathSync(product);
-		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([p, join(p, '.flkd'), join(p, 'node_modules', 'x'), join(p, 'node_modules')]);
+		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([p, join(p, '.dsnr'), join(p, 'node_modules', 'x'), join(p, 'node_modules')]);
 	});
 
 	describe('publishing what the app made', () => {
@@ -981,13 +981,13 @@ describe('prototypes', () => {
 		await call(CHANNELS.useCheckout, product);
 		writeSkill();
 		g(product, 'checkout', '-q', '-b', 'bare-develop');
-		g(product, 'rm', '-rq', '.flkd');
+		g(product, 'rm', '-rq', '.dsnr');
 		g(product, 'commit', '-q', '-m', 'no setup on this branch');
 		g(product, 'checkout', '-q', 'develop');
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'bare-develop' });
 		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
 		const readOnly = (agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly;
-		expect(readOnly).toContain(join(realpathSync(product), '.flkd'));
+		expect(readOnly).toContain(join(realpathSync(product), '.dsnr'));
 	});
 
 	it('write React when the product is installed here, then build it on save and keep the source beside the page', async () => {

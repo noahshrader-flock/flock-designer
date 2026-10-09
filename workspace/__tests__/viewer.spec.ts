@@ -124,7 +124,7 @@ describe('signing in', () => {
 		await open();
 		await press(button('Sign in to comment'));
 		await settle();
-		expect(document.body.textContent).toContain('comment on this prototype in Flock Designer');
+		expect(document.body.textContent).toContain('comment on this prototype in DSNR');
 		expect(document.querySelector('input')).toBeNull();
 		await press(button('OK'));
 		await settle();

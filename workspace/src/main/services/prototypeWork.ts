@@ -14,7 +14,7 @@ import { parseIterations } from '../../shared/records';
  * Making a prototype, with nothing of the app in it: starting one (its record, its brief, its name), what its agent
  * may read and how it is built, building its page, and saving page and source to the design repository.
  *
- * **One way to make a prototype.** The app calls this, and so does the `flkd` command an agent runs from Claude Code
+ * **One way to make a prototype.** The app calls this, and so does the `dsnr` command an agent runs from Claude Code
  * in VS Code, where there is no app. Everything it needs is passed in, so neither caller can make a prototype the
  * other would not recognise.
  */
@@ -159,7 +159,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (ready.ready) return null;
 		return ready.why === 'not-installed'
 			? `Prototypes are built from the real design system, and ${ready.designSystem} is not installed in ${ready.repository}. Run npm ci there (it needs access to the private packages), then try again.`
-			: "Prototypes are built with Flock Designer's own bundler, which is not installed. Run npm ci in flock-designer/workspace, then try again.";
+			: "Prototypes are built with DSNR's own bundler, which is not installed. Run npm ci in flock-designer/workspace, then try again.";
 	};
 
 	/**
@@ -201,7 +201,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return {
 			code,
 			// The guidance that goes with the code when the branch has it; otherwise the checkout's own, which always has
-			// it (develop has no Flock Designer files, and the page must still follow the product).
+			// it (develop has no DSNR files, and the page must still follow the product).
 			productGuidance: has(join(code, descriptor.contextDir)) ?? has(join(root, descriptor.contextDir)),
 			// The design system's checkout beside the product, named as its package is: its guidance and, as important
 			// for a page that redraws its components, its source.
@@ -306,7 +306,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 
 	/**
-	 * A change started by the flkd command is saved by a later run of it: what `startChange` said, worked out again from
+	 * A change started by the dsnr command is saved by a later run of it: what `startChange` said, worked out again from
 	 * what is there. Null when `name` is recorded, as a change made in place is; otherwise it must be its version's next
 	 * iteration, started from the newest.
 	 */

@@ -6,7 +6,7 @@ read because it happens to be nearby, and nothing about one kind of work leaks i
 
 | Work | Started by | Where the agent works | Entry file | Produces |
 |---|---|---|---|---|
-| **Prototype** | New → Prototype, or asking for one in Claude Code | The app's own folder. The product's code, guidance and installed packages are **read-only** | `skills/build-prototype.md` (this repo); from Claude Code, `skills/start-prototype.md` first, which runs `flkd` | One React file built from the real components, `projects/<id>/prototypes/<name>.tsx`, and its page, `<name>.html`, where the name is its version and iteration (`v2-i1`; older ones are `i1`) |
+| **Prototype** | New → Prototype, or asking for one in Claude Code | The app's own folder. The product's code, guidance and installed packages are **read-only** | `skills/build-prototype.md` (this repo); from Claude Code, `skills/start-prototype.md` first, which runs `dsnr` | One React file built from the real components, `projects/<id>/prototypes/<name>.tsx`, and its page, `<name>.html`, where the name is its version and iteration (`v2-i1`; older ones are `i1`) |
 | **Codebase work** | New → Codebase work | The product repository, on `feature/<id>` | `skills/codebase-work.md` (this repo), then the product's own agent instructions | Real code on the branch, passing the product's light check, committed as it goes |
 | **Move a prototype into the code** | Build in the codebase, on a prototype | The product repository, on `feature/<id>` | `skills/move-to-code.md` and `skills/codebase-work.md` (this repo), then the product's agent instructions | `projects/<id>/audit-<name>.md` first (from the prototype's `@standin`, `@mock` and `@remove` marks), then real code |
 | **Hand off** | Hand off, on codebase work | The product repository, on `feature/<id>` | `skills/handoff.md` (this repo), then the product's gate and reviewers | The gate passing, `projects/<id>/review.md`, fixes committed, and `HANDOFF.md` on the branch |
@@ -16,7 +16,7 @@ read because it happens to be nearby, and nothing about one kind of work leaks i
 
 ## The three layers, always in this order
 
-1. **The product's guidance**: its Flock Designer folder (`.flkd/` in Coke). How the app is put together,
+1. **The product's guidance**: its DSNR folder (`.dsnr/` in Coke). How the app is put together,
    its patterns, its rules. Product-specific, so it lives in the product repository, never here.
 2. **The design system's guidance**: its tokens and components, in the version the product installs.
 3. **Shared standards**: `standards/` in this repository. What holds for every product.

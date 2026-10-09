@@ -20,7 +20,7 @@ import {
 const descriptor: WorkspaceDescriptor = {
 	version: 1,
 	product: 'Coke',
-	contextDir: '.flkd',
+	contextDir: '.dsnr',
 	prototypeRoot: 'src/prototypes',
 	branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
 	commands: [],
@@ -96,7 +96,7 @@ describe('createIteration', () => {
 		// The record lives with the design record, NOT in the product checkout --
 		// putting it there dirties the tree and blocks the next piece of work.
 		expect(existsSync(join(records, 'demo/iterations.json'))).toBe(true);
-		expect(existsSync(join(root, '.flkd/projects/demo/iterations.json'))).toBe(false);
+		expect(existsSync(join(root, '.dsnr/projects/demo/iterations.json'))).toBe(false);
 		expect((await readCheckout(root)).clean).toBe(true);
 	});
 

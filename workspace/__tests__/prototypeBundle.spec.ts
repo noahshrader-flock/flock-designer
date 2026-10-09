@@ -103,7 +103,7 @@ describe('bundling a React prototype into one page', () => {
 
 		it('are none when it says none', async () => {
 			const r = await build(page);
-			expect(r.html).not.toContain('flkd-states');
+			expect(r.html).not.toContain('dsnr-states');
 		});
 
 		it('fail the build, saying why, when the list is not plain names, or names one twice', async () => {

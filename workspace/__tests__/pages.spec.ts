@@ -315,9 +315,9 @@ describe('what GitHub has that the site does not have yet', () => {
 		'workspace/src/shared/projects.ts',
 		'workspace/src/site/buildSite.ts',
 		'workspace/src/main/services/designRepo.ts',
-		'workspace/src/cli/flkd.ts',
+		'workspace/src/cli/dsnr.ts',
 		'workspace/viewer.vite.config.ts',
-		'workspace/bin/flkd.mjs',
+		'workspace/bin/dsnr.mjs',
 		'workspace/package-lock.json',
 		'.github/workflows/publish-prototypes.yml',
 	])('is the site built differently when %s changes: a deploy with no page to name', async (filename) => {
@@ -347,7 +347,7 @@ describe('when GitHub will not start the deploy', () => {
 			path.endsWith('/dispatches') ? Promise.reject(Object.assign(new Error('Resource not accessible by integration'), { status: 403 })) : gh.api(path, init as never),
 		);
 		const { done } = run(gh, { github: { api: refuse } });
-		await expect(done).rejects.toThrow(/Flock Designer's GitHub App is not allowed to start the deploy[\s\S]*Actions: read and write/);
+		await expect(done).rejects.toThrow(/DSNR's GitHub App is not allowed to start the deploy[\s\S]*Actions: read and write/);
 	});
 });
 

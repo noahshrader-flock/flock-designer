@@ -1,8 +1,8 @@
 # Implementation plan: what remains
 
-**Updated 2026-10-07.** Everything still to do for Flock Designer, and nothing else. What is built, how it works and
-why is in [flock-designer.md](flock-designer.md); this file never repeats it. **When an item is done it leaves this
-file**: its evidence goes into `flock-designer.md` (the status table, Appendix B, a change-log row), so the two
+**Updated 2026-10-07.** Everything still to do for DSNR, and nothing else. What is built, how it works and
+why is in [dsnr.md](dsnr.md); this file never repeats it. **When an item is done it leaves this
+file**: its evidence goes into `dsnr.md` (the status table, Appendix B, a change-log row), so the two
 never describe the same thing.
 
 **The state of it.** Every step that is code or guidance is built. What remains is proving it with people, a few
@@ -40,7 +40,7 @@ first real runs, setup and access that need other people, and decisions.
 Codebase work is started, viewed and handed off from Claude Code in the product repository. The app's one link to it
 is **Build in the codebase**, from a prototype. **Done:** New makes prototypes only; a project card opens its newest
 prototype, and a project with only codebase work links to it on GitHub (**Built in code**); codebase work records its
-repository so anyone can follow that link (see [flock-designer.md, 3.8](flock-designer.md#38--move-a-prototype-into-the-code)).
+repository so anyone can follow that link (see [dsnr.md, 3.8](dsnr.md#38--move-a-prototype-into-the-code)).
 
 **Left:**
 1. ~~Decide where Build in the codebase's run shows.~~ **Done 2026-10-08:** it is handed to Claude Code in VS Code (or
@@ -110,14 +110,14 @@ What a designer needs before they can start, and what needs a named person. None
 
 #### 1.1 — Decide the rules (was step 1)
 
-**Noah.** The rules were settled while this was written, and the full account is in [Appendix B](flock-designer.md#11--decide-the-rules-as-settled-was-step-1). **What remains is to name the Design System owner**, which 1.5 and 4.2 wait on. Everything else is settled.
+**Noah.** The rules were settled while this was written, and the full account is in [Appendix B](dsnr.md#11--decide-the-rules-as-settled-was-step-1). **What remains is to name the Design System owner**, which 1.5 and 4.2 wait on. Everything else is settled.
 
 #### 1.5 — Design-system agent files: what is still owed (was step 5)
 
 **Human — the Design System owner, once named.** The work itself is done and verified (full account
-in [Appendix B](flock-designer.md#15--set-up-the-design-system-agent-files-the-full-account-was-step-5)): the authoring standards exist in
-FUI's `.flkd/authoring/`, and the snapshot problem the resolution half was fighting is gone
-([step 1.7](flock-designer.md#17--stop-copying-the-design-system-point-at-it-was-d1)). Two approvals remain:
+in [Appendix B](dsnr.md#15--set-up-the-design-system-agent-files-the-full-account-was-step-5)): the authoring standards exist in
+FUI's `.dsnr/authoring/`, and the snapshot problem the resolution half was fighting is gone
+([step 1.7](dsnr.md#17--stop-copying-the-design-system-point-at-it-was-d1)). Two approvals remain:
 
 - **Approve the authoring standards** (`authoring/components.md` and `authoring/stories.md` in
   `flock-react-component-lib`).
@@ -129,7 +129,7 @@ FUI's `.flkd/authoring/`, and the snapshot problem the resolution half was fight
 #### 4.1 — Designer environment access (was step 18)
 
 **Noah, with whoever owns the internal registry; then a test designer.** Split out of
-[step 2.2](flock-designer.md#22--make-the-product-runnable-on-mock-data-was-step-8) on 2026-09-28, because everything left in
+[step 2.2](dsnr.md#22--make-the-product-runnable-on-mock-data-was-step-8) on 2026-09-28, because everything left in
 it needs access or a person rather than code.
 
 **What step 2.2 found.** Design mode works — the real shell renders on fixtures, verified from
@@ -162,31 +162,31 @@ on mock data unaided, and the result is in the friction log.
 
 #### 4.2 — Ship the design-system context in the package (was step 17)
 
-**Design System owner, with a developer.** Much smaller since [step 1.7](flock-designer.md#17--stop-copying-the-design-system-point-at-it-was-d1) removed the snapshots this step existed to keep current. Deferred here
+**Design System owner, with a developer.** Much smaller since [step 1.7](dsnr.md#17--stop-copying-the-design-system-point-at-it-was-d1) removed the snapshots this step existed to keep current. Deferred here
 deliberately: Phases 1–3 work against a sibling checkout, which is enough to build and prove the
 workflow. This closes the class of problem rather than managing it.
 
-**Why it is not just a packaging task.** [Decision 1](flock-designer.md#decisions-the-audit-raises) recommends
-shipping `.flkd` inside the published package so the context always matches the lockfile. That is
+**Why it is not just a packaging task.** [Decision 1](dsnr.md#decisions-the-audit-raises) recommends
+shipping `.dsnr` inside the published package so the context always matches the lockfile. That is
 right, but on its own it makes staleness *reliable* rather than absent, because **there is no
 generator**: `component-manifest.json`, `tokens.json`, and `deprecated-components.json` were produced
 once in `0f25abd` and have never been regenerated. Publishing a manifest nothing regenerates just
 distributes the stale one on a schedule.
 
 - **No generator is needed, and the snapshots are gone** — see
-  [step 1.7](flock-designer.md#17--stop-copying-the-design-system-point-at-it-was-d1). This step used to exist largely to
+  [step 1.7](dsnr.md#17--stop-copying-the-design-system-point-at-it-was-d1). This step used to exist largely to
   keep a copy of the design system's facts in step with the design system. There is no copy. What
-  remains here is smaller and is about distribution only: whether the judgment files in `.flkd/`
+  remains here is smaller and is about distribution only: whether the judgment files in `.dsnr/`
   travel with the package rather than requiring a sibling checkout.
 - ~~**Decide what `cokeUsages` and `common` become.**~~ **Settled by deletion, 2026-09-29.** The
   fields described one consuming product inside a design-system artifact, which made the manifest
   impossible to build from this repository alone. The manifest is gone and they went with it.
-- **Ship `.flkd` in the package.** Today `package.json` has `files: ["build", "dev/postinstall.ts"]`
-  and nothing copies `.flkd` into `build/`. **Lower stakes now** — what would ship is judgment that
+- **Ship `.dsnr` in the package.** Today `package.json` has `files: ["build", "dev/postinstall.ts"]`
+  and nothing copies `.dsnr` into `build/`. **Lower stakes now** — what would ship is judgment that
   changes rarely, not data that goes stale, so a sibling checkout being slightly behind costs much
   less than it used to.
 - **Reverse the resolution order in practice.** Both repositories already list the package first; it
-  falls through to the checkout because the package has no `.flkd`. When this lands, nothing in
+  falls through to the checkout because the package has no `.dsnr`. When this lands, nothing in
   either repository changes.
 - ~~**Drop the release-tag requirement**, and turn `validate.py`'s staleness NOTE back into a
   failure.~~ **Both gone, 2026-09-29.** The staleness NOTE and the version chain it belonged to were
@@ -218,14 +218,14 @@ It exists for designers who cannot run the product locally, and step 2.2 address
 cheaply. Deciding in advance would invert the evidence.
 
 **Done when:** the decision is recorded in the change log either way. If yes, see
-[the managed harness](flock-designer.md#if-step-11-says-yes-the-managed-harness).
+[the managed harness](dsnr.md#if-step-11-says-yes-the-managed-harness).
 
 ### After the pilot: candidates
 
 Not commitments. Each is decided on what the pilot shows.
 
-- **The app clones the product repository and installs its packages for the designer. Built 2026-10-08** (see [flock-designer.md, 3.9](flock-designer.md#39--clone-a-repository-from-new-built-2026-10-08)). **Left for Noah:** fast-forward Coke's `noah/flock-designer` to `noah/flock-designer-path`, which declares Coke's `install` command (and holds the routing fix, `30edaa36`); then, by hand, clone a repository he does not have from New, clone Coke and see it land on `noah/flock-designer`, and install its packages there (never yet run against GitHub Packages). How long the Coke clone takes is not measured; a partial clone is worth looking at only if it is slow.
-- **Prototypes on a link, with the app's comments: [PAGES_PLAN.md](PAGES_PLAN.md).** Private GitHub Pages for each prototype (viewing requires signing in to GitHub, which waits on moving the repository into the org; until then it is public and publishing says so), a link the Flock Designer agent hands back in its final summary even from Claude Code in VS Code, an **Open page** link in the app, and the app's own comments (pins, inline box, side panel) on the page, feeding the same review issue the app reads. Prompted by the design-team thread of 2026-10-07 (how to share with people who do not have Claude). Its detail, phases and what was checked are in that file, not here.
+- **The app clones the product repository and installs its packages for the designer. Built 2026-10-08** (see [dsnr.md, 3.9](dsnr.md#39--clone-a-repository-from-new-built-2026-10-08)). **Left for Noah:** fast-forward Coke's `noah/flock-designer` to `noah/flock-designer-path`, which declares Coke's `install` command (and holds the routing fix, `30edaa36`); then, by hand, clone a repository he does not have from New, clone Coke and see it land on `noah/flock-designer`, and install its packages there (never yet run against GitHub Packages). How long the Coke clone takes is not measured; a partial clone is worth looking at only if it is slow.
+- **Prototypes on a link, with the app's comments: [PAGES_PLAN.md](PAGES_PLAN.md).** Private GitHub Pages for each prototype (viewing requires signing in to GitHub, which waits on moving the repository into the org; until then it is public and publishing says so), a link the DSNR agent hands back in its final summary even from Claude Code in VS Code, an **Open page** link in the app, and the app's own comments (pins, inline box, side panel) on the page, feeding the same review issue the app reads. Prompted by the design-team thread of 2026-10-07 (how to share with people who do not have Claude). Its detail, phases and what was checked are in that file, not here.
 - **The Design System tab shows the component library: [DESIGN_SYSTEM_PLAN.md](DESIGN_SYSTEM_PLAN.md).** The library's components, read from a local clone of `flock-react-component-lib` at `develop` (kept current by the app), grouped as Storybook groups them, each with links to its Storybook page, Figma and source. It does not copy or embed Storybook; it also lays the identity (a component's folder path) a later "adjust a component and open a pull request" feature will use. S1 to S3 are built (the list); P0 (connect the design system: clone it or locate a clone, remembered) and P1 to P3 (previews of each component) come next. Its detail is in that file, not here.
 - **A standalone export of a prototype**, one HTML file that opens locally with no app, as the same thread suggested for other tools. Today a saved page points to shared font files stored beside it (`projects/_shared/`), so it is not a single file; an export would inline them. Smaller than the viewer, and useful on its own for sending a prototype to someone.
 - **Codebase iterations beyond I1.** Codebase work is one branch because it is meant to ship. A second would be for a designer who needs another attempt after engineering asks for changes; it needs a branch name, a rule for which one engineering takes, and a Handoff per iteration. Design it from a real case.
@@ -242,7 +242,7 @@ Nothing here blocks the pilot.
 | 2 | Coke's `.github/instructions` still says to use `src/…` imports, which crash the app on load | Engineering's file; agents may not edit `.github/` |
 | 3 | Does Coke support dark mode? | Prototypes render dark on a dark Mac |
 | 4 | May prototypes carry the MUI X licence key? | The grid shows a watermark without it |
-| 5 | When does `.flkd` go onto `develop`? | Agents read guidance from the code branch, else the accepted checkout |
+| 5 | When does `.dsnr` go onto `develop`? | Agents read guidance from the code branch, else the accepted checkout |
 | 6 | Pin a model per agent, or use a different one for the reviewers? | Not planned unless asked. Today every agent uses the default |
 | 7 | **Keep or remove Share for review** (the draft pull request and deploy preview in the More menu) | Built and working, but it reaches into delivery, which is engineering's. Decide after the pilot |
 | 8 | **Should the More menu stay disabled until the page is up?** | It also hides Open in VS Code and Build in the codebase while a build is running or has failed, which is when they are most useful. The alternative is to disable only Open in browser and Copy link |
@@ -269,7 +269,7 @@ none holds up the work in front of it.
 | Package and org items ([step 4.2](#42--ship-the-design-system-context-in-the-package-was-step-17)) | Design System owner | Smaller now than it was |
 
 **Status values:** Not started, In progress, **Built — awaiting check**, Complete. A step is Complete only when its "done when"
-is met and the evidence is cited in the [change log](flock-designer.md#change-log).
+is met and the evidence is cited in the [change log](dsnr.md#change-log).
 
 ## How steps are worked and closed
 
@@ -321,7 +321,7 @@ Decisions already settled in this plan are not repeated here. What remains genui
 
 - **Is Mac enough for now?** Windows roughly doubles the distribution work. Decide before 3.6.
 - **May a prototype carry the MUI X licence key?** Without it, `FSDataGrid` shows a "Missing license key" watermark. It is the prototype, not a bug, but it is visible. The key comes from Coke's environment, and a prototype is kept in the design repository.
-- **When does `.flkd/` reach `develop`?** Coke's Flock Designer guidance is only on `noah/flock-designer`. A prototype reads it from the branch it is based on when that branch has it, otherwise from the accepted checkout's working tree.
+- **When does `.dsnr/` reach `develop`?** Coke's DSNR guidance is only on `noah/flock-designer`. A prototype reads it from the branch it is based on when that branch has it, otherwise from the accepted checkout's working tree.
 - **How much of Coke should carry stable names?** Measured 2026-10-06: **131 `data-e2e-ref` across 49 of 344
   component files**, mostly on leaf elements rather than containers. A pin on an element with no stable name of
   its own is only as durable as its nearest named ancestor, so this is the ceiling on how well a comment survives
@@ -385,7 +385,7 @@ Decisions already settled in this plan are not repeated here. What remains genui
 
 **Review**
 
-- A PM or engineer who has never seen Flock Designer can sign in, open a prototype, and leave an element-anchored comment within a few minutes of first launch, unaided.
+- A PM or engineer who has never seen DSNR can sign in, open a prototype, and leave an element-anchored comment within a few minutes of first launch, unaided.
 - A designer learns a comment arrived without going to look for it.
 - A comment placed on an element is still on that element after a reload and a resize.
 - Comments are readable by the agent with no app involved, and an agent instruction can act on them.
@@ -399,7 +399,7 @@ Decisions already settled in this plan are not repeated here. What remains genui
 
 ### Near-term definition of success
 
-Within a small number of real prototype requests, Flock Designer should make it possible to:
+Within a small number of real prototype requests, DSNR should make it possible to:
 
 - move from a focused brief to a reviewable Flock-native flow in one working session;
 - cite the FUI and product patterns used rather than rely on agent memory;

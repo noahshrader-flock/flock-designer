@@ -76,7 +76,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 	return (
 		<div className="mx-auto mt-20 max-w-[460px] text-center">
 			<div className="flex flex-col gap-6">
-				<h1 className="text-2xl font-semibold">Flock Designer</h1>
+				<h1 className="text-2xl font-semibold">DSNR</h1>
 				<p className="text-muted-foreground text-sm">
 					Sign in with GitHub to browse projects and leave comments. You need read access to the design repository — nothing
 					else, and no checkout.

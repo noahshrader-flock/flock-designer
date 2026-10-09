@@ -60,6 +60,6 @@ describe('the sections', () => {
 	it('are not there before signing in', async () => {
 		await show({ user: null });
 		expect(tabs()).toHaveLength(0);
-		expect(document.body.textContent).toContain('Flock Designer');
+		expect(document.body.textContent).toContain('DSNR');
 	});
 });

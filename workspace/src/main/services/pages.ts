@@ -97,7 +97,7 @@ export const pageStatus = async (github: GitHubApi, ref: DesignRepoRef, projectI
 const SITE_SOURCES = [
 	/^workspace\/src\/(site|viewer|renderer|shared)\//,
 	/^workspace\/src\/main\/services\/(designRepo|github|paths)\.ts$/,
-	/^workspace\/src\/cli\/flkd\.ts$/,
+	/^workspace\/src\/cli\/dsnr\.ts$/,
 	/^workspace\/(bin\/|viewer\.vite\.config\.ts$|package-lock\.json$)/,
 	/^\.github\/workflows\/publish-prototypes\.yml$/,
 ];
@@ -254,7 +254,7 @@ const deploy = async (
 			body: { ref: branch },
 		});
 	} catch (err) {
-		if (forbidden(err)) throw new Error("Flock Designer's GitHub App is not allowed to start the deploy. Its permissions need Actions: read and write (and Pages and Deployments: read), approved on the installation. Publishing from the command line still works.");
+		if (forbidden(err)) throw new Error("DSNR's GitHub App is not allowed to start the deploy. Its permissions need Actions: read and write (and Pages and Deployments: read), approved on the installation. Publishing from the command line still works.");
 		if (notFound(err)) throw new Error(`The workflow that publishes the site (.github/workflows/${PUBLISH_WORKFLOW}) is not on GitHub yet, on the repository's default branch. Push it, then try again.`);
 		throw err;
 	}

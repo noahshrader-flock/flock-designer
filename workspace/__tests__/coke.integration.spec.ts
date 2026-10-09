@@ -15,7 +15,7 @@ import { recordsRootFor } from '../src/main/services/discovery';
  * Skipped, loudly, when Coke is not checked out beside this repository.
  */
 const COKE = '/Users/noah.shrader/Documents/GitHub/flock-coke';
-const available = existsSync(COKE) && existsSync(`${COKE}/.flkd/workspace.json`);
+const available = existsSync(COKE) && existsSync(`${COKE}/.dsnr/workspace.json`);
 
 describe.skipIf(!available)('against the real Coke checkout', () => {
 	it('parses the descriptor Coke ships', () => {
@@ -65,7 +65,7 @@ describe.skipIf(!available)('against the real Coke checkout', () => {
 
 describe.skipIf(available)('Coke checkout', () => {
 	it('is not available, so the integration checks did not run', () => {
-		console.warn(`Skipped: no descriptor at ${COKE}/.flkd/workspace.json`);
+		console.warn(`Skipped: no descriptor at ${COKE}/.dsnr/workspace.json`);
 		expect(available).toBe(false);
 	});
 });

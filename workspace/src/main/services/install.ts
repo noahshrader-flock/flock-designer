@@ -6,7 +6,7 @@ import { NotStarted, Stopped, runStreamed } from './streamed';
 /**
  * Installing a repository's packages from the New modal (C5 of the clone plan).
  *
- * **Only the command the repository declares** (`install` in its `.flkd/workspace.json`), as every command the app runs
+ * **Only the command the repository declares** (`install` in its `.dsnr/workspace.json`), as every command the app runs
  * is: the repository's owners decide how it installs, and the person asks for it with one click. It runs with the
  * person's own registry sign-in, as their terminal would; when the private registry refuses, it says how to sign in.
  */

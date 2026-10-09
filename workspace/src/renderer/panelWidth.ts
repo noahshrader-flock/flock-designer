@@ -18,7 +18,7 @@ export const clampPanelWidth = (width: number, windowWidth: number): number =>
 /** How far a keyboard arrow moves the divider. */
 export const PANEL_STEP = 16;
 
-const KEY = 'flock-designer.panelWidth';
+const KEY = 'dsnr.panelWidth';
 
 /** A per-person convenience, never a requirement: storage may be blocked or empty. */
 export const loadPanelWidth = (windowWidth: number): number => {

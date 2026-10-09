@@ -49,7 +49,7 @@ export const ConnectDesignSystem = ({ repository, lost, onConnected }: { reposit
 			<div className="flex flex-col gap-6">
 				<h1 className="text-2xl font-semibold">Connect the design system</h1>
 				<p className="text-muted-foreground text-sm">
-					Flock Designer reads the component library, {repository}, from a copy on this computer. Clone it, or choose the
+					DSNR reads the component library, {repository}, from a copy on this computer. Clone it, or choose the
 					copy you already have.
 				</p>
 				{lost !== null && (

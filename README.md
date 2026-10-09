@@ -1,8 +1,8 @@
-# Flock Designer
+# DSNR
 
 Four things live here.
 
-**[`flock-designer.md`](flock-designer.md)** — where everything stands. What Flock Designer is, what is built,
+**[`dsnr.md`](dsnr.md)** — where everything stands. What DSNR is, what is built,
 how it works and why, every contract, and the change log. If you are picking this up, start with its "Where things
 stand" block. **[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)** is what is left to do; each fact is in only one of the two.
 
@@ -21,7 +21,7 @@ patterns and boundaries stay in the product repository; these are the ones that 
 There are two kinds of work: a **prototype**, one page built from the product's real components to decide what
 something should be, and **codebase work**, the real change, built to ship. Each has iterations, `I1`, `I2`.
 **Address** asks the agent to act on one comment; **Hand off** is the full check before an engineer takes the
-work. These and the rest are defined once, in [the vocabulary](flock-designer.md#vocabulary).
+work. These and the rest are defined once, in [the vocabulary](dsnr.md#vocabulary).
 
 The app is for **discovery**: a prototype is reviewed in it, by anyone with the app and a GitHub account.
 **Delivery** is engineering's, through their own pull requests and preview links.
@@ -45,10 +45,10 @@ built from it, so anyone can open it without the product. Large files those page
 
 ## What a product repository provides
 
-Everything here is shared; a product brings only what is true of it. To adopt Flock Designer, a repository
+Everything here is shared; a product brings only what is true of it. To adopt DSNR, a repository
 provides, beside a checkout of this one and of its design system (the folder named as the package is):
 
-- **`.flkd/workspace.json`**, the app's contract with the product (`workspace/src/shared/contract.ts`,
+- **`.dsnr/workspace.json`**, the app's contract with the product (`workspace/src/shared/contract.ts`,
   `WorkspaceDescriptor`): its name, its context folder, where prototypes go, its branch names, its design
   system package, and its commands. The app looks for these command ids:
   - `preview` serves an older prototype branch, `design-mode` serves the real product on mock data (each with
@@ -58,12 +58,12 @@ provides, beside a checkout of this one and of its design system (the folder nam
   - `install` installs its packages (`npm ci`), run from the New modal when they are missing and the person asks.
     Without it the modal says what to run instead.
   Commands run through `npm`, `npx` or `node`.
-- **`.flkd/`**: a manifest (its conventions, accessibility target and who signs off), its builder agent and
+- **`.dsnr/`**: a manifest (its conventions, accessibility target and who signs off), its builder agent and
   two read-only reviewers (parity, and implementation), its own patterns and boundaries, and the product's
   part of each shared skill, such as what its gate checks and what its engineers pick up.
 - **Its agent instructions** (`CLAUDE.md` or `AGENTS.md`) sending product work to that builder.
 
-**Coke's (`flock-coke`, branch `noah/flock-designer`) is the worked example:** copy its `.flkd/`, its
+**Coke's (`flock-coke`, branch `noah/flock-designer`) is the worked example:** copy its `.dsnr/`, its
 `workspace.json` and its check scripts, and replace what is Coke's. Nothing here, or in the design system,
 changes for a new product.
 

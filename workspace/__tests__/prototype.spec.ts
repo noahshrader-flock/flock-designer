@@ -114,7 +114,7 @@ describe('cloneStore', () => {
 describe('what the agent is told', () => {
 	const sources = {
 		code: '/q/source/coke',
-		productGuidance: '/c/coke/.flkd',
+		productGuidance: '/c/coke/.dsnr',
 		designSystemGuidance: '/c/fui',
 		installedDesignSystem: null,
 		sharedStandards: '/d/standards',
@@ -128,7 +128,7 @@ describe('what the agent is told', () => {
 		expect(task).toContain('Write `/q/users/i1.tsx`');
 		expect(task).toContain(`\`${build.buildCommand}\``);
 		expect(task).toContain('Read only: never change anything');
-		for (const dir of ['/q/source/coke', '/c/coke/.flkd', '/c/fui', '/d/standards', '/c/node_modules']) expect(task).toContain(`\`${dir}\``);
+		for (const dir of ['/q/source/coke', '/c/coke/.dsnr', '/c/fui', '/d/standards', '/c/node_modules']) expect(task).toContain(`\`${dir}\``);
 		expect(task.trimEnd().endsWith('A users list')).toBe(true);
 	});
 
@@ -137,7 +137,7 @@ describe('what the agent is told', () => {
 	});
 
 	it('lets the agent read only the folders that exist', () => {
-		expect(prototypeReadable(sources)).toEqual(['/q/source/coke', '/c/coke/.flkd', '/c/fui', '/d/standards', '/c/node_modules']);
+		expect(prototypeReadable(sources)).toEqual(['/q/source/coke', '/c/coke/.dsnr', '/c/fui', '/d/standards', '/c/node_modules']);
 		expect(prototypeReadable(null)).toEqual([]);
 	});
 

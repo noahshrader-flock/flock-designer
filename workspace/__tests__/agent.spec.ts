@@ -41,9 +41,9 @@ describe('the adapter boundary', () => {
 	});
 
 	it('names the conversation with the ID the app chose, so it can be continued elsewhere', () => {
-		const argv = claudeCodeAdapter.argvFor('t', { session: '5ea94a82-46ac-4823-9acb-716bcb37aa64', name: 'Flock Designer: demo', addDirs: ['/r'] });
+		const argv = claudeCodeAdapter.argvFor('t', { session: '5ea94a82-46ac-4823-9acb-716bcb37aa64', name: 'DSNR: demo', addDirs: ['/r'] });
 		expect(argv[argv.indexOf('--session-id') + 1]).toBe('5ea94a82-46ac-4823-9acb-716bcb37aa64');
-		expect(argv[argv.indexOf('--name') + 1]).toBe('Flock Designer: demo');
+		expect(argv[argv.indexOf('--name') + 1]).toBe('DSNR: demo');
 		// --add-dir takes a list, so it stays last.
 		expect(argv.at(-2)).toBe('--add-dir');
 	});

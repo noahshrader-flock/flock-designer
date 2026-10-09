@@ -228,7 +228,7 @@ export const NewWork = ({
 						<Alert>
 							<InfoIcon />
 							<AlertTitle>No product repository found</AlertTitle>
-							<AlertDescription>Flock Designer could not find a Flock product repository on this machine.</AlertDescription>
+							<AlertDescription>DSNR could not find a Flock product repository on this machine.</AlertDescription>
 							<AlertAction>
 								<Button variant="outline" onClick={onChoose}>
 									Find it
@@ -278,7 +278,7 @@ export const NewWork = ({
 										<code>npm ci</code> in it (this needs access to the private packages), then open this again.
 									</>
 								) : (
-									'Flock Designer cannot build pages on this machine. Reinstall the app and try again.'
+									'DSNR cannot build pages on this machine. Reinstall the app and try again.'
 								)}
 							</AlertDescription>
 						</Alert>

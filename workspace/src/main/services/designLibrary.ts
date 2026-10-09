@@ -132,7 +132,7 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 	const read = new Map<string, Promise<Map<string, string>>>();
 	const readStories = async (paths: string[]): Promise<Map<string, string>> => {
 		// A header no story can contain, then the object as git stores it; `%(rest)` gives back the path asked for.
-		const mark = `@@flock-designer-${Math.random().toString(36).slice(2)}@@`;
+		const mark = `@@dsnr-${Math.random().toString(36).slice(2)}@@`;
 		const out = await runGit(root, ['cat-file', `--batch=${mark} %(objecttype) %(rest)`], undefined, undefined, paths.map((p) => `${ref}:${p} ${p}\n`).join(''));
 		const files = new Map<string, string>();
 		for (const chunk of `\n${out}`.split(`\n${mark} `).slice(1)) {

@@ -4,11 +4,11 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { main } from '../src/cli/flkd';
+import { main } from '../src/cli/dsnr';
 import { g, installDesignSystem, makeProduct } from './fixtures';
 
 /**
- * `flkd`, the command an agent runs from Claude Code in VS Code to make a prototype with no app running. Against a
+ * `dsnr`, the command an agent runs from Claude Code in VS Code to make a prototype with no app running. Against a
  * temporary product checkout and design repository side by side, and the real bundler, as on a designer's machine.
  */
 
@@ -21,7 +21,7 @@ let err: string[];
 let github: { api: (path: string) => Promise<unknown> } | null;
 
 const esbuild = createRequire(__filename).resolve('esbuild');
-const deps = (cwd: string) => ({ cwd, out: (t: string) => out.push(t), err: (t: string) => err.push(t), prototypesRoot: prototypes, esbuild, self: ['flkd'], github });
+const deps = (cwd: string) => ({ cwd, out: (t: string) => out.push(t), err: (t: string) => err.push(t), prototypesRoot: prototypes, esbuild, self: ['dsnr'], github });
 const run = (...argv: string[]) => main(argv, deps(product));
 const iterations = () => JSON.parse(readFileSync(join(design, 'projects', 'demo', 'iterations.json'), 'utf8')) as { name: string }[];
 
@@ -62,9 +62,9 @@ describe('new-prototype', () => {
 		expect(task).toContain(`Write \`${join(prototypes, 'demo', 'v1-i1.tsx')}\``);
 		expect(task).toContain(join(prototypes, 'build-prototype.mjs'));
 		expect(task).toContain('A list of cameras');
-		expect(task).toContain(`flkd save-prototype --project demo --name v1-i1 --product ${product}`);
+		expect(task).toContain(`dsnr save-prototype --project demo --name v1-i1 --product ${product}`);
 		// It finishes by publishing, and with the link the command printed, or why there is none.
-		expect(task).toContain('flkd publish --project demo --name v1-i1');
+		expect(task).toContain('dsnr publish --project demo --name v1-i1');
 		expect(task).toMatch(/Never give a link the command did not print/);
 	});
 
@@ -108,7 +108,7 @@ describe('save-prototype', () => {
 		const saved = join(design, 'projects', 'demo', 'prototypes');
 		expect(readFileSync(join(saved, 'v1-i1.tsx'), 'utf8')).toContain("from 'x'");
 		expect(readFileSync(join(saved, 'v1-i1.html'), 'utf8')).toContain('Real component');
-		expect(out.at(-1)).toMatch(/It is in Flock Designer/);
+		expect(out.at(-1)).toMatch(/It is in DSNR/);
 	});
 
 	it('says what the build said when the source does not compile, and saves nothing', async () => {
@@ -154,7 +154,7 @@ describe('change-prototype', () => {
 		await made();
 		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1-i1', '--note', 'Make the title bigger')).toBe(0);
 		expect(out.join('\n')).toMatch(/The change is made in v1-i1: change it/);
-		expect(out.join('\n')).toContain('flkd save-prototype --project demo --name v1-i1');
+		expect(out.join('\n')).toContain('dsnr save-prototype --project demo --name v1-i1');
 		writeFileSync(local('v1-i1'), page('bigger'));
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
 		expect(iterations().map((i) => i.name)).toEqual(['v1-i1']);
@@ -170,8 +170,8 @@ describe('change-prototype', () => {
 		expect(said).not.toBeNull();
 		expect(readFileSync(said?.[1] as string, 'utf8')).toContain('feedback');
 		expect(out.join('\n')).toContain(`Write \`${local('v1-i2')}\``);
-		expect(out.join('\n')).toContain('flkd publish --project demo --name v1-i2');
-		expect(out.join('\n')).toContain('flkd save-prototype --project demo --name v1-i2');
+		expect(out.join('\n')).toContain('dsnr publish --project demo --name v1-i2');
+		expect(out.join('\n')).toContain('dsnr save-prototype --project demo --name v1-i2');
 		expect(readFileSync(local('v1-i2'), 'utf8')).toBe(page('first'));
 		expect(iterations().map((i) => i.name)).toEqual(['v1-i1']);
 
@@ -382,10 +382,10 @@ describe('the command', () => {
 	it('is started by its own skill, never by the build skill every prototype task carries', () => {
 		const skills = join(__dirname, '..', '..', 'skills');
 		// The build skill is in the task of every agent the app starts too, which must never start another prototype.
-		expect(readFileSync(join(skills, 'build-prototype.md'), 'utf8')).not.toMatch(/new-prototype|flkd\.mjs/);
+		expect(readFileSync(join(skills, 'build-prototype.md'), 'utf8')).not.toMatch(/new-prototype|dsnr\.mjs/);
 		// The starting skill names the launcher as it sits beside a product repository.
-		expect(readFileSync(join(skills, 'start-prototype.md'), 'utf8')).toContain('node ../flock-designer/workspace/bin/flkd.mjs new-prototype');
-		expect(existsSync(join(__dirname, '..', 'bin', 'flkd.mjs'))).toBe(true);
+		expect(readFileSync(join(skills, 'start-prototype.md'), 'utf8')).toContain('node ../flock-designer/workspace/bin/dsnr.mjs new-prototype');
+		expect(existsSync(join(__dirname, '..', 'bin', 'dsnr.mjs'))).toBe(true);
 	});
 
 	it('refuses what it does not know, and says how it is used', async () => {
@@ -411,7 +411,7 @@ describe('the command', () => {
 		// A home of its own, so the app's prototype folder it finds is this test's, never this machine's.
 		const env = { ...process.env, HOME: home, XDG_CONFIG_HOME: join(home, '.config'), APPDATA: join(home, 'AppData') };
 		const sh = (command: string) => spawnSync('/bin/sh', ['-c', command], { cwd: product, env, encoding: 'utf8' });
-		const launcher = join(__dirname, '..', 'bin', 'flkd.mjs');
+		const launcher = join(__dirname, '..', 'bin', 'dsnr.mjs');
 
 		const usage = spawnSync(process.execPath, [launcher], { cwd: product, env, encoding: 'utf8' });
 		expect(usage.status).toBe(2);

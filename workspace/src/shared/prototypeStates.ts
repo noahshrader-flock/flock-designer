@@ -6,7 +6,7 @@
  */
 
 /** The tag the build writes the list into. */
-export const STATES_META = 'flkd-states';
+export const STATES_META = 'dsnr-states';
 
 /** What a state may be called, in the address and in the source: one lowercase word, so it is short in the bar. */
 export const STATE_NAME = /^[a-z0-9]+$/;

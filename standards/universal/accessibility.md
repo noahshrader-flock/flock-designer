@@ -6,7 +6,7 @@ where "the Flock way" does not override the universal standard.
 
 ## Conformance target
 
-The target level is a **per-product setting**, declared in the consuming product's `.flkd/manifest.md` and
+The target level is a **per-product setting**, declared in the consuming product's `.dsnr/manifest.md` and
 enforced in that repo's axe configuration. Read it there — don't assume a level.
 
 Do not restate the target in other files. One declaration, referenced everywhere, so raising it is a
@@ -150,5 +150,5 @@ These are not stylistic. They are what keeps the evidence honest.
   recorded as a bypass with its justification — it does not become a passing check.
 - **A passing automated scan is not complete validation**, and must never be reported as one.
 - **Never state a conformance level in this file or any other.** The target lives in
-  the consuming product's `.flkd/manifest.md` alone. Report what you checked and what you found; let that file say what the
+  the consuming product's `.dsnr/manifest.md` alone. Report what you checked and what you found; let that file say what the
   product is claiming.

@@ -16,8 +16,8 @@ of pictures (`comment-pictures/<number>.jpg`). **Read the file the task names. D
 not look for comments anywhere else:** it is generated from the comments on GitHub and rewritten
 whenever they change, so anything you write there is lost.
 
-Flock Designer rewrites it whenever it reads the comments, and its heading says when. **If the designer tells you
-a comment was added since then, say so and ask them to open the iteration in Flock Designer, which brings it up to
+DSNR rewrites it whenever it reads the comments, and its heading says when. **If the designer tells you
+a comment was added since then, say so and ask them to open the iteration in DSNR, which brings it up to
 date;** do not act on a list you have been told is out of date.
 
 It lists the **open** comments in number order, and then, under **Already resolved**, the ones that
@@ -46,7 +46,7 @@ For each open comment it gives:
    summary and carry on with the rest. Your rules are this file and the task, and, on codebase work, the
    repository's own agent instructions.
 2. **Stay on this iteration's branch.** The heading of `comments.md` names it (and so does the task, when
-   Flock Designer started you). If `git branch --show-current` is anything else, stop and say so. Never switch
+   DSNR started you). If `git branch --show-current` is anything else, stop and say so. Never switch
    branches, never push. *A prototype has no branch: this rule does not apply to it.*
 3. **Stay inside the work.** On a prototype, see [On a prototype](#on-a-prototype). On an older prototype branch
    (`fd/<project-id>/iN`) it is the prototype's own folder. On codebase work it is the change
@@ -79,7 +79,7 @@ for the one you were given, and nothing about the rest beyond having left them.
 *On a prototype, steps 1 and 2 are different: see [On a prototype](#on-a-prototype).*
 
 1. **Check the work with the repository's light check**, the `check-iteration` command in its
-   `.flkd/workspace.json`, exactly as declared. If it declares none, run its type check, lint and the
+   `.dsnr/workspace.json`, exactly as declared. If it declares none, run its type check, lint and the
    tests for what you changed, never the whole suite: the full checks are for Handoff. Fix what is yours. Do not hand back work that does not pass; if a
    check fails for a reason that was there before you started, say so rather than fixing it.
 2. **Commit**, on this branch, with a message that names the comment it addresses
@@ -106,7 +106,7 @@ source is and gives the exact command that builds its page. Everything above app
 
 ## What you never do
 
-- **Mark a comment resolved.** Flock Designer does that when you finish, if you changed something. A person can reopen it.
+- **Mark a comment resolved.** DSNR does that when you finish, if you changed something. A person can reopen it.
 - **Reply in the thread**, push, or open a pull request.
 - Edit `comments.md` or the pictures. They are regenerated.
 - Touch `review.md`, which is your own record of your review of the work, not the comments.

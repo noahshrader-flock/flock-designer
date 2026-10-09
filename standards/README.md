@@ -1,6 +1,6 @@
 # Shared standards
 
-**Cross-product standards.** These hold for any Flock product that adopts Flock Designer, and they
+**Cross-product standards.** These hold for any Flock product that adopts DSNR, and they
 carry no reference to any one product's stack, patterns, or codebase.
 
 ```
@@ -30,7 +30,7 @@ terms as FUI's: when the content stops moving and a second product adopts it.
 
 1. **A product's `non-negotiables.md`** — hard rules, always win
 2. **`universal/accessibility.md`** — a floor. A product may raise it; nothing overrides it downward
-3. **A product's Flock tier** (`.flkd/standards/flock/`) — convention, density, tone, vocabulary.
+3. **A product's Flock tier** (`.dsnr/standards/flock/`) — convention, density, tone, vocabulary.
    **Overrides the universal design tier below**
 4. **`universal/`** (design + interaction) — applies wherever the tiers above are silent
 
@@ -41,7 +41,7 @@ to a *higher* bar, never a lower one.
 ## What does not belong here
 
 - **A conformance level.** The target is a per-product setting and lives in that product's
-  `.flkd/manifest.md`. A file here that states a level competes with it and will be wrong for someone.
+  `.dsnr/manifest.md`. A file here that states a level competes with it and will be wrong for someone.
 - **A product's patterns, components, routes, or stack.** That is product intelligence.
 - **A convention justified by one product's evidence.** If a count came from one codebase, say so —
   otherwise one product's habits become a Flock-wide rule by accident.

@@ -5,8 +5,8 @@ import { join } from 'node:path';
 /**
  * Finding the product repository without being told where it is.
  *
- * A repository that Flock Designer can work in says so itself: it has a
- * `.flkd/workspace.json`. That file is the marker, so there is nothing to
+ * A repository that DSNR can work in says so itself: it has a
+ * `.dsnr/workspace.json`. That file is the marker, so there is nothing to
  * register and nothing that can drift out of date. People keep their clones in
  * a handful of places, so those are looked through, one level deep, and the
  * most recently used match wins; the person can change it, but is not asked.
@@ -62,7 +62,7 @@ export const defaultDiscoveryDeps: DiscoveryDeps = {
 };
 
 export const findProductCheckouts = (deps: DiscoveryDeps = defaultDiscoveryDeps): string[] =>
-	findRepositories(deps, (dir) => deps.exists(join(dir, '.flkd', 'workspace.json')));
+	findRepositories(deps, (dir) => deps.exists(join(dir, '.dsnr', 'workspace.json')));
 
 /**
  * The clones in the usual places (and first the folders given) that `accept` takes, most recently used first. What

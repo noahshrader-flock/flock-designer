@@ -7,7 +7,7 @@ from `flock-react-component-lib` (FUI), without copying Storybook and without bu
 
 This is the detail behind one candidate in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), which points here and does
 not repeat it. **This file holds only what is still to do or decide.** What is built, and its evidence, goes to
-[flock-designer.md](flock-designer.md) when a milestone is done, and leaves this file.
+[dsnr.md](dsnr.md) when a milestone is done, and leaves this file.
 
 ## What it is for
 
@@ -25,7 +25,7 @@ it.
 1. **The library repository is the only source of truth.** The app holds an index of it, read when the tab opens. It
    never stores a copy of a component, a story, a prop table or a screenshot. A built preview is a cache in the app's
    own folder, keyed by the `develop` commit it was built from, and thrown away when that moves on. (Same rule as
-   [step 1.7](flock-designer.md#17--stop-copying-the-design-system-point-at-it-was-d1): point at it, do not copy it.)
+   [step 1.7](dsnr.md#17--stop-copying-the-design-system-point-at-it-was-d1): point at it, do not copy it.)
 2. **Storybook stays where controls, prop tables and docs live.** The app renders a component's stories as they are
    written, to show what it looks like (P1, P2), and links to Storybook for everything else. It does not embed or run
    Storybook, and it never writes a story of its own.
@@ -52,7 +52,7 @@ it.
 | **Storybook's sidebar order is set in `.storybook/preview.tsx`:** Buttons, Inputs, Data Display, Feedback, Surfaces, Navigation, Layout, Tables | the library | The tab uses the same order, then any other group alphabetically (`Components`, `Popovers`, `Utils`) |
 | **A clone's local `develop` goes stale, and it is real:** on Noah's clone the local `develop` is at 2026-09-29 and `origin/develop` at 2026-10-07, eight days apart | `git log` in the library | Decision 4: read `origin/develop`, and the app fetches it |
 | **`git fetch origin develop` works with the person's own credentials** (checked with `--dry-run`), and **changes only `origin/develop`:** no local branch, no working file | the library | Safe to do on opening the tab. Fails fast on no credentials or no network, with `GIT_TERMINAL_PROMPT=0` as `git.ts` already sets |
-| **The library has `.flkd/` but no `.flkd/workspace.json`,** so discovery does not list it | the library | Needs its own lookup, not a descriptor |
+| **The library has `.dsnr/` but no `.dsnr/workspace.json`,** so discovery does not list it | the library | Needs its own lookup, not a descriptor |
 | **The app can already find a clone by its `origin` remote** (`originOf`, `gitHubRepoOf`) in the usual folders and the clone folder, and **can clone a named repository with progress** (`Cloner`) | `repositories.ts`, `discovery.ts`, `cloneFolder.ts`, `clone.ts` | Finding and cloning the library is reuse |
 | **Reads of a ref go through `git.ts`** (argv only, `GIT_TERMINAL_PROMPT=0`, `runGit` exported) | `git.ts` | `ls-tree` and `show` need no new way to run git |
 | **The renderer has only the named operations on `contract.ts`;** the window never sends a path | `shared/contract.ts` | One new operation; the library's path is found in the main process |
@@ -127,7 +127,7 @@ nothing on GitHub changed.
 
 ### S1: The catalog reader (done 2026-10-08)
 
-**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+**Done.** What it built, and the evidence, is in [dsnr.md](dsnr.md#change-log) (2026-10-08). In
 short: `services/componentCatalog.ts`'s `readCatalog(reads)` takes two reads (every file under a folder, one file's text)
 and returns `CatalogComponent[]` in the tab's order. **Superseded by decision 17:** the folder rules, `isGap` and `STORYBOOK_URL` as the one
 constant for the hosted Storybook. **For S2:** the reads are `git ls-tree -r --name-only` and `git show` on
@@ -138,7 +138,7 @@ first would show that one, and the real-library test would catch it as a wrong g
 
 ### S2: Finding the library, bringing it up to date, and reading it (done 2026-10-08)
 
-**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+**Done.** What it built, and the evidence, is in [dsnr.md](dsnr.md#change-log) (2026-10-08). In
 short: `services/designLibrary.ts` finds the clone by its origin (`findLibrary`), reads `origin/develop` through git
 (`libraryReads`, with the stories in one `cat-file --batch`), fetches only that ref (`updateLibrary`), and `DesignLibrary`
 answers the new `designSystemCatalog(refresh)` channel. **For S3:** call it with `false` when the tab is first shown
@@ -151,7 +151,7 @@ one line. **Where it differs from the plan:** `CatalogUpdate` has a fourth value
 
 ### S3: The tab (done 2026-10-08)
 
-**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+**Done.** What it built, and the evidence, is in [dsnr.md](dsnr.md#change-log) (2026-10-08). In
 short: `renderer/DesignSystem.tsx`, mounted in `App.tsx` and kept mounted while hidden; the toolbar, the Chromatic line,
 search, the kind tabs, **Without a story (n)**, grouped rows with their links, and every state; the two-step first read
 and Sync. **For P0:** the `no-clone` state is a `Notice` in `DesignSystem.tsx` saying to clone it by hand; P0 replaces
@@ -162,7 +162,7 @@ component with no readable title appears in an **Ungrouped** group like any othe
 
 ### P0: Connect the design system (done 2026-10-08)
 
-**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+**Done.** What it built, and the evidence, is in [dsnr.md](dsnr.md#change-log) (2026-10-08). In
 short: `renderer/ConnectDesignSystem.tsx` (Clone and Locate), `connectLibrary`, `locateLibrary` and `whyNotLibrary` in
 `services/designLibrary.ts`, the `locateDesignSystem` and `cloneDesignSystem` channels, and, shared on the way,
 `services/folderMemory.ts`, `renderer/Clone.tsx`, `cloneAsPlanned` in `ipc.ts` and `isDesignSystem` in
@@ -178,7 +178,7 @@ decision 12's automatic find stays out of its way. Nothing is open.
 
 ### P1: Build the previews (done 2026-10-08)
 
-**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+**Done.** What it built, and the evidence, is in [dsnr.md](dsnr.md#change-log) (2026-10-08). In
 short: `services/storyPreviews.ts` (`StoryPreviews`) builds one page of every story file of `develop`, once per commit,
 into the app's own folder, and `PrototypeServer.serveFolder` serves it on this machine only; the new `storyPreview`
 channel answers `ready` (with the page's address), `no-library`, `no-packages` (React or Storybook's stories not
@@ -203,7 +203,7 @@ shows it.
 
 ### P2: The component page (done 2026-10-08)
 
-**Done.** What it built, and the evidence, is in [flock-designer.md](flock-designer.md#change-log) (2026-10-08). In
+**Done.** What it built, and the evidence, is in [dsnr.md](dsnr.md#change-log) (2026-10-08). In
 short: `renderer/ComponentPage.tsx` (the page, the shared More menu `ComponentLinks`, and `StoryFrame`), opened from a
 row or the finder in `renderer/DesignSystem.tsx`, which keeps the list mounted underneath. **Where it differs from the
 plan:** the stories are frames in the window, not the native preview view (decision 9), so there is no picture of the
@@ -239,7 +239,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 |---|---|
 | **Pick a component to adjust** | `CatalogComponent.id` (its story file; its folder is the component's) |
 | **Try a token change** | T1: the same preview with a changed theme. The change is a few lines in the tone or palette file, which is what a pull request would carry |
-| **Make the change with the agent** | The authoring standards already in the library (`.flkd/authoring/components.md`, `stories.md`), the same agent run as prototypes |
+| **Make the change with the agent** | The authoring standards already in the library (`.dsnr/authoring/components.md`, `stories.md`), the same agent run as prototypes |
 | **Start from `develop`** | `origin/develop`, already fetched and current; a branch for the component is made from it, as prototypes make theirs, so the catalog and the work start from the same commit |
 | **See it** | P1's preview build, run on the person's branch instead of `develop`: the same page, the same cards, showing the change |
 | **Propose it** | A branch and a draft pull request to the library, through the existing share path (`share.ts`, `shareTools.ts`). The library's CI already publishes a Chromatic build for each pull request (`chromatic.yaml`) |

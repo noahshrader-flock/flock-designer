@@ -242,7 +242,7 @@ describe('placing comments on reopening', () => {
 	});
 
 	describe('on a prototype, which lists its states', () => {
-		const TAG = '<meta name="flkd-states" content="default,panel">';
+		const TAG = '<meta name="dsnr-states" content="default,panel">';
 		const at = (query: string) => page(CARD, `http://localhost:3000/demo/v1-i1/${query}`, TAG);
 		const placed = (w: ReturnType<typeof page>, state: string) =>
 			(w.eval(resolveScript([req(1, { route: '/demo/v1-i1/', selector: 'main', state })], 'nonce')) as Array<{ state: string }>)[0]?.state;

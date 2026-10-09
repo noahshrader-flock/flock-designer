@@ -2,7 +2,7 @@
 
 **Shared by every product.** Nothing here names a product's tools, layout or components: each product
 says those for itself, in its own guidance, and this tells you to read it. The app puts this file in the
-task when someone chooses **New → Prototype**, and so does `flkd` when an agent starts one from Claude Code
+task when someone chooses **New → Prototype**, and so does `dsnr` when an agent starts one from Claude Code
 (`start-prototype.md`), so nobody has to find it. It is also in the task, after
 `address-comments.md`, when someone presses **Address** on a prototype's comment: then that file decides what you
 change and what you say at the end, and this one is how the change is made.
@@ -31,14 +31,14 @@ is kept.
 - **Check it builds** with the command the task gives, after every change. Do not finish while it reports
   an error: a prototype that does not build cannot be saved.
 - **If you look at the page yourself** (a screenshot of the built file, say), its icons show as their names
-  ("search", "close"): the design system's fonts are kept beside the page and served by Flock Designer, not
+  ("search", "close"): the design system's fonts are kept beside the page and served by DSNR, not
   embedded in it. That is expected. Do not change the page for it or spend time on it.
 
 ## Before you write anything: read, in this order
 
 The task lists what you may read. Read only; never change anything in any of it.
 
-1. **The product's guidance** (its Flock Designer folder). Start at its index or manifest and follow it.
+1. **The product's guidance** (its DSNR folder). Start at its index or manifest and follow it.
    Find, at least: how the app is put together (its navigation, page frame, where a view of this kind
    sits, and how a prototype mounts), the patterns for what you are making, and its rules.
 2. **The design system's guidance and source:** its tokens, and how its components are used.
@@ -114,5 +114,5 @@ when the prototype moves into the code:
 Say in a few lines what you made, where in the product it sits, which screen you modelled it on, and every
 `@standin`: what the page shows that the product cannot do today. That is the first thing the person reads.
 
-A prototype has no review pass of its own: people review it in Flock Designer, and the product's reviewers run when
+A prototype has no review pass of its own: people review it in DSNR, and the product's reviewers run when
 codebase work is handed off. Do not run them, or list them as not run.

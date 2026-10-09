@@ -85,13 +85,13 @@ export const prototypeIn = (frame: HTMLIFrameElement): Document => {
 
 /** The page the site builds, as far as the viewer is concerned: the bar's slot, the panel, and the prototype's frame. */
 export const sitePage = () => {
-	document.body.innerHTML = '<header id="flkd-bar"></header><div><iframe id="flkd-frame"></iframe><aside id="flkd-panel"></aside></div>';
-	const frame = document.getElementById('flkd-frame') as HTMLIFrameElement;
+	document.body.innerHTML = '<header id="dsnr-bar"></header><div><iframe id="dsnr-frame"></iframe><aside id="dsnr-panel"></aside></div>';
+	const frame = document.getElementById('dsnr-frame') as HTMLIFrameElement;
 	const doc = prototypeIn(frame);
 	return {
 		frame,
 		doc,
-		slots: { bar: document.getElementById('flkd-bar') as HTMLElement, panel: document.getElementById('flkd-panel') as HTMLElement, frame },
+		slots: { bar: document.getElementById('dsnr-bar') as HTMLElement, panel: document.getElementById('dsnr-panel') as HTMLElement, frame },
 	};
 };
 

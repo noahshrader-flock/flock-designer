@@ -34,12 +34,12 @@ export interface DesignRepoRef {
   repo: string;
 }
 
-/** Where projects and review threads live, for the app and the flkd command alike. */
+/** Where projects and review threads live, for the app and the dsnr command alike. */
 const env: Record<string, string | undefined> = typeof process === 'undefined' ? {} : process.env;
 /** (In a browser, where the published site's comments run this, there is no environment: the page says which.) */
 export const DESIGN_REPO: DesignRepoRef = {
-  owner: env.FLOCK_DESIGNER_REPO_OWNER ?? 'noahshrader-flock',
-  repo: env.FLOCK_DESIGNER_REPO_NAME ?? 'flock-designer',
+  owner: env.DSNR_REPO_OWNER ?? 'noahshrader-flock',
+  repo: env.DSNR_REPO_NAME ?? 'flock-designer',
 };
 
 /**
@@ -290,7 +290,7 @@ export class DesignRepo {
           body: [
             `Review thread for **${projectId}**, branch: \`${branch}\`.`,
             '',
-            'Comments here are written by Flock Designer and exported to the project record.',
+            'Comments here are written by DSNR and exported to the project record.',
             'Do not change the branch line above — the app finds this issue by it.',
           ].join('\n'),
           labels: [ITERATION_LABEL],

@@ -3,7 +3,7 @@
 **Shared by every product.** Nothing here names a product's routes or tools.
 
 When you build or change a view on a **codebase** iteration — work on a `feature/<project-id>` branch
-that runs inside the real product — record where that work is, so Flock Designer opens on it instead
+that runs inside the real product — record where that work is, so DSNR opens on it instead
 of wherever the product happens to start.
 
 Without this, opening the iteration lands on the product's front door and the designer has to find
@@ -28,7 +28,7 @@ In the design repository, `projects/<project-id>/iterations.json`, on this itera
 - **The plainest form of the route, never a route pattern.** Where a route has both a plain and a
   nested form (`/roles/compare` and `/organization/:id/roles/compare`), record the one with no
   parameters in it. A pattern is what a router matches against; as an address, `:id` is taken
-  literally and matches nothing. Flock Designer refuses a route containing `:id`, `{id}` or `*` and
+  literally and matches nothing. DSNR refuses a route containing `:id`, `{id}` or `*` and
   opens where it would have anyway, so a pattern here means the landing route simply does nothing.
 - **Check it loads.** Open the route in the running app before recording it. If it redirects --
   a permission the mock user does not have, a guard, a parameter it needs -- it is not a landing

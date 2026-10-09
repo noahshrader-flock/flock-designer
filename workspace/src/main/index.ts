@@ -1,5 +1,6 @@
 import { BrowserWindow, app, safeStorage, screen, shell } from 'electron';
 import { join } from 'node:path';
+import pkg from '../../package.json';
 import { CHANNELS } from '../shared/contract';
 import { registerIpc } from './ipc';
 import { SessionMemory } from './services/editor';
@@ -28,6 +29,10 @@ import { TokenStore } from './services/tokenStore';
 
 const isDev = !app.isPackaged;
 
+// The app's saved data (settings, sign-in, working copies) stays in the folder it has always had, whatever the app is
+// called: the name of the package would otherwise choose it, and renaming the app would start everyone from nothing.
+app.setPath('userData', join(app.getPath('appData'), pkg.settingsFolder));
+
 /** Set by the smoke check: boot, prove the window exists, exit. */
 const smokeMode = process.argv.includes('--smoke');
 
@@ -42,7 +47,7 @@ const smokeMode = process.argv.includes('--smoke');
  * and must be installed on the design repository. A token it issues cannot see
  * a repository the app is not installed on; verified 2026-10-05.
  */
-const GITHUB_CLIENT_ID = process.env.FLOCK_DESIGNER_CLIENT_ID ?? 'Iv23li2z9ayhXhGdFXCm';
+const GITHUB_CLIENT_ID = process.env.DSNR_CLIENT_ID ?? 'Iv23li2z9ayhXhGdFXCm';
 
 const DEFAULT_SIZE = { width: 1160, height: 700 };
 
@@ -60,7 +65,7 @@ const createWindow = (): BrowserWindow => {
 		minWidth: MIN_WINDOW.width,
 		minHeight: MIN_WINDOW.height,
 		show: !smokeMode && !process.argv.includes('--smoke-page') && !process.argv.includes('--smoke-local'),
-		title: 'Flock Designer',
+		title: 'DSNR',
 		// No native title bar: the app's own top bar is the toolbar. On macOS the window
 		// buttons stay, inset to sit centred in it; elsewhere the system draws its
 		// controls over the bar's right edge.

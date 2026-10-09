@@ -1,6 +1,6 @@
 # Publishes the prototypes site: built from the repository as it is, then deployed to GitHub Pages.
 #
-# Run only when asked (flkd publish asks), never on a push, so nothing reaches the site unless someone published it.
+# Run only when asked (dsnr publish asks), never on a push, so nothing reaches the site unless someone published it.
 # See workspace/src/main/services/pages.ts.
 name: Publish prototypes
 
@@ -35,9 +35,9 @@ jobs:
       - name: Build the site
         env:
           GH_TOKEN: ${{ github.token }}
-          FLOCK_DESIGNER_REPO_OWNER: ${{ github.repository_owner }}
-          FLOCK_DESIGNER_REPO_NAME: ${{ github.event.repository.name }}
-        run: node workspace/bin/flkd.mjs build-site --out _site
+          DSNR_REPO_OWNER: ${{ github.repository_owner }}
+          DSNR_REPO_NAME: ${{ github.event.repository.name }}
+        run: node workspace/bin/dsnr.mjs build-site --out _site
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

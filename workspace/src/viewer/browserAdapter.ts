@@ -95,7 +95,7 @@ export const framePage = (frame: HTMLIFrameElement): PageSurface & { route(): Pr
 };
 
 /** Where the token is kept: this browser only, for this site. */
-const TOKEN_KEY = 'flock-designer.github-token';
+const TOKEN_KEY = 'dsnr.github-token';
 export const savedToken = (): string | null => {
 	try {
 		return localStorage.getItem(TOKEN_KEY);

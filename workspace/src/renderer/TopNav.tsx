@@ -44,7 +44,7 @@ export const TopNav = ({
 				onMac ? 'pr-6 pl-[108px]' : 'pr-[150px] pl-6'
 			}`}
 		>
-			<span className="mr-10 text-base font-bold whitespace-nowrap">Flock Designer</span>
+			<span className="mr-10 text-base font-bold whitespace-nowrap">DSNR</span>
 
 			{user && (
 				<Tabs value={section} onValueChange={(next) => onSectionChange(next as Section)} className="app-no-drag">

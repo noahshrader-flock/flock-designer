@@ -154,15 +154,15 @@ export const registerIpc = ({
 	page,
 	memory,
 	onPublishStatus,
-	prototypesRoot = join(tmpdir(), 'flock-designer-prototypes'),
+	prototypesRoot = join(tmpdir(), 'dsnr-prototypes'),
 	prototypeServer = new PrototypeServer(),
-	sessions = new SessionMemory(join(tmpdir(), 'flock-designer-agent-sessions.json')),
-	cloneFolders = new CloneFolderMemory(join(tmpdir(), 'flock-designer-clone-folder.json')),
+	sessions = new SessionMemory(join(tmpdir(), 'dsnr-agent-sessions.json')),
+	cloneFolders = new CloneFolderMemory(join(tmpdir(), 'dsnr-clone-folder.json')),
 	cloner = new Cloner(),
 	installer = new Installer(),
 	designLibrary,
-	designSystems = new DesignSystemMemory(join(tmpdir(), 'flock-designer-design-system.json')),
-	storyPreviewsRoot = join(tmpdir(), 'flock-designer-story-previews'),
+	designSystems = new DesignSystemMemory(join(tmpdir(), 'dsnr-design-system.json')),
+	storyPreviewsRoot = join(tmpdir(), 'dsnr-story-previews'),
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
@@ -187,7 +187,7 @@ export const registerIpc = ({
 	 * The product checkout this person has already accepted, or null.
 	 *
 	 * **Discovery deliberately does not feed this.** A repository's own
-	 * `.flkd/workspace.json` is its command allowlist, so a repository that merely
+	 * `.dsnr/workspace.json` is its command allowlist, so a repository that merely
 	 * exists on disk must never become runnable: finding one is a suggestion, and
 	 * accepting it (`useCheckout`, which a click calls) is what trusts it. Only a
 	 * root that went through `openRepository` is remembered here, so the memory file
@@ -203,7 +203,7 @@ export const registerIpc = ({
 		const found = recordsRootFor(productRoot);
 		if (found === null) {
 			throw new Error(
-				`Flock Designer could not find the design repository next to ${basename(productRoot)}. Clone flock-designer into the same folder, beside it.`,
+				`DSNR could not find the design repository next to ${basename(productRoot)}. Clone flock-designer into the same folder, beside it.`,
 			);
 		}
 		return found;
@@ -297,7 +297,7 @@ export const registerIpc = ({
 			// Only ever a repository discovery itself found, so the renderer cannot
 			// name an arbitrary directory and have it trusted.
 			if (!productCheckouts().includes(root)) {
-				throw new Error('That is not a repository Flock Designer found on this machine.');
+				throw new Error('That is not a repository DSNR found on this machine.');
 			}
 			return openRepository(root);
 		}),
@@ -354,7 +354,7 @@ export const registerIpc = ({
 	const planClone = async (repository: string, folder: string): Promise<ClonePlan> => {
 		if (visible.length === 0 && github.state().state === 'signedIn') visible = await visibleRepositories(github);
 		const listed = listedAs(visible, repository);
-		if (listed === undefined) throw new Error(`${repository} is not one of the repositories your GitHub account can see. Sign in to GitHub in Flock Designer, then try again.`);
+		if (listed === undefined) throw new Error(`${repository} is not one of the repositories your GitHub account can see. Sign in to GitHub in DSNR, then try again.`);
 		const design = clonePlace(folder, DESIGN);
 		const place = clonePlace(folder, listed);
 		const home = homedir();
@@ -401,7 +401,7 @@ export const registerIpc = ({
 		}),
 	);
 	/**
-	 * A clone is used on a branch with the Flock Designer setup, since the app reads it from the files there. A clone just
+	 * A clone is used on a branch with the DSNR setup, since the app reads it from the files there. A clone just
 	 * made is moved to the most recently committed branch that has it (it holds nothing of the person's yet); one that
 	 * was already there is the person's, so it is never moved, and they are told which branch to switch it to.
 	 */
@@ -410,9 +410,9 @@ export const registerIpc = ({
 		const here = (await readCheckout(root)).branch ?? 'no branch';
 		const good = (await branchesWithFile(root, DESCRIPTOR_PATH))[0];
 		if (good === undefined) {
-			throw new Error(`Cloned, but no branch of ${repository.split('/')[1]} has the Flock Designer setup (${DESCRIPTOR_PATH}), so it can't be used here yet.`);
+			throw new Error(`Cloned, but no branch of ${repository.split('/')[1]} has the DSNR setup (${DESCRIPTOR_PATH}), so it can't be used here yet.`);
 		}
-		if (!fresh) throw new Error(`${root} is on ${here}, which has no Flock Designer setup. Switch it to ${good}, which has it, then try again.`);
+		if (!fresh) throw new Error(`${root} is on ${here}, which has no DSNR setup. Switch it to ${good}, which has it, then try again.`);
 		await ensureLocalBranch(root, good);
 		await runGit(root, ['checkout', '-q', good]);
 	};
@@ -483,11 +483,11 @@ export const registerIpc = ({
 		if (branch === null) {
 			throw new Error('This repository has a detached HEAD. Check out a branch first.');
 		}
-		// Work is built where the product's Flock Designer setup is. A branch without it (develop, before the
+		// Work is built where the product's DSNR setup is. A branch without it (develop, before the
 		// setup is merged there) would leave the checkout on a branch this app can no longer work in.
 		const setup = `${descriptor.contextDir}/workspace.json`;
 		if (!(await runGit(canonical, ['cat-file', '-e', `refs/heads/${branch}:${setup}`]).then(() => true, () => false))) {
-			throw new Error(`${branch} has no ${setup}, so work cannot start from it. Start from a branch that has the Flock Designer setup.`);
+			throw new Error(`${branch} has no ${setup}, so work cannot start from it. Start from a branch that has the DSNR setup.`);
 		}
 		const recordsRoot = recordsFor(canonical);
 		return written(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch));
@@ -599,7 +599,7 @@ export const registerIpc = ({
 			...(branch !== null ? { work: branch } : {}),
 			...(purpose ? { purpose } : {}),
 			session,
-			name: `Flock Designer: ${projectId}`,
+			name: `DSNR: ${projectId}`,
 		});
 		if (started.state === 'running' && branch !== null) sessions.write(canonical, branch, session);
 		return started;
@@ -902,10 +902,10 @@ export const registerIpc = ({
 		const here = await recordStore().read(path);
 		return here !== null || designClone() === null ? here : designRepo.readFile(path);
 	};
-	/** A shared skill, which the agent's task is built from: read as the flkd command reads it. */
+	/** A shared skill, which the agent's task is built from: read as the dsnr command reads it. */
 	const readSkillText = (path: string): Promise<string> => work.skill(path);
 	/**
-	 * Making prototypes: the same code the flkd command runs from Claude Code, given this app's folder, the repository
+	 * Making prototypes: the same code the dsnr command runs from Claude Code, given this app's folder, the repository
 	 * this person accepted, and this app's store.
 	 */
 	const work = prototypeWork({

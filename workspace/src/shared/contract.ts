@@ -20,7 +20,7 @@ export interface Checkout {
 }
 
 /**
- * What a repository says about itself, read from `.flkd/workspace.json`.
+ * What a repository says about itself, read from `.dsnr/workspace.json`.
  *
  * Workspace hard-codes nothing about Coke. A repository that wants to be opened
  * here declares where its context lives, what may be run, and how a prototype is
@@ -294,7 +294,7 @@ export interface WorkspaceApi {
 	listRepositories(): Promise<Result<Repository[]>>;
 	/** The branches of an opened repository, here or only on GitHub, most recently worked on first: what new work can start from. */
 	listBaseBranches(root: string): Promise<Result<string[]>>;
-	/** Of those, the ones with the Flock Designer setup, which codebase work can start from. */
+	/** Of those, the ones with the DSNR setup, which codebase work can start from. */
 	branchesWithSetup(root: string): Promise<Result<string[]>>;
 	/** Checks out an existing iteration's branch. */
 	continueIteration(root: string, projectId: string, name: string): Promise<Result<Iteration>>;
@@ -307,7 +307,7 @@ export interface WorkspaceApi {
 	 */
 	lastCheckout(): Promise<Result<Checkout | null>>;
 	/**
-	 * A repository found on this machine by its `.flkd/workspace.json`, offered for the
+	 * A repository found on this machine by its `.dsnr/workspace.json`, offered for the
 	 * person to confirm. Finding it grants nothing: nothing may run in it until
 	 * `useCheckout` is called, which is what a click does.
 	 */

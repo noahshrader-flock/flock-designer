@@ -29,15 +29,15 @@ beforeEach(() => {
 	product = mkdtempSync(join(tmpdir(), 'fdw-journey-'));
 	records = mkdtempSync(join(tmpdir(), 'fdw-journey-records-'));
 
-	mkdirSync(join(product, '.flkd'), { recursive: true });
+	mkdirSync(join(product, '.dsnr'), { recursive: true });
 	mkdirSync(join(product, 'src/prototypes'), { recursive: true });
-	writeFileSync(join(product, '.flkd/non-negotiables.md'), '# rules\n');
+	writeFileSync(join(product, '.dsnr/non-negotiables.md'), '# rules\n');
 	writeFileSync(
-		join(product, '.flkd/workspace.json'),
+		join(product, '.dsnr/workspace.json'),
 		JSON.stringify({
 			version: 1,
 			product: 'Test Product',
-			contextDir: '.flkd',
+			contextDir: '.dsnr',
 			prototypeRoot: 'src/prototypes',
 			branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
 			commands: [
@@ -82,7 +82,7 @@ describe('from a request to a running preview', () => {
 		const receipt = await buildContextReceipt(root, descriptor);
 		expect(receipt.product).toBe('Test Product');
 		expect(receipt.designSystem.resolved).toBe('5.5.4');
-		expect(receipt.contextFiles).toContain('.flkd/non-negotiables.md');
+		expect(receipt.contextFiles).toContain('.dsnr/non-negotiables.md');
 		expect(receipt.problems).toEqual([]);
 
 		// 3. Start the codebase work. The branch is made for them.

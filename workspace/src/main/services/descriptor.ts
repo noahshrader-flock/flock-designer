@@ -11,7 +11,7 @@ import { resolveInside } from './paths';
  * descriptor, it cannot be run.
  */
 
-export const DESCRIPTOR_PATH = '.flkd/workspace.json';
+export const DESCRIPTOR_PATH = '.dsnr/workspace.json';
 
 export class DescriptorProblem extends Error {
 	constructor(message: string) {

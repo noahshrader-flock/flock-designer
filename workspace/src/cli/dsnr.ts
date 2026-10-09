@@ -20,7 +20,7 @@ import { buildSite } from '../site/buildSite';
 import { serveSite } from '../site/serveSite';
 
 /**
- * `flkd`: making a prototype from Claude Code in VS Code, with no app running.
+ * `dsnr`: making a prototype from Claude Code in VS Code, with no app running.
  *
  * The same service the app calls, given this machine's paths instead of the app's: the product checkout the agent is
  * working in, the design repository's clone beside it, and the app's own prototype folder, so a prototype made here
@@ -71,12 +71,12 @@ export const ghApi = (): GitHubApi => ({
 
 
 const USAGE = `Usage:
-  flkd new-prototype --project <id> --note <what to make> [--title <project title>] [--from <branch>] [--product <dir>]
-  flkd change-prototype --project <id> --name <v1-i1> --note <what to change> [--product <dir>]
-  flkd save-prototype --project <id> --name <v1-i1> [--product <dir>]
-  flkd build-site [--out <dir>] [--serve]
-  flkd publish --project <id> --name <v1-i1> [--no-open]
-  flkd unpublish --project <id> --name <v1-i1>
+  dsnr new-prototype --project <id> --note <what to make> [--title <project title>] [--from <branch>] [--product <dir>]
+  dsnr change-prototype --project <id> --name <v1-i1> --note <what to change> [--product <dir>]
+  dsnr save-prototype --project <id> --name <v1-i1> [--product <dir>]
+  dsnr build-site [--out <dir>] [--serve]
+  dsnr publish --project <id> --name <v1-i1> [--no-open]
+  dsnr unpublish --project <id> --name <v1-i1>
 
 new-prototype records the next version (v1-i1 for a new project, then v2-i1, v3-i1) and prints the task: where to
 write the prototype and how to check it builds. change-prototype does the same for a change to one: in its version's
@@ -98,7 +98,7 @@ const productOf = async (cwd: string, named: string | undefined): Promise<string
 	} catch {
 		throw new Error(named ? `There is no folder at ${named}.` : 'This is not inside a product repository. Run it from one, or pass --product.');
 	}
-	if (!existsSync(join(root, DESCRIPTOR_PATH))) throw new Error(`${root} has no ${DESCRIPTOR_PATH}, so Flock Designer cannot build prototypes from it.`);
+	if (!existsSync(join(root, DESCRIPTOR_PATH))) throw new Error(`${root} has no ${DESCRIPTOR_PATH}, so DSNR cannot build prototypes from it.`);
 	return root;
 };
 
@@ -253,7 +253,7 @@ const taskText = (lead: string, task: string, save: string, publish: string): st
 		'   It prints the page\'s link, or says why there is none.',
 		'3. Say what you made, as the skill says. End with the page: the link exactly as the command printed it, which version',
 		'   and iteration it is (V1 · I2), and who can open it, in the command\'s words. If it printed no link, say so, and why,',
-		'   in its words, and that the prototype is saved in Flock Designer. Never give a link the command did not print.',
+		'   in its words, and that the prototype is saved in DSNR. Never give a link the command did not print.',
 	].join('\n');
 
 export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
@@ -303,7 +303,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 				}
 			}
 			deps.out(
-				`Saved ${prototypeSourcePath(projectId, name)} and ${prototypePagePath(projectId, name)} in ${designRoot}. It is in Flock Designer (press Sync if the app is already open), which publishes it the next time it is open.`,
+				`Saved ${prototypeSourcePath(projectId, name)} and ${prototypePagePath(projectId, name)} in ${designRoot}. It is in DSNR (press Sync if the app is already open), which publishes it the next time it is open.`,
 			);
 			return 0;
 		}
@@ -356,7 +356,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		deps.out(taskText(`Recorded ${projectId} ${iteration.name}, modelled on ${branch}. Your task follows.`, text, saveCommand(iteration.name), publishCommand(iteration.name)));
 		return 0;
 	} catch (err) {
-		deps.err(err instanceof UsageError ? `${err.message}\n\n${USAGE}` : `flkd: ${err instanceof Error ? err.message : String(err)}`);
+		deps.err(err instanceof UsageError ? `${err.message}\n\n${USAGE}` : `dsnr: ${err instanceof Error ? err.message : String(err)}`);
 		return err instanceof UsageError ? 2 : 1;
 	}
 };

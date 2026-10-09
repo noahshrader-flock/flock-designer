@@ -2,7 +2,7 @@
 
 **Product-agnostic.** Using correct components does not make a layout good. A product's own Flock-tier
 standard — its density, spacing and layout conventions — **overrides anything here**, and lives in
-that product's `.flkd/standards/flock/`.
+that product's `.dsnr/standards/flock/`.
 
 ## Rhythm
 

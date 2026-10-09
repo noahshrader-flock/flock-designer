@@ -198,13 +198,13 @@ describe('a repository with no clone on this machine', () => {
 		let cloned = false;
 		await open({
 			clonePlan: async () => ok(cloned ? { ...PLAN, place: { state: 'cloned', path: '/h/GitHub/flock-ops' } } : PLAN),
-			cloneRepository: async () => ((cloned = true), fail("Cloned, but no branch of flock-ops has the Flock Designer setup (.flkd/workspace.json), so it can't be used here yet.")),
+			cloneRepository: async () => ((cloned = true), fail("Cloned, but no branch of flock-ops has the DSNR setup (.dsnr/workspace.json), so it can't be used here yet.")),
 		});
 		await chooseRepository('flocksafety/flock-ops');
 		await press(button('Clone repository'));
 		await settle();
 		expect(text()).toContain('Already in ~/GitHub/flock-ops');
-		expect(text()).toContain('no branch of flock-ops has the Flock Designer setup');
+		expect(text()).toContain('no branch of flock-ops has the DSNR setup');
 		expect(() => button(/Clone repository|Use repository/)).toThrow(/0 buttons/);
 	});
 

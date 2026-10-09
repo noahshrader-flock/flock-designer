@@ -4,7 +4,7 @@ import { DescriptorProblem, findCommand, parseDescriptor } from '../src/main/ser
 const valid = {
 	version: 1,
 	product: 'Coke',
-	contextDir: '.flkd',
+	contextDir: '.dsnr',
 	prototypeRoot: 'src/prototypes',
 	branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
 	commands: [

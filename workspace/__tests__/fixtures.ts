@@ -6,15 +6,15 @@ import { join } from 'node:path';
 
 export const g = (root: string, ...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
 
-/** The Flock Designer setup file a product repository carries, written into `dir`. Its design system is called x. */
+/** The DSNR setup file a product repository carries, written into `dir`. Its design system is called x. */
 export const makeProductFiles = (dir: string, commands: unknown[] = []) => {
-	mkdirSync(join(dir, '.flkd'), { recursive: true });
+	mkdirSync(join(dir, '.dsnr'), { recursive: true });
 	writeFileSync(
-		join(dir, '.flkd', 'workspace.json'),
+		join(dir, '.dsnr', 'workspace.json'),
 		JSON.stringify({
 			version: 1,
 			product: 'Test Product',
-			contextDir: '.flkd',
+			contextDir: '.dsnr',
 			prototypeRoot: 'src/prototypes',
 			branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
 			commands,
@@ -23,7 +23,7 @@ export const makeProductFiles = (dir: string, commands: unknown[] = []) => {
 	);
 };
 
-/** A product repository Flock Designer can open, on `develop`, with one commit. Its design system is called x. */
+/** A product repository DSNR can open, on `develop`, with one commit. Its design system is called x. */
 export const makeProduct = (dir: string, commands: unknown[] = []) => {
 	makeProductFiles(dir, commands);
 	g(dir, 'init', '-q', '-b', 'develop');

@@ -7,7 +7,7 @@ import { g, makeProduct } from './fixtures';
 
 /**
  * What work starts from (C4 of the clone plan), in a fresh clone: most of its branches are only on GitHub, and only
- * some carry the Flock Designer setup.
+ * some carry the DSNR setup.
  */
 
 let root: string;
@@ -25,7 +25,7 @@ beforeEach(() => {
 	makeProduct(source);
 	g(source, 'checkout', '-q', '--orphan', 'plain');
 	g(source, 'rm', '-rq', '--cached', '.');
-	rmSync(join(source, '.flkd'), { recursive: true });
+	rmSync(join(source, '.dsnr'), { recursive: true });
 	commit(source, 'README.md', 'plain');
 	g(source, 'checkout', '-q', 'develop');
 	g(source, 'checkout', '-q', '-b', 'noah/work');
@@ -43,7 +43,7 @@ describe('the branches work can start from', () => {
 	});
 
 	it('are told apart by whether they carry the setup file, asked of git once', async () => {
-		expect((await branchesWithFile(clone, '.flkd/workspace.json')).sort()).toEqual(['develop', 'noah/work']);
+		expect((await branchesWithFile(clone, '.dsnr/workspace.json')).sort()).toEqual(['develop', 'noah/work']);
 	});
 });
 

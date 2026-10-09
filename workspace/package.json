@@ -1,5 +1,7 @@
 {
-	"name": "flock-designer",
+	"name": "dsnr",
+	"productName": "DSNR",
+	"settingsFolder": "flock-designer",
 	"version": "0.1.0",
 	"private": true,
 	"description": "Local coordination layer over real Flock product repositories.",

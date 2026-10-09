@@ -1,7 +1,7 @@
 # Start or change a prototype from Claude Code
 
 **Shared by every product.** For an agent in Claude Code, in a product repository, asked for a prototype or for a
-change to one. The app is not needed: this uses the same code the app runs, so the work appears in Flock Designer like
+change to one. The app is not needed: this uses the same code the app runs, so the work appears in DSNR like
 any other. Started from the app, a prototype never needs this file.
 
 ## Start it
@@ -9,7 +9,7 @@ any other. Started from the app, a prototype never needs this file.
 From the product repository, run:
 
 ```bash
-node ../flock-designer/workspace/bin/flkd.mjs new-prototype --project <id> --title "<project title>" --note "<what they asked for>"
+node ../flock-designer/workspace/bin/dsnr.mjs new-prototype --project <id> --title "<project title>" --note "<what they asked for>"
 ```
 
 - **`<id>`** is the project's folder in `../flock-designer/projects/`: the existing one when this continues a
@@ -35,7 +35,7 @@ If it says something must be installed first, tell the person what, and stop.
 When asked to change a prototype that exists (a refinement of the same idea, not a different one), run:
 
 ```bash
-node ../flock-designer/workspace/bin/flkd.mjs change-prototype --project <id> --name <v1-i1> --note "<what they asked to change>"
+node ../flock-designer/workspace/bin/dsnr.mjs change-prototype --project <id> --name <v1-i1> --note "<what they asked to change>"
 ```
 
 - **`--name`** is any iteration of the version to change; the change goes in that version's newest iteration.
@@ -61,5 +61,5 @@ repository is.
 ## Taking a page down
 
 Only when the person asks for an iteration to come off its page:
-`node ../flock-designer/workspace/bin/flkd.mjs unpublish --project <id> --name <v1-i2>`. It removes the saved page and
+`node ../flock-designer/workspace/bin/dsnr.mjs unpublish --project <id> --name <v1-i2>`. It removes the saved page and
 source, pushes, and deploys the site without it; the record and comments stay. Pass on what it printed.
