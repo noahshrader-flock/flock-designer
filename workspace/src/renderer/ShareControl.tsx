@@ -1,4 +1,4 @@
-import { CircleCheckIcon, CodeIcon, FileTextIcon, GitBranchIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
+import { CodeIcon, FileTextIcon, GitBranchIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared/contract';
 import { projectCodeLink, recordLabel } from '../shared/projects';
@@ -29,7 +29,6 @@ export const ShareControl = ({
 	onOpenInBrowser,
 	prototype = false,
 	onMoveToCode,
-	selection,
 	editor,
 	onViewRecord,
 }: {
@@ -43,8 +42,6 @@ export const ShareControl = ({
 	prototype?: boolean;
 	/** Offered when there is a product repository here to build it in. */
 	onMoveToCode?: () => void;
-	/** A prototype's version, and whether it is the project's selected one, to select it or not. */
-	selection?: { version: number; selected: boolean; onToggle: () => void };
 	/** Codebase work, handed to the person's editor: the checkout, and the agent's conversation when there is one. */
 	editor?: { editor: boolean; session: boolean; openInEditor: () => unknown; continueInClaude: () => unknown };
 	/** Opens one of the project's documents (`project.records`), which are the last group in the menu. */
@@ -68,7 +65,6 @@ export const ShareControl = ({
 	// The menu's two groups: what you do to the work, then where you look at it.
 	const canMove = prototype && onMoveToCode;
 	const canShare = checkout && !prototype;
-	const canSelect = prototype && selection;
 	// Where the project's codebase work is on GitHub, and its documents: always there, whether or not the page is up.
 	const builtInCode = projectCodeLink(project);
 	const records = onViewRecord !== undefined ? project.records : [];
@@ -111,12 +107,6 @@ export const ShareControl = ({
 					{/* What can be done with the work needs its page up; the documents do not. */}
 					{canOpen && (
 						<>
-							{canSelect && (
-								<DropdownMenuItem onSelect={selection.onToggle}>
-									<CircleCheckIcon />
-									{selection.selected ? `Unselect V${selection.version}` : `Select V${selection.version}`}
-								</DropdownMenuItem>
-							)}
 							{canMove && (
 								<DropdownMenuItem onSelect={onMoveToCode}>
 									<CodeIcon />
@@ -136,7 +126,7 @@ export const ShareControl = ({
 								</DropdownMenuItem>
 							)}
 							{/* No line when the first group is empty. */}
-							{(canSelect || canMove || canShare) && <DropdownMenuSeparator />}
+							{(canMove || canShare) && <DropdownMenuSeparator />}
 							{editor && (
 								<DropdownMenuItem onSelect={editor.openInEditor}>
 									<SquareTerminalIcon />

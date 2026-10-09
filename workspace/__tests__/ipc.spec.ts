@@ -670,7 +670,7 @@ describe('prototypes', () => {
 			expect(githubApi.mock.calls.every(([, init]) => !(init as { method?: string } | undefined)?.method)).toBe(true);
 		});
 
-		it('publishes once more when asked again while it runs, so a version selected meanwhile is not missed', async () => {
+		it('publishes once more when asked again while it runs, so a change saved meanwhile is not missed', async () => {
 			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
 			const asked = () => githubApi.mock.calls.filter(([path]) => path === '/repos/noahshrader-flock/flock-designer').length;
 			githubApi.mockImplementation(async (path: string) => {
@@ -683,7 +683,8 @@ describe('prototypes', () => {
 			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 			writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<h1>Demo</h1>');
 			await call(CHANNELS.savePrototype, 'demo', 'v1-i1');
-			await call(CHANNELS.selectVersion, 'demo', 1);
+			// Saved again while the first publish runs.
+			await call(CHANNELS.savePrototype, 'demo', 'v1-i1');
 			for (let i = 0; i < 50 && asked() < 2; i++) await new Promise((r) => setTimeout(r, 10));
 			expect(asked()).toBe(2);
 		});
@@ -959,20 +960,6 @@ describe('prototypes', () => {
 		// Kept beside the projects, never listed as one.
 		const listed = await call(CHANNELS.listProjects);
 		expect((listed.value as { id: string }[]).map((p) => p.id)).not.toContain('_shared');
-	});
-
-	it('select a version in its own file in the design repository, read it back, and refuse one the project does not have', async () => {
-		await call(CHANNELS.useCheckout, product);
-		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-		expect((await call(CHANNELS.selectedVersion, 'demo')).value).toBeNull();
-		expect(await call(CHANNELS.selectVersion, 'demo', 1)).toEqual({ ok: true, value: null });
-		expect(JSON.parse(readFileSync(join(design, 'projects', 'demo', 'selected.json'), 'utf8'))).toEqual({ version: 1 });
-		expect((await call(CHANNELS.selectedVersion, 'demo')).value).toBe(1);
-		expect((await call(CHANNELS.selectVersion, 'demo', 3)).ok).toBe(false);
-		expect((await call(CHANNELS.selectVersion, 'demo', 1.5)).ok).toBe(false);
-		expect((await call(CHANNELS.selectVersion, '../x', 1)).ok).toBe(false);
-		await call(CHANNELS.selectVersion, 'demo', null);
-		expect((await call(CHANNELS.selectedVersion, 'demo')).value).toBeNull();
 	});
 
 	describe('Build in the codebase, handed to Claude Code', () => {

@@ -468,23 +468,19 @@ describe('Build', () => {
 	});
 });
 
-describe('the selected version', () => {
+describe('there is no selected version', () => {
 	const prototypes = ['v2-i2', 'v2-i1', 'v1-i1'].map((name) => ({ ...PROTOTYPE, name, branch: `prototype/demo/${name}` }));
 
-	it('is chosen from the menu, and unchosen', async () => {
+	it('so More has nothing to select or unselect, and the app asks nothing of the kind', async () => {
 		const app = fakeApp();
-		await open(app);
-		await press(menuItem(await openMenu(button('More')), 'Select V1'));
-		await settle();
-		expect(app.calls.selectVersion?.[0]).toEqual(['demo', 1]);
-		await press(menuItem(await openMenu(button('More')), 'Unselect V1'));
-		await settle();
-		expect(app.calls.selectVersion?.[1]).toEqual(['demo', null]);
+		await open(app, { project: { ...PROJECT, iterations: prototypes } });
+		const names = (await openMenu(button('More'))).map((i) => i.textContent?.trim());
+		expect(names.join('|')).not.toMatch(/Select|Unselect/);
+		expect(app.calls.selectedVersion).toBeUndefined();
 	});
 
-	it('is where Build in the codebase starts, from its newest iteration, wherever the screen is', async () => {
+	it('and Build is on the prototype being looked at, not on some other version', async () => {
 		const app = fakeApp({
-			selectedVersion: async () => ok(2),
 			agentReadiness: async () => ok({ state: 'ready' }),
 			branchesWithSetup: async () => ok(['develop']),
 			moveToCodePlan: async () => ok({ branch: 'feature/demo', exists: false, recorded: false, started: false, repository: 'flock-coke', basedOn: null, current: 'develop', clean: true }),
@@ -492,8 +488,8 @@ describe('the selected version', () => {
 		await open(app, { project: { ...PROJECT, iterations: prototypes } });
 		await press(menuItem(await openMenu(button('More')), 'Build'));
 		await settle();
-		expect(document.body.textContent).toContain('This moves V2 · I2 into flock-coke');
-		expect(app.calls.moveToCodePlan?.[0]).toEqual(['/c/flock-coke', 'demo', 'v2-i2']);
+		expect(document.body.textContent).toContain('This moves V1 · I1 into flock-coke');
+		expect(app.calls.moveToCodePlan?.[0]).toEqual(['/c/flock-coke', 'demo', 'v1-i1']);
 	});
 });
 

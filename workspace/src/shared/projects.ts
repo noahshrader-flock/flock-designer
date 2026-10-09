@@ -243,23 +243,6 @@ export const prototypeKey = (projectId: string, name: string): string => `${PROT
 export const projectPath = (projectId: string, file: string): string => `projects/${projectId}/${file}`;
 /** Where a prototype's page is kept in the design repository. */
 export const prototypePagePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.html`);
-/**
- * The version a project's team has chosen, which its site's `latest` leads to and Build in the codebase starts from.
- * Kept in its own file, so choosing one never touches the iterations' records.
- */
-export const selectedVersionPath = (projectId: string): string => projectPath(projectId, 'selected.json');
-/** A version's number: a whole number from 1. */
-export const isVersion = (n: unknown): n is number => Number.isSafeInteger(n) && (n as number) > 0;
-/** The file's version, or null when there is none, or it is anything else. */
-export const parseSelectedVersion = (text: string | null): number | null => {
-	try {
-		const version: unknown = text === null ? null : (JSON.parse(text) as { version?: unknown }).version;
-		return isVersion(version) ? version : null;
-	} catch {
-		return null;
-	}
-};
-export const selectedVersionText = (version: number | null): string => `${JSON.stringify({ version }, null, 2)}\n`;
 /** Its React source, kept beside the page. */
 export const prototypeSourcePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.tsx`);
 /**

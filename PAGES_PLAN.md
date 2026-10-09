@@ -27,8 +27,8 @@ through engineering's pull requests and previews.
 3. **The agent that makes a prototype hands back the link,** from the app or from Claude Code, and nobody has to
    remember a step. Built (M2, M6).
 4. **A prototype always has a page, and the page follows the project:**
-   `/<project>/`, `/<project>/v1/i2/`, `/<project>/v1/latest/`, and `/<project>/latest/` (the selected version's newest
-   iteration, or the newest version's). **A version is a different idea; an iteration is a refinement of one.**
+   `/<project>/`, `/<project>/v1/i2/`, `/<project>/v1/latest/`, and `/<project>/latest/` (the newest
+   version's newest iteration). **A version is a different idea; an iteration is a refinement of one.**
 
 ## Where things stand
 
@@ -37,11 +37,11 @@ through engineering's pull requests and previews.
 | M1 versions, M2 commands without the app, M3 Address starts the next iteration, M4 one comments experience, M5a the site, M5b publish, M6 the agent hands back the link | **Done** (2026-10-08) |
 | M7 comments on the page, M8 the round trip proved by a test | **Built, then paused** with M9: the page's **Sign in to comment** button says to comment in the app for now |
 | M9 sign-in for everyone | **Decided; waiting on Noah's approvals** |
-| M10 the smaller things | **Built:** selected version, unpublish, "Built in code" link, the viewer on a phone. **Paused with M9:** the comment-related parts |
+| M10 the smaller things | **Built:** unpublish, "Built in code" link, the viewer on a phone (a selected version was built and removed on 2026-10-09). **Paused with M9:** the comment-related parts |
 | M0 the asks | **In progress, Noah** |
 
 The site is live and public while the repository is: `https://noahshrader-flock.github.io/flock-designer/`. It does
-**not** yet have the M10 changes (selected version, "Built in code", the phone layout); redeploy when wanted.
+**not** yet have the M10 changes ("Built in code", the phone layout); redeploy when wanted.
 
 ## What is still known to bind
 
