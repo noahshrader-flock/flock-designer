@@ -293,3 +293,15 @@ describe.skipIf(!hasBranch)('changing the real library’s tokens (T3)', () => {
 		}
 	});
 });
+
+describe.skipIf(!hasBranch)('reading the real library’s files exactly', () => {
+	it('gives each file as committed, white space at its ends and all, read alone or with the stories', async () => {
+		const real = libraryReads(REAL, `refs/remotes/origin/${FUI.branch}`);
+		const files = await real.listFiles('');
+		const story = files.find((f) => /FSButton\.stories\.tsx$/.test(f)) as string;
+		for (const path of ['src/colors/tones/neutral.ts', story]) {
+			const exact = execFileSync('git', ['-C', REAL, 'show', `refs/remotes/origin/${FUI.branch}:${path}`], { encoding: 'utf8' });
+			expect(await real.readFile(path)).toBe(exact);
+		}
+	});
+});

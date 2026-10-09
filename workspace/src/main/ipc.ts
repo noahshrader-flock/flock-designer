@@ -30,7 +30,7 @@ import { AGENT_BUSY, type AgentExtras, AgentRunner, agentReadiness, locateClaude
 import { SessionMemory, findEditor, openFolder, openPrompt, openSession, resumeCommand, startCommand } from './services/editor';
 import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, codebaseWorkPreamble, commandLine, handoffTask } from './services/engineeringHandoff';
 import { lastVerdict } from '../shared/handoff';
-import { type ShareRunner, previewIsUp, pullRequestText } from './services/share';
+import { type ShareRunner, type ShareTools, previewIsUp, pullRequestText } from './services/share';
 import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
 import { DESCRIPTOR_PATH, findCommand, readDescriptor } from './services/descriptor';
@@ -43,6 +43,7 @@ import { DesignSystemsMemory } from './services/designSystems';
 import { ProfileNames } from './services/profileNames';
 import { StoryPreviews } from './services/storyPreviews';
 import { tokenEditsOf } from './services/tokenEdits';
+import { TokenBranches } from './services/tokenBranches';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, listedAs, mergeRepositories, originOf, reachableRepositories } from './services/repositories';
@@ -149,6 +150,9 @@ export interface IpcContext {
 	personGitHub?: Pick<GitHubSession, 'api'> | null;
 	/** Where the previews of the library's stories are built: the app's own folder, never the library's. */
 	storyPreviewsRoot?: string;
+	/** Which branch each design system's change to its tokens is kept on (T4); and the GitHub tools it is proposed with. */
+	tokenBranchesFile?: string;
+	tokenBranchTools?: (root: string) => ShareTools;
 }
 
 export const registerIpc = ({
@@ -172,6 +176,8 @@ export const registerIpc = ({
 	designSystems = new DesignSystemsMemory(join(tmpdir(), 'dsnr-design-system.json')),
 	personGitHub = ghApi(),
 	storyPreviewsRoot = join(tmpdir(), 'dsnr-story-previews'),
+	tokenBranchesFile = join(tmpdir(), 'dsnr-token-branches.json'),
+	tokenBranchTools = (root: string) => realShareTools(root),
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
@@ -323,16 +329,18 @@ export const registerIpc = ({
 	// The window says only whether to wait for the update; where the design system is, it is never told and never asks.
 	const library = designLibrary ?? new DesignLibrary({ systems: designSystems });
 	ipcMain.handle(CHANNELS.designSystemCatalog, guard((refresh: unknown) => library.catalog(refresh === true)));
-	const previews = new StoryPreviews({
-		system: () => {
-			const shown = library.current();
-			return typeof shown === 'string' ? null : shown;
-		},
-		folder: storyPreviewsRoot,
-		server: prototypeServer,
-	});
-	// A change to try is only ever a list of token edits, checked here and again before anything is written (T3).
+	const shownSystem = () => {
+		const shown = library.current();
+		return typeof shown === 'string' ? null : shown;
+	};
+	const previews = new StoryPreviews({ system: shownSystem, folder: storyPreviewsRoot, server: prototypeServer });
+	// A change is only ever a list of token edits, checked here and again before anything is written (T3, T4).
 	ipcMain.handle(CHANNELS.storyPreview, guard((edits: unknown) => previews.preview(tokenEditsOf(edits))));
+	const tokenBranches = new TokenBranches({ system: shownSystem, file: tokenBranchesFile, tools: tokenBranchTools });
+	ipcMain.handle(CHANNELS.tokenBranch, guard(() => tokenBranches.current()));
+	ipcMain.handle(CHANNELS.saveTokens, guard((edits: unknown) => tokenBranches.save(tokenEditsOf(edits))));
+	ipcMain.handle(CHANNELS.proposeTokens, guard(() => tokenBranches.propose()));
+	ipcMain.handle(CHANNELS.forgetTokenBranch, guard(() => (tokenBranches.forget(), null)));
 	ipcMain.handle(CHANNELS.designSystems, guard(() => designSystems.read()));
 	ipcMain.handle(CHANNELS.selectDesignSystem, guard((id: string) => (designSystems.select(String(id)), null)));
 	ipcMain.handle(CHANNELS.removeDesignSystem, guard((id: string) => (designSystems.remove(String(id)), null)));

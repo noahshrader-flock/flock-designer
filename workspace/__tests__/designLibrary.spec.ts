@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Catalog, ConnectedDesignSystem } from '../src/shared/contract';
-import { DesignLibrary, fetchProblem, readLibrary, updateLibrary } from '../src/main/services/designLibrary';
+import { DesignLibrary, fetchProblem, libraryReads, readLibrary, updateLibrary } from '../src/main/services/designLibrary';
 import { DesignSystemsMemory } from '../src/main/services/designSystems';
 import { g } from './fixtures';
 
@@ -245,3 +245,25 @@ describe('what the tab is told', () => {
 	});
 });
 
+
+describe('reading the library’s files exactly', () => {
+	it('gives every file as committed, with the white space at its ends, alone or as the last of a batch of stories', async () => {
+		const dir = mkdtempSync(join(tmpdir(), 'dsnr-exact-'));
+		try {
+			g(dir, 'init', '-q', '-b', 'develop');
+			const files = { 'src/a.stories.tsx': 'export const A = 1;\n\n', 'src/b.stories.tsx': '\n  export const B = 2;\n\n', 'src/theme.ts': 'export const t = 1;\n' };
+			for (const [path, text] of Object.entries(files)) {
+				mkdirSync(dirname(join(dir, path)), { recursive: true });
+				writeFileSync(join(dir, path), text);
+			}
+			g(dir, 'add', '-A');
+			g(dir, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'files');
+			const reads = libraryReads(dir, 'develop');
+			// Listing reads every story in one batch; the theme file is read on its own.
+			await reads.listFiles('');
+			for (const [path, text] of Object.entries(files)) expect(await reads.readFile(path)).toBe(text);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+});

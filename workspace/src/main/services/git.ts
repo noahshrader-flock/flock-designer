@@ -42,7 +42,7 @@ const attempt = async (root: string, args: string[], timeoutMs?: number, env?: R
 	// What a command reads from its input (`cat-file --batch-check`), given all at once.
 	if (input !== undefined) running.child.stdin?.end(input);
 	const { stdout } = await running;
-	return stdout.trim();
+	return stdout;
 };
 
 /**
@@ -53,7 +53,7 @@ const attempt = async (root: string, args: string[], timeoutMs?: number, env?: R
  * to this", and deleting one under a live process corrupts the index. The error says what
  * to check instead.
  */
-const git = (root: string, args: string[], timeoutMs?: number, env?: Record<string, string>, input?: string): Promise<string> => {
+const queued = (root: string, args: string[], timeoutMs?: number, env?: Record<string, string>, input?: string): Promise<string> => {
 	const run1 = async (): Promise<string> => {
 		let lastDetail = '';
 		for (let i = 0; i < 4; i++) {
@@ -75,6 +75,16 @@ const git = (root: string, args: string[], timeoutMs?: number, env?: Record<stri
 	queues.set(key, result.catch(() => undefined));
 	return result;
 };
+
+/** Git, its output trimmed: for a command that prints a value (a commit, a branch, a count). */
+const git = (root: string, args: string[], timeoutMs?: number, env?: Record<string, string>, input?: string): Promise<string> =>
+	queued(root, args, timeoutMs, env, input).then((out) => out.trim());
+
+/**
+ * Git, its output exactly as printed: for a file's contents, whose white space at either end is the file's own. A file
+ * read trimmed and written back would lose its last newline.
+ */
+export const gitExact = queued;
 
 export const isRepository = (root: string): boolean => existsSync(join(root, '.git'));
 

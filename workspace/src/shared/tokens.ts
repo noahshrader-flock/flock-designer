@@ -18,6 +18,32 @@ export const lengthParts = (value: string): { number: number; unit: 'px' | 'rem'
 	return m ? { number: Number(m[1]), unit: m[2] as 'px' | 'rem' | 'em' } : null;
 };
 
+/** A token as a person names it: `primary main`, `pineGreen 50`. */
+export const nameOf = (t: DesignToken): string => `${t.set} ${t.name}`;
+
+/** A token named with where it is shown: `Light primary main`, `Tones pineGreen 50`, `Radius base` (not `Radius radius base`). */
+export const labelOf = (t: DesignToken): string => (t.set.toLowerCase() === t.group.toLowerCase() ? `${t.group} ${t.name}` : `${t.group} ${nameOf(t)}`);
+
+/** What a token reads as, in a word: the token it points at (`pineGreen 40`), or its value (`12px`). */
+export const readsAs = (t: DesignToken, byPath: Map<string, DesignToken>): string => {
+	const pointed = t.ref && byPath.get(t.ref.path);
+	return pointed ? nameOf(pointed) : t.value;
+};
+
+/**
+ * A change in words, one line for each token edited: `Light primary main: pineGreen 50 → pineGreen 40`. What the panel lists,
+ * and what a save's commit and its pull request say.
+ */
+export const describeChange = (tokens: DesignToken[], edits: TokenEdit[]): string[] => {
+	const read = new Map(tokens.map((t) => [t.path, t]));
+	const changed = new Map(withEdits(tokens, edits).map((t) => [t.path, t]));
+	return edits.flatMap((e) => {
+		const was = read.get(e.path);
+		const now = changed.get(e.path);
+		return was && now ? [`${labelOf(was)}: ${readsAs(was, read)} → ${readsAs(now, changed)}`] : [];
+	});
+};
+
 /** Whether `value` is one a token of this kind can be given. */
 export const fitsKind = (kind: DesignToken['kind'], value: string): boolean => (kind === 'color' ? HEX_COLOR : DIMENSION).test(value);
 

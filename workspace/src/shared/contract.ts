@@ -297,6 +297,21 @@ export type TokenChange = { ref: string } | { value: string };
 /** One token changed. A change is a list of these, one per token, and nothing else. */
 export type TokenEdit = { path: string } & TokenChange;
 
+/**
+ * Where a change to the tokens is kept (T4 and T5): a branch of the library DSNR made for it, each save one commit on it,
+ * and the draft pull request it is proposed in once it is.
+ */
+export interface TokenBranch {
+	/** The branch, always `dsnr/tokens-…`: DSNR writes to no other. */
+	branch: string;
+	/** The library's commit the change is made on, and the change as last saved. */
+	base: string;
+	saved: TokenEdit[];
+	saves: number;
+	/** The draft pull request, and Chromatic's build of it once the library's CI has linked one. */
+	pullRequest: { number: number; url: string; chromatic: string | null } | null;
+}
+
 /** Something in the library's token files that is not read, with where it is. */
 export interface TokenProblem {
 	file: string;
@@ -423,6 +438,14 @@ export interface WorkspaceApi {
 	 * same stories built with those tokens changed (T3), written nowhere; with none, as the branch has them.
 	 */
 	storyPreview(edits: TokenEdit[]): Promise<Result<StoryPreview>>;
+	/** The branch a change to the shown design system's tokens is kept on, or null when none has been saved (T4). */
+	tokenBranch(): Promise<Result<TokenBranch | null>>;
+	/** Saves the change as one commit on its branch, made on the first save; pushed when it is proposed (T4). */
+	saveTokens(edits: TokenEdit[]): Promise<Result<TokenBranch>>;
+	/** Pushes the branch and opens a draft pull request for it, or says the one already open (T5). */
+	proposeTokens(): Promise<Result<TokenBranch>>;
+	/** Forgets the branch, to start a new change: the branch and any pull request stay where they are. */
+	forgetTokenBranch(): Promise<Result<null>>;
 	/** Where this person's clones go: the folder they chose, or the default. */
 	cloneFolder(): Promise<Result<string>>;
 	/** Asks for the clone folder with the system's folder picker, and keeps it. Null if the person cancels. */
@@ -875,6 +898,10 @@ export const CHANNELS = {
 	selectDesignSystem: 'workspace:selectDesignSystem',
 	removeDesignSystem: 'workspace:removeDesignSystem',
 	storyPreview: 'workspace:storyPreview',
+	tokenBranch: 'workspace:tokenBranch',
+	saveTokens: 'workspace:saveTokens',
+	proposeTokens: 'workspace:proposeTokens',
+	forgetTokenBranch: 'workspace:forgetTokenBranch',
 	cloneFolder: 'workspace:cloneFolder',
 	chooseCloneFolder: 'workspace:chooseCloneFolder',
 	clonePlan: 'workspace:clonePlan',

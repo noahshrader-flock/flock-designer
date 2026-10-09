@@ -182,6 +182,14 @@ describe('the Design System tab', () => {
 		expect(await call(CHANNELS.storyPreview, [{ path: 'spacing', value: 6 }])).toMatchObject({ ok: false });
 	});
 
+	it('has no branch for a change to the tokens when there is no design system, saves and proposes nothing, and takes only edits', async () => {
+		expect(await call(CHANNELS.tokenBranch)).toEqual({ ok: true, value: null });
+		expect(await call(CHANNELS.saveTokens, [{ path: 'spacing', value: '6px' }])).toMatchObject({ ok: false, error: expect.stringContaining('no design system connected') });
+		expect(await call(CHANNELS.saveTokens, '/etc')).toMatchObject({ ok: false, error: expect.stringContaining('list of token edits') });
+		expect(await call(CHANNELS.proposeTokens)).toMatchObject({ ok: false, error: expect.stringContaining('Save the change to a branch first') });
+		expect(await call(CHANNELS.forgetTokenBranch)).toEqual({ ok: true, value: null });
+	});
+
 	describe('connecting one (P4)', () => {
 		const commitAll = (d: string) => {
 			g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'add', '.');

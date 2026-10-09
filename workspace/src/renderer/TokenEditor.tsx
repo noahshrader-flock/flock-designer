@@ -2,7 +2,9 @@ import { RotateCcwIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { DesignToken } from '../shared/contract';
 import { plural } from '../shared/plural';
-import { AA_TEXT, contrastPartner, contrastRatio, lengthParts, pointingAt, writtenWith } from '../shared/tokens';
+import { AA_TEXT, contrastPartner, contrastRatio, lengthParts, pointingAt, readsAs, writtenWith } from '../shared/tokens';
+import { TokenBranchActions } from './TokenBranchActions';
+import type { TokenBranchControls } from './useTokenBranch';
 import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -221,45 +223,48 @@ export const TokenEditor = ({ token }: { token: DesignToken }) => {
 
 /**
  * What has been changed, above the tabs: each change, from what the library has to what it is now, with a reset for each
- * and for all. Nothing is saved; on the list there is nothing live, so it says to open a component.
+ * and for all, then what can be done with it (`TokenBranchActions`): saved to a branch, and proposed. It stays while a
+ * branch is kept, even with nothing changed, so a branch can still be proposed or left.
  */
-export const ChangedTokens = ({ live }: { live: boolean }) => {
-	const { edits, read, byPath, target, change, clear } = useTokenChanges();
-	if (edits.length === 0) return null;
-	/** How a token reads, in a word: what it points at, or its value. */
-	const valueOf = (t: DesignToken) => {
-		const pointed = target(t);
-		return pointed ? nameOf(pointed) : t.value;
-	};
+export const ChangedTokens = ({ live, branch }: { live: boolean; branch: TokenBranchControls }) => {
+	const { edits, read, byPath, change, clear } = useTokenChanges();
+	if (edits.length === 0 && branch.branch === null) return null;
 	return (
 		<section aria-label="Changed" data-changed-tokens className="flex flex-col gap-2 border-b p-4">
 			<div className="flex items-center justify-between">
 				<h3 className="text-sm font-semibold">
 					Changed <span className="text-muted-foreground font-normal">{edits.length}</span>
 				</h3>
-				<Button variant="ghost" size="sm" className="-mr-2" onClick={clear}>
-					Reset all
-				</Button>
+				{edits.length > 0 && (
+					<Button variant="ghost" size="sm" className="-mr-2" onClick={clear}>
+						Reset all
+					</Button>
+				)}
 			</div>
-			<ul className="flex flex-col">
-				{edits.map((e) => {
-					const was = read.get(e.path) as DesignToken;
-					const now = byPath.get(e.path) as DesignToken;
-					return (
-						<li key={e.path} data-change={e.path} className="flex items-center gap-2 py-1 text-sm">
-							{now.kind === 'color' && <Swatch value={now.value} />}
-							<span className="min-w-0 truncate">{labelOf(was)}</span>
-							<span className="text-muted-foreground ml-auto shrink-0 font-mono text-xs">
-								{valueOf(was)} → {valueOf(now)}
-							</span>
-							<Button variant="ghost" size="icon-sm" aria-label={`Reset ${labelOf(was)}`} onClick={() => change(was, null)}>
-								<RotateCcwIcon />
-							</Button>
-						</li>
-					);
-				})}
-			</ul>
-			<p className="text-muted-foreground text-xs">{live ? 'Tried in the previews. Nothing is saved.' : 'Open a component to see them. Nothing is saved.'}</p>
+			{edits.length === 0 ? (
+				<p className="text-muted-foreground text-sm">Every token is as the library has it.</p>
+			) : (
+				<ul className="flex flex-col">
+					{edits.map((e) => {
+						const was = read.get(e.path) as DesignToken;
+						const now = byPath.get(e.path) as DesignToken;
+						return (
+							<li key={e.path} data-change={e.path} className="flex items-center gap-2 py-1 text-sm">
+								{now.kind === 'color' && <Swatch value={now.value} />}
+								<span className="min-w-0 truncate">{labelOf(was)}</span>
+								<span className="text-muted-foreground ml-auto shrink-0 font-mono text-xs">
+									{readsAs(was, read)} → {readsAs(now, byPath)}
+								</span>
+								<Button variant="ghost" size="icon-sm" aria-label={`Reset ${labelOf(was)}`} onClick={() => change(was, null)}>
+									<RotateCcwIcon />
+								</Button>
+							</li>
+						);
+					})}
+				</ul>
+			)}
+			{edits.length > 0 && <p className="text-muted-foreground text-xs">{live ? 'Tried in the previews.' : 'Open a component to see them.'}</p>}
+			<TokenBranchActions controls={branch} />
 		</section>
 	);
 };

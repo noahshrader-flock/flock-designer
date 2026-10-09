@@ -12,6 +12,7 @@ import { ResizablePanel } from './ResizablePanel';
 import { SearchSelect } from './SearchSelect';
 import { SyncButton } from './SyncButton';
 import { TokensPanel } from './TokensPanel';
+import { useTokenBranch } from './useTokenBranch';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
@@ -138,13 +139,13 @@ const Notice = ({ title, children, onRetry }: { title: string; children: ReactNo
  * The Design System tab: the design system connected, as its branch has it on GitHub, from a clone on this machine
  * (DESIGN_SYSTEM_PLAN.md). Its toolbar names it, switches between those connected and removes one (P4); with none, the
  * Connect screen. The components view is the list, by default, with a finder above it, and a component once one is opened,
- * with its stories live. At the right, always, the side panel: the tokens (T2), where a change to the tokens is tried (T3), or,
- * once a component is opened, that component, by a button group in the toolbar. Opening a component switches the panel to it,
- * leaving it switches back to the tokens, and either can be chosen while the component is open. The tokens panel is only
- * hidden meanwhile, so its search, tab and open groups are as they were left. The
- * change is the tab's, so the panel makes it and an open component's previews are built with it. It is kept nowhere: a
- * design system shown afresh starts with none, and a sync keeps only the edits of tokens the library still has. Not a
- * second Storybook: docs and controls stay there, behind each component's links.
+ * with its stories live. At the right, always, the side panel: the tokens (T2), where a change to the tokens is tried
+ * (T3), or the open component, chosen by a button group in the toolbar. Opening a component switches the panel to it,
+ * leaving it switches back to the tokens, and either can be chosen while it is open; the tokens are only hidden meanwhile,
+ * so their search, tab and open groups are as they were left. The change being tried is the tab's: the panel makes it, an
+ * open component's previews are built with it, a design system shown afresh starts with none, and a sync keeps only the
+ * edits of tokens the library still has. Not a second Storybook: docs and controls stay there, behind each component's
+ * links.
  *
  * It reads once when first shown, at once from what the clone has, then again when GitHub has been asked for changes;
  * after that only when Sync is pressed. It stays mounted while hidden, and the list stays mounted while a component is
@@ -167,6 +168,8 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [adding, setAdding] = useState(false);
 	// The change to the tokens being tried (T3).
 	const [edits, setEdits] = useState<TokenEdit[]>([]);
+	// Where it is kept, once saved (T4), and proposed (T5).
+	const branch = useTokenBranch(systems.current, edits, setEdits);
 	const started = useRef(false);
 
 	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {
@@ -353,7 +356,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 				    The tokens are hidden, not left, so what was typed and opened in them is as it was. */}
 				<ResizablePanel panel={TOKENS_PANEL} label="Resize the tokens panel">
 					<div data-panel="tokens" hidden={panel !== 'tokens'} className="flex min-h-0 flex-1 flex-col">
-						<TokensPanel tokens={catalog.tokens} edits={edits} onEdits={setEdits} live={opened !== undefined} />
+						<TokensPanel tokens={catalog.tokens} edits={edits} onEdits={setEdits} live={opened !== undefined} branch={branch} />
 					</div>
 					{panel === 'component' && opened && <ComponentPanel component={opened} />}
 				</ResizablePanel>

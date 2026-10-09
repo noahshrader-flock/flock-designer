@@ -3,7 +3,8 @@ import { act, createElement, useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { TokensPanel } from '../src/renderer/TokensPanel';
 import type { DesignToken, DesignTokens, TokenEdit } from '../src/shared/contract';
-import { button, press, render, settle, typeInto, unmountAll } from './reviewHarness';
+import { button, fail, fakeApp, ok, press, render, settle, typeInto, unmountAll } from './reviewHarness';
+import { useTokenBranch } from '../src/renderer/useTokenBranch';
 
 /**
  * The tokens panel (T2 of the design system plan), read only: the list T1 reads, in collapsible groups, each set of
@@ -42,10 +43,16 @@ let current: Awaited<ReturnType<typeof render>> | null = null;
 let made: TokenEdit[][] = [];
 const Tab = ({ tokens, live }: { tokens: DesignTokens; live: boolean }) => {
 	const [edits, setEdits] = useState<TokenEdit[]>([]);
-	return createElement(TokensPanel, { tokens, edits, live, onEdits: (e: TokenEdit[]) => (made.push(e), setEdits(e)) });
+	const onEdits = (e: TokenEdit[]) => (made.push(e), setEdits(e));
+	const branch = useTokenBranch('acme/ui', edits, onEdits);
+	return createElement(TokensPanel, { tokens, edits, live, onEdits, branch });
 };
-const show = async (tokens: DesignTokens = TOKENS, live = true) => {
+/** The app the panel saves and proposes through: a stand-in, so nothing is written or opened. */
+let app: ReturnType<typeof fakeApp>;
+const show = async (tokens: DesignTokens = TOKENS, live = true, more: Record<string, (...a: never[]) => unknown> = {}) => {
 	made = [];
+	app = fakeApp(more);
+	(window as unknown as { workspace: unknown }).workspace = app.api;
 	current = await render(createElement(Tab, { tokens, live }));
 };
 afterEach(async () => {
@@ -379,7 +386,7 @@ describe('changing a token (T3)', () => {
 		expect(list.compareDocumentPosition(tabs()[0] as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(list.querySelector('h3')?.textContent).toBe('Changed 1');
 		expect(list.querySelector('[data-change="palette.light.primary.main"]')?.textContent).toContain('pineGreen 50 → pineGreen 20');
-		expect(list.textContent).toContain('Tried in the previews. Nothing is saved.');
+		expect(list.textContent).toContain('Tried in the previews.');
 		await press(button('Reset Light primary main'));
 		await settle();
 		expect(made.at(-1)).toEqual([]);
@@ -424,7 +431,7 @@ describe('changing a token (T3)', () => {
 		await show(TOKENS, false);
 		await open('tone.pineGreen.50');
 		await pick(document.querySelector('input[type="color"]') as HTMLInputElement, '#000000');
-		expect(changedList()?.textContent).toContain('Open a component to see them. Nothing is saved.');
+		expect(changedList()?.textContent).toContain('Open a component to see them.');
 	});
 
 	describe('what it says a change does', () => {
@@ -480,5 +487,88 @@ describe('naming and reach (T3)', () => {
 		await press(row('tone.red.40')?.querySelector('button') as HTMLElement);
 		await settle();
 		expect(document.querySelector('[data-token-editor="tone.red.40"] [data-reach]')).toBeNull();
+	});
+});
+
+describe('saving and proposing a change (T4, T5)', () => {
+	const BRANCH = { branch: 'dsnr/tokens-20261009-ab12', base: 'c1', saves: 1, saved: [{ path: 'tone.pineGreen.50', value: '#000000' }], pullRequest: null };
+	const branchShown = () => document.querySelector<HTMLElement>('[data-token-branch]');
+	const changedList = () => document.querySelector<HTMLElement>('[data-changed-tokens]');
+	const changeTone = async () => {
+		await press(row('tone.pineGreen.50')?.querySelector('button') as HTMLElement);
+		await settle();
+		const picker = document.querySelector('[data-token-editor="tone.pineGreen.50"] input[type="color"]') as HTMLInputElement;
+		await act(async () => {
+			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(picker, '#000000');
+			picker.dispatchEvent(new Event('change', { bubbles: true }));
+		});
+		await settle();
+	};
+
+	it('offers to save a change to a branch, and only Save until it is saved', async () => {
+		await show(TOKENS, true, { saveTokens: async () => ok(BRANCH) });
+		await changeTone();
+		expect([...(branchShown()?.querySelectorAll('button') ?? [])].map((b) => b.textContent)).toEqual(['Save to a branch']);
+		await press(button('Save to a branch'));
+		await settle();
+		expect(app.calls.saveTokens).toEqual([[[{ path: 'tone.pineGreen.50', value: '#000000' }]]]);
+		expect(branchShown()?.textContent).toContain('dsnr/tokens-20261009-ab12');
+		expect(branchShown()?.textContent).toContain('1 save');
+		// Saved, so it can be proposed; nothing new to save.
+		expect([...(branchShown()?.querySelectorAll('button') ?? [])].map((b) => b.textContent)).toEqual(['Propose', 'Start over']);
+	});
+
+	it('offers Save again, not Propose, once the change is not the one saved', async () => {
+		await show(TOKENS, true, { saveTokens: async () => ok(BRANCH) });
+		await changeTone();
+		await press(button('Save to a branch'));
+		await settle();
+		await press(button('Reset Tones pineGreen 50'));
+		await settle();
+		expect([...(branchShown()?.querySelectorAll('button') ?? [])].map((b) => b.textContent)).toEqual(['Save', 'Start over']);
+		// With nothing changed the branch is still there, to save back to the library's values, propose, or leave.
+		expect(changedList()?.textContent).toContain('Every token is as the library has it.');
+	});
+
+	it('proposes it as a draft pull request, linked, and links Chromatic’s build once the library’s CI has made one', async () => {
+		const proposed = { ...BRANCH, pullRequest: { number: 42, url: 'https://github.com/acme/ui/pull/42', chromatic: null } };
+		await show(TOKENS, true, { saveTokens: async () => ok(BRANCH), proposeTokens: async () => ok(proposed) });
+		await changeTone();
+		await press(button('Save to a branch'));
+		await settle();
+		await press(button('Propose'));
+		await settle();
+		expect(app.calls.proposeTokens).toHaveLength(1);
+		const link = [...(branchShown()?.querySelectorAll('a') ?? [])].find((a) => a.textContent === 'Draft pull request #42') as HTMLAnchorElement;
+		expect(link.getAttribute('href')).toBe('https://github.com/acme/ui/pull/42');
+		expect(link.getAttribute('target')).toBe('_blank');
+		expect(branchShown()?.textContent).toContain('Chromatic’s build is linked here once the library’s CI has made it.');
+		expect([...(branchShown()?.querySelectorAll('button') ?? [])].map((b) => b.textContent)).toEqual(['Start over']);
+	});
+
+	it('says why a save did not work, and keeps the change', async () => {
+		await show(TOKENS, true, { saveTokens: async () => fail('Author identity unknown') });
+		await changeTone();
+		await press(button('Save to a branch'));
+		await settle();
+		expect(branchShown()?.querySelector('[role="alert"]')?.textContent).toBe('Author identity unknown');
+		expect(made.at(-1)).toEqual([{ path: 'tone.pineGreen.50', value: '#000000' }]);
+	});
+
+	it('puts back the change last saved when the panel opens with none, as after the app was closed', async () => {
+		await show(TOKENS, true, { tokenBranch: async () => ok(BRANCH) });
+		await settle();
+		expect(made.at(-1)).toEqual(BRANCH.saved);
+		expect(branchShown()?.textContent).toContain('dsnr/tokens-20261009-ab12');
+	});
+
+	it('starts over: forgets the branch and empties the change, leaving the branch and its pull request where they are', async () => {
+		await show(TOKENS, true, { tokenBranch: async () => ok(BRANCH), forgetTokenBranch: async () => ok(null) });
+		await settle();
+		await press(button('Start over'));
+		await settle();
+		expect(app.calls.forgetTokenBranch).toHaveLength(1);
+		expect(made.at(-1)).toEqual([]);
+		expect(changedList()).toBeNull();
 	});
 });

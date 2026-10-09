@@ -7,9 +7,9 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, Dia
 
 /**
  * What the library has that DSNR could not read (T2 of the design system plan): said only when there is something, as
- * shadcn's own default alert as it comes, neutral (the icon, a title saying how many, and a View action), above the tabs of the tokens
- * panel, and in a dialog when View is pressed, each with the file and line it is at. The rest of the tokens are shown;
- * what is listed here is skipped, never guessed.
+ * shadcn's default alert as it comes (the icon, a title saying how many, and a View action), above the tokens panel's
+ * tabs, and in a dialog when View is pressed, each with the file and line it is at. The rest of the tokens are shown; what
+ * is listed here is skipped, never guessed.
  */
 export const TokenProblems = ({ problems }: { problems: TokenProblem[] }) => {
 	if (problems.length === 0) return null;

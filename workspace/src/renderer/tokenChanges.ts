@@ -82,11 +82,7 @@ export const useTokenChangesFor = (tokens: DesignToken[], edits: TokenEdit[], on
 		};
 	}, [tokens, edits, onEdits]);
 
-/** A token as a person names it: `primary main`, `pineGreen 50`. */
-export const nameOf = (t: DesignToken): string => `${t.set} ${t.name}`;
-
-/** A token named with where it is shown: `Light primary main`, `Tones pineGreen 50`, `Radius base` (not `Radius radius base`). */
-export const labelOf = (t: DesignToken): string => (t.set.toLowerCase() === t.group.toLowerCase() ? `${t.group} ${t.name}` : `${t.group} ${nameOf(t)}`);
+export { labelOf, nameOf } from '../shared/tokens';
 
 /** An opacity written after a tone (`66`), as a person reads it (`40%`). */
 export const opacity = (alpha: string): string => `${Math.round((parseInt(alpha, 16) / 255) * 100)}%`;

@@ -3,6 +3,7 @@ import type { DesignToken, DesignTokens, TokenEdit } from '../shared/contract';
 import { contrastPartner, contrastRatio, isForeground } from '../shared/tokens';
 import { ChangedTokens, ContrastNote, Swatch, TokenEditor } from './TokenEditor';
 import { TokenProblems } from './TokenProblems';
+import type { TokenBranchControls } from './useTokenBranch';
 import { TokenChangesProvider, labelOf, nameOf, opacity, useTokenChanges, useTokenChangesFor } from './tokenChanges';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -151,6 +152,7 @@ export const TokensPanel = ({
 	edits,
 	onEdits,
 	live,
+	branch,
 }: {
 	tokens: DesignTokens;
 	/** The change being tried, and what changes it. */
@@ -158,6 +160,8 @@ export const TokensPanel = ({
 	onEdits: (edits: TokenEdit[]) => void;
 	/** Whether a component is open, so a change is seen as it is made. */
 	live: boolean;
+	/** The branch the change is kept on, and saving and proposing it (T4, T5). */
+	branch: TokenBranchControls;
 }) => {
 	const [current, setCurrent] = useState<string | null>(null);
 	const [queries, setQueries] = useState<Record<string, string>>({});
@@ -180,7 +184,7 @@ export const TokensPanel = ({
 	return (
 		<TokenChangesProvider value={changes}>
 			<TokenProblems problems={tokens.problems} />
-			<ChangedTokens live={live} />
+			<ChangedTokens live={live} branch={branch} />
 			<PanelTabs value={active} onValueChange={setCurrent}>
 				<PanelTabsList>
 					{categories.map(([category]) => (

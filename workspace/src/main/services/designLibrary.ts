@@ -4,7 +4,7 @@ import type { Catalog, CatalogUpdate, ConnectedDesignSystem, DesignSystemConnect
 import { isStoryFile, readCatalog, type CatalogReads } from './componentCatalog';
 import { readTokens } from './designTokens';
 import { type DesignSystemsMemory, defaultBranch, designSystemId, filesOf, findDesignSystems, within } from './designSystems';
-import { runGit } from './git';
+import { gitExact, runGit } from './git';
 
 /**
  * The connected design system on this machine, for the Design System tab: kept up to date, and read.
@@ -67,9 +67,11 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 	const readStories = async (paths: string[]): Promise<Map<string, string>> => {
 		// A header no story can contain, then the object as git stores it; `%(rest)` gives back the path asked for.
 		const mark = `@@dsnr-${Math.random().toString(36).slice(2)}@@`;
-		const out = await runGit(root, ['cat-file', `--batch=${mark} %(objecttype) %(rest)`], undefined, undefined, paths.map((p) => `${ref}:${p} ${p}\n`).join(''));
+		const out = await gitExact(root, ['cat-file', `--batch=${mark} %(objecttype) %(rest)`], undefined, undefined, paths.map((p) => `${ref}:${p} ${p}\n`).join(''));
 		const files = new Map<string, string>();
-		for (const chunk of `\n${out}`.split(`\n${mark} `).slice(1)) {
+		// Git ends each object with one newline of its own: the next header's split takes it, and the last is taken here,
+		// so every file is exactly as committed.
+		for (const chunk of `\n${out.replace(/\n$/, '')}`.split(`\n${mark} `).slice(1)) {
 			const newline = chunk.indexOf('\n');
 			const [type, path] = [chunk.slice(0, chunk.indexOf(' ')), chunk.slice(chunk.indexOf(' ') + 1, newline)];
 			if (type === 'blob') files.set(path, chunk.slice(newline + 1));
@@ -91,7 +93,7 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 				const text = (await batch).get(path);
 				if (text !== undefined) return text;
 			}
-			return runGit(root, ['show', `${ref}:${path}`]);
+			return gitExact(root, ['show', `${ref}:${path}`]);
 		},
 	};
 };
