@@ -7,7 +7,8 @@ import { GitProblem, pushBranch } from '../src/main/services/git';
 import { recordPreview, readIterations } from '../src/main/services/iterations';
 import { type ShareStatus } from '../src/shared/contract';
 import { ShareRunner, type ShareRequest } from '../src/main/services/share';
-import { locateGh, realShareTools } from '../src/main/services/shareTools';
+import { locateGh } from '../src/main/services/ghCli';
+import { realShareTools } from '../src/main/services/shareTools';
 
 /**
  * The real git push and the real way of running `gh`, against a throwaway bare repository as

@@ -74,12 +74,20 @@ export const visibleRepositories = async (session: Pick<GitHubSession, 'api'>, m
  * Every repository the signed-in person's account reaches: what their own GitHub sign-in sees (its command line, when it
  * is here and signed in; every organisation's repositories, as their account does), then any the app's sign-in sees that
  * it did not. The app's own sign-in is a GitHub App, which sees only the repositories it is installed on; this is how a
- * repository the person can open on GitHub is never missing here. Each named once, whatever its case.
+ * repository the person can open on GitHub is never missing here. **The command line's list is taken only when it is
+ * signed in as the same person as the app** (`login`): another account's repositories are not this person's. Each named
+ * once, whatever its case. Asked at once, as each can take a second or more.
  */
-export const reachableRepositories = async (app: Pick<GitHubSession, 'api'>, person: Pick<GitHubSession, 'api'> | null): Promise<string[]> => {
-	const [theirs, apps] = await Promise.all([person ? visibleRepositories(person).catch(() => []) : [], visibleRepositories(app).catch(() => [])]);
+export const reachableRepositories = async (app: Pick<GitHubSession, 'api'>, person: Pick<GitHubSession, 'api'> | null, login: string | null): Promise<string[]> => {
+	const theirs = async (): Promise<string[]> => {
+		if (person === null || login === null) return [];
+		const [who, names] = await Promise.all([person.api('/user').catch(() => null), visibleRepositories(person).catch(() => [])]);
+		const same = typeof (who as { login?: unknown } | null)?.login === 'string' && (who as { login: string }).login.toLowerCase() === login.toLowerCase();
+		return same ? names : [];
+	};
+	const [mine, apps] = await Promise.all([theirs(), visibleRepositories(app).catch(() => [])]);
 	const seen = new Set<string>();
-	return [...theirs, ...apps].filter((name) => {
+	return [...mine, ...apps].filter((name) => {
 		const key = name.toLowerCase();
 		if (seen.has(key)) return false;
 		seen.add(key);

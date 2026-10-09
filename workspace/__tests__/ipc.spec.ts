@@ -34,6 +34,8 @@ let copied = '';
 let cloneSources: Record<string, string> = {};
 /** What the person's own GitHub account lists, beyond what the app's GitHub App can see. */
 let personRepos: string[] = [];
+/** Who the person's own GitHub command line is signed in as: the app's own sign-in is `noah`. */
+let personLogin = 'noah';
 
 /** A repository made by `make`, as a bare one to clone from: this machine standing in for GitHub. */
 const bare = (name: string, make: (dir: string) => void) => {
@@ -134,6 +136,7 @@ beforeEach(async () => {
 	githubState = { state: 'signedOut' };
 	githubApi = vi.fn(async (path: string) => Promise.reject(new Error(`not faked: ${path}`)));
 	personRepos = [];
+	personLogin = 'noah';
 	designRepoProjects = [];
 	prototypeServer = new (await import('../src/main/services/prototypeServer')).PrototypeServer();
 
@@ -153,7 +156,7 @@ beforeEach(async () => {
 		cloner: new (await import('../src/main/services/clone')).Cloner({ urlOf: (r) => cloneSources[r] ?? 'file:///nowhere' }),
 		designSystems: new (await import('../src/main/services/designSystems')).DesignSystemsMemory(join(home, 'design-system.json')),
 		// The person's own GitHub (its command line): never the real one here.
-		personGitHub: { api: async (path: string) => (path.startsWith('/user/repos') ? personRepos.map((full_name) => ({ full_name })) : []) },
+		personGitHub: { api: async (path: string) => (path === '/user' ? { login: personLogin } : path.startsWith('/user/repos') ? personRepos.map((full_name) => ({ full_name })) : []) },
 		storyPreviewsRoot: join(home, 'story-previews'),
 	});
 });
@@ -228,6 +231,15 @@ describe('the Design System tab', () => {
 			const listed = ((await call(CHANNELS.listRepositories)).value as { name: string }[]).map((r) => r.name);
 			expect(listed).toEqual(expect.arrayContaining([LIB, 'flocksafety/flock-coke']));
 			expect(await call(CHANNELS.connectDesignSystem, LIB)).toEqual({ ok: true, value: { state: 'connected', id: LIB } });
+		});
+
+		it('does not list what the command line sees when it is signed in as someone else', async () => {
+			signedIn(['flocksafety/flock-coke']);
+			personRepos = ['someone/private'];
+			personLogin = 'someone';
+			const listed = ((await call(CHANNELS.listRepositories)).value as { name: string }[]).map((r) => r.name);
+			expect(listed).not.toContain('someone/private');
+			expect(listed).toContain('flocksafety/flock-coke');
 		});
 
 		it('refuses, in words, a repository with no design system in it, and connects nothing', async () => {

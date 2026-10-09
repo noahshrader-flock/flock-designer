@@ -1,8 +1,7 @@
 import { execFile } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import { promisify } from 'node:util';
+import { locateGh } from './ghCli';
 import { pushBranch } from './git';
-import { findOnPath } from './paths';
 import { type Check, type PullRequest, ShareProblem, type ShareTools } from './share';
 
 const run = promisify(execFile);
@@ -18,11 +17,6 @@ const run = promisify(execFile);
  * whatever they are allowed to do, and the app never sees its token.
  */
 
-/** The GitHub CLI: on the PATH, or where it is usually installed (an app opened from the Dock has no PATH). */
-export const locateGh = (env: NodeJS.ProcessEnv = process.env, exists: (p: string) => boolean = existsSync): string =>
-	findOnPath('gh', env, exists) ??
-	['/opt/homebrew/bin/gh', '/usr/local/bin/gh', '/usr/bin/gh'].find((p) => exists(p)) ??
-	'gh';
 
 const NOT_INSTALLED =
 	'Sharing uses the GitHub CLI (gh), which was not found on this machine. Install it from https://cli.github.com, run `gh auth login` in a terminal, then share again.';

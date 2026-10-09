@@ -313,6 +313,12 @@ export const registerIpc = ({
 
 	ipcMain.handle(CHANNELS.cloneFolder, guard(cloneFolder));
 
+	/** Who is signed in to the app, by their GitHub login, or null. */
+	const signedInLogin = (): string | null => {
+		const s = github.state();
+		return s.state === 'signedIn' ? s.user.login : null;
+	};
+
 	// The window says only whether to wait for the update; where the design system is, it is never told and never asks.
 	const library = designLibrary ?? new DesignLibrary({ systems: designSystems });
 	ipcMain.handle(CHANNELS.designSystemCatalog, guard((refresh: unknown) => library.catalog(refresh === true)));
@@ -353,7 +359,7 @@ export const registerIpc = ({
 	const DESIGN = `${DESIGN_REPO.owner}/${DESIGN_REPO.repo}`;
 	/** What cloning `repository` into `folder` would do. */
 	const planClone = async (repository: string, folder: string, forDesignSystem = false): Promise<ClonePlan> => {
-		if (visible.length === 0 && github.state().state === 'signedIn') visible = await reachableRepositories(github, personGitHub);
+		if (visible.length === 0 && github.state().state === 'signedIn') visible = await reachableRepositories(github, personGitHub, signedInLogin());
 		const listed = listedAs(visible, repository);
 		if (listed === undefined) throw new Error(`${repository} is not one of the repositories your GitHub account can see. Sign in to GitHub in DSNR, then try again.`);
 		const design = clonePlace(folder, DESIGN);
@@ -437,7 +443,7 @@ export const registerIpc = ({
 				return { root, repo: origin === null ? null : gitHubRepoOf(origin) };
 			});
 			// Signed out, or GitHub out of reach: what is on this machine can still be started in.
-			const remote = github.state().state === 'signedIn' ? await reachableRepositories(github, personGitHub) : [];
+			const remote = github.state().state === 'signedIn' ? await reachableRepositories(github, personGitHub, signedInLogin()) : [];
 			if (remote.length > 0) visible = remote;
 			return mergeRepositories(remote, clones);
 		}),
