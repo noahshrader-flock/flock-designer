@@ -38,10 +38,16 @@ export type Measure = (runs: { base: string; mode: Mode; files: string[] }[]) =>
 const TAG_BLUE = 0x5a;
 
 /**
- * Sizes for spacing and radius tags: primes over 8, so a whole multiple of up to 8 of one is never a multiple of another,
- * and none is a size a library is likely to write by hand.
+ * The size tag after `px`: the next prime. Size tags are primes from 13, so a whole multiple of up to 8 of one is never a
+ * multiple of another, and none is a size a library is likely to write by hand; there are as many as a library has lengths.
  */
-const TAG_SIZES = [13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127];
+const FIRST_SIZE_TAG = 13;
+const nextSizeTag = (px: number): number => {
+	const isPrime = (k: number) => Array.from({ length: Math.floor(Math.sqrt(k)) - 1 }, (_, i) => i + 2).every((d) => k % d !== 0);
+	let k = px + 1;
+	while (!isPrime(k)) k++;
+	return k;
+};
 /** The largest multiple of a size tag read as that token: a theme's spacing is used up to a few times over. */
 const MOST_MULTIPLE = 8;
 
@@ -55,7 +61,7 @@ export interface Tags {
 /**
  * A tag for every token: one edit for each place a token is written (a role both modes share is one place), a color by
  * its number, a length by a prime number of pixels (of a rem's sixteenths for one written in rem). A length in `em`, whose
- * pixels depend on where it is used, is left untagged, as are sizes past the primes there are.
+ * pixels depend on where it is used, is left untagged.
  */
 export const tagsFor = (tokens: DesignToken[]): Tags => {
 	const edits: TokenEdit[] = [];
@@ -72,9 +78,9 @@ export const tagsFor = (tokens: DesignToken[]): Tags => {
 			edits.push({ path: t.path, value });
 			continue;
 		}
-		const px = TAG_SIZES[sizes.length];
 		const unit = lengthParts(t.value)?.unit;
-		if (px === undefined || (unit !== 'px' && unit !== 'rem')) continue;
+		if (unit !== 'px' && unit !== 'rem') continue;
+		const px = sizes.length === 0 ? FIRST_SIZE_TAG : nextSizeTag((sizes[sizes.length - 1] as { px: number }).px);
 		sizes.push({ px, path: t.path });
 		edits.push({ path: t.path, value: unit === 'px' ? `${px}px` : `${px / 16}rem` });
 	}
@@ -166,7 +172,8 @@ export interface ComponentTokensDeps {
 	measure: Measure;
 }
 
-type Index = { files: Map<string, FileUse> } | { error: string };
+/** Each story file's tokens, or null for one that did not draw, of which nothing can be said. */
+type Index = { files: Map<string, FileUse | null> } | { error: string };
 
 /** The index of what every component draws with, for the commit the library's branch is at. */
 export class ComponentTokens {
@@ -195,10 +202,11 @@ export class ComponentTokens {
 			this.index = null;
 			return { state: 'failed', error: done.error };
 		}
+		if (!done.files.has(file)) return { state: 'failed', error: `${file} is not one of the library's story files.` };
 		const use = done.files.get(file);
-		if (!use) return { state: 'failed', error: `${file} is not one of the library's story files.` };
+		if (!use) return { state: 'failed', error: 'Its stories did not draw, so which tokens it uses cannot be said. Its page says why.' };
 		const sharedWith: Record<string, string[]> = {};
-		for (const path of use.uses.keys()) sharedWith[path] = [...done.files].filter(([f, u]) => f !== file && u.uses.has(path)).map(([f]) => f);
+		for (const path of use.uses.keys()) sharedWith[path] = [...done.files].filter(([f, u]) => f !== file && u?.uses.has(path)).map(([f]) => f);
 		return {
 			state: 'ready',
 			uses: [...use.uses].map(([path, uses]) => ({ path, uses })).sort((a, b) => b.uses - a.uses),
@@ -208,7 +216,7 @@ export class ComponentTokens {
 		};
 	}
 
-	private async build(system: ConnectedDesignSystem, commit: string): Promise<Map<string, FileUse>> {
+	private async build(system: ConnectedDesignSystem, commit: string): Promise<Map<string, FileUse | null>> {
 		const reads = await systemReads(system, commit);
 		const [read, catalog] = await Promise.all([readTokens(reads), readCatalog(reads, designSystemOf(system))]);
 		const { tokens } = read;
@@ -224,6 +232,12 @@ export class ComponentTokens {
 			{ base: tagged.base, mode: 'dark', files },
 			{ base: plain.base, mode: 'light', files },
 		]);
-		return new Map(files.map((f, i) => [f, decode({ light: light?.[i] ?? undefined, dark: dark?.[i] ?? undefined }, asIs?.[i] ?? undefined, tags, tokens)]));
+		// A file whose tagged drawing in light did not come back has nothing to say, rather than that it draws with no token.
+		return new Map(
+			files.map((f, i) => {
+				const drawn = light?.[i];
+				return [f, drawn ? decode({ light: drawn, dark: dark?.[i] ?? undefined }, asIs?.[i] ?? undefined, tags, tokens) : null];
+			}),
+		);
 	}
 }

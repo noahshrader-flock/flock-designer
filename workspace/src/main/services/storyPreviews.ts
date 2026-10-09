@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readdirSync, realpathSync, rmSync, symlinkSync, 
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
-import { PREVIEW_FILE, PREVIEW_HEIGHT } from '../../shared/catalog';
+import { PREVIEW_FILE, PREVIEW_HEIGHT, PREVIEW_SHOW } from '../../shared/catalog';
 import { designSystemOf } from '../../shared/catalog';
 import type { ConnectedDesignSystem, StoryPreview, TokenEdit } from '../../shared/contract';
 import { type CatalogReads, PREVIEW_CANDIDATES, readCatalog } from './componentCatalog';
@@ -132,7 +132,7 @@ const show = (file) => {
 				h(Boundary, null, h(Live, { Story, drawsItself: drawsItself(name) })))))));
 	}, fail);
 };
-window.__dsnrShow = show;
+window[${JSON.stringify(PREVIEW_SHOW)}] = show;
 show(new URLSearchParams(location.search).get(${JSON.stringify(PREVIEW_FILE)}));
 `;
 

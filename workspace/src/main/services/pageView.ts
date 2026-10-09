@@ -2,8 +2,20 @@ import { type BrowserWindow, WebContentsView, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
 import type { MarkerRequest, MarkerResult, PageBounds, PageHoldReason, PickedPoint, PinEvent } from '../../shared/contract';
 import { assertPreviewUrl } from '../../shared/anchor';
-import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, ROUTE_SCRIPT, SINGLE_PAGE, focusScript, layerVisibleScript, readMarkers, readPick, readPinMessage, resolveScript } from '../../shared/pageScripts';
+import {
+	CANCEL_PICK_SCRIPT,
+	PICK_SCRIPT,
+	ROUTE_SCRIPT,
+	SINGLE_PAGE,
+	focusScript,
+	layerVisibleScript,
+	readMarkers,
+	readPick,
+	readPinMessage,
+	resolveScript,
+} from '../../shared/pageScripts';
 import { type Box, cropRect, frameRect, toPicture } from './picture';
+import { keepToOrigin, sandboxedPreferences } from './sandboxedPage';
 
 /**
  * A prototype's preview, shown inside the app so a comment can be placed on it.
@@ -48,7 +60,6 @@ const settled = async (wc: Electron.WebContents, ms: number): Promise<boolean> =
 	return realPageIsUp(wc);
 };
 
-
 export class PageView {
 	private view: WebContentsView | null = null;
 	private origin: string | null = null;
@@ -75,30 +86,15 @@ export class PageView {
 		this.close();
 		this.nonce = randomUUID();
 
-		const view = new WebContentsView({
-			webPreferences: {
-				// No preload: nothing is exposed to the page.
-				sandbox: true,
-				contextIsolation: true,
-				nodeIntegration: false,
-				webSecurity: true,
-				partition: SESSION,
-			},
-		});
+		const view = new WebContentsView({ webPreferences: sandboxedPreferences(SESSION) });
 		const wc = view.webContents;
-		wc.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
-
-		wc.setWindowOpenHandler(({ url: target }) => {
-			if (target.startsWith('https://')) void shell.openExternal(target);
-			return { action: 'deny' };
-		});
 		// Stay on the preview. A link elsewhere opens in the real browser.
-		wc.on('will-navigate', (event, target) => {
-			if (new URL(target).origin !== this.origin) {
-				event.preventDefault();
-				if (target.startsWith('https://')) void shell.openExternal(target);
-			}
-		});
+		keepToOrigin(
+			wc,
+			// None yet is no origin: every navigation is held until the preview's own is known.
+			() => this.origin ?? '',
+			(target) => target.startsWith('https://') && void shell.openExternal(target),
+		);
 		const reportRoute = () => {
 			void this.run<string>(ROUTE_SCRIPT).then((r) => typeof r === 'string' && this.onRoute(r.slice(0, 300)));
 		};

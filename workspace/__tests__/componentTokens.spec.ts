@@ -62,6 +62,14 @@ describe('the tags', () => {
 		expect(tags.edits.some((e) => e.path === 'font')).toBe(false);
 	});
 
+	it('give every length a tag however many a library has, each a prime, none a multiple of another', () => {
+		const many = Array.from({ length: 40 }, (_, i) => token(`space.${i}`, 'dimension', `${i + 1}px`));
+		const sizes = tagsFor(many).sizes.map((s) => s.px);
+		expect(sizes).toHaveLength(40);
+		expect(sizes.slice(0, 6)).toEqual([13, 17, 19, 23, 29, 31]);
+		for (const a of sizes) for (const b of sizes) if (a !== b) for (let k = 1; k <= 8; k++) expect((a * k) % b === 0 && (a * k) / b <= 8).toBe(false);
+	});
+
 	it('are edits of values, so a pointer is given the tag and named by it, not by what it points at', () => {
 		expect(tags.edits.every((e: TokenEdit) => 'value' in e)).toBe(true);
 	});
@@ -219,6 +227,13 @@ describe('the index', () => {
 		expect(await ready(i, 'src/components/A/A.stories.tsx')).toEqual({ state: 'failed', error: 'tags did not build' });
 		fail = false;
 		expect((await ready(i, 'src/components/A/A.stories.tsx')).state).toBe('ready');
+	});
+
+	it('says a component’s stories did not draw, rather than that it draws with no token', async () => {
+		const i = index({ measure: async (runs) => runs.map((run) => run.files.map((f) => (f.includes('B.stories') ? null : drawn({ 'rgb(0, 1, 90)': 1 })))) });
+		expect(await ready(i, 'src/components/B/B.stories.tsx')).toEqual({ state: 'failed', error: expect.stringContaining('did not draw') });
+		// The others are still said, and are not said to share with the one that did not draw.
+		expect(await i.of('src/components/A/A.stories.tsx')).toMatchObject({ state: 'ready', sharedWith: { 'palette.light.primary.main': [] } });
 	});
 
 	it('has nothing to say when no design system is connected', async () => {

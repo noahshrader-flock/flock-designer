@@ -37,5 +37,7 @@ export const isTokenGroup = (group: string): boolean => /\btokens?\b/i.test(grou
 export const PREVIEW_HEIGHT = 'flockPreviewHeight';
 /** Which story file a preview page draws, by this address parameter. */
 export const PREVIEW_FILE = 'file';
+/** What the preview page is told to draw another story file in place of the last with, without loading again (T6). */
+export const PREVIEW_SHOW = '__dsnrShow';
 /** A story file's preview page, in the build served at `base`. */
 export const previewAddress = (base: string, file: string): string => `${base}?${PREVIEW_FILE}=${encodeURIComponent(file)}`;
