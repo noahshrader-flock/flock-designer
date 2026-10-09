@@ -576,6 +576,12 @@ export interface Project {
   iterations: ProjectIteration[];
   /** Everyone who has committed to the project: code on any iteration, or its design-repo folder. */
   people: Person[];
+  /**
+   * The last time anything happened to the project that GitHub knows of: a change to its folder in the design
+   * repository, or a comment on one of its review threads. Null when it could not be read. Read with `lastUpdated`,
+   * which also counts when each iteration was made.
+   */
+  updatedAt?: string | null;
   /** True when the project exists only on this machine: built here, not yet shared. */
   localOnly?: boolean;
 }

@@ -5,13 +5,14 @@ import { CardGrid } from './CardGrid';
 import { NewWork, type Created } from './NewWork';
 import { Page } from './Page';
 import { ProjectCard } from './ProjectCard';
+import { ProjectSort } from './ProjectSort';
 import { PublishBanner, PublishLine, usePublishStatus } from './PublishStatus';
 import { RecordSheet } from './RecordSheet';
 import { Review } from './Review';
 import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
 import { InfoIcon, SearchIcon } from 'lucide-react';
-import { matchesProject } from '../shared/projects';
+import { type ProjectOrder, matchesProject, sortProjects } from '../shared/projects';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { InputGroup, InputGroupAddon, InputGroupInput } from './ui/input-group';
@@ -32,6 +33,8 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 	const [creating, setCreating] = useState(false);
 	// What is typed in the search beside the name of the screen: the cards are narrowed to what matches.
 	const [search, setSearch] = useState('');
+	// The most recent activity first, until it is changed.
+	const [order, setOrder] = useState<ProjectOrder>('updated');
 	const [looked, setLooked] = useState(false);
 	const [suggestion, setSuggestion] = useState<CheckoutSuggestion | null>(null);
 	const [publishStatus, setPublishStatus] = usePublishStatus();
@@ -122,7 +125,10 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 		);
 	}
 
-	const matching = projects.filter((p) => matchesProject(p, search));
+	const matching = sortProjects(
+		projects.filter((p) => matchesProject(p, search)),
+		order,
+	);
 
 	return (
 		<>
@@ -130,19 +136,22 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 			<Toolbar className="sticky top-0 z-40">
 				<h2 className="text-sm font-semibold">Projects</h2>
 				{projects.length > 0 && (
-					<InputGroup className="w-64">
-						<InputGroupAddon>
-							<SearchIcon />
-						</InputGroupAddon>
-						<InputGroupInput
-							type="search"
-							aria-label="Search projects"
-							placeholder="Search projects"
-							value={search}
-							onChange={(e) => setSearch(e.target.value)}
-							onKeyDown={(e) => e.key === 'Escape' && setSearch('')}
-						/>
-					</InputGroup>
+					<div className="flex items-center gap-2">
+						<InputGroup className="w-64">
+							<InputGroupAddon>
+								<SearchIcon />
+							</InputGroupAddon>
+							<InputGroupInput
+								type="search"
+								aria-label="Search projects"
+								placeholder="Search projects"
+								value={search}
+								onChange={(e) => setSearch(e.target.value)}
+								onKeyDown={(e) => e.key === 'Escape' && setSearch('')}
+							/>
+						</InputGroup>
+						<ProjectSort order={order} onChange={setOrder} />
+					</div>
 				)}
 				<div className="grow" />
 				<div className="flex items-center gap-2">

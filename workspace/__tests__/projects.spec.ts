@@ -8,6 +8,7 @@ import {
 	asDate,
 	asRoute,
 	isPrototypeName,
+	lastUpdated,
 	matchesProject,
 	isRecordName,
 	iterationLabel,
@@ -21,6 +22,7 @@ import {
 	parsePrototypeName,
 	prototypeName,
 	slugify,
+	sortProjects,
 	startedAt,
 	unionLocal,
 	workOf,
@@ -397,5 +399,53 @@ describe('matchesProject', () => {
 		expect(matchesProject(alerts, 'roles')).toBe(false);
 		expect(matchesProject(alerts, '.*')).toBe(false);
 		expect(matchesProject(alerts, '(')).toBe(false);
+	});
+});
+
+describe('when a project was last updated', () => {
+	it('is the latest of the activity GitHub knows of and when any iteration was made', () => {
+		const p = project('alpha', { updatedAt: '2026-10-05T10:00:00Z', iterations: [it1({ createdAt: '2026-10-07T09:00:00Z' }), it1({ name: 'i2', createdAt: '2026-10-02T09:00:00Z' })] });
+		expect(lastUpdated(p)).toBe('2026-10-07T09:00:00Z');
+		expect(lastUpdated({ ...p, updatedAt: '2026-10-09T00:00:00Z' })).toBe('2026-10-09T00:00:00Z');
+	});
+
+	it('is null for a project with nothing dated, and ignores what is not a date', () => {
+		expect(lastUpdated(project('alpha', { iterations: [] }))).toBeNull();
+		expect(lastUpdated(project('alpha', { updatedAt: 'someday', iterations: [it1({ createdAt: null })] }))).toBeNull();
+	});
+});
+
+describe('sorting the projects', () => {
+	const old = project('b-old', { title: 'Banana', updatedAt: '2026-10-01T00:00:00Z', iterations: [] });
+	const fresh = project('a-new', { title: 'apple', updatedAt: '2026-10-08T00:00:00Z', iterations: [] });
+	const never = project('c-none', { title: 'Cherry', iterations: [] });
+
+	it('puts the project with the most recent activity first, and those with none last', () => {
+		expect(sortProjects([never, old, fresh], 'updated').map((p) => p.id)).toEqual(['a-new', 'b-old', 'c-none']);
+	});
+
+	it('falls back to the name when two were updated together, so the order never shuffles', () => {
+		const same = { updatedAt: '2026-10-08T00:00:00Z', iterations: [] };
+		expect(sortProjects([project('z', { title: 'Zed', ...same }), project('m', { title: 'Mid', ...same })], 'updated').map((p) => p.id)).toEqual(['m', 'z']);
+	});
+
+	it('sorts by name, without regard to case, with the id as the last word', () => {
+		expect(sortProjects([never, old, fresh], 'alphabetical').map((p) => p.title)).toEqual(['apple', 'Banana', 'Cherry']);
+		expect(sortProjects([project('b', { title: 'Same' }), project('a', { title: 'Same' })], 'alphabetical').map((p) => p.id)).toEqual(['a', 'b']);
+	});
+
+	it('does not change the list it was given', () => {
+		const list = [never, old, fresh];
+		sortProjects(list, 'alphabetical');
+		expect(list.map((p) => p.id)).toEqual(['c-none', 'b-old', 'a-new']);
+	});
+});
+
+describe('merging when a project was last updated', () => {
+	it('keeps the later of GitHub’s and this machine’s', () => {
+		const [m] = mergeProjects([project('alpha', { updatedAt: '2026-10-05T00:00:00Z' })], [project('alpha', { updatedAt: '2026-10-08T00:00:00Z' })]);
+		expect(m?.updatedAt).toBe('2026-10-08T00:00:00Z');
+		const [n] = mergeProjects([project('alpha', { updatedAt: '2026-10-09T00:00:00Z' })], [project('alpha')]);
+		expect(n?.updatedAt).toBe('2026-10-09T00:00:00Z');
 	});
 });

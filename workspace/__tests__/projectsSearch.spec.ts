@@ -38,7 +38,8 @@ describe('searching the projects', () => {
 		expect(search().getAttribute('aria-label')).toBe('Search projects');
 		expect(heading.compareDocumentPosition(search()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(heading.parentElement?.contains(search())).toBe(true);
-		expect(titles()).toEqual(['Alert history', 'Admin usage', 'Role comparison']);
+		// None is dated, so they are in name order.
+		expect(titles()).toEqual(['Admin usage', 'Alert history', 'Role comparison']);
 	});
 
 	it('narrows the cards as you type, and brings them back when it is cleared', async () => {

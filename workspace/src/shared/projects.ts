@@ -65,6 +65,34 @@ export const startedAt = (p: Pick<Project, 'iterations'>): string | null =>
 		.filter((d): d is string => d !== null)
 		.sort((a, b) => Date.parse(a) - Date.parse(b))[0] ?? null;
 
+/** The latest of some dates, ignoring anything that is not one; null when none is. */
+export const latestDate = (dates: unknown[]): string | null =>
+	dates.map(asDate).filter((d): d is string => d !== null).sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null;
+
+/**
+ * When anything last happened in a project: the latest of the activity GitHub reported (`updatedAt`) and when each of
+ * its iterations was made. Null when nothing is dated.
+ */
+export const lastUpdated = (p: Pick<Project, 'iterations'> & { updatedAt?: string | null }): string | null =>
+	latestDate([p.updatedAt, ...p.iterations.map((i) => i.createdAt)]);
+
+/** Alphabetical by name without regard to case, and by id when two share a name, so an order never shuffles. */
+const byName = (a: Project, b: Project): number => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) || a.id.localeCompare(b.id);
+
+/** How the Projects screen orders its cards: the most recent activity first, or by name. */
+export type ProjectOrder = 'updated' | 'alphabetical';
+
+/** The projects in an order, as a new list. Those with nothing dated come last when ordered by activity. */
+export const sortProjects = (projects: Project[], order: ProjectOrder): Project[] =>
+	[...projects].sort((a, b) => {
+		if (order === 'alphabetical') return byName(a, b);
+		const da = lastUpdated(a);
+		const db = lastUpdated(b);
+		if (da !== null && db !== null && da !== db) return Date.parse(db) - Date.parse(da);
+		if ((da === null) !== (db === null)) return da === null ? 1 : -1;
+		return byName(a, b);
+	});
+
 /**
  * Whether a project is what a search is for: every word typed is somewhere in its name, its id, or the name or
  * GitHub login of someone who worked on it, without regard to case. Plain text, never a pattern; an empty search is
@@ -83,7 +111,7 @@ export const newestProjectFirst = (a: Project, b: Project): number => {
 	const db = startedAt(b);
 	if (da !== null && db !== null && da !== db) return Date.parse(db) - Date.parse(da);
 	if ((da === null) !== (db === null)) return da === null ? 1 : -1;
-	return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) || a.id.localeCompare(b.id);
+	return byName(a, b);
 };
 
 /**
@@ -117,6 +145,7 @@ export const mergeProjects = (remote: Project[], local: Project[]): Project[] =>
 		}
 		byId.set(l.id, {
 			...r,
+			updatedAt: latestDate([r.updatedAt, l.updatedAt]),
 			// A project shared before it had a brief shows its id; the local brief names it.
 			title: r.title === r.id && l.title !== l.id ? l.title : r.title,
 			records: [...new Set([...r.records, ...l.records])].sort(),

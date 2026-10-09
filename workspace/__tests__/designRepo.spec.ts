@@ -57,6 +57,28 @@ describe('listProjects', () => {
     expect(alpha?.iterations.map((i) => [i.name, i.createdAt]).sort()).toEqual([['i1', '2026-10-01T00:00:00Z'], ['i2', null]]);
   });
 
+  it('knows when a project last had activity: the newest of a change to its folder and a comment on its review thread', async () => {
+    const commits = [
+      { commit: { author: { name: 'Noah' }, committer: { date: '2026-10-06T12:00:00Z' } } },
+      { commit: { author: { name: 'Pat' }, committer: { date: '2026-10-02T12:00:00Z' } } },
+    ];
+    const later = fakeSession({ ...routes, '/repos/acme/design/commits?path=projects/alpha': commits });
+    expect((await new DesignRepo(later.session, REF).listProjects())[0]?.updatedAt).toBe('2026-10-06T12:00:00Z');
+    // A comment made after: GitHub dates the thread by its latest comment.
+    const commented = fakeSession({
+      ...routes,
+      '/repos/acme/design/commits?path=projects/alpha': commits,
+      '/repos/acme/design/issues?state=all': [{ number: 7, comments: 3, updated_at: '2026-10-08T08:00:00Z', body: 'Review thread for alpha, branch: `fd/alpha/i2`.' }],
+    });
+    expect((await new DesignRepo(commented.session, REF).listProjects())[0]?.updatedAt).toBe('2026-10-08T08:00:00Z');
+  });
+
+  it('has no date for activity it cannot read, and does not fail the list for it', async () => {
+    const { session } = fakeSession({ ...routes, '/repos/acme/design/commits?path=projects/alpha': () => { throw new Error('rate limited'); } });
+    const [alpha] = await new DesignRepo(session, REF).listProjects();
+    expect(alpha?.updatedAt).toBeNull();
+  });
+
   it('lists project folders, skipping files and templates', async () => {
     const { session } = fakeSession(routes);
     expect((await new DesignRepo(session, REF).listProjects()).map((p) => p.id)).toEqual(['alpha']);

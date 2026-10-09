@@ -1,7 +1,7 @@
 import type { CommentAnchor, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
 import { GitHubError } from './github';
 import { asPeople, isBot, mergePeople } from '../../shared/people';
-import { asDate, asRoute, firstHeading, newestFirst } from '../../shared/projects';
+import { asDate, asRoute, firstHeading, latestDate, newestFirst } from '../../shared/projects';
 import { RESOLVED_MARK, addressedAt, addressedIn, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withAddressed, withResolved } from '../../shared/anchor';
 import { asArray, asRecord } from '../../shared/json';
 
@@ -19,6 +19,15 @@ import { asArray, asRecord } from '../../shared/json';
  */
 
 const ITERATION_LABEL = 'flock-designer:review';
+
+/** What the app knows of an iteration's review thread (or threads: a branch can have more than one). */
+interface ReviewThread {
+  number: number;
+  numbers: number[];
+  openComments: number;
+  /** When it last had a comment, by GitHub's account of it. */
+  updatedAt: string | null;
+}
 
 export interface DesignRepoRef {
   owner: string;
@@ -71,10 +80,11 @@ export class DesignRepo {
           .sort();
 
         const iterations = await this.readIterations(id, records, issues);
+        const folder = await this.folderActivity(id);
         // Alphabetical, so the line does not reshuffle as iterations are added.
         const people = mergePeople(
           iterations.flatMap((it) => it.contributors),
-          await this.folderAuthors(id),
+          folder.people,
         );
         return {
           id,
@@ -82,26 +92,30 @@ export class DesignRepo {
           records,
           iterations,
           people,
+          // A change to the folder, or a comment on a review thread (GitHub dates a thread by its latest).
+          updatedAt: latestDate([folder.updatedAt, ...iterations.map((it) => issues.get(it.branch)?.updatedAt)]),
         };
       }),
     );
   }
 
   /**
-   * People who have committed to the project's own folder (brief, review,
-   * decisions). Best effort: a failure here must not hide the project list.
+   * Who has committed to the project's own folder (brief, review, decisions), and when it last changed. Best effort:
+   * a failure here must not hide the project list.
    */
-  private async folderAuthors(id: string): Promise<Person[]> {
+  private async folderActivity(id: string): Promise<{ people: Person[]; updatedAt: string | null }> {
     try {
+      // Newest first, as GitHub lists them.
       const commits = asArray(await this.session.api(`${this.base}/commits?path=projects/${id}&per_page=100`));
-      return commits.reverse().flatMap((c): Person[] => {
+      const people = [...commits].reverse().flatMap((c): Person[] => {
         const name = String(asRecord(asRecord(asRecord(c).commit).author).name ?? '');
         const account = asRecord(asRecord(c).author); // the GitHub account, when the email is linked to one
         const login = typeof account.login === 'string' && !isBot(account.login) ? account.login : null;
         return name && !isBot(name) ? [{ name, login }] : [];
       });
+      return { people, updatedAt: latestDate(commits.map((c) => asRecord(asRecord(asRecord(c).commit).committer).date)) };
     } catch {
-      return [];
+      return { people: [], updatedAt: null };
     }
   }
 
@@ -187,12 +201,12 @@ export class DesignRepo {
   private readonly known = new Map<string, Set<number>>();
 
   /** Review issues keyed by the branch they carry comments for. */
-  private async listReviewIssues(): Promise<Map<string, { number: number; numbers: number[]; openComments: number }>> {
+  private async listReviewIssues(): Promise<Map<string, ReviewThread>> {
     const issues = (await this.allPages(`${this.base}/issues?state=all&labels=${encodeURIComponent(ITERATION_LABEL)}`, 10)).map(asRecord);
 
     // More than one thread can exist for a branch (the listing lag above made
     // some). All of them are read, the oldest is written to, and none is lost.
-    const byBranch = new Map<string, { number: number; numbers: number[]; openComments: number }>();
+    const byBranch = new Map<string, ReviewThread>();
     for (const issue of issues) {
       const branch = /branch:\s*`([^`]+)`/.exec(String(issue.body ?? ''))?.[1];
       if (branch && typeof issue.number === 'number') {
@@ -202,13 +216,14 @@ export class DesignRepo {
           number: Math.min(...numbers),
           numbers,
           openComments: (have?.openComments ?? 0) + Number(issue.comments ?? 0),
+          updatedAt: latestDate([have?.updatedAt, issue.updated_at]),
         });
       }
     }
     for (const [branch, known] of this.known) {
       const have = byBranch.get(branch);
       const numbers = [...new Set([...(have?.numbers ?? []), ...known])];
-      byBranch.set(branch, { number: Math.min(...numbers), numbers, openComments: have?.openComments ?? 0 });
+      byBranch.set(branch, { number: Math.min(...numbers), numbers, openComments: have?.openComments ?? 0, updatedAt: have?.updatedAt ?? null });
     }
     return byBranch;
   }
@@ -229,7 +244,7 @@ export class DesignRepo {
   private async readIterations(
     id: string,
     records: string[],
-    issues: Map<string, { number: number; openComments: number }>,
+    issues: Map<string, ReviewThread>,
   ): Promise<ProjectIteration[]> {
     if (!records.includes('iterations.json')) return [];
     const file = asRecord(await this.session.api(`${this.base}/contents/projects/${id}/iterations.json`));
