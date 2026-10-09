@@ -54,7 +54,9 @@ export const App = () => {
 							</div>
 						</>
 					) : (
-						<div className="mx-auto max-w-[1400px] p-6">
+						// Centred on the window, across and down: the bar's height is left clear below as well as above (the
+						// area starts under the bar), so the middle is the window's, not what is left under the bar.
+						<div className="flex min-h-full items-center justify-center p-6 pb-(--nav-height)">
 							<SignIn state={signIn} onChanged={refreshSignIn} />
 						</div>
 					)}
