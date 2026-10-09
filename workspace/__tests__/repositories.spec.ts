@@ -92,23 +92,25 @@ describe('reachableRepositories', () => {
 	it('is every repository the person’s account reaches: their own GitHub sign-in’s, then any the app’s sees that it did not', async () => {
 		const app = listing(['flocksafety/flock-designer', 'flocksafety/flock-coke']);
 		const person = listing(['flocksafety/flock-coke', 'flocksafety/flock-react-component-lib', 'noah/sandbox']);
-		expect(await reachableRepositories(app, person, 'noah')).toEqual(['flocksafety/flock-coke', 'flocksafety/flock-react-component-lib', 'noah/sandbox', 'flocksafety/flock-designer']);
+		expect(await reachableRepositories(app, person, 'noah')).toEqual({ names: ['flocksafety/flock-coke', 'flocksafety/flock-react-component-lib', 'noah/sandbox', 'flocksafety/flock-designer'], reach: 'account' });
 	});
 
 	it('names a repository once, whatever its case', async () => {
-		expect(await reachableRepositories(listing(['Acme/UI']), listing(['acme/ui']), 'noah')).toEqual(['acme/ui']);
+		expect((await reachableRepositories(listing(['Acme/UI']), listing(['acme/ui']), 'noah')).names).toEqual(['acme/ui']);
 	});
 
 	it('takes the command line’s list only when it is signed in as the same person as the app, whatever the case of the name', async () => {
 		const someoneElse = listing(['other/private'], 'pat');
-		expect(await reachableRepositories(listing(['flocksafety/flock-coke']), someoneElse, 'noah')).toEqual(['flocksafety/flock-coke']);
-		expect(await reachableRepositories(listing(['a/b']), listing(['c/d'], 'Noah'), 'noah')).toEqual(['c/d', 'a/b']);
+		expect(await reachableRepositories(listing(['flocksafety/flock-coke']), someoneElse, 'noah')).toEqual({ names: ['flocksafety/flock-coke'], reach: 'app' });
+		expect(await reachableRepositories(listing(['a/b']), listing(['c/d'], 'Noah'), 'noah')).toEqual({ names: ['c/d', 'a/b'], reach: 'account' });
 	});
 
 	it('is the app’s list alone when the person’s GitHub command line is missing or signed out, or nobody is signed in to the app', async () => {
 		const missing = { api: vi.fn(async () => Promise.reject(new Error('gh: command not found'))) };
-		expect(await reachableRepositories(listing(['flocksafety/flock-coke']), missing, 'noah')).toEqual(['flocksafety/flock-coke']);
-		expect(await reachableRepositories(listing(['flocksafety/flock-coke']), null, 'noah')).toEqual(['flocksafety/flock-coke']);
-		expect(await reachableRepositories(listing(['flocksafety/flock-coke']), listing(['c/d']), null)).toEqual(['flocksafety/flock-coke']);
+		// And says so: the list reaches only what the app's GitHub App is installed on.
+		const app = { names: ['flocksafety/flock-coke'], reach: 'app' };
+		expect(await reachableRepositories(listing(['flocksafety/flock-coke']), missing, 'noah')).toEqual(app);
+		expect(await reachableRepositories(listing(['flocksafety/flock-coke']), null, 'noah')).toEqual(app);
+		expect(await reachableRepositories(listing(['flocksafety/flock-coke']), listing(['c/d']), null)).toEqual(app);
 	});
 });

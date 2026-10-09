@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import type { Repository } from '../../shared/contract';
+import type { Repository, RepositoryReach } from '../../shared/contract';
 import type { GitHubSession } from './githubSession';
 
 /**
@@ -76,21 +76,28 @@ export const visibleRepositories = async (session: Pick<GitHubSession, 'api'>, m
  * it did not. The app's own sign-in is a GitHub App, which sees only the repositories it is installed on; this is how a
  * repository the person can open on GitHub is never missing here. **The command line's list is taken only when it is
  * signed in as the same person as the app** (`login`): another account's repositories are not this person's. Each named
- * once, whatever its case. Asked at once, as each can take a second or more.
+ * once, whatever its case. Asked at once, as each can take a second or more. Says how far the list reaches: `account`
+ * when the person's own list is in it, `app` when it is only what the app's GitHub App is installed on.
  */
-export const reachableRepositories = async (app: Pick<GitHubSession, 'api'>, person: Pick<GitHubSession, 'api'> | null, login: string | null): Promise<string[]> => {
-	const theirs = async (): Promise<string[]> => {
-		if (person === null || login === null) return [];
+export const reachableRepositories = async (
+	app: Pick<GitHubSession, 'api'>,
+	person: Pick<GitHubSession, 'api'> | null,
+	login: string | null,
+): Promise<{ names: string[]; reach: Exclude<RepositoryReach, 'none'> }> => {
+	// Null when the command line's list is not this person's: missing, signed out, or another account.
+	const theirs = async (): Promise<string[] | null> => {
+		if (person === null || login === null) return null;
 		const [who, names] = await Promise.all([person.api('/user').catch(() => null), visibleRepositories(person).catch(() => [])]);
 		const same = typeof (who as { login?: unknown } | null)?.login === 'string' && (who as { login: string }).login.toLowerCase() === login.toLowerCase();
-		return same ? names : [];
+		return same && who !== null ? names : null;
 	};
 	const [mine, apps] = await Promise.all([theirs(), visibleRepositories(app).catch(() => [])]);
 	const seen = new Set<string>();
-	return [...mine, ...apps].filter((name) => {
+	const names = [...(mine ?? []), ...apps].filter((name) => {
 		const key = name.toLowerCase();
 		if (seen.has(key)) return false;
 		seen.add(key);
 		return true;
 	});
+	return { names, reach: mine === null ? 'app' : 'account' };
 };

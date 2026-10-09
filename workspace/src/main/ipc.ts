@@ -21,7 +21,7 @@ import {
 	type PrototypeAddressed,
 	type PrototypeReadiness,
 	type Project,
-	type Repository,
+	type RepositoryList,
 	type PublishStatus,
 	type Result,
 	type ReviewComment,
@@ -359,7 +359,7 @@ export const registerIpc = ({
 	const DESIGN = `${DESIGN_REPO.owner}/${DESIGN_REPO.repo}`;
 	/** What cloning `repository` into `folder` would do. */
 	const planClone = async (repository: string, folder: string, forDesignSystem = false): Promise<ClonePlan> => {
-		if (visible.length === 0 && github.state().state === 'signedIn') visible = await reachableRepositories(github, personGitHub, signedInLogin());
+		if (visible.length === 0 && github.state().state === 'signedIn') visible = (await reachableRepositories(github, personGitHub, signedInLogin())).names;
 		const listed = listedAs(visible, repository);
 		if (listed === undefined) throw new Error(`${repository} is not one of the repositories your GitHub account can see. Sign in to GitHub in DSNR, then try again.`);
 		const design = clonePlace(folder, DESIGN);
@@ -437,15 +437,15 @@ export const registerIpc = ({
 
 	ipcMain.handle(
 		CHANNELS.listRepositories,
-		guard(async (): Promise<Repository[]> => {
+		guard(async (): Promise<RepositoryList> => {
 			const clones = productCheckouts().map((root) => {
 				const origin = originOf(root);
 				return { root, repo: origin === null ? null : gitHubRepoOf(origin) };
 			});
 			// Signed out, or GitHub out of reach: what is on this machine can still be started in.
-			const remote = github.state().state === 'signedIn' ? await reachableRepositories(github, personGitHub, signedInLogin()) : [];
-			if (remote.length > 0) visible = remote;
-			return mergeRepositories(remote, clones);
+			const remote = github.state().state === 'signedIn' ? await reachableRepositories(github, personGitHub, signedInLogin()) : { names: [], reach: 'none' as const };
+			if (remote.names.length > 0) visible = remote.names;
+			return { repositories: mergeRepositories(remote.names, clones), reach: remote.reach };
 		}),
 	);
 

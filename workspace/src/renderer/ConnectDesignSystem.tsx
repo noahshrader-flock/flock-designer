@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { FoundDesignSystem, Repository } from '../shared/contract';
+import type { FoundDesignSystem, Repository, RepositoryReach } from '../shared/contract';
 import { plural } from '../shared/plural';
 import { CancelButton } from './CancelButton';
 import { CloneHere, useClone } from './Clone';
+import { RepositoryReachNote } from './RepositoryReachNote';
 import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
@@ -17,13 +18,18 @@ import { Label } from './ui/label';
  */
 export const ConnectDesignSystem = ({ onConnected, onCancel }: { onConnected: () => void; onCancel?: () => void }) => {
 	const [repos, setRepos] = useState<Repository[] | null>(null);
+	const [reach, setReach] = useState<RepositoryReach | null>(null);
 	const [picked, setPicked] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	// A repository with several design systems in it, until one is chosen.
 	const [choosing, setChoosing] = useState<{ repository: string; found: FoundDesignSystem[] } | null>(null);
 
 	useEffect(() => {
-		void window.workspace.listRepositories().then((r) => (r.ok ? setRepos(r.value) : setError(r.error)));
+		void window.workspace.listRepositories().then((r) => {
+			if (!r.ok) return setError(r.error);
+			setRepos(r.value.repositories);
+			setReach(r.value.reach);
+		});
 	}, []);
 
 	const clone = useClone(picked, setError, true);
@@ -82,6 +88,7 @@ export const ConnectDesignSystem = ({ onConnected, onCancel }: { onConnected: ()
 								empty="No repository matches."
 								disabled={clone.cloning !== null}
 							/>
+							<RepositoryReachNote reach={reach} />
 							{picked !== null && <CloneHere clone={clone} onClone={() => void connect()} action="Connect" />}
 						</>
 					)}

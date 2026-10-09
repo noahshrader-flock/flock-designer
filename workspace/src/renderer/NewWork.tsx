@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import type { AgentReadiness, Checkout, Project, ProjectIteration, PrototypeReadiness, Repository } from '../shared/contract';
+import type { AgentReadiness, Checkout, Project, ProjectIteration, PrototypeReadiness, Repository, RepositoryList, RepositoryReach } from '../shared/contract';
 import { freshIteration, slugify } from '../shared/projects';
 import { CancelButton } from './CancelButton';
 import { CloneHere, useClone, Working } from './Clone';
+import { RepositoryReachNote } from './RepositoryReachNote';
 import { SearchSelect } from './SearchSelect';
 import { InfoIcon } from 'lucide-react';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
@@ -55,18 +56,23 @@ export const NewWork = ({
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [repos, setRepos] = useState<Repository[]>([]);
+	const [reach, setReach] = useState<RepositoryReach | null>(null);
 	const [readiness, setReadiness] = useState<AgentReadiness>({ state: 'unknown' });
 	// The repository chosen, by name. Null means the one in use.
 	const [picked, setPicked] = useState<string | null>(null);
 	const [branches, setBranches] = useState<string[]>([]);
 	const [from, setFrom] = useState<string | null>(null);
 	const id = slugify(name);
+	const showRepos = (list: RepositoryList) => {
+		setRepos(list.repositories);
+		setReach(list.reach);
+	};
 
 	useEffect(() => {
 		if (!open) return;
 		setPicked(null);
 		setError(null);
-		void window.workspace.listRepositories().then((r) => r.ok && setRepos(r.value));
+		void window.workspace.listRepositories().then((r) => r.ok && showRepos(r.value));
 		// Asked now, not after the branch is made: an agent that cannot start would leave an empty iteration behind.
 		void window.workspace.agentReadiness().then((r) => r.ok && setReadiness(r.value));
 	}, [open]);
@@ -105,7 +111,7 @@ export const NewWork = ({
 		// Found and accepted: the form carries on with it, and the list shows it as here now.
 		onCheckout(r.value);
 		setPicked(null);
-		void window.workspace.listRepositories().then((l) => l.ok && setRepos(l.value));
+		void window.workspace.listRepositories().then((l) => l.ok && showRepos(l.value));
 	};
 	// Closing while it clones stops the clone, which leaves nothing behind.
 	const closedWhileCloning = useRef(false);
@@ -204,6 +210,7 @@ export const NewWork = ({
 									empty="No repository matches."
 									disabled={busy || cloning !== null}
 								/>
+								<RepositoryReachNote reach={reach} />
 								{toClone !== null && <CloneHere clone={cloneState} onClone={() => void clone()} />}
 							</div>
 							{/* After the clone, not before: there is nothing to start from until it is here. */}

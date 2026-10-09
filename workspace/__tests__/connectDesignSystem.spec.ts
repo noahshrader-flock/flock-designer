@@ -25,7 +25,7 @@ const plan = (repository: string, state: 'free' | 'cloned' = 'free'): ClonePlan 
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
 const open = async (more: Record<string, (...a: never[]) => unknown> = {}, props: Record<string, unknown> = {}) => {
-	const app = fakeApp({ listRepositories: async () => ok(REPOS), clonePlan: async (repository: string) => ok(plan(repository)), ...more });
+	const app = fakeApp({ listRepositories: async () => ok({ repositories: REPOS, reach: 'account' }), clonePlan: async (repository: string) => ok(plan(repository)), ...more });
 	(window as unknown as { workspace: unknown }).workspace = app.api;
 	const onConnected = vi.fn();
 	current = await render(createElement(ConnectDesignSystem, { onConnected, ...props }));
@@ -66,6 +66,17 @@ describe('the screen', () => {
 		// The design system is read, not worked in: no design repository beside it.
 		expect(app.calls.clonePlan?.at(-1)).toEqual(['flocksafety/flock-coke', true]);
 		expect(text()).not.toContain('not the design system');
+	});
+
+	it('says when the list is only the repositories DSNR’s GitHub App can see, and how to see every one', async () => {
+		await open({ listRepositories: async () => ok({ repositories: REPOS, reach: 'app' }) });
+		expect(text()).toContain('Only the repositories DSNR’s GitHub App is installed on are listed.');
+		expect(text()).toContain('gh auth login');
+	});
+
+	it('says nothing of the kind when the list is every repository the account reaches', async () => {
+		await open();
+		expect(text()).not.toContain('Only the repositories');
 	});
 
 	it('has no Cancel when nothing is connected yet, and one that goes back when something is', async () => {

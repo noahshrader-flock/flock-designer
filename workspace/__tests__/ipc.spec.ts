@@ -228,8 +228,9 @@ describe('the Design System tab', () => {
 			signedIn(['flocksafety/flock-coke']);
 			personRepos = [LIB];
 			cloneSources = { [LIB]: repository('fui', { 'a/A.stories.tsx': story('A/A') }) };
-			const listed = ((await call(CHANNELS.listRepositories)).value as { name: string }[]).map((r) => r.name);
+			const listed = ((await call(CHANNELS.listRepositories)).value as { repositories: { name: string }[] }).repositories.map((r) => r.name);
 			expect(listed).toEqual(expect.arrayContaining([LIB, 'flocksafety/flock-coke']));
+			expect(((await call(CHANNELS.listRepositories)).value as { reach: string }).reach).toBe('account');
 			expect(await call(CHANNELS.connectDesignSystem, LIB)).toEqual({ ok: true, value: { state: 'connected', id: LIB } });
 		});
 
@@ -237,8 +238,10 @@ describe('the Design System tab', () => {
 			signedIn(['flocksafety/flock-coke']);
 			personRepos = ['someone/private'];
 			personLogin = 'someone';
-			const listed = ((await call(CHANNELS.listRepositories)).value as { name: string }[]).map((r) => r.name);
+			const listed = ((await call(CHANNELS.listRepositories)).value as { repositories: { name: string }[] }).repositories.map((r) => r.name);
 			expect(listed).not.toContain('someone/private');
+			// Said, not hidden: the list is only what the app's GitHub App can see.
+			expect(((await call(CHANNELS.listRepositories)).value as { reach: string }).reach).toBe('app');
 			expect(listed).toContain('flocksafety/flock-coke');
 		});
 
@@ -312,11 +315,11 @@ describe('where clones go', () => {
 	it('is chosen with the system’s folder picker and kept, and a repository there is found and can be used', async () => {
 		const elsewhere = join(home, 'Work', 'repos');
 		makeProduct(join(elsewhere, 'flock-other'), []);
-		expect((await call(CHANNELS.listRepositories)).value).not.toContainEqual(expect.objectContaining({ root: join(elsewhere, 'flock-other') }));
+		expect(((await call(CHANNELS.listRepositories)).value as { repositories: unknown[] }).repositories).not.toContainEqual(expect.objectContaining({ root: join(elsewhere, 'flock-other') }));
 		(await picker()).mockResolvedValueOnce({ canceled: false, filePaths: [elsewhere] } as never);
 		expect((await call(CHANNELS.chooseCloneFolder)).value).toBe(elsewhere);
 		expect((await call(CHANNELS.cloneFolder)).value).toBe(elsewhere);
-		expect((await call(CHANNELS.listRepositories)).value).toContainEqual(expect.objectContaining({ root: join(elsewhere, 'flock-other') }));
+		expect(((await call(CHANNELS.listRepositories)).value as { repositories: unknown[] }).repositories).toContainEqual(expect.objectContaining({ root: join(elsewhere, 'flock-other') }));
 		expect((await call(CHANNELS.useCheckout, join(elsewhere, 'flock-other'))).ok).toBe(true);
 	});
 
@@ -352,7 +355,7 @@ describe('where clones go', () => {
 			// Its origin as a real clone's would read: GitHub, not this machine's stand-in.
 			g(join(home, 'Work', 'flock-ops'), 'remote', 'set-url', 'origin', 'https://github.com/flocksafety/flock-ops.git');
 			// Found where it went, so it is listed as here.
-			expect((await call(CHANNELS.listRepositories)).value).toContainEqual({ name: 'flocksafety/flock-ops', root: join(home, 'Work', 'flock-ops') });
+			expect(((await call(CHANNELS.listRepositories)).value as { repositories: unknown[] }).repositories).toContainEqual({ name: 'flocksafety/flock-ops', root: join(home, 'Work', 'flock-ops') });
 		});
 
 		it('refuses a repository the person’s list does not have, with nothing made', async () => {
@@ -565,7 +568,7 @@ describe('where new work starts', () => {
 	it('lists the repositories on this machine without trusting any', async () => {
 		// Signed out, so only what is on this machine; a clone with no GitHub remote goes by its folder name.
 		const r = await call(CHANNELS.listRepositories);
-		expect(r).toEqual({ ok: true, value: [{ name: 'flock-coke', root: product }] });
+		expect(r).toEqual({ ok: true, value: { repositories: [{ name: 'flock-coke', root: product }], reach: 'none' } });
 		expect((await call(CHANNELS.listBaseBranches, product)).ok).toBe(false);
 	});
 

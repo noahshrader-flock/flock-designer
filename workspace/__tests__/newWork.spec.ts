@@ -26,7 +26,7 @@ let current: Awaited<ReturnType<typeof render>> | null = null;
 let progress: ((p: CloneProgress) => void) | null = null;
 const open = async (more: Record<string, (...a: never[]) => unknown> = {}, props: Record<string, unknown> = {}) => {
 	const app = fakeApp({
-		listRepositories: async () => ok(REPOS),
+		listRepositories: async () => ok({ repositories: REPOS, reach: 'account' }),
 		agentReadiness: async () => ok({ state: 'ready' }),
 		listBaseBranches: async () => ok(['develop']),
 		prototypeReadiness: async () => ok({ ready: true, designSystem: 'x', version: '1' }),
@@ -128,6 +128,13 @@ describe('installing its packages', () => {
 		await open({ prototypeReadiness: async () => ok(notInstalled(false)) });
 		expect(text()).toContain('Run npm ci in it');
 		expect(() => button('Install packages')).toThrow(/0 buttons/);
+	});
+});
+
+describe('how far the list reaches', () => {
+	it('says when it is only the repositories DSNR’s GitHub App can see, as the Connect screen does', async () => {
+		await open({ listRepositories: async () => ok({ repositories: REPOS, reach: 'app' }) });
+		expect(document.body.textContent).toContain('Only the repositories DSNR’s GitHub App is installed on are listed.');
 	});
 });
 

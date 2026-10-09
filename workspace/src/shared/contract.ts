@@ -362,7 +362,7 @@ export interface WorkspaceApi {
 	 * Every repository the signed-in person can see on GitHub, most recently pushed first, each with its clone on
 	 * this machine where there is one; then clones here GitHub did not list. Listing one trusts nothing.
 	 */
-	listRepositories(): Promise<Result<Repository[]>>;
+	listRepositories(): Promise<Result<RepositoryList>>;
 	/** The branches of an opened repository, here or only on GitHub, most recently worked on first: what new work can start from. */
 	listBaseBranches(root: string): Promise<Result<string[]>>;
 	/** Of those, the ones with the DSNR setup, which codebase work can start from. */
@@ -622,6 +622,19 @@ export interface Repository {
 	name: string;
 	/** Its clone on this machine, or null when it has none. */
 	root: string | null;
+}
+
+/**
+ * How far a list of repositories reaches: `account`, every one the signed-in person's account can (through their own
+ * GitHub command line, signed in as them); `app`, only those DSNR's GitHub App is installed on; `none`, nobody is signed
+ * in, so only the clones on this computer. Said, so a repository missing from a short list is never a mystery.
+ */
+export type RepositoryReach = 'account' | 'app' | 'none';
+
+/** The repositories a picker offers, and how far that list reaches. */
+export interface RepositoryList {
+	repositories: Repository[];
+	reach: RepositoryReach;
 }
 
 /** Where a repository would be placed in the clone folder, and whether it can be. */

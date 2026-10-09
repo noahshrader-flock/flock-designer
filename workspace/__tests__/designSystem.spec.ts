@@ -192,7 +192,7 @@ describe('the design systems connected (P4)', () => {
 	});
 
 	it('connect another from the switcher, with Cancel back to the one shown', async () => {
-		await open(() => ok(ready()), false, { listRepositories: async () => ok([]) });
+		await open(() => ok(ready()), false, { listRepositories: async () => ok({ repositories: [], reach: 'account' }) });
 		await press(menuItem(await openMenu(switcher()), 'Connect a design system'));
 		await settle();
 		expect(text()).toContain('Connect your design system');
@@ -365,7 +365,7 @@ describe('when there is no list', () => {
 		const app = fakeApp({
 			designSystemCatalog: async () => ok(connected ? ready() : { state: 'none' }),
 			designSystems: async () => ok(connected ? SYSTEMS : { systems: [], current: null }),
-			listRepositories: async () => ok([{ name: FUI_SYSTEM.repository, root: null }]),
+			listRepositories: async () => ok({ repositories: [{ name: FUI_SYSTEM.repository, root: null }], reach: 'account' }),
 			clonePlan: async () => ok({ repository: FUI_SYSTEM.repository, place: { state: 'cloned', path: FUI_SYSTEM.root }, where: '~/GitHub/flock-react-component-lib', design: null }),
 			connectDesignSystem: async () => {
 				connected = true;

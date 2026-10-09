@@ -27,7 +27,7 @@ import type {
 	RunLogLine,
 	SignInState,
 	WorkspaceApi,
-	Repository,
+	RepositoryList,
 	AgentReadiness,
 	PrototypeReadiness,
 	MoveToCodePlan,
@@ -61,7 +61,7 @@ const api: WorkspaceApi = {
 	readContextReceipt: (root) => invoke<ContextReceipt>(CHANNELS.readContextReceipt, root),
 
 	listIterations: (root, projectId) => invoke<Iteration[]>(CHANNELS.listIterations, root, projectId),
-	listRepositories: () => invoke<Repository[]>(CHANNELS.listRepositories),
+	listRepositories: () => invoke<RepositoryList>(CHANNELS.listRepositories),
 	listBaseBranches: (root) => invoke<string[]>(CHANNELS.listBaseBranches, root),
 	branchesWithSetup: (root) => invoke<string[]>(CHANNELS.branchesWithSetup, root),
 	continueIteration: (root, projectId, name) => invoke<Iteration>(CHANNELS.continueIteration, root, projectId, name),
