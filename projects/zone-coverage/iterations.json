@@ -17,5 +17,24 @@
       "branch": "noah/flock-designer",
       "commit": "becdfc67bd0fb50864825d4fc8cdb4fcdf53e0f8"
     }
+  },
+  {
+    "projectId": "zone-coverage",
+    "name": "v2-i1",
+    "branch": "prototype/zone-coverage/v2-i1",
+    "commit": null,
+    "createdAt": "2026-10-09T11:57:51.353Z",
+    "note": "Version 2, a different idea from the table: show each zone as a card instead of a table row. Each card has a health status at the top: healthy, degraded, or offline. The offline cameras are listed on the card itself, so an admin can see what is wrong without opening the zone. Cards are grouped by status, worst first (offline, then degraded, then healthy). Keep the empty state for when no zone matches, and keep the search box and the 'has offline cameras' filter from the original request.",
+    "contributors": [
+      {
+        "name": "Noah Shrader",
+        "login": "noahshrader-flock"
+      }
+    ],
+    "basedOn": {
+      "repository": "flock-coke",
+      "branch": "noah/flock-designer",
+      "commit": "becdfc67bd0fb50864825d4fc8cdb4fcdf53e0f8"
+    }
   }
 ]
