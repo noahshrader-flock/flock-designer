@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { DeviceCodeStart, SignInState } from '../shared/contract';
+import { CancelButton } from './CancelButton';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 
@@ -65,9 +66,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 
 					<p className="text-muted-foreground text-sm">Waiting for you to approve it. This page continues on its own.</p>
 					<div>
-						<Button variant="secondary" onClick={cancel}>
-							Cancel
-						</Button>
+						<CancelButton onClick={cancel} />
 					</div>
 				</div>
 			</div>

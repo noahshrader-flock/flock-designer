@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AgentReadiness, Checkout, Project, ProjectIteration, PrototypeReadiness, Repository } from '../shared/contract';
 import { freshIteration, slugify } from '../shared/projects';
+import { CancelButton } from './CancelButton';
 import { CloneHere, useClone, Working } from './Clone';
 import { SearchSelect } from './SearchSelect';
 import { InfoIcon } from 'lucide-react';
@@ -309,9 +310,7 @@ export const NewWork = ({
 					)}
 				</DialogBody>
 				<DialogFooter>
-					<Button variant="secondary" onClick={close} disabled={busy}>
-						Cancel
-					</Button>
+					<CancelButton onClick={close} disabled={busy} />
 					<Button
 						onClick={() => void create()}
 						disabled={busy || blocked || prototypeBlocked || !id || !task.trim() || !checkout || elsewhere || !from}

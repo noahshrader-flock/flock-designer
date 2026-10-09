@@ -1,4 +1,5 @@
 import type { ProjectIteration } from '../shared/contract';
+import { CancelButton } from './CancelButton';
 import { useAgentBusy } from './useAgentBusy';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
@@ -52,9 +53,7 @@ export const HandoffDialog = ({
 					</div>
 				</DialogBody>
 				<DialogFooter>
-					<Button variant="secondary" onClick={onClose}>
-						Cancel
-					</Button>
+					<CancelButton onClick={onClose} />
 					<Button
 						onClick={() => {
 							onClose();

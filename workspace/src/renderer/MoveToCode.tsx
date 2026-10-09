@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { BuildInClaude, Checkout, MoveToCodePlan, Project, ProjectIteration } from '../shared/contract';
 import { iterationLabel } from '../shared/projects';
+import { CancelButton } from './CancelButton';
 import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
@@ -183,9 +184,7 @@ export const MoveToCode = ({
 							)}
 						</DialogBody>
 						<DialogFooter>
-							<Button variant="secondary" onClick={onClose} disabled={busy}>
-								Cancel
-							</Button>
+							<CancelButton onClick={onClose} disabled={busy} />
 							<Button onClick={() => void start()} disabled={!canStart}>
 								{busy ? 'Opening…' : continuing ? 'Continue in Claude Code' : 'Build in Claude Code'}
 							</Button>

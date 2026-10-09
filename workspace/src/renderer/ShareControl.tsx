@@ -2,6 +2,7 @@ import { CircleCheckIcon, CodeIcon, FileTextIcon, GitBranchIcon, CopyIcon, Ellip
 import { useEffect, useState } from 'react';
 import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared/contract';
 import { projectCodeLink, recordLabel } from '../shared/projects';
+import { CancelButton } from './CancelButton';
 import { dialogView, isMine, stepText } from './shareView';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
@@ -240,9 +241,7 @@ export const ShareControl = ({
 					<DialogFooter>
 						{view === 'confirm' ? (
 							<>
-								<Button variant="secondary" onClick={() => setOpen(false)}>
-									Cancel
-								</Button>
+								<CancelButton onClick={() => setOpen(false)} />
 								<Button onClick={() => void start()}>{url ? 'Push and update' : 'Push and share'}</Button>
 							</>
 						) : (

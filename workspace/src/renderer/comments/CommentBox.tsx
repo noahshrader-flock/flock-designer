@@ -1,3 +1,4 @@
+import { CancelButton } from '../CancelButton';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
@@ -47,9 +48,7 @@ export const CommentBox = ({
 				<Textarea id="comment-draft" rows={3} value={comments.draft} onChange={(e) => comments.setDraft(e.target.value)} autoFocus />
 				{note && <p className="text-muted-foreground text-xs">{note}</p>}
 				<div className="flex flex-row justify-end gap-2">
-					<Button variant="secondary" onClick={comments.cancelCompose} disabled={comments.posting}>
-						Cancel
-					</Button>
+					<CancelButton onClick={comments.cancelCompose} disabled={comments.posting} />
 					<Button onClick={() => void comments.post()} disabled={comments.posting || !comments.draft.trim()}>
 						{comments.posting ? 'Saving…' : 'Save'}
 					</Button>
