@@ -46,8 +46,11 @@ export interface ViewerSlots {
 	frame: HTMLIFrameElement;
 }
 
-/** The state the frame shows, and choosing another; kept above the bar, which is drawn again on signing in or out. */
-type Showing = { state: string | null; onState: (state: string | null) => void };
+/**
+ * The page's states, the one the frame shows, and choosing another; kept above the bar, which is drawn again on signing
+ * in or out.
+ */
+type Showing = { states: string[]; state: string | null; onState: (state: string | null) => void };
 
 /** The page's bar. `children` is what comes last: the Comment control, or signing in. */
 const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; slots: ViewerSlots; showing: Showing; children: ReactNode }) => {
@@ -76,7 +79,7 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 					grouped
 					onSelect={(next) => void (location.href = next.href)}
 				/>
-				<StateSwitcher states={config.states ?? []} current={showing.state} onSelect={showing.onState} />
+				<StateSwitcher states={showing.states} current={showing.state} onSelect={showing.onState} />
 				{children}
 			</div>
 		</Toolbar>,
@@ -89,11 +92,12 @@ export const Viewer = ({ config, slots }: { config: ViewerConfig; slots: ViewerS
 	const [token, setToken] = useState<string | null>(savedToken);
 	const [paused, setPaused] = useState(false);
 	// The frame opens in the page's first state; another is the same page, asked for in it.
-	const [state, setState] = useState<string | null>(null);
+	const [shownState, setShownState] = useState<string | null>(null);
 	const showing: Showing = {
-		state,
+		states: config.states ?? [],
+		state: shownState,
 		onState: (next) => {
-			setState(next);
+			setShownState(next);
 			slots.frame.src = withState(slots.frame.getAttribute('src') ?? 'page.html', next);
 		},
 	};
@@ -189,7 +193,8 @@ const Commenting = ({
 						)}
 						<CommentList
 							comments={comments}
-							states={config.states}
+							states={showing.states}
+							onShowState={showing.onState}
 							addressed={(c) => prototypeAddressed(c, config.projectId, config.name)}
 						/>
 					</div>,

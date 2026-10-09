@@ -13,25 +13,27 @@ const NOTE: Record<MarkerState, string | null> = {
 	moved: 'The element changed, so this follows its text.',
 	missing: 'The element is no longer on the page, so this is shown as a page comment.',
 	elsewhere: null,
-	otherState: 'Made in a different state of this page. Switch to that state to see where it was.',
+	otherState: 'Made in a different state of this page, so it is not pinned here.',
 };
 
 /**
  * Every comment on the iteration, as cards: who wrote it, what it says, the spot it was made on, and a menu to resolve
  * or delete it. `actions` puts more at the top of a card's menu (the app's Address), and `addressed` says on a card
  * what the agent did with it, both left to the screen this sits in. `states` are the prototype's, so a card can name
- * the state it was made in.
+ * the state it was made in; `onShowState` opens the page in it (`null` is the first), from a comment made in another.
  */
 export const CommentList = ({
 	comments,
 	actions,
 	addressed,
 	states = [],
+	onShowState,
 }: {
 	comments: Comments;
 	actions?: (comment: ReviewComment) => ReactNode;
 	addressed?: (comment: ReviewComment) => ReactNode;
 	states?: string[];
+	onShowState?: (state: string | null) => void;
 }) => {
 	// Deleting cannot be undone, so it asks first, on the card itself (a dialog would have to take the preview's place).
 	const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
@@ -47,6 +49,9 @@ export const CommentList = ({
 				const n = comments.numberOf(comment.id);
 				const note = comment.addressedAt !== null ? addressed?.(comment) : null;
 				const madeIn = comment.anchor?.state === undefined ? null : stateOfQuery(comment.anchor.state, states);
+				// Made in another of the prototype's states, which it still has: the page can be shown in it.
+				const target = madeIn ?? states[0];
+				const showIn = state === 'otherState' && onShowState && target !== undefined && states.includes(target) ? target : null;
 				return (
 					<div
 						key={comment.id}
@@ -109,6 +114,20 @@ export const CommentList = ({
 							{madeIn && <span className="text-muted-foreground text-xs">State: {madeIn}</span>}
 							{comment.anchor && state === 'elsewhere' && <span className="text-muted-foreground text-xs">On {comment.anchor.route}</span>}
 							{state && NOTE[state] && <span className="text-warning text-xs">{NOTE[state]}</span>}
+							{showIn && (
+								<Button
+									size="sm"
+									variant="outline"
+									className="self-start"
+									onClick={(e: React.MouseEvent) => {
+										// Showing the page in its state is not choosing the comment.
+										e.stopPropagation();
+										onShowState?.(madeIn);
+									}}
+								>
+									Show in {showIn}
+								</Button>
+							)}
 						</div>
 					</div>
 				);

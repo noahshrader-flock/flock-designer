@@ -535,6 +535,48 @@ describe('the prototype’s states', () => {
 		expect(cardFor('Before states were recorded').textContent).not.toContain('State:');
 	});
 
+	describe('a comment made in another of them', () => {
+		const anchor = { route: '/', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
+		// As the page says on this view: made in another state, so not drawn.
+		const elsewhere = (madeIn: string) =>
+			fakeApp({
+				openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1/', states: ['default', 'panel'] }),
+				readComments: async () => ok([comment(1, 'On the panel', { anchor: { ...anchor, state: madeIn } })]),
+				pageShowMarkers: async (items: { id: number }[]) => ok(items.map((i) => ({ id: i.id, state: 'otherState' }))),
+			});
+
+		it('has a button on its card that opens the page in that state', async () => {
+			const app = elsewhere('?state=panel');
+			await open(app);
+			await settle();
+			await sidebar();
+			await press(button('Show in panel', cardFor('On the panel')));
+			await settle();
+			expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/?state=panel']);
+			expect(button('State panel: switch state')).toBeTruthy();
+			// Pressing it is not choosing the comment.
+			expect(cardFor('On the panel').className).not.toContain('border-primary');
+		});
+
+		it('names the first state too, and opens the page as it opens', async () => {
+			const app = elsewhere('');
+			await open(app);
+			await settle();
+			await sidebar();
+			await press(button('Show in default', cardFor('On the panel')));
+			await settle();
+			expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/']);
+		});
+
+		it('has no button for a state the prototype no longer has, only the note', async () => {
+			await open(elsewhere('?state=gone'));
+			await settle();
+			await sidebar();
+			expect([...cardFor('On the panel').querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Show in gone');
+			expect(cardFor('On the panel').textContent).toContain('Made in a different state of this page, so it is not pinned here.');
+		});
+	});
+
 	it('are not offered for a prototype with one, or none', async () => {
 		await open(withStates(['default']));
 		await settle();

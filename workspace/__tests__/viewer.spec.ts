@@ -59,8 +59,8 @@ describe("the page's bar", () => {
 
 describe('the states of the page', () => {
 	const withStates = async (states: string[]) => {
+		// The site gives the frame src="page.html"; jsdom would never finish loading it, and the viewer reads it as that when unset.
 		const page = sitePage();
-		page.frame.setAttribute('src', 'page.html');
 		current = await render(createElement(Viewer, { config: { ...CONFIG, states }, slots: page.slots }));
 		return page;
 	};
@@ -79,6 +79,32 @@ describe('the states of the page', () => {
 		await press(document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')[0] as HTMLElement);
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html');
+	});
+
+	it('open from a comment made in another of them, by the button on its card', async () => {
+		saveToken('good-token');
+		gh.issues.push({
+			number: 1,
+			body: 'Review thread for **demo**, branch: `prototype/demo/v1-i1`.',
+			labels: ['flock-designer:review'],
+			comments: [
+				{
+					id: 7,
+					body: composeBody('On the panel', { route: '/demo/v1-i1/', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '', state: '?state=panel' }),
+					user: { login: 'noah' },
+					created_at: '2026-10-08T09:00:00Z',
+				},
+			],
+		});
+		const { frame } = await withStates(['default', 'panel']);
+		await settle();
+		await press(button('Show all comments'));
+		await settle();
+		const card = cards().find((c) => c.textContent?.includes('On the panel')) as HTMLElement;
+		await press(button('Show in panel', card));
+		await settle();
+		expect(frame.getAttribute('src')).toBe('page.html?state=panel');
+		expect(button('State panel: switch state')).toBeTruthy();
 	});
 
 	it('are not offered for a page with one, or a page built before pages said', async () => {
