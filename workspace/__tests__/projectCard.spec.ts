@@ -43,7 +43,7 @@ const show = async (p: Project) => {
 	return { onOpen };
 };
 const card = () => document.querySelector<HTMLElement>('[data-slot="card"]')!;
-const cover = () => document.querySelector('.aspect-\\[1920\\/1080\\]')!;
+const cover = () => document.querySelector('[data-slot="card-cover"]')!;
 const footer = () => document.querySelector<HTMLElement>('[data-slot="card-footer"]')!;
 
 afterEach(async () => {
