@@ -44,7 +44,8 @@ import { ProfileNames } from './services/profileNames';
 import { StoryPreviews } from './services/storyPreviews';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
-import { gitHubRepoOf, listedAs, mergeRepositories, originOf, visibleRepositories } from './services/repositories';
+import { gitHubRepoOf, listedAs, mergeRepositories, originOf, reachableRepositories } from './services/repositories';
+import { ghApi } from './services/ghCli';
 import { classify, readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
 import { ADDRESS_SKILL, chooseComment, prepareAddress } from './services/address';
@@ -138,8 +139,13 @@ export interface IpcContext {
 	installer?: Installer;
 	/** The component library for the Design System tab. Given for tests, to read a library made for them. */
 	designLibrary?: DesignLibrary;
-	/** The design system the person connected. */
+	/** The design systems the person connected. */
 	designSystems?: DesignSystemsMemory;
+	/**
+	 * GitHub as the person's own account sees it (its command line), so every repository they can reach is listed, not
+	 * only those the app's GitHub App is installed on. Null where there is none; given for tests.
+	 */
+	personGitHub?: Pick<GitHubSession, 'api'> | null;
 	/** Where the previews of the library's stories are built: the app's own folder, never the library's. */
 	storyPreviewsRoot?: string;
 }
@@ -163,6 +169,7 @@ export const registerIpc = ({
 	installer = new Installer(),
 	designLibrary,
 	designSystems = new DesignSystemsMemory(join(tmpdir(), 'dsnr-design-system.json')),
+	personGitHub = ghApi(),
 	storyPreviewsRoot = join(tmpdir(), 'dsnr-story-previews'),
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
@@ -346,7 +353,7 @@ export const registerIpc = ({
 	const DESIGN = `${DESIGN_REPO.owner}/${DESIGN_REPO.repo}`;
 	/** What cloning `repository` into `folder` would do. */
 	const planClone = async (repository: string, folder: string, forDesignSystem = false): Promise<ClonePlan> => {
-		if (visible.length === 0 && github.state().state === 'signedIn') visible = await visibleRepositories(github);
+		if (visible.length === 0 && github.state().state === 'signedIn') visible = await reachableRepositories(github, personGitHub);
 		const listed = listedAs(visible, repository);
 		if (listed === undefined) throw new Error(`${repository} is not one of the repositories your GitHub account can see. Sign in to GitHub in DSNR, then try again.`);
 		const design = clonePlace(folder, DESIGN);
@@ -430,7 +437,7 @@ export const registerIpc = ({
 				return { root, repo: origin === null ? null : gitHubRepoOf(origin) };
 			});
 			// Signed out, or GitHub out of reach: what is on this machine can still be started in.
-			const remote = github.state().state === 'signedIn' ? await visibleRepositories(github).catch(() => []) : [];
+			const remote = github.state().state === 'signedIn' ? await reachableRepositories(github, personGitHub) : [];
 			if (remote.length > 0) visible = remote;
 			return mergeRepositories(remote, clones);
 		}),

@@ -1,4 +1,3 @@
-import { execFile } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -48,27 +47,8 @@ export interface CliDeps {
 	buildViewer?: () => Promise<string>;
 }
 
-/** GitHub's API through its command line, `gh`, signed in as the person running this. */
 export { openInBrowser } from '../main/services/openBrowser';
-
-export const ghApi = (): GitHubApi => ({
-	api: (path, init = {}) =>
-		new Promise((done, fail) => {
-			const args = ['api', path, ...(init.method ? ['--method', init.method] : []), ...(init.body !== undefined ? ['--input', '-'] : [])];
-			const child = execFile('gh', args, { maxBuffer: 64 * 1024 * 1024 }, (err, stdout, stderr) => {
-				// What GitHub said, and its status, so a 404 can be told from anything else.
-				if (err) return fail(Object.assign(new Error(stderr.trim() || err.message), { status: Number(/HTTP (\d{3})/.exec(stderr)?.[1]) || undefined }));
-				if (!stdout.trim()) return done(null);
-				try {
-					done(JSON.parse(stdout));
-				} catch (e) {
-					fail(e);
-				}
-			});
-			if (init.body !== undefined) child.stdin?.end(JSON.stringify(init.body));
-		}),
-});
-
+export { ghApi } from '../main/services/ghCli';
 
 const USAGE = `Usage:
   dsnr new-prototype --project <id> --note <what to make> [--title <project title>] [--from <branch>] [--product <dir>]

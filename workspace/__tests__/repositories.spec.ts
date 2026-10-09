@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { gitHubRepoOf, mergeRepositories, originOf, visibleRepositories } from '../src/main/services/repositories';
+import { gitHubRepoOf, mergeRepositories, originOf, reachableRepositories, visibleRepositories } from '../src/main/services/repositories';
 
 describe('gitHubRepoOf', () => {
 	it('reads owner/repo from each form git writes a GitHub remote in', () => {
@@ -49,12 +49,56 @@ describe('mergeRepositories', () => {
 });
 
 describe('visibleRepositories', () => {
-	it('reads every page GitHub has, and stops at the first short one', async () => {
-		const page = (n: number, count: number) => Array.from({ length: count }, (_, i) => ({ full_name: `o/r${n}-${i}` }));
-		const api = vi.fn(async (path: string) => (path.endsWith('page=1') ? page(1, 100) : page(2, 3)));
+	const page = (n: number, count: number) => Array.from({ length: count }, (_, i) => ({ full_name: `o/r${n}-${i}` }));
+
+	it('reads every page GitHub has, up to the first that is not full, in order', async () => {
+		const api = vi.fn(async (path: string) => {
+			const n = Number(/page=(\d+)$/.exec(path)?.[1]);
+			return n <= 2 ? page(n, 100) : n === 3 ? page(3, 3) : page(n, 100);
+		});
 		const names = await visibleRepositories({ api } as never);
-		expect(names).toHaveLength(103);
-		expect(api).toHaveBeenCalledTimes(2);
+		expect(names).toHaveLength(203);
+		expect(names[0]).toBe('o/r1-0');
+		expect(names.at(-1)).toBe('o/r3-2');
 		expect(api.mock.calls[0]?.[0]).toContain('affiliation=owner,collaborator,organization_member');
+	});
+
+	it('asks for one page alone when it is not full, and for the rest at once when it is', async () => {
+		const short = vi.fn(async () => page(1, 3));
+		expect(await visibleRepositories({ api: short } as never)).toHaveLength(3);
+		expect(short).toHaveBeenCalledTimes(1);
+		let running = 0;
+		let most = 0;
+		const full = vi.fn(async (path: string) => {
+			running++;
+			most = Math.max(most, running);
+			await new Promise((r) => setTimeout(r, 5));
+			running--;
+			return path.endsWith('page=1') ? page(1, 100) : page(2, 0);
+		});
+		await visibleRepositories({ api: full } as never);
+		// After the first, the other nine were asked together, not one after another.
+		expect(full).toHaveBeenCalledTimes(10);
+		expect(most).toBe(9);
+	});
+});
+
+describe('reachableRepositories', () => {
+	const listing = (names: string[]) => ({ api: vi.fn(async () => names.map((full_name) => ({ full_name }))) });
+
+	it('is every repository the person’s account reaches: their own GitHub sign-in’s, then any the app’s sees that it did not', async () => {
+		const app = listing(['flocksafety/flock-designer', 'flocksafety/flock-coke']);
+		const person = listing(['flocksafety/flock-coke', 'flocksafety/flock-react-component-lib', 'noah/sandbox']);
+		expect(await reachableRepositories(app, person)).toEqual(['flocksafety/flock-coke', 'flocksafety/flock-react-component-lib', 'noah/sandbox', 'flocksafety/flock-designer']);
+	});
+
+	it('names a repository once, whatever its case', async () => {
+		expect(await reachableRepositories(listing(['Acme/UI']), listing(['acme/ui']))).toEqual(['acme/ui']);
+	});
+
+	it('is the app’s list alone when the person’s GitHub command line is missing or signed out', async () => {
+		const missing = { api: vi.fn(async () => Promise.reject(new Error('gh: command not found'))) };
+		expect(await reachableRepositories(listing(['flocksafety/flock-coke']), missing)).toEqual(['flocksafety/flock-coke']);
+		expect(await reachableRepositories(listing(['flocksafety/flock-coke']), null)).toEqual(['flocksafety/flock-coke']);
 	});
 });

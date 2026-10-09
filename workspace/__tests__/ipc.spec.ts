@@ -32,6 +32,8 @@ vi.mock('electron', () => ({
 let copied = '';
 /** Where each repository is cloned from in a test: this machine, standing in for GitHub. */
 let cloneSources: Record<string, string> = {};
+/** What the person's own GitHub account lists, beyond what the app's GitHub App can see. */
+let personRepos: string[] = [];
 
 /** A repository made by `make`, as a bare one to clone from: this machine standing in for GitHub. */
 const bare = (name: string, make: (dir: string) => void) => {
@@ -131,6 +133,7 @@ beforeEach(async () => {
 	setAddressed = vi.fn(async (id: number, commit: string | null, iteration: string | null) => ({ id, addressedAt: commit, addressedIn: iteration }));
 	githubState = { state: 'signedOut' };
 	githubApi = vi.fn(async (path: string) => Promise.reject(new Error(`not faked: ${path}`)));
+	personRepos = [];
 	designRepoProjects = [];
 	prototypeServer = new (await import('../src/main/services/prototypeServer')).PrototypeServer();
 
@@ -149,6 +152,8 @@ beforeEach(async () => {
 		cloneFolders: new (await import('../src/main/services/cloneFolder')).CloneFolderMemory(join(home, 'clone-folder.json')),
 		cloner: new (await import('../src/main/services/clone')).Cloner({ urlOf: (r) => cloneSources[r] ?? 'file:///nowhere' }),
 		designSystems: new (await import('../src/main/services/designSystems')).DesignSystemsMemory(join(home, 'design-system.json')),
+		// The person's own GitHub (its command line): never the real one here.
+		personGitHub: { api: async (path: string) => (path.startsWith('/user/repos') ? personRepos.map((full_name) => ({ full_name })) : []) },
 		storyPreviewsRoot: join(home, 'story-previews'),
 	});
 });
@@ -214,6 +219,15 @@ describe('the Design System tab', () => {
 			expect(await ready()).toMatchObject({ state: 'ready', branch: 'main', components: [] });
 			expect(((await call(CHANNELS.designSystemCatalog, false)).value as { tokens: { source: string } }).tokens.source).toBe('CSS variables');
 			expect(((await call(CHANNELS.designSystems)).value as { systems: { name: string }[] }).systems[0]?.name).toBe('brand');
+		});
+
+		it('lists and connects a repository only the person’s own account reaches, where the app’s GitHub App is not installed', async () => {
+			signedIn(['flocksafety/flock-coke']);
+			personRepos = [LIB];
+			cloneSources = { [LIB]: repository('fui', { 'a/A.stories.tsx': story('A/A') }) };
+			const listed = ((await call(CHANNELS.listRepositories)).value as { name: string }[]).map((r) => r.name);
+			expect(listed).toEqual(expect.arrayContaining([LIB, 'flocksafety/flock-coke']));
+			expect(await call(CHANNELS.connectDesignSystem, LIB)).toEqual({ ok: true, value: { state: 'connected', id: LIB } });
 		});
 
 		it('refuses, in words, a repository with no design system in it, and connects nothing', async () => {

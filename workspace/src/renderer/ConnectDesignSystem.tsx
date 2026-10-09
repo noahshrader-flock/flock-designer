@@ -67,23 +67,23 @@ export const ConnectDesignSystem = ({ onConnected, onCancel }: { onConnected: ()
 								</Button>
 							))}
 						</>
+					) : repos === null ? (
+						<p className="text-muted-foreground text-sm">Loading your repositories…</p>
 					) : (
-						repos !== null && (
-							<>
-								<Label htmlFor="connect-repo">Repository</Label>
-								<SearchSelect
-									id="connect-repo"
-									items={repos.map((r) => r.name)}
-									value={picked}
-									onChange={setPicked}
-									placeholder="Choose a repository"
-									search="Search repositories…"
-									empty="No repository matches."
-									disabled={clone.cloning !== null}
-								/>
-								{picked !== null && <CloneHere clone={clone} onClone={() => void connect()} action="Connect" />}
-							</>
-						)
+						<>
+							<Label htmlFor="connect-repo">Repository</Label>
+							<SearchSelect
+								id="connect-repo"
+								items={repos.map((r) => r.name)}
+								value={picked}
+								onChange={setPicked}
+								placeholder="Choose a repository"
+								search="Search repositories…"
+								empty="No repository matches."
+								disabled={clone.cloning !== null}
+							/>
+							{picked !== null && <CloneHere clone={clone} onClone={() => void connect()} action="Connect" />}
+						</>
 					)}
 					{error && (
 						<Alert variant="destructive">

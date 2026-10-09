@@ -51,18 +51,38 @@ export const mergeRepositories = (remote: string[], clones: { root: string; repo
 /**
  * Every repository the signed-in person can see, by `owner/repo`, most recently pushed first. GitHub decides
  * what is visible, so this follows their permissions exactly. Bounded, at a thousand: past that the search
- * box is what finds one.
+ * box is what finds one. The first page is asked alone; when it is full, the rest are asked at once, since each ask can
+ * be a second or more (through GitHub's command line, a process each), and read up to the first that is not full.
  */
 export const visibleRepositories = async (session: Pick<GitHubSession, 'api'>, maxPages = 10): Promise<string[]> => {
-	const names: string[] = [];
-	for (let page = 1; page <= maxPages; page++) {
-		const batch = await session.api(`/user/repos?affiliation=owner,collaborator,organization_member&sort=pushed&per_page=100&page=${page}`);
-		const items = Array.isArray(batch) ? batch : [];
-		for (const r of items) {
-			const name = (r as { full_name?: unknown }).full_name;
-			if (typeof name === 'string') names.push(name);
-		}
-		if (items.length < 100) break;
+	const page = async (n: number): Promise<string[]> => {
+		const batch = await session.api(`/user/repos?affiliation=owner,collaborator,organization_member&sort=pushed&per_page=100&page=${n}`);
+		return (Array.isArray(batch) ? batch : []).map((r) => (r as { full_name?: unknown }).full_name).filter((n): n is string => typeof n === 'string');
+	};
+	const first = await page(1);
+	if (first.length < 100 || maxPages === 1) return first;
+	const rest = await Promise.all(Array.from({ length: maxPages - 1 }, (_, i) => page(i + 2)));
+	const names = [...first];
+	for (const batch of rest) {
+		names.push(...batch);
+		if (batch.length < 100) break;
 	}
 	return names;
+};
+
+/**
+ * Every repository the signed-in person's account reaches: what their own GitHub sign-in sees (its command line, when it
+ * is here and signed in; every organisation's repositories, as their account does), then any the app's sign-in sees that
+ * it did not. The app's own sign-in is a GitHub App, which sees only the repositories it is installed on; this is how a
+ * repository the person can open on GitHub is never missing here. Each named once, whatever its case.
+ */
+export const reachableRepositories = async (app: Pick<GitHubSession, 'api'>, person: Pick<GitHubSession, 'api'> | null): Promise<string[]> => {
+	const [theirs, apps] = await Promise.all([person ? visibleRepositories(person).catch(() => []) : [], visibleRepositories(app).catch(() => [])]);
+	const seen = new Set<string>();
+	return [...theirs, ...apps].filter((name) => {
+		const key = name.toLowerCase();
+		if (seen.has(key)) return false;
+		seen.add(key);
+		return true;
+	});
 };
