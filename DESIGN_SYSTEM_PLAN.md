@@ -2,7 +2,7 @@
 
 **Written 2026-10-08. Every decision is made and every unknown I could measure was measured the same day. S1 to S3 are built
 (2026-10-08), and P0 (**Connect the design system**, which replaced S4) the same evening. P1 and P2 (previews) were built the same day.
-P3 (pictures in the list) was dropped.** The plan for filling the **Design System** tab (`renderer/DesignSystem.tsx`) with the components
+P3 (pictures in the list) was dropped.** Tokens (T1 to T6) were laid out on 2026-10-09, after reading how Claude Design does it; none is built. The plan for filling the **Design System** tab (`renderer/DesignSystem.tsx`) with the components
 from `flock-react-component-lib` (FUI), without copying Storybook and without building the editing yet.
 
 This is the detail behind one candidate in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), which points here and does
@@ -80,14 +80,24 @@ the library):**
 | **Components read the roles through the MUI theme at run time,** made by `createFSTheme(mode)` in `src/utils/theme.ts` | A change of theme reaches every component with nothing per component |
 | **The library's own `FSApp` wrapper takes a `theme` prop** (`<FSApp theme={...}>`), and the library's `.storybook/preview.tsx` already wraps every story in `FSApp` | The hook for a changed theme **already exists**: P1 builds nothing to reserve for it |
 | **Spacing and radius are set once in the theme** (spacing 8, radius 8), **but about a dozen component styles hardcode `8px` and `360px`** instead of reading them | A radius control would move most things and not those. A library cleanup for the Design System owner; the tab need not work around it |
-| **Some component styles are built from the palette when the theme is created** (`getFSVariantStyles(palette)`) | A theme changed afterwards may not reach those. To check, cheaply, when tokens are built (T1); not a P1 concern |
+| **Some component styles are built from the palette when the theme is created** (`getFSVariantStyles(palette)`) | A theme changed afterwards may not reach those. To check, cheaply, before the controls are built (T3's spike); not a P1 concern |
 | **The 259-variable CSS file** (`flock-colors.css`) **is "kept for backward compatibility"** by the library's own words | Not a source for tokens; ignored |
 | **The library's own Storybook cannot be built from `develop` alone.** A build from a `git archive` of `develop` failed on `../symbols.generated`, a file the library generates at install time and does not keep in git (it is missing from the clone on Noah's checked-out branch too) | Embedding Storybook means running the clone's own dev server on whatever branch is checked out: not `develop`, not read-only, and a server to start and stop. Why decision 15 chooses the build in decision 8 |
+
+**How Claude Design does it (read 2026-10-09, from [Anthropic's help centre](https://support.claude.com/en/articles/14604397-set-up-your-design-system-in-claude-design) and third-party write-ups such as [this one](https://nitayneeman.com/blog/how-to-sync-a-design-system-with-claude-design/); marked where it is only third-party):**
+
+| Fact | What it means here |
+|---|---|
+| **It builds a design system from sources it is given** (a repository, decks, screenshots, assets) and extracts a colour palette, typography, components and layout patterns; a repository is the strongest input (Anthropic) | Ours is read from the library's own source, so nothing is guessed from pictures. The decision is only how to find the tokens in code that is laid out differently (decision 18) |
+| **For a React library, `/design-sync` in Claude Code is React-only** and uploads a compiled copy: one bundle, the stylesheet, the fonts, and for each component a preview page (the card), type definitions, a usage guide, and a conventions file with rules like "never hand-style a component"; it checks each preview visually first (third-party; the copy is a one-way snapshot) | The same shape as P1 and P2 (a card per component, from the stories) and the library's own `.dsnr/authoring` guidance. Nothing to add |
+| **Changes are made in chat only:** open the system, press Remix, talk to Claude; there is a "Let Claude clean it up" button and a Published switch. **No token editor, no versions, diffs or rollback are documented** (Anthropic) | Controls, a branch with its history, and a pull request are beyond what it documents: T3 to T5. Chat comes after, as T6 |
+| **Its known failure is tokens that do not arrive:** the cards look right while the tokens are missing, fonts are dropped, and copies of the stylesheet drift apart (third-party) | Our version of it is a control that moves nothing. T3 checks, per token, that a change reaches the components, and says so on the control |
+| **Tokens reach it through the code's stylesheet** (CSS variables, Tailwind) in the examples written up; nothing is said of other sources (third-party) | FUI's are TypeScript, and other libraries differ, so T1 reads in layers behind one list (decision 18) |
 
 **Left unmeasured, deliberately:** how long a fetch takes on a slow network. It runs while the tab shows the list it
 already has (decision 4), so a slow fetch costs nothing the person waits on.
 
-## Decisions (all made; 1, 4 and 11 to 14 by Noah, 2026-10-08, the rest settled in this plan and cheap to change)
+## Decisions (all made; 1, 4 and 11 to 14 by Noah, 2026-10-08, and 20 on 2026-10-09; the rest settled in this plan and cheap to change. 18 and 19 are proposed, 2026-10-09, for Noah to confirm)
 
 | # | Question | Decided | Why |
 |---|---|---|---|
@@ -101,7 +111,10 @@ already has (decision 4), so a slow fetch costs nothing the person waits on.
 | 9 | **Where is a preview shown?** | **Click a component (its row, or the toolbar's finder), and it opens on its own page in the tab:** its name, subtitle and links, then **each of its story files in a card**, live, in a frame of its own, as tall as it renders. Back returns to the list where it was. **Built (P2) as frames in the window, not the native preview view:** each frame is sandboxed to the local server's origin, which is not the window's | One frame per story file: a dialog or drawer renders into its frame's body, and one broken file cannot take the others down. Frames in the window need none of the native view's workarounds (a picture of the page under every menu), and the window's own menus draw over them as over anything else |
 | 10 | **Pictures in the list itself?** | **No** (Noah, 2026-10-08: "I just wanted the actual components"). P3 is dropped | The components are seen live on their own page (P2). Pictures would have been a second way to render every component, with files kept per commit and blank or misleading pictures for anything that opens on a click |
 | 15 | **Embed Storybook for the preview instead?** | **No, not for reading** (Noah and Claude, 2026-10-08). The preview renders **the library's own stories** with the library's own `FSApp`, as decision 8 says, and Storybook stays where docs, controls and prop tables live | It costs nothing per component: the catalog already lists every story file, and the generated entry imports them all, so **a new component appears with nothing added here**. It is not a second Storybook: no docs, no controls, no rewritten stories. Embedding Storybook needs its dev server on the working tree (see the facts above). **It is the right tool for the later editing stage** (edit a branch, watch Storybook update, open the pull request), and the preview build runs on a branch as well as on `develop`, so choosing this now closes nothing |
-| 16 | **Where do token controls go?** | **A separate later step, T1, after P2,** not inside P2 (Noah, 2026-10-08: "a P2 step"; kept apart so P2 stays small). Nothing for it is built in P1 | The library's `FSApp` already takes a theme, so T1 needs no hook from P1. Keeping it out of P2 keeps the component page about seeing a component |
+| 16 | **Where do token controls go?** | **A separate later series, T1 onward, after P2,** not inside P2 (Noah, 2026-10-08: "a P2 step"; kept apart so P2 stays small). Nothing for it is built in P1 | The library's `FSApp` already takes a theme, so the T steps need no hook from P1. Keeping it out of P2 keeps the component page about seeing a component |
+| 18 | **How are tokens found?** | **By layers, behind one reader** (proposed 2026-10-09): (1) the library's own theme files, which is all FUI has (tones, palette roles, the theme's spacing and radius); (2) CSS variables or Tailwind's `@theme`; (3) a token JSON file in the standard format; (4) an agent reading what is there, when none of the first three finds anything. **Only layer 1 is built,** because decision 13 allows one library; each other is a small reader that returns the same list, added when a second design system is accepted | Claude Design reads tokens from the code's stylesheet and says nothing of other sources, and libraries differ. One list means no screen learns where a token came from |
+| 19 | **What is a change?** | **A short list of token overrides (path and value), and nothing else** (proposed 2026-10-09). The preview applies it as a theme, **Reset** is the empty list, and the branch step writes the same list into the files. The controls produce it, a typed value does, and the agent could later | One representation, so seeing a change, undoing it and saving it are the same change at three moments, and nothing is kept in two shapes |
+| 20 | **Controls, or only words?** | **Controls** (Noah, 2026-10-09: "I do like the sliders and controllers as long as we can do this cleanly"), **built from the kind of token, not token by token:** one colour control (a picker and its hex) and one dimension control (a slider and its number), each token getting the one its kind says, with its range from the kind. Claude Design changes things only by chat; asking in words comes later (T6) and makes the same list | "Cleanly" means no code per token: a token the reader finds gets its control with nothing written, and a new kind of token is one new control |
 | 17 | **What is a component?** | **Whatever the library's Storybook lists** (Noah, 2026-10-08: "using Storybook as that source of truth … anytime you add something that has Storybook in it, it would just get the list from the Storybook"). Every `*.stories.(js|jsx|mjs|ts|tsx)` file on the design system's branch, anywhere in the repository, is one component, named by the last part of its title and grouped by the first, in the order decision 7 gives. **What the app cannot read from the library is in its entry in `DESIGN_SYSTEMS`:** the repository, the branch that is its source of truth, and the hosted Storybook address, if any | It is what makes the tab automatic for any Storybook library: no folder layout, naming or location is assumed, a story added to the library is in the list, and a second design system is one more entry (shown by a test with a library on `main`, stories under `packages/`, and no hosted Storybook). It also removed a layer: the folder rules, parts, gaps and their marks |
 | 11 | **How does the tab get a library when it has none?** | **A centred "Connect the design system" screen, laid out like the GitHub sign-in,** with two tabs: **Clone** and **Locate** (P0). Whichever is used, the connection is **remembered** (the folder's path, in the app's own settings, as the checkout and the clone folder are) and checked every time the app starts | Noah, 2026-10-08: connecting is something a person does on purpose, once, like signing in, and the app remembers it. Locate lets someone who already has the library anywhere on the computer use that clone, and Clone gives everyone else one with no terminal |
 | 12 | **Does the app still find a clone by itself?** | **Yes** (Noah, 2026-10-08), **as a convenience.** What is remembered wins; otherwise a clone of the library in the clone folder or the usual places is used, with no screen. The Connect screen shows only when neither exists, or the remembered folder is gone | A designer with the library already in `~/Documents/GitHub` should not have to say so, and Noah's own reason: **a connection can be removed and replaced later,** which a find-by-itself rule does not get in the way of. Finding trusts nothing: the app only reads git's copy of `develop` from it (decision 4) |
@@ -123,7 +136,12 @@ nothing on GitHub changed.
 | **P0** (done) | **Connect the design system:** the centred screen with **Clone** and **Locate**, and a connection that is remembered. **Replaces S4** | S2, S3, decisions 11 to 14 | M | Medium |
 | **P1** (done) | **Build the previews:** one page of every story from `develop`, cached by commit, one story per address | P0, decision 8 | M | **Medium** |
 | **P2** (done) | **The component page:** click a row, see its stories as live cards | P1, decision 9 | M | Medium |
-| **T1** | **Adjust tokens in the preview:** colours, spacing and radius, seen live, written nowhere | P2, decision 16 | L | Medium |
+| **T1** | **Find the tokens:** a reader that returns the library's tokens as one typed list (colours, spacing, radius), found and not listed | P2, decisions 16, 18 | M | Low |
+| **T2** | **Show the tokens:** a Tokens page in the tab, as cards: colour tones, palette roles (light and dark), spacing, radius, each with its value and where it comes from | T1 | M | Low |
+| **T3** | **Adjust tokens, seen live, written nowhere:** a control for each token, from its kind; the change is the overrides list, applied as a theme in the preview; Reset | T2, decisions 19, 20 | L | Medium |
+| **T4** | **Try it on a branch:** each save is a commit on a new branch of the library, so the branch's history is the iterations; the preview can run on the branch | T3 | L | Medium |
+| **T5** | **Propose it:** a draft pull request from that branch, with Chromatic's link | T4 | M | Medium |
+| **T6** (candidate) | **Ask in words:** "make the primary a little warmer" produces the same overrides list | T3 | S | Low |
 
 ### S1: The catalog reader (done 2026-10-08)
 
@@ -213,23 +231,56 @@ opens on a click is not marked "Opens on click", and shows as it does in Storybo
 running app yet; Noah to try:** open FSButton, FSPopovers (several files), FSSelect (the note about what is not
 installed) and FSDrawer (opens on a click), and Back.
 
-### T1: Adjust tokens in the preview
+### T1 to T6: tokens, from finding them to proposing a change
 
-**Not built, and not specified in detail until P2 has been used.** What it is, so P1 and P2 leave the way clear (they
-already do): like Claude Design, the app looks at the connected library and shows **what can be adjusted**, as
-controls, and the preview shows the change live.
+**Not built, and T3 onward is not specified in detail until T2 has been used.** Like Claude Design, the app looks at the
+connected library and shows **what can be adjusted**; it goes further, in that a change is made with controls, seen
+live, and carried to a branch and a pull request.
 
-- **Found, not listed:** the app reads the library's tone files and palette files (decision above: flat TypeScript
-  literals, read as text) and builds the controls from what it finds. A colour added to the library appears; nothing is
-  maintained here.
-- **The controls a designer would expect:** a colour with a picker and its hex for each palette role and tone, light and
-  dark; spacing and radius as a slider with its value; typography later. Grouped as the library groups them.
-- **Seen, not saved:** a change builds a theme (MUI's `createTheme` over the library's `createFSTheme`) and passes it to
-  `FSApp` in the preview. No file in the library is touched, and **Reset** puts it back. Saving a change to a branch and
-  opening a pull request is the editing plan's, using the same change.
-- **To check when it is built (cheap, one spike):** how far a changed theme reaches the component styles that were built
-  from the palette at creation, and the `8px` and `360px` values that ignore the theme. Whatever does not follow is
-  said in the control ("not used by every component"), and is a list for the Design System owner.
+**How it stays clean (the rule for every T step):**
+- **One list of tokens** (T1). The Tokens page and the controls take it, and none knows where a token came from
+  (decision 18).
+- **One kind of control for one kind of token** (decision 20): a colour (a picker and its hex), a dimension (a slider
+  and its number). The range comes from the kind (a radius from zero, spacing as a multiple of the base), never
+  written per token.
+- **One representation of a change** (decision 19), applied in one place: the library's own `FSApp` theme prop, in the
+  preview frame. No code per component, which is the rule previews already follow.
+- **A test first for each behaviour,** and each step finished, committed and leaving the app working, like the other
+  milestones.
+
+**T1: Find the tokens.** A pure function, like `readCatalog`, that takes reads of the clone's `origin/develop` (every
+file under a folder, one file's text) and returns the tokens as `{ path, kind: colour | dimension, value, group, source
+file and line }`, grouped as the library groups them (tone families, palette roles for each mode, spacing, radius). The
+files are flat TypeScript literals, read as text (as found above), not by running the library. **Found, not listed:** a
+colour added to the library appears. A file it cannot read is named, and the rest still show. *Tests:* the real library
+(as `componentCatalog.spec.ts` does), and fixtures for a family added, a role pointing at a tone, and a file that
+departs from the standard.
+
+**T2: Show the tokens.** A Tokens page in the tab, beside the components: cards for the tone families (a swatch for
+each step, with its name and hex), the palette roles (light and dark, with `main`, `light`, `dark` and `contrastText`),
+spacing and radius, each saying where it comes from. **Decision owed (Noah):** the library's two Storybook token pages
+(the colour palette and the colour primitives) are in the components list today. Once T2 shows the same from the
+source, are they hidden from the list, or kept? Their stories stay in the library either way.
+
+**T3: Adjust tokens, seen live, written nowhere.** **First, the one cheap spike:** how far a changed theme reaches the
+component styles built from the palette when the theme is created (`getFSVariantStyles(palette)`), and the `8px` and
+`360px` values that ignore the theme. The answer is kept **for each token** and said on its control ("not used by every
+component"); the rest is a list for the Design System owner. Then each token gets the control its kind says, a change
+builds a theme (MUI's `createTheme` over the library's `createFSTheme`) and passes it to `FSApp` in the preview frames,
+and **Reset** empties the list. It shows on the component page and the Tokens page both. No file is touched.
+
+**T4: Try it on a branch.** Starts from `origin/develop` and makes a branch in the library as prototypes make theirs,
+in a separate working copy, so the person's checkout is never touched. Saving writes the overrides list into the tone and
+palette files as an exact text edit of the literal, read back and compared before it is kept, and each save is one
+commit, so the branch's history is the list of iterations (and the History button can read it). The preview build runs
+on the branch instead of `develop`.
+
+**T5: Propose it.** A draft pull request from the branch through the existing share path (`share.ts`,
+`shareTools.ts`), with the Chromatic link the library's CI already makes. Who reviews, and how comments come back, is
+the editing plan's question (the library's pull requests go to the Design System owners, `CODEOWNERS`).
+
+**T6 (candidate): Ask in words.** Words produce the same list, through the agent and the library's authoring standards;
+nothing else changes. Built only if the controls leave a gap.
 
 ## What this leaves ready for editing (not built)
 
@@ -238,7 +289,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 | Later step | What it will use from version 1 |
 |---|---|
 | **Pick a component to adjust** | `CatalogComponent.id` (its story file; its folder is the component's) |
-| **Try a token change** | T1: the same preview with a changed theme. The change is a few lines in the tone or palette file, which is what a pull request would carry |
+| **Try a token change** | T3 to T5, above |
 | **Make the change with the agent** | The authoring standards already in the library (`.dsnr/authoring/components.md`, `stories.md`), the same agent run as prototypes |
 | **Start from `develop`** | `origin/develop`, already fetched and current; a branch for the component is made from it, as prototypes make theirs, so the catalog and the work start from the same commit |
 | **See it** | P1's preview build, run on the person's branch instead of `develop`: the same page, the same cards, showing the change |
@@ -255,7 +306,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 - **Embedding or running Storybook, and controls or prop tables.** Previews render the stories as written; changing
   their arguments is Storybook's.
 - **Tokens, colors, icons and the `uxDocs` pages in the list.** They are not components, so the list does not show them.
-  Adjusting tokens is T1; icons and the `uxDocs` pages are not planned.
+  Finding, showing and adjusting tokens is T1 to T5; icons and the `uxDocs` pages are not planned.
 - **Any branch but `develop`, and any tagged version of the library.** Branches are the later expansion of this plan.
 - **Reading the library over the GitHub API** (a person with no clone). A second reader of the same function, built if
   asked for.
@@ -276,14 +327,18 @@ Nothing below is built, and nothing is shaped now except the first line.
 | **Locate connects something that is not the library** | The tab would show the wrong list | Decision 13: the folder's `origin` is checked before it is connected, and again on every read |
 | **The tab becomes a second Storybook** | The thing Noah said not to do | Requirement 2 is the test for every addition: previews show the stories as written, and anything about controlling or documenting them links to Storybook |
 | **A preview build fails on `develop`** (a story that only builds in Storybook's own setup, or a real error in the library) | No previews at all, or blank cards | A package or generated file the clone lacks is set aside, and only the stories that use it say so. Any other build error is said as it is. A single story that throws is shown with its error in its own card. The real-library test builds every story file |
-| **A theme change does not reach every component (T1)** | A colour control that moves some things and not others looks broken | Checked before T1 is built, and said in the control for what does not follow; the hardcoded `8px` and `360px` are a library cleanup |
+| **A theme change does not reach every component (T3)** | A colour control that moves some things and not others looks broken | Checked for each token before T3 is built, and said on the control for what does not follow; the hardcoded `8px` and `360px` are a library cleanup |
+| **A token that quietly does not arrive** (Claude Design's own failure: the cards look right while tokens are missing) | A control that moves nothing, and is trusted | T3's spike and its note for each token, and a test that a changed value reaches a rendered component |
+| **The reader finds nothing, or the wrong thing, in a library laid out differently** | An empty or misleading Tokens page | It says "no tokens found" and where it looked. Layer 1 is FUI's only; the others come with a second library (decision 18) |
+| **Writing a change into a source file breaks it (T4)** | A branch that does not compile | An exact edit of the literal, read back and compared before it is kept; the preview build runs on the branch, so a broken one shows at once |
+| **A slider makes an unusable value** | Unreadable text, or a radius of nothing everywhere | Ranges come from the kind, with sensible bounds, and Reset is one press |
 | **Building runs code** | Trust | The app's own esbuild and Sass run in its process, on a copy of `develop` taken out of git; the library's code runs only in the sandboxed preview view, which has no bridge to the app (`pageView.ts`), as prototypes do. The page's only message out is its height |
 | **A build is slow or large** | A wait the first time, and disk | 5.5 s measured; built once per `develop` commit, in the background, with the old one removed. 7.3 MB a build |
 
 ## Next
 
 **S1 to S3 and P0 to P2 are done,** with Storybook as the source of truth for what a component is (decision 17), and
-stories responding as they should. **T1 (token controls) is next,** and waits for Noah to say so. P3 was dropped
+stories responding as they should. **T1 (find the tokens) is next,** and waits for Noah to say so; T2 and T3 follow it, and T4 to T6 are laid out but not specified. P3 was dropped
 (decision 10).
 
 **By hand, Noah:** restart the dev session (the main process changed), open the Design System tab, and try a few
