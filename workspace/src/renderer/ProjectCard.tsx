@@ -1,17 +1,12 @@
-import { FileTextIcon, FolderIcon, GitBranchIcon, MessageSquareIcon, type LucideIcon } from 'lucide-react';
+import { FolderIcon, GitBranchIcon, MessageSquareIcon, type LucideIcon } from 'lucide-react';
 import type { Project, ProjectIteration } from '../shared/contract';
 import { workOf } from '../shared/projects';
 import { CardCover } from './CardCover';
-import { MoreMenu } from './MoreMenu';
 import { PeopleLine } from './People';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardFooter, CardTitle } from './ui/card';
-import { DropdownMenuItem } from './ui/dropdown-menu';
 import { Separator } from './ui/separator';
-
-/** A name as it reads in a menu: the first letter capital, the rest as written. */
-const sentence = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** One way into each kind of work: a prototype, and codebase work. */
 const WAYS_IN = 2;
@@ -36,9 +31,9 @@ const Way = ({ iteration, label, Icon, comments, onOpen }: { iteration: ProjectI
 );
 
 /**
- * A project in the Projects grid. The top is a cover in the card's own colour: at its top right the project's menu (its
- * records, when it has any) and across from it whether it is only on this machine; at its bottom left the project's
- * name, with who it is by directly under it. The footer is a stacked list of the ways in: view the newest prototype, and
+ * A project in the Projects grid. The top is a cover in the card's own colour: at its top whether it is only on this
+ * machine; at its bottom left the project's name, with who it is by directly under it. Its documents are not here: they
+ * are in the More menu of its own screen. The footer is a stacked list of the ways in: view the newest prototype, and
  * under it the newest codebase work, each only when it exists and each with how many comments are open on that work at
  * its far right. The footer always has room for both, so on every card in a grid it starts at the same line, with a blank
  * place under a way in that is not there, and the cards in a row are the same height.
@@ -46,12 +41,10 @@ const Way = ({ iteration, label, Icon, comments, onOpen }: { iteration: ProjectI
 export const ProjectCard = ({
 	project,
 	onOpen,
-	onViewRecord,
 }: {
 	project: Project;
 	/** One way into each kind of work, at its newest; the review screen switches between its iterations. */
 	onOpen: (iteration: ProjectIteration) => void;
-	onViewRecord: (name: string) => void;
 }) => {
 	const prototypes = workOf(project.iterations, 'prototype');
 	const codebases = workOf(project.iterations, 'codebase');
@@ -65,16 +58,6 @@ export const ProjectCard = ({
 				{/* Always there, so the name stays at the bottom when there is nothing to put at the top. */}
 				<div className="flex items-start justify-between gap-2">
 					<span className="flex flex-wrap items-center gap-2">{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}</span>
-					{project.records.length > 0 && (
-						<MoreMenu label={`More for ${project.title}`}>
-							{project.records.map((record) => (
-								<DropdownMenuItem key={record} onSelect={() => onViewRecord(record)}>
-									<FileTextIcon />
-									{sentence(record.replace(/\.[^.]+$/, '').replace(/-/g, ' '))}
-								</DropdownMenuItem>
-							))}
-						</MoreMenu>
-					)}
 				</div>
 				<div className="flex min-w-0 flex-col gap-2">
 					<CardTitle className="line-clamp-2 text-lg font-semibold">{project.title}</CardTitle>

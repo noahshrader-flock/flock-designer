@@ -1,6 +1,7 @@
-import { CircleCheckIcon, CodeIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
+import { CircleCheckIcon, CodeIcon, FileTextIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared/contract';
+import { recordLabel } from '../shared/projects';
 import { dialogView, isMine, stepText } from './shareView';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
@@ -29,6 +30,7 @@ export const ShareControl = ({
 	onMoveToCode,
 	selection,
 	editor,
+	onViewRecord,
 }: {
 	checkout: Checkout | null;
 	project: Project;
@@ -44,6 +46,8 @@ export const ShareControl = ({
 	selection?: { version: number; selected: boolean; onToggle: () => void };
 	/** Codebase work, handed to the person's editor: the checkout, and the agent's conversation when there is one. */
 	editor?: { editor: boolean; session: boolean; openInEditor: () => unknown; continueInClaude: () => unknown };
+	/** Opens one of the project's documents (`project.records`), which are the last group in the menu. */
+	onViewRecord?: (name: string) => void;
 }) => {
 	const [status, setStatus] = useState<ShareStatus>({ state: 'idle' });
 	const [open, setOpen] = useState(false);
@@ -64,6 +68,8 @@ export const ShareControl = ({
 	const canMove = prototype && onMoveToCode;
 	const canShare = checkout && !prototype;
 	const canSelect = prototype && selection;
+	// The project's documents are always there to read, whether or not the page is up.
+	const documents = onViewRecord !== undefined && project.records.length > 0;
 
 	const start = async () => {
 		if (!checkout) return;
@@ -91,7 +97,7 @@ export const ShareControl = ({
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<DropdownMenuTrigger asChild>
-							<Button size="icon" variant="outline" aria-label="More" disabled={!canOpen}>
+							<Button size="icon" variant="outline" aria-label="More" disabled={!canOpen && !documents}>
 								{running ? <Spinner /> : <EllipsisVerticalIcon />}
 							</Button>
 						</DropdownMenuTrigger>
@@ -99,53 +105,70 @@ export const ShareControl = ({
 					<TooltipContent>{running ? 'Sharing…' : 'More'}</TooltipContent>
 				</Tooltip>
 				<DropdownMenuContent align="end" className="w-auto">
-					{canSelect && (
-						<DropdownMenuItem onSelect={selection.onToggle}>
-							<CircleCheckIcon />
-							{selection.selected ? `Unselect V${selection.version}` : `Select V${selection.version}`}
+					{/* What can be done with the work needs its page up; the documents do not. */}
+					{canOpen && (
+						<>
+						{canSelect && (
+							<DropdownMenuItem onSelect={selection.onToggle}>
+								<CircleCheckIcon />
+								{selection.selected ? `Unselect V${selection.version}` : `Select V${selection.version}`}
+							</DropdownMenuItem>
+						)}
+						{canMove && (
+							<DropdownMenuItem onSelect={onMoveToCode}>
+								<CodeIcon />
+								Build in the codebase
+							</DropdownMenuItem>
+						)}
+						{canShare && (
+							<DropdownMenuItem
+								onSelect={() => {
+									setPhase(running ? 'working' : 'confirm');
+									setError(null);
+									setOpen(true);
+								}}
+							>
+								<Share2Icon />
+								{running ? 'Sharing…' : url ? 'Update shared preview' : 'Share for review'}
+							</DropdownMenuItem>
+						)}
+						{/* No line when the first group is empty. */}
+						{(canSelect || canMove || canShare) && <DropdownMenuSeparator />}
+						{editor && (
+							<DropdownMenuItem onSelect={editor.openInEditor}>
+								<SquareTerminalIcon />
+								{editor.editor ? 'Open in VS Code' : 'Show in Finder'}
+							</DropdownMenuItem>
+						)}
+						{editor?.session && (
+							<DropdownMenuItem onSelect={editor.continueInClaude}>
+								<MessageSquareShareIcon />
+								Continue in Claude Code
+							</DropdownMenuItem>
+						)}
+						<DropdownMenuItem onSelect={onOpenInBrowser}>
+							<ExternalLinkIcon />
+							Open in browser
 						</DropdownMenuItem>
+						{url && (
+							<DropdownMenuItem onSelect={() => void copy()}>
+								<CopyIcon />
+								{copied ? 'Copied' : 'Copy preview link'}
+							</DropdownMenuItem>
+						)}
+						</>
 					)}
-					{canMove && (
-						<DropdownMenuItem onSelect={onMoveToCode}>
-							<CodeIcon />
-							Build in the codebase
-						</DropdownMenuItem>
-					)}
-					{canShare && (
-						<DropdownMenuItem
-							onSelect={() => {
-								setPhase(running ? 'working' : 'confirm');
-								setError(null);
-								setOpen(true);
-							}}
-						>
-							<Share2Icon />
-							{running ? 'Sharing…' : url ? 'Update shared preview' : 'Share for review'}
-						</DropdownMenuItem>
-					)}
-					{/* No line when the first group is empty. */}
-					{(canSelect || canMove || canShare) && <DropdownMenuSeparator />}
-					{editor && (
-						<DropdownMenuItem onSelect={editor.openInEditor}>
-							<SquareTerminalIcon />
-							{editor.editor ? 'Open in VS Code' : 'Show in Finder'}
-						</DropdownMenuItem>
-					)}
-					{editor?.session && (
-						<DropdownMenuItem onSelect={editor.continueInClaude}>
-							<MessageSquareShareIcon />
-							Continue in Claude Code
-						</DropdownMenuItem>
-					)}
-					<DropdownMenuItem onSelect={onOpenInBrowser}>
-						<ExternalLinkIcon />
-						Open in browser
-					</DropdownMenuItem>
-					{url && (
-						<DropdownMenuItem onSelect={() => void copy()}>
-							<CopyIcon />
-							{copied ? 'Copied' : 'Copy preview link'}
-						</DropdownMenuItem>
+					{/* The project's documents, after the ways to look at the work. */}
+					{documents && (
+						<>
+							{canOpen && <DropdownMenuSeparator />}
+							{project.records.map((record) => (
+								<DropdownMenuItem key={record} onSelect={() => onViewRecord(record)}>
+									<FileTextIcon />
+									{recordLabel(record)}
+								</DropdownMenuItem>
+							))}
+						</>
 					)}
 				</DropdownMenuContent>
 			</DropdownMenu>

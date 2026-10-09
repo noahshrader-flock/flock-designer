@@ -21,6 +21,7 @@ import {
 	byVersion,
 	parsePrototypeName,
 	prototypeName,
+	recordLabel,
 	slugify,
 	sortProjects,
 	startedAt,
@@ -447,5 +448,14 @@ describe('merging when a project was last updated', () => {
 		expect(m?.updatedAt).toBe('2026-10-08T00:00:00Z');
 		const [n] = mergeProjects([project('alpha', { updatedAt: '2026-10-09T00:00:00Z' })], [project('alpha')]);
 		expect(n?.updatedAt).toBe('2026-10-09T00:00:00Z');
+	});
+});
+
+describe('how a project’s document is named in a menu', () => {
+	it('drops the extension, turns dashes into spaces, and capitalises the first letter only', () => {
+		expect(recordLabel('brief.md')).toBe('Brief');
+		expect(recordLabel('design-notes.md')).toBe('Design notes');
+		expect(recordLabel('audit-i1.md')).toBe('Audit i1');
+		expect(recordLabel('iterations.json')).toBe('Iterations');
 	});
 });

@@ -34,14 +34,12 @@ const project = (more: Partial<Project> = {}): Project => ({
 });
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
-const show = async (p: Project, handlers: { onOpen?: () => void; onViewRecord?: () => void } = {}) => {
+const show = async (p: Project, handlers: { onOpen?: () => void } = {}) => {
 	const onOpen = vi.fn(handlers.onOpen);
-	const onViewRecord = vi.fn(handlers.onViewRecord);
-	current = await render(createElement(ProjectCard, { project: p, onOpen, onViewRecord }));
-	return { onOpen, onViewRecord };
+	current = await render(createElement(ProjectCard, { project: p, onOpen }));
+	return { onOpen };
 };
 const text = () => document.body.textContent ?? '';
-const kebab = () => button('More for Admin usage');
 const cover = () => document.querySelector('.aspect-\\[1920\\/1080\\]')!;
 const footer = () => document.querySelector('[data-slot="card-footer"]')!;
 const NOAH = { name: 'Noah Shrader', login: 'noah' };
@@ -53,13 +51,13 @@ afterEach(async () => {
 });
 
 describe('the cover', () => {
-	it('has the name at its bottom left with the person directly under it, and the menu at its top right', async () => {
+	it('has the name at its bottom left with the person directly under it, and nothing else on it', async () => {
 		await show(project({ records: ['brief.md'], people: [NOAH] }));
 		const [top, bottom] = [...cover().children];
-		expect(top!.contains(kebab())).toBe(true);
-		// Last in the top row, which spreads its two ends: badges at the left, the menu at the right.
-		expect(top!.className).toContain('justify-between');
-		expect(top!.lastElementChild!.contains(kebab())).toBe(true);
+		// A top row that is always there, so the name stays at the bottom, with a menu nowhere: its documents are in the
+		// More menu of the project's own screen.
+		expect(top!.querySelector('button')).toBeNull();
+		expect(document.querySelector('[aria-label^="More for"]')).toBeNull();
 		expect(bottom!.children[0]!.textContent).toBe('Admin usage');
 		const person = bottom!.children[1]!;
 		expect(person.querySelector('[data-slot="avatar"]')).not.toBeNull();
@@ -99,7 +97,7 @@ describe('the cover', () => {
 		expect(bottom!.textContent).toBe('Admin usage');
 	});
 
-	it('says across from the menu when the project is only on this machine', async () => {
+	it('says at its top when the project is only on this machine', async () => {
 		await show(project({ localOnly: true, iterations: [CODEBASE] }));
 		expect(cover().children[0]!.textContent).toContain('Only on this machine');
 		await unmountAll(current!.root);
@@ -111,22 +109,6 @@ describe('the cover', () => {
 		await show(project({ iterations: [iteration({ openComments: 4 })] }));
 		expect(cover().querySelector('[aria-label*="open comment"]')).toBeNull();
 		expect(cover().querySelector('.lucide-message-square')).toBeNull();
-	});
-});
-
-describe('the menu', () => {
-	it('is the project’s records, each with its icon, and opens one', async () => {
-		const { onViewRecord } = await show(project({ iterations: [CODEBASE], records: ['brief.md', 'design-notes.md'] }));
-		const items = await openMenu(kebab());
-		expect(items.map((i) => i.textContent)).toEqual(['Brief', 'Design notes']);
-		expect(items.every((i) => i.querySelector('svg'))).toBe(true);
-		menuItem(items, 'Design notes').click();
-		expect(onViewRecord).toHaveBeenCalledWith('design-notes.md');
-	});
-
-	it('is not there when there are no records: the ways in are in the footer', async () => {
-		await show(project({ iterations: [PROTOTYPE, CODEBASE] }));
-		expect(document.querySelector('[aria-label^="More for"]')).toBeNull();
 	});
 });
 

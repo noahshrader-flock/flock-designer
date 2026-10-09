@@ -30,6 +30,7 @@ import { appComments, appPage } from './comments/appAdapter';
 import { useComments } from './comments/useComments';
 import { HandoffDialog } from './HandoffDialog';
 import { MoveToCode } from './MoveToCode';
+import { RecordSheet } from './RecordSheet';
 import { AgentLog, Loading } from './Loading';
 import { ShareControl } from './ShareControl';
 import { useOverlaps } from './overlays';
@@ -127,6 +128,8 @@ export const Review = ({
 	const hostedUrl = iteration.previewUrl ?? null;
 	const useHosted = hostedUrl !== null && (checkout === null || local.phase.kind === 'failed');
 	const hosted = useHostedPreview(useHosted ? hostedUrl : null);
+	// One of the project's documents, read out in a panel from the side; kept after it closes so it can slide away.
+	const [viewing, setViewing] = useState<{ name: string; open: boolean } | null>(null);
 	// Moving a prototype into the code is confirmed first, in a dialog (MoveToCode).
 	const [moving, setMoving] = useState(false);
 	const kind = workKind(iteration);
@@ -515,6 +518,7 @@ export const Review = ({
 						onMoveToCode={checkout ? () => setMoving(true) : undefined}
 						selection={version !== null ? { version, selected: selected === version, onToggle: () => void toggleSelected() } : undefined}
 						editor={editor.available ? editor : undefined}
+						onViewRecord={(name) => setViewing({ name, open: true })}
 					/>
 				</div>
 			</Toolbar>
@@ -527,6 +531,8 @@ export const Review = ({
 					</AlertDescription>
 				</Alert>
 			)}
+
+			{viewing && <RecordSheet project={project} name={viewing.name} open={viewing.open} onClose={() => setViewing({ ...viewing, open: false })} />}
 
 			{checkout && codebase && (
 				<HandoffDialog

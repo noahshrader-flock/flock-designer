@@ -7,7 +7,6 @@ import { Page } from './Page';
 import { ProjectCard } from './ProjectCard';
 import { ProjectSort } from './ProjectSort';
 import { PublishBanner, PublishLine, usePublishStatus } from './PublishStatus';
-import { RecordSheet } from './RecordSheet';
 import { Review } from './Review';
 import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
@@ -26,8 +25,6 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from './ui/input-group';
 export const Projects = ({ hidden }: { hidden: boolean }) => {
 	const [projects, setProjects] = useState<Project[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
-	// Kept after it closes so the panel can slide away still showing what it was showing.
-	const [viewing, setViewing] = useState<{ project: Project; name: string; open: boolean } | null>(null);
 	const [selected, setSelected] = useState<{ project: Project; iteration: ProjectIteration; task?: string } | null>(null);
 	const [checkout, setCheckout] = useState<Checkout | null>(null);
 	const [creating, setCreating] = useState(false);
@@ -237,20 +234,11 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 								key={project.id}
 								project={project}
 								onOpen={(iteration) => setSelected({ project, iteration })}
-								onViewRecord={(name) => setViewing({ project, name, open: true })}
 							/>
 						))}
 					</CardGrid>
 				)}
 			</Page>
-			{viewing && (
-				<RecordSheet
-					project={viewing.project}
-					name={viewing.name}
-					open={viewing.open}
-					onClose={() => setViewing({ ...viewing, open: false })}
-				/>
-			)}
 		</>
 	);
 };

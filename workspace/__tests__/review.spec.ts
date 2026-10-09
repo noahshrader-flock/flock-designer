@@ -308,6 +308,54 @@ describe('its published page', () => {
 	});
 });
 
+describe('the project’s documents, in More', () => {
+	const records = { project: { ...PROJECT, records: ['brief.md', 'design-notes.md', 'iterations.json'] } };
+	const items = async () => [...(await openMenu(button('More'))), ...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
+
+	it('are the last group in the menu, after a divider that follows Open in browser', async () => {
+		await open(fakeApp(), records);
+		const all = await items();
+		const names = all.map((i) => i.textContent?.trim());
+		expect(names.slice(-4)).toEqual(['Open in browser', 'Brief', 'Design notes', 'Iterations']);
+		const divider = [...document.querySelectorAll('[role="separator"]')].at(-1) as HTMLElement;
+		const order = (a: Element, b: Element) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
+		expect(order(menuItem(all, 'Open in browser'), divider)).toBeTruthy();
+		expect(order(divider, menuItem(all, 'Brief'))).toBeTruthy();
+	});
+
+	it('open the document in the panel from the side, read from the design repository', async () => {
+		const app = fakeApp({ readRecord: async () => ok('# Brief\n\nA list of alerts.') });
+		await open(app, records);
+		await press(menuItem(await openMenu(button('More')), 'Design notes'));
+		await settle();
+		expect(app.calls.readRecord).toEqual([['demo', 'design-notes.md']]);
+		expect(document.body.textContent).toContain('design-notes.md');
+		expect(document.body.textContent).toContain('A list of alerts.');
+	});
+
+	it('can be read before the page is up, and are then all that the menu has', async () => {
+		const app = fakeApp({ openPrototype: async () => fail('This prototype has no page yet.') });
+		await open(app, records);
+		await settle();
+		const names = (await items()).map((i) => i.textContent?.trim());
+		expect(names).toEqual(['Brief', 'Design notes', 'Iterations']);
+		expect(document.querySelectorAll('[role="separator"]')).toHaveLength(0);
+	});
+
+	it('leave nothing to open before the page is up, for a project that has none', async () => {
+		await open(fakeApp({ openPrototype: async () => fail('This prototype has no page yet.') }));
+		await settle();
+		expect(button('More').disabled).toBe(true);
+	});
+
+	it('leave the menu as it was, with no divider at the end, for a project that has none', async () => {
+		await open(fakeApp());
+		const names = (await items()).map((i) => i.textContent?.trim());
+		expect(names.at(-1)).toBe('Open in browser');
+		expect(document.querySelectorAll('[role="separator"]')).toHaveLength(1);
+	});
+});
+
 describe('the selected version', () => {
 	const prototypes = ['v2-i2', 'v2-i1', 'v1-i1'].map((name) => ({ ...PROTOTYPE, name, branch: `prototype/demo/${name}` }));
 
