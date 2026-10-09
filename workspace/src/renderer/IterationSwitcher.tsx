@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { byVersion, iterationLabel, latestIterationName, parsePrototypeName } from '../shared/projects';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /** What the switcher needs to know of an iteration: how it is named, and which it is. */
@@ -79,6 +80,7 @@ export const IterationSwitcher = <T extends Switchable>({
 	grouped,
 	onSelect,
 	note,
+	children,
 }: {
 	current: Switchable;
 	siblings: T[];
@@ -87,6 +89,8 @@ export const IterationSwitcher = <T extends Switchable>({
 	onSelect: (next: T) => void;
 	/** Said after an iteration's name in the menu, when there is something to say about it. */
 	note?: (iteration: T) => string;
+	/** A prototype's own controls (its states), between the version and the history, where they read left to right. */
+	children?: ReactNode;
 }) => {
 	const go = (branch: string) => {
 		const next = siblings.find((i) => i.branch === branch);
@@ -123,6 +127,7 @@ export const IterationSwitcher = <T extends Switchable>({
 					if (next) go(next.branch);
 				}}
 			/>
+			{children}
 			<Pick
 				what="iteration"
 				{...HISTORY}
@@ -139,21 +144,29 @@ export const IterationSwitcher = <T extends Switchable>({
 };
 
 /**
- * A prototype's states (see `shared/prototypeStates`): beside the version and the iteration, the way of seeing this one
- * that is on screen. Not there with fewer than two, as there is nothing to switch to. `null` is the first, the state
- * the page opens in, so choosing it goes back to the page's own address.
+ * A prototype's states (see `shared/prototypeStates`), as a group of buttons with the one shown pressed: they are few,
+ * and each is a way of seeing the page, so each is one press away. Not there with fewer than two, as there is nothing
+ * to switch to. `null` is the first, the state the page opens in, so choosing it goes back to the page's own address.
  */
 export const StateSwitcher = ({ states, current, onSelect }: { states: string[]; current: string | null; onSelect: (state: string | null) => void }) => {
 	if (states.length < 2) return null;
 	// One it no longer has (it was built again without it) shows as the page does: in the first.
 	const here = current !== null && states.includes(current) ? current : (states[0] as string);
 	return (
-		<Pick
-			what="state"
-			label={here}
+		<ToggleGroup
+			type="single"
+			variant="outline"
+			spacing={0}
+			aria-label="State"
 			value={here}
-			choices={states.map((s) => ({ value: s, label: s }))}
-			onChange={(s) => onSelect(s === states[0] ? null : s)}
-		/>
+			// Pressing the one shown would unpress it, leaving none shown: it stays.
+			onValueChange={(next) => next !== '' && next !== here && onSelect(next === states[0] ? null : next)}
+		>
+			{states.map((s) => (
+				<ToggleGroupItem key={s} value={s}>
+					{s}
+				</ToggleGroupItem>
+			))}
+		</ToggleGroup>
 	);
 };

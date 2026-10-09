@@ -78,8 +78,9 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 					siblings={iterations}
 					grouped
 					onSelect={(next) => void (location.href = next.href)}
-				/>
-				<StateSwitcher states={showing.states} current={showing.state} onSelect={showing.onState} />
+				>
+					<StateSwitcher states={showing.states} current={showing.state} onSelect={showing.onState} />
+				</IterationSwitcher>
 				{children}
 			</div>
 		</Toolbar>,

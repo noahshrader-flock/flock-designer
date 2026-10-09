@@ -46,6 +46,18 @@ describe('the top bar', () => {
 		expect(controls().map(size)).toEqual(controls().map(() => expect.stringMatching(/^(default|icon)$/)));
 	});
 
+	it('counts a prototype’s states among them, each the normal size', async () => {
+		const app = fakeApp({ openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1/', states: ['default', 'no-match', 'panel'] }) });
+		(window as unknown as { workspace: unknown }).workspace = app.api;
+		current = await render(createElement(Review, reviewProps() as never));
+		await settle();
+		const states = [...document.querySelectorAll<HTMLElement>('[data-slot="toggle-group-item"]')];
+		expect(states).toHaveLength(3);
+		// Counted by the check above, and the same height as the dropdowns beside them.
+		expect(states.every((b) => controls().includes(b))).toBe(true);
+		expect(states.map(size)).toEqual(['default', 'default', 'default']);
+	});
+
 	it('has controls of one size on a published page, beside the switcher', async () => {
 		const page = sitePage();
 		current = await render(createElement(Viewer, { config: PAGE_CONFIG, slots: page.slots }));

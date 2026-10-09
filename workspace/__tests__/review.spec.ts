@@ -21,6 +21,10 @@ import {
 	render,
 	reviewProps,
 	settle,
+	shownState,
+	state,
+	stateButtons,
+	stateGroup,
 	typeInto,
 	unmountAll,
 } from './reviewHarness';
@@ -517,21 +521,19 @@ describe('there is no selected version', () => {
 describe('the prototype’s states', () => {
 	const withStates = (states: string[]) => fakeApp({ openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1/', states }) });
 
-	it('are a dropdown in the bar, and choosing one opens the preview in it', async () => {
+	it('are a group of buttons in the bar, and pressing one opens the preview in it', async () => {
 		const app = withStates(['default', 'no-match', 'panel']);
 		await open(app);
 		await settle();
 		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/']);
-		await openMenu(button('State default: switch state'));
-		const states = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
-		expect(states.map((s) => s.textContent?.trim())).toEqual(['default', 'no-match', 'panel']);
-		await press(states[1] as HTMLElement);
+		expect(stateButtons().map((s) => s.textContent)).toEqual(['default', 'no-match', 'panel']);
+		expect(shownState()).toBe('default');
+		await press(state('no-match'));
 		await settle();
 		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/?state=no-match']);
-		expect(button('State no-match: switch state')).toBeTruthy();
+		expect(shownState()).toBe('no-match');
 		// The first is the page as it opens.
-		await openMenu(button('State no-match: switch state'));
-		await press(document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')[0] as HTMLElement);
+		await press(state('default'));
 		await settle();
 		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/']);
 	});
@@ -574,7 +576,7 @@ describe('the prototype’s states', () => {
 			await press(button('Show in panel', cardFor('On the panel')));
 			await settle();
 			expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/?state=panel']);
-			expect(button('State panel: switch state')).toBeTruthy();
+			expect(shownState()).toBe('panel');
 			// Pressing it is not choosing the comment.
 			expect(cardFor('On the panel').className).not.toContain('border-primary');
 		});
@@ -601,7 +603,7 @@ describe('the prototype’s states', () => {
 	it('are not offered for a prototype with one, or none', async () => {
 		await open(withStates(['default']));
 		await settle();
-		expect(document.querySelector('[aria-label^="State"]')).toBeNull();
+		expect(stateGroup()).toBeNull();
 		expect(button('Iteration I1: switch iteration')).toBeTruthy();
 	});
 });

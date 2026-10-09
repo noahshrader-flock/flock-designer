@@ -485,8 +485,9 @@ export const Review = ({
 						grouped={kind === 'prototype'}
 						onSelect={(next) => onOpen(project, next)}
 						note={(i) => (i.localOnly && !project.localOnly ? ' · only on this machine' : '')}
-					/>
-					<StateSwitcher states={states} current={shownState} onSelect={setShownState} />
+					>
+						<StateSwitcher states={states} current={shownState} onSelect={setShownState} />
+					</IterationSwitcher>
 					<CommentControl comments={comments} listOpen={sidebarOpen} onToggleList={() => setSidebarOpen((o) => !o)} disabled={!opened} />
 					{/* Codebase work's next step, so it is the one filled button. */}
 					{checkout && codebase && (

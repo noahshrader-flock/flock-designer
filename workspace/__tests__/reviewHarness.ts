@@ -173,6 +173,15 @@ export const button = (name: string | RegExp, scope: ParentNode = document): HTM
 	if (all.length !== 1) throw new Error(`${all.length} buttons named ${name}: ${[...scope.querySelectorAll('button')].map(named).join(' | ')}`);
 	return all[0] as HTMLButtonElement;
 };
+/** A prototype's states, as the bar shows them: one button each, in a group named State, the one shown pressed. */
+export const stateGroup = (): HTMLElement | null => document.querySelector<HTMLElement>('[role="group"][aria-label="State"], [data-slot="toggle-group"][aria-label="State"]');
+export const stateButtons = (): HTMLElement[] => [...(stateGroup()?.querySelectorAll<HTMLElement>('[data-slot="toggle-group-item"]') ?? [])];
+export const shownState = (): string | undefined => stateButtons().find((b) => b.getAttribute('aria-checked') === 'true')?.textContent?.trim();
+export const state = (name: string): HTMLElement => {
+	const b = stateButtons().find((x) => x.textContent?.trim() === name);
+	if (!b) throw new Error(`no state button ${name}: ${stateButtons().map((x) => x.textContent).join(' | ')}`);
+	return b;
+};
 export const press = (el: Element) => act(async () => void el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
 
 /** Opens a menu as a pointer does, and returns its items. */

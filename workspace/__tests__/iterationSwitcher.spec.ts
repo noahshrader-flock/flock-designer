@@ -2,7 +2,7 @@
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IterationSwitcher, StateSwitcher } from '../src/renderer/IterationSwitcher';
-import { button, press, render, settle, unmountAll } from './reviewHarness';
+import { button, press, render, settle, shownState, state, stateButtons, stateGroup, unmountAll } from './reviewHarness';
 
 /**
  * Switching between a project's work: for prototypes, a dropdown of its versions and, beside it, a dropdown of the
@@ -129,39 +129,53 @@ describe('a prototype’s states', () => {
 		return onSelect;
 	};
 
-	it('are a dropdown saying which one you are on, the first until another is chosen', async () => {
+	it('are a group of buttons, one each, in the prototype’s own order', async () => {
 		await showStates();
-		expect(button('State default: switch state').textContent).toBe('default');
+		expect(stateGroup()).not.toBeNull();
+		expect(stateButtons().map((b) => b.textContent)).toEqual(STATES);
+	});
+
+	it('press the one you are on, the first until another is chosen', async () => {
+		await showStates();
+		expect(shownState()).toBe('default');
+		expect(stateButtons().map((b) => b.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
 		await unmountAll(current!.root);
 		await showStates({ current: 'panel' });
-		expect(button('State panel: switch state').textContent).toBe('panel');
+		expect(shownState()).toBe('panel');
 	});
 
-	it('lists every state, in the prototype’s own order, with this one chosen', async () => {
-		await showStates({ current: 'no-match' });
-		const items = await choices(button('State no-match: switch state'));
-		expect(names(items)).toEqual(STATES);
-		expect(items.map((i) => i.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
-	});
-
-	it('goes to the state chosen, and back to the first as the one it opens in', async () => {
+	it('go to the state chosen, and back to the first as the one the page opens in', async () => {
 		const onSelect = await showStates({ current: 'panel' });
-		await press((await choices(button('State panel: switch state')))[1]!);
+		await press(state('no-match'));
 		expect(onSelect).toHaveBeenLastCalledWith('no-match');
-		await press((await choices(button('State panel: switch state')))[0]!);
+		await press(state('default'));
 		expect(onSelect).toHaveBeenLastCalledWith(null);
 	});
 
-	it('says the first for a state the prototype no longer has, as the page then shows', async () => {
-		await showStates({ current: 'gone' });
-		expect(button('State default: switch state')).toBeTruthy();
+	it('do nothing when the one you are on is pressed again, rather than leaving none shown', async () => {
+		const onSelect = await showStates({ current: 'panel' });
+		await press(state('panel'));
+		expect(onSelect).not.toHaveBeenCalled();
+		expect(shownState()).toBe('panel');
 	});
 
-	it('is not there for a prototype with one state, or none: there is nothing to switch to', async () => {
+	it('show the first for a state the prototype no longer has, as the page then does', async () => {
+		await showStates({ current: 'gone' });
+		expect(shownState()).toBe('default');
+	});
+
+	it('are the normal size of the bar, joined into one control, and are not words in a menu', async () => {
+		await showStates();
+		expect(stateButtons().map((b) => b.getAttribute('data-size'))).toEqual(['default', 'default', 'default']);
+		expect(stateGroup()?.getAttribute('data-spacing')).toBe('0');
+		expect(document.querySelector('[role="menu"]')).toBeNull();
+	});
+
+	it('are not there for a prototype with one state, or none: there is nothing to switch to', async () => {
 		await showStates({ states: ['default'] });
-		expect(document.querySelector('[aria-label^="State"]')).toBeNull();
+		expect(stateGroup()).toBeNull();
 		await unmountAll(current!.root);
 		await showStates({ states: [] });
-		expect(document.querySelector('[aria-label^="State"]')).toBeNull();
+		expect(stateGroup()).toBeNull();
 	});
 });

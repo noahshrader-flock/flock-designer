@@ -5,7 +5,7 @@ import { composeBody } from '../src/shared/anchor';
 import { Viewer } from '../src/viewer/Viewer';
 import { saveToken, savedToken } from '../src/viewer/browserAdapter';
 import { PAGE_CONFIG as CONFIG, commentOnPage, fakeGitHub, sitePage } from './pageHarness';
-import { button, cards, menuItem, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
+import { button, cards, menuItem, openMenu, press, render, settle, shownState, state, stateButtons, stateGroup, typeInto, unmountAll } from './reviewHarness';
 
 /**
  * Commenting on a prototype's published page (M7 of the Pages plan): the viewer, drawn into the page the site builds,
@@ -65,18 +65,20 @@ describe('the states of the page', () => {
 		return page;
 	};
 
-	it('are a dropdown beside the iteration, and choosing one opens the page in it', async () => {
+	it('are a group of buttons between the version and the history, and pressing one opens the page in it', async () => {
 		const { frame } = await withStates(['default', 'no-match', 'panel']);
-		await openMenu(button('State default: switch state'));
-		const states = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
-		expect(states.map((i) => i.textContent?.trim())).toEqual(['default', 'no-match', 'panel']);
-		await press(states[2] as HTMLElement);
+		expect(stateButtons().map((i) => i.textContent)).toEqual(['default', 'no-match', 'panel']);
+		expect(shownState()).toBe('default');
+		// In the bar's order: the version, the states, then the history.
+		const before = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+		expect(before(button('Version V1: switch version'), stateGroup() as Element)).toBe(true);
+		expect(before(stateGroup() as Element, button('Iteration I1: switch iteration'))).toBe(true);
+		await press(state('panel'));
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?state=panel');
-		expect(button('State panel: switch state')).toBeTruthy();
+		expect(shownState()).toBe('panel');
 		// Back to the first is the page as it opens.
-		await openMenu(button('State panel: switch state'));
-		await press(document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')[0] as HTMLElement);
+		await press(state('default'));
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html');
 	});
@@ -104,7 +106,7 @@ describe('the states of the page', () => {
 		await press(button('Show in panel', card));
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?state=panel');
-		expect(button('State panel: switch state')).toBeTruthy();
+		expect(shownState()).toBe('panel');
 	});
 
 	it('are not offered for a page with one, or a page built before pages said', async () => {
