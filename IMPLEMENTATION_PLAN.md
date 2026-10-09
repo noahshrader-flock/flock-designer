@@ -35,12 +35,30 @@ first real runs, setup and access that need other people, and decisions.
 
 ## What is still to do
 
+### The app is for prototypes (decided by Noah, 2026-10-08)
+
+Codebase work is started, viewed and handed off from Claude Code in the product repository. The app's one link to it
+is **Build in the codebase**, from a prototype. **Done:** New makes prototypes only; a project card opens its newest
+prototype, and a project with only codebase work links to it on GitHub (**Built in code**); codebase work records its
+repository so anyone can follow that link (see [flock-designer.md, 3.8](flock-designer.md#38--move-a-prototype-into-the-code)).
+
+**Left:**
+1. **Decide where Build in the codebase's run shows.** Today it starts the agent in the app and opens the codebase
+   screen to show the run, the last way into that screen. Recommended: hand it to Claude Code in the product
+   repository, as prototypes are made from there (a `flkd` command and skill that print the task and record the work).
+2. **Confirm Hand off works from Claude Code alone** (the repository's `npm run handoff` and the shared handoff skill),
+   then remove the app's Hand off dialog and report.
+3. **Then remove the codebase screen and what only it uses:** the preview runtime and local build, Share for review
+   (its pull request and CI wait), the editor hand-over buttons, and the pushing of work branches.
+4. **Check the older prototypes made as code on `fd/` branches,** which open through that screen: make them records
+   with a link, or keep a way to see them, depending on whether anyone still uses them.
+
 ### 3.6 — Pilot and decision (was C5)
 
 **Human.** Two or three real projects reviewed through the app by people **outside design** — a PM and
 an engineer at minimum. **Scope (2026-10-07):** one loop. A designer makes a prototype; a PM opens it in the
-app and comments; Address acts on the comments; the prototype is moved into the code; Hand off gives an engineer
-the branch. A designer comfortable with the setup may also start codebase work directly. **Not in scope:**
+app and comments; Address acts on the comments; the prototype is moved into the code; Hand off, from Claude Code,
+gives an engineer the branch. Codebase work started directly is started in the codebase, not the app. **Not in scope:**
 shared previews of codebase work (engineering's own PR previews cover delivery), and codebase iterations beyond
 I1. The check that matters most: a reviewer with a second GitHub account, no checkout and only the app can open a
 prototype and comment.
@@ -57,12 +75,12 @@ These pass their tests. None is *done* until someone has watched it work, and Cl
 | 1 | A prototype made from a real request (3.7). A first run exists (admin-usage: about 6 minutes, built first time); judging it is Noah's | The page is clearly more accurate than the hand-drawn ones, and quicker | Noah |
 | 2 | A prototype moved into the code through the app (3.8): the confirmation, the audit, the branch | The audit and branch are a better start than a hand-drawn page would have been | Noah |
 | 3 | **Address on a prototype**, with a real agent, on a comment of your own | The agent changes the source, the page is rebuilt and saved, and the comment is marked addressed | Noah |
-| 4 | **Address on a codebase comment that is inside the iteration's scope** | The agent changes real code from a comment, which Noah has not yet seen | Noah |
+| 4 | ~~Address on a codebase comment~~ | Dropped 2026-10-08: codebase work is not reviewed in the app | — |
 | 5 | **A reviewer with a second GitHub account, no checkout and only the app** opens a prototype and comments | The reviewer path works for someone who is not you. **The check that matters most** | Noah, with a second account |
 | 6 | **A prototype moved into the code by a different person** than the one who made it | The prototype is in the design repository, so anyone with the product repository can move it | Two people |
 | 7 | **The prototype's comments reach the engineer** after the move into the code | The conversation is not lost at the handover | The pilot |
 | 8 | **Take over in Claude Code** during a codebase build, and confirm the conversation opens in VS Code's Claude Code panel | The handover to the editor works. Not yet seen | Noah |
-| 9 | One real **Share for review** (3.4), which needs Coke's draft change pushed | Optional now: codebase work is reviewed through engineering's own previews. Only if Share for review is kept | Noah |
+| 9 | ~~One real Share for review~~ | Dropped 2026-10-08: codebase work is reviewed through engineering's own previews | — |
 
 ### Finish the handoff proof: `admin-usage`
 
@@ -71,7 +89,7 @@ checkout, which has 14 uncommitted files from the run that was cut off.
 
 | # | Item | Status |
 |---|---|---|
-| H1 | Run Handoff on `feature/admin-usage` from the app | waiting on Noah |
+| H1 | Run Handoff on `feature/admin-usage` from Claude Code in Coke (`npm run handoff -- admin-usage`, with the shared handoff skill) | waiting on Noah |
 | H2 | The open review findings, which Handoff must clear or record: the feature flag (declared, and on in design mode); a11y scans scoped narrower instead of the violation recorded; the "Add New Role" action nobody asked for; the stale audit; sample data that drifted from the prototype's; the type error; the unwired test helper; the removed test timeouts | with H1 |
 | H3 | Judge it: the Users page works, the Usage tab appears behind its flag, and engineering would accept the diff. Then run a second, different prototype through the same path | after H1 |
 | H4 | Permission denials (44 in the first run, 18 for the builder): re-measure after the next run, then widen the allowlist only for what is still denied | after H1 |
