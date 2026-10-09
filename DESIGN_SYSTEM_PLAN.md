@@ -2,7 +2,7 @@
 
 **Written 2026-10-08. Every decision is made and every unknown I could measure was measured the same day. S1 to S3 are built
 (2026-10-08), and P0 (**Connect the design system**, which replaced S4) the same evening. P1 and P2 (previews) were built the same day.
-P3 (pictures in the list) was dropped.** Tokens (T1 to T6) were laid out on 2026-10-09, after reading how Claude Design does it; none is built. The plan for filling the **Design System** tab (`renderer/DesignSystem.tsx`) with the components
+P3 (pictures in the list) was dropped.** Tokens (T1 to T6) were laid out on 2026-10-09, after reading how Claude Design does it; T1 was built the same day. The plan for filling the **Design System** tab (`renderer/DesignSystem.tsx`) with the components
 from `flock-react-component-lib` (FUI), without copying Storybook and without building the editing yet.
 
 This is the detail behind one candidate in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), which points here and does
@@ -84,6 +84,14 @@ the library):**
 | **The 259-variable CSS file** (`flock-colors.css`) **is "kept for backward compatibility"** by the library's own words | Not a source for tokens; ignored |
 | **The library's own Storybook cannot be built from `develop` alone.** A build from a `git archive` of `develop` failed on `../symbols.generated`, a file the library generates at install time and does not keep in git (it is missing from the clone on Noah's checked-out branch too) | Embedding Storybook means running the clone's own dev server on whatever branch is checked out: not `develop`, not read-only, and a server to start and stop. Why decision 15 chooses the build in decision 8 |
 
+**Read for T1 (2026-10-09, from `origin/develop`):**
+
+| Fact | What it means here |
+|---|---|
+| **The colour values take two forms in the palettes:** a tone step (`pineGreen[50]`), or the same with an opacity after it (`` `${pineGreen[20]}66` ``); the tone files are flat `step: '#HEX'` objects, in descending order of step, and both modes spread in one shared palette (`...sharedPalette`, the priority colours) | All three read as text. A shared role is one token in each mode, both pointing at where it is written (`shared.ts`) |
+| **Three of `neutral`'s steps are written wrong:** 94 is `'@ECEEEB'`, 70 is `'AEB0B2'` and 4 is `'0B0F0D'` (an `@`, and two with no `#`) | Not read, and named with their lines; never guessed. **For the Design System owner to fix.** No palette role points at them today |
+| **627 tokens:** eleven tone families, the light and dark palettes, spacing and radius (both `8`) | The panel needs its groups collapsed by default, as decision 21 has it |
+
 **How Claude Design does it (read 2026-10-09, from [Anthropic's help centre](https://support.claude.com/en/articles/14604397-set-up-your-design-system-in-claude-design) and third-party write-ups such as [this one](https://nitayneeman.com/blog/how-to-sync-a-design-system-with-claude-design/); marked where it is only third-party):**
 
 | Fact | What it means here |
@@ -138,7 +146,7 @@ nothing on GitHub changed.
 | **P0** (done) | **Connect the design system:** the centred screen with **Clone** and **Locate**, and a connection that is remembered. **Replaces S4** | S2, S3, decisions 11 to 14 | M | Medium |
 | **P1** (done) | **Build the previews:** one page of every story from `develop`, cached by commit, one story per address | P0, decision 8 | M | **Medium** |
 | **P2** (done) | **The component page:** click a row, see its stories as live cards | P1, decision 9 | M | Medium |
-| **T1** | **Find the tokens:** a reader that returns the library's tokens as one typed list (colours, spacing, radius), found and not listed | P2, decisions 16, 18 | M | Low |
+| **T1** (done) | **Find the tokens:** a reader that returns the library's tokens as one typed list (colours, spacing, radius), found and not listed | P2, decisions 16, 18 | M | Low |
 | **T2** | **Show the tokens, in a panel:** a resizable panel at the right of the component page, in collapsible groups: colour tones, palette roles (light and dark), spacing, radius, each with its value and where it comes from; searchable | T1, decision 21 | M | Low |
 | **T3** | **Adjust tokens in the same panel, seen live, written nowhere:** a control on each row, from its kind; a **Changed** group at the top with a reset for each and for all; the change is the overrides list, applied as a theme to every card on the page | T2, decisions 19, 20 | L | Medium |
 | **T4** | **Try it on a branch:** each save is a commit on a new branch of the library, so the branch's history is the iterations; the preview can run on the branch | T3 | L | Medium |
@@ -250,13 +258,12 @@ live, and carried to a branch and a pull request.
 - **A test first for each behaviour,** and each step finished, committed and leaving the app working, like the other
   milestones.
 
-**T1: Find the tokens.** A pure function, like `readCatalog`, that takes reads of the clone's `origin/develop` (every
-file under a folder, one file's text) and returns the tokens as `{ path, kind: colour | dimension, value, group, source
-file and line }`, grouped as the library groups them (tone families, palette roles for each mode, spacing, radius). The
-files are flat TypeScript literals, read as text (as found above), not by running the library. **Found, not listed:** a
-colour added to the library appears. A file it cannot read is named, and the rest still show. *Tests:* the real library
-(as `componentCatalog.spec.ts` does), and fixtures for a family added, a role pointing at a tone, and a file that
-departs from the standard.
+**T1: Find the tokens (done 2026-10-09).** What it built, and the evidence, is in [dsnr.md](dsnr.md#change-log)
+(2026-10-09). In short: `services/designTokens.ts`'s `readTokens(reads)` takes the catalog's reads and returns
+`DesignTokens` (`shared/contract.ts`): one list of `DesignToken`s, what was not read with its file and line, and how
+they were found. **For T2:** the panel takes that list as it is, grouped by `group` and `set`; nothing is wired to the
+tab yet, so T2 adds one read of it beside the catalog's (`designLibrary.ts`), on the same commit. **The library has
+three steps written wrong,** which the panel should show as the reader reports them (see "What is known").
 
 **T2: Show the tokens, in a panel.** A **resizable panel at the right of the component page** (decision 21), opened by a
 button as the comments panel is, with the components beside it. It reads the list T1 returns, in collapsible groups:
@@ -344,7 +351,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 ## Next
 
 **S1 to S3 and P0 to P2 are done,** with Storybook as the source of truth for what a component is (decision 17), and
-stories responding as they should. **T1 (find the tokens) is next,** and waits for Noah to say so; T2 and T3 (the panel, then its controls) follow it, and T4 to T6 are laid out but not specified. P3 was dropped
+stories responding as they should. **T1 (find the tokens) is done. T2 (the panel, read only) is next,** and waits for Noah to say so; T3 (its controls) follows, and T4 to T6 are laid out but not specified. P3 was dropped
 (decision 10).
 
 **By hand, Noah:** restart the dev session (the main process changed), open the Design System tab, and try a few

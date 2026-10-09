@@ -229,6 +229,41 @@ export type PublishStatus =
 	| { state: 'held'; problems: PublishProblem[]; at: string };
 
 /**
+ * A design token the library has (T1 of the design system plan), as read from its own files: what the Design System tab
+ * shows, and what a change names (by `path`).
+ */
+export interface DesignToken {
+	/** Its identity: `tone.pineGreen.50`, `palette.light.primary.main`, `spacing`, `radius`. */
+	path: string;
+	kind: 'colour' | 'dimension';
+	/** Where it is shown: `Tones`, `Light`, `Dark`, `Spacing`, `Radius`. */
+	group: string;
+	/** Its family or role (`pineGreen`, `primary`), and its step or variant (`50`, `main`). */
+	set: string;
+	name: string;
+	/** A colour as a hex (eight digits when it has an opacity), a dimension with its unit (`8px`). */
+	value: string;
+	/** A palette role's tone, and the opacity written after it. */
+	ref?: { tone: string; step: string; alpha?: string };
+	source: { file: string; line: number };
+}
+
+/** Something in the library's token files that is not read, with where it is. */
+export interface TokenProblem {
+	file: string;
+	line?: number;
+	reason: string;
+}
+
+/** The library's tokens, how they were found (`null`: no way found them), what was not read, and where it looked. */
+export interface DesignTokens {
+	source: string | null;
+	tokens: DesignToken[];
+	problems: TokenProblem[];
+	looked: string[];
+}
+
+/**
  * A component as the library's Storybook has it: one story file, named and grouped by its Storybook title. Storybook is
  * the source of truth for what is a component, so a component with no stories is not one here either.
  */
