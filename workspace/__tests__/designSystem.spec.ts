@@ -72,6 +72,12 @@ const FUI_SYSTEM = {
 const ACME = { id: 'acme/acme:packages/ui', name: 'Acme UI', repository: 'acme/acme', root: '/h/GitHub/acme', folder: 'packages/ui', branch: 'main' };
 const SYSTEMS = { systems: [FUI_SYSTEM, ACME], current: FUI_SYSTEM.id };
 const switcher = (name = FUI_SYSTEM.name) => button(`Design system ${name}: switch design system`);
+/** The Components frame's first row (T9): the switcher's own. */
+const firstRow = () => switcher().parentElement as HTMLElement;
+/** The tab bar's tabs (T9), by name; Radix moves to a tab on its mouse down, as a person's press does. */
+const tab = (name: string) => [...document.querySelectorAll<HTMLElement>('[role="tab"]')].find((t) => t.textContent === name) as HTMLElement;
+const chooseTab = (name: 'Components' | 'Voice and tone') =>
+	act(async () => void tab(name).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 })));
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
 const open = async (
@@ -101,6 +107,47 @@ afterEach(async () => {
 	if (current) await unmountAll(current.root);
 	current = null;
 	document.body.innerHTML = '';
+});
+
+describe('the tab bar (T9)', () => {
+	const bar = () => document.querySelector('[role="tablist"][aria-label="Design System"]') as HTMLElement;
+	const divider = () => document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]');
+	const shown = (name: string) => !(document.querySelector(`[role="tabpanel"][data-tab="${name}"]`) as HTMLElement).hidden;
+
+	it('has Components and Voice and tone, in that order, Components chosen', async () => {
+		await open(() => ok(ready()));
+		expect([...bar().querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toEqual(['Components', 'Voice and tone']);
+		expect(tab('Components').getAttribute('aria-selected')).toBe('true');
+		// Above the frame's first row, which is the Components tab's own.
+		expect(bar().compareDocumentPosition(firstRow()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(bar().contains(firstRow())).toBe(false);
+	});
+
+	it('shows Voice and tone with no first row and no side panel, and Components again as it was left', async () => {
+		await open(() => ok(ready()));
+		await chooseTab('Voice and tone');
+		expect(tab('Voice and tone').getAttribute('aria-selected')).toBe('true');
+		expect(shown('voice-and-tone')).toBe(true);
+		expect(shown('components')).toBe(false);
+		// The Components tab is hidden, not left: its row and panel are in it, so neither is seen.
+		expect(divider()?.closest('[hidden]')).not.toBeNull();
+		expect(firstRow().closest('[hidden]')).not.toBeNull();
+		await chooseTab('Components');
+		expect(shown('components')).toBe(true);
+		expect(divider()?.closest('[hidden]')).toBeNull();
+		expect(rows()).toHaveLength(5);
+	});
+
+	it('is there before the library is read, and when no design system is connected', async () => {
+		const app = fakeApp({ designSystemCatalog: () => new Promise(() => undefined) });
+		(window as unknown as { workspace: unknown }).workspace = app.api;
+		current = await render(createElement(DesignSystem, { hidden: false }));
+		expect(bar()).not.toBeNull();
+		await unmountAll(current.root);
+		await open(() => ok({ state: 'none' }));
+		expect(bar()).not.toBeNull();
+		expect(text()).toContain('Connect your design system');
+	});
 });
 
 describe('the list', () => {
@@ -136,73 +183,100 @@ describe('the list', () => {
 	});
 });
 
-describe('finding a component', () => {
-	const finder = () => button('Find a component');
-	const choices = () => [...document.querySelectorAll('[cmdk-item]')].map((i) => i.textContent);
+describe('searching the components (T9)', () => {
+	const search = () => document.querySelector('input[aria-label="Search components"]') as HTMLInputElement;
+	const viewButton = (name: 'List' | 'Grid') => document.querySelector<HTMLElement>(`[aria-label="View"] [aria-label="${name}"]`) as HTMLElement;
+	const cards = () => [...document.querySelectorAll<HTMLElement>('[data-component-card]')].map((c) => c.getAttribute('data-component-card'));
+	afterEach(() => localStorage.clear());
 
-	it('lists every component in a searchable dropdown, the New modal’s own, and narrows it as you type', async () => {
+	it('is a search box, not a menu: the list narrows as you type, by name or group, and a group with nothing left goes', async () => {
 		await open(() => ok(ready()));
-		await press(finder());
-		await settle();
-		expect(choices()).toEqual(['FSButton', 'FSCard', 'FSCardHeader', 'PopoverHeader', 'Loose']);
-		const search = document.querySelector('[cmdk-input]') as HTMLInputElement;
-		await typeInto(search, 'card');
-		await settle();
-		expect(choices().filter((c) => c === 'FSCard' || c === 'FSCardHeader')).toHaveLength(2);
-		await typeInto(search, 'nothing like it');
-		await settle();
-		expect(text()).toContain('No component matches.');
+		expect(document.querySelector('[cmdk-input]')).toBeNull();
+		expect(text()).not.toContain('Find a component');
+		await typeInto(search(), 'card');
+		expect(rows()).toEqual(['FSCard', 'FSCardHeader']);
+		expect(groups()).toEqual(['Surfaces']);
+		// The group's count is what is left of it.
+		expect(document.querySelector('section[aria-label="Surfaces"] h3')?.textContent).toBe('Surfaces 2');
+		// A group's name finds its components; every word typed has to match, in any case.
+		await typeInto(search(), 'popovers');
+		expect(rows()).toEqual(['PopoverHeader']);
+		await typeInto(search(), 'SURFACES header');
+		expect(rows()).toEqual(['FSCardHeader']);
+		await typeInto(search(), '');
+		expect(rows()).toHaveLength(5);
 	});
 
-	it('opens the component chosen in the finder on its own page', async () => {
+	it('says when nothing matches, with a way to clear it, and Escape clears it too', async () => {
 		await open(() => ok(ready()));
-		await press(finder());
-		await settle();
-		await act(
-			async () =>
-				void [...document.querySelectorAll('[cmdk-item]')]
-					.find((i) => i.textContent === 'PopoverHeader')!
-					.dispatchEvent(new MouseEvent('click', { bubbles: true })),
-		);
-		await settle();
+		await typeInto(search(), 'nothing like it');
+		expect(rows()).toHaveLength(0);
+		expect(text()).toContain('No component matches “nothing like it”.');
+		await press(button('Clear search'));
+		expect(search().value).toBe('');
+		expect(rows()).toHaveLength(5);
+		await typeInto(search(), 'card');
+		await act(async () => void search().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+		expect(rows()).toHaveLength(5);
+	});
+
+	it('narrows the grid by the same rule as the list', async () => {
+		await open(() => ok(ready()));
+		await press(viewButton('Grid'));
+		await typeInto(search(), 'card');
+		expect(cards()).toEqual([COMPONENTS[1]!.id, COMPONENTS[2]!.id]);
+		expect(groups()).toEqual(['Surfaces']);
+	});
+
+	it('opens nothing by itself: a component is opened from its row', async () => {
+		await open(() => ok(ready()));
+		await typeInto(search(), 'popover');
+		expect(document.querySelector('h3')?.textContent).not.toBe('PopoverHeader');
+		await press(row('PopoverHeader').querySelector('button')!);
 		expect(document.querySelector('h3')?.textContent).toBe('PopoverHeader');
-		// The finder is the list's, so it goes with the list and comes back with it.
-		expect(finder().closest('[hidden]')).not.toBeNull();
 	});
 
-	it('shows a name two components share with its group in the finder, and opens the one chosen', async () => {
-		await open(() =>
-			ok(
-				ready('unchanged', [
-					component('Overview', { id: 'a/Overview.stories.tsx', group: 'Buttons' }),
-					component('Overview', { id: 'b/Overview.stories.tsx', group: 'Surfaces', subtitle: 'The surfaces one.' }),
-				]),
-			),
-		);
-		await press(finder());
-		await settle();
-		expect(choices()).toEqual(['Buttons / Overview', 'Surfaces / Overview']);
-		await act(
-			async () =>
-				void [...document.querySelectorAll('[cmdk-item]')]
-					.find((i) => i.textContent === 'Surfaces / Overview')!
-					.dispatchEvent(new MouseEvent('click', { bubbles: true })),
-		);
-		await settle();
-		expect(text()).toContain('The surfaces one.');
-	});
-
-	it('is in the components view, above the list, and not in the toolbar', async () => {
+	it('is in the second row, with List and Grid at its far right, above the list; it goes with the list and comes back after Back', async () => {
 		await open(() => ok(ready()));
-		const toolbar = switcher().parentElement!;
-		expect(toolbar.contains(finder())).toBe(false);
-		// Above the first group, in the same place as the list it searches.
-		const first = document.querySelector('section[aria-label="Buttons"]') as HTMLElement;
-		expect(finder().compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(finder().closest('[hidden]')).toBeNull();
+		const first = firstRow();
+		expect(first.contains(search())).toBe(false);
+		const second = search().closest('[data-components-search]') as HTMLElement;
+		expect(second.lastElementChild?.contains(viewButton('Grid'))).toBe(true);
+		const buttons = document.querySelector('section[aria-label="Buttons"]') as HTMLElement;
+		expect(search().compareDocumentPosition(buttons) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(search().closest('[hidden]')).toBeNull();
+		await press(row('FSButton').querySelector('button')!);
+		expect(search().closest('[hidden]')).not.toBeNull();
+		// The first row stays: it is the frame's, not the list's.
+		expect(firstRow().closest('[hidden]')).toBeNull();
+		await press(button('Back to components'));
+		expect(search().closest('[hidden]')).toBeNull();
 	});
 
-	it('says in an alert at the top of the tokens panel, above its tabs, how many values could not be read, and nothing when all were', async () => {
+	it('keeps what was typed while a component is open, and while Voice and tone is looked at', async () => {
+		await open(() => ok(ready()));
+		await typeInto(search(), 'card');
+		await press(row('FSCard').querySelector('button')!);
+		await press(button('Back to components'));
+		expect(search().value).toBe('card');
+		await chooseTab('Voice and tone');
+		await chooseTab('Components');
+		expect(search().value).toBe('card');
+		expect(rows()).toEqual(['FSCard', 'FSCardHeader']);
+	});
+
+	it('starts empty for another design system', async () => {
+		await open(() => ok(ready()));
+		await typeInto(search(), 'card');
+		await openMenu(switcher());
+		await press([...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')][1] as HTMLElement);
+		await settle();
+		expect(search().value).toBe('');
+	});
+});
+
+describe('the components frame’s first row and the side panel’s top', () => {
+	it('says in an alert at the top of the tokens panel, under the panel’s switch and above its tabs, how many values could not be read, and nothing when all were', async () => {
 		await open(() => ok(ready()));
 		expect(document.body.textContent).not.toContain('couldn’t be read');
 		await unmountAll(current!.root);
@@ -213,11 +287,13 @@ describe('finding a component', () => {
 		await open(() => ok({ ...ready(), tokens: { ...TOKENS, problems } }));
 		const alert = document.querySelector('[role="alert"]') as HTMLElement;
 		expect(alert.querySelector('[data-slot="alert-title"]')?.textContent).toBe('2 values couldn’t be read');
-		// In the panel at the right, before its tabs; not in the toolbar, which has only Sync and More beside the name.
+		// In the panel at the right, under its switch and before its tabs; not in the first row, which has only Sync and More
+		// beside the name.
 		const panel = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')?.nextElementSibling as HTMLElement;
 		expect(panel.contains(alert)).toBe(true);
 		expect(alert.compareDocumentPosition(panel.querySelector('[role="tablist"]')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(switcher().parentElement?.contains(alert)).toBe(false);
+		expect(panelView('Tokens').compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(firstRow().contains(alert)).toBe(false);
 		// Its details are in the dialog it opens, not in the panel.
 		expect(panel.textContent).not.toContain('neutral.ts');
 		await press(button('View', alert));
@@ -225,22 +301,42 @@ describe('finding a component', () => {
 		expect(document.querySelector('[role="dialog"]')?.textContent).toContain('src/colors/tones/neutral.ts:15');
 	});
 
-	it('has the design system’s name and branch, then Sync, the panel’s Tokens and Component, and More at the toolbar’s right, and nothing else', async () => {
+	it('has, in the first row, the design system’s name and branch, then Sync, then More, and nothing else', async () => {
 		await open(() => ok(ready()));
-		const toolbar = switcher().parentElement!;
-		expect(toolbar.textContent).toBe('Flock React Component LibSyncTokensComponent');
+		const first = firstRow();
+		expect(first.textContent).toBe('Flock React Component LibSync');
+		expect(first.contains(document.querySelector('[aria-label="Branch develop"]'))).toBe(true);
 		const inOrder = (a: Element, b: Element) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
 		expect(inOrder(switcher(), button('Sync'))).toBeTruthy();
-		expect(inOrder(button('Sync'), panelView('Tokens'))).toBeTruthy();
-		expect(inOrder(panelView('Component'), button('More for Flock React Component Lib'))).toBeTruthy();
+		expect(inOrder(button('Sync'), button('More for Flock React Component Lib'))).toBeTruthy();
+		expect(first.contains(button('More for Flock React Component Lib'))).toBe(true);
+		// The panel's switch is not in it: it is at the top of the panel.
+		expect(first.querySelector('[aria-label="Side panel"]')).toBeNull();
+	});
+
+	it('is in the components frame, at the left of the side panel, which runs the height of the tab beside it', async () => {
+		await open(() => ok(ready()));
+		const divider = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')!;
+		expect(divider.previousElementSibling?.contains(firstRow())).toBe(true);
+		expect(divider.nextElementSibling?.contains(firstRow())).toBe(false);
+	});
+
+	it('has the panel’s Tokens and Component as the first thing in the panel', async () => {
+		await open(() => ok(ready()));
+		const panel = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')?.nextElementSibling as HTMLElement;
+		expect(panel.firstElementChild?.querySelector('[aria-label="Side panel"]')).not.toBeNull();
+		// The same with a component open, whose panel is under it too.
+		await press(row('FSButton').querySelector('button')!);
+		expect(panel.firstElementChild?.querySelector('[aria-label="Side panel"]')).not.toBeNull();
+		expect(panelView('Tokens').compareDocumentPosition(componentPanel()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 	});
 
 	it('has no switcher between components and composites, and no count', async () => {
 		await open(() => ok(ready()));
-		// Not in the list: the only tabs are the tokens panel's, at the right of the divider.
+		// Not in the list: the tabs are the tab bar's, above it, and the tokens panel's, at the right of the divider.
 		const list = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')!.previousElementSibling!;
 		expect(list.querySelector('[role="tablist"]')).toBeNull();
-		expect(document.querySelectorAll('[role="tablist"]')).toHaveLength(1);
+		expect(document.querySelectorAll('[role="tablist"]')).toHaveLength(2);
 		expect(text()).not.toMatch(/\d+ components/);
 		expect(rows()).toHaveLength(5);
 	});
@@ -301,10 +397,10 @@ describe('the components as a list or a grid (P5)', () => {
 	const cards = () => [...document.querySelectorAll<HTMLElement>('[data-component-card]')];
 	afterEach(() => localStorage.clear());
 
-	it('are a list at first, with List and Grid beside the finder', async () => {
+	it('are a list at first, with List and Grid beside the search', async () => {
 		await open(() => ok(ready()));
 		expect(shownView()).toBe('List');
-		expect(button('Find a component').closest('div')?.parentElement?.contains(viewButton('Grid'))).toBe(true);
+		expect(document.querySelector('[data-components-search]')?.contains(viewButton('Grid'))).toBe(true);
 		expect(cards()).toHaveLength(0);
 	});
 
@@ -359,7 +455,7 @@ describe('the side panel’s views', () => {
 		expect(componentPanel()).toBeNull();
 	});
 
-	it('switch to Component the moment a component is opened, from the list or from the finder', async () => {
+	it('switch to Component the moment a component is opened, from the list or from a card', async () => {
 		await open(() => ok(ready()));
 		await press(row('FSButton').querySelector('button')!);
 		expect(shownView()).toBe('Component');
@@ -367,13 +463,12 @@ describe('the side panel’s views', () => {
 		expect(tokensShown()).toBe(false);
 		expect(componentPanel()?.textContent).toContain('FSButton');
 		await press(button('Back to components'));
-		await press(button('Find a component'));
-		await settle();
-		const item = [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === 'FSCard') as Element;
-		await act(async () => void item.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+		await press(document.querySelector<HTMLElement>('[aria-label="View"] [aria-label="Grid"]')!);
+		await press(document.querySelector<HTMLElement>(`[data-component-card="${COMPONENTS[1]!.id}"]`)!);
 		await settle();
 		expect(shownView()).toBe('Component');
 		expect(componentPanel()?.textContent).toContain('FSCard');
+		localStorage.clear();
 	});
 
 	it('show, as Component, the tokens the open component draws with, asked for by its story file', async () => {
@@ -544,7 +639,7 @@ describe('opening a component', () => {
 		expect(listShown()).toBe(true);
 		// The same list, not a new one: what was scrolled stays scrolled.
 		expect(document.querySelector('[data-component]')!.closest('div')).toBe(list);
-		expect(button('Find a component')).toBeTruthy();
+		expect(document.querySelector('input[aria-label="Search components"]')?.closest('[hidden]')).toBeNull();
 	});
 
 	it('closes a component that a sync removed, back to the list', async () => {

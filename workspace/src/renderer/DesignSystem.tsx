@@ -1,5 +1,7 @@
 import { ChevronDownIcon, ChevronRightIcon, GitBranchIcon, InfoIcon, LayoutGridIcon, LayoutListIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { Tabs as TabsPrimitive } from 'radix-ui';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { matchesComponent } from '../shared/catalog';
 import type {
 	Catalog,
 	CatalogComponent,
@@ -19,7 +21,7 @@ import { MoreMenu } from './MoreMenu';
 import { Page } from './Page';
 import { TOKENS_PANEL } from './panelWidth';
 import { ResizablePanel } from './ResizablePanel';
-import { SearchSelect } from './SearchSelect';
+import { SearchField } from './SearchField';
 import { CardGridSkeleton, RowsSkeleton, SkeletonStatus } from './Skeletons';
 import { SyncButton } from './SyncButton';
 import { TokensPanel } from './TokensPanel';
@@ -30,6 +32,7 @@ import { Skeleton } from './ui/skeleton';
 import { undeclared } from '../shared/wcag';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { Toolbar } from './Toolbar';
+import { VoiceAndTone } from './VoiceAndTone';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import {
@@ -41,6 +44,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /** Said only when something is wrong, as the Projects screen does: a failed update is a line, never an error. */
@@ -116,7 +120,7 @@ type ComponentsView = 'list' | 'grid';
 const VIEW_KEY = 'dsnr.componentsView';
 const rememberedView = (): ComponentsView => (localStorage.getItem(VIEW_KEY) === 'grid' ? 'grid' : 'list');
 
-/** List or Grid, as a button group with the one shown pressed, beside the finder. */
+/** List or Grid, as a button group with the one shown pressed, at the right of the search. */
 const ViewSwitcher = ({ view, onSelect }: { view: ComponentsView; onSelect: (view: ComponentsView) => void }) => (
 	<ToggleGroup
 		type="single"
@@ -179,23 +183,51 @@ const Notice = ({ title, children, onRetry }: { title: string; children: ReactNo
 	</Page>
 );
 
+/** The Design System tab's own tabs (T9): the company's design system, as its components and as its voice and tone. */
+type Tab = 'components' | 'voice-and-tone';
+
 /**
- * The Design System tab: the design system connected, as its branch has it on GitHub, from a clone on this machine
- * (DESIGN_SYSTEM_PLAN.md). Its toolbar names it, switches between those connected and removes one (P4); with none, the
- * Connect screen. The components view is the list, by default, with a finder above it, and a component once one is opened,
- * with its stories live. At the right, always, the side panel: the tokens (T2), where a change to the tokens is tried
- * (T3), or the open component, chosen by a button group in the toolbar. Opening a component switches the panel to it,
- * leaving it switches back to the tokens, and either can be chosen while it is open; the tokens are only hidden meanwhile,
- * so their search, tab and open groups are as they were left. The change being tried is the tab's: the panel makes it, an
- * open component's previews are built with it, a design system shown afresh starts with none, and a sync keeps only the
- * edits of tokens the library still has. Not a second Storybook: docs and controls stay there, behind each component's
- * links.
+ * The Design System tab (DESIGN_SYSTEM_PLAN.md): the company's, not any one library's, so its bar holds only its two tabs,
+ * Components and Voice and tone (T9). Each stays mounted while the other is shown, so what was typed, scrolled and opened
+ * in it is as it was left; and Radix's own pane is used rather than shadcn's, which sets a text size on everything in it.
+ */
+export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
+	const [tab, setTab] = useState<Tab>('components');
+	return (
+		<Tabs value={tab} onValueChange={(next) => setTab(next as Tab)} className="gap-0">
+			<Toolbar className="sticky top-0 z-40">
+				<TabsList variant="line" aria-label="Design System">
+					<TabsTrigger value="components">Components</TabsTrigger>
+					<TabsTrigger value="voice-and-tone">Voice and tone</TabsTrigger>
+				</TabsList>
+			</Toolbar>
+			<TabsPrimitive.Content value="components" forceMount hidden={tab !== 'components'} data-tab="components" className="outline-none">
+				<Components hidden={hidden || tab !== 'components'} />
+			</TabsPrimitive.Content>
+			<TabsPrimitive.Content value="voice-and-tone" forceMount hidden={tab !== 'voice-and-tone'} data-tab="voice-and-tone" className="outline-none">
+				<VoiceAndTone />
+			</TabsPrimitive.Content>
+		</Tabs>
+	);
+};
+
+/**
+ * The Components tab: the design system connected, as its branch has it on GitHub, from a clone on this machine. Its
+ * first row names it, switches between those connected and removes one (P4), and syncs it; with none, the Connect screen.
+ * The components view is the list, by default, with a search and List or Grid above it, and a component once one is
+ * opened, with its stories live. At the right, always, the side panel, which runs the height of the tab beside it: at its
+ * top the switch between its two views, the tokens (T2), where a change to the tokens is tried (T3), and the open
+ * component. Opening a component switches the panel to it, leaving it switches back to the tokens, and either can be chosen
+ * while it is open; the tokens are only hidden meanwhile, so their search, tab and open groups are as they were left. The
+ * change being tried is the tab's: the panel makes it, an open component's previews are built with it, a design system shown
+ * afresh starts with none, and a sync keeps only the edits of tokens the library still has. Not a second Storybook: docs and
+ * controls stay there, behind each component's links.
  *
  * It reads once when first shown, at once from what the clone has, then again when GitHub has been asked for changes;
  * after that only when Sync is pressed. It stays mounted while hidden, and the list stays mounted while a component is
- * open, so the scroll survives both.
+ * open, so the scroll and the search survive both.
  */
-export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
+const Components = ({ hidden }: { hidden: boolean }) => {
 	const [catalog, setCatalog] = useState<Catalog | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [syncing, setSyncing] = useState(false);
@@ -221,6 +253,8 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		localStorage.setItem(VIEW_KEY, view);
 	};
 	const pictures = useComponentPictures(!hidden && componentsView === 'grid' && catalog?.state === 'ready', catalog?.state === 'ready' ? catalog.commit : null);
+	// What is typed in the search over the list: the list or grid is narrowed to what matches.
+	const [search, setSearch] = useState('');
 	// The change as every panel that shows tokens sees it: the tokens view and the component view alike.
 	const changes = useTokenChangesFor(
 		catalog?.state === 'ready' ? catalog.tokens.tokens : NO_TOKENS,
@@ -276,6 +310,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		openComponent(null);
 		setCatalog(null);
 		setEdits([]);
+		setSearch('');
 		await listSystems();
 		await firstRead();
 	}, [openComponent, listSystems, firstRead]);
@@ -298,11 +333,11 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	}
 	// Connecting another, with a way back to the one shown.
 	if (adding) return <ConnectDesignSystem onConnected={() => void showAnother()} onCancel={() => setAdding(false)} />;
-	// The screen's shape until the library is read: its bar, and the components as the list or grid last chosen.
+	// The screen's shape until the library is read: its first row, and the components as the list or grid last chosen.
 	if (catalog === null)
 		return (
 			<SkeletonStatus label="Reading the component library…">
-				<Toolbar className="sticky top-0 z-40">
+				<Toolbar>
 					<Skeleton className="h-5 w-40" />
 				</Toolbar>
 				<Page>{componentsView === 'grid' ? <CardGridSkeleton picture /> : <RowsSkeleton />}</Page>
@@ -334,68 +369,56 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	}
 
 	const byId = new Map(catalog.components.map((c) => [c.id, c]));
-	// The finder picks by what it shows, so a name two components share is shown with its group.
-	const shared = new Set(catalog.components.map((c) => c.name).filter((n, i, all) => all.indexOf(n) !== i));
-	const label = (c: CatalogComponent) => (shared.has(c.name) ? `${c.group} / ${c.name}` : c.name);
 	// A component a sync removed is closed rather than shown from a list that no longer has it.
 	const opened = open === null ? undefined : byId.get(open);
 	// With none open (a sync removed it) there is nothing but the tokens to show.
 	const panel: PanelView = opened ? view : 'tokens';
+	// The groups of what the search finds, in the catalog's order: a group with nothing found is left out.
 	const groups: { group: string; rows: CatalogComponent[] }[] = [];
-	for (const c of catalog.components) {
+	for (const c of catalog.components.filter((c) => matchesComponent(c, search))) {
 		const last = groups[groups.length - 1];
 		if (last?.group === c.group) last.rows.push(c);
 		else groups.push({ group: c.group, rows: [c] });
 	}
 
 	return (
-		<>
-			<Toolbar className="sticky top-0 z-40">
-				<DesignSystemSwitcher systems={systems.systems} shown={shown} onSelect={(id) => void select(id)} onAdd={() => setAdding(true)} />
-				<Tooltip delayDuration={300}>
-					<TooltipTrigger asChild>
-						<GitBranchIcon aria-label={`Branch ${catalog.branch}`} className="text-muted-foreground size-4 shrink-0" />
-					</TooltipTrigger>
-					<TooltipContent side="bottom" className="font-mono">
-						{catalog.branch}
-					</TooltipContent>
-				</Tooltip>
-				<div className="grow" />
-				{/* Where syncing is on the Projects screen: the problem, if there is one, beside the button. */}
-				<div className="flex items-center gap-2">
-					<UpdateProblem update={catalog.update} />
-					<SyncButton syncing={syncing} onClick={() => void sync()} />
-					<PanelSwitcher view={panel} canShowComponent={opened !== undefined} onSelect={setView} />
-					{shown && (
-						<MoreMenu label={`More for ${shown.name}`}>
-							<DropdownMenuItem variant="destructive" onSelect={() => void remove(shown.id)}>
-								<Trash2Icon />
-								Remove {shown.name}
-							</DropdownMenuItem>
-						</MoreMenu>
-					)}
-				</div>
-			</Toolbar>
-			{/* The tab under its bars: the list or a component, which scrolls on its own, and at the right the tokens panel,
-			    which does not move when either changes. */}
-			<div className="flex h-[calc(100dvh-var(--nav-height)-var(--toolbar-height))]">
-				<div className="min-w-0 flex-1 overflow-y-auto">
+		// The tab under its bar: at the left the frame, its first row and under it the list or a component, which scrolls on
+		// its own; at the right the side panel, the frame's full height, which does not move when either changes.
+		<div className="flex h-[calc(100dvh-var(--nav-height)-var(--toolbar-height))]">
+			<div className="flex min-w-0 flex-1 flex-col">
+				<Toolbar>
+					<DesignSystemSwitcher systems={systems.systems} shown={shown} onSelect={(id) => void select(id)} onAdd={() => setAdding(true)} />
+					<Tooltip delayDuration={300}>
+						<TooltipTrigger asChild>
+							<GitBranchIcon aria-label={`Branch ${catalog.branch}`} className="text-muted-foreground size-4 shrink-0" />
+						</TooltipTrigger>
+						<TooltipContent side="bottom" className="font-mono">
+							{catalog.branch}
+						</TooltipContent>
+					</Tooltip>
+					<div className="grow" />
+					{/* Where syncing is on the Projects screen: the problem, if there is one, beside the button; More after it. */}
+					<div className="flex items-center gap-2">
+						<UpdateProblem update={catalog.update} />
+						<SyncButton syncing={syncing} onClick={() => void sync()} />
+						{shown && (
+							<MoreMenu label={`More for ${shown.name}`}>
+								<DropdownMenuItem variant="destructive" onSelect={() => void remove(shown.id)}>
+									<Trash2Icon />
+									Remove {shown.name}
+								</DropdownMenuItem>
+							</MoreMenu>
+						)}
+					</div>
+				</Toolbar>
+				<div className="min-h-0 flex-1 overflow-y-auto">
 					{opened && <ComponentPage component={opened} commit={catalog.commit} edits={edits} onBack={() => openComponent(null)} />}
 					{/* Kept while a component is open, so going back finds the list where it was. */}
 					<div hidden={opened !== undefined}>
 						<Page>
-							{/* The components view's own: it finds a component to open, so it goes when one is open; and List or Grid. */}
-							<div className="flex items-center justify-between gap-3">
-								<div className="w-72">
-									<SearchSelect
-										items={catalog.components.map(label)}
-										value={null}
-										onChange={(chosen) => openComponent(catalog.components.find((c) => label(c) === chosen)?.id ?? null)}
-										placeholder="Find a component"
-										search="Search components…"
-										empty="No component matches."
-									/>
-								</div>
+							{/* The list's own second row, so it goes when a component is open: the search, and List or Grid at its right. */}
+							<div data-components-search className="flex items-center justify-between gap-3">
+								<SearchField label="Search components" value={search} onChange={setSearch} className="w-72" />
 								<ViewSwitcher view={componentsView} onSelect={chooseView} />
 							</div>
 							{error && (
@@ -405,6 +428,13 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 							)}
 							{catalog.components.length === 0 ? (
 								<p className="text-muted-foreground text-sm">The library's Storybook has no stories on {catalog.branch}, so there are no components to list.</p>
+							) : groups.length === 0 ? (
+								<p className="text-muted-foreground text-sm">
+									No component matches “{search.trim()}”.{' '}
+									<button type="button" className="text-primary underline underline-offset-4" onClick={() => setSearch('')}>
+										Clear search
+									</button>
+								</p>
 							) : (
 								groups.map(({ group, rows }) => (
 									<section key={group} className="flex flex-col gap-2" aria-label={group}>
@@ -437,17 +467,21 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 						</Page>
 					</div>
 				</div>
-				{/* Always there (decision 21), whichever screen is open: the tokens, or the component open when that is chosen.
-				    The tokens are hidden, not left, so what was typed and opened in them is as it was. */}
-				<ResizablePanel panel={TOKENS_PANEL} label="Resize the tokens panel">
-					<TokenChangesProvider value={changes}>
-						<div data-panel="tokens" hidden={panel !== 'tokens'} className="flex min-h-0 flex-1 flex-col">
-							<TokensPanel tokens={catalog.tokens} live={opened !== undefined} branch={branch} />
-						</div>
-						{panel === 'component' && opened && <ComponentPanel key={opened.id} component={opened} components={catalog.components} />}
-					</TokenChangesProvider>
-				</ResizablePanel>
 			</div>
-		</>
+			{/* Always there (decision 21), whichever screen is open: the tokens, or the component open when that is chosen,
+			    by the switch at its top, as high as the frame's first row so the two read as one line. The tokens are
+			    hidden, not left, so what was typed and opened in them is as it was. */}
+			<ResizablePanel panel={TOKENS_PANEL} label="Resize the tokens panel">
+				<div className="flex h-(--toolbar-height) shrink-0 items-center border-b px-4">
+					<PanelSwitcher view={panel} canShowComponent={opened !== undefined} onSelect={setView} />
+				</div>
+				<TokenChangesProvider value={changes}>
+					<div data-panel="tokens" hidden={panel !== 'tokens'} className="flex min-h-0 flex-1 flex-col">
+						<TokensPanel tokens={catalog.tokens} live={opened !== undefined} branch={branch} />
+					</div>
+					{panel === 'component' && opened && <ComponentPanel key={opened.id} component={opened} components={catalog.components} />}
+				</TokenChangesProvider>
+			</ResizablePanel>
+		</div>
 	);
 };

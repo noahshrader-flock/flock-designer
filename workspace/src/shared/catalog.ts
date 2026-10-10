@@ -33,6 +33,17 @@ export const designSystemOf = ({ repository, branch }: { repository: string; bra
  */
 export const isTokenGroup = (group: string): boolean => /\btokens?\b/i.test(group);
 
+/**
+ * Whether a component is one the Components tab's search finds (T9): every word typed is in its name or its group, without
+ * regard to case. Plain text, never a pattern, as the Projects search is; an empty search is every component.
+ */
+export const matchesComponent = (component: { name: string; group: string }, search: string): boolean => {
+	const words = search.toLowerCase().split(/\s+/).filter(Boolean);
+	if (words.length === 0) return true;
+	const text = `${component.name}\n${component.group}`.toLowerCase();
+	return words.every((w) => text.includes(w));
+};
+
 /** The one thing a preview page tells the frame holding it: its height, under this name. */
 export const PREVIEW_HEIGHT = 'flockPreviewHeight';
 /** Which story file a preview page draws, by this address parameter. */
