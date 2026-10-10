@@ -8,8 +8,8 @@ import { Card, CardFooter, CardTitle } from './ui/card';
  * A component in the grid view (P5 of the design system plan, decision 31): the Projects card, its cover a picture of the
  * component's first story, filling the cover edge to edge (it is taken in the cover's own shape, around the component),
  * its footer the component's name and its group. The cover is the same size with or without a picture, so nothing moves
- * when one arrives: a soft placeholder until there is one, and the picture fades in once it has loaded. The picture is decorative: the name is beside it. The whole card
- * opens the component.
+ * when one arrives: a soft placeholder until there is one, and the picture fades in once it has loaded. The picture is
+ * decorative: the name is beside it. The whole card opens the component.
  */
 export const ComponentCard = ({ component, picture, onOpen }: { component: CatalogComponent; picture: string | undefined; onOpen: () => void }) => {
 	const [loaded, setLoaded] = useState<string | null>(null);
@@ -24,8 +24,6 @@ export const ComponentCard = ({ component, picture, onOpen }: { component: Catal
 					{shown && (
 						<img
 							src={shown}
-							// Taken at twice the size it is shown, so it is drawn at half its pixels and stays sharp.
-							srcSet={`${shown} 2x`}
 							alt=""
 							decoding="async"
 							onLoad={() => setLoaded(shown)}

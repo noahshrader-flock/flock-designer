@@ -9,12 +9,13 @@ import { createHash } from 'node:crypto';
 import { BrowserWindow, nativeImage } from 'electron';
 import { PREVIEW_SHOW, previewAddress } from '../../shared/catalog';
 import type { Drawn, Measure, Mode } from './componentTokens';
-import { composeOnWhite } from './pictureComposition';
+import { COMPOSITION, composeOnWhite } from './pictureComposition';
 import { keepToOrigin, sandboxedPreferences } from './sandboxedPage';
 
-/** How many windows draw a run's files at once, and how long one story may take. */
+/** How many windows draw a run's files at once, how long one story may take, and each window's size. */
 const WINDOWS_PER_RUN = 3;
 const STORY_MS = 15_000;
+const WINDOW = { width: 1200, height: 900 };
 /**
  * A picture (P5): the top of the page this many pixels down, drawn at twice the size (`PICTURE_SCALE`) so it is sharp,
  * is what `composeOnWhite` finds the story in; it is kept at most this many pixels across, as JPEG. How long the page is
@@ -63,7 +64,7 @@ const readDrawn = (file: string, picture: boolean): string => `(async (file, pic
 	const name = first?.querySelector('.fd-name');
 	if (name) name.style.visibility = 'hidden';
 	await new Promise((r) => setTimeout(r, ${REPAINT_MS}));
-	return { ...drawn, crop: { x: 0, y: 0, width: innerWidth, height: Math.min(innerHeight, ${PICTURE_TOP}) } };
+	return drawn;
 })(${JSON.stringify(file)}, ${picture})`;
 
 /** A promise, or null after `ms`. */
@@ -71,9 +72,8 @@ const within = <T>(ms: number, p: Promise<T>): Promise<T | null> =>
 	Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
 
 /** The picture of a story's first story from a capture of the top of its page; nothing when it painted nothing. */
-const pictureOf = async (wc: Electron.WebContents, crop: Electron.Rectangle | null | undefined): Promise<Buffer | undefined> => {
-	if (!crop || crop.width < 4 || crop.height < 4) return undefined;
-	const image = await wc.capturePage(crop);
+const pictureOf = async (wc: Electron.WebContents): Promise<Buffer | undefined> => {
+	const image = await wc.capturePage({ x: 0, y: 0, width: WINDOW.width, height: PICTURE_TOP });
 	const data = image.toBitmap();
 	// The captured image's size in pixels, whatever the scale it was taken at.
 	const size = image.getSize();
@@ -86,15 +86,13 @@ const pictureOf = async (wc: Electron.WebContents, crop: Electron.Rectangle | nu
 
 /** How pictures are taken, as a fingerprint of the code that takes them: they are only shown while it is the same (see `ComponentPictures`). */
 export const PICTURE_RECIPE = createHash('sha256')
-	.update(
-		`${readDrawn.toString()}${readDrawn('', true)}${pictureOf.toString()}${composeOnWhite.toString()}${[PICTURE_TOP, PICTURE_SCALE, PICTURE_MOST_ACROSS, PICTURE_QUALITY, REPAINT_MS]}`,
-	)
+	.update(`${readDrawn('', true)}${pictureOf}${COMPOSITION}${[WINDOW.width, PICTURE_TOP, PICTURE_SCALE, PICTURE_MOST_ACROSS, PICTURE_QUALITY]}`)
 	.digest('hex')
 	.slice(0, 12);
 
 /** A window nobody sees, held as a shown preview is, on the previews' own origin; not throttled for being out of sight. */
 const hiddenWindow = (origin: string): BrowserWindow => {
-	const win = new BrowserWindow({ show: false, width: 1200, height: 900, webPreferences: { ...sandboxedPreferences(SESSION), backgroundThrottling: false } });
+	const win = new BrowserWindow({ show: false, ...WINDOW, webPreferences: { ...sandboxedPreferences(SESSION), backgroundThrottling: false } });
 	keepToOrigin(win.webContents, () => origin);
 	return win;
 };
@@ -119,19 +117,11 @@ const drawShare = async (base: string, mode: Mode, files: string[], pictures: bo
 		const drawn: (Drawn | null)[] = [];
 		// Pictures are drawn at twice the size, whatever the screen, so they are sharp.
 		if (pictures)
-			await within(
-				STORY_MS,
-				wc.debugger.sendCommand('Emulation.setDeviceMetricsOverride', { width: 1200, height: 900, deviceScaleFactor: PICTURE_SCALE, mobile: false }),
-			);
+			await within(STORY_MS, wc.debugger.sendCommand('Emulation.setDeviceMetricsOverride', { ...WINDOW, deviceScaleFactor: PICTURE_SCALE, mobile: false }));
 		for (const file of files) {
-			const read = (await within(STORY_MS, wc.executeJavaScript(readDrawn(file, pictures)) as Promise<Drawn & { crop?: Electron.Rectangle | null }>)) ?? null;
-			if (read === null) {
-				drawn.push(null);
-				continue;
-			}
-			const { crop, ...measured } = read;
-			const picture = pictures ? await within(STORY_MS, pictureOf(wc, crop)) : undefined;
-			drawn.push(picture ? { ...measured, picture } : measured);
+			const measured = await within(STORY_MS, wc.executeJavaScript(readDrawn(file, pictures)) as Promise<Drawn>);
+			const picture = measured && pictures ? await within(STORY_MS, pictureOf(wc)) : undefined;
+			drawn.push(measured && picture ? { ...measured, picture } : measured);
 		}
 		return drawn;
 	} finally {

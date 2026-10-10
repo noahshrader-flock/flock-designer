@@ -287,7 +287,12 @@ export class ComponentTokens {
 		);
 		const [light, dark, asIs] = taggedBase === null ? [undefined, undefined, drawn[0]] : drawn;
 		// The pictures, each replacing its component's last; a component that did not draw keeps its last.
-		this.deps.pictures.keep(system.id, files, new Map(files.flatMap((f, i) => (asIs?.[i]?.picture ? [[f, asIs[i]?.picture as Buffer] as const] : []))));
+		const taken = new Map<string, Buffer>();
+		files.forEach((f, i) => {
+			const picture = asIs?.[i]?.picture;
+			if (picture) taken.set(f, picture);
+		});
+		this.deps.pictures.keep(system.id, files, taken);
 		// Tags that would not build leave the pictures taken, and say why which tokens each uses cannot be said.
 		if (tagged !== null && tagged.state !== 'ready')
 			throw new Error(tagged.state === 'failed' ? tagged.error : 'The previews could not be built with the tags.');

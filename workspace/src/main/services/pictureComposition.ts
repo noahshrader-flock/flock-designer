@@ -55,3 +55,6 @@ export const composeOnWhite = (capture: Bitmap): Bitmap | null => {
 	}
 	return { data, width, height };
 };
+
+/** All of how a picture is composed, for the fingerprint of how pictures are taken (`PICTURE_RECIPE`). */
+export const COMPOSITION = `${isPaint}${painted}${composeOnWhite}${[MARGIN, LEAST]}`;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { composeOnWhite } from '../src/main/services/pictureComposition';
+import { COMPOSITION, composeOnWhite } from '../src/main/services/pictureComposition';
 
 /**
  * A component's picture from a capture of its page (P5 of the design system plan): what was painted, found from the
@@ -81,5 +81,12 @@ describe('a picture', () => {
 		const [l, t] = paintedEdges(picture);
 		expect(pixel(picture, l, t)).toEqual([0x10, 0x80, 0x62, 0xff]);
 		expect(pixel(picture, l + 10, t + 10)).toEqual([0xff, 0x00, 0x00, 0xff]);
+	});
+
+	it('is fingerprinted by all of how it is composed, its helpers and their numbers too, so a change to any of them is seen', () => {
+		// What is paint (below 248), the room around it (24) and the least width (960).
+		expect(COMPOSITION).toContain('248');
+		expect(COMPOSITION).toContain('24,960');
+		expect(COMPOSITION).toContain('Uint32Array');
 	});
 });

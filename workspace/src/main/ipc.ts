@@ -159,13 +159,13 @@ export interface IpcContext {
 	measureStories?: Measure;
 	/**
 	 * Which tokens each component draws with (T6), and so what is got ready in the background: given for tests.
-	 * `warmAfterMs`: when to start getting the shown design system ready after the app opens; not at all when absent.
 	 */
 	componentTokens?: Pick<ComponentTokens, 'of' | 'warm' | 'pictures'>;
 	/** Where the pictures of the components are kept (P5): the app's own folder. */
 	componentPicturesRoot?: string;
 	/** How the pictures are taken: a fingerprint, so only pictures taken that way are shown. */
 	componentPictureRecipe?: string;
+	/** When to start getting the shown design system ready after the app opens; not at all when absent. */
 	warmAfterMs?: number;
 }
 
@@ -354,7 +354,7 @@ export const registerIpc = ({
 		return typeof shown === 'string' ? null : shown;
 	};
 	const previews = new StoryPreviews({ system: shownSystem, folder: storyPreviewsRoot, server: prototypeServer });
-	// Which tokens a component draws with (T6): the window names a story file, and only a story file of the library is answered.
+	// Which tokens each component draws with (T6), and its picture (P5), from one drawing pass.
 	const componentPictures = new ComponentPictures({ folder: componentPicturesRoot, server: prototypeServer, recipe: componentPictureRecipe });
 	const componentTokens = injectedComponentTokens ?? new ComponentTokens({ system: shownSystem, previews, measure: measureStories, pictures: componentPictures });
 	ipcMain.handle(CHANNELS.componentPictures, guard(() => componentTokens.pictures()));
@@ -372,6 +372,7 @@ export const registerIpc = ({
 	);
 	// A change is only ever a list of token edits, checked here and again before anything is written (T3, T4).
 	ipcMain.handle(CHANNELS.storyPreview, guard((edits: unknown) => previews.preview(tokenEditsOf(edits))));
+	// The window names a story file, and only a story file of the library is answered.
 	ipcMain.handle(
 		CHANNELS.componentTokens,
 		guard((file: unknown) => {

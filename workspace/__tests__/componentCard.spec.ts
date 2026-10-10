@@ -46,10 +46,7 @@ describe('a component’s card', () => {
 		await show('http://127.0.0.1:1/p/a.jpg');
 		const img = document.querySelector('img') as HTMLImageElement;
 		expect(img.getAttribute('alt')).toBe('');
-		// Taken at twice the size it is shown.
-		expect(img.getAttribute('srcset')).toBe('http://127.0.0.1:1/p/a.jpg 2x');
-		// It fills the cover, edge to edge: nothing is left around it to be seen.
-		// Whole, never cropped or stretched: a picture in any shape fits, on the white the stories are drawn on.
+		// It fills the cover, whole, never cropped or stretched: a picture in any shape fits, on the white the stories are drawn on.
 		expect(img.className.split(' ')).toEqual(expect.arrayContaining(['size-full', 'object-contain']));
 		expect(img.className).not.toContain('object-cover');
 		expect(img.className).toContain('opacity-0');

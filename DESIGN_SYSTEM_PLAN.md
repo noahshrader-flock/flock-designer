@@ -256,9 +256,9 @@ installed) and FSDrawer (opens on a click), and Back.
 
 ### P5: A grid view of the components, with pictures (done 2026-10-09)
 
-**Done.** What it built, and the evidence, is in [dsnr.md](dsnr.md#change-log) (2026-10-09): on FUI, 76 of 81 components
-pictured in the background pass (about 13 to 18 s cold, 1.4 MB in all), each the first story alone, found from the pixels
-and centered on white in the cover's own shape, filling the cover edge to edge, shown at half its pixels so it is sharp.
+**Done.** What it built, and the evidence, is in [dsnr.md](dsnr.md#change-log) (2026-10-09): on FUI, 80 of 81 components
+pictured in the background pass (about 18 s cold, 1.4 MB in all), each the first story alone, found from the pixels and
+centered on white in the cover's own shape, filling the cover edge to edge, taken at twice the size so it is sharp.
 
 **What it is** (decision 31): beside the finder, a **List** and **Grid** switch, remembered. The grid shows the same
 groups as the list, each a `CardGrid` of component cards: the Projects card (`Card`, `CardCover`), its cover a picture of
@@ -270,7 +270,8 @@ twice as wide as it is tall (never under 480 px of the page across, so a small c
 story that painted nothing has no picture. They are kept by `services/componentPictures.ts`: one per component, per design
 system, in the app's own folder (not the previews' build folder, which is removed when the library moves), each file
 named by its content, so a new picture is a new address and an old one is removed when replaced; with a small record of
-which picture is whose, written whole. The window asks for them (`componentPictures`), and again every few seconds
+which picture is whose, written whole, with a fingerprint of the code that takes them (`PICTURE_RECIPE`), so a picture
+taken another way, after that code changes, is not shown. The window asks for them (`componentPictures`), and again every few seconds
 while the pass runs. **Reliable before pretty:** a story that does not draw keeps its last picture or has none, never a
 broken one; the cover is the same size with or without one; a picture fades in once loaded (not with reduced motion); it
 is decorative to a screen reader, since the name is beside it. **Not in P5:** pictures in the list rows, or in place of
