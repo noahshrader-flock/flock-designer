@@ -8,7 +8,7 @@ import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { SearchField } from './SearchField';
-import { PanelTabs, PanelTabsContent, PanelTabsList, PanelTabsTrigger } from './PanelTabs';
+import { LineTabs, LineTabsContent, LineTabsList, LineTabsTrigger } from './LineTabs';
 
 /**
  * The library's tokens, in the panel at the right of the Design System tab (T2 and T3 of the design system plan): the
@@ -16,7 +16,7 @@ import { PanelTabs, PanelTabsContent, PanelTabsList, PanelTabsTrigger } from './
  * category the library gains is a tab with nothing else changed), each tab with its own search. **One accordion at most:**
  * a tab with several groups (Color has Tones, Light and Dark) has them as an accordion, open until closed; a set is
  * never closed up behind a second one, but a plain heading over its tokens, each a swatch at the left and its value at the
- * right. A tab with one group shows its sets straight away. The tabs are the panel's (`PanelTabs`): edge to edge on a
+ * right. A tab with one group shows its sets straight away. The tabs are the panel's (`LineTabs`): edge to edge on a
  * bottom border, the padding on the content under them. What the library has that is not read is one alert above the
  * tabs (`TokenProblems`), its details in a dialog, so the panel keeps its room.
  *
@@ -181,25 +181,25 @@ export const TokensPanel = ({
 		<>
 			<TokenProblems problems={tokens.problems} />
 			<ChangedTokens live={live} branch={branch} />
-			<PanelTabs value={active} onValueChange={setCurrent}>
-				<PanelTabsList>
+			<LineTabs value={active} onValueChange={setCurrent}>
+				<LineTabsList>
 					{categories.map(([category]) => (
-						<PanelTabsTrigger key={category} value={category}>
+						<LineTabsTrigger key={category} value={category}>
 							{category}
-						</PanelTabsTrigger>
+						</LineTabsTrigger>
 					))}
-				</PanelTabsList>
+				</LineTabsList>
 				{categories.map(([category, inCategory]) => (
-					<PanelTabsContent key={category} value={category} className="pt-0">
+					<LineTabsContent key={category} value={category} className="pt-0">
 						<TokensTab
 							category={category}
 							tokens={inCategory}
 							query={queries[category] ?? ''}
 							onQuery={(query) => setQueries((all) => ({ ...all, [category]: query }))}
 						/>
-					</PanelTabsContent>
+					</LineTabsContent>
 				))}
-			</PanelTabs>
+			</LineTabs>
 		</>
 	);
 };

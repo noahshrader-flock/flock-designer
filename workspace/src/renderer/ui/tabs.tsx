@@ -1,6 +1,7 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
+import { titleCase } from "../../shared/titleCase"
 import { Tabs as TabsPrimitive } from "radix-ui"
 
 function Tabs({
@@ -54,6 +55,7 @@ function TabsList({
 
 function TabsTrigger({
   className,
+  children,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
   return (
@@ -67,7 +69,10 @@ function TabsTrigger({
         className
       )}
       {...props}
-    />
+    >
+      {/* A tab's label is always in title case, whatever it was written in. */}
+      {typeof children === "string" ? titleCase(children) : children}
+    </TabsPrimitive.Trigger>
   )
 }
 

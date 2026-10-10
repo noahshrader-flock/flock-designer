@@ -90,7 +90,7 @@ describe('the tabs', () => {
 	it('run edge to edge across the panel: nothing around them is padded, only the content under them is', async () => {
 		await show();
 		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
-		const panel = list.closest('[data-slot="panel-tabs"]') as HTMLElement;
+		const panel = list.closest('[data-slot="line-tabs"]') as HTMLElement;
 		expect(panel).not.toBeNull();
 		// No ancestor between the strip and the panel's edge has padding of its own.
 		for (let el = list.parentElement; el && el !== panel.parentElement; el = el.parentElement) expect(el.className, el.tagName).not.toMatch(/(^|\s)p[xtblr]?-\d/);

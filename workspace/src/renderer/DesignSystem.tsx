@@ -1,5 +1,4 @@
 import { ChevronDownIcon, ChevronRightIcon, GitBranchIcon, InfoIcon, LayoutGridIcon, LayoutListIcon, PlusIcon, Trash2Icon } from 'lucide-react';
-import { Tabs as TabsPrimitive } from 'radix-ui';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { matchesComponent } from '../shared/catalog';
 import type {
@@ -17,6 +16,7 @@ import { CardGrid } from './CardGrid';
 import { ComponentCard } from './ComponentCard';
 import { ComponentPanel } from './ComponentPanel';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
+import { LineTabs, LineTabsContent, LineTabsList, LineTabsTrigger } from './LineTabs';
 import { MoreMenu } from './MoreMenu';
 import { NoMatches } from './NoMatches';
 import { Page } from './Page';
@@ -33,7 +33,7 @@ import { TokenChangesProvider, useTokenChangesFor } from './tokenChanges';
 import { Skeleton } from './ui/skeleton';
 import { undeclared } from '../shared/wcag';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
-import { Toolbar, ToolbarTab, ToolbarTabsList } from './Toolbar';
+import { Toolbar } from './Toolbar';
 import { VoiceAndTone } from './VoiceAndTone';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
@@ -46,7 +46,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { Tabs } from './ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /** Said only when something is wrong, as the Projects screen does: a failed update is a line, never an error. */
@@ -191,31 +190,33 @@ const Notice = ({ title, children, onRetry }: { title: string; children: ReactNo
 type Tab = 'components' | 'primitives' | 'voice-and-tone';
 
 /**
- * The Design System tab (DESIGN_SYSTEM_PLAN.md): the company's, not any one library's, so its bar holds only its two tabs,
- * Components and Voice and tone (T9). Each stays mounted while the other is shown, so what was typed, scrolled and opened
- * in it is as it was left; and Radix's own pane is used rather than shadcn's, which sets a text size on everything in it.
+ * The Design System tab (DESIGN_SYSTEM_PLAN.md): the company's, not any one library's, so its bar holds only its own tabs,
+ * Components, Primitives and Voice and Tone (T9): the app's line tabs (`LineTabs`), the same as the tokens panel's, across
+ * the width. The tab fills the window under the top bar, and each pane scrolls on its own. Each stays mounted while another
+ * is shown, so what was typed, scrolled and opened in it is as it was left.
  */
 export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [tab, setTab] = useState<Tab>('components');
 	return (
-		<Tabs value={tab} onValueChange={(next) => setTab(next as Tab)} className="gap-0">
-			<Toolbar tabs className="sticky top-0 z-40">
-				<ToolbarTabsList aria-label="Design System">
-					<ToolbarTab value="components">Components</ToolbarTab>
-					<ToolbarTab value="primitives">Primitives</ToolbarTab>
-					<ToolbarTab value="voice-and-tone">Voice and tone</ToolbarTab>
-				</ToolbarTabsList>
-			</Toolbar>
-			<TabsPrimitive.Content value="components" forceMount hidden={tab !== 'components'} data-tab="components" className="outline-none">
+		<LineTabs value={tab} onValueChange={(next) => setTab(next as Tab)} className="h-[calc(100dvh-var(--nav-height))]">
+			<div className="bg-card shrink-0">
+				<LineTabsList aria-label="Design System">
+					<LineTabsTrigger value="components">Components</LineTabsTrigger>
+					<LineTabsTrigger value="primitives">Primitives</LineTabsTrigger>
+					<LineTabsTrigger value="voice-and-tone">Voice and Tone</LineTabsTrigger>
+				</LineTabsList>
+			</div>
+			{/* No padding: each pane has its own layout. Kept while another is shown, only hidden. */}
+			<LineTabsContent value="components" forceMount hidden={tab !== 'components'} data-tab="components" className="p-0">
 				<Components hidden={hidden || tab !== 'components'} />
-			</TabsPrimitive.Content>
-			<TabsPrimitive.Content value="primitives" forceMount hidden={tab !== 'primitives'} data-tab="primitives" className="outline-none">
+			</LineTabsContent>
+			<LineTabsContent value="primitives" forceMount hidden={tab !== 'primitives'} data-tab="primitives" className="p-0">
 				<Primitives />
-			</TabsPrimitive.Content>
-			<TabsPrimitive.Content value="voice-and-tone" forceMount hidden={tab !== 'voice-and-tone'} data-tab="voice-and-tone" className="outline-none">
+			</LineTabsContent>
+			<LineTabsContent value="voice-and-tone" forceMount hidden={tab !== 'voice-and-tone'} data-tab="voice-and-tone" className="p-0">
 				<VoiceAndTone hidden={hidden || tab !== 'voice-and-tone'} />
-			</TabsPrimitive.Content>
-		</Tabs>
+			</LineTabsContent>
+		</LineTabs>
 	);
 };
 
@@ -392,7 +393,7 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 	return (
 		// The tab under its bar: at the left the frame, its first row and under it the list or a component, which scrolls on
 		// its own; at the right the side panel, the frame's full height, which does not move when either changes.
-		<div className="flex h-[calc(100dvh-var(--nav-height)-var(--toolbar-height))]">
+		<div className="flex h-full">
 			<div className="flex min-w-0 flex-1 flex-col">
 				<Toolbar>
 					<DesignSystemSwitcher systems={systems.systems} shown={shown} onSelect={(id) => void select(id)} onAdd={() => setAdding(true)} />

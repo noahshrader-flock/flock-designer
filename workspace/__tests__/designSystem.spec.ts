@@ -76,7 +76,7 @@ const switcher = (name = FUI_SYSTEM.name) => button(`Design system ${name}: swit
 const firstRow = () => switcher().parentElement as HTMLElement;
 /** The tab bar's tabs (T9), by name; Radix moves to a tab on its mouse down, as a person's press does. */
 const tab = (name: string) => [...document.querySelectorAll<HTMLElement>('[role="tab"]')].find((t) => t.textContent === name) as HTMLElement;
-const chooseTab = (name: 'Components' | 'Voice and tone') =>
+const chooseTab = (name: 'Components' | 'Voice and Tone') =>
 	act(async () => void tab(name).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 })));
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
@@ -116,7 +116,7 @@ describe('the tab bar (T9)', () => {
 
 	it('has Components, Primitives and Voice and tone, in that order, Components chosen', async () => {
 		await open(() => ok(ready()));
-		expect([...bar().querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toEqual(['Components', 'Primitives', 'Voice and tone']);
+		expect([...bar().querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toEqual(['Components', 'Primitives', 'Voice and Tone']);
 		expect(tab('Components').getAttribute('aria-selected')).toBe('true');
 		// Above the frame's first row, which is the Components tab's own.
 		expect(bar().compareDocumentPosition(firstRow()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -131,31 +131,33 @@ describe('the tab bar (T9)', () => {
 		expect(shown('components')).toBe(false);
 		expect(shown('voice-and-tone')).toBe(false);
 		expect(divider()?.closest('[hidden]')).not.toBeNull();
-		await chooseTab('Voice and tone');
+		await chooseTab('Voice and Tone');
 		expect(shown('primitives')).toBe(false);
 		expect(shown('voice-and-tone')).toBe(true);
 		await chooseTab('Components');
 		expect(shown('components')).toBe(true);
 	});
 
-	it('is a bar whose tabs run its whole height, so the line under the chosen one rests on the bar’s own, with the names centered', async () => {
+	it('is the same line tabs as the tokens panel’s Color, Spacing and Shape: edge to edge, each tab an equal share, with nothing set on them here', async () => {
 		await open(() => ok(ready()));
-		const toolbar = bar().parentElement as HTMLElement;
-		expect(toolbar.hasAttribute('data-toolbar-tabs')).toBe(true);
-		// The list fills the bar, and a tab fills the list: nothing floats between the tab and the line under the bar.
-		expect(bar().className).toMatch(/group-data-horizontal\/tabs:h-full/);
-		// With none of the padding that keeps a pill's tabs off its edge: it would leave the tabs short of the bar's line.
-		expect(bar().className.split(' ')).toContain('p-0');
-		expect(bar().className.split(' ')).not.toContain('p-[3px]');
-		expect(tab('Components').className).toMatch(/group-data-horizontal\/tabs:after:-bottom-px/);
-		// The components frame's own bar has none of this: it is not a bar of tabs.
-		expect(firstRow().hasAttribute('data-toolbar-tabs')).toBe(false);
+		expect(bar().getAttribute('data-variant')).toBe('line');
+		expect(bar().className.split(' ')).toEqual(expect.arrayContaining(['w-full', 'border-b']));
+		expect(bar().closest('[data-slot="line-tabs"]')).not.toBeNull();
+		for (const t of bar().querySelectorAll<HTMLElement>('[role="tab"]')) {
+			expect(t.className.split(' ')).toContain('flex-1');
+			expect(t.className).not.toMatch(/(^|\s)(h-full|p-0)(\s|$)/);
+		}
+		// Not a bar of the toolbar's, which has the height and the centering of one thing in a row.
+		expect(bar().closest('[class*="h-(--toolbar-height)"]')).toBeNull();
+		expect(bar().closest('[data-toolbar-tabs]')).toBeNull();
+		const panelTabs = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')!.nextElementSibling!.querySelector('[role="tablist"]') as HTMLElement;
+		expect(panelTabs.className.split(' ')).toEqual(expect.arrayContaining(['w-full', 'border-b']));
 	});
 
 	it('shows Voice and tone with no first row and no side panel, and Components again as it was left', async () => {
 		await open(() => ok(ready()));
-		await chooseTab('Voice and tone');
-		expect(tab('Voice and tone').getAttribute('aria-selected')).toBe('true');
+		await chooseTab('Voice and Tone');
+		expect(tab('Voice and Tone').getAttribute('aria-selected')).toBe('true');
 		expect(shown('voice-and-tone')).toBe(true);
 		expect(shown('components')).toBe(false);
 		// The Components tab is hidden, not left: its row and panel are in it, so neither is seen.
@@ -288,7 +290,7 @@ describe('searching the components (T9)', () => {
 		await press(row('FSCard').querySelector('button')!);
 		await press(button('Back to components'));
 		expect(search().value).toBe('card');
-		await chooseTab('Voice and tone');
+		await chooseTab('Voice and Tone');
 		await chooseTab('Components');
 		expect(search().value).toBe('card');
 		expect(rows()).toEqual(['FSCard', 'FSCardHeader']);
