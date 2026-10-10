@@ -1,3 +1,5 @@
+import { matchesWords } from './search';
+
 /**
  * The design system the Design System tab reads, as the catalog needs it: the repository, the branch that is its source
  * of truth (the repository's default, decision 24), and where its Storybook is hosted, if anywhere. Made from what was
@@ -33,16 +35,8 @@ export const designSystemOf = ({ repository, branch }: { repository: string; bra
  */
 export const isTokenGroup = (group: string): boolean => /\btokens?\b/i.test(group);
 
-/**
- * Whether a component is one the Components tab's search finds (T9): every word typed is in its name or its group, without
- * regard to case. Plain text, never a pattern, as the Projects search is; an empty search is every component.
- */
-export const matchesComponent = (component: { name: string; group: string }, search: string): boolean => {
-	const words = search.toLowerCase().split(/\s+/).filter(Boolean);
-	if (words.length === 0) return true;
-	const text = `${component.name}\n${component.group}`.toLowerCase();
-	return words.every((w) => text.includes(w));
-};
+/** Whether a component is one the Components tab's search finds (T9): by its name or its group, as `matchesWords` finds. */
+export const matchesComponent = (component: { name: string; group: string }, search: string): boolean => matchesWords(`${component.name}\n${component.group}`, search);
 
 /** The one thing a preview page tells the frame holding it: its height, under this name. */
 export const PREVIEW_HEIGHT = 'flockPreviewHeight';

@@ -7,6 +7,9 @@
 import { voiceIsWritten, voiceWithoutComments } from '../../shared/voice';
 import { VOICE_FILE } from './voiceAndTone';
 
+/** The task's heading for the section, whichever way it is made. */
+const HEADING = '## Voice and tone';
+
 /** The file's headings one level down, under the task's own, and its title left out, since the task's heading names it. */
 const underTheTask = (text: string): string => {
 	const lines = text.split('\n');
@@ -25,7 +28,7 @@ const underTheTask = (text: string): string => {
 export const voiceBrief = (text: string | null): string => {
 	if (text === null || !voiceIsWritten(text)) return '';
 	return [
-		'## Voice and tone',
+		HEADING,
 		'',
 		`Write every word a person will read in Flock's voice and tone, below, from \`${VOICE_FILE}\` in the design repository. Where this product's own guidance says otherwise, the product's wins.`,
 		'',
@@ -42,7 +45,7 @@ export const taskVoice = async (read: (path: string) => Promise<string | null>):
 		return voiceBrief(await read(VOICE_FILE));
 	} catch (err) {
 		return [
-			'## Voice and tone',
+			HEADING,
 			'',
 			`Flock's voice and tone could not be read (${err instanceof Error ? err.message : String(err)}). Write in this product's own voice, from its guidance, and say in your summary that it was not read.`,
 		].join('\n');

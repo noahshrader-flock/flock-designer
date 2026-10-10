@@ -13,6 +13,7 @@ import { InfoIcon } from 'lucide-react';
 import { type ProjectOrder, matchesProject, sortProjects } from '../shared/projects';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
+import { NoMatches } from './NoMatches';
 import { SearchField } from './SearchField';
 import { CardGridSkeleton, SkeletonStatus } from './Skeletons';
 
@@ -210,12 +211,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 				)}
 
 				{matching.length === 0 && projects !== null && projects.length > 0 && (
-					<p className="text-muted-foreground text-sm">
-						No project matches “{search.trim()}”.{' '}
-						<button type="button" className="text-primary underline underline-offset-4" onClick={() => setSearch('')}>
-							Clear search
-						</button>
-					</p>
+					<NoMatches thing="project" search={search} onClear={() => setSearch('')} />
 				)}
 
 				{matching.length > 0 && (

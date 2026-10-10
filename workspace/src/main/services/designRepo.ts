@@ -1,5 +1,5 @@
 import type { CommentAnchor, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
-import { GitHubError } from './github';
+import { GitHubError, httpStatus } from './github';
 import { asPeople, isBot, mergePeople } from '../../shared/people';
 import { asDate, asGitHubRepository, asPullRequest, asRoute, firstHeading, latestDate, newestFirst } from '../../shared/projects';
 import { RESOLVED_MARK, addressedAt, addressedIn, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withAddressed, withResolved } from '../../shared/anchor';
@@ -128,16 +128,22 @@ export class DesignRepo {
 
   /** Any file in the design repository, as text, or null when there is none. */
   async readFile(path: string): Promise<string | null> {
+    return (await this.readFileAt(path))?.text ?? null;
+  }
+
+  /**
+   * A file on a branch (the default one when none is named), with its blob's sha, which a write to it is made against;
+   * null when the branch or the file is not there. Whether asked through the app's session or the command line.
+   */
+  async readFileAt(path: string, ref?: string): Promise<{ text: string; sha: string } | null> {
     try {
-      const file = asRecord(await this.session.api(`${this.base}/contents/${path}`));
+      const file = asRecord(await this.session.api(`${this.base}/contents/${path}${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`));
+      if (typeof file.sha !== 'string') return null;
       // Over 1 MB, the contents API leaves the content out; the blob it names carries it, up to 100 MB.
-      if (file.encoding === 'none' && typeof file.sha === 'string') {
-        const blob = asRecord(await this.session.api(`${this.base}/git/blobs/${file.sha}`));
-        return typeof blob.content === 'string' ? Buffer.from(blob.content, 'base64').toString('utf8') : null;
-      }
-      return typeof file.content === 'string' ? Buffer.from(file.content, 'base64').toString('utf8') : null;
+      const content = file.encoding === 'none' ? asRecord(await this.session.api(`${this.base}/git/blobs/${file.sha}`)).content : file.content;
+      return typeof content === 'string' ? { text: Buffer.from(content, 'base64').toString('utf8'), sha: file.sha } : null;
     } catch (err) {
-      if (err instanceof GitHubError && err.status === 404) return null;
+      if (httpStatus(err) === 404) return null;
       throw err;
     }
   }
@@ -148,7 +154,7 @@ export class DesignRepo {
       await this.session.api(`${this.base}/contents/${path}`);
       return true;
     } catch (err) {
-      if (err instanceof GitHubError && err.status === 404) return false;
+      if (httpStatus(err) === 404) return false;
       throw err;
     }
   }

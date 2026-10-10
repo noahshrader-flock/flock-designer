@@ -583,10 +583,26 @@ describe('readFile and writeFile', () => {
   };
 
   it('reads any file as text, and says null when there is none', async () => {
-    const { session } = fakeSession({ '/repos/acme/design/contents/skills/a.md': { content: b64('# A') }, '/repos/acme/design/contents/skills/b.md': notFound });
+    const { session } = fakeSession({ '/repos/acme/design/contents/skills/a.md': { content: b64('# A'), sha: 'a1' }, '/repos/acme/design/contents/skills/b.md': notFound });
     const repo = new DesignRepo(session, REF);
     expect(await repo.readFile('skills/a.md')).toBe('# A');
     expect(await repo.readFile('skills/b.md')).toBeNull();
+  });
+
+  it('says null for a file that is not there whichever way GitHub was asked: the app’s session, or the command line', async () => {
+    // The person's `gh` (ghCli.ts) fails with GitHub's status on a plain error, not a GitHubError.
+    const gh = { api: async () => Promise.reject(Object.assign(new Error('gh: Not Found (HTTP 404)'), { status: 404 })) };
+    const repo = new DesignRepo(gh, REF);
+    expect(await repo.readFile('skills/none.md')).toBeNull();
+    expect(await repo.readFileAt('skills/none.md', 'some-branch')).toBeNull();
+    expect(await repo.hasFile('skills/none.md')).toBe(false);
+    const failing = new DesignRepo({ api: async () => Promise.reject(Object.assign(new Error('gh: Server Error (HTTP 500)'), { status: 500 })) }, REF);
+    await expect(failing.readFile('skills/a.md')).rejects.toThrow('Server Error');
+  });
+
+  it('reads a file on a branch with its sha, which a write to it is made against', async () => {
+    const { session } = fakeSession({ '/repos/acme/design/contents/skills/a.md?ref=dsnr%2Fvoice-20261010-ab12': { content: b64('# A'), sha: 'a1' } });
+    expect(await new DesignRepo(session, REF).readFileAt('skills/a.md', 'dsnr/voice-20261010-ab12')).toEqual({ text: '# A', sha: 'a1' });
   });
 
   it('reads a file over 1 MB through its blob, as GitHub leaves its content out', async () => {

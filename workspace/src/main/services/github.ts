@@ -28,6 +28,15 @@ export class GitHubError extends Error {
   }
 }
 
+/**
+ * GitHub's status for a failed call, whichever way it was made: the app's session raises a `GitHubError`, the person's
+ * command line (`ghCli.ts`) an error carrying the same `status`. Undefined when the call never reached GitHub.
+ */
+export const httpStatus = (err: unknown): number | undefined => {
+  const s = (err as { status?: unknown } | null)?.status;
+  return typeof s === 'number' ? s : undefined;
+};
+
 /** Raised when the person must sign in again -- the refresh token is spent or revoked. */
 export class ReauthRequired extends GitHubError {
   constructor(message = 'Sign in to GitHub again.') {

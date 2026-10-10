@@ -1,28 +1,21 @@
-import { ExternalLinkIcon, GitBranchIcon, InfoIcon, RefreshCwIcon } from 'lucide-react';
+import { InfoIcon, RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Result, VoiceAndTone as Voice, VoiceSave } from '../shared/contract';
-import { plural } from '../shared/plural';
+import type { VoiceAndTone as Voice } from '../shared/contract';
 import { VOICE_SKELETON } from '../shared/voice';
+import { BranchActions } from './BranchActions';
+import { OutLink } from './OutLink';
 import { Page } from './Page';
 import { RowsSkeleton, SkeletonStatus } from './Skeletons';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 
-/** A link out, which the app hands to the system's browser. */
-const Out = ({ href, children }: { href: string; children: string }) => (
-	<a href={href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline underline-offset-3">
-		{children}
-		<ExternalLinkIcon className="size-3" />
-	</a>
-);
-
 /**
  * The Voice and tone tab (T9 of the design system plan): the company's voice and tone, one file in the design repository,
  * which every agent task carries. Read from GitHub when the tab is first shown and on Refresh, so a commit made in the
  * repository shows; edited in one text area; saved to a branch of DSNR's, each save one commit, and proposed as a draft
- * pull request, as a change to the tokens is. A save is made against the file the text was opened at, so a change made on
- * GitHub meanwhile is shown beside the person's text, to choose between, and never overwritten.
+ * pull request, as a change to the tokens is (`BranchActions`). A save is made against the file the text was opened at, so
+ * a change made on GitHub meanwhile is shown beside the person's text, to choose between, and never overwritten.
  */
 export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 	const [voice, setVoice] = useState<Voice | null>(null);
@@ -33,20 +26,20 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 	const [against, setAgainst] = useState<string | null>(null);
 	// The file as it is on GitHub now, when a save found it changed since it was opened.
 	const [theirs, setTheirs] = useState<Voice | null>(null);
-	const [busy, setBusy] = useState<'reading' | 'saving' | 'proposing' | null>(null);
-	const [actionError, setActionError] = useState<string | null>(null);
-	const [proposeFailed, setProposeFailed] = useState(false);
+	const [reading, setReading] = useState(false);
+	const [busy, setBusy] = useState<'saving' | 'proposing' | null>(null);
+	// What went wrong saving or proposing, and whether it was proposing, which GitHub's own page can do instead.
+	const [failed, setFailed] = useState<{ error: string; proposing: boolean } | null>(null);
 	const started = useRef(false);
 
-	/** What the text is compared with to know it is changed: the change as last saved, else the default branch's file. */
-	const baseline = voice?.branch?.text ?? voice?.text ?? null;
-	const unsaved = draft !== null && draft !== (baseline ?? null);
+	// What the text is compared with to know it is changed: the change as last saved, else the default branch's file.
+	const unsaved = draft !== null && draft !== (voice?.branch?.text ?? voice?.text ?? null);
 
 	/** Reads it again; the text in the area is replaced only when it holds nothing unsaved, so typing is never lost. */
 	const read = useCallback(async (keepTyped: boolean) => {
-		setBusy('reading');
+		setReading(true);
 		const r = await window.workspace.voiceAndTone();
-		setBusy(null);
+		setReading(false);
 		if (!r.ok) return setError(r.error);
 		setError(null);
 		setVoice(r.value);
@@ -62,37 +55,30 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 		void read(false);
 	}, [hidden, read]);
 
-	const act = async (what: 'saving' | 'proposing', call: () => Promise<Result<Voice>>) => {
-		setBusy(what);
-		setActionError(null);
-		setProposeFailed(false);
-		const r = await call();
-		setBusy(null);
-		if (!r.ok) {
-			setActionError(r.error);
-			setProposeFailed(what === 'proposing');
-			return;
-		}
-		setVoice(r.value);
-	};
-
 	const save = async () => {
 		if (draft === null) return;
 		setBusy('saving');
-		setActionError(null);
-		setProposeFailed(false);
-		const r: Result<VoiceSave> = await window.workspace.saveVoiceAndTone(draft, against);
+		setFailed(null);
+		const r = await window.workspace.saveVoiceAndTone(draft, against);
 		setBusy(null);
-		if (!r.ok) return setActionError(r.error);
+		if (!r.ok) return setFailed({ error: r.error, proposing: false });
 		setVoice(r.value.voice);
 		if (r.value.state === 'changed') setTheirs(r.value.voice);
 	};
 
+	const propose = async () => {
+		setBusy('proposing');
+		setFailed(null);
+		const r = await window.workspace.proposeVoiceAndTone();
+		setBusy(null);
+		if (!r.ok) return setFailed({ error: r.error, proposing: true });
+		setVoice(r.value);
+	};
+
 	const startOver = async () => {
 		const r = await window.workspace.forgetVoiceBranch();
-		if (!r.ok) return setActionError(r.error);
-		setActionError(null);
-		setProposeFailed(false);
+		if (!r.ok) return setFailed({ error: r.error, proposing: false });
+		setFailed(null);
 		await read(false);
 	};
 
@@ -133,7 +119,7 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 						repository; a product&apos;s own guidance wins where it differs.
 					</p>
 				</div>
-				<Button variant="outline" disabled={busy !== null} onClick={() => void read(unsaved)}>
+				<Button variant="outline" disabled={reading || busy !== null} onClick={() => void read(unsaved)}>
 					<RefreshCwIcon />
 					Refresh
 				</Button>
@@ -194,50 +180,28 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 				/>
 			)}
 
-			{(branch || unsaved || actionError) && (
-				<div data-voice-branch className="flex flex-col gap-2">
-					{branch && (
-						<p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-							<GitBranchIcon className="size-3.5 shrink-0" />
-							<span className="min-w-0 truncate font-mono">{branch.branch}</span>
-							<span className="shrink-0">· {plural(branch.saves, 'save')}</span>
-						</p>
-					)}
-					{branch?.pullRequest && (
-						<p className="text-xs">
-							<Out href={branch.pullRequest.url}>{`Draft pull request #${branch.pullRequest.number}`}</Out>
-						</p>
-					)}
-					{actionError && (
-						<Alert variant="destructive">
-							<AlertDescription>
-								{actionError}
-								{proposeFailed && branch && (
+			{(branch || unsaved || failed) && (
+				<BranchActions
+					branch={branch}
+					unsaved={unsaved}
+					busy={busy}
+					canSave={theirs === null}
+					error={
+						failed && (
+							<>
+								{failed.error}
+								{failed.proposing && branch && (
 									<span className="mt-1 block">
-										<Out href={branch.compare}>Open the pull request on GitHub</Out>
+										<OutLink href={branch.compare}>Open the pull request on GitHub</OutLink>
 									</span>
 								)}
-							</AlertDescription>
-						</Alert>
-					)}
-					<div className="flex items-center gap-2">
-						{unsaved && (
-							<Button size="sm" disabled={busy !== null || theirs !== null} onClick={() => void save()}>
-								{busy === 'saving' ? 'Saving…' : branch ? 'Save' : 'Save to a branch'}
-							</Button>
-						)}
-						{branch && !unsaved && !branch.pullRequest && (
-							<Button size="sm" disabled={busy !== null} onClick={() => void act('proposing', () => window.workspace.proposeVoiceAndTone())}>
-								{busy === 'proposing' ? 'Opening a draft pull request…' : 'Propose'}
-							</Button>
-						)}
-						{branch && (
-							<Button variant="ghost" size="sm" className="ml-auto" disabled={busy !== null} onClick={() => void startOver()}>
-								Start over
-							</Button>
-						)}
-					</div>
-				</div>
+							</>
+						)
+					}
+					onSave={() => void save()}
+					onPropose={() => void propose()}
+					onStartOver={() => void startOver()}
+				/>
 			)}
 		</Page>
 	);

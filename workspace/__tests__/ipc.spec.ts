@@ -263,6 +263,11 @@ describe('the Design System tab', () => {
 		expect(await call(CHANNELS.saveVoiceAndTone, 'x', '../../etc/passwd')).toMatchObject({ ok: false, error: expect.stringContaining('sha') });
 		expect(await call(CHANNELS.saveVoiceAndTone, 'x', 42)).toMatchObject({ ok: false, error: expect.stringContaining('sha') });
 		expect(githubApi.mock.calls.length).toBe(asked);
+		// A blob's sha in either of git's kinds is taken, and the save goes on to GitHub.
+		for (const sha of ['a'.repeat(40), 'b'.repeat(64)]) {
+			expect(await call(CHANNELS.saveVoiceAndTone, 'x', sha)).not.toMatchObject({ error: expect.stringContaining('against the file’s sha') });
+		}
+		expect(githubApi.mock.calls.length).toBeGreaterThan(asked);
 		expect(await call(CHANNELS.proposeVoiceAndTone)).toMatchObject({ ok: false, error: expect.stringContaining('Save the change') });
 		expect(await call(CHANNELS.forgetVoiceBranch)).toEqual({ ok: true, value: null });
 	});

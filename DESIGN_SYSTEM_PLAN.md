@@ -430,8 +430,8 @@ nothing else changes. Built only if the controls leave a gap.
 ### T9: Voice and tone (done 2026-10-10)
 
 What it built, and the evidence, is in [dsnr.md](dsnr.md#change-log) (2026-10-10). **What building it changed from the plan
-below:** (1) the service makes its own Contents calls (`services/voiceAndTone.ts`), since a save needs the file's sha with its
-text, rather than `DesignRepo.readFile` taking a ref; (2) a save checks the default branch's file against the sha the text was
+below:** (1) the file is read through `DesignRepo.readFileAt(path, ref)`, which gives its sha with its text and which `readFile` is
+now made from, so there is one way to read a file from the design repository; (2) a save checks the default branch's file against the sha the text was
 opened at on *every* save, not only the first, and GitHub's 409 is the backstop when the default branch moves between that check
 and the branch being made (the branch is then deleted and the save refused); (3) a remembered branch that is not `dsnr/voice-…` is
 never taken for a change kept, so it is never written to; (4) whether a branch was merged or closed is asked of the person's `gh`
@@ -443,6 +443,15 @@ codebase run (`startTracked`), the move-to-code task file, and the `dsnr` comman
 the four "Find a component" lines (the bar's order, the alert, the count of tab lists, opening from the finder): those were
 rewritten for the new layout, and every other token and component test passed unchanged; (8) the tab's two panes are Radix's own,
 since shadcn's sets a text size on everything in them; (9) steps 2 and 3 were built as one, sharing the service and the page.
+**Final review (Noah: "make sure that it is absolutely clean", 2026-10-10):** what T9 had copied is now one piece each:
+the branch's line and Save, Propose and Start over (`BranchActions`, which the tokens' `TokenBranchActions` is now made from),
+the link out (`OutLink`), the `dsnr/<kind>-<day>-<hex>` naming and pattern (`dsnrBranch.ts`, the tokens' too), a search's word
+match (`shared/search.ts`, the Projects search's too), the "No … matches" line (`NoMatches`, the Projects screen's too), the bar
+of tabs (`ToolbarTabsList`, `ToolbarTab`, in `Toolbar.tsx`, as `PanelTabs` is for panels), GitHub's status on a failed call
+(`httpStatus`, `github.ts`), and every task reading the file through `work.voice()`. A redundant call went (whether a branch
+exists, which reading the file on it already says). Found in passing and fixed: `DesignRepo` took only the app's own errors for
+"not there", so a missing file read through the person's `gh` (the `dsnr` command) failed instead of being null. A save also
+takes a blob's 64-hex sha, for a repository on SHA-256.
 **After using it (Noah, 2026-10-10):** (10) the bar of tabs is the one exception to the toolbar's centering (`Toolbar tabs`): its tabs run the bar's whole height and the list has none of the padding that keeps a pill's tabs off its edge, so the line under the chosen tab rests on the bar's own line, with the names still centered; (11) the panel's switch is **Component, then Tokens**, across the panel's whole width, which is an option of the toggle group itself (`fullWidth`), not of the panel; the tokens are still what shows until a component is opened; (12) a third tab, **Primitives**, sits between Components and Voice and tone. **What it holds is not decided:** it is an empty page, with no side panel, until Noah says.
 
 **Why (Noah, 2026-10-10):** what prototypes and code say should use Flock's tone of voice, and the voice should be changed in
@@ -521,7 +530,8 @@ Tokens and Component switch and More, and a Find a component menu sits over the 
 - **One reader, one writer, for the file.** It is read and written through the design repository's own API (`DesignRepo`), which
   works with or without a clone on the machine, so a designer with no checkout can use it. (`writeFile`'s own note says it is for where there is no clone, "one writer per machine": that rule keeps two writers off the default branch's records; a branch of its own that nothing checks out has no second writer, and the file on the default branch only changes when its pull request is merged.) The token path is not reused for it:
   that path makes commits with git's plumbing in a clone of the *library* and writes token edits, none of which applies here. What
-  is shared is the shape the person sees (save, propose, start over, a branch remembered on disk), not the mechanics.
+  is shared is what the person sees, as one component (`BranchActions`: the branch and its saves, the draft pull request,
+  Save, Propose, Start over), and the branch's naming (`dsnrBranch.ts`), not the mechanics.
 - **Delivered the way accessibility is** (T7, part A), so nobody has to remember it: `taskAccessibility` reads the standard
   "as the skills are" and puts it into every task, at two places, `ipc.ts` (codebase tasks) and `prototypeWork.ts` (prototype
   tasks). A `taskVoice` beside it reads `standards/flock/voice-and-tone.md` each time a task is made, copied nowhere.

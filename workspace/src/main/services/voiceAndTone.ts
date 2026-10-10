@@ -15,21 +15,19 @@
  *
  * Every call here was tried on the real design repository on 2026-10-10 before this was written.
  */
-import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { VoiceAndTone, VoiceBranch, VoiceSave } from '../../shared/contract';
 import { asArray, asRecord } from '../../shared/json';
-import type { DesignRepoRef, GitHubApi } from './designRepo';
+import { DesignRepo, type DesignRepoRef, type GitHubApi } from './designRepo';
+import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
+import { httpStatus } from './github';
 
 /** Where the file is, in the design repository: the shared layer's Flock tier (decided in the plan, T9). */
 export const VOICE_FILE = 'standards/flock/voice-and-tone.md';
 
 /** The branches DSNR saves the voice and tone to: its own, so a save can never land on anyone's work. */
-export const VOICE_BRANCH = /^dsnr\/voice-\d{8}-[0-9a-f]{4}$/;
-
-/** A new branch's name: the day, and four letters so two on one day differ. */
-const newBranch = (now: Date): string => `dsnr/voice-${now.toISOString().slice(0, 10).replace(/-/g, '')}-${randomBytes(2).toString('hex')}`;
+export const VOICE_BRANCH = dsnrBranchPattern('voice');
 
 /** What is kept of the change between runs of the app, by repository. */
 interface Kept {
@@ -38,18 +36,14 @@ interface Kept {
 	pullRequest: { number: number; url: string } | null;
 }
 
-/** GitHub's status for a failed call, from the app's session and the command line alike. */
-const statusOf = (err: unknown): number | undefined => {
-	const s = (err as { status?: unknown } | null)?.status;
-	return typeof s === 'number' ? s : undefined;
-};
-
 const PROPOSAL_TITLE = 'Voice and tone';
 const PROPOSAL_BODY =
 	'Proposed from the Voice and tone tab in DSNR.\n\nOnce merged, this is the voice and tone every agent task carries, wherever the product’s own guidance does not say otherwise.';
 
 export class VoiceAndToneFile {
 	private readonly repo: DesignRepoRef;
+	/** The file, read as every file in the design repository is. */
+	private readonly files: DesignRepo;
 	private readonly app: GitHubApi;
 	private readonly person: GitHubApi | null;
 	private readonly file: string;
@@ -72,6 +66,7 @@ export class VoiceAndToneFile {
 		now?: () => Date;
 	}) {
 		this.repo = repo;
+		this.files = new DesignRepo(app, repo);
 		this.app = app;
 		this.person = person;
 		this.file = file;
@@ -85,29 +80,28 @@ export class VoiceAndToneFile {
 		return `${this.repo.owner}/${this.repo.repo}`;
 	}
 
-	/** The change kept, if one is: an entry naming a branch DSNR did not make is never taken for one. */
-	private kept(): Kept | null {
-		if (!existsSync(this.file)) return null;
+	/** Everything remembered, by repository: nothing when there is no file, or one that is not readable. */
+	private remembered(): Record<string, unknown> {
 		try {
-			const entry = asRecord(asRecord(JSON.parse(readFileSync(this.file, 'utf8')))[this.key]);
-			if (typeof entry.branch !== 'string' || !VOICE_BRANCH.test(entry.branch)) return null;
-			const pr = asRecord(entry.pullRequest);
-			return {
-				branch: entry.branch,
-				saves: typeof entry.saves === 'number' ? entry.saves : 0,
-				pullRequest: typeof pr.number === 'number' && typeof pr.url === 'string' ? { number: pr.number, url: pr.url } : null,
-			};
+			return existsSync(this.file) ? asRecord(JSON.parse(readFileSync(this.file, 'utf8'))) : {};
 		} catch {
-			return null;
+			return {};
 		}
 	}
+
+	/** The change kept, if one is: an entry naming a branch DSNR did not make is never taken for one. */
+	private kept(): Kept | null {
+		const entry = asRecord(this.remembered()[this.key]);
+		if (typeof entry.branch !== 'string' || !VOICE_BRANCH.test(entry.branch)) return null;
+		const pr = asRecord(entry.pullRequest);
+		return {
+			branch: entry.branch,
+			saves: typeof entry.saves === 'number' ? entry.saves : 0,
+			pullRequest: typeof pr.number === 'number' && typeof pr.url === 'string' ? { number: pr.number, url: pr.url } : null,
+		};
+	}
 	private keep(kept: Kept | null): void {
-		let all: Record<string, unknown> = {};
-		try {
-			all = existsSync(this.file) ? asRecord(JSON.parse(readFileSync(this.file, 'utf8'))) : {};
-		} catch {
-			all = {};
-		}
+		const all = this.remembered();
 		if (kept) all[this.key] = kept;
 		else delete all[this.key];
 		mkdirSync(dirname(this.file), { recursive: true });
@@ -125,29 +119,12 @@ export class VoiceAndToneFile {
 		return repo.default_branch;
 	}
 
-	/** The file on a branch, with its blob's sha; null when the branch or the file is not there. Any other failure is said. */
-	private async read(ref: string): Promise<{ text: string; sha: string } | null> {
-		try {
-			const file = asRecord(await this.app.api(`${this.base}/contents/${VOICE_FILE}?ref=${encodeURIComponent(ref)}`));
-			if (typeof file.sha !== 'string') return null;
-			// Over 1 MB, the contents API leaves the content out; the blob it names carries it.
-			const content =
-				file.encoding === 'none' ? asRecord(await this.app.api(`${this.base}/git/blobs/${file.sha}`)).content : file.content;
-			return typeof content === 'string' ? { text: Buffer.from(content, 'base64').toString('utf8'), sha: file.sha } : null;
-		} catch (err) {
-			if (statusOf(err) === 404) return null;
-			throw err;
-		}
-	}
-
-	private async branchExists(branch: string): Promise<boolean> {
-		try {
-			await this.app.api(`${this.base}/git/ref/heads/${encodeURIComponent(branch)}`);
-			return true;
-		} catch (err) {
-			if (statusOf(err) === 404) return false;
-			throw err;
-		}
+	/**
+	 * The file on a branch, with its blob's sha; null when the branch or the file is not there, which for a branch of DSNR's
+	 * (always made with the file on it) is the branch deleted. Any other failure is said.
+	 */
+	private read(ref: string): Promise<{ text: string; sha: string } | null> {
+		return this.files.readFileAt(VOICE_FILE, ref);
 	}
 
 	/** Asked of the person's command line where there is one, else of the app's session, which may not see pull requests. */
@@ -189,7 +166,7 @@ export class VoiceAndToneFile {
 	private async branch(base: string): Promise<VoiceBranch | null> {
 		let kept = this.kept();
 		if (kept === null) return null;
-		const onBranch = (await this.branchExists(kept.branch)) ? await this.read(kept.branch) : null;
+		const onBranch = await this.read(kept.branch);
 		const pullRequest = onBranch === null ? 'gone' : await this.pullRequestOf(kept);
 		if (pullRequest === 'gone') {
 			this.forget();
@@ -212,15 +189,15 @@ export class VoiceAndToneFile {
 		if ((onDefault?.sha ?? null) !== against) return { state: 'changed', voice: await this.current() };
 		const kept = this.kept();
 		try {
-			if (kept && (await this.branchExists(kept.branch))) {
-				const onBranch = await this.read(kept.branch);
-				if (onBranch?.text !== text) {
-					await this.put(kept.branch, text, onBranch?.sha ?? null, 'Voice and tone, saved from DSNR');
+			const onBranch = kept && (await this.read(kept.branch));
+			if (kept && onBranch) {
+				if (onBranch.text !== text) {
+					await this.put(kept.branch, text, onBranch.sha, 'Voice and tone, saved from DSNR');
 					this.keep({ ...kept, saves: kept.saves + 1 });
 				}
 			} else {
 				if (onDefault?.text === text) return { state: 'saved', voice: await this.current() };
-				const branch = newBranch(this.now());
+				const branch = newDsnrBranch('voice', this.now());
 				const head = asRecord(asRecord(await this.app.api(`${this.base}/git/ref/heads/${encodeURIComponent(base)}`)).object).sha;
 				if (typeof head !== 'string') throw new Error(`GitHub did not say where ${base} is.`);
 				await this.app.api(`${this.base}/git/refs`, { method: 'POST', body: { ref: `refs/heads/${branch}`, sha: head } });
@@ -229,13 +206,13 @@ export class VoiceAndToneFile {
 				} catch (err) {
 					// The default branch moved between reading it and making the branch: the branch goes, and the save is refused.
 					await this.app.api(`${this.base}/git/refs/heads/${encodeURIComponent(branch)}`, { method: 'DELETE' }).catch(() => undefined);
-					if (statusOf(err) === 409 || statusOf(err) === 422) return { state: 'changed', voice: await this.current() };
+					if (httpStatus(err) === 409 || httpStatus(err) === 422) return { state: 'changed', voice: await this.current() };
 					throw err;
 				}
 				this.keep({ branch, saves: 1, pullRequest: null });
 			}
 		} catch (err) {
-			const s = statusOf(err);
+			const s = httpStatus(err);
 			if (s === 403 || s === 404) throw new Error('Saving needs write access to the design repository. Ask someone who has it to add you.');
 			throw err;
 		}
@@ -271,7 +248,7 @@ export class VoiceAndToneFile {
 			this.keep({ ...kept, pullRequest: { number: pr.number, url: pr.html_url } });
 		} catch (err) {
 			// No command line, or one not signed in: the change stays saved, and GitHub's own page can open the pull request.
-			if (statusOf(err) === undefined && /ENOENT|not found|auth|log ?in/i.test(String((err as Error).message))) throw new Error(needsGh);
+			if (httpStatus(err) === undefined && /ENOENT|not found|auth|log ?in/i.test(String((err as Error).message))) throw new Error(needsGh);
 			throw err;
 		}
 		return this.current();

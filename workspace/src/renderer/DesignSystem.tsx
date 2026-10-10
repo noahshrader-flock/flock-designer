@@ -18,6 +18,7 @@ import { ComponentCard } from './ComponentCard';
 import { ComponentPanel } from './ComponentPanel';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { MoreMenu } from './MoreMenu';
+import { NoMatches } from './NoMatches';
 import { Page } from './Page';
 import { Primitives } from './Primitives';
 import { TOKENS_PANEL } from './panelWidth';
@@ -32,7 +33,7 @@ import { TokenChangesProvider, useTokenChangesFor } from './tokenChanges';
 import { Skeleton } from './ui/skeleton';
 import { undeclared } from '../shared/wcag';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
-import { Toolbar } from './Toolbar';
+import { Toolbar, ToolbarTab, ToolbarTabsList } from './Toolbar';
 import { VoiceAndTone } from './VoiceAndTone';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
@@ -45,7 +46,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
+import { Tabs } from './ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /** Said only when something is wrong, as the Projects screen does: a failed update is a line, never an error. */
@@ -190,12 +191,6 @@ const Notice = ({ title, children, onRetry }: { title: string; children: ReactNo
 type Tab = 'components' | 'primitives' | 'voice-and-tone';
 
 /**
- * A tab in the bar fills the bar's height, and the line under the chosen one rests on the bar's own line (`Toolbar tabs`):
- * the list has none of the padding that keeps a pill's tabs off its edge, and the line is drawn over the bar's.
- */
-const TAB = 'group-data-horizontal/tabs:h-full group-data-horizontal/tabs:after:-bottom-px';
-
-/**
  * The Design System tab (DESIGN_SYSTEM_PLAN.md): the company's, not any one library's, so its bar holds only its two tabs,
  * Components and Voice and tone (T9). Each stays mounted while the other is shown, so what was typed, scrolled and opened
  * in it is as it was left; and Radix's own pane is used rather than shadcn's, which sets a text size on everything in it.
@@ -205,17 +200,11 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	return (
 		<Tabs value={tab} onValueChange={(next) => setTab(next as Tab)} className="gap-0">
 			<Toolbar tabs className="sticky top-0 z-40">
-				<TabsList variant="line" aria-label="Design System" className="group-data-horizontal/tabs:h-full p-0">
-					<TabsTrigger value="components" className={TAB}>
-						Components
-					</TabsTrigger>
-					<TabsTrigger value="primitives" className={TAB}>
-						Primitives
-					</TabsTrigger>
-					<TabsTrigger value="voice-and-tone" className={TAB}>
-						Voice and tone
-					</TabsTrigger>
-				</TabsList>
+				<ToolbarTabsList aria-label="Design System">
+					<ToolbarTab value="components">Components</ToolbarTab>
+					<ToolbarTab value="primitives">Primitives</ToolbarTab>
+					<ToolbarTab value="voice-and-tone">Voice and tone</ToolbarTab>
+				</ToolbarTabsList>
 			</Toolbar>
 			<TabsPrimitive.Content value="components" forceMount hidden={tab !== 'components'} data-tab="components" className="outline-none">
 				<Components hidden={hidden || tab !== 'components'} />
@@ -448,12 +437,7 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 							{catalog.components.length === 0 ? (
 								<p className="text-muted-foreground text-sm">The library's Storybook has no stories on {catalog.branch}, so there are no components to list.</p>
 							) : groups.length === 0 ? (
-								<p className="text-muted-foreground text-sm">
-									No component matches “{search.trim()}”.{' '}
-									<button type="button" className="text-primary underline underline-offset-4" onClick={() => setSearch('')}>
-										Clear search
-									</button>
-								</p>
+								<NoMatches thing="component" search={search} onClear={() => setSearch('')} />
 							) : (
 								groups.map(({ group, rows }) => (
 									<section key={group} className="flex flex-col gap-2" aria-label={group}>

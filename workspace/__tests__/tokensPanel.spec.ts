@@ -527,7 +527,7 @@ describe('naming and reach (T3)', () => {
 
 describe('saving and proposing a change (T4, T5)', () => {
 	const BRANCH = { branch: 'dsnr/tokens-20261009-ab12', saves: 1, saved: [{ path: 'tone.pineGreen.50', value: '#000000' }], pullRequest: null };
-	const branchShown = () => document.querySelector<HTMLElement>('[data-token-branch]');
+	const branchShown = () => document.querySelector<HTMLElement>('[data-branch-actions]');
 	const changedList = () => document.querySelector<HTMLElement>('[data-changed-tokens]');
 	const changeTone = async () => {
 		await press(row('tone.pineGreen.50')?.querySelector('button') as HTMLElement);

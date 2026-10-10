@@ -22,6 +22,7 @@ import { dirname, join } from 'node:path';
 import type { ConnectedDesignSystem, TokenBranch, TokenEdit } from '../../shared/contract';
 import { describeChange } from '../../shared/tokens';
 import { libraryCommit, systemReads } from './designLibrary';
+import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { readTokens } from './designTokens';
 import { branchExists, runGit } from './git';
 import type { CatalogReads } from './componentCatalog';
@@ -29,10 +30,8 @@ import type { ShareTools } from './share';
 import { editedFiles } from './tokenEdits';
 
 /** The branches DSNR saves a change to: its own, so a save can never land on anyone's work. */
-export const TOKEN_BRANCH = /^dsnr\/tokens-\d{8}-[0-9a-f]{4}$/;
+export const TOKEN_BRANCH = dsnrBranchPattern('tokens');
 
-/** A new branch's name: the day, and four letters so two on one day differ. */
-const newBranch = (now: Date): string => `dsnr/tokens-${now.toISOString().slice(0, 10).replace(/-/g, '')}-${randomBytes(2).toString('hex')}`;
 
 /**
  * What DSNR keeps of a branch beyond what is shown: the library's commit the change is made on (`base`), and the commit
@@ -123,7 +122,7 @@ export class TokenBranches {
 		const files = await editedFiles(reads, edits);
 		const message = commitMessage(await describedAt(reads, edits));
 
-		const branch = kept?.branch ?? newBranch(this.deps.now?.() ?? new Date());
+		const branch = kept?.branch ?? newDsnrBranch('tokens', this.deps.now?.() ?? new Date());
 		const parent = kept?.tip ?? base;
 		const commit = await commitFiles(system.root, base, parent, files, message);
 		// The same files as the last save: no commit, but the change as asked is the one saved.
