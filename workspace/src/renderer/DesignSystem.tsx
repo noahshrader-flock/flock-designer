@@ -19,6 +19,7 @@ import { ComponentPanel } from './ComponentPanel';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { MoreMenu } from './MoreMenu';
 import { Page } from './Page';
+import { Primitives } from './Primitives';
 import { TOKENS_PANEL } from './panelWidth';
 import { ResizablePanel } from './ResizablePanel';
 import { SearchField } from './SearchField';
@@ -145,23 +146,25 @@ const NO_TOKENS: DesignToken[] = [];
 const NO_TARGET = undeclared('The design system is not read yet');
 
 /**
- * Which the side panel shows, as a button group like a prototype's states: the tokens, or the component that is open.
- * Component is off while none is open, as there is nothing to show.
+ * Which the side panel shows, as a button group like a prototype's states, across the panel's width: the component that is
+ * open, or the tokens. Component is first, and off while none is open, as there is nothing to show; the tokens are what the
+ * panel shows until then.
  */
 const PanelSwitcher = ({ view, canShowComponent, onSelect }: { view: PanelView; canShowComponent: boolean; onSelect: (view: PanelView) => void }) => (
 	<ToggleGroup
 		type="single"
 		variant="outline"
 		spacing={0}
+		fullWidth
 		aria-label="Side panel"
 		value={view}
 		// Pressing the one shown would unpress it, leaving none shown: it stays.
 		onValueChange={(next) => (next === 'tokens' || next === 'component') && next !== view && onSelect(next)}
 	>
-		<ToggleGroupItem value="tokens">Tokens</ToggleGroupItem>
 		<ToggleGroupItem value="component" disabled={!canShowComponent}>
 			Component
 		</ToggleGroupItem>
+		<ToggleGroupItem value="tokens">Tokens</ToggleGroupItem>
 	</ToggleGroup>
 );
 
@@ -183,8 +186,14 @@ const Notice = ({ title, children, onRetry }: { title: string; children: ReactNo
 	</Page>
 );
 
-/** The Design System tab's own tabs (T9): the company's design system, as its components and as its voice and tone. */
-type Tab = 'components' | 'voice-and-tone';
+/** The Design System tab's own tabs (T9): the company's design system, as its components, its primitives, and its voice and tone. */
+type Tab = 'components' | 'primitives' | 'voice-and-tone';
+
+/**
+ * A tab in the bar fills the bar's height, and the line under the chosen one rests on the bar's own line (`Toolbar tabs`):
+ * the list has none of the padding that keeps a pill's tabs off its edge, and the line is drawn over the bar's.
+ */
+const TAB = 'group-data-horizontal/tabs:h-full group-data-horizontal/tabs:after:-bottom-px';
 
 /**
  * The Design System tab (DESIGN_SYSTEM_PLAN.md): the company's, not any one library's, so its bar holds only its two tabs,
@@ -195,14 +204,24 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [tab, setTab] = useState<Tab>('components');
 	return (
 		<Tabs value={tab} onValueChange={(next) => setTab(next as Tab)} className="gap-0">
-			<Toolbar className="sticky top-0 z-40">
-				<TabsList variant="line" aria-label="Design System">
-					<TabsTrigger value="components">Components</TabsTrigger>
-					<TabsTrigger value="voice-and-tone">Voice and tone</TabsTrigger>
+			<Toolbar tabs className="sticky top-0 z-40">
+				<TabsList variant="line" aria-label="Design System" className="group-data-horizontal/tabs:h-full p-0">
+					<TabsTrigger value="components" className={TAB}>
+						Components
+					</TabsTrigger>
+					<TabsTrigger value="primitives" className={TAB}>
+						Primitives
+					</TabsTrigger>
+					<TabsTrigger value="voice-and-tone" className={TAB}>
+						Voice and tone
+					</TabsTrigger>
 				</TabsList>
 			</Toolbar>
 			<TabsPrimitive.Content value="components" forceMount hidden={tab !== 'components'} data-tab="components" className="outline-none">
 				<Components hidden={hidden || tab !== 'components'} />
+			</TabsPrimitive.Content>
+			<TabsPrimitive.Content value="primitives" forceMount hidden={tab !== 'primitives'} data-tab="primitives" className="outline-none">
+				<Primitives />
 			</TabsPrimitive.Content>
 			<TabsPrimitive.Content value="voice-and-tone" forceMount hidden={tab !== 'voice-and-tone'} data-tab="voice-and-tone" className="outline-none">
 				<VoiceAndTone hidden={hidden || tab !== 'voice-and-tone'} />

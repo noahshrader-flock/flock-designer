@@ -165,7 +165,7 @@ nothing on GitHub changed.
 | **T6** (done) | **Show a component's tokens, and who shares them:** every token tagged with a unique value, built once, each story rendered and read back (decision 29); the Component view shows **Made from** (the component's tokens, as the same rows with the same editor), **Shared with** (the other components that use a token) and **Not tokens** (what is set in the component); run in the background once per library commit, in both modes | T3, decision 29 | M | Medium |
 | **T7** (done) | **Accessibility, delivered and measured:** the rules and the product's declared target put into every build task (A); axe-core run on a built prototype page in a hidden sandboxed window, its failures given back to the agent and kept on the iteration's record (B); one definition of WCAG in code, shared by the contrast display and the check, both reading the target from the manifest (C); each component's own count on its card and panel (D); tests that keep the standard from drifting | decision 30, T3, T6 (the hidden windows) | M | Medium |
 | **T8** (candidate) | **Ask in words:** "make the primary a little warmer" produces the same list of edits | T3 | S | Low |
-| **T9** (done) | **Voice and tone:** the tab gets a bar of two tabs, **Components** and **Voice and tone**, and the Components frame two rows of its own, with the Tokens and Component switch at the top of the right panel (step 1); the company's voice and tone is one file in the design repository, read and shown (2), changed in the app as a branch and a draft pull request or in the repository (3), and put into every build task the way accessibility is (4) | T7's task brief, decisions 17 to 31 | M | Medium |
+| **T9** (done) | **Voice and tone:** the tab gets a bar of three tabs, **Components**, **Primitives** and **Voice and tone**, and the Components frame two rows of its own, with the Component and Tokens switch across the top of the right panel (step 1); the company's voice and tone is one file in the design repository, read and shown (2), changed in the app as a branch and a draft pull request or in the repository (3), and put into every build task the way accessibility is (4) | T7's task brief, decisions 17 to 31 | M | Medium |
 
 ### S1: The catalog reader (done 2026-10-08)
 
@@ -443,6 +443,7 @@ codebase run (`startTracked`), the move-to-code task file, and the `dsnr` comman
 the four "Find a component" lines (the bar's order, the alert, the count of tab lists, opening from the finder): those were
 rewritten for the new layout, and every other token and component test passed unchanged; (8) the tab's two panes are Radix's own,
 since shadcn's sets a text size on everything in them; (9) steps 2 and 3 were built as one, sharing the service and the page.
+**After using it (Noah, 2026-10-10):** (10) the bar of tabs is the one exception to the toolbar's centering (`Toolbar tabs`): its tabs run the bar's whole height and the list has none of the padding that keeps a pill's tabs off its edge, so the line under the chosen tab rests on the bar's own line, with the names still centered; (11) the panel's switch is **Component, then Tokens**, across the panel's whole width, which is an option of the toggle group itself (`fullWidth`), not of the panel; the tokens are still what shows until a component is opened; (12) a third tab, **Primitives**, sits between Components and Voice and tone. **What it holds is not decided:** it is an empty page, with no side panel, until Noah says.
 
 **Why (Noah, 2026-10-10):** what prototypes and code say should use Flock's tone of voice, and the voice should be changed in
 the app or in the repository with the same effect: someone commits a change and it shows in the app, or a change made in the app
@@ -455,7 +456,7 @@ statement of two or three sentences and at least three anti-patterns, with a not
 project starts. Guides say adjectives alone work badly and concrete rules, paired good and bad sentences and an anti-pattern
 list work well. **No sync with a repository is described:** it is a snapshot made once inside their tool. That sync is what T9 adds.
 
-**Where it sits (Noah, 2026-10-10):** Design System is the company's, not any one library, and has two tabs. The second is
+**Where it sits (Noah, 2026-10-10):** Design System is the company's, not any one library, and has three tabs: Components, Primitives (what it holds is not decided), and
 **Voice and tone** (first called Brand guidelines; it holds only voice and tone at first, and the name can widen later). It sits
 beside the connected library, so switching the system or branch does not change it. A product's own differences stay in its
 `.dsnr/standards/flock/`, which already wins over anything shared.
@@ -493,21 +494,22 @@ Tokens and Component switch and More, and a Find a component menu sits over the 
 
 ```
 ┌───────────────────────────────────────────────────────────────┬──────────────────┐
-│ Components   Voice and tone                                   │                  │  the tab bar
+│ Components   Primitives   Voice and tone                      │                  │  the tab bar
 ├───────────────────────────────────────────────────────────────┼──────────────────┤
-│ [ Design system name ▾ ]  branch          [Sync]  [More ⋯]    │ [Tokens|Component]  the switch
+│ [ Design system name ▾ ]  branch          [Sync]  [More ⋯]    │ [Component|Tokens]  the switch
 │ [ Search components…              ]            [List|Grid]    │ the alert, if values cannot be read
 │                                                               │ the tokens, or the open component
 │ the list or grid, or a component's page                       │
 └───────────────────────────────────────────────────────────────┴──────────────────┘
 ```
 
-- **The tab bar** is the bar the tab has now, with **Components** and **Voice and tone** at its left and nothing at its right.
+- **The tab bar** is the bar the tab has now, with **Components**, **Primitives** and **Voice and tone** at its left and nothing at its right.
+  Its tabs run the bar's whole height, so the line under the chosen one rests on the bar's own line (`Toolbar tabs`).
 - **The Components frame's first row:** the switcher (the design systems connected, and Connect a design system), the branch
   with it, then Sync, with the problem with a sync beside it as now, and **More** to the right of Sync (Remove stays in it).
 - **Its second row:** a **search box, "Search components"**, in place of the Find a component menu, and **List or Grid** at the
   far right. The row belongs to the list and goes when a component is open, as the menu does now.
-- **The right panel** keeps its place and width. The **Tokens and Component switch moves to its top, above the alert** (the
+- **The right panel** keeps its place and width. The **Component and Tokens switch moves to its top, across its whole width, above the alert** (the
   one `TokenProblems` shows for what the library has that is not read), so it is above both views. The panel belongs to
   Components only; Voice and tone has none.
 - **One behavior changes:** the menu opened a component; a search box **narrows the list or grid** in place, groups with nothing

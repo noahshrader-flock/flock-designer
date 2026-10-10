@@ -114,13 +114,42 @@ describe('the tab bar (T9)', () => {
 	const divider = () => document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]');
 	const shown = (name: string) => !(document.querySelector(`[role="tabpanel"][data-tab="${name}"]`) as HTMLElement).hidden;
 
-	it('has Components and Voice and tone, in that order, Components chosen', async () => {
+	it('has Components, Primitives and Voice and tone, in that order, Components chosen', async () => {
 		await open(() => ok(ready()));
-		expect([...bar().querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toEqual(['Components', 'Voice and tone']);
+		expect([...bar().querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toEqual(['Components', 'Primitives', 'Voice and tone']);
 		expect(tab('Components').getAttribute('aria-selected')).toBe('true');
 		// Above the frame's first row, which is the Components tab's own.
 		expect(bar().compareDocumentPosition(firstRow()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(bar().contains(firstRow())).toBe(false);
+	});
+
+	it('shows Primitives with no first row and no side panel either, between the other two', async () => {
+		await open(() => ok(ready()));
+		await chooseTab('Primitives');
+		expect(tab('Primitives').getAttribute('aria-selected')).toBe('true');
+		expect(shown('primitives')).toBe(true);
+		expect(shown('components')).toBe(false);
+		expect(shown('voice-and-tone')).toBe(false);
+		expect(divider()?.closest('[hidden]')).not.toBeNull();
+		await chooseTab('Voice and tone');
+		expect(shown('primitives')).toBe(false);
+		expect(shown('voice-and-tone')).toBe(true);
+		await chooseTab('Components');
+		expect(shown('components')).toBe(true);
+	});
+
+	it('is a bar whose tabs run its whole height, so the line under the chosen one rests on the bar’s own, with the names centered', async () => {
+		await open(() => ok(ready()));
+		const toolbar = bar().parentElement as HTMLElement;
+		expect(toolbar.hasAttribute('data-toolbar-tabs')).toBe(true);
+		// The list fills the bar, and a tab fills the list: nothing floats between the tab and the line under the bar.
+		expect(bar().className).toMatch(/group-data-horizontal\/tabs:h-full/);
+		// With none of the padding that keeps a pill's tabs off its edge: it would leave the tabs short of the bar's line.
+		expect(bar().className.split(' ')).toContain('p-0');
+		expect(bar().className.split(' ')).not.toContain('p-[3px]');
+		expect(tab('Components').className).toMatch(/group-data-horizontal\/tabs:after:-bottom-px/);
+		// The components frame's own bar has none of this: it is not a bar of tabs.
+		expect(firstRow().hasAttribute('data-toolbar-tabs')).toBe(false);
 	});
 
 	it('shows Voice and tone with no first row and no side panel, and Components again as it was left', async () => {
@@ -321,10 +350,15 @@ describe('the components frame’s first row and the side panel’s top', () => 
 		expect(divider.nextElementSibling?.contains(firstRow())).toBe(false);
 	});
 
-	it('has the panel’s Tokens and Component as the first thing in the panel', async () => {
+	it('has the panel’s Component and Tokens as the first thing in the panel, Component first, across the whole panel', async () => {
 		await open(() => ok(ready()));
 		const panel = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')?.nextElementSibling as HTMLElement;
 		expect(panel.firstElementChild?.querySelector('[aria-label="Side panel"]')).not.toBeNull();
+		const group = document.querySelector('[aria-label="Side panel"]') as HTMLElement;
+		expect([...group.querySelectorAll('[data-slot="toggle-group-item"]')].map((b) => b.textContent)).toEqual(['Component', 'Tokens']);
+		expect(group.getAttribute('data-full-width')).toBe('true');
+		// Still the tokens until a component is opened: the one shown is the second of the two.
+		expect(shownView()).toBe('Tokens');
 		// The same with a component open, whose panel is under it too.
 		await press(row('FSButton').querySelector('button')!);
 		expect(panel.firstElementChild?.querySelector('[aria-label="Side panel"]')).not.toBeNull();
