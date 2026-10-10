@@ -16,7 +16,7 @@ const picture = (text: string) => Buffer.from(`jpeg ${text}`);
 
 let folder: string;
 let server: PrototypeServer;
-const pictures = () => new ComponentPictures({ folder, server });
+const pictures = (recipe = 'now') => new ComponentPictures({ folder, server, recipe });
 const files = (system = 'acme/ui') => readdirSync(pictures().folderOf(system));
 const fetched = async (url: string) => (await (await fetch(url)).arrayBuffer()).byteLength;
 
@@ -77,7 +77,7 @@ describe('the pictures of the components', () => {
 	it('are kept across restarts, and apart for each design system', async () => {
 		pictures().keep('acme/ui', [A], new Map([[A, picture('a')]]));
 		pictures().keep('other/ds', [A], new Map([[A, picture('other')]]));
-		const again = new ComponentPictures({ folder, server });
+		const again = new ComponentPictures({ folder, server, recipe: 'now' });
 		expect(Object.keys(await again.of('acme/ui'))).toEqual([A]);
 		expect((await again.of('acme/ui'))[A]).not.toBe((await again.of('other/ds'))[A]);
 	});
@@ -91,6 +91,17 @@ describe('the pictures of the components', () => {
 		expect(existsSync(pictures().folderOf('acme/ui'))).toBe(false);
 		expect((await fetch(url)).status).toBe(404);
 		expect(Object.keys(await pictures().of('other/ds'))).toEqual([A]);
+	});
+
+	it('are not shown when they were taken another way than the app takes them now, and are dropped by the next pass', async () => {
+		pictures('before').keep('acme/ui', [A, B], new Map([[A, picture('a')], [B, picture('b')]]));
+		expect(Object.keys(await pictures('before').of('acme/ui'))).toEqual([A, B]);
+		// After the app changes how it takes them: the old are no picture, not a stretched or cropped one.
+		expect(await pictures('now').of('acme/ui')).toEqual({});
+		// A pass that did not take a component's picture does not bring back an old one.
+		pictures('now').keep('acme/ui', [A, B], new Map([[A, picture('a2')]]));
+		expect(Object.keys(await pictures('now').of('acme/ui'))).toEqual([A]);
+		expect(files().filter((f) => f.endsWith('.jpg'))).toHaveLength(1);
 	});
 
 	it('are none, not an error, when what they were kept with cannot be read', async () => {

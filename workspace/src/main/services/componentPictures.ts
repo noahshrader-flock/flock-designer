@@ -3,7 +3,8 @@
  * each component, taken in the drawing pass T6 makes (`ComponentTokens`), kept the way good apps keep thumbnails.
  *
  * - **Replaced in place, never blanked:** a pass's picture of a component replaces that component's last one; a component
- *   the pass did not picture (its story did not draw) keeps its last; a component no longer listed loses its picture.
+ *   the pass did not picture (its story did not draw) keeps its last; a component no longer listed loses its picture. Only
+ *   a last one taken the way the app takes them now: after the app changes how, the old ones are not shown, not stretched.
  * - **Kept across restarts,** in the app's own folder, apart for each design system, and not in the previews' build
  *   folder, which is removed when the library moves.
  * - **Each file named by its content,** so a newer picture is at a new address (nothing shows an old one from a cache), and
@@ -24,6 +25,11 @@ export interface ComponentPicturesDeps {
 	/** The app's own folder for pictures. */
 	folder: string;
 	server: PrototypeServer;
+	/**
+	 * How pictures are taken, as a fingerprint of the code that takes them, so a picture is only ever shown that was taken
+	 * the way the app takes them now: one from an older way (another shape, another crop) is no picture, not a wrong one.
+	 */
+	recipe: string;
 }
 
 export class ComponentPictures {
@@ -51,7 +57,7 @@ export class ComponentPictures {
 			record[file] = name;
 		}
 		// Written whole: a reader sees the last record or this one, never part of one.
-		writeFileSync(join(dir, `${RECORD}.new`), JSON.stringify(record));
+		writeFileSync(join(dir, `${RECORD}.new`), JSON.stringify({ recipe: this.deps.recipe, pictures: record }));
 		renameSync(join(dir, `${RECORD}.new`), join(dir, RECORD));
 		const named = new Set(Object.values(record));
 		for (const f of readdirSync(dir)) if (f.endsWith('.jpg') && !named.has(f)) rmSync(join(dir, f), { force: true });
@@ -71,12 +77,14 @@ export class ComponentPictures {
 		rmSync(this.folderOf(system), { recursive: true, force: true });
 	}
 
-	/** Which picture is whose; none when it is missing or cannot be read. */
+	/** Which picture is whose; none when it is missing, cannot be read, or was taken another way than the app takes them now. */
 	private record(system: string): Record<string, string> {
 		try {
-			const kept = JSON.parse(readFileSync(join(this.folderOf(system), RECORD), 'utf8')) as unknown;
-			if (typeof kept !== 'object' || kept === null) return {};
-			return Object.fromEntries(Object.entries(kept).filter((e): e is [string, string] => typeof e[1] === 'string' && /^[0-9a-f]{16}\.jpg$/.test(e[1])));
+			const kept = JSON.parse(readFileSync(join(this.folderOf(system), RECORD), 'utf8')) as { recipe?: unknown; pictures?: unknown };
+			if (kept.recipe !== this.deps.recipe || typeof kept.pictures !== 'object' || kept.pictures === null) return {};
+			return Object.fromEntries(
+				Object.entries(kept.pictures).filter((e): e is [string, string] => typeof e[1] === 'string' && /^[0-9a-f]{16}\.jpg$/.test(e[1])),
+			);
 		} catch {
 			return {};
 		}

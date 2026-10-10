@@ -5,6 +5,7 @@
  * Each window loads the preview page once and draws its share of the story files in it, one after another; a story that
  * does not draw in time is said as null, and the rest go on.
  */
+import { createHash } from 'node:crypto';
 import { BrowserWindow, nativeImage } from 'electron';
 import { PREVIEW_SHOW, previewAddress } from '../../shared/catalog';
 import type { Drawn, Measure, Mode } from './componentTokens';
@@ -69,14 +70,6 @@ const readDrawn = (file: string, picture: boolean): string => `(async (file, pic
 const within = <T>(ms: number, p: Promise<T>): Promise<T | null> =>
 	Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
 
-/** A window nobody sees, held as a shown preview is, on the previews' own origin; not throttled for being out of sight. */
-const hiddenWindow = (origin: string): BrowserWindow => {
-	const win = new BrowserWindow({ show: false, width: 1200, height: 900, webPreferences: { ...sandboxedPreferences(SESSION), backgroundThrottling: false } });
-	keepToOrigin(win.webContents, () => origin);
-	return win;
-};
-
-/** One window's share of a run: the page loaded once, in the run's mode, then each file drawn in turn. */
 /** The picture of a story's first story from a capture of the top of its page; nothing when it painted nothing. */
 const pictureOf = async (wc: Electron.WebContents, crop: Electron.Rectangle | null | undefined): Promise<Buffer | undefined> => {
 	if (!crop || crop.width < 4 || crop.height < 4) return undefined;
@@ -91,6 +84,22 @@ const pictureOf = async (wc: Electron.WebContents, crop: Electron.Rectangle | nu
 	return (composed.width > PICTURE_MOST_ACROSS ? picture.resize({ width: PICTURE_MOST_ACROSS, quality: 'best' }) : picture).toJPEG(PICTURE_QUALITY);
 };
 
+/** How pictures are taken, as a fingerprint of the code that takes them: they are only shown while it is the same (see `ComponentPictures`). */
+export const PICTURE_RECIPE = createHash('sha256')
+	.update(
+		`${readDrawn.toString()}${readDrawn('', true)}${pictureOf.toString()}${composeOnWhite.toString()}${[PICTURE_TOP, PICTURE_SCALE, PICTURE_MOST_ACROSS, PICTURE_QUALITY, REPAINT_MS]}`,
+	)
+	.digest('hex')
+	.slice(0, 12);
+
+/** A window nobody sees, held as a shown preview is, on the previews' own origin; not throttled for being out of sight. */
+const hiddenWindow = (origin: string): BrowserWindow => {
+	const win = new BrowserWindow({ show: false, width: 1200, height: 900, webPreferences: { ...sandboxedPreferences(SESSION), backgroundThrottling: false } });
+	keepToOrigin(win.webContents, () => origin);
+	return win;
+};
+
+/** One window's share of a run: the page loaded once, in the run's mode, then each file drawn in turn. */
 const drawShare = async (base: string, mode: Mode, files: string[], pictures: boolean): Promise<(Drawn | null)[]> => {
 	const win = hiddenWindow(new URL(base).origin);
 	try {

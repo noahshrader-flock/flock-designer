@@ -164,6 +164,8 @@ export interface IpcContext {
 	componentTokens?: Pick<ComponentTokens, 'of' | 'warm' | 'pictures'>;
 	/** Where the pictures of the components are kept (P5): the app's own folder. */
 	componentPicturesRoot?: string;
+	/** How the pictures are taken: a fingerprint, so only pictures taken that way are shown. */
+	componentPictureRecipe?: string;
 	warmAfterMs?: number;
 }
 
@@ -195,6 +197,7 @@ export const registerIpc = ({
 	},
 	componentTokens: injectedComponentTokens,
 	componentPicturesRoot = join(tmpdir(), 'dsnr-component-pictures'),
+	componentPictureRecipe = 'for tests',
 	warmAfterMs,
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
@@ -352,7 +355,7 @@ export const registerIpc = ({
 	};
 	const previews = new StoryPreviews({ system: shownSystem, folder: storyPreviewsRoot, server: prototypeServer });
 	// Which tokens a component draws with (T6): the window names a story file, and only a story file of the library is answered.
-	const componentPictures = new ComponentPictures({ folder: componentPicturesRoot, server: prototypeServer });
+	const componentPictures = new ComponentPictures({ folder: componentPicturesRoot, server: prototypeServer, recipe: componentPictureRecipe });
 	const componentTokens = injectedComponentTokens ?? new ComponentTokens({ system: shownSystem, previews, measure: measureStories, pictures: componentPictures });
 	ipcMain.handle(CHANNELS.componentPictures, guard(() => componentTokens.pictures()));
 	// The previews and the index are got ready in the background, so a component opened later is drawn at once: as the app

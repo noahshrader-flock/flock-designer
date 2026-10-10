@@ -9,7 +9,7 @@ import { DESIGN_REPO, DesignRepo } from './services/designRepo';
 import { CheckoutMemory } from './services/checkoutMemory';
 import { CloneFolderMemory } from './services/cloneFolder';
 import { DesignSystemsMemory } from './services/designSystems';
-import { measureInWindows } from './services/storyMeasure';
+import { PICTURE_RECIPE, measureInWindows } from './services/storyMeasure';
 import { PageView } from './services/pageView';
 import { MIN_WINDOW, type WindowState, WindowMemory, restoreState } from './services/windowMemory';
 import { PrototypeServer } from './services/prototypeServer';
@@ -173,6 +173,7 @@ void app.whenReady().then(() => {
 		storyPreviewsRoot: join(app.getPath('userData'), 'story-previews'),
 		tokenBranchesFile: join(app.getPath('userData'), 'token-branches.json'),
 		componentPicturesRoot: join(app.getPath('userData'), 'component-pictures'),
+		componentPictureRecipe: PICTURE_RECIPE,
 		measureStories: measureInWindows,
 		// A little after the window is up, so opening the app is not slowed by getting the design system ready.
 		warmAfterMs: 3000,

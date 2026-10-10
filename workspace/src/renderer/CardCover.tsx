@@ -8,7 +8,11 @@ import type { ReactNode } from 'react';
  * With `bleed` the cover has no padding and no layout of its own: what is in it fills it edge to edge (a picture does).
  */
 export const CardCover = ({ children, bleed = false }: { children?: ReactNode; bleed?: boolean }) => (
-	<div data-slot="card-cover" className={`aspect-[1920/960] w-full ${bleed ? 'relative overflow-hidden' : 'flex flex-col justify-between py-3 pr-3 pl-4.5'}`}>
+	<div
+		data-slot="card-cover"
+		// The card puts a gap under its cover; a picture runs through it to the footer, as its own color does for a card without one.
+		className={`aspect-[1920/960] w-full ${bleed ? 'relative mb-[calc(var(--card-spacing)*-1)] overflow-hidden' : 'flex flex-col justify-between py-3 pr-3 pl-4.5'}`}
+	>
 		{children}
 	</div>
 );

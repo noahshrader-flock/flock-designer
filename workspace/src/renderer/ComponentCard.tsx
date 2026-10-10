@@ -20,7 +20,7 @@ export const ComponentCard = ({ component, picture, onOpen }: { component: Catal
 		<Card data-component-card={component.id} className={`pt-0 ${PRESSABLE_CARD}`} {...pressableCard(`Open ${component.name}`, onOpen)}>
 			{/* The picture is the cover: edge to edge, with a soft gray behind it until it has loaded. */}
 			<CardCover bleed>
-				<div data-picture-area className="bg-muted/40 absolute inset-0">
+				<div data-picture-area className={`absolute inset-0 ${shown && loaded === shown ? 'bg-white' : 'bg-muted/40'}`}>
 					{shown && (
 						<img
 							src={shown}
@@ -30,7 +30,7 @@ export const ComponentCard = ({ component, picture, onOpen }: { component: Catal
 							decoding="async"
 							onLoad={() => setLoaded(shown)}
 							onError={() => setFailed(shown)}
-							className={`size-full object-cover transition-opacity duration-200 motion-reduce:transition-none ${loaded === shown ? 'opacity-100' : 'opacity-0'}`}
+							className={`size-full object-contain transition-opacity duration-200 motion-reduce:transition-none ${loaded === shown ? 'opacity-100' : 'opacity-0'}`}
 						/>
 					)}
 				</div>

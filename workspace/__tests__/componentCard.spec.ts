@@ -33,6 +33,8 @@ describe('a component’s card', () => {
 		// Nothing around the picture: no padding on the cover, and no box inside it.
 		expect(cover.className).not.toMatch(/\bp[xytrbl]?-/);
 		expect(cover.className).toContain('overflow-hidden');
+		// The card's gap under its cover is run through, so no band of the card's color shows between a picture and its footer.
+		expect(cover.className).toContain('mb-[calc(var(--card-spacing)*-1)]');
 		// A soft placeholder until there is a picture, filling the cover.
 		expect(card.querySelector('[data-picture-area]')?.className.split(' ')).toEqual(expect.arrayContaining(['bg-muted/40', 'absolute', 'inset-0']));
 		expect(card.textContent).toBe('FSButtonButtons');
@@ -47,11 +49,22 @@ describe('a component’s card', () => {
 		// Taken at twice the size it is shown.
 		expect(img.getAttribute('srcset')).toBe('http://127.0.0.1:1/p/a.jpg 2x');
 		// It fills the cover, edge to edge: nothing is left around it to be seen.
-		expect(img.className.split(' ')).toEqual(expect.arrayContaining(['size-full', 'object-cover']));
+		// Whole, never cropped or stretched: a picture in any shape fits, on the white the stories are drawn on.
+		expect(img.className.split(' ')).toEqual(expect.arrayContaining(['size-full', 'object-contain']));
+		expect(img.className).not.toContain('object-cover');
 		expect(img.className).toContain('opacity-0');
 		expect(img.className).toContain('motion-reduce:transition-none');
 		await act(async () => void img.dispatchEvent(new Event('load')));
 		expect(img.className).toContain('opacity-100');
+		// White behind it once it is there, as the stories are drawn on white; the placeholder's gray until then.
+		expect(document.querySelector('[data-picture-area]')?.className).toContain('bg-white');
+	});
+});
+
+describe('how the pictures are taken', () => {
+	it('is a fingerprint of the code that takes them, so a change to it makes the old pictures no picture', async () => {
+		const { PICTURE_RECIPE } = await import('../src/main/services/storyMeasure');
+		expect(PICTURE_RECIPE).toMatch(/^[0-9a-f]{12}$/);
 	});
 });
 
