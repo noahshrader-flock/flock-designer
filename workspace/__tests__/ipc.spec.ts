@@ -762,8 +762,12 @@ describe('prototypes', () => {
 		// No file: nothing said of it.
 		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
 		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('## Voice and tone');
-		// A file with nothing written under its headings: still nothing.
+		// An empty file, as the repository has it until it is written: still nothing, and the task goes ahead.
 		mkdirSync(dirname(voiceFile), { recursive: true });
+		writeFileSync(voiceFile, '');
+		expect((await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list')).ok).toBe(true);
+		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('## Voice and tone');
+		// A file with nothing written under its headings: still nothing.
 		writeFileSync(voiceFile, '# Voice and tone\n\n## Voice\n\n<!-- how Flock sounds -->\n');
 		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
 		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('## Voice and tone');

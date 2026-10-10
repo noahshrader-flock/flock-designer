@@ -600,6 +600,13 @@ describe('readFile and writeFile', () => {
     await expect(failing.readFile('skills/a.md')).rejects.toThrow('Server Error');
   });
 
+  it('reads an empty file as empty, not as none and not as a failure: it is there, with nothing written in it yet', async () => {
+    const { session } = fakeSession({ '/repos/acme/design/contents/standards/flock/voice-and-tone.md': { content: '', encoding: 'base64', sha: 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391' } });
+    const repo = new DesignRepo(session, REF);
+    expect(await repo.readFile('standards/flock/voice-and-tone.md')).toBe('');
+    expect(await repo.readFileAt('standards/flock/voice-and-tone.md')).toEqual({ text: '', sha: 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391' });
+  });
+
   it('reads a file on a branch with its sha, which a write to it is made against', async () => {
     const { session } = fakeSession({ '/repos/acme/design/contents/skills/a.md?ref=dsnr%2Fvoice-20261010-ab12': { content: b64('# A'), sha: 'a1' } });
     expect(await new DesignRepo(session, REF).readFileAt('skills/a.md', 'dsnr/voice-20261010-ab12')).toEqual({ text: '# A', sha: 'a1' });

@@ -492,6 +492,14 @@ a 2023 "Flock Safety-Brand Guidelines" document, nearly all of it marked "Copy i
 in Slack (July 2026), which is how documents are written, not how the product speaks. **Nothing on interface copy,** and nothing
 from either is copied into this plan.
 
+**In the agent files too (Noah, 2026-10-10):** the file is **committed blank** in the design repository (an empty file, so it is
+always there, to be written in, and ignored while it is), and **Coke's agent files name it**, so a run that does not come from
+the app (Claude Code in VS Code) reads it as well: in `.dsnr/README.md` (the standards tree, the precedence, as the shared Flock
+tier between Coke's own and the universal), in what the DSNR agent reads (`agents/dsnr.md`), in what the parity reviewer reads and
+checks the view's words against (`agents/product-parity-reviewer.md`), and in `standards/non-negotiables.md`'s precedence. Blank, each
+says there is nothing to apply and that it is not a finding; written, it is read every time. The component library's agent files do
+not name it: they are the design system's layer, which is about components.
+
 **The file:** `standards/flock/voice-and-tone.md` in `flock-designer`, **blank until Noah writes it**: the tab shows its text area
 whether the file exists or not, and Save makes the file. What goes in it is his: the guides suggest a voice in two or three
 sentences, concrete rules (reading level, sentence length, words banned; only what is Flock-wide, since the generic rules stay
@@ -601,12 +609,12 @@ propose opens a **draft** and never a ready one); the page (save, propose, a ref
 address task carries the file's text, with one sentence: the product's own guidance wins where it differs. **With no file the
 section is left out, with no error** (the file is not required). The context receipt names it, if it names the accessibility
 target (read `ContextReceipt` at the start of this step to see). Documents: `standards/README.md` (tree, tiers and precedence),
-`skills/README.md` (the third layer), a line at the head of `copy-and-microcopy.md`. **Nothing is needed in Coke for delivery;**
-one line in its `.dsnr/README.md` precedence list is a Coke change Noah pushes. *Tests:* the section is in a prototype task, a
+`skills/README.md` (the third layer), a line at the head of `copy-and-microcopy.md`. **A run from the app needs nothing in Coke** (the task
+carries the file); **a run in VS Code, with no app, reads Coke's agent files, so they name it too** (decided 2026-10-10, below). *Tests:* the section is in a prototype task, a
 codebase task and an address task; absent with no file; the text read afresh each time (an edit shows in the next task); and the
 words in a task are the file's own, not a copy kept anywhere.
 
-**Noah's check (what tests cannot show):** in the app, Design System, Voice and Tone: write a line in the text area, **Save to a branch**. That is the first real save through the app's own GitHub session (the probe used `gh`): if it says write access is needed, the GitHub App's Contents permission is not approved on the installation. Then see the branch on GitHub, **Propose**, see the draft pull request, merge it, **Refresh** and see the merged text; then build a prototype and see `## Voice and tone` in its task. Optional, Coke's to push: one line in its `.dsnr/README.md` precedence list naming `standards/flock/`.
+**Noah's check (what tests cannot show):** in the app, Design System, Voice and Tone: write a line in the text area, **Save to a branch**. That is the first real save through the app's own GitHub session (the probe used `gh`): if it says write access is needed, the GitHub App's Contents permission is not approved on the installation. Then see the branch on GitHub, **Propose**, see the draft pull request, merge it, **Refresh** and see the merged text; then build a prototype and see `## Voice and tone` in its task. Coke's agent files name the file too, on Coke's `noah/dsnr-voice` (`fda6b052`, one commit on `noah/dsnr`; **Noah fast-forwards `noah/dsnr` to it**; the agent never pushes).
 
 **Not in T9:** logos, color and typography beyond the tokens; choosing the library's branch; fields in place of the text area;
 checking written copy against the voice automatically (a candidate once the file is in use).

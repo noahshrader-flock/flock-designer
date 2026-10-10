@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { VOICE_FILE } from '../src/main/services/voiceAndTone';
 import { taskVoice, voiceBrief } from '../src/main/services/voiceBrief';
@@ -55,6 +57,20 @@ describe('the section a task carries', () => {
 		expect(voiceBrief(headings)).toBe('');
 		expect(voiceBrief('# Voice and tone\n\n## Voice\n\n<!-- later -->\n')).toBe('');
 		expect(voiceIsWritten('# Voice and tone\n\nPlain words.\n')).toBe(true);
+	});
+});
+
+describe('the file in the design repository', () => {
+	const file = join(__dirname, '../..', VOICE_FILE);
+
+	it('is always there, so that writing in it is all it takes for every task to carry it: blank, it is ignored', () => {
+		expect(existsSync(file)).toBe(true);
+		// Whatever is in it, a task makes of it either its words or nothing, and never fails.
+		const text = readFileSync(file, 'utf8');
+		expect(() => voiceBrief(text)).not.toThrow();
+		expect(voiceBrief(text) === '' || voiceBrief(text).startsWith('## Voice and tone')).toBe(true);
+		// Blank, as it is until it is written, it is nothing.
+		expect(voiceBrief('')).toBe('');
 	});
 });
 
