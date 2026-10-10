@@ -165,6 +165,7 @@ nothing on GitHub changed.
 | **T6** (done) | **Show a component's tokens, and who shares them:** every token tagged with a unique value, built once, each story rendered and read back (decision 29); the Component view shows **Made from** (the component's tokens, as the same rows with the same editor), **Shared with** (the other components that use a token) and **Not tokens** (what is set in the component); run in the background once per library commit, in both modes | T3, decision 29 | M | Medium |
 | **T7** (done) | **Accessibility, delivered and measured:** the rules and the product's declared target put into every build task (A); axe-core run on a built prototype page in a hidden sandboxed window, its failures given back to the agent and kept on the iteration's record (B); one definition of WCAG in code, shared by the contrast display and the check, both reading the target from the manifest (C); each component's own count on its card and panel (D); tests that keep the standard from drifting | decision 30, T3, T6 (the hidden windows) | M | Medium |
 | **T8** (candidate) | **Ask in words:** "make the primary a little warmer" produces the same list of edits | T3 | S | Low |
+| **T9** | **Voice and tone:** the tab gets a bar of two tabs, **Components** and **Voice and tone**, and the Components frame two rows of its own, with the Tokens and Component switch at the top of the right panel (step 1); the company's voice and tone is one file in the design repository, read and shown (2), changed in the app as a branch and a draft pull request or in the repository (3), and put into every build task the way accessibility is (4) | T7's task brief, decisions 17 to 31 | M | Medium |
 
 ### S1: The catalog reader (done 2026-10-08)
 
@@ -426,6 +427,158 @@ is fixed in up to two rounds and reported, with the hard stop only at handoff (d
 **T8 (candidate): Ask in words.** Words produce the same list, through the agent and the library's authoring standards;
 nothing else changes. Built only if the controls leave a gap.
 
+### T9: Voice and tone (planned, 2026-10-10)
+
+**Why (Noah, 2026-10-10):** what prototypes and code say should use Flock's tone of voice, and the voice should be changed in
+the app or in the repository with the same effect: someone commits a change and it shows in the app, or a change made in the app
+reaches the repository. Today there is only the generic `standards/universal/copy-and-microcopy.md`, which says a product's own
+Flock-tier standard overrides it; Coke's `.dsnr/standards/flock/product-native-ui.md` has a few vocabulary lines, and no document of
+the company's voice was found in any of the five repositories.
+
+**How Claude Design does it (third-party guides only, nothing official found):** its setup form asks for a voice and tone
+statement of two or three sentences and at least three anti-patterns, with a notes field; a published system is chosen when a new
+project starts. Guides say adjectives alone work badly and concrete rules, paired good and bad sentences and an anti-pattern
+list work well. **No sync with a repository is described:** it is a snapshot made once inside their tool. That sync is what T9 adds.
+
+**Where it sits (Noah, 2026-10-10):** Design System is the company's, not any one library, and has two tabs. The second is
+**Voice and tone** (first called Brand guidelines; it holds only voice and tone at first, and the name can widen later). It sits
+beside the connected library, so switching the system or branch does not change it. A product's own differences stay in its
+`.dsnr/standards/flock/`, which already wins over anything shared.
+
+**Decided (2026-10-10; Noah left 1 to 3 to me and agreed 4):**
+1. **The file lives in the shared layer, in a new `standards/flock/` beside `universal/`.** Flock's voice is not universal
+   (`universal/` is "would hold at any company") and not one product's (a product's `.dsnr/standards/flock/` is for what differs
+   in that product); Noah's layers put what is common to all products in `flock-designer`; and it is where the app already reads
+   and writes. The component library is the wrong place: a package consumed by products, and the voice is not about components.
+   **Precedence becomes:** a product's own Flock tier, then `standards/flock/`, then `universal/` (accessibility a floor under all).
+2. **No source exists to start from** (below). **Noah writes the content himself;** the app starts the file as a skeleton of
+   headings with nothing invented in it, and nobody else has to confirm anything before it is used.
+3. **The editor is one plain text area over one file,** not fields. The file is what the agent reads, and Claude Design's own
+   form (statement, anti-patterns, notes) also ends as one document; headings give the structure, and fields can come later.
+4. **The branch stays shown, not chosen.** The previews, tokens, component pictures and their caches are all built from one
+   commit of the library's default branch (P4), so a choice reaches all of them: a step of its own. The branches a person would
+   want to see are the ones the app makes (T4, T5), seen by trying the change and by the draft pull request's Chromatic build.
+   Revisit when someone asks to open a colleague's branch.
+
+**What exists already (searched 2026-10-10: Google Drive, public Slack, this machine; nothing a person could use as the file):**
+a 2023 "Flock Safety-Brand Guidelines" document, nearly all of it marked "Copy in progress"; and a technical-writing skill shared
+in Slack (July 2026), which is how documents are written, not how the product speaks. **Nothing on interface copy,** and nothing
+from either is copied into this plan.
+
+**The file:** `standards/flock/voice-and-tone.md` in `flock-designer`. **It starts as a skeleton, not invented rules** (the
+skeleton is what "Start the file" fills the text area with; Save makes the file): the headings **Voice** (two or three
+sentences), **Rules** (concrete: reading level, sentence length, words banned; only what is Flock-wide, since the generic rules
+stay in `copy-and-microcopy.md`), **Say this, not that** (paired examples), and **Anti-patterns** (at least three). **Coke's vocabulary stays in Coke:** its lines on Devices, "Fleet", and no
+"Oops" rest on one product's evidence (its own file says so, and `standards/README.md` says one product's habit is not a
+Flock-wide rule), so nothing is moved out of it. A line there that Noah says is company-wide is lifted into the shared
+file then, and removed from Coke's, so each fact still lives once.
+
+**The layout (Noah, 2026-10-10).** Today one bar holds the system's name, a branch icon, the problem with a sync, Sync, the
+Tokens and Component switch and More, and a Find a component menu sits over the list (`DesignSystem.tsx`). It becomes:
+
+```
+┌───────────────────────────────────────────────────────────────┬──────────────────┐
+│ Components   Voice and tone                                   │                  │  the tab bar
+├───────────────────────────────────────────────────────────────┼──────────────────┤
+│ [ Design system name ▾ ]  branch          [Sync]  [More ⋯]    │ [Tokens|Component]  the switch
+│ [ Search components…              ]            [List|Grid]    │ the alert, if values cannot be read
+│                                                               │ the tokens, or the open component
+│ the list or grid, or a component's page                       │
+└───────────────────────────────────────────────────────────────┴──────────────────┘
+```
+
+- **The tab bar** is the bar the tab has now, with **Components** and **Voice and tone** at its left and nothing at its right.
+- **The Components frame's first row:** the switcher (the design systems connected, and Connect a design system), the branch
+  with it, then Sync, with the problem with a sync beside it as now, and **More** to the right of Sync (Remove stays in it).
+- **Its second row:** a **search box, "Search components"**, in place of the Find a component menu, and **List or Grid** at the
+  far right. The row belongs to the list and goes when a component is open, as the menu does now.
+- **The right panel** keeps its place and width. The **Tokens and Component switch moves to its top, above the alert** (the
+  one `TokenProblems` shows for what the library has that is not read), so it is above both views. The panel belongs to
+  Components only; Voice and tone has none.
+- **One behavior changes:** the menu opened a component; a search box **narrows the list or grid** in place, groups with nothing
+  left disappearing, with a line saying none matches. Components are opened by their row or card, as they are.
+- **No new parts:** the box is the app's `SearchField` (as the Projects bar and the tokens panel use); the rest is the parts
+  that exist, moved. The tab is kept mounted while hidden, as the Design System tab is, so neither tab loses what was typed.
+
+**How it stays clean:**
+- **One reader, one writer, for the file.** It is read and written through the design repository's own API (`DesignRepo`), which
+  works with or without a clone on the machine, so a designer with no checkout can use it. (`writeFile`'s own note says it is for where there is no clone, "one writer per machine": that rule keeps two writers off the default branch's records; a branch of its own that nothing checks out has no second writer, and the file on the default branch only changes when its pull request is merged.) The token path is not reused for it:
+  that path makes commits with git's plumbing in a clone of the *library* and writes token edits, none of which applies here. What
+  is shared is the shape the person sees (save, propose, start over, a branch remembered on disk), not the mechanics.
+- **Delivered the way accessibility is** (T7, part A), so nobody has to remember it: `taskAccessibility` reads the standard
+  "as the skills are" and puts it into every task, at two places, `ipc.ts` (codebase tasks) and `prototypeWork.ts` (prototype
+  tasks). A `taskVoice` beside it reads `standards/flock/voice-and-tone.md` each time a task is made, copied nowhere.
+- **A test first for each behavior,** and each step finished, committed and leaving the app working.
+
+**Steps:**
+
+**1. The bar, the two rows, the switch, the search (nothing else).** `DesignSystem.tsx`: a tab bar (Components, Voice and tone) in
+place of today's bar; the two rows inside the Components frame; `PanelSwitcher` moved to the top of the `ResizablePanel`, above
+`TokenProblems`, in both views; the `SearchSelect` finder replaced by `SearchField` filtering `catalog.components`, groups
+without a match left out. **Voice and tone shows an empty page** until step 2 and has no right panel. *Tests, in
+`designSystem.spec.ts`, which names the old bar in four places* (lines 140, 307, 370, 547, "Find a component"): those four are
+rewritten for the search box; new ones for: both tabs, Components selected, and Voice and tone showing no tokens panel; More after
+Sync in the first row; the switch the first thing in the panel and above the alert; the search narrowing the list and the grid
+(the same rule), a group with no match gone, the none-match line, and Escape clearing it; the second row gone with a component open
+and back after Back; what was typed in the search kept when switching tabs and back. The existing token and component tests must
+pass unchanged: they are the proof nothing else moved.
+
+**2. Read the file, read only.** `DesignRepo.readFile` (which already gives null for a missing file) gets an optional ref;
+a `voice` channel (named like `tokenBranch`'s) returns the text, its blob sha, and whether the file exists. The page shows the
+text, read only, a **Refresh** that reads again (a commit made in the repository shows after it, and when the tab is opened), and,
+with no file, a line saying so with **Start the file**. *Tests:* the service with a fake API (text and sha; 404 gives "no file";
+an error is said, not swallowed); the page for each (text, empty, error, refreshed after a change in the repository).
+
+**3. Change it in the app.** The text area becomes editable; **Save** keeps the text on a branch of the design repository,
+`dsnr/voice-<day>-<4 hex>` (the pattern is checked, as `TOKEN_BRANCH` is, so a save can never land on anyone's work), made from
+the default branch's head on the first save, with one commit by the signed-in person on each save after (a save that changes
+nothing makes none). **Propose** opens a draft pull request; **Start over** forgets the branch, which stays on GitHub. The branch,
+the file's sha it was made on and the last commit are remembered on disk, as `tokenBranchesFile` does, so the app can be closed;
+on opening, a remembered branch whose pull request is merged or closed is forgotten, and the text shown is the default branch's.
+**If the file changed on the default branch since the text was opened** (its sha is not the one held), **Save refuses** and says
+so, keeping the person's text beside the new one to choose from; nothing is overwritten. **Without write access,** the first save
+says so, in the repository's own words as `writeFile` does today, and the text stays.
+
+**Tested on the real repository, 2026-10-10** (a throwaway branch, through the calls the service will make, with Noah's `gh`
+login; the branch was deleted and its draft pull request, #11, left closed):
+- A file that is not there reads as **404**, as `readFile` already treats it: "no file" needs nothing new.
+- A branch cut from the default branch's head (`git/refs`) works; **each Contents PUT with `branch` is one commit** (two saves
+  were two commits ahead of the default).
+- **A save on a stale file sha is refused with 409.** The branch is cut from the current head, so giving the sha the text was
+  opened at on the *first* save makes the same call detect a change on the default branch since: one mechanism, no separate check.
+- A pull request made with `draft: true` is a draft; **a second for the same branch is refused (422)**, so the existing one is
+  found by its branch first (`pulls?head=<owner>:<branch>&state=all`, which also gives open, closed or merged, for the rule that a
+  merged branch is forgotten).
+- **The repository's default branch is `noah/flock-designer`, its only branch.** A voice pull request is made against it, and the
+  service asks GitHub for `default_branch` rather than naming one, so a `main` later changes nothing.
+- No workflow runs on a pull request here (`publish-prototypes.yml` is `workflow_dispatch` only), so a proposal builds nothing.
+
+**Decided from the test: the pull request is opened by the person's own `gh`,** as Share does ("the designer's own `gh` is
+already them", and the app's GitHub App needs no new permission), with the branch and its commits through `DesignRepo`. **Not
+testable from outside the app:** the App's own token is in the keychain, and whether the installation holds *Pull requests* is
+unknown and no longer matters. The branch and commits need *Contents: read and write* on the installation, which the record
+publishing (`writeFile`) already depends on; without it the first save says so. Without `gh`, saving still works and the page gives
+GitHub's compare link instead of Propose, saying `gh` is needed, as Share's dialog does. What a real run of the service, as the
+app, adds is Noah's check (below).
+*Tests:* the service with a fake API (branch from the default
+head; one commit per save; none when unchanged; refusal on a changed sha; remembered across a restart; start over; the pattern;
+propose opens a **draft** and never a ready one); the page (save, propose, a refusal, no write access).
+
+**4. Put it into every task, and the documents that describe it.** `taskVoice(readStandard)` in `accessibilityBrief.ts`'s style
+(its own file, `voiceBrief.ts`), called at the two places `taskAccessibility` is, so every prototype, codebase, move-to-code and
+address task carries the file's text, with one sentence: the product's own guidance wins where it differs. **With no file the
+section is left out, with no error** (the file is not required). The context receipt names it, if it names the accessibility
+target (read `ContextReceipt` at the start of this step to see). Documents: `standards/README.md` (tree, tiers and precedence),
+`skills/README.md` (the third layer), a line at the head of `copy-and-microcopy.md`. **Nothing is needed in Coke for delivery;**
+one line in its `.dsnr/README.md` precedence list is a Coke change Noah pushes. *Tests:* the section is in a prototype task, a
+codebase task and an address task; absent with no file; the text read afresh each time (an edit shows in the next task); and the
+words in a task are the file's own, not a copy kept anywhere.
+
+**Open:** nothing for Noah to decide before step 1. **Noah's check, after step 3:** save an edit in the app, see the branch on GitHub, Propose, see the draft pull request, merge it, and see the page show the merged text.
+
+**Not in T9:** logos, color and typography beyond the tokens; choosing the library's branch; fields in place of the text area;
+checking written copy against the voice automatically (a candidate once the file is in use).
+
 ## What this leaves ready for editing (not built)
 
 Nothing below is built, and nothing is shaped now except the first line.
@@ -486,7 +639,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 ## Next
 
 **S1 to S3 and P0 to P2 are done,** with Storybook as the source of truth for what a component is (decision 17), and
-stories responding as they should. **T1 to T5 and P4 are done (the tokens, read, in the panel, a change tried on them, kept on a branch and proposed as a draft pull request; any repository connected).** **T6 is done too (a component's tokens, and who shares them, found by tagging; decision 29).** The next steps are a designer trying T1 to T6 on a real task, and **T7 is done (accessibility, delivered and measured; decision 30): every task carries the rules and the target, each prototype and each component is checked with axe-core, and WCAG's edition is watched weekly.** T8 is a candidate only. P3 was dropped
+stories responding as they should. **T1 to T5 and P4 are done (the tokens, read, in the panel, a change tried on them, kept on a branch and proposed as a draft pull request; any repository connected).** **T6 is done too (a component's tokens, and who shares them, found by tagging; decision 29).** The next steps are a designer trying T1 to T6 on a real task, and **T7 is done (accessibility, delivered and measured; decision 30): every task carries the rules and the target, each prototype and each component is checked with axe-core, and WCAG's edition is watched weekly.** T8 is a candidate only. **T9 (voice and tone, with the tab bar and the new layout of the Components frame; 2026-10-10) is laid out in four steps with their tests, its questions settled, and waiting for Noah's go.** P3 was dropped
 (decision 10).
 
 **By hand, Noah:** restart the dev session (the main process changed), open the Design System tab, and try a few
