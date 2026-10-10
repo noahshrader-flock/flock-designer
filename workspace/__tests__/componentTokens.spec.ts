@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ComponentTokens, type Drawn, type Measure, decode, tagsFor } from '../src/main/services/componentTokens';
 import type { DesignToken, TokenEdit } from '../src/shared/contract';
 import { g } from './fixtures';
@@ -146,7 +146,13 @@ describe('the index', () => {
 		tagged: async (edits: TokenEdit[]) => (builds.push(edits), { state: 'ready' as const, base: 'http://127.0.0.1:1/tagged/' }),
 	};
 	const system = () => ({ id: 'acme/ui', name: 'Acme', repository: 'acme/ui', root: clone, folder: '', branch: 'develop' });
-	const index = (more: Partial<ConstructorParameters<typeof ComponentTokens>[0]> = {}) => new ComponentTokens({ system, previews, measure, ...more });
+	/** The pictures kept, as the pass gave them: a stand-in for the store, which has tests of its own. */
+	let kept: { system: string; listed: string[]; taken: Map<string, Buffer> }[];
+	const pictures = {
+		keep: (system: string, listed: string[], taken: Map<string, Buffer>) => void kept.push({ system, listed, taken }),
+		of: async () => Object.fromEntries([...(kept.at(-1)?.taken.keys() ?? [])].map((f) => [f, `http://127.0.0.1:1/pictures/${f}`])),
+	};
+	const index = (more: Partial<ConstructorParameters<typeof ComponentTokens>[0]> = {}) => new ComponentTokens({ system, previews, measure, pictures, ...more });
 	const ready = async (i: ComponentTokens, file: string) => {
 		for (let n = 0; n < 50; n++) {
 			const a = await i.of(file);
@@ -173,6 +179,7 @@ describe('the index', () => {
 		g(home, 'clone', '-q', join(home, 'remote.git'), clone);
 		asked = [];
 		builds = [];
+		kept = [];
 	});
 	afterEach(() => rmSync(home, { recursive: true, force: true }));
 
@@ -186,7 +193,7 @@ describe('the index', () => {
 			[
 				{ base: 'http://127.0.0.1:1/tagged/', mode: 'light', files },
 				{ base: 'http://127.0.0.1:1/tagged/', mode: 'dark', files },
-				{ base: 'http://127.0.0.1:1/plain/', mode: 'light', files },
+				{ base: 'http://127.0.0.1:1/plain/', mode: 'light', files, pictures: true },
 			],
 		]);
 	});
@@ -257,6 +264,41 @@ describe('the index', () => {
 	it('does nothing when there is no design system, or it has no branch to read', async () => {
 		await expect(index({ system: () => null }).warm()).resolves.toBeUndefined();
 		expect(asked).toHaveLength(0);
+	});
+
+	it('keeps the pictures the plain drawing took, of the listed components, and not the tagged ones', async () => {
+		const shot = Buffer.from('jpeg');
+		const i = index({
+			measure: async (runs) =>
+				runs.map((run) => run.files.map((f) => ({ ...drawn({ 'rgb(0, 1, 90)': 1 }), ...(run.pictures && f.includes('A.stories') ? { picture: shot } : {}) }))),
+		});
+		await i.warm();
+		expect(kept).toEqual([
+			{
+				system: 'acme/ui',
+				listed: ['src/components/A/A.stories.tsx', 'src/components/B/B.stories.tsx'],
+				taken: new Map([['src/components/A/A.stories.tsx', shot]]),
+			},
+		]);
+	});
+
+	it('gives the pictures there are, and says while a pass that may replace them is drawing', async () => {
+		let finish: () => void = () => undefined;
+		let drawingStarted = false;
+		const i = index({
+			measure: async (runs) => {
+				drawingStarted = true;
+				await new Promise<void>((r) => (finish = r));
+				return runs.map((run) => run.files.map(() => drawn()));
+			},
+		});
+		void i.warm();
+		await vi.waitFor(() => expect(drawingStarted).toBe(true));
+		expect(await i.pictures()).toEqual({ drawing: true, pictures: {} });
+		finish();
+		await i.warm();
+		expect((await i.pictures()).drawing).toBe(false);
+		expect(await index({ system: () => null }).pictures()).toEqual({ drawing: false, pictures: {} });
 	});
 
 	it('has nothing to say when no design system is connected', async () => {

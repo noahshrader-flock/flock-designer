@@ -1,9 +1,10 @@
 import { ExternalLinkIcon, MessageSquareIcon } from 'lucide-react';
-import type { KeyboardEvent, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { Project, ProjectIteration } from '../shared/contract';
 import { plural } from '../shared/plural';
 import { byVersion, projectCodeLink, workOf } from '../shared/projects';
 import { CardCover } from './CardCover';
+import { PRESSABLE_CARD, pressableCard } from './pressableCard';
 import { PeopleLine } from './People';
 import { Badge } from './ui/badge';
 import { Card, CardFooter, CardTitle } from './ui/card';
@@ -35,25 +36,9 @@ export const ProjectCard = ({ project, onOpen }: { project: Project; onOpen: (it
 	const versions = byVersion(prototypes).length;
 	// What pressing the card does: into the newest prototype, or out to the codebase work on GitHub. Or nothing.
 	const go = newest !== undefined ? () => onOpen(newest) : link !== null ? () => void window.open(link, '_blank', 'noreferrer') : null;
-	const way =
-		go === null
-			? {}
-			: {
-					role: newest ? 'button' : 'link',
-					tabIndex: 0,
-					'aria-label': newest ? `Open ${project.title}` : `Open ${project.title} on GitHub`,
-					onClick: go,
-					onKeyDown: (e: KeyboardEvent) => {
-						if (e.key !== 'Enter' && e.key !== ' ') return;
-						e.preventDefault();
-						go();
-					},
-				};
+	const way = go === null ? {} : pressableCard(newest ? `Open ${project.title}` : `Open ${project.title} on GitHub`, go, newest ? 'button' : 'link');
 	return (
-		<Card
-			className={`pt-0 ${go ? 'hover:bg-accent/40 focus-visible:ring-ring/50 cursor-pointer transition-colors outline-none focus-visible:ring-3' : ''}`}
-			{...way}
-		>
+		<Card className={`pt-0 ${go ? PRESSABLE_CARD : ''}`} {...way}>
 			<CardCover>
 				{/* Always there, so the name stays at the bottom when there is nothing to put at the top. */}
 				<div className="flex items-start justify-between gap-2">

@@ -315,6 +315,15 @@ export type ComponentTokens =
 	  };
 
 /**
+ * The pictures of the shown design system's components, for the grid view (P5): each component's picture by its story
+ * file, an address on the app's local server, none for one without; and whether a pass that may replace them is drawing.
+ */
+export interface ComponentPictures {
+	drawing: boolean;
+	pictures: Record<string, string>;
+}
+
+/**
  * Where a change to the tokens is kept (T4 and T5): a branch of the library DSNR made for it, each save one commit on it,
  * and the draft pull request it is proposed in once it is.
  */
@@ -456,6 +465,8 @@ export interface WorkspaceApi {
 	storyPreview(edits: TokenEdit[]): Promise<Result<StoryPreview>>;
 	/** Which tokens a component draws with, by its story file (T6); `building` while every story is drawn, the first time. */
 	componentTokens(file: string): Promise<Result<ComponentTokens>>;
+	/** The pictures of the shown design system's components, for the grid view (P5). */
+	componentPictures(): Promise<Result<ComponentPictures>>;
 	/** The branch a change to the shown design system's tokens is kept on, or null when none has been saved (T4). */
 	tokenBranch(): Promise<Result<TokenBranch | null>>;
 	/** Saves the change as one commit on its branch, made on the first save; pushed when it is proposed (T4). */
@@ -917,6 +928,7 @@ export const CHANNELS = {
 	removeDesignSystem: 'workspace:removeDesignSystem',
 	storyPreview: 'workspace:storyPreview',
 	componentTokens: 'workspace:componentTokens',
+	componentPictures: 'workspace:componentPictures',
 	tokenBranch: 'workspace:tokenBranch',
 	saveTokens: 'workspace:saveTokens',
 	proposeTokens: 'workspace:proposeTokens',

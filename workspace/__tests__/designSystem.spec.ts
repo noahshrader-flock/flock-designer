@@ -244,6 +244,61 @@ const shownView = () => [...document.querySelectorAll<HTMLElement>('[aria-label=
 const tokensShown = () => !document.querySelector('[data-panel="tokens"]')!.hasAttribute('hidden');
 const componentPanel = () => document.querySelector<HTMLElement>('[data-panel="component"]');
 
+describe('the components as a list or a grid (P5)', () => {
+	const viewButton = (name: 'List' | 'Grid') => document.querySelector<HTMLElement>(`[aria-label="View"] [aria-label="${name}"]`) as HTMLElement;
+	const shownView = () => document.querySelector('[aria-label="View"] [aria-checked="true"]')?.getAttribute('aria-label');
+	const cards = () => [...document.querySelectorAll<HTMLElement>('[data-component-card]')];
+	afterEach(() => localStorage.clear());
+
+	it('are a list at first, with List and Grid beside the finder', async () => {
+		await open(() => ok(ready()));
+		expect(shownView()).toBe('List');
+		expect(button('Find a component').closest('div')?.parentElement?.contains(viewButton('Grid'))).toBe(true);
+		expect(cards()).toHaveLength(0);
+	});
+
+	it('are a grid of cards when Grid is pressed, in the same groups, each card the component’s name and group', async () => {
+		await open(() => ok(ready()));
+		await press(viewButton('Grid'));
+		await settle();
+		expect(groups()).toEqual(['Buttons', 'Surfaces', 'Popovers', 'Ungrouped']);
+		expect(cards().map((c) => c.getAttribute('data-component-card'))).toEqual(COMPONENTS.map((c) => c.id));
+		expect(cards()[0]?.textContent).toBe('FSButtonButtons');
+		expect(document.querySelectorAll('[data-component]')).toHaveLength(0);
+	});
+
+	it('open a component from a card, by a press or by Enter, as a project card does', async () => {
+		await open(() => ok(ready()));
+		await press(viewButton('Grid'));
+		await press(cards()[0] as HTMLElement);
+		expect(document.querySelector('h3')?.textContent).toBe('FSButton');
+		await press(button('Back to components'));
+		await act(async () => void (cards()[1] as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+		expect(document.querySelector('h3')?.textContent).toBe('FSCard');
+	});
+
+	it('remember the view chosen', async () => {
+		await open(() => ok(ready()));
+		await press(viewButton('Grid'));
+		await unmountAll(current!.root);
+		await open(() => ok(ready()));
+		expect(shownView()).toBe('Grid');
+	});
+
+	it('show each component’s picture in its card, and ask for the pictures only while the grid is shown', async () => {
+		const pictures = { [COMPONENTS[0]!.id]: 'http://127.0.0.1:1/component-pictures-x/0123456789abcdef.jpg' };
+		const app = await open(() => ok(ready()), false, { componentPictures: async () => ok({ drawing: false, pictures }) });
+		expect(app.calls.componentPictures).toBeUndefined();
+		await press(viewButton('Grid'));
+		await settle();
+		expect(app.calls.componentPictures).toHaveLength(1);
+		expect(cards()[0]?.querySelector('img')?.getAttribute('src')).toBe(pictures[COMPONENTS[0]!.id]);
+		// The others keep their cover, a placeholder of the same size.
+		expect(cards()[1]?.querySelector('img')).toBeNull();
+		expect(cards()[1]?.querySelector('[data-picture-area]')).not.toBeNull();
+	});
+});
+
 describe('the side panel’s views', () => {
 	it('start on Tokens, with Component off until a component is open', async () => {
 		await open(() => ok(ready()));

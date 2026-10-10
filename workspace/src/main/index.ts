@@ -172,6 +172,7 @@ void app.whenReady().then(() => {
 		designSystems: new DesignSystemsMemory(DesignSystemsMemory.defaultPath(app.getPath('userData'))),
 		storyPreviewsRoot: join(app.getPath('userData'), 'story-previews'),
 		tokenBranchesFile: join(app.getPath('userData'), 'token-branches.json'),
+		componentPicturesRoot: join(app.getPath('userData'), 'component-pictures'),
 		measureStories: measureInWindows,
 		// A little after the window is up, so opening the app is not slowed by getting the design system ready.
 		warmAfterMs: 3000,

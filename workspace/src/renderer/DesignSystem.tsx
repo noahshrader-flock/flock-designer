@@ -1,4 +1,4 @@
-import { ChevronDownIcon, ChevronRightIcon, GitBranchIcon, InfoIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { ChevronDownIcon, ChevronRightIcon, GitBranchIcon, InfoIcon, LayoutGridIcon, LayoutListIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type {
 	Catalog,
@@ -11,6 +11,8 @@ import type {
 	TokenEdit,
 } from '../shared/contract';
 import { ComponentPage } from './ComponentPage';
+import { CardGrid } from './CardGrid';
+import { ComponentCard } from './ComponentCard';
 import { ComponentPanel } from './ComponentPanel';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { LoadingScreen } from './Loading';
@@ -21,6 +23,7 @@ import { ResizablePanel } from './ResizablePanel';
 import { SearchSelect } from './SearchSelect';
 import { SyncButton } from './SyncButton';
 import { TokensPanel } from './TokensPanel';
+import { useComponentPictures } from './useComponentPictures';
 import { useTokenBranch } from './useTokenBranch';
 import { TokenChangesProvider, useTokenChangesFor } from './tokenChanges';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
@@ -106,6 +109,31 @@ const DesignSystemSwitcher = ({
 
 type PanelView = 'tokens' | 'component';
 
+/** The components as a list of rows, or a grid of cards with pictures (P5): chosen with the switch, remembered. */
+type ComponentsView = 'list' | 'grid';
+const VIEW_KEY = 'dsnr.componentsView';
+const rememberedView = (): ComponentsView => (localStorage.getItem(VIEW_KEY) === 'grid' ? 'grid' : 'list');
+
+/** List or Grid, as a button group with the one shown pressed, beside the finder. */
+const ViewSwitcher = ({ view, onSelect }: { view: ComponentsView; onSelect: (view: ComponentsView) => void }) => (
+	<ToggleGroup
+		type="single"
+		variant="outline"
+		spacing={0}
+		aria-label="View"
+		value={view}
+		// Pressing the one shown would unpress it, leaving none: it stays.
+		onValueChange={(next) => (next === 'list' || next === 'grid') && next !== view && onSelect(next)}
+	>
+		<ToggleGroupItem value="list" aria-label="List">
+			<LayoutListIcon />
+		</ToggleGroupItem>
+		<ToggleGroupItem value="grid" aria-label="Grid">
+			<LayoutGridIcon />
+		</ToggleGroupItem>
+	</ToggleGroup>
+);
+
 /** No tokens, the same each time, while the library is not read. */
 const NO_TOKENS: DesignToken[] = [];
 
@@ -183,6 +211,13 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [edits, setEdits] = useState<TokenEdit[]>([]);
 	// Where it is kept, once saved (T4), and proposed (T5).
 	const branch = useTokenBranch(systems.current, edits, setEdits);
+	// The components as a list or a grid of cards with pictures (P5), as last chosen; the pictures while the grid shows.
+	const [componentsView, setComponentsView] = useState<ComponentsView>(rememberedView);
+	const chooseView = (view: ComponentsView) => {
+		setComponentsView(view);
+		localStorage.setItem(VIEW_KEY, view);
+	};
+	const pictures = useComponentPictures(!hidden && componentsView === 'grid' && catalog?.state === 'ready', catalog?.state === 'ready' ? catalog.commit : null);
 	// The change as every panel that shows tokens sees it: the tokens view and the component view alike.
 	const changes = useTokenChangesFor(catalog?.state === 'ready' ? catalog.tokens.tokens : NO_TOKENS, edits, setEdits);
 	const started = useRef(false);
@@ -332,16 +367,19 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 					{/* Kept while a component is open, so going back finds the list where it was. */}
 					<div hidden={opened !== undefined}>
 						<Page>
-							{/* The components view's own: it finds a component to open, so it goes when one is open. */}
-							<div className="w-72">
-								<SearchSelect
-									items={catalog.components.map(label)}
-									value={null}
-									onChange={(chosen) => openComponent(catalog.components.find((c) => label(c) === chosen)?.id ?? null)}
-									placeholder="Find a component"
-									search="Search components…"
-									empty="No component matches."
-								/>
+							{/* The components view's own: it finds a component to open, so it goes when one is open; and List or Grid. */}
+							<div className="flex items-center justify-between gap-3">
+								<div className="w-72">
+									<SearchSelect
+										items={catalog.components.map(label)}
+										value={null}
+										onChange={(chosen) => openComponent(catalog.components.find((c) => label(c) === chosen)?.id ?? null)}
+										placeholder="Find a component"
+										search="Search components…"
+										empty="No component matches."
+									/>
+								</div>
+								<ViewSwitcher view={componentsView} onSelect={chooseView} />
 							</div>
 							{error && (
 								<Alert variant="destructive">
@@ -356,11 +394,19 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 										<h3 className="text-sm font-semibold">
 											{group} <span className="text-muted-foreground font-normal">{rows.length}</span>
 										</h3>
-										<ul className="bg-card divide-y rounded-lg border">
-											{rows.map((c) => (
-												<Row key={c.id} component={c} onOpen={() => openComponent(c.id)} />
-											))}
-										</ul>
+										{componentsView === 'grid' ? (
+											<CardGrid>
+												{rows.map((c) => (
+													<ComponentCard key={c.id} component={c} picture={pictures[c.id]} onOpen={() => openComponent(c.id)} />
+												))}
+											</CardGrid>
+										) : (
+											<ul className="bg-card divide-y rounded-lg border">
+												{rows.map((c) => (
+													<Row key={c.id} component={c} onOpen={() => openComponent(c.id)} />
+												))}
+											</ul>
+										)}
 									</section>
 								))
 							)}

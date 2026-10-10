@@ -168,7 +168,7 @@ beforeEach(async () => {
 		personGitHub: { api: async (path: string) => (path === '/user' ? { login: personLogin } : path.startsWith('/user/repos') ? personRepos.map((full_name) => ({ full_name })) : []) },
 		storyPreviewsRoot: join(home, 'story-previews'),
 		// What is got ready in the background is only counted here, never drawn.
-		componentTokens: { of: ask, warm } as never,
+		componentTokens: { of: ask, warm, pictures: async () => ({ drawing: false, pictures: {} }) } as never,
 		...more,
 	});
 	register();
@@ -212,6 +212,10 @@ describe('the Design System tab', () => {
 			expect(await call(CHANNELS.designSystemCatalog, false)).toMatchObject({ ok: true, value: { state: 'ready' } });
 			expect(warm).toHaveBeenCalledTimes(2);
 		});
+	});
+
+	it('gives the pictures of the components, for the grid', async () => {
+		expect(await call(CHANNELS.componentPictures)).toEqual({ ok: true, value: { drawing: false, pictures: {} } });
 	});
 
 	it('asks which tokens a component draws with only by a story file, and by nothing else the window sends', async () => {

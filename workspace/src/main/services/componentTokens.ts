@@ -12,18 +12,30 @@
  * Kept for the library's commit: the first ask starts it in the background and says `building`; later asks for that
  * commit answer at once.
  */
-import type { ComponentTokens as Answer, ConnectedDesignSystem, DesignToken, StoryPreview, TokenEdit } from '../../shared/contract';
+import type {
+	ComponentTokens as Answer,
+	ComponentPictures as Pictures,
+	ConnectedDesignSystem,
+	DesignToken,
+	StoryPreview,
+	TokenEdit,
+} from '../../shared/contract';
+import type { ComponentPictures } from './componentPictures';
 import { designSystemOf } from '../../shared/catalog';
 import { lengthParts, placeOf, writtenWith } from '../../shared/tokens';
 import { readCatalog } from './componentCatalog';
 import { libraryCommit, listedComponents, systemReads } from './designLibrary';
 import { readTokens } from './designTokens';
 
-/** What a story draws, as counts of each computed value: its colors (background, text, border), radii and spacing. */
+/**
+ * What a story draws, as counts of each computed value: its colors (background, text, border), radii and spacing; and,
+ * when its run asked for one (P5), a picture of its first story, as JPEG.
+ */
 export interface Drawn {
 	colors: Record<string, number>;
 	radii: Record<string, number>;
 	spacing: Record<string, number>;
+	picture?: Buffer;
 }
 
 export type Mode = 'light' | 'dark';
@@ -32,7 +44,7 @@ export type Mode = 'light' | 'dark';
  * Draws story files from a build of the previews (its `base`), in a mode, and says what each drew, in the order given;
  * null for one that would not draw. Several runs at once.
  */
-export type Measure = (runs: { base: string; mode: Mode; files: string[] }[]) => Promise<(Drawn | null)[][]>;
+export type Measure = (runs: { base: string; mode: Mode; files: string[]; pictures?: boolean }[]) => Promise<(Drawn | null)[][]>;
 
 /** A tag's blue, the same for every color tag: its red and green are the token's number. */
 const TAG_BLUE = 0x5a;
@@ -170,6 +182,8 @@ export interface ComponentTokensDeps {
 	system: () => ConnectedDesignSystem | null;
 	previews: TaggedPreviews;
 	measure: Measure;
+	/** Where the pictures the same pass takes are kept (P5). */
+	pictures: Pick<ComponentPictures, 'keep' | 'of'>;
 }
 
 /** Each story file's tokens, or null for one that did not draw, of which nothing can be said. */
@@ -214,6 +228,18 @@ export class ComponentTokens {
 	}
 
 	/**
+	 * The pictures of the shown design system's components (P5), as they are now, and whether a pass that may replace them
+	 * is drawing. Pictures from an earlier pass are given while a new one draws, never none in their place.
+	 */
+	async pictures(): Promise<Pictures> {
+		const system = this.deps.system();
+		if (system === null) return { drawing: false, pictures: {} };
+		const started = await this.started().catch(() => null);
+		const drawing = started !== null && !('error' in started) && started.index.done === null;
+		return { drawing, pictures: await this.deps.pictures.of(system.id) };
+	}
+
+	/**
 	 * Gets the index for the commit the library is at ready in the background, without waiting for a component to be asked
 	 * for, so it is there by the time one is. Resolves once it is built, or has failed; never rejects, since a failure is said
 	 * to whoever asks for a component, and tried again then.
@@ -255,8 +281,11 @@ export class ComponentTokens {
 		const [light, dark, asIs] = await this.deps.measure([
 			{ base: tagged.base, mode: 'light', files },
 			{ base: tagged.base, mode: 'dark', files },
-			{ base: plain.base, mode: 'light', files },
+			// The library as it is, in light: what the grid's pictures are of (P5).
+			{ base: plain.base, mode: 'light', files, pictures: true },
 		]);
+		// The pictures, each replacing its component's last; a component that did not draw keeps its last.
+		this.deps.pictures.keep(system.id, files, new Map(files.flatMap((f, i) => (asIs?.[i]?.picture ? [[f, asIs[i]?.picture as Buffer] as const] : []))));
 		// A file whose tagged drawing in light did not come back has nothing to say, rather than that it draws with no token.
 		return new Map(
 			files.map((f, i) => {

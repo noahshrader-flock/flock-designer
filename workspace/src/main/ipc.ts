@@ -45,6 +45,7 @@ import { StoryPreviews } from './services/storyPreviews';
 import { tokenEditsOf } from './services/tokenEdits';
 import { TokenBranches } from './services/tokenBranches';
 import { ComponentTokens, type Measure } from './services/componentTokens';
+import { ComponentPictures } from './services/componentPictures';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, listedAs, mergeRepositories, originOf, reachableRepositories } from './services/repositories';
@@ -160,7 +161,9 @@ export interface IpcContext {
 	 * Which tokens each component draws with (T6), and so what is got ready in the background: given for tests.
 	 * `warmAfterMs`: when to start getting the shown design system ready after the app opens; not at all when absent.
 	 */
-	componentTokens?: Pick<ComponentTokens, 'of' | 'warm'>;
+	componentTokens?: Pick<ComponentTokens, 'of' | 'warm' | 'pictures'>;
+	/** Where the pictures of the components are kept (P5): the app's own folder. */
+	componentPicturesRoot?: string;
 	warmAfterMs?: number;
 }
 
@@ -191,6 +194,7 @@ export const registerIpc = ({
 		throw new Error('Stories can be drawn only in the app.');
 	},
 	componentTokens: injectedComponentTokens,
+	componentPicturesRoot = join(tmpdir(), 'dsnr-component-pictures'),
 	warmAfterMs,
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
 	const openRepository = async (root: string): Promise<Checkout> => {
@@ -348,7 +352,10 @@ export const registerIpc = ({
 	};
 	const previews = new StoryPreviews({ system: shownSystem, folder: storyPreviewsRoot, server: prototypeServer });
 	// Which tokens a component draws with (T6): the window names a story file, and only a story file of the library is answered.
-	const componentTokens = injectedComponentTokens ?? new ComponentTokens({ system: shownSystem, previews, measure: measureStories });
+	const componentTokens =
+		injectedComponentTokens ??
+		new ComponentTokens({ system: shownSystem, previews, measure: measureStories, pictures: new ComponentPictures({ folder: componentPicturesRoot, server: prototypeServer }) });
+	ipcMain.handle(CHANNELS.componentPictures, guard(() => componentTokens.pictures()));
 	// The previews and the index are got ready in the background, so a component opened later is drawn at once: as the app
 	// opens, and whenever the library has been read (it may have moved). For a commit already ready it is nothing.
 	const warm = () => void componentTokens.warm();
