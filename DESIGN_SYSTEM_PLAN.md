@@ -377,7 +377,7 @@ below the criterion. **Not in T7:** a full contrast check of every pair in a sys
 **D, visible on each component** (Noah, 2026-10-10: yes). Once B can run axe on a page, it runs it over each component's
 first story in the drawing pass T6 already makes, at the product's or system's target, and a component's card and its
 panel say "N automated issues, M need a person" in the same words as review. Last, since it needs B and C and costs a
-second axe run per component; it is the "axe over the drawn components" that "Not in T7" above leaves out, now in.
+second axe run per component.
 **Staying true to WCAG, with nobody to remember** (Noah: "I don't want this drifting"). Each place a standard could drift
 has a test that fails when it does, so a change is seen when it happens, not found later:
 - **One declaration of the target:** the manifest. The app reads it and copies it nowhere. A product's own copies of it
