@@ -205,7 +205,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 				<Components hidden={hidden || tab !== 'components'} />
 			</TabsPrimitive.Content>
 			<TabsPrimitive.Content value="voice-and-tone" forceMount hidden={tab !== 'voice-and-tone'} data-tab="voice-and-tone" className="outline-none">
-				<VoiceAndTone />
+				<VoiceAndTone hidden={hidden || tab !== 'voice-and-tone'} />
 			</TabsPrimitive.Content>
 		</Tabs>
 	);

@@ -379,6 +379,37 @@ export interface TokenBranch {
 	pullRequest: { number: number; url: string; chromatic: string | null } | null;
 }
 
+/**
+ * The company's voice and tone (T9): one file in the design repository, as its default branch has it, and the change to
+ * it kept on a branch of DSNR's, if one is and it is not merged yet.
+ */
+export interface VoiceAndTone {
+	/** Where the file is in the design repository. */
+	path: string;
+	/** The default branch: the file is read from it, and a change is proposed to it. */
+	base: string;
+	/** The file there, and its blob's sha, which a save is made against; both null while there is no file. */
+	text: string | null;
+	sha: string | null;
+	branch: VoiceBranch | null;
+}
+
+/** Where a change to the voice and tone is kept: a branch DSNR made for it, each save one commit, until it is merged. */
+export interface VoiceBranch {
+	/** Always `dsnr/voice-…`: DSNR writes to no other. */
+	branch: string;
+	/** The text as last saved there, and how many saves the branch has. */
+	text: string;
+	saves: number;
+	/** The draft pull request it is proposed in, once it is. */
+	pullRequest: { number: number; url: string } | null;
+	/** GitHub's page for it, where a pull request can be opened by hand without the command line. */
+	compare: string;
+}
+
+/** A save: kept, or refused because the file changed on the default branch since the text was opened, shown as it is now. */
+export type VoiceSave = { state: 'saved'; voice: VoiceAndTone } | { state: 'changed'; voice: VoiceAndTone };
+
 /** Something in the library's token files that is not read, with where it is. */
 export interface TokenProblem {
 	file: string;
@@ -529,6 +560,17 @@ export interface WorkspaceApi {
 	proposeTokens(): Promise<Result<TokenBranch>>;
 	/** Forgets the branch, to start a new change: the branch and any pull request stay where they are. */
 	forgetTokenBranch(): Promise<Result<null>>;
+	/** The voice and tone file as GitHub has it now, and the change kept on a branch, if one is (T9). */
+	voiceAndTone(): Promise<Result<VoiceAndTone>>;
+	/**
+	 * Saves the text as one commit on its branch, made from the default branch on the first save; refused when the file
+	 * there is no longer the one at `against`, the sha the text was opened at (null: there was no file).
+	 */
+	saveVoiceAndTone(text: string, against: string | null): Promise<Result<VoiceSave>>;
+	/** Opens a draft pull request for the branch, with the person's own GitHub command line, or says the one already open. */
+	proposeVoiceAndTone(): Promise<Result<VoiceAndTone>>;
+	/** Forgets the branch, to start again from the default branch's file: the branch and any pull request stay. */
+	forgetVoiceBranch(): Promise<Result<null>>;
 	/** Where this person's clones go: the folder they chose, or the default. */
 	cloneFolder(): Promise<Result<string>>;
 	/** Asks for the clone folder with the system's folder picker, and keeps it. Null if the person cancels. */
@@ -994,6 +1036,10 @@ export const CHANNELS = {
 	saveTokens: 'workspace:saveTokens',
 	proposeTokens: 'workspace:proposeTokens',
 	forgetTokenBranch: 'workspace:forgetTokenBranch',
+	voiceAndTone: 'workspace:voiceAndTone',
+	saveVoiceAndTone: 'workspace:saveVoiceAndTone',
+	proposeVoiceAndTone: 'workspace:proposeVoiceAndTone',
+	forgetVoiceBranch: 'workspace:forgetVoiceBranch',
 	cloneFolder: 'workspace:cloneFolder',
 	chooseCloneFolder: 'workspace:chooseCloneFolder',
 	clonePlan: 'workspace:clonePlan',

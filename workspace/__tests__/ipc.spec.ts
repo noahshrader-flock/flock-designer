@@ -255,6 +255,18 @@ describe('the Design System tab', () => {
 		expect(await call(CHANNELS.forgetTokenBranch)).toEqual({ ok: true, value: null });
 	});
 
+	it('takes only text, and the sha of the file it was opened at, to save the voice and tone, asking GitHub nothing otherwise (T9)', async () => {
+		register({ voiceBranchFile: join(home, 'voice-branch.json') });
+		const asked = githubApi.mock.calls.length;
+		expect(await call(CHANNELS.saveVoiceAndTone, { text: 'x' }, null)).toMatchObject({ ok: false, error: expect.stringContaining('saved as text') });
+		expect(await call(CHANNELS.saveVoiceAndTone, 'x'.repeat(200_001), null)).toMatchObject({ ok: false, error: expect.stringContaining('200,000') });
+		expect(await call(CHANNELS.saveVoiceAndTone, 'x', '../../etc/passwd')).toMatchObject({ ok: false, error: expect.stringContaining('sha') });
+		expect(await call(CHANNELS.saveVoiceAndTone, 'x', 42)).toMatchObject({ ok: false, error: expect.stringContaining('sha') });
+		expect(githubApi.mock.calls.length).toBe(asked);
+		expect(await call(CHANNELS.proposeVoiceAndTone)).toMatchObject({ ok: false, error: expect.stringContaining('Save the change') });
+		expect(await call(CHANNELS.forgetVoiceBranch)).toEqual({ ok: true, value: null });
+	});
+
 	describe('connecting one (P4)', () => {
 		const commitAll = (d: string) => {
 			g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'add', '.');

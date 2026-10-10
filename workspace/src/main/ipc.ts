@@ -47,6 +47,7 @@ import { tokenEditsOf } from './services/tokenEdits';
 import { A11Y_COMMAND, fixRequest, productTarget, taskAccessibility } from './services/accessibilityBrief';
 import { type CheckPage, accessibilityOf } from './services/accessibilityCheck';
 import { TokenBranches } from './services/tokenBranches';
+import { VoiceAndToneFile } from './services/voiceAndTone';
 import { ComponentTokens, type Measure } from './services/componentTokens';
 import { ComponentPictures } from './services/componentPictures';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
@@ -158,6 +159,8 @@ export interface IpcContext {
 	/** Which branch each design system's change to its tokens is kept on (T4); and the GitHub tools it is proposed with. */
 	tokenBranchesFile?: string;
 	tokenBranchTools?: (root: string) => ShareTools;
+	/** Which branch a change to the voice and tone is kept on (T9). */
+	voiceBranchFile?: string;
 	/** How stories are drawn to read what they draw (T6): hidden windows, in the app. */
 	measureStories?: Measure;
 	/** How a page is checked for accessibility (T7): axe-core in a hidden window, in the app. */
@@ -197,6 +200,7 @@ export const registerIpc = ({
 	storyPreviewsRoot = join(tmpdir(), 'dsnr-story-previews'),
 	tokenBranchesFile = join(tmpdir(), 'dsnr-token-branches.json'),
 	tokenBranchTools = (root: string) => realShareTools(root),
+	voiceBranchFile = join(tmpdir(), 'dsnr-voice-branch.json'),
 	measureStories = async () => {
 		throw new Error('Stories can be drawn only in the app.');
 	},
@@ -393,6 +397,21 @@ export const registerIpc = ({
 	ipcMain.handle(CHANNELS.saveTokens, guard((edits: unknown) => tokenBranches.save(tokenEditsOf(edits))));
 	ipcMain.handle(CHANNELS.proposeTokens, guard(() => tokenBranches.propose()));
 	ipcMain.handle(CHANNELS.forgetTokenBranch, guard(() => (tokenBranches.forget(), null)));
+	// The voice and tone (T9): read and written through the app's session, proposed with the person's own command line.
+	const voice = new VoiceAndToneFile({ repo: DESIGN_REPO, app: github, person: personGitHub, file: voiceBranchFile });
+	// The longest a save takes: far beyond any real voice and tone, short of anything that could hurt.
+	const MAX_VOICE = 200_000;
+	ipcMain.handle(CHANNELS.voiceAndTone, guard(() => voice.current()));
+	ipcMain.handle(
+		CHANNELS.saveVoiceAndTone,
+		guard((text: unknown, against: unknown) => {
+			if (typeof text !== 'string' || text.length > MAX_VOICE) throw new Error('The voice and tone is saved as text, up to 200,000 characters.');
+			if (against !== null && (typeof against !== 'string' || !/^[0-9a-f]{40}$/.test(against))) throw new Error('A save is made against the file’s sha.');
+			return voice.save(text, against);
+		}),
+	);
+	ipcMain.handle(CHANNELS.proposeVoiceAndTone, guard(() => voice.propose()));
+	ipcMain.handle(CHANNELS.forgetVoiceBranch, guard(() => (voice.forget(), null)));
 	ipcMain.handle(CHANNELS.designSystems, guard(() => designSystems.read()));
 	ipcMain.handle(CHANNELS.selectDesignSystem, guard((id: string) => (designSystems.select(String(id)), null)));
 	// Removed with everything the app keeps of it: its pictures too (P5).
