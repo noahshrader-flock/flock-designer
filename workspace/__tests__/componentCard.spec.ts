@@ -16,9 +16,10 @@ const COMPONENT: CatalogComponent = {
 	source: '',
 };
 let current: Awaited<ReturnType<typeof render>> | null = null;
-const show = async (picture?: string) => {
-	current = await render(createElement(ComponentCard, { component: COMPONENT, picture, onOpen: vi.fn() }));
+const show = async (picture?: string, drawing = false) => {
+	current = await render(createElement(ComponentCard, { component: COMPONENT, picture, drawing, onOpen: vi.fn() }));
 };
+const waiting = () => document.querySelector('[data-picture-waiting]');
 afterEach(async () => {
 	if (current) await unmountAll(current.root);
 	current = null;
@@ -86,5 +87,26 @@ describe('a picture that does not load', () => {
 		await act(async () => void (document.querySelector('img') as HTMLImageElement).dispatchEvent(new Event('error')));
 		expect(document.querySelector('img')).toBeNull();
 		expect(document.querySelector('[data-picture-area]')?.className).toContain('bg-muted/40');
+	});
+});
+
+describe('a picture on its way', () => {
+	it('is a skeleton while a pass is drawing it, and while it loads, and goes once it has loaded', async () => {
+		await show(undefined, true);
+		expect(waiting()?.getAttribute('data-slot')).toBe('skeleton');
+		await unmountAll(current!.root);
+		await show('http://127.0.0.1:1/p/a.jpg');
+		expect(waiting()).not.toBeNull();
+		await act(async () => void (document.querySelector('img') as HTMLImageElement).dispatchEvent(new Event('load')));
+		expect(waiting()).toBeNull();
+	});
+
+	it('is not waited for when there is none and nothing is drawing, or it would not load: a still placeholder, never a skeleton that does not end', async () => {
+		await show();
+		expect(waiting()).toBeNull();
+		await unmountAll(current!.root);
+		await show('http://127.0.0.1:1/p/missing.jpg', true);
+		await act(async () => void (document.querySelector('img') as HTMLImageElement).dispatchEvent(new Event('error')));
+		expect(waiting()).toBeNull();
 	});
 });

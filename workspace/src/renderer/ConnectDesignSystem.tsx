@@ -8,6 +8,8 @@ import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
+import { Skeleton } from './ui/skeleton';
+import { SkeletonStatus } from './Skeletons';
 
 /**
  * Connecting a design system (P4 of the design system plan), centered in the window like the GitHub sign-in: one of the
@@ -74,7 +76,11 @@ export const ConnectDesignSystem = ({ onConnected, onCancel }: { onConnected: ()
 							))}
 						</>
 					) : repos === null ? (
-						<p className="text-muted-foreground text-sm">Loading your repositories…</p>
+						// The repository field, until the list it chooses from is read.
+						<SkeletonStatus label="Loading your repositories…" className="flex flex-col gap-2">
+							<Skeleton className="h-4 w-20" />
+							<Skeleton className="h-9 w-full" />
+						</SkeletonStatus>
 					) : (
 						<>
 							<Label htmlFor="connect-repo">Repository</Label>

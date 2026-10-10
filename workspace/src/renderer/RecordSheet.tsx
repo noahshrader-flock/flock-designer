@@ -3,7 +3,7 @@ import type { Project } from '../shared/contract';
 import { RichText } from './RichText';
 import { Alert, AlertDescription } from './ui/alert';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from './ui/sheet';
-import { Spinner } from './ui/spinner';
+import { LinesSkeleton, SkeletonStatus } from './Skeletons';
 
 /**
  * One file from a project's folder, read out in a panel from the side: the brief, the review notes, the
@@ -40,7 +40,11 @@ export const RecordSheet = ({ project, name, open, onClose }: { project: Project
 							<AlertDescription>{error}</AlertDescription>
 						</Alert>
 					)}
-					{text === null && !error && <Spinner />}
+					{text === null && !error && (
+						<SkeletonStatus label="Loading the file…">
+							<LinesSkeleton count={8} />
+						</SkeletonStatus>
+					)}
 					{text !== null &&
 						(!text ? (
 							<p className="text-muted-foreground text-sm">This file is empty.</p>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CatalogComponent, ComponentTokens, DesignToken } from '../shared/contract';
 import { plural } from '../shared/plural';
-import { Loading } from './Loading';
+import { LinesSkeleton, SkeletonStatus } from './Skeletons';
 import { useTokenChanges } from './tokenChanges';
 import { Swatch } from './TokenEditor';
 import { Sets, inOrder } from './TokensPanel';
@@ -49,8 +49,10 @@ export const ComponentPanel = ({ component, components }: { component: CatalogCo
 				<p className="text-muted-foreground text-sm">{component.subtitle ?? component.group}</p>
 			</div>
 			{answer === null || answer.state === 'building' ? (
-				<div className="flex flex-col gap-2">
-					<Loading>Finding the tokens {component.name} draws with…</Loading>
+				<div className="flex flex-col gap-3">
+					<SkeletonStatus label={`Finding the tokens ${component.name} draws with…`}>
+						<LinesSkeleton count={5} />
+					</SkeletonStatus>
 					<p className="text-muted-foreground text-xs">
 						The first time for each version of the library, every story is drawn with each token marked, which takes a few seconds.
 					</p>

@@ -72,3 +72,18 @@ describe('searching the projects', () => {
 		expect(document.body.textContent).toContain('No projects yet');
 	});
 });
+
+describe('while the projects are read', () => {
+	it('shows the screen with its toolbar, and the cards as skeletons, said in words for a screen reader', async () => {
+		const app = fakeApp({ listProjects: () => new Promise(() => undefined), lastCheckout: async () => ok(null), suggestCheckout: async () => ok(null), publishStatus: async () => ok({ state: 'unavailable' }) });
+		(window as unknown as { workspace: unknown }).workspace = app.api;
+		current = await render(createElement(Projects, { hidden: false }));
+		await settle();
+		expect([...document.querySelectorAll('h2')].some((h) => h.textContent === 'Projects')).toBe(true);
+		const status = document.querySelector('[role="status"][aria-busy="true"]') as HTMLElement;
+		expect(status.querySelector('.sr-only')?.textContent).toBe('Loading projects…');
+		expect(status.querySelectorAll('[data-slot="card"]').length).toBeGreaterThan(0);
+		// Nothing said about the list before it is read: not that there are none.
+		expect(document.body.textContent).not.toContain('No projects yet');
+	});
+});

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Checkout, CheckoutSuggestion, Project, ProjectIteration } from '../shared/contract';
-import { LoadingScreen } from './Loading';
 import { CardGrid } from './CardGrid';
 import { NewWork, type Created } from './NewWork';
 import { Page } from './Page';
@@ -15,6 +14,7 @@ import { type ProjectOrder, matchesProject, sortProjects } from '../shared/proje
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { SearchField } from './SearchField';
+import { CardGridSkeleton, SkeletonStatus } from './Skeletons';
 
 /**
  * Reviewer mode: every project in the design repository, read through the API.
@@ -98,10 +98,6 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 		);
 	}
 
-	if (!projects) {
-		return <LoadingScreen>Loading projects…</LoadingScreen>;
-	}
-
 	if (selected) {
 		return (
 			<Review
@@ -123,7 +119,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 	}
 
 	const matching = sortProjects(
-		projects.filter((p) => matchesProject(p, search)),
+		(projects ?? []).filter((p) => matchesProject(p, search)),
 		order,
 	);
 
@@ -132,7 +128,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 			{/* Stays put while the list scrolls under it, as it does on a prototype's screen. */}
 			<Toolbar className="sticky top-0 z-40">
 				<h2 className="text-sm font-semibold">Projects</h2>
-				{projects.length > 0 && (
+				{projects !== null && projects.length > 0 && (
 					<div className="flex items-center gap-2">
 						<SearchField label="Search projects" value={search} onChange={setSearch} className="w-64" />
 						<ProjectSort order={order} onChange={setOrder} />
@@ -200,13 +196,20 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 					}}
 				/>
 
-				{projects.length === 0 && (
+				{/* The cards' shapes until the projects are read, under the screen's own toolbar. */}
+				{projects === null && (
+					<SkeletonStatus label="Loading projects…">
+						<CardGridSkeleton />
+					</SkeletonStatus>
+				)}
+
+				{projects?.length === 0 && (
 					<p className="text-muted-foreground text-sm">
 						No projects yet. A project appears here once its folder exists in the design repository.
 					</p>
 				)}
 
-				{matching.length === 0 && projects.length > 0 && (
+				{matching.length === 0 && projects !== null && projects.length > 0 && (
 					<p className="text-muted-foreground text-sm">
 						No project matches “{search.trim()}”.{' '}
 						<button type="button" className="text-primary underline underline-offset-4" onClick={() => setSearch('')}>

@@ -15,17 +15,18 @@ import { CardGrid } from './CardGrid';
 import { ComponentCard } from './ComponentCard';
 import { ComponentPanel } from './ComponentPanel';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
-import { LoadingScreen } from './Loading';
 import { MoreMenu } from './MoreMenu';
 import { Page } from './Page';
 import { TOKENS_PANEL } from './panelWidth';
 import { ResizablePanel } from './ResizablePanel';
 import { SearchSelect } from './SearchSelect';
+import { CardGridSkeleton, RowsSkeleton, SkeletonStatus } from './Skeletons';
 import { SyncButton } from './SyncButton';
 import { TokensPanel } from './TokensPanel';
 import { useComponentPictures } from './useComponentPictures';
 import { useTokenBranch } from './useTokenBranch';
 import { TokenChangesProvider, useTokenChangesFor } from './tokenChanges';
+import { Skeleton } from './ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
@@ -290,7 +291,16 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	}
 	// Connecting another, with a way back to the one shown.
 	if (adding) return <ConnectDesignSystem onConnected={() => void showAnother()} onCancel={() => setAdding(false)} />;
-	if (catalog === null) return <LoadingScreen>Reading the component library…</LoadingScreen>;
+	// The screen's shape until the library is read: its bar, and the components as the list or grid last chosen.
+	if (catalog === null)
+		return (
+			<SkeletonStatus label="Reading the component library…">
+				<Toolbar className="sticky top-0 z-40">
+					<Skeleton className="h-5 w-40" />
+				</Toolbar>
+				<Page>{componentsView === 'grid' ? <CardGridSkeleton picture /> : <RowsSkeleton />}</Page>
+			</SkeletonStatus>
+		);
 	if (catalog.state === 'none') return <ConnectDesignSystem onConnected={() => void showAnother()} />;
 	if (catalog.state === 'lost') {
 		return (
@@ -397,7 +407,13 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 										{componentsView === 'grid' ? (
 											<CardGrid>
 												{rows.map((c) => (
-													<ComponentCard key={c.id} component={c} picture={pictures[c.id]} onOpen={() => openComponent(c.id)} />
+													<ComponentCard
+														key={c.id}
+														component={c}
+														picture={pictures.pictures[c.id]}
+														drawing={pictures.drawing}
+														onOpen={() => openComponent(c.id)}
+													/>
 												))}
 											</CardGrid>
 										) : (

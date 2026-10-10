@@ -4,11 +4,13 @@ import { PREVIEW_HEIGHT, previewAddress } from '../shared/catalog';
 import type { CatalogComponent, StoryPreview, TokenEdit } from '../shared/contract';
 import { BackButton } from './BackButton';
 import { Loading } from './Loading';
+import { SkeletonStatus } from './Skeletons';
 import { MoreMenu } from './MoreMenu';
 import { Page } from './Page';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
+import { Skeleton } from './ui/skeleton';
 import { DropdownMenuItem } from './ui/dropdown-menu';
 
 /** A link out, as a menu item. The window opens nothing itself: the app hands an https address to the system's browser. */
@@ -117,9 +119,10 @@ export const ComponentPage = ({
 			</div>
 
 			{preview.state === 'building' ? (
-				<div className="flex flex-col items-center gap-4 py-16 text-center">
-					<Loading>Building previews…</Loading>
-				</div>
+				// Where the stories will be drawn, until they are.
+				<SkeletonStatus label="Building previews…">
+					<Skeleton className="h-80 w-full rounded-xl" />
+				</SkeletonStatus>
 			) : preview.state === 'ready' ? (
 				<>
 					{refused && (

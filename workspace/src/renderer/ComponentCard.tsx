@@ -3,24 +3,39 @@ import type { CatalogComponent } from '../shared/contract';
 import { CardCover } from './CardCover';
 import { PRESSABLE_CARD, pressableCard } from './pressableCard';
 import { Card, CardFooter, CardTitle } from './ui/card';
+import { Skeleton } from './ui/skeleton';
 
 /**
  * A component in the grid view (P5 of the design system plan, decision 31): the Projects card, its cover a picture of the
  * component's first story, filling the cover edge to edge (it is taken in the cover's own shape, around the component),
  * its footer the component's name and its group. The cover is the same size with or without a picture, so nothing moves
- * when one arrives: a soft placeholder until there is one, and the picture fades in once it has loaded. The picture is
+ * when one arrives: a skeleton while one is on its way (`drawing`, or loading), a still soft placeholder for a component
+ * with none, and the picture fades in once it has loaded. The picture is
  * decorative: the name is beside it. The whole card opens the component.
  */
-export const ComponentCard = ({ component, picture, onOpen }: { component: CatalogComponent; picture: string | undefined; onOpen: () => void }) => {
+export const ComponentCard = ({
+	component,
+	picture,
+	drawing = false,
+	onOpen,
+}: {
+	component: CatalogComponent;
+	picture: string | undefined;
+	drawing?: boolean;
+	onOpen: () => void;
+}) => {
 	const [loaded, setLoaded] = useState<string | null>(null);
 	// A picture that would not load is no picture: the placeholder, never a white block.
 	const [failed, setFailed] = useState<string | null>(null);
 	const shown = picture !== undefined && picture !== failed ? picture : undefined;
+	// On its way: loading, or not yet taken by a pass that is drawing. One that failed to load is not waited for.
+	const waiting = shown ? loaded !== shown : drawing && picture === undefined;
 	return (
 		<Card data-component-card={component.id} className={`pt-0 ${PRESSABLE_CARD}`} {...pressableCard(`Open ${component.name}`, onOpen)}>
-			{/* The picture is the cover: edge to edge, with a soft gray behind it until it has loaded. */}
+			{/* The picture is the cover: edge to edge, with a skeleton behind it until it has loaded. */}
 			<CardCover bleed>
 				<div data-picture-area className={`absolute inset-0 ${shown && loaded === shown ? 'bg-white' : 'bg-muted/40'}`}>
+					{waiting && <Skeleton data-picture-waiting className="absolute inset-0 rounded-none" />}
 					{shown && (
 						<img
 							src={shown}

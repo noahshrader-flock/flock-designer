@@ -34,7 +34,18 @@ const TOKENS: DesignTokens = {
 	source: 'theme files',
 	looked: [],
 	problems: [],
-	tokens: [{ path: 'tone.pineGreen.50', kind: 'color', category: 'Color', group: 'Tones', set: 'pineGreen', name: '50', value: '#108062', source: { file: 'src/colors/tones/pineGreen.ts', line: 3 } }],
+	tokens: [
+		{
+			path: 'tone.pineGreen.50',
+			kind: 'color',
+			category: 'Color',
+			group: 'Tones',
+			set: 'pineGreen',
+			name: '50',
+			value: '#108062',
+			source: { file: 'src/colors/tones/pineGreen.ts', line: 3 },
+		},
+	],
 };
 
 const ready = (update: CatalogUpdate = 'unchanged', components = COMPONENTS): Catalog => ({
@@ -48,14 +59,30 @@ const ready = (update: CatalogUpdate = 'unchanged', components = COMPONENTS): Ca
 });
 
 /** The design systems connected (P4): FUI, by its Storybook's brand, and a second one. */
-const FUI_SYSTEM = { id: 'flocksafety/flock-react-component-lib', name: 'Flock React Component Lib', repository: 'flocksafety/flock-react-component-lib', root: '/h/GitHub/flock-react-component-lib', folder: '', branch: 'develop' };
+const FUI_SYSTEM = {
+	id: 'flocksafety/flock-react-component-lib',
+	name: 'Flock React Component Lib',
+	repository: 'flocksafety/flock-react-component-lib',
+	root: '/h/GitHub/flock-react-component-lib',
+	folder: '',
+	branch: 'develop',
+};
 const ACME = { id: 'acme/acme:packages/ui', name: 'Acme UI', repository: 'acme/acme', root: '/h/GitHub/acme', folder: 'packages/ui', branch: 'main' };
 const SYSTEMS = { systems: [FUI_SYSTEM, ACME], current: FUI_SYSTEM.id };
 const switcher = (name = FUI_SYSTEM.name) => button(`Design system ${name}: switch design system`);
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
-const open = async (answers: (refresh: boolean) => ReturnType<typeof ok<Catalog>> | ReturnType<typeof fail>, hidden = false, more: Record<string, (...a: never[]) => unknown> = {}) => {
-	const app = fakeApp({ designSystemCatalog: async (refresh: boolean) => answers(refresh), designSystems: async () => ok(SYSTEMS), storyPreview: async () => ok({ state: 'ready', base: 'http://127.0.0.1:1/p/' }), ...more });
+const open = async (
+	answers: (refresh: boolean) => ReturnType<typeof ok<Catalog>> | ReturnType<typeof fail>,
+	hidden = false,
+	more: Record<string, (...a: never[]) => unknown> = {},
+) => {
+	const app = fakeApp({
+		designSystemCatalog: async (refresh: boolean) => answers(refresh),
+		designSystems: async () => ok(SYSTEMS),
+		storyPreview: async () => ok({ state: 'ready', base: 'http://127.0.0.1:1/p/' }),
+		...more,
+	});
 	(window as unknown as { workspace: unknown }).workspace = app.api;
 	current = await render(createElement(DesignSystem, { hidden }));
 	return app;
@@ -129,7 +156,12 @@ describe('finding a component', () => {
 		await open(() => ok(ready()));
 		await press(finder());
 		await settle();
-		await act(async () => void [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === 'PopoverHeader')!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+		await act(
+			async () =>
+				void [...document.querySelectorAll('[cmdk-item]')]
+					.find((i) => i.textContent === 'PopoverHeader')!
+					.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+		);
 		await settle();
 		expect(document.querySelector('h3')?.textContent).toBe('PopoverHeader');
 		// The finder is the list's, so it goes with the list and comes back with it.
@@ -138,12 +170,22 @@ describe('finding a component', () => {
 
 	it('shows a name two components share with its group in the finder, and opens the one chosen', async () => {
 		await open(() =>
-			ok(ready('unchanged', [component('Overview', { id: 'a/Overview.stories.tsx', group: 'Buttons' }), component('Overview', { id: 'b/Overview.stories.tsx', group: 'Surfaces', subtitle: 'The surfaces one.' })])),
+			ok(
+				ready('unchanged', [
+					component('Overview', { id: 'a/Overview.stories.tsx', group: 'Buttons' }),
+					component('Overview', { id: 'b/Overview.stories.tsx', group: 'Surfaces', subtitle: 'The surfaces one.' }),
+				]),
+			),
 		);
 		await press(finder());
 		await settle();
 		expect(choices()).toEqual(['Buttons / Overview', 'Surfaces / Overview']);
-		await act(async () => void [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === 'Surfaces / Overview')!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+		await act(
+			async () =>
+				void [...document.querySelectorAll('[cmdk-item]')]
+					.find((i) => i.textContent === 'Surfaces / Overview')!
+					.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+		);
 		await settle();
 		expect(text()).toContain('The surfaces one.');
 	});
@@ -162,7 +204,10 @@ describe('finding a component', () => {
 		await open(() => ok(ready()));
 		expect(document.body.textContent).not.toContain('couldn’t be read');
 		await unmountAll(current!.root);
-		const problems = [{ file: 'src/colors/tones/neutral.ts', line: 10, reason: 'one' }, { file: 'src/colors/tones/neutral.ts', line: 15, reason: 'two' }];
+		const problems = [
+			{ file: 'src/colors/tones/neutral.ts', line: 10, reason: 'one' },
+			{ file: 'src/colors/tones/neutral.ts', line: 15, reason: 'two' },
+		];
 		await open(() => ok({ ...ready(), tokens: { ...TOKENS, problems } }));
 		const alert = document.querySelector('[role="alert"]') as HTMLElement;
 		expect(alert.querySelector('[data-slot="alert-title"]')?.textContent).toBe('2 values couldn’t be read');
@@ -239,8 +284,12 @@ describe('the design systems connected (P4)', () => {
 });
 
 /** The side panel's two views, as a button group in the toolbar: its buttons by name. */
-const panelView = (name: 'Tokens' | 'Component') => [...document.querySelectorAll<HTMLElement>('[aria-label="Side panel"] [data-slot="toggle-group-item"]')].find((b) => b.textContent === name) as HTMLElement;
-const shownView = () => [...document.querySelectorAll<HTMLElement>('[aria-label="Side panel"] [data-slot="toggle-group-item"]')].find((b) => b.getAttribute('aria-checked') === 'true')?.textContent;
+const panelView = (name: 'Tokens' | 'Component') =>
+	[...document.querySelectorAll<HTMLElement>('[aria-label="Side panel"] [data-slot="toggle-group-item"]')].find((b) => b.textContent === name) as HTMLElement;
+const shownView = () =>
+	[...document.querySelectorAll<HTMLElement>('[aria-label="Side panel"] [data-slot="toggle-group-item"]')].find(
+		(b) => b.getAttribute('aria-checked') === 'true',
+	)?.textContent;
 const tokensShown = () => !document.querySelector('[data-panel="tokens"]')!.hasAttribute('hidden');
 const componentPanel = () => document.querySelector<HTMLElement>('[data-panel="component"]');
 
@@ -364,7 +413,16 @@ describe('the side panel’s views', () => {
 
 	it('go back to Tokens when a sync removes the open component', async () => {
 		let n = 0;
-		await open(() => ok(n++ === 0 ? ready() : ready('updated', COMPONENTS.filter((c) => c.name !== 'FSCard'))));
+		await open(() =>
+			ok(
+				n++ === 0
+					? ready()
+					: ready(
+							'updated',
+							COMPONENTS.filter((c) => c.name !== 'FSCard'),
+						),
+			),
+		);
 		await press(row('FSCard').querySelector('button')!);
 		await press(button('Sync'));
 		await settle();
@@ -489,7 +547,16 @@ describe('opening a component', () => {
 
 	it('closes a component that a sync removed, back to the list', async () => {
 		let n = 0;
-		await open(() => ok(n++ === 0 ? ready() : ready('updated', COMPONENTS.filter((c) => c.name !== 'FSCard'))));
+		await open(() =>
+			ok(
+				n++ === 0
+					? ready()
+					: ready(
+							'updated',
+							COMPONENTS.filter((c) => c.name !== 'FSCard'),
+						),
+			),
+		);
 		await press(row('FSCard').querySelector('button')!);
 		await press(button('Sync'));
 		await settle();
@@ -568,7 +635,11 @@ describe('when there is no list', () => {
 		const app = fakeApp({ designSystemCatalog: () => new Promise(() => undefined) });
 		(window as unknown as { workspace: unknown }).workspace = app.api;
 		current = await render(createElement(DesignSystem, { hidden: false }));
-		expect(text()).toContain('Reading the component library…');
+		// In the screen's own shape, as a skeleton, with what it is doing said in words for a screen reader.
+		const status = document.querySelector('[role="status"][aria-busy="true"]') as HTMLElement;
+		expect(status.querySelector('.sr-only')?.textContent).toBe('Reading the component library…');
+		expect(status.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(1);
+		expect(status.querySelector('[data-slot="spinner"]')).toBeNull();
 	});
 
 	it('shows the Connect screen when none is connected, and the list once one is', async () => {
@@ -577,7 +648,8 @@ describe('when there is no list', () => {
 			designSystemCatalog: async () => ok(connected ? ready() : { state: 'none' }),
 			designSystems: async () => ok(connected ? SYSTEMS : { systems: [], current: null }),
 			listRepositories: async () => ok({ repositories: [{ name: FUI_SYSTEM.repository, root: null }], reach: 'account' }),
-			clonePlan: async () => ok({ repository: FUI_SYSTEM.repository, place: { state: 'cloned', path: FUI_SYSTEM.root }, where: '~/GitHub/flock-react-component-lib', design: null }),
+			clonePlan: async () =>
+				ok({ repository: FUI_SYSTEM.repository, place: { state: 'cloned', path: FUI_SYSTEM.root }, where: '~/GitHub/flock-react-component-lib', design: null }),
 			connectDesignSystem: async () => {
 				connected = true;
 				return ok({ state: 'connected', id: FUI_SYSTEM.id });
@@ -590,7 +662,12 @@ describe('when there is no list', () => {
 		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Cancel')).toBe(false);
 		await press(button('Choose a repository'));
 		await settle();
-		await act(async () => void [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === FUI_SYSTEM.repository)!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+		await act(
+			async () =>
+				void [...document.querySelectorAll('[cmdk-item]')]
+					.find((i) => i.textContent === FUI_SYSTEM.repository)!
+					.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+		);
 		await settle();
 		await press(button('Connect'));
 		await settle();
