@@ -14,6 +14,9 @@ export const ACCESSIBILITY_STANDARD = 'standards/universal/accessibility.md';
 export const MANIFEST_FILE = 'manifest.md';
 export const LIBRARY_MANIFEST = `.dsnr/${MANIFEST_FILE}`;
 
+/** The id a product's setup gives its own accessibility check (`.dsnr/workspace.json`), run as codebase work goes. */
+export const A11Y_COMMAND = 'a11y';
+
 /** The parts of the standard a task carries: the rules, what to check and record, the checklist, and how to report. */
 export const BRIEF_SECTIONS = ['Universal rules', 'What must be checked and recorded', 'The manual checklist', 'Reporting rules'];
 
@@ -50,16 +53,19 @@ const issueLine = (i: AccessibilityIssue): string =>
 
 /**
  * The accessibility section of a task. `standard` is the standard's text; `target` the product's; `findings`, when the
- * work starts from a prototype that was checked (moving it to code), what that check left open, so none is dropped.
+ * work starts from a prototype that was checked (moving it to code), what that check left open, so none is dropped;
+ * `check`, for codebase work, the product's own accessibility command (its `a11y`), to run as the work goes.
  */
 export const accessibilityBrief = ({
 	standard,
 	target,
 	findings,
+	check = null,
 }: {
 	standard: string;
 	target: DeclaredTarget;
 	findings?: { violations: AccessibilityIssue[]; incomplete: AccessibilityIssue[] } | null;
+	check?: string | null;
 }): string => {
 	const tags = target.tags.map((t) => `\`${t}\``).join(', ');
 	const left = notAutomated(target.target);
@@ -72,6 +78,7 @@ export const accessibilityBrief = ({
 			? `This product's target, from ${target.source}: **${describeTarget(target.target)}**, checked with the axe tags ${tags}. Do not state a conformance level yourself: report what you checked and what you found.`
 			: `${target.why}, so it declares no target. Build to **${describeTarget(target.target)}** (axe tags ${tags}) as a default, and say in your summary that there was no declared target: what you checked is informational, not a claim.`,
 		...(left.length ? ['', `No automated check covers ${left.join(' or ')}: check those criteria by hand, or report them as not run.`] : []),
+		...(check ? ['', `This product's own accessibility check is \`${check}\`: run it as the work goes, not only at the end. Handoff runs it again.`] : []),
 		...(findings && (findings.violations.length || findings.incomplete.length)
 			? [
 					'',
@@ -107,7 +114,8 @@ export const taskAccessibility = async (
 	readStandard: (path: string) => Promise<string>,
 	target: DeclaredTarget,
 	findings?: { violations: AccessibilityIssue[]; incomplete: AccessibilityIssue[] } | null,
-): Promise<string> => accessibilityBrief({ standard: await readStandard(ACCESSIBILITY_STANDARD), target, findings });
+	check: string | null = null,
+): Promise<string> => accessibilityBrief({ standard: await readStandard(ACCESSIBILITY_STANDARD), target, findings, check });
 
 /**
  * What a prototype's agent is asked when its page's check found issues (T7, part B): to fix those, and nothing else, as

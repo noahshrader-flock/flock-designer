@@ -44,7 +44,7 @@ import { DesignSystemsMemory } from './services/designSystems';
 import { ProfileNames } from './services/profileNames';
 import { StoryPreviews } from './services/storyPreviews';
 import { tokenEditsOf } from './services/tokenEdits';
-import { fixRequest, productTarget, taskAccessibility } from './services/accessibilityBrief';
+import { A11Y_COMMAND, fixRequest, productTarget, taskAccessibility } from './services/accessibilityBrief';
 import { type CheckPage, accessibilityOf } from './services/accessibilityCheck';
 import { TokenBranches } from './services/tokenBranches';
 import { ComponentTokens, type Measure } from './services/componentTokens';
@@ -643,7 +643,9 @@ export const registerIpc = ({
 	/** The accessibility section of a codebase task (T7): the product's target from its own manifest, on the branch it is on. */
 	const codebaseAccessibility = (canonical: string, findings?: Parameters<typeof taskAccessibility>[2]): Promise<string> => {
 		const descriptor = readDescriptor(canonical);
-		return taskAccessibility(readSkillText, productTarget(join(canonical, descriptor.contextDir), descriptor.product), findings);
+		// The product's own check, where its setup declares one (Coke's `a11y`), run as the work goes; its gate runs it at handoff.
+		const check = commandLine(descriptor.commands, A11Y_COMMAND, '');
+		return taskAccessibility(readSkillText, productTarget(join(canonical, descriptor.contextDir), descriptor.product), findings, check);
 	};
 
 	/**

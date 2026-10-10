@@ -1549,6 +1549,15 @@ describe('one agent, one piece of work', () => {
 		expect(task).toContain('## Accessibility');
 		expect(task).toContain('**WCAG 2.0 Level A**');
 		expect(task).toContain('### Reporting rules');
+		// No a11y command declared: none named.
+		expect(task).not.toContain("own accessibility check is");
+	});
+
+	it('names the product’s own accessibility command, where its setup declares one, to run as the work goes (T7)', async () => {
+		makeProductFiles(product, [{ id: 'a11y', label: 'Accessibility', argv: ['npm', 'run', 'a11y'] }]);
+		await call(CHANNELS.useCheckout, product);
+		await call(CHANNELS.startAgent, product, 'demo', 'do it');
+		expect(agentStart.mock.calls.at(-1)?.[2]).toContain("This product's own accessibility check is `npm run a11y`: run it as the work goes, not only at the end. Handoff runs it again.");
 	});
 
 	it('puts the shared rules for codebase work, and the light check, in a run on the codebase branch only', async () => {
