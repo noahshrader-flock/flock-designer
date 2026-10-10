@@ -17,6 +17,8 @@ import type { PrototypeServer } from './prototypeServer';
 
 const RECORD = 'pictures.json';
 const hash = (s: string | Buffer, n: number) => createHash('sha256').update(s).digest('hex').slice(0, n);
+/** What a design system's pictures are served as, on the local server. */
+const servedAs = (system: string) => `component-pictures-${hash(system, 12)}`;
 
 export interface ComponentPicturesDeps {
 	/** The app's own folder for pictures. */
@@ -59,8 +61,14 @@ export class ComponentPictures {
 	async of(system: string): Promise<Record<string, string>> {
 		const record = this.record(system);
 		if (Object.keys(record).length === 0) return {};
-		const base = await this.deps.server.serveFolder(`component-pictures-${hash(system, 12)}`, this.folderOf(system));
+		const base = await this.deps.server.serveFolder(servedAs(system), this.folderOf(system));
 		return Object.fromEntries(Object.entries(record).map(([file, name]) => [file, `${base}${name}`]));
+	}
+
+	/** Removes a design system's pictures, when it is removed from the app: nothing of it is left behind. */
+	forget(system: string): void {
+		this.deps.server.stopServing(servedAs(system));
+		rmSync(this.folderOf(system), { recursive: true, force: true });
 	}
 
 	/** Which picture is whose; none when it is missing or cannot be read. */

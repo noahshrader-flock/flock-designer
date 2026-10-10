@@ -167,6 +167,7 @@ beforeEach(async () => {
 		// The person's own GitHub (its command line): never the real one here.
 		personGitHub: { api: async (path: string) => (path === '/user' ? { login: personLogin } : path.startsWith('/user/repos') ? personRepos.map((full_name) => ({ full_name })) : []) },
 		storyPreviewsRoot: join(home, 'story-previews'),
+		componentPicturesRoot: join(home, 'component-pictures'),
 		// What is got ready in the background is only counted here, never drawn.
 		componentTokens: { of: ask, warm, pictures: async () => ({ drawing: false, pictures: {} }) } as never,
 		...more,
@@ -212,6 +213,15 @@ describe('the Design System tab', () => {
 			expect(await call(CHANNELS.designSystemCatalog, false)).toMatchObject({ ok: true, value: { state: 'ready' } });
 			expect(warm).toHaveBeenCalledTimes(2);
 		});
+	});
+
+	it('removes a design system’s pictures with it, so nothing of it is left on this computer', async () => {
+		const { ComponentPictures } = await import('../src/main/services/componentPictures');
+		const store = new ComponentPictures({ folder: join(home, 'component-pictures'), server: prototypeServer });
+		store.keep('acme/ui', ['a.stories.tsx'], new Map([['a.stories.tsx', Buffer.from('jpeg')]]));
+		expect(existsSync(store.folderOf('acme/ui'))).toBe(true);
+		expect(await call(CHANNELS.removeDesignSystem, 'acme/ui')).toEqual({ ok: true, value: null });
+		expect(existsSync(store.folderOf('acme/ui'))).toBe(false);
 	});
 
 	it('gives the pictures of the components, for the grid', async () => {

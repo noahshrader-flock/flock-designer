@@ -352,9 +352,8 @@ export const registerIpc = ({
 	};
 	const previews = new StoryPreviews({ system: shownSystem, folder: storyPreviewsRoot, server: prototypeServer });
 	// Which tokens a component draws with (T6): the window names a story file, and only a story file of the library is answered.
-	const componentTokens =
-		injectedComponentTokens ??
-		new ComponentTokens({ system: shownSystem, previews, measure: measureStories, pictures: new ComponentPictures({ folder: componentPicturesRoot, server: prototypeServer }) });
+	const componentPictures = new ComponentPictures({ folder: componentPicturesRoot, server: prototypeServer });
+	const componentTokens = injectedComponentTokens ?? new ComponentTokens({ system: shownSystem, previews, measure: measureStories, pictures: componentPictures });
 	ipcMain.handle(CHANNELS.componentPictures, guard(() => componentTokens.pictures()));
 	// The previews and the index are got ready in the background, so a component opened later is drawn at once: as the app
 	// opens, and whenever the library has been read (it may have moved). For a commit already ready it is nothing.
@@ -384,7 +383,15 @@ export const registerIpc = ({
 	ipcMain.handle(CHANNELS.forgetTokenBranch, guard(() => (tokenBranches.forget(), null)));
 	ipcMain.handle(CHANNELS.designSystems, guard(() => designSystems.read()));
 	ipcMain.handle(CHANNELS.selectDesignSystem, guard((id: string) => (designSystems.select(String(id)), null)));
-	ipcMain.handle(CHANNELS.removeDesignSystem, guard((id: string) => (designSystems.remove(String(id)), null)));
+	// Removed with everything the app keeps of it: its pictures too (P5).
+	ipcMain.handle(
+		CHANNELS.removeDesignSystem,
+		guard((id: string) => {
+			designSystems.remove(String(id));
+			componentPictures.forget(String(id));
+			return null;
+		}),
+	);
 	// Chosen with the system's picker, here: the window never names a folder to put files in.
 	ipcMain.handle(
 		CHANNELS.chooseCloneFolder,

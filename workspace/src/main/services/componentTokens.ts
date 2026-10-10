@@ -274,23 +274,29 @@ export class ComponentTokens {
 		// The components the tab lists, so a token page is never said to share a token.
 		const files = listedComponents(catalog, read).map((c) => c.id);
 		const tags = tagsFor(tokens);
-		const [plain, tagged] = [await this.deps.previews.preview(), await this.deps.previews.tagged(tags.edits)];
+		const plain = await this.deps.previews.preview();
 		if (plain.state !== 'ready')
 			throw new Error(plain.state === 'failed' ? plain.error : 'The previews could not be built, so the components could not be drawn.');
-		if (tagged.state !== 'ready') throw new Error(tagged.state === 'failed' ? tagged.error : 'The previews could not be built with the tags.');
-		const [light, dark, asIs] = await this.deps.measure([
-			{ base: tagged.base, mode: 'light', files },
-			{ base: tagged.base, mode: 'dark', files },
-			// The library as it is, in light: what the grid's pictures are of (P5).
-			{ base: plain.base, mode: 'light', files, pictures: true },
-		]);
+		// With no token the library can be tagged by, there is nothing to tag: its stories are still drawn, as they are.
+		const tagged = tags.edits.length === 0 ? null : await this.deps.previews.tagged(tags.edits);
+		const taggedBase = tagged?.state === 'ready' ? tagged.base : null;
+		// The library as it is, in light, is always drawn: it is what the grid's pictures are of (P5), whatever the tags do.
+		const asIsRun = { base: plain.base, mode: 'light' as const, files, pictures: true };
+		const drawn = await this.deps.measure(
+			taggedBase === null ? [asIsRun] : [{ base: taggedBase, mode: 'light', files }, { base: taggedBase, mode: 'dark', files }, asIsRun],
+		);
+		const [light, dark, asIs] = taggedBase === null ? [undefined, undefined, drawn[0]] : drawn;
 		// The pictures, each replacing its component's last; a component that did not draw keeps its last.
 		this.deps.pictures.keep(system.id, files, new Map(files.flatMap((f, i) => (asIs?.[i]?.picture ? [[f, asIs[i]?.picture as Buffer] as const] : []))));
-		// A file whose tagged drawing in light did not come back has nothing to say, rather than that it draws with no token.
+		// Tags that would not build leave the pictures taken, and say why which tokens each uses cannot be said.
+		if (tagged !== null && tagged.state !== 'ready')
+			throw new Error(tagged.state === 'failed' ? tagged.error : 'The previews could not be built with the tags.');
+		// A file whose drawing did not come back has nothing to say, rather than that it draws with no token. With no tags,
+		// what it draws as it is is all it sets itself.
 		return new Map(
 			files.map((f, i) => {
-				const drawn = light?.[i];
-				return [f, drawn ? decode({ light: drawn, dark: dark?.[i] ?? undefined }, asIs?.[i] ?? undefined, tags, tokens) : null];
+				const read = tagged === null ? asIs?.[i] : light?.[i];
+				return [f, read ? decode({ light: read, dark: dark?.[i] ?? undefined }, asIs?.[i] ?? undefined, tags, tokens) : null];
 			}),
 		);
 	}

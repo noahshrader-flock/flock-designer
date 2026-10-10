@@ -301,6 +301,46 @@ describe('the index', () => {
 		expect(await index({ system: () => null }).pictures()).toEqual({ drawing: false, pictures: {} });
 	});
 
+	it('still draws and pictures a library with no tokens it can tag, as it is, once, and says it draws with none', async () => {
+		// The theme files hold no tone and no palette, so nothing can be tagged: a Storybook library with no tokens read.
+		g(clone, 'rm', '-q', 'src/colors/tones/brand.ts', 'src/colors/theme/light.ts');
+		g(clone, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'no tokens');
+		g(clone, 'update-ref', 'refs/remotes/origin/develop', 'HEAD');
+		const shot = Buffer.from('jpeg');
+		const i = index({
+			measure: async (runs) => (
+				asked.push(runs),
+				runs.map((run) => run.files.map(() => ({ ...drawn({ 'rgb(107, 114, 128)': 2 }), ...(run.pictures ? { picture: shot } : {}) })))
+			),
+		});
+		await i.warm();
+		expect(builds).toHaveLength(0);
+		// With no tokens read, the library's own token page is a component like the others (decision 22), and is drawn too.
+		// In the catalog's order, by group: Buttons, Design Tokens, Inputs.
+		const files = ['src/components/A/A.stories.tsx', 'src/uxDocs/Palette.stories.tsx', 'src/components/B/B.stories.tsx'];
+		expect(asked).toEqual([[{ base: 'http://127.0.0.1:1/plain/', mode: 'light', files, pictures: true }]]);
+		expect(kept[0]?.taken.size).toBe(3);
+		expect(await i.of('src/components/A/A.stories.tsx')).toEqual({
+			state: 'ready',
+			uses: [],
+			sharedWith: {},
+			notTokens: [{ kind: 'color', value: 'rgb(107, 114, 128)', uses: 2 }],
+			derived: 0,
+		});
+	});
+
+	it('keeps the pictures when the tagged build fails, and says why which tokens each uses cannot be said', async () => {
+		const shot = Buffer.from('jpeg');
+		const i = index({
+			previews: { ...previews, tagged: async () => ({ state: 'failed' as const, error: 'tags did not build' }) },
+			measure: async (runs) => (asked.push(runs), runs.map((run) => run.files.map(() => ({ ...drawn(), ...(run.pictures ? { picture: shot } : {}) })))),
+		});
+		await i.warm();
+		expect(asked[0]).toHaveLength(1);
+		expect(kept[0]?.taken.size).toBe(2);
+		expect(await i.of('src/components/A/A.stories.tsx')).toEqual({ state: 'failed', error: 'tags did not build' });
+	});
+
 	it('has nothing to say when no design system is connected', async () => {
 		expect(await index({ system: () => null }).of('x')).toEqual({ state: 'failed', error: 'There is no design system connected.' });
 	});
