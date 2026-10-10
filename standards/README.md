@@ -1,13 +1,12 @@
 # Shared standards
 
-**Cross-product standards.** These hold for any Flock product that adopts DSNR, and they
-carry no reference to any one product's stack, patterns, or codebase.
+**Cross-product standards.** These hold for any Flock product that adopts DSNR, and they carry no reference to any one
+product's stack, patterns, or codebase.
 
 ```
 standards/
+├── non-negotiables.md        hard rules, the same in every product
 ├── production-readiness.md   what has to be true before work is handed to engineering
-├── flock/                    Flock's own, the same in every Flock product
-│   └── voice-and-tone.md         how Flock's product speaks (written in the app's Voice and tone tab)
 └── universal/                portable; would hold at any company
     ├── accessibility.md          a floor nothing overrides
     ├── interaction-states.md     the seven view states
@@ -16,47 +15,43 @@ standards/
     └── copy-and-microcopy.md
 ```
 
-## How a product resolves these
+How Flock looks and speaks is the design system's: `product-native-ui.md` and `voice-and-tone.md` in its `.dsnr/`.
 
-A sibling checkout today, the same arrangement FUI context uses:
+## Which wins
 
-```
-your-product/
-../flock-designer/standards/      <- this directory
-```
+**Said here, once.** Every agent and skill follows this order; no product file restates it.
 
-A product's agent files reference them by that relative path. Becoming a package follows on the same
-terms as FUI's: when the content stops moving and a second product adopts it.
+1. **Hard rules:** `non-negotiables.md` here, and the product's `.dsnr/standards/non-negotiables.md`. Always win
+2. **`universal/accessibility.md`**: a floor. A product may raise it, in its `.dsnr/manifest.md`; nothing overrides it
+   downward
+3. **The design system's facts:** component APIs and token names, from the installed package
+4. **The product's repository docs** (`AGENTS.md`, `CLAUDE.md` and the like): on stack and tooling questions
+5. **The product's conventions**, `.dsnr/standards/product.md`: measured from its real views, so they win over Flock's
+   where they differ
+6. **Flock's conventions and voice**, the design system's `product-native-ui.md` and `voice-and-tone.md`. A blank voice
+   and tone file adds nothing until it is written
+7. **`universal/`** (design and interaction): wherever the tiers above are silent
 
-**Two of these reach every agent task without being named:** the app reads `universal/accessibility.md`
-and `flock/voice-and-tone.md` each time it makes a task, and puts them in it. Nobody has to point at them.
+**The one asymmetry:** accessibility sits in the universal tier but behaves differently from the rest of it. Design
+judgment is overridable by product convention; conformance is not.
 
-## The tiers, and which wins
+## How a product reaches these
 
-1. **A product's `non-negotiables.md`** — hard rules, always win
-2. **`universal/accessibility.md`** — a floor. A product may raise it; nothing overrides it downward
-3. **A product's Flock tier** (`.dsnr/standards/flock/`) — convention, density, tone, vocabulary.
-   **Overrides the tiers below**
-4. **`flock/`** — what is Flock's in every product: its voice and tone. **Overrides the universal design
-   tier below**
-5. **`universal/`** (design + interaction) — applies wherever the tiers above are silent
-
-**The one asymmetry:** accessibility sits in the universal tier but behaves differently from the rest
-of it. Design judgment is overridable by product convention; conformance is not. A product may commit
-to a *higher* bar, never a lower one.
+A sibling checkout, the same arrangement the design system's guidance uses: `flock-designer/` beside the product. The
+product's agent shims point at `../agents/`, and the shared agents read the product's `.dsnr/` by the file names in
+`../README.md` ("What a product repository provides"). The app also puts the accessibility rules and the voice and tone in
+every task it makes, so a run from the app has them without reading anything. Becoming a package follows when the content
+stops moving and a second product adopts it.
 
 ## What does not belong here
 
-- **A conformance level.** The target is a per-product setting and lives in that product's
-  `.dsnr/manifest.md`. A file here that states a level competes with it and will be wrong for someone.
-- **A product's patterns, components, routes, or stack.** That is product intelligence.
-- **A convention justified by one product's evidence.** If a count came from one codebase, say so —
-  otherwise one product's habits become a Flock-wide rule by accident.
+- **A conformance level.** The target is a per-product setting, in that product's `.dsnr/manifest.md`.
+- **A product's patterns, components, routes, stack, or commands.** That is product intelligence.
+- **A convention justified by one product's evidence.** If a count came from one codebase, it is that product's
+  `standards/product.md`, not a Flock-wide rule.
+- **How Flock looks or speaks.** That is the design system's.
 
 ## Changing one of these
 
-A change here reaches every adopting product, so it goes through review rather than a direct edit.
-Repeated evidence from real work is what justifies a change — see a product's gap log.
-
-`flock/voice-and-tone.md` is changed the same way from the app: its Voice and tone tab saves an edit
-to a branch of its own and proposes it as a draft pull request. A commit made here shows in the tab.
+A change here reaches every adopting product, so it goes through review rather than a direct edit. Repeated evidence
+from real work is what justifies a change: see a product's gap log.

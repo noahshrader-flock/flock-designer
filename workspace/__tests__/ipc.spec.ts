@@ -263,13 +263,14 @@ describe('the Design System tab', () => {
 		expect(await call(CHANNELS.saveVoiceAndTone, 'x', '../../etc/passwd')).toMatchObject({ ok: false, error: expect.stringContaining('sha') });
 		expect(await call(CHANNELS.saveVoiceAndTone, 'x', 42)).toMatchObject({ ok: false, error: expect.stringContaining('sha') });
 		expect(githubApi.mock.calls.length).toBe(asked);
-		// A blob's sha in either of git's kinds is taken, and the save goes on to GitHub.
+		// A blob's sha in either of git's kinds is taken, and the save goes on: here, to say none is connected.
 		for (const sha of ['a'.repeat(40), 'b'.repeat(64)]) {
-			expect(await call(CHANNELS.saveVoiceAndTone, 'x', sha)).not.toMatchObject({ error: expect.stringContaining('against the file’s sha') });
+			expect(await call(CHANNELS.saveVoiceAndTone, 'x', sha)).toMatchObject({ ok: false, error: expect.stringContaining('No design system is connected') });
 		}
-		expect(githubApi.mock.calls.length).toBeGreaterThan(asked);
-		expect(await call(CHANNELS.proposeVoiceAndTone)).toMatchObject({ ok: false, error: expect.stringContaining('Save the change') });
-		expect(await call(CHANNELS.forgetVoiceBranch)).toEqual({ ok: true, value: null });
+		// The voice and tone is the connected design system's: with none, every channel says so, and none asks GitHub.
+		expect(await call(CHANNELS.voiceAndTone)).toMatchObject({ ok: false, error: expect.stringContaining('No design system is connected') });
+		expect(await call(CHANNELS.proposeVoiceAndTone)).toMatchObject({ ok: false, error: expect.stringContaining('No design system is connected') });
+		expect(githubApi.mock.calls.length).toBe(asked);
 	});
 
 	describe('connecting one (P4)', () => {
@@ -758,7 +759,7 @@ describe('prototypes', () => {
 		writeSkill();
 		await call(CHANNELS.useCheckout, product);
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-		const voiceFile = join(design, 'standards', 'flock', 'voice-and-tone.md');
+		const voiceFile = join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md');
 		// No file: nothing said of it.
 		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
 		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('## Voice and tone');
@@ -1061,8 +1062,8 @@ describe('prototypes', () => {
 
 		it('carries Flock’s voice and tone, as every task does (T9)', async () => {
 			await ready();
-			mkdirSync(join(design, 'standards', 'flock'), { recursive: true });
-			writeFileSync(join(design, 'standards', 'flock', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
+			mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });
+			writeFileSync(join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
 			threads({ 'v1-i1': [comment(7, 'Make this primary', 'noah')] });
 			expect((await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7)).ok).toBe(true);
 			expect(task()).toContain('## Voice and tone');
@@ -1302,8 +1303,8 @@ describe('prototypes', () => {
 
 		it('writes Flock’s voice and tone into the task beside the prototype, after the accessibility rules (T9)', async () => {
 			await saved();
-			mkdirSync(join(design, 'standards', 'flock'), { recursive: true });
-			writeFileSync(join(design, 'standards', 'flock', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
+			mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });
+			writeFileSync(join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
 			expect((await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
 			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'), 'utf8');
 			expect(task).toContain('Calm and exact.');
@@ -1601,26 +1602,27 @@ describe('one agent, one piece of work', () => {
 		expect(agentStop).not.toHaveBeenCalled();
 	});
 
-	it('gives a codebase run the shared skills and standards to read, and says where they are', async () => {
-		mkdirSync(join(design, 'skills'), { recursive: true });
-		mkdirSync(join(design, 'standards'), { recursive: true });
+	it('gives a codebase run the shared agents, skills, standards and logging to read, and says where they are', async () => {
+		for (const dir of ['agents', 'skills', 'standards', 'knowledge']) mkdirSync(join(design, dir), { recursive: true });
 		await call(CHANNELS.useCheckout, product);
 		await call(CHANNELS.startAgent, product, 'demo', 'do it');
 		const [, , task, extras] = agentStart.mock.calls.at(-1) as [string, string, string, { readOnly: string[] }];
 		const real = realpathSync(design);
-		expect(extras.readOnly).toEqual(expect.arrayContaining([join(real, 'skills'), join(real, 'standards')]));
-		expect(task).toContain(join(real, 'skills'));
+		// The product's shims point at the shared agents: a run that could not read them would have no definition.
+		const shared = ['agents', 'skills', 'standards', 'knowledge'].map((d) => join(real, d));
+		expect(extras.readOnly).toEqual(expect.arrayContaining(shared));
+		for (const dir of shared) expect(task).toContain(dir);
 	});
 
 	it('gives every codebase run Flock’s voice and tone, after the accessibility rules, once it is written (T9)', async () => {
 		await call(CHANNELS.useCheckout, product);
 		await call(CHANNELS.startAgent, product, 'demo', 'do it');
 		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('## Voice and tone');
-		mkdirSync(join(design, 'standards', 'flock'), { recursive: true });
-		writeFileSync(join(design, 'standards', 'flock', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
+		mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });
+		writeFileSync(join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
 		await call(CHANNELS.startAgent, product, 'demo', 'do it');
 		const task = agentStart.mock.calls.at(-1)?.[2] as string;
-		expect(task).toContain("Where this product's own guidance says otherwise, the product's wins.");
+		expect(task).toContain("Where this product's own conventions say otherwise, the product's win.");
 		expect(task).toContain('Calm and exact.');
 		expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## Voice and tone'));
 	});

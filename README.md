@@ -1,6 +1,6 @@
 # DSNR
 
-Four things live here.
+These live here.
 
 **[`dsnr.md`](dsnr.md)** — where everything stands. What DSNR is, what is built,
 how it works and why, every contract, and the change log. If you are picking this up, start with its "Where things
@@ -8,13 +8,20 @@ stand" block. **[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)** is what is 
 
 **`projects/`** — one folder per project. Drop in whatever context you have.
 
+**`agents/`** — the builder (`dsnr.md`) and its two read-only reviewers, the same in every product. A product
+carries only a three-line shim for each, so Claude Code finds them.
+
 **`skills/`** — workflows the agent follows that are the same in every product, such as acting on a
 reviewer's comments. The app puts the right one in the agent's task, so nobody has to find or install
 it, and a product repository does not carry a copy.
 
 **`standards/`** — the design standards that are not specific to any one product. The product's own
 patterns and boundaries stay in the product repository; these are the ones that hold anywhere. See
-[`standards/README.md`](standards/README.md) for how a product resolves them and which tier wins.
+[`standards/README.md`](standards/README.md) for how a product resolves them and which tier wins. How Flock looks and
+speaks (its UI conventions, its voice and tone) is the design system's, in its own `.dsnr/`.
+
+**`knowledge/`** — how the gap and setup-friction logs are written, the baselines and the pilot's questions. Each
+product keeps its own rows.
 
 ## The words
 
@@ -45,27 +52,43 @@ built from it, so anyone can open it without the product. Large files those page
 
 ## What a product repository provides
 
-Everything here is shared; a product brings only what is true of it. To adopt DSNR, a repository
-provides, beside a checkout of this one and of its design system (the folder named as the package is):
+**Everything here is shared; a product brings only what is true of it, at these fixed names.** The shared agents read
+them by name, so a product file never points back here. To adopt DSNR, a repository sits beside a checkout of this one
+and of its design system (the folder named as the package is), and provides:
 
-- **`.dsnr/workspace.json`**, the app's contract with the product (`workspace/src/shared/contract.ts`,
-  `WorkspaceDescriptor`): its name, its context folder, where prototypes go, its branch names, its design
-  system package, and its commands. The app looks for these command ids:
-  - `preview` serves an older prototype branch, `design-mode` serves the real product on mock data (each with
-    `servesPreviewOn`);
-  - `check-iteration`, the **light check**: fast, on what the branch changed, run after every step;
-  - `handoff`, the **gate**: takes `<project-id>`, and refuses until the work is fit for engineering;
-  - `install` installs its packages (`npm ci`), run from the New modal when they are missing and the person asks.
-    Without it the modal says what to run instead.
-  Commands run through `npm`, `npx` or `node`.
-- **`.dsnr/`**: a manifest (its conventions, accessibility target and who signs off), its builder agent and
-  two read-only reviewers (parity, and implementation), its own patterns and boundaries, and the product's
-  part of each shared skill, such as what its gate checks and what its engineers pick up.
-- **Its agent instructions** (`CLAUDE.md` or `AGENTS.md`) sending product work to that builder.
+| File | What it holds |
+|---|---|
+| `.dsnr/workspace.json` | The app's contract (`workspace/src/shared/contract.ts`, `WorkspaceDescriptor`): its name, its context folder, where prototypes go, its branch names, its design system package, and its commands |
+| `.dsnr/README.md` | Its index: each of its files and what it is for, its own skills, and its commands |
+| `.dsnr/manifest.md` | Identity, stack, conventions, the accessibility target (and nowhere else), where things are, what is off-limits, how to run it |
+| `.dsnr/standards/non-negotiables.md` | What each shared hard rule means here: its plumbing, its mock layer, its conventions |
+| `.dsnr/standards/product.md` | Its measured conventions (casing, vocabulary) where they differ from Flock's |
+| `.dsnr/implementation/` | What a prototype must never import, with the check that finds it, and what it may |
+| `.dsnr/skills/` | Its part of a shared skill (what its gate checks, what its engineers pick up), and any path only it has |
+| `.dsnr/knowledge/` | Its gap and setup-friction logs, rows only (`knowledge/README.md` here says how) |
+| Its patterns | Whatever folders it needs (Coke: `composition/`, `product-patterns/`), listed in its README |
+| `.claude/agents/<name>.md` | One shim per shared agent: frontmatter, then one line naming `../flock-designer/agents/<name>.md` |
+| `CLAUDE.md` (or `AGENTS.md`) | A short section sending product UI work to the `dsnr` subagent |
 
-**Coke's (`flock-coke`, branch `noah/flock-designer`) is the worked example:** copy its `.dsnr/`, its
-`workspace.json` and its check scripts, and replace what is Coke's. Nothing here, or in the design system,
-changes for a new product.
+**The commands** in `workspace.json`, by id: `preview` (an older prototype branch) and `design-mode` (the real product
+on mock data), each with `servesPreviewOn`; `check-iteration`, the **light check**, fast, run after every step;
+`handoff`, the **gate**, which takes `<project-id>` and refuses until the work is fit for engineering; `typecheck`,
+`lint`, `a11y` and `boundary`, which the reviewers run; and `install` (`npm ci`), run from the New modal when packages
+are missing. Commands run through `npm`, `npx` or `node`.
+
+**The `CLAUDE.md` section**, as Coke has it:
+
+```markdown
+## Product UI and prototype work
+
+Route requests to build, prototype, mock up, recreate, or critique a product view or UI through the **dsnr** subagent,
+deciding the path first as its definition says (`../flock-designer/agents/dsnr.md`, "Which path") and naming it in the
+task you hand over. If `dsnr`, or a reviewer, is not available as a subagent, read its shim in `.claude/agents/` and
+follow it directly, saying so. Wait for whatever you hand to a subagent, in the foreground.
+```
+
+**Coke (`flock-coke`, branch `noah/dsnr`) is the worked example.** Copy the shape of its `.dsnr/`, its shims and its
+check scripts, and replace what is Coke's. Nothing here, or in the design system, changes for a new product.
 
 ## What is not here
 

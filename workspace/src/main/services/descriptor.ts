@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
 import type { ShareDescriptor, WorkspaceCommand, WorkspaceDescriptor } from '../../shared/contract';
 import { resolveInside } from './paths';
 
@@ -146,3 +147,10 @@ export const findCommand = (descriptor: WorkspaceDescriptor, commandId: string):
 	}
 	return command;
 };
+
+/**
+ * The design system's checkout beside a product, named as its package is (`designSystem.package`): where its guidance is
+ * read, by an agent and by the tasks DSNR makes alike. One rule, so they never look in different places.
+ */
+export const designSystemCheckout = (root: string, pkg: string = readDescriptor(root).designSystem.package): string =>
+	join(dirname(root), basename(pkg));

@@ -7,12 +7,15 @@ import type { GitHubApi } from '../src/main/services/designRepo';
 import { VOICE_BRANCH, VOICE_FILE, VoiceAndToneFile } from '../src/main/services/voiceAndTone';
 
 /**
- * The voice and tone file (T9 of the design system plan): read from the design repository's default branch, a change kept
- * on DSNR's own branch, one commit each save, and proposed as a draft pull request. GitHub is a stand-in kept in memory,
- * answering the calls the service makes as the real API does; each was tried on the real repository on 2026-10-10.
+ * The voice and tone file (T9 of the design system plan): in the design system's agent files, read from its default branch,
+ * a change kept on DSNR's own branch, one commit each save, and proposed as a draft pull request, all with the person's
+ * own command line. GitHub is a stand-in kept in memory, answering the calls the service makes as the real API does; each
+ * was tried on a real repository on 2026-10-10.
  */
 
 const REPO = { owner: 'acme', repo: 'design' };
+/** Where the file is: a design system that is the whole repository. */
+const PATH = VOICE_FILE;
 /** The default branch, which the service has to ask for: the real design repository's is not `main`. */
 const DEFAULT = 'noah/flock-designer';
 
@@ -143,7 +146,7 @@ let home: string;
 let memory: string;
 let gh: FakeGitHub;
 const NOW = () => new Date('2026-10-10T15:00:00Z');
-const make = (person: GitHubApi | null = gh.as('person')) => new VoiceAndToneFile({ repo: REPO, app: gh.as('app'), person, file: memory, now: NOW });
+const make = (folder = '') => new VoiceAndToneFile({ repo: REPO, folder, github: gh.as('person'), file: memory, now: NOW });
 const writes = () => gh.asked.filter((a) => !/ GET /.test(a));
 
 beforeEach(() => {
@@ -157,13 +160,13 @@ describe('reading the file', () => {
 	it('reads it from the default branch GitHub names, with the sha a save is made against', async () => {
 		gh.commit('# Voice and tone\n\nPlain words.\n');
 		const voice = await make().current();
-		expect(voice).toEqual({ path: VOICE_FILE, base: DEFAULT, text: '# Voice and tone\n\nPlain words.\n', sha: gh.branches.get(DEFAULT)!.files.get(VOICE_FILE)!.sha, branch: null });
-		expect(gh.asked).toContain('app GET /repos/acme/design');
+		expect(voice).toEqual({ repository: 'acme/design', path: PATH, base: DEFAULT, text: '# Voice and tone\n\nPlain words.\n', sha: gh.branches.get(DEFAULT)!.files.get(VOICE_FILE)!.sha, branch: null });
+		expect(gh.asked).toContain('person GET /repos/acme/design');
 		expect(writes()).toEqual([]);
 	});
 
 	it('says there is no file, rather than failing, when the repository has none', async () => {
-		expect(await make().current()).toEqual({ path: VOICE_FILE, base: DEFAULT, text: null, sha: null, branch: null });
+		expect(await make().current()).toEqual({ repository: 'acme/design', path: PATH, base: DEFAULT, text: null, sha: null, branch: null });
 	});
 
 	it('says what went wrong when GitHub cannot be read, and never takes that for no file', async () => {
@@ -177,6 +180,21 @@ describe('reading the file', () => {
 		expect((await file.current()).text).toBe('one');
 		gh.commit('two');
 		expect((await file.current()).text).toBe('two');
+	});
+});
+
+describe('a design system inside a larger repository', () => {
+	it('reads and saves the file in the design system’s own folder', async () => {
+		const folder = 'packages/ui';
+		const inFolder = `${folder}/${VOICE_FILE}`;
+		const b = gh.branches.get(DEFAULT)!;
+		b.files.set(inFolder, { text: 'one', sha: 'f'.repeat(40) });
+		const file = make(folder);
+		const opened = await file.current();
+		expect(opened).toMatchObject({ path: inFolder, text: 'one' });
+		const r = await file.save('two', opened.sha);
+		expect(gh.branches.get(r.voice.branch!.branch)!.files.get(inFolder)!.text).toBe('two');
+		expect(gh.asked).toContain(`person PUT /repos/acme/design/contents/${inFolder}`);
 	});
 });
 
@@ -194,8 +212,9 @@ describe('saving a change', () => {
 		expect(gh.text(branch.branch)).toBe('two');
 		expect(gh.text(DEFAULT)).toBe('one');
 		expect(r.voice.text).toBe('one');
-		// The branch is made from the default branch's head, and the commit is made by the app's own session.
-		expect(writes()).toEqual(['app POST /repos/acme/design/git/refs', `app PUT /repos/acme/design/contents/${VOICE_FILE}`]);
+		// The branch is made from the default branch's head, and every call is the person's own command line.
+		expect(writes()).toEqual(['person POST /repos/acme/design/git/refs', `person PUT /repos/acme/design/contents/${VOICE_FILE}`]);
+		expect(gh.asked.every((a) => a.startsWith('person '))).toBe(true);
 	});
 
 	it('adds one commit to the same branch on each save after, and none when nothing changed', async () => {
@@ -326,9 +345,11 @@ describe('proposing it', () => {
 		expect(branch.compare).toBe(`https://github.com/acme/design/compare/${encodeURIComponent(DEFAULT)}...${encodeURIComponent(branch.branch)}?expand=1`);
 	});
 
-	it('says the command line is needed when there is none, and the change stays saved', async () => {
-		const file = await saved(make(null));
+	it('says the command line is needed when it is not signed in, and the change stays saved', async () => {
+		const file = await saved();
+		gh.refuse = { when: (m, p) => m === 'POST' && p.endsWith('/pulls'), status: undefined as unknown as number, message: 'To get started with GitHub CLI, please run:  gh auth login' };
 		await expect(file.propose()).rejects.toThrow(/GitHub command line \(gh\)/);
+		gh.refuse = null;
 		expect((await file.current()).branch).toMatchObject({ text: 'two', saves: 1, pullRequest: null });
 	});
 

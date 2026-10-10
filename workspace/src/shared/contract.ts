@@ -380,11 +380,12 @@ export interface TokenBranch {
 }
 
 /**
- * The company's voice and tone (T9): one file in the design repository, as its default branch has it, and the change to
- * it kept on a branch of DSNR's, if one is and it is not merged yet.
+ * The company's voice and tone (T9): one file in the connected design system's agent files, as its default branch has it,
+ * and the change to it kept on a branch of DSNR's, if one is and it is not merged yet.
  */
 export interface VoiceAndTone {
-	/** Where the file is in the design repository. */
+	/** The design system's repository (`owner/repo`), and where the file is in it. */
+	repository: string;
 	path: string;
 	/** The default branch: the file is read from it, and a change is proposed to it. */
 	base: string;

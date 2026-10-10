@@ -22,7 +22,8 @@ it pass.
 ## 2. Review it, both ways, independently
 
 Two reviews, because *does this read as the product* and *is it built correctly* are different questions
-with different evidence. The product's guidance names its two reviewers.
+with different evidence. The reviewers are shared, `../agents/product-parity-reviewer.md` and
+`../agents/implementation-reviewer.md`, and the product's shims make them subagents.
 
 - **Run them as subagents, in the foreground,** one after the other or together, and wait for both. Never
   in the background, and never with a reminder to check later: this run ends when you stop, and a review
@@ -49,6 +50,9 @@ still gets what it got, with the request it really sends.
 
 `HANDOFF.md` at the root of the branch, committed with the work: it is the first thing seen on checkout.
 Say in it that it is to be deleted when the work merges.
+
+**The design record stays in the project's folder** (brief, context receipt, audit, both reviews). `HANDOFF.md` tells
+engineering what they picked up; the project folder is why it was built that way. Do not duplicate one into the other.
 
 **It tells them what the diff does not say. Not a summary of the diff, not a case for the work.**
 

@@ -4,13 +4,13 @@ import type { Iteration, Person, PrototypeReadiness } from '../../shared/contrac
 import { type DeclaredTarget, undeclared } from '../../shared/wcag';
 import { firstHeading, hasOutsideComments, latestIterationName, nextIterationName, parsePrototypeName, projectPath, prototypePagePath, prototypeSourcePath } from '../../shared/projects';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from './accessibilityBrief';
-import { readDescriptor } from './descriptor';
+import { designSystemCheckout, readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
 import { branchCommit, branchExists, gitExact, readCheckout, readTreeAt } from './git';
 import { assertUsableProjectId } from './iterations';
 import { MAX_PAGE, type PrototypeBuild, type PrototypeSources, type RecordStore, assertPrototypeName, prototypeVersionOf, recordIteration, recordPrototype } from './prototype';
 import { bundleCommand, runBundle, sharedFilesOf, writeBundleScript } from './prototypeBundle';
-import { taskVoice } from './voiceBrief';
+import { designSystemFile, taskVoice } from './voiceBrief';
 import { parseIterations } from '../../shared/records';
 
 /**
@@ -208,7 +208,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			productGuidance: has(join(code, descriptor.contextDir)) ?? has(join(root, descriptor.contextDir)),
 			// The design system's checkout beside the product, named as its package is: its guidance and, as important
 			// for a page that redraws its components, its source.
-			designSystemGuidance: has(join(dirname(root), basename(pkg))),
+			designSystemGuidance: has(designSystemCheckout(root, pkg)),
 			installedDesignSystem,
 			sharedStandards: designRoot === null ? null : has(join(dirname(designRoot), 'standards')),
 			// Only worth building against when the design system itself is installed in them.
@@ -378,8 +378,11 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	/** The accessibility section of a prototype's task (T7), at its target. */
 	const accessibility = async (projectId: string, name: string): Promise<string> => taskAccessibility(skill, await target(projectId, name));
 
-	/** The voice and tone section of a task (T9): the design repository's file, read as the skills are, each time. */
-	const voice = (): Promise<string> => taskVoice(ctx.readDesignFile);
+	/**
+	 * The voice and tone section of a task (T9): the design system's file, read from its checkout beside the product
+	 * (`root`, the product this work is in), each time.
+	 */
+	const voice = (root: string | null = ctx.productRoot()): Promise<string> => taskVoice(root === null ? async () => null : designSystemFile(root));
 
 	return { dir, file, sourceFile, sharedText, skill, target, accessibility, voice, title, records, record, sourceText, readiness, start, sources, buildPlan, buildPage, keep, save, page, startChange, resumeChange, finishChange };
 };

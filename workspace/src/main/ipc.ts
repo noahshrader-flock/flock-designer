@@ -34,7 +34,7 @@ import { lastVerdict } from '../shared/handoff';
 import { type ShareRunner, type ShareTools, previewIsUp, pullRequestText } from './services/share';
 import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
-import { DESCRIPTOR_PATH, findCommand, readDescriptor } from './services/descriptor';
+import { DESCRIPTOR_PATH, designSystemCheckout, findCommand, readDescriptor } from './services/descriptor';
 import { branchCommit, branchExists, branchesWithFile, ensureLocalBranch, isRepository, readCheckout, recentBranches, runGit } from './services/git';
 import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
 import { type Cloned, Cloner, type GitProgress, notClonedOver } from './services/clone';
@@ -47,7 +47,7 @@ import { tokenEditsOf } from './services/tokenEdits';
 import { A11Y_COMMAND, fixRequest, productTarget, taskAccessibility } from './services/accessibilityBrief';
 import { type CheckPage, accessibilityOf } from './services/accessibilityCheck';
 import { TokenBranches } from './services/tokenBranches';
-import { VoiceAndToneFile } from './services/voiceAndTone';
+import { NEEDS_GH, VoiceAndToneFile } from './services/voiceAndTone';
 import { ComponentTokens, type Measure } from './services/componentTokens';
 import { ComponentPictures } from './services/componentPictures';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
@@ -397,22 +397,28 @@ export const registerIpc = ({
 	ipcMain.handle(CHANNELS.saveTokens, guard((edits: unknown) => tokenBranches.save(tokenEditsOf(edits))));
 	ipcMain.handle(CHANNELS.proposeTokens, guard(() => tokenBranches.propose()));
 	ipcMain.handle(CHANNELS.forgetTokenBranch, guard(() => (tokenBranches.forget(), null)));
-	// The voice and tone (T9): read and written through the app's session, proposed with the person's own command line.
-	const voiceFile = new VoiceAndToneFile({ repo: DESIGN_REPO, app: github, person: personGitHub, file: voiceBranchFile });
+	// The voice and tone (T9): the connected design system's, read, saved and proposed with the person's own command line.
+	const voiceFile = (): VoiceAndToneFile => {
+		const system = shownSystem();
+		if (system === null) throw new Error('No design system is connected. Connect one in Components: its voice and tone is in its agent files.');
+		if (personGitHub === null) throw new Error(NEEDS_GH);
+		const [owner = '', repo = ''] = system.repository.split('/');
+		return new VoiceAndToneFile({ repo: { owner, repo }, folder: system.folder, github: personGitHub, file: voiceBranchFile });
+	};
 	// The longest a save takes: far beyond any real voice and tone, short of anything that could hurt.
 	const MAX_VOICE = 200_000;
-	ipcMain.handle(CHANNELS.voiceAndTone, guard(() => voiceFile.current()));
+	ipcMain.handle(CHANNELS.voiceAndTone, guard(() => voiceFile().current()));
 	ipcMain.handle(
 		CHANNELS.saveVoiceAndTone,
 		guard((text: unknown, against: unknown) => {
 			if (typeof text !== 'string' || text.length > MAX_VOICE) throw new Error('The voice and tone is saved as text, up to 200,000 characters.');
 			// A blob's sha: 40 hex, or 64 in a repository on SHA-256.
 			if (against !== null && (typeof against !== 'string' || !/^([0-9a-f]{40}|[0-9a-f]{64})$/.test(against))) throw new Error('A save is made against the file’s sha.');
-			return voiceFile.save(text, against);
+			return voiceFile().save(text, against);
 		}),
 	);
-	ipcMain.handle(CHANNELS.proposeVoiceAndTone, guard(() => voiceFile.propose()));
-	ipcMain.handle(CHANNELS.forgetVoiceBranch, guard(() => (voiceFile.forget(), null)));
+	ipcMain.handle(CHANNELS.proposeVoiceAndTone, guard(() => voiceFile().propose()));
+	ipcMain.handle(CHANNELS.forgetVoiceBranch, guard(() => (voiceFile().forget(), null)));
 	ipcMain.handle(CHANNELS.designSystems, guard(() => designSystems.read()));
 	ipcMain.handle(CHANNELS.selectDesignSystem, guard((id: string) => (designSystems.select(String(id)), null)));
 	// Removed with everything the app keeps of it: its pictures too (P5).
@@ -677,9 +683,11 @@ export const registerIpc = ({
 		const designRoot = recordsRootFor(canonical);
 		const pkg = readDescriptor(canonical).designSystem.package;
 		const named: Array<[string, string | null]> = [
+			["Shared agents (the product's shims point here)", designRoot === null ? null : join(dirname(designRoot), 'agents')],
 			['Shared skills (a `skills/…` path in any guidance is here)', designRoot === null ? null : join(dirname(designRoot), 'skills')],
 			['Shared standards', designRoot === null ? null : join(dirname(designRoot), 'standards')],
-			["The design system's checkout (its guidance and source)", join(dirname(canonical), basename(pkg))],
+			['Shared logging (how the product logs what went wrong)', designRoot === null ? null : join(dirname(designRoot), 'knowledge')],
+			["The design system's checkout (its guidance and source)", designSystemCheckout(canonical, pkg)],
 		];
 		const found = named.filter((n): n is [string, string] => n[1] !== null && existsSync(n[1]));
 		if (!found.length) return { dirs: [], note: '' };
@@ -703,8 +711,8 @@ export const registerIpc = ({
 		const session = randomUUID();
 		const shared = sharedGuidance(canonical);
 		const accessibility = await codebaseAccessibility(canonical);
-		// The company's voice and tone (T9), read as every task reads it; nothing when the design repository has none written.
-		const voice = await work.voice();
+		// The voice and tone (T9), from the design system beside this product; nothing while it is blank.
+		const voice = await work.voice(canonical);
 		const started = agent.start(canonical, projectId, `${task}${shared.note}\n\n${accessibility}${voice ? `\n\n${voice}` : ''}`, {
 			// The project's records live in the design repository, beside the product checkout.
 			addDirs,
@@ -1453,7 +1461,7 @@ export const registerIpc = ({
 					// Built toward the product's target from the start, with what the prototype's check left open: its page
 					// checked now when it was not already. A check that cannot run leaves the findings out, never the move.
 					accessibility: await codebaseAccessibility(canonical, await prototypeAccessibility(projectId, name).catch(() => null)),
-					voice: await work.voice(),
+					voice: await work.voice(canonical),
 				}),
 			);
 			const prompt = moveToCodePrompt({ label, projectId, taskFile, continuing: continuing ? branch : null });

@@ -692,7 +692,7 @@ Where knowledge lives, and what each layer may not claim:
 
 ### The agent contract
 
-**Implemented in:** `flock-coke/.dsnr/agents/dsnr.md` — "The contract", always/never verbatim.
+**Implemented in:** `flock-designer/agents/dsnr.md` — "The contract", always/never verbatim (moved from Coke 2026-10-10).
 
 The non-negotiables. These are the statements a reviewer can hold the agent to, and the ones a validator should eventually enforce.
 
@@ -719,7 +719,7 @@ Every one of these is testable. That matters more than the list being complete.
 
 ### The operating loop
 
-**Implemented in:** `flock-coke/.dsnr/agents/dsnr.md` — "How you work", steps 0 and 0b.
+**Implemented in:** `flock-designer/agents/dsnr.md` — "How you work", steps 0 and 0b (moved from Coke 2026-10-10).
 
 ```text
 Frame the decision
@@ -901,7 +901,7 @@ before any code is written.
 > `iN` ([3.7](#37--prototypes)). What follows is how prototype branches were drawn; it still describes the
 > `fd/<project-id>/iN` branches that exist, and codebase work's one branch.
 
-**Implemented in:** `flock-coke/.dsnr/manifest.md` — "Prototype configuration"; enforced in `.dsnr/agents/implementation-reviewer.md`.
+**Implemented in:** `flock-coke/.dsnr/manifest.md` — "Prototype configuration"; enforced in `flock-designer/agents/implementation-reviewer.md`.
 
 - Start from the selected baseline and create a project namespace only after confirmation: `fd/<project-id>/i1`, `fd/<project-id>/i2`, and so on.
 - Each iteration branch is created from the prior selected iteration, not from an opaque app snapshot. The relationship is visible in Git.
@@ -1014,7 +1014,7 @@ The artifact matrix states how many each level owes: Ground needs the default pl
 
 ### The review model
 
-**Implemented in:** `flock-coke/.dsnr/agents/product-parity-reviewer.md` and `.dsnr/agents/implementation-reviewer.md`, including the implementation accessibility lens.
+**Implemented in:** `flock-designer/agents/product-parity-reviewer.md` and `flock-designer/agents/implementation-reviewer.md`, including the implementation accessibility lens.
 
 Two reviewer agents, three lenses. Accessibility is a lens applied inside both, not a third agent:
 
@@ -1028,7 +1028,7 @@ Each report distinguishes observed facts from inferences and proposals. This pre
 
 ### The review record
 
-**Implemented in:** `flock-coke/.dsnr/agents/dsnr.md` step 6, plus the output shape in both reviewers.
+**Implemented in:** `flock-designer/agents/dsnr.md` step 6, plus the output shape in both reviewers (moved from Coke 2026-10-10).
 
 `review.md` in the project folder, one section per iteration, for every artifact at Ground or above. This single file replaces the separate "evidence receipt" and "accessibility receipt" used in earlier drafts. Each iteration's section records:
 
@@ -3401,6 +3401,7 @@ Newest first. Every change to any of the three documents gets a row: what change
 
 | Date | Change | Sections updated |
 |---|---|---|
+| 2026-10-10 | **The layers made clean: nothing broad in a product's agent files (Noah).** One rule sorts every agent file: a product's `.dsnr/` holds only its facts; how Flock looks and speaks is the design system's `.dsnr/`; how DSNR works is `flock-designer`. **To `flock-designer`:** the builder and both reviewers (`agents/`, generic, each product fact named by its slot), the request guide (`agents/request-guide.md`), the pattern-choosing and reference skills (`skills/choose-existing-patterns.md`, `skills/recreate-from-reference.md`), the hard rules (`standards/non-negotiables.md`), the logs' method, the baselines and the pilot's questions (`knowledge/README.md`), and the order of precedence, written once (`standards/README.md`); the product contract is now fixed file names (`README.md`, "What a product repository provides"), with the `CLAUDE.md` section given verbatim. **To the design system** (`flock-react-component-lib/.dsnr/`, on `noah/dsnr`): Flock's UI conventions (`product-native-ui.md`) and the voice and tone, blank (`voice-and-tone.md`), moved out of `flock-designer/standards/flock/` (removed) at Noah's word; its README lists both. **Coke** (`noah/dsnr`) keeps only its facts: shims pointing at the shared agents, a three-line `CLAUDE.md` section, its index, manifest (with "Where things are"), its non-negotiables numbered as the shared rules, `standards/product.md` (casing and vocabulary, measured), its implementation, composition and patterns, its older-path and handoff skills, and its log rows. Removed from Coke too: eight hardcoded FUI versions, a stale path to a deleted role form, the plumbing list kept three times, restated FUI counts, and a personal-branch default in its scripts (now `noah/dsnr`, said once in `scripts/lib/work.mjs`). **The app:** the Voice and Tone tab reads and saves the connected design system's `.dsnr/voice-and-tone.md` (its folder when it has one) with the person's `gh`, since the GitHub App reaches only the design repository; tasks read it from the design system's checkout beside the product, through one helper (`designSystemCheckout`) that prototype sources and codebase runs now share; codebase runs may read the shared `agents/` and `knowledge/`. **Checked:** `validate.py` (updated: shims point at the shared agents, every product slot exists, no product file points into `flock-designer`, the voice file exists) 644 checks, 0 failures, each new rule seen to fail when broken; app 1,650 tests and typecheck clean. | DESIGN_SYSTEM_PLAN.md (T9), `flock-designer` README, agents, skills, standards, knowledge; Coke `.dsnr/`, shims, `CLAUDE.md`, scripts; the design system's `.dsnr/` |
 | 2026-10-10 | **T9: the voice and tone file is in the agent files too (Noah: "make sure that the document is there, even if it's blank").** `standards/flock/voice-and-tone.md` is committed **blank** (an empty file) in the design repository: until now nothing created it before a first save was merged, so it did not exist. An empty file reads as empty (not as none, and not as a failure) through `DesignRepo`, the clone, and every task, which leave it out; tests for each, and one that fails if the file is ever missing from the repository. **Coke's agent files name it** (Coke `noah/dsnr`, `fda6b052`, one commit, made in a separate working copy and fast-forwarded onto `noah/dsnr` at Noah's word that it belongs on his branch, not a new one; unpushed): `.dsnr/README.md` (the standards tree, the precedence as the shared Flock tier between Coke's own and the universal, and a line that the Flock tier has two homes), `agents/dsnr.md` (what the agent reads), `agents/product-parity-reviewer.md` (read, and checked against once written; blank is not a finding), `standards/non-negotiables.md` (the precedence). So a run in VS Code with no app carries it as a run from the app does. The component library's agent files are not changed: they are about components. | DESIGN_SYSTEM_PLAN.md (T9), `standards/flock/voice-and-tone.md` |
 | 2026-10-10 | **T9: final confirmation (Noah: "one final confirmation that everything from T9 is clean"), the top switch large, and the voice file always there.** **The top bar's Projects / Design System switch** is the large size: the tab list has the two sizes a Button has (`size`, default h-8 and `lg` h-9, `data-size`), and the nav asks for `lg`; the line tabs keep the default. **The Voice and Tone tab has no "Start the file"** (Noah: the file is always part of the system): the text area is always there, blank with no file, with a placeholder; nothing to save until something is written, and Save makes the file against no file. The skeleton of headings (`VOICE_SKELETON`) is removed, since nothing starts a file now; a blank file, or one of headings and comments only, adds nothing to a task. **Final sweep:** no leftover names or attributes from the forms T9 went through (`PanelTabs`, `ToolbarTab`, `data-toolbar-tabs`, `data-voice-branch`, the skeleton, the finder); no unused export in T9's files (one needless export, `KeptBranch`, made local); no unused local under `--noUnusedLocals` in either typecheck; the plan's mentions of the skeleton and Start the file corrected. | DESIGN_SYSTEM_PLAN.md (T9) |
 | 2026-10-10 | **T9: the tabs not stretched, and the bar's height (Noah: "I don't like the tabs stretched like that").** The Design System tabs are `LineTabsList bar`: the one option of the shared tabs, set in the component and on nothing where it is used. It makes the strip as tall as the toolbar (`--toolbar-height`, which `h-8` is replaced by in the merge), inset by the page's padding, on the toolbar's background, with each tab as wide as its label (`flex-none` on its tabs, from the list) and at the left. The tokens panel's Color, Spacing and Shape are the same component without it, stretched as before. **Measured on the drawn screen:** the strip 44px, the Components frame's first row 44px, the panel's switch row 44px, the strip's bottom the first row's top (no gap); tabs 98, 79 and 114px wide; the underline 2px, on the strip's border. Tests for the option and for its absence. | DESIGN_SYSTEM_PLAN.md (T9) |

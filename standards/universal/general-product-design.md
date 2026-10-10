@@ -2,9 +2,8 @@
 
 **Product-agnostic.** Baseline judgment expected before implementation. This is the overview —
 `layout-judgment.md`, `copy-and-microcopy.md`, `interaction-states.md`, and `accessibility.md` go
-deeper on their areas. Flock-specific standards in
-`../flock/` **override these on matters of convention and taste** — density, tone, vocabulary,
-component choice. Where they're silent, these apply.
+deeper on their areas. Flock's conventions and a product's own **override these on matters of convention and taste**
+(density, tone, vocabulary, component choice), in the order `../README.md` gives. Where they're silent, these apply.
 
 ## Answer the four questions
 

@@ -10,8 +10,8 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 
 /**
- * The Voice and tone tab (T9 of the design system plan): the company's voice and tone, one file in the design repository,
- * which every agent task carries. Read from GitHub when the tab is first shown and on Refresh, so a commit made in the
+ * The Voice and Tone tab (T9 of the design system plan): Flock's voice and tone, one file in the connected design system's
+ * agent files, which every agent task carries. Read from GitHub when the tab is first shown and on Refresh, so a commit made in the
  * repository shows; edited in one text area, which is always there (blank until the file has been written, so there is
  * nothing to start); saved to a branch of DSNR's, each save one commit, and proposed as a draft
  * pull request, as a change to the tokens is (`BranchActions`). A save is made against the file the text was opened at, so
@@ -114,8 +114,8 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 				<div className="flex min-w-0 flex-col gap-1">
 					<h2 className="text-base font-semibold">Voice and tone</h2>
 					<p className="text-muted-foreground text-sm">
-						How Flock&apos;s product speaks. Every agent task carries this file, from <span className="font-mono text-xs">{voice.path}</span> in the design
-						repository; a product&apos;s own guidance wins where it differs.
+						How Flock&apos;s product speaks. Every agent task carries this file, <span className="font-mono text-xs">{voice.path}</span> in{' '}
+						{voice.repository}, the design system&apos;s agent files; a product&apos;s own conventions win where they differ.
 					</p>
 				</div>
 				<Button variant="outline" disabled={reading || busy !== null} onClick={() => void read(unsaved)}>

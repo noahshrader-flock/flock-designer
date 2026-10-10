@@ -1,10 +1,13 @@
 /**
  * What every agent task says about the company's voice and tone (T9 of the design system plan, step 4): the file's own
- * words, read from the design repository each time a task is made, as the accessibility standard is (T7, part A), and put
+ * words, read from the design system's agent files each time a task is made, as the accessibility standard is (T7, part A), and put
  * into the task instead of naming a file the agent may never open. Nothing is copied. With no file, or one with nothing
  * written in it yet, the task says nothing about it: the file is not required.
  */
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { voiceIsWritten, voiceWithoutComments } from '../../shared/voice';
+import { designSystemCheckout } from './descriptor';
 import { VOICE_FILE } from './voiceAndTone';
 
 /** The task's heading for the section, whichever way it is made. */
@@ -30,14 +33,22 @@ export const voiceBrief = (text: string | null): string => {
 	return [
 		HEADING,
 		'',
-		`Write every word a person will read in Flock's voice and tone, below, from \`${VOICE_FILE}\` in the design repository. Where this product's own guidance says otherwise, the product's wins.`,
+		`Write every word a person will read in Flock's voice and tone, below, from \`${VOICE_FILE}\` in the design system's agent files. Where this product's own conventions say otherwise, the product's win.`,
 		'',
 		underTheTask(voiceWithoutComments(text)),
 	].join('\n');
 };
 
+/** A file of the design system's, read from its checkout beside the product at `root`; null when it is not there. */
+export const designSystemFile =
+	(root: string) =>
+	async (path: string): Promise<string | null> => {
+		const file = join(designSystemCheckout(root), path);
+		return existsSync(file) ? readFileSync(file, 'utf8') : null;
+	};
+
 /**
- * The voice and tone section of a task, made the one way every task makes it: the file read as the skills are (`read`).
+ * The voice and tone section of a task, made the one way every task makes it: the design system's file, through `read`.
  * A file that cannot be read is said to be so, and the task goes ahead, since it is not required.
  */
 export const taskVoice = async (read: (path: string) => Promise<string | null>): Promise<string> => {

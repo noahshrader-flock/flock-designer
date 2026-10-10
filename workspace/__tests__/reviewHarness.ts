@@ -39,7 +39,7 @@ export const fakeApp = (overrides: Impl = {}) => {
 		// No change to the tokens saved, unless a test says otherwise.
 		tokenBranch: async () => ok(null),
 		// No voice and tone file in the design repository, unless a test says otherwise.
-		voiceAndTone: async () => ok({ path: 'standards/flock/voice-and-tone.md', base: 'main', text: null, sha: null, branch: null }),
+		voiceAndTone: async () => ok({ repository: 'flocksafety/flock-react-component-lib', path: '.dsnr/voice-and-tone.md', base: 'develop', text: null, sha: null, branch: null }),
 		// Every story still being drawn, unless a test says otherwise.
 		componentTokens: async () => ok({ state: 'building' }),
 		// No pictures of the components yet, and none being drawn, unless a test says otherwise.

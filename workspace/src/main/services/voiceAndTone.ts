@@ -1,19 +1,20 @@
 /**
- * The company's voice and tone (T9 of the design system plan): one file in the design repository, read and changed from the
- * Design System tab, and put into every agent task (`voiceBrief.ts`).
+ * The company's voice and tone (T9 of the design system plan): one file in the design system's agent files
+ * (`.dsnr/voice-and-tone.md`, in its folder when it lives in a larger repository), read and changed from the Design System
+ * tab, and put into every agent task (`voiceBrief.ts`).
  *
- * **Reading** is from the default branch, which GitHub is asked for rather than named (the design repository's is not
- * `main`), so a commit made in the repository shows the next time the tab reads.
+ * **Reading** is from the design system's default branch, which GitHub is asked for rather than named, so a commit made in
+ * the repository shows the next time the tab reads.
  *
  * **Saving** keeps the text on a branch DSNR makes for it (`dsnr/voice-…`), made from the default branch's head on the
  * first save, with one commit for each save after; nothing is checked out and the default branch is never written. A save
  * is refused when the file on the default branch is no longer the one the text was opened at, so nobody's change is
- * overwritten. The branch and its commits are made through the app's own session, as the records are published.
+ * overwritten. **Proposing** opens a draft pull request for it. A change merged, closed or deleted on GitHub is forgotten
+ * when it is next read.
  *
- * **Proposing** opens a draft pull request with the person's own GitHub command line, as Share does, so the app's GitHub
- * App needs no permission for pull requests. A change merged, closed or deleted on GitHub is forgotten when it is next read.
- *
- * Every call here was tried on the real design repository on 2026-10-10 before this was written.
+ * Every call is the person's own GitHub command line, as a change to the tokens is proposed: the app's own GitHub App is
+ * installed on the design repository only, so it cannot reach a design system. Every call was tried on a real repository
+ * on 2026-10-10 before this was written.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -23,8 +24,8 @@ import { DesignRepo, type DesignRepoRef, type GitHubApi } from './designRepo';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { httpStatus } from './github';
 
-/** Where the file is, in the design repository: the shared layer's Flock tier (decided in the plan, T9). */
-export const VOICE_FILE = 'standards/flock/voice-and-tone.md';
+/** Where the file is, in a design system's agent files: how Flock speaks is the design system's (Noah, 2026-10-10). */
+export const VOICE_FILE = '.dsnr/voice-and-tone.md';
 
 /** The branches DSNR saves the voice and tone to: its own, so a save can never land on anyone's work. */
 export const VOICE_BRANCH = dsnrBranchPattern('voice');
@@ -38,37 +39,39 @@ interface Kept {
 
 const PROPOSAL_TITLE = 'Voice and tone';
 const PROPOSAL_BODY =
-	'Proposed from the Voice and tone tab in DSNR.\n\nOnce merged, this is the voice and tone every agent task carries, wherever the product’s own guidance does not say otherwise.';
+	'Proposed from the Voice and Tone tab in DSNR.\n\nOnce merged, this is the voice and tone every agent task carries, wherever a product’s own conventions do not say otherwise.';
 
 export class VoiceAndToneFile {
 	private readonly repo: DesignRepoRef;
-	/** The file, read as every file in the design repository is. */
+	/** The file's path in the repository: in the design system's folder, when it has one. */
+	private readonly path: string;
+	/** The file, read as every file DSNR reads from GitHub is. */
 	private readonly files: DesignRepo;
-	private readonly app: GitHubApi;
-	private readonly person: GitHubApi | null;
+	private readonly github: GitHubApi;
 	private readonly file: string;
 	private readonly now: () => Date;
 
 	constructor({
 		repo,
-		app,
-		person,
+		folder = '',
+		github,
 		file,
 		now = () => new Date(),
 	}: {
+		/** The design system's repository. */
 		repo: DesignRepoRef;
-		/** The app's own session: what reads the file and writes the branch. */
-		app: GitHubApi;
-		/** The person's GitHub command line, which opens the pull request; null where there is none. */
-		person: GitHubApi | null;
+		/** Its folder, when it lives in a larger repository; empty when it is the whole repository. */
+		folder?: string;
+		/** The person's own GitHub command line. */
+		github: GitHubApi;
 		/** Where the branch is remembered. */
 		file: string;
 		now?: () => Date;
 	}) {
 		this.repo = repo;
-		this.files = new DesignRepo(app, repo);
-		this.app = app;
-		this.person = person;
+		this.path = folder ? `${folder.replace(/\/+$/, '')}/${VOICE_FILE}` : VOICE_FILE;
+		this.files = new DesignRepo(github, repo);
+		this.github = github;
 		this.file = file;
 		this.now = now;
 	}
@@ -114,7 +117,7 @@ export class VoiceAndToneFile {
 	}
 
 	private async defaultBranch(): Promise<string> {
-		const repo = asRecord(await this.app.api(this.base));
+		const repo = asRecord(await this.github.api(this.base));
 		if (typeof repo.default_branch !== 'string') throw new Error('GitHub did not say which branch is the design repository’s default.');
 		return repo.default_branch;
 	}
@@ -124,12 +127,7 @@ export class VoiceAndToneFile {
 	 * (always made with the file on it) is the branch deleted. Any other failure is said.
 	 */
 	private read(ref: string): Promise<{ text: string; sha: string } | null> {
-		return this.files.readFileAt(VOICE_FILE, ref);
-	}
-
-	/** Asked of the person's command line where there is one, else of the app's session, which may not see pull requests. */
-	private get pulls(): GitHubApi {
-		return this.person ?? this.app;
+		return this.files.readFileAt(this.path, ref);
 	}
 
 	/**
@@ -139,10 +137,10 @@ export class VoiceAndToneFile {
 	private async pullRequestOf(kept: Kept): Promise<{ number: number; url: string } | 'gone' | null | undefined> {
 		try {
 			if (kept.pullRequest) {
-				const pr = asRecord(await this.pulls.api(`${this.base}/pulls/${kept.pullRequest.number}`));
+				const pr = asRecord(await this.github.api(`${this.base}/pulls/${kept.pullRequest.number}`));
 				return pr.state === 'open' && !pr.merged_at ? kept.pullRequest : 'gone';
 			}
-			const found = asArray(await this.pulls.api(`${this.base}/pulls?head=${encodeURIComponent(`${this.repo.owner}:${kept.branch}`)}&state=all`)).map(asRecord);
+			const found = asArray(await this.github.api(`${this.base}/pulls?head=${encodeURIComponent(`${this.repo.owner}:${kept.branch}`)}&state=all`)).map(asRecord);
 			const open = found.find((p) => p.state === 'open');
 			if (open && typeof open.number === 'number' && typeof open.html_url === 'string') return { number: open.number, url: open.html_url };
 			return found.length > 0 ? 'gone' : null;
@@ -159,7 +157,7 @@ export class VoiceAndToneFile {
 	async current(): Promise<VoiceAndTone> {
 		const base = await this.defaultBranch();
 		const onDefault = await this.read(base);
-		return { path: VOICE_FILE, base, text: onDefault?.text ?? null, sha: onDefault?.sha ?? null, branch: await this.branch(base) };
+		return { repository: this.key, path: this.path, base, text: onDefault?.text ?? null, sha: onDefault?.sha ?? null, branch: await this.branch(base) };
 	}
 
 	/** The kept branch as GitHub has it, after forgetting it if it was merged, closed or deleted there. */
@@ -198,14 +196,14 @@ export class VoiceAndToneFile {
 			} else {
 				if (onDefault?.text === text) return { state: 'saved', voice: await this.current() };
 				const branch = newDsnrBranch('voice', this.now());
-				const head = asRecord(asRecord(await this.app.api(`${this.base}/git/ref/heads/${encodeURIComponent(base)}`)).object).sha;
+				const head = asRecord(asRecord(await this.github.api(`${this.base}/git/ref/heads/${encodeURIComponent(base)}`)).object).sha;
 				if (typeof head !== 'string') throw new Error(`GitHub did not say where ${base} is.`);
-				await this.app.api(`${this.base}/git/refs`, { method: 'POST', body: { ref: `refs/heads/${branch}`, sha: head } });
+				await this.github.api(`${this.base}/git/refs`, { method: 'POST', body: { ref: `refs/heads/${branch}`, sha: head } });
 				try {
 					await this.put(branch, text, against, onDefault ? 'Voice and tone, saved from DSNR' : 'Voice and tone, started from DSNR');
 				} catch (err) {
 					// The default branch moved between reading it and making the branch: the branch goes, and the save is refused.
-					await this.app.api(`${this.base}/git/refs/heads/${encodeURIComponent(branch)}`, { method: 'DELETE' }).catch(() => undefined);
+					await this.github.api(`${this.base}/git/refs/heads/${encodeURIComponent(branch)}`, { method: 'DELETE' }).catch(() => undefined);
 					if (httpStatus(err) === 409 || httpStatus(err) === 422) return { state: 'changed', voice: await this.current() };
 					throw err;
 				}
@@ -222,7 +220,7 @@ export class VoiceAndToneFile {
 	/** One commit of the file on one of DSNR's own branches, never on any other. */
 	private async put(branch: string, text: string, sha: string | null, message: string): Promise<void> {
 		if (!VOICE_BRANCH.test(branch)) throw new Error(`${branch} is not a branch DSNR made, so nothing is written to it.`);
-		await this.app.api(`${this.base}/contents/${VOICE_FILE}`, {
+		await this.github.api(`${this.base}/contents/${this.path}`, {
 			method: 'PUT',
 			body: { message, branch, content: Buffer.from(text, 'utf8').toString('base64'), ...(sha ? { sha } : {}) },
 		});
@@ -232,14 +230,13 @@ export class VoiceAndToneFile {
 	async propose(): Promise<VoiceAndTone> {
 		const kept = this.kept();
 		if (kept === null) throw new Error('Save the change before proposing it.');
-		if (this.person === null) throw new Error(needsGh);
 		const base = await this.defaultBranch();
 		try {
-			const open = asArray(await this.person.api(`${this.base}/pulls?head=${encodeURIComponent(`${this.repo.owner}:${kept.branch}`)}&state=open`)).map(asRecord)[0];
+			const open = asArray(await this.github.api(`${this.base}/pulls?head=${encodeURIComponent(`${this.repo.owner}:${kept.branch}`)}&state=open`)).map(asRecord)[0];
 			const pr =
 				open ??
 				asRecord(
-					await this.person.api(`${this.base}/pulls`, {
+					await this.github.api(`${this.base}/pulls`, {
 						method: 'POST',
 						body: { title: PROPOSAL_TITLE, head: kept.branch, base, body: PROPOSAL_BODY, draft: true },
 					}),
@@ -247,13 +244,14 @@ export class VoiceAndToneFile {
 			if (typeof pr.number !== 'number' || typeof pr.html_url !== 'string') throw new Error('GitHub did not say which pull request it opened.');
 			this.keep({ ...kept, pullRequest: { number: pr.number, url: pr.html_url } });
 		} catch (err) {
-			// No command line, or one not signed in: the change stays saved, and GitHub's own page can open the pull request.
-			if (httpStatus(err) === undefined && /ENOENT|not found|auth|log ?in/i.test(String((err as Error).message))) throw new Error(needsGh);
+			// A command line not signed in, or gone since: the change stays saved, and GitHub's own page can open the pull request.
+			if (httpStatus(err) === undefined && /ENOENT|not found|auth|log ?in/i.test(String((err as Error).message))) throw new Error(NEEDS_GH);
 			throw err;
 		}
 		return this.current();
 	}
 }
 
-const needsGh =
-	'Proposing opens the pull request with the GitHub command line (gh), which is not installed or not signed in here. The change is saved on its branch: open the pull request on GitHub instead.';
+/** What is said when the person's GitHub command line cannot be used: everything here goes through it. */
+export const NEEDS_GH =
+	'The voice and tone is read and saved with the GitHub command line (gh), which is not installed or not signed in here. Install it and run `gh auth login`; anything already saved is on its branch.';

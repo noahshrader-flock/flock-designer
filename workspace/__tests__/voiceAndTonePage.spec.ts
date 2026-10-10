@@ -13,8 +13,9 @@ import { button, fail, fakeApp, ok, press, render, settle, typeInto, unmountAll 
 const SHA = 'a'.repeat(40);
 const NEW_SHA = 'b'.repeat(40);
 const voice = (more: Partial<VoiceAndTone> = {}): VoiceAndTone => ({
-	path: 'standards/flock/voice-and-tone.md',
-	base: 'noah/flock-designer',
+	repository: 'flocksafety/flock-react-component-lib',
+	path: '.dsnr/voice-and-tone.md',
+	base: 'develop',
 	text: '# Voice and tone\n\nPlain words.\n',
 	sha: SHA,
 	branch: null,
@@ -25,7 +26,7 @@ const kept = (more: Partial<VoiceBranch> = {}): VoiceBranch => ({
 	text: '# Voice and tone\n\nPlainer words.\n',
 	saves: 1,
 	pullRequest: null,
-	compare: 'https://github.com/acme/design/compare/noah%2Fflock-designer...dsnr%2Fvoice-20261010-ab12?expand=1',
+	compare: 'https://github.com/flocksafety/flock-react-component-lib/compare/develop...dsnr%2Fvoice-20261010-ab12?expand=1',
 	...more,
 });
 
@@ -65,7 +66,8 @@ describe('reading it', () => {
 	it('shows the file in one text area, with where it is, and nothing to save until it is changed', async () => {
 		await show();
 		expect(area()?.value).toBe('# Voice and tone\n\nPlain words.\n');
-		expect(text()).toContain('standards/flock/voice-and-tone.md');
+		expect(text()).toContain('.dsnr/voice-and-tone.md');
+		expect(text()).toContain('flocksafety/flock-react-component-lib');
 		expect(has('Save to a branch')).toBe(false);
 		expect(has('Propose')).toBe(false);
 	});

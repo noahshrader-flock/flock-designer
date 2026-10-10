@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { main } from '../src/cli/dsnr';
 import { g, installDesignSystem, makeProduct, addStandards } from './fixtures';
@@ -72,8 +72,8 @@ describe('new-prototype', () => {
 	it('carries Flock’s voice and tone in the task when the design repository has it written, and nothing when it has none (T9)', async () => {
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(0);
 		expect(out.join('\n')).not.toContain('## Voice and tone');
-		mkdirSync(join(design, 'standards', 'flock'), { recursive: true });
-		writeFileSync(join(design, 'standards', 'flock', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
+		mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });
+		writeFileSync(join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
 		out = [];
 		expect(await run('new-prototype', '--project', 'demo', '--note', 'Another idea')).toBe(0);
 		const task = out.join('\n');

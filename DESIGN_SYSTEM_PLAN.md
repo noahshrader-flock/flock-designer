@@ -452,6 +452,19 @@ of tabs (later removed: see (10) below), GitHub's status on a failed call
 exists, which reading the file on it already says). Found in passing and fixed: `DesignRepo` took only the app's own errors for
 "not there", so a missing file read through the person's `gh` (the `dsnr` command) failed instead of being null. A save also
 takes a blob's 64-hex sha, for a repository on SHA-256.
+**The layers made clean (Noah, 2026-10-10: "make sure that we are not putting anything that can be broadly applicable to all
+of an organization's code bases just inside of the product code base").** One rule now sorts every agent file: **a product's
+`.dsnr/` holds only its facts; how Flock looks and speaks is the design system's `.dsnr/`; how DSNR works is
+`flock-designer`.** Coke's three agent definitions, the request guide, the pattern-choosing and reference skills, the
+workflow parts of its non-negotiables, manifest and README, the logs' method, the baselines and the pilot's questions moved to
+`flock-designer` (`agents/`, `skills/`, `standards/non-negotiables.md`, `knowledge/README.md`); Flock's UI conventions and the
+voice and tone to the design system; its restatements of the design system's own rules were deleted (the design system's
+README already said each). **Pointers go one way:** a product's shim names the shared agent, the shared agents name a
+product's files by fixed names (`flock-designer/README.md`, "What a product repository provides"), and no product file
+points back, which `validate.py` now fails on. The order of precedence is written once, in `standards/README.md`. Coke
+also lost eight hardcoded "today 5.5.4" (the lock says 5.6.6), a stale path to a deleted role form, and a personal-branch
+default in its scripts (now `noah/dsnr`, said once).
+
 **After using it (Noah, 2026-10-10):** (10) the bar of tabs went through three forms the same day: an exception in the toolbar, removed; the shared tabs stretched across the width like the panel's, which Noah did not want; and last, **the shared `LineTabs` with one option, `bar`** (renamed from `PanelTabs`, since it is no longer a panel's only), which sets a toolbar's height and inset and tabs as wide as their labels, inside the component and on nothing where it is used. The toolbar is as it was before T9, and the tab fills the window under the top bar with each pane scrolling on its own, so nothing counts the toolbar's height; (11) the panel's switch is **Component, then Tokens**, across the panel's whole width, which is an option of the toggle group itself (`fullWidth`), not of the panel; the tokens are still what shows until a component is opened; (12) a third tab, **Primitives**, sits between Components and Voice and Tone; (13) the top bar's switch between Projects and Design System is the large size of tabs (`TabsList size="lg"`, a Button's large height; the default is a Button's default), a size option the tab list did not have; (14) the voice and tone has no "Start the file": the text area is always there, blank with no file (Noah), so the skeleton of headings was removed, and a file of only headings or comments adds nothing to a task, as a blank one does; (15) a tab's label is in title case whatever it was written in, by the tab component (`titleCase`, `shared/titleCase.ts`), for every tab in the app. **What it holds is not decided:** it is an empty page, with no side panel, until Noah says.
 
 **Why (Noah, 2026-10-10):** what prototypes and code say should use Flock's tone of voice, and the voice should be changed in
@@ -466,16 +479,16 @@ project starts. Guides say adjectives alone work badly and concrete rules, paire
 list work well. **No sync with a repository is described:** it is a snapshot made once inside their tool. That sync is what T9 adds.
 
 **Where it sits (Noah, 2026-10-10):** Design System is the company's, not any one library, and has three tabs: Components, Primitives (what it holds is not decided), and
-**Voice and tone** (first called Brand guidelines; it holds only voice and tone at first, and the name can widen later). It sits
-beside the connected library, so switching the system or branch does not change it. A product's own differences stay in its
-`.dsnr/standards/flock/`, which already wins over anything shared.
+**Voice and tone** (first called Brand guidelines; it holds only voice and tone at first, and the name can widen later). It is the
+connected design system's, `.dsnr/voice-and-tone.md` in its repository, so switching the system shows that system's. A
+product's own measured conventions (its `.dsnr/standards/product.md`) win where they differ.
 
 **Decided (2026-10-10; Noah left 1 to 3 to me and agreed 4):**
-1. **The file lives in the shared layer, in a new `standards/flock/` beside `universal/`.** Flock's voice is not universal
-   (`universal/` is "would hold at any company") and not one product's (a product's `.dsnr/standards/flock/` is for what differs
-   in that product); Noah's layers put what is common to all products in `flock-designer`; and it is where the app already reads
-   and writes. The component library is the wrong place: a package consumed by products, and the voice is not about components.
-   **Precedence becomes:** a product's own Flock tier, then `standards/flock/`, then `universal/` (accessibility a floor under all).
+1. **The file is the design system's** (Noah, 2026-10-10: "the voice and tone stuff should be a part of the design system
+   agent files"): `.dsnr/voice-and-tone.md` in `flock-react-component-lib`, beside Flock's UI conventions
+   (`product-native-ui.md`, moved there from Coke the same day). How Flock looks and speaks is the design system's, the same in
+   every product. **Reversed twice the same day:** it was first put in `flock-designer/standards/flock/` and named in four of
+   Coke's agent files, which put Flock-wide text into a product; both are gone.
 2. **No source exists to start from** (below). **Noah writes the content himself;** nothing is invented for it, and
    nobody else has to confirm anything before it is used. **The file is always part of the system** (Noah, 2026-10-10): the
    tab is always the text area, blank until the file has been written, with nothing to start, and a blank file adds nothing to
@@ -492,21 +505,18 @@ a 2023 "Flock Safety-Brand Guidelines" document, nearly all of it marked "Copy i
 in Slack (July 2026), which is how documents are written, not how the product speaks. **Nothing on interface copy,** and nothing
 from either is copied into this plan.
 
-**In the agent files too (Noah, 2026-10-10):** the file is **committed blank** in the design repository (an empty file, so it is
-always there, to be written in, and ignored while it is), and **Coke's agent files name it**, so a run that does not come from
-the app (Claude Code in VS Code) reads it as well: in `.dsnr/README.md` (the standards tree, the precedence, as the shared Flock
-tier between Coke's own and the universal), in what the DSNR agent reads (`agents/dsnr.md`), in what the parity reviewer reads and
-checks the view's words against (`agents/product-parity-reviewer.md`), and in `standards/non-negotiables.md`'s precedence. Blank, each
-says there is nothing to apply and that it is not a finding; written, it is read every time. The component library's agent files do
-not name it: they are the design system's layer, which is about components.
+**In the agent files (Noah, 2026-10-10):** the file is **committed blank** in the design system's `.dsnr/` (an empty file, so
+it is always there, to be written in, and ignored while it is), and listed in its README. The shared agents read it by name
+from the design system's checkout beside the product; the app puts it in every task it makes. **No product file names it**,
+and the design system's `validate.py` fails if it goes missing.
 
-**The file:** `standards/flock/voice-and-tone.md` in `flock-designer`, **blank until Noah writes it**: the tab shows its text area
+**The file:** `.dsnr/voice-and-tone.md` in the design system, **blank until Noah writes it**: the tab shows its text area
 whether the file exists or not, and Save makes the file. What goes in it is his: the guides suggest a voice in two or three
 sentences, concrete rules (reading level, sentence length, words banned; only what is Flock-wide, since the generic rules stay
 in `copy-and-microcopy.md`), paired examples, and at least three anti-patterns. **Coke's vocabulary stays in Coke:** its lines on Devices, "Fleet", and no
 "Oops" rest on one product's evidence (its own file says so, and `standards/README.md` says one product's habit is not a
-Flock-wide rule), so nothing is moved out of it. A line there that Noah says is company-wide is lifted into the shared
-file then, and removed from Coke's, so each fact still lives once.
+Flock-wide rule), so nothing is moved out of it. A line there that Noah says is company-wide is lifted into the design
+system's conventions then, and removed from Coke's, so each fact still lives once.
 
 **The layout (Noah, 2026-10-10).** Today one bar holds the system's name, a branch icon, the problem with a sync, Sync, the
 Tokens and Component switch and More, and a Find a component menu sits over the list (`DesignSystem.tsx`). It becomes:
@@ -547,7 +557,8 @@ Tokens and Component switch and More, and a Find a component menu sits over the 
   Save, Propose, Start over), and the branch's naming (`dsnrBranch.ts`), not the mechanics.
 - **Delivered the way accessibility is** (T7, part A), so nobody has to remember it: `taskAccessibility` reads the standard
   "as the skills are" and puts it into every task, at two places, `ipc.ts` (codebase tasks) and `prototypeWork.ts` (prototype
-  tasks). A `taskVoice` beside it reads `standards/flock/voice-and-tone.md` each time a task is made, copied nowhere.
+  tasks). A `taskVoice` beside it reads the design system's `.dsnr/voice-and-tone.md`, from its checkout beside the product, each
+  time a task is made, copied nowhere.
 - **A test first for each behavior,** and each step finished, committed and leaving the app working.
 
 **Steps:**
