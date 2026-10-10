@@ -165,7 +165,7 @@ nothing on GitHub changed.
 | **T6** (done) | **Show a component's tokens, and who shares them:** every token tagged with a unique value, built once, each story rendered and read back (decision 29); the Component view shows **Made from** (the component's tokens, as the same rows with the same editor), **Shared with** (the other components that use a token) and **Not tokens** (what is set in the component); run in the background once per library commit, in both modes | T3, decision 29 | M | Medium |
 | **T7** (done) | **Accessibility, delivered and measured:** the rules and the product's declared target put into every build task (A); axe-core run on a built prototype page in a hidden sandboxed window, its failures given back to the agent and kept on the iteration's record (B); one definition of WCAG in code, shared by the contrast display and the check, both reading the target from the manifest (C); each component's own count on its card and panel (D); tests that keep the standard from drifting | decision 30, T3, T6 (the hidden windows) | M | Medium |
 | **T8** (candidate) | **Ask in words:** "make the primary a little warmer" produces the same list of edits | T3 | S | Low |
-| **T9** | **Voice and tone:** the tab gets a bar of two tabs, **Components** and **Voice and tone**, and the Components frame two rows of its own, with the Tokens and Component switch at the top of the right panel (step 1); the company's voice and tone is one file in the design repository, read and shown (2), changed in the app as a branch and a draft pull request or in the repository (3), and put into every build task the way accessibility is (4) | T7's task brief, decisions 17 to 31 | M | Medium |
+| **T9** (done) | **Voice and tone:** the tab gets a bar of two tabs, **Components** and **Voice and tone**, and the Components frame two rows of its own, with the Tokens and Component switch at the top of the right panel (step 1); the company's voice and tone is one file in the design repository, read and shown (2), changed in the app as a branch and a draft pull request or in the repository (3), and put into every build task the way accessibility is (4) | T7's task brief, decisions 17 to 31 | M | Medium |
 
 ### S1: The catalog reader (done 2026-10-08)
 
@@ -427,7 +427,22 @@ is fixed in up to two rounds and reported, with the hard stop only at handoff (d
 **T8 (candidate): Ask in words.** Words produce the same list, through the agent and the library's authoring standards;
 nothing else changes. Built only if the controls leave a gap.
 
-### T9: Voice and tone (planned, 2026-10-10)
+### T9: Voice and tone (done 2026-10-10)
+
+What it built, and the evidence, is in [dsnr.md](dsnr.md#change-log) (2026-10-10). **What building it changed from the plan
+below:** (1) the service makes its own Contents calls (`services/voiceAndTone.ts`), since a save needs the file's sha with its
+text, rather than `DesignRepo.readFile` taking a ref; (2) a save checks the default branch's file against the sha the text was
+opened at on *every* save, not only the first, and GitHub's 409 is the backstop when the default branch moves between that check
+and the branch being made (the branch is then deleted and the save refused); (3) a remembered branch that is not `dsnr/voice-…` is
+never taken for a change kept, so it is never written to; (4) whether a branch was merged or closed is asked of the person's `gh`
+where there is one, else of the app's session, and when GitHub cannot tell, the change is kept, not lost; (5) a file with only
+its headings and comments, as "Start the file" leaves it, is not put in a task, and a file that cannot be read is said to be in
+the task, which goes ahead; (6) the section reaches every task through a required `voice` field on each task builder, so the
+compiler names any new kind of task that leaves it out: prototype build and its accessibility fix, prototype address, every
+codebase run (`startTracked`), the move-to-code task file, and the `dsnr` command; (7) the old bar was named by more tests than
+the four "Find a component" lines (the bar's order, the alert, the count of tab lists, opening from the finder): those were
+rewritten for the new layout, and every other token and component test passed unchanged; (8) the tab's two panes are Radix's own,
+since shadcn's sets a text size on everything in them; (9) steps 2 and 3 were built as one, sharing the service and the page.
 
 **Why (Noah, 2026-10-10):** what prototypes and code say should use Flock's tone of voice, and the voice should be changed in
 the app or in the repository with the same effect: someone commits a change and it shows in the app, or a change made in the app
@@ -574,7 +589,7 @@ one line in its `.dsnr/README.md` precedence list is a Coke change Noah pushes. 
 codebase task and an address task; absent with no file; the text read afresh each time (an edit shows in the next task); and the
 words in a task are the file's own, not a copy kept anywhere.
 
-**Open:** nothing for Noah to decide before step 1. **Noah's check, after step 3:** save an edit in the app, see the branch on GitHub, Propose, see the draft pull request, merge it, and see the page show the merged text.
+**Noah's check (what tests cannot show):** in the app, Design System, Voice and tone: Start the file, write a line, **Save to a branch**. That is the first real save through the app's own GitHub session (the probe used `gh`): if it says write access is needed, the GitHub App's Contents permission is not approved on the installation. Then see the branch on GitHub, **Propose**, see the draft pull request, merge it, **Refresh** and see the merged text; then build a prototype and see `## Voice and tone` in its task. Optional, Coke's to push: one line in its `.dsnr/README.md` precedence list naming `standards/flock/`.
 
 **Not in T9:** logos, color and typography beyond the tokens; choosing the library's branch; fields in place of the text area;
 checking written copy against the voice automatically (a candidate once the file is in use).
@@ -639,7 +654,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 ## Next
 
 **S1 to S3 and P0 to P2 are done,** with Storybook as the source of truth for what a component is (decision 17), and
-stories responding as they should. **T1 to T5 and P4 are done (the tokens, read, in the panel, a change tried on them, kept on a branch and proposed as a draft pull request; any repository connected).** **T6 is done too (a component's tokens, and who shares them, found by tagging; decision 29).** The next steps are a designer trying T1 to T6 on a real task, and **T7 is done (accessibility, delivered and measured; decision 30): every task carries the rules and the target, each prototype and each component is checked with axe-core, and WCAG's edition is watched weekly.** T8 is a candidate only. **T9 (voice and tone, with the tab bar and the new layout of the Components frame; 2026-10-10) is laid out in four steps with their tests, its questions settled, and waiting for Noah's go.** P3 was dropped
+stories responding as they should. **T1 to T5 and P4 are done (the tokens, read, in the panel, a change tried on them, kept on a branch and proposed as a draft pull request; any repository connected).** **T6 is done too (a component's tokens, and who shares them, found by tagging; decision 29).** The next steps are a designer trying T1 to T6 on a real task, and **T7 is done (accessibility, delivered and measured; decision 30): every task carries the rules and the target, each prototype and each component is checked with axe-core, and WCAG's edition is watched weekly.** T8 is a candidate only. **T9 is done too (voice and tone: the tab's own bar and the Components frame's two rows; the file read, edited, saved to a branch and proposed; and carried by every task).** Noah's check is in T9's section. P3 was dropped
 (decision 10).
 
 **By hand, Noah:** restart the dev session (the main process changed), open the Design System tab, and try a few
