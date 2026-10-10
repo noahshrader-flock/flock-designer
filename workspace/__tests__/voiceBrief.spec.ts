@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { VOICE_FILE } from '../src/main/services/voiceAndTone';
 import { taskVoice, voiceBrief } from '../src/main/services/voiceBrief';
-import { VOICE_SKELETON, voiceIsWritten } from '../src/shared/voice';
+import { voiceIsWritten } from '../src/shared/voice';
 
 /**
  * What every agent task carries of the company's voice and tone (T9 of the design system plan, step 4): the file's own
@@ -46,11 +46,13 @@ describe('the section a task carries', () => {
 		expect(brief).toContain('\n# not a heading: inside a fence\n');
 	});
 
-	it('is nothing at all with no file, or one with nothing written in it yet, such as the file as it is started', () => {
+	it('is nothing at all with no file, or one with nothing written in it yet: blank, or only headings and comments', () => {
 		expect(voiceBrief(null)).toBe('');
 		expect(voiceBrief('')).toBe('');
-		expect(voiceIsWritten(VOICE_SKELETON)).toBe(false);
-		expect(voiceBrief(VOICE_SKELETON)).toBe('');
+		expect(voiceBrief('  \n\n')).toBe('');
+		const headings = '# Voice and tone\n\n## Voice\n\n<!-- Two or three sentences. -->\n\n## Rules\n';
+		expect(voiceIsWritten(headings)).toBe(false);
+		expect(voiceBrief(headings)).toBe('');
 		expect(voiceBrief('# Voice and tone\n\n## Voice\n\n<!-- later -->\n')).toBe('');
 		expect(voiceIsWritten('# Voice and tone\n\nPlain words.\n')).toBe(true);
 	});

@@ -762,10 +762,9 @@ describe('prototypes', () => {
 		// No file: nothing said of it.
 		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
 		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('## Voice and tone');
-		// The file as it is started, with nothing written under its headings: still nothing.
+		// A file with nothing written under its headings: still nothing.
 		mkdirSync(dirname(voiceFile), { recursive: true });
-		const { VOICE_SKELETON } = await import('../src/shared/voice');
-		writeFileSync(voiceFile, VOICE_SKELETON);
+		writeFileSync(voiceFile, '# Voice and tone\n\n## Voice\n\n<!-- how Flock sounds -->\n');
 		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
 		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('## Voice and tone');
 		// Written: its words, after the accessibility rules and before what the person asked for.

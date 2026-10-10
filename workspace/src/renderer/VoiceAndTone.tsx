@@ -1,7 +1,6 @@
 import { InfoIcon, RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { VoiceAndTone as Voice } from '../shared/contract';
-import { VOICE_SKELETON } from '../shared/voice';
 import { BranchActions } from './BranchActions';
 import { OutLink } from './OutLink';
 import { Page } from './Page';
@@ -13,15 +12,16 @@ import { Textarea } from './ui/textarea';
 /**
  * The Voice and tone tab (T9 of the design system plan): the company's voice and tone, one file in the design repository,
  * which every agent task carries. Read from GitHub when the tab is first shown and on Refresh, so a commit made in the
- * repository shows; edited in one text area; saved to a branch of DSNR's, each save one commit, and proposed as a draft
+ * repository shows; edited in one text area, which is always there (blank until the file has been written, so there is
+ * nothing to start); saved to a branch of DSNR's, each save one commit, and proposed as a draft
  * pull request, as a change to the tokens is (`BranchActions`). A save is made against the file the text was opened at, so
  * a change made on GitHub meanwhile is shown beside the person's text, to choose between, and never overwritten.
  */
 export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 	const [voice, setVoice] = useState<Voice | null>(null);
 	const [error, setError] = useState<string | null>(null);
-	// The text in the area: null while there is no file and none has been started.
-	const [draft, setDraft] = useState<string | null>(null);
+	// The text in the area: blank while there is no file.
+	const [draft, setDraft] = useState('');
 	// The default branch's file the text was opened at, which a save is made against.
 	const [against, setAgainst] = useState<string | null>(null);
 	// The file as it is on GitHub now, when a save found it changed since it was opened.
@@ -32,8 +32,8 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 	const [failed, setFailed] = useState<{ error: string; proposing: boolean } | null>(null);
 	const started = useRef(false);
 
-	// What the text is compared with to know it is changed: the change as last saved, else the default branch's file.
-	const unsaved = draft !== null && draft !== (voice?.branch?.text ?? voice?.text ?? null);
+	// What the text is compared with to know it is changed: the change as last saved, else the default branch's file, else nothing.
+	const unsaved = draft !== (voice?.branch?.text ?? voice?.text ?? '');
 
 	/** Reads it again; the text in the area is replaced only when it holds nothing unsaved, so typing is never lost. */
 	const read = useCallback(async (keepTyped: boolean) => {
@@ -44,7 +44,7 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 		setError(null);
 		setVoice(r.value);
 		if (!keepTyped) {
-			setDraft(r.value.branch?.text ?? r.value.text);
+			setDraft(r.value.branch?.text ?? r.value.text ?? '');
 			setAgainst(r.value.sha);
 		}
 	}, []);
@@ -56,7 +56,6 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 	}, [hidden, read]);
 
 	const save = async () => {
-		if (draft === null) return;
 		setBusy('saving');
 		setFailed(null);
 		const r = await window.workspace.saveVoiceAndTone(draft, against);
@@ -145,7 +144,7 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 						<Button
 							variant="outline"
 							onClick={() => {
-								setDraft(theirs.branch?.text ?? theirs.text);
+								setDraft(theirs.branch?.text ?? theirs.text ?? '');
 								setAgainst(theirs.sha);
 								setTheirs(null);
 							}}
@@ -165,20 +164,14 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 				</Alert>
 			)}
 
-			{draft === null ? (
-				<div className="flex flex-col items-start gap-3 rounded-lg border border-dashed p-6">
-					<p className="text-sm">There is no voice and tone file yet. Start it here, and save it to propose it.</p>
-					<Button onClick={() => setDraft(VOICE_SKELETON)}>Start the file</Button>
-				</div>
-			) : (
-				<Textarea
-					aria-label="Voice and tone"
-					value={draft}
-					onChange={(e) => setDraft(e.target.value)}
-					spellCheck
-					className="min-h-[60vh] font-mono text-sm md:text-sm"
-				/>
-			)}
+			<Textarea
+				aria-label="Voice and tone"
+				placeholder="How Flock's product speaks: its voice, the rules it follows, what it never does."
+				value={draft}
+				onChange={(e) => setDraft(e.target.value)}
+				spellCheck
+				className="min-h-[60vh] font-mono text-sm md:text-sm"
+			/>
 
 			{(branch || unsaved || failed) && (
 				<BranchActions

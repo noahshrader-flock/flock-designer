@@ -2,7 +2,6 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { VoiceAndTone as VoicePage } from '../src/renderer/VoiceAndTone';
-import { VOICE_SKELETON } from '../src/shared/voice';
 import type { VoiceAndTone, VoiceBranch } from '../src/shared/contract';
 import { button, fail, fakeApp, ok, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
@@ -71,14 +70,18 @@ describe('reading it', () => {
 		expect(has('Propose')).toBe(false);
 	});
 
-	it('says there is no file yet, and Start the file gives its headings with nothing written under them', async () => {
+	it('is always the text area, blank when there is no file yet: nothing to start, and nothing to save until something is written', async () => {
 		await show({ voiceAndTone: async () => ok(voice({ text: null, sha: null })) });
-		expect(area()).toBeNull();
-		expect(text()).toContain('There is no voice and tone file yet');
-		await press(button('Start the file'));
-		expect(area()?.value).toBe(VOICE_SKELETON);
-		// A new file is a change, saved against no file at all.
+		expect(area()?.value).toBe('');
+		expect(area()?.getAttribute('placeholder')).toBeTruthy();
+		expect(text()).not.toMatch(/Start the file|no voice and tone file/i);
+		expect(has('Save to a branch')).toBe(false);
+		expect(has('Propose')).toBe(false);
+		await typeInto(area()!, 'Calm and exact.\n');
 		expect(has('Save to a branch')).toBe(true);
+		// Cleared again: back to what is saved, which is nothing.
+		await typeInto(area()!, '');
+		expect(has('Save to a branch')).toBe(false);
 	});
 
 	it('says what went wrong when it cannot be read, and Try again reads it again', async () => {
@@ -135,12 +138,12 @@ describe('saving and proposing it', () => {
 	it('saves a new file against no file at all', async () => {
 		const app = await show({
 			voiceAndTone: async () => ok(voice({ text: null, sha: null })),
-			saveVoiceAndTone: async () => ok({ state: 'saved', voice: voice({ text: null, sha: null, branch: kept({ text: VOICE_SKELETON }) }) }),
+			saveVoiceAndTone: async () => ok({ state: 'saved', voice: voice({ text: null, sha: null, branch: kept({ text: 'Calm and exact.\n' }) }) }),
 		});
-		await press(button('Start the file'));
+		await typeInto(area()!, 'Calm and exact.\n');
 		await press(button('Save to a branch'));
 		await settle();
-		expect(app.calls.saveVoiceAndTone).toEqual([[VOICE_SKELETON, null]]);
+		expect(app.calls.saveVoiceAndTone).toEqual([['Calm and exact.\n', null]]);
 	});
 
 	it('proposes it, and links the draft pull request in place of Propose', async () => {

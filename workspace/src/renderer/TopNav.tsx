@@ -47,7 +47,7 @@ export const TopNav = ({
 
 			{user ? (
 				<Tabs value={section} onValueChange={(next) => onSectionChange(next as Section)} className="app-no-drag">
-					<TabsList>
+					<TabsList size="lg">
 						{SECTIONS.map(({ id, label }) => (
 							<TabsTrigger key={id} value={id} className="px-3">
 								{label}

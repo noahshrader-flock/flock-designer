@@ -436,7 +436,7 @@ opened at on *every* save, not only the first, and GitHub's 409 is the backstop 
 and the branch being made (the branch is then deleted and the save refused); (3) a remembered branch that is not `dsnr/voice-…` is
 never taken for a change kept, so it is never written to; (4) whether a branch was merged or closed is asked of the person's `gh`
 where there is one, else of the app's session, and when GitHub cannot tell, the change is kept, not lost; (5) a file with only
-its headings and comments, as "Start the file" leaves it, is not put in a task, and a file that cannot be read is said to be in
+only its headings and comments, or nothing, is not put in a task, and a file that cannot be read is said to be in
 the task, which goes ahead; (6) the section reaches every task through a required `voice` field on each task builder, so the
 compiler names any new kind of task that leaves it out: prototype build and its accessibility fix, prototype address, every
 codebase run (`startTracked`), the move-to-code task file, and the `dsnr` command; (7) the old bar was named by more tests than
@@ -452,7 +452,7 @@ of tabs (later removed: see (10) below), GitHub's status on a failed call
 exists, which reading the file on it already says). Found in passing and fixed: `DesignRepo` took only the app's own errors for
 "not there", so a missing file read through the person's `gh` (the `dsnr` command) failed instead of being null. A save also
 takes a blob's 64-hex sha, for a repository on SHA-256.
-**After using it (Noah, 2026-10-10):** (10) the bar of tabs went through three forms the same day: an exception in the toolbar, removed; the shared tabs stretched across the width like the panel's, which Noah did not want; and last, **the shared `LineTabs` with one option, `bar`** (renamed from `PanelTabs`, since it is no longer a panel's only), which sets a toolbar's height and inset and tabs as wide as their labels, inside the component and on nothing where it is used. The toolbar is as it was before T9, and the tab fills the window under the top bar with each pane scrolling on its own, so nothing counts the toolbar's height; (11) the panel's switch is **Component, then Tokens**, across the panel's whole width, which is an option of the toggle group itself (`fullWidth`), not of the panel; the tokens are still what shows until a component is opened; (12) a third tab, **Primitives**, sits between Components and Voice and Tone; (13) a tab's label is in title case whatever it was written in, by the tab component (`titleCase`, `shared/titleCase.ts`), for every tab in the app. **What it holds is not decided:** it is an empty page, with no side panel, until Noah says.
+**After using it (Noah, 2026-10-10):** (10) the bar of tabs went through three forms the same day: an exception in the toolbar, removed; the shared tabs stretched across the width like the panel's, which Noah did not want; and last, **the shared `LineTabs` with one option, `bar`** (renamed from `PanelTabs`, since it is no longer a panel's only), which sets a toolbar's height and inset and tabs as wide as their labels, inside the component and on nothing where it is used. The toolbar is as it was before T9, and the tab fills the window under the top bar with each pane scrolling on its own, so nothing counts the toolbar's height; (11) the panel's switch is **Component, then Tokens**, across the panel's whole width, which is an option of the toggle group itself (`fullWidth`), not of the panel; the tokens are still what shows until a component is opened; (12) a third tab, **Primitives**, sits between Components and Voice and Tone; (13) the top bar's switch between Projects and Design System is the large size of tabs (`TabsList size="lg"`, a Button's large height; the default is a Button's default), a size option the tab list did not have; (14) the voice and tone has no "Start the file": the text area is always there, blank with no file (Noah), so the skeleton of headings was removed, and a file of only headings or comments adds nothing to a task, as a blank one does; (15) a tab's label is in title case whatever it was written in, by the tab component (`titleCase`, `shared/titleCase.ts`), for every tab in the app. **What it holds is not decided:** it is an empty page, with no side panel, until Noah says.
 
 **Why (Noah, 2026-10-10):** what prototypes and code say should use Flock's tone of voice, and the voice should be changed in
 the app or in the repository with the same effect: someone commits a change and it shows in the app, or a change made in the app
@@ -476,8 +476,10 @@ beside the connected library, so switching the system or branch does not change 
    in that product); Noah's layers put what is common to all products in `flock-designer`; and it is where the app already reads
    and writes. The component library is the wrong place: a package consumed by products, and the voice is not about components.
    **Precedence becomes:** a product's own Flock tier, then `standards/flock/`, then `universal/` (accessibility a floor under all).
-2. **No source exists to start from** (below). **Noah writes the content himself;** the app starts the file as a skeleton of
-   headings with nothing invented in it, and nobody else has to confirm anything before it is used.
+2. **No source exists to start from** (below). **Noah writes the content himself;** nothing is invented for it, and
+   nobody else has to confirm anything before it is used. **The file is always part of the system** (Noah, 2026-10-10): the
+   tab is always the text area, blank until the file has been written, with nothing to start, and a blank file adds nothing to
+   a task.
 3. **The editor is one plain text area over one file,** not fields. The file is what the agent reads, and Claude Design's own
    form (statement, anti-patterns, notes) also ends as one document; headings give the structure, and fields can come later.
 4. **The branch stays shown, not chosen.** The previews, tokens, component pictures and their caches are all built from one
@@ -490,10 +492,10 @@ a 2023 "Flock Safety-Brand Guidelines" document, nearly all of it marked "Copy i
 in Slack (July 2026), which is how documents are written, not how the product speaks. **Nothing on interface copy,** and nothing
 from either is copied into this plan.
 
-**The file:** `standards/flock/voice-and-tone.md` in `flock-designer`. **It starts as a skeleton, not invented rules** (the
-skeleton is what "Start the file" fills the text area with; Save makes the file): the headings **Voice** (two or three
-sentences), **Rules** (concrete: reading level, sentence length, words banned; only what is Flock-wide, since the generic rules
-stay in `copy-and-microcopy.md`), **Say this, not that** (paired examples), and **Anti-patterns** (at least three). **Coke's vocabulary stays in Coke:** its lines on Devices, "Fleet", and no
+**The file:** `standards/flock/voice-and-tone.md` in `flock-designer`, **blank until Noah writes it**: the tab shows its text area
+whether the file exists or not, and Save makes the file. What goes in it is his: the guides suggest a voice in two or three
+sentences, concrete rules (reading level, sentence length, words banned; only what is Flock-wide, since the generic rules stay
+in `copy-and-microcopy.md`), paired examples, and at least three anti-patterns. **Coke's vocabulary stays in Coke:** its lines on Devices, "Fleet", and no
 "Oops" rest on one product's evidence (its own file says so, and `standards/README.md` says one product's habit is not a
 Flock-wide rule), so nothing is moved out of it. A line there that Noah says is company-wide is lifted into the shared
 file then, and removed from Coke's, so each fact still lives once.
@@ -556,7 +558,7 @@ pass unchanged: they are the proof nothing else moved.
 **2. Read the file, read only.** `DesignRepo.readFile` (which already gives null for a missing file) gets an optional ref;
 a `voice` channel (named like `tokenBranch`'s) returns the text, its blob sha, and whether the file exists. The page shows the
 text, read only, a **Refresh** that reads again (a commit made in the repository shows after it, and when the tab is opened), and,
-with no file, a line saying so with **Start the file**. *Tests:* the service with a fake API (text and sha; 404 gives "no file";
+with no file, a blank text area (there is nothing to start). *Tests:* the service with a fake API (text and sha; 404 gives "no file";
 an error is said, not swallowed); the page for each (text, empty, error, refreshed after a change in the repository).
 
 **3. Change it in the app.** The text area becomes editable; **Save** keeps the text on a branch of the design repository,
@@ -604,7 +606,7 @@ one line in its `.dsnr/README.md` precedence list is a Coke change Noah pushes. 
 codebase task and an address task; absent with no file; the text read afresh each time (an edit shows in the next task); and the
 words in a task are the file's own, not a copy kept anywhere.
 
-**Noah's check (what tests cannot show):** in the app, Design System, Voice and tone: Start the file, write a line, **Save to a branch**. That is the first real save through the app's own GitHub session (the probe used `gh`): if it says write access is needed, the GitHub App's Contents permission is not approved on the installation. Then see the branch on GitHub, **Propose**, see the draft pull request, merge it, **Refresh** and see the merged text; then build a prototype and see `## Voice and tone` in its task. Optional, Coke's to push: one line in its `.dsnr/README.md` precedence list naming `standards/flock/`.
+**Noah's check (what tests cannot show):** in the app, Design System, Voice and Tone: write a line in the text area, **Save to a branch**. That is the first real save through the app's own GitHub session (the probe used `gh`): if it says write access is needed, the GitHub App's Contents permission is not approved on the installation. Then see the branch on GitHub, **Propose**, see the draft pull request, merge it, **Refresh** and see the merged text; then build a prototype and see `## Voice and tone` in its task. Optional, Coke's to push: one line in its `.dsnr/README.md` precedence list naming `standards/flock/`.
 
 **Not in T9:** logos, color and typography beyond the tokens; choosing the library's branch; fields in place of the text area;
 checking written copy against the voice automatically (a candidate once the file is in use).

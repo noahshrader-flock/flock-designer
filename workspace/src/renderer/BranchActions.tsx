@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 
 /** A change kept on a branch of DSNR's, as either kind of change has one: the tokens' (T4, T5) and the voice and tone's (T9). */
-export interface KeptBranch {
+interface KeptBranch {
 	branch: string;
 	saves: number;
 	pullRequest: { number: number; url: string } | null;
