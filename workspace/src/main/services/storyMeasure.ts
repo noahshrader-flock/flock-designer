@@ -5,21 +5,25 @@
  * Each window loads the preview page once and draws its share of the story files in it, one after another; a story that
  * does not draw in time is said as null, and the rest go on.
  */
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, nativeImage } from 'electron';
 import { PREVIEW_SHOW, previewAddress } from '../../shared/catalog';
 import type { Drawn, Measure, Mode } from './componentTokens';
+import { composeOnWhite } from './pictureComposition';
 import { keepToOrigin, sandboxedPreferences } from './sandboxedPage';
 
 /** How many windows draw a run's files at once, and how long one story may take. */
 const WINDOWS_PER_RUN = 3;
 const STORY_MS = 15_000;
 /**
- * A picture (P5): taken at twice the size a card shows it, at most this many pixels across and down, with a little room
- * around what the story draws.
+ * A picture (P5): the top of the page this many pixels down, drawn at twice the size (`PICTURE_SCALE`) so it is sharp,
+ * is what `composeOnWhite` finds the story in; it is kept at most this many pixels across, as JPEG. How long the page is
+ * given to repaint before one is taken.
  */
-const PICTURE_MAX = { width: 720, height: 360 };
-const PICTURE_MARGIN = 12;
+const PICTURE_TOP = 640;
+const PICTURE_SCALE = 2;
+const PICTURE_MOST_ACROSS = 1440;
 const PICTURE_QUALITY = 85;
+const REPAINT_MS = 150;
 
 /** The windows' session: their own, in memory only. */
 const SESSION = 'dsnr-story-measure';
@@ -30,7 +34,7 @@ const SESSION = 'dsnr-story-measure';
  * elements that take up room are read: each one's background, text and border colors, its radius, and its padding,
  * margins and gaps, counted by computed value.
  */
-const readDrawn = (file: string): string => `(async (file) => {
+const readDrawn = (file: string, picture: boolean): string => `(async (file, picture) => {
 	const until = Date.now() + ${STORY_MS - 3000};
 	while (typeof window[${JSON.stringify(PREVIEW_SHOW)}] !== 'function' && Date.now() < until) await new Promise((r) => setTimeout(r, 50));
 	await window[${JSON.stringify(PREVIEW_SHOW)}](file);
@@ -49,24 +53,17 @@ const readDrawn = (file: string): string => `(async (file) => {
 		add(drawn.radii, s.borderTopLeftRadius);
 		for (const k of ['paddingTop', 'paddingLeft', 'marginTop', 'marginLeft', 'rowGap', 'columnGap']) add(drawn.spacing, s[k]);
 	}
-	// Where the first story draws, for its picture (P5): around what it paints, its name left out, within the window.
+	if (!picture) return drawn;
+	// A picture (P5): the first story alone, at the top of the page, which is white. Everything else is hidden first (hidden,
+	// so nothing moves), or a short story would have the next one, and its own name, in its picture. A hidden window paints
+	// a moment after a change, and the picture is of what it has painted.
 	const first = document.querySelector('[data-story]');
-	let [l, t, r, b] = [Infinity, Infinity, -Infinity, -Infinity];
-	for (const el of first ? first.querySelectorAll('*') : []) {
-		if (el.closest('.fd-name')) continue;
-		const box = el.getBoundingClientRect();
-		if (box.width === 0 || box.height === 0) continue;
-		const s = getComputedStyle(el);
-		const paints = el.children.length === 0 || s.backgroundColor !== 'rgba(0, 0, 0, 0)' || parseFloat(s.borderTopWidth) > 0 || s.boxShadow !== 'none';
-		if (!paints) continue;
-		[l, t, r, b] = [Math.min(l, box.left), Math.min(t, box.top), Math.max(r, box.right), Math.max(b, box.bottom)];
-	}
-	// Never above the bottom of the story's name, which the room around it would otherwise take in.
-	const label = first?.querySelector('.fd-name')?.getBoundingClientRect();
-	const x = Math.max(0, Math.floor(l) - ${PICTURE_MARGIN}), y = Math.max(label ? Math.ceil(label.bottom) : 0, Math.floor(t) - ${PICTURE_MARGIN});
-	drawn.crop = r > l && b > t ? { x, y, width: Math.min(innerWidth - x, Math.ceil(r) + ${PICTURE_MARGIN} - x), height: Math.min(innerHeight - y, Math.ceil(b) + ${PICTURE_MARGIN} - y) } : null;
-	return drawn;
-})(${JSON.stringify(file)})`;
+	for (const el of document.querySelectorAll('[data-story]')) if (el !== first) el.style.visibility = 'hidden';
+	const name = first?.querySelector('.fd-name');
+	if (name) name.style.visibility = 'hidden';
+	await new Promise((r) => setTimeout(r, ${REPAINT_MS}));
+	return { ...drawn, crop: { x: 0, y: 0, width: innerWidth, height: Math.min(innerHeight, ${PICTURE_TOP}) } };
+})(${JSON.stringify(file)}, ${picture})`;
 
 /** A promise, or null after `ms`. */
 const within = <T>(ms: number, p: Promise<T>): Promise<T | null> =>
@@ -80,13 +77,18 @@ const hiddenWindow = (origin: string): BrowserWindow => {
 };
 
 /** One window's share of a run: the page loaded once, in the run's mode, then each file drawn in turn. */
-/** A story's first story, from where the page said it draws, as a JPEG no larger than a card needs; null for nothing. */
+/** The picture of a story's first story from a capture of the top of its page; nothing when it painted nothing. */
 const pictureOf = async (wc: Electron.WebContents, crop: Electron.Rectangle | null | undefined): Promise<Buffer | undefined> => {
 	if (!crop || crop.width < 4 || crop.height < 4) return undefined;
 	const image = await wc.capturePage(crop);
-	const { width, height } = image.getSize();
-	const scale = Math.min(1, PICTURE_MAX.width / width, PICTURE_MAX.height / height);
-	return (scale < 1 ? image.resize({ width: Math.round(width * scale), height: Math.round(height * scale), quality: 'best' }) : image).toJPEG(PICTURE_QUALITY);
+	const data = image.toBitmap();
+	// The captured image's size in pixels, whatever the scale it was taken at.
+	const size = image.getSize();
+	const scale = Math.sqrt(data.length / 4 / (size.width * size.height));
+	const composed = composeOnWhite({ data, width: Math.round(size.width * scale), height: Math.round(size.height * scale) });
+	if (composed === null) return undefined;
+	const picture = nativeImage.createFromBitmap(composed.data, { width: composed.width, height: composed.height });
+	return (composed.width > PICTURE_MOST_ACROSS ? picture.resize({ width: PICTURE_MOST_ACROSS, quality: 'best' }) : picture).toJPEG(PICTURE_QUALITY);
 };
 
 const drawShare = async (base: string, mode: Mode, files: string[], pictures: boolean): Promise<(Drawn | null)[]> => {
@@ -108,9 +110,12 @@ const drawShare = async (base: string, mode: Mode, files: string[], pictures: bo
 		const drawn: (Drawn | null)[] = [];
 		// Pictures are drawn at twice the size, whatever the screen, so they are sharp.
 		if (pictures)
-			await within(STORY_MS, wc.debugger.sendCommand('Emulation.setDeviceMetricsOverride', { width: 1200, height: 900, deviceScaleFactor: 2, mobile: false }));
+			await within(
+				STORY_MS,
+				wc.debugger.sendCommand('Emulation.setDeviceMetricsOverride', { width: 1200, height: 900, deviceScaleFactor: PICTURE_SCALE, mobile: false }),
+			);
 		for (const file of files) {
-			const read = (await within(STORY_MS, wc.executeJavaScript(readDrawn(file)) as Promise<Drawn & { crop?: Electron.Rectangle | null }>)) ?? null;
+			const read = (await within(STORY_MS, wc.executeJavaScript(readDrawn(file, pictures)) as Promise<Drawn & { crop?: Electron.Rectangle | null }>)) ?? null;
 			if (read === null) {
 				drawn.push(null);
 				continue;

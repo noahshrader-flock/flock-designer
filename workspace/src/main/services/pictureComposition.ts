@@ -1,0 +1,57 @@
+/**
+ * A component's picture, from a capture of the top of its page (P5 of the design system plan): what the story painted,
+ * found from the pixels themselves and put in the middle of a white canvas twice as wide as it is tall, the shape of a
+ * card's cover. From the pixels, so it holds for any component: nothing is assumed of its elements, and a story that
+ * painted nothing has no picture, not a blank one.
+ *
+ * Pixels are 4 bytes each, blue, green, red, alpha, as Electron gives a captured image's bitmap.
+ */
+
+export interface Bitmap {
+	data: Buffer;
+	width: number;
+	height: number;
+}
+
+/** The room kept around what the story painted, and the least a picture is across, in pixels (the page is drawn at twice). */
+const MARGIN = 24;
+const LEAST = 960;
+
+/** Whether a pixel is paint: not white, as the page behind the stories is, to the eye. */
+const isPaint = (p: number): boolean => {
+	const [b, g, r, a] = [p & 0xff, (p >>> 8) & 0xff, (p >>> 16) & 0xff, p >>> 24];
+	return a < 255 || b < 248 || g < 248 || r < 248;
+};
+
+/** The smallest box around the pixels that are paint, or null when there are none. */
+const painted = ({ data, width, height }: Bitmap): { x: number; y: number; width: number; height: number } | null => {
+	const pixels = new Uint32Array(data.buffer, data.byteOffset, Math.floor(data.length / 4));
+	let [left, top, right, bottom] = [width, height, -1, -1];
+	for (let y = 0; y < height; y++) {
+		const row = y * width;
+		for (let x = 0; x < width; x++) {
+			if (pixels[row + x] === 0xffffffff || !isPaint(pixels[row + x] as number)) continue;
+			if (x < left) left = x;
+			if (x > right) right = x;
+			if (y < top) top = y;
+			bottom = y;
+		}
+	}
+	return right < 0 ? null : { x: left, y: top, width: right - left + 1, height: bottom - top + 1 };
+};
+
+/** The picture: what `capture` painted, centered on white, twice as wide as it is tall; null when it painted nothing. */
+export const composeOnWhite = (capture: Bitmap): Bitmap | null => {
+	const box = painted(capture);
+	if (box === null) return null;
+	// Wide enough for it and its room, and tall enough that the half of that width holds it too.
+	const width = Math.ceil(Math.max(LEAST, box.width + 2 * MARGIN, 2 * (box.height + 2 * MARGIN)) / 2) * 2;
+	const height = width / 2;
+	const data = Buffer.alloc(width * height * 4, 0xff);
+	const [left, top] = [Math.floor((width - box.width) / 2), Math.floor((height - box.height) / 2)];
+	for (let y = 0; y < box.height; y++) {
+		const from = ((box.y + y) * capture.width + box.x) * 4;
+		capture.data.copy(data, ((top + y) * width + left) * 4, from, from + box.width * 4);
+	}
+	return { data, width, height };
+};

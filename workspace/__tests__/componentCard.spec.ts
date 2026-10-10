@@ -28,9 +28,13 @@ describe('a component’s card', () => {
 	it('is the Projects card: its cover a fixed shape, its footer the name and the group', async () => {
 		await show();
 		const card = document.querySelector('[data-component-card]') as HTMLElement;
-		expect(card.querySelector('[data-slot="card-cover"]')?.className).toContain('aspect-[1920/960]');
-		// A soft placeholder until there is a picture.
-		expect(card.querySelector('[data-picture-area]')?.className).toContain('bg-muted/40');
+		const cover = card.querySelector('[data-slot="card-cover"]') as HTMLElement;
+		expect(cover.className).toContain('aspect-[1920/960]');
+		// Nothing around the picture: no padding on the cover, and no box inside it.
+		expect(cover.className).not.toMatch(/\bp[xytrbl]?-/);
+		expect(cover.className).toContain('overflow-hidden');
+		// A soft placeholder until there is a picture, filling the cover.
+		expect(card.querySelector('[data-picture-area]')?.className.split(' ')).toEqual(expect.arrayContaining(['bg-muted/40', 'absolute', 'inset-0']));
 		expect(card.textContent).toBe('FSButtonButtons');
 		expect(card.getAttribute('role')).toBe('button');
 		expect(card.getAttribute('aria-label')).toBe('Open FSButton');
@@ -42,13 +46,12 @@ describe('a component’s card', () => {
 		expect(img.getAttribute('alt')).toBe('');
 		// Taken at twice the size it is shown.
 		expect(img.getAttribute('srcset')).toBe('http://127.0.0.1:1/p/a.jpg 2x');
-		// White once the picture is there, as the stories are drawn on white; the placeholder's gray until then.
-		expect(document.querySelector('[data-picture-area]')?.className).toContain('bg-muted/40');
+		// It fills the cover, edge to edge: nothing is left around it to be seen.
+		expect(img.className.split(' ')).toEqual(expect.arrayContaining(['size-full', 'object-cover']));
 		expect(img.className).toContain('opacity-0');
 		expect(img.className).toContain('motion-reduce:transition-none');
 		await act(async () => void img.dispatchEvent(new Event('load')));
 		expect(img.className).toContain('opacity-100');
-		expect(document.querySelector('[data-picture-area]')?.className).toContain('bg-white');
 	});
 });
 
