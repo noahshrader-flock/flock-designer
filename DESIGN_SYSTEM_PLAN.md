@@ -369,7 +369,9 @@ tags are already held to its manifest by the product's own check (FUI's `.dsnr/v
 check them a second time (that check covers Coke's `cypress/support/commands.js` but not its `__tests__/support/axe.ts`,
 which also repeats `wcag2a`: Coke's to add); (5) Coke declares its own `a11y` command, which its handoff gate already
 runs, so codebase tasks name it to run as the work goes, rather than a new command; (6) the Design System's contrast is
-judged at the design system's own target (FUI declares none, so the default, informational), not a product's.
+judged at the design system's own target (FUI declares none, so the default, informational), not a product's; (7)
+`shared/wcag.ts` holds only the criteria the app judges (1.4.3 and 1.4.6, as text): 1.4.11 and the large-text ratios are
+added with whatever first judges them, since the token panel knows neither a text's size nor that a color is a control's.
 Decision 30 says what and why; this is the order, each step leaving the app working.
 **A, deliver the standard.** The task an agent is given for a prototype, for codebase work, and for addressing a comment
 carries the accessibility rules (the universal rules section and the reporting rules, read from
