@@ -48,6 +48,7 @@ import { A11Y_COMMAND, fixRequest, productTarget, taskAccessibility } from './se
 import { type CheckPage, accessibilityOf } from './services/accessibilityCheck';
 import { TokenBranches } from './services/tokenBranches';
 import { VoiceAndToneFile } from './services/voiceAndTone';
+import { taskVoice } from './services/voiceBrief';
 import { ComponentTokens, type Measure } from './services/componentTokens';
 import { ComponentPictures } from './services/componentPictures';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
@@ -702,7 +703,9 @@ export const registerIpc = ({
 		const session = randomUUID();
 		const shared = sharedGuidance(canonical);
 		const accessibility = await codebaseAccessibility(canonical);
-		const started = agent.start(canonical, projectId, `${task}${shared.note}\n\n${accessibility}`, {
+		// The company's voice and tone (T9), read as the skills are; nothing when the design repository has none written.
+		const voice = await taskVoice(readDesignFile);
+		const started = agent.start(canonical, projectId, `${task}${shared.note}\n\n${accessibility}${voice ? `\n\n${voice}` : ''}`, {
 			// The project's records live in the design repository, beside the product checkout.
 			addDirs,
 			readOnly: shared.dirs,
@@ -1119,7 +1122,8 @@ export const registerIpc = ({
 			const skill = await readSkillText(BUILD_SKILL);
 			const { build, sources } = await prototypeRun(projectId, name);
 			const accessibility = await work.accessibility(projectId, name);
-			return startPrototypeAgent(projectId, name, sources, prototypeBuildTask({ skill, build, sources, accessibility, request: String(request) }));
+			const voice = await work.voice();
+			return startPrototypeAgent(projectId, name, sources, prototypeBuildTask({ skill, build, sources, accessibility, voice, request: String(request) }));
 		}),
 	);
 
@@ -1184,11 +1188,12 @@ export const registerIpc = ({
 			prototypeChanges.set(commentId, { projectId, change });
 			const where = whereTheChangeGoes(change, name);
 			const accessibility = await work.accessibility(projectId, change.from.name);
+			const voice = await work.voice();
 			return startPrototypeAgent(
 				projectId,
 				name,
 				sources,
-				prototypeAddressTask({ addressSkill, buildSkill, build, sources, accessibility, commentsPath: written.path, number, name, where }),
+				prototypeAddressTask({ addressSkill, buildSkill, build, sources, accessibility, voice, commentsPath: written.path, number, name, where }),
 			);
 		}),
 	);
@@ -1336,7 +1341,8 @@ export const registerIpc = ({
 			const skill = await readSkillText(BUILD_SKILL);
 			const { build, sources } = await prototypeRun(projectId, name);
 			const accessibility = await work.accessibility(projectId, name);
-			return startPrototypeAgent(projectId, name, sources, prototypeBuildTask({ skill, build, sources, accessibility, request: fixRequest(result) }));
+			const voice = await work.voice();
+			return startPrototypeAgent(projectId, name, sources, prototypeBuildTask({ skill, build, sources, accessibility, voice, request: fixRequest(result) }));
 		}),
 	);
 
@@ -1447,6 +1453,7 @@ export const registerIpc = ({
 					// Built toward the product's target from the start, with what the prototype's check left open: its page
 					// checked now when it was not already. A check that cannot run leaves the findings out, never the move.
 					accessibility: await codebaseAccessibility(canonical, await prototypeAccessibility(projectId, name).catch(() => null)),
+					voice: await taskVoice(readDesignFile),
 				}),
 			);
 			const prompt = moveToCodePrompt({ label, projectId, taskFile, continuing: continuing ? branch : null });

@@ -19,7 +19,9 @@ read because it happens to be nearby, and nothing about one kind of work leaks i
 1. **The product's guidance**: its DSNR folder (`.dsnr/` in Coke). How the app is put together,
    its patterns, its rules. Product-specific, so it lives in the product repository, never here.
 2. **The design system's guidance**: its tokens and components, in the version the product installs.
-3. **Shared standards**: `standards/` in this repository. What holds for every product.
+3. **Shared standards**: `standards/` in this repository. What holds for every product. Two of them
+   are put in every task by the app, so no entry file has to name them: the accessibility rules
+   (`standards/universal/accessibility.md`) and Flock's voice and tone (`standards/flock/voice-and-tone.md`).
 
 A layer only ever adds to the one below it, and a product's rule wins over a shared one for that
 product. Anything true of one product goes in that product's guidance; anything true of every product

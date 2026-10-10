@@ -187,6 +187,7 @@ export const prototypeBuildTask = ({
 	build,
 	sources,
 	accessibility,
+	voice,
 	request,
 }: {
 	skill: string;
@@ -194,6 +195,8 @@ export const prototypeBuildTask = ({
 	sources: PrototypeSources;
 	/** The accessibility section (`taskAccessibility`): the rules and the product's target. */
 	accessibility: string;
+	/** The voice and tone section (`taskVoice`): empty when the design repository has none written. */
+	voice: string;
 	request: string;
 }): string =>
 	[
@@ -209,6 +212,7 @@ export const prototypeBuildTask = ({
 		'',
 		accessibility,
 		'',
+		...(voice ? [voice, ''] : []),
 		'## What the person asked for',
 		'',
 		request.trim(),
@@ -225,6 +229,7 @@ export const prototypeAddressTask = ({
 	build,
 	sources,
 	accessibility,
+	voice,
 	commentsPath,
 	number,
 	name,
@@ -236,6 +241,8 @@ export const prototypeAddressTask = ({
 	sources: PrototypeSources;
 	/** The accessibility section (`taskAccessibility`). */
 	accessibility: string;
+	/** The voice and tone section (`taskVoice`): empty when the design repository has none written. */
+	voice: string;
 	commentsPath: string;
 	/** The comment's number, as on its pin. */
 	number: number;
@@ -258,6 +265,7 @@ export const prototypeAddressTask = ({
 		'',
 		accessibility,
 		'',
+		...(voice ? [voice, ''] : []),
 		'## How to act on a comment',
 		'',
 		addressSkill.trim(),
@@ -291,11 +299,14 @@ export const moveToCodeTask = ({
 	basedOn,
 	sourceFile,
 	accessibility,
+	voice,
 }: {
 	skill: string;
 	pageFile: string;
 	/** The accessibility section (`taskAccessibility`), with what the prototype's check left open. */
 	accessibility: string;
+	/** The voice and tone section (`taskVoice`): empty when the design repository has none written. */
+	voice: string;
 	/** The React source, when the prototype was written in React. */
 	sourceFile?: string | null;
 	auditFile: string;
@@ -319,4 +330,5 @@ export const moveToCodeTask = ({
 		`Write the audit to \`${auditFile}\` before you change any code.`,
 		'',
 		accessibility,
+		...(voice ? ['', voice] : []),
 	].join('\n');

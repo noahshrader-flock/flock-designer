@@ -10,6 +10,7 @@ import { branchCommit, branchExists, gitExact, readCheckout, readTreeAt } from '
 import { assertUsableProjectId } from './iterations';
 import { MAX_PAGE, type PrototypeBuild, type PrototypeSources, type RecordStore, assertPrototypeName, prototypeVersionOf, recordIteration, recordPrototype } from './prototype';
 import { bundleCommand, runBundle, sharedFilesOf, writeBundleScript } from './prototypeBundle';
+import { taskVoice } from './voiceBrief';
 import { parseIterations } from '../../shared/records';
 
 /**
@@ -377,7 +378,10 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	/** The accessibility section of a prototype's task (T7), at its target. */
 	const accessibility = async (projectId: string, name: string): Promise<string> => taskAccessibility(skill, await target(projectId, name));
 
-	return { dir, file, sourceFile, sharedText, skill, target, accessibility, title, records, record, sourceText, readiness, start, sources, buildPlan, buildPage, keep, save, page, startChange, resumeChange, finishChange };
+	/** The voice and tone section of a task (T9): the design repository's file, read as the skills are, each time. */
+	const voice = (): Promise<string> => taskVoice(ctx.readDesignFile);
+
+	return { dir, file, sourceFile, sharedText, skill, target, accessibility, voice, title, records, record, sourceText, readiness, start, sources, buildPlan, buildPage, keep, save, page, startChange, resumeChange, finishChange };
 };
 
 export type PrototypeWork = ReturnType<typeof prototypeWork>;

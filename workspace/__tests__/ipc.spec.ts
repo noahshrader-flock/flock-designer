@@ -749,6 +749,36 @@ describe('prototypes', () => {
 		expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## What the person asked for'));
 	});
 
+	it('carry Flock’s voice and tone, read from the design repository each time, once it has something written in it (T9)', async () => {
+		writeSkill();
+		await call(CHANNELS.useCheckout, product);
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		const voiceFile = join(design, 'standards', 'flock', 'voice-and-tone.md');
+		// No file: nothing said of it.
+		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
+		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('## Voice and tone');
+		// The file as it is started, with nothing written under its headings: still nothing.
+		mkdirSync(dirname(voiceFile), { recursive: true });
+		const { VOICE_SKELETON } = await import('../src/shared/voice');
+		writeFileSync(voiceFile, VOICE_SKELETON);
+		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
+		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('## Voice and tone');
+		// Written: its words, after the accessibility rules and before what the person asked for.
+		writeFileSync(voiceFile, '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
+		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
+		let task = agentStart.mock.calls.at(-1)?.[2] as string;
+		expect(task).toContain('## Voice and tone');
+		expect(task).toContain('### Voice\n\nCalm and exact.');
+		expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## Voice and tone'));
+		expect(task.indexOf('## Voice and tone')).toBeLessThan(task.indexOf('## What the person asked for'));
+		// Changed: the next task has the change, as nothing keeps a copy.
+		writeFileSync(voiceFile, '# Voice and tone\n\n## Voice\n\nWarm and exact.\n');
+		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
+		task = agentStart.mock.calls.at(-1)?.[2] as string;
+		expect(task).toContain('Warm and exact.');
+		expect(task).not.toContain('Calm and exact.');
+	});
+
 	it('say whether the real design system is installed here, and which version', async () => {
 		await call(CHANNELS.useCheckout, product);
 		expect(await call(CHANNELS.prototypeReadiness, product)).toEqual({ ok: true, value: { ready: true, designSystem: 'x', version: '1.2.3' } });
@@ -1021,6 +1051,17 @@ describe('prototypes', () => {
 			expect(readFileSync(join(home, 'prototype', 'demo', 'comments.md'), 'utf8')).toContain('Make this primary');
 		});
 
+		it('carries Flock’s voice and tone, as every task does (T9)', async () => {
+			await ready();
+			mkdirSync(join(design, 'standards', 'flock'), { recursive: true });
+			writeFileSync(join(design, 'standards', 'flock', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
+			threads({ 'v1-i1': [comment(7, 'Make this primary', 'noah')] });
+			expect((await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7)).ok).toBe(true);
+			expect(task()).toContain('## Voice and tone');
+			expect(task()).toContain('Calm and exact.');
+			expect(task().indexOf('## Voice and tone')).toBeLessThan(task().indexOf('## How to act on a comment'));
+		});
+
 		it('with no one else commenting, changes the iteration in place, saves it, and marks the comment', async () => {
 			await ready();
 			threads({ 'v1-i1': [comment(7, 'x', 'noah')] });
@@ -1249,6 +1290,16 @@ describe('prototypes', () => {
 			g(product, 'checkout', '-q', 'develop');
 			expect((await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
 			expect(readFileSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'), 'utf8')).not.toContain('left open');
+		});
+
+		it('writes Flock’s voice and tone into the task beside the prototype, after the accessibility rules (T9)', async () => {
+			await saved();
+			mkdirSync(join(design, 'standards', 'flock'), { recursive: true });
+			writeFileSync(join(design, 'standards', 'flock', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
+			expect((await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
+			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'), 'utf8');
+			expect(task).toContain('Calm and exact.');
+			expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## Voice and tone'));
 		});
 
 		it('makes the branch and the record, writes the task beside the prototype, and gives the command to start it', async () => {
@@ -1551,6 +1602,19 @@ describe('one agent, one piece of work', () => {
 		const real = realpathSync(design);
 		expect(extras.readOnly).toEqual(expect.arrayContaining([join(real, 'skills'), join(real, 'standards')]));
 		expect(task).toContain(join(real, 'skills'));
+	});
+
+	it('gives every codebase run Flock’s voice and tone, after the accessibility rules, once it is written (T9)', async () => {
+		await call(CHANNELS.useCheckout, product);
+		await call(CHANNELS.startAgent, product, 'demo', 'do it');
+		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('## Voice and tone');
+		mkdirSync(join(design, 'standards', 'flock'), { recursive: true });
+		writeFileSync(join(design, 'standards', 'flock', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
+		await call(CHANNELS.startAgent, product, 'demo', 'do it');
+		const task = agentStart.mock.calls.at(-1)?.[2] as string;
+		expect(task).toContain("Where this product's own guidance says otherwise, the product's wins.");
+		expect(task).toContain('Calm and exact.');
+		expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## Voice and tone'));
 	});
 
 	it('gives every codebase run the accessibility rules and the product’s target (T7)', async () => {

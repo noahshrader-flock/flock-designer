@@ -69,6 +69,19 @@ describe('new-prototype', () => {
 		expect(task).toMatch(/Never give a link the command did not print/);
 	});
 
+	it('carries Flock’s voice and tone in the task when the design repository has it written, and nothing when it has none (T9)', async () => {
+		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(0);
+		expect(out.join('\n')).not.toContain('## Voice and tone');
+		mkdirSync(join(design, 'standards', 'flock'), { recursive: true });
+		writeFileSync(join(design, 'standards', 'flock', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
+		out = [];
+		expect(await run('new-prototype', '--project', 'demo', '--note', 'Another idea')).toBe(0);
+		const task = out.join('\n');
+		expect(task).toContain('## Voice and tone');
+		expect(task).toContain('### Voice\n\nCalm and exact.');
+		expect(task.indexOf('## Voice and tone')).toBeLessThan(task.indexOf('## What the person asked for'));
+	});
+
 	it('makes the next version for a project that has one, keeping its brief', async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
 		const brief = readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8');

@@ -1,7 +1,9 @@
 # Copy and microcopy
 
 **Product-agnostic.** A product's own Flock-tier standard — its vocabulary, tone and casing —
-**overrides anything here**, and lives in that product's `.dsnr/standards/flock/`.
+**overrides anything here**, and lives in that product's `.dsnr/standards/flock/`. Flock's own voice and
+tone, the same in every product, is `../flock/voice-and-tone.md`, which every agent task carries; it
+overrides this file too, and a product's Flock tier overrides it.
 
 Interface copy is design work. A well-laid-out screen with vague labels is a badly designed screen.
 
