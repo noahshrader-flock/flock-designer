@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import axe from 'axe-core';
-import { type AxeRun, isAxeRules, mergeRuns } from '../../shared/accessibility';
+import { type AxeRule, type AxeRun, isAxeRules, mergeRuns } from '../../shared/accessibility';
 import type { AccessibilityResult } from '../../shared/contract';
 import { withState } from '../../shared/prototypeStates';
 import { type DeclaredTarget, notAutomated, targetLine } from '../../shared/wcag';
@@ -27,14 +27,27 @@ const SETTLE_MS = 300;
  */
 export type CheckPage = (url: string, states: string[], tags: string[]) => Promise<AxeRun[]>;
 
-/** What runs in the page: axe-core itself, then a run limited to the tags, kept to violations and what it could not decide. */
+/**
+ * A run of axe already in the page (`axe.source`), as an expression: on `context` (axe's own, as source: `document`, or
+ * what to include and exclude), with the `tags` only, kept to violations and what it could not decide, each trimmed to
+ * what is kept. The one way the app runs axe: on a prototype's page, and on a design system's stories (D).
+ */
+export const axeRun = (context: string, tags: string[]): string => `(async () => {
+	const r = await window.axe.run(${context}, { runOnly: { type: 'tag', values: ${JSON.stringify(tags)} }, resultTypes: ['violations', 'incomplete'] });
+	const trim = (x) => ({ id: x.id, help: x.help, impact: x.impact ?? null, tags: x.tags, helpUrl: x.helpUrl, nodes: x.nodes.length });
+	return { violations: r.violations.map(trim), incomplete: r.incomplete.map(trim) };
+})()`;
+
+/** Whether what a page gave back for `axeRun` is its results: a page's word, checked before it is used. */
+export const axeFound = (v: unknown): v is { violations: AxeRule[]; incomplete: AxeRule[] } =>
+	typeof v === 'object' && v !== null && isAxeRules((v as { violations?: unknown }).violations) && isAxeRules((v as { incomplete?: unknown }).incomplete);
+
+/** What runs in a prototype's page: once it has settled, axe-core itself, then a run over the whole page. */
 const runAxe = (tags: string[]): string => `(async () => {
 	await document.fonts.ready;
 	await new Promise((r) => setTimeout(r, ${SETTLE_MS}));
 	${axe.source}
-	const r = await window.axe.run(document, { runOnly: { type: 'tag', values: ${JSON.stringify(tags)} }, resultTypes: ['violations', 'incomplete'] });
-	const trim = (x) => ({ id: x.id, help: x.help, impact: x.impact ?? null, tags: x.tags, helpUrl: x.helpUrl, nodes: x.nodes.length });
-	return { violations: r.violations.map(trim), incomplete: r.incomplete.map(trim) };
+	return await ${axeRun('document', tags)};
 })()`;
 
 export const checkInWindow: CheckPage = async (url, states, tags) => {
@@ -50,9 +63,8 @@ export const checkInWindow: CheckPage = async (url, states, tags) => {
 				)) === null
 			)
 				throw new Error(`The page did not load in its ${state} state, so it could not be checked.`);
-			const found = (await within(STATE_MS, wc.executeJavaScript(runAxe(tags)))) as { violations: unknown; incomplete: unknown } | null;
-			if (found === null || !isAxeRules(found.violations) || !isAxeRules(found.incomplete))
-				throw new Error(`The accessibility check did not finish in the page's ${state} state.`);
+			const found: unknown = await within(STATE_MS, wc.executeJavaScript(runAxe(tags)));
+			if (!axeFound(found)) throw new Error(`The accessibility check did not finish in the page's ${state} state.`);
 			runs.push({ state: state ?? 'default', violations: found.violations, incomplete: found.incomplete });
 		}
 		return runs;
@@ -60,6 +72,13 @@ export const checkInWindow: CheckPage = async (url, states, tags) => {
 		win.destroy();
 	}
 };
+
+/** A result from axe's runs, one per state, at `target`: what it found, and what it was made with. */
+export const resultOf = (runs: AxeRun[], target: DeclaredTarget, at: Date): AccessibilityResult => ({
+	ran: { axe: axe.version, tags: target.tags, target: targetLine(target), declared: target.declared, at: at.toISOString(), states: runs.map((r) => r.state) },
+	...mergeRuns(runs),
+	notAutomated: notAutomated(target.target),
+});
 
 /** What a result is made with: the page, axe-core's version, the tags and the target. Any change makes a new result. */
 const keyOf = (html: string, target: DeclaredTarget): string =>
@@ -97,19 +116,7 @@ export const accessibilityOf = async ({
 			// Unreadable is the same as none: made again.
 		}
 	}
-	const runs = await check(url, states, target.tags);
-	const result: AccessibilityResult = {
-		ran: {
-			axe: axe.version,
-			tags: target.tags,
-			target: targetLine(target),
-			declared: target.declared,
-			at: now().toISOString(),
-			states: runs.map((r) => r.state),
-		},
-		...mergeRuns(runs),
-		notAutomated: notAutomated(target.target),
-	};
+	const result = resultOf(await check(url, states, target.tags), target, now());
 	mkdirSync(dirname(file), { recursive: true });
 	writeFileSync(`${file}.new`, JSON.stringify({ key, result }));
 	renameSync(`${file}.new`, file);

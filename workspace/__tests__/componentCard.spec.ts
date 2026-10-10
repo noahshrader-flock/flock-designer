@@ -16,8 +16,8 @@ const COMPONENT: CatalogComponent = {
 	source: '',
 };
 let current: Awaited<ReturnType<typeof render>> | null = null;
-const show = async (picture?: string, drawing = false) => {
-	current = await render(createElement(ComponentCard, { component: COMPONENT, picture, drawing, onOpen: vi.fn() }));
+const show = async (picture?: string, drawing = false, issues?: { violations: number; incomplete: number }) => {
+	current = await render(createElement(ComponentCard, { component: COMPONENT, picture, drawing, issues, onOpen: vi.fn() }));
 };
 const waiting = () => document.querySelector('[data-picture-waiting]');
 afterEach(async () => {
@@ -108,5 +108,24 @@ describe('a picture on its way', () => {
 		await show('http://127.0.0.1:1/p/missing.jpg', true);
 		await act(async () => void (document.querySelector('img') as HTMLImageElement).dispatchEvent(new Event('error')));
 		expect(waiting()).toBeNull();
+	});
+});
+
+describe('a component’s accessibility, on its card (T7)', () => {
+	it('is a badge with how many issues axe found, and the same words as the panel in the card’s name', async () => {
+		await show(undefined, false, { violations: 2, incomplete: 1 });
+		const badge = document.querySelector('[data-accessibility-issues]') as HTMLElement;
+		expect(badge.textContent).toBe('2');
+		expect(badge.title).toBe('2 automated issues, 1 needs a person');
+		expect(document.querySelector('[data-component-card]')?.getAttribute('aria-label')).toBe('Open FSButton, 2 automated issues, 1 needs a person');
+	});
+
+	it('is nothing when axe found none, or the check has not come back: no result is a pass', async () => {
+		await show(undefined, false, { violations: 0, incomplete: 3 });
+		expect(document.querySelector('[data-accessibility-issues]')).toBeNull();
+		expect(document.querySelector('[data-component-card]')?.getAttribute('aria-label')).toBe('Open FSButton');
+		await unmountAll(current!.root);
+		await show();
+		expect(document.querySelector('[data-accessibility-issues]')).toBeNull();
 	});
 });

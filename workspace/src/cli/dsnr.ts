@@ -17,6 +17,7 @@ import { localPrototypeFile, prototypeWork, whereTheChangeGoes } from '../main/s
 import { publish, recordsFrom, unpublish } from '../main/services/pages';
 import { buildSite } from '../site/buildSite';
 import { serveSite } from '../site/serveSite';
+import { checkWcagEdition } from './wcagEdition';
 
 /**
  * `dsnr`: making a prototype from Claude Code in VS Code, with no app running.
@@ -40,6 +41,8 @@ export interface CliDeps {
 	github: GitHubApi | null;
 	/** Asks for a page with no credentials: whether a published page opens for anyone. */
 	fetchAnonymously?: (url: string) => Promise<{ status: number }>;
+	/** Reads a page's text: the W3C's, for `wcag-edition`. The network's own when absent. */
+	fetchText?: (url: string) => Promise<string>;
 	sleep?: (ms: number) => Promise<void>;
 	/** Opens an address in the person's browser. Absent where there is none to open (a test, a machine with no display). */
 	open?: (url: string) => void;
@@ -239,11 +242,13 @@ const taskText = (lead: string, task: string, save: string, publish: string): st
 export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 	try {
 		const [command, ...rest] = argv;
-		if (!['new-prototype', 'change-prototype', 'save-prototype', 'build-site', 'publish', 'unpublish'].includes(command ?? '')) {
+		if (!['new-prototype', 'change-prototype', 'save-prototype', 'build-site', 'publish', 'unpublish', 'wcag-edition'].includes(command ?? '')) {
 			throw new UsageError(command ? `There is no command called ${command}.` : 'Say which command.');
 		}
 		const values = optionsOf(rest);
 		if (command === 'build-site') return await site(deps, values);
+		if (command === 'wcag-edition')
+			return await checkWcagEdition({ fetchText: deps.fetchText ?? (async (url) => (await fetch(url)).text()), github: deps.github, repo: DESIGN_REPO, out: deps.out });
 		if (command === 'publish') return await publishPage(deps, values);
 		if (command === 'unpublish') return await unpublishPage(deps, values);
 		const projectId = values.project;

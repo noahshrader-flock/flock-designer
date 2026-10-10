@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type CheckPage, accessibilityOf } from '../src/main/services/accessibilityCheck';
-import { type AxeRule, criterionOf, mergeRuns, summaryOf } from '../src/shared/accessibility';
+import { type AxeRule, countsOf, criterionOf, mergeRuns, summaryOf } from '../src/shared/accessibility';
 import { declaredTarget, fixRequest } from '../src/main/services/accessibilityBrief';
 import { undeclared } from '../src/shared/wcag';
 
@@ -53,10 +53,10 @@ describe('a result', () => {
 
 	it('is said the same way everywhere, and never as a pass', () => {
 		const one = mergeRuns([{ state: 'default', violations: [rule('image-alt')], incomplete: [rule('color-contrast'), rule('link-name')] }]);
-		expect(summaryOf(one)).toBe('1 automated issue, 2 need a person');
-		expect(summaryOf({ violations: [], incomplete: [] })).toBe('No issues found by automated checks');
-		expect(summaryOf({ violations: [], incomplete: one.violations })).toBe('No issues found by automated checks, 1 needs a person');
-		expect(summaryOf({ violations: [], incomplete: [] })).not.toMatch(/pass|compliant|conform/i);
+		expect(summaryOf(countsOf(one))).toBe('1 automated issue, 2 need a person');
+		expect(summaryOf({ violations: 0, incomplete: 0 })).toBe('No issues found by automated checks');
+		expect(summaryOf({ violations: 0, incomplete: 1 })).toBe('No issues found by automated checks, 1 needs a person');
+		expect(summaryOf({ violations: 0, incomplete: 0 })).not.toMatch(/pass|compliant|conform/i);
 	});
 });
 

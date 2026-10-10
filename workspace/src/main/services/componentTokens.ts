@@ -13,6 +13,7 @@
  * commit answer at once.
  */
 import type {
+	AccessibilityResult,
 	ComponentTokens as Answer,
 	ComponentPictures as Pictures,
 	ConnectedDesignSystem,
@@ -21,21 +22,25 @@ import type {
 	TokenEdit,
 } from '../../shared/contract';
 import type { ComponentPictures } from './componentPictures';
+import { type AxeRule, countsOf } from '../../shared/accessibility';
 import { designSystemOf } from '../../shared/catalog';
 import { lengthParts, placeOf, writtenWith } from '../../shared/tokens';
 import { readCatalog } from './componentCatalog';
-import { libraryCommit, listedComponents, systemReads } from './designLibrary';
+import { libraryCommit, libraryTarget, listedComponents, systemReads } from './designLibrary';
+import { resultOf } from './accessibilityCheck';
 import { readTokens } from './designTokens';
 
 /**
  * What a story draws, as counts of each computed value: its colors (background, text, border), radii and spacing; and,
- * when its run asked for one (P5), a picture of its first story, as JPEG.
+ * when its run asked for one (P5), a picture of its first story, as JPEG; and, when its run gave tags (T7), what axe
+ * found in its stories at them.
  */
 export interface Drawn {
 	colors: Record<string, number>;
 	radii: Record<string, number>;
 	spacing: Record<string, number>;
 	picture?: Buffer;
+	accessibility?: { violations: AxeRule[]; incomplete: AxeRule[] };
 }
 
 export type Mode = 'light' | 'dark';
@@ -44,7 +49,7 @@ export type Mode = 'light' | 'dark';
  * Draws story files from a build of the previews (its `base`), in a mode, and says what each drew, in the order given;
  * null for one that would not draw. Several runs at once.
  */
-export type Measure = (runs: { base: string; mode: Mode; files: string[]; pictures?: boolean }[]) => Promise<(Drawn | null)[][]>;
+export type Measure = (runs: { base: string; mode: Mode; files: string[]; pictures?: boolean; accessibility?: string[] }[]) => Promise<(Drawn | null)[][]>;
 
 /** A tag's blue, the same for every color tag: its red and green are the token's number. */
 const TAG_BLUE = 0x5a;
@@ -186,8 +191,12 @@ export interface ComponentTokensDeps {
 	pictures: Pick<ComponentPictures, 'keep' | 'of'>;
 }
 
-/** Each story file's tokens, or null for one that did not draw, of which nothing can be said. */
-type Index = { files: Map<string, FileUse | null> } | { error: string };
+/**
+ * Each story file's tokens, or null for one that did not draw, of which nothing can be said; and what axe found in each
+ * that drew, at the design system's target (T7).
+ */
+type Built = { files: Map<string, FileUse | null>; accessibility: Map<string, AccessibilityResult> };
+type Index = Built | { error: string };
 
 /** The index for one commit: `done` once it is built or has failed, and `finished` for whoever waits for that. */
 interface Building {
@@ -224,6 +233,7 @@ export class ComponentTokens {
 			sharedWith,
 			notTokens: use.notTokens,
 			derived: use.derived,
+			accessibility: done.accessibility.get(file) ?? null,
 		};
 	}
 
@@ -233,10 +243,13 @@ export class ComponentTokens {
 	 */
 	async pictures(): Promise<Pictures> {
 		const system = this.deps.system();
-		if (system === null) return { drawing: false, pictures: {} };
+		if (system === null) return { drawing: false, pictures: {}, issues: {} };
 		const started = await this.started().catch(() => null);
-		const drawing = started !== null && !('error' in started) && started.index.done === null;
-		return { drawing, pictures: await this.deps.pictures.of(system.id) };
+		const done = started !== null && !('error' in started) ? started.index.done : null;
+		const drawing = started !== null && !('error' in started) && done === null;
+		// What each card says of its component's accessibility (T7): how many of each, once the pass has checked it.
+		const issues = done !== null && !('error' in done) ? Object.fromEntries([...done.accessibility].map(([f, r]) => [f, countsOf(r)])) : {};
+		return { drawing, pictures: await this.deps.pictures.of(system.id), issues };
 	}
 
 	/**
@@ -259,7 +272,7 @@ export class ComponentTokens {
 		if (this.index?.key !== key) {
 			const index: Building = { key, done: null, finished: Promise.resolve() };
 			index.finished = this.build(system, commit).then(
-				(files) => void (index.done = { files }),
+				(built) => void (index.done = built),
 				(err: Error) => void (index.done = { error: err.message }),
 			);
 			this.index = index;
@@ -267,9 +280,9 @@ export class ComponentTokens {
 		return { index: this.index };
 	}
 
-	private async build(system: ConnectedDesignSystem, commit: string): Promise<Map<string, FileUse | null>> {
+	private async build(system: ConnectedDesignSystem, commit: string): Promise<Built> {
 		const reads = await systemReads(system, commit);
-		const [read, catalog] = await Promise.all([readTokens(reads), readCatalog(reads, designSystemOf(system))]);
+		const [read, catalog, target] = await Promise.all([readTokens(reads), readCatalog(reads, designSystemOf(system)), libraryTarget(reads, system.name)]);
 		const { tokens } = read;
 		// The components the tab lists, so a token page is never said to share a token.
 		const files = listedComponents(catalog, read).map((c) => c.id);
@@ -280,8 +293,9 @@ export class ComponentTokens {
 		// With no token the library can be tagged by, there is nothing to tag: its stories are still drawn, as they are.
 		const tagged = tags.edits.length === 0 ? null : await this.deps.previews.tagged(tags.edits);
 		const taggedBase = tagged?.state === 'ready' ? tagged.base : null;
-		// The library as it is, in light, is always drawn: it is what the grid's pictures are of (P5), whatever the tags do.
-		const asIsRun = { base: plain.base, mode: 'light' as const, files, pictures: true };
+		// The library as it is, in light, is always drawn: it is what the grid's pictures are of (P5), whatever the tags do,
+		// and what each component's accessibility is checked on, at the design system's target (T7).
+		const asIsRun = { base: plain.base, mode: 'light' as const, files, pictures: true, accessibility: target.tags };
 		const drawn = await this.deps.measure(
 			taggedBase === null ? [asIsRun] : [{ base: taggedBase, mode: 'light', files }, { base: taggedBase, mode: 'dark', files }, asIsRun],
 		);
@@ -293,16 +307,23 @@ export class ComponentTokens {
 			if (picture) taken.set(f, picture);
 		});
 		this.deps.pictures.keep(system.id, files, taken);
+		const at = new Date();
+		const accessibility = new Map<string, AccessibilityResult>();
+		files.forEach((f, i) => {
+			const found = asIs?.[i]?.accessibility;
+			if (found) accessibility.set(f, resultOf([{ state: 'default', ...found }], target, at));
+		});
 		// Tags that would not build leave the pictures taken, and say why which tokens each uses cannot be said.
 		if (tagged !== null && tagged.state !== 'ready')
 			throw new Error(tagged.state === 'failed' ? tagged.error : 'The previews could not be built with the tags.');
 		// A file whose drawing did not come back has nothing to say, rather than that it draws with no token. With no tags,
 		// what it draws as it is is all it sets itself.
-		return new Map(
+		const uses = new Map(
 			files.map((f, i) => {
 				const read = tagged === null ? asIs?.[i] : light?.[i];
 				return [f, read ? decode({ light: read, dark: dark?.[i] ?? undefined }, asIs?.[i] ?? undefined, tags, tokens) : null];
 			}),
 		);
+		return { files: uses, accessibility };
 	}
 }

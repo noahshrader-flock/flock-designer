@@ -1,0 +1,38 @@
+# Once a week, asks the W3C which edition of WCAG is its latest published one, and opens an issue when it is not the one
+# the app's numbers come from (WCAG_EDITION, in workspace/src/shared/wcag.ts): a new version, or a corrected edition is
+# then seen the week it is published, with nobody having to remember to look. The same change is said once.
+# See workspace/src/cli/wcagEdition.ts and T7 of DESIGN_SYSTEM_PLAN.md.
+#
+# GitHub runs a scheduled workflow only from the repository's default branch.
+name: WCAG edition
+
+on:
+  schedule:
+    # Mondays, 09:17 UTC.
+    - cron: '17 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+      # The command's packages only: no scripts, so none of the app's own binaries are downloaded.
+      - name: Install
+        run: npm ci --ignore-scripts
+        working-directory: workspace
+      - name: Ask the W3C
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DSNR_REPO_OWNER: ${{ github.repository_owner }}
+          DSNR_REPO_NAME: ${{ github.event.repository.name }}
+        run: node workspace/bin/dsnr.mjs wcag-edition

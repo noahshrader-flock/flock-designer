@@ -419,6 +419,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 														component={c}
 														picture={pictures.pictures[c.id]}
 														drawing={pictures.drawing}
+														issues={pictures.issues[c.id]}
 														onOpen={() => openComponent(c.id)}
 													/>
 												))}

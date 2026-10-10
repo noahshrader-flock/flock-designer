@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { designSystemOf, isTokenGroup } from '../../shared/catalog';
+import type { DeclaredTarget } from '../../shared/wcag';
 import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem, DesignSystemConnection, DesignTokens, FoundDesignSystem } from '../../shared/contract';
 import { LIBRARY_MANIFEST, declaredTarget } from './accessibilityBrief';
 import { isStoryFile, readCatalog, type CatalogReads } from './componentCatalog';
@@ -112,6 +113,10 @@ export const systemReads = async (system: ConnectedDesignSystem, commit: string)
 export const listedComponents = (components: CatalogComponent[], tokens: DesignTokens): CatalogComponent[] =>
 	tokens.source !== null ? components.filter((c) => !isTokenGroup(c.group)) : components;
 
+/** A design system's accessibility target (T7): what its own manifest declares on the commit read, or the default. */
+export const libraryTarget = async (reads: CatalogReads, name: string): Promise<DeclaredTarget> =>
+	declaredTarget(await reads.readFile(LIBRARY_MANIFEST).catch(() => null), name);
+
 /** The catalog as the clone's copy of the design system's branch has it now, with `update` as given. */
 export const readLibrary = async (system: ConnectedDesignSystem, update: CatalogUpdate): Promise<Catalog> => {
 	const { root, branch } = system;
@@ -120,13 +125,8 @@ export const readLibrary = async (system: ConnectedDesignSystem, update: Catalog
 	const committedAt = await runGit(root, ['log', '-1', '--format=%cI', commit]);
 	// The components and the tokens, from the same reads of the same commit.
 	const reads = await systemReads(system, commit);
-	const [components, tokens, manifest] = await Promise.all([
-		readCatalog(reads, designSystemOf(system)),
-		readTokens(reads),
-		reads.readFile(LIBRARY_MANIFEST).catch(() => null),
-	]);
-	// Its accessibility target (T7), as its own manifest declares it on the same commit.
-	const accessibility = declaredTarget(manifest, system.name);
+	// With its accessibility target (T7), as its own manifest declares it on the same commit.
+	const [components, tokens, accessibility] = await Promise.all([readCatalog(reads, designSystemOf(system)), readTokens(reads), libraryTarget(reads, system.name)]);
 	return { state: 'ready', branch, commit, committedAt, update, components: listedComponents(components, tokens), tokens, accessibility };
 };
 

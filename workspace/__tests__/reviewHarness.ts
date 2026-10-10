@@ -41,7 +41,7 @@ export const fakeApp = (overrides: Impl = {}) => {
 		// Every story still being drawn, unless a test says otherwise.
 		componentTokens: async () => ok({ state: 'building' }),
 		// No pictures of the components yet, and none being drawn, unless a test says otherwise.
-		componentPictures: async () => ok({ drawing: false, pictures: {} }),
+		componentPictures: async () => ok({ drawing: false, pictures: {}, issues: {} }),
 		shareStatus: async () => ok({ state: 'idle' }),
 		publishedPage: async () => ok({ state: 'none' }),
 		pageShowMarkers: async (items: { id: number }[]) => ok(items.map((i) => ({ id: i.id, state: 'found' }))),

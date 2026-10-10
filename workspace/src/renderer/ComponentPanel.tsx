@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { CatalogComponent, ComponentTokens, DesignToken } from '../shared/contract';
+import { countsOf, summaryOf } from '../shared/accessibility';
 import { plural } from '../shared/plural';
+import { AccessibilityFindings } from './AccessibilityStatus';
 import { LinesSkeleton, SkeletonStatus } from './Skeletons';
 import { useTokenChanges } from './tokenChanges';
 import { Swatch } from './TokenEditor';
@@ -152,6 +154,20 @@ const Uses = ({
 					)}
 				</section>
 			)}
+			{/* What axe found in its stories, at the design system's target (T7). */}
+			<section aria-label="Accessibility" className="flex flex-col gap-2">
+				<h3 className="text-sm font-semibold">Accessibility</h3>
+				{answer.accessibility === null ? (
+					<p className="text-muted-foreground text-xs">Not checked: its stories did not finish drawing for the check.</p>
+				) : (
+					<>
+						<p data-accessibility-summary className={`text-sm ${answer.accessibility.violations.length ? 'text-warning' : ''}`}>
+							{summaryOf(countsOf(answer.accessibility))}
+						</p>
+						<AccessibilityFindings result={answer.accessibility} />
+					</>
+				)}
+			</section>
 		</>
 	);
 };

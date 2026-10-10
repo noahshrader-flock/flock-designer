@@ -179,7 +179,7 @@ beforeEach(async () => {
 		storyPreviewsRoot: join(home, 'story-previews'),
 		componentPicturesRoot: join(home, 'component-pictures'),
 		// What is got ready in the background is only counted here, never drawn.
-		componentTokens: { of: ask, warm, pictures: async () => ({ drawing: false, pictures: {} }) } as never,
+		componentTokens: { of: ask, warm, pictures: async () => ({ drawing: false, pictures: {}, issues: {} }) } as never,
 		checkPage,
 		...more,
 	});
@@ -236,7 +236,7 @@ describe('the Design System tab', () => {
 	});
 
 	it('gives the pictures of the components, for the grid', async () => {
-		expect(await call(CHANNELS.componentPictures)).toEqual({ ok: true, value: { drawing: false, pictures: {} } });
+		expect(await call(CHANNELS.componentPictures)).toEqual({ ok: true, value: { drawing: false, pictures: {}, issues: {} } });
 	});
 
 	it('asks which tokens a component draws with only by a story file, and by nothing else the window sends', async () => {

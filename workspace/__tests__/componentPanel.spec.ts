@@ -38,6 +38,12 @@ const READY: ComponentTokens = {
 		{ kind: 'spacing', value: '16px', uses: 41 },
 	],
 	derived: 7,
+	accessibility: {
+		ran: { axe: '4.14.0', tags: ['wcag2a'], target: 'WCAG 2.0 Level A', declared: true, at: '2026-10-10T00:00:00.000Z', states: ['default'] },
+		violations: [{ rule: 'button-name', help: 'Buttons must have discernible text', impact: 'critical', criteria: ['4.1.2'], nodes: 2, url: 'https://x', states: ['default'] }],
+		incomplete: [],
+		notAutomated: [],
+	},
 };
 
 const NO_TARGET = undeclared('Acme has no .dsnr/manifest.md');
@@ -117,8 +123,25 @@ describe('the component view', () => {
 		expect(section.textContent).toContain('7 uses are shades worked out from a token');
 	});
 
+	it('says what axe found in its stories at the library’s target, in the words used everywhere, and never a pass (T7)', async () => {
+		await show(async () => ok(READY));
+		const section = document.querySelector('[aria-label="Accessibility"]') as HTMLElement;
+		expect(section.querySelector('[data-accessibility-summary]')?.textContent).toBe('1 automated issue');
+		expect(section.textContent).toContain('Checked with axe-core 4.14.0 at WCAG 2.0 Level A');
+		expect(section.textContent).toContain('Buttons must have discernible text');
+		expect(section.textContent).toContain('WCAG 4.1.2 · critical · 2 elements');
+		expect(section.textContent).toContain('this is not a pass');
+	});
+
+	it('says a component was not checked when its check did not come back, rather than that it has no issues', async () => {
+		await show(async () => ok({ ...READY, accessibility: null }));
+		const section = document.querySelector('[aria-label="Accessibility"]') as HTMLElement;
+		expect(section.textContent).toContain('Not checked');
+		expect(section.textContent).not.toContain('No issues');
+	});
+
 	it('says when a component draws with none of the library’s tokens', async () => {
-		await show(async () => ok({ state: 'ready', uses: [], sharedWith: {}, notTokens: [], derived: 0 }));
+		await show(async () => ok({ state: 'ready', uses: [], sharedWith: {}, notTokens: [], derived: 0, accessibility: null }));
 		expect(text()).toContain('FSButton draws with none of the library’s tokens.');
 		expect(document.querySelector('[aria-label="Not tokens"]')).toBeNull();
 	});

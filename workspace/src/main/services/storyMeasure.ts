@@ -6,10 +6,12 @@
  * does not draw in time is said as null, and the rest go on.
  */
 import { createHash } from 'node:crypto';
+import axe from 'axe-core';
 import { nativeImage } from 'electron';
 import { PREVIEW_SHOW, previewAddress } from '../../shared/catalog';
 import type { Drawn, Measure, Mode } from './componentTokens';
 import { COMPOSITION, composeOnWhite } from './pictureComposition';
+import { axeFound, axeRun } from './accessibilityCheck';
 import { hiddenWindow, within } from './sandboxedPage';
 
 /** How many windows draw a run's files at once, how long one story may take, and each window's size. */
@@ -34,9 +36,10 @@ const SESSION = 'dsnr-story-measure';
  * What a story file draws, read in the page once it has drawn: the page draws the file in place of the last
  * (`PREVIEW_SHOW`), so the page is loaded once for many. Then its fonts, and what animates in, settle, and its stories'
  * elements that take up room are read: each one's background, text and border colors, its radius, and its padding,
- * margins and gaps, counted by computed value.
+ * margins and gaps, counted by computed value. With `tags`, axe (in the page already) checks the stories' accessibility
+ * at them (T7), before anything is hidden for a picture, since axe passes over what is hidden.
  */
-const readDrawn = (file: string, picture: boolean): string => `(async (file, picture) => {
+const readDrawn = (file: string, picture: boolean, tags: string[] | null = null): string => `(async (file, picture) => {
 	const until = Date.now() + ${STORY_MS - 3000};
 	while (typeof window[${JSON.stringify(PREVIEW_SHOW)}] !== 'function' && Date.now() < until) await new Promise((r) => setTimeout(r, 50));
 	await window[${JSON.stringify(PREVIEW_SHOW)}](file);
@@ -54,6 +57,12 @@ const readDrawn = (file: string, picture: boolean): string => `(async (file, pic
 		if (parseFloat(s.borderTopWidth) > 0) add(drawn.colors, s.borderTopColor);
 		add(drawn.radii, s.borderTopLeftRadius);
 		for (const k of ['paddingTop', 'paddingLeft', 'marginTop', 'marginLeft', 'rowGap', 'columnGap']) add(drawn.spacing, s[k]);
+	}${
+		tags
+			? `
+	// The stories only: not the page they are drawn on, nor the names it gives them.
+	drawn.accessibility = window.axe ? await ${axeRun("{ include: [['#root']], exclude: [['.fd-name']] }", tags)} : null;`
+			: ''
 	}
 	if (!picture) return drawn;
 	// A picture (P5): the first story alone, at the top of the page, which is white. Everything else is hidden first (hidden,
@@ -87,7 +96,7 @@ export const PICTURE_RECIPE = createHash('sha256')
 	.slice(0, 12);
 
 /** One window's share of a run: the page loaded once, in the run's mode, then each file drawn in turn. */
-const drawShare = async (base: string, mode: Mode, files: string[], pictures: boolean): Promise<(Drawn | null)[]> => {
+const drawShare = async (base: string, mode: Mode, files: string[], pictures: boolean, tags: string[] | null): Promise<(Drawn | null)[]> => {
 	const win = hiddenWindow(SESSION, new URL(base).origin, WINDOW);
 	try {
 		const wc = win.webContents;
@@ -107,10 +116,18 @@ const drawShare = async (base: string, mode: Mode, files: string[], pictures: bo
 		// Pictures are drawn at twice the size, whatever the screen, so they are sharp.
 		if (pictures)
 			await within(STORY_MS, wc.debugger.sendCommand('Emulation.setDeviceMetricsOverride', { ...WINDOW, deviceScaleFactor: PICTURE_SCALE, mobile: false }));
+		// axe-core, once for every file the page draws (T7).
+		if (tags) await within(STORY_MS, wc.executeJavaScript(`${axe.source};true`));
 		for (const file of files) {
-			const measured = await within(STORY_MS, wc.executeJavaScript(readDrawn(file, pictures)) as Promise<Drawn>);
-			const picture = measured && pictures ? await within(STORY_MS, pictureOf(wc)) : undefined;
-			drawn.push(measured && picture ? { ...measured, picture } : measured);
+			const read = await within(STORY_MS, wc.executeJavaScript(readDrawn(file, pictures, tags)) as Promise<Drawn & { accessibility?: unknown }>);
+			if (read === null) {
+				drawn.push(null);
+				continue;
+			}
+			// What the page says it found, only when it is axe's results.
+			const { accessibility, ...measured } = read;
+			const picture = pictures ? await within(STORY_MS, pictureOf(wc)) : undefined;
+			drawn.push({ ...measured, ...(picture ? { picture } : {}), ...(axeFound(accessibility) ? { accessibility } : {}) });
 		}
 		return drawn;
 	} finally {
@@ -124,10 +141,10 @@ const drawShare = async (base: string, mode: Mode, files: string[], pictures: bo
  */
 export const measureInWindows: Measure = async (runs) => {
 	const results: (Drawn | null)[][] = [];
-	for (const { base, mode, files, pictures = false } of runs) {
+	for (const { base, mode, files, pictures = false, accessibility = null } of runs) {
 		// Each window takes every third file, so the slow ones are spread out.
 		const shares = Array.from({ length: Math.min(WINDOWS_PER_RUN, files.length) }, (_, w) => files.filter((_, i) => i % WINDOWS_PER_RUN === w));
-		const drawn = await Promise.all(shares.map((share) => drawShare(base, mode, share, pictures)));
+		const drawn = await Promise.all(shares.map((share) => drawShare(base, mode, share, pictures, accessibility)));
 		results.push(files.map((_, i) => drawn[i % WINDOWS_PER_RUN]?.[Math.floor(i / WINDOWS_PER_RUN)] ?? null));
 	}
 	return results;

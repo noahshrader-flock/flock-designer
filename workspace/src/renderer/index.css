@@ -65,7 +65,8 @@
 	 * picked by hand, so they sit in the same color space as everything else and there is one name
 	 * per meaning instead of a color chosen at each place that needs it.
 	 */
-	--warning: var(--color-amber-600);
+	/* 700, not 600: warnings are text, and 600 on white is 3.1:1, under the 4.5:1 WCAG 1.4.3 asks; 700 is 5:1. */
+	--warning: var(--color-amber-700);
 	--success: var(--color-green-600);
 }
 

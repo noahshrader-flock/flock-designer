@@ -74,11 +74,17 @@ export const mergeRuns = (runs: AxeRun[]): { violations: AccessibilityIssue[]; i
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
+/** How many of each a result has: issues axe found, and ones it could not decide. */
+export const countsOf = (r: Pick<AccessibilityResult, 'violations' | 'incomplete'>): { violations: number; incomplete: number } => ({
+	violations: r.violations.length,
+	incomplete: r.incomplete.length,
+});
+
 /**
  * A result in a few words, the same wherever it is shown: "3 automated issues, 2 need a person", or "No issues found by
  * automated checks". Never a pass.
  */
-export const summaryOf = (r: Pick<AccessibilityResult, 'violations' | 'incomplete'>): string => {
-	const found = r.violations.length ? count(r.violations.length, 'automated issue', 'automated issues') : 'No issues found by automated checks';
-	return r.incomplete.length ? `${found}, ${count(r.incomplete.length, 'needs a person', 'need a person')}` : found;
+export const summaryOf = ({ violations, incomplete }: { violations: number; incomplete: number }): string => {
+	const found = violations ? count(violations, 'automated issue', 'automated issues') : 'No issues found by automated checks';
+	return incomplete ? `${found}, ${count(incomplete, 'needs a person', 'need a person')}` : found;
 };

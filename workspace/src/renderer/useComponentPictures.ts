@@ -11,7 +11,7 @@ const ASK_EVERY_MS = 3000;
  * `drawing` until the first answer says otherwise, so a card waits for its picture rather than saying it has none.
  */
 export const useComponentPictures = (shown: boolean, commit: string | null): ComponentPictures => {
-	const [pictures, setPictures] = useState<ComponentPictures>({ drawing: true, pictures: {} });
+	const [pictures, setPictures] = useState<ComponentPictures>({ drawing: true, pictures: {}, issues: {} });
 	useEffect(() => {
 		if (!shown) return;
 		let live = true;

@@ -338,7 +338,7 @@ describe('the components as a list or a grid (P5)', () => {
 
 	it('show each component’s picture in its card, and ask for the pictures only while the grid is shown', async () => {
 		const pictures = { [COMPONENTS[0]!.id]: 'http://127.0.0.1:1/component-pictures-x/0123456789abcdef.jpg' };
-		const app = await open(() => ok(ready()), false, { componentPictures: async () => ok({ drawing: false, pictures }) });
+		const app = await open(() => ok(ready()), false, { componentPictures: async () => ok({ drawing: false, pictures, issues: {} }) });
 		expect(app.calls.componentPictures).toBeUndefined();
 		await press(viewButton('Grid'));
 		await settle();

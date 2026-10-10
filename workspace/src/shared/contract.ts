@@ -314,6 +314,8 @@ export type ComponentTokens =
 			sharedWith: Record<string, string[]>;
 			notTokens: { kind: 'color' | 'radius' | 'spacing'; value: string; uses: number }[];
 			derived: number;
+			/** What axe found in its stories, at the design system's target (T7); null when it could not be checked. */
+			accessibility: AccessibilityResult | null;
 	  };
 
 /**
@@ -350,6 +352,8 @@ export interface AccessibilityResult {
 export interface ComponentPictures {
 	drawing: boolean;
 	pictures: Record<string, string>;
+	/** What each card says of its component's accessibility (T7): how many issues axe found, and how many need a person. */
+	issues: Record<string, { violations: number; incomplete: number }>;
 }
 
 /**

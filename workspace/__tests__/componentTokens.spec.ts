@@ -193,7 +193,8 @@ describe('the index', () => {
 			[
 				{ base: 'http://127.0.0.1:1/tagged/', mode: 'light', files },
 				{ base: 'http://127.0.0.1:1/tagged/', mode: 'dark', files },
-				{ base: 'http://127.0.0.1:1/plain/', mode: 'light', files, pictures: true },
+				// As it is, checked for accessibility at the library's target: none declared, so the default (T7).
+				{ base: 'http://127.0.0.1:1/plain/', mode: 'light', files, pictures: true, accessibility: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] },
 			],
 		]);
 	});
@@ -209,6 +210,7 @@ describe('the index', () => {
 			sharedWith: { 'tone.brand.50': [] },
 			notTokens: [{ kind: 'color', value: 'rgb(107, 114, 128)', uses: 1 }],
 			derived: 0,
+			accessibility: null,
 		});
 		const a = await i.of('src/components/A/A.stories.tsx');
 		expect(a).toMatchObject({ state: 'ready', uses: [{ path: 'palette.light.primary.main', uses: 6 }] });
@@ -294,11 +296,11 @@ describe('the index', () => {
 		});
 		void i.warm();
 		await vi.waitFor(() => expect(drawingStarted).toBe(true));
-		expect(await i.pictures()).toEqual({ drawing: true, pictures: {} });
+		expect(await i.pictures()).toEqual({ drawing: true, pictures: {}, issues: {} });
 		finish();
 		await i.warm();
 		expect((await i.pictures()).drawing).toBe(false);
-		expect(await index({ system: () => null }).pictures()).toEqual({ drawing: false, pictures: {} });
+		expect(await index({ system: () => null }).pictures()).toEqual({ drawing: false, pictures: {}, issues: {} });
 	});
 
 	it('still draws and pictures a library with no tokens it can tag, as it is, once, and says it draws with none', async () => {
@@ -318,7 +320,9 @@ describe('the index', () => {
 		// With no tokens read, the library's own token page is a component like the others (decision 22), and is drawn too.
 		// In the catalog's order, by group: Buttons, Design Tokens, Inputs.
 		const files = ['src/components/A/A.stories.tsx', 'src/uxDocs/Palette.stories.tsx', 'src/components/B/B.stories.tsx'];
-		expect(asked).toEqual([[{ base: 'http://127.0.0.1:1/plain/', mode: 'light', files, pictures: true }]]);
+		expect(asked).toEqual([
+			[{ base: 'http://127.0.0.1:1/plain/', mode: 'light', files, pictures: true, accessibility: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] }],
+		]);
 		expect(kept[0]?.taken.size).toBe(3);
 		expect(await i.of('src/components/A/A.stories.tsx')).toEqual({
 			state: 'ready',
@@ -326,7 +330,42 @@ describe('the index', () => {
 			sharedWith: {},
 			notTokens: [{ kind: 'color', value: 'rgb(107, 114, 128)', uses: 2 }],
 			derived: 0,
+			accessibility: null,
 		});
+	});
+
+	it('checks each component’s accessibility in the same pass, at the library’s own target, and says it to the panel and the cards (T7)', async () => {
+		// The library declares its target in its own manifest.
+		mkdirSync(join(clone, '.dsnr'), { recursive: true });
+		writeFileSync(join(clone, '.dsnr', 'manifest.md'), '## Accessibility conformance target\n\n| | |\n|---|---|\n| **Target** | WCAG 2.1 Level AA |\n');
+		g(clone, 'add', '-A');
+		g(clone, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'target');
+		g(clone, 'update-ref', 'refs/remotes/origin/develop', 'HEAD');
+		const found = {
+			violations: [
+				{ id: 'button-name', help: 'Buttons must have discernible text', impact: 'critical', tags: ['wcag2a', 'wcag412'], helpUrl: 'https://x', nodes: 2 },
+			],
+			incomplete: [],
+		};
+		const i = index({
+			measure: async (runs) => (
+				asked.push(runs),
+				runs.map((run) =>
+					run.files.map((f) => ({ ...drawn({ 'rgb(107, 114, 128)': 1 }), ...(run.accessibility && f.includes('/A/') ? { accessibility: found } : {}) })),
+				)
+			),
+		});
+		await i.warm();
+		expect(asked[0]?.at(-1)?.accessibility).toEqual(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']);
+		const a = await i.of('src/components/A/A.stories.tsx');
+		expect(a.state === 'ready' && a.accessibility).toMatchObject({
+			ran: { target: 'WCAG 2.1 Level AA', declared: true, states: ['default'] },
+			violations: [{ rule: 'button-name', criteria: ['4.1.2'], nodes: 2 }],
+		});
+		// One that drew, but whose check did not come back, is not checked: never a clean result.
+		const b = await i.of('src/components/B/B.stories.tsx');
+		expect(b.state === 'ready' && b.accessibility).toBeNull();
+		expect((await i.pictures()).issues).toEqual({ 'src/components/A/A.stories.tsx': { violations: 1, incomplete: 0 } });
 	});
 
 	it('keeps the pictures when the tagged build fails, and says why which tokens each uses cannot be said', async () => {

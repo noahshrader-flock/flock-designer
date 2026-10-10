@@ -1,7 +1,10 @@
+import { AccessibilityIcon } from 'lucide-react';
 import { useState } from 'react';
+import { summaryOf } from '../shared/accessibility';
 import type { CatalogComponent } from '../shared/contract';
 import { CardCover } from './CardCover';
 import { PRESSABLE_CARD, pressableCard } from './pressableCard';
+import { Badge } from './ui/badge';
 import { Card, CardFooter, CardTitle } from './ui/card';
 import { Skeleton } from './ui/skeleton';
 
@@ -12,16 +15,21 @@ import { Skeleton } from './ui/skeleton';
  * when one arrives: a skeleton while one is on its way (`drawing`, or loading), a still soft placeholder for a component
  * with none, and the picture fades in once it has loaded. The picture is
  * decorative: the name is beside it. The whole card opens the component.
+ *
+ * When axe found issues in its stories (T7), a badge on the cover says how many, and the card's name says it in words, as
+ * the panel does. A component with none shows nothing: no result is a pass.
  */
 export const ComponentCard = ({
 	component,
 	picture,
 	drawing = false,
+	issues,
 	onOpen,
 }: {
 	component: CatalogComponent;
 	picture: string | undefined;
 	drawing?: boolean;
+	issues?: { violations: number; incomplete: number };
 	onOpen: () => void;
 }) => {
 	const [loaded, setLoaded] = useState<string | null>(null);
@@ -31,11 +39,21 @@ export const ComponentCard = ({
 	// On its way: loading, or not yet taken by a pass that is drawing. One that failed to load is not waited for.
 	const waiting = shown ? loaded !== shown : drawing && picture === undefined;
 	return (
-		<Card data-component-card={component.id} className={`pt-0 ${PRESSABLE_CARD}`} {...pressableCard(`Open ${component.name}`, onOpen)}>
+		<Card
+			data-component-card={component.id}
+			className={`pt-0 ${PRESSABLE_CARD}`}
+			{...pressableCard(`Open ${component.name}${issues?.violations ? `, ${summaryOf(issues)}` : ''}`, onOpen)}
+		>
 			{/* The picture is the cover: edge to edge, with a skeleton behind it until it has loaded. */}
 			<CardCover bleed>
 				<div data-picture-area className={`absolute inset-0 ${shown && loaded === shown ? 'bg-white' : 'bg-muted/40'}`}>
 					{waiting && <Skeleton data-picture-waiting className="absolute inset-0 rounded-none" />}
+					{issues && issues.violations > 0 && (
+						<Badge variant="secondary" data-accessibility-issues={issues.violations} title={summaryOf(issues)} className="absolute top-2 right-2 z-10">
+							<AccessibilityIcon aria-hidden />
+							{issues.violations}
+						</Badge>
+					)}
 					{shown && (
 						<img
 							src={shown}
