@@ -1,11 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import type { Iteration, Person, PrototypeReadiness } from '../../shared/contract';
+import { type DeclaredTarget, undeclared } from '../../shared/wcag';
 import { firstHeading, hasOutsideComments, latestIterationName, nextIterationName, parsePrototypeName, projectPath, prototypePagePath, prototypeSourcePath } from '../../shared/projects';
-import { taskAccessibility } from './accessibilityBrief';
+import { MANIFEST_FILE, declaredTarget, taskAccessibility } from './accessibilityBrief';
 import { readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
-import { branchCommit, branchExists, readCheckout, readTreeAt } from './git';
+import { branchCommit, branchExists, gitExact, readCheckout, readTreeAt } from './git';
 import { assertUsableProjectId } from './iterations';
 import { MAX_PAGE, type PrototypeBuild, type PrototypeSources, type RecordStore, assertPrototypeName, prototypeVersionOf, recordIteration, recordPrototype } from './prototype';
 import { bundleCommand, runBundle, sharedFilesOf, writeBundleScript } from './prototypeBundle';
@@ -359,13 +360,25 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return ctx.readDesignFile(prototypePagePath(projectId, name));
 	};
 
-	/** The accessibility section of a prototype's task (T7): the target from the guidance the prototype is modeled on. */
-	const accessibility = async (sources: PrototypeSources): Promise<string> => {
+	/**
+	 * A prototype's accessibility target (T7): what its product's manifest declares on the branch the prototype is modeled
+	 * on, else in the checkout, as its guidance is found (develop has no DSNR files); read from git, so nothing is copied.
+	 */
+	const target = async (projectId: string, name: string): Promise<DeclaredTarget> => {
 		const root = ctx.productRoot();
-		return taskAccessibility(skill, sources.productGuidance, root === null ? 'The product' : readDescriptor(root).product);
+		if (root === null) return undeclared('No product repository is open');
+		const descriptor = readDescriptor(root);
+		const path = `${descriptor.contextDir}/${MANIFEST_FILE}`;
+		const basedOn = (await record(projectId, name))?.basedOn;
+		const onBranch = basedOn && basename(root) === basedOn.repository ? await gitExact(root, ['show', `${basedOn.branch}:${path}`]).catch(() => null) : null;
+		const here = join(root, path);
+		return declaredTarget(onBranch ?? (existsSync(here) ? readFileSync(here, 'utf8') : null), descriptor.product);
 	};
 
-	return { dir, file, sourceFile, sharedText, skill, accessibility, title, records, record, sourceText, readiness, start, sources, buildPlan, buildPage, keep, save, page, startChange, resumeChange, finishChange };
+	/** The accessibility section of a prototype's task (T7), at its target. */
+	const accessibility = async (projectId: string, name: string): Promise<string> => taskAccessibility(skill, await target(projectId, name));
+
+	return { dir, file, sourceFile, sharedText, skill, target, accessibility, title, records, record, sourceText, readiness, start, sources, buildPlan, buildPage, keep, save, page, startChange, resumeChange, finishChange };
 };
 
 export type PrototypeWork = ReturnType<typeof prototypeWork>;

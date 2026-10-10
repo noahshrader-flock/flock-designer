@@ -4,6 +4,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { basename, dirname, join, sep } from 'node:path';
 import {
+	type AccessibilityResult,
 	CHANNELS,
 	type Checkout,
 	type CheckoutSuggestion,
@@ -43,7 +44,8 @@ import { DesignSystemsMemory } from './services/designSystems';
 import { ProfileNames } from './services/profileNames';
 import { StoryPreviews } from './services/storyPreviews';
 import { tokenEditsOf } from './services/tokenEdits';
-import { taskAccessibility } from './services/accessibilityBrief';
+import { fixRequest, productTarget, taskAccessibility } from './services/accessibilityBrief';
+import { type CheckPage, accessibilityOf } from './services/accessibilityCheck';
 import { TokenBranches } from './services/tokenBranches';
 import { ComponentTokens, type Measure } from './services/componentTokens';
 import { ComponentPictures } from './services/componentPictures';
@@ -158,6 +160,8 @@ export interface IpcContext {
 	tokenBranchTools?: (root: string) => ShareTools;
 	/** How stories are drawn to read what they draw (T6): hidden windows, in the app. */
 	measureStories?: Measure;
+	/** How a page is checked for accessibility (T7): axe-core in a hidden window, in the app. */
+	checkPage?: CheckPage;
 	/**
 	 * Which tokens each component draws with (T6), and so what is got ready in the background: given for tests.
 	 */
@@ -195,6 +199,9 @@ export const registerIpc = ({
 	tokenBranchTools = (root: string) => realShareTools(root),
 	measureStories = async () => {
 		throw new Error('Stories can be drawn only in the app.');
+	},
+	checkPage = async () => {
+		throw new Error('Pages can be checked only in the app.');
 	},
 	componentTokens: injectedComponentTokens,
 	componentPicturesRoot = join(tmpdir(), 'dsnr-component-pictures'),
@@ -634,9 +641,9 @@ export const registerIpc = ({
 	);
 
 	/** The accessibility section of a codebase task (T7): the product's target from its own manifest, on the branch it is on. */
-	const accessibilityOf = (canonical: string, findings?: Parameters<typeof taskAccessibility>[3]): Promise<string> => {
+	const codebaseAccessibility = (canonical: string, findings?: Parameters<typeof taskAccessibility>[2]): Promise<string> => {
 		const descriptor = readDescriptor(canonical);
-		return taskAccessibility(readSkillText, join(canonical, descriptor.contextDir), descriptor.product, findings);
+		return taskAccessibility(readSkillText, productTarget(join(canonical, descriptor.contextDir), descriptor.product), findings);
 	};
 
 	/**
@@ -673,7 +680,7 @@ export const registerIpc = ({
 	) => {
 		const session = randomUUID();
 		const shared = sharedGuidance(canonical);
-		const accessibility = await accessibilityOf(canonical);
+		const accessibility = await codebaseAccessibility(canonical);
 		const started = agent.start(canonical, projectId, `${task}${shared.note}\n\n${accessibility}`, {
 			// The project's records live in the design repository, beside the product checkout.
 			addDirs,
@@ -1085,7 +1092,7 @@ export const registerIpc = ({
 			if (agent.status().state === 'running') return agent.status();
 			const skill = await readSkillText(BUILD_SKILL);
 			const { build, sources } = await prototypeRun(projectId, name);
-			const accessibility = await work.accessibility(sources);
+			const accessibility = await work.accessibility(projectId, name);
 			return startPrototypeAgent(projectId, name, sources, prototypeBuildTask({ skill, build, sources, accessibility, request: String(request) }));
 		}),
 	);
@@ -1150,7 +1157,7 @@ export const registerIpc = ({
 			const { build, sources } = await prototypeRun(projectId, change.target, change.from.name);
 			prototypeChanges.set(commentId, { projectId, change });
 			const where = whereTheChangeGoes(change, name);
-			const accessibility = await work.accessibility(sources);
+			const accessibility = await work.accessibility(projectId, change.from.name);
 			return startPrototypeAgent(
 				projectId,
 				name,
@@ -1277,6 +1284,38 @@ export const registerIpc = ({
 		}),
 	);
 
+	/**
+	 * A prototype's accessibility (T7): its saved page, served as it is opened, checked in each of its states at its
+	 * product's target, and kept beside it. Made again only when what it was made with changes.
+	 */
+	const prototypeAccessibility = async (projectId: string, name: string): Promise<AccessibilityResult> => {
+		assertUsableProjectId(projectId);
+		assertPrototypeName(name);
+		const html = await prototypePage(projectId, name);
+		if (html === null) throw new Error('This prototype has no page yet.');
+		await serveShared(html);
+		const url = await prototypeServer.serve(`${projectId}/${name}`, html);
+		const file = join(dirname(work.file(projectId, name)), `${name}.accessibility.json`);
+		return accessibilityOf({ file, html, url, states: statesOf(html), target: await work.target(projectId, name), check: checkPage });
+	};
+	ipcMain.handle(
+		CHANNELS.checkAccessibility,
+		guard((projectId: string, name: string) => once(`accessibility:${projectId}/${name}`, () => prototypeAccessibility(projectId, name))),
+	);
+	// One round of the prototype's own check: its agent given what the check found, as a build error is given (T7).
+	ipcMain.handle(
+		CHANNELS.fixAccessibility,
+		guard(async (projectId: string, name: string) => {
+			if (agent.status().state === 'running') throw new Error(AGENT_BUSY);
+			const result = await prototypeAccessibility(projectId, name);
+			if (result.violations.length === 0) throw new Error('The accessibility check found nothing to fix.');
+			const skill = await readSkillText(BUILD_SKILL);
+			const { build, sources } = await prototypeRun(projectId, name);
+			const accessibility = await work.accessibility(projectId, name);
+			return startPrototypeAgent(projectId, name, sources, prototypeBuildTask({ skill, build, sources, accessibility, request: fixRequest(result) }));
+		}),
+	);
+
 	ipcMain.handle(
 		CHANNELS.moveToCodePlan,
 		guard(async (root: string, projectId: string, name: string): Promise<MoveToCodePlan> => {
@@ -1381,8 +1420,9 @@ export const registerIpc = ({
 					auditFile: join(recordsRoot, projectId, `audit-${name}.md`),
 					name,
 					basedOn: (await work.record(projectId, name))?.basedOn,
-					// Built toward the product's target from the start, with what the prototype's check left open.
-					accessibility: await accessibilityOf(canonical),
+					// Built toward the product's target from the start, with what the prototype's check left open: its page
+					// checked now when it was not already. A check that cannot run leaves the findings out, never the move.
+					accessibility: await codebaseAccessibility(canonical, await prototypeAccessibility(projectId, name).catch(() => null)),
 				}),
 			);
 			const prompt = moveToCodePrompt({ label, projectId, taskFile, continuing: continuing ? branch : null });

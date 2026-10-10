@@ -604,6 +604,13 @@ export interface WorkspaceApi {
 	publishPage(projectId: string, name: string): Promise<Result<PageStatus>>;
 	savePrototype(projectId: string, name: string): Promise<Result<null>>;
 	openPrototype(projectId: string, name: string): Promise<Result<OpenedPrototype>>;
+	/**
+	 * A prototype's saved page checked for accessibility at its product's target (T7): kept, and made again only when the
+	 * page, axe-core, the tags or the target change. Takes a few seconds the first time.
+	 */
+	checkAccessibility(projectId: string, name: string): Promise<Result<AccessibilityResult>>;
+	/** Starts the prototype's agent on what its last check found, and nothing else: one round of its own check (T7). */
+	fixAccessibility(projectId: string, name: string): Promise<Result<AgentStatus>>;
 	/** What moving a prototype into the code would do in this checkout, asked before it is offered. */
 	moveToCodePlan(root: string, projectId: string, name: string): Promise<Result<MoveToCodePlan>>;
 	/** Whether a prototype can be built from this repository on this machine, and with which design system version. */
@@ -1006,6 +1013,8 @@ export const CHANNELS = {
 	publishPage: 'workspace:publishPage',
 	savePrototype: 'workspace:savePrototype',
 	openPrototype: 'workspace:openPrototype',
+	checkAccessibility: 'workspace:checkAccessibility',
+	fixAccessibility: 'workspace:fixAccessibility',
 	buildInClaude: 'workspace:buildInClaude',
 	prototypeReadiness: 'workspace:prototypeReadiness',
 	moveToCodePlan: 'workspace:moveToCodePlan',

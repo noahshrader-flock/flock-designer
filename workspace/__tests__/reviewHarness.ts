@@ -23,6 +23,15 @@ export const fakeApp = (overrides: Impl = {}) => {
 		agentRecent: async () => ok({ work: null, lines: [] }),
 		signInState: async () => ok({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
 		openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1', states: [] }),
+		// Nothing found, by the default target: a page with no issues, as most fixtures are.
+		checkAccessibility: async () =>
+			ok({
+				ran: { axe: '4.14.0', tags: ['wcag2a'], target: 'WCAG 2.0 Level A', declared: true, at: '2026-10-10T00:00:00.000Z', states: ['default'] },
+				violations: [],
+				incomplete: [],
+				notAutomated: [],
+			}),
+		fixAccessibility: async () => ok({ state: 'running', startedAt: 'now' }),
 		readComments: async () => ok([]),
 		// No design system connected, unless a test says otherwise.
 		designSystems: async () => ok({ systems: [], current: null }),

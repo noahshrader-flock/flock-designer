@@ -15,8 +15,11 @@ import type { Project, ProjectIteration, WorkspaceApi } from '../shared/contract
 
 export type BuildPhase =
 	| { kind: 'idle' }
-	/** `handoff`: the agent is doing a Handoff, which ends in a report, not a preview. */
-	| { kind: 'agent'; handoff?: boolean }
+	/**
+	 * `handoff`: the agent is doing a Handoff, which ends in a report, not a preview. `accessibility`: it is fixing what a
+	 * prototype's accessibility check found (T7).
+	 */
+	| { kind: 'agent'; handoff?: boolean; accessibility?: boolean }
 	| { kind: 'preview' }
 	/**
 	 * `uncommitted`: the checkout had changes nobody committed when it was opened, and no agent made them here. `states`:

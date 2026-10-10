@@ -6,11 +6,11 @@
  * does not draw in time is said as null, and the rest go on.
  */
 import { createHash } from 'node:crypto';
-import { BrowserWindow, nativeImage } from 'electron';
+import { nativeImage } from 'electron';
 import { PREVIEW_SHOW, previewAddress } from '../../shared/catalog';
 import type { Drawn, Measure, Mode } from './componentTokens';
 import { COMPOSITION, composeOnWhite } from './pictureComposition';
-import { keepToOrigin, sandboxedPreferences } from './sandboxedPage';
+import { hiddenWindow, within } from './sandboxedPage';
 
 /** How many windows draw a run's files at once, how long one story may take, and each window's size. */
 const WINDOWS_PER_RUN = 3;
@@ -67,10 +67,6 @@ const readDrawn = (file: string, picture: boolean): string => `(async (file, pic
 	return drawn;
 })(${JSON.stringify(file)}, ${picture})`;
 
-/** A promise, or null after `ms`. */
-const within = <T>(ms: number, p: Promise<T>): Promise<T | null> =>
-	Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
-
 /** The picture of a story's first story from a capture of the top of its page; nothing when it painted nothing. */
 const pictureOf = async (wc: Electron.WebContents): Promise<Buffer | undefined> => {
 	const image = await wc.capturePage({ x: 0, y: 0, width: WINDOW.width, height: PICTURE_TOP });
@@ -90,16 +86,9 @@ export const PICTURE_RECIPE = createHash('sha256')
 	.digest('hex')
 	.slice(0, 12);
 
-/** A window nobody sees, held as a shown preview is, on the previews' own origin; not throttled for being out of sight. */
-const hiddenWindow = (origin: string): BrowserWindow => {
-	const win = new BrowserWindow({ show: false, ...WINDOW, webPreferences: { ...sandboxedPreferences(SESSION), backgroundThrottling: false } });
-	keepToOrigin(win.webContents, () => origin);
-	return win;
-};
-
 /** One window's share of a run: the page loaded once, in the run's mode, then each file drawn in turn. */
 const drawShare = async (base: string, mode: Mode, files: string[], pictures: boolean): Promise<(Drawn | null)[]> => {
-	const win = hiddenWindow(new URL(base).origin);
+	const win = hiddenWindow(SESSION, new URL(base).origin, WINDOW);
 	try {
 		const wc = win.webContents;
 		// The mode is set on a page: on a window that has none, the command never answers. It holds for the pages after.

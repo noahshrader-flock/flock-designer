@@ -1,10 +1,10 @@
 /**
  * How the app holds a page of someone else's code (a prototype, a component library's stories): in a sandbox with no
  * preload and no Node, in a session of its own that is gone on quit, granted no permission, opening no window, and kept
- * to its own origin. A page shown to the person (`pageView.ts`) and one drawn out of sight (`storyMeasure.ts`) are held
- * the same way, by this.
+ * to its own origin. A page shown to the person (`pageView.ts`) and one drawn out of sight (`storyMeasure.ts`, and the
+ * accessibility check, `accessibilityCheck.ts`) are held the same way, by this.
  */
-import type { WebContents, WebPreferences } from 'electron';
+import { BrowserWindow, type WebContents, type WebPreferences } from 'electron';
 
 /** A page's settings: nothing exposed to it, in `partition` (no `persist:` prefix, so in memory only). */
 export const sandboxedPreferences = (partition: string): WebPreferences => ({
@@ -32,3 +32,17 @@ export const keepToOrigin = (wc: WebContents, origin: () => string, elsewhere: (
 		}
 	});
 };
+
+/**
+ * A window nobody sees, holding a page as a shown one is held, in `partition`, kept to `origin`; not throttled for being
+ * out of sight, or a page it holds would not draw.
+ */
+export const hiddenWindow = (partition: string, origin: string, size: { width: number; height: number }): BrowserWindow => {
+	const win = new BrowserWindow({ show: false, ...size, webPreferences: { ...sandboxedPreferences(partition), backgroundThrottling: false } });
+	keepToOrigin(win.webContents, () => origin);
+	return win;
+};
+
+/** A page's answer, or null after `ms`, or when it fails: a page out of sight may never answer. */
+export const within = <T>(ms: number, p: Promise<T>): Promise<T | null> =>
+	Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);

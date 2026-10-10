@@ -31,6 +31,7 @@ import { useComments } from './comments/useComments';
 import { HandoffDialog } from './HandoffDialog';
 import { MoveToCode } from './MoveToCode';
 import { RecordSheet } from './RecordSheet';
+import { AccessibilityStatus } from './AccessibilityStatus';
 import { AgentLog, Loading } from './Loading';
 import { ShareControl } from './ShareControl';
 import { useOverlaps } from './overlays';
@@ -453,6 +454,10 @@ export const Review = ({
 					>
 						<StateSwitcher states={states} current={shownState} onSelect={setShownState} />
 					</IterationSwitcher>
+					{/* What the automated accessibility check found on the page, each time it is opened (T7). */}
+					{kind === 'prototype' && (
+						<AccessibilityStatus projectId={project.id} name={iteration.name} opened={local.phase.kind === 'running' ? local.phase : null} />
+					)}
 					<CommentControl comments={comments} listOpen={sidebarOpen} onToggleList={() => setSidebarOpen((o) => !o)} disabled={!opened} />
 					{/* Codebase work's next step, so it is the one filled button. */}
 					{checkout && codebase && (
@@ -589,6 +594,8 @@ export const Review = ({
 									<Loading>
 										{handingOffNow
 											? `Handing off ${project.title}…`
+											: local.phase.kind === 'agent' && local.phase.accessibility
+											? 'Fixing what the accessibility check found…'
 											: local.phase.kind === 'agent'
 											? `Building ${project.title}…`
 											: local.phase.kind === 'preview'

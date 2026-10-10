@@ -100,6 +100,8 @@ let githubApi: ReturnType<typeof vi.fn>;
 let designRepoProjects: unknown[] = [];
 let warm: ReturnType<typeof vi.fn>;
 let ask: ReturnType<typeof vi.fn>;
+/** What a page's accessibility check finds (T7): axe in the app, a stand-in here, finding an image with no text. */
+let checkPage: ReturnType<typeof vi.fn>;
 let register: (more?: Record<string, unknown>) => void;
 let prototypeServer: InstanceType<typeof import('../src/main/services/prototypeServer')['PrototypeServer']>;
 
@@ -146,6 +148,13 @@ beforeEach(async () => {
 
 	warm = vi.fn(async () => undefined);
 	ask = vi.fn(async () => ({ state: 'building' }));
+	checkPage = vi.fn(async (_url: string, states: string[]) =>
+		(states.length ? states : ['default']).map((state) => ({
+			state,
+			violations: [{ id: 'image-alt', help: 'Images must have alternate text', impact: 'critical', tags: ['wcag2a', 'wcag111'], helpUrl: 'https://x/image-alt', nodes: 1 }],
+			incomplete: [],
+		})),
+	);
 	const { CloneFolderMemory } = await import('../src/main/services/cloneFolder');
 	const { Cloner } = await import('../src/main/services/clone');
 	const { DesignSystemsMemory } = await import('../src/main/services/designSystems');
@@ -171,6 +180,7 @@ beforeEach(async () => {
 		componentPicturesRoot: join(home, 'component-pictures'),
 		// What is got ready in the background is only counted here, never drawn.
 		componentTokens: { of: ask, warm, pictures: async () => ({ drawing: false, pictures: {} }) } as never,
+		checkPage,
 		...more,
 	});
 	register();
@@ -1195,6 +1205,39 @@ describe('prototypes', () => {
 
 	describe('Build in the codebase, handed to Claude Code', () => {
 		const saved = () => savedPrototype();
+
+		it('checks a prototype’s page at its product’s target, keeps the result, and gives its agent what it found to fix (T7)', async () => {
+			await saved();
+			writeFileSync(join(design, 'skills', 'build-prototype.md'), '# Build');
+			const checked = await call(CHANNELS.checkAccessibility, 'demo', 'v1-i1');
+			expect(checked.value).toMatchObject({ ran: { declared: false, target: 'WCAG 2.2 Level AA, informational: no target declared' }, violations: [{ rule: 'image-alt' }] });
+			expect(checkPage).toHaveBeenCalledWith(expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+\/demo\/v1-i1/), [], ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']);
+			// Kept: the same page is not checked twice.
+			await call(CHANNELS.checkAccessibility, 'demo', 'v1-i1');
+			expect(checkPage).toHaveBeenCalledTimes(1);
+			// One round of its own check: the agent is given what was found, and only that, as its request.
+			installDesignSystem(product);
+			const fixing = await call(CHANNELS.fixAccessibility, 'demo', 'v1-i1');
+			expect(fixing.ok).toBe(true);
+			const task = agentStart.mock.calls.at(-1)?.[2] as string;
+			expect(task).toContain('## What the person asked for');
+			expect(task.slice(task.indexOf('## What the person asked for'))).toContain('- **image-alt** (WCAG 1.1.1)');
+			expect(task).toContain('Change nothing else');
+		});
+
+		it('carries what the prototype’s accessibility check left open into the task, to fix in the code (T7)', async () => {
+			await saved();
+			await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop');
+			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'), 'utf8');
+			expect(task).toContain("### What the prototype's check left open");
+			expect(task).toContain('- **image-alt** (WCAG 1.1.1): Images must have alternate text. 1 element.');
+			// A check that cannot run leaves the findings out, never the move.
+			checkPage.mockRejectedValue(new Error('no window'));
+			rmSync(join(home, 'prototype', 'demo', 'v1-i1.accessibility.json'), { force: true });
+			g(product, 'checkout', '-q', 'develop');
+			expect((await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
+			expect(readFileSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'), 'utf8')).not.toContain('left open');
+		});
 
 		it('makes the branch and the record, writes the task beside the prototype, and gives the command to start it', async () => {
 			await saved();

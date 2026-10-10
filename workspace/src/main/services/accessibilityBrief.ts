@@ -5,7 +5,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { AccessibilityIssue } from '../../shared/contract';
+import type { AccessibilityIssue, AccessibilityResult } from '../../shared/contract';
 import { axeTagsFor, describeTarget, notAutomated, parseTarget, type DeclaredTarget, undeclared } from '../../shared/wcag';
 
 /** The standard, in the design repository, as the skills are. */
@@ -100,12 +100,24 @@ export const productTarget = (guidance: string | null, product: string): Declare
 };
 
 /**
- * The accessibility section of a task for a product, made the one way every task makes it: the standard read as the
- * skills are (`readStandard`), the target from the product's guidance folder.
+ * The accessibility section of a task, made the one way every task makes it: the standard read as the skills are
+ * (`readStandard`), at the product's `target`.
  */
 export const taskAccessibility = async (
 	readStandard: (path: string) => Promise<string>,
-	guidance: string | null,
-	product: string,
+	target: DeclaredTarget,
 	findings?: { violations: AccessibilityIssue[]; incomplete: AccessibilityIssue[] } | null,
-): Promise<string> => accessibilityBrief({ standard: await readStandard(ACCESSIBILITY_STANDARD), target: productTarget(guidance, product), findings });
+): Promise<string> => accessibilityBrief({ standard: await readStandard(ACCESSIBILITY_STANDARD), target, findings });
+
+/**
+ * What a prototype's agent is asked when its page's check found issues (T7, part B): to fix those, and nothing else, as
+ * one round of its own check, the way a build error is fixed. Built from the result kept, never from the window's words.
+ */
+export const fixRequest = (result: AccessibilityResult): string =>
+	[
+		`The page was checked for accessibility with axe-core ${result.ran.axe}, at ${result.ran.target}, and it found the issues below.`,
+		'Fix each one in the source, then build it again. Change nothing else: how the page looks and what it does stay as they are.',
+		'Where a fix would change the design, leave it, and say in your summary which one and why.',
+		'',
+		...result.violations.map(issueLine),
+	].join('\n');
