@@ -363,7 +363,11 @@ carries the accessibility rules (the universal rules section and the reporting r
 `standards/universal/accessibility.md` as the skills are) and the product's declared target and axe tags (read from its
 `.dsnr/manifest.md`), where now it names a folder. A product with no manifest, or no target in it, is told so, and the
 agent is told to report that it could not check against one. `codebase-work.md` and `address-comments.md` each gain the
-one line that sends the agent to the rules. **B, measure.** After a prototype is built, `services/accessibility.ts` runs
+one line that sends the agent to the rules. **Moving a prototype to code** (Noah, 2026-10-10: moving to React "should
+automatically try to move towards an accessible standard") is codebase work, so it has the same task, plus the prototype's
+own remaining findings (what B kept on its iteration, and what needs a person), which the agent fixes in the real code or
+says why not; none is dropped by the move. It is told to build toward the product's target as it goes, not at the end. The
+formal checks are at handoff, where the product's own axe command runs and the readiness gate requires the target. **B, measure.** After a prototype is built, `services/accessibility.ts` runs
 axe-core (bundled; MPL-2.0) in a hidden window held as the story-drawing windows are (`sandboxedPage.ts`), against the
 saved page and in each of its states, with `runOnly` the manifest's tags. Its violations go back to the agent in its own
 check loop, up to two rounds, then are left as they are and reported; the result (violations by rule and success criterion,
@@ -393,8 +397,14 @@ has a test that fails when it does, so a change is seen when it happens, not fou
   than now is shown as out of date and run again, never as current.
 - **Never more than was measured:** no screen says "compliant" or "passes", whatever the numbers; conformance is a person's
   judgment (axe finds about 57% of WCAG issues), and the review says what is left for one.
-- **A new WCAG version** (a new level, a new success criterion) is one change to `shared/wcag.ts` and its tests, and the
-  manifest's target.
+- **WCAG itself changing** (Noah: "as WCAG updates things... capture those updates"). The edition the app's numbers were
+  taken from (`WCAG_EDITION`: version and the W3C's date for it, today WCAG 2.2, 12 December 2024) is recorded in
+  `shared/wcag.ts`. A scheduled check (a weekly GitHub workflow beside `publish-prototypes.yml`) reads the W3C's
+  latest-published address (`w3.org/TR/WCAG2/`, which names its version and date) and, when either differs from the
+  record, opens an issue saying so: a new version, or a republished edition with corrections. A person decides what it
+  means; the check is what makes sure it is seen, and a test keeps the record and the check reading the same fields. An
+  axe-core upgrade is caught the same way, by the tag-ladder test. A new WCAG version is then one change to
+  `shared/wcag.ts`, its tests and the manifest's target.
 **Confirmed by Noah:** the default where no target is declared (WCAG 2.2 AA, informational), and that a failing check
 is fixed in up to two rounds and reported, with the hard stop only at handoff (decision 30). Nothing is waiting on him.
 
