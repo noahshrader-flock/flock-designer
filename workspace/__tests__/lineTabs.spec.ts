@@ -16,12 +16,12 @@ afterEach(async () => {
 	document.body.innerHTML = '';
 });
 
-const show = async () => {
+const show = async (bar = false) => {
 	current = await render(
 		createElement(
 			LineTabs,
 			{ defaultValue: 'a' },
-			createElement(LineTabsList, null, createElement(LineTabsTrigger, { value: 'a' }, 'One'), createElement(LineTabsTrigger, { value: 'b' }, 'Two')),
+			createElement(LineTabsList, bar ? { bar: true } : null, createElement(LineTabsTrigger, { value: 'a' }, 'One'), createElement(LineTabsTrigger, { value: 'b' }, 'Two')),
 			createElement(LineTabsContent, { value: 'a' }, 'First'),
 		),
 	);
@@ -43,6 +43,25 @@ describe('line tabs', () => {
 			// Nothing set on the tab at the call site: only what the component itself gives every tab.
 			expect(tab.className).not.toMatch(/(^|\s)(h-full|p-0)(\s|$)/);
 		}
+	});
+
+	it('are as wide as their labels, at the left, in a strip as tall as a toolbar, when it is a bar of tabs: an option of the component, set on nothing else', async () => {
+		await show(true);
+		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
+		const classes = list.className.split(' ');
+		expect(list.hasAttribute('data-bar')).toBe(true);
+		// Still edge to edge on its border, but its tabs are not shares of it, and it is as tall as the bar under it.
+		expect(classes).toEqual(expect.arrayContaining(['w-full', 'border-b', 'justify-start', 'group-data-horizontal/tabs:h-(--toolbar-height)', '[&>[role=tab]]:flex-none']));
+		// Aligned with what is under it, which is inset by the page's padding, and on the toolbar's own background.
+		expect(classes).toEqual(expect.arrayContaining(['px-(--page-padding)', 'bg-card']));
+		expect(classes).not.toContain('group-data-horizontal/tabs:h-8');
+	});
+
+	it('are, without the option, the panel’s: equal shares of the strip, and no bar’s height or inset', async () => {
+		await show();
+		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
+		expect(list.hasAttribute('data-bar')).toBe(false);
+		expect(list.className).not.toMatch(/toolbar-height|page-padding|flex-none|justify-start/);
 	});
 
 	it('write each tab’s label in title case, whatever it was written in, and leave a label that is not text as it is', async () => {

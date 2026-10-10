@@ -447,12 +447,12 @@ since shadcn's sets a text size on everything in them; (9) steps 2 and 3 were bu
 the branch's line and Save, Propose and Start over (`BranchActions`, which the tokens' `TokenBranchActions` is now made from),
 the link out (`OutLink`), the `dsnr/<kind>-<day>-<hex>` naming and pattern (`dsnrBranch.ts`, the tokens' too), a search's word
 match (`shared/search.ts`, the Projects search's too), the "No … matches" line (`NoMatches`, the Projects screen's too), the bar
-of tabs (later removed: see the last paragraph below), GitHub's status on a failed call
+of tabs (later removed: see (10) below), GitHub's status on a failed call
 (`httpStatus`, `github.ts`), and every task reading the file through `work.voice()`. A redundant call went (whether a branch
 exists, which reading the file on it already says). Found in passing and fixed: `DesignRepo` took only the app's own errors for
 "not there", so a missing file read through the person's `gh` (the `dsnr` command) failed instead of being null. A save also
 takes a blob's 64-hex sha, for a repository on SHA-256.
-**After using it (Noah, 2026-10-10):** (10) the bar of tabs first had an exception of its own in the toolbar (its tabs run the bar's height, with the list's padding removed, so the line rested on the bar's); **it was removed again the same day** (Noah: keep it pure): the row of tabs is the shared `LineTabs` (the tokens panel's, renamed from `PanelTabs` since it is no longer a panel's only), the toolbar is as it was before T9, and the tab fills the window under the top bar with each pane scrolling on its own, so nothing counts the toolbar's height; (11) the panel's switch is **Component, then Tokens**, across the panel's whole width, which is an option of the toggle group itself (`fullWidth`), not of the panel; the tokens are still what shows until a component is opened; (12) a third tab, **Primitives**, sits between Components and Voice and Tone; (13) a tab's label is in title case whatever it was written in, by the tab component (`titleCase`, `shared/titleCase.ts`), for every tab in the app. **What it holds is not decided:** it is an empty page, with no side panel, until Noah says.
+**After using it (Noah, 2026-10-10):** (10) the bar of tabs went through three forms the same day: an exception in the toolbar, removed; the shared tabs stretched across the width like the panel's, which Noah did not want; and last, **the shared `LineTabs` with one option, `bar`** (renamed from `PanelTabs`, since it is no longer a panel's only), which sets a toolbar's height and inset and tabs as wide as their labels, inside the component and on nothing where it is used. The toolbar is as it was before T9, and the tab fills the window under the top bar with each pane scrolling on its own, so nothing counts the toolbar's height; (11) the panel's switch is **Component, then Tokens**, across the panel's whole width, which is an option of the toggle group itself (`fullWidth`), not of the panel; the tokens are still what shows until a component is opened; (12) a third tab, **Primitives**, sits between Components and Voice and Tone; (13) a tab's label is in title case whatever it was written in, by the tab component (`titleCase`, `shared/titleCase.ts`), for every tab in the app. **What it holds is not decided:** it is an empty page, with no side panel, until Noah says.
 
 **Why (Noah, 2026-10-10):** what prototypes and code say should use Flock's tone of voice, and the voice should be changed in
 the app or in the repository with the same effect: someone commits a change and it shows in the app, or a change made in the app
@@ -503,7 +503,7 @@ Tokens and Component switch and More, and a Find a component menu sits over the 
 
 ```
 ┌───────────────────────────────────────────────────────────────┬──────────────────┐
-│ Components        Primitives        Voice and Tone                                   │  the tabs
+│ Components   Primitives   Voice and Tone                      │                  │  the tabs
 ├───────────────────────────────────────────────────────────────┼──────────────────┤
 │ [ Design system name ▾ ]  branch          [Sync]  [More ⋯]    │ [Component|Tokens]  the switch
 │ [ Search components…              ]            [List|Grid]    │ the alert, if values cannot be read
@@ -512,9 +512,11 @@ Tokens and Component switch and More, and a Find a component menu sits over the 
 └───────────────────────────────────────────────────────────────┴──────────────────┘
 ```
 
-- **The tabs** are the app's line tabs (`LineTabs`), the same piece as the tokens panel's Color, Spacing and Shape: edge to edge
-  across the window, each an equal share, the line under the chosen one on the strip's own border, and each label in title
-  case (`Voice and Tone`), which the tab component itself does for every tab. Nothing about them is set on the screen.
+- **The tabs** are the app's line tabs (`LineTabs`) as a **bar of tabs** (`LineTabsList bar`): a strip as tall as the toolbar
+  under it (and the panel's switch row), inset as they are, each tab as wide as its label and not stretched, the line under the
+  chosen one on the strip's own border, and each label in title case (`Voice and Tone`), which the tab component itself does for
+  every tab. The tokens panel's Color, Spacing and Shape are the same component without the option, stretched across the panel.
+  Nothing about either is set on the screen that uses them: the option is said once, in the component.
 - **The Components frame's first row:** the switcher (the design systems connected, and Connect a design system), the branch
   with it, then Sync, with the problem with a sync beside it as now, and **More** to the right of Sync (Remove stays in it).
 - **Its second row:** a **search box, "Search components"**, in place of the Find a component menu, and **List or Grid** at the

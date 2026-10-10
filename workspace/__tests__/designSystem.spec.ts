@@ -138,20 +138,21 @@ describe('the tab bar (T9)', () => {
 		expect(shown('components')).toBe(true);
 	});
 
-	it('is the same line tabs as the tokens panel’s Color, Spacing and Shape: edge to edge, each tab an equal share, with nothing set on them here', async () => {
+	it('is the app’s line tabs as a bar of tabs: as tall as the toolbar under it, its tabs as wide as their labels and not stretched, with nothing set on them here', async () => {
 		await open(() => ok(ready()));
 		expect(bar().getAttribute('data-variant')).toBe('line');
-		expect(bar().className.split(' ')).toEqual(expect.arrayContaining(['w-full', 'border-b']));
+		expect(bar().hasAttribute('data-bar')).toBe(true);
 		expect(bar().closest('[data-slot="line-tabs"]')).not.toBeNull();
-		for (const t of bar().querySelectorAll<HTMLElement>('[role="tab"]')) {
-			expect(t.className.split(' ')).toContain('flex-1');
-			expect(t.className).not.toMatch(/(^|\s)(h-full|p-0)(\s|$)/);
-		}
-		// Not a bar of the toolbar's, which has the height and the centering of one thing in a row.
-		expect(bar().closest('[class*="h-(--toolbar-height)"]')).toBeNull();
-		expect(bar().closest('[data-toolbar-tabs]')).toBeNull();
+		// The height is the toolbar's own, said once by the component: the same as the row under it and the panel's switch row.
+		expect(bar().className.split(' ')).toContain('group-data-horizontal/tabs:h-(--toolbar-height)');
+		expect(firstRow().className).toContain('h-(--toolbar-height)');
+		expect(bar().className.split(' ')).toContain('[&>[role=tab]]:flex-none');
+		// Nothing set on the tabs or the list here: not a size, a padding, or a stretch.
+		for (const t of bar().querySelectorAll<HTMLElement>('[role="tab"]')) expect(t.className).not.toMatch(/(^|\s)(h-full|p-0)(\s|$)/);
+		// The tokens panel's Color, Spacing and Shape are the same component without the option: stretched across the panel.
 		const panelTabs = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')!.nextElementSibling!.querySelector('[role="tablist"]') as HTMLElement;
-		expect(panelTabs.className.split(' ')).toEqual(expect.arrayContaining(['w-full', 'border-b']));
+		expect(panelTabs.hasAttribute('data-bar')).toBe(false);
+		expect(panelTabs.className).not.toContain('[&>[role=tab]]:flex-none');
 	});
 
 	it('shows Voice and tone with no first row and no side panel, and Components again as it was left', async () => {

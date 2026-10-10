@@ -191,21 +191,19 @@ type Tab = 'components' | 'primitives' | 'voice-and-tone';
 
 /**
  * The Design System tab (DESIGN_SYSTEM_PLAN.md): the company's, not any one library's, so its bar holds only its own tabs,
- * Components, Primitives and Voice and Tone (T9): the app's line tabs (`LineTabs`), the same as the tokens panel's, across
- * the width. The tab fills the window under the top bar, and each pane scrolls on its own. Each stays mounted while another
+ * Components, Primitives and Voice and Tone (T9): the app's line tabs (`LineTabs`) as a bar of tabs, as tall as the toolbar
+ * under it. The tab fills the window under the top bar, and each pane scrolls on its own. Each stays mounted while another
  * is shown, so what was typed, scrolled and opened in it is as it was left.
  */
 export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [tab, setTab] = useState<Tab>('components');
 	return (
 		<LineTabs value={tab} onValueChange={(next) => setTab(next as Tab)} className="h-[calc(100dvh-var(--nav-height))]">
-			<div className="bg-card shrink-0">
-				<LineTabsList aria-label="Design System">
-					<LineTabsTrigger value="components">Components</LineTabsTrigger>
-					<LineTabsTrigger value="primitives">Primitives</LineTabsTrigger>
-					<LineTabsTrigger value="voice-and-tone">Voice and Tone</LineTabsTrigger>
-				</LineTabsList>
-			</div>
+			<LineTabsList bar aria-label="Design System">
+				<LineTabsTrigger value="components">Components</LineTabsTrigger>
+				<LineTabsTrigger value="primitives">Primitives</LineTabsTrigger>
+				<LineTabsTrigger value="voice-and-tone">Voice and Tone</LineTabsTrigger>
+			</LineTabsList>
 			{/* No padding: each pane has its own layout. Kept while another is shown, only hidden. */}
 			<LineTabsContent value="components" forceMount hidden={tab !== 'components'} data-tab="components" className="p-0">
 				<Components hidden={hidden || tab !== 'components'} />
