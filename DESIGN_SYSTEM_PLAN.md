@@ -163,7 +163,7 @@ nothing on GitHub changed.
 | **T4** (done) | **Try it on a branch:** each save writes the same edits (T3's writer) to a new branch of the library, one commit each, so the branch's history is the iterations; the preview can run on the branch | T3 | M | Medium |
 | **T5** (done) | **Propose it:** a draft pull request from that branch, with Chromatic's link | T4 | M | Medium |
 | **T6** (done) | **Show a component's tokens, and who shares them:** every token tagged with a unique value, built once, each story rendered and read back (decision 29); the Component view shows **Made from** (the component's tokens, as the same rows with the same editor), **Shared with** (the other components that use a token) and **Not tokens** (what is set in the component); run in the background once per library commit, in both modes | T3, decision 29 | M | Medium |
-| **T7** | **Accessibility, delivered and measured:** the rules and the product's declared target put into every build task (A); axe-core run on a built prototype page in a hidden sandboxed window, its failures given back to the agent and kept on the iteration's record (B); one definition of WCAG in code, shared by the contrast display and the check, both reading the target from the manifest (C) | decision 30, T3, T6 (the hidden windows) | M | Medium |
+| **T7** | **Accessibility, delivered and measured:** the rules and the product's declared target put into every build task (A); axe-core run on a built prototype page in a hidden sandboxed window, its failures given back to the agent and kept on the iteration's record (B); one definition of WCAG in code, shared by the contrast display and the check, both reading the target from the manifest (C); each component's own count on its card and panel (D); tests that keep the standard from drifting | decision 30, T3, T6 (the hidden windows) | M | Medium |
 | **T8** (candidate) | **Ask in words:** "make the primary a little warmer" produces the same list of edits | T3 | S | Low |
 
 ### S1: The catalog reader (done 2026-10-08)
@@ -373,8 +373,28 @@ person". It is never shown as a pass. For codebase work the product declares an 
 **C, one definition.** `shared/wcag.ts` holds the thresholds the app uses, each with its success criterion number and
 W3C link (1.4.3 text, 1.4.6, 1.4.11 non-text, large text), and the tag ladder `accessibility.md` describes; the contrast
 display reads the connected design system's or product's target and says "not required at your target" where it is
-below the criterion. **Not in T7:** a full contrast check of every pair in a system, and axe over the drawn components of
-the design system (both are worth doing, and use the same hidden windows); typography, which has no thresholds here yet.
+below the criterion. **Not in T7:** a full contrast check of every pair in a system (worth doing, and uses the same hidden windows); typography, which has no thresholds here yet.
+**D, visible on each component** (Noah, 2026-10-10: yes). Once B can run axe on a page, it runs it over each component's
+first story in the drawing pass T6 already makes, at the product's or system's target, and a component's card and its
+panel say "N automated issues, M need a person" in the same words as review. Last, since it needs B and C and costs a
+second axe run per component; it is the "axe over the drawn components" that "Not in T7" above leaves out, now in.
+**Staying true to WCAG, with nobody to remember** (Noah: "I don't want this drifting"). Each place a standard could drift
+has a test that fails when it does, so a change is seen when it happens, not found later:
+- **One declaration of the target:** the manifest. The app reads it and copies it nowhere. A product's own copies of it
+  (Coke's cypress and test setup repeat `wcag2a`) are said by the app when they differ from the manifest's, for a person
+  to fix in that product; the app does not edit a product for this.
+- **The thresholds** (`shared/wcag.ts`) are tested against the W3C's own numbers (4.5:1, 3:1, 7:1) and its known boundary
+  cases (black on white 21:1; #767676 on white, the lightest gray that passes 4.5:1), and each carries its success
+  criterion and W3C link, so a wrong number cannot be typed in unseen.
+- **The tag ladder** is tested against axe-core's own list of tags, and against the ladder in `accessibility.md`, so an
+  axe upgrade that renames or adds a tag, or an edit to the doc, fails a test instead of drifting. Where axe-core is
+  upgraded the suite says whether the ladder still holds.
+- **A result says what it was made with:** axe-core's version, the tags, and when. One made with another version or target
+  than now is shown as out of date and run again, never as current.
+- **Never more than was measured:** no screen says "compliant" or "passes", whatever the numbers; conformance is a person's
+  judgment (axe finds about 57% of WCAG issues), and the review says what is left for one.
+- **A new WCAG version** (a new level, a new success criterion) is one change to `shared/wcag.ts` and its tests, and the
+  manifest's target.
 **Confirmed by Noah:** the default where no target is declared (WCAG 2.2 AA, informational), and that a failing check
 is fixed in up to two rounds and reported, with the hard stop only at handoff (decision 30). Nothing is waiting on him.
 
