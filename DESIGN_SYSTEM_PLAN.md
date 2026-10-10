@@ -163,7 +163,7 @@ nothing on GitHub changed.
 | **T4** (done) | **Try it on a branch:** each save writes the same edits (T3's writer) to a new branch of the library, one commit each, so the branch's history is the iterations; the preview can run on the branch | T3 | M | Medium |
 | **T5** (done) | **Propose it:** a draft pull request from that branch, with Chromatic's link | T4 | M | Medium |
 | **T6** (done) | **Show a component's tokens, and who shares them:** every token tagged with a unique value, built once, each story rendered and read back (decision 29); the Component view shows **Made from** (the component's tokens, as the same rows with the same editor), **Shared with** (the other components that use a token) and **Not tokens** (what is set in the component); run in the background once per library commit, in both modes | T3, decision 29 | M | Medium |
-| **T7** | **Accessibility, delivered and measured:** the rules and the product's declared target put into every build task (A); axe-core run on a built prototype page in a hidden sandboxed window, its failures given back to the agent and kept on the iteration's record (B); one definition of WCAG in code, shared by the contrast display and the check, both reading the target from the manifest (C); each component's own count on its card and panel (D); tests that keep the standard from drifting | decision 30, T3, T6 (the hidden windows) | M | Medium |
+| **T7** (done) | **Accessibility, delivered and measured:** the rules and the product's declared target put into every build task (A); axe-core run on a built prototype page in a hidden sandboxed window, its failures given back to the agent and kept on the iteration's record (B); one definition of WCAG in code, shared by the contrast display and the check, both reading the target from the manifest (C); each component's own count on its card and panel (D); tests that keep the standard from drifting | decision 30, T3, T6 (the hidden windows) | M | Medium |
 | **T8** (candidate) | **Ask in words:** "make the primary a little warmer" produces the same list of edits | T3 | S | Low |
 
 ### S1: The catalog reader (done 2026-10-08)
@@ -357,7 +357,20 @@ out from a token (a hover's darker shade) is counted, not named; a state no stor
 color, spacing and radius; lengths in `em` are not tagged; a role both modes share is named as Light in light and Dark in
 dark.
 
-**T7: Accessibility, delivered and measured.** Decision 30 says what and why; this is the order, each step leaving the app working.
+**T7: Accessibility, delivered and measured (done 2026-10-10).** What it built, and the evidence, is in
+[dsnr.md](dsnr.md#change-log) (2026-10-10). **What building it changed from the plan below:** (1) there was no check loop
+for a prototype to put the failures into (the agent was only told to build until its build stops failing), so B made one:
+a newly built page is checked before it is shown, and the agent is given what was found, up to two rounds; (2) a result is
+kept beside the page on each machine, with what it was made with (the page, axe-core's version, the tags, the target), not
+on the shared record: anyone who opens the same page gets the same result, made again when any of that changes, and moving
+to code checks it when it was not; (3) the standard's tag ladder named three tags axe-core has no rules for (`wcag22a`,
+`wcag21aaa`, `wcag22aaa`), which run nothing: corrected, and held to axe-core by a test; (4) a product's own copies of its
+tags are already held to its manifest by the product's own check (FUI's `.dsnr/validate.py`, rule 9), so the app does not
+check them a second time (that check covers Coke's `cypress/support/commands.js` but not its `__tests__/support/axe.ts`,
+which also repeats `wcag2a`: Coke's to add); (5) Coke declares its own `a11y` command, which its handoff gate already
+runs, so codebase tasks name it to run as the work goes, rather than a new command; (6) the Design System's contrast is
+judged at the design system's own target (FUI declares none, so the default, informational), not a product's.
+Decision 30 says what and why; this is the order, each step leaving the app working.
 **A, deliver the standard.** The task an agent is given for a prototype, for codebase work, and for addressing a comment
 carries the accessibility rules (the universal rules section and the reporting rules, read from
 `standards/universal/accessibility.md` as the skills are) and the product's declared target and axe tags (read from its
@@ -385,8 +398,8 @@ second axe run per component.
 **Staying true to WCAG, with nobody to remember** (Noah: "I don't want this drifting"). Each place a standard could drift
 has a test that fails when it does, so a change is seen when it happens, not found later:
 - **One declaration of the target:** the manifest. The app reads it and copies it nowhere. A product's own copies of it
-  (Coke's cypress and test setup repeat `wcag2a`) are said by the app when they differ from the manifest's, for a person
-  to fix in that product; the app does not edit a product for this.
+  (Coke's cypress and test setup repeat `wcag2a`) are held to it by the product's own check (FUI's `.dsnr/validate.py`,
+  rule 9); the app does not edit a product for this.
 - **The thresholds** (`shared/wcag.ts`) are tested against the W3C's own numbers (4.5:1, 3:1, 7:1) and its known boundary
   cases (black on white 21:1; #767676 on white, the lightest gray that passes 4.5:1), and each carries its success
   criterion and W3C link, so a wrong number cannot be typed in unseen.
@@ -471,7 +484,7 @@ Nothing below is built, and nothing is shaped now except the first line.
 ## Next
 
 **S1 to S3 and P0 to P2 are done,** with Storybook as the source of truth for what a component is (decision 17), and
-stories responding as they should. **T1 to T5 and P4 are done (the tokens, read, in the panel, a change tried on them, kept on a branch and proposed as a draft pull request; any repository connected).** **T6 is done too (a component's tokens, and who shares them, found by tagging; decision 29).** The next steps are a designer trying T1 to T6 on a real task, and **T7 (accessibility, delivered and measured; decision 30), planned, both of its open questions answered, and waiting for Noah's go.** T8 is a candidate only. P3 was dropped
+stories responding as they should. **T1 to T5 and P4 are done (the tokens, read, in the panel, a change tried on them, kept on a branch and proposed as a draft pull request; any repository connected).** **T6 is done too (a component's tokens, and who shares them, found by tagging; decision 29).** The next steps are a designer trying T1 to T6 on a real task, and **T7 is done (accessibility, delivered and measured; decision 30): every task carries the rules and the target, each prototype and each component is checked with axe-core, and WCAG's edition is watched weekly.** T8 is a candidate only. P3 was dropped
 (decision 10).
 
 **By hand, Noah:** restart the dev session (the main process changed), open the Design System tab, and try a few
