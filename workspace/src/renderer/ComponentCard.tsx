@@ -13,23 +13,27 @@ import { Card, CardFooter, CardTitle } from './ui/card';
  */
 export const ComponentCard = ({ component, picture, onOpen }: { component: CatalogComponent; picture: string | undefined; onOpen: () => void }) => {
 	const [loaded, setLoaded] = useState<string | null>(null);
+	// A picture that would not load is no picture: the placeholder, never a white block.
+	const [failed, setFailed] = useState<string | null>(null);
+	const shown = picture !== undefined && picture !== failed ? picture : undefined;
 	return (
 		<Card data-component-card={component.id} className={`pt-0 ${PRESSABLE_CARD}`} {...pressableCard(`Open ${component.name}`, onOpen)}>
 			<CardCover>
 				{/* White behind a picture, as the stories are drawn on white (the preview page's own); a soft gray until there is one. */}
 				<div
 					data-picture-area
-					className={`relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-md ${picture ? 'bg-white' : 'bg-muted/40'}`}
+					className={`relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-md ${shown && loaded === shown ? 'bg-white' : 'bg-muted/40'}`}
 				>
-					{picture && (
+					{shown && (
 						<img
-							src={picture}
+							src={shown}
 							// Taken at twice the size it is shown, so it is drawn at half its pixels and stays sharp.
-							srcSet={`${picture} 2x`}
+							srcSet={`${shown} 2x`}
 							alt=""
 							decoding="async"
-							onLoad={() => setLoaded(picture)}
-							className={`max-h-full max-w-full object-contain transition-opacity duration-200 motion-reduce:transition-none ${loaded === picture ? 'opacity-100' : 'opacity-0'}`}
+							onLoad={() => setLoaded(shown)}
+							onError={() => setFailed(shown)}
+							className={`max-h-full max-w-full object-contain transition-opacity duration-200 motion-reduce:transition-none ${loaded === shown ? 'opacity-100' : 'opacity-0'}`}
 						/>
 					)}
 				</div>
