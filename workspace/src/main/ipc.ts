@@ -1054,6 +1054,11 @@ export const registerIpc = ({
 			if (uri !== null) prototypeServer.share(n, uri);
 		}
 	};
+	/** A prototype's page on the local server, with the shared files it points at beside it: where it is opened and checked. */
+	const servePrototype = async (projectId: string, name: string, html: string): Promise<string> => {
+		await serveShared(html);
+		return prototypeServer.serve(`${projectId}/${name}`, html);
+	};
 	/** The page: this machine's newest build first (built again when its source changed), then the saved one. */
 	const prototypePage = (projectId: string, name: string): Promise<string | null> => work.page(projectId, name, agent.status().state === 'running');
 	/** Runs `work` once at a time per key: a second caller waits for the first and shares its answer. */
@@ -1281,8 +1286,7 @@ export const registerIpc = ({
 			const local = work.file(projectId, name);
 			const path = prototypePagePath(projectId, name);
 			if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html) await work.keep(projectId, name, html);
-			await serveShared(html);
-			return { url: await prototypeServer.serve(`${projectId}/${name}`, html), states: statesOf(html) };
+			return { url: await servePrototype(projectId, name, html), states: statesOf(html) };
 		}),
 	);
 
@@ -1295,8 +1299,7 @@ export const registerIpc = ({
 		assertPrototypeName(name);
 		const html = await prototypePage(projectId, name);
 		if (html === null) throw new Error('This prototype has no page yet.');
-		await serveShared(html);
-		const url = await prototypeServer.serve(`${projectId}/${name}`, html);
+		const url = await servePrototype(projectId, name, html);
 		const file = join(dirname(work.file(projectId, name)), `${name}.accessibility.json`);
 		return accessibilityOf({ file, html, url, states: statesOf(html), target: await work.target(projectId, name), check: checkPage });
 	};

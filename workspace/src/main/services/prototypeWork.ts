@@ -3,7 +3,7 @@ import { basename, dirname, join } from 'node:path';
 import type { Iteration, Person, PrototypeReadiness } from '../../shared/contract';
 import { type DeclaredTarget, undeclared } from '../../shared/wcag';
 import { firstHeading, hasOutsideComments, latestIterationName, nextIterationName, parsePrototypeName, projectPath, prototypePagePath, prototypeSourcePath } from '../../shared/projects';
-import { MANIFEST_FILE, declaredTarget, taskAccessibility } from './accessibilityBrief';
+import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from './accessibilityBrief';
 import { readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
 import { branchCommit, branchExists, gitExact, readCheckout, readTreeAt } from './git';
@@ -371,8 +371,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const path = `${descriptor.contextDir}/${MANIFEST_FILE}`;
 		const basedOn = (await record(projectId, name))?.basedOn;
 		const onBranch = basedOn && basename(root) === basedOn.repository ? await gitExact(root, ['show', `${basedOn.branch}:${path}`]).catch(() => null) : null;
-		const here = join(root, path);
-		return declaredTarget(onBranch ?? (existsSync(here) ? readFileSync(here, 'utf8') : null), descriptor.product);
+		return onBranch !== null ? declaredTarget(onBranch, descriptor.product) : productTarget(join(root, descriptor.contextDir), descriptor.product);
 	};
 
 	/** The accessibility section of a prototype's task (T7), at its target. */

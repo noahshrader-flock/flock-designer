@@ -85,37 +85,33 @@ export interface Criterion {
 
 const understanding = (slug: string) => `https://www.w3.org/WAI/WCAG22/Understanding/${slug}.html`;
 
-/** 1.4.3: text against what is behind it, 4.5:1, or 3:1 for large text. */
-export const CONTRAST_TEXT = {
+/**
+ * A contrast criterion: the least ratio it asks of text. Only the ones the app judges are here (a color pair is judged
+ * as text: the token panel does not know a size, or that a color is a control's); another is added with what judges it.
+ */
+export interface ContrastCriterion extends Criterion {
+	ratio: number;
+}
+
+/** 1.4.3: text against what is behind it, 4.5:1. */
+export const CONTRAST_TEXT: ContrastCriterion = {
 	sc: '1.4.3',
 	name: 'Contrast (Minimum)',
 	level: 'AA',
 	since: '2.0',
 	url: understanding('contrast-minimum'),
 	ratio: 4.5,
-	large: 3,
-} as const satisfies Criterion & { ratio: number; large: number };
+};
 
-/** 1.4.6: the stricter text contrast, 7:1, or 4.5:1 for large text. */
-export const CONTRAST_ENHANCED = {
+/** 1.4.6: the stricter text contrast, 7:1. */
+export const CONTRAST_ENHANCED: ContrastCriterion = {
 	sc: '1.4.6',
 	name: 'Contrast (Enhanced)',
 	level: 'AAA',
 	since: '2.0',
 	url: understanding('contrast-enhanced'),
 	ratio: 7,
-	large: 4.5,
-} as const satisfies Criterion & { ratio: number; large: number };
-
-/** 1.4.11: the parts of a control and meaningful graphics against what is next to them, 3:1. */
-export const CONTRAST_NON_TEXT = {
-	sc: '1.4.11',
-	name: 'Non-text Contrast',
-	level: 'AA',
-	since: '2.1',
-	url: understanding('non-text-contrast'),
-	ratio: 3,
-} as const satisfies Criterion & { ratio: number };
+};
 
 /** Whether a target asks for a criterion: its level is within the target's, and it came in by the target's version. */
 export const requiredAt = (criterion: Criterion, target: WcagTarget): boolean =>

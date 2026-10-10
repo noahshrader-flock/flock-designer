@@ -5,7 +5,8 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { AccessibilityIssue, AccessibilityResult } from '../../shared/contract';
+import { whereFound } from '../../shared/accessibility';
+import type { AccessibilityFindings, AccessibilityIssue, AccessibilityResult } from '../../shared/contract';
 import { axeTagsFor, describeTarget, notAutomated, parseTarget, type DeclaredTarget, undeclared } from '../../shared/wcag';
 
 /** The standard, in the design repository, as the skills are. */
@@ -49,7 +50,7 @@ export const declaredTarget = (manifest: string | null, where: string): Declared
 
 /** What a check found that is still open, as the agent reads it: what failed, where in WCAG, and on how many elements. */
 const issueLine = (i: AccessibilityIssue): string =>
-	`- **${i.rule}**${i.criteria.length ? ` (WCAG ${i.criteria.join(', ')})` : ''}: ${i.help}. ${i.nodes} element${i.nodes === 1 ? '' : 's'}${i.states.length > 1 || (i.states[0] && i.states[0] !== 'default') ? `, in ${i.states.join(', ')}` : ''}.`;
+	`- **${i.rule}**${i.criteria.length ? ` (WCAG ${i.criteria.join(', ')})` : ''}: ${i.help}. ${whereFound(i)}.`;
 
 /**
  * The accessibility section of a task. `standard` is the standard's text; `target` the product's; `findings`, when the
@@ -64,7 +65,7 @@ export const accessibilityBrief = ({
 }: {
 	standard: string;
 	target: DeclaredTarget;
-	findings?: { violations: AccessibilityIssue[]; incomplete: AccessibilityIssue[] } | null;
+	findings?: AccessibilityFindings | null;
 	check?: string | null;
 }): string => {
 	const tags = target.tags.map((t) => `\`${t}\``).join(', ');
@@ -113,7 +114,7 @@ export const productTarget = (guidance: string | null, product: string): Declare
 export const taskAccessibility = async (
 	readStandard: (path: string) => Promise<string>,
 	target: DeclaredTarget,
-	findings?: { violations: AccessibilityIssue[]; incomplete: AccessibilityIssue[] } | null,
+	findings?: AccessibilityFindings | null,
 	check: string | null = null,
 ): Promise<string> => accessibilityBrief({ standard: await readStandard(ACCESSIBILITY_STANDARD), target, findings, check });
 

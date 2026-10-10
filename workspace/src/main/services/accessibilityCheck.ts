@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import axe from 'axe-core';
-import { type AxeRule, type AxeRun, isAxeRules, mergeRuns } from '../../shared/accessibility';
+import { type AxeFound, type AxeRun, isAxeRules, mergeRuns } from '../../shared/accessibility';
 import type { AccessibilityResult } from '../../shared/contract';
 import { withState } from '../../shared/prototypeStates';
 import { type DeclaredTarget, notAutomated, targetLine } from '../../shared/wcag';
@@ -39,7 +39,7 @@ export const axeRun = (context: string, tags: string[]): string => `(async () =>
 })()`;
 
 /** Whether what a page gave back for `axeRun` is its results: a page's word, checked before it is used. */
-export const axeFound = (v: unknown): v is { violations: AxeRule[]; incomplete: AxeRule[] } =>
+export const axeFound = (v: unknown): v is AxeFound =>
 	typeof v === 'object' && v !== null && isAxeRules((v as { violations?: unknown }).violations) && isAxeRules((v as { incomplete?: unknown }).incomplete);
 
 /** What runs in a prototype's page: once it has settled, axe-core itself, then a run over the whole page. */
@@ -54,18 +54,17 @@ export const checkInWindow: CheckPage = async (url, states, tags) => {
 	const win = hiddenWindow(SESSION, new URL(url).origin, WINDOW);
 	try {
 		const runs: AxeRun[] = [];
+		const wc = win.webContents;
 		for (const state of states.length ? states : [null]) {
-			const wc = win.webContents;
-			if (
-				(await within(
-					STATE_MS,
-					wc.loadURL(withState(url, state)).then(() => true),
-				)) === null
-			)
-				throw new Error(`The page did not load in its ${state} state, so it could not be checked.`);
+			const said = state ?? 'default';
+			const loaded = await within(
+				STATE_MS,
+				wc.loadURL(withState(url, state)).then(() => true),
+			);
+			if (loaded === null) throw new Error(`The page did not load in its ${said} state, so it could not be checked.`);
 			const found: unknown = await within(STATE_MS, wc.executeJavaScript(runAxe(tags)));
-			if (!axeFound(found)) throw new Error(`The accessibility check did not finish in the page's ${state} state.`);
-			runs.push({ state: state ?? 'default', violations: found.violations, incomplete: found.incomplete });
+			if (!axeFound(found)) throw new Error(`The accessibility check did not finish in the page's ${said} state.`);
+			runs.push({ state: said, ...found });
 		}
 		return runs;
 	} finally {

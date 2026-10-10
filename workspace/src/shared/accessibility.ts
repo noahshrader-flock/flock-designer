@@ -3,7 +3,8 @@
  * results for each state of a page, merged by rule, with the WCAG success criteria each rule checks, and said in the same
  * words wherever they are shown. Never as a pass: at most, no issues found by automated checks.
  */
-import type { AccessibilityIssue, AccessibilityResult } from './contract';
+import type { AccessibilityCounts, AccessibilityFindings, AccessibilityIssue } from './contract';
+import { plural } from './plural';
 
 /** One rule's results in one axe run, as the page gives them back: trimmed to what is kept. */
 export interface AxeRule {
@@ -15,11 +16,15 @@ export interface AxeRule {
 	nodes: number;
 }
 
-/** One axe run: a page in one of its states. */
-export interface AxeRun {
-	state: string;
+/** What one axe run found, as the page gives it back. */
+export interface AxeFound {
 	violations: AxeRule[];
 	incomplete: AxeRule[];
+}
+
+/** One axe run: a page in one of its states. */
+export interface AxeRun extends AxeFound {
+	state: string;
 }
 
 /** The WCAG success criterion an axe tag names (`wcag143` is 1.4.3, `wcag2411` is 2.4.11), or null for any other tag. */
@@ -42,7 +47,7 @@ export const isAxeRules = (v: unknown): v is AxeRule[] =>
 	);
 
 /** A page's runs, one per state, as one list of each kind: a rule found in several states once, its elements counted in all. */
-export const mergeRuns = (runs: AxeRun[]): { violations: AccessibilityIssue[]; incomplete: AccessibilityIssue[] } => {
+export const mergeRuns = (runs: AxeRun[]): AccessibilityFindings => {
 	const merge = (kind: 'violations' | 'incomplete'): AccessibilityIssue[] => {
 		const byRule = new Map<string, AccessibilityIssue>();
 		for (const run of runs) {
@@ -72,19 +77,20 @@ export const mergeRuns = (runs: AxeRun[]): { violations: AccessibilityIssue[]; i
 	return { violations: merge('violations'), incomplete: merge('incomplete') };
 };
 
-const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+/** How many of each a check found. */
+export const countsOf = (r: AccessibilityFindings): AccessibilityCounts => ({ violations: r.violations.length, incomplete: r.incomplete.length });
 
-/** How many of each a result has: issues axe found, and ones it could not decide. */
-export const countsOf = (r: Pick<AccessibilityResult, 'violations' | 'incomplete'>): { violations: number; incomplete: number } => ({
-	violations: r.violations.length,
-	incomplete: r.incomplete.length,
-});
+/** The states an issue was found in, when that says something: none for a page that has only its default. */
+export const foundIn = (i: AccessibilityIssue): string[] => (i.states.length > 1 || i.states[0] !== 'default' ? i.states : []);
+
+/** Where an issue is, in a few words: "2 elements", or "2 elements, in empty". */
+export const whereFound = (i: AccessibilityIssue): string => `${plural(i.nodes, 'element')}${foundIn(i).length ? `, in ${foundIn(i).join(', ')}` : ''}`;
 
 /**
  * A result in a few words, the same wherever it is shown: "3 automated issues, 2 need a person", or "No issues found by
  * automated checks". Never a pass.
  */
-export const summaryOf = ({ violations, incomplete }: { violations: number; incomplete: number }): string => {
-	const found = violations ? count(violations, 'automated issue', 'automated issues') : 'No issues found by automated checks';
-	return incomplete ? `${found}, ${count(incomplete, 'needs a person', 'need a person')}` : found;
+export const summaryOf = ({ violations, incomplete }: AccessibilityCounts): string => {
+	const found = violations ? plural(violations, 'automated issue') : 'No issues found by automated checks';
+	return incomplete ? `${found}, ${incomplete} ${incomplete === 1 ? 'needs' : 'need'} a person` : found;
 };

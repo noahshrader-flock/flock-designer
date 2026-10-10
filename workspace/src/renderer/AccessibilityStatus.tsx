@@ -1,6 +1,7 @@
 import { AccessibilityIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { countsOf, summaryOf } from '../shared/accessibility';
+import { countsOf, foundIn, summaryOf } from '../shared/accessibility';
+import { plural } from '../shared/plural';
 import type { AccessibilityIssue, AccessibilityResult } from '../shared/contract';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -36,8 +37,8 @@ const Issue = ({ issue }: { issue: AccessibilityIssue }) => (
 			{[
 				issue.criteria.length ? `WCAG ${issue.criteria.join(', ')}` : null,
 				issue.impact,
-				`${issue.nodes} element${issue.nodes === 1 ? '' : 's'}`,
-				issue.states.length > 1 || issue.states[0] !== 'default' ? `in ${issue.states.join(', ')}` : null,
+				plural(issue.nodes, 'element'),
+				foundIn(issue).length ? `in ${foundIn(issue).join(', ')}` : null,
 			]
 				.filter(Boolean)
 				.join(' · ')}{' '}

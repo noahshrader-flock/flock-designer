@@ -1,7 +1,7 @@
 import { AccessibilityIcon } from 'lucide-react';
 import { useState } from 'react';
 import { summaryOf } from '../shared/accessibility';
-import type { CatalogComponent } from '../shared/contract';
+import type { AccessibilityCounts, CatalogComponent } from '../shared/contract';
 import { CardCover } from './CardCover';
 import { PRESSABLE_CARD, pressableCard } from './pressableCard';
 import { Badge } from './ui/badge';
@@ -29,7 +29,7 @@ export const ComponentCard = ({
 	component: CatalogComponent;
 	picture: string | undefined;
 	drawing?: boolean;
-	issues?: { violations: number; incomplete: number };
+	issues?: AccessibilityCounts;
 	onOpen: () => void;
 }) => {
 	const [loaded, setLoaded] = useState<string | null>(null);

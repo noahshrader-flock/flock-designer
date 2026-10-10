@@ -345,6 +345,15 @@ export interface AccessibilityResult {
 	notAutomated: string[];
 }
 
+/** What a check found: the issues axe found, and the ones it could not decide, for a person. */
+export type AccessibilityFindings = Pick<AccessibilityResult, 'violations' | 'incomplete'>;
+
+/** How many of each a check found, as a card says it. */
+export interface AccessibilityCounts {
+	violations: number;
+	incomplete: number;
+}
+
 /**
  * The pictures of the shown design system's components, for the grid view (P5): each component's picture by its story
  * file, an address on the app's local server, none for one without; and whether a pass that may replace them is drawing.
@@ -353,7 +362,7 @@ export interface ComponentPictures {
 	drawing: boolean;
 	pictures: Record<string, string>;
 	/** What each card says of its component's accessibility (T7): how many issues axe found, and how many need a person. */
-	issues: Record<string, { violations: number; incomplete: number }>;
+	issues: Record<string, AccessibilityCounts>;
 }
 
 /**

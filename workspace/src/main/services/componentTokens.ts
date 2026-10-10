@@ -22,7 +22,7 @@ import type {
 	TokenEdit,
 } from '../../shared/contract';
 import type { ComponentPictures } from './componentPictures';
-import { type AxeRule, countsOf } from '../../shared/accessibility';
+import { type AxeFound, countsOf } from '../../shared/accessibility';
 import { designSystemOf } from '../../shared/catalog';
 import { lengthParts, placeOf, writtenWith } from '../../shared/tokens';
 import { readCatalog } from './componentCatalog';
@@ -40,7 +40,7 @@ export interface Drawn {
 	radii: Record<string, number>;
 	spacing: Record<string, number>;
 	picture?: Buffer;
-	accessibility?: { violations: AxeRule[]; incomplete: AxeRule[] };
+	accessibility?: AxeFound;
 }
 
 export type Mode = 'light' | 'dark';
@@ -245,11 +245,11 @@ export class ComponentTokens {
 		const system = this.deps.system();
 		if (system === null) return { drawing: false, pictures: {}, issues: {} };
 		const started = await this.started().catch(() => null);
-		const done = started !== null && !('error' in started) ? started.index.done : null;
-		const drawing = started !== null && !('error' in started) && done === null;
+		const index = started === null || 'error' in started ? null : started.index;
+		const built = index?.done && !('error' in index.done) ? index.done : null;
 		// What each card says of its component's accessibility (T7): how many of each, once the pass has checked it.
-		const issues = done !== null && !('error' in done) ? Object.fromEntries([...done.accessibility].map(([f, r]) => [f, countsOf(r)])) : {};
-		return { drawing, pictures: await this.deps.pictures.of(system.id), issues };
+		const issues = built ? Object.fromEntries([...built.accessibility].map(([f, r]) => [f, countsOf(r)])) : {};
+		return { drawing: index !== null && index.done === null, pictures: await this.deps.pictures.of(system.id), issues };
 	}
 
 	/**

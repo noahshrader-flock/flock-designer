@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest';
 import { contrastRatio } from '../src/shared/tokens';
 import {
 	CONTRAST_ENHANCED,
-	CONTRAST_NON_TEXT,
 	CONTRAST_TEXT,
 	DEFAULT_TARGET,
 	WCAG_EDITION,
@@ -28,11 +27,9 @@ import {
 
 describe('the thresholds', () => {
 	it('are the W3C’s numbers, each with its success criterion, level, version and the W3C’s page for it', () => {
-		expect([CONTRAST_TEXT.sc, CONTRAST_TEXT.ratio, CONTRAST_TEXT.large, CONTRAST_TEXT.level, CONTRAST_TEXT.since]).toEqual(['1.4.3', 4.5, 3, 'AA', '2.0']);
-		expect([CONTRAST_ENHANCED.sc, CONTRAST_ENHANCED.ratio, CONTRAST_ENHANCED.large, CONTRAST_ENHANCED.level]).toEqual(['1.4.6', 7, 4.5, 'AAA']);
-		expect([CONTRAST_NON_TEXT.sc, CONTRAST_NON_TEXT.ratio, CONTRAST_NON_TEXT.level, CONTRAST_NON_TEXT.since]).toEqual(['1.4.11', 3, 'AA', '2.1']);
-		for (const c of [CONTRAST_TEXT, CONTRAST_ENHANCED, CONTRAST_NON_TEXT])
-			expect(c.url).toMatch(/^https:\/\/www\.w3\.org\/WAI\/WCAG22\/Understanding\/[a-z-]+\.html$/);
+		expect([CONTRAST_TEXT.sc, CONTRAST_TEXT.ratio, CONTRAST_TEXT.level, CONTRAST_TEXT.since]).toEqual(['1.4.3', 4.5, 'AA', '2.0']);
+		expect([CONTRAST_ENHANCED.sc, CONTRAST_ENHANCED.ratio, CONTRAST_ENHANCED.level, CONTRAST_ENHANCED.since]).toEqual(['1.4.6', 7, 'AAA', '2.0']);
+		for (const c of [CONTRAST_TEXT, CONTRAST_ENHANCED]) expect(c.url).toMatch(/^https:\/\/www\.w3\.org\/WAI\/WCAG22\/Understanding\/[a-z-]+\.html$/);
 	});
 
 	it('meet the W3C’s known cases: black on white is 21:1, and #767676 on white is the lightest gray that is 4.5:1', () => {
@@ -41,11 +38,13 @@ describe('the thresholds', () => {
 		expect(contrastRatio('#777777', '#FFFFFF')!).toBeLessThan(CONTRAST_TEXT.ratio);
 	});
 
-	it('are asked for only at a target that includes them: contrast is AA, so not at Level A; non-text contrast came in 2.1', () => {
+	it('are asked for only at a target that includes them: contrast is AA, so not at Level A; one from 2.1 not at 2.0', () => {
 		expect(requiredAt(CONTRAST_TEXT, { version: '2.0', level: 'A' })).toBe(false);
 		expect(requiredAt(CONTRAST_TEXT, { version: '2.0', level: 'AA' })).toBe(true);
-		expect(requiredAt(CONTRAST_NON_TEXT, { version: '2.0', level: 'AA' })).toBe(false);
-		expect(requiredAt(CONTRAST_NON_TEXT, { version: '2.1', level: 'AA' })).toBe(true);
+		// A criterion that came in with 2.1 (1.4.11, non-text contrast) is not asked for at 2.0.
+		const later = { sc: '1.4.11', name: 'Non-text Contrast', level: 'AA', since: '2.1', url: '' } as const;
+		expect(requiredAt(later, { version: '2.0', level: 'AA' })).toBe(false);
+		expect(requiredAt(later, { version: '2.1', level: 'AA' })).toBe(true);
 		expect(requiredAt(CONTRAST_ENHANCED, DEFAULT_TARGET)).toBe(false);
 	});
 });
