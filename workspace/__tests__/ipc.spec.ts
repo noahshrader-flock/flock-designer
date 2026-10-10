@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHANNELS } from '../src/shared/contract';
-import { g, installDesignSystem, makeProduct, makeProductFiles } from './fixtures';
+import { g, installDesignSystem, makeProduct, makeProductFiles, addStandards } from './fixtures';
 
 /**
  * The IPC layer itself: which handlers demand that a repository was actually
@@ -113,6 +113,7 @@ beforeEach(async () => {
 	mkdirSync(product, { recursive: true });
 	mkdirSync(join(design, '.git'), { recursive: true });
 	mkdirSync(join(design, 'projects'), { recursive: true });
+	addStandards(design);
 	makeProduct(product, [{ id: 'preview', label: 'Run', argv: ['node', '-e', 'setTimeout(()=>{},1e4)'], servesPreviewOn: 3999 }]);
 
 	// Discovery looks under the home directory; point it at a temporary one.
@@ -708,6 +709,24 @@ describe('prototypes', () => {
 	};
 	beforeEach(() => installDesignSystem(product));
 
+	it('are built toward the product’s accessibility target, from its own manifest, with the rules in the task (T7)', async () => {
+		writeSkill();
+		await call(CHANNELS.useCheckout, product);
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		// No manifest: the default, and said so.
+		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
+		let task = agentStart.mock.calls.at(-1)?.[2] as string;
+		expect(task).toContain('## Accessibility');
+		expect(task).toContain('Test Product has no .dsnr/manifest.md, so it declares no target. Build to **WCAG 2.2 Level AA**');
+		// The product's own target, once its manifest declares one; and the rules, ahead of what the person asked for.
+		writeFileSync(join(product, '.dsnr', 'manifest.md'), readFileSync(join(__dirname, 'fixtures/coke-manifest.md'), 'utf8'));
+		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
+		task = agentStart.mock.calls.at(-1)?.[2] as string;
+		expect(task).toContain("This product's target, from Test Product's .dsnr/manifest.md: **WCAG 2.0 Level A**, checked with the axe tags `wcag2a`.");
+		expect(task).toContain('#### Names');
+		expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## What the person asked for'));
+	});
+
 	it('say whether the real design system is installed here, and which version', async () => {
 		await call(CHANNELS.useCheckout, product);
 		expect(await call(CHANNELS.prototypeReadiness, product)).toEqual({ ok: true, value: { ready: true, designSystem: 'x', version: '1.2.3' } });
@@ -782,7 +801,14 @@ describe('prototypes', () => {
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'Another', { root: product, branch: 'develop' });
 		await call(CHANNELS.buildPrototype, 'demo', 'v2-i1', 'Another');
 		const p = realpathSync(product);
-		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([p, join(p, '.dsnr'), join(p, 'node_modules', 'x'), join(p, 'node_modules')]);
+		const standards = join(realpathSync(design), 'standards');
+		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([
+			p,
+			join(p, '.dsnr'),
+			join(p, 'node_modules', 'x'),
+			standards,
+			join(p, 'node_modules'),
+		]);
 	});
 
 	describe('publishing what the app made', () => {
@@ -1184,6 +1210,9 @@ describe('prototypes', () => {
 			expect(task).toContain('Audit first.');
 			expect(task).toContain(join(home, 'prototype', 'demo', 'v1-i1.html'));
 			expect(task).toContain(join(design, 'projects', 'demo', 'audit-v1-i1.md'));
+			// Built toward the product's accessibility target from the start (T7).
+			expect(task).toContain('## Accessibility');
+			expect(task).toContain('Build toward the target as you go, not at the end');
 			// No VS Code in a test: the command that starts it in a terminal, on the clipboard, pointing at the task.
 			const { value } = r as { value: { editor: boolean; command: string } };
 			expect(value.editor).toBe(false);
@@ -1467,6 +1496,16 @@ describe('one agent, one piece of work', () => {
 		const real = realpathSync(design);
 		expect(extras.readOnly).toEqual(expect.arrayContaining([join(real, 'skills'), join(real, 'standards')]));
 		expect(task).toContain(join(real, 'skills'));
+	});
+
+	it('gives every codebase run the accessibility rules and the product’s target (T7)', async () => {
+		writeFileSync(join(product, '.dsnr', 'manifest.md'), readFileSync(join(__dirname, 'fixtures/coke-manifest.md'), 'utf8'));
+		await call(CHANNELS.useCheckout, product);
+		await call(CHANNELS.startAgent, product, 'demo', 'do it');
+		const task = agentStart.mock.calls.at(-1)?.[2] as string;
+		expect(task).toContain('## Accessibility');
+		expect(task).toContain('**WCAG 2.0 Level A**');
+		expect(task).toContain('### Reporting rules');
 	});
 
 	it('puts the shared rules for codebase work, and the light check, in a run on the codebase branch only', async () => {

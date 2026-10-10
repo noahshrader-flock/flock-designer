@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /** Fixtures more than one spec builds the same way: a product checkout, and its design system installed. */
@@ -44,4 +44,13 @@ export const installDesignSystem = (product: string) => {
 	writeFileSync(join(modules, 'x', 'index.js'), "exports.Hello = () => require('react').createElement('h1', null, 'Real component');");
 	const appModules = join(__dirname, '..', 'node_modules');
 	for (const pkg of ['react', 'react-dom', 'scheduler']) if (!existsSync(join(modules, pkg))) symlinkSync(join(appModules, pkg), join(modules, pkg));
+};
+
+/**
+ * The shared standards a design repository has, which every agent task reads: the real accessibility standard, so a task
+ * is built from what it is built from in use (T7).
+ */
+export const addStandards = (design: string) => {
+	mkdirSync(join(design, 'standards', 'universal'), { recursive: true });
+	copyFileSync(join(__dirname, '../../standards/universal/accessibility.md'), join(design, 'standards', 'universal', 'accessibility.md'));
 };

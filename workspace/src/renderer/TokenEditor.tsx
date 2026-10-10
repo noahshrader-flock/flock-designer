@@ -2,7 +2,8 @@ import { RotateCcwIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { DesignToken } from '../shared/contract';
 import { plural } from '../shared/plural';
-import { AA_TEXT, contrastPartner, contrastRatio, lengthParts, pointingAt, readsAs, writtenWith } from '../shared/tokens';
+import { contrastPartner, contrastRatio, lengthParts, pointingAt, readsAs, writtenWith } from '../shared/tokens';
+import { textContrast } from '../shared/wcag';
 import { TokenBranchActions } from './TokenBranchActions';
 import type { TokenBranchControls } from './useTokenBranch';
 import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
@@ -34,12 +35,15 @@ export const Swatch = ({ value, size = 'size-4' }: { value: string; size?: strin
 	<span data-swatch className={`${size} shrink-0 rounded-sm border`} style={{ backgroundColor: value }} />
 );
 
-/** A pair's contrast as WCAG states it, and whether it is enough for text. */
-export const ContrastNote = ({ ratio, className = '' }: { ratio: number; className?: string }) => (
-	<span data-contrast={ratio} className={`${ratio < AA_TEXT ? 'text-warning' : 'text-muted-foreground'} ${className}`}>
-		{ratio}:1
-	</span>
-);
+/** A pair's contrast as WCAG states it, flagged only where the target asks for more (`textContrast`). */
+export const ContrastNote = ({ ratio, className = '' }: { ratio: number; className?: string }) => {
+	const { accessibility } = useTokenChanges();
+	return (
+		<span data-contrast={ratio} className={`${textContrast(ratio, accessibility).flag ? 'text-warning' : 'text-muted-foreground'} ${className}`}>
+			{ratio}:1
+		</span>
+	);
+};
 
 /**
  * A color picker and its hex. The picker applies when it is closed; the hex when Enter is pressed or it is left, and only
@@ -157,14 +161,14 @@ const Reach = ({ token }: { token: DesignToken }) => {
 
 /** The contrast a color leaves with the one it is read with, and whether that is enough for text. */
 const Contrast = ({ token }: { token: DesignToken }) => {
-	const { shown } = useTokenChanges();
+	const { shown, accessibility } = useTokenChanges();
 	const partner = contrastPartner(token, shown);
 	const ratio = partner ? contrastRatio(token.value, partner.value) : null;
 	if (!partner || ratio === null) return null;
 	return (
 		<p className="text-xs">
 			Contrast with {partner.name}: <ContrastNote ratio={ratio} className="font-medium" />
-			<span className="text-muted-foreground">{ratio < AA_TEXT ? `, below AA, which asks ${AA_TEXT}:1 for text` : ', passes AA for text'}</span>
+			<span className="text-muted-foreground">, {textContrast(ratio, accessibility).words}</span>
 		</p>
 	);
 };

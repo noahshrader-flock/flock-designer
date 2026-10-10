@@ -7,6 +7,8 @@
  * deliberate edit to this file, which is the point.
  */
 
+import type { DeclaredTarget } from './wcag';
+
 /** A repository the designer has opened. */
 export interface Checkout {
 	/** Absolute path to the repository root. */
@@ -315,6 +317,33 @@ export type ComponentTokens =
 	  };
 
 /**
+ * One kind of problem an accessibility check found (T7): the axe rule, what it asks, how serious axe says it is, the WCAG
+ * success criteria it checks (as "1.4.3"), on how many elements, where to read about it, and in which of a page's states.
+ */
+export interface AccessibilityIssue {
+	rule: string;
+	help: string;
+	impact: string | null;
+	criteria: string[];
+	nodes: number;
+	url: string;
+	states: string[];
+}
+
+/**
+ * What an accessibility check found (T7), and what it was made with: axe-core's version, the tags and the target they came
+ * from, whether the target was declared, when, and in which states. `violations` are what axe found; `incomplete` what it
+ * could not decide, for a person; `notAutomated` the parts of the target no automated check covers. Never a pass: at most,
+ * no issues found by automated checks.
+ */
+export interface AccessibilityResult {
+	ran: { axe: string; tags: string[]; target: string; declared: boolean; at: string; states: string[] };
+	violations: AccessibilityIssue[];
+	incomplete: AccessibilityIssue[];
+	notAutomated: string[];
+}
+
+/**
  * The pictures of the shown design system's components, for the grid view (P5): each component's picture by its story
  * file, an address on the app's local server, none for one without; and whether a pass that may replace them is drawing.
  */
@@ -391,8 +420,20 @@ export type CatalogUpdate =
 
 /** The Design System tab's list: the component library as its branch has it on GitHub, or why there is none. */
 export type Catalog =
-	/** `tokens`: the library's, read on the same commit (`DesignTokens`). */
-	| { state: 'ready'; branch: string; commit: string; committedAt: string; update: CatalogUpdate; components: CatalogComponent[]; tokens: DesignTokens }
+	/**
+	 * `tokens`: the library's, read on the same commit (`DesignTokens`). `accessibility`: the target the design system
+	 * declares in its own `.dsnr/manifest.md`, on the same commit, or the default, informational (T7).
+	 */
+	| {
+			state: 'ready';
+			branch: string;
+			commit: string;
+			committedAt: string;
+			update: CatalogUpdate;
+			components: CatalogComponent[];
+			tokens: DesignTokens;
+			accessibility: DeclaredTarget;
+	  }
 	/** No design system is connected. */
 	| { state: 'none' }
 	/** The one shown is connected, but its clone is no longer at `root`. */

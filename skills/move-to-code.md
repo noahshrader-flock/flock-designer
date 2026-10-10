@@ -69,7 +69,8 @@ does around it, and put it in the audit:
 ## Then: the work
 
 Build it as you would any codebase work here, following this repository's own agent instructions
-and standards.
+and standards, and the task's **Accessibility** section: the rules, and this product's target, read from its manifest for you. What the prototype's check left open is listed
+there: fix each in the code, or say in the audit why not.
 
 - **Move the unmarked code in as written,** split into the files where it belongs. Act on every mark as
   its note says: build the decision for each `@standin`, wire each `@mock` the way this repository mocks

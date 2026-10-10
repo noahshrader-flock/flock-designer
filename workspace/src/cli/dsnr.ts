@@ -266,7 +266,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		/** The build skill and this run: where to write, and how to check it builds. */
 		const buildTask = async (skill: string, name: string, modeledOn: string, request: string): Promise<string> => {
 			const { build, sources } = work.buildPlan(projectId, name, await work.sources(projectId, modeledOn));
-			return prototypeBuildTask({ skill, build, sources, request });
+			return prototypeBuildTask({ skill, build, sources, accessibility: await work.accessibility(sources), request });
 		};
 
 		if (command === 'save-prototype') {

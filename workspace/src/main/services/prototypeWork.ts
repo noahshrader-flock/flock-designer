@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } 
 import { basename, dirname, join } from 'node:path';
 import type { Iteration, Person, PrototypeReadiness } from '../../shared/contract';
 import { firstHeading, hasOutsideComments, latestIterationName, nextIterationName, parsePrototypeName, projectPath, prototypePagePath, prototypeSourcePath } from '../../shared/projects';
+import { taskAccessibility } from './accessibilityBrief';
 import { readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
 import { branchCommit, branchExists, readCheckout, readTreeAt } from './git';
@@ -358,7 +359,13 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return ctx.readDesignFile(prototypePagePath(projectId, name));
 	};
 
-	return { dir, file, sourceFile, sharedText, skill, title, records, record, sourceText, readiness, start, sources, buildPlan, buildPage, keep, save, page, startChange, resumeChange, finishChange };
+	/** The accessibility section of a prototype's task (T7): the target from the guidance the prototype is modeled on. */
+	const accessibility = async (sources: PrototypeSources): Promise<string> => {
+		const root = ctx.productRoot();
+		return taskAccessibility(skill, sources.productGuidance, root === null ? 'The product' : readDescriptor(root).product);
+	};
+
+	return { dir, file, sourceFile, sharedText, skill, accessibility, title, records, record, sourceText, readiness, start, sources, buildPlan, buildPage, keep, save, page, startChange, resumeChange, finishChange };
 };
 
 export type PrototypeWork = ReturnType<typeof prototypeWork>;

@@ -43,6 +43,7 @@ import { DesignSystemsMemory } from './services/designSystems';
 import { ProfileNames } from './services/profileNames';
 import { StoryPreviews } from './services/storyPreviews';
 import { tokenEditsOf } from './services/tokenEdits';
+import { taskAccessibility } from './services/accessibilityBrief';
 import { TokenBranches } from './services/tokenBranches';
 import { ComponentTokens, type Measure } from './services/componentTokens';
 import { ComponentPictures } from './services/componentPictures';
@@ -632,6 +633,12 @@ export const registerIpc = ({
 		}),
 	);
 
+	/** The accessibility section of a codebase task (T7): the product's target from its own manifest, on the branch it is on. */
+	const accessibilityOf = (canonical: string, findings?: Parameters<typeof taskAccessibility>[3]): Promise<string> => {
+		const descriptor = readDescriptor(canonical);
+		return taskAccessibility(readSkillText, join(canonical, descriptor.contextDir), descriptor.product, findings);
+	};
+
 	/**
 	 * What a codebase run may read besides the checkout: the shared skills and standards the product's guidance
 	 * points at, and the design system's own guidance beside it. Read only, and named in the task, since a folder
@@ -655,9 +662,10 @@ export const registerIpc = ({
 
 	/**
 	 * Starts a run the person can come back to: tagged with its branch, its conversation named and kept (so it can
-	 * be continued in VS Code), and given the shared guidance to read. Every run in a product checkout starts here.
+	 * be continued in VS Code), and given the shared guidance to read and the accessibility rules and the product's target
+	 * (T7). Every run in a product checkout starts here.
 	 */
-	const startTracked = (
+	const startTracked = async (
 		canonical: string,
 		projectId: string,
 		task: string,
@@ -665,7 +673,8 @@ export const registerIpc = ({
 	) => {
 		const session = randomUUID();
 		const shared = sharedGuidance(canonical);
-		const started = agent.start(canonical, projectId, `${task}${shared.note}`, {
+		const accessibility = await accessibilityOf(canonical);
+		const started = agent.start(canonical, projectId, `${task}${shared.note}\n\n${accessibility}`, {
 			// The project's records live in the design repository, beside the product checkout.
 			addDirs,
 			readOnly: shared.dirs,
@@ -1076,7 +1085,8 @@ export const registerIpc = ({
 			if (agent.status().state === 'running') return agent.status();
 			const skill = await readSkillText(BUILD_SKILL);
 			const { build, sources } = await prototypeRun(projectId, name);
-			return startPrototypeAgent(projectId, name, sources, prototypeBuildTask({ skill, build, sources, request: String(request) }));
+			const accessibility = await work.accessibility(sources);
+			return startPrototypeAgent(projectId, name, sources, prototypeBuildTask({ skill, build, sources, accessibility, request: String(request) }));
 		}),
 	);
 
@@ -1140,7 +1150,13 @@ export const registerIpc = ({
 			const { build, sources } = await prototypeRun(projectId, change.target, change.from.name);
 			prototypeChanges.set(commentId, { projectId, change });
 			const where = whereTheChangeGoes(change, name);
-			return startPrototypeAgent(projectId, name, sources, prototypeAddressTask({ addressSkill, buildSkill, build, sources, commentsPath: written.path, number, name, where }));
+			const accessibility = await work.accessibility(sources);
+			return startPrototypeAgent(
+				projectId,
+				name,
+				sources,
+				prototypeAddressTask({ addressSkill, buildSkill, build, sources, accessibility, commentsPath: written.path, number, name, where }),
+			);
 		}),
 	);
 	/**
@@ -1365,6 +1381,8 @@ export const registerIpc = ({
 					auditFile: join(recordsRoot, projectId, `audit-${name}.md`),
 					name,
 					basedOn: (await work.record(projectId, name))?.basedOn,
+					// Built toward the product's target from the start, with what the prototype's check left open.
+					accessibility: await accessibilityOf(canonical),
 				}),
 			);
 			const prompt = moveToCodePrompt({ label, projectId, taskFile, continuing: continuing ? branch : null });

@@ -195,7 +195,7 @@ describe('bringing develop up to date', () => {
 });
 
 describe('what the tab is told', () => {
-	const catalogOf = (update: string): Catalog => ({ state: 'ready', commit: 'c', committedAt: 'd', update: update as never, components: [] });
+	const catalogOf = (update: string): Catalog => ({ state: 'ready', commit: 'c', committedAt: 'd', update: update as never, components: [] }) as Catalog;
 
 	const memory = (system: ConnectedDesignSystem | null) => {
 		const m = new DesignSystemsMemory(join(home, 'design-system.json'));

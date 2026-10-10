@@ -71,7 +71,7 @@ for the one you were given, and nothing about the rest beyond having left them.
    and what you need to know. A wrong change made with confidence costs the designer more than a
    question.
 4. **Make the smallest change that addresses it.** Reuse what is already there, and follow the
-   repository's own standards as for any other change.
+   repository's own standards as for any other change, and the task's **Accessibility** section: the rules, and this product's target, read from its manifest for you. A change never leaves the page less accessible than it was.
 5. A question is answered in your summary and needs no change.
 
 ## When you have finished with it

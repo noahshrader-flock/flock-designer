@@ -27,6 +27,7 @@ import { useComponentPictures } from './useComponentPictures';
 import { useTokenBranch } from './useTokenBranch';
 import { TokenChangesProvider, useTokenChangesFor } from './tokenChanges';
 import { Skeleton } from './ui/skeleton';
+import { undeclared } from '../shared/wcag';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { Toolbar } from './Toolbar';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
@@ -135,8 +136,9 @@ const ViewSwitcher = ({ view, onSelect }: { view: ComponentsView; onSelect: (vie
 	</ToggleGroup>
 );
 
-/** No tokens, the same each time, while the library is not read. */
+/** No tokens, the same each time, while the library is not read; and the default target, until it says its own. */
 const NO_TOKENS: DesignToken[] = [];
+const NO_TARGET = undeclared('The design system is not read yet');
 
 /**
  * Which the side panel shows, as a button group like a prototype's states: the tokens, or the component that is open.
@@ -220,7 +222,12 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	};
 	const pictures = useComponentPictures(!hidden && componentsView === 'grid' && catalog?.state === 'ready', catalog?.state === 'ready' ? catalog.commit : null);
 	// The change as every panel that shows tokens sees it: the tokens view and the component view alike.
-	const changes = useTokenChangesFor(catalog?.state === 'ready' ? catalog.tokens.tokens : NO_TOKENS, edits, setEdits);
+	const changes = useTokenChangesFor(
+		catalog?.state === 'ready' ? catalog.tokens.tokens : NO_TOKENS,
+		edits,
+		setEdits,
+		catalog?.state === 'ready' ? catalog.accessibility : NO_TARGET,
+	);
 	const started = useRef(false);
 
 	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {

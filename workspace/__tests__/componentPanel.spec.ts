@@ -5,6 +5,7 @@ import { ComponentPanel } from '../src/renderer/ComponentPanel';
 import { TokenChangesProvider, useTokenChangesFor } from '../src/renderer/tokenChanges';
 import type { CatalogComponent, ComponentTokens, DesignToken, TokenEdit } from '../src/shared/contract';
 import { button, fail, fakeApp, ok, press, render, settle, unmountAll } from './reviewHarness';
+import { undeclared } from '../src/shared/wcag';
 
 /**
  * The side panel's Component view (T6 of the design system plan): the tokens the open component draws with, as the
@@ -39,12 +40,13 @@ const READY: ComponentTokens = {
 	derived: 7,
 };
 
+const NO_TARGET = undeclared('Acme has no .dsnr/manifest.md');
 let current: Awaited<ReturnType<typeof render>> | null = null;
 let made: TokenEdit[][] = [];
 let app: ReturnType<typeof fakeApp>;
 const Tab = () => {
 	const [edits, setEdits] = useState<TokenEdit[]>([]);
-	const changes = useTokenChangesFor(TOKENS, edits, (e) => (made.push(e), setEdits(e)));
+	const changes = useTokenChangesFor(TOKENS, edits, (e) => (made.push(e), setEdits(e)), NO_TARGET);
 	return createElement(TokenChangesProvider, { value: changes }, createElement(ComponentPanel, { component: BUTTON, components: COMPONENTS }));
 };
 const show = async (answer: () => Promise<unknown>) => {

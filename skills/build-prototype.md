@@ -44,7 +44,7 @@ The task lists what you may read. Read only; never change anything in any of it.
 2. **The design system's guidance and source:** its tokens, and how its components are used.
 3. **The product's code**, on the branch the task names: the nearest real screen to what is asked for,
    and the real components it uses. This is what the page must match.
-4. **Shared standards:** the view states, copy and accessibility.
+4. **Shared standards:** the view states and copy. Accessibility is in the task's **Accessibility** section: the rules, and this product's target, read from its manifest for you.
 
 If the product's guidance is missing, say so first thing in your summary.
 

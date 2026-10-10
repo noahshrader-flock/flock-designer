@@ -3,7 +3,8 @@ import type { CatalogReads } from '../src/main/services/componentCatalog';
 import { readTokens } from '../src/main/services/designTokens';
 import { editedFiles, tokenEditsOf } from '../src/main/services/tokenEdits';
 import type { DesignToken, TokenEdit } from '../src/shared/contract';
-import { AA_TEXT, contrastPartner, contrastRatio, pointingAt, sameChange, withEdits } from '../src/shared/tokens';
+import { contrastPartner, contrastRatio, pointingAt, sameChange, withEdits } from '../src/shared/tokens';
+import { CONTRAST_TEXT } from '../src/shared/wcag';
 
 /**
  * A change to the library's tokens (T3 of the design system plan, decisions 19, 26 and 27): what it does to the list,
@@ -96,7 +97,7 @@ describe('contrast', () => {
 		expect(contrastRatio('#FFFFFF', '#000000')).toBe(21);
 		// #777777 on white is 4.48:1: shown as 4.4, under AA's 4.5, never rounded up to look like it passes.
 		expect(contrastRatio('#777777', '#FFFFFF')).toBe(4.4);
-		expect(contrastRatio('#108062', '#FFFFFF')!).toBeGreaterThanOrEqual(AA_TEXT);
+		expect(contrastRatio('#108062', '#FFFFFF')!).toBeGreaterThanOrEqual(CONTRAST_TEXT.ratio);
 	});
 
 	it('is not said for a color something shows through, or one that is not a hex', () => {

@@ -17,11 +17,17 @@ single edit rather than a hunt.
 | | Level A | Level AA | Level AAA |
 |---|---|---|---|
 | **WCAG 2.0** | `wcag2a` | `wcag2aa` | `wcag2aaa` |
-| **WCAG 2.1** | `wcag21a` | `wcag21aa` | `wcag21aaa` |
-| **WCAG 2.2** | `wcag22a` | `wcag22aa` | `wcag22aaa` |
+| **WCAG 2.1** | `wcag21a` | `wcag21aa` | none |
+| **WCAG 2.2** | none | `wcag22aa` | none |
 
 Those are **axe tag names** — raising conformance means adding tags to the axe `runOnly.values`
-array, then fixing what newly fails.
+array, then fixing what newly fails. Levels are cumulative: 2.1 AA is every tag at or above it in the table.
+
+**"none" means axe has no rules for that level**, not that it has no criteria: 2.2 Level A, for one,
+added criteria (consistent help, redundant entry) that only a person can check. A tag that names no
+rules runs nothing, so never add one to make a run look complete — report those criteria as not run,
+or checked by hand. DSNR's own copy of this table, in `workspace/src/shared/wcag.ts`, is held to
+axe-core's rules and to this table by a test, so the two cannot drift.
 
 What each step actually adds, in practice:
 

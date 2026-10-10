@@ -29,7 +29,8 @@ The run ends when you stop. Nobody can answer a question, confirm a plan or look
 ## What is not this run's job
 
 The reviews and the full checks happen once, at **Handoff**, when the work is where it belongs. This run's
-job is to get it there, on the product's standards, and say what is left.
+job is to get it there, on the product's standards, and say what is left. That includes accessibility, built
+toward as you go, as the task's **Accessibility** section: the rules, and this product's target, read from its manifest for you.
 
 ## When you have finished
 

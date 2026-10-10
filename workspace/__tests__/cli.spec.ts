@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { main } from '../src/cli/dsnr';
-import { g, installDesignSystem, makeProduct } from './fixtures';
+import { g, installDesignSystem, makeProduct, addStandards } from './fixtures';
 
 /**
  * `dsnr`, the command an agent runs from Claude Code in VS Code to make a prototype with no app running. Against a
@@ -44,6 +44,7 @@ beforeEach(() => {
 	g(design, 'config', 'user.name', 'Test Person');
 	g(design, 'config', 'user.email', '123+test-person@users.noreply.github.com');
 	writeFileSync(join(design, 'skills', 'build-prototype.md'), '# Build a prototype\n');
+	addStandards(design);
 });
 
 afterEach(() => rmSync(home, { recursive: true, force: true }));

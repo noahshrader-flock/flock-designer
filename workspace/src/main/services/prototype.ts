@@ -186,11 +186,14 @@ export const prototypeBuildTask = ({
 	skill,
 	build,
 	sources,
+	accessibility,
 	request,
 }: {
 	skill: string;
 	build: PrototypeBuild;
 	sources: PrototypeSources;
+	/** The accessibility section (`taskAccessibility`): the rules and the product's target. */
+	accessibility: string;
 	request: string;
 }): string =>
 	[
@@ -203,6 +206,8 @@ export const prototypeBuildTask = ({
 		`  It writes the page to \`${build.page}\`. Do not finish while it reports an error.`,
 		'',
 		...readableLines(sources),
+		'',
+		accessibility,
 		'',
 		'## What the person asked for',
 		'',
@@ -219,6 +224,7 @@ export const prototypeAddressTask = ({
 	buildSkill,
 	build,
 	sources,
+	accessibility,
 	commentsPath,
 	number,
 	name,
@@ -228,6 +234,8 @@ export const prototypeAddressTask = ({
 	buildSkill: string;
 	build: PrototypeBuild;
 	sources: PrototypeSources;
+	/** The accessibility section (`taskAccessibility`). */
+	accessibility: string;
 	commentsPath: string;
 	/** The comment's number, as on its pin. */
 	number: number;
@@ -247,6 +255,8 @@ export const prototypeAddressTask = ({
 		`  It writes the page to \`${build.page}\`. Do not finish while it reports an error.`,
 		'',
 		...readableLines(sources),
+		'',
+		accessibility,
 		'',
 		'## How to act on a comment',
 		'',
@@ -280,9 +290,12 @@ export const moveToCodeTask = ({
 	name,
 	basedOn,
 	sourceFile,
+	accessibility,
 }: {
 	skill: string;
 	pageFile: string;
+	/** The accessibility section (`taskAccessibility`), with what the prototype's check left open. */
+	accessibility: string;
 	/** The React source, when the prototype was written in React. */
 	sourceFile?: string | null;
 	auditFile: string;
@@ -304,4 +317,6 @@ export const moveToCodeTask = ({
 			? `It was modeled on \`${basedOn.branch}\` of ${basedOn.repository}${basedOn.commit ? ` at ${basedOn.commit.slice(0, 7)}` : ''}; the code may have moved on since.`
 			: 'It was made without the product code to look at, so expect more of it to differ from how the product really works.',
 		`Write the audit to \`${auditFile}\` before you change any code.`,
+		'',
+		accessibility,
 	].join('\n');

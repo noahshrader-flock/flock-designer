@@ -119,9 +119,6 @@ export const contrastPartner = (token: DesignToken, tokens: DesignToken[]): Desi
 /** Whether a token is the one read on top in its pair (`contrastText`, `--x-foreground`): its pair's row says the ratio. */
 export const isForeground = (token: DesignToken): boolean => token.name === 'contrastText' || token.name.endsWith('-foreground');
 
-/** The least contrast WCAG asks of body text (level AA). */
-export const AA_TEXT = 4.5;
-
 /** A hex color's relative luminance, as WCAG defines it. */
 const luminance = (hex: string): number => {
 	const [r, g, b] = [1, 3, 5].map((i) => {

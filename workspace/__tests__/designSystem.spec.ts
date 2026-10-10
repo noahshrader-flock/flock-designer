@@ -2,6 +2,7 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DesignSystem } from '../src/renderer/DesignSystem';
+import { undeclared } from '../src/shared/wcag';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
 import type { Catalog, CatalogComponent, CatalogUpdate, DesignTokens } from '../src/shared/contract';
 import { button, fail, fakeApp, menuItem, ok, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
@@ -56,6 +57,7 @@ const ready = (update: CatalogUpdate = 'unchanged', components = COMPONENTS): Ca
 	update,
 	components,
 	tokens: TOKENS,
+	accessibility: undeclared('FUI has no .dsnr/manifest.md'),
 });
 
 /** The design systems connected (P4): FUI, by its Storybook's brand, and a second one. */

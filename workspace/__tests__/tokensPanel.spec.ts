@@ -6,6 +6,7 @@ import type { DesignToken, DesignTokens, TokenEdit } from '../src/shared/contrac
 import { button, fail, fakeApp, ok, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 import { useTokenBranch } from '../src/renderer/useTokenBranch';
 import { TokenChangesProvider, useTokenChangesFor } from '../src/renderer/tokenChanges';
+import { type DeclaredTarget, undeclared } from '../src/shared/wcag';
 
 /**
  * The tokens panel (T2 of the design system plan), read only: the list T1 reads, in collapsible groups, each set of
@@ -42,12 +43,14 @@ const TOKENS: DesignTokens = {
 let current: Awaited<ReturnType<typeof render>> | null = null;
 /** Every change the panel made, newest last: the tab keeps the change, as `DesignSystem` does. */
 let made: TokenEdit[][] = [];
+/** What the panel's contrast is judged at: the default unless a test gives the library's own. */
+let target: DeclaredTarget = undeclared('Acme has no .dsnr/manifest.md');
 const Tab = ({ tokens, live }: { tokens: DesignTokens; live: boolean }) => {
 	const [edits, setEdits] = useState<TokenEdit[]>([]);
 	const onEdits = (e: TokenEdit[]) => (made.push(e), setEdits(e));
 	const branch = useTokenBranch('acme/ui', edits, onEdits);
 	// The change is the tab's, given to the panel as `DesignSystem` gives it.
-	const changes = useTokenChangesFor(tokens.tokens, edits, onEdits);
+	const changes = useTokenChangesFor(tokens.tokens, edits, onEdits, target);
 	return createElement(TokenChangesProvider, { value: changes }, createElement(TokensPanel, { tokens, live, branch }));
 };
 /** The app the panel saves and proposes through: a stand-in, so nothing is written or opened. */
@@ -456,11 +459,40 @@ describe('changing a token (T3)', () => {
 			expect(ratio()?.className).toContain('text-muted-foreground');
 			expect(row('palette.light.primary.contrastText')?.querySelector('[data-contrast]')).toBeNull();
 			const editor = await open('palette.light.primary.main');
-			expect(editor.textContent).toContain('Contrast with contrastText: 4.8:1, passes AA for text');
+			expect(editor.textContent).toContain('Contrast with contrastText: 4.8:1, meets the 4.5:1 WCAG 1.4.3 asks for text');
 			await pick(editor.querySelector('input[type="color"]') as HTMLInputElement, '#BBBBBB');
 			expect(ratio()?.textContent).toBe('1.9:1');
 			expect(ratio()?.className).toContain('text-warning');
-			expect(document.querySelector('[data-token-editor]')?.textContent).toContain('below AA, which asks 4.5:1 for text');
+			expect(document.querySelector('[data-token-editor]')?.textContent).toContain(
+				'below the 4.5:1 WCAG 1.4.3 asks for text (informational: no target declared)',
+			);
+		});
+
+		it('judges a pair at the target the library declares: below 4.5:1 is not flagged at Level A, which asks for no contrast', async () => {
+			target = { declared: true, target: { version: '2.0', level: 'A' }, tags: ['wcag2a'], source: "Acme's .dsnr/manifest.md" };
+			try {
+				await show(PAIR);
+				const editor = await open('palette.light.primary.main');
+				await pick(editor.querySelector('input[type="color"]') as HTMLInputElement, '#BBBBBB');
+				expect(row('palette.light.primary.main')?.querySelector('[data-contrast]')?.className).toContain('text-muted-foreground');
+				expect(document.querySelector('[data-token-editor]')?.textContent).toContain(
+					'below the 4.5:1 WCAG 1.4.3 asks for text, not required at your target, WCAG 2.0 Level A',
+				);
+			} finally {
+				target = undeclared('Acme has no .dsnr/manifest.md');
+			}
+		});
+
+		it('judges a pair at AAA against 1.4.6’s 7:1', async () => {
+			target = { declared: true, target: { version: '2.2', level: 'AAA' }, tags: [], source: "Acme's .dsnr/manifest.md" };
+			try {
+				await show(PAIR);
+				const editor = await open('palette.light.primary.main');
+				expect(editor.textContent).toContain('4.8:1, below the 7:1 WCAG 1.4.6 asks for text');
+				expect(row('palette.light.primary.main')?.querySelector('[data-contrast]')?.className).toContain('text-warning');
+			} finally {
+				target = undeclared('Acme has no .dsnr/manifest.md');
+			}
 		});
 
 		it('says when a token is written in one place with another, and marks both as changed', async () => {

@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo } from 'react';
 import type { DesignToken, TokenChange, TokenEdit } from '../shared/contract';
+import type { DeclaredTarget } from '../shared/wcag';
 import { placeOf, sameChange, withEdits } from '../shared/tokens';
 
 /**
@@ -24,6 +25,8 @@ export interface TokenChanges {
 	change: (token: DesignToken, to: TokenChange | null) => void;
 	/** Every token back as the library has it. */
 	clear: () => void;
+	/** The accessibility target a pair's contrast is judged at (T7): the design system's, or the default. */
+	accessibility: DeclaredTarget;
 }
 
 const TokenChangesContext = createContext<TokenChanges | null>(null);
@@ -53,8 +56,16 @@ const changed = (edits: TokenEdit[], read: Map<string, DesignToken>, token: Desi
 	return next ? [...edits.filter((e) => !atPlace(e)), next] : edits.filter((e) => !atPlace(e));
 };
 
-/** The change as the panel holds it, for the library's `tokens`, the `edits` being tried and what changes them. */
-export const useTokenChangesFor = (tokens: DesignToken[], edits: TokenEdit[], onEdits: (edits: TokenEdit[]) => void): TokenChanges =>
+/**
+ * The change as the panel holds it, for the library's `tokens`, the `edits` being tried and what changes them, judged at
+ * the library's `accessibility` target.
+ */
+export const useTokenChangesFor = (
+	tokens: DesignToken[],
+	edits: TokenEdit[],
+	onEdits: (edits: TokenEdit[]) => void,
+	accessibility: DeclaredTarget,
+): TokenChanges =>
 	useMemo(() => {
 		const read = new Map(tokens.map((t) => [t.path, t]));
 		const shown = withEdits(tokens, edits);
@@ -76,8 +87,9 @@ export const useTokenChangesFor = (tokens: DesignToken[], edits: TokenEdit[], on
 				if (next !== edits) onEdits(next);
 			},
 			clear: () => onEdits([]),
+			accessibility,
 		};
-	}, [tokens, edits, onEdits]);
+	}, [tokens, edits, onEdits, accessibility]);
 
 export { labelOf, nameOf } from '../shared/tokens';
 

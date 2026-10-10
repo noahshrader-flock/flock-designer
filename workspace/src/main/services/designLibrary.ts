@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { designSystemOf, isTokenGroup } from '../../shared/catalog';
 import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem, DesignSystemConnection, DesignTokens, FoundDesignSystem } from '../../shared/contract';
+import { LIBRARY_MANIFEST, declaredTarget } from './accessibilityBrief';
 import { isStoryFile, readCatalog, type CatalogReads } from './componentCatalog';
 import { readTokens } from './designTokens';
 import { type DesignSystemsMemory, defaultBranch, designSystemId, filesOf, findDesignSystems, within } from './designSystems';
@@ -119,8 +120,14 @@ export const readLibrary = async (system: ConnectedDesignSystem, update: Catalog
 	const committedAt = await runGit(root, ['log', '-1', '--format=%cI', commit]);
 	// The components and the tokens, from the same reads of the same commit.
 	const reads = await systemReads(system, commit);
-	const [components, tokens] = await Promise.all([readCatalog(reads, designSystemOf(system)), readTokens(reads)]);
-	return { state: 'ready', branch, commit, committedAt, update, components: listedComponents(components, tokens), tokens };
+	const [components, tokens, manifest] = await Promise.all([
+		readCatalog(reads, designSystemOf(system)),
+		readTokens(reads),
+		reads.readFile(LIBRARY_MANIFEST).catch(() => null),
+	]);
+	// Its accessibility target (T7), as its own manifest declares it on the same commit.
+	const accessibility = declaredTarget(manifest, system.name);
+	return { state: 'ready', branch, commit, committedAt, update, components: listedComponents(components, tokens), tokens, accessibility };
 };
 
 export interface DesignLibraryDeps {
