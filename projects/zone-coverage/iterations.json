@@ -16,7 +16,8 @@
       "repository": "flock-coke",
       "branch": "noah/flock-designer",
       "commit": "becdfc67bd0fb50864825d4fc8cdb4fcdf53e0f8"
-    }
+    },
+    "cover": "4ebc6edd74a1"
   },
   {
     "projectId": "zone-coverage",
@@ -35,7 +36,8 @@
       "repository": "flock-coke",
       "branch": "noah/flock-designer",
       "commit": "becdfc67bd0fb50864825d4fc8cdb4fcdf53e0f8"
-    }
+    },
+    "cover": "2b873ab008a1"
   },
   {
     "projectId": "zone-coverage",
@@ -54,6 +56,7 @@
       "repository": "flock-coke",
       "branch": "noah/flock-designer",
       "commit": "becdfc67bd0fb50864825d4fc8cdb4fcdf53e0f8"
-    }
+    },
+    "cover": "60473c5ca3bd"
   }
 ]

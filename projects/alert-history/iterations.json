@@ -36,7 +36,8 @@
       "repository": "flock-coke",
       "branch": "noah/flock-designer",
       "commit": "8089eb7f3e07fff9967648aa6226f52a5d911abe"
-    }
+    },
+    "cover": "472e769b2b81"
   },
   {
     "projectId": "alert-history",
