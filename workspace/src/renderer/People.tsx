@@ -1,11 +1,12 @@
 import type { Person } from '../shared/contract';
 import { avatarUrl } from '../shared/people';
+import { CARD_DETAIL } from './cardFooters';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /**
- * Who a project is by: the first person's picture and name, and how many others there are, whose names are on hover. The
- * first person is the one the project's record names first, who started it.
+ * Who a project is by: the first person's picture and name, in the card's gray, and how many others there are, whose names
+ * are on hover. The first person is the one the project's record names first, who started it.
  */
 export const PeopleLine = ({ people }: { people: Person[] }) => {
 	const [first, ...others] = people;
@@ -16,7 +17,7 @@ export const PeopleLine = ({ people }: { people: Person[] }) => {
 				<AvatarImage src={avatarUrl(first.login) ?? undefined} alt="" />
 				<AvatarFallback>{first.name.charAt(0).toUpperCase()}</AvatarFallback>
 			</Avatar>
-			<span className="truncate text-sm">{first.name}</span>
+			<span className={`${CARD_DETAIL} truncate`}>{first.name}</span>
 			{others.length > 0 && (
 				<Tooltip>
 					<TooltipTrigger asChild>

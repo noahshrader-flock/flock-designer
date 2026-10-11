@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { summaryOf } from '../shared/accessibility';
 import type { AccessibilityCounts, CatalogComponent } from '../shared/contract';
 import { CardCover } from './CardCover';
-import { CARD_NAME, COMPONENT_FOOTER } from './cardFooters';
+import { CARD_DETAIL, CARD_NAME, COMPONENT_FOOTER } from './cardFooters';
 import { PRESSABLE_CARD, pressableCard } from './pressableCard';
 import { Badge } from './ui/badge';
 import { Card, CardFooter, CardTitle } from './ui/card';
@@ -69,7 +69,7 @@ export const ComponentCard = ({
 			</CardCover>
 			<CardFooter className={COMPONENT_FOOTER}>
 				<CardTitle className={CARD_NAME}>{component.name}</CardTitle>
-				<span className="text-muted-foreground shrink-0 truncate text-sm">{component.group}</span>
+				<span className={`${CARD_DETAIL} shrink-0 truncate`}>{component.group}</span>
 			</CardFooter>
 		</Card>
 	);

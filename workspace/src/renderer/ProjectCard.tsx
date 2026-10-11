@@ -4,7 +4,7 @@ import type { Project, ProjectIteration } from '../shared/contract';
 import { plural } from '../shared/plural';
 import { byVersion, projectCodeLink, workOf } from '../shared/projects';
 import { CardCover } from './CardCover';
-import { CARD_NAME, PROJECT_FOOTER } from './cardFooters';
+import { CARD_DETAIL, CARD_NAME, PROJECT_FOOTER } from './cardFooters';
 import { PRESSABLE_CARD, pressableCard } from './pressableCard';
 import { PeopleLine } from './People';
 import { Badge } from './ui/badge';
@@ -13,8 +13,8 @@ import { Card, CardFooter, CardTitle } from './ui/card';
 /** How many comments a project's prototypes have, all of them together. */
 const commentsOn = (prototypes: ProjectIteration[]): number => prototypes.reduce((n, it) => n + it.openComments, 0);
 
-/** What the footer says at its right, in the gray of the comment count. */
-const Aside = ({ children }: { children: ReactNode }) => <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-sm">{children}</span>;
+/** What the footer says at its right, in the card's gray. */
+const Aside = ({ children }: { children: ReactNode }) => <span className={`${CARD_DETAIL} flex shrink-0 items-center gap-1.5`}>{children}</span>;
 
 /**
  * A project in the Projects grid, shaped as a component's is (`ComponentCard`): the cover is the preview, empty for now in
@@ -41,9 +41,9 @@ export const ProjectCard = ({ project, onOpen }: { project: Project; onOpen: (it
 	const way = go === null ? {} : pressableCard(newest ? `Open ${project.title}` : `Open ${project.title} on GitHub`, go, newest ? 'button' : 'link');
 	return (
 		<Card className={`pt-0 ${go ? PRESSABLE_CARD : ''}`} {...way}>
-			{/* The preview, when there is one: it fills the cover, as a component's picture does. */}
+			{/* The picture, when there is one (the project's preview): it fills the cover, as a component's does. */}
 			<CardCover>
-				<div data-preview-area className="bg-muted/40 absolute inset-0" />
+				<div data-picture-area className="bg-muted/40 absolute inset-0" />
 				{project.localOnly && (
 					<Badge variant="secondary" className="absolute top-2 left-2 z-10">
 						Only on this machine
@@ -52,7 +52,7 @@ export const ProjectCard = ({ project, onOpen }: { project: Project; onOpen: (it
 				{!newest && link && <ExternalLinkIcon aria-hidden className="text-muted-foreground absolute top-2 right-2 z-10 size-4" />}
 			</CardCover>
 			<CardFooter className={PROJECT_FOOTER}>
-				<CardTitle className={`${CARD_NAME} shrink-0`}>{project.title}</CardTitle>
+				<CardTitle className={CARD_NAME}>{project.title}</CardTitle>
 				<div className="flex items-center justify-between gap-2">
 					{project.people.length > 0 ? <PeopleLine people={project.people} /> : <span />}
 					{newest ? (

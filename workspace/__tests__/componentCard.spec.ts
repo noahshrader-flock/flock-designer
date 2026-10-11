@@ -33,8 +33,11 @@ describe('a component’s card', () => {
 		expect(name.textContent).toBe('FSButton');
 		expect(name.className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'text-base', 'font-semibold']));
 		expect(name.className.split(' ')).not.toContain('text-sm');
-		// In a row with its group, it is the one that gives way when the name is long.
+		// In a row with its group, it is the one that gives way when the name is long: one line, never a second.
 		expect(name.className.split(' ')).not.toContain('shrink-0');
+		expect(name.className.split(' ').some((c) => c.startsWith('line-clamp'))).toBe(false);
+		// Its group is in the gray the Projects card uses for what a project has.
+		expect(document.querySelector('[data-slot="card-footer"]')!.lastElementChild!.className.split(' ')).toEqual(expect.arrayContaining(['text-muted-foreground', 'text-sm']));
 	});
 
 	it('is the Projects card: its cover a fixed shape, its footer the name and the group', async () => {

@@ -60,7 +60,7 @@ afterEach(async () => {
 describe('the cover', () => {
 	it('is the preview, empty for now, in the soft color of a component card with no picture; the name and who it is by are in the footer', async () => {
 		await show(project({ iterations: [NEWEST], people: [NOAH] }));
-		const area = cover().querySelector('[data-preview-area]')!;
+		const area = cover().querySelector('[data-picture-area]')!;
 		expect(area).not.toBeNull();
 		expect(area.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'inset-0', 'bg-muted/40']));
 		expect(cover().textContent).toBe('');
@@ -87,13 +87,22 @@ describe('the footer', () => {
 		expect(footer().children).toHaveLength(2);
 		expect(nameRow().textContent).toBe('Admin usage');
 		expect(nameRow().getAttribute('data-slot')).toBe('card-title');
-		// It keeps its whole line: squeezed by the rows around it, it would lose the bottom of its letters.
-		expect(nameRow().className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'text-base', 'font-semibold', 'shrink-0']));
+		expect(nameRow().className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'text-base', 'font-semibold']));
 		// One size up from the text under it.
 		expect(nameRow().className.split(' ')).not.toContain('text-sm');
 		// Above who it is by, not beside it.
 		expect(nameRow().compareDocumentPosition(details()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(details().contains(nameRow())).toBe(false);
+	});
+
+	it('never takes a second line: it runs the width of the footer, then is cut with an ellipsis', async () => {
+		await show(project({ title: 'Admin usage and what each organization has switched on across every role they manage', iterations: [NEWEST] }));
+		// `truncate` is one line, overflow hidden, an ellipsis: nothing wraps, and nothing sets a number of lines.
+		const classes = nameRow().className.split(' ');
+		expect(classes).toContain('truncate');
+		expect(classes.some((c) => c.startsWith('line-clamp'))).toBe(false);
+		// The row is as wide as the footer's content, so the name goes all the way across before it is cut.
+		expect(footer().className.split(' ')).toContain('items-stretch');
 	});
 
 	it('has, under the name, who it is by at the left and how many comments its prototypes have at the right', async () => {
@@ -110,6 +119,15 @@ describe('the footer', () => {
 		expect(comments.textContent).toBe('5');
 		expect(comments.querySelector('.lucide-message-square')).not.toBeNull();
 		expect(details().className.split(' ')).toContain('justify-between');
+	});
+
+	it('writes who it is by in the same gray as what the project has: the versions and the comments, and a component’s group', async () => {
+		await show(project({ iterations: [NEWEST], people: [NOAH, { name: 'Sam Lee', login: 'sam' }] }));
+		const name = details().querySelector('.truncate')!;
+		expect(name.textContent).toBe('Noah Shrader');
+		const gray = ['text-muted-foreground', 'text-sm'];
+		expect(name.className.split(' ')).toEqual(expect.arrayContaining(gray));
+		expect(details().children[1]!.className.split(' ')).toEqual(expect.arrayContaining(gray));
 	});
 
 	it('says how many others there are, and names them on hover', async () => {
