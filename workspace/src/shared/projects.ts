@@ -270,6 +270,19 @@ export const coverToShow = (project: Pick<Project, 'iterations'>): { name: strin
 	const pictured = workOf(project.iterations, 'prototype').find((i) => asCover(i.cover) !== null);
 	return pictured ? { name: pictured.name, cover: pictured.cover as string } : null;
 };
+/**
+ * What pressing a project does, the same for its card and its row: into its newest prototype in the app; or, for a project
+ * with only codebase work, out to that work on GitHub, in the browser; or nothing, for a project with neither (nothing made
+ * yet, or codebase work whose record does not say where it is). `label` names it, for a screen reader.
+ */
+export type ProjectOpening = { kind: 'app'; label: string; iteration: ProjectIteration } | { kind: 'link'; label: string; url: string };
+export const projectOpening = (project: Pick<Project, 'title' | 'iterations'>): ProjectOpening | null => {
+	const newest = workOf(project.iterations, 'prototype')[0];
+	if (newest !== undefined) return { kind: 'app', label: `Open ${project.title}`, iteration: newest };
+	const url = projectCodeLink(project);
+	return url === null ? null : { kind: 'link', label: `Open ${project.title} on GitHub`, url };
+};
+
 /** The list with pictures just made taken in, and nothing else changed: the same list when there are none. */
 export const withCovers = (projects: Project[], made: MadeCover[]): Project[] => {
 	if (made.length === 0) return projects;

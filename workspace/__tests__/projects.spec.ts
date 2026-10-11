@@ -30,6 +30,7 @@ import {
 	workOf,
 	asCover,
 	coverToShow,
+	projectOpening,
 	withCovers,
 } from '../src/shared/projects';
 import { readFolderProjects } from '../src/main/services/localProjects';
@@ -534,5 +535,29 @@ describe('the picture on a project’s card', () => {
 	it('reads a picture’s hash, and nothing that is not one', () => {
 		expect(asCover('0123456789ab')).toBe('0123456789ab');
 		for (const bad of ['0123456789AB', '0123456789a', '../x', 12, null, undefined]) expect(asCover(bad)).toBeNull();
+	});
+});
+
+describe('what pressing a project does', () => {
+	const v = (name: string, day: number) => it1({ name, branch: `prototype/alpha/${name}`, createdAt: `2026-10-0${day}T00:00:00Z` });
+	const code = it1({ name: 'codebase', branch: 'feature/alpha', repository: 'flocksafety/flock-coke' });
+
+	it('opens its newest prototype in the app', () => {
+		const older = v('v1-i1', 1);
+		const newest = v('v1-i2', 2);
+		expect(projectOpening(project('alpha', { title: 'Alpha', iterations: [older, newest, code] }))).toEqual({ kind: 'app', label: 'Open Alpha', iteration: newest });
+	});
+
+	it('opens a project with only codebase work on GitHub, in the browser', () => {
+		expect(projectOpening(project('alpha', { title: 'Alpha', iterations: [code] }))).toEqual({
+			kind: 'link',
+			label: 'Open Alpha on GitHub',
+			url: 'https://github.com/flocksafety/flock-coke/tree/feature/alpha',
+		});
+	});
+
+	it('is nothing for a project with nothing made, or with codebase work that does not say where it is', () => {
+		expect(projectOpening(project('alpha', { iterations: [] }))).toBeNull();
+		expect(projectOpening(project('alpha', { iterations: [{ ...code, repository: null }] }))).toBeNull();
 	});
 });

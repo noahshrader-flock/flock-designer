@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { CardCover } from './CardCover';
 import { CardGrid } from './CardGrid';
+import { ROW_LAYOUT, RowList, THUMBNAIL } from './ListRow';
 import { Card, CardFooter } from './ui/card';
 import { COMPONENT_FOOTER, PROJECT_FOOTER } from './cardFooters';
 import { Skeleton } from './ui/skeleton';
@@ -57,16 +58,22 @@ export const CardGridSkeleton = ({ detail = false, count = 6 }: { detail?: boole
 	</CardGrid>
 );
 
-/** A list of rows while it loads, in the list's own box: a name and a line under it. */
-export const RowsSkeleton = ({ count = 6 }: { count?: number }) => (
-	<ul className="bg-card divide-y rounded-lg border">
+/**
+ * A list of rows while it loads, in the list's own box: a name and a line under it, and with `thumbnails` the picture's
+ * shape at the left, as a list with pictures has, so nothing jumps when its rows arrive.
+ */
+export const RowsSkeleton = ({ count = 6, thumbnails = false }: { count?: number; thumbnails?: boolean }) => (
+	<RowList>
 		{Array.from({ length: count }, (_, i) => (
-			<li key={i} className="flex flex-col gap-1.5 px-4 py-3">
-				<Skeleton className="h-4 w-1/4" />
-				<Skeleton className="h-4 w-2/5" />
+			<li key={i} className={ROW_LAYOUT}>
+				{thumbnails && <Skeleton data-thumbnail-skeleton className={`rounded-md ${THUMBNAIL}`} />}
+				<div className="flex grow flex-col gap-1.5">
+					<Skeleton className="h-4 w-1/4" />
+					<Skeleton className="h-4 w-2/5" />
+				</div>
 			</li>
 		))}
-	</ul>
+	</RowList>
 );
 
 /** Lines of text while they load, the last one shorter, as a paragraph ends. */

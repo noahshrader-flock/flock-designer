@@ -1,4 +1,4 @@
-import { ChevronDownIcon, ChevronRightIcon, GitBranchIcon, InfoIcon, LayoutGridIcon, LayoutListIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { ChevronDownIcon, GitBranchIcon, InfoIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { matchesComponent } from '../shared/catalog';
 import type {
@@ -21,7 +21,7 @@ import { GroupTrigger, useClosedGroups } from './GroupAccordion';
 import { MoreMenu } from './MoreMenu';
 import { NoMatches } from './NoMatches';
 import { Page } from './Page';
-import { PICTURE_SHAPE, PictureArea } from './PictureArea';
+import { ListRow, RowList } from './ListRow';
 import { Primitives } from './Primitives';
 import { TOKENS_PANEL } from './panelWidth';
 import { ResizablePanel } from './ResizablePanel';
@@ -35,6 +35,7 @@ import { TokenChangesProvider, useTokenChangesFor } from './tokenChanges';
 import { Skeleton } from './ui/skeleton';
 import { undeclared } from '../shared/wcag';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
+import { ViewSwitcher, useRememberedView } from './ViewSwitcher';
 import { Toolbar } from './Toolbar';
 import { VoiceAndTone } from './VoiceAndTone';
 import { Accordion, AccordionContent, AccordionItem } from './ui/accordion';
@@ -64,18 +65,14 @@ const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
  * and description. The whole row opens it, and the chevron says so. Its links are on its own page.
  */
 const Row = ({ component, picture, drawing, onOpen }: { component: CatalogComponent; picture: string | undefined; drawing: boolean; onOpen: () => void }) => (
-	<li data-component={component.id}>
-		<button type="button" className="hover:bg-muted/50 flex w-full items-center gap-4 px-4 py-3 text-left" onClick={onOpen}>
-			<span data-thumbnail className={`relative h-10 shrink-0 overflow-hidden rounded-md border ${PICTURE_SHAPE}`}>
-				<PictureArea picture={picture} drawing={drawing} />
-			</span>
-			<span className="flex min-w-0 grow flex-col gap-0.5">
-				<span className="text-sm font-medium">{component.name}</span>
-				{component.subtitle && <span className="text-muted-foreground text-sm">{component.subtitle}</span>}
-			</span>
-			<ChevronRightIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />
-		</button>
-	</li>
+	<ListRow
+		data={{ 'data-component': component.id }}
+		name={component.name}
+		detail={component.subtitle && <span className="text-muted-foreground text-sm">{component.subtitle}</span>}
+		picture={picture}
+		drawing={drawing}
+		onOpen={onOpen}
+	/>
 );
 
 /**
@@ -126,29 +123,7 @@ const DesignSystemSwitcher = ({
 type PanelView = 'tokens' | 'component';
 
 /** The components as a list of rows, or a grid of cards with pictures (P5): chosen with the switch, remembered. */
-type ComponentsView = 'list' | 'grid';
 const VIEW_KEY = 'dsnr.componentsView';
-const rememberedView = (): ComponentsView => (localStorage.getItem(VIEW_KEY) === 'grid' ? 'grid' : 'list');
-
-/** List or Grid, as a button group with the one shown pressed, at the right of the search. */
-const ViewSwitcher = ({ view, onSelect }: { view: ComponentsView; onSelect: (view: ComponentsView) => void }) => (
-	<ToggleGroup
-		type="single"
-		variant="outline"
-		spacing={0}
-		aria-label="View"
-		value={view}
-		// Pressing the one shown would unpress it, leaving none: it stays.
-		onValueChange={(next) => (next === 'list' || next === 'grid') && next !== view && onSelect(next)}
-	>
-		<ToggleGroupItem value="list" aria-label="List">
-			<LayoutListIcon />
-		</ToggleGroupItem>
-		<ToggleGroupItem value="grid" aria-label="Grid">
-			<LayoutGridIcon />
-		</ToggleGroupItem>
-	</ToggleGroup>
-);
 
 /** No tokens, the same each time, while the library is not read; and the default target, until it says its own. */
 const NO_TOKENS: DesignToken[] = [];
@@ -263,11 +238,7 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 	// Where it is kept, once saved (T4), and proposed (T5).
 	const branch = useTokenBranch(systems.current, edits, setEdits);
 	// The components as a list or a grid of cards with pictures (P5), as last chosen; the pictures while the grid shows.
-	const [componentsView, setComponentsView] = useState<ComponentsView>(rememberedView);
-	const chooseView = (view: ComponentsView) => {
-		setComponentsView(view);
-		localStorage.setItem(VIEW_KEY, view);
-	};
+	const [componentsView, chooseView] = useRememberedView(VIEW_KEY);
 	// The pictures are the list's thumbnails and the grid's covers alike, so they are asked for whichever is shown.
 	const pictures = useComponentPictures(!hidden && catalog?.state === 'ready', catalog?.state === 'ready' ? catalog.commit : null);
 	// What is typed in the search over the list: the list or grid is narrowed to what matches.
@@ -360,7 +331,7 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 				<Toolbar>
 					<Skeleton className="h-5 w-40" />
 				</Toolbar>
-				<Page>{componentsView === 'grid' ? <CardGridSkeleton /> : <RowsSkeleton />}</Page>
+				<Page>{componentsView === 'grid' ? <CardGridSkeleton /> : <RowsSkeleton thumbnails />}</Page>
 			</SkeletonStatus>
 		);
 	if (catalog.state === 'none') return <ConnectDesignSystem onConnected={() => void showAnother()} />;
@@ -470,11 +441,11 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 														))}
 													</CardGrid>
 												) : (
-													<ul className="bg-card divide-y rounded-lg border">
+													<RowList>
 														{rows.map((c) => (
 															<Row key={c.id} component={c} picture={pictures.pictures[c.id]} drawing={pictures.drawing} onOpen={() => openComponent(c.id)} />
 														))}
-													</ul>
+													</RowList>
 												)}
 											</AccordionContent>
 										</AccordionItem>

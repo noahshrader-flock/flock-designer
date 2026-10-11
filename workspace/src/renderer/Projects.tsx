@@ -3,7 +3,9 @@ import type { Checkout, CheckoutSuggestion, Project, ProjectIteration } from '..
 import { CardGrid } from './CardGrid';
 import { NewWork, type Created } from './NewWork';
 import { Page } from './Page';
+import { RowList } from './ListRow';
 import { ProjectCard } from './ProjectCard';
+import { ProjectRow } from './ProjectRow';
 import { ProjectSort } from './ProjectSort';
 import { PublishBanner, PublishLine, usePublishStatus } from './PublishStatus';
 import { Review } from './Review';
@@ -15,7 +17,11 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { NoMatches } from './NoMatches';
 import { SearchField } from './SearchField';
-import { CardGridSkeleton, SkeletonStatus } from './Skeletons';
+import { CardGridSkeleton, RowsSkeleton, SkeletonStatus } from './Skeletons';
+import { ViewSwitcher, useRememberedView } from './ViewSwitcher';
+
+/** Where the screen's choice of list or grid is kept: its own, apart from the Design System's. */
+const VIEW_KEY = 'dsnr.projectsView';
 
 /**
  * Reviewer mode: every project in the design repository, read through the API.
@@ -33,6 +39,8 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 	const [search, setSearch] = useState('');
 	// The most recent activity first, until it is changed.
 	const [order, setOrder] = useState<ProjectOrder>('updated');
+	// Cards in a grid, as the screen has always been, or rows in a list: as last chosen here.
+	const [view, chooseView] = useRememberedView(VIEW_KEY, 'grid');
 	const [looked, setLooked] = useState(false);
 	const [suggestion, setSuggestion] = useState<CheckoutSuggestion | null>(null);
 	const [publishStatus, setPublishStatus] = usePublishStatus();
@@ -127,6 +135,8 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 		(projects ?? []).filter((p) => matchesProject(p, search)),
 		order,
 	);
+	// Opening a project into one of its prototypes, from its card or its row alike.
+	const openIn = (project: Project) => (iteration: ProjectIteration) => setSelected({ project, iteration });
 
 	return (
 		<>
@@ -143,6 +153,8 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 				<div className="flex items-center gap-2">
 					{/* Where syncing is, beside the button that starts it, so the two always read together. */}
 					<PublishLine status={publishStatus} />
+					{/* List or grid, at the immediate left of Sync; nothing to switch while there are no projects. */}
+					{projects !== null && projects.length > 0 && <ViewSwitcher view={view} onSelect={chooseView} />}
 					{/* Sync sends what is waiting and reads what is new, rather than waiting for the next trigger. */}
 					<SyncButton
 						syncing={syncing}
@@ -201,11 +213,9 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 					}}
 				/>
 
-				{/* The cards' shapes until the projects are read, under the screen's own toolbar. */}
+				{/* The shapes of what is coming, cards or rows, until the projects are read, under the screen's own toolbar. */}
 				{projects === null && (
-					<SkeletonStatus label="Loading projects…">
-						<CardGridSkeleton detail />
-					</SkeletonStatus>
+					<SkeletonStatus label="Loading projects…">{view === 'grid' ? <CardGridSkeleton detail /> : <RowsSkeleton thumbnails />}</SkeletonStatus>
 				)}
 
 				{projects?.length === 0 && (
@@ -218,17 +228,20 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 					<NoMatches thing="project" search={search} onClear={() => setSearch('')} />
 				)}
 
-				{matching.length > 0 && (
-					<CardGrid>
-						{matching.map((project) => (
-							<ProjectCard
-								key={project.id}
-								project={project}
-								onOpen={(iteration) => setSelected({ project, iteration })}
-							/>
-						))}
-					</CardGrid>
-				)}
+				{matching.length > 0 &&
+					(view === 'grid' ? (
+						<CardGrid>
+							{matching.map((project) => (
+								<ProjectCard key={project.id} project={project} onOpen={openIn(project)} />
+							))}
+						</CardGrid>
+					) : (
+						<RowList>
+							{matching.map((project) => (
+								<ProjectRow key={project.id} project={project} onOpen={openIn(project)} />
+							))}
+						</RowList>
+					))}
 			</Page>
 		</>
 	);
