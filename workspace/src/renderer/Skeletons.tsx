@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { CardCover } from './CardCover';
 import { CardGrid } from './CardGrid';
 import { Card, CardFooter } from './ui/card';
+import { COMPONENT_FOOTER, PROJECT_FOOTER } from './cardFooters';
 import { Skeleton } from './ui/skeleton';
 
 /**
@@ -20,32 +21,38 @@ export const SkeletonStatus = ({ label, className, children }: { label: string; 
 	</div>
 );
 
-/** A card of a grid while its content loads: a picture's cover (`picture`), or the card's own color with a name at its foot. */
-export const CardSkeleton = ({ picture = false }: { picture?: boolean }) => (
+/**
+ * A card of a grid while its content loads: the cover, and a footer of one row, a component's name and group, or of two
+ * (`detail`), a project's name and under it who it is by and what it has. The same sizes as the cards, so nothing jumps.
+ */
+export const CardSkeleton = ({ detail = false }: { detail?: boolean }) => (
 	<Card className="pt-0">
-		{picture ? (
-			<CardCover bleed>
-				<Skeleton className="absolute inset-0 rounded-none" />
-			</CardCover>
-		) : (
-			<CardCover>
-				<span />
-				<Skeleton className="h-5 w-2/5" />
-			</CardCover>
-		)}
+		<CardCover>
+			<Skeleton className="absolute inset-0 rounded-none" />
+		</CardCover>
 		{/* The footer is the skeleton's own color (muted), so its lines are a shade of the text instead, to be seen on it. */}
-		<CardFooter className="mt-auto flex h-12 items-center justify-between gap-2 pr-3 pl-4.5">
-			<Skeleton className="bg-foreground/10 h-4 w-1/3" />
-			<Skeleton className="bg-foreground/10 h-4 w-1/5" />
-		</CardFooter>
+		{detail ? (
+			<CardFooter className={PROJECT_FOOTER}>
+				<Skeleton className="bg-foreground/10 h-4 w-2/5" />
+				<div className="flex items-center justify-between gap-2">
+					<Skeleton className="bg-foreground/10 h-4 w-1/3" />
+					<Skeleton className="bg-foreground/10 h-4 w-1/5" />
+				</div>
+			</CardFooter>
+		) : (
+			<CardFooter className={COMPONENT_FOOTER}>
+				<Skeleton className="bg-foreground/10 h-4 w-1/3" />
+				<Skeleton className="bg-foreground/10 h-4 w-1/5" />
+			</CardFooter>
+		)}
 	</Card>
 );
 
 /** A grid of cards while they load: a row or two's worth. */
-export const CardGridSkeleton = ({ picture = false, count = 6 }: { picture?: boolean; count?: number }) => (
+export const CardGridSkeleton = ({ detail = false, count = 6 }: { detail?: boolean; count?: number }) => (
 	<CardGrid>
 		{Array.from({ length: count }, (_, i) => (
-			<CardSkeleton key={i} picture={picture} />
+			<CardSkeleton key={i} detail={detail} />
 		))}
 	</CardGrid>
 );

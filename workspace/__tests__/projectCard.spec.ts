@@ -2,12 +2,14 @@
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProjectCard } from '../src/renderer/ProjectCard';
+import { CardSkeleton } from '../src/renderer/Skeletons';
 import type { Project, ProjectIteration } from '../src/shared/contract';
 import { press, render, unmountAll } from './reviewHarness';
 
 /**
- * A project card in the Projects grid: the project's name on the cover; in the footer, who it is by at the left and how
- * many comments its prototypes have at the right; and the whole card a way into its newest prototype. A project with only
+ * A project card in the Projects grid, shaped as a component's is: the top is the preview (empty until there is one); the
+ * footer has the project's name on a row of its own, and under it who it is by at the left and how many versions and
+ * comments its prototypes have at the right. The whole card is a way into its newest prototype. A project with only
  * codebase work links to it on GitHub instead. Against the card on its own.
  */
 
@@ -45,6 +47,9 @@ const show = async (p: Project) => {
 const card = () => document.querySelector<HTMLElement>('[data-slot="card"]')!;
 const cover = () => document.querySelector('[data-slot="card-cover"]')!;
 const footer = () => document.querySelector<HTMLElement>('[data-slot="card-footer"]')!;
+/** The footer's two rows: the name, then who it is by and what it has. */
+const nameRow = () => footer().children[0]!;
+const details = () => footer().children[1]!;
 
 afterEach(async () => {
 	if (current) await unmountAll(current.root);
@@ -53,26 +58,45 @@ afterEach(async () => {
 });
 
 describe('the cover', () => {
-	it('has the project’s name at its bottom left, and nobody on it: who it is by is in the footer', async () => {
+	it('is the preview, empty for now, in the soft color of a component card with no picture; the name and who it is by are in the footer', async () => {
 		await show(project({ iterations: [NEWEST], people: [NOAH] }));
-		const [top, bottom] = [...cover().children];
-		expect(bottom!.textContent).toBe('Admin usage');
-		expect(bottom!.className.split(' ')).toContain('text-lg');
+		const area = cover().querySelector('[data-preview-area]')!;
+		expect(area).not.toBeNull();
+		expect(area.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'inset-0', 'bg-muted/40']));
+		expect(cover().textContent).toBe('');
 		expect(cover().querySelector('[data-slot="avatar"]')).toBeNull();
-		expect(top!.textContent).toBe('');
-		expect(cover().className).not.toMatch(/\bbg-/);
 	});
 
-	it('says at its top when the project is only on this machine', async () => {
+	it('is the same cover a component card has, the same size', async () => {
+		await show(project({ iterations: [NEWEST] }));
+		const classes = cover().className.split(' ');
+		expect(classes).toEqual(expect.arrayContaining(['aspect-[1920/960]', 'w-full', 'relative', 'overflow-hidden']));
+	});
+
+	it('says at its top left when the project is only on this machine', async () => {
 		await show(project({ localOnly: true, iterations: [NEWEST] }));
-		expect(cover().children[0]!.textContent).toContain('Only on this machine');
+		const badge = [...cover().querySelectorAll('[data-slot="badge"]')].find((b) => b.textContent === 'Only on this machine')!;
+		expect(badge).toBeTruthy();
+		expect(badge.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'top-2', 'left-2']));
 	});
 });
 
 describe('the footer', () => {
-	it('has who it is by at the left and how many comments its prototypes have at the right', async () => {
+	it('has the project’s name on a row of its own, as a component card names itself, one line and cut short when long', async () => {
+		await show(project({ iterations: [NEWEST], people: [NOAH] }));
+		expect(footer().children).toHaveLength(2);
+		expect(nameRow().textContent).toBe('Admin usage');
+		expect(nameRow().getAttribute('data-slot')).toBe('card-title');
+		// It keeps its whole line: squeezed by the rows around it, it would lose the bottom of its letters.
+		expect(nameRow().className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'text-sm', 'font-semibold', 'shrink-0']));
+		// Above who it is by, not beside it.
+		expect(nameRow().compareDocumentPosition(details()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(details().contains(nameRow())).toBe(false);
+	});
+
+	it('has, under the name, who it is by at the left and how many comments its prototypes have at the right', async () => {
 		await show(project({ iterations: [iteration({ ...NEWEST, openComments: 3 }), iteration({ ...OLDER, openComments: 2 })], people: [NOAH] }));
-		const [left, right] = [...footer().children];
+		const [left, right] = [...details().children];
 		expect(left!.querySelector('[data-slot="avatar"]')!.getAttribute('data-size')).toBe('xs');
 		expect(left!.querySelector('.truncate')!.textContent).toBe('Noah Shrader');
 		// Every prototype's comments, together.
@@ -80,13 +104,13 @@ describe('the footer', () => {
 		expect(comments.getAttribute('aria-label')).toBe('5 comments');
 		expect(comments.textContent).toBe('5');
 		expect(comments.querySelector('.lucide-message-square')).not.toBeNull();
-		expect(footer().className.split(' ')).toContain('justify-between');
+		expect(details().className.split(' ')).toContain('justify-between');
 	});
 
 	it('says how many others there are, and names them on hover', async () => {
 		await show(project({ iterations: [NEWEST], people: [NOAH, { name: 'Sam Lee', login: 'sam' }, { name: 'Ava Cho', login: null }] }));
-		expect(footer().textContent).toContain('Noah Shrader');
-		expect(footer().textContent).toContain('+2');
+		expect(details().textContent).toContain('Noah Shrader');
+		expect(details().textContent).toContain('+2');
 		expect(footer().textContent).not.toContain('Sam Lee');
 	});
 
@@ -109,12 +133,12 @@ describe('the footer', () => {
 		await unmountAll(current!.root);
 		await show(project());
 		expect(footer().className).toBe(withPeople);
-		expect(withPeople.split(' ')).toContain('h-12');
+		expect(withPeople.split(' ')).toContain('h-20');
 	});
 });
 
 describe('how many versions it has', () => {
-	const at = () => footer().children[1]!;
+	const at = () => details().children[1]!;
 	const v = (name: string) => iteration({ name, branch: `prototype/admin-usage/${name}` });
 
 	it('says so before the comments, with a bullet between, all in the gray of the comment count', async () => {
@@ -148,6 +172,18 @@ describe('how many versions it has', () => {
 	});
 });
 
+describe('while it loads', () => {
+	it('is a skeleton the same size: the same cover, and a footer of two rows with the same height', async () => {
+		await show(project({ iterations: [NEWEST], people: [NOAH] }));
+		const real = { cover: cover().className, footer: footer().className };
+		await unmountAll(current!.root);
+		current = await render(createElement(CardSkeleton, { detail: true }));
+		expect(cover().className).toBe(real.cover);
+		expect(footer().className).toBe(real.footer);
+		expect(footer().children).toHaveLength(2);
+	});
+});
+
 describe('opening it', () => {
 	it('is the whole card, into its newest prototype', async () => {
 		const { onOpen } = await show(project({ iterations: [OLDER, NEWEST] }));
@@ -176,7 +212,7 @@ describe('a project with only codebase work', () => {
 
 	it('says Built in code in the gray of the comment count, with no icon beside it', async () => {
 		await show(project({ iterations: [CODEBASE], people: [NOAH] }));
-		const [left, right] = [...footer().children];
+		const [left, right] = [...details().children];
 		expect(left!.querySelector('.truncate')!.textContent).toBe('Noah Shrader');
 		expect(right!.textContent).toBe('Built in code');
 		expect(right!.className.split(' ')).toContain('text-muted-foreground');
@@ -184,14 +220,11 @@ describe('a project with only codebase work', () => {
 		expect(footer().querySelector('a')).toBeNull();
 	});
 
-	it('has the external-link icon at the top right of the card, in that gray', async () => {
+	it('has the external-link icon at the top right of the cover, in that gray', async () => {
 		await show(project({ iterations: [CODEBASE] }));
-		const top = cover().children[0]!;
-		const icon = top.querySelector('.lucide-external-link')!;
+		const icon = cover().querySelector('.lucide-external-link')!;
 		expect(icon).not.toBeNull();
-		expect(top.lastElementChild!.contains(icon)).toBe(true);
-		expect(top.className.split(' ')).toContain('justify-between');
-		expect(icon.closest('.text-muted-foreground')).not.toBeNull();
+		expect(icon.getAttribute('class')!.split(' ')).toEqual(expect.arrayContaining(['absolute', 'top-2', 'right-2', 'text-muted-foreground']));
 	});
 
 	it('is the whole card a way to GitHub: it opens the link, in the browser, and is not a way into the app', async () => {

@@ -2,6 +2,7 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ComponentCard } from '../src/renderer/ComponentCard';
+import { CardSkeleton } from '../src/renderer/Skeletons';
 import type { CatalogComponent } from '../src/shared/contract';
 import { render, unmountAll } from './reviewHarness';
 
@@ -56,6 +57,17 @@ describe('a component’s card', () => {
 		expect(img.className).toContain('opacity-100');
 		// White behind it once it is there, as the stories are drawn on white; the placeholder's gray until then.
 		expect(document.querySelector('[data-picture-area]')?.className).toContain('bg-white');
+	});
+});
+
+describe('while it loads', () => {
+	it('is a skeleton the same size: the same cover, and a footer of one row with the same height', async () => {
+		current = await render(createElement(ComponentCard, { component: COMPONENT, picture: undefined, onOpen: () => undefined }));
+		const real = { cover: document.querySelector('[data-slot="card-cover"]')!.className, footer: document.querySelector('[data-slot="card-footer"]')!.className };
+		await unmountAll(current.root);
+		current = await render(createElement(CardSkeleton));
+		expect(document.querySelector('[data-slot="card-cover"]')!.className).toBe(real.cover);
+		expect(document.querySelector('[data-slot="card-footer"]')!.className).toBe(real.footer);
 	});
 });
 

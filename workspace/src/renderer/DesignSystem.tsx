@@ -347,7 +347,7 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 				<Toolbar>
 					<Skeleton className="h-5 w-40" />
 				</Toolbar>
-				<Page>{componentsView === 'grid' ? <CardGridSkeleton picture /> : <RowsSkeleton />}</Page>
+				<Page>{componentsView === 'grid' ? <CardGridSkeleton /> : <RowsSkeleton />}</Page>
 			</SkeletonStatus>
 		);
 	if (catalog.state === 'none') return <ConnectDesignSystem onConnected={() => void showAnother()} />;

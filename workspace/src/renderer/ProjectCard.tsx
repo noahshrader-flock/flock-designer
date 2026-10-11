@@ -4,6 +4,7 @@ import type { Project, ProjectIteration } from '../shared/contract';
 import { plural } from '../shared/plural';
 import { byVersion, projectCodeLink, workOf } from '../shared/projects';
 import { CardCover } from './CardCover';
+import { PROJECT_FOOTER } from './cardFooters';
 import { PRESSABLE_CARD, pressableCard } from './pressableCard';
 import { PeopleLine } from './People';
 import { Badge } from './ui/badge';
@@ -16,8 +17,9 @@ const commentsOn = (prototypes: ProjectIteration[]): number => prototypes.reduce
 const Aside = ({ children }: { children: ReactNode }) => <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-sm">{children}</span>;
 
 /**
- * A project in the Projects grid. The cover, in the card's own color, has the project's name at its bottom left (and at
- * its top whether it is only on this machine). The footer has who it is by at the left and, at the right in gray, how
+ * A project in the Projects grid, shaped as a component's is (`ComponentCard`): the cover is the preview, empty for now in
+ * the soft color of a component with no picture, with whether the project is only on this machine at its top left. The
+ * footer has the project's name on a row of its own, and under it who it is by at the left and, at the right in gray, how
  * many versions the project has and how many comments its prototypes have (or Built in code, or Nothing made yet). It is
  * the same height on every card, so a row of cards lines up.
  *
@@ -39,30 +41,35 @@ export const ProjectCard = ({ project, onOpen }: { project: Project; onOpen: (it
 	const way = go === null ? {} : pressableCard(newest ? `Open ${project.title}` : `Open ${project.title} on GitHub`, go, newest ? 'button' : 'link');
 	return (
 		<Card className={`pt-0 ${go ? PRESSABLE_CARD : ''}`} {...way}>
+			{/* The preview, when there is one: it fills the cover, as a component's picture does. */}
 			<CardCover>
-				{/* Always there, so the name stays at the bottom when there is nothing to put at the top. */}
-				<div className="flex items-start justify-between gap-2">
-					<span className="flex flex-wrap items-center gap-2">{project.localOnly && <Badge variant="secondary">Only on this machine</Badge>}</span>
-					{!newest && link && <ExternalLinkIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
-				</div>
-				<CardTitle className="line-clamp-2 text-lg font-semibold">{project.title}</CardTitle>
-			</CardCover>
-			<CardFooter className="mt-auto flex h-12 items-center justify-between gap-2 pr-3 pl-4.5">
-				{project.people.length > 0 ? <PeopleLine people={project.people} /> : <span />}
-				{newest ? (
-					<Aside>
-						<span>{plural(versions, 'version')}</span>
-						<span aria-hidden>•</span>
-						<span className="flex items-center gap-1" aria-label={plural(comments, 'comment')}>
-							<MessageSquareIcon className="size-3.5" />
-							{comments}
-						</span>
-					</Aside>
-				) : codebase ? (
-					<Aside>Built in code</Aside>
-				) : (
-					<Aside>Nothing made yet</Aside>
+				<div data-preview-area className="bg-muted/40 absolute inset-0" />
+				{project.localOnly && (
+					<Badge variant="secondary" className="absolute top-2 left-2 z-10">
+						Only on this machine
+					</Badge>
 				)}
+				{!newest && link && <ExternalLinkIcon aria-hidden className="text-muted-foreground absolute top-2 right-2 z-10 size-4" />}
+			</CardCover>
+			<CardFooter className={PROJECT_FOOTER}>
+				<CardTitle className="shrink-0 truncate text-sm font-semibold">{project.title}</CardTitle>
+				<div className="flex items-center justify-between gap-2">
+					{project.people.length > 0 ? <PeopleLine people={project.people} /> : <span />}
+					{newest ? (
+						<Aside>
+							<span>{plural(versions, 'version')}</span>
+							<span aria-hidden>•</span>
+							<span className="flex items-center gap-1" aria-label={plural(comments, 'comment')}>
+								<MessageSquareIcon className="size-3.5" />
+								{comments}
+							</span>
+						</Aside>
+					) : codebase ? (
+						<Aside>Built in code</Aside>
+					) : (
+						<Aside>Nothing made yet</Aside>
+					)}
+				</div>
 			</CardFooter>
 		</Card>
 	);

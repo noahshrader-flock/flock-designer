@@ -200,7 +200,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 				{/* The cards' shapes until the projects are read, under the screen's own toolbar. */}
 				{projects === null && (
 					<SkeletonStatus label="Loading projects…">
-						<CardGridSkeleton />
+						<CardGridSkeleton detail />
 					</SkeletonStatus>
 				)}
 

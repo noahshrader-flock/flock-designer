@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { summaryOf } from '../shared/accessibility';
 import type { AccessibilityCounts, CatalogComponent } from '../shared/contract';
 import { CardCover } from './CardCover';
+import { COMPONENT_FOOTER } from './cardFooters';
 import { PRESSABLE_CARD, pressableCard } from './pressableCard';
 import { Badge } from './ui/badge';
 import { Card, CardFooter, CardTitle } from './ui/card';
@@ -45,7 +46,7 @@ export const ComponentCard = ({
 			{...pressableCard(`Open ${component.name}${issues?.violations ? `, ${summaryOf(issues)}` : ''}`, onOpen)}
 		>
 			{/* The picture is the cover: edge to edge, with a skeleton behind it until it has loaded. */}
-			<CardCover bleed>
+			<CardCover>
 				<div data-picture-area className={`absolute inset-0 ${shown && loaded === shown ? 'bg-white' : 'bg-muted/40'}`}>
 					{waiting && <Skeleton data-picture-waiting className="absolute inset-0 rounded-none" />}
 					{issues && issues.violations > 0 && (
@@ -66,7 +67,7 @@ export const ComponentCard = ({
 					)}
 				</div>
 			</CardCover>
-			<CardFooter className="mt-auto flex h-12 items-center justify-between gap-2 pr-3 pl-4.5">
+			<CardFooter className={COMPONENT_FOOTER}>
 				<CardTitle className="truncate text-sm font-semibold">{component.name}</CardTitle>
 				<span className="text-muted-foreground shrink-0 truncate text-sm">{component.group}</span>
 			</CardFooter>
