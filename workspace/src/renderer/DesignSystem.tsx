@@ -21,6 +21,7 @@ import { GroupTrigger, useClosedGroups } from './GroupAccordion';
 import { MoreMenu } from './MoreMenu';
 import { NoMatches } from './NoMatches';
 import { Page } from './Page';
+import { PICTURE_SHAPE, PictureArea } from './PictureArea';
 import { Primitives } from './Primitives';
 import { TOKENS_PANEL } from './panelWidth';
 import { ResizablePanel } from './ResizablePanel';
@@ -58,10 +59,16 @@ const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
 		</span>
 	) : null;
 
-/** A component in the list: the whole row opens it, and the chevron says so. Its links are on its own page. */
-const Row = ({ component, onOpen }: { component: CatalogComponent; onOpen: () => void }) => (
+/**
+ * A component in the list: its picture reduced at the left (a thumbnail, the grid's picture in the same shape), then its name
+ * and description. The whole row opens it, and the chevron says so. Its links are on its own page.
+ */
+const Row = ({ component, picture, drawing, onOpen }: { component: CatalogComponent; picture: string | undefined; drawing: boolean; onOpen: () => void }) => (
 	<li data-component={component.id}>
 		<button type="button" className="hover:bg-muted/50 flex w-full items-center gap-4 px-4 py-3 text-left" onClick={onOpen}>
+			<span data-thumbnail className={`relative h-10 shrink-0 overflow-hidden rounded-md border ${PICTURE_SHAPE}`}>
+				<PictureArea picture={picture} drawing={drawing} />
+			</span>
 			<span className="flex min-w-0 grow flex-col gap-0.5">
 				<span className="text-sm font-medium">{component.name}</span>
 				{component.subtitle && <span className="text-muted-foreground text-sm">{component.subtitle}</span>}
@@ -261,7 +268,8 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 		setComponentsView(view);
 		localStorage.setItem(VIEW_KEY, view);
 	};
-	const pictures = useComponentPictures(!hidden && componentsView === 'grid' && catalog?.state === 'ready', catalog?.state === 'ready' ? catalog.commit : null);
+	// The pictures are the list's thumbnails and the grid's covers alike, so they are asked for whichever is shown.
+	const pictures = useComponentPictures(!hidden && catalog?.state === 'ready', catalog?.state === 'ready' ? catalog.commit : null);
 	// What is typed in the search over the list: the list or grid is narrowed to what matches.
 	const [search, setSearch] = useState('');
 	// The groups closed up: they stay closed while a component is opened.
@@ -464,7 +472,7 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 												) : (
 													<ul className="bg-card divide-y rounded-lg border">
 														{rows.map((c) => (
-															<Row key={c.id} component={c} onOpen={() => openComponent(c.id)} />
+															<Row key={c.id} component={c} picture={pictures.pictures[c.id]} drawing={pictures.drawing} onOpen={() => openComponent(c.id)} />
 														))}
 													</ul>
 												)}

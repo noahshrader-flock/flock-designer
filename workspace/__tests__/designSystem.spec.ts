@@ -516,10 +516,12 @@ describe('the components as a list or a grid (P5)', () => {
 		expect(shownView()).toBe('Grid');
 	});
 
-	it('show each component’s picture in its card, and ask for the pictures only while the grid is shown', async () => {
+	it('show each component’s picture in its card, asked for as the tab is shown, in the list as in the grid', async () => {
 		const pictures = { [COMPONENTS[0]!.id]: 'http://127.0.0.1:1/component-pictures-x/0123456789abcdef.jpg' };
 		const app = await open(() => ok(ready()), false, { componentPictures: async () => ok({ drawing: false, pictures, issues: {} }) });
-		expect(app.calls.componentPictures).toBeUndefined();
+		await settle();
+		// Asked for in the list, which is the view it opens in: the rows have thumbnails.
+		expect(app.calls.componentPictures).toHaveLength(1);
 		await press(viewButton('Grid'));
 		await settle();
 		expect(app.calls.componentPictures).toHaveLength(1);
@@ -527,6 +529,57 @@ describe('the components as a list or a grid (P5)', () => {
 		// The others keep their cover, a placeholder of the same size.
 		expect(cards()[1]?.querySelector('img')).toBeNull();
 		expect(cards()[1]?.querySelector('[data-picture-area]')).not.toBeNull();
+	});
+
+	it('do not ask for the pictures while the tab is hidden', async () => {
+		const app = await open(() => ok(ready()), true);
+		expect(app.calls.componentPictures).toBeUndefined();
+	});
+});
+
+describe('a thumbnail in each row of the list', () => {
+	const PICTURE = 'http://127.0.0.1:1/component-pictures-x/0123456789abcdef.jpg';
+	const thumb = (name: string) => row(name).querySelector('button > [data-thumbnail]') as HTMLElement | null;
+
+	it('is the picture the grid shows, reduced, at the left of the name and its description', async () => {
+		await open(() => ok(ready()), false, { componentPictures: async () => ok({ drawing: false, pictures: { [COMPONENTS[0]!.id]: PICTURE }, issues: {} }) });
+		await settle();
+		const t = thumb('FSButton')!;
+		expect(t).not.toBeNull();
+		expect(t.querySelector('img')?.getAttribute('src')).toBe(PICTURE);
+		// First in the row, before the name, and the same shape as a card's cover, so it is the same picture, smaller.
+		expect(row('FSButton').querySelector('button')!.firstElementChild).toBe(t);
+		expect(t.className.split(' ')).toContain('aspect-[1920/960]');
+		expect(t.nextElementSibling!.textContent).toContain('FSButton');
+		// Decorative: the name is beside it.
+		expect(t.querySelector('img')?.getAttribute('alt')).toBe('');
+	});
+
+	it('is the soft placeholder, the same as a card’s, for a component with none, and has one on every row', async () => {
+		await open(() => ok(ready()), false, { componentPictures: async () => ok({ drawing: false, pictures: {}, issues: {} }) });
+		await settle();
+		for (const name of rows()) {
+			expect(thumb(name)).not.toBeNull();
+			expect(thumb(name)!.querySelector('img')).toBeNull();
+			expect(thumb(name)!.querySelector('[data-picture-area]')!.className.split(' ')).toContain('bg-muted/40');
+		}
+	});
+
+	it('is a skeleton while the pictures are being drawn, then the picture', async () => {
+		let drawing = true;
+		await open(() => ok(ready()), false, { componentPictures: async () => ok({ drawing, pictures: drawing ? {} : { [COMPONENTS[0]!.id]: PICTURE }, issues: {} }) });
+		await settle();
+		expect(thumb('FSButton')!.querySelector('[data-picture-waiting]')).not.toBeNull();
+		expect(thumb('FSCard')!.querySelector('[data-picture-waiting]')).not.toBeNull();
+		drawing = false;
+	});
+
+	it('does not open the component by itself, and the whole row still does', async () => {
+		await open(() => ok(ready()));
+		await settle();
+		expect(thumb('FSButton')!.querySelectorAll('button, a')).toHaveLength(0);
+		await press(thumb('FSButton')!);
+		expect(document.querySelector('h3')?.textContent).toBe('FSButton');
 	});
 });
 

@@ -5,6 +5,7 @@ import { plural } from '../shared/plural';
 import { byVersion, projectCodeLink, workOf } from '../shared/projects';
 import { CardCover } from './CardCover';
 import { CARD_DETAIL, CARD_NAME, PROJECT_FOOTER } from './cardFooters';
+import { PictureArea } from './PictureArea';
 import { PRESSABLE_CARD, pressableCard } from './pressableCard';
 import { PeopleLine } from './People';
 import { Badge } from './ui/badge';
@@ -41,9 +42,9 @@ export const ProjectCard = ({ project, onOpen }: { project: Project; onOpen: (it
 	const way = go === null ? {} : pressableCard(newest ? `Open ${project.title}` : `Open ${project.title} on GitHub`, go, newest ? 'button' : 'link');
 	return (
 		<Card className={`pt-0 ${go ? PRESSABLE_CARD : ''}`} {...way}>
-			{/* The picture, when there is one (the project's preview): it fills the cover, as a component's does. */}
+			{/* The picture, when there is one (the project's preview): it fills the cover, as a component's does; none yet. */}
 			<CardCover>
-				<div data-picture-area className="bg-muted/40 absolute inset-0" />
+				<PictureArea picture={undefined} />
 				{project.localOnly && (
 					<Badge variant="secondary" className="absolute top-2 left-2 z-10">
 						Only on this machine

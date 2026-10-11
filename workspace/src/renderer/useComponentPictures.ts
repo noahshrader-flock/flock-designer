@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import type { ComponentPictures } from '../shared/contract';
 
-/** How often the grid asks again while a pass that may replace its pictures is drawing. */
+/** How often the list and the grid ask again while a pass that may replace their pictures is drawing. */
 const ASK_EVERY_MS = 3000;
 
 /**
- * The pictures of the shown design system's components (P5), by story file, while `shown` (the grid is on screen):
+ * The pictures of the shown design system's components (P5), by story file, while `shown` (the list or the grid is on screen):
  * asked once, then again every few seconds while a pass is drawing, so each set appears as it is ready. The pictures
  * already there are kept meanwhile, never cleared. Asked again for another `commit` (a sync that moved the library).
- * `drawing` until the first answer says otherwise, so a card waits for its picture rather than saying it has none.
+ * `drawing` until the first answer says otherwise, so a card or a row waits for its picture rather than saying it has none.
  */
 export const useComponentPictures = (shown: boolean, commit: string | null): ComponentPictures => {
 	const [pictures, setPictures] = useState<ComponentPictures>({ drawing: true, pictures: {}, issues: {} });
