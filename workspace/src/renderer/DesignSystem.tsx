@@ -35,6 +35,7 @@ import { undeclared } from '../shared/wcag';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { Toolbar } from './Toolbar';
 import { VoiceAndTone } from './VoiceAndTone';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import {
@@ -262,6 +263,8 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 	const pictures = useComponentPictures(!hidden && componentsView === 'grid' && catalog?.state === 'ready', catalog?.state === 'ready' ? catalog.commit : null);
 	// What is typed in the search over the list: the list or grid is narrowed to what matches.
 	const [search, setSearch] = useState('');
+	// The groups closed up, by name: every group is open until it is closed, and stays closed while a component is opened.
+	const [closed, setClosed] = useState<string[]>([]);
 	// The change as every panel that shows tokens sees it: the tokens view and the component view alike.
 	const changes = useTokenChangesFor(
 		catalog?.state === 'ready' ? catalog.tokens.tokens : NO_TOKENS,
@@ -318,6 +321,7 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 		setCatalog(null);
 		setEdits([]);
 		setSearch('');
+		setClosed([]);
 		await listSystems();
 		await firstRead();
 	}, [openComponent, listSystems, firstRead]);
@@ -438,33 +442,41 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 							) : groups.length === 0 ? (
 								<NoMatches thing="component" search={search} onClear={() => setSearch('')} />
 							) : (
-								groups.map(({ group, rows }) => (
-									<section key={group} className="flex flex-col gap-2" aria-label={group}>
-										<h3 className="text-sm font-semibold">
-											{group} <span className="text-muted-foreground font-normal">{rows.length}</span>
-										</h3>
-										{componentsView === 'grid' ? (
-											<CardGrid>
-												{rows.map((c) => (
-													<ComponentCard
-														key={c.id}
-														component={c}
-														picture={pictures.pictures[c.id]}
-														drawing={pictures.drawing}
-														issues={pictures.issues[c.id]}
-														onOpen={() => openComponent(c.id)}
-													/>
-												))}
-											</CardGrid>
-										) : (
-											<ul className="bg-card divide-y rounded-lg border">
-												{rows.map((c) => (
-													<Row key={c.id} component={c} onOpen={() => openComponent(c.id)} />
-												))}
-											</ul>
-										)}
-									</section>
-								))
+								// The groups are an accordion, open until closed, as the tokens' are: a group is closed up on its own.
+								<Accordion type="multiple" value={groups.map((g) => g.group).filter((g) => !closed.includes(g))} onValueChange={(open) => setClosed(groups.map((g) => g.group).filter((g) => !open.includes(g)))}>
+									{groups.map(({ group, rows }) => (
+										<AccordionItem key={group} value={group} data-component-group={group}>
+											<AccordionTrigger>
+												<span className="flex items-baseline gap-2">
+													<span>{group}</span>
+													<span className="text-muted-foreground font-normal">{rows.length}</span>
+												</span>
+											</AccordionTrigger>
+											<AccordionContent>
+												{componentsView === 'grid' ? (
+													<CardGrid>
+														{rows.map((c) => (
+															<ComponentCard
+																key={c.id}
+																component={c}
+																picture={pictures.pictures[c.id]}
+																drawing={pictures.drawing}
+																issues={pictures.issues[c.id]}
+																onOpen={() => openComponent(c.id)}
+															/>
+														))}
+													</CardGrid>
+												) : (
+													<ul className="bg-card divide-y rounded-lg border">
+														{rows.map((c) => (
+															<Row key={c.id} component={c} onOpen={() => openComponent(c.id)} />
+														))}
+													</ul>
+												)}
+											</AccordionContent>
+										</AccordionItem>
+									))}
+								</Accordion>
 							)}
 						</Page>
 					</div>

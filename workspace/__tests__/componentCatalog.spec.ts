@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 import { designSystemOf, type DesignSystem } from '../src/shared/catalog';
-import { isStoryFile, literalField, readCatalog, sidebarOrder, storybookId, storybookUrl, UNGROUPED, type CatalogReads } from '../src/main/services/componentCatalog';
+import { isStoryFile, literalField, readCatalog, storybookId, storybookUrl, UNGROUPED, type CatalogReads } from '../src/main/services/componentCatalog';
 import { libraryReads } from '../src/main/services/designLibrary';
 
 /** A library made of files in memory. A file whose text is null cannot be read. */
@@ -91,38 +91,12 @@ describe('reading a story', () => {
 });
 
 describe('the order', () => {
-	const PREVIEW = `const preview = {
-  parameters: {
-    options: {
-      storySort: {
-        order: [
-          'Welcome',
-          'Design Tokens',
-          ['Color', 'Elevation'],
-          'Popovers',
-          "Inputs",
-          'Buttons',
-        ],
-      },
-    },
-  },
-};`;
-
-	it('reads the top level of the sidebar order the library’s Storybook sets, not a group’s own', () => {
-		expect(sidebarOrder(PREVIEW)).toEqual(['Welcome', 'Design Tokens', 'Popovers', 'Inputs', 'Buttons']);
-		expect(sidebarOrder('export default {};')).toEqual([]);
-		// Only the order inside storySort is the sidebar's: another setting called order, before it or without it, is not.
-		expect(sidebarOrder(`const steps = { order: ['first'] };\n${PREVIEW}`)).toEqual(['Welcome', 'Design Tokens', 'Popovers', 'Inputs', 'Buttons']);
-		expect(sidebarOrder("const steps = { order: ['first'] };")).toEqual([]);
-	});
-
-	it('puts groups in the sidebar’s order, others after it alphabetically, Ungrouped last, and names alphabetically', async () => {
+	it('is alphabetical: groups, then names within a group, whatever case they are written in, with Ungrouped last', async () => {
 		const catalog = await readCatalog(
 			library({
-				'.storybook/preview.tsx': PREVIEW,
 				'a/Zeta.stories.tsx': story('Popovers/Zeta'),
 				'a/Alpha.stories.tsx': story('Popovers/Alpha'),
-				'a/Field.stories.tsx': story('Inputs/Field'),
+				'a/Field.stories.tsx': story('inputs/Field'),
 				'a/primary.stories.tsx': story('Buttons/primary'),
 				'a/Big.stories.tsx': story('Buttons/Big'),
 				'a/Loose.stories.tsx': 'const meta = {};',
@@ -130,13 +104,16 @@ describe('the order', () => {
 			}),
 			DS,
 		);
-		// The library's order, which is not alphabetical: Popovers, Inputs, Buttons.
-		expect(catalog.map((c) => `${c.group}/${c.name}`)).toEqual(['Popovers/Alpha', 'Popovers/Zeta', 'Inputs/Field', 'Buttons/Big', 'Buttons/primary', 'Utils/Util', `${UNGROUPED}/Loose`]);
+		expect(catalog.map((c) => `${c.group}/${c.name}`)).toEqual(['Buttons/Big', 'Buttons/primary', 'inputs/Field', 'Popovers/Alpha', 'Popovers/Zeta', 'Utils/Util', `${UNGROUPED}/Loose`]);
 	});
 
-	it('orders alphabetically when the library sets no sidebar order', async () => {
-		const catalog = await readCatalog(library({ 'a/B.stories.tsx': story('Zed/B'), 'a/A.stories.tsx': story('Alpha/A') }), DS);
-		expect(catalog.map((c) => c.group)).toEqual(['Alpha', 'Zed']);
+	it('is the same whatever order the library’s own Storybook shows its sidebar in: it is not read', async () => {
+		const SIDEBAR = "const preview = { parameters: { options: { storySort: { order: ['Popovers', 'Inputs', 'Buttons'] } } } };";
+		const files = { 'a/B.stories.tsx': story('Buttons/B'), 'a/P.stories.tsx': story('Popovers/P'), 'a/I.stories.tsx': story('Inputs/I') };
+		const without = await readCatalog(library(files), DS);
+		const withSidebar = await readCatalog(library({ ...files, '.storybook/preview.tsx': SIDEBAR }), DS);
+		expect(withSidebar.map((c) => c.group)).toEqual(['Buttons', 'Inputs', 'Popovers']);
+		expect(withSidebar).toEqual(without);
 	});
 });
 
@@ -180,14 +157,13 @@ describe.skipIf(!hasBranch)('against the real library', () => {
 		expect(catalog.length).toBeGreaterThan(70);
 	});
 
-	it('reads every story title, in the sidebar order the library sets', async () => {
+	it('reads every story title, and lists the groups alphabetically', async () => {
 		const catalog = await readCatalog(reads, FUI);
 		expect(catalog.filter((c) => c.group === UNGROUPED).map((c) => c.id)).toEqual([]);
 		const groups = [...new Set(catalog.map((c) => c.group))];
-		// The library's own sidebar order, which is not alphabetical: Inputs before Data Display, Surfaces before Layout.
-		expect(groups.indexOf('Buttons')).toBeLessThan(groups.indexOf('Inputs'));
-		expect(groups.indexOf('Inputs')).toBeLessThan(groups.indexOf('Data Display'));
-		expect(groups.indexOf('Surfaces')).toBeLessThan(groups.indexOf('Layout'));
+		expect(groups).toEqual([...groups].sort((a, b) => a.localeCompare(b)));
+		// The library's own sidebar has Inputs before Data Display: this does not.
+		expect(groups.indexOf('Data Display')).toBeLessThan(groups.indexOf('Inputs'));
 	});
 
 	it("builds every Storybook id exactly as the library's own Storybook does", async () => {

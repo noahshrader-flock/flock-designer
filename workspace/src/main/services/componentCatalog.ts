@@ -1,7 +1,7 @@
 /**
  * The component library's catalog, as its Storybook has it, for the Design System tab. **Storybook is the source of
  * truth:** a component is a story file, wherever it is in the repository, named and grouped by its Storybook title and
- * ordered as the library's own `.storybook/preview` orders its sidebar. Nothing here knows how one library lays out its
+ * listed alphabetically. Nothing here knows how one library lays out its
  * folders or names its components, so a story added to the library is in the list, and a library set up like any other
  * Storybook library reads the same way. An index of the library, never a copy: no story is run here, nothing is compiled.
  *
@@ -27,7 +27,7 @@ const STORY_FILE = new RegExp(`\\.stories\\.(${SCRIPT_EXTENSIONS.join('|')})$`);
 /** A Storybook story file, by Storybook's own convention: `*.stories.` and a script extension. Docs pages (`.mdx`) are not components. */
 export const isStoryFile = (path: string): boolean => STORY_FILE.test(path);
 
-/** The library's Storybook preview set-up, where its sidebar order lives: `.storybook/preview` with a script extension. */
+/** The library's Storybook preview set-up: `.storybook/preview` with a script extension. */
 export const PREVIEW_CANDIDATES = SCRIPT_EXTENSIONS.map((e) => `.storybook/preview.${e}`);
 
 /** Storybook's own id rule (`sanitize` in `storybook/internal/csf`): lowercased, punctuation and spaces as one `-`. */
@@ -53,32 +53,6 @@ export const literalField = (text: string, key: string): string | null => {
 	return value === '' ? null : value;
 };
 
-/**
- * The top level of the sidebar order in a Storybook preview set-up (`parameters.options.storySort.order`), as written:
- * its string literals, and not those in the nested lists that order a group's own entries. Only an `order` inside
- * `storySort` counts. Empty when it has none.
- */
-export const sidebarOrder = (preview: string): string[] => {
-	const sort = preview.indexOf('storySort');
-	const start = sort === -1 ? null : /\border\s*:\s*\[/.exec(preview.slice(sort));
-	if (!start) return [];
-	preview = preview.slice(sort);
-	const order: string[] = [];
-	let depth = 1;
-	for (let i = start.index + start[0].length; i < preview.length && depth > 0; i++) {
-		const c = preview[i]!;
-		if (c === '[') depth++;
-		else if (c === ']') depth--;
-		else if ((c === "'" || c === '"') && depth === 1) {
-			const end = preview.indexOf(c, i + 1);
-			if (end === -1) break;
-			order.push(preview.slice(i + 1, end));
-			i = end;
-		}
-	}
-	return order;
-};
-
 const read = async (reads: CatalogReads, path: string): Promise<string> => {
 	try {
 		return await reads.readFile(path);
@@ -88,14 +62,15 @@ const read = async (reads: CatalogReads, path: string): Promise<string> => {
 	}
 };
 
+/** One word before another, without regard to case, and numbers by their value: `FSTab2` before `FSTab10`. */
+const alphabetical = (a: string, b: string): number => a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true });
+
 /**
- * Every component in the library, in the order its Storybook shows them: groups in the sidebar's order, any other group
- * after them alphabetically and `Ungrouped` last, and components alphabetically within a group.
+ * Every component in the library, alphabetically: groups, then components within a group, with `Ungrouped` last, the group
+ * of those with no title to put them in one. The order is ours, not the library's own sidebar order.
  */
 export const readCatalog = async (reads: CatalogReads, library: DesignSystem): Promise<CatalogComponent[]> => {
 	const files = await reads.listFiles('');
-	const preview = PREVIEW_CANDIDATES.find((p) => files.includes(p));
-	const order = preview === undefined ? [] : sidebarOrder(await read(reads, preview));
 	const components = await Promise.all(
 		files.filter(isStoryFile).map(async (file): Promise<CatalogComponent> => {
 			const text = await read(reads, file);
@@ -111,12 +86,6 @@ export const readCatalog = async (reads: CatalogReads, library: DesignSystem): P
 			};
 		}),
 	);
-	const rank = (group: string) => (group === UNGROUPED ? order.length + 2 : order.includes(group) ? order.indexOf(group) : order.length + 1);
-	return components.sort(
-		(a, b) =>
-			rank(a.group) - rank(b.group) ||
-			a.group.localeCompare(b.group) ||
-			a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) ||
-			a.id.localeCompare(b.id),
-	);
+	const last = (group: string) => (group === UNGROUPED ? 1 : 0);
+	return components.sort((a, b) => last(a.group) - last(b.group) || alphabetical(a.group, b.group) || alphabetical(a.name, b.name) || a.id.localeCompare(b.id));
 };

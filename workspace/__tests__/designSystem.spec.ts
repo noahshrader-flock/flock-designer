@@ -100,7 +100,9 @@ const nameOf = (li: Element) => li.querySelector('.font-medium')?.textContent ??
 const rows = () => [...document.querySelectorAll('[data-component]')].map(nameOf);
 const row = (name: string) => [...document.querySelectorAll('[data-component]')].find((li) => nameOf(li) === name) as HTMLElement;
 /** The component list's groups: not the tokens panel's sets, which are sections too. */
-const groups = () => [...document.querySelectorAll('section:not([data-token-set])')].map((s) => s.getAttribute('aria-label'));
+const groups = () => [...document.querySelectorAll('[data-component-group]')].map((s) => s.getAttribute('data-component-group'));
+/** A group's accordion trigger, by its name: the button that opens and closes it. */
+const groupTrigger = (name: string) => document.querySelector(`[data-component-group="${name}"] [data-slot="accordion-trigger"]`) as HTMLElement;
 const text = () => document.body.textContent ?? '';
 
 afterEach(async () => {
@@ -215,6 +217,51 @@ describe('the list', () => {
 	});
 });
 
+describe('the groups', () => {
+	afterEach(() => localStorage.clear());
+
+	it('are accordions, each with its name and how many it holds, all open at first', async () => {
+		await open(() => ok(ready()));
+		for (const name of ['Buttons', 'Surfaces', 'Popovers', 'Ungrouped']) expect(groupTrigger(name).getAttribute('aria-expanded')).toBe('true');
+		expect(groupTrigger('Buttons').textContent).toBe('Buttons1');
+		expect(groupTrigger('Surfaces').textContent).toBe('Surfaces2');
+		expect(rows()).toHaveLength(5);
+	});
+
+	it('close on their own, and open again: the others are as they were, and the count stays', async () => {
+		await open(() => ok(ready()));
+		await press(groupTrigger('Surfaces'));
+		expect(groupTrigger('Surfaces').getAttribute('aria-expanded')).toBe('false');
+		expect(rows()).toEqual(['FSButton', 'PopoverHeader', 'Loose']);
+		expect(groups()).toEqual(['Buttons', 'Surfaces', 'Popovers', 'Ungrouped']);
+		expect(groupTrigger('Surfaces').textContent).toBe('Surfaces2');
+		await press(groupTrigger('Buttons'));
+		expect(rows()).toEqual(['PopoverHeader', 'Loose']);
+		await press(groupTrigger('Surfaces'));
+		expect(rows()).toEqual(['FSCard', 'FSCardHeader', 'PopoverHeader', 'Loose']);
+	});
+
+	it('close the same way in the grid, and the view chosen keeps what was closed', async () => {
+		await open(() => ok(ready()));
+		await press(groupTrigger('Surfaces'));
+		await press(document.querySelector<HTMLElement>('[aria-label="View"] [aria-label="Grid"]')!);
+		expect([...document.querySelectorAll('[data-component-card]')].map((c) => c.getAttribute('data-component-card'))).toEqual([COMPONENTS[0]!.id, COMPONENTS[3]!.id, COMPONENTS[4]!.id]);
+		expect(groupTrigger('Surfaces').getAttribute('aria-expanded')).toBe('false');
+	});
+
+	it('stay closed while a component is opened and the list comes back, and are all open again for another design system', async () => {
+		await open(() => ok(ready()));
+		await press(groupTrigger('Buttons'));
+		await press(row('FSCard').querySelector('button')!);
+		await press(button('Back to components'));
+		expect(groupTrigger('Buttons').getAttribute('aria-expanded')).toBe('false');
+		await openMenu(switcher());
+		await press([...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')][1] as HTMLElement);
+		await settle();
+		expect(groupTrigger('Buttons').getAttribute('aria-expanded')).toBe('true');
+	});
+});
+
 describe('searching the components (T9)', () => {
 	const search = () => document.querySelector('input[aria-label="Search components"]') as HTMLInputElement;
 	const viewButton = (name: 'List' | 'Grid') => document.querySelector<HTMLElement>(`[aria-label="View"] [aria-label="${name}"]`) as HTMLElement;
@@ -229,7 +276,7 @@ describe('searching the components (T9)', () => {
 		expect(rows()).toEqual(['FSCard', 'FSCardHeader']);
 		expect(groups()).toEqual(['Surfaces']);
 		// The group's count is what is left of it.
-		expect(document.querySelector('section[aria-label="Surfaces"] h3')?.textContent).toBe('Surfaces 2');
+		expect(groupTrigger('Surfaces').textContent).toBe('Surfaces2');
 		// A group's name finds its components; every word typed has to match, in any case.
 		await typeInto(search(), 'popovers');
 		expect(rows()).toEqual(['PopoverHeader']);
@@ -274,7 +321,7 @@ describe('searching the components (T9)', () => {
 		expect(first.contains(search())).toBe(false);
 		const second = search().closest('[data-components-search]') as HTMLElement;
 		expect(second.lastElementChild?.contains(viewButton('Grid'))).toBe(true);
-		const buttons = document.querySelector('section[aria-label="Buttons"]') as HTMLElement;
+		const buttons = document.querySelector('[data-component-group="Buttons"]') as HTMLElement;
 		expect(search().compareDocumentPosition(buttons) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(search().closest('[hidden]')).toBeNull();
 		await press(row('FSButton').querySelector('button')!);
