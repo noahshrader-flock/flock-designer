@@ -23,7 +23,8 @@ function AccordionItem({
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn("not-last:border-b", className)}
+      // A line under a group only when it is closed, so it reads as a row between its neighbours; open, its content is its own.
+      className={cn("not-last:data-[state=closed]:border-b", className)}
       {...props}
     />
   )
@@ -65,7 +66,8 @@ function AccordionContent({
     >
       <div
         className={cn(
-          "h-(--radix-accordion-content-height) pt-0 pb-2.5 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
+          // No height of its own: Radix measures one when a group opens and a fixed height from that stays when the rows change.
+          "pt-0 pb-2.5 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
           className
         )}
       >
