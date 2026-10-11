@@ -5,7 +5,8 @@ import { ChangedTokens, ContrastNote, Swatch, TokenEditor } from './TokenEditor'
 import { TokenProblems } from './TokenProblems';
 import type { TokenBranchControls } from './useTokenBranch';
 import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { GroupTrigger, useClosedGroups } from './GroupAccordion';
+import { Accordion, AccordionContent, AccordionItem } from './ui/accordion';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { SearchField } from './SearchField';
 import { LineTabs, LineTabsContent, LineTabsList, LineTabsTrigger } from './LineTabs';
@@ -110,8 +111,7 @@ const STICKY_HEADER = '[&>h3]:bg-card [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10';
 
 /** One category's tab: its own search, then its tokens. What is typed is the panel's, so it is there when the tab is back. */
 const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tokens: DesignToken[]; query: string; onQuery: (query: string) => void }) => {
-	// Every group is open until the person closes it, so a group the library gains, or a search finds, is open too.
-	const [closed, setClosed] = useState<string[]>([]);
+	const closed = useClosedGroups();
 	const q = query.trim().toLowerCase();
 	const shown = useMemo(() => (q === '' ? tokens : tokens.filter((t) => searchable(t).includes(q))), [tokens, q]);
 
@@ -126,17 +126,10 @@ const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tok
 				// One group would say the tab's own name again, so its sets are shown directly.
 				<Sets tokens={shown} />
 			) : (
-				<Accordion type="multiple" value={names.filter((g) => !closed.includes(g))} onValueChange={(open) => setClosed(names.filter((g) => !open.includes(g)))}>
+				<Accordion {...closed.accordion(names)}>
 					{groups.map(([group, inGroup]) => (
 						<AccordionItem key={group} value={group} data-token-group className={STICKY_HEADER}>
-							<AccordionTrigger>
-								<span className="flex items-baseline gap-2">
-									<span data-name>{group}</span>
-									<span data-count className="text-muted-foreground font-normal">
-										{inGroup.length}
-									</span>
-								</span>
-							</AccordionTrigger>
+							<GroupTrigger name={group} count={inGroup.length} />
 							<AccordionContent>
 								<Sets tokens={inGroup} />
 							</AccordionContent>

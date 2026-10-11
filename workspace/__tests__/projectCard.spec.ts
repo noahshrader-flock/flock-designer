@@ -87,9 +87,8 @@ describe('the footer', () => {
 		expect(footer().children).toHaveLength(2);
 		expect(nameRow().textContent).toBe('Admin usage');
 		expect(nameRow().getAttribute('data-slot')).toBe('card-title');
-		expect(nameRow().className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'text-base', 'font-semibold']));
-		// One size up from the text under it.
-		expect(nameRow().className.split(' ')).not.toContain('text-sm');
+		expect(nameRow().className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'text-sm', 'font-semibold']));
+		expect(nameRow().className.split(' ')).not.toContain('text-base');
 		// Above who it is by, not beside it.
 		expect(nameRow().compareDocumentPosition(details()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(details().contains(nameRow())).toBe(false);
@@ -156,7 +155,7 @@ describe('the footer', () => {
 		await unmountAll(current!.root);
 		await show(project());
 		expect(footer().className).toBe(withPeople);
-		expect(withPeople.split(' ')).toContain('h-20');
+		expect(withPeople.split(' ')).toContain('h-18');
 	});
 });
 

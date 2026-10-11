@@ -27,12 +27,12 @@ afterEach(async () => {
 });
 
 describe('a component’s card', () => {
-	it('names itself in the card name every card uses: one size up from the text around it', async () => {
+	it('names itself in the card name every card uses', async () => {
 		await show();
 		const name = document.querySelector('[data-slot="card-title"]') as HTMLElement;
 		expect(name.textContent).toBe('FSButton');
-		expect(name.className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'text-base', 'font-semibold']));
-		expect(name.className.split(' ')).not.toContain('text-sm');
+		expect(name.className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'text-sm', 'font-semibold']));
+		expect(name.className.split(' ')).not.toContain('text-base');
 		// In a row with its group, it is the one that gives way when the name is long: one line, never a second.
 		expect(name.className.split(' ')).not.toContain('shrink-0');
 		expect(name.className.split(' ').some((c) => c.startsWith('line-clamp'))).toBe(false);
