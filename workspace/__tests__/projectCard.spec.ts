@@ -88,7 +88,9 @@ describe('the footer', () => {
 		expect(nameRow().textContent).toBe('Admin usage');
 		expect(nameRow().getAttribute('data-slot')).toBe('card-title');
 		// It keeps its whole line: squeezed by the rows around it, it would lose the bottom of its letters.
-		expect(nameRow().className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'text-sm', 'font-semibold', 'shrink-0']));
+		expect(nameRow().className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'text-base', 'font-semibold', 'shrink-0']));
+		// One size up from the text under it.
+		expect(nameRow().className.split(' ')).not.toContain('text-sm');
 		// Above who it is by, not beside it.
 		expect(nameRow().compareDocumentPosition(details()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(details().contains(nameRow())).toBe(false);
@@ -97,7 +99,10 @@ describe('the footer', () => {
 	it('has, under the name, who it is by at the left and how many comments its prototypes have at the right', async () => {
 		await show(project({ iterations: [iteration({ ...NEWEST, openComments: 3 }), iteration({ ...OLDER, openComments: 2 })], people: [NOAH] }));
 		const [left, right] = [...details().children];
-		expect(left!.querySelector('[data-slot="avatar"]')!.getAttribute('data-size')).toBe('xs');
+		// The smallest avatar there is, below the extra small one it was.
+		const avatar = left!.querySelector('[data-slot="avatar"]')!;
+		expect(avatar.getAttribute('data-size')).toBe('2xs');
+		expect(avatar.className.split(' ')).toContain('data-[size=2xs]:size-4');
 		expect(left!.querySelector('.truncate')!.textContent).toBe('Noah Shrader');
 		// Every prototype's comments, together.
 		const comments = right!.querySelector('[aria-label$="comments"], [aria-label$="comment"]')!;

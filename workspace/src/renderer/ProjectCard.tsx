@@ -4,7 +4,7 @@ import type { Project, ProjectIteration } from '../shared/contract';
 import { plural } from '../shared/plural';
 import { byVersion, projectCodeLink, workOf } from '../shared/projects';
 import { CardCover } from './CardCover';
-import { PROJECT_FOOTER } from './cardFooters';
+import { CARD_NAME, PROJECT_FOOTER } from './cardFooters';
 import { PRESSABLE_CARD, pressableCard } from './pressableCard';
 import { PeopleLine } from './People';
 import { Badge } from './ui/badge';
@@ -52,7 +52,7 @@ export const ProjectCard = ({ project, onOpen }: { project: Project; onOpen: (it
 				{!newest && link && <ExternalLinkIcon aria-hidden className="text-muted-foreground absolute top-2 right-2 z-10 size-4" />}
 			</CardCover>
 			<CardFooter className={PROJECT_FOOTER}>
-				<CardTitle className="shrink-0 truncate text-sm font-semibold">{project.title}</CardTitle>
+				<CardTitle className={`${CARD_NAME} shrink-0`}>{project.title}</CardTitle>
 				<div className="flex items-center justify-between gap-2">
 					{project.people.length > 0 ? <PeopleLine people={project.people} /> : <span />}
 					{newest ? (

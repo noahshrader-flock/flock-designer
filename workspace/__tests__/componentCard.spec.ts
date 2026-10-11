@@ -27,6 +27,16 @@ afterEach(async () => {
 });
 
 describe('a component’s card', () => {
+	it('names itself in the card name every card uses: one size up from the text around it', async () => {
+		await show();
+		const name = document.querySelector('[data-slot="card-title"]') as HTMLElement;
+		expect(name.textContent).toBe('FSButton');
+		expect(name.className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'text-base', 'font-semibold']));
+		expect(name.className.split(' ')).not.toContain('text-sm');
+		// In a row with its group, it is the one that gives way when the name is long.
+		expect(name.className.split(' ')).not.toContain('shrink-0');
+	});
+
 	it('is the Projects card: its cover a fixed shape, its footer the name and the group', async () => {
 		await show();
 		const card = document.querySelector('[data-component-card]') as HTMLElement;

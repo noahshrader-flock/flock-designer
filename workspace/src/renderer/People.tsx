@@ -12,7 +12,7 @@ export const PeopleLine = ({ people }: { people: Person[] }) => {
 	if (first === undefined) return null;
 	return (
 		<span className="flex min-w-0 items-center gap-2">
-			<Avatar size="xs">
+			<Avatar size="2xs">
 				<AvatarImage src={avatarUrl(first.login) ?? undefined} alt="" />
 				<AvatarFallback>{first.name.charAt(0).toUpperCase()}</AvatarFallback>
 			</Avatar>
