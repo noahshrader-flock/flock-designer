@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Iteration, Person } from '../../shared/contract';
-import { firstHeading, isPrototypeName, nextPrototypeName, projectPath, prototypeKey } from '../../shared/projects';
+import { assertCover, firstHeading, isPrototypeName, nextPrototypeName, projectPath, prototypeKey } from '../../shared/projects';
 import { addressOpening } from './address';
 import { resolveInside } from './paths';
 import { parseIterations } from '../../shared/records';
@@ -17,9 +17,12 @@ import { parseIterations } from '../../shared/records';
 export interface RecordStore {
 	/** A file in the design repository, by its path from the repository's root, or null. */
 	read(path: string): Promise<string | null>;
+	/** A file as the bytes it is (a picture), or null. */
+	readBytes(path: string): Promise<Buffer | null>;
 	/** Whether a file is there, without fetching it: shared files run to megabytes. */
 	has(path: string): Promise<boolean>;
-	write(path: string, content: string, message: string): Promise<void>;
+	/** Text, or the bytes of a picture. */
+	write(path: string, content: string | Buffer, message: string): Promise<void>;
 }
 
 /** The design repository's clone on this machine. `published` runs after each write. */
@@ -27,6 +30,10 @@ export const cloneStore = (designRoot: string, published: () => void): RecordSto
 	read: async (path) => {
 		const file = resolveInside(designRoot, path);
 		return existsSync(file) ? readFileSync(file, 'utf8') : null;
+	},
+	readBytes: async (path) => {
+		const file = resolveInside(designRoot, path);
+		return existsSync(file) ? readFileSync(file) : null;
 	},
 	has: async (path) => existsSync(resolveInside(designRoot, path)),
 	write: async (path, content) => {
@@ -110,6 +117,20 @@ export const recordPrototype = async (
 		await store.write(brief, `# ${title.replace(/\s+/g, ' ').trim()}\n\n${note.trim()}\n`, `${projectId}: start the project`);
 	}
 	return addRecord(store, existing, { projectId, name, note, me, basedOn, now });
+};
+
+/**
+ * Names a prototype's picture on its record (`Iteration.cover`), changing nothing else in it or in any other record.
+ * Written after the picture itself, so a record never names a picture that is not there. False when there is no record
+ * of the prototype, as for a page that was never recorded: nothing is written then.
+ */
+export const setCover = async (store: RecordStore, projectId: string, name: string, cover: string): Promise<boolean> => {
+	assertCover(cover);
+	const existing = await readRecords(store, projectId);
+	if (!existing.some((i) => i.name === name)) return false;
+	const updated = existing.map((i) => (i.name === name ? { ...i, cover } : i));
+	await store.write(projectPath(projectId, 'iterations.json'), `${JSON.stringify(updated, null, 2)}\n`, `${projectId}: picture of prototype ${name}`);
+	return true;
 };
 
 /**

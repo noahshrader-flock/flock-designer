@@ -1,7 +1,7 @@
 import type { CommentAnchor, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
 import { GitHubError, httpStatus } from './github';
 import { asPeople, isBot, mergePeople } from '../../shared/people';
-import { asDate, asGitHubRepository, asPullRequest, asRoute, firstHeading, latestDate, newestFirst } from '../../shared/projects';
+import { asCover, asDate, asGitHubRepository, asPullRequest, asRoute, firstHeading, latestDate, newestFirst } from '../../shared/projects';
 import { RESOLVED_MARK, addressedAt, addressedIn, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withAddressed, withResolved } from '../../shared/anchor';
 import { asArray, asRecord } from '../../shared/json';
 
@@ -136,12 +136,22 @@ export class DesignRepo {
    * null when the branch or the file is not there. Whether asked through the app's session or the command line.
    */
   async readFileAt(path: string, ref?: string): Promise<{ text: string; sha: string } | null> {
+    const file = await this.readBytesAt(path, ref);
+    return file === null ? null : { text: file.bytes.toString('utf8'), sha: file.sha };
+  }
+
+  /** Any file in the design repository as the bytes it is (a picture), or null when there is none. */
+  async readBytes(path: string): Promise<Buffer | null> {
+    return (await this.readBytesAt(path))?.bytes ?? null;
+  }
+
+  private async readBytesAt(path: string, ref?: string): Promise<{ bytes: Buffer; sha: string } | null> {
     try {
       const file = asRecord(await this.session.api(`${this.base}/contents/${path}${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`));
       if (typeof file.sha !== 'string') return null;
       // Over 1 MB, the contents API leaves the content out; the blob it names carries it, up to 100 MB.
       const content = file.encoding === 'none' ? asRecord(await this.session.api(`${this.base}/git/blobs/${file.sha}`)).content : file.content;
-      return typeof content === 'string' ? { text: Buffer.from(content, 'base64').toString('utf8'), sha: file.sha } : null;
+      return typeof content === 'string' ? { bytes: Buffer.from(content, 'base64'), sha: file.sha } : null;
     } catch (err) {
       if (httpStatus(err) === 404) return null;
       throw err;
@@ -160,10 +170,10 @@ export class DesignRepo {
   }
 
   /**
-   * Creates or replaces a file in the design repository, as one commit by the signed-in person. Used
-   * only where there is no clone on this machine to write into: one writer per machine.
+   * Creates or replaces a file in the design repository, as one commit by the signed-in person: text, or the bytes of a
+   * picture. Used only where there is no clone on this machine to write into: one writer per machine.
    */
-  async writeFile(path: string, content: string, message: string): Promise<void> {
+  async writeFile(path: string, content: string | Buffer, message: string): Promise<void> {
     const put = async () => {
       let sha: string | undefined;
       try {
@@ -174,7 +184,7 @@ export class DesignRepo {
       }
       await this.session.api(`${this.base}/contents/${path}`, {
         method: 'PUT',
-        body: { message, content: Buffer.from(content, 'utf8').toString('base64'), ...(sha ? { sha } : {}) },
+        body: { message, content: (typeof content === 'string' ? Buffer.from(content, 'utf8') : content).toString('base64'), ...(sha ? { sha } : {}) },
       });
     };
     try {
@@ -278,6 +288,7 @@ export class DesignRepo {
         commit: typeof it.commit === 'string' ? it.commit : null,
         createdAt: asDate(it.createdAt),
         route: asRoute(it.route),
+        cover: asCover(it.cover),
       }))
       .sort(newestFirst);
   }

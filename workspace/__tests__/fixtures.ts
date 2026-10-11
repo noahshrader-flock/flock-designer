@@ -1,8 +1,9 @@
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { RecordStore } from '../src/main/services/prototype';
 
-/** Fixtures more than one spec builds the same way: a product checkout, and its design system installed. */
+/** Fixtures more than one spec builds the same way: a product checkout, its design system installed, a design repository in memory. */
 
 export const g = (root: string, ...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
 
@@ -53,4 +54,22 @@ export const installDesignSystem = (product: string) => {
 export const addStandards = (design: string) => {
 	mkdirSync(join(design, 'standards', 'universal'), { recursive: true });
 	copyFileSync(join(__dirname, '../../standards/universal/accessibility.md'), join(design, 'standards', 'universal', 'accessibility.md'));
+};
+
+/**
+ * A design repository held in memory, as a `RecordStore`: text and the bytes of pictures, with the paths written, in the
+ * order they were written.
+ */
+export const memoryStore = (files: Record<string, string | Buffer> = {}) => {
+	const writes: string[] = [];
+	const store: RecordStore = {
+		read: async (p) => (p in files ? String(files[p]) : null),
+		readBytes: async (p) => (p in files ? Buffer.from(files[p] as string | Buffer) : null),
+		has: async (p) => p in files,
+		write: async (p, c) => {
+			files[p] = c;
+			writes.push(p);
+		},
+	};
+	return { store, files, writes };
 };

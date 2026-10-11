@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Project, ProjectIteration } from '../../shared/contract';
 import { asPeople, mergePeople } from '../../shared/people';
-import { asDate, asGitHubRepository, asPullRequest, asRoute, firstHeading, newestFirst } from '../../shared/projects';
+import { asCover, asDate, asGitHubRepository, asPullRequest, asRoute, firstHeading, newestFirst } from '../../shared/projects';
 
 const readJson = (path: string): unknown => {
 	try {
@@ -46,6 +46,7 @@ pullRequest: asPullRequest(it.pullRequest),
 						contributors: asPeople(it.contributors),
 						createdAt: asDate(it.createdAt),
 						route: asRoute(it.route),
+						cover: asCover(it.cover),
 					}),
 				)
 				.sort(newestFirst);

@@ -4,25 +4,13 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
 import { isPrototypeKey, nextPrototypeName, prototypeKey, prototypePagePath } from '../src/shared/projects';
-import { type RecordStore, cloneStore, moveToCodePrompt, moveToCodeTask, prototypeBuildTask, prototypeReadable, recordPrototype } from '../src/main/services/prototype';
+import { cloneStore, moveToCodePrompt, moveToCodeTask, prototypeBuildTask, prototypeReadable, recordPrototype, setCover } from '../src/main/services/prototype';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
+import { memoryStore } from './fixtures';
 import { claudeCodeAdapter } from '../src/main/services/agent';
 import { FIX_ROUNDS, type PrototypeApi, runPrototypeBuild } from '../src/renderer/prototypeBuild';
 import type { BuildPhase } from '../src/renderer/localBuild';
 
-/** A design repository held in memory. */
-const memoryStore = (files: Record<string, string> = {}) => {
-	const writes: string[] = [];
-	const store: RecordStore = {
-		read: async (p) => files[p] ?? null,
-		has: async (p) => p in files,
-		write: async (p, c) => {
-			files[p] = c;
-			writes.push(p);
-		},
-	};
-	return { store, files, writes };
-};
 
 describe('what a prototype is called', () => {
 	it('is keyed apart from every branch, and numbered one past the highest', () => {
@@ -89,6 +77,25 @@ describe('recordPrototype', () => {
 	});
 });
 
+describe('setCover', () => {
+	const RECORDS = 'projects/users/iterations.json';
+	const rec = (name: string, more: Record<string, unknown> = {}) => ({ projectId: 'users', name, branch: `prototype/users/${name}`, commit: null, createdAt: '2026-10-10T00:00:00Z', note: '', ...more });
+
+	it('says on one prototype’s record which picture is its, and changes nothing else', async () => {
+		const { store, files } = memoryStore({ [RECORDS]: JSON.stringify([rec('v1-i1', { previewUrl: 'https://x.test' }), rec('v2-i1')]) });
+		expect(await setCover(store, 'users', 'v1-i1', 'aaaaaaaaaaaa')).toBe(true);
+		const after = JSON.parse(files[RECORDS] as string) as Array<Record<string, unknown>>;
+		expect(after).toEqual([rec('v1-i1', { previewUrl: 'https://x.test', cover: 'aaaaaaaaaaaa' }), rec('v2-i1')]);
+	});
+
+	it('writes nothing for a prototype it has no record of, and refuses a picture that is not a hash', async () => {
+		const { store, writes } = memoryStore({ [RECORDS]: JSON.stringify([rec('v1-i1')]) });
+		expect(await setCover(store, 'users', 'v9-i1', 'aaaaaaaaaaaa')).toBe(false);
+		await expect(setCover(store, 'users', 'v1-i1', '../../x')).rejects.toThrow();
+		expect(writes).toEqual([]);
+	});
+});
+
 describe('cloneStore', () => {
 	let dir: string;
 	afterEach(() => rmSync(dir, { recursive: true, force: true }));
@@ -102,6 +109,16 @@ describe('cloneStore', () => {
 		expect(await store.read('projects/users/prototypes/i1.html')).toBe('<p>hi</p>');
 		expect(await store.read('projects/users/nothing.md')).toBeNull();
 		expect(published).toHaveBeenCalledOnce();
+	});
+
+	it('writes a picture as the bytes it is, and reads it back as bytes', async () => {
+		dir = mkdtempSync(join(tmpdir(), 'fd-prototype-clone-'));
+		const store = cloneStore(dir, vi.fn());
+		const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0x00, 0x80, 0xfe]);
+		await store.write('projects/users/covers/v1-i1-aaaaaaaaaaaa.jpg', jpeg, 'm');
+		expect(readFileSync(join(dir, 'projects/users/covers/v1-i1-aaaaaaaaaaaa.jpg'))).toEqual(jpeg);
+		expect(await store.readBytes('projects/users/covers/v1-i1-aaaaaaaaaaaa.jpg')).toEqual(jpeg);
+		expect(await store.readBytes('projects/users/covers/none.jpg')).toBeNull();
 	});
 
 	it('never writes outside the clone', async () => {

@@ -70,6 +70,7 @@ const savedPrototype = async (root = product) => {
 	writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<h1>Demo</h1>');
 	expect((await call(CHANNELS.savePrototype, 'demo', 'v1-i1')).ok).toBe(true);
 };
+const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7, 7, 7]);
 /** Build on that prototype, from `from`: how codebase work is started from the window. */
 const build = (root: string, from?: string) => call(CHANNELS.buildInClaude, root, 'demo', 'v1-i1', from);
 /** Codebase work for demo, recorded and checked out, as Build or an agent in a terminal would leave it. */
@@ -102,6 +103,10 @@ let warm: ReturnType<typeof vi.fn>;
 let ask: ReturnType<typeof vi.fn>;
 /** What a page's accessibility check finds (T7): axe in the app, a stand-in here, finding an image with no text. */
 let checkPage: ReturnType<typeof vi.fn>;
+/** How a prototype's picture is drawn: a window in the app, a stand-in here that gives the same few bytes. */
+let drawCover: ReturnType<typeof vi.fn>;
+/** A file read from GitHub as bytes: none, unless a test says otherwise. */
+let readBytes: ReturnType<typeof vi.fn>;
 let register: (more?: Record<string, unknown>) => void;
 let prototypeServer: InstanceType<typeof import('../src/main/services/prototypeServer')['PrototypeServer']>;
 
@@ -155,6 +160,8 @@ beforeEach(async () => {
 			incomplete: [],
 		})),
 	);
+	drawCover = vi.fn(async () => JPEG);
+	readBytes = vi.fn(async () => null);
 	const { CloneFolderMemory } = await import('../src/main/services/cloneFolder');
 	const { Cloner } = await import('../src/main/services/clone');
 	const { DesignSystemsMemory } = await import('../src/main/services/designSystems');
@@ -165,7 +172,7 @@ beforeEach(async () => {
 		runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
 		agent: { start: agentStart, status: agentStatus, stop: agentStop, runningIn: agentRunningIn, runningSession: () => runningSession, recentLines: () => recent } as never,
 		github: { state: () => githubState, api: (...a: unknown[]) => githubApi(...a) } as never,
-		designRepo: { listProjects: vi.fn(async () => designRepoProjects), deleteComment, readComments, setAddressed, readFile: vi.fn(async () => null) } as never,
+		designRepo: { listProjects: vi.fn(async () => designRepoProjects), deleteComment, readComments, setAddressed, readFile: vi.fn(async () => null), readBytes: (...a: unknown[]) => readBytes(...a) } as never,
 		page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
 		memory: { read: () => memoryValue, write: (r: string) => { memoryValue = r; }, available: () => true } as never,
 		onPublishStatus: vi.fn(),
@@ -181,6 +188,7 @@ beforeEach(async () => {
 		// What is got ready in the background is only counted here, never drawn.
 		componentTokens: { of: ask, warm, pictures: async () => ({ drawing: false, pictures: {}, issues: {} }) } as never,
 		checkPage,
+		drawCover,
 		...more,
 	});
 	register();
@@ -1469,6 +1477,76 @@ describe('prototypes', () => {
 		for (const [id, name] of [['demo', '../x'], ['demo', 'codebase'], ['../demo', 'v1-i1']]) {
 			expect((await call(CHANNELS.openPrototype, id, name)).ok).toBe(false);
 			expect((await call(CHANNELS.savePrototype, id, name)).ok).toBe(false);
+		}
+	});
+});
+
+describe('the picture of each prototype, on its project’s card', () => {
+	// A prototype is recorded only where it can be built: from the real design system, installed.
+	beforeEach(() => installDesignSystem(product));
+	const hashOf = async (html: string) => (await import('../src/main/services/prototype')).prototypeVersionOf(html);
+	const recordOf = (name: string) =>
+		(JSON.parse(readFileSync(join(design, 'projects', 'demo', 'iterations.json'), 'utf8')) as Array<Record<string, unknown>>).find((r) => r.name === name);
+
+	it('is drawn once for each prototype built here, kept in the design repository, named on its record, and read back for the card', async () => {
+		await savedPrototype();
+		const cover = await hashOf('<h1>Demo</h1>');
+		const made = await call(CHANNELS.ensureCovers);
+		expect(made).toEqual({ ok: true, value: [{ projectId: 'demo', name: 'v1-i1', cover }] });
+		expect(drawCover).toHaveBeenCalledWith(expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+\/demo\/v1-i1/));
+		expect(readFileSync(join(design, 'projects', 'demo', 'covers', `v1-i1-${cover}.jpg`))).toEqual(JPEG);
+		expect(recordOf('v1-i1')?.cover).toBe(cover);
+		// Current now: not drawn again.
+		expect(await call(CHANNELS.ensureCovers)).toEqual({ ok: true, value: [] });
+		expect(drawCover).toHaveBeenCalledTimes(1);
+		// The list says which picture, and the card reads it.
+		const listed = (await call(CHANNELS.listProjects)).value as Array<{ id: string; iterations: Array<{ name: string; cover?: string | null }> }>;
+		expect(listed.find((p) => p.id === 'demo')?.iterations.find((i) => i.name === 'v1-i1')?.cover).toBe(cover);
+		expect(await call(CHANNELS.projectCover, 'demo', 'v1-i1', cover)).toEqual({ ok: true, value: `data:image/jpeg;base64,${JPEG.toString('base64')}` });
+	});
+
+	it('is drawn again when the page changes, and the earlier picture is left where it is', async () => {
+		await savedPrototype();
+		await call(CHANNELS.ensureCovers);
+		const first = await hashOf('<h1>Demo</h1>');
+		writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<h1>Demo, changed</h1>');
+		const second = await hashOf('<h1>Demo, changed</h1>');
+		expect((await call(CHANNELS.ensureCovers)).value).toEqual([{ projectId: 'demo', name: 'v1-i1', cover: second }]);
+		expect(recordOf('v1-i1')?.cover).toBe(second);
+		expect(readdirSync(join(design, 'projects', 'demo', 'covers')).sort()).toEqual([`v1-i1-${first}.jpg`, `v1-i1-${second}.jpg`].sort());
+	});
+
+	it('is not drawn while an agent is working, since the page may be half written', async () => {
+		await savedPrototype();
+		agentStatus.mockReturnValue({ state: 'running' });
+		expect(await call(CHANNELS.ensureCovers)).toEqual({ ok: true, value: [] });
+		expect(drawCover).not.toHaveBeenCalled();
+	});
+
+	it('is not drawn for a prototype whose page was not built here, and is nothing when it cannot be drawn', async () => {
+		await savedPrototype();
+		rmSync(join(home, 'prototype', 'demo', 'v1-i1.html'));
+		expect(await call(CHANNELS.ensureCovers)).toEqual({ ok: true, value: [] });
+		expect(drawCover).not.toHaveBeenCalled();
+		writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<h1>Demo</h1>');
+		drawCover.mockResolvedValue(null);
+		expect(await call(CHANNELS.ensureCovers)).toEqual({ ok: true, value: [] });
+		expect(recordOf('v1-i1')?.cover).toBeUndefined();
+		expect(existsSync(join(design, 'projects', 'demo', 'covers'))).toBe(false);
+	});
+
+	it('is read from GitHub when this machine’s clone does not have it yet, and is nothing when neither has it', async () => {
+		await savedPrototype();
+		readBytes.mockResolvedValueOnce(JPEG);
+		expect(await call(CHANNELS.projectCover, 'demo', 'v2-i1', 'aaaaaaaaaaaa')).toEqual({ ok: true, value: `data:image/jpeg;base64,${JPEG.toString('base64')}` });
+		expect(readBytes).toHaveBeenCalledWith('projects/demo/covers/v2-i1-aaaaaaaaaaaa.jpg');
+		expect(await call(CHANNELS.projectCover, 'demo', 'v3-i1', 'aaaaaaaaaaaa')).toEqual({ ok: true, value: null });
+	});
+
+	it('takes no path from the window: a project, a prototype and a hash, each checked', async () => {
+		await savedPrototype();
+		for (const args of [['../x', 'v1-i1', 'aaaaaaaaaaaa'], ['demo', '../v1-i1', 'aaaaaaaaaaaa'], ['demo', 'v1-i1', '../../a'], ['demo', 'v1-i1', 'AAAAAAAAAAAA']]) {
+			expect((await call(CHANNELS.projectCover, ...args)).ok).toBe(false);
 		}
 	});
 });

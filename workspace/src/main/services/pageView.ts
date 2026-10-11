@@ -14,7 +14,7 @@ import {
 	readPinMessage,
 	resolveScript,
 } from '../../shared/pageScripts';
-import { type Box, cropRect, frameRect, toPicture } from './picture';
+import { type Box, cropRect, frameRect, jpegDataUrl, toPicture } from './picture';
 import { keepToOrigin, sandboxedPreferences } from './sandboxedPage';
 
 /**
@@ -187,7 +187,7 @@ export class PageView {
 		// picture shows the page as it was a frame ago, without the pin that was just placed.
 		await this.run('new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))');
 		const image = await wc.capturePage();
-		return image.isEmpty() ? null : `data:image/jpeg;base64,${image.toJPEG(85).toString('base64')}`;
+		return image.isEmpty() ? null : jpegDataUrl(image.toJPEG(85));
 	}
 
 	setBounds(b: PageBounds): void {

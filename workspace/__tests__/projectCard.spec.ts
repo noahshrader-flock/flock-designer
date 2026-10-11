@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProjectCard } from '../src/renderer/ProjectCard';
 import { CardSkeleton } from '../src/renderer/Skeletons';
 import type { Project, ProjectIteration } from '../src/shared/contract';
-import { press, render, unmountAll } from './reviewHarness';
+import { fakeApp, ok, press, render, settle, unmountAll } from './reviewHarness';
 
 /**
  * A project card in the Projects grid, shaped as a component's is: the top is the preview (empty until there is one); the
@@ -71,6 +71,37 @@ describe('the cover', () => {
 		await show(project({ iterations: [NEWEST] }));
 		const classes = cover().className.split(' ');
 		expect(classes).toEqual(expect.arrayContaining(['aspect-[1920/960]', 'w-full', 'relative', 'overflow-hidden']));
+	});
+
+	it('is the picture of its newest prototype, asked for by the picture’s record, faded in once it has loaded', async () => {
+		const app = fakeApp({ projectCover: async () => ok('data:image/jpeg;base64,AAAA') });
+		(window as unknown as { workspace: unknown }).workspace = app.api;
+		await show(project({ iterations: [iteration({ ...NEWEST, cover: 'bbbbbbbbbbbb' }), iteration({ ...OLDER, cover: 'aaaaaaaaaaaa' })] }));
+		expect(app.calls.projectCover).toEqual([['admin-usage', 'v1-i2', 'bbbbbbbbbbbb']]);
+		const img = cover().querySelector('img')!;
+		expect(img.getAttribute('src')).toBe('data:image/jpeg;base64,AAAA');
+		expect(img.getAttribute('alt')).toBe('');
+	});
+
+	it('waits for its picture with the skeleton, and keeps the soft color if there turns out to be none', async () => {
+		let answer: (v: unknown) => void = () => undefined;
+		const app = fakeApp({ projectCover: () => new Promise((r) => (answer = r)) });
+		(window as unknown as { workspace: unknown }).workspace = app.api;
+		await show(project({ id: 'waiting', iterations: [iteration({ ...NEWEST, cover: 'cccccccccccc' })] }));
+		expect(cover().querySelector('[data-picture-waiting]')).not.toBeNull();
+		answer(ok(null));
+		await settle();
+		expect(cover().querySelector('[data-picture-waiting]')).toBeNull();
+		expect(cover().querySelector('img')).toBeNull();
+		expect(cover().querySelector('[data-picture-area]')!.className.split(' ')).toContain('bg-muted/40');
+	});
+
+	it('asks for nothing when no prototype has a picture: the cover is as it was', async () => {
+		const app = fakeApp();
+		(window as unknown as { workspace: unknown }).workspace = app.api;
+		await show(project({ iterations: [NEWEST] }));
+		expect(app.calls.projectCover).toBeUndefined();
+		expect(cover().querySelector('[data-picture-waiting]')).toBeNull();
 	});
 
 	it('says at its top left when the project is only on this machine', async () => {

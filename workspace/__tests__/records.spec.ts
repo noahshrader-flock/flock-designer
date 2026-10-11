@@ -24,6 +24,13 @@ describe('mergeIterationRecords', () => {
 		expect(find(merged, 'i1')).toMatchObject({ commit: 'abc', previewUrl: 'https://x.test' });
 	});
 
+	it('keeps a prototype’s picture across machines: this machine’s when it has one, never blanked by one that has none', () => {
+		const newer = mergeIterationRecords(text(rec('i1', { cover: 'bbbbbbbbbbbb' })), text(rec('i1', { cover: 'aaaaaaaaaaaa' })));
+		expect(find(newer, 'i1').cover).toBe('bbbbbbbbbbbb');
+		const kept = mergeIterationRecords(text(rec('i1')), text(rec('i1', { cover: 'aaaaaaaaaaaa' })));
+		expect(find(kept, 'i1').cover).toBe('aaaaaaaaaaaa');
+	});
+
 	it('keeps the earliest start date, so merging never makes work look newer', () => {
 		const merged = mergeIterationRecords(text(rec('i1', { createdAt: '2026-10-05T00:00:00Z' })), text(rec('i1', { createdAt: '2026-09-28T00:00:00Z' })));
 		expect(find(merged, 'i1').createdAt).toBe('2026-09-28T00:00:00Z');

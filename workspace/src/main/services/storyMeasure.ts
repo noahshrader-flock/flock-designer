@@ -12,7 +12,7 @@ import { PREVIEW_SHOW, previewAddress } from '../../shared/catalog';
 import type { Drawn, Measure, Mode } from './componentTokens';
 import { COMPOSITION, composeOnWhite } from './pictureComposition';
 import { axeFound, axeRun } from './accessibilityCheck';
-import { hiddenWindow, within } from './sandboxedPage';
+import { hiddenWindow, setColorScheme, within } from './sandboxedPage';
 
 /** How many windows draw a run's files at once, how long one story may take, and each window's size. */
 const WINDOWS_PER_RUN = 3;
@@ -100,12 +100,8 @@ const drawShare = async (base: string, mode: Mode, files: string[], pictures: bo
 	const win = hiddenWindow(SESSION, new URL(base).origin, WINDOW);
 	try {
 		const wc = win.webContents;
-		// The mode is set on a page: on a window that has none, the command never answers. It holds for the pages after.
-		await wc.loadURL('about:blank');
-		wc.debugger.attach('1.3');
-		const set = await within(STORY_MS, wc.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: mode }] }));
 		const loaded =
-			set === null
+			!(await setColorScheme(wc, mode, STORY_MS))
 				? null
 				: await within(
 						STORY_MS,

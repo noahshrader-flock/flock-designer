@@ -1,8 +1,8 @@
 /**
  * How the app holds a page of someone else's code (a prototype, a component library's stories): in a sandbox with no
  * preload and no Node, in a session of its own that is gone on quit, granted no permission, opening no window, and kept
- * to its own origin. A page shown to the person (`pageView.ts`) and one drawn out of sight (`storyMeasure.ts`, and the
- * accessibility check, `accessibilityCheck.ts`) are held the same way, by this.
+ * to its own origin. A page shown to the person (`pageView.ts`) and one drawn out of sight (`storyMeasure.ts`, the
+ * accessibility check, `accessibilityCheck.ts`, and a prototype's picture, `coverWindow.ts`) are held the same way, by this.
  */
 import { BrowserWindow, type WebContents, type WebPreferences } from 'electron';
 
@@ -46,3 +46,14 @@ export const hiddenWindow = (partition: string, origin: string, size: { width: n
 /** A page's answer, or null after `ms`, or when it fails: a page out of sight may never answer. */
 export const within = <T>(ms: number, p: Promise<T>): Promise<T | null> =>
 	Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
+
+/**
+ * Sets a hidden window's `prefers-color-scheme` for its pages, for that window alone, so the app's own appearance is never
+ * changed. The mode is set on a page: on a window that has none, the command never answers, so a blank one is loaded first;
+ * it holds for the pages after. False when it was not set within `ms`.
+ */
+export const setColorScheme = async (wc: WebContents, mode: 'light' | 'dark', ms: number): Promise<boolean> => {
+	await wc.loadURL('about:blank');
+	wc.debugger.attach('1.3');
+	return (await within(ms, wc.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: mode }] }))) !== null;
+};

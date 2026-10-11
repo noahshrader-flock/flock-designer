@@ -10,7 +10,7 @@ import { Review } from './Review';
 import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
 import { InfoIcon } from 'lucide-react';
-import { type ProjectOrder, matchesProject, sortProjects } from '../shared/projects';
+import { type ProjectOrder, matchesProject, sortProjects, withCovers } from '../shared/projects';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { NoMatches } from './NoMatches';
@@ -65,6 +65,10 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 		const result = await window.workspace.listProjects();
 		if (result.ok) {
 			setProjects(result.value);
+			// With the list on screen: pictures for the prototypes built here that have none current, taken in once made.
+			void window.workspace.ensureCovers().then((made) => {
+				if (made.ok && made.value.length > 0) setProjects((now) => (now === null ? now : withCovers(now, made.value)));
+			});
 		} else {
 			setError(result.error);
 		}

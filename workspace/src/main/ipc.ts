@@ -68,6 +68,7 @@ import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
 import {
+	coverPath,
 	isRecordName,
 	iterationLabel,
 	mergeProjects,
@@ -80,7 +81,9 @@ import { resolveInside } from './services/paths';
 import { PrototypeServer } from './services/prototypeServer';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
 import { statesOf } from '../shared/prototypeStates';
-import { type PrototypeChange, prototypeWork, whereTheChangeGoes } from './services/prototypeWork';
+import { type PrototypeChange, localPrototypeFile, prototypeWork, whereTheChangeGoes } from './services/prototypeWork';
+import { type CoverDeps, type DrawCover, builtHere, ensureCovers } from './services/projectCovers';
+import { jpegDataUrl } from './services/picture';
 import { pageStatus, publish, recordsFrom, redeploySite, siteBehind } from './services/pages';
 import {
 	BUILD_SKILL,
@@ -165,6 +168,8 @@ export interface IpcContext {
 	measureStories?: Measure;
 	/** How a page is checked for accessibility (T7): axe-core in a hidden window, in the app. */
 	checkPage?: CheckPage;
+	/** How a prototype's page is drawn as its picture on its project's card: a hidden window, in the app. */
+	drawCover?: DrawCover;
 	/**
 	 * Which tokens each component draws with (T6), and so what is got ready in the background: given for tests.
 	 */
@@ -206,6 +211,9 @@ export const registerIpc = ({
 	},
 	checkPage = async () => {
 		throw new Error('Pages can be checked only in the app.');
+	},
+	drawCover = async () => {
+		throw new Error('Pictures of prototypes can be drawn only in the app.');
 	},
 	componentTokens: injectedComponentTokens,
 	componentPicturesRoot = join(tmpdir(), 'dsnr-component-pictures'),
@@ -1011,18 +1019,20 @@ export const registerIpc = ({
 			? cloneStore(clone, () => void publisher.publish(true))
 			: {
 					read: (path) => designRepo.readFile(path),
+					readBytes: (path) => designRepo.readBytes(path),
 					has: (path) => designRepo.hasFile(path),
 					write: (path, content, message) => designRepo.writeFile(path, content, message),
 				};
 	};
 	/**
 	 * A file from the design repository: through the record store, and from GitHub when the clone here does not have
-	 * it yet (a colleague's work not pulled). Without a clone the store already is GitHub, so it is asked once.
+	 * it yet (a colleague's work not pulled). Without a clone the store already is GitHub, so it is asked once. As text,
+	 * or as the bytes of a picture.
 	 */
-	const readDesignFile = async (path: string): Promise<string | null> => {
-		const here = await recordStore().read(path);
-		return here !== null || designClone() === null ? here : designRepo.readFile(path);
-	};
+	const fromDesignRepo = async <T>(here: T | null, there: () => Promise<T | null>): Promise<T | null> =>
+		here !== null || designClone() === null ? here : there();
+	const readDesignFile = async (path: string): Promise<string | null> => fromDesignRepo(await recordStore().read(path), () => designRepo.readFile(path));
+	const readDesignBytes = async (path: string): Promise<Buffer | null> => fromDesignRepo(await recordStore().readBytes(path), () => designRepo.readBytes(path));
 	/** A shared skill, which the agent's task is built from: read as the dsnr command reads it. */
 	const readSkillText = (path: string): Promise<string> => work.skill(path);
 	/**
@@ -1338,6 +1348,42 @@ export const registerIpc = ({
 	ipcMain.handle(
 		CHANNELS.checkAccessibility,
 		guard((projectId: string, name: string) => once(`accessibility:${projectId}/${name}`, () => prototypeAccessibility(projectId, name))),
+	);
+	/**
+	 * The picture of each prototype on its project's card (PROJECT_PICTURES_PLAN.md). Asked for by the list once it is on
+	 * screen: every page built on this machine whose record does not name its picture is drawn, one at a time, and kept.
+	 * Never while an agent works, as its page may be half written: the next time the list is opened does it.
+	 */
+	const coverDeps: CoverDeps = {
+		store: recordStore,
+		page: (projectId, name) => {
+			const file = localPrototypeFile(prototypesRoot, projectId, name, 'html');
+			return existsSync(file) ? readFileSync(file, 'utf8') : null;
+		},
+		serve: servePrototype,
+		draw: drawCover,
+		tried: new Set(),
+	};
+	ipcMain.handle(
+		CHANNELS.ensureCovers,
+		guard(() => once('covers', async () => (agent.status().state === 'running' ? [] : ensureCovers(coverDeps, builtHere(prototypesRoot))))),
+	);
+	/** Pictures read this session, by path: what is at a picture's path never changes, so it is read once. */
+	const coversRead = new Map<string, string>();
+	ipcMain.handle(
+		CHANNELS.projectCover,
+		guard(async (projectId: string, name: string, cover: string): Promise<string | null> => {
+			assertUsableProjectId(projectId);
+			assertPrototypeName(name);
+			const path = coverPath(projectId, name, cover);
+			const kept = coversRead.get(path);
+			if (kept !== undefined) return kept;
+			const bytes = await readDesignBytes(path);
+			if (bytes === null) return null;
+			const url = jpegDataUrl(bytes);
+			coversRead.set(path, url);
+			return url;
+		}),
 	);
 	// One round of the prototype's own check: its agent given what the check found, as a build error is given (T7).
 	ipcMain.handle(

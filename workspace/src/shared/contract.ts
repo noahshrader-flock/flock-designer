@@ -118,6 +118,12 @@ export interface Iteration {
 	 * what it was looking at. Absent when it was made without a repository on the machine.
 	 */
 	basedOn?: { repository: string; branch: string; commit: string | null };
+	/**
+	 * For a prototype: which picture of it is kept, as the hash of the page it was drawn from. The picture is the file
+	 * `covers/<name>-<cover>.jpg` in the project's folder (`coverPath`), so it is current exactly when this is the page's
+	 * hash. Written after the picture is, by the machine the page was built on.
+	 */
+	cover?: string;
 }
 
 /** Where sharing an iteration has got to. One at a time: it is a push, a pull request and a build. */
@@ -704,6 +710,13 @@ export interface WorkspaceApi {
 
 	/** Reviewer mode: everything below reads the design repo through the API. */
 	listProjects(): Promise<Result<Project[]>>;
+	/**
+	 * Makes sure every prototype built on this machine has a current picture: draws those that do not, one at a time, keeps
+	 * each in the design repository and names it on the prototype's record. Says which it made. Nothing while an agent works.
+	 */
+	ensureCovers(): Promise<Result<MadeCover[]>>;
+	/** A prototype's picture, by the hash on its record, as a data URL; null when there is none to read. */
+	projectCover(projectId: string, name: string, cover: string): Promise<Result<string | null>>;
 	readComments(projectId: string, iteration: string): Promise<Result<ReviewComment[]>>;
 	/** The text of one file in a project's folder (its brief, its review notes, …): this machine's copy if it has one, else GitHub's. */
 	readRecord(projectId: string, name: string): Promise<Result<string>>;
@@ -891,6 +904,15 @@ export interface ProjectIteration {
   /** Codebase work: its repository on GitHub (`owner/repo`) and its pull request, when the record says. Read with `codeLink`. */
   repository?: string | null;
   pullRequest?: string | null;
+  /** A prototype's picture, by the hash on its record (`Iteration.cover`); null when it has none yet. Read with `coverToShow`. */
+  cover?: string | null;
+}
+
+/** A picture of a prototype just made and named on its record: what the list takes in without being read again. */
+export interface MadeCover {
+  projectId: string;
+  name: string;
+  cover: string;
 }
 
 /** Someone who has committed to a project. The login is known only when we could resolve one. */
@@ -1094,6 +1116,8 @@ export const CHANNELS = {
 	signInState: 'workspace:signInState',
 	signOut: 'workspace:signOut',
 	listProjects: 'workspace:listProjects',
+	ensureCovers: 'workspace:ensureCovers',
+	projectCover: 'workspace:projectCover',
 	readComments: 'workspace:readComments',
 	readRecord: 'workspace:readRecord',
 	postComment: 'workspace:postComment',

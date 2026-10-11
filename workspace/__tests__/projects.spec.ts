@@ -28,6 +28,9 @@ import {
 	startedAt,
 	unionLocal,
 	workOf,
+	asCover,
+	coverToShow,
+	withCovers,
 } from '../src/shared/projects';
 import { readFolderProjects } from '../src/main/services/localProjects';
 
@@ -53,6 +56,13 @@ describe('mergeProjects', () => {
 		expect(merged).toHaveLength(1);
 		expect(merged[0]).toMatchObject({ title: 'Alpha, as shared', localOnly: false });
 		expect(merged[0]?.iterations[0]?.openComments).toBe(3);
+	});
+
+	it('shows the picture this machine has just made before GitHub has it, and GitHub’s when this machine has none', () => {
+		const made = mergeProjects([project('alpha', { iterations: [it1({ cover: null })] })], [project('alpha', { iterations: [it1({ cover: 'bbbbbbbbbbbb' })] })]);
+		expect(made[0]?.iterations[0]?.cover).toBe('bbbbbbbbbbbb');
+		const shared = mergeProjects([project('alpha', { iterations: [it1({ cover: 'aaaaaaaaaaaa' })] })], [project('alpha', { iterations: [it1({ cover: null })] })]);
+		expect(shared[0]?.iterations[0]?.cover).toBe('aaaaaaaaaaaa');
 	});
 
 	it('adds an iteration made here to a project that is already shared', () => {
@@ -161,6 +171,18 @@ describe('reading projects from their folders', () => {
 		const [p] = inProgress(root);
 		expect(p?.iterations.find((i) => i.name === 'i1')?.createdAt).toBe('2026-09-28T17:13:52-04:00');
 		expect(p?.iterations.find((i) => i.name === 'i2')?.createdAt).toBeNull();
+	});
+
+	it('reads which picture each prototype has, and nothing that is not one', () => {
+		write('pictured', {
+			'iterations.json': JSON.stringify([
+				{ name: 'v1-i1', branch: 'prototype/pictured/v1-i1', cover: 'aaaaaaaaaaaa' },
+				{ name: 'v1-i2', branch: 'prototype/pictured/v1-i2', cover: '../../etc' },
+				{ name: 'v1-i3', branch: 'prototype/pictured/v1-i3' },
+			]),
+		});
+		const [p] = inProgress(root);
+		expect(Object.fromEntries(p!.iterations.map((i) => [i.name, i.cover]))).toEqual({ 'v1-i1': 'aaaaaaaaaaaa', 'v1-i2': null, 'v1-i3': null });
 	});
 
 	it('names a project by its id when it has no brief yet', () => {
@@ -479,5 +501,38 @@ describe('the link to codebase work on GitHub', () => {
 		expect(codeLink(work({ repository: 'a/b/c' }))).toBeNull();
 		expect(codeLink(work({ pullRequest: 'javascript:alert(1)' }))).toBeNull();
 		expect(codeLink(work({ repository: 'o/r', pullRequest: 'https://evil.test/o/r/pull/1' }))).toBe('https://github.com/o/r/tree/feature/alpha');
+	});
+});
+
+describe('the picture on a project’s card', () => {
+	const A = 'aaaaaaaaaaaa';
+	const B = 'bbbbbbbbbbbb';
+	const v = (name: string, day: number, cover: string | null) => it1({ name, branch: `prototype/alpha/${name}`, createdAt: `2026-10-0${day}T00:00:00Z`, cover });
+
+	it('is its newest prototype’s', () => {
+		expect(coverToShow(project('alpha', { iterations: [v('v1-i1', 1, A), v('v2-i1', 2, B)] }))).toEqual({ name: 'v2-i1', cover: B });
+	});
+
+	it('is the newest earlier one that has a picture, while the newest has none yet', () => {
+		expect(coverToShow(project('alpha', { iterations: [v('v1-i1', 1, A), v('v1-i2', 2, null)] }))).toEqual({ name: 'v1-i1', cover: A });
+	});
+
+	it('is none for a project with no picture, or with only codebase work', () => {
+		expect(coverToShow(project('alpha', { iterations: [v('v1-i1', 1, null)] }))).toBeNull();
+		expect(coverToShow(project('alpha', { iterations: [it1({ name: 'codebase', branch: 'feature/alpha', cover: A })] }))).toBeNull();
+		expect(coverToShow(project('alpha', { iterations: [] }))).toBeNull();
+	});
+
+	it('takes the pictures just made into the list, and leaves everything else as it was', () => {
+		const list = [project('alpha', { iterations: [v('v1-i1', 1, null), v('v2-i1', 2, null)] }), project('beta')];
+		const after = withCovers(list, [{ projectId: 'alpha', name: 'v2-i1', cover: B }]);
+		expect(after[0]?.iterations.map((i) => i.cover)).toEqual([null, B]);
+		expect(after[1]).toBe(list[1]);
+		expect(withCovers(list, [])).toBe(list);
+	});
+
+	it('reads a picture’s hash, and nothing that is not one', () => {
+		expect(asCover('0123456789ab')).toBe('0123456789ab');
+		for (const bad of ['0123456789AB', '0123456789a', '../x', 12, null, undefined]) expect(asCover(bad)).toBeNull();
 	});
 });

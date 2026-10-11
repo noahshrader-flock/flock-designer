@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Capturable, MAX_PICTURE_BYTES, cropRect, frameRect, toPicture } from '../src/main/services/picture';
+import { type Capturable, MAX_PICTURE_BYTES, cropRect, fitJpeg, frameRect, toPicture } from '../src/main/services/picture';
 
 /** An image whose JPEG size is predictable: width times quality, in bytes. */
 const image = (over: Partial<{ empty: boolean; bytes: (w: number, q: number) => number; throws: boolean }> = {}): Capturable & { tried: string[] } => {
@@ -103,3 +103,22 @@ describe('frameRect', () => {
 	});
 });
 
+
+describe('fitJpeg', () => {
+	// The project pictures' steps: each a width and a quality, tried in order, the first that fits kept.
+	const STEPS: Array<[number, number]> = [[960, 80], [960, 70], [720, 70], [640, 60]];
+
+	it('keeps the first step that fits the budget, and goes no smaller than it has to', () => {
+		const img = image({ bytes: (w, q) => w * q });
+		// 960 at 80 is 76,800 bytes and at 70 is 67,200; 720 at 70 is 50,400, inside 60,000.
+		const jpeg = fitJpeg(img, 60_000, STEPS) as Buffer;
+		expect(img.tried).toEqual(['960@80', '960@70', '720@70']);
+		expect(jpeg.length).toBe(50_400);
+	});
+
+	it('is nothing when no step fits, or the image is empty, or it cannot be encoded: never a picture over budget', () => {
+		expect(fitJpeg(image({ bytes: () => 100_000 }), 48_000, STEPS)).toBeNull();
+		expect(fitJpeg(image({ empty: true }), 48_000, STEPS)).toBeNull();
+		expect(fitJpeg(image({ throws: true }), 48_000, STEPS)).toBeNull();
+	});
+});

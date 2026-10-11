@@ -57,6 +57,17 @@ describe('listProjects', () => {
     expect(alpha?.iterations.map((i) => [i.name, i.createdAt]).sort()).toEqual([['i1', '2026-10-01T00:00:00Z'], ['i2', null]]);
   });
 
+  it('reads which picture each prototype has from its record, and nothing that is not one', async () => {
+    const { session } = fakeSession({
+      ...routes,
+      '/repos/acme/design/contents/projects/alpha/iterations.json': {
+        content: b64(JSON.stringify([{ ...ITERATIONS[0], cover: 'aaaaaaaaaaaa' }, { ...ITERATIONS[1], cover: 'not a hash' }])),
+      },
+    });
+    const [alpha] = await new DesignRepo(session, REF).listProjects();
+    expect(Object.fromEntries(alpha!.iterations.map((i) => [i.name, i.cover]))).toEqual({ i1: 'aaaaaaaaaaaa', i2: null });
+  });
+
   it('knows when a project last had activity: the newest of a change to its folder and a comment on its review thread', async () => {
     const commits = [
       { commit: { author: { name: 'Noah' }, committer: { date: '2026-10-06T12:00:00Z' } } },
@@ -634,6 +645,21 @@ describe('readFile and writeFile', () => {
       { path: '/repos/acme/design/contents/projects/x/new.html', body: { message: 'm', content: b64('<p>') } },
       { path: '/repos/acme/design/contents/projects/x/old.html', body: { message: 'm', content: b64('<p>'), sha: 'abc' } },
     ]);
+  });
+
+  it('writes a picture as the bytes it is, and reads one back as bytes', async () => {
+    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0x00, 0x80, 0xfe]);
+    const writes: unknown[] = [];
+    const api = vi.fn(async (path: string, init: { method?: string; body?: unknown } = {}) => {
+      if (init.method === 'PUT') return writes.push({ path, body: init.body }), {};
+      if (path.endsWith('there.jpg')) return { sha: 's1', content: jpeg.toString('base64'), encoding: 'base64' };
+      throw new GitHubError('Not Found', 404);
+    });
+    const repo = new DesignRepo({ api } as never, REF);
+    await repo.writeFile('projects/x/covers/v1-i1-aaaaaaaaaaaa.jpg', jpeg, 'm');
+    expect(writes).toEqual([{ path: '/repos/acme/design/contents/projects/x/covers/v1-i1-aaaaaaaaaaaa.jpg', body: { message: 'm', content: jpeg.toString('base64') } }]);
+    expect(await repo.readBytes('projects/x/covers/there.jpg')).toEqual(jpeg);
+    expect(await repo.readBytes('projects/x/covers/none.jpg')).toBeNull();
   });
 
   it('says what access is needed when GitHub refuses the write', async () => {

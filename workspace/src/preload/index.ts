@@ -27,6 +27,7 @@ import type {
 	PublishStatus,
 	ShareStatus,
 	PreviewStatus,
+	MadeCover,
 	Project,
 	Result,
 	ReviewComment,
@@ -147,6 +148,8 @@ const api: WorkspaceApi = {
 	onSignInChanged: (listener) => subscribe<SignInState>(CHANNELS.signInChanged, listener),
 
 	listProjects: () => invoke<Project[]>(CHANNELS.listProjects),
+	ensureCovers: () => invoke<MadeCover[]>(CHANNELS.ensureCovers),
+	projectCover: (projectId, name, cover) => invoke<string | null>(CHANNELS.projectCover, projectId, name, cover),
 	readRecord: (projectId, name) => invoke<string>(CHANNELS.readRecord, projectId, name),
 	readComments: (projectId, iteration) => invoke<ReviewComment[]>(CHANNELS.readComments, projectId, iteration),
 	postComment: (projectId, iteration, body, anchor, picture) =>

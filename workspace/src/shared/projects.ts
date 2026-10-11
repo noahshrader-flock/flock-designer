@@ -1,4 +1,4 @@
-import type { Iteration, IterationKind, Person, Project, ProjectIteration } from './contract';
+import type { Iteration, IterationKind, MadeCover, Person, Project, ProjectIteration } from './contract';
 import { isBot, mergePeople } from './people';
 import { matchesWords } from './search';
 
@@ -145,6 +145,8 @@ export const mergeProjects = (remote: Project[], local: Project[]): Project[] =>
 					createdAt: ri.createdAt ?? li.createdAt,
 					repository: ri.repository ?? li.repository ?? null,
 					pullRequest: ri.pullRequest ?? li.pullRequest ?? null,
+					// A picture made here leads: GitHub has it only once it is published.
+					cover: li.cover ?? ri.cover ?? null,
 					contributors: mergePeople(ri.contributors, li.contributors),
 				});
 		}
@@ -242,6 +244,40 @@ export const projectPath = (projectId: string, file: string): string => `project
 export const prototypePagePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.html`);
 /** Its React source, kept beside the page. */
 export const prototypeSourcePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.tsx`);
+
+/** A picture's hash, as a record names it (`prototypeVersionOf` of the page): twelve lower-case hex digits, nothing else. */
+const COVER = /^[0-9a-f]{12}$/;
+/** The hash a record gives a prototype's picture, or null when it gives none or anything else. */
+export const asCover = (v: unknown): string | null => (typeof v === 'string' && COVER.test(v) ? v : null);
+/** Refuses anything but a picture's hash: a path is built from it, and it comes from a record or the window. */
+export const assertCover = (v: unknown): void => {
+	if (asCover(v) === null) throw new Error('That is not the name of a picture.');
+};
+/**
+ * Where a prototype's picture is kept in the design repository: in its project's `covers/` folder (a folder, so a picture
+ * is never one of the project's documents), named by the prototype and the hash of the page it is of, so a file never
+ * changes under its name.
+ */
+export const coverPath = (projectId: string, name: string, cover: string): string => {
+	assertCover(cover);
+	return projectPath(projectId, `covers/${name}-${cover}.jpg`);
+};
+/**
+ * The picture a project's card shows: its newest prototype's, else the newest earlier one that has a picture, so a card
+ * never goes empty while a picture exists. None for a project with no picture, or with only codebase work.
+ */
+export const coverToShow = (project: Pick<Project, 'iterations'>): { name: string; cover: string } | null => {
+	const pictured = workOf(project.iterations, 'prototype').find((i) => asCover(i.cover) !== null);
+	return pictured ? { name: pictured.name, cover: pictured.cover as string } : null;
+};
+/** The list with pictures just made taken in, and nothing else changed: the same list when there are none. */
+export const withCovers = (projects: Project[], made: MadeCover[]): Project[] => {
+	if (made.length === 0) return projects;
+	const cover = (projectId: string, name: string) => made.find((m) => m.projectId === projectId && m.name === name)?.cover;
+	return projects.map((p) =>
+		made.some((m) => m.projectId === p.id) ? { ...p, iterations: p.iterations.map((i) => ({ ...i, cover: cover(p.id, i.name) ?? i.cover ?? null })) } : p,
+	);
+};
 /**
  * A prototype's name says which **version** it belongs to (a different idea for the same brief) and which
  * **iteration** of that version it is (a refinement): `v2-i3`. Names from before versions, `i1`, `i2`, are version 1,

@@ -11,6 +11,7 @@ import { CloneFolderMemory } from './services/cloneFolder';
 import { DesignSystemsMemory } from './services/designSystems';
 import { PICTURE_RECIPE, measureInWindows } from './services/storyMeasure';
 import { checkInWindow } from './services/accessibilityCheck';
+import { coverInWindow } from './services/coverWindow';
 import { PageView } from './services/pageView';
 import { MIN_WINDOW, type WindowState, WindowMemory, restoreState } from './services/windowMemory';
 import { PrototypeServer } from './services/prototypeServer';
@@ -178,6 +179,7 @@ void app.whenReady().then(() => {
 		componentPictureRecipe: PICTURE_RECIPE,
 		measureStories: measureInWindows,
 		checkPage: checkInWindow,
+		drawCover: coverInWindow,
 		// A little after the window is up, so opening the app is not slowed by getting the design system ready.
 		warmAfterMs: 3000,
 	});

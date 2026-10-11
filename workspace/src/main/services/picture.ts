@@ -62,19 +62,36 @@ export const frameRect = (
 	return { x, y, width, height };
 };
 
-/** A data URL for the image, as small as it needs to be to fit, or null if it cannot be made to fit. */
-export const toPicture = (image: Capturable, maxBytes = MAX_PICTURE_BYTES): string | null => {
+/**
+ * The image as a JPEG within `maxBytes`: `steps` are a width and a quality each, tried in order, and the first that fits is
+ * kept, so it is no smaller than it has to be. Null when none fits, or the image is empty or cannot be encoded: never a
+ * picture over budget. A comment's picture and a prototype's both are made this way, each with its own steps.
+ */
+export const fitJpeg = (image: Capturable, maxBytes: number, steps: ReadonlyArray<readonly [width: number, quality: number]>): Buffer | null => {
 	try {
 		if (image.isEmpty()) return null;
-		for (const width of WIDTHS) {
-			const resized = image.resize({ width, quality: 'good' });
-			for (const quality of QUALITIES) {
-				const jpeg = resized.toJPEG(quality);
-				if (jpeg.length > 0 && jpeg.length <= maxBytes) return `data:image/jpeg;base64,${jpeg.toString('base64')}`;
-			}
+		// Each width is resized to once, for all its qualities.
+		let at = 0;
+		let resized = image;
+		for (const [width, quality] of steps) {
+			if (width !== at) [at, resized] = [width, image.resize({ width, quality: 'good' })];
+			const jpeg = resized.toJPEG(quality);
+			if (jpeg.length > 0 && jpeg.length <= maxBytes) return jpeg;
 		}
 	} catch {
-		// A picture that cannot be taken is a comment without one.
+		// A picture that cannot be taken is no picture.
 	}
 	return null;
+};
+
+/** A comment's steps: each width, at each quality, before the next width. */
+const COMMENT_STEPS = WIDTHS.flatMap((w) => QUALITIES.map((q) => [w, q] as const));
+
+/** A JPEG as a data URL, which is how every picture reaches the window. */
+export const jpegDataUrl = (jpeg: Buffer): string => `data:image/jpeg;base64,${jpeg.toString('base64')}`;
+
+/** A data URL for the image, as small as it needs to be to fit, or null if it cannot be made to fit. */
+export const toPicture = (image: Capturable, maxBytes = MAX_PICTURE_BYTES): string | null => {
+	const jpeg = fitJpeg(image, maxBytes, COMMENT_STEPS);
+	return jpeg === null ? null : jpegDataUrl(jpeg);
 };
