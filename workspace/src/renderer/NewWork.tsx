@@ -6,7 +6,7 @@ import { CloneHere, useClone, Working } from './Clone';
 import { FolderField } from './FolderField';
 import { RepositoryReachNote } from './RepositoryReachNote';
 import { SearchSelect } from './SearchSelect';
-import { InfoIcon } from 'lucide-react';
+import { GitBranchIcon, InfoIcon } from 'lucide-react';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
@@ -24,7 +24,7 @@ export interface Created {
 	task: string;
 }
 
-/** Where it starts, as the repository's description: the branch, and a Change that swaps it for a field with the list. */
+/** Where it starts, as the repository's description: a branch icon and the branch, and a Change that swaps it for a field with the list. */
 const StartsFrom = ({ branch, branches, onChange, disabled }: { branch: string; branches: string[]; onChange: (branch: string) => void; disabled: boolean }) => {
 	const [changing, setChanging] = useState(false);
 	if (changing)
@@ -46,8 +46,9 @@ const StartsFrom = ({ branch, branches, onChange, disabled }: { branch: string; 
 			</Field>
 		);
 	return (
-		<FieldDescription>
-			Starts from <code className="font-mono">{branch}</code>.{' '}
+		<FieldDescription data-starts-from className="flex items-center gap-1.5">
+			<GitBranchIcon aria-hidden className="size-3.5 shrink-0" />
+			<code className="font-mono">{branch}</code>
 			<Button variant="link" className="h-auto p-0 text-sm" disabled={disabled || branches.length === 0} onClick={() => setChanging(true)}>
 				Change
 			</Button>

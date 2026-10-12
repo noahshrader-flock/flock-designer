@@ -63,6 +63,8 @@ const chooseRepository = async (name: string) => {
 	await settle();
 };
 const text = () => document.body.textContent ?? '';
+/** The line that says the branch it starts from, under the repository; null when there is none. */
+const startsFrom = () => document.querySelector<HTMLElement>('[data-starts-from]');
 
 afterEach(async () => {
 	if (current) await unmountAll(current.root);
@@ -116,9 +118,17 @@ describe('how the form is laid out', () => {
 
 	it('says what it starts from under the repository, with a way to change it, and no list until then', async () => {
 		await open({ listBaseBranches: branches });
-		expect(text()).toContain('Starts from develop');
+		expect(startsFrom()?.textContent).toContain('develop');
 		expect(document.getElementById('new-work-from')).toBeNull();
 		expect(button('Change').disabled).toBe(false);
+	});
+
+	it('says the branch with a branch icon before it, and not in words', async () => {
+		await open({ listBaseBranches: branches });
+		const line = startsFrom()!;
+		expect(line.querySelector('svg')).not.toBeNull();
+		expect(line.textContent).toBe('developChange');
+		expect(text()).not.toContain('Starts from');
 	});
 
 	it('opens the list of branches from Change, and starts from the one chosen, said again under the repository', async () => {
@@ -130,7 +140,7 @@ describe('how the form is laid out', () => {
 		const option = [...document.querySelectorAll<HTMLElement>('[cmdk-item]')].find((o) => o.textContent === 'release');
 		await press(option as HTMLElement);
 		await settle();
-		expect(text()).toContain('Starts from release');
+		expect(startsFrom()?.textContent).toContain('release');
 		expect(document.getElementById('new-work-from')).toBeNull();
 		await press(button('Create prototype'));
 		await settle();
@@ -146,10 +156,10 @@ describe('how the form is laid out', () => {
 		const repos = [...REPOS, { name: 'flocksafety/flock-ops', root: '/h/GitHub/flock-ops' }].filter((r) => r.root !== null);
 		await open({ listRepositories: async () => ok({ repositories: repos, reach: 'account' }), useCheckout: async () => fail('not usable') });
 		await chooseRepository('flocksafety/flock-ops');
-		expect(text()).not.toContain('Starts from');
+		expect(startsFrom()).toBeNull();
 		await unmountAll(current!.root);
 		await open({ lastCheckout: async () => ok(null) }, { checkout: null });
-		expect(text()).not.toContain('Starts from');
+		expect(startsFrom()).toBeNull();
 	});
 
 	it('closes the list without changing the branch when it is left without choosing', async () => {
@@ -158,7 +168,7 @@ describe('how the form is laid out', () => {
 		await settle();
 		await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
 		await settle();
-		expect(text()).toContain('Starts from develop');
+		expect(startsFrom()?.textContent).toContain('develop');
 		expect(document.getElementById('new-work-from')).toBeNull();
 	});
 });
@@ -313,14 +323,14 @@ describe('a repository with no clone on this machine', () => {
 		let finish: (v: unknown) => void = () => undefined;
 		const made = { root: '/h/GitHub/flock-ops', name: 'flock-ops', branch: 'develop', clean: true };
 		await open({ cloneRepository: () => new Promise((r) => (finish = r)) }, {});
-		expect(text()).toContain('Starts from');
+		expect(startsFrom()).not.toBeNull();
 		await chooseRepository('flocksafety/flock-ops');
-		expect(text()).not.toContain('Starts from');
+		expect(startsFrom()).toBeNull();
 		await press(button('Clone repository'));
-		expect(text()).not.toContain('Starts from');
+		expect(startsFrom()).toBeNull();
 		await act(async () => finish(ok(made)));
 		await settle();
-		expect(text()).toContain('Starts from');
+		expect(startsFrom()).not.toBeNull();
 	});
 
 	it('says why a clone failed where the button is, and can be tried again', async () => {
