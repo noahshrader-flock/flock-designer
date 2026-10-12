@@ -29,4 +29,11 @@ describe('the card grid', () => {
 		const classes = document.querySelector('p')!.parentElement!.className.split(' ');
 		expect(classes).toEqual(expect.arrayContaining(['grid', 'grid-cols-1', '@3xl:grid-cols-2', '@5xl:grid-cols-3', '@min-[84rem]:grid-cols-4', '@min-[104rem]:grid-cols-5']));
 	});
+
+	it('keeps 1.5 rem between cards, the same in the Projects grid and the Design System’s, since both are this', async () => {
+		current = await render(createElement(CardGrid, null, createElement('p', null, 'one')));
+		const classes = document.querySelector('p')!.parentElement!.className.split(' ');
+		expect(classes).toContain('gap-6');
+		expect(classes).not.toContain('gap-4');
+	});
 });

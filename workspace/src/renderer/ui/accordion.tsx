@@ -61,7 +61,8 @@ function AccordionContent({
   return (
     <AccordionPrimitive.Content
       data-slot="accordion-content"
-      className="overflow-hidden text-sm data-open:animate-accordion-down data-closed:animate-accordion-up"
+      // Not clipped at its edge: what a group holds (a card) draws its border just outside itself, and would lose it.
+      className="text-sm"
       {...props}
     >
       <div

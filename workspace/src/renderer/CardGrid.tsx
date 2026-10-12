@@ -7,6 +7,6 @@ import type { ReactNode } from 'react';
  */
 export const CardGrid = ({ children }: { children: ReactNode }) => (
 	<div className="@container">
-		<div className="grid grid-cols-1 gap-4 @3xl:grid-cols-2 @5xl:grid-cols-3 @min-[84rem]:grid-cols-4 @min-[104rem]:grid-cols-5">{children}</div>
+		<div className="grid grid-cols-1 gap-6 @3xl:grid-cols-2 @5xl:grid-cols-3 @min-[84rem]:grid-cols-4 @min-[104rem]:grid-cols-5">{children}</div>
 	</div>
 );

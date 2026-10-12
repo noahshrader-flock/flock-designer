@@ -48,4 +48,12 @@ describe('the accordion', () => {
 		// Not a line under every group whether it is open or not.
 		for (const item of items) expect(item.className.split(' ')).not.toContain('not-last:border-b');
 	});
+
+	it('does not clip what is in it: a card’s border is drawn just outside the card, and a group that cuts at its edge loses it', async () => {
+		await show(['a']);
+		const content = document.querySelector('[data-slot="accordion-content"]') as HTMLElement;
+		expect(content.className.split(' ')).not.toContain('overflow-hidden');
+		// Nor the animation that edge was kept for: it has no keyframes, so it never ran.
+		expect(content.className).not.toContain('animate-accordion');
+	});
 });
