@@ -1,0 +1,36 @@
+# On every push to the default branch: the format, the linter, the typecheck and the unit tests, so a change that breaks
+# one is seen on the commit that did it, with nobody having to remember to run them. Every commit lands on
+# noah/flock-designer directly, so it runs on push rather than on pull requests, which would never fire.
+#
+# The integration tests (real git, esbuild and the real library) run on the machine with the clones, as part of
+# npm run check; here the library is not checked out, and they have not yet been run on Linux.
+name: CI
+
+on:
+  push:
+    branches: [noah/flock-designer]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: workspace/.nvmrc
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+      # With its scripts: two unit tests load the electron package, which needs its own download to load.
+      - name: Install
+        run: npm ci
+      - name: Format, lint and typecheck
+        run: npm run check:static
+      - name: Unit tests
+        run: npm run test:unit

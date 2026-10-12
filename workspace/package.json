@@ -19,7 +19,8 @@
 		"test:integration": "vitest run --project integration",
 		"format": "prettier --write .",
 		"lint": "eslint .",
-		"check": "prettier --check . && eslint . && npm run typecheck && npm test",
+		"check:static": "prettier --check . && eslint . && npm run typecheck",
+		"check": "npm run check:static && npm test",
 		"smoke": "npm run build && node scripts/smoke-boot.mjs",
 		"smoke:page": "npm run build && node scripts/smoke-page.mjs",
 		"smoke:local": "npm run build && node scripts/smoke-local.mjs"
