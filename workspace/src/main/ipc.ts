@@ -1,7 +1,7 @@
 import { type BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { homedir, tmpdir } from 'node:os';
+import { homedir } from 'node:os';
 import { basename, dirname, join, sep } from 'node:path';
 import {
 	type AccessibilityResult,
@@ -152,14 +152,14 @@ export interface IpcContext {
 	/** Told whenever publishing moves, so the window can show it. */
 	onPublishStatus: (status: PublishStatus) => void;
 	/** Where prototypes are built before they are saved: the app's own folder, never a repository. */
-	prototypesRoot?: string;
+	prototypesRoot: string;
 	prototypeServer?: PrototypeServer;
 	/** The latest agent conversation for each branch, so it can be continued in the person's editor. */
-	sessions?: SessionMemory;
+	sessions: SessionMemory;
 	/** Where this person's clones go, once they choose. */
-	cloneFolders?: CloneFolderMemory;
+	cloneFolders: CloneFolderMemory;
 	/** The appearance they chose (Settings), and how it is applied to the app: the system's theme setting, in the app. */
-	appearanceMemory?: AppearanceMemory;
+	appearanceMemory: AppearanceMemory;
 	applyAppearance?: (appearance: Appearance) => void;
 	/** Clones what the New modal asks for. Given for tests, to clone from this machine instead of GitHub. */
 	cloner?: Cloner;
@@ -167,19 +167,19 @@ export interface IpcContext {
 	/** The component library for the Design System tab. Given for tests, to read a library made for them. */
 	designLibrary?: DesignLibrary;
 	/** The design systems the person connected. */
-	designSystems?: DesignSystemsMemory;
+	designSystems: DesignSystemsMemory;
 	/**
 	 * GitHub as the person's own account sees it (its command line), so every repository they can reach is listed, not
 	 * only those the app's GitHub App is installed on. Null where there is none; given for tests.
 	 */
 	personGitHub?: Pick<GitHubSession, 'api'> | null;
 	/** Where the previews of the library's stories are built: the app's own folder, never the library's. */
-	storyPreviewsRoot?: string;
+	storyPreviewsRoot: string;
 	/** Which branch each design system's change to its tokens is kept on (T4); and the GitHub tools it is proposed with. */
-	tokenBranchesFile?: string;
+	tokenBranchesFile: string;
 	tokenBranchTools?: (root: string) => ShareTools;
 	/** Which branch a change to the voice and tone is kept on (T9). */
-	voiceBranchFile?: string;
+	voiceBranchFile: string;
 	/** How stories are drawn to read what they draw (T6): hidden windows, in the app. */
 	measureStories?: Measure;
 	/** How a page is checked for accessibility (T7): axe-core in a hidden window, in the app. */
@@ -191,7 +191,7 @@ export interface IpcContext {
 	 */
 	componentTokens?: Pick<ComponentTokens, 'of' | 'warm' | 'pictures'>;
 	/** Where the pictures of the components are kept (P5): the app's own folder. */
-	componentPicturesRoot?: string;
+	componentPicturesRoot: string;
 	/** How the pictures are taken: a fingerprint, so only pictures taken that way are shown. */
 	componentPictureRecipe?: string;
 	/** When to start getting the shown design system ready after the app opens; not at all when absent. */
@@ -209,21 +209,21 @@ export const registerIpc = ({
 	page,
 	memory,
 	onPublishStatus,
-	prototypesRoot = join(tmpdir(), 'dsnr-prototypes'),
+	prototypesRoot,
 	prototypeServer = new PrototypeServer(),
-	sessions = new SessionMemory(join(tmpdir(), 'dsnr-agent-sessions.json')),
-	cloneFolders = new CloneFolderMemory(join(tmpdir(), 'dsnr-clone-folder.json')),
-	appearanceMemory = new AppearanceMemory(join(tmpdir(), 'dsnr-appearance.json')),
+	sessions,
+	cloneFolders,
+	appearanceMemory,
 	applyAppearance = () => undefined,
 	cloner = new Cloner(),
 	installer = new Installer(),
 	designLibrary,
-	designSystems = new DesignSystemsMemory(join(tmpdir(), 'dsnr-design-system.json')),
+	designSystems,
 	personGitHub = ghApi(),
-	storyPreviewsRoot = join(tmpdir(), 'dsnr-story-previews'),
-	tokenBranchesFile = join(tmpdir(), 'dsnr-token-branches.json'),
+	storyPreviewsRoot,
+	tokenBranchesFile,
 	tokenBranchTools = (root: string) => realShareTools(root),
-	voiceBranchFile = join(tmpdir(), 'dsnr-voice-branch.json'),
+	voiceBranchFile,
 	measureStories = async () => {
 		throw new Error('Stories can be drawn only in the app.');
 	},
@@ -234,7 +234,7 @@ export const registerIpc = ({
 		throw new Error('Pictures of prototypes can be drawn only in the app.');
 	},
 	componentTokens: injectedComponentTokens,
-	componentPicturesRoot = join(tmpdir(), 'dsnr-component-pictures'),
+	componentPicturesRoot,
 	componentPictureRecipe = 'for tests',
 	warmAfterMs,
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {

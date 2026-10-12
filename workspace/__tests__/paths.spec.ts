@@ -4,11 +4,12 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PathOutsideCheckout, isInside, resolveInside } from '../src/main/services/paths';
 
+let base: string;
 let root: string;
 let outside: string;
 
 beforeAll(() => {
-	const base = mkdtempSync(join(tmpdir(), 'fdw-paths-'));
+	base = mkdtempSync(join(tmpdir(), 'fdw-paths-'));
 	root = join(base, 'repo');
 	outside = join(base, 'elsewhere');
 	mkdirSync(join(root, 'src'), { recursive: true });
@@ -19,7 +20,8 @@ beforeAll(() => {
 	symlinkSync(join(outside, 'secret.txt'), join(root, 'src', 'linked.txt'));
 });
 
-afterAll(() => rmSync(root, { recursive: true, force: true }));
+// The whole folder: the outside one beside the repository too.
+afterAll(() => rmSync(base, { recursive: true, force: true }));
 
 describe('isInside', () => {
 	it('accepts a path within the checkout', () => {

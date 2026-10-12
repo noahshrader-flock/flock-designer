@@ -195,6 +195,7 @@ beforeEach(async () => {
 	const { CloneFolderMemory } = await import('../src/main/services/cloneFolder');
 	const { Cloner } = await import('../src/main/services/clone');
 	const { DesignSystemsMemory } = await import('../src/main/services/designSystems');
+	const { SessionMemory } = await import('../src/main/services/editor');
 	register = (more: Record<string, unknown> = {}) =>
 		registerIpc({
 			window: { webContents: { send: vi.fn() } } as never,
@@ -235,6 +236,10 @@ beforeEach(async () => {
 			applyAppearance: (a: string) => void applied.push(a),
 			cloner: new Cloner({ urlOf: (r) => cloneSources[r] ?? 'file:///nowhere' }),
 			designSystems: new DesignSystemsMemory(join(home, 'design-system.json')),
+			// Every file the app keeps is in this test's own folder: none is shared with another run or worker.
+			sessions: new SessionMemory(join(home, 'agent-sessions.json')),
+			tokenBranchesFile: join(home, 'token-branches.json'),
+			voiceBranchFile: join(home, 'voice-branch.json'),
 			// The person's own GitHub (its command line): never the real one here.
 			personGitHub: {
 				api: async (path: string) =>
@@ -324,7 +329,6 @@ describe('the Design System tab', () => {
 	});
 
 	it('takes only text, and the sha of the file it was opened at, to save the voice and tone, asking GitHub nothing otherwise (T9)', async () => {
-		register({ voiceBranchFile: join(home, 'voice-branch.json') });
 		const asked = githubApi.mock.calls.length;
 		expect(await call(CHANNELS.saveVoiceAndTone, { text: 'x' }, null)).toMatchObject({ ok: false, error: expect.stringContaining('saved as text') });
 		expect(await call(CHANNELS.saveVoiceAndTone, 'x'.repeat(200_001), null)).toMatchObject({ ok: false, error: expect.stringContaining('200,000') });
@@ -2023,7 +2027,7 @@ describe('one agent, one piece of work', () => {
 		const { SessionMemory } = await import('../src/main/services/editor');
 		const sessions = new SessionMemory(join(home, 'agent-sessions.json'));
 		const { runner, sessionsSpawned } = await realRunner();
-		register({ agent: runner, sessions });
+		register({ agent: runner });
 		await call(CHANNELS.useCheckout, product);
 		expect((await call(CHANNELS.startAgent, product, 'demo', 'do it')).ok).toBe(true);
 		const r = await call(CHANNELS.startAgent, product, 'demo', 'do it');
