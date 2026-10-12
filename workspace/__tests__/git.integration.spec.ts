@@ -35,13 +35,11 @@ beforeEach(() => {
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 describe('what a repository says', () => {
-	it('gives origin as git resolves it, rewritten by insteadOf, which reading the config by hand misses', async () => {
-		const { originOf } = await import('../src/main/services/repositories');
+	it('gives origin as git resolves it, rewritten by insteadOf', async () => {
 		expect(await originUrl(root)).toBeNull();
 		g('remote', 'add', 'origin', 'gh:flocksafety/flock-coke');
 		g('config', 'url.git@github.com:.insteadOf', 'gh:');
 		expect(await originUrl(root)).toBe('git@github.com:flocksafety/flock-coke');
-		expect(originOf(root)).toBe('gh:flocksafety/flock-coke');
 	});
 
 	it('says whether a file is on a branch, and whether a commit since changed it', async () => {

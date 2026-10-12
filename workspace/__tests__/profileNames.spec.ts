@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ProfileNames } from '../src/main/services/profileNames';
 import type { Person, Project, ProjectIteration } from '../src/shared/contract';
+import { projectIteration } from './fixtures';
 
 /**
  * One name for a person, everywhere: their GitHub profile name. Against a fake GitHub.
@@ -19,20 +20,7 @@ const fakeGitHub = () =>
 		return PROFILES[login];
 	});
 
-const iteration = (contributors: Person[]): ProjectIteration => ({
-	name: 'i1',
-	branch: 'fd/a/i1',
-	issueNumber: null,
-	openComments: 0,
-	previewUrl: null,
-	commit: null,
-	contributors,
-	createdAt: null,
-	route: null,
-	repository: null,
-	pullRequest: null,
-	cover: null,
-});
+const iteration = (contributors: Person[]): ProjectIteration => projectIteration({ name: 'i1', branch: 'fd/a/i1', contributors });
 const project = (people: Person[], contributors: Person[] = people): Project => ({
 	id: 'a',
 	title: 'A',

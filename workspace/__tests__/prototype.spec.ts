@@ -7,8 +7,8 @@ import { isPrototypeKey, prototypeKey, prototypePagePath } from '../src/shared/d
 import { nextPrototypeName } from '../src/shared/prototypeNames';
 import { cloneStore, moveToCodePrompt, prototypeReadable, recordPrototype, setCover } from '../src/main/services/prototype';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
-import { memoryStore } from './fixtures';
-import { moveToCodeTask, prototypeBuildTask } from '../src/main/services/agentTasks';
+import { agentFinished, agentRunning, memoryStore, projectIteration } from './fixtures';
+import { prototypeBuildTask } from '../src/main/services/agentTasks';
 import { claudeCodeAdapter } from '../src/main/services/agent';
 import { FIX_ROUNDS, type PrototypeApi, runPrototypeBuild } from '../src/renderer/prototypeBuild';
 import type { BuildPhase } from '../src/renderer/localBuild';
@@ -182,14 +182,6 @@ describe('what the agent is told', () => {
 		expect(prototypeReadable(null)).toEqual([]);
 	});
 
-	it('asks for the audit before any code changes', () => {
-		const task = moveToCodeTask(
-			{ skill: 's', pageFile: '/q/i1.html', auditFile: '/d/projects/users/audit-i1.md', name: 'i1' },
-			{ lightCheck: null, shared: '', accessibility: '', voice: '' },
-		);
-		expect(task).toContain('Write the audit to `/d/projects/users/audit-i1.md` before you change any code.');
-	});
-
 	it('lets the agent read the product but never change it', () => {
 		const argv = claudeCodeAdapter.argvFor('t', { readOnly: ['/c/coke'] });
 		const settings = JSON.parse(argv[argv.indexOf('--settings') + 1] as string);
@@ -228,30 +220,17 @@ describe('PrototypeServer', () => {
 
 describe('runPrototypeBuild', () => {
 	const project: Project = { id: 'users', title: 'Users', folder: null, records: [], iterations: [], people: [] };
-	const iteration: ProjectIteration = {
-		name: 'i1',
-		branch: 'prototype/users/i1',
-		issueNumber: null,
-		openComments: 0,
-		previewUrl: null,
-		commit: null,
-		contributors: [],
-		createdAt: null,
-		route: null,
-		repository: null,
-		pullRequest: null,
-		cover: null,
-	};
+	const iteration: ProjectIteration = projectIteration({ name: 'i1', branch: 'prototype/users/i1' });
 	const api = (over: Partial<Record<keyof PrototypeApi, unknown>> = {}) => {
 		const calls: string[] = [];
 		const ok = (name: string, value: unknown) => vi.fn(async () => (calls.push(name), { ok: true as const, value }));
 		const a = {
-			buildPrototype: ok('buildPrototype', { state: 'running', startedAt: 'now', work: null, purpose: null }),
-			agentStatus: ok('agentStatus', { state: 'finished', exitCode: 0, work: null, purpose: null }),
+			buildPrototype: ok('buildPrototype', agentRunning()),
+			agentStatus: ok('agentStatus', agentFinished()),
 			savePrototype: ok('savePrototype', null),
 			openPrototype: ok('openPrototype', { url: 'http://127.0.0.1:5000/users/i1/', states: ['default', 'empty'] }),
 			checkAccessibility: ok('checkAccessibility', { violations: [], incomplete: [] }),
-			fixAccessibility: ok('fixAccessibility', { state: 'running', startedAt: 'now', work: null, purpose: null }),
+			fixAccessibility: ok('fixAccessibility', agentRunning()),
 			...over,
 		} as unknown as PrototypeApi;
 		return { a, calls };

@@ -1,22 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
 import { type BuildApi, type BuildPhase, previewAddress, previewCommandFor, routeWentWrong, runLocalBuild } from '../src/renderer/localBuild';
+import { agentFinished, agentRunning, projectIteration } from './fixtures';
 
-const iteration = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
-	name: 'i1',
-	branch: 'fd/users/i1',
-	issueNumber: null,
-	openComments: 0,
-	previewUrl: null,
-	commit: null,
-	contributors: [],
-	createdAt: null,
-	route: null,
-	repository: null,
-	pullRequest: null,
-	cover: null,
-	...over,
-});
+const iteration = (over: Partial<ProjectIteration> = {}): ProjectIteration => projectIteration({ name: 'i1', branch: 'fd/users/i1', ...over });
 const project: Project = { id: 'users', title: 'Users', folder: null, records: [], iterations: [], people: [] };
 
 /** A workspace that does what a healthy one does, with any step overridable. */
@@ -26,9 +13,9 @@ const api = (over: Partial<Record<keyof BuildApi, unknown>> = {}) => {
 	const a = {
 		readCheckout: ok('readCheckout', { root: '/r', name: 'coke', branch: 'fd/users/i1', clean: true }),
 		continueIteration: ok('continueIteration', {}),
-		startAgent: ok('startAgent', { state: 'running', startedAt: 'now', work: null, purpose: null }),
-		startHandoff: ok('startHandoff', { state: 'running', startedAt: 'now', work: 'fd/users/i1', purpose: 'handoff' }),
-		agentStatus: ok('agentStatus', { state: 'finished', exitCode: 0, work: null, purpose: null }),
+		startAgent: ok('startAgent', agentRunning()),
+		startHandoff: ok('startHandoff', agentRunning('fd/users/i1', 'handoff')),
+		agentStatus: ok('agentStatus', agentFinished()),
 		startCommand: ok('startCommand', { state: 'running', commandId: 'preview', url: 'http://localhost:3100/' }),
 		...over,
 	} as unknown as BuildApi;
@@ -108,7 +95,7 @@ describe('work that was just created', () => {
 		const { a } = api({
 			agentStatus: vi.fn(async () => ({
 				ok: true,
-				value: ++polls < 3 ? { state: 'running' } : { state: 'finished', exitCode: 0, work: null, purpose: null },
+				value: ++polls < 3 ? { state: 'running' } : agentFinished(),
 			})),
 		});
 		await run(a, { task: 'x' });
@@ -116,7 +103,7 @@ describe('work that was just created', () => {
 	});
 
 	it('does not start the preview if the agent stopped with an error, and says so', async () => {
-		const { a } = api({ agentStatus: vi.fn(async () => ({ ok: true, value: { state: 'finished', exitCode: 2, work: null, purpose: null } })) });
+		const { a } = api({ agentStatus: vi.fn(async () => ({ ok: true, value: agentFinished(2) })) });
 		const { url, phases } = await run(a, { task: 'x' });
 		expect(url).toBeNull();
 		expect(a.startCommand).not.toHaveBeenCalled();
@@ -207,7 +194,7 @@ describe('when nobody is looking any more', () => {
 		const { a, calls } = api({
 			agentStatus: vi.fn(async () => ({
 				ok: true,
-				value: ++polls < 3 ? { state: 'running', work: 'fd/users/i1' } : { state: 'finished', exitCode: 0, work: null, purpose: null },
+				value: ++polls < 3 ? { state: 'running', work: 'fd/users/i1' } : agentFinished(),
 			})),
 		});
 		const { url, phases } = await run(a);
@@ -248,8 +235,7 @@ describe('when nobody is looking any more', () => {
 		const { a, calls } = api({
 			agentStatus: vi.fn(async () => ({
 				ok: true,
-				value:
-					++polls < 3 ? { state: 'running', work: 'fd/users/i1', purpose: 'handoff' } : { state: 'finished', exitCode: 0, work: null, purpose: null },
+				value: ++polls < 3 ? { state: 'running', work: 'fd/users/i1', purpose: 'handoff' } : agentFinished(),
 			})),
 		});
 		const { phases } = await run(a);

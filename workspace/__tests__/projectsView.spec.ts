@@ -1,3 +1,4 @@
+import { projectIteration } from './fixtures';
 // @vitest-environment jsdom
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -12,22 +13,7 @@ const project = (id: string, title: string): Project => ({
 	title,
 	folder: null,
 	records: [],
-	iterations: [
-		{
-			name: 'v1-i1',
-			branch: `prototype/${id}/v1-i1`,
-			issueNumber: null,
-			openComments: 0,
-			previewUrl: null,
-			commit: null,
-			contributors: [],
-			createdAt: '2026-10-01T00:00:00Z',
-			route: null,
-			repository: null,
-			pullRequest: null,
-			cover: null,
-		},
-	],
+	iterations: [projectIteration({ name: 'v1-i1', branch: `prototype/${id}/v1-i1`, createdAt: '2026-10-01T00:00:00Z' })],
 	people: [],
 });
 const PROJECTS = [project('alert-history', 'Alert history'), project('admin-usage', 'Admin usage')];

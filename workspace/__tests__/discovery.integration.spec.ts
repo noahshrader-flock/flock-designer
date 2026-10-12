@@ -9,6 +9,7 @@ import { classify, patternToRegex, readBranchProjects } from '../src/main/servic
 import { findProductCheckouts, recordsRootFor, type DiscoveryDeps } from '../src/main/services/discovery';
 import { continueIteration, readIterations } from '../src/main/services/iterations';
 import { unionLocal } from '../src/shared/projectList';
+import { projectIteration } from './fixtures';
 
 const descriptor: WorkspaceDescriptor = {
 	version: 1,
@@ -160,21 +161,7 @@ describe('work found in a real repository, with no record written', () => {
 });
 
 describe('unionLocal', () => {
-	const it1 = (branch: string, over: Partial<ProjectIteration> = {}): ProjectIteration => ({
-		name: 'i1',
-		branch,
-		issueNumber: null,
-		openComments: 0,
-		previewUrl: null,
-		commit: null,
-		contributors: [],
-		createdAt: null,
-		route: null,
-		repository: null,
-		pullRequest: null,
-		cover: null,
-		...over,
-	});
+	const it1 = (branch: string, over: Partial<ProjectIteration> = {}): ProjectIteration => projectIteration({ name: 'i1', branch, ...over });
 	it('keeps what a record says and adds branches it did not know about', () => {
 		const rec = [
 			{

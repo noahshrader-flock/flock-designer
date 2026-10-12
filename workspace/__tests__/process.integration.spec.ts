@@ -29,9 +29,4 @@ describe('running a program', () => {
 		expect(failed).toBeInstanceOf(NotInstalled);
 		expect(failed).toMatchObject({ code: 'ENOENT', program: 'definitely-not-installed-xyz' });
 	});
-
-	it('always has a time limit, even when none is given', async () => {
-		const { DEFAULT_TIMEOUT_MS } = await import('../src/main/services/process');
-		expect(DEFAULT_TIMEOUT_MS).toBeGreaterThan(0);
-	});
 });

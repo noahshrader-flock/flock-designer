@@ -1,3 +1,4 @@
+import { projectIteration } from './fixtures';
 // @vitest-environment jsdom
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -13,21 +14,8 @@ import { fakeApp, ok, press, render, settle, unmountAll } from './reviewHarness'
  * codebase work links to it on GitHub instead. Against the card on its own.
  */
 
-const iteration = (more: Partial<ProjectIteration> = {}): ProjectIteration => ({
-	name: 'v1-i1',
-	branch: 'prototype/admin-usage/v1-i1',
-	issueNumber: null,
-	openComments: 0,
-	previewUrl: null,
-	commit: null,
-	contributors: [],
-	createdAt: '2026-10-01T10:00:00Z',
-	route: null,
-	repository: null,
-	pullRequest: null,
-	cover: null,
-	...more,
-});
+const iteration = (more: Partial<ProjectIteration> = {}): ProjectIteration =>
+	projectIteration({ name: 'v1-i1', branch: 'prototype/admin-usage/v1-i1', createdAt: '2026-10-01T10:00:00Z', ...more });
 // By the app's own rule (`workKind`): codebase work is the iteration named `codebase`; any other is a prototype.
 const NEWEST = iteration({ name: 'v1-i2', branch: 'prototype/admin-usage/v1-i2', createdAt: '2026-10-05T10:00:00Z' });
 const OLDER = iteration({ name: 'v1-i1', createdAt: '2026-09-01T10:00:00Z' });

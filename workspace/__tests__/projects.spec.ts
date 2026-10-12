@@ -29,22 +29,9 @@ import {
 import { PROJECT_ID, asDate, asRoute, isRecordName, slugify, asCover } from '../src/shared/validate';
 import { codeLink, iterationLabel, workOf } from '../src/shared/work';
 import { readFolderProjects } from '../src/main/services/localProjects';
+import { projectIteration } from './fixtures';
 
-const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
-	name: 'i1',
-	branch: 'fd/alpha/i1',
-	issueNumber: null,
-	openComments: 0,
-	previewUrl: null,
-	commit: null,
-	contributors: [],
-	createdAt: null,
-	route: null,
-	repository: null,
-	pullRequest: null,
-	cover: null,
-	...over,
-});
+const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => projectIteration({ name: 'i1', branch: 'fd/alpha/i1', ...over });
 const project = (id: string, over: Partial<Project> = {}): Project => ({
 	id,
 	title: id,
@@ -417,20 +404,7 @@ describe("versions and iterations in a prototype's name", () => {
 });
 
 describe('byVersion', () => {
-	const iterationAt = (name: string, createdAt: string): ProjectIteration => ({
-		name,
-		branch: `prototype/demo/${name}`,
-		issueNumber: null,
-		openComments: 0,
-		previewUrl: null,
-		commit: null,
-		contributors: [],
-		createdAt,
-		route: null,
-		repository: null,
-		pullRequest: null,
-		cover: null,
-	});
+	const iterationAt = (name: string, createdAt: string): ProjectIteration => projectIteration({ name, branch: `prototype/demo/${name}`, createdAt });
 
 	it("groups a project's prototypes by version, keeping the order it was given", () => {
 		const newestFirst = [iterationAt('v2-i1', '2026-10-05'), iterationAt('v1-i2', '2026-10-04'), iterationAt('i1', '2026-10-01')];

@@ -6,7 +6,8 @@ import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcContext } from '../src/main/ipc';
 import { CHANNELS } from '../src/shared/contract';
-import { g, installDesignSystem, makeProduct, makeProductFiles, addStandards, type Fn } from './fixtures';
+import type { Ports } from '../src/main/ports';
+import { addStandards, agentRunning, g, installDesignSystem, makeProduct, makeProductFiles, type Fn } from './fixtures';
 
 /**
  * The IPC layer itself: which handlers demand that a repository was actually
@@ -28,19 +29,31 @@ vi.mock('electron', () => ({
 	},
 }));
 let copied = '';
-/** Everything outside the app, faked: no dialog, no other application, no real gh, no push. */
-let ports: {
-	chooseFolder: Fn;
-	tell: Fn;
-	openExternal: Fn;
-	openPath: Fn;
-	copy: Fn;
-	httpStatus: Fn;
-	editor: { find: () => string | null; openFolder: Fn; openPrompt: Fn; openSession: Fn };
-	claude: () => string;
-	personGitHub: { api: (path: string) => Promise<unknown> };
-	shareTools: Fn;
-};
+/**
+ * Everything outside the app, faked: no dialog, no other application, no real gh, no push. Checked against `Ports`, so a
+ * port added there and not here fails to compile.
+ */
+const fakePorts = () =>
+	({
+		chooseFolder: vi.fn(async (): Promise<string | null> => null),
+		tell: vi.fn(async () => undefined),
+		openExternal: vi.fn(async () => undefined),
+		openPath: vi.fn(async () => undefined),
+		copy: vi.fn(async (t: string) => void (copied = t)),
+		httpStatus: vi.fn(async () => 200),
+		// Never another application from a test: VS Code is treated as not installed.
+		editor: { find: (): string | null => null, openFolder: vi.fn(), openPrompt: vi.fn(), openSession: vi.fn() },
+		claude: () => 'claude',
+		// The person's own GitHub (its command line): never the real one here.
+		personGitHub: {
+			api: async (path: string) =>
+				path === '/user' ? { login: personLogin } : path.startsWith('/user/repos') ? personRepos.map((full_name) => ({ full_name })) : [],
+		},
+		shareTools: vi.fn(() => {
+			throw new Error('Sharing is not faked in this test.');
+		}),
+	}) satisfies Ports;
+let ports: ReturnType<typeof fakePorts>;
 /** Where each repository is cloned from in a test: this machine, standing in for GitHub. */
 let cloneSources: Record<string, string> = {};
 /** What the person's own GitHub account lists, beyond what the app's GitHub App can see. */
@@ -154,25 +167,7 @@ beforeEach(async () => {
 	// Discovery looks under the home directory; point it at a temporary one.
 	vi.doMock('node:os', async () => ({ ...(await vi.importActual<object>('node:os')), homedir: () => home }));
 	copied = '';
-	ports = {
-		chooseFolder: vi.fn(async () => null),
-		tell: vi.fn(async () => undefined),
-		openExternal: vi.fn(async () => undefined),
-		openPath: vi.fn(async () => undefined),
-		copy: vi.fn(async (t: string) => void (copied = t)),
-		httpStatus: vi.fn(async () => 200),
-		// Never another application from a test: VS Code is treated as not installed.
-		editor: { find: () => null, openFolder: vi.fn(), openPrompt: vi.fn(), openSession: vi.fn() },
-		claude: () => 'claude',
-		// The person's own GitHub (its command line): never the real one here.
-		personGitHub: {
-			api: async (path: string) =>
-				path === '/user' ? { login: personLogin } : path.startsWith('/user/repos') ? personRepos.map((full_name) => ({ full_name })) : [],
-		},
-		shareTools: vi.fn(() => {
-			throw new Error('Sharing is not faked in this test.');
-		}),
-	};
+	ports = fakePorts();
 
 	({ registerIpc } = await import('../src/main/ipc'));
 	({ OpenedCheckouts } = await import('../src/main/services/session'));
@@ -225,7 +220,7 @@ beforeEach(async () => {
 	register = (more: Partial<IpcContext> = {}) =>
 		registerIpc({
 			window: { webContents: { send: vi.fn() } } as never,
-			ports: ports as never,
+			ports,
 			opened,
 			runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
 			agent: {
@@ -1984,7 +1979,7 @@ describe('one agent, one piece of work', () => {
 
 	it("hands the agent's conversation over, and stops the app's run of it first so it has one writer", async () => {
 		await call(CHANNELS.useCheckout, product);
-		agentStart.mockReturnValue({ state: 'running', startedAt: 'now', work: null, purpose: null });
+		agentStart.mockReturnValue(agentRunning());
 		expect((await call(CHANNELS.editorState, product, branchHere())).value).toEqual({ editor: false, session: false });
 		await call(CHANNELS.startAgent, product, 'demo', 'do it');
 		const session = (agentStart.mock.calls.at(-1)?.[3] as { session: string }).session;
@@ -2097,7 +2092,7 @@ describe('Handoff', () => {
 		mkdirSync(join(design, 'skills'), { recursive: true });
 		writeFileSync(join(design, 'skills', 'handoff.md'), '# Hand work to engineering\nThe shared steps.\n');
 		await codebaseWork();
-		agentStart.mockReturnValue({ state: 'running', startedAt: 'now', work: 'feature/demo', purpose: 'handoff' });
+		agentStart.mockReturnValue(agentRunning('feature/demo', 'handoff'));
 	};
 	const commitHandoff = () => {
 		writeFileSync(join(product, 'HANDOFF.md'), '# Handoff\n');
@@ -2124,7 +2119,7 @@ describe('Handoff', () => {
 		g(product, 'checkout', '-q', 'develop');
 		expect((await call(CHANNELS.startHandoff, product, 'demo')).error).toMatch(/Open feature\/demo first/);
 		g(product, 'checkout', '-q', 'feature/demo');
-		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now', work: null, purpose: null });
+		agentStatus.mockReturnValue(agentRunning());
 		expect((await call(CHANNELS.startHandoff, product, 'demo')).error).toMatch(/already working/);
 		expect(agentStart).not.toHaveBeenCalled();
 	});

@@ -2,6 +2,7 @@ import { act, createElement, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { CommentAnchor, PickedPoint, PinEvent, Project, ProjectIteration, Result, ReviewComment, WorkspaceApi } from '../src/shared/contract';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
+import { agentRunning, projectIteration } from './fixtures';
 
 /**
  * The review screen, rendered for real in jsdom against a fake app: every call the window can make answers, the ones
@@ -35,7 +36,7 @@ export const fakeApp = (overrides: Impl = {}) => {
 				incomplete: [],
 				notAutomated: [],
 			}),
-		fixAccessibility: async () => ok({ state: 'running', startedAt: 'now', work: null, purpose: null }),
+		fixAccessibility: async () => ok(agentRunning()),
 		readComments: async () => ok([]),
 		// No design system connected, unless a test says otherwise.
 		designSystems: async () => ok({ systems: [], current: null }),
@@ -134,20 +135,7 @@ export const PROJECT: Project = {
 	createdAt: null,
 } as unknown as Project;
 
-export const PROTOTYPE: ProjectIteration = {
-	name: 'v1-i1',
-	branch: 'prototype/demo/v1-i1',
-	issueNumber: 1,
-	openComments: 0,
-	previewUrl: null,
-	commit: null,
-	contributors: [],
-	createdAt: null,
-	route: null,
-	repository: null,
-	pullRequest: null,
-	cover: null,
-};
+export const PROTOTYPE: ProjectIteration = projectIteration({ name: 'v1-i1', branch: 'prototype/demo/v1-i1', issueNumber: 1 });
 
 const CHECKOUT = { root: '/c/flock-coke', name: 'flock-coke', branch: 'develop', clean: true };
 

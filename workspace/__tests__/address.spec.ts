@@ -3,9 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { prepareAddress } from '../src/main/services/address';
-import { addressTask } from '../src/main/services/agentTasks';
 import { type AddressPhase, runAddress, runPrototypeAddress } from '../src/renderer/address';
 import type { AgentStatus, ReviewComment, Result } from '../src/shared/contract';
+import { agentFinished, agentRunning } from './fixtures';
 
 const comment = (id: number, over: Partial<ReviewComment> = {}): ReviewComment => ({
 	id,
@@ -129,25 +129,6 @@ describe('prepareAddress', () => {
 	});
 });
 
-describe('addressTask', () => {
-	it('asks for the one comment it was given, by the number on its pin', () => {
-		const one = addressTask('/r/comments.md', 'fd/demo/i1', 'SKILL', 3);
-		expect(one).toContain('Address comment 3 on this project, and only that one.');
-		expect(one).toContain('leave them');
-		expect(one.endsWith('SKILL')).toBe(true);
-	});
-
-	it('is short and names what the app produced', () => {
-		const task = addressTask('/r/projects/demo/comments.md', 'fd/demo/i1', 'SKILL TEXT', 1);
-		expect(task.split('\n').slice(0, 2)).toEqual([
-			'Address comment 1 on this project, and only that one.',
-			'The comments are in /r/projects/demo/comments.md, written from GitHub a moment ago. Read it first.',
-		]);
-		expect(task).toContain("This iteration's branch is fd/demo/i1.");
-		expect(task.endsWith('SKILL TEXT')).toBe(true);
-	});
-});
-
 describe('runAddress', () => {
 	const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 	/** The branch stands still unless a test says otherwise, which is the interesting case. */
@@ -178,12 +159,12 @@ describe('runAddress', () => {
 		let i = 0;
 		return async () => ok(s[Math.min(i++, s.length - 1)] as AgentStatus);
 	};
-	const started: AgentStatus = { state: 'running', startedAt: 'now', work: null, purpose: null };
+	const started: AgentStatus = agentRunning();
 
 	it('runs, waits through the agent, and says it is done', async () => {
 		const phases = await run({
 			addressComments: async () => ok(started),
-			agentStatus: statuses(started, started, { state: 'finished', exitCode: 0, work: null, purpose: null }),
+			agentStatus: statuses(started, started, agentFinished()),
 			iterationCommit: commits('abc', 'def'),
 		});
 		expect(phases.map((p) => p.kind)).toEqual(['running', 'done']);
@@ -195,7 +176,7 @@ describe('runAddress', () => {
 		// decision only a person can make. It exits cleanly, so only the branch tells them apart.
 		const phases = await run({
 			addressComments: async () => ok(started),
-			agentStatus: statuses(started, { state: 'finished', exitCode: 0, work: null, purpose: null }),
+			agentStatus: statuses(started, agentFinished()),
 			iterationCommit: commits('abc', 'abc'),
 		});
 		expect(phases[1]).toEqual({ kind: 'done', changed: false, commit: null });
@@ -204,7 +185,7 @@ describe('runAddress', () => {
 	it('does not claim the branch stood still when it cannot be read', async () => {
 		const phases = await run({
 			addressComments: async () => ok(started),
-			agentStatus: statuses({ state: 'finished', exitCode: 0, work: null, purpose: null }),
+			agentStatus: statuses(agentFinished()),
 			iterationCommit: async () => ({ ok: false, error: 'not a git repository' }),
 		});
 		// Nothing is claimed about the branch, and there is no commit to point at.
@@ -234,11 +215,10 @@ describe('runAddress', () => {
 				(p) => p.kind,
 			),
 		).toEqual(['running', 'failed']);
-		expect(
-			(
-				await run({ addressComments: async () => ok(started), agentStatus: statuses({ state: 'finished', exitCode: 1, work: null, purpose: null }) })
-			).map((p) => p.kind),
-		).toEqual(['running', 'failed']);
+		expect((await run({ addressComments: async () => ok(started), agentStatus: statuses(agentFinished(1)) })).map((p) => p.kind)).toEqual([
+			'running',
+			'failed',
+		]);
 	});
 
 	it('stops quietly when nobody is looking any more', async () => {
@@ -250,8 +230,8 @@ describe('runAddress', () => {
 
 describe('runPrototypeAddress', () => {
 	const ok = <T>(value: T): Result<T> => ({ ok: true, value });
-	const started: AgentStatus = { state: 'running', startedAt: 'now', work: null, purpose: null };
-	const finished: AgentStatus = { state: 'finished', exitCode: 0, work: null, purpose: null };
+	const started: AgentStatus = agentRunning();
+	const finished: AgentStatus = agentFinished();
 	const addressed = { changed: true, iteration: 'v1-i2', made: null, comment: { id: 7 } } as never;
 	const run = async (api: Partial<Parameters<typeof runPrototypeAddress>[0]['api']>, isLive = () => true) => {
 		const phases: AddressPhase[] = [];

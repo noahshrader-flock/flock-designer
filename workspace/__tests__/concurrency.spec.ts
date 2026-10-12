@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coalescing, singleFlight } from '../src/main/services/concurrency';
+import { coalescing, coalescingByKey, singleFlight } from '../src/main/services/concurrency';
 
 const later = () => {
 	let done!: (v: string) => void;
@@ -63,5 +63,27 @@ describe('one run at a time, and one more if asked meanwhile', () => {
 		await expect(go()).rejects.toThrow('first failed');
 		await go();
 		expect(runs).toBe(2);
+	});
+});
+
+describe('one run at a time for each key', () => {
+	it('runs a key once more for however many ask meanwhile, other keys beside it, and counts only what is running', async () => {
+		const byKey = coalescingByKey<string>();
+		const gates = [later(), later()];
+		let runs = 0;
+		const gate = (i: number) => gates[i] as ReturnType<typeof later>;
+		const workA = async () => void (await gate(runs++).promise);
+		const other = later();
+		const asked = [byKey.run('a', workA), byKey.run('a', workA), byKey.run('a', workA)];
+		const b = byKey.run('b', async () => void (await other.promise));
+		expect([byKey.has('a'), byKey.has('b'), byKey.size]).toEqual([true, true, 2]);
+		other.done('');
+		await b;
+		expect([byKey.has('b'), byKey.size]).toEqual([false, 1]);
+		gate(0).done('');
+		gate(1).done('');
+		await Promise.all(asked);
+		expect(runs).toBe(2);
+		expect(byKey.size).toBe(0);
 	});
 });

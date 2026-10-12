@@ -1,3 +1,4 @@
+import { agentFinished, agentRunning } from './fixtures';
 // @vitest-environment jsdom
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -70,8 +71,8 @@ const openApp = async (address?: { iteration: string }) => {
 		moveComment: (id: number, anchor: CommentAnchor) => toResult(repo.moveComment(id, anchor)),
 		pageShowMarkers: (items: MarkerRequest[]) => framePage(preview).showMarkers(items),
 		// Address, as the main process finishes it: the change made, and the comment marked (and resolved) where it is.
-		addressPrototype: async () => ok({ state: 'running', startedAt: 'now', work: null, purpose: null }),
-		agentStatus: async () => ok({ state: 'finished', exitCode: 0, work: null, purpose: null }),
+		addressPrototype: async () => ok(agentRunning()),
+		agentStatus: async () => ok(agentFinished()),
 		finishPrototypeAddress: async (id: number) =>
 			ok({
 				changed: true,

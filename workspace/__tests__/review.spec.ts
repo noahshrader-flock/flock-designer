@@ -1,3 +1,4 @@
+import { agentFinished, agentRunning } from './fixtures';
 // @vitest-environment jsdom
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -646,8 +647,8 @@ describe('Address', () => {
 		let c = comment(1, 'Remove this');
 		const app = fakeApp({
 			readComments: async () => ok([c]),
-			addressPrototype: async () => ok({ state: 'running', startedAt: 'now', work: null, purpose: null }),
-			agentStatus: async () => ok({ state: 'finished', exitCode: 0, work: null, purpose: null }),
+			addressPrototype: async () => ok(agentRunning()),
+			agentStatus: async () => ok(agentFinished()),
 			finishPrototypeAddress: async () =>
 				ok({
 					changed: true,

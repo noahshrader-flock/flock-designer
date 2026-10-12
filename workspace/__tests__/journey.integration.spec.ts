@@ -11,6 +11,7 @@ import { continueIteration, createIteration, readIterations } from '../src/main/
 import { RuntimeManager } from '../src/main/services/runtime';
 import { OpenedCheckouts } from '../src/main/services/session';
 import type { PreviewStatus, RunLogLine } from '../src/shared/contract';
+import { agentFinished } from './fixtures';
 
 /**
  * The journey step 13 owes, start to finish.
@@ -100,7 +101,7 @@ describe('from a request to a running preview', () => {
 		agent.start(root, 'inactive-users', 'Flag users who have not signed in for 90 days.');
 		await new Promise((r) => setTimeout(r, 400));
 		expect(logs.map((l) => l.text).join('')).toContain('Project: inactive-users');
-		expect(agent.status()).toEqual({ state: 'finished', exitCode: 0, work: null, purpose: null });
+		expect(agent.status()).toEqual(agentFinished());
 
 		// 5. The agent's work lands on the branch and is committed.
 		writeFileSync(join(product, 'src/prototypes/view.tsx'), 'export const View = () => null;\n');

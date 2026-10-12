@@ -3,11 +3,36 @@ import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { RecordStore } from '../src/main/services/prototype';
+import type { AgentStatus, ProjectIteration } from '../src/shared/contract';
 
 /** A mocked function of any shape, called as the code calls it: vitest's own `Procedure`, which it does not export. */
 export type Fn = Mock<(...args: any[]) => any>;
 
 /** Fixtures more than one spec builds the same way: a product checkout, its design system installed, a design repository in memory. */
+
+/** An iteration as the window is given one: `name` and `branch`, and nothing shared, built or commented on unless `over` says. */
+export const projectIteration = (over: Pick<ProjectIteration, 'name' | 'branch'> & Partial<ProjectIteration>): ProjectIteration => ({
+	issueNumber: null,
+	openComments: 0,
+	previewUrl: null,
+	commit: null,
+	contributors: [],
+	createdAt: null,
+	route: null,
+	repository: null,
+	pullRequest: null,
+	cover: null,
+	...over,
+});
+
+/** The agent as a fake runner reports it: running, or finished with `exitCode`, for `work` when it was started for some. */
+export const agentRunning = (work: string | null = null, purpose: 'handoff' | null = null): AgentStatus => ({
+	state: 'running',
+	startedAt: 'now',
+	work,
+	purpose,
+});
+export const agentFinished = (exitCode = 0, work: string | null = null): AgentStatus => ({ state: 'finished', exitCode, work, purpose: null });
 
 export const g = (root: string, ...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
 
