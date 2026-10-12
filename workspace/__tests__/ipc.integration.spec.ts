@@ -1938,6 +1938,24 @@ describe('startAgent validates the project id', () => {
 });
 
 describe('the table of calls', () => {
+	it('checks what the window sends before a handler runs: a comment on a branch that is not one, or past its length, is refused', async () => {
+		const posted = await call(CHANNELS.postComment, 'demo', 'prototype/demo/v1-i1`)', 'Hi', null);
+		expect(posted).toMatchObject({ ok: false, error: expect.stringMatching(/is not a branch name/) });
+		const long = await call(CHANNELS.postComment, 'demo', 'prototype/demo/v1-i1', 'x'.repeat(20_001), null);
+		expect(long).toMatchObject({ ok: false, error: expect.stringMatching(/up to 20,000 characters/) });
+		expect(await call(CHANNELS.readComments, '../etc', 'prototype/demo/v1-i1')).toMatchObject({
+			ok: false,
+			error: expect.stringMatching(/project id/),
+		});
+		expect(readComments).not.toHaveBeenCalled();
+	});
+
+	it('bounds a request to the agent, which goes into its command line', async () => {
+		const r = await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'x'.repeat(20_001));
+		expect(r).toMatchObject({ ok: false, error: expect.stringMatching(/up to 20,000 characters/) });
+		expect(agentStart).not.toHaveBeenCalled();
+	});
+
 	it('has a handler for every call the window can make, and none it cannot', async () => {
 		const { INVOKE, invokeChannel } = await import('../src/shared/contract');
 		expect([...handlers.keys()].sort()).toEqual(INVOKE.map(invokeChannel).sort());
