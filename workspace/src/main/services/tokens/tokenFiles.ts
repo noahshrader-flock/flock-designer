@@ -162,7 +162,17 @@ export const tokenFiles: TokenSource = {
 			const value = resolve(raw.value);
 			// Typography (R3): a family, a weight, a size named as one, or a typography token as each of its parts.
 			const typeToken = (at: string, group: string, set: string, name: string, written: string | null) => {
-				if (written !== null) tokens.push({ path: at, kind: 'font', category: primitiveOf('font', at) as string, group, set, name, value: written, source: { file: raw.file, line: raw.line } });
+				if (written !== null)
+					tokens.push({
+						path: at,
+						kind: 'font',
+						category: primitiveOf('font', at) as string,
+						group,
+						set,
+						name,
+						value: written,
+						source: { file: raw.file, line: raw.line },
+					});
 			};
 			const set = raw.path.slice(0, -1).join('.') || path;
 			const last = raw.path[raw.path.length - 1] as string;
@@ -180,7 +190,17 @@ export const tokenFiles: TokenSource = {
 			// cannot be read is named.
 			const motion = (at: string, kind: 'duration' | 'easing', motionSet: string, name: string, written: string | null) => {
 				if (written === null) problems.push({ file: raw.file, line: raw.line, reason: `${at} is not a duration or an easing that can be read` });
-				else tokens.push({ path: at, kind, category: primitiveOf(kind, at) as string, group: MOTION_PARTS[kind], set: motionSet, name, value: written, source: { file: raw.file, line: raw.line } });
+				else
+					tokens.push({
+						path: at,
+						kind,
+						category: primitiveOf(kind, at) as string,
+						group: MOTION_PARTS[kind],
+						set: motionSet,
+						name,
+						value: written,
+						source: { file: raw.file, line: raw.line },
+					});
 			};
 			if (raw.type === 'duration' || raw.type === 'cubicBezier') {
 				motion(path, raw.type === 'duration' ? 'duration' : 'easing', set, last, raw.type === 'duration' ? durationOf(value) : easingOf(value));
@@ -195,8 +215,23 @@ export const tokenFiles: TokenSource = {
 			// A shadow (R4), as the box shadow it draws; one that cannot be drawn is named.
 			if (raw.type === 'shadow') {
 				const shadow = boxShadowOf(value, resolve);
-				if (shadow === null) problems.push({ file: raw.file, line: raw.line, reason: `${path} is not a shadow that can be read: it needs a color, offsets, a blur and a spread` });
-				else tokens.push({ path, kind: 'shadow', category: primitiveOf('shadow', path) as string, group: SHADOWS, set, name: last, value: shadow, source: { file: raw.file, line: raw.line } });
+				if (shadow === null)
+					problems.push({
+						file: raw.file,
+						line: raw.line,
+						reason: `${path} is not a shadow that can be read: it needs a color, offsets, a blur and a spread`,
+					});
+				else
+					tokens.push({
+						path,
+						kind: 'shadow',
+						category: primitiveOf('shadow', path) as string,
+						group: SHADOWS,
+						set,
+						name: last,
+						value: shadow,
+						source: { file: raw.file, line: raw.line },
+					});
 				continue;
 			}
 			if (raw.type === 'typography' && value !== null && typeof value === 'object') {
@@ -208,7 +243,8 @@ export const tokenFiles: TokenSource = {
 			}
 			const color = raw.type === 'color' && typeof value === 'string' ? value : null;
 			// A border is shown as its width, which is what Borders holds.
-			const length = raw.type === 'dimension' ? lengthOf(value) : raw.type === 'border' ? lengthOf(resolve((value as { width?: unknown } | null)?.width)) : null;
+			const length =
+				raw.type === 'dimension' ? lengthOf(value) : raw.type === 'border' ? lengthOf(resolve((value as { width?: unknown } | null)?.width)) : null;
 			const kind = color !== null ? 'color' : length !== null ? 'dimension' : null;
 			const category = kind === null ? null : primitiveOf(kind, naming);
 			if (kind === null || category === null) continue;
@@ -232,7 +268,9 @@ export const tokenFiles: TokenSource = {
 		}
 		// A token that names another is the semantic one; the ones with a value of their own are the primitives.
 		const named = (t: DesignToken) => POINTER.test(String(raws.get(t.path)?.value));
-		return tokens.length === 0 && problems.length === 0 ? null : { source: tokenFiles.name, tokens: semanticFirst(tokens, (t) => !named(t)), problems };
+		return tokens.length === 0 && problems.length === 0
+			? null
+			: { source: tokenFiles.name, tokens: semanticFirst(tokens, (t) => !named(t)), problems };
 	},
 
 	edit: (text, token, to) => {

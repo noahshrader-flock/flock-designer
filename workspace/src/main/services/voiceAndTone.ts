@@ -148,7 +148,9 @@ export class VoiceAndToneFile {
 				const pr = asRecord(await this.github.api(`${this.base}/pulls/${kept.pullRequest.number}`));
 				return pr.state === 'open' && !pr.merged_at ? kept.pullRequest : 'gone';
 			}
-			const found = asArray(await this.github.api(`${this.base}/pulls?head=${encodeURIComponent(`${this.repo.owner}:${kept.branch}`)}&state=all`)).map(asRecord);
+			const found = asArray(
+				await this.github.api(`${this.base}/pulls?head=${encodeURIComponent(`${this.repo.owner}:${kept.branch}`)}&state=all`),
+			).map(asRecord);
 			const open = found.find((p) => p.state === 'open');
 			if (open && typeof open.number === 'number' && typeof open.html_url === 'string') return { number: open.number, url: open.html_url };
 			return found.length > 0 ? 'gone' : null;
@@ -165,7 +167,14 @@ export class VoiceAndToneFile {
 	async current(): Promise<VoiceAndTone> {
 		const base = await this.defaultBranch();
 		const onDefault = await this.read(base);
-		return { repository: this.key, path: this.path, base, text: onDefault?.text ?? null, sha: onDefault?.sha ?? null, branch: await this.branch(base) };
+		return {
+			repository: this.key,
+			path: this.path,
+			base,
+			text: onDefault?.text ?? null,
+			sha: onDefault?.sha ?? null,
+			branch: await this.branch(base),
+		};
 	}
 
 	/** The kept branch as GitHub has it, after forgetting it if it was merged, closed or deleted there. */
@@ -240,7 +249,9 @@ export class VoiceAndToneFile {
 		if (kept === null) throw new Error('Save the change before proposing it.');
 		const base = await this.defaultBranch();
 		try {
-			const open = asArray(await this.github.api(`${this.base}/pulls?head=${encodeURIComponent(`${this.repo.owner}:${kept.branch}`)}&state=open`)).map(asRecord)[0];
+			const open = asArray(
+				await this.github.api(`${this.base}/pulls?head=${encodeURIComponent(`${this.repo.owner}:${kept.branch}`)}&state=open`),
+			).map(asRecord)[0];
 			const pr =
 				open ??
 				asRecord(

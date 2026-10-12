@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { RESOLVED_MARK, addressedAt, addressedIn, assertPreviewUrl, composeBody, isResolved, parseAnchor, parsePicture, sanitizeAnchor, sanitizePicture, stripAnchor, withAddressed, withResolved } from '../src/shared/anchor';
+import {
+	RESOLVED_MARK,
+	addressedAt,
+	addressedIn,
+	assertPreviewUrl,
+	composeBody,
+	isResolved,
+	parseAnchor,
+	parsePicture,
+	sanitizeAnchor,
+	sanitizePicture,
+	stripAnchor,
+	withAddressed,
+	withResolved,
+} from '../src/shared/anchor';
 import type { CommentAnchor } from '../src/shared/contract';
 
 const anchor: CommentAnchor = {
@@ -43,7 +57,14 @@ describe('comment anchors', () => {
 
 describe('sanitizeAnchor', () => {
 	it('caps lengths and forces shapes', () => {
-		const out = sanitizeAnchor({ route: '/' + 'a'.repeat(999), selector: 's'.repeat(999), nearbyText: 't'.repeat(999), viewport: { width: -5, height: 'x' }, commit: 'not hex!', offset: { x: 9, y: -3 } });
+		const out = sanitizeAnchor({
+			route: '/' + 'a'.repeat(999),
+			selector: 's'.repeat(999),
+			nearbyText: 't'.repeat(999),
+			viewport: { width: -5, height: 'x' },
+			commit: 'not hex!',
+			offset: { x: 9, y: -3 },
+		});
 		expect(out?.route).toHaveLength(300);
 		expect(out?.selector).toHaveLength(500);
 		expect(out?.nearbyText).toHaveLength(120);
@@ -63,86 +84,86 @@ describe('assertPreviewUrl', () => {
 		expect(assertPreviewUrl('http://localhost:3000/')).toBe('http://localhost:3000/');
 		expect(assertPreviewUrl('https://pr-12.preview.example.com/a')).toContain('https://');
 	});
-	it.each(['file:///etc/passwd', 'javascript:alert(1)', 'http://example.com', 'https://user:pw@example.com', 'nonsense'])(
-		'refuses %s',
-		(u) => expect(() => assertPreviewUrl(u)).toThrow(),
+	it.each(['file:///etc/passwd', 'javascript:alert(1)', 'http://example.com', 'https://user:pw@example.com', 'nonsense'])('refuses %s', (u) =>
+		expect(() => assertPreviewUrl(u)).toThrow(),
 	);
 });
 
 describe('addressed marker', () => {
-  const anchored = () => composeBody('Remove this text', { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' });
+	const anchored = () =>
+		composeBody('Remove this text', { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' });
 
-  it('records the commit the agent made, without touching the comment or its anchor', () => {
-    const body = anchored();
-    const done = withAddressed(body, '7f90de2c54a5fad511237ef1b8d0821a6b95bc79');
-    expect(addressedAt(done)).toBe('7f90de2c54a5fad511237ef1b8d0821a6b95bc79');
-    expect(done.startsWith(body)).toBe(true);
-    expect(parseAnchor(done)).toMatchObject({ route: '/a' });
-    // It is not resolution: that is the person's to give.
-    expect(isResolved(done)).toBe(false);
-  });
+	it('records the commit the agent made, without touching the comment or its anchor', () => {
+		const body = anchored();
+		const done = withAddressed(body, '7f90de2c54a5fad511237ef1b8d0821a6b95bc79');
+		expect(addressedAt(done)).toBe('7f90de2c54a5fad511237ef1b8d0821a6b95bc79');
+		expect(done.startsWith(body)).toBe(true);
+		expect(parseAnchor(done)).toMatchObject({ route: '/a' });
+		// It is not resolution: that is the person's to give.
+		expect(isResolved(done)).toBe(false);
+	});
 
-  it('clears the mark, so a later run that changed nothing leaves none behind', () => {
-    const body = anchored();
-    expect(withAddressed(withAddressed(body, 'abc1234'), null)).toBe(body);
-    expect(addressedAt(body)).toBeNull();
-  });
+	it('clears the mark, so a later run that changed nothing leaves none behind', () => {
+		const body = anchored();
+		expect(withAddressed(withAddressed(body, 'abc1234'), null)).toBe(body);
+		expect(addressedAt(body)).toBeNull();
+	});
 
-  it('replaces the old commit rather than keeping both', () => {
-    const twice = withAddressed(withAddressed('x', 'abc1234'), 'def5678');
-    expect(addressedAt(twice)).toBe('def5678');
-    expect(twice.match(/fd-addressed/g)).toHaveLength(1);
-  });
+	it('replaces the old commit rather than keeping both', () => {
+		const twice = withAddressed(withAddressed('x', 'abc1234'), 'def5678');
+		expect(addressedAt(twice)).toBe('def5678');
+		expect(twice.match(/fd-addressed/g)).toHaveLength(1);
+	});
 
-  it('writes only something that is a commit', () => {
-    for (const bad of ['', 'not-a-sha', '../etc', 'abc', '<!-- fd-addressed: deadbeef -->']) {
-      expect(addressedAt(withAddressed('x', bad))).toBeNull();
-    }
-  });
+	it('writes only something that is a commit', () => {
+		for (const bad of ['', 'not-a-sha', '../etc', 'abc', '<!-- fd-addressed: deadbeef -->']) {
+			expect(addressedAt(withAddressed('x', bad))).toBeNull();
+		}
+	});
 
-  it('never shows in the comment as a person reads it', () => {
-    const marked = withAddressed(anchored(), 'abc1234');
-    expect(stripAnchor(marked)).toBe('Remove this text');
-    // And on a comment with no anchor at all.
-    expect(stripAnchor(withAddressed('Just a note', 'abc1234'))).toBe('Just a note');
-  });
+	it('never shows in the comment as a person reads it', () => {
+		const marked = withAddressed(anchored(), 'abc1234');
+		expect(stripAnchor(marked)).toBe('Remove this text');
+		// And on a comment with no anchor at all.
+		expect(stripAnchor(withAddressed('Just a note', 'abc1234'))).toBe('Just a note');
+	});
 
-  it("on a prototype, says which iteration the change is in, and only ever a prototype's name", () => {
-    const marked = withAddressed(anchored(), 'abc1234def56', 'v1-i2');
-    expect(addressedAt(marked)).toBe('abc1234def56');
-    expect(addressedIn(marked)).toBe('v1-i2');
-    expect(stripAnchor(marked)).toBe('Remove this text');
-    expect(addressedIn(withAddressed('x', 'abc1234'))).toBeNull();
-    expect(addressedIn(withAddressed('x', 'abc1234', 'codebase'))).toBeNull();
-    expect(withAddressed('x', 'abc1234', '--> <script>')).toBe(withAddressed('x', 'abc1234'));
-    // Moved on again: the mark is replaced, never doubled.
-    const again = withAddressed(marked, 'fedcba987654', 'v1-i3');
-    expect(addressedIn(again)).toBe('v1-i3');
-    expect(again.match(/fd-addressed/g)).toHaveLength(1);
-  });
+	it("on a prototype, says which iteration the change is in, and only ever a prototype's name", () => {
+		const marked = withAddressed(anchored(), 'abc1234def56', 'v1-i2');
+		expect(addressedAt(marked)).toBe('abc1234def56');
+		expect(addressedIn(marked)).toBe('v1-i2');
+		expect(stripAnchor(marked)).toBe('Remove this text');
+		expect(addressedIn(withAddressed('x', 'abc1234'))).toBeNull();
+		expect(addressedIn(withAddressed('x', 'abc1234', 'codebase'))).toBeNull();
+		expect(withAddressed('x', 'abc1234', '--> <script>')).toBe(withAddressed('x', 'abc1234'));
+		// Moved on again: the mark is replaced, never doubled.
+		const again = withAddressed(marked, 'fedcba987654', 'v1-i3');
+		expect(addressedIn(again)).toBe('v1-i3');
+		expect(again.match(/fd-addressed/g)).toHaveLength(1);
+	});
 
-  it('sits alongside the resolved marker without disturbing it', () => {
-    const both = withResolved(withAddressed(anchored(), 'abc1234'), true);
-    expect(addressedAt(both)).toBe('abc1234');
-    expect(isResolved(both)).toBe(true);
-    expect(stripAnchor(both.replace(RESOLVED_MARK, '').trim())).toBe('Remove this text');
-  });
+	it('sits alongside the resolved marker without disturbing it', () => {
+		const both = withResolved(withAddressed(anchored(), 'abc1234'), true);
+		expect(addressedAt(both)).toBe('abc1234');
+		expect(isResolved(both)).toBe(true);
+		expect(stripAnchor(both.replace(RESOLVED_MARK, '').trim())).toBe('Remove this text');
+	});
 });
 
 describe('resolved marker', () => {
-  it('sets and clears the marker without touching the comment or its anchor', () => {
-    const body = composeBody('Make this primary', { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' });
-    const done = withResolved(body, true);
-    expect(isResolved(done)).toBe(true);
-    expect(done.startsWith(body)).toBe(true);
-    expect(withResolved(done, false)).toBe(body);
-    expect(parseAnchor(done)).toMatchObject({ route: '/a' });
-  });
+	it('sets and clears the marker without touching the comment or its anchor', () => {
+		const body = composeBody('Make this primary', { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' });
+		const done = withResolved(body, true);
+		expect(isResolved(done)).toBe(true);
+		expect(done.startsWith(body)).toBe(true);
+		expect(withResolved(done, false)).toBe(body);
+		expect(parseAnchor(done)).toMatchObject({ route: '/a' });
+	});
 
-  it('is idempotent: resolving twice leaves one marker', () => {
-    const once = withResolved('x', true);
-    expect(withResolved(once, true).split(RESOLVED_MARK).length).toBe(2);
-  });
+	it('is idempotent: resolving twice leaves one marker', () => {
+		const once = withResolved('x', true);
+		expect(withResolved(once, true).split(RESOLVED_MARK).length).toBe(2);
+	});
 });
 
 describe('page state in an anchor', () => {
@@ -244,8 +265,7 @@ describe('what kind of element, and where it sits', () => {
 		expect(sanitizeAnchor({ ...base, inside: ['', '   ', 7] })).not.toHaveProperty('inside');
 	});
 
-	it('cuts a long container name rather than carrying a page\'s text into the record', () => {
+	it("cuts a long container name rather than carrying a page's text into the record", () => {
 		expect(sanitizeAnchor({ ...base, inside: ['x'.repeat(500)] })?.inside?.[0]?.length).toBe(60);
 	});
 });
-

@@ -39,7 +39,13 @@ export const App = () => {
 
 	return (
 		<div className="bg-background h-screen overflow-hidden">
-			<TopNav user={signIn.state === 'signedIn' ? signIn.user : null} section={section} onSectionChange={setSection} onSignOut={signOut} onSettings={() => setSettingsOpen(true)} />
+			<TopNav
+				user={signIn.state === 'signedIn' ? signIn.user : null}
+				section={section}
+				onSectionChange={setSection}
+				onSignOut={signOut}
+				onSettings={() => setSettingsOpen(true)}
+			/>
 			<Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 			{/* The bar is fixed, so the rest starts below it and scrolls on its own. */}
 			<div className="h-full overflow-y-auto pt-(--nav-height)">

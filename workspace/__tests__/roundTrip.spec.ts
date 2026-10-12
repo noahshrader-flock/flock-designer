@@ -7,7 +7,21 @@ import type { CommentAnchor } from '../src/shared/contract';
 import { Viewer } from '../src/viewer/Viewer';
 import { asResult, browserComments, framePage, saveToken, tokenApi } from '../src/viewer/browserAdapter';
 import { PAGE_CONFIG, commentOnPage, fakeGitHub, prototypeIn, sitePage } from './pageHarness';
-import { afterAgentCheck, button, cardFor, cards, fakeApp, menuItem, ok, openMenu, press, render, reviewProps, settle, unmountAll } from './reviewHarness';
+import {
+	afterAgentCheck,
+	button,
+	cardFor,
+	cards,
+	fakeApp,
+	menuItem,
+	ok,
+	openMenu,
+	press,
+	render,
+	reviewProps,
+	settle,
+	unmountAll,
+} from './reviewHarness';
 
 /**
  * The round trip (M8 of the Pages plan): a comment made on a prototype's published page reaches the app, and what the
@@ -48,7 +62,8 @@ const openApp = async (address?: { iteration: string }) => {
 	const app = fakeApp({
 		signInState: async () => ok({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
 		readComments: (projectId: string, branch: string) => asResult(repo.readComments(projectId, branch)),
-		postComment: (projectId: string, branch: string, body: string, anchor: CommentAnchor) => asResult(repo.postComment(projectId, branch, body, anchor, null)),
+		postComment: (projectId: string, branch: string, body: string, anchor: CommentAnchor) =>
+			asResult(repo.postComment(projectId, branch, body, anchor, null)),
 		resolveComment: (id: number, resolved: boolean) => asResult(repo.setResolved(id, resolved)),
 		deleteComment: (id: number) => asResult(repo.deleteComment(id).then(() => null)),
 		moveComment: (id: number, anchor: CommentAnchor) => asResult(repo.moveComment(id, anchor)),
@@ -57,7 +72,12 @@ const openApp = async (address?: { iteration: string }) => {
 		addressPrototype: async () => ok({ state: 'running', startedAt: 'now' }),
 		agentStatus: async () => ok({ state: 'finished', exitCode: 0 }),
 		finishPrototypeAddress: async (id: number) =>
-			ok({ changed: true, iteration: address?.iteration ?? 'v1-i1', made: null, comment: await repo.setAddressed(id, 'abc1234def56', address?.iteration ?? 'v1-i1') }),
+			ok({
+				changed: true,
+				iteration: address?.iteration ?? 'v1-i1',
+				made: null,
+				comment: await repo.setAddressed(id, 'abc1234def56', address?.iteration ?? 'v1-i1'),
+			}),
 	});
 	(window as unknown as { workspace: unknown }).workspace = app.api;
 	current = await render(createElement(Review, reviewProps() as never));

@@ -35,8 +35,10 @@ export const installProblem = (output: string, node: string | null): string => {
 	}
 	if (refused) return `${refused.registry ?? 'The package registry'} refused npm on this computer. Sign in to it as your team does, then try again.`;
 	if (/ENOSPC|no space left/i.test(output)) return 'There is not enough disk space to install the packages. Free some, then try again.';
-	if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN/.test(output)) return 'Could not reach the package registry. Check the internet connection, then try again.';
-	if (/EBADENGINE|Unsupported engine/i.test(output) && node) return `The packages need Node ${node}, and this computer has another. Install Node ${node}, then try again.`;
+	if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN/.test(output))
+		return 'Could not reach the package registry. Check the internet connection, then try again.';
+	if (/EBADENGINE|Unsupported engine/i.test(output) && node)
+		return `The packages need Node ${node}, and this computer has another. Install Node ${node}, then try again.`;
 	const last = output.trim().split('\n').filter(Boolean).slice(-3).join(' ');
 	return `The packages did not install: ${last || 'it stopped without saying why.'}`;
 };
@@ -72,7 +74,9 @@ export class Installer {
 			if (err instanceof Stopped) throw new InstallProblem('The install was stopped. Run it again to finish it.');
 			if (err instanceof NotStarted && err.missing) {
 				const node = nodeVersionOf(root);
-				throw new InstallProblem(`${file} was not found on this computer. Install Node.js${node ? ` (this repository asks for ${node})` : ''} from https://nodejs.org, then try again.`);
+				throw new InstallProblem(
+					`${file} was not found on this computer. Install Node.js${node ? ` (this repository asks for ${node})` : ''} from https://nodejs.org, then try again.`,
+				);
 			}
 			throw err instanceof InstallProblem || !(err instanceof Error) ? err : new InstallProblem(err.message);
 		} finally {

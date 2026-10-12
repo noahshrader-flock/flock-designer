@@ -55,7 +55,6 @@ describe('the tags', () => {
 		expect(shown.sizes.map((s) => s.path)).not.toContain('text.base');
 	});
 
-
 	it('give every color its own tag, by its number, and a role both modes share one', () => {
 		expect([...tags.colors]).toEqual([
 			['#00015A', 'palette.light.primary.main'],
@@ -109,7 +108,13 @@ describe('reading what a story drew', () => {
 
 	it('tells what the component sets itself, also in its plain drawing, from what is worked out from a token', () => {
 		const use = decode(
-			{ light: drawn({ 'rgba(0, 0, 0, 0.87)': 6, 'rgb(1, 2, 3)': 2, 'rgba(0, 0, 0, 0)': 9 }, { '360px': 4, '50%': 1, '0px': 7 }, { '9px': 2, normal: 30 }) },
+			{
+				light: drawn(
+					{ 'rgba(0, 0, 0, 0.87)': 6, 'rgb(1, 2, 3)': 2, 'rgba(0, 0, 0, 0)': 9 },
+					{ '360px': 4, '50%': 1, '0px': 7 },
+					{ '9px': 2, normal: 30 },
+				),
+			},
 			drawn({ 'rgba(0, 0, 0, 0.87)': 6, 'rgb(16, 128, 98)': 3 }),
 			tags,
 			TOKENS,
@@ -166,7 +171,8 @@ describe('the index', () => {
 		keep: (system: string, listed: string[], taken: Map<string, Buffer>) => void kept.push({ system, listed, taken }),
 		of: async () => Object.fromEntries([...(kept.at(-1)?.taken.keys() ?? [])].map((f) => [f, `http://127.0.0.1:1/pictures/${f}`])),
 	};
-	const index = (more: Partial<ConstructorParameters<typeof ComponentTokens>[0]> = {}) => new ComponentTokens({ system, previews, measure, pictures, ...more });
+	const index = (more: Partial<ConstructorParameters<typeof ComponentTokens>[0]> = {}) =>
+		new ComponentTokens({ system, previews, measure, pictures, ...more });
 	const ready = async (i: ComponentTokens, file: string) => {
 		for (let n = 0; n < 50; n++) {
 			const a = await i.of(file);
@@ -208,7 +214,13 @@ describe('the index', () => {
 				{ base: 'http://127.0.0.1:1/tagged/', mode: 'light', files },
 				{ base: 'http://127.0.0.1:1/tagged/', mode: 'dark', files },
 				// As it is, checked for accessibility at the library's target: none declared, so the default (T7).
-				{ base: 'http://127.0.0.1:1/plain/', mode: 'light', files, pictures: true, accessibility: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] },
+				{
+					base: 'http://127.0.0.1:1/plain/',
+					mode: 'light',
+					files,
+					pictures: true,
+					accessibility: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'],
+				},
 			],
 		]);
 	});
@@ -253,7 +265,9 @@ describe('the index', () => {
 	});
 
 	it('says a component’s stories did not draw, rather than that it draws with no token', async () => {
-		const i = index({ measure: async (runs) => runs.map((run) => run.files.map((f) => (f.includes('B.stories') ? null : drawn({ 'rgb(0, 1, 90)': 1 })))) });
+		const i = index({
+			measure: async (runs) => runs.map((run) => run.files.map((f) => (f.includes('B.stories') ? null : drawn({ 'rgb(0, 1, 90)': 1 })))),
+		});
 		expect(await ready(i, 'src/components/B/B.stories.tsx')).toEqual({ state: 'failed', error: expect.stringContaining('did not draw') });
 		// The others are still said, and are not said to share with the one that did not draw.
 		expect(await i.of('src/components/A/A.stories.tsx')).toMatchObject({ state: 'ready', sharedWith: { 'palette.light.primary.main': [] } });
@@ -286,7 +300,9 @@ describe('the index', () => {
 		const shot = Buffer.from('jpeg');
 		const i = index({
 			measure: async (runs) =>
-				runs.map((run) => run.files.map((f) => ({ ...drawn({ 'rgb(0, 1, 90)': 1 }), ...(run.pictures && f.includes('A.stories') ? { picture: shot } : {}) }))),
+				runs.map((run) =>
+					run.files.map((f) => ({ ...drawn({ 'rgb(0, 1, 90)': 1 }), ...(run.pictures && f.includes('A.stories') ? { picture: shot } : {}) })),
+				),
 		});
 		await i.warm();
 		expect(kept).toEqual([
@@ -335,7 +351,15 @@ describe('the index', () => {
 		// In the catalog's order, by group: Buttons, Design Tokens, Inputs.
 		const files = ['src/components/A/A.stories.tsx', 'src/uxDocs/Palette.stories.tsx', 'src/components/B/B.stories.tsx'];
 		expect(asked).toEqual([
-			[{ base: 'http://127.0.0.1:1/plain/', mode: 'light', files, pictures: true, accessibility: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] }],
+			[
+				{
+					base: 'http://127.0.0.1:1/plain/',
+					mode: 'light',
+					files,
+					pictures: true,
+					accessibility: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'],
+				},
+			],
 		]);
 		expect(kept[0]?.taken.size).toBe(3);
 		expect(await i.of('src/components/A/A.stories.tsx')).toEqual({
@@ -351,13 +375,23 @@ describe('the index', () => {
 	it('checks each component’s accessibility in the same pass, at the library’s own target, and says it to the panel and the cards (T7)', async () => {
 		// The library declares its target in its own manifest.
 		mkdirSync(join(clone, '.dsnr'), { recursive: true });
-		writeFileSync(join(clone, '.dsnr', 'manifest.md'), '## Accessibility conformance target\n\n| | |\n|---|---|\n| **Target** | WCAG 2.1 Level AA |\n');
+		writeFileSync(
+			join(clone, '.dsnr', 'manifest.md'),
+			'## Accessibility conformance target\n\n| | |\n|---|---|\n| **Target** | WCAG 2.1 Level AA |\n',
+		);
 		g(clone, 'add', '-A');
 		g(clone, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'target');
 		g(clone, 'update-ref', 'refs/remotes/origin/develop', 'HEAD');
 		const found = {
 			violations: [
-				{ id: 'button-name', help: 'Buttons must have discernible text', impact: 'critical', tags: ['wcag2a', 'wcag412'], helpUrl: 'https://x', nodes: 2 },
+				{
+					id: 'button-name',
+					help: 'Buttons must have discernible text',
+					impact: 'critical',
+					tags: ['wcag2a', 'wcag412'],
+					helpUrl: 'https://x',
+					nodes: 2,
+				},
 			],
 			incomplete: [],
 		};
@@ -365,7 +399,10 @@ describe('the index', () => {
 			measure: async (runs) => (
 				asked.push(runs),
 				runs.map((run) =>
-					run.files.map((f) => ({ ...drawn({ 'rgb(107, 114, 128)': 1 }), ...(run.accessibility && f.includes('/A/') ? { accessibility: found } : {}) })),
+					run.files.map((f) => ({
+						...drawn({ 'rgb(107, 114, 128)': 1 }),
+						...(run.accessibility && f.includes('/A/') ? { accessibility: found } : {}),
+					})),
 				)
 			),
 		});
@@ -386,7 +423,10 @@ describe('the index', () => {
 		const shot = Buffer.from('jpeg');
 		const i = index({
 			previews: { ...previews, tagged: async () => ({ state: 'failed' as const, error: 'tags did not build' }) },
-			measure: async (runs) => (asked.push(runs), runs.map((run) => run.files.map(() => ({ ...drawn(), ...(run.pictures ? { picture: shot } : {}) })))),
+			measure: async (runs) => (
+				asked.push(runs),
+				runs.map((run) => run.files.map(() => ({ ...drawn(), ...(run.pictures ? { picture: shot } : {}) })))
+			),
 		});
 		await i.warm();
 		expect(asked[0]).toHaveLength(1);

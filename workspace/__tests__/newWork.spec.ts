@@ -86,7 +86,14 @@ describe('what it makes', () => {
 	});
 
 	it('is modeled on any branch, and makes a prototype from it', async () => {
-		const made = { projectId: 'ops-list', name: 'v1-i1', branch: 'prototype/ops-list/v1-i1', commit: null, createdAt: '2026-10-08T00:00:00Z', note: 'A list' };
+		const made = {
+			projectId: 'ops-list',
+			name: 'v1-i1',
+			branch: 'prototype/ops-list/v1-i1',
+			commit: null,
+			createdAt: '2026-10-08T00:00:00Z',
+			note: 'A list',
+		};
 		const { app } = await open({ listBaseBranches: async () => ok(['develop', 'noah/flock-designer']), createPrototype: async () => ok(made) });
 		await fill();
 		expect(button('Create prototype').disabled).toBe(false);
@@ -101,7 +108,14 @@ describe('how the form is laid out', () => {
 		const at = document.getElementById(id) as HTMLElement;
 		return [...document.querySelectorAll('*')].indexOf(at);
 	};
-	const made = { projectId: 'ops-list', name: 'v1-i1', branch: 'prototype/ops-list/v1-i1', commit: null, createdAt: '2026-10-08T00:00:00Z', note: 'A list' };
+	const made = {
+		projectId: 'ops-list',
+		name: 'v1-i1',
+		branch: 'prototype/ops-list/v1-i1',
+		commit: null,
+		createdAt: '2026-10-08T00:00:00Z',
+		note: 'A list',
+	};
 	const branches = async () => ok(['develop', 'release', 'noah/flock-designer']);
 
 	it('asks for the name, then what it should explore, then the repository', async () => {
@@ -174,7 +188,14 @@ describe('how the form is laid out', () => {
 });
 
 describe('its folder', () => {
-	const made = { projectId: 'ops-list', name: 'v1-i1', branch: 'prototype/ops-list/v1-i1', commit: null, createdAt: '2026-10-08T00:00:00Z', note: 'A list' };
+	const made = {
+		projectId: 'ops-list',
+		name: 'v1-i1',
+		branch: 'prototype/ops-list/v1-i1',
+		commit: null,
+		createdAt: '2026-10-08T00:00:00Z',
+		note: 'A list',
+	};
 	const fill = async () => {
 		await typeInto(document.getElementById('new-work-name') as HTMLInputElement, 'Ops list');
 		await typeInto(document.getElementById('new-work-task') as HTMLTextAreaElement, 'A list');
@@ -197,7 +218,16 @@ describe('its folder', () => {
 	it('starts again on the folder being viewed each time it is opened', async () => {
 		await open({}, { folders: ['Admin', 'Roles'], folder: 'Roles' });
 		await pickFolder('Admin');
-		const props = (open: boolean) => ({ open, onClose: () => undefined, checkout: HERE, onChoose: () => undefined, onCheckout: () => undefined, onCreated: () => undefined, folders: ['Admin', 'Roles'], folder: 'Roles' });
+		const props = (open: boolean) => ({
+			open,
+			onClose: () => undefined,
+			checkout: HERE,
+			onChoose: () => undefined,
+			onCheckout: () => undefined,
+			onCreated: () => undefined,
+			folders: ['Admin', 'Roles'],
+			folder: 'Roles',
+		});
 		// Rendered as the harness renders it, so it is the same form closed and opened again, not a new one.
 		await act(async () => current!.root.render(createElement(TooltipProvider, null, createElement(NewWork, props(false)))));
 		await act(async () => current!.root.render(createElement(TooltipProvider, null, createElement(NewWork, props(true)))));
@@ -235,7 +265,13 @@ describe('its folder', () => {
 });
 
 describe('installing its packages', () => {
-	const notInstalled = (canInstall: boolean) => ({ ready: false, why: 'not-installed', designSystem: '@flocksafety/fui', repository: 'flock-coke', canInstall });
+	const notInstalled = (canInstall: boolean) => ({
+		ready: false,
+		why: 'not-installed',
+		designSystem: '@flocksafety/fui',
+		repository: 'flock-coke',
+		canInstall,
+	});
 
 	it('offers to install them when the repository says how, shows how far it has got, then asks again whether it is ready', async () => {
 		let line: ((l: string) => void) | null = null;
@@ -258,7 +294,10 @@ describe('installing its packages', () => {
 	});
 
 	it('says why an install failed, and offers it again', async () => {
-		await open({ prototypeReadiness: async () => ok(notInstalled(true)), installPackages: async () => fail('npm on this computer is not signed in to GitHub Packages') });
+		await open({
+			prototypeReadiness: async () => ok(notInstalled(true)),
+			installPackages: async () => fail('npm on this computer is not signed in to GitHub Packages'),
+		});
 		await press(button('Install packages'));
 		await settle();
 		expect(text()).toContain('not signed in to GitHub Packages');
@@ -295,7 +334,13 @@ describe('a repository with no clone on this machine', () => {
 
 	it('asks again where it goes once the folder is changed with the picker', async () => {
 		let asked = 0;
-		const { app } = await open({ clonePlan: async () => (asked++, ok(asked > 1 ? { ...PLAN, place: { state: 'free', path: '/Volumes/w/flock-ops' }, where: '/Volumes/w/flock-ops' } : PLAN)), chooseCloneFolder: async () => ok('/Volumes/w') });
+		const { app } = await open({
+			clonePlan: async () => (
+				asked++,
+				ok(asked > 1 ? { ...PLAN, place: { state: 'free', path: '/Volumes/w/flock-ops' }, where: '/Volumes/w/flock-ops' } : PLAN)
+			),
+			chooseCloneFolder: async () => ok('/Volumes/w'),
+		});
 		await chooseRepository('flocksafety/flock-ops');
 		await press(button('Change'));
 		await settle();
@@ -346,7 +391,10 @@ describe('a repository with no clone on this machine', () => {
 		let cloned = false;
 		await open({
 			clonePlan: async () => ok(cloned ? { ...PLAN, place: { state: 'cloned', path: '/h/GitHub/flock-ops' } } : PLAN),
-			cloneRepository: async () => ((cloned = true), fail("Cloned, but no branch of flock-ops has the DSNR setup (.dsnr/workspace.json), so it can't be used here yet.")),
+			cloneRepository: async () => (
+				(cloned = true),
+				fail("Cloned, but no branch of flock-ops has the DSNR setup (.dsnr/workspace.json), so it can't be used here yet.")
+			),
 		});
 		await chooseRepository('flocksafety/flock-ops');
 		await press(button('Clone repository'));
@@ -364,7 +412,17 @@ describe('a repository with no clone on this machine', () => {
 	});
 
 	it('will not clone over something else in the way, and says what it is', async () => {
-		await open({ clonePlan: async () => ok({ ...PLAN, place: { state: 'taken', path: '/h/GitHub/flock-ops', why: '/h/GitHub/flock-ops already exists, and is not a clone of flocksafety/flock-ops.' } }) });
+		await open({
+			clonePlan: async () =>
+				ok({
+					...PLAN,
+					place: {
+						state: 'taken',
+						path: '/h/GitHub/flock-ops',
+						why: '/h/GitHub/flock-ops already exists, and is not a clone of flocksafety/flock-ops.',
+					},
+				}),
+		});
 		await chooseRepository('flocksafety/flock-ops');
 		expect(text()).toContain('is not a clone of flocksafety/flock-ops');
 		expect(() => button('Clone repository')).toThrow(/0 buttons/);

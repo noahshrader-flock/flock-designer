@@ -57,7 +57,14 @@ const fakes = (initial: ReviewComment[]) => {
 		drawn,
 		pin: (e: PinEvent) => pinListener?.(e),
 		click: (anchor: Partial<CommentAnchor> = {}) =>
-			clicked?.(ok({ anchor: { route: '/', selector: '#hero', nearbyText: 'Hero', viewport: { width: 1, height: 1 }, commit: '', ...anchor }, at: { x: 5, y: 5 }, box: null, picture: null })),
+			clicked?.(
+				ok({
+					anchor: { route: '/', selector: '#hero', nearbyText: 'Hero', viewport: { width: 1, height: 1 }, commit: '', ...anchor },
+					at: { x: 5, y: 5 },
+					box: null,
+					picture: null,
+				}),
+			),
 	};
 };
 

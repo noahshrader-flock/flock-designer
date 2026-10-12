@@ -18,7 +18,8 @@ describe('gitHubRepoOf', () => {
 
 describe('originOf', () => {
 	it('reads the origin remote from .git/config, and only origin', () => {
-		const config = '[core]\n\tbare = false\n[remote "upstream"]\n\turl = git@github.com:up/x.git\n[remote "origin"]\n\turl = git@github.com:me/x.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n';
+		const config =
+			'[core]\n\tbare = false\n[remote "upstream"]\n\turl = git@github.com:up/x.git\n[remote "origin"]\n\turl = git@github.com:me/x.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n';
 		expect(originOf('/r', () => config)).toBe('git@github.com:me/x.git');
 	});
 
@@ -34,11 +35,14 @@ describe('originOf', () => {
 
 describe('mergeRepositories', () => {
 	it("keeps GitHub's order, fills in each clone, and adds clones GitHub did not list", () => {
-		const r = mergeRepositories(['Flock-Safety/flock-coke', 'flock-safety/other'], [
-			{ root: '/c/flock-coke', repo: 'flock-safety/flock-coke' },
-			{ root: '/c/fork', repo: 'me/fork' },
-			{ root: '/c/plain', repo: null },
-		]);
+		const r = mergeRepositories(
+			['Flock-Safety/flock-coke', 'flock-safety/other'],
+			[
+				{ root: '/c/flock-coke', repo: 'flock-safety/flock-coke' },
+				{ root: '/c/fork', repo: 'me/fork' },
+				{ root: '/c/plain', repo: null },
+			],
+		);
 		expect(r).toEqual([
 			{ name: 'Flock-Safety/flock-coke', root: '/c/flock-coke' },
 			{ name: 'flock-safety/other', root: null },
@@ -92,7 +96,10 @@ describe('reachableRepositories', () => {
 	it('is every repository the person’s account reaches: their own GitHub sign-in’s, then any the app’s sees that it did not', async () => {
 		const app = listing(['flocksafety/flock-designer', 'flocksafety/flock-coke']);
 		const person = listing(['flocksafety/flock-coke', 'flocksafety/flock-react-component-lib', 'noah/sandbox']);
-		expect(await reachableRepositories(app, person, 'noah')).toEqual({ names: ['flocksafety/flock-coke', 'flocksafety/flock-react-component-lib', 'noah/sandbox', 'flocksafety/flock-designer'], reach: 'account' });
+		expect(await reachableRepositories(app, person, 'noah')).toEqual({
+			names: ['flocksafety/flock-coke', 'flocksafety/flock-react-component-lib', 'noah/sandbox', 'flocksafety/flock-designer'],
+			reach: 'account',
+		});
 	});
 
 	it('names a repository once, whatever its case', async () => {
@@ -101,7 +108,10 @@ describe('reachableRepositories', () => {
 
 	it('takes the command line’s list only when it is signed in as the same person as the app, whatever the case of the name', async () => {
 		const someoneElse = listing(['other/private'], 'pat');
-		expect(await reachableRepositories(listing(['flocksafety/flock-coke']), someoneElse, 'noah')).toEqual({ names: ['flocksafety/flock-coke'], reach: 'app' });
+		expect(await reachableRepositories(listing(['flocksafety/flock-coke']), someoneElse, 'noah')).toEqual({
+			names: ['flocksafety/flock-coke'],
+			reach: 'app',
+		});
 		expect(await reachableRepositories(listing(['a/b']), listing(['c/d'], 'Noah'), 'noah')).toEqual({ names: ['c/d', 'a/b'], reach: 'account' });
 	});
 

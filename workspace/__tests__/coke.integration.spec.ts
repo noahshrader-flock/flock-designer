@@ -56,7 +56,7 @@ describe.skipIf(!available)('against the real Coke checkout', () => {
 		expect(Array.isArray(receipt.problems)).toBe(true);
 	});
 
-	it('puts project records where the repository\'s own handoff gate looks for them', () => {
+	it("puts project records where the repository's own handoff gate looks for them", () => {
 		// check-handoff.mjs resolves '../flock-designer/projects/<id>'. If these two
 		// ever disagree, Workspace writes records the gate cannot find.
 		expect(recordsRootFor(COKE)).toBe('/Users/noah.shrader/Documents/GitHub/flock-designer/projects');

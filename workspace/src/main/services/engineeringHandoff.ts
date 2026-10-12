@@ -35,7 +35,13 @@ export const handoffTask = ({
 	branch,
 	gate,
 	lightCheck,
-}: { skill: string; projectId: string; branch: string; gate: string | null; lightCheck: string | null }): string =>
+}: {
+	skill: string;
+	projectId: string;
+	branch: string;
+	gate: string | null;
+	lightCheck: string | null;
+}): string =>
 	[
 		`Hand ${projectId} to engineering.`,
 		'',

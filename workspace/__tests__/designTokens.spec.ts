@@ -25,14 +25,19 @@ const reads = (files: Record<string, string>): CatalogReads => ({
 
 /** A tone file, its steps in the order given (an object would sort its number keys). */
 const tone = (name: string, steps: [string, string][]) =>
-	`/** ${name} primitives. */\nexport const ${name} = {\n${steps
-		.map(([k, v]) => `  ${k}: '${v}',`)
-		.join('\n')}\n};\n`;
+	`/** ${name} primitives. */\nexport const ${name} = {\n${steps.map(([k, v]) => `  ${k}: '${v}',`).join('\n')}\n};\n`;
 
 const LIBRARY: Record<string, string> = {
 	'src/colors/tones/index.ts': "export { pineGreen } from './pineGreen';\nexport { red } from './red';\n",
-	'src/colors/tones/pineGreen.ts': tone('pineGreen', [['100', '#FFFFFF'], ['50', '#108062'], ['20', '#18372F']]),
-	'src/colors/tones/red.ts': tone('red', [['40', '#BA1A1A'], ['0', '#000000']]),
+	'src/colors/tones/pineGreen.ts': tone('pineGreen', [
+		['100', '#FFFFFF'],
+		['50', '#108062'],
+		['20', '#18372F'],
+	]),
+	'src/colors/tones/red.ts': tone('red', [
+		['40', '#BA1A1A'],
+		['0', '#000000'],
+	]),
 	'src/colors/theme/light.ts': `import { PaletteMode, PaletteOptions } from '@mui/material';
 import { pineGreen } from '../tones';
 import { sharedPalette } from './shared';
@@ -138,7 +143,10 @@ describe('the palette roles', () => {
 	it('include the roles both modes share, read from where they are written', async () => {
 		const list = await readTokens(reads(LIBRARY));
 		for (const mode of ['light', 'dark']) {
-			expect(find(list, `palette.${mode}.priority0.main`)).toMatchObject({ value: '#BA1A1A', source: { file: 'src/colors/theme/shared.ts', line: 5 } });
+			expect(find(list, `palette.${mode}.priority0.main`)).toMatchObject({
+				value: '#BA1A1A',
+				source: { file: 'src/colors/theme/shared.ts', line: 5 },
+			});
 		}
 	});
 });
@@ -146,8 +154,26 @@ describe('the palette roles', () => {
 describe('spacing and radius', () => {
 	it('are the theme’s, as dimensions in pixels', async () => {
 		const list = await readTokens(reads(LIBRARY));
-		expect(find(list, 'spacing')).toEqual({ path: 'spacing', kind: 'dimension', category: 'Spacing', group: 'Spacing', set: 'spacing', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 2 } });
-		expect(find(list, 'radius')).toEqual({ path: 'radius', kind: 'dimension', category: 'Shape', group: 'Radius', set: 'radius', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 5 } });
+		expect(find(list, 'spacing')).toEqual({
+			path: 'spacing',
+			kind: 'dimension',
+			category: 'Spacing',
+			group: 'Spacing',
+			set: 'spacing',
+			name: 'base',
+			value: '8px',
+			source: { file: 'src/utils/theme.ts', line: 2 },
+		});
+		expect(find(list, 'radius')).toEqual({
+			path: 'radius',
+			kind: 'dimension',
+			category: 'Shape',
+			group: 'Radius',
+			set: 'radius',
+			name: 'base',
+			value: '8px',
+			source: { file: 'src/utils/theme.ts', line: 5 },
+		});
 	});
 });
 
@@ -167,7 +193,9 @@ describe('typography (R3)', () => {
 `;
 	const library = { ...LIBRARY, 'src/utils/theme.ts': THEME };
 	const typography = async () =>
-		(await readTokens(reads(library))).tokens.filter((t) => t.category === 'Typography').map(({ path, kind, group, set, name, value, source }) => ({ path, kind, group, set, name, value, line: source.line }));
+		(await readTokens(reads(library))).tokens
+			.filter((t) => t.category === 'Typography')
+			.map(({ path, kind, group, set, name, value, source }) => ({ path, kind, group, set, name, value, line: source.line }));
 
 	it('is the theme’s typography: its family, its base size in pixels, its weights, and each style’s size, weight and line height', async () => {
 		expect(await typography()).toEqual([
@@ -182,7 +210,11 @@ describe('typography (R3)', () => {
 
 	it('names a value it cannot read, with its line, and reads the rest', async () => {
 		const list = await readTokens(reads(library));
-		expect(list.problems).toContainEqual({ file: 'src/utils/theme.ts', line: 9, reason: 'typography.h2.fontSize is pxToRem(60), not a value, so it is not read' });
+		expect(list.problems).toContainEqual({
+			file: 'src/utils/theme.ts',
+			line: 9,
+			reason: 'typography.h2.fontSize is pxToRem(60), not a value, so it is not read',
+		});
 	});
 
 	it('is only the family for a theme that sets only that, as Flock’s does', async () => {
@@ -208,7 +240,9 @@ describe('elevation (R4)', () => {
 	const read = () => readTokens(reads({ ...LIBRARY, 'src/utils/theme.ts': THEME }));
 
 	it('is the theme’s shadows, each at its level, with the first, none, left out', async () => {
-		const shadows = (await read()).tokens.filter((t) => t.category === 'Elevation').map(({ path, kind, group, set, name, value, source }) => ({ path, kind, group, set, name, value, line: source.line }));
+		const shadows = (await read()).tokens
+			.filter((t) => t.category === 'Elevation')
+			.map(({ path, kind, group, set, name, value, source }) => ({ path, kind, group, set, name, value, line: source.line }));
 		expect(shadows).toEqual([
 			{ path: 'shadows.1', kind: 'shadow', group: 'Shadows', set: 'shadows', name: '1', value: '0px 2px 1px -1px rgba(0,0,0,0.2)', line: 6 },
 			{ path: 'shadows.2', kind: 'shadow', group: 'Shadows', set: 'shadows', name: '2', value: '0px 3px 3px -2px rgba(0,0,0,0.2)', line: 7 },
@@ -216,7 +250,11 @@ describe('elevation (R4)', () => {
 	});
 
 	it('names a shadow it cannot read, with its line', async () => {
-		expect((await read()).problems).toContainEqual({ file: 'src/utils/theme.ts', line: 8, reason: 'shadows[3] is createShadow(1, 2), not a value, so it is not read' });
+		expect((await read()).problems).toContainEqual({
+			file: 'src/utils/theme.ts',
+			line: 8,
+			reason: 'shadows[3] is createShadow(1, 2), not a value, so it is not read',
+		});
 	});
 
 	it('is nothing for a theme that sets none, as Flock’s does not', async () => {
@@ -244,7 +282,9 @@ describe('breakpoints and motion (R5)', () => {
 `;
 	const read = () => readTokens(reads({ ...LIBRARY, 'src/utils/theme.ts': THEME }));
 	const of = async (category: string) =>
-		(await read()).tokens.filter((t) => t.category === category).map(({ path, kind, group, set, name, value, source }) => ({ path, kind, group, set, name, value, line: source.line }));
+		(await read()).tokens
+			.filter((t) => t.category === category)
+			.map(({ path, kind, group, set, name, value, source }) => ({ path, kind, group, set, name, value, line: source.line }));
 
 	it('is the theme’s breakpoints, each in pixels, the custom ones as well as MUI’s', async () => {
 		expect(await of('Breakpoints')).toEqual([
@@ -257,14 +297,26 @@ describe('breakpoints and motion (R5)', () => {
 	it('is the theme’s transitions: each duration in milliseconds, and each easing', async () => {
 		expect(await of('Motion')).toEqual([
 			{ path: 'transitions.duration.short', kind: 'duration', group: 'Duration', set: 'duration', name: 'short', value: '250ms', line: 12 },
-			{ path: 'transitions.easing.easeOut', kind: 'easing', group: 'Easing', set: 'easing', name: 'easeOut', value: 'cubic-bezier(0.0, 0, 0.2, 1)', line: 13 },
+			{
+				path: 'transitions.easing.easeOut',
+				kind: 'easing',
+				group: 'Easing',
+				set: 'easing',
+				name: 'easeOut',
+				value: 'cubic-bezier(0.0, 0, 0.2, 1)',
+				line: 13,
+			},
 		]);
-		expect((await read()).problems).toContainEqual({ file: 'src/utils/theme.ts', line: 12, reason: 'transitions.duration.complex is theme.duration, not a value, so it is not read' });
+		expect((await read()).problems).toContainEqual({
+			file: 'src/utils/theme.ts',
+			line: 12,
+			reason: 'transitions.duration.complex is theme.duration, not a value, so it is not read',
+		});
 	});
 
 	it('is read from where the theme sets them, not from a style that uses them first', async () => {
 		const styled = THEME.replace(
-			"    const breakpoints",
+			'    const breakpoints',
 			"    const card = { [theme.breakpoints.up('md')]: { padding: 8 } };\n    const breakpoints",
 		);
 		const list = await readTokens(reads({ ...LIBRARY, 'src/utils/theme.ts': styled }));
@@ -306,16 +358,28 @@ describe('what it cannot read', () => {
 	});
 
 	it('names a role that points at a tone or step the library does not have, once, though both modes share it', async () => {
-		const list = await readTokens(reads({ ...LIBRARY, 'src/colors/theme/shared.ts': LIBRARY['src/colors/theme/shared.ts']!.replace('red[40]', 'red[45]') }));
+		const list = await readTokens(
+			reads({ ...LIBRARY, 'src/colors/theme/shared.ts': LIBRARY['src/colors/theme/shared.ts']!.replace('red[40]', 'red[45]') }),
+		);
 		expect(list.problems).toEqual([{ file: 'src/colors/theme/shared.ts', line: 5, reason: expect.stringContaining('red[45]') }]);
 		expect(find(list, 'palette.light.priority0.main')).toBeUndefined();
 	});
 
 	it('names a step whose color is not a hex, with what is written, and reads the rest', async () => {
-		const list = await readTokens(reads({ ...LIBRARY, 'src/colors/tones/red.ts': tone('red', [['40', '#BA1A1A'], ['0', '000000']]) }));
+		const list = await readTokens(
+			reads({
+				...LIBRARY,
+				'src/colors/tones/red.ts': tone('red', [
+					['40', '#BA1A1A'],
+					['0', '000000'],
+				]),
+			}),
+		);
 		expect(find(list, 'tone.red.0')).toBeUndefined();
 		expect(find(list, 'tone.red.40')?.value).toBe('#BA1A1A');
-		expect(list.problems).toEqual([{ file: 'src/colors/tones/red.ts', line: 4, reason: "red 0 is '000000', not a hex color, so this step is not read" }]);
+		expect(list.problems).toEqual([
+			{ file: 'src/colors/tones/red.ts', line: 4, reason: "red 0 is '000000', not a hex color, so this step is not read" },
+		]);
 	});
 });
 
@@ -323,7 +387,10 @@ describe('a library laid out differently', () => {
 	it('finds tone families, palettes and the theme wherever the library keeps them, by their shape and not their folder', async () => {
 		const list = await readTokens(
 			reads({
-				'src/tokens/brand.ts': tone('brand', [['50', '#336699'], ['10', '#001122']]),
+				'src/tokens/brand.ts': tone('brand', [
+					['50', '#336699'],
+					['10', '#001122'],
+				]),
 				'src/tokens/modes.ts': "export const light = {\n  mode: 'light',\n  primary: { main: brand[50] },\n};\n",
 				'src/theme/index.ts': 'export const theme = createTheme({\n  spacing: 4,\n  shape: { borderRadius: 6 },\n});\n',
 			}),
@@ -351,7 +418,13 @@ export const theme = createTheme({
 `;
 		const list = await readTokens(reads({ 'src/theme.ts': theme }));
 		expect(list.source).toBe('theme files');
-		expect(find(list, 'palette.light.primary.main')).toMatchObject({ kind: 'color', category: 'Color', group: 'Light', value: '#1976D2', source: { line: 5 } });
+		expect(find(list, 'palette.light.primary.main')).toMatchObject({
+			kind: 'color',
+			category: 'Color',
+			group: 'Light',
+			value: '#1976D2',
+			source: { line: 5 },
+		});
 		expect(find(list, 'typography.fontFamily')).toMatchObject({ category: 'Typography', value: 'Roboto, sans-serif' });
 		expect(find(list, 'breakpoints.sm')).toMatchObject({ category: 'Breakpoints', value: '600px' });
 		expect(find(list, 'radius')?.value).toBe('4px');
@@ -365,13 +438,21 @@ export const theme = createTheme({
 	});
 
 	it('leaves alone what is neither tones nor a palette, and does not call it a problem', async () => {
-		const list = await readTokens(reads({ ...LIBRARY, 'src/colors/customPalette.ts': "export const customPalette = { brandName: 'Flock', shades: 3 };\n" }));
+		const list = await readTokens(
+			reads({ ...LIBRARY, 'src/colors/customPalette.ts': "export const customPalette = { brandName: 'Flock', shades: 3 };\n" }),
+		);
 		expect(list.problems).toEqual([]);
 		expect(list.tokens.some((t) => t.source.file === 'src/colors/customPalette.ts')).toBe(false);
 	});
 
 	it('does not read tests, stories or built files as the library’s tokens', async () => {
-		const list = await readTokens(reads({ ...LIBRARY, 'src/colors/tones/pineGreen.stories.tsx': tone('storyGreen', [['50', '#00FF00']]), 'dist/colors.js': tone('builtGreen', [['50', '#00FF00']]) }));
+		const list = await readTokens(
+			reads({
+				...LIBRARY,
+				'src/colors/tones/pineGreen.stories.tsx': tone('storyGreen', [['50', '#00FF00']]),
+				'dist/colors.js': tone('builtGreen', [['50', '#00FF00']]),
+			}),
+		);
 		expect(list.tokens.some((t) => t.set === 'storyGreen' || t.set === 'builtGreen')).toBe(false);
 	});
 
@@ -439,7 +520,9 @@ describe.skipIf(!hasBranch)('changing the real library’s tokens (T3)', () => {
 			{ path: 'spacing', value: '6px' },
 		]);
 		// The tone, the dark palette, the palette both modes share (so Light and Dark priority0 change together), the theme.
-		expect([...written.keys()]).toEqual(expect.arrayContaining(['src/colors/tones/pineGreen.ts', 'src/colors/theme/dark.ts', 'src/colors/theme/shared.ts']));
+		expect([...written.keys()]).toEqual(
+			expect.arrayContaining(['src/colors/tones/pineGreen.ts', 'src/colors/theme/dark.ts', 'src/colors/theme/shared.ts']),
+		);
 		expect(written.size).toBe(4);
 		// Only the token's own text changes: one line in each file.
 		for (const [file, text] of written) {

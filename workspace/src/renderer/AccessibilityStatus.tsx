@@ -70,8 +70,8 @@ export const AccessibilityFindings = ({ result }: { result: AccessibilityResult 
 	<>
 		<p className="text-muted-foreground text-xs">
 			Checked with axe-core {result.ran.axe} at {result.ran.target}
-			{result.ran.states.length > 1 ? `, in ${result.ran.states.join(', ')}` : ''}. Automated checks find about half of the problems WCAG covers: this is not a
-			pass, and the manual checklist is a person&rsquo;s.
+			{result.ran.states.length > 1 ? `, in ${result.ran.states.join(', ')}` : ''}. Automated checks find about half of the problems WCAG covers: this
+			is not a pass, and the manual checklist is a person&rsquo;s.
 		</p>
 		<Issues title="Found by axe" issues={result.violations} />
 		<Issues title="For a person to judge (axe could not decide)" issues={result.incomplete} />

@@ -12,7 +12,16 @@ const skill = (name: string): string => readFileSync(join(SKILLS, name), 'utf8')
  */
 const TASKS: Record<string, (text: string) => string> = {
 	'move-to-code.md': (text) =>
-		moveToCodeTask({ skill: text, pageFile: '/p/i1.html', auditFile: '/d/audit-i1.md', name: 'i1', accessibility: '', voice: '', lightCheck: null, shared: '' }),
+		moveToCodeTask({
+			skill: text,
+			pageFile: '/p/i1.html',
+			auditFile: '/d/audit-i1.md',
+			name: 'i1',
+			accessibility: '',
+			voice: '',
+			lightCheck: null,
+			shared: '',
+		}),
 };
 
 /** Every `file.md` a skill says is in the task, in the same sentence. */

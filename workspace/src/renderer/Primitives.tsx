@@ -145,14 +145,23 @@ const Specimens = ({ tokens, byPath, preview }: Drawing) => (
 		) : preview.state === 'asking' ? (
 			<Skeleton className="h-32 w-full" />
 		) : (
-			<p className="text-muted-foreground text-sm">The specimen is drawn in the design system’s preview, which cannot be built here{notBuilt(preview)}.</p>
+			<p className="text-muted-foreground text-sm">
+				The specimen is drawn in the design system’s preview, which cannot be built here{notBuilt(preview)}.
+			</p>
 		)}
 		<Table tokens={tokens} byPath={byPath} preview={preview} />
 	</div>
 );
 
 /** Each of the vocabulary's drawings, by the word it uses for it: a new drawing is one entry. */
-const DRAWINGS: Record<Primitive['drawn'], (props: Drawing) => ReactNode> = { swatches: Swatches, bars: Bars, corners: Corners, specimens: Specimens, shadows: Shadows, table: Table };
+const DRAWINGS: Record<Primitive['drawn'], (props: Drawing) => ReactNode> = {
+	swatches: Swatches,
+	bars: Bars,
+	corners: Corners,
+	specimens: Specimens,
+	shadows: Shadows,
+	table: Table,
+};
 
 /**
  * A primitive's tokens as the vocabulary says to draw them, a group heading over each when it has several. A primitive made
@@ -177,7 +186,8 @@ const Drawn = ({ primitive, tokens, byPath, preview }: { primitive: Primitive | 
 };
 
 /** Whether the design system has a primitive the preview build draws: only then is it asked for. */
-const drawnInPreview = (tokens: DesignToken[]): boolean => tokens.some((t) => PRIMITIVES.find((p) => p.category === t.category)?.drawn === 'specimens');
+const drawnInPreview = (tokens: DesignToken[]): boolean =>
+	tokens.some((t) => PRIMITIVES.find((p) => p.category === t.category)?.drawn === 'specimens');
 
 /** "theme files, CSS variables and design token files". */
 const listed = (words: string[]): string => (words.length < 2 ? (words[0] ?? '') : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`);
@@ -214,7 +224,9 @@ export const Primitives = ({ catalog, edits, hidden }: { catalog: Catalog | null
 		if (hidden || commit === null || askedFor.current === commit) return;
 		askedFor.current = commit;
 		setPreview({ state: 'asking' });
-		void window.workspace.storyPreview([]).then((r) => setPreview(r.ok && r.value !== null ? r.value : { state: 'failed', error: r.ok ? 'it gave no answer' : r.error }));
+		void window.workspace
+			.storyPreview([])
+			.then((r) => setPreview(r.ok && r.value !== null ? r.value : { state: 'failed', error: r.ok ? 'it gave no answer' : r.error }));
 	}, [hidden, commit]);
 	if (catalog === null)
 		return (
@@ -228,7 +240,9 @@ export const Primitives = ({ catalog, edits, hidden }: { catalog: Catalog | null
 		return (
 			<Page>
 				<p className="text-muted-foreground text-sm">
-					{catalog.state === 'none' ? 'Connect a design system on the Components tab to see its primitives.' : 'The design system could not be read: the Components tab says why.'}
+					{catalog.state === 'none'
+						? 'Connect a design system on the Components tab to see its primitives.'
+						: 'The design system could not be read: the Components tab says why.'}
 				</p>
 			</Page>
 		);
@@ -258,7 +272,11 @@ export const Primitives = ({ catalog, edits, hidden }: { catalog: Catalog | null
 					const has = (p.parts ?? []).filter((part) => !lacks.includes(part));
 					return (
 						<Chip key={p.category} defined={n !== undefined} onPress={() => go(n === undefined ? 'not-defined' : p.category)}>
-							{n === undefined ? `${p.category} not defined` : lacks.length > 0 && has.length > 0 ? `${p.category} ${n} · ${listed(has).toLowerCase()} only` : `${p.category} ${n}`}
+							{n === undefined
+								? `${p.category} not defined`
+								: lacks.length > 0 && has.length > 0
+									? `${p.category} ${n} · ${listed(has).toLowerCase()} only`
+									: `${p.category} ${n}`}
 						</Chip>
 					);
 				})}
@@ -270,7 +288,9 @@ export const Primitives = ({ catalog, edits, hidden }: { catalog: Catalog | null
 						</Chip>
 					))}
 			</div>
-			{edits.length > 0 && <p className="text-muted-foreground text-sm">Showing the change being tried on the Components tab ({plural(edits.length, 'token')}).</p>}
+			{edits.length > 0 && (
+				<p className="text-muted-foreground text-sm">Showing the change being tried on the Components tab ({plural(edits.length, 'token')}).</p>
+			)}
 			{/* In the page's own column: the panel's padding is the panel's. */}
 			<TokenProblems problems={read.problems} className="" />
 			{found.map(([category, list]) => (
@@ -286,7 +306,12 @@ export const Primitives = ({ catalog, edits, hidden }: { catalog: Catalog | null
 				</section>
 			))}
 			{missing.length > 0 && (
-				<section ref={(el) => void sections.current.set('not-defined', el)} data-not-defined aria-label="Not defined" className="flex scroll-mt-4 flex-col gap-3 border-t pt-6">
+				<section
+					ref={(el) => void sections.current.set('not-defined', el)}
+					data-not-defined
+					aria-label="Not defined"
+					className="flex scroll-mt-4 flex-col gap-3 border-t pt-6"
+				>
 					<h2 className="text-base font-semibold">Not defined</h2>
 					{read.source === null && <p className="text-muted-foreground text-sm">No tokens were found. Looked for {listed(read.looked)}.</p>}
 					<ul className="flex flex-col gap-1.5">

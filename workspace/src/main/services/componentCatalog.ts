@@ -78,7 +78,12 @@ export const readCatalog = async (reads: CatalogReads, library: DesignSystem): P
 			const parts = title?.split('/').map((p) => p.trim()) ?? [];
 			return {
 				id: file,
-				name: parts.at(-1) || file.split('/').pop()!.replace(/\.stories\.\w+$/, ''),
+				name:
+					parts.at(-1) ||
+					file
+						.split('/')
+						.pop()!
+						.replace(/\.stories\.\w+$/, ''),
 				group: parts.length > 1 ? parts[0]! : UNGROUPED,
 				subtitle: literalField(text, 'componentSubtitle'),
 				storybook: title !== null && library.storybook !== null ? storybookUrl(library.storybook, title) : null,
@@ -87,5 +92,7 @@ export const readCatalog = async (reads: CatalogReads, library: DesignSystem): P
 		}),
 	);
 	const last = (group: string) => (group === UNGROUPED ? 1 : 0);
-	return components.sort((a, b) => last(a.group) - last(b.group) || alphabetical(a.group, b.group) || alphabetical(a.name, b.name) || a.id.localeCompare(b.id));
+	return components.sort(
+		(a, b) => last(a.group) - last(b.group) || alphabetical(a.group, b.group) || alphabetical(a.name, b.name) || a.id.localeCompare(b.id),
+	);
 };

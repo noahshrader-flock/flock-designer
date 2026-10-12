@@ -54,9 +54,13 @@ describe('the sync notice', () => {
 		]);
 		expect(description.querySelector('ul, li, b, strong, button')).toBeNull();
 		// Exactly the classes the components give themselves: the same as a bare one, with none of the screen's laid over.
-		const reference = await render(createElement('div', null, createElement(AlertDescription), createElement(AlertAction), createElement(Button, { variant: 'outline' }, 'x')));
+		const reference = await render(
+			createElement('div', null, createElement(AlertDescription), createElement(AlertAction), createElement(Button, { variant: 'outline' }, 'x')),
+		);
 		expect(description.className).toBe(reference.host.querySelector('[data-slot="alert-description"]')!.className);
-		expect(document.querySelector('[data-slot="alert-action"]')!.className).toBe(reference.host.querySelector('[data-slot="alert-action"]')!.className);
+		expect(document.querySelector('[data-slot="alert-action"]')!.className).toBe(
+			reference.host.querySelector('[data-slot="alert-action"]')!.className,
+		);
 		expect(button('Try again').className).toBe(reference.host.querySelector('button')!.className);
 		await unmountAll(reference.root);
 	});

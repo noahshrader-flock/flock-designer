@@ -94,14 +94,14 @@ export const MoveToCode = ({
 						<DialogBody className="flex flex-col gap-3">
 							{handed.editor ? (
 								<p className="text-sm">
-									It is in Claude Code in VS Code now, on {plan?.branch}: a new conversation there has the task typed in. Press
-									Enter there to start it, then watch the agent write the audit and then the code, and step in when you like.
+									It is in Claude Code in VS Code now, on {plan?.branch}: a new conversation there has the task typed in. Press Enter there to start
+									it, then watch the agent write the audit and then the code, and step in when you like.
 								</p>
 							) : (
 								<>
 									<p className="text-sm">
-										VS Code with Claude Code is not on this machine, so the command that starts it in a terminal is on your
-										clipboard. Paste it in a terminal to begin:
+										VS Code with Claude Code is not on this machine, so the command that starts it in a terminal is on your clipboard. Paste it in a
+										terminal to begin:
 									</p>
 									<pre className="bg-muted m-0 rounded-md p-3 font-mono text-xs wrap-anywhere whitespace-pre-wrap">{handed.command}</pre>
 								</>
@@ -115,8 +115,8 @@ export const MoveToCode = ({
 					<>
 						<DialogBody className="flex flex-col gap-4">
 							<p className="text-muted-foreground text-sm">
-								This moves {iterationLabel(iteration)} into {checkout.name} as real work, built by Claude Code in the repository. It
-								needs the full setup: packages, environment variables, and the app able to run.
+								This moves {iterationLabel(iteration)} into {checkout.name} as real work, built by Claude Code in the repository. It needs the full
+								setup: packages, environment variables, and the app able to run.
 							</p>
 
 							{plan && needsClean && !plan.clean && (
@@ -165,7 +165,9 @@ export const MoveToCode = ({
 									<div className="flex flex-col gap-1.5">
 										<p className="text-sm font-medium">What happens</p>
 										<ol className="text-muted-foreground m-0 list-decimal pl-5 text-sm">
-											<li>Claude Code opens in {checkout.name} on {plan.branch}, with the task in a new conversation.</li>
+											<li>
+												Claude Code opens in {checkout.name} on {plan.branch}, with the task in a new conversation.
+											</li>
 											<li>
 												{continuing
 													? 'The agent looks at what is already on the branch and its audit, then carries on from there.'

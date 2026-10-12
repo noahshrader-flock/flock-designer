@@ -35,7 +35,10 @@ export const editProblem = (edit: TokenEdit, byPath: Map<string, DesignToken>): 
 	const token = byPath.get(edit.path);
 	if (!token) return `The library has no token ${edit.path}.`;
 	if (!isEditable(token)) return `${token.path} is shown, not changed: only a color, a spacing or a radius is changed here.`;
-	if ('value' in edit) return fitsKind(token.kind, edit.value) ? null : `${edit.value} is not a ${token.kind === 'color' ? 'hex color' : 'length'}, so ${token.path} cannot be it.`;
+	if ('value' in edit)
+		return fitsKind(token.kind, edit.value)
+			? null
+			: `${edit.value} is not a ${token.kind === 'color' ? 'hex color' : 'length'}, so ${token.path} cannot be it.`;
 	const target = byPath.get(edit.ref);
 	if (!token.ref) return `${token.path} has a value of its own, not a pointer, so it is given a value, not pointed elsewhere.`;
 	if (!target || target.kind !== token.kind || target.path === token.path) return `${token.path} cannot point at ${edit.ref}.`;
@@ -56,7 +59,8 @@ const mismatch = (read: DesignToken[], expected: DesignToken[]): string | null =
 		const t = got.get(want.path);
 		if (!t) return `${want.path} would be gone`;
 		if (t.value.toLowerCase() !== want.value.toLowerCase()) return `${want.path} would be ${t.value}, not ${want.value}`;
-		if (t.ref?.path !== want.ref?.path || t.ref?.alpha !== want.ref?.alpha) return `${want.path} would point at ${t.ref?.path ?? 'nothing'}, not ${want.ref?.path ?? 'nothing'}`;
+		if (t.ref?.path !== want.ref?.path || t.ref?.alpha !== want.ref?.alpha)
+			return `${want.path} would point at ${t.ref?.path ?? 'nothing'}, not ${want.ref?.path ?? 'nothing'}`;
 	}
 	return null;
 };

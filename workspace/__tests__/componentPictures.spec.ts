@@ -94,7 +94,14 @@ describe('the pictures of the components', () => {
 	});
 
 	it('are not shown when they were taken another way than the app takes them now, and are dropped by the next pass', async () => {
-		pictures('before').keep('acme/ui', [A, B], new Map([[A, picture('a')], [B, picture('b')]]));
+		pictures('before').keep(
+			'acme/ui',
+			[A, B],
+			new Map([
+				[A, picture('a')],
+				[B, picture('b')],
+			]),
+		);
 		expect(Object.keys(await pictures('before').of('acme/ui'))).toEqual([A, B]);
 		// After the app changes how it takes them: the old are no picture, not a stretched or cropped one.
 		expect(await pictures('now').of('acme/ui')).toEqual({});

@@ -55,7 +55,10 @@ const story = (title: string, body: string) => `const meta = { title: '${title}'
 /** Library files: two components, one of them with Sass; and the library's own preview set-up. */
 const LIBRARY = {
 	'.storybook/preview.tsx': 'export default {};\n',
-	'src/components/FSOne/FSOne.stories.tsx': story('Buttons/FSOne', `import './one.scss';\nexport const Default = () => <button className="one">One</button>;\nexport const Other = () => <span>Other</span>;`),
+	'src/components/FSOne/FSOne.stories.tsx': story(
+		'Buttons/FSOne',
+		`import './one.scss';\nexport const Default = () => <button className="one">One</button>;\nexport const Other = () => <span>Other</span>;`,
+	),
 	'src/components/FSOne/one.scss': '$c: red;\n.one { color: $c; }\n',
 	'src/components/FSTwo/FSTwo.stories.tsx': story('Inputs/FSTwo', `export const Default = () => <p>Two</p>;`),
 };
@@ -77,7 +80,8 @@ exports.composeStories = (m) => Object.fromEntries(Object.entries(m).filter(([k]
 
 /** Storybook's channel as its preview has it: what a story's `useArgs` sends `updateStoryArgs` on. */
 const FAKE_STORYBOOK_CHANNEL = {
-	'node_modules/storybook/package.json': '{"name":"storybook","version":"0.0.0","type":"module","exports":{"./preview-api":"./preview-api.js","./internal/core-events":"./core-events.js"}}',
+	'node_modules/storybook/package.json':
+		'{"name":"storybook","version":"0.0.0","type":"module","exports":{"./preview-api":"./preview-api.js","./internal/core-events":"./core-events.js"}}',
 	// ES modules, as the real package ships them.
 	'node_modules/storybook/preview-api.js': `const listeners = {};
 const channel = { on: (e, f) => (listeners[e] ??= []).push(f), emit: (e, ...a) => (listeners[e] ?? []).forEach((f) => f(...a)) };
@@ -101,7 +105,8 @@ const makeLibrary = (files: Record<string, string>, packages = true) => {
 		write(clone, FAKE_STORYBOOK);
 	}
 };
-const previews = (more: Partial<ConstructorParameters<typeof StoryPreviews>[0]> = {}) => new StoryPreviews({ system: connected(clone), folder, server, ...more });
+const previews = (more: Partial<ConstructorParameters<typeof StoryPreviews>[0]> = {}) =>
+	new StoryPreviews({ system: connected(clone), folder, server, ...more });
 const ready = async (p: StoryPreviews) => {
 	const r = await p.preview();
 	if (r.state !== 'ready') throw new Error(`not ready: ${JSON.stringify(r)}`);
@@ -164,7 +169,11 @@ describe('building the previews', () => {
 		expect(root.textContent).toContain('Two');
 		// Nothing was looked for that is not there: no preview set-up is imported, so none had to be set aside.
 		const site = join(folder, readdirSync(folder)[0]!, 'site');
-		expect(readdirSync(site).filter((f) => f.endsWith('.js')).some((f) => readFileSync(join(site, f), 'utf8').includes('Not installed here'))).toBe(false);
+		expect(
+			readdirSync(site)
+				.filter((f) => f.endsWith('.js'))
+				.some((f) => readFileSync(join(site, f), 'utf8').includes('Not installed here')),
+		).toBe(false);
 	});
 
 	it('redraws a story that updates its own args, as Storybook does, and leaves one that only pins a value alone', async () => {
@@ -229,11 +238,19 @@ export const Status = { args: { label: 'Network', value: 'Connected' } };`,
 		await render(await ready(previews()), 'src/components/FSOne/FSOne.stories.tsx');
 		await vi.waitFor(() => expect(heard.length).toBeGreaterThan(0));
 		window.removeEventListener('message', listen);
-		expect(heard.every((m) => Object.keys(m as object).join() === PREVIEW_HEIGHT && typeof (m as Record<string, unknown>)[PREVIEW_HEIGHT] === 'number')).toBe(true);
+		expect(
+			heard.every((m) => Object.keys(m as object).join() === PREVIEW_HEIGHT && typeof (m as Record<string, unknown>)[PREVIEW_HEIGHT] === 'number'),
+		).toBe(true);
 	});
 
 	it('shows a story that throws as its error, and the others still render', async () => {
-		makeLibrary({ ...LIBRARY, 'src/components/FSOne/FSOne.stories.tsx': story('Buttons/FSOne', `export const Broken = () => { throw new Error('boom'); };\nexport const Fine = () => <b>fine</b>;`) });
+		makeLibrary({
+			...LIBRARY,
+			'src/components/FSOne/FSOne.stories.tsx': story(
+				'Buttons/FSOne',
+				`export const Broken = () => { throw new Error('boom'); };\nexport const Fine = () => <b>fine</b>;`,
+			),
+		});
 		const root = await render(await ready(previews()), 'src/components/FSOne/FSOne.stories.tsx');
 		expect(root.querySelector('.fd-error')?.textContent).toContain('boom');
 		expect(root.textContent).toContain('fine');
@@ -243,7 +260,10 @@ export const Status = { args: { label: 'Network', value: 'Connected' } };`,
 		makeLibrary({
 			...LIBRARY,
 			'src/icons/index.ts': "export * from './symbols.generated';\n",
-			'src/components/FSTwo/FSTwo.stories.tsx': story('Inputs/FSTwo', `import { ArrowSymbol } from '../../icons/symbols.generated';\nexport const Default = () => <p>{String(ArrowSymbol)}</p>;`),
+			'src/components/FSTwo/FSTwo.stories.tsx': story(
+				'Inputs/FSTwo',
+				`import { ArrowSymbol } from '../../icons/symbols.generated';\nexport const Default = () => <p>{String(ArrowSymbol)}</p>;`,
+			),
 		});
 		const p = previews();
 		const base = await ready(p);
@@ -331,7 +351,8 @@ describe('trying a change to the tokens (T3)', () => {
 	const THEMED = {
 		...LIBRARY,
 		'src/colors/tones/brand.ts': "export const brand = {\n  50: '#108062',\n  20: '#18372F',\n};\n",
-		'src/colors/theme/light.ts': "import { brand } from '../tones/brand';\n\nexport const lightPalette = {\n  mode: 'light',\n  primary: { main: brand[50] },\n};\n",
+		'src/colors/theme/light.ts':
+			"import { brand } from '../tones/brand';\n\nexport const lightPalette = {\n  mode: 'light',\n  primary: { main: brand[50] },\n};\n",
 		'src/components/FSTwo/FSTwo.stories.tsx': story(
 			'Inputs/FSTwo',
 			"import { lightPalette } from '../../colors/theme/light';\nexport const Default = () => <p style={{ color: lightPalette.primary.main }}>Two</p>;",
@@ -424,7 +445,10 @@ describe('trying a change to the tokens (T3)', () => {
 		makeLibrary(THEMED);
 		const p = previews();
 		const base = await ready(p);
-		expect(await p.preview([{ path: 'tone.brand.50', value: 'red' }])).toEqual({ state: 'failed', error: expect.stringContaining('not a hex color') });
+		expect(await p.preview([{ path: 'tone.brand.50', value: 'red' }])).toEqual({
+			state: 'failed',
+			error: expect.stringContaining('not a hex color'),
+		});
 		expect(await p.preview([])).toEqual({ state: 'ready', base });
 	});
 });
@@ -450,7 +474,12 @@ describe('leaving the library alone', () => {
 		makeLibrary(LIBRARY);
 		g(clone, 'checkout', '-q', '-b', 'noah/work');
 		write(clone, { 'src/components/FSOne/FSOne.stories.tsx': 'unsaved\n' });
-		const snapshot = () => ({ head: g(clone, 'rev-parse', 'HEAD'), status: g(clone, 'status', '--porcelain', '--ignored'), refs: g(clone, 'for-each-ref'), files: readdirSync(clone).sort() });
+		const snapshot = () => ({
+			head: g(clone, 'rev-parse', 'HEAD'),
+			status: g(clone, 'status', '--porcelain', '--ignored'),
+			refs: g(clone, 'for-each-ref'),
+			files: readdirSync(clone).sort(),
+		});
 		const before = snapshot();
 		await ready(previews());
 		expect(snapshot()).toEqual(before);
@@ -473,15 +502,21 @@ describe('the page', () => {
 		expect(entry.match(/"src\/b\/B\.stories\.tsx":/g)).toHaveLength(1);
 		expect(entry).toContain('"/lib/.storybook/preview.tsx"');
 		// No preview set-up, no Storybook channel: neither is looked for.
-		expect(previewEntry('/lib', [], { preview: null, argsChannel: false })).not.toMatch(/import \* as preview|setProjectAnnotations\(preview|storybook\/preview-api/);
+		expect(previewEntry('/lib', [], { preview: null, argsChannel: false })).not.toMatch(
+			/import \* as preview|setProjectAnnotations\(preview|storybook\/preview-api/,
+		);
 		expect(entry).toContain("import('storybook/preview-api')");
 		expect(entry).not.toMatch(/FSButton|FSCard/);
 	});
 
 	it('knows which imports a build could not resolve', () => {
-		expect(unresolved([{ text: 'Could not resolve "../../icons/symbols.generated"' }, { text: 'Could not resolve "left-pad"' }, { text: 'Unexpected "}"' }])).toEqual(
-			new Set(['../../icons/symbols.generated', 'left-pad']),
-		);
+		expect(
+			unresolved([
+				{ text: 'Could not resolve "../../icons/symbols.generated"' },
+				{ text: 'Could not resolve "left-pad"' },
+				{ text: 'Unexpected "}"' },
+			]),
+		).toEqual(new Set(['../../icons/symbols.generated', 'left-pad']));
 	});
 });
 

@@ -15,50 +15,50 @@ import type { StoredToken } from './github';
  */
 
 export interface SafeStorageLike {
-  isEncryptionAvailable(): boolean;
-  encryptString(plain: string): Buffer;
-  decryptString(encrypted: Buffer): string;
+	isEncryptionAvailable(): boolean;
+	encryptString(plain: string): Buffer;
+	decryptString(encrypted: Buffer): string;
 }
 
 export class TokenStore {
-  constructor(
-    private readonly file: string,
-    private readonly safeStorage: SafeStorageLike,
-  ) {}
+	constructor(
+		private readonly file: string,
+		private readonly safeStorage: SafeStorageLike,
+	) {}
 
-  static defaultPath(userDataDir: string): string {
-    return join(userDataDir, 'github-token.enc');
-  }
+	static defaultPath(userDataDir: string): string {
+		return join(userDataDir, 'github-token.enc');
+	}
 
-  readonly available = (): boolean => this.safeStorage.isEncryptionAvailable();
+	readonly available = (): boolean => this.safeStorage.isEncryptionAvailable();
 
-  read(): StoredToken | null {
-    if (!existsSync(this.file) || !this.available()) {
-      return null;
-    }
-    try {
-      const parsed: unknown = JSON.parse(this.safeStorage.decryptString(readFileSync(this.file)));
-      if (typeof parsed !== 'object' || parsed === null) {
-        return null;
-      }
-      const token = parsed as StoredToken;
-      return typeof token.accessToken === 'string' && typeof token.expiresAt === 'number' ? token : null;
-    } catch {
-      // A token we cannot decrypt is a token we do not have. Say so by returning
-      // null; the person signs in again, which is the correct outcome.
-      return null;
-    }
-  }
+	read(): StoredToken | null {
+		if (!existsSync(this.file) || !this.available()) {
+			return null;
+		}
+		try {
+			const parsed: unknown = JSON.parse(this.safeStorage.decryptString(readFileSync(this.file)));
+			if (typeof parsed !== 'object' || parsed === null) {
+				return null;
+			}
+			const token = parsed as StoredToken;
+			return typeof token.accessToken === 'string' && typeof token.expiresAt === 'number' ? token : null;
+		} catch {
+			// A token we cannot decrypt is a token we do not have. Say so by returning
+			// null; the person signs in again, which is the correct outcome.
+			return null;
+		}
+	}
 
-  write(token: StoredToken): void {
-    if (!this.available()) {
-      return;
-    }
-    mkdirSync(dirname(this.file), { recursive: true });
-    writeFileSync(this.file, this.safeStorage.encryptString(JSON.stringify(token)), { mode: 0o600 });
-  }
+	write(token: StoredToken): void {
+		if (!this.available()) {
+			return;
+		}
+		mkdirSync(dirname(this.file), { recursive: true });
+		writeFileSync(this.file, this.safeStorage.encryptString(JSON.stringify(token)), { mode: 0o600 });
+	}
 
-  clear(): void {
-    rmSync(this.file, { force: true });
-  }
+	clear(): void {
+		rmSync(this.file, { force: true });
+	}
 }

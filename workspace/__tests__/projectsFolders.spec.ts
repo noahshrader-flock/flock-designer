@@ -22,7 +22,13 @@ const PROJECTS = [
 let current: Awaited<ReturnType<typeof render>> | null = null;
 const open = async (projects: Project[] = PROJECTS, later?: Project[]) => {
 	let reads = 0;
-	const app = fakeApp({ listProjects: async () => ok(reads++ > 0 && later ? later : projects), publishNow: async () => ok({ state: 'unavailable' }), lastCheckout: async () => ok(null), suggestCheckout: async () => ok(null), publishStatus: async () => ok({ state: 'unavailable' }) });
+	const app = fakeApp({
+		listProjects: async () => ok(reads++ > 0 && later ? later : projects),
+		publishNow: async () => ok({ state: 'unavailable' }),
+		lastCheckout: async () => ok(null),
+		suggestCheckout: async () => ok(null),
+		publishStatus: async () => ok({ state: 'unavailable' }),
+	});
 	(window as unknown as { workspace: unknown }).workspace = app.api;
 	current = await render(createElement(Projects, { hidden: false }));
 	await settle();
@@ -80,7 +86,10 @@ describe('the folder filter', () => {
 	});
 
 	it('shows every project again when the folder chosen is in no project any more, as after a move on another machine', async () => {
-		await open(PROJECTS, PROJECTS.map((p) => (p.folder === 'Roles' ? { ...p, folder: 'Admin' } : p)));
+		await open(
+			PROJECTS,
+			PROJECTS.map((p) => (p.folder === 'Roles' ? { ...p, folder: 'Admin' } : p)),
+		);
 		await choose(button('Folder: All folders'), 'Roles');
 		expect(titles()).toEqual(['Role comparison']);
 		await press(button('Sync'));

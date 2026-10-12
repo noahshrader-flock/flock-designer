@@ -90,14 +90,17 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 	}, [load]);
 
 	/** Accepting the suggestion is what trusts it; finding it did not. */
-	const useSuggestion = useCallback(async (root: string) => {
-		const r = await window.workspace.useCheckout(root);
-		if (r.ok) {
-			setCheckout(r.value);
-			setSuggestion(null);
-			await load();
-		}
-	}, [load]);
+	const useSuggestion = useCallback(
+		async (root: string) => {
+			const r = await window.workspace.useCheckout(root);
+			if (r.ok) {
+				setCheckout(r.value);
+				setSuggestion(null);
+				await load();
+			}
+		},
+		[load],
+	);
 
 	if (error) {
 		return (
@@ -177,9 +180,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 							);
 						}}
 					/>
-					<Button onClick={() => setCreating(true)}>
-						New
-					</Button>
+					<Button onClick={() => setCreating(true)}>New</Button>
 				</div>
 			</Toolbar>
 			<Page wide>
@@ -233,9 +234,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 				)}
 
 				{projects?.length === 0 && (
-					<p className="text-muted-foreground text-sm">
-						No projects yet. A project appears here once its folder exists in the design repository.
-					</p>
+					<p className="text-muted-foreground text-sm">No projects yet. A project appears here once its folder exists in the design repository.</p>
 				)}
 
 				{matching.length === 0 && projects !== null && projects.length > 0 && (

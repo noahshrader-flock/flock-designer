@@ -18,9 +18,7 @@ const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** `fd/<project-id>/i<n>` as a regular expression, built from the repository's own pattern. */
 export const patternToRegex = (pattern: string): RegExp =>
-	new RegExp(
-		`^${escape(pattern).replace(escape('<project-id>'), '([a-z0-9]+(?:-[a-z0-9]+)*)').replace(escape('<n>'), '(\\d+)')}$`,
-	);
+	new RegExp(`^${escape(pattern).replace(escape('<project-id>'), '([a-z0-9]+(?:-[a-z0-9]+)*)').replace(escape('<n>'), '(\\d+)')}$`);
 
 /** What to ask git for: everything under the fixed start of each pattern. */
 const prefixOf = (pattern: string): string => pattern.slice(0, pattern.indexOf('<'));

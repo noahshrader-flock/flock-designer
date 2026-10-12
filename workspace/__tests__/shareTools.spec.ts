@@ -50,7 +50,12 @@ esac
 
 const checks = (bucket: string, workflow = 'PR Deployment') =>
 	JSON.stringify([{ name: 'deploy', workflow, bucket, link: 'https://github.test/run/1', startedAt: new Date().toISOString() }]);
-const calls = () => (existsSync(join(dir, 'gh', 'calls.log')) ? readFileSync(join(dir, 'gh', 'calls.log'), 'utf8').trim().split('\n') : []);
+const calls = () =>
+	existsSync(join(dir, 'gh', 'calls.log'))
+		? readFileSync(join(dir, 'gh', 'calls.log'), 'utf8')
+				.trim()
+				.split('\n')
+		: [];
 
 beforeEach(() => {
 	dir = mkdtempSync(join(tmpdir(), 'fdw-share-'));
@@ -144,7 +149,10 @@ describe('sharing through the real tools', () => {
 		writeFileSync(join(dir, 'gh', 'checks-2.json'), checks('pass'));
 		const records = join(dir, 'records');
 		mkdirSync(join(records, 'demo'), { recursive: true });
-		writeFileSync(join(records, 'demo', 'iterations.json'), JSON.stringify([{ projectId: 'demo', name: 'i1', branch: 'fd/demo/i1', commit: null, createdAt: 'x', note: '' }]));
+		writeFileSync(
+			join(records, 'demo', 'iterations.json'),
+			JSON.stringify([{ projectId: 'demo', name: 'i1', branch: 'fd/demo/i1', commit: null, createdAt: 'x', note: '' }]),
+		);
 
 		const seen: ShareStatus[] = [];
 		const runner = new ShareRunner((s) => seen.push(s));

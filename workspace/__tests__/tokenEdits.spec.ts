@@ -48,7 +48,16 @@ const change = async (files: Record<string, string>, edits: TokenEdit[]) => {
 };
 
 describe('what a change does to the list', () => {
-	const tone = (step: string, value: string): DesignToken => ({ path: `tone.g.${step}`, kind: 'color', category: 'Color', group: 'Tones', set: 'g', name: step, value, source: { file: 'g.ts', line: 1 } });
+	const tone = (step: string, value: string): DesignToken => ({
+		path: `tone.g.${step}`,
+		kind: 'color',
+		category: 'Color',
+		group: 'Tones',
+		set: 'g',
+		name: step,
+		value,
+		source: { file: 'g.ts', line: 1 },
+	});
 	const role = (path: string, ref: string, value: string, alpha?: string): DesignToken => ({
 		...tone('x', value),
 		path,
@@ -57,7 +66,12 @@ describe('what a change does to the list', () => {
 		name: path.split('.').pop() as string,
 		ref: alpha ? { path: ref, alpha } : { path: ref },
 	});
-	const TOKENS = [tone('50', '#108062'), tone('60', '#20A080'), role('palette.light.primary.main', 'tone.g.50', '#108062'), role('palette.light.primary.border', 'tone.g.50', '#10806266', '66')];
+	const TOKENS = [
+		tone('50', '#108062'),
+		tone('60', '#20A080'),
+		role('palette.light.primary.main', 'tone.g.50', '#108062'),
+		role('palette.light.primary.border', 'tone.g.50', '#10806266', '66'),
+	];
 
 	it('moves every token that points at a changed one, keeping each one’s opacity', () => {
 		const after = withEdits(TOKENS, [{ path: 'tone.g.50', value: '#000000' }]);
@@ -110,8 +124,9 @@ describe('contrast', () => {
 		const theme = (await readTokens(reads(THEME))).tokens;
 		const main = theme.find((t) => t.path === 'palette.light.primary.main') as DesignToken;
 		expect(contrastPartner(main, theme)?.path).toBe('palette.light.primary.contrastText');
-		const css = (await readTokens(reads({ 'a.css': ':root { --primary: #000000; --primary-foreground: #ffffff; }\n.dark { --primary-foreground: #eeeeee; }' })))
-			.tokens;
+		const css = (
+			await readTokens(reads({ 'a.css': ':root { --primary: #000000; --primary-foreground: #ffffff; }\n.dark { --primary-foreground: #eeeeee; }' }))
+		).tokens;
 		expect(contrastPartner(css.find((t) => t.path === 'css.light.primary') as DesignToken, css)?.path).toBe('css.light.primary-foreground');
 		// A color with no pair says nothing.
 		expect(contrastPartner(theme.find((t) => t.path === 'palette.light.surface.main') as DesignToken, theme)).toBeUndefined();
@@ -121,7 +136,9 @@ describe('contrast', () => {
 describe('writing a change into theme files', () => {
 	it('writes a tone step’s new hex in its place, and moves the roles that point at it', async () => {
 		const { written, find } = await change(THEME, [{ path: 'tone.pineGreen.50', value: '#0a6b52' }]);
-		expect(written.get('src/colors/tones/pineGreen.ts')).toBe("export const pineGreen = {\n  100: '#FFFFFF',\n  50: '#0A6B52',\n  20: '#18372F',\n};\n");
+		expect(written.get('src/colors/tones/pineGreen.ts')).toBe(
+			"export const pineGreen = {\n  100: '#FFFFFF',\n  50: '#0A6B52',\n  20: '#18372F',\n};\n",
+		);
 		expect([...written.keys()]).toEqual(['src/colors/tones/pineGreen.ts']);
 		expect(find('palette.light.primary.main').value).toBe('#0A6B52');
 	});
@@ -157,28 +174,39 @@ describe('writing a change into theme files', () => {
 		const shared = {
 			'src/colors/tones/pineGreen.ts': THEME['src/colors/tones/pineGreen.ts'],
 			'src/colors/theme/shared.ts': "export const sharedPalette = {\n  info: { main: '#0000FF' },\n};\n",
-			'src/colors/theme/modes.ts': "export const lightPalette = { mode: 'light', ...sharedPalette };\nexport const darkPalette = { mode: 'dark', ...sharedPalette };\n",
+			'src/colors/theme/modes.ts':
+				"export const lightPalette = { mode: 'light', ...sharedPalette };\nexport const darkPalette = { mode: 'dark', ...sharedPalette };\n",
 		};
 		const { find } = await change(shared, [{ path: 'palette.light.info.main', value: '#00FF00' }]);
 		expect([find('palette.light.info.main').value, find('palette.dark.info.main').value]).toEqual(['#00FF00', '#00FF00']);
-		const apart = [{ path: 'palette.light.info.main', value: '#00FF00' }, { path: 'palette.dark.info.main', value: '#FF0000' }];
+		const apart = [
+			{ path: 'palette.light.info.main', value: '#00FF00' },
+			{ path: 'palette.dark.info.main', value: '#FF0000' },
+		];
 		await expect(editedFiles(reads(shared), apart)).rejects.toThrow('each token once');
 	});
 
 	it('refuses what the theme cannot say: a radius in rem, or a role pointed at something not a tone step', async () => {
 		await expect(editedFiles(reads(THEME), [{ path: 'radius', value: '0.5rem' }])).rejects.toThrow('whole number of pixels');
-		await expect(editedFiles(reads(THEME), [{ path: 'palette.light.primary.main', ref: 'palette.light.surface.main' }])).rejects.toThrow('only at a tone step');
+		await expect(editedFiles(reads(THEME), [{ path: 'palette.light.primary.main', ref: 'palette.light.surface.main' }])).rejects.toThrow(
+			'only at a tone step',
+		);
 	});
 });
 
 describe('writing a change into CSS variables', () => {
 	it('writes a color kept as bare HSL channels as channels, as shadcn uses them inside hsl()', async () => {
-		const { written, find } = await change({ 'src/globals.css': ':root {\n  --primary: 222.2 47.4% 11.2%;\n}\n' }, [{ path: 'css.light.primary', value: '#222222' }]);
+		const { written, find } = await change({ 'src/globals.css': ':root {\n  --primary: 222.2 47.4% 11.2%;\n}\n' }, [
+			{ path: 'css.light.primary', value: '#222222' },
+		]);
 		expect(written.get('src/globals.css')).toBe(':root {\n  --primary: 0 0% 13.33%;\n}\n');
 		expect(find('css.light.primary').value).toBe('#222222');
 	});
 
-	const CSS = { 'src/globals.css': ':root {\n  /* --primary: #000000; */ --primary: #111111;\n  --ring: var(--primary);\n  --accent: #333333;\n  --radius: 0.5rem;\n}\n' };
+	const CSS = {
+		'src/globals.css':
+			':root {\n  /* --primary: #000000; */ --primary: #111111;\n  --ring: var(--primary);\n  --accent: #333333;\n  --radius: 0.5rem;\n}\n',
+	};
 
 	it('writes a variable’s new value in its own declaration, past a commented-out one on the same line', async () => {
 		const { written, find } = await change(CSS, [{ path: 'css.light.primary', value: '#222222' }]);
@@ -241,7 +269,10 @@ describe('what is refused', () => {
 		await expect(editedFiles(reads(THEME), [{ path: 'tone.nope.1', value: '#000000' }])).rejects.toThrow('no token tone.nope.1');
 		await expect(editedFiles(reads(THEME), [{ path: 'tone.pineGreen.50', value: 'red' }])).rejects.toThrow('not a hex color');
 		await expect(editedFiles(reads(THEME), [{ path: 'spacing', value: '#000000' }])).rejects.toThrow('not a length');
-		const twice = [{ path: 'spacing', value: '4px' }, { path: 'spacing', value: '6px' }];
+		const twice = [
+			{ path: 'spacing', value: '4px' },
+			{ path: 'spacing', value: '6px' },
+		];
 		await expect(editedFiles(reads(THEME), twice)).rejects.toThrow('each token once');
 	});
 
@@ -264,7 +295,15 @@ describe('what is refused', () => {
 
 	it('anything from the window that is not a list of edits', () => {
 		expect(tokenEditsOf(undefined)).toEqual([]);
-		expect(tokenEditsOf([{ path: 'a', value: '#000000' }, { path: 'b', ref: 'c' }])).toEqual([{ path: 'a', value: '#000000' }, { path: 'b', ref: 'c' }]);
+		expect(
+			tokenEditsOf([
+				{ path: 'a', value: '#000000' },
+				{ path: 'b', ref: 'c' },
+			]),
+		).toEqual([
+			{ path: 'a', value: '#000000' },
+			{ path: 'b', ref: 'c' },
+		]);
 		expect(() => tokenEditsOf('a')).toThrow();
 		expect(() => tokenEditsOf([{ path: 'a' }])).toThrow();
 		expect(() => tokenEditsOf(['a', null])).toThrow('A token edit names a token');
@@ -275,7 +314,16 @@ describe('what is refused', () => {
 });
 
 describe('a token that is not a color or a length', () => {
-	const font = (path: string, value: string): DesignToken => ({ path, kind: 'font', category: 'Typography', group: 'Family', set: 'font', name: path, value, source: { file: 'a.css', line: 1 } });
+	const font = (path: string, value: string): DesignToken => ({
+		path,
+		kind: 'font',
+		category: 'Typography',
+		group: 'Family',
+		set: 'font',
+		name: path,
+		value,
+		source: { file: 'a.css', line: 1 },
+	});
 	const byPath = new Map([font('font.sans', 'Inter'), font('font.mono', 'Menlo')].map((t) => [t.path, t]));
 
 	it('fits no value, however much one looks like a length', () => {
@@ -286,8 +334,19 @@ describe('a token that is not a color or a length', () => {
 	});
 
 	it('is refused as a change when it is a length of a primitive that is only shown: a breakpoint', () => {
-		const breakpoint: DesignToken = { path: 'breakpoints.md', kind: 'dimension', category: 'Breakpoints', group: 'Breakpoints', set: 'breakpoints', name: 'md', value: '900px', source: { file: 'a.ts', line: 1 } };
-		expect(editProblem({ path: 'breakpoints.md', value: '800px' }, new Map([[breakpoint.path, breakpoint]]))).toMatch(/breakpoints\.md is shown, not changed/);
+		const breakpoint: DesignToken = {
+			path: 'breakpoints.md',
+			kind: 'dimension',
+			category: 'Breakpoints',
+			group: 'Breakpoints',
+			set: 'breakpoints',
+			name: 'md',
+			value: '900px',
+			source: { file: 'a.ts', line: 1 },
+		};
+		expect(editProblem({ path: 'breakpoints.md', value: '800px' }, new Map([[breakpoint.path, breakpoint]]))).toMatch(
+			/breakpoints\.md is shown, not changed/,
+		);
 	});
 
 	it('is refused as a change, given a value or pointed at another of its kind: it is shown, not changed', () => {

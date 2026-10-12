@@ -20,7 +20,13 @@ export const designSystemId = (repository: string, folder: string): string => (f
 
 /** The folders of a repository that are packages (have a `package.json`), and its root, deepest first. */
 const packagesOf = (files: string[]): string[] =>
-	['', ...files.filter((f) => f === 'package.json' || f.endsWith('/package.json')).map((f) => dirname(f)).filter((d) => d !== '.')]
+	[
+		'',
+		...files
+			.filter((f) => f === 'package.json' || f.endsWith('/package.json'))
+			.map((f) => dirname(f))
+			.filter((d) => d !== '.'),
+	]
 		.filter((d, i, all) => all.indexOf(d) === i)
 		.sort((a, b) => b.length - a.length);
 
@@ -120,11 +126,20 @@ export class DesignSystemsMemory {
 				const repository = repositoryAt(kept.folder);
 				if (repository === null) return { systems: [], current: null };
 				const id = designSystemId(repository, '');
-				return { systems: [{ id, name: repository.split('/')[1] as string, repository, root: kept.folder, folder: '', branch: 'develop' }], current: id };
+				return {
+					systems: [{ id, name: repository.split('/')[1] as string, repository, root: kept.folder, folder: '', branch: 'develop' }],
+					current: id,
+				};
 			}
 			const systems = (Array.isArray(kept.systems) ? kept.systems : []).filter(
 				(s): s is ConnectedDesignSystem =>
-					typeof s?.id === 'string' && typeof s.name === 'string' && typeof s.repository === 'string' && typeof s.root === 'string' && isAbsolute(s.root) && typeof s.folder === 'string' && typeof s.branch === 'string',
+					typeof s?.id === 'string' &&
+					typeof s.name === 'string' &&
+					typeof s.repository === 'string' &&
+					typeof s.root === 'string' &&
+					isAbsolute(s.root) &&
+					typeof s.folder === 'string' &&
+					typeof s.branch === 'string',
 			);
 			const current = typeof kept.current === 'string' && systems.some((s) => s.id === kept.current) ? kept.current : (systems[0]?.id ?? null);
 			return { systems, current };

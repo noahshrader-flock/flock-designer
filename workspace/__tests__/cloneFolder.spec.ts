@@ -10,7 +10,10 @@ import { CloneFolderMemory, type ClonePlaceDeps, clonePlace, cloneFolderOf, defa
  */
 
 describe('the default clone folder', () => {
-	const exists = (...dirs: string[]) => (p: string) => dirs.includes(p);
+	const exists =
+		(...dirs: string[]) =>
+		(p: string) =>
+			dirs.includes(p);
 
 	it('is beside the repository last worked in, so the design repository stays next to it', () => {
 		expect(defaultCloneFolder({ home: '/h', exists: exists('/h/GitHub'), clones: ['/h/code/flock-coke', '/h/GitHub/other'] })).toBe('/h/code');
@@ -64,15 +67,27 @@ describe('where a repository would be placed', () => {
 	});
 
 	it('is already cloned when a clone of the same repository is there, matched by its origin as GitHub matches names', () => {
-		const deps = tree({ '/h/GitHub/flock-coke': ['.git', 'src'], '/h/GitHub/flock-coke/.git': [] }, { '/h/GitHub/flock-coke': 'git@github.com:FlockSafety/flock-coke.git' });
+		const deps = tree(
+			{ '/h/GitHub/flock-coke': ['.git', 'src'], '/h/GitHub/flock-coke/.git': [] },
+			{ '/h/GitHub/flock-coke': 'git@github.com:FlockSafety/flock-coke.git' },
+		);
 		expect(clonePlace('/h/GitHub', 'flocksafety/flock-coke', deps)).toEqual({ state: 'cloned', path: '/h/GitHub/flock-coke' });
 	});
 
 	it('is taken by another repository’s clone, or by anything else, and says which', () => {
-		const other = tree({ '/h/GitHub/flock-coke': ['.git'], '/h/GitHub/flock-coke/.git': [] }, { '/h/GitHub/flock-coke': 'https://github.com/someone/flock-coke.git' });
-		expect(clonePlace('/h/GitHub', 'flocksafety/flock-coke', other)).toMatchObject({ state: 'taken', why: expect.stringContaining('someone/flock-coke') });
+		const other = tree(
+			{ '/h/GitHub/flock-coke': ['.git'], '/h/GitHub/flock-coke/.git': [] },
+			{ '/h/GitHub/flock-coke': 'https://github.com/someone/flock-coke.git' },
+		);
+		expect(clonePlace('/h/GitHub', 'flocksafety/flock-coke', other)).toMatchObject({
+			state: 'taken',
+			why: expect.stringContaining('someone/flock-coke'),
+		});
 		const files = tree({ '/h/GitHub/flock-coke': ['notes.txt'] });
-		expect(clonePlace('/h/GitHub', 'flocksafety/flock-coke', files)).toMatchObject({ state: 'taken', why: expect.stringContaining('not a clone of flocksafety/flock-coke') });
+		expect(clonePlace('/h/GitHub', 'flocksafety/flock-coke', files)).toMatchObject({
+			state: 'taken',
+			why: expect.stringContaining('not a clone of flocksafety/flock-coke'),
+		});
 	});
 
 	it('refuses anything that is not a GitHub repository name, so no path is made of one', () => {
@@ -82,6 +97,9 @@ describe('where a repository would be placed', () => {
 	});
 
 	it('joins a Windows path the Windows way', () => {
-		expect(clonePlace('C:\\Users\\pat\\GitHub', 'flocksafety/flock-coke', { ...tree({}), paths: path.win32 })).toEqual({ state: 'free', path: 'C:\\Users\\pat\\GitHub\\flock-coke' });
+		expect(clonePlace('C:\\Users\\pat\\GitHub', 'flocksafety/flock-coke', { ...tree({}), paths: path.win32 })).toEqual({
+			state: 'free',
+			path: 'C:\\Users\\pat\\GitHub\\flock-coke',
+		});
 	});
 });

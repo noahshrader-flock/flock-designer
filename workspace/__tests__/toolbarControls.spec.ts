@@ -21,14 +21,22 @@ afterEach(async () => {
 });
 
 /** The controls in the top bar: its buttons, links and dropdowns (each says its size, even under a tooltip) and its search. */
-const controls = (): HTMLElement[] =>
-	[...document.querySelectorAll<HTMLElement>('[class*="h-(--toolbar-height)"] :is(button, a)[data-size], [class*="h-(--toolbar-height)"] [data-slot="input-group"]')];
+const controls = (): HTMLElement[] => [
+	...document.querySelectorAll<HTMLElement>(
+		'[class*="h-(--toolbar-height)"] :is(button, a)[data-size], [class*="h-(--toolbar-height)"] [data-slot="input-group"]',
+	),
+];
 const size = (el: HTMLElement) => (el.getAttribute('data-slot') === 'input-group' ? 'normal' : el.getAttribute('data-size'));
 
 describe('the top bar', () => {
 	it('has controls of one size on the Projects screen', async () => {
 		const project = { id: 'alpha', title: 'Alpha', records: [], iterations: [], people: [], openComments: 0 } as unknown as Project;
-		const app = fakeApp({ listProjects: async () => ok([project]), lastCheckout: async () => ok(null), suggestCheckout: async () => ok(null), publishStatus: async () => ok({ state: 'unavailable' }) });
+		const app = fakeApp({
+			listProjects: async () => ok([project]),
+			lastCheckout: async () => ok(null),
+			suggestCheckout: async () => ok(null),
+			publishStatus: async () => ok({ state: 'unavailable' }),
+		});
 		(window as unknown as { workspace: unknown }).workspace = app.api;
 		current = await render(createElement(Projects, { hidden: false }));
 		await settle();

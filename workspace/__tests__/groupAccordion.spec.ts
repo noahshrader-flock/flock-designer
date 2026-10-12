@@ -29,12 +29,23 @@ const List = () => {
 		createElement(
 			Accordion,
 			closed.accordion(names),
-			names.map((n) => createElement(AccordionItem, { key: n, value: n }, createElement(GroupTrigger, { name: n, count: n.length }), createElement(AccordionContent, null, `in ${n}`))),
+			names.map((n) =>
+				createElement(
+					AccordionItem,
+					{ key: n, value: n },
+					createElement(GroupTrigger, { name: n, count: n.length }),
+					createElement(AccordionContent, null, `in ${n}`),
+				),
+			),
 		),
 	);
 };
-const trigger = (name: string) => [...document.querySelectorAll<HTMLElement>('[data-slot="accordion-trigger"]')].find((t) => t.querySelector('[data-name]')?.textContent === name)!;
-const open = () => [...document.querySelectorAll('[data-slot="accordion-trigger"]')].filter((t) => t.getAttribute('aria-expanded') === 'true').map((t) => t.querySelector('[data-name]')!.textContent);
+const trigger = (name: string) =>
+	[...document.querySelectorAll<HTMLElement>('[data-slot="accordion-trigger"]')].find((t) => t.querySelector('[data-name]')?.textContent === name)!;
+const open = () =>
+	[...document.querySelectorAll('[data-slot="accordion-trigger"]')]
+		.filter((t) => t.getAttribute('aria-expanded') === 'true')
+		.map((t) => t.querySelector('[data-name]')!.textContent);
 
 describe('the groups of a list', () => {
 	it('are each a header with its name and, in gray, its count, and are all open at first', async () => {

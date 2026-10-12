@@ -4,13 +4,20 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
 import { isPrototypeKey, nextPrototypeName, prototypeKey, prototypePagePath } from '../src/shared/projects';
-import { cloneStore, moveToCodePrompt, moveToCodeTask, prototypeBuildTask, prototypeReadable, recordPrototype, setCover } from '../src/main/services/prototype';
+import {
+	cloneStore,
+	moveToCodePrompt,
+	moveToCodeTask,
+	prototypeBuildTask,
+	prototypeReadable,
+	recordPrototype,
+	setCover,
+} from '../src/main/services/prototype';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { memoryStore } from './fixtures';
 import { claudeCodeAdapter } from '../src/main/services/agent';
 import { FIX_ROUNDS, type PrototypeApi, runPrototypeBuild } from '../src/renderer/prototypeBuild';
 import type { BuildPhase } from '../src/renderer/localBuild';
-
 
 describe('what a prototype is called', () => {
 	it('is keyed apart from every branch, and numbered one past the highest', () => {
@@ -41,7 +48,10 @@ describe('recordPrototype', () => {
 	it("adds to an existing project's records and leaves its brief alone", async () => {
 		const { store, files } = memoryStore({
 			'projects/users/brief.md': '# Users\n\nThe real brief.\n',
-			'projects/users/iterations.json': JSON.stringify([{ name: 'i1', branch: 'fd/users/i1' }, { name: 'i2', branch: 'prototype/users/i2' }]),
+			'projects/users/iterations.json': JSON.stringify([
+				{ name: 'i1', branch: 'fd/users/i1' },
+				{ name: 'i2', branch: 'prototype/users/i2' },
+			]),
 		});
 		const it = await recordPrototype(store, { projectId: 'users', title: 'Other', note: 'n', me: null, now });
 		// Another prototype on a project is another idea: the next version, after the older names, which are version 1.
@@ -79,7 +89,15 @@ describe('recordPrototype', () => {
 
 describe('setCover', () => {
 	const RECORDS = 'projects/users/iterations.json';
-	const rec = (name: string, more: Record<string, unknown> = {}) => ({ projectId: 'users', name, branch: `prototype/users/${name}`, commit: null, createdAt: '2026-10-10T00:00:00Z', note: '', ...more });
+	const rec = (name: string, more: Record<string, unknown> = {}) => ({
+		projectId: 'users',
+		name,
+		branch: `prototype/users/${name}`,
+		commit: null,
+		createdAt: '2026-10-10T00:00:00Z',
+		note: '',
+		...more,
+	});
 
 	it('says on one prototype’s record which picture is its, and changes nothing else', async () => {
 		const { store, files } = memoryStore({ [RECORDS]: JSON.stringify([rec('v1-i1', { previewUrl: 'https://x.test' }), rec('v2-i1')]) });
@@ -137,7 +155,11 @@ describe('what the agent is told', () => {
 		sharedStandards: '/d/standards',
 		nodeModules: '/c/node_modules',
 	};
-	const build = { source: '/q/users/i1.tsx', page: '/q/users/i1.html', buildCommand: 'node /q/build-prototype.mjs /e /q/users/i1.tsx /q/users/i1.html /c/node_modules /q/_shared' };
+	const build = {
+		source: '/q/users/i1.tsx',
+		page: '/q/users/i1.html',
+		buildCommand: 'node /q/build-prototype.mjs /e /q/users/i1.tsx /q/users/i1.html /c/node_modules /q/_shared',
+	};
 
 	it('names the source to write, the exact command that checks it builds, and every folder it may read, read-only', () => {
 		const task = prototypeBuildTask({ skill: '# Skill', build, sources, request: 'A users list' });
@@ -159,7 +181,16 @@ describe('what the agent is told', () => {
 	});
 
 	it('asks for the audit before any code changes', () => {
-		const task = moveToCodeTask({ skill: 's', pageFile: '/q/i1.html', auditFile: '/d/projects/users/audit-i1.md', name: 'i1', accessibility: '', voice: '', lightCheck: null, shared: '' });
+		const task = moveToCodeTask({
+			skill: 's',
+			pageFile: '/q/i1.html',
+			auditFile: '/d/projects/users/audit-i1.md',
+			name: 'i1',
+			accessibility: '',
+			voice: '',
+			lightCheck: null,
+			shared: '',
+		});
 		expect(task).toContain('Write the audit to `/d/projects/users/audit-i1.md` before you change any code.');
 	});
 
@@ -201,7 +232,16 @@ describe('PrototypeServer', () => {
 
 describe('runPrototypeBuild', () => {
 	const project: Project = { id: 'users', title: 'Users', records: [], iterations: [], people: [] };
-	const iteration: ProjectIteration = { name: 'i1', branch: 'prototype/users/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], createdAt: null, route: null };
+	const iteration: ProjectIteration = {
+		name: 'i1',
+		branch: 'prototype/users/i1',
+		issueNumber: null,
+		previewUrl: null,
+		commit: null,
+		contributors: [],
+		createdAt: null,
+		route: null,
+	};
 	const api = (over: Partial<Record<keyof PrototypeApi, unknown>> = {}) => {
 		const calls: string[] = [];
 		const ok = (name: string, value: unknown) => vi.fn(async () => (calls.push(name), { ok: true as const, value }));
@@ -246,7 +286,10 @@ describe('runPrototypeBuild', () => {
 		let asked = 0;
 		const agentStatus = vi.fn(async () => ({
 			ok: true as const,
-			value: asked++ < 2 ? { state: 'running', startedAt: 'now', work: 'prototype/users/i1' } : { state: 'finished', exitCode: 0, work: 'prototype/users/i1' },
+			value:
+				asked++ < 2
+					? { state: 'running', startedAt: 'now', work: 'prototype/users/i1' }
+					: { state: 'finished', exitCode: 0, work: 'prototype/users/i1' },
 		}));
 		const { a, calls } = api({ agentStatus });
 		const { url, phases } = await run(a);
@@ -258,7 +301,9 @@ describe('runPrototypeBuild', () => {
 	});
 
 	it("does not wait on another piece of work's run", async () => {
-		const { a, calls } = api({ agentStatus: vi.fn(async () => ({ ok: true as const, value: { state: 'running', startedAt: 'now', work: 'prototype/other/i1' } })) });
+		const { a, calls } = api({
+			agentStatus: vi.fn(async () => ({ ok: true as const, value: { state: 'running', startedAt: 'now', work: 'prototype/other/i1' } })),
+		});
 		expect((await run(a)).phases).toEqual(['preview', 'running']);
 		expect(calls).toEqual(['openPrototype']);
 	});
@@ -330,7 +375,9 @@ describe('the first line of a Build conversation', () => {
 
 	it('says to look at what is on the branch first, for work started before', () => {
 		const prompt = moveToCodePrompt({ ...at, continuing: 'feature/alert-history' });
-		expect(prompt).toMatch(/^Continue building prototype V2 · I1 of alert-history into this codebase, on feature\/alert-history\. Some of it may be done already, so look at the branch and the audit first\./);
+		expect(prompt).toMatch(
+			/^Continue building prototype V2 · I1 of alert-history into this codebase, on feature\/alert-history\. Some of it may be done already, so look at the branch and the audit first\./,
+		);
 		expect(prompt).toContain('is in /app/prototypes/alert-history/v2-i1-into-code.md: read it and do what it says.');
 	});
 });

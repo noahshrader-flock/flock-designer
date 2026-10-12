@@ -60,7 +60,15 @@ export const FolderField = ({
 			{adding && (
 				<Field>
 					<FieldLabel htmlFor={`${id}-new`}>New folder name</FieldLabel>
-					<Input id={`${id}-new`} value={name} onChange={(e) => rename(e.target.value)} placeholder="Admin" maxLength={60} autoFocus disabled={disabled} />
+					<Input
+						id={`${id}-new`}
+						value={name}
+						onChange={(e) => rename(e.target.value)}
+						placeholder="Admin"
+						maxLength={60}
+						autoFocus
+						disabled={disabled}
+					/>
 				</Field>
 			)}
 		</Field>

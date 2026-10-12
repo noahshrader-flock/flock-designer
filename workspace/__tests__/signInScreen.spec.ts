@@ -18,7 +18,10 @@ afterEach(async () => {
 
 const classes = (el: Element | null) => (el?.className ?? '').split(' ');
 const signedOut = () => {
-	const app = fakeApp({ signInState: async () => ok({ state: 'signedOut' }), signInStart: async () => ok({ userCode: 'WDJB-MJHT', verificationUri: 'https://github.com/login/device' }) });
+	const app = fakeApp({
+		signInState: async () => ok({ state: 'signedOut' }),
+		signInStart: async () => ok({ userCode: 'WDJB-MJHT', verificationUri: 'https://github.com/login/device' }),
+	});
 	(window as unknown as { workspace: unknown }).workspace = app.api;
 };
 

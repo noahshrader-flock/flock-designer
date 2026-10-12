@@ -66,7 +66,10 @@ export const settleScript = (quietMs = COVER_QUIET_MS, capMs = COVER_CAP_MS): st
 export const isBlank = (data: Uint8Array): boolean => {
 	const pixels = Math.floor(data.length / 4);
 	if (pixels === 0) return true;
-	const near = (i: number) => Math.abs((data[i * 4] as number) - (data[0] as number)) <= 4 && Math.abs((data[i * 4 + 1] as number) - (data[1] as number)) <= 4 && Math.abs((data[i * 4 + 2] as number) - (data[2] as number)) <= 4;
+	const near = (i: number) =>
+		Math.abs((data[i * 4] as number) - (data[0] as number)) <= 4 &&
+		Math.abs((data[i * 4 + 1] as number) - (data[1] as number)) <= 4 &&
+		Math.abs((data[i * 4 + 2] as number) - (data[2] as number)) <= 4;
 	// A sample, not every pixel: a capture is a million of them, and something on the page is never one pixel.
 	const step = Math.max(1, Math.floor(pixels / 20_000));
 	let seen = 0;

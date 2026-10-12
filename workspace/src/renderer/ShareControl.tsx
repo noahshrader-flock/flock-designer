@@ -1,4 +1,15 @@
-import { CodeIcon, FileTextIcon, FolderIcon, GitBranchIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
+import {
+	CodeIcon,
+	FileTextIcon,
+	FolderIcon,
+	GitBranchIcon,
+	CopyIcon,
+	EllipsisVerticalIcon,
+	ExternalLinkIcon,
+	MessageSquareShareIcon,
+	Share2Icon,
+	SquareTerminalIcon,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared/contract';
 import { projectCodeLink, recordLabel } from '../shared/projects';
@@ -191,9 +202,8 @@ export const ShareControl = ({
 						{view === 'confirm' && (
 							<>
 								<p className="text-sm">
-									This pushes <b>{iteration.branch}</b> to the repository and opens a <b>draft pull request</b>, so a preview
-									link can be built for reviewers. The pull request is only there to make the link: it is not meant to be
-									merged.
+									This pushes <b>{iteration.branch}</b> to the repository and opens a <b>draft pull request</b>, so a preview link can be built for
+									reviewers. The pull request is only there to make the link: it is not meant to be merged.
 								</p>
 								<p className="text-muted-foreground text-sm">
 									Only committed work is shared. The build takes several minutes, and you can close this and keep working.
@@ -220,8 +230,8 @@ export const ShareControl = ({
 									</a>
 								</p>
 								<p className="text-muted-foreground text-sm">
-									Reviewers will see it on this iteration the next time they open the app. If anything stops it reaching
-									them, the publishing status on the Projects page says what.
+									Reviewers will see it on this iteration the next time they open the app. If anything stops it reaching them, the publishing status
+									on the Projects page says what.
 								</p>
 							</>
 						)}

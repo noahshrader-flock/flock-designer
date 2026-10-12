@@ -122,7 +122,11 @@ export const specimenScript = `var drawSpecimens = (() => {
  * FUI) would not respond; the page supplies just that. A story that pins a value without it does not respond in
  * Storybook either, and does not here: making it respond is the story's to do, in the library.
  */
-export const previewEntry = (library: string, storyFiles: string[], { preview, argsChannel }: { preview: string | null; argsChannel: boolean }): string => `
+export const previewEntry = (
+	library: string,
+	storyFiles: string[],
+	{ preview, argsChannel }: { preview: string | null; argsChannel: boolean },
+): string => `
 import { Component, Fragment, createElement as h, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';

@@ -67,7 +67,16 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 		);
 	} catch (err) {
 		const why = err instanceof Error ? err.message.split('\n')[0] : String(err);
-		return { published, mine, problems: [problem('Work branches', `Could not reach GitHub, so ${mine.length === 1 ? 'a branch is' : `${mine.length} branches are`} saved here and will be published when it can: ${why}`)] };
+		return {
+			published,
+			mine,
+			problems: [
+				problem(
+					'Work branches',
+					`Could not reach GitHub, so ${mine.length === 1 ? 'a branch is' : `${mine.length} branches are`} saved here and will be published when it can: ${why}`,
+				),
+			],
+		};
 	}
 
 	for (const branch of mine) {
@@ -77,9 +86,17 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 		if (there === here) continue; // already published, exactly
 		if (there !== undefined) {
 			// Only a fast-forward goes. If GitHub has commits this machine lacks (or has never seen), it is a conversation, not a push.
-			const ahead = await runGit(root, ['merge-base', '--is-ancestor', there, here]).then(() => true, () => false);
+			const ahead = await runGit(root, ['merge-base', '--is-ancestor', there, here]).then(
+				() => true,
+				() => false,
+			);
 			if (!ahead) {
-				problems.push(problem(branch, 'It has changes on GitHub that this machine does not have, so it was not pushed. Bring them in (git pull --rebase on the branch), and it will publish.'));
+				problems.push(
+					problem(
+						branch,
+						'It has changes on GitHub that this machine does not have, so it was not pushed. Bring them in (git pull --rebase on the branch), and it will publish.',
+					),
+				);
 				continue;
 			}
 		}

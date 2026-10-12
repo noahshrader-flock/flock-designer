@@ -39,7 +39,15 @@ export const fakeApp = (overrides: Impl = {}) => {
 		// No change to the tokens saved, unless a test says otherwise.
 		tokenBranch: async () => ok(null),
 		// No voice and tone file in the design repository, unless a test says otherwise.
-		voiceAndTone: async () => ok({ repository: 'flocksafety/flock-react-component-lib', path: '.dsnr/voice-and-tone.md', base: 'develop', text: null, sha: null, branch: null }),
+		voiceAndTone: async () =>
+			ok({
+				repository: 'flocksafety/flock-react-component-lib',
+				path: '.dsnr/voice-and-tone.md',
+				base: 'develop',
+				text: null,
+				sha: null,
+				branch: null,
+			}),
 		// Every story still being drawn, unless a test says otherwise.
 		componentTokens: async () => ok({ state: 'building' }),
 		// No pictures of the components yet, and none being drawn, unless a test says otherwise.
@@ -67,7 +75,8 @@ export const fakeApp = (overrides: Impl = {}) => {
 	const api = new Proxy(
 		{},
 		{
-			get: (_t, name: string) =>
+			get:
+				(_t, name: string) =>
 				(...args: unknown[]) => {
 					(calls[name] ??= []).push(args);
 					const f = impl[name] as ((...a: unknown[]) => unknown) | undefined;
@@ -86,7 +95,14 @@ export const fakeApp = (overrides: Impl = {}) => {
 		/** A click on the page while commenting, at an element with this anchor. */
 		click: (anchor: Partial<CommentAnchor> = {}) =>
 			act(async () =>
-				picked?.(ok({ anchor: { route: '/', selector: 'main', nearbyText: 'Main', viewport: { width: 1, height: 1 }, commit: '', ...anchor }, at: { x: 10, y: 10 }, box: null, picture: null })),
+				picked?.(
+					ok({
+						anchor: { route: '/', selector: 'main', nearbyText: 'Main', viewport: { width: 1, height: 1 }, commit: '', ...anchor },
+						at: { x: 10, y: 10 },
+						box: null,
+						picture: null,
+					}),
+				),
 			),
 	};
 };
@@ -197,12 +213,21 @@ export const button = (name: string | RegExp, scope: ParentNode = document): HTM
 	return all[0] as HTMLButtonElement;
 };
 /** A prototype's states, as the bar shows them: one button each, in a group named State, the one shown pressed. */
-export const stateGroup = (): HTMLElement | null => document.querySelector<HTMLElement>('[role="group"][aria-label="State"], [data-slot="toggle-group"][aria-label="State"]');
+export const stateGroup = (): HTMLElement | null =>
+	document.querySelector<HTMLElement>('[role="group"][aria-label="State"], [data-slot="toggle-group"][aria-label="State"]');
 export const stateButtons = (): HTMLElement[] => [...(stateGroup()?.querySelectorAll<HTMLElement>('[data-slot="toggle-group-item"]') ?? [])];
-export const shownState = (): string | undefined => stateButtons().find((b) => b.getAttribute('aria-checked') === 'true')?.textContent?.trim();
+export const shownState = (): string | undefined =>
+	stateButtons()
+		.find((b) => b.getAttribute('aria-checked') === 'true')
+		?.textContent?.trim();
 export const state = (name: string): HTMLElement => {
 	const b = stateButtons().find((x) => x.textContent?.trim() === name);
-	if (!b) throw new Error(`no state button ${name}: ${stateButtons().map((x) => x.textContent).join(' | ')}`);
+	if (!b)
+		throw new Error(
+			`no state button ${name}: ${stateButtons()
+				.map((x) => x.textContent)
+				.join(' | ')}`,
+		);
 	return b;
 };
 export const press = (el: Element) => act(async () => void el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
@@ -224,7 +249,12 @@ export const menuItem = (items: HTMLElement[], name: string): HTMLElement => {
 /** The card of the comment that says this. */
 export const cardFor = (text: string): HTMLElement => {
 	const c = cards().find((el) => el.textContent?.includes(text));
-	if (!c) throw new Error(`no card for ${text}: ${cards().map((x) => x.textContent).join(' | ')}`);
+	if (!c)
+		throw new Error(
+			`no card for ${text}: ${cards()
+				.map((x) => x.textContent)
+				.join(' | ')}`,
+		);
 	return c;
 };
 

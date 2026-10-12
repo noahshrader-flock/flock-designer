@@ -136,7 +136,10 @@ export const startedAt = (p: Pick<Project, 'iterations'>): string | null =>
 
 /** The latest of some dates, ignoring anything that is not one; null when none is. */
 export const latestDate = (dates: unknown[]): string | null =>
-	dates.map(asDate).filter((d): d is string => d !== null).sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null;
+	dates
+		.map(asDate)
+		.filter((d): d is string => d !== null)
+		.sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null;
 
 /**
  * When anything last happened in a project: the latest of the activity GitHub reported (`updatedAt`) and when each of
@@ -250,7 +253,17 @@ export const unionLocal = (records: Project[], branches: Project[]): Project[] =
 		const have = new Map(r.iterations.map((i) => [i.branch, i]));
 		for (const bi of b.iterations) {
 			const ri = have.get(bi.branch);
-			have.set(bi.branch, ri ? { ...ri, commit: bi.commit ?? ri.commit, createdAt: ri.createdAt ?? bi.createdAt, contributors: mergePeople(ri.contributors, bi.contributors) } : bi);
+			have.set(
+				bi.branch,
+				ri
+					? {
+							...ri,
+							commit: bi.commit ?? ri.commit,
+							createdAt: ri.createdAt ?? bi.createdAt,
+							contributors: mergePeople(ri.contributors, bi.contributors),
+						}
+					: bi,
+			);
 		}
 		const its = [...have.values()].sort(newestFirst);
 		byId.set(b.id, { ...r, iterations: its, people: mergePeople(r.people, ...its.map((i) => i.contributors)) });
@@ -269,7 +282,8 @@ export const newestFirst = (a: ProjectIteration, b: ProjectIteration): number =>
  * are joined onto a folder or a repository address, so they are checked before they are used for either.
  */
 /** A repository on GitHub, by its `owner/repo`: GitHub's own characters, and never `.` or `..`. */
-const isGitHubRepository = (s: unknown): s is string => typeof s === 'string' && /^[\w.-]+\/[\w.-]+$/.test(s) && !s.split('/').some((p) => p === '.' || p === '..');
+const isGitHubRepository = (s: unknown): s is string =>
+	typeof s === 'string' && /^[\w.-]+\/[\w.-]+$/.test(s) && !s.split('/').some((p) => p === '.' || p === '..');
 const PULL_REQUEST = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+$/;
 /** A repository as a record gives it, or null when it is anything else. */
 export const asGitHubRepository = (v: unknown): string | null => (isGitHubRepository(v) ? v : null);
@@ -288,7 +302,9 @@ export const codeLink = (it: { branch: string; repository?: string | null; pullR
 };
 
 /** Where a project's codebase work is on GitHub (`codeLink`), or null when it has none, or its record does not say. */
-export const projectCodeLink = (project: { iterations: { name: string; branch: string; repository?: string | null; pullRequest?: string | null }[] }): string | null => {
+export const projectCodeLink = (project: {
+	iterations: { name: string; branch: string; repository?: string | null; pullRequest?: string | null }[];
+}): string | null => {
 	const codebase = project.iterations.find((it) => workKind(it) === 'codebase');
 	return codebase ? codeLink(codebase) : null;
 };
@@ -362,7 +378,9 @@ export const withCovers = (projects: Project[], made: MadeCover[]): Project[] =>
 	if (made.length === 0) return projects;
 	const cover = (projectId: string, name: string) => made.find((m) => m.projectId === projectId && m.name === name)?.cover;
 	return projects.map((p) =>
-		made.some((m) => m.projectId === p.id) ? { ...p, iterations: p.iterations.map((i) => ({ ...i, cover: cover(p.id, i.name) ?? i.cover ?? null })) } : p,
+		made.some((m) => m.projectId === p.id)
+			? { ...p, iterations: p.iterations.map((i) => ({ ...i, cover: cover(p.id, i.name) ?? i.cover ?? null })) }
+			: p,
 	);
 };
 /**
@@ -391,7 +409,12 @@ export const nextPrototypeName = (names: string[]): string =>
 	prototypeName(parsedNames(names).reduce((max, p) => Math.max(max, p.version), 0) + 1, 1);
 /** A refinement of a version: its next iteration, one past the highest it has had. */
 export const nextIterationName = (names: string[], version: number): string =>
-	prototypeName(version, parsedNames(names).filter((p) => p.version === version).reduce((max, p) => Math.max(max, p.iteration), 0) + 1);
+	prototypeName(
+		version,
+		parsedNames(names)
+			.filter((p) => p.version === version)
+			.reduce((max, p) => Math.max(max, p.iteration), 0) + 1,
+	);
 /**
  * Where an iteration is on the published site, from the site's root: `<project>/v1/i2/`. The one place the site's
  * addresses are made, for the site itself, the command that publishes it and the app that opens it. Null for a name

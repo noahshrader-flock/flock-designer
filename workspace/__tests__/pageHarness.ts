@@ -27,10 +27,20 @@ export const PAGE_CONFIG = {
  */
 export const TOKENS: Record<string, string> = { 'good-token': 'pat', 'app-token': 'noah' };
 export const fakeGitHub = () => {
-	const issues: { number: number; body: string; labels: string[]; comments: { id: number; body: string; user: { login: string }; created_at: string }[] }[] = [];
+	const issues: {
+		number: number;
+		body: string;
+		labels: string[];
+		comments: { id: number; body: string; user: { login: string }; created_at: string }[];
+	}[] = [];
 	let nextId = 100;
 	const calls: string[] = [];
-	const json = (status: number, body: unknown) => ({ status, headers: { get: () => null }, json: async () => body, text: async () => JSON.stringify(body) });
+	const json = (status: number, body: unknown) => ({
+		status,
+		headers: { get: () => null },
+		json: async () => body,
+		text: async () => JSON.stringify(body),
+	});
 	const fetch = vi.fn(async (url: string, init: { method?: string; headers?: Record<string, string>; body?: string } = {}) => {
 		const method = init.method ?? 'GET';
 		const path = url.replace('https://api.github.com', '').split('?')[0] as string;
@@ -39,7 +49,10 @@ export const fakeGitHub = () => {
 		if (!login) return json(401, { message: 'Bad credentials' });
 		if (path === '/user') return json(200, { login });
 		if (path === '/repos/acme/design/issues' && method === 'GET') {
-			return json(200, issues.map((i) => ({ number: i.number, body: i.body, comments: i.comments.length, labels: i.labels.map((name) => ({ name })) })));
+			return json(
+				200,
+				issues.map((i) => ({ number: i.number, body: i.body, comments: i.comments.length, labels: i.labels.map((name) => ({ name })) })),
+			);
 		}
 		if (path === '/repos/acme/design/issues' && method === 'POST') {
 			const { body, labels } = JSON.parse(init.body ?? '{}');
@@ -51,7 +64,12 @@ export const fakeGitHub = () => {
 			const issue = issues.find((i) => i.number === Number(thread[1]));
 			if (!issue) return json(404, { message: 'Not Found' });
 			if (method === 'GET') return json(200, issue.comments);
-			const made = { id: nextId++, body: JSON.parse(init.body ?? '{}').body, user: { login }, created_at: `2026-10-08T10:00:${String(nextId % 60).padStart(2, '0')}Z` };
+			const made = {
+				id: nextId++,
+				body: JSON.parse(init.body ?? '{}').body,
+				user: { login },
+				created_at: `2026-10-08T10:00:${String(nextId % 60).padStart(2, '0')}Z`,
+			};
 			issue.comments.push(made);
 			return json(201, made);
 		}

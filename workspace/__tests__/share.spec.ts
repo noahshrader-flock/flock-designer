@@ -109,7 +109,9 @@ describe('runShare', () => {
 
 	it('refuses a kind the repository does not build previews for, before touching anything', async () => {
 		const h = harness();
-		await expect(runShare({ ...request, kind: 'codebase' }, h.tools, () => undefined, timings)).rejects.toThrow(/does not build a preview for codebase work.*prototype/s);
+		await expect(runShare({ ...request, kind: 'codebase' }, h.tools, () => undefined, timings)).rejects.toThrow(
+			/does not build a preview for codebase work.*prototype/s,
+		);
 		expect(h.calls).toEqual([]);
 	});
 
@@ -122,7 +124,13 @@ describe('runShare', () => {
 	it('stops when nobody is waiting any more', async () => {
 		const h = harness({ checkSequence: [[check('pending')]] });
 		let live = true;
-		const done = runShare(request, h.tools, (s) => s === 'building' && (live = false), timings, () => live);
+		const done = runShare(
+			request,
+			h.tools,
+			(s) => s === 'building' && (live = false),
+			timings,
+			() => live,
+		);
 		await expect(done).rejects.toThrow(/stopped/);
 	});
 });

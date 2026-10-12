@@ -138,7 +138,9 @@ export class PageView {
 			}
 		}
 		const why = last instanceof Error ? last.message : String(last);
-		throw new Error(`The preview did not load after ${LOAD_ATTEMPTS} tries (${why}). If its server is still starting, give it a moment and try again.`);
+		throw new Error(
+			`The preview did not load after ${LOAD_ATTEMPTS} tries (${why}). If its server is still starting, give it a moment and try again.`,
+		);
 	}
 
 	/** The address the preview is showing right now, page and query included, or null if there is no preview. */

@@ -1,25 +1,9 @@
-import {
-	CloudUploadIcon,
-	ExternalLinkIcon,
-	FolderIcon,
-	GitBranchIcon,
-	PackageCheckIcon,
-	TriangleAlertIcon,
-	WandSparklesIcon,
-} from 'lucide-react';
+import { CloudUploadIcon, ExternalLinkIcon, FolderIcon, GitBranchIcon, PackageCheckIcon, TriangleAlertIcon, WandSparklesIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, PageStatus, Project, ProjectIteration } from '../shared/contract';
 import { READY_LINE } from '../shared/handoff';
 import { withState } from '../shared/prototypeStates';
-import {
-	freshIteration,
-	isPrototypeKey,
-	iterationLabel,
-	prototypeKey,
-	prototypePagePath,
-	workKind,
-	workOf,
-} from '../shared/projects';
+import { freshIteration, isPrototypeKey, iterationLabel, prototypeKey, prototypePagePath, workKind, workOf } from '../shared/projects';
 import { IterationSwitcher, StateSwitcher } from './IterationSwitcher';
 import { CommentBox } from './comments/CommentBox';
 import { CommentControl } from './comments/CommentControl';
@@ -175,8 +159,7 @@ export const Review = ({
 		window.addEventListener('focus', checkPage);
 		return () => window.removeEventListener('focus', checkPage);
 	}, [prototype, checkPage, address.kind]);
-	const publish = () =>
-		void window.workspace.publishPage(project.id, iteration.name).then((r) => (r.ok ? setPage(r.value) : setError(r.error)));
+	const publish = () => void window.workspace.publishPage(project.id, iteration.name).then((r) => (r.ok ? setPage(r.value) : setError(r.error)));
 	// While it is being published, looked at again until it is done: a deploy takes a minute or two.
 	useEffect(() => {
 		if (page.state !== 'publishing') return;
@@ -186,7 +169,8 @@ export const Review = ({
 
 	// The comments: read, drawn as pins, and left, against the app's GitHub and its native preview.
 	const commentStore = useMemo(
-		() => appComments(window.workspace, { projectId: project.id, branch: iteration.branch, name: iteration.name, commit: iteration.commit, checkout }),
+		() =>
+			appComments(window.workspace, { projectId: project.id, branch: iteration.branch, name: iteration.name, commit: iteration.commit, checkout }),
 		[project.id, iteration.branch, iteration.name, iteration.commit, checkout],
 	);
 	const commentPage = useMemo(() => appPage(window.workspace), []);
@@ -202,23 +186,26 @@ export const Review = ({
 
 	// Only the newest open counts: an older one that finishes late must not undo, or complain about, a newer one.
 	const openRun = useRef(0);
-	const open = useCallback(async (url: string) => {
-		const mine = ++openRun.current;
-		setError(null);
-		const r = await window.workspace.pageOpen(url);
-		if (mine !== openRun.current) return;
-		if (r.ok) {
-			setOpened(true);
-			// The page is up, so this is the first moment pins can be drawn on it. Read again rather
-			// than draw whatever the read on arrival happened to return: that one raced the preview
-			// starting, and a reviewer may have commented in between. Asked for, not a background read:
-			// opening cleared what the first one said, so if this fails too it has to say so.
-			void load();
-		} else {
-			setOpened(false);
-			setError(r.error);
-		}
-	}, [load]);
+	const open = useCallback(
+		async (url: string) => {
+			const mine = ++openRun.current;
+			setError(null);
+			const r = await window.workspace.pageOpen(url);
+			if (mine !== openRun.current) return;
+			if (r.ok) {
+				setOpened(true);
+				// The page is up, so this is the first moment pins can be drawn on it. Read again rather
+				// than draw whatever the read on arrival happened to return: that one raced the preview
+				// starting, and a reviewer may have commented in between. Asked for, not a background read:
+				// opening cleared what the first one said, so if this fails too it has to say so.
+				void load();
+			} else {
+				setOpened(false);
+				setError(r.error);
+			}
+		},
+		[load],
+	);
 
 	// The shared preview opens once it answers; the view closes when leaving.
 	useEffect(() => {
@@ -337,7 +324,6 @@ export const Review = ({
 		[],
 	);
 
-
 	/** A prototype iteration of this project, by name, as people read it. */
 	const labelOf = (name: string): string => iterationLabel({ name, branch: prototypeKey(project.id, name) });
 	/** Where an Address run on this prototype put its change, when that is another iteration than this one. */
@@ -409,7 +395,10 @@ export const Review = ({
 				<Tooltip delayDuration={300}>
 					<TooltipTrigger asChild>
 						{prototype ? (
-							<FolderIcon aria-label={`Saved at ${prototypePagePath(project.id, iteration.name)}`} className="text-muted-foreground size-4 shrink-0" />
+							<FolderIcon
+								aria-label={`Saved at ${prototypePagePath(project.id, iteration.name)}`}
+								className="text-muted-foreground size-4 shrink-0"
+							/>
 						) : (
 							<GitBranchIcon aria-label={`Branch ${iteration.branch}`} className="text-muted-foreground size-4 shrink-0" />
 						)}
@@ -512,12 +501,7 @@ export const Review = ({
 			/>
 
 			{checkout && codebase && (
-				<HandoffDialog
-					open={handingOff}
-					onClose={() => setHandingOff(false)}
-					iteration={iteration}
-					onStart={localBuild.handoff}
-				/>
+				<HandoffDialog open={handingOff} onClose={() => setHandingOff(false)} iteration={iteration} onStart={localBuild.handoff} />
 			)}
 			{checkout && prototype && (
 				<MoveToCode open={moving} onClose={() => setMoving(false)} project={project} iteration={iteration} checkout={checkout} />
@@ -604,9 +588,7 @@ export const Review = ({
 							) : !prototype && !iteration.previewUrl && !checkout ? (
 								<>
 									<p className="text-sm">DSNR needs the product repository to show this.</p>
-									<p className="text-muted-foreground text-sm">
-										It could not find one on this machine. Point it at your product repository once.
-									</p>
+									<p className="text-muted-foreground text-sm">It could not find one on this machine. Point it at your product repository once.</p>
 									<Button onClick={onChoose}>Find it</Button>
 								</>
 							) : (
@@ -615,12 +597,12 @@ export const Review = ({
 										{handingOffNow
 											? `Handing off ${project.title}…`
 											: local.phase.kind === 'agent' && local.phase.accessibility
-											? 'Fixing what the accessibility check found…'
-											: local.phase.kind === 'agent'
-											? `Building ${project.title}…`
-											: local.phase.kind === 'preview'
-												? 'Starting the preview…'
-												: 'Opening the preview…'}
+												? 'Fixing what the accessibility check found…'
+												: local.phase.kind === 'agent'
+													? `Building ${project.title}…`
+													: local.phase.kind === 'preview'
+														? 'Starting the preview…'
+														: 'Opening the preview…'}
 									</Loading>
 									{local.phase.kind === 'agent' && (
 										<>
@@ -655,13 +637,7 @@ export const Review = ({
 					)}
 
 					{/* While a comment is being written the preview is this picture of it. */}
-					{snapshot && (
-						<img
-							src={snapshot}
-							alt="The preview, paused while a comment is written"
-							className="absolute inset-0 size-full object-fill"
-						/>
-					)}
+					{snapshot && <img src={snapshot} alt="The preview, paused while a comment is written" className="absolute inset-0 size-full object-fill" />}
 				</div>
 
 				{/* There is nothing to comment on until the page is open, so the list waits for it too. */}
@@ -679,9 +655,8 @@ export const Review = ({
 							{wrongRoute && !composing && (
 								<Alert variant="warning">
 									<AlertDescription>
-										This iteration records its work at <code>{wrongRoute.asked}</code>, but the preview opened{' '}
-										<code>{wrongRoute.landedOn}</code>. The page you are looking at may not be the work. The route may have
-										moved, or something redirected it.
+										This iteration records its work at <code>{wrongRoute.asked}</code>, but the preview opened <code>{wrongRoute.landedOn}</code>. The
+										page you are looking at may not be the work. The route may have moved, or something redirected it.
 									</AlertDescription>
 								</Alert>
 							)}
@@ -710,9 +685,11 @@ export const Review = ({
 													Open {labelOf(changedElsewhere.iteration)}
 												</Button>
 											</>
-										) : address.changed
-											? 'The agent has finished. Look at the preview and the changes, then resolve what is done.'
-											: 'The agent finished without changing anything. What it says below is why — often the change is outside this iteration, or the comment needs a decision from you.'}
+										) : address.changed ? (
+											'The agent has finished. Look at the preview and the changes, then resolve what is done.'
+										) : (
+											'The agent finished without changing anything. What it says below is why — often the change is outside this iteration, or the comment needs a decision from you.'
+										)}
 										{addressLog.length > 0 && (
 											<pre
 												className={`m-0 mt-2 overflow-auto text-[11px] wrap-anywhere whitespace-pre-wrap ${

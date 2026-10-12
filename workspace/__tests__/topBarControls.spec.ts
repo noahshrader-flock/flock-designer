@@ -37,7 +37,9 @@ const choices = async (el: Element) => {
 };
 const tooltips = () => document.querySelectorAll('[data-slot="tooltip-content"]');
 const trigger = (label: string | RegExp) =>
-	[...document.querySelectorAll<HTMLElement>('button')].find((b) => (typeof label === 'string' ? b.getAttribute('aria-label') === label : label.test(b.getAttribute('aria-label') ?? '')))!;
+	[...document.querySelectorAll<HTMLElement>('button')].find((b) =>
+		typeof label === 'string' ? b.getAttribute('aria-label') === label : label.test(b.getAttribute('aria-label') ?? ''),
+	)!;
 
 const SIBLINGS = [
 	{ name: 'v1-i1', branch: 'prototype/demo/v1-i1' },
@@ -77,7 +79,16 @@ describe('the More menus', () => {
 	it('have none on a prototype’s, which is the one that shows a spinner while sharing', async () => {
 		(window as unknown as { workspace: unknown }).workspace = fakeApp().api;
 		current = await render(
-			createElement(ShareControl, { checkout: null, project: PROJECT, iteration: PROTOTYPE, canOpen: true, onOpenInBrowser: vi.fn(), prototype: true, onMoveToCode: vi.fn(), editor: {} as never }),
+			createElement(ShareControl, {
+				checkout: null,
+				project: PROJECT,
+				iteration: PROTOTYPE,
+				canOpen: true,
+				onOpenInBrowser: vi.fn(),
+				prototype: true,
+				onMoveToCode: vi.fn(),
+				editor: {} as never,
+			}),
 		);
 		await rest(trigger('More'));
 		expect(tooltips()).toHaveLength(0);

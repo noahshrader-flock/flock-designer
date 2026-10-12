@@ -8,9 +8,7 @@ const CALL_TIMEOUT_MS = 60_000;
 
 /** The GitHub CLI: on the PATH, or where it is usually installed (an app opened from the Dock has no PATH). */
 export const locateGh = (env: NodeJS.ProcessEnv = process.env, exists: (p: string) => boolean = existsSync): string =>
-	findOnPath('gh', env, exists) ??
-	['/opt/homebrew/bin/gh', '/usr/local/bin/gh', '/usr/bin/gh'].find((p) => exists(p)) ??
-	'gh';
+	findOnPath('gh', env, exists) ?? ['/opt/homebrew/bin/gh', '/usr/local/bin/gh', '/usr/bin/gh'].find((p) => exists(p)) ?? 'gh';
 
 /**
  * GitHub's API through its own command line, `gh`, signed in as the person: what their account can reach, every
@@ -25,7 +23,8 @@ export const ghApi = (bin: string = locateGh()): GitHubApi => ({
 			const args = ['api', path, ...(init.method ? ['--method', init.method] : []), ...(init.body !== undefined ? ['--input', '-'] : [])];
 			const child = execFile(bin, args, { maxBuffer: 64 * 1024 * 1024, timeout: CALL_TIMEOUT_MS }, (err, stdout, stderr) => {
 				// What GitHub said, and its status, so a 404 can be told from anything else.
-				if (err) return fail(Object.assign(new Error(stderr.trim() || err.message), { status: Number(/HTTP (\d{3})/.exec(stderr)?.[1]) || undefined }));
+				if (err)
+					return fail(Object.assign(new Error(stderr.trim() || err.message), { status: Number(/HTTP (\d{3})/.exec(stderr)?.[1]) || undefined }));
 				if (!stdout.trim()) return done(null);
 				try {
 					done(JSON.parse(stdout));

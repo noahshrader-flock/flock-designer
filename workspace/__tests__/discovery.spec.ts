@@ -10,16 +10,23 @@ import { continueIteration, readIterations } from '../src/main/services/iteratio
 import { unionLocal } from '../src/shared/projects';
 
 const descriptor: WorkspaceDescriptor = {
-	version: 1, product: 'Coke', contextDir: '.dsnr', prototypeRoot: 'src/prototypes',
+	version: 1,
+	product: 'Coke',
+	contextDir: '.dsnr',
+	prototypeRoot: 'src/prototypes',
 	branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
-	commands: [], designSystem: { package: 'x' },
+	commands: [],
+	designSystem: { package: 'x' },
 };
 
 describe('finding the product repository', () => {
 	const fake = (tree: Record<string, string[]>, activity: Record<string, number> = {}): DiscoveryDeps => ({
 		home: '/h',
 		exists: (p) => Object.values(tree).some((files) => files.includes(p)),
-		list: (dir) => Object.keys(tree).filter((d) => d.startsWith(`${dir}/`) && !d.slice(dir.length + 1).includes('/')).map((d) => d.slice(dir.length + 1)),
+		list: (dir) =>
+			Object.keys(tree)
+				.filter((d) => d.startsWith(`${dir}/`) && !d.slice(dir.length + 1).includes('/'))
+				.map((d) => d.slice(dir.length + 1)),
 		activity: (r) => activity[r] ?? 0,
 	});
 	const product = (dir: string) => [`${dir}/.git`, `${dir}/.dsnr/workspace.json`];
@@ -50,10 +57,7 @@ describe('finding the product repository', () => {
 	});
 
 	it('puts the most recently used first when there are several', () => {
-		const deps = fake(
-			{ '/h/code/old': product('/h/code/old'), '/h/code/new': product('/h/code/new') },
-			{ '/h/code/old': 1, '/h/code/new': 9 },
-		);
+		const deps = fake({ '/h/code/old': product('/h/code/old'), '/h/code/new': product('/h/code/new') }, { '/h/code/old': 1, '/h/code/new': 9 });
 		expect(findProductCheckouts(deps)).toEqual(['/h/code/new', '/h/code/old']);
 	});
 
@@ -64,8 +68,12 @@ describe('finding the product repository', () => {
 });
 
 describe('reading a branch as work', () => {
-	it('uses the repository\'s own patterns', () => {
-		expect(classify(descriptor, 'fd/users-inactivity-signal/i2')).toEqual({ projectId: 'users-inactivity-signal', name: 'i2', branch: 'fd/users-inactivity-signal/i2' });
+	it("uses the repository's own patterns", () => {
+		expect(classify(descriptor, 'fd/users-inactivity-signal/i2')).toEqual({
+			projectId: 'users-inactivity-signal',
+			name: 'i2',
+			branch: 'fd/users-inactivity-signal/i2',
+		});
 		expect(classify(descriptor, 'feature/unused-roles-signal')).toMatchObject({ projectId: 'unused-roles-signal', name: 'codebase' });
 	});
 	it('does not mistake ordinary branches for work', () => {
@@ -153,8 +161,10 @@ describe('work found in a real repository, with no record written', () => {
 describe('unionLocal', () => {
 	const it1 = (branch: string, over = {}) => ({ name: 'i1', branch, issueNumber: null, previewUrl: null, commit: null, contributors: [], ...over });
 	it('keeps what a record says and adds branches it did not know about', () => {
-		const rec = [{ id: 'a', title: 'A, from the brief', records: ['brief.md'], iterations: [it1('fd/a/i1', { previewUrl: 'https://p' })], people: []}];
-		const git = [{ id: 'a', title: 'a', records: [], iterations: [it1('fd/a/i1', { commit: 'abc' }), it1('fd/a/i2')], people: []}];
+		const rec = [
+			{ id: 'a', title: 'A, from the brief', records: ['brief.md'], iterations: [it1('fd/a/i1', { previewUrl: 'https://p' })], people: [] },
+		];
+		const git = [{ id: 'a', title: 'a', records: [], iterations: [it1('fd/a/i1', { commit: 'abc' }), it1('fd/a/i2')], people: [] }];
 		const [u] = unionLocal(rec, git);
 		expect(u?.title).toBe('A, from the brief');
 		expect(u?.iterations.find((i) => i.branch === 'fd/a/i1')).toMatchObject({ previewUrl: 'https://p', commit: 'abc' });

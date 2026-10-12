@@ -22,5 +22,7 @@ export const StoryFrame = ({ src, title }: { src: string; title: string }) => {
 		window.addEventListener('message', heard);
 		return () => window.removeEventListener('message', heard);
 	}, []);
-	return <iframe ref={frame} src={src} title={title} sandbox="allow-scripts allow-same-origin" className="block w-full border-0" style={{ height }} />;
+	return (
+		<iframe ref={frame} src={src} title={title} sandbox="allow-scripts allow-same-origin" className="block w-full border-0" style={{ height }} />
+	);
 };

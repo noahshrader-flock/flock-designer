@@ -2,7 +2,17 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Iteration, Person } from '../../shared/contract';
-import { assertCover, briefFolder, firstHeading, folderName, isPrototypeName, nextPrototypeName, projectPath, prototypeKey, withFolder } from '../../shared/projects';
+import {
+	assertCover,
+	briefFolder,
+	firstHeading,
+	folderName,
+	isPrototypeName,
+	nextPrototypeName,
+	projectPath,
+	prototypeKey,
+	withFolder,
+} from '../../shared/projects';
 import { addressOpening } from './address';
 import { lightCheckLine } from './engineeringHandoff';
 import { resolveInside } from './paths';
@@ -63,13 +73,13 @@ export interface PrototypeBuild {
 	buildCommand: string;
 }
 
-
 /** A project's iteration records. A file that cannot be read is refused rather than written over. */
 export const readRecords = async (store: RecordStore, projectId: string): Promise<Iteration[]> => {
 	const raw = await store.read(projectPath(projectId, 'iterations.json'));
 	if (raw === null) return [];
 	const records = parseIterations(raw);
-	if (records === null) throw new Error(`${projectPath(projectId, 'iterations.json')} is not a readable list of records, so nothing was added to it.`);
+	if (records === null)
+		throw new Error(`${projectPath(projectId, 'iterations.json')} is not a readable list of records, so nothing was added to it.`);
 	return records;
 };
 
@@ -77,7 +87,14 @@ export const readRecords = async (store: RecordStore, projectId: string): Promis
 const addRecord = async (
 	store: RecordStore,
 	existing: Iteration[],
-	{ projectId, name, note, me, basedOn, now }: { projectId: string; name: string; note: string; me: Person | null; basedOn?: Iteration['basedOn']; now: Date },
+	{
+		projectId,
+		name,
+		note,
+		me,
+		basedOn,
+		now,
+	}: { projectId: string; name: string; note: string; me: Person | null; basedOn?: Iteration['basedOn']; now: Date },
 ): Promise<Iteration> => {
 	const iteration: Iteration = {
 		projectId,
@@ -91,7 +108,11 @@ const addRecord = async (
 		...(me ? { contributors: [me] } : {}),
 		...(basedOn ? { basedOn } : {}),
 	};
-	await store.write(projectPath(projectId, 'iterations.json'), `${JSON.stringify([...existing, iteration], null, 2)}\n`, `${projectId}: record prototype ${name}`);
+	await store.write(
+		projectPath(projectId, 'iterations.json'),
+		`${JSON.stringify([...existing, iteration], null, 2)}\n`,
+		`${projectId}: record prototype ${name}`,
+	);
 	return iteration;
 };
 
@@ -136,7 +157,11 @@ export const assignFolder = async (store: RecordStore, projectId: string, folder
 	if (brief === null) throw new Error(`${projectId} has no brief, which is where its folder is kept.`);
 	const name = folderName(folder);
 	if (briefFolder(brief) === name) return;
-	await store.write(path, withFolder(brief, name), name === null ? `${projectId}: taken out of its folder` : `${projectId}: put in the folder ${name}`);
+	await store.write(
+		path,
+		withFolder(brief, name),
+		name === null ? `${projectId}: taken out of its folder` : `${projectId}: put in the folder ${name}`,
+	);
 };
 
 /**
@@ -159,11 +184,19 @@ export const setCover = async (store: RecordStore, projectId: string, name: stri
  */
 export const recordIteration = async (
 	store: RecordStore,
-	{ projectId, name, from, note, me, now = new Date() }: { projectId: string; name: string; from: Iteration; note: string; me: Person | null; now?: Date },
+	{
+		projectId,
+		name,
+		from,
+		note,
+		me,
+		now = new Date(),
+	}: { projectId: string; name: string; from: Iteration; note: string; me: Person | null; now?: Date },
 ): Promise<Iteration> => {
 	assertPrototypeName(name);
 	const existing = await readRecords(store, projectId);
-	if (existing.some((i) => i.name === name)) throw new Error(`${projectId} already has a ${name}. Try again: the change will go in the next iteration.`);
+	if (existing.some((i) => i.name === name))
+		throw new Error(`${projectId} already has a ${name}. Try again: the change will go in the next iteration.`);
 	return addRecord(store, existing, { projectId, name, note, me, basedOn: from.basedOn, now });
 };
 
@@ -206,13 +239,18 @@ export const prototypeReadable = (s: PrototypeSources | null): string[] =>
 
 /** What a prototype's agent may read, said the same way for building one and for changing one. */
 const readableLines = (sources: PrototypeSources): string[] => {
-	const line = (label: string, dir: string | null, missing: string) => (dir ? `- **${label}:** \`${dir}\`` : `- **${label}:** not on this machine. ${missing}`);
+	const line = (label: string, dir: string | null, missing: string) =>
+		dir ? `- **${label}:** \`${dir}\`` : `- **${label}:** not on this machine. ${missing}`;
 	return [
 		'What you may read. **Read only: never change anything in any of these.**',
 		'',
 		line("The product's code", sources.code, ''),
 		line("The product's guidance", sources.productGuidance, "Say so in your summary: the page cannot follow the product's structure without it."),
-		line('The design system (guidance and source)', sources.designSystemGuidance, "Use the installed design system and the product's own code for tokens and components."),
+		line(
+			'The design system (guidance and source)',
+			sources.designSystemGuidance,
+			"Use the installed design system and the product's own code for tokens and components.",
+		),
 		line('The design system as installed', sources.installedDesignSystem, 'Its version cannot be confirmed; say so.'),
 		line('Shared standards', sources.sharedStandards, ''),
 		line("The product's installed packages", sources.nodeModules, ''),
@@ -324,7 +362,17 @@ export const prototypeAddressTask = ({
  * written beside the prototype. `continuing` is the branch, when the work was started before: then it says to look at
  * what is there first.
  */
-export const moveToCodePrompt = ({ label, projectId, taskFile, continuing }: { label: string; projectId: string; taskFile: string; continuing: string | null }): string =>
+export const moveToCodePrompt = ({
+	label,
+	projectId,
+	taskFile,
+	continuing,
+}: {
+	label: string;
+	projectId: string;
+	taskFile: string;
+	continuing: string | null;
+}): string =>
 	[
 		continuing
 			? `Continue building prototype ${label} of ${projectId} into this codebase, on ${continuing}. Some of it may be done already, so look at the branch and the audit first.`

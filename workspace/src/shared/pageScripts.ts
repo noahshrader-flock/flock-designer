@@ -462,8 +462,7 @@ ${HELPERS}
   return results;
 })(${JSON.stringify(items)}, ${JSON.stringify(nonce)})`;
 
-export const focusScript = (id: number): string =>
-	`window.__fdMarkers && window.__fdMarkers.focus(${Number.isInteger(id) ? id : -1})`;
+export const focusScript = (id: number): string => `window.__fdMarkers && window.__fdMarkers.focus(${Number.isInteger(id) ? id : -1})`;
 
 export const ROUTE_SCRIPT = 'location.pathname + location.hash';
 
@@ -499,7 +498,10 @@ export const readPick = (raw: unknown): PickedSpot | null => {
 	// The element's own box, from the page: only numbers, only if it is a real size.
 	const b = (raw as { box?: Record<string, unknown> }).box;
 	const box =
-		b && [b.x, b.y, b.width, b.height].every((v) => typeof v === 'number' && Number.isFinite(v)) && (b.width as number) > 0 && (b.height as number) > 0
+		b &&
+		[b.x, b.y, b.width, b.height].every((v) => typeof v === 'number' && Number.isFinite(v)) &&
+		(b.width as number) > 0 &&
+		(b.height as number) > 0
 			? { x: b.x as number, y: b.y as number, width: b.width as number, height: b.height as number }
 			: null;
 	return { anchor, at: { x: n(at?.x), y: n(at?.y) }, box };

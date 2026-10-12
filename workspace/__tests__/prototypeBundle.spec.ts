@@ -52,7 +52,10 @@ describe('bundling a React prototype into one page', () => {
 		const script = writeBundleScript(join(dir, 'prototype'));
 		const big = 'data:font/woff2;base64,' + 'A'.repeat(30000);
 		const small = 'data:image/png;base64,' + 'B'.repeat(100);
-		writeFileSync(join(modules, '@acme', 'ds', 'style.css'), `@font-face { font-family: X; src: url(${big}); } .logo { background: url("${small}"); }`);
+		writeFileSync(
+			join(modules, '@acme', 'ds', 'style.css'),
+			`@font-face { font-family: X; src: url(${big}); } .logo { background: url("${small}"); }`,
+		);
 		const entry = join(dir, 'prototype', 'i1.tsx');
 		mkdirSync(join(dir, 'prototype'), { recursive: true });
 		writeFileSync(entry, "import '@acme/ds/style.css';\nexport default () => null;\n");
@@ -107,7 +110,14 @@ describe('bundling a React prototype into one page', () => {
 		});
 
 		it('fail the build, saying why, when the list is not plain names, or names one twice', async () => {
-			for (const states of ["['default', 'Has Spaces']", "['default', 'no-match']", "['default', name]", "['default', 'empty', 'default']", '[]', 'makeStates()']) {
+			for (const states of [
+				"['default', 'Has Spaces']",
+				"['default', 'no-match']",
+				"['default', name]",
+				"['default', 'empty', 'default']",
+				'[]',
+				'makeStates()',
+			]) {
 				const r = await build(`const name = 'x';\nexport const states = ${states};\n${page}`);
 				expect(r.ok, states).toBe(false);
 				expect(r.output).toContain('export const states');

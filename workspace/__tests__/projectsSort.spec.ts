@@ -7,12 +7,22 @@ import { button, fakeApp, ok, openMenu, press, render, settle, typeInto, unmount
 
 /** Ordering the Projects screen: a dropdown beside the search, last updated first unless it is changed. */
 
-const project = (id: string, title: string, updatedAt: string | null): Project => ({ id, title, records: [], iterations: [], people: [], updatedAt }) as unknown as Project;
-const PROJECTS = [project('banana', 'Banana', '2026-10-05T00:00:00Z'), project('cherry', 'Cherry', '2026-10-08T00:00:00Z'), project('apple', 'Apple', '2026-10-01T00:00:00Z')];
+const project = (id: string, title: string, updatedAt: string | null): Project =>
+	({ id, title, records: [], iterations: [], people: [], updatedAt }) as unknown as Project;
+const PROJECTS = [
+	project('banana', 'Banana', '2026-10-05T00:00:00Z'),
+	project('cherry', 'Cherry', '2026-10-08T00:00:00Z'),
+	project('apple', 'Apple', '2026-10-01T00:00:00Z'),
+];
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
 const open = async () => {
-	const app = fakeApp({ listProjects: async () => ok(PROJECTS), lastCheckout: async () => ok(null), suggestCheckout: async () => ok(null), publishStatus: async () => ok({ state: 'unavailable' }) });
+	const app = fakeApp({
+		listProjects: async () => ok(PROJECTS),
+		lastCheckout: async () => ok(null),
+		suggestCheckout: async () => ok(null),
+		publishStatus: async () => ok({ state: 'unavailable' }),
+	});
 	(window as unknown as { workspace: unknown }).workspace = app.api;
 	current = await render(createElement(Projects, { hidden: false }));
 	await settle();

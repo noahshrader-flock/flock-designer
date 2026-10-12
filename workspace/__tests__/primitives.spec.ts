@@ -103,7 +103,13 @@ describe('what can be changed', () => {
 	});
 
 	it('is not any other kind, nor a token of a category the vocabulary does not know', () => {
-		for (const [category, kind] of [['Typography', 'font'], ['Elevation', 'shadow'], ['Motion', 'duration'], ['Motion', 'easing'], ['Spacing', 'number']] as const) {
+		for (const [category, kind] of [
+			['Typography', 'font'],
+			['Elevation', 'shadow'],
+			['Motion', 'duration'],
+			['Motion', 'easing'],
+			['Spacing', 'number'],
+		] as const) {
 			expect(isEditable(shaped(category, kind))).toBe(false);
 		}
 		expect(isEditable(shaped('Sizing', 'dimension'))).toBe(false);
@@ -126,11 +132,23 @@ describe('the parts a primitive is missing', () => {
 	it('are those of its parts it has no token for, in the vocabulary’s order', () => {
 		const typography = PRIMITIVES.find((p) => p.category === 'Typography')!;
 		expect(missingParts(typography, [type('Family', 'base', 'fontFamily', '"Inter",sans-serif')])).toEqual(['Size', 'Weight', 'Line height']);
-		expect(missingParts(typography, [type('Family', 'base', 'fontFamily', 'Inter'), type('Size', 'h1', 'fontSize', '96px'), type('Weight', 'h1', 'fontWeight', '300'), type('Line height', 'h1', 'lineHeight', '1.2')])).toEqual([]);
+		expect(
+			missingParts(typography, [
+				type('Family', 'base', 'fontFamily', 'Inter'),
+				type('Size', 'h1', 'fontSize', '96px'),
+				type('Weight', 'h1', 'fontWeight', '300'),
+				type('Line height', 'h1', 'lineHeight', '1.2'),
+			]),
+		).toEqual([]);
 	});
 
 	it('are none for a primitive that is not made of parts', () => {
-		expect(missingParts(PRIMITIVES.find((p) => p.category === 'Color')!, [])).toEqual([]);
+		expect(
+			missingParts(
+				PRIMITIVES.find((p) => p.category === 'Color')!,
+				[],
+			),
+		).toEqual([]);
 	});
 });
 

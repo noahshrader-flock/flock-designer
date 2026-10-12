@@ -64,7 +64,17 @@ const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
  * A component in the list: its picture reduced at the left (a thumbnail, the grid's picture in the same shape), then its name
  * and description. The whole row opens it, and the chevron says so. Its links are on its own page.
  */
-const Row = ({ component, picture, drawing, onOpen }: { component: CatalogComponent; picture: string | undefined; drawing: boolean; onOpen: () => void }) => (
+const Row = ({
+	component,
+	picture,
+	drawing,
+	onOpen,
+}: {
+	component: CatalogComponent;
+	picture: string | undefined;
+	drawing: boolean;
+	onOpen: () => void;
+}) => (
 	<ListRow
 		data={{ 'data-component': component.id }}
 		name={component.name}
@@ -369,8 +379,8 @@ const Components = ({
 	if (catalog.state === 'no-branch') {
 		return (
 			<Notice title={`This clone has no ${catalog.branch} branch`} onRetry={() => void sync()}>
-				The clone at {catalog.root} has no {catalog.branch} branch from GitHub to read, and no other branch is read in its place. Check it is a clone of the
-				library, and that this computer can reach GitHub.
+				The clone at {catalog.root} has no {catalog.branch} branch from GitHub to read, and no other branch is read in its place. Check it is a clone
+				of the library, and that this computer can reach GitHub.
 			</Notice>
 		);
 	}
@@ -434,7 +444,9 @@ const Components = ({
 								</Alert>
 							)}
 							{catalog.components.length === 0 ? (
-								<p className="text-muted-foreground text-sm">The library's Storybook has no stories on {catalog.branch}, so there are no components to list.</p>
+								<p className="text-muted-foreground text-sm">
+									The library's Storybook has no stories on {catalog.branch}, so there are no components to list.
+								</p>
 							) : groups.length === 0 ? (
 								<NoMatches thing="component" search={search} onClear={() => setSearch('')} />
 							) : (
@@ -459,7 +471,13 @@ const Components = ({
 												) : (
 													<RowList>
 														{rows.map((c) => (
-															<Row key={c.id} component={c} picture={pictures.pictures[c.id]} drawing={pictures.drawing} onOpen={() => openComponent(c.id)} />
+															<Row
+																key={c.id}
+																component={c}
+																picture={pictures.pictures[c.id]}
+																drawing={pictures.drawing}
+																onOpen={() => openComponent(c.id)}
+															/>
 														))}
 													</RowList>
 												)}

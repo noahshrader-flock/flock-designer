@@ -41,7 +41,11 @@ const COLOR = /^(#[0-9a-f]{3,8}|(rgba?|hsla?|oklch|oklab|lab|lch|hwb|color)\(.*\
  * slash. Read as the hex it draws, so it is shown, compared and changed as any color is, and written back as channels.
  */
 const CHANNELS = /^(-?\d*\.?\d+)(?:deg)?\s+(\d*\.?\d+)%\s+(\d*\.?\d+)%(?:\s*\/\s*(\d*\.?\d+)(%?))?$/;
-const hex2 = (n: number): string => Math.round(n * 255).toString(16).padStart(2, '0').toUpperCase();
+const hex2 = (n: number): string =>
+	Math.round(n * 255)
+		.toString(16)
+		.padStart(2, '0')
+		.toUpperCase();
 
 /** The hex a color's channels draw, the opacity as two more digits when it has one. */
 export const hexOfChannels = (channels: string): string | null => {
@@ -104,7 +108,8 @@ export const cssVariables: TokenSource = {
 			}
 		}
 		/** The mode a variable a pointer names is found in: its own mode first, then the light one. */
-		const modeOf = (name: string, mode: string): string | null => (modes.get(mode)?.has(name) ? mode : modes.get('light')?.has(name) ? 'light' : null);
+		const modeOf = (name: string, mode: string): string | null =>
+			modes.get(mode)?.has(name) ? mode : modes.get('light')?.has(name) ? 'light' : null;
 		/** A value with any `var(--name)` followed. */
 		const resolve = (value: string, mode: string, depth = 0): string => {
 			const m = POINTER.exec(value);
@@ -123,12 +128,31 @@ export const cssVariables: TokenSource = {
 				// Typography and shadows are known by their names; a color is a color, however it is named (`--shadow-color`).
 				const type = COLOR.test(value) ? null : typography(name, value);
 				const shadow = COLOR.test(value) ? null : /^(.*shadow)(?:-(.+))?$/.exec(name);
-				const named = type !== null ? { kind: 'font' as const, ...type } : shadow ? { kind: 'shadow' as const, group: SHADOWS, set: shadow[1] as string, name: shadow[2] ?? 'base' } : null;
+				const named =
+					type !== null
+						? { kind: 'font' as const, ...type }
+						: shadow
+							? { kind: 'shadow' as const, group: SHADOWS, set: shadow[1] as string, name: shadow[2] ?? 'base' }
+							: null;
 				if (named !== null) {
-					tokens.push({ path: `css.${mode}.${name}`, category: primitiveOf(named.kind, name) as string, ...named, value, source: { file: v.file, line: v.line } });
+					tokens.push({
+						path: `css.${mode}.${name}`,
+						category: primitiveOf(named.kind, name) as string,
+						...named,
+						value,
+						source: { file: v.file, line: v.line },
+					});
 					continue;
 				}
-				const kind = COLOR.test(value) ? 'color' : DIMENSION.test(value) ? 'dimension' : DURATION.test(value) ? 'duration' : EASING.test(value) ? 'easing' : null;
+				const kind = COLOR.test(value)
+					? 'color'
+					: DIMENSION.test(value)
+						? 'dimension'
+						: DURATION.test(value)
+							? 'duration'
+							: EASING.test(value)
+								? 'easing'
+								: null;
 				const category = kind === null ? null : primitiveOf(kind, name);
 				if (kind === null || category === null) continue;
 				// A scale's steps are one set: `--color-red-500` is step 500 of `color-red`.

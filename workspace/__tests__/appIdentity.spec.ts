@@ -21,7 +21,7 @@ describe('the app’s name', () => {
 	it('keeps its saved data where it always was, named by one field that the app and the command both read', () => {
 		expect(pkg.settingsFolder).toBe('flock-designer');
 		expect(readFileSync(join(root, 'bin', 'dsnr.mjs'), 'utf8')).toContain('pkg.settingsFolder');
-		expect(readFileSync(join(root, 'src', 'main', 'index.ts'), 'utf8')).toContain("pkg.settingsFolder");
+		expect(readFileSync(join(root, 'src', 'main', 'index.ts'), 'utf8')).toContain('pkg.settingsFolder');
 	});
 
 	it('is DSNR in the window’s own page, which the title bar shows', () => {

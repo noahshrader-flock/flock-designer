@@ -35,8 +35,26 @@ const TOKENS: DesignTokens = {
 		color('palette.light.primary.main', 'Light', 'primary', 'main', '#108062', { ref: { path: 'tone.pineGreen.50' } }),
 		color('palette.light.primaryBorder.main', 'Light', 'primaryBorder', 'main', '#18372F66', { ref: { path: 'tone.pineGreen.20', alpha: '66' } }),
 		color('palette.dark.primary.main', 'Dark', 'primary', 'main', '#C7E7DD', { ref: { path: 'tone.pineGreen.90' } }),
-		{ path: 'spacing', kind: 'dimension', category: 'Spacing', group: 'Spacing', set: 'spacing', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 2 } },
-		{ path: 'radius', kind: 'dimension', category: 'Shape', group: 'Radius', set: 'radius', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 5 } },
+		{
+			path: 'spacing',
+			kind: 'dimension',
+			category: 'Spacing',
+			group: 'Spacing',
+			set: 'spacing',
+			name: 'base',
+			value: '8px',
+			source: { file: 'src/utils/theme.ts', line: 2 },
+		},
+		{
+			path: 'radius',
+			kind: 'dimension',
+			category: 'Shape',
+			group: 'Radius',
+			set: 'radius',
+			name: 'base',
+			value: '8px',
+			source: { file: 'src/utils/theme.ts', line: 5 },
+		},
 	],
 };
 
@@ -71,7 +89,12 @@ afterEach(async () => {
 const groups = () => [...document.querySelectorAll<HTMLElement>('[data-token-group] > h3 button')];
 const group = (name: string) => {
 	const t = groups().find((b) => b.querySelector('[data-name]')?.textContent === name);
-	if (!t) throw new Error(`no group ${name}: ${groups().map((b) => b.textContent).join(' | ')}`);
+	if (!t)
+		throw new Error(
+			`no group ${name}: ${groups()
+				.map((b) => b.textContent)
+				.join(' | ')}`,
+		);
 	return t;
 };
 /** The sets shown, each a plain heading over its rows, never closed up behind another trigger. */
@@ -80,7 +103,8 @@ const setNames = () => sets().map((e) => e.querySelector('[data-set-name]')?.tex
 /** The tabs, and choosing one as a press does (tabs switch as the pointer goes down). */
 const tabs = () => [...document.querySelectorAll<HTMLElement>('[role="tab"]')];
 const tab = (name: string) => tabs().find((t) => t.textContent === name) as HTMLElement;
-const choose = (name: string) => act(async () => void tab(name).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 })));
+const choose = (name: string) =>
+	act(async () => void tab(name).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 })));
 const search = (category: string) => document.querySelector<HTMLInputElement>(`input[aria-label="Search ${category.toLowerCase()}"]`);
 const rows = () => [...document.querySelectorAll<HTMLElement>('[data-token]')];
 const row = (path: string) => document.querySelector<HTMLElement>(`[data-token="${path}"]`);
@@ -93,7 +117,8 @@ describe('the tabs', () => {
 		const panel = list.closest('[data-slot="line-tabs"]') as HTMLElement;
 		expect(panel).not.toBeNull();
 		// No ancestor between the strip and the panel's edge has padding of its own.
-		for (let el = list.parentElement; el && el !== panel.parentElement; el = el.parentElement) expect(el.className, el.tagName).not.toMatch(/(^|\s)p[xtblr]?-\d/);
+		for (let el = list.parentElement; el && el !== panel.parentElement; el = el.parentElement)
+			expect(el.className, el.tagName).not.toMatch(/(^|\s)p[xtblr]?-\d/);
 		// The padding is the content's, which also scrolls on its own, so the strip stays at the top.
 		const content = document.querySelector('[data-slot="tabs-content"]') as HTMLElement;
 		expect(content.className.split(' ')).toEqual(expect.arrayContaining(['p-4', 'overflow-y-auto']));
@@ -115,7 +140,22 @@ describe('the tabs', () => {
 	});
 
 	it('are made from the tokens, so a category the library gains is a tab with nothing else changed', async () => {
-		await show({ ...TOKENS, tokens: [...TOKENS.tokens, { path: 'shadow.1', kind: 'dimension', category: 'Shadow', group: 'Elevation', set: 'elevation', name: '1', value: '0 1px 2px', source: { file: 'src/utils/theme.ts', line: 9 } }] });
+		await show({
+			...TOKENS,
+			tokens: [
+				...TOKENS.tokens,
+				{
+					path: 'shadow.1',
+					kind: 'dimension',
+					category: 'Shadow',
+					group: 'Elevation',
+					set: 'elevation',
+					name: '1',
+					value: '0 1px 2px',
+					source: { file: 'src/utils/theme.ts', line: 9 },
+				},
+			],
+		});
 		expect(tabs().map((t) => t.textContent)).toEqual(['Color', 'Spacing', 'Shape', 'Shadow']);
 	});
 
@@ -240,7 +280,11 @@ describe('searching', () => {
 		await typeInto(search('Color') as HTMLInputElement, 'primary');
 		await settle();
 		expect(groups().map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['Light', 'Dark']);
-		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual(['palette.light.primary.main', 'palette.light.primaryBorder.main', 'palette.dark.primary.main']);
+		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual([
+			'palette.light.primary.main',
+			'palette.light.primaryBorder.main',
+			'palette.dark.primary.main',
+		]);
 	});
 
 	it('is kept apart: what is typed in one tab leaves the others as they were, and is there when you come back', async () => {
@@ -270,7 +314,10 @@ describe('searching', () => {
 
 describe('what it could not read', () => {
 	it('is one alert above the tabs, its details in a dialog and not in the panel, which keeps its room', async () => {
-		await show({ ...TOKENS, problems: [{ file: 'src/colors/tones/neutral.ts', line: 10, reason: "neutral 94 is '@ECEEEB', not a hex color, so this step is not read" }] });
+		await show({
+			...TOKENS,
+			problems: [{ file: 'src/colors/tones/neutral.ts', line: 10, reason: "neutral 94 is '@ECEEEB', not a hex color, so this step is not read" }],
+		});
 		const alert = document.querySelector('[role="alert"]') as HTMLElement;
 		expect(alert.textContent).toBe('1 value couldn’t be readView');
 		expect(alert.compareDocumentPosition(tabs()[0] as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -626,7 +673,16 @@ describe('the vocabulary of primitives (R1)', () => {
 	});
 
 	it('shows a token that is not a color or a length as a row with nothing to press: it is never offered an editor', async () => {
-		const font: DesignToken = { path: 'font.sans', kind: 'font', category: 'Typography', group: 'Family', set: 'font', name: 'sans', value: 'Inter', source: { file: 'a.css', line: 1 } };
+		const font: DesignToken = {
+			path: 'font.sans',
+			kind: 'font',
+			category: 'Typography',
+			group: 'Family',
+			set: 'font',
+			name: 'sans',
+			value: 'Inter',
+			source: { file: 'a.css', line: 1 },
+		};
 		await show({ ...TOKENS, tokens: [...TOKENS.tokens, font] });
 		// Typography is in the vocabulary (R3), so its tab is where the vocabulary puts it.
 		expect(tabs().map((t) => t.textContent)).toEqual(['Color', 'Typography', 'Spacing', 'Shape']);

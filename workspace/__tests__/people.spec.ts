@@ -27,13 +27,20 @@ describe('mergePeople', () => {
 		]);
 	});
 	it('joins two names that turn out to be one account', () => {
-		expect(mergePeople([{ name: 'Ada L', login: 'ada' }, { name: 'Ada Lovelace', login: 'ada' }])).toHaveLength(1);
+		expect(
+			mergePeople([
+				{ name: 'Ada L', login: 'ada' },
+				{ name: 'Ada Lovelace', login: 'ada' },
+			]),
+		).toHaveLength(1);
 	});
 	it('orders by what is shown', () => {
-		expect(mergePeople([{ name: 'Zed', login: null }, { name: 'Amy', login: 'bob' }]).map((p) => p.login ?? p.name)).toEqual([
-			'bob',
-			'Zed',
-		]);
+		expect(
+			mergePeople([
+				{ name: 'Zed', login: null },
+				{ name: 'Amy', login: 'bob' },
+			]).map((p) => p.login ?? p.name),
+		).toEqual(['bob', 'Zed']);
 	});
 });
 

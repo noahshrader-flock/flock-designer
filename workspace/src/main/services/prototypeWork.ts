@@ -2,13 +2,31 @@ import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } 
 import { basename, dirname, join } from 'node:path';
 import type { Iteration, Person, PrototypeReadiness } from '../../shared/contract';
 import { type DeclaredTarget, undeclared } from '../../shared/wcag';
-import { fromBrief, hasOutsideComments, latestIterationName, nextIterationName, parsePrototypeName, projectPath, prototypePagePath, prototypeSourcePath } from '../../shared/projects';
+import {
+	fromBrief,
+	hasOutsideComments,
+	latestIterationName,
+	nextIterationName,
+	parsePrototypeName,
+	projectPath,
+	prototypePagePath,
+	prototypeSourcePath,
+} from '../../shared/projects';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from './accessibilityBrief';
 import { designSystemCheckout, readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
 import { branchCommit, branchExists, gitExact, isSafeBranchName, readCheckout, readTreeAt } from './git';
 import { assertUsableProjectId } from './iterations';
-import { MAX_PAGE, type PrototypeBuild, type PrototypeSources, type RecordStore, assertPrototypeName, prototypeVersionOf, recordIteration, recordPrototype } from './prototype';
+import {
+	MAX_PAGE,
+	type PrototypeBuild,
+	type PrototypeSources,
+	type RecordStore,
+	assertPrototypeName,
+	prototypeVersionOf,
+	recordIteration,
+	recordPrototype,
+} from './prototype';
 import { bundleCommand, runBundle, sharedFilesOf, writeBundleScript } from './prototypeBundle';
 import { designSystemFile, taskVoice } from './voiceBrief';
 import { parseIterations } from '../../shared/records';
@@ -74,7 +92,8 @@ export interface PrototypeStart {
 	folder?: string | null;
 }
 
-const NO_PRODUCT = 'Prototypes are built from the real design system, so they need the product repository, with its packages installed, on this machine.';
+const NO_PRODUCT =
+	'Prototypes are built from the real design system, so they need the product repository, with its packages installed, on this machine.';
 
 /** Where a prototype's page or source is on this machine, in the app's prototype folder. Saying so makes no folder. */
 export const localPrototypeFile = (prototypesRoot: string, projectId: string, name: string, ext: 'html' | 'tsx'): string => {
@@ -117,7 +136,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	/** A shared skill, which an agent's task is built from. Only an out-of-date design repository can lack one. */
 	const skill = async (path: string): Promise<string> => {
 		const text = await ctx.readDesignFile(path);
-		if (text === null) throw new Error(`The design repository has no ${path}, which the agent's task is built from. Update it (git pull) and try again.`);
+		if (text === null)
+			throw new Error(`The design repository has no ${path}, which the agent's task is built from. Update it (git pull) and try again.`);
 		return text;
 	};
 
@@ -130,7 +150,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return parsed;
 	};
 	/** A project's title, from its brief: what people know it by. Its id when the brief has none. */
-	const title = async (projectId: string): Promise<string> => fromBrief(projectId, await ctx.readDesignFile(projectPath(projectId, 'brief.md'))).title;
+	const title = async (projectId: string): Promise<string> =>
+		fromBrief(projectId, await ctx.readDesignFile(projectPath(projectId, 'brief.md'))).title;
 	/** A prototype's record. */
 	const record = async (projectId: string, name: string): Promise<Iteration | undefined> => (await records(projectId)).find((i) => i.name === name);
 	/** A prototype's React source: this machine's newest, else the saved one. Reading it makes no folder. */
@@ -225,7 +246,11 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const source = sourceFile(projectId, name);
 		const page = file(projectId, name);
 		return {
-			build: { source, page, buildCommand: bundleCommand(writeBundleScript(prototypesRoot), ctx.esbuild() as string, source, page, found.nodeModules, sharedDir) },
+			build: {
+				source,
+				page,
+				buildCommand: bundleCommand(writeBundleScript(prototypesRoot), ctx.esbuild() as string, source, page, found.nodeModules, sharedDir),
+			},
 			sources: found,
 		};
 	};
@@ -238,7 +263,14 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const root = ctx.productRoot();
 		const why = notReady(root);
 		if (why !== null || root === null) throw new Error(why ?? NO_PRODUCT);
-		const r = await runBundle(writeBundleScript(prototypesRoot), ctx.esbuild() as string, sourceFile(projectId, name), file(projectId, name), join(root, 'node_modules'), sharedDir);
+		const r = await runBundle(
+			writeBundleScript(prototypesRoot),
+			ctx.esbuild() as string,
+			sourceFile(projectId, name),
+			file(projectId, name),
+			join(root, 'node_modules'),
+			sharedDir,
+		);
 		if (!r.ok) throw new Error(`The prototype did not build:\n${r.output.slice(0, 2000)}`);
 	};
 
@@ -253,7 +285,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			if (existsSync(local) && !(await store.has(sharedPath(n)))) await store.write(sharedPath(n), readFileSync(local, 'utf8'), `Shared file ${n}`);
 		}
 		const source = sourceFile(projectId, name);
-		if (existsSync(source)) await store.write(prototypeSourcePath(projectId, name), readFileSync(source, 'utf8'), `${projectId}: prototype ${name} source`);
+		if (existsSync(source))
+			await store.write(prototypeSourcePath(projectId, name), readFileSync(source, 'utf8'), `${projectId}: prototype ${name} source`);
 		await store.write(prototypePagePath(projectId, name), html, `${projectId}: prototype ${name}`);
 	};
 
@@ -287,7 +320,11 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 * `authorsOf` says who has commented on an iteration, or null when that cannot be read: then it is taken as
 	 * commented on. Nothing is recorded yet: see `finishChange`.
 	 */
-	const startChange = async (projectId: string, name: string, authorsOf: (iteration: Iteration) => Promise<string[] | null>): Promise<PrototypeChange> => {
+	const startChange = async (
+		projectId: string,
+		name: string,
+		authorsOf: (iteration: Iteration) => Promise<string[] | null>,
+	): Promise<PrototypeChange> => {
 		const version = versionOf(name);
 		const all = await records(projectId);
 		const names = all.map((i) => i.name);
@@ -321,7 +358,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const names = all.map((i) => i.name);
 		if (names.includes(name)) return null;
 		const from = all.find((i) => i.name === latestIterationName(names, version));
-		if (!from || nextIterationName(names, version) !== name) throw new Error(`${projectId} has no ${name}, and it is not the next iteration of anything.`);
+		if (!from || nextIterationName(names, version) !== name)
+			throw new Error(`${projectId} has no ${name}, and it is not the next iteration of anything.`);
 		const source = await sourceText(projectId, from.name);
 		return { from, target: name, fresh: true, before: source === null ? '' : prototypeVersionOf(source), unread: false };
 	};
@@ -388,7 +426,31 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 */
 	const voice = (root: string | null = ctx.productRoot()): Promise<string> => taskVoice(root === null ? async () => null : designSystemFile(root));
 
-	return { dir, file, sourceFile, sharedText, skill, target, accessibility, voice, title, records, record, sourceText, readiness, start, sources, buildPlan, buildPage, keep, save, page, startChange, resumeChange, finishChange };
+	return {
+		dir,
+		file,
+		sourceFile,
+		sharedText,
+		skill,
+		target,
+		accessibility,
+		voice,
+		title,
+		records,
+		record,
+		sourceText,
+		readiness,
+		start,
+		sources,
+		buildPlan,
+		buildPage,
+		keep,
+		save,
+		page,
+		startChange,
+		resumeChange,
+		finishChange,
+	};
 };
 
 export type PrototypeWork = ReturnType<typeof prototypeWork>;

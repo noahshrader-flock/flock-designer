@@ -38,7 +38,12 @@ export const ComponentCard = ({
 			<CardCover>
 				<PictureArea picture={picture} drawing={drawing}>
 					{issues && issues.violations > 0 && (
-						<Badge variant="secondary" data-accessibility-issues={issues.violations} title={summaryOf(issues)} className="absolute top-2 right-2 z-10">
+						<Badge
+							variant="secondary"
+							data-accessibility-issues={issues.violations}
+							title={summaryOf(issues)}
+							className="absolute top-2 right-2 z-10"
+						>
 							<AccessibilityIcon aria-hidden />
 							{issues.violations}
 						</Badge>

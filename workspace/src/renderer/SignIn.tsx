@@ -78,8 +78,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 			<div className="flex flex-col gap-6">
 				<h1 className="text-2xl font-semibold">DSNR</h1>
 				<p className="text-muted-foreground text-sm">
-					Sign in with GitHub to browse projects and leave comments. You need read access to the design repository — nothing
-					else, and no checkout.
+					Sign in with GitHub to browse projects and leave comments. You need read access to the design repository — nothing else, and no checkout.
 				</p>
 				{error && (
 					<Alert variant="destructive">

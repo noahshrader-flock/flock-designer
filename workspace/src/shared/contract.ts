@@ -236,10 +236,7 @@ export interface PublishProblem {
  */
 export type PublishStatus =
 	/** Nothing to publish from here: no product repository, or no design repository beside it. */
-	| { state: 'unavailable' }
-	| { state: 'working' }
-	| { state: 'shared'; at: string }
-	| { state: 'held'; problems: PublishProblem[]; at: string };
+	{ state: 'unavailable' } | { state: 'working' } | { state: 'shared'; at: string } | { state: 'held'; problems: PublishProblem[]; at: string };
 
 /**
  * A design system the person connected (P4 of the design system plan): a repository, the folder in it the design system
@@ -657,7 +654,13 @@ export interface WorkspaceApi {
 	 * `from`: the repository on this machine and a branch in it to model the page on. `folder`: the folder a new project is
 	 * put in (the folders plan); a project that has a brief already stays where it is.
 	 */
-	createPrototype(projectId: string, title: string, note: string, from?: { root: string; branch: string }, folder?: string | null): Promise<Result<Iteration>>;
+	createPrototype(
+		projectId: string,
+		title: string,
+		note: string,
+		from?: { root: string; branch: string },
+		folder?: string | null,
+	): Promise<Result<Iteration>>;
 	buildPrototype(projectId: string, name: string, request: string): Promise<Result<AgentStatus>>;
 	/**
 	 * Starts the agent on one comment on a prototype. There is no batch. The change goes in the newest iteration of the
@@ -795,24 +798,24 @@ export interface WorkspaceApi {
 
 /** Who is signed in. */
 export interface GitHubUser {
-  login: string;
-  name: string | null;
-  avatarUrl: string | null;
+	login: string;
+	name: string | null;
+	avatarUrl: string | null;
 }
 
 /** What the person types in, and where. */
 export interface DeviceCodeStart {
-  deviceCode: string;
-  userCode: string;
-  verificationUri: string;
-  expiresInSeconds: number;
-  intervalSeconds: number;
+	deviceCode: string;
+	userCode: string;
+	verificationUri: string;
+	expiresInSeconds: number;
+	intervalSeconds: number;
 }
 
 export type SignInState =
-  | { state: 'signedOut' }
-  | { state: 'awaitingDevice'; userCode: string; verificationUri: string; expiresAt: string }
-  | { state: 'signedIn'; user: GitHubUser };
+	| { state: 'signedOut' }
+	| { state: 'awaitingDevice'; userCode: string; verificationUri: string; expiresAt: string }
+	| { state: 'signedIn'; user: GitHubUser };
 
 /**
  * A project, read from the design repository through the API.
@@ -871,77 +874,77 @@ export interface CloneProgress {
 }
 
 export interface CheckoutSuggestion {
-  root: string;
-  name: string;
-  /** What the repository calls itself, read from its descriptor. */
-  product: string;
+	root: string;
+	name: string;
+	/** What the repository calls itself, read from its descriptor. */
+	product: string;
 }
 
 export interface Project {
-  /** Directory name under `projects/`, which is also the project id. */
-  id: string;
-  /** First heading of `brief.md`, or the id if it has none. */
-  title: string;
-  /** The folder it is in, from its brief's front matter (`briefFolder`), or null for none. Absent where it was not read. */
-  folder?: string | null;
-  /** Files present in the project folder, for showing what a project has. */
-  records: string[];
-  /** Iterations found as branches, newest first. */
-  iterations: ProjectIteration[];
-  /** Everyone who has committed to the project: code on any iteration, or its design-repo folder. */
-  people: Person[];
-  /**
-   * The last time anything happened to the project that GitHub knows of: a change to its folder in the design
-   * repository, or a comment on one of its review threads. Null when it could not be read. Read with `lastUpdated`,
-   * which also counts when each iteration was made.
-   */
-  updatedAt?: string | null;
-  /** True when the project exists only on this machine: built here, not yet shared. */
-  localOnly?: boolean;
+	/** Directory name under `projects/`, which is also the project id. */
+	id: string;
+	/** First heading of `brief.md`, or the id if it has none. */
+	title: string;
+	/** The folder it is in, from its brief's front matter (`briefFolder`), or null for none. Absent where it was not read. */
+	folder?: string | null;
+	/** Files present in the project folder, for showing what a project has. */
+	records: string[];
+	/** Iterations found as branches, newest first. */
+	iterations: ProjectIteration[];
+	/** Everyone who has committed to the project: code on any iteration, or its design-repo folder. */
+	people: Person[];
+	/**
+	 * The last time anything happened to the project that GitHub knows of: a change to its folder in the design
+	 * repository, or a comment on one of its review threads. Null when it could not be read. Read with `lastUpdated`,
+	 * which also counts when each iteration was made.
+	 */
+	updatedAt?: string | null;
+	/** True when the project exists only on this machine: built here, not yet shared. */
+	localOnly?: boolean;
 }
 
 export interface ProjectIteration {
-  name: string;
-  branch: string;
-  /** The issue that carries this iteration's comments, once one exists. */
-  issueNumber: number | null;
-  /** How many comments are open on this iteration: 0 for work with no thread yet, or only on this machine. */
-  openComments: number;
-  /** Preview URL recorded when the iteration was shared, if any. */
-  previewUrl: string | null;
-  /** The commit the iteration was last recorded at, so a comment can say what it was made against. */
-  commit: string | null;
-  contributors: Person[];
-  /**
-   * When the work was started, as an ISO date: its record's, or for work found only as a branch, its first
-   * commit. Null when neither is known. A project's date is its earliest iteration's, and orders the list.
-   */
-  createdAt: string | null;
-  /**
-   * Where the work is in the running app (`/roles/compare`), so opening the iteration lands on what
-   * was changed instead of the app's front door. Null when the record does not say.
-   */
-  route: string | null;
-  /** True when this iteration exists only on this machine. */
-  localOnly?: boolean;
-  /** Codebase work: its repository on GitHub (`owner/repo`) and its pull request, when the record says. Read with `codeLink`. */
-  repository?: string | null;
-  pullRequest?: string | null;
-  /** A prototype's picture, by the hash on its record (`Iteration.cover`); null when it has none yet. Read with `coverToShow`. */
-  cover?: string | null;
+	name: string;
+	branch: string;
+	/** The issue that carries this iteration's comments, once one exists. */
+	issueNumber: number | null;
+	/** How many comments are open on this iteration: 0 for work with no thread yet, or only on this machine. */
+	openComments: number;
+	/** Preview URL recorded when the iteration was shared, if any. */
+	previewUrl: string | null;
+	/** The commit the iteration was last recorded at, so a comment can say what it was made against. */
+	commit: string | null;
+	contributors: Person[];
+	/**
+	 * When the work was started, as an ISO date: its record's, or for work found only as a branch, its first
+	 * commit. Null when neither is known. A project's date is its earliest iteration's, and orders the list.
+	 */
+	createdAt: string | null;
+	/**
+	 * Where the work is in the running app (`/roles/compare`), so opening the iteration lands on what
+	 * was changed instead of the app's front door. Null when the record does not say.
+	 */
+	route: string | null;
+	/** True when this iteration exists only on this machine. */
+	localOnly?: boolean;
+	/** Codebase work: its repository on GitHub (`owner/repo`) and its pull request, when the record says. Read with `codeLink`. */
+	repository?: string | null;
+	pullRequest?: string | null;
+	/** A prototype's picture, by the hash on its record (`Iteration.cover`); null when it has none yet. Read with `coverToShow`. */
+	cover?: string | null;
 }
 
 /** A picture of a prototype just made and named on its record: what the list takes in without being read again. */
 export interface MadeCover {
-  projectId: string;
-  name: string;
-  cover: string;
+	projectId: string;
+	name: string;
+	cover: string;
 }
 
 /** Someone who has committed to a project. The login is known only when we could resolve one. */
 export interface Person {
-  name: string;
-  login: string | null;
+	name: string;
+	login: string | null;
 }
 
 /** One reviewer comment, stored as a GitHub issue comment. */
@@ -966,23 +969,23 @@ export interface PrototypeAddressed {
 }
 
 export interface ReviewComment {
-  id: number;
-  author: string;
-  authorAvatarUrl: string | null;
-  body: string;
-  createdAt: string;
-  resolved: boolean;
-  /**
-   * The commit the agent made when it acted on this comment, or null. Not the same as resolved: it
-   * says a change is waiting for the person's verdict, which only they can give.
-   */
-  addressedAt: string | null;
-  /** On a prototype, the iteration that change is in: the next one, when others had commented on this one. */
-  addressedIn: string | null;
-  /** Present once C2 anchors comments to an element; absent for page-level ones. */
-  anchor: CommentAnchor | null;
-  /** A small picture of the spot, as a JPEG data URL, taken when the comment was placed. Absent on older comments. */
-  picture: string | null;
+	id: number;
+	author: string;
+	authorAvatarUrl: string | null;
+	body: string;
+	createdAt: string;
+	resolved: boolean;
+	/**
+	 * The commit the agent made when it acted on this comment, or null. Not the same as resolved: it
+	 * says a change is waiting for the person's verdict, which only they can give.
+	 */
+	addressedAt: string | null;
+	/** On a prototype, the iteration that change is in: the next one, when others had commented on this one. */
+	addressedIn: string | null;
+	/** Present once C2 anchors comments to an element; absent for page-level ones. */
+	anchor: CommentAnchor | null;
+	/** A small picture of the spot, as a JPEG data URL, taken when the comment was placed. Absent on older comments. */
+	picture: string | null;
 }
 
 /**
@@ -993,57 +996,55 @@ export interface ReviewComment {
  * a page-level comment rather than vanish.
  */
 export interface CommentAnchor {
-  route: string;
-  selector: string;
-  nearbyText: string;
-  viewport: { width: number; height: number };
-  commit: string;
-  /** Where in the element the click landed, 0 to 1 each way, so a marker sits where the comment was made. */
-  offset?: { x: number; y: number };
-  /** The kind of element it is (`p`, `button`), so "this subtext" and "this button" are told apart in words. */
-  tag?: string;
-  /**
-   * The named containers it sits inside, outermost first, at most three: "Notification Preferences",
-   * "Hotlist Hits". Text a person or an agent can search for, which a path of nth-of-type cannot be.
-   */
-  inside?: string[];
-  /**
-   * The page's query string when the comment was made (`?state=error`), which is what tells one state of a
-   * prototype from another. Empty for the default state. Absent on comments made before this was recorded,
-   * which are shown wherever their element is.
-   */
-  state?: string;
+	route: string;
+	selector: string;
+	nearbyText: string;
+	viewport: { width: number; height: number };
+	commit: string;
+	/** Where in the element the click landed, 0 to 1 each way, so a marker sits where the comment was made. */
+	offset?: { x: number; y: number };
+	/** The kind of element it is (`p`, `button`), so "this subtext" and "this button" are told apart in words. */
+	tag?: string;
+	/**
+	 * The named containers it sits inside, outermost first, at most three: "Notification Preferences",
+	 * "Hotlist Hits". Text a person or an agent can search for, which a path of nth-of-type cannot be.
+	 */
+	inside?: string[];
+	/**
+	 * The page's query string when the comment was made (`?state=error`), which is what tells one state of a
+	 * prototype from another. Empty for the default state. Absent on comments made before this was recorded,
+	 * which are shown wherever their element is.
+	 */
+	state?: string;
 }
 
 /** A comment to place on the page, numbered as it is listed beside it. */
 export interface MarkerRequest {
-  id: number;
-  number: number;
-  anchor: CommentAnchor;
-  /** True for the viewer's own pins, which can be dragged. */
-  movable?: boolean;
+	id: number;
+	number: number;
+	anchor: CommentAnchor;
+	/** True for the viewer's own pins, which can be dragged. */
+	movable?: boolean;
 }
 
 /** What a pin on the page reports: it was clicked, or it was dragged and dropped. */
-export type PinEvent =
-  | { kind: 'click'; id: number }
-  | { kind: 'move'; id: number; anchor: CommentAnchor };
+export type PinEvent = { kind: 'click'; id: number } | { kind: 'move'; id: number; anchor: CommentAnchor };
 
 /** How a comment was placed on the page. `moved` follows the text; `missing` degrades to a page-level comment. */
 export type MarkerState = 'found' | 'moved' | 'missing' | 'elsewhere' | 'otherState';
 export interface MarkerResult {
-  id: number;
-  state: MarkerState;
+	id: number;
+	state: MarkerState;
 }
 
 /** Where a click landed: the anchor to store, and the point in the page, which is only for placing the comment box. */
 export interface PickedPoint {
-  anchor: CommentAnchor;
-  at: { x: number; y: number };
-  /** The element's own box in the page, so the picture can frame the element. Absent if it could not be measured. */
-  box: { x: number; y: number; width: number; height: number } | null;
-  /** The spot cropped from the page before any pin was drawn, if it could be taken. */
-  picture: string | null;
+	anchor: CommentAnchor;
+	at: { x: number; y: number };
+	/** The element's own box in the page, so the picture can frame the element. Absent if it could not be measured. */
+	box: { x: number; y: number; width: number; height: number } | null;
+	/** The spot cropped from the page before any pin was drawn, if it could be taken. */
+	picture: string | null;
 }
 
 /** Why the preview is hidden. A closed set, so the window cannot invent reasons. */
@@ -1052,10 +1053,10 @@ export type PageHoldReason = (typeof PAGE_HOLD_REASONS)[number];
 
 /** Where the preview sits, in the window's own coordinates. */
 export interface PageBounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+	x: number;
+	y: number;
+	width: number;
+	height: number;
 }
 
 /** Channel names, in one place so main and preload cannot drift. */

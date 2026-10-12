@@ -21,7 +21,12 @@ const show = async (bar = false) => {
 		createElement(
 			LineTabs,
 			{ defaultValue: 'a' },
-			createElement(LineTabsList, bar ? { bar: true } : null, createElement(LineTabsTrigger, { value: 'a' }, 'One'), createElement(LineTabsTrigger, { value: 'b' }, 'Two')),
+			createElement(
+				LineTabsList,
+				bar ? { bar: true } : null,
+				createElement(LineTabsTrigger, { value: 'a' }, 'One'),
+				createElement(LineTabsTrigger, { value: 'b' }, 'Two'),
+			),
 			createElement(LineTabsContent, { value: 'a' }, 'First'),
 		),
 	);
@@ -51,7 +56,9 @@ describe('line tabs', () => {
 		const classes = list.className.split(' ');
 		expect(list.hasAttribute('data-bar')).toBe(true);
 		// Still edge to edge on its border, but its tabs are not shares of it, and it is as tall as the bar under it.
-		expect(classes).toEqual(expect.arrayContaining(['w-full', 'border-b', 'justify-start', 'group-data-horizontal/tabs:h-(--toolbar-height)', '[&>[role=tab]]:flex-none']));
+		expect(classes).toEqual(
+			expect.arrayContaining(['w-full', 'border-b', 'justify-start', 'group-data-horizontal/tabs:h-(--toolbar-height)', '[&>[role=tab]]:flex-none']),
+		);
 		// Aligned with what is under it, which is inset by the page's padding, and on the toolbar's own background.
 		expect(classes).toEqual(expect.arrayContaining(['px-(--page-padding)', 'bg-card']));
 		expect(classes).not.toContain('group-data-horizontal/tabs:h-8');

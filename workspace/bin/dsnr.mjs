@@ -36,7 +36,14 @@ const out = mkdtempSync(join(tmpdir(), 'dsnr-'));
 try {
 	const { build } = await import(pathToFileURL(esbuild).href);
 	const file = join(out, 'dsnr.mjs');
-	await build({ entryPoints: [join(workspace, 'src', 'cli', 'dsnr.ts')], outfile: file, bundle: true, platform: 'node', format: 'esm', logLevel: 'error' });
+	await build({
+		entryPoints: [join(workspace, 'src', 'cli', 'dsnr.ts')],
+		outfile: file,
+		bundle: true,
+		platform: 'node',
+		format: 'esm',
+		logLevel: 'error',
+	});
 	const { main, ghApi, openInBrowser } = await import(pathToFileURL(file).href);
 	process.exitCode = await main(process.argv.slice(2), {
 		cwd: process.cwd(),

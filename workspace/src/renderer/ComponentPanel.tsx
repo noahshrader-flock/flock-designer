@@ -147,10 +147,13 @@ const Uses = ({
 							</li>
 						))}
 					</ul>
-					{answer.notTokens.length > MOST_LISTED && <p className="text-muted-foreground text-xs">And {answer.notTokens.length - MOST_LISTED} more.</p>}
+					{answer.notTokens.length > MOST_LISTED && (
+						<p className="text-muted-foreground text-xs">And {answer.notTokens.length - MOST_LISTED} more.</p>
+					)}
 					{answer.derived > 0 && (
 						<p className="text-muted-foreground text-xs">
-							{plural(answer.derived, 'use')} {answer.derived === 1 ? 'is a shade' : 'are shades'} worked out from a token, such as a hover’s darker color.
+							{plural(answer.derived, 'use')} {answer.derived === 1 ? 'is a shade' : 'are shades'} worked out from a token, such as a hover’s darker
+							color.
 						</p>
 					)}
 				</section>

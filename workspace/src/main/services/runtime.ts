@@ -119,12 +119,7 @@ export class RuntimeManager {
 		this.events.onStatus(status);
 	}
 
-	async start(
-		root: string,
-		descriptor: WorkspaceDescriptor,
-		commandId: string,
-		projectId?: string,
-	): Promise<PreviewStatus> {
+	async start(root: string, descriptor: WorkspaceDescriptor, commandId: string, projectId?: string): Promise<PreviewStatus> {
 		const current = this.running.get(commandId);
 		if (current) {
 			if (current.projectId === projectId) return this.status(commandId);
@@ -150,12 +145,8 @@ export class RuntimeManager {
 		this.running.set(commandId, { child, projectId, status: { state: 'starting', commandId, projectId } });
 		this.events.onStatus({ state: 'starting', commandId, projectId });
 
-		child.stdout?.on('data', (d: Buffer) =>
-			this.events.onLog({ commandId, stream: 'stdout', text: d.toString() }),
-		);
-		child.stderr?.on('data', (d: Buffer) =>
-			this.events.onLog({ commandId, stream: 'stderr', text: d.toString() }),
-		);
+		child.stdout?.on('data', (d: Buffer) => this.events.onLog({ commandId, stream: 'stdout', text: d.toString() }));
+		child.stderr?.on('data', (d: Buffer) => this.events.onLog({ commandId, stream: 'stderr', text: d.toString() }));
 		child.on('error', (err) => {
 			this.stopping.delete(commandId);
 			this.running.delete(commandId);
@@ -165,11 +156,7 @@ export class RuntimeManager {
 			const expected = this.stopping.delete(commandId);
 			this.running.delete(commandId);
 			if (!expected) {
-				this.events.onStatus(
-					code === 0
-						? { state: 'stopped' }
-						: { state: 'failed', commandId, detail: `exited with code ${String(code)}` },
-				);
+				this.events.onStatus(code === 0 ? { state: 'stopped' } : { state: 'failed', commandId, detail: `exited with code ${String(code)}` });
 			}
 		});
 

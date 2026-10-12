@@ -8,11 +8,7 @@ import { useEffect, useState } from 'react';
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Resolves true as soon as `check` says yes, false if nobody is looking any more. */
-export const waitUntilUp = async (
-	check: () => Promise<boolean>,
-	isLive: () => boolean,
-	pollMs = 10_000,
-): Promise<boolean> => {
+export const waitUntilUp = async (check: () => Promise<boolean>, isLive: () => boolean, pollMs = 10_000): Promise<boolean> => {
 	while (isLive()) {
 		if (await check()) return true;
 		await sleep(pollMs);

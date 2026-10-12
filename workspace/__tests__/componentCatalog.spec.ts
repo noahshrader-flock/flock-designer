@@ -3,7 +3,15 @@ import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 import { designSystemOf, type DesignSystem } from '../src/shared/catalog';
-import { isStoryFile, literalField, readCatalog, storybookId, storybookUrl, UNGROUPED, type CatalogReads } from '../src/main/services/componentCatalog';
+import {
+	isStoryFile,
+	literalField,
+	readCatalog,
+	storybookId,
+	storybookUrl,
+	UNGROUPED,
+	type CatalogReads,
+} from '../src/main/services/componentCatalog';
 import { libraryReads } from '../src/main/services/designLibrary';
 
 /** A library made of files in memory. A file whose text is null cannot be read. */
@@ -31,14 +39,20 @@ describe('what is a component', () => {
 			}),
 			DS,
 		);
-		expect(catalog.map((c) => c.id).sort()).toEqual(['lib/anywhere/deep/Card.stories.jsx', 'packages/x/Chip.stories.ts', 'src/components/Button/Button.stories.tsx']);
+		expect(catalog.map((c) => c.id).sort()).toEqual([
+			'lib/anywhere/deep/Card.stories.jsx',
+			'packages/x/Chip.stories.ts',
+			'src/components/Button/Button.stories.tsx',
+		]);
 		expect(['a.stories.js', 'a.stories.mjs', 'a.stories.tsx'].every(isStoryFile)).toBe(true);
 		expect(['a.stories.mdx', 'a.story.tsx', 'stories.tsx'].some(isStoryFile)).toBe(false);
 	});
 
 	it('names and groups a component by its Storybook title, and links it to the library’s own Storybook and source', async () => {
 		const [c] = await readCatalog(
-			library({ 'src/components/FSButton/FSButton.stories.tsx': story('Buttons/FSButton', "\n    componentSubtitle: 'Buttons allow users to take actions.',") }),
+			library({
+				'src/components/FSButton/FSButton.stories.tsx': story('Buttons/FSButton', "\n    componentSubtitle: 'Buttons allow users to take actions.',"),
+			}),
 			designSystemOf({ repository: 'flocksafety/flock-react-component-lib', branch: 'develop' }),
 		);
 		expect(c).toEqual({
@@ -104,7 +118,15 @@ describe('the order', () => {
 			}),
 			DS,
 		);
-		expect(catalog.map((c) => `${c.group}/${c.name}`)).toEqual(['Buttons/Big', 'Buttons/primary', 'inputs/Field', 'Popovers/Alpha', 'Popovers/Zeta', 'Utils/Util', `${UNGROUPED}/Loose`]);
+		expect(catalog.map((c) => `${c.group}/${c.name}`)).toEqual([
+			'Buttons/Big',
+			'Buttons/primary',
+			'inputs/Field',
+			'Popovers/Alpha',
+			'Popovers/Zeta',
+			'Utils/Util',
+			`${UNGROUPED}/Loose`,
+		]);
 	});
 
 	it('is the same whatever order the library’s own Storybook shows its sidebar in: it is not read', async () => {

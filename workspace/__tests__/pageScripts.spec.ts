@@ -19,7 +19,9 @@ const page = (html: string, url = 'http://localhost:3000/users#/list', head = ''
 };
 
 const click = (w: Window, el: Element) =>
-	el.dispatchEvent(new (w as unknown as { MouseEvent: typeof MouseEvent }).MouseEvent('click', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
+	el.dispatchEvent(
+		new (w as unknown as { MouseEvent: typeof MouseEvent }).MouseEvent('click', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }),
+	);
 
 const CARD = `
   <main>
@@ -141,14 +143,20 @@ describe('a prototype, which is one page wherever it is served', () => {
 		expect(out[0]?.state).toBe('found');
 		const app = page(CARD, 'http://127.0.0.1:5000/demo/v1-i1/');
 		app.eval(SINGLE_PAGE);
-		expect((app.eval(resolveScript([req(1, { route: '/design/demo/v1/i1/page.html', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('found');
+		expect(
+			(app.eval(resolveScript([req(1, { route: '/design/demo/v1/i1/page.html', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state,
+		).toBe('found');
 	});
 
 	it('still tells apart what follows its #, where a prototype keeps a place within itself', () => {
 		const w = page(CARD, 'https://acme.github.io/design/demo/v1/i1/page.html#/settings');
 		w.eval(SINGLE_PAGE);
-		expect((w.eval(resolveScript([req(1, { route: '/demo/v1-i1/#/list', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('elsewhere');
-		expect((w.eval(resolveScript([req(1, { route: '/x/#/settings', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('found');
+		expect((w.eval(resolveScript([req(1, { route: '/demo/v1-i1/#/list', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe(
+			'elsewhere',
+		);
+		expect((w.eval(resolveScript([req(1, { route: '/x/#/settings', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe(
+			'found',
+		);
 	});
 
 	it('gives a picked spot an address a comment can be saved with, wherever the page is served', async () => {
@@ -162,21 +170,27 @@ describe('a prototype, which is one page wherever it is served', () => {
 
 	it('is a real app otherwise, where the path is the place', () => {
 		const w = page(CARD, 'http://localhost:3000/users#/list');
-		expect((w.eval(resolveScript([req(1, { route: '/roles#/list', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('elsewhere');
+		expect((w.eval(resolveScript([req(1, { route: '/roles#/list', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe(
+			'elsewhere',
+		);
 	});
 });
 
 describe('placing comments on reopening', () => {
 	it('finds an element by its selector and draws a numbered marker', () => {
 		const w = page(CARD);
-		const out = w.eval(resolveScript([req(1, { selector: '[data-e2e-ref="users-invite"]', offset: { x: 0.5, y: 0.5 } })], 'nonce')) as Array<{ state: string }>;
+		const out = w.eval(resolveScript([req(1, { selector: '[data-e2e-ref="users-invite"]', offset: { x: 0.5, y: 0.5 } })], 'nonce')) as Array<{
+			state: string;
+		}>;
 		expect(out[0]?.state).toBe('found');
 		expect(w.document.querySelector('[data-fd-layer]')?.textContent).toBe('1');
 	});
 
 	it('follows the text when the markup changed', () => {
 		const w = page('<section><p>Totally different markup</p><span>Invite users</span></section>');
-		const out = w.eval(resolveScript([req(1, { selector: '[data-e2e-ref="users-invite"]', nearbyText: 'Invite users' })], 'nonce')) as Array<{ state: string }>;
+		const out = w.eval(resolveScript([req(1, { selector: '[data-e2e-ref="users-invite"]', nearbyText: 'Invite users' })], 'nonce')) as Array<{
+			state: string;
+		}>;
 		expect(out[0]?.state).toBe('moved');
 		expect(w.document.querySelector('[data-fd-layer]')).not.toBeNull();
 	});
@@ -195,7 +209,9 @@ describe('placing comments on reopening', () => {
 
 	it('follows the text when the element was shortened, not only lengthened', () => {
 		const w = page('<section><p>Invite</p></section>');
-		const out = w.eval(resolveScript([req(1, { selector: '#gone', nearbyText: 'Invite users to the organization' })], 'nonce')) as Array<{ state: string }>;
+		const out = w.eval(resolveScript([req(1, { selector: '#gone', nearbyText: 'Invite users to the organization' })], 'nonce')) as Array<{
+			state: string;
+		}>;
 		expect(out[0]?.state).toBe('moved');
 	});
 
@@ -269,7 +285,9 @@ describe('placing comments on reopening', () => {
 
 	it('compares the query as it is on a page that lists no states, such as a real app', () => {
 		const w = page(CARD, 'http://localhost:3000/users#/list');
-		expect((w.eval(resolveScript([req(1, { selector: 'main', state: '?state=default' })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe('otherState');
+		expect((w.eval(resolveScript([req(1, { selector: 'main', state: '?state=default' })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe(
+			'otherState',
+		);
 	});
 
 	it('replaces earlier markers, and clears them when given nothing', () => {
@@ -300,7 +318,9 @@ describe('pins that can be clicked and dragged', () => {
 		w.eval(resolveScript([{ ...req(5, { selector: 'main' }), movable }], 'secret'));
 		const pin = w.document.querySelector('[data-fd-layer] > div > div') as HTMLElement;
 		const fire = (type: string, x = 0, y = 0) =>
-			pin.dispatchEvent(new (w as unknown as { MouseEvent: typeof MouseEvent }).MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y }));
+			pin.dispatchEvent(
+				new (w as unknown as { MouseEvent: typeof MouseEvent }).MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y }),
+			);
 		return { w, said, pin, fire };
 	};
 
@@ -400,7 +420,8 @@ describe('redrawing the pins', () => {
 		const w = page(CARD);
 		const el = w.document.querySelector('[data-e2e-ref="users-invite"]') as HTMLElement;
 		let left = 100;
-		el.getBoundingClientRect = () => ({ left, top: 50, width: 40, height: 20, right: left + 40, bottom: 70, x: left, y: 50, toJSON: () => ({}) }) as DOMRect;
+		el.getBoundingClientRect = () =>
+			({ left, top: 50, width: 40, height: 20, right: left + 40, bottom: 70, x: left, y: 50, toJSON: () => ({}) }) as DOMRect;
 		w.eval(resolveScript([req(1, { selector: '[data-e2e-ref="users-invite"]' })], 'nonce'));
 		const marker = w.document.querySelector('[data-fd-layer] > div') as HTMLElement;
 		// Where on the element the pin sits, which moving the element keeps.
@@ -415,7 +436,7 @@ describe('redrawing the pins', () => {
 });
 
 describe('hiding the pins for a picture', () => {
-	it('hides the app\'s own pins and shows them again, leaving the page alone', async () => {
+	it("hides the app's own pins and shows them again, leaving the page alone", async () => {
 		const w = page(CARD);
 		w.eval(resolveScript([req(1, { selector: '[data-e2e-ref="users-invite"]' })], 'nonce'));
 		const layer = w.document.querySelector('[data-fd-layer]') as HTMLElement;
@@ -443,13 +464,16 @@ describe('choosing what a pin attaches to', () => {
 
 	/** jsdom has no layout and no elementsFromPoint, so give an element a box, and say what is "under the pointer". */
 	const under = (w: Window & { document: Document }, el: Element, rect = { left: 10, top: 20, width: 100, height: 30 }) => {
-		(el as HTMLElement).getBoundingClientRect = () => ({ ...rect, right: rect.left + rect.width, bottom: rect.top + rect.height, x: rect.left, y: rect.top, toJSON: () => ({}) }) as DOMRect;
+		(el as HTMLElement).getBoundingClientRect = () =>
+			({ ...rect, right: rect.left + rect.width, bottom: rect.top + rect.height, x: rect.left, y: rect.top, toJSON: () => ({}) }) as DOMRect;
 		const chain: Element[] = [];
 		for (let e: Element | null = el; e; e = e.parentElement) chain.push(e);
 		(w.document as unknown as { elementsFromPoint: () => Element[] }).elementsFromPoint = () => chain;
 	};
 	const move = (w: Window, x = 12, y = 22) =>
-		w.document.dispatchEvent(new (w as unknown as { MouseEvent: typeof MouseEvent }).MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: y }));
+		w.document.dispatchEvent(
+			new (w as unknown as { MouseEvent: typeof MouseEvent }).MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: y }),
+		);
 	const press = (w: Window, key: string) => {
 		const ev = new (w as unknown as { KeyboardEvent: typeof KeyboardEvent }).KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
 		w.document.dispatchEvent(ev);
@@ -466,7 +490,12 @@ describe('choosing what a pin attaches to', () => {
 		under(w, sub);
 		move(w);
 		expect(outlineOf(w).style.display).toBe('block');
-		expect([outlineOf(w).style.left, outlineOf(w).style.top, outlineOf(w).style.width, outlineOf(w).style.height]).toEqual(['10px', '20px', '100px', '30px']);
+		expect([outlineOf(w).style.left, outlineOf(w).style.top, outlineOf(w).style.width, outlineOf(w).style.height]).toEqual([
+			'10px',
+			'20px',
+			'100px',
+			'30px',
+		]);
 		expect(chipOf(w).textContent).toContain('<p> Notify me when a plate');
 		expect(chipOf(w).textContent).toContain('container');
 	});
@@ -560,7 +589,7 @@ describe('choosing what a pin attaches to', () => {
 		expect(w.document.querySelector('[data-fd-layer]')).toBeNull();
 	});
 
-	it('does not outline one of the app\'s own pins as if it were the page', () => {
+	it("does not outline one of the app's own pins as if it were the page", () => {
 		const w = page(FORM);
 		const sub = w.document.getElementById('sub') as HTMLElement;
 		w.eval(resolveScript([req(1, { selector: '#sub' })], 'nonce'));
@@ -581,4 +610,3 @@ describe('choosing what a pin attaches to', () => {
 		expect(layers(w).every((l) => l.style.visibility === 'hidden')).toBe(true);
 	});
 });
-

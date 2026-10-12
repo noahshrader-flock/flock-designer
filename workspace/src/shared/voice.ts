@@ -4,7 +4,11 @@
  */
 
 /** The file without its comments, trimmed: what a task carries of it. */
-export const voiceWithoutComments = (text: string): string => text.replace(/<!--[\s\S]*?-->/g, '').replace(/\n{3,}/g, '\n\n').trim();
+export const voiceWithoutComments = (text: string): string =>
+	text
+		.replace(/<!--[\s\S]*?-->/g, '')
+		.replace(/\n{3,}/g, '\n\n')
+		.trim();
 
 /** Whether a file says anything yet: a line that is neither a heading nor blank, once its comments are out. */
 export const voiceIsWritten = (text: string): boolean =>

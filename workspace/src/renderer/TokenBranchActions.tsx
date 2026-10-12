@@ -16,7 +16,11 @@ export const TokenBranchActions = ({ controls }: { controls: TokenBranchControls
 			busy={busy}
 			error={error}
 			pullRequestNote={
-				chromatic ? <OutLink href={chromatic}>Chromatic</OutLink> : <span className="text-muted-foreground">Chromatic’s build is linked here once the library’s CI has made it.</span>
+				chromatic ? (
+					<OutLink href={chromatic}>Chromatic</OutLink>
+				) : (
+					<span className="text-muted-foreground">Chromatic’s build is linked here once the library’s CI has made it.</span>
+				)
 			}
 			onSave={save}
 			onPropose={propose}

@@ -46,8 +46,7 @@ afterEach(() => {
 	rmSync(root, { recursive: true, force: true });
 });
 
-const make = (over: Partial<RuntimeDeps> = {}) =>
-	new RuntimeManager({ onLog: (l) => logs.push(l), onStatus: (s) => statuses.push(s) }, deps(over));
+const make = (over: Partial<RuntimeDeps> = {}) => new RuntimeManager({ onLog: (l) => logs.push(l), onStatus: (s) => statuses.push(s) }, deps(over));
 
 describe('the allowlist', () => {
 	it('refuses a command the repository does not declare', async () => {
@@ -138,7 +137,11 @@ describe('preview', () => {
 describe('commands that serve one project', () => {
 	it('puts the project in as its own argument', () => {
 		expect(fillProjectId(['npm', 'run', 'start:prototype', '--', '<project-id>'], 'users-inactivity-signal')).toEqual([
-			'npm', 'run', 'start:prototype', '--', 'users-inactivity-signal',
+			'npm',
+			'run',
+			'start:prototype',
+			'--',
+			'users-inactivity-signal',
 		]);
 	});
 
@@ -233,4 +236,3 @@ describe('a preview does not open a browser tab of its own', () => {
 		expect(envOf(spawnSpy)).toBe(process.env);
 	});
 });
-

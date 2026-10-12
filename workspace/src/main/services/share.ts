@@ -72,7 +72,6 @@ export interface ShareTimings {
 
 export const DEFAULT_TIMINGS: ShareTimings = { pollMs: 10_000, startupMs: 180_000, timeoutMs: 25 * 60_000, skewMs: 120_000 };
 
-
 /**
  * Whether a shared preview's address answers yet. A person behind company sign-in gets a redirect or a
  * refusal and the page is there; only no answer, "not found" and a server error mean it is not up.
@@ -102,9 +101,7 @@ export const runShare = async (
 	isLive: () => boolean = () => true,
 ): Promise<{ url: string; prUrl: string }> => {
 	if (!req.share.kinds.includes(req.kind)) {
-		throw new ShareProblem(
-			`This repository does not build a preview for ${req.kind} work. It does for: ${req.share.kinds.join(', ')}.`,
-		);
+		throw new ShareProblem(`This repository does not build a preview for ${req.kind} work. It does for: ${req.share.kinds.join(', ')}.`);
 	}
 	// It goes to git and gh as an argument; it comes from this person's own record, but is checked all the same.
 	if (!isSafeBranchName(req.branch)) {
@@ -126,9 +123,7 @@ export const runShare = async (
 	const cutoff = pushed ? pushedAt - timings.skewMs : Number.NEGATIVE_INFINITY;
 	const waitStart = tools.now();
 	for (;;) {
-		const mine = (await tools.checks(pr.number)).filter(
-			(c) => c.workflow === req.share.workflow && !(Date.parse(c.startedAt) < cutoff),
-		);
+		const mine = (await tools.checks(pr.number)).filter((c) => c.workflow === req.share.workflow && !(Date.parse(c.startedAt) < cutoff));
 
 		if (mine.length === 0) {
 			if (tools.now() - waitStart > timings.startupMs) {

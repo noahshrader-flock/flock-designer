@@ -40,7 +40,11 @@ describe('running', () => {
 
 	it('shows every problem from both syncs, with their reasons, and clears them when the next run gets through', async () => {
 		let healthy = false;
-		const { manager } = make(async () => (healthy ? { branches: ok, records: ok } : { branches: bad('feature/x', 'It has moved on GitHub.'), records: bad('Project records', 'Could not reach GitHub.') }));
+		const { manager } = make(async () =>
+			healthy
+				? { branches: ok, records: ok }
+				: { branches: bad('feature/x', 'It has moved on GitHub.'), records: bad('Project records', 'Could not reach GitHub.') },
+		);
 		await manager.publish(true);
 		expect(manager.status()).toMatchObject({ state: 'held', problems: [{ what: 'feature/x' }, { what: 'Project records' }] });
 		healthy = true;
@@ -139,7 +143,10 @@ describe('order', () => {
 	});
 
 	it('still publishes records when a branch had a problem, and returns both results', async () => {
-		const r = await publishInOrder(async () => bad('feature/x', 'moved'), async () => ok);
+		const r = await publishInOrder(
+			async () => bad('feature/x', 'moved'),
+			async () => ok,
+		);
 		expect(r.branches.problems).toHaveLength(1);
 		expect(r.records.problems).toHaveLength(0);
 	});

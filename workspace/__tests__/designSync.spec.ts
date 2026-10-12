@@ -28,7 +28,15 @@ const write = (root: string, path: string, body: string) => {
 	mkdirSync(join(root, path, '..'), { recursive: true });
 	writeFileSync(join(root, path), body);
 };
-const record = (name: string, extra: Record<string, unknown> = {}) => ({ projectId: 'p', name, branch: `fd/p/${name}`, commit: null, createdAt: '2026-10-01T00:00:00Z', note: '', ...extra });
+const record = (name: string, extra: Record<string, unknown> = {}) => ({
+	projectId: 'p',
+	name,
+	branch: `fd/p/${name}`,
+	commit: null,
+	createdAt: '2026-10-01T00:00:00Z',
+	note: '',
+	...extra,
+});
 const commitAll = (root: string, msg: string) => {
 	git(root, 'add', '-A');
 	git(root, 'commit', '-q', '-m', msg);
@@ -38,7 +46,10 @@ beforeEach(() => {
 	dir = mkdtempSync(join(tmpdir(), 'fdw-dsync-'));
 	remote = join(dir, 'remote.git');
 	execFileSync('git', ['init', '-q', '--bare', '-b', 'main', remote]);
-	for (const [name, who] of [['mine', 'Me'], ['theirs', 'Teammate']] as const) {
+	for (const [name, who] of [
+		['mine', 'Me'],
+		['theirs', 'Teammate'],
+	] as const) {
 		const root = join(dir, name);
 		execFileSync('git', ['clone', '-q', remote, root], { stdio: 'ignore' });
 		git(root, 'config', 'user.email', `${name}@example.test`);
@@ -155,7 +166,11 @@ describe('when someone else has published too', () => {
 	});
 
 	it('combines two people recording different iterations of one project, by meaning, not by lines', async () => {
-		write(theirs, 'projects/p/iterations.json', `${JSON.stringify([record('i1'), record('i2', { contributors: [{ name: 'Teammate', login: 'tm' }] })], null, 2)}\n`);
+		write(
+			theirs,
+			'projects/p/iterations.json',
+			`${JSON.stringify([record('i1'), record('i2', { contributors: [{ name: 'Teammate', login: 'tm' }] })], null, 2)}\n`,
+		);
 		commitAll(theirs, 'teammate i2');
 		git(theirs, 'push', '-q', 'origin', 'HEAD:main');
 		write(mine, 'projects/p/iterations.json', `${JSON.stringify([record('i1', { commit: 'mine1' }), record('i3')], null, 2)}\n`);
@@ -188,7 +203,7 @@ describe('when someone else has published too', () => {
 		expect(git(mine, 'status', '-sb').split('\n')[0]).not.toMatch(/behind/);
 	});
 
-	it("holds, and loses nothing, when two people changed the same brief, which only they can settle", async () => {
+	it('holds, and loses nothing, when two people changed the same brief, which only they can settle', async () => {
 		write(theirs, 'projects/p/brief.md', '# P, teammate version\n');
 		commitAll(theirs, 'teammate brief');
 		git(theirs, 'push', '-q', 'origin', 'HEAD:main');

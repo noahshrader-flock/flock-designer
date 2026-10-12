@@ -24,7 +24,8 @@ afterEach(async () => {
 
 const tabs = () => [...document.querySelectorAll<HTMLElement>('[role="tab"]')];
 /** Tabs switch as the pointer goes down, as a person's press does. */
-const choose = (tab: HTMLElement) => act(async () => void tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 })));
+const choose = (tab: HTMLElement) =>
+	act(async () => void tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 })));
 
 describe('the bar', () => {
 	const header = () => document.querySelector('header') as HTMLElement;

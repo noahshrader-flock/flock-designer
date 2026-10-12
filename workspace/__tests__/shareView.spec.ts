@@ -43,14 +43,24 @@ describe('stepText', () => {
 describe('waitUntilUp', () => {
 	it('returns as soon as the address answers', async () => {
 		let n = 0;
-		expect(await waitUntilUp(async () => ++n === 3, () => true, 1)).toBe(true);
+		expect(
+			await waitUntilUp(
+				async () => ++n === 3,
+				() => true,
+				1,
+			),
+		).toBe(true);
 		expect(n).toBe(3);
 	});
 
 	it('stops checking once nobody is looking, instead of polling for ever', async () => {
 		let n = 0;
 		let live = true;
-		const result = await waitUntilUp(async () => (++n === 2 && (live = false), false), () => live, 1);
+		const result = await waitUntilUp(
+			async () => (++n === 2 && (live = false), false),
+			() => live,
+			1,
+		);
 		expect(result).toBe(false);
 		expect(n).toBe(2);
 	});

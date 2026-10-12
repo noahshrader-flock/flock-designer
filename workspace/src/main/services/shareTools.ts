@@ -17,7 +17,6 @@ const run = promisify(execFile);
  * whatever they are allowed to do, and the app never sees its token.
  */
 
-
 const NOT_INSTALLED =
 	'Pull requests are opened with the GitHub CLI (gh), which was not found on this machine. Install it from https://cli.github.com, run `gh auth login` in a terminal, then try again.';
 const NOT_SIGNED_IN = 'The GitHub CLI is installed but not signed in. Run `gh auth login` in a terminal, then try again.';
@@ -80,9 +79,7 @@ export const realShareTools = (root: string, bin: string = locateGh()): ShareToo
 	},
 
 	createDraftPr: async (branch, title, body): Promise<PullRequest> => {
-		const url = (await gh(root, bin, ['pr', 'create', '--draft', '--head', branch, '--title', title, '--body', body]))
-			.split('\n')
-			.pop() as string;
+		const url = (await gh(root, bin, ['pr', 'create', '--draft', '--head', branch, '--title', title, '--body', body])).split('\n').pop() as string;
 		return { number: number(url), url };
 	},
 

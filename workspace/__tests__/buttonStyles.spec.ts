@@ -50,7 +50,9 @@ describe('the vertical ellipsis', () => {
 
 	it('is a ghost button wherever one is drawn: the Button holding the icon says variant="ghost"', () => {
 		const wrong: string[] = [];
-		for (const f of ['src/renderer', 'src/viewer'].flatMap((d) => files(join(__dirname, '..', d))).filter((p) => !p.includes(join('renderer', 'ui')))) {
+		for (const f of ['src/renderer', 'src/viewer']
+			.flatMap((d) => files(join(__dirname, '..', d)))
+			.filter((p) => !p.includes(join('renderer', 'ui')))) {
 			const text = readFileSync(f, 'utf8');
 			for (const m of text.matchAll(/<EllipsisVerticalIcon/g)) {
 				// The Button that holds it: the last one opened before the icon.
@@ -97,8 +99,11 @@ describe('a button that is always off', () => {
 		const offWithTitle = ['src/renderer', 'src/viewer']
 			.flatMap((d) => files(join(__dirname, '..', d)))
 			.filter((f) => !f.includes(`${join('renderer', 'ui')}`))
-			.flatMap((f) => tags(readFileSync(f, 'utf8')).filter((t) => /\sdisabled(\s|\/?>)/.test(t) && /\stitle=/.test(t)).map((t) => `${f}: ${t.slice(0, 80)}`));
+			.flatMap((f) =>
+				tags(readFileSync(f, 'utf8'))
+					.filter((t) => /\sdisabled(\s|\/?>)/.test(t) && /\stitle=/.test(t))
+					.map((t) => `${f}: ${t.slice(0, 80)}`),
+			);
 		expect(offWithTitle).toEqual([]);
 	});
 });
-

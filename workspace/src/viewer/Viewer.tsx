@@ -137,7 +137,12 @@ const Commenting = ({
 	onSignOut: () => void;
 }) => {
 	const store = useMemo(
-		() => browserComments(tokenApi(token), { owner: config.owner, repo: config.repo }, { projectId: config.projectId, branch: prototypeKey(config.projectId, config.name) }),
+		() =>
+			browserComments(
+				tokenApi(token),
+				{ owner: config.owner, repo: config.repo },
+				{ projectId: config.projectId, branch: prototypeKey(config.projectId, config.name) },
+			),
 		[token, config],
 	);
 	const page = useMemo(() => framePage(slots.frame), [slots.frame]);

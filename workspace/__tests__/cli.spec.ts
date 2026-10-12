@@ -21,7 +21,15 @@ let err: string[];
 let github: { api: (path: string) => Promise<unknown> } | null;
 
 const esbuild = createRequire(__filename).resolve('esbuild');
-const deps = (cwd: string) => ({ cwd, out: (t: string) => out.push(t), err: (t: string) => err.push(t), prototypesRoot: prototypes, esbuild, self: ['dsnr'], github });
+const deps = (cwd: string) => ({
+	cwd,
+	out: (t: string) => out.push(t),
+	err: (t: string) => err.push(t),
+	prototypesRoot: prototypes,
+	esbuild,
+	self: ['dsnr'],
+	github,
+});
 const run = (...argv: string[]) => main(argv, deps(product));
 const iterations = () => JSON.parse(readFileSync(join(design, 'projects', 'demo', 'iterations.json'), 'utf8')) as { name: string }[];
 
@@ -54,7 +62,12 @@ describe('new-prototype', () => {
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list of cameras')).toBe(0);
 
 		expect(iterations()).toMatchObject([
-			{ name: 'v1-i1', branch: 'prototype/demo/v1-i1', basedOn: { repository: 'flock-coke', branch: 'develop' }, contributors: [{ name: 'Test Person', login: 'test-person' }] },
+			{
+				name: 'v1-i1',
+				branch: 'prototype/demo/v1-i1',
+				basedOn: { repository: 'flock-coke', branch: 'develop' },
+				contributors: [{ name: 'Test Person', login: 'test-person' }],
+			},
 		]);
 		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list of cameras\n');
 
@@ -116,7 +129,10 @@ describe('new-prototype', () => {
 describe('save-prototype', () => {
 	it('builds the page from its source and saves both to the design repository', async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
-		writeFileSync(join(prototypes, 'demo', 'v1-i1.tsx'), "/* A page made of the real thing. */\nimport { Hello } from 'x';\nexport default () => <Hello />;\n");
+		writeFileSync(
+			join(prototypes, 'demo', 'v1-i1.tsx'),
+			"/* A page made of the real thing. */\nimport { Hello } from 'x';\nexport default () => <Hello />;\n",
+		);
 
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
 		const saved = join(design, 'projects', 'demo', 'prototypes');
@@ -149,7 +165,12 @@ describe('change-prototype', () => {
 				if (path === '/user') return { login: 'test-person' };
 				const thread = /\/issues\/(\d+)\/comments/.exec(path);
 				if (thread) {
-					return (threads[names[Number(thread[1]) - 1] as string] ?? []).map((login, i) => ({ id: i + 1, body: 'x', user: { login }, created_at: '2026-10-08T00:00:00Z' }));
+					return (threads[names[Number(thread[1]) - 1] as string] ?? []).map((login, i) => ({
+						id: i + 1,
+						body: 'x',
+						user: { login },
+						created_at: '2026-10-08T00:00:00Z',
+					}));
 				}
 				if (/\/issues\?/.test(path)) return names.map((name, i) => ({ number: i + 1, body: `branch: \`prototype/demo/${name}\``, comments: 1 }));
 				throw new Error(`not faked: ${path}`);
@@ -235,7 +256,7 @@ describe('build-site', () => {
 		expect(out.join('\n')).toMatch(/Built 1 page in 1 project[\s\S]*Comment counts are left out/);
 	});
 
-	it('counts each iteration\'s comments when GitHub can be asked, and builds from the design repository itself too', async () => {
+	it("counts each iteration's comments when GitHub can be asked, and builds from the design repository itself too", async () => {
 		await saved();
 		github = {
 			api: async (path: string) => (/\/issues\?/.test(path) ? [{ number: 1, body: 'branch: `prototype/demo/v1-i1`', comments: 2 }] : []),
@@ -296,7 +317,8 @@ describe('publish opens the page the first time', () => {
 				if (/^\/repos\/[^/]+\/[^/]+$/.test(path)) return { private: true, default_branch: branch };
 				if (path.endsWith('/pages')) return { html_url: 'https://acme.github.io/design/', public: false };
 				if (path.endsWith('/dispatches')) return void (dispatched = true);
-				if (path.includes('/actions/workflows/')) return { workflow_runs: dispatched ? [{ id: 2, status: 'completed', conclusion: 'success', html_url: 'run/2' }] : [] };
+				if (path.includes('/actions/workflows/'))
+					return { workflow_runs: dispatched ? [{ id: 2, status: 'completed', conclusion: 'success', html_url: 'run/2' }] : [] };
 				if (path.includes('/deployments?')) return [{ id: 6, sha: 'd'.repeat(40) }];
 				if (path.includes('/deployments/6/statuses')) return [{ state: 'success' }];
 				if (path.includes('/commits?')) return onSite ? [{ sha: 'c'.repeat(40) }] : [];
@@ -306,7 +328,13 @@ describe('publish opens the page the first time', () => {
 	};
 	const publishWith = (branch: string, onSite: boolean, more: string[] = []) => {
 		const opened: string[] = [];
-		const quick = { ...deps(design), github: site(branch, onSite), sleep: async () => undefined, fetchAnonymously: async () => ({ status: 404 }), open: (u: string) => void opened.push(u) };
+		const quick = {
+			...deps(design),
+			github: site(branch, onSite),
+			sleep: async () => undefined,
+			fetchAnonymously: async () => ({ status: 404 }),
+			open: (u: string) => void opened.push(u),
+		};
 		return main(['publish', '--project', 'demo', '--name', 'v1-i1', ...more], quick).then((code) => ({ code, opened }));
 	};
 
@@ -331,8 +359,16 @@ describe('publish opens the page the first time', () => {
 	it('does not open anything when the deploy fails', async () => {
 		const branch = await saved();
 		const opened: string[] = [];
-		const failing = { api: async (path: string) => (path.endsWith('/dispatches') ? Promise.reject(Object.assign(new Error('Not Found'), { status: 404 })) : site(branch, false).api(path)) };
-		const code = await main(['publish', '--project', 'demo', '--name', 'v1-i1'], { ...deps(design), github: failing, sleep: async () => undefined, open: (u: string) => void opened.push(u) });
+		const failing = {
+			api: async (path: string) =>
+				path.endsWith('/dispatches') ? Promise.reject(Object.assign(new Error('Not Found'), { status: 404 })) : site(branch, false).api(path),
+		};
+		const code = await main(['publish', '--project', 'demo', '--name', 'v1-i1'], {
+			...deps(design),
+			github: failing,
+			sleep: async () => undefined,
+			open: (u: string) => void opened.push(u),
+		});
 		expect(code).toBe(1);
 		expect(opened).toEqual([]);
 	});
@@ -376,7 +412,8 @@ describe('unpublish', () => {
 				if (/^\/repos\/[^/]+\/[^/]+$/.test(path)) return { private: true, default_branch: branch };
 				if (path.endsWith('/pages')) return { html_url: 'https://acme.github.io/design/', public: false };
 				if (path.endsWith('/dispatches')) return void (dispatched = true);
-				if (path.includes('/runs')) return { workflow_runs: dispatched ? [{ id: 2, status: 'completed', conclusion: 'success', html_url: 'run/2' }] : [] };
+				if (path.includes('/runs'))
+					return { workflow_runs: dispatched ? [{ id: 2, status: 'completed', conclusion: 'success', html_url: 'run/2' }] : [] };
 				throw new Error(`not faked: ${path}`);
 			},
 		};
@@ -431,7 +468,11 @@ describe('the command', () => {
 		expect(usage.status).toBe(2);
 		expect(usage.stderr).toMatch(/Usage:[\s\S]*new-prototype[\s\S]*save-prototype/);
 
-		const made = spawnSync(process.execPath, [launcher, 'new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list'], { cwd: product, env, encoding: 'utf8' });
+		const made = spawnSync(process.execPath, [launcher, 'new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list'], {
+			cwd: product,
+			env,
+			encoding: 'utf8',
+		});
 		expect(made.stderr).toBe('');
 		expect(made.status).toBe(0);
 		const source = /Write `([^`]+)`/.exec(made.stdout)?.[1] as string;

@@ -17,7 +17,8 @@ let out: string;
 
 const FONT = Buffer.from('not really a font, but bytes all the same');
 const HASH = '0123456789abcdef';
-const page = (text: string) => `<!doctype html><html><head><style>@font-face{src:url(/_shared/${HASH})}</style></head><body><h1>${text}</h1></body></html>`;
+const page = (text: string) =>
+	`<!doctype html><html><head><style>@font-face{src:url(/_shared/${HASH})}</style></head><body><h1>${text}</h1></body></html>`;
 const record = (name: string, more: Record<string, unknown> = {}) => ({
 	projectId: 'x',
 	name,
@@ -30,7 +31,10 @@ const project = (id: string, brief: string | null, iterations: Record<string, un
 	const dir = join(design, 'projects', id);
 	mkdirSync(join(dir, 'prototypes'), { recursive: true });
 	if (brief !== null) writeFileSync(join(dir, 'brief.md'), brief);
-	writeFileSync(join(dir, 'iterations.json'), JSON.stringify(iterations.map((i) => ({ ...i, projectId: id, branch: String(i.branch).replace('/x/', `/${id}/`) }))));
+	writeFileSync(
+		join(dir, 'iterations.json'),
+		JSON.stringify(iterations.map((i) => ({ ...i, projectId: id, branch: String(i.branch).replace('/x/', `/${id}/`) }))),
+	);
 	for (const [name, html] of Object.entries(pages)) writeFileSync(join(dir, 'prototypes', `${name}.html`), html);
 };
 const read = (path: string) => readFileSync(join(out, path), 'utf8');
@@ -78,7 +82,7 @@ describe('the index', () => {
 });
 
 describe('an iteration', () => {
-	it('is its saved page under a bar that is a link back to the project, which the viewer replaces with the app\'s own', () => {
+	it("is its saved page under a bar that is a link back to the project, which the viewer replaces with the app's own", () => {
 		build();
 		const viewer = read('alpha/v1/i2/index.html');
 		expect(viewer).toContain('<iframe');
@@ -151,7 +155,9 @@ describe('there is no selected version', () => {
 
 describe('built in code', () => {
 	const withCodebase = (pullRequest: string) =>
-		project('alpha', '# Alpha\n', [record('v1-i1'), { name: 'codebase', branch: 'feature/alpha', commit: null, note: '', pullRequest }], { 'v1-i1': page('Alpha') });
+		project('alpha', '# Alpha\n', [record('v1-i1'), { name: 'codebase', branch: 'feature/alpha', commit: null, note: '', pullRequest }], {
+			'v1-i1': page('Alpha'),
+		});
 
 	it("links the project page to its codebase work's pull request, once it has been shared", () => {
 		withCodebase('https://github.com/o/r/pull/5');
@@ -168,7 +174,12 @@ describe('built in code', () => {
 	});
 
 	it('links to the branch when the record names its repository but has no pull request', () => {
-		project('alpha', '# Alpha\n', [record('v1-i1'), { name: 'codebase', branch: 'feature/alpha', commit: null, note: '', repository: 'flocksafety/flock-coke' }], { 'v1-i1': page('Alpha') });
+		project(
+			'alpha',
+			'# Alpha\n',
+			[record('v1-i1'), { name: 'codebase', branch: 'feature/alpha', commit: null, note: '', repository: 'flocksafety/flock-coke' }],
+			{ 'v1-i1': page('Alpha') },
+		);
 		build();
 		expect(read('alpha/index.html')).toContain('<a href="https://github.com/flocksafety/flock-coke/tree/feature/alpha">Built in code</a>');
 	});
@@ -246,9 +257,14 @@ describe('comments on the page', () => {
 		const viewer = join(root, 'viewer');
 		mkdirSync(viewer);
 		for (const f of ['viewer.js', 'viewer.css']) writeFileSync(join(viewer, f), '');
-		writeFileSync(join(design, 'projects', 'alpha', 'prototypes', 'v2-i1.html'), page('Alpha two').replace('<head>', '<head><meta name="dsnr-states" content="default,filtered,panel">'));
+		writeFileSync(
+			join(design, 'projects', 'alpha', 'prototypes', 'v2-i1.html'),
+			page('Alpha two').replace('<head>', '<head><meta name="dsnr-states" content="default,filtered,panel">'),
+		);
 		build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } });
-		const config = JSON.parse(/<script type="application\/json" id="dsnr-config">([^<]*)<\/script>/.exec(read('alpha/v2/i1/index.html'))?.[1] ?? 'null');
+		const config = JSON.parse(
+			/<script type="application\/json" id="dsnr-config">([^<]*)<\/script>/.exec(read('alpha/v2/i1/index.html'))?.[1] ?? 'null',
+		);
 		expect(config.states).toEqual(['default', 'filtered', 'panel']);
 	});
 

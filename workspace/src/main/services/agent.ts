@@ -78,9 +78,7 @@ export const locateClaude = (
 		const dir = join(home, editor, 'extensions');
 		const versions = list(dir)
 			.filter((n) => n.startsWith('anthropic.claude-code-'))
-			.sort((a, b) =>
-				b.localeCompare(a, undefined, { numeric: true }),
-			);
+			.sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
 		for (const v of versions) {
 			const bin = join(dir, v, 'resources', 'native-binary', 'claude');
 			if (exists(bin)) return bin;
@@ -167,10 +165,7 @@ const runCommand: RunCommand = (file, args) =>
  * an older Claude Code without the command, a slow machine -- it does not stand in the way: the run itself
  * still reports a real failure.
  */
-export const agentReadiness = async (
-	locate: () => string = () => locateClaude(),
-	run: RunCommand = runCommand,
-): Promise<AgentReadiness> => {
+export const agentReadiness = async (locate: () => string = () => locateClaude(), run: RunCommand = runCommand): Promise<AgentReadiness> => {
 	const bin = locate();
 	let out: string;
 	try {
@@ -307,12 +302,7 @@ export class AgentRunner {
 	 * would create a second source that drifts from the first.
 	 */
 	taskFor(projectId: string, task: string): string {
-		return [
-			`Project: ${projectId}`,
-			'Read this repository\'s own agent instructions and follow them.',
-			'',
-			task,
-		].join('\n');
+		return [`Project: ${projectId}`, "Read this repository's own agent instructions and follow them.", '', task].join('\n');
 	}
 
 	/**
@@ -364,9 +354,7 @@ export class AgentRunner {
 				this.onLog({ commandId: 'agent', stream: 'stdout', text: `${text}\n` });
 			}
 		});
-		child.stderr?.on('data', (d: Buffer) =>
-			this.onLog({ commandId: 'agent', stream: 'stderr', text: d.toString() }),
-		);
+		child.stderr?.on('data', (d: Buffer) => this.onLog({ commandId: 'agent', stream: 'stderr', text: d.toString() }));
 		child.on('error', (err) => {
 			this.child = null;
 			this.current = {

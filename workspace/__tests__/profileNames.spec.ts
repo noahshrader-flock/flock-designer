@@ -20,9 +20,23 @@ const fakeGitHub = () =>
 	});
 
 const iteration = (contributors: Person[]): ProjectIteration => ({
-	name: 'i1', branch: 'fd/a/i1', issueNumber: null, openComments: 0, previewUrl: null, commit: null, contributors, createdAt: null, route: null,
+	name: 'i1',
+	branch: 'fd/a/i1',
+	issueNumber: null,
+	openComments: 0,
+	previewUrl: null,
+	commit: null,
+	contributors,
+	createdAt: null,
+	route: null,
 });
-const project = (people: Person[], contributors: Person[] = people): Project => ({ id: 'a', title: 'A', records: [], iterations: [iteration(contributors)], people });
+const project = (people: Person[], contributors: Person[] = people): Project => ({
+	id: 'a',
+	title: 'A',
+	records: [],
+	iterations: [iteration(contributors)],
+	people,
+});
 
 describe('naming people by their GitHub profile', () => {
 	it('shows a person by their profile name, whatever git called them', async () => {

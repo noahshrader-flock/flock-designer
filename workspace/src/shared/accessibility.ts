@@ -84,7 +84,8 @@ export const countsOf = (r: AccessibilityFindings): AccessibilityCounts => ({ vi
 export const foundIn = (i: AccessibilityIssue): string[] => (i.states.length > 1 || i.states[0] !== 'default' ? i.states : []);
 
 /** Where an issue is, in a few words: "2 elements", or "2 elements, in empty". */
-export const whereFound = (i: AccessibilityIssue): string => `${plural(i.nodes, 'element')}${foundIn(i).length ? `, in ${foundIn(i).join(', ')}` : ''}`;
+export const whereFound = (i: AccessibilityIssue): string =>
+	`${plural(i.nodes, 'element')}${foundIn(i).length ? `, in ${foundIn(i).join(', ')}` : ''}`;
 
 /**
  * A result in a few words, the same wherever it is shown: "3 automated issues, 2 need a person", or "No issues found by

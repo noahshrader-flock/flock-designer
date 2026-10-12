@@ -54,7 +54,9 @@ describe('numbering', () => {
 	it('keeps resolved comments as history, plainly marked, after the open ones', () => {
 		// So the file is the whole conversation: a designer opening it days later sees what was asked
 		// and what was settled, without it reading as work still to do.
-		const { markdown, open } = renderComments(input([comment(1, { resolved: true, body: 'Make this primary' }), comment(2, { body: 'Remove this subtext' })]));
+		const { markdown, open } = renderComments(
+			input([comment(1, { resolved: true, body: 'Make this primary' }), comment(2, { body: 'Remove this subtext' })]),
+		);
 		expect(open).toBe(1);
 		expect(markdown).toContain('## Already resolved');
 		expect(markdown).toContain('Nothing in this section is work to do.');

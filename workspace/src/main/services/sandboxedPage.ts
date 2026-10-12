@@ -55,5 +55,7 @@ export const within = <T>(ms: number, p: Promise<T>): Promise<T | null> =>
 export const setColorScheme = async (wc: WebContents, mode: 'light' | 'dark', ms: number): Promise<boolean> => {
 	await wc.loadURL('about:blank');
 	wc.debugger.attach('1.3');
-	return (await within(ms, wc.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: mode }] }))) !== null;
+	return (
+		(await within(ms, wc.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: mode }] }))) !== null
+	);
 };

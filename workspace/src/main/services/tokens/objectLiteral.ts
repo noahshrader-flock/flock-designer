@@ -94,11 +94,18 @@ export const arrayItems = (text: string, open: number): { text: string; line: nu
 		const at = codeStart(text, from, to);
 		if (at >= to) return;
 		const end = codeEnd(text, at, to);
-		items.push({ text: text.slice(at, end).replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '').trim(), line: lineAt(text, at), span: [at, end] });
+		items.push({
+			text: text
+				.slice(at, end)
+				.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')
+				.trim(),
+			line: lineAt(text, at),
+			span: [at, end],
+		});
 	};
 	let start = open + 1;
 	let depth = 0;
-	for (let i = open + 1; i < text.length; ) {
+	for (let i = open + 1; i < text.length;) {
 		const j = skipNonCode(text, i);
 		if (j > i) {
 			i = j;
@@ -137,14 +144,28 @@ export const parseObject = (text: string, open: number): { node: Node; end: numb
 		// The key ends at the first colon of the entry's own code.
 		let i = at;
 		while (i < to && text[i] !== ':') i = Math.max(skipNonCode(text, i), i + 1);
-		const key = text.slice(at, i).trim().replace(/^['"]|['"]$/g, '');
+		const key = text
+			.slice(at, i)
+			.trim()
+			.replace(/^['"]|['"]$/g, '');
 		const valueAt = codeStart(text, i + 1, to);
 		if (text[valueAt] === '{') {
 			const { node, end } = parseObject(text, valueAt);
 			entries.push({ key, value: node, line, span: [valueAt, end] });
 			return;
 		}
-		entries.push({ key, value: { kind: 'value', text: text.slice(valueAt, to).replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '').trim() }, line, span: [valueAt, codeEnd(text, valueAt, to)] });
+		entries.push({
+			key,
+			value: {
+				kind: 'value',
+				text: text
+					.slice(valueAt, to)
+					.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')
+					.trim(),
+			},
+			line,
+			span: [valueAt, codeEnd(text, valueAt, to)],
+		});
 	};
 	let i = open + 1;
 	while (i < text.length) {

@@ -49,8 +49,17 @@ export const notClonedOver = (why: string): string => `${why} Nothing was cloned
 
 /** What git said, in words a person can act on. `repository` names what was being cloned. */
 export const cloneProblem = (repository: string, stderr: string): string => {
-	const said = stderr.trim().split('\n').filter((l) => !/^(Cloning into|remote: (Enumerating|Counting|Compressing|Total))/.test(l)).pop() ?? '';
-	if (/Authentication failed|could not read (Username|Password)|terminal prompts disabled|Repository not found|Permission denied \(publickey\)|403/i.test(stderr)) {
+	const said =
+		stderr
+			.trim()
+			.split('\n')
+			.filter((l) => !/^(Cloning into|remote: (Enumerating|Counting|Compressing|Total))/.test(l))
+			.pop() ?? '';
+	if (
+		/Authentication failed|could not read (Username|Password)|terminal prompts disabled|Repository not found|Permission denied \(publickey\)|403/i.test(
+			stderr,
+		)
+	) {
 		return `GitHub would not let git on this computer clone ${repository}: git is not signed in to GitHub, or this account cannot read it. Run \`gh auth setup-git\` in a terminal (with the GitHub CLI signed in), or sign in to git, then try again.`;
 	}
 	if (/Could not resolve host|Failed to connect|Connection (timed out|refused|reset)|Network is unreachable|unable to access/i.test(stderr)) {

@@ -27,28 +27,29 @@ export const readFolderProjects = (recordsRoot: string): Project[] => {
 		.filter((e) => e.isDirectory() && !e.name.startsWith('_') && !e.name.startsWith('.'))
 		.map((e): Project => {
 			const dir = join(recordsRoot, e.name);
-			const records = readdirSync(dir, { withFileTypes: true }).filter((f) => f.isFile()).map((f) => f.name).sort();
+			const records = readdirSync(dir, { withFileTypes: true })
+				.filter((f) => f.isFile())
+				.map((f) => f.name)
+				.sort();
 			const brief = records.includes('brief.md') ? readFileSync(join(dir, 'brief.md'), 'utf8') : null;
 			const raw = readJson(join(dir, 'iterations.json'));
 			const iterations = (Array.isArray(raw) ? raw : [])
 				.filter((it): it is Record<string, unknown> => typeof it === 'object' && it !== null)
 				.filter((it) => typeof it.branch === 'string' && typeof it.name === 'string')
-				.map(
-					(it): ProjectIteration => ({
-						name: String(it.name),
-						branch: String(it.branch),
-						issueNumber: null,
-						openComments: 0,
-						previewUrl: typeof it.previewUrl === 'string' ? it.previewUrl : null,
-repository: asGitHubRepository(it.repository),
-pullRequest: asPullRequest(it.pullRequest),
-						commit: typeof it.commit === 'string' ? it.commit : null,
-						contributors: asPeople(it.contributors),
-						createdAt: asDate(it.createdAt),
-						route: asRoute(it.route),
-						cover: asCover(it.cover),
-					}),
-				)
+				.map((it): ProjectIteration => ({
+					name: String(it.name),
+					branch: String(it.branch),
+					issueNumber: null,
+					openComments: 0,
+					previewUrl: typeof it.previewUrl === 'string' ? it.previewUrl : null,
+					repository: asGitHubRepository(it.repository),
+					pullRequest: asPullRequest(it.pullRequest),
+					commit: typeof it.commit === 'string' ? it.commit : null,
+					contributors: asPeople(it.contributors),
+					createdAt: asDate(it.createdAt),
+					route: asRoute(it.route),
+					cover: asCover(it.cover),
+				}))
 				.sort(newestFirst);
 			return {
 				id: e.name,
@@ -59,4 +60,3 @@ pullRequest: asPullRequest(it.pullRequest),
 			};
 		});
 };
-

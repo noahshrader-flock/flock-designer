@@ -30,7 +30,6 @@ import { editedFiles } from './tokenEdits';
 /** The branches DSNR saves a change to: its own, so a save can never land on anyone's work. */
 export const TOKEN_BRANCH = dsnrBranchPattern('tokens');
 
-
 /**
  * What DSNR keeps of a branch beyond what is shown: the library's commit the change is made on (`base`), and the commit
  * the branch was last saved at (`tip`), to move it only from there.
@@ -38,7 +37,13 @@ export const TOKEN_BRANCH = dsnrBranchPattern('tokens');
 type Kept = TokenBranch & { base: string; tip: string };
 
 /** A commit of `base`'s tree with `files` (path to text) as given, whose parent is `parent`; null when nothing would change. */
-export const commitFiles = async (root: string, base: string, parent: string, files: Map<string, string>, message: string): Promise<string | null> => {
+export const commitFiles = async (
+	root: string,
+	base: string,
+	parent: string,
+	files: Map<string, string>,
+	message: string,
+): Promise<string | null> => {
 	const blobs = new Map<string, string>();
 	for (const [path, text] of files) blobs.set(path, await runGit(root, ['hash-object', '-w', '--stdin'], undefined, undefined, text));
 	return commitOnto(root, base, parent, blobs, message);
@@ -46,7 +51,9 @@ export const commitFiles = async (root: string, base: string, parent: string, fi
 
 /** What a save's commit says: how many tokens it changes, and each, in the panel's words. */
 export const commitMessage = (lines: string[]): string =>
-	[`Design tokens: ${lines.length === 0 ? 'back as the library has them' : `${lines.length} changed`}`, '', ...lines, '', 'Saved from DSNR.'].join('\n');
+	[`Design tokens: ${lines.length === 0 ? 'back as the library has them' : `${lines.length} changed`}`, '', ...lines, '', 'Saved from DSNR.'].join(
+		'\n',
+	);
 
 /** What a pull request for a change says: the tokens it changes, and that it was opened from DSNR, as a draft. */
 export const proposalText = (lines: string[]): { title: string; body: string } => ({
@@ -115,9 +122,11 @@ export class TokenBranches {
 		}
 		if (commit === null) throw new Error('This change leaves the library as it is, so there is nothing to save.');
 		// From where DSNR left it, or for a new branch only if there is none of that name: never over a commit it did not make.
-		await runGit(system.root, ['update-ref', '-m', 'DSNR: save design tokens', `refs/heads/${branch}`, commit, kept?.tip ?? '']).catch((err: Error) => {
-			throw new Error(`${branch} has moved since DSNR last saved to it, so nothing was saved. ${err.message}`);
-		});
+		await runGit(system.root, ['update-ref', '-m', 'DSNR: save design tokens', `refs/heads/${branch}`, commit, kept?.tip ?? '']).catch(
+			(err: Error) => {
+				throw new Error(`${branch} has moved since DSNR last saved to it, so nothing was saved. ${err.message}`);
+			},
+		);
 		const next: Kept = { ...(kept ?? this.fresh(branch, base)), tip: commit, saved: edits, saves: (kept?.saves ?? 0) + 1 };
 		this.keep(system.id, next);
 		// Once proposed, the pull request has every save.

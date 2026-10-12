@@ -25,7 +25,11 @@ const plan = (repository: string, state: 'free' | 'cloned' = 'free'): ClonePlan 
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
 const open = async (more: Record<string, (...a: never[]) => unknown> = {}, props: Record<string, unknown> = {}) => {
-	const app = fakeApp({ listRepositories: async () => ok({ repositories: REPOS, reach: 'account' }), clonePlan: async (repository: string) => ok(plan(repository)), ...more });
+	const app = fakeApp({
+		listRepositories: async () => ok({ repositories: REPOS, reach: 'account' }),
+		clonePlan: async (repository: string) => ok(plan(repository)),
+		...more,
+	});
 	(window as unknown as { workspace: unknown }).workspace = app.api;
 	const onConnected = vi.fn();
 	current = await render(createElement(ConnectDesignSystem, { onConnected, ...props }));
@@ -101,7 +105,8 @@ describe('connecting', () => {
 	});
 
 	it('says why a repository was refused, and connects nothing', async () => {
-		const why = 'No design system was found in flocksafety/flock-coke: it has no Storybook stories, and no tokens in theme files, CSS variables or token files.';
+		const why =
+			'No design system was found in flocksafety/flock-coke: it has no Storybook stories, and no tokens in theme files, CSS variables or token files.';
 		const { onConnected } = await open({ connectDesignSystem: async () => fail(why) });
 		await pick('flocksafety/flock-coke');
 		await press(button('Connect'));

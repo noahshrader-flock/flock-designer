@@ -93,7 +93,12 @@ const meOf = async (designRoot: string, github: GitHubApi | null): Promise<Perso
 	const read = async (key: string) => (await runGit(designRoot, ['config', key]).catch(() => '')).trim();
 	const name = await read('user.name');
 	if (!name) return null;
-	const login = loginFromNoreply(await read('user.email')) ?? (await github?.api('/user').then((u) => (u as { login?: unknown }).login).catch(() => null));
+	const login =
+		loginFromNoreply(await read('user.email')) ??
+		(await github
+			?.api('/user')
+			.then((u) => (u as { login?: unknown }).login)
+			.catch(() => null));
 	return { name, login: typeof login === 'string' ? login : null };
 };
 
@@ -180,7 +185,8 @@ const savedPage = async (deps: CliDeps, values: { project?: string; name?: strin
 				: `${projectId} ${name} has no saved page in the design repository, so it is not on the site.`,
 		);
 	}
-	if (!deps.github) throw new Error(`${doing} goes through GitHub's command line, gh, which is missing or not signed in here. Run gh auth login, then try again.`);
+	if (!deps.github)
+		throw new Error(`${doing} goes through GitHub's command line, gh, which is missing or not signed in here. Run gh auth login, then try again.`);
 	return {
 		github: deps.github,
 		ref: DESIGN_REPO,
@@ -233,9 +239,9 @@ const taskText = (lead: string, task: string, save: string, publish: string): st
 		'',
 		`1. Save it, with exactly: \`${save}\``,
 		`2. Publish it, with exactly: \`${publish}\``,
-		'   It prints the page\'s link, or says why there is none.',
+		"   It prints the page's link, or says why there is none.",
 		'3. Say what you made, as the skill says. End with the page: the link exactly as the command printed it, which version',
-		'   and iteration it is (V1 · I2), and who can open it, in the command\'s words. If it printed no link, say so, and why,',
+		"   and iteration it is (V1 · I2), and who can open it, in the command's words. If it printed no link, say so, and why,",
 		'   in its words, and that the prototype is saved in DSNR. Never give a link the command did not print.',
 	].join('\n');
 
@@ -248,7 +254,12 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		const values = optionsOf(rest);
 		if (command === 'build-site') return await site(deps, values);
 		if (command === 'wcag-edition')
-			return await checkWcagEdition({ fetchText: deps.fetchText ?? (async (url) => (await fetch(url)).text()), github: deps.github, repo: DESIGN_REPO, out: deps.out });
+			return await checkWcagEdition({
+				fetchText: deps.fetchText ?? (async (url) => (await fetch(url)).text()),
+				github: deps.github,
+				repo: DESIGN_REPO,
+				out: deps.out,
+			});
 		if (command === 'publish') return await publishPage(deps, values);
 		if (command === 'unpublish') return await unpublishPage(deps, values);
 		const projectId = values.project;
@@ -271,7 +282,14 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		/** The build skill and this run: where to write, and how to check it builds. */
 		const buildTask = async (skill: string, name: string, modeledOn: string, request: string): Promise<string> => {
 			const { build, sources } = work.buildPlan(projectId, name, await work.sources(projectId, modeledOn));
-			return prototypeBuildTask({ skill, build, sources, accessibility: await work.accessibility(projectId, modeledOn), voice: await work.voice(), request });
+			return prototypeBuildTask({
+				skill,
+				build,
+				sources,
+				accessibility: await work.accessibility(projectId, modeledOn),
+				voice: await work.voice(),
+				request,
+			});
 		};
 
 		if (command === 'save-prototype') {
@@ -281,7 +299,12 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			if (change === null) {
 				await work.save(projectId, name);
 			} else {
-				const { version } = await work.finishChange(projectId, change, await meOf(designRoot, deps.github), `A change to ${iterationLabel(change.from)}`);
+				const { version } = await work.finishChange(
+					projectId,
+					change,
+					await meOf(designRoot, deps.github),
+					`A change to ${iterationLabel(change.from)}`,
+				);
 				if (version === null) {
 					deps.out(`Nothing in ${name} changed from ${change.from.name}, so nothing was made or saved.`);
 					return 0;
@@ -294,7 +317,10 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		}
 
 		const note = values['note-file'] ? readFileSync(resolve(deps.cwd, values['note-file']), 'utf8') : values.note;
-		if (!note?.trim()) throw new UsageError(command === 'change-prototype' ? 'Say what to change, with --note or --note-file.' : 'Say what to make, with --note or --note-file.');
+		if (!note?.trim())
+			throw new UsageError(
+				command === 'change-prototype' ? 'Say what to change, with --note or --note-file.' : 'Say what to make, with --note or --note-file.',
+			);
 		// Read before anything is recorded: only an out-of-date design repository lacks it.
 		const skill = await work.skill(BUILD_SKILL);
 
@@ -312,7 +338,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			const text = await buildTask(skill, change.target, change.from.name, note);
 			const where = whereTheChangeGoes(change, name) ?? `The change is made in ${change.target}: change it, rather than starting again.`;
 			const unsaved = change.fresh ? ` ${change.target} is recorded when it is saved.` : '';
-			const signIn = change.unread ? ' (GitHub\'s command line, gh, is missing or not signed in.)' : '';
+			const signIn = change.unread ? " (GitHub's command line, gh, is missing or not signed in.)" : '';
 			// What people have said about it so far, for the agent to read before it changes anything, and to tell the person.
 			const open = openComments(read.comments ?? []);
 			let said = '';
@@ -338,7 +364,14 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 
 		const iteration = await work.start(root, { projectId, title, note, branch, me: await meOf(designRoot, deps.github) });
 		const text = await buildTask(skill, iteration.name, iteration.name, note);
-		deps.out(taskText(`Recorded ${projectId} ${iteration.name}, modeled on ${branch}. Your task follows.`, text, saveCommand(iteration.name), publishCommand(iteration.name)));
+		deps.out(
+			taskText(
+				`Recorded ${projectId} ${iteration.name}, modeled on ${branch}. Your task follows.`,
+				text,
+				saveCommand(iteration.name),
+				publishCommand(iteration.name),
+			),
+		);
 		return 0;
 	} catch (err) {
 		deps.err(err instanceof UsageError ? `${err.message}\n\n${USAGE}` : `dsnr: ${err instanceof Error ? err.message : String(err)}`);

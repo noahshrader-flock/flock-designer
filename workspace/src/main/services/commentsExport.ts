@@ -99,7 +99,15 @@ export const renderComments = ({ projectId, title, iteration, comments, generate
 	// Listed after the open ones, plainly marked, so nothing here reads as work to do.
 	const done = resolvedComments(comments).sort((a, b) => (numbers.get(a.id) ?? 0) - (numbers.get(b.id) ?? 0));
 	if (done.length > 0) {
-		lines.push('', '---', '', '## Already resolved', '', '**Nothing in this section is work to do.** It is what has been dealt with, kept so the history is in one place.', '');
+		lines.push(
+			'',
+			'---',
+			'',
+			'## Already resolved',
+			'',
+			'**Nothing in this section is work to do.** It is what has been dealt with, kept so the history is in one place.',
+			'',
+		);
 		for (const c of done) {
 			lines.push(`- **Comment ${numbers.get(c.id) ?? 0}** · ${oneLine(c.author)}, ${c.createdAt}: ${oneLine(c.body || '(no text)')}`);
 		}

@@ -35,7 +35,8 @@ export const pixelsOf = (value: string): number | null => {
 export const nameOf = (t: DesignToken): string => `${t.set} ${t.name}`;
 
 /** A token named with where it is shown: `Light primary main`, `Tones pineGreen 50`, `Radius base` (not `Radius radius base`). */
-export const labelOf = (t: DesignToken): string => (t.set.toLowerCase() === t.group.toLowerCase() ? `${t.group} ${t.name}` : `${t.group} ${nameOf(t)}`);
+export const labelOf = (t: DesignToken): string =>
+	t.set.toLowerCase() === t.group.toLowerCase() ? `${t.group} ${t.name}` : `${t.group} ${nameOf(t)}`;
 
 /** What a token reads as, in a word: the token it points at (`pineGreen 40`), or its value (`12px`). */
 export const readsAs = (t: DesignToken, byPath: Map<string, DesignToken>): string => {
@@ -68,7 +69,8 @@ export const sameChange = (a: TokenEdit[], b: TokenEdit[]): boolean => {
 };
 
 /** Whether `value` is one a token of this kind can be given. */
-export const fitsKind = (kind: DesignToken['kind'], value: string): boolean => (kind === 'color' ? HEX_COLOR.test(value) : kind === 'dimension' ? DIMENSION.test(value) : false);
+export const fitsKind = (kind: DesignToken['kind'], value: string): boolean =>
+	kind === 'color' ? HEX_COLOR.test(value) : kind === 'dimension' ? DIMENSION.test(value) : false;
 
 /**
  * Where a token is written. Two tokens can be written in one place: a palette both modes spread in (FUI's shared roles)
@@ -77,7 +79,8 @@ export const fitsKind = (kind: DesignToken['kind'], value: string): boolean => (
 export const placeOf = (t: DesignToken): string => `${t.source.file}:${t.source.line}:${t.set}.${t.name}`;
 
 /** The other tokens written where `token` is: what a change to it also changes. */
-export const writtenWith = (tokens: DesignToken[], token: DesignToken): DesignToken[] => tokens.filter((t) => t !== token && placeOf(t) === placeOf(token));
+export const writtenWith = (tokens: DesignToken[], token: DesignToken): DesignToken[] =>
+	tokens.filter((t) => t !== token && placeOf(t) === placeOf(token));
 
 /**
  * The tokens as they read with `edits` made: each one edited (and any written in the same place), and every one that

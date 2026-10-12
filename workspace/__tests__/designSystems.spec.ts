@@ -83,7 +83,10 @@ describe('one package of a repository', () => {
 
 describe('what a design system is called', () => {
 	it('is its Storybook’s brand title, its package’s name, or the repository’s, in that order', async () => {
-		const withBrand = { '.storybook/theme.ts': "create({ brandTitle: 'Flock React Component Lib' })", 'package.json': '{ "name": "@flocksafety/flock-react-component-lib" }' };
+		const withBrand = {
+			'.storybook/theme.ts': "create({ brandTitle: 'Flock React Component Lib' })",
+			'package.json': '{ "name": "@flocksafety/flock-react-component-lib" }',
+		};
 		expect(await nameOf(reads(withBrand), Object.keys(withBrand), 'flocksafety/flock-react-component-lib', '')).toBe('Flock React Component Lib');
 		expect(await nameOf(reads({ 'package.json': '{ "name": "@acme/ui" }' }), ['package.json'], 'acme/ui-kit', '')).toBe('ui');
 		expect(await nameOf(reads({}), [], 'acme/ui-kit', '')).toBe('ui-kit');
@@ -134,7 +137,14 @@ describe('the branch read', () => {
 describe('the ones connected', () => {
 	let dir: string;
 	let file: string;
-	const system = (repository: string, folder = ''): ConnectedDesignSystem => ({ id: designSystemId(repository, folder), name: repository, repository, root: join(dir, repository), folder, branch: 'main' });
+	const system = (repository: string, folder = ''): ConnectedDesignSystem => ({
+		id: designSystemId(repository, folder),
+		name: repository,
+		repository,
+		root: join(dir, repository),
+		folder,
+		branch: 'main',
+	});
 	beforeEach(() => {
 		dir = mkdtempSync(join(tmpdir(), 'dsnr-systems-'));
 		file = join(dir, 'design-system.json');
@@ -171,7 +181,16 @@ describe('the ones connected', () => {
 		execFileSync('git', ['-C', clone, 'remote', 'add', 'origin', 'git@github.com:flocksafety/flock-react-component-lib.git']);
 		writeFileSync(file, JSON.stringify({ folder: clone }));
 		expect(new DesignSystemsMemory(file).read()).toEqual({
-			systems: [{ id: 'flocksafety/flock-react-component-lib', name: 'flock-react-component-lib', repository: 'flocksafety/flock-react-component-lib', root: clone, folder: '', branch: 'develop' }],
+			systems: [
+				{
+					id: 'flocksafety/flock-react-component-lib',
+					name: 'flock-react-component-lib',
+					repository: 'flocksafety/flock-react-component-lib',
+					root: clone,
+					folder: '',
+					branch: 'develop',
+				},
+			],
 			current: 'flocksafety/flock-react-component-lib',
 		});
 	});

@@ -15,7 +15,9 @@ const capture = (width: number, height: number, boxes: { x: number; y: number; w
 	}
 	return { data, width, height };
 };
-const pixel = ({ data, width }: { data: Buffer; width: number }, x: number, y: number) => [...data.subarray((y * width + x) * 4, (y * width + x) * 4 + 4)];
+const pixel = ({ data, width }: { data: Buffer; width: number }, x: number, y: number) => [
+	...data.subarray((y * width + x) * 4, (y * width + x) * 4 + 4),
+];
 /** Where, in the picture, the paint is: its left, top, right and bottom edges. */
 const paintedEdges = (picture: { data: Buffer; width: number; height: number }) => {
 	let [l, t, r, b] = [picture.width, picture.height, -1, -1];

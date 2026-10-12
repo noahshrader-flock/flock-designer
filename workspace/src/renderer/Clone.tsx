@@ -91,7 +91,12 @@ export const CloneHere = ({ clone, onClone, action }: { clone: CloneState; onClo
 					</>
 				)}
 				{' · '}
-				<button type="button" className="text-primary underline underline-offset-4" onClick={() => void clone.changeFolder()} disabled={cloning !== null}>
+				<button
+					type="button"
+					className="text-primary underline underline-offset-4"
+					onClick={() => void clone.changeFolder()}
+					disabled={cloning !== null}
+				>
 					Change
 				</button>
 			</p>

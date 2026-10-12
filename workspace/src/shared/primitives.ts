@@ -41,7 +41,12 @@ export const MOTION_PARTS = { duration: 'Duration', easing: 'Easing' } as const;
 /** The group every shadow is in: elevation has no parts, so its readers share this one name. */
 export const SHADOWS = 'Shadows';
 /** Each part by the key MUI's theme and the design token standard both write it under. */
-export const TYPE_KEYS: Record<string, string> = { fontFamily: TYPE_PARTS.family, fontSize: TYPE_PARTS.size, fontWeight: TYPE_PARTS.weight, lineHeight: TYPE_PARTS.lineHeight };
+export const TYPE_KEYS: Record<string, string> = {
+	fontFamily: TYPE_PARTS.family,
+	fontSize: TYPE_PARTS.size,
+	fontWeight: TYPE_PARTS.weight,
+	lineHeight: TYPE_PARTS.lineHeight,
+};
 
 /** In the order they are shown, which is also the order a token is matched in: the first that fits is the one. */
 export const PRIMITIVES: readonly Primitive[] = [

@@ -22,7 +22,12 @@ const show = async (open: string[]) => {
 			Accordion,
 			{ type: 'multiple', defaultValue: open },
 			...['a', 'b', 'c'].map((v) =>
-				createElement(AccordionItem, { key: v, value: v }, createElement(AccordionTrigger, null, `Group ${v}`), createElement(AccordionContent, null, createElement('p', null, `What is in ${v}`))),
+				createElement(
+					AccordionItem,
+					{ key: v, value: v },
+					createElement(AccordionTrigger, null, `Group ${v}`),
+					createElement(AccordionContent, null, createElement('p', null, `What is in ${v}`)),
+				),
 			),
 		),
 	);

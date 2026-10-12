@@ -153,7 +153,9 @@ const Reach = ({ token }: { token: DesignToken }) => {
 	if (!pointedInto && also.length === 0) return null;
 	return (
 		<div data-reach className="text-muted-foreground flex flex-col gap-1 text-xs">
-			{pointedInto && <p title={users.map(labelOf).join('\n')}>{users.length > 0 ? `Used by ${plural(users.length, 'role')}` : 'Not used by any role'}</p>}
+			{pointedInto && (
+				<p title={users.map(labelOf).join('\n')}>{users.length > 0 ? `Used by ${plural(users.length, 'role')}` : 'Not used by any role'}</p>
+			)}
 			{also.length > 0 && <p>Also changes {also.map(labelOf).join(', ')}: written in one place.</p>}
 		</div>
 	);

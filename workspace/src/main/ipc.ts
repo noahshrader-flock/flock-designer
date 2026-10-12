@@ -37,7 +37,15 @@ import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
 import { DESCRIPTOR_PATH, designSystemCheckout, findCommand, readDescriptor } from './services/descriptor';
 import { branchCommit, branchExists, branchesWithFile, ensureLocalBranch, isRepository, readCheckout, recentBranches, runGit } from './services/git';
-import { assertUsableProjectId, codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
+import {
+	assertUsableProjectId,
+	codebaseBranchFor,
+	continueIteration,
+	createIteration,
+	readIterations,
+	recordPreview,
+	recordedIteration,
+} from './services/iterations';
 import { type Cloned, Cloner, type GitProgress, notClonedOver } from './services/clone';
 import { INSTALL_COMMAND, Installer } from './services/install';
 import { DesignLibrary } from './services/designLibrary';
@@ -386,8 +394,12 @@ export const registerIpc = ({
 	const previews = new StoryPreviews({ system: shownSystem, folder: storyPreviewsRoot, server: prototypeServer });
 	// Which tokens each component draws with (T6), and its picture (P5), from one drawing pass.
 	const componentPictures = new ComponentPictures({ folder: componentPicturesRoot, server: prototypeServer, recipe: componentPictureRecipe });
-	const componentTokens = injectedComponentTokens ?? new ComponentTokens({ system: shownSystem, previews, measure: measureStories, pictures: componentPictures });
-	ipcMain.handle(CHANNELS.componentPictures, guard(() => componentTokens.pictures()));
+	const componentTokens =
+		injectedComponentTokens ?? new ComponentTokens({ system: shownSystem, previews, measure: measureStories, pictures: componentPictures });
+	ipcMain.handle(
+		CHANNELS.componentPictures,
+		guard(() => componentTokens.pictures()),
+	);
 	// The previews and the index are got ready in the background, so a component opened later is drawn at once: as the app
 	// opens, and whenever the library has been read (it may have moved). For a commit already ready it is nothing.
 	const warm = () => void componentTokens.warm();
@@ -401,7 +413,10 @@ export const registerIpc = ({
 		}),
 	);
 	// A change is only ever a list of token edits, checked here and again before anything is written (T3, T4).
-	ipcMain.handle(CHANNELS.storyPreview, guard((edits: unknown) => previews.preview(tokenEditsOf(edits))));
+	ipcMain.handle(
+		CHANNELS.storyPreview,
+		guard((edits: unknown) => previews.preview(tokenEditsOf(edits))),
+	);
 	// The window names a story file, and only a story file of the library is answered.
 	ipcMain.handle(
 		CHANNELS.componentTokens,
@@ -411,10 +426,22 @@ export const registerIpc = ({
 		}),
 	);
 	const tokenBranches = new TokenBranches({ system: shownSystem, file: tokenBranchesFile, tools: tokenBranchTools });
-	ipcMain.handle(CHANNELS.tokenBranch, guard(() => tokenBranches.current()));
-	ipcMain.handle(CHANNELS.saveTokens, guard((edits: unknown) => tokenBranches.save(tokenEditsOf(edits))));
-	ipcMain.handle(CHANNELS.proposeTokens, guard(() => tokenBranches.propose()));
-	ipcMain.handle(CHANNELS.forgetTokenBranch, guard(() => (tokenBranches.forget(), null)));
+	ipcMain.handle(
+		CHANNELS.tokenBranch,
+		guard(() => tokenBranches.current()),
+	);
+	ipcMain.handle(
+		CHANNELS.saveTokens,
+		guard((edits: unknown) => tokenBranches.save(tokenEditsOf(edits))),
+	);
+	ipcMain.handle(
+		CHANNELS.proposeTokens,
+		guard(() => tokenBranches.propose()),
+	);
+	ipcMain.handle(
+		CHANNELS.forgetTokenBranch,
+		guard(() => (tokenBranches.forget(), null)),
+	);
 	// The voice and tone (T9): the connected design system's, read, saved and proposed with the person's own command line.
 	const voiceFile = (): VoiceAndToneFile => {
 		const system = shownSystem();
@@ -425,20 +452,36 @@ export const registerIpc = ({
 	};
 	// The longest a save takes: far beyond any real voice and tone, short of anything that could hurt.
 	const MAX_VOICE = 200_000;
-	ipcMain.handle(CHANNELS.voiceAndTone, guard(() => voiceFile().current()));
+	ipcMain.handle(
+		CHANNELS.voiceAndTone,
+		guard(() => voiceFile().current()),
+	);
 	ipcMain.handle(
 		CHANNELS.saveVoiceAndTone,
 		guard((text: unknown, against: unknown) => {
 			if (typeof text !== 'string' || text.length > MAX_VOICE) throw new Error('The voice and tone is saved as text, up to 200,000 characters.');
 			// A blob's sha: 40 hex, or 64 in a repository on SHA-256.
-			if (against !== null && (typeof against !== 'string' || !/^([0-9a-f]{40}|[0-9a-f]{64})$/.test(against))) throw new Error('A save is made against the file’s sha.');
+			if (against !== null && (typeof against !== 'string' || !/^([0-9a-f]{40}|[0-9a-f]{64})$/.test(against)))
+				throw new Error('A save is made against the file’s sha.');
 			return voiceFile().save(text, against);
 		}),
 	);
-	ipcMain.handle(CHANNELS.proposeVoiceAndTone, guard(() => voiceFile().propose()));
-	ipcMain.handle(CHANNELS.forgetVoiceBranch, guard(() => (voiceFile().forget(), null)));
-	ipcMain.handle(CHANNELS.designSystems, guard(() => designSystems.read()));
-	ipcMain.handle(CHANNELS.selectDesignSystem, guard((id: string) => (designSystems.select(String(id)), null)));
+	ipcMain.handle(
+		CHANNELS.proposeVoiceAndTone,
+		guard(() => voiceFile().propose()),
+	);
+	ipcMain.handle(
+		CHANNELS.forgetVoiceBranch,
+		guard(() => (voiceFile().forget(), null)),
+	);
+	ipcMain.handle(
+		CHANNELS.designSystems,
+		guard(() => designSystems.read()),
+	);
+	ipcMain.handle(
+		CHANNELS.selectDesignSystem,
+		guard((id: string) => (designSystems.select(String(id)), null)),
+	);
 	// Removed with everything the app keeps of it: its pictures too (P5).
 	ipcMain.handle(
 		CHANNELS.removeDesignSystem,
@@ -473,9 +516,11 @@ export const registerIpc = ({
 	const DESIGN = `${DESIGN_REPO.owner}/${DESIGN_REPO.repo}`;
 	/** What cloning `repository` into `folder` would do. */
 	const planClone = async (repository: string, folder: string, forDesignSystem = false): Promise<ClonePlan> => {
-		if (visible.length === 0 && github.state().state === 'signedIn') visible = (await reachableRepositories(github, personGitHub, signedInLogin())).names;
+		if (visible.length === 0 && github.state().state === 'signedIn')
+			visible = (await reachableRepositories(github, personGitHub, signedInLogin())).names;
 		const listed = listedAs(visible, repository);
-		if (listed === undefined) throw new Error(`${repository} is not one of the repositories your GitHub account can see. Sign in to GitHub in DSNR, then try again.`);
+		if (listed === undefined)
+			throw new Error(`${repository} is not one of the repositories your GitHub account can see. Sign in to GitHub in DSNR, then try again.`);
 		const design = clonePlace(folder, DESIGN);
 		const place = clonePlace(folder, listed);
 		const home = homedir();
@@ -483,7 +528,10 @@ export const registerIpc = ({
 		// The design system is read, not worked in, so it needs no design repository beside it.
 		return { repository: listed, place, where, design: design.state === 'cloned' || forDesignSystem ? null : design };
 	};
-	ipcMain.handle(CHANNELS.clonePlan, guard((repository: string, forDesignSystem: unknown) => planClone(repository, cloneFolder(), forDesignSystem === true)));
+	ipcMain.handle(
+		CHANNELS.clonePlan,
+		guard((repository: string, forDesignSystem: unknown) => planClone(repository, cloneFolder(), forDesignSystem === true)),
+	);
 	/**
 	 * Clones what `planClone` says, with its progress sent to the window and `cancelClone` able to stop it: the repository,
 	 * and the design repository beside it when the plan has one. Where it went, and whether it was cloned or already there.
@@ -557,7 +605,10 @@ export const registerIpc = ({
 				return { root, repo: origin === null ? null : gitHubRepoOf(origin) };
 			});
 			// Signed out, or GitHub out of reach: what is on this machine can still be started in.
-			const remote = github.state().state === 'signedIn' ? await reachableRepositories(github, personGitHub, signedInLogin()) : { names: [], reach: 'none' as const };
+			const remote =
+				github.state().state === 'signedIn'
+					? await reachableRepositories(github, personGitHub, signedInLogin())
+					: { names: [], reach: 'none' as const };
 			if (remote.names.length > 0) visible = remote.names;
 			return { repositories: mergeRepositories(remote.names, clones), reach: remote.reach };
 		}),
@@ -574,7 +625,10 @@ export const registerIpc = ({
 
 	// Re-reads a checkout the person already opened; it trusts and remembers nothing, so the window naming a folder
 	// is never enough to make it trusted (only the picker, a repository discovery found, the last one, and a clone are).
-	ipcMain.handle(CHANNELS.readCheckout, guard((root: string) => readCheckout(opened.require(root))));
+	ipcMain.handle(
+		CHANNELS.readCheckout,
+		guard((root: string) => readCheckout(opened.require(root))),
+	);
 
 	ipcMain.handle(
 		CHANNELS.readContextReceipt,
@@ -583,15 +637,15 @@ export const registerIpc = ({
 
 	ipcMain.handle(
 		CHANNELS.listIterations,
-		guard((root: string, projectId: string) =>
-			readIterations(recordsFor(opened.require(root)), projectId),
-		),
+		guard((root: string, projectId: string) => readIterations(recordsFor(opened.require(root)), projectId)),
 	);
 
 	/** Switching branches under a running agent changes the files it is working on mid-run. */
 	const assertAgentNotHere = (canonical: string): void => {
 		if (agent.runningIn(canonical)) {
-			throw new Error(`The agent is working in ${basename(canonical)}, and this would change its branch. Wait for it to finish, or take it over, then try again.`);
+			throw new Error(
+				`The agent is working in ${basename(canonical)}, and this would change its branch. Wait for it to finish, or take it over, then try again.`,
+			);
 		}
 	};
 
@@ -613,7 +667,12 @@ export const registerIpc = ({
 		// Work is built where the product's DSNR setup is. A branch without it (develop, before the
 		// setup is merged there) would leave the checkout on a branch this app can no longer work in.
 		const setup = `${descriptor.contextDir}/workspace.json`;
-		if (!(await runGit(canonical, ['cat-file', '-e', `refs/heads/${branch}:${setup}`]).then(() => true, () => false))) {
+		if (
+			!(await runGit(canonical, ['cat-file', '-e', `refs/heads/${branch}:${setup}`]).then(
+				() => true,
+				() => false,
+			))
+		) {
 			throw new Error(`${branch} has no ${setup}, so work cannot start from it. Start from a branch that has the DSNR setup.`);
 		}
 		const recordsRoot = recordsFor(canonical);
@@ -644,7 +703,14 @@ export const registerIpc = ({
 		await ensureLocalBranch(canonical, branch);
 		if ((await readCheckout(canonical)).branch === branch) return;
 		const me = github.state();
-		await continueIteration(canonical, recordsFor(canonical), projectId, 'codebase', me.state === 'signedIn' ? me.user.login : null, descriptorFor(root));
+		await continueIteration(
+			canonical,
+			recordsFor(canonical),
+			projectId,
+			'codebase',
+			me.state === 'signedIn' ? me.user.login : null,
+			descriptorFor(root),
+		);
 	}
 
 	ipcMain.handle(
@@ -665,9 +731,7 @@ export const registerIpc = ({
 
 	ipcMain.handle(
 		CHANNELS.startCommand,
-		guard((root: string, commandId: string, projectId?: string) =>
-			runtime.start(opened.require(root), descriptorFor(root), commandId, projectId),
-		),
+		guard((root: string, commandId: string, projectId?: string) => runtime.start(opened.require(root), descriptorFor(root), commandId, projectId)),
 	);
 
 	ipcMain.handle(
@@ -822,9 +886,18 @@ export const registerIpc = ({
 		}),
 	);
 
-	ipcMain.handle(CHANNELS.agentStatus, guard(() => agent.status()));
-	ipcMain.handle(CHANNELS.agentRecent, guard(() => agent.recentLines()));
-	ipcMain.handle(CHANNELS.agentReadiness, guard(() => agentReadiness()));
+	ipcMain.handle(
+		CHANNELS.agentStatus,
+		guard(() => agent.status()),
+	);
+	ipcMain.handle(
+		CHANNELS.agentRecent,
+		guard(() => agent.recentLines()),
+	);
+	ipcMain.handle(
+		CHANNELS.agentReadiness,
+		guard(() => agentReadiness()),
+	);
 
 	// One click: read the comments now, write the file from that read, then start the agent. Nothing
 	// a reviewer wrote is put in the task; it reaches the agent only through the file.
@@ -892,10 +965,16 @@ export const registerIpc = ({
 			});
 		}),
 	);
-	ipcMain.handle(CHANNELS.shareStatus, guard(() => share.status()));
+	ipcMain.handle(
+		CHANNELS.shareStatus,
+		guard(() => share.status()),
+	);
 
 	// Publishing happens by itself; these only report it, and let a person ask for it now.
-	ipcMain.handle(CHANNELS.publishStatus, guard(() => publisher.status()));
+	ipcMain.handle(
+		CHANNELS.publishStatus,
+		guard(() => publisher.status()),
+	);
 	ipcMain.handle(
 		CHANNELS.publishNow,
 		guard(async () => {
@@ -919,7 +998,10 @@ export const registerIpc = ({
 
 	// Sign-in. No handler returns a token: the renderer only ever learns whether
 	// someone is signed in, and who.
-	ipcMain.handle(CHANNELS.signInStart, guard(() => github.startSignIn()));
+	ipcMain.handle(
+		CHANNELS.signInStart,
+		guard(() => github.startSignIn()),
+	);
 	ipcMain.handle(
 		CHANNELS.signInCancel,
 		guard(() => {
@@ -927,7 +1009,10 @@ export const registerIpc = ({
 			return null;
 		}),
 	);
-	ipcMain.handle(CHANNELS.signInState, guard(() => github.state()));
+	ipcMain.handle(
+		CHANNELS.signInState,
+		guard(() => github.state()),
+	);
 	ipcMain.handle(
 		CHANNELS.signOut,
 		guard(() => {
@@ -960,12 +1045,7 @@ export const registerIpc = ({
 				// first, and it is what vouches for a `feature/<id>` branch (see readBranchProjects).
 				const folders = recordsRoot ? readFolderProjects(recordsRoot) : [];
 				// The branches are the evidence: work made without the app still shows.
-				const branches = await readBranchProjects(
-					root,
-					readDescriptor(root),
-					login,
-					new Set(folders.map((p) => p.id)),
-				).catch(() => []);
+				const branches = await readBranchProjects(root, readDescriptor(root), login, new Set(folders.map((p) => p.id))).catch(() => []);
 				// A folder with nothing built yet is a notes folder, not work in progress.
 				local = unionLocal(folders, branches).filter((p) => p.iterations.length > 0);
 				const origin = originOf(root);
@@ -983,10 +1063,15 @@ export const registerIpc = ({
 			void publisher.publish();
 			const merged = mergeProjects(remote, local);
 			// Work on this checkout's codebase branch for a project is in this checkout's repository.
-			const located = here === null ? merged : merged.map((p) => ({
-				...p,
-				iterations: p.iterations.map((it) => (workKind(it) === 'codebase' && !it.repository && it.branch === here.branchOf(p.id) ? { ...it, repository: here.repository } : it)),
-			}));
+			const located =
+				here === null
+					? merged
+					: merged.map((p) => ({
+							...p,
+							iterations: p.iterations.map((it) =>
+								workKind(it) === 'codebase' && !it.repository && it.branch === here.branchOf(p.id) ? { ...it, repository: here.repository } : it,
+							),
+						}));
 			return profiles.nameEveryone(located);
 		}),
 	);
@@ -1002,8 +1087,7 @@ export const registerIpc = ({
 			if (recordsRoot === null) return;
 			// The record's name for it, or the one the branch's own name gives it (work with no record yet).
 			const name =
-				readIterations(recordsRoot, projectId).find((i) => i.branch === branch)?.name ??
-				classify(readDescriptor(root as string), branch)?.name;
+				readIterations(recordsRoot, projectId).find((i) => i.branch === branch)?.name ?? classify(readDescriptor(root as string), branch)?.name;
 			if (!name) return;
 			writeCommentsExport(recordsRoot, {
 				projectId,
@@ -1045,8 +1129,10 @@ export const registerIpc = ({
 	 */
 	const fromDesignRepo = async <T>(here: T | null, there: () => Promise<T | null>): Promise<T | null> =>
 		here !== null || designClone() === null ? here : there();
-	const readDesignFile = async (path: string): Promise<string | null> => fromDesignRepo(await recordStore().read(path), () => designRepo.readFile(path));
-	const readDesignBytes = async (path: string): Promise<Buffer | null> => fromDesignRepo(await recordStore().readBytes(path), () => designRepo.readBytes(path));
+	const readDesignFile = async (path: string): Promise<string | null> =>
+		fromDesignRepo(await recordStore().read(path), () => designRepo.readFile(path));
+	const readDesignBytes = async (path: string): Promise<Buffer | null> =>
+		fromDesignRepo(await recordStore().readBytes(path), () => designRepo.readBytes(path));
 	/** A shared skill, which the agent's task is built from: read as the dsnr command reads it. */
 	const readSkillText = (path: string): Promise<string> => work.skill(path);
 	/**
@@ -1129,7 +1215,10 @@ export const registerIpc = ({
 		return s.state === 'signedIn' ? { name: s.user.name ?? s.user.login, login: s.user.login } : null;
 	};
 
-	ipcMain.handle(CHANNELS.prototypeReadiness, guard((root: string) => prototypeReadiness(root)));
+	ipcMain.handle(
+		CHANNELS.prototypeReadiness,
+		guard((root: string) => prototypeReadiness(root)),
+	);
 
 	ipcMain.handle(
 		CHANNELS.createPrototype,
@@ -1175,7 +1264,12 @@ export const registerIpc = ({
 			const { build, sources } = await prototypeRun(projectId, name);
 			const accessibility = await work.accessibility(projectId, name);
 			const voice = await work.voice();
-			return startPrototypeAgent(projectId, name, sources, prototypeBuildTask({ skill, build, sources, accessibility, voice, request: String(request) }));
+			return startPrototypeAgent(
+				projectId,
+				name,
+				sources,
+				prototypeBuildTask({ skill, build, sources, accessibility, voice, request: String(request) }),
+			);
 		}),
 	);
 
@@ -1314,10 +1408,16 @@ export const registerIpc = ({
 		publishing.set(key, run);
 	};
 	const publishInBackground = (projectId: string, name: string): void =>
-		inBackground(prototypeKey(projectId, name), async () => publish({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())), projectId, name }));
+		inBackground(prototypeKey(projectId, name), async () =>
+			publish({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())), projectId, name }),
+		);
 	/** The site, when what it is built from changed and no page did: it has no page of its own to key on. */
-	const redeployInBackground = (): void => inBackground('the site', async () => redeploySite({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())) }));
-	ipcMain.handle(CHANNELS.publishedPage, guard((projectId: string, name: string) => publishedPage(projectId, name)));
+	const redeployInBackground = (): void =>
+		inBackground('the site', async () => redeploySite({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())) }));
+	ipcMain.handle(
+		CHANNELS.publishedPage,
+		guard((projectId: string, name: string) => publishedPage(projectId, name)),
+	);
 	ipcMain.handle(
 		CHANNELS.openPublishedPage,
 		guard(async (projectId: string, name: string): Promise<null> => {
@@ -1361,7 +1461,8 @@ export const registerIpc = ({
 			// now: what this machine shows is what reviewers get, and no finished page is stranded on one machine.
 			const local = work.file(projectId, name);
 			const path = prototypePagePath(projectId, name);
-			if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html) await work.keep(projectId, name, html);
+			if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html)
+				await work.keep(projectId, name, html);
 			return { url: await servePrototype(projectId, name, html), states: statesOf(html) };
 		}),
 	);
@@ -1430,7 +1531,12 @@ export const registerIpc = ({
 			const { build, sources } = await prototypeRun(projectId, name);
 			const accessibility = await work.accessibility(projectId, name);
 			const voice = await work.voice();
-			return startPrototypeAgent(projectId, name, sources, prototypeBuildTask({ skill, build, sources, accessibility, voice, request: fixRequest(result) }));
+			return startPrototypeAgent(
+				projectId,
+				name,
+				sources,
+				prototypeBuildTask({ skill, build, sources, accessibility, voice, request: fixRequest(result) }),
+			);
 		}),
 	);
 
@@ -1568,7 +1674,8 @@ export const registerIpc = ({
 			const root = trustedRoot();
 			const recordsRoot = root === null ? null : recordsRootFor(root);
 			const path = recordsRoot === null ? null : resolveInside(recordsRoot, join(projectId, name));
-			const text = path !== null && existsSync(path) && statSync(path).isFile() ? readFileSync(path, 'utf8') : await designRepo.readRecord(projectId, name);
+			const text =
+				path !== null && existsSync(path) && statSync(path).isFile() ? readFileSync(path, 'utf8') : await designRepo.readRecord(projectId, name);
 			// The brief without its front matter (its folder), which is the app's and not the person's to read.
 			return shownRecord(name, text).slice(0, MAX_RECORD);
 		}),
@@ -1583,9 +1690,8 @@ export const registerIpc = ({
 	);
 	ipcMain.handle(
 		CHANNELS.postComment,
-		guard(
-			(projectId: string, branch: string, body: string, anchor: unknown, picture?: unknown): Promise<ReviewComment> =>
-				designRepo.postComment(projectId, branch, body, sanitizeAnchor(anchor), sanitizePicture(picture)),
+		guard((projectId: string, branch: string, body: string, anchor: unknown, picture?: unknown): Promise<ReviewComment> =>
+			designRepo.postComment(projectId, branch, body, sanitizeAnchor(anchor), sanitizePicture(picture)),
 		),
 	);
 
@@ -1593,8 +1699,14 @@ export const registerIpc = ({
 	// than the main process, and the preview less than the window.
 	const nothing = (_done?: unknown): null => null;
 	// A prototype is one page: the app's own server says which addresses are its, never the window.
-	ipcMain.handle(CHANNELS.pageOpen, guard(async (url: string) => nothing(await page.open(String(url), { singlePage: prototypeServer.owns(String(url)) }))));
-	ipcMain.handle(CHANNELS.pageClose, guard(() => nothing(page.close())));
+	ipcMain.handle(
+		CHANNELS.pageOpen,
+		guard(async (url: string) => nothing(await page.open(String(url), { singlePage: prototypeServer.owns(String(url)) }))),
+	);
+	ipcMain.handle(
+		CHANNELS.pageClose,
+		guard(() => nothing(page.close())),
+	);
 	// The page the preview is on, in the person's own browser. The address comes from the preview itself, never
 	// from the window, and goes through the same check as opening one: this app's own web addresses only.
 	ipcMain.handle(
@@ -1610,7 +1722,10 @@ export const registerIpc = ({
 		CHANNELS.pageSetBounds,
 		guard((b: PageBounds) => nothing(page.setBounds({ x: Number(b?.x), y: Number(b?.y), width: Number(b?.width), height: Number(b?.height) }))),
 	);
-	ipcMain.handle(CHANNELS.pageSnapshot, guard(() => page.snapshot()));
+	ipcMain.handle(
+		CHANNELS.pageSnapshot,
+		guard(() => page.snapshot()),
+	);
 	ipcMain.handle(
 		CHANNELS.pageHold,
 		guard((reason: string, held: boolean) => {
@@ -1618,8 +1733,14 @@ export const registerIpc = ({
 			return nothing(page.hold(reason as PageHoldReason, held === true));
 		}),
 	);
-	ipcMain.handle(CHANNELS.pagePick, guard(() => page.pick()));
-	ipcMain.handle(CHANNELS.pageCancelPick, guard(async () => nothing(await page.cancelPick())));
+	ipcMain.handle(
+		CHANNELS.pagePick,
+		guard(() => page.pick()),
+	);
+	ipcMain.handle(
+		CHANNELS.pageCancelPick,
+		guard(async () => nothing(await page.cancelPick())),
+	);
 	ipcMain.handle(
 		CHANNELS.pageShowMarkers,
 		guard((items: MarkerRequest[]) => {
@@ -1675,7 +1796,10 @@ export const registerIpc = ({
 			return found ? branchCommit(canonical, found.branch).catch(() => null) : null;
 		}),
 	);
-	ipcMain.handle(CHANNELS.pageFocusMarker, guard(async (id: number) => nothing(await page.focusMarker(Number(id)))));
+	ipcMain.handle(
+		CHANNELS.pageFocusMarker,
+		guard(async (id: number) => nothing(await page.focusMarker(Number(id)))),
+	);
 
 	return { publish: (force = false) => publisher.publish(force) };
 };

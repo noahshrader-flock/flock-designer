@@ -40,6 +40,7 @@ describe('the toggle group', () => {
 		const g = await group(true);
 		expect(g.getAttribute('data-full-width')).toBe('true');
 		expect(g.className).toContain('data-[full-width=true]:w-full');
-		for (const item of g.querySelectorAll('[data-slot="toggle-group-item"]')) expect(item.className).toContain('group-data-[full-width=true]/toggle-group:flex-1');
+		for (const item of g.querySelectorAll('[data-slot="toggle-group-item"]'))
+			expect(item.className).toContain('group-data-[full-width=true]/toggle-group:flex-1');
 	});
 });

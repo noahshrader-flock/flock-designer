@@ -75,7 +75,7 @@ describe('publishing my work branches', () => {
 		expect(remoteBranches()).toEqual(['develop']);
 	});
 
-	it("does not publish a branch with a project folder if I have no commits on it", async () => {
+	it('does not publish a branch with a project folder if I have no commits on it', async () => {
 		branchFrom(root, 'feature/role-comparison');
 		commit(root, 'feature/role-comparison', 'view.tsx', 'teammate');
 		expect((await sync(['role-comparison'])).published).toEqual([]);
@@ -145,7 +145,7 @@ describe('when GitHub has something this machine does not', () => {
 		expect(remoteSha('feature/role-comparison')).toBe(theirs); // untouched
 	});
 
-	it("still publishes my other branches when one of them has a problem", async () => {
+	it('still publishes my other branches when one of them has a problem', async () => {
 		branchFrom(root, 'feature/a');
 		commit(root, 'feature/a', 'a.tsx');
 		await sync(['a', 'b']);

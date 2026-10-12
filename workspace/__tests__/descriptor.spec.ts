@@ -128,7 +128,9 @@ describe('share', () => {
 
 describe('designSystemCheckout', () => {
 	it('is the checkout beside the product, named as its package is, for a design system that is its own repository', () => {
-		expect(designSystemCheckout('/h/GitHub/flock-coke', { package: '@flocksafety/flock-react-component-lib' })).toBe('/h/GitHub/flock-react-component-lib');
+		expect(designSystemCheckout('/h/GitHub/flock-coke', { package: '@flocksafety/flock-react-component-lib' })).toBe(
+			'/h/GitHub/flock-react-component-lib',
+		);
 	});
 
 	it('is the folder in the product’s own repository, when the design system is one: nothing beside it is looked in', () => {

@@ -25,8 +25,10 @@ export interface SiteVisibility {
 	site: { url: string; public: boolean } | null;
 }
 
-const forbidden = (err: unknown): boolean => asRecord(err).status === 403 || /\b403\b|not accessible by integration/i.test(err instanceof Error ? err.message : String(err));
-const notFound = (err: unknown): boolean => asRecord(err).status === 404 || /\b404\b|Not Found/.test(err instanceof Error ? err.message : String(err));
+const forbidden = (err: unknown): boolean =>
+	asRecord(err).status === 403 || /\b403\b|not accessible by integration/i.test(err instanceof Error ? err.message : String(err));
+const notFound = (err: unknown): boolean =>
+	asRecord(err).status === 404 || /\b404\b|Not Found/.test(err instanceof Error ? err.message : String(err));
 
 export const readVisibility = async (github: GitHubApi, ref: DesignRepoRef): Promise<SiteVisibility> => {
 	const base = `/repos/${ref.owner}/${ref.repo}`;
@@ -44,7 +46,8 @@ export const readVisibility = async (github: GitHubApi, ref: DesignRepoRef): Pro
 };
 
 /** Why anyone could open the site, or null when GitHub says it is private. Unknown counts as public. */
-export const whyPublic = (v: SiteVisibility): string | null => (!v.repoPrivate ? 'the repository is public' : v.site?.public ? 'its Pages site is public' : null);
+export const whyPublic = (v: SiteVisibility): string | null =>
+	!v.repoPrivate ? 'the repository is public' : v.site?.public ? 'its Pages site is public' : null;
 
 interface Run {
 	id: number;
@@ -75,9 +78,9 @@ export const pageStatus = async (github: GitHubApi, ref: DesignRepoRef, projectI
 	const base = `/repos/${ref.owner}/${ref.repo}`;
 	const deployed = await deployedSha(github, base);
 	const [changed] =
-		((await github.api(`${base}/commits?path=${encodeURIComponent(prototypePagePath(projectId, name))}&sha=${encodeURIComponent(vis.defaultBranch)}&per_page=1`)) as
-			| { sha: string }[]
-			| null) ?? [];
+		((await github.api(
+			`${base}/commits?path=${encodeURIComponent(prototypePagePath(projectId, name))}&sha=${encodeURIComponent(vis.defaultBranch)}&per_page=1`,
+		)) as { sha: string }[] | null) ?? [];
 	if (deployed === null || !changed) return { state: 'unpublished' };
 	if (changed.sha !== deployed) {
 		const { status } = asRecord(await github.api(`${base}/compare/${changed.sha}...${deployed}`));
@@ -217,7 +220,15 @@ const isFirstTime = async (github: GitHubApi, ref: DesignRepoRef, projectId: str
  * happened, for the messages: "published", "unpublished". Returns where the site is, ending in a slash.
  */
 const deploy = async (
-	{ github, ref, recordsBranch, pushRecords, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), log = () => undefined, timeoutMs = 10 * 60_000 }: DeployInput,
+	{
+		github,
+		ref,
+		recordsBranch,
+		pushRecords,
+		sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
+		log = () => undefined,
+		timeoutMs = 10 * 60_000,
+	}: DeployInput,
 	done: 'published' | 'unpublished',
 	change: () => Promise<void> = async () => undefined,
 ): Promise<{ visibility: SiteVisibility; site: string }> => {
@@ -232,7 +243,9 @@ const deploy = async (
 	const branch = visibility.defaultBranch;
 	if (recordsBranch === '') throw new Error(`${nothing}: the design repository here is not on a branch.`);
 	if (recordsBranch !== undefined && recordsBranch !== branch) {
-		throw new Error(`${nothing}: the site is built from ${branch}, and the design repository here is on ${recordsBranch}. Switch it to ${branch}, then try again.`);
+		throw new Error(
+			`${nothing}: the site is built from ${branch}, and the design repository here is on ${recordsBranch}. Switch it to ${branch}, then try again.`,
+		);
 	}
 
 	// 2. The records, and only the records.
@@ -245,8 +258,9 @@ const deploy = async (
 
 	// 3. The deploy: the site is built from what GitHub now has. Runs that were there before are not this one.
 	const runs = async (): Promise<Run[]> =>
-		(asRecord(await github.api(`${base}/actions/workflows/${PUBLISH_WORKFLOW}/runs?event=workflow_dispatch&branch=${encodeURIComponent(branch)}&per_page=20`))
-			.workflow_runs as Run[] | undefined) ?? [];
+		(asRecord(
+			await github.api(`${base}/actions/workflows/${PUBLISH_WORKFLOW}/runs?event=workflow_dispatch&branch=${encodeURIComponent(branch)}&per_page=20`),
+		).workflow_runs as Run[] | undefined) ?? [];
 	const before = new Set((await runs()).map((r) => r.id));
 	try {
 		await github.api(`${base}/actions/workflows/${PUBLISH_WORKFLOW}/dispatches`, {
@@ -254,8 +268,14 @@ const deploy = async (
 			body: { ref: branch },
 		});
 	} catch (err) {
-		if (forbidden(err)) throw new Error("DSNR's GitHub App is not allowed to start the deploy. Its permissions need Actions: read and write (and Pages and Deployments: read), approved on the installation. Publishing from the command line still works.");
-		if (notFound(err)) throw new Error(`The workflow that publishes the site (.github/workflows/${PUBLISH_WORKFLOW}) is not on GitHub yet, on the repository's default branch. Push it, then try again.`);
+		if (forbidden(err))
+			throw new Error(
+				"DSNR's GitHub App is not allowed to start the deploy. Its permissions need Actions: read and write (and Pages and Deployments: read), approved on the installation. Publishing from the command line still works.",
+			);
+		if (notFound(err))
+			throw new Error(
+				`The workflow that publishes the site (.github/workflows/${PUBLISH_WORKFLOW}) is not on GitHub yet, on the repository's default branch. Push it, then try again.`,
+			);
 		throw err;
 	}
 	log('The site is being built and deployed. This takes a minute or two.');
@@ -265,9 +285,13 @@ const deploy = async (
 		await sleep(5000);
 		mine = (await runs()).find((r) => !before.has(r.id));
 		if (mine?.status === 'completed') break;
-		if (Date.now() - started > timeoutMs) throw new Error(`The deploy has not finished after ${Math.round(timeoutMs / 60_000)} minutes. ${mine ? `See ${mine.html_url}.` : 'It never started.'}`);
+		if (Date.now() - started > timeoutMs)
+			throw new Error(
+				`The deploy has not finished after ${Math.round(timeoutMs / 60_000)} minutes. ${mine ? `See ${mine.html_url}.` : 'It never started.'}`,
+			);
 	}
-	if (mine.conclusion !== 'success') throw new Error(`The deploy did not finish (${mine.conclusion}). What went wrong is at ${mine.html_url}.${noLink}`);
+	if (mine.conclusion !== 'success')
+		throw new Error(`The deploy did not finish (${mine.conclusion}). What went wrong is at ${mine.html_url}.${noLink}`);
 	return { visibility, site: site.replace(/\/?$/, '/') };
 };
 
@@ -291,7 +315,9 @@ export const publish = async (input: PublishInput): Promise<Published> => {
 	if (why !== null) {
 		log(`Published. Note that ${why}, so anyone with the link can open this page, signed in or not. ${url}`);
 	} else if (opened) {
-		log(`This page opens for anyone, signed in or not, although GitHub said the site was private. Do not share it; check the repository's Pages settings. ${url}`);
+		log(
+			`This page opens for anyone, signed in or not, although GitHub said the site was private. Do not share it; check the repository's Pages settings. ${url}`,
+		);
 	} else {
 		log(`Published. It opens for people signed in to GitHub with access to ${ref.owner}/${ref.repo}: ${url}`);
 	}

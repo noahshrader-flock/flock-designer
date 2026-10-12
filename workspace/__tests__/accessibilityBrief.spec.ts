@@ -100,8 +100,8 @@ describe('the accessibility section of a task', () => {
 		expect(brief).toContain(
 			'For a person to judge (axe could not decide):\n- **color-contrast** (WCAG 1.4.3): Elements must meet minimum color contrast. 1 element, in default, empty.',
 		);
-		expect(accessibilityBrief({ standard: STANDARD, target: declaredTarget(COKE, 'Coke'), findings: { violations: [], incomplete: [] } })).not.toContain(
-			'left open',
-		);
+		expect(
+			accessibilityBrief({ standard: STANDARD, target: declaredTarget(COKE, 'Coke'), findings: { violations: [], incomplete: [] } }),
+		).not.toContain('left open');
 	});
 });

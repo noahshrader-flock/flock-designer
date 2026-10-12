@@ -145,24 +145,30 @@ describe('addressTask', () => {
 		expect(task).toContain("This iteration's branch is fd/demo/i1.");
 		expect(task.endsWith('SKILL TEXT')).toBe(true);
 	});
-
 });
 
 describe('runAddress', () => {
-	const ok = <T,>(value: T): Result<T> => ({ ok: true, value });
+	const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 	/** The branch stands still unless a test says otherwise, which is the interesting case. */
 	const commits = (...heads: Array<string | null>) => {
 		let i = 0;
 		return async () => ok(heads[Math.min(i++, heads.length - 1)] ?? null);
 	};
 	const run = async (
-		api: Omit<Parameters<typeof runAddress>[0]['api'], 'iterationCommit'> & { iterationCommit?: Parameters<typeof runAddress>[0]['api']['iterationCommit'] },
+		api: Omit<Parameters<typeof runAddress>[0]['api'], 'iterationCommit'> & {
+			iterationCommit?: Parameters<typeof runAddress>[0]['api']['iterationCommit'];
+		},
 		isLive = () => true,
 	) => {
 		const phases: AddressPhase[] = [];
 		await runAddress({
 			api: { iterationCommit: commits('abc'), ...api } as Parameters<typeof runAddress>[0]['api'],
-			root: '/c', projectId: 'demo', name: 'i1', isLive, onPhase: (p) => phases.push(p), pollMs: 1,
+			root: '/c',
+			projectId: 'demo',
+			name: 'i1',
+			isLive,
+			onPhase: (p) => phases.push(p),
+			pollMs: 1,
 		});
 		return phases;
 	};
@@ -208,37 +214,55 @@ describe('runAddress', () => {
 		const phases: AddressPhase[] = [];
 		await runAddress({
 			api: { addressComments: async () => ({ ok: false, error: 'There are uncommitted changes' }), agentStatus, iterationCommit: commits('abc') },
-			root: '/c', projectId: 'demo', name: 'i1', isLive: () => true, onPhase: (p) => phases.push(p), pollMs: 1,
+			root: '/c',
+			projectId: 'demo',
+			name: 'i1',
+			isLive: () => true,
+			onPhase: (p) => phases.push(p),
+			pollMs: 1,
 		});
 		expect(phases[1]).toEqual({ kind: 'failed', message: 'There are uncommitted changes' });
 		expect(agentStatus).not.toHaveBeenCalled();
 	});
 
 	it('fails when the agent cannot run, or stops with an error', async () => {
-		expect((await run({ addressComments: async () => ok({ state: 'unavailable', detail: 'not installed' }), agentStatus: statuses(started) })).map((p) => p.kind)).toEqual(['running', 'failed']);
-		expect((await run({ addressComments: async () => ok(started), agentStatus: statuses({ state: 'finished', exitCode: 1 }) })).map((p) => p.kind)).toEqual(['running', 'failed']);
+		expect(
+			(await run({ addressComments: async () => ok({ state: 'unavailable', detail: 'not installed' }), agentStatus: statuses(started) })).map(
+				(p) => p.kind,
+			),
+		).toEqual(['running', 'failed']);
+		expect(
+			(await run({ addressComments: async () => ok(started), agentStatus: statuses({ state: 'finished', exitCode: 1 }) })).map((p) => p.kind),
+		).toEqual(['running', 'failed']);
 	});
 
 	it('stops quietly when nobody is looking any more', async () => {
 		let live = true;
-		const phases = await run(
-			{ addressComments: async () => ok(started), agentStatus: async () => ((live = false), ok(started)) },
-			() => live,
-		);
+		const phases = await run({ addressComments: async () => ok(started), agentStatus: async () => ((live = false), ok(started)) }, () => live);
 		expect(phases.map((p) => p.kind)).toEqual(['running']);
 	});
 });
 
 describe('runPrototypeAddress', () => {
-	const ok = <T,>(value: T): Result<T> => ({ ok: true, value });
+	const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 	const started: AgentStatus = { state: 'running', startedAt: 'now' };
 	const finished: AgentStatus = { state: 'finished', exitCode: 0 };
 	const addressed = { changed: true, iteration: 'v1-i2', made: null, comment: { id: 7 } } as never;
 	const run = async (api: Partial<Parameters<typeof runPrototypeAddress>[0]['api']>, isLive = () => true) => {
 		const phases: AddressPhase[] = [];
 		await runPrototypeAddress({
-			api: { addressPrototype: async () => ok(started), agentStatus: async () => ok(finished), finishPrototypeAddress: async () => ok(addressed), ...api },
-			projectId: 'demo', name: 'v1-i1', commentId: 7, isLive, onPhase: (p) => phases.push(p), pollMs: 1,
+			api: {
+				addressPrototype: async () => ok(started),
+				agentStatus: async () => ok(finished),
+				finishPrototypeAddress: async () => ok(addressed),
+				...api,
+			},
+			projectId: 'demo',
+			name: 'v1-i1',
+			commentId: 7,
+			isLive,
+			onPhase: (p) => phases.push(p),
+			pollMs: 1,
 		});
 		return phases;
 	};

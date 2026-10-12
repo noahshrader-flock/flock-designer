@@ -79,7 +79,9 @@ export const accessibilityBrief = ({
 			? `This product's target, from ${target.source}: **${describeTarget(target.target)}**, checked with the axe tags ${tags}. Do not state a conformance level yourself: report what you checked and what you found.`
 			: `${target.why}, so it declares no target. Build to **${describeTarget(target.target)}** (axe tags ${tags}) as a default, and say in your summary that there was no declared target: what you checked is informational, not a claim.`,
 		...(left.length ? ['', `No automated check covers ${left.join(' or ')}: check those criteria by hand, or report them as not run.`] : []),
-		...(check ? ['', `This product's own accessibility check is \`${check}\`: run it as the work goes, not only at the end. Handoff runs it again.`] : []),
+		...(check
+			? ['', `This product's own accessibility check is \`${check}\`: run it as the work goes, not only at the end. Handoff runs it again.`]
+			: []),
 		...(findings && (findings.violations.length || findings.incomplete.length)
 			? [
 					'',

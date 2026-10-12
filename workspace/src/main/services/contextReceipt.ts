@@ -17,10 +17,7 @@ import { resolveInside } from './paths';
  */
 
 /** Reads the version a checkout actually resolves, not the range it asks for. */
-export const resolveDesignSystem = (
-	root: string,
-	pkg: string,
-): { resolved: string | null; source: string } => {
+export const resolveDesignSystem = (root: string, pkg: string): { resolved: string | null; source: string } => {
 	const lockPath = join(root, 'package-lock.json');
 	if (existsSync(lockPath)) {
 		try {
@@ -75,10 +72,7 @@ const listFilesUnder = (dir: string, limit = 200): string[] => {
 	return found;
 };
 
-export const buildContextReceipt = async (
-	root: string,
-	descriptor: WorkspaceDescriptor,
-): Promise<ContextReceipt> => {
+export const buildContextReceipt = async (root: string, descriptor: WorkspaceDescriptor): Promise<ContextReceipt> => {
 	const checkout = await readCheckout(root);
 	const problems: string[] = [];
 
@@ -89,7 +83,9 @@ export const buildContextReceipt = async (
 	const contextDir = resolveInside(root, descriptor.contextDir);
 	let contextFiles: string[] = [];
 	if (existsSync(contextDir)) {
-		contextFiles = listFilesUnder(contextDir).map((f) => relative(root, f)).sort();
+		contextFiles = listFilesUnder(contextDir)
+			.map((f) => relative(root, f))
+			.sort();
 		if (contextFiles.length === 0) {
 			problems.push(`${descriptor.contextDir} exists but holds no context files.`);
 		}

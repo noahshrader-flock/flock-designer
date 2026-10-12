@@ -57,12 +57,16 @@ describe('cloning', () => {
 	it('refuses a folder with something else in it, and leaves it untouched', async () => {
 		mkdirSync(join(folder, 'flock-coke'), { recursive: true });
 		writeFileSync(join(folder, 'flock-coke', 'notes.txt'), 'mine');
-		await expect(new Cloner(fromRemote).clone({ repository: REPO, visible: VISIBLE, folder })).rejects.toThrow(/not a clone of[\s\S]*Nothing was cloned over it/);
+		await expect(new Cloner(fromRemote).clone({ repository: REPO, visible: VISIBLE, folder })).rejects.toThrow(
+			/not a clone of[\s\S]*Nothing was cloned over it/,
+		);
 		expect(readdirSync(join(folder, 'flock-coke'))).toEqual(['notes.txt']);
 	});
 
 	it('refuses a repository that is not in the person’s list, before anything is made', async () => {
-		await expect(new Cloner(fromRemote).clone({ repository: 'someone/secret', visible: VISIBLE, folder })).rejects.toThrow(/not one of the repositories your GitHub account can see/);
+		await expect(new Cloner(fromRemote).clone({ repository: 'someone/secret', visible: VISIBLE, folder })).rejects.toThrow(
+			/not one of the repositories your GitHub account can see/,
+		);
 		expect(existsSync(folder)).toBe(false);
 	});
 
@@ -94,12 +98,16 @@ describe('cloning', () => {
 describe('what it says when it cannot', () => {
 	it('says how to sign git in when GitHub refuses, as it does with no terminal to ask in', async () => {
 		const refused = fakeGit("Cloning into 'x'...\\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\\n", 128);
-		await expect(new Cloner({ git: refused }).clone({ repository: REPO, visible: VISIBLE, folder })).rejects.toThrow(/gh auth setup-git[\s\S]*sign in to git/);
+		await expect(new Cloner({ git: refused }).clone({ repository: REPO, visible: VISIBLE, folder })).rejects.toThrow(
+			/gh auth setup-git[\s\S]*sign in to git/,
+		);
 		expect(existsSync(join(folder, 'flock-coke'))).toBe(false);
 	});
 
 	it('says where to get git, on a Mac and on Windows, when there is none', async () => {
-		await expect(new Cloner({ git: join(root, 'no-git-here') }).clone({ repository: REPO, visible: VISIBLE, folder })).rejects.toThrow(/xcode-select --install[\s\S]*Git for Windows/);
+		await expect(new Cloner({ git: join(root, 'no-git-here') }).clone({ repository: REPO, visible: VISIBLE, folder })).rejects.toThrow(
+			/xcode-select --install[\s\S]*Git for Windows/,
+		);
 	});
 
 	it('tells being refused from being offline and from a full disk', () => {

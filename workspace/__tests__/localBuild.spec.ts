@@ -3,7 +3,15 @@ import type { Project, ProjectIteration } from '../src/shared/contract';
 import { type BuildApi, type BuildPhase, previewAddress, previewCommandFor, routeWentWrong, runLocalBuild } from '../src/renderer/localBuild';
 
 const iteration = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
-	name: 'i1', branch: 'fd/users/i1', issueNumber: null, previewUrl: null, commit: null, contributors: [], createdAt: null, route: null, ...over,
+	name: 'i1',
+	branch: 'fd/users/i1',
+	issueNumber: null,
+	previewUrl: null,
+	commit: null,
+	contributors: [],
+	createdAt: null,
+	route: null,
+	...over,
 });
 const project: Project = { id: 'users', title: 'Users', records: [], iterations: [], people: [] };
 
@@ -25,7 +33,16 @@ const api = (over: Partial<Record<keyof BuildApi, unknown>> = {}) => {
 
 const run = async (a: BuildApi, extra: Partial<Parameters<typeof runLocalBuild>[0]> = {}) => {
 	const phases: BuildPhase[] = [];
-	const url = await runLocalBuild({ api: a, root: '/r', project, iteration: iteration(), isLive: () => true, onPhase: (p) => phases.push(p), pollMs: 1, ...extra });
+	const url = await runLocalBuild({
+		api: a,
+		root: '/r',
+		project,
+		iteration: iteration(),
+		isLive: () => true,
+		onPhase: (p) => phases.push(p),
+		pollMs: 1,
+		...extra,
+	});
 	return { url, phases };
 };
 
@@ -38,13 +55,13 @@ describe('opening an iteration', () => {
 		expect(calls).not.toContain('startAgent');
 	});
 
-	it('leaves the checkout alone when it is already on the iteration\'s branch', async () => {
+	it("leaves the checkout alone when it is already on the iteration's branch", async () => {
 		const { a, calls } = api();
 		await run(a);
 		expect(calls).not.toContain('continueIteration');
 	});
 
-	it('moves the checkout to the iteration\'s branch when it is elsewhere', async () => {
+	it("moves the checkout to the iteration's branch when it is elsewhere", async () => {
 		const { a, calls } = api({ readCheckout: vi.fn(async () => ({ ok: true, value: { branch: 'develop' } })) });
 		await run(a);
 		expect(a.continueIteration).toHaveBeenCalledWith('/r', 'users', 'i1');
@@ -56,7 +73,7 @@ describe('opening an iteration', () => {
 		expect(previewCommandFor(iteration({ name: 'codebase' }))).toBe('design-mode');
 	});
 
-	it('opens where the work is when the record says, instead of the product\'s front door', async () => {
+	it("opens where the work is when the record says, instead of the product's front door", async () => {
 		// A codebase iteration runs the whole product. Without this it opens on whatever the app shows
 		// first, which is how a comment meant for /roles/compare was made on the Organizations list.
 		const { a } = api();
@@ -119,7 +136,9 @@ describe('when something goes wrong', () => {
 	});
 
 	it('reports a preview that would not start', async () => {
-		const { a } = api({ startCommand: vi.fn(async () => ({ ok: true, value: { state: 'failed', commandId: 'preview', detail: 'Port 3100 is in use.' } })) });
+		const { a } = api({
+			startCommand: vi.fn(async () => ({ ok: true, value: { state: 'failed', commandId: 'preview', detail: 'Port 3100 is in use.' } })),
+		});
 		const { phases } = await run(a);
 		expect(phases.at(-1)).toEqual({ kind: 'failed', message: 'Port 3100 is in use.' });
 	});
@@ -143,8 +162,18 @@ describe('when nobody is looking any more', () => {
 		let live = true;
 		const phases: BuildPhase[] = [];
 		const url = await runLocalBuild({
-			api: { ...a, readCheckout: vi.fn(async () => { live = false; return { ok: true as const, value: { root: '/r', name: 'c', branch: 'fd/users/i1', clean: true } }; }) } as BuildApi,
-			root: '/r', project, iteration: iteration(), isLive: () => live, onPhase: (p) => phases.push(p),
+			api: {
+				...a,
+				readCheckout: vi.fn(async () => {
+					live = false;
+					return { ok: true as const, value: { root: '/r', name: 'c', branch: 'fd/users/i1', clean: true } };
+				}),
+			} as BuildApi,
+			root: '/r',
+			project,
+			iteration: iteration(),
+			isLive: () => live,
+			onPhase: (p) => phases.push(p),
 		});
 		expect(url).toBeNull();
 		expect(phases).toEqual([]);
@@ -169,7 +198,10 @@ describe('when nobody is looking any more', () => {
 	it('waits on its own agent when opened again mid-build, without asking for the work twice', async () => {
 		let polls = 0;
 		const { a, calls } = api({
-			agentStatus: vi.fn(async () => ({ ok: true, value: ++polls < 3 ? { state: 'running', work: 'fd/users/i1' } : { state: 'finished', exitCode: 0 } })),
+			agentStatus: vi.fn(async () => ({
+				ok: true,
+				value: ++polls < 3 ? { state: 'running', work: 'fd/users/i1' } : { state: 'finished', exitCode: 0 },
+			})),
 		});
 		const { url, phases } = await run(a);
 		expect(calls).not.toContain('startAgent');
@@ -177,7 +209,7 @@ describe('when nobody is looking any more', () => {
 		expect(url).toBe('http://localhost:3100/');
 	});
 
-	it('does not mistake another work\'s run for its own', async () => {
+	it("does not mistake another work's run for its own", async () => {
 		const { a, calls } = api({ agentStatus: vi.fn(async () => ({ ok: true, value: { state: 'running', work: 'prototype/other/i1' } })) });
 		const { phases } = await run(a);
 		expect(calls).not.toContain('startAgent');
@@ -227,17 +259,31 @@ describe('when nobody is looking any more', () => {
 	it('stops polling an agent whose screen has gone', async () => {
 		let live = true;
 		let polls = 0;
-		const { a } = api({ agentStatus: vi.fn(async () => { polls++; live = false; return { ok: true, value: { state: 'running' } }; }) });
-		const url = await runLocalBuild({ api: a, root: '/r', project, iteration: iteration(), task: 'x', isLive: () => live, onPhase: () => undefined, pollMs: 1 });
+		const { a } = api({
+			agentStatus: vi.fn(async () => {
+				polls++;
+				live = false;
+				return { ok: true, value: { state: 'running' } };
+			}),
+		});
+		const url = await runLocalBuild({
+			api: a,
+			root: '/r',
+			project,
+			iteration: iteration(),
+			task: 'x',
+			isLive: () => live,
+			onPhase: () => undefined,
+			pollMs: 1,
+		});
 		expect(url).toBeNull();
 		expect(polls).toBeLessThanOrEqual(1);
 		expect(a.startCommand).not.toHaveBeenCalled();
 	});
 });
 
-
 describe('previewAddress', () => {
-	it('joins the iteration\'s route onto the preview, keeping its port', () => {
+	it("joins the iteration's route onto the preview, keeping its port", () => {
 		expect(previewAddress('http://localhost:3100/', '/roles/compare')).toBe('http://localhost:3100/roles/compare');
 		expect(previewAddress('http://localhost:3000/', '/roles/compare?state=error')).toBe('http://localhost:3000/roles/compare?state=error');
 	});
@@ -289,4 +335,3 @@ describe('routeWentWrong', () => {
 		expect(routeWentWrong('/organization/:id/roles', '/')).not.toBeNull();
 	});
 });
-

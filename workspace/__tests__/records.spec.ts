@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { mergeIterationRecords } from '../src/shared/records';
 
-const rec = (name: string, extra: Record<string, unknown> = {}) => ({ projectId: 'p', name, branch: `fd/p/${name}`, commit: null, createdAt: '2026-10-01T00:00:00Z', ...extra });
+const rec = (name: string, extra: Record<string, unknown> = {}) => ({
+	projectId: 'p',
+	name,
+	branch: `fd/p/${name}`,
+	commit: null,
+	createdAt: '2026-10-01T00:00:00Z',
+	...extra,
+});
 const text = (...r: unknown[]) => JSON.stringify(r, null, 2);
 const names = (json: string | null) => (JSON.parse(json as string) as Array<{ name: string }>).map((r) => r.name);
-const find = (json: string | null, name: string) => (JSON.parse(json as string) as Array<Record<string, unknown>>).find((r) => r.name === name) as Record<string, unknown>;
+const find = (json: string | null, name: string) =>
+	(JSON.parse(json as string) as Array<Record<string, unknown>>).find((r) => r.name === name) as Record<string, unknown>;
 
 describe('mergeIterationRecords', () => {
 	it('keeps every iteration either side knows, in order', () => {
@@ -32,14 +40,24 @@ describe('mergeIterationRecords', () => {
 	});
 
 	it('keeps the earliest start date, so merging never makes work look newer', () => {
-		const merged = mergeIterationRecords(text(rec('i1', { createdAt: '2026-10-05T00:00:00Z' })), text(rec('i1', { createdAt: '2026-09-28T00:00:00Z' })));
+		const merged = mergeIterationRecords(
+			text(rec('i1', { createdAt: '2026-10-05T00:00:00Z' })),
+			text(rec('i1', { createdAt: '2026-09-28T00:00:00Z' })),
+		);
 		expect(find(merged, 'i1').createdAt).toBe('2026-09-28T00:00:00Z');
 	});
 
 	it('combines contributors from both sides without repeating anyone', () => {
 		const merged = mergeIterationRecords(
 			text(rec('i1', { contributors: [{ name: 'Ada', login: 'ada' }] })),
-			text(rec('i1', { contributors: [{ name: 'Ada', login: 'ada' }, { name: 'Grace', login: null }] })),
+			text(
+				rec('i1', {
+					contributors: [
+						{ name: 'Ada', login: 'ada' },
+						{ name: 'Grace', login: null },
+					],
+				}),
+			),
 		);
 		expect((find(merged, 'i1').contributors as Array<{ name: string }>).map((p) => p.name).sort()).toEqual(['Ada', 'Grace']);
 	});
@@ -62,7 +80,10 @@ describe('mergeIterationRecords', () => {
 	});
 
 	it('is stable: merging a record with itself changes nothing that matters', () => {
-		const one = mergeIterationRecords(text(rec('i1', { contributors: [{ name: 'Ada', login: 'ada' }] })), text(rec('i1', { contributors: [{ name: 'Ada', login: 'ada' }] })));
+		const one = mergeIterationRecords(
+			text(rec('i1', { contributors: [{ name: 'Ada', login: 'ada' }] })),
+			text(rec('i1', { contributors: [{ name: 'Ada', login: 'ada' }] })),
+		);
 		expect(mergeIterationRecords(one as string, one as string)).toBe(one);
 	});
 });

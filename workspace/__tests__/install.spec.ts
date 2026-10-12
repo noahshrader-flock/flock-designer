@@ -27,14 +27,19 @@ describe('installing', () => {
 	});
 
 	it('says how to sign in when GitHub Packages refuses, as npm says it does', async () => {
-		const npm = "console.error('npm error code E401'); console.error('npm error 401 Unauthorized - GET https://npm.pkg.github.com/@flocksafety%2fx - authentication token not provided'); process.exit(1);";
-		await expect(new Installer().install(root, node(npm))).rejects.toThrow(/not signed in to GitHub Packages[\s\S]*npm login --auth-type=legacy --registry=https:\/\/npm\.pkg\.github\.com/);
+		const npm =
+			"console.error('npm error code E401'); console.error('npm error 401 Unauthorized - GET https://npm.pkg.github.com/@flocksafety%2fx - authentication token not provided'); process.exit(1);";
+		await expect(new Installer().install(root, node(npm))).rejects.toThrow(
+			/not signed in to GitHub Packages[\s\S]*npm login --auth-type=legacy --registry=https:\/\/npm\.pkg\.github\.com/,
+		);
 	});
 
 	it('says to install Node, at the version the repository asks for, when there is no npm', async () => {
 		writeFileSync(join(root, '.nvmrc'), 'v22.13.1\n');
 		const missing = { id: 'install', label: 'Install', argv: [join(root, 'no-npm-here'), 'ci'] };
-		await expect(new Installer().install(root, missing)).rejects.toThrow(/was not found on this computer\. Install Node\.js \(this repository asks for v22\.13\.1\)/);
+		await expect(new Installer().install(root, missing)).rejects.toThrow(
+			/was not found on this computer\. Install Node\.js \(this repository asks for v22\.13\.1\)/,
+		);
 	});
 
 	it('stops when asked, and says it can be run again', async () => {
@@ -53,10 +58,14 @@ describe('installing', () => {
 
 describe('what it says when it cannot', () => {
 	it('tells another registry’s refusal, a full disk, being offline and the wrong Node apart', () => {
-		expect(installProblem('npm error 403 Forbidden - GET https://registry.example.test/x', null)).toBe('https://registry.example.test refused npm on this computer. Sign in to it as your team does, then try again.');
+		expect(installProblem('npm error 403 Forbidden - GET https://registry.example.test/x', null)).toBe(
+			'https://registry.example.test refused npm on this computer. Sign in to it as your team does, then try again.',
+		);
 		expect(installProblem('npm error code ENOSPC', null)).toMatch(/not enough disk space/);
 		expect(installProblem('npm error code ENOTFOUND', null)).toMatch(/Could not reach the package registry/);
 		expect(installProblem('npm warn EBADENGINE Unsupported engine', 'v22.13.1')).toMatch(/need Node v22\.13\.1/);
-		expect(installProblem('npm error something new\nnpm error A complete log is at /tmp/x.log', null)).toBe('The packages did not install: npm error something new npm error A complete log is at /tmp/x.log');
+		expect(installProblem('npm error something new\nnpm error A complete log is at /tmp/x.log', null)).toBe(
+			'The packages did not install: npm error something new npm error A complete log is at /tmp/x.log',
+		);
 	});
 });

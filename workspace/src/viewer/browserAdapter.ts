@@ -2,7 +2,17 @@ import { DesignRepo, type DesignRepoRef, type GitHubApi } from '../main/services
 import { type Fetcher, callApi } from '../main/services/github';
 import type { PinEvent, Result } from '../shared/contract';
 import { asRecord } from '../shared/json';
-import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, ROUTE_SCRIPT, SINGLE_PAGE, focusScript, readMarkers, readPick, readPinMessage, resolveScript } from '../shared/pageScripts';
+import {
+	CANCEL_PICK_SCRIPT,
+	PICK_SCRIPT,
+	ROUTE_SCRIPT,
+	SINGLE_PAGE,
+	focusScript,
+	readMarkers,
+	readPick,
+	readPinMessage,
+	resolveScript,
+} from '../shared/pageScripts';
 import type { CommentStore, PageSurface } from '../renderer/comments/surfaces';
 
 /**
@@ -27,7 +37,11 @@ export const asResult = async <T>(work: Promise<T>): Promise<Result<T>> => {
 };
 
 /** One iteration's comments, on GitHub. `branch` is its key, `prototype/<project>/<name>`, which names its thread. */
-export const browserComments = (github: GitHubApi, ref: DesignRepoRef, { projectId, branch }: { projectId: string; branch: string }): CommentStore => {
+export const browserComments = (
+	github: GitHubApi,
+	ref: DesignRepoRef,
+	{ projectId, branch }: { projectId: string; branch: string },
+): CommentStore => {
 	const repo = new DesignRepo(github, ref);
 	return {
 		read: () => asResult(repo.readComments(projectId, branch)),
@@ -81,7 +95,12 @@ export const framePage = (frame: HTMLIFrameElement): PageSurface & { route(): Pr
 		}
 	};
 	return {
-		pick: () => asResult(run<unknown>(PICK_SCRIPT).then((raw) => readPick(raw)).then((spot) => (spot ? { ...spot, picture: null } : null))),
+		pick: () =>
+			asResult(
+				run<unknown>(PICK_SCRIPT)
+					.then((raw) => readPick(raw))
+					.then((spot) => (spot ? { ...spot, picture: null } : null)),
+			),
 		cancelPick: () => run(CANCEL_PICK_SCRIPT),
 		showMarkers: (items) => asResult(run<unknown>(resolveScript(items, nonce)).then((raw) => readMarkers(raw, items))),
 		focusMarker: (id) => run(focusScript(id)),

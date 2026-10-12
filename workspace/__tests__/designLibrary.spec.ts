@@ -10,7 +10,15 @@ import { g } from './fixtures';
 const LIBRARY = 'flocksafety/flock-react-component-lib';
 const GITHUB_URL = `https://github.com/${LIBRARY}.git`;
 /** The library as connected: the whole repository, on develop, at `root`. */
-const at = (root: string, more: Partial<ConnectedDesignSystem> = {}): ConnectedDesignSystem => ({ id: LIBRARY, name: 'FUI', repository: LIBRARY, root, folder: '', branch: 'develop', ...more });
+const at = (root: string, more: Partial<ConnectedDesignSystem> = {}): ConnectedDesignSystem => ({
+	id: LIBRARY,
+	name: 'FUI',
+	repository: LIBRARY,
+	root,
+	folder: '',
+	branch: 'develop',
+	...more,
+});
 const story = (title: string) => `const meta = {\n  title: '${title}',\n};\nexport default meta;\n`;
 
 let home: string;
@@ -68,17 +76,30 @@ describe('reading develop', () => {
 
 	it('reads develop whatever the clone has checked out, and leaves the branch, the files and HEAD exactly as they were', async () => {
 		g(clone, 'checkout', '-q', '-b', 'noah/work');
-		write(clone, { 'src/components/FSButton/FSButton.stories.tsx': story('Changed/FSButton'), 'src/components/FSNew/FSNew.stories.tsx': story('Inputs/FSNew') });
+		write(clone, {
+			'src/components/FSButton/FSButton.stories.tsx': story('Changed/FSButton'),
+			'src/components/FSNew/FSNew.stories.tsx': story('Inputs/FSNew'),
+		});
 		commit(clone, 'work in progress');
 		write(clone, { 'src/components/FSButton/FSButton.stories.tsx': story('Unsaved/FSButton') });
-		const before = { head: g(clone, 'rev-parse', 'HEAD'), branch: g(clone, 'branch', '--show-current'), status: g(clone, 'status', '--porcelain'), refs: g(clone, 'for-each-ref') };
+		const before = {
+			head: g(clone, 'rev-parse', 'HEAD'),
+			branch: g(clone, 'branch', '--show-current'),
+			status: g(clone, 'status', '--porcelain'),
+			refs: g(clone, 'for-each-ref'),
+		};
 		const unsaved = readFileSync(join(clone, 'src/components/FSButton/FSButton.stories.tsx'), 'utf8');
 
 		const c = ready(await readLibrary(at(clone), 'unchanged'));
 		expect(c.components.map((x) => [x.name, x.group])).toEqual([['FSButton', 'Buttons']]);
 		await updateLibrary(clone, 'develop');
 
-		expect({ head: g(clone, 'rev-parse', 'HEAD'), branch: g(clone, 'branch', '--show-current'), status: g(clone, 'status', '--porcelain'), refs: g(clone, 'for-each-ref') }).toEqual(before);
+		expect({
+			head: g(clone, 'rev-parse', 'HEAD'),
+			branch: g(clone, 'branch', '--show-current'),
+			status: g(clone, 'status', '--porcelain'),
+			refs: g(clone, 'for-each-ref'),
+		}).toEqual(before);
 		expect(readFileSync(join(clone, 'src/components/FSButton/FSButton.stories.tsx'), 'utf8')).toBe(unsaved);
 	});
 
@@ -86,7 +107,8 @@ describe('reading develop', () => {
 		const TOKEN_FILES = {
 			'src/colors/tones/index.ts': "export { pineGreen } from './pineGreen';\n",
 			'src/colors/tones/pineGreen.ts': "export const pineGreen = {\n  50: '#108062',\n};\n",
-			'src/colors/theme/light.ts': "export const lightPalette = {\n  mode: 'light' as PaletteMode,\n  primary: {\n    main: pineGreen[50],\n  },\n};\n",
+			'src/colors/theme/light.ts':
+				"export const lightPalette = {\n  mode: 'light' as PaletteMode,\n  primary: {\n    main: pineGreen[50],\n  },\n};\n",
 			'src/uxDocs/designTokens/PaletteColors.stories.tsx': story('Design Tokens/Color Palette'),
 			'src/uxDocs/designTokens/PrimitiveColors.stories.tsx': story('Design Tokens/Color Primitives'),
 		};
@@ -123,7 +145,13 @@ describe('reading develop', () => {
 	});
 
 	it('reads only the design system’s own package in a monorepo, not an app beside it', async () => {
-		pushDevelop({ 'package.json': '{}', 'packages/ui/package.json': '{}', 'packages/ui/Card.stories.tsx': story('Cards/Card'), 'apps/web/package.json': '{}', 'apps/web/Page.stories.tsx': story('Pages/Page') });
+		pushDevelop({
+			'package.json': '{}',
+			'packages/ui/package.json': '{}',
+			'packages/ui/Card.stories.tsx': story('Cards/Card'),
+			'apps/web/package.json': '{}',
+			'apps/web/Page.stories.tsx': story('Pages/Page'),
+		});
 		await updateLibrary(clone, 'develop');
 		expect(ready(await readLibrary(at(clone, { folder: 'packages/ui' }), 'unchanged')).components.map((x) => x.name)).toEqual(['Card']);
 	});
@@ -140,8 +168,14 @@ describe('reading develop', () => {
 	});
 
 	it('reads every story in a folder, many at once, the same as reading each', async () => {
-		const many = Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`src/components/FSItem${i}/FSItem${i}.stories.tsx`, story(`Data Display/FSItem${i}`)]));
-		pushDevelop({ ...many, 'src/compositeComponents/FSPopovers/a.stories.tsx': story('Popovers/A’s “quoted”'), 'src/compositeComponents/FSPopovers/b.stories.tsx': story('Popovers/B') });
+		const many = Object.fromEntries(
+			Array.from({ length: 30 }, (_, i) => [`src/components/FSItem${i}/FSItem${i}.stories.tsx`, story(`Data Display/FSItem${i}`)]),
+		);
+		pushDevelop({
+			...many,
+			'src/compositeComponents/FSPopovers/a.stories.tsx': story('Popovers/A’s “quoted”'),
+			'src/compositeComponents/FSPopovers/b.stories.tsx': story('Popovers/B'),
+		});
 		await updateLibrary(clone, 'develop');
 		const c = ready(await readLibrary(at(clone), 'unchanged'));
 		// Each story file is a component, as Storybook lists them: the two in one folder are two.
@@ -195,7 +229,8 @@ describe('bringing develop up to date', () => {
 });
 
 describe('what the tab is told', () => {
-	const catalogOf = (update: string): Catalog => ({ state: 'ready', commit: 'c', committedAt: 'd', update: update as never, components: [] }) as Catalog;
+	const catalogOf = (update: string): Catalog =>
+		({ state: 'ready', commit: 'c', committedAt: 'd', update: update as never, components: [] }) as Catalog;
 
 	const memory = (system: ConnectedDesignSystem | null) => {
 		const m = new DesignSystemsMemory(join(home, 'design-system.json'));
@@ -205,9 +240,12 @@ describe('what the tab is told', () => {
 
 	it('says none is connected, or that the one shown is gone from this computer', async () => {
 		expect(await new DesignLibrary({ systems: memory(null) }).catalog(false)).toEqual({ state: 'none' });
-		expect(await new DesignLibrary({ systems: memory(at(join(home, 'gone'))) }).catalog(false)).toEqual({ state: 'lost', name: 'FUI', root: join(home, 'gone') });
+		expect(await new DesignLibrary({ systems: memory(at(join(home, 'gone'))) }).catalog(false)).toEqual({
+			state: 'lost',
+			name: 'FUI',
+			root: join(home, 'gone'),
+		});
 	});
-
 
 	it('answers at once with what the clone has, then the next ask with refresh waits for the one fetch it started', async () => {
 		let finish: (o: 'updated') => void = () => undefined;
@@ -245,13 +283,16 @@ describe('what the tab is told', () => {
 	});
 });
 
-
 describe('reading the library’s files exactly', () => {
 	it('gives every file as committed, with the white space at its ends, alone or as the last of a batch of stories', async () => {
 		const dir = mkdtempSync(join(tmpdir(), 'dsnr-exact-'));
 		try {
 			g(dir, 'init', '-q', '-b', 'develop');
-			const files = { 'src/a.stories.tsx': 'export const A = 1;\n\n', 'src/b.stories.tsx': '\n  export const B = 2;\n\n', 'src/theme.ts': 'export const t = 1;\n' };
+			const files = {
+				'src/a.stories.tsx': 'export const A = 1;\n\n',
+				'src/b.stories.tsx': '\n  export const B = 2;\n\n',
+				'src/theme.ts': 'export const t = 1;\n',
+			};
 			for (const [path, text] of Object.entries(files)) {
 				mkdirSync(dirname(join(dir, path)), { recursive: true });
 				writeFileSync(join(dir, path), text);

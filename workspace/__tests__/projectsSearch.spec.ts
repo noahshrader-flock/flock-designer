@@ -9,11 +9,20 @@ import { fakeApp, ok, press, render, settle, typeInto, unmountAll } from './revi
 
 const project = (id: string, title: string, people: Project['people'] = []): Project =>
 	({ id, title, records: [], iterations: [], people, openComments: 0 }) as unknown as Project;
-const PROJECTS = [project('alert-history', 'Alert history', [{ name: 'Noah Shrader', login: 'noah' }]), project('admin-usage', 'Admin usage'), project('role-comparison', 'Role comparison')];
+const PROJECTS = [
+	project('alert-history', 'Alert history', [{ name: 'Noah Shrader', login: 'noah' }]),
+	project('admin-usage', 'Admin usage'),
+	project('role-comparison', 'Role comparison'),
+];
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
 const open = async (projects = PROJECTS) => {
-	const app = fakeApp({ listProjects: async () => ok(projects), lastCheckout: async () => ok(null), suggestCheckout: async () => ok(null), publishStatus: async () => ok({ state: 'unavailable' }) });
+	const app = fakeApp({
+		listProjects: async () => ok(projects),
+		lastCheckout: async () => ok(null),
+		suggestCheckout: async () => ok(null),
+		publishStatus: async () => ok({ state: 'unavailable' }),
+	});
 	(window as unknown as { workspace: unknown }).workspace = app.api;
 	current = await render(createElement(Projects, { hidden: false }));
 	await settle();
@@ -75,7 +84,12 @@ describe('searching the projects', () => {
 
 describe('while the projects are read', () => {
 	it('shows the screen with its toolbar, and the cards as skeletons, said in words for a screen reader', async () => {
-		const app = fakeApp({ listProjects: () => new Promise(() => undefined), lastCheckout: async () => ok(null), suggestCheckout: async () => ok(null), publishStatus: async () => ok({ state: 'unavailable' }) });
+		const app = fakeApp({
+			listProjects: () => new Promise(() => undefined),
+			lastCheckout: async () => ok(null),
+			suggestCheckout: async () => ok(null),
+			publishStatus: async () => ok({ state: 'unavailable' }),
+		});
 		(window as unknown as { workspace: unknown }).workspace = app.api;
 		current = await render(createElement(Projects, { hidden: false }));
 		await settle();

@@ -253,7 +253,9 @@ describe.skipIf(realDevelop === null)('saving a change to the real library', () 
 			{ path: 'spacing', value: '6px' },
 		]);
 		expect(g(throwaway, 'rev-parse', `${b.branch}^`).trim()).toBe(realDevelop);
-		const changed = g(throwaway, 'diff', '--numstat', realDevelop as string, b.branch).trim().split('\n');
+		const changed = g(throwaway, 'diff', '--numstat', realDevelop as string, b.branch)
+			.trim()
+			.split('\n');
 		// Three files, one line each, nothing else.
 		expect(changed.map((l) => l.split('\t').slice(0, 2).join(' '))).toEqual(['1 1', '1 1', '1 1']);
 		expect(g(throwaway, 'log', '-1', '--format=%B', b.branch)).toContain('Tones pineGreen 50: #108062 → #0A6B52');

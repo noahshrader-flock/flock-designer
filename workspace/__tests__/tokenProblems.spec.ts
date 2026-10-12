@@ -40,7 +40,11 @@ describe('what could not be read', () => {
 		// Only what the component sets: no class passed in, so every look of it is shadcn's.
 		expect(alert.className).toContain('bg-card');
 		expect(alert.className).not.toMatch(/warning|destructive|\b(flex|rounded-none|border-x-0|py-1)\b/);
-		expect([...alert.children].map((c) => `${c.tagName}:${c.getAttribute('data-slot') ?? ''}`)).toEqual(['svg:', 'DIV:alert-title', 'DIV:alert-action']);
+		expect([...alert.children].map((c) => `${c.tagName}:${c.getAttribute('data-slot') ?? ''}`)).toEqual([
+			'svg:',
+			'DIV:alert-title',
+			'DIV:alert-action',
+		]);
 		expect(alert.querySelector('[data-slot="alert-title"]')?.textContent).toBe('3 values couldn’t be read');
 		expect(alert.querySelector('[data-slot="alert-action"]')?.textContent).toBe('View');
 	});

@@ -12,14 +12,39 @@ import { undeclared } from '../src/shared/wcag';
  * tokens panel's own rows, who else shares each, and what it sets itself. Against a fake app.
  */
 
-const component = (name: string, group = 'Buttons'): CatalogComponent => ({ id: `src/components/${name}/${name}.stories.tsx`, name, group, subtitle: null, storybook: null, source: '' });
+const component = (name: string, group = 'Buttons'): CatalogComponent => ({
+	id: `src/components/${name}/${name}.stories.tsx`,
+	name,
+	group,
+	subtitle: null,
+	storybook: null,
+	source: '',
+});
 const BUTTON = component('FSButton');
 const COMPONENTS = [BUTTON, component('FSCard', 'Surfaces'), component('FSTextField', 'Inputs'), component('FSTabs'), component('FSChip')];
-const color = (path: string, group: string, set: string, name: string, value: string): DesignToken => ({ path, kind: 'color', category: 'Color', group, set, name, value, source: { file: 'src/theme.ts', line: 3 } });
+const color = (path: string, group: string, set: string, name: string, value: string): DesignToken => ({
+	path,
+	kind: 'color',
+	category: 'Color',
+	group,
+	set,
+	name,
+	value,
+	source: { file: 'src/theme.ts', line: 3 },
+});
 const TOKENS: DesignToken[] = [
 	color('palette.light.primary.main', 'Light', 'primary', 'main', '#108062'),
 	color('palette.dark.primary.main', 'Dark', 'primary', 'main', '#80D6B9'),
-	{ path: 'radius', kind: 'dimension', category: 'Shape', group: 'Radius', set: 'radius', name: 'base', value: '8px', source: { file: 'src/utils/theme.ts', line: 5 } },
+	{
+		path: 'radius',
+		kind: 'dimension',
+		category: 'Shape',
+		group: 'Radius',
+		set: 'radius',
+		name: 'base',
+		value: '8px',
+		source: { file: 'src/utils/theme.ts', line: 5 },
+	},
 ];
 const READY: ComponentTokens = {
 	state: 'ready',
@@ -40,7 +65,17 @@ const READY: ComponentTokens = {
 	derived: 7,
 	accessibility: {
 		ran: { axe: '4.14.0', tags: ['wcag2a'], target: 'WCAG 2.0 Level A', declared: true, at: '2026-10-10T00:00:00.000Z', states: ['default'] },
-		violations: [{ rule: 'button-name', help: 'Buttons must have discernible text', impact: 'critical', criteria: ['4.1.2'], nodes: 2, url: 'https://x', states: ['default'] }],
+		violations: [
+			{
+				rule: 'button-name',
+				help: 'Buttons must have discernible text',
+				impact: 'critical',
+				criteria: ['4.1.2'],
+				nodes: 2,
+				url: 'https://x',
+				states: ['default'],
+			},
+		],
 		incomplete: [],
 		notAutomated: [],
 	},
@@ -119,7 +154,10 @@ describe('the component view', () => {
 	it('lists what the component sets itself, and how much is a shade worked out from a token', async () => {
 		await show(async () => ok(READY));
 		const section = document.querySelector('[aria-label="Not tokens"]') as HTMLElement;
-		expect([...section.querySelectorAll('[data-not-token]')].map((li) => li.textContent)).toEqual(['colorrgba(0, 0, 0, 0.87)22 uses', 'spacing16px41 uses']);
+		expect([...section.querySelectorAll('[data-not-token]')].map((li) => li.textContent)).toEqual([
+			'colorrgba(0, 0, 0, 0.87)22 uses',
+			'spacing16px41 uses',
+		]);
 		expect(section.textContent).toContain('7 uses are shades worked out from a token');
 	});
 

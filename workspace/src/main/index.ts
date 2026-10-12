@@ -69,7 +69,11 @@ const createWindow = (): BrowserWindow => {
 	if (!testing) nativeTheme.themeSource = appearanceMemory().read();
 	const state: WindowState = testing
 		? DEFAULT_SIZE
-		: restoreState(memory.read(), screen.getAllDisplays().map((d) => d.workArea), DEFAULT_SIZE);
+		: restoreState(
+				memory.read(),
+				screen.getAllDisplays().map((d) => d.workArea),
+				DEFAULT_SIZE,
+			);
 	const window = new BrowserWindow({
 		width: state.width,
 		height: state.height,
@@ -158,8 +162,10 @@ void app.whenReady().then(() => {
 	);
 	const designRepo = new DesignRepo(github, DESIGN_REPO);
 
-	const page = new PageView(window, (route) => window.webContents.send('workspace:event:pageRoute', route), (e) =>
-		window.webContents.send('workspace:event:pinEvent', e),
+	const page = new PageView(
+		window,
+		(route) => window.webContents.send('workspace:event:pageRoute', route),
+		(e) => window.webContents.send('workspace:event:pinEvent', e),
 	);
 
 	const prototypeServer = new PrototypeServer();

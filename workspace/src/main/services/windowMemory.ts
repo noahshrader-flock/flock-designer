@@ -34,7 +34,10 @@ export const MIN_WINDOW = { width: 900, height: 560 };
 export const restoreState = (saved: unknown, screens: Area[], fallback: { width: number; height: number }): WindowState => {
 	const s = (typeof saved === 'object' && saved !== null ? saved : {}) as Record<string, unknown>;
 	const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : null);
-	const biggest = screens.reduce((a, b) => (b.width * b.height > a.width * a.height ? b : a), screens[0] ?? { x: 0, y: 0, width: 1920, height: 1080 });
+	const biggest = screens.reduce(
+		(a, b) => (b.width * b.height > a.width * a.height ? b : a),
+		screens[0] ?? { x: 0, y: 0, width: 1920, height: 1080 },
+	);
 	const clamp = (v: number | null, lo: number, hi: number, dflt: number): number => (v === null ? dflt : Math.min(Math.max(v, lo), Math.max(lo, hi)));
 	const width = clamp(num(s.width), MIN_WINDOW.width, biggest.width, fallback.width);
 	const height = clamp(num(s.height), MIN_WINDOW.height, biggest.height, fallback.height);

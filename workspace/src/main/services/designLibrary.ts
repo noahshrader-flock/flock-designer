@@ -1,7 +1,15 @@
 import { existsSync } from 'node:fs';
 import { designSystemOf, isTokenGroup } from '../../shared/catalog';
 import type { DeclaredTarget } from '../../shared/wcag';
-import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem, DesignSystemConnection, DesignTokens, FoundDesignSystem } from '../../shared/contract';
+import type {
+	Catalog,
+	CatalogComponent,
+	CatalogUpdate,
+	ConnectedDesignSystem,
+	DesignSystemConnection,
+	DesignTokens,
+	FoundDesignSystem,
+} from '../../shared/contract';
 import { LIBRARY_MANIFEST, declaredTarget } from './accessibilityBrief';
 import { isStoryFile, readCatalog, type CatalogReads } from './componentCatalog';
 import { readTokens } from './designTokens';
@@ -25,14 +33,27 @@ const branchRef = (branch: string): string => `refs/remotes/origin/${branch}`;
 
 /** What git said when a fetch of `branch` failed, in words a person can act on. */
 export const fetchProblem = (stderr: string, branch: string): string => {
-	if (/Authentication failed|could not read (Username|Password)|terminal prompts disabled|Repository not found|Permission denied \(publickey\)|403/i.test(stderr)) {
+	if (
+		/Authentication failed|could not read (Username|Password)|terminal prompts disabled|Repository not found|Permission denied \(publickey\)|403/i.test(
+			stderr,
+		)
+	) {
 		return 'GitHub would not let git on this computer read the library: git is not signed in to GitHub, or this account cannot read it. Run `gh auth setup-git` in a terminal (with the GitHub CLI signed in), or sign in to git.';
 	}
-	if (/Could not resolve host|Failed to connect|Connection (timed out|refused|reset)|Network is unreachable|unable to access|timed out|SIGTERM/i.test(stderr)) {
+	if (
+		/Could not resolve host|Failed to connect|Connection (timed out|refused|reset)|Network is unreachable|unable to access|timed out|SIGTERM/i.test(
+			stderr,
+		)
+	) {
 		return 'Could not reach GitHub. Check the internet connection.';
 	}
 	if (/couldn't find remote ref|no such ref/i.test(stderr)) return `GitHub has no ${branch} branch for the library.`;
-	const said = stderr.trim().split('\n').pop()?.replace(/^fatal:\s*/, '') ?? '';
+	const said =
+		stderr
+			.trim()
+			.split('\n')
+			.pop()
+			?.replace(/^fatal:\s*/, '') ?? '';
 	return `Git could not update the library: ${said || 'it stopped without saying why.'}`;
 };
 
@@ -52,7 +73,11 @@ export const libraryCommit = async (root: string, branch: string): Promise<strin
 export const updateLibrary = async (root: string, branch: string): Promise<Exclude<CatalogUpdate, 'updating'>> => {
 	const before = await libraryCommit(root, branch);
 	try {
-		await runGit(root, ['fetch', '--quiet', '--no-tags', '--no-recurse-submodules', 'origin', `+refs/heads/${branch}:${branchRef(branch)}`], FETCH_TIMEOUT_MS);
+		await runGit(
+			root,
+			['fetch', '--quiet', '--no-tags', '--no-recurse-submodules', 'origin', `+refs/heads/${branch}:${branchRef(branch)}`],
+			FETCH_TIMEOUT_MS,
+		);
 	} catch (err) {
 		return { failed: fetchProblem((err as Error).message, branch) };
 	}
@@ -69,7 +94,13 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 	const readStories = async (paths: string[]): Promise<Map<string, string>> => {
 		// A header no story can contain, then the object as git stores it; `%(rest)` gives back the path asked for.
 		const mark = `@@dsnr-${Math.random().toString(36).slice(2)}@@`;
-		const out = await gitExact(root, ['cat-file', `--batch=${mark} %(objecttype) %(rest)`], undefined, undefined, paths.map((p) => `${ref}:${p} ${p}\n`).join(''));
+		const out = await gitExact(
+			root,
+			['cat-file', `--batch=${mark} %(objecttype) %(rest)`],
+			undefined,
+			undefined,
+			paths.map((p) => `${ref}:${p} ${p}\n`).join(''),
+		);
 		const files = new Map<string, string>();
 		// Git ends each object with one newline of its own: the next header's split takes it, and the last is taken here,
 		// so every file is exactly as committed.
@@ -85,7 +116,11 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 	const list = async (dir: string): Promise<string[]> => {
 		const files = (await runGit(root, ['ls-tree', '-r', '--name-only', ref, ...(dir === '' ? [] : ['--', dir])])).split('\n').filter(Boolean);
 		const stories = files.filter((f) => isStoryFile(f) && !/\s/.test(f));
-		if (stories.length > 0) read.set(dir, readStories(stories).catch(() => new Map()));
+		if (stories.length > 0)
+			read.set(
+				dir,
+				readStories(stories).catch(() => new Map()),
+			);
 		return files;
 	};
 	return {
@@ -126,7 +161,11 @@ export const readLibrary = async (system: ConnectedDesignSystem, update: Catalog
 	// The components and the tokens, from the same reads of the same commit.
 	const reads = await systemReads(system, commit);
 	// With its accessibility target (T7), as its own manifest declares it on the same commit.
-	const [components, tokens, accessibility] = await Promise.all([readCatalog(reads, designSystemOf(system)), readTokens(reads), libraryTarget(reads, system.name)]);
+	const [components, tokens, accessibility] = await Promise.all([
+		readCatalog(reads, designSystemOf(system)),
+		readTokens(reads),
+		libraryTarget(reads, system.name),
+	]);
 	return { state: 'ready', branch, commit, committedAt, update, components: listedComponents(components, tokens), tokens, accessibility };
 };
 
@@ -186,7 +225,9 @@ export class DesignLibrary {
 		if (commit === null) throw new Error(typeof update === 'object' ? update.failed : `${repository} has no ${branch} branch from GitHub to read.`);
 		const found = await findDesignSystems(libraryReads(root, commit), repository);
 		if (found.length === 0) {
-			throw new Error(`No design system was found in ${repository}: it has no Storybook stories, and no tokens in theme files, CSS variables or token files.`);
+			throw new Error(
+				`No design system was found in ${repository}: it has no Storybook stories, and no tokens in theme files, CSS variables or token files.`,
+			);
 		}
 		if (found.length > 1) {
 			this.offered.set(repository, { root, branch, found });

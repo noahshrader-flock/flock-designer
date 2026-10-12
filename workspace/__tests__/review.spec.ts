@@ -88,7 +88,6 @@ describe('reading comments', () => {
 		await sidebar();
 		expect(document.body.textContent).toContain('No comments yet');
 	});
-
 });
 
 describe('writing a comment', () => {
@@ -276,7 +275,11 @@ describe('pins and cards', () => {
 	it('says, on the card, when its element is gone or it was made in another state', async () => {
 		const app = fakeApp({
 			readComments: async () => ok([comment(1, 'Gone'), comment(2, 'Other')]),
-			pageShowMarkers: async () => ok([{ id: 1, state: 'missing' }, { id: 2, state: 'otherState' }]),
+			pageShowMarkers: async () =>
+				ok([
+					{ id: 1, state: 'missing' },
+					{ id: 2, state: 'otherState' },
+				]),
 		});
 		await open(app);
 		await sidebar();
@@ -309,7 +312,9 @@ describe('its published page', () => {
 	it('says why a publish stopped, on the screen and on the button, and that Publish tries again', async () => {
 		await open(fakeApp({ publishedPage: async () => ok({ state: 'unpublished', why: 'the repository is public.' }) }));
 		expect(button('Publish').getAttribute('title')).toBe('the repository is public.');
-		expect(document.body.textContent).toContain('It was not published because: the repository is public. It is tried again by itself, or press Publish.');
+		expect(document.body.textContent).toContain(
+			'It was not published because: the repository is public. It is tried again by itself, or press Publish.',
+		);
 	});
 
 	it('offers to publish it too when GitHub would not say whether it is, with why on the button', async () => {
@@ -395,9 +400,22 @@ describe('the project’s documents, in More', () => {
 });
 
 describe('Build', () => {
-	const plan = { branch: 'feature/demo', exists: false, recorded: false, started: false, repository: 'flock-coke', basedOn: { repository: 'flock-coke', branch: 'develop' }, current: 'develop', clean: true };
+	const plan = {
+		branch: 'feature/demo',
+		exists: false,
+		recorded: false,
+		started: false,
+		repository: 'flock-coke',
+		basedOn: { repository: 'flock-coke', branch: 'develop' },
+		current: 'develop',
+		clean: true,
+	};
 	const dialog = async (withSetup: string[], more: Partial<typeof plan> = {}) => {
-		const app = fakeApp({ agentReadiness: async () => ok({ state: 'ready' }), moveToCodePlan: async () => ok({ ...plan, ...more }), branchesWithSetup: async () => ok(withSetup) });
+		const app = fakeApp({
+			agentReadiness: async () => ok({ state: 'ready' }),
+			moveToCodePlan: async () => ok({ ...plan, ...more }),
+			branchesWithSetup: async () => ok(withSetup),
+		});
 		await open(app);
 		await press(menuItem(await openMenu(button('More')), 'Build'));
 		await settle();
@@ -513,7 +531,17 @@ describe('there is no selected version', () => {
 		const app = fakeApp({
 			agentReadiness: async () => ok({ state: 'ready' }),
 			branchesWithSetup: async () => ok(['develop']),
-			moveToCodePlan: async () => ok({ branch: 'feature/demo', exists: false, recorded: false, started: false, repository: 'flock-coke', basedOn: null, current: 'develop', clean: true }),
+			moveToCodePlan: async () =>
+				ok({
+					branch: 'feature/demo',
+					exists: false,
+					recorded: false,
+					started: false,
+					repository: 'flock-coke',
+					basedOn: null,
+					current: 'develop',
+					clean: true,
+				}),
 		});
 		await open(app, { project: { ...PROJECT, iterations: prototypes } });
 		await press(menuItem(await openMenu(button('More')), 'Build'));
@@ -621,7 +649,12 @@ describe('Address', () => {
 			addressPrototype: async () => ok({ state: 'running', startedAt: 'now' }),
 			agentStatus: async () => ok({ state: 'finished', exitCode: 0 }),
 			finishPrototypeAddress: async () =>
-				ok({ changed: true, iteration: 'v1-i2', made: null, comment: (c = { ...c, resolved: true, addressedAt: 'abc1234def56', addressedIn: 'v1-i2' }) }),
+				ok({
+					changed: true,
+					iteration: 'v1-i2',
+					made: null,
+					comment: (c = { ...c, resolved: true, addressedAt: 'abc1234def56', addressedIn: 'v1-i2' }),
+				}),
 		});
 		await open(app);
 		await sidebar();
@@ -656,7 +689,15 @@ describe('its accessibility', () => {
 	const saved = () => document.querySelector<HTMLElement>('[aria-label^="Saved at"]');
 
 	it('is at the immediate right of the icon that says where the prototype is saved, not with the controls at the right', async () => {
-		const app = fakeApp({ checkAccessibility: async () => ok({ ran: { axe: '4.14.0', tags: ['wcag2a'], target: 'WCAG 2.0 Level A', declared: true, at: '2026-10-10T00:00:00.000Z', states: ['default'] }, violations: [], incomplete: [], notAutomated: [] }) });
+		const app = fakeApp({
+			checkAccessibility: async () =>
+				ok({
+					ran: { axe: '4.14.0', tags: ['wcag2a'], target: 'WCAG 2.0 Level A', declared: true, at: '2026-10-10T00:00:00.000Z', states: ['default'] },
+					violations: [],
+					incomplete: [],
+					notAutomated: [],
+				}),
+		});
 		await open(app);
 		await settle();
 		expect(accessibility()).not.toBeNull();
@@ -753,4 +794,3 @@ describe('assigning the project a folder, from More', () => {
 		expect(document.querySelector('[data-slot="dialog-content"]')?.textContent).toContain('Saving needs write access to the design repository.');
 	});
 });
-

@@ -164,7 +164,8 @@ describe('saving and proposing it', () => {
 	it('says why it could not be proposed, and gives GitHub’s page to open the pull request by hand', async () => {
 		await show({
 			voiceAndTone: async () => ok(voice({ branch: kept() })),
-			proposeVoiceAndTone: async () => fail('Proposing opens the pull request with the GitHub command line (gh), which is not installed or not signed in here.'),
+			proposeVoiceAndTone: async () =>
+				fail('Proposing opens the pull request with the GitHub command line (gh), which is not installed or not signed in here.'),
 		});
 		await press(button('Propose'));
 		await settle();

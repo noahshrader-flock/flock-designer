@@ -146,9 +146,7 @@ export const readDescriptor = (root: string): WorkspaceDescriptor => {
 	try {
 		text = readFileSync(path, 'utf8');
 	} catch {
-		throw new DescriptorProblem(
-			`This repository has no ${DESCRIPTOR_PATH}, so Workspace does not know what it may run here.`,
-		);
+		throw new DescriptorProblem(`This repository has no ${DESCRIPTOR_PATH}, so Workspace does not know what it may run here.`);
 	}
 	return parseDescriptor(text);
 };

@@ -98,7 +98,8 @@ const typographyOf = (file: string, text: string): { tokens: DesignToken[]; prob
 		if (e.key === 'fontFamily' || e.key === 'fontSize') add(e, `typography.${e.key}`, TYPE_KEYS[e.key] as string, 'base', e.key);
 		else if (weight) add(e, `typography.${e.key}`, TYPE_PARTS.weight, 'weight', (weight[1] as string).toLowerCase());
 		else if (e.value.kind === 'object')
-			for (const part of e.value.entries) if (part.key !== null && TYPE_KEYS[part.key]) add(part, `typography.${e.key}.${part.key}`, TYPE_KEYS[part.key] as string, e.key, part.key);
+			for (const part of e.value.entries)
+				if (part.key !== null && TYPE_KEYS[part.key]) add(part, `typography.${e.key}.${part.key}`, TYPE_KEYS[part.key] as string, e.key, part.key);
 	}
 	return { tokens, problems };
 };
@@ -119,7 +120,16 @@ const shadowsOf = (file: string, text: string): { tokens: DesignToken[]; problem
 		const value = literal(item.text);
 		if (value === null) problems.push({ file, line: item.line, reason: `shadows[${level}] is ${item.text}, not a value, so it is not read` });
 		else if (value !== 'none')
-			tokens.push({ path: `shadows.${level}`, kind: 'shadow', category: primitiveOf('shadow', 'shadows') as string, group: SHADOWS, set: 'shadows', name: String(level), value, source: { file, line: item.line } });
+			tokens.push({
+				path: `shadows.${level}`,
+				kind: 'shadow',
+				category: primitiveOf('shadow', 'shadows') as string,
+				group: SHADOWS,
+				set: 'shadows',
+				name: String(level),
+				value,
+				source: { file, line: item.line },
+			});
 	});
 	return { tokens, problems };
 };
@@ -147,7 +157,17 @@ const layoutAndMotionOf = (file: string, text: string): { tokens: DesignToken[];
 			const written = e.value.kind === 'value' ? e.value.text : 'an object';
 			const value = themeValue(written, unit);
 			if (value === null) problems.push({ file, line: e.line, reason: `${path}.${e.key} is ${written}, not a value, so it is not read` });
-			else tokens.push({ path: `${path}.${e.key}`, kind, category: primitiveOf(kind, path) as string, group, set, name: e.key, value, source: { file, line: e.line } });
+			else
+				tokens.push({
+					path: `${path}.${e.key}`,
+					kind,
+					category: primitiveOf(kind, path) as string,
+					group,
+					set,
+					name: e.key,
+					value,
+					source: { file, line: e.line },
+				});
 		}
 	};
 	const breakpoints = primitiveOf('dimension', 'breakpoints') as string;
@@ -161,7 +181,10 @@ const layoutAndMotionOf = (file: string, text: string): { tokens: DesignToken[];
  * A whole number a theme sets: `const spacing = 8;`, or `spacing: 8` in `createTheme({ … })`; with its line, and where
  * the number is written.
  */
-const themeNumber = (text: string, { key, inside }: (typeof THEME_NUMBERS)[number]): { value: string; line: number; span: [number, number] } | null => {
+const themeNumber = (
+	text: string,
+	{ key, inside }: (typeof THEME_NUMBERS)[number],
+): { value: string; line: number; span: [number, number] } | null => {
 	const constant = new RegExp(`\\bconst\\s+${key}\\s*=\\s*(\\d+)\\s*;`).exec(text);
 	if (constant) {
 		const at = constant.index + (constant[0].length - constant[0].replace(/^.*?=\s*/, '').length);
@@ -202,7 +225,16 @@ export const themeFiles: TokenSource = {
 					continue;
 				}
 				steps.set(e.key as string, hex.toUpperCase());
-				tokens.push({ path: `tone.${name}.${e.key}`, kind: 'color', category: primitiveOf('color', name) as string, group: 'Tones', set: name, name: e.key as string, value: hex.toUpperCase(), source: { file, line: e.line } });
+				tokens.push({
+					path: `tone.${name}.${e.key}`,
+					kind: 'color',
+					category: primitiveOf('color', name) as string,
+					group: 'Tones',
+					set: name,
+					name: e.key as string,
+					value: hex.toUpperCase(),
+					source: { file, line: e.line },
+				});
 			}
 			tones.set(name, steps);
 		}
@@ -256,7 +288,8 @@ export const themeFiles: TokenSource = {
 			}
 		}
 		for (const { name, mode } of palettes) {
-			for (const r of rolesOf(name)) tokens.push({ path: `palette.${mode}.${r.set}.${r.name}`, category: primitiveOf('color', r.name) as string, group: capitalized(mode), ...r });
+			for (const r of rolesOf(name))
+				tokens.push({ path: `palette.${mode}.${r.set}.${r.name}`, category: primitiveOf('color', r.name) as string, group: capitalized(mode), ...r });
 		}
 		// A theme is tones, a palette, or a call to MUI's `createTheme`; a file with none of them is not one.
 		if (tones.size === 0 && palettes.length === 0 && ![...texts.values()].some((t) => /\bcreateTheme\s*\(/.test(t))) return null;
@@ -267,7 +300,16 @@ export const themeFiles: TokenSource = {
 			for (const [file, text] of texts) {
 				const found = themeNumber(text, number);
 				if (!found) continue;
-				tokens.push({ path: name, kind: 'dimension', category: primitiveOf('dimension', name) as string, group: capitalized(name), set: name, name: 'base', value: `${found.value}px`, source: { file, line: found.line } });
+				tokens.push({
+					path: name,
+					kind: 'dimension',
+					category: primitiveOf('dimension', name) as string,
+					group: capitalized(name),
+					set: name,
+					name: 'base',
+					value: `${found.value}px`,
+					source: { file, line: found.line },
+				});
 				break;
 			}
 		}
@@ -291,7 +333,8 @@ export const themeFiles: TokenSource = {
 			const found = number && themeNumber(text, number);
 			if (!found || found.line !== token.source.line) throw notWhereRead(token);
 			const px = 'value' in to ? /^(\d+)px$/.exec(to.value)?.[1] : undefined;
-			if (px === undefined) throw new Error(`The theme sets ${token.path} as a whole number of pixels, so it cannot be ${'value' in to ? to.value : 'a pointer'}.`);
+			if (px === undefined)
+				throw new Error(`The theme sets ${token.path} as a whole number of pixels, so it cannot be ${'value' in to ? to.value : 'a pointer'}.`);
 			return replaced(text, found.span, px);
 		}
 		const entry = entryAt(text, token.name, token.source.line, paletteIn(text) ?? []);
@@ -301,7 +344,8 @@ export const themeFiles: TokenSource = {
 		const step = /^tone\.(\w+)\.(\d+)$/.exec(to.ref);
 		if (!step) throw new Error(`${token.path} can point only at a tone step, not at ${to.ref}.`);
 		const [tone, at] = [step[1] as string, step[2] as string];
-		if (!new RegExp(`\\b${tone}\\b`).test(text)) throw new Error(`${token.source.file} does not use ${tone}, so ${token.path} cannot point at it there.`);
+		if (!new RegExp(`\\b${tone}\\b`).test(text))
+			throw new Error(`${token.source.file} does not use ${tone}, so ${token.path} cannot point at it there.`);
 		const alpha = token.ref?.alpha;
 		return replaced(text, entry.span, alpha ? `\`\${${tone}[${at}]}${alpha}\`` : `${tone}[${at}]`);
 	},

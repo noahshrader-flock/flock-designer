@@ -24,7 +24,11 @@ const component = (more: Partial<CatalogComponent> = {}): CatalogComponent => ({
 });
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
-const show = async (c: CatalogComponent, answer: () => Promise<ReturnType<typeof ok<StoryPreview>> | ReturnType<typeof fail>> = async () => ok({ state: 'ready', base: BASE }), more: Record<string, unknown> = {}) => {
+const show = async (
+	c: CatalogComponent,
+	answer: () => Promise<ReturnType<typeof ok<StoryPreview>> | ReturnType<typeof fail>> = async () => ok({ state: 'ready', base: BASE }),
+	more: Record<string, unknown> = {},
+) => {
 	const app = fakeApp({ storyPreview: answer });
 	(window as unknown as { workspace: unknown }).workspace = app.api;
 	const props = { component: c, commit: 'c1', edits: [], onBack: vi.fn(), ...more };
@@ -88,7 +92,8 @@ describe('the previews', () => {
 	it('grows a frame to the height its own page says, and takes no height from anywhere else', async () => {
 		await show(component());
 		const frame = frames()[0]!;
-		const tell = (data: unknown, source: MessageEventSource | null) => act(async () => void window.dispatchEvent(new MessageEvent('message', { data, source })));
+		const tell = (data: unknown, source: MessageEventSource | null) =>
+			act(async () => void window.dispatchEvent(new MessageEvent('message', { data, source })));
 		await tell({ [PREVIEW_HEIGHT]: 640 }, frame.contentWindow);
 		expect(frame.style.height).toBe('640px');
 		await tell({ [PREVIEW_HEIGHT]: 99 }, window);
@@ -126,11 +131,16 @@ describe('with a change to the tokens (T3)', () => {
 	const TRIAL = 'http://127.0.0.1:4000/trial-1-abc/';
 	const edits = [{ path: 'tone.pineGreen.50', value: '#0A6B52' }];
 	const rerender = (props: Record<string, unknown>) =>
-		act(async () => current!.root.render(createElement(TooltipProvider, null, createElement(ComponentPage, props as Parameters<typeof ComponentPage>[0]))));
+		act(async () =>
+			current!.root.render(createElement(TooltipProvider, null, createElement(ComponentPage, props as Parameters<typeof ComponentPage>[0]))),
+		);
 
 	it('builds the previews with the change, keeping the stories shown while it builds, and shows the new build', async () => {
 		let finish: (v: ReturnType<typeof ok<StoryPreview>>) => void = () => undefined;
-		const answers = [async () => ok<StoryPreview>({ state: 'ready', base: BASE }), () => new Promise<ReturnType<typeof ok<StoryPreview>>>((r) => (finish = r))];
+		const answers = [
+			async () => ok<StoryPreview>({ state: 'ready', base: BASE }),
+			() => new Promise<ReturnType<typeof ok<StoryPreview>>>((r) => (finish = r)),
+		];
 		const { app, props } = await show(component(), () => (answers.shift() as () => Promise<ReturnType<typeof ok<StoryPreview>>>)());
 		await rerender({ ...props, edits });
 		await settle();

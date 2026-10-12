@@ -44,7 +44,9 @@ describe('the weekly check of WCAG’s edition', () => {
 	});
 
 	it('says a change once: an issue already open for it is not opened again', async () => {
-		const { api, out } = await run(NEWER, [{ title: 'WCAG has a new edition: 2.3, published 2027-03-01', html_url: 'https://github.com/o/r/issues/4' }]);
+		const { api, out } = await run(NEWER, [
+			{ title: 'WCAG has a new edition: 2.3, published 2027-03-01', html_url: 'https://github.com/o/r/issues/4' },
+		]);
 		expect(api.mock.calls.some(([, init]) => (init as { method?: string } | undefined)?.method === 'POST')).toBe(false);
 		expect(out.at(-1)).toBe('Already said: https://github.com/o/r/issues/4');
 	});

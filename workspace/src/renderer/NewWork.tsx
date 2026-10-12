@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import type { AgentReadiness, Checkout, Project, ProjectIteration, PrototypeReadiness, Repository, RepositoryList, RepositoryReach } from '../shared/contract';
+import type {
+	AgentReadiness,
+	Checkout,
+	Project,
+	ProjectIteration,
+	PrototypeReadiness,
+	Repository,
+	RepositoryList,
+	RepositoryReach,
+} from '../shared/contract';
 import { freshIteration, slugify } from '../shared/projects';
 import { CancelButton } from './CancelButton';
 import { CloneHere, useClone, Working } from './Clone';
@@ -25,7 +34,17 @@ export interface Created {
 }
 
 /** Where it starts, as the repository's description: a branch icon and the branch, and a Change that swaps it for a field with the list. */
-const StartsFrom = ({ branch, branches, onChange, disabled }: { branch: string; branches: string[]; onChange: (branch: string) => void; disabled: boolean }) => {
+const StartsFrom = ({
+	branch,
+	branches,
+	onChange,
+	disabled,
+}: {
+	branch: string;
+	branches: string[];
+	onChange: (branch: string) => void;
+	disabled: boolean;
+}) => {
 	const [changing, setChanging] = useState(false);
 	if (changing)
 		return (
@@ -287,10 +306,19 @@ export const NewWork = ({
 							</AlertAction>
 						</Alert>
 					)}
-					<FolderField id="new-work-folder" label="Folder (optional)" folders={folders} value={inFolder ?? null} onChange={setInFolder} disabled={busy} />
+					<FolderField
+						id="new-work-folder"
+						label="Folder (optional)"
+						folders={folders}
+						value={inFolder ?? null}
+						onChange={setInFolder}
+						disabled={busy}
+					/>
 					{prototype && !prototype.ready && (
 						<Alert variant="warning">
-							<AlertTitle>{prototype.why === 'not-installed' ? "The real components aren't installed here" : 'The page builder is missing'}</AlertTitle>
+							<AlertTitle>
+								{prototype.why === 'not-installed' ? "The real components aren't installed here" : 'The page builder is missing'}
+							</AlertTitle>
 							<AlertDescription>
 								{prototype.why === 'not-installed' && prototype.canInstall ? (
 									<div className="flex flex-col items-start gap-3">

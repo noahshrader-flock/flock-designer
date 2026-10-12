@@ -17,7 +17,18 @@ describe('opening an address', () => {
 	});
 
 	it('opens nothing that is not a plain https address, whatever it says', () => {
-		for (const bad of ['http://example.test/', 'file:///etc/passwd', 'javascript:alert(1)', 'https://x.test/a b', 'https://x.test/a&calc', 'https://x.test/a;rm', 'https://x.test/$(id)', 'https://x.test/?q=1', 'open /Applications', '']) {
+		for (const bad of [
+			'http://example.test/',
+			'file:///etc/passwd',
+			'javascript:alert(1)',
+			'https://x.test/a b',
+			'https://x.test/a&calc',
+			'https://x.test/a;rm',
+			'https://x.test/$(id)',
+			'https://x.test/?q=1',
+			'open /Applications',
+			'',
+		]) {
 			expect(browserCommand(bad, 'win32')).toBeNull();
 			expect(browserCommand(bad, 'darwin')).toBeNull();
 		}

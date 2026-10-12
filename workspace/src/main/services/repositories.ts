@@ -13,7 +13,9 @@ import type { GitHubSession } from './githubSession';
 
 /** `owner/repo` from a GitHub remote, in any of the forms git writes one. Null for anything else. */
 export const gitHubRepoOf = (remote: string): string | null => {
-	const m = /^(?:https:\/\/(?:[^@/]+@)?github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([\w.-]+\/[\w.-]+?)(?:\.git)?\/?$/i.exec(remote.trim());
+	const m = /^(?:https:\/\/(?:[^@/]+@)?github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([\w.-]+\/[\w.-]+?)(?:\.git)?\/?$/i.exec(
+		remote.trim(),
+	);
 	return m?.[1] ?? null;
 };
 
@@ -88,7 +90,8 @@ export const reachableRepositories = async (
 	const theirs = async (): Promise<string[] | null> => {
 		if (person === null || login === null) return null;
 		const [who, names] = await Promise.all([person.api('/user').catch(() => null), visibleRepositories(person).catch(() => [])]);
-		const same = typeof (who as { login?: unknown } | null)?.login === 'string' && (who as { login: string }).login.toLowerCase() === login.toLowerCase();
+		const same =
+			typeof (who as { login?: unknown } | null)?.login === 'string' && (who as { login: string }).login.toLowerCase() === login.toLowerCase();
 		return same && who !== null ? names : null;
 	};
 	const [mine, apps] = await Promise.all([theirs(), visibleRepositories(app).catch(() => [])]);

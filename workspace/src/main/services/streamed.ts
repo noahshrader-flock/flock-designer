@@ -34,7 +34,12 @@ export class Stopped extends Error {
 export const runStreamed = (
 	file: string,
 	args: string[],
-	{ cwd, env = process.env, signal, onText = () => undefined }: { cwd?: string; env?: NodeJS.ProcessEnv; signal?: AbortSignal; onText?: (text: string) => void },
+	{
+		cwd,
+		env = process.env,
+		signal,
+		onText = () => undefined,
+	}: { cwd?: string; env?: NodeJS.ProcessEnv; signal?: AbortSignal; onText?: (text: string) => void },
 ): Promise<Streamed> =>
 	new Promise((done, fail) => {
 		const child = spawn(file, args, { cwd, env, shell: false, stdio: ['ignore', 'pipe', 'pipe'], ...(signal ? { signal } : {}) });

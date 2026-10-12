@@ -119,7 +119,7 @@ describe('branchAuthors', () => {
 		g('-c', `user.name=${name}`, '-c', 'user.email=x@example.test', 'commit', '-q', '-m', `by ${name}`);
 	};
 
-	it('lists everyone who committed on the branch, once each, and not the trunk\'s authors', async () => {
+	it("lists everyone who committed on the branch, once each, and not the trunk's authors", async () => {
 		g('checkout', '-q', '-b', 'fd/p/i1');
 		commitAs('Ada Lovelace', 'a.txt');
 		commitAs('Grace Hopper', 'b.txt');
@@ -179,7 +179,7 @@ describe('two commands at once in one repository', () => {
 describe('a lock held by something outside the app', () => {
 	const lock = () => join(root, '.git', 'index.lock');
 
-	it('is waited out when it clears by itself, as an editor\'s brief lock does', async () => {
+	it("is waited out when it clears by itself, as an editor's brief lock does", async () => {
 		g('branch', 'a');
 		writeFileSync(lock(), '');
 		setTimeout(() => existsSync(lock()) && unlinkSync(lock()), 400);
@@ -238,7 +238,8 @@ describe('branchStartedAt', () => {
 describe('a branch name from data', () => {
 	it('is safe to give git only when it cannot be read as an option or a range', () => {
 		for (const name of ['develop', 'feature/alpha', 'noah/flock-designer', 'v1.2', 'a_b-c']) expect(isSafeBranchName(name)).toBe(true);
-		for (const name of ['-x', '--output=/tmp/x', '', 'a..b', '/abs', ' develop', 'a b', 'x:y', 'a~1', 'a^', '.hidden']) expect(isSafeBranchName(name)).toBe(false);
+		for (const name of ['-x', '--output=/tmp/x', '', 'a..b', '/abs', ' develop', 'a b', 'x:y', 'a~1', 'a^', '.hidden'])
+			expect(isSafeBranchName(name)).toBe(false);
 	});
 
 	it('is never read by git as an option when a branch’s start is asked for', async () => {
@@ -247,4 +248,3 @@ describe('a branch name from data', () => {
 		expect(existsSync(written)).toBe(false);
 	});
 });
-

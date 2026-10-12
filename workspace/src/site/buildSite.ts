@@ -58,7 +58,6 @@ interface SiteProject {
 	builtInCode: string | null;
 }
 
-
 const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 /** Text as it is safe in HTML, in an element or an attribute. */
 const escape = (s: string): string => s.replace(/[&<>"']/g, (c) => ENTITIES[c] as string);
@@ -113,7 +112,14 @@ const writeShared = (designRoot: string, outDir: string): Map<string, string> =>
 	const names = new Map<string, string>();
 	const dir = join(designRoot, 'projects', '_shared');
 	if (!existsSync(dir)) return names;
-	const ext: Record<string, string> = { 'font/woff2': 'woff2', 'font/woff': 'woff', 'font/ttf': 'ttf', 'font/otf': 'otf', 'image/svg+xml': 'svg', 'image/png': 'png' };
+	const ext: Record<string, string> = {
+		'font/woff2': 'woff2',
+		'font/woff': 'woff',
+		'font/ttf': 'ttf',
+		'font/otf': 'otf',
+		'image/svg+xml': 'svg',
+		'image/png': 'png',
+	};
 	for (const f of readdirSync(dir)) {
 		const hash = /^([0-9a-f]{16})\.datauri$/.exec(f)?.[1];
 		const m = hash ? /^data:([^;,]+)(;base64)?,(.*)$/s.exec(readFileSync(join(dir, f), 'utf8')) : null;

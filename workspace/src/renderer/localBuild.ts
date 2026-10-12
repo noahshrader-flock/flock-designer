@@ -36,8 +36,7 @@ export type BuildApi = Pick<WorkspaceApi, 'readCheckout' | 'continueIteration' |
  * From the iteration's own name, which the main process already normalized, rather than a
  * hard-coded branch prefix: the repository declares how its branches are named.
  */
-export const previewCommandFor = (iteration: ProjectIteration): string =>
-	iteration.name === 'codebase' ? 'design-mode' : 'preview';
+export const previewCommandFor = (iteration: ProjectIteration): string => (iteration.name === 'codebase' ? 'design-mode' : 'preview');
 
 /**
  * Where the preview opens: the iteration's own route within the running app when its record says
@@ -96,11 +95,7 @@ export type AgentOutcome = { kind: 'finished' } | { kind: 'failed'; message: str
  * Waits for the agent that was just started, asking how it is getting on. Shared by building a
  * prototype and addressing comments, which both start the one agent and wait for it the same way.
  */
-export const waitForAgent = async (
-	api: Pick<WorkspaceApi, 'agentStatus'>,
-	isLive: () => boolean,
-	pollMs = 1000,
-): Promise<AgentOutcome> => {
+export const waitForAgent = async (api: Pick<WorkspaceApi, 'agentStatus'>, isLive: () => boolean, pollMs = 1000): Promise<AgentOutcome> => {
 	for (;;) {
 		await sleep(pollMs);
 		if (!isLive()) return { kind: 'stopped' };
@@ -180,7 +175,9 @@ export const runLocalBuild = async ({
 		// not on the branch, and the preview would show half of it as if it were the work.
 		const after = await api.readCheckout(root);
 		if (after.ok && !after.value.clean) {
-			return fail('The agent stopped before it committed all of its work: there are changes in the checkout it did not commit. Continue in Claude Code to finish them.');
+			return fail(
+				'The agent stopped before it committed all of its work: there are changes in the checkout it did not commit. Continue in Claude Code to finish them.',
+			);
 		}
 		if (reporting) {
 			onPhase({ kind: 'reported' });
@@ -201,4 +198,3 @@ export const runLocalBuild = async ({
 	// `stopped` here means the process ended before it ever answered; its output is on screen.
 	return fail(result.value.state === 'failed' ? result.value.detail : 'The preview stopped before it was ready. Its output is below.');
 };
-

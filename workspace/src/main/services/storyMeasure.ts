@@ -100,18 +100,20 @@ const drawShare = async (base: string, mode: Mode, files: string[], pictures: bo
 	const win = hiddenWindow(SESSION, new URL(base).origin, WINDOW);
 	try {
 		const wc = win.webContents;
-		const loaded =
-			!(await setColorScheme(wc, mode, STORY_MS))
-				? null
-				: await within(
-						STORY_MS,
-						wc.loadURL(previewAddress(base, files[0] as string)).then(() => true),
-					);
+		const loaded = !(await setColorScheme(wc, mode, STORY_MS))
+			? null
+			: await within(
+					STORY_MS,
+					wc.loadURL(previewAddress(base, files[0] as string)).then(() => true),
+				);
 		if (loaded === null) return files.map(() => null);
 		const drawn: (Drawn | null)[] = [];
 		// Pictures are drawn at twice the size, whatever the screen, so they are sharp.
 		if (pictures)
-			await within(STORY_MS, wc.debugger.sendCommand('Emulation.setDeviceMetricsOverride', { ...WINDOW, deviceScaleFactor: PICTURE_SCALE, mobile: false }));
+			await within(
+				STORY_MS,
+				wc.debugger.sendCommand('Emulation.setDeviceMetricsOverride', { ...WINDOW, deviceScaleFactor: PICTURE_SCALE, mobile: false }),
+			);
 		// axe-core, once for every file the page draws (T7).
 		if (tags) await within(STORY_MS, wc.executeJavaScript(`${axe.source};true`));
 		for (const file of files) {

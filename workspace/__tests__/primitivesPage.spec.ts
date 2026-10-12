@@ -23,13 +23,27 @@ const TOKENS: DesignToken[] = [
 	token({ path: 'tone.pineGreen.50', category: 'Color', group: 'Tones', set: 'pineGreen', name: '50', value: '#108062' }),
 	token({ path: 'tone.pineGreen.20', category: 'Color', group: 'Tones', set: 'pineGreen', name: '20', value: '#18372F' }),
 	token({ path: 'tone.red.40', category: 'Color', group: 'Tones', set: 'red', name: '40', value: '#BA1A1A' }),
-	token({ path: 'palette.light.primary.main', category: 'Color', group: 'Light', set: 'primary', name: 'main', value: '#108062', ref: { path: 'tone.pineGreen.50' } }),
+	token({
+		path: 'palette.light.primary.main',
+		category: 'Color',
+		group: 'Light',
+		set: 'primary',
+		name: 'main',
+		value: '#108062',
+		ref: { path: 'tone.pineGreen.50' },
+	}),
 	token({ path: 'palette.light.primary.contrastText', category: 'Color', group: 'Light', set: 'primary', name: 'contrastText', value: '#FFFFFF' }),
 	token({ path: 'palette.dark.primary.main', category: 'Color', group: 'Dark', set: 'primary', name: 'main', value: '#C7E7DD' }),
 	token({ path: 'spacing', category: 'Spacing', group: 'Spacing', set: 'spacing', name: 'base', value: '8px' }),
 	token({ path: 'radius', category: 'Shape', group: 'Radius', set: 'radius', name: 'base', value: '0.5rem' }),
 ];
-const tokens = (list = TOKENS, more: Partial<DesignTokens> = {}): DesignTokens => ({ source: 'theme files', tokens: list, problems: [], looked: ['theme files', 'CSS variables', 'design token files'], ...more });
+const tokens = (list = TOKENS, more: Partial<DesignTokens> = {}): DesignTokens => ({
+	source: 'theme files',
+	tokens: list,
+	problems: [],
+	looked: ['theme files', 'CSS variables', 'design token files'],
+	...more,
+});
 const ready = (t: DesignTokens = tokens()): Catalog =>
 	({
 		state: 'ready',
@@ -43,9 +57,15 @@ const ready = (t: DesignTokens = tokens()): Catalog =>
 	}) as unknown as Catalog;
 
 /** Typography, all four parts: a design system that defines every primitive DSNR can read. */
-const font = (group: string, set: string, name: string, value: string) => token({ path: `typography.${set}.${name}`, kind: 'font', category: 'Typography', group, set, name, value });
+const font = (group: string, set: string, name: string, value: string) =>
+	token({ path: `typography.${set}.${name}`, kind: 'font', category: 'Typography', group, set, name, value });
 const FAMILY = font('Family', 'base', 'fontFamily', '"Inter",sans-serif');
-const TYPE = [FAMILY, font('Size', 'h1', 'fontSize', '6rem'), font('Weight', 'h1', 'fontWeight', '300'), font('Line height', 'h1', 'lineHeight', '1.167')];
+const TYPE = [
+	FAMILY,
+	font('Size', 'h1', 'fontSize', '6rem'),
+	font('Weight', 'h1', 'fontWeight', '300'),
+	font('Line height', 'h1', 'lineHeight', '1.167'),
+];
 const BASE = 'http://127.0.0.1:1/previews/abc/';
 const MORE = [
 	token({ path: 'border.thin', category: 'Borders', group: 'Borders', set: 'border', name: 'thin', value: '1px' }),
@@ -53,11 +73,25 @@ const MORE = [
 	token({ path: 'motion.fast', kind: 'duration', category: 'Motion', group: 'Duration', set: 'motion', name: 'fast', value: '150ms' }),
 	token({ path: 'motion.out', kind: 'easing', category: 'Motion', group: 'Easing', set: 'motion', name: 'out', value: 'cubic-bezier(0, 0, 0.2, 1)' }),
 ];
-const ELEVATION = [token({ path: 'shadows.1', kind: 'shadow', category: 'Elevation', group: 'Shadows', set: 'shadows', name: '1', value: '0px 1px 3px rgba(0, 0, 0, 0.2)' })];
+const ELEVATION = [
+	token({
+		path: 'shadows.1',
+		kind: 'shadow',
+		category: 'Elevation',
+		group: 'Shadows',
+		set: 'shadows',
+		name: '1',
+		value: '0px 1px 3px rgba(0, 0, 0, 0.2)',
+	}),
+];
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
 let app: ReturnType<typeof fakeApp>;
-const show = async (catalog: Catalog | null = ready(), edits: TokenEdit[] = [], { hidden = false, preview = ok({ state: 'ready', base: BASE }) as unknown } = {}) => {
+const show = async (
+	catalog: Catalog | null = ready(),
+	edits: TokenEdit[] = [],
+	{ hidden = false, preview = ok({ state: 'ready', base: BASE }) as unknown } = {},
+) => {
 	app = fakeApp({ storyPreview: async () => preview });
 	(window as unknown as { workspace: unknown }).workspace = app.api;
 	current = await render(createElement(Primitives, { catalog, edits, hidden }));
@@ -77,7 +111,16 @@ const notDefined = () => document.querySelector<HTMLElement>('[data-not-defined]
 describe('what it defines, at the top', () => {
 	it('is a chip for each primitive, in the vocabulary’s order, with how many tokens it has', async () => {
 		await show(ready(tokens([...TOKENS, ...TYPE, ...ELEVATION])));
-		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Typography 4', 'Spacing 1', 'Shape 1', 'Elevation 1', 'Borders not defined', 'Breakpoints not defined', 'Motion not defined']);
+		expect(chips().map((c) => c.textContent)).toEqual([
+			'Color 6',
+			'Typography 4',
+			'Spacing 1',
+			'Shape 1',
+			'Elevation 1',
+			'Borders not defined',
+			'Breakpoints not defined',
+			'Motion not defined',
+		]);
 	});
 
 	it('says which parts a primitive made of parts has, when it lacks some: Flock’s typography is a family and nothing else', async () => {
@@ -96,7 +139,16 @@ describe('what it defines, at the top', () => {
 
 	it('says a primitive is not defined when it has no tokens, as a chip of its own', async () => {
 		await show(ready(tokens([...TOKENS.filter((t) => t.category !== 'Shape'), ...TYPE])));
-		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Typography 4', 'Spacing 1', 'Shape not defined', 'Elevation not defined', 'Borders not defined', 'Breakpoints not defined', 'Motion not defined']);
+		expect(chips().map((c) => c.textContent)).toEqual([
+			'Color 6',
+			'Typography 4',
+			'Spacing 1',
+			'Shape not defined',
+			'Elevation not defined',
+			'Borders not defined',
+			'Breakpoints not defined',
+			'Motion not defined',
+		]);
 		expect(chips()[3]!.getAttribute('data-defined')).toBe('false');
 	});
 });
@@ -107,7 +159,17 @@ describe('each primitive, drawn', () => {
 		// Out of order on purpose, with the one it does not know first: the order is the vocabulary's, not the list's.
 		await show(ready(tokens([other, ...TYPE, ...[...TOKENS].reverse()])));
 		expect(sections()).toEqual(['Color', 'Typography', 'Spacing', 'Shape', 'Sizing']);
-		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Typography 4', 'Spacing 1', 'Shape 1', 'Elevation not defined', 'Borders not defined', 'Breakpoints not defined', 'Motion not defined', 'Sizing 1']);
+		expect(chips().map((c) => c.textContent)).toEqual([
+			'Color 6',
+			'Typography 4',
+			'Spacing 1',
+			'Shape 1',
+			'Elevation not defined',
+			'Borders not defined',
+			'Breakpoints not defined',
+			'Motion not defined',
+			'Sizing 1',
+		]);
 	});
 
 	it('draws the palette as each set in a row of swatches: a tone family’s steps, a role’s variants', async () => {
@@ -154,10 +216,14 @@ describe('each primitive, drawn', () => {
 
 	it('shows borders, breakpoints and motion as plain tables of their names and values, motion’s durations and easings together', async () => {
 		await show(ready(tokens([...TOKENS, ...MORE])));
-		const rows = (name: string) => [...section(name).querySelectorAll('tbody tr')].map((r) => [...r.querySelectorAll('td')].map((d) => d.textContent));
+		const rows = (name: string) =>
+			[...section(name).querySelectorAll('tbody tr')].map((r) => [...r.querySelectorAll('td')].map((d) => d.textContent));
 		expect(rows('Borders')).toEqual([['border thin', '1px']]);
 		expect(rows('Breakpoints')).toEqual([['breakpoints md', '900px']]);
-		expect(rows('Motion')).toEqual([['motion fast', '150ms'], ['motion out', 'cubic-bezier(0, 0, 0.2, 1)']]);
+		expect(rows('Motion')).toEqual([
+			['motion fast', '150ms'],
+			['motion out', 'cubic-bezier(0, 0, 0.2, 1)'],
+		]);
 		expect(section('Motion').querySelectorAll('table')).toHaveLength(1);
 	});
 
@@ -226,7 +292,16 @@ describe('what it does not define', () => {
 
 	it('says every primitive is not defined, and every place it looked, when no tokens are found at all', async () => {
 		await show(ready(tokens([], { source: null })));
-		expect(chips().map((c) => c.textContent)).toEqual(['Color not defined', 'Typography not defined', 'Spacing not defined', 'Shape not defined', 'Elevation not defined', 'Borders not defined', 'Breakpoints not defined', 'Motion not defined']);
+		expect(chips().map((c) => c.textContent)).toEqual([
+			'Color not defined',
+			'Typography not defined',
+			'Spacing not defined',
+			'Shape not defined',
+			'Elevation not defined',
+			'Borders not defined',
+			'Breakpoints not defined',
+			'Motion not defined',
+		]);
 		expect(notDefined()!.textContent).toContain('No tokens were found. Looked for theme files, CSS variables and design token files.');
 	});
 

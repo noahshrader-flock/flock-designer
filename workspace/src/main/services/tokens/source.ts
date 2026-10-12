@@ -26,7 +26,8 @@ export const notWhereRead = (token: DesignToken): Error =>
  * rather than define them.
  */
 export const isLibraryFile = (path: string): boolean =>
-	!/(^|\/)(node_modules|dist|build|out|coverage|storybook-static|\.storybook|__tests__|__mocks__)\//.test(path) && !/\.(stories|test|spec)\.\w+$/.test(path);
+	!/(^|\/)(node_modules|dist|build|out|coverage|storybook-static|\.storybook|__tests__|__mocks__)\//.test(path) &&
+	!/\.(stories|test|spec)\.\w+$/.test(path);
 
 /**
  * The tokens in the order the panel shows them: **within each category, the semantic ones first** (what a color is for,

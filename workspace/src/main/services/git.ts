@@ -74,7 +74,10 @@ const queued = (root: string, args: string[], timeoutMs?: number, env?: Record<s
 	const key = resolve(root);
 	const result = (queues.get(key) ?? Promise.resolve()).then(run1, run1);
 	// The next command waits for this one whether it worked or not.
-	queues.set(key, result.catch(() => undefined));
+	queues.set(
+		key,
+		result.catch(() => undefined),
+	);
 	return result;
 };
 
@@ -175,7 +178,9 @@ export const recentBranches = async (root: string): Promise<string[]> => (await 
 export const branchesWithFile = async (root: string, file: string): Promise<string[]> => {
 	const bases = await baseRefs(root);
 	if (bases.length === 0) return [];
-	const lines = (await git(root, ['cat-file', '--batch-check'], undefined, undefined, `${bases.map((b) => `${b.ref}:${file}`).join('\n')}\n`)).split('\n');
+	const lines = (await git(root, ['cat-file', '--batch-check'], undefined, undefined, `${bases.map((b) => `${b.ref}:${file}`).join('\n')}\n`)).split(
+		'\n',
+	);
 	// Found: `<object> blob <size>`. Not there: `<what was asked> missing`.
 	return bases.filter((_, i) => /^[0-9a-f]{40,64} blob /.test(lines[i] ?? '')).map((b) => b.name);
 };
@@ -192,7 +197,13 @@ export const isSafeBranchName = (name: string): boolean => /^[A-Za-z0-9][A-Za-z0
  * temporary index, so neither a working copy nor the repository's own index is touched. A file keeps the mode it has in
  * `base`. Null when the tree is the parent's, so nothing would change.
  */
-export const commitOnto = async (root: string, base: string, parent: string, files: Map<string, string | null>, message: string): Promise<string | null> => {
+export const commitOnto = async (
+	root: string,
+	base: string,
+	parent: string,
+	files: Map<string, string | null>,
+	message: string,
+): Promise<string | null> => {
 	const env = { GIT_INDEX_FILE: join(tmpdir(), `dsnr-index-${randomBytes(6).toString('hex')}`) };
 	try {
 		await git(root, ['read-tree', base], undefined, env);
@@ -220,7 +231,12 @@ export const ensureLocalBranch = async (root: string, branch: string): Promise<v
 	if (await branchExists(root, branch)) return;
 	// Only ever the name of a branch git has, so it cannot be read as an option.
 	const remote = `refs/remotes/origin/${branch}`;
-	const onGitHub = !branch.startsWith('-') && (await git(root, ['rev-parse', '--verify', '--quiet', remote]).then(() => true, () => false));
+	const onGitHub =
+		!branch.startsWith('-') &&
+		(await git(root, ['rev-parse', '--verify', '--quiet', remote]).then(
+			() => true,
+			() => false,
+		));
 	if (!onGitHub) throw new GitProblem(`There is no branch called ${branch} in ${basename(root)}.`);
 	await git(root, ['branch', '--track', branch, remote]);
 };
@@ -236,9 +252,7 @@ export const ensureLocalBranch = async (root: string, branch: string): Promise<v
 const requireCleanTree = async (root: string, action: string): Promise<void> => {
 	const { clean } = await readCheckout(root);
 	if (!clean) {
-		throw new GitProblem(
-			`There are uncommitted changes in ${basename(root)}. Commit or put them aside before ${action}.`,
-		);
+		throw new GitProblem(`There are uncommitted changes in ${basename(root)}. Commit or put them aside before ${action}.`);
 	}
 };
 
@@ -293,8 +307,7 @@ export const branchAuthors = async (root: string, branch: string): Promise<Autho
 
 /** Whether a commit's author is the person this machine commits as: the same email, or failing that the same name. */
 export const isSamePerson = (me: Author, other: Author): boolean =>
-	(me.email !== '' && other.email.toLowerCase() === me.email.toLowerCase()) ||
-	(me.name !== '' && other.name.toLowerCase() === me.name.toLowerCase());
+	(me.email !== '' && other.email.toLowerCase() === me.email.toLowerCase()) || (me.name !== '' && other.name.toLowerCase() === me.name.toLowerCase());
 
 /** Who this machine commits as. Empty strings when git has no identity set. */
 export const localIdentity = async (root: string): Promise<Author> => {
@@ -309,8 +322,7 @@ export const localIdentity = async (root: string): Promise<Author> => {
 };
 
 /** The commit a branch is at, without switching to it. */
-export const branchCommit = async (root: string, branch: string): Promise<string> =>
-	git(root, ['rev-parse', '--verify', `refs/heads/${branch}`]);
+export const branchCommit = async (root: string, branch: string): Promise<string> => git(root, ['rev-parse', '--verify', `refs/heads/${branch}`]);
 
 export const checkoutBranch = async (root: string, branch: string): Promise<void> => {
 	await requireCleanTree(root, 'switching iteration');

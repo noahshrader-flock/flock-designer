@@ -40,7 +40,10 @@ export const axeRun = (context: string, tags: string[]): string => `(async () =>
 
 /** Whether what a page gave back for `axeRun` is its results: a page's word, checked before it is used. */
 export const axeFound = (v: unknown): v is AxeFound =>
-	typeof v === 'object' && v !== null && isAxeRules((v as { violations?: unknown }).violations) && isAxeRules((v as { incomplete?: unknown }).incomplete);
+	typeof v === 'object' &&
+	v !== null &&
+	isAxeRules((v as { violations?: unknown }).violations) &&
+	isAxeRules((v as { incomplete?: unknown }).incomplete);
 
 /** What runs in a prototype's page: once it has settled, axe-core itself, then a run over the whole page. */
 const runAxe = (tags: string[]): string => `(async () => {
@@ -74,7 +77,14 @@ export const checkInWindow: CheckPage = async (url, states, tags) => {
 
 /** A result from axe's runs, one per state, at `target`: what it found, and what it was made with. */
 export const resultOf = (runs: AxeRun[], target: DeclaredTarget, at: Date): AccessibilityResult => ({
-	ran: { axe: axe.version, tags: target.tags, target: targetLine(target), declared: target.declared, at: at.toISOString(), states: runs.map((r) => r.state) },
+	ran: {
+		axe: axe.version,
+		tags: target.tags,
+		target: targetLine(target),
+		declared: target.declared,
+		at: at.toISOString(),
+		states: runs.map((r) => r.state),
+	},
 	...mergeRuns(runs),
 	notAutomated: notAutomated(target.target),
 });

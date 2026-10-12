@@ -14,7 +14,7 @@ afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force
 
 const id = '5ea94a82-46ac-4823-9acb-716bcb37aa64';
 
-describe('remembering the agent\'s conversations', () => {
+describe("remembering the agent's conversations", () => {
 	it('keeps the latest one for each branch of each checkout, across restarts', () => {
 		const file = join(temp(), 'agent-sessions.json');
 		new SessionMemory(file).write('/r', 'feature/a', id);
@@ -66,7 +66,9 @@ describe('a conversation opened in VS Code', () => {
 
 describe('a new conversation from a terminal', () => {
 	it('starts Claude Code in the repository with the first prompt, quoted', () => {
-		expect(startCommand('/bin/claude', "/Users/a b/flock-coke", "Read /tmp/it's.md")).toBe(`cd '/Users/a b/flock-coke' && /bin/claude 'Read /tmp/it'\\''s.md'`);
+		expect(startCommand('/bin/claude', '/Users/a b/flock-coke', "Read /tmp/it's.md")).toBe(
+			`cd '/Users/a b/flock-coke' && /bin/claude 'Read /tmp/it'\\''s.md'`,
+		);
 	});
 });
 

@@ -37,7 +37,9 @@ describe('a component’s card', () => {
 		expect(name.className.split(' ')).not.toContain('shrink-0');
 		expect(name.className.split(' ').some((c) => c.startsWith('line-clamp'))).toBe(false);
 		// Its group is in the gray the Projects card uses for what a project has.
-		expect(document.querySelector('[data-slot="card-footer"]')!.lastElementChild!.className.split(' ')).toEqual(expect.arrayContaining(['text-muted-foreground', 'text-sm']));
+		expect(document.querySelector('[data-slot="card-footer"]')!.lastElementChild!.className.split(' ')).toEqual(
+			expect.arrayContaining(['text-muted-foreground', 'text-sm']),
+		);
 	});
 
 	it('is the Projects card: its cover a fixed shape, its footer the name and the group', async () => {
@@ -76,7 +78,10 @@ describe('a component’s card', () => {
 describe('while it loads', () => {
 	it('is a skeleton the same size: the same cover, and a footer of one row with the same height', async () => {
 		current = await render(createElement(ComponentCard, { component: COMPONENT, picture: undefined, onOpen: () => undefined }));
-		const real = { cover: document.querySelector('[data-slot="card-cover"]')!.className, footer: document.querySelector('[data-slot="card-footer"]')!.className };
+		const real = {
+			cover: document.querySelector('[data-slot="card-cover"]')!.className,
+			footer: document.querySelector('[data-slot="card-footer"]')!.className,
+		};
 		await unmountAll(current.root);
 		current = await render(createElement(CardSkeleton));
 		expect(document.querySelector('[data-slot="card-cover"]')!.className).toBe(real.cover);

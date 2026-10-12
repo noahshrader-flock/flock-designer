@@ -104,7 +104,10 @@ export const IterationSwitcher = <T extends Switchable>({
 	}
 	// Newest first, whatever order they were given in: the app and the published page then always agree.
 	const versions = byVersion(siblings)
-		.map((v) => ({ ...v, iterations: [...v.iterations].sort((a, b) => (parsePrototypeName(b.name)?.iteration ?? 0) - (parsePrototypeName(a.name)?.iteration ?? 0)) }))
+		.map((v) => ({
+			...v,
+			iterations: [...v.iterations].sort((a, b) => (parsePrototypeName(b.name)?.iteration ?? 0) - (parsePrototypeName(a.name)?.iteration ?? 0)),
+		}))
 		.sort((a, b) => b.version - a.version);
 	return (
 		<>
@@ -115,7 +118,10 @@ export const IterationSwitcher = <T extends Switchable>({
 				choices={versions.map((v) => ({ value: String(v.version), label: `V${v.version}` }))}
 				// A version opens at its newest iteration.
 				onChange={(v) => {
-					const newest = latestIterationName(siblings.map((i) => i.name), Number(v));
+					const newest = latestIterationName(
+						siblings.map((i) => i.name),
+						Number(v),
+					);
 					const next = siblings.find((i) => i.name === newest);
 					if (next) go(next.branch);
 				}}
@@ -141,7 +147,15 @@ export const IterationSwitcher = <T extends Switchable>({
  * and each is a way of seeing the page, so each is one press away. Not there with fewer than two, as there is nothing
  * to switch to. `null` is the first, the state the page opens in, so choosing it goes back to the page's own address.
  */
-export const StateSwitcher = ({ states, current, onSelect }: { states: string[]; current: string | null; onSelect: (state: string | null) => void }) => {
+export const StateSwitcher = ({
+	states,
+	current,
+	onSelect,
+}: {
+	states: string[];
+	current: string | null;
+	onSelect: (state: string | null) => void;
+}) => {
 	if (states.length < 2) return null;
 	// One it no longer has (it was built again without it) shows as the page does: in the first.
 	const here = current !== null && states.includes(current) ? current : (states[0] as string);

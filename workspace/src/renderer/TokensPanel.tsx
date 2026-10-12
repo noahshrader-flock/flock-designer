@@ -109,7 +109,17 @@ export const Sets = ({ tokens, noteFor }: { tokens: DesignToken[]; noteFor?: (to
 const STICKY_HEADER = '[&>h3]:bg-card [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10';
 
 /** One category's tab: its own search, then its tokens. What is typed is the panel's, so it is there when the tab is back. */
-const TokensTab = ({ category, tokens, query, onQuery }: { category: string; tokens: DesignToken[]; query: string; onQuery: (query: string) => void }) => {
+const TokensTab = ({
+	category,
+	tokens,
+	query,
+	onQuery,
+}: {
+	category: string;
+	tokens: DesignToken[];
+	query: string;
+	onQuery: (query: string) => void;
+}) => {
 	const closed = useClosedGroups();
 	const q = query.trim().toLowerCase();
 	const shown = useMemo(() => (q === '' ? tokens : tokens.filter((t) => searchable(t).includes(q))), [tokens, q]);

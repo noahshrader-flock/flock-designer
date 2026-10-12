@@ -162,7 +162,9 @@ describe('the tab bar (T9)', () => {
 		// Nothing set on the tabs or the list here: not a size, a padding, or a stretch.
 		for (const t of bar().querySelectorAll<HTMLElement>('[role="tab"]')) expect(t.className).not.toMatch(/(^|\s)(h-full|p-0)(\s|$)/);
 		// The tokens panel's Color, Spacing and Shape are the same component without the option: stretched across the panel.
-		const panelTabs = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')!.nextElementSibling!.querySelector('[role="tablist"]') as HTMLElement;
+		const panelTabs = document
+			.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')!
+			.nextElementSibling!.querySelector('[role="tablist"]') as HTMLElement;
 		expect(panelTabs.hasAttribute('data-bar')).toBe(false);
 		expect(panelTabs.className).not.toContain('[&>[role=tab]]:flex-none');
 	});
@@ -255,7 +257,11 @@ describe('the groups', () => {
 		await open(() => ok(ready()));
 		await press(groupTrigger('Surfaces'));
 		await press(document.querySelector<HTMLElement>('[aria-label="View"] [aria-label="Grid"]')!);
-		expect([...document.querySelectorAll('[data-component-card]')].map((c) => c.getAttribute('data-component-card'))).toEqual([COMPONENTS[0]!.id, COMPONENTS[3]!.id, COMPONENTS[4]!.id]);
+		expect([...document.querySelectorAll('[data-component-card]')].map((c) => c.getAttribute('data-component-card'))).toEqual([
+			COMPONENTS[0]!.id,
+			COMPONENTS[3]!.id,
+			COMPONENTS[4]!.id,
+		]);
 		expect(groupTrigger('Surfaces').getAttribute('aria-expanded')).toBe('false');
 	});
 
@@ -446,7 +452,10 @@ describe('the design systems connected (P4)', () => {
 		const app = await open(() => ok(ready()));
 		const items = await openMenu(switcher());
 		const radios = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
-		expect(radios.map((r) => r.textContent)).toEqual(['Flock React Component Libflocksafety/flock-react-component-lib', 'Acme UIacme/acme · packages/ui']);
+		expect(radios.map((r) => r.textContent)).toEqual([
+			'Flock React Component Libflocksafety/flock-react-component-lib',
+			'Acme UIacme/acme · packages/ui',
+		]);
 		expect(radios.map((r) => r.getAttribute('aria-checked'))).toEqual(['true', 'false']);
 		expect(menuItem(items, 'Connect a design system')).toBeTruthy();
 		await press(radios[1] as HTMLElement);
@@ -478,7 +487,8 @@ describe('the design systems connected (P4)', () => {
 		let connected = false;
 		const app = await open(() => ok(ready()), false, {
 			listRepositories: async () => ok({ repositories: [{ name: ACME.repository, root: null }], reach: 'account' }),
-			clonePlan: async () => ok({ repository: ACME.repository, place: { state: 'cloned', path: '/h/GitHub/acme' }, where: '~/GitHub/acme', design: null }),
+			clonePlan: async () =>
+				ok({ repository: ACME.repository, place: { state: 'cloned', path: '/h/GitHub/acme' }, where: '~/GitHub/acme', design: null }),
 			connectDesignSystem: async () => {
 				connected = true;
 				return ok({ state: 'connected', id: ACME.id });
@@ -488,7 +498,12 @@ describe('the design systems connected (P4)', () => {
 		await settle();
 		await press(button('Choose a repository'));
 		await settle();
-		await act(async () => void [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === ACME.repository)!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+		await act(
+			async () =>
+				void [...document.querySelectorAll('[cmdk-item]')]
+					.find((i) => i.textContent === ACME.repository)!
+					.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+		);
 		await settle();
 		await press(button('Connect'));
 		await settle();
@@ -510,7 +525,9 @@ describe('the design systems connected (P4)', () => {
 
 /** The side panel's two views, as a button group in the toolbar: its buttons by name. */
 const panelView = (name: 'Tokens' | 'Component') =>
-	[...document.querySelectorAll<HTMLElement>('[aria-label="Side panel"] [data-slot="toggle-group-item"]')].find((b) => b.textContent === name) as HTMLElement;
+	[...document.querySelectorAll<HTMLElement>('[aria-label="Side panel"] [data-slot="toggle-group-item"]')].find(
+		(b) => b.textContent === name,
+	) as HTMLElement;
 const shownView = () =>
 	[...document.querySelectorAll<HTMLElement>('[aria-label="Side panel"] [data-slot="toggle-group-item"]')].find(
 		(b) => b.getAttribute('aria-checked') === 'true',
@@ -585,7 +602,9 @@ describe('a thumbnail in each row of the list', () => {
 	const thumb = (name: string) => row(name).querySelector('button > [data-thumbnail]') as HTMLElement | null;
 
 	it('is the picture the grid shows, reduced, at the left of the name and its description', async () => {
-		await open(() => ok(ready()), false, { componentPictures: async () => ok({ drawing: false, pictures: { [COMPONENTS[0]!.id]: PICTURE }, issues: {} }) });
+		await open(() => ok(ready()), false, {
+			componentPictures: async () => ok({ drawing: false, pictures: { [COMPONENTS[0]!.id]: PICTURE }, issues: {} }),
+		});
 		await settle();
 		const t = thumb('FSButton')!;
 		expect(t).not.toBeNull();
@@ -610,7 +629,9 @@ describe('a thumbnail in each row of the list', () => {
 
 	it('is a skeleton while the pictures are being drawn, then the picture', async () => {
 		let drawing = true;
-		await open(() => ok(ready()), false, { componentPictures: async () => ok({ drawing, pictures: drawing ? {} : { [COMPONENTS[0]!.id]: PICTURE }, issues: {} }) });
+		await open(() => ok(ready()), false, {
+			componentPictures: async () => ok({ drawing, pictures: drawing ? {} : { [COMPONENTS[0]!.id]: PICTURE }, issues: {} }),
+		});
 		await settle();
 		expect(thumb('FSButton')!.querySelector('[data-picture-waiting]')).not.toBeNull();
 		expect(thumb('FSCard')!.querySelector('[data-picture-waiting]')).not.toBeNull();
@@ -926,7 +947,12 @@ describe('when there is no list', () => {
 			designSystems: async () => ok(connected ? SYSTEMS : { systems: [], current: null }),
 			listRepositories: async () => ok({ repositories: [{ name: FUI_SYSTEM.repository, root: null }], reach: 'account' }),
 			clonePlan: async () =>
-				ok({ repository: FUI_SYSTEM.repository, place: { state: 'cloned', path: FUI_SYSTEM.root }, where: '~/GitHub/flock-react-component-lib', design: null }),
+				ok({
+					repository: FUI_SYSTEM.repository,
+					place: { state: 'cloned', path: FUI_SYSTEM.root },
+					where: '~/GitHub/flock-react-component-lib',
+					design: null,
+				}),
 			connectDesignSystem: async () => {
 				connected = true;
 				return ok({ state: 'connected', id: FUI_SYSTEM.id });

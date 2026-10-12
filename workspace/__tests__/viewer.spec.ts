@@ -5,7 +5,21 @@ import { composeBody } from '../src/shared/anchor';
 import { Viewer } from '../src/viewer/Viewer';
 import { saveToken, savedToken } from '../src/viewer/browserAdapter';
 import { PAGE_CONFIG as CONFIG, commentOnPage, fakeGitHub, sitePage } from './pageHarness';
-import { button, cards, menuItem, openMenu, press, render, settle, shownState, state, stateButtons, stateGroup, typeInto, unmountAll } from './reviewHarness';
+import {
+	button,
+	cards,
+	menuItem,
+	openMenu,
+	press,
+	render,
+	settle,
+	shownState,
+	state,
+	stateButtons,
+	stateGroup,
+	typeInto,
+	unmountAll,
+} from './reviewHarness';
 
 /**
  * Commenting on a prototype's published page (M7 of the Pages plan): the viewer, drawn into the page the site builds,
@@ -92,7 +106,14 @@ describe('the states of the page', () => {
 			comments: [
 				{
 					id: 7,
-					body: composeBody('On the panel', { route: '/demo/v1-i1/', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '', state: '?state=panel' }),
+					body: composeBody('On the panel', {
+						route: '/demo/v1-i1/',
+						selector: 'main',
+						nearbyText: '',
+						viewport: { width: 1, height: 1 },
+						commit: '',
+						state: '?state=panel',
+					}),
 					user: { login: 'noah' },
 					created_at: '2026-10-08T09:00:00Z',
 				},
@@ -196,7 +217,13 @@ describe('commenting on the page', () => {
 				{
 					id: 7,
 					// As the app writes it, at its own server's address for this prototype.
-					body: composeBody('From the app', { route: '/demo/v1-i1/', selector: '[data-e2e-ref="clear-filter-button"]', nearbyText: 'Clear Filter', viewport: { width: 1, height: 1 }, commit: '' }),
+					body: composeBody('From the app', {
+						route: '/demo/v1-i1/',
+						selector: '[data-e2e-ref="clear-filter-button"]',
+						nearbyText: 'Clear Filter',
+						viewport: { width: 1, height: 1 },
+						commit: '',
+					}),
 					user: { login: 'noah' },
 					created_at: '2026-10-08T09:00:00Z',
 				},

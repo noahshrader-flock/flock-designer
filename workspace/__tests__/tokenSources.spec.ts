@@ -50,7 +50,13 @@ describe('CSS variables', () => {
 	it('are read as tokens when the library has no theme files, each mode from its own block', async () => {
 		const list = await readTokens(reads({ 'src/styles/globals.css': CSS }));
 		expect(list.source).toBe('CSS variables');
-		expect(find(list, 'css.light.background')).toMatchObject({ kind: 'color', category: 'Color', group: 'Light', value: '#ffffff', source: { file: 'src/styles/globals.css', line: 2 } });
+		expect(find(list, 'css.light.background')).toMatchObject({
+			kind: 'color',
+			category: 'Color',
+			group: 'Light',
+			value: '#ffffff',
+			source: { file: 'src/styles/globals.css', line: 2 },
+		});
 		expect(find(list, 'css.dark.background')).toMatchObject({ group: 'Dark', value: 'hsl(0 0% 4%)' });
 		expect(find(list, 'css.light.primary')?.value).toBe('oklch(0.205 0 0)');
 		expect(find(list, 'css.light.ring')?.value).toBe('rgb(10 20 30)');
@@ -82,7 +88,9 @@ describe('CSS variables', () => {
 }
 `;
 		const list = await readTokens(reads({ 'src/app.css': css }));
-		const typography = list.tokens.filter((t) => t.category === 'Typography').map(({ path, kind, group, set, name, value }) => ({ path, kind, group, set, name, value }));
+		const typography = list.tokens
+			.filter((t) => t.category === 'Typography')
+			.map(({ path, kind, group, set, name, value }) => ({ path, kind, group, set, name, value }));
 		expect(typography).toEqual([
 			{ path: 'css.light.font-sans', kind: 'font', group: 'Family', set: 'font', name: 'sans', value: 'Inter, sans-serif' },
 			{ path: 'css.light.font-weight-bold', kind: 'font', group: 'Weight', set: 'font-weight', name: 'bold', value: '700' },
@@ -104,11 +112,34 @@ describe('CSS variables', () => {
 }
 `;
 		const list = await readTokens(reads({ 'src/app.css': css }));
-		const shadows = list.tokens.filter((t) => t.category === 'Elevation').map(({ path, kind, group, set, name, value }) => ({ path, kind, group, set, name, value }));
+		const shadows = list.tokens
+			.filter((t) => t.category === 'Elevation')
+			.map(({ path, kind, group, set, name, value }) => ({ path, kind, group, set, name, value }));
 		expect(shadows).toEqual([
-			{ path: 'css.light.shadow-sm', kind: 'shadow', group: 'Shadows', set: 'shadow', name: 'sm', value: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)' },
-			{ path: 'css.light.inset-shadow-xs', kind: 'shadow', group: 'Shadows', set: 'inset-shadow', name: 'xs', value: 'inset 0 1px 1px rgb(0 0 0 / 0.05)' },
-			{ path: 'css.light.shadow', kind: 'shadow', group: 'Shadows', set: 'shadow', name: 'base', value: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)' },
+			{
+				path: 'css.light.shadow-sm',
+				kind: 'shadow',
+				group: 'Shadows',
+				set: 'shadow',
+				name: 'sm',
+				value: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+			},
+			{
+				path: 'css.light.inset-shadow-xs',
+				kind: 'shadow',
+				group: 'Shadows',
+				set: 'inset-shadow',
+				name: 'xs',
+				value: 'inset 0 1px 1px rgb(0 0 0 / 0.05)',
+			},
+			{
+				path: 'css.light.shadow',
+				kind: 'shadow',
+				group: 'Shadows',
+				set: 'shadow',
+				name: 'base',
+				value: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+			},
 		]);
 		// A color named for a shadow is a color.
 		expect(find(list, 'css.light.shadow-color')).toMatchObject({ kind: 'color', category: 'Color' });
@@ -128,8 +159,18 @@ describe('CSS variables', () => {
 		expect(find(list, 'css.light.breakpoint-md')).toMatchObject({ kind: 'dimension', category: 'Breakpoints', group: 'Breakpoints', value: '48rem' });
 		expect(find(list, 'css.light.border-thin')).toMatchObject({ kind: 'dimension', category: 'Borders', group: 'Borders', value: '1px' });
 		expect(find(list, 'css.light.duration-fast')).toMatchObject({ kind: 'duration', category: 'Motion', group: 'Duration', value: '150ms' });
-		expect(find(list, 'css.light.default-transition-duration')).toMatchObject({ kind: 'duration', category: 'Motion', group: 'Duration', value: '0.15s' });
-		expect(find(list, 'css.light.ease-out')).toMatchObject({ kind: 'easing', category: 'Motion', group: 'Easing', value: 'cubic-bezier(0, 0, 0.2, 1)' });
+		expect(find(list, 'css.light.default-transition-duration')).toMatchObject({
+			kind: 'duration',
+			category: 'Motion',
+			group: 'Duration',
+			value: '0.15s',
+		});
+		expect(find(list, 'css.light.ease-out')).toMatchObject({
+			kind: 'easing',
+			category: 'Motion',
+			group: 'Easing',
+			value: 'cubic-bezier(0, 0, 0.2, 1)',
+		});
 		// A color named for a border is a color.
 		expect(find(list, 'css.light.border')).toMatchObject({ kind: 'color', category: 'Color' });
 	});
@@ -175,7 +216,14 @@ describe('design token files', () => {
 	it('are read as tokens in the standard format, with the type each group says', async () => {
 		const list = await readTokens(reads({ 'tokens/base.tokens.json': TOKENS }));
 		expect(list.source).toBe('token files');
-		expect(find(list, 'color.red.500')).toMatchObject({ kind: 'color', category: 'Color', group: 'Color', set: 'color.red', name: '500', value: '#ff0000' });
+		expect(find(list, 'color.red.500')).toMatchObject({
+			kind: 'color',
+			category: 'Color',
+			group: 'Color',
+			set: 'color.red',
+			name: '500',
+			value: '#ff0000',
+		});
 		expect(find(list, 'spacing.sm')).toMatchObject({ kind: 'dimension', category: 'Spacing', value: '4px' });
 		expect(find(list, 'radius.md')).toMatchObject({ kind: 'dimension', category: 'Shape', value: '6px' });
 	});
@@ -206,7 +254,9 @@ describe('design token files', () => {
 			2,
 		);
 		const list = await readTokens(reads({ 'tokens/type.tokens.json': type }));
-		const typography = list.tokens.filter((t) => t.category === 'Typography').map(({ path, kind, group, set, name, value }) => ({ path, kind, group, set, name, value }));
+		const typography = list.tokens
+			.filter((t) => t.category === 'Typography')
+			.map(({ path, kind, group, set, name, value }) => ({ path, kind, group, set, name, value }));
 		expect(typography).toEqual([
 			{ path: 'font.family.sans', kind: 'font', group: 'Family', set: 'font.family', name: 'sans', value: 'Inter, sans-serif' },
 			{ path: 'font.weight.bold', kind: 'font', group: 'Weight', set: 'font.weight', name: 'bold', value: '700' },
@@ -227,7 +277,12 @@ describe('design token files', () => {
 				shadow: {
 					$type: 'shadow',
 					sm: { $value: { color: '{color.black}', offsetX: '0px', offsetY: '1px', blur: '2px', spread: '0px' } },
-					md: { $value: [{ color: '#00000033', offsetX: { value: 0, unit: 'px' }, offsetY: '4px', blur: '6px', spread: '-1px' }, { color: '#0000001a', offsetX: '0px', offsetY: '2px', blur: '4px', spread: '-2px', inset: true }] },
+					md: {
+						$value: [
+							{ color: '#00000033', offsetX: { value: 0, unit: 'px' }, offsetY: '4px', blur: '6px', spread: '-1px' },
+							{ color: '#0000001a', offsetX: '0px', offsetY: '2px', blur: '4px', spread: '-2px', inset: true },
+						],
+					},
 					broken: { $value: { color: '#000000', offsetX: '0px' } },
 					partly: { $value: [{ color: '#000000', offsetX: '0px', offsetY: '1px', blur: '2px', spread: '0px' }, { color: '#000000' }] },
 				},
@@ -236,14 +291,25 @@ describe('design token files', () => {
 			2,
 		);
 		const list = await readTokens(reads({ 'tokens/shadow.tokens.json': shadows }));
-		expect(find(list, 'shadow.sm')).toMatchObject({ kind: 'shadow', category: 'Elevation', group: 'Shadows', set: 'shadow', name: 'sm', value: '0px 1px 2px 0px #000000' });
+		expect(find(list, 'shadow.sm')).toMatchObject({
+			kind: 'shadow',
+			category: 'Elevation',
+			group: 'Shadows',
+			set: 'shadow',
+			name: 'sm',
+			value: '0px 1px 2px 0px #000000',
+		});
 		expect(find(list, 'shadow.md')?.value).toBe('0px 4px 6px -1px #00000033, inset 0px 2px 4px -2px #0000001a');
 		// One it cannot draw is named, not guessed.
 		expect(find(list, 'shadow.broken')).toBeUndefined();
-		expect(list.problems.map((p) => p.reason)).toContain('shadow.broken is not a shadow that can be read: it needs a color, offsets, a blur and a spread');
+		expect(list.problems.map((p) => p.reason)).toContain(
+			'shadow.broken is not a shadow that can be read: it needs a color, offsets, a blur and a spread',
+		);
 		// Nor half of one: a token of several shadows is drawn whole or not at all, never as the part that could be read.
 		expect(find(list, 'shadow.partly')).toBeUndefined();
-		expect(list.problems.map((p) => p.reason)).toContain('shadow.partly is not a shadow that can be read: it needs a color, offsets, a blur and a spread');
+		expect(list.problems.map((p) => p.reason)).toContain(
+			'shadow.partly is not a shadow that can be read: it needs a color, offsets, a blur and a spread',
+		);
 	});
 
 	it('read motion, breakpoints and border widths: a duration, a cubic Bézier, and lengths named for them', async () => {
@@ -262,7 +328,14 @@ describe('design token files', () => {
 			2,
 		);
 		const list = await readTokens(reads({ 'tokens/more.tokens.json': more }));
-		expect(find(list, 'motion.fast')).toMatchObject({ kind: 'duration', category: 'Motion', group: 'Duration', set: 'motion', name: 'fast', value: '100ms' });
+		expect(find(list, 'motion.fast')).toMatchObject({
+			kind: 'duration',
+			category: 'Motion',
+			group: 'Duration',
+			set: 'motion',
+			name: 'fast',
+			value: '100ms',
+		});
 		expect(find(list, 'motion.slow')?.value).toBe('400ms');
 		expect(find(list, 'motion.out')).toMatchObject({ kind: 'easing', category: 'Motion', group: 'Easing', value: 'cubic-bezier(0, 0, 0.2, 1)' });
 		expect(find(list, 'motion.wrong')).toBeUndefined();
@@ -283,8 +356,19 @@ describe('design token files', () => {
 		);
 		const list = await readTokens(reads({ 'tokens/more.tokens.json': more }));
 		expect(find(list, 'line.thin')).toMatchObject({ kind: 'dimension', category: 'Borders', value: '1px' });
-		expect(find(list, 'move.quick.duration')).toMatchObject({ kind: 'duration', category: 'Motion', group: 'Duration', set: 'move.quick', value: '200ms' });
-		expect(find(list, 'move.quick.timingFunction')).toMatchObject({ kind: 'easing', category: 'Motion', group: 'Easing', value: 'cubic-bezier(0, 0, 0.2, 1)' });
+		expect(find(list, 'move.quick.duration')).toMatchObject({
+			kind: 'duration',
+			category: 'Motion',
+			group: 'Duration',
+			set: 'move.quick',
+			value: '200ms',
+		});
+		expect(find(list, 'move.quick.timingFunction')).toMatchObject({
+			kind: 'easing',
+			category: 'Motion',
+			group: 'Easing',
+			value: 'cubic-bezier(0, 0, 0.2, 1)',
+		});
 	});
 
 	it('read a Tokens Studio file, as Figma’s plugin writes one: value and type with no $, by its own names for the types', async () => {
@@ -299,7 +383,9 @@ describe('design token files', () => {
 					weights: { bold: { value: '700', type: 'fontWeights' } },
 					leading: { tight: { value: '1.2', type: 'lineHeights' } },
 					scale: { md: { value: '16px', type: 'fontSizes' } },
-					elevation: { sm: { value: { x: '0', y: '1', blur: '2', spread: '0', color: '{global.colors.blue}', type: 'innerShadow' }, type: 'boxShadow' } },
+					elevation: {
+						sm: { value: { x: '0', y: '1', blur: '2', spread: '0', color: '{global.colors.blue}', type: 'innerShadow' }, type: 'boxShadow' },
+					},
 				},
 			},
 			null,

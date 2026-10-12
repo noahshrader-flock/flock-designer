@@ -24,7 +24,14 @@ const iteration = (more: Partial<ProjectIteration> = {}): ProjectIteration => ({
 const NEWEST = iteration({ name: 'v1-i2', branch: 'prototype/admin-usage/v1-i2', createdAt: '2026-10-05T10:00:00Z', openComments: 3 });
 const OLDER = iteration({ name: 'v1-i1', createdAt: '2026-09-01T10:00:00Z', openComments: 2 });
 const CODEBASE = iteration({ name: 'codebase', branch: 'feature/admin-usage', repository: 'flocksafety/flock-coke' });
-const project = (more: Partial<Project> = {}): Project => ({ id: 'admin-usage', title: 'Admin usage', records: [], iterations: [], people: [], ...more });
+const project = (more: Partial<Project> = {}): Project => ({
+	id: 'admin-usage',
+	title: 'Admin usage',
+	records: [],
+	iterations: [],
+	people: [],
+	...more,
+});
 const NOAH = { name: 'Noah Shrader', login: 'noah' };
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
@@ -81,7 +88,9 @@ describe('its picture', () => {
 	it('is the card’s: the newest prototype’s, read by the name its record gives it, in the thumbnail', async () => {
 		const app = fakeApp({ projectCover: async () => ok('data:image/jpeg;base64,AAAA') });
 		(window as unknown as { workspace: unknown }).workspace = app.api;
-		await show(project({ id: 'row-pictured', iterations: [iteration({ ...NEWEST, cover: 'bbbbbbbbbbbb' }), iteration({ ...OLDER, cover: 'aaaaaaaaaaaa' })] }));
+		await show(
+			project({ id: 'row-pictured', iterations: [iteration({ ...NEWEST, cover: 'bbbbbbbbbbbb' }), iteration({ ...OLDER, cover: 'aaaaaaaaaaaa' })] }),
+		);
 		expect(app.calls.projectCover).toEqual([['row-pictured', 'v1-i2', 'bbbbbbbbbbbb']]);
 		expect(rowButton().querySelector('[data-thumbnail] img')!.getAttribute('src')).toBe('data:image/jpeg;base64,AAAA');
 	});

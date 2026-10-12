@@ -118,8 +118,16 @@
 		@apply bg-background text-foreground;
 		margin: 0;
 		font-family:
-			ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
-			'Apple Color Emoji', 'Segoe UI Emoji';
+			ui-sans-serif,
+			system-ui,
+			-apple-system,
+			'Segoe UI',
+			Roboto,
+			Helvetica,
+			Arial,
+			sans-serif,
+			'Apple Color Emoji',
+			'Segoe UI Emoji';
 		/* The window is the app: it never scrolls as a page, its panels scroll inside it. */
 		overflow: hidden;
 	}

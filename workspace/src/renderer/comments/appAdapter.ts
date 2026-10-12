@@ -9,7 +9,13 @@ import type { CommentStore, PageSurface } from './surfaces';
 /** One iteration's comments. `commit` is the recorded one, the fallback when the checkout cannot say where it is. */
 export const appComments = (
 	api: WorkspaceApi,
-	{ projectId, branch, name, commit, checkout }: { projectId: string; branch: string; name: string; commit: string | null; checkout: Checkout | null },
+	{
+		projectId,
+		branch,
+		name,
+		commit,
+		checkout,
+	}: { projectId: string; branch: string; name: string; commit: string | null; checkout: Checkout | null },
 ): CommentStore => ({
 	read: () => api.readComments(projectId, branch),
 	post: (body, anchor, picture) => api.postComment(projectId, branch, body, anchor, picture),

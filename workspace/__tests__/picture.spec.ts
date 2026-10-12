@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { type Capturable, MAX_PICTURE_BYTES, cropRect, fitJpeg, frameRect, toPicture } from '../src/main/services/picture';
 
 /** An image whose JPEG size is predictable: width times quality, in bytes. */
-const image = (over: Partial<{ empty: boolean; bytes: (w: number, q: number) => number; throws: boolean }> = {}): Capturable & { tried: string[] } => {
+const image = (
+	over: Partial<{ empty: boolean; bytes: (w: number, q: number) => number; throws: boolean }> = {},
+): Capturable & { tried: string[] } => {
 	const tried: string[] = [];
 	const make = (width: number): Capturable => ({
 		isEmpty: () => over.empty === true,
@@ -103,10 +105,14 @@ describe('frameRect', () => {
 	});
 });
 
-
 describe('fitJpeg', () => {
 	// The project pictures' steps: each a width and a quality, tried in order, the first that fits kept.
-	const STEPS: Array<[number, number]> = [[960, 80], [960, 70], [720, 70], [640, 60]];
+	const STEPS: Array<[number, number]> = [
+		[960, 80],
+		[960, 70],
+		[720, 70],
+		[640, 60],
+	];
 
 	it('keeps the first step that fits the budget, and goes no smaller than it has to', () => {
 		const img = image({ bytes: (w, q) => w * q });

@@ -152,7 +152,11 @@ export const recordPreview = (
 	const found = iterations.find((i) => i.name === name);
 	if (!found) throw new IterationProblem(`${projectId} has no iteration called ${name}.`);
 	const updated = { ...found, previewUrl, ...(commit ? { commit } : {}), ...(pullRequest ? { pullRequest } : {}) };
-	writeIterations(recordsRoot, projectId, iterations.map((i) => (i.name === name ? updated : i)));
+	writeIterations(
+		recordsRoot,
+		projectId,
+		iterations.map((i) => (i.name === name ? updated : i)),
+	);
 	return updated;
 };
 
@@ -160,21 +164,12 @@ export const recordPreview = (
  * Work started outside the app (an agent in a terminal, or by hand) has a branch and no record. The branch is
  * the evidence, so the record is made from it rather than refusing the work: null only if the branch is not there.
  */
-const adoptUnrecorded = async (
-	productRoot: string,
-	descriptor: WorkspaceDescriptor,
-	projectId: string,
-	name: string,
-): Promise<Iteration | null> => {
+const adoptUnrecorded = async (productRoot: string, descriptor: WorkspaceDescriptor, projectId: string, name: string): Promise<Iteration | null> => {
 	// Only an old-form name (`i3`) can be an older prototype branch (`fd/<id>/i3`). A versioned name is a page,
 	// never a branch, so it is never read as one.
 	const old = parsePrototypeName(name);
 	const branch =
-		name === 'codebase'
-			? codebaseBranchFor(descriptor, projectId)
-			: old?.legacy
-				? branchFor(descriptor, projectId, old.iteration)
-				: null;
+		name === 'codebase' ? codebaseBranchFor(descriptor, projectId) : old?.legacy ? branchFor(descriptor, projectId, old.iteration) : null;
 	if (!branch || !(await branchExists(productRoot, branch))) return null;
 	// Dated from the work itself, not from the moment the app first needed a record for it.
 	const createdAt = (await branchStartedAt(productRoot, branch)) ?? new Date().toISOString();

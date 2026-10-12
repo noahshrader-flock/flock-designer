@@ -17,7 +17,7 @@ beforeEach(() => {
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 describe('the task handed over', () => {
-	it('names the project and points at the repository\'s own instructions', () => {
+	it("names the project and points at the repository's own instructions", () => {
 		const runner = new AgentRunner((l) => logs.push(l));
 		const task = runner.taskFor('users-inactivity-signal', 'Flag users who have not signed in.');
 		expect(task).toContain('Project: users-inactivity-signal');
@@ -109,14 +109,14 @@ describe('running unattended', () => {
 		expect(argv[argv.indexOf('--output-format') + 1]).toBe('stream-json');
 	});
 
-	it('allows running the repository\'s scripts and local git, but nothing that pushes or discards', () => {
+	it("allows running the repository's scripts and local git, but nothing that pushes or discards", () => {
 		const allowed = argv[argv.indexOf('--allowedTools') + 1] ?? '';
 		expect(allowed).toContain('Bash(npm run:*)');
 		expect(allowed).toContain('Bash(git commit:*)');
 		for (const bad of ['git push', 'git reset', 'git checkout', 'rm', 'curl']) expect(allowed).not.toContain(bad);
 	});
 
-	it('turns off the attribution line Claude Code adds to its commits, so the designer\'s history has none', () => {
+	it("turns off the attribution line Claude Code adds to its commits, so the designer's history has none", () => {
 		const settings = JSON.parse(argv[argv.indexOf('--settings') + 1] ?? '{}');
 		expect(settings).toEqual({ attribution: { commit: '', pr: '' } });
 	});
@@ -129,16 +129,24 @@ describe('running unattended', () => {
 describe('finding Claude Code', () => {
 	const none = () => false;
 	it('prefers whatever is on the PATH', () => {
-		expect(locateClaude({ PATH: '/a:/b' }, '/h', (p) => p === '/b/claude', () => [])).toBe('/b/claude');
+		expect(
+			locateClaude(
+				{ PATH: '/a:/b' },
+				'/h',
+				(p) => p === '/b/claude',
+				() => [],
+			),
+		).toBe('/b/claude');
 	});
 
 	it('finds the copy an editor bundles, newest version, when nothing is on the PATH', () => {
 		const bin = (v: string) => `/h/.vscode/extensions/anthropic.claude-code-${v}/resources/native-binary/claude`;
-		const found = locateClaude({ PATH: '' }, '/h', (p) => p === bin('2.1.289-darwin-arm64') || p === bin('2.1.287-darwin-arm64'), () => [
-			'anthropic.claude-code-2.1.287-darwin-arm64',
-			'anthropic.claude-code-2.1.289-darwin-arm64',
-			'other.extension-1.0.0',
-		]);
+		const found = locateClaude(
+			{ PATH: '' },
+			'/h',
+			(p) => p === bin('2.1.289-darwin-arm64') || p === bin('2.1.287-darwin-arm64'),
+			() => ['anthropic.claude-code-2.1.287-darwin-arm64', 'anthropic.claude-code-2.1.289-darwin-arm64', 'other.extension-1.0.0'],
+		);
 		expect(found).toBe(bin('2.1.289-darwin-arm64'));
 	});
 
@@ -150,7 +158,15 @@ describe('finding Claude Code', () => {
 describe('reading the stream', () => {
 	const events = [
 		{ type: 'system', subtype: 'init' },
-		{ type: 'assistant', message: { content: [{ type: 'text', text: 'Reading the brief.' }, { type: 'tool_use', name: 'Write', input: { file_path: 'src/prototypes/x/index.tsx' } }] } },
+		{
+			type: 'assistant',
+			message: {
+				content: [
+					{ type: 'text', text: 'Reading the brief.' },
+					{ type: 'tool_use', name: 'Write', input: { file_path: 'src/prototypes/x/index.tsx' } },
+				],
+			},
+		},
 		{ type: 'result', subtype: 'success', is_error: false },
 	].map((e) => JSON.stringify(e));
 
@@ -166,7 +182,9 @@ describe('reading the stream', () => {
 	});
 
 	it('reports a failed run as stopped', () => {
-		expect(claudeStreamFormatter()(`${JSON.stringify({ type: 'result', is_error: true, result: 'out of turns' })}\n`)).toEqual(['Stopped: out of turns']);
+		expect(claudeStreamFormatter()(`${JSON.stringify({ type: 'result', is_error: true, result: 'out of turns' })}\n`)).toEqual([
+			'Stopped: out of turns',
+		]);
 	});
 
 	it('keeps what the agent said at the end, which is where it explains why it changed nothing', () => {
@@ -208,14 +226,18 @@ describe('agentReadiness', () => {
 		expect(await agentReadiness(() => 'claude', run)).toEqual({ state: 'missing' });
 	});
 
-	it('stands in nobody\'s way when it cannot tell: an older Claude Code, a timeout, an answer it does not understand', async () => {
-		expect(await agentReadiness(locate, async () => { throw Object.assign(new Error('unknown command'), { code: 1 }); })).toEqual({ state: 'unknown' });
+	it("stands in nobody's way when it cannot tell: an older Claude Code, a timeout, an answer it does not understand", async () => {
+		expect(
+			await agentReadiness(locate, async () => {
+				throw Object.assign(new Error('unknown command'), { code: 1 });
+			}),
+		).toEqual({ state: 'unknown' });
 		expect(await agentReadiness(locate, async () => 'Logged in as someone')).toEqual({ state: 'unknown' });
 	});
 });
 
 describe('what a run leaves behind for a screen opened again', () => {
-	it("tags the run with its work and keeps its recent lines", async () => {
+	it('tags the run with its work and keeps its recent lines', async () => {
 		const runner = new AgentRunner(() => {}, {
 			adapter: { name: 'Echo', argvFor: () => ['node', '-e', 'console.log("one"); console.log("two")'] },
 			spawnProcess: spawn,

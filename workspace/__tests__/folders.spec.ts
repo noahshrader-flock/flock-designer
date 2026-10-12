@@ -7,7 +7,20 @@ import { DesignRepo } from '../src/main/services/designRepo';
 import type { GitHubSession } from '../src/main/services/githubSession';
 import { readFolderProjects } from '../src/main/services/localProjects';
 import { assignFolder, recordPrototype, type RecordStore } from '../src/main/services/prototype';
-import { briefBody, briefFolder, firstHeading, folderName, foldersOf, inFolder, mergeProjects, projectDir, projectPath, sameFolder, shownRecord, withFolder } from '../src/shared/projects';
+import {
+	briefBody,
+	briefFolder,
+	firstHeading,
+	folderName,
+	foldersOf,
+	inFolder,
+	mergeProjects,
+	projectDir,
+	projectPath,
+	sameFolder,
+	shownRecord,
+	withFolder,
+} from '../src/shared/projects';
 import { memoryStore } from './fixtures';
 
 /**

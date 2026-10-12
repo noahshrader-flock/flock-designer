@@ -49,7 +49,8 @@ const changed = (edits: TokenEdit[], read: Map<string, DesignToken>, token: Desi
 		const t = read.get(e.path);
 		return t !== undefined && placeOf(t) === placeOf(token);
 	};
-	const asRead = to === null || ('ref' in to ? token.ref?.path === to.ref : token.ref === undefined && token.value.toLowerCase() === to.value.toLowerCase());
+	const asRead =
+		to === null || ('ref' in to ? token.ref?.path === to.ref : token.ref === undefined && token.value.toLowerCase() === to.value.toLowerCase());
 	const now = edits.find(atPlace);
 	const next: TokenEdit | undefined = asRead ? undefined : { path: token.path, ...(to as TokenChange) };
 	if (sameChange(now ? [now] : [], next ? [next] : [])) return edits;

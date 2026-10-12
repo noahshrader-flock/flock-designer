@@ -77,7 +77,7 @@ describe('markersFor', () => {
 		expect(markersFor(list, numbers(list), 'a', null).map((m) => m.id)).toEqual([2]);
 	});
 
-	it('only the viewer\'s own pins can be dragged', () => {
+	it("only the viewer's own pins can be dragged", () => {
 		const list = [pinned(1, { author: 'me' }), pinned(2, { author: 'someone else' })];
 		const [mine, theirs] = markersFor(list, numbers(list), 'me', null);
 		expect(mine?.movable).toBe(true);
@@ -102,7 +102,10 @@ describe('markersFor', () => {
 
 describe('forgetPosted', () => {
 	it('forgets a local copy once GitHub returns that comment', () => {
-		const held = new Map([[1, c(1)], [2, c(2)]]);
+		const held = new Map([
+			[1, c(1)],
+			[2, c(2)],
+		]);
 		forgetPosted(held, [c(1)]);
 		expect([...held.keys()]).toEqual([2]);
 	});
@@ -131,7 +134,8 @@ describe('openComments / resolvedComments', () => {
 	});
 
 	it('is the same question the pins ask, so a pin and the count cannot disagree', () => {
-		const withPin = (id: number, over = {}) => c(id, { anchor: { route: '/r', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' }, ...over });
+		const withPin = (id: number, over = {}) =>
+			c(id, { anchor: { route: '/r', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' }, ...over });
 		const list = [withPin(1), withPin(2, { resolved: true })];
 		expect(markersFor(list, numberComments(list), 'a', null).map((m) => m.id)).toEqual(openComments(list).map((x) => x.id));
 	});

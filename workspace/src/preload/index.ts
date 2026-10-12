@@ -51,8 +51,7 @@ import type {
  * difference between a bridge and a hole.
  */
 
-const invoke = <T>(channel: string, ...args: unknown[]): Promise<Result<T>> =>
-	ipcRenderer.invoke(channel, ...args) as Promise<Result<T>>;
+const invoke = <T>(channel: string, ...args: unknown[]): Promise<Result<T>> => ipcRenderer.invoke(channel, ...args) as Promise<Result<T>>;
 
 /** Subscribes and returns the unsubscribe, so a component cannot leak a listener. */
 const subscribe = <T>(channel: string, listener: (payload: T) => void): (() => void) => {
@@ -118,7 +117,8 @@ const api: WorkspaceApi = {
 	handoffResult: (root) => invoke<boolean | null>(CHANNELS.handoffResult, root),
 	openInEditor: (root) => invoke<null>(CHANNELS.openInEditor, root),
 	continueInClaude: (root, branch) => invoke<'editor' | 'terminal'>(CHANNELS.continueInClaude, root, branch),
-	createPrototype: (projectId, title, note, from, folder) => invoke<Iteration>(CHANNELS.createPrototype, projectId, title, note, from ?? null, folder ?? null),
+	createPrototype: (projectId, title, note, from, folder) =>
+		invoke<Iteration>(CHANNELS.createPrototype, projectId, title, note, from ?? null, folder ?? null),
 	buildPrototype: (projectId, name, request) => invoke<AgentStatus>(CHANNELS.buildPrototype, projectId, name, request),
 	addressPrototype: (projectId, name, commentId) => invoke<AgentStatus>(CHANNELS.addressPrototype, projectId, name, commentId),
 	finishPrototypeAddress: (commentId) => invoke<PrototypeAddressed>(CHANNELS.finishPrototypeAddress, commentId),

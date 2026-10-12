@@ -20,9 +20,18 @@ export const coverInWindow: DrawCover = async (url) => {
 	try {
 		const wc = win.webContents;
 		if (!(await setColorScheme(wc, 'light', LOAD_MS))) return null;
-		const scaled = await within(LOAD_MS, wc.debugger.sendCommand('Emulation.setDeviceMetricsOverride', { ...COVER_WINDOW, deviceScaleFactor: 1, mobile: false }));
+		const scaled = await within(
+			LOAD_MS,
+			wc.debugger.sendCommand('Emulation.setDeviceMetricsOverride', { ...COVER_WINDOW, deviceScaleFactor: 1, mobile: false }),
+		);
 		if (scaled === null) return null;
-		if ((await within(LOAD_MS, wc.loadURL(url).then(() => true))) === null) return null;
+		if (
+			(await within(
+				LOAD_MS,
+				wc.loadURL(url).then(() => true),
+			)) === null
+		)
+			return null;
 		const ready = (await within(READY_MS, wc.executeJavaScript(settleScript()))) as { capped?: unknown } | null;
 		if (ready === null || ready.capped !== false) return null;
 		const image = await wc.capturePage({ x: 0, y: 0, ...COVER_WINDOW });

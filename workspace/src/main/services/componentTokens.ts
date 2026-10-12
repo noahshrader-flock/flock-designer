@@ -50,7 +50,9 @@ export type Mode = 'light' | 'dark';
  * Draws story files from a build of the previews (its `base`), in a mode, and says what each drew, in the order given;
  * null for one that would not draw. Several runs at once.
  */
-export type Measure = (runs: { base: string; mode: Mode; files: string[]; pictures?: boolean; accessibility?: string[] }[]) => Promise<(Drawn | null)[][]>;
+export type Measure = (
+	runs: { base: string; mode: Mode; files: string[]; pictures?: boolean; accessibility?: string[] }[],
+) => Promise<(Drawn | null)[][]>;
 
 /** A tag's blue, the same for every color tag: its red and green are the token's number. */
 const TAG_BLUE = 0x5a;
@@ -173,7 +175,11 @@ export const decode = (tagged: Partial<Record<Mode, Drawn>>, plain: Drawn | unde
 	return {
 		uses,
 		notTokens: [...notTokens]
-			.map(([key, n]) => ({ kind: key.slice(0, key.indexOf(' ')) as 'color' | 'radius' | 'spacing', value: key.slice(key.indexOf(' ') + 1), uses: n }))
+			.map(([key, n]) => ({
+				kind: key.slice(0, key.indexOf(' ')) as 'color' | 'radius' | 'spacing',
+				value: key.slice(key.indexOf(' ') + 1),
+				uses: n,
+			}))
 			.sort((a, b) => b.uses - a.uses),
 		derived,
 	};
@@ -283,7 +289,11 @@ export class ComponentTokens {
 
 	private async build(system: ConnectedDesignSystem, commit: string): Promise<Built> {
 		const reads = await systemReads(system, commit);
-		const [read, catalog, target] = await Promise.all([readTokens(reads), readCatalog(reads, designSystemOf(system)), libraryTarget(reads, system.name)]);
+		const [read, catalog, target] = await Promise.all([
+			readTokens(reads),
+			readCatalog(reads, designSystemOf(system)),
+			libraryTarget(reads, system.name),
+		]);
 		const { tokens } = read;
 		// The components the tab lists, so a token page is never said to share a token.
 		const files = listedComponents(catalog, read).map((c) => c.id);

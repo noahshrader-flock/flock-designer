@@ -45,7 +45,11 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 
 	const routes: string[] = [];
 	const pins: PinEvent[] = [];
-	const page = new PageView(window, (r) => routes.push(r), (e) => pins.push(e));
+	const page = new PageView(
+		window,
+		(r) => routes.push(r),
+		(e) => pins.push(e),
+	);
 	page.setBounds({ x: 0, y: 0, width: 800, height: 600 });
 	await page.open(`${origin}/users`);
 
@@ -68,7 +72,11 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	console.log('smoke-page: step 2a');
 	wc.sendInputEvent({ type: 'mouseMove', x: 100, y: 70 });
 	await new Promise((r) => setTimeout(r, 250));
-	const outlined = await js<{ box: { left: number; top: number; width: number; height: number }; label: string; target: { left: number; top: number; width: number; height: number } } | null>(
+	const outlined = await js<{
+		box: { left: number; top: number; width: number; height: number };
+		label: string;
+		target: { left: number; top: number; width: number; height: number };
+	} | null>(
 		`(function(){var l=document.querySelectorAll('[data-fd-layer="hover"]');if(l.length<2)return null;var o=l[0].getBoundingClientRect(),b=document.querySelector('[data-e2e-ref]').getBoundingClientRect();return {box:{left:o.left,top:o.top,width:o.width,height:o.height},label:l[1].textContent,target:{left:b.left,top:b.top,width:b.width,height:b.height}}})()`,
 	);
 	if (!outlined) return fail('nothing was outlined under the pointer');
@@ -87,7 +95,8 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	if (anchor.route !== '/users') fail(`wrong route: ${anchor.route}`);
 	if ((await js<number>('window.__pressed')) !== 0) fail('the click reached the page');
 
-	if (picked !== null && (picked.anchor.tag !== 'button' || !(picked.anchor.inside ?? []).includes('Invite area'))) fail(`the kind and containers were not recorded: ${JSON.stringify(picked.anchor)}`);
+	if (picked !== null && (picked.anchor.tag !== 'button' || !(picked.anchor.inside ?? []).includes('Invite area')))
+		fail(`the kind and containers were not recorded: ${JSON.stringify(picked.anchor)}`);
 	if (await js<boolean>('document.querySelector("[data-fd-layer=hover]") !== null')) fail('the outline was left on the page after the click');
 
 	// 2c. Climbing to the container: the up arrow moves the outline to the section, and that is what is recorded.
@@ -126,7 +135,9 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	if (r[0]?.state !== 'found') fail(`expected found, got ${JSON.stringify(r)}`);
 	// The pin's tip is the wrapper's position, and it must be where the click was: inside the element.
 	const markerOnElement = () =>
-		js<boolean>(`(function(){var m=document.querySelector('[data-fd-layer="pins"] > div').getBoundingClientRect();var e=document.querySelector('[data-e2e-ref]').getBoundingClientRect();return m.left>=e.left-1&&m.left<=e.right+1&&m.top>=e.top-1&&m.top<=e.bottom+1;})()`);
+		js<boolean>(
+			`(function(){var m=document.querySelector('[data-fd-layer="pins"] > div').getBoundingClientRect();var e=document.querySelector('[data-e2e-ref]').getBoundingClientRect();return m.left>=e.left-1&&m.left<=e.right+1&&m.top>=e.top-1&&m.top<=e.bottom+1;})()`,
+		);
 	if (!(await markerOnElement())) fail('the marker is not on the element');
 
 	// 3a. With a pin already on the page, a picture of that spot does not show the pin.
@@ -135,7 +146,9 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 		const bmp = img.toBitmap();
 		let n = 0;
 		for (let i = 0; i + 3 < bmp.length; i += 4) {
-			const b = bmp[i] as number, g = bmp[i + 1] as number, r = bmp[i + 2] as number;
+			const b = bmp[i] as number,
+				g = bmp[i + 1] as number,
+				r = bmp[i + 2] as number;
 			if (Math.abs(r - 37) < 30 && Math.abs(g - 99) < 30 && Math.abs(b - 235) < 30) n++;
 		}
 		return n;
@@ -155,7 +168,8 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	if (!second?.picture) return fail('no picture with the second click');
 	const inPicture = blue(nativeImage.createFromDataURL(second.picture));
 	if (inPicture > 3) fail(`the picture shows the pin (${inPicture} blue pixels), but it should show the thing and not the pin`);
-	if ((await js<string>("document.querySelector('[data-fd-layer=pins]').style.visibility")) !== 'visible') fail('the pins were left hidden after the picture');
+	if ((await js<string>("document.querySelector('[data-fd-layer=pins]').style.visibility")) !== 'visible')
+		fail('the pins were left hidden after the picture');
 
 	// 3b. A pin can be clicked, and dragged, with the real mouse. The pin's body hangs above its tip.
 	const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -165,7 +179,11 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	await wait(300);
 	if (pins.length !== 1 || pins[0]?.kind !== 'click' || pins[0].id !== 7) fail(`a click on the pin was not reported: ${JSON.stringify(pins)}`);
 	wc.sendInputEvent({ type: 'mouseDown', x: 100, y: 51, button: 'left', clickCount: 1 });
-	for (const [x, y] of [[140, 90], [220, 200], [300, 300]] as const) {
+	for (const [x, y] of [
+		[140, 90],
+		[220, 200],
+		[300, 300],
+	] as const) {
 		wc.sendInputEvent({ type: 'mouseMove', x, y, modifiers: ['leftbuttondown'] });
 		await wait(50);
 	}
@@ -180,7 +198,8 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	if (await js<boolean>(`document.querySelector('[data-fd-layer="hover"]') !== null`)) fail('the drag outline was left on the page');
 	await wait(300);
 	const moved = pins[1];
-	if (pins.length !== 2 || moved?.kind !== 'move' || moved.id !== 7 || moved.anchor.route !== '/users') fail(`a drag was not reported as a move: ${JSON.stringify(pins)}`);
+	if (pins.length !== 2 || moved?.kind !== 'move' || moved.id !== 7 || moved.anchor.route !== '/users')
+		fail(`a drag was not reported as a move: ${JSON.stringify(pins)}`);
 	// A page that writes the same kind of message without knowing the secret is ignored.
 	await js(`console.debug('__fd:' + JSON.stringify({ n: 'guess', t: 'click', id: 7 }))`);
 	await js(`console.debug('__fd:' + JSON.stringify({ t: 'move', id: 7, anchor: {} }))`);
@@ -271,7 +290,8 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 		fail(`a page that moves on during its first load was reported as a failure: ${(e as Error).message}`);
 	}
 	await new Promise((res) => setTimeout(res, 600));
-	if (!(await (window.contentView.children[0] as WebContentsView).webContents.executeJavaScript('!!document.getElementById("ok")'))) fail('the page that moved on is not the one showing');
+	if (!(await (window.contentView.children[0] as WebContentsView).webContents.executeJavaScript('!!document.getElementById("ok")')))
+		fail('the page that moved on is not the one showing');
 	reloader.close();
 
 	// 9. A server whose port is open before it can serve: the first attempts are refused, and the preview still opens.

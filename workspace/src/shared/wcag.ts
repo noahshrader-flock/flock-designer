@@ -115,7 +115,8 @@ export const CONTRAST_ENHANCED: ContrastCriterion = {
 
 /** Whether a target asks for a criterion: its level is within the target's, and it came in by the target's version. */
 export const requiredAt = (criterion: Criterion, target: WcagTarget): boolean =>
-	WCAG_LEVELS.indexOf(criterion.level) <= WCAG_LEVELS.indexOf(target.level) && WCAG_VERSIONS.indexOf(criterion.since) <= WCAG_VERSIONS.indexOf(target.version);
+	WCAG_LEVELS.indexOf(criterion.level) <= WCAG_LEVELS.indexOf(target.level) &&
+	WCAG_VERSIONS.indexOf(criterion.since) <= WCAG_VERSIONS.indexOf(target.version);
 
 /**
  * A product's target as the app holds it: the one it declares, from its manifest, with the axe tags it runs; or the

@@ -12,7 +12,10 @@ import { type BuildPhase, waitForAgent } from './localBuild';
  * back to the agent, as a build error does, for up to `FIX_ROUNDS` rounds; what is left is shown, never hidden. A
  * check that cannot run never keeps the page from being shown.
  */
-export type PrototypeApi = Pick<WorkspaceApi, 'buildPrototype' | 'agentStatus' | 'savePrototype' | 'openPrototype' | 'checkAccessibility' | 'fixAccessibility'>;
+export type PrototypeApi = Pick<
+	WorkspaceApi,
+	'buildPrototype' | 'agentStatus' | 'savePrototype' | 'openPrototype' | 'checkAccessibility' | 'fixAccessibility'
+>;
 
 /** How many times the agent is given what the accessibility check found, before the page is shown as it is (decision 30). */
 export const FIX_ROUNDS = 2;

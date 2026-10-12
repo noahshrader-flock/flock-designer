@@ -160,7 +160,14 @@ describe('reading the file', () => {
 	it('reads it from the default branch GitHub names, with the sha a save is made against', async () => {
 		gh.commit('# Voice and tone\n\nPlain words.\n');
 		const voice = await make().current();
-		expect(voice).toEqual({ repository: 'acme/design', path: PATH, base: DEFAULT, text: '# Voice and tone\n\nPlain words.\n', sha: gh.branches.get(DEFAULT)!.files.get(VOICE_FILE)!.sha, branch: null });
+		expect(voice).toEqual({
+			repository: 'acme/design',
+			path: PATH,
+			base: DEFAULT,
+			text: '# Voice and tone\n\nPlain words.\n',
+			sha: gh.branches.get(DEFAULT)!.files.get(VOICE_FILE)!.sha,
+			branch: null,
+		});
 		expect(gh.asked).toContain('person GET /repos/acme/design');
 		expect(writes()).toEqual([]);
 	});
@@ -344,7 +351,15 @@ describe('proposing it', () => {
 		const other = make();
 		other.forget();
 		const branch = (await other.save('three', (await other.current()).sha)).voice.branch!;
-		gh.pulls.push({ number: 40, head: branch.branch, base: DEFAULT, draft: false, state: 'open', merged_at: null, html_url: 'https://github.com/acme/design/pull/40' });
+		gh.pulls.push({
+			number: 40,
+			head: branch.branch,
+			base: DEFAULT,
+			draft: false,
+			state: 'open',
+			merged_at: null,
+			html_url: 'https://github.com/acme/design/pull/40',
+		});
 		expect((await other.current()).branch!.pullRequest).toEqual({ number: 40, url: 'https://github.com/acme/design/pull/40' });
 		expect((await other.propose()).branch!.pullRequest!.number).toBe(40);
 		expect(gh.pulls).toHaveLength(2);
@@ -353,12 +368,18 @@ describe('proposing it', () => {
 	it('gives GitHub’s compare page for the branch, where one can be opened by hand', async () => {
 		const file = await saved();
 		const branch = (await file.current()).branch!;
-		expect(branch.compare).toBe(`https://github.com/acme/design/compare/${encodeURIComponent(DEFAULT)}...${encodeURIComponent(branch.branch)}?expand=1`);
+		expect(branch.compare).toBe(
+			`https://github.com/acme/design/compare/${encodeURIComponent(DEFAULT)}...${encodeURIComponent(branch.branch)}?expand=1`,
+		);
 	});
 
 	it('says the command line is needed when it is not signed in, and the change stays saved', async () => {
 		const file = await saved();
-		gh.refuse = { when: (m, p) => m === 'POST' && p.endsWith('/pulls'), status: undefined as unknown as number, message: 'To get started with GitHub CLI, please run:  gh auth login' };
+		gh.refuse = {
+			when: (m, p) => m === 'POST' && p.endsWith('/pulls'),
+			status: undefined as unknown as number,
+			message: 'To get started with GitHub CLI, please run:  gh auth login',
+		};
 		await expect(file.propose()).rejects.toThrow(/GitHub command line \(gh\)/);
 		gh.refuse = null;
 		expect((await file.current()).branch).toMatchObject({ text: 'two', saves: 1, pullRequest: null });

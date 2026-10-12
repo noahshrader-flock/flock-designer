@@ -71,7 +71,7 @@ describe('project ids', () => {
 });
 
 describe('branchFor', () => {
-	it('uses the repository\'s own pattern rather than a hard-coded one', () => {
+	it("uses the repository's own pattern rather than a hard-coded one", () => {
 		expect(branchFor(descriptor, 'demo', 2)).toBe('fd/demo/i2');
 		const other = { ...descriptor, branchPattern: { prototype: 'proto/<project-id>-<n>', codebase: 'x' } };
 		expect(branchFor(other, 'demo', 2)).toBe('proto/demo-2');
@@ -157,9 +157,7 @@ describe('codebase work', () => {
 	it('refuses a second codebase record for the same project', async () => {
 		await createIteration(root, records, descriptor, 'demo', '', 'develop');
 		g('checkout', '-q', 'develop');
-		await expect(createIteration(root, records, descriptor, 'demo', '', 'develop')).rejects.toThrow(
-			/already has codebase work/,
-		);
+		await expect(createIteration(root, records, descriptor, 'demo', '', 'develop')).rejects.toThrow(/already has codebase work/);
 	});
 
 	it('records nothing when a dirty tree stops the switch', async () => {
@@ -167,7 +165,6 @@ describe('codebase work', () => {
 		await expect(createIteration(root, records, descriptor, 'demo', '', 'develop')).rejects.toThrow(/uncommitted/);
 		expect(readIterations(records, 'demo')).toEqual([]);
 	});
-
 });
 
 describe('recordPreview', () => {
@@ -229,7 +226,9 @@ describe('recordedIteration: work started outside the app', () => {
 		g('checkout', '-q', '-b', 'feature/old-work');
 		writeFileSync(join(root, 'old.txt'), 'x');
 		g('add', '.');
-		execFileSync('git', ['-C', root, 'commit', '-q', '-m', 'old'], { env: { ...process.env, GIT_AUTHOR_DATE: '2026-09-02T08:00:00+00:00', GIT_COMMITTER_DATE: '2026-09-02T08:00:00+00:00' } });
+		execFileSync('git', ['-C', root, 'commit', '-q', '-m', 'old'], {
+			env: { ...process.env, GIT_AUTHOR_DATE: '2026-09-02T08:00:00+00:00', GIT_COMMITTER_DATE: '2026-09-02T08:00:00+00:00' },
+		});
 		const found = await recordedIteration(root, records, descriptor, 'old-work', 'codebase');
 		expect(new Date(found.createdAt).toISOString()).toBe('2026-09-02T08:00:00.000Z');
 	});
@@ -265,4 +264,3 @@ describe('recordedIteration: work started outside the app', () => {
 		await expect(recordedIteration(root, records, descriptor, 'demo', '../../etc')).rejects.toThrow();
 	});
 });
-

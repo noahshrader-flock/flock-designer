@@ -110,7 +110,7 @@ export class PublishManager {
 				const { branches, records } = await ctx.run();
 				problems.push(...branches.problems, ...records.problems);
 			} catch (err) {
-				problems.push({ what: 'Publishing', why: err instanceof Error ? err.message.split('\n')[0] ?? String(err) : String(err) });
+				problems.push({ what: 'Publishing', why: err instanceof Error ? (err.message.split('\n')[0] ?? String(err)) : String(err) });
 			}
 			const at = this.clock().toISOString();
 			this.set(problems.length === 0 ? { state: 'shared', at } : { state: 'held', problems, at });

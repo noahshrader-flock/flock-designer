@@ -18,7 +18,11 @@ afterEach(async () => {
 });
 
 const row = (more: Record<string, unknown> = {}) =>
-	createElement(RowList, null, createElement(ListRow, { data: { 'data-row': 'a' }, name: 'FSButton', picture: undefined, drawing: false, onOpen: vi.fn(), ...more }));
+	createElement(
+		RowList,
+		null,
+		createElement(ListRow, { data: { 'data-row': 'a' }, name: 'FSButton', picture: undefined, drawing: false, onOpen: vi.fn(), ...more }),
+	);
 const button = () => document.querySelector<HTMLElement>('[data-row] button')!;
 
 describe('RowList', () => {
@@ -59,7 +63,9 @@ describe('ListRow', () => {
 		current = await render(row({ picture: 'http://127.0.0.1:1/p.jpg' }));
 		const thumb = button().firstElementChild!;
 		expect(thumb.hasAttribute('data-thumbnail')).toBe(true);
-		expect(thumb.className.split(' ')).toEqual(expect.arrayContaining(['h-10', 'shrink-0', 'overflow-hidden', 'rounded-md', 'border', 'aspect-[1920/960]']));
+		expect(thumb.className.split(' ')).toEqual(
+			expect.arrayContaining(['h-10', 'shrink-0', 'overflow-hidden', 'rounded-md', 'border', 'aspect-[1920/960]']),
+		);
 		expect(thumb.querySelector('img')!.getAttribute('src')).toBe('http://127.0.0.1:1/p.jpg');
 		await unmountAll(current.root);
 		current = await render(row({ drawing: true }));

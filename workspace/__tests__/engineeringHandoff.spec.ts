@@ -8,7 +8,7 @@ const commands = [
 	{ id: 'handoff', label: 'Handoff gate', argv: ['npm', 'run', 'handoff', '--', '<project-id>'] },
 ];
 
-describe('a product\'s commands', () => {
+describe("a product's commands", () => {
 	it('are found by id in its workspace file, for this project, or not at all', () => {
 		expect(commandLine(commands, 'handoff', 'admin-usage')).toBe('npm run handoff -- admin-usage');
 		expect(commandLine(commands, 'check-iteration', 'admin-usage')).toBe('npm run check:iteration');
@@ -17,7 +17,7 @@ describe('a product\'s commands', () => {
 });
 
 describe('the tasks', () => {
-	it('carry the shared rules for codebase work and this product\'s light check, before the task itself', () => {
+	it("carry the shared rules for codebase work and this product's light check, before the task itself", () => {
 		const pre = codebaseWorkPreamble('# Codebase work, unattended\n', 'npm run check:iteration');
 		expect(pre).toContain('# Codebase work, unattended');
 		expect(pre).toContain('`npm run check:iteration`');
@@ -25,7 +25,13 @@ describe('the tasks', () => {
 	});
 
 	it('Handoff: the shared skill, the branch, the gate first and last, the light check, and the verdict line asked for', () => {
-		const task = handoffTask({ skill: '# Hand work to engineering\n', projectId: 'admin-usage', branch: 'feature/admin-usage', gate: 'npm run handoff -- admin-usage', lightCheck: 'npm run check:iteration' });
+		const task = handoffTask({
+			skill: '# Hand work to engineering\n',
+			projectId: 'admin-usage',
+			branch: 'feature/admin-usage',
+			gate: 'npm run handoff -- admin-usage',
+			lightCheck: 'npm run check:iteration',
+		});
 		expect(task).toContain('# Hand work to engineering');
 		expect(task).toContain('`feature/admin-usage`');
 		expect(task).toMatch(/`npm run handoff -- admin-usage`. Run it first, and last, once HANDOFF.md is committed/);

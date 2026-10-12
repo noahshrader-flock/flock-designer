@@ -138,9 +138,7 @@ describe('from a request to a running preview', () => {
 
 		// An uncommitted edit must block the branch move, not be carried across.
 		writeFileSync(join(product, 'src/prototypes/scratch.txt'), 'unsaved thinking\n');
-		await expect(
-			createIteration(root, records, descriptor, 'inactive-users', 'x', 'develop'),
-		).rejects.toThrow(/uncommitted changes/);
+		await expect(createIteration(root, records, descriptor, 'inactive-users', 'x', 'develop')).rejects.toThrow(/uncommitted changes/);
 
 		expect(readIterations(records, 'inactive-users')).toEqual([]);
 		expect((await readCheckout(root)).branch).toBe('develop');

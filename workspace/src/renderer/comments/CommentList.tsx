@@ -110,7 +110,9 @@ export const CommentList = ({
 								</div>
 							)}
 							<p className="text-sm">{comment.body}</p>
-							{comment.picture && <img className="max-w-[240px] rounded border" src={comment.picture} alt={`The spot comment ${n || ''} was made on`} />}
+							{comment.picture && (
+								<img className="max-w-[240px] rounded border" src={comment.picture} alt={`The spot comment ${n || ''} was made on`} />
+							)}
 							{madeIn && <span className="text-muted-foreground text-xs">State: {stateLabel(madeIn)}</span>}
 							{comment.anchor && state === 'elsewhere' && <span className="text-muted-foreground text-xs">On {comment.anchor.route}</span>}
 							{state && NOTE[state] && <span className="text-warning text-xs">{NOTE[state]}</span>}
