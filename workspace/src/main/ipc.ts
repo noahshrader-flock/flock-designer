@@ -733,6 +733,8 @@ export const registerIpc = ({
 		const accessibility = await codebaseAccessibility(canonical);
 		// The voice and tone (T9), from the design system beside this product; nothing while it is blank.
 		const voice = await work.voice(canonical);
+		// Joining the run already going on this branch keeps that run's conversation, not this new name for it.
+		const joining = agent.status().state === 'running';
 		const started = agent.start(canonical, projectId, `${task}${shared.note}\n\n${accessibility}${voice ? `\n\n${voice}` : ''}`, {
 			// The project's records live in the design repository, beside the product checkout.
 			addDirs,
@@ -742,7 +744,7 @@ export const registerIpc = ({
 			session,
 			name: `DSNR: ${projectId}`,
 		});
-		if (started.state === 'running' && branch !== null) sessions.write(canonical, branch, session);
+		if (!joining && started.state === 'running' && branch !== null) sessions.write(canonical, branch, session);
 		return started;
 	};
 
@@ -755,13 +757,6 @@ export const registerIpc = ({
 			assertUsableProjectId(projectId);
 			const canonical = opened.require(root);
 			const branch = (await readCheckout(canonical)).branch;
-			const now = agent.status();
-			if (now.state === 'running') {
-				// The same work asked twice (the screen opened twice) joins its run; anything else must not be
-				// mistaken for it, or the screen would wait on someone else's run and report this work as done.
-				if (branch !== null && now.work === branch) return now;
-				throw new Error(AGENT_BUSY);
-			}
 			// On the project's codebase branch, the shared rules for unattended codebase work, and this product's light check.
 			const descriptor = descriptorFor(root);
 			const skill = branch === codebaseBranchFor(descriptor, projectId) ? await readDesignFile(CODEBASE_SKILL) : null;
@@ -1167,9 +1162,8 @@ export const registerIpc = ({
 		guard(async (projectId: string, name: string, request: string) => {
 			assertUsableProjectId(projectId);
 			assertPrototypeName(name);
-			// The screen can ask twice (it is opened twice in development, and Try again asks again). One agent is
-			// already building: this request waits on that run rather than starting a second or failing.
-			if (agent.status().state === 'running') return agent.status();
+			// The screen can ask twice (it is opened twice in development, and Try again asks again): the runner joins
+			// this prototype's run, and refuses while it is working on anything else.
 			const skill = await readSkillText(BUILD_SKILL);
 			const { build, sources } = await prototypeRun(projectId, name);
 			const accessibility = await work.accessibility(projectId, name);

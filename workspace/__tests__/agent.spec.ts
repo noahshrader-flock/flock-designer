@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AgentRunner, agentReadiness, claudeCodeAdapter, claudeStreamFormatter, locateClaude } from '../src/main/services/agent';
+import { AGENT_BUSY, AgentRunner, agentReadiness, claudeCodeAdapter, claudeStreamFormatter, locateClaude } from '../src/main/services/agent';
 import type { RunLogLine } from '../src/shared/contract';
 
 let root: string;
@@ -86,14 +86,16 @@ describe('status', () => {
 		expect(runner.status()).toEqual({ state: 'finished', exitCode: 0 });
 	});
 
-	it('does not start a second run over a running one', async () => {
+	it('does not start a second run over a running one: the same work joins it, anything else is told it is busy', async () => {
 		const runner = new AgentRunner((l) => logs.push(l), {
 			spawnProcess: spawn,
 			adapter: { name: 'Sleep', argvFor: () => ['node', '-e', 'setInterval(() => {}, 1000)'] },
 		});
-		const first = runner.start(root, 'demo', 'x');
-		const second = runner.start(root, 'demo', 'y');
-		expect(second).toEqual(first);
+		const first = runner.start(root, 'demo', 'x', { work: 'prototype/demo/v1-i1' });
+		expect(runner.start(root, 'demo', 'x', { work: 'prototype/demo/v1-i1' })).toEqual(first);
+		expect(() => runner.start(root, 'other', 'y', { work: 'prototype/other/v1-i1' })).toThrow(AGENT_BUSY);
+		// Work with no name can never be told apart from the run, so it is never joined to it.
+		expect(() => runner.start(root, 'demo', 'y')).toThrow(AGENT_BUSY);
 		runner.stop();
 	});
 });

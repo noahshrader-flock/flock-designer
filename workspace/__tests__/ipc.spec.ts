@@ -50,6 +50,18 @@ const signedIn = (repos: string[]) => {
 	githubApi.mockImplementation(async (path: string) => (path.startsWith('/user/repos') ? repos.map((full_name) => ({ full_name })) : Promise.reject(new Error(`not faked: ${path}`))));
 };
 
+/** The real runner, so its one-run rule is what is tested, over a stand-in agent that runs until the test ends. */
+const realRunner = async () => {
+	const { EventEmitter } = await import('node:events');
+	const { AgentRunner } = await import('../src/main/services/agent');
+	const sessionsSpawned: Array<string | undefined> = [];
+	const runner = new AgentRunner(() => {}, {
+		adapter: { name: 'Fake', argvFor: (t, extras) => (sessionsSpawned.push(extras?.session), ['fake', t]) },
+		spawnProcess: (() => Object.assign(new EventEmitter(), { stdout: null, stderr: null, kill: () => true })) as never,
+	});
+	return { runner, sessionsSpawned };
+};
+
 const call = async (channel: string, ...args: unknown[]) => {
 	const fn = handlers.get(channel);
 	if (!fn) throw new Error(`no handler registered for ${channel}`);
@@ -1264,6 +1276,22 @@ describe('prototypes', () => {
 		expect(b.ok).toBe(true);
 	});
 
+	it('refuse to build while another prototype’s agent is running, rather than wait on that run and save this one unbuilt', async () => {
+		const { runner, sessionsSpawned } = await realRunner();
+		register({ agent: runner });
+		await call(CHANNELS.useCheckout, product);
+		writeSkill();
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		await call(CHANNELS.createPrototype, 'other', 'Other', 'A table', { root: product, branch: 'develop' });
+		expect((await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list')).ok).toBe(true);
+		// The same prototype asked again joins its run.
+		expect(await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list')).toMatchObject({ ok: true, value: { state: 'running', work: 'prototype/demo/v1-i1' } });
+		const other = await call(CHANNELS.buildPrototype, 'other', 'v1-i1', 'A table');
+		expect(other.ok).toBe(false);
+		expect(other.error).toMatch(/already working on something else/);
+		expect(sessionsSpawned).toHaveLength(1);
+	});
+
 	it('save a page that was built here but never saved, when it is opened', async () => {
 		await call(CHANNELS.useCheckout, product);
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
@@ -1719,12 +1747,14 @@ describe('one agent, one piece of work', () => {
 	});
 
 	it('refuses while the agent is busy with other work, instead of waiting on it as if it were this', async () => {
+		const { runner, sessionsSpawned } = await realRunner();
+		register({ agent: runner });
 		await call(CHANNELS.useCheckout, product);
-		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now', work: 'prototype/other/i1' });
+		runner.start(product, 'other', 't', { work: 'prototype/other/i1' });
 		const r = await call(CHANNELS.startAgent, product, 'demo', 'do it');
 		expect(r.ok).toBe(false);
 		expect(r.error).toMatch(/already working on something else/);
-		expect(agentStart).not.toHaveBeenCalled();
+		expect(sessionsSpawned).toHaveLength(1);
 	});
 
 	it('hands the agent\'s conversation over, and stops the app\'s run of it first so it has one writer', async () => {
@@ -1819,13 +1849,18 @@ describe('one agent, one piece of work', () => {
 		expect(r.error).toMatch(/agent is working in flock-coke/);
 	});
 
-	it('joins its own run when asked twice, rather than starting a second', async () => {
+	it('joins its own run when asked twice, rather than starting a second, and keeps that run’s conversation', async () => {
+		const { SessionMemory } = await import('../src/main/services/editor');
+		const sessions = new SessionMemory(join(home, 'agent-sessions.json'));
+		const { runner, sessionsSpawned } = await realRunner();
+		register({ agent: runner, sessions });
 		await call(CHANNELS.useCheckout, product);
-		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now', work: branchHere() });
+		expect((await call(CHANNELS.startAgent, product, 'demo', 'do it')).ok).toBe(true);
 		const r = await call(CHANNELS.startAgent, product, 'demo', 'do it');
 		expect(r.ok).toBe(true);
-		expect(r.value).toMatchObject({ state: 'running' });
-		expect(agentStart).not.toHaveBeenCalled();
+		expect(r.value).toMatchObject({ state: 'running', work: branchHere() });
+		expect(sessionsSpawned).toHaveLength(1);
+		expect(sessions.read(realpathSync(product), branchHere())?.session).toBe(sessionsSpawned[0]);
 	});
 });
 

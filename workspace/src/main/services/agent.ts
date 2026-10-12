@@ -315,9 +315,15 @@ export class AgentRunner {
 		].join('\n');
 	}
 
+	/**
+	 * One run at a time. The same work asked again (a screen opened twice, Try again) joins the run that is going;
+	 * anything else is refused, never handed that run, or its screen would wait on someone else's work and report its own
+	 * as done. Decided here, where nothing can start in between, rather than by each caller checking first.
+	 */
 	start(root: string, projectId: string, task: string, extras?: AgentExtras): AgentStatus {
 		if (this.current.state === 'running') {
-			return this.current;
+			if (extras?.work !== undefined && extras.work === this.work) return this.current;
+			throw new Error(AGENT_BUSY);
 		}
 		const argv = this.deps.adapter.argvFor(extras?.bare ? task : this.taskFor(projectId, task), extras);
 		const [file, ...args] = argv;
