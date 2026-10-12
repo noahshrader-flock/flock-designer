@@ -24,6 +24,9 @@ export class GitHubSession {
   private token: StoredToken | null = null;
   private user: SignInState = { state: 'signedOut' };
   private pending: AbortController | null = null;
+  // One refresh at a time: GitHub replaces the refresh token on each use, so a second refresh with the old one is
+  // refused, and that refusal used to sign the person out over the first one's fresh token.
+  private refreshing: Promise<StoredToken> | null = null;
 
   constructor(
     private readonly clientId: string,
@@ -43,10 +46,12 @@ export class GitHubSession {
     try {
       const user = await this.withToken((t) => readUser(t, this.fetcher));
       this.setState({ state: 'signedIn', user });
-    } catch {
-      // Expired or revoked while the app was closed: start signed out rather
-      // than showing a broken session.
-      this.signOut();
+    } catch (err) {
+      // Expired or revoked while the app was closed: start signed out rather than showing a broken session. Offline
+      // or a GitHub outage is not that: the token is kept for the next launch, and calls made meanwhile still use it.
+      if (err instanceof ReauthRequired) {
+        this.signOut();
+      }
     }
     return this.state();
   }
@@ -130,21 +135,42 @@ export class GitHubSession {
       throw new ReauthRequired('Sign in to GitHub first.');
     }
     if (isExpired(this.token, this.now())) {
-      const refreshed = await refreshToken(this.clientId, this.token, this.fetcher, this.now).catch(() => {
-        this.signOut();
-        throw new ReauthRequired();
-      });
-      this.token = refreshed;
-      this.store.write(refreshed);
+      await this.refresh(this.token);
+    }
+    const token = this.token;
+    if (!token) {
+      throw new ReauthRequired('Sign in to GitHub first.');
     }
     try {
-      return await fn(this.token.accessToken);
+      return await fn(token.accessToken);
     } catch (err) {
       if (err instanceof ReauthRequired) {
         this.signOut();
       }
       throw err;
     }
+  }
+
+  /** Signs out only when GitHub refuses the refresh token; a network or server failure leaves the session as it was. */
+  private refresh(token: StoredToken): Promise<StoredToken> {
+    this.refreshing ??= refreshToken(this.clientId, token, this.fetcher, this.now)
+      .then(
+        (fresh) => {
+          this.token = fresh;
+          this.store.write(fresh);
+          return fresh;
+        },
+        (err: unknown) => {
+          if (err instanceof ReauthRequired) {
+            this.signOut();
+          }
+          throw err;
+        },
+      )
+      .finally(() => {
+        this.refreshing = null;
+      });
+    return this.refreshing;
   }
 
   api(path: string, init: { method?: string; body?: unknown } = {}): Promise<unknown> {

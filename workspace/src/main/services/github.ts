@@ -172,7 +172,12 @@ export const refreshToken = async (
   });
   const body = asRecord(await res.json());
   if (typeof body.access_token !== 'string') {
-    throw new ReauthRequired();
+    // An OAuth error (`bad_refresh_token`, and the like) means the refresh token is no good: sign in again. Anything
+    // else, a server error or a proxy's page, may pass, so it must not end the session.
+    if (typeof body.error === 'string') {
+      throw new ReauthRequired();
+    }
+    throw new GitHubError('GitHub could not renew the sign-in just now. Try again in a moment.', res.status);
   }
   return tokenFromResponse(body, now());
 };
