@@ -25,8 +25,8 @@ import { commandLine } from './services/engineeringHandoff';
 import { type ShareRunner } from './services/share';
 
 import { DESCRIPTOR_PATH, designSystemCheckout, readDescriptor, type WorkspaceDescriptor } from './services/descriptor';
-import { branchExists, branchesWithFile, checkoutBranch, ensureLocalBranch, hasFileAt, isRepository, readCheckout } from './services/git';
-import { codebaseBranchFor, continueIteration, createIteration, readIterations, recordedIteration } from './services/iterations';
+import { branchesWithFile, checkoutBranch, ensureLocalBranch, isRepository, readCheckout } from './services/git';
+import { readIterations, recordedIteration } from './services/iterations';
 import { type Cloned, Cloner, type GitProgress, notClonedOver } from './services/clone';
 import { INSTALL_COMMAND, Installer } from './services/install';
 import { DesignLibrary } from './services/designLibrary';
@@ -68,6 +68,7 @@ import { type CoverDeps, type DrawCover } from './services/projectCovers';
 import { prototypeReadable, type PrototypeSources } from './services/prototype';
 import type { CheckoutMemory } from './services/checkoutMemory';
 import { singleFlight } from './services/concurrency';
+import { codebaseWork } from './services/codebaseWork';
 import { designStore } from './services/designStore';
 import { siteDeploys } from './services/siteDeploys';
 import { registerCheckout } from './ipc/checkout';
@@ -378,71 +379,17 @@ export const ipcDeps = ({
 	};
 
 	/** Switching branches under a running agent changes the files it is working on mid-run. */
-	const assertAgentNotHere = (canonical: string): void => {
-		if (agent.runningIn(canonical)) {
-			throw new Error(
-				`The agent is working in ${basename(canonical)}, and this would change its branch. Wait for it to finish, or take it over, then try again.`,
-			);
-		}
-	};
-
-	/**
-	 * Codebase work's branch, checked out, and its record: from `from`, or the branch the checkout is on. Only Build
-	 * starts codebase work from the app, so there is no channel for it of its own.
-	 */
-	async function startCodebaseWork(root: string, projectId: string, note: string, from?: string) {
-		const canonical = opened.require(root);
-		assertAgentNotHere(canonical);
-		const descriptor = descriptorFor(root);
-		// Only ever a branch that exists here or on GitHub, so the window cannot pass git an option or a revision
-		// expression. One only on GitHub (as most are in a fresh clone) is made local, with nothing checked out.
-		if (from !== undefined) await ensureLocalBranch(canonical, from);
-		const branch = from ?? (await readCheckout(canonical)).branch;
-		if (branch === null) {
-			throw new Error('This repository has a detached HEAD. Check out a branch first.');
-		}
-		// Work is built where the product's DSNR setup is. A branch without it (develop, before the
-		// setup is merged there) would leave the checkout on a branch this app can no longer work in.
-		if (!(await hasFileAt(canonical, `refs/heads/${branch}`, DESCRIPTOR_PATH))) {
-			throw new Error(`${branch} has no ${DESCRIPTOR_PATH}, so work cannot start from it. Start from a branch that has the DSNR setup.`);
-		}
-		const recordsRoot = recordsFor(canonical);
-		return written(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch));
-	}
-
-	/**
-	 * A project's codebase work as this checkout and the records know it: its branch, whether that branch is here, and
-	 * whether it is recorded. Started when either is true; Build then continues it rather than starting a second.
-	 */
-	async function codebaseWorkOf(root: string, projectId: string) {
-		const canonical = opened.require(root);
-		const branch = codebaseBranchFor(descriptorFor(root), projectId);
-		const records = await work.records(projectId);
-		const exists = await branchExists(canonical, branch);
-		const recorded = records.some((i) => i.name === 'codebase');
-		return { branch, exists, recorded, started: exists || recorded, records };
-	}
-
-	/**
-	 * Codebase work already started, picked up: its branch made local if it is only on GitHub, and the checkout moved to
-	 * it. A checkout already on it is left exactly as it is, uncommitted work and all, since that is the work in
-	 * progress; moving from another branch needs a clean one, so nothing is carried or lost.
-	 */
-	async function continueCodebaseWork(root: string, projectId: string, branch: string) {
-		const canonical = opened.require(root);
-		assertAgentNotHere(canonical);
-		await ensureLocalBranch(canonical, branch);
-		if ((await readCheckout(canonical)).branch === branch) return;
-		const me = github.state();
-		await continueIteration(
-			canonical,
-			recordsFor(canonical),
-			projectId,
-			'codebase',
-			me.state === 'signedIn' ? me.user.login : null,
-			descriptorFor(root),
-		);
-	}
+	// Starting and picking up a project's codebase work, never under a running agent (`codebaseWork`).
+	const codebase = codebaseWork({
+		agentIn: (canonical) => agent.runningIn(canonical),
+		records: (projectId) => work.records(projectId),
+		login: () => {
+			const me = github.state();
+			return me.state === 'signedIn' ? me.user.login : null;
+		},
+		written,
+	});
+	const { assertAgentNotHere } = codebase;
 
 	/** The accessibility section of a codebase task (T7): the product's target from its own manifest, on the branch it is on. */
 	const codebaseAccessibility = (canonical: string, findings?: Parameters<typeof taskAccessibility>[2]): Promise<string> => {
@@ -762,9 +709,7 @@ export const ipcDeps = ({
 		cloneAsPlanned,
 		startAtSetup,
 		assertAgentNotHere,
-		startCodebaseWork,
-		codebaseWorkOf,
-		continueCodebaseWork,
+		codebase,
 		codebaseAccessibility,
 		agentBusy,
 		refuseWhileBusy,

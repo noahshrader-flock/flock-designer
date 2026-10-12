@@ -27,11 +27,9 @@ export const registerCodebase = (d: IpcDeps): void => {
 		agentBusy,
 		checkout,
 		checkoutParts,
-		codebaseWorkOf,
-		continueCodebaseWork,
+		codebase,
 		designRepo,
 		handoffStarts,
-		opened,
 		ports,
 		prototypeAccessibility,
 		prototypePage,
@@ -39,11 +37,9 @@ export const registerCodebase = (d: IpcDeps): void => {
 		publisher,
 		readDesignFile,
 		readSkillText,
-		recordsFor,
 		refuseWhileBusy,
 		sessions,
 		share,
-		startCodebaseWork,
 		startTracked,
 		work,
 	} = d;
@@ -164,8 +160,8 @@ export const registerCodebase = (d: IpcDeps): void => {
 	});
 	handle('shareStatus', [], () => share.status());
 	handle('moveToCodePlan', [checkout, arg.projectId, arg.prototypeName], async (workIn, projectId, name): Promise<MoveToCodePlan> => {
-		const { root, canonical } = workIn;
-		const { branch, exists, recorded, started, records } = await codebaseWorkOf(root, projectId);
+		const { canonical } = workIn;
+		const { branch, exists, recorded, started, records } = await codebase.of(workIn, projectId);
 		const basedOn = records.find((i) => i.name === name)?.basedOn;
 		const here = await readCheckout(canonical);
 		return {
@@ -213,10 +209,9 @@ export const registerCodebase = (d: IpcDeps): void => {
 	 */
 	handle(
 		'buildInClaude',
-		[arg.root, arg.projectId, arg.prototypeName, arg.optional(arg.branch)],
-		async (root, projectId, name, from): Promise<BuildInClaude> => {
-			const canonical = opened.require(root);
-			const recordsRoot = recordsFor(canonical);
+		[checkout, arg.projectId, arg.prototypeName, arg.optional(arg.branch)],
+		async (workIn, projectId, name, from): Promise<BuildInClaude> => {
+			const { canonical, recordsRoot } = workIn;
 			const skill = await readSkillText(MOVE_SKILL);
 			// The page and its source are copied where the agent can read them, so it works from the version saved.
 			const html = await prototypePage(projectId, name);
@@ -227,9 +222,9 @@ export const registerCodebase = (d: IpcDeps): void => {
 			const label = iterationLabel({ name, branch: prototypeKey(projectId, name) });
 			// The branch first: nothing is written for the agent if the work cannot start (a dirty tree, work not found).
 			// Work already started, here or recorded, is continued where it is; it is not started a second time.
-			const { branch, started: continuing } = await codebaseWorkOf(root, projectId);
-			if (continuing) await continueCodebaseWork(root, projectId, branch);
-			else await startCodebaseWork(root, projectId, `From prototype ${label}`, from ?? undefined);
+			const { branch, started: continuing } = await codebase.of(workIn, projectId);
+			if (continuing) await codebase.resume(workIn, projectId, branch);
+			else await codebase.start(workIn, projectId, `From prototype ${label}`, from ?? undefined);
 			writeFileSync(pageFile, html);
 			if (source !== null) writeFileSync(sourceFile, source);
 			const taskFile = join(dirname(pageFile), `${name}-into-code.md`);
