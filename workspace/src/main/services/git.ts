@@ -5,6 +5,7 @@ import { basename, join, resolve } from 'node:path';
 import type { Checkout } from '../../shared/contract';
 import { runFile } from './process';
 import { errorText } from '../../shared/result';
+import { isBot } from '../../shared/people';
 import { OBJECT_ID_PATTERN } from '../../shared/sha';
 
 /**
@@ -262,7 +263,7 @@ export const createBranch = async (root: string, branch: string, from: string): 
 };
 
 /** `[bot]` accounts and automation are not people working on a design. */
-const isPerson = (name: string): boolean => name !== '' && !/\[bot\]$/i.test(name);
+const isPerson = (name: string): boolean => name !== '' && !isBot(name);
 
 /**
  * The branch the repository treats as its trunk, to measure an iteration against.

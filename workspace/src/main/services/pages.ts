@@ -94,15 +94,20 @@ export const pageStatus = async (github: GitHubApi, ref: DesignRepoRef, projectI
  * generator, the workflow that runs it, and the packages it installs. A change to any of these changes how the pages
  * look and work, so the site needs a deploy as much as it does for a new page. The renderer folder is all of it, not
  * only what the viewer imports: one deploy too many after an edit to a screen the site does not carry costs a minute
- * of the workflow, and a list of imports kept by hand would one day miss one.
+ * of the workflow. The services are named one by one, as the viewer imports them; a test follows the viewer's imports
+ * (`siteSources.spec.ts`), so a service moved or added without its name here fails there, rather than leaving the site
+ * stale without a word.
  */
 const SITE_SOURCES = [
 	/^workspace\/src\/(site|viewer|renderer|shared)\//,
-	/^workspace\/src\/main\/services\/(designRepo|github|paths)\.ts$/,
+	/^workspace\/src\/main\/services\/(designRepo|github)\.ts$/,
 	/^workspace\/src\/cli\/dsnr\.ts$/,
 	/^workspace\/(bin\/|viewer\.vite\.config\.ts$|package-lock\.json$)/,
 	/^\.github\/workflows\/publish-prototypes\.yml$/,
 ];
+
+/** Whether a change to `file` (a path in the design repository) changes how the site is built. */
+export const isSiteSource = (file: string): boolean => SITE_SOURCES.some((s) => s.test(file));
 
 /** What GitHub has that the site does not: a prototype page, or a change to how the site is built (`code`). */
 export type SiteBehind = { kind: 'page'; projectId: string; name: string } | { kind: 'code' };
@@ -126,7 +131,7 @@ export const siteBehind = async (github: GitHubApi, ref: DesignRepoRef): Promise
 		const file = String(asRecord(f).filename);
 		const m = /^projects\/([^/]+)\/prototypes\/([^/]+)\.html$/.exec(file);
 		if (m?.[1] && m[2]) return { kind: 'page', projectId: m[1], name: m[2] };
-		code ||= SITE_SOURCES.some((s) => s.test(file));
+		code ||= isSiteSource(file);
 	}
 	return code ? { kind: 'code' } : null;
 };
