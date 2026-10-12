@@ -49,14 +49,36 @@ describe('the folder field', () => {
 		expect(list().textContent).toBe('Roles');
 		await unmountAll(current!.root);
 		await show(null);
-		expect(list().textContent).toBe('No folder');
+		expect(list().textContent).toBe('Choose folder');
 	});
 
-	it('lists no folder, the folders in use, and a way to add a new one, last', async () => {
+	it('lists a way to add a new folder first, then the folders in use, and no folder to choose when it has none', async () => {
 		await show();
 		await press(list());
 		await settle();
-		expect([...document.querySelectorAll('[cmdk-item]')].map((o) => o.textContent)).toEqual(['No folder', 'Admin', 'Roles', 'Add new folder']);
+		expect([...document.querySelectorAll('[cmdk-item]')].map((o) => o.textContent)).toEqual(['Add new folder', 'Admin', 'Roles']);
+	});
+
+	it('offers No folder, last, only while a folder is chosen: the way to clear it', async () => {
+		await show('Admin');
+		await press(list());
+		await settle();
+		expect([...document.querySelectorAll('[cmdk-item]')].map((o) => o.textContent)).toEqual(['Add new folder', 'Admin', 'Roles', 'No folder']);
+	});
+
+	it('goes back to choosing a folder once No folder is chosen', async () => {
+		await show('Admin');
+		await pick('No folder');
+		expect(list().textContent).toBe('Choose folder');
+		expect(chosen).toEqual([null]);
+	});
+
+	it('offers a folder with only a way to add one when there are none', async () => {
+		chosen = [];
+		current = await render(createElement(FolderField, { id: 'f', label: 'Folder', folders: [], value: null, onChange: () => undefined }));
+		await press(list());
+		await settle();
+		expect([...document.querySelectorAll('[cmdk-item]')].map((o) => o.textContent)).toEqual(['Add new folder']);
 	});
 
 	it('says which folder is chosen, and none for no folder', async () => {

@@ -6,13 +6,15 @@ import { Input } from './ui/input';
 
 const NO_FOLDER = 'No folder';
 const ADD = 'Add new folder';
+const CHOOSE = 'Choose folder';
 
 /**
- * Which folder a project is in (the folders plan), one field for New and for Assign folder: **No folder**, the folders in
- * use, or **Add new folder**, which opens an input under the list for its name. A folder exists because a project is in
- * it, so a new one is made by the project that is put in it. What is chosen is said as a folder's name, `null` for no
- * folder, or `undefined` while a new folder has no name yet. A new name that is a folder in use, ignoring case, is that
- * folder.
+ * Which folder a project is in (the folders plan), one field for New and for Assign folder: **Add new folder**, first,
+ * which opens an input under the list for its name, then the folders in use. It says *Choose folder* until one is chosen,
+ * and **No folder** is offered, last, only while one is: the way to clear it. (Filtering by no folder is the Projects
+ * screen's.) A folder exists because a project is in it, so a new one is made by the project that is put in it. What is
+ * chosen is said as a folder's name, `null` for no folder, or `undefined` while a new folder has no name yet. A new name
+ * that is a folder in use, ignoring case, is that folder.
  */
 export const FolderField = ({
 	id,
@@ -31,7 +33,7 @@ export const FolderField = ({
 }) => {
 	const [adding, setAdding] = useState(false);
 	const [name, setName] = useState('');
-	const items = [NO_FOLDER, ...folders, ADD];
+	const items = [ADD, ...folders, ...(value === null ? [] : [NO_FOLDER])];
 	const choose = (item: string) => {
 		setAdding(item === ADD);
 		setName('');
@@ -48,9 +50,9 @@ export const FolderField = ({
 			<SearchSelect
 				id={id}
 				items={items}
-				value={adding ? ADD : (value ?? NO_FOLDER)}
+				value={adding ? ADD : value}
 				onChange={choose}
-				placeholder={NO_FOLDER}
+				placeholder={CHOOSE}
 				search="Search folders…"
 				empty="No folder matches."
 				disabled={disabled}
