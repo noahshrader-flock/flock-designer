@@ -1,7 +1,7 @@
 import { BrowserWindow, app, nativeTheme, safeStorage, screen, shell } from 'electron';
 import { join } from 'node:path';
 import pkg from '../../package.json';
-import { CHANNELS } from '../shared/contract';
+import { emit } from './handle';
 import { registerIpc } from './ipc';
 import { quitWithTheWindow } from './lifecycle';
 import { SessionMemory } from './services/editor';
@@ -146,11 +146,11 @@ void app.whenReady().then(() => {
 	const opened = new OpenedCheckouts();
 
 	const runtime = new RuntimeManager({
-		onLog: (line) => window.webContents.send('workspace:event:runLog', line),
-		onStatus: (status) => window.webContents.send('workspace:event:previewStatus', status),
+		onLog: (line) => emit(window, 'onRunLog', line),
+		onStatus: (status) => emit(window, 'onPreviewStatus', status),
 	});
-	const agent = new AgentRunner((line) => window.webContents.send('workspace:event:agentLog', line));
-	const share = new ShareRunner((status) => window.webContents.send(CHANNELS.shareStatusChanged, status));
+	const agent = new AgentRunner((line) => emit(window, 'onAgentLog', line));
+	const share = new ShareRunner((status) => emit(window, 'onShareStatus', status));
 
 	const github = new GitHubSession(
 		GITHUB_CLIENT_ID,
@@ -158,14 +158,14 @@ void app.whenReady().then(() => {
 		// Node ships fetch; the Fetcher type is the narrow slice the session uses, so
 		// tests can pass a stub without pulling in all of fetch's surface.
 		fetch as unknown as Fetcher,
-		(state) => window.webContents.send('workspace:event:signInChanged', state),
+		(state) => emit(window, 'onSignInChanged', state),
 	);
 	const designRepo = new DesignRepo(github, DESIGN_REPO);
 
 	const page = new PageView(
 		window,
-		(route) => window.webContents.send('workspace:event:pageRoute', route),
-		(e) => window.webContents.send('workspace:event:pinEvent', e),
+		(route) => emit(window, 'onPageRoute', route),
+		(e) => emit(window, 'onPinEvent', e),
 	);
 
 	const prototypeServer = new PrototypeServer();
@@ -181,7 +181,7 @@ void app.whenReady().then(() => {
 		designRepo,
 		page,
 		memory,
-		onPublishStatus: (status) => window.webContents.send(CHANNELS.publishStatusChanged, status),
+		onPublishStatus: (status) => emit(window, 'onPublishStatus', status),
 		prototypesRoot: join(app.getPath('userData'), 'prototypes'),
 		prototypeServer,
 		sessions: new SessionMemory(SessionMemory.defaultPath(app.getPath('userData'))),

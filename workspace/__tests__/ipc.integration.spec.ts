@@ -1909,6 +1909,13 @@ describe('startAgent validates the project id', () => {
 	});
 });
 
+describe('the table of calls', () => {
+	it('has a handler for every call the window can make, and none it cannot', async () => {
+		const { INVOKE, invokeChannel } = await import('../src/shared/contract');
+		expect([...handlers.keys()].sort()).toEqual(INVOKE.map(invokeChannel).sort());
+	});
+});
+
 describe('one agent, one piece of work', () => {
 	const branchHere = () => execFileSync('git', ['-C', product, 'branch', '--show-current']).toString().trim();
 
