@@ -446,20 +446,53 @@ describe('the design systems connected (P4)', () => {
 		expect((app.calls.designSystemCatalog ?? []).length).toBeGreaterThan(1);
 	});
 
-	it('connect another from the switcher, with Cancel back to the one shown', async () => {
-		await open(() => ok(ready()), false, { listRepositories: async () => ok({ repositories: [], reach: 'account' }) });
+	const modal = () => document.querySelector<HTMLElement>('[data-slot="dialog-content"]');
+
+	it('connect another from the switcher in a modal over the components, which stay as they were, and Cancel closes it', async () => {
+		const app = await open(() => ok(ready()), false, { listRepositories: async () => ok({ repositories: [], reach: 'account' }) });
+		const reads = (app.calls.designSystemCatalog ?? []).length;
 		await press(menuItem(await openMenu(switcher()), 'Connect a design system'));
 		await settle();
-		expect(text()).toContain('Connect your design system');
+		expect(modal()!.querySelector('[data-slot="dialog-title"]')!.textContent).toBe('Connect a design system');
+		// Not the screen of the first connection: the components are still there, and nothing was read again.
+		expect(document.querySelector('h1')).toBeNull();
+		expect(rows()).toHaveLength(5);
 		await press(button('Cancel'));
 		await settle();
+		expect(modal()).toBeNull();
 		expect(rows()).toHaveLength(5);
+		expect((app.calls.designSystemCatalog ?? []).length).toBe(reads);
+	});
+
+	it('connect another from the modal, which closes, and the one connected is shown', async () => {
+		let connected = false;
+		const app = await open(() => ok(ready()), false, {
+			listRepositories: async () => ok({ repositories: [{ name: ACME.repository, root: null }], reach: 'account' }),
+			clonePlan: async () => ok({ repository: ACME.repository, place: { state: 'cloned', path: '/h/GitHub/acme' }, where: '~/GitHub/acme', design: null }),
+			connectDesignSystem: async () => {
+				connected = true;
+				return ok({ state: 'connected', id: ACME.id });
+			},
+		});
+		await press(menuItem(await openMenu(switcher()), 'Connect a design system'));
+		await settle();
+		await press(button('Choose a repository'));
+		await settle();
+		await act(async () => void [...document.querySelectorAll('[cmdk-item]')].find((i) => i.textContent === ACME.repository)!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+		await settle();
+		await press(button('Connect'));
+		await settle();
+		expect(connected).toBe(true);
+		expect(modal()).toBeNull();
+		expect(app.calls.connectDesignSystem).toEqual([[ACME.repository]]);
 	});
 
 	it('remove the one shown from the More menu, and nothing on disk is said to be deleted', async () => {
 		const app = await open(() => ok(ready()));
 		const items = await openMenu(button('More for Flock React Component Lib'));
-		await press(menuItem(items, 'Remove Flock React Component Lib'));
+		// Just Remove: the menu is already about this design system.
+		expect(items.map((i) => i.textContent)).toEqual(['Remove']);
+		await press(menuItem(items, 'Remove'));
 		await settle();
 		expect(app.calls.removeDesignSystem).toEqual([[FUI_SYSTEM.id]]);
 	});
@@ -913,7 +946,8 @@ describe('when there is no list', () => {
 		const app = await open(() => ok({ state: 'lost', name: 'Flock React Component Lib', root: '/h/GitHub/flock-react-component-lib' }));
 		expect(text()).toContain('Flock React Component Lib is no longer on this computer');
 		expect(text()).toContain('/h/GitHub/flock-react-component-lib');
-		await press(button('Remove Flock React Component Lib'));
+		// Just Remove: the title says which.
+		await press(button('Remove'));
 		await settle();
 		expect(app.calls.removeDesignSystem).toEqual([[FUI_SYSTEM.id]]);
 	});

@@ -322,8 +322,8 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 			</Notice>
 		);
 	}
-	// Connecting another, with a way back to the one shown.
-	if (adding) return <ConnectDesignSystem onConnected={() => void showAnother()} onCancel={() => setAdding(false)} />;
+	// Connecting another, in a modal over whatever is shown, with a way back to it.
+	const connecting = adding ? <ConnectDesignSystem onConnected={() => void showAnother()} onCancel={() => setAdding(false)} /> : null;
 	// The screen's shape until the library is read: its first row, and the components as the list or grid last chosen.
 	if (catalog === null)
 		return (
@@ -337,17 +337,20 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 	if (catalog.state === 'none') return <ConnectDesignSystem onConnected={() => void showAnother()} />;
 	if (catalog.state === 'lost') {
 		return (
-			<Notice title={`${catalog.name} is no longer on this computer`}>
-				Its copy was at {catalog.root}. Remove it, then connect it again, or connect another.
-				<div className="mt-3 flex gap-2">
-					<Button variant="outline" onClick={() => shown && void remove(shown.id)}>
-						Remove {catalog.name}
-					</Button>
-					<Button variant="ghost" onClick={() => setAdding(true)}>
-						Connect a design system
-					</Button>
-				</div>
-			</Notice>
+			<>
+				<Notice title={`${catalog.name} is no longer on this computer`}>
+					Its copy was at {catalog.root}. Remove it, then connect it again, or connect another.
+					<div className="mt-3 flex gap-2">
+						<Button variant="outline" onClick={() => shown && void remove(shown.id)}>
+							Remove
+						</Button>
+						<Button variant="ghost" onClick={() => setAdding(true)}>
+							Connect a design system
+						</Button>
+					</div>
+				</Notice>
+				{connecting}
+			</>
 		);
 	}
 	if (catalog.state === 'no-branch') {
@@ -396,7 +399,7 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 							<MoreMenu label={`More for ${shown.name}`}>
 								<DropdownMenuItem variant="destructive" onSelect={() => void remove(shown.id)}>
 									<Trash2Icon />
-									Remove {shown.name}
+									Remove
 								</DropdownMenuItem>
 							</MoreMenu>
 						)}
@@ -470,6 +473,7 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 					{panel === 'component' && opened && <ComponentPanel key={opened.id} component={opened} components={catalog.components} />}
 				</TokenChangesProvider>
 			</ResizablePanel>
+			{connecting}
 		</div>
 	);
 };

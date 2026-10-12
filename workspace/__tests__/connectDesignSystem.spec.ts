@@ -131,3 +131,42 @@ describe('connecting', () => {
 		expect(onConnected).toHaveBeenCalledOnce();
 	});
 });
+
+describe('as a modal, to connect another when one is connected already', () => {
+	const dialog = () => document.querySelector<HTMLElement>('[data-slot="dialog-content"]');
+
+	it('is a dialog with its own title and the same repository to choose, not the centered screen', async () => {
+		await open({}, { onCancel: vi.fn() });
+		expect(dialog()!.querySelector('[data-slot="dialog-title"]')!.textContent).toBe('Connect a design system');
+		expect(dialog()!.textContent).toContain('Choose the repository your design system is in.');
+		expect(document.querySelector('h1')).toBeNull();
+		expect(dialog()!.contains(button('Choose a repository'))).toBe(true);
+	});
+
+	it('is the screen, when nothing is connected yet and so there is nothing to go back to', async () => {
+		await open();
+		expect(dialog()).toBeNull();
+	});
+
+	it('connects the repository chosen, as the screen does', async () => {
+		const { app, onConnected } = await open({ connectDesignSystem: async () => ok({ state: 'connected', id: LIB }) }, { onCancel: vi.fn() });
+		await pick(LIB);
+		await press(button('Connect'));
+		await settle();
+		expect(app.calls.connectDesignSystem).toEqual([[LIB]]);
+		expect(onConnected).toHaveBeenCalledOnce();
+	});
+
+	it('cannot be closed while it is cloning: no Cancel, no close button', async () => {
+		const onCancel = vi.fn();
+		await open({ connectDesignSystem: () => new Promise(() => undefined) }, { onCancel });
+		await pick(LIB);
+		await press(button('Connect'));
+		await settle();
+		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Cancel')).toBe(false);
+		expect(dialog()!.querySelector('[data-slot="dialog-close"]')).toBeNull();
+		document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+		await settle();
+		expect(onCancel).not.toHaveBeenCalled();
+	});
+});
