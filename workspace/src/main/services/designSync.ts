@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import type { PublishProblem } from '../../shared/contract';
 import { plural } from '../../shared/plural';
 import { mergeIterationRecords } from '../../shared/records';
-import { commitOnto, gitExact, runGit } from './git';
+import { commitOnto, git } from './git';
 
 /**
  * Keeping the design repository's project records published, with nobody having to remember.
@@ -40,7 +40,7 @@ const lines = (out: string): string[] => out.split('\n').filter(Boolean);
 const message = (err: unknown): string => (err instanceof Error ? err.message : String(err)).trim().split('\n')[0] ?? '';
 
 export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
-	const g = (...args: string[]) => runGit(designRoot, args, 120_000);
+	const g = (...args: string[]) => git(designRoot, args, { timeoutMs: 120_000 });
 	const held = (why: string, published: string[] = []): SyncResult => ({ published, problems: [{ what: RECORDS, why }] });
 
 	// Where this is going. Without a branch that tracks the same-named branch on GitHub there is nowhere safe to put records.
@@ -103,7 +103,7 @@ const recordsOnTopOf = async (
 	designRoot: string,
 	theirs: string,
 ): Promise<string | { commit: string | null; ids: string[]; paths: string[]; read: Map<string, string | null> }> => {
-	const g = (args: string[], input?: string) => runGit(designRoot, args, 60_000, undefined, input);
+	const g = (args: string[], input?: string) => git(designRoot, args, { timeoutMs: 60_000, input });
 	const blobAt = (rev: string, path: string) => g(['rev-parse', '-q', '--verify', `${rev}:${path}`]).catch(() => null);
 	const base = await g(['merge-base', 'HEAD', theirs]).catch(() => null);
 	if (base === null) return 'The design repository here and on GitHub share no history, so records are not published into it.';
@@ -131,7 +131,10 @@ const recordsOnTopOf = async (
 			hopeless.push(path);
 			continue;
 		}
-		const merged = mergeIterationRecords(readFileSync(join(designRoot, path), 'utf8'), await gitExact(designRoot, ['show', `${theirs}:${path}`]));
+		const merged = mergeIterationRecords(
+			readFileSync(join(designRoot, path), 'utf8'),
+			await git(designRoot, ['show', `${theirs}:${path}`], { trim: false }),
+		);
 		if (merged === null) return `${path} could not be combined with GitHub's copy, so nothing was changed. Your changes are kept here.`;
 		changes.set(path, await g(['hash-object', '-w', '--stdin'], merged));
 	}
@@ -143,7 +146,7 @@ const recordsOnTopOf = async (
 	// A record that does not parse must never be published: every reviewer's project list reads these.
 	for (const [path, blob] of changes) {
 		if (!isRecordFile(path) || blob === null) continue;
-		const text = await gitExact(designRoot, ['cat-file', 'blob', blob]);
+		const text = await git(designRoot, ['cat-file', 'blob', blob], { trim: false });
 		if (mergeIterationRecords(text, text) === null) {
 			return `${path} is not a valid record, so nothing was published. Fix it in the design repository, and records will flow again.`;
 		}
@@ -165,14 +168,14 @@ const recordsOnTopOf = async (
  * move over them, and git itself refuses when anything else of the person's would be overwritten. Then nothing moves.
  */
 const catchUp = async (designRoot: string, target: string, paths: string[], read: Map<string, string | null>): Promise<void> => {
-	const g = (...args: string[]) => runGit(designRoot, args, 60_000);
+	const g = (...args: string[]) => git(designRoot, args, { timeoutMs: 60_000 });
 	if ((await g('rev-parse', 'HEAD')) === target) return;
 	for (const path of paths.filter(isRecordFile)) {
 		const file = join(designRoot, path);
 		const there = await g('rev-parse', '-q', '--verify', `${target}:${path}`).catch(() => null);
 		const now = existsSync(file) ? await g('hash-object', '--', path) : null;
 		if (now === null || there === null || now === there || now !== read.get(path)) continue;
-		writeFileSync(file, await gitExact(designRoot, ['show', `${target}:${path}`]));
+		writeFileSync(file, await git(designRoot, ['show', `${target}:${path}`], { trim: false }));
 	}
 	if (paths.length > 0) await g('add', '-A', '--', ...paths).catch(() => undefined);
 	try {

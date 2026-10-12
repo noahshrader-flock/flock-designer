@@ -22,7 +22,7 @@ import { describeChange } from '../../shared/tokens';
 import { libraryCommit, systemReads } from './designLibrary';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { readTokens } from './designTokens';
-import { branchExists, commitOnto, runGit } from './git';
+import { branchExists, commitOnto, git } from './git';
 import type { CatalogReads } from './componentCatalog';
 import type { ShareTools } from './share';
 import { editedFiles } from './tokenEdits';
@@ -45,7 +45,7 @@ export const commitFiles = async (
 	message: string,
 ): Promise<string | null> => {
 	const blobs = new Map<string, string>();
-	for (const [path, text] of files) blobs.set(path, await runGit(root, ['hash-object', '-w', '--stdin'], undefined, undefined, text));
+	for (const [path, text] of files) blobs.set(path, await git(root, ['hash-object', '-w', '--stdin'], { input: text }));
 	return commitOnto(root, base, parent, blobs, message);
 };
 
@@ -122,11 +122,9 @@ export class TokenBranches {
 		}
 		if (commit === null) throw new Error('This change leaves the library as it is, so there is nothing to save.');
 		// From where DSNR left it, or for a new branch only if there is none of that name: never over a commit it did not make.
-		await runGit(system.root, ['update-ref', '-m', 'DSNR: save design tokens', `refs/heads/${branch}`, commit, kept?.tip ?? '']).catch(
-			(err: Error) => {
-				throw new Error(`${branch} has moved since DSNR last saved to it, so nothing was saved. ${err.message}`);
-			},
-		);
+		await git(system.root, ['update-ref', '-m', 'DSNR: save design tokens', `refs/heads/${branch}`, commit, kept?.tip ?? '']).catch((err: Error) => {
+			throw new Error(`${branch} has moved since DSNR last saved to it, so nothing was saved. ${err.message}`);
+		});
 		const next: Kept = { ...(kept ?? this.fresh(branch, base)), tip: commit, saved: edits, saves: (kept?.saves ?? 0) + 1 };
 		this.keep(system.id, next);
 		// Once proposed, the pull request has every save.

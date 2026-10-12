@@ -11,10 +11,10 @@ const GIT_TIMEOUT_MS = 60_000;
 /**
  * Git, through argv only.
  *
- * Every call goes through `runFile` with an argument array, so no shell parses
- * anything -- a branch name containing `;` or backticks is a bad branch name,
- * not a command. Nothing here rewrites or discards history: the destructive
- * verbs are simply absent, which is a stronger guarantee than guarding them.
+ * Every call goes through `runFile` with an argument array, so no shell parses anything -- a branch name containing `;`
+ * or backticks is a bad branch name, not a command. The helpers here never rewrite history or discard a person's work:
+ * the one forced checkout is in a worktree of the app's own (`readTreeAt`), and a branch is only ever switched on a clean
+ * tree. `git` itself runs what it is given; a caller that changes a repository says what it changes.
  */
 
 export class GitProblem extends Error {
@@ -31,7 +31,21 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const isLockContention = (detail: string): boolean => /index\.lock|Unable to create .*\.lock|another git process/i.test(detail);
 
-const attempt = async (root: string, args: string[], timeoutMs?: number, env?: Record<string, string>, input?: string): Promise<string> => {
+export interface GitOptions {
+	/** A minute when not given. */
+	timeoutMs?: number;
+	env?: Record<string, string>;
+	/** What the command reads from its input (`cat-file --batch-check`), given all at once. */
+	input?: string;
+	/**
+	 * Trimmed unless false: for a command that prints a value (a commit, a branch, a count). A file's contents are read
+	 * with `trim: false`, since their white space at either end is the file's own, and a file read trimmed and written
+	 * back would lose its last newline.
+	 */
+	trim?: boolean;
+}
+
+const attempt = async (root: string, args: string[], { timeoutMs, env, input }: GitOptions): Promise<string> => {
 	// `--no-optional-locks`: a read-only command (status, log, rev-parse) would otherwise
 	// refresh the index in the background and take the same lock a checkout needs. Git
 	// documents this flag for exactly the case of a tool polling a repository.
@@ -54,12 +68,12 @@ const attempt = async (root: string, args: string[], timeoutMs?: number, env?: R
  * to this", and deleting one under a live process corrupts the index. The error says what
  * to check instead.
  */
-const queued = (root: string, args: string[], timeoutMs?: number, env?: Record<string, string>, input?: string): Promise<string> => {
+const queued = (root: string, args: string[], options: GitOptions): Promise<string> => {
 	const run1 = async (): Promise<string> => {
 		let lastDetail = '';
 		for (let i = 0; i < 4; i++) {
 			try {
-				return await attempt(root, args, timeoutMs, env, input);
+				return await attempt(root, args, options);
 			} catch (err) {
 				lastDetail = (err as { stderr?: string; message: string }).stderr?.trim() || (err as Error).message;
 				if (!isLockContention(lastDetail)) throw new GitProblem(lastDetail);
@@ -80,15 +94,9 @@ const queued = (root: string, args: string[], timeoutMs?: number, env?: Record<s
 	return result;
 };
 
-/** Git, its output trimmed: for a command that prints a value (a commit, a branch, a count). */
-const git = (root: string, args: string[], timeoutMs?: number, env?: Record<string, string>, input?: string): Promise<string> =>
-	queued(root, args, timeoutMs, env, input).then((out) => out.trim());
-
-/**
- * Git, its output exactly as printed: for a file's contents, whose white space at either end is the file's own. A file
- * read trimmed and written back would lose its last newline.
- */
-export const gitExact = queued;
+/** Runs git in `root`, on that repository's queue: what it printed, trimmed unless `trim: false`. */
+export const git = (root: string, args: string[], options: GitOptions = {}): Promise<string> =>
+	queued(root, args, options).then((out) => (options.trim === false ? out : out.trim()));
 
 export const isRepository = (root: string): boolean => existsSync(join(root, '.git'));
 
@@ -177,9 +185,7 @@ export const recentBranches = async (root: string): Promise<string[]> => (await 
 export const branchesWithFile = async (root: string, file: string): Promise<string[]> => {
 	const bases = await baseRefs(root);
 	if (bases.length === 0) return [];
-	const lines = (await git(root, ['cat-file', '--batch-check'], undefined, undefined, `${bases.map((b) => `${b.ref}:${file}`).join('\n')}\n`)).split(
-		'\n',
-	);
+	const lines = (await git(root, ['cat-file', '--batch-check'], { input: `${bases.map((b) => `${b.ref}:${file}`).join('\n')}\n` })).split('\n');
 	// Found: `<object> blob <size>`. Not there: `<what was asked> missing`.
 	return bases.filter((_, i) => /^[0-9a-f]{40,64} blob /.test(lines[i] ?? '')).map((b) => b.name);
 };
@@ -205,18 +211,18 @@ export const commitOnto = async (
 ): Promise<string | null> => {
 	const env = { GIT_INDEX_FILE: join(tmpdir(), `dsnr-index-${randomBytes(6).toString('hex')}`) };
 	try {
-		await git(root, ['read-tree', base], undefined, env);
+		await git(root, ['read-tree', base], { env });
 		for (const [path, blob] of files) {
 			if (blob === null) {
-				await git(root, ['update-index', '--force-remove', '--', path], undefined, env);
+				await git(root, ['update-index', '--force-remove', '--', path], { env });
 				continue;
 			}
 			const mode = (await git(root, ['ls-tree', base, '--', path])).split(/\s/)[0] || '100644';
-			await git(root, ['update-index', '--add', '--cacheinfo', `${mode},${blob},${path}`], undefined, env);
+			await git(root, ['update-index', '--add', '--cacheinfo', `${mode},${blob},${path}`], { env });
 		}
-		const tree = await git(root, ['write-tree'], undefined, env);
+		const tree = await git(root, ['write-tree'], { env });
 		if (tree === (await git(root, ['rev-parse', `${parent}^{tree}`]))) return null;
-		return await git(root, ['commit-tree', tree, '-p', parent], undefined, undefined, message);
+		return await git(root, ['commit-tree', tree, '-p', parent], { input: message });
 	} finally {
 		rmSync(env.GIT_INDEX_FILE, { force: true });
 	}
@@ -321,6 +327,23 @@ export const localIdentity = async (root: string): Promise<Author> => {
 };
 
 /** The commit a branch is at, without switching to it. */
+/**
+ * Where `origin` points, as git resolves it (its `insteadOf` rules, a worktree's shared config), or null when there is
+ * none. For one repository; a scan of many reads `.git/config` itself (`originOf`), sparing a process per folder.
+ */
+export const originUrl = async (root: string): Promise<string | null> => (await git(root, ['remote', 'get-url', 'origin']).catch(() => '')) || null;
+
+/** Whether `path` is in `ref` (a commit, or a branch's full ref). */
+export const hasFileAt = (root: string, ref: string, path: string): Promise<boolean> =>
+	git(root, ['cat-file', '-e', `${ref}:${path}`]).then(
+		() => true,
+		() => false,
+	);
+
+/** Whether a commit since `commit` changed `path`. */
+export const changedSince = async (root: string, commit: string, path: string): Promise<boolean> =>
+	(await git(root, ['diff', '--name-only', commit, 'HEAD', '--', path])) !== '';
+
 export const branchCommit = async (root: string, branch: string): Promise<string> => git(root, ['rev-parse', '--verify', `refs/heads/${branch}`]);
 
 export const checkoutBranch = async (root: string, branch: string): Promise<void> => {
@@ -345,7 +368,7 @@ export const pushBranch = async (root: string, branch: string): Promise<{ pushed
 	}
 	let out: string;
 	try {
-		out = await git(root, ['push', '--porcelain', '--set-upstream', 'origin', `refs/heads/${branch}:refs/heads/${branch}`], 120_000);
+		out = await git(root, ['push', '--porcelain', '--set-upstream', 'origin', `refs/heads/${branch}:refs/heads/${branch}`], { timeoutMs: 120_000 });
 	} catch (err) {
 		const detail = err instanceof Error ? err.message : String(err);
 		if (/rejected|non-fast-forward|fetch first/i.test(detail)) {
@@ -373,6 +396,3 @@ export const branchStartedAt = async (root: string, branch: string): Promise<str
 	if (!isSafeBranchName(branch)) return null;
 	return (await git(root, ['log', '-1', '--format=%aI', branch]).catch(() => '')) || null;
 };
-
-/** Git, for the services that sync a repository: the same queue, lock retry and no-prompt rule as everything above. */
-export const runGit = git;

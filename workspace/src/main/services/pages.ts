@@ -2,7 +2,7 @@ import type { PageStatus } from '../../shared/contract';
 import { prototypePagePath, sitePath } from '../../shared/projects';
 import type { DesignRepoRef, GitHubApi } from './designRepo';
 import { type SyncResult, syncRecords } from './designSync';
-import { runGit } from './git';
+import { git } from './git';
 import { asArray, asRecord } from '../../shared/json';
 
 /**
@@ -144,7 +144,7 @@ export const fetchAnonymously = async (url: string): Promise<{ status: number }>
 export const recordsFrom = async (clone: string | null): Promise<Pick<PublishInput, 'recordsBranch' | 'pushRecords'>> => {
 	if (clone === null) return { pushRecords: async () => ({ published: [], problems: [] }) };
 	// '' when it is on no branch: refused by publish, after the gate has had its say.
-	const recordsBranch = (await runGit(clone, ['symbolic-ref', '--short', 'HEAD']).catch(() => '')).trim();
+	const recordsBranch = (await git(clone, ['symbolic-ref', '--short', 'HEAD']).catch(() => '')).trim();
 	return { recordsBranch, pushRecords: () => syncRecords(clone) };
 };
 

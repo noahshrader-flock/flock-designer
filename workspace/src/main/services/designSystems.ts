@@ -10,7 +10,7 @@ import { dirname, isAbsolute, join } from 'node:path';
 import type { ConnectedDesignSystem, ConnectedDesignSystems, FoundDesignSystem } from '../../shared/contract';
 import { isStoryFile, type CatalogReads } from './componentCatalog';
 import { readTokens } from './designTokens';
-import { runGit } from './git';
+import { git } from './git';
 import { gitHubRepoOf, originOf } from './repositories';
 
 const REMOTE_TIMEOUT_MS = 30_000;
@@ -90,13 +90,13 @@ export const findDesignSystems = async (reads: CatalogReads, repository: string)
 /** The branch GitHub calls a clone's repository's default: git's own record of it, else asked of GitHub; null if neither says. */
 export const defaultBranch = async (root: string): Promise<string | null> => {
 	try {
-		const ref = await runGit(root, ['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD']);
+		const ref = await git(root, ['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD']);
 		if (ref.startsWith('refs/remotes/origin/')) return ref.slice('refs/remotes/origin/'.length);
 	} catch {
 		// A clone made without it, or an old one: asked of GitHub instead.
 	}
 	try {
-		const out = await runGit(root, ['ls-remote', '--symref', 'origin', 'HEAD'], REMOTE_TIMEOUT_MS);
+		const out = await git(root, ['ls-remote', '--symref', 'origin', 'HEAD'], { timeoutMs: REMOTE_TIMEOUT_MS });
 		return /^ref: refs\/heads\/(\S+)\s+HEAD$/m.exec(out)?.[1] ?? null;
 	} catch {
 		return null;

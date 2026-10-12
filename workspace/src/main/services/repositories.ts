@@ -19,7 +19,10 @@ export const gitHubRepoOf = (remote: string): string | null => {
 	return m?.[1] ?? null;
 };
 
-/** The `origin` remote's URL from a clone's `.git/config`, or null. */
+/**
+ * The `origin` remote's URL from a clone's `.git/config`, or null: no process, for scanning many folders. It does not
+ * apply `insteadOf` or follow a worktree's `.git` file; for one repository, ask git (`originUrl`).
+ */
 export const originOf = (root: string, read: (path: string) => string = (p) => readFileSync(p, 'utf8')): string | null => {
 	let config: string;
 	try {

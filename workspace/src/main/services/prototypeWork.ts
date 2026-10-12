@@ -15,7 +15,7 @@ import {
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from './accessibilityBrief';
 import { designSystemCheckout, readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
-import { branchCommit, branchExists, gitExact, isSafeBranchName, readCheckout, readTreeAt } from './git';
+import { branchCommit, branchExists, git, isSafeBranchName, readCheckout, readTreeAt } from './git';
 import { assertUsableProjectId } from './iterations';
 import {
 	MAX_PAGE,
@@ -413,7 +413,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const basedOn = (await record(projectId, name))?.basedOn;
 		// The branch comes from the shared records, so it is checked before git reads it as the start of an argument.
 		const fromBranch = basedOn && basename(root) === basedOn.repository && isSafeBranchName(basedOn.branch);
-		const onBranch = fromBranch ? await gitExact(root, ['show', `${basedOn.branch}:${path}`]).catch(() => null) : null;
+		const onBranch = fromBranch ? await git(root, ['show', `${basedOn.branch}:${path}`], { trim: false }).catch(() => null) : null;
 		return onBranch !== null ? declaredTarget(onBranch, descriptor.product) : productTarget(join(root, descriptor.contextDir), descriptor.product);
 	};
 

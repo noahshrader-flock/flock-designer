@@ -14,7 +14,7 @@ import { LIBRARY_MANIFEST, declaredTarget } from './accessibilityBrief';
 import { isStoryFile, readCatalog, type CatalogReads } from './componentCatalog';
 import { readTokens } from './designTokens';
 import { type DesignSystemsMemory, defaultBranch, designSystemId, filesOf, findDesignSystems, within } from './designSystems';
-import { gitExact, runGit } from './git';
+import { git } from './git';
 
 /**
  * The connected design system on this machine, for the Design System tab: kept up to date, and read.
@@ -60,7 +60,7 @@ export const fetchProblem = (stderr: string, branch: string): string => {
 /** The commit a clone's copy of `branch` is at, or null when it has none. */
 export const libraryCommit = async (root: string, branch: string): Promise<string | null> => {
 	try {
-		return (await runGit(root, ['rev-parse', '--verify', '--quiet', `${branchRef(branch)}^{commit}`])) || null;
+		return (await git(root, ['rev-parse', '--verify', '--quiet', `${branchRef(branch)}^{commit}`])) || null;
 	} catch {
 		return null;
 	}
@@ -73,11 +73,9 @@ export const libraryCommit = async (root: string, branch: string): Promise<strin
 export const updateLibrary = async (root: string, branch: string): Promise<Exclude<CatalogUpdate, 'updating'>> => {
 	const before = await libraryCommit(root, branch);
 	try {
-		await runGit(
-			root,
-			['fetch', '--quiet', '--no-tags', '--no-recurse-submodules', 'origin', `+refs/heads/${branch}:${branchRef(branch)}`],
-			FETCH_TIMEOUT_MS,
-		);
+		await git(root, ['fetch', '--quiet', '--no-tags', '--no-recurse-submodules', 'origin', `+refs/heads/${branch}:${branchRef(branch)}`], {
+			timeoutMs: FETCH_TIMEOUT_MS,
+		});
 	} catch (err) {
 		return { failed: fetchProblem((err as Error).message, branch) };
 	}
@@ -94,13 +92,10 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 	const readStories = async (paths: string[]): Promise<Map<string, string>> => {
 		// A header no story can contain, then the object as git stores it; `%(rest)` gives back the path asked for.
 		const mark = `@@dsnr-${Math.random().toString(36).slice(2)}@@`;
-		const out = await gitExact(
-			root,
-			['cat-file', `--batch=${mark} %(objecttype) %(rest)`],
-			undefined,
-			undefined,
-			paths.map((p) => `${ref}:${p} ${p}\n`).join(''),
-		);
+		const out = await git(root, ['cat-file', `--batch=${mark} %(objecttype) %(rest)`], {
+			input: paths.map((p) => `${ref}:${p} ${p}\n`).join(''),
+			trim: false,
+		});
 		const files = new Map<string, string>();
 		// Git ends each object with one newline of its own: the next header's split takes it, and the last is taken here,
 		// so every file is exactly as committed.
@@ -114,7 +109,7 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 	// A folder is listed once: the catalog and the tokens both list the whole library, from the same commit.
 	const listed = new Map<string, Promise<string[]>>();
 	const list = async (dir: string): Promise<string[]> => {
-		const files = (await runGit(root, ['ls-tree', '-r', '--name-only', ref, ...(dir === '' ? [] : ['--', dir])])).split('\n').filter(Boolean);
+		const files = (await git(root, ['ls-tree', '-r', '--name-only', ref, ...(dir === '' ? [] : ['--', dir])])).split('\n').filter(Boolean);
 		const stories = files.filter((f) => isStoryFile(f) && !/\s/.test(f));
 		if (stories.length > 0)
 			read.set(
@@ -130,7 +125,7 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 				const text = (await batch).get(path);
 				if (text !== undefined) return text;
 			}
-			return gitExact(root, ['show', `${ref}:${path}`]);
+			return git(root, ['show', `${ref}:${path}`], { trim: false });
 		},
 	};
 };
@@ -157,7 +152,7 @@ export const readLibrary = async (system: ConnectedDesignSystem, update: Catalog
 	const { root, branch } = system;
 	const commit = await libraryCommit(root, branch);
 	if (commit === null) return { state: 'no-branch', root, branch };
-	const committedAt = await runGit(root, ['log', '-1', '--format=%cI', commit]);
+	const committedAt = await git(root, ['log', '-1', '--format=%cI', commit]);
 	// The components and the tokens, from the same reads of the same commit.
 	const reads = await systemReads(system, commit);
 	// With its accessibility target (T7), as its own manifest declares it on the same commit.

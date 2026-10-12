@@ -10,7 +10,7 @@ import { DESCRIPTOR_PATH } from '../main/services/descriptor';
 import { DESIGN_REPO, DesignRepo, type GitHubApi } from '../main/services/designRepo';
 import { recordsRootFor } from '../main/services/discovery';
 import { assertUsableProjectId } from '../main/services/iterations';
-import { readCheckout, runGit } from '../main/services/git';
+import { readCheckout, git } from '../main/services/git';
 import { BUILD_SKILL, assertPrototypeName, cloneStore, prototypeBuildTask } from '../main/services/prototype';
 import { shellLine } from '../main/services/prototypeBundle';
 import { localPrototypeFile, prototypeWork, whereTheChangeGoes } from '../main/services/prototypeWork';
@@ -77,7 +77,7 @@ class UsageError extends Error {}
 const productOf = async (cwd: string, named: string | undefined): Promise<string> => {
 	let root: string;
 	try {
-		root = realpathSync(named ? resolve(cwd, named) : (await runGit(cwd, ['rev-parse', '--show-toplevel'])).trim());
+		root = realpathSync(named ? resolve(cwd, named) : (await git(cwd, ['rev-parse', '--show-toplevel'])).trim());
 	} catch {
 		throw new Error(named ? `There is no folder at ${named}.` : 'This is not inside a product repository. Run it from one, or pass --product.');
 	}
@@ -90,7 +90,7 @@ const productOf = async (cwd: string, named: string | undefined): Promise<string
  * comments are known by, from a noreply address, else from GitHub's command line; records join people by name either way.
  */
 const meOf = async (designRoot: string, github: GitHubApi | null): Promise<Person | null> => {
-	const read = async (key: string) => (await runGit(designRoot, ['config', key]).catch(() => '')).trim();
+	const read = async (key: string) => (await git(designRoot, ['config', key]).catch(() => '')).trim();
 	const name = await read('user.name');
 	if (!name) return null;
 	const login =
@@ -128,7 +128,7 @@ const optionsOf = (args: string[]) => {
 const designOf = async (cwd: string): Promise<string> => {
 	let root: string;
 	try {
-		root = realpathSync((await runGit(cwd, ['rev-parse', '--show-toplevel'])).trim());
+		root = realpathSync((await git(cwd, ['rev-parse', '--show-toplevel'])).trim());
 	} catch {
 		throw new Error('This is not inside a repository. Run it from the design repository, or a product repository beside it.');
 	}

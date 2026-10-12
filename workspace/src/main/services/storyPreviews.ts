@@ -8,7 +8,7 @@ import type { ConnectedDesignSystem, StoryPreview, TokenEdit } from '../../share
 import { type CatalogReads, PREVIEW_CANDIDATES, readCatalog } from './componentCatalog';
 import { libraryCommit, systemReads } from './designLibrary';
 import { readTokens } from './designTokens';
-import { runGit } from './git';
+import { git } from './git';
 import type { BuildContext, BuildOptions, Loader, Plugin } from 'esbuild';
 import { ASSET_TYPES, type PrototypeServer } from './prototypeServer';
 import { runFile } from './process';
@@ -390,7 +390,7 @@ export const trialBuild = async (library: string, tokenFiles: string[], site: st
 const copyAt = async (root: string, commit: string, library: string, folder: string): Promise<void> => {
 	mkdirSync(library, { recursive: true });
 	const tar = `${library}.tar`;
-	await runGit(root, ['archive', '--format=tar', '-o', tar, commit]);
+	await git(root, ['archive', '--format=tar', '-o', tar, commit]);
 	await runFile('tar', ['-xf', tar, '-C', library], { timeoutMs: 120_000 });
 	rmSync(tar, { force: true });
 	// A junction on Windows, a symbolic link elsewhere: the packages are read where the clone has them.

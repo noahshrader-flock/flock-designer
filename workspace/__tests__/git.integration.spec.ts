@@ -14,7 +14,10 @@ import {
 	branchStartedAt,
 	isSafeBranchName,
 	readCheckout,
-	runGit,
+	changedSince,
+	git,
+	hasFileAt,
+	originUrl,
 } from '../src/main/services/git';
 
 let root: string;
@@ -32,9 +35,32 @@ beforeEach(() => {
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
+describe('what a repository says', () => {
+	it('gives origin as git resolves it, rewritten by insteadOf, which reading the config by hand misses', async () => {
+		const { originOf } = await import('../src/main/services/repositories');
+		expect(await originUrl(root)).toBeNull();
+		g('remote', 'add', 'origin', 'gh:flocksafety/flock-coke');
+		g('config', 'url.git@github.com:.insteadOf', 'gh:');
+		expect(await originUrl(root)).toBe('git@github.com:flocksafety/flock-coke');
+		expect(originOf(root)).toBe('gh:flocksafety/flock-coke');
+	});
+
+	it('says whether a file is on a branch, and whether a commit since changed it', async () => {
+		const first = g('rev-parse', 'HEAD').trim();
+		expect(await hasFileAt(root, 'refs/heads/develop', 'README.md')).toBe(true);
+		expect(await hasFileAt(root, 'refs/heads/develop', 'HANDOFF.md')).toBe(false);
+		expect(await changedSince(root, first, 'HANDOFF.md')).toBe(false);
+		writeFileSync(join(root, 'HANDOFF.md'), 'done');
+		g('add', '.');
+		g('commit', '-q', '-m', 'handoff');
+		expect(await changedSince(root, first, 'HANDOFF.md')).toBe(true);
+		expect(await changedSince(root, first, 'README.md')).toBe(false);
+	});
+});
+
 describe('how git is run', () => {
 	/** What git's own environment holds for `name`, as a command it runs sees it. */
-	const seen = (name: string) => runGit(root, ['-c', `alias.seen=!printenv ${name}`, 'seen']);
+	const seen = (name: string) => git(root, ['-c', `alias.seen=!printenv ${name}`, 'seen']);
 
 	it('never asks for a password or lets ssh ask one, since there is no terminal to answer', async () => {
 		expect(await seen('GIT_TERMINAL_PROMPT')).toBe('0');
@@ -59,7 +85,7 @@ describe('how git is run', () => {
 	});
 
 	it('stops a command that runs past its time, and says so', async () => {
-		await expect(runGit(root, ['-c', 'alias.hang=!sleep 30', 'hang'], 300)).rejects.toThrow(/did not finish within 0\.3 s/);
+		await expect(git(root, ['-c', 'alias.hang=!sleep 30', 'hang'], { timeoutMs: 300 })).rejects.toThrow(/did not finish within 0\.3 s/);
 	});
 });
 

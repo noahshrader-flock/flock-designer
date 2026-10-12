@@ -1,7 +1,7 @@
 import type { WorkspaceDescriptor } from '../../shared/contract';
 import { classify } from './branchProjects';
 import type { Problem, SyncResult } from './designSync';
-import { branchAuthors, branchCommit, isSamePerson, listBranches, localIdentity, pushBranch, runGit } from './git';
+import { branchAuthors, branchCommit, isSamePerson, listBranches, localIdentity, pushBranch, git } from './git';
 
 /**
  * Publishing the person's own work branches, so the design repository never points at a branch that
@@ -55,7 +55,7 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 	// What GitHub has of them, in one round trip.
 	let remote: Map<string, string>;
 	try {
-		const out = await runGit(root, ['ls-remote', '--heads', 'origin', ...prefixes.map((p) => `refs/heads/${p}*`)], 60_000);
+		const out = await git(root, ['ls-remote', '--heads', 'origin', ...prefixes.map((p) => `refs/heads/${p}*`)], { timeoutMs: 60_000 });
 		remote = new Map(
 			out
 				.split('\n')
@@ -86,7 +86,7 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 		if (there === here) continue; // already published, exactly
 		if (there !== undefined) {
 			// Only a fast-forward goes. If GitHub has commits this machine lacks (or has never seen), it is a conversation, not a push.
-			const ahead = await runGit(root, ['merge-base', '--is-ancestor', there, here]).then(
+			const ahead = await git(root, ['merge-base', '--is-ancestor', there, here]).then(
 				() => true,
 				() => false,
 			);

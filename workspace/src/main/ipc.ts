@@ -35,7 +35,20 @@ import { type ShareRunner, type ShareTools, previewIsUp, pullRequestText } from 
 import { realShareTools } from './services/shareTools';
 import { buildContextReceipt } from './services/contextReceipt';
 import { DESCRIPTOR_PATH, designSystemCheckout, findCommand, readDescriptor } from './services/descriptor';
-import { branchCommit, branchExists, branchesWithFile, ensureLocalBranch, isRepository, readCheckout, recentBranches, runGit } from './services/git';
+import {
+	branchCommit,
+	branchExists,
+	branchesWithFile,
+	changedSince,
+	checkoutBranch,
+	ensureLocalBranch,
+	hasFileAt,
+	headCommit,
+	originUrl,
+	isRepository,
+	readCheckout,
+	recentBranches,
+} from './services/git';
 import {
 	assertUsableProjectId,
 	codebaseBranchFor,
@@ -498,7 +511,7 @@ export const registerIpc = ({
 		}
 		if (!fresh) throw new Error(`${root} is on ${here}, which has no DSNR setup. Switch it to ${good}, which has it, then try again.`);
 		await ensureLocalBranch(root, good);
-		await runGit(root, ['checkout', '-q', good]);
+		await checkoutBranch(root, good);
 	};
 	handle('cancelClone', () => {
 		cloning?.abort();
@@ -556,14 +569,8 @@ export const registerIpc = ({
 		}
 		// Work is built where the product's DSNR setup is. A branch without it (develop, before the
 		// setup is merged there) would leave the checkout on a branch this app can no longer work in.
-		const setup = `${descriptor.contextDir}/workspace.json`;
-		if (
-			!(await runGit(canonical, ['cat-file', '-e', `refs/heads/${branch}:${setup}`]).then(
-				() => true,
-				() => false,
-			))
-		) {
-			throw new Error(`${branch} has no ${setup}, so work cannot start from it. Start from a branch that has the DSNR setup.`);
+		if (!(await hasFileAt(canonical, `refs/heads/${branch}`, DESCRIPTOR_PATH))) {
+			throw new Error(`${branch} has no ${DESCRIPTOR_PATH}, so work cannot start from it. Start from a branch that has the DSNR setup.`);
 		}
 		const recordsRoot = recordsFor(canonical);
 		return written(await createIteration(canonical, recordsRoot, descriptor, projectId, note, branch));
@@ -875,7 +882,7 @@ export const registerIpc = ({
 			const branches = await readBranchProjects(root, readDescriptor(root), login, new Set(folders.map((p) => p.id))).catch(() => []);
 			// A folder with nothing built yet is a notes folder, not work in progress.
 			local = unionLocal(folders, branches).filter((p) => p.iterations.length > 0);
-			const origin = originOf(root);
+			const origin = await originUrl(root);
 			const repository = origin === null ? null : gitHubRepoOf(origin);
 			const descriptor = readDescriptor(root);
 			if (repository) here = { repository, branchOf: (projectId) => codebaseBranchFor(descriptor, projectId) };
@@ -1352,7 +1359,7 @@ export const registerIpc = ({
 			gate: commandLine(descriptor.commands, 'handoff', projectId),
 			lightCheck: commandLine(descriptor.commands, 'check-iteration', projectId),
 		});
-		handoffStarts.set(canonical, { branch: iteration.branch, head: (await runGit(canonical, ['rev-parse', 'HEAD'])).trim() });
+		handoffStarts.set(canonical, { branch: iteration.branch, head: await headCommit(canonical) });
 		return startTracked(canonical, projectId, task, { branch: iteration.branch, addDirs: [recordsRoot], purpose: 'handoff' });
 	});
 	/**
@@ -1365,7 +1372,7 @@ export const registerIpc = ({
 		const here = await readCheckout(canonical);
 		const recent = agent.recentLines();
 		if (!started || started.branch !== here.branch || recent.work !== here.branch) return null;
-		const committed = (await runGit(canonical, ['diff', '--name-only', started.head, 'HEAD', '--', HANDOFF_FILE])).trim() !== '';
+		const committed = await changedSince(canonical, started.head, HANDOFF_FILE);
 		return committed && lastVerdict(recent.lines) === 'ready';
 	});
 

@@ -1,10 +1,20 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { Iteration, Person, WorkspaceDescriptor } from '../../shared/contract';
-import { branchAuthors, branchExists, branchStartedAt, checkoutBranch, createBranch, headCommit, isSamePerson, localIdentity } from './git';
+import {
+	branchAuthors,
+	branchExists,
+	branchStartedAt,
+	checkoutBranch,
+	createBranch,
+	headCommit,
+	isSamePerson,
+	localIdentity,
+	originUrl,
+} from './git';
 import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
-import { gitHubRepoOf, originOf } from './repositories';
+import { gitHubRepoOf } from './repositories';
 import { PROJECT_ID, parsePrototypeName } from '../../shared/projects';
 
 /**
@@ -104,7 +114,7 @@ export const createIteration = async (
 	}
 
 	// Where it is on GitHub, so the project links to it for people without the repository.
-	const origin = originOf(productRoot);
+	const origin = await originUrl(productRoot);
 	const repository = origin === null ? null : gitHubRepoOf(origin);
 	const iteration: Iteration = {
 		projectId,
