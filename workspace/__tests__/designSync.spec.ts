@@ -115,6 +115,32 @@ describe('publishing records', () => {
 });
 
 describe('when someone else has published too', () => {
+	it("never stashes the person's uncommitted edits, nor leaves them in a stash, when GitHub changed the same file", async () => {
+		write(theirs, 'README.md', '# design, by a teammate\n');
+		commitAll(theirs, 'teammate readme');
+		git(theirs, 'push', '-q', 'origin', 'HEAD:main');
+		write(mine, 'README.md', '# design, my edit\n');
+		write(mine, 'projects/p/brief.md', '# P, edited\n');
+		const before = git(mine, 'rev-parse', 'HEAD');
+		const r = await syncRecords(mine);
+		// The records still go; the person's branch stays where it was, since catching up would overwrite their edit.
+		expect(r).toEqual({ published: ['p'], problems: [] });
+		expect(onRemote('projects/p/brief.md')).toBe('# P, edited');
+		expect(onRemote('README.md')).toBe('# design, by a teammate');
+		expect(readFileSync(join(mine, 'README.md'), 'utf8')).toBe('# design, my edit\n');
+		expect(git(mine, 'rev-parse', 'HEAD')).toBe(before);
+		expect(git(mine, 'stash', 'list')).toBe('');
+	});
+
+	it('publishes once when asked twice at the same moment, and both runs end well', async () => {
+		write(mine, 'projects/p/brief.md', '# P, edited\n');
+		const base = git(remote, 'rev-parse', 'main');
+		const [a, b] = await Promise.all([syncRecords(mine), syncRecords(mine)]);
+		expect([a.problems, b.problems]).toEqual([[], []]);
+		expect(git(remote, 'rev-list', '--count', `${base}..main`)).toBe('1');
+		expect(git(mine, 'status', '--porcelain')).toBe('');
+	});
+
 	it("fits onto a teammate's work without a merge commit, and keeps both", async () => {
 		write(theirs, 'projects/other/brief.md', '# Other\n');
 		commitAll(theirs, 'teammate project');
@@ -189,7 +215,21 @@ describe('what it refuses to publish', () => {
 		expect(r.problems[0]?.why).toMatch(/Records are held back/);
 		expect(remoteHas('workspace/app.ts')).toBe(false);
 		expect(onRemote('projects/p/brief.md')).toBe('# P'); // not even the record went
-		expect(git(mine, 'log', '-1', '--format=%s')).toBe('Update p'); // but it is saved, ready
+		expect(git(mine, 'log', '-1', '--format=%s')).toBe('app change, not for auto-publishing'); // nothing added to their branch
+		expect(readFileSync(join(mine, 'projects/p/brief.md'), 'utf8')).toBe('# P, edited\n'); // the record kept, ready
+	});
+
+	it("never rewrites the person's own commits, even when a teammate has published since", async () => {
+		write(mine, 'workspace/app.ts', 'export {}');
+		commitAll(mine, 'app change');
+		const own = git(mine, 'rev-parse', 'HEAD');
+		write(theirs, 'projects/other/brief.md', '# Other\n');
+		commitAll(theirs, 'teammate project');
+		git(theirs, 'push', '-q', 'origin', 'HEAD:main');
+		write(mine, 'projects/p/brief.md', '# P, edited\n');
+		expect((await syncRecords(mine)).problems[0]?.why).toMatch(/Records are held back/);
+		expect(git(mine, 'rev-parse', 'HEAD')).toBe(own);
+		expect(existsSync(join(mine, '.git', 'rebase-merge'))).toBe(false);
 	});
 
 	it('publishes those records once the other work has been pushed by its owner', async () => {
@@ -249,8 +289,8 @@ describe('when GitHub cannot be reached', () => {
 		renameSync(remote, `${remote}.away`);
 		const offline = await syncRecords(mine);
 		expect(offline.published).toEqual([]);
-		expect(offline.problems[0]?.why).toMatch(/Could not reach GitHub.*saved here/s);
-		expect(git(mine, 'log', '-1', '--format=%s')).toBe('Update p');
+		expect(offline.problems[0]?.why).toMatch(/Could not reach GitHub.*kept here/s);
+		expect(readFileSync(join(mine, 'projects/p/brief.md'), 'utf8')).toBe('# P, edited offline\n');
 
 		renameSync(`${remote}.away`, remote);
 		const online = await syncRecords(mine);
@@ -258,12 +298,12 @@ describe('when GitHub cannot be reached', () => {
 		expect(onRemote('projects/p/brief.md')).toBe('# P, edited offline');
 	});
 
-	it('does not make a second commit for the same change on a retry', async () => {
+	it("adds nothing to the person's branch while it waits", async () => {
 		write(mine, 'projects/p/brief.md', '# P, edited offline\n');
 		renameSync(remote, `${remote}.away`);
 		await syncRecords(mine);
 		await syncRecords(mine);
-		expect(git(mine, 'rev-list', '--count', 'origin/main..HEAD')).toBe('1');
+		expect(git(mine, 'rev-list', '--count', 'origin/main..HEAD')).toBe('0');
 	});
 });
 

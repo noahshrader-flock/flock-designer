@@ -1,9 +1,11 @@
-import { writeFileSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { PublishProblem } from '../../shared/contract';
 import { plural } from '../../shared/plural';
 import { mergeIterationRecords } from '../../shared/records';
-import { runGit } from './git';
+import { gitExact, runGit } from './git';
 
 /**
  * Keeping the design repository's project records published, with nobody having to remember.
@@ -11,15 +13,18 @@ import { runGit } from './git';
  * **One writer.** Records used to be written into this clone *and* committed to GitHub through its
  * API, so the clone could never catch up: git refuses to fast-forward over a file that already matches
  * what is coming in, which left the tree dirty and `git pull` stuck. Now there is one copy of each
- * change. It is committed here, fitted onto whatever GitHub has, and pushed.
+ * change, published from here.
  *
- * **Only the records.** It touches `projects/` and nothing else, and it refuses to push if anything
- * else is waiting to go, because pushing a branch pushes every commit on it, and the person's own work
- * on the repository (the app, the plan) is theirs to publish. What is held back is said, with why.
+ * **Only the records, and never the person's work.** The records commit is made on top of what GitHub has, in a
+ * temporary index, and pushed: the person's branch, index and files are never rebased or stashed. Their branch is then
+ * fast-forwarded to it, which git does only when the branch has nothing of its own and their edits are not in the way. When
+ * it has commits of its own, records wait (they would land on GitHub but stay uncommitted here, and the person's next
+ * `git pull` would refuse); what is held back is said, with why.
  *
- * **Never destructive.** Plain pushes only; a combination it cannot make is abandoned with the
- * person's work intact (the local commit stays, and the next run tries again); other uncommitted files
- * are set aside and put back, never committed.
+ * **Never destructive.** Plain pushes only; a combination it cannot make is abandoned with the records left as they are
+ * here, and the next run tries again. Two runs at once (the app's publisher, a page deploy, the `dsnr` command in
+ * another process) need no lock: each builds on what GitHub has, and the second's push is refused, builds again, and
+ * finds nothing left to do.
  */
 
 export type Problem = PublishProblem;
@@ -35,6 +40,9 @@ const isRecordFile = (f: string): boolean => /^projects\/[^/]+\/iterations\.json
 const lines = (out: string): string[] => out.split('\n').filter(Boolean);
 /** The first line of what git said: enough to act on, without a wall of its output. */
 const message = (err: unknown): string => (err instanceof Error ? err.message : String(err)).trim().split('\n')[0] ?? '';
+
+/** What a run publishes for one file: its blob, or null when it is deleted. */
+type Entry = { path: string; blob: string | null };
 
 export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 	const g = (...args: string[]) => runGit(designRoot, args, 120_000);
@@ -54,108 +62,142 @@ export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 	}
 	const remote = upstream.slice(0, upstream.length - branch.length - 1);
 
-	// 1. Whatever changed under projects/ becomes one local commit, limited to those paths.
-	const changed = lines(await g('status', '--porcelain', '--untracked-files=all', '--', 'projects'));
-	const ids = [...new Set(changed.map((l) => /projects\/([^/]+)\//.exec(l)?.[1]).filter((x): x is string => Boolean(x)))].sort();
-	if (ids.length > 0) {
-		try {
-			await g('add', '-A', '--', 'projects');
-			await g('commit', '-q', '-m', `Update ${ids.join(', ')}`, '--', 'projects');
-		} catch (err) {
-			await g('reset', '-q', '--', 'projects').catch(() => undefined);
-			return held(`Could not save the project records: ${message(err)}. Git needs a name and email (git config user.name, user.email).`);
-		}
-	}
-
-	// 2. Fit onto what GitHub has now.
-	try {
-		await g('fetch', '-q', remote, branch);
-	} catch (err) {
-		return held(`Could not reach GitHub, so the records are saved here and will be published when it can: ${message(err)}`);
-	}
-	if (Number(await g('rev-list', '--count', `HEAD..${upstream}`)) > 0) {
-		const problem = await integrate(designRoot, upstream);
-		if (problem) return held(problem);
-	}
-
-	// 3. Only records may go. Anything else waiting is the person's own to publish.
-	const waiting = Number(await g('rev-list', '--count', `${upstream}..HEAD`));
-	if (waiting === 0) return { published: [], problems: [] };
-	const outside = lines(await g('diff', '--name-only', `${upstream}..HEAD`)).filter((f) => !f.startsWith('projects/'));
-	if (outside.length > 0) {
-		return held(
-			`${plural(outside.length, 'change')} outside the project records (${outside.slice(0, 3).join(', ')}${outside.length > 3 ? ', …' : ''}) are waiting to be pushed, and a push would carry them. Records are held back; push those yourself, and records will flow again.`,
-		);
-	}
-
-	// A record that does not parse must never be published: a textual merge of two edits can in principle make
-	// one, and every reviewer's project list reads these.
-	for (const file of lines(await g('diff', '--name-only', `${upstream}..HEAD`)).filter(isRecordFile)) {
-		const text = await g('show', `HEAD:${file}`).catch(() => null);
-		if (text !== null && mergeIterationRecords(text, text) === null) {
-			return held(`${file} is not a valid record, so nothing was published. Fix it in the design repository, and records will flow again.`);
-		}
-	}
-
-	// 4. Push. If GitHub moved in the meantime, fit once more and try once more.
 	for (let attempt = 0; ; attempt++) {
 		try {
-			await g('push', '-q', remote, `HEAD:refs/heads/${branch}`);
-			return { published: ids, problems: [] };
+			await g('fetch', '-q', remote, branch);
 		} catch (err) {
-			if (attempt === 1) return held(`Could not publish the records: ${message(err)}`);
-			try {
-				await g('fetch', '-q', remote, branch);
-				const problem = await integrate(designRoot, upstream);
-				if (problem) return held(problem);
-			} catch (inner) {
-				return held(`Could not publish the records: ${message(inner)}`);
-			}
+			return held(`Could not reach GitHub, so the records are kept here and will be published when it can: ${message(err)}`);
 		}
+		const theirs = await g('rev-parse', upstream);
+
+		// The person's own commits are theirs to publish: until they have, records wait, and nothing here is touched.
+		const outside = lines(await g('diff', '--name-only', `${theirs}...HEAD`)).filter((f) => !f.startsWith('projects/'));
+		if (outside.length > 0) {
+			return held(
+				`${plural(outside.length, 'change')} outside the project records (${outside.slice(0, 3).join(', ')}${outside.length > 3 ? ', …' : ''}) are waiting to be pushed. Records are held back; push those yourself, and records will flow again.`,
+			);
+		}
+
+		const made = await recordsOnTopOf(designRoot, theirs);
+		if (typeof made === 'string') return held(made);
+		const { commit, ids, paths, read } = made;
+		if (commit === null) {
+			await catchUp(designRoot, theirs, paths, read);
+			return { published: [], problems: [] };
+		}
+		try {
+			await g('push', '-q', remote, `${commit}:refs/heads/${branch}`);
+		} catch (err) {
+			// GitHub moved in the meantime (another run, a teammate): build again on what it has now, once.
+			if (attempt === 0) continue;
+			return held(`Could not publish the records: ${message(err)}`);
+		}
+		await g('update-ref', `refs/remotes/${upstream}`, commit).catch(() => undefined);
+		await catchUp(designRoot, commit, paths, read);
+		return { published: ids, problems: [] };
 	}
 };
 
 /**
- * Replays this machine's record commits onto GitHub's. A conflict in a project's `iterations.json` is
- * the ordinary case (two people recording iterations of one project) and is merged by meaning; any
- * other conflict is a real disagreement between people, so the attempt is abandoned and nothing is lost.
- * Returns null on success, or what to tell the person.
+ * This machine's record changes (what `projects/` has here against where this branch and GitHub's last met), as a commit
+ * on GitHub's: made in a temporary index, so nothing of the person's is touched. A file changed on both sides is an
+ * ordinary case for `iterations.json` (two people recording iterations of one project) and is merged by meaning; any
+ * other is a real disagreement between people, which only they can settle. A string says what to tell the person.
  */
-const integrate = async (designRoot: string, upstream: string): Promise<string | null> => {
-	const g = (args: string[], env?: Record<string, string>) => runGit(designRoot, args, 60_000, env);
-	const abandon = async (why: string): Promise<string> => {
-		await g(['rebase', '--abort']).catch(() => undefined);
-		return why;
-	};
+const recordsOnTopOf = async (
+	designRoot: string,
+	theirs: string,
+): Promise<string | { commit: string | null; ids: string[]; paths: string[]; read: Map<string, string | null> }> => {
+	const g = (args: string[], env?: Record<string, string>, input?: string) => runGit(designRoot, args, 60_000, env, input);
+	const blobAt = (rev: string, path: string) => g(['rev-parse', '-q', '--verify', `${rev}:${path}`]).catch(() => null);
+	const base = await g(['merge-base', 'HEAD', theirs]).catch(() => null);
+	if (base === null) return 'The design repository here and on GitHub share no history, so records are not published into it.';
 
-	try {
-		await g(['rebase', '--autostash', upstream]);
-		return null;
-	} catch (first) {
-		let failure: unknown = first;
-		for (let round = 0; round < 25; round++) {
-			const unmerged = lines(await g(['diff', '--name-only', '--diff-filter=U']).catch(() => ''));
-			if (unmerged.length === 0) return abandon(`Could not combine your changes with GitHub's: ${message(failure)}`);
-			const hopeless = unmerged.filter((f) => !isRecordFile(f));
-			if (hopeless.length > 0) {
-				return abandon(`${hopeless.join(', ')} changed both here and on GitHub, and git cannot tell which to keep. Nothing was lost: your changes are saved here. Combine them in the design repository, then records will flow again.`);
-			}
-			for (const file of unmerged) {
-				// During a rebase, stage 2 is what GitHub has and stage 3 is the change being replayed (this machine's).
-				const theirs = await g(['show', `:2:${file}`]).catch(() => null);
-				const mine = await g(['show', `:3:${file}`]).catch(() => null);
-				const merged = theirs !== null && mine !== null ? mergeIterationRecords(mine, theirs) : null;
-				if (merged === null) return abandon(`${file} could not be combined with GitHub's copy, so nothing was changed. Your changes are saved here.`);
-				writeFileSync(join(designRoot, file), merged);
-				await g(['add', '--', file]);
-			}
-			try {
-				await g(['rebase', '--continue'], { GIT_EDITOR: 'true' });
-				return null;
-			} catch (next) {
-				failure = next; // the next commit being replayed may conflict too
-			}
+	const paths = [
+		...new Set([
+			...lines(await g(['diff', '--name-only', '--no-renames', base, '--', 'projects'])),
+			...lines(await g(['ls-files', '--others', '--exclude-standard', '--', 'projects'])),
+		]),
+	].sort();
+	const entries: Entry[] = [];
+	const hopeless: string[] = [];
+	const read = new Map<string, string | null>();
+	for (const path of paths) {
+		const here = existsSync(join(designRoot, path)) ? await g(['hash-object', '-w', '--', path]) : null;
+		read.set(path, here);
+		const there = await blobAt(theirs, path);
+		if (here === there) continue;
+		if (there === (await blobAt(base, path))) {
+			entries.push({ path, blob: here });
+			continue;
 		}
-		return abandon("Could not combine your changes with GitHub's after many tries, so nothing was changed.");
+		if (!isRecordFile(path) || here === null || there === null) {
+			hopeless.push(path);
+			continue;
+		}
+		const merged = mergeIterationRecords(readFileSync(join(designRoot, path), 'utf8'), await gitExact(designRoot, ['show', `${theirs}:${path}`]));
+		if (merged === null) return `${path} could not be combined with GitHub's copy, so nothing was changed. Your changes are kept here.`;
+		entries.push({ path, blob: await g(['hash-object', '-w', '--stdin'], undefined, merged) });
+	}
+	if (hopeless.length > 0) {
+		return `${hopeless.join(', ')} changed both here and on GitHub, and git cannot tell which to keep. Nothing was lost: your changes are kept here. Combine them in the design repository, then records will flow again.`;
+	}
+	if (entries.length === 0) return { commit: null, ids: [], paths, read };
+
+	// A record that does not parse must never be published: every reviewer's project list reads these.
+	for (const { path, blob } of entries) {
+		if (!isRecordFile(path) || blob === null) continue;
+		const text = await gitExact(designRoot, ['cat-file', 'blob', blob]);
+		if (mergeIterationRecords(text, text) === null) {
+			return `${path} is not a valid record, so nothing was published. Fix it in the design repository, and records will flow again.`;
+		}
+	}
+
+	const env = { GIT_INDEX_FILE: join(tmpdir(), `dsnr-records-${randomBytes(6).toString('hex')}`) };
+	try {
+		await g(['read-tree', theirs], env);
+		for (const { path, blob } of entries) {
+			if (blob === null) {
+				await g(['update-index', '--force-remove', '--', path], env);
+				continue;
+			}
+			const mode = (await g(['ls-tree', theirs, '--', path])).split(/\s/)[0] || '100644';
+			await g(['update-index', '--add', '--cacheinfo', `${mode},${blob},${path}`], env);
+		}
+		const tree = await g(['write-tree'], env);
+		if (tree === (await g(['rev-parse', `${theirs}^{tree}`]))) return { commit: null, ids: [], paths, read };
+		const ids = [...new Set(entries.map((e) => /^projects\/([^/]+)\//.exec(e.path)?.[1]).filter((x): x is string => Boolean(x)))].sort();
+		try {
+			const commit = await g(['commit-tree', tree, '-p', theirs, '-m', `Update ${ids.join(', ')}`]);
+			return { commit, ids, paths, read };
+		} catch (err) {
+			return `Could not save the project records: ${message(err)}. Git needs a name and email (git config user.name, user.email).`;
+		}
+	} finally {
+		rmSync(env.GIT_INDEX_FILE, { force: true });
+	}
+};
+
+/**
+ * Brings the person's branch up to `target` when it has nothing of its own, so the tree stops being behind. A record
+ * merged with GitHub's is written here first, only if it is still as it was read (`read`): one written since is newer,
+ * and is left for the next run. The records are then staged, so git can
+ * move over them, and git itself refuses when anything else of the person's would be overwritten. Then nothing moves.
+ */
+const catchUp = async (designRoot: string, target: string, paths: string[], read: Map<string, string | null>): Promise<void> => {
+	const g = (...args: string[]) => runGit(designRoot, args, 60_000);
+	if ((await g('rev-parse', 'HEAD')) === target) return;
+	for (const path of paths.filter(isRecordFile)) {
+		const file = join(designRoot, path);
+		const there = await g('rev-parse', '-q', '--verify', `${target}:${path}`).catch(() => null);
+		const now = existsSync(file) ? await g('hash-object', '--', path) : null;
+		if (now === null || there === null || now === there || now !== read.get(path)) continue;
+		writeFileSync(file, await gitExact(designRoot, ['show', `${target}:${path}`]));
+	}
+	if (paths.length > 0) await g('add', '-A', '--', ...paths).catch(() => undefined);
+	try {
+		await g('merge', '--ff-only', '-q', target);
+	} catch {
+		if (paths.length > 0) await g('reset', '-q', '--', ...paths).catch(() => undefined);
 	}
 };
