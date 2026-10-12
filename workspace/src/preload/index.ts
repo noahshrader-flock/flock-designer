@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { CHANNELS } from '../shared/contract';
+import type { Appearance } from '../shared/appearance';
 import type {
 	BuildInClaude,
 	ConnectedDesignSystems,
@@ -152,6 +153,8 @@ const api: WorkspaceApi = {
 	projectCover: (projectId, name, cover) => invoke<string | null>(CHANNELS.projectCover, projectId, name, cover),
 	readRecord: (projectId, name) => invoke<string>(CHANNELS.readRecord, projectId, name),
 	assignFolder: (projectId, folder) => invoke<void>(CHANNELS.assignFolder, projectId, folder),
+	appearance: () => invoke<Appearance>(CHANNELS.appearance),
+	setAppearance: (appearance) => invoke<Appearance>(CHANNELS.setAppearance, appearance),
 	readComments: (projectId, iteration) => invoke<ReviewComment[]>(CHANNELS.readComments, projectId, iteration),
 	postComment: (projectId, iteration, body, anchor, picture) =>
 		invoke<ReviewComment>(CHANNELS.postComment, projectId, iteration, body, anchor, picture ?? null),

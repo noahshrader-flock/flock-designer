@@ -27,6 +27,7 @@ import {
 	type Result,
 	type ReviewComment,
 } from '../shared/contract';
+import { type Appearance, isAppearance } from '../shared/appearance';
 import { AGENT_BUSY, type AgentExtras, AgentRunner, agentReadiness, locateClaude } from './services/agent';
 import { SessionMemory, findEditor, openFolder, openPrompt, openSession, resumeCommand, startCommand } from './services/editor';
 import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, codebaseWorkPreamble, commandLine, handoffTask } from './services/engineeringHandoff';
@@ -50,6 +51,7 @@ import { TokenBranches } from './services/tokenBranches';
 import { NEEDS_GH, VoiceAndToneFile } from './services/voiceAndTone';
 import { ComponentTokens, type Measure } from './services/componentTokens';
 import { ComponentPictures } from './services/componentPictures';
+import { AppearanceMemory } from './services/appearance';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, listedAs, mergeRepositories, originOf, reachableRepositories } from './services/repositories';
@@ -148,6 +150,9 @@ export interface IpcContext {
 	sessions?: SessionMemory;
 	/** Where this person's clones go, once they choose. */
 	cloneFolders?: CloneFolderMemory;
+	/** The appearance they chose (Settings), and how it is applied to the app: the system's theme setting, in the app. */
+	appearanceMemory?: AppearanceMemory;
+	applyAppearance?: (appearance: Appearance) => void;
 	/** Clones what the New modal asks for. Given for tests, to clone from this machine instead of GitHub. */
 	cloner?: Cloner;
 	installer?: Installer;
@@ -200,6 +205,8 @@ export const registerIpc = ({
 	prototypeServer = new PrototypeServer(),
 	sessions = new SessionMemory(join(tmpdir(), 'dsnr-agent-sessions.json')),
 	cloneFolders = new CloneFolderMemory(join(tmpdir(), 'dsnr-clone-folder.json')),
+	appearanceMemory = new AppearanceMemory(join(tmpdir(), 'dsnr-appearance.json')),
+	applyAppearance = () => undefined,
 	cloner = new Cloner(),
 	installer = new Installer(),
 	designLibrary,
@@ -1129,6 +1136,20 @@ export const registerIpc = ({
 			const root = opened.require(from.root);
 			await ensureLocalBranch(root, from.branch);
 			return work.start(root, { projectId, title, note, branch: from.branch, me: me(), folder: folderName(folder) });
+		}),
+	);
+	ipcMain.handle(
+		CHANNELS.appearance,
+		guard(async () => appearanceMemory.read()),
+	);
+	ipcMain.handle(
+		CHANNELS.setAppearance,
+		guard(async (appearance: unknown) => {
+			if (!isAppearance(appearance)) throw new Error('That is not an appearance: Auto, Light or Dark.');
+			// Applied before it is kept: a setting that could not be applied must not be what the app opens with.
+			applyAppearance(appearance);
+			appearanceMemory.write(appearance);
+			return appearance;
 		}),
 	);
 	ipcMain.handle(

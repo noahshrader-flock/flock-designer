@@ -1,4 +1,4 @@
-import { BrowserWindow, app, safeStorage, screen, shell } from 'electron';
+import { BrowserWindow, app, nativeTheme, safeStorage, screen, shell } from 'electron';
 import { join } from 'node:path';
 import pkg from '../../package.json';
 import { CHANNELS } from '../shared/contract';
@@ -13,6 +13,7 @@ import { PICTURE_RECIPE, measureInWindows } from './services/storyMeasure';
 import { checkInWindow } from './services/accessibilityCheck';
 import { coverInWindow } from './services/coverWindow';
 import { PageView } from './services/pageView';
+import { AppearanceMemory } from './services/appearance';
 import { MIN_WINDOW, type WindowState, WindowMemory, restoreState } from './services/windowMemory';
 import { PrototypeServer } from './services/prototypeServer';
 import type { Fetcher } from './services/github';
@@ -53,11 +54,18 @@ const smokeMode = process.argv.includes('--smoke');
 const GITHUB_CLIENT_ID = process.env.DSNR_CLIENT_ID ?? 'Iv23li2z9ayhXhGdFXCm';
 
 const DEFAULT_SIZE = { width: 1160, height: 700 };
+/** The window's color until the page is drawn, as the page's own dark background (`--background` in `index.css`). */
+const DARK_BACKGROUND = '#0a0a0a';
+/** The appearance chosen in Settings, kept in the app's settings: read when the window is made, and kept when it is chosen. */
+const appearanceMemory = (): AppearanceMemory => new AppearanceMemory(AppearanceMemory.defaultPath(app.getPath('userData')));
 
 const createWindow = (): BrowserWindow => {
 	// A check run for testing must neither read nor change how the person's own window is kept.
 	const testing = smokeMode || process.argv.includes('--smoke-page') || process.argv.includes('--smoke-local');
 	const memory = new WindowMemory(WindowMemory.defaultPath(app.getPath('userData')));
+	// The appearance chosen in Settings, set before the window exists so it never shows the wrong one for a moment. It is the
+	// system's theme setting for the whole app: the pages and the previews follow it as they followed the computer's.
+	if (!testing) nativeTheme.themeSource = appearanceMemory().read();
 	const state: WindowState = testing
 		? DEFAULT_SIZE
 		: restoreState(memory.read(), screen.getAllDisplays().map((d) => d.workArea), DEFAULT_SIZE);
@@ -76,7 +84,7 @@ const createWindow = (): BrowserWindow => {
 		...(process.platform === 'darwin'
 			? { trafficLightPosition: { x: 20, y: 20 } }
 			: { titleBarOverlay: { color: '#ffffff', symbolColor: '#111111', height: 56 } }),
-		backgroundColor: '#ffffff',
+		backgroundColor: nativeTheme.shouldUseDarkColors ? DARK_BACKGROUND : '#ffffff',
 		webPreferences: {
 			preload: join(__dirname, '../preload/index.js'),
 			contextIsolation: true,
@@ -180,6 +188,8 @@ void app.whenReady().then(() => {
 		measureStories: measureInWindows,
 		checkPage: checkInWindow,
 		drawCover: coverInWindow,
+		appearanceMemory: appearanceMemory(),
+		applyAppearance: (appearance) => void (nativeTheme.themeSource = appearance),
 		// A little after the window is up, so opening the app is not slowed by getting the design system ready.
 		warmAfterMs: 3000,
 	});

@@ -1,4 +1,4 @@
-import { LogOutIcon } from 'lucide-react';
+import { LogOutIcon, SettingsIcon } from 'lucide-react';
 import type { GitHubUser } from '../shared/contract';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
@@ -30,11 +30,14 @@ export const TopNav = ({
 	section,
 	onSectionChange,
 	onSignOut,
+	onSettings,
 }: {
 	user: GitHubUser | null;
 	section: Section;
 	onSectionChange: (section: Section) => void;
 	onSignOut: () => void;
+	/** Opens Settings, from the account menu. */
+	onSettings?: () => void;
 }) => {
 	return (
 		<header
@@ -77,6 +80,10 @@ export const TopNav = ({
 								<p className="text-muted-foreground text-xs">@{user.login}</p>
 							</div>
 							<DropdownMenuSeparator />
+							<DropdownMenuItem onSelect={onSettings}>
+								<SettingsIcon />
+								Settings
+							</DropdownMenuItem>
 							<DropdownMenuItem onSelect={onSignOut}>
 								<LogOutIcon />
 								Sign out

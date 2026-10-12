@@ -107,11 +107,14 @@ let checkPage: ReturnType<typeof vi.fn>;
 let drawCover: ReturnType<typeof vi.fn>;
 /** A file read from GitHub as bytes: none, unless a test says otherwise. */
 let readBytes: ReturnType<typeof vi.fn>;
+/** What the window is told its appearance is, as the app tells the system's theme setting: the calls, in order. */
+let applied: string[] = [];
 let register: (more?: Record<string, unknown>) => void;
 let prototypeServer: InstanceType<typeof import('../src/main/services/prototypeServer')['PrototypeServer']>;
 
 beforeEach(async () => {
 	handlers.clear();
+	applied = [];
 	vi.resetModules();
 	home = mkdtempSync(join(tmpdir(), 'fdw-ipc-home-'));
 	mkdirSync(join(home, 'GitHub'), { recursive: true });
@@ -162,6 +165,7 @@ beforeEach(async () => {
 	);
 	drawCover = vi.fn(async () => JPEG);
 	readBytes = vi.fn(async () => null);
+	const { AppearanceMemory } = await import('../src/main/services/appearance');
 	const { CloneFolderMemory } = await import('../src/main/services/cloneFolder');
 	const { Cloner } = await import('../src/main/services/clone');
 	const { DesignSystemsMemory } = await import('../src/main/services/designSystems');
@@ -179,6 +183,8 @@ beforeEach(async () => {
 		prototypesRoot: join(home, 'prototype'),
 		prototypeServer,
 		cloneFolders: new CloneFolderMemory(join(home, 'clone-folder.json')),
+		appearanceMemory: new AppearanceMemory(join(home, 'appearance.json')),
+		applyAppearance: (a: string) => void applied.push(a),
 		cloner: new Cloner({ urlOf: (r) => cloneSources[r] ?? 'file:///nowhere' }),
 		designSystems: new DesignSystemsMemory(join(home, 'design-system.json')),
 		// The person's own GitHub (its command line): never the real one here.
@@ -1935,3 +1941,26 @@ describe('publishing', () => {
 		expect(handlers.has('workspace:setPublishConsent')).toBe(false);
 	});
 });
+
+describe('the appearance', () => {
+	it('is Auto until one is chosen', async () => {
+		expect(await call(CHANNELS.appearance)).toEqual({ ok: true, value: 'system' });
+	});
+
+	it('is chosen, applied to the app at once, and kept for the next time it opens', async () => {
+		expect(await call(CHANNELS.setAppearance, 'dark')).toEqual({ ok: true, value: 'dark' });
+		expect(applied).toEqual(['dark']);
+		expect((await call(CHANNELS.appearance)).value).toBe('dark');
+		expect(JSON.parse(readFileSync(join(home, 'appearance.json'), 'utf8'))).toEqual({ appearance: 'dark' });
+		await call(CHANNELS.setAppearance, 'system');
+		expect(applied).toEqual(['dark', 'system']);
+	});
+
+	it('is refused when it is not one of the three, and nothing is applied or kept', async () => {
+		expect((await call(CHANNELS.setAppearance, 'sepia')).ok).toBe(false);
+		expect((await call(CHANNELS.setAppearance, undefined)).ok).toBe(false);
+		expect(applied).toEqual([]);
+		expect((await call(CHANNELS.appearance)).value).toBe('system');
+	});
+});
+

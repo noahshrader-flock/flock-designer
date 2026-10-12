@@ -7,6 +7,7 @@
  * deliberate edit to this file, which is the point.
  */
 
+import type { Appearance } from './appearance';
 import type { DeclaredTarget } from './wcag';
 
 /** A repository the designer has opened. */
@@ -734,6 +735,10 @@ export interface WorkspaceApi {
 	readComments(projectId: string, iteration: string): Promise<Result<ReviewComment[]>>;
 	/** The text of one file in a project's folder (its brief, its review notes, …): this machine's copy if it has one, else GitHub's. */
 	readRecord(projectId: string, name: string): Promise<Result<string>>;
+	/** The app's appearance (Settings): Auto, Light or Dark. */
+	appearance(): Promise<Result<Appearance>>;
+	/** Sets it: applied to the whole app at once (its pages and previews too), and kept for the next time it opens. */
+	setAppearance(appearance: Appearance): Promise<Result<Appearance>>;
 	/** Puts a project in a folder, or in none for null, in its brief in the design repository (the folders plan). */
 	assignFolder(projectId: string, folder: string | null): Promise<Result<void>>;
 	postComment(
@@ -1106,6 +1111,8 @@ export const CHANNELS = {
 	continueInClaude: 'workspace:continueInClaude',
 	createPrototype: 'workspace:createPrototype',
 	assignFolder: 'workspace:assignFolder',
+	appearance: 'workspace:appearance',
+	setAppearance: 'workspace:setAppearance',
 	buildPrototype: 'workspace:buildPrototype',
 	addressPrototype: 'workspace:addressPrototype',
 	finishPrototypeAddress: 'workspace:finishPrototypeAddress',

@@ -3,7 +3,7 @@ import { createElement } from 'react';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TopNav } from '../src/renderer/TopNav';
-import { render, unmountAll } from './reviewHarness';
+import { openMenu, press, render, unmountAll } from './reviewHarness';
 
 /**
  * The sections in the window's top bar (Projects, Design System): shadcn's Tabs in its default look, the pill with the
@@ -46,6 +46,24 @@ describe('the bar', () => {
 		await show({ user: null });
 		expect([...header().children]).toHaveLength(3);
 		expect(header().textContent).toBe('DSNR');
+	});
+});
+
+describe('the account menu', () => {
+	// The account is the last button in the bar, after the section tabs.
+	const open = () => openMenu([...document.querySelectorAll('header button')].at(-1) as HTMLElement);
+
+	it('has Settings above Sign out', async () => {
+		await show();
+		expect((await open()).map((i) => i.textContent)).toEqual(['Settings', 'Sign out']);
+	});
+
+	it('opens Settings from its item', async () => {
+		const onSettings = vi.fn();
+		await show({ onSettings });
+		const [settings] = await open();
+		await press(settings!);
+		expect(onSettings).toHaveBeenCalledOnce();
 	});
 });
 

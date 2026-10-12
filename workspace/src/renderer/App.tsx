@@ -4,6 +4,7 @@ import { Projects } from './Projects';
 import { SignIn } from './SignIn';
 import { DesignSystem } from './DesignSystem';
 import { ErrorBoundary } from './ErrorBoundary';
+import { Settings } from './Settings';
 import { TopNav, type Section } from './TopNav';
 
 /**
@@ -19,6 +20,7 @@ import { TopNav, type Section } from './TopNav';
 export const App = () => {
 	const [section, setSection] = useState<Section>('projects');
 	const [signIn, setSignIn] = useState<SignInState>({ state: 'signedOut' });
+	const [settingsOpen, setSettingsOpen] = useState(false);
 
 	const refreshSignIn = useCallback(async () => {
 		const result = await window.workspace.signInState();
@@ -37,7 +39,8 @@ export const App = () => {
 
 	return (
 		<div className="bg-background h-screen overflow-hidden">
-			<TopNav user={signIn.state === 'signedIn' ? signIn.user : null} section={section} onSectionChange={setSection} onSignOut={signOut} />
+			<TopNav user={signIn.state === 'signedIn' ? signIn.user : null} section={section} onSectionChange={setSection} onSignOut={signOut} onSettings={() => setSettingsOpen(true)} />
+			<Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 			{/* The bar is fixed, so the rest starts below it and scrolls on its own. */}
 			<div className="h-full overflow-y-auto pt-(--nav-height)">
 				<ErrorBoundary>
