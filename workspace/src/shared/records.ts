@@ -1,5 +1,7 @@
-import type { Iteration } from './contract';
+import type { Iteration, ProjectIteration } from './contract';
+import { asRecord } from './json';
 import { asPeople, mergePeople } from './people';
+import { asCover, asDate, asGitHubRepository, asPullRequest, asRoute } from './projects';
 
 /**
  * Two copies of one project's `iterations.json`, made on different machines, as one.
@@ -16,21 +18,93 @@ import { asPeople, mergePeople } from './people';
 type Rec = Record<string, unknown>;
 
 /**
- * A project's `iterations.json`, read: a list of records, each with a name, or null when it is anything else. The one
- * place the file is judged, so everything that reads it agrees on what a readable one is.
+ * A project's `iterations.json` as written: a list of records, each with a name and a branch, or null when it is anything
+ * else. The one place the file is judged, so everything that reads it agrees on what a readable one is.
  */
-export const parseIterations = (text: string): Iteration[] | null => parse(text) as Iteration[] | null;
-
-const parse = (text: string): Rec[] | null => {
+const rawRecords = (text: string): Rec[] | null => {
 	try {
 		const value: unknown = JSON.parse(text);
-		return Array.isArray(value) && value.every((r) => typeof r === 'object' && r !== null && typeof (r as Rec).name === 'string')
+		return Array.isArray(value) && value.every((r) => typeof asRecord(r).name === 'string' && typeof asRecord(r).branch === 'string')
 			? (value as Rec[])
 			: null;
 	} catch {
 		return null;
 	}
 };
+
+const basedOnOf = (v: unknown): Iteration['basedOn'] | undefined => {
+	const b = asRecord(v);
+	return typeof b.repository === 'string' && typeof b.branch === 'string' && (typeof b.commit === 'string' || b.commit === null)
+		? { repository: b.repository, branch: b.branch, commit: b.commit }
+		: undefined;
+};
+
+/**
+ * One record, checked: each field the app knows is what it should be, or left out (an address a page will be sent to, a
+ * picture's name, a link), never trusted because a file said so. What it does not know is kept, so a list read and
+ * written back never loses what a newer version wrote.
+ */
+const KNOWN = [
+	'projectId',
+	'name',
+	'branch',
+	'commit',
+	'createdAt',
+	'note',
+	'contributors',
+	'previewUrl',
+	'pullRequest',
+	'repository',
+	'route',
+	'basedOn',
+	'cover',
+];
+
+const checked = (r: Rec): Iteration => {
+	const rest = Object.fromEntries(Object.entries(r).filter(([k]) => !KNOWN.includes(k)));
+	const pullRequest = asPullRequest(r.pullRequest);
+	const repository = asGitHubRepository(r.repository);
+	const route = asRoute(r.route);
+	const basedOn = basedOnOf(r.basedOn);
+	const cover = asCover(r.cover);
+	return {
+		...rest,
+		projectId: typeof r.projectId === 'string' ? r.projectId : '',
+		name: r.name as string,
+		branch: r.branch as string,
+		commit: typeof r.commit === 'string' ? r.commit : null,
+		createdAt: typeof r.createdAt === 'string' ? r.createdAt : '',
+		note: typeof r.note === 'string' ? r.note : '',
+		...(Array.isArray(r.contributors) ? { contributors: asPeople(r.contributors) } : {}),
+		...(typeof r.previewUrl === 'string' ? { previewUrl: r.previewUrl } : {}),
+		...(pullRequest !== null ? { pullRequest } : {}),
+		...(repository !== null ? { repository } : {}),
+		...(route !== null ? { route } : {}),
+		...(basedOn ? { basedOn } : {}),
+		...(cover !== null ? { cover } : {}),
+	};
+};
+
+export const parseIterations = (text: string): Iteration[] | null => rawRecords(text)?.map(checked) ?? null;
+
+/** The file as written, the one way: two-space JSON, ending in a newline. */
+export const serializeIterations = (records: readonly unknown[]): string => `${JSON.stringify(records, null, 2)}\n`;
+
+/** A record as the window shows it, with its review thread when it has one. */
+export const toProjectIteration = (r: Iteration, thread?: { number: number; openComments: number }): ProjectIteration => ({
+	name: r.name,
+	branch: r.branch,
+	issueNumber: thread?.number ?? null,
+	openComments: thread?.openComments ?? 0,
+	previewUrl: r.previewUrl ?? null,
+	repository: r.repository ?? null,
+	pullRequest: r.pullRequest ?? null,
+	commit: r.commit,
+	contributors: r.contributors ?? [],
+	createdAt: asDate(r.createdAt),
+	route: r.route ?? null,
+	cover: r.cover ?? null,
+});
 
 const earliest = (a: unknown, b: unknown): unknown => {
 	const da = typeof a === 'string' ? Date.parse(a) : Number.NaN;
@@ -42,8 +116,8 @@ const earliest = (a: unknown, b: unknown): unknown => {
 
 /** `mine` is this machine's copy and wins where the two disagree about a value; `theirs` fills what mine lacks. */
 export const mergeIterationRecords = (mine: string, theirs: string): string | null => {
-	const a = parse(mine);
-	const b = parse(theirs);
+	const a = rawRecords(mine);
+	const b = rawRecords(theirs);
 	if (a === null || b === null) return null;
 
 	const byName = new Map<string, Rec>();
@@ -63,5 +137,5 @@ export const mergeIterationRecords = (mine: string, theirs: string): string | nu
 		byName.set(String(r.name), merged);
 	}
 	const list = [...byName.values()].sort((x, y) => String(x.name).localeCompare(String(y.name), undefined, { numeric: true }));
-	return `${JSON.stringify(list, null, 2)}\n`;
+	return serializeIterations(list);
 };

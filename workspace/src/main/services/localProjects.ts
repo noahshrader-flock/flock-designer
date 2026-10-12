@@ -1,16 +1,9 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Project, ProjectIteration } from '../../shared/contract';
-import { asPeople, mergePeople } from '../../shared/people';
-import { asCover, asDate, asGitHubRepository, asPullRequest, asRoute, fromBrief, newestFirst } from '../../shared/projects';
-
-const readJson = (path: string): unknown => {
-	try {
-		return JSON.parse(readFileSync(path, 'utf8'));
-	} catch {
-		return null;
-	}
-};
+import type { Project } from '../../shared/contract';
+import { mergePeople } from '../../shared/people';
+import { fromBrief, newestFirst } from '../../shared/projects';
+import { parseIterations, toProjectIteration } from '../../shared/records';
 
 /**
  * Every project folder in the local copy of the design repository, read straight from disk, with whatever
@@ -32,24 +25,10 @@ export const readFolderProjects = (recordsRoot: string): Project[] => {
 				.map((f) => f.name)
 				.sort();
 			const brief = records.includes('brief.md') ? readFileSync(join(dir, 'brief.md'), 'utf8') : null;
-			const raw = readJson(join(dir, 'iterations.json'));
-			const iterations = (Array.isArray(raw) ? raw : [])
-				.filter((it): it is Record<string, unknown> => typeof it === 'object' && it !== null)
-				.filter((it) => typeof it.branch === 'string' && typeof it.name === 'string')
-				.map((it): ProjectIteration => ({
-					name: String(it.name),
-					branch: String(it.branch),
-					issueNumber: null,
-					openComments: 0,
-					previewUrl: typeof it.previewUrl === 'string' ? it.previewUrl : null,
-					repository: asGitHubRepository(it.repository),
-					pullRequest: asPullRequest(it.pullRequest),
-					commit: typeof it.commit === 'string' ? it.commit : null,
-					contributors: asPeople(it.contributors),
-					createdAt: asDate(it.createdAt),
-					route: asRoute(it.route),
-					cover: asCover(it.cover),
-				}))
+			const file = join(dir, 'iterations.json');
+			// A record that cannot be read lists the project with nothing built, as a folder with no record does.
+			const iterations = ((existsSync(file) ? parseIterations(readFileSync(file, 'utf8')) : null) ?? [])
+				.map((it) => toProjectIteration(it))
 				.sort(newestFirst);
 			return {
 				id: e.name,

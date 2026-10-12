@@ -16,6 +16,7 @@ import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
 import { gitHubRepoOf } from './repositories';
 import { PROJECT_ID, parsePrototypeName } from '../../shared/projects';
+import { parseIterations, serializeIterations } from '../../shared/records';
 
 /**
  * Named attempts at the question, and the record of them.
@@ -57,18 +58,15 @@ export const readIterations = (recordsRoot: string, projectId: string): Iteratio
 	if (!existsSync(path)) {
 		return [];
 	}
-	try {
-		const parsed = JSON.parse(readFileSync(path, 'utf8')) as unknown;
-		return Array.isArray(parsed) ? (parsed as Iteration[]) : [];
-	} catch {
-		throw new Error(`${join(projectId, 'iterations.json')} is not readable JSON.`);
-	}
+	const parsed = parseIterations(readFileSync(path, 'utf8'));
+	if (parsed === null) throw new Error(`${join(projectId, 'iterations.json')} is not a readable list of records.`);
+	return parsed;
 };
 
 const writeIterations = (recordsRoot: string, projectId: string, iterations: Iteration[]): void => {
 	const path = recordPath(recordsRoot, projectId);
 	mkdirSync(dirname(path), { recursive: true });
-	writeFileSync(path, `${JSON.stringify(iterations, null, 2)}\n`);
+	writeFileSync(path, serializeIterations(iterations));
 };
 
 /** The one `feature/<project-id>` branch for real-code work. */

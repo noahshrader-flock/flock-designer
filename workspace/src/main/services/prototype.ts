@@ -16,7 +16,7 @@ import {
 import { addressOpening } from './address';
 import { lightCheckLine } from './engineeringHandoff';
 import { resolveInside } from './paths';
-import { parseIterations } from '../../shared/records';
+import { parseIterations, serializeIterations } from '../../shared/records';
 
 /**
  * Prototypes: what is recorded, where the page is kept, and what the agent is told.
@@ -73,13 +73,15 @@ export interface PrototypeBuild {
 	buildCommand: string;
 }
 
-/** A project's iteration records. A file that cannot be read is refused rather than written over. */
-export const readRecords = async (store: RecordStore, projectId: string): Promise<Iteration[]> => {
+/**
+ * A project's iteration records, through anything that reads a file of the design repository. A file that cannot be read
+ * is refused rather than written over, or guessed at.
+ */
+export const readRecords = async (store: Pick<RecordStore, 'read'>, projectId: string): Promise<Iteration[]> => {
 	const raw = await store.read(projectPath(projectId, 'iterations.json'));
 	if (raw === null) return [];
 	const records = parseIterations(raw);
-	if (records === null)
-		throw new Error(`${projectPath(projectId, 'iterations.json')} is not a readable list of records, so nothing was added to it.`);
+	if (records === null) throw new Error(`${projectPath(projectId, 'iterations.json')} is not a readable list of records, so it was left as it is.`);
 	return records;
 };
 
@@ -110,7 +112,7 @@ const addRecord = async (
 	};
 	await store.write(
 		projectPath(projectId, 'iterations.json'),
-		`${JSON.stringify([...existing, iteration], null, 2)}\n`,
+		serializeIterations([...existing, iteration]),
 		`${projectId}: record prototype ${name}`,
 	);
 	return iteration;
@@ -174,7 +176,7 @@ export const setCover = async (store: RecordStore, projectId: string, name: stri
 	const existing = await readRecords(store, projectId);
 	if (!existing.some((i) => i.name === name)) return false;
 	const updated = existing.map((i) => (i.name === name ? { ...i, cover } : i));
-	await store.write(projectPath(projectId, 'iterations.json'), `${JSON.stringify(updated, null, 2)}\n`, `${projectId}: picture of prototype ${name}`);
+	await store.write(projectPath(projectId, 'iterations.json'), serializeIterations(updated), `${projectId}: picture of prototype ${name}`);
 	return true;
 };
 

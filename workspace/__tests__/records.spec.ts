@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeIterationRecords } from '../src/shared/records';
+import { mergeIterationRecords, parseIterations, serializeIterations, toProjectIteration } from '../src/shared/records';
 
 const rec = (name: string, extra: Record<string, unknown> = {}) => ({
 	projectId: 'p',
@@ -85,5 +85,61 @@ describe('mergeIterationRecords', () => {
 			text(rec('i1', { contributors: [{ name: 'Ada', login: 'ada' }] })),
 		);
 		expect(mergeIterationRecords(one as string, one as string)).toBe(one);
+	});
+});
+
+describe('reading iterations.json', () => {
+	const good = { projectId: 'p', name: 'i1', branch: 'fd/p/i1', commit: null, createdAt: '2026-10-01T00:00:00Z', note: '' };
+
+	it('reads a list of records, each with a name and a branch, and nothing else', () => {
+		expect(parseIterations(JSON.stringify([good]))).toEqual([good]);
+		for (const bad of ['{nope', '{}', '[1]', JSON.stringify([{ ...good, name: 3 }]), JSON.stringify([{ ...good, branch: undefined }])])
+			expect(parseIterations(bad), bad).toBeNull();
+	});
+
+	it('leaves out a field that is not what it should be, rather than trusting it', () => {
+		const [r] = parseIterations(
+			JSON.stringify([
+				{
+					...good,
+					route: 'https://elsewhere',
+					cover: 'nothex',
+					pullRequest: 'javascript:x',
+					repository: 'not a repo',
+					contributors: 'Noah',
+					previewUrl: 7,
+				},
+			]),
+		)!;
+		for (const field of ['route', 'cover', 'pullRequest', 'repository', 'previewUrl', 'contributors']) expect(r, field).not.toHaveProperty(field);
+	});
+
+	it('keeps what it does not know, so writing a list back never loses what a newer app wrote', () => {
+		const [r] = parseIterations(JSON.stringify([{ ...good, somethingNew: { a: 1 } }]))!;
+		expect(JSON.parse(serializeIterations([r!]))[0].somethingNew).toEqual({ a: 1 });
+	});
+
+	it('is written one way: two-space JSON, ending in a newline', () => {
+		expect(serializeIterations([good])).toBe(`${JSON.stringify([good], null, 2)}\n`);
+	});
+
+	it('is shown with its thread when there is one, and none when there is not', () => {
+		const shown = toProjectIteration({ ...good, previewUrl: 'https://p', route: '/users' }, { number: 9, openComments: 2 });
+		expect(shown).toMatchObject({
+			name: 'i1',
+			branch: 'fd/p/i1',
+			issueNumber: 9,
+			openComments: 2,
+			previewUrl: 'https://p',
+			route: '/users',
+			contributors: [],
+		});
+		expect(toProjectIteration(good)).toMatchObject({
+			issueNumber: null,
+			openComments: 0,
+			previewUrl: null,
+			route: null,
+			createdAt: '2026-10-01T00:00:00Z',
+		});
 	});
 });

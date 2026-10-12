@@ -26,10 +26,10 @@ import {
 	prototypeVersionOf,
 	recordIteration,
 	recordPrototype,
+	readRecords,
 } from './prototype';
 import { bundleCommand, runBundle, sharedFilesOf, writeBundleScript } from './prototypeBundle';
 import { designSystemFile, taskVoice } from './voiceBrief';
-import { parseIterations } from '../../shared/records';
 
 /**
  * Making a prototype, with nothing of the app in it: starting one (its record, its brief, its name), what its agent
@@ -142,13 +142,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 
 	/** A project's records, from its iterations.json: none when it has none, and an error when the file is not readable. */
-	const records = async (projectId: string): Promise<Iteration[]> => {
-		const raw = await ctx.readDesignFile(projectPath(projectId, 'iterations.json'));
-		if (raw === null) return [];
-		const parsed = parseIterations(raw);
-		if (parsed === null) throw new Error(`${projectPath(projectId, 'iterations.json')} is not a readable list of records.`);
-		return parsed;
-	};
+	const records = (projectId: string): Promise<Iteration[]> => readRecords({ read: ctx.readDesignFile }, projectId);
 	/** A project's title, from its brief: what people know it by. Its id when the brief has none. */
 	const title = async (projectId: string): Promise<string> =>
 		fromBrief(projectId, await ctx.readDesignFile(projectPath(projectId, 'brief.md'))).title;

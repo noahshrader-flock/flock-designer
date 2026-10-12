@@ -1,18 +1,7 @@
 import type { CommentAnchor, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
 import { GitHubError, httpStatus } from './github';
-import { asPeople, isBot, mergePeople } from '../../shared/people';
-import {
-	asCover,
-	asDate,
-	asGitHubRepository,
-	asPullRequest,
-	asRoute,
-	fromBrief,
-	latestDate,
-	newestFirst,
-	projectDir,
-	projectPath,
-} from '../../shared/projects';
+import { isBot, mergePeople } from '../../shared/people';
+import { fromBrief, latestDate, newestFirst, projectDir, projectPath } from '../../shared/projects';
 import {
 	RESOLVED_MARK,
 	addressedAt,
@@ -26,6 +15,7 @@ import {
 	withResolved,
 } from '../../shared/anchor';
 import { asArray, asRecord } from '../../shared/json';
+import { parseIterations, toProjectIteration } from '../../shared/records';
 
 /**
  * The design repository, read through the API.
@@ -286,30 +276,9 @@ export class DesignRepo {
 		const file = asRecord(await this.session.api(`${this.base}/contents/${projectPath(id, 'iterations.json')}`));
 		if (typeof file.content !== 'string') return [];
 
-		let parsed: unknown;
-		try {
-			parsed = JSON.parse(Buffer.from(file.content, 'base64').toString('utf8'));
-		} catch {
-			return [];
-		}
-
-		return asArray(parsed)
-			.map(asRecord)
-			.filter((it) => typeof it.branch === 'string' && typeof it.name === 'string')
-			.map((it) => ({
-				name: String(it.name),
-				branch: String(it.branch),
-				issueNumber: issues.get(String(it.branch))?.number ?? null,
-				openComments: issues.get(String(it.branch))?.openComments ?? 0,
-				previewUrl: typeof it.previewUrl === 'string' ? it.previewUrl : null,
-				repository: asGitHubRepository(it.repository),
-				pullRequest: asPullRequest(it.pullRequest),
-				contributors: asPeople(it.contributors),
-				commit: typeof it.commit === 'string' ? it.commit : null,
-				createdAt: asDate(it.createdAt),
-				route: asRoute(it.route),
-				cover: asCover(it.cover),
-			}))
+		// One that cannot be read is no iterations recorded, as a missing one is: the project is still listed.
+		return (parseIterations(Buffer.from(file.content, 'base64').toString('utf8')) ?? [])
+			.map((it) => toProjectIteration(it, issues.get(it.branch)))
 			.sort(newestFirst);
 	}
 
