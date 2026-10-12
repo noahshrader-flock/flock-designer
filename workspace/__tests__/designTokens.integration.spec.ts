@@ -3,14 +3,13 @@ import { expect, it } from 'vitest';
 import { libraryReads } from '../src/main/services/designLibrary';
 import { readTokens } from '../src/main/services/designTokens';
 import { editedFiles } from '../src/main/services/tokenEdits';
-import { REAL_LIBRARY, describeWith, realDevelop } from './realCheckouts';
+import { REAL_LIBRARY, describeWith, libraryMissing } from './realCheckouts';
 
 /** The reader against the real library's `develop`, as the app reads it. */
 const DEVELOP = 'refs/remotes/origin/develop';
-const missing = realDevelop === null ? `no clone of the design system with develop at ${REAL_LIBRARY} (set FUI_ROOT)` : null;
 const find = (list: Awaited<ReturnType<typeof readTokens>>, path: string) => list.tokens.find((t) => t.path === path);
 
-describeWith(missing, 'against the real library', () => {
+describeWith(libraryMissing, 'against the real library', () => {
 	const real = libraryReads(REAL_LIBRARY, DEVELOP);
 
 	it('reads every tone, both palettes, spacing and radius; all it cannot read is a tone step written wrong in the library', async () => {
@@ -43,7 +42,7 @@ describeWith(missing, 'against the real library', () => {
 	});
 });
 
-describeWith(missing, 'changing the real library’s tokens (T3)', () => {
+describeWith(libraryMissing, 'changing the real library’s tokens (T3)', () => {
 	it('writes a tone, a role pointed at another step, a role’s own color, and the spacing, each reading back exactly', async () => {
 		const real = libraryReads(REAL_LIBRARY, DEVELOP);
 		const written = await editedFiles(real, [
@@ -65,7 +64,7 @@ describeWith(missing, 'changing the real library’s tokens (T3)', () => {
 	});
 });
 
-describeWith(missing, 'reading the real library’s files exactly', () => {
+describeWith(libraryMissing, 'reading the real library’s files exactly', () => {
 	it('gives each file as committed, white space at its ends and all, read alone or with the stories', async () => {
 		const real = libraryReads(REAL_LIBRARY, DEVELOP);
 		const files = await real.listFiles('');

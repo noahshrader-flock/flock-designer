@@ -1,10 +1,9 @@
-import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { expect, it } from 'vitest';
 import { buildContextReceipt } from '../src/main/services/contextReceipt';
 import { findCommand, readDescriptor } from '../src/main/services/descriptor';
 import { recordsRootFor } from '../src/main/services/discovery';
-import { REAL_COKE, describeWith } from './realCheckouts';
+import { REAL_COKE as COKE, cokeMissing, describeWith } from './realCheckouts';
 
 /**
  * The services against a real checkout, not a fixture.
@@ -14,10 +13,7 @@ import { REAL_COKE, describeWith } from './realCheckouts';
  * receipt resolves a real design-system version from a real lockfile, and that
  * the records root lands where the repository's own handoff gate already looks.
  */
-const COKE = REAL_COKE;
-const missing = existsSync(join(COKE, '.dsnr', 'workspace.json')) ? null : `no Coke checkout with a descriptor at ${COKE} (set COKE_ROOT)`;
-
-describeWith(missing, 'against the real Coke checkout', () => {
+describeWith(cokeMissing, 'against the real Coke checkout', () => {
 	it('parses the descriptor Coke ships', () => {
 		const descriptor = readDescriptor(COKE);
 		expect(descriptor.product).toContain('Coke');

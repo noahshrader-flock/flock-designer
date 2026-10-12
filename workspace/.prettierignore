@@ -4,5 +4,4 @@ src/renderer/ui/
 __tests__/fixtures/
 # Prose, wrapped by hand.
 *.md
-out/
 package-lock.json

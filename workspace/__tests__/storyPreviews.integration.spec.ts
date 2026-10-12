@@ -8,7 +8,7 @@ import { PREVIEW_HEIGHT, previewAddress } from '../src/shared/catalog';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { buildPreviews, hasPackages, notInstalled, previewEntry, StoryPreviews, unresolved } from '../src/main/services/storyPreviews';
 import { g } from './fixtures';
-import { REAL_LIBRARY, describeWith, realDevelop } from './realCheckouts';
+import { REAL_LIBRARY as REAL, describeWith, libraryMissing } from './realCheckouts';
 
 /**
  * What the builds do, counted on the real esbuild and Sass, so a test can say how a change is built (one build kept
@@ -581,13 +581,7 @@ describe('serving a built folder', () => {
  * The real library on this machine, not a fixture: every one of develop's story files builds into the page, built with
  * the clone's own packages and nothing fetched.
  */
-const REAL = REAL_LIBRARY;
-const missing =
-	realDevelop === null
-		? `no clone of the design system with develop at ${REAL} (set FUI_ROOT)`
-		: hasPackages(REAL)
-			? null
-			: `${REAL} has no packages installed`;
+const missing = libraryMissing ?? (hasPackages(REAL) ? null : `${REAL} has no packages installed`);
 
 describeWith(missing, 'against the real library on origin/develop', () => {
 	it('builds every story file with the clone’s own packages, and serves it', async () => {

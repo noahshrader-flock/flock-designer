@@ -4,15 +4,13 @@ import { expect, it } from 'vitest';
 import { designSystemOf } from '../src/shared/catalog';
 import { isStoryFile, literalField, readCatalog, UNGROUPED } from '../src/main/services/componentCatalog';
 import { libraryReads } from '../src/main/services/designLibrary';
-import { REAL_LIBRARY, describeWith, realDevelop } from './realCheckouts';
+import { REAL_LIBRARY as REAL, describeWith, libraryMissing } from './realCheckouts';
 
 /** The reader against the real library's branch, not a fixture. */
-const REAL = REAL_LIBRARY;
 const FUI = designSystemOf({ repository: 'flocksafety/flock-react-component-lib', branch: 'develop' });
 const git = (...args: string[]) => execFileSync('git', ['-C', REAL, ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-const missing = realDevelop === null ? `no clone of the design system with develop at ${REAL} (set FUI_ROOT)` : null;
 
-describeWith(missing, 'against the real library', () => {
+describeWith(libraryMissing, 'against the real library', () => {
 	// The app's own reads (one `cat-file --batch` for the stories), so this checks them on the real library too.
 	const reads = libraryReads(REAL, `refs/remotes/origin/${FUI.branch}`);
 

@@ -24,6 +24,13 @@ export const realDevelop = ((): string | null => {
 	}
 })();
 
+/** Why the library's tests cannot run here, or null when they can. */
+export const libraryMissing = realDevelop === null ? `no clone of the design system with develop at ${REAL_LIBRARY} (set FUI_ROOT)` : null;
+/** Why Coke's cannot, or null. */
+export const cokeMissing = existsSync(join(REAL_COKE, '.dsnr', 'workspace.json'))
+	? null
+	: `no Coke checkout with a descriptor at ${REAL_COKE} (set COKE_ROOT)`;
+
 /**
  * Tests that need something only some machines have. Where it is missing they are listed as skipped, with why in the
  * name, so a run that did not check them says so rather than passing quietly.

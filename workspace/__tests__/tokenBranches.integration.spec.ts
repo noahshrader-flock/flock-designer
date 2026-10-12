@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Check, PullRequest, ShareTools } from '../src/main/services/share';
 import { TOKEN_BRANCH, TokenBranches, proposalText } from '../src/main/services/tokenBranches';
 import { g } from './fixtures';
-import { REAL_LIBRARY, describeWith, realDevelop } from './realCheckouts';
+import { REAL_LIBRARY as REAL, describeWith, libraryMissing, realDevelop } from './realCheckouts';
 
 /**
  * Keeping a change to the tokens on a branch, and proposing it (T4 and T5 of the design system plan), against a real
@@ -231,10 +231,8 @@ describe('proposing it (T5)', () => {
 });
 
 /** The real library, read where it is and saved to in a throwaway clone of it: the person's clone is never written to. */
-const REAL = REAL_LIBRARY;
-const missing = realDevelop === null ? `no clone of the design system with develop at ${REAL} (set FUI_ROOT)` : null;
 
-describeWith(missing, 'saving a change to the real library', () => {
+describeWith(libraryMissing, 'saving a change to the real library', () => {
 	it('commits a tone, a role pointed at another step and the spacing on its develop, each file as the library writes it', async () => {
 		const throwaway = join(home, 'fui');
 		g(home, 'clone', '-q', '--shared', '--no-checkout', REAL, throwaway);
