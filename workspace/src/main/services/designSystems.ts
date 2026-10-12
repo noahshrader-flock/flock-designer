@@ -111,11 +111,10 @@ const repositoryAt = (root: string): string | null => {
 };
 
 /**
- * The design systems a person connected, and which is shown, in their own small file in the app's settings. What is kept
- * is a hint: whoever reads it checks the folder is still there. A file kept by an earlier version (one connected folder,
- * `{ "folder": … }`) is read as that one design system: that version took only FUI, whose branch is `develop`.
+ * What the file holds, checked: only whole design systems, and a current one among them. A file kept by an earlier
+ * version (one connected folder, `{ "folder": … }`) is read as that one design system: that version took only FUI,
+ * whose branch is `develop`.
  */
-/** What the file holds, checked: only whole design systems, and a current one among them. */
 const parseConnected = (raw: unknown): ConnectedDesignSystems => {
 	const kept = asRecord(raw);
 	if (typeof kept.folder === 'string' && isAbsolute(kept.folder) && kept.systems === undefined) {
@@ -133,6 +132,10 @@ const parseConnected = (raw: unknown): ConnectedDesignSystems => {
 	return { systems, current };
 };
 
+/**
+ * The design systems a person connected, and which is shown, in their own small file in the app's settings. What is kept
+ * is a hint: whoever reads it checks the folder is still there.
+ */
 export class DesignSystemsMemory {
 	private readonly file: JsonFile<ConnectedDesignSystems>;
 

@@ -157,7 +157,7 @@ const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): P
 			viewerDir = await deps.buildViewer();
 			noViewer = '';
 		} catch (err) {
-			noViewer = ` Its pages have no comments: the viewer did not build (${err instanceof Error ? err.message.split('\n')[0] : String(err)}).`;
+			noViewer = ` Its pages have no comments: the viewer did not build (${errorText(err, { firstLine: true })}).`;
 		}
 	}
 	const built = buildSite({ designRoot, outDir, comments, viewer: viewerDir ? { dir: viewerDir, ref: DESIGN_REPO } : undefined });

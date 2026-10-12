@@ -7,9 +7,6 @@ import { runFile } from './process';
 import { errorText } from '../../shared/result';
 import { OBJECT_ID_PATTERN } from '../../shared/sha';
 
-/** Git is given a minute unless a caller says otherwise: a hung command would hold up every other one on its repository. */
-const GIT_TIMEOUT_MS = 60_000;
-
 /**
  * Git, through argv only.
  *
@@ -27,7 +24,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const isLockContention = (detail: string): boolean => /index\.lock|Unable to create .*\.lock|another git process/i.test(detail);
 
 export interface GitOptions {
-	/** A minute when not given. */
+	/** `runFile`'s limit when not given: a hung command would hold up every other one on its repository. */
 	timeoutMs?: number;
 	env?: Record<string, string>;
 	/** What the command reads from its input (`cat-file --batch-check`), given all at once. */
@@ -45,11 +42,10 @@ const attempt = async (root: string, args: string[], { timeoutMs, env, input }: 
 	// refresh the index in the background and take the same lock a checkout needs. Git
 	// documents this flag for exactly the case of a tool polling a repository.
 	const { stdout } = await runFile('git', ['--no-optional-locks', '-C', root, ...args], {
-		timeoutMs: timeoutMs ?? GIT_TIMEOUT_MS,
+		timeoutMs,
 		// Never wait for someone to type a password into a window that has no terminal, nor for ssh to ask one (an app
 		// opened from the Dock has no terminal for it). A person's own ssh command is theirs, and kept.
 		env: { GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: process.env.GIT_SSH_COMMAND ?? 'ssh -o BatchMode=yes', ...env },
-		// What a command reads from its input (`cat-file --batch-check`), given all at once.
 		input,
 	});
 	return stdout;
@@ -70,7 +66,7 @@ const queued = (root: string, args: string[], options: GitOptions): Promise<stri
 			try {
 				return await attempt(root, args, options);
 			} catch (err) {
-				lastDetail = (err as { stderr?: string; message: string }).stderr?.trim() || (err as Error).message;
+				lastDetail = errorText(err);
 				if (!isLockContention(lastDetail)) throw new Error(lastDetail);
 				if (i < 3) await sleep(250 * (i + 1));
 			}
@@ -284,16 +280,17 @@ const trunk = async (root: string): Promise<string | null> => {
 	}
 };
 
-/**
- * Who has committed on a branch, beyond what is already on the trunk, in the
- * order they first appear. Names only: a shared repository is no place for
- * anyone's email address.
- */
+/** Someone who committed, as git has them. */
 export interface Author {
 	name: string;
 	email: string;
 }
 
+/**
+ * Who has committed on a branch, beyond what is already on the trunk, in the order they first appear. The email is only
+ * for telling who is who (`isSamePerson`); what is kept or shown of a person is their name (`peopleOn`), since a shared
+ * repository is no place for anyone's email address.
+ */
 export const branchAuthors = async (root: string, branch: string): Promise<Author[]> => {
 	const base = await trunk(root);
 	if (base === null || base === branch) return [];
@@ -322,7 +319,6 @@ export const localIdentity = async (root: string): Promise<Author> => {
 	return { name: await read('user.name'), email: await read('user.email') };
 };
 
-/** The commit a branch is at, without switching to it. */
 /**
  * Where `origin` points, as git resolves it (its `insteadOf` rules, a worktree's shared config), or null when there is
  * none. For one repository; a scan of many reads `.git/config` itself (`originOf`), sparing a process per folder.
@@ -340,6 +336,7 @@ export const hasFileAt = (root: string, ref: string, path: string): Promise<bool
 export const changedSince = async (root: string, commit: string, path: string): Promise<boolean> =>
 	(await git(root, ['diff', '--name-only', commit, 'HEAD', '--', path])) !== '';
 
+/** The commit a branch is at, without switching to it. */
 export const branchCommit = async (root: string, branch: string): Promise<string> => git(root, ['rev-parse', '--verify', `refs/heads/${branch}`]);
 
 export const checkoutBranch = async (root: string, branch: string): Promise<void> => {

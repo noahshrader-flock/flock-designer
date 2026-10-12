@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Iteration, Person } from '../../shared/contract';
 import type { WorkspaceDescriptor } from './descriptor';
 import {
@@ -19,6 +19,7 @@ import { gitHubRepoOf } from './repositories';
 import { parsePrototypeName } from '../../shared/prototypeNames';
 import { PROJECT_ID } from '../../shared/validate';
 import { parseIterations, serializeIterations } from '../../shared/records';
+import { writeAtomic } from './jsonFile';
 
 /**
  * Named attempts at the question, and the record of them.
@@ -66,9 +67,8 @@ export const readIterations = (recordsRoot: string, projectId: string): Iteratio
 };
 
 const writeIterations = (recordsRoot: string, projectId: string, iterations: Iteration[]): void => {
-	const path = recordPath(recordsRoot, projectId);
-	mkdirSync(dirname(path), { recursive: true });
-	writeFileSync(path, serializeIterations(iterations));
+	// Whole, so a reader never sees half a list, which it would refuse.
+	writeAtomic(recordPath(recordsRoot, projectId), serializeIterations(iterations));
 };
 
 /** The one `feature/<project-id>` branch for real-code work. */
@@ -203,12 +203,12 @@ export const continueIteration = async (
 	recordsRoot: string,
 	projectId: string,
 	name: string,
-	signedInLogin: string | null = null,
-	descriptor?: WorkspaceDescriptor,
+	signedInLogin: string | null,
+	descriptor: WorkspaceDescriptor,
 ): Promise<Iteration> => {
 	let iterations = readIterations(recordsRoot, projectId);
 	let iteration = iterations.find((i) => i.name === name);
-	if (!iteration && descriptor) {
+	if (!iteration) {
 		const adopted = await adoptUnrecorded(productRoot, descriptor, projectId, name);
 		if (adopted) {
 			iteration = adopted;

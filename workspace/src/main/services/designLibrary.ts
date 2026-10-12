@@ -16,6 +16,7 @@ import { readTokens } from './designTokens';
 import { type DesignSystemsMemory, defaultBranch, designSystemId, filesOf, findDesignSystems, within } from './designSystems';
 import { git } from './git';
 import { singleFlight } from './concurrency';
+import { errorText } from '../../shared/result';
 
 /**
  * The connected design system on this machine, for the Design System tab: kept up to date, and read.
@@ -78,15 +79,15 @@ export const updateLibrary = async (root: string, branch: string): Promise<Exclu
 			timeoutMs: FETCH_TIMEOUT_MS,
 		});
 	} catch (err) {
-		return { failed: fetchProblem((err as Error).message, branch) };
+		return { failed: fetchProblem(errorText(err), branch) };
 	}
 	return (await libraryCommit(root, branch)) === before ? 'unchanged' : 'updated';
 };
 
 /**
- * The library's two reads, for the catalog and the tokens, on `ref` (a commit, or the copy of a branch) through git. Listing also reads every story it lists with one
- * `git cat-file --batch`, so the files the catalog asks for next are already here: one git process for eighty stories,
- * not eighty. A file not read that way is read on its own.
+ * The library's two reads, for the catalog and the tokens, on `ref` (a commit, or the copy of a branch) through git.
+ * Listing also reads every story it lists with one `git cat-file --batch`, so the files the catalog asks for next are
+ * already here: one git process for eighty stories, not eighty. A file not read that way is read on its own.
  */
 export const libraryReads = (root: string, ref: string): CatalogReads => {
 	const read = new Map<string, Promise<Map<string, string>>>();

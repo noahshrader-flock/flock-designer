@@ -43,7 +43,6 @@ describe('prepareAddress', () => {
 		const d = deps();
 		const out = await prepareAddress(d, target());
 		expect(d.readComments).toHaveBeenCalledTimes(1);
-		expect(out.open).toBe(1);
 		// The file still holds every comment; the task says which one to act on.
 		expect(readFileSync(out.path, 'utf8')).toContain('## Comment 2');
 		expect(out.task).toContain(out.path);
@@ -71,7 +70,6 @@ describe('prepareAddress', () => {
 		// The file still holds every comment -- it is the project's file, and its pictures are kept in
 		// step with it -- so which one to act on is said in the task.
 		const out = await prepareAddress(deps(), { ...target(), commentId: 2 });
-		expect(out.open).toBe(1);
 		expect(out.task).toContain('Address comment 2 on this project, and only that one.');
 		expect(out.task).toContain('Act on comment 2 alone.');
 		// The others are still in the file, as context.

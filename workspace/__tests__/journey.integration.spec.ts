@@ -126,7 +126,7 @@ describe('from a request to a running preview', () => {
 		expect(readIterations(records, 'inactive-users').map((i) => i.name)).toEqual(['codebase']);
 
 		// 9. Come back to it later and the commit is recorded.
-		const back = await continueIteration(root, records, 'inactive-users', 'codebase');
+		const back = await continueIteration(root, records, 'inactive-users', 'codebase', null, readDescriptor(root));
 		expect(back.commit).toMatch(/^[0-9a-f]{40}$/);
 		expect((await readCheckout(root)).branch).toBe('feature/inactive-users');
 	});

@@ -120,14 +120,14 @@ describe('continueIteration', () => {
 		g('commit', '-q', '-m', 'work');
 		g('checkout', '-q', 'develop');
 
-		const back = await continueIteration(root, records, 'demo', 'i1');
+		const back = await continueIteration(root, records, 'demo', 'i1', null, descriptor);
 		expect((await readCheckout(root)).branch).toBe('fd/demo/i1');
 		expect(back.commit).toMatch(/^[0-9a-f]{40}$/);
 		expect(readIterations(records, 'demo')[0]?.commit).toBe(back.commit);
 	});
 
 	it('refuses an iteration it has no record of', async () => {
-		await expect(continueIteration(root, records, 'demo', 'i9')).rejects.toThrow(/no iteration called i9/);
+		await expect(continueIteration(root, records, 'demo', 'i9', null, descriptor)).rejects.toThrow(/no iteration called i9/);
 	});
 });
 
@@ -180,7 +180,7 @@ describe('recordPreview', () => {
 	it('survives the record being refreshed when the iteration is opened again', async () => {
 		await oldPrototype(1);
 		recordPreview(records, 'demo', 'i1', 'https://dev-coke-pr-5.example.test');
-		await continueIteration(root, records, 'demo', 'i1');
+		await continueIteration(root, records, 'demo', 'i1', null, descriptor);
 		expect(readIterations(records, 'demo')[0]?.previewUrl).toBe('https://dev-coke-pr-5.example.test');
 	});
 

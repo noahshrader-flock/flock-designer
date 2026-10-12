@@ -8,16 +8,10 @@
  * a run is missed and nothing runs twice at once (publishing, a site deploy).
  */
 
-export interface SingleFlight<K, T> {
-	run(key: K, start: () => Promise<T>): Promise<T>;
-	has(key: K): boolean;
-	readonly size: number;
-}
-
-export const singleFlight = <K, T>(): SingleFlight<K, T> => {
+export const singleFlight = <K, T>() => {
 	const running = new Map<K, Promise<T>>();
 	return {
-		run(key, start) {
+		run(key: K, start: () => Promise<T>): Promise<T> {
 			const have = running.get(key);
 			if (have) return have;
 			const started = start().finally(() => {
@@ -25,10 +19,6 @@ export const singleFlight = <K, T>(): SingleFlight<K, T> => {
 			});
 			running.set(key, started);
 			return started;
-		},
-		has: (key) => running.has(key),
-		get size() {
-			return running.size;
 		},
 	};
 };

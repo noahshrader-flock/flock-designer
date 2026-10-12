@@ -3,6 +3,7 @@ import { basename, dirname, join } from 'node:path';
 import type { IterationKind } from '../../shared/contract';
 import { resolveInside } from './paths';
 import { asRecord } from '../../shared/json';
+import { errorText } from '../../shared/result';
 
 /**
  * Reads what a repository says about itself.
@@ -86,7 +87,7 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 	try {
 		raw = JSON.parse(text);
 	} catch (err) {
-		throw new Error(`${DESCRIPTOR_PATH} is not valid JSON: ${(err as Error).message}`);
+		throw new Error(`${DESCRIPTOR_PATH} is not valid JSON: ${errorText(err)}`);
 	}
 	if (typeof raw !== 'object' || raw === null) {
 		throw new Error(`${DESCRIPTOR_PATH} is not an object`);
@@ -164,10 +165,8 @@ export const findCommand = (descriptor: WorkspaceDescriptor, commandId: string):
 export const designSystemCheckout = (root: string, designSystem: WorkspaceDescriptor['designSystem'] = readDescriptor(root).designSystem): string =>
 	designSystem.folder !== undefined ? join(root, designSystem.folder) : join(dirname(root), basename(designSystem.package));
 
-// The descriptor a product ships, `.dsnr/workspace.json`, as parsed: the main process's alone, never the window's.
-
 /**
- * What a repository says about itself, read from `.dsnr/workspace.json`.
+ * What a repository says about itself, read from `.dsnr/workspace.json`: the main process's alone, never the window's.
  *
  * Workspace hard-codes nothing about Coke. A repository that wants to be opened
  * here declares where its context lives, what may be run, and how a prototype is

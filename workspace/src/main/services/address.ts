@@ -56,7 +56,7 @@ export const chooseComment = (comments: ReviewComment[], commentId: number): num
 export const prepareAddress = async (
 	deps: AddressDeps,
 	{ recordsRoot, projectId, iteration, commentId }: AddressTarget,
-): Promise<{ task: string; open: number; path: string }> => {
+): Promise<{ task: string; path: string }> => {
 	if (deps.agentRunning()) {
 		throw new Error(AGENT_BUSY);
 	}
@@ -90,5 +90,5 @@ export const prepareAddress = async (
 	// Written even when nothing is open, so the file never keeps listing comments that have since been resolved.
 	const written = writeCommentsExport(recordsRoot, input);
 	const number = chooseComment(comments, commentId);
-	return { task: addressTask(written.path, iteration.branch, skill, number), open: 1, path: written.path };
+	return { task: addressTask(written.path, iteration.branch, skill, number), path: written.path };
 };

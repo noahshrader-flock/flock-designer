@@ -17,7 +17,7 @@ export const siteDeploys = ({ github, designClone }: { github: Pick<GitHubSessio
 	const stopped = new Map<string, string>();
 	const signedIn = () => github.state().state === 'signedIn';
 
-	/** Runs a deploy in the background under `key`, one at a time for a key, and once more if asked again meanwhile. */
+	/** Runs a deploy in the background under `key`. */
 	const inBackground = (key: string, deploy: () => Promise<unknown>): void => {
 		if (!signedIn()) return;
 		void running.run(key, () =>

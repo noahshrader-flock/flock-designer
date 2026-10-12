@@ -2,6 +2,7 @@ import type { WorkspaceDescriptor } from './descriptor';
 import { classify } from './branchProjects';
 import type { Problem, SyncResult } from './designSync';
 import { branchAuthors, branchCommit, isSamePerson, listBranches, localIdentity, pushBranch, git } from './git';
+import { errorText } from '../../shared/result';
 
 /**
  * Publishing the person's own work branches, so the design repository never points at a branch that
@@ -55,7 +56,7 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 	// What GitHub has of them, in one round trip.
 	let remote: Map<string, string>;
 	try {
-		const out = await git(root, ['ls-remote', '--heads', 'origin', ...prefixes.map((p) => `refs/heads/${p}*`)], { timeoutMs: 60_000 });
+		const out = await git(root, ['ls-remote', '--heads', 'origin', ...prefixes.map((p) => `refs/heads/${p}*`)]);
 		remote = new Map(
 			out
 				.split('\n')
@@ -66,7 +67,7 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 				}),
 		);
 	} catch (err) {
-		const why = err instanceof Error ? err.message.split('\n')[0] : String(err);
+		const why = errorText(err, { firstLine: true });
 		return {
 			published,
 			mine,

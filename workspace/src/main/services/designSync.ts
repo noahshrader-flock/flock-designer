@@ -104,7 +104,7 @@ const recordsOnTopOf = async (
 	designRoot: string,
 	theirs: string,
 ): Promise<string | { commit: string | null; ids: string[]; paths: string[]; read: Map<string, string | null> }> => {
-	const g = (args: string[], input?: string) => git(designRoot, args, { timeoutMs: 60_000, input });
+	const g = (args: string[], input?: string) => git(designRoot, args, { input });
 	const blobAt = (rev: string, path: string) => g(['rev-parse', '-q', '--verify', `${rev}:${path}`]).catch(() => null);
 	const base = await g(['merge-base', 'HEAD', theirs]).catch(() => null);
 	if (base === null) return 'The design repository here and on GitHub share no history, so records are not published into it.';
@@ -169,7 +169,7 @@ const recordsOnTopOf = async (
  * move over them, and git itself refuses when anything else of the person's would be overwritten. Then nothing moves.
  */
 const catchUp = async (designRoot: string, target: string, paths: string[], read: Map<string, string | null>): Promise<void> => {
-	const g = (...args: string[]) => git(designRoot, args, { timeoutMs: 60_000 });
+	const g = (...args: string[]) => git(designRoot, args);
 	if ((await g('rev-parse', 'HEAD')) === target) return;
 	for (const path of paths.filter(isRecordFile)) {
 		const file = join(designRoot, path);

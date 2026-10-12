@@ -1,3 +1,4 @@
+import { errorText } from '../../shared/result';
 /**
  * Where a change to the library's tokens is kept, and how it is proposed (T4 and T5 of the design system plan).
  *
@@ -37,20 +38,14 @@ export const TOKEN_BRANCH = dsnrBranchPattern('tokens');
 type Kept = TokenBranch & { base: string; tip: string };
 
 /** A commit of `base`'s tree with `files` (path to text) as given, whose parent is `parent`; null when nothing would change. */
-export const commitFiles = async (
-	root: string,
-	base: string,
-	parent: string,
-	files: Map<string, string>,
-	message: string,
-): Promise<string | null> => {
+const commitFiles = async (root: string, base: string, parent: string, files: Map<string, string>, message: string): Promise<string | null> => {
 	const blobs = new Map<string, string>();
 	for (const [path, text] of files) blobs.set(path, await git(root, ['hash-object', '-w', '--stdin'], { input: text }));
 	return commitOnto(root, base, parent, blobs, message);
 };
 
 /** What a save's commit says: how many tokens it changes, and each, in the panel's words. */
-export const commitMessage = (lines: string[]): string =>
+const commitMessage = (lines: string[]): string =>
 	[`Design tokens: ${lines.length === 0 ? 'back as the library has them' : `${lines.length} changed`}`, '', ...lines, '', 'Saved from DSNR.'].join(
 		'\n',
 	);
@@ -84,7 +79,7 @@ const ownBranches = (raw: unknown): Record<string, Kept> =>
 	Object.fromEntries(
 		Object.entries(asRecord(raw)).filter((e): e is [string, Kept] => {
 			const k = asRecord(e[1]);
-			return typeof k.branch === 'string' && TOKEN_BRANCH.test(k.branch) && typeof k.tip === 'string';
+			return typeof k.branch === 'string' && TOKEN_BRANCH.test(k.branch) && typeof k.tip === 'string' && typeof k.base === 'string';
 		}),
 	);
 
@@ -136,9 +131,11 @@ export class TokenBranches {
 		}
 		if (commit === null) throw new Error('This change leaves the library as it is, so there is nothing to save.');
 		// From where DSNR left it, or for a new branch only if there is none of that name: never over a commit it did not make.
-		await git(system.root, ['update-ref', '-m', 'DSNR: save design tokens', `refs/heads/${branch}`, commit, kept?.tip ?? '']).catch((err: Error) => {
-			throw new Error(`${branch} has moved since DSNR last saved to it, so nothing was saved. ${err.message}`);
-		});
+		await git(system.root, ['update-ref', '-m', 'DSNR: save design tokens', `refs/heads/${branch}`, commit, kept?.tip ?? '']).catch(
+			(err: unknown) => {
+				throw new Error(`${branch} has moved since DSNR last saved to it, so nothing was saved. ${errorText(err)}`);
+			},
+		);
 		const next: Kept = { ...(kept ?? this.fresh(branch, base)), tip: commit, saved: edits, saves: (kept?.saves ?? 0) + 1 };
 		this.keep(system.id, next);
 		// Once proposed, the pull request has every save.

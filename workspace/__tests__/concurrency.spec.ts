@@ -15,10 +15,8 @@ describe('one run for a key, its answer shared', () => {
 		const first = later();
 		const a = flight.run('k', () => (started++, first.promise));
 		const b = flight.run('k', () => (started++, Promise.resolve('other')));
-		expect(flight.has('k')).toBe(true);
 		first.done('one');
 		expect(await Promise.all([a, b])).toEqual(['one', 'one']);
-		expect(flight.has('k')).toBe(false);
 		expect(await flight.run('k', () => (started++, Promise.resolve('two')))).toBe('two');
 		expect(started).toBe(2);
 	});
@@ -26,7 +24,6 @@ describe('one run for a key, its answer shared', () => {
 	it('never keeps a failure: the next caller tries again', async () => {
 		const flight = singleFlight<string, string>();
 		await expect(flight.run('k', () => Promise.reject(new Error('offline')))).rejects.toThrow('offline');
-		expect(flight.size).toBe(0);
 		expect(await flight.run('k', () => Promise.resolve('back'))).toBe('back');
 	});
 
@@ -34,7 +31,6 @@ describe('one run for a key, its answer shared', () => {
 		const flight = singleFlight<string, string>();
 		const a = flight.run('a', () => Promise.resolve('A'));
 		const b = flight.run('b', () => Promise.resolve('B'));
-		expect(flight.size).toBe(2);
 		expect(await Promise.all([a, b])).toEqual(['A', 'B']);
 	});
 });

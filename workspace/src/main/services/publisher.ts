@@ -31,7 +31,7 @@ export const publishInOrder = async <B extends SyncResult>(
 };
 
 export interface PublishContext {
-	/** What to hand to the two syncs; null when there is nothing to publish from here. */
+	/** Publishes branches, then records: what each sync did. */
 	run(): Promise<{ branches: SyncResult; records: SyncResult }>;
 }
 

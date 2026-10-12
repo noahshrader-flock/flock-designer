@@ -6,7 +6,7 @@ import { codebaseBranchFor, continueIteration, createIteration } from './iterati
 
 /** A checkout the person opened, as a handler has it: its folder, its descriptor, and the records beside it. */
 export interface WorkCheckout {
-	canonical: string;
+	readonly canonical: string;
 	readonly descriptor: WorkspaceDescriptor;
 	readonly recordsRoot: string;
 }
