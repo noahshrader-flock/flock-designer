@@ -1,10 +1,11 @@
 import type { PageStatus } from '../../shared/contract';
 import { prototypePagePath, sitePath } from '../../shared/designPaths';
-import type { DesignRepoRef, GitHubApi } from './designRepo';
+import type { GitHubApi } from './designRepo';
 import { type SyncResult, syncRecords } from './designSync';
 import { git } from './git';
 import { asArray, asRecord } from '../../shared/json';
 import { errorText } from '../../shared/result';
+import { type RepoRef, formatRepo } from '../../shared/repoRef';
 
 /**
  * Publishing a prototype to its page on the design repository's GitHub Pages site: the one way it is done, from the
@@ -29,7 +30,7 @@ export interface SiteVisibility {
 const forbidden = (err: unknown): boolean => asRecord(err).status === 403 || /\b403\b|not accessible by integration/i.test(errorText(err));
 const notFound = (err: unknown): boolean => asRecord(err).status === 404 || /\b404\b|Not Found/.test(errorText(err));
 
-export const readVisibility = async (github: GitHubApi, ref: DesignRepoRef): Promise<SiteVisibility> => {
+export const readVisibility = async (github: GitHubApi, ref: RepoRef): Promise<SiteVisibility> => {
 	const base = `/repos/${ref.owner}/${ref.repo}`;
 	const repo = asRecord(await github.api(base));
 	let site: SiteVisibility['site'] = null;
@@ -69,7 +70,7 @@ const deployedSha = async (github: GitHubApi, base: string): Promise<string | nu
 	return null;
 };
 
-export const pageStatus = async (github: GitHubApi, ref: DesignRepoRef, projectId: string, name: string): Promise<PageStatus> => {
+export const pageStatus = async (github: GitHubApi, ref: RepoRef, projectId: string, name: string): Promise<PageStatus> => {
 	const path = sitePath(projectId, name);
 	if (path === null) return { state: 'none' };
 	const vis = await readVisibility(github, ref);
@@ -118,7 +119,7 @@ export type SiteBehind = { kind: 'page'; projectId: string; name: string } | { k
  * the site is built from is `code`. Null when the site has what GitHub has, when a deploy is already on its way (it will
  * take what is there), or when there is nothing to compare with yet.
  */
-export const siteBehind = async (github: GitHubApi, ref: DesignRepoRef): Promise<SiteBehind | null> => {
+export const siteBehind = async (github: GitHubApi, ref: RepoRef): Promise<SiteBehind | null> => {
 	const vis = await readVisibility(github, ref);
 	if (!vis.site?.url) return null;
 	const base = `/repos/${ref.owner}/${ref.repo}`;
@@ -154,7 +155,7 @@ export const recordsFrom = async (clone: string | null): Promise<Pick<PublishInp
 
 interface DeployInput {
 	github: GitHubApi;
-	ref: DesignRepoRef;
+	ref: RepoRef;
 	/**
 	 * The branch the records are pushed to, when they are pushed from a clone. The site is deployed from the repository's
 	 * default branch, so records anywhere else would never reach it: that is refused.
@@ -208,7 +209,7 @@ export interface Published {
  * Whether the last deploy of the site already had this page, asked of that deploy's commit. Only a clear "no" counts:
  * when GitHub cannot say, it is not the first time, so nothing is made of a guess (a browser tab opened by mistake).
  */
-const isFirstTime = async (github: GitHubApi, ref: DesignRepoRef, projectId: string, name: string): Promise<boolean> => {
+const isFirstTime = async (github: GitHubApi, ref: RepoRef, projectId: string, name: string): Promise<boolean> => {
 	const base = `/repos/${ref.owner}/${ref.repo}`;
 	try {
 		const deployed = await deployedSha(github, base);
@@ -325,7 +326,7 @@ export const publish = async (input: PublishInput): Promise<Published> => {
 			`This page opens for anyone, signed in or not, although GitHub said the site was private. Do not share it; check the repository's Pages settings. ${url}`,
 		);
 	} else {
-		log(`Published. It opens for people signed in to GitHub with access to ${ref.owner}/${ref.repo}: ${url}`);
+		log(`Published. It opens for people signed in to GitHub with access to ${formatRepo(ref)}: ${url}`);
 	}
 	return { url, public: opened, first };
 };

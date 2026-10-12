@@ -15,11 +15,11 @@ import {
 } from './git';
 import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
-import { gitHubRepoOf } from './repositories';
 import { parsePrototypeName } from '../../shared/prototypeNames';
 import { PROJECT_ID } from '../../shared/validate';
 import { parseIterations, serializeIterations } from '../../shared/records';
 import { writeAtomic } from './jsonFile';
+import { parseRemote } from '../../shared/repoRef';
 
 /**
  * Named attempts at the question, and the record of them.
@@ -106,7 +106,7 @@ export const createIteration = async (
 
 	// Where it is on GitHub, so the project links to it for people without the repository.
 	const origin = await originUrl(productRoot);
-	const repository = origin === null ? null : gitHubRepoOf(origin);
+	const repository = origin === null ? null : parseRemote(origin);
 	const iteration: Iteration = {
 		projectId,
 		name,

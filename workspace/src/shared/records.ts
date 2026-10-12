@@ -1,7 +1,8 @@
 import type { Iteration, ProjectIteration } from './contract';
 import { asRecord } from './json';
 import { asPeople, mergePeople } from './people';
-import { asCover, asDate, asGitHubRepository, asPullRequest, asRoute } from './validate';
+import { asCover, asDate, asPullRequest, asRoute } from './validate';
+import { asRepositoryPath } from './repoRef';
 
 /**
  * Two copies of one project's `iterations.json`, made on different machines, as one.
@@ -63,7 +64,7 @@ const KNOWN = [
 const checked = (r: Rec): Iteration => {
 	const rest = Object.fromEntries(Object.entries(r).filter(([k]) => !KNOWN.includes(k)));
 	const pullRequest = asPullRequest(r.pullRequest);
-	const repository = asGitHubRepository(r.repository);
+	const repository = asRepositoryPath(r.repository);
 	const route = asRoute(r.route);
 	const basedOn = basedOnOf(r.basedOn);
 	const cover = asCover(r.cover);

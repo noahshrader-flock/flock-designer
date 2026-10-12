@@ -9,6 +9,7 @@ import { statesOf } from '../shared/prototypeStates';
 import { parseIterations } from '../shared/records';
 import { plural } from '../shared/plural';
 import { extensionOf } from '../shared/mime';
+import type { RepoRef } from '../shared/repoRef';
 
 /**
  * The site prototypes are published as, built from the design repository: every project with a saved page, every
@@ -37,7 +38,7 @@ export interface SiteInput {
 	 * Comments on each iteration's page: the built viewer (`viewer.js`, `viewer.css`), and the repository whose review
 	 * threads they are. Without it the pages are as they were, with nothing to comment with.
 	 */
-	viewer?: { dir: string; ref: { owner: string; repo: string } };
+	viewer?: { dir: string; ref: RepoRef };
 }
 
 export interface SiteSummary {
@@ -203,7 +204,7 @@ const projectPage = (p: SiteProject, comments: Map<string, number> | undefined):
  * What the page's bar and comments are told, safe inside a script element: which iteration this is, where the others
  * are, and the states the page has.
  */
-const viewerConfig = (ref: { owner: string; repo: string }, p: SiteProject, current: Page, states: string[]): string =>
+const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: string[]): string =>
 	JSON.stringify({
 		owner: ref.owner,
 		repo: ref.repo,

@@ -1,21 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { gitHubRepoOf, mergeRepositories, originOf, reachableRepositories, visibleRepositories } from '../src/main/services/repositories';
+import { mergeRepositories, originOf, reachableRepositories, visibleRepositories } from '../src/main/services/repositories';
 import { type RouteCall, fakeGitHub } from './fakes/github';
-
-describe('gitHubRepoOf', () => {
-	it('reads owner/repo from each form git writes a GitHub remote in', () => {
-		expect(gitHubRepoOf('https://github.com/flock-safety/flock-coke.git')).toBe('flock-safety/flock-coke');
-		expect(gitHubRepoOf('https://github.com/flock-safety/flock-coke')).toBe('flock-safety/flock-coke');
-		expect(gitHubRepoOf('git@github.com:flock-safety/flock-coke.git')).toBe('flock-safety/flock-coke');
-		expect(gitHubRepoOf('ssh://git@github.com/flock-safety/flock-coke.git')).toBe('flock-safety/flock-coke');
-		expect(gitHubRepoOf('https://x-access-token@github.com/a/b.git')).toBe('a/b');
-	});
-
-	it('is null for anything that is not GitHub', () => {
-		expect(gitHubRepoOf('https://gitlab.com/a/b.git')).toBeNull();
-		expect(gitHubRepoOf('/srv/git/b.git')).toBeNull();
-	});
-});
 
 describe('originOf', () => {
 	it('reads the origin remote from .git/config, and only origin', () => {

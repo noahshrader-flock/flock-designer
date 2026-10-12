@@ -55,6 +55,7 @@ import { registerPage } from './ipc/page';
 import { registerPrototypes } from './ipc/prototypes';
 import { registerPublishing } from './ipc/publishing';
 import { registerReview } from './ipc/review';
+import { formatRepo, repoRefOf } from '../shared/repoRef';
 
 export interface IpcContext {
 	window: BrowserWindow;
@@ -285,8 +286,7 @@ export const ipcDeps = ({
 		const system = shownSystem();
 		if (system === null) throw new Error('No design system is connected. Connect one in Components: its voice and tone is in its agent files.');
 		if (personGitHub === null) throw new Error(NEEDS_GH);
-		const [owner = '', repo = ''] = system.repository.split('/');
-		return new VoiceAndToneFile({ repo: { owner, repo }, folder: system.folder, github: personGitHub, file: voiceBranchFile });
+		return new VoiceAndToneFile({ repo: repoRefOf(system.repository), folder: system.folder, github: personGitHub, file: voiceBranchFile });
 	};
 
 	/**
@@ -298,7 +298,7 @@ export const ipcDeps = ({
 		cloning: null,
 		installing: null,
 	};
-	const DESIGN = `${DESIGN_REPO.owner}/${DESIGN_REPO.repo}`;
+	const DESIGN = formatRepo(DESIGN_REPO);
 	/**
 	 * What cloning `repository` into `folder` would do. Cloning, from the New modal, is only of a repository the person's
 	 * own GitHub list returned (the last list shown, or asked again), only into the clone folder, and with the design

@@ -11,6 +11,7 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, Dia
 import { Field, FieldLabel } from './ui/field';
 import { Skeleton } from './ui/skeleton';
 import { SkeletonStatus } from './Skeletons';
+import { repoName } from '../shared/repoRef';
 
 /**
  * Connecting a design system (P4 of the design system plan), centered in the window like the GitHub sign-in: one of the
@@ -41,7 +42,7 @@ export const ConnectDesignSystem = ({ onConnected, onCancel }: { onConnected: ()
 	const clone = useClone(picked, setError, true);
 	const connect = async () => {
 		setError(null);
-		const name = picked?.split('/')[1] ?? '';
+		const name = picked ? repoName(picked) : '';
 		const r = await clone.run(window.workspace.connectDesignSystem, clone.plan?.place.state === 'cloned' ? `Looking in ${name}…` : undefined);
 		if (!r?.ok) return;
 		if (r.value.state === 'connected') onConnected();

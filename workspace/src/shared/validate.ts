@@ -46,14 +46,7 @@ export const asRoute = (v: unknown): string | null => {
 	return path;
 };
 
-/** A repository on GitHub, by its `owner/repo`: GitHub's own characters, and never `.` or `..`. */
-const isGitHubRepository = (s: unknown): s is string =>
-	typeof s === 'string' && /^[\w.-]+\/[\w.-]+$/.test(s) && !s.split('/').some((p) => p === '.' || p === '..');
-
 const PULL_REQUEST = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+$/;
-
-/** A repository as a record gives it, or null when it is anything else. */
-export const asGitHubRepository = (v: unknown): string | null => (isGitHubRepository(v) ? v : null);
 
 /** A pull request's address as a record gives it, or null when it is not one of GitHub's. */
 export const asPullRequest = (v: unknown): string | null => (typeof v === 'string' && PULL_REQUEST.test(v) ? v : null);

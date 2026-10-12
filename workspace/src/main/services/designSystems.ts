@@ -1,3 +1,4 @@
+import { parseRemote, repoName } from '../../shared/repoRef';
 /**
  * The design systems a person connected, for the Design System tab (P4 of the design system plan): any repository they
  * can reach, **accepted by what is found in it, not by its name** (decision 23). A design system is a folder with
@@ -12,7 +13,7 @@ import { isStoryFile, type CatalogReads } from './componentCatalog';
 import { readTokens } from './designTokens';
 import { git } from './git';
 import { type JsonFile, jsonFile } from './jsonFile';
-import { gitHubRepoOf, originOf } from './repositories';
+import { originOf } from './repositories';
 
 const REMOTE_TIMEOUT_MS = 30_000;
 
@@ -67,7 +68,7 @@ export const nameOf = async (reads: CatalogReads, files: string[], repository: s
 			if (title) return title;
 		}
 	}
-	return (await packageName(reads, folder)) ?? (repository.split('/')[1] as string);
+	return (await packageName(reads, folder)) ?? repoName(repository);
 };
 
 /**
@@ -107,7 +108,7 @@ export const defaultBranch = async (root: string): Promise<string | null> => {
 /** The repository a clone's `origin` is on GitHub (`owner/repo`), or null. */
 const repositoryAt = (root: string): string | null => {
 	const remote = originOf(root);
-	return remote === null ? null : gitHubRepoOf(remote);
+	return remote === null ? null : parseRemote(remote);
 };
 
 /**
@@ -121,7 +122,7 @@ const parseConnected = (raw: unknown): ConnectedDesignSystems => {
 		const repository = repositoryAt(kept.folder);
 		if (repository === null) return { systems: [], current: null };
 		const id = designSystemId(repository, '');
-		return { systems: [{ id, name: repository.split('/')[1] as string, repository, root: kept.folder, folder: '', branch: 'develop' }], current: id };
+		return { systems: [{ id, name: repoName(repository), repository, root: kept.folder, folder: '', branch: 'develop' }], current: id };
 	}
 	const systems = asArray(kept.systems).filter((s): s is ConnectedDesignSystem => {
 		const r = asRecord(s);

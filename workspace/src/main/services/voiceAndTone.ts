@@ -1,3 +1,4 @@
+import { type RepoRef, formatRepo } from '../../shared/repoRef';
 /**
  * The company's voice and tone (T9 of the design system plan): one file in the design system's agent files
  * (`.dsnr/voice-and-tone.md`, in its folder when it lives in a larger repository), read and changed from the Design System
@@ -18,7 +19,7 @@
  */
 import type { VoiceAndTone, VoiceBranch, VoiceSave } from '../../shared/contract';
 import { asArray, asRecord } from '../../shared/json';
-import { DesignRepo, type DesignRepoRef, type GitHubApi } from './designRepo';
+import { DesignRepo, type GitHubApi } from './designRepo';
 import { designSystemId } from './designSystems';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { httpStatus } from './github';
@@ -42,7 +43,7 @@ const PROPOSAL_BODY =
 	'Proposed from the Voice and Tone tab in DSNR.\n\nOnce merged, this is the voice and tone every agent task carries, wherever a product’s own conventions do not say otherwise.';
 
 export class VoiceAndToneFile {
-	private readonly repo: DesignRepoRef;
+	private readonly repo: RepoRef;
 	/** The file's path in the repository: in the design system's folder, when it has one. */
 	private readonly path: string;
 	/** The design system's folder in the repository, empty when it is the whole repository. */
@@ -62,7 +63,7 @@ export class VoiceAndToneFile {
 		now = () => new Date(),
 	}: {
 		/** The design system's repository. */
-		repo: DesignRepoRef;
+		repo: RepoRef;
 		/** Its folder, when it lives in a larger repository; empty when it is the whole repository. */
 		folder?: string;
 		/** The person's own GitHub command line. */
@@ -88,7 +89,7 @@ export class VoiceAndToneFile {
 	 * apart. For one that is the whole repository the id is the repository's name, the key this file has always used.
 	 */
 	private get key(): string {
-		return designSystemId(`${this.repo.owner}/${this.repo.repo}`, this.folder);
+		return designSystemId(formatRepo(this.repo), this.folder);
 	}
 
 	/** The change kept, if one is: an entry naming a branch DSNR did not make is never taken for one. */

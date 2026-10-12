@@ -2,10 +2,10 @@ import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import type { ClonePlace } from '../../shared/contract';
-import { asGitHubRepository } from '../../shared/validate';
 import { CODE_FOLDERS } from './discovery';
 import { FolderMemory } from './folderMemory';
-import { gitHubRepoOf, listedAs, originOf } from './repositories';
+import { listedAs, originOf } from './repositories';
+import { asRepositoryPath, parseRemote, repoName } from '../../shared/repoRef';
 
 /**
  * Where this person's clones go: one folder, theirs to choose, which discovery looks through first, so a repository the
@@ -69,12 +69,12 @@ export const defaultClonePlaceDeps: ClonePlaceDeps = {
  * name, so no path is ever made of one.
  */
 export const clonePlace = (folder: string, repository: string, deps: ClonePlaceDeps = defaultClonePlaceDeps): ClonePlace => {
-	const name = asGitHubRepository(repository)?.split('/')[1];
-	if (name === undefined) throw new Error(`"${repository}" is not a GitHub repository name.`);
-	const at = (deps.paths ?? path).join(folder, name);
+	const checked = asRepositoryPath(repository);
+	if (checked === null) throw new Error(`"${repository}" is not a GitHub repository name.`);
+	const at = (deps.paths ?? path).join(folder, repoName(checked));
 	if (!deps.exists(at) || deps.list(at).length === 0) return { state: 'free', path: at };
 	const origin = deps.exists((deps.paths ?? path).join(at, '.git')) ? deps.origin(at) : null;
-	const repo = origin === null ? null : gitHubRepoOf(origin);
+	const repo = origin === null ? null : parseRemote(origin);
 	if (repo !== null && listedAs([repo], repository) !== undefined) return { state: 'cloned', path: at };
 	return {
 		state: 'taken',

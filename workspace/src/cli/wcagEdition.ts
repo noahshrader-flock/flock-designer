@@ -1,3 +1,4 @@
+import type { RepoRef } from '../shared/repoRef';
 /**
  * `dsnr wcag-edition` (T7 of the design system plan): asks the W3C which edition of WCAG 2 is its latest published one, and
  * when it is not the one the app's numbers come from (`WCAG_EDITION`), opens an issue on the design repository saying so,
@@ -11,7 +12,7 @@ export interface WcagEditionDeps {
 	fetchText: (url: string) => Promise<string>;
 	/** GitHub, to open the issue on `repo`; null where it cannot be asked, and then the difference is only printed. */
 	github: GitHubApi | null;
-	repo: { owner: string; repo: string };
+	repo: RepoRef;
 	out: (text: string) => void;
 }
 

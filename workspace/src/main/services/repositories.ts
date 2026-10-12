@@ -11,14 +11,6 @@ import type { GitHubSession } from './githubSession';
  * repository to do it: these are clones discovery found, which the person has not accepted yet.
  */
 
-/** `owner/repo` from a GitHub remote, in any of the forms git writes one. Null for anything else. */
-export const gitHubRepoOf = (remote: string): string | null => {
-	const m = /^(?:https:\/\/(?:[^@/]+@)?github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([\w.-]+\/[\w.-]+?)(?:\.git)?\/?$/i.exec(
-		remote.trim(),
-	);
-	return m?.[1] ?? null;
-};
-
 /**
  * The `origin` remote's URL from a clone's `.git/config`, or null: no process, for scanning many folders. It does not
  * apply `insteadOf` or follow a worktree's `.git` file; for one repository, ask git (`originUrl`).

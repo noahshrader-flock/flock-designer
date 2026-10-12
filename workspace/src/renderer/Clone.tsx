@@ -3,6 +3,7 @@ import type { ClonePlan, Result } from '../shared/contract';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Spinner } from './ui/spinner';
+import { repoName } from '../shared/repoRef';
 
 /**
  * Cloning a repository from the app: where it would go, changing that, cloning it with progress, and stopping. One
@@ -36,7 +37,7 @@ export const useClone = (repository: string | null, onProblem: (error: string) =
 	useEffect(
 		() =>
 			window.workspace.onCloneProgress((p) =>
-				setCloning((c) => (c === null ? null : `Cloning ${p.repository.split('/')[1]}: ${p.step}${p.percent === null ? '' : ` ${p.percent}%`}`)),
+				setCloning((c) => (c === null ? null : `Cloning ${repoName(p.repository)}: ${p.step}${p.percent === null ? '' : ` ${p.percent}%`}`)),
 			),
 		[],
 	);
@@ -55,7 +56,7 @@ export const useClone = (repository: string | null, onProblem: (error: string) =
 	 */
 	const run = async <T,>(clone: (repository: string) => Promise<Result<T>>, working?: string): Promise<Result<T> | null> => {
 		if (repository === null) return null;
-		setCloning(working ?? `Cloning ${repository.split('/')[1]}…`);
+		setCloning(working ?? `Cloning ${repoName(repository)}…`);
 		const r = await clone(repository);
 		setCloning(null);
 		if (!r.ok) {

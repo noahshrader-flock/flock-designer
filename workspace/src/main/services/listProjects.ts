@@ -7,7 +7,7 @@ import { recordsRootFor } from './discovery';
 import { originUrl } from './git';
 import { codebaseBranchFor } from './iterations';
 import { readFolderProjects } from './localProjects';
-import { gitHubRepoOf } from './repositories';
+import { parseRemote } from '../../shared/repoRef';
 
 /**
  * The projects the Projects screen lists: GitHub's, and this checkout's (`root`, one the person opened; nothing is read
@@ -38,7 +38,7 @@ export const listProjects = async ({
 		// A folder with nothing built yet is a notes folder, not work in progress.
 		local = unionLocal(folders, branches).filter((p) => p.iterations.length > 0);
 		const origin = await originUrl(root);
-		const repository = origin === null ? null : gitHubRepoOf(origin);
+		const repository = origin === null ? null : parseRemote(origin);
 		if (repository) here = { repository, branchOf: (projectId) => codebaseBranchFor(descriptor, projectId) };
 	}
 	let fromGitHub: Project[] = [];

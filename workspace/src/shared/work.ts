@@ -1,8 +1,9 @@
 import type { IterationKind, ProjectIteration } from './contract';
 import { isPrototypeKey } from './designPaths';
-import { asGitHubRepository, asPullRequest } from './validate';
+import { asPullRequest } from './validate';
 import { byNewest } from './sort';
 import { parsePrototypeName } from './prototypeNames';
+import { asRepositoryPath } from './repoRef';
 
 /** The two kinds of work, prototypes and codebase work, and where a project's work is in code. */
 
@@ -13,7 +14,7 @@ import { parsePrototypeName } from './prototypeNames';
 export const codeLink = (it: { branch: string; repository?: string | null; pullRequest?: string | null }): string | null => {
 	const pr = asPullRequest(it.pullRequest);
 	if (pr) return pr;
-	const repo = asGitHubRepository(it.repository);
+	const repo = asRepositoryPath(it.repository);
 	return repo ? `https://github.com/${repo}/tree/${it.branch.split('/').map(encodeURIComponent).join('/')}` : null;
 };
 

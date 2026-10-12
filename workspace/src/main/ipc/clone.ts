@@ -5,6 +5,7 @@ import { arg, handle } from '../handle';
 import { DESCRIPTOR_PATH } from '../services/descriptor';
 import { branchesWithFile, checkoutBranch, ensureLocalBranch, readCheckout } from '../services/git';
 import type { IpcDeps } from '../ipc';
+import { repoName } from '../../shared/repoRef';
 
 /**
  * Cloning a repository from the person's GitHub list, with the design repository beside it when it needs one.
@@ -22,7 +23,7 @@ export const registerClone = (d: IpcDeps): void => {
 		const here = (await readCheckout(root)).branch ?? 'no branch';
 		const good = (await branchesWithFile(root, DESCRIPTOR_PATH))[0];
 		if (good === undefined) {
-			throw new Error(`Cloned, but no branch of ${repository.split('/')[1]} has the DSNR setup (${DESCRIPTOR_PATH}), so it can't be used here yet.`);
+			throw new Error(`Cloned, but no branch of ${repoName(repository)} has the DSNR setup (${DESCRIPTOR_PATH}), so it can't be used here yet.`);
 		}
 		if (!fresh) throw new Error(`${root} is on ${here}, which has no DSNR setup. Switch it to ${good}, which has it, then try again.`);
 		await ensureLocalBranch(root, good);

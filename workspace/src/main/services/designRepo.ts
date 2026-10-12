@@ -18,6 +18,7 @@ import {
 } from '../../shared/anchor';
 import { asArray, asRecord } from '../../shared/json';
 import { parseIterations, toProjectIteration } from '../../shared/records';
+import type { RepoRef } from '../../shared/repoRef';
 
 /**
  * The design repository, read through the API.
@@ -43,15 +44,10 @@ interface ReviewThread {
 	updatedAt: string | null;
 }
 
-export interface DesignRepoRef {
-	owner: string;
-	repo: string;
-}
-
 /** Where projects and review threads live, for the app and the dsnr command alike. */
 const env: Record<string, string | undefined> = typeof process === 'undefined' ? {} : process.env;
 /** (In a browser, where the published site's comments run this, there is no environment: the page says which.) */
-export const DESIGN_REPO: DesignRepoRef = {
+export const DESIGN_REPO: RepoRef = {
 	owner: env.DSNR_REPO_OWNER ?? 'noahshrader-flock',
 	repo: env.DSNR_REPO_NAME ?? 'flock-designer',
 };
@@ -67,7 +63,7 @@ export interface GitHubApi {
 export class DesignRepo {
 	constructor(
 		private readonly session: GitHubApi,
-		private readonly ref: DesignRepoRef,
+		private readonly ref: RepoRef,
 	) {}
 
 	private get base(): string {
