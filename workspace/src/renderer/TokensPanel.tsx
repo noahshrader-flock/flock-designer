@@ -1,5 +1,6 @@
 import { type ReactNode, useMemo, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../shared/contract';
+import { byPrimitive, inOrder, isEditable } from '../shared/primitives';
 import { contrastPartner, contrastRatio, isForeground } from '../shared/tokens';
 import { ChangedTokens, ContrastNote, Swatch, TokenEditor } from './TokenEditor';
 import { TokenProblems } from './TokenProblems';
@@ -26,25 +27,18 @@ import { LineTabs, LineTabsContent, LineTabsList, LineTabsTrigger } from './Line
  * the tab's, given to every panel that shows tokens (`useTokenChanges`): the component page builds its previews with it.
  */
 
-/** Tokens in the order they came, by `key`, keeping the first-seen order of the keys. */
-export const inOrder = <K extends string>(tokens: DesignToken[], key: (t: DesignToken) => K): [K, DesignToken[]][] => {
-	const by = new Map<K, DesignToken[]>();
-	for (const t of tokens) {
-		const list = by.get(key(t));
-		if (list) list.push(t);
-		else by.set(key(t), [t]);
-	}
-	return [...by];
-};
-
 const setKey = (t: DesignToken) => `${t.group}/${t.set}`;
 
 /** What a token is, in words, for the search to look through: what it points at too. */
 const searchable = (t: DesignToken) => [t.path, t.group, t.set, t.name, t.value, t.ref?.path ?? ''].join(' ').toLowerCase();
 
+/** A row's layout: the same whether it can be pressed or not, so a row that is only shown lines up with the others. */
+const ROW = '-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left text-sm';
+
 /**
  * A token's row: its swatch, name, what it points at, the contrast of its pair when it is the one read under the other,
- * and its value, as changed. Pressing it opens its control, beside the panel, over the components it changes.
+ * and its value, as changed. Pressing it opens its control, beside the panel, over the components it changes. A token
+ * that cannot be changed (`isEditable`: a font, a shadow) is the same row with nothing to press.
  */
 export const TokenRow = ({ token, note }: { token: DesignToken; note?: ReactNode }) => {
 	const changes = useTokenChanges();
@@ -52,32 +46,37 @@ export const TokenRow = ({ token, note }: { token: DesignToken; note?: ReactNode
 	const partner = isForeground(token) ? undefined : contrastPartner(token, changes.shown);
 	const ratio = partner ? contrastRatio(token.value, partner.value) : null;
 	const edited = changes.isChanged(token);
+	const content = (
+		<>
+			{token.kind === 'color' && <Swatch value={token.value} />}
+			<span className={`min-w-0 truncate ${edited ? 'font-medium' : ''}`}>{token.name}</span>
+			{target && (
+				<span className="text-muted-foreground truncate text-xs">
+					{nameOf(target)}
+					{token.ref?.alpha && ` at ${opacity(token.ref.alpha)}`}
+				</span>
+			)}
+			{ratio !== null && <ContrastNote ratio={ratio} className="shrink-0 text-xs" />}
+			<span className="text-muted-foreground ml-auto shrink-0 font-mono text-xs">{token.value}</span>
+			{edited && <span data-changed-mark aria-label="Changed" className="bg-primary size-1.5 shrink-0 rounded-full" />}
+		</>
+	);
 	return (
 		<li data-token={token.path} data-changed={edited || undefined} title={`${token.source.file}:${token.source.line}`}>
-			<Popover>
-				<PopoverTrigger asChild>
-					<button
-						type="button"
-						aria-label={`Change ${labelOf(token)}`}
-						className="hover:bg-muted/50 data-[state=open]:bg-muted -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left text-sm"
-					>
-						{token.kind === 'color' && <Swatch value={token.value} />}
-						<span className={`min-w-0 truncate ${edited ? 'font-medium' : ''}`}>{token.name}</span>
-						{target && (
-							<span className="text-muted-foreground truncate text-xs">
-								{nameOf(target)}
-								{token.ref?.alpha && ` at ${opacity(token.ref.alpha)}`}
-							</span>
-						)}
-						{ratio !== null && <ContrastNote ratio={ratio} className="shrink-0 text-xs" />}
-						<span className="text-muted-foreground ml-auto shrink-0 font-mono text-xs">{token.value}</span>
-						{edited && <span data-changed-mark aria-label="Changed" className="bg-primary size-1.5 shrink-0 rounded-full" />}
-					</button>
-				</PopoverTrigger>
-				<PopoverContent side="left" align="start" className="w-72">
-					<TokenEditor token={token} />
-				</PopoverContent>
-			</Popover>
+			{isEditable(token.kind) ? (
+				<Popover>
+					<PopoverTrigger asChild>
+						<button type="button" aria-label={`Change ${labelOf(token)}`} className={`hover:bg-muted/50 data-[state=open]:bg-muted ${ROW}`}>
+							{content}
+						</button>
+					</PopoverTrigger>
+					<PopoverContent side="left" align="start" className="w-72">
+						<TokenEditor token={token} />
+					</PopoverContent>
+				</Popover>
+			) : (
+				<div className={ROW}>{content}</div>
+			)}
 			{note && <div className="text-muted-foreground pb-1 text-xs">{note}</div>}
 		</li>
 	);
@@ -155,7 +154,7 @@ export const TokensPanel = ({
 	const [current, setCurrent] = useState<string | null>(null);
 	const [queries, setQueries] = useState<Record<string, string>>({});
 	const changes = useTokenChanges();
-	const categories = useMemo(() => inOrder(changes.shown, (t) => t.category), [changes.shown]);
+	const categories = useMemo(() => byPrimitive(changes.shown), [changes.shown]);
 
 	if (tokens.source === null || categories.length === 0) {
 		return (

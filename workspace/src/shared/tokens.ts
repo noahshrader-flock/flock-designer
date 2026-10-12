@@ -5,6 +5,7 @@
  * disagree.
  */
 import type { DesignToken, TokenEdit } from './contract';
+import { isEditable } from './primitives';
 
 /** A color a change can give: a hex, with an opacity when it has eight digits. */
 export const HEX_COLOR = /^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/i;
@@ -55,7 +56,7 @@ export const sameChange = (a: TokenEdit[], b: TokenEdit[]): boolean => {
 };
 
 /** Whether `value` is one a token of this kind can be given. */
-export const fitsKind = (kind: DesignToken['kind'], value: string): boolean => (kind === 'color' ? HEX_COLOR : DIMENSION).test(value);
+export const fitsKind = (kind: DesignToken['kind'], value: string): boolean => isEditable(kind) && (kind === 'color' ? HEX_COLOR : DIMENSION).test(value);
 
 /**
  * Where a token is written. Two tokens can be written in one place: a palette both modes spread in (FUI's shared roles)

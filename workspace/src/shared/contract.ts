@@ -278,10 +278,16 @@ export type DesignSystemConnection = { state: 'connected'; id: string } | { stat
  * A design token the library has (T1 of the design system plan), as read from its own files: what the Design System tab
  * shows, and what a change names (by `path`).
  */
+/**
+ * What a token's value is, which says how it is drawn: a color, a length, a font, a shadow, a duration, an easing curve, or a
+ * plain number. Only a color and a length can be changed in the app (`isEditable`); the rest are shown.
+ */
+export type TokenKind = 'color' | 'dimension' | 'font' | 'shadow' | 'duration' | 'easing' | 'number';
+
 export interface DesignToken {
 	/** Its identity: `tone.pineGreen.50`, `palette.light.primary.main`, `spacing`, `radius`. */
 	path: string;
-	kind: 'color' | 'dimension';
+	kind: TokenKind;
 	/** Its tab in the tokens panel: `Color`, `Spacing`, `Shape`. A category the reader adds is a tab with no other change. */
 	category: string;
 	/** Where it is shown within its tab: `Tones`, `Light`, `Dark`, `Spacing`, `Radius`. */

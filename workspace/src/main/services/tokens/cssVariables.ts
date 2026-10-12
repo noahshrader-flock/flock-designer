@@ -1,7 +1,7 @@
 /**
  * Tokens kept as CSS variables, as shadcn and Tailwind design systems keep them: `--primary: oklch(…)` in `:root`, the
  * dark values in `.dark`, a Tailwind scale in `@theme` (`--color-red-500`). A variable is a token when its value is a
- * color, or a length whose name says spacing or radius (`categoryOf`); every other variable (a font size, a z-index, a
+ * color, or a length whose name says spacing or radius (`primitiveOf`); every other variable (a font size, a z-index, a
  * duration) is left out, not guessed. A value that names another variable (`var(--ring)`) is the color it points at,
  * and points at that variable's token. A change is written in the variable's own declaration: `--primary: #108062;`, or
  * `--primary: var(--ring);` to point it elsewhere.
@@ -9,7 +9,8 @@
 import type { DesignToken } from '../../../shared/contract';
 import { DIMENSION } from '../../../shared/tokens';
 import { lineAt, replaced } from './objectLiteral';
-import { type TokenSource, capitalized, categoryOf, notWhereRead, semanticFirst } from './source';
+import { primitiveOf } from '../../../shared/primitives';
+import { type TokenSource, capitalized, notWhereRead, semanticFirst } from './source';
 
 const STYLESHEET = /\.(css|scss|less|pcss)$/;
 const COLOR = /^(#[0-9a-f]{3,8}|(rgba?|hsla?|oklch|oklab|lab|lch|hwb|color)\(.*\))$/i;
@@ -64,7 +65,7 @@ export const cssVariables: TokenSource = {
 				const pointer = POINTER.exec(v.value)?.[1];
 				const pointerMode = pointer === undefined ? null : modeOf(pointer, mode);
 				const kind = COLOR.test(value) ? 'color' : DIMENSION.test(value) ? 'dimension' : null;
-				const category = kind === null ? null : categoryOf(kind, name);
+				const category = kind === null ? null : primitiveOf(kind, name);
 				if (kind === null || category === null) continue;
 				// A scale's steps are one set: `--color-red-500` is step 500 of `color-red`.
 				const step = /^(.*)-(\d+)$/.exec(name);

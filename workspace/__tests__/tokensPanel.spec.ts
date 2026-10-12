@@ -617,3 +617,26 @@ describe('saving and proposing a change (T4, T5)', () => {
 		expect(changedList()).toBeNull();
 	});
 });
+
+describe('the vocabulary of primitives (R1)', () => {
+	it('puts the tabs in its order, Color, Spacing, Shape, whatever order the tokens came in', async () => {
+		const [first, ...rest] = [...TOKENS.tokens].reverse();
+		await show({ ...TOKENS, tokens: [first as DesignToken, ...rest] });
+		expect(tabs().map((t) => t.textContent)).toEqual(['Color', 'Spacing', 'Shape']);
+	});
+
+	it('shows a token that is not a color or a length as a row with nothing to press: it is never offered an editor', async () => {
+		const font: DesignToken = { path: 'font.sans', kind: 'font', category: 'Typography', group: 'Family', set: 'font', name: 'sans', value: 'Inter', source: { file: 'a.css', line: 1 } };
+		await show({ ...TOKENS, tokens: [...TOKENS.tokens, font] });
+		expect(tabs().map((t) => t.textContent)).toEqual(['Color', 'Spacing', 'Shape', 'Typography']);
+		await choose('Typography');
+		await settle();
+		const row = document.querySelector<HTMLElement>('[data-token="font.sans"]')!;
+		expect(row.textContent).toContain('Inter');
+		expect(row.querySelector('button')).toBeNull();
+		// A color is still a control.
+		await choose('Color');
+		await settle();
+		expect(document.querySelector('[data-token="palette.light.primary.main"] button')?.getAttribute('aria-label')).toBe('Change Light primary main');
+	});
+});

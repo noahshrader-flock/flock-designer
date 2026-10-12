@@ -6,7 +6,8 @@ import { AccessibilityFindings } from './AccessibilityStatus';
 import { LinesSkeleton, SkeletonStatus } from './Skeletons';
 import { useTokenChanges } from './tokenChanges';
 import { Swatch } from './TokenEditor';
-import { Sets, inOrder } from './TokensPanel';
+import { inOrder } from '../shared/primitives';
+import { Sets } from './TokensPanel';
 import { Alert, AlertAction, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 

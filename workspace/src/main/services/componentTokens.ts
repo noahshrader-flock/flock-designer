@@ -24,6 +24,7 @@ import type {
 import type { ComponentPictures } from './componentPictures';
 import { type AxeFound, countsOf } from '../../shared/accessibility';
 import { designSystemOf } from '../../shared/catalog';
+import { isEditable } from '../../shared/primitives';
 import { lengthParts, placeOf, writtenWith } from '../../shared/tokens';
 import { readCatalog } from './componentCatalog';
 import { libraryCommit, libraryTarget, listedComponents, systemReads } from './designLibrary';
@@ -86,7 +87,8 @@ export const tagsFor = (tokens: DesignToken[]): Tags => {
 	const sizes: Tags['sizes'] = [];
 	const places = new Set<string>();
 	for (const t of tokens) {
-		if (places.has(placeOf(t))) continue;
+		// Only what can be changed is tagged: a tag is a change, and a font or a shadow is shown, never changed.
+		if (!isEditable(t.kind) || places.has(placeOf(t))) continue;
 		places.add(placeOf(t));
 		if (t.kind === 'color') {
 			const n = colors.size + 1;

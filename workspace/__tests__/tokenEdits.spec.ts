@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogReads } from '../src/main/services/componentCatalog';
 import { readTokens } from '../src/main/services/designTokens';
-import { editedFiles, tokenEditsOf } from '../src/main/services/tokenEdits';
+import { editProblem, editedFiles, tokenEditsOf } from '../src/main/services/tokenEdits';
 import type { DesignToken, TokenEdit } from '../src/shared/contract';
-import { contrastPartner, contrastRatio, pointingAt, sameChange, withEdits } from '../src/shared/tokens';
+import { contrastPartner, contrastRatio, fitsKind, pointingAt, sameChange, withEdits } from '../src/shared/tokens';
 import { CONTRAST_TEXT } from '../src/shared/wcag';
 
 /**
@@ -265,5 +265,22 @@ describe('what is refused', () => {
 		expect(() => tokenEditsOf([{ path: 'a', ref: 'b', value: '#000000' }])).toThrow();
 		expect(() => tokenEditsOf([{ path: 'a', value: 7 }])).toThrow();
 		expect(() => tokenEditsOf(Array.from({ length: 501 }, () => ({ path: 'a', value: '#000000' })))).toThrow();
+	});
+});
+
+describe('a token that is not a color or a length', () => {
+	const font = (path: string, value: string): DesignToken => ({ path, kind: 'font', category: 'Typography', group: 'Family', set: 'font', name: path, value, source: { file: 'a.css', line: 1 } });
+	const byPath = new Map([font('font.sans', 'Inter'), font('font.mono', 'Menlo')].map((t) => [t.path, t]));
+
+	it('fits no value, however much one looks like a length', () => {
+		expect(fitsKind('dimension', '8px')).toBe(true);
+		expect(fitsKind('color', '#108062')).toBe(true);
+		expect(fitsKind('font', '8px')).toBe(false);
+		expect(fitsKind('font', '#108062')).toBe(false);
+	});
+
+	it('is refused as a change, given a value or pointed at another of its kind: it is shown, not changed', () => {
+		expect(editProblem({ path: 'font.sans', value: '8px' }, byPath)).toMatch(/font\.sans is shown, not changed/);
+		expect(editProblem({ path: 'font.sans', ref: 'font.mono' }, byPath)).toMatch(/font\.sans is shown, not changed/);
 	});
 });

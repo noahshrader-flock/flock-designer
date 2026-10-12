@@ -12,7 +12,7 @@ import { g } from './fixtures';
  * stand-ins, and the real drawing is the app's (`storyMeasure.ts`).
  */
 
-const token = (path: string, kind: 'color' | 'dimension', value: string, more: Partial<DesignToken> = {}): DesignToken => ({
+const token = (path: string, kind: DesignToken['kind'], value: string, more: Partial<DesignToken> = {}): DesignToken => ({
 	path,
 	kind,
 	category: kind === 'color' ? 'Color' : path === 'radius' ? 'Shape' : 'Spacing',
@@ -41,6 +41,14 @@ const drawn = (colors: Record<string, number> = {}, radii: Record<string, number
 
 describe('the tags', () => {
 	const tags = tagsFor(TOKENS);
+
+	it('leave a token that is not a color or a length untouched, even one written in pixels', () => {
+		const shown = tagsFor([...TOKENS, token('text.base', 'number', '16px'), token('font.sans', 'font', 'Inter')]);
+		expect(shown.edits.map((e) => e.path)).not.toContain('text.base');
+		expect(shown.edits.map((e) => e.path)).not.toContain('font.sans');
+		expect(shown.sizes.map((s) => s.path)).not.toContain('text.base');
+	});
+
 
 	it('give every color its own tag, by its number, and a role both modes share one', () => {
 		expect([...tags.colors]).toEqual([

@@ -11,7 +11,8 @@
  */
 import type { DesignToken, TokenProblem } from '../../../shared/contract';
 import { type Entry, entryAt, exportedObjects, lineAt, literal, parseObject, replaced } from './objectLiteral';
-import { type TokenSource, capitalized, categoryOf, notWhereRead, semanticFirst } from './source';
+import { primitiveOf } from '../../../shared/primitives';
+import { type TokenSource, capitalized, notWhereRead, semanticFirst } from './source';
 
 const SCRIPT = /\.(ts|tsx|js|jsx|mjs)$/;
 const THEME_PATH = /(^|\/)(colou?rs?|tokens?|themes?|palettes?|tones?)(\/|\.|$)/i;
@@ -93,7 +94,7 @@ export const themeFiles: TokenSource = {
 					continue;
 				}
 				steps.set(e.key as string, hex.toUpperCase());
-				tokens.push({ path: `tone.${name}.${e.key}`, kind: 'color', category: 'Color', group: 'Tones', set: name, name: e.key as string, value: hex.toUpperCase(), source: { file, line: e.line } });
+				tokens.push({ path: `tone.${name}.${e.key}`, kind: 'color', category: primitiveOf('color', name) as string, group: 'Tones', set: name, name: e.key as string, value: hex.toUpperCase(), source: { file, line: e.line } });
 			}
 			tones.set(name, steps);
 		}
@@ -137,7 +138,7 @@ export const themeFiles: TokenSource = {
 			.filter((p): p is { name: string; mode: string } => p.mode !== null)
 			.sort((a, b) => (a.mode === 'light' ? -1 : b.mode === 'light' ? 1 : a.mode.localeCompare(b.mode)));
 		for (const { name, mode } of palettes) {
-			for (const r of rolesOf(name)) tokens.push({ path: `palette.${mode}.${r.set}.${r.name}`, category: 'Color', group: capitalized(mode), ...r });
+			for (const r of rolesOf(name)) tokens.push({ path: `palette.${mode}.${r.set}.${r.name}`, category: primitiveOf('color', r.name) as string, group: capitalized(mode), ...r });
 		}
 		if (tones.size === 0 && palettes.length === 0) return null;
 
@@ -147,7 +148,7 @@ export const themeFiles: TokenSource = {
 			for (const [file, text] of texts) {
 				const found = themeNumber(text, number);
 				if (!found) continue;
-				tokens.push({ path: name, kind: 'dimension', category: categoryOf('dimension', name) as string, group: capitalized(name), set: name, name: 'base', value: `${found.value}px`, source: { file, line: found.line } });
+				tokens.push({ path: name, kind: 'dimension', category: primitiveOf('dimension', name) as string, group: capitalized(name), set: name, name: 'base', value: `${found.value}px`, source: { file, line: found.line } });
 				break;
 			}
 		}

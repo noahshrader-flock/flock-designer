@@ -9,6 +9,7 @@
  * that points at one, and nothing else moved. A change that would not read back so is refused in words, and nothing is built from it.
  */
 import type { DesignToken, TokenEdit } from '../../shared/contract';
+import { isEditable } from '../../shared/primitives';
 import { fitsKind, placeOf, withEdits } from '../../shared/tokens';
 import type { CatalogReads } from './componentCatalog';
 import { readTokens, sourceNamed } from './designTokens';
@@ -30,9 +31,10 @@ export const tokenEditsOf = (sent: unknown): TokenEdit[] => {
 };
 
 /** The reason an edit cannot be made to these tokens, or null when it can. */
-const problemWith = (edit: TokenEdit, byPath: Map<string, DesignToken>): string | null => {
+export const editProblem = (edit: TokenEdit, byPath: Map<string, DesignToken>): string | null => {
 	const token = byPath.get(edit.path);
 	if (!token) return `The library has no token ${edit.path}.`;
+	if (!isEditable(token.kind)) return `${token.path} is shown, not changed: only a color or a length is changed here.`;
 	if ('value' in edit) return fitsKind(token.kind, edit.value) ? null : `${edit.value} is not a ${token.kind === 'color' ? 'hex color' : 'length'}, so ${token.path} cannot be it.`;
 	const target = byPath.get(edit.ref);
 	if (!token.ref) return `${token.path} has a value of its own, not a pointer, so it is given a value, not pointed elsewhere.`;
@@ -69,7 +71,7 @@ export const editedFiles = async (reads: CatalogReads, edits: TokenEdit[]): Prom
 	if (!source) throw new Error('No tokens were found in this library, so there is nothing to change.');
 	const byPath = new Map(tokens.tokens.map((t) => [t.path, t]));
 	for (const edit of edits) {
-		const problem = problemWith(edit, byPath);
+		const problem = editProblem(edit, byPath);
 		if (problem) throw new Error(problem);
 	}
 	// Once for each place a token is written: two edits of one place (a shared role's Light and Dark) would contradict.

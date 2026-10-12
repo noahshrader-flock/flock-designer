@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogReads } from '../src/main/services/componentCatalog';
 import { readTokens } from '../src/main/services/designTokens';
-import { categoryOf } from '../src/main/services/tokens/source';
 
 /**
  * The other ways a library keeps its tokens (decision 18), behind the same list as FUI's theme files: CSS variables (a
@@ -17,20 +16,6 @@ const reads = (files: Record<string, string>): CatalogReads => ({
 	},
 });
 const find = (list: Awaited<ReturnType<typeof readTokens>>, path: string) => list.tokens.find((t) => t.path === path);
-
-describe('which tab a token is on', () => {
-	it('is Color for a color, Shape for a radius, Spacing for spacing, and nothing for a size it cannot place', () => {
-		expect(categoryOf('color', 'primary')).toBe('Color');
-		expect(categoryOf('dimension', 'radius-md')).toBe('Shape');
-		expect(categoryOf('dimension', 'rounded')).toBe('Shape');
-		expect(categoryOf('dimension', 'spacing')).toBe('Spacing');
-		expect(categoryOf('dimension', 'space.4')).toBe('Spacing');
-		expect(categoryOf('dimension', 'gap-2')).toBe('Spacing');
-		// Not a guess: a font size, a width or a breakpoint is not spacing.
-		expect(categoryOf('dimension', 'font-size-sm')).toBeNull();
-		expect(categoryOf('dimension', 'breakpoint-md')).toBeNull();
-	});
-});
 
 describe('CSS variables', () => {
 	const CSS = `:root {

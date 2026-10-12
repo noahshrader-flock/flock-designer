@@ -1,7 +1,7 @@
 /**
  * What every way of finding a library's tokens shares (decision 18): the shape of a source, which of the library's files
- * are its own, and the one rule for which tab a token is on. A source decides only what its files mean, and how a change
- * is written back into them (decision 26).
+ * are its own. Which primitive a token is, is the vocabulary's (`primitiveOf` in `shared/primitives.ts`). A source decides
+ * only what its files mean, and how a change is written back into them (decision 26).
  */
 import type { DesignToken, DesignTokens, TokenChange } from '../../../shared/contract';
 import type { CatalogReads } from '../componentCatalog';
@@ -27,17 +27,6 @@ export const notWhereRead = (token: DesignToken): Error =>
  */
 export const isLibraryFile = (path: string): boolean =>
 	!/(^|\/)(node_modules|dist|build|out|coverage|storybook-static|\.storybook|__tests__|__mocks__)\//.test(path) && !/\.(stories|test|spec)\.\w+$/.test(path);
-
-/**
- * The tab a token is on, from its kind and its name: every color is Color, a radius is Shape, spacing is Spacing. A
- * size that is none of these (a font size, a width, a breakpoint) is `null`, and is left out rather than placed by guess.
- */
-export const categoryOf = (kind: DesignToken['kind'], name: string): string | null => {
-	if (kind === 'color') return 'Color';
-	if (/radius|rounded|corner/i.test(name)) return 'Shape';
-	if (/spacing|space|gap|gutter|inset/i.test(name)) return 'Spacing';
-	return null;
-};
 
 /**
  * The tokens in the order the panel shows them: **within each category, the semantic ones first** (what a color is for,

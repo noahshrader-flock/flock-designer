@@ -9,7 +9,8 @@
 import type { DesignToken, TokenProblem } from '../../../shared/contract';
 import { DIMENSION, lengthParts } from '../../../shared/tokens';
 import { type Entry, parseObject, replaced } from './objectLiteral';
-import { type TokenSource, capitalized, categoryOf, notWhereRead, semanticFirst } from './source';
+import { primitiveOf } from '../../../shared/primitives';
+import { type TokenSource, capitalized, notWhereRead, semanticFirst } from './source';
 
 const TOKEN_FILE = /(\.tokens\.json|(^|\/)(design-)?tokens?\.json|(^|\/)(design-)?tokens\/.+\.json)$/i;
 
@@ -89,7 +90,7 @@ export const tokenFiles: TokenSource = {
 			const color = raw.type === 'color' && typeof value === 'string' ? value : null;
 			const length = raw.type === 'dimension' ? lengthOf(value) : null;
 			const kind = color !== null ? 'color' : length !== null ? 'dimension' : null;
-			const category = kind === null ? null : categoryOf(kind, path);
+			const category = kind === null ? null : primitiveOf(kind, path);
 			if (kind === null || category === null) continue;
 			tokens.push({
 				path,
