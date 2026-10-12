@@ -1,5 +1,5 @@
 import type { CommentAnchor } from './contract';
-import { isPrototypeName } from './projects';
+import { isPrototypeName } from './prototypeNames';
 import { COMMIT_PATTERN, isCommit } from './sha';
 
 /**

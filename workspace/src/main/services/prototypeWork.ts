@@ -2,16 +2,9 @@ import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } 
 import { basename, dirname, join } from 'node:path';
 import type { Iteration, Person, PrototypeReadiness } from '../../shared/contract';
 import { type DeclaredTarget, undeclared } from '../../shared/wcag';
-import {
-	fromBrief,
-	hasOutsideComments,
-	latestIterationName,
-	nextIterationName,
-	parsePrototypeName,
-	projectPath,
-	prototypePagePath,
-	prototypeSourcePath,
-} from '../../shared/projects';
+import { fromBrief } from '../../shared/brief';
+import { projectPath, prototypePagePath, prototypeSourcePath } from '../../shared/designPaths';
+import { hasOutsideComments, latestIterationName, nextIterationName, parsePrototypeName } from '../../shared/prototypeNames';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from './accessibilityBrief';
 import { designSystemCheckout, readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';

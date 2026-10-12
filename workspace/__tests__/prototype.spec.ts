@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
-import { isPrototypeKey, nextPrototypeName, prototypeKey, prototypePagePath } from '../src/shared/projects';
+import { isPrototypeKey, prototypeKey, prototypePagePath } from '../src/shared/designPaths';
+import { nextPrototypeName } from '../src/shared/prototypeNames';
 import {
 	cloneStore,
 	moveToCodePrompt,

@@ -1,7 +1,9 @@
 import type { CommentAnchor, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
 import { GitHubError, httpStatus } from './github';
 import { isBot, mergePeople } from '../../shared/people';
-import { fromBrief, latestDate, newestFirst, projectDir, projectPath } from '../../shared/projects';
+import { fromBrief } from '../../shared/brief';
+import { projectDir, projectPath } from '../../shared/designPaths';
+import { latestDate, newestFirst } from '../../shared/projectList';
 import {
 	RESOLVED_MARK,
 	addressedAt,

@@ -2,7 +2,8 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Project } from '../../shared/contract';
 import { mergePeople } from '../../shared/people';
-import { fromBrief, newestFirst } from '../../shared/projects';
+import { fromBrief } from '../../shared/brief';
+import { newestFirst } from '../../shared/projectList';
 import { parseIterations, toProjectIteration } from '../../shared/records';
 
 /**

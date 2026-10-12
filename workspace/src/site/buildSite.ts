@@ -1,7 +1,10 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Iteration } from '../shared/contract';
-import { fromBrief, isPrototypeKey, iterationLabel, parsePrototypeName, projectCodeLink, sitePath } from '../shared/projects';
+import { fromBrief } from '../shared/brief';
+import { isPrototypeKey, sitePath } from '../shared/designPaths';
+import { parsePrototypeName } from '../shared/prototypeNames';
+import { iterationLabel, projectCodeLink } from '../shared/work';
 import { statesOf } from '../shared/prototypeStates';
 import { parseIterations } from '../shared/records';
 import { plural } from '../shared/plural';

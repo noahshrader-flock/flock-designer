@@ -1,6 +1,7 @@
 import { ChevronDownIcon, HistoryIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { byVersion, iterationLabel, latestIterationName, parsePrototypeName } from '../shared/projects';
+import { byVersion, latestIterationName, parsePrototypeName } from '../shared/prototypeNames';
+import { iterationLabel } from '../shared/work';
 import { stateLabel } from '../shared/prototypeStates';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from './ui/dropdown-menu';

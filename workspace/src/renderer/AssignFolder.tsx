@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { sameFolder } from '../shared/projects';
+import { sameFolder } from '../shared/brief';
 import { CancelButton } from './CancelButton';
 import { FolderField, type FolderPick, pickOf, pickedFolder } from './FolderField';
 import { Alert, AlertDescription } from './ui/alert';

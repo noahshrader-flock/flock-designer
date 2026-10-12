@@ -2,7 +2,9 @@ import { MessageSquareIcon } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
 import type { Project, ProjectIteration } from '../shared/contract';
 import { plural } from '../shared/plural';
-import { byVersion, coverToShow, projectOpening, workOf } from '../shared/projects';
+import { coverToShow, projectOpening } from '../shared/projectList';
+import { byVersion } from '../shared/prototypeNames';
+import { workOf } from '../shared/work';
 import { CARD_DETAIL } from './cardFooters';
 import { Badge } from './ui/badge';
 

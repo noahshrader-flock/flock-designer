@@ -1,5 +1,6 @@
 import type { ReviewComment } from '../../shared/contract';
-import { iterationLabel, prototypeKey } from '../../shared/projects';
+import { prototypeKey } from '../../shared/designPaths';
+import { iterationLabel } from '../../shared/work';
 
 /**
  * What a card on a prototype says the agent did with its comment: where the change is, when that is another iteration

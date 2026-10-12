@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { prototypeVersionOf } from '../src/main/services/prototype';
 import { memoryStore, type Fn } from './fixtures';
 import { type CoverDeps, builtHere, ensureCovers, isBlank } from '../src/main/services/projectCovers';
-import { coverPath } from '../src/shared/projects';
+import { coverPath } from '../src/shared/designPaths';
 
 /**
  * The picture of each prototype on its project's card: one reconcile step that makes sure every prototype built on this

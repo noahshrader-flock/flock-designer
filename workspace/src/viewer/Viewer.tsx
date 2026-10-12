@@ -1,7 +1,7 @@
 import { ChevronLeftIcon, LogOutIcon } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { prototypeKey } from '../shared/projects';
+import { prototypeKey } from '../shared/designPaths';
 import { withState } from '../shared/prototypeStates';
 import { prototypeAddressed } from '../renderer/comments/addressed';
 import { CommentBox } from '../renderer/comments/CommentBox';

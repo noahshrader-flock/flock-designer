@@ -89,18 +89,11 @@ import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anc
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
-import {
-	coverPath,
-	folderName,
-	isRecordName,
-	iterationLabel,
-	mergeProjects,
-	prototypeKey,
-	prototypePagePath,
-	shownRecord,
-	unionLocal,
-	workKind,
-} from '../shared/projects';
+import { folderName, shownRecord } from '../shared/brief';
+import { coverPath, prototypeKey, prototypePagePath } from '../shared/designPaths';
+import { mergeProjects, unionLocal } from '../shared/projectList';
+import { isRecordName } from '../shared/validate';
+import { iterationLabel, workKind } from '../shared/work';
 import { resolveInside } from './services/paths';
 import { PrototypeServer } from './services/prototypeServer';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';

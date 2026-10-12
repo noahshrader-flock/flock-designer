@@ -2,17 +2,10 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Iteration, Person } from '../../shared/contract';
-import {
-	assertCover,
-	briefFolder,
-	firstHeading,
-	folderName,
-	isPrototypeName,
-	nextPrototypeName,
-	projectPath,
-	prototypeKey,
-	withFolder,
-} from '../../shared/projects';
+import { briefFolder, firstHeading, folderName, withFolder } from '../../shared/brief';
+import { projectPath, prototypeKey } from '../../shared/designPaths';
+import { isPrototypeName, nextPrototypeName } from '../../shared/prototypeNames';
+import { assertCover } from '../../shared/validate';
 import { addressOpening } from './address';
 import { lightCheckLine } from './engineeringHandoff';
 import { resolveInside } from './paths';

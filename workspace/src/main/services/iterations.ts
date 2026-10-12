@@ -15,7 +15,8 @@ import {
 import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
 import { gitHubRepoOf } from './repositories';
-import { PROJECT_ID, parsePrototypeName } from '../../shared/projects';
+import { parsePrototypeName } from '../../shared/prototypeNames';
+import { PROJECT_ID } from '../../shared/validate';
 import { parseIterations, serializeIterations } from '../../shared/records';
 
 /**

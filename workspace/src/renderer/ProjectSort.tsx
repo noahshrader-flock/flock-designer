@@ -1,4 +1,4 @@
-import type { ProjectOrder } from '../shared/projects';
+import type { ProjectOrder } from '../shared/projectList';
 import { ChoiceMenu } from './ChoiceMenu';
 
 const ORDERS: { value: ProjectOrder; label: string }[] = [

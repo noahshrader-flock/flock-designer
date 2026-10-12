@@ -7,7 +7,7 @@ import type { ProjectIteration, WorkspaceDescriptor } from '../src/shared/contra
 import { classify, patternToRegex, readBranchProjects } from '../src/main/services/branchProjects';
 import { findProductCheckouts, recordsRootFor, type DiscoveryDeps } from '../src/main/services/discovery';
 import { continueIteration, readIterations } from '../src/main/services/iterations';
-import { unionLocal } from '../src/shared/projects';
+import { unionLocal } from '../src/shared/projectList';
 
 const descriptor: WorkspaceDescriptor = {
 	version: 1,

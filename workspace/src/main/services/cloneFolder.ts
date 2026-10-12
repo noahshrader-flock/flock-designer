@@ -2,7 +2,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import type { ClonePlace } from '../../shared/contract';
-import { asGitHubRepository } from '../../shared/projects';
+import { asGitHubRepository } from '../../shared/validate';
 import { CODE_FOLDERS } from './discovery';
 import { FolderMemory } from './folderMemory';
 import { gitHubRepoOf, listedAs, originOf } from './repositories';

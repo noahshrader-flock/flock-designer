@@ -1,5 +1,5 @@
 import type { PageStatus } from '../../shared/contract';
-import { prototypePagePath, sitePath } from '../../shared/projects';
+import { prototypePagePath, sitePath } from '../../shared/designPaths';
 import type { DesignRepoRef, GitHubApi } from './designRepo';
 import { type SyncResult, syncRecords } from './designSync';
 import { git } from './git';

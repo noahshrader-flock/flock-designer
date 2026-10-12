@@ -1,4 +1,4 @@
-import { ALL_FOLDERS, type FolderChoice } from '../shared/projects';
+import { ALL_FOLDERS, type FolderChoice } from '../shared/brief';
 import { ChoiceMenu } from './ChoiceMenu';
 
 /** The menu's word for each choice that is not a folder; a folder is its own name, after `folder:` so no name is taken for one. */

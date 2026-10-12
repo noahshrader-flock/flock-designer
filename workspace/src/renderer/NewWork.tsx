@@ -9,7 +9,8 @@ import type {
 	RepositoryList,
 	RepositoryReach,
 } from '../shared/contract';
-import { freshIteration, slugify } from '../shared/projects';
+import { slugify } from '../shared/validate';
+import { freshIteration } from '../shared/work';
 import { CancelButton } from './CancelButton';
 import { CloneHere, useClone, Working } from './Clone';
 import { FolderField, type FolderPick, pickOf, pickedFolder } from './FolderField';

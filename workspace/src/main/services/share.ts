@@ -1,5 +1,5 @@
 import type { IterationKind, ShareDescriptor, ShareStatus, ShareStep } from '../../shared/contract';
-import { projectDir } from '../../shared/projects';
+import { projectDir } from '../../shared/designPaths';
 import { isSafeBranchName } from './git';
 import { errorText } from '../../shared/result';
 

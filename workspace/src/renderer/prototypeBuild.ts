@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Project, ProjectIteration, RunLogLine, WorkspaceApi } from '../shared/contract';
-import { prototypeKey } from '../shared/projects';
+import { prototypeKey } from '../shared/designPaths';
 import { type BuildPhase, waitForAgent } from './localBuild';
 
 /**

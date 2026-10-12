@@ -3,18 +3,21 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
+import { recordLabel } from '../src/shared/brief';
 import {
-	PROJECT_ID,
-	asDate,
-	asRoute,
-	isPrototypeName,
-	codeLink,
 	lastUpdated,
 	matchesProject,
-	isRecordName,
-	iterationLabel,
 	mergeProjects,
 	newestProjectFirst,
+	sortProjects,
+	startedAt,
+	unionLocal,
+	coverToShow,
+	projectOpening,
+	withCovers,
+} from '../src/shared/projectList';
+import {
+	isPrototypeName,
 	nextIterationName,
 	latestIterationName,
 	hasOutsideComments,
@@ -22,17 +25,9 @@ import {
 	byVersion,
 	parsePrototypeName,
 	prototypeName,
-	recordLabel,
-	slugify,
-	sortProjects,
-	startedAt,
-	unionLocal,
-	workOf,
-	asCover,
-	coverToShow,
-	projectOpening,
-	withCovers,
-} from '../src/shared/projects';
+} from '../src/shared/prototypeNames';
+import { PROJECT_ID, asDate, asRoute, isRecordName, slugify, asCover } from '../src/shared/validate';
+import { codeLink, iterationLabel, workOf } from '../src/shared/work';
 import { readFolderProjects } from '../src/main/services/localProjects';
 
 const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { folderName, sameFolder } from '../shared/projects';
+import { folderName, sameFolder } from '../shared/brief';
 import { SearchSelect } from './SearchSelect';
 import { Field, FieldLabel } from './ui/field';
 import { Input } from './ui/input';

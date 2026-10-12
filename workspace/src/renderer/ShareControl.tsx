@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared/contract';
-import { projectCodeLink, recordLabel } from '../shared/projects';
+import { recordLabel } from '../shared/brief';
+import { projectCodeLink } from '../shared/work';
 import { CancelButton } from './CancelButton';
 import { dialogView, isMine, stepText } from './shareView';
 import { Alert, AlertDescription } from './ui/alert';

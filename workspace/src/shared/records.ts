@@ -1,7 +1,7 @@
 import type { Iteration, ProjectIteration } from './contract';
 import { asRecord } from './json';
 import { asPeople, mergePeople } from './people';
-import { asCover, asDate, asGitHubRepository, asPullRequest, asRoute } from './projects';
+import { asCover, asDate, asGitHubRepository, asPullRequest, asRoute } from './validate';
 
 /**
  * Two copies of one project's `iterations.json`, made on different machines, as one.

@@ -1,0 +1,48 @@
+import { parsePrototypeName } from './prototypeNames';
+import { assertCover } from './validate';
+
+/** Where things are in the design repository, and the keys prototypes are known by. */
+
+/**
+ * A prototype: one self-contained page, made without running the product, saved in the design repository beside
+ * the project's other records. It has no git branch. Its key, in the place a branch name goes (the iteration
+ * record, the review thread), is `prototype/<project-id>/<name>`, which no repository's branch pattern makes, so it
+ * can never be mistaken for one. (The older prototypes on `fd/` branches have a branch, not a key.)
+ */
+const PROTOTYPE_PREFIX = 'prototype/';
+
+export const isPrototypeKey = (branch: string): boolean => branch.startsWith(PROTOTYPE_PREFIX);
+
+export const prototypeKey = (projectId: string, name: string): string => `${PROTOTYPE_PREFIX}${projectId}/${name}`;
+
+/** A project's folder in the design repository: the one place a project's path is built (the folders plan's rule 3). */
+export const projectDir = (projectId: string): string => `projects/${projectId}`;
+
+/** A file in a project's folder in the design repository, by its path from the repository's root. */
+export const projectPath = (projectId: string, file: string): string => `${projectDir(projectId)}/${file}`;
+
+/** Where a prototype's page is kept in the design repository. */
+export const prototypePagePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.html`);
+
+/** Its React source, kept beside the page. */
+export const prototypeSourcePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.tsx`);
+
+/**
+ * Where a prototype's picture is kept in the design repository: in its project's `covers/` folder (a folder, so a picture
+ * is never one of the project's documents), named by the prototype and the hash of the page it is of, so a file never
+ * changes under its name.
+ */
+export const coverPath = (projectId: string, name: string, cover: string): string => {
+	assertCover(cover);
+	return projectPath(projectId, `covers/${name}-${cover}.jpg`);
+};
+
+/**
+ * Where an iteration is on the published site, from the site's root: `<project>/v1/i2/`. The one place the site's
+ * addresses are made, for the site itself, the command that publishes it and the app that opens it. Null for a name
+ * that is not a prototype's.
+ */
+export const sitePath = (projectId: string, name: string): string | null => {
+	const p = parsePrototypeName(name);
+	return p ? `${projectId}/v${p.version}/i${p.iteration}/` : null;
+};

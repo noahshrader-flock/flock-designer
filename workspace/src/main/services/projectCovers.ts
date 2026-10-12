@@ -15,7 +15,9 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MadeCover } from '../../shared/contract';
-import { PROJECT_ID, coverPath, isPrototypeName } from '../../shared/projects';
+import { coverPath } from '../../shared/designPaths';
+import { isPrototypeName } from '../../shared/prototypeNames';
+import { PROJECT_ID } from '../../shared/validate';
 import { type RecordStore, prototypeVersionOf, readRecords, setCover } from './prototype';
 
 /** The window a picture is drawn in: the shape of a card's cover, twice as wide as tall. */

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { BuildInClaude, Checkout, MoveToCodePlan, Project, ProjectIteration } from '../shared/contract';
-import { iterationLabel } from '../shared/projects';
+import { iterationLabel } from '../shared/work';
 import { CancelButton } from './CancelButton';
 import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';

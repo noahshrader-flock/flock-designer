@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import type { ReviewComment } from '../../shared/contract';
 import { assertUsableProjectId } from './iterations';
 import { numberComments, openComments, resolvedComments } from '../../shared/comments';
-import { fromBrief, isPrototypeKey } from '../../shared/projects';
+import { fromBrief } from '../../shared/brief';
+import { isPrototypeKey } from '../../shared/designPaths';
 import { plural } from '../../shared/plural';
 import { resolveInside } from './paths';
 
