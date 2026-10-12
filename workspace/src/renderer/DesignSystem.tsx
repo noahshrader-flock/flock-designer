@@ -1,5 +1,5 @@
 import { ChevronDownIcon, GitBranchIcon, InfoIcon, PlusIcon, Trash2Icon } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { type Dispatch, type ReactNode, type SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
 import { matchesComponent } from '../shared/catalog';
 import type {
 	Catalog,
@@ -181,6 +181,10 @@ type Tab = 'components' | 'primitives' | 'voice-and-tone';
  */
 export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [tab, setTab] = useState<Tab>('components');
+	// The design system as read, and the change being tried on it: the Components tab reads and changes them, and Primitives
+	// draws the same, so the two never disagree and nothing is read twice.
+	const [catalog, setCatalog] = useState<Catalog | null>(null);
+	const [edits, setEdits] = useState<TokenEdit[]>([]);
 	return (
 		<LineTabs value={tab} onValueChange={(next) => setTab(next as Tab)} className="h-[calc(100dvh-var(--nav-height))]">
 			<LineTabsList bar aria-label="Design System">
@@ -190,10 +194,10 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 			</LineTabsList>
 			{/* No padding: each pane has its own layout. Kept while another is shown, only hidden. */}
 			<LineTabsContent value="components" forceMount hidden={tab !== 'components'} data-tab="components" className="p-0">
-				<Components hidden={hidden || tab !== 'components'} />
+				<Components hidden={hidden || tab !== 'components'} catalog={catalog} setCatalog={setCatalog} edits={edits} setEdits={setEdits} />
 			</LineTabsContent>
 			<LineTabsContent value="primitives" forceMount hidden={tab !== 'primitives'} data-tab="primitives" className="p-0">
-				<Primitives />
+				<Primitives catalog={catalog} edits={edits} />
 			</LineTabsContent>
 			<LineTabsContent value="voice-and-tone" forceMount hidden={tab !== 'voice-and-tone'} data-tab="voice-and-tone" className="p-0">
 				<VoiceAndTone hidden={hidden || tab !== 'voice-and-tone'} />
@@ -218,8 +222,19 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
  * after that only when Sync is pressed. It stays mounted while hidden, and the list stays mounted while a component is
  * open, so the scroll and the search survive both.
  */
-const Components = ({ hidden }: { hidden: boolean }) => {
-	const [catalog, setCatalog] = useState<Catalog | null>(null);
+const Components = ({
+	hidden,
+	catalog,
+	setCatalog,
+	edits,
+	setEdits,
+}: {
+	hidden: boolean;
+	catalog: Catalog | null;
+	setCatalog: Dispatch<SetStateAction<Catalog | null>>;
+	edits: TokenEdit[];
+	setEdits: Dispatch<SetStateAction<TokenEdit[]>>;
+}) => {
 	const [error, setError] = useState<string | null>(null);
 	const [syncing, setSyncing] = useState(false);
 	// The component open on its own page, by id; the list when there is none. And what the side panel shows: opening or
@@ -233,8 +248,6 @@ const Components = ({ hidden }: { hidden: boolean }) => {
 	// The design systems connected, and which is shown (P4); and whether another is being connected.
 	const [systems, setSystems] = useState<ConnectedDesignSystems>({ systems: [], current: null });
 	const [adding, setAdding] = useState(false);
-	// The change to the tokens being tried (T3).
-	const [edits, setEdits] = useState<TokenEdit[]>([]);
 	// Where it is kept, once saved (T4), and proposed (T5).
 	const branch = useTokenBranch(systems.current, edits, setEdits);
 	// The components as a list or a grid of cards with pictures (P5), as last chosen; the pictures while the grid shows.

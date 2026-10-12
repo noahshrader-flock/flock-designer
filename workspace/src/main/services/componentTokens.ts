@@ -25,7 +25,7 @@ import type { ComponentPictures } from './componentPictures';
 import { type AxeFound, countsOf } from '../../shared/accessibility';
 import { designSystemOf } from '../../shared/catalog';
 import { isEditable } from '../../shared/primitives';
-import { lengthParts, placeOf, writtenWith } from '../../shared/tokens';
+import { PX_PER_REM, lengthParts, placeOf, writtenWith } from '../../shared/tokens';
 import { readCatalog } from './componentCatalog';
 import { libraryCommit, libraryTarget, listedComponents, systemReads } from './designLibrary';
 import { resultOf } from './accessibilityCheck';
@@ -101,7 +101,7 @@ export const tagsFor = (tokens: DesignToken[]): Tags => {
 		if (unit !== 'px' && unit !== 'rem') continue;
 		const px = sizes.length === 0 ? FIRST_SIZE_TAG : nextSizeTag((sizes[sizes.length - 1] as { px: number }).px);
 		sizes.push({ px, path: t.path });
-		edits.push({ path: t.path, value: unit === 'px' ? `${px}px` : `${px / 16}rem` });
+		edits.push({ path: t.path, value: unit === 'px' ? `${px}px` : `${px / PX_PER_REM}rem` });
 	}
 	return { edits, colors, sizes };
 };

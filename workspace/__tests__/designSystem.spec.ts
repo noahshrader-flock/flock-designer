@@ -140,6 +140,16 @@ describe('the tab bar (T9)', () => {
 		expect(shown('components')).toBe(true);
 	});
 
+	it('shows on Primitives the design system the Components tab read, with no second read of it', async () => {
+		const app = await open(() => ok(ready()));
+		const reads = (app.calls.designSystemCatalog ?? []).length;
+		await chooseTab('Primitives');
+		await settle();
+		const chips = [...document.querySelectorAll('[data-tab="primitives"] [data-primitive-chip]')].map((c) => c.textContent);
+		expect(chips[0]).toMatch(/^Color \d+$/);
+		expect((app.calls.designSystemCatalog ?? []).length).toBe(reads);
+	});
+
 	it('is the app’s line tabs as a bar of tabs: as tall as the toolbar under it, its tabs as wide as their labels and not stretched, with nothing set on them here', async () => {
 		await open(() => ok(ready()));
 		expect(bar().getAttribute('data-variant')).toBe('line');

@@ -19,6 +19,16 @@ export const lengthParts = (value: string): { number: number; unit: 'px' | 'rem'
 	return m ? { number: Number(m[1]), unit: m[2] as 'px' | 'rem' | 'em' } : null;
 };
 
+/** How many pixels a rem is, as the browser's default font size makes it. */
+export const PX_PER_REM = 16;
+
+/** A length in pixels, as it is drawn; null for one that is not a length, or whose size depends on where it is used (`em`). */
+export const pixelsOf = (value: string): number | null => {
+	const length = lengthParts(value);
+	if (length === null || length.unit === 'em') return null;
+	return length.unit === 'rem' ? length.number * PX_PER_REM : length.number;
+};
+
 /** A token as a person names it: `primary main`, `pineGreen 50`. */
 export const nameOf = (t: DesignToken): string => `${t.set} ${t.name}`;
 

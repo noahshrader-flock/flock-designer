@@ -2,8 +2,9 @@ import type { DesignToken, TokenKind } from './contract';
 
 /**
  * The vocabulary of primitives (the Primitives plan, R1): the kinds of primitive DSNR knows, in one place, as data. The tokens
- * panel's tabs and the readers' sorting of what they find read it (and the Primitives page will), so there is no second
- * list of categories anywhere. Adding a kind of primitive is adding a row here, once a reader can read it.
+ * panel's tabs, the readers' sorting of what they find and the Primitives page all read it, so there is no second list of
+ * categories anywhere. **A primitive is in the list only once a reader can read it,** so the page saying a design system
+ * does not define one is always something DSNR looked for. Adding one is adding a row here, with its reader.
  */
 export interface Primitive {
 	/** Its name, as a tab and a section say it. */
@@ -12,13 +13,18 @@ export interface Primitive {
 	kind: TokenKind;
 	/** For a kind several primitives share (a length is spacing or a radius), the words in a token's name that say which. */
 	named?: RegExp;
+	/**
+	 * How the Primitives page draws it: colors as swatches, spacing as bars as long as each step, a radius as a corner of its
+	 * size. A category with no drawing of its own (one the vocabulary does not know) is a plain table of names and values.
+	 */
+	drawn: 'swatches' | 'bars' | 'corners';
 }
 
 /** In the order they are shown, which is also the order a token is matched in: the first that fits is the one. */
 export const PRIMITIVES: readonly Primitive[] = [
-	{ category: 'Color', kind: 'color' },
-	{ category: 'Spacing', kind: 'dimension', named: /spacing|space|gap|gutter|inset/i },
-	{ category: 'Shape', kind: 'dimension', named: /radius|rounded|corner/i },
+	{ category: 'Color', kind: 'color', drawn: 'swatches' },
+	{ category: 'Spacing', kind: 'dimension', named: /spacing|space|gap|gutter|inset/i, drawn: 'bars' },
+	{ category: 'Shape', kind: 'dimension', named: /radius|rounded|corner/i, drawn: 'corners' },
 ];
 
 /**

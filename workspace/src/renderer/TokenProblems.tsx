@@ -11,12 +11,12 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, Dia
  * tabs, and in a dialog when View is pressed, each with the file and line it is at. The rest of the tokens are shown; what
  * is listed here is skipped, never guessed.
  */
-export const TokenProblems = ({ problems }: { problems: TokenProblem[] }) => {
+export const TokenProblems = ({ problems, className = 'p-4' }: { problems: TokenProblem[]; className?: string }) => {
 	if (problems.length === 0) return null;
 	const said = `${plural(problems.length, 'value')} couldn’t be read`;
 	return (
 		<Dialog>
-			<div className="p-4">
+			<div className={className}>
 				<Alert>
 					<TriangleAlertIcon />
 					<AlertTitle>{said}</AlertTitle>
