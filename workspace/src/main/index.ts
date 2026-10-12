@@ -1,29 +1,12 @@
-import { BrowserWindow, app, nativeTheme, safeStorage, screen, shell } from 'electron';
+import { BrowserWindow, app, nativeTheme, screen, shell } from 'electron';
 import { join } from 'node:path';
 import pkg from '../../package.json';
 import { appPaths } from './appPaths';
-import { emit } from './handle';
 import { registerIpc } from './ipc';
+import { createServices } from './composition';
 import { quitWithTheWindow } from './lifecycle';
-import { SessionMemory } from './services/editor';
-import { AgentRunner } from './services/agent';
-import { DESIGN_REPO, DesignRepo } from './services/designRepo';
-import { CheckoutMemory } from './services/checkoutMemory';
-import { CloneFolderMemory } from './services/cloneFolder';
-import { DesignSystemsMemory } from './services/designSystems';
-import { PICTURE_RECIPE, measureInWindows } from './services/storyMeasure';
-import { checkInWindow } from './services/accessibilityCheck';
-import { coverInWindow } from './services/coverWindow';
-import { PageView } from './services/pageView';
 import { AppearanceMemory } from './services/appearance';
 import { MIN_WINDOW, type WindowState, WindowMemory, restoreState } from './services/windowMemory';
-import { PrototypeServer } from './services/prototypeServer';
-import { networkFetch } from './services/github';
-import { GitHubSession } from './services/githubSession';
-import { RuntimeManager } from './services/runtime';
-import { ShareRunner } from './services/share';
-import { OpenedCheckouts } from './services/session';
-import { TokenStore } from './services/tokenStore';
 import { errorText } from '../shared/result';
 
 /**
@@ -147,58 +130,9 @@ const createWindow = (): BrowserWindow => {
 
 void app.whenReady().then(() => {
 	const window = createWindow();
-	const opened = new OpenedCheckouts();
-
-	const runtime = new RuntimeManager({
-		onLog: (line) => emit(window, 'onRunLog', line),
-		onStatus: (status) => emit(window, 'onPreviewStatus', status),
-	});
-	const agent = new AgentRunner((line) => emit(window, 'onAgentLog', line));
-	const share = new ShareRunner((status) => emit(window, 'onShareStatus', status));
-
-	const github = new GitHubSession(GITHUB_CLIENT_ID, new TokenStore(paths().githubToken, safeStorage), networkFetch, (state) =>
-		emit(window, 'onSignInChanged', state),
-	);
-	const designRepo = new DesignRepo(github, DESIGN_REPO);
-
-	const page = new PageView(
-		window,
-		(route) => emit(window, 'onPageRoute', route),
-		(e) => emit(window, 'onPinEvent', e),
-	);
-
-	const prototypeServer = new PrototypeServer();
-	const memory = new CheckoutMemory(paths().checkout);
-
-	const publishing = registerIpc({
-		window,
-		opened,
-		runtime,
-		agent,
-		share,
-		github,
-		designRepo,
-		page,
-		memory,
-		onPublishStatus: (status) => emit(window, 'onPublishStatus', status),
-		prototypesRoot: paths().prototypes,
-		prototypeServer,
-		sessions: new SessionMemory(paths().agentSessions),
-		cloneFolders: new CloneFolderMemory(paths().cloneFolder),
-		designSystems: new DesignSystemsMemory(paths().designSystems),
-		storyPreviewsRoot: paths().storyPreviews,
-		tokenBranchesFile: paths().tokenBranches,
-		voiceBranchFile: paths().voiceBranch,
-		componentPicturesRoot: paths().componentPictures,
-		componentPictureRecipe: PICTURE_RECIPE,
-		measureStories: measureInWindows,
-		checkPage: checkInWindow,
-		drawCover: coverInWindow,
-		appearanceMemory: appearanceMemory(),
-		applyAppearance: (appearance) => void (nativeTheme.themeSource = appearance),
-		// A little after the window is up, so opening the app is not slowed by getting the design system ready.
-		warmAfterMs: 3000,
-	});
+	const services = createServices(window, paths(), GITHUB_CLIENT_ID);
+	const { runtime, agent, share, github, page, prototypeServer } = services;
+	const publishing = registerIpc(services);
 	window.on('closed', () => prototypeServer.close());
 	// Coming back to the window is a good moment to publish whatever was done while it was away.
 	window.on('focus', () => void publishing.publish());
@@ -213,9 +147,9 @@ void app.whenReady().then(() => {
 	/**
 	 * Nothing the app started may outlive the window.
 	 *
-	 * Wired to the window closing, not only to quitting: on macOS closing the last
-	 * window does not quit, so a `before-quit`-only cleanup left a dev server
-	 * holding its port and an agent still writing to the repository.
+	 * Wired to the window closing, not only to quitting: the window is the app (it quits when the last one
+	 * closes, `lifecycle.ts`), and a `before-quit`-only cleanup once left a dev server holding its port and an agent
+	 * still writing to the repository.
 	 */
 	const stopEverything = () => {
 		runtime.stopAll();

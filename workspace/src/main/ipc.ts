@@ -1,5 +1,6 @@
-import { type BrowserWindow, clipboard, dialog, shell } from 'electron';
+import type { BrowserWindow } from 'electron';
 import { emit, handle } from './handle';
+import type { Ports } from './ports';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -27,13 +28,12 @@ import {
 	type ReviewComment,
 } from '../shared/contract';
 import { type Appearance, isAppearance } from '../shared/appearance';
-import { AGENT_BUSY, type AgentExtras, AgentRunner, agentReadiness, locateClaude } from './services/agent';
-import { SessionMemory, findEditor, openFolder, openPrompt, openSession, resumeCommand, startCommand } from './services/editor';
+import { AGENT_BUSY, type AgentExtras, AgentRunner, agentReadiness } from './services/agent';
+import { SessionMemory, resumeCommand, startCommand } from './services/editor';
 import { type CheckoutParts, codebaseTask, handoffTask, moveToCodeTask, prototypeAddressTask, prototypeBuildTask } from './services/agentTasks';
 import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, commandLine } from './services/engineeringHandoff';
 import { lastVerdict } from '../shared/handoff';
-import { type ShareRunner, type ShareTools, previewIsUp, pullRequestText } from './services/share';
-import { realShareTools } from './services/shareTools';
+import { type ShareRunner, previewIsUp, pullRequestText } from './services/share';
 import { buildContextReceipt } from './services/contextReceipt';
 import { DESCRIPTOR_PATH, designSystemCheckout, findCommand, readDescriptor } from './services/descriptor';
 import {
@@ -76,7 +76,6 @@ import { AppearanceMemory } from './services/appearance';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
 import { gitHubRepoOf, listedAs, mergeRepositories, originOf, reachableRepositories } from './services/repositories';
-import { ghApi } from './services/ghCli';
 import { classify, readBranchProjects } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
 import { ADDRESS_SKILL, chooseComment, prepareAddress } from './services/address';
@@ -131,6 +130,8 @@ import { coalescingByKey, singleFlight } from './services/concurrency';
 
 export interface IpcContext {
 	window: BrowserWindow;
+	/** Everything reached outside the app: dialogs, other applications, the clipboard, the network, the person's own tools. */
+	ports: Ports;
 	opened: OpenedCheckouts;
 	runtime: RuntimeManager;
 	agent: AgentRunner;
@@ -143,39 +144,34 @@ export interface IpcContext {
 	onPublishStatus: (status: PublishStatus) => void;
 	/** Where prototypes are built before they are saved: the app's own folder, never a repository. */
 	prototypesRoot: string;
-	prototypeServer?: PrototypeServer;
+	prototypeServer: PrototypeServer;
 	/** The latest agent conversation for each branch, so it can be continued in the person's editor. */
 	sessions: SessionMemory;
 	/** Where this person's clones go, once they choose. */
 	cloneFolders: CloneFolderMemory;
 	/** The appearance they chose (Settings), and how it is applied to the app: the system's theme setting, in the app. */
 	appearanceMemory: AppearanceMemory;
-	applyAppearance?: (appearance: Appearance) => void;
+	applyAppearance: (appearance: Appearance) => void;
 	/** Clones what the New modal asks for. Given for tests, to clone from this machine instead of GitHub. */
-	cloner?: Cloner;
-	installer?: Installer;
+	cloner: Cloner;
+	installer: Installer;
 	/** The component library for the Design System tab. Given for tests, to read a library made for them. */
+	/** A test's own; built from the connected design systems when not given. */
 	designLibrary?: DesignLibrary;
 	/** The design systems the person connected. */
 	designSystems: DesignSystemsMemory;
-	/**
-	 * GitHub as the person's own account sees it (its command line), so every repository they can reach is listed, not
-	 * only those the app's GitHub App is installed on. Null where there is none; given for tests.
-	 */
-	personGitHub?: Pick<GitHubSession, 'api'> | null;
 	/** Where the previews of the library's stories are built: the app's own folder, never the library's. */
 	storyPreviewsRoot: string;
-	/** Which branch each design system's change to its tokens is kept on (T4); and the GitHub tools it is proposed with. */
+	/** Which branch each design system's change to its tokens is kept on (T4). */
 	tokenBranchesFile: string;
-	tokenBranchTools?: (root: string) => ShareTools;
 	/** Which branch a change to the voice and tone is kept on (T9). */
 	voiceBranchFile: string;
 	/** How stories are drawn to read what they draw (T6): hidden windows, in the app. */
-	measureStories?: Measure;
+	measureStories: Measure;
 	/** How a page is checked for accessibility (T7): axe-core in a hidden window, in the app. */
-	checkPage?: CheckPage;
+	checkPage: CheckPage;
 	/** How a prototype's page is drawn as its picture on its project's card: a hidden window, in the app. */
-	drawCover?: DrawCover;
+	drawCover: DrawCover;
 	/**
 	 * Which tokens each component draws with (T6), and so what is got ready in the background: given for tests.
 	 */
@@ -183,13 +179,14 @@ export interface IpcContext {
 	/** Where the pictures of the components are kept (P5): the app's own folder. */
 	componentPicturesRoot: string;
 	/** How the pictures are taken: a fingerprint, so only pictures taken that way are shown. */
-	componentPictureRecipe?: string;
+	componentPictureRecipe: string;
 	/** When to start getting the shown design system ready after the app opens; not at all when absent. */
 	warmAfterMs?: number;
 }
 
 export const registerIpc = ({
 	window,
+	ports,
 	opened,
 	runtime,
 	agent,
@@ -200,34 +197,27 @@ export const registerIpc = ({
 	memory,
 	onPublishStatus,
 	prototypesRoot,
-	prototypeServer = new PrototypeServer(),
+	prototypeServer,
 	sessions,
 	cloneFolders,
 	appearanceMemory,
-	applyAppearance = () => undefined,
-	cloner = new Cloner(),
-	installer = new Installer(),
+	applyAppearance,
+	cloner,
+	installer,
 	designLibrary,
 	designSystems,
-	personGitHub = ghApi(),
 	storyPreviewsRoot,
 	tokenBranchesFile,
-	tokenBranchTools = (root: string) => realShareTools(root),
 	voiceBranchFile,
-	measureStories = async () => {
-		throw new Error('Stories can be drawn only in the app.');
-	},
-	checkPage = async () => {
-		throw new Error('Pages can be checked only in the app.');
-	},
-	drawCover = async () => {
-		throw new Error('Pictures of prototypes can be drawn only in the app.');
-	},
+	measureStories,
+	checkPage,
+	drawCover,
 	componentTokens: injectedComponentTokens,
 	componentPicturesRoot,
-	componentPictureRecipe = 'for tests',
+	componentPictureRecipe,
 	warmAfterMs,
 }: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
+	const { personGitHub } = ports;
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
 			throw new Error(`${root} is not a git repository.`);
@@ -316,15 +306,8 @@ export const registerIpc = ({
 	};
 
 	handle('chooseCheckout', async (): Promise<Checkout | null> => {
-		const { canceled, filePaths } = await dialog.showOpenDialog(window, {
-			title: 'Open a product repository',
-			properties: ['openDirectory'],
-		});
-		const chosen = filePaths[0];
-		if (canceled || chosen === undefined) {
-			return null;
-		}
-		return openRepository(chosen);
+		const chosen = await ports.chooseFolder({ title: 'Open a product repository' });
+		return chosen === null ? null : openRepository(chosen);
 	});
 
 	handle('lastCheckout', async (): Promise<Checkout | null> => {
@@ -391,7 +374,7 @@ export const registerIpc = ({
 		if (typeof file !== 'string' || file.length === 0 || file.length > 500) throw new Error('A component is asked for by its story file.');
 		return componentTokens.of(file);
 	});
-	const tokenBranches = new TokenBranches({ system: shownSystem, file: tokenBranchesFile, tools: tokenBranchTools });
+	const tokenBranches = new TokenBranches({ system: shownSystem, file: tokenBranchesFile, tools: ports.shareTools });
 	handle('tokenBranch', () => tokenBranches.current());
 	handle('saveTokens', (edits: unknown) => tokenBranches.save(tokenEditsOf(edits)));
 	handle('proposeTokens', () => tokenBranches.propose());
@@ -425,13 +408,8 @@ export const registerIpc = ({
 	});
 	// Chosen with the system's picker, here: the window never names a folder to put files in.
 	handle('chooseCloneFolder', async (): Promise<string | null> => {
-		const { canceled, filePaths } = await dialog.showOpenDialog(window, {
-			title: 'Choose where repositories are cloned',
-			defaultPath: cloneFolder(),
-			properties: ['openDirectory', 'createDirectory'],
-		});
-		const chosen = filePaths[0];
-		if (canceled || chosen === undefined) return null;
+		const chosen = await ports.chooseFolder({ title: 'Choose where repositories are cloned', defaultPath: cloneFolder(), canCreate: true });
+		if (chosen === null) return null;
 		cloneFolders.write(chosen);
 		return chosen;
 	});
@@ -738,14 +716,14 @@ export const registerIpc = ({
 
 	// Handing the work to the person, in VS Code. Only ever on a click: it opens another application.
 	handle('editorState', (root: string, branch: string) => ({
-		editor: findEditor() !== null,
+		editor: ports.editor.find() !== null,
 		session: sessions.read(opened.require(root), String(branch)) !== null,
 	}));
 	handle('openInEditor', async (root: string) => {
 		const canonical = opened.require(root);
-		const editor = findEditor();
-		if (editor) await openFolder(editor, canonical);
-		else await shell.openPath(canonical);
+		const editor = ports.editor.find();
+		if (editor) await ports.editor.openFolder(editor, canonical);
+		else await ports.openPath(canonical);
 		return null;
 	});
 	handle('continueInClaude', async (root: string, branch: string): Promise<'editor' | 'terminal'> => {
@@ -757,15 +735,14 @@ export const registerIpc = ({
 		const takeOver = () => {
 			if (agent.runningSession() === found.session) agent.stop();
 		};
-		const editor = findEditor();
+		const editor = ports.editor.find();
 		if (editor) {
-			await openSession(editor, found, takeOver);
+			await ports.editor.openSession(editor, found, takeOver);
 			return 'editor';
 		}
-		await clipboard.writeText(resumeCommand(locateClaude(), found));
+		await ports.copy(resumeCommand(ports.claude(), found));
 		takeOver();
-		await dialog.showMessageBox({
-			type: 'info',
+		await ports.tell({
 			message: 'The command to continue is copied',
 			detail: 'VS Code with the Claude Code extension is not installed here. Paste the command into a terminal to continue the same conversation.',
 		});
@@ -833,7 +810,7 @@ export const registerIpc = ({
 				branch: iteration.branch,
 				...pullRequestText(projectId, name),
 			},
-			tools: realShareTools(canonical),
+			tools: ports.shareTools(canonical),
 			// Saved, then published, and only then is the link called ready: a reviewer cannot open what is not up yet.
 			record: async (url, prUrl) => {
 				recordPreview(recordsRoot, projectId, name, url, shared, prUrl);
@@ -852,9 +829,7 @@ export const registerIpc = ({
 	handle('previewReachable', async (url: string): Promise<boolean> => {
 		const checked = assertPreviewUrl(String(url));
 		try {
-			const res = await fetch(checked, { redirect: 'follow', signal: AbortSignal.timeout(6000) });
-			await res.body?.cancel();
-			return previewIsUp(res.status);
+			return previewIsUp(await ports.httpStatus(checked));
 		} catch {
 			return false;
 		}
@@ -1233,7 +1208,7 @@ export const registerIpc = ({
 	handle('openPublishedPage', async (projectId: string, name: string): Promise<null> => {
 		const status = await publishedPage(projectId, name);
 		if (status.state !== 'published') throw new Error('This iteration is not on its page yet.');
-		await shell.openExternal(assertPreviewUrl(status.url));
+		await ports.openExternal(assertPreviewUrl(status.url));
 		return null;
 	});
 	handle('publishPage', async (projectId: string, name: string): Promise<PageStatus> => {
@@ -1422,13 +1397,13 @@ export const registerIpc = ({
 			),
 		);
 		const prompt = moveToCodePrompt({ label, projectId, taskFile, continuing: continuing ? branch : null });
-		const editor = findEditor();
+		const editor = ports.editor.find();
 		if (editor) {
-			await openPrompt(editor, canonical, prompt);
+			await ports.editor.openPrompt(editor, canonical, prompt);
 			return { editor: true, command: null };
 		}
-		const command = startCommand(locateClaude(), canonical, prompt);
-		await clipboard.writeText(command);
+		const command = startCommand(ports.claude(), canonical, prompt);
+		await ports.copy(command);
 		return { editor: false, command };
 	});
 
@@ -1465,7 +1440,7 @@ export const registerIpc = ({
 	handle('openPreviewInBrowser', async () => {
 		const url = page.currentUrl();
 		if (url === null) throw new Error('There is no preview open to show in a browser.');
-		await shell.openExternal(assertPreviewUrl(url));
+		await ports.openExternal(assertPreviewUrl(url));
 		return null;
 	});
 	handle('pageSetBounds', (b: PageBounds) =>

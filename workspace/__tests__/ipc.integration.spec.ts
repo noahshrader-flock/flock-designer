@@ -4,6 +4,7 @@ import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { IpcContext } from '../src/main/ipc';
 import { CHANNELS } from '../src/shared/contract';
 import { g, installDesignSystem, makeProduct, makeProductFiles, addStandards, type Fn } from './fixtures';
 
@@ -25,11 +26,21 @@ vi.mock('electron', () => ({
 	ipcMain: {
 		handle: (channel: string, fn: (...args: unknown[]) => unknown) => handlers.set(channel, fn),
 	},
-	dialog: { showOpenDialog: vi.fn(async () => ({ canceled: true, filePaths: [] })), showMessageBox: vi.fn(async () => ({ response: 0 })) },
-	shell: { openExternal: vi.fn(), openPath: vi.fn(async () => '') },
-	clipboard: { writeText: (t: string) => (copied = t) },
 }));
 let copied = '';
+/** Everything outside the app, faked: no dialog, no other application, no real gh, no push. */
+let ports: {
+	chooseFolder: Fn;
+	tell: Fn;
+	openExternal: Fn;
+	openPath: Fn;
+	copy: Fn;
+	httpStatus: Fn;
+	editor: { find: () => string | null; openFolder: Fn; openPrompt: Fn; openSession: Fn };
+	claude: () => string;
+	personGitHub: { api: (path: string) => Promise<unknown> };
+	shareTools: Fn;
+};
 /** Where each repository is cloned from in a test: this machine, standing in for GitHub. */
 let cloneSources: Record<string, string> = {};
 /** What the person's own GitHub account lists, beyond what the app's GitHub App can see. */
@@ -123,7 +134,7 @@ let drawCover: Fn;
 let readBytes: Fn;
 /** What the window is told its appearance is, as the app tells the system's theme setting: the calls, in order. */
 let applied: string[] = [];
-let register: (more?: Record<string, unknown>) => void;
+let register: (more?: Partial<IpcContext>) => void;
 let prototypeServer: InstanceType<(typeof import('../src/main/services/prototypeServer'))['PrototypeServer']>;
 
 beforeEach(async () => {
@@ -142,12 +153,26 @@ beforeEach(async () => {
 
 	// Discovery looks under the home directory; point it at a temporary one.
 	vi.doMock('node:os', async () => ({ ...(await vi.importActual<object>('node:os')), homedir: () => home }));
-	// Never another application from a test: VS Code is treated as not installed.
-	vi.doMock('../src/main/services/editor', async () => ({
-		...(await vi.importActual<object>('../src/main/services/editor')),
-		findEditor: () => null,
-	}));
 	copied = '';
+	ports = {
+		chooseFolder: vi.fn(async () => null),
+		tell: vi.fn(async () => undefined),
+		openExternal: vi.fn(async () => undefined),
+		openPath: vi.fn(async () => undefined),
+		copy: vi.fn(async (t: string) => void (copied = t)),
+		httpStatus: vi.fn(async () => 200),
+		// Never another application from a test: VS Code is treated as not installed.
+		editor: { find: () => null, openFolder: vi.fn(), openPrompt: vi.fn(), openSession: vi.fn() },
+		claude: () => 'claude',
+		// The person's own GitHub (its command line): never the real one here.
+		personGitHub: {
+			api: async (path: string) =>
+				path === '/user' ? { login: personLogin } : path.startsWith('/user/repos') ? personRepos.map((full_name) => ({ full_name })) : [],
+		},
+		shareTools: vi.fn(() => {
+			throw new Error('Sharing is not faked in this test.');
+		}),
+	};
 
 	({ registerIpc } = await import('../src/main/ipc'));
 	({ OpenedCheckouts } = await import('../src/main/services/session'));
@@ -194,11 +219,13 @@ beforeEach(async () => {
 	const { AppearanceMemory } = await import('../src/main/services/appearance');
 	const { CloneFolderMemory } = await import('../src/main/services/cloneFolder');
 	const { Cloner } = await import('../src/main/services/clone');
+	const { Installer } = await import('../src/main/services/install');
 	const { DesignSystemsMemory } = await import('../src/main/services/designSystems');
 	const { SessionMemory } = await import('../src/main/services/editor');
-	register = (more: Record<string, unknown> = {}) =>
+	register = (more: Partial<IpcContext> = {}) =>
 		registerIpc({
 			window: { webContents: { send: vi.fn() } } as never,
+			ports: ports as never,
 			opened,
 			runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
 			agent: {
@@ -240,17 +267,18 @@ beforeEach(async () => {
 			sessions: new SessionMemory(join(home, 'agent-sessions.json')),
 			tokenBranchesFile: join(home, 'token-branches.json'),
 			voiceBranchFile: join(home, 'voice-branch.json'),
-			// The person's own GitHub (its command line): never the real one here.
-			personGitHub: {
-				api: async (path: string) =>
-					path === '/user' ? { login: personLogin } : path.startsWith('/user/repos') ? personRepos.map((full_name) => ({ full_name })) : [],
-			},
 			storyPreviewsRoot: join(home, 'story-previews'),
 			componentPicturesRoot: join(home, 'component-pictures'),
 			// What is got ready in the background is only counted here, never drawn.
 			componentTokens: { of: ask, warm, pictures: async () => ({ drawing: false, pictures: {}, issues: {} }) } as never,
 			checkPage,
 			drawCover,
+			installer: new Installer(),
+			// Stories are drawn only in the app: a test that reaches for it says so.
+			measureStories: async () => {
+				throw new Error('Stories are drawn only in the app.');
+			},
+			componentPictureRecipe: 'for tests',
 			...more,
 		});
 	register();
@@ -288,7 +316,7 @@ describe('the Design System tab', () => {
 			await call(CHANNELS.designSystemCatalog, false);
 			expect(warm).not.toHaveBeenCalled();
 			const ready = { state: 'ready', components: [], tokens: { source: null, tokens: [], problems: [], looked: [] } };
-			register({ designLibrary: { catalog: async () => ready, current: () => 'none' } });
+			register({ designLibrary: { catalog: async () => ready, current: () => 'none' } as never });
 			await call(CHANNELS.designSystemCatalog, true);
 			expect(warm).toHaveBeenCalledOnce();
 			expect(await call(CHANNELS.designSystemCatalog, false)).toMatchObject({ ok: true, value: { state: 'ready' } });
@@ -497,7 +525,7 @@ describe('the Design System tab', () => {
 });
 
 describe('where clones go', () => {
-	const picker = async () => vi.mocked((await import('electron')).dialog.showOpenDialog);
+	const picker = async () => ports.chooseFolder;
 
 	it('is beside the repository found on this machine until the person chooses', async () => {
 		expect((await call(CHANNELS.cloneFolder)).value).toBe(join(home, 'GitHub'));
@@ -509,7 +537,7 @@ describe('where clones go', () => {
 		expect(((await call(CHANNELS.listRepositories)).value as { repositories: unknown[] }).repositories).not.toContainEqual(
 			expect.objectContaining({ root: join(elsewhere, 'flock-other') }),
 		);
-		(await picker()).mockResolvedValueOnce({ canceled: false, filePaths: [elsewhere] } as never);
+		(await picker()).mockResolvedValueOnce(elsewhere);
 		expect((await call(CHANNELS.chooseCloneFolder)).value).toBe(elsewhere);
 		expect((await call(CHANNELS.cloneFolder)).value).toBe(elsewhere);
 		expect(((await call(CHANNELS.listRepositories)).value as { repositories: unknown[] }).repositories).toContainEqual(
@@ -520,7 +548,7 @@ describe('where clones go', () => {
 
 	describe('cloning from the New modal', () => {
 		const elsewhere = async () => {
-			(await picker()).mockResolvedValueOnce({ canceled: false, filePaths: [join(home, 'Work')] } as never);
+			(await picker()).mockResolvedValueOnce(join(home, 'Work'));
 			await call(CHANNELS.chooseCloneFolder);
 		};
 
@@ -691,7 +719,7 @@ describe('where clones go', () => {
 	});
 
 	it('is left as it was when the picker is canceled', async () => {
-		(await picker()).mockResolvedValueOnce({ canceled: true, filePaths: [] } as never);
+		(await picker()).mockResolvedValueOnce(null);
 		expect((await call(CHANNELS.chooseCloneFolder)).value).toBeNull();
 		expect((await call(CHANNELS.cloneFolder)).value).toBe(join(home, 'GitHub'));
 	});
@@ -2116,7 +2144,7 @@ describe('moveComment validates its arguments', () => {
 });
 
 describe('opening the preview in the real browser', () => {
-	const openedLink = async () => (await import('electron')).shell.openExternal as unknown as Fn;
+	const openedLink = async () => ports.openExternal;
 
 	it('opens the page the preview is on, query and all, in the default browser', async () => {
 		previewUrl = 'http://localhost:3000/organization/org_1/roles/compare?a=r1&b=r2';
