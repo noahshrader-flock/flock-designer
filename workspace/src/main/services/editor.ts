@@ -1,7 +1,7 @@
-import { execFile } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { runFile } from './process';
 
 /**
  * Handing the agent's work to the person, in their own editor.
@@ -58,8 +58,9 @@ export const findEditor = (home: string = homedir(), exists: (p: string) => bool
 	return hasClaude ? app : null;
 };
 
-const run = (file: string, args: string[]): Promise<void> =>
-	new Promise((resolve, reject) => execFile(file, args, (err) => (err ? reject(err) : resolve())));
+const run = async (file: string, args: string[]): Promise<void> => {
+	await runFile(file, args, { timeoutMs: 30_000 });
+};
 
 /** Opens a folder in VS Code: a window of its own, or the one already showing it. */
 export const openFolder = (editor: string, folder: string): Promise<void> => run('/usr/bin/open', ['-a', editor, folder]);

@@ -1,17 +1,17 @@
-import { execFile } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
-import { promisify } from 'node:util';
 import type { Checkout } from '../../shared/contract';
+import { runFile } from './process';
 
-const run = promisify(execFile);
+/** Git is given a minute unless a caller says otherwise: a hung command would hold up every other one on its repository. */
+const GIT_TIMEOUT_MS = 60_000;
 
 /**
  * Git, through argv only.
  *
- * Every call goes through `execFile` with an argument array, so no shell parses
+ * Every call goes through `runFile` with an argument array, so no shell parses
  * anything -- a branch name containing `;` or backticks is a bad branch name,
  * not a command. Nothing here rewrites or discards history: the destructive
  * verbs are simply absent, which is a stronger guarantee than guarding them.
@@ -35,15 +35,14 @@ const attempt = async (root: string, args: string[], timeoutMs?: number, env?: R
 	// `--no-optional-locks`: a read-only command (status, log, rev-parse) would otherwise
 	// refresh the index in the background and take the same lock a checkout needs. Git
 	// documents this flag for exactly the case of a tool polling a repository.
-	const running = run('git', ['--no-optional-locks', '-C', root, ...args], {
-		maxBuffer: 16 * 1024 * 1024,
-		...(timeoutMs ? { timeout: timeoutMs } : {}),
-		// Never wait for someone to type a password into a window that has no terminal.
-		env: { ...process.env, GIT_TERMINAL_PROMPT: '0', ...env },
+	const { stdout } = await runFile('git', ['--no-optional-locks', '-C', root, ...args], {
+		timeoutMs: timeoutMs ?? GIT_TIMEOUT_MS,
+		// Never wait for someone to type a password into a window that has no terminal, nor for ssh to ask one (an app
+		// opened from the Dock has no terminal for it). A person's own ssh command is theirs, and kept.
+		env: { GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: process.env.GIT_SSH_COMMAND ?? 'ssh -o BatchMode=yes', ...env },
+		// What a command reads from its input (`cat-file --batch-check`), given all at once.
+		input,
 	});
-	// What a command reads from its input (`cat-file --batch-check`), given all at once.
-	if (input !== undefined) running.child.stdin?.end(input);
-	const { stdout } = await running;
 	return stdout;
 };
 

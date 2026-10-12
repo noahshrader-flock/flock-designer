@@ -66,6 +66,9 @@ export interface Fetcher {
 	}>;
 }
 
+/** The real fetch, as the session uses it: every call to GitHub given up on after 30 seconds rather than left to hang. */
+export const networkFetch: Fetcher = (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(30_000) }) as ReturnType<Fetcher>;
+
 /** Step one: ask GitHub for a code the person types into github.com/login/device. */
 export const startDeviceFlow = async (clientId: string, fetcher: Fetcher): Promise<DeviceCodeStart> => {
 	const res = await fetcher(DEVICE_CODE_URL, {

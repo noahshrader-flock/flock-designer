@@ -133,7 +133,9 @@ export const siteBehind = async (github: GitHubApi, ref: DesignRepoRef): Promise
 };
 
 /** No credentials, and GitHub's sign-in redirect not followed: a 200 means the page opens for anyone. */
-export const fetchAnonymously = async (url: string): Promise<{ status: number }> => ({ status: (await fetch(url, { redirect: 'manual' })).status });
+export const fetchAnonymously = async (url: string): Promise<{ status: number }> => ({
+	status: (await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(15_000) })).status,
+});
 
 /**
  * How the records reach GitHub from where publishing runs: from a clone, by its records sync (only `projects/`), on the

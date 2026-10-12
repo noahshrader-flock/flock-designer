@@ -1,10 +1,7 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { locateGh } from './ghCli';
 import { pushBranch } from './git';
+import { NotInstalled, ProcessFailed, runFile } from './process';
 import { type Check, type PullRequest, ShareProblem, type ShareTools } from './share';
-
-const run = promisify(execFile);
 
 /**
  * The real tools behind sharing: the designer's own git for the push, and the GitHub CLI for
@@ -34,21 +31,15 @@ class GhFailure extends ShareProblem {
 
 const gh = async (root: string, bin: string, args: string[]): Promise<string> => {
 	try {
-		const { stdout } = await run(bin, args, {
-			cwd: root,
-			timeout: 60_000,
-			maxBuffer: 8 * 1024 * 1024,
-			// No prompts: there is no terminal to answer one.
-			env: { ...process.env, GH_PROMPT_DISABLED: '1', NO_COLOR: '1' },
-		});
+		// No prompts: there is no terminal to answer one.
+		const { stdout } = await runFile(bin, args, { cwd: root, maxBuffer: 8 * 1024 * 1024, env: { GH_PROMPT_DISABLED: '1', NO_COLOR: '1' } });
 		return stdout.trim();
 	} catch (err) {
-		const e = err as NodeJS.ErrnoException & { stdout?: string; stderr?: string };
-		if (e.code === 'ENOENT') throw new ShareProblem(NOT_INSTALLED);
-		const detail = (e.stderr ?? '').trim() || e.message;
-		if (/gh auth login|not logged in|HTTP 401/i.test(detail)) throw new ShareProblem(NOT_SIGNED_IN);
+		if (err instanceof NotInstalled) throw new ShareProblem(NOT_INSTALLED);
+		if (!(err instanceof ProcessFailed)) throw err;
+		if (/gh auth login|not logged in|HTTP 401/i.test(err.message)) throw new ShareProblem(NOT_SIGNED_IN);
 		// `gh` exits non-zero to say "checks are pending" or "a check failed" and still prints the answer.
-		throw new GhFailure(`The GitHub CLI said: ${detail}`, e.stdout ?? '', e.stderr ?? '');
+		throw new GhFailure(`The GitHub CLI said: ${err.message}`, err.stdout, err.stderr);
 	}
 };
 

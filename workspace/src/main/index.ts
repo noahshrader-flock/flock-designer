@@ -17,7 +17,7 @@ import { PageView } from './services/pageView';
 import { AppearanceMemory } from './services/appearance';
 import { MIN_WINDOW, type WindowState, WindowMemory, restoreState } from './services/windowMemory';
 import { PrototypeServer } from './services/prototypeServer';
-import type { Fetcher } from './services/github';
+import { networkFetch } from './services/github';
 import { GitHubSession } from './services/githubSession';
 import { RuntimeManager } from './services/runtime';
 import { ShareRunner } from './services/share';
@@ -155,9 +155,7 @@ void app.whenReady().then(() => {
 	const github = new GitHubSession(
 		GITHUB_CLIENT_ID,
 		new TokenStore(TokenStore.defaultPath(app.getPath('userData')), safeStorage),
-		// Node ships fetch; the Fetcher type is the narrow slice the session uses, so
-		// tests can pass a stub without pulling in all of fetch's surface.
-		fetch as unknown as Fetcher,
+		networkFetch,
 		(state) => emit(window, 'onSignInChanged', state),
 	);
 	const designRepo = new DesignRepo(github, DESIGN_REPO);

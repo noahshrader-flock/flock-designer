@@ -255,7 +255,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		if (command === 'build-site') return await site(deps, values);
 		if (command === 'wcag-edition')
 			return await checkWcagEdition({
-				fetchText: deps.fetchText ?? (async (url) => (await fetch(url)).text()),
+				fetchText: deps.fetchText ?? (async (url) => (await fetch(url, { signal: AbortSignal.timeout(15_000) })).text()),
 				github: deps.github,
 				repo: DESIGN_REPO,
 				out: deps.out,

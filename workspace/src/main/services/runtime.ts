@@ -40,7 +40,8 @@ export interface RuntimeDeps {
 
 export const httpProbe = async (port: number): Promise<boolean> => {
 	try {
-		const response = await fetch(`http://localhost:${port}/`, { redirect: 'manual' });
+		// A probe, asked again shortly: a server that does not answer in two seconds is not up yet.
+		const response = await fetch(`http://localhost:${port}/`, { redirect: 'manual', signal: AbortSignal.timeout(2000) });
 		return response.status < 500;
 	} catch {
 		return false;

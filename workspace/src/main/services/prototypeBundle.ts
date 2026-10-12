@@ -1,8 +1,8 @@
-import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { STATE_NAME, STATES_META } from '../../shared/prototypeStates';
+import { ProcessFailed, runFile } from './process';
 
 /**
  * Turns a prototype written in React into one HTML file anyone can open.
@@ -125,27 +125,14 @@ export const runBundle = (
 	nodeModules: string,
 	shared: string,
 	node: string = process.execPath,
-): Promise<{ ok: boolean; output: string }> =>
-	new Promise((resolve) => {
-		mkdirSync(dirname(out), { recursive: true });
-		// Electron runs scripts as Node when told to; plain Node ignores the variable.
-		const child = spawn(node, [script, esbuild, entry, out, nodeModules, shared], {
-			env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
-			stdio: ['ignore', 'pipe', 'pipe'],
-		});
-		let output = '';
-		child.stdout.on('data', (d: Buffer) => (output += d.toString()));
-		child.stderr.on('data', (d: Buffer) => (output += d.toString()));
-		const timer = setTimeout(() => child.kill(), 120_000);
-		child.on('error', (err) => {
-			clearTimeout(timer);
-			resolve({ ok: false, output: err.message });
-		});
-		child.on('exit', (code) => {
-			clearTimeout(timer);
-			resolve({ ok: code === 0, output: output.trim() });
-		});
-	});
+): Promise<{ ok: boolean; output: string }> => {
+	mkdirSync(dirname(out), { recursive: true });
+	// Electron runs scripts as Node when told to; plain Node ignores the variable.
+	return runFile(node, [script, esbuild, entry, out, nodeModules, shared], { timeoutMs: 120_000, env: { ELECTRON_RUN_AS_NODE: '1' } }).then(
+		(r) => ({ ok: true, output: `${r.stdout}${r.stderr}`.trim() }),
+		(err: Error) => ({ ok: false, output: err instanceof ProcessFailed ? `${err.stdout}${err.stderr}`.trim() || err.message : err.message }),
+	);
+};
 
 /** The shared files a page points at, by name, so they can be kept with it and served beside it. */
 export const sharedFilesOf = (html: string): string[] => [...new Set([...html.matchAll(/\/_shared\/([0-9a-f]{16})\b/g)].map((m) => m[1] as string))];

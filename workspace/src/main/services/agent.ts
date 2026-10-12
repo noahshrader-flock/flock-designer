@@ -1,9 +1,10 @@
-import { type ChildProcess, execFile, spawn } from 'node:child_process';
+import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { findOnPath } from './paths';
 import type { AgentReadiness, AgentStatus, RunLogLine } from '../../shared/contract';
+import { ProcessFailed, runFile } from './process';
 
 /**
  * Hands a task to the agent the designer already has installed.
@@ -150,11 +151,13 @@ const settingsFor = (readOnly: string[]): string =>
 /** Runs a command and resolves with what it printed, or rejects. Bounded, so a hung check never holds anything up. */
 type RunCommand = (file: string, args: string[]) => Promise<string>;
 const runCommand: RunCommand = (file, args) =>
-	new Promise((resolve, reject) =>
-		execFile(file, args, { timeout: 10_000, env: process.env }, (err, stdout) =>
+	runFile(file, args, { timeoutMs: 10_000 }).then(
+		(r) => r.stdout,
+		(err: unknown) => {
 			// A command that answers and then exits non-zero (as a "no" may) still answered.
-			err && !String(stdout).trim() ? reject(err) : resolve(String(stdout)),
-		),
+			if (err instanceof ProcessFailed && err.stdout.trim()) return err.stdout;
+			throw err;
+		},
 	);
 
 /**

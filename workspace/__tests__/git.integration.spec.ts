@@ -14,6 +14,7 @@ import {
 	branchStartedAt,
 	isSafeBranchName,
 	readCheckout,
+	runGit,
 } from '../src/main/services/git';
 
 let root: string;
@@ -30,6 +31,37 @@ beforeEach(() => {
 });
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
+
+describe('how git is run', () => {
+	/** What git's own environment holds for `name`, as a command it runs sees it. */
+	const seen = (name: string) => runGit(root, ['-c', `alias.seen=!printenv ${name}`, 'seen']);
+
+	it('never asks for a password or lets ssh ask one, since there is no terminal to answer', async () => {
+		expect(await seen('GIT_TERMINAL_PROMPT')).toBe('0');
+		const own = process.env.GIT_SSH_COMMAND;
+		delete process.env.GIT_SSH_COMMAND;
+		try {
+			expect(await seen('GIT_SSH_COMMAND')).toBe('ssh -o BatchMode=yes');
+		} finally {
+			if (own !== undefined) process.env.GIT_SSH_COMMAND = own;
+		}
+	});
+
+	it('keeps a person’s own ssh command', async () => {
+		const own = process.env.GIT_SSH_COMMAND;
+		process.env.GIT_SSH_COMMAND = 'ssh -i ~/.ssh/mine';
+		try {
+			expect(await seen('GIT_SSH_COMMAND')).toBe('ssh -i ~/.ssh/mine');
+		} finally {
+			if (own === undefined) delete process.env.GIT_SSH_COMMAND;
+			else process.env.GIT_SSH_COMMAND = own;
+		}
+	});
+
+	it('stops a command that runs past its time, and says so', async () => {
+		await expect(runGit(root, ['-c', 'alias.hang=!sleep 30', 'hang'], 300)).rejects.toThrow(/did not finish within 0\.3 s/);
+	});
+});
 
 describe('readCheckout', () => {
 	it('reports the branch and a clean tree', async () => {

@@ -1,9 +1,7 @@
-import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { promisify } from 'node:util';
 import { PREVIEW_FILE, PREVIEW_HEIGHT, PREVIEW_SHOW, PREVIEW_SPECIMEN } from '../../shared/catalog';
 import { designSystemOf } from '../../shared/catalog';
 import type { ConnectedDesignSystem, StoryPreview, TokenEdit } from '../../shared/contract';
@@ -13,9 +11,8 @@ import { readTokens } from './designTokens';
 import { runGit } from './git';
 import type { BuildContext, BuildOptions, Loader, Plugin } from 'esbuild';
 import { ASSET_TYPES, type PrototypeServer } from './prototypeServer';
+import { runFile } from './process';
 import { editedFiles } from './tokenEdits';
-
-const run = promisify(execFile);
 
 /**
  * Previews of the component library's stories, for the Design System tab (DESIGN_SYSTEM_PLAN.md, P1).
@@ -394,7 +391,7 @@ const copyAt = async (root: string, commit: string, library: string, folder: str
 	mkdirSync(library, { recursive: true });
 	const tar = `${library}.tar`;
 	await runGit(root, ['archive', '--format=tar', '-o', tar, commit]);
-	await run('tar', ['-xf', tar, '-C', library]);
+	await runFile('tar', ['-xf', tar, '-C', library], { timeoutMs: 120_000 });
 	rmSync(tar, { force: true });
 	// A junction on Windows, a symbolic link elsewhere: the packages are read where the clone has them.
 	for (const at of folder === '' ? [''] : ['', folder]) {
