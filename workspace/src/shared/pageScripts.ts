@@ -443,11 +443,11 @@ ${HELPERS}
   });
   doc.documentElement.appendChild(layer);
   positionPins();
-  window.addEventListener('scroll', place, true);
-  window.addEventListener('resize', place);
-  var timer = setInterval(place, 400);
+  window.addEventListener('scroll', positionPins, true);
+  window.addEventListener('resize', positionPins);
+  var timer = setInterval(positionPins, 400);
   window.__fdMarkers = {
-    stop: function () { window.removeEventListener('scroll', place, true); window.removeEventListener('resize', place); clearInterval(timer); },
+    stop: function () { window.removeEventListener('scroll', positionPins, true); window.removeEventListener('resize', positionPins); clearInterval(timer); },
     focus: function (id) {
       for (var i = 0; i < placed.length; i++) {
         if (placed[i].id === id) {

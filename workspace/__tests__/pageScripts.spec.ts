@@ -395,6 +395,23 @@ describe('redrawing the pins', () => {
 		// ...and the outline belongs to comment mode, which is still on.
 		expect(w.document.querySelectorAll('[data-fd-layer="hover"]').length).toBeGreaterThan(0);
 	});
+
+	it('follows its element when the page scrolls or the window is resized', () => {
+		const w = page(CARD);
+		const el = w.document.querySelector('[data-e2e-ref="users-invite"]') as HTMLElement;
+		let left = 100;
+		el.getBoundingClientRect = () => ({ left, top: 50, width: 40, height: 20, right: left + 40, bottom: 70, x: left, y: 50, toJSON: () => ({}) }) as DOMRect;
+		w.eval(resolveScript([req(1, { selector: '[data-e2e-ref="users-invite"]' })], 'nonce'));
+		const marker = w.document.querySelector('[data-fd-layer] > div') as HTMLElement;
+		// Where on the element the pin sits, which moving the element keeps.
+		const offset = Number.parseFloat(marker.style.left) - left;
+		left = 300;
+		w.dispatchEvent(new w.Event('resize'));
+		expect(marker.style.left).toBe(`${300 + offset}px`);
+		left = 500;
+		w.dispatchEvent(new w.Event('scroll'));
+		expect(marker.style.left).toBe(`${500 + offset}px`);
+	});
 });
 
 describe('hiding the pins for a picture', () => {
