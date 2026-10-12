@@ -59,7 +59,9 @@ export const mergeRepositories = (remote: string[], clones: { root: string; repo
 export const visibleRepositories = async (session: Pick<GitHubSession, 'api'>, maxPages = 10): Promise<string[]> => {
 	const page = async (n: number): Promise<string[]> => {
 		const batch = await session.api(`/user/repos?affiliation=owner,collaborator,organization_member&sort=pushed&per_page=100&page=${n}`);
-		return (Array.isArray(batch) ? batch : []).map((r) => (r as { full_name?: unknown }).full_name).filter((n): n is string => typeof n === 'string');
+		return (Array.isArray(batch) ? batch : [])
+			.map((r) => (r as { full_name?: unknown }).full_name)
+			.filter((name): name is string => typeof name === 'string');
 	};
 	const first = await page(1);
 	if (first.length < 100 || maxPages === 1) return first;

@@ -236,8 +236,8 @@ export const tokenFiles: TokenSource = {
 			}
 			if (raw.type === 'typography' && value !== null && typeof value === 'object') {
 				for (const [key, group] of Object.entries(TYPE_KEYS)) {
-					const part = (value as Record<string, unknown>)[key];
-					if (part !== undefined) typeToken(`${path}.${key}`, group, path, key, (READ_PART[group] as (v: unknown) => string | null)(resolve(part)));
+					const piece = (value as Record<string, unknown>)[key];
+					if (piece !== undefined) typeToken(`${path}.${key}`, group, path, key, (READ_PART[group] as (v: unknown) => string | null)(resolve(piece)));
 				}
 				continue;
 			}

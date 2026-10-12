@@ -43,7 +43,7 @@ export const useTokenBranch = (shown: string | null, edits: TokenEdit[], setEdit
 			live = false;
 		};
 		// Only when another design system is shown: the change in the panel is the person's after that.
-	}, [shown]);
+	}, [shown]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const waiting = Boolean(branch?.pullRequest) && branch?.pullRequest?.chromatic === null;
 	useEffect(() => {

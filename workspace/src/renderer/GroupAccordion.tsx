@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { AccordionTrigger } from './ui/accordion';
 
 /**
@@ -10,13 +10,15 @@ import { AccordionTrigger } from './ui/accordion';
  */
 export const useClosedGroups = () => {
 	const [closed, setClosed] = useState<string[]>([]);
+	// The same function every render, so a callback that reopens the groups need not change with them.
+	const reopen = useCallback(() => setClosed([]), []);
 	return {
 		accordion: (names: string[]) => ({
 			type: 'multiple' as const,
 			value: names.filter((n) => !closed.includes(n)),
 			onValueChange: (open: string[]) => setClosed(names.filter((n) => !open.includes(n))),
 		}),
-		reopen: () => setClosed([]),
+		reopen,
 	};
 };
 

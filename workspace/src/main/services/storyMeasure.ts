@@ -141,7 +141,7 @@ export const measureInWindows: Measure = async (runs) => {
 	const results: (Drawn | null)[][] = [];
 	for (const { base, mode, files, pictures = false, accessibility = null } of runs) {
 		// Each window takes every third file, so the slow ones are spread out.
-		const shares = Array.from({ length: Math.min(WINDOWS_PER_RUN, files.length) }, (_, w) => files.filter((_, i) => i % WINDOWS_PER_RUN === w));
+		const shares = Array.from({ length: Math.min(WINDOWS_PER_RUN, files.length) }, (_, w) => files.filter((_file, i) => i % WINDOWS_PER_RUN === w));
 		const drawn = await Promise.all(shares.map((share) => drawShare(base, mode, share, pictures, accessibility)));
 		results.push(files.map((_, i) => drawn[i % WINDOWS_PER_RUN]?.[Math.floor(i / WINDOWS_PER_RUN)] ?? null));
 	}

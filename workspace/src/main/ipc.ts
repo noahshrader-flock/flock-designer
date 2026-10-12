@@ -875,7 +875,7 @@ export const registerIpc = ({
 				await openSession(editor, found, takeOver);
 				return 'editor';
 			}
-			clipboard.writeText(resumeCommand(locateClaude(), found));
+			await clipboard.writeText(resumeCommand(locateClaude(), found));
 			takeOver();
 			await dialog.showMessageBox({
 				type: 'info',
@@ -1201,12 +1201,12 @@ export const registerIpc = ({
 	};
 	/** The page: this machine's newest build first (built again when its source changed), then the saved one. */
 	const prototypePage = (projectId: string, name: string): Promise<string | null> => work.page(projectId, name, agentBusy());
-	/** Runs `work` once at a time per key: a second caller waits for the first and shares its answer. */
+	/** Runs `run` once at a time per key: a second caller waits for the first and shares its answer. */
 	const inFlight = new Map<string, Promise<unknown>>();
-	const once = <T>(key: string, work: () => Promise<T>): Promise<T> => {
+	const once = <T>(key: string, run: () => Promise<T>): Promise<T> => {
 		const running = inFlight.get(key) as Promise<T> | undefined;
 		if (running) return running;
-		const p = work().finally(() => inFlight.delete(key));
+		const p = run().finally(() => inFlight.delete(key));
 		inFlight.set(key, p);
 		return p;
 	};
@@ -1318,7 +1318,7 @@ export const registerIpc = ({
 			const buildSkill = await readSkillText(BUILD_SKILL);
 			// Read now, not earlier: this is what makes the file current, and what says who has commented.
 			const comments = await designRepo.readComments(projectId, prototypeKey(projectId, name));
-			const written = writeCommentsExport(prototypesRoot, {
+			const exported = writeCommentsExport(prototypesRoot, {
 				projectId,
 				title: await work.title(projectId),
 				iteration: { name, branch: prototypeKey(projectId, name) },
@@ -1339,7 +1339,7 @@ export const registerIpc = ({
 				projectId,
 				name,
 				sources,
-				prototypeAddressTask({ addressSkill, buildSkill, build, sources, accessibility, voice, commentsPath: written.path, number, name, where }),
+				prototypeAddressTask({ addressSkill, buildSkill, build, sources, accessibility, voice, commentsPath: exported.path, number, name, where }),
 			);
 		}),
 	);
@@ -1600,8 +1600,8 @@ export const registerIpc = ({
 			const here = await readCheckout(canonical);
 			const recent = agent.recentLines();
 			if (!started || started.branch !== here.branch || recent.work !== here.branch) return null;
-			const written = (await runGit(canonical, ['diff', '--name-only', started.head, 'HEAD', '--', HANDOFF_FILE])).trim() !== '';
-			return written && lastVerdict(recent.lines) === 'ready';
+			const committed = (await runGit(canonical, ['diff', '--name-only', started.head, 'HEAD', '--', HANDOFF_FILE])).trim() !== '';
+			return committed && lastVerdict(recent.lines) === 'ready';
 		}),
 	);
 
@@ -1659,7 +1659,7 @@ export const registerIpc = ({
 				return { editor: true, command: null };
 			}
 			const command = startCommand(locateClaude(), canonical, prompt);
-			clipboard.writeText(command);
+			await clipboard.writeText(command);
 			return { editor: false, command };
 		}),
 	);

@@ -135,7 +135,8 @@ export const NewWork = ({
 		void window.workspace.listRepositories().then((r) => r.ok && showRepos(r.value));
 		// Asked now, not after the branch is made: an agent that cannot start would leave an empty iteration behind.
 		void window.workspace.agentReadiness().then((r) => r.ok && setReadiness(r.value));
-	}, [open]);
+		// Only when it opens: the folder it starts in is the one shown then, and the person's choice after that.
+	}, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// A new repository brings its own branches, and starts on the one it has checked out.
 	useEffect(() => {
@@ -218,8 +219,8 @@ export const NewWork = ({
 	// Nothing else decides this: no repository, or one without its packages, cannot make a prototype.
 	const prototypeBlocked = askRoot === null || (prototype !== null && !prototype.ready);
 
-	const pickRepo = async (name: string) => {
-		const repo = choices.find((r) => r.name === name);
+	const pickRepo = async (repoName: string) => {
+		const repo = choices.find((r) => r.name === repoName);
 		if (!repo) return;
 		setPicked(repo.name);
 		setError(null);

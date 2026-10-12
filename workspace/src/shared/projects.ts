@@ -114,7 +114,6 @@ export const asRoute = (v: unknown): string | null => {
 	// No scheme, no authority, no backslash, no control characters, no whitespace.
 	if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return null;
 	if (raw.startsWith('//') || raw.includes('\\')) return null;
-	// eslint-disable-next-line no-control-regex
 	if (/[\u0000- \u007f]/.test(raw)) return null;
 	const path = raw.startsWith('/') ? raw : `/${raw}`;
 	// `..` cannot escape the origin, but a route that climbs is a mistake in the record, not a landing place.

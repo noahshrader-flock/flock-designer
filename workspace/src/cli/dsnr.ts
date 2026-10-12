@@ -229,7 +229,7 @@ const unpublishPage = async (deps: CliDeps, values: { project?: string; name?: s
  * printed. Only the command's word on a link counts, so the agent never gives one it made up, or leaves the person not
  * knowing whether there is one.
  */
-const taskText = (lead: string, task: string, save: string, publish: string): string =>
+const taskText = (lead: string, task: string, save: string, publishLine: string): string =>
 	[
 		lead,
 		'',
@@ -238,7 +238,7 @@ const taskText = (lead: string, task: string, save: string, publish: string): st
 		'## When it builds',
 		'',
 		`1. Save it, with exactly: \`${save}\``,
-		`2. Publish it, with exactly: \`${publish}\``,
+		`2. Publish it, with exactly: \`${publishLine}\``,
 		"   It prints the page's link, or says why there is none.",
 		'3. Say what you made, as the skill says. End with the page: the link exactly as the command printed it, which version',
 		"   and iteration it is (V1 · I2), and who can open it, in the command's words. If it printed no link, say so, and why,",

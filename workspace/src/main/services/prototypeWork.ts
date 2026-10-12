@@ -193,14 +193,14 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 * new prototype is a new idea). What it is modeled on is not optional: a prototype is built from a repository's
 	 * real design system, on a branch that exists here.
 	 */
-	const start = async (root: string, { projectId, title, note, branch, me, folder }: PrototypeStart): Promise<Iteration> => {
+	const start = async (root: string, { projectId, title: name, note, branch, me, folder }: PrototypeStart): Promise<Iteration> => {
 		assertUsableProjectId(projectId);
 		const why = notReady(root);
 		if (why !== null) throw new Error(why);
-		if (typeof title !== 'string' || !title.trim()) throw new Error('A prototype needs a name.');
+		if (typeof name !== 'string' || !name.trim()) throw new Error('A prototype needs a name.');
 		if (!(await branchExists(root, branch))) throw new Error(`There is no branch called ${branch} in ${basename(root)}.`);
 		const basedOn = { repository: basename(root), branch, commit: await branchCommit(root, branch).catch(() => null) };
-		return recordPrototype(ctx.store(), { projectId, title: title.slice(0, 200), note: String(note).slice(0, 8000), me, basedOn, folder });
+		return recordPrototype(ctx.store(), { projectId, title: name.slice(0, 200), note: String(note).slice(0, 8000), me, basedOn, folder });
 	};
 
 	/**

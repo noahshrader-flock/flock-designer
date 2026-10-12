@@ -268,6 +268,7 @@ const Components = ({
 	const [search, setSearch] = useState('');
 	// The groups closed up: they stay closed while a component is opened.
 	const closed = useClosedGroups();
+	const reopenGroups = closed.reopen;
 	// The change as every panel that shows tokens sees it: the tokens view and the component view alike.
 	const changes = useTokenChangesFor(
 		catalog?.state === 'ready' ? catalog.tokens.tokens : NO_TOKENS,
@@ -277,18 +278,21 @@ const Components = ({
 	);
 	const started = useRef(false);
 
-	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {
-		const r = await window.workspace.designSystemCatalog(refresh);
-		if (!r.ok) {
-			setError(r.error);
-			return null;
-		}
-		setError(null);
-		setCatalog(r.value);
-		const paths = new Set(r.value.state === 'ready' ? r.value.tokens.tokens.map((t) => t.path) : []);
-		setEdits((all) => (all.every((e) => paths.has(e.path)) ? all : all.filter((e) => paths.has(e.path))));
-		return r.value;
-	}, []);
+	const ask = useCallback(
+		async (refresh: boolean): Promise<Catalog | null> => {
+			const r = await window.workspace.designSystemCatalog(refresh);
+			if (!r.ok) {
+				setError(r.error);
+				return null;
+			}
+			setError(null);
+			setCatalog(r.value);
+			const paths = new Set(r.value.state === 'ready' ? r.value.tokens.tokens.map((t) => t.path) : []);
+			setEdits((all) => (all.every((e) => paths.has(e.path)) ? all : all.filter((e) => paths.has(e.path))));
+			return r.value;
+		},
+		[setCatalog, setEdits],
+	);
 
 	const sync = useCallback(async () => {
 		setSyncing(true);
@@ -324,10 +328,10 @@ const Components = ({
 		setCatalog(null);
 		setEdits([]);
 		setSearch('');
-		closed.reopen();
+		reopenGroups();
 		await listSystems();
 		await firstRead();
-	}, [openComponent, listSystems, firstRead]);
+	}, [openComponent, setCatalog, setEdits, reopenGroups, listSystems, firstRead]);
 	// Switching to one, or removing the one shown: either way another is shown, or what went wrong is said.
 	const thenShow = async (done: Promise<Result<null>>) => {
 		const r = await done;
@@ -392,7 +396,7 @@ const Components = ({
 	const panel: PanelView = opened ? view : 'tokens';
 	// The groups of what the search finds, in the catalog's order: a group with nothing found is left out.
 	const groups: { group: string; rows: CatalogComponent[] }[] = [];
-	for (const c of catalog.components.filter((c) => matchesComponent(c, search))) {
+	for (const c of catalog.components.filter((each) => matchesComponent(each, search))) {
 		const last = groups[groups.length - 1];
 		if (last?.group === c.group) last.rows.push(c);
 		else groups.push({ group: c.group, rows: [c] });

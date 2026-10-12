@@ -331,8 +331,8 @@ export class ComponentTokens {
 		// what it draws as it is is all it sets itself.
 		const uses = new Map(
 			files.map((f, i) => {
-				const read = tagged === null ? asIs?.[i] : light?.[i];
-				return [f, read ? decode({ light: read, dark: dark?.[i] ?? undefined }, asIs?.[i] ?? undefined, tags, tokens) : null];
+				const asDrawn = tagged === null ? asIs?.[i] : light?.[i];
+				return [f, asDrawn ? decode({ light: asDrawn, dark: dark?.[i] ?? undefined }, asIs?.[i] ?? undefined, tags, tokens) : null];
 			}),
 		);
 		return { files: uses, accessibility };

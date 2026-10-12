@@ -90,7 +90,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 	}, [load]);
 
 	/** Accepting the suggestion is what trusts it; finding it did not. */
-	const useSuggestion = useCallback(
+	const acceptSuggestion = useCallback(
 		async (root: string) => {
 			const r = await window.workspace.useCheckout(root);
 			if (r.ok) {
@@ -195,7 +195,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 								<Button size="sm" variant="secondary" onClick={chooseCheckout}>
 									Choose another
 								</Button>
-								<Button size="sm" onClick={() => void useSuggestion(suggestion.root)}>
+								<Button size="sm" onClick={() => void acceptSuggestion(suggestion.root)}>
 									Use this one
 								</Button>
 							</span>

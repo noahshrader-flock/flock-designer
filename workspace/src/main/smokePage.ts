@@ -131,8 +131,8 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	// 3. Reopened on the same page: found, and the marker sits on the element.
 	console.log('smoke-page: step 3');
 	const items = [{ id: 7, number: 1, anchor, movable: true }];
-	let r = await page.showMarkers(items);
-	if (r[0]?.state !== 'found') fail(`expected found, got ${JSON.stringify(r)}`);
+	let shown = await page.showMarkers(items);
+	if (shown[0]?.state !== 'found') fail(`expected found, got ${JSON.stringify(shown)}`);
 	// The pin's tip is the wrapper's position, and it must be where the click was: inside the element.
 	const markerOnElement = () =>
 		js<boolean>(
@@ -217,19 +217,19 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	console.log('smoke-page: step 5');
 	version = '2';
 	await wc.loadURL(`${origin}/users`);
-	r = await page.showMarkers(items);
-	if (r[0]?.state !== 'moved') fail(`expected moved, got ${JSON.stringify(r)}`);
+	shown = await page.showMarkers(items);
+	if (shown[0]?.state !== 'moved') fail(`expected moved, got ${JSON.stringify(shown)}`);
 	version = '3';
 	await wc.loadURL(`${origin}/users`);
-	r = await page.showMarkers(items);
-	if (r[0]?.state !== 'missing') fail(`expected missing, got ${JSON.stringify(r)}`);
+	shown = await page.showMarkers(items);
+	if (shown[0]?.state !== 'missing') fail(`expected missing, got ${JSON.stringify(shown)}`);
 
 	// 5b. The same page in another state (`?state=error`) is not the page the comment was made on.
 	console.log('smoke-page: step 5b');
 	version = '1';
 	await wc.loadURL(`${origin}/users?state=error`);
-	r = await page.showMarkers(items);
-	if (r[0]?.state !== 'otherState') fail(`expected otherState, got ${JSON.stringify(r)}`);
+	shown = await page.showMarkers(items);
+	if (shown[0]?.state !== 'otherState') fail(`expected otherState, got ${JSON.stringify(shown)}`);
 	if (await js<boolean>("document.querySelector('[data-fd-layer=pins]') !== null")) fail('a pin was drawn for a comment made in another state');
 	const inState = page.pick();
 	await new Promise((res) => setTimeout(res, 200));
