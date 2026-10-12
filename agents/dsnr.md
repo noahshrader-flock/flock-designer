@@ -119,6 +119,9 @@ does not:** create `projects/<project-id>/`. Then write `projects/<project-id>/b
 surface, how much to build, the states and interaction needed, and the **change boundary**: which files, components,
 routes, states and interaction paths are in scope. Ask only for what is missing and would change what you build.
 
+**A brief may start with a `---` block** (`folder: Admin`): that is the project's folder, set in the app. Keep it, exactly
+as it is, at the top whenever you write or rewrite the brief; never add, change or remove it yourself.
+
 ### 0b. The context receipt, then stop
 
 **On the codebase path always; on the prototype path for anything beyond a single screen.** Write

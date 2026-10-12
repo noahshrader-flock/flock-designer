@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Project, ProjectIteration } from '../../shared/contract';
 import { asPeople, mergePeople } from '../../shared/people';
-import { asCover, asDate, asGitHubRepository, asPullRequest, asRoute, firstHeading, newestFirst } from '../../shared/projects';
+import { asCover, asDate, asGitHubRepository, asPullRequest, asRoute, fromBrief, newestFirst } from '../../shared/projects';
 
 const readJson = (path: string): unknown => {
 	try {
@@ -28,7 +28,7 @@ export const readFolderProjects = (recordsRoot: string): Project[] => {
 		.map((e): Project => {
 			const dir = join(recordsRoot, e.name);
 			const records = readdirSync(dir, { withFileTypes: true }).filter((f) => f.isFile()).map((f) => f.name).sort();
-			const brief = records.includes('brief.md') ? firstHeading(readFileSync(join(dir, 'brief.md'), 'utf8')) : null;
+			const brief = records.includes('brief.md') ? readFileSync(join(dir, 'brief.md'), 'utf8') : null;
 			const raw = readJson(join(dir, 'iterations.json'));
 			const iterations = (Array.isArray(raw) ? raw : [])
 				.filter((it): it is Record<string, unknown> => typeof it === 'object' && it !== null)
@@ -52,7 +52,7 @@ pullRequest: asPullRequest(it.pullRequest),
 				.sort(newestFirst);
 			return {
 				id: e.name,
-				title: brief ?? e.name,
+				...fromBrief(e.name, brief),
 				records,
 				iterations,
 				people: mergePeople(...iterations.map((i) => i.contributors)),

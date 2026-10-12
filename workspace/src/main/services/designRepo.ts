@@ -1,7 +1,7 @@
 import type { CommentAnchor, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
 import { GitHubError, httpStatus } from './github';
 import { asPeople, isBot, mergePeople } from '../../shared/people';
-import { asCover, asDate, asGitHubRepository, asPullRequest, asRoute, firstHeading, latestDate, newestFirst } from '../../shared/projects';
+import { asCover, asDate, asGitHubRepository, asPullRequest, asRoute, fromBrief, latestDate, newestFirst, projectDir, projectPath } from '../../shared/projects';
 import { RESOLVED_MARK, addressedAt, addressedIn, composeBody, isResolved, parseAnchor, parsePicture, stripAnchor, withAddressed, withResolved } from '../../shared/anchor';
 import { asArray, asRecord } from '../../shared/json';
 
@@ -73,7 +73,7 @@ export class DesignRepo {
     return Promise.all(
       dirs.map(async (dir) => {
         const id = String(dir.name);
-        const records = asArray(await this.session.api(`${this.base}/contents/projects/${id}`))
+        const records = asArray(await this.session.api(`${this.base}/contents/${projectDir(id)}`))
           .map(asRecord)
           .filter((f) => f.type === 'file')
           .map((f) => String(f.name))
@@ -88,7 +88,7 @@ export class DesignRepo {
         );
         return {
           id,
-          title: (await this.readBriefTitle(id, records)) ?? id,
+          ...(await this.readBrief(id, records)),
           records,
           iterations,
           people,
@@ -106,7 +106,7 @@ export class DesignRepo {
   private async folderActivity(id: string): Promise<{ people: Person[]; updatedAt: string | null }> {
     try {
       // Newest first, as GitHub lists them.
-      const commits = asArray(await this.session.api(`${this.base}/commits?path=projects/${id}&per_page=100`));
+      const commits = asArray(await this.session.api(`${this.base}/commits?path=${projectDir(id)}&per_page=100`));
       const people = [...commits].reverse().flatMap((c): Person[] => {
         const name = String(asRecord(asRecord(asRecord(c).commit).author).name ?? '');
         const account = asRecord(asRecord(c).author); // the GitHub account, when the email is linked to one
@@ -121,7 +121,7 @@ export class DesignRepo {
 
   /** One file from a project's folder, as text. */
   async readRecord(id: string, name: string): Promise<string> {
-    const file = asRecord(await this.session.api(`${this.base}/contents/projects/${id}/${name}`));
+    const file = asRecord(await this.session.api(`${this.base}/contents/${projectPath(id, name)}`));
     if (typeof file.content !== 'string') throw new Error(`${name} could not be read from the design repository.`);
     return Buffer.from(file.content, 'base64').toString('utf8');
   }
@@ -199,11 +199,11 @@ export class DesignRepo {
     }
   }
 
-  private async readBriefTitle(id: string, records: string[]): Promise<string | null> {
-    if (!records.includes('brief.md')) return null;
-    const file = asRecord(await this.session.api(`${this.base}/contents/projects/${id}/brief.md`));
-    if (typeof file.content !== 'string') return null;
-    return firstHeading(Buffer.from(file.content, 'base64').toString('utf8'));
+  /** A project's title (its brief's heading, or its id) and its folder, from one read of its brief. */
+  private async readBrief(id: string, records: string[]): Promise<{ title: string; folder: string | null }> {
+    if (!records.includes('brief.md')) return fromBrief(id, null);
+    const file = asRecord(await this.session.api(`${this.base}/contents/${projectPath(id, 'brief.md')}`));
+    return fromBrief(id, typeof file.content === 'string' ? Buffer.from(file.content, 'base64').toString('utf8') : null);
   }
 
   /**
@@ -263,7 +263,7 @@ export class DesignRepo {
     issues: Map<string, ReviewThread>,
   ): Promise<ProjectIteration[]> {
     if (!records.includes('iterations.json')) return [];
-    const file = asRecord(await this.session.api(`${this.base}/contents/projects/${id}/iterations.json`));
+    const file = asRecord(await this.session.api(`${this.base}/contents/${projectPath(id, 'iterations.json')}`));
     if (typeof file.content !== 'string') return [];
 
     let parsed: unknown;

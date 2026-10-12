@@ -872,6 +872,8 @@ export interface Project {
   id: string;
   /** First heading of `brief.md`, or the id if it has none. */
   title: string;
+  /** The folder it is in, from its brief's front matter (`briefFolder`), or null for none. Absent where it was not read. */
+  folder?: string | null;
   /** Files present in the project folder, for showing what a project has. */
   records: string[];
   /** Iterations found as branches, newest first. */

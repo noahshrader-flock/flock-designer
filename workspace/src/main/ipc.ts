@@ -74,6 +74,7 @@ import {
 	mergeProjects,
 	prototypeKey,
 	prototypePagePath,
+	shownRecord,
 	unionLocal,
 	workKind,
 } from '../shared/projects';
@@ -1531,11 +1532,10 @@ export const registerIpc = ({
 			// This machine's copy first: it is the one being written, and may not be published yet.
 			const root = trustedRoot();
 			const recordsRoot = root === null ? null : recordsRootFor(root);
-			if (recordsRoot !== null) {
-				const path = resolveInside(recordsRoot, join(projectId, name));
-				if (existsSync(path) && statSync(path).isFile()) return readFileSync(path, 'utf8').slice(0, MAX_RECORD);
-			}
-			return (await designRepo.readRecord(projectId, name)).slice(0, MAX_RECORD);
+			const path = recordsRoot === null ? null : resolveInside(recordsRoot, join(projectId, name));
+			const text = path !== null && existsSync(path) && statSync(path).isFile() ? readFileSync(path, 'utf8') : await designRepo.readRecord(projectId, name);
+			// The brief without its front matter (its folder), which is the app's and not the person's to read.
+			return shownRecord(name, text).slice(0, MAX_RECORD);
 		}),
 	);
 	ipcMain.handle(

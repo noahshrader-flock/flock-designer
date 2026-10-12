@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } 
 import { basename, dirname, join } from 'node:path';
 import type { Iteration, Person, PrototypeReadiness } from '../../shared/contract';
 import { type DeclaredTarget, undeclared } from '../../shared/wcag';
-import { firstHeading, hasOutsideComments, latestIterationName, nextIterationName, parsePrototypeName, projectPath, prototypePagePath, prototypeSourcePath } from '../../shared/projects';
+import { fromBrief, hasOutsideComments, latestIterationName, nextIterationName, parsePrototypeName, projectPath, prototypePagePath, prototypeSourcePath } from '../../shared/projects';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from './accessibilityBrief';
 import { designSystemCheckout, readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
@@ -128,7 +128,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return parsed;
 	};
 	/** A project's title, from its brief: what people know it by. Its id when the brief has none. */
-	const title = async (projectId: string): Promise<string> => firstHeading((await ctx.readDesignFile(projectPath(projectId, 'brief.md'))) ?? '') ?? projectId;
+	const title = async (projectId: string): Promise<string> => fromBrief(projectId, await ctx.readDesignFile(projectPath(projectId, 'brief.md'))).title;
 	/** A prototype's record. */
 	const record = async (projectId: string, name: string): Promise<Iteration | undefined> => (await records(projectId)).find((i) => i.name === name);
 	/** A prototype's React source: this machine's newest, else the saved one. Reading it makes no folder. */

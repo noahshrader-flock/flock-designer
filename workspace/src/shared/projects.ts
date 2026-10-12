@@ -15,6 +15,60 @@ export const firstHeading = (markdown: string): string | null => {
 };
 
 /**
+ * A project's **folder** (the folders plan): a label, kept in its brief's front matter, a `---` block at the very top:
+ *
+ *     ---
+ *     folder: Admin
+ *     ---
+ *     # Alert history
+ *
+ * Read and written only here, so where the folder is kept can change in one place. A project id never holds its folder.
+ */
+const FRONT_MATTER = /^---\r?\n((?:.*\r?\n)*?)---\r?\n/;
+const FOLDER_LINE = /^folder:(.*)$/;
+
+/** A folder's name as it is kept: trimmed, runs of spaces made one, at most 60 characters; null when nothing is left. */
+export const folderName = (v: unknown): string | null => {
+	if (typeof v !== 'string') return null;
+	const name = v.replace(/\s+/g, ' ').trim().slice(0, 60).trim();
+	return name === '' ? null : name;
+};
+
+/** The lines of a brief's front matter, and the rest of the brief after it; no lines when it has none. */
+const frontMatterOf = (markdown: string): { lines: string[]; body: string } => {
+	const m = FRONT_MATTER.exec(markdown);
+	return m ? { lines: (m[1] as string).split(/\r?\n/).filter((l) => l !== ''), body: markdown.slice(m[0].length) } : { lines: [], body: markdown };
+};
+
+/** The folder a brief says its project is in, or null. */
+export const briefFolder = (markdown: string): string | null => {
+	const line = frontMatterOf(markdown).lines.find((l) => FOLDER_LINE.test(l));
+	return line === undefined ? null : folderName(FOLDER_LINE.exec(line)?.[1]);
+};
+
+/** What a project's brief says of it: its title (the brief's heading, or the id when there is none) and its folder. */
+export const fromBrief = (projectId: string, brief: string | null): { title: string; folder: string | null } =>
+	brief === null ? { title: projectId, folder: null } : { title: firstHeading(brief) ?? projectId, folder: briefFolder(brief) };
+
+/** A brief as a person reads it: without its front matter. */
+export const briefBody = (markdown: string): string => frontMatterOf(markdown).body;
+
+/** A record's text as a person is shown it: the brief without its front matter, every other record as it is. */
+export const shownRecord = (name: string, text: string): string => (name === 'brief.md' ? briefBody(text) : text);
+
+/**
+ * A brief with its project in `folder`, or in none for null: only the folder's line changes, anything else in the front
+ * matter is kept, and a brief left with nothing in it is as it was before it had a folder.
+ */
+export const withFolder = (markdown: string, folder: string | null): string => {
+	const { lines, body } = frontMatterOf(markdown);
+	const name = folderName(folder);
+	const others = lines.filter((l) => !FOLDER_LINE.test(l));
+	const kept = name === null ? others : [...others, `folder: ${name}`];
+	return kept.length === 0 ? body : `---\n${kept.join('\n')}\n---\n${body}`;
+};
+
+/**
  * A name becomes a project id. Truncation happens before the trailing hyphen is
  * stripped, so a long name cannot produce an id the main process would reject --
  * which is what the renderer's own copy of this used to do.
@@ -155,6 +209,9 @@ export const mergeProjects = (remote: Project[], local: Project[]): Project[] =>
 			updatedAt: latestDate([r.updatedAt, l.updatedAt]),
 			// A project shared before it had a brief shows its id; the local brief names it.
 			title: r.title === r.id && l.title !== l.id ? l.title : r.title,
+			// This machine's brief, when it has one: it is the one last written here, and the records sync fits it onto
+			// GitHub's before every push, so it is never behind for longer than a sync. GitHub's otherwise.
+			folder: l.records.includes('brief.md') ? (l.folder ?? null) : (r.folder ?? null),
 			records: [...new Set([...r.records, ...l.records])].sort(),
 			iterations: [...have.values()].sort(newestFirst),
 			people: mergePeople(r.people, l.people, ...[...have.values()].map((i) => i.contributors)),
@@ -238,8 +295,11 @@ export const isRecordName = (n: unknown): n is string => typeof n === 'string' &
 const PROTOTYPE_PREFIX = 'prototype/';
 export const isPrototypeKey = (branch: string): boolean => branch.startsWith(PROTOTYPE_PREFIX);
 export const prototypeKey = (projectId: string, name: string): string => `${PROTOTYPE_PREFIX}${projectId}/${name}`;
+/** A project's folder in the design repository: the one place a project's path is built (the folders plan's rule 3). */
+export const projectDir = (projectId: string): string => `projects/${projectId}`;
+
 /** A file in a project's folder in the design repository, by its path from the repository's root. */
-export const projectPath = (projectId: string, file: string): string => `projects/${projectId}/${file}`;
+export const projectPath = (projectId: string, file: string): string => `${projectDir(projectId)}/${file}`;
 /** Where a prototype's page is kept in the design repository. */
 export const prototypePagePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.html`);
 /** Its React source, kept beside the page. */

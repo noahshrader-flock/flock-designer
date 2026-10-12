@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Iteration, Person } from '../../shared/contract';
-import { assertCover, firstHeading, isPrototypeName, nextPrototypeName, projectPath, prototypeKey } from '../../shared/projects';
+import { assertCover, briefFolder, firstHeading, folderName, isPrototypeName, nextPrototypeName, projectPath, prototypeKey, withFolder } from '../../shared/projects';
 import { addressOpening } from './address';
 import { resolveInside } from './paths';
 import { parseIterations } from '../../shared/records';
@@ -114,9 +114,25 @@ export const recordPrototype = async (
 	const brief = projectPath(projectId, 'brief.md');
 	const haveBrief = await store.read(brief);
 	if (haveBrief === null || firstHeading(haveBrief) === null) {
-		await store.write(brief, `# ${title.replace(/\s+/g, ' ').trim()}\n\n${note.trim()}\n`, `${projectId}: start the project`);
+		// A brief with no heading may still have a folder, which is kept.
+		const written = `# ${title.replace(/\s+/g, ' ').trim()}\n\n${note.trim()}\n`;
+		await store.write(brief, withFolder(written, haveBrief === null ? null : briefFolder(haveBrief)), `${projectId}: start the project`);
 	}
 	return addRecord(store, existing, { projectId, name, note, me, basedOn, now });
+};
+
+/**
+ * Puts a project in a folder, or in none for null (the folders plan): its brief, read just before, with only its folder
+ * changed, written once with a message that says so. Nothing is written when it is in that folder already. The brief is
+ * where the folder is kept, so a project with none is refused rather than given one.
+ */
+export const assignFolder = async (store: RecordStore, projectId: string, folder: string | null): Promise<void> => {
+	const path = projectPath(projectId, 'brief.md');
+	const brief = await store.read(path);
+	if (brief === null) throw new Error(`${projectId} has no brief, which is where its folder is kept.`);
+	const name = folderName(folder);
+	if (briefFolder(brief) === name) return;
+	await store.write(path, withFolder(brief, name), name === null ? `${projectId}: taken out of its folder` : `${projectId}: put in the folder ${name}`);
 };
 
 /**

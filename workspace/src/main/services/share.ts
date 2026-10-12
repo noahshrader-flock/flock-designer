@@ -1,4 +1,5 @@
 import type { IterationKind, ShareDescriptor, ShareStatus, ShareStep } from '../../shared/contract';
+import { projectDir } from '../../shared/projects';
 
 /**
  * Putting an iteration in front of someone who is not on this machine.
@@ -91,7 +92,7 @@ export const pullRequestText = (projectId: string, name: string): { title: strin
 		'This is a **draft pull request that exists only to build a preview link** for review in DSNR.',
 		'It is not headed for the trunk and should not be merged or marked ready for review.',
 		'',
-		`The project record, with the brief and the comments, is \`projects/${projectId}\` in the design repository.`,
+		`The project record, with the brief and the comments, is \`${projectDir(projectId)}\` in the design repository.`,
 		'',
 		'_Opened by DSNR._',
 	].join('\n'),

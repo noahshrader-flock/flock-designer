@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Iteration } from '../shared/contract';
-import { firstHeading, isPrototypeKey, iterationLabel, parsePrototypeName, projectCodeLink, sitePath } from '../shared/projects';
+import { fromBrief, isPrototypeKey, iterationLabel, parsePrototypeName, projectCodeLink, sitePath } from '../shared/projects';
 import { statesOf } from '../shared/prototypeStates';
 import { parseIterations } from '../shared/records';
 
@@ -98,7 +98,7 @@ const readProjects = (designRoot: string): SiteProject[] => {
 		return [
 			{
 				id,
-				title: firstHeading(brief) ?? id,
+				title: fromBrief(id, brief).title,
 				versions: [...byVersion.entries()]
 					.sort(([a], [b]) => a - b)
 					.map(([version, ps]) => ({ version, pages: ps.sort((a, b) => b.iteration - a.iteration) })),

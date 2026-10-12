@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import type { ReviewComment } from '../../shared/contract';
 import { assertUsableProjectId } from './iterations';
 import { numberComments, openComments, resolvedComments } from '../../shared/comments';
-import { firstHeading, isPrototypeKey } from '../../shared/projects';
+import { fromBrief, isPrototypeKey } from '../../shared/projects';
 import { plural } from '../../shared/plural';
 import { resolveInside } from './paths';
 
@@ -135,7 +135,7 @@ export const writeCommentsExport = (recordsRoot: string, input: ExportInput): Ex
 export const projectTitle = (recordsRoot: string, projectId: string): string => {
 	try {
 		const brief = join(resolveInside(recordsRoot, projectId), 'brief.md');
-		return (existsSync(brief) ? firstHeading(readFileSync(brief, 'utf8')) : null) ?? projectId;
+		return fromBrief(projectId, existsSync(brief) ? readFileSync(brief, 'utf8') : null).title;
 	} catch {
 		return projectId;
 	}
