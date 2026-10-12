@@ -1,3 +1,4 @@
+import { basename } from 'node:path';
 import type { Checkout, CheckoutSuggestion, RepositoryList } from '../../shared/contract';
 import { arg, emit, handle } from '../handle';
 import { buildContextReceipt } from '../services/contextReceipt';
@@ -6,7 +7,6 @@ import { branchCommit, branchesWithFile, readCheckout, recentBranches } from '..
 import { INSTALL_COMMAND } from '../services/install';
 import { continueIteration, readIterations, recordedIteration } from '../services/iterations';
 import { gitHubRepoOf, mergeRepositories, originOf, reachableRepositories } from '../services/repositories';
-import { basename } from 'node:path';
 import type { IpcDeps } from '../ipc';
 
 /**
@@ -26,7 +26,6 @@ export const registerCheckout = (d: IpcDeps): void => {
 		personGitHub,
 		ports,
 		productCheckouts,
-		recordsFor,
 		runtime,
 		signedInLogin,
 		state,
@@ -92,7 +91,7 @@ export const registerCheckout = (d: IpcDeps): void => {
 	// is never enough to make it trusted (only the picker, a repository discovery found, the last one, and a clone are).
 	handle('readCheckout', [checkout], (workIn) => readCheckout(workIn.canonical));
 	handle('readContextReceipt', [checkout], (workIn) => buildContextReceipt(workIn.canonical, workIn.descriptor));
-	handle('listIterations', [checkout, arg.projectId], (workIn, projectId) => readIterations(recordsFor(workIn.canonical), projectId));
+	handle('listIterations', [checkout, arg.projectId], (workIn, projectId) => readIterations(workIn.recordsRoot, projectId));
 	handle('continueIteration', [checkout, arg.projectId, arg.iterationName], async (workIn, projectId, name) => {
 		const { canonical } = workIn;
 		// Opening the run's own work is fine: the checkout is already on its branch, so nothing moves.
@@ -100,22 +99,14 @@ export const registerCheckout = (d: IpcDeps): void => {
 			const wanted = await recordedIteration(canonical, workIn.recordsRoot, workIn.descriptor, projectId, name);
 			if ((await readCheckout(canonical)).branch !== wanted.branch) assertAgentNotHere(canonical);
 		}
-		const recordsRoot = workIn.recordsRoot;
-		const me = github.state();
-		const login = me.state === 'signedIn' ? me.user.login : null;
-		return written(await continueIteration(canonical, recordsRoot, projectId, name, login, workIn.descriptor));
+		return written(await continueIteration(canonical, workIn.recordsRoot, projectId, name, signedInLogin(), workIn.descriptor));
 	});
 	handle('startCommand', [checkout, arg.name, arg.optional(arg.projectId)], (workIn, commandId, projectId) =>
 		runtime.start(workIn.canonical, workIn.descriptor, commandId, projectId ?? undefined),
 	);
-	handle('stopCommand', [checkout, arg.name], (workIn, commandId) => {
-		workIn.canonical;
-		return runtime.stop(commandId);
-	});
-	handle('commandStatus', [checkout, arg.name], (workIn, commandId) => {
-		workIn.canonical;
-		return runtime.status(commandId);
-	});
+	// Only for a checkout the person opened, though the runtime knows its commands by id alone.
+	handle('stopCommand', [checkout, arg.name], (_workIn, commandId) => runtime.stop(commandId));
+	handle('commandStatus', [checkout, arg.name], (_workIn, commandId) => runtime.status(commandId));
 	// Installing a repository's packages, from the New modal: only the command it declares, one at a time, stoppable.
 	handle('installPackages', [checkout], async (workIn): Promise<null> => {
 		const { canonical } = workIn;

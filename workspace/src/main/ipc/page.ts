@@ -5,13 +5,15 @@ import { arg, handle } from '../handle';
 import type { IpcDeps } from '../ipc';
 
 /**
- * The preview: the page view, its pins, and picking a place on it.
+ * The preview: the page view, its pins, and picking a place on it. Every argument is checked again here: the window is
+ * trusted less than the main process, and the preview less than the window.
  */
 export const registerPage = (d: IpcDeps): void => {
-	const { nothing, page, ports, prototypeServer } = d;
+	const { page, ports, prototypeServer } = d;
+	const nothing = (_done?: unknown): null => null;
 
 	// A prototype is one page: the app's own server says which addresses are its, never the window.
-	handle('pageOpen', [arg.url], async (url) => nothing(await page.open(String(url), { singlePage: prototypeServer.owns(String(url)) })));
+	handle('pageOpen', [arg.url], async (url) => nothing(await page.open(url, { singlePage: prototypeServer.owns(url) })));
 	handle('pageClose', [], () => nothing(page.close()));
 	// The page the preview is on, in the person's own browser. The address comes from the preview itself, never
 	// from the window, and goes through the same check as opening one: this app's own web addresses only.
@@ -28,7 +30,7 @@ export const registerPage = (d: IpcDeps): void => {
 	handle('pageSnapshot', [], () => page.snapshot());
 	handle('pageHold', [arg.name, arg.flag], (reason, held) => {
 		if (!(PAGE_HOLD_REASONS as readonly string[]).includes(reason)) throw new Error('That is not a reason to hide the preview.');
-		return nothing(page.hold(reason as PageHoldReason, held === true));
+		return nothing(page.hold(reason as PageHoldReason, held));
 	});
 	handle('pagePick', [], () => page.pick());
 	handle('pageCancelPick', [], async () => nothing(await page.cancelPick()));
@@ -41,5 +43,5 @@ export const registerPage = (d: IpcDeps): void => {
 		});
 		return page.showMarkers(clean);
 	});
-	handle('pageFocusMarker', [arg.commentId], async (id) => nothing(await page.focusMarker(Number(id))));
+	handle('pageFocusMarker', [arg.commentId], async (id) => nothing(await page.focusMarker(id)));
 };

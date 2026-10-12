@@ -1,18 +1,21 @@
+import { existsSync } from 'node:fs';
 import { folderName } from '../../shared/brief';
-import type { OpenedPrototype, PrototypeAddressed } from '../../shared/contract';
+import type { OpenedPrototype, PrototypeAddressed, PrototypeReadiness } from '../../shared/contract';
 import { coverPath, prototypeKey, prototypePagePath } from '../../shared/designPaths';
 import { statesOf } from '../../shared/prototypeStates';
+import { iterationLabel } from '../../shared/work';
 import { arg, handle } from '../handle';
 import { fixRequest } from '../services/accessibilityBrief';
 import { ADDRESS_SKILL, chooseComment } from '../services/address';
 import { prototypeAddressTask, prototypeBuildTask } from '../services/agentTasks';
 import { writeCommentsExport } from '../services/commentsExport';
+import { readDescriptor } from '../services/descriptor';
 import { ensureLocalBranch } from '../services/git';
+import { INSTALL_COMMAND } from '../services/install';
 import { jpegDataUrl } from '../services/picture';
 import { builtHere, ensureCovers } from '../services/projectCovers';
-import { BUILD_SKILL, assignFolder } from '../services/prototype';
-import { whereTheChangeGoes } from '../services/prototypeWork';
-import { existsSync } from 'node:fs';
+import { BUILD_SKILL, type PrototypeSources, assignFolder, prototypeReadable } from '../services/prototype';
+import { type PrototypeChange, whereTheChangeGoes } from '../services/prototypeWork';
 import type { IpcDeps } from '../ipc';
 
 /**
@@ -23,18 +26,12 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		agent,
 		agentBusy,
 		coverDeps,
-		coversRead,
 		designRepo,
-		finishPrototypeChange,
-		finishPrototypeChanges,
 		me,
 		once,
 		opened,
 		prototypeAccessibility,
-		prototypeChanges,
 		prototypePage,
-		prototypeReadiness,
-		prototypeRun,
 		prototypesRoot,
 		publishInBackground,
 		readDesignBytes,
@@ -42,11 +39,57 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		recordStore,
 		refuseWhileBusy,
 		servePrototype,
-		startPrototypeAgent,
 		work,
 	} = d;
 
-	handle('prototypeReadiness', [arg.root], (root) => prototypeReadiness(root));
+	/** What building a prototype and changing one share: what it is modeled on, read once, and how it is built. */
+	const prototypeRun = async (projectId: string, name: string, modeledOn = name) =>
+		work.buildPlan(projectId, name, await once(`source:${projectId}`, () => work.sources(projectId, modeledOn)));
+	/** Its agent, in the folder it was built in, reading the product read-only, and nothing committed. */
+	const startPrototypeAgent = (projectId: string, name: string, sources: PrototypeSources, task: string) =>
+		agent.start(work.dir(projectId), projectId, task, { bare: true, readOnly: prototypeReadable(sources), work: prototypeKey(projectId, name) });
+
+	/**
+	 * Acting on one comment on a prototype. The same steps as on a branch -- comments read from GitHub now, the file
+	 * written from that read, then the agent started -- but the agent changes the prototype's source in the app's own
+	 * folder, where it was built, and nothing is committed. What others commented on is never changed under them: the
+	 * service says which iteration the change goes in (`startChange`), and `finishPrototypeAddress` records and saves it.
+	 */
+	const prototypeChanges = new Map<number, { projectId: string; change: PrototypeChange }>();
+	/**
+	 * Finishes one: a changed prototype built, recorded when new, and saved, and the comment marked with where the change
+	 * is. Run by the screen when the agent ends, and when the prototype is opened again, so a change made while the screen
+	 * was left is never stranded.
+	 */
+	const finishPrototypeChange = async (commentId: number): Promise<PrototypeAddressed> => {
+		const pending = prototypeChanges.get(commentId);
+		if (!pending) throw new Error('There is no change to this comment waiting to be saved.');
+		refuseWhileBusy();
+		prototypeChanges.delete(commentId);
+		const { projectId, change } = pending;
+		const { version, made } = await work.finishChange(projectId, change, me(), `For a comment on ${iterationLabel(change.from)}`);
+		// Either way: a run that changed nothing clears the mark an earlier one left.
+		const comment = await designRepo.setAddressed(commentId, version, version === null ? null : change.target);
+		if (version !== null) publishInBackground(projectId, change.target);
+		return { changed: version !== null, iteration: change.target, made, comment };
+	};
+	const finishPrototypeChanges = async (projectId: string): Promise<void> => {
+		if (agentBusy()) return;
+		for (const [commentId, pending] of [...prototypeChanges]) {
+			// One that does not build is left as it is on this machine, unrecorded: nobody is watching to be told why, and
+			// the next Address on it starts again from what people saw.
+			if (pending.projectId === projectId) await finishPrototypeChange(commentId).catch(() => undefined);
+		}
+	};
+	/** Pictures read this session, by path: what is at a picture's path never changes, so it is read once. */
+	const coversRead = new Map<string, string>();
+
+	// Whether a prototype can be built from this accepted repository here.
+	handle('prototypeReadiness', [arg.root], (root): PrototypeReadiness => {
+		const canonical = opened.require(root);
+		const readiness = work.readiness(canonical);
+		return readiness.ready ? readiness : { ...readiness, canInstall: readDescriptor(canonical).commands.some((c) => c.id === INSTALL_COMMAND) };
+	});
 	handle('createPrototype', [arg.projectId, arg.name, arg.words, arg.startingPoint, arg.unknown], async (projectId, title, note, from, folder) => {
 		// What it is modeled on is not optional: a prototype is built from a repository's real design system.
 		if (!from) throw new Error('A prototype is modeled on a branch of a repository on this machine. Choose one.');
@@ -66,12 +109,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		const { build, sources } = await prototypeRun(projectId, name);
 		const accessibility = await work.accessibility(projectId, name);
 		const voice = await work.voice();
-		return startPrototypeAgent(
-			projectId,
-			name,
-			sources,
-			prototypeBuildTask({ skill, build, sources, accessibility, voice, request: String(request) }),
-		);
+		return startPrototypeAgent(projectId, name, sources, prototypeBuildTask({ skill, build, sources, accessibility, voice, request }));
 	});
 	handle('addressPrototype', [arg.projectId, arg.prototypeName, arg.commentId], async (projectId, name, commentId) => {
 		refuseWhileBusy();

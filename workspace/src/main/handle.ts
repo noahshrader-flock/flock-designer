@@ -15,7 +15,7 @@ import { assertUsableProjectId } from './services/iterations';
  * the one place a throw becomes a Result.
  */
 
-export const guard =
+const guard =
 	<Args extends unknown[], T>(fn: (...args: Args) => Promise<T> | T) =>
 	async (_event: Electron.IpcMainInvokeEvent, ...args: Args): Promise<Result<T>> => {
 		try {
@@ -92,7 +92,7 @@ export const arg = {
 	startingPoint: ((v) => {
 		if (v === undefined || v === null) return null;
 		const r = asRecord(v);
-		return { root: text('a folder', 4096)(r.root), branch: arg.branch(r.branch) };
+		return { root: arg.root(r.root), branch: arg.branch(r.branch) };
 	}) as Check<{ root: string; branch: string } | null>,
 	/** `check`, or null when nothing is sent. */
 	optional:

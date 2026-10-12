@@ -1,21 +1,54 @@
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { sanitizeAnchor, sanitizePicture } from '../../shared/anchor';
 import { shownRecord } from '../../shared/brief';
 import type { Project, ReviewComment } from '../../shared/contract';
 import { isCommit } from '../../shared/sha';
 import { isRecordName } from '../../shared/validate';
 import { arg, handle } from '../handle';
-import { recordsRootFor } from '../services/discovery';
-import { resolveInside } from '../services/paths';
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
-import type { IpcDeps } from '../ipc';
+import { classify } from '../services/branchProjects';
+import { projectTitle, writeCommentsExport } from '../services/commentsExport';
+import { readDescriptor } from '../services/descriptor';
+import { readIterations } from '../services/iterations';
 import { listProjects } from '../services/listProjects';
+import { resolveInside } from '../services/paths';
+import { ProfileNames } from '../services/profileNames';
+import type { IpcDeps } from '../ipc';
 
 /**
  * The project list, its records, and the review comments kept as GitHub issues.
  */
 export const registerReview = (d: IpcDeps): void => {
-	const { MAX_RECORD, designRepo, exportComments, github, opened, profiles, publisher, trustedRoot } = d;
+	const { designRepo, github, opened, publisher, signedInLogin, trustedRecords, trustedRoot } = d;
+
+	/** Names people by their GitHub profile, once each, so a person is the same name wherever they appear. */
+	const profiles = new ProfileNames((path) => github.api(path));
+	/**
+	 * Rewrites `comments.md` for what was just read, on a machine that has the design repository
+	 * beside the product checkout. Best effort: reading comments never fails because a file
+	 * could not be written; the Address button, which depends on the file, is strict.
+	 */
+	const exportComments = (projectId: string, branch: string, comments: ReviewComment[]): void => {
+		try {
+			const trusted = trustedRecords();
+			if (trusted === null) return;
+			const { root, recordsRoot } = trusted;
+			// The record's name for it, or the one the branch's own name gives it (work with no record yet).
+			const name = readIterations(recordsRoot, projectId).find((i) => i.branch === branch)?.name ?? classify(readDescriptor(root), branch)?.name;
+			if (!name) return;
+			writeCommentsExport(recordsRoot, {
+				projectId,
+				title: projectTitle(recordsRoot, projectId),
+				iteration: { name, branch },
+				comments,
+				generatedAt: new Date(),
+			});
+		} catch {
+			// Nothing to do: the comments themselves were read fine.
+		}
+	};
+	/** A record is text a person reads; anything larger than this is not one, and is cut rather than sent whole. */
+	const MAX_RECORD = 400_000;
 
 	// Reviewer mode: read through the API, never a checkout.
 	// Everything on GitHub plus everything built on this machine. Work made here
@@ -25,12 +58,7 @@ export const registerReview = (d: IpcDeps): void => {
 		// The gate, not the discovery list: nothing is read or run in a repository this person has not accepted.
 		const root = trustedRoot();
 		if (root !== null) opened.require(root);
-		const me = github.state();
-		const projects = await listProjects({
-			root,
-			login: me.state === 'signedIn' ? me.user.login : null,
-			remote: () => designRepo.listProjects(),
-		});
+		const projects = await listProjects({ root, login: signedInLogin(), remote: () => designRepo.listProjects() });
 		// Reading the list is a good moment to make sure what it shows is published.
 		void publisher.publish();
 		return profiles.nameEveryone(projects);
@@ -38,8 +66,7 @@ export const registerReview = (d: IpcDeps): void => {
 	handle('readRecord', [arg.name, arg.name], async (projectId, name): Promise<string> => {
 		if (!isRecordName(projectId) || !isRecordName(name)) throw new Error('That is not a file in a project.');
 		// This machine's copy first: it is the one being written, and may not be published yet.
-		const root = trustedRoot();
-		const recordsRoot = root === null ? null : recordsRootFor(root);
+		const recordsRoot = trustedRecords()?.recordsRoot ?? null;
 		const path = recordsRoot === null ? null : resolveInside(recordsRoot, join(projectId, name));
 		const text =
 			path !== null && existsSync(path) && statSync(path).isFile() ? readFileSync(path, 'utf8') : await designRepo.readRecord(projectId, name);
@@ -66,9 +93,7 @@ export const registerReview = (d: IpcDeps): void => {
 		await designRepo.deleteComment(commentId);
 		return null;
 	});
-	handle('resolveComment', [arg.commentId, arg.flag], (commentId, resolved): Promise<ReviewComment> => {
-		return designRepo.setResolved(commentId, resolved === true);
-	});
+	handle('resolveComment', [arg.commentId, arg.flag], (commentId, resolved): Promise<ReviewComment> => designRepo.setResolved(commentId, resolved));
 	handle('markAddressed', [arg.commentId, arg.unknown], (commentId, commit): Promise<ReviewComment> => {
 		// A commit, or nothing. Anything else is not written into a comment body.
 		const sha = isCommit(commit) ? commit : null;

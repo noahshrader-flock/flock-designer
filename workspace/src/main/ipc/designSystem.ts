@@ -9,11 +9,15 @@ import type { IpcDeps } from '../ipc';
  * voice and tone, and its branch.
  */
 export const registerDesignSystem = (d: IpcDeps): void => {
-	const { MAX_VOICE, cloneAsPlanned, componentPictures, componentTokens, designSystems, library, previews, tokenBranches, voiceFile, warm } = d;
+	const { cloneAsPlanned, componentPictures, componentTokens, designSystems, library, previews, tokenBranches, voiceFile, warm } = d;
+
+	// The longest a save takes: far beyond any real voice and tone, short of anything that could hurt.
+	const MAX_VOICE = 200_000;
 
 	handle('componentPictures', [], () => componentTokens.pictures());
+	// The window says only whether to wait for the update; where the design system is, it is never told and never asks.
 	handle('designSystemCatalog', [arg.flag], async (refresh) => {
-		const catalog = await library.catalog(refresh === true);
+		const catalog = await library.catalog(refresh);
 		if (catalog.state === 'ready') warm();
 		return catalog;
 	});
@@ -38,20 +42,18 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 	handle('proposeVoiceAndTone', [], () => voiceFile().propose());
 	handle('forgetVoiceBranch', [], () => (voiceFile().forget(), null));
 	handle('designSystems', [], () => designSystems.read());
-	handle('selectDesignSystem', [arg.name], (id) => (designSystems.select(String(id)), null));
+	handle('selectDesignSystem', [arg.name], (id) => (designSystems.select(id), null));
 	// Removed with everything the app keeps of it: its pictures too (P5).
 	handle('removeDesignSystem', [arg.name], (id) => {
-		designSystems.remove(String(id));
-		componentPictures.forget(String(id));
+		designSystems.remove(id);
+		componentPictures.forget(id);
 		return null;
 	});
-	// Only a design system, refused by name before anything is downloaded; then connected like a folder that was located.
-	// Connecting a design system (P4): cloned or used where it is, then looked in (`DesignLibrary.connect`).
+	// Connecting a design system (P4): only a design system, refused by name before anything is downloaded, then cloned or
+	// used where it is and looked in like a folder that was located (`DesignLibrary.connect`).
 	handle('connectDesignSystem', [arg.name], async (repository): Promise<DesignSystemConnection> => {
-		const cloned = await cloneAsPlanned(String(repository), true);
+		const cloned = await cloneAsPlanned(repository, true);
 		return library.connect(cloned.repository, cloned.path);
 	});
-	handle('chooseDesignSystem', [arg.name, arg.name], (repository, folder): DesignSystemConnection =>
-		library.choose(String(repository), String(folder)),
-	);
+	handle('chooseDesignSystem', [arg.name, arg.name], (repository, folder): DesignSystemConnection => library.choose(repository, folder));
 };

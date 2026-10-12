@@ -17,7 +17,7 @@ export const registerPublishing = (d: IpcDeps): void => {
 		return publisher.status();
 	});
 	handle('previewReachable', [arg.url], async (url): Promise<boolean> => {
-		const checked = assertPreviewUrl(String(url));
+		const checked = assertPreviewUrl(url);
 		try {
 			return previewIsUp(await ports.httpStatus(checked));
 		} catch {

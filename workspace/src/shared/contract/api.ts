@@ -355,7 +355,7 @@ export interface WorkspaceApi {
 
 /**
  * The window's whole reach, as one table: every call it can make (`INVOKE`, each on the channel `workspace:<name>`) and
- * every event it can hear (`EVENTS`, each method's channel `workspace:event:<name>`; two keep the names they had). The
+ * every event it can hear (`EVENTS`, each on the channel `workspace:event:<name>`, its method's name without `on`). The
  * preload builds the window's API from it, main registers and sends by it, and the check below fails the typecheck when
  * a method of `WorkspaceApi` is in neither, so the three cannot drift.
  */

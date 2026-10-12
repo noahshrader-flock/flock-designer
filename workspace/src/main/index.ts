@@ -42,9 +42,9 @@ const GITHUB_CLIENT_ID = process.env.DSNR_CLIENT_ID ?? 'Iv23li2z9ayhXhGdFXCm';
 const DEFAULT_SIZE = { width: 1160, height: 700 };
 /** The window's color until the page is drawn, as the page's own dark background (`--background` in `index.css`). */
 const DARK_BACKGROUND = '#0a0a0a';
-/** The appearance chosen in Settings, kept in the app's settings: read when the window is made, and kept when it is chosen. */
 /** The app's own folder, read when asked: Electron settles where it is before the app is ready. */
 const paths = () => appPaths(app.getPath('userData'));
+/** The appearance chosen in Settings, kept in the app's settings: read when the window is made, and kept when it is chosen. */
 const appearanceMemory = (): AppearanceMemory => new AppearanceMemory(paths().appearance);
 
 const createWindow = (): BrowserWindow => {
