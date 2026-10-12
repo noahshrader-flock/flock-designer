@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Check, PullRequest, ShareTools } from '../src/main/services/share';
 import { TOKEN_BRANCH, TokenBranches, proposalText } from '../src/main/services/tokenBranches';
 import { g } from './fixtures';
+import { REAL_LIBRARY, describeWith, realDevelop } from './realCheckouts';
 
 /**
  * Keeping a change to the tokens on a branch, and proposing it (T4 and T5 of the design system plan), against a real
@@ -230,16 +231,10 @@ describe('proposing it (T5)', () => {
 });
 
 /** The real library, read where it is and saved to in a throwaway clone of it: the person's clone is never written to. */
-const REAL = '/Users/noah.shrader/Documents/GitHub/flock-react-component-lib';
-const realDevelop = (() => {
-	try {
-		return g(REAL, 'rev-parse', '--verify', '--quiet', 'refs/remotes/origin/develop').trim();
-	} catch {
-		return null;
-	}
-})();
+const REAL = REAL_LIBRARY;
+const missing = realDevelop === null ? `no clone of the design system with develop at ${REAL} (set FUI_ROOT)` : null;
 
-describe.skipIf(realDevelop === null)('saving a change to the real library', () => {
+describeWith(missing, 'saving a change to the real library', () => {
 	it('commits a tone, a role pointed at another step and the spacing on its develop, each file as the library writes it', async () => {
 		const throwaway = join(home, 'fui');
 		g(home, 'clone', '-q', '--shared', '--no-checkout', REAL, throwaway);
@@ -258,7 +253,8 @@ describe.skipIf(realDevelop === null)('saving a change to the real library', () 
 			.split('\n');
 		// Three files, one line each, nothing else.
 		expect(changed.map((l) => l.split('\t').slice(0, 2).join(' '))).toEqual(['1 1', '1 1', '1 1']);
-		expect(g(throwaway, 'log', '-1', '--format=%B', b.branch)).toContain('Tones pineGreen 50: #108062 → #0A6B52');
+		// From whatever the library has today, to the value saved.
+		expect(g(throwaway, 'log', '-1', '--format=%B', b.branch)).toMatch(/Tones pineGreen 50: #[0-9A-F]{6} → #0A6B52/i);
 		// The person's clone has no such branch: nothing was written there.
 		expect(g(REAL, 'branch', '--list', b.branch).trim()).toBe('');
 	}, 60_000);

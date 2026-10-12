@@ -1,8 +1,10 @@
 import { existsSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { dirname, join } from 'node:path';
+import { expect, it } from 'vitest';
 import { buildContextReceipt } from '../src/main/services/contextReceipt';
 import { findCommand, readDescriptor } from '../src/main/services/descriptor';
 import { recordsRootFor } from '../src/main/services/discovery';
+import { REAL_COKE, describeWith } from './realCheckouts';
 
 /**
  * The services against a real checkout, not a fixture.
@@ -11,13 +13,11 @@ import { recordsRootFor } from '../src/main/services/discovery';
  * actual product repository -- that the descriptor Coke ships parses, that the
  * receipt resolves a real design-system version from a real lockfile, and that
  * the records root lands where the repository's own handoff gate already looks.
- *
- * Skipped, loudly, when Coke is not checked out beside this repository.
  */
-const COKE = '/Users/noah.shrader/Documents/GitHub/flock-coke';
-const available = existsSync(COKE) && existsSync(`${COKE}/.dsnr/workspace.json`);
+const COKE = REAL_COKE;
+const missing = existsSync(join(COKE, '.dsnr', 'workspace.json')) ? null : `no Coke checkout with a descriptor at ${COKE} (set COKE_ROOT)`;
 
-describe.skipIf(!available)('against the real Coke checkout', () => {
+describeWith(missing, 'against the real Coke checkout', () => {
 	it('parses the descriptor Coke ships', () => {
 		const descriptor = readDescriptor(COKE);
 		expect(descriptor.product).toContain('Coke');
@@ -59,13 +59,6 @@ describe.skipIf(!available)('against the real Coke checkout', () => {
 	it("puts project records where the repository's own handoff gate looks for them", () => {
 		// check-handoff.mjs resolves '../flock-designer/projects/<id>'. If these two
 		// ever disagree, Workspace writes records the gate cannot find.
-		expect(recordsRootFor(COKE)).toBe('/Users/noah.shrader/Documents/GitHub/flock-designer/projects');
-	});
-});
-
-describe.skipIf(available)('Coke checkout', () => {
-	it('is not available, so the integration checks did not run', () => {
-		console.warn(`Skipped: no descriptor at ${COKE}/.dsnr/workspace.json`);
-		expect(available).toBe(false);
+		expect(recordsRootFor(COKE)).toBe(join(dirname(COKE), 'flock-designer', 'projects'));
 	});
 });

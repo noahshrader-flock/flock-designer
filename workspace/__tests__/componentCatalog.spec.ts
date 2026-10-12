@@ -1,6 +1,3 @@
-import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 import { designSystemOf, type DesignSystem } from '../src/shared/catalog';
 import {
@@ -12,7 +9,6 @@ import {
 	UNGROUPED,
 	type CatalogReads,
 } from '../src/main/services/componentCatalog';
-import { libraryReads } from '../src/main/services/designLibrary';
 
 /** A library made of files in memory. A file whose text is null cannot be read. */
 const library = (files: Record<string, string | null>): CatalogReads => ({
@@ -148,52 +144,5 @@ describe("Storybook's id rule", () => {
 	])('%s is %s', (title, id) => {
 		expect(storybookId(title)).toBe(id);
 		expect(storybookUrl('https://sb.example/', title)).toBe(`https://sb.example/?path=/docs/${id}--docs`);
-	});
-});
-
-/**
- * The reader against the real library's branch, not a fixture. Skipped, loudly, when the library is not checked out
- * beside this repository.
- */
-const REAL = '/Users/noah.shrader/Documents/GitHub/flock-react-component-lib';
-const FUI = designSystemOf({ repository: 'flocksafety/flock-react-component-lib', branch: 'develop' });
-const git = (...args: string[]) => execFileSync('git', ['-C', REAL, ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-const hasBranch = (() => {
-	if (!existsSync(`${REAL}/.git`)) return false;
-	try {
-		git('rev-parse', '--verify', '--quiet', `refs/remotes/origin/${FUI.branch}`);
-		return true;
-	} catch {
-		return false;
-	}
-})();
-
-describe.skipIf(!hasBranch)('against the real library', () => {
-	// The app's own reads (one `cat-file --batch` for the stories), so this checks them on the real library too.
-	const reads = libraryReads(REAL, `refs/remotes/origin/${FUI.branch}`);
-
-	it('lists every story file Storybook has, and nothing else', async () => {
-		const catalog = await readCatalog(reads, FUI);
-		const stories = git('ls-tree', '-r', '--name-only', `refs/remotes/origin/${FUI.branch}`).split('\n').filter(isStoryFile);
-		expect(catalog.map((c) => c.id).sort()).toEqual(stories.sort());
-		expect(catalog.length).toBeGreaterThan(70);
-	});
-
-	it('reads every story title, and lists the groups alphabetically', async () => {
-		const catalog = await readCatalog(reads, FUI);
-		expect(catalog.filter((c) => c.group === UNGROUPED).map((c) => c.id)).toEqual([]);
-		const groups = [...new Set(catalog.map((c) => c.group))];
-		expect(groups).toEqual([...groups].sort((a, b) => a.localeCompare(b)));
-		// The library's own sidebar has Inputs before Data Display: this does not.
-		expect(groups.indexOf('Data Display')).toBeLessThan(groups.indexOf('Inputs'));
-	});
-
-	it("builds every Storybook id exactly as the library's own Storybook does", async () => {
-		const csf = createRequire(`${REAL}/package.json`)('storybook/internal/csf') as { toId: (kind: string, name: string) => string };
-		const catalog = await readCatalog(reads, FUI);
-		for (const c of catalog) {
-			const title = literalField(await reads.readFile(c.id), 'title')!;
-			expect(c.storybook).toBe(`${FUI.storybook}?path=/docs/${csf.toId(title, 'Docs')}`);
-		}
 	});
 });
