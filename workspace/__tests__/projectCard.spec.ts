@@ -104,11 +104,13 @@ describe('the cover', () => {
 		expect(cover().querySelector('[data-picture-waiting]')).toBeNull();
 	});
 
-	it('says at its top left when the project is only on this machine', async () => {
-		await show(project({ localOnly: true, iterations: [NEWEST] }));
-		const badge = [...cover().querySelectorAll('[data-slot="badge"]')].find((b) => b.textContent === 'Only on this machine')!;
-		expect(badge).toBeTruthy();
-		expect(badge.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'top-2', 'left-2']));
+	it('says at its top left which folder the project is in, and when it is only on this machine', async () => {
+		await show(project({ localOnly: true, folder: 'Admin', iterations: [NEWEST] }));
+		const badges = [...cover().querySelectorAll('[data-slot="badge"]')];
+		expect(badges.map((b) => b.textContent)).toEqual(['Admin', 'Only on this machine']);
+		const holder = badges[0]!.parentElement!;
+		expect(badges[1]!.parentElement).toBe(holder);
+		expect(holder.className.split(' ')).toEqual(expect.arrayContaining(['absolute', 'top-2', 'left-2']));
 	});
 });
 

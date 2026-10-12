@@ -7,7 +7,7 @@ import { DesignRepo } from '../src/main/services/designRepo';
 import type { GitHubSession } from '../src/main/services/githubSession';
 import { readFolderProjects } from '../src/main/services/localProjects';
 import { assignFolder, recordPrototype, type RecordStore } from '../src/main/services/prototype';
-import { briefBody, briefFolder, firstHeading, folderName, mergeProjects, projectDir, projectPath, shownRecord, withFolder } from '../src/shared/projects';
+import { briefBody, briefFolder, firstHeading, folderName, foldersOf, inFolder, mergeProjects, projectDir, projectPath, sameFolder, shownRecord, withFolder } from '../src/shared/projects';
 import { memoryStore } from './fixtures';
 
 /**
@@ -197,5 +197,26 @@ describe('assigning a project a folder', () => {
 	it('refuses a project with no brief, which is where the folder is kept', async () => {
 		const { store } = said({});
 		await expect(assignFolder(store, 'alert-history', 'Admin')).rejects.toThrow('alert-history has no brief, which is where its folder is kept.');
+	});
+});
+
+describe('the folders in use', () => {
+	const p = (id: string, folder: string | null): Project => ({ id, title: id, records: [], iterations: [], people: [], folder });
+
+	it('are each folder a project is in, once whatever its case, as the first project in the list spells it, in order', () => {
+		expect(foldersOf([p('a', 'roles'), p('b', 'Admin'), p('c', 'ROLES'), p('d', null), p('e', 'admin')])).toEqual(['Admin', 'roles']);
+	});
+
+	it('are one folder for two spellings that differ only by case', () => {
+		expect(sameFolder('Admin', 'admin')).toBe(true);
+		expect(sameFolder('Admin', 'Admins')).toBe(false);
+	});
+
+	it('hold a project when it is in that folder, all of them for no folder chosen, and those in none for null', () => {
+		expect(inFolder(p('a', 'Admin'), 'admin')).toBe(true);
+		expect(inFolder(p('a', 'Admin'), 'Roles')).toBe(false);
+		expect(inFolder(p('a', 'Admin'), undefined)).toBe(true);
+		expect(inFolder(p('a', null), null)).toBe(true);
+		expect(inFolder(p('a', 'Admin'), null)).toBe(false);
 	});
 });

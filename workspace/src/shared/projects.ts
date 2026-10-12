@@ -46,6 +46,20 @@ export const briefFolder = (markdown: string): string | null => {
 	return line === undefined ? null : folderName(FOLDER_LINE.exec(line)?.[1]);
 };
 
+/** Whether two folder names are one folder: they differ, if at all, only by case. */
+export const sameFolder = (a: string, b: string): boolean => a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0;
+
+/** The folders projects are in, each once whatever its case (as the first project in the list spells it), in order. */
+export const foldersOf = (projects: Project[]): string[] => {
+	const folders: string[] = [];
+	for (const p of projects) if (p.folder && !folders.some((f) => sameFolder(f, p.folder as string))) folders.push(p.folder);
+	return folders.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+};
+
+/** Whether a project is in the folder chosen: any for none chosen (`undefined`), none for `null`, else that folder. */
+export const inFolder = (project: Project, folder: string | null | undefined): boolean =>
+	folder === undefined ? true : folder === null ? !project.folder : !!project.folder && sameFolder(project.folder, folder);
+
 /** What a project's brief says of it: its title (the brief's heading, or the id when there is none) and its folder. */
 export const fromBrief = (projectId: string, brief: string | null): { title: string; folder: string | null } =>
 	brief === null ? { title: projectId, folder: null } : { title: firstHeading(brief) ?? projectId, folder: briefFolder(brief) };
@@ -149,12 +163,12 @@ export const sortProjects = (projects: Project[], order: ProjectOrder): Project[
 	});
 
 /**
- * Whether a project is what a search is for: every word typed is somewhere in its name, its id, or the name or
+ * Whether a project is what a search is for: every word typed is somewhere in its name, its id, its folder, or the name or
  * GitHub login of someone who worked on it, without regard to case. Plain text, never a pattern; an empty search is
  * every project.
  */
 export const matchesProject = (project: Project, search: string): boolean =>
-	matchesWords([project.title, project.id, ...project.people.flatMap((p) => [p.name, p.login ?? ''])].join('\n'), search);
+	matchesWords([project.title, project.id, project.folder ?? '', ...project.people.flatMap((p) => [p.name, p.login ?? ''])].join('\n'), search);
 
 /** Newest project first. A project with no known date goes last, and ties fall back to the title so the order never shuffles. */
 export const newestProjectFirst = (a: Project, b: Project): number => {

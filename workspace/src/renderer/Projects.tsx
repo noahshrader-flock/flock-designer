@@ -6,13 +6,14 @@ import { Page } from './Page';
 import { RowList } from './ListRow';
 import { ProjectCard } from './ProjectCard';
 import { ProjectRow } from './ProjectRow';
+import { FolderFilter } from './FolderFilter';
 import { ProjectSort } from './ProjectSort';
 import { PublishBanner, PublishLine, usePublishStatus } from './PublishStatus';
 import { Review } from './Review';
 import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
 import { InfoIcon } from 'lucide-react';
-import { type ProjectOrder, matchesProject, sortProjects, withCovers } from '../shared/projects';
+import { type ProjectOrder, foldersOf, inFolder, matchesProject, sortProjects, withCovers } from '../shared/projects';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { NoMatches } from './NoMatches';
@@ -39,6 +40,8 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 	const [search, setSearch] = useState('');
 	// The most recent activity first, until it is changed.
 	const [order, setOrder] = useState<ProjectOrder>('updated');
+	// The folder shown: every project (undefined), those in no folder (null), or one folder's.
+	const [folder, setFolder] = useState<string | null | undefined>(undefined);
 	// Cards in a grid, as the screen has always been, or rows in a list: as last chosen here.
 	const [view, chooseView] = useRememberedView(VIEW_KEY, 'grid');
 	const [looked, setLooked] = useState(false);
@@ -131,8 +134,12 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 		);
 	}
 
+	const folders = foldersOf(projects ?? []);
+	const unfiled = (projects ?? []).some((p) => inFolder(p, null));
+	// A folder chosen that no project is in any more (moved since, on another machine) shows them all again.
+	const shown = (projects ?? []).some((p) => inFolder(p, folder)) ? folder : undefined;
 	const matching = sortProjects(
-		(projects ?? []).filter((p) => matchesProject(p, search)),
+		(projects ?? []).filter((p) => inFolder(p, shown) && matchesProject(p, search)),
 		order,
 	);
 	// Opening a project into one of its prototypes, from its card or its row alike.
@@ -147,6 +154,8 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 					<div className="flex items-center gap-2">
 						<SearchField label="Search projects" value={search} onChange={setSearch} className="w-64" />
 						<ProjectSort order={order} onChange={setOrder} />
+						{/* Only once a project is in a folder: before that it would only say All folders. */}
+						{folders.length > 0 && <FolderFilter folders={folders} unfiled={unfiled} folder={shown} onChange={setFolder} />}
 					</div>
 				)}
 				<div className="grow" />

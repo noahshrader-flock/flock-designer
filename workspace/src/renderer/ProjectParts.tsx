@@ -4,10 +4,11 @@ import type { Project, ProjectIteration } from '../shared/contract';
 import { plural } from '../shared/plural';
 import { byVersion, coverToShow, projectOpening, workOf } from '../shared/projects';
 import { CARD_DETAIL } from './cardFooters';
+import { Badge } from './ui/badge';
 
 /**
  * What a project's card and its row in the list have in common, so neither says it twice: its picture, what it has (its
- * versions and comments), and what pressing it does.
+ * versions and comments), its folder, and what pressing it does.
  */
 
 /** Pictures already read, by what names them: what a picture's name names never changes, so one shown again has it at once. */
@@ -80,3 +81,11 @@ export const openingOf = (project: Project, onOpen: (iteration: ProjectIteration
 		press: opening.kind === 'app' ? () => onOpen(opening.iteration) : () => void window.open(opening.url, '_blank', 'noreferrer'),
 	};
 };
+
+/** The folder a project is in, said quietly where its card and its row say it is only on this machine; nothing for none. */
+export const FolderBadge = ({ project, className }: { project: Project; className?: string }) =>
+	project.folder ? (
+		<Badge variant="outline" data-folder className={className}>
+			{project.folder}
+		</Badge>
+	) : null;
