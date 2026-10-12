@@ -35,13 +35,6 @@ export interface AddressTarget {
 	commentId: number;
 }
 
-export class AddressProblem extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = 'AddressProblem';
-	}
-}
-
 /** The skill, relative to the design repository. Shared by every product. */
 export const ADDRESS_SKILL = 'skills/address-comments.md';
 
@@ -76,12 +69,12 @@ export const addressTask = (commentsPath: string, branch: string, skill: string,
  * someone resolved or deleted a moment ago, rather than the agent being sent after one that is no longer there.
  */
 export const chooseComment = (comments: ReviewComment[], commentId: number): number => {
-	if (openComments(comments).length === 0) throw new AddressProblem('There are no open comments to address.');
+	if (openComments(comments).length === 0) throw new Error('There are no open comments to address.');
 	const chosen = comments.find((c) => c.id === commentId);
-	if (!chosen) throw new AddressProblem('That comment is no longer there. It may have been deleted since this screen was last read.');
-	if (chosen.resolved) throw new AddressProblem('That comment has been resolved already, so there is nothing to act on.');
+	if (!chosen) throw new Error('That comment is no longer there. It may have been deleted since this screen was last read.');
+	if (chosen.resolved) throw new Error('That comment has been resolved already, so there is nothing to act on.');
 	const number = numberComments(comments).get(commentId);
-	if (number === undefined) throw new AddressProblem('That comment could not be numbered, so the agent cannot be told which one to act on.');
+	if (number === undefined) throw new Error('That comment could not be numbered, so the agent cannot be told which one to act on.');
 	return number;
 };
 
@@ -90,26 +83,24 @@ export const prepareAddress = async (
 	{ recordsRoot, projectId, iteration, commentId }: AddressTarget,
 ): Promise<{ task: string; open: number; path: string }> => {
 	if (deps.agentRunning()) {
-		throw new AddressProblem(AGENT_BUSY);
+		throw new Error(AGENT_BUSY);
 	}
 	// The skill is shared by every product and lives in the design repository, which has to be here anyway
 	// (the records are in it). Only an out-of-date copy of that repository can lack it.
 	const skill = deps.skill();
 	if (skill === null) {
-		throw new AddressProblem(
+		throw new Error(
 			`The design repository on this machine has no ${ADDRESS_SKILL}, which tells the agent how to act on comments. Update it (git pull) and try again.`,
 		);
 	}
 	const here = await deps.checkout();
 	if (here.branch !== iteration.branch) {
-		throw new AddressProblem(
+		throw new Error(
 			`This machine is on ${here.branch ?? 'no branch'}, not ${iteration.branch}. Open this iteration here first, so its preview and the agent's changes are the same work.`,
 		);
 	}
 	if (!here.clean) {
-		throw new AddressProblem(
-			`There are uncommitted changes on ${iteration.branch}, and the agent commits its work. Commit them or put them aside first.`,
-		);
+		throw new Error(`There are uncommitted changes on ${iteration.branch}, and the agent commits its work. Commit them or put them aside first.`);
 	}
 
 	// Read now, not earlier: this is what makes the file current.

@@ -1,7 +1,7 @@
 import { locateGh } from './ghCli';
 import { pushBranch } from './git';
 import { NotInstalled, ProcessFailed, runFile } from './process';
-import { type Check, type PullRequest, ShareProblem, type ShareTools } from './share';
+import type { Check, PullRequest, ShareTools } from './share';
 
 /**
  * The real tools behind sharing: the designer's own git for the push, and the GitHub CLI for
@@ -19,7 +19,7 @@ const NOT_INSTALLED =
 const NOT_SIGNED_IN = 'The GitHub CLI is installed but not signed in. Run `gh auth login` in a terminal, then try again.';
 
 /** A `gh` run that failed, keeping what it printed: some failures still carry the answer. */
-class GhFailure extends ShareProblem {
+class GhFailure extends Error {
 	constructor(
 		message: string,
 		readonly stdout: string,
@@ -35,9 +35,9 @@ const gh = async (root: string, bin: string, args: string[]): Promise<string> =>
 		const { stdout } = await runFile(bin, args, { cwd: root, maxBuffer: 8 * 1024 * 1024, env: { GH_PROMPT_DISABLED: '1', NO_COLOR: '1' } });
 		return stdout.trim();
 	} catch (err) {
-		if (err instanceof NotInstalled) throw new ShareProblem(NOT_INSTALLED);
+		if (err instanceof NotInstalled) throw new Error(NOT_INSTALLED);
 		if (!(err instanceof ProcessFailed)) throw err;
-		if (/gh auth login|not logged in|HTTP 401/i.test(err.message)) throw new ShareProblem(NOT_SIGNED_IN);
+		if (/gh auth login|not logged in|HTTP 401/i.test(err.message)) throw new Error(NOT_SIGNED_IN);
 		// `gh` exits non-zero to say "checks are pending" or "a check failed" and still prints the answer.
 		throw new GhFailure(`The GitHub CLI said: ${err.message}`, err.stdout, err.stderr);
 	}
@@ -45,7 +45,7 @@ const gh = async (root: string, bin: string, args: string[]): Promise<string> =>
 
 const number = (url: string): number => {
 	const n = Number(/\/pull\/(\d+)/.exec(url)?.[1]);
-	if (!Number.isInteger(n) || n <= 0) throw new ShareProblem(`The GitHub CLI did not return a pull request address (it said: ${url}).`);
+	if (!Number.isInteger(n) || n <= 0) throw new Error(`The GitHub CLI did not return a pull request address (it said: ${url}).`);
 	return n;
 };
 

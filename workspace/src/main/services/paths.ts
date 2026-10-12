@@ -10,13 +10,6 @@ import { delimiter, isAbsolute, join, relative, resolve, sep } from 'node:path';
  * have to fail, and the symlink is the one that string comparison misses.
  */
 
-export class PathOutsideCheckout extends Error {
-	constructor(requested: string, root: string) {
-		super(`Refused: ${requested} is outside the opened repository (${root})`);
-		this.name = 'PathOutsideCheckout';
-	}
-}
-
 /** Resolves symlinks where the path exists, and leaves it alone where it does not. */
 const realOrLexical = (path: string): string => {
 	try {
@@ -47,7 +40,7 @@ export const isInside = (root: string, candidate: string): boolean => {
  */
 export const resolveInside = (root: string, candidate: string): string => {
 	if (!isInside(root, candidate)) {
-		throw new PathOutsideCheckout(candidate, root);
+		throw new Error(`Refused: ${candidate} is outside the opened repository (${root})`);
 	}
 	return resolve(realOrLexical(resolve(root)), candidate);
 };

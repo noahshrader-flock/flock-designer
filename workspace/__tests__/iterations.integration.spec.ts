@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { WorkspaceDescriptor } from '../src/shared/contract';
 import { readCheckout } from '../src/main/services/git';
 import {
-	IterationProblem,
 	assertUsableProjectId,
 	branchFor,
 	codebaseBranchFor,
@@ -66,7 +65,7 @@ describe('project ids', () => {
 	it.each(['../escape', 'Has Caps', 'trailing-', 'semi;colon', ''])('refuses %s', (id) => {
 		// The id becomes both a directory and a branch name, so anything that could
 		// escape either has to fail here rather than downstream.
-		expect(() => assertUsableProjectId(id)).toThrow(IterationProblem);
+		expect(() => assertUsableProjectId(id)).toThrow(/is not a usable project id/);
 	});
 });
 
@@ -204,7 +203,7 @@ describe('recordPreview', () => {
 	});
 
 	it('refuses an iteration that is not recorded rather than inventing one', () => {
-		expect(() => recordPreview(records, 'demo', 'i9', 'https://x.example.test')).toThrow(IterationProblem);
+		expect(() => recordPreview(records, 'demo', 'i9', 'https://x.example.test')).toThrow(/has no iteration called i9/);
 	});
 });
 
@@ -256,7 +255,7 @@ describe('recordedIteration: work started outside the app', () => {
 
 	it('refuses work whose branch is not there, rather than inventing a record for it', async () => {
 		await expect(recordedIteration(root, records, descriptor, 'demo', 'i7')).rejects.toThrow(/no iteration called i7/);
-		await expect(recordedIteration(root, records, descriptor, 'demo', 'codebase')).rejects.toThrow(IterationProblem);
+		await expect(recordedIteration(root, records, descriptor, 'demo', 'codebase')).rejects.toThrow(/has no iteration called codebase/);
 		expect(existsSync(join(records, 'demo', 'iterations.json'))).toBe(false);
 	});
 

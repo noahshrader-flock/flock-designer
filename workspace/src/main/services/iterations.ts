@@ -30,13 +30,6 @@ import { PROJECT_ID, parsePrototypeName } from '../../shared/projects';
  * the next iteration on its own bookkeeping. That is how this was found.
  */
 
-export class IterationProblem extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = 'IterationProblem';
-	}
-}
-
 /**
  * `fd/<project-id>/i<n>` from the repository's own pattern, never hard-coded. Prototypes were once made on these
  * branches; they are no longer, and this is only for reading the ones that exist.
@@ -50,9 +43,7 @@ export const branchFor = (descriptor: WorkspaceDescriptor, projectId: string, n:
  */
 export const assertUsableProjectId = (projectId: string): void => {
 	if (!PROJECT_ID.test(projectId)) {
-		throw new IterationProblem(
-			`"${projectId}" is not a usable project id. Use lower-case words separated by hyphens, like "users-inactivity-signal".`,
-		);
+		throw new Error(`"${projectId}" is not a usable project id. Use lower-case words separated by hyphens, like "users-inactivity-signal".`);
 	}
 };
 
@@ -70,7 +61,7 @@ export const readIterations = (recordsRoot: string, projectId: string): Iteratio
 		const parsed = JSON.parse(readFileSync(path, 'utf8')) as unknown;
 		return Array.isArray(parsed) ? (parsed as Iteration[]) : [];
 	} catch {
-		throw new IterationProblem(`${join(projectId, 'iterations.json')} is not readable JSON.`);
+		throw new Error(`${join(projectId, 'iterations.json')} is not readable JSON.`);
 	}
 };
 
@@ -103,7 +94,7 @@ export const createIteration = async (
 	const name = 'codebase';
 	const branch = codebaseBranchFor(descriptor, projectId);
 	if (existing.some((i) => i.name === name)) {
-		throw new IterationProblem(`${projectId} already has codebase work recorded. Use Continue on it.`);
+		throw new Error(`${projectId} already has codebase work recorded. Use Continue on it.`);
 	}
 	// Either way nothing is recorded unless the checkout succeeds, so the
 	// record cannot claim work that is not there.
@@ -160,7 +151,7 @@ export const recordPreview = (
 ): Iteration => {
 	const iterations = readIterations(recordsRoot, projectId);
 	const found = iterations.find((i) => i.name === name);
-	if (!found) throw new IterationProblem(`${projectId} has no iteration called ${name}.`);
+	if (!found) throw new Error(`${projectId} has no iteration called ${name}.`);
 	const updated = { ...found, previewUrl, ...(commit ? { commit } : {}), ...(pullRequest ? { pullRequest } : {}) };
 	writeIterations(
 		recordsRoot,
@@ -202,7 +193,7 @@ export const recordedIteration = async (
 	const found = existing.find((i) => i.name === name);
 	if (found) return found;
 	const adopted = await adoptUnrecorded(productRoot, descriptor, projectId, name);
-	if (!adopted) throw new IterationProblem(`${projectId} has no iteration called ${name}.`);
+	if (!adopted) throw new Error(`${projectId} has no iteration called ${name}.`);
 	writeIterations(recordsRoot, projectId, [...existing, adopted]);
 	return adopted;
 };
@@ -225,7 +216,7 @@ export const continueIteration = async (
 		}
 	}
 	if (!iteration) {
-		throw new IterationProblem(`${projectId} has no iteration called ${name}.`);
+		throw new Error(`${projectId} has no iteration called ${name}.`);
 	}
 	await checkoutBranch(productRoot, iteration.branch);
 

@@ -17,13 +17,6 @@ import { errorText } from '../../shared/result';
  * that is testable with no network, no remote and no real pull request.
  */
 
-export class ShareProblem extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = 'ShareProblem';
-	}
-}
-
 export interface PullRequest {
 	number: number;
 	url: string;
@@ -102,21 +95,21 @@ export const runShare = async (
 	isLive: () => boolean = () => true,
 ): Promise<{ url: string; prUrl: string }> => {
 	if (!req.share.kinds.includes(req.kind)) {
-		throw new ShareProblem(`This repository does not build a preview for ${req.kind} work. It does for: ${req.share.kinds.join(', ')}.`);
+		throw new Error(`This repository does not build a preview for ${req.kind} work. It does for: ${req.share.kinds.join(', ')}.`);
 	}
 	// It goes to git and gh as an argument; it comes from this person's own record, but is checked all the same.
 	if (!isSafeBranchName(req.branch)) {
-		throw new ShareProblem(`"${req.branch}" is not a branch name that can be shared.`);
+		throw new Error(`"${req.branch}" is not a branch name that can be shared.`);
 	}
 
 	onStep('pushing');
 	const pushedAt = tools.now();
 	const { pushed } = await tools.push(req.branch);
-	if (!isLive()) throw new ShareProblem('Sharing was stopped.');
+	if (!isLive()) throw new Error('Sharing was stopped.');
 
 	onStep('opening');
 	const pr = (await tools.findPr(req.branch)) ?? (await tools.createDraftPr(req.branch, req.title, req.body));
-	if (!isLive()) throw new ShareProblem('Sharing was stopped.');
+	if (!isLive()) throw new Error('Sharing was stopped.');
 
 	// What to wait for: the deploy workflow *for what was just pushed*. Checks left over from the
 	// previous push are not evidence about this one, so when something new went up, only checks
@@ -128,7 +121,7 @@ export const runShare = async (
 
 		if (mine.length === 0) {
 			if (tools.now() - waitStart > timings.startupMs) {
-				throw new ShareProblem(
+				throw new Error(
 					`The "${req.share.workflow}" workflow did not start for ${pr.url}. The preview is not being built, so there is no address to share.`,
 				);
 			}
@@ -136,7 +129,7 @@ export const runShare = async (
 		} else {
 			const bad = mine.find((c) => c.bucket === 'fail' || c.bucket === 'cancel');
 			if (bad) {
-				throw new ShareProblem(`"${bad.name}" did not succeed, so there is no preview to share. Its log: ${bad.link || pr.url}`);
+				throw new Error(`"${bad.name}" did not succeed, so there is no preview to share. Its log: ${bad.link || pr.url}`);
 			}
 			const waiting = mine.filter((c) => c.bucket !== 'pass' && c.bucket !== 'skipping');
 			if (waiting.length === 0) break;
@@ -144,12 +137,12 @@ export const runShare = async (
 		}
 
 		if (tools.now() - waitStart > timings.timeoutMs) {
-			throw new ShareProblem(
+			throw new Error(
 				`The preview was still building after ${Math.round(timings.timeoutMs / 60_000)} minutes. It may yet finish: share again to check.`,
 			);
 		}
 		await tools.sleep(timings.pollMs);
-		if (!isLive()) throw new ShareProblem('Sharing was stopped.');
+		if (!isLive()) throw new Error('Sharing was stopped.');
 	}
 
 	return { url: previewUrlFor(req.share, pr.number), prUrl: pr.url };
@@ -191,7 +184,7 @@ export class ShareRunner {
 
 	start(job: ShareJob): ShareStatus {
 		if (this.current.state === 'running') {
-			throw new ShareProblem(`Already sharing ${this.current.projectId} ${this.current.name}. Wait for it to finish.`);
+			throw new Error(`Already sharing ${this.current.projectId} ${this.current.name}. Wait for it to finish.`);
 		}
 		const { projectId, name } = job.request;
 		this.live = true;

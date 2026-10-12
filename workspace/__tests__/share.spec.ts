@@ -4,7 +4,6 @@ import {
 	type Check,
 	DEFAULT_TIMINGS,
 	type ShareRequest,
-	ShareProblem,
 	ShareRunner,
 	type ShareTools,
 	previewIsUp,
@@ -117,7 +116,7 @@ describe('runShare', () => {
 
 	it.each(['-delete', '--force', 'a/../b', ''])('refuses a branch name that could be read as an option or a path: %j', async (branch) => {
 		const h = harness();
-		await expect(runShare({ ...request, branch }, h.tools, () => undefined, timings)).rejects.toThrow(ShareProblem);
+		await expect(runShare({ ...request, branch }, h.tools, () => undefined, timings)).rejects.toThrow(/is not a branch name that can be shared/);
 		expect(h.calls).toEqual([]);
 	});
 

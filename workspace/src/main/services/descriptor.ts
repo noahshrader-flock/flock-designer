@@ -15,34 +15,27 @@ import { asRecord } from '../../shared/json';
 
 export const DESCRIPTOR_PATH = '.dsnr/workspace.json';
 
-export class DescriptorProblem extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = 'DescriptorProblem';
-	}
-}
-
 const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string');
 
 const parseCommand = (raw: unknown, index: number): WorkspaceCommand => {
 	const at = `commands[${index}]`;
 	if (typeof raw !== 'object' || raw === null) {
-		throw new DescriptorProblem(`${at} is not an object`);
+		throw new Error(`${at} is not an object`);
 	}
 	const c = raw as Record<string, unknown>;
 	if (typeof c.id !== 'string' || c.id === '') {
-		throw new DescriptorProblem(`${at}.id is missing`);
+		throw new Error(`${at}.id is missing`);
 	}
 	if (typeof c.label !== 'string' || c.label === '') {
-		throw new DescriptorProblem(`${at}.label is missing`);
+		throw new Error(`${at}.label is missing`);
 	}
 	if (!isStringArray(c.argv) || c.argv.length === 0) {
 		// Already-split argv, never a shell string: there is no shell to interpret
 		// quoting, pipes or substitution, so a descriptor cannot smuggle one in.
-		throw new DescriptorProblem(`${at}.argv must be a non-empty array of strings`);
+		throw new Error(`${at}.argv must be a non-empty array of strings`);
 	}
 	if (c.servesPreviewOn !== undefined && typeof c.servesPreviewOn !== 'number') {
-		throw new DescriptorProblem(`${at}.servesPreviewOn must be a port number`);
+		throw new Error(`${at}.servesPreviewOn must be a port number`);
 	}
 	return {
 		id: c.id,
@@ -61,7 +54,7 @@ const KINDS = ['prototype', 'codebase'] as const;
  * level, not empty, and not the repository itself (that is a design system in a repository of its own: leave it out).
  */
 const designSystemFolder = (value: unknown): string => {
-	const bad = () => new DescriptorProblem(`${DESCRIPTOR_PATH} has a designSystem.folder that is not a folder inside the repository`);
+	const bad = () => new Error(`${DESCRIPTOR_PATH} has a designSystem.folder that is not a folder inside the repository`);
 	if (typeof value !== 'string') throw bad();
 	const path = value.replace(/\/+$/, '');
 	if (path === '' || path.startsWith('/') || path.split('/').some((part) => part === '' || part === '.' || part === '..')) throw bad();
@@ -77,13 +70,13 @@ const parseShare = (raw: unknown): ShareDescriptor | undefined => {
 	if (raw === undefined) return undefined;
 	const s = asRecord(raw);
 	if (typeof s.url !== 'string' || !s.url.startsWith('https://') || !s.url.includes('<pr>')) {
-		throw new DescriptorProblem(`${DESCRIPTOR_PATH} share.url must be an https address containing <pr>`);
+		throw new Error(`${DESCRIPTOR_PATH} share.url must be an https address containing <pr>`);
 	}
 	if (typeof s.workflow !== 'string' || s.workflow === '') {
-		throw new DescriptorProblem(`${DESCRIPTOR_PATH} share.workflow must name the workflow that deploys a preview`);
+		throw new Error(`${DESCRIPTOR_PATH} share.workflow must name the workflow that deploys a preview`);
 	}
 	if (!Array.isArray(s.kinds) || s.kinds.length === 0 || !s.kinds.every((k) => (KINDS as readonly unknown[]).includes(k))) {
-		throw new DescriptorProblem(`${DESCRIPTOR_PATH} share.kinds must list "prototype", "codebase" or both`);
+		throw new Error(`${DESCRIPTOR_PATH} share.kinds must list "prototype", "codebase" or both`);
 	}
 	return { url: s.url, workflow: s.workflow, kinds: s.kinds as ShareDescriptor['kinds'] };
 };
@@ -93,39 +86,39 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 	try {
 		raw = JSON.parse(text);
 	} catch (err) {
-		throw new DescriptorProblem(`${DESCRIPTOR_PATH} is not valid JSON: ${(err as Error).message}`);
+		throw new Error(`${DESCRIPTOR_PATH} is not valid JSON: ${(err as Error).message}`);
 	}
 	if (typeof raw !== 'object' || raw === null) {
-		throw new DescriptorProblem(`${DESCRIPTOR_PATH} is not an object`);
+		throw new Error(`${DESCRIPTOR_PATH} is not an object`);
 	}
 	const d = raw as Record<string, unknown>;
 
 	if (d.version !== 1) {
 		// Refusing a version we do not know beats reading it optimistically and
 		// running something that means what a later schema said it meant.
-		throw new DescriptorProblem(`${DESCRIPTOR_PATH} declares version ${String(d.version)}; this app understands 1`);
+		throw new Error(`${DESCRIPTOR_PATH} declares version ${String(d.version)}; this app understands 1`);
 	}
 	for (const key of ['product', 'contextDir', 'prototypeRoot'] as const) {
 		if (typeof d[key] !== 'string' || d[key] === '') {
-			throw new DescriptorProblem(`${DESCRIPTOR_PATH} is missing ${key}`);
+			throw new Error(`${DESCRIPTOR_PATH} is missing ${key}`);
 		}
 	}
 	const branch = d.branchPattern as Record<string, unknown> | undefined;
 	if (!branch || typeof branch.prototype !== 'string' || typeof branch.codebase !== 'string') {
-		throw new DescriptorProblem(`${DESCRIPTOR_PATH} is missing branchPattern.prototype or branchPattern.codebase`);
+		throw new Error(`${DESCRIPTOR_PATH} is missing branchPattern.prototype or branchPattern.codebase`);
 	}
 	if (!Array.isArray(d.commands)) {
-		throw new DescriptorProblem(`${DESCRIPTOR_PATH} is missing commands`);
+		throw new Error(`${DESCRIPTOR_PATH} is missing commands`);
 	}
 	const commands = d.commands.map(parseCommand);
 	const ids = commands.map((c) => c.id);
 	const duplicate = ids.find((id, i) => ids.indexOf(id) !== i);
 	if (duplicate) {
-		throw new DescriptorProblem(`${DESCRIPTOR_PATH} declares two commands with id "${duplicate}"`);
+		throw new Error(`${DESCRIPTOR_PATH} declares two commands with id "${duplicate}"`);
 	}
 	const ds = d.designSystem as Record<string, unknown> | undefined;
 	if (!ds || typeof ds.package !== 'string' || ds.package === '') {
-		throw new DescriptorProblem(`${DESCRIPTOR_PATH} is missing designSystem.package`);
+		throw new Error(`${DESCRIPTOR_PATH} is missing designSystem.package`);
 	}
 	const folder = ds.folder === undefined ? undefined : designSystemFolder(ds.folder);
 
@@ -147,7 +140,7 @@ export const readDescriptor = (root: string): WorkspaceDescriptor => {
 	try {
 		text = readFileSync(path, 'utf8');
 	} catch {
-		throw new DescriptorProblem(`This repository has no ${DESCRIPTOR_PATH}, so Workspace does not know what it may run here.`);
+		throw new Error(`This repository has no ${DESCRIPTOR_PATH}, so Workspace does not know what it may run here.`);
 	}
 	return parseDescriptor(text);
 };
@@ -156,7 +149,7 @@ export const readDescriptor = (root: string): WorkspaceDescriptor => {
 export const findCommand = (descriptor: WorkspaceDescriptor, commandId: string): WorkspaceCommand => {
 	const command = descriptor.commands.find((c) => c.id === commandId);
 	if (!command) {
-		throw new DescriptorProblem(`"${commandId}" is not a command this repository declares`);
+		throw new Error(`"${commandId}" is not a command this repository declares`);
 	}
 	return command;
 };

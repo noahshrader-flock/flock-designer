@@ -19,13 +19,6 @@ const GIT_TIMEOUT_MS = 60_000;
  * tree. `git` itself runs what it is given; a caller that changes a repository says what it changes.
  */
 
-export class GitProblem extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = 'GitProblem';
-	}
-}
-
 /** One queue per repository: git takes a lock on the index, so two commands at once can collide. */
 const queues = new Map<string, Promise<unknown>>();
 
@@ -78,11 +71,11 @@ const queued = (root: string, args: string[], options: GitOptions): Promise<stri
 				return await attempt(root, args, options);
 			} catch (err) {
 				lastDetail = (err as { stderr?: string; message: string }).stderr?.trim() || (err as Error).message;
-				if (!isLockContention(lastDetail)) throw new GitProblem(lastDetail);
+				if (!isLockContention(lastDetail)) throw new Error(lastDetail);
 				if (i < 3) await sleep(250 * (i + 1));
 			}
 		}
-		throw new GitProblem(
+		throw new Error(
 			`${lastDetail}\n\nGit says another process is using this repository. If nothing else is running git in it, the lock is left over and .git/index.lock can be deleted.`,
 		);
 	};
@@ -104,7 +97,7 @@ export const isRepository = (root: string): boolean => existsSync(join(root, '.g
 
 export const readCheckout = async (root: string): Promise<Checkout> => {
 	if (!isRepository(root)) {
-		throw new GitProblem(`${root} is not a git repository`);
+		throw new Error(`${root} is not a git repository`);
 	}
 	const branch = await git(root, ['rev-parse', '--abbrev-ref', 'HEAD']);
 	const status = await git(root, ['status', '--porcelain']);
@@ -138,7 +131,7 @@ export const listBranches = async (root: string, prefix: string): Promise<string
  * Nothing in the person's working tree, index or current branch changes.
  */
 export const readTreeAt = async (root: string, dir: string, branch: string): Promise<string> => {
-	if (!(await branchExists(root, branch))) throw new GitProblem(`There is no branch called ${branch} in ${basename(root)}.`);
+	if (!(await branchExists(root, branch))) throw new Error(`There is no branch called ${branch} in ${basename(root)}.`);
 	if (existsSync(dir) && !existsSync(join(dir, '.git'))) {
 		// Left half-made by an earlier attempt: it is the app's own copy, so it is cleared and made again.
 		rmSync(dir, { recursive: true, force: true });
@@ -245,7 +238,7 @@ export const ensureLocalBranch = async (root: string, branch: string): Promise<v
 			() => true,
 			() => false,
 		));
-	if (!onGitHub) throw new GitProblem(`There is no branch called ${branch} in ${basename(root)}.`);
+	if (!onGitHub) throw new Error(`There is no branch called ${branch} in ${basename(root)}.`);
 	await git(root, ['branch', '--track', branch, remote]);
 };
 
@@ -260,14 +253,14 @@ export const ensureLocalBranch = async (root: string, branch: string): Promise<v
 const requireCleanTree = async (root: string, action: string): Promise<void> => {
 	const { clean } = await readCheckout(root);
 	if (!clean) {
-		throw new GitProblem(`There are uncommitted changes in ${basename(root)}. Commit or put them aside before ${action}.`);
+		throw new Error(`There are uncommitted changes in ${basename(root)}. Commit or put them aside before ${action}.`);
 	}
 };
 
 export const createBranch = async (root: string, branch: string, from: string): Promise<void> => {
 	await requireCleanTree(root, 'creating a new iteration');
 	if (await branchExists(root, branch)) {
-		throw new GitProblem(`Branch ${branch} already exists.`);
+		throw new Error(`Branch ${branch} already exists.`);
 	}
 	await git(root, ['checkout', '-b', branch, from]);
 };
@@ -352,7 +345,7 @@ export const branchCommit = async (root: string, branch: string): Promise<string
 export const checkoutBranch = async (root: string, branch: string): Promise<void> => {
 	await requireCleanTree(root, 'switching iteration');
 	if (!(await branchExists(root, branch))) {
-		throw new GitProblem(`Branch ${branch} does not exist.`);
+		throw new Error(`Branch ${branch} does not exist.`);
 	}
 	await git(root, ['checkout', branch]);
 };
@@ -367,7 +360,7 @@ export const checkoutBranch = async (root: string, branch: string): Promise<void
  */
 export const pushBranch = async (root: string, branch: string): Promise<{ pushed: boolean }> => {
 	if (!(await branchExists(root, branch))) {
-		throw new GitProblem(`Branch ${branch} does not exist on this machine, so there is nothing to share.`);
+		throw new Error(`Branch ${branch} does not exist on this machine, so there is nothing to share.`);
 	}
 	let out: string;
 	try {
@@ -375,11 +368,11 @@ export const pushBranch = async (root: string, branch: string): Promise<{ pushed
 	} catch (err) {
 		const detail = errorText(err);
 		if (/rejected|non-fast-forward|fetch first/i.test(detail)) {
-			throw new GitProblem(
+			throw new Error(
 				`${branch} has changes on the remote that this machine does not have, so it was not pushed. Pull them first, then try again.\n\n${detail}`,
 			);
 		}
-		throw new GitProblem(`Could not push ${branch} to origin.\n\n${detail}`);
+		throw new Error(`Could not push ${branch} to origin.\n\n${detail}`);
 	}
 	const lines = out.split('\n').filter((l) => l.includes('refs/heads/'));
 	return { pushed: !lines.every((l) => l.startsWith('=')) };

@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync, rmSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { PathOutsideCheckout, isInside, resolveInside } from '../src/main/services/paths';
+import { isInside, resolveInside } from '../src/main/services/paths';
 
 let base: string;
 let root: string;
@@ -59,7 +59,7 @@ describe('resolveInside', () => {
 		expect(resolveInside(root, 'src/a.txt')).toMatch(/src\/a\.txt$/);
 	});
 
-	it('throws by name, so a caller can tell this apart from an IO error', () => {
-		expect(() => resolveInside(root, '../elsewhere/secret.txt')).toThrow(PathOutsideCheckout);
+	it('says it refused, and where the repository is, rather than failing as a missing file would', () => {
+		expect(() => resolveInside(root, '../elsewhere/secret.txt')).toThrow(/^Refused: .* is outside the opened repository/);
 	});
 });

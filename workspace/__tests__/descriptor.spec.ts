@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DescriptorProblem, designSystemCheckout, findCommand, parseDescriptor } from '../src/main/services/descriptor';
+import { designSystemCheckout, findCommand, parseDescriptor } from '../src/main/services/descriptor';
 
 const valid = {
 	version: 1,
@@ -32,7 +32,7 @@ describe('parseDescriptor', () => {
 		['not JSON at all', '{nope'],
 		['a JSON array', '[]'],
 	])('refuses %s', (_label, text) => {
-		expect(() => parseDescriptor(text)).toThrow(DescriptorProblem);
+		expect(() => parseDescriptor(text)).toThrow(/^\.dsnr\/workspace\.json /);
 	});
 
 	it('refuses a version it does not understand rather than guessing', () => {

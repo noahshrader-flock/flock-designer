@@ -4,7 +4,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
-	GitProblem,
 	branchAuthors,
 	branchExists,
 	checkoutBranch,
@@ -103,7 +102,7 @@ describe('readCheckout', () => {
 
 	it('refuses a directory that is not a repository', async () => {
 		const plain = mkdtempSync(join(tmpdir(), 'fdw-plain-'));
-		await expect(readCheckout(plain)).rejects.toThrow(GitProblem);
+		await expect(readCheckout(plain)).rejects.toThrow(/is not a git repository/);
 		expect(isRepository(plain)).toBe(false);
 		rmSync(plain, { recursive: true, force: true });
 	});
@@ -131,7 +130,7 @@ describe('createBranch', () => {
 	it('treats a branch name with shell metacharacters as a name, not a command', async () => {
 		// If anything here reached a shell, this would run `touch`. argv means it cannot.
 		const nasty = 'fd/demo/i1; touch pwned';
-		await expect(createBranch(root, nasty, 'develop')).rejects.toThrow(GitProblem);
+		await expect(createBranch(root, nasty, 'develop')).rejects.toThrow();
 		expect(isRepository(join(root, 'pwned'))).toBe(false);
 	});
 });
@@ -228,7 +227,7 @@ describe('two commands at once in one repository', () => {
 
 	it('do not let a failure stop the commands queued behind it', async () => {
 		g('branch', 'a');
-		await expect(checkoutBranch(root, 'no-such-branch')).rejects.toThrow(GitProblem);
+		await expect(checkoutBranch(root, 'no-such-branch')).rejects.toThrow(/Branch no-such-branch does not exist/);
 		await checkoutBranch(root, 'a');
 		expect((await readCheckout(root)).branch).toBe('a');
 	});
@@ -249,7 +248,6 @@ describe('a lock held by something outside the app', () => {
 		g('branch', 'a');
 		writeFileSync(lock(), '');
 		const err = await checkoutBranch(root, 'a').catch((e: Error) => e);
-		expect(err).toBeInstanceOf(GitProblem);
 		expect((err as Error).message).toMatch(/index\.lock/);
 		expect((err as Error).message).toMatch(/nothing else is running git/i);
 		// Deleting a lock under a live process corrupts the index, so it must still be there.

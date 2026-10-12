@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AddressProblem, addressTask, prepareAddress } from '../src/main/services/address';
+import { addressTask, prepareAddress } from '../src/main/services/address';
 import { type AddressPhase, runAddress, runPrototypeAddress } from '../src/renderer/address';
 import type { AgentStatus, ReviewComment, Result } from '../src/shared/contract';
 
@@ -125,8 +125,8 @@ describe('prepareAddress', () => {
 		await expect(prepareAddress(d, target())).rejects.toThrow('Sign in again.');
 	});
 
-	it('is a typed problem the window can show', async () => {
-		await expect(prepareAddress(deps({ agentRunning: () => true }), target())).rejects.toBeInstanceOf(AddressProblem);
+	it('says why it will not start, in words the window can show', async () => {
+		await expect(prepareAddress(deps({ agentRunning: () => true }), target())).rejects.toThrow(/already working on something else/);
 	});
 });
 

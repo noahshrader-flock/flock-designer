@@ -3,7 +3,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, wr
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { GitProblem, pushBranch } from '../src/main/services/git';
+import { pushBranch } from '../src/main/services/git';
 import { recordPreview, readIterations } from '../src/main/services/iterations';
 import { type ShareStatus } from '../src/shared/contract';
 import { ShareRunner, type ShareRequest } from '../src/main/services/share';
@@ -124,7 +124,7 @@ describe('pushBranch', () => {
 	});
 
 	it('refuses a branch that is not on this machine', async () => {
-		await expect(pushBranch(work, 'fd/nope/i1')).rejects.toThrow(GitProblem);
+		await expect(pushBranch(work, 'fd/nope/i1')).rejects.toThrow(/does not exist on this machine, so there is nothing to share/);
 	});
 });
 
