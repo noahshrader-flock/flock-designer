@@ -1,18 +1,30 @@
-import { type ReactNode, useRef } from 'react';
-import type { Catalog, DesignToken, TokenEdit } from '../shared/contract';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { specimenAddress } from '../shared/catalog';
+import type { Catalog, DesignToken, StoryPreview, TokenEdit } from '../shared/contract';
 import { plural } from '../shared/plural';
-import { PRIMITIVES, type Primitive, byPrimitive, inOrder } from '../shared/primitives';
+import { PRIMITIVES, type Primitive, byPrimitive, inOrder, missingParts } from '../shared/primitives';
+import { typeSpecimens } from '../shared/specimens';
 import { nameOf, pixelsOf, readsAs, withEdits } from '../shared/tokens';
 import { Page } from './Page';
 import { LinesSkeleton, SkeletonStatus } from './Skeletons';
+import { StoryFrame } from './StoryFrame';
 import { Swatch } from './TokenEditor';
 import { TokenProblems } from './TokenProblems';
 import { badgeVariants } from './ui/badge';
+import { Card, CardContent } from './ui/card';
+import { Skeleton } from './ui/skeleton';
 
-/** What every drawing is given: the tokens it draws, and every token by its path, to say what one points at. */
+/** The design system's preview build, which a drawing that needs its own CSS (a type specimen) is drawn in; asked for once. */
+type Preview = StoryPreview | { state: 'asking' };
+
+/**
+ * What every drawing is given: the tokens it draws, every token by its path (to say what one points at), and the design
+ * system's preview build, for a drawing made in it.
+ */
 interface Drawing {
 	tokens: DesignToken[];
 	byPath: Map<string, DesignToken>;
+	preview: Preview;
 }
 
 /** A token's name and what it reads as, under its drawing: the tone it points at, or its value. */
@@ -96,16 +108,49 @@ const Table = ({ tokens }: Drawing) => (
 	</table>
 );
 
-/** Each of the vocabulary's drawings, by the word it uses for it: a new drawing is one entry. */
-const DRAWINGS: Record<Primitive['drawn'], (props: Drawing) => ReactNode> = { swatches: Swatches, bars: Bars, corners: Corners };
+/** Why a specimen cannot be drawn, from what the preview build said. */
+const notBuilt = (preview: StoryPreview): string =>
+	preview.state === 'no-packages'
+		? `: its packages are not installed (run npm install in ${preview.root})`
+		: preview.state === 'failed'
+			? `: ${preview.error}`
+			: '';
 
-/** A primitive's tokens as the vocabulary says to draw them, a group heading over each when it has several. */
-const Drawn = ({ primitive, tokens, byPath }: { primitive: Primitive | undefined; tokens: DesignToken[]; byPath: Map<string, DesignToken> }) => {
+/**
+ * Typography: a specimen of each family and style, drawn in the design system's own preview so its fonts are its own (the
+ * page says when one is not there), and under it the values as written, to read off.
+ */
+const Specimens = ({ tokens, byPath, preview }: Drawing) => (
+	<div className="flex flex-col gap-4">
+		{preview.state === 'ready' ? (
+			// In a card, as a component's stories are: the page inside it keeps its own padding.
+			<Card className="gap-0 overflow-hidden py-0">
+				<CardContent className="px-0">
+					<StoryFrame src={specimenAddress(preview.base, typeSpecimens(tokens))} title="Type specimen" />
+				</CardContent>
+			</Card>
+		) : preview.state === 'asking' ? (
+			<Skeleton className="h-32 w-full" />
+		) : (
+			<p className="text-muted-foreground text-sm">The specimen is drawn in the design system’s preview, which cannot be built here{notBuilt(preview)}.</p>
+		)}
+		<Table tokens={tokens} byPath={byPath} preview={preview} />
+	</div>
+);
+
+/** Each of the vocabulary's drawings, by the word it uses for it: a new drawing is one entry. */
+const DRAWINGS: Record<Primitive['drawn'], (props: Drawing) => ReactNode> = { swatches: Swatches, bars: Bars, corners: Corners, specimens: Specimens };
+
+/**
+ * A primitive's tokens as the vocabulary says to draw them, a group heading over each when it has several. A primitive made
+ * of parts (typography) is one drawing of the whole: its parts are what its groups are.
+ */
+const Drawn = ({ primitive, tokens, byPath, preview }: { primitive: Primitive | undefined } & Drawing) => {
 	const Draw = primitive ? DRAWINGS[primitive.drawn] : Table;
-	const draw = (list: DesignToken[]): ReactNode => <Draw tokens={list} byPath={byPath} />;
+	const draw = (list: DesignToken[]): ReactNode => <Draw tokens={list} byPath={byPath} preview={preview} />;
 	const groups = inOrder(tokens, (t) => t.group);
 	// One group would say the primitive's own name again, so its tokens are drawn directly, as on a tokens tab.
-	if (groups.length === 1) return draw(tokens);
+	if (primitive?.parts !== undefined || groups.length === 1) return draw(tokens);
 	return (
 		<div className="flex flex-col gap-6">
 			{groups.map(([group, inGroup]) => (
@@ -117,6 +162,9 @@ const Drawn = ({ primitive, tokens, byPath }: { primitive: Primitive | undefined
 		</div>
 	);
 };
+
+/** Whether the design system has a primitive the preview build draws: only then is it asked for. */
+const drawnInPreview = (tokens: DesignToken[]): boolean => tokens.some((t) => PRIMITIVES.find((p) => p.category === t.category)?.drawn === 'specimens');
 
 /** "theme files, CSS variables and design token files". */
 const listed = (words: string[]): string => (words.length < 2 ? (words[0] ?? '') : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`);
@@ -139,11 +187,22 @@ const Chip = ({ defined, onPress, children }: { defined: boolean; onPress: () =>
  * list the side panel shows (`byPrimitive`, the vocabulary's order), as the change being tried there leaves it. At its top a
  * chip for each primitive, how many tokens it has or that it is not defined, each one a way to its section; then each
  * primitive drawn as the vocabulary says (the palette as swatches, spacing as bars, a radius as a corner), anything without a
- * drawing as a plain table, and last the primitives it does not define, with where DSNR looked. **A picture, not a panel:**
- * nothing on it changes a token, which is the Components tab's side panel's, beside the components it changes.
+ * drawing as a plain table, and last the primitives it does not define, with where DSNR looked, and the parts it leaves out of
+ * one it does (R3: Flock's typography is a family, with no size, weight or line height). Typography is a specimen drawn in
+ * the design system's preview build, which is asked for once a commit, and only while the tab is shown. **A picture, not a
+ * panel:** nothing on it changes a token, which is the Components tab's side panel's, beside the components it changes.
  */
-export const Primitives = ({ catalog, edits }: { catalog: Catalog | null; edits: TokenEdit[] }) => {
+export const Primitives = ({ catalog, edits, hidden }: { catalog: Catalog | null; edits: TokenEdit[]; hidden: boolean }) => {
 	const sections = useRef(new Map<string, HTMLElement | null>());
+	const [preview, setPreview] = useState<Preview>({ state: 'asking' });
+	const commit = catalog?.state === 'ready' && drawnInPreview(catalog.tokens.tokens) ? catalog.commit : null;
+	const askedFor = useRef<string | null>(null);
+	useEffect(() => {
+		if (hidden || commit === null || askedFor.current === commit) return;
+		askedFor.current = commit;
+		setPreview({ state: 'asking' });
+		void window.workspace.storyPreview([]).then((r) => setPreview(r.ok && r.value !== null ? r.value : { state: 'failed', error: r.ok ? 'it gave no answer' : r.error }));
+	}, [hidden, commit]);
 	if (catalog === null)
 		return (
 			<SkeletonStatus label="Reading the design system…">
@@ -165,22 +224,33 @@ export const Primitives = ({ catalog, edits }: { catalog: Catalog | null; edits:
 	const tokens = withEdits(read.tokens, edits);
 	const byPath = new Map(tokens.map((t) => [t.path, t]));
 	const found = byPrimitive(tokens);
-	const missing = PRIMITIVES.filter((p) => !found.some(([category]) => category === p.category));
+	const primitive = (category: string) => PRIMITIVES.find((p) => p.category === category);
+	// A primitive's tokens, by its name: undefined when it has none.
+	const tokensOf = (category: string) => found.find(([c]) => c === category)?.[1];
+	// What the design system leaves out: a primitive it has no tokens for, or the parts of one it has.
+	const missing = PRIMITIVES.flatMap((p) => {
+		const list = tokensOf(p.category);
+		if (list === undefined) return [{ key: p.category, said: p.category }];
+		const parts = missingParts(p, list);
+		return parts.length === 0 ? [] : [{ key: p.category, said: `${p.category} ${listed(parts).toLowerCase()}` }];
+	});
 	const go = (key: string) => sections.current.get(key)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-	const count = (category: string) => found.find(([c]) => c === category)?.[1].length;
 	return (
 		<Page>
 			<div data-coverage className="flex flex-wrap items-center gap-2">
 				{PRIMITIVES.map((p) => {
-					const n = count(p.category);
+					const list = tokensOf(p.category);
+					const n = list?.length;
+					const lacks = missingParts(p, list ?? []);
+					const has = (p.parts ?? []).filter((part) => !lacks.includes(part));
 					return (
 						<Chip key={p.category} defined={n !== undefined} onPress={() => go(n === undefined ? 'not-defined' : p.category)}>
-							{n === undefined ? `${p.category} not defined` : `${p.category} ${n}`}
+							{n === undefined ? `${p.category} not defined` : lacks.length > 0 && has.length > 0 ? `${p.category} ${n} · ${listed(has).toLowerCase()} only` : `${p.category} ${n}`}
 						</Chip>
 					);
 				})}
 				{found
-					.filter(([category]) => !PRIMITIVES.some((p) => p.category === category))
+					.filter(([category]) => primitive(category) === undefined)
 					.map(([category, list]) => (
 						<Chip key={category} defined onPress={() => go(category)}>
 							{category} {list.length}
@@ -199,7 +269,7 @@ export const Primitives = ({ catalog, edits }: { catalog: Catalog | null; edits:
 					className="flex scroll-mt-4 flex-col gap-4 border-t pt-6"
 				>
 					<h2 className="text-base font-semibold">{category}</h2>
-					<Drawn primitive={PRIMITIVES.find((p) => p.category === category)} tokens={list} byPath={byPath} />
+					<Drawn primitive={primitive(category)} tokens={list} byPath={byPath} preview={preview} />
 				</section>
 			))}
 			{missing.length > 0 && (
@@ -207,9 +277,9 @@ export const Primitives = ({ catalog, edits }: { catalog: Catalog | null; edits:
 					<h2 className="text-base font-semibold">Not defined</h2>
 					{read.source === null && <p className="text-muted-foreground text-sm">No tokens were found. Looked for {listed(read.looked)}.</p>}
 					<ul className="flex flex-col gap-1.5">
-						{missing.map((p) => (
-							<li key={p.category} className="text-sm">
-								<span className="font-medium">{p.category}</span>
+						{missing.map((m) => (
+							<li key={m.key} className="text-sm">
+								<span className="font-medium">{m.said}</span>
 								{read.source !== null && <span className="text-muted-foreground"> Not defined in its {read.source}.</span>}
 							</li>
 						))}

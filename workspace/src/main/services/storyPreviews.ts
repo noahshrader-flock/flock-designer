@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readdirSync, realpathSync, rmSync, symlinkSync, 
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
-import { PREVIEW_FILE, PREVIEW_HEIGHT, PREVIEW_SHOW } from '../../shared/catalog';
+import { PREVIEW_FILE, PREVIEW_HEIGHT, PREVIEW_SHOW, PREVIEW_SPECIMEN } from '../../shared/catalog';
 import { designSystemOf } from '../../shared/catalog';
 import type { ConnectedDesignSystem, StoryPreview, TokenEdit } from '../../shared/contract';
 import { type CatalogReads, PREVIEW_CANDIDATES, readCatalog } from './componentCatalog';
@@ -52,6 +52,66 @@ const PAGE = `<!doctype html>
 	</body>
 </html>
 `;
+
+/**
+ * A type specimen (R3 of the design system plan), as the preview page draws one: each line a sample in its own family,
+ * size, weight and line height, named with them, in a part of the page of its own (the stories' root is left alone). It is
+ * drawn here, not in the app's window, because this page has the design system's own CSS, and so its fonts, as its
+ * components do. **A family that is not there is said to be not there,** so a sample in a fallback is never taken for the
+ * real one: once the page's fonts have loaded, a family is there when text in it is not the width of text in a fallback.
+ * A family every browser has (`sans-serif`) is taken to be there. `var`, so the page can be given it more than once.
+ */
+export const specimenScript = `var drawSpecimens = (() => {
+	const SAMPLE = 'The quick brown fox jumps over the lazy dog';
+	const GENERIC = new Set(['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-serif', 'ui-sans-serif', 'ui-monospace', 'ui-rounded', 'emoji', 'math', 'fangsong']);
+	const first = (family) => family.split(',')[0].trim().replace(/^['"]|['"]$/g, '');
+	const there = (family) => {
+		if (GENERIC.has(family)) return true;
+		const probe = (fallback) => {
+			const s = document.createElement('span');
+			s.textContent = 'mmmmmmmmmmlli10WQ@';
+			s.style.cssText = 'position:absolute;visibility:hidden;font-size:72px;white-space:nowrap';
+			s.style.fontFamily = fallback;
+			document.body.append(s);
+			const plain = s.offsetWidth;
+			s.style.fontFamily = JSON.stringify(family) + ', ' + fallback;
+			const own = s.offsetWidth;
+			s.remove();
+			return plain !== own;
+		};
+		return probe('monospace') || probe('serif');
+	};
+	const element = (tag, className, text) => {
+		const e = document.createElement(tag);
+		if (className) e.className = className;
+		if (text !== undefined) e.textContent = text;
+		return e;
+	};
+	return async (lines, into) => {
+		const page = into || document.body.appendChild(document.createElement('div'));
+		page.replaceChildren();
+		const drawn = lines.map((line) => {
+			const section = element('section', 'fd-story');
+			section.dataset.specimen = line.key;
+			const said = [line.label, line.size, line.weight && 'weight ' + line.weight, line.lineHeight && 'line height ' + line.lineHeight];
+			const sample = element('p', '', SAMPLE);
+			sample.dataset.sample = '';
+			sample.style.margin = '0';
+			if (line.family) sample.style.fontFamily = line.family;
+			if (line.size) sample.style.fontSize = line.size;
+			if (line.weight) sample.style.fontWeight = line.weight;
+			if (line.lineHeight) sample.style.lineHeight = line.lineHeight;
+			section.append(element('h4', 'fd-name', said.filter(Boolean).join(' · ')), sample);
+			page.append(section);
+			return { line, section };
+		});
+		if (document.fonts) await document.fonts.ready;
+		for (const { line, section } of drawn) {
+			const family = line.family && first(line.family);
+			if (family && !there(family)) section.append(element('p', 'fd-name', family + ' is not available here: shown in a fallback.'));
+		}
+	};
+})();`;
 
 /**
  * The page's script: the story file named in its address, every story in it by name, each in its own error boundary so
@@ -133,7 +193,19 @@ const show = (file) => {
 	}, fail);
 };
 window[${JSON.stringify(PREVIEW_SHOW)}] = show;
-show(new URLSearchParams(location.search).get(${JSON.stringify(PREVIEW_FILE)}));
+
+${specimenScript}
+// A type specimen when the address asks for one (R3), in place of a story file.
+const asked = new URLSearchParams(location.search);
+const specimen = asked.get(${JSON.stringify(PREVIEW_SPECIMEN)});
+if (specimen === null) show(asked.get(${JSON.stringify(PREVIEW_FILE)}));
+else {
+	try {
+		drawSpecimens(JSON.parse(specimen)).then(tell, fail);
+	} catch (error) {
+		fail(error);
+	}
+}
 `;
 
 /** Whether the clone has the packages a preview is built from: React, and Storybook's portable stories. */

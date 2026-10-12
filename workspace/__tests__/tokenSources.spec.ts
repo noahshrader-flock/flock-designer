@@ -60,13 +60,38 @@ describe('CSS variables', () => {
 		expect(find(list, 'css.dark.primary')?.value).toBe('#333333');
 	});
 
-	it('put a radius on Shape and spacing on Spacing, and leave out what is neither', async () => {
+	it('put a radius on Shape, spacing on Spacing, a font size on Typography, and leave out what is none of these', async () => {
 		const list = await readTokens(reads({ 'src/styles/globals.css': CSS }));
 		expect(find(list, 'css.light.radius')).toMatchObject({ kind: 'dimension', category: 'Shape', value: '0.625rem' });
 		expect(find(list, 'css.light.spacing')).toMatchObject({ kind: 'dimension', category: 'Spacing', value: '0.25rem' });
-		expect(list.tokens.map((t) => t.path)).not.toContain('css.light.font-size-sm');
+		expect(find(list, 'css.light.font-size-sm')).toMatchObject({ kind: 'font', category: 'Typography', group: 'Size', set: 'sm', value: '14px' });
 		expect(list.tokens.map((t) => t.path)).not.toContain('css.light.z-modal');
 		expect(list.tokens.map((t) => t.path)).not.toContain('css.light.commented');
+	});
+
+	it('read typography by its name, as Tailwind’s theme names it: a family, a weight, a size and its line height, a leading', async () => {
+		const css = `@theme {
+  --font-sans: Inter, sans-serif;
+  --font-weight-bold: 700;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --leading-tight: 1.25;
+  --text-muted: #666666;
+  --font-color: #333333;
+}
+`;
+		const list = await readTokens(reads({ 'src/app.css': css }));
+		const typography = list.tokens.filter((t) => t.category === 'Typography').map(({ path, kind, group, set, name, value }) => ({ path, kind, group, set, name, value }));
+		expect(typography).toEqual([
+			{ path: 'css.light.font-sans', kind: 'font', group: 'Family', set: 'font', name: 'sans', value: 'Inter, sans-serif' },
+			{ path: 'css.light.font-weight-bold', kind: 'font', group: 'Weight', set: 'font-weight', name: 'bold', value: '700' },
+			{ path: 'css.light.text-sm', kind: 'font', group: 'Size', set: 'sm', name: 'size', value: '0.875rem' },
+			{ path: 'css.light.text-sm--line-height', kind: 'font', group: 'Line height', set: 'sm', name: 'line height', value: '1.25rem' },
+			{ path: 'css.light.leading-tight', kind: 'font', group: 'Line height', set: 'leading', name: 'tight', value: '1.25' },
+		]);
+		// A color named like type is a color: a font's color is not a family.
+		expect(find(list, 'css.light.text-muted')).toMatchObject({ kind: 'color', category: 'Color' });
+		expect(find(list, 'css.light.font-color')).toMatchObject({ kind: 'color', category: 'Color' });
 	});
 
 	it('group a scale of steps into one set: Tailwind’s --color-red-500 is step 500 of color-red', async () => {
@@ -105,10 +130,43 @@ describe('design token files', () => {
 		expect(colors).toEqual(['color.brand', 'color.red.500']);
 	});
 
-	it('follow a reference to the token it names, and leave out the kinds the panel does not show', async () => {
+	it('follow a reference to the token it names', async () => {
 		const list = await readTokens(reads({ 'tokens/base.tokens.json': TOKENS }));
 		expect(find(list, 'color.brand')?.value).toBe('#ff0000');
-		expect(list.tokens.map((t) => t.path)).not.toContain('font.body');
+	});
+
+	it('read typography: a family, a weight, a size, and a typography token as each of its parts, following what it names', async () => {
+		const type = JSON.stringify(
+			{
+				font: {
+					family: { sans: { $type: 'fontFamily', $value: ['Inter', 'sans-serif'] } },
+					weight: { bold: { $type: 'fontWeight', $value: 700 } },
+					size: { body: { $type: 'dimension', $value: '16px' } },
+				},
+				heading: { h1: { $type: 'typography', $value: { fontFamily: '{font.family.sans}', fontSize: '32px', fontWeight: 700, lineHeight: 1.2 } } },
+				shadow: { sm: { $type: 'shadow', $value: { offsetX: '0px' } } },
+			},
+			null,
+			2,
+		);
+		const list = await readTokens(reads({ 'tokens/type.tokens.json': type }));
+		const typography = list.tokens.filter((t) => t.category === 'Typography').map(({ path, kind, group, set, name, value }) => ({ path, kind, group, set, name, value }));
+		expect(typography).toEqual([
+			{ path: 'font.family.sans', kind: 'font', group: 'Family', set: 'font.family', name: 'sans', value: 'Inter, sans-serif' },
+			{ path: 'font.weight.bold', kind: 'font', group: 'Weight', set: 'font.weight', name: 'bold', value: '700' },
+			{ path: 'font.size.body', kind: 'font', group: 'Size', set: 'font.size', name: 'body', value: '16px' },
+			{ path: 'heading.h1.fontFamily', kind: 'font', group: 'Family', set: 'heading.h1', name: 'fontFamily', value: 'Inter, sans-serif' },
+			{ path: 'heading.h1.fontSize', kind: 'font', group: 'Size', set: 'heading.h1', name: 'fontSize', value: '32px' },
+			{ path: 'heading.h1.fontWeight', kind: 'font', group: 'Weight', set: 'heading.h1', name: 'fontWeight', value: '700' },
+			{ path: 'heading.h1.lineHeight', kind: 'font', group: 'Line height', set: 'heading.h1', name: 'lineHeight', value: '1.2' },
+		]);
+		// A kind no primitive reads yet is still left out.
+		expect(list.tokens.map((t) => t.path)).not.toContain('shadow.sm');
+	});
+
+	it('read the one typography token in the shared fixture as its family', async () => {
+		const list = await readTokens(reads({ 'tokens/base.tokens.json': TOKENS }));
+		expect(find(list, 'font.body.fontFamily')).toMatchObject({ kind: 'font', category: 'Typography', group: 'Family', value: 'Inter' });
 	});
 
 	it('name a file that is not JSON, and read the others', async () => {

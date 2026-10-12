@@ -3,7 +3,9 @@ import { act, createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Primitives } from '../src/renderer/Primitives';
 import type { Catalog, DesignToken, DesignTokens, TokenEdit } from '../src/shared/contract';
-import { render, settle, unmountAll } from './reviewHarness';
+import { specimenAddress } from '../src/shared/catalog';
+import { typeSpecimens } from '../src/shared/specimens';
+import { fakeApp, ok, render, settle, unmountAll } from './reviewHarness';
 
 /**
  * The Primitives tab (R2 of the design system plan): the design system seen whole, from the same list the side panel shows.
@@ -40,9 +42,18 @@ const ready = (t: DesignTokens = tokens()): Catalog =>
 		accessibility: { declared: false, target: { version: '2.2', level: 'AA' }, tags: [], why: '' },
 	}) as unknown as Catalog;
 
+/** Typography, all four parts: a design system that defines every primitive DSNR can read. */
+const font = (group: string, set: string, name: string, value: string) => token({ path: `typography.${set}.${name}`, kind: 'font', category: 'Typography', group, set, name, value });
+const FAMILY = font('Family', 'base', 'fontFamily', '"Inter",sans-serif');
+const TYPE = [FAMILY, font('Size', 'h1', 'fontSize', '6rem'), font('Weight', 'h1', 'fontWeight', '300'), font('Line height', 'h1', 'lineHeight', '1.167')];
+const BASE = 'http://127.0.0.1:1/previews/abc/';
+
 let current: Awaited<ReturnType<typeof render>> | null = null;
-const show = async (catalog: Catalog | null = ready(), edits: TokenEdit[] = []) => {
-	current = await render(createElement(Primitives, { catalog, edits }));
+let app: ReturnType<typeof fakeApp>;
+const show = async (catalog: Catalog | null = ready(), edits: TokenEdit[] = [], { hidden = false, preview = ok({ state: 'ready', base: BASE }) as unknown } = {}) => {
+	app = fakeApp({ storyPreview: async () => preview });
+	(window as unknown as { workspace: unknown }).workspace = app.api;
+	current = await render(createElement(Primitives, { catalog, edits, hidden }));
 	await settle();
 };
 afterEach(async () => {
@@ -58,23 +69,28 @@ const notDefined = () => document.querySelector<HTMLElement>('[data-not-defined]
 
 describe('what it defines, at the top', () => {
 	it('is a chip for each primitive, in the vocabulary’s order, with how many tokens it has', async () => {
-		await show();
-		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Spacing 1', 'Shape 1']);
+		await show(ready(tokens([...TOKENS, ...TYPE])));
+		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Typography 4', 'Spacing 1', 'Shape 1']);
+	});
+
+	it('says which parts a primitive made of parts has, when it lacks some: Flock’s typography is a family and nothing else', async () => {
+		await show(ready(tokens([...TOKENS, FAMILY])));
+		expect(chips()[1]!.textContent).toBe('Typography 1 · family only');
 	});
 
 	it('takes you to a primitive’s section when its chip is pressed', async () => {
 		const scroll = vi.fn();
 		Element.prototype.scrollIntoView = scroll;
 		await show();
-		await act(async () => void chips()[2]!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+		await act(async () => void chips()[3]!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
 		expect(scroll).toHaveBeenCalledOnce();
 		expect(scroll.mock.contexts[0]).toBe(section('Shape'));
 	});
 
 	it('says a primitive is not defined when it has no tokens, as a chip of its own', async () => {
-		await show(ready(tokens(TOKENS.filter((t) => t.category !== 'Shape'))));
-		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Spacing 1', 'Shape not defined']);
-		expect(chips()[2]!.getAttribute('data-defined')).toBe('false');
+		await show(ready(tokens([...TOKENS.filter((t) => t.category !== 'Shape'), ...TYPE])));
+		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Typography 4', 'Spacing 1', 'Shape not defined']);
+		expect(chips()[3]!.getAttribute('data-defined')).toBe('false');
 	});
 });
 
@@ -82,9 +98,9 @@ describe('each primitive, drawn', () => {
 	it('is a section for each, in the vocabulary’s order, and one the vocabulary does not know after them', async () => {
 		const other = token({ path: 'size.icon', category: 'Sizing', group: 'Sizing', set: 'size', name: 'icon', value: '24px' });
 		// Out of order on purpose, with the one it does not know first: the order is the vocabulary's, not the list's.
-		await show(ready(tokens([other, ...[...TOKENS].reverse()])));
-		expect(sections()).toEqual(['Color', 'Spacing', 'Shape', 'Sizing']);
-		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Spacing 1', 'Shape 1', 'Sizing 1']);
+		await show(ready(tokens([other, ...TYPE, ...[...TOKENS].reverse()])));
+		expect(sections()).toEqual(['Color', 'Typography', 'Spacing', 'Shape', 'Sizing']);
+		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Typography 4', 'Spacing 1', 'Shape 1', 'Sizing 1']);
 	});
 
 	it('draws the palette as each set in a row of swatches: a tone family’s steps, a role’s variants', async () => {
@@ -124,28 +140,70 @@ describe('each primitive, drawn', () => {
 
 	it('changes nothing: there is no control on it, only the picture', async () => {
 		await show();
+		await unmountAll(current!.root);
+		await show(ready(tokens([...TOKENS, ...TYPE])));
 		expect(document.querySelectorAll('input, [role="slider"]')).toHaveLength(0);
 		expect([...document.querySelectorAll('button')].every((b) => b.hasAttribute('data-primitive-chip'))).toBe(true);
 	});
 });
 
+describe('typography', () => {
+	const typography = () => section('Typography');
+
+	it('is a specimen drawn in the design system’s own preview, so its fonts are its own, and its values under it', async () => {
+		await show(ready(tokens([...TOKENS, ...TYPE])));
+		const frame = typography().querySelector('iframe')!;
+		expect(frame.getAttribute('src')).toBe(specimenAddress(BASE, typeSpecimens(TYPE)));
+		expect(frame.getAttribute('sandbox')).toBe('allow-scripts allow-same-origin');
+		expect(app.calls.storyPreview).toEqual([[[]]]);
+		// The values, as written, for reading off: the specimen shows them, this says them.
+		const rows = [...typography().querySelectorAll('tbody tr')].map((r) => r.textContent);
+		expect(rows).toEqual(['base fontFamily"Inter",sans-serif', 'h1 fontSize6rem', 'h1 fontWeight300', 'h1 lineHeight1.167']);
+	});
+
+	it('is one drawing of the whole, not one for each part', async () => {
+		await show(ready(tokens([...TOKENS, ...TYPE])));
+		expect(typography().querySelectorAll('iframe')).toHaveLength(1);
+		expect(typography().querySelectorAll('h3')).toHaveLength(0);
+	});
+
+	it('does not ask for the preview while the tab is not shown', async () => {
+		await show(ready(tokens([...TOKENS, ...TYPE])), [], { hidden: true });
+		expect(app.calls.storyPreview).toBeUndefined();
+	});
+
+	it('says why there is no specimen when the preview cannot be built here, and still says the values', async () => {
+		await show(ready(tokens([...TOKENS, ...TYPE])), [], { preview: ok({ state: 'no-packages', root: '/h/GitHub/fui' }) });
+		expect(typography().querySelector('iframe')).toBeNull();
+		expect(typography().textContent).toContain('The specimen is drawn in the design system’s preview, which cannot be built here');
+		expect(typography().querySelectorAll('tbody tr')).toHaveLength(4);
+	});
+});
+
 describe('what it does not define', () => {
 	it('is listed after the rest, each with where DSNR looked: in the design system’s own tokens', async () => {
-		await show(ready(tokens(TOKENS.filter((t) => t.category !== 'Shape'))));
-		expect(sections()).toEqual(['Color', 'Spacing']);
+		await show(ready(tokens([...TOKENS.filter((t) => t.category !== 'Shape'), ...TYPE])));
+		expect(sections()).toEqual(['Color', 'Typography', 'Spacing']);
 		expect(notDefined()!.textContent).toContain('Shape');
 		expect(notDefined()!.textContent).toContain('Not defined in its theme files.');
 	});
 
 	it('says every primitive is not defined, and every place it looked, when no tokens are found at all', async () => {
 		await show(ready(tokens([], { source: null })));
-		expect(chips().map((c) => c.textContent)).toEqual(['Color not defined', 'Spacing not defined', 'Shape not defined']);
+		expect(chips().map((c) => c.textContent)).toEqual(['Color not defined', 'Typography not defined', 'Spacing not defined', 'Shape not defined']);
 		expect(notDefined()!.textContent).toContain('No tokens were found. Looked for theme files, CSS variables and design token files.');
 	});
 
-	it('is not there when the design system defines every primitive DSNR can read', async () => {
-		await show();
+	it('is not there when the design system defines every primitive DSNR can read, and every part of each', async () => {
+		await show(ready(tokens([...TOKENS, ...TYPE])));
 		expect(notDefined()).toBeNull();
+	});
+
+	it('lists the parts a primitive leaves out, as Flock’s typography leaves out a size, a weight and a line height', async () => {
+		await show(ready(tokens([...TOKENS, FAMILY])));
+		expect(notDefined()!.textContent).toContain('Typography size, weight and line height');
+		expect(notDefined()!.textContent).toContain('Not defined in its theme files.');
+		expect(sections()).toContain('Typography');
 	});
 });
 

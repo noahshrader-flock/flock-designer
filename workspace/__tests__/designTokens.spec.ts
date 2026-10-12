@@ -151,6 +151,47 @@ describe('spacing and radius', () => {
 	});
 });
 
+describe('typography (R3)', () => {
+	const THEME = `export const createFSTheme = (mode: 'light' | 'dark' = 'light'): Theme => {
+    const spacing = 8;
+    const shape: Shape = { borderRadius: 8 };
+    const typography: ThemeOptions['typography'] = {
+      fontFamily: '"Inter",sans-serif',
+      fontSize: 14,
+      fontWeightBold: 700,
+      h1: { fontSize: '6rem', fontWeight: 300, lineHeight: 1.167 },
+      h2: { fontSize: pxToRem(60) },
+    };
+    return createTheme({ spacing, shape, typography });
+};
+`;
+	const library = { ...LIBRARY, 'src/utils/theme.ts': THEME };
+	const typography = async () =>
+		(await readTokens(reads(library))).tokens.filter((t) => t.category === 'Typography').map(({ path, kind, group, set, name, value, source }) => ({ path, kind, group, set, name, value, line: source.line }));
+
+	it('is the theme’s typography: its family, its base size in pixels, its weights, and each style’s size, weight and line height', async () => {
+		expect(await typography()).toEqual([
+			{ path: 'typography.fontFamily', kind: 'font', group: 'Family', set: 'base', name: 'fontFamily', value: '"Inter",sans-serif', line: 5 },
+			{ path: 'typography.fontSize', kind: 'font', group: 'Size', set: 'base', name: 'fontSize', value: '14px', line: 6 },
+			{ path: 'typography.fontWeightBold', kind: 'font', group: 'Weight', set: 'weight', name: 'bold', value: '700', line: 7 },
+			{ path: 'typography.h1.fontSize', kind: 'font', group: 'Size', set: 'h1', name: 'fontSize', value: '6rem', line: 8 },
+			{ path: 'typography.h1.fontWeight', kind: 'font', group: 'Weight', set: 'h1', name: 'fontWeight', value: '300', line: 8 },
+			{ path: 'typography.h1.lineHeight', kind: 'font', group: 'Line height', set: 'h1', name: 'lineHeight', value: '1.167', line: 8 },
+		]);
+	});
+
+	it('names a value it cannot read, with its line, and reads the rest', async () => {
+		const list = await readTokens(reads(library));
+		expect(list.problems).toContainEqual({ file: 'src/utils/theme.ts', line: 9, reason: 'typography.h2.fontSize is pxToRem(60), not a value, so it is not read' });
+	});
+
+	it('is only the family for a theme that sets only that, as Flock’s does', async () => {
+		const only = THEME.replace(/fontSize: 14,[\s\S]*?\n    \};/, '};');
+		const list = await readTokens(reads({ ...LIBRARY, 'src/utils/theme.ts': only }));
+		expect(list.tokens.filter((t) => t.category === 'Typography').map((t) => t.path)).toEqual(['typography.fontFamily']);
+	});
+});
+
 describe('the categories', () => {
 	it('say which tab a token belongs on: every color is Color, spacing is Spacing, and radius is Shape', async () => {
 		const list = await readTokens(reads(LIBRARY));

@@ -17,12 +17,23 @@ export interface Primitive {
 	 * How the Primitives page draws it: colors as swatches, spacing as bars as long as each step, a radius as a corner of its
 	 * size. A category with no drawing of its own (one the vocabulary does not know) is a plain table of names and values.
 	 */
-	drawn: 'swatches' | 'bars' | 'corners';
+	drawn: 'swatches' | 'bars' | 'corners' | 'specimens';
+	/**
+	 * For a primitive made of parts (typography: a family, a size, a weight, a line height), each part's name, as its tokens'
+	 * group says it: a design system that defines some is shown to lack the rest (`missingParts`).
+	 */
+	parts?: readonly string[];
 }
+
+/** Typography's parts, as a typography token's group names them: the one spelling the readers and the page share. */
+export const TYPE_PARTS = { family: 'Family', size: 'Size', weight: 'Weight', lineHeight: 'Line height' } as const;
+/** Each part by the key MUI's theme and the design token standard both write it under. */
+export const TYPE_KEYS: Record<string, string> = { fontFamily: TYPE_PARTS.family, fontSize: TYPE_PARTS.size, fontWeight: TYPE_PARTS.weight, lineHeight: TYPE_PARTS.lineHeight };
 
 /** In the order they are shown, which is also the order a token is matched in: the first that fits is the one. */
 export const PRIMITIVES: readonly Primitive[] = [
 	{ category: 'Color', kind: 'color', drawn: 'swatches' },
+	{ category: 'Typography', kind: 'font', drawn: 'specimens', parts: Object.values(TYPE_PARTS) },
 	{ category: 'Spacing', kind: 'dimension', named: /spacing|space|gap|gutter|inset/i, drawn: 'bars' },
 	{ category: 'Shape', kind: 'dimension', named: /radius|rounded|corner/i, drawn: 'corners' },
 ];
@@ -63,3 +74,7 @@ export const byPrimitive = (tokens: DesignToken[]): [string, DesignToken[]][] =>
  * tagging pass are made for. Every other kind is shown and never edited, written or tagged.
  */
 export const isEditable = (kind: TokenKind): boolean => kind === 'color' || kind === 'dimension';
+
+/** The parts of a primitive its tokens leave out, in the vocabulary's order: none for one that is not made of parts. */
+export const missingParts = (primitive: Primitive, tokens: DesignToken[]): string[] =>
+	(primitive.parts ?? []).filter((part) => !tokens.some((t) => t.group === part));

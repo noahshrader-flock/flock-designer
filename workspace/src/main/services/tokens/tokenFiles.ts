@@ -1,15 +1,16 @@
 /**
  * Tokens kept in design token files, the standard JSON format (the Design Tokens Community Group's, which Style
  * Dictionary and Tokens Studio write): a token is an object with a `$value`, its kind the `$type` it has or its group
- * has. Colors, and lengths whose name says spacing or radius, are read; other kinds (typography, shadows, durations) are
- * left out until the panel shows them. A value that names another token (`{color.red.500}`) is that token's value, and
+ * has. Colors, lengths whose name says spacing or radius, and typography (a family, a weight, a size named as one, a
+ * typography token as each of its parts) are read; other kinds (shadows, durations) are left out until a primitive reads
+ * them. A value that names another token (`{color.red.500}`) is that token's value, and
  * points at it. Each token's line is exact: the file is read a second time for where things are, by the same reader the
  * theme files use (JSON is an object literal too). A change is written in the token's `$value`, in the shape it had.
  */
 import type { DesignToken, TokenProblem } from '../../../shared/contract';
 import { DIMENSION, lengthParts } from '../../../shared/tokens';
 import { type Entry, parseObject, replaced } from './objectLiteral';
-import { primitiveOf } from '../../../shared/primitives';
+import { TYPE_KEYS, TYPE_PARTS, primitiveOf } from '../../../shared/primitives';
 import { type TokenSource, capitalized, notWhereRead, semanticFirst } from './source';
 
 const TOKEN_FILE = /(\.tokens\.json|(^|\/)(design-)?tokens?\.json|(^|\/)(design-)?tokens\/.+\.json)$/i;
@@ -46,6 +47,20 @@ const lengthOf = (value: unknown): string | null => {
 	if (typeof value === 'string') return DIMENSION.test(value) ? value : null;
 	const v = value as { value?: unknown; unit?: unknown } | null;
 	return typeof v?.value === 'number' && typeof v.unit === 'string' && DIMENSION.test(`${v.value}${v.unit}`) ? `${v.value}${v.unit}` : null;
+};
+
+/** A family as written: a name, or a list of them, which a stylesheet writes with commas. */
+const familyOf = (value: unknown): string | null =>
+	typeof value === 'string' ? value : Array.isArray(value) && value.every((v) => typeof v === 'string') ? value.join(', ') : null;
+/** A weight or a line height as written: a number, or a word (`bold`), or a length for a line height. */
+const plainOf = (value: unknown): string | null => (typeof value === 'number' ? String(value) : typeof value === 'string' ? value : null);
+
+/** How each part of typography is read from a token file: a family as a name or a list, a size as a length, the rest as written. */
+const READ_PART: Record<string, (v: unknown) => string | null> = {
+	[TYPE_PARTS.family]: familyOf,
+	[TYPE_PARTS.size]: (v) => lengthOf(v),
+	[TYPE_PARTS.weight]: plainOf,
+	[TYPE_PARTS.lineHeight]: plainOf,
 };
 
 export const tokenFiles: TokenSource = {
@@ -87,6 +102,31 @@ export const tokenFiles: TokenSource = {
 		const tokens: DesignToken[] = [];
 		for (const [path, raw] of raws) {
 			const value = resolve(raw.value);
+			// Typography (R3): a family, a weight, a size named as one, or a typography token as each of its parts.
+			const typeToken = (at: string, group: string, set: string, name: string, written: string | null) => {
+				if (written !== null) tokens.push({ path: at, kind: 'font', category: primitiveOf('font', at) as string, group, set, name, value: written, source: { file: raw.file, line: raw.line } });
+			};
+			const set = raw.path.slice(0, -1).join('.') || path;
+			const last = raw.path[raw.path.length - 1] as string;
+			if (raw.type === 'fontFamily') {
+				typeToken(path, TYPE_PARTS.family, set, last, familyOf(value));
+				continue;
+			}
+			if (raw.type === 'fontWeight') {
+				typeToken(path, TYPE_PARTS.weight, set, last, plainOf(value));
+				continue;
+			}
+			if (raw.type === 'dimension' && /font[._-]?size/i.test(path)) {
+				typeToken(path, TYPE_PARTS.size, set, last, lengthOf(value));
+				continue;
+			}
+			if (raw.type === 'typography' && value !== null && typeof value === 'object') {
+				for (const [key, group] of Object.entries(TYPE_KEYS)) {
+					const part = (value as Record<string, unknown>)[key];
+					if (part !== undefined) typeToken(`${path}.${key}`, group, path, key, (READ_PART[group] as (v: unknown) => string | null)(resolve(part)));
+				}
+				continue;
+			}
 			const color = raw.type === 'color' && typeof value === 'string' ? value : null;
 			const length = raw.type === 'dimension' ? lengthOf(value) : null;
 			const kind = color !== null ? 'color' : length !== null ? 'dimension' : null;
@@ -97,8 +137,8 @@ export const tokenFiles: TokenSource = {
 				kind,
 				category,
 				group: capitalized(raw.path[0] as string),
-				set: raw.path.slice(0, -1).join('.') || path,
-				name: raw.path[raw.path.length - 1] as string,
+				set,
+				name: last,
 				value: (color ?? length) as string,
 				source: { file: raw.file, line: raw.line },
 			});

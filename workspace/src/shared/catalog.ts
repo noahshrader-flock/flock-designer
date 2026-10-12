@@ -46,3 +46,20 @@ export const PREVIEW_FILE = 'file';
 export const PREVIEW_SHOW = '__dsnrShow';
 /** A story file's preview page, in the build served at `base`. */
 export const previewAddress = (base: string, file: string): string => `${base}?${PREVIEW_FILE}=${encodeURIComponent(file)}`;
+
+/**
+ * One line of a type specimen (R3 of the design system plan): what it is called, and the font it is drawn in, each part
+ * only when the design system says it. Drawn by the preview page, so the design system's own CSS loads its fonts.
+ */
+export interface SpecimenLine {
+	key: string;
+	label: string;
+	family?: string;
+	size?: string;
+	weight?: string;
+	lineHeight?: string;
+}
+/** Which lines a preview page draws as a type specimen, instead of a story file, by this address parameter. */
+export const PREVIEW_SPECIMEN = 'specimen';
+/** A preview page that draws `lines` as a type specimen, in the build served at `base`. */
+export const specimenAddress = (base: string, lines: SpecimenLine[]): string => `${base}?${PREVIEW_SPECIMEN}=${encodeURIComponent(JSON.stringify(lines))}`;

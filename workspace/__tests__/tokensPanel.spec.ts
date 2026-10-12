@@ -628,7 +628,8 @@ describe('the vocabulary of primitives (R1)', () => {
 	it('shows a token that is not a color or a length as a row with nothing to press: it is never offered an editor', async () => {
 		const font: DesignToken = { path: 'font.sans', kind: 'font', category: 'Typography', group: 'Family', set: 'font', name: 'sans', value: 'Inter', source: { file: 'a.css', line: 1 } };
 		await show({ ...TOKENS, tokens: [...TOKENS.tokens, font] });
-		expect(tabs().map((t) => t.textContent)).toEqual(['Color', 'Spacing', 'Shape', 'Typography']);
+		// Typography is in the vocabulary (R3), so its tab is where the vocabulary puts it.
+		expect(tabs().map((t) => t.textContent)).toEqual(['Color', 'Typography', 'Spacing', 'Shape']);
 		await choose('Typography');
 		await settle();
 		const row = document.querySelector<HTMLElement>('[data-token="font.sans"]')!;

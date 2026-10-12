@@ -11,7 +11,7 @@
  */
 import type { DesignToken, TokenProblem } from '../../../shared/contract';
 import { type Entry, entryAt, exportedObjects, lineAt, literal, parseObject, replaced } from './objectLiteral';
-import { primitiveOf } from '../../../shared/primitives';
+import { TYPE_KEYS, TYPE_PARTS, primitiveOf } from '../../../shared/primitives';
 import { type TokenSource, capitalized, notWhereRead, semanticFirst } from './source';
 
 const SCRIPT = /\.(ts|tsx|js|jsx|mjs)$/;
@@ -48,6 +48,39 @@ const THEME_NUMBERS: { path: string; key: string; inside: RegExp }[] = [
 	{ path: 'spacing', key: 'spacing', inside: /createTheme\(\s*\{/ },
 	{ path: 'radius', key: 'borderRadius', inside: /\bshape\b[^={]*[=:]\s*\{/ },
 ];
+
+/** Where a theme sets its typography: `typography: {` in `createTheme`, or a `const typography = {` of its own. */
+const TYPOGRAPHY = /\btypography\b[^={;,\n]*[=:]\s*\{/;
+
+/**
+ * A theme's typography as tokens (R3): its family, its base size, its weights (`fontWeightBold`), and each style's family,
+ * size, weight and line height (`h1: { … }`). A size written as a number is in pixels, as MUI reads it. A value that is not
+ * written as one (`pxToRem(60)`) is named, never guessed.
+ */
+const typographyOf = (file: string, text: string): { tokens: DesignToken[]; problems: TokenProblem[] } => {
+	const tokens: DesignToken[] = [];
+	const problems: TokenProblem[] = [];
+	const open = TYPOGRAPHY.exec(text);
+	if (!open) return { tokens, problems };
+	const { node } = parseObject(text, open.index + open[0].length - 1);
+	if (node.kind !== 'object') return { tokens, problems };
+	const add = (e: Entry, path: string, group: string, set: string, name: string) => {
+		const written = e.value.kind === 'value' ? e.value.text : '';
+		const number = /^-?\d+(\.\d+)?$/.exec(written)?.[0];
+		const value = literal(written) ?? (number === undefined ? null : group === TYPE_PARTS.size ? `${number}px` : number);
+		if (value === null) problems.push({ file, line: e.line, reason: `${path} is ${written}, not a value, so it is not read` });
+		else tokens.push({ path, kind: 'font', category: primitiveOf('font', path) as string, group, set, name, value, source: { file, line: e.line } });
+	};
+	for (const e of node.entries) {
+		if (e.key === null) continue;
+		const weight = /^fontWeight(\w+)$/.exec(e.key);
+		if (e.key === 'fontFamily' || e.key === 'fontSize') add(e, `typography.${e.key}`, TYPE_KEYS[e.key] as string, 'base', e.key);
+		else if (weight) add(e, `typography.${e.key}`, TYPE_PARTS.weight, 'weight', (weight[1] as string).toLowerCase());
+		else if (e.value.kind === 'object')
+			for (const part of e.value.entries) if (part.key !== null && TYPE_KEYS[part.key]) add(part, `typography.${e.key}.${part.key}`, TYPE_KEYS[part.key] as string, e.key, part.key);
+	}
+	return { tokens, problems };
+};
 
 /**
  * A whole number a theme sets: `const spacing = 8;`, or `spacing: 8` in `createTheme({ … })`; with its line, and where
@@ -151,6 +184,14 @@ export const themeFiles: TokenSource = {
 				tokens.push({ path: name, kind: 'dimension', category: primitiveOf('dimension', name) as string, group: capitalized(name), set: name, name: 'base', value: `${found.value}px`, source: { file, line: found.line } });
 				break;
 			}
+		}
+		// The theme's typography, from the first file that sets it.
+		for (const [file, text] of texts) {
+			const found = typographyOf(file, text);
+			if (found.tokens.length === 0 && found.problems.length === 0) continue;
+			tokens.push(...found.tokens);
+			problems.push(...found.problems);
+			break;
 		}
 		// The tones are the primitives the palettes are made from: after them.
 		return { source: themeFiles.name, tokens: semanticFirst(tokens, (t) => t.group === 'Tones'), problems };

@@ -197,7 +197,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 				<Components hidden={hidden || tab !== 'components'} catalog={catalog} setCatalog={setCatalog} edits={edits} setEdits={setEdits} />
 			</LineTabsContent>
 			<LineTabsContent value="primitives" forceMount hidden={tab !== 'primitives'} data-tab="primitives" className="p-0">
-				<Primitives catalog={catalog} edits={edits} />
+				<Primitives catalog={catalog} edits={edits} hidden={hidden || tab !== 'primitives'} />
 			</LineTabsContent>
 			<LineTabsContent value="voice-and-tone" forceMount hidden={tab !== 'voice-and-tone'} data-tab="voice-and-tone" className="p-0">
 				<VoiceAndTone hidden={hidden || tab !== 'voice-and-tone'} />
