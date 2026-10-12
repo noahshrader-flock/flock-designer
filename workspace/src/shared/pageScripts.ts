@@ -371,7 +371,8 @@ ${HELPERS}
   layer.setAttribute('data-fd-layer', 'pins');
   layer.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;z-index:2147483647;pointer-events:none';
 
-  var place = function () {
+  // Not called place: that is the helpers' route reader, and this script shares their scope.
+  var positionPins = function () {
     placed.forEach(function (p) {
       var x, y, hidden = false;
       if (p.pos) { x = p.pos.x; y = p.pos.y; }
@@ -416,7 +417,7 @@ ${HELPERS}
         dragging = true;
         p.pos = { x: ev.clientX, y: ev.clientY };
         pin.style.cursor = 'grabbing';
-        place();
+        positionPins();
         // Dropping re-attaches the pin to whatever is under it, so show what that is while it is being
         // dragged -- the same outline, from the same code, as when a pin is first placed. It exists
         // only for the length of the drag: there is nothing to point at the rest of the time.
@@ -432,7 +433,7 @@ ${HELPERS}
         pin.style.cursor = p.movable ? 'grab' : 'pointer';
         if (!dragging) { say({ t: 'click', id: p.id }); return; }
         var target = underlying(ev.clientX, ev.clientY);
-        if (!target) { p.pos = null; place(); return; }
+        if (!target) { p.pos = null; positionPins(); return; }
         // The pin stays where it was dropped until the app redraws it from the saved comment.
         say({ t: 'move', id: p.id, anchor: describe(target, ev.clientX, ev.clientY) });
       };
@@ -441,7 +442,7 @@ ${HELPERS}
     });
   });
   doc.documentElement.appendChild(layer);
-  place();
+  positionPins();
   window.addEventListener('scroll', place, true);
   window.addEventListener('resize', place);
   var timer = setInterval(place, 400);
@@ -453,7 +454,7 @@ ${HELPERS}
           placed[i].el.scrollIntoView({ block: 'center', inline: 'nearest' });
           var m = placed[i].marker.firstChild;
           m.animate([{ transform: 'rotate(-45deg) scale(1)' }, { transform: 'rotate(-45deg) scale(1.6)' }, { transform: 'rotate(-45deg) scale(1)' }], { duration: 700 });
-          place();
+          positionPins();
         }
       }
     }

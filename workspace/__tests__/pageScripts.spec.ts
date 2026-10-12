@@ -2,7 +2,7 @@
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import { sanitizeAnchor } from '../src/shared/anchor';
-import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, SINGLE_PAGE, layerVisibleScript, resolveScript } from '../src/shared/pageScripts';
+import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, SINGLE_PAGE, layerVisibleScript, readPinMessage, resolveScript } from '../src/shared/pageScripts';
 import type { CommentAnchor, MarkerRequest } from '../src/shared/contract';
 
 const page = (html: string, url = 'http://localhost:3000/users#/list', head = '') => {
@@ -319,6 +319,9 @@ describe('pins that can be clicked and dragged', () => {
 		expect(said).toHaveLength(1);
 		expect(said[0]).toMatchObject({ t: 'move', id: 5, n: 'secret' });
 		expect((said[0]?.anchor as { selector: string }).selector).toBe('[data-e2e-ref="users-invite"]');
+		// Where it landed reaches the app whole: the app's own reader takes it, with the page it is on.
+		const read = readPinMessage(`__fd:${JSON.stringify(said[0])}`, 'secret');
+		expect(read).toMatchObject({ kind: 'move', id: 5, anchor: { selector: '[data-e2e-ref="users-invite"]', route: '/users#/list' } });
 	});
 
 	it('outlines what the pin would attach to while it is being dragged, and only then', () => {
