@@ -9,8 +9,8 @@ import { InfoIcon } from 'lucide-react';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Field, FieldDescription, FieldLabel } from './ui/field';
 import { Input } from './ui/input';
-import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 
 /** What New makes, said under its title. The app is for prototypes: codebase work is started in the codebase. */
@@ -23,16 +23,47 @@ export interface Created {
 	task: string;
 }
 
+/** Where it starts, as the repository's description: the branch, and a Change that swaps it for a field with the list. */
+const StartsFrom = ({ branch, branches, onChange, disabled }: { branch: string; branches: string[]; onChange: (branch: string) => void; disabled: boolean }) => {
+	const [changing, setChanging] = useState(false);
+	if (changing)
+		return (
+			<Field>
+				<FieldLabel htmlFor="new-work-from">Starts from</FieldLabel>
+				<SearchSelect
+					id="new-work-from"
+					items={branches}
+					value={branch}
+					onChange={onChange}
+					placeholder="Choose a branch"
+					search="Search branches…"
+					empty="No branch matches."
+					className="font-mono"
+					defaultOpen
+					onOpenChange={(open) => !open && setChanging(false)}
+				/>
+			</Field>
+		);
+	return (
+		<FieldDescription>
+			Starts from <code className="font-mono">{branch}</code>.{' '}
+			<Button variant="link" className="h-auto p-0 text-sm" disabled={disabled || branches.length === 0} onClick={() => setChanging(true)}>
+				Change
+			</Button>
+		</FieldDescription>
+	);
+};
+
 /**
- * Starting a prototype: where it starts (a repository, and a branch in it, which it reads to look like the
- * product), a name, and what it should explore. Creating it makes the record; the agent and the preview follow on
+ * Starting a prototype: a name, what it should explore, and where it starts (a repository, and a branch in it, which it
+ * reads to look like the product), in that order. Creating it makes the record; the agent and the preview follow on
  * their own. Codebase work is not started here: that is done in the codebase, and a prototype moves into it with
  * Build in the codebase.
  *
  * The repositories are the ones GitHub shows the signed-in person, so the list follows their permissions;
  * both lists can be searched by typing. The repository starts on the one last used, and the branch on the one
- * it has checked out, so the usual case is two choices already made. Work is built in a clone, so a
- * repository with none on this machine is cloned from here: where it will go is shown, and can be changed, before
+ * it has checked out, said under the repository with a Change, so the usual case is two choices already made.
+ * Work is built in a clone, so a repository with none on this machine is cloned from here: where it will go is shown, and can be changed, before
  * anything is downloaded, and once it is cloned the form carries on with it, and only then asks what it starts from.
  */
 export const NewWork = ({
@@ -196,41 +227,38 @@ export const NewWork = ({
 					<DialogDescription>{ABOUT}</DialogDescription>
 				</DialogHeader>
 				<DialogBody className="flex flex-col gap-4">
+					<Field>
+						<FieldLabel htmlFor="new-work-name">Name</FieldLabel>
+						<Input id="new-work-name" placeholder="Users — inactivity signal" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+					</Field>
+					<Field>
+						<FieldLabel htmlFor="new-work-task">What should it explore?</FieldLabel>
+						<Textarea
+							id="new-work-task"
+							rows={4}
+							value={task}
+							onChange={(e) => setTask(e.target.value)}
+							placeholder="A users list that flags people who have not signed in for 90 days."
+						/>
+					</Field>
 					{checkout || choices.length > 0 ? (
-						<>
-							<div className="flex flex-col gap-2">
-								<Label htmlFor="new-work-repo">Repository</Label>
-								<SearchSelect
-									id="new-work-repo"
-									items={choices.map((r) => r.name)}
-									value={chosen?.name ?? null}
-									onChange={(v) => void pickRepo(v)}
-									placeholder="Choose a repository"
-									search="Search repositories…"
-									empty="No repository matches."
-									disabled={busy || cloning !== null}
-								/>
-								<RepositoryReachNote reach={reach} />
-								{toClone !== null && <CloneHere clone={cloneState} onClone={() => void clone()} />}
-							</div>
+						<Field>
+							<FieldLabel htmlFor="new-work-repo">Repository</FieldLabel>
+							<SearchSelect
+								id="new-work-repo"
+								items={choices.map((r) => r.name)}
+								value={chosen?.name ?? null}
+								onChange={(v) => void pickRepo(v)}
+								placeholder="Choose a repository"
+								search="Search repositories…"
+								empty="No repository matches."
+								disabled={busy || cloning !== null}
+							/>
+							<RepositoryReachNote reach={reach} />
+							{toClone !== null && <CloneHere clone={cloneState} onClone={() => void clone()} />}
 							{/* After the clone, not before: there is nothing to start from until it is here. */}
-							{toClone === null && (
-								<div className="flex flex-col gap-2">
-									<Label htmlFor="new-work-from">Starts from</Label>
-									<SearchSelect
-										id="new-work-from"
-										items={branches}
-										value={elsewhere ? null : from}
-										onChange={setFrom}
-										placeholder={checkout && !elsewhere ? 'Choose a branch' : 'Choose a repository first'}
-										search="Search branches…"
-										empty="No branch matches."
-										disabled={busy || elsewhere || branches.length === 0}
-										className="font-mono"
-									/>
-								</div>
-							)}
-						</>
+							{toClone === null && !elsewhere && from !== null && <StartsFrom branch={from} branches={branches} onChange={setFrom} disabled={busy} />}
+						</Field>
 					) : (
 						<Alert>
 							<InfoIcon />
@@ -243,27 +271,6 @@ export const NewWork = ({
 							</AlertAction>
 						</Alert>
 					)}
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="new-work-name">Name</Label>
-						<Input
-							id="new-work-name"
-							placeholder="Users — inactivity signal"
-							value={name}
-							onChange={(e) => setName(e.target.value)}
-							autoFocus
-						/>
-						<p className="text-muted-foreground text-xs">{id ? `Project id: ${id}` : 'The id is made from the name.'}</p>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="new-work-task">What should it explore?</Label>
-						<Textarea
-							id="new-work-task"
-							rows={4}
-							value={task}
-							onChange={(e) => setTask(e.target.value)}
-							placeholder="A users list that flags people who have not signed in for 90 days."
-						/>
-					</div>
 					{prototype && !prototype.ready && (
 						<Alert variant="warning">
 							<AlertTitle>{prototype.why === 'not-installed' ? "The real components aren't installed here" : 'The page builder is missing'}</AlertTitle>

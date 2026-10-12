@@ -21,6 +21,8 @@ export const SearchSelect = ({
 	empty,
 	disabled,
 	className,
+	defaultOpen = false,
+	onOpenChange,
 }: {
 	id?: string;
 	items: string[];
@@ -31,10 +33,17 @@ export const SearchSelect = ({
 	empty: string;
 	disabled?: boolean;
 	className?: string;
+	/** Opened as it appears, for a choice a button asked for; told when it closes, with or without a choice. */
+	defaultOpen?: boolean;
+	onOpenChange?: (open: boolean) => void;
 }) => {
-	const [open, setOpen] = useState(false);
+	const [open, setOpen] = useState(defaultOpen);
+	const toggle = (next: boolean) => {
+		setOpen(next);
+		onOpenChange?.(next);
+	};
 	return (
-		<Popover open={open} onOpenChange={setOpen}>
+		<Popover open={open} onOpenChange={toggle}>
 			<PopoverTrigger asChild>
 				<Button
 					id={id}
@@ -61,7 +70,7 @@ export const SearchSelect = ({
 									data-checked={value === item}
 									onSelect={() => {
 										onChange(item);
-										setOpen(false);
+										toggle(false);
 									}}
 								>
 									<span className="truncate">{item}</span>

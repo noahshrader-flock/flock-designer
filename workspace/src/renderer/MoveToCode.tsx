@@ -6,7 +6,7 @@ import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
-import { Label } from './ui/label';
+import { Field, FieldDescription, FieldLabel } from './ui/field';
 
 /**
  * Moving a prototype into the code, said out loud before it happens.
@@ -138,8 +138,8 @@ export const MoveToCode = ({
 							)}
 							{plan && (
 								<>
-									<div className="flex flex-col gap-2">
-										<Label htmlFor="move-from">{continuing ? 'Continues' : 'Starts from'}</Label>
+									<Field>
+										<FieldLabel htmlFor="move-from">{continuing ? 'Continues' : 'Starts from'}</FieldLabel>
 										{continuing ? (
 											<p className="font-mono text-sm">{plan.branch}</p>
 										) : (
@@ -155,12 +155,12 @@ export const MoveToCode = ({
 												className="font-mono"
 											/>
 										)}
-										<p className="text-muted-foreground text-xs">
+										<FieldDescription>
 											{continuing
 												? `${plan.branch} already has this project’s codebase work, so Claude Code picks it up there.${plan.current === plan.branch ? '' : ' Your checkout moves to it.'}`
 												: `Creates ${plan.branch} from this branch and moves your checkout to it.`}
-										</p>
-									</div>
+										</FieldDescription>
+									</Field>
 
 									<div className="flex flex-col gap-1.5">
 										<p className="text-sm font-medium">What happens</p>

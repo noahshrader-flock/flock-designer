@@ -8,7 +8,7 @@ import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
-import { Label } from './ui/label';
+import { Field, FieldLabel } from './ui/field';
 import { Skeleton } from './ui/skeleton';
 import { SkeletonStatus } from './Skeletons';
 
@@ -80,8 +80,8 @@ export const ConnectDesignSystem = ({ onConnected, onCancel }: { onConnected: ()
 					<Skeleton className="h-9 w-full" />
 				</SkeletonStatus>
 			) : (
-				<>
-					<Label htmlFor="connect-repo">Repository</Label>
+				<Field>
+					<FieldLabel htmlFor="connect-repo">Repository</FieldLabel>
 					<SearchSelect
 						id="connect-repo"
 						items={repos.map((r) => r.name)}
@@ -94,7 +94,7 @@ export const ConnectDesignSystem = ({ onConnected, onCancel }: { onConnected: ()
 					/>
 					<RepositoryReachNote reach={reach} />
 					{picked !== null && <CloneHere clone={clone} onClone={() => void connect()} action="Connect" />}
-				</>
+				</Field>
 			)}
 			{error && (
 				<Alert variant="destructive">

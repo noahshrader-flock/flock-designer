@@ -93,6 +93,75 @@ describe('what it makes', () => {
 	});
 });
 
+describe('how the form is laid out', () => {
+	const position = (id: string) => {
+		const at = document.getElementById(id) as HTMLElement;
+		return [...document.querySelectorAll('*')].indexOf(at);
+	};
+	const made = { projectId: 'ops-list', name: 'v1-i1', branch: 'prototype/ops-list/v1-i1', commit: null, createdAt: '2026-10-08T00:00:00Z', note: 'A list' };
+	const branches = async () => ok(['develop', 'release', 'noah/flock-designer']);
+
+	it('asks for the name, then what it should explore, then the repository', async () => {
+		await open();
+		expect(position('new-work-name')).toBeLessThan(position('new-work-task'));
+		expect(position('new-work-task')).toBeLessThan(position('new-work-repo'));
+	});
+
+	it('says nothing of the id made from the name, which nobody needs to know', async () => {
+		await open();
+		await typeInto(document.getElementById('new-work-name') as HTMLInputElement, 'Ops list');
+		expect(text()).not.toMatch(/project id|id is made/i);
+	});
+
+	it('says what it starts from under the repository, with a way to change it, and no list until then', async () => {
+		await open({ listBaseBranches: branches });
+		expect(text()).toContain('Starts from develop');
+		expect(document.getElementById('new-work-from')).toBeNull();
+		expect(button('Change').disabled).toBe(false);
+	});
+
+	it('opens the list of branches from Change, and starts from the one chosen, said again under the repository', async () => {
+		const { app } = await open({ listBaseBranches: branches, createPrototype: async () => ok(made) });
+		await typeInto(document.getElementById('new-work-name') as HTMLInputElement, 'Ops list');
+		await typeInto(document.getElementById('new-work-task') as HTMLTextAreaElement, 'A list');
+		await press(button('Change'));
+		await settle();
+		const option = [...document.querySelectorAll<HTMLElement>('[cmdk-item]')].find((o) => o.textContent === 'release');
+		await press(option as HTMLElement);
+		await settle();
+		expect(text()).toContain('Starts from release');
+		expect(document.getElementById('new-work-from')).toBeNull();
+		await press(button('Create prototype'));
+		await settle();
+		expect(app.calls.createPrototype?.[0]).toEqual(['ops-list', 'Ops list', 'A list', { root: HERE.root, branch: 'release' }]);
+	});
+
+	it('has no Change when the repository has no other branch to list', async () => {
+		await open({ listBaseBranches: async () => ok([]) });
+		expect(button('Change').disabled).toBe(true);
+	});
+
+	it('says nothing of a branch for a repository chosen but not switched to, or when there is none in use', async () => {
+		const repos = [...REPOS, { name: 'flocksafety/flock-ops', root: '/h/GitHub/flock-ops' }].filter((r) => r.root !== null);
+		await open({ listRepositories: async () => ok({ repositories: repos, reach: 'account' }), useCheckout: async () => fail('not usable') });
+		await chooseRepository('flocksafety/flock-ops');
+		expect(text()).not.toContain('Starts from');
+		await unmountAll(current!.root);
+		await open({ lastCheckout: async () => ok(null) }, { checkout: null });
+		expect(text()).not.toContain('Starts from');
+	});
+
+	it('closes the list without changing the branch when it is left without choosing', async () => {
+		await open({ listBaseBranches: branches });
+		await press(button('Change'));
+		await settle();
+		await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+		await settle();
+		expect(text()).toContain('Starts from develop');
+		expect(document.getElementById('new-work-from')).toBeNull();
+	});
+});
+
 describe('installing its packages', () => {
 	const notInstalled = (canInstall: boolean) => ({ ready: false, why: 'not-installed', designSystem: '@flocksafety/fui', repository: 'flock-coke', canInstall });
 
