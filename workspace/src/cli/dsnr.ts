@@ -3,7 +3,6 @@ import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import type { Iteration, Person, ReviewComment } from '../shared/contract';
 import { openComments } from '../shared/comments';
-import { loginFromNoreply } from '../shared/people';
 import { firstHeading } from '../shared/brief';
 import { projectPath, prototypePagePath, prototypeSourcePath } from '../shared/designPaths';
 import { iterationLabel } from '../shared/work';
@@ -24,6 +23,7 @@ import { serveSite } from '../site/serveSite';
 import { checkWcagEdition } from './wcagEdition';
 import { errorText } from '../shared/result';
 import { plural } from '../shared/plural';
+import { loginFromNoreply } from '../shared/hostUrls';
 
 /**
  * `dsnr`: making a prototype from Claude Code in VS Code, with no app running.

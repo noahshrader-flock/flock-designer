@@ -1,3 +1,4 @@
+import { treeUrl } from '../../shared/hostUrls';
 /**
  * The component library's catalog, as its Storybook has it, for the Design System tab. **Storybook is the source of
  * truth:** a component is a story file, wherever it is in the repository, named and grouped by its Storybook title and
@@ -87,7 +88,7 @@ export const readCatalog = async (reads: CatalogReads, library: DesignSystem): P
 				group: parts.length > 1 ? parts[0]! : UNGROUPED,
 				subtitle: literalField(text, 'componentSubtitle'),
 				storybook: title !== null && library.storybook !== null ? storybookUrl(library.storybook, title) : null,
-				source: `https://github.com/${library.repository}/tree/${library.branch}/${dirname(file)}`,
+				source: treeUrl(library.repository, library.branch, dirname(file)),
 			};
 		}),
 	);

@@ -46,11 +46,6 @@ export const asRoute = (v: unknown): string | null => {
 	return path;
 };
 
-const PULL_REQUEST = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+$/;
-
-/** A pull request's address as a record gives it, or null when it is not one of GitHub's. */
-export const asPullRequest = (v: unknown): string | null => (typeof v === 'string' && PULL_REQUEST.test(v) ? v : null);
-
 /**
  * One plain file or folder name, never a path. Project ids and record names reach the main process from the window and
  * are joined onto a folder or a repository address, so they are checked before they are used for either.

@@ -3,14 +3,6 @@ import type { Person } from './contract';
 /** An automated GitHub account (`github-actions[bot]`): not a person, so never a contributor or a reviewer. */
 export const isBot = (login: string): boolean => /\[bot\]$/i.test(login);
 
-/** A person's avatar, which GitHub serves for any login. Null when we only know a git name. */
-export const avatarUrl = (login: string | null): string | null =>
-	login ? `https://avatars.githubusercontent.com/${encodeURIComponent(login)}?size=64` : null;
-
-/** `12345+login@users.noreply.github.com` or `login@users.noreply.github.com`. */
-export const loginFromNoreply = (email: string): string | null =>
-	/^(?:\d+\+)?([A-Za-z0-9-]+)@users\.noreply\.github\.com$/i.exec(email.trim())?.[1] ?? null;
-
 /** Old records held bare names; both shapes are read. Anything else is dropped. */
 export const asPeople = (value: unknown): Person[] =>
 	(Array.isArray(value) ? value : []).flatMap((v): Person[] => {

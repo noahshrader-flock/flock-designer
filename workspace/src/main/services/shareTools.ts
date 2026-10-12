@@ -2,6 +2,7 @@ import { locateGh } from './ghCli';
 import { pushBranch } from './git';
 import { NotInstalled, ProcessFailed, runFile } from './process';
 import type { Check, PullRequest, ShareTools } from './share';
+import { numberFromChangeRequestUrl } from '../../shared/hostUrls';
 
 /**
  * The real tools behind sharing: the designer's own git for the push, and the GitHub CLI for
@@ -44,8 +45,8 @@ const gh = async (root: string, bin: string, args: string[]): Promise<string> =>
 };
 
 const number = (url: string): number => {
-	const n = Number(/\/pull\/(\d+)/.exec(url)?.[1]);
-	if (!Number.isInteger(n) || n <= 0) throw new Error(`The GitHub CLI did not return a pull request address (it said: ${url}).`);
+	const n = numberFromChangeRequestUrl(url);
+	if (n === null || n <= 0) throw new Error(`The GitHub CLI did not return a pull request address (it said: ${url}).`);
 	return n;
 };
 

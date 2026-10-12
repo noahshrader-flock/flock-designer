@@ -1,8 +1,8 @@
 import type { Person } from '../shared/contract';
-import { avatarUrl } from '../shared/people';
 import { CARD_DETAIL } from './cardFooters';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { avatarUrl } from '../shared/hostUrls';
 
 /**
  * Who a project is by: the first person's picture and name, in the card's gray, and how many others there are, whose names

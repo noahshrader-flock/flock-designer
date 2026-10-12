@@ -1,4 +1,5 @@
 import { type RepoRef, formatRepo } from '../../shared/repoRef';
+import { compareUrl } from '../../shared/hostUrls';
 /**
  * The company's voice and tone (T9 of the design system plan): one file in the design system's agent files
  * (`.dsnr/voice-and-tone.md`, in its folder when it lives in a larger repository), read and changed from the Design System
@@ -150,10 +151,6 @@ export class VoiceAndToneFile {
 		}
 	}
 
-	private compare(base: string, branch: string): string {
-		return `https://github.com/${this.key}/compare/${encodeURIComponent(base)}...${encodeURIComponent(branch)}?expand=1`;
-	}
-
 	/** The file as the default branch has it now, and the change kept on a branch, if one still is. */
 	async current(): Promise<VoiceAndTone> {
 		const base = await this.defaultBranch();
@@ -182,7 +179,13 @@ export class VoiceAndToneFile {
 			kept = { ...kept, pullRequest };
 			this.keep(kept);
 		}
-		return { branch: kept.branch, text: onBranch!.text, saves: kept.saves, pullRequest: kept.pullRequest, compare: this.compare(base, kept.branch) };
+		return {
+			branch: kept.branch,
+			text: onBranch!.text,
+			saves: kept.saves,
+			pullRequest: kept.pullRequest,
+			compare: compareUrl(formatRepo(this.repo), base, kept.branch),
+		};
 	}
 
 	/**

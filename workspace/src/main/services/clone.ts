@@ -4,6 +4,7 @@ import { clonePlace } from './cloneFolder';
 import { listedAs } from './repositories';
 import { NotStarted, Stopped, runStreamed } from './streamed';
 import { errorText } from '../../shared/result';
+import { cloneUrl } from '../../shared/hostUrls';
 
 /**
  * Cloning a repository the person chose from their own GitHub list into their clone folder (C2 of the clone plan).
@@ -129,7 +130,7 @@ export class Cloner {
 	}
 
 	private async run(repository: string, dest: string, onProgress: (p: GitProgress) => void, signal?: AbortSignal): Promise<void> {
-		const url = (this.deps.urlOf ?? ((r) => `https://github.com/${r}.git`))(repository);
+		const url = (this.deps.urlOf ?? cloneUrl)(repository);
 		const { code, output } = await runStreamed(this.deps.git ?? 'git', ['clone', '--progress', '--no-recurse-submodules', '--', url, dest], {
 			// Never wait for a password typed into a window that has no terminal: fail, and say how to sign in.
 			env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },

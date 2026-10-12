@@ -13,13 +13,13 @@ import {
 	localIdentity,
 	originUrl,
 } from './git';
-import { loginFromNoreply } from '../../shared/people';
 import { resolveInside } from './paths';
 import { parsePrototypeName } from '../../shared/prototypeNames';
 import { PROJECT_ID } from '../../shared/validate';
 import { parseIterations, serializeIterations } from '../../shared/records';
 import { writeAtomic } from './jsonFile';
 import { parseRemote } from '../../shared/repoRef';
+import { loginFromNoreply } from '../../shared/hostUrls';
 
 /**
  * Named attempts at the question, and the record of them.

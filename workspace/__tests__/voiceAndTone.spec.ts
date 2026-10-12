@@ -204,6 +204,8 @@ describe('a design system inside a larger repository', () => {
 		expect(opened).toMatchObject({ path: inFolder, text: 'one' });
 		const r = await file.save('two', opened.sha);
 		expect(gh.branches.get(r.voice.branch!.branch)!.files.get(inFolder)!.text).toBe('two');
+		// Its compare page is the repository's: the folder is in the design system's id, never in an address.
+		expect(r.voice.branch!.compare).toMatch(/^https:\/\/github\.com\/acme\/design\/compare\//);
 		expect(gh.asked).toContain(`person PUT /repos/acme/design/contents/${inFolder}`);
 	});
 
@@ -371,9 +373,7 @@ describe('proposing it', () => {
 	it('gives GitHub’s compare page for the branch, where one can be opened by hand', async () => {
 		const file = await saved();
 		const branch = (await file.current()).branch!;
-		expect(branch.compare).toBe(
-			`https://github.com/acme/design/compare/${encodeURIComponent(DEFAULT)}...${encodeURIComponent(branch.branch)}?expand=1`,
-		);
+		expect(branch.compare).toBe(`https://github.com/acme/design/compare/${DEFAULT}...${branch.branch}?expand=1`);
 	});
 
 	it('says the command line is needed when it is not signed in, and the change stays saved', async () => {

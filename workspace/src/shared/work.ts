@@ -1,9 +1,9 @@
 import type { IterationKind, ProjectIteration } from './contract';
 import { isPrototypeKey } from './designPaths';
-import { asPullRequest } from './validate';
 import { byNewest } from './sort';
 import { parsePrototypeName } from './prototypeNames';
 import { asRepositoryPath } from './repoRef';
+import { asChangeRequestUrl, treeUrl } from './hostUrls';
 
 /** The two kinds of work, prototypes and codebase work, and where a project's work is in code. */
 
@@ -12,10 +12,10 @@ import { asRepositoryPath } from './repoRef';
  * one is recorded, else its branch in the repository the record names. Null when the record says neither.
  */
 export const codeLink = (it: { branch: string; repository?: string | null; pullRequest?: string | null }): string | null => {
-	const pr = asPullRequest(it.pullRequest);
+	const pr = asChangeRequestUrl(it.pullRequest);
 	if (pr) return pr;
 	const repo = asRepositoryPath(it.repository);
-	return repo ? `https://github.com/${repo}/tree/${it.branch.split('/').map(encodeURIComponent).join('/')}` : null;
+	return repo ? treeUrl(repo, it.branch) : null;
 };
 
 /** Where a project's codebase work is on GitHub (`codeLink`), or null when it has none, or its record does not say. */
