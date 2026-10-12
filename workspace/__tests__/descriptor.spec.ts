@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DescriptorProblem, findCommand, parseDescriptor } from '../src/main/services/descriptor';
+import { dirname, join } from 'node:path';
+import { DescriptorProblem, designSystemCheckout, findCommand, parseDescriptor } from '../src/main/services/descriptor';
 
 const valid = {
 	version: 1,
@@ -51,6 +52,25 @@ describe('parseDescriptor', () => {
 
 	it('refuses a missing designSystem.package', () => {
 		expect(() => parse({ ...valid, designSystem: {} })).toThrow(/designSystem\.package/);
+	});
+
+	describe('designSystem.folder, for a design system that is a folder of this repository', () => {
+		const withFolder = (folder: unknown) => ({ ...valid, designSystem: { package: '@acme/ui', folder } });
+
+		it('is not there for a design system that is its own repository, as it never was', () => {
+			expect(parse(valid).designSystem).toEqual({ package: '@flocksafety/flock-react-component-lib' });
+		});
+
+		it('is read, as a path within the repository without a slash at its end', () => {
+			expect(parse(withFolder('packages/ui')).designSystem).toEqual({ package: '@acme/ui', folder: 'packages/ui' });
+			expect(parse(withFolder('packages/ui/')).designSystem.folder).toBe('packages/ui');
+		});
+
+		it('is refused when it is anywhere but inside the repository: absolute, up a level, empty, or the repository itself', () => {
+			for (const folder of ['/etc', '../ui', 'packages/../../ui', 'packages//ui', '', '.', './ui', 12, null]) {
+				expect(() => parse(withFolder(folder)), String(folder)).toThrow(/designSystem\.folder/);
+			}
+		});
 	});
 
 	it('refuses a command given as a shell string, not an argv array', () => {
@@ -106,3 +126,12 @@ describe('share', () => {
 	});
 });
 
+describe('designSystemCheckout', () => {
+	it('is the checkout beside the product, named as its package is, for a design system that is its own repository', () => {
+		expect(designSystemCheckout('/h/GitHub/flock-coke', { package: '@flocksafety/flock-react-component-lib' })).toBe('/h/GitHub/flock-react-component-lib');
+	});
+
+	it('is the folder in the product’s own repository, when the design system is one: nothing beside it is looked in', () => {
+		expect(designSystemCheckout('/h/GitHub/acme', { package: '@acme/ui', folder: 'packages/ui' })).toBe('/h/GitHub/acme/packages/ui');
+	});
+});

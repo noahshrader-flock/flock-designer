@@ -18,7 +18,8 @@ it, and a product repository does not carry a copy.
 **`standards/`** — the design standards that are not specific to any one product. The product's own
 patterns and boundaries stay in the product repository; these are the ones that hold anywhere. See
 [`standards/README.md`](standards/README.md) for how a product resolves them and which tier wins. How Flock looks and
-speaks (its UI conventions, its voice and tone) is the design system's, in its own `.dsnr/`.
+speaks (its UI conventions, its voice and tone) is the design system's, in its own `.dsnr/`: **a design system's agent files are
+in its own folder, wherever it is**, whether that is a repository of its own or a folder of the product's.
 
 **`knowledge/`** — how the gap and setup-friction logs are written, the baselines and the pilot's questions. Each
 product keeps its own rows.
@@ -54,11 +55,12 @@ built from it, so anyone can open it without the product. Large files those page
 
 **Everything here is shared; a product brings only what is true of it, at these fixed names.** The shared agents read
 them by name, so a product file never points back here. To adopt DSNR, a repository sits beside a checkout of this one
-and of its design system (the folder named as the package is), and provides:
+and of its design system (a checkout named as the package is; or, for a design system that is a folder of the product's own
+repository, nothing beside it: `designSystem.folder` says which folder), and provides:
 
 | File | What it holds |
 |---|---|
-| `.dsnr/workspace.json` | The app's contract (`workspace/src/shared/contract.ts`, `WorkspaceDescriptor`): its name, its context folder, where prototypes go, its branch names, its design system package, and its commands |
+| `.dsnr/workspace.json` | The app's contract (`workspace/src/shared/contract.ts`, `WorkspaceDescriptor`): its name, its context folder, where prototypes go, its branch names, its design system package (and its folder in this repository, when it is one), and its commands |
 | `.dsnr/README.md` | Its index: each of its files and what it is for, its own skills, and its commands |
 | `.dsnr/manifest.md` | Identity, stack, conventions, the accessibility target (and nowhere else), where things are, what is off-limits, how to run it |
 | `.dsnr/standards/non-negotiables.md` | What each shared hard rule means here: its plumbing, its mock layer, its conventions |

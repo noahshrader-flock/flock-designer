@@ -42,8 +42,12 @@ export interface WorkspaceDescriptor {
 	branchPattern: { prototype: string; codebase: string };
 	/** Every command Workspace may run. Nothing else is runnable. */
 	commands: WorkspaceCommand[];
-	/** How the resolved design-system version is discovered. */
-	designSystem: { package: string };
+	/**
+	 * The design system the product is built on: its package, and, when it is a folder of this repository (a monorepo), that
+	 * folder, where its agent files are (`designSystemCheckout`). Without a folder it is a repository of its own, checked
+	 * out beside this one and named as its package is.
+	 */
+	designSystem: { package: string; folder?: string };
 	/** How this repository turns a branch into a link a reviewer can open. Absent: it cannot be shared from here. */
 	share?: ShareDescriptor;
 }

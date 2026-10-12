@@ -1319,6 +1319,25 @@ describe('prototypes', () => {
 			expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## Voice and tone'));
 		});
 
+		it('reads the voice and tone from the design system’s folder when it is a folder of the product’s own repository, not from a checkout beside it', async () => {
+			await saved();
+			// The product says its design system is `packages/ui` in this repository: its agent files are there.
+			const descriptor = join(product, '.dsnr', 'workspace.json');
+			writeFileSync(descriptor, JSON.stringify({ ...JSON.parse(readFileSync(descriptor, 'utf8')), designSystem: { package: 'x', folder: 'packages/ui' } }));
+			mkdirSync(join(product, 'packages', 'ui', '.dsnr'), { recursive: true });
+			writeFileSync(join(product, 'packages', 'ui', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nFrom the folder.\n');
+			// Committed, as a repository's files are: an unfinished change would be said to be one, and stop the task.
+			g(product, 'add', '-A');
+			g(product, 'commit', '-q', '-m', 'the design system is a folder here');
+			// A checkout beside the product, which a package-style design system would have, is not what is read.
+			mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });
+			writeFileSync(join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nFrom beside it.\n');
+			expect((await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
+			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'), 'utf8');
+			expect(task).toContain('From the folder.');
+			expect(task).not.toContain('From beside it.');
+		});
+
 		it('makes the branch and the record, writes the task beside the prototype, and gives the command to start it', async () => {
 			await saved();
 			const r = await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop');

@@ -64,8 +64,9 @@ Don't skip: most mistakes come from skipping the product's patterns or the desig
 2. **The product:** its `.dsnr/README.md`, which lists its files and what each is for, and `.dsnr/manifest.md` in full:
    its stack, conventions, accessibility target, where things are, and what is off-limits. Then what its README says to
    read for the job (its patterns, composition and import rules) before importing anything from its source.
-3. **The design system:** its `.dsnr/README.md`, in the checkout beside the product named as its package
-   (`designSystem.package` in `.dsnr/workspace.json`). It says how to read the installed package (the version the product
+3. **The design system:** its `.dsnr/README.md`, in the design system's own folder: the checkout beside the product named as its package
+   (`designSystem.package` in `.dsnr/workspace.json`), or the folder `designSystem.folder` names when it is a folder of the product's
+   own repository. It says how to read the installed package (the version the product
    has, which a checkout may be ahead of), and holds Flock's conventions (`product-native-ui.md`) and voice and tone
    (`voice-and-tone.md`). **If the checkout is missing, say so and stop**: never guess at component APIs or token names.
 4. **The product's repository docs** (`AGENTS.md`, `CLAUDE.md` and the like) for architecture and conventions. They win on

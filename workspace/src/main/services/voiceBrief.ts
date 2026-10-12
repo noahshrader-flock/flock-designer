@@ -39,7 +39,7 @@ export const voiceBrief = (text: string | null): string => {
 	].join('\n');
 };
 
-/** A file of the design system's, read from its checkout beside the product at `root`; null when it is not there. */
+/** A file of the design system's, read from its own folder for the product at `root` (`designSystemCheckout`); null when it is not there. */
 export const designSystemFile =
 	(root: string) =>
 	async (path: string): Promise<string | null> => {

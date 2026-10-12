@@ -9,7 +9,7 @@ report.
 ## Before reviewing
 
 1. The product's `.dsnr/standards/product.md`: its measured conventions, which win where they differ from Flock's
-2. The design system's `product-native-ui.md` and `voice-and-tone.md` (its `.dsnr/`, in the checkout beside the product):
+2. The design system's `product-native-ui.md` and `voice-and-tone.md` (its `.dsnr/`, in the design system's own folder):
    Flock's conventions and voice. Check the view's words against the voice once it is written; blank, there is nothing
    to check against, and that is not a finding
 3. `../standards/universal/accessibility.md`, and the conformance target in the product's `.dsnr/manifest.md`

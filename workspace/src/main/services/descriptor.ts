@@ -55,6 +55,19 @@ const parseCommand = (raw: unknown, index: number): WorkspaceCommand => {
 const KINDS = ['prototype', 'codebase'] as const;
 
 /**
+ * A design system's folder in the product's own repository, as a path inside it with no slash at its end. It comes from a
+ * file anyone may edit and is joined onto the checkout, so it is nothing but plain folder names: not absolute, not up a
+ * level, not empty, and not the repository itself (that is a design system in a repository of its own: leave it out).
+ */
+const designSystemFolder = (value: unknown): string => {
+	const bad = () => new DescriptorProblem(`${DESCRIPTOR_PATH} has a designSystem.folder that is not a folder inside the repository`);
+	if (typeof value !== 'string') throw bad();
+	const path = value.replace(/\/+$/, '');
+	if (path === '' || path.startsWith('/') || path.split('/').some((part) => part === '' || part === '.' || part === '..')) throw bad();
+	return path;
+};
+
+/**
  * Optional: a repository that cannot build a preview for a branch just leaves it out. When it is
  * there it is held to what sharing needs, because a bad address here would be recorded for every
  * reviewer: https only, and a place for the pull request number.
@@ -113,6 +126,7 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 	if (!ds || typeof ds.package !== 'string' || ds.package === '') {
 		throw new DescriptorProblem(`${DESCRIPTOR_PATH} is missing designSystem.package`);
 	}
+	const folder = ds.folder === undefined ? undefined : designSystemFolder(ds.folder);
 
 	return {
 		version: 1,
@@ -121,7 +135,7 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 		prototypeRoot: d.prototypeRoot as string,
 		branchPattern: { prototype: branch.prototype, codebase: branch.codebase },
 		commands,
-		designSystem: { package: ds.package },
+		designSystem: { package: ds.package, ...(folder !== undefined ? { folder } : {}) },
 		...(d.share !== undefined ? { share: parseShare(d.share) } : {}),
 	};
 };
@@ -149,8 +163,11 @@ export const findCommand = (descriptor: WorkspaceDescriptor, commandId: string):
 };
 
 /**
- * The design system's checkout beside a product, named as its package is (`designSystem.package`): where its guidance is
- * read, by an agent and by the tasks DSNR makes alike. One rule, so they never look in different places.
+ * Where the design system's own files are: its agent files (`.dsnr/`, including the voice and tone), its guidance and its
+ * source. **A design system's agent files are in its own folder, wherever it is.** A design system that is a folder of the
+ * product's repository (`designSystem.folder`, a monorepo) is that folder; one that is a repository of its own is the
+ * checkout beside the product, named as its package is. Read by an agent and by the tasks DSNR makes alike: one rule, so
+ * they never look in different places.
  */
-export const designSystemCheckout = (root: string, pkg: string = readDescriptor(root).designSystem.package): string =>
-	join(dirname(root), basename(pkg));
+export const designSystemCheckout = (root: string, designSystem: WorkspaceDescriptor['designSystem'] = readDescriptor(root).designSystem): string =>
+	designSystem.folder !== undefined ? join(root, designSystem.folder) : join(dirname(root), basename(designSystem.package));

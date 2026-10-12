@@ -206,9 +206,9 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			// The guidance that goes with the code when the branch has it; otherwise the checkout's own, which always has
 			// it (develop has no DSNR files, and the page must still follow the product).
 			productGuidance: has(join(code, descriptor.contextDir)) ?? has(join(root, descriptor.contextDir)),
-			// The design system's checkout beside the product, named as its package is: its guidance and, as important
-			// for a page that redraws its components, its source.
-			designSystemGuidance: has(designSystemCheckout(root, pkg)),
+			// The design system's own folder (`designSystemCheckout`): its guidance and, as important for a page that
+			// redraws its components, its source.
+			designSystemGuidance: has(designSystemCheckout(root, descriptor.designSystem)),
 			installedDesignSystem,
 			sharedStandards: designRoot === null ? null : has(join(dirname(designRoot), 'standards')),
 			// Only worth building against when the design system itself is installed in them.
@@ -379,8 +379,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	const accessibility = async (projectId: string, name: string): Promise<string> => taskAccessibility(skill, await target(projectId, name));
 
 	/**
-	 * The voice and tone section of a task (T9): the design system's file, read from its checkout beside the product
-	 * (`root`, the product this work is in), each time.
+	 * The voice and tone section of a task (T9): the design system's file, read from its own folder
+	 * (`designSystemCheckout` of `root`, the product this work is in), each time.
 	 */
 	const voice = (root: string | null = ctx.productRoot()): Promise<string> => taskVoice(root === null ? async () => null : designSystemFile(root));
 

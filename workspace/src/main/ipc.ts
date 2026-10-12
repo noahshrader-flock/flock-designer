@@ -684,18 +684,18 @@ export const registerIpc = ({
 
 	/**
 	 * What a codebase run may read besides the checkout: the shared skills and standards the product's guidance
-	 * points at, and the design system's own guidance beside it. Read only, and named in the task, since a folder
+	 * points at, and the design system's own guidance (`designSystemCheckout`). Read only, and named in the task, since a folder
 	 * the agent has not been told about is one it never opens.
 	 */
 	const sharedGuidance = (canonical: string): { dirs: string[]; note: string } => {
 		const designRoot = recordsRootFor(canonical);
-		const pkg = readDescriptor(canonical).designSystem.package;
+		const designSystem = readDescriptor(canonical).designSystem;
 		const named: Array<[string, string | null]> = [
 			["Shared agents (the product's shims point here)", designRoot === null ? null : join(dirname(designRoot), 'agents')],
 			['Shared skills (a `skills/…` path in any guidance is here)', designRoot === null ? null : join(dirname(designRoot), 'skills')],
 			['Shared standards', designRoot === null ? null : join(dirname(designRoot), 'standards')],
 			['Shared logging (how the product logs what went wrong)', designRoot === null ? null : join(dirname(designRoot), 'knowledge')],
-			["The design system's checkout (its guidance and source)", designSystemCheckout(canonical, pkg)],
+			["The design system's checkout (its guidance and source)", designSystemCheckout(canonical, designSystem)],
 		];
 		const found = named.filter((n): n is [string, string] => n[1] !== null && existsSync(n[1]));
 		if (!found.length) return { dirs: [], note: '' };
