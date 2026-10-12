@@ -196,6 +196,17 @@ describe('a design system inside a larger repository', () => {
 		expect(gh.branches.get(r.voice.branch!.branch)!.files.get(inFolder)!.text).toBe('two');
 		expect(gh.asked).toContain(`person PUT /repos/acme/design/contents/${inFolder}`);
 	});
+
+	it('keeps each design system’s saved change apart from another’s in the same repository', async () => {
+		const b = gh.branches.get(DEFAULT)!;
+		for (const f of ['packages/ui', 'packages/admin']) b.files.set(`${f}/${VOICE_FILE}`, { text: 'one', sha: 'f'.repeat(40) });
+		const ui = make('packages/ui');
+		const saved = await ui.save('two', (await ui.current()).sha);
+		expect((await make('packages/ui').current()).branch?.branch).toBe(saved.voice.branch!.branch);
+		// The other design system in the same repository has no saved change of its own.
+		expect((await make('packages/admin').current()).branch).toBeNull();
+		expect((await make().current()).branch).toBeNull();
+	});
 });
 
 describe('saving a change', () => {

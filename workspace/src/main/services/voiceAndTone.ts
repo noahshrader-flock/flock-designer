@@ -21,6 +21,7 @@ import { dirname } from 'node:path';
 import type { VoiceAndTone, VoiceBranch, VoiceSave } from '../../shared/contract';
 import { asArray, asRecord } from '../../shared/json';
 import { DesignRepo, type DesignRepoRef, type GitHubApi } from './designRepo';
+import { designSystemId } from './designSystems';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { httpStatus } from './github';
 
@@ -45,6 +46,8 @@ export class VoiceAndToneFile {
 	private readonly repo: DesignRepoRef;
 	/** The file's path in the repository: in the design system's folder, when it has one. */
 	private readonly path: string;
+	/** The design system's folder in the repository, empty when it is the whole repository. */
+	private readonly folder: string;
 	/** The file, read as every file DSNR reads from GitHub is. */
 	private readonly files: DesignRepo;
 	private readonly github: GitHubApi;
@@ -69,7 +72,8 @@ export class VoiceAndToneFile {
 		now?: () => Date;
 	}) {
 		this.repo = repo;
-		this.path = folder ? `${folder.replace(/\/+$/, '')}/${VOICE_FILE}` : VOICE_FILE;
+		this.folder = folder.replace(/\/+$/, '');
+		this.path = this.folder ? `${this.folder}/${VOICE_FILE}` : VOICE_FILE;
 		this.files = new DesignRepo(github, repo);
 		this.github = github;
 		this.file = file;
@@ -79,8 +83,12 @@ export class VoiceAndToneFile {
 	private get base(): string {
 		return `/repos/${this.repo.owner}/${this.repo.repo}`;
 	}
+	/**
+	 * Kept by the design system's id, as the token branches are, so two design systems in one repository keep their changes
+	 * apart. For one that is the whole repository the id is the repository's name, the key this file has always used.
+	 */
 	private get key(): string {
-		return `${this.repo.owner}/${this.repo.repo}`;
+		return designSystemId(`${this.repo.owner}/${this.repo.repo}`, this.folder);
 	}
 
 	/** Everything remembered, by repository: nothing when there is no file, or one that is not readable. */
