@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { checkWcagEdition } from '../src/cli/wcagEdition';
 import { WCAG_LATEST } from '../src/shared/wcag';
+import { fakeGitHub } from './fakes/github';
 
 /**
  * The weekly check of WCAG's edition (T7 of the design system plan): the W3C's page against the one recorded, an issue
@@ -14,11 +15,12 @@ const NEWER = PAGE.replace('(WCAG) 2.2', '(WCAG) 2.3').replace('datetime="2024-1
 
 const run = async (page: string, open: { title: string; html_url: string }[] = [], github = true) => {
 	const out: string[] = [];
-	const api = vi.fn(async (path: string, init?: { method?: string; body?: unknown }) =>
-		init?.method === 'POST' ? { html_url: 'https://github.com/o/r/issues/9' } : path.includes('?state=open') ? open : null,
-	);
+	const { github: host, api } = fakeGitHub({
+		'POST /repos/o/r/issues': { html_url: 'https://github.com/o/r/issues/9' },
+		'GET /repos/o/r/issues?state=open*': open,
+	});
 	const fetchText = vi.fn(async () => page);
-	const code = await checkWcagEdition({ fetchText, github: github ? { api } : null, repo: { owner: 'o', repo: 'r' }, out: (t) => out.push(t) });
+	const code = await checkWcagEdition({ fetchText, github: github ? host : null, repo: { owner: 'o', repo: 'r' }, out: (t) => out.push(t) });
 	return { code, out, api, fetchText };
 };
 

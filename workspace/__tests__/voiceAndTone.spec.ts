@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { GitHubApi } from '../src/main/services/designRepo';
 import { VOICE_BRANCH, VOICE_FILE, VoiceAndToneFile } from '../src/main/services/voiceAndTone';
+import { type RouteCall, fakeGitHub, refusal } from './fakes/github';
 
 /**
  * The voice and tone file (T9 of the design system plan): in the design system's agent files, read from its default branch,
@@ -30,7 +31,9 @@ interface Pull {
 }
 
 const sha = (text: string, n: number) => createHash('sha1').update(`${n}:${text}`).digest('hex');
-const status = (n: number, message: string) => Object.assign(new Error(message), { status: n });
+const BASE = `/repos/${REPO.owner}/${REPO.repo}`;
+/** The file a contents call names. */
+const fileOf = (path: string) => decodeURIComponent(path.slice(`${BASE}/contents/`.length).split('?')[0] as string);
 
 /** GitHub, as far as the voice and tone needs it: branches of files, commits counted, pull requests. */
 class FakeGitHub {
@@ -62,84 +65,84 @@ class FakeGitHub {
 	}
 
 	as(who: 'app' | 'person'): GitHubApi {
-		return { api: async (path, init = {}) => this.answer(who, init.method ?? 'GET', path, init.body as Record<string, unknown> | undefined) };
+		return {
+			api: async (path, init = {}) => {
+				const method = init.method ?? 'GET';
+				this.asked.push(`${who} ${method} ${path}`);
+				if (this.refuse?.when(method, path)) throw refusal(this.refuse.status, this.refuse.message);
+				return this.host.api(path, init);
+			},
+		};
 	}
 
-	private answer(who: string, method: string, path: string, body?: Record<string, unknown>): unknown {
-		this.asked.push(`${who} ${method} ${path}`);
-		if (this.refuse?.when(method, path)) throw status(this.refuse.status, this.refuse.message);
-		const base = `/repos/${REPO.owner}/${REPO.repo}`;
-		if (!path.startsWith(base)) throw status(404, 'Not Found');
-		const [route, query = ''] = path.slice(base.length).split('?');
-		const q = new URLSearchParams(query);
-		if (route === '' && method === 'GET') return { default_branch: DEFAULT };
-
-		const contents = /^\/contents\/(.+)$/.exec(route!);
-		if (contents) {
-			const file = decodeURIComponent(contents[1]!);
-			if (method === 'GET') {
-				const b = this.branches.get(q.get('ref') ?? DEFAULT);
-				const f = b?.files.get(file);
-				if (!f) throw status(404, 'Not Found');
-				return { content: Buffer.from(f.text).toString('base64'), encoding: 'base64', sha: f.sha };
-			}
-			if (method === 'PUT') {
-				const b = this.branches.get(String(body!.branch));
-				if (!b) throw status(404, 'Branch not found');
-				const have = b.files.get(file);
-				if (have && body!.sha !== have.sha) throw status(409, `${file} does not match ${String(body!.sha)}`);
-				if (!have && body!.sha) throw status(409, `${file} does not match ${String(body!.sha)}`);
-				const text = Buffer.from(String(body!.content), 'base64').toString('utf8');
-				const made = { text, sha: sha(text, ++this.n) };
-				b.files.set(file, made);
-				b.commits += 1;
-				return { content: { sha: made.sha } };
-			}
-		}
-		const ref = /^\/git\/ref\/heads\/(.+)$/.exec(route!);
-		if (ref && method === 'GET') {
-			const b = this.branches.get(decodeURIComponent(ref[1]!));
-			if (!b) throw status(404, 'Not Found');
-			return { object: { sha: `${decodeURIComponent(ref[1]!)}@${b.commits}` } };
-		}
-		if (route === '/git/refs' && method === 'POST') {
-			const name = String(body!.ref).replace(/^refs\/heads\//, '');
-			if (this.branches.has(name)) throw status(422, 'Reference already exists');
+	/** Where a call is in the repository, without its query: `/contents/x.md`, `/pulls/11`. */
+	private static route = (path: string) => path.slice(BASE.length).split('?')[0] as string;
+	private readonly host = fakeGitHub({
+		[`GET ${BASE}`]: { default_branch: DEFAULT },
+		[`GET ${BASE}/contents/*`]: ({ path, query }: RouteCall) => {
+			const f = this.branches.get(query.get('ref') ?? DEFAULT)?.files.get(fileOf(path));
+			if (!f) throw refusal(404);
+			return { content: Buffer.from(f.text).toString('base64'), encoding: 'base64', sha: f.sha };
+		},
+		[`PUT ${BASE}/contents/*`]: ({ path, body }: RouteCall) => {
+			const file = fileOf(path);
+			const put = body as Record<string, unknown>;
+			const b = this.branches.get(String(put.branch));
+			if (!b) throw refusal(404, 'Branch not found');
+			const have = b.files.get(file);
+			if ((have && put.sha !== have.sha) || (!have && put.sha)) throw refusal(409, `${file} does not match ${String(put.sha)}`);
+			const text = Buffer.from(String(put.content), 'base64').toString('utf8');
+			const made = { text, sha: sha(text, ++this.n) };
+			b.files.set(file, made);
+			b.commits += 1;
+			return { content: { sha: made.sha } };
+		},
+		[`GET ${BASE}/git/ref/heads/*`]: ({ path }: RouteCall) => {
+			const name = decodeURIComponent(FakeGitHub.route(path).slice('/git/ref/heads/'.length));
+			const b = this.branches.get(name);
+			if (!b) throw refusal(404);
+			return { object: { sha: `${name}@${b.commits}` } };
+		},
+		[`POST ${BASE}/git/refs`]: ({ body }: RouteCall) => {
+			const ref = String((body as { ref: string }).ref);
+			const name = ref.replace(/^refs\/heads\//, '');
+			if (this.branches.has(name)) throw refusal(422, 'Reference already exists');
 			const from = this.branches.get(DEFAULT)!;
 			this.branches.set(name, { files: new Map(from.files), commits: from.commits });
-			return { ref: body!.ref };
-		}
-		const deleting = /^\/git\/refs\/heads\/(.+)$/.exec(route!);
-		if (deleting && method === 'DELETE') {
-			this.branches.delete(decodeURIComponent(deleting[1]!));
+			return { ref };
+		},
+		[`DELETE ${BASE}/git/refs/heads/*`]: ({ path }: RouteCall) => {
+			this.branches.delete(decodeURIComponent(FakeGitHub.route(path).slice('/git/refs/heads/'.length)));
 			return null;
-		}
-		if (route === '/pulls' && method === 'GET') {
-			const head = q.get('head')?.split(':')[1];
-			return this.pulls.filter((p) => p.head === head && (q.get('state') === 'all' || p.state === (q.get('state') ?? 'open')));
-		}
-		const pull = /^\/pulls\/(\d+)$/.exec(route!);
-		if (pull && method === 'GET') {
-			const found = this.pulls.find((p) => p.number === Number(pull[1]));
-			if (!found) throw status(404, 'Not Found');
+		},
+		[`GET ${BASE}/pulls?*`]: ({ query }: RouteCall) => {
+			const head = query.get('head')?.split(':')[1];
+			return this.pulls.filter((p) => p.head === head && (query.get('state') === 'all' || p.state === (query.get('state') ?? 'open')));
+		},
+		[`GET ${BASE}/pulls/*`]: ({ path }: RouteCall) => {
+			const found = this.pulls.find((p) => p.number === Number(FakeGitHub.route(path).slice('/pulls/'.length)));
+			if (!found) throw refusal(404);
 			return found;
-		}
-		if (route === '/pulls' && method === 'POST') {
-			if (this.pulls.some((p) => p.head === body!.head && p.state === 'open')) throw status(422, 'A pull request already exists');
+		},
+		[`POST ${BASE}/pulls`]: ({ body }: RouteCall) => {
+			const asked = body as Record<string, unknown>;
+			if (this.pulls.some((p) => p.head === asked.head && p.state === 'open')) throw refusal(422, 'A pull request already exists');
 			const made: Pull = {
 				number: this.pulls.length + 11,
-				head: String(body!.head),
-				base: String(body!.base),
-				draft: body!.draft === true,
+				head: String(asked.head),
+				base: String(asked.base),
+				draft: asked.draft === true,
 				state: 'open',
 				merged_at: null,
 				html_url: `https://github.com/acme/design/pull/${this.pulls.length + 11}`,
 			};
 			this.pulls.push(made);
 			return made;
-		}
-		throw status(404, `No stand-in for ${method} ${path}`);
-	}
+		},
+		'*': ({ method, path }: RouteCall) => {
+			throw refusal(404, path.startsWith(BASE) ? `No stand-in for ${method} ${path}` : 'Not Found');
+		},
+	});
 }
 
 let home: string;

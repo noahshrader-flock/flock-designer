@@ -6,6 +6,8 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { main } from '../src/cli/dsnr';
 import { g, installDesignSystem, makeProduct, addStandards } from './fixtures';
+import { DESIGN_REPO, type GitHubApi } from '../src/main/services/designRepo';
+import { type RouteCall, fakeGitHub, refusal } from './fakes/github';
 
 /**
  * `dsnr`, the command an agent runs from Claude Code in VS Code to make a prototype with no app running. Against a
@@ -18,7 +20,9 @@ let design: string;
 let prototypes: string;
 let out: string[];
 let err: string[];
-let github: { api: (path: string) => Promise<unknown> } | null;
+let github: GitHubApi | null;
+/** The design repository's address in GitHub's API, as the command names it. */
+const REPO = `/repos/${DESIGN_REPO.owner}/${DESIGN_REPO.repo}`;
 
 const esbuild = createRequire(__filename).resolve('esbuild');
 const deps = (cwd: string) => ({
@@ -160,22 +164,17 @@ describe('change-prototype', () => {
 	/** GitHub as its API answers: who the person is, and each iteration's review thread with its commenters. */
 	const signedIn = (threads: Record<string, string[]>) => {
 		const names = Object.keys(threads);
-		github = {
-			api: async (path: string) => {
-				if (path === '/user') return { login: 'test-person' };
-				const thread = /\/issues\/(\d+)\/comments/.exec(path);
-				if (thread) {
-					return (threads[names[Number(thread[1]) - 1] as string] ?? []).map((login, i) => ({
-						id: i + 1,
-						body: 'x',
-						user: { login },
-						created_at: '2026-10-08T00:00:00Z',
-					}));
-				}
-				if (/\/issues\?/.test(path)) return names.map((name, i) => ({ number: i + 1, body: `branch: \`prototype/demo/${name}\``, comments: 1 }));
-				throw new Error(`not faked: ${path}`);
-			},
-		};
+		github = fakeGitHub({
+			'/user': { login: 'test-person' },
+			[`${REPO}/issues?*`]: names.map((name, i) => ({ number: i + 1, body: `branch: \`prototype/demo/${name}\``, comments: 1 })),
+			[`${REPO}/issues/*`]: ({ path }: RouteCall) =>
+				(threads[names[Number(/\/issues\/(\d+)\/comments/.exec(path)?.[1]) - 1] as string] ?? []).map((login, i) => ({
+					id: i + 1,
+					body: 'x',
+					user: { login },
+					created_at: '2026-10-08T00:00:00Z',
+				})),
+		}).github;
 	};
 	const made = async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
@@ -258,9 +257,7 @@ describe('build-site', () => {
 
 	it("counts each iteration's comments when GitHub can be asked, and builds from the design repository itself too", async () => {
 		await saved();
-		github = {
-			api: async (path: string) => (/\/issues\?/.test(path) ? [{ number: 1, body: 'branch: `prototype/demo/v1-i1`', comments: 2 }] : []),
-		};
+		github = fakeGitHub({ [`${REPO}/issues?*`]: [{ number: 1, body: 'branch: `prototype/demo/v1-i1`', comments: 2 }], '*': [] }).github;
 		const site = join(home, 'elsewhere-site');
 		expect(await main(['build-site', '--out', site], deps(design))).toBe(0);
 		expect(readFileSync(join(site, 'demo', 'index.html'), 'utf8')).toContain('2 comments');
@@ -310,21 +307,20 @@ describe('publish opens the page the first time', () => {
 		return branch;
 	};
 	/** A GitHub whose site is deployed at once, and either already has the page or does not. */
-	const site = (branch: string, onSite: boolean) => {
+	const site = (branch: string, onSite: boolean, more: Record<string, unknown> = {}) => {
 		let dispatched = false;
-		return {
-			api: async (path: string) => {
-				if (/^\/repos\/[^/]+\/[^/]+$/.test(path)) return { private: true, default_branch: branch };
-				if (path.endsWith('/pages')) return { html_url: 'https://acme.github.io/design/', public: false };
-				if (path.endsWith('/dispatches')) return void (dispatched = true);
-				if (path.includes('/actions/workflows/'))
-					return { workflow_runs: dispatched ? [{ id: 2, status: 'completed', conclusion: 'success', html_url: 'run/2' }] : [] };
-				if (path.includes('/deployments?')) return [{ id: 6, sha: 'd'.repeat(40) }];
-				if (path.includes('/deployments/6/statuses')) return [{ state: 'success' }];
-				if (path.includes('/commits?')) return onSite ? [{ sha: 'c'.repeat(40) }] : [];
-				throw new Error(`not faked: ${path}`);
-			},
-		};
+		return fakeGitHub({
+			[REPO]: { private: true, default_branch: branch },
+			[`${REPO}/pages`]: { html_url: 'https://acme.github.io/design/', public: false },
+			[`POST ${REPO}/actions/workflows/*`]: () => void (dispatched = true),
+			[`${REPO}/actions/workflows/*`]: () => ({
+				workflow_runs: dispatched ? [{ id: 2, status: 'completed', conclusion: 'success', html_url: 'run/2' }] : [],
+			}),
+			[`${REPO}/deployments?*`]: [{ id: 6, sha: 'd'.repeat(40) }],
+			[`${REPO}/deployments/6/statuses*`]: [{ state: 'success' }],
+			[`${REPO}/commits?*`]: onSite ? [{ sha: 'c'.repeat(40) }] : [],
+			...more,
+		}).github;
 	};
 	const publishWith = (branch: string, onSite: boolean, more: string[] = []) => {
 		const opened: string[] = [];
@@ -359,10 +355,11 @@ describe('publish opens the page the first time', () => {
 	it('does not open anything when the deploy fails', async () => {
 		const branch = await saved();
 		const opened: string[] = [];
-		const failing = {
-			api: async (path: string) =>
-				path.endsWith('/dispatches') ? Promise.reject(Object.assign(new Error('Not Found'), { status: 404 })) : site(branch, false).api(path),
-		};
+		const failing = site(branch, false, {
+			[`POST ${REPO}/actions/workflows/*`]: () => {
+				throw refusal(404);
+			},
+		});
 		const code = await main(['publish', '--project', 'demo', '--name', 'v1-i1'], {
 			...deps(design),
 			github: failing,
@@ -407,16 +404,14 @@ describe('unpublish', () => {
 		g(design, 'remote', 'add', 'origin', remote);
 		g(design, 'push', '-q', '-u', 'origin', branch);
 		let dispatched = false;
-		github = {
-			api: async (path: string) => {
-				if (/^\/repos\/[^/]+\/[^/]+$/.test(path)) return { private: true, default_branch: branch };
-				if (path.endsWith('/pages')) return { html_url: 'https://acme.github.io/design/', public: false };
-				if (path.endsWith('/dispatches')) return void (dispatched = true);
-				if (path.includes('/runs'))
-					return { workflow_runs: dispatched ? [{ id: 2, status: 'completed', conclusion: 'success', html_url: 'run/2' }] : [] };
-				throw new Error(`not faked: ${path}`);
-			},
-		};
+		github = fakeGitHub({
+			[REPO]: { private: true, default_branch: branch },
+			[`${REPO}/pages`]: { html_url: 'https://acme.github.io/design/', public: false },
+			[`POST ${REPO}/actions/workflows/*`]: () => void (dispatched = true),
+			[`${REPO}/actions/workflows/*`]: () => ({
+				workflow_runs: dispatched ? [{ id: 2, status: 'completed', conclusion: 'success', html_url: 'run/2' }] : [],
+			}),
+		}).github;
 		const quick = { ...deps(design), sleep: async () => undefined, fetchAnonymously: async () => ({ status: 404 }) };
 		expect(await main(['unpublish', '--project', 'demo', '--name', 'v1-i1'], quick)).toBe(0);
 		for (const f of ['v1-i1.html', 'v1-i1.tsx']) {

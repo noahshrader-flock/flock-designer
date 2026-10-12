@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcContext } from '../src/main/ipc';
 import { CHANNELS } from '../src/shared/contract';
 import type { Ports } from '../src/main/ports';
+import { fakeGitHub } from './fakes/github';
 import { addStandards, agentRunning, g, installDesignSystem, makeProduct, makeProductFiles, type Fn } from './fixtures';
 
 /**
@@ -45,10 +46,11 @@ const fakePorts = () =>
 		editor: { find: (): string | null => null, openFolder: vi.fn(), openPrompt: vi.fn(), openSession: vi.fn() },
 		claude: () => 'claude',
 		// The person's own GitHub (its command line): never the real one here.
-		personGitHub: {
-			api: async (path: string) =>
-				path === '/user' ? { login: personLogin } : path.startsWith('/user/repos') ? personRepos.map((full_name) => ({ full_name })) : [],
-		},
+		personGitHub: fakeGitHub({
+			'/user': () => ({ login: personLogin }),
+			'/user/repos*': () => personRepos.map((full_name) => ({ full_name })),
+			'*': [],
+		}).github,
 		shareTools: vi.fn(() => {
 			throw new Error('Sharing is not faked in this test.');
 		}),
@@ -71,10 +73,10 @@ const bare = (name: string, make: (dir: string) => void) => {
 /** Signed in to GitHub, with `repos` as the person's list. */
 const signedIn = (repos: string[]) => {
 	githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
-	githubApi.mockImplementation(async (path: string) =>
-		path.startsWith('/user/repos') ? repos.map((full_name) => ({ full_name })) : Promise.reject(new Error(`not faked: ${path}`)),
-	);
+	answer({ '/user/repos*': repos.map((full_name) => ({ full_name })) });
 };
+/** The app's own GitHub answers from `routes` (`fakes/github.ts`); `githubApi` still has every call it was asked. */
+const answer = (routes: Record<string, unknown>) => githubApi.mockImplementation(fakeGitHub(routes).api);
 
 /** The real runner, so its one-run rule is what is tested, over a stand-in agent that runs until the test ends. */
 const realRunner = async () => {
@@ -185,7 +187,7 @@ beforeEach(async () => {
 	readComments = vi.fn(async () => []);
 	setAddressed = vi.fn(async (id: number, commit: string | null, iteration: string | null) => ({ id, addressedAt: commit, addressedIn: iteration }));
 	githubState = { state: 'signedOut' };
-	githubApi = vi.fn(async (path: string) => Promise.reject(new Error(`not faked: ${path}`)));
+	githubApi = vi.fn(fakeGitHub().api);
 	personRepos = [];
 	personLogin = 'noah';
 	designRepoProjects = [];
@@ -829,9 +831,7 @@ describe('listProjects', () => {
 			],
 		};
 		designRepoProjects = [shared];
-		githubApi.mockImplementation(async (path: string) =>
-			path === '/users/noahshrader-flock' ? { login: 'noahshrader-flock', name: 'Noah Shrader' } : Promise.reject(new Error(`not faked: ${path}`)),
-		);
+		answer({ '/users/noahshrader-flock': { login: 'noahshrader-flock', name: 'Noah Shrader' } });
 		const r = await call(CHANNELS.listProjects);
 		const [alpha] = r.value as { people: unknown[]; iterations: { contributors: unknown[] }[] }[];
 		expect(alpha!.people).toEqual([{ name: 'Noah Shrader', login: 'noahshrader-flock' }]);
@@ -1079,13 +1079,12 @@ describe('prototypes', () => {
 	describe('publishing what the app made', () => {
 		it('publishes a prototype it saved, by itself, and says why the page is not published when that stops', async () => {
 			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
-			githubApi.mockImplementation(async (path: string) => {
-				if (path === '/repos/noahshrader-flock/flock-designer') return { private: false, default_branch: 'main' };
-				if (path === '/repos/noahshrader-flock/flock-designer/pages') return { html_url: 'https://x.github.io/flock-designer/', public: true };
+			answer({
+				'/repos/noahshrader-flock/flock-designer': { private: false, default_branch: 'main' },
+				'/repos/noahshrader-flock/flock-designer/pages': { html_url: 'https://x.github.io/flock-designer/', public: true },
 				// Never deployed, and the page not on GitHub yet.
-				if (path.startsWith('/repos/noahshrader-flock/flock-designer/deployments?')) return [];
-				if (path.startsWith('/repos/noahshrader-flock/flock-designer/commits?')) return [];
-				throw new Error(`not faked: ${path}`);
+				'/repos/noahshrader-flock/flock-designer/deployments?*': [],
+				'/repos/noahshrader-flock/flock-designer/commits?*': [],
 			});
 			await call(CHANNELS.useCheckout, product);
 			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
@@ -1107,10 +1106,9 @@ describe('prototypes', () => {
 		it('publishes once more when asked again while it runs, so a change saved meanwhile is not missed', async () => {
 			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
 			const asked = () => githubApi.mock.calls.filter(([path]) => path === '/repos/noahshrader-flock/flock-designer').length;
-			githubApi.mockImplementation(async (path: string) => {
-				if (path === '/repos/noahshrader-flock/flock-designer') return { private: false, default_branch: 'main' };
-				if (path === '/repos/noahshrader-flock/flock-designer/pages') return { html_url: 'https://x.github.io/flock-designer/', public: true };
-				throw new Error(`not faked: ${path}`);
+			answer({
+				'/repos/noahshrader-flock/flock-designer': { private: false, default_branch: 'main' },
+				'/repos/noahshrader-flock/flock-designer/pages': { html_url: 'https://x.github.io/flock-designer/', public: true },
 			});
 			await call(CHANNELS.useCheckout, product);
 			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
@@ -1127,17 +1125,15 @@ describe('prototypes', () => {
 			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
 			const base = '/repos/noahshrader-flock/flock-designer';
 			const deployed = 'd'.repeat(40);
-			githubApi.mockImplementation(async (path: string) => {
-				if (path === base) return { private: false, default_branch: 'main' };
-				if (path === `${base}/pages`) return { html_url: 'https://x.github.io/flock-designer/', public: true };
-				if (path.startsWith(`${base}/actions/workflows/`) && path.includes('/runs')) return { workflow_runs: [{ status: 'completed' }] };
-				if (path.startsWith(`${base}/deployments?`)) return [{ id: 6, sha: deployed }];
-				if (path === `${base}/deployments/6/statuses?per_page=1`) return [{ state: 'success' }];
-				if (path === `${base}/compare/${deployed}...main`)
-					return { files: [{ filename: 'projects/demo/prototypes/v1-i1.html', status: 'modified' }] };
-				if (path.startsWith(`${base}/commits?`)) return [{ sha: 'c'.repeat(40) }];
-				if (path.startsWith(`${base}/compare/`)) return { status: 'behind' };
-				throw new Error(`not faked: ${path}`);
+			answer({
+				[base]: { private: false, default_branch: 'main' },
+				[`${base}/pages`]: { html_url: 'https://x.github.io/flock-designer/', public: true },
+				[`${base}/actions/workflows/*`]: { workflow_runs: [{ status: 'completed' }] },
+				[`${base}/deployments?*`]: [{ id: 6, sha: deployed }],
+				[`${base}/deployments/6/statuses?per_page=1`]: [{ state: 'success' }],
+				[`${base}/compare/${deployed}...main`]: { files: [{ filename: 'projects/demo/prototypes/v1-i1.html', status: 'modified' }] },
+				[`${base}/commits?*`]: [{ sha: 'c'.repeat(40) }],
+				[`${base}/compare/*`]: { status: 'behind' },
 			});
 			await call(CHANNELS.useCheckout, product);
 			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
@@ -1161,14 +1157,13 @@ describe('prototypes', () => {
 			const deployed = 'd'.repeat(40);
 			const behindBy = async (filename: string) => {
 				githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
-				githubApi.mockImplementation(async (path: string) => {
-					if (path === base) return { private: false, default_branch: 'main' };
-					if (path === `${base}/pages`) return { html_url: 'https://x.github.io/flock-designer/', public: true };
-					if (path.startsWith(`${base}/actions/workflows/`) && path.includes('/runs')) return { workflow_runs: [{ status: 'completed' }] };
-					if (path.startsWith(`${base}/deployments?`)) return [{ id: 6, sha: deployed }];
-					if (path === `${base}/deployments/6/statuses?per_page=1`) return [{ state: 'success' }];
-					if (path === `${base}/compare/${deployed}...main`) return { files: [{ filename, status: 'modified' }] };
-					throw new Error(`not faked: ${path}`);
+				answer({
+					[base]: { private: false, default_branch: 'main' },
+					[`${base}/pages`]: { html_url: 'https://x.github.io/flock-designer/', public: true },
+					[`${base}/actions/workflows/*`]: { workflow_runs: [{ status: 'completed' }] },
+					[`${base}/deployments?*`]: [{ id: 6, sha: deployed }],
+					[`${base}/deployments/6/statuses?per_page=1`]: [{ state: 'success' }],
+					[`${base}/compare/${deployed}...main`]: { files: [{ filename, status: 'modified' }] },
 				});
 				await call(CHANNELS.useCheckout, product);
 				githubApi.mockClear();
@@ -1188,12 +1183,11 @@ describe('prototypes', () => {
 		});
 
 		it('publishes a prototype when asked, as it does by itself, and says it is under way', async () => {
-			githubApi.mockImplementation(async (path: string) => {
-				if (path === '/repos/noahshrader-flock/flock-designer') return { private: false, default_branch: 'main' };
-				if (path === '/repos/noahshrader-flock/flock-designer/pages') return { html_url: 'https://x.github.io/flock-designer/', public: true };
-				if (path.startsWith('/repos/noahshrader-flock/flock-designer/deployments?')) return [];
-				if (path.startsWith('/repos/noahshrader-flock/flock-designer/commits?')) return [];
-				throw new Error(`not faked: ${path}`);
+			answer({
+				'/repos/noahshrader-flock/flock-designer': { private: false, default_branch: 'main' },
+				'/repos/noahshrader-flock/flock-designer/pages': { html_url: 'https://x.github.io/flock-designer/', public: true },
+				'/repos/noahshrader-flock/flock-designer/deployments?*': [],
+				'/repos/noahshrader-flock/flock-designer/commits?*': [],
 			});
 			await call(CHANNELS.useCheckout, product);
 			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });

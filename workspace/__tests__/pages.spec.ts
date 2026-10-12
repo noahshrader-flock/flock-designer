@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import type { Fn } from './fixtures';
+import type { GitHubApi } from '../src/main/services/designRepo';
+import { type RouteCall, fakeGitHub, refusal } from './fakes/github';
 import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, redeploySite, siteBehind, unpublish, whyPublic } from '../src/main/services/pages';
 
 /**
@@ -12,48 +13,45 @@ import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, redeploySite, si
 const REF = { owner: 'acme', repo: 'design' };
 const SITE = 'https://acme.github.io/design/';
 
-/** GitHub as its API answers. Runs appear one poll after the dispatch, and finish on the next. */
-const fakeGitHub = ({
-	repoPrivate = true,
-	sitePublic = false,
-	pages = true,
-	conclusion = 'success',
-	workflow = true,
-	onSite = true as boolean | 'no-deploy',
-} = {}) => {
-	const calls: { path: string; method: string; body?: unknown }[] = [];
+const notFound = () => {
+	throw refusal(404);
+};
+
+/**
+ * GitHub as its API answers. Runs appear one poll after the dispatch, and finish on the next. `more` replaces any of its
+ * routes, for a test of one refusal.
+ */
+const fakeSite = (
+	{ repoPrivate = true, sitePublic = false, pages = true, conclusion = 'success', workflow = true, onSite = true as boolean | 'no-deploy' } = {},
+	more: Record<string, unknown> = {},
+) => {
 	const runs: { id: number; status: string; conclusion: string | null; html_url: string }[] = [
 		{ id: 1, status: 'completed', conclusion: 'success', html_url: 'run/1' },
 	];
 	let polls = 0;
-	const api = vi.fn(async (path: string, init: { method?: string; body?: unknown } = {}) => {
-		calls.push({ path, method: init.method ?? 'GET', body: init.body });
-		if (path === '/repos/acme/design') return { private: repoPrivate, visibility: repoPrivate ? 'private' : 'public', default_branch: 'main' };
-		if (path === '/repos/acme/design/pages') {
-			if (!pages) throw Object.assign(new Error('Not Found'), { status: 404 });
-			return { html_url: SITE, public: sitePublic, build_type: 'workflow' };
-		}
+	return fakeGitHub({
+		'/repos/acme/design': { private: repoPrivate, visibility: repoPrivate ? 'private' : 'public', default_branch: 'main' },
+		'/repos/acme/design/pages': pages ? { html_url: SITE, public: sitePublic, build_type: 'workflow' } : notFound,
 		// What the site was last built from, and whether this page was in it.
-		if (path.startsWith('/repos/acme/design/deployments?')) return onSite === 'no-deploy' ? [] : [{ id: 6, sha: 'd'.repeat(40) }];
-		if (path === '/repos/acme/design/deployments/6/statuses?per_page=1') return [{ state: 'success' }];
-		if (path.startsWith('/repos/acme/design/commits?')) return onSite === true ? [{ sha: 'c'.repeat(40) }] : [];
-		if (path === `/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/dispatches`) {
-			if (!workflow) throw Object.assign(new Error('Not Found'), { status: 404 });
+		'/repos/acme/design/deployments?*': onSite === 'no-deploy' ? [] : [{ id: 6, sha: 'd'.repeat(40) }],
+		'/repos/acme/design/deployments/6/statuses?per_page=1': [{ state: 'success' }],
+		'/repos/acme/design/commits?*': onSite === true ? [{ sha: 'c'.repeat(40) }] : [],
+		[`/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/dispatches`]: () => {
+			if (!workflow) notFound();
 			runs.unshift({ id: 2, status: 'queued', conclusion: null, html_url: 'run/2' });
 			return null;
-		}
-		if (path.startsWith(`/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/runs`)) {
+		},
+		[`/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/runs*`]: () => {
 			polls++;
 			const fresh = runs.find((r) => r.id === 2);
 			if (fresh && polls > 2) Object.assign(fresh, { status: 'completed', conclusion });
 			return { workflow_runs: runs };
-		}
-		throw new Error(`not faked: ${init.method ?? 'GET'} ${path}`);
+		},
+		...more,
 	});
-	return { api, calls };
 };
 
-const run = (gh: ReturnType<typeof fakeGitHub>, more: Partial<Parameters<typeof publish>[0]> = {}) => {
+const run = (gh: ReturnType<typeof fakeSite>, more: Partial<Parameters<typeof publish>[0]> = {}) => {
 	const log: string[] = [];
 	const anonymous = vi.fn(async () => ({ status: 302 }));
 	const pushRecords = vi.fn(async () => ({ published: ['demo'], problems: [] }));
@@ -74,8 +72,8 @@ const run = (gh: ReturnType<typeof fakeGitHub>, more: Partial<Parameters<typeof 
 
 describe('where the page is going', () => {
 	it('reads whether the repository and its site are private', async () => {
-		expect(await readVisibility({ api: fakeGitHub().api }, REF)).toMatchObject({ repoPrivate: true, site: { url: SITE, public: false } });
-		expect(await readVisibility({ api: fakeGitHub({ pages: false }).api }, REF)).toMatchObject({ repoPrivate: true, site: null });
+		expect(await readVisibility({ api: fakeSite().api }, REF)).toMatchObject({ repoPrivate: true, site: { url: SITE, public: false } });
+		expect(await readVisibility({ api: fakeSite({ pages: false }).api }, REF)).toMatchObject({ repoPrivate: true, site: null });
 	});
 
 	it('says why anyone could open the site, or nothing when GitHub says it is private', () => {
@@ -87,7 +85,7 @@ describe('where the page is going', () => {
 
 describe('publishing', () => {
 	it('pushes the records, asks for the deploy, waits for it, and gives the link to the iteration', async () => {
-		const gh = fakeGitHub();
+		const gh = fakeSite();
 		const { done, pushRecords, anonymous } = run(gh);
 		expect(await done).toEqual({ url: `${SITE}demo/v1/i2/`, public: false, first: false });
 		expect(pushRecords).toHaveBeenCalledOnce();
@@ -97,11 +95,11 @@ describe('publishing', () => {
 	});
 
 	it('says whether this is the first time the page goes up: not on the last deploy, or no deploy yet', async () => {
-		expect(await run(fakeGitHub()).done).toMatchObject({ first: false });
-		expect(await run(fakeGitHub({ onSite: false })).done).toMatchObject({ first: true });
-		expect(await run(fakeGitHub({ onSite: 'no-deploy' })).done).toMatchObject({ first: true });
+		expect(await run(fakeSite()).done).toMatchObject({ first: false });
+		expect(await run(fakeSite({ onSite: false })).done).toMatchObject({ first: true });
+		expect(await run(fakeSite({ onSite: 'no-deploy' })).done).toMatchObject({ first: true });
 		// Asked of the last deploy, with the commits that touched this page.
-		const gh = fakeGitHub({ onSite: false });
+		const gh = fakeSite({ onSite: false });
 		await run(gh).done;
 		expect(gh.calls.map((c) => c.path).find((p) => p.startsWith('/repos/acme/design/commits?'))).toContain(
 			`sha=${'d'.repeat(40)}&path=projects%2Fdemo%2Fprototypes%2Fv1-i2.html`,
@@ -109,17 +107,19 @@ describe('publishing', () => {
 	});
 
 	it('does not count it as the first time when it cannot tell, so nothing opens by mistake', async () => {
-		const gh = fakeGitHub();
-		const unsure = {
-			api: vi.fn(async (path: string, init?: never) =>
-				path.startsWith('/repos/acme/design/deployments?') ? Promise.reject(new Error('Forbidden')) : gh.api(path, init),
-			),
-		};
-		expect(await run(gh, { github: unsure }).done).toMatchObject({ first: false });
+		const gh = fakeSite(
+			{},
+			{
+				'/repos/acme/design/deployments?*': () => {
+					throw refusal(403);
+				},
+			},
+		);
+		expect(await run(gh).done).toMatchObject({ first: false });
 	});
 
 	it('goes ahead while the repository is public, and says so in its note', async () => {
-		const gh = fakeGitHub({ repoPrivate: false, sitePublic: true });
+		const gh = fakeSite({ repoPrivate: false, sitePublic: true });
 		const { done, log, pushRecords } = run(gh, { fetchAnonymously: async () => ({ status: 200 }) });
 		expect(await done).toEqual({ url: `${SITE}demo/v1/i2/`, public: true, first: false });
 		expect(pushRecords).toHaveBeenCalledOnce();
@@ -128,7 +128,7 @@ describe('publishing', () => {
 	});
 
 	it('has nowhere to go without a Pages site, and pushes nothing', async () => {
-		const gh = fakeGitHub({ pages: false });
+		const gh = fakeSite({ pages: false });
 		const { done, pushRecords } = run(gh);
 		await expect(done).rejects.toThrow(/no GitHub Pages site[\s\S]*No link/);
 		expect(pushRecords).not.toHaveBeenCalled();
@@ -136,13 +136,13 @@ describe('publishing', () => {
 	});
 
 	it('says plainly when a page it was told is private opens for anyone, and not to share it', async () => {
-		const { done, log } = run(fakeGitHub(), { fetchAnonymously: async () => ({ status: 200 }) });
+		const { done, log } = run(fakeSite(), { fetchAnonymously: async () => ({ status: 200 }) });
 		expect(await done).toMatchObject({ public: true });
 		expect(log.join('\n')).toMatch(/opens for anyone[\s\S]*Do not share/);
 	});
 
 	it('stops before deploying when the records cannot be pushed, and says why', async () => {
-		const gh = fakeGitHub();
+		const gh = fakeSite();
 		const { done } = run(gh, {
 			pushRecords: async () => ({ published: [], problems: [{ what: 'Project records', why: '2 changes outside the project records are waiting' }] }),
 		});
@@ -151,31 +151,31 @@ describe('publishing', () => {
 	});
 
 	it('says where to look when the deploy fails', async () => {
-		const { done } = run(fakeGitHub({ conclusion: 'failure' }));
+		const { done } = run(fakeSite({ conclusion: 'failure' }));
 		await expect(done).rejects.toThrow(/did not finish[\s\S]*run\/2/);
 	});
 
 	it('says the workflow is missing when GitHub has none to run', async () => {
-		const { done } = run(fakeGitHub({ workflow: false }));
+		const { done } = run(fakeSite({ workflow: false }));
 		await expect(done).rejects.toThrow(new RegExp(`${PUBLISH_WORKFLOW}[\\s\\S]*not on GitHub`));
 	});
 
 	it('refuses records on a branch the site is not built from, before pushing them', async () => {
-		const gh = fakeGitHub();
+		const gh = fakeSite();
 		const { done, pushRecords } = run(gh, { recordsBranch: 'noah/elsewhere' });
 		await expect(done).rejects.toThrow(/built from main[\s\S]*noah\/elsewhere/);
 		expect(pushRecords).not.toHaveBeenCalled();
 	});
 
 	it('asks where it is going before anything about this machine, and refuses a clone on no branch after it', async () => {
-		await expect(run(fakeGitHub({ pages: false }), { recordsBranch: '' }).done).rejects.toThrow(/no GitHub Pages site/);
-		const { done, pushRecords } = run(fakeGitHub(), { recordsBranch: '' });
+		await expect(run(fakeSite({ pages: false }), { recordsBranch: '' }).done).rejects.toThrow(/no GitHub Pages site/);
+		const { done, pushRecords } = run(fakeSite(), { recordsBranch: '' });
 		await expect(done).rejects.toThrow(/not on a branch/);
 		expect(pushRecords).not.toHaveBeenCalled();
 	});
 
 	it('refuses a name that is not a prototype', async () => {
-		const { done } = run(fakeGitHub(), { name: 'codebase' });
+		const { done } = run(fakeSite(), { name: 'codebase' });
 		await expect(done).rejects.toThrow(/not a prototype/);
 	});
 });
@@ -206,29 +206,26 @@ describe('whether an iteration is on its page', () => {
 		compare = 'ahead',
 		repoPrivate = true,
 		deployments = true,
-	} = {}) => ({
-		api: vi.fn(async (path: string) => {
-			if (path === '/repos/acme/design') return { private: repoPrivate, default_branch: 'main' };
-			if (path === '/repos/acme/design/pages') return { html_url: SITE, public: !repoPrivate };
-			if (path.startsWith('/repos/acme/design/deployments?'))
-				return deployments
-					? [
-							{ id: 7, sha: 'f'.repeat(40) },
-							{ id: 6, sha: deployed },
-						]
-					: [];
-			if (path === '/repos/acme/design/deployments/7/statuses?per_page=1') return [{ state: 'in_progress' }];
-			if (path === '/repos/acme/design/deployments/6/statuses?per_page=1') return [{ state: 'success' }];
-			if (path.startsWith('/repos/acme/design/commits?')) {
-				expect(path).toContain('path=projects%2Fdemo%2Fprototypes%2Fv1-i2.html');
-				expect(path).toContain('sha=main');
+	} = {}) =>
+		fakeGitHub({
+			'/repos/acme/design': { private: repoPrivate, default_branch: 'main' },
+			'/repos/acme/design/pages': { html_url: SITE, public: !repoPrivate },
+			'/repos/acme/design/deployments?*': deployments
+				? [
+						{ id: 7, sha: 'f'.repeat(40) },
+						{ id: 6, sha: deployed },
+					]
+				: [],
+			'/repos/acme/design/deployments/7/statuses?per_page=1': [{ state: 'in_progress' }],
+			'/repos/acme/design/deployments/6/statuses?per_page=1': [{ state: 'success' }],
+			'/repos/acme/design/commits?*': ({ query }: RouteCall) => {
+				expect(query.get('path')).toBe('projects/demo/prototypes/v1-i2.html');
+				expect(query.get('sha')).toBe('main');
 				return changed ? [{ sha: changed }] : [];
-			}
-			if (path.startsWith('/repos/acme/design/compare/')) return { status: compare };
-			throw new Error(`not faked: ${path}`);
-		}),
-	});
-	const status = (gh: { api: Fn }) => pageStatus(gh, REF, 'demo', 'v1-i2');
+			},
+			'/repos/acme/design/compare/*': { status: compare },
+		}).github;
+	const status = (gh: GitHubApi) => pageStatus(gh, REF, 'demo', 'v1-i2');
 
 	it('is published when the last deploy includes the last change to its page, with a link that names that deploy', async () => {
 		expect(await status(site())).toEqual({ state: 'published', url: `${SITE}demo/v1/i2/?v=ddddddd` });
@@ -242,18 +239,14 @@ describe('whether an iteration is on its page', () => {
 	});
 
 	it('has nothing to say without a site, or for something that is not a prototype', async () => {
-		const none = {
-			api: vi.fn(async (path: string) =>
-				path === '/repos/acme/design' ? { private: true } : Promise.reject(Object.assign(new Error('Not Found'), { status: 404 })),
-			),
-		};
+		const none = fakeGitHub({ '/repos/acme/design': { private: true }, '/repos/acme/design/*': notFound }).github;
 		expect(await pageStatus(none, REF, 'demo', 'v1-i2')).toEqual({ state: 'none' });
 		expect(await pageStatus(site(), REF, 'demo', 'codebase')).toEqual({ state: 'none' });
 	});
 });
 
 describe('unpublishing', () => {
-	const take = (gh: ReturnType<typeof fakeGitHub>, more: Partial<Parameters<typeof unpublish>[0]> = {}) => {
+	const take = (gh: ReturnType<typeof fakeSite>, more: Partial<Parameters<typeof unpublish>[0]> = {}) => {
 		const order: string[] = [];
 		const log: string[] = [];
 		const done = unpublish({
@@ -273,7 +266,7 @@ describe('unpublishing', () => {
 	};
 
 	it('removes the page, pushes that, deploys the site without it, and checks it is gone', async () => {
-		const gh = fakeGitHub({ repoPrivate: false, sitePublic: true });
+		const gh = fakeSite({ repoPrivate: false, sitePublic: true });
 		const { done, order, log } = take(gh);
 		expect(await done).toEqual({ url: `${SITE}demo/v1/i2/`, gone: true });
 		expect(order).toEqual(['removed', 'pushed']);
@@ -282,15 +275,15 @@ describe('unpublishing', () => {
 	});
 
 	it('says to ask for Pages to be switched off when the page still opens', async () => {
-		const { done, log } = take(fakeGitHub(), { fetchAnonymously: async () => ({ status: 200 }) });
+		const { done, log } = take(fakeSite(), { fetchAnonymously: async () => ({ status: 200 }) });
 		expect(await done).toMatchObject({ gone: false });
 		expect(log.join('\n')).toMatch(/still opens[\s\S]*switch Pages off/);
 	});
 
 	it('removes nothing when there is no site, or the records are on a branch the site is not built from', async () => {
 		for (const [gh, more] of [
-			[fakeGitHub({ pages: false }), {}],
-			[fakeGitHub(), { recordsBranch: 'noah/elsewhere' }],
+			[fakeSite({ pages: false }), {}],
+			[fakeSite(), { recordsBranch: 'noah/elsewhere' }],
 		] as const) {
 			const { done, order } = take(gh, more);
 			await expect(done).rejects.toThrow();
@@ -299,7 +292,7 @@ describe('unpublishing', () => {
 	});
 
 	it('says the page is still on the site when the records cannot be pushed', async () => {
-		const gh = fakeGitHub();
+		const gh = fakeSite();
 		const { done } = take(gh, {
 			pushRecords: async () => ({ published: [], problems: [{ what: 'Project records', why: 'Could not reach GitHub.' }] }),
 		});
@@ -315,20 +308,15 @@ describe('what GitHub has that the site does not have yet', () => {
 		runs = [{ status: 'completed' }] as { status: string }[],
 		deployed = true,
 		pages = true,
-	} = {}) => ({
-		api: vi.fn(async (path: string) => {
-			if (path === '/repos/acme/design') return { private: true, default_branch: 'main' };
-			if (path === '/repos/acme/design/pages') {
-				if (!pages) throw Object.assign(new Error('Not Found'), { status: 404 });
-				return { html_url: SITE, public: false };
-			}
-			if (path === WORKFLOW_RUNS) return { workflow_runs: runs };
-			if (path.startsWith('/repos/acme/design/deployments?')) return deployed ? [{ id: 6, sha: 'd'.repeat(40) }] : [];
-			if (path === '/repos/acme/design/deployments/6/statuses?per_page=1') return [{ state: 'success' }];
-			if (path === `/repos/acme/design/compare/${'d'.repeat(40)}...main`) return { files };
-			throw new Error(`not faked: ${path}`);
-		}),
-	});
+	} = {}) =>
+		fakeGitHub({
+			'/repos/acme/design': { private: true, default_branch: 'main' },
+			'/repos/acme/design/pages': pages ? { html_url: SITE, public: false } : notFound,
+			[WORKFLOW_RUNS]: { workflow_runs: runs },
+			'/repos/acme/design/deployments?*': deployed ? [{ id: 6, sha: 'd'.repeat(40) }] : [],
+			'/repos/acme/design/deployments/6/statuses?per_page=1': [{ state: 'success' }],
+			[`/repos/acme/design/compare/${'d'.repeat(40)}...main`]: { files },
+		}).github;
 
 	it('is found by what changed since the last deploy: one call, whichever page it was', async () => {
 		expect(await siteBehind(github(), REF)).toEqual({ kind: 'page', projectId: 'demo', name: 'v1-i2' });
@@ -386,20 +374,22 @@ describe('what GitHub has that the site does not have yet', () => {
 
 describe('when GitHub will not start the deploy', () => {
 	it('says what the app is missing, in words that can be acted on, when its permission is refused', async () => {
-		const gh = fakeGitHub();
-		const refuse = vi.fn(async (path: string, init?: { method?: string; body?: unknown }) =>
-			path.endsWith('/dispatches')
-				? Promise.reject(Object.assign(new Error('Resource not accessible by integration'), { status: 403 }))
-				: gh.api(path, init as never),
+		const gh = fakeSite(
+			{},
+			{
+				[`/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/dispatches`]: () => {
+					throw refusal(403, 'Resource not accessible by integration');
+				},
+			},
 		);
-		const { done } = run(gh, { github: { api: refuse } });
+		const { done } = run(gh);
 		await expect(done).rejects.toThrow(/DSNR's GitHub App is not allowed to start the deploy[\s\S]*Actions: read and write/);
 	});
 });
 
 describe('deploying the site with no page to name', () => {
 	it('pushes the records, deploys, and waits, as publishing does', async () => {
-		const gh = fakeGitHub();
+		const gh = fakeSite();
 		const pushRecords = vi.fn(async () => ({ published: [], problems: [] }));
 		await redeploySite({ github: { api: gh.api }, ref: REF, recordsBranch: 'main', pushRecords, sleep: async () => undefined });
 		expect(pushRecords).toHaveBeenCalledOnce();
@@ -410,7 +400,7 @@ describe('deploying the site with no page to name', () => {
 	});
 
 	it('stops where publishing does: no site, the wrong branch, a failed deploy', async () => {
-		const input = (gh: ReturnType<typeof fakeGitHub>, more = {}) => ({
+		const input = (gh: ReturnType<typeof fakeSite>, more = {}) => ({
 			github: { api: gh.api },
 			ref: REF,
 			recordsBranch: 'main',
@@ -418,8 +408,8 @@ describe('deploying the site with no page to name', () => {
 			sleep: async () => undefined,
 			...more,
 		});
-		await expect(redeploySite(input(fakeGitHub({ pages: false })))).rejects.toThrow(/no GitHub Pages site/);
-		await expect(redeploySite(input(fakeGitHub(), { recordsBranch: 'noah/elsewhere' }))).rejects.toThrow(/built from main/);
-		await expect(redeploySite(input(fakeGitHub({ conclusion: 'failure' })))).rejects.toThrow(/did not finish/);
+		await expect(redeploySite(input(fakeSite({ pages: false })))).rejects.toThrow(/no GitHub Pages site/);
+		await expect(redeploySite(input(fakeSite(), { recordsBranch: 'noah/elsewhere' }))).rejects.toThrow(/built from main/);
+		await expect(redeploySite(input(fakeSite({ conclusion: 'failure' })))).rejects.toThrow(/did not finish/);
 	});
 });

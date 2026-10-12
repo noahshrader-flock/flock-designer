@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { gitHubRepoOf, mergeRepositories, originOf, reachableRepositories, visibleRepositories } from '../src/main/services/repositories';
+import { type RouteCall, fakeGitHub } from './fakes/github';
 
 describe('gitHubRepoOf', () => {
 	it('reads owner/repo from each form git writes a GitHub remote in', () => {
@@ -56,11 +57,13 @@ describe('visibleRepositories', () => {
 	const page = (n: number, count: number) => Array.from({ length: count }, (_, i) => ({ full_name: `o/r${n}-${i}` }));
 
 	it('reads every page GitHub has, up to the first that is not full, in order', async () => {
-		const api = vi.fn(async (path: string) => {
-			const n = Number(/page=(\d+)$/.exec(path)?.[1]);
-			return n <= 2 ? page(n, 100) : n === 3 ? page(3, 3) : page(n, 100);
+		const { github, api } = fakeGitHub({
+			'/user/repos*': ({ query }: RouteCall) => {
+				const n = Number(query.get('page'));
+				return n <= 2 ? page(n, 100) : n === 3 ? page(3, 3) : page(n, 100);
+			},
 		});
-		const names = await visibleRepositories({ api } as never);
+		const names = await visibleRepositories(github);
 		expect(names).toHaveLength(203);
 		expect(names[0]).toBe('o/r1-0');
 		expect(names.at(-1)).toBe('o/r3-2');
@@ -68,30 +71,31 @@ describe('visibleRepositories', () => {
 	});
 
 	it('asks for one page alone when it is not full, and for the rest at once when it is', async () => {
-		const short = vi.fn(async () => page(1, 3));
-		expect(await visibleRepositories({ api: short } as never)).toHaveLength(3);
-		expect(short).toHaveBeenCalledTimes(1);
+		const short = fakeGitHub({ '/user/repos*': page(1, 3) });
+		expect(await visibleRepositories(short.github)).toHaveLength(3);
+		expect(short.calls).toHaveLength(1);
 		let running = 0;
 		let most = 0;
-		const full = vi.fn(async (path: string) => {
-			running++;
-			most = Math.max(most, running);
-			await new Promise((r) => setTimeout(r, 5));
-			running--;
-			return path.endsWith('page=1') ? page(1, 100) : page(2, 0);
+		const full = fakeGitHub({
+			'/user/repos*': async ({ query }: RouteCall) => {
+				running++;
+				most = Math.max(most, running);
+				await new Promise((r) => setTimeout(r, 5));
+				running--;
+				return query.get('page') === '1' ? page(1, 100) : page(2, 0);
+			},
 		});
-		await visibleRepositories({ api: full } as never);
+		await visibleRepositories(full.github);
 		// After the first, the other nine were asked together, not one after another.
-		expect(full).toHaveBeenCalledTimes(10);
+		expect(full.calls).toHaveLength(10);
 		expect(most).toBe(9);
 	});
 });
 
 describe('reachableRepositories', () => {
 	/** A GitHub sign-in that lists `names`, signed in as `login`. */
-	const listing = (names: string[], login = 'noah') => ({
-		api: vi.fn(async (path: string) => (path === '/user' ? { login } : names.map((full_name) => ({ full_name })))),
-	});
+	const listing = (names: string[], login = 'noah') =>
+		fakeGitHub({ '/user': { login }, '/user/repos*': names.map((full_name) => ({ full_name })) }).github;
 
 	it('is every repository the person’s account reaches: their own GitHub sign-in’s, then any the app’s sees that it did not', async () => {
 		const app = listing(['flocksafety/flock-designer', 'flocksafety/flock-coke']);
@@ -116,7 +120,11 @@ describe('reachableRepositories', () => {
 	});
 
 	it('is the app’s list alone when the person’s GitHub command line is missing or signed out, or nobody is signed in to the app', async () => {
-		const missing = { api: vi.fn(async () => Promise.reject(new Error('gh: command not found'))) };
+		const missing = fakeGitHub({
+			'*': () => {
+				throw new Error('gh: command not found');
+			},
+		}).github;
 		// And says so: the list reaches only what the app's GitHub App is installed on.
 		const app = { names: ['flocksafety/flock-coke'], reach: 'app' };
 		expect(await reachableRepositories(listing(['flocksafety/flock-coke']), missing, 'noah')).toEqual(app);

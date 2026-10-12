@@ -1,15 +1,15 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project } from '../src/shared/contract';
 import { DesignRepo } from '../src/main/services/designRepo';
-import type { GitHubSession } from '../src/main/services/githubSession';
 import { readFolderProjects } from '../src/main/services/localProjects';
 import { assignFolder, recordPrototype, type RecordStore } from '../src/main/services/prototype';
 import { briefBody, briefFolder, firstHeading, folderName, foldersOf, inFolder, sameFolder, shownRecord, withFolder } from '../src/shared/brief';
 import { projectDir, projectPath } from '../src/shared/designPaths';
 import { mergeProjects } from '../src/shared/projectList';
+import { fakeGitHub } from './fakes/github';
 import { memoryStore } from './fixtures';
 
 /**
@@ -118,25 +118,18 @@ describe('reading a project’s folder', () => {
 
 	it('is read from GitHub’s copy of the brief, in the same request as its title', async () => {
 		const b64 = (s: string) => Buffer.from(s, 'utf8').toString('base64');
-		const routes: Record<string, unknown> = {
-			'/repos/acme/design/contents/projects/alpha/brief.md': { content: b64(FILED) },
-			'/repos/acme/design/contents/projects/alpha': [{ type: 'file', name: 'brief.md' }],
-			'/repos/acme/design/contents/projects/beta': [],
-			'/repos/acme/design/contents/projects': [
+		const { github, api } = fakeGitHub({
+			'/repos/acme/design/contents/projects/alpha/brief.md*': { content: b64(FILED) },
+			'/repos/acme/design/contents/projects/alpha*': [{ type: 'file', name: 'brief.md' }],
+			'/repos/acme/design/contents/projects/beta*': [],
+			'/repos/acme/design/contents/projects*': [
 				{ type: 'dir', name: 'alpha' },
 				{ type: 'dir', name: 'beta' },
 			],
-			'/repos/acme/design/commits': [],
-			'/repos/acme/design/issues': [],
-		};
-		const api = vi.fn(async (path: string) => {
-			const key = Object.keys(routes)
-				.filter((r) => path.startsWith(r))
-				.sort((a, b) => b.length - a.length)[0];
-			if (!key) throw new Error(`no stub for ${path}`);
-			return routes[key];
+			'/repos/acme/design/commits*': [],
+			'/repos/acme/design/issues*': [],
 		});
-		const list = await new DesignRepo({ api } as unknown as GitHubSession, { owner: 'acme', repo: 'design' }).listProjects();
+		const list = await new DesignRepo(github, { owner: 'acme', repo: 'design' }).listProjects();
 		const byId = new Map(list.map((p) => [p.id, p]));
 		expect(byId.get('alpha')).toMatchObject({ title: 'Alert history', folder: 'Admin' });
 		expect(byId.get('beta')).toMatchObject({ title: 'beta', folder: null });
