@@ -43,18 +43,33 @@ const show = async (answer: unknown, opened: unknown = {}) => {
 	return app;
 };
 const control = () => document.querySelector('button') as HTMLButtonElement;
+const dialog = () => document.querySelector<HTMLElement>('[data-slot="dialog-content"]');
 afterEach(async () => {
 	if (current) await unmountAll(current.root);
 	current = null;
 });
 
 describe('a prototype’s accessibility', () => {
-	it('says what the automated check found, in the words used everywhere, and lists it with what it was made with', async () => {
+	it('is a ghost button with the accessibility icon and how many issues the automated check found, as a component’s card has', async () => {
 		await show(ok(RESULT));
-		expect(control().textContent).toBe('1 automated issue, 1 needs a person');
+		expect(control().getAttribute('data-variant')).toBe('ghost');
+		expect(control().querySelector('.lucide-accessibility')).not.toBeNull();
+		expect(control().textContent).toBe('1');
+		expect(control().getAttribute('data-accessibility')).toBe('1');
 		expect(control().className).toContain('text-warning');
+		// The words are for a screen reader and for hover: the same ones the card's badge uses everywhere.
+		expect(control().getAttribute('aria-label')).toBe('1 automated issue, 1 needs a person');
+		expect(control().title).toBe('1 automated issue, 1 needs a person');
+	});
+
+	it('opens what the check found in a modal, with what it was made with, and not before it is pressed', async () => {
+		await show(ok(RESULT));
+		expect(dialog()).toBeNull();
 		await press(control());
-		const list = document.body.textContent ?? '';
+		expect(dialog()).not.toBeNull();
+		expect(dialog()!.querySelector('[data-slot="dialog-title"]')!.textContent).toBe('Accessibility');
+		const list = dialog()!.textContent ?? '';
+		expect(list).toContain('1 automated issue, 1 needs a person');
 		expect(list).toContain('Checked with axe-core 4.14.0 at WCAG 2.0 Level A, in default, empty.');
 		expect(list).toContain('this is not a pass');
 		expect(list).toContain('Images must have alternate text');
@@ -63,19 +78,40 @@ describe('a prototype’s accessibility', () => {
 		expect(document.querySelector('a[href="https://dequeuniversity.com/rules/axe/4.14/image-alt"]')?.getAttribute('target')).toBe('_blank');
 	});
 
+	it('closes again, with its own close button', async () => {
+		await show(ok(RESULT));
+		await press(control());
+		await press(dialog()!.querySelector<HTMLElement>('[data-slot="dialog-close"]')!);
+		await settle();
+		expect(dialog()).toBeNull();
+	});
+
 	it('never says a pass, at most that automated checks found nothing, and says what no check covers', async () => {
 		await show(ok({ ...RESULT, violations: [], incomplete: [], notAutomated: ['WCAG 2.2 Level A'] }));
-		expect(control().textContent).toBe('No issues found by automated checks');
+		expect(control().textContent).toBe('0');
+		expect(control().getAttribute('aria-label')).toBe('No issues found by automated checks');
 		expect(control().className).not.toContain('text-warning');
 		await press(control());
-		expect(document.body.textContent).toContain('No automated check covers WCAG 2.2 Level A');
+		expect(dialog()!.textContent).toContain('No issues found by automated checks');
+		expect(dialog()!.textContent).toContain('No automated check covers WCAG 2.2 Level A');
 		expect(document.body.textContent).not.toMatch(/\bpasses\b|compliant|conforms/i);
 	});
 
-	it('says it was not checked, and why, when the check could not run', async () => {
+	it('is, while it is being checked, a button that is off with a spinner, named for what it is doing', async () => {
+		await show(new Promise(() => undefined));
+		expect(control().disabled).toBe(true);
+		expect(control().querySelector('[data-slot="spinner"], .animate-spin')).not.toBeNull();
+		expect(control().getAttribute('aria-label')).toBe('Checking accessibility…');
+		expect(control().textContent).toBe('');
+	});
+
+	it('says it was not checked, and why, when the check could not run, with the icon and nothing to open', async () => {
 		await show(fail('The page did not load in its empty state, so it could not be checked.'));
-		expect(control().textContent).toBe('Accessibility not checked');
+		expect(control().disabled).toBe(true);
+		expect(control().querySelector('.lucide-accessibility')).not.toBeNull();
+		expect(control().getAttribute('aria-label')).toBe('Accessibility not checked');
 		expect(control().title).toBe('The page did not load in its empty state, so it could not be checked.');
+		expect(control().textContent).toBe('');
 	});
 
 	it('is not asked for before the page is open', async () => {

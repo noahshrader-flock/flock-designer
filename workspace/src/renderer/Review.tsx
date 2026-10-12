@@ -411,6 +411,10 @@ export const Review = ({
 						{prototype ? prototypePagePath(project.id, iteration.name) : iteration.branch}
 					</TooltipContent>
 				</Tooltip>
+				{/* What the automated accessibility check found on the page, each time it is opened (T7): beside where it is saved. */}
+				{kind === 'prototype' && (
+					<AccessibilityStatus projectId={project.id} name={iteration.name} opened={local.phase.kind === 'running' ? local.phase : null} />
+				)}
 				<div className="grow" />
 				{/* What you can do here, evenly spaced: tighter than the toolbar's own gap, so it reads as one group. */}
 				<div className="flex items-center gap-2">
@@ -454,10 +458,6 @@ export const Review = ({
 					>
 						<StateSwitcher states={states} current={shownState} onSelect={setShownState} />
 					</IterationSwitcher>
-					{/* What the automated accessibility check found on the page, each time it is opened (T7). */}
-					{kind === 'prototype' && (
-						<AccessibilityStatus projectId={project.id} name={iteration.name} opened={local.phase.kind === 'running' ? local.phase : null} />
-					)}
 					<CommentControl comments={comments} listOpen={sidebarOpen} onToggleList={() => setSidebarOpen((o) => !o)} disabled={!opened} />
 					{/* Codebase work's next step, so it is the one filled button. */}
 					{checkout && codebase && (

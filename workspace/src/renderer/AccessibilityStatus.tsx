@@ -4,7 +4,7 @@ import { countsOf, foundIn, summaryOf } from '../shared/accessibility';
 import { plural } from '../shared/plural';
 import type { AccessibilityIssue, AccessibilityResult } from '../shared/contract';
 import { Button } from './ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Spinner } from './ui/spinner';
 
 type Check = { state: 'checking' } | { state: 'ready'; result: AccessibilityResult } | { state: 'failed'; error: string };
@@ -83,39 +83,54 @@ export const AccessibilityFindings = ({ result }: { result: AccessibilityResult 
 );
 
 /**
- * In a prototype's toolbar (T7 of the design system plan, part B): what the automated check found, in the same words
- * everywhere ("3 automated issues, 2 need a person"), and what it was made with. Never a pass: at most, no issues found
- * by automated checks, and what is left for a person is said.
+ * In a prototype's toolbar, at the right of the icon that says where it is saved (T7 of the design system plan, part B):
+ * a ghost button with the accessibility icon and how many issues the automated check found, as a component's card has it.
+ * Pressing it opens what the check found and what it was made with, in a modal. Its words ("3 automated issues, 2 need a
+ * person") are the same everywhere and are its name for a screen reader and on hover. Never a pass: at most, no issues
+ * found by automated checks, and what is left for a person is said.
  */
 export const AccessibilityStatus = ({ projectId, name, opened }: { projectId: string; name: string; opened: unknown }) => {
 	const check = useAccessibility(projectId, name, opened);
+	const [open, setOpen] = useState(false);
 	if (check === null) return null;
 	if (check.state === 'checking')
 		return (
-			<Button variant="ghost" disabled>
+			<Button variant="ghost" size="icon" disabled aria-label="Checking accessibility…" title="Checking accessibility…">
 				<Spinner />
-				Checking accessibility…
 			</Button>
 		);
 	if (check.state === 'failed')
 		return (
-			<Button variant="ghost" disabled title={check.error}>
+			<Button variant="ghost" size="icon" disabled aria-label="Accessibility not checked" title={check.error}>
 				<AccessibilityIcon />
-				Accessibility not checked
 			</Button>
 		);
 	const { result } = check;
+	const summary = summaryOf(countsOf(result));
 	return (
-		<Popover>
-			<PopoverTrigger asChild>
-				<Button variant="ghost" data-accessibility={result.violations.length} className={result.violations.length ? 'text-warning' : undefined}>
-					<AccessibilityIcon />
-					{summaryOf(countsOf(result))}
-				</Button>
-			</PopoverTrigger>
-			<PopoverContent align="end" className="flex max-h-[min(70vh,560px)] w-[420px] flex-col gap-3 overflow-y-auto">
-				<AccessibilityFindings result={result} />
-			</PopoverContent>
-		</Popover>
+		<>
+			<Button
+				variant="ghost"
+				aria-label={summary}
+				title={summary}
+				data-accessibility={result.violations.length}
+				className={result.violations.length ? 'text-warning' : undefined}
+				onClick={() => setOpen(true)}
+			>
+				<AccessibilityIcon aria-hidden />
+				{result.violations.length}
+			</Button>
+			<Dialog open={open} onOpenChange={setOpen}>
+				<DialogContent className="sm:max-w-xl">
+					<DialogHeader>
+						<DialogTitle>Accessibility</DialogTitle>
+						<DialogDescription>{summary}</DialogDescription>
+					</DialogHeader>
+					<DialogBody className="flex flex-col gap-3">
+						<AccessibilityFindings result={result} />
+					</DialogBody>
+				</DialogContent>
+			</Dialog>
+		</>
 	);
 };

@@ -649,3 +649,19 @@ describe('Address', () => {
 		expect((await openMenu(button('Comment actions', cardFor('Done')))).map((i) => i.textContent?.trim())).toEqual(['Reopen', 'Delete']);
 	});
 });
+
+describe('its accessibility', () => {
+	/** The button in the toolbar that shows what the automated check found, and the icon that says where the work is saved. */
+	const accessibility = () => document.querySelector<HTMLElement>('[data-accessibility]');
+	const saved = () => document.querySelector<HTMLElement>('[aria-label^="Saved at"]');
+
+	it('is at the immediate right of the icon that says where the prototype is saved, not with the controls at the right', async () => {
+		const app = fakeApp({ checkAccessibility: async () => ok({ ran: { axe: '4.14.0', tags: ['wcag2a'], target: 'WCAG 2.0 Level A', declared: true, at: '2026-10-10T00:00:00.000Z', states: ['default'] }, violations: [], incomplete: [], notAutomated: [] }) });
+		await open(app);
+		await settle();
+		expect(accessibility()).not.toBeNull();
+		expect(saved()!.nextElementSibling).toBe(accessibility());
+		// The group at the right has no accessibility control in it.
+		expect(document.querySelector('.grow')!.nextElementSibling!.querySelector('[data-accessibility]')).toBeNull();
+	});
+});
