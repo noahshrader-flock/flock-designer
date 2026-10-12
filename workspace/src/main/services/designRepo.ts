@@ -1,5 +1,6 @@
 import type { CommentAnchor, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
 import { HostError, hostErrorKind } from './hostError';
+import { readPages } from './paging';
 import { isBot, mergePeople } from '../../shared/people';
 import { fromBrief } from '../../shared/brief';
 import { projectDir, projectPath } from '../../shared/designPaths';
@@ -230,7 +231,9 @@ export class DesignRepo {
 
 	/** Review issues keyed by the branch they carry comments for. */
 	private async listReviewIssues(): Promise<Map<string, ReviewThread>> {
-		const issues = (await this.allPages(`${this.base}/issues?state=all&labels=${encodeURIComponent(ITERATION_LABEL)}`, 10)).map(asRecord);
+		const issues = (
+			await readPages(this.session, `${this.base}/issues?state=all&labels=${encodeURIComponent(ITERATION_LABEL)}`, { maxPages: 10 })
+		).map(asRecord);
 
 		// More than one thread can exist for a branch (the listing lag above made
 		// some). All of them are read, the oldest is written to, and none is lost.
@@ -308,21 +311,6 @@ export class DesignRepo {
 		return created.number;
 	}
 
-	/**
-	 * Every item of a list GitHub pages, 100 at a time. The first version read one page and stopped,
-	 * so the 101st comment on a thread (or the 101st review thread) silently never appeared. A limit
-	 * stops a runaway list; reaching it is said aloud rather than hidden.
-	 */
-	private async allPages(path: string, maxPages: number): Promise<unknown[]> {
-		const items: unknown[] = [];
-		for (let page = 1; page <= maxPages; page++) {
-			const batch = asArray(await this.session.api(`${path}${path.includes('?') ? '&' : '?'}per_page=100&page=${page}`));
-			items.push(...batch);
-			if (batch.length < 100) return items;
-		}
-		throw new Error(`There are more than ${maxPages * 100} of these on GitHub, which is more than this app reads.`);
-	}
-
 	/** One GitHub comment as the app knows it. The one place a comment's body is taken apart. */
 	private toComment(raw: Record<string, unknown>): ReviewComment {
 		const body = String(raw.body ?? '');
@@ -349,7 +337,7 @@ export class DesignRepo {
 	async readComments(branch: string): Promise<ReviewComment[]> {
 		const issue = (await this.listReviewIssues()).get(branch);
 		if (!issue) return [];
-		const threads = await Promise.all(issue.numbers.map((n) => this.allPages(`${this.base}/issues/${n}/comments`, 20)));
+		const threads = await Promise.all(issue.numbers.map((n) => readPages(this.session, `${this.base}/issues/${n}/comments`, { maxPages: 20 })));
 		return threads
 			.flat()
 			.map(asRecord)

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import type { Repository, RepositoryReach } from '../../shared/contract';
 import type { GitHubSession } from './githubSession';
+import { readPages } from './paging';
 
 /**
  * The repositories new work can start in: every one the signed-in person can see on GitHub, matched to its
@@ -52,21 +53,12 @@ export const mergeRepositories = (remote: string[], clones: { root: string; repo
  * be a second or more (through GitHub's command line, a process each), and read up to the first that is not full.
  */
 export const visibleRepositories = async (session: Pick<GitHubSession, 'api'>, maxPages = 10): Promise<string[]> => {
-	const page = async (n: number): Promise<string[]> => {
-		const batch = await session.api(`/user/repos?affiliation=owner,collaborator,organization_member&sort=pushed&per_page=100&page=${n}`);
-		return (Array.isArray(batch) ? batch : [])
-			.map((r) => (r as { full_name?: unknown }).full_name)
-			.filter((name): name is string => typeof name === 'string');
-	};
-	const first = await page(1);
-	if (first.length < 100 || maxPages === 1) return first;
-	const rest = await Promise.all(Array.from({ length: maxPages - 1 }, (_, i) => page(i + 2)));
-	const names = [...first];
-	for (const batch of rest) {
-		names.push(...batch);
-		if (batch.length < 100) break;
-	}
-	return names;
+	const repos = await readPages(session, '/user/repos?affiliation=owner,collaborator,organization_member&sort=pushed', {
+		maxPages,
+		together: true,
+		atMost: 'stop',
+	});
+	return repos.map((r) => (r as { full_name?: unknown }).full_name).filter((name): name is string => typeof name === 'string');
 };
 
 /**

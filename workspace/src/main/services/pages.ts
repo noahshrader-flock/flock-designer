@@ -101,7 +101,7 @@ export const pageStatus = async (github: GitHubApi, ref: RepoRef, projectId: str
  */
 const SITE_SOURCES = [
 	/^workspace\/src\/(site|viewer|renderer|shared)\//,
-	/^workspace\/src\/main\/services\/(designRepo|github|hostError)\.ts$/,
+	/^workspace\/src\/main\/services\/(designRepo|github|hostError|paging)\.ts$/,
 	/^workspace\/src\/cli\/dsnr\.ts$/,
 	/^workspace\/(bin\/|viewer\.vite\.config\.ts$|package-lock\.json$)/,
 	/^\.github\/workflows\/publish-prototypes\.yml$/,
