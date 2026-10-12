@@ -67,10 +67,11 @@ import { type PrototypeChange, localPrototypeFile, prototypeWork } from './servi
 import { type CoverDeps, type DrawCover } from './services/projectCovers';
 
 import { pageStatus, publish, recordsFrom, redeploySite, siteBehind } from './services/pages';
-import { type RecordStore, cloneStore, prototypeReadable, type PrototypeSources } from './services/prototype';
+import { prototypeReadable, type PrototypeSources } from './services/prototype';
 import type { CheckoutMemory } from './services/checkoutMemory';
 import { errorText } from '../shared/result';
 import { coalescingByKey, singleFlight } from './services/concurrency';
+import { designStore } from './services/designStore';
 import { registerCheckout } from './ipc/checkout';
 import { registerClone } from './ipc/clone';
 import { registerDesignSystem } from './ipc/designSystem';
@@ -569,28 +570,11 @@ export const ipcDeps = ({
 		const recordsRoot = root === null ? null : recordsRootFor(root);
 		return recordsRoot === null ? null : dirname(recordsRoot);
 	};
-	const recordStore = (): RecordStore => {
-		const clone = designClone();
-		return clone !== null
-			? cloneStore(clone, () => void publisher.publish(true))
-			: {
-					read: (path) => designRepo.readFile(path),
-					readBytes: (path) => designRepo.readBytes(path),
-					has: (path) => designRepo.hasFile(path),
-					write: (path, content, message) => designRepo.writeFile(path, content, message),
-				};
-	};
-	/**
-	 * A file from the design repository: through the record store, and from GitHub when the clone here does not have
-	 * it yet (a colleague's work not pulled). Without a clone the store already is GitHub, so it is asked once. As text,
-	 * or as the bytes of a picture.
-	 */
-	const fromDesignRepo = async <T>(here: T | null, there: () => Promise<T | null>): Promise<T | null> =>
-		here !== null || designClone() === null ? here : there();
-	const readDesignFile = async (path: string): Promise<string | null> =>
-		fromDesignRepo(await recordStore().read(path), () => designRepo.readFile(path));
-	const readDesignBytes = async (path: string): Promise<Buffer | null> =>
-		fromDesignRepo(await recordStore().readBytes(path), () => designRepo.readBytes(path));
+	// The design repository's files: the clone here, written then published, or GitHub (`designStore`).
+	const store = designStore({ clone: designClone, designRepo, onWrite: () => void publisher.publish(true) });
+	const recordStore = store.records;
+	const readDesignFile = store.readFile;
+	const readDesignBytes = store.readBytes;
 	/** A shared skill, which the agent's task is built from: read as the dsnr command reads it. */
 	const readSkillText = (path: string): Promise<string> => work.skill(path);
 	/**
@@ -848,7 +832,6 @@ export const ipcDeps = ({
 		exportComments,
 		designClone,
 		recordStore,
-		fromDesignRepo,
 		readDesignFile,
 		readDesignBytes,
 		readSkillText,

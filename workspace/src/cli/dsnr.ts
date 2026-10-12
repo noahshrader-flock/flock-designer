@@ -14,7 +14,8 @@ import { recordsRootFor } from '../main/services/discovery';
 import { assertUsableProjectId } from '../main/services/iterations';
 import { readCheckout, git } from '../main/services/git';
 import { prototypeBuildTask } from '../main/services/agentTasks';
-import { BUILD_SKILL, assertPrototypeName, cloneStore } from '../main/services/prototype';
+import { designStore } from '../main/services/designStore';
+import { BUILD_SKILL, assertPrototypeName } from '../main/services/prototype';
 import { shellLine } from '../main/services/prototypeBundle';
 import { localPrototypeFile, prototypeWork, whereTheChangeGoes } from '../main/services/prototypeWork';
 import { publish, recordsFrom, unpublish } from '../main/services/pages';
@@ -274,12 +275,13 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		const records = recordsRootFor(root);
 		if (records === null) throw new Error(`There is no design repository beside ${root}. Clone flock-designer into the same folder.`);
 		const designRoot = dirname(records);
-		const store = cloneStore(designRoot, () => undefined);
+		// The clone alone: publishing is its own command here, and there is no app sign-in to read GitHub with.
+		const store = designStore({ clone: () => designRoot, designRepo: null, onWrite: () => undefined });
 		const work = prototypeWork({
 			prototypesRoot: deps.prototypesRoot,
 			productRoot: () => root,
-			store: () => store,
-			readDesignFile: (path) => store.read(path),
+			store: store.records,
+			readDesignFile: store.readFile,
 			esbuild: () => deps.esbuild,
 		});
 		const saveCommand = (name: string) => shellLine([...deps.self, 'save-prototype', '--project', projectId, '--name', name, '--product', root]);
@@ -361,7 +363,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			return 0;
 		}
 
-		const brief = await store.read(projectPath(projectId, 'brief.md'));
+		const brief = await store.readFile(projectPath(projectId, 'brief.md'));
 		const title = values.title ?? (brief === null ? null : firstHeading(brief));
 		if (!title) throw new UsageError(`${projectId} is a new project, so it needs a title: --title.`);
 		const branch = values.from ?? (await readCheckout(root)).branch;
