@@ -1,3 +1,6 @@
+---
+folder: Admin
+---
 # Admin Usage
 
 Add a new tab called "Usage" to the Organization page, after the last existing tab in the tab bar.
