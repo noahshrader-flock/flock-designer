@@ -1,64 +1,41 @@
 import type { BrowserWindow } from 'electron';
-import { asRecord } from '../shared/json';
-import { type Check, arg, emit, handle } from './handle';
+
+import { type Check, arg, emit } from './handle';
 import type { Ports } from './ports';
 import { randomUUID } from 'node:crypto';
-import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, join, sep } from 'node:path';
 import {
 	type AccessibilityResult,
 	type Checkout,
-	type CheckoutSuggestion,
-	type BuildInClaude,
 	type ClonePlan,
-	type MarkerRequest,
-	PAGE_HOLD_REASONS,
-	type PageHoldReason,
-	type MoveToCodePlan,
-	type DesignSystemConnection,
-	type OpenedPrototype,
 	type Person,
 	type PageStatus,
 	type PrototypeAddressed,
 	type PrototypeReadiness,
-	type Project,
-	type RepositoryList,
 	type PublishStatus,
 	type ReviewComment,
 } from '../shared/contract';
-import { type Appearance, isAppearance } from '../shared/appearance';
-import { AGENT_BUSY, type AgentExtras, AgentRunner, agentReadiness } from './services/agent';
-import { SessionMemory, resumeCommand, startCommand } from './services/editor';
-import { type CheckoutParts, codebaseTask, handoffTask, moveToCodeTask, prototypeAddressTask, prototypeBuildTask } from './services/agentTasks';
-import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, commandLine } from './services/engineeringHandoff';
-import { lastVerdict } from '../shared/handoff';
-import { type ShareRunner, previewIsUp, pullRequestText } from './services/share';
-import { buildContextReceipt } from './services/contextReceipt';
-import { DESCRIPTOR_PATH, designSystemCheckout, findCommand, readDescriptor, type WorkspaceDescriptor } from './services/descriptor';
-import {
-	branchCommit,
-	branchExists,
-	branchesWithFile,
-	changedSince,
-	checkoutBranch,
-	ensureLocalBranch,
-	hasFileAt,
-	headCommit,
-	originUrl,
-	isRepository,
-	readCheckout,
-	recentBranches,
-} from './services/git';
-import { codebaseBranchFor, continueIteration, createIteration, readIterations, recordPreview, recordedIteration } from './services/iterations';
+import { type Appearance } from '../shared/appearance';
+import { AGENT_BUSY, type AgentExtras, AgentRunner } from './services/agent';
+import { SessionMemory } from './services/editor';
+import { type CheckoutParts } from './services/agentTasks';
+import { commandLine } from './services/engineeringHandoff';
+
+import { type ShareRunner } from './services/share';
+
+import { DESCRIPTOR_PATH, designSystemCheckout, readDescriptor, type WorkspaceDescriptor } from './services/descriptor';
+import { branchExists, branchesWithFile, checkoutBranch, ensureLocalBranch, hasFileAt, isRepository, readCheckout } from './services/git';
+import { codebaseBranchFor, continueIteration, createIteration, readIterations, recordedIteration } from './services/iterations';
 import { type Cloned, Cloner, type GitProgress, notClonedOver } from './services/clone';
 import { INSTALL_COMMAND, Installer } from './services/install';
 import { DesignLibrary } from './services/designLibrary';
 import { DesignSystemsMemory } from './services/designSystems';
 import { ProfileNames } from './services/profileNames';
 import { StoryPreviews } from './services/storyPreviews';
-import { tokenEditsOf } from './services/tokenEdits';
-import { A11Y_COMMAND, fixRequest, productTarget, taskAccessibility } from './services/accessibilityBrief';
+
+import { A11Y_COMMAND, productTarget, taskAccessibility } from './services/accessibilityBrief';
 import { type CheckPage, accessibilityOf } from './services/accessibilityCheck';
 import { TokenBranches } from './services/tokenBranches';
 import { NEEDS_GH, VoiceAndToneFile } from './services/voiceAndTone';
@@ -67,57 +44,42 @@ import { ComponentPictures } from './services/componentPictures';
 import { AppearanceMemory } from './services/appearance';
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
-import { gitHubRepoOf, listedAs, mergeRepositories, originOf, reachableRepositories } from './services/repositories';
-import { classify, readBranchProjects } from './services/branchProjects';
+import { listedAs, reachableRepositories } from './services/repositories';
+import { classify } from './services/branchProjects';
 import { RuntimeManager } from './services/runtime';
-import { ADDRESS_SKILL, chooseComment, prepareAddress } from './services/address';
 import { projectTitle, writeCommentsExport } from './services/commentsExport';
 import { syncRecords } from './services/designSync';
 import { syncBranches } from './services/branchSync';
 import { PublishManager, publishInOrder } from './services/publisher';
 import { DESIGN_REPO, DesignRepo } from './services/designRepo';
 import type { PageView } from './services/pageView';
-import { assertPreviewUrl, sanitizeAnchor, sanitizePicture } from '../shared/anchor';
 import type { GitHubSession } from './services/githubSession';
 import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
-import { folderName, shownRecord } from '../shared/brief';
-import { coverPath, prototypeKey, prototypePagePath } from '../shared/designPaths';
-import { mergeProjects, unionLocal } from '../shared/projectList';
-import { isRecordName } from '../shared/validate';
-import { iterationLabel, workKind } from '../shared/work';
-import { resolveInside } from './services/paths';
+import { prototypeKey } from '../shared/designPaths';
+
+import { iterationLabel } from '../shared/work';
+
 import { PrototypeServer } from './services/prototypeServer';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
 import { statesOf } from '../shared/prototypeStates';
-import { type PrototypeChange, localPrototypeFile, prototypeWork, whereTheChangeGoes } from './services/prototypeWork';
-import { type CoverDeps, type DrawCover, builtHere, ensureCovers } from './services/projectCovers';
-import { jpegDataUrl } from './services/picture';
+import { type PrototypeChange, localPrototypeFile, prototypeWork } from './services/prototypeWork';
+import { type CoverDeps, type DrawCover } from './services/projectCovers';
+
 import { pageStatus, publish, recordsFrom, redeploySite, siteBehind } from './services/pages';
-import {
-	BUILD_SKILL,
-	MOVE_SKILL,
-	type RecordStore,
-	assignFolder,
-	cloneStore,
-	moveToCodePrompt,
-	prototypeReadable,
-	type PrototypeSources,
-} from './services/prototype';
+import { type RecordStore, cloneStore, prototypeReadable, type PrototypeSources } from './services/prototype';
 import type { CheckoutMemory } from './services/checkoutMemory';
 import { errorText } from '../shared/result';
-import { isCommit, isObjectId } from '../shared/sha';
 import { coalescingByKey, singleFlight } from './services/concurrency';
-
-/**
- * Every operation the window can reach, and nothing else.
- *
- * There is no generic invoke and no passthrough. Each handler is named, takes
- * typed arguments, resolves the root against what the designer actually opened,
- * and returns a Result rather than throwing across the boundary -- an exception
- * crossing IPC arrives as a shapeless string, which is how a real problem turns
- * into "something went wrong".
- */
+import { registerCheckout } from './ipc/checkout';
+import { registerClone } from './ipc/clone';
+import { registerDesignSystem } from './ipc/designSystem';
+import { registerCodebase } from './ipc/codebase';
+import { registerPrototypes } from './ipc/prototypes';
+import { registerReview } from './ipc/review';
+import { registerPublishing } from './ipc/publishing';
+import { registerPage } from './ipc/page';
+import { registerAccount } from './ipc/account';
 
 export interface IpcContext {
 	window: BrowserWindow;
@@ -175,7 +137,8 @@ export interface IpcContext {
 	warmAfterMs?: number;
 }
 
-export const registerIpc = ({
+/** Everything the handlers share: the context, and what is made from it once, for the window's whole session. */
+export const ipcDeps = ({
 	window,
 	ports,
 	opened,
@@ -207,7 +170,7 @@ export const registerIpc = ({
 	componentPicturesRoot,
 	componentPictureRecipe,
 	warmAfterMs,
-}: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
+}: IpcContext) => {
 	const { personGitHub } = ports;
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
@@ -317,42 +280,6 @@ export const registerIpc = ({
 		return value;
 	};
 
-	handle('chooseCheckout', [], async (): Promise<Checkout | null> => {
-		const chosen = await ports.chooseFolder({ title: 'Open a product repository' });
-		return chosen === null ? null : openRepository(chosen);
-	});
-
-	handle('lastCheckout', [], async (): Promise<Checkout | null> => {
-		const root = trustedRoot();
-		return root === null ? null : openRepository(root);
-	});
-
-	// Finding a repository grants it nothing: this only describes one, and
-	// `useCheckout` is the step that trusts it.
-	handle('suggestCheckout', [], (): CheckoutSuggestion | null => {
-		if (trustedRoot() !== null) return null;
-		const root = productCheckouts()[0];
-		if (root === undefined) return null;
-		try {
-			return { root, name: basename(root), product: readDescriptor(root).product };
-		} catch {
-			// A descriptor we cannot read is not a repository we should offer.
-			return null;
-		}
-	});
-
-	// Not `checkout`: the folder is one discovery found, not yet one the person opened; accepting it is what opens it.
-	handle('useCheckout', [arg.root], async (root): Promise<Checkout> => {
-		// Only ever a repository discovery itself found, so the renderer cannot
-		// name an arbitrary directory and have it trusted.
-		if (!productCheckouts().includes(root)) {
-			throw new Error('That is not a repository DSNR found on this machine.');
-		}
-		return openRepository(root);
-	});
-
-	handle('cloneFolder', [], cloneFolder);
-
 	/** Who is signed in to the app, by their GitHub login, or null. */
 	const signedInLogin = (): string | null => {
 		const s = github.state();
@@ -370,28 +297,11 @@ export const registerIpc = ({
 	const componentPictures = new ComponentPictures({ folder: componentPicturesRoot, server: prototypeServer, recipe: componentPictureRecipe });
 	const componentTokens =
 		injectedComponentTokens ?? new ComponentTokens({ system: shownSystem, previews, measure: measureStories, pictures: componentPictures });
-	handle('componentPictures', [], () => componentTokens.pictures());
 	// The previews and the index are got ready in the background, so a component opened later is drawn at once: as the app
 	// opens, and whenever the library has been read (it may have moved). For a commit already ready it is nothing.
 	const warm = () => void componentTokens.warm();
 	if (warmAfterMs !== undefined) setTimeout(warm, warmAfterMs).unref();
-	handle('designSystemCatalog', [arg.flag], async (refresh) => {
-		const catalog = await library.catalog(refresh === true);
-		if (catalog.state === 'ready') warm();
-		return catalog;
-	});
-	// A change is only ever a list of token edits, checked here and again before anything is written (T3, T4).
-	handle('storyPreview', [arg.unknown], (edits) => previews.preview(tokenEditsOf(edits)));
-	// The window names a story file, and only a story file of the library is answered.
-	handle('componentTokens', [arg.unknown], (file) => {
-		if (typeof file !== 'string' || file.length === 0 || file.length > 500) throw new Error('A component is asked for by its story file.');
-		return componentTokens.of(file);
-	});
 	const tokenBranches = new TokenBranches({ system: shownSystem, file: tokenBranchesFile, tools: ports.shareTools });
-	handle('tokenBranch', [], () => tokenBranches.current());
-	handle('saveTokens', [arg.unknown], (edits) => tokenBranches.save(tokenEditsOf(edits)));
-	handle('proposeTokens', [], () => tokenBranches.propose());
-	handle('forgetTokenBranch', [], () => (tokenBranches.forget(), null));
 	// The voice and tone (T9): the connected design system's, read, saved and proposed with the person's own command line.
 	const voiceFile = (): VoiceAndToneFile => {
 		const system = shownSystem();
@@ -402,43 +312,26 @@ export const registerIpc = ({
 	};
 	// The longest a save takes: far beyond any real voice and tone, short of anything that could hurt.
 	const MAX_VOICE = 200_000;
-	handle('voiceAndTone', [], () => voiceFile().current());
-	handle('saveVoiceAndTone', [arg.unknown, arg.unknown], (text, against) => {
-		if (typeof text !== 'string' || text.length > MAX_VOICE) throw new Error('The voice and tone is saved as text, up to 200,000 characters.');
-		// A blob's sha: 40 hex, or 64 in a repository on SHA-256.
-		if (against !== null && !isObjectId(against)) throw new Error('A save is made against the file’s sha.');
-		return voiceFile().save(text, against);
-	});
-	handle('proposeVoiceAndTone', [], () => voiceFile().propose());
-	handle('forgetVoiceBranch', [], () => (voiceFile().forget(), null));
-	handle('designSystems', [], () => designSystems.read());
-	handle('selectDesignSystem', [arg.name], (id) => (designSystems.select(String(id)), null));
-	// Removed with everything the app keeps of it: its pictures too (P5).
-	handle('removeDesignSystem', [arg.name], (id) => {
-		designSystems.remove(String(id));
-		componentPictures.forget(String(id));
-		return null;
-	});
-	// Chosen with the system's picker, here: the window never names a folder to put files in.
-	handle('chooseCloneFolder', [], async (): Promise<string | null> => {
-		const chosen = await ports.chooseFolder({ title: 'Choose where repositories are cloned', defaultPath: cloneFolder(), canCreate: true });
-		if (chosen === null) return null;
-		cloneFolders.write(chosen);
-		return chosen;
-	});
 
 	/**
 	 * Cloning, from the New modal: only a repository the person's own GitHub list returned (the last list shown, or asked
 	 * again), only into the clone folder, and the design repository beside it when it is missing.
 	 */
-	let visible: string[] = [];
-	let cloning: AbortController | null = null;
+	/**
+	 * What the handlers change and share: the repositories the person can see (read once, then kept), and the clone and
+	 * the install in progress, which Cancel stops.
+	 */
+	const state: { visible: string[]; cloning: AbortController | null; installing: AbortController | null } = {
+		visible: [],
+		cloning: null,
+		installing: null,
+	};
 	const DESIGN = `${DESIGN_REPO.owner}/${DESIGN_REPO.repo}`;
 	/** What cloning `repository` into `folder` would do. */
 	const planClone = async (repository: string, folder: string, forDesignSystem = false): Promise<ClonePlan> => {
-		if (visible.length === 0 && github.state().state === 'signedIn')
-			visible = (await reachableRepositories(github, personGitHub, signedInLogin())).names;
-		const listed = listedAs(visible, repository);
+		if (state.visible.length === 0 && github.state().state === 'signedIn')
+			state.visible = (await reachableRepositories(github, personGitHub, signedInLogin())).names;
+		const listed = listedAs(state.visible, repository);
 		if (listed === undefined)
 			throw new Error(`${repository} is not one of the repositories your GitHub account can see. Sign in to GitHub in DSNR, then try again.`);
 		const design = clonePlace(folder, DESIGN);
@@ -448,7 +341,6 @@ export const registerIpc = ({
 		// The design system is read, not worked in, so it needs no design repository beside it.
 		return { repository: listed, place, where, design: design.state === 'cloned' || forDesignSystem ? null : design };
 	};
-	handle('clonePlan', [arg.name, arg.flag], (repository, forDesignSystem) => planClone(repository, cloneFolder(), forDesignSystem === true));
 	/**
 	 * Clones what `planClone` says, with its progress sent to the window and `cancelClone` able to stop it: the repository,
 	 * and the design repository beside it when the plan has one. Where it went, and whether it was cloned or already there.
@@ -458,31 +350,17 @@ export const registerIpc = ({
 		const plan = await planClone(repository, folder, forDesignSystem);
 		// Both asked first, so the product is not cloned only for the design repository to be in the way.
 		for (const p of [plan.place, plan.design]) if (p?.state === 'taken') throw new Error(notClonedOver(p.why));
-		const stop = (cloning = new AbortController());
+		const stop = (state.cloning = new AbortController());
 		const progress = (of: string) => (p: GitProgress) => emit(window, 'onCloneProgress', { repository: of, ...p });
 		try {
-			const cloned = await cloner.clone({ repository: plan.repository, visible, folder }, progress(plan.repository), stop.signal);
+			const cloned = await cloner.clone({ repository: plan.repository, visible: state.visible, folder }, progress(plan.repository), stop.signal);
 			// The design repository is the app's own, named here, never by the window: it is the whole list it may clone.
 			if (plan.design) await cloner.clone({ repository: DESIGN, visible: [DESIGN], folder }, progress(DESIGN), stop.signal);
 			return { ...cloned, repository: plan.repository };
 		} finally {
-			cloning = null;
+			state.cloning = null;
 		}
 	};
-	handle('cloneRepository', [arg.name], async (repository): Promise<Checkout> => {
-		const { path: product, cloned: fresh, repository: listed } = await cloneAsPlanned(repository);
-		await startAtSetup(listed, product, fresh);
-		return openRepository(product);
-	});
-	// Only a design system, refused by name before anything is downloaded; then connected like a folder that was located.
-	// Connecting a design system (P4): cloned or used where it is, then looked in (`DesignLibrary.connect`).
-	handle('connectDesignSystem', [arg.name], async (repository): Promise<DesignSystemConnection> => {
-		const cloned = await cloneAsPlanned(String(repository), true);
-		return library.connect(cloned.repository, cloned.path);
-	});
-	handle('chooseDesignSystem', [arg.name, arg.name], (repository, folder): DesignSystemConnection =>
-		library.choose(String(repository), String(folder)),
-	);
 	/**
 	 * A clone is used on a branch with the DSNR setup, since the app reads it from the files there. A clone just
 	 * made is moved to the most recently committed branch that has it (it holds nothing of the person's yet); one that
@@ -499,35 +377,6 @@ export const registerIpc = ({
 		await ensureLocalBranch(root, good);
 		await checkoutBranch(root, good);
 	};
-	handle('cancelClone', [], () => {
-		cloning?.abort();
-		return null;
-	});
-
-	handle('listRepositories', [], async (): Promise<RepositoryList> => {
-		const clones = productCheckouts().map((root) => {
-			const origin = originOf(root);
-			return { root, repo: origin === null ? null : gitHubRepoOf(origin) };
-		});
-		// Signed out, or GitHub out of reach: what is on this machine can still be started in.
-		const remote =
-			github.state().state === 'signedIn'
-				? await reachableRepositories(github, personGitHub, signedInLogin())
-				: { names: [], reach: 'none' as const };
-		if (remote.names.length > 0) visible = remote.names;
-		return { repositories: mergeRepositories(remote.names, clones), reach: remote.reach };
-	});
-
-	handle('listBaseBranches', [checkout], (workIn) => recentBranches(workIn.canonical));
-	handle('branchesWithSetup', [checkout], (workIn) => branchesWithFile(workIn.canonical, DESCRIPTOR_PATH));
-
-	// Re-reads a checkout the person already opened; it trusts and remembers nothing, so the window naming a folder
-	// is never enough to make it trusted (only the picker, a repository discovery found, the last one, and a clone are).
-	handle('readCheckout', [checkout], (workIn) => readCheckout(workIn.canonical));
-
-	handle('readContextReceipt', [checkout], (workIn) => buildContextReceipt(workIn.canonical, workIn.descriptor));
-
-	handle('listIterations', [checkout, arg.projectId], (workIn, projectId) => readIterations(recordsFor(workIn.canonical), projectId));
 
 	/** Switching branches under a running agent changes the files it is working on mid-run. */
 	const assertAgentNotHere = (canonical: string): void => {
@@ -595,33 +444,6 @@ export const registerIpc = ({
 			descriptorFor(root),
 		);
 	}
-
-	handle('continueIteration', [checkout, arg.projectId, arg.iterationName], async (workIn, projectId, name) => {
-		const { canonical } = workIn;
-		// Opening the run's own work is fine: the checkout is already on its branch, so nothing moves.
-		if (agent.runningIn(canonical)) {
-			const wanted = await recordedIteration(canonical, workIn.recordsRoot, workIn.descriptor, projectId, name);
-			if ((await readCheckout(canonical)).branch !== wanted.branch) assertAgentNotHere(canonical);
-		}
-		const recordsRoot = workIn.recordsRoot;
-		const me = github.state();
-		const login = me.state === 'signedIn' ? me.user.login : null;
-		return written(await continueIteration(canonical, recordsRoot, projectId, name, login, workIn.descriptor));
-	});
-
-	handle('startCommand', [checkout, arg.name, arg.optional(arg.projectId)], (workIn, commandId, projectId) =>
-		runtime.start(workIn.canonical, workIn.descriptor, commandId, projectId ?? undefined),
-	);
-
-	handle('stopCommand', [checkout, arg.name], (workIn, commandId) => {
-		workIn.canonical;
-		return runtime.stop(commandId);
-	});
-
-	handle('commandStatus', [checkout, arg.name], (workIn, commandId) => {
-		workIn.canonical;
-		return runtime.status(commandId);
-	});
 
 	/** The accessibility section of a codebase task (T7): the product's target from its own manifest, on the branch it is on. */
 	const codebaseAccessibility = (canonical: string, findings?: Parameters<typeof taskAccessibility>[2]): Promise<string> => {
@@ -709,205 +531,8 @@ export const registerIpc = ({
 		return started;
 	};
 
-	handle('startAgent', [checkout, arg.projectId, arg.words], async (workIn, projectId, task) => {
-		// Same rule startCommand applies. This one is interpolated into the agent's
-		// prompt, and the agent runs unattended with edit permission, so an
-		// unchecked value here is prompt injection rather than argv injection.
-		const { canonical } = workIn;
-		const branch = (await readCheckout(canonical)).branch;
-		// On the project's codebase branch, the shared rules for unattended codebase work, and this product's light check.
-		const descriptor = workIn.descriptor;
-		const unattended = branch === codebaseBranchFor(descriptor, projectId) ? await readDesignFile(CODEBASE_SKILL) : null;
-		// A prototype being moved into the code is read from the app's own copy of it.
-		const prototypeFolder = join(prototypesRoot, projectId);
-		const { parts, readOnly } = await checkoutParts(canonical, projectId);
-		return startTracked(canonical, projectId, codebaseTask({ unattended, task }, parts), {
-			branch,
-			addDirs: [workIn.recordsRoot, ...(existsSync(prototypeFolder) ? [prototypeFolder] : [])],
-			readOnly,
-		});
-	});
-
-	// Handing the work to the person, in VS Code. Only ever on a click: it opens another application.
-	handle('editorState', [checkout, arg.branch], (workIn, branch) => ({
-		editor: ports.editor.find() !== null,
-		session: sessions.read(workIn.canonical, String(branch)) !== null,
-	}));
-	handle('openInEditor', [checkout], async (workIn) => {
-		const { canonical } = workIn;
-		const editor = ports.editor.find();
-		if (editor) await ports.editor.openFolder(editor, canonical);
-		else await ports.openPath(canonical);
-		return null;
-	});
-	handle('continueInClaude', [checkout, arg.branch], async (workIn, branch): Promise<'editor' | 'terminal'> => {
-		const { canonical } = workIn;
-		const found = sessions.read(canonical, String(branch));
-		if (!found) throw new Error('There is no agent conversation for this work on this machine.');
-		// Taking over a run still going: one conversation has one writer, so the app's run stops, but only once
-		// the way to continue it is there: a folder that would not open must not cost the run.
-		const takeOver = () => {
-			if (agent.runningSession() === found.session) agent.stop();
-		};
-		const editor = ports.editor.find();
-		if (editor) {
-			await ports.editor.openSession(editor, found, takeOver);
-			return 'editor';
-		}
-		await ports.copy(resumeCommand(ports.claude(), found));
-		takeOver();
-		await ports.tell({
-			message: 'The command to continue is copied',
-			detail: 'VS Code with the Claude Code extension is not installed here. Paste the command into a terminal to continue the same conversation.',
-		});
-		return 'terminal';
-	});
-
-	handle('agentStatus', [], () => agent.status());
-	handle('agentRecent', [], () => agent.recentLines());
-	handle('agentReadiness', [], () => agentReadiness());
-
-	// One click: read the comments now, write the file from that read, then start the agent. Nothing
-	// a reviewer wrote is put in the task; it reaches the agent only through the file.
-	handle('addressComments', [checkout, arg.projectId, arg.iterationName, arg.commentId], async (workIn, projectId, name, commentId) => {
-		// The window supplies this, so it is checked like anything else that crosses the boundary.
-		// There is no batch: a request with no comment is a mistake, not a request for all of them.
-		const { canonical, recordsRoot } = workIn;
-		const iteration = await recordedIteration(canonical, recordsRoot, workIn.descriptor, projectId, name);
-		const skill = await readDesignFile(ADDRESS_SKILL);
-		const prepared = await prepareAddress(
-			{
-				readComments: () => designRepo.readComments(iteration.branch),
-				checkout: () => readCheckout(canonical),
-				agentRunning: agentBusy,
-				skill: () => skill,
-				title: projectTitle(recordsRoot, projectId),
-			},
-			{ recordsRoot, projectId, iteration, commentId },
-		);
-		const { parts, readOnly } = await checkoutParts(canonical, projectId);
-		return startTracked(canonical, projectId, codebaseTask({ unattended: null, task: prepared.task }, parts), {
-			branch: null,
-			addDirs: [recordsRoot],
-			readOnly,
-		});
-	});
-
-	// Sharing. The branch comes from this person's own record, never from the window, and
-	// the repository's descriptor says what a share is. Starts and returns: it takes minutes.
-	handle('shareIteration', [checkout, arg.projectId, arg.iterationName], async (workIn, projectId, name) => {
-		const { canonical, descriptor } = workIn;
-		const { share: how } = descriptor;
-		if (!how) {
-			throw new Error(`${descriptor.product} does not say how a shared preview is built, so it cannot be shared from here.`);
-		}
-		const recordsRoot = workIn.recordsRoot;
-		const iteration = await recordedIteration(canonical, recordsRoot, descriptor, projectId, name);
-		// Only what is committed goes up. Sharing a branch with unsaved edits would show reviewers less than the designer sees.
-		const here = await readCheckout(canonical);
-		if (here.branch === iteration.branch && !here.clean) {
-			throw new Error(`There are uncommitted changes on ${iteration.branch}, and only committed work is shared. Commit them, then share again.`);
-		}
-		// The commit that goes up now, which is what reviewers will be looking at.
-		const shared = await branchCommit(canonical, iteration.branch).catch(() => undefined);
-		return share.start({
-			request: {
-				share: how,
-				kind: workKind(iteration),
-				projectId,
-				name,
-				branch: iteration.branch,
-				...pullRequestText(projectId, name),
-			},
-			tools: ports.shareTools(canonical),
-			// Saved, then published, and only then is the link called ready: a reviewer cannot open what is not up yet.
-			record: async (url, prUrl) => {
-				recordPreview(recordsRoot, projectId, name, url, shared, prUrl);
-				await publisher.publish(true);
-			},
-		});
-	});
-	handle('shareStatus', [], () => share.status());
-
-	// Publishing happens by itself; these only report it, and let a person ask for it now.
-	handle('publishStatus', [], () => publisher.status());
-	handle('publishNow', [], async () => {
-		await publisher.publish(true);
-		return publisher.status();
-	});
-	handle('previewReachable', [arg.url], async (url): Promise<boolean> => {
-		const checked = assertPreviewUrl(String(url));
-		try {
-			return previewIsUp(await ports.httpStatus(checked));
-		} catch {
-			return false;
-		}
-	});
-
-	// Sign-in. No handler returns a token: the renderer only ever learns whether
-	// someone is signed in, and who.
-	handle('signInStart', [], () => github.startSignIn());
-	handle('signInCancel', [], () => {
-		github.cancelSignIn();
-		return null;
-	});
-	handle('signInState', [], () => github.state());
-	handle('signOut', [], () => {
-		github.signOut();
-		return null;
-	});
-
 	/** Names people by their GitHub profile, once each, so a person is the same name wherever they appear. */
 	const profiles = new ProfileNames((path) => github.api(path));
-	// Reviewer mode: read through the API, never a checkout.
-	// Everything on GitHub plus everything built on this machine. Work made here
-	// must appear here, shared or not, so the two are merged; if GitHub cannot be
-	// reached, what is local still shows.
-	handle('listProjects', [], async (): Promise<Project[]> => {
-		// The gate, not the discovery list: nothing is read or run in a repository
-		// this person has not accepted.
-		const root = trustedRoot();
-		const me = github.state();
-		const login = me.state === 'signedIn' ? me.user.login : null;
-		let local: Project[] = [];
-		// The checkout's repository on GitHub, for codebase work recorded before records named it.
-		let here: { repository: string; branchOf: (projectId: string) => string } | null = null;
-		if (root !== null) {
-			opened.require(root);
-			const recordsRoot = recordsRootFor(root);
-			// Every project folder, not only those that record an iteration: the folder is what an agent makes
-			// first, and it is what vouches for a `feature/<id>` branch (see readBranchProjects).
-			const folders = recordsRoot ? readFolderProjects(recordsRoot) : [];
-			// The branches are the evidence: work made without the app still shows.
-			const branches = await readBranchProjects(root, readDescriptor(root), login, new Set(folders.map((p) => p.id))).catch(() => []);
-			// A folder with nothing built yet is a notes folder, not work in progress.
-			local = unionLocal(folders, branches).filter((p) => p.iterations.length > 0);
-			const origin = await originUrl(root);
-			const repository = origin === null ? null : gitHubRepoOf(origin);
-			const descriptor = readDescriptor(root);
-			if (repository) here = { repository, branchOf: (projectId) => codebaseBranchFor(descriptor, projectId) };
-		}
-		let remote: Project[] = [];
-		try {
-			remote = await designRepo.listProjects();
-		} catch (err) {
-			if (local.length === 0) throw err;
-		}
-		// Reading the list is a good moment to make sure what it shows is published.
-		void publisher.publish();
-		const merged = mergeProjects(remote, local);
-		// Work on this checkout's codebase branch for a project is in this checkout's repository.
-		const located =
-			here === null
-				? merged
-				: merged.map((p) => ({
-						...p,
-						iterations: p.iterations.map((it) =>
-							workKind(it) === 'codebase' && !it.repository && it.branch === here.branchOf(p.id) ? { ...it, repository: here.repository } : it,
-						),
-					}));
-		return profiles.nameEveryone(located);
-	});
 	/**
 	 * Rewrites `comments.md` for what was just read, on a machine that has the design repository
 	 * beside the product checkout. Best effort: reading comments never fails because a file
@@ -988,25 +613,6 @@ export const registerIpc = ({
 		return readiness.ready ? readiness : { ...readiness, canInstall: descriptorFor(root).commands.some((c) => c.id === INSTALL_COMMAND) };
 	};
 
-	// Installing a repository's packages, from the New modal: only the command it declares, one at a time, stoppable.
-	let installing: AbortController | null = null;
-	handle('installPackages', [checkout], async (workIn): Promise<null> => {
-		const { canonical } = workIn;
-		// Its packages change under a running agent otherwise.
-		if (agent.runningIn(canonical)) throw new Error(`The agent is working in ${basename(canonical)}. Install the packages when it has finished.`);
-		const command = findCommand(workIn.descriptor, INSTALL_COMMAND);
-		const stop = (installing = new AbortController());
-		try {
-			await installer.install(canonical, command, (line) => emit(window, 'onInstallLine', line), stop.signal);
-		} finally {
-			installing = null;
-		}
-		return null;
-	});
-	handle('cancelInstall', [], () => {
-		installing?.abort();
-		return null;
-	});
 	/** What building a prototype and changing one share: what it is modeled on, read once, and how it is built. */
 	const prototypeRun = async (projectId: string, name: string, modeledOn = name) =>
 		work.buildPlan(projectId, name, await once(`source:${projectId}`, () => work.sources(projectId, modeledOn)));
@@ -1035,44 +641,6 @@ export const registerIpc = ({
 		const s = github.state();
 		return s.state === 'signedIn' ? { name: s.user.name ?? s.user.login, login: s.user.login } : null;
 	};
-
-	handle('prototypeReadiness', [arg.root], (root) => prototypeReadiness(root));
-
-	handle('createPrototype', [arg.projectId, arg.name, arg.words, arg.startingPoint, arg.unknown], async (projectId, title, note, from, folder) => {
-		// What it is modeled on is not optional: a prototype is built from a repository's real design system.
-		if (!from) throw new Error('A prototype is modeled on a branch of a repository on this machine. Choose one.');
-		// Only a repository this person accepted, and a branch in it, made local when it is only on GitHub.
-		const root = opened.require(from.root);
-		await ensureLocalBranch(root, from.branch);
-		return work.start(root, { projectId, title, note, branch: from.branch, me: me(), folder: folderName(folder) });
-	});
-	handle('appearance', [], async () => appearanceMemory.read());
-	handle('setAppearance', [arg.unknown], async (appearance) => {
-		if (!isAppearance(appearance)) throw new Error('That is not an appearance: Auto, Light or Dark.');
-		// Applied before it is kept: a setting that could not be applied must not be what the app opens with.
-		applyAppearance(appearance);
-		appearanceMemory.write(appearance);
-		return appearance;
-	});
-	handle('assignFolder', [arg.projectId, arg.unknown], async (projectId, folder) => {
-		await assignFolder(recordStore(), projectId, folderName(folder));
-		return null;
-	});
-
-	handle('buildPrototype', [arg.projectId, arg.prototypeName, arg.words], async (projectId, name, request) => {
-		// The screen can ask twice (it is opened twice in development, and Try again asks again): the runner joins
-		// this prototype's run, and refuses while it is working on anything else.
-		const skill = await readSkillText(BUILD_SKILL);
-		const { build, sources } = await prototypeRun(projectId, name);
-		const accessibility = await work.accessibility(projectId, name);
-		const voice = await work.voice();
-		return startPrototypeAgent(
-			projectId,
-			name,
-			sources,
-			prototypeBuildTask({ skill, build, sources, accessibility, voice, request: String(request) }),
-		);
-	});
 
 	/**
 	 * Acting on one comment on a prototype. The same steps as on a branch -- comments read from GitHub now, the file
@@ -1106,38 +674,6 @@ export const registerIpc = ({
 			if (pending.projectId === projectId) await finishPrototypeChange(commentId).catch(() => undefined);
 		}
 	};
-	handle('addressPrototype', [arg.projectId, arg.prototypeName, arg.commentId], async (projectId, name, commentId) => {
-		refuseWhileBusy();
-		// One left from a run whose screen was closed is finished first, or this run would start from the same copy.
-		await finishPrototypeChanges(projectId);
-		const addressSkill = await readSkillText(ADDRESS_SKILL);
-		const buildSkill = await readSkillText(BUILD_SKILL);
-		// Read now, not earlier: this is what makes the file current, and what says who has commented.
-		const comments = await designRepo.readComments(prototypeKey(projectId, name));
-		const exported = writeCommentsExport(prototypesRoot, {
-			projectId,
-			title: await work.title(projectId),
-			iteration: { name, branch: prototypeKey(projectId, name) },
-			comments,
-			generatedAt: new Date(),
-		});
-		const number = chooseComment(comments, commentId);
-		const change = await work.startChange(projectId, name, async (it) =>
-			(it.name === name ? comments : await designRepo.readComments(it.branch)).map((c) => c.author),
-		);
-		// Modeled on what the iteration it comes from was: a new one has no record of its own yet.
-		const { build, sources } = await prototypeRun(projectId, change.target, change.from.name);
-		prototypeChanges.set(commentId, { projectId, change });
-		const where = whereTheChangeGoes(change, name);
-		const accessibility = await work.accessibility(projectId, change.from.name);
-		const voice = await work.voice();
-		return startPrototypeAgent(
-			projectId,
-			name,
-			sources,
-			prototypeAddressTask({ addressSkill, buildSkill, build, sources, accessibility, voice, commentsPath: exported.path, number, name, where }),
-		);
-	});
 	/**
 	 * The iteration's published page. Asked of GitHub as the person signed in to the app; nothing to say when they are
 	 * not. Opening it works the address out again here, so the window never hands this an address to open.
@@ -1202,37 +738,6 @@ export const registerIpc = ({
 	/** The site, when what it is built from changed and no page did: it has no page of its own to key on. */
 	const redeployInBackground = (): void =>
 		inBackground('the site', async () => redeploySite({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())) }));
-	handle('publishedPage', [arg.projectId, arg.prototypeName], (projectId, name) => publishedPage(projectId, name));
-	handle('openPublishedPage', [arg.projectId, arg.prototypeName], async (projectId, name): Promise<null> => {
-		const status = await publishedPage(projectId, name);
-		if (status.state !== 'published') throw new Error('This iteration is not on its page yet.');
-		await ports.openExternal(assertPreviewUrl(status.url));
-		return null;
-	});
-	handle('publishPage', [arg.projectId, arg.prototypeName], async (projectId, name): Promise<PageStatus> => {
-		if (github.state().state !== 'signedIn') throw new Error('Sign in to GitHub to publish.');
-		publishInBackground(projectId, name);
-		return publishedPage(projectId, name);
-	});
-	handle('finishPrototypeAddress', [arg.commentId], (commentId): Promise<PrototypeAddressed> => finishPrototypeChange(commentId));
-
-	handle('savePrototype', [arg.projectId, arg.iterationName], async (projectId, name): Promise<null> => {
-		await work.save(projectId, name);
-		publishInBackground(projectId, name);
-		return null;
-	});
-
-	handle('openPrototype', [arg.projectId, arg.prototypeName], async (projectId, name): Promise<OpenedPrototype> => {
-		await finishPrototypeChanges(projectId);
-		const html = await prototypePage(projectId, name);
-		if (html === null) throw new Error('This prototype has no page yet.');
-		// A page built here but never saved (the screen was left, or gave up, while the agent finished) is saved
-		// now: what this machine shows is what reviewers get, and no finished page is stranded on one machine.
-		const local = work.file(projectId, name);
-		const path = prototypePagePath(projectId, name);
-		if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html) await work.keep(projectId, name, html);
-		return { url: await servePrototype(projectId, name, html), states: statesOf(html) };
-	});
 
 	/**
 	 * A prototype's accessibility (T7): its saved page, served as it is opened, checked in each of its states at its
@@ -1245,9 +750,6 @@ export const registerIpc = ({
 		const file = join(dirname(work.file(projectId, name)), `${name}.accessibility.json`);
 		return accessibilityOf({ file, html, url, states: statesOf(html), target: await work.target(projectId, name), check: checkPage });
 	};
-	handle('checkAccessibility', [arg.projectId, arg.iterationName], (projectId, name) =>
-		once(`accessibility:${projectId}/${name}`, () => prototypeAccessibility(projectId, name)),
-	);
 	/**
 	 * The picture of each prototype on its project's card (PROJECT_PICTURES_PLAN.md). Asked for by the list once it is on
 	 * screen: every page built on this machine whose record does not name its picture is drawn, one at a time, and kept.
@@ -1263,223 +765,139 @@ export const registerIpc = ({
 		draw: drawCover,
 		tried: new Set(),
 	};
-	handle('ensureCovers', [], () => once('covers', async () => (agentBusy() ? [] : ensureCovers(coverDeps, builtHere(prototypesRoot)))));
 	/** Pictures read this session, by path: what is at a picture's path never changes, so it is read once. */
 	const coversRead = new Map<string, string>();
-	handle('projectCover', [arg.projectId, arg.prototypeName, arg.name], async (projectId, name, cover): Promise<string | null> => {
-		const path = coverPath(projectId, name, cover);
-		const kept = coversRead.get(path);
-		if (kept !== undefined) return kept;
-		const bytes = await readDesignBytes(path);
-		if (bytes === null) return null;
-		const url = jpegDataUrl(bytes);
-		coversRead.set(path, url);
-		return url;
-	});
-	// One round of the prototype's own check: its agent given what the check found, as a build error is given (T7).
-	handle('fixAccessibility', [arg.projectId, arg.iterationName], async (projectId, name) => {
-		refuseWhileBusy();
-		const result = await prototypeAccessibility(projectId, name);
-		if (result.violations.length === 0) throw new Error('The accessibility check found nothing to fix.');
-		const skill = await readSkillText(BUILD_SKILL);
-		const { build, sources } = await prototypeRun(projectId, name);
-		const accessibility = await work.accessibility(projectId, name);
-		const voice = await work.voice();
-		return startPrototypeAgent(
-			projectId,
-			name,
-			sources,
-			prototypeBuildTask({ skill, build, sources, accessibility, voice, request: fixRequest(result) }),
-		);
-	});
-
-	handle('moveToCodePlan', [checkout, arg.projectId, arg.prototypeName], async (workIn, projectId, name): Promise<MoveToCodePlan> => {
-		const { root, canonical } = workIn;
-		const { branch, exists, recorded, started, records } = await codebaseWorkOf(root, projectId);
-		const basedOn = records.find((i) => i.name === name)?.basedOn;
-		const here = await readCheckout(canonical);
-		return {
-			branch,
-			exists,
-			recorded,
-			started,
-			repository: basename(canonical),
-			basedOn: basedOn ? { repository: basedOn.repository, branch: basedOn.branch } : null,
-			current: here.branch,
-			clean: here.clean,
-		};
-	});
 
 	// Handoff: the heavy pass on codebase work, started here so the checks and the start are one step. Where the
 	// branch stood when it started is kept, so the verdict can tell a handoff written now from one left from before.
 	const handoffStarts = new Map<string, { branch: string; head: string }>();
-	handle('startHandoff', [checkout, arg.projectId], async (workIn, projectId) => {
-		const { canonical, recordsRoot, descriptor } = workIn;
-		const iteration = await recordedIteration(canonical, recordsRoot, descriptor, projectId, 'codebase');
-		const here = await readCheckout(canonical);
-		if (here.branch !== iteration.branch) throw new Error(`Open ${iteration.branch} first: a handoff checks the work where it is.`);
-		refuseWhileBusy();
-		const skill = await readSkillText(HANDOFF_SKILL);
-		const { parts, readOnly } = await checkoutParts(canonical, projectId);
-		const task = handoffTask({ skill, projectId, branch: iteration.branch, gate: commandLine(descriptor.commands, 'handoff', projectId) }, parts);
-		handoffStarts.set(canonical, { branch: iteration.branch, head: await headCommit(canonical) });
-		return startTracked(canonical, projectId, task, { branch: iteration.branch, addDirs: [recordsRoot], readOnly, purpose: 'handoff' });
-	});
-	/**
-	 * Whether the last Handoff here found the work ready: the run's own last verdict says so, and HANDOFF.md was
-	 * committed since it started. Null when this app did not start one on this branch (it was restarted since).
-	 */
-	handle('handoffResult', [checkout], async (workIn): Promise<boolean | null> => {
-		const { canonical } = workIn;
-		const started = handoffStarts.get(canonical);
-		const here = await readCheckout(canonical);
-		const recent = agent.recentLines();
-		if (!started || started.branch !== here.branch || recent.work !== here.branch) return null;
-		const committed = await changedSince(canonical, started.head, HANDOFF_FILE);
-		return committed && lastVerdict(recent.lines) === 'ready';
-	});
-
-	/**
-	 * Build, from a prototype: its branch and record are made here, as all codebase work's are (or, when the work was
-	 * started before, picked up where it is), and the building is handed to Claude Code in the product repository, where the person watches it and can step in. The
-	 * task is written beside the prototype's own copy (the skill, the page and source to start from, where the audit
-	 * goes); the conversation starts with a line pointing at it. In VS Code when it has Claude Code; otherwise the
-	 * command that starts it in a terminal is put on the clipboard.
-	 */
-	handle(
-		'buildInClaude',
-		[arg.root, arg.projectId, arg.prototypeName, arg.optional(arg.branch)],
-		async (root, projectId, name, from): Promise<BuildInClaude> => {
-			const canonical = opened.require(root);
-			const recordsRoot = recordsFor(canonical);
-			const skill = await readSkillText(MOVE_SKILL);
-			// The page and its source are copied where the agent can read them, so it works from the version saved.
-			const html = await prototypePage(projectId, name);
-			if (html === null) throw new Error('This prototype has no page yet.');
-			const pageFile = work.file(projectId, name);
-			const sourceFile = work.sourceFile(projectId, name);
-			const source = await work.sourceText(projectId, name);
-			const label = iterationLabel({ name, branch: prototypeKey(projectId, name) });
-			// The branch first: nothing is written for the agent if the work cannot start (a dirty tree, work not found).
-			// Work already started, here or recorded, is continued where it is; it is not started a second time.
-			const { branch, started: continuing } = await codebaseWorkOf(root, projectId);
-			if (continuing) await continueCodebaseWork(root, projectId, branch);
-			else await startCodebaseWork(root, projectId, `From prototype ${label}`, from ?? undefined);
-			writeFileSync(pageFile, html);
-			if (source !== null) writeFileSync(sourceFile, source);
-			const taskFile = join(dirname(pageFile), `${name}-into-code.md`);
-			writeFileSync(
-				taskFile,
-				moveToCodeTask(
-					{
-						skill,
-						pageFile,
-						sourceFile: source !== null ? sourceFile : null,
-						auditFile: join(recordsRoot, projectId, `audit-${name}.md`),
-						name,
-						basedOn: (await work.record(projectId, name))?.basedOn,
-					},
-					// Built toward the product's target from the start, with what the prototype's check left open: its page
-					// checked now when it was not already. A check that cannot run leaves the findings out, never the move.
-					(await checkoutParts(canonical, projectId, await prototypeAccessibility(projectId, name).catch(() => null))).parts,
-				),
-			);
-			const prompt = moveToCodePrompt({ label, projectId, taskFile, continuing: continuing ? branch : null });
-			const editor = ports.editor.find();
-			if (editor) {
-				await ports.editor.openPrompt(editor, canonical, prompt);
-				return { editor: true, command: null };
-			}
-			const command = startCommand(ports.claude(), canonical, prompt);
-			await ports.copy(command);
-			return { editor: false, command };
-		},
-	);
 
 	/** A record is text a person reads; anything larger than this is not one, and is cut rather than sent whole. */
 	const MAX_RECORD = 400_000;
-	handle('readRecord', [arg.name, arg.name], async (projectId, name): Promise<string> => {
-		if (!isRecordName(projectId) || !isRecordName(name)) throw new Error('That is not a file in a project.');
-		// This machine's copy first: it is the one being written, and may not be published yet.
-		const root = trustedRoot();
-		const recordsRoot = root === null ? null : recordsRootFor(root);
-		const path = recordsRoot === null ? null : resolveInside(recordsRoot, join(projectId, name));
-		const text =
-			path !== null && existsSync(path) && statSync(path).isFile() ? readFileSync(path, 'utf8') : await designRepo.readRecord(projectId, name);
-		// The brief without its front matter (its folder), which is the app's and not the person's to read.
-		return shownRecord(name, text).slice(0, MAX_RECORD);
-	});
-	handle('readComments', [arg.projectId, arg.branch], async (projectId, branch): Promise<ReviewComment[]> => {
-		const comments = await designRepo.readComments(branch);
-		exportComments(projectId, branch, comments);
-		return comments;
-	});
-	handle(
-		'postComment',
-		[arg.projectId, arg.branch, arg.words, arg.unknown, arg.unknown],
-		(projectId, branch, body, anchor, picture): Promise<ReviewComment> =>
-			designRepo.postComment(projectId, branch, body, sanitizeAnchor(anchor), sanitizePicture(picture)),
-	);
 
 	// The preview. Every argument is re-checked here: the window is trusted less
 	// than the main process, and the preview less than the window.
 	const nothing = (_done?: unknown): null => null;
-	// A prototype is one page: the app's own server says which addresses are its, never the window.
-	handle('pageOpen', [arg.url], async (url) => nothing(await page.open(String(url), { singlePage: prototypeServer.owns(String(url)) })));
-	handle('pageClose', [], () => nothing(page.close()));
-	// The page the preview is on, in the person's own browser. The address comes from the preview itself, never
-	// from the window, and goes through the same check as opening one: this app's own web addresses only.
-	handle('openPreviewInBrowser', [], async () => {
-		const url = page.currentUrl();
-		if (url === null) throw new Error('There is no preview open to show in a browser.');
-		await ports.openExternal(assertPreviewUrl(url));
-		return null;
-	});
-	handle('pageSetBounds', [arg.unknown], (sent) => {
-		const b = asRecord(sent);
-		return nothing(page.setBounds({ x: Number(b.x), y: Number(b.y), width: Number(b.width), height: Number(b.height) }));
-	});
-	handle('pageSnapshot', [], () => page.snapshot());
-	handle('pageHold', [arg.name, arg.flag], (reason, held) => {
-		if (!(PAGE_HOLD_REASONS as readonly string[]).includes(reason)) throw new Error('That is not a reason to hide the preview.');
-		return nothing(page.hold(reason as PageHoldReason, held === true));
-	});
-	handle('pagePick', [], () => page.pick());
-	handle('pageCancelPick', [], async () => nothing(await page.cancelPick()));
-	handle('pageShowMarkers', [arg.unknown], (items) => {
-		const clean = (Array.isArray(items) ? items : []).slice(0, 200).flatMap((i): MarkerRequest[] => {
-			const anchor = sanitizeAnchor(i?.anchor);
-			return anchor && Number.isInteger(i.id) && Number.isInteger(i.number)
-				? [{ id: i.id, number: i.number, anchor, movable: i.movable === true }]
-				: [];
-		});
-		return page.showMarkers(clean);
-	});
-	handle('moveComment', [arg.commentId, arg.unknown], (commentId, anchor): Promise<ReviewComment> => {
-		const clean = sanitizeAnchor(anchor);
-		if (!clean) throw new Error('That is not a place a pin can be moved to.');
-		return designRepo.moveComment(commentId, clean);
-	});
-	handle('deleteComment', [arg.commentId], async (commentId) => {
-		await designRepo.deleteComment(commentId);
-		return null;
-	});
-	handle('resolveComment', [arg.commentId, arg.flag], (commentId, resolved): Promise<ReviewComment> => {
-		return designRepo.setResolved(commentId, resolved === true);
-	});
-	handle('markAddressed', [arg.commentId, arg.unknown], (commentId, commit): Promise<ReviewComment> => {
-		// A commit, or nothing. Anything else is not written into a comment body.
-		const sha = isCommit(commit) ? commit : null;
-		return designRepo.setAddressed(commentId, sha);
-	});
-	// What the branch is at right now: read when a comment is placed, so the comment says
-	// which version of the code it was made against rather than which one was last recorded.
-	handle('iterationCommit', [checkout, arg.projectId, arg.iterationName], async (workIn, projectId, name): Promise<string | null> => {
-		const { canonical } = workIn;
-		const found = await recordedIteration(canonical, workIn.recordsRoot, workIn.descriptor, projectId, name).catch(() => null);
-		return found ? branchCommit(canonical, found.branch).catch(() => null) : null;
-	});
-	handle('pageFocusMarker', [arg.commentId], async (id) => nothing(await page.focusMarker(Number(id))));
+	return {
+		window,
+		ports,
+		opened,
+		runtime,
+		agent,
+		share,
+		github,
+		designRepo,
+		page,
+		memory,
+		onPublishStatus,
+		prototypesRoot,
+		prototypeServer,
+		sessions,
+		cloneFolders,
+		appearanceMemory,
+		applyAppearance,
+		cloner,
+		installer,
+		designLibrary,
+		designSystems,
+		storyPreviewsRoot,
+		tokenBranchesFile,
+		voiceBranchFile,
+		measureStories,
+		checkPage,
+		drawCover,
+		componentTokens,
+		componentPicturesRoot,
+		componentPictureRecipe,
+		warmAfterMs,
+		personGitHub,
+		openRepository,
+		descriptorFor,
+		checkout,
+		productCheckouts,
+		cloneFolder,
+		trustedRoot,
+		recordsFor,
+		publisher,
+		written,
+		signedInLogin,
+		library,
+		shownSystem,
+		previews,
+		componentPictures,
+		warm,
+		tokenBranches,
+		voiceFile,
+		MAX_VOICE,
+		state,
+		DESIGN,
+		planClone,
+		cloneAsPlanned,
+		startAtSetup,
+		assertAgentNotHere,
+		startCodebaseWork,
+		codebaseWorkOf,
+		continueCodebaseWork,
+		codebaseAccessibility,
+		agentBusy,
+		refuseWhileBusy,
+		sharedGuidance,
+		checkoutParts,
+		startTracked,
+		profiles,
+		exportComments,
+		designClone,
+		recordStore,
+		fromDesignRepo,
+		readDesignFile,
+		readDesignBytes,
+		readSkillText,
+		work,
+		prototypeReadiness,
+		prototypeRun,
+		startPrototypeAgent,
+		serveShared,
+		servePrototype,
+		prototypePage,
+		inFlight,
+		once,
+		me,
+		prototypeChanges,
+		finishPrototypeChange,
+		finishPrototypeChanges,
+		publishedPage,
+		publishing,
+		publishStopped,
+		lastCatchUp,
+		catchUpSite,
+		inBackground,
+		publishInBackground,
+		redeployInBackground,
+		prototypeAccessibility,
+		coverDeps,
+		coversRead,
+		handoffStarts,
+		MAX_RECORD,
+		nothing,
+	};
+};
+export type IpcDeps = ReturnType<typeof ipcDeps>;
 
-	return { publish: (force = false) => publisher.publish(force) };
+/**
+ * Every operation the window can reach, and nothing else, registered by area (`ipc/`). There is no generic invoke and no
+ * passthrough: each handler is named, its arguments checked (`handle.ts`), its root resolved against what the person
+ * actually opened, and its answer returned as a Result.
+ */
+export const registerIpc = (context: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
+	const d = ipcDeps(context);
+	registerCheckout(d);
+	registerClone(d);
+	registerDesignSystem(d);
+	registerCodebase(d);
+	registerPrototypes(d);
+	registerReview(d);
+	registerPublishing(d);
+	registerPage(d);
+	registerAccount(d);
+	return { publish: (force = false) => d.publisher.publish(force) };
 };
