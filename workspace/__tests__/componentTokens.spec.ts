@@ -43,7 +43,13 @@ describe('the tags', () => {
 	const tags = tagsFor(TOKENS);
 
 	it('leave a token that is not a color or a length untouched, even one written in pixels', () => {
-		const shown = tagsFor([...TOKENS, token('text.base', 'number', '16px'), token('font.sans', 'font', 'Inter')]);
+		const shown = tagsFor([
+			...TOKENS,
+			token('text.base', 'number', '16px'),
+			token('font.sans', 'font', 'Inter'),
+			token('breakpoints.md', 'dimension', '900px', { category: 'Breakpoints', group: 'Breakpoints' }),
+		]);
+		expect(shown.edits.map((e) => e.path)).not.toContain('breakpoints.md');
 		expect(shown.edits.map((e) => e.path)).not.toContain('text.base');
 		expect(shown.edits.map((e) => e.path)).not.toContain('font.sans');
 		expect(shown.sizes.map((s) => s.path)).not.toContain('text.base');

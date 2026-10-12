@@ -94,6 +94,45 @@ describe('CSS variables', () => {
 		expect(find(list, 'css.light.font-color')).toMatchObject({ kind: 'color', category: 'Color' });
 	});
 
+	it('read a shadow by its name, as Tailwind’s theme names them, following a variable it is written as', async () => {
+		const css = `@theme {
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --inset-shadow-xs: inset 0 1px 1px rgb(0 0 0 / 0.05);
+  --shadow: var(--shadow-sm);
+  --shadow-color: #000000;
+}
+`;
+		const list = await readTokens(reads({ 'src/app.css': css }));
+		const shadows = list.tokens.filter((t) => t.category === 'Elevation').map(({ path, kind, group, set, name, value }) => ({ path, kind, group, set, name, value }));
+		expect(shadows).toEqual([
+			{ path: 'css.light.shadow-sm', kind: 'shadow', group: 'Shadows', set: 'shadow', name: 'sm', value: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)' },
+			{ path: 'css.light.inset-shadow-xs', kind: 'shadow', group: 'Shadows', set: 'inset-shadow', name: 'xs', value: 'inset 0 1px 1px rgb(0 0 0 / 0.05)' },
+			{ path: 'css.light.shadow', kind: 'shadow', group: 'Shadows', set: 'shadow', name: 'base', value: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)' },
+		]);
+		// A color named for a shadow is a color.
+		expect(find(list, 'css.light.shadow-color')).toMatchObject({ kind: 'color', category: 'Color' });
+	});
+
+	it('read breakpoints and border widths as lengths named for them, and motion as its durations and easings', async () => {
+		const css = `@theme {
+  --breakpoint-md: 48rem;
+  --border-thin: 1px;
+  --duration-fast: 150ms;
+  --default-transition-duration: 0.15s;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --border: #e5e5e5;
+}
+`;
+		const list = await readTokens(reads({ 'src/app.css': css }));
+		expect(find(list, 'css.light.breakpoint-md')).toMatchObject({ kind: 'dimension', category: 'Breakpoints', group: 'Breakpoints', value: '48rem' });
+		expect(find(list, 'css.light.border-thin')).toMatchObject({ kind: 'dimension', category: 'Borders', group: 'Borders', value: '1px' });
+		expect(find(list, 'css.light.duration-fast')).toMatchObject({ kind: 'duration', category: 'Motion', group: 'Duration', value: '150ms' });
+		expect(find(list, 'css.light.default-transition-duration')).toMatchObject({ kind: 'duration', category: 'Motion', group: 'Duration', value: '0.15s' });
+		expect(find(list, 'css.light.ease-out')).toMatchObject({ kind: 'easing', category: 'Motion', group: 'Easing', value: 'cubic-bezier(0, 0, 0.2, 1)' });
+		// A color named for a border is a color.
+		expect(find(list, 'css.light.border')).toMatchObject({ kind: 'color', category: 'Color' });
+	});
+
 	it('group a scale of steps into one set: Tailwind’s --color-red-500 is step 500 of color-red', async () => {
 		const list = await readTokens(reads({ 'src/styles/globals.css': CSS }));
 		expect(find(list, 'css.light.color-red-500')).toMatchObject({ set: 'color-red', name: '500' });
@@ -144,7 +183,7 @@ describe('design token files', () => {
 					size: { body: { $type: 'dimension', $value: '16px' } },
 				},
 				heading: { h1: { $type: 'typography', $value: { fontFamily: '{font.family.sans}', fontSize: '32px', fontWeight: 700, lineHeight: 1.2 } } },
-				shadow: { sm: { $type: 'shadow', $value: { offsetX: '0px' } } },
+				gradient: { sky: { $type: 'gradient', $value: [] } },
 			},
 			null,
 			2,
@@ -161,7 +200,58 @@ describe('design token files', () => {
 			{ path: 'heading.h1.lineHeight', kind: 'font', group: 'Line height', set: 'heading.h1', name: 'lineHeight', value: '1.2' },
 		]);
 		// A kind no primitive reads yet is still left out.
-		expect(list.tokens.map((t) => t.path)).not.toContain('shadow.sm');
+		expect(list.tokens.map((t) => t.path)).not.toContain('gradient.sky');
+	});
+
+	it('read a shadow, or several on one token, as the box shadow they draw, following a color it names', async () => {
+		const shadows = JSON.stringify(
+			{
+				color: { black: { $type: 'color', $value: '#000000' } },
+				shadow: {
+					$type: 'shadow',
+					sm: { $value: { color: '{color.black}', offsetX: '0px', offsetY: '1px', blur: '2px', spread: '0px' } },
+					md: { $value: [{ color: '#00000033', offsetX: { value: 0, unit: 'px' }, offsetY: '4px', blur: '6px', spread: '-1px' }, { color: '#0000001a', offsetX: '0px', offsetY: '2px', blur: '4px', spread: '-2px', inset: true }] },
+					broken: { $value: { color: '#000000', offsetX: '0px' } },
+					partly: { $value: [{ color: '#000000', offsetX: '0px', offsetY: '1px', blur: '2px', spread: '0px' }, { color: '#000000' }] },
+				},
+			},
+			null,
+			2,
+		);
+		const list = await readTokens(reads({ 'tokens/shadow.tokens.json': shadows }));
+		expect(find(list, 'shadow.sm')).toMatchObject({ kind: 'shadow', category: 'Elevation', group: 'Shadows', set: 'shadow', name: 'sm', value: '0px 1px 2px 0px #000000' });
+		expect(find(list, 'shadow.md')?.value).toBe('0px 4px 6px -1px #00000033, inset 0px 2px 4px -2px #0000001a');
+		// One it cannot draw is named, not guessed.
+		expect(find(list, 'shadow.broken')).toBeUndefined();
+		expect(list.problems.map((p) => p.reason)).toContain('shadow.broken is not a shadow that can be read: it needs a color, offsets, a blur and a spread');
+		// Nor half of one: a token of several shadows is drawn whole or not at all, never as the part that could be read.
+		expect(find(list, 'shadow.partly')).toBeUndefined();
+		expect(list.problems.map((p) => p.reason)).toContain('shadow.partly is not a shadow that can be read: it needs a color, offsets, a blur and a spread');
+	});
+
+	it('read motion, breakpoints and border widths: a duration, a cubic Bézier, and lengths named for them', async () => {
+		const more = JSON.stringify(
+			{
+				motion: {
+					fast: { $type: 'duration', $value: '100ms' },
+					slow: { $type: 'duration', $value: { value: 400, unit: 'ms' } },
+					out: { $type: 'cubicBezier', $value: [0, 0, 0.2, 1] },
+					wrong: { $type: 'cubicBezier', $value: [0, 0] },
+				},
+				breakpoint: { md: { $type: 'dimension', $value: '900px' } },
+				border: { width: { thin: { $type: 'dimension', $value: '1px' } } },
+			},
+			null,
+			2,
+		);
+		const list = await readTokens(reads({ 'tokens/more.tokens.json': more }));
+		expect(find(list, 'motion.fast')).toMatchObject({ kind: 'duration', category: 'Motion', group: 'Duration', set: 'motion', name: 'fast', value: '100ms' });
+		expect(find(list, 'motion.slow')?.value).toBe('400ms');
+		expect(find(list, 'motion.out')).toMatchObject({ kind: 'easing', category: 'Motion', group: 'Easing', value: 'cubic-bezier(0, 0, 0.2, 1)' });
+		expect(find(list, 'motion.wrong')).toBeUndefined();
+		expect(list.problems.map((p) => p.reason)).toContain('motion.wrong is not a duration or an easing that can be read');
+		expect(find(list, 'breakpoint.md')).toMatchObject({ kind: 'dimension', category: 'Breakpoints', value: '900px' });
+		expect(find(list, 'border.width.thin')).toMatchObject({ kind: 'dimension', category: 'Borders', value: '1px' });
 	});
 
 	it('read the one typography token in the shared fixture as its family', async () => {

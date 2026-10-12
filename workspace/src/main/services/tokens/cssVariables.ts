@@ -1,18 +1,21 @@
 /**
  * Tokens kept as CSS variables, as shadcn and Tailwind design systems keep them: `--primary: oklch(…)` in `:root`, the
  * dark values in `.dark`, a Tailwind scale in `@theme` (`--color-red-500`). A variable is a token when its value is a
- * color, or a length whose name says spacing or radius (`primitiveOf`), or typography by its name (a family, a weight, a size,
- * a line height); every other variable (a z-index, a duration) is left out, not guessed. A value that names another variable (`var(--ring)`) is the color it points at,
+ * color, or a length whose name says spacing or radius (`primitiveOf`), or typography or a shadow by its name (a family, a
+ * weight, a size, a line height; `--shadow-sm`), or a duration or an easing; every other variable (a z-index) is left out,
+ * not guessed. A value that names another variable (`var(--ring)`) is the color it points at,
  * and points at that variable's token. A change is written in the variable's own declaration: `--primary: #108062;`, or
  * `--primary: var(--ring);` to point it elsewhere.
  */
 import type { DesignToken } from '../../../shared/contract';
-import { DIMENSION } from '../../../shared/tokens';
+import { DIMENSION, DURATION } from '../../../shared/tokens';
 import { lineAt, replaced } from './objectLiteral';
-import { TYPE_PARTS, primitiveOf } from '../../../shared/primitives';
+import { MOTION_PARTS, SHADOWS, TYPE_PARTS, primitiveOf } from '../../../shared/primitives';
 import { type TokenSource, capitalized, notWhereRead, semanticFirst } from './source';
 
 const STYLESHEET = /\.(css|scss|less|pcss)$/;
+/** An easing (`cubic-bezier(…)`, `ease-out`, `linear`): motion, by its value, as a duration is (`DURATION`). */
+const EASING = /^(cubic-bezier\(.*\)|steps\(.*\)|linear(\(.*\))?|ease(-in|-out|-in-out)?)$/;
 
 /**
  * Which part of typography a variable is, by its name as Tailwind's theme names it (and the plain names others use): its
@@ -81,12 +84,15 @@ export const cssVariables: TokenSource = {
 				const value = resolve(v.value, mode);
 				const pointer = POINTER.exec(v.value)?.[1];
 				const pointerMode = pointer === undefined ? null : modeOf(pointer, mode);
+				// Typography and shadows are known by their names; a color is a color, however it is named (`--shadow-color`).
 				const type = COLOR.test(value) ? null : typography(name, value);
-				if (type !== null) {
-					tokens.push({ path: `css.${mode}.${name}`, kind: 'font', category: primitiveOf('font', name) as string, ...type, value, source: { file: v.file, line: v.line } });
+				const shadow = COLOR.test(value) ? null : /^(.*shadow)(?:-(.+))?$/.exec(name);
+				const named = type !== null ? { kind: 'font' as const, ...type } : shadow ? { kind: 'shadow' as const, group: SHADOWS, set: shadow[1] as string, name: shadow[2] ?? 'base' } : null;
+				if (named !== null) {
+					tokens.push({ path: `css.${mode}.${name}`, category: primitiveOf(named.kind, name) as string, ...named, value, source: { file: v.file, line: v.line } });
 					continue;
 				}
-				const kind = COLOR.test(value) ? 'color' : DIMENSION.test(value) ? 'dimension' : null;
+				const kind = COLOR.test(value) ? 'color' : DIMENSION.test(value) ? 'dimension' : DURATION.test(value) ? 'duration' : EASING.test(value) ? 'easing' : null;
 				const category = kind === null ? null : primitiveOf(kind, name);
 				if (kind === null || category === null) continue;
 				// A scale's steps are one set: `--color-red-500` is step 500 of `color-red`.
@@ -95,7 +101,7 @@ export const cssVariables: TokenSource = {
 					path: `css.${mode}.${name}`,
 					kind,
 					category,
-					group: kind === 'color' ? capitalized(mode) : category,
+					group: kind === 'color' ? capitalized(mode) : kind === 'duration' || kind === 'easing' ? MOTION_PARTS[kind] : category,
 					set: step ? (step[1] as string) : name,
 					name: step ? (step[2] as string) : name,
 					value,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DesignToken } from '../src/shared/contract';
 import { PREVIEW_SPECIMEN, specimenAddress } from '../src/shared/catalog';
-import { PRIMITIVES, TYPE_PARTS, byPrimitive, isEditable, missingParts, primitiveOf } from '../src/shared/primitives';
+import { MOTION_PARTS, PRIMITIVES, TYPE_PARTS, byPrimitive, isEditable, missingParts, primitiveOf } from '../src/shared/primitives';
 import { typeSpecimens } from '../src/shared/specimens';
 
 /**
@@ -21,8 +21,13 @@ const token = (category: string, path = category.toLowerCase()): DesignToken => 
 });
 
 describe('the vocabulary', () => {
-	it('is Color, Typography, Spacing and Shape, in that order, until a reader can read another kind', () => {
-		expect(PRIMITIVES.map((p) => p.category)).toEqual(['Color', 'Typography', 'Spacing', 'Shape']);
+	it('is Color, Typography, Spacing, Shape, Elevation, Borders, Breakpoints and Motion, in that order', () => {
+		expect(PRIMITIVES.map((p) => p.category)).toEqual(['Color', 'Typography', 'Spacing', 'Shape', 'Elevation', 'Borders', 'Breakpoints', 'Motion']);
+	});
+
+	it('says motion is a duration and an easing, so a design system with one is seen to lack the other', () => {
+		expect(PRIMITIVES.find((p) => p.category === 'Motion')?.parts).toEqual(['Duration', 'Easing']);
+		expect(Object.values(MOTION_PARTS)).toEqual(['Duration', 'Easing']);
 	});
 
 	it('says typography has a family, a size, a weight and a line height, so a design system with some is seen to lack the rest', () => {
@@ -41,7 +46,7 @@ describe('which primitive a token is', () => {
 		expect(primitiveOf('dimension', 'gap-2')).toBe('Spacing');
 		// Not a guess: a font size, a width or a breakpoint is not spacing.
 		expect(primitiveOf('dimension', 'font-size-sm')).toBeNull();
-		expect(primitiveOf('dimension', 'breakpoint-md')).toBeNull();
+		expect(primitiveOf('dimension', 'width-md')).toBeNull();
 	});
 
 	it('is Typography for a font, whatever its name says', () => {
@@ -49,9 +54,25 @@ describe('which primitive a token is', () => {
 		expect(primitiveOf('font', 'spacing')).toBe('Typography');
 	});
 
-	it('is nothing for a kind no primitive in the vocabulary is yet, whatever its name says', () => {
-		expect(primitiveOf('shadow', 'radius')).toBeNull();
-		expect(primitiveOf('duration', 'spacing')).toBeNull();
+	it('is Elevation for a shadow, whatever its name says', () => {
+		expect(primitiveOf('shadow', 'radius')).toBe('Elevation');
+	});
+
+	it('is Borders for a length named for a border, Breakpoints for one named for a breakpoint, and a radius still Shape', () => {
+		expect(primitiveOf('dimension', 'border-thin')).toBe('Borders');
+		expect(primitiveOf('dimension', 'border.width.thick')).toBe('Borders');
+		expect(primitiveOf('dimension', 'border-radius')).toBe('Shape');
+		expect(primitiveOf('dimension', 'breakpoint-md')).toBe('Breakpoints');
+		expect(primitiveOf('dimension', 'screen-lg')).toBe('Breakpoints');
+	});
+
+	it('is Motion for a duration or an easing, whatever its name says', () => {
+		expect(primitiveOf('duration', 'spacing')).toBe('Motion');
+		expect(primitiveOf('easing', 'radius')).toBe('Motion');
+	});
+
+	it('is nothing for a kind no primitive in the vocabulary is, whatever its name says', () => {
+		expect(primitiveOf('number', 'spacing')).toBeNull();
 	});
 });
 
@@ -68,10 +89,24 @@ describe('the order the primitives are shown in', () => {
 });
 
 describe('what can be changed', () => {
-	it('is a color or a length, and nothing else: every other kind is shown, never edited, written or tagged', () => {
-		expect(isEditable('color')).toBe(true);
-		expect(isEditable('dimension')).toBe(true);
-		for (const kind of ['font', 'shadow', 'duration', 'easing', 'number'] as const) expect(isEditable(kind)).toBe(false);
+	const shaped = (category: string, kind: DesignToken['kind']) => ({ ...token(category), kind });
+
+	it('is a color or a length of a primitive that is changed here (Color, Spacing, Shape), and nothing else', () => {
+		expect(isEditable(shaped('Color', 'color'))).toBe(true);
+		expect(isEditable(shaped('Spacing', 'dimension'))).toBe(true);
+		expect(isEditable(shaped('Shape', 'dimension'))).toBe(true);
+	});
+
+	it('is not a length that is only shown: a breakpoint or a border is a length, and is not changed here', () => {
+		expect(isEditable(shaped('Breakpoints', 'dimension'))).toBe(false);
+		expect(isEditable(shaped('Borders', 'dimension'))).toBe(false);
+	});
+
+	it('is not any other kind, nor a token of a category the vocabulary does not know', () => {
+		for (const [category, kind] of [['Typography', 'font'], ['Elevation', 'shadow'], ['Motion', 'duration'], ['Motion', 'easing'], ['Spacing', 'number']] as const) {
+			expect(isEditable(shaped(category, kind))).toBe(false);
+		}
+		expect(isEditable(shaped('Sizing', 'dimension'))).toBe(false);
 	});
 });
 

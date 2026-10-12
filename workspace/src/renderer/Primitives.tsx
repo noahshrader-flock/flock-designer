@@ -88,6 +88,19 @@ const Corners = ({ tokens }: Drawing) => (
 	</div>
 );
 
+/** Elevation: each shadow on a box it raises, with its name and what it is. */
+const Shadows = ({ tokens }: Drawing) => (
+	<div className="flex flex-wrap gap-6">
+		{tokens.map((t) => (
+			<div key={t.path} data-primitive-token className="flex w-40 flex-col gap-2">
+				<span data-shadow-sample className="bg-card h-20 rounded-lg" style={{ boxShadow: t.value }} />
+				<span className="text-sm">{nameOf(t)}</span>
+				<span className="text-muted-foreground font-mono text-xs break-words">{t.value}</span>
+			</div>
+		))}
+	</div>
+);
+
 /** Anything with no drawing of its own: its names and values. */
 const Table = ({ tokens }: Drawing) => (
 	<table className="w-full max-w-xl text-sm">
@@ -139,7 +152,7 @@ const Specimens = ({ tokens, byPath, preview }: Drawing) => (
 );
 
 /** Each of the vocabulary's drawings, by the word it uses for it: a new drawing is one entry. */
-const DRAWINGS: Record<Primitive['drawn'], (props: Drawing) => ReactNode> = { swatches: Swatches, bars: Bars, corners: Corners, specimens: Specimens };
+const DRAWINGS: Record<Primitive['drawn'], (props: Drawing) => ReactNode> = { swatches: Swatches, bars: Bars, corners: Corners, specimens: Specimens, shadows: Shadows, table: Table };
 
 /**
  * A primitive's tokens as the vocabulary says to draw them, a group heading over each when it has several. A primitive made

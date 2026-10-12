@@ -5,13 +5,15 @@
  * disagree.
  */
 import type { DesignToken, TokenEdit } from './contract';
-import { isEditable } from './primitives';
 
 /** A color a change can give: a hex, with an opacity when it has eight digits. */
 export const HEX_COLOR = /^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
 /** A CSS length the panel shows as a dimension: `8px`, `0.25rem`, `1.5em`. */
 export const DIMENSION = /^(-?\d*\.?\d+)(px|rem|em)$/;
+
+/** A CSS duration: `150ms`, `0.2s`. */
+export const DURATION = /^-?\d*\.?\d+m?s$/;
 
 /** A length's number and unit (`8px` is 8 and `px`), or null when it is not one. */
 export const lengthParts = (value: string): { number: number; unit: 'px' | 'rem' | 'em' } | null => {
@@ -66,7 +68,7 @@ export const sameChange = (a: TokenEdit[], b: TokenEdit[]): boolean => {
 };
 
 /** Whether `value` is one a token of this kind can be given. */
-export const fitsKind = (kind: DesignToken['kind'], value: string): boolean => isEditable(kind) && (kind === 'color' ? HEX_COLOR : DIMENSION).test(value);
+export const fitsKind = (kind: DesignToken['kind'], value: string): boolean => (kind === 'color' ? HEX_COLOR.test(value) : kind === 'dimension' ? DIMENSION.test(value) : false);
 
 /**
  * Where a token is written. Two tokens can be written in one place: a palette both modes spread in (FUI's shared roles)

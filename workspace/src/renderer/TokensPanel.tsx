@@ -38,7 +38,7 @@ const ROW = '-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 p
 /**
  * A token's row: its swatch, name, what it points at, the contrast of its pair when it is the one read under the other,
  * and its value, as changed. Pressing it opens its control, beside the panel, over the components it changes. A token
- * that cannot be changed (`isEditable`: a font, a shadow) is the same row with nothing to press.
+ * that cannot be changed (`isEditable`: a font, a shadow, a breakpoint) is the same row with nothing to press.
  */
 export const TokenRow = ({ token, note }: { token: DesignToken; note?: ReactNode }) => {
 	const changes = useTokenChanges();
@@ -63,7 +63,7 @@ export const TokenRow = ({ token, note }: { token: DesignToken; note?: ReactNode
 	);
 	return (
 		<li data-token={token.path} data-changed={edited || undefined} title={`${token.source.file}:${token.source.line}`}>
-			{isEditable(token.kind) ? (
+			{isEditable(token) ? (
 				<Popover>
 					<PopoverTrigger asChild>
 						<button type="button" aria-label={`Change ${labelOf(token)}`} className={`hover:bg-muted/50 data-[state=open]:bg-muted ${ROW}`}>

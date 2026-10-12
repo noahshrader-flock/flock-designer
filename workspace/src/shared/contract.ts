@@ -280,7 +280,8 @@ export type DesignSystemConnection = { state: 'connected'; id: string } | { stat
  */
 /**
  * What a token's value is, which says how it is drawn: a color, a length, a font, a shadow, a duration, an easing curve, or a
- * plain number. Only a color and a length can be changed in the app (`isEditable`); the rest are shown.
+ * plain number. Only the colors and lengths of Color, Spacing and Shape can be changed in the app (`isEditable`); the rest
+ * are shown.
  */
 export type TokenKind = 'color' | 'dimension' | 'font' | 'shadow' | 'duration' | 'easing' | 'number';
 

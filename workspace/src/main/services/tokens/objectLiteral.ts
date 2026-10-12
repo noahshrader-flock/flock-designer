@@ -84,6 +84,43 @@ const codeEnd = (text: string, from: number, to: number): number => {
 	return Math.min(end, to);
 };
 
+/**
+ * The items of the array literal whose `[` is at `open`: each one's code as written, its line, and where it is. A string's
+ * commas, and those inside a call or a nested literal, do not end an item.
+ */
+export const arrayItems = (text: string, open: number): { text: string; line: number; span: [number, number] }[] => {
+	const items: { text: string; line: number; span: [number, number] }[] = [];
+	const item = (from: number, to: number) => {
+		const at = codeStart(text, from, to);
+		if (at >= to) return;
+		const end = codeEnd(text, at, to);
+		items.push({ text: text.slice(at, end).replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '').trim(), line: lineAt(text, at), span: [at, end] });
+	};
+	let start = open + 1;
+	let depth = 0;
+	for (let i = open + 1; i < text.length; ) {
+		const j = skipNonCode(text, i);
+		if (j > i) {
+			i = j;
+			continue;
+		}
+		const c = text[i];
+		if (c === '{' || c === '[' || c === '(') depth++;
+		else if (c === '}' || c === ']' || c === ')') {
+			if (depth === 0) {
+				item(start, i);
+				return items;
+			}
+			depth--;
+		} else if (c === ',' && depth === 0) {
+			item(start, i);
+			start = i + 1;
+		}
+		i++;
+	}
+	return items;
+};
+
 /** The object literal whose `{` is at `open`, and where it ends. */
 export const parseObject = (text: string, open: number): { node: Node; end: number } => {
 	const entries: Entry[] = [];

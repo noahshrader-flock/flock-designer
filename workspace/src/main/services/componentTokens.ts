@@ -88,7 +88,7 @@ export const tagsFor = (tokens: DesignToken[]): Tags => {
 	const places = new Set<string>();
 	for (const t of tokens) {
 		// Only what can be changed is tagged: a tag is a change, and a font or a shadow is shown, never changed.
-		if (!isEditable(t.kind) || places.has(placeOf(t))) continue;
+		if (!isEditable(t) || places.has(placeOf(t))) continue;
 		places.add(placeOf(t));
 		if (t.kind === 'color') {
 			const n = colors.size + 1;
@@ -214,7 +214,6 @@ export class ComponentTokens {
 	constructor(private readonly deps: ComponentTokensDeps) {}
 
 	async of(file: string): Promise<Answer> {
-		const system = this.deps.system();
 		const started = await this.started();
 		if ('error' in started) return { state: 'failed', error: started.error };
 		const done = started.index.done;

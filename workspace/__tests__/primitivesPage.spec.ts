@@ -47,6 +47,13 @@ const font = (group: string, set: string, name: string, value: string) => token(
 const FAMILY = font('Family', 'base', 'fontFamily', '"Inter",sans-serif');
 const TYPE = [FAMILY, font('Size', 'h1', 'fontSize', '6rem'), font('Weight', 'h1', 'fontWeight', '300'), font('Line height', 'h1', 'lineHeight', '1.167')];
 const BASE = 'http://127.0.0.1:1/previews/abc/';
+const MORE = [
+	token({ path: 'border.thin', category: 'Borders', group: 'Borders', set: 'border', name: 'thin', value: '1px' }),
+	token({ path: 'breakpoints.md', category: 'Breakpoints', group: 'Breakpoints', set: 'breakpoints', name: 'md', value: '900px' }),
+	token({ path: 'motion.fast', kind: 'duration', category: 'Motion', group: 'Duration', set: 'motion', name: 'fast', value: '150ms' }),
+	token({ path: 'motion.out', kind: 'easing', category: 'Motion', group: 'Easing', set: 'motion', name: 'out', value: 'cubic-bezier(0, 0, 0.2, 1)' }),
+];
+const ELEVATION = [token({ path: 'shadows.1', kind: 'shadow', category: 'Elevation', group: 'Shadows', set: 'shadows', name: '1', value: '0px 1px 3px rgba(0, 0, 0, 0.2)' })];
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
 let app: ReturnType<typeof fakeApp>;
@@ -69,8 +76,8 @@ const notDefined = () => document.querySelector<HTMLElement>('[data-not-defined]
 
 describe('what it defines, at the top', () => {
 	it('is a chip for each primitive, in the vocabulary’s order, with how many tokens it has', async () => {
-		await show(ready(tokens([...TOKENS, ...TYPE])));
-		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Typography 4', 'Spacing 1', 'Shape 1']);
+		await show(ready(tokens([...TOKENS, ...TYPE, ...ELEVATION])));
+		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Typography 4', 'Spacing 1', 'Shape 1', 'Elevation 1', 'Borders not defined', 'Breakpoints not defined', 'Motion not defined']);
 	});
 
 	it('says which parts a primitive made of parts has, when it lacks some: Flock’s typography is a family and nothing else', async () => {
@@ -89,7 +96,7 @@ describe('what it defines, at the top', () => {
 
 	it('says a primitive is not defined when it has no tokens, as a chip of its own', async () => {
 		await show(ready(tokens([...TOKENS.filter((t) => t.category !== 'Shape'), ...TYPE])));
-		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Typography 4', 'Spacing 1', 'Shape not defined']);
+		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Typography 4', 'Spacing 1', 'Shape not defined', 'Elevation not defined', 'Borders not defined', 'Breakpoints not defined', 'Motion not defined']);
 		expect(chips()[3]!.getAttribute('data-defined')).toBe('false');
 	});
 });
@@ -100,7 +107,7 @@ describe('each primitive, drawn', () => {
 		// Out of order on purpose, with the one it does not know first: the order is the vocabulary's, not the list's.
 		await show(ready(tokens([other, ...TYPE, ...[...TOKENS].reverse()])));
 		expect(sections()).toEqual(['Color', 'Typography', 'Spacing', 'Shape', 'Sizing']);
-		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Typography 4', 'Spacing 1', 'Shape 1', 'Sizing 1']);
+		expect(chips().map((c) => c.textContent)).toEqual(['Color 6', 'Typography 4', 'Spacing 1', 'Shape 1', 'Elevation not defined', 'Borders not defined', 'Breakpoints not defined', 'Motion not defined', 'Sizing 1']);
 	});
 
 	it('draws the palette as each set in a row of swatches: a tone family’s steps, a role’s variants', async () => {
@@ -129,6 +136,35 @@ describe('each primitive, drawn', () => {
 		// In pixels, as drawn: half a rem is 8.
 		expect(corner.style.borderRadius).toBe('8px');
 		expect(section('Shape').textContent).toContain('0.5rem');
+	});
+
+	it('draws a shadow on a box, as it would raise one, with its name and what it is', async () => {
+		await show(ready(tokens([...TOKENS, ...ELEVATION])));
+		const box = section('Elevation').querySelector<HTMLElement>('[data-shadow-sample]')!;
+		expect(box.style.boxShadow).toBe('0px 1px 3px rgba(0, 0, 0, 0.2)');
+		expect(section('Elevation').textContent).toContain('shadows 1');
+		expect(section('Elevation').textContent).toContain('0px 1px 3px rgba(0, 0, 0, 0.2)');
+	});
+
+	it('says a design system that sets no shadows does not define elevation, as Flock’s does not', async () => {
+		await show();
+		expect(notDefined()!.textContent).toContain('Elevation');
+		expect(chips().map((c) => c.textContent)).toContain('Elevation not defined');
+	});
+
+	it('shows borders, breakpoints and motion as plain tables of their names and values, motion’s durations and easings together', async () => {
+		await show(ready(tokens([...TOKENS, ...MORE])));
+		const rows = (name: string) => [...section(name).querySelectorAll('tbody tr')].map((r) => [...r.querySelectorAll('td')].map((d) => d.textContent));
+		expect(rows('Borders')).toEqual([['border thin', '1px']]);
+		expect(rows('Breakpoints')).toEqual([['breakpoints md', '900px']]);
+		expect(rows('Motion')).toEqual([['motion fast', '150ms'], ['motion out', 'cubic-bezier(0, 0, 0.2, 1)']]);
+		expect(section('Motion').querySelectorAll('table')).toHaveLength(1);
+	});
+
+	it('says which part of motion a design system leaves out, as typography’s', async () => {
+		await show(ready(tokens([...TOKENS, MORE[2]!])));
+		expect(chips().find((c) => c.textContent?.startsWith('Motion'))!.textContent).toBe('Motion 1 · duration only');
+		expect(notDefined()!.textContent).toContain('Motion easing');
 	});
 
 	it('shows anything with no drawing of its own as a plain table of its names and values', async () => {
@@ -190,12 +226,12 @@ describe('what it does not define', () => {
 
 	it('says every primitive is not defined, and every place it looked, when no tokens are found at all', async () => {
 		await show(ready(tokens([], { source: null })));
-		expect(chips().map((c) => c.textContent)).toEqual(['Color not defined', 'Typography not defined', 'Spacing not defined', 'Shape not defined']);
+		expect(chips().map((c) => c.textContent)).toEqual(['Color not defined', 'Typography not defined', 'Spacing not defined', 'Shape not defined', 'Elevation not defined', 'Borders not defined', 'Breakpoints not defined', 'Motion not defined']);
 		expect(notDefined()!.textContent).toContain('No tokens were found. Looked for theme files, CSS variables and design token files.');
 	});
 
 	it('is not there when the design system defines every primitive DSNR can read, and every part of each', async () => {
-		await show(ready(tokens([...TOKENS, ...TYPE])));
+		await show(ready(tokens([...TOKENS, ...TYPE, ...ELEVATION, ...MORE])));
 		expect(notDefined()).toBeNull();
 	});
 

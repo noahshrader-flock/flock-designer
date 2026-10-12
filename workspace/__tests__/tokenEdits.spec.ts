@@ -279,6 +279,11 @@ describe('a token that is not a color or a length', () => {
 		expect(fitsKind('font', '#108062')).toBe(false);
 	});
 
+	it('is refused as a change when it is a length of a primitive that is only shown: a breakpoint', () => {
+		const breakpoint: DesignToken = { path: 'breakpoints.md', kind: 'dimension', category: 'Breakpoints', group: 'Breakpoints', set: 'breakpoints', name: 'md', value: '900px', source: { file: 'a.ts', line: 1 } };
+		expect(editProblem({ path: 'breakpoints.md', value: '800px' }, new Map([[breakpoint.path, breakpoint]]))).toMatch(/breakpoints\.md is shown, not changed/);
+	});
+
 	it('is refused as a change, given a value or pointed at another of its kind: it is shown, not changed', () => {
 		expect(editProblem({ path: 'font.sans', value: '8px' }, byPath)).toMatch(/font\.sans is shown, not changed/);
 		expect(editProblem({ path: 'font.sans', ref: 'font.mono' }, byPath)).toMatch(/font\.sans is shown, not changed/);

@@ -192,6 +192,91 @@ describe('typography (R3)', () => {
 	});
 });
 
+describe('elevation (R4)', () => {
+	const THEME = `export const createFSTheme = (mode: 'light' | 'dark' = 'light'): Theme => {
+    const spacing = 8;
+    const shape: Shape = { borderRadius: 8 };
+    const shadows: Shadows = [
+      'none',
+      '0px 2px 1px -1px rgba(0,0,0,0.2)',
+      "0px 3px 3px -2px rgba(0,0,0,0.2)",
+      createShadow(1, 2),
+    ];
+    return createTheme({ spacing, shape, shadows });
+};
+`;
+	const read = () => readTokens(reads({ ...LIBRARY, 'src/utils/theme.ts': THEME }));
+
+	it('is the theme’s shadows, each at its level, with the first, none, left out', async () => {
+		const shadows = (await read()).tokens.filter((t) => t.category === 'Elevation').map(({ path, kind, group, set, name, value, source }) => ({ path, kind, group, set, name, value, line: source.line }));
+		expect(shadows).toEqual([
+			{ path: 'shadows.1', kind: 'shadow', group: 'Shadows', set: 'shadows', name: '1', value: '0px 2px 1px -1px rgba(0,0,0,0.2)', line: 6 },
+			{ path: 'shadows.2', kind: 'shadow', group: 'Shadows', set: 'shadows', name: '2', value: '0px 3px 3px -2px rgba(0,0,0,0.2)', line: 7 },
+		]);
+	});
+
+	it('names a shadow it cannot read, with its line', async () => {
+		expect((await read()).problems).toContainEqual({ file: 'src/utils/theme.ts', line: 8, reason: 'shadows[3] is createShadow(1, 2), not a value, so it is not read' });
+	});
+
+	it('is nothing for a theme that sets none, as Flock’s does not', async () => {
+		expect((await readTokens(reads(LIBRARY))).tokens.filter((t) => t.category === 'Elevation')).toEqual([]);
+	});
+});
+
+describe('breakpoints and motion (R5)', () => {
+	const THEME = `export const createFSTheme = (mode: 'light' | 'dark' = 'light'): Theme => {
+    const spacing = 8;
+    const shape: Shape = { borderRadius: 8 };
+    const breakpoints: ThemeOptions['breakpoints'] = {
+      values: {
+        xs: 0,
+        md: 900,
+        desktopNav: 1050,
+      },
+    };
+    const transitions = {
+      duration: { short: 250, complex: theme.duration },
+      easing: { easeOut: 'cubic-bezier(0.0, 0, 0.2, 1)' },
+    };
+    return createTheme({ spacing, shape, breakpoints, transitions });
+};
+`;
+	const read = () => readTokens(reads({ ...LIBRARY, 'src/utils/theme.ts': THEME }));
+	const of = async (category: string) =>
+		(await read()).tokens.filter((t) => t.category === category).map(({ path, kind, group, set, name, value, source }) => ({ path, kind, group, set, name, value, line: source.line }));
+
+	it('is the theme’s breakpoints, each in pixels, the custom ones as well as MUI’s', async () => {
+		expect(await of('Breakpoints')).toEqual([
+			{ path: 'breakpoints.xs', kind: 'dimension', group: 'Breakpoints', set: 'breakpoints', name: 'xs', value: '0px', line: 6 },
+			{ path: 'breakpoints.md', kind: 'dimension', group: 'Breakpoints', set: 'breakpoints', name: 'md', value: '900px', line: 7 },
+			{ path: 'breakpoints.desktopNav', kind: 'dimension', group: 'Breakpoints', set: 'breakpoints', name: 'desktopNav', value: '1050px', line: 8 },
+		]);
+	});
+
+	it('is the theme’s transitions: each duration in milliseconds, and each easing', async () => {
+		expect(await of('Motion')).toEqual([
+			{ path: 'transitions.duration.short', kind: 'duration', group: 'Duration', set: 'duration', name: 'short', value: '250ms', line: 12 },
+			{ path: 'transitions.easing.easeOut', kind: 'easing', group: 'Easing', set: 'easing', name: 'easeOut', value: 'cubic-bezier(0.0, 0, 0.2, 1)', line: 13 },
+		]);
+		expect((await read()).problems).toContainEqual({ file: 'src/utils/theme.ts', line: 12, reason: 'transitions.duration.complex is theme.duration, not a value, so it is not read' });
+	});
+
+	it('is read from where the theme sets them, not from a style that uses them first', async () => {
+		const styled = THEME.replace(
+			"    const breakpoints",
+			"    const card = { [theme.breakpoints.up('md')]: { padding: 8 } };\n    const breakpoints",
+		);
+		const list = await readTokens(reads({ ...LIBRARY, 'src/utils/theme.ts': styled }));
+		expect(list.tokens.filter((t) => t.category === 'Breakpoints').map((t) => t.name)).toEqual(['xs', 'md', 'desktopNav']);
+	});
+
+	it('is nothing for a theme that sets neither', async () => {
+		const list = await readTokens(reads(LIBRARY));
+		expect(list.tokens.filter((t) => t.category === 'Breakpoints' || t.category === 'Motion')).toEqual([]);
+	});
+});
+
 describe('the categories', () => {
 	it('say which tab a token belongs on: every color is Color, spacing is Spacing, and radius is Shape', async () => {
 		const list = await readTokens(reads(LIBRARY));

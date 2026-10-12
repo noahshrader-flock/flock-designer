@@ -2,15 +2,15 @@
  * Tokens kept in design token files, the standard JSON format (the Design Tokens Community Group's, which Style
  * Dictionary and Tokens Studio write): a token is an object with a `$value`, its kind the `$type` it has or its group
  * has. Colors, lengths whose name says spacing or radius, and typography (a family, a weight, a size named as one, a
- * typography token as each of its parts) are read; other kinds (shadows, durations) are left out until a primitive reads
- * them. A value that names another token (`{color.red.500}`) is that token's value, and
- * points at it. Each token's line is exact: the file is read a second time for where things are, by the same reader the
+ * typography token as each of its parts), shadows, and motion (a duration, a cubic Bézier) are read, and a length named
+ * for a border or a breakpoint; other kinds (a gradient) are left out until a primitive reads them. A value that names
+ * another token (`{color.red.500}`) is that token's value, and points at it. Each token's line is exact: the file is read a second time for where things are, by the same reader the
  * theme files use (JSON is an object literal too). A change is written in the token's `$value`, in the shape it had.
  */
 import type { DesignToken, TokenProblem } from '../../../shared/contract';
-import { DIMENSION, lengthParts } from '../../../shared/tokens';
+import { DIMENSION, DURATION, lengthParts } from '../../../shared/tokens';
 import { type Entry, parseObject, replaced } from './objectLiteral';
-import { TYPE_KEYS, TYPE_PARTS, primitiveOf } from '../../../shared/primitives';
+import { MOTION_PARTS, SHADOWS, TYPE_KEYS, TYPE_PARTS, primitiveOf } from '../../../shared/primitives';
 import { type TokenSource, capitalized, notWhereRead, semanticFirst } from './source';
 
 const TOKEN_FILE = /(\.tokens\.json|(^|\/)(design-)?tokens?\.json|(^|\/)(design-)?tokens\/.+\.json)$/i;
@@ -62,6 +62,32 @@ const READ_PART: Record<string, (v: unknown) => string | null> = {
 	[TYPE_PARTS.weight]: plainOf,
 	[TYPE_PARTS.lineHeight]: plainOf,
 };
+
+/**
+ * A shadow as the box shadow it draws, from the standard's parts (a color, two offsets, a blur, a spread, and `inset`), or
+ * several of them on one token; null when a part it needs is missing or is not one. `color` is followed to what it names.
+ */
+const boxShadowOf = (value: unknown, resolve: (v: unknown) => unknown): string | null => {
+	const one = (s: unknown): string | null => {
+		const o = s !== null && typeof s === 'object' ? (s as Record<string, unknown>) : {};
+		const color = resolve(o.color);
+		const lengths = [o.offsetX, o.offsetY, o.blur, o.spread].map((l) => lengthOf(resolve(l)));
+		if (typeof color !== 'string' || lengths.some((l) => l === null)) return null;
+		return `${o.inset === true ? 'inset ' : ''}${lengths.join(' ')} ${color}`;
+	};
+	const all = (Array.isArray(value) ? value : [value]).map(one);
+	return all.length > 0 && all.every((s) => s !== null) ? all.join(', ') : null;
+};
+
+/** A duration as written (`100ms`), or as the standard's newer form (`{ value: 100, unit: 'ms' }`). */
+const durationOf = (value: unknown): string | null => {
+	if (typeof value === 'string') return DURATION.test(value) ? value : null;
+	const v = value as { value?: unknown; unit?: unknown } | null;
+	return typeof v?.value === 'number' && (v.unit === 'ms' || v.unit === 's') ? `${v.value}${v.unit}` : null;
+};
+/** A cubic Bézier, four numbers, as CSS writes it. */
+const easingOf = (value: unknown): string | null =>
+	Array.isArray(value) && value.length === 4 && value.every((n) => typeof n === 'number') ? `cubic-bezier(${value.join(', ')})` : null;
 
 export const tokenFiles: TokenSource = {
 	name: 'token files',
@@ -118,6 +144,22 @@ export const tokenFiles: TokenSource = {
 			}
 			if (raw.type === 'dimension' && /font[._-]?size/i.test(path)) {
 				typeToken(path, TYPE_PARTS.size, set, last, lengthOf(value));
+				continue;
+			}
+			// Motion (R5): a duration, and an easing as a cubic Bézier; one that cannot be read is named.
+			if (raw.type === 'duration' || raw.type === 'cubicBezier') {
+				const kind = raw.type === 'duration' ? 'duration' : 'easing';
+				const written = kind === 'duration' ? durationOf(value) : easingOf(value);
+				if (written === null) problems.push({ file: raw.file, line: raw.line, reason: `${path} is not a duration or an easing that can be read` });
+				else
+					tokens.push({ path, kind, category: primitiveOf(kind, path) as string, group: MOTION_PARTS[kind], set, name: last, value: written, source: { file: raw.file, line: raw.line } });
+				continue;
+			}
+			// A shadow (R4), as the box shadow it draws; one that cannot be drawn is named.
+			if (raw.type === 'shadow') {
+				const shadow = boxShadowOf(value, resolve);
+				if (shadow === null) problems.push({ file: raw.file, line: raw.line, reason: `${path} is not a shadow that can be read: it needs a color, offsets, a blur and a spread` });
+				else tokens.push({ path, kind: 'shadow', category: primitiveOf('shadow', path) as string, group: SHADOWS, set, name: last, value: shadow, source: { file: raw.file, line: raw.line } });
 				continue;
 			}
 			if (raw.type === 'typography' && value !== null && typeof value === 'object') {
