@@ -1,5 +1,6 @@
 import type { IterationKind, ShareDescriptor, ShareStatus, ShareStep } from '../../shared/contract';
 import { projectDir } from '../../shared/projects';
+import { isSafeBranchName } from './git';
 
 /**
  * Putting an iteration in front of someone who is not on this machine.
@@ -71,11 +72,6 @@ export interface ShareTimings {
 
 export const DEFAULT_TIMINGS: ShareTimings = { pollMs: 10_000, startupMs: 180_000, timeoutMs: 25 * 60_000, skewMs: 120_000 };
 
-/**
- * A branch name goes to git and gh as an argument. It comes from this person's own record,
- * not the window, but a name that starts with `-` would still be read as an option.
- */
-const SAFE_BRANCH = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
 
 /**
  * Whether a shared preview's address answers yet. A person behind company sign-in gets a redirect or a
@@ -110,7 +106,8 @@ export const runShare = async (
 			`This repository does not build a preview for ${req.kind} work. It does for: ${req.share.kinds.join(', ')}.`,
 		);
 	}
-	if (!SAFE_BRANCH.test(req.branch) || req.branch.includes('..')) {
+	// It goes to git and gh as an argument; it comes from this person's own record, but is checked all the same.
+	if (!isSafeBranchName(req.branch)) {
 		throw new ShareProblem(`"${req.branch}" is not a branch name that can be shared.`);
 	}
 

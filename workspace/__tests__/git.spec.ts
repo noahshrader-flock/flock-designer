@@ -12,6 +12,7 @@ import {
 	isRepository,
 	listBranches,
 	branchStartedAt,
+	isSafeBranchName,
 	readCheckout,
 } from '../src/main/services/git';
 
@@ -231,6 +232,19 @@ describe('branchStartedAt', () => {
 		g('checkout', '-q', '-b', 'feature/just-cut');
 		expect(await branchStartedAt(root, 'feature/just-cut')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 		expect(await branchStartedAt(root, 'feature/nope')).toBeNull();
+	});
+});
+
+describe('a branch name from data', () => {
+	it('is safe to give git only when it cannot be read as an option or a range', () => {
+		for (const name of ['develop', 'feature/alpha', 'noah/flock-designer', 'v1.2', 'a_b-c']) expect(isSafeBranchName(name)).toBe(true);
+		for (const name of ['-x', '--output=/tmp/x', '', 'a..b', '/abs', ' develop', 'a b', 'x:y', 'a~1', 'a^', '.hidden']) expect(isSafeBranchName(name)).toBe(false);
+	});
+
+	it('is never read by git as an option when a branch’s start is asked for', async () => {
+		const written = join(root, 'written-by-git');
+		expect(await branchStartedAt(root, `--output=${written}`)).toBeNull();
+		expect(existsSync(written)).toBe(false);
 	});
 });
 

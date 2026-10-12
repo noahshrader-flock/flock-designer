@@ -781,6 +781,23 @@ describe('prototypes', () => {
 		expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## What the person asked for'));
 	});
 
+	it('never let a branch named in the shared records be read by git as an option', async () => {
+		writeSkill();
+		await call(CHANNELS.useCheckout, product);
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		// Someone with write access to the design repository puts an option where the branch belongs.
+		const written = join(home, 'written-by-git');
+		const records = join(design, 'projects', 'demo', 'iterations.json');
+		const list = JSON.parse(readFileSync(records, 'utf8')) as { basedOn: { branch: string } }[];
+		list[0]!.basedOn.branch = `--output=${written}`;
+		writeFileSync(records, JSON.stringify(list));
+		// The build is refused as a branch that does not exist, and git is never handed the option, whichever check
+		// reaches it first.
+		const built = await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
+		expect(built.error).toMatch(/There is no branch called --output=/);
+		expect(existsSync(written)).toBe(false);
+	});
+
 	it('carry Flock’s voice and tone, read from the design repository each time, once it has something written in it (T9)', async () => {
 		writeSkill();
 		await call(CHANNELS.useCheckout, product);

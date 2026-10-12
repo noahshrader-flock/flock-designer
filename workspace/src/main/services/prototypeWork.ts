@@ -6,7 +6,7 @@ import { fromBrief, hasOutsideComments, latestIterationName, nextIterationName, 
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from './accessibilityBrief';
 import { designSystemCheckout, readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
-import { branchCommit, branchExists, gitExact, readCheckout, readTreeAt } from './git';
+import { branchCommit, branchExists, gitExact, isSafeBranchName, readCheckout, readTreeAt } from './git';
 import { assertUsableProjectId } from './iterations';
 import { MAX_PAGE, type PrototypeBuild, type PrototypeSources, type RecordStore, assertPrototypeName, prototypeVersionOf, recordIteration, recordPrototype } from './prototype';
 import { bundleCommand, runBundle, sharedFilesOf, writeBundleScript } from './prototypeBundle';
@@ -373,7 +373,9 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const descriptor = readDescriptor(root);
 		const path = `${descriptor.contextDir}/${MANIFEST_FILE}`;
 		const basedOn = (await record(projectId, name))?.basedOn;
-		const onBranch = basedOn && basename(root) === basedOn.repository ? await gitExact(root, ['show', `${basedOn.branch}:${path}`]).catch(() => null) : null;
+		// The branch comes from the shared records, so it is checked before git reads it as the start of an argument.
+		const fromBranch = basedOn && basename(root) === basedOn.repository && isSafeBranchName(basedOn.branch);
+		const onBranch = fromBranch ? await gitExact(root, ['show', `${basedOn.branch}:${path}`]).catch(() => null) : null;
 		return onBranch !== null ? declaredTarget(onBranch, descriptor.product) : productTarget(join(root, descriptor.contextDir), descriptor.product);
 	};
 

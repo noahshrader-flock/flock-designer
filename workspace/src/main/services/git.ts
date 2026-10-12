@@ -179,6 +179,13 @@ export const branchesWithFile = async (root: string, file: string): Promise<stri
 };
 
 /**
+ * Whether a branch name that came from data (a record, the shared design repository) is safe to give git where it would
+ * start an argument: never an option (`-…`) or a range (`a..b`), nor anything git refuses in a branch name. The one
+ * rule, for every caller; a name that fails it is treated as a branch that does not exist.
+ */
+export const isSafeBranchName = (name: string): boolean => /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(name) && !name.includes('..');
+
+/**
  * A branch to start from, made local when it is only on GitHub: a local branch tracking `origin/<branch>`, with no
  * checkout, so the person's current branch never moves. Throws when it is on neither.
  */
@@ -325,6 +332,7 @@ export const branchStartedAt = async (root: string, branch: string): Promise<str
 	const dates = own.split('\n').filter(Boolean);
 	const oldest = dates[dates.length - 1];
 	if (oldest) return oldest;
+	if (!isSafeBranchName(branch)) return null;
 	return (await git(root, ['log', '-1', '--format=%aI', branch]).catch(() => '')) || null;
 };
 
