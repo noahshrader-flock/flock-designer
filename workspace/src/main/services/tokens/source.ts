@@ -40,6 +40,3 @@ export const semanticFirst = (tokens: DesignToken[], isPrimitive: (t: DesignToke
 	for (const t of tokens) byCategory.set(t.category, [...(byCategory.get(t.category) ?? []), t]);
 	return [...byCategory.values()].flatMap((own) => [...own.filter((t) => !isPrimitive(t)), ...own.filter(isPrimitive)]);
 };
-
-/** A word as a heading has it: `light` is `Light`. */
-export const capitalized = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);

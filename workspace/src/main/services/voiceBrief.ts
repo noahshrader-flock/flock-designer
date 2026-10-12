@@ -1,3 +1,4 @@
+import { errorText } from '../../shared/result';
 /**
  * What every agent task says about the company's voice and tone (T9 of the design system plan, step 4): the file's own
  * words, read from the design system's agent files each time a task is made, as the accessibility standard is (T7, part A), and put
@@ -58,7 +59,7 @@ export const taskVoice = async (read: (path: string) => Promise<string | null>):
 		return [
 			HEADING,
 			'',
-			`Flock's voice and tone could not be read (${err instanceof Error ? err.message : String(err)}). Write in this product's own voice, from its guidance, and say in your summary that it was not read.`,
+			`Flock's voice and tone could not be read (${errorText(err)}). Write in this product's own voice, from its guidance, and say in your summary that it was not read.`,
 		].join('\n');
 	}
 };

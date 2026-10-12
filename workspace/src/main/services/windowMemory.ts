@@ -1,4 +1,5 @@
 import { type JsonFile, jsonFile } from './jsonFile';
+import { asRecord } from '../../shared/json';
 
 /**
  * Remembers the window's size and place, so it opens the way it was left.
@@ -31,7 +32,7 @@ export const MIN_WINDOW = { width: 900, height: 560 };
  * system places it.
  */
 export const restoreState = (saved: unknown, screens: Area[], fallback: { width: number; height: number }): WindowState => {
-	const s = (typeof saved === 'object' && saved !== null ? saved : {}) as Record<string, unknown>;
+	const s = asRecord(saved);
 	const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : null);
 	const biggest = screens.reduce(
 		(a, b) => (b.width * b.height > a.width * a.height ? b : a),

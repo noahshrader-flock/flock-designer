@@ -5,7 +5,8 @@ import { DesignRepo } from '../src/main/services/designRepo';
 import { Review } from '../src/renderer/Review';
 import type { CommentAnchor, MarkerRequest } from '../src/shared/contract';
 import { Viewer } from '../src/viewer/Viewer';
-import { asResult, browserComments, framePage, saveToken, tokenApi } from '../src/viewer/browserAdapter';
+import { browserComments, framePage, saveToken, tokenApi } from '../src/viewer/browserAdapter';
+import { toResult } from '../src/shared/result';
 import { PAGE_CONFIG, commentOnPage, fakeGitHub, prototypeIn, sitePage } from './pageHarness';
 import {
 	afterAgentCheck,
@@ -61,12 +62,12 @@ const openApp = async (address?: { iteration: string }) => {
 	const doc = prototypeIn(preview);
 	const app = fakeApp({
 		signInState: async () => ok({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
-		readComments: (_projectId: string, branch: string) => asResult(repo.readComments(branch)),
+		readComments: (_projectId: string, branch: string) => toResult(repo.readComments(branch)),
 		postComment: (projectId: string, branch: string, body: string, anchor: CommentAnchor | null) =>
-			asResult(repo.postComment(projectId, branch, body, anchor, null)),
-		resolveComment: (id: number, resolved: boolean) => asResult(repo.setResolved(id, resolved)),
-		deleteComment: (id: number) => asResult(repo.deleteComment(id).then(() => null)),
-		moveComment: (id: number, anchor: CommentAnchor) => asResult(repo.moveComment(id, anchor)),
+			toResult(repo.postComment(projectId, branch, body, anchor, null)),
+		resolveComment: (id: number, resolved: boolean) => toResult(repo.setResolved(id, resolved)),
+		deleteComment: (id: number) => toResult(repo.deleteComment(id).then(() => null)),
+		moveComment: (id: number, anchor: CommentAnchor) => toResult(repo.moveComment(id, anchor)),
 		pageShowMarkers: (items: MarkerRequest[]) => framePage(preview).showMarkers(items),
 		// Address, as the main process finishes it: the change made, and the comment marked (and resolved) where it is.
 		addressPrototype: async () => ok({ state: 'running', startedAt: 'now' }),

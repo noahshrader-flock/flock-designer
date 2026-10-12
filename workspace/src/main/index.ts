@@ -24,6 +24,7 @@ import { RuntimeManager } from './services/runtime';
 import { ShareRunner } from './services/share';
 import { OpenedCheckouts } from './services/session';
 import { TokenStore } from './services/tokenStore';
+import { errorText } from '../shared/result';
 
 /**
  * The application shell.
@@ -233,7 +234,7 @@ void app.whenReady().then(() => {
 			.then(({ runLocalSmoke }) => runLocalSmoke(window, process.env.FD_COKE ?? '', process.env.FD_PROJECT ?? ''))
 			.then(() => app.exit(0))
 			.catch((err) => {
-				console.error(`smoke-local: FAILED -- ${err instanceof Error ? err.message : String(err)}`);
+				console.error(`smoke-local: FAILED -- ${errorText(err)}`);
 				app.exit(1);
 			});
 		setTimeout(() => {
@@ -247,7 +248,7 @@ void app.whenReady().then(() => {
 			.then(({ runPageSmoke }) => runPageSmoke(window))
 			.then(() => app.exit(0))
 			.catch((err) => {
-				console.error(`smoke-page: FAILED -- ${err instanceof Error ? err.message : String(err)}`);
+				console.error(`smoke-page: FAILED -- ${errorText(err)}`);
 				app.exit(1);
 			});
 		setTimeout(() => {

@@ -12,7 +12,8 @@ import type { DesignToken } from '../../../shared/contract';
 import { DIMENSION, DURATION } from '../../../shared/tokens';
 import { lineAt, replaced } from './objectLiteral';
 import { MOTION_PARTS, SHADOWS, TYPE_PARTS, primitiveOf } from '../../../shared/primitives';
-import { type TokenSource, capitalized, notWhereRead, semanticFirst } from './source';
+import { capitalize } from '../../../shared/titleCase';
+import { type TokenSource, notWhereRead, semanticFirst } from './source';
 
 const STYLESHEET = /\.(css|scss|less|pcss)$/;
 /** An easing (`cubic-bezier(…)`, `ease-out`, `linear`): motion, by its value, as a duration is (`DURATION`). */
@@ -161,7 +162,7 @@ export const cssVariables: TokenSource = {
 					path: `css.${mode}.${name}`,
 					kind,
 					category,
-					group: kind === 'color' ? capitalized(mode) : kind === 'duration' || kind === 'easing' ? MOTION_PARTS[kind] : category,
+					group: kind === 'color' ? capitalize(mode) : kind === 'duration' || kind === 'easing' ? MOTION_PARTS[kind] : category,
 					set: step ? (step[1] as string) : name,
 					name: step ? (step[2] as string) : name,
 					value,

@@ -1,25 +1,18 @@
 import { readFile } from 'node:fs/promises';
 import { type Server, createServer } from 'node:http';
 import { extname, join, normalize, sep } from 'node:path';
+import { MIME_TYPES } from '../../shared/mime';
 
-/** The fonts and pictures a built folder may hold, by extension: what a build may write as files beside its page. */
-export const ASSET_TYPES: Record<string, string> = {
-	'.woff2': 'font/woff2',
-	'.woff': 'font/woff',
-	'.ttf': 'font/ttf',
-	'.svg': 'image/svg+xml',
-	'.png': 'image/png',
-	'.jpg': 'image/jpeg',
-	'.gif': 'image/gif',
-};
+/**
+ * The fonts and pictures a built folder may hold, by extension: what a build may write as files beside its page. A list
+ * of its own, narrower than what a server can say a file is: widening it widens what a build may write.
+ */
+const ASSETS = ['.woff2', '.woff', '.ttf', '.svg', '.png', '.jpg', '.gif'];
+const typesOf = (extensions: string[]): Record<string, string> => Object.fromEntries(extensions.map((e) => [e, MIME_TYPES[e] as string]));
+export const ASSET_TYPES = typesOf(ASSETS);
 
 /** What a built folder holds, by extension: the page, its script and styles, and its assets. Nothing else is served. */
-const TYPES: Record<string, string> = {
-	'.html': 'text/html; charset=utf-8',
-	'.js': 'text/javascript; charset=utf-8',
-	'.css': 'text/css; charset=utf-8',
-	...ASSET_TYPES,
-};
+const TYPES = typesOf(['.html', '.js', '.css', ...ASSETS]);
 
 /**
  * Serves prototypes to the review screen, and the component previews to the Design System tab, from this process, on

@@ -1,6 +1,6 @@
 import { DesignRepo, type DesignRepoRef, type GitHubApi } from '../main/services/designRepo';
 import { type Fetcher, callApi } from '../main/services/github';
-import type { PinEvent, Result } from '../shared/contract';
+import type { PinEvent } from '../shared/contract';
 import { asRecord } from '../shared/json';
 import {
 	CANCEL_PICK_SCRIPT,
@@ -14,6 +14,7 @@ import {
 	resolveScript,
 } from '../shared/pageScripts';
 import type { CommentStore, PageSurface } from '../renderer/comments/surfaces';
+import { toResult } from '../shared/result';
 
 /**
  * The comments experience on a prototype's published page: the browser's side of what the app does through its main
@@ -27,15 +28,6 @@ export const tokenApi = (token: string, fetcher: Fetcher = fetch as unknown as F
 	api: (path, init = {}) => callApi(token, { path, ...init }, fetcher),
 });
 
-/** What the app's calls answer with: the value, or what went wrong, never a throw. */
-export const asResult = async <T>(work: Promise<T>): Promise<Result<T>> => {
-	try {
-		return { ok: true, value: await work };
-	} catch (err) {
-		return { ok: false, error: err instanceof Error ? err.message : String(err) };
-	}
-};
-
 /** One iteration's comments, on GitHub. `branch` is its key, `prototype/<project>/<name>`, which names its thread. */
 export const browserComments = (
 	github: GitHubApi,
@@ -44,12 +36,12 @@ export const browserComments = (
 ): CommentStore => {
 	const repo = new DesignRepo(github, ref);
 	return {
-		read: () => asResult(repo.readComments(branch)),
+		read: () => toResult(repo.readComments(branch)),
 		// No picture of the spot: a page cannot take one of itself.
-		post: (body, anchor) => asResult(repo.postComment(projectId, branch, body, anchor, null)),
-		resolve: (id, resolved) => asResult(repo.setResolved(id, resolved)),
-		remove: (id) => asResult(repo.deleteComment(id).then(() => null)),
-		move: (id, anchor) => asResult(repo.moveComment(id, anchor)),
+		post: (body, anchor) => toResult(repo.postComment(projectId, branch, body, anchor, null)),
+		resolve: (id, resolved) => toResult(repo.setResolved(id, resolved)),
+		remove: (id) => toResult(repo.deleteComment(id).then(() => null)),
+		move: (id, anchor) => toResult(repo.moveComment(id, anchor)),
 		viewer: async () => {
 			try {
 				const login = asRecord(await github.api('/user')).login;
@@ -96,13 +88,13 @@ export const framePage = (frame: HTMLIFrameElement): PageSurface & { route(): Pr
 	};
 	return {
 		pick: () =>
-			asResult(
+			toResult(
 				run<unknown>(PICK_SCRIPT)
 					.then((raw) => readPick(raw))
 					.then((spot) => (spot ? { ...spot, picture: null } : null)),
 			),
 		cancelPick: () => run(CANCEL_PICK_SCRIPT),
-		showMarkers: (items) => asResult(run<unknown>(resolveScript(items, nonce)).then((raw) => readMarkers(raw, items))),
+		showMarkers: (items) => toResult(run<unknown>(resolveScript(items, nonce)).then((raw) => readMarkers(raw, items))),
 		focusMarker: (id) => run(focusScript(id)),
 		onPinEvent: (listener) => {
 			listeners.add(listener);

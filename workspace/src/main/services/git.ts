@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import type { Checkout } from '../../shared/contract';
 import { runFile } from './process';
+import { errorText } from '../../shared/result';
+import { OBJECT_ID_PATTERN } from '../../shared/sha';
 
 /** Git is given a minute unless a caller says otherwise: a hung command would hold up every other one on its repository. */
 const GIT_TIMEOUT_MS = 60_000;
@@ -187,7 +189,8 @@ export const branchesWithFile = async (root: string, file: string): Promise<stri
 	if (bases.length === 0) return [];
 	const lines = (await git(root, ['cat-file', '--batch-check'], { input: `${bases.map((b) => `${b.ref}:${file}`).join('\n')}\n` })).split('\n');
 	// Found: `<object> blob <size>`. Not there: `<what was asked> missing`.
-	return bases.filter((_, i) => /^[0-9a-f]{40,64} blob /.test(lines[i] ?? '')).map((b) => b.name);
+	const found = new RegExp(`^${OBJECT_ID_PATTERN} blob `);
+	return bases.filter((_, i) => found.test(lines[i] ?? '')).map((b) => b.name);
 };
 
 /**
@@ -370,7 +373,7 @@ export const pushBranch = async (root: string, branch: string): Promise<{ pushed
 	try {
 		out = await git(root, ['push', '--porcelain', '--set-upstream', 'origin', `refs/heads/${branch}:refs/heads/${branch}`], { timeoutMs: 120_000 });
 	} catch (err) {
-		const detail = err instanceof Error ? err.message : String(err);
+		const detail = errorText(err);
 		if (/rejected|non-fast-forward|fetch first/i.test(detail)) {
 			throw new GitProblem(
 				`${branch} has changes on the remote that this machine does not have, so it was not pushed. Pull them first, then try again.\n\n${detail}`,

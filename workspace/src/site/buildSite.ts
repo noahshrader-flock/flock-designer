@@ -4,6 +4,7 @@ import type { Iteration } from '../shared/contract';
 import { fromBrief, isPrototypeKey, iterationLabel, parsePrototypeName, projectCodeLink, sitePath } from '../shared/projects';
 import { statesOf } from '../shared/prototypeStates';
 import { parseIterations } from '../shared/records';
+import { plural } from '../shared/plural';
 
 /**
  * The site prototypes are published as, built from the design repository: every project with a saved page, every
@@ -178,7 +179,7 @@ const indexPage = (projects: SiteProject[]): string =>
 						.sort()
 						.at(-1),
 				);
-				return `<li><a href="${p.id}/"><strong>${escape(p.title)}</strong><br><span class="muted">${n} ${n === 1 ? 'version' : 'versions'}${newest ? ` · ${newest}` : ''}</span></a></li>`;
+				return `<li><a href="${p.id}/"><strong>${escape(p.title)}</strong><br><span class="muted">${plural(n, 'version')}${newest ? ` · ${newest}` : ''}</span></a></li>`;
 			})
 			.join('\n')}\n</ul>\n</main>`,
 	);
@@ -194,7 +195,7 @@ const projectPage = (p: SiteProject, comments: Map<string, number> | undefined):
 							const date = dateOf(pg.record.createdAt);
 							const author = pg.record.contributors?.[0]?.name;
 							const count = comments?.get(pg.record.branch);
-							const facts = [date, author, count === undefined ? null : `${count} ${count === 1 ? 'comment' : 'comments'}`].filter(Boolean);
+							const facts = [date, author, count === undefined ? null : plural(count, 'comment')].filter(Boolean);
 							return `<li><a href="${pg.path}"><strong>I${pg.iteration}</strong>${facts.length ? `<br><span class="muted">${facts.map((f) => escape(String(f))).join(' · ')}</span>` : ''}</a></li>`;
 						})
 						.join('\n')}\n</ul>\n</section>`,

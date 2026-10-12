@@ -13,6 +13,7 @@ import type { BuildContext, BuildOptions, Loader, Plugin } from 'esbuild';
 import { ASSET_TYPES, type PrototypeServer } from './prototypeServer';
 import { runFile } from './process';
 import { editedFiles } from './tokenEdits';
+import { errorText } from '../../shared/result';
 
 /**
  * Previews of the component library's stories, for the Design System tab (DESIGN_SYSTEM_PLAN.md, P1).
@@ -516,7 +517,7 @@ export class StoryPreviews {
 			return { state: 'ready', base: await this.deps.server.serveFolder(serveKey(basename(dir)), site) };
 		} catch (err) {
 			rmSync(dir, { recursive: true, force: true });
-			return { state: 'failed', error: err instanceof Error ? err.message : String(err) };
+			return { state: 'failed', error: errorText(err) };
 		}
 	}
 
@@ -549,7 +550,7 @@ export class StoryPreviews {
 			trial.served = key;
 			return { state: 'ready', base };
 		} catch (err) {
-			return { state: 'failed', error: err instanceof Error ? err.message : String(err) };
+			return { state: 'failed', error: errorText(err) };
 		}
 	}
 
@@ -574,7 +575,7 @@ export class StoryPreviews {
 			this.taggedServed = key;
 			return { state: 'ready', base: await this.deps.server.serveFolder(key, join(at.dir, 'tagged')) };
 		} catch (err) {
-			return { state: 'failed', error: err instanceof Error ? err.message : String(err) };
+			return { state: 'failed', error: errorText(err) };
 		}
 	}
 

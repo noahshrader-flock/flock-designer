@@ -1,3 +1,4 @@
+import { asRecord } from '../../shared/json';
 /**
  * A change to the library's tokens, written into its files (T3 of the design system plan, decisions 19 and 26): what the
  * previews are built from to try a change, and what T4 will commit to a branch. **One writer for both.**
@@ -23,7 +24,7 @@ export const tokenEditsOf = (sent: unknown): TokenEdit[] => {
 	const isText = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 200;
 	if (!Array.isArray(sent) || sent.length > MOST_EDITS) throw new Error('A change is a list of token edits.');
 	return sent.map((e: unknown) => {
-		const o = typeof e === 'object' && e !== null ? (e as Record<string, unknown>) : {};
+		const o = asRecord(e);
 		if (isText(o.path) && isText(o.ref) && !('value' in o)) return { path: o.path, ref: o.ref };
 		if (isText(o.path) && isText(o.value) && !('ref' in o)) return { path: o.path, value: o.value };
 		throw new Error('A token edit names a token and either the token it points at or its new value.');

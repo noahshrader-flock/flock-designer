@@ -5,6 +5,7 @@ import { stateLabel } from '../shared/prototypeStates';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
+import { capitalize } from '../shared/titleCase';
 
 /** What the switcher needs to know of an iteration: how it is named, and which it is. */
 export interface Switchable {
@@ -36,7 +37,7 @@ const Pick = ({
 }) => (
 	<DropdownMenu>
 		<DropdownMenuTrigger asChild>
-			<Button variant="outline" size={icon ? 'icon' : 'default'} aria-label={`${what[0]!.toUpperCase()}${what.slice(1)} ${label}: switch ${what}`}>
+			<Button variant="outline" size={icon ? 'icon' : 'default'} aria-label={`${capitalize(what)} ${label}: switch ${what}`}>
 				{icon ?? (
 					<>
 						{label}

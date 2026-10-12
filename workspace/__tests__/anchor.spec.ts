@@ -21,7 +21,7 @@ const anchor: CommentAnchor = {
 	selector: '[data-e2e-ref="users-invite"]',
 	nearbyText: 'Invite users',
 	viewport: { width: 1280, height: 800 },
-	commit: 'abc123',
+	commit: 'abc1234',
 	offset: { x: 0.25, y: 0.5 },
 };
 

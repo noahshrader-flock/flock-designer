@@ -2,19 +2,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import { extname, join } from 'node:path';
 import { isInside } from '../main/services/paths';
-
-const TYPES: Record<string, string> = {
-	'.html': 'text/html; charset=utf-8',
-	// A browser runs a script, or applies a stylesheet, only when it is served as one.
-	'.js': 'text/javascript; charset=utf-8',
-	'.css': 'text/css; charset=utf-8',
-	'.woff2': 'font/woff2',
-	'.woff': 'font/woff',
-	'.ttf': 'font/ttf',
-	'.otf': 'font/otf',
-	'.svg': 'image/svg+xml',
-	'.png': 'image/png',
-};
+import { MIME_TYPES } from '../shared/mime';
 
 /**
  * Serves a built site on this machine only, to look at it as it will be published. A browser will not load a page's
@@ -41,7 +29,7 @@ export const serveSite = (siteDir: string, port = 0): Promise<{ server: Server; 
 				res.writeHead(404, { 'content-type': 'text/plain' }).end('Not found');
 				return;
 			}
-			res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' }).end(readFileSync(file));
+			res.writeHead(200, { 'content-type': MIME_TYPES[extname(file)] ?? 'application/octet-stream' }).end(readFileSync(file));
 		});
 		server.on('error', fail);
 		server.listen(port, '127.0.0.1', () => {

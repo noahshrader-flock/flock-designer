@@ -3,6 +3,7 @@ import type { CloneProgress } from '../../shared/contract';
 import { clonePlace } from './cloneFolder';
 import { listedAs } from './repositories';
 import { NotStarted, Stopped, runStreamed } from './streamed';
+import { errorText } from '../../shared/result';
 
 /**
  * Cloning a repository the person chose from their own GitHub list into their clone folder (C2 of the clone plan).
@@ -121,7 +122,7 @@ export class Cloner {
 			if (err instanceof NotStarted && err.missing) throw new CloneProblem(GIT_MISSING);
 			if (err instanceof CloneProblem) throw err;
 			if ((err as NodeJS.ErrnoException).code === 'ENOSPC') throw new CloneProblem(cloneProblem(listed, 'No space left on device'));
-			throw new CloneProblem(`Could not clone ${listed}: ${err instanceof Error ? err.message : String(err)}`);
+			throw new CloneProblem(`Could not clone ${listed}: ${errorText(err)}`);
 		} finally {
 			this.running = null;
 		}

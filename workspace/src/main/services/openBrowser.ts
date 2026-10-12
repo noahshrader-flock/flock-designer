@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { COMMIT_PATTERN } from '../../shared/sha';
 
 /**
  * Opens an address in the person's default browser, from a command that has just published a page.
@@ -8,7 +9,7 @@ import { spawn } from 'node:child_process';
  * shell. Not being able to open one is not an error: the link was printed.
  */
 
-const PLAIN = /^https:\/\/[A-Za-z0-9.-]+(?::\d+)?(?:\/[A-Za-z0-9._~/-]*)?(?:\?v=[0-9a-f]{7,40})?$/;
+const PLAIN = new RegExp(`^https://[A-Za-z0-9.-]+(?::\\d+)?(?:/[A-Za-z0-9._~/-]*)?(?:\\?v=${COMMIT_PATTERN})?$`);
 
 /** The program and arguments that open `url` on this platform, or null when it is not an address to open. */
 export const browserCommand = (url: string, platform: NodeJS.Platform = process.platform): { file: string; args: string[] } | null => {

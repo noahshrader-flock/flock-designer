@@ -14,7 +14,8 @@
 import type { DesignToken, TokenProblem } from '../../../shared/contract';
 import { type Entry, arrayItems, entryAt, exportedObjects, lineAt, literal, parseObject, replaced } from './objectLiteral';
 import { MOTION_PARTS, SHADOWS, TYPE_KEYS, TYPE_PARTS, primitiveOf } from '../../../shared/primitives';
-import { type TokenSource, capitalized, notWhereRead, semanticFirst } from './source';
+import { capitalize } from '../../../shared/titleCase';
+import { type TokenSource, notWhereRead, semanticFirst } from './source';
 
 const SCRIPT = /\.(ts|tsx|js|jsx|mjs)$/;
 const THEME_PATH = /(^|\/)(colou?rs?|tokens?|themes?|palettes?|tones?)(\/|\.|$)/i;
@@ -289,7 +290,7 @@ export const themeFiles: TokenSource = {
 		}
 		for (const { name, mode } of palettes) {
 			for (const r of rolesOf(name))
-				tokens.push({ path: `palette.${mode}.${r.set}.${r.name}`, category: primitiveOf('color', r.name) as string, group: capitalized(mode), ...r });
+				tokens.push({ path: `palette.${mode}.${r.set}.${r.name}`, category: primitiveOf('color', r.name) as string, group: capitalize(mode), ...r });
 		}
 		// A theme is tones, a palette, or a call to MUI's `createTheme`; a file with none of them is not one.
 		if (tones.size === 0 && palettes.length === 0 && ![...texts.values()].some((t) => /\bcreateTheme\s*\(/.test(t))) return null;
@@ -304,7 +305,7 @@ export const themeFiles: TokenSource = {
 					path: name,
 					kind: 'dimension',
 					category: primitiveOf('dimension', name) as string,
-					group: capitalized(name),
+					group: capitalize(name),
 					set: name,
 					name: 'base',
 					value: `${found.value}px`,

@@ -13,7 +13,8 @@ import type { DesignToken, TokenProblem } from '../../../shared/contract';
 import { DIMENSION, DURATION, lengthParts } from '../../../shared/tokens';
 import { type Entry, parseObject, replaced } from './objectLiteral';
 import { MOTION_PARTS, SHADOWS, TYPE_KEYS, TYPE_PARTS, primitiveOf } from '../../../shared/primitives';
-import { type TokenSource, capitalized, notWhereRead, semanticFirst } from './source';
+import { capitalize } from '../../../shared/titleCase';
+import { type TokenSource, notWhereRead, semanticFirst } from './source';
 
 const TOKEN_FILE = /(\.tokens\.json|(^|\/)(design-)?tokens?\.json|(^|\/)(design-)?tokens\/.+\.json)$/i;
 
@@ -252,7 +253,7 @@ export const tokenFiles: TokenSource = {
 				path,
 				kind,
 				category,
-				group: capitalized(raw.path[0] as string),
+				group: capitalize(raw.path[0] as string),
 				set,
 				name: last,
 				value: (color ?? length) as string,

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import type { ShareDescriptor, WorkspaceCommand, WorkspaceDescriptor } from '../../shared/contract';
 import { resolveInside } from './paths';
+import { asRecord } from '../../shared/json';
 
 /**
  * Reads what a repository says about itself.
@@ -74,7 +75,7 @@ const designSystemFolder = (value: unknown): string => {
  */
 const parseShare = (raw: unknown): ShareDescriptor | undefined => {
 	if (raw === undefined) return undefined;
-	const s = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+	const s = asRecord(raw);
 	if (typeof s.url !== 'string' || !s.url.startsWith('https://') || !s.url.includes('<pr>')) {
 		throw new DescriptorProblem(`${DESCRIPTOR_PATH} share.url must be an https address containing <pr>`);
 	}

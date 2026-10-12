@@ -124,6 +124,8 @@ import {
 	type PrototypeSources,
 } from './services/prototype';
 import type { CheckoutMemory } from './services/checkoutMemory';
+import { errorText } from '../shared/result';
+import { isCommit, isObjectId } from '../shared/sha';
 
 /**
  * Every operation the window can reach, and nothing else.
@@ -416,8 +418,7 @@ export const registerIpc = ({
 	handle('saveVoiceAndTone', (text: unknown, against: unknown) => {
 		if (typeof text !== 'string' || text.length > MAX_VOICE) throw new Error('The voice and tone is saved as text, up to 200,000 characters.');
 		// A blob's sha: 40 hex, or 64 in a repository on SHA-256.
-		if (against !== null && (typeof against !== 'string' || !/^([0-9a-f]{40}|[0-9a-f]{64})$/.test(against)))
-			throw new Error('A save is made against the file’s sha.');
+		if (against !== null && !isObjectId(against)) throw new Error('A save is made against the file’s sha.');
 		return voiceFile().save(text, against);
 	});
 	handle('proposeVoiceAndTone', () => voiceFile().propose());
@@ -1167,7 +1168,7 @@ export const registerIpc = ({
 			status = await pageStatus(github, DESIGN_REPO, projectId, name);
 		} catch (err) {
 			// Most often the app's GitHub permission: reading the site and its deploys needs Pages and Deployments.
-			return { state: 'unavailable', why: `GitHub would not say whether this is published: ${err instanceof Error ? err.message : String(err)}` };
+			return { state: 'unavailable', why: `GitHub would not say whether this is published: ${errorText(err)}` };
 		}
 		const stopped = publishStopped.get(key);
 		return status.state === 'unpublished' && stopped ? { state: 'unpublished', why: stopped } : status;
@@ -1209,7 +1210,7 @@ export const registerIpc = ({
 		if (publishing.has(key)) return void publishAgain.add(key);
 		const run = deploy()
 			.then(() => void publishStopped.delete(key))
-			.catch((err: unknown) => void publishStopped.set(key, err instanceof Error ? err.message : String(err)))
+			.catch((err: unknown) => void publishStopped.set(key, errorText(err)))
 			.finally(() => {
 				publishing.delete(key);
 				if (publishAgain.delete(key)) inBackground(key, deploy);
@@ -1504,7 +1505,7 @@ export const registerIpc = ({
 	handle('markAddressed', (commentId: number, commit: unknown): Promise<ReviewComment> => {
 		if (!Number.isInteger(commentId)) throw new Error('That is not a comment.');
 		// A commit, or nothing. Anything else is not written into a comment body.
-		const sha = typeof commit === 'string' && /^[0-9a-f]{7,40}$/.test(commit) ? commit : null;
+		const sha = isCommit(commit) ? commit : null;
 		return designRepo.setAddressed(commentId, sha);
 	});
 	// What the branch is at right now: read when a comment is placed, so the comment says

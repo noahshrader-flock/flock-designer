@@ -1,3 +1,4 @@
+import { capitalize } from './titleCase';
 /**
  * A prototype's states: the ways one page can be seen (`default`, `filtered`, `panel`…), each opened by asking for the
  * page with `?state=<name>`. The prototype says which it has, as `export const states = ['default', …]` in its source,
@@ -12,7 +13,7 @@ export const STATES_META = 'dsnr-states';
 export const STATE_NAME = /^[a-z0-9]+$/;
 
 /** How a state is shown, in the bar and on a comment: its name with a capital. The name itself stays as it is. */
-export const stateLabel = (name: string): string => name.charAt(0).toUpperCase() + name.slice(1);
+export const stateLabel = (name: string): string => capitalize(name);
 
 /** The states a built page has, from its tag; none when it has no tag, or one that is not a list of names. */
 export const statesOf = (html: string): string[] => {

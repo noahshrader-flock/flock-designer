@@ -1,5 +1,6 @@
 import { type BrowserWindow, ipcMain } from 'electron';
 import { type Answer, type EventName, type InvokeName, type Payload, type Result, eventChannel, invokeChannel } from '../shared/contract';
+import { fail, ok } from '../shared/result';
 
 /**
  * How the main process meets the window: each call registered by its name in the contract's table, its answer checked
@@ -9,12 +10,6 @@ import { type Answer, type EventName, type InvokeName, type Payload, type Result
  * crossing IPC arrives as a shapeless string, which is how a real problem turns into "something went wrong", so this is
  * the one place a throw becomes a Result.
  */
-
-const ok = <T>(value: T): Result<T> => ({ ok: true, value });
-const fail = (error: unknown): Result<never> => ({
-	ok: false,
-	error: error instanceof Error ? error.message : String(error),
-});
 
 export const guard =
 	<Args extends unknown[], T>(fn: (...args: Args) => Promise<T> | T) =>

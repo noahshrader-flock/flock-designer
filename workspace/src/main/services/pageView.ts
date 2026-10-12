@@ -16,6 +16,7 @@ import {
 } from '../../shared/pageScripts';
 import { type Box, cropRect, frameRect, jpegDataUrl, toPicture } from './picture';
 import { keepToOrigin, sandboxedPreferences } from './sandboxedPage';
+import { errorText } from '../../shared/result';
 
 /**
  * A prototype's preview, shown inside the app so a comment can be placed on it.
@@ -137,7 +138,7 @@ export class PageView {
 				await sleep(RETRY_MS);
 			}
 		}
-		const why = last instanceof Error ? last.message : String(last);
+		const why = errorText(last);
 		throw new Error(
 			`The preview did not load after ${LOAD_ATTEMPTS} tries (${why}). If its server is still starting, give it a moment and try again.`,
 		);

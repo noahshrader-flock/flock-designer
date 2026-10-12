@@ -386,7 +386,7 @@ describe('moveComment', () => {
 		selector: 'main',
 		nearbyText: 'x',
 		viewport: { width: 1, height: 1 },
-		commit: 'abc123',
+		commit: 'abc1234',
 		offset: { x: 0.1, y: 0.1 },
 	};
 	const after = { ...before, selector: '#new', commit: '', offset: { x: 0.9, y: 0.5 } };
@@ -400,7 +400,7 @@ describe('moveComment', () => {
 		const sent = (writes[0]?.body as { body: string }).body;
 		expect(writes[0]).toMatchObject({ path: COMMENT, method: 'PATCH' });
 		expect(stripAnchor(sent)).toBe('Make this primary');
-		expect(parseAnchor(sent)).toMatchObject({ selector: '#new', offset: { x: 0.9, y: 0.5 }, commit: 'abc123' });
+		expect(parseAnchor(sent)).toMatchObject({ selector: '#new', offset: { x: 0.9, y: 0.5 }, commit: 'abc1234' });
 		expect(moved.id).toBe(55);
 	});
 
@@ -426,7 +426,7 @@ describe('moveComment', () => {
 
 describe('setResolved', () => {
 	const COMMENT = '/repos/acme/design/issues/comments/70';
-	const anchor = { route: '/users', selector: 'main', nearbyText: 'x', viewport: { width: 1, height: 1 }, commit: 'abc123' };
+	const anchor = { route: '/users', selector: 'main', nearbyText: 'x', viewport: { width: 1, height: 1 }, commit: 'abc1234' };
 
 	it('marks an open comment resolved, and changes nothing else about it', async () => {
 		const { composeBody, parseAnchor, stripAnchor } = await import('../src/shared/anchor');
@@ -438,7 +438,7 @@ describe('setResolved', () => {
 		expect(writes[0]).toMatchObject({ path: COMMENT, method: 'PATCH' });
 		expect(sent).toContain('<!-- resolved -->');
 		expect(stripAnchor(sent.replace('<!-- resolved -->', '').trim())).toBe('Make this primary');
-		expect(parseAnchor(sent)).toMatchObject({ selector: 'main', commit: 'abc123' });
+		expect(parseAnchor(sent)).toMatchObject({ selector: 'main', commit: 'abc1234' });
 		expect(result.resolved).toBe(false); // the stub returns the old body; the real API returns the new one
 	});
 

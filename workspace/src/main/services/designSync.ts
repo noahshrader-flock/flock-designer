@@ -4,6 +4,7 @@ import type { PublishProblem } from '../../shared/contract';
 import { plural } from '../../shared/plural';
 import { mergeIterationRecords } from '../../shared/records';
 import { commitOnto, git } from './git';
+import { errorText } from '../../shared/result';
 
 /**
  * Keeping the design repository's project records published, with nobody having to remember.
@@ -37,7 +38,7 @@ const RECORDS = 'Project records';
 const isRecordFile = (f: string): boolean => /^projects\/[^/]+\/iterations\.json$/.test(f);
 const lines = (out: string): string[] => out.split('\n').filter(Boolean);
 /** The first line of what git said: enough to act on, without a wall of its output. */
-const message = (err: unknown): string => (err instanceof Error ? err.message : String(err)).trim().split('\n')[0] ?? '';
+const message = (err: unknown): string => errorText(err, { firstLine: true });
 
 export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 	const g = (...args: string[]) => git(designRoot, args, { timeoutMs: 120_000 });

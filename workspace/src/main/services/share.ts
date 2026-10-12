@@ -1,6 +1,7 @@
 import type { IterationKind, ShareDescriptor, ShareStatus, ShareStep } from '../../shared/contract';
 import { projectDir } from '../../shared/projects';
 import { isSafeBranchName } from './git';
+import { errorText } from '../../shared/result';
 
 /**
  * Putting an iteration in front of someone who is not on this machine.
@@ -210,7 +211,7 @@ export class ShareRunner {
 				await job.record(url, prUrl);
 				this.set({ state: 'ready', projectId, name, url, prUrl });
 			} catch (err) {
-				this.set({ state: 'failed', projectId, name, message: err instanceof Error ? err.message : String(err) });
+				this.set({ state: 'failed', projectId, name, message: errorText(err) });
 			} finally {
 				this.live = false;
 			}

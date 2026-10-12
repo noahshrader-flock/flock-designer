@@ -1,5 +1,6 @@
 import type { CommentAnchor } from './contract';
 import { isPrototypeName } from './projects';
+import { COMMIT_PATTERN, isCommit } from './sha';
 
 /**
  * Where a comment points, carried inside the comment itself.
@@ -55,7 +56,7 @@ export const sanitizeAnchor = (v: unknown): CommentAnchor | null => {
 		selector,
 		nearbyText: clip(r.nearbyText, 120),
 		viewport: { width: int(viewport.width), height: int(viewport.height) },
-		commit: /^[0-9a-f]{0,40}$/i.test(clip(r.commit, 40)) ? clip(r.commit, 40) : '',
+		commit: isCommit(r.commit) ? r.commit : '',
 		...(off ? { offset: { x: unit(off.x), y: unit(off.y) } } : {}),
 		...(state !== undefined ? { state } : {}),
 		...(tag !== undefined ? { tag } : {}),
@@ -97,7 +98,7 @@ export const withResolved = (body: string, resolved: boolean): string => {
  * anyone else reading the thread on GitHub. On a prototype it also says which iteration the change is in, since one
  * that others had commented on is never changed in place: the change is in its next iteration.
  */
-const ADDRESSED = /<!-- fd-addressed: ([0-9a-f]{7,40})(?: in ([\w-]{1,20}))? -->/;
+const ADDRESSED = new RegExp(`<!-- fd-addressed: (${COMMIT_PATTERN})(?: in ([\\w-]{1,20}))? -->`);
 
 export const addressedAt = (body: string): string | null => ADDRESSED.exec(body)?.[1] ?? null;
 /** The prototype iteration the change was made in, when the mark names one. */
@@ -110,7 +111,7 @@ export const addressedIn = (body: string): string | null => {
 export const withAddressed = (body: string, commit: string | null, iteration: string | null = null): string => {
 	const bare = body.replace(ADDRESSED, '').trimEnd();
 	// Only ever a real commit, and a real iteration name: these are read back out and shown on the card.
-	if (!commit || !/^[0-9a-f]{7,40}$/.test(commit)) return bare;
+	if (!isCommit(commit)) return bare;
 	return `${bare}\n<!-- fd-addressed: ${commit}${iteration !== null && isPrototypeName(iteration) ? ` in ${iteration}` : ''} -->`;
 };
 

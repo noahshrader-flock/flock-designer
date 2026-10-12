@@ -1,6 +1,7 @@
 import type { Iteration, IterationKind, MadeCover, Person, Project, ProjectIteration } from './contract';
 import { isBot, mergePeople } from './people';
 import { matchesWords } from './search';
+import { capitalize } from './titleCase';
 
 /** The only shape a project id may take: lower-case words joined by single hyphens. */
 export const PROJECT_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -153,16 +154,20 @@ const byName = (a: Project, b: Project): number => a.title.localeCompare(b.title
 /** How the Projects screen orders its cards: the most recent activity first, or by name. */
 export type ProjectOrder = 'updated' | 'alphabetical';
 
-/** The projects in an order, as a new list. Those with nothing dated come last when ordered by activity. */
-export const sortProjects = (projects: Project[], order: ProjectOrder): Project[] =>
-	[...projects].sort((a, b) => {
-		if (order === 'alphabetical') return byName(a, b);
-		const da = lastUpdated(a);
-		const db = lastUpdated(b);
+/** The one "newest first" rule: by `dateOf`, the undated last, and `then` between two of one date, so an order never shuffles. */
+const byNewest =
+	<T>(dateOf: (t: T) => string | null, then: (a: T, b: T) => number) =>
+	(a: T, b: T): number => {
+		const da = dateOf(a);
+		const db = dateOf(b);
 		if (da !== null && db !== null && da !== db) return Date.parse(db) - Date.parse(da);
 		if ((da === null) !== (db === null)) return da === null ? 1 : -1;
-		return byName(a, b);
-	});
+		return then(a, b);
+	};
+
+/** The projects in an order, as a new list. Those with nothing dated come last when ordered by activity. */
+export const sortProjects = (projects: Project[], order: ProjectOrder): Project[] =>
+	[...projects].sort(order === 'alphabetical' ? byName : byNewest(lastUpdated, byName));
 
 /**
  * Whether a project is what a search is for: every word typed is somewhere in its name, its id, its folder, or the name or
@@ -173,13 +178,7 @@ export const matchesProject = (project: Project, search: string): boolean =>
 	matchesWords([project.title, project.id, project.folder ?? '', ...project.people.flatMap((p) => [p.name, p.login ?? ''])].join('\n'), search);
 
 /** Newest project first. A project with no known date goes last, and ties fall back to the title so the order never shuffles. */
-export const newestProjectFirst = (a: Project, b: Project): number => {
-	const da = startedAt(a);
-	const db = startedAt(b);
-	if (da !== null && db !== null && da !== db) return Date.parse(db) - Date.parse(da);
-	if ((da === null) !== (db === null)) return da === null ? 1 : -1;
-	return byName(a, b);
-};
+export const newestProjectFirst = byNewest(startedAt, byName);
 
 /**
  * One list from two sources: what is in the design repository on GitHub, and
@@ -311,7 +310,7 @@ export const projectCodeLink = (project: {
 /** A project file as it reads in a menu: `design-notes.md` is "Design notes". */
 export const recordLabel = (name: string): string => {
 	const words = name.replace(/\.[^.]+$/, '').replace(/-/g, ' ');
-	return words.charAt(0).toUpperCase() + words.slice(1);
+	return capitalize(words);
 };
 export const isRecordName = (n: unknown): n is string => typeof n === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(n) && !n.includes('..');
 
@@ -473,9 +472,10 @@ export const byVersion = <T extends { name: string }>(iterations: T[]): { versio
 	}
 	return [...groups].map(([version, its]) => ({ version, iterations: its }));
 };
-const newestStarted = (a: ProjectIteration, b: ProjectIteration): number =>
-	(b.createdAt ? Date.parse(b.createdAt) : -Infinity) - (a.createdAt ? Date.parse(a.createdAt) : -Infinity) ||
-	b.name.localeCompare(a.name, undefined, { numeric: true });
+const newestStarted = byNewest<ProjectIteration>(
+	(it) => it.createdAt || null,
+	(a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }),
+);
 export const workOf = (iterations: ProjectIteration[], kind: IterationKind): ProjectIteration[] =>
 	iterations.filter((i) => workKind(i) === kind).sort(newestStarted);
 

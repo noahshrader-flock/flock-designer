@@ -4,6 +4,7 @@ import type { DesignRepoRef, GitHubApi } from './designRepo';
 import { type SyncResult, syncRecords } from './designSync';
 import { git } from './git';
 import { asArray, asRecord } from '../../shared/json';
+import { errorText } from '../../shared/result';
 
 /**
  * Publishing a prototype to its page on the design repository's GitHub Pages site: the one way it is done, from the
@@ -25,10 +26,8 @@ export interface SiteVisibility {
 	site: { url: string; public: boolean } | null;
 }
 
-const forbidden = (err: unknown): boolean =>
-	asRecord(err).status === 403 || /\b403\b|not accessible by integration/i.test(err instanceof Error ? err.message : String(err));
-const notFound = (err: unknown): boolean =>
-	asRecord(err).status === 404 || /\b404\b|Not Found/.test(err instanceof Error ? err.message : String(err));
+const forbidden = (err: unknown): boolean => asRecord(err).status === 403 || /\b403\b|not accessible by integration/i.test(errorText(err));
+const notFound = (err: unknown): boolean => asRecord(err).status === 404 || /\b404\b|Not Found/.test(errorText(err));
 
 export const readVisibility = async (github: GitHubApi, ref: DesignRepoRef): Promise<SiteVisibility> => {
 	const base = `/repos/${ref.owner}/${ref.repo}`;
