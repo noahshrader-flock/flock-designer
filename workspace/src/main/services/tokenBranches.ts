@@ -15,16 +15,14 @@
  *
  * Which branch a design system's change is on is remembered on disk, so the app can be closed and the change carried on.
  */
-import { randomBytes } from 'node:crypto';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import type { ConnectedDesignSystem, TokenBranch, TokenEdit } from '../../shared/contract';
 import { describeChange } from '../../shared/tokens';
 import { libraryCommit, systemReads } from './designLibrary';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { readTokens } from './designTokens';
-import { branchExists, runGit } from './git';
+import { branchExists, commitOnto, runGit } from './git';
 import type { CatalogReads } from './componentCatalog';
 import type { ShareTools } from './share';
 import { editedFiles } from './tokenEdits';
@@ -39,26 +37,11 @@ export const TOKEN_BRANCH = dsnrBranchPattern('tokens');
  */
 type Kept = TokenBranch & { base: string; tip: string };
 
-/**
- * A commit of `base`'s tree with `files` as given, whose parent is `parent`: made without a working copy or the
- * repository's own index, in a temporary one. Null when the tree is the parent's, so nothing would change.
- */
+/** A commit of `base`'s tree with `files` (path to text) as given, whose parent is `parent`; null when nothing would change. */
 export const commitFiles = async (root: string, base: string, parent: string, files: Map<string, string>, message: string): Promise<string | null> => {
-	const env = { GIT_INDEX_FILE: join(tmpdir(), `dsnr-index-${randomBytes(6).toString('hex')}`) };
-	try {
-		await runGit(root, ['read-tree', base], undefined, env);
-		for (const [path, text] of files) {
-			const blob = await runGit(root, ['hash-object', '-w', '--stdin'], undefined, undefined, text);
-			// The file keeps the mode it has: a token file is never made executable, or plain when it was not.
-			const mode = (await runGit(root, ['ls-tree', base, '--', path])).split(/\s/)[0] || '100644';
-			await runGit(root, ['update-index', '--add', '--cacheinfo', `${mode},${blob},${path}`], undefined, env);
-		}
-		const tree = await runGit(root, ['write-tree'], undefined, env);
-		if (tree === (await runGit(root, ['rev-parse', `${parent}^{tree}`]))) return null;
-		return await runGit(root, ['commit-tree', tree, '-p', parent], undefined, undefined, message);
-	} finally {
-		rmSync(env.GIT_INDEX_FILE, { force: true });
-	}
+	const blobs = new Map<string, string>();
+	for (const [path, text] of files) blobs.set(path, await runGit(root, ['hash-object', '-w', '--stdin'], undefined, undefined, text));
+	return commitOnto(root, base, parent, blobs, message);
 };
 
 /** What a save's commit says: how many tokens it changes, and each, in the panel's words. */

@@ -1,5 +1,7 @@
 import { execFile } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { existsSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import type { Checkout } from '../../shared/contract';
@@ -184,6 +186,31 @@ export const branchesWithFile = async (root: string, file: string): Promise<stri
  * rule, for every caller; a name that fails it is treated as a branch that does not exist.
  */
 export const isSafeBranchName = (name: string): boolean => /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(name) && !name.includes('..');
+
+/**
+ * A commit of `base`'s tree with `files` changed (each a blob, or null to remove it), whose parent is `parent`: made in a
+ * temporary index, so neither a working copy nor the repository's own index is touched. A file keeps the mode it has in
+ * `base`. Null when the tree is the parent's, so nothing would change.
+ */
+export const commitOnto = async (root: string, base: string, parent: string, files: Map<string, string | null>, message: string): Promise<string | null> => {
+	const env = { GIT_INDEX_FILE: join(tmpdir(), `dsnr-index-${randomBytes(6).toString('hex')}`) };
+	try {
+		await git(root, ['read-tree', base], undefined, env);
+		for (const [path, blob] of files) {
+			if (blob === null) {
+				await git(root, ['update-index', '--force-remove', '--', path], undefined, env);
+				continue;
+			}
+			const mode = (await git(root, ['ls-tree', base, '--', path])).split(/\s/)[0] || '100644';
+			await git(root, ['update-index', '--add', '--cacheinfo', `${mode},${blob},${path}`], undefined, env);
+		}
+		const tree = await git(root, ['write-tree'], undefined, env);
+		if (tree === (await git(root, ['rev-parse', `${parent}^{tree}`]))) return null;
+		return await git(root, ['commit-tree', tree, '-p', parent], undefined, undefined, message);
+	} finally {
+		rmSync(env.GIT_INDEX_FILE, { force: true });
+	}
+};
 
 /**
  * A branch to start from, made local when it is only on GitHub: a local branch tracking `origin/<branch>`, with no

@@ -1,11 +1,9 @@
-import { randomBytes } from 'node:crypto';
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PublishProblem } from '../../shared/contract';
 import { plural } from '../../shared/plural';
 import { mergeIterationRecords } from '../../shared/records';
-import { gitExact, runGit } from './git';
+import { commitOnto, gitExact, runGit } from './git';
 
 /**
  * Keeping the design repository's project records published, with nobody having to remember.
@@ -40,9 +38,6 @@ const isRecordFile = (f: string): boolean => /^projects\/[^/]+\/iterations\.json
 const lines = (out: string): string[] => out.split('\n').filter(Boolean);
 /** The first line of what git said: enough to act on, without a wall of its output. */
 const message = (err: unknown): string => (err instanceof Error ? err.message : String(err)).trim().split('\n')[0] ?? '';
-
-/** What a run publishes for one file: its blob, or null when it is deleted. */
-type Entry = { path: string; blob: string | null };
 
 export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 	const g = (...args: string[]) => runGit(designRoot, args, 120_000);
@@ -108,7 +103,7 @@ const recordsOnTopOf = async (
 	designRoot: string,
 	theirs: string,
 ): Promise<string | { commit: string | null; ids: string[]; paths: string[]; read: Map<string, string | null> }> => {
-	const g = (args: string[], env?: Record<string, string>, input?: string) => runGit(designRoot, args, 60_000, env, input);
+	const g = (args: string[], input?: string) => runGit(designRoot, args, 60_000, undefined, input);
 	const blobAt = (rev: string, path: string) => g(['rev-parse', '-q', '--verify', `${rev}:${path}`]).catch(() => null);
 	const base = await g(['merge-base', 'HEAD', theirs]).catch(() => null);
 	if (base === null) return 'The design repository here and on GitHub share no history, so records are not published into it.';
@@ -119,7 +114,8 @@ const recordsOnTopOf = async (
 			...lines(await g(['ls-files', '--others', '--exclude-standard', '--', 'projects'])),
 		]),
 	].sort();
-	const entries: Entry[] = [];
+	// What is published for each file: its blob, or null when it is deleted.
+	const changes = new Map<string, string | null>();
 	const hopeless: string[] = [];
 	const read = new Map<string, string | null>();
 	for (const path of paths) {
@@ -128,7 +124,7 @@ const recordsOnTopOf = async (
 		const there = await blobAt(theirs, path);
 		if (here === there) continue;
 		if (there === (await blobAt(base, path))) {
-			entries.push({ path, blob: here });
+			changes.set(path, here);
 			continue;
 		}
 		if (!isRecordFile(path) || here === null || there === null) {
@@ -137,15 +133,15 @@ const recordsOnTopOf = async (
 		}
 		const merged = mergeIterationRecords(readFileSync(join(designRoot, path), 'utf8'), await gitExact(designRoot, ['show', `${theirs}:${path}`]));
 		if (merged === null) return `${path} could not be combined with GitHub's copy, so nothing was changed. Your changes are kept here.`;
-		entries.push({ path, blob: await g(['hash-object', '-w', '--stdin'], undefined, merged) });
+		changes.set(path, await g(['hash-object', '-w', '--stdin'], merged));
 	}
 	if (hopeless.length > 0) {
 		return `${hopeless.join(', ')} changed both here and on GitHub, and git cannot tell which to keep. Nothing was lost: your changes are kept here. Combine them in the design repository, then records will flow again.`;
 	}
-	if (entries.length === 0) return { commit: null, ids: [], paths, read };
+	if (changes.size === 0) return { commit: null, ids: [], paths, read };
 
 	// A record that does not parse must never be published: every reviewer's project list reads these.
-	for (const { path, blob } of entries) {
+	for (const [path, blob] of changes) {
 		if (!isRecordFile(path) || blob === null) continue;
 		const text = await gitExact(designRoot, ['cat-file', 'blob', blob]);
 		if (mergeIterationRecords(text, text) === null) {
@@ -153,28 +149,12 @@ const recordsOnTopOf = async (
 		}
 	}
 
-	const env = { GIT_INDEX_FILE: join(tmpdir(), `dsnr-records-${randomBytes(6).toString('hex')}`) };
+	const ids = [...new Set([...changes.keys()].map((p) => /^projects\/([^/]+)\//.exec(p)?.[1]).filter((x): x is string => Boolean(x)))].sort();
 	try {
-		await g(['read-tree', theirs], env);
-		for (const { path, blob } of entries) {
-			if (blob === null) {
-				await g(['update-index', '--force-remove', '--', path], env);
-				continue;
-			}
-			const mode = (await g(['ls-tree', theirs, '--', path])).split(/\s/)[0] || '100644';
-			await g(['update-index', '--add', '--cacheinfo', `${mode},${blob},${path}`], env);
-		}
-		const tree = await g(['write-tree'], env);
-		if (tree === (await g(['rev-parse', `${theirs}^{tree}`]))) return { commit: null, ids: [], paths, read };
-		const ids = [...new Set(entries.map((e) => /^projects\/([^/]+)\//.exec(e.path)?.[1]).filter((x): x is string => Boolean(x)))].sort();
-		try {
-			const commit = await g(['commit-tree', tree, '-p', theirs, '-m', `Update ${ids.join(', ')}`]);
-			return { commit, ids, paths, read };
-		} catch (err) {
-			return `Could not save the project records: ${message(err)}. Git needs a name and email (git config user.name, user.email).`;
-		}
-	} finally {
-		rmSync(env.GIT_INDEX_FILE, { force: true });
+		const commit = await commitOnto(designRoot, theirs, theirs, changes, `Update ${ids.join(', ')}`);
+		return commit === null ? { commit: null, ids: [], paths, read } : { commit, ids, paths, read };
+	} catch (err) {
+		return `Could not save the project records: ${message(err)}. Git needs a name and email (git config user.name, user.email).`;
 	}
 };
 
