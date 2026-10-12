@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+import type { Fn } from './fixtures';
 import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, redeploySite, siteBehind, unpublish, whyPublic } from '../src/main/services/pages';
 
 /**
@@ -227,7 +228,7 @@ describe('whether an iteration is on its page', () => {
 			throw new Error(`not faked: ${path}`);
 		}),
 	});
-	const status = (gh: { api: ReturnType<typeof vi.fn> }) => pageStatus(gh, REF, 'demo', 'v1-i2');
+	const status = (gh: { api: Fn }) => pageStatus(gh, REF, 'demo', 'v1-i2');
 
 	it('is published when the last deploy includes the last change to its page, with a link that names that deploy', async () => {
 		expect(await status(site())).toEqual({ state: 'published', url: `${SITE}demo/v1/i2/?v=ddddddd` });

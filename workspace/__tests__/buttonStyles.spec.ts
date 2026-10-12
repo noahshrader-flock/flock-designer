@@ -56,8 +56,8 @@ describe('the vertical ellipsis', () => {
 			const text = readFileSync(f, 'utf8');
 			for (const m of text.matchAll(/<EllipsisVerticalIcon/g)) {
 				// The Button that holds it: the last one opened before the icon.
-				const button = text.slice(text.lastIndexOf('<Button', m.index), m.index);
-				if (!/variant="ghost"/.test(button)) wrong.push(f.replace(`${join(__dirname, '..')}/`, ''));
+				const tag = text.slice(text.lastIndexOf('<Button', m.index), m.index);
+				if (!/variant="ghost"/.test(tag)) wrong.push(f.replace(`${join(__dirname, '..')}/`, ''));
 			}
 		}
 		expect(wrong).toEqual([]);

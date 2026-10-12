@@ -215,7 +215,7 @@ export default { title: 'Data/FSLine', component: Line };
 export const Status = { args: { label: 'Network', value: 'Connected' } };`,
 		});
 		const root = await render(await ready(previews()), 'src/components/FSTwo/FSTwo.stories.tsx');
-		const box = (story: string) => root.querySelector(`[data-story="${story}"] input`) as HTMLInputElement;
+		const box = (name: string) => root.querySelector(`[data-story="${name}"] input`) as HTMLInputElement;
 		// Only checked: it starts checked, and a click unchecks it.
 		expect(box('Checked').checked).toBe(true);
 		box('Checked').click();
@@ -323,8 +323,8 @@ describe('keeping them', () => {
 
 	it('does not reuse a build an older app made from the same commit', async () => {
 		makeLibrary(LIBRARY);
-		const commit = g(clone, 'rev-parse', 'refs/remotes/origin/develop').trim();
-		const stale = join(folder, `${commit.slice(0, 12)}-00000000`, 'site');
+		const head = g(clone, 'rev-parse', 'refs/remotes/origin/develop').trim();
+		const stale = join(folder, `${head.slice(0, 12)}-00000000`, 'site');
 		write(stale, { 'index.html': 'an older app’s page' });
 		const build = vi.fn(buildPreviews);
 		const base = await ready(previews({ build }));

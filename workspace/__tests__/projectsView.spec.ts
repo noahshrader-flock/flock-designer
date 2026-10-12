@@ -7,25 +7,25 @@ import { fakeApp, ok, press, render, settle, typeInto, unmountAll } from './revi
 
 /** The Projects screen as a list or a grid: a switch in the toolbar, at the left of Sync, and the choice kept. */
 
-const project = (id: string, title: string): Project =>
-	({
-		id,
-		title,
-		records: [],
-		iterations: [
-			{
-				name: 'v1-i1',
-				branch: `prototype/${id}/v1-i1`,
-				issueNumber: null,
-				openComments: 0,
-				previewUrl: null,
-				commit: null,
-				contributors: [],
-				createdAt: '2026-10-01T00:00:00Z',
-			},
-		],
-		people: [],
-	}) as Project;
+const project = (id: string, title: string): Project => ({
+	id,
+	title,
+	records: [],
+	iterations: [
+		{
+			name: 'v1-i1',
+			branch: `prototype/${id}/v1-i1`,
+			issueNumber: null,
+			openComments: 0,
+			previewUrl: null,
+			commit: null,
+			contributors: [],
+			createdAt: '2026-10-01T00:00:00Z',
+			route: null,
+		},
+	],
+	people: [],
+});
 const PROJECTS = [project('alert-history', 'Alert history'), project('admin-usage', 'Admin usage')];
 
 let current: Awaited<ReturnType<typeof render>> | null = null;

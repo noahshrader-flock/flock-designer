@@ -191,28 +191,28 @@ describe('page state in an anchor', () => {
 });
 
 describe('a picture in a comment', () => {
-	const anchor = { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
+	const sample = { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
 	const picture = `data:image/jpeg;base64,${Buffer.from('not really a jpeg but shaped like one').toString('base64')}`;
 
 	it('is written into the comment, read back, and does not show up as part of the words', () => {
-		const body = composeBody('Make this primary', anchor, picture);
+		const body = composeBody('Make this primary', sample, picture);
 		expect(parsePicture(body)).toBe(picture);
 		expect(parseAnchor(body)).toMatchObject({ route: '/a' });
 		expect(stripAnchor(body)).toBe('Make this primary');
 	});
 
 	it('is hidden: nothing of it is visible markup, so a person reading on GitHub sees only the words and the spot', () => {
-		const visible = composeBody('hi', anchor, picture).replace(/<!--[\s\S]*?-->/g, '');
+		const visible = composeBody('hi', sample, picture).replace(/<!--[\s\S]*?-->/g, '');
 		expect(visible).not.toContain('base64');
 	});
 
 	it('leaves a comment without one exactly as it was', () => {
-		expect(composeBody('hi', anchor)).toBe(composeBody('hi', anchor, null));
-		expect(parsePicture(composeBody('hi', anchor))).toBeNull();
+		expect(composeBody('hi', sample)).toBe(composeBody('hi', sample, null));
+		expect(parsePicture(composeBody('hi', sample))).toBeNull();
 	});
 
 	it('survives being resolved and reopened', () => {
-		const resolved = withResolved(composeBody('hi', anchor, picture), true);
+		const resolved = withResolved(composeBody('hi', sample, picture), true);
 		expect(parsePicture(resolved)).toBe(picture);
 		expect(parsePicture(withResolved(resolved, false))).toBe(picture);
 	});
@@ -235,7 +235,7 @@ describe('a picture in a comment', () => {
 	});
 
 	it('is dropped, not written, if it is not a picture', () => {
-		expect(composeBody('hi', anchor, 'javascript:alert(1)')).not.toContain('fd-picture');
+		expect(composeBody('hi', sample, 'javascript:alert(1)')).not.toContain('fd-picture');
 	});
 });
 

@@ -9,6 +9,8 @@ const c = (id: number, over: Partial<ReviewComment> = {}): ReviewComment => ({
 	body: `c${id}`,
 	createdAt: `2026-10-05T10:${String(id).padStart(2, '0')}:00Z`,
 	resolved: false,
+	addressedAt: null,
+	addressedIn: null,
 	anchor: null,
 	picture: null,
 	...over,

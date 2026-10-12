@@ -3,7 +3,7 @@ import type { ShareStatus } from '../src/shared/contract';
 import { waitUntilUp } from '../src/renderer/hostedPreview';
 import { dialogView, isMine, stepText } from '../src/renderer/shareView';
 
-const ready: ShareStatus = { state: 'ready', projectId: 'demo', name: 'i1', url: 'https://x', prUrl: 'https://y', published: { state: 'published' } };
+const ready: ShareStatus = { state: 'ready', projectId: 'demo', name: 'i1', url: 'https://x', prUrl: 'https://y' };
 const running: ShareStatus = { state: 'running', projectId: 'demo', name: 'i1', step: 'building' };
 const failed: ShareStatus = { state: 'failed', projectId: 'demo', name: 'i1', message: 'no' };
 

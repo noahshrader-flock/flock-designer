@@ -37,7 +37,7 @@ const choices = async (el: Element) => {
 };
 const tooltips = () => document.querySelectorAll('[data-slot="tooltip-content"]');
 const trigger = (label: string | RegExp) =>
-	[...document.querySelectorAll<HTMLElement>('button')].find((b) =>
+	[...document.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
 		typeof label === 'string' ? b.getAttribute('aria-label') === label : label.test(b.getAttribute('aria-label') ?? ''),
 	)!;
 

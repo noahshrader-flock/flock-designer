@@ -26,7 +26,7 @@ describe('the edges of a screen', () => {
 	});
 
 	it('is the page’s padding on every side, wide or not', async () => {
-		current = await render(createElement(Page, { wide: true }, createElement('p', null, 'x')));
+		current = await render(createElement(Page, { wide: true, children: createElement('p', null, 'x') }));
 		expect(document.querySelector('p')!.parentElement!.className.split(' ')).toContain('p-(--page-padding)');
 		await unmountAll(current.root);
 		current = await render(createElement(Page, null, createElement('p', null, 'x')));
@@ -41,7 +41,7 @@ describe('the edges of a screen', () => {
 	});
 
 	it('is not capped on a wide page, and is on a page of text', async () => {
-		current = await render(createElement(Page, { wide: true }, createElement('p', null, 'x')));
+		current = await render(createElement(Page, { wide: true, children: createElement('p', null, 'x') }));
 		expect(document.querySelector('p')!.parentElement!.className).not.toContain('max-w');
 		await unmountAll(current.root);
 		current = await render(createElement(Page, null, createElement('p', null, 'x')));

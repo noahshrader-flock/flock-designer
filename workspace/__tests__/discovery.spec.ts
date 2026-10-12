@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { WorkspaceDescriptor } from '../src/shared/contract';
+import type { ProjectIteration, WorkspaceDescriptor } from '../src/shared/contract';
 import { classify, patternToRegex, readBranchProjects } from '../src/main/services/branchProjects';
 import { findProductCheckouts, recordsRootFor, type DiscoveryDeps } from '../src/main/services/discovery';
 import { continueIteration, readIterations } from '../src/main/services/iterations';
@@ -159,7 +159,18 @@ describe('work found in a real repository, with no record written', () => {
 });
 
 describe('unionLocal', () => {
-	const it1 = (branch: string, over = {}) => ({ name: 'i1', branch, issueNumber: null, previewUrl: null, commit: null, contributors: [], ...over });
+	const it1 = (branch: string, over: Partial<ProjectIteration> = {}): ProjectIteration => ({
+		name: 'i1',
+		branch,
+		issueNumber: null,
+		openComments: 0,
+		previewUrl: null,
+		commit: null,
+		contributors: [],
+		createdAt: null,
+		route: null,
+		...over,
+	});
 	it('keeps what a record says and adds branches it did not know about', () => {
 		const rec = [
 			{ id: 'a', title: 'A, from the brief', records: ['brief.md'], iterations: [it1('fd/a/i1', { previewUrl: 'https://p' })], people: [] },

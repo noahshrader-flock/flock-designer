@@ -19,7 +19,7 @@ const pixel = ({ data, width }: { data: Buffer; width: number }, x: number, y: n
 	...data.subarray((y * width + x) * 4, (y * width + x) * 4 + 4),
 ];
 /** Where, in the picture, the paint is: its left, top, right and bottom edges. */
-const paintedEdges = (picture: { data: Buffer; width: number; height: number }) => {
+const paintedEdges = (picture: { data: Buffer; width: number; height: number }): [number, number, number, number] => {
 	let [l, t, r, b] = [picture.width, picture.height, -1, -1];
 	for (let y = 0; y < picture.height; y++)
 		for (let x = 0; x < picture.width; x++)

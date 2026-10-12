@@ -1,6 +1,11 @@
 {
 	"files": [],
-	"references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }, { "path": "./tsconfig.viewer.json" }],
+	"references": [
+		{ "path": "./tsconfig.node.json" },
+		{ "path": "./tsconfig.web.json" },
+		{ "path": "./tsconfig.viewer.json" },
+		{ "path": "./tsconfig.test.json" }
+	],
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": { "@/*": ["./src/renderer/*"] }

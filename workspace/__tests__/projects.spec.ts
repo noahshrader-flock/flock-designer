@@ -44,6 +44,7 @@ const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
 	commit: null,
 	contributors: [],
 	createdAt: null,
+	route: null,
 	...over,
 });
 const project = (id: string, over: Partial<Project> = {}): Project => ({
@@ -417,10 +418,11 @@ describe("versions and iterations in a prototype's name", () => {
 });
 
 describe('byVersion', () => {
-	const it1 = (name: string, createdAt: string): ProjectIteration => ({
+	const iterationAt = (name: string, createdAt: string): ProjectIteration => ({
 		name,
 		branch: `prototype/demo/${name}`,
 		issueNumber: null,
+		openComments: 0,
 		previewUrl: null,
 		commit: null,
 		contributors: [],
@@ -429,7 +431,7 @@ describe('byVersion', () => {
 	});
 
 	it("groups a project's prototypes by version, keeping the order it was given", () => {
-		const newestFirst = [it1('v2-i1', '2026-10-05'), it1('v1-i2', '2026-10-04'), it1('i1', '2026-10-01')];
+		const newestFirst = [iterationAt('v2-i1', '2026-10-05'), iterationAt('v1-i2', '2026-10-04'), iterationAt('i1', '2026-10-01')];
 		expect(byVersion(newestFirst).map((g) => [g.version, g.iterations.map((i) => i.name)])).toEqual([
 			[2, ['v2-i1']],
 			[1, ['v1-i2', 'i1']],
@@ -437,7 +439,7 @@ describe('byVersion', () => {
 	});
 
 	it('leaves out anything that is not a prototype name', () => {
-		expect(byVersion([it1('codebase', '2026-10-05')])).toEqual([]);
+		expect(byVersion([iterationAt('codebase', '2026-10-05')])).toEqual([]);
 	});
 });
 

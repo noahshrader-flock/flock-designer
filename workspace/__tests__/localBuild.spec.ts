@@ -6,6 +6,7 @@ const iteration = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
 	name: 'i1',
 	branch: 'fd/users/i1',
 	issueNumber: null,
+	openComments: 0,
 	previewUrl: null,
 	commit: null,
 	contributors: [],

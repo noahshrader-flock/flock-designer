@@ -688,9 +688,9 @@ describe('the vocabulary of primitives (R1)', () => {
 		expect(tabs().map((t) => t.textContent)).toEqual(['Color', 'Typography', 'Spacing', 'Shape']);
 		await choose('Typography');
 		await settle();
-		const row = document.querySelector<HTMLElement>('[data-token="font.sans"]')!;
-		expect(row.textContent).toContain('Inter');
-		expect(row.querySelector('button')).toBeNull();
+		const fontRow = document.querySelector<HTMLElement>('[data-token="font.sans"]')!;
+		expect(fontRow.textContent).toContain('Inter');
+		expect(fontRow.querySelector('button')).toBeNull();
 		// A color is still a control.
 		await choose('Color');
 		await settle();

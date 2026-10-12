@@ -3,7 +3,7 @@ import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DesignRepo } from '../src/main/services/designRepo';
 import { Review } from '../src/renderer/Review';
-import type { CommentAnchor } from '../src/shared/contract';
+import type { CommentAnchor, MarkerRequest } from '../src/shared/contract';
 import { Viewer } from '../src/viewer/Viewer';
 import { asResult, browserComments, framePage, saveToken, tokenApi } from '../src/viewer/browserAdapter';
 import { PAGE_CONFIG, commentOnPage, fakeGitHub, prototypeIn, sitePage } from './pageHarness';
@@ -62,12 +62,12 @@ const openApp = async (address?: { iteration: string }) => {
 	const app = fakeApp({
 		signInState: async () => ok({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
 		readComments: (projectId: string, branch: string) => asResult(repo.readComments(projectId, branch)),
-		postComment: (projectId: string, branch: string, body: string, anchor: CommentAnchor) =>
+		postComment: (projectId: string, branch: string, body: string, anchor: CommentAnchor | null) =>
 			asResult(repo.postComment(projectId, branch, body, anchor, null)),
 		resolveComment: (id: number, resolved: boolean) => asResult(repo.setResolved(id, resolved)),
 		deleteComment: (id: number) => asResult(repo.deleteComment(id).then(() => null)),
 		moveComment: (id: number, anchor: CommentAnchor) => asResult(repo.moveComment(id, anchor)),
-		pageShowMarkers: (items: never) => framePage(preview).showMarkers(items),
+		pageShowMarkers: (items: MarkerRequest[]) => framePage(preview).showMarkers(items),
 		// Address, as the main process finishes it: the change made, and the comment marked (and resolved) where it is.
 		addressPrototype: async () => ok({ state: 'running', startedAt: 'now' }),
 		agentStatus: async () => ok({ state: 'finished', exitCode: 0 }),

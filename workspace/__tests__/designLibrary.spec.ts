@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Catalog, ConnectedDesignSystem } from '../src/shared/contract';
+import type { Catalog, CatalogUpdate, ConnectedDesignSystem } from '../src/shared/contract';
+import { undeclared } from '../src/shared/wcag';
 import { DesignLibrary, fetchProblem, libraryReads, readLibrary, updateLibrary } from '../src/main/services/designLibrary';
 import { DesignSystemsMemory } from '../src/main/services/designSystems';
 import { g } from './fixtures';
@@ -229,8 +230,16 @@ describe('bringing develop up to date', () => {
 });
 
 describe('what the tab is told', () => {
-	const catalogOf = (update: string): Catalog =>
-		({ state: 'ready', commit: 'c', committedAt: 'd', update: update as never, components: [] }) as Catalog;
+	const catalogOf = (update: CatalogUpdate): Catalog => ({
+		state: 'ready',
+		branch: 'develop',
+		commit: 'c',
+		committedAt: 'd',
+		update,
+		components: [],
+		tokens: { source: null, tokens: [], problems: [], looked: [] },
+		accessibility: undeclared('none here'),
+	});
 
 	const memory = (system: ConnectedDesignSystem | null) => {
 		const m = new DesignSystemsMemory(join(home, 'design-system.json'));
@@ -256,7 +265,7 @@ describe('what the tab is told', () => {
 				fetches++;
 				return new Promise((r) => (finish = r));
 			},
-			read: async (_, update) => catalogOf(update as string),
+			read: async (_, update) => catalogOf(update),
 		});
 		expect(await library.catalog(false)).toMatchObject({ update: 'updating' });
 		const refreshed = library.catalog(true);

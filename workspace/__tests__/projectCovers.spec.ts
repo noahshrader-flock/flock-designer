@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { prototypeVersionOf } from '../src/main/services/prototype';
-import { memoryStore } from './fixtures';
+import { memoryStore, type Fn } from './fixtures';
 import { type CoverDeps, builtHere, ensureCovers, isBlank } from '../src/main/services/projectCovers';
 import { coverPath } from '../src/shared/projects';
 
@@ -30,7 +30,7 @@ const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
 const coverOf = (files: Record<string, string | Buffer>, name: string) =>
 	(JSON.parse(String(files[RECORDS])) as Array<Record<string, unknown>>).find((r) => r.name === name)?.cover;
 
-let deps: CoverDeps & { draw: ReturnType<typeof vi.fn>; serve: ReturnType<typeof vi.fn> };
+let deps: CoverDeps & { draw: Fn; serve: Fn };
 let mem: ReturnType<typeof memoryStore>;
 let pages: Record<string, string>;
 beforeEach(() => {

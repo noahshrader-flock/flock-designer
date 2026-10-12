@@ -23,6 +23,8 @@ const comment = (id: number, over: Partial<ReviewComment> = {}): ReviewComment =
 	body: `comment ${id}`,
 	createdAt: `2026-10-05T10:0${id}:00Z`,
 	resolved: false,
+	addressedAt: null,
+	addressedIn: null,
 	anchor: anchor(),
 	picture: null,
 	...over,

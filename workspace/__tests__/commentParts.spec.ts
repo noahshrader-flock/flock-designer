@@ -18,7 +18,7 @@ const fakes = (initial: ReviewComment[]) => {
 	let saved = [...initial];
 	const drawn: MarkerRequest[][] = [];
 	let pinListener: ((e: PinEvent) => void) | null = null;
-	let clicked: ((v: unknown) => void) | null = null;
+	let clicked: ((v: Awaited<ReturnType<PageSurface['pick']>>) => void) | null = null;
 	const store: CommentStore = {
 		read: async () => ok(saved),
 		post: async (body, anchor) => {

@@ -22,6 +22,7 @@ const iteration = (more: Partial<ProjectIteration> = {}): ProjectIteration => ({
 	commit: null,
 	contributors: [],
 	createdAt: '2026-10-01T10:00:00Z',
+	route: null,
 	...more,
 });
 // By the app's own rule (`workKind`): codebase work is the iteration named `codebase`; any other is a prototype.

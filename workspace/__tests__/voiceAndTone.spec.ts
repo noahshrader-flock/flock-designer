@@ -238,14 +238,14 @@ describe('saving a change', () => {
 	it('adds one commit to the same branch on each save after, and none when nothing changed', async () => {
 		gh.commit('one');
 		const file = make();
-		const { sha } = await file.current();
-		const first = (await file.save('two', sha)).voice.branch!;
+		const { sha: read } = await file.current();
+		const first = (await file.save('two', read)).voice.branch!;
 		const commits = gh.branches.get(first.branch)!.commits;
-		const second = (await file.save('three', sha)).voice.branch!;
+		const second = (await file.save('three', read)).voice.branch!;
 		expect(second.branch).toBe(first.branch);
 		expect(second).toMatchObject({ text: 'three', saves: 2 });
 		expect(gh.branches.get(first.branch)!.commits).toBe(commits + 1);
-		const again = (await file.save('three', sha)).voice.branch!;
+		const again = (await file.save('three', read)).voice.branch!;
 		expect(again.saves).toBe(2);
 		expect(gh.branches.get(first.branch)!.commits).toBe(commits + 1);
 	});
@@ -269,9 +269,9 @@ describe('saving a change', () => {
 	it('refuses, writing nothing, when the file changed on the default branch since the text was opened, and shows it as it is now', async () => {
 		gh.commit('one');
 		const file = make();
-		const { sha } = await file.current();
+		const { sha: read } = await file.current();
 		gh.commit('someone else’s');
-		const r = await file.save('mine', sha);
+		const r = await file.save('mine', read);
 		expect(r.state).toBe('changed');
 		expect(r.voice.text).toBe('someone else’s');
 		expect(writes()).toEqual([]);

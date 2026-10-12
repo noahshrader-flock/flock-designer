@@ -36,12 +36,12 @@ describe('recordPrototype', () => {
 
 	it('starts a new project with its brief, then records the prototype', async () => {
 		const { store, files, writes } = memoryStore();
-		const it = await recordPrototype(store, { projectId: 'users', title: 'Users — inactivity', note: 'flag inactive users', me, now });
-		expect(it).toMatchObject({ name: 'v1-i1', branch: 'prototype/users/v1-i1', contributors: [me], createdAt: now.toISOString() });
+		const recorded = await recordPrototype(store, { projectId: 'users', title: 'Users — inactivity', note: 'flag inactive users', me, now });
+		expect(recorded).toMatchObject({ name: 'v1-i1', branch: 'prototype/users/v1-i1', contributors: [me], createdAt: now.toISOString() });
 		expect(files['projects/users/brief.md']).toBe('# Users — inactivity\n\nflag inactive users\n');
-		expect(it.note).toBe('flag inactive users');
+		expect(recorded.note).toBe('flag inactive users');
 		expect(JSON.parse(files['projects/users/iterations.json'] as string)).toHaveLength(1);
-		// The brief first: a record that names a project with no brief would list it under its bare id.
+		// The brief first: a record that names a project with no brief would list recorded under its bare id.
 		expect(writes).toEqual(['projects/users/brief.md', 'projects/users/iterations.json']);
 	});
 
@@ -53,19 +53,25 @@ describe('recordPrototype', () => {
 				{ name: 'i2', branch: 'prototype/users/i2' },
 			]),
 		});
-		const it = await recordPrototype(store, { projectId: 'users', title: 'Other', note: 'n', me: null, now });
+		const recorded = await recordPrototype(store, { projectId: 'users', title: 'Other', note: 'n', me: null, now });
 		// Another prototype on a project is another idea: the next version, after the older names, which are version 1.
-		expect(it.name).toBe('v2-i1');
-		expect(it.contributors).toBeUndefined();
+		expect(recorded.name).toBe('v2-i1');
+		expect(recorded.contributors).toBeUndefined();
 		expect(files['projects/users/brief.md']).toBe('# Users\n\nThe real brief.\n');
 		expect(JSON.parse(files['projects/users/iterations.json'] as string).map((i: { name: string }) => i.name)).toEqual(['i1', 'i2', 'v2-i1']);
 	});
 
 	it('keeps the whole request in the brief, and its first line on the record', async () => {
 		const { store, files } = memoryStore();
-		const it = await recordPrototype(store, { projectId: 'users', title: 'Users', note: 'Add a Usage tab.\n\nWho uses it: admins.\n', me, now });
-		expect(files['projects/users/brief.md']).toBe('# Users\n\nAdd a Usage tab.\n\nWho uses it: admins.\n');
-		expect(it.note).toBe('Add a Usage tab.');
+		const recorded = await recordPrototype(store, {
+			projectId: 'users',
+			title: 'Users',
+			note: 'Add a Usage tab.\n\nWho uses recorded: admins.\n',
+			me,
+			now,
+		});
+		expect(files['projects/users/brief.md']).toBe('# Users\n\nAdd a Usage tab.\n\nWho uses recorded: admins.\n');
+		expect(recorded.note).toBe('Add a Usage tab.');
 	});
 
 	it('keeps what it was modeled on', async () => {
@@ -162,7 +168,7 @@ describe('what the agent is told', () => {
 	};
 
 	it('names the source to write, the exact command that checks it builds, and every folder it may read, read-only', () => {
-		const task = prototypeBuildTask({ skill: '# Skill', build, sources, request: 'A users list' });
+		const task = prototypeBuildTask({ skill: '# Skill', build, sources, accessibility: '', voice: '', request: 'A users list' });
 		expect(task.startsWith('# Skill')).toBe(true);
 		expect(task).toContain('Write `/q/users/i1.tsx`');
 		expect(task).toContain(`\`${build.buildCommand}\``);
@@ -172,7 +178,9 @@ describe('what the agent is told', () => {
 	});
 
 	it('says what is missing rather than leaving the agent to guess', () => {
-		expect(prototypeBuildTask({ skill: 's', build, sources, request: 'r' })).toContain('The design system as installed:** not on this machine');
+		expect(prototypeBuildTask({ skill: 's', build, sources, accessibility: '', voice: '', request: 'r' })).toContain(
+			'The design system as installed:** not on this machine',
+		);
 	});
 
 	it('lets the agent read only the folders that exist', () => {
@@ -236,6 +244,7 @@ describe('runPrototypeBuild', () => {
 		name: 'i1',
 		branch: 'prototype/users/i1',
 		issueNumber: null,
+		openComments: 0,
 		previewUrl: null,
 		commit: null,
 		contributors: [],

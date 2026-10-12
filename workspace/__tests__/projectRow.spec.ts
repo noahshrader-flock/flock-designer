@@ -19,6 +19,7 @@ const iteration = (more: Partial<ProjectIteration> = {}): ProjectIteration => ({
 	commit: null,
 	contributors: [],
 	createdAt: '2026-10-01T10:00:00Z',
+	route: null,
 	...more,
 });
 const NEWEST = iteration({ name: 'v1-i2', branch: 'prototype/admin-usage/v1-i2', createdAt: '2026-10-05T10:00:00Z', openComments: 3 });

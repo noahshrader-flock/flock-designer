@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHANNELS } from '../src/shared/contract';
-import { g, installDesignSystem, makeProduct, makeProductFiles, addStandards } from './fixtures';
+import { g, installDesignSystem, makeProduct, makeProductFiles, addStandards, type Fn } from './fixtures';
 
 /**
  * The IPC layer itself: which handlers demand that a repository was actually
@@ -97,30 +97,30 @@ const codebaseWork = async () => {
 let registerIpc: (typeof import('../src/main/ipc'))['registerIpc'];
 let OpenedCheckouts: (typeof import('../src/main/services/session'))['OpenedCheckouts'];
 let opened: InstanceType<typeof OpenedCheckouts>;
-let agentStart: ReturnType<typeof vi.fn>;
-let agentStatus: ReturnType<typeof vi.fn>;
-let agentStop: ReturnType<typeof vi.fn>;
-let agentRunningIn: ReturnType<typeof vi.fn>;
+let agentStart: Fn;
+let agentStatus: Fn;
+let agentStop: Fn;
+let agentRunningIn: Fn;
 let runningSession: string | null;
 let recent: { work: string | null; lines: string[] };
-let runtimeStart: ReturnType<typeof vi.fn>;
+let runtimeStart: Fn;
 let memoryValue: string | null;
 let previewUrl: string | null;
-let deleteComment: ReturnType<typeof vi.fn>;
-let readComments: ReturnType<typeof vi.fn>;
-let setAddressed: ReturnType<typeof vi.fn>;
+let deleteComment: Fn;
+let readComments: Fn;
+let setAddressed: Fn;
 let githubState: unknown;
-let githubApi: ReturnType<typeof vi.fn>;
+let githubApi: Fn;
 /** What the design repository's project list says, for the tests of the list. */
 let designRepoProjects: unknown[] = [];
-let warm: ReturnType<typeof vi.fn>;
-let ask: ReturnType<typeof vi.fn>;
+let warm: Fn;
+let ask: Fn;
 /** What a page's accessibility check finds (T7): axe in the app, a stand-in here, finding an image with no text. */
-let checkPage: ReturnType<typeof vi.fn>;
+let checkPage: Fn;
 /** How a prototype's picture is drawn: a window in the app, a stand-in here that gives the same few bytes. */
-let drawCover: ReturnType<typeof vi.fn>;
+let drawCover: Fn;
 /** A file read from GitHub as bytes: none, unless a test says otherwise. */
-let readBytes: ReturnType<typeof vi.fn>;
+let readBytes: Fn;
 /** What the window is told its appearance is, as the app tells the system's theme setting: the calls, in order. */
 let applied: string[] = [];
 let register: (more?: Record<string, unknown>) => void;
@@ -218,6 +218,8 @@ beforeEach(async () => {
 				readBytes: (...a: unknown[]) => readBytes(...a),
 			} as never,
 			page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
+			// No test here shares a preview; sharing is runShare's, tested on its own.
+			share: { start: vi.fn(), status: vi.fn(() => ({ state: 'idle' })) } as never,
 			memory: {
 				read: () => memoryValue,
 				write: (r: string) => {
@@ -291,7 +293,7 @@ describe('the Design System tab', () => {
 
 	it('removes a design system’s pictures with it, so nothing of it is left on this computer', async () => {
 		const { ComponentPictures } = await import('../src/main/services/componentPictures');
-		const store = new ComponentPictures({ folder: join(home, 'component-pictures'), server: prototypeServer });
+		const store = new ComponentPictures({ folder: join(home, 'component-pictures'), server: prototypeServer, recipe: 'test' });
 		store.keep('acme/ui', ['a.stories.tsx'], new Map([['a.stories.tsx', Buffer.from('jpeg')]]));
 		expect(existsSync(store.folderOf('acme/ui'))).toBe(true);
 		expect(await call(CHANNELS.removeDesignSystem, 'acme/ui')).toEqual({ ok: true, value: null });
@@ -538,8 +540,8 @@ describe('where clones go', () => {
 				where: '~/Work/flock-ops',
 				design: { state: 'free', path: join(home, 'Work', 'flock-designer') },
 			});
-			const opened = await call(CHANNELS.cloneRepository, 'flocksafety/flock-ops');
-			expect(opened).toMatchObject({ ok: true, value: { name: 'flock-ops', branch: 'develop' } });
+			const cloned = await call(CHANNELS.cloneRepository, 'flocksafety/flock-ops');
+			expect(cloned).toMatchObject({ ok: true, value: { name: 'flock-ops', branch: 'develop' } });
 			expect(existsSync(join(home, 'Work', 'flock-designer', 'projects', '.keep'))).toBe(true);
 			// Its origin as a real clone's would read: GitHub, not this machine's stand-in.
 			g(join(home, 'Work', 'flock-ops'), 'remote', 'set-url', 'origin', 'https://github.com/flocksafety/flock-ops.git');
@@ -997,9 +999,9 @@ describe('prototypes', () => {
 		expect((await call(CHANNELS.savePrototype, 'demo', 'v1-i1')).ok).toBe(true);
 		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), 'utf8')).toBe('<h1>Demo</h1>');
 
-		const opened = await call(CHANNELS.openPrototype, 'demo', 'v1-i1');
-		expect(opened).toMatchObject({ ok: true, value: { states: [] } });
-		expect(await (await fetch((opened.value as { url: string }).url)).text()).toBe('<h1>Demo</h1>');
+		const shown = await call(CHANNELS.openPrototype, 'demo', 'v1-i1');
+		expect(shown).toMatchObject({ ok: true, value: { states: [] } });
+		expect(await (await fetch((shown.value as { url: string }).url)).text()).toBe('<h1>Demo</h1>');
 
 		// With the states the page says it has, for the bar to offer; the page is the same in each, asked for in it.
 		writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<meta name="dsnr-states" content="default,empty"><h1>Demo</h1>');
@@ -1479,8 +1481,8 @@ describe('prototypes', () => {
 		const page = readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v2-i1.html'), 'utf8');
 		expect(page).toContain(`/_shared/${kept[0]?.replace('.datauri', '')}`);
 		expect(page).not.toContain('A'.repeat(1000));
-		const opened = await call(CHANNELS.openPrototype, 'demo', 'v2-i1');
-		const font = await fetch((opened.value as { url: string }).url.replace('/demo/v2-i1/', `/_shared/${kept[0]?.replace('.datauri', '')}`));
+		const shown = await call(CHANNELS.openPrototype, 'demo', 'v2-i1');
+		const font = await fetch((shown.value as { url: string }).url.replace('/demo/v2-i1/', `/_shared/${kept[0]?.replace('.datauri', '')}`));
 		expect(font.headers.get('content-type')).toBe('font/woff2');
 		// Kept beside the projects, never listed as one.
 		const listed = await call(CHANNELS.listProjects);
@@ -2103,11 +2105,11 @@ describe('moveComment validates its arguments', () => {
 });
 
 describe('opening the preview in the real browser', () => {
-	const opened = async () => (await import('electron')).shell.openExternal as unknown as ReturnType<typeof vi.fn>;
+	const openedLink = async () => (await import('electron')).shell.openExternal as unknown as Fn;
 
 	it('opens the page the preview is on, query and all, in the default browser', async () => {
 		previewUrl = 'http://localhost:3000/organization/org_1/roles/compare?a=r1&b=r2';
-		const open = await opened();
+		const open = await openedLink();
 		open.mockClear();
 		expect((await call(CHANNELS.openPreviewInBrowser)).ok).toBe(true);
 		expect(open).toHaveBeenCalledWith('http://localhost:3000/organization/org_1/roles/compare?a=r1&b=r2');
@@ -2115,14 +2117,14 @@ describe('opening the preview in the real browser', () => {
 
 	it('opens a shared preview too', async () => {
 		previewUrl = 'https://dev-coke-pr-12.flocksafety.com/';
-		const open = await opened();
+		const open = await openedLink();
 		open.mockClear();
 		expect((await call(CHANNELS.openPreviewInBrowser)).ok).toBe(true);
 		expect(open).toHaveBeenCalledTimes(1);
 	});
 
 	it('says so, and opens nothing, when there is no preview', async () => {
-		const open = await opened();
+		const open = await openedLink();
 		open.mockClear();
 		const r = await call(CHANNELS.openPreviewInBrowser);
 		expect(r.ok).toBe(false);
@@ -2134,7 +2136,7 @@ describe('opening the preview in the real browser', () => {
 		'refuses an address a preview could not have, even if the preview somehow reports it: %s',
 		async (bad) => {
 			previewUrl = bad;
-			const open = await opened();
+			const open = await openedLink();
 			open.mockClear();
 			expect((await call(CHANNELS.openPreviewInBrowser)).ok).toBe(false);
 			expect(open).not.toHaveBeenCalled();

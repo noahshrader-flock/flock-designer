@@ -76,7 +76,7 @@ const switcher = (name = FUI_SYSTEM.name) => button(`Design system ${name}: swit
 const firstRow = () => switcher().parentElement as HTMLElement;
 /** The tab bar's tabs (T9), by name; Radix moves to a tab on its mouse down, as a person's press does. */
 const tab = (name: string) => [...document.querySelectorAll<HTMLElement>('[role="tab"]')].find((t) => t.textContent === name) as HTMLElement;
-const chooseTab = (name: 'Components' | 'Voice and Tone') =>
+const chooseTab = (name: 'Components' | 'Primitives' | 'Voice and Tone') =>
 	act(async () => void tab(name).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 })));
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
@@ -537,13 +537,13 @@ const componentPanel = () => document.querySelector<HTMLElement>('[data-panel="c
 
 describe('the components as a list or a grid (P5)', () => {
 	const viewButton = (name: 'List' | 'Grid') => document.querySelector<HTMLElement>(`[aria-label="View"] [aria-label="${name}"]`) as HTMLElement;
-	const shownView = () => document.querySelector('[aria-label="View"] [aria-checked="true"]')?.getAttribute('aria-label');
+	const viewShown = () => document.querySelector('[aria-label="View"] [aria-checked="true"]')?.getAttribute('aria-label');
 	const cards = () => [...document.querySelectorAll<HTMLElement>('[data-component-card]')];
 	afterEach(() => localStorage.clear());
 
 	it('are a list at first, with List and Grid beside the search', async () => {
 		await open(() => ok(ready()));
-		expect(shownView()).toBe('List');
+		expect(viewShown()).toBe('List');
 		expect(document.querySelector('[data-components-search]')?.contains(viewButton('Grid'))).toBe(true);
 		expect(cards()).toHaveLength(0);
 	});
@@ -573,7 +573,7 @@ describe('the components as a list or a grid (P5)', () => {
 		await press(viewButton('Grid'));
 		await unmountAll(current!.root);
 		await open(() => ok(ready()));
-		expect(shownView()).toBe('Grid');
+		expect(viewShown()).toBe('Grid');
 	});
 
 	it('show each component’s picture in its card, asked for as the tab is shown, in the list as in the grid', async () => {

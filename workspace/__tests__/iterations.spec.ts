@@ -48,9 +48,9 @@ beforeEach(() => {
  */
 const oldPrototype = async (n: number) => {
 	g('checkout', '-q', '-b', `fd/demo/i${n}`, 'develop');
-	const it = await recordedIteration(root, records, descriptor, 'demo', `i${n}`);
+	const recorded = await recordedIteration(root, records, descriptor, 'demo', `i${n}`);
 	g('checkout', '-q', 'develop');
-	return it;
+	return recorded;
 };
 
 afterEach(() => {
@@ -134,9 +134,9 @@ describe('continueIteration', () => {
 
 describe('codebase work', () => {
 	it('creates the one feature branch and records it as "codebase"', async () => {
-		const it = await createIteration(root, records, descriptor, 'demo', 'real change', 'develop');
-		expect(it.name).toBe('codebase');
-		expect(it.branch).toBe(codebaseBranchFor(descriptor, 'demo'));
+		const created = await createIteration(root, records, descriptor, 'demo', 'real change', 'develop');
+		expect(created.name).toBe('codebase');
+		expect(created.branch).toBe(codebaseBranchFor(descriptor, 'demo'));
 		expect((await readCheckout(root)).branch).toBe('feature/demo');
 		expect(readIterations(records, 'demo')).toHaveLength(1);
 	});

@@ -10,7 +10,7 @@ export default tseslint.config(
 	// A rule switched off where it was wrong says so; one that no longer switches anything off goes.
 	{ linterOptions: { reportUnusedDisableDirectives: 'error' } },
 	{
-		files: ['src/**/*.{ts,tsx}'],
+		files: ['src/**/*.{ts,tsx}', '__tests__/**/*.ts'],
 		languageOptions: { parser: tseslint.parser, parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname } },
 		plugins: { '@typescript-eslint': tseslint.plugin, 'react-hooks': reactHooks },
 		rules: {

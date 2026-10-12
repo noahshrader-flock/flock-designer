@@ -218,8 +218,8 @@ describe('its folder', () => {
 	it('starts again on the folder being viewed each time it is opened', async () => {
 		await open({}, { folders: ['Admin', 'Roles'], folder: 'Roles' });
 		await pickFolder('Admin');
-		const props = (open: boolean) => ({
-			open,
+		const props = (isOpen: boolean) => ({
+			open: isOpen,
 			onClose: () => undefined,
 			checkout: HERE,
 			onChoose: () => undefined,

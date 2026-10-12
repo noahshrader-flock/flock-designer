@@ -139,7 +139,7 @@ describe('reading what a story drew', () => {
 describe('the index', () => {
 	let home: string;
 	let clone: string;
-	let asked: { base: string; mode: string; files: string[] }[][];
+	let asked: Parameters<Measure>[0][];
 	let builds: TokenEdit[][];
 	const LIB = {
 		'src/colors/tones/brand.ts': "export const brand = {\n  50: '#108062',\n};\n",
@@ -168,7 +168,7 @@ describe('the index', () => {
 	/** The pictures kept, as the pass gave them: a stand-in for the store, which has tests of its own. */
 	let kept: { system: string; listed: string[]; taken: Map<string, Buffer> }[];
 	const pictures = {
-		keep: (system: string, listed: string[], taken: Map<string, Buffer>) => void kept.push({ system, listed, taken }),
+		keep: (id: string, listed: string[], taken: Map<string, Buffer>) => void kept.push({ system: id, listed, taken }),
 		of: async () => Object.fromEntries([...(kept.at(-1)?.taken.keys() ?? [])].map((f) => [f, `http://127.0.0.1:1/pictures/${f}`])),
 	};
 	const index = (more: Partial<ConstructorParameters<typeof ComponentTokens>[0]> = {}) =>

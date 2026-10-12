@@ -10,7 +10,7 @@
 		"dev": "electron-vite dev",
 		"build": "npm run typecheck && electron-vite build",
 		"start": "electron-vite preview",
-		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.viewer.json",
+		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.viewer.json && tsc --noEmit -p tsconfig.test.json",
 		"test": "vitest run",
 		"format": "prettier --write .",
 		"lint": "eslint .",
@@ -37,6 +37,7 @@
 		"tailwindcss": "^4.3.3"
 	},
 	"devDependencies": {
+		"@types/jsdom": "^21.1.7",
 		"@types/luxon": "^3.4.2",
 		"@types/node": "^22.10.0",
 		"@types/react": "^19.3.0",

@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Fn } from './fixtures';
 import { RuntimeManager, fillProjectId, type RuntimeDeps } from '../src/main/services/runtime';
 import type { PreviewStatus, RunLogLine, WorkspaceDescriptor } from '../src/shared/contract';
 
@@ -213,7 +214,7 @@ describe('one port, many prototypes', () => {
 });
 
 describe('a preview does not open a browser tab of its own', () => {
-	const envOf = (spy: ReturnType<typeof vi.fn>) => (spy.mock.calls[0]?.[2] as { env: Record<string, string> }).env;
+	const envOf = (spy: Fn) => (spy.mock.calls[0]?.[2] as { env: Record<string, string> }).env;
 
 	it("tells a command that serves a preview not to open a browser, so the app's window is the only place it appears", async () => {
 		const spawnSpy = vi.fn(spawn);

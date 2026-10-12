@@ -2,6 +2,7 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { App } from '../src/renderer/App';
+import type { SignInState } from '../src/shared/contract';
 import { button, fakeApp, ok, press, render, settle, unmountAll } from './reviewHarness';
 
 /**
@@ -48,18 +49,25 @@ describe('the sign-in screen', () => {
 	});
 
 	it('is the same for the code to type on GitHub', async () => {
-		let changed: ((state: { state: string }) => void) | null = null;
+		let changed: ((state: SignInState) => void) | null = null;
 		const app = fakeApp({
 			signInState: async () => ok({ state: 'signedOut' }),
 			signInStart: async () => ok({ userCode: 'WDJB-MJHT', verificationUri: 'https://github.com/login/device' }),
-			onSignInChanged: (listener: (state: { state: string }) => void) => ((changed = listener), () => undefined),
+			onSignInChanged: (listener: (state: SignInState) => void) => ((changed = listener), () => undefined),
 		});
 		(window as unknown as { workspace: unknown }).workspace = app.api;
 		current = await render(createElement(App));
 		await press(button('Sign in with GitHub'));
 		await settle();
 		// GitHub is now waiting for the code: the app tells the window so.
-		await act(async () => changed?.({ state: 'awaitingDevice' }));
+		await act(async () =>
+			changed?.({
+				state: 'awaitingDevice',
+				userCode: 'WDJB-MJHT',
+				verificationUri: 'https://github.com/login/device',
+				expiresAt: '2026-10-12T12:15:00Z',
+			}),
+		);
 		await settle();
 		const heading = [...document.querySelectorAll('h1')].find((h) => h.textContent === 'Enter this code on GitHub') as HTMLElement;
 		expect(document.body.textContent).toContain('WDJB-MJHT');

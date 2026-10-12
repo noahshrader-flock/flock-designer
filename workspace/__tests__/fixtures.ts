@@ -1,7 +1,11 @@
+import type { Mock } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { RecordStore } from '../src/main/services/prototype';
+
+/** A mocked function of any shape, called as the code calls it: vitest's own `Procedure`, which it does not export. */
+export type Fn = Mock<(...args: any[]) => any>;
 
 /** Fixtures more than one spec builds the same way: a product checkout, its design system installed, a design repository in memory. */
 

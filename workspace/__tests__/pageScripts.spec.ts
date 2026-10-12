@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { JSDOM } from 'jsdom';
+import { type DOMWindow, JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import { sanitizeAnchor } from '../src/shared/anchor';
 import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, SINGLE_PAGE, layerVisibleScript, readPinMessage, resolveScript } from '../src/shared/pageScripts';
@@ -11,17 +11,14 @@ const page = (html: string, url = 'http://localhost:3000/users#/list', head = ''
 		runScripts: 'outside-only',
 		pretendToBeVisual: true,
 	});
-	const w = dom.window as unknown as Window & { eval: (s: string) => unknown; document: Document };
+	const w = dom.window;
 	// jsdom has no layout or animation; give the scripts what they need to run.
 	w.Element.prototype.scrollIntoView = () => undefined;
 	(w.Element.prototype as unknown as { animate: () => void }).animate = () => undefined;
 	return w;
 };
 
-const click = (w: Window, el: Element) =>
-	el.dispatchEvent(
-		new (w as unknown as { MouseEvent: typeof MouseEvent }).MouseEvent('click', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }),
-	);
+const click = (w: DOMWindow, el: Element) => el.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
 
 const CARD = `
   <main>
@@ -122,7 +119,7 @@ describe('picking an element', () => {
 	it('Escape cancels', async () => {
 		const w = page(CARD);
 		const picked = w.eval(PICK_SCRIPT) as Promise<unknown>;
-		w.document.dispatchEvent(new (w as unknown as { KeyboardEvent: typeof KeyboardEvent }).KeyboardEvent('keydown', { key: 'Escape' }));
+		w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape' }));
 		expect(await picked).toBeNull();
 	});
 });
@@ -310,7 +307,7 @@ describe('pins that can be clicked and dragged', () => {
 	const setup = (movable: boolean) => {
 		const w = page(CARD);
 		const said: Array<Record<string, unknown>> = [];
-		(w as unknown as { console: { debug: (m: string) => void } }).console.debug = (m: string) => {
+		w.console.debug = (m: string) => {
 			if (m.startsWith('__fd:')) said.push(JSON.parse(m.slice(5)));
 		};
 		const target = w.document.querySelector('[data-e2e-ref="users-invite"]')!;
@@ -318,9 +315,7 @@ describe('pins that can be clicked and dragged', () => {
 		w.eval(resolveScript([{ ...req(5, { selector: 'main' }), movable }], 'secret'));
 		const pin = w.document.querySelector('[data-fd-layer] > div > div') as HTMLElement;
 		const fire = (type: string, x = 0, y = 0) =>
-			pin.dispatchEvent(
-				new (w as unknown as { MouseEvent: typeof MouseEvent }).MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y }),
-			);
+			pin.dispatchEvent(new w.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y }));
 		return { w, said, pin, fire };
 	};
 
@@ -399,7 +394,7 @@ describe('pins that can be clicked and dragged', () => {
 });
 
 describe('redrawing the pins', () => {
-	const pins = (w: Window) => w.document.querySelectorAll('[data-fd-layer]:not([data-fd-layer="hover"])');
+	const pins = (w: DOMWindow) => w.document.querySelectorAll('[data-fd-layer]:not([data-fd-layer="hover"])');
 
 	it('removes the pins that were there, even while a comment is being placed', () => {
 		const w = page(CARD);
@@ -463,25 +458,22 @@ describe('choosing what a pin attaches to', () => {
 	  </main>`;
 
 	/** jsdom has no layout and no elementsFromPoint, so give an element a box, and say what is "under the pointer". */
-	const under = (w: Window & { document: Document }, el: Element, rect = { left: 10, top: 20, width: 100, height: 30 }) => {
+	const under = (w: DOMWindow & { document: Document }, el: Element, rect = { left: 10, top: 20, width: 100, height: 30 }) => {
 		(el as HTMLElement).getBoundingClientRect = () =>
 			({ ...rect, right: rect.left + rect.width, bottom: rect.top + rect.height, x: rect.left, y: rect.top, toJSON: () => ({}) }) as DOMRect;
 		const chain: Element[] = [];
 		for (let e: Element | null = el; e; e = e.parentElement) chain.push(e);
 		(w.document as unknown as { elementsFromPoint: () => Element[] }).elementsFromPoint = () => chain;
 	};
-	const move = (w: Window, x = 12, y = 22) =>
-		w.document.dispatchEvent(
-			new (w as unknown as { MouseEvent: typeof MouseEvent }).MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: y }),
-		);
-	const press = (w: Window, key: string) => {
-		const ev = new (w as unknown as { KeyboardEvent: typeof KeyboardEvent }).KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+	const move = (w: DOMWindow, x = 12, y = 22) => w.document.dispatchEvent(new w.MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: y }));
+	const press = (w: DOMWindow, key: string) => {
+		const ev = new w.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
 		w.document.dispatchEvent(ev);
 		return ev;
 	};
-	const layers = (w: Window & { document: Document }) => [...w.document.querySelectorAll('[data-fd-layer="hover"]')] as HTMLElement[];
-	const outlineOf = (w: Window & { document: Document }) => layers(w)[0] as HTMLElement;
-	const chipOf = (w: Window & { document: Document }) => layers(w)[1] as HTMLElement;
+	const layers = (w: DOMWindow & { document: Document }) => [...w.document.querySelectorAll('[data-fd-layer="hover"]')] as HTMLElement[];
+	const outlineOf = (w: DOMWindow & { document: Document }) => layers(w)[0] as HTMLElement;
+	const chipOf = (w: DOMWindow & { document: Document }) => layers(w)[1] as HTMLElement;
 
 	it('outlines the element under the pointer, where it is, and names it, before anything is clicked', () => {
 		const w = page(FORM);

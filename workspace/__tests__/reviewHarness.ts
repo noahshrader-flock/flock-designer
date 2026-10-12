@@ -1,6 +1,6 @@
 import { act, createElement, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import type { CommentAnchor, PinEvent, Project, ProjectIteration, ReviewComment } from '../src/shared/contract';
+import type { CommentAnchor, PickedPoint, PinEvent, Project, ProjectIteration, Result, ReviewComment, WorkspaceApi } from '../src/shared/contract';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
 
 /**
@@ -12,12 +12,16 @@ import { TooltipProvider } from '../src/renderer/ui/tooltip';
 export const ok = <T>(value: T) => ({ ok: true as const, value });
 export const fail = (error: string) => ({ ok: false as const, error });
 
-type Impl = Record<string, (...args: never[]) => unknown>;
+/**
+ * Any of the window's calls, by its real name and with its real arguments, so renaming or changing one breaks the tests
+ * that fake it. What a fake answers is left open: tests give partial and malformed answers on purpose.
+ */
+type Impl = { [K in keyof WorkspaceApi]?: (...args: Parameters<WorkspaceApi[K]>) => unknown };
 
 export const fakeApp = (overrides: Impl = {}) => {
 	const calls: Record<string, unknown[][]> = {};
 	let pinListener: ((e: PinEvent) => void) | null = null;
-	let picked: ((v: unknown) => void) | null = null;
+	let picked: ((v: Result<PickedPoint | null>) => void) | null = null;
 	const impl: Impl = {
 		agentStatus: async () => ok({ state: 'idle' }),
 		agentRecent: async () => ok({ work: null, lines: [] }),
@@ -79,7 +83,7 @@ export const fakeApp = (overrides: Impl = {}) => {
 				(_t, name: string) =>
 				(...args: unknown[]) => {
 					(calls[name] ??= []).push(args);
-					const f = impl[name] as ((...a: unknown[]) => unknown) | undefined;
+					const f = impl[name as keyof WorkspaceApi] as ((...a: unknown[]) => unknown) | undefined;
 					if (f) return f(...args);
 					// Subscriptions give back a way to stop; everything else answers that it worked.
 					return name.startsWith('on') ? () => undefined : Promise.resolve(ok(null));
@@ -134,6 +138,7 @@ export const PROTOTYPE: ProjectIteration = {
 	name: 'v1-i1',
 	branch: 'prototype/demo/v1-i1',
 	issueNumber: 1,
+	openComments: 0,
 	previewUrl: null,
 	commit: null,
 	contributors: [],
