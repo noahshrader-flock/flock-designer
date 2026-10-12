@@ -202,4 +202,10 @@ describe('the ones connected', () => {
 		expect(new DesignSystemsMemory(file).read()).toMatchObject({ systems: [{ id: 'acme/ui' }], current: 'acme/ui' });
 		expect(readFileSync(file, 'utf8')).toContain('"x"');
 	});
+
+	it('keep a repository only as the path of one, as records keep it: a kept one that is not, is not a design system', () => {
+		const bad = { ...system('acme/ui'), id: 'bad', repository: '../../etc' };
+		writeFileSync(file, JSON.stringify({ systems: [bad, system('acme/ui')], current: 'bad' }));
+		expect(new DesignSystemsMemory(file).read()).toMatchObject({ systems: [{ id: 'acme/ui' }], current: 'acme/ui' });
+	});
 });

@@ -1,4 +1,4 @@
-import { parseRemote, repoName } from '../../shared/repoRef';
+import { asRepositoryPath, parseRemote, repoName } from '../../shared/repoRef';
 /**
  * The design systems a person connected, for the Design System tab (P4 of the design system plan): any repository they
  * can reach, **accepted by what is found in it, not by its name** (decision 23). A design system is a folder with
@@ -126,8 +126,9 @@ const parseConnected = (raw: unknown): ConnectedDesignSystems => {
 	}
 	const systems = asArray(kept.systems).filter((s): s is ConnectedDesignSystem => {
 		const r = asRecord(s);
-		const strings = [r.id, r.name, r.repository, r.root, r.folder, r.branch].every((v) => typeof v === 'string');
-		return strings && isAbsolute(r.root as string);
+		const strings = [r.id, r.name, r.root, r.folder, r.branch].every((v) => typeof v === 'string');
+		// Its repository is read as every kept one is (a record's too): the path of one, or not a design system.
+		return strings && asRepositoryPath(r.repository) !== null && isAbsolute(r.root as string);
 	});
 	const current = typeof kept.current === 'string' && systems.some((s) => s.id === kept.current) ? kept.current : (systems[0]?.id ?? null);
 	return { systems, current };
