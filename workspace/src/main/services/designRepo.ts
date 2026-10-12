@@ -379,7 +379,7 @@ export class DesignRepo {
 		return new Map([...(await this.listReviewIssues())].map(([branch, thread]) => [branch, thread.openComments]));
 	}
 
-	async readComments(projectId: string, branch: string): Promise<ReviewComment[]> {
+	async readComments(branch: string): Promise<ReviewComment[]> {
 		const issue = (await this.listReviewIssues()).get(branch);
 		if (!issue) return [];
 		const threads = await Promise.all(issue.numbers.map((n) => this.allPages(`${this.base}/issues/${n}/comments`, 20)));

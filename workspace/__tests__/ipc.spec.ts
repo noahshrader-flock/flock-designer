@@ -1221,7 +1221,7 @@ describe('prototypes', () => {
 		const page = (text: string) => `import { Hello } from 'x';\nexport default () => <><Hello /><p>${text}</p></>;\n`;
 		/** Comments by iteration: v1-i1's thread, and any other's. */
 		const threads = (byName: Record<string, ReturnType<typeof comment>[]>) =>
-			readComments.mockImplementation(async (_p: string, key: string) => byName[key.split('/').at(-1) as string] ?? []);
+			readComments.mockImplementation(async (key: string) => byName[key.split('/').at(-1) as string] ?? []);
 		/** A v1-i1 Noah made, signed in, with a source. */
 		const ready = async () => {
 			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
@@ -1239,7 +1239,7 @@ describe('prototypes', () => {
 			threads({ 'v1-i1': [comment(7, 'Make this primary', 'noah')] });
 
 			expect((await call(CHANNELS.addressPrototype, 'demo', 'v1-i1', 7)).ok).toBe(true);
-			expect(readComments).toHaveBeenCalledWith('demo', 'prototype/demo/v1-i1');
+			expect(readComments).toHaveBeenCalledWith('prototype/demo/v1-i1');
 			const [dir, , text, extras] = agentStart.mock.calls.at(-1) as [string, string, string, { work: string; bare: boolean }];
 			expect(dir).toBe(join(home, 'prototype', 'demo'));
 			expect(text).toContain('Address comment 1 on prototype v1-i1');

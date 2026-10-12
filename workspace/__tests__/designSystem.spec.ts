@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, createElement } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { DesignSystem } from '../src/renderer/DesignSystem';
 import { undeclared } from '../src/shared/wcag';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';

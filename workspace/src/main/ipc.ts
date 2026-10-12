@@ -914,7 +914,7 @@ export const registerIpc = ({
 			const skill = await readDesignFile(ADDRESS_SKILL);
 			const prepared = await prepareAddress(
 				{
-					readComments: () => designRepo.readComments(projectId, iteration.branch),
+					readComments: () => designRepo.readComments(iteration.branch),
 					checkout: () => readCheckout(canonical),
 					agentRunning: agentBusy,
 					skill: () => skill,
@@ -1317,7 +1317,7 @@ export const registerIpc = ({
 			const addressSkill = await readSkillText(ADDRESS_SKILL);
 			const buildSkill = await readSkillText(BUILD_SKILL);
 			// Read now, not earlier: this is what makes the file current, and what says who has commented.
-			const comments = await designRepo.readComments(projectId, prototypeKey(projectId, name));
+			const comments = await designRepo.readComments(prototypeKey(projectId, name));
 			const exported = writeCommentsExport(prototypesRoot, {
 				projectId,
 				title: await work.title(projectId),
@@ -1327,7 +1327,7 @@ export const registerIpc = ({
 			});
 			const number = chooseComment(comments, commentId);
 			const change = await work.startChange(projectId, name, async (it) =>
-				(it.name === name ? comments : await designRepo.readComments(projectId, it.branch)).map((c) => c.author),
+				(it.name === name ? comments : await designRepo.readComments(it.branch)).map((c) => c.author),
 			);
 			// Modeled on what the iteration it comes from was: a new one has no record of its own yet.
 			const { build, sources } = await prototypeRun(projectId, change.target, change.from.name);
@@ -1683,7 +1683,7 @@ export const registerIpc = ({
 	ipcMain.handle(
 		CHANNELS.readComments,
 		guard(async (projectId: string, branch: string): Promise<ReviewComment[]> => {
-			const comments = await designRepo.readComments(projectId, branch);
+			const comments = await designRepo.readComments(branch);
 			exportComments(projectId, branch, comments);
 			return comments;
 		}),

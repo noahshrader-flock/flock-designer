@@ -8,13 +8,13 @@ import { Button } from './ui/button';
  * click and no hint of what happened.
  */
 export class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
-	state = { error: null as Error | null };
+	override state = { error: null as Error | null };
 
 	static getDerivedStateFromError(error: Error) {
 		return { error };
 	}
 
-	render() {
+	override render() {
 		if (!this.state.error) return this.props.children;
 		return (
 			<div className="mx-auto max-w-[720px] p-6 pt-20">

@@ -44,7 +44,7 @@ export const browserComments = (
 ): CommentStore => {
 	const repo = new DesignRepo(github, ref);
 	return {
-		read: () => asResult(repo.readComments(projectId, branch)),
+		read: () => asResult(repo.readComments(branch)),
 		// No picture of the spot: a page cannot take one of itself.
 		post: (body, anchor) => asResult(repo.postComment(projectId, branch, body, anchor, null)),
 		resolve: (id, resolved) => asResult(repo.setResolved(id, resolved)),

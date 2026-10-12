@@ -61,7 +61,7 @@ const openApp = async (address?: { iteration: string }) => {
 	const doc = prototypeIn(preview);
 	const app = fakeApp({
 		signInState: async () => ok({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
-		readComments: (projectId: string, branch: string) => asResult(repo.readComments(projectId, branch)),
+		readComments: (_projectId: string, branch: string) => asResult(repo.readComments(branch)),
 		postComment: (projectId: string, branch: string, body: string, anchor: CommentAnchor | null) =>
 			asResult(repo.postComment(projectId, branch, body, anchor, null)),
 		resolveComment: (id: number, resolved: boolean) => asResult(repo.setResolved(id, resolved)),

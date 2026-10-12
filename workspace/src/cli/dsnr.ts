@@ -331,7 +331,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			const repo = deps.github ? new DesignRepo(deps.github, DESIGN_REPO) : null;
 			const read: { comments: ReviewComment[] | null } = { comments: null };
 			const authorsOf = async (it: Iteration): Promise<string[] | null> => {
-				read.comments = repo ? await repo.readComments(projectId, it.branch).catch(() => null) : null;
+				read.comments = repo ? await repo.readComments(it.branch).catch(() => null) : null;
 				return read.comments?.map((c) => c.author) ?? null;
 			};
 			const change = await work.startChange(projectId, name, authorsOf);

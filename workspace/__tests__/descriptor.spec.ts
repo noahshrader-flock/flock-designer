@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { dirname, join } from 'node:path';
 import { DescriptorProblem, designSystemCheckout, findCommand, parseDescriptor } from '../src/main/services/descriptor';
 
 const valid = {
