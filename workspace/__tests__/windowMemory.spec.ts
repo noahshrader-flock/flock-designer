@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { WindowMemory, restoreState } from '../src/main/services/windowMemory';
+import { appPaths } from '../src/main/appPaths';
 
 const laptop = { x: 0, y: 0, width: 1512, height: 944 };
 const external = { x: 1512, y: 0, width: 2560, height: 1415 };
@@ -50,11 +51,11 @@ describe('WindowMemory', () => {
 
 	it('writes and reads back, and reads nothing from a missing or broken file', () => {
 		dir = mkdtempSync(join(tmpdir(), 'fd-window-'));
-		const memory = new WindowMemory(WindowMemory.defaultPath(dir));
+		const memory = new WindowMemory(appPaths(dir).window);
 		expect(memory.read()).toBeNull();
 		memory.write({ x: 1, y: 2, width: 1000, height: 700, maximized: false });
 		expect(memory.read()).toEqual({ x: 1, y: 2, width: 1000, height: 700, maximized: false });
-		writeFileSync(WindowMemory.defaultPath(dir), '{not json');
+		writeFileSync(appPaths(dir).window, '{not json');
 		expect(memory.read()).toBeNull();
 	});
 });

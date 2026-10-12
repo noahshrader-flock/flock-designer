@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { APPEARANCES, asAppearance, isAppearance } from '../src/shared/appearance';
 import { AppearanceMemory } from '../src/main/services/appearance';
+import { appPaths } from '../src/main/appPaths';
 
 /**
  * The app's appearance (Settings): Auto, which follows the computer's own light or dark setting and is what it starts as,
@@ -56,7 +57,7 @@ describe('the appearance kept', () => {
 	});
 
 	it('is kept where the app keeps its settings, and a place that cannot be written to is no failure', () => {
-		expect(AppearanceMemory.defaultPath('/data')).toBe(join('/data', 'appearance.json'));
+		expect(appPaths('/data').appearance).toBe(join('/data', 'appearance.json'));
 		mkdirSync(file);
 		expect(() => new AppearanceMemory(file).write('dark')).not.toThrow();
 		expect(new AppearanceMemory(file).read()).toBe('system');

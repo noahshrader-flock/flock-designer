@@ -1,5 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { type JsonFile, jsonFile } from './jsonFile';
 
 /**
  * Remembers the window's size and place, so it opens the way it was left.
@@ -55,25 +54,19 @@ export const restoreState = (saved: unknown, screens: Area[], fallback: { width:
 	return { width, height, ...(onScreen ? { x: x as number, y: y as number } : {}), ...(s.maximized === true ? { maximized: true } : {}) };
 };
 
+/** The window's size and place, as last left: checked against the screens there are now by `restoreState`. */
 export class WindowMemory {
-	constructor(private readonly file: string) {}
+	private readonly file: JsonFile<unknown>;
 
-	static defaultPath = (userData: string): string => join(userData, 'window.json');
+	constructor(path: string) {
+		this.file = jsonFile<unknown>(path, { parse: (raw) => raw, fallback: null });
+	}
 
 	read(): unknown {
-		try {
-			return JSON.parse(readFileSync(this.file, 'utf8'));
-		} catch {
-			return null;
-		}
+		return this.file.read();
 	}
 
 	write(state: WindowState): void {
-		try {
-			mkdirSync(dirname(this.file), { recursive: true });
-			writeFileSync(this.file, JSON.stringify(state));
-		} catch {
-			// Not remembering is an inconvenience, never a reason to fail.
-		}
+		this.file.write(state);
 	}
 }

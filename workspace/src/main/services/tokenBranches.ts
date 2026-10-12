@@ -15,14 +15,14 @@
  *
  * Which branch a design system's change is on is remembered on disk, so the app can be closed and the change carried on.
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
 import type { ConnectedDesignSystem, TokenBranch, TokenEdit } from '../../shared/contract';
+import { asRecord } from '../../shared/json';
 import { describeChange } from '../../shared/tokens';
 import { libraryCommit, systemReads } from './designLibrary';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { readTokens } from './designTokens';
 import { branchExists, commitOnto, git } from './git';
+import { type JsonFile, jsonFile } from './jsonFile';
 import type { CatalogReads } from './componentCatalog';
 import type { ShareTools } from './share';
 import { editedFiles } from './tokenEdits';
@@ -79,8 +79,22 @@ export interface TokenBranchesDeps {
 	now?: () => Date;
 }
 
+/** The kept branches that are DSNR's own and whole; anything else in the file is left out. */
+const ownBranches = (raw: unknown): Record<string, Kept> =>
+	Object.fromEntries(
+		Object.entries(asRecord(raw)).filter((e): e is [string, Kept] => {
+			const k = asRecord(e[1]);
+			return typeof k.branch === 'string' && TOKEN_BRANCH.test(k.branch) && typeof k.tip === 'string';
+		}),
+	);
+
 export class TokenBranches {
-	constructor(private readonly deps: TokenBranchesDeps) {}
+	/** Each design system's branch, by its id. Only a branch DSNR names as its own is ever written to, whatever the file says. */
+	private readonly file: JsonFile<Record<string, Kept>>;
+
+	constructor(private readonly deps: TokenBranchesDeps) {
+		this.file = jsonFile(deps.file, { parse: ownBranches, fallback: {} });
+	}
 
 	/** The shown design system's branch, or null: none was saved, or the branch is gone from the clone. */
 	async current(): Promise<TokenBranch | null> {
@@ -150,7 +164,7 @@ export class TokenBranches {
 	/** Forgets the shown design system's branch, so the next save makes a new one. The branch and its pull request stay. */
 	forget(): void {
 		const system = this.deps.system();
-		if (system) this.write(Object.fromEntries(Object.entries(this.read()).filter(([id]) => id !== system.id)));
+		if (system) this.file.update((all) => Object.fromEntries(Object.entries(all).filter(([id]) => id !== system.id)));
 	}
 
 	private system(): ConnectedDesignSystem {
@@ -166,7 +180,7 @@ export class TokenBranches {
 	/** The shown design system's branch as kept, when it is still in the clone where DSNR left it. */
 	private async kept(): Promise<{ system: ConnectedDesignSystem; kept: Kept } | null> {
 		const system = this.deps.system();
-		const kept = system ? this.read()[system.id] : undefined;
+		const kept = system ? this.file.read()[system.id] : undefined;
 		if (!system || !kept) return null;
 		const there = await branchExists(system.root, kept.branch).catch(() => false);
 		if (!there) {
@@ -176,25 +190,8 @@ export class TokenBranches {
 		return { system, kept };
 	}
 
-	private read(): Record<string, Kept> {
-		try {
-			const all = JSON.parse(readFileSync(this.deps.file, 'utf8')) as Record<string, Kept>;
-			// Only a branch DSNR names as its own is ever written to, whatever the file says.
-			return Object.fromEntries(
-				Object.entries(all).filter(([, k]) => typeof k?.branch === 'string' && TOKEN_BRANCH.test(k.branch) && typeof k.tip === 'string'),
-			);
-		} catch {
-			return {};
-		}
-	}
-
 	private keep(id: string, kept: Kept): void {
-		this.write({ ...this.read(), [id]: kept });
-	}
-
-	private write(all: Record<string, Kept>): void {
-		mkdirSync(dirname(this.deps.file), { recursive: true });
-		writeFileSync(this.deps.file, JSON.stringify(all));
+		this.file.update((all) => ({ ...all, [id]: kept }));
 	}
 }
 

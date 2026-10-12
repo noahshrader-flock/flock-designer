@@ -1,6 +1,6 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
 import { type Appearance, asAppearance } from '../../shared/appearance';
+import { asRecord } from '../../shared/json';
+import { type JsonFile, jsonFile } from './jsonFile';
 
 /**
  * The appearance the person chose (Settings), in its own small file in the app's settings, so the app opens the way it
@@ -8,24 +8,17 @@ import { type Appearance, asAppearance } from '../../shared/appearance';
  * keeping it only means choosing again.
  */
 export class AppearanceMemory {
-	constructor(private readonly file: string) {}
+	private readonly file: JsonFile<{ appearance: Appearance }>;
 
-	static defaultPath = (userData: string): string => join(userData, 'appearance.json');
+	constructor(path: string) {
+		this.file = jsonFile(path, { parse: (raw) => ({ appearance: asAppearance(asRecord(raw).appearance) }), fallback: { appearance: 'system' } });
+	}
 
 	read(): Appearance {
-		try {
-			return asAppearance((JSON.parse(readFileSync(this.file, 'utf8')) as Record<string, unknown>).appearance);
-		} catch {
-			return 'system';
-		}
+		return this.file.read().appearance;
 	}
 
 	write(appearance: Appearance): void {
-		try {
-			mkdirSync(dirname(this.file), { recursive: true });
-			writeFileSync(this.file, JSON.stringify({ appearance }));
-		} catch {
-			// Chosen again next time.
-		}
+		this.file.write({ appearance });
 	}
 }

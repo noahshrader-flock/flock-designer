@@ -1,6 +1,8 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
+import { asRecord } from '../../shared/json';
+import { type JsonFile, jsonFile } from './jsonFile';
 import { runFile } from './process';
 
 /**
@@ -21,31 +23,20 @@ export interface AgentSession {
 
 /** The latest agent session for each branch of each checkout. */
 export class SessionMemory {
-	constructor(private readonly file: string) {}
+	private readonly file: JsonFile<Record<string, unknown>>;
 
-	static defaultPath = (userData: string): string => join(userData, 'agent-sessions.json');
-
-	private all(): Record<string, AgentSession> {
-		try {
-			const parsed = JSON.parse(readFileSync(this.file, 'utf8')) as unknown;
-			return parsed && typeof parsed === 'object' ? (parsed as Record<string, AgentSession>) : {};
-		} catch {
-			return {};
-		}
+	constructor(path: string) {
+		this.file = jsonFile(path, { parse: asRecord, fallback: {} });
 	}
 
 	read(root: string, branch: string): AgentSession | null {
-		const found = this.all()[`${root}\n${branch}`];
-		return found && typeof found.session === 'string' && UUID.test(found.session) && found.root === root ? found : null;
+		const found = asRecord(this.file.read()[`${root}\n${branch}`]);
+		return typeof found.session === 'string' && UUID.test(found.session) && found.root === root ? { session: found.session, root } : null;
 	}
 
+	/** Not remembering costs the "continue" later, never the run itself. */
 	write(root: string, branch: string, session: string): void {
-		try {
-			mkdirSync(dirname(this.file), { recursive: true });
-			writeFileSync(this.file, JSON.stringify({ ...this.all(), [`${root}\n${branch}`]: { session, root } }));
-		} catch {
-			// Not remembering costs the "continue" later, never the run itself.
-		}
+		this.file.update((all) => ({ ...all, [`${root}\n${branch}`]: { session, root } }));
 	}
 }
 

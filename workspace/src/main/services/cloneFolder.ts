@@ -18,8 +18,6 @@ export class CloneFolderMemory extends FolderMemory {
 	constructor(file: string) {
 		super(file, 'folder');
 	}
-
-	static defaultPath = (userData: string): string => path.join(userData, 'clone-folder.json');
 }
 
 export interface CloneFolderDeps {

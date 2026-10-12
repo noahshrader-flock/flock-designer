@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import type { StoredToken } from './github';
+import { writeAtomic } from './jsonFile';
 
 /**
  * Where the GitHub token lives.
@@ -26,10 +26,6 @@ export class TokenStore {
 		private readonly safeStorage: SafeStorageLike,
 	) {}
 
-	static defaultPath(userDataDir: string): string {
-		return join(userDataDir, 'github-token.enc');
-	}
-
 	readonly available = (): boolean => this.safeStorage.isEncryptionAvailable();
 
 	read(): StoredToken | null {
@@ -54,8 +50,8 @@ export class TokenStore {
 		if (!this.available()) {
 			return;
 		}
-		mkdirSync(dirname(this.file), { recursive: true });
-		writeFileSync(this.file, this.safeStorage.encryptString(JSON.stringify(token)), { mode: 0o600 });
+		// Written whole, and readable by this person alone. A sign-in that cannot be kept throws: the person must know.
+		writeAtomic(this.file, this.safeStorage.encryptString(JSON.stringify(token)), 0o600);
 	}
 
 	clear(): void {

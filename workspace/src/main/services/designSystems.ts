@@ -5,12 +5,13 @@
  * and when several do, the person chooses. Its branch is the repository's default (decision 24). Several can be
  * connected, one shown at a time, and each is remembered.
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, join } from 'node:path';
+import { dirname, isAbsolute } from 'node:path';
 import type { ConnectedDesignSystem, ConnectedDesignSystems, FoundDesignSystem } from '../../shared/contract';
+import { asArray, asRecord } from '../../shared/json';
 import { isStoryFile, type CatalogReads } from './componentCatalog';
 import { readTokens } from './designTokens';
 import { git } from './git';
+import { type JsonFile, jsonFile } from './jsonFile';
 import { gitHubRepoOf, originOf } from './repositories';
 
 const REMOTE_TIMEOUT_MS = 30_000;
@@ -114,47 +115,38 @@ const repositoryAt = (root: string): string | null => {
  * is a hint: whoever reads it checks the folder is still there. A file kept by an earlier version (one connected folder,
  * `{ "folder": … }`) is read as that one design system: that version took only FUI, whose branch is `develop`.
  */
+/** What the file holds, checked: only whole design systems, and a current one among them. */
+const parseConnected = (raw: unknown): ConnectedDesignSystems => {
+	const kept = asRecord(raw);
+	if (typeof kept.folder === 'string' && isAbsolute(kept.folder) && kept.systems === undefined) {
+		const repository = repositoryAt(kept.folder);
+		if (repository === null) return { systems: [], current: null };
+		const id = designSystemId(repository, '');
+		return { systems: [{ id, name: repository.split('/')[1] as string, repository, root: kept.folder, folder: '', branch: 'develop' }], current: id };
+	}
+	const systems = asArray(kept.systems).filter((s): s is ConnectedDesignSystem => {
+		const r = asRecord(s);
+		const strings = [r.id, r.name, r.repository, r.root, r.folder, r.branch].every((v) => typeof v === 'string');
+		return strings && isAbsolute(r.root as string);
+	});
+	const current = typeof kept.current === 'string' && systems.some((s) => s.id === kept.current) ? kept.current : (systems[0]?.id ?? null);
+	return { systems, current };
+};
+
 export class DesignSystemsMemory {
-	constructor(private readonly file: string) {}
+	private readonly file: JsonFile<ConnectedDesignSystems>;
 
-	static defaultPath = (userData: string): string => join(userData, 'design-system.json');
-
-	read(): ConnectedDesignSystems {
-		try {
-			const kept = JSON.parse(readFileSync(this.file, 'utf8')) as { systems?: unknown; current?: unknown; folder?: unknown };
-			if (typeof kept.folder === 'string' && isAbsolute(kept.folder) && kept.systems === undefined) {
-				const repository = repositoryAt(kept.folder);
-				if (repository === null) return { systems: [], current: null };
-				const id = designSystemId(repository, '');
-				return {
-					systems: [{ id, name: repository.split('/')[1] as string, repository, root: kept.folder, folder: '', branch: 'develop' }],
-					current: id,
-				};
-			}
-			const systems = (Array.isArray(kept.systems) ? kept.systems : []).filter(
-				(s): s is ConnectedDesignSystem =>
-					typeof s?.id === 'string' &&
-					typeof s.name === 'string' &&
-					typeof s.repository === 'string' &&
-					typeof s.root === 'string' &&
-					isAbsolute(s.root) &&
-					typeof s.folder === 'string' &&
-					typeof s.branch === 'string',
-			);
-			const current = typeof kept.current === 'string' && systems.some((s) => s.id === kept.current) ? kept.current : (systems[0]?.id ?? null);
-			return { systems, current };
-		} catch {
-			return { systems: [], current: null };
-		}
+	constructor(path: string) {
+		this.file = jsonFile(path, { parse: parseConnected, fallback: { systems: [], current: null } });
 	}
 
+	read(): ConnectedDesignSystems {
+		return this.file.read();
+	}
+
+	/** Not remembering is an inconvenience: the person connects it again. */
 	private write(systems: ConnectedDesignSystem[], current: string | null): void {
-		try {
-			mkdirSync(dirname(this.file), { recursive: true });
-			writeFileSync(this.file, JSON.stringify({ systems, current }));
-		} catch {
-			// Not remembering is an inconvenience: the person connects it again.
-		}
+		this.file.write({ systems, current });
 	}
 
 	/** The one shown, or null when none is connected. */

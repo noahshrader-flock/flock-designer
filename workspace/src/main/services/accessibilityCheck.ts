@@ -5,14 +5,14 @@
  * a result made with anything else is never given as current: it is made again.
  */
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
 import axe from 'axe-core';
 import { type AxeFound, type AxeRun, isAxeRules, mergeRuns } from '../../shared/accessibility';
 import type { AccessibilityResult } from '../../shared/contract';
 import { withState } from '../../shared/prototypeStates';
 import { type DeclaredTarget, notAutomated, targetLine } from '../../shared/wcag';
 import { hiddenWindow, within } from './sandboxedPage';
+import { writeAtomic } from './jsonFile';
 
 /** The windows' session, their own and in memory; their size, a desktop's; how long a state may take. */
 const SESSION = 'dsnr-accessibility';
@@ -126,8 +126,6 @@ export const accessibilityOf = async ({
 		}
 	}
 	const result = resultOf(await check(url, states, target.tags), target, now());
-	mkdirSync(dirname(file), { recursive: true });
-	writeFileSync(`${file}.new`, JSON.stringify({ key, result }));
-	renameSync(`${file}.new`, file);
+	writeAtomic(file, JSON.stringify({ key, result }));
 	return result;
 };

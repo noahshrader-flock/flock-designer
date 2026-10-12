@@ -1,5 +1,6 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute } from 'node:path';
+import { isAbsolute } from 'node:path';
+import { asRecord } from '../../shared/json';
+import { type JsonFile, jsonFile } from './jsonFile';
 
 /**
  * One folder the app remembers for a person, in its own small file in the app's settings: the product checkout they
@@ -9,28 +10,24 @@ import { dirname, isAbsolute } from 'node:path';
  * can do nothing the person could not have done themselves. Not remembering is an inconvenience, never a failure.
  */
 export class FolderMemory {
+	private readonly file: JsonFile<Record<string, unknown>>;
+
 	/** `key` is the field the path is kept under, which is what each file has always used. */
 	constructor(
-		private readonly file: string,
+		path: string,
 		private readonly key: string,
-	) {}
+	) {
+		this.file = jsonFile(path, { parse: asRecord, fallback: {} });
+	}
 
 	/** The folder kept, or null when none was, or what was kept is not an absolute path. */
 	read(): string | null {
-		try {
-			const kept = (JSON.parse(readFileSync(this.file, 'utf8')) as Record<string, unknown>)[this.key];
-			return typeof kept === 'string' && isAbsolute(kept) ? kept : null;
-		} catch {
-			return null;
-		}
+		const kept = this.file.read()[this.key];
+		return typeof kept === 'string' && isAbsolute(kept) ? kept : null;
 	}
 
+	/** Not kept, the person is asked again next time, or the default is used. */
 	write(folder: string): void {
-		try {
-			mkdirSync(dirname(this.file), { recursive: true });
-			writeFileSync(this.file, JSON.stringify({ [this.key]: folder }));
-		} catch {
-			// The person is asked again next time, or the default is used.
-		}
+		this.file.write({ [this.key]: folder });
 	}
 }

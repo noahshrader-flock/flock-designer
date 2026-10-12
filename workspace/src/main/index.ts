@@ -1,6 +1,7 @@
 import { BrowserWindow, app, nativeTheme, safeStorage, screen, shell } from 'electron';
 import { join } from 'node:path';
 import pkg from '../../package.json';
+import { appPaths } from './appPaths';
 import { emit } from './handle';
 import { registerIpc } from './ipc';
 import { quitWithTheWindow } from './lifecycle';
@@ -58,12 +59,14 @@ const DEFAULT_SIZE = { width: 1160, height: 700 };
 /** The window's color until the page is drawn, as the page's own dark background (`--background` in `index.css`). */
 const DARK_BACKGROUND = '#0a0a0a';
 /** The appearance chosen in Settings, kept in the app's settings: read when the window is made, and kept when it is chosen. */
-const appearanceMemory = (): AppearanceMemory => new AppearanceMemory(AppearanceMemory.defaultPath(app.getPath('userData')));
+/** The app's own folder, read when asked: Electron settles where it is before the app is ready. */
+const paths = () => appPaths(app.getPath('userData'));
+const appearanceMemory = (): AppearanceMemory => new AppearanceMemory(paths().appearance);
 
 const createWindow = (): BrowserWindow => {
 	// A check run for testing must neither read nor change how the person's own window is kept.
 	const testing = smokeMode || process.argv.includes('--smoke-page') || process.argv.includes('--smoke-local');
-	const memory = new WindowMemory(WindowMemory.defaultPath(app.getPath('userData')));
+	const memory = new WindowMemory(paths().window);
 	// The appearance chosen in Settings, set before the window exists so it never shows the wrong one for a moment. It is the
 	// system's theme setting for the whole app: the pages and the previews follow it as they followed the computer's.
 	if (!testing) nativeTheme.themeSource = appearanceMemory().read();
@@ -152,11 +155,8 @@ void app.whenReady().then(() => {
 	const agent = new AgentRunner((line) => emit(window, 'onAgentLog', line));
 	const share = new ShareRunner((status) => emit(window, 'onShareStatus', status));
 
-	const github = new GitHubSession(
-		GITHUB_CLIENT_ID,
-		new TokenStore(TokenStore.defaultPath(app.getPath('userData')), safeStorage),
-		networkFetch,
-		(state) => emit(window, 'onSignInChanged', state),
+	const github = new GitHubSession(GITHUB_CLIENT_ID, new TokenStore(paths().githubToken, safeStorage), networkFetch, (state) =>
+		emit(window, 'onSignInChanged', state),
 	);
 	const designRepo = new DesignRepo(github, DESIGN_REPO);
 
@@ -167,7 +167,7 @@ void app.whenReady().then(() => {
 	);
 
 	const prototypeServer = new PrototypeServer();
-	const memory = new CheckoutMemory(CheckoutMemory.defaultPath(app.getPath('userData')));
+	const memory = new CheckoutMemory(paths().checkout);
 
 	const publishing = registerIpc({
 		window,
@@ -180,15 +180,15 @@ void app.whenReady().then(() => {
 		page,
 		memory,
 		onPublishStatus: (status) => emit(window, 'onPublishStatus', status),
-		prototypesRoot: join(app.getPath('userData'), 'prototypes'),
+		prototypesRoot: paths().prototypes,
 		prototypeServer,
-		sessions: new SessionMemory(SessionMemory.defaultPath(app.getPath('userData'))),
-		cloneFolders: new CloneFolderMemory(CloneFolderMemory.defaultPath(app.getPath('userData'))),
-		designSystems: new DesignSystemsMemory(DesignSystemsMemory.defaultPath(app.getPath('userData'))),
-		storyPreviewsRoot: join(app.getPath('userData'), 'story-previews'),
-		tokenBranchesFile: join(app.getPath('userData'), 'token-branches.json'),
-		voiceBranchFile: join(app.getPath('userData'), 'voice-branch.json'),
-		componentPicturesRoot: join(app.getPath('userData'), 'component-pictures'),
+		sessions: new SessionMemory(paths().agentSessions),
+		cloneFolders: new CloneFolderMemory(paths().cloneFolder),
+		designSystems: new DesignSystemsMemory(paths().designSystems),
+		storyPreviewsRoot: paths().storyPreviews,
+		tokenBranchesFile: paths().tokenBranches,
+		voiceBranchFile: paths().voiceBranch,
+		componentPicturesRoot: paths().componentPictures,
 		componentPictureRecipe: PICTURE_RECIPE,
 		measureStories: measureInWindows,
 		checkPage: checkInWindow,

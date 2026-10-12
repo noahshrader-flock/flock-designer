@@ -12,9 +12,10 @@
  *   written.
  */
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PrototypeServer } from './prototypeServer';
+import { writeAtomic } from './jsonFile';
 
 const RECORD = 'pictures.json';
 const hash = (s: string | Buffer, n: number) => createHash('sha256').update(s).digest('hex').slice(0, n);
@@ -57,8 +58,7 @@ export class ComponentPictures {
 			record[file] = name;
 		}
 		// Written whole: a reader sees the last record or this one, never part of one.
-		writeFileSync(join(dir, `${RECORD}.new`), JSON.stringify({ recipe: this.deps.recipe, pictures: record }));
-		renameSync(join(dir, `${RECORD}.new`), join(dir, RECORD));
+		writeAtomic(join(dir, RECORD), JSON.stringify({ recipe: this.deps.recipe, pictures: record }));
 		const named = new Set(Object.values(record));
 		for (const f of readdirSync(dir)) if (f.endsWith('.jpg') && !named.has(f)) rmSync(join(dir, f), { force: true });
 	}

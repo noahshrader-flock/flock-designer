@@ -16,14 +16,13 @@
  * installed on the design repository only, so it cannot reach a design system. Every call was tried on a real repository
  * on 2026-10-10 before this was written.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
 import type { VoiceAndTone, VoiceBranch, VoiceSave } from '../../shared/contract';
 import { asArray, asRecord } from '../../shared/json';
 import { DesignRepo, type DesignRepoRef, type GitHubApi } from './designRepo';
 import { designSystemId } from './designSystems';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { httpStatus } from './github';
+import { type JsonFile, jsonFile } from './jsonFile';
 
 /** Where the file is, in a design system's agent files: how Flock speaks is the design system's (Noah, 2026-10-10). */
 export const VOICE_FILE = '.dsnr/voice-and-tone.md';
@@ -51,7 +50,8 @@ export class VoiceAndToneFile {
 	/** The file, read as every file DSNR reads from GitHub is. */
 	private readonly files: DesignRepo;
 	private readonly github: GitHubApi;
-	private readonly file: string;
+	/** The change kept for each design system, by its id. */
+	private readonly file: JsonFile<Record<string, unknown>>;
 	private readonly now: () => Date;
 
 	constructor({
@@ -76,7 +76,7 @@ export class VoiceAndToneFile {
 		this.path = this.folder ? `${this.folder}/${VOICE_FILE}` : VOICE_FILE;
 		this.files = new DesignRepo(github, repo);
 		this.github = github;
-		this.file = file;
+		this.file = jsonFile(file, { parse: asRecord, fallback: {} });
 		this.now = now;
 	}
 
@@ -91,18 +91,9 @@ export class VoiceAndToneFile {
 		return designSystemId(`${this.repo.owner}/${this.repo.repo}`, this.folder);
 	}
 
-	/** Everything remembered, by repository: nothing when there is no file, or one that is not readable. */
-	private remembered(): Record<string, unknown> {
-		try {
-			return existsSync(this.file) ? asRecord(JSON.parse(readFileSync(this.file, 'utf8'))) : {};
-		} catch {
-			return {};
-		}
-	}
-
 	/** The change kept, if one is: an entry naming a branch DSNR did not make is never taken for one. */
 	private kept(): Kept | null {
-		const entry = asRecord(this.remembered()[this.key]);
+		const entry = asRecord(this.file.read()[this.key]);
 		if (typeof entry.branch !== 'string' || !VOICE_BRANCH.test(entry.branch)) return null;
 		const pr = asRecord(entry.pullRequest);
 		return {
@@ -112,11 +103,10 @@ export class VoiceAndToneFile {
 		};
 	}
 	private keep(kept: Kept | null): void {
-		const all = this.remembered();
-		if (kept) all[this.key] = kept;
-		else delete all[this.key];
-		mkdirSync(dirname(this.file), { recursive: true });
-		writeFileSync(this.file, JSON.stringify(all, null, 2));
+		this.file.update((all) => {
+			const { [this.key]: _, ...others } = all;
+			return kept ? { ...others, [this.key]: kept } : others;
+		});
 	}
 
 	/** Forgets the change, to start again from the default branch's file. The branch and any pull request stay on GitHub. */

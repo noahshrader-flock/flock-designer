@@ -1,4 +1,3 @@
-import { join } from 'node:path';
 import { FolderMemory } from './folderMemory';
 
 /**
@@ -11,6 +10,4 @@ export class CheckoutMemory extends FolderMemory {
 	constructor(file: string) {
 		super(file, 'root');
 	}
-
-	static defaultPath = (userData: string): string => join(userData, 'checkout.json');
 }
