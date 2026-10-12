@@ -11,6 +11,7 @@ import {
 	refreshToken,
 	startDeviceFlow,
 } from './github';
+import { singleFlight } from './concurrency';
 import type { TokenStore } from './tokenStore';
 
 /**
@@ -26,7 +27,7 @@ export class GitHubSession {
 	private pending: AbortController | null = null;
 	// One refresh at a time: GitHub replaces the refresh token on each use, so a second refresh with the old one is
 	// refused, and that refusal used to sign the person out over the first one's fresh token.
-	private refreshing: Promise<StoredToken> | null = null;
+	private readonly refreshing = singleFlight<'refresh', StoredToken>();
 
 	constructor(
 		private readonly clientId: string,
@@ -153,8 +154,8 @@ export class GitHubSession {
 
 	/** Signs out only when GitHub refuses the refresh token; a network or server failure leaves the session as it was. */
 	private refresh(token: StoredToken): Promise<StoredToken> {
-		this.refreshing ??= refreshToken(this.clientId, token, this.fetcher, this.now)
-			.then(
+		return this.refreshing.run('refresh', () =>
+			refreshToken(this.clientId, token, this.fetcher, this.now).then(
 				(fresh) => {
 					this.token = fresh;
 					this.store.write(fresh);
@@ -166,11 +167,8 @@ export class GitHubSession {
 					}
 					throw err;
 				},
-			)
-			.finally(() => {
-				this.refreshing = null;
-			});
-		return this.refreshing;
+			),
+		);
 	}
 
 	api(path: string, init: { method?: string; body?: unknown } = {}): Promise<unknown> {

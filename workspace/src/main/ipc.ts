@@ -119,6 +119,7 @@ import {
 import type { CheckoutMemory } from './services/checkoutMemory';
 import { errorText } from '../shared/result';
 import { isCommit, isObjectId } from '../shared/sha';
+import { coalescingByKey, singleFlight } from './services/concurrency';
 
 /**
  * Every operation the window can reach, and nothing else.
@@ -1023,14 +1024,8 @@ export const registerIpc = ({
 	/** The page: this machine's newest build first (built again when its source changed), then the saved one. */
 	const prototypePage = (projectId: string, name: string): Promise<string | null> => work.page(projectId, name, agentBusy());
 	/** Runs `run` once at a time per key: a second caller waits for the first and shares its answer. */
-	const inFlight = new Map<string, Promise<unknown>>();
-	const once = <T>(key: string, run: () => Promise<T>): Promise<T> => {
-		const running = inFlight.get(key) as Promise<T> | undefined;
-		if (running) return running;
-		const p = run().finally(() => inFlight.delete(key));
-		inFlight.set(key, p);
-		return p;
-	};
+	const inFlight = singleFlight<string, unknown>();
+	const once = <T>(key: string, run: () => Promise<T>): Promise<T> => inFlight.run(key, run) as Promise<T>;
 	const me = (): Person | null => {
 		const s = github.state();
 		return s.state === 'signedIn' ? { name: s.user.name ?? s.user.login, login: s.user.login } : null;
@@ -1172,10 +1167,9 @@ export const registerIpc = ({
 	 * the agent publishes from Claude Code: the same code. What stopped it is kept, so the screen can say why the page
 	 * is not published.
 	 */
-	const publishing = new Map<string, Promise<void>>();
+	// One deploy of a page at a time, and once more if asked again meanwhile: what changed since may have missed its push.
+	const publishing = coalescingByKey<string>();
 	const publishStopped = new Map<string, string>();
-	// Asked for again while one runs: what changed since may have missed its push, so one more runs after it.
-	const publishAgain = new Set<string>();
 	/**
 	 * Brings the site up to date with what GitHub has, by itself: on every cycle of the publisher (opening, focusing,
 	 * refreshing, any record written), if a page was pushed, or what the site is built from changed, and no deploy has
@@ -1201,15 +1195,11 @@ export const registerIpc = ({
 	/** Runs a deploy in the background under `key`, one at a time for a key, and once more if asked again meanwhile. */
 	const inBackground = (key: string, deploy: () => Promise<unknown>): void => {
 		if (github.state().state !== 'signedIn') return;
-		if (publishing.has(key)) return void publishAgain.add(key);
-		const run = deploy()
-			.then(() => void publishStopped.delete(key))
-			.catch((err: unknown) => void publishStopped.set(key, errorText(err)))
-			.finally(() => {
-				publishing.delete(key);
-				if (publishAgain.delete(key)) inBackground(key, deploy);
-			});
-		publishing.set(key, run);
+		void publishing.run(key, () =>
+			deploy()
+				.then(() => void publishStopped.delete(key))
+				.catch((err: unknown) => void publishStopped.set(key, errorText(err))),
+		);
 	};
 	const publishInBackground = (projectId: string, name: string): void =>
 		inBackground(prototypeKey(projectId, name), async () =>

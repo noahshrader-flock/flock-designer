@@ -14,6 +14,7 @@ import { ASSET_TYPES, type PrototypeServer } from './prototypeServer';
 import { runFile } from './process';
 import { editedFiles } from './tokenEdits';
 import { errorText } from '../../shared/result';
+import { singleFlight } from './concurrency';
 
 /**
  * Previews of the component library's stories, for the Design System tab (DESIGN_SYSTEM_PLAN.md, P1).
@@ -456,7 +457,7 @@ export class StoryPreviews {
 	private trial: { dir: string; builder: TrialBuild; served: string | null; tries: number } | null = null;
 	/** The newest change asked for, and the building of it, while one is building. */
 	private wanted: TokenEdit[] = [];
-	private trying: Promise<StoryPreview> | null = null;
+	private trying = singleFlight<'newest', StoryPreview>();
 	/** The address the commit's tagged build (T6) was last served at. */
 	private taggedServed: string | null = null;
 
@@ -466,8 +467,7 @@ export class StoryPreviews {
 		const base = await this.base();
 		if (edits.length === 0 || base.state !== 'ready') return base;
 		this.wanted = edits;
-		this.trying ??= this.tryNewest().finally(() => (this.trying = null));
-		return this.trying;
+		return this.trying.run('newest', () => this.tryNewest());
 	}
 
 	private async base(): Promise<StoryPreview> {

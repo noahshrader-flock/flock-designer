@@ -15,6 +15,7 @@ import { isStoryFile, readCatalog, type CatalogReads } from './componentCatalog'
 import { readTokens } from './designTokens';
 import { type DesignSystemsMemory, defaultBranch, designSystemId, filesOf, findDesignSystems, within } from './designSystems';
 import { git } from './git';
+import { singleFlight } from './concurrency';
 
 /**
  * The connected design system on this machine, for the Design System tab: kept up to date, and read.
@@ -177,7 +178,8 @@ export interface DesignLibraryDeps {
  * outcome. One fetch at a time per clone and branch.
  */
 export class DesignLibrary {
-	private fetching = new Map<string, Promise<Exclude<CatalogUpdate, 'updating'>>>();
+	/** One fetch of a library's branch at a time, shared, and forgotten once it settles (a failed one included). */
+	private fetching = singleFlight<string, Exclude<CatalogUpdate, 'updating'>>();
 	/** The last fetch's outcome for each clone and branch, so a later ask without `refresh` says how current the list is. */
 	private outcome = new Map<string, Exclude<CatalogUpdate, 'updating'>>();
 	/** What a repository with several design systems had found, until one is chosen: only a folder offered can be. */
@@ -248,15 +250,12 @@ export class DesignLibrary {
 
 	private fetch(root: string, branch: string): Promise<Exclude<CatalogUpdate, 'updating'>> {
 		const key = `${root}#${branch}`;
-		const running = this.fetching.get(key);
-		if (running) return running;
 		const update = this.deps.update ?? updateLibrary;
-		const started = update(root, branch).then((outcome) => {
-			this.outcome.set(key, outcome);
-			this.fetching.delete(key);
-			return outcome;
-		});
-		this.fetching.set(key, started);
-		return started;
+		return this.fetching.run(key, () =>
+			update(root, branch).then((outcome) => {
+				this.outcome.set(key, outcome);
+				return outcome;
+			}),
+		);
 	}
 }

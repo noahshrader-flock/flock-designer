@@ -1,5 +1,7 @@
 import type { PublishProblem, PublishStatus } from '../../shared/contract';
 import type { SyncResult } from './designSync';
+import { coalescing } from './concurrency';
+import { errorText } from '../../shared/result';
 
 /**
  * Keeps the person's work published, by itself.
@@ -43,8 +45,8 @@ export interface PublishDeps {
 
 export class PublishManager {
 	private current: PublishStatus;
-	private running: Promise<void> | null = null;
-	private again = false;
+	/** One run at a time, and one more for whatever asks during it, so nothing written meanwhile waits for a later trigger. */
+	private readonly runs = coalescing(() => this.runOnce());
 	private lastFinished = 0;
 	private timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -73,10 +75,7 @@ export class PublishManager {
 	 * `force` skips the spacing between runs (a person asked, or something was just written).
 	 */
 	publish(force = false): Promise<void> {
-		if (this.running) {
-			this.again = true;
-			return this.running;
-		}
+		if (this.runs.running) return this.runs();
 		const wait = this.lastFinished + (this.deps.minGapMs ?? 15_000) - Date.now();
 		if (!force && wait > 0) {
 			// Too soon after the last run to start another, but not too soon to forget: one run is made for
@@ -88,38 +87,26 @@ export class PublishManager {
 			}, wait);
 			return Promise.resolve();
 		}
-		this.running = this.run().finally(() => {
-			this.running = null;
+		return this.runs().finally(() => {
 			this.lastFinished = Date.now();
 		});
-		return this.running;
 	}
 
-	private async run(): Promise<void> {
-		let again = true;
-		while (again) {
-			again = false;
-			const ctx = await this.deps.context().catch(() => null);
-			if (ctx === null) {
-				this.set({ state: 'unavailable' });
-				return;
-			}
-			this.set({ state: 'working' });
-			const problems: PublishProblem[] = [];
-			try {
-				const { branches, records } = await ctx.run();
-				problems.push(...branches.problems, ...records.problems);
-			} catch (err) {
-				problems.push({ what: 'Publishing', why: err instanceof Error ? (err.message.split('\n')[0] ?? String(err)) : String(err) });
-			}
-			const at = this.clock().toISOString();
-			this.set(problems.length === 0 ? { state: 'shared', at } : { state: 'held', problems, at });
-			// Something asked for another run while this one was going: do exactly one more, so nothing written
-			// during a run is left for the next trigger.
-			if (this.again) {
-				this.again = false;
-				again = true;
-			}
+	private async runOnce(): Promise<void> {
+		const ctx = await this.deps.context().catch(() => null);
+		if (ctx === null) {
+			this.set({ state: 'unavailable' });
+			return;
 		}
+		this.set({ state: 'working' });
+		const problems: PublishProblem[] = [];
+		try {
+			const { branches, records } = await ctx.run();
+			problems.push(...branches.problems, ...records.problems);
+		} catch (err) {
+			problems.push({ what: 'Publishing', why: errorText(err, { firstLine: true }) });
+		}
+		const at = this.clock().toISOString();
+		this.set(problems.length === 0 ? { state: 'shared', at } : { state: 'held', problems, at });
 	}
 }

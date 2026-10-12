@@ -256,6 +256,22 @@ describe('what the tab is told', () => {
 		});
 	});
 
+	it('tries the fetch again after one that failed outright, rather than handing back that failure for good', async () => {
+		let fetches = 0;
+		const library = new DesignLibrary({
+			systems: memory(at(clone)),
+			update: async () => {
+				fetches++;
+				if (fetches === 1) throw new Error('git is not here');
+				return 'updated';
+			},
+			read: async (_, update) => catalogOf(update),
+		});
+		await expect(library.catalog(true)).rejects.toThrow('git is not here');
+		expect(await library.catalog(true)).toMatchObject({ update: 'updated' });
+		expect(fetches).toBe(2);
+	});
+
 	it('answers at once with what the clone has, then the next ask with refresh waits for the one fetch it started', async () => {
 		let finish: (o: 'updated') => void = () => undefined;
 		let fetches = 0;
