@@ -8,6 +8,7 @@ import { iterationLabel, projectCodeLink } from '../shared/work';
 import { statesOf } from '../shared/prototypeStates';
 import { parseIterations } from '../shared/records';
 import { plural } from '../shared/plural';
+import { extensionOf } from '../shared/mime';
 
 /**
  * The site prototypes are published as, built from the design repository: every project with a saved page, every
@@ -116,19 +117,11 @@ const writeShared = (designRoot: string, outDir: string): Map<string, string> =>
 	const names = new Map<string, string>();
 	const dir = join(designRoot, 'projects', '_shared');
 	if (!existsSync(dir)) return names;
-	const ext: Record<string, string> = {
-		'font/woff2': 'woff2',
-		'font/woff': 'woff',
-		'font/ttf': 'ttf',
-		'font/otf': 'otf',
-		'image/svg+xml': 'svg',
-		'image/png': 'png',
-	};
 	for (const f of readdirSync(dir)) {
 		const hash = /^([0-9a-f]{16})\.datauri$/.exec(f)?.[1];
 		const m = hash ? /^data:([^;,]+)(;base64)?,(.*)$/s.exec(readFileSync(join(dir, f), 'utf8')) : null;
 		if (!hash || !m) continue;
-		const name = `${hash}.${ext[m[1] as string] ?? 'bin'}`;
+		const name = `${hash}.${extensionOf(m[1] as string) ?? 'bin'}`;
 		const body = m[2] ? Buffer.from(m[3] as string, 'base64') : Buffer.from(decodeURIComponent(m[3] as string));
 		mkdirSync(join(outDir, '_shared'), { recursive: true });
 		writeFileSync(join(outDir, '_shared', name), body);

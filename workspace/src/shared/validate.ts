@@ -5,8 +5,7 @@ export const PROJECT_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /**
  * A name becomes a project id. Truncation happens before the trailing hyphen is
- * stripped, so a long name cannot produce an id the main process would reject --
- * which is what the renderer's own copy of this used to do.
+ * stripped, so a long name cannot produce an id the main process would reject.
  */
 export const slugify = (name: string): string =>
 	name
@@ -47,10 +46,6 @@ export const asRoute = (v: unknown): string | null => {
 	return path;
 };
 
-/**
- * One plain file or folder name, never a path. Project ids and record names reach the main process from the window and
- * are joined onto a folder or a repository address, so they are checked before they are used for either.
- */
 /** A repository on GitHub, by its `owner/repo`: GitHub's own characters, and never `.` or `..`. */
 const isGitHubRepository = (s: unknown): s is string =>
 	typeof s === 'string' && /^[\w.-]+\/[\w.-]+$/.test(s) && !s.split('/').some((p) => p === '.' || p === '..');
@@ -63,6 +58,10 @@ export const asGitHubRepository = (v: unknown): string | null => (isGitHubReposi
 /** A pull request's address as a record gives it, or null when it is not one of GitHub's. */
 export const asPullRequest = (v: unknown): string | null => (typeof v === 'string' && PULL_REQUEST.test(v) ? v : null);
 
+/**
+ * One plain file or folder name, never a path. Project ids and record names reach the main process from the window and
+ * are joined onto a folder or a repository address, so they are checked before they are used for either.
+ */
 export const isRecordName = (n: unknown): n is string => typeof n === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(n) && !n.includes('..');
 
 /** A picture's hash, as a record names it (`prototypeVersionOf` of the page): twelve lower-case hex digits, nothing else. */

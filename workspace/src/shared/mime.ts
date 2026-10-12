@@ -13,3 +13,9 @@ export const MIME_TYPES: Readonly<Record<string, string>> = {
 	'.jpg': 'image/jpeg',
 	'.gif': 'image/gif',
 };
+
+/** The extension a file of `type` is written with, without its dot, or null for a type not in the table. */
+export const extensionOf = (type: string): string | null =>
+	Object.entries(MIME_TYPES)
+		.find(([, t]) => t === type)?.[0]
+		.slice(1) ?? null;

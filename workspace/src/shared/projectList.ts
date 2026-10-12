@@ -7,19 +7,22 @@ import { byNewest } from './sort';
 
 /** The list of projects as screens show it: dated, ordered, searched, merged from GitHub and this machine, with covers. */
 
-/** When a project was started: its earliest iteration's date, or null if none has one. */
-export const startedAt = (p: Pick<Project, 'iterations'>): string | null =>
-	p.iterations
-		.map((i) => i.createdAt)
-		.filter((d): d is string => d !== null)
-		.sort((a, b) => Date.parse(a) - Date.parse(b))[0] ?? null;
-
-/** The latest of some dates, ignoring anything that is not one; null when none is. */
-export const latestDate = (dates: unknown[]): string | null =>
+/** The first of some dates in `order` (1, earliest; -1, latest), ignoring anything that is not one; null when none is. */
+const firstDate = (dates: unknown[], order: 1 | -1): string | null =>
 	dates
 		.map(asDate)
 		.filter((d): d is string => d !== null)
-		.sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null;
+		.sort((a, b) => order * (Date.parse(a) - Date.parse(b)))[0] ?? null;
+
+/** The latest of some dates, ignoring anything that is not one; null when none is. */
+export const latestDate = (dates: unknown[]): string | null => firstDate(dates, -1);
+
+/** When a project was started: its earliest iteration's date, or null if none has one. */
+export const startedAt = (p: Pick<Project, 'iterations'>): string | null =>
+	firstDate(
+		p.iterations.map((i) => i.createdAt),
+		1,
+	);
 
 /**
  * When anything last happened in a project: the latest of the activity GitHub reported (`updatedAt`) and when each of
@@ -97,7 +100,7 @@ export const mergeProjects = (remote: Project[], local: Project[]): Project[] =>
 			// GitHub's before every push, so it is never behind for longer than a sync. GitHub's otherwise.
 			folder: l.records.includes('brief.md') ? (l.folder ?? null) : (r.folder ?? null),
 			records: [...new Set([...r.records, ...l.records])].sort(),
-			iterations: [...have.values()].sort(newestFirst),
+			iterations: [...have.values()].sort(iterationOrder),
 			people: mergePeople(r.people, l.people, ...[...have.values()].map((i) => i.contributors)),
 		});
 	}
@@ -132,14 +135,14 @@ export const unionLocal = (records: Project[], branches: Project[]): Project[] =
 					: bi,
 			);
 		}
-		const its = [...have.values()].sort(newestFirst);
+		const its = [...have.values()].sort(iterationOrder);
 		byId.set(b.id, { ...r, iterations: its, people: mergePeople(r.people, ...its.map((i) => i.contributors)) });
 	}
 	return [...byId.values()];
 };
 
-/** Prototype iterations newest first, then the codebase work. */
-export const newestFirst = (a: ProjectIteration, b: ProjectIteration): number => {
+/** The order a project's iterations are kept in: its prototypes by name, the newest name first, then its codebase work. */
+export const iterationOrder = (a: ProjectIteration, b: ProjectIteration): number => {
 	const codebase = (x: ProjectIteration) => (workKind(x) === 'codebase' ? 1 : 0);
 	return codebase(a) - codebase(b) || b.name.localeCompare(a.name, undefined, { numeric: true });
 };

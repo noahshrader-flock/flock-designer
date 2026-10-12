@@ -1,7 +1,7 @@
 import type { Person, Project, ProjectIteration } from '../../shared/contract';
 import type { WorkspaceDescriptor } from './descriptor';
 import { mergePeople } from '../../shared/people';
-import { newestFirst } from '../../shared/projectList';
+import { iterationOrder } from '../../shared/projectList';
 import { branchCommit, branchStartedAt, listBranches } from './git';
 import { peopleOn } from './iterations';
 
@@ -94,7 +94,7 @@ export const readBranchProjects = async (
 		// Found as branches: no brief read, so in no folder until one is.
 		folder: null,
 		records: [],
-		iterations: its.sort(newestFirst),
+		iterations: its.sort(iterationOrder),
 		people: mergePeople(...its.map((i) => i.contributors)),
 	}));
 };

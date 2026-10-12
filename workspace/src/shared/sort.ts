@@ -1,5 +1,3 @@
-/** The one "newest first" order, for whatever has a date. */
-
 /** The one "newest first" rule: by `dateOf`, the undated last, and `then` between two of one date, so an order never shuffles. */
 export const byNewest =
 	<T>(dateOf: (t: T) => string | null, then: (a: T, b: T) => number) =>

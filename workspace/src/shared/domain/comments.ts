@@ -15,9 +15,9 @@ export interface ReviewComment {
 	addressedAt: string | null;
 	/** On a prototype, the iteration that change is in: the next one, when others had commented on this one. */
 	addressedIn: string | null;
-	/** Present once C2 anchors comments to an element; absent for page-level ones. */
+	/** Where on the page it was placed; null for a comment on the page as a whole. */
 	anchor: CommentAnchor | null;
-	/** A small picture of the spot, as a JPEG data URL, taken when the comment was placed. Absent on older comments. */
+	/** A small picture of the spot, as a JPEG data URL, taken when the comment was placed. Null on older comments. */
 	picture: string | null;
 }
 

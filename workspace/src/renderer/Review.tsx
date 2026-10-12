@@ -4,7 +4,8 @@ import type { Checkout, PageStatus, Project, ProjectIteration } from '../shared/
 import { READY_LINE } from '../shared/handoff';
 import { withState } from '../shared/prototypeStates';
 import { isPrototypeKey, prototypeKey, prototypePagePath } from '../shared/designPaths';
-import { freshIteration, iterationLabel, workKind, workOf } from '../shared/work';
+import { iterationLabel, workKind, workOf } from '../shared/work';
+import { toProjectIteration } from '../shared/records';
 import { IterationSwitcher, StateSwitcher } from './IterationSwitcher';
 import { CommentBox } from './comments/CommentBox';
 import { CommentControl } from './comments/CommentControl';
@@ -336,7 +337,7 @@ export const Review = ({
 		if (known) return onOpen(project, known);
 		// Just made: the list this screen was opened from has not got it yet.
 		if (changedElsewhere.made) {
-			const made = freshIteration(changedElsewhere.made);
+			const made = toProjectIteration(changedElsewhere.made);
 			onOpen({ ...project, iterations: [...project.iterations, made] }, made);
 		}
 	};

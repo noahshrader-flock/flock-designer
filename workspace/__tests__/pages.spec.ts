@@ -353,7 +353,7 @@ describe('what GitHub has that the site does not have yet', () => {
 		'workspace/src/renderer/comments/CommentList.tsx',
 		'workspace/src/renderer/ui/button.tsx',
 		'workspace/src/renderer/index.css',
-		'workspace/src/shared/projects.ts',
+		'workspace/src/shared/projectList.ts',
 		'workspace/src/site/buildSite.ts',
 		'workspace/src/main/services/designRepo.ts',
 		'workspace/src/cli/dsnr.ts',

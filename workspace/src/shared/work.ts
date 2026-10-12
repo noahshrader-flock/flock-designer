@@ -1,4 +1,4 @@
-import type { Iteration, IterationKind, ProjectIteration } from './contract';
+import type { IterationKind, ProjectIteration } from './contract';
 import { isPrototypeKey } from './designPaths';
 import { asGitHubRepository, asPullRequest } from './validate';
 import { byNewest } from './sort';
@@ -25,11 +25,7 @@ export const projectCodeLink = (project: {
 	return codebase ? codeLink(codebase) : null;
 };
 
-/**
- * A project's work as the screens offer it: its **prototypes** (pages, and the older ones on `fd/` branches: attempts
- * to decide what something should be, kept or carried into the code) and its **codebase** work, the real change. Each is newest first, so
- * the first is what "View prototype" and "View codebase" open, and the rest are the iterations to switch to.
- */
+/** Which kind of work an iteration is: codebase work is the one named `codebase` on a branch; anything else is a prototype. */
 export const workKind = (i: Pick<ProjectIteration, 'name' | 'branch'>): IterationKind =>
 	!isPrototypeKey(i.branch) && i.name === 'codebase' ? 'codebase' : 'prototype';
 
@@ -38,24 +34,14 @@ const newestStarted = byNewest<ProjectIteration>(
 	(a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }),
 );
 
+/**
+ * A project's work as the screens offer it: its **prototypes** (pages, and the older ones on `fd/` branches: attempts
+ * to decide what something should be, kept or carried into the code) and its **codebase** work, the real change. Each
+ * is newest first, so the first is what "View prototype" and "View codebase" open, and the rest are the iterations to
+ * switch to.
+ */
 export const workOf = (iterations: ProjectIteration[], kind: IterationKind): ProjectIteration[] =>
 	iterations.filter((i) => workKind(i) === kind).sort(newestStarted);
-
-/** A just-made iteration as the screens show one: nothing shared or built yet, so nowhere to land. */
-export const freshIteration = (it: Iteration): ProjectIteration => ({
-	name: it.name,
-	branch: it.branch,
-	issueNumber: null,
-	openComments: 0,
-	previewUrl: null,
-	route: null,
-	commit: it.commit,
-	contributors: it.contributors ?? [],
-	createdAt: it.createdAt,
-	repository: it.repository ?? null,
-	pullRequest: it.pullRequest ?? null,
-	cover: it.cover ?? null,
-});
 
 /**
  * How an iteration is named on screen: `V2 · I3`. A project's codebase work is one branch, so it is its first

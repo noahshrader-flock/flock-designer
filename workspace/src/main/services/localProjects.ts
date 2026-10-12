@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import type { Project } from '../../shared/contract';
 import { mergePeople } from '../../shared/people';
 import { fromBrief } from '../../shared/brief';
-import { newestFirst } from '../../shared/projectList';
+import { iterationOrder } from '../../shared/projectList';
 import { parseIterations, toProjectIteration } from '../../shared/records';
 
 /**
@@ -30,7 +30,7 @@ export const readFolderProjects = (recordsRoot: string): Project[] => {
 			// A record that cannot be read lists the project with nothing built, as a folder with no record does.
 			const iterations = ((existsSync(file) ? parseIterations(readFileSync(file, 'utf8')) : null) ?? [])
 				.map((it) => toProjectIteration(it))
-				.sort(newestFirst);
+				.sort(iterationOrder);
 			return {
 				id: e.name,
 				...fromBrief(e.name, brief),

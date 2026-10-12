@@ -5,6 +5,7 @@ import { isPrototypeName } from '../shared/prototypeNames';
 import { fail, ok } from '../shared/result';
 import { isSafeBranchName } from './services/git';
 import { assertUsableProjectId } from './services/iterations';
+import { assertPrototypeName } from './services/prototype';
 
 /**
  * How the main process meets the window: each call registered by its name in the contract's table, its answer checked
@@ -62,7 +63,8 @@ export const arg = {
 	}) as Check<string>,
 	/** A prototype's name, `v2-i3`. */
 	prototypeName: ((v) => {
-		if (typeof v !== 'string' || !isPrototypeName(v)) throw new Error(`"${String(v)}" is not a prototype.`);
+		if (typeof v !== 'string') throw new Error('That is not a prototype.');
+		assertPrototypeName(v);
 		return v;
 	}) as Check<string>,
 	/** Any iteration's name: a prototype's, or `codebase`. */

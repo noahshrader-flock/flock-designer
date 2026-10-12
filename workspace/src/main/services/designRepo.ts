@@ -3,7 +3,7 @@ import { GitHubError, httpStatus } from './github';
 import { isBot, mergePeople } from '../../shared/people';
 import { fromBrief } from '../../shared/brief';
 import { projectDir, projectPath } from '../../shared/designPaths';
-import { latestDate, newestFirst } from '../../shared/projectList';
+import { latestDate, iterationOrder } from '../../shared/projectList';
 import {
 	RESOLVED_MARK,
 	addressedAt,
@@ -281,7 +281,7 @@ export class DesignRepo {
 		// One that cannot be read is no iterations recorded, as a missing one is: the project is still listed.
 		return (parseIterations(Buffer.from(file.content, 'base64').toString('utf8')) ?? [])
 			.map((it) => toProjectIteration(it, issues.get(it.branch)))
-			.sort(newestFirst);
+			.sort(iterationOrder);
 	}
 
 	/** The issue carrying an iteration's comments, created on first use. */

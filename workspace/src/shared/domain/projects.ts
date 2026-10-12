@@ -5,7 +5,7 @@ import type { ReviewComment } from './comments';
 /** One named attempt at the question, tied to a branch and a commit. */
 export interface Iteration {
 	projectId: string;
-	/** `i1`, `i2`, … */
+	/** `v2-i3` (`i1` when written before versions), or `codebase`. */
 	name: string;
 	branch: string;
 	/** Null until the iteration has a commit. */
@@ -42,7 +42,7 @@ export interface Iteration {
 
 /**
  * The two kinds of work. A **prototype** is one page built from the real components, saved in the design
- * repository and numbered i1, i2, … (the older ones made as code on `fd/` branches count as prototypes too).
+ * repository and named by version and iteration, `v2-i3` (the older ones made as code on `fd/` branches count as prototypes too).
  * **Codebase** work is the real change, on the project's one `feature/` branch.
  */
 export type IterationKind = 'prototype' | 'codebase';
@@ -105,7 +105,7 @@ export interface Project {
 	folder: string | null;
 	/** Files present in the project folder, for showing what a project has. */
 	records: string[];
-	/** Iterations found as branches, newest first. */
+	/** Its iterations, from its records and this machine's branches, in `iterationOrder`. */
 	iterations: ProjectIteration[];
 	/** Everyone who has committed to the project: code on any iteration, or its design-repo folder. */
 	people: Person[];

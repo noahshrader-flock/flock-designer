@@ -10,7 +10,7 @@ import type {
 	RepositoryReach,
 } from '../shared/contract';
 import { slugify } from '../shared/validate';
-import { freshIteration } from '../shared/work';
+import { toProjectIteration } from '../shared/records';
 import { CancelButton } from './CancelButton';
 import { CloneHere, useClone, Working } from './Clone';
 import { FolderField, type FolderPick, pickOf, pickedFolder } from './FolderField';
@@ -246,7 +246,7 @@ export const NewWork = ({
 		);
 		setBusy(false);
 		if (!r.ok) return setError(r.error);
-		const iteration = freshIteration(r.value);
+		const iteration = toProjectIteration(r.value);
 		onCreated({
 			project: { id, title: name.trim(), folder: pickedFolder(inFolder), records: [], iterations: [iteration], people: [] },
 			iteration,
