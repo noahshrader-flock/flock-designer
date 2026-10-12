@@ -699,6 +699,13 @@ export const registerIpc = ({
 	 * points at, and the design system's own guidance (`designSystemCheckout`). Read only, and named in the task, since a folder
 	 * the agent has not been told about is one it never opens.
 	 */
+	/** Whether the one agent is working. Starting it is the runner's to refuse; this is for what must wait for it. */
+	const agentBusy = (): boolean => agent.status().state === 'running';
+	/** For what must not run under the agent, or writes something before starting it: nothing is left for a run that cannot. */
+	const refuseWhileBusy = (): void => {
+		if (agentBusy()) throw new Error(AGENT_BUSY);
+	};
+
 	const sharedGuidance = (canonical: string): { dirs: string[]; note: string } => {
 		const designRoot = recordsRootFor(canonical);
 		const designSystem = readDescriptor(canonical).designSystem;
@@ -734,7 +741,7 @@ export const registerIpc = ({
 		// The voice and tone (T9), from the design system beside this product; nothing while it is blank.
 		const voice = await work.voice(canonical);
 		// Joining the run already going on this branch keeps that run's conversation, not this new name for it.
-		const joining = agent.status().state === 'running';
+		const joining = agentBusy();
 		const started = agent.start(canonical, projectId, `${task}${shared.note}\n\n${accessibility}${voice ? `\n\n${voice}` : ''}`, {
 			// The project's records live in the design repository, beside the product checkout.
 			addDirs,
@@ -836,7 +843,7 @@ export const registerIpc = ({
 				{
 					readComments: () => designRepo.readComments(projectId, iteration.branch),
 					checkout: () => readCheckout(canonical),
-					agentRunning: () => agent.status().state === 'running',
+					agentRunning: agentBusy,
 					skill: () => skill,
 					title: projectTitle(recordsRoot, projectId),
 				},
@@ -1107,7 +1114,7 @@ export const registerIpc = ({
 		return prototypeServer.serve(`${projectId}/${name}`, html);
 	};
 	/** The page: this machine's newest build first (built again when its source changed), then the saved one. */
-	const prototypePage = (projectId: string, name: string): Promise<string | null> => work.page(projectId, name, agent.status().state === 'running');
+	const prototypePage = (projectId: string, name: string): Promise<string | null> => work.page(projectId, name, agentBusy());
 	/** Runs `work` once at a time per key: a second caller waits for the first and shares its answer. */
 	const inFlight = new Map<string, Promise<unknown>>();
 	const once = <T>(key: string, work: () => Promise<T>): Promise<T> => {
@@ -1187,7 +1194,7 @@ export const registerIpc = ({
 	const finishPrototypeChange = async (commentId: number): Promise<PrototypeAddressed> => {
 		const pending = prototypeChanges.get(commentId);
 		if (!pending) throw new Error('There is no change to this comment waiting to be saved.');
-		if (agent.status().state === 'running') throw new Error(AGENT_BUSY);
+		refuseWhileBusy();
 		prototypeChanges.delete(commentId);
 		const { projectId, change } = pending;
 		const { version, made } = await work.finishChange(projectId, change, me(), `For a comment on ${iterationLabel(change.from)}`);
@@ -1197,7 +1204,7 @@ export const registerIpc = ({
 		return { changed: version !== null, iteration: change.target, made, comment };
 	};
 	const finishPrototypeChanges = async (projectId: string): Promise<void> => {
-		if (agent.status().state === 'running') return;
+		if (agentBusy()) return;
 		for (const [commentId, pending] of [...prototypeChanges]) {
 			// One that does not build is left as it is on this machine, unrecorded: nobody is watching to be told why, and
 			// the next Address on it starts again from what people saw.
@@ -1210,7 +1217,7 @@ export const registerIpc = ({
 			assertUsableProjectId(projectId);
 			assertPrototypeName(name);
 			if (!Number.isSafeInteger(commentId)) throw new Error('That is not a comment.');
-			if (agent.status().state === 'running') throw new Error(AGENT_BUSY);
+			refuseWhileBusy();
 			// One left from a run whose screen was closed is finished first, or this run would start from the same copy.
 			await finishPrototypeChanges(projectId);
 			const addressSkill = await readSkillText(ADDRESS_SKILL);
@@ -1393,7 +1400,7 @@ export const registerIpc = ({
 	};
 	ipcMain.handle(
 		CHANNELS.ensureCovers,
-		guard(() => once('covers', async () => (agent.status().state === 'running' ? [] : ensureCovers(coverDeps, builtHere(prototypesRoot))))),
+		guard(() => once('covers', async () => (agentBusy() ? [] : ensureCovers(coverDeps, builtHere(prototypesRoot))))),
 	);
 	/** Pictures read this session, by path: what is at a picture's path never changes, so it is read once. */
 	const coversRead = new Map<string, string>();
@@ -1416,7 +1423,7 @@ export const registerIpc = ({
 	ipcMain.handle(
 		CHANNELS.fixAccessibility,
 		guard(async (projectId: string, name: string) => {
-			if (agent.status().state === 'running') throw new Error(AGENT_BUSY);
+			refuseWhileBusy();
 			const result = await prototypeAccessibility(projectId, name);
 			if (result.violations.length === 0) throw new Error('The accessibility check found nothing to fix.');
 			const skill = await readSkillText(BUILD_SKILL);
@@ -1462,7 +1469,7 @@ export const registerIpc = ({
 			const iteration = await recordedIteration(canonical, recordsRoot, descriptor, projectId, 'codebase');
 			const here = await readCheckout(canonical);
 			if (here.branch !== iteration.branch) throw new Error(`Open ${iteration.branch} first: a handoff checks the work where it is.`);
-			if (agent.status().state === 'running') throw new Error(AGENT_BUSY);
+			refuseWhileBusy();
 			const skill = await readSkillText(HANDOFF_SKILL);
 			const task = handoffTask({
 				skill,

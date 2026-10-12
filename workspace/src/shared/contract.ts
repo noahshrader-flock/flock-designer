@@ -509,7 +509,7 @@ export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export interface WorkspaceApi {
 	/** Native directory picker. Resolves to null if the designer cancels. */
 	chooseCheckout(): Promise<Result<Checkout | null>>;
-	/** Open a checkout by path, validating it is a repository. */
+	/** Re-read a checkout already opened (its branch, whether it is clean). It never trusts a folder the window names. */
 	readCheckout(root: string): Promise<Result<Checkout>>;
 	/** Read the repository's descriptor and resolve what it points at. */
 	readContextReceipt(root: string): Promise<Result<ContextReceipt>>;
