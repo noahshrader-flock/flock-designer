@@ -1060,6 +1060,7 @@ export const registerIpc = ({
 	handle('assignFolder', async (projectId: string, folder: unknown) => {
 		assertUsableProjectId(projectId);
 		await assignFolder(recordStore(), projectId, folderName(folder));
+		return null;
 	});
 
 	handle('buildPrototype', async (projectId: string, name: string, request: string) => {

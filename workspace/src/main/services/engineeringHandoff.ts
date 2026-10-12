@@ -1,4 +1,4 @@
-import type { WorkspaceCommand } from '../../shared/contract';
+import type { WorkspaceCommand } from './descriptor';
 import { NOT_READY_LINE, READY_LINE } from '../../shared/handoff';
 
 /**

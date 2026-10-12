@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { WorkspaceCommand } from '../../shared/contract';
+import type { WorkspaceCommand } from './descriptor';
 import { NotStarted, Stopped, runStreamed } from './streamed';
 
 /**

@@ -1,4 +1,4 @@
-import type { WorkspaceDescriptor } from '../../shared/contract';
+import type { WorkspaceDescriptor } from './descriptor';
 import { classify } from './branchProjects';
 import type { Problem, SyncResult } from './designSync';
 import { branchAuthors, branchCommit, isSamePerson, listBranches, localIdentity, pushBranch, git } from './git';

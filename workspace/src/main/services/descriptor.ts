@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { ShareDescriptor, WorkspaceCommand, WorkspaceDescriptor } from '../../shared/contract';
+import type { IterationKind } from '../../shared/contract';
 import { resolveInside } from './paths';
 import { asRecord } from '../../shared/json';
 
@@ -163,3 +163,62 @@ export const findCommand = (descriptor: WorkspaceDescriptor, commandId: string):
  */
 export const designSystemCheckout = (root: string, designSystem: WorkspaceDescriptor['designSystem'] = readDescriptor(root).designSystem): string =>
 	designSystem.folder !== undefined ? join(root, designSystem.folder) : join(dirname(root), basename(designSystem.package));
+
+// The descriptor a product ships, `.dsnr/workspace.json`, as parsed: the main process's alone, never the window's.
+
+/**
+ * What a repository says about itself, read from `.dsnr/workspace.json`.
+ *
+ * Workspace hard-codes nothing about Coke. A repository that wants to be opened
+ * here declares where its context lives, what may be run, and how a prototype is
+ * addressed. A repository without this file can be opened read-only, but nothing
+ * can be run in it.
+ */
+export interface WorkspaceDescriptor {
+	/** Schema version, so an older app can refuse a newer descriptor honestly. */
+	version: 1;
+	/** Human name for the product this repository holds. */
+	product: string;
+	/** Path to the agent-context directory, relative to the root. */
+	contextDir: string;
+	/** Where prototype directories live, relative to the root. */
+	prototypeRoot: string;
+	/** Branch naming, with `<project-id>` and `<n>` placeholders. */
+	branchPattern: { prototype: string; codebase: string };
+	/** Every command Workspace may run. Nothing else is runnable. */
+	commands: WorkspaceCommand[];
+	/**
+	 * The design system the product is built on: its package, and, when it is a folder of this repository (a monorepo), that
+	 * folder, where its agent files are (`designSystemCheckout`). Without a folder it is a repository of its own, checked
+	 * out beside this one and named as its package is.
+	 */
+	designSystem: { package: string; folder?: string };
+	/** How this repository turns a branch into a link a reviewer can open. Absent: it cannot be shared from here. */
+	share?: ShareDescriptor;
+}
+
+/**
+ * The repository's own account of how a shared preview comes about, so Workspace
+ * hard-codes nothing about one product's CI. A draft pull request is opened for
+ * the branch; the repository's deploy workflow builds it; the address follows a
+ * fixed pattern.
+ */
+export interface ShareDescriptor {
+	/** The preview's address, with `<pr>` where the pull request number goes. Must be https. */
+	url: string;
+	/** Name of the workflow whose success means the preview is up. */
+	workflow: string;
+	/** Which kinds of work get a preview from this repository's CI. */
+	kinds: IterationKind[];
+}
+
+export interface WorkspaceCommand {
+	/** Stable id the renderer refers to, e.g. `preview`, `typecheck`. */
+	id: string;
+	/** What a designer would call it. */
+	label: string;
+	/** Executable and arguments, already split — never a shell string. */
+	argv: string[];
+	/** Set when the command serves a preview, so Workspace knows to watch for a URL. */
+	servesPreviewOn?: number;
+}

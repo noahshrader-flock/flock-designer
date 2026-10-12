@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Fn } from './fixtures';
 import { RuntimeManager, fillProjectId, type RuntimeDeps } from '../src/main/services/runtime';
-import type { PreviewStatus, RunLogLine, WorkspaceDescriptor } from '../src/shared/contract';
+import type { PreviewStatus, RunLogLine } from '../src/shared/contract';
+import type { WorkspaceDescriptor } from '../src/main/services/descriptor';
 
 const descriptor: WorkspaceDescriptor = {
 	version: 1,

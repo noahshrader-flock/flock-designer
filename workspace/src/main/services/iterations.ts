@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import type { Iteration, Person, WorkspaceDescriptor } from '../../shared/contract';
+import type { Iteration, Person } from '../../shared/contract';
+import type { WorkspaceDescriptor } from './descriptor';
 import {
 	branchAuthors,
 	branchExists,

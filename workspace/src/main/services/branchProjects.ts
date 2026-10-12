@@ -1,4 +1,5 @@
-import type { Person, Project, ProjectIteration, WorkspaceDescriptor } from '../../shared/contract';
+import type { Person, Project, ProjectIteration } from '../../shared/contract';
+import type { WorkspaceDescriptor } from './descriptor';
 import { mergePeople } from '../../shared/people';
 import { newestFirst } from '../../shared/projectList';
 import { branchCommit, branchStartedAt, listBranches } from './git';

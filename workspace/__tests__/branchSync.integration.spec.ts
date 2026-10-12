@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { syncBranches } from '../src/main/services/branchSync';
-import type { WorkspaceDescriptor } from '../src/shared/contract';
+import type { WorkspaceDescriptor } from '../src/main/services/descriptor';
 
 const descriptor: WorkspaceDescriptor = {
 	version: 1,
