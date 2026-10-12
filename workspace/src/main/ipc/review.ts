@@ -1,22 +1,15 @@
 import { sanitizeAnchor, sanitizePicture } from '../../shared/anchor';
 import { shownRecord } from '../../shared/brief';
 import type { Project, ReviewComment } from '../../shared/contract';
-import { mergeProjects, unionLocal } from '../../shared/projectList';
 import { isCommit } from '../../shared/sha';
 import { isRecordName } from '../../shared/validate';
-import { workKind } from '../../shared/work';
 import { arg, handle } from '../handle';
-import { readBranchProjects } from '../services/branchProjects';
-import { readDescriptor } from '../services/descriptor';
 import { recordsRootFor } from '../services/discovery';
-import { originUrl } from '../services/git';
-import { codebaseBranchFor } from '../services/iterations';
-import { readFolderProjects } from '../services/localProjects';
 import { resolveInside } from '../services/paths';
-import { gitHubRepoOf } from '../services/repositories';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { IpcDeps } from '../ipc';
+import { listProjects } from '../services/listProjects';
 
 /**
  * The project list, its records, and the review comments kept as GitHub issues.
@@ -29,49 +22,18 @@ export const registerReview = (d: IpcDeps): void => {
 	// must appear here, shared or not, so the two are merged; if GitHub cannot be
 	// reached, what is local still shows.
 	handle('listProjects', [], async (): Promise<Project[]> => {
-		// The gate, not the discovery list: nothing is read or run in a repository
-		// this person has not accepted.
+		// The gate, not the discovery list: nothing is read or run in a repository this person has not accepted.
 		const root = trustedRoot();
+		if (root !== null) opened.require(root);
 		const me = github.state();
-		const login = me.state === 'signedIn' ? me.user.login : null;
-		let local: Project[] = [];
-		// The checkout's repository on GitHub, for codebase work recorded before records named it.
-		let here: { repository: string; branchOf: (projectId: string) => string } | null = null;
-		if (root !== null) {
-			opened.require(root);
-			const recordsRoot = recordsRootFor(root);
-			// Every project folder, not only those that record an iteration: the folder is what an agent makes
-			// first, and it is what vouches for a `feature/<id>` branch (see readBranchProjects).
-			const folders = recordsRoot ? readFolderProjects(recordsRoot) : [];
-			// The branches are the evidence: work made without the app still shows.
-			const branches = await readBranchProjects(root, readDescriptor(root), login, new Set(folders.map((p) => p.id))).catch(() => []);
-			// A folder with nothing built yet is a notes folder, not work in progress.
-			local = unionLocal(folders, branches).filter((p) => p.iterations.length > 0);
-			const origin = await originUrl(root);
-			const repository = origin === null ? null : gitHubRepoOf(origin);
-			const descriptor = readDescriptor(root);
-			if (repository) here = { repository, branchOf: (projectId) => codebaseBranchFor(descriptor, projectId) };
-		}
-		let remote: Project[] = [];
-		try {
-			remote = await designRepo.listProjects();
-		} catch (err) {
-			if (local.length === 0) throw err;
-		}
+		const projects = await listProjects({
+			root,
+			login: me.state === 'signedIn' ? me.user.login : null,
+			remote: () => designRepo.listProjects(),
+		});
 		// Reading the list is a good moment to make sure what it shows is published.
 		void publisher.publish();
-		const merged = mergeProjects(remote, local);
-		// Work on this checkout's codebase branch for a project is in this checkout's repository.
-		const located =
-			here === null
-				? merged
-				: merged.map((p) => ({
-						...p,
-						iterations: p.iterations.map((it) =>
-							workKind(it) === 'codebase' && !it.repository && it.branch === here.branchOf(p.id) ? { ...it, repository: here.repository } : it,
-						),
-					}));
-		return profiles.nameEveryone(located);
+		return profiles.nameEveryone(projects);
 	});
 	handle('readRecord', [arg.name, arg.name], async (projectId, name): Promise<string> => {
 		if (!isRecordName(projectId) || !isRecordName(name)) throw new Error('That is not a file in a project.');
