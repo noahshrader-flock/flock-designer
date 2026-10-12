@@ -11,7 +11,6 @@ import {
 	type Checkout,
 	type ClonePlan,
 	type Person,
-	type PageStatus,
 	type PrototypeAddressed,
 	type PrototypeReadiness,
 	type PublishStatus,
@@ -66,12 +65,11 @@ import { statesOf } from '../shared/prototypeStates';
 import { type PrototypeChange, localPrototypeFile, prototypeWork } from './services/prototypeWork';
 import { type CoverDeps, type DrawCover } from './services/projectCovers';
 
-import { pageStatus, publish, recordsFrom, redeploySite, siteBehind } from './services/pages';
 import { prototypeReadable, type PrototypeSources } from './services/prototype';
 import type { CheckoutMemory } from './services/checkoutMemory';
-import { errorText } from '../shared/result';
-import { coalescingByKey, singleFlight } from './services/concurrency';
+import { singleFlight } from './services/concurrency';
 import { designStore } from './services/designStore';
+import { siteDeploys } from './services/siteDeploys';
 import { registerCheckout } from './ipc/checkout';
 import { registerClone } from './ipc/clone';
 import { registerDesignSystem } from './ipc/designSystem';
@@ -662,66 +660,11 @@ export const ipcDeps = ({
 	 * The iteration's published page. Asked of GitHub as the person signed in to the app; nothing to say when they are
 	 * not. Opening it works the address out again here, so the window never hands this an address to open.
 	 */
-	const publishedPage = async (projectId: string, name: string): Promise<PageStatus> => {
-		if (github.state().state !== 'signedIn') return { state: 'none' };
-		const key = prototypeKey(projectId, name);
-		if (publishing.has(key)) return { state: 'publishing' };
-		let status: PageStatus;
-		try {
-			status = await pageStatus(github, DESIGN_REPO, projectId, name);
-		} catch (err) {
-			// Most often the app's GitHub permission: reading the site and its deploys needs Pages and Deployments.
-			return { state: 'unavailable', why: `GitHub would not say whether this is published: ${errorText(err)}` };
-		}
-		const stopped = publishStopped.get(key);
-		return status.state === 'unpublished' && stopped ? { state: 'unpublished', why: stopped } : status;
-	};
-	/**
-	 * Publishes what the app itself just made (a prototype it built, or a change Address made), in the background, as
-	 * the agent publishes from Claude Code: the same code. What stopped it is kept, so the screen can say why the page
-	 * is not published.
-	 */
-	// One deploy of a page at a time, and once more if asked again meanwhile: what changed since may have missed its push.
-	const publishing = coalescingByKey<string>();
-	const publishStopped = new Map<string, string>();
-	/**
-	 * Brings the site up to date with what GitHub has, by itself: on every cycle of the publisher (opening, focusing,
-	 * refreshing, any record written), if a page was pushed, or what the site is built from changed, and no deploy has
-	 * it, one is started. That can reach GitHub without a deploy (an edit made outside a save, a deploy that failed, a
-	 * push from another machine), and nothing else would ever notice. Asked at most once a minute, and after a deploy
-	 * that failed, once every ten, so a permission that is missing is not retried on every focus. A failed deploy of
-	 * the site alone is only remembered for that pause: a page's failure is shown on its screen, and the cause (the
-	 * permission) shows there too the next time a page is published.
-	 */
-	let lastCatchUp = 0;
-	const catchUpSite = async (): Promise<void> => {
-		const gap = publishStopped.size > 0 ? 10 * 60_000 : 60_000;
-		if (github.state().state !== 'signedIn' || publishing.size > 0 || Date.now() - lastCatchUp < gap) return;
-		lastCatchUp = Date.now();
-		try {
-			const behind = await siteBehind(github, DESIGN_REPO);
-			if (behind?.kind === 'page') publishInBackground(behind.projectId, behind.name);
-			else if (behind?.kind === 'code') redeployInBackground();
-		} catch {
-			// GitHub would not say: the review screen says so for the page being looked at.
-		}
-	};
-	/** Runs a deploy in the background under `key`, one at a time for a key, and once more if asked again meanwhile. */
-	const inBackground = (key: string, deploy: () => Promise<unknown>): void => {
-		if (github.state().state !== 'signedIn') return;
-		void publishing.run(key, () =>
-			deploy()
-				.then(() => void publishStopped.delete(key))
-				.catch((err: unknown) => void publishStopped.set(key, errorText(err))),
-		);
-	};
-	const publishInBackground = (projectId: string, name: string): void =>
-		inBackground(prototypeKey(projectId, name), async () =>
-			publish({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())), projectId, name }),
-		);
-	/** The site, when what it is built from changed and no page did: it has no page of its own to key on. */
-	const redeployInBackground = (): void =>
-		inBackground('the site', async () => redeploySite({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())) }));
+	// The site's deploys, run in the background, and whether a page is on the site (`siteDeploys`).
+	const deploys = siteDeploys({ github, designClone });
+	const publishedPage = deploys.status;
+	const publishInBackground = deploys.page;
+	const catchUpSite = deploys.catchUp;
 
 	/**
 	 * A prototype's accessibility (T7): its saved page, served as it is opened, checked in each of its states at its
@@ -849,13 +792,8 @@ export const ipcDeps = ({
 		finishPrototypeChange,
 		finishPrototypeChanges,
 		publishedPage,
-		publishing,
-		publishStopped,
-		lastCatchUp,
 		catchUpSite,
-		inBackground,
 		publishInBackground,
-		redeployInBackground,
 		prototypeAccessibility,
 		coverDeps,
 		coversRead,
