@@ -652,8 +652,11 @@ export interface WorkspaceApi {
 	 * it is new; building runs the agent in the app's own folder; saving puts the page in the design
 	 * repository; opening serves it to the preview from this machine.
 	 */
-	/** `from`: the repository on this machine and a branch in it to model the page on. */
-	createPrototype(projectId: string, title: string, note: string, from?: { root: string; branch: string }): Promise<Result<Iteration>>;
+	/**
+	 * `from`: the repository on this machine and a branch in it to model the page on. `folder`: the folder a new project is
+	 * put in (the folders plan); a project that has a brief already stays where it is.
+	 */
+	createPrototype(projectId: string, title: string, note: string, from?: { root: string; branch: string }, folder?: string | null): Promise<Result<Iteration>>;
 	buildPrototype(projectId: string, name: string, request: string): Promise<Result<AgentStatus>>;
 	/**
 	 * Starts the agent on one comment on a prototype. There is no batch. The change goes in the newest iteration of the
@@ -731,6 +734,8 @@ export interface WorkspaceApi {
 	readComments(projectId: string, iteration: string): Promise<Result<ReviewComment[]>>;
 	/** The text of one file in a project's folder (its brief, its review notes, …): this machine's copy if it has one, else GitHub's. */
 	readRecord(projectId: string, name: string): Promise<Result<string>>;
+	/** Puts a project in a folder, or in none for null, in its brief in the design repository (the folders plan). */
+	assignFolder(projectId: string, folder: string | null): Promise<Result<void>>;
 	postComment(
 		projectId: string,
 		iteration: string,
@@ -1100,6 +1105,7 @@ export const CHANNELS = {
 	openInEditor: 'workspace:openInEditor',
 	continueInClaude: 'workspace:continueInClaude',
 	createPrototype: 'workspace:createPrototype',
+	assignFolder: 'workspace:assignFolder',
 	buildPrototype: 'workspace:buildPrototype',
 	addressPrototype: 'workspace:addressPrototype',
 	finishPrototypeAddress: 'workspace:finishPrototypeAddress',

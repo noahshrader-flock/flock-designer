@@ -96,7 +96,9 @@ const addRecord = async (
 
 /**
  * Records a new prototype, the next version, and the project itself when this is its first work: a brief with its
- * title, which is what the project list names it by. The page comes later, once the agent has made it.
+ * title, which is what the project list names it by, in the folder it is started in. A project that has a brief already
+ * stays in its folder: a new version started from another folder's view does not move it. The page comes later, once the
+ * agent has made it.
  */
 export const recordPrototype = async (
 	store: RecordStore,
@@ -106,8 +108,9 @@ export const recordPrototype = async (
 		note,
 		me,
 		basedOn,
+		folder = null,
 		now = new Date(),
-	}: { projectId: string; title: string; note: string; me: Person | null; basedOn?: Iteration['basedOn']; now?: Date },
+	}: { projectId: string; title: string; note: string; me: Person | null; basedOn?: Iteration['basedOn']; folder?: string | null; now?: Date },
 ): Promise<Iteration> => {
 	const existing = await readRecords(store, projectId);
 	const name = nextPrototypeName(existing.map((i) => i.name));
@@ -116,7 +119,7 @@ export const recordPrototype = async (
 	if (haveBrief === null || firstHeading(haveBrief) === null) {
 		// A brief with no heading may still have a folder, which is kept.
 		const written = `# ${title.replace(/\s+/g, ' ').trim()}\n\n${note.trim()}\n`;
-		await store.write(brief, withFolder(written, haveBrief === null ? null : briefFolder(haveBrief)), `${projectId}: start the project`);
+		await store.write(brief, withFolder(written, haveBrief === null ? folder : briefFolder(haveBrief)), `${projectId}: start the project`);
 	}
 	return addRecord(store, existing, { projectId, name, note, me, basedOn, now });
 };

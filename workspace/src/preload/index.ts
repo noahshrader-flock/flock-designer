@@ -117,7 +117,7 @@ const api: WorkspaceApi = {
 	handoffResult: (root) => invoke<boolean | null>(CHANNELS.handoffResult, root),
 	openInEditor: (root) => invoke<null>(CHANNELS.openInEditor, root),
 	continueInClaude: (root, branch) => invoke<'editor' | 'terminal'>(CHANNELS.continueInClaude, root, branch),
-	createPrototype: (projectId, title, note, from) => invoke<Iteration>(CHANNELS.createPrototype, projectId, title, note, from ?? null),
+	createPrototype: (projectId, title, note, from, folder) => invoke<Iteration>(CHANNELS.createPrototype, projectId, title, note, from ?? null, folder ?? null),
 	buildPrototype: (projectId, name, request) => invoke<AgentStatus>(CHANNELS.buildPrototype, projectId, name, request),
 	addressPrototype: (projectId, name, commentId) => invoke<AgentStatus>(CHANNELS.addressPrototype, projectId, name, commentId),
 	finishPrototypeAddress: (commentId) => invoke<PrototypeAddressed>(CHANNELS.finishPrototypeAddress, commentId),
@@ -151,6 +151,7 @@ const api: WorkspaceApi = {
 	ensureCovers: () => invoke<MadeCover[]>(CHANNELS.ensureCovers),
 	projectCover: (projectId, name, cover) => invoke<string | null>(CHANNELS.projectCover, projectId, name, cover),
 	readRecord: (projectId, name) => invoke<string>(CHANNELS.readRecord, projectId, name),
+	assignFolder: (projectId, folder) => invoke<void>(CHANNELS.assignFolder, projectId, folder),
 	readComments: (projectId, iteration) => invoke<ReviewComment[]>(CHANNELS.readComments, projectId, iteration),
 	postComment: (projectId, iteration, body, anchor, picture) =>
 		invoke<ReviewComment>(CHANNELS.postComment, projectId, iteration, body, anchor, picture ?? null),

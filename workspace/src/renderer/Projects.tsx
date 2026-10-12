@@ -114,6 +114,12 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 		);
 	}
 
+	// The folders projects are in, for the filter, New and Assign folder alike.
+	const folders = foldersOf(projects ?? []);
+	const unfiled = (projects ?? []).some((p) => inFolder(p, null));
+	// A folder chosen that no project is in any more (moved since, on another machine) shows them all again.
+	const shown = (projects ?? []).some((p) => inFolder(p, folder)) ? folder : undefined;
+
 	if (selected) {
 		return (
 			<Review
@@ -126,6 +132,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 				task={selected.task}
 				hidden={hidden}
 				onOpen={(project, iteration, task) => setSelected({ project, iteration, task })}
+				folders={folders}
 				onBack={() => {
 					setSelected(null);
 					void load();
@@ -134,10 +141,6 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 		);
 	}
 
-	const folders = foldersOf(projects ?? []);
-	const unfiled = (projects ?? []).some((p) => inFolder(p, null));
-	// A folder chosen that no project is in any more (moved since, on another machine) shows them all again.
-	const shown = (projects ?? []).some((p) => inFolder(p, folder)) ? folder : undefined;
 	const matching = sortProjects(
 		(projects ?? []).filter((p) => inFolder(p, shown) && matchesProject(p, search)),
 		order,
@@ -216,6 +219,8 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 					checkout={checkout}
 					onChoose={chooseCheckout}
 					onCheckout={setCheckout}
+					folders={folders}
+					folder={typeof shown === 'string' ? shown : null}
 					onCreated={(c: Created) => {
 						setCreating(false);
 						setSelected({ project: c.project, iteration: c.iteration, task: c.task });

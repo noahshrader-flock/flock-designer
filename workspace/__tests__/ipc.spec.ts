@@ -817,6 +817,25 @@ describe('prototypes', () => {
 		expect((await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list')).ok).toBe(false);
 	});
 
+	it('are started in the folder chosen, written in the new project’s brief in the clone', async () => {
+		await call(CHANNELS.useCheckout, product);
+		expect((await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' }, '  Admin ')).ok).toBe(true);
+		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('---\nfolder: Admin\n---\n# Demo\n\nA list\n');
+	});
+
+	it('are put in a folder and taken out of it, in the brief in the clone, and a project that is not one is refused', async () => {
+		await call(CHANNELS.useCheckout, product);
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		expect((await call(CHANNELS.assignFolder, 'demo', 'Roles')).ok).toBe(true);
+		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('---\nfolder: Roles\n---\n# Demo\n\nA list\n');
+		expect((await call(CHANNELS.assignFolder, 'demo', null)).ok).toBe(true);
+		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list\n');
+		mkdirSync(join(design, 'etc'), { recursive: true });
+		writeFileSync(join(design, 'etc', 'brief.md'), '# Not a project\n');
+		expect((await call(CHANNELS.assignFolder, '../etc', 'Roles')).ok).toBe(false);
+		expect(readFileSync(join(design, 'etc', 'brief.md'), 'utf8')).toBe('# Not a project\n');
+	});
+
 	it('are recorded, saved and served through the clone on this machine', async () => {
 		await call(CHANNELS.useCheckout, product);
 		const made = await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });

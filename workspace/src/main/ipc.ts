@@ -69,6 +69,7 @@ import { OpenedCheckouts } from './services/session';
 import { readFolderProjects } from './services/localProjects';
 import {
 	coverPath,
+	folderName,
 	isRecordName,
 	iterationLabel,
 	mergeProjects,
@@ -91,6 +92,7 @@ import {
 	MOVE_SKILL,
 	type RecordStore,
 	assertPrototypeName,
+	assignFolder,
 	cloneStore,
 	moveToCodePrompt,
 	moveToCodeTask,
@@ -1120,13 +1122,20 @@ export const registerIpc = ({
 
 	ipcMain.handle(
 		CHANNELS.createPrototype,
-		guard(async (projectId: string, title: string, note: string, from: { root: string; branch: string } | null) => {
+		guard(async (projectId: string, title: string, note: string, from: { root: string; branch: string } | null, folder?: unknown) => {
 			// What it is modeled on is not optional: a prototype is built from a repository's real design system.
 			if (!from) throw new Error('A prototype is modeled on a branch of a repository on this machine. Choose one.');
 			// Only a repository this person accepted, and a branch in it, made local when it is only on GitHub.
 			const root = opened.require(from.root);
 			await ensureLocalBranch(root, from.branch);
-			return work.start(root, { projectId, title, note, branch: from.branch, me: me() });
+			return work.start(root, { projectId, title, note, branch: from.branch, me: me(), folder: folderName(folder) });
+		}),
+	);
+	ipcMain.handle(
+		CHANNELS.assignFolder,
+		guard(async (projectId: string, folder: unknown) => {
+			assertUsableProjectId(projectId);
+			await assignFolder(recordStore(), projectId, folderName(folder));
 		}),
 	);
 

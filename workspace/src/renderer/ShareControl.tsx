@@ -1,4 +1,4 @@
-import { CodeIcon, FileTextIcon, GitBranchIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
+import { CodeIcon, FileTextIcon, FolderIcon, GitBranchIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, MessageSquareShareIcon, Share2Icon, SquareTerminalIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Checkout, Project, ProjectIteration, ShareStatus } from '../shared/contract';
 import { projectCodeLink, recordLabel } from '../shared/projects';
@@ -30,6 +30,7 @@ export const ShareControl = ({
 	onMoveToCode,
 	editor,
 	onViewRecord,
+	onAssignFolder,
 }: {
 	checkout: Checkout | null;
 	project: Project;
@@ -45,6 +46,8 @@ export const ShareControl = ({
 	editor?: { editor: boolean; session: boolean; openInEditor: () => unknown; continueInClaude: () => unknown };
 	/** Opens one of the project's documents (`project.records`), which are the last group in the menu. */
 	onViewRecord?: (name: string) => void;
+	/** Opens Assign folder, for a project with a brief, which is where its folder is kept: the menu's last item. */
+	onAssignFolder?: () => void;
 }) => {
 	const [status, setStatus] = useState<ShareStatus>({ state: 'idle' });
 	const [open, setOpen] = useState(false);
@@ -67,6 +70,7 @@ export const ShareControl = ({
 	// Where the project's codebase work is on GitHub, and its documents: always there, whether or not the page is up.
 	const builtInCode = projectCodeLink(project);
 	const records = onViewRecord !== undefined ? project.records : [];
+	const folderable = onAssignFolder !== undefined && project.records.includes('brief.md');
 	const documents = builtInCode !== null || records.length > 0;
 
 	const start = async () => {
@@ -163,6 +167,16 @@ export const ShareControl = ({
 									{recordLabel(record)}
 								</DropdownMenuItem>
 							))}
+						</>
+					)}
+					{/* What the project is in, last: it is about the project, not this page. */}
+					{folderable && (
+						<>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem onSelect={onAssignFolder}>
+								<FolderIcon />
+								Assign folder…
+							</DropdownMenuItem>
 						</>
 					)}
 				</DropdownMenuContent>

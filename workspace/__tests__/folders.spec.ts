@@ -194,6 +194,18 @@ describe('assigning a project a folder', () => {
 		expect(files['projects/alert-history/brief.md']).toBe('---\nfolder: Admin\n---\n# Alert history\n\nPast alerts\n');
 	});
 
+	it('puts a new project in the folder it is started in', async () => {
+		const { store, files } = said({});
+		await recordPrototype(store, { projectId: 'alert-history', title: 'Alert history', note: 'Past alerts', me: null, folder: 'Admin' });
+		expect(files['projects/alert-history/brief.md']).toBe('---\nfolder: Admin\n---\n# Alert history\n\nPast alerts\n');
+	});
+
+	it('leaves a project that already has a brief where it is, when a new version is started in another folder', async () => {
+		const { store, files } = said({ 'projects/alert-history/brief.md': FILED });
+		await recordPrototype(store, { projectId: 'alert-history', title: 'Alert history', note: 'Again', me: null, folder: 'Roles' });
+		expect(files['projects/alert-history/brief.md']).toBe(FILED);
+	});
+
 	it('refuses a project with no brief, which is where the folder is kept', async () => {
 		const { store } = said({});
 		await expect(assignFolder(store, 'alert-history', 'Admin')).rejects.toThrow('alert-history has no brief, which is where its folder is kept.');

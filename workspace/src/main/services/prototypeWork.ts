@@ -70,6 +70,8 @@ export interface PrototypeStart {
 	/** A branch of the product checkout that exists here. */
 	branch: string;
 	me: Person | null;
+	/** The folder a new project is put in (the folders plan), as `folderName` gives it; null for none. */
+	folder?: string | null;
 }
 
 const NO_PRODUCT = 'Prototypes are built from the real design system, so they need the product repository, with its packages installed, on this machine.';
@@ -170,14 +172,14 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 * new prototype is a new idea). What it is modeled on is not optional: a prototype is built from a repository's
 	 * real design system, on a branch that exists here.
 	 */
-	const start = async (root: string, { projectId, title, note, branch, me }: PrototypeStart): Promise<Iteration> => {
+	const start = async (root: string, { projectId, title, note, branch, me, folder }: PrototypeStart): Promise<Iteration> => {
 		assertUsableProjectId(projectId);
 		const why = notReady(root);
 		if (why !== null) throw new Error(why);
 		if (typeof title !== 'string' || !title.trim()) throw new Error('A prototype needs a name.');
 		if (!(await branchExists(root, branch))) throw new Error(`There is no branch called ${branch} in ${basename(root)}.`);
 		const basedOn = { repository: basename(root), branch, commit: await branchCommit(root, branch).catch(() => null) };
-		return recordPrototype(ctx.store(), { projectId, title: title.slice(0, 200), note: String(note).slice(0, 8000), me, basedOn });
+		return recordPrototype(ctx.store(), { projectId, title: title.slice(0, 200), note: String(note).slice(0, 8000), me, basedOn, folder });
 	};
 
 	/**

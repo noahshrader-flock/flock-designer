@@ -34,6 +34,7 @@ import { RecordSheet } from './RecordSheet';
 import { AccessibilityStatus } from './AccessibilityStatus';
 import { AgentLog, Loading } from './Loading';
 import { ShareControl } from './ShareControl';
+import { AssignFolder } from './AssignFolder';
 import { useOverlaps } from './overlays';
 import { BackButton } from './BackButton';
 import { Toolbar } from './Toolbar';
@@ -75,6 +76,7 @@ export const Review = ({
 	task,
 	hidden,
 	onOpen,
+	folders = [],
 }: {
 	project: Project;
 	iteration: ProjectIteration;
@@ -88,6 +90,8 @@ export const Review = ({
 	hidden: boolean;
 	/** Opens other work: where moving a prototype into the code goes next. */
 	onOpen: (project: Project, iteration: ProjectIteration, task?: string) => void;
+	/** The folders in use, to assign this project to one (the folders plan). */
+	folders?: string[];
 }) => {
 	const [error, setError] = useState<string | null>(null);
 	/**
@@ -129,6 +133,9 @@ export const Review = ({
 	const hosted = useHostedPreview(useHosted ? hostedUrl : null);
 	// One of the project's documents, read out in a panel from the side; kept after it closes so it can slide away.
 	const [viewing, setViewing] = useState<{ name: string; open: boolean } | null>(null);
+	// Assign folder's modal, and the folder as last assigned here: the project shown was read before it.
+	const [assigning, setAssigning] = useState(false);
+	const [folder, setFolder] = useState(project.folder ?? null);
 	// Moving a prototype into the code is confirmed first, in a dialog (MoveToCode).
 	const [moving, setMoving] = useState(false);
 	const kind = workKind(iteration);
@@ -476,6 +483,7 @@ export const Review = ({
 						onMoveToCode={checkout ? () => setMoving(true) : undefined}
 						editor={editor.available ? editor : undefined}
 						onViewRecord={(name) => setViewing({ name, open: true })}
+						onAssignFolder={() => setAssigning(true)}
 					/>
 				</div>
 			</Toolbar>
@@ -490,6 +498,18 @@ export const Review = ({
 			)}
 
 			{viewing && <RecordSheet project={project} name={viewing.name} open={viewing.open} onClose={() => setViewing({ ...viewing, open: false })} />}
+
+			<AssignFolder
+				open={assigning}
+				onClose={() => setAssigning(false)}
+				projectId={project.id}
+				folders={folders}
+				folder={folder}
+				onAssigned={(assigned) => {
+					setFolder(assigned);
+					setAssigning(false);
+				}}
+			/>
 
 			{checkout && codebase && (
 				<HandoffDialog

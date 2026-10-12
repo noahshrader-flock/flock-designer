@@ -2,6 +2,7 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { NewWork } from '../src/renderer/NewWork';
+import { TooltipProvider } from '../src/renderer/ui/tooltip';
 import type { ClonePlan, CloneProgress } from '../src/shared/contract';
 import { button, fail, fakeApp, ok, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
@@ -89,7 +90,7 @@ describe('what it makes', () => {
 		expect(button('Create prototype').disabled).toBe(false);
 		await press(button('Create prototype'));
 		await settle();
-		expect(app.calls.createPrototype?.[0]).toEqual(['ops-list', 'Ops list', 'A list', { root: HERE.root, branch: 'develop' }]);
+		expect(app.calls.createPrototype?.[0]).toEqual(['ops-list', 'Ops list', 'A list', { root: HERE.root, branch: 'develop' }, null]);
 	});
 });
 
@@ -133,7 +134,7 @@ describe('how the form is laid out', () => {
 		expect(document.getElementById('new-work-from')).toBeNull();
 		await press(button('Create prototype'));
 		await settle();
-		expect(app.calls.createPrototype?.[0]).toEqual(['ops-list', 'Ops list', 'A list', { root: HERE.root, branch: 'release' }]);
+		expect(app.calls.createPrototype?.[0]).toEqual(['ops-list', 'Ops list', 'A list', { root: HERE.root, branch: 'release' }, null]);
 	});
 
 	it('has no Change when the repository has no other branch to list', async () => {
@@ -159,6 +160,67 @@ describe('how the form is laid out', () => {
 		await settle();
 		expect(text()).toContain('Starts from develop');
 		expect(document.getElementById('new-work-from')).toBeNull();
+	});
+});
+
+describe('its folder', () => {
+	const made = { projectId: 'ops-list', name: 'v1-i1', branch: 'prototype/ops-list/v1-i1', commit: null, createdAt: '2026-10-08T00:00:00Z', note: 'A list' };
+	const fill = async () => {
+		await typeInto(document.getElementById('new-work-name') as HTMLInputElement, 'Ops list');
+		await typeInto(document.getElementById('new-work-task') as HTMLTextAreaElement, 'A list');
+	};
+	const pickFolder = async (name: string) => {
+		await press(document.getElementById('new-work-folder') as HTMLElement);
+		await settle();
+		await press([...document.querySelectorAll<HTMLElement>('[cmdk-item]')].find((o) => o.textContent === name) as HTMLElement);
+		await settle();
+	};
+
+	it('is asked for after the repository, as optional, starting on the folder being viewed', async () => {
+		await open({}, { folders: ['Admin', 'Roles'], folder: 'Roles' });
+		const at = (id: string) => [...document.querySelectorAll('*')].indexOf(document.getElementById(id) as HTMLElement);
+		expect(at('new-work-repo')).toBeLessThan(at('new-work-folder'));
+		expect(document.querySelector('label[for="new-work-folder"]')?.textContent).toBe('Folder (optional)');
+		expect((document.getElementById('new-work-folder') as HTMLElement).textContent).toBe('Roles');
+	});
+
+	it('starts again on the folder being viewed each time it is opened', async () => {
+		await open({}, { folders: ['Admin', 'Roles'], folder: 'Roles' });
+		await pickFolder('Admin');
+		const props = (open: boolean) => ({ open, onClose: () => undefined, checkout: HERE, onChoose: () => undefined, onCheckout: () => undefined, onCreated: () => undefined, folders: ['Admin', 'Roles'], folder: 'Roles' });
+		// Rendered as the harness renders it, so it is the same form closed and opened again, not a new one.
+		await act(async () => current!.root.render(createElement(TooltipProvider, null, createElement(NewWork, props(false)))));
+		await act(async () => current!.root.render(createElement(TooltipProvider, null, createElement(NewWork, props(true)))));
+		await settle();
+		expect((document.getElementById('new-work-folder') as HTMLElement).textContent).toBe('Roles');
+	});
+
+	it('makes the prototype in the folder chosen, or in a new one named there, or in none', async () => {
+		const { app } = await open({ createPrototype: async () => ok(made) }, { folders: ['Admin'] });
+		await fill();
+		await pickFolder('Admin');
+		await press(button('Create prototype'));
+		await settle();
+		expect(app.calls.createPrototype?.at(-1)?.[4]).toBe('Admin');
+		await pickFolder('Add new folder');
+		await typeInto(document.getElementById('new-work-folder-new') as HTMLInputElement, 'Alerts');
+		await fill();
+		await press(button('Create prototype'));
+		await settle();
+		expect(app.calls.createPrototype?.at(-1)?.[4]).toBe('Alerts');
+	});
+
+	it('makes it in no folder when none is chosen, or a new one is left without a name', async () => {
+		const { app } = await open({ createPrototype: async () => ok(made) }, { folders: ['Admin'] });
+		await fill();
+		await press(button('Create prototype'));
+		await settle();
+		expect(app.calls.createPrototype?.at(-1)?.[4]).toBeNull();
+		await pickFolder('Add new folder');
+		await fill();
+		await press(button('Create prototype'));
+		await settle();
+		expect(app.calls.createPrototype?.at(-1)?.[4]).toBeNull();
 	});
 });
 

@@ -3,6 +3,7 @@ import type { AgentReadiness, Checkout, Project, ProjectIteration, PrototypeRead
 import { freshIteration, slugify } from '../shared/projects';
 import { CancelButton } from './CancelButton';
 import { CloneHere, useClone, Working } from './Clone';
+import { FolderField } from './FolderField';
 import { RepositoryReachNote } from './RepositoryReachNote';
 import { SearchSelect } from './SearchSelect';
 import { InfoIcon } from 'lucide-react';
@@ -55,9 +56,9 @@ const StartsFrom = ({ branch, branches, onChange, disabled }: { branch: string; 
 };
 
 /**
- * Starting a prototype: a name, what it should explore, and where it starts (a repository, and a branch in it, which it
- * reads to look like the product), in that order. Creating it makes the record; the agent and the preview follow on
- * their own. Codebase work is not started here: that is done in the codebase, and a prototype moves into it with
+ * Starting a prototype: a name, what it should explore, where it starts (a repository, and a branch in it, which it
+ * reads to look like the product), and, if it is a new project, the folder it goes in, in that order. Creating it makes
+ * the record; the agent and the preview follow on their own. Codebase work is not started here: that is done in the codebase, and a prototype moves into it with
  * Build in the codebase.
  *
  * The repositories are the ones GitHub shows the signed-in person, so the list follows their permissions;
@@ -73,6 +74,8 @@ export const NewWork = ({
 	onChoose,
 	onCheckout,
 	onCreated,
+	folders = [],
+	folder = null,
 }: {
 	open: boolean;
 	onClose: () => void;
@@ -81,9 +84,14 @@ export const NewWork = ({
 	/** A repository picked from the list, now accepted. */
 	onCheckout: (checkout: Checkout) => void;
 	onCreated: (created: Created) => void;
+	/** The folders in use, to put the new project in one (the folders plan), and the one being viewed, which it starts on. */
+	folders?: string[];
+	folder?: string | null;
 }) => {
 	const [name, setName] = useState('');
 	const [task, setTask] = useState('');
+	// The folder the new project goes in: undefined while a new one is being named, which is none until it has a name.
+	const [inFolder, setInFolder] = useState<string | null | undefined>(folder);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [repos, setRepos] = useState<Repository[]>([]);
@@ -102,6 +110,7 @@ export const NewWork = ({
 	useEffect(() => {
 		if (!open) return;
 		setPicked(null);
+		setInFolder(folder);
 		setError(null);
 		void window.workspace.listRepositories().then((r) => r.ok && showRepos(r.value));
 		// Asked now, not after the branch is made: an agent that cannot start would leave an empty iteration behind.
@@ -206,7 +215,13 @@ export const NewWork = ({
 		if (!id || !task.trim()) return;
 		setBusy(true);
 		setError(null);
-		const r = await window.workspace.createPrototype(id, name.trim(), task.trim(), checkout && !elsewhere && from ? { root: checkout.root, branch: from } : undefined);
+		const r = await window.workspace.createPrototype(
+			id,
+			name.trim(),
+			task.trim(),
+			checkout && !elsewhere && from ? { root: checkout.root, branch: from } : undefined,
+			inFolder ?? null,
+		);
 		setBusy(false);
 		if (!r.ok) return setError(r.error);
 		const iteration = freshIteration(r.value);
@@ -271,6 +286,7 @@ export const NewWork = ({
 							</AlertAction>
 						</Alert>
 					)}
+					<FolderField id="new-work-folder" label="Folder (optional)" folders={folders} value={inFolder ?? null} onChange={setInFolder} disabled={busy} />
 					{prototype && !prototype.ready && (
 						<Alert variant="warning">
 							<AlertTitle>{prototype.why === 'not-installed' ? "The real components aren't installed here" : 'The page builder is missing'}</AlertTitle>

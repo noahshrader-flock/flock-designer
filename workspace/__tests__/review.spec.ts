@@ -341,8 +341,8 @@ describe('the project’s documents, in More', () => {
 		await open(fakeApp(), records);
 		const all = await items();
 		const names = all.map((i) => i.textContent?.trim());
-		expect(names.slice(-4)).toEqual(['Open in browser', 'Brief', 'Design notes', 'Iterations']);
-		const divider = [...document.querySelectorAll('[role="separator"]')].at(-1) as HTMLElement;
+		expect(names.slice(-5)).toEqual(['Open in browser', 'Brief', 'Design notes', 'Iterations', 'Assign folder…']);
+		const divider = [...document.querySelectorAll('[role="separator"]')].at(-2) as HTMLElement;
 		const order = (a: Element, b: Element) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
 		expect(order(menuItem(all, 'Open in browser'), divider)).toBeTruthy();
 		expect(order(divider, menuItem(all, 'Brief'))).toBeTruthy();
@@ -368,8 +368,8 @@ describe('the project’s documents, in More', () => {
 		await open(app, records);
 		await settle();
 		const names = (await items()).map((i) => i.textContent?.trim());
-		expect(names).toEqual(['Brief', 'Design notes', 'Iterations']);
-		expect(document.querySelectorAll('[role="separator"]')).toHaveLength(0);
+		expect(names).toEqual(['Brief', 'Design notes', 'Iterations', 'Assign folder…']);
+		expect(document.querySelectorAll('[role="separator"]')).toHaveLength(1);
 	});
 
 	it('leave nothing to open before the page is up, for a project that has none', async () => {
@@ -382,7 +382,7 @@ describe('the project’s documents, in More', () => {
 		const codebase = { ...PROTOTYPE, name: 'codebase', branch: 'feature/demo', repository: 'flocksafety/flock-coke' };
 		await open(fakeApp(), { project: { ...PROJECT, records: ['brief.md'], iterations: [PROTOTYPE, codebase] } });
 		const all = await items();
-		expect(all.map((i) => i.textContent?.trim()).slice(-3)).toEqual(['Open in browser', 'Built in code', 'Brief']);
+		expect(all.map((i) => i.textContent?.trim()).slice(-4)).toEqual(['Open in browser', 'Built in code', 'Brief', 'Assign folder…']);
 		expect(menuItem(all, 'Built in code').getAttribute('href')).toBe('https://github.com/flocksafety/flock-coke/tree/feature/demo');
 	});
 
@@ -665,3 +665,92 @@ describe('its accessibility', () => {
 		expect(document.querySelector('.grow')!.nextElementSibling!.querySelector('[data-accessibility]')).toBeNull();
 	});
 });
+
+describe('assigning the project a folder, from More', () => {
+	const briefed = (folder: string | null = null) => ({ project: { ...PROJECT, records: ['brief.md'], folder }, folders: ['Admin', 'Roles'] });
+	const assign = async () => {
+		await press(menuItem(await openMenu(button('More')), 'Assign folder…'));
+		await settle();
+	};
+	const pickFolder = async (name: string) => {
+		await press(document.getElementById('assign-folder') as HTMLElement);
+		await settle();
+		await press([...document.querySelectorAll<HTMLElement>('[cmdk-item]')].find((o) => o.textContent === name) as HTMLElement);
+		await settle();
+	};
+
+	it('is the last item, after a divider, only for a project with a brief, which is where its folder is kept', async () => {
+		await open(fakeApp(), briefed());
+		const names = (await openMenu(button('More'))).map((i) => i.textContent?.trim());
+		expect(names.at(-1)).toBe('Assign folder…');
+		await unmountAll((current as NonNullable<typeof current>).root);
+		await open(fakeApp(), { project: { ...PROJECT, records: ['iterations.json'] } });
+		expect((await openMenu(button('More'))).map((i) => i.textContent?.trim())).not.toContain('Assign folder…');
+	});
+
+	it('opens a modal with the folder field, on the folder the project is in, and Assign off until it changes', async () => {
+		await open(fakeApp(), briefed('Admin'));
+		await assign();
+		expect(document.querySelector('[data-slot="dialog-title"]')?.textContent).toBe('Assign folder');
+		expect((document.getElementById('assign-folder') as HTMLElement).textContent).toBe('Admin');
+		expect(button('Assign').disabled).toBe(true);
+	});
+
+	it('assigns the folder chosen, closes, and opens on it the next time', async () => {
+		const app = fakeApp({ assignFolder: async () => ok(undefined) });
+		await open(app, briefed('Admin'));
+		await assign();
+		await pickFolder('Roles');
+		await press(button('Assign'));
+		await settle();
+		expect(app.calls.assignFolder).toEqual([['demo', 'Roles']]);
+		expect(document.querySelector('[data-slot="dialog-title"]')).toBeNull();
+		await assign();
+		expect((document.getElementById('assign-folder') as HTMLElement).textContent).toBe('Roles');
+	});
+
+	it('makes a new folder by putting the project in it, with Assign off until it has a name', async () => {
+		const app = fakeApp({ assignFolder: async () => ok(undefined) });
+		await open(app, briefed());
+		await assign();
+		await pickFolder('Add new folder');
+		expect(button('Assign').disabled).toBe(true);
+		await typeInto(document.getElementById('assign-folder-new') as HTMLInputElement, 'Alerts');
+		await press(button('Assign'));
+		await settle();
+		expect(app.calls.assignFolder).toEqual([['demo', 'Alerts']]);
+		await assign();
+		expect((document.getElementById('assign-folder') as HTMLElement).textContent).toBe('Alerts');
+	});
+
+	it('keeps Assign off while a new folder has no name, for a project already in a folder', async () => {
+		await open(fakeApp(), briefed('Admin'));
+		await assign();
+		await pickFolder('Add new folder');
+		expect(button('Assign').disabled).toBe(true);
+		// A name typed and taken out again is still no name.
+		await typeInto(document.getElementById('assign-folder-new') as HTMLInputElement, 'x');
+		await typeInto(document.getElementById('assign-folder-new') as HTMLInputElement, '');
+		expect(button('Assign').disabled).toBe(true);
+	});
+
+	it('takes it out of its folder', async () => {
+		const app = fakeApp({ assignFolder: async () => ok(undefined) });
+		await open(app, briefed('Admin'));
+		await assign();
+		await pickFolder('No folder');
+		await press(button('Assign'));
+		await settle();
+		expect(app.calls.assignFolder).toEqual([['demo', null]]);
+	});
+
+	it('says why it could not, in the modal, and stays open', async () => {
+		await open(fakeApp({ assignFolder: async () => fail('Saving needs write access to the design repository.') }), briefed());
+		await assign();
+		await pickFolder('Admin');
+		await press(button('Assign'));
+		await settle();
+		expect(document.querySelector('[data-slot="dialog-content"]')?.textContent).toContain('Saving needs write access to the design repository.');
+	});
+});
+
