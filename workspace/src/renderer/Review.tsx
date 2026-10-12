@@ -445,7 +445,7 @@ export const Review = ({
 						</Button>
 					)}
 					{page.state === 'publishing' && (
-						<Button variant="outline" disabled title="Being put on its page. This takes a minute or two.">
+						<Button variant="outline" disabled>
 							Publishing…
 						</Button>
 					)}

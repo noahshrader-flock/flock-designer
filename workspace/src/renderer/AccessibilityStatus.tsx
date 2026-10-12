@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { countsOf, foundIn, summaryOf } from '../shared/accessibility';
 import { plural } from '../shared/plural';
 import type { AccessibilityIssue, AccessibilityResult } from '../shared/contract';
+import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Spinner } from './ui/spinner';
@@ -95,15 +96,31 @@ export const AccessibilityStatus = ({ projectId, name, opened }: { projectId: st
 	if (check === null) return null;
 	if (check.state === 'checking')
 		return (
-			<Button variant="ghost" size="icon" disabled aria-label="Checking accessibility…" title="Checking accessibility…">
+			<Button variant="ghost" size="icon" disabled aria-label="Checking accessibility…">
 				<Spinner />
 			</Button>
 		);
+	// Why it could not be checked is said where it can be read: a disabled button would never show it.
 	if (check.state === 'failed')
 		return (
-			<Button variant="ghost" size="icon" disabled aria-label="Accessibility not checked" title={check.error}>
-				<AccessibilityIcon />
-			</Button>
+			<>
+				<Button variant="ghost" size="icon" aria-label={`Accessibility not checked: ${check.error}`} onClick={() => setOpen(true)}>
+					<AccessibilityIcon />
+				</Button>
+				<Dialog open={open} onOpenChange={setOpen}>
+					<DialogContent className="sm:max-w-xl">
+						<DialogHeader>
+							<DialogTitle>Accessibility</DialogTitle>
+							<DialogDescription>Not checked</DialogDescription>
+						</DialogHeader>
+						<DialogBody className="flex flex-col gap-3">
+							<Alert variant="destructive">
+								<AlertDescription className="wrap-anywhere whitespace-pre-wrap">{check.error}</AlertDescription>
+							</Alert>
+						</DialogBody>
+					</DialogContent>
+				</Dialog>
+			</>
 		);
 	const { result } = check;
 	const summary = summaryOf(countsOf(result));

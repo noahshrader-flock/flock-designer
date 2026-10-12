@@ -102,16 +102,21 @@ describe('a prototype’s accessibility', () => {
 		expect(control().disabled).toBe(true);
 		expect(control().querySelector('[data-slot="spinner"], .animate-spin')).not.toBeNull();
 		expect(control().getAttribute('aria-label')).toBe('Checking accessibility…');
+		expect(control().title).toBe('');
 		expect(control().textContent).toBe('');
 	});
 
-	it('says it was not checked, and why, when the check could not run, with the icon and nothing to open', async () => {
-		await show(fail('The page did not load in its empty state, so it could not be checked.'));
-		expect(control().disabled).toBe(true);
+	it('says it was not checked, and why, where the reason can be read: a button that opens it, named with it', async () => {
+		const why = 'The page did not load in its empty state, so it could not be checked.';
+		await show(fail(why));
+		// Not a disabled button with the reason in its title: a disabled button never shows a title.
+		expect(control().disabled).toBe(false);
 		expect(control().querySelector('.lucide-accessibility')).not.toBeNull();
-		expect(control().getAttribute('aria-label')).toBe('Accessibility not checked');
-		expect(control().title).toBe('The page did not load in its empty state, so it could not be checked.');
+		expect(control().getAttribute('aria-label')).toBe(`Accessibility not checked: ${why}`);
 		expect(control().textContent).toBe('');
+		await press(control());
+		expect(dialog()!.textContent).toContain('Not checked');
+		expect(dialog()!.textContent).toContain(why);
 	});
 
 	it('is not asked for before the page is open', async () => {

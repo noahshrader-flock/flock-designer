@@ -72,3 +72,33 @@ describe('Sync', () => {
 		expect(button('Syncing…').disabled).toBe(true);
 	});
 });
+
+describe('a button that is always off', () => {
+	it('never keeps something to say in its title: a disabled button cannot be hovered, so its title is never shown', () => {
+		const files = (dir: string): string[] =>
+			readdirSync(dir).flatMap((n) => (statSync(join(dir, n)).isDirectory() ? files(join(dir, n)) : n.endsWith('.tsx') ? [join(dir, n)] : []));
+		/** Each `<Button …>` or `<button …>` opening tag, read to its closing `>` outside any `{…}`. */
+		const tags = (text: string): string[] => {
+			const found: string[] = [];
+			for (const m of text.matchAll(/<(Button|button)\b/g)) {
+				let depth = 0;
+				for (let i = m.index ?? 0; i < text.length; i++) {
+					const c = text[i];
+					if (c === '{') depth++;
+					else if (c === '}') depth--;
+					else if (c === '>' && depth === 0) {
+						found.push(text.slice(m.index ?? 0, i + 1));
+						break;
+					}
+				}
+			}
+			return found;
+		};
+		const offWithTitle = ['src/renderer', 'src/viewer']
+			.flatMap((d) => files(join(__dirname, '..', d)))
+			.filter((f) => !f.includes(`${join('renderer', 'ui')}`))
+			.flatMap((f) => tags(readFileSync(f, 'utf8')).filter((t) => /\sdisabled(\s|\/?>)/.test(t) && /\stitle=/.test(t)).map((t) => `${f}: ${t.slice(0, 80)}`));
+		expect(offWithTitle).toEqual([]);
+	});
+});
+

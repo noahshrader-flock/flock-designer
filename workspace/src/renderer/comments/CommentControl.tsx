@@ -18,12 +18,13 @@ export const CommentControl = ({
 	/** Nothing to comment on yet: the page is not up. */
 	disabled: boolean;
 }) => (
+	// Each title is a hint for when the button can be pressed: a disabled button never shows one.
 	<div className="flex items-center">
 		<Button
 			variant={comments.commentMode ? 'default' : 'outline'}
 			aria-pressed={comments.commentMode}
 			disabled={disabled}
-			title="Comment: click anywhere on the page to leave one (C)"
+			title={disabled ? undefined : 'Comment: click anywhere on the page to leave one (C)'}
 			className="rounded-r-none"
 			onClick={comments.toggleCommentMode}
 		>
@@ -35,7 +36,7 @@ export const CommentControl = ({
 			aria-pressed={listOpen}
 			aria-label="Show all comments"
 			disabled={disabled}
-			title={comments.total > 0 ? `All comments (${comments.total})` : 'All comments'}
+			title={disabled ? undefined : comments.total > 0 ? `All comments (${comments.total})` : 'All comments'}
 			className="rounded-l-none border-l-0"
 			onClick={onToggleList}
 		>
