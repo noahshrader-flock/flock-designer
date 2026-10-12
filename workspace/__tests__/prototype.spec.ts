@@ -159,7 +159,7 @@ describe('what the agent is told', () => {
 	});
 
 	it('asks for the audit before any code changes', () => {
-		const task = moveToCodeTask({ skill: 's', pageFile: '/q/i1.html', auditFile: '/d/projects/users/audit-i1.md', name: 'i1' });
+		const task = moveToCodeTask({ skill: 's', pageFile: '/q/i1.html', auditFile: '/d/projects/users/audit-i1.md', name: 'i1', accessibility: '', voice: '', lightCheck: null, shared: '' });
 		expect(task).toContain('Write the audit to `/d/projects/users/audit-i1.md` before you change any code.');
 	});
 

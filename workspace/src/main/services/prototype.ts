@@ -4,6 +4,7 @@ import { dirname } from 'node:path';
 import type { Iteration, Person } from '../../shared/contract';
 import { assertCover, briefFolder, firstHeading, folderName, isPrototypeName, nextPrototypeName, projectPath, prototypeKey, withFolder } from '../../shared/projects';
 import { addressOpening } from './address';
+import { lightCheckLine } from './engineeringHandoff';
 import { resolveInside } from './paths';
 import { parseIterations } from '../../shared/records';
 
@@ -340,9 +341,15 @@ export const moveToCodeTask = ({
 	sourceFile,
 	accessibility,
 	voice,
+	lightCheck,
+	shared,
 }: {
 	skill: string;
 	pageFile: string;
+	/** The product's `check-iteration` command, or null when its workspace file names none. */
+	lightCheck: string | null;
+	/** The shared folders the agent may read (`sharedGuidance().note`): opened in the editor, it is given no others. */
+	shared: string;
 	/** The accessibility section (`taskAccessibility`), with what the prototype's check left open. */
 	accessibility: string;
 	/** The voice and tone section (`taskVoice`): empty when the design repository has none written. */
@@ -368,7 +375,8 @@ export const moveToCodeTask = ({
 			? `It was modeled on \`${basedOn.branch}\` of ${basedOn.repository}${basedOn.commit ? ` at ${basedOn.commit.slice(0, 7)}` : ''}; the code may have moved on since.`
 			: 'It was made without the product code to look at, so expect more of it to differ from how the product really works.',
 		`Write the audit to \`${auditFile}\` before you change any code.`,
+		lightCheckLine(lightCheck),
 		'',
 		accessibility,
 		...(voice ? ['', voice] : []),
-	].join('\n');
+	].join('\n') + shared;

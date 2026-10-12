@@ -52,8 +52,9 @@ is wiring the plumbing, not rebuilding yours.
 - **Name the branch `branchPattern.codebase`**, with the project's id. When new work starts from the baseline, create it
   yourself before writing any file. DSNR finds the work by that name and `flock-designer/projects/<project-id>/`.
 - **Record where the work is**, as `../skills/record-the-route.md` says, when the view first loads.
-- **How an unattended run starts and finishes** is `../skills/codebase-work.md`, which a run DSNR starts carries in its
-  task.
+- **How an unattended run starts and finishes** is `../skills/codebase-work.md`, which an unattended run DSNR starts
+  carries in its task. **Build in the codebase** is watched, in the person's editor: `../skills/move-to-code.md` says
+  what it needs.
 
 ## What to read, in order
 

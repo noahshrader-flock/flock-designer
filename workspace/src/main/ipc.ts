@@ -1535,6 +1535,8 @@ export const registerIpc = ({
 					// checked now when it was not already. A check that cannot run leaves the findings out, never the move.
 					accessibility: await codebaseAccessibility(canonical, await prototypeAccessibility(projectId, name).catch(() => null)),
 					voice: await work.voice(canonical),
+					lightCheck: commandLine(descriptorFor(root).commands, 'check-iteration', projectId),
+					shared: sharedGuidance(canonical).note,
 				}),
 			);
 			const prompt = moveToCodePrompt({ label, projectId, taskFile, continuing: continuing ? branch : null });

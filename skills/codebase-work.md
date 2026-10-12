@@ -1,9 +1,9 @@
 # Codebase work, unattended
 
-**Shared by every product.** The app puts this file in the task of every agent run it starts on a
-product's codebase branch: codebase work started from **New**, and **Build in the codebase**. The product's
-own agent instructions say how to build there; this says how an unattended run starts and finishes, which
-is the same everywhere.
+**Shared by every product.** The app puts this file in the task of every agent run it starts unattended on
+a product's codebase branch. It is for unattended runs only: **Build in the codebase** opens in the
+person's editor, watched, and its own skill says what that run needs. The product's own agent instructions
+say how to build there; this says how an unattended run starts and finishes, which is the same everywhere.
 
 ## Nobody is there to answer
 

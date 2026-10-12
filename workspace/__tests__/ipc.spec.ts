@@ -1391,6 +1391,16 @@ describe('prototypes', () => {
 			expect(readFileSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'), 'utf8')).not.toContain('left open');
 		});
 
+		it('tells its agent this product’s light check and where the shared skills and standards are, which nothing else does', async () => {
+			await saved();
+			expect((await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
+			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'), 'utf8');
+			// The fixture's workspace file names none, so the agent is told what to run instead.
+			expect(task).toContain("This product's workspace file names no light check (`check-iteration`)");
+			expect(task).toContain('## Also yours to read (never change)');
+			expect(task).toMatch(/- Shared standards: `[^`]*flock-designer\/standards`/);
+		});
+
 		it('writes Flock’s voice and tone into the task beside the prototype, after the accessibility rules (T9)', async () => {
 			await saved();
 			mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });

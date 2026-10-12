@@ -9,9 +9,11 @@ running the product. Most of it is the real thing; what is not is marked. It sho
 in real components. Your job is to put it where it really belongs in this product, write down what that
 takes for a person to check, and then build it properly.
 
-**This is codebase work, unattended:** `codebase-work.md` (in your task too) says how it runs and
-finishes: nobody to answer, the light check, commit as you go, reviews at Handoff. What follows is only
-what moving a prototype adds.
+**This is codebase work, with the person watching** (it opens in their editor). Check each step with the
+product's light check, named in this task, and fix what it finds. Commit as you go, on this branch, with
+**no `Co-Authored-By` or other attribution line**; never push, never switch branches. The reviews and the
+full checks are not this run's: they happen at **Handoff**. What follows is only what moving a prototype
+adds.
 
 - **The agent that builds writes the audit.** If this repository hands the work to another agent, give it
   this file unchanged, with the paths the task names; do not paraphrase it.
@@ -84,4 +86,5 @@ there: fix each in the code, or say in the audit why not.
 
 ## When you have finished
 
-As `codebase-work.md` says, and also: what is waiting in **Needs a decision**, and where the audit is.
+Say what you built, where, the light check's result, and what is still open: what is waiting in **Needs a
+decision**, and where the audit is. Say that the reviews run at Handoff.

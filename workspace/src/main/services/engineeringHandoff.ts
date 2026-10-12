@@ -20,7 +20,7 @@ export const commandLine = (commands: WorkspaceCommand[], id: string, projectId:
 	return found ? found.argv.map((a) => a.replaceAll('<project-id>', projectId)).join(' ') : null;
 };
 
-const lightCheckLine = (lightCheck: string | null): string =>
+export const lightCheckLine = (lightCheck: string | null): string =>
 	lightCheck
 		? `This product's light check is \`${lightCheck}\`.`
 		: "This product's workspace file names no light check (`check-iteration`): run its type check, lint and the tests for what you changed.";
