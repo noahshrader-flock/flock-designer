@@ -30,7 +30,7 @@ export type BuildPhase =
 	| { kind: 'reported' }
 	| { kind: 'failed'; message: string };
 
-export type BuildApi = Pick<WorkspaceApi, 'openCheckout' | 'continueIteration' | 'startAgent' | 'startHandoff' | 'agentStatus' | 'startCommand'>;
+export type BuildApi = Pick<WorkspaceApi, 'readCheckout' | 'continueIteration' | 'startAgent' | 'startHandoff' | 'agentStatus' | 'startCommand'>;
 
 /**
  * From the iteration's own name, which the main process already normalized, rather than a
@@ -149,7 +149,7 @@ export const runLocalBuild = async ({
 
 	// The checkout has to be on this iteration's branch. A dirty tree stops it, and the
 	// message says what to do about it.
-	const opened = await api.openCheckout(root);
+	const opened = await api.readCheckout(root);
 	// Checked before every step that changes something, not just at the end: a screen that
 	// has gone (or that React ran twice on purpose) must not still be switching branches.
 	if (!isLive()) return null;
@@ -178,7 +178,7 @@ export const runLocalBuild = async ({
 		if (!isLive()) return null;
 		// A run that says it finished but left changes it never committed did not finish: what it was doing is
 		// not on the branch, and the preview would show half of it as if it were the work.
-		const after = await api.openCheckout(root);
+		const after = await api.readCheckout(root);
 		if (after.ok && !after.value.clean) {
 			return fail('The agent stopped before it committed all of its work: there are changes in the checkout it did not commit. Continue in Claude Code to finish them.');
 		}

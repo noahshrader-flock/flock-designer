@@ -65,7 +65,7 @@ const subscribe = <T>(channel: string, listener: (payload: T) => void): (() => v
 
 const api: WorkspaceApi = {
 	chooseCheckout: () => invoke<Checkout | null>(CHANNELS.chooseCheckout),
-	openCheckout: (root) => invoke<Checkout>(CHANNELS.openCheckout, root),
+	readCheckout: (root) => invoke<Checkout>(CHANNELS.readCheckout, root),
 	readContextReceipt: (root) => invoke<ContextReceipt>(CHANNELS.readContextReceipt, root),
 
 	listIterations: (root, projectId) => invoke<Iteration[]>(CHANNELS.listIterations, root, projectId),

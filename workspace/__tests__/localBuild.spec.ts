@@ -12,7 +12,7 @@ const api = (over: Partial<Record<keyof BuildApi, unknown>> = {}) => {
 	const calls: string[] = [];
 	const ok = (name: string, value: unknown) => vi.fn(async () => (calls.push(name), { ok: true as const, value }));
 	const a = {
-		openCheckout: ok('openCheckout', { root: '/r', name: 'coke', branch: 'fd/users/i1', clean: true }),
+		readCheckout: ok('readCheckout', { root: '/r', name: 'coke', branch: 'fd/users/i1', clean: true }),
 		continueIteration: ok('continueIteration', {}),
 		startAgent: ok('startAgent', { state: 'running', startedAt: 'now' }),
 		startHandoff: ok('startHandoff', { state: 'running', startedAt: 'now', work: 'fd/users/i1', purpose: 'handoff' }),
@@ -45,7 +45,7 @@ describe('opening an iteration', () => {
 	});
 
 	it('moves the checkout to the iteration\'s branch when it is elsewhere', async () => {
-		const { a, calls } = api({ openCheckout: vi.fn(async () => ({ ok: true, value: { branch: 'develop' } })) });
+		const { a, calls } = api({ readCheckout: vi.fn(async () => ({ ok: true, value: { branch: 'develop' } })) });
 		await run(a);
 		expect(a.continueIteration).toHaveBeenCalledWith('/r', 'users', 'i1');
 		expect(calls).toContain('startCommand');
@@ -109,7 +109,7 @@ describe('work that was just created', () => {
 describe('when something goes wrong', () => {
 	it('reports a dirty working tree with what it was told, instead of carrying on', async () => {
 		const { a } = api({
-			openCheckout: vi.fn(async () => ({ ok: true, value: { branch: 'develop' } })),
+			readCheckout: vi.fn(async () => ({ ok: true, value: { branch: 'develop' } })),
 			continueIteration: vi.fn(async () => ({ ok: false, error: 'There are uncommitted changes. Commit them first.' })),
 		});
 		const { url, phases } = await run(a);
@@ -131,7 +131,7 @@ describe('when something goes wrong', () => {
 	});
 
 	it('reports a failure to reach the repository', async () => {
-		const { a } = api({ openCheckout: vi.fn(async () => ({ ok: false, error: 'not a git repository' })) });
+		const { a } = api({ readCheckout: vi.fn(async () => ({ ok: false, error: 'not a git repository' })) });
 		const { phases } = await run(a);
 		expect(phases).toEqual([{ kind: 'failed', message: 'not a git repository' }]);
 	});
@@ -143,7 +143,7 @@ describe('when nobody is looking any more', () => {
 		let live = true;
 		const phases: BuildPhase[] = [];
 		const url = await runLocalBuild({
-			api: { ...a, openCheckout: vi.fn(async () => { live = false; return { ok: true as const, value: { root: '/r', name: 'c', branch: 'fd/users/i1', clean: true } }; }) } as BuildApi,
+			api: { ...a, readCheckout: vi.fn(async () => { live = false; return { ok: true as const, value: { root: '/r', name: 'c', branch: 'fd/users/i1', clean: true } }; }) } as BuildApi,
 			root: '/r', project, iteration: iteration(), isLive: () => live, onPhase: (p) => phases.push(p),
 		});
 		expect(url).toBeNull();
@@ -156,7 +156,7 @@ describe('when nobody is looking any more', () => {
 		// still switched branches, two checkouts ran at once and one hit git's lock.
 		let live = true;
 		const { a } = api({
-			openCheckout: vi.fn(async () => {
+			readCheckout: vi.fn(async () => {
 				live = false;
 				return { ok: true, value: { branch: 'develop' } };
 			}),
@@ -187,7 +187,7 @@ describe('when nobody is looking any more', () => {
 	it('does not call a run finished that left changes it never committed', async () => {
 		let opens = 0;
 		const { a, calls } = api({
-			openCheckout: vi.fn(async () => ({ ok: true, value: { root: '/r', name: 'coke', branch: 'fd/users/i1', clean: opens++ === 0 } })),
+			readCheckout: vi.fn(async () => ({ ok: true, value: { root: '/r', name: 'coke', branch: 'fd/users/i1', clean: opens++ === 0 } })),
 		});
 		const { phases } = await run(a, { task: 'build it' });
 		expect(phases.at(-1)).toMatchObject({ kind: 'failed', message: expect.stringMatching(/did not commit/) });
@@ -219,7 +219,7 @@ describe('when nobody is looking any more', () => {
 	});
 
 	it('says when the checkout has changes nobody here made, and still opens the preview', async () => {
-		const { a } = api({ openCheckout: vi.fn(async () => ({ ok: true, value: { root: '/r', name: 'coke', branch: 'fd/users/i1', clean: false } })) });
+		const { a } = api({ readCheckout: vi.fn(async () => ({ ok: true, value: { root: '/r', name: 'coke', branch: 'fd/users/i1', clean: false } })) });
 		const { phases } = await run(a);
 		expect(phases.at(-1)).toMatchObject({ kind: 'running', uncommitted: true });
 	});

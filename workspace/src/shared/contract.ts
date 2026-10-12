@@ -510,7 +510,7 @@ export interface WorkspaceApi {
 	/** Native directory picker. Resolves to null if the designer cancels. */
 	chooseCheckout(): Promise<Result<Checkout | null>>;
 	/** Open a checkout by path, validating it is a repository. */
-	openCheckout(root: string): Promise<Result<Checkout>>;
+	readCheckout(root: string): Promise<Result<Checkout>>;
 	/** Read the repository's descriptor and resolve what it points at. */
 	readContextReceipt(root: string): Promise<Result<ContextReceipt>>;
 
@@ -1061,7 +1061,7 @@ export interface PageBounds {
 /** Channel names, in one place so main and preload cannot drift. */
 export const CHANNELS = {
 	chooseCheckout: 'workspace:chooseCheckout',
-	openCheckout: 'workspace:openCheckout',
+	readCheckout: 'workspace:readCheckout',
 	readContextReceipt: 'workspace:readContextReceipt',
 	listIterations: 'workspace:listIterations',
 	continueIteration: 'workspace:continueIteration',

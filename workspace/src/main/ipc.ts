@@ -572,7 +572,9 @@ export const registerIpc = ({
 		guard((root: string) => branchesWithFile(opened.require(root), DESCRIPTOR_PATH)),
 	);
 
-	ipcMain.handle(CHANNELS.openCheckout, guard((root: string) => openRepository(root)));
+	// Re-reads a checkout the person already opened; it trusts and remembers nothing, so the window naming a folder
+	// is never enough to make it trusted (only the picker, a repository discovery found, the last one, and a clone are).
+	ipcMain.handle(CHANNELS.readCheckout, guard((root: string) => readCheckout(opened.require(root))));
 
 	ipcMain.handle(
 		CHANNELS.readContextReceipt,

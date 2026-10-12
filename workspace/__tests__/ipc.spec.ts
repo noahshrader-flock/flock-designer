@@ -586,7 +586,7 @@ describe('where clones go', () => {
 			g(product, 'branch', 'noah/elsewhere');
 			const clone = join(home, 'GitHub', 'coke-clone');
 			g(home, 'clone', '-q', product, clone);
-			await call(CHANNELS.openCheckout, clone);
+			await call(CHANNELS.useCheckout, clone);
 			await savedPrototype(clone);
 			expect(g(clone, 'branch', '--list', 'noah/elsewhere').trim()).toBe('');
 			const r = await build(clone, 'noah/elsewhere');
@@ -645,6 +645,18 @@ describe('discovery suggests; it does not trust', () => {
 		const r = await call(CHANNELS.lastCheckout);
 		expect(r.value).toBeNull();
 		expect(opened.has(product)).toBe(false);
+	});
+
+	it('re-reads only a repository already opened, and never trusts or remembers one because the window names it', async () => {
+		const elsewhere = mkdtempSync(join(tmpdir(), 'fdw-named-'));
+		makeProduct(elsewhere);
+		const named = await call(CHANNELS.readCheckout, elsewhere);
+		expect(named.ok).toBe(false);
+		expect(opened.has(elsewhere)).toBe(false);
+		expect((await call(CHANNELS.lastCheckout)).value).toBeNull();
+		await call(CHANNELS.useCheckout, product);
+		expect(await call(CHANNELS.readCheckout, product)).toMatchObject({ ok: true, value: { root: realpathSync(product) } });
+		rmSync(elsewhere, { recursive: true, force: true });
 	});
 
 	it('accepting the suggestion is what trusts it', async () => {
