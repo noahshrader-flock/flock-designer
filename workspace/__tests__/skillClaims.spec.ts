@@ -19,17 +19,18 @@ const TASKS: Record<string, (text: string) => string> = {
 const claimed = (text: string): string[] => [...text.matchAll(/`([\w./-]+\.md)`[^`.\n]{0,40}\bin (?:your|the) task\b/g)].map((m) => m[1] as string);
 
 describe('what a skill says is in its task', () => {
-	const withClaims = readdirSync(SKILLS)
-		.filter((f) => f.endsWith('.md'))
-		.map((f) => [f, claimed(skill(f))] as const)
-		.filter(([, files]) => files.length > 0);
-
-	it.each(withClaims.length ? withClaims : [['(none)', []] as const])('is there, for %s', (name, files) => {
-		if (!files.length) return;
-		const build = TASKS[name];
-		expect(build, `${name} says ${files.join(', ')} is in its task: add the task it is given in to TASKS`).toBeDefined();
-		const task = build?.(skill(name)) ?? '';
-		for (const file of files) expect(task, `${name} says ${file} is in its task`).toContain(skill(file).split('\n')[0]);
+	it('is there', () => {
+		const missing = readdirSync(SKILLS)
+			.filter((f) => f.endsWith('.md'))
+			.flatMap((name) => {
+				const files = claimed(skill(name));
+				if (files.length === 0) return [];
+				const build = TASKS[name];
+				if (!build) return [`${name} says ${files.join(', ')} is in its task: add the task it is given in to TASKS`];
+				const task = build(skill(name));
+				return files.filter((file) => !task.includes(skill(file).split('\n')[0] ?? '')).map((file) => `${name} says ${file} is in its task`);
+			});
+		expect(missing).toEqual([]);
 	});
 
 	it('is found when a skill says it', () => {
