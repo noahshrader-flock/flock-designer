@@ -2,7 +2,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { addressTask, prepareAddress } from '../src/main/services/address';
+import { prepareAddress } from '../src/main/services/address';
+import { addressTask } from '../src/main/services/agentTasks';
 import { type AddressPhase, runAddress, runPrototypeAddress } from '../src/renderer/address';
 import type { AgentStatus, ReviewComment, Result } from '../src/shared/contract';
 

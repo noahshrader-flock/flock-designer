@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { moveToCodeTask } from '../src/main/services/prototype';
+import { codebaseTask, handoffTask, moveToCodeTask, prototypeAddressTask, prototypeBuildTask } from '../src/main/services/agentTasks';
 
 const SKILLS = join(__dirname, '../../skills');
 const skill = (name: string): string => readFileSync(join(SKILLS, name), 'utf8');
@@ -10,17 +10,33 @@ const skill = (name: string): string => readFileSync(join(SKILLS, name), 'utf8')
  * The task each skill is given in, built from the real skill. A skill that says another file is "in your task" is
  * believed by the agent; when it is not there, the agent works without it and never knows.
  */
+const parts = { lightCheck: null, shared: '', accessibility: '', voice: '' };
+const prototypeBuild = { source: '/p/i1.tsx', page: '/p/i1.html', buildCommand: 'node build' };
+const sources = {
+	code: '/p/code',
+	productGuidance: null,
+	designSystemGuidance: null,
+	installedDesignSystem: null,
+	sharedStandards: null,
+	nodeModules: null,
+};
 const TASKS: Record<string, (text: string) => string> = {
-	'move-to-code.md': (text) =>
-		moveToCodeTask({
-			skill: text,
-			pageFile: '/p/i1.html',
-			auditFile: '/d/audit-i1.md',
-			name: 'i1',
+	'move-to-code.md': (text) => moveToCodeTask({ skill: text, pageFile: '/p/i1.html', auditFile: '/d/audit-i1.md', name: 'i1' }, parts),
+	'codebase-work.md': (text) => codebaseTask({ unattended: text, task: 'The task.' }, parts),
+	'handoff.md': (text) => handoffTask({ skill: text, projectId: 'p', branch: 'feature/p', gate: null }, parts),
+	'build-prototype.md': (text) =>
+		prototypeBuildTask({ skill: text, build: prototypeBuild, sources, accessibility: '', voice: '', request: 'A list' }),
+	'address-comments.md': (text) =>
+		prototypeAddressTask({
+			addressSkill: text,
+			buildSkill: '',
+			build: prototypeBuild,
+			sources,
 			accessibility: '',
 			voice: '',
-			lightCheck: null,
-			shared: '',
+			commentsPath: '/p/comments.md',
+			number: 1,
+			name: 'v1-i1',
 		}),
 };
 

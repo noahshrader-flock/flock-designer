@@ -1,4 +1,5 @@
 import { AGENT_BUSY } from './agent';
+import { addressTask } from './agentTasks';
 import type { ReviewComment } from '../../shared/contract';
 import { type ExportInput, writeCommentsExport } from './commentsExport';
 import { numberComments, openComments } from '../../shared/comments';
@@ -37,32 +38,6 @@ export interface AddressTarget {
 
 /** The skill, relative to the design repository. Shared by every product. */
 export const ADDRESS_SKILL = 'skills/address-comments.md';
-
-/**
- * How every address task begins, on a branch or on a prototype. `number` is the comment to act on -- the number the
- * designer read off its pin. The file still holds every comment, because it is the project's file and its pictures
- * are kept in step with it, so which one to act on is said here rather than by narrowing the file.
- */
-export const addressOpening = (number: number, commentsPath: string, subject: string): string[] => [
-	`Address comment ${number} on ${subject}, and only that one.`,
-	`The comments are in ${commentsPath}, written from GitHub a moment ago. Read it first.`,
-	`Act on comment ${number} alone. The others are listed for context: leave them, and do not mention them except to say you left them.`,
-];
-
-/**
- * The task the agent is given on a branch. It names the skill, the file and the branch, all of which this app
- * produced, and **none of what a reviewer wrote**: their words reach the agent only through the file, quoted,
- * under a heading that says they are feedback and not instructions.
- */
-export const addressTask = (commentsPath: string, branch: string, skill: string, only: number): string =>
-	[
-		...addressOpening(only, commentsPath, 'this project'),
-		`This iteration's branch is ${branch}.`,
-		'',
-		'Follow these instructions:',
-		'',
-		skill.trim(),
-	].join('\n');
 
 /**
  * The number of the one comment to act on, from a read made just now. The fresh read is what catches a comment

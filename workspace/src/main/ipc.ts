@@ -29,7 +29,8 @@ import {
 import { type Appearance, isAppearance } from '../shared/appearance';
 import { AGENT_BUSY, type AgentExtras, AgentRunner, agentReadiness, locateClaude } from './services/agent';
 import { SessionMemory, findEditor, openFolder, openPrompt, openSession, resumeCommand, startCommand } from './services/editor';
-import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, codebaseWorkPreamble, commandLine, handoffTask } from './services/engineeringHandoff';
+import { type CheckoutParts, codebaseTask, handoffTask, moveToCodeTask, prototypeAddressTask, prototypeBuildTask } from './services/agentTasks';
+import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, commandLine } from './services/engineeringHandoff';
 import { lastVerdict } from '../shared/handoff';
 import { type ShareRunner, type ShareTools, previewIsUp, pullRequestText } from './services/share';
 import { realShareTools } from './services/shareTools';
@@ -110,9 +111,6 @@ import {
 	assignFolder,
 	cloneStore,
 	moveToCodePrompt,
-	moveToCodeTask,
-	prototypeAddressTask,
-	prototypeBuildTask,
 	prototypeReadable,
 	type PrototypeSources,
 } from './services/prototype';
@@ -666,32 +664,49 @@ export const registerIpc = ({
 		if (!found.length) return { dirs: [], note: '' };
 		return {
 			dirs: found.map(([, d]) => d),
-			note: ['', '', '## Also yours to read (never change)', '', ...found.map(([what, d]) => `- ${what}: \`${d}\``)].join('\n'),
+			note: ['## Also yours to read (never change)', '', ...found.map(([what, d]) => `- ${what}: \`${d}\``)].join('\n'),
 		};
 	};
 
 	/**
-	 * Starts a run the person can come back to: tagged with its branch, its conversation named and kept (so it can
-	 * be continued in VS Code), and given the shared guidance to read and the accessibility rules and the product's target
-	 * (T7). Every run in a product checkout starts here.
+	 * What every run in a product checkout is given besides its own task (`CheckoutParts`, put in place by `agentTasks`),
+	 * and the folders it may read for them. `findings`: what a prototype's own accessibility check left open, to fix.
 	 */
-	const startTracked = async (
+	const checkoutParts = async (
+		canonical: string,
+		projectId: string,
+		findings?: Parameters<typeof taskAccessibility>[2],
+	): Promise<{ parts: CheckoutParts; readOnly: string[] }> => {
+		const shared = sharedGuidance(canonical);
+		return {
+			readOnly: shared.dirs,
+			parts: {
+				lightCheck: commandLine(readDescriptor(canonical).commands, 'check-iteration', projectId),
+				shared: shared.note,
+				accessibility: await codebaseAccessibility(canonical, findings),
+				// The voice and tone (T9), from the design system beside this product; nothing while it is blank.
+				voice: await work.voice(canonical),
+			},
+		};
+	};
+
+	/**
+	 * Starts a run the person can come back to: tagged with its branch, and its conversation named and kept, so it can
+	 * be continued in VS Code. Every run in a product checkout starts here, with its whole task (`agentTasks`).
+	 */
+	const startTracked = (
 		canonical: string,
 		projectId: string,
 		task: string,
-		{ branch, addDirs, purpose }: { branch: string | null; addDirs: string[]; purpose?: AgentExtras['purpose'] },
+		{ branch, addDirs, readOnly, purpose }: { branch: string | null; addDirs: string[]; readOnly: string[]; purpose?: AgentExtras['purpose'] },
 	) => {
 		const session = randomUUID();
-		const shared = sharedGuidance(canonical);
-		const accessibility = await codebaseAccessibility(canonical);
-		// The voice and tone (T9), from the design system beside this product; nothing while it is blank.
-		const voice = await work.voice(canonical);
 		// Joining the run already going on this branch keeps that run's conversation, not this new name for it.
 		const joining = agentBusy();
-		const started = agent.start(canonical, projectId, `${task}${shared.note}\n\n${accessibility}${voice ? `\n\n${voice}` : ''}`, {
+		const started = agent.start(canonical, projectId, task, {
 			// The project's records live in the design repository, beside the product checkout.
 			addDirs,
-			readOnly: shared.dirs,
+			readOnly,
 			...(branch !== null ? { work: branch } : {}),
 			...(purpose ? { purpose } : {}),
 			session,
@@ -710,13 +725,14 @@ export const registerIpc = ({
 		const branch = (await readCheckout(canonical)).branch;
 		// On the project's codebase branch, the shared rules for unattended codebase work, and this product's light check.
 		const descriptor = descriptorFor(root);
-		const skill = branch === codebaseBranchFor(descriptor, projectId) ? await readDesignFile(CODEBASE_SKILL) : null;
-		const preamble = skill ? codebaseWorkPreamble(skill, commandLine(descriptor.commands, 'check-iteration', projectId)) : '';
+		const unattended = branch === codebaseBranchFor(descriptor, projectId) ? await readDesignFile(CODEBASE_SKILL) : null;
 		// A prototype being moved into the code is read from the app's own copy of it.
 		const prototypeFolder = join(prototypesRoot, projectId);
-		return startTracked(canonical, projectId, `${preamble}${task}`, {
+		const { parts, readOnly } = await checkoutParts(canonical, projectId);
+		return startTracked(canonical, projectId, codebaseTask({ unattended, task }, parts), {
 			branch,
 			addDirs: [recordsFor(canonical), ...(existsSync(prototypeFolder) ? [prototypeFolder] : [])],
+			readOnly,
 		});
 	});
 
@@ -781,7 +797,12 @@ export const registerIpc = ({
 			},
 			{ recordsRoot, projectId, iteration, commentId },
 		);
-		return startTracked(canonical, projectId, prepared.task, { branch: null, addDirs: [recordsRoot] });
+		const { parts, readOnly } = await checkoutParts(canonical, projectId);
+		return startTracked(canonical, projectId, codebaseTask({ unattended: null, task: prepared.task }, parts), {
+			branch: null,
+			addDirs: [recordsRoot],
+			readOnly,
+		});
 	});
 
 	// Sharing. The branch comes from this person's own record, never from the window, and
@@ -1337,15 +1358,10 @@ export const registerIpc = ({
 		if (here.branch !== iteration.branch) throw new Error(`Open ${iteration.branch} first: a handoff checks the work where it is.`);
 		refuseWhileBusy();
 		const skill = await readSkillText(HANDOFF_SKILL);
-		const task = handoffTask({
-			skill,
-			projectId,
-			branch: iteration.branch,
-			gate: commandLine(descriptor.commands, 'handoff', projectId),
-			lightCheck: commandLine(descriptor.commands, 'check-iteration', projectId),
-		});
+		const { parts, readOnly } = await checkoutParts(canonical, projectId);
+		const task = handoffTask({ skill, projectId, branch: iteration.branch, gate: commandLine(descriptor.commands, 'handoff', projectId) }, parts);
 		handoffStarts.set(canonical, { branch: iteration.branch, head: await headCommit(canonical) });
-		return startTracked(canonical, projectId, task, { branch: iteration.branch, addDirs: [recordsRoot], purpose: 'handoff' });
+		return startTracked(canonical, projectId, task, { branch: iteration.branch, addDirs: [recordsRoot], readOnly, purpose: 'handoff' });
 	});
 	/**
 	 * Whether the last Handoff here found the work ready: the run's own last verdict says so, and HANDOFF.md was
@@ -1391,20 +1407,19 @@ export const registerIpc = ({
 		const taskFile = join(dirname(pageFile), `${name}-into-code.md`);
 		writeFileSync(
 			taskFile,
-			moveToCodeTask({
-				skill,
-				pageFile,
-				sourceFile: source !== null ? sourceFile : null,
-				auditFile: join(recordsRoot, projectId, `audit-${name}.md`),
-				name,
-				basedOn: (await work.record(projectId, name))?.basedOn,
+			moveToCodeTask(
+				{
+					skill,
+					pageFile,
+					sourceFile: source !== null ? sourceFile : null,
+					auditFile: join(recordsRoot, projectId, `audit-${name}.md`),
+					name,
+					basedOn: (await work.record(projectId, name))?.basedOn,
+				},
 				// Built toward the product's target from the start, with what the prototype's check left open: its page
 				// checked now when it was not already. A check that cannot run leaves the findings out, never the move.
-				accessibility: await codebaseAccessibility(canonical, await prototypeAccessibility(projectId, name).catch(() => null)),
-				voice: await work.voice(canonical),
-				lightCheck: commandLine(descriptorFor(root).commands, 'check-iteration', projectId),
-				shared: sharedGuidance(canonical).note,
-			}),
+				(await checkoutParts(canonical, projectId, await prototypeAccessibility(projectId, name).catch(() => null))).parts,
+			),
 		);
 		const prompt = moveToCodePrompt({ label, projectId, taskFile, continuing: continuing ? branch : null });
 		const editor = findEditor();

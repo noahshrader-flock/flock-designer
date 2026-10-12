@@ -13,7 +13,8 @@ import { DESIGN_REPO, DesignRepo, type GitHubApi } from '../main/services/design
 import { recordsRootFor } from '../main/services/discovery';
 import { assertUsableProjectId } from '../main/services/iterations';
 import { readCheckout, git } from '../main/services/git';
-import { BUILD_SKILL, assertPrototypeName, cloneStore, prototypeBuildTask } from '../main/services/prototype';
+import { prototypeBuildTask } from '../main/services/agentTasks';
+import { BUILD_SKILL, assertPrototypeName, cloneStore } from '../main/services/prototype';
 import { shellLine } from '../main/services/prototypeBundle';
 import { localPrototypeFile, prototypeWork, whereTheChangeGoes } from '../main/services/prototypeWork';
 import { publish, recordsFrom, unpublish } from '../main/services/pages';

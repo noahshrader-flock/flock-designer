@@ -5,17 +5,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
 import { isPrototypeKey, prototypeKey, prototypePagePath } from '../src/shared/designPaths';
 import { nextPrototypeName } from '../src/shared/prototypeNames';
-import {
-	cloneStore,
-	moveToCodePrompt,
-	moveToCodeTask,
-	prototypeBuildTask,
-	prototypeReadable,
-	recordPrototype,
-	setCover,
-} from '../src/main/services/prototype';
+import { cloneStore, moveToCodePrompt, prototypeReadable, recordPrototype, setCover } from '../src/main/services/prototype';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { memoryStore } from './fixtures';
+import { moveToCodeTask, prototypeBuildTask } from '../src/main/services/agentTasks';
 import { claudeCodeAdapter } from '../src/main/services/agent';
 import { FIX_ROUNDS, type PrototypeApi, runPrototypeBuild } from '../src/renderer/prototypeBuild';
 import type { BuildPhase } from '../src/renderer/localBuild';
@@ -190,16 +183,10 @@ describe('what the agent is told', () => {
 	});
 
 	it('asks for the audit before any code changes', () => {
-		const task = moveToCodeTask({
-			skill: 's',
-			pageFile: '/q/i1.html',
-			auditFile: '/d/projects/users/audit-i1.md',
-			name: 'i1',
-			accessibility: '',
-			voice: '',
-			lightCheck: null,
-			shared: '',
-		});
+		const task = moveToCodeTask(
+			{ skill: 's', pageFile: '/q/i1.html', auditFile: '/d/projects/users/audit-i1.md', name: 'i1' },
+			{ lightCheck: null, shared: '', accessibility: '', voice: '' },
+		);
 		expect(task).toContain('Write the audit to `/d/projects/users/audit-i1.md` before you change any code.');
 	});
 
