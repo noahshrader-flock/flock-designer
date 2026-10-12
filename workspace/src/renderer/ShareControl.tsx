@@ -9,7 +9,6 @@ import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Spinner } from './ui/spinner';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /**
  * What can be done with this page beyond reviewing it, behind one menu: move a prototype into the code,
@@ -93,16 +92,11 @@ export const ShareControl = ({
 	return (
 		<>
 			<DropdownMenu>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<DropdownMenuTrigger asChild>
-							<Button size="icon" variant="ghost" aria-label="More" disabled={!canOpen && !documents}>
-								{running ? <Spinner /> : <EllipsisVerticalIcon />}
-							</Button>
-						</DropdownMenuTrigger>
-					</TooltipTrigger>
-					<TooltipContent>{running ? 'Sharing…' : 'More'}</TooltipContent>
-				</Tooltip>
+				<DropdownMenuTrigger asChild>
+					<Button size="icon" variant="ghost" aria-label="More" disabled={!canOpen && !documents}>
+						{running ? <Spinner /> : <EllipsisVerticalIcon />}
+					</Button>
+				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-auto">
 					{/* What can be done with the work needs its page up; the documents do not. */}
 					{canOpen && (

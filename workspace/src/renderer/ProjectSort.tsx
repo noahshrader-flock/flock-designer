@@ -2,7 +2,6 @@ import { ChevronDownIcon } from 'lucide-react';
 import type { ProjectOrder } from '../shared/projects';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 const ORDERS: { order: ProjectOrder; label: string }[] = [
 	{ order: 'updated', label: 'Last updated' },
@@ -14,17 +13,12 @@ export const ProjectSort = ({ order, onChange }: { order: ProjectOrder; onChange
 	const label = ORDERS.find((o) => o.order === order)?.label ?? '';
 	return (
 		<DropdownMenu>
-			<Tooltip>
-				<TooltipTrigger asChild>
-					<DropdownMenuTrigger asChild>
-						<Button variant="outline" aria-label={`Sort projects: ${label}`}>
-							{label}
-							<ChevronDownIcon />
-						</Button>
-					</DropdownMenuTrigger>
-				</TooltipTrigger>
-				<TooltipContent>Sort projects</TooltipContent>
-			</Tooltip>
+			<DropdownMenuTrigger asChild>
+				<Button variant="outline" aria-label={`Sort projects: ${label}`}>
+					{label}
+					<ChevronDownIcon />
+				</Button>
+			</DropdownMenuTrigger>
 			<DropdownMenuContent align="start" className="w-auto">
 				<DropdownMenuRadioGroup value={order} onValueChange={(value) => onChange(value as ProjectOrder)}>
 					{ORDERS.map((o) => (

@@ -5,7 +5,6 @@ import { stateLabel } from '../shared/prototypeStates';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /** What the switcher needs to know of an iteration: how it is named, and which it is. */
 export interface Switchable {
@@ -24,9 +23,8 @@ const Pick = ({
 	choices,
 	onChange,
 	icon,
-	tip = `Switch ${what}`,
 }: {
-	/** What it picks, for its tooltip and its name for assistive technology: "version", "iteration", "state". */
+	/** What it picks, for its name for assistive technology: "version", "iteration", "state". */
 	what: 'version' | 'iteration' | 'state';
 	/** The button's own words: `V2`, `I1`, `default`. */
 	label: string;
@@ -35,24 +33,18 @@ const Pick = ({
 	onChange: (value: string) => void;
 	/** Drawn instead of the label, which is then only in its name for assistive technology. */
 	icon?: ReactNode;
-	tip?: string;
 }) => (
 	<DropdownMenu>
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<DropdownMenuTrigger asChild>
-					<Button variant="outline" size={icon ? 'icon' : 'default'} aria-label={`${what[0]!.toUpperCase()}${what.slice(1)} ${label}: switch ${what}`}>
-						{icon ?? (
-							<>
-								{label}
-								<ChevronDownIcon />
-							</>
-						)}
-					</Button>
-				</DropdownMenuTrigger>
-			</TooltipTrigger>
-			<TooltipContent>{tip}</TooltipContent>
-		</Tooltip>
+		<DropdownMenuTrigger asChild>
+			<Button variant="outline" size={icon ? 'icon' : 'default'} aria-label={`${what[0]!.toUpperCase()}${what.slice(1)} ${label}: switch ${what}`}>
+				{icon ?? (
+					<>
+						{label}
+						<ChevronDownIcon />
+					</>
+				)}
+			</Button>
+		</DropdownMenuTrigger>
 		<DropdownMenuContent align="end" className="max-h-72 w-auto">
 			<DropdownMenuRadioGroup value={value} onValueChange={(next) => next !== value && onChange(next)}>
 				{choices.map((c) => (
@@ -66,7 +58,7 @@ const Pick = ({
 );
 
 /** The iteration is picked from its history: a clock icon, the menu newest first with the one shown checked. */
-const HISTORY = { icon: <HistoryIcon />, tip: 'History' };
+const HISTORY = { icon: <HistoryIcon /> };
 
 /**
  * Switching between a project's work. Prototypes have two, as they have two ideas of "another": **the version** (a
