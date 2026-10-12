@@ -1,4 +1,5 @@
 import { locateGh } from './ghCli';
+import { HostError } from './hostError';
 import { pushBranch } from './git';
 import { NotInstalled, ProcessFailed, runFile } from './process';
 import type { Check, PullRequest, ShareTools } from './share';
@@ -20,13 +21,13 @@ const NOT_INSTALLED =
 const NOT_SIGNED_IN = 'The GitHub CLI is installed but not signed in. Run `gh auth login` in a terminal, then try again.';
 
 /** A `gh` run that failed, keeping what it printed: some failures still carry the answer. */
-class GhFailure extends Error {
+class GhFailure extends HostError {
 	constructor(
 		message: string,
 		readonly stdout: string,
 		readonly stderr: string,
 	) {
-		super(message);
+		super(message, undefined, 'failed');
 	}
 }
 
@@ -36,9 +37,9 @@ const gh = async (root: string, bin: string, args: string[]): Promise<string> =>
 		const { stdout } = await runFile(bin, args, { cwd: root, maxBuffer: 8 * 1024 * 1024, env: { GH_PROMPT_DISABLED: '1', NO_COLOR: '1' } });
 		return stdout.trim();
 	} catch (err) {
-		if (err instanceof NotInstalled) throw new Error(NOT_INSTALLED);
+		if (err instanceof NotInstalled) throw new HostError(NOT_INSTALLED, undefined, 'missingCli');
 		if (!(err instanceof ProcessFailed)) throw err;
-		if (/gh auth login|not logged in|HTTP 401/i.test(err.message)) throw new Error(NOT_SIGNED_IN);
+		if (/gh auth login|not logged in|HTTP 401/i.test(err.message)) throw new HostError(NOT_SIGNED_IN, undefined, 'reauth');
 		// `gh` exits non-zero to say "checks are pending" or "a check failed" and still prints the answer.
 		throw new GhFailure(`The GitHub CLI said: ${err.message}`, err.stdout, err.stderr);
 	}

@@ -1,5 +1,5 @@
 import type { CommentAnchor, Person, Project, ProjectIteration, ReviewComment } from '../../shared/contract';
-import { GitHubError, httpStatus } from './github';
+import { HostError, hostErrorKind } from './hostError';
 import { isBot, mergePeople } from '../../shared/people';
 import { fromBrief } from '../../shared/brief';
 import { projectDir, projectPath } from '../../shared/designPaths';
@@ -161,7 +161,7 @@ export class DesignRepo {
 			const content = file.encoding === 'none' ? asRecord(await this.session.api(`${this.base}/git/blobs/${file.sha}`)).content : file.content;
 			return typeof content === 'string' ? { bytes: Buffer.from(content, 'base64'), sha: file.sha } : null;
 		} catch (err) {
-			if (httpStatus(err) === 404) return null;
+			if (hostErrorKind(err) === 'notFound') return null;
 			throw err;
 		}
 	}
@@ -172,7 +172,7 @@ export class DesignRepo {
 			await this.session.api(`${this.base}/contents/${path}`);
 			return true;
 		} catch (err) {
-			if (httpStatus(err) === 404) return false;
+			if (hostErrorKind(err) === 'notFound') return false;
 			throw err;
 		}
 	}
@@ -188,7 +188,7 @@ export class DesignRepo {
 				const have = asRecord(await this.session.api(`${this.base}/contents/${path}`));
 				sha = typeof have.sha === 'string' ? have.sha : undefined;
 			} catch (err) {
-				if (!(err instanceof GitHubError && err.status === 404)) throw err;
+				if (hostErrorKind(err) !== 'notFound') throw err;
 			}
 			await this.session.api(`${this.base}/contents/${path}`, {
 				method: 'PUT',
@@ -203,8 +203,8 @@ export class DesignRepo {
 			await put();
 		} catch (err) {
 			// Someone else changed it between the read and the write: read again and write once more.
-			if (err instanceof GitHubError && (err.status === 409 || err.status === 422)) return put();
-			if (err instanceof GitHubError && (err.status === 403 || err.status === 404)) {
+			if (hostErrorKind(err) === 'conflict') return put();
+			if (hostErrorKind(err) === 'forbidden' || hostErrorKind(err) === 'notFound') {
 				throw new Error('Saving needs write access to the design repository. Ask someone who has it to add you.');
 			}
 			throw err;
@@ -422,9 +422,9 @@ export class DesignRepo {
 		try {
 			await this.session.api(`${this.base}/issues/comments/${commentId}`, { method: 'DELETE' });
 		} catch (err) {
-			if (err instanceof GitHubError && err.status === 404) return;
-			if (err instanceof GitHubError && err.status === 403) {
-				throw new GitHubError("Only a comment's author, or someone who can write to the design repository, can delete it.", 403);
+			if (hostErrorKind(err) === 'notFound') return;
+			if (hostErrorKind(err) === 'forbidden') {
+				throw new HostError("Only a comment's author, or someone who can write to the design repository, can delete it.", 403);
 			}
 			throw err;
 		}

@@ -1,7 +1,9 @@
 import { existsSync } from 'node:fs';
 import type { GitHubApi } from './designRepo';
 import { findOnPath } from './paths';
-import { ProcessFailed, runFile } from './process';
+import { errorText } from '../../shared/result';
+import { HostError } from './hostError';
+import { NotInstalled, ProcessFailed, runFile } from './process';
 
 /** How long one call may take before it is given up on: a stuck one must not hold a screen. */
 const CALL_TIMEOUT_MS = 60_000;
@@ -9,6 +11,19 @@ const CALL_TIMEOUT_MS = 60_000;
 /** The GitHub CLI: on the PATH, or where it is usually installed (an app opened from the Dock has no PATH). */
 export const locateGh = (env: NodeJS.ProcessEnv = process.env, exists: (p: string) => boolean = existsSync): string =>
 	findOnPath('gh', env, exists) ?? ['/opt/homebrew/bin/gh', '/usr/local/bin/gh', '/usr/bin/gh'].find((p) => exists(p)) ?? 'gh';
+
+/**
+ * A failed `gh` run as the host error it is: its status read from what it printed (`gh: Not Found (HTTP 404)`), else
+ * missing, signed out, or out of time, as `gh` says each.
+ */
+export const ghError = (err: unknown): HostError => {
+	if (err instanceof NotInstalled) return new HostError(err.message, undefined, 'missingCli');
+	if (!(err instanceof ProcessFailed)) return new HostError(errorText(err), undefined, 'failed');
+	const status = Number(/HTTP (\d{3})/.exec(err.stderr)?.[1]) || undefined;
+	if (status !== undefined) return new HostError(err.message, status);
+	if (/gh auth login|not logged in/i.test(err.message)) return new HostError(err.message, undefined, 'reauth');
+	return new HostError(err.message, undefined, err.timedOut ? 'unreachable' : 'failed');
+};
 
 /**
  * GitHub's API through its own command line, `gh`, signed in as the person: what their account can reach, every
@@ -22,10 +37,7 @@ export const ghApi = (bin: string = locateGh()): GitHubApi => ({
 		const args = ['api', path, ...(init.method ? ['--method', init.method] : []), ...(init.body !== undefined ? ['--input', '-'] : [])];
 		const input = init.body !== undefined ? JSON.stringify(init.body) : undefined;
 		const { stdout } = await runFile(bin, args, { maxBuffer: 64 * 1024 * 1024, timeoutMs: CALL_TIMEOUT_MS, input }).catch((err: unknown) => {
-			// What GitHub said, and its status, so a 404 can be told from anything else.
-			if (err instanceof ProcessFailed)
-				throw Object.assign(new Error(err.message), { status: Number(/HTTP (\d{3})/.exec(err.stderr)?.[1]) || undefined });
-			throw err;
+			throw ghError(err);
 		});
 		return stdout.trim() ? (JSON.parse(stdout) as unknown) : null;
 	},

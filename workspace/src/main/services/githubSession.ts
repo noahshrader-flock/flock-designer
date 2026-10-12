@@ -1,17 +1,7 @@
 import type { DeviceCodeStart, SignInState } from '../../shared/contract';
-import {
-	type Fetcher,
-	type StoredToken,
-	GitHubError,
-	ReauthRequired,
-	callApi,
-	isExpired,
-	pollForToken,
-	readUser,
-	refreshToken,
-	startDeviceFlow,
-} from './github';
+import { type Fetcher, type StoredToken, ReauthRequired, callApi, isExpired, pollForToken, readUser, refreshToken, startDeviceFlow } from './github';
 import { singleFlight } from './concurrency';
+import { HostError } from './hostError';
 import type { TokenStore } from './tokenStore';
 
 /**
@@ -72,7 +62,7 @@ export class GitHubSession {
 	 */
 	async startSignIn(): Promise<DeviceCodeStart> {
 		if (!this.store.available()) {
-			throw new GitHubError(
+			throw new HostError(
 				'This machine has no secure storage available, so a sign-in cannot be kept. Signing in would have to be repeated every launch.',
 			);
 		}

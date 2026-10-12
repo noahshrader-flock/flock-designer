@@ -23,7 +23,7 @@ import { asArray, asRecord } from '../../shared/json';
 import { DesignRepo, type GitHubApi } from './designRepo';
 import { designSystemId } from './designSystems';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
-import { httpStatus } from './github';
+import { hostErrorKind } from './hostError';
 import { type JsonFile, jsonFile } from './jsonFile';
 
 /** Where the file is, in a design system's agent files: how Flock speaks is the design system's (Noah, 2026-10-10). */
@@ -215,14 +215,15 @@ export class VoiceAndToneFile {
 				} catch (err) {
 					// The default branch moved between reading it and making the branch: the branch goes, and the save is refused.
 					await this.github.api(`${this.base}/git/refs/heads/${encodeURIComponent(branch)}`, { method: 'DELETE' }).catch(() => undefined);
-					if (httpStatus(err) === 409 || httpStatus(err) === 422) return { state: 'changed', voice: await this.current() };
+					if (hostErrorKind(err) === 'conflict') return { state: 'changed', voice: await this.current() };
 					throw err;
 				}
 				this.keep({ branch, saves: 1, pullRequest: null });
 			}
 		} catch (err) {
-			const s = httpStatus(err);
-			if (s === 403 || s === 404) throw new Error('Saving needs write access to the design repository. Ask someone who has it to add you.');
+			const kind = hostErrorKind(err);
+			if (kind === 'forbidden' || kind === 'notFound')
+				throw new Error('Saving needs write access to the design repository. Ask someone who has it to add you.');
 			throw err;
 		}
 		return { state: 'saved', voice: await this.current() };
@@ -258,7 +259,7 @@ export class VoiceAndToneFile {
 			this.keep({ ...kept, pullRequest: { number: pr.number, url: pr.html_url } });
 		} catch (err) {
 			// A command line not signed in, or gone since: the change stays saved, and GitHub's own page can open the pull request.
-			if (httpStatus(err) === undefined && /ENOENT|not found|auth|log ?in/i.test(String((err as Error).message))) throw new Error(NEEDS_GH);
+			if (hostErrorKind(err) === 'missingCli' || hostErrorKind(err) === 'reauth') throw new Error(NEEDS_GH);
 			throw err;
 		}
 		return this.current();

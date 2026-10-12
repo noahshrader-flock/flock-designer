@@ -1,10 +1,10 @@
 import type { PageStatus } from '../../shared/contract';
 import { prototypePagePath, sitePath } from '../../shared/designPaths';
 import type { GitHubApi } from './designRepo';
+import { hostErrorKind } from './hostError';
 import { type SyncResult, syncRecords } from './designSync';
 import { git } from './git';
 import { asArray, asRecord } from '../../shared/json';
-import { errorText } from '../../shared/result';
 import { type RepoRef, formatRepo } from '../../shared/repoRef';
 
 /**
@@ -27,8 +27,8 @@ export interface SiteVisibility {
 	site: { url: string; public: boolean } | null;
 }
 
-const forbidden = (err: unknown): boolean => asRecord(err).status === 403 || /\b403\b|not accessible by integration/i.test(errorText(err));
-const notFound = (err: unknown): boolean => asRecord(err).status === 404 || /\b404\b|Not Found/.test(errorText(err));
+const forbidden = (err: unknown): boolean => hostErrorKind(err) === 'forbidden';
+const notFound = (err: unknown): boolean => hostErrorKind(err) === 'notFound';
 
 export const readVisibility = async (github: GitHubApi, ref: RepoRef): Promise<SiteVisibility> => {
 	const base = `/repos/${ref.owner}/${ref.repo}`;
@@ -101,7 +101,7 @@ export const pageStatus = async (github: GitHubApi, ref: RepoRef, projectId: str
  */
 const SITE_SOURCES = [
 	/^workspace\/src\/(site|viewer|renderer|shared)\//,
-	/^workspace\/src\/main\/services\/(designRepo|github)\.ts$/,
+	/^workspace\/src\/main\/services\/(designRepo|github|hostError)\.ts$/,
 	/^workspace\/src\/cli\/dsnr\.ts$/,
 	/^workspace\/(bin\/|viewer\.vite\.config\.ts$|package-lock\.json$)/,
 	/^\.github\/workflows\/publish-prototypes\.yml$/,

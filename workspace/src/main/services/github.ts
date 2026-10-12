@@ -1,5 +1,7 @@
 import type { DeviceCodeStart, GitHubUser } from '../../shared/contract';
 import { asRecord } from '../../shared/json';
+import { errorText } from '../../shared/result';
+import { HostError } from './hostError';
 
 /**
  * GitHub's device flow, and the slice of the REST API the app uses.
@@ -18,29 +20,10 @@ const DEVICE_CODE_URL = 'https://github.com/login/device/code';
 const TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const API = 'https://api.github.com';
 
-export class GitHubError extends Error {
-	constructor(
-		message: string,
-		readonly status?: number,
-	) {
-		super(message);
-		this.name = 'GitHubError';
-	}
-}
-
-/**
- * GitHub's status for a failed call, whichever way it was made: the app's session raises a `GitHubError`, the person's
- * command line (`ghCli.ts`) an error carrying the same `status`. Undefined when the call never reached GitHub.
- */
-export const httpStatus = (err: unknown): number | undefined => {
-	const s = (err as { status?: unknown } | null)?.status;
-	return typeof s === 'number' ? s : undefined;
-};
-
 /** Raised when the person must sign in again -- the refresh token is spent or revoked. */
-export class ReauthRequired extends GitHubError {
+export class ReauthRequired extends HostError {
 	constructor(message = 'Sign in to GitHub again.') {
-		super(message);
+		super(message, undefined, 'reauth');
 		this.name = 'ReauthRequired';
 	}
 }
@@ -78,7 +61,7 @@ export const startDeviceFlow = async (clientId: string, fetcher: Fetcher): Promi
 	});
 	const body = asRecord(await res.json());
 	if (typeof body.device_code !== 'string' || typeof body.user_code !== 'string') {
-		throw new GitHubError(
+		throw new HostError(
 			typeof body.error_description === 'string'
 				? body.error_description
 				: 'GitHub did not return a device code. Check the client ID, and that device flow is enabled on the app.',
@@ -142,14 +125,14 @@ export const pollForToken = async (
 				interval = typeof body.interval === 'number' ? body.interval : interval + 5;
 				continue;
 			case 'expired_token':
-				throw new GitHubError('The sign-in code expired. Start again.');
+				throw new HostError('The sign-in code expired. Start again.');
 			case 'access_denied':
-				throw new GitHubError('Sign-in was canceled on GitHub.');
+				throw new HostError('Sign-in was canceled on GitHub.');
 			default:
-				throw new GitHubError(typeof body.error_description === 'string' ? body.error_description : 'GitHub refused the sign-in.', res.status);
+				throw new HostError(typeof body.error_description === 'string' ? body.error_description : 'GitHub refused the sign-in.', res.status);
 		}
 	}
-	throw new GitHubError('The sign-in code expired. Start again.');
+	throw new HostError('The sign-in code expired. Start again.');
 };
 
 export const refreshToken = async (
@@ -177,7 +160,7 @@ export const refreshToken = async (
 		if (typeof body.error === 'string') {
 			throw new ReauthRequired();
 		}
-		throw new GitHubError('GitHub could not renew the sign-in just now. Try again in a moment.', res.status);
+		throw new HostError('GitHub could not renew the sign-in just now. Try again in a moment.', res.status);
 	}
 	return tokenFromResponse(body, now());
 };
@@ -192,6 +175,7 @@ export interface ApiCall {
 }
 
 export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): Promise<unknown> => {
+	// A call that never reached GitHub (offline, a proxy that hung up) is said as one, in its own words.
 	const res = await fetcher(`${API}${call.path}`, {
 		method: call.method ?? 'GET',
 		headers: {
@@ -201,6 +185,8 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): P
 			...(call.body === undefined ? {} : { 'Content-Type': 'application/json' }),
 		},
 		...(call.body === undefined ? {} : { body: JSON.stringify(call.body) }),
+	}).catch((err: unknown) => {
+		throw new HostError(errorText(err), undefined, 'unreachable');
 	});
 	if (res.status === 401) {
 		throw new ReauthRequired();
@@ -230,7 +216,7 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): P
 					: call.path.includes('/issues')
 						? 'Issues (read and write)'
 						: 'an additional repository permission';
-			throw new GitHubError(
+			throw new HostError(
 				`The GitHub App is missing the ${needed} permission. Add it under the app's ` +
 					'Permissions & events, then approve the update on the installation.',
 				res.status,
@@ -238,14 +224,14 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): P
 		}
 		if (res.status === 404) {
 			// Indistinguishable from a repository that does not exist, so say both.
-			throw new GitHubError(`Not found, or this app is not installed on it: ${call.path}`, res.status);
+			throw new HostError(`Not found, or this app is not installed on it: ${call.path}`, res.status);
 		}
 		// With no message of its own, say which call it was (saving one comment can take several), what came back,
 		// and the request id, so a failure that is GitHub's can be reported to them and one that is ours can be found.
 		const id = res.headers?.get('x-github-request-id');
 		const what = raw ? `: ${raw.replace(/\s+/g, ' ').slice(0, 200)}` : '';
 		const which = `${call.method ?? 'GET'} ${call.path.replace(/\?.*$/, '')}`;
-		throw new GitHubError(message || `GitHub returned ${res.status} for ${which}${what}${id ? ` (request ${id})` : ''}`, res.status);
+		throw new HostError(message || `GitHub returned ${res.status} for ${which}${what}${id ? ` (request ${id})` : ''}`, res.status);
 	}
 	// "No Content": a delete worked and there is nothing to read. Parsing it would fail a call that succeeded.
 	if (res.status === 204) return null;

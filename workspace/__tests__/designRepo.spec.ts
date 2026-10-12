@@ -655,15 +655,18 @@ describe('readFile and writeFile', () => {
 		expect(await repo.readFile('skills/b.md')).toBeNull();
 	});
 
-	it('says null for a file that is not there whichever way GitHub was asked: the app’s session, or the command line', async () => {
-		// The person's `gh` (ghCli.ts) fails with GitHub's status on a plain error, not a GitHubError.
-		const gh = { api: async () => Promise.reject(Object.assign(new Error('gh: Not Found (HTTP 404)'), { status: 404 })) };
-		const repo = new DesignRepo(gh, REF);
+	it('says null for a file that is not there, and fails on anything else', async () => {
+		// Every transport says "not there" one way (`HostError`); the command line's own is checked in ghCli.spec.
+		const repo = new DesignRepo(fakeGitHub({ '*': notFound }).github, REF);
 		expect(await repo.readFile('skills/none.md')).toBeNull();
 		expect(await repo.readFileAt('skills/none.md', 'some-branch')).toBeNull();
 		expect(await repo.hasFile('skills/none.md')).toBe(false);
 		const failing = new DesignRepo(
-			{ api: async () => Promise.reject(Object.assign(new Error('gh: Server Error (HTTP 500)'), { status: 500 })) },
+			fakeGitHub({
+				'*': () => {
+					throw refusal(500, 'Server Error');
+				},
+			}).github,
 			REF,
 		);
 		await expect(failing.readFile('skills/a.md')).rejects.toThrow('Server Error');
@@ -710,6 +713,19 @@ describe('readFile and writeFile', () => {
 			{ method: 'PUT', path: '/repos/acme/design/contents/projects/x/new.html', body: { message: 'm', content: b64('<p>') } },
 			{ method: 'PUT', path: '/repos/acme/design/contents/projects/x/old.html', body: { message: 'm', content: b64('<p>'), sha: 'abc' } },
 		]);
+	});
+
+	it('writes again once, against what is there now, when another write got in between', async () => {
+		let puts = 0;
+		const { github, writes } = fakeGitHub({
+			'PUT /repos/acme/design/contents/*': () => {
+				if (++puts === 1) throw refusal(409, 'is at abd but expected abc');
+				return {};
+			},
+			'GET /repos/acme/design/contents/*': () => ({ sha: puts === 0 ? 'abc' : 'abd' }),
+		});
+		await new DesignRepo(github, REF).writeFile('projects/x/a.html', '<p>', 'm');
+		expect(writes.map((w) => (w.body as { sha?: string }).sha)).toEqual(['abc', 'abd']);
 	});
 
 	it('writes a picture as the bytes it is, and reads one back as bytes', async () => {

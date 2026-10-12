@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { GitHubApi } from '../src/main/services/designRepo';
 import { VOICE_BRANCH, VOICE_FILE, VoiceAndToneFile } from '../src/main/services/voiceAndTone';
+import type { HostErrorKind } from '../src/main/services/hostError';
 import { type RouteCall, fakeGitHub, refusal } from './fakes/github';
 
 /**
@@ -42,7 +43,7 @@ class FakeGitHub {
 	/** Every call, with who made it: the app's own session, or the person's command line. */
 	asked: string[] = [];
 	/** A status every call answers with, to stand in for a refusal. */
-	refuse: { when: (method: string, path: string) => boolean; status: number; message: string } | null = null;
+	refuse: { when: (method: string, path: string) => boolean; status: number | undefined; message: string; kind?: HostErrorKind } | null = null;
 	private n = 0;
 
 	constructor() {
@@ -69,7 +70,7 @@ class FakeGitHub {
 			api: async (path, init = {}) => {
 				const method = init.method ?? 'GET';
 				this.asked.push(`${who} ${method} ${path}`);
-				if (this.refuse?.when(method, path)) throw refusal(this.refuse.status, this.refuse.message);
+				if (this.refuse?.when(method, path)) throw refusal(this.refuse.status, this.refuse.message, this.refuse.kind);
 				return this.host.api(path, init);
 			},
 		};
@@ -380,8 +381,9 @@ describe('proposing it', () => {
 		const file = await saved();
 		gh.refuse = {
 			when: (m, p) => m === 'POST' && p.endsWith('/pulls'),
-			status: undefined as unknown as number,
+			status: undefined,
 			message: 'To get started with GitHub CLI, please run:  gh auth login',
+			kind: 'reauth',
 		};
 		await expect(file.propose()).rejects.toThrow(/GitHub command line \(gh\)/);
 		gh.refuse = null;

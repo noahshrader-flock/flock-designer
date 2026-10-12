@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
 	type Fetcher,
 	type StoredToken,
-	GitHubError,
 	ReauthRequired,
 	callApi,
 	isExpired,
@@ -10,6 +9,7 @@ import {
 	refreshToken,
 	startDeviceFlow,
 } from '../src/main/services/github';
+import { HostError } from '../src/main/services/hostError';
 
 /** A fetch stub that replays queued responses and records what was sent. */
 const stub = (responses: Array<{ status?: number; body: unknown }>) => {
@@ -164,6 +164,6 @@ describe('callApi', () => {
 
 	it("passes GitHub's own message through for other failures", async () => {
 		const { fetcher } = stub([{ status: 422, body: { message: 'Validation failed' } }]);
-		await expect(callApi('tok', { path: '/x' }, fetcher)).rejects.toThrow(GitHubError);
+		await expect(callApi('tok', { path: '/x' }, fetcher)).rejects.toThrow(HostError);
 	});
 });
