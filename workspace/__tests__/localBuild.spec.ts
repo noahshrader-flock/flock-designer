@@ -12,9 +12,12 @@ const iteration = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
 	contributors: [],
 	createdAt: null,
 	route: null,
+	repository: null,
+	pullRequest: null,
+	cover: null,
 	...over,
 });
-const project: Project = { id: 'users', title: 'Users', records: [], iterations: [], people: [] };
+const project: Project = { id: 'users', title: 'Users', folder: null, records: [], iterations: [], people: [] };
 
 /** A workspace that does what a healthy one does, with any step overridable. */
 const api = (over: Partial<Record<keyof BuildApi, unknown>> = {}) => {
@@ -23,9 +26,9 @@ const api = (over: Partial<Record<keyof BuildApi, unknown>> = {}) => {
 	const a = {
 		readCheckout: ok('readCheckout', { root: '/r', name: 'coke', branch: 'fd/users/i1', clean: true }),
 		continueIteration: ok('continueIteration', {}),
-		startAgent: ok('startAgent', { state: 'running', startedAt: 'now' }),
+		startAgent: ok('startAgent', { state: 'running', startedAt: 'now', work: null, purpose: null }),
 		startHandoff: ok('startHandoff', { state: 'running', startedAt: 'now', work: 'fd/users/i1', purpose: 'handoff' }),
-		agentStatus: ok('agentStatus', { state: 'finished', exitCode: 0 }),
+		agentStatus: ok('agentStatus', { state: 'finished', exitCode: 0, work: null, purpose: null }),
 		startCommand: ok('startCommand', { state: 'running', commandId: 'preview', url: 'http://localhost:3100/' }),
 		...over,
 	} as unknown as BuildApi;
@@ -103,14 +106,17 @@ describe('work that was just created', () => {
 	it('waits for the agent while it is still working', async () => {
 		let polls = 0;
 		const { a } = api({
-			agentStatus: vi.fn(async () => ({ ok: true, value: ++polls < 3 ? { state: 'running' } : { state: 'finished', exitCode: 0 } })),
+			agentStatus: vi.fn(async () => ({
+				ok: true,
+				value: ++polls < 3 ? { state: 'running' } : { state: 'finished', exitCode: 0, work: null, purpose: null },
+			})),
 		});
 		await run(a, { task: 'x' });
 		expect(polls).toBe(3);
 	});
 
 	it('does not start the preview if the agent stopped with an error, and says so', async () => {
-		const { a } = api({ agentStatus: vi.fn(async () => ({ ok: true, value: { state: 'finished', exitCode: 2 } })) });
+		const { a } = api({ agentStatus: vi.fn(async () => ({ ok: true, value: { state: 'finished', exitCode: 2, work: null, purpose: null } })) });
 		const { url, phases } = await run(a, { task: 'x' });
 		expect(url).toBeNull();
 		expect(a.startCommand).not.toHaveBeenCalled();
@@ -201,7 +207,7 @@ describe('when nobody is looking any more', () => {
 		const { a, calls } = api({
 			agentStatus: vi.fn(async () => ({
 				ok: true,
-				value: ++polls < 3 ? { state: 'running', work: 'fd/users/i1' } : { state: 'finished', exitCode: 0 },
+				value: ++polls < 3 ? { state: 'running', work: 'fd/users/i1' } : { state: 'finished', exitCode: 0, work: null, purpose: null },
 			})),
 		});
 		const { url, phases } = await run(a);
@@ -242,7 +248,8 @@ describe('when nobody is looking any more', () => {
 		const { a, calls } = api({
 			agentStatus: vi.fn(async () => ({
 				ok: true,
-				value: ++polls < 3 ? { state: 'running', work: 'fd/users/i1', purpose: 'handoff' } : { state: 'finished', exitCode: 0 },
+				value:
+					++polls < 3 ? { state: 'running', work: 'fd/users/i1', purpose: 'handoff' } : { state: 'finished', exitCode: 0, work: null, purpose: null },
 			})),
 		});
 		const { phases } = await run(a);

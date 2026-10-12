@@ -23,6 +23,9 @@ const iteration = (more: Partial<ProjectIteration> = {}): ProjectIteration => ({
 	contributors: [],
 	createdAt: '2026-10-01T10:00:00Z',
 	route: null,
+	repository: null,
+	pullRequest: null,
+	cover: null,
 	...more,
 });
 // By the app's own rule (`workKind`): codebase work is the iteration named `codebase`; any other is a prototype.
@@ -32,6 +35,7 @@ const CODEBASE = iteration({ name: 'codebase', branch: 'feature/admin-usage', re
 const project = (more: Partial<Project> = {}): Project => ({
 	id: 'admin-usage',
 	title: 'Admin usage',
+	folder: null,
 	records: [],
 	iterations: [],
 	people: [],

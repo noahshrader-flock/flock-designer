@@ -273,8 +273,8 @@ export class AgentRunner {
 	private purpose: 'handoff' | null = null;
 
 	/** What the status carries about the run, so a screen can tell its own run from another, and what kind it is. */
-	private tags(): { work?: string; purpose?: 'handoff' } {
-		return { ...(this.work ? { work: this.work } : {}), ...(this.purpose ? { purpose: this.purpose } : {}) };
+	private tags(): { work: string | null; purpose: 'handoff' | null } {
+		return { work: this.work, purpose: this.purpose };
 	}
 	/** The run's recent lines, kept here so a screen that was left and opened again can pick up where it was. */
 	private recent: string[] = [];

@@ -1938,7 +1938,7 @@ describe('one agent, one piece of work', () => {
 
 	it("hands the agent's conversation over, and stops the app's run of it first so it has one writer", async () => {
 		await call(CHANNELS.useCheckout, product);
-		agentStart.mockReturnValue({ state: 'running', startedAt: 'now' });
+		agentStart.mockReturnValue({ state: 'running', startedAt: 'now', work: null, purpose: null });
 		expect((await call(CHANNELS.editorState, product, branchHere())).value).toEqual({ editor: false, session: false });
 		await call(CHANNELS.startAgent, product, 'demo', 'do it');
 		const session = (agentStart.mock.calls.at(-1)?.[3] as { session: string }).session;
@@ -2078,7 +2078,7 @@ describe('Handoff', () => {
 		g(product, 'checkout', '-q', 'develop');
 		expect((await call(CHANNELS.startHandoff, product, 'demo')).error).toMatch(/Open feature\/demo first/);
 		g(product, 'checkout', '-q', 'feature/demo');
-		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now' });
+		agentStatus.mockReturnValue({ state: 'running', startedAt: 'now', work: null, purpose: null });
 		expect((await call(CHANNELS.startHandoff, product, 'demo')).error).toMatch(/already working/);
 		expect(agentStart).not.toHaveBeenCalled();
 	});

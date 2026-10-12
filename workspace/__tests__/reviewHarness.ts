@@ -35,7 +35,7 @@ export const fakeApp = (overrides: Impl = {}) => {
 				incomplete: [],
 				notAutomated: [],
 			}),
-		fixAccessibility: async () => ok({ state: 'running', startedAt: 'now' }),
+		fixAccessibility: async () => ok({ state: 'running', startedAt: 'now', work: null, purpose: null }),
 		readComments: async () => ok([]),
 		// No design system connected, unless a test says otherwise.
 		designSystems: async () => ok({ systems: [], current: null }),
@@ -144,6 +144,9 @@ export const PROTOTYPE: ProjectIteration = {
 	contributors: [],
 	createdAt: null,
 	route: null,
+	repository: null,
+	pullRequest: null,
+	cover: null,
 };
 
 const CHECKOUT = { root: '/c/flock-coke', name: 'flock-coke', branch: 'develop', clean: true };

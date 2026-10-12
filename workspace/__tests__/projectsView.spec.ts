@@ -10,6 +10,7 @@ import { fakeApp, ok, press, render, settle, typeInto, unmountAll } from './revi
 const project = (id: string, title: string): Project => ({
 	id,
 	title,
+	folder: null,
 	records: [],
 	iterations: [
 		{
@@ -22,6 +23,9 @@ const project = (id: string, title: string): Project => ({
 			contributors: [],
 			createdAt: '2026-10-01T00:00:00Z',
 			route: null,
+			repository: null,
+			pullRequest: null,
+			cover: null,
 		},
 	],
 	people: [],

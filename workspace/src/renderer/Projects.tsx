@@ -13,7 +13,7 @@ import { Review } from './Review';
 import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
 import { InfoIcon } from 'lucide-react';
-import { type ProjectOrder, foldersOf, inFolder, matchesProject, sortProjects, withCovers } from '../shared/projects';
+import { ALL_FOLDERS, type FolderChoice, type ProjectOrder, foldersOf, inFolder, matchesProject, sortProjects, withCovers } from '../shared/projects';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { NoMatches } from './NoMatches';
@@ -40,8 +40,8 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 	const [search, setSearch] = useState('');
 	// The most recent activity first, until it is changed.
 	const [order, setOrder] = useState<ProjectOrder>('updated');
-	// The folder shown: every project (undefined), those in no folder (null), or one folder's.
-	const [folder, setFolder] = useState<string | null | undefined>(undefined);
+	// The folder shown: every project, those in no folder, or one folder's.
+	const [folder, setFolder] = useState<FolderChoice>(ALL_FOLDERS);
 	// Cards in a grid, as the screen has always been, or rows in a list: as last chosen here.
 	const [view, chooseView] = useRememberedView(VIEW_KEY, 'grid');
 	const [looked, setLooked] = useState(false);
@@ -119,9 +119,9 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 
 	// The folders projects are in, for the filter, New and Assign folder alike.
 	const folders = foldersOf(projects ?? []);
-	const unfiled = (projects ?? []).some((p) => inFolder(p, null));
+	const unfiled = (projects ?? []).some((p) => inFolder(p, { kind: 'none' }));
 	// A folder chosen that no project is in any more (moved since, on another machine) shows them all again.
-	const shown = (projects ?? []).some((p) => inFolder(p, folder)) ? folder : undefined;
+	const shown = (projects ?? []).some((p) => inFolder(p, folder)) ? folder : ALL_FOLDERS;
 
 	if (selected) {
 		return (
@@ -221,7 +221,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 					onChoose={chooseCheckout}
 					onCheckout={setCheckout}
 					folders={folders}
-					folder={typeof shown === 'string' ? shown : null}
+					folder={shown.kind === 'folder' ? shown.name : null}
 					onCreated={(c: Created) => {
 						setCreating(false);
 						setSelected({ project: c.project, iteration: c.iteration, task: c.task });

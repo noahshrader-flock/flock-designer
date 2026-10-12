@@ -239,7 +239,7 @@ describe('PrototypeServer', () => {
 });
 
 describe('runPrototypeBuild', () => {
-	const project: Project = { id: 'users', title: 'Users', records: [], iterations: [], people: [] };
+	const project: Project = { id: 'users', title: 'Users', folder: null, records: [], iterations: [], people: [] };
 	const iteration: ProjectIteration = {
 		name: 'i1',
 		branch: 'prototype/users/i1',
@@ -250,17 +250,20 @@ describe('runPrototypeBuild', () => {
 		contributors: [],
 		createdAt: null,
 		route: null,
+		repository: null,
+		pullRequest: null,
+		cover: null,
 	};
 	const api = (over: Partial<Record<keyof PrototypeApi, unknown>> = {}) => {
 		const calls: string[] = [];
 		const ok = (name: string, value: unknown) => vi.fn(async () => (calls.push(name), { ok: true as const, value }));
 		const a = {
-			buildPrototype: ok('buildPrototype', { state: 'running', startedAt: 'now' }),
-			agentStatus: ok('agentStatus', { state: 'finished', exitCode: 0 }),
+			buildPrototype: ok('buildPrototype', { state: 'running', startedAt: 'now', work: null, purpose: null }),
+			agentStatus: ok('agentStatus', { state: 'finished', exitCode: 0, work: null, purpose: null }),
 			savePrototype: ok('savePrototype', null),
 			openPrototype: ok('openPrototype', { url: 'http://127.0.0.1:5000/users/i1/', states: ['default', 'empty'] }),
 			checkAccessibility: ok('checkAccessibility', { violations: [], incomplete: [] }),
-			fixAccessibility: ok('fixAccessibility', { state: 'running', startedAt: 'now' }),
+			fixAccessibility: ok('fixAccessibility', { state: 'running', startedAt: 'now', work: null, purpose: null }),
 			...over,
 		} as unknown as PrototypeApi;
 		return { a, calls };

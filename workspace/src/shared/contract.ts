@@ -142,9 +142,9 @@ export type ShareStep = 'pushing' | 'opening' | 'building';
 
 export type PreviewStatus =
 	| { state: 'stopped' }
-	| { state: 'starting'; commandId: string; projectId?: string }
+	| { state: 'starting'; commandId: string; projectId: string | null }
 	/** `projectId` is whose preview this is: every prototype shares one port, so the address alone cannot say. */
-	| { state: 'running'; commandId: string; url: string; projectId?: string }
+	| { state: 'running'; commandId: string; url: string; projectId: string | null }
 	| { state: 'failed'; commandId: string; detail: string };
 
 /** A line of output from a running command, for the log surface. */
@@ -160,11 +160,11 @@ export type AgentReadiness = { state: 'ready' } | { state: 'missing' } | { state
 export type AgentStatus =
 	| { state: 'idle' }
 	/**
-	 * `work`: which piece of work this run is for, so a screen opened again can tell its own run from another.
-	 * `purpose`: set for a Handoff, which ends in a report rather than a preview.
+	 * `work`: which piece of work this run is for, so a screen opened again can tell its own run from another; null when
+	 * the run was not started for one. `purpose`: `handoff` for a Handoff, which ends in a report rather than a preview.
 	 */
-	| { state: 'running'; startedAt: string; work?: string; purpose?: 'handoff' }
-	| { state: 'finished'; exitCode: number; work?: string; purpose?: 'handoff' }
+	| { state: 'running'; startedAt: string; work: string | null; purpose: 'handoff' | null }
+	| { state: 'finished'; exitCode: number; work: string | null; purpose: 'handoff' | null }
 	| { state: 'unavailable'; detail: string };
 
 /**
@@ -220,7 +220,7 @@ export type PrototypeReadiness =
 			designSystem: string;
 			repository: string;
 			/** The repository declares how it installs (`install`), so the app can run it when asked. */
-			canInstall?: boolean;
+			canInstall: boolean;
 	  };
 
 /** Something that could not be published, and why, in words a person can act on. */
@@ -885,8 +885,8 @@ export interface Project {
 	id: string;
 	/** First heading of `brief.md`, or the id if it has none. */
 	title: string;
-	/** The folder it is in, from its brief's front matter (`briefFolder`), or null for none. Absent where it was not read. */
-	folder?: string | null;
+	/** The folder it is in, from its brief's front matter (`briefFolder`), or null for none. */
+	folder: string | null;
 	/** Files present in the project folder, for showing what a project has. */
 	records: string[];
 	/** Iterations found as branches, newest first. */
@@ -928,10 +928,10 @@ export interface ProjectIteration {
 	/** True when this iteration exists only on this machine. */
 	localOnly?: boolean;
 	/** Codebase work: its repository on GitHub (`owner/repo`) and its pull request, when the record says. Read with `codeLink`. */
-	repository?: string | null;
-	pullRequest?: string | null;
+	repository: string | null;
+	pullRequest: string | null;
 	/** A prototype's picture, by the hash on its record (`Iteration.cover`); null when it has none yet. Read with `coverToShow`. */
-	cover?: string | null;
+	cover: string | null;
 }
 
 /** A picture of a prototype just made and named on its record: what the list takes in without being read again. */

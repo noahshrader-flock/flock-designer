@@ -29,10 +29,14 @@ const iteration = (contributors: Person[]): ProjectIteration => ({
 	contributors,
 	createdAt: null,
 	route: null,
+	repository: null,
+	pullRequest: null,
+	cover: null,
 });
 const project = (people: Person[], contributors: Person[] = people): Project => ({
 	id: 'a',
 	title: 'A',
+	folder: null,
 	records: [],
 	iterations: [iteration(contributors)],
 	people,

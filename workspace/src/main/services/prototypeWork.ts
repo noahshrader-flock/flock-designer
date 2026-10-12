@@ -162,8 +162,9 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	const readiness = (root: string): PrototypeReadiness => {
 		const designSystem = readDescriptor(root).designSystem.package;
 		const pkg = join(root, 'node_modules', ...designSystem.split('/'));
-		if (!existsSync(join(pkg, 'package.json'))) return { ready: false, why: 'not-installed', designSystem, repository: basename(root) };
-		if (ctx.esbuild() === null) return { ready: false, why: 'no-bundler', designSystem, repository: basename(root) };
+		if (!existsSync(join(pkg, 'package.json')))
+			return { ready: false, why: 'not-installed', designSystem, repository: basename(root), canInstall: false };
+		if (ctx.esbuild() === null) return { ready: false, why: 'no-bundler', designSystem, repository: basename(root), canInstall: false };
 		let version: string | null = null;
 		try {
 			version = (JSON.parse(readFileSync(join(pkg, 'package.json'), 'utf8')) as { version?: string }).version ?? null;

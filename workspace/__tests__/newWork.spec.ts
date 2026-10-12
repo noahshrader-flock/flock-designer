@@ -235,6 +235,19 @@ describe('its folder', () => {
 		expect((document.getElementById('new-work-folder') as HTMLElement).textContent).toBe('Roles');
 	});
 
+	it('hands the screen the new project in its folder, so it is listed there before the list is read again', async () => {
+		const created: Array<{ project: { folder: string | null } }> = [];
+		await open(
+			{ createPrototype: async () => ok(made) },
+			{ folders: ['Admin'], onCreated: (c: { project: { folder: string | null } }) => void created.push(c) },
+		);
+		await fill();
+		await pickFolder('Admin');
+		await press(button('Create prototype'));
+		await settle();
+		expect(created.at(-1)?.project.folder).toBe('Admin');
+	});
+
 	it('makes the prototype in the folder chosen, or in a new one named there, or in none', async () => {
 		const { app } = await open({ createPrototype: async () => ok(made) }, { folders: ['Admin'] });
 		await fill();

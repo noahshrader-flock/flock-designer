@@ -45,11 +45,15 @@ const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => ({
 	contributors: [],
 	createdAt: null,
 	route: null,
+	repository: null,
+	pullRequest: null,
+	cover: null,
 	...over,
 });
 const project = (id: string, over: Partial<Project> = {}): Project => ({
 	id,
 	title: id,
+	folder: null,
 	records: [],
 	iterations: [it1({ branch: `fd/${id}/i1` })],
 	people: [],
@@ -428,6 +432,9 @@ describe('byVersion', () => {
 		contributors: [],
 		createdAt,
 		route: null,
+		repository: null,
+		pullRequest: null,
+		cover: null,
 	});
 
 	it("groups a project's prototypes by version, keeping the order it was given", () => {

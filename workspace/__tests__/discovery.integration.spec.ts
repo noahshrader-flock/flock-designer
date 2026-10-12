@@ -169,13 +169,23 @@ describe('unionLocal', () => {
 		contributors: [],
 		createdAt: null,
 		route: null,
+		repository: null,
+		pullRequest: null,
+		cover: null,
 		...over,
 	});
 	it('keeps what a record says and adds branches it did not know about', () => {
 		const rec = [
-			{ id: 'a', title: 'A, from the brief', records: ['brief.md'], iterations: [it1('fd/a/i1', { previewUrl: 'https://p' })], people: [] },
+			{
+				id: 'a',
+				title: 'A, from the brief',
+				folder: null,
+				records: ['brief.md'],
+				iterations: [it1('fd/a/i1', { previewUrl: 'https://p' })],
+				people: [],
+			},
 		];
-		const git = [{ id: 'a', title: 'a', records: [], iterations: [it1('fd/a/i1', { commit: 'abc' }), it1('fd/a/i2')], people: [] }];
+		const git = [{ id: 'a', title: 'a', folder: null, records: [], iterations: [it1('fd/a/i1', { commit: 'abc' }), it1('fd/a/i2')], people: [] }];
 		const [u] = unionLocal(rec, git);
 		expect(u?.title).toBe('A, from the brief');
 		expect(u?.iterations.find((i) => i.branch === 'fd/a/i1')).toMatchObject({ previewUrl: 'https://p', commit: 'abc' });

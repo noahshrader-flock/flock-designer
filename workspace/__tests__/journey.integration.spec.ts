@@ -100,7 +100,7 @@ describe('from a request to a running preview', () => {
 		agent.start(root, 'inactive-users', 'Flag users who have not signed in for 90 days.');
 		await new Promise((r) => setTimeout(r, 400));
 		expect(logs.map((l) => l.text).join('')).toContain('Project: inactive-users');
-		expect(agent.status()).toEqual({ state: 'finished', exitCode: 0 });
+		expect(agent.status()).toEqual({ state: 'finished', exitCode: 0, work: null, purpose: null });
 
 		// 5. The agent's work lands on the branch and is committed.
 		writeFileSync(join(product, 'src/prototypes/view.tsx'), 'export const View = () => null;\n');
@@ -114,7 +114,7 @@ describe('from a request to a running preview', () => {
 			{ spawnProcess: spawn, probe: async () => true, previewTimeoutMs: 3000 },
 		);
 		const preview = await runtime.start(root, descriptor, 'preview');
-		expect(preview).toEqual({ state: 'running', commandId: 'preview', url: 'http://localhost:4998/' });
+		expect(preview).toEqual({ state: 'running', commandId: 'preview', url: 'http://localhost:4998/', projectId: null });
 
 		// 7. Stop it, and leave nothing running.
 		await runtime.stop('preview');

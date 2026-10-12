@@ -57,9 +57,13 @@ export const foldersOf = (projects: Project[]): string[] => {
 	return folders.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 };
 
-/** Whether a project is in the folder chosen: any for none chosen (`undefined`), none for `null`, else that folder. */
-export const inFolder = (project: Project, folder: string | null | undefined): boolean =>
-	folder === undefined ? true : folder === null ? !project.folder : !!project.folder && sameFolder(project.folder, folder);
+/** Which projects the Projects screen shows: every one, those in no folder, or one folder's. */
+export type FolderChoice = { kind: 'all' } | { kind: 'none' } | { kind: 'folder'; name: string };
+export const ALL_FOLDERS: FolderChoice = { kind: 'all' };
+
+/** Whether a project is among those `choice` shows. */
+export const inFolder = (project: Project, choice: FolderChoice): boolean =>
+	choice.kind === 'all' ? true : choice.kind === 'none' ? !project.folder : !!project.folder && sameFolder(project.folder, choice.name);
 
 /** What a project's brief says of it: its title (the brief's heading, or the id when there is none) and its folder. */
 export const fromBrief = (projectId: string, brief: string | null): { title: string; folder: string | null } =>
@@ -212,10 +216,10 @@ export const mergeProjects = (remote: Project[], local: Project[]): Project[] =>
 					...ri,
 					commit: ri.commit ?? li.commit,
 					createdAt: ri.createdAt ?? li.createdAt,
-					repository: ri.repository ?? li.repository ?? null,
-					pullRequest: ri.pullRequest ?? li.pullRequest ?? null,
+					repository: ri.repository ?? li.repository,
+					pullRequest: ri.pullRequest ?? li.pullRequest,
 					// A picture made here leads: GitHub has it only once it is published.
-					cover: li.cover ?? ri.cover ?? null,
+					cover: li.cover ?? ri.cover,
 					contributors: mergePeople(ri.contributors, li.contributors),
 				});
 		}
@@ -376,9 +380,7 @@ export const withCovers = (projects: Project[], made: MadeCover[]): Project[] =>
 	if (made.length === 0) return projects;
 	const cover = (projectId: string, name: string) => made.find((m) => m.projectId === projectId && m.name === name)?.cover;
 	return projects.map((p) =>
-		made.some((m) => m.projectId === p.id)
-			? { ...p, iterations: p.iterations.map((i) => ({ ...i, cover: cover(p.id, i.name) ?? i.cover ?? null })) }
-			: p,
+		made.some((m) => m.projectId === p.id) ? { ...p, iterations: p.iterations.map((i) => ({ ...i, cover: cover(p.id, i.name) ?? i.cover })) } : p,
 	);
 };
 /**
@@ -490,4 +492,7 @@ export const freshIteration = (it: Iteration): ProjectIteration => ({
 	commit: it.commit,
 	contributors: it.contributors ?? [],
 	createdAt: it.createdAt,
+	repository: it.repository ?? null,
+	pullRequest: it.pullRequest ?? null,
+	cover: it.cover ?? null,
 });

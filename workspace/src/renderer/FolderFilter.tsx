@@ -1,3 +1,4 @@
+import { ALL_FOLDERS, type FolderChoice } from '../shared/projects';
 import { ChoiceMenu } from './ChoiceMenu';
 
 /** The menu's word for each choice that is not a folder; a folder is its own name, after `folder:` so no name is taken for one. */
@@ -6,7 +7,7 @@ const NONE = 'none';
 
 /**
  * Which folder the Projects screen shows (the folders plan): all of them, one, or the projects in none, which is offered
- * only when some project is in none. `undefined` is all, `null` is none, a name is that folder.
+ * only when some project is in none.
  */
 export const FolderFilter = ({
 	folders,
@@ -16,17 +17,17 @@ export const FolderFilter = ({
 }: {
 	folders: string[];
 	unfiled: boolean;
-	folder: string | null | undefined;
-	onChange: (folder: string | null | undefined) => void;
+	folder: FolderChoice;
+	onChange: (folder: FolderChoice) => void;
 }) => (
 	<ChoiceMenu
 		name="Folder"
-		value={folder === undefined ? ALL : folder === null ? NONE : `folder:${folder}`}
+		value={folder.kind === 'all' ? ALL : folder.kind === 'none' ? NONE : `folder:${folder.name}`}
 		choices={[
 			{ value: ALL, label: 'All folders' },
 			...folders.map((f) => ({ value: `folder:${f}`, label: f })),
 			...(unfiled ? [{ value: NONE, label: 'No folder' }] : []),
 		]}
-		onChange={(v) => onChange(v === ALL ? undefined : v === NONE ? null : v.slice('folder:'.length))}
+		onChange={(v) => onChange(v === ALL ? ALL_FOLDERS : v === NONE ? { kind: 'none' } : { kind: 'folder', name: v.slice('folder:'.length) })}
 	/>
 );

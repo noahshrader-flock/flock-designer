@@ -70,8 +70,8 @@ const openApp = async (address?: { iteration: string }) => {
 		moveComment: (id: number, anchor: CommentAnchor) => toResult(repo.moveComment(id, anchor)),
 		pageShowMarkers: (items: MarkerRequest[]) => framePage(preview).showMarkers(items),
 		// Address, as the main process finishes it: the change made, and the comment marked (and resolved) where it is.
-		addressPrototype: async () => ok({ state: 'running', startedAt: 'now' }),
-		agentStatus: async () => ok({ state: 'finished', exitCode: 0 }),
+		addressPrototype: async () => ok({ state: 'running', startedAt: 'now', work: null, purpose: null }),
+		agentStatus: async () => ok({ state: 'finished', exitCode: 0, work: null, purpose: null }),
 		finishPrototypeAddress: async (id: number) =>
 			ok({
 				changed: true,

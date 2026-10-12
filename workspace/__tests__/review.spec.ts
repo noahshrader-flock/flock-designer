@@ -646,8 +646,8 @@ describe('Address', () => {
 		let c = comment(1, 'Remove this');
 		const app = fakeApp({
 			readComments: async () => ok([c]),
-			addressPrototype: async () => ok({ state: 'running', startedAt: 'now' }),
-			agentStatus: async () => ok({ state: 'finished', exitCode: 0 }),
+			addressPrototype: async () => ok({ state: 'running', startedAt: 'now', work: null, purpose: null }),
+			agentStatus: async () => ok({ state: 'finished', exitCode: 0, work: null, purpose: null }),
 			finishPrototypeAddress: async () =>
 				ok({
 					changed: true,

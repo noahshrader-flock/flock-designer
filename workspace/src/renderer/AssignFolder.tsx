@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { sameFolder } from '../shared/projects';
 import { CancelButton } from './CancelButton';
-import { FolderField } from './FolderField';
+import { FolderField, type FolderPick, pickOf, pickedFolder } from './FolderField';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
@@ -26,24 +26,25 @@ export const AssignFolder = ({
 	folder: string | null;
 	onAssigned: (folder: string | null) => void;
 }) => {
-	const [choice, setChoice] = useState<string | null | undefined>(folder);
+	const [choice, setChoice] = useState<FolderPick>(pickOf(folder));
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	// Each opening starts on the folder the project is in.
 	useEffect(() => {
 		if (!open) return;
-		setChoice(folder);
+		setChoice(pickOf(folder));
 		setError(null);
 	}, [open, folder]);
-	const same = choice === undefined || (choice === null ? folder === null : folder !== null && sameFolder(choice, folder));
+	const chosen = pickedFolder(choice);
+	const same = choice.kind === 'naming' || (chosen === null ? folder === null : folder !== null && sameFolder(chosen, folder));
 	const assign = async () => {
-		if (choice === undefined) return;
+		if (choice.kind === 'naming') return;
 		setBusy(true);
 		setError(null);
-		const r = await window.workspace.assignFolder(projectId, choice);
+		const r = await window.workspace.assignFolder(projectId, chosen);
 		setBusy(false);
 		if (!r.ok) return setError(r.error);
-		onAssigned(choice);
+		onAssigned(chosen);
 	};
 	return (
 		<Dialog open={open} onOpenChange={(next) => !next && !busy && onClose()}>
@@ -52,7 +53,7 @@ export const AssignFolder = ({
 					<DialogTitle>Assign folder</DialogTitle>
 				</DialogHeader>
 				<DialogBody className="flex flex-col gap-4">
-					<FolderField id="assign-folder" label="Folder" folders={folders} value={choice ?? null} onChange={setChoice} disabled={busy} />
+					<FolderField id="assign-folder" label="Folder" folders={folders} value={chosen} onChange={setChoice} disabled={busy} />
 					{error && (
 						<Alert variant="destructive">
 							<AlertDescription>{error}</AlertDescription>

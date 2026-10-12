@@ -12,7 +12,7 @@ import type {
 import { freshIteration, slugify } from '../shared/projects';
 import { CancelButton } from './CancelButton';
 import { CloneHere, useClone, Working } from './Clone';
-import { FolderField } from './FolderField';
+import { FolderField, type FolderPick, pickOf, pickedFolder } from './FolderField';
 import { RepositoryReachNote } from './RepositoryReachNote';
 import { SearchSelect } from './SearchSelect';
 import { GitBranchIcon, InfoIcon } from 'lucide-react';
@@ -110,8 +110,8 @@ export const NewWork = ({
 }) => {
 	const [name, setName] = useState('');
 	const [task, setTask] = useState('');
-	// The folder the new project goes in: undefined while a new one is being named, which is none until it has a name.
-	const [inFolder, setInFolder] = useState<string | null | undefined>(folder);
+	// The folder the new project goes in: none while a new one is being named, until it has a name.
+	const [inFolder, setInFolder] = useState<FolderPick>(pickOf(folder ?? null));
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [repos, setRepos] = useState<Repository[]>([]);
@@ -130,7 +130,7 @@ export const NewWork = ({
 	useEffect(() => {
 		if (!open) return;
 		setPicked(null);
-		setInFolder(folder);
+		setInFolder(pickOf(folder ?? null));
 		setError(null);
 		void window.workspace.listRepositories().then((r) => r.ok && showRepos(r.value));
 		// Asked now, not after the branch is made: an agent that cannot start would leave an empty iteration behind.
@@ -241,13 +241,13 @@ export const NewWork = ({
 			name.trim(),
 			task.trim(),
 			checkout && !elsewhere && from ? { root: checkout.root, branch: from } : undefined,
-			inFolder ?? null,
+			pickedFolder(inFolder),
 		);
 		setBusy(false);
 		if (!r.ok) return setError(r.error);
 		const iteration = freshIteration(r.value);
 		onCreated({
-			project: { id, title: name.trim(), records: [], iterations: [iteration], people: [] },
+			project: { id, title: name.trim(), folder: pickedFolder(inFolder), records: [], iterations: [iteration], people: [] },
 			iteration,
 			task: task.trim(),
 		});
@@ -311,7 +311,7 @@ export const NewWork = ({
 						id="new-work-folder"
 						label="Folder (optional)"
 						folders={folders}
-						value={inFolder ?? null}
+						value={pickedFolder(inFolder)}
 						onChange={setInFolder}
 						disabled={busy}
 					/>

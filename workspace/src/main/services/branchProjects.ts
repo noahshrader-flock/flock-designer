@@ -76,6 +76,9 @@ export const readBranchProjects = async (
 					commit: await branchCommit(productRoot, branch).catch(() => null),
 					contributors: people,
 					createdAt: await branchStartedAt(productRoot, branch).catch(() => null),
+					repository: null,
+					pullRequest: null,
+					cover: null,
 				};
 				return { id: it.projectId, iteration };
 			}),
@@ -87,6 +90,8 @@ export const readBranchProjects = async (
 	return [...byProject].map(([id, its]) => ({
 		id,
 		title: id,
+		// Found as branches: no brief read, so in no folder until one is.
+		folder: null,
 		records: [],
 		iterations: its.sort(newestFirst),
 		people: mergePeople(...its.map((i) => i.contributors)),

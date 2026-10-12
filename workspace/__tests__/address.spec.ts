@@ -179,12 +179,12 @@ describe('runAddress', () => {
 		let i = 0;
 		return async () => ok(s[Math.min(i++, s.length - 1)] as AgentStatus);
 	};
-	const started: AgentStatus = { state: 'running', startedAt: 'now' };
+	const started: AgentStatus = { state: 'running', startedAt: 'now', work: null, purpose: null };
 
 	it('runs, waits through the agent, and says it is done', async () => {
 		const phases = await run({
 			addressComments: async () => ok(started),
-			agentStatus: statuses(started, started, { state: 'finished', exitCode: 0 }),
+			agentStatus: statuses(started, started, { state: 'finished', exitCode: 0, work: null, purpose: null }),
 			iterationCommit: commits('abc', 'def'),
 		});
 		expect(phases.map((p) => p.kind)).toEqual(['running', 'done']);
@@ -196,7 +196,7 @@ describe('runAddress', () => {
 		// decision only a person can make. It exits cleanly, so only the branch tells them apart.
 		const phases = await run({
 			addressComments: async () => ok(started),
-			agentStatus: statuses(started, { state: 'finished', exitCode: 0 }),
+			agentStatus: statuses(started, { state: 'finished', exitCode: 0, work: null, purpose: null }),
 			iterationCommit: commits('abc', 'abc'),
 		});
 		expect(phases[1]).toEqual({ kind: 'done', changed: false, commit: null });
@@ -205,7 +205,7 @@ describe('runAddress', () => {
 	it('does not claim the branch stood still when it cannot be read', async () => {
 		const phases = await run({
 			addressComments: async () => ok(started),
-			agentStatus: statuses({ state: 'finished', exitCode: 0 }),
+			agentStatus: statuses({ state: 'finished', exitCode: 0, work: null, purpose: null }),
 			iterationCommit: async () => ({ ok: false, error: 'not a git repository' }),
 		});
 		// Nothing is claimed about the branch, and there is no commit to point at.
@@ -236,7 +236,9 @@ describe('runAddress', () => {
 			),
 		).toEqual(['running', 'failed']);
 		expect(
-			(await run({ addressComments: async () => ok(started), agentStatus: statuses({ state: 'finished', exitCode: 1 }) })).map((p) => p.kind),
+			(
+				await run({ addressComments: async () => ok(started), agentStatus: statuses({ state: 'finished', exitCode: 1, work: null, purpose: null }) })
+			).map((p) => p.kind),
 		).toEqual(['running', 'failed']);
 	});
 
@@ -249,8 +251,8 @@ describe('runAddress', () => {
 
 describe('runPrototypeAddress', () => {
 	const ok = <T>(value: T): Result<T> => ({ ok: true, value });
-	const started: AgentStatus = { state: 'running', startedAt: 'now' };
-	const finished: AgentStatus = { state: 'finished', exitCode: 0 };
+	const started: AgentStatus = { state: 'running', startedAt: 'now', work: null, purpose: null };
+	const finished: AgentStatus = { state: 'finished', exitCode: 0, work: null, purpose: null };
 	const addressed = { changed: true, iteration: 'v1-i2', made: null, comment: { id: 7 } } as never;
 	const run = async (api: Partial<Parameters<typeof runPrototypeAddress>[0]['api']>, isLive = () => true) => {
 		const phases: AddressPhase[] = [];

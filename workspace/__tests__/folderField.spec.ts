@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { createElement, useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { FolderField } from '../src/renderer/FolderField';
+import { FolderField, type FolderPick, pickOf, pickedFolder } from '../src/renderer/FolderField';
 import { press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
 /**
@@ -10,15 +10,15 @@ import { press, render, settle, typeInto, unmountAll } from './reviewHarness';
  */
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
-let chosen: (string | null | undefined)[] = [];
+let chosen: FolderPick[] = [];
 const Host = ({ first }: { first: string | null }) => {
-	const [value, setValue] = useState<string | null | undefined>(first);
+	const [value, setValue] = useState<FolderPick>(pickOf(first));
 	return createElement(FolderField, {
 		id: 'f',
 		label: 'Folder (optional)',
 		folders: ['Admin', 'Roles'],
-		value: value ?? null,
-		onChange: (v: string | null | undefined) => {
+		value: pickedFolder(value),
+		onChange: (v: FolderPick) => {
 			chosen.push(v);
 			setValue(v);
 		},
@@ -70,7 +70,7 @@ describe('the folder field', () => {
 		await show('Admin');
 		await pick('No folder');
 		expect(list().textContent).toBe('Choose folder');
-		expect(chosen).toEqual([null]);
+		expect(chosen).toEqual([{ kind: 'none' }]);
 	});
 
 	it('offers a folder with only a way to add one when there are none', async () => {
@@ -85,7 +85,7 @@ describe('the folder field', () => {
 		await show('Admin');
 		await pick('Roles');
 		await pick('No folder');
-		expect(chosen).toEqual(['Roles', null]);
+		expect(chosen).toEqual([{ kind: 'folder', name: 'Roles' }, { kind: 'none' }]);
 		expect(nameInput()).toBeNull();
 	});
 
@@ -94,16 +94,16 @@ describe('the folder field', () => {
 		await pick('Add new folder');
 		expect(nameInput()).not.toBeNull();
 		expect(document.querySelector('label[for="f-new"]')?.textContent).toBe('New folder name');
-		expect(chosen).toEqual([undefined]);
+		expect(chosen).toEqual([{ kind: 'naming' }]);
 		await typeInto(nameInput()!, '  Alerts   area ');
-		expect(chosen.at(-1)).toBe('Alerts area');
+		expect(chosen.at(-1)).toEqual({ kind: 'folder', name: 'Alerts area' });
 	});
 
 	it('takes a new name that is a folder in use, ignoring case, for that folder', async () => {
 		await show();
 		await pick('Add new folder');
 		await typeInto(nameInput()!, 'admin');
-		expect(chosen.at(-1)).toBe('Admin');
+		expect(chosen.at(-1)).toEqual({ kind: 'folder', name: 'Admin' });
 	});
 
 	it('closes the input when a folder in the list is chosen again', async () => {
@@ -111,6 +111,6 @@ describe('the folder field', () => {
 		await pick('Add new folder');
 		await pick('Roles');
 		expect(nameInput()).toBeNull();
-		expect(chosen.at(-1)).toBe('Roles');
+		expect(chosen.at(-1)).toEqual({ kind: 'folder', name: 'Roles' });
 	});
 });

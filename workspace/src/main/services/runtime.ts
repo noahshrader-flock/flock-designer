@@ -58,7 +58,7 @@ interface Running {
 	child: ChildProcess;
 	status: PreviewStatus;
 	/** Which project this process is serving, for commands that serve one. */
-	projectId?: string;
+	projectId: string | null;
 }
 
 /**
@@ -143,8 +143,8 @@ export class RuntimeManager {
 			env: command.servesPreviewOn === undefined ? process.env : { ...process.env, ...QUIET_PREVIEW },
 		});
 
-		this.running.set(commandId, { child, projectId, status: { state: 'starting', commandId, projectId } });
-		this.events.onStatus({ state: 'starting', commandId, projectId });
+		this.running.set(commandId, { child, projectId: projectId ?? null, status: { state: 'starting', commandId, projectId: projectId ?? null } });
+		this.events.onStatus({ state: 'starting', commandId, projectId: projectId ?? null });
 
 		child.stdout?.on('data', (d: Buffer) => this.events.onLog({ commandId, stream: 'stdout', text: d.toString() }));
 		child.stderr?.on('data', (d: Buffer) => this.events.onLog({ commandId, stream: 'stderr', text: d.toString() }));
@@ -179,7 +179,7 @@ export class RuntimeManager {
 					state: 'running',
 					commandId,
 					url: `http://localhost:${port}/`,
-					projectId: this.running.get(commandId)?.projectId,
+					projectId: this.running.get(commandId)?.projectId ?? null,
 				};
 				this.setStatus(commandId, status);
 				return status;

@@ -13,9 +13,15 @@ const CHOOSE = 'Choose folder';
  * which opens an input under the list for its name, then the folders in use. It says *Choose folder* until one is chosen,
  * and **No folder** is offered, last, only while one is: the way to clear it. (Filtering by no folder is the Projects
  * screen's.) A folder exists because a project is in it, so a new one is made by the project that is put in it. What is
- * chosen is said as a folder's name, `null` for no folder, or `undefined` while a new folder has no name yet. A new name
- * that is a folder in use, ignoring case, is that folder.
+ * chosen is a folder, no folder, or a new folder still being named. A new name that is a folder in use, ignoring case,
+ * is that folder.
  */
+/** What the field holds: a folder, no folder, or a new one whose name is not typed yet (nothing to save). */
+export type FolderPick = { kind: 'none' } | { kind: 'folder'; name: string } | { kind: 'naming' };
+/** The pick of a folder as it is kept: no folder for none, or for one still being named. */
+export const pickedFolder = (pick: FolderPick): string | null => (pick.kind === 'folder' ? pick.name : null);
+export const pickOf = (folder: string | null): FolderPick => (folder === null ? { kind: 'none' } : { kind: 'folder', name: folder });
+
 export const FolderField = ({
 	id,
 	label,
@@ -28,7 +34,7 @@ export const FolderField = ({
 	label: string;
 	folders: string[];
 	value: string | null;
-	onChange: (folder: string | null | undefined) => void;
+	onChange: (pick: FolderPick) => void;
 	disabled?: boolean;
 }) => {
 	const [adding, setAdding] = useState(false);
@@ -37,12 +43,12 @@ export const FolderField = ({
 	const choose = (item: string) => {
 		setAdding(item === ADD);
 		setName('');
-		onChange(item === ADD ? undefined : item === NO_FOLDER ? null : item);
+		onChange(item === ADD ? { kind: 'naming' } : item === NO_FOLDER ? { kind: 'none' } : { kind: 'folder', name: item });
 	};
 	const rename = (typed: string) => {
 		setName(typed);
 		const named = folderName(typed);
-		onChange(named === null ? undefined : (folders.find((f) => sameFolder(f, named)) ?? named));
+		onChange(named === null ? { kind: 'naming' } : { kind: 'folder', name: folders.find((f) => sameFolder(f, named)) ?? named });
 	};
 	return (
 		<Field>

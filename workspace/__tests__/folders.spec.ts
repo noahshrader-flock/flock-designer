@@ -156,7 +156,15 @@ describe('reading a project’s folder', () => {
 });
 
 describe('a project’s folder, when this machine and GitHub both know the project', () => {
-	const project = (over: Partial<Project>): Project => ({ id: 'alpha', title: 'Alpha', records: ['brief.md'], iterations: [], people: [], ...over });
+	const project = (over: Partial<Project>): Project => ({
+		id: 'alpha',
+		title: 'Alpha',
+		folder: null,
+		records: ['brief.md'],
+		iterations: [],
+		people: [],
+		...over,
+	});
 
 	it('is this machine’s, which is the one last written here and is synced from GitHub before every write', () => {
 		const [merged] = mergeProjects([project({ folder: 'Admin' })], [project({ folder: 'Roles' })]);
@@ -237,11 +245,11 @@ describe('the folders in use', () => {
 		expect(sameFolder('Admin', 'Admins')).toBe(false);
 	});
 
-	it('hold a project when it is in that folder, all of them for no folder chosen, and those in none for null', () => {
-		expect(inFolder(p('a', 'Admin'), 'admin')).toBe(true);
-		expect(inFolder(p('a', 'Admin'), 'Roles')).toBe(false);
-		expect(inFolder(p('a', 'Admin'), undefined)).toBe(true);
-		expect(inFolder(p('a', null), null)).toBe(true);
-		expect(inFolder(p('a', 'Admin'), null)).toBe(false);
+	it('hold a project when it is in that folder, all of them for all folders, and those in none for no folder', () => {
+		expect(inFolder(p('a', 'Admin'), { kind: 'folder', name: 'admin' })).toBe(true);
+		expect(inFolder(p('a', 'Admin'), { kind: 'folder', name: 'Roles' })).toBe(false);
+		expect(inFolder(p('a', 'Admin'), { kind: 'all' })).toBe(true);
+		expect(inFolder(p('a', null), { kind: 'none' })).toBe(true);
+		expect(inFolder(p('a', 'Admin'), { kind: 'none' })).toBe(false);
 	});
 });

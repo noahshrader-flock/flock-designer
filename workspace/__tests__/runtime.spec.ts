@@ -103,7 +103,7 @@ describe('preview', () => {
 	it('reports running with a URL once the port answers', async () => {
 		manager = make({ probe: async () => true });
 		const status = await manager.start(root, descriptor, 'preview');
-		expect(status).toEqual({ state: 'running', commandId: 'preview', url: 'http://localhost:4999/' });
+		expect(status).toEqual({ state: 'running', commandId: 'preview', url: 'http://localhost:4999/', projectId: null });
 	});
 
 	it('gives up with a readable reason when the port never answers', async () => {
