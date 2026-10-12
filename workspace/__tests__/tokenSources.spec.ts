@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogReads } from '../src/main/services/componentCatalog';
 import { readTokens } from '../src/main/services/designTokens';
+import { channelsOf, hexOfChannels } from '../src/main/services/tokens/cssVariables';
 
 /**
  * The other ways a library keeps its tokens (decision 18), behind the same list as FUI's theme files: CSS variables (a
@@ -133,6 +134,22 @@ describe('CSS variables', () => {
 		expect(find(list, 'css.light.border')).toMatchObject({ kind: 'color', category: 'Color' });
 	});
 
+	it('read shadcn’s colors written as bare HSL channels, as the color they draw, in each mode and through a pointer', async () => {
+		const css = ':root {\n  --primary: 222.2 47.4% 11.2%;\n  --ring: var(--primary);\n}\n.dark {\n  --primary: 210 40% 98%;\n}\n';
+		const list = await readTokens(reads({ 'src/globals.css': css }));
+		expect(find(list, 'css.light.primary')).toMatchObject({ kind: 'color', category: 'Color', value: '#0F172A' });
+		expect(find(list, 'css.dark.primary')?.value).toBe('#F8FAFC');
+		expect(find(list, 'css.light.ring')).toMatchObject({ value: '#0F172A', ref: { path: 'css.light.primary' } });
+	});
+
+	it('give back every color it writes as channels as that same color, so a change reads back as made', () => {
+		for (let n = 0; n < 4096; n++) {
+			const hex = `#${(((n * 2654435761) >>> 0) % 0xffffff).toString(16).padStart(6, '0').toUpperCase()}`;
+			expect(hexOfChannels(channelsOf(hex))).toBe(hex);
+		}
+		expect(hexOfChannels(channelsOf('#11223380'))).toBe('#11223380');
+	});
+
 	it('group a scale of steps into one set: Tailwind’s --color-red-500 is step 500 of color-red', async () => {
 		const list = await readTokens(reads({ 'src/styles/globals.css': CSS }));
 		expect(find(list, 'css.light.color-red-500')).toMatchObject({ set: 'color-red', name: '500' });
@@ -252,6 +269,59 @@ describe('design token files', () => {
 		expect(list.problems.map((p) => p.reason)).toContain('motion.wrong is not a duration or an easing that can be read');
 		expect(find(list, 'breakpoint.md')).toMatchObject({ kind: 'dimension', category: 'Breakpoints', value: '900px' });
 		expect(find(list, 'border.width.thin')).toMatchObject({ kind: 'dimension', category: 'Borders', value: '1px' });
+	});
+
+	it('read the standard’s border as its width, and its transition as its duration and its easing', async () => {
+		const more = JSON.stringify(
+			{
+				line: { thin: { $type: 'border', $value: { color: '#000000', width: '1px', style: 'solid' } } },
+				ease: { out: { $type: 'cubicBezier', $value: [0, 0, 0.2, 1] } },
+				move: { quick: { $type: 'transition', $value: { duration: '200ms', delay: '0ms', timingFunction: '{ease.out}' } } },
+			},
+			null,
+			2,
+		);
+		const list = await readTokens(reads({ 'tokens/more.tokens.json': more }));
+		expect(find(list, 'line.thin')).toMatchObject({ kind: 'dimension', category: 'Borders', value: '1px' });
+		expect(find(list, 'move.quick.duration')).toMatchObject({ kind: 'duration', category: 'Motion', group: 'Duration', set: 'move.quick', value: '200ms' });
+		expect(find(list, 'move.quick.timingFunction')).toMatchObject({ kind: 'easing', category: 'Motion', group: 'Easing', value: 'cubic-bezier(0, 0, 0.2, 1)' });
+	});
+
+	it('read a Tokens Studio file, as Figma’s plugin writes one: value and type with no $, by its own names for the types', async () => {
+		const studio = JSON.stringify(
+			{
+				global: {
+					colors: { blue: { value: '#0000ff', type: 'color' } },
+					size: { sm: { value: '4px', type: 'spacing' } },
+					rounding: { md: { value: '6px', type: 'borderRadius' }, lg: { value: '8', type: 'borderRadius' } },
+					stroke: { thin: { value: '1px', type: 'borderWidth' } },
+					families: { body: { value: 'Inter', type: 'fontFamilies' } },
+					weights: { bold: { value: '700', type: 'fontWeights' } },
+					leading: { tight: { value: '1.2', type: 'lineHeights' } },
+					scale: { md: { value: '16px', type: 'fontSizes' } },
+					elevation: { sm: { value: { x: '0', y: '1', blur: '2', spread: '0', color: '{global.colors.blue}', type: 'innerShadow' }, type: 'boxShadow' } },
+				},
+			},
+			null,
+			2,
+		);
+		const list = await readTokens(reads({ 'tokens.json': studio }));
+		const of = (path: string) => {
+			const t = find(list, path);
+			return t && { kind: t.kind, category: t.category, value: t.value };
+		};
+		expect(of('global.colors.blue')).toEqual({ kind: 'color', category: 'Color', value: '#0000ff' });
+		expect(of('global.size.sm')).toEqual({ kind: 'dimension', category: 'Spacing', value: '4px' });
+		expect(of('global.rounding.md')).toEqual({ kind: 'dimension', category: 'Shape', value: '6px' });
+		// A length with no unit, as Tokens Studio writes one, is in pixels.
+		expect(of('global.rounding.lg')).toEqual({ kind: 'dimension', category: 'Shape', value: '8px' });
+		expect(of('global.stroke.thin')).toEqual({ kind: 'dimension', category: 'Borders', value: '1px' });
+		expect(of('global.families.body')).toEqual({ kind: 'font', category: 'Typography', value: 'Inter' });
+		expect(find(list, 'global.weights.bold')?.group).toBe('Weight');
+		expect(find(list, 'global.leading.tight')?.group).toBe('Line height');
+		expect(find(list, 'global.scale.md')?.group).toBe('Size');
+		// Its shadow's lengths are written without units, which are pixels, and an inner shadow is an inset one.
+		expect(of('global.elevation.sm')).toEqual({ kind: 'shadow', category: 'Elevation', value: 'inset 0px 1px 2px 0px #0000ff' });
 	});
 
 	it('read the one typography token in the shared fixture as its family', async () => {

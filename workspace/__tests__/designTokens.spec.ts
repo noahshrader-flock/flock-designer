@@ -335,6 +335,35 @@ describe('a library laid out differently', () => {
 		expect(find(list, 'radius')?.value).toBe('6px');
 	});
 
+	it('reads a MUI theme written all in createTheme, with no tone files: its palette, typography as a function, its breakpoints', async () => {
+		const theme = `import { createTheme } from '@mui/material/styles';
+
+export const theme = createTheme({
+  palette: {
+    primary: { main: '#1976D2', contrastText: '#FFFFFF' },
+  },
+  typography: (palette) => ({
+    fontFamily: 'Roboto, sans-serif',
+  }),
+  breakpoints: { values: { sm: 600 } },
+  shape: { borderRadius: 4 },
+});
+`;
+		const list = await readTokens(reads({ 'src/theme.ts': theme }));
+		expect(list.source).toBe('theme files');
+		expect(find(list, 'palette.light.primary.main')).toMatchObject({ kind: 'color', category: 'Color', group: 'Light', value: '#1976D2', source: { line: 5 } });
+		expect(find(list, 'typography.fontFamily')).toMatchObject({ category: 'Typography', value: 'Roboto, sans-serif' });
+		expect(find(list, 'breakpoints.sm')).toMatchObject({ category: 'Breakpoints', value: '600px' });
+		expect(find(list, 'radius')?.value).toBe('4px');
+	});
+
+	it('reads a MUI theme whose palette is worked out when it runs for what it writes as values: its typography', async () => {
+		const theme = "export const theme = createTheme({\n  palette: paletteFor(mode),\n  typography: { fontFamily: 'Public Sans' },\n});\n";
+		const list = await readTokens(reads({ 'src/theme/create-theme.ts': theme }));
+		expect(list.source).toBe('theme files');
+		expect(list.tokens.map((t) => t.path)).toEqual(['typography.fontFamily']);
+	});
+
 	it('leaves alone what is neither tones nor a palette, and does not call it a problem', async () => {
 		const list = await readTokens(reads({ ...LIBRARY, 'src/colors/customPalette.ts': "export const customPalette = { brandName: 'Flock', shades: 3 };\n" }));
 		expect(list.problems).toEqual([]);

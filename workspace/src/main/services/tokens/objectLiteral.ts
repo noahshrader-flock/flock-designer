@@ -184,16 +184,16 @@ export const exportedObjects = (text: string): Map<string, Entry[]> => {
  * The entry written as `key` on `line`, anywhere in a file's exported objects, however deep: where a token read from
  * there is written. Null unless exactly one is, so a change is never written to a guess.
  */
-export const entryAt = (text: string, key: string, line: number): Entry | null => {
-	const found: Entry[] = [];
+export const entryAt = (text: string, key: string, line: number, also: Entry[] = []): Entry | null => {
+	const found = new Map<number, Entry>();
 	const walk = (entries: Entry[]) => {
 		for (const e of entries) {
-			if (e.key === key && e.line === line) found.push(e);
+			if (e.key === key && e.line === line) found.set(e.span[0], e);
 			if (e.value.kind === 'object') walk(e.value.entries);
 		}
 	};
-	for (const entries of exportedObjects(text).values()) walk(entries);
-	return found.length === 1 ? (found[0] as Entry) : null;
+	for (const entries of [...exportedObjects(text).values(), also]) walk(entries);
+	return found.size === 1 ? ([...found.values()][0] as Entry) : null;
 };
 
 /** `text` with `span` replaced by `written`. */

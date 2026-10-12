@@ -172,6 +172,12 @@ describe('writing a change into theme files', () => {
 });
 
 describe('writing a change into CSS variables', () => {
+	it('writes a color kept as bare HSL channels as channels, as shadcn uses them inside hsl()', async () => {
+		const { written, find } = await change({ 'src/globals.css': ':root {\n  --primary: 222.2 47.4% 11.2%;\n}\n' }, [{ path: 'css.light.primary', value: '#222222' }]);
+		expect(written.get('src/globals.css')).toBe(':root {\n  --primary: 0 0% 13.33%;\n}\n');
+		expect(find('css.light.primary').value).toBe('#222222');
+	});
+
 	const CSS = { 'src/globals.css': ':root {\n  /* --primary: #000000; */ --primary: #111111;\n  --ring: var(--primary);\n  --accent: #333333;\n  --radius: 0.5rem;\n}\n' };
 
 	it('writes a variable’s new value in its own declaration, past a commented-out one on the same line', async () => {
@@ -287,5 +293,28 @@ describe('a token that is not a color or a length', () => {
 	it('is refused as a change, given a value or pointed at another of its kind: it is shown, not changed', () => {
 		expect(editProblem({ path: 'font.sans', value: '8px' }, byPath)).toMatch(/font\.sans is shown, not changed/);
 		expect(editProblem({ path: 'font.sans', ref: 'font.mono' }, byPath)).toMatch(/font\.sans is shown, not changed/);
+	});
+});
+
+describe('writing a change into a library laid out otherwise', () => {
+	it('writes a Tokens Studio value in its value, with no $', async () => {
+		const studio = JSON.stringify({ colors: { blue: { value: '#0000ff', type: 'color' } } }, null, 2);
+		const { written, find } = await change({ 'tokens.json': studio }, [{ path: 'colors.blue', value: '#00FF00' }]);
+		expect(written.get('tokens.json')).toContain('"value": "#00FF00"');
+		expect(find('colors.blue').value).toBe('#00FF00');
+	});
+
+	it('keeps a length with no unit as it is written, a number of pixels', async () => {
+		const studio = JSON.stringify({ borderRadius: { lg: { value: '8', type: 'borderRadius' } } }, null, 2);
+		const { written, find } = await change({ 'tokens.json': studio }, [{ path: 'borderRadius.lg', value: '12px' }]);
+		expect(written.get('tokens.json')).toContain('"value": "12"');
+		expect(find('borderRadius.lg').value).toBe('12px');
+	});
+
+	it('writes a role of a palette set in createTheme itself', async () => {
+		const theme = "export const theme = createTheme({\n  palette: {\n    primary: { main: '#1976D2' },\n  },\n});\n";
+		const { written, find } = await change({ 'src/theme.ts': theme }, [{ path: 'palette.light.primary.main', value: '#000000' }]);
+		expect(written.get('src/theme.ts')).toContain("primary: { main: '#000000' }");
+		expect(find('palette.light.primary.main').value).toBe('#000000');
 	});
 });

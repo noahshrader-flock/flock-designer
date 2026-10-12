@@ -7,7 +7,7 @@
  * in order on the library's own files, and the first that finds tokens gives the list, so one library is never read two
  * ways at once. Every source returns the same shape, so nothing that shows or changes a token learns where it came from.
  * Theme files (MUI's way, and FUI's) are tried first, then CSS variables (shadcn's and Tailwind's), then design token
- * files (the standard JSON). The fourth layer, an agent reading what is there, is not built.
+ * files (the standard JSON, and Tokens Studio's). The fourth layer, an agent reading what is there, is not built.
  *
  * A value that is not plain is named, with its file and line, and the rest are still read: this never guesses.
  */

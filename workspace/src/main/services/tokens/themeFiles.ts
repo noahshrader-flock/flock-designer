@@ -2,8 +2,9 @@
  * Tokens kept as a JavaScript or TypeScript theme, as MUI libraries keep them (FUI among them). **Found by their shape,
  * not by where they are:** a tone family is an exported object of numbered steps with hex colors (`pineGreen = { 50:
  * '#108062', … }`), a palette is an exported object with a `mode` (`lightPalette = { mode: 'light', primary: { main:
- * pineGreen[50] } }`), and the theme's spacing and radius are its `spacing` and its `shape.borderRadius`; its typography,
- * shadows, breakpoints and transitions, shown and never changed, are where it sets them (`themePart`). Only files
+ * pineGreen[50] } }`), or, with neither, the palette given to `createTheme` in place; the theme's spacing and radius are its
+ * `spacing` and its `shape.borderRadius`; its typography, shadows, breakpoints and transitions, shown and never changed, are
+ * where it sets them (`themePart`). A file with no tones, no palette and no `createTheme` is not a theme. Only files
  * whose path says colors, tokens, themes, palettes or tones are read; any other object in them is left alone.
  *
  * **A change is written as the library writes it** (decision 26): a tone step's hex as a quoted hex, a role pointed at
@@ -51,11 +52,20 @@ const THEME_NUMBERS: { path: string; key: string; inside: RegExp }[] = [
 ];
 
 /**
- * Where a theme sets one of its parts: `name: {` (or `[`) in `createTheme`, or a `const name = {` of its own. Only those two:
- * `[theme.breakpoints.up('md')]: {` in a style is not where the breakpoints are set.
+ * Where a theme sets one of its parts: `name: {` (or `[`) in `createTheme`, or a `const name = {` of its own, either also
+ * as a function that gives it (`typography: (palette) => ({`). Only those: `[theme.breakpoints.up('md')]: {` in a style is
+ * not where the breakpoints are set.
  */
 const themePart = (name: string, open: '{' | '['): RegExp =>
-	new RegExp(`(?:\\b(?:const|let|var)\\s+${name}\\b[^=;\\n]*=|(?<![.\\w])${name}\\s*:)\\s*\\${open}`);
+	new RegExp(`(?:\\b(?:const|let|var)\\s+${name}\\b[^=;\\n]*=|(?<![.\\w])${name}\\s*:)\\s*(?:\\([^()]*\\)\\s*=>\\s*\\(?\\s*)?\\${open}`);
+const PALETTE = themePart('palette', '{');
+
+/** The palette `createTheme` is given in place (`palette: { primary: { main: '#1976D2' } }`), when there is one. */
+const paletteIn = (text: string): Entry[] | null => {
+	const open = PALETTE.exec(text);
+	const node = open ? parseObject(text, open.index + open[0].length - 1).node : null;
+	return node?.kind === 'object' ? node.entries : null;
+};
 const TYPOGRAPHY = themePart('typography', '{');
 
 /** A value as a theme writes it: a string, or a number with `unit` after it (a size in pixels, a duration in milliseconds). */
@@ -235,10 +245,21 @@ export const themeFiles: TokenSource = {
 			.map(([name, { entries }]) => ({ name, mode: modeOf(entries) }))
 			.filter((p): p is { name: string; mode: string } => p.mode !== null)
 			.sort((a, b) => (a.mode === 'light' ? -1 : b.mode === 'light' ? 1 : a.mode.localeCompare(b.mode)));
+		// With none, the palette `createTheme` is given in place, light unless it says.
+		if (palettes.length === 0) {
+			for (const [file, text] of texts) {
+				const entries = paletteIn(text);
+				if (entries === null) continue;
+				objects.set('palette', { file, entries });
+				palettes.push({ name: 'palette', mode: modeOf(entries) ?? 'light' });
+				break;
+			}
+		}
 		for (const { name, mode } of palettes) {
 			for (const r of rolesOf(name)) tokens.push({ path: `palette.${mode}.${r.set}.${r.name}`, category: primitiveOf('color', r.name) as string, group: capitalized(mode), ...r });
 		}
-		if (tones.size === 0 && palettes.length === 0) return null;
+		// A theme is tones, a palette, or a call to MUI's `createTheme`; a file with none of them is not one.
+		if (tones.size === 0 && palettes.length === 0 && ![...texts.values()].some((t) => /\bcreateTheme\s*\(/.test(t))) return null;
 
 		// The theme's base spacing and radius, in pixels, from the first file that sets them.
 		for (const number of THEME_NUMBERS) {
@@ -273,7 +294,7 @@ export const themeFiles: TokenSource = {
 			if (px === undefined) throw new Error(`The theme sets ${token.path} as a whole number of pixels, so it cannot be ${'value' in to ? to.value : 'a pointer'}.`);
 			return replaced(text, found.span, px);
 		}
-		const entry = entryAt(text, token.name, token.source.line);
+		const entry = entryAt(text, token.name, token.source.line, paletteIn(text) ?? []);
 		if (!entry || entry.value.kind !== 'value') throw notWhereRead(token);
 		if ('value' in to) return replaced(text, entry.span, `'${to.value.toUpperCase()}'`);
 		// A role points at a tone step; the tone must already be in the file, which is what makes it reachable there.

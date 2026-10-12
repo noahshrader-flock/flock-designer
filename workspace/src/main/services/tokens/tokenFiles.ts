@@ -1,11 +1,13 @@
 /**
- * Tokens kept in design token files, the standard JSON format (the Design Tokens Community Group's, which Style
- * Dictionary and Tokens Studio write): a token is an object with a `$value`, its kind the `$type` it has or its group
- * has. Colors, lengths whose name says spacing or radius, and typography (a family, a weight, a size named as one, a
- * typography token as each of its parts), shadows, and motion (a duration, a cubic Bézier) are read, and a length named
- * for a border or a breakpoint; other kinds (a gradient) are left out until a primitive reads them. A value that names
- * another token (`{color.red.500}`) is that token's value, and points at it. Each token's line is exact: the file is read a second time for where things are, by the same reader the
- * theme files use (JSON is an object literal too). A change is written in the token's `$value`, in the shape it had.
+ * Tokens kept in design token files: the standard JSON format (the Design Tokens Community Group's), where a token is an
+ * object with a `$value`, its kind the `$type` it has or its group has; or, in a file with no `$value`, the `value` and
+ * `type` Tokens Studio and Style Dictionary's older format write, with Tokens Studio's names for the types
+ * (`TYPE_NAMES`). Colors, lengths (by the primitive their type or name says), typography (a family, a weight, a line
+ * height, a size named as one, a typography token as each of its parts), shadows, borders (as their width) and motion (a
+ * duration, a cubic Bézier, a transition) are read; other kinds (a gradient) are left out until a primitive reads them. A
+ * value that names another token (`{color.red.500}`) is that token's value, and points at it. Each token's line is exact:
+ * the file is read a second time for where things are, by the same reader the theme files use (JSON is an object literal
+ * too). A change is written in the token's value, in the shape it had.
  */
 import type { DesignToken, TokenProblem } from '../../../shared/contract';
 import { DIMENSION, DURATION, lengthParts } from '../../../shared/tokens';
@@ -18,10 +20,28 @@ const TOKEN_FILE = /(\.tokens\.json|(^|\/)(design-)?tokens?\.json|(^|\/)(design-
 interface Raw {
 	path: string[];
 	type: string | undefined;
+	/** For a type that says which primitive it is (Tokens Studio's `borderRadius`), the word that says so; else its path. */
+	named?: string;
 	value: unknown;
 	file: string;
 	line: number;
 }
+
+/**
+ * Tokens Studio's names for the standard's types (and a border's, which is a width), each with the word that says which
+ * primitive it is when its type says that and its name may not (`rounding.md` of type `borderRadius` is a radius).
+ */
+const TYPE_NAMES: Record<string, { type: string; named?: string }> = {
+	spacing: { type: 'dimension', named: 'spacing' },
+	borderRadius: { type: 'dimension', named: 'radius' },
+	borderWidth: { type: 'dimension', named: 'border' },
+	border: { type: 'border', named: 'border' },
+	fontSizes: { type: 'dimension', named: 'fontSize' },
+	fontFamilies: { type: 'fontFamily' },
+	fontWeights: { type: 'fontWeight' },
+	lineHeights: { type: 'lineHeight' },
+	boxShadow: { type: 'shadow' },
+};
 
 /** Every object entry of a token file, however deep, by its path joined with dots: where each thing in it is written. */
 const entriesOf = (text: string): Map<string, Entry> => {
@@ -42,8 +62,12 @@ const entriesOf = (text: string): Map<string, Entry> => {
 /** A value that names another token: `{color.red.500}` names `color.red.500`. */
 const POINTER = /^\{([^{}]+)\}$/;
 
-/** A length as written: `"4px"`, or `{ "value": 4, "unit": "px" }`. */
+/** A number with no unit, as Tokens Studio writes a length in pixels: `"8"`, or `8`. */
+const BARE = /^-?\d*\.?\d+$/;
+
+/** A length as written: `"4px"`, `{ "value": 4, "unit": "px" }`, or a number with no unit, which is in pixels. */
 const lengthOf = (value: unknown): string | null => {
+	if (typeof value === 'number' || (typeof value === 'string' && BARE.test(value))) return `${value}px`;
 	if (typeof value === 'string') return DIMENSION.test(value) ? value : null;
 	const v = value as { value?: unknown; unit?: unknown } | null;
 	return typeof v?.value === 'number' && typeof v.unit === 'string' && DIMENSION.test(`${v.value}${v.unit}`) ? `${v.value}${v.unit}` : null;
@@ -63,17 +87,21 @@ const READ_PART: Record<string, (v: unknown) => string | null> = {
 	[TYPE_PARTS.lineHeight]: plainOf,
 };
 
+/** The token types that are one part of typography, and which. */
+const TYPE_PART_OF: Record<string, string> = { fontFamily: TYPE_PARTS.family, fontWeight: TYPE_PARTS.weight, lineHeight: TYPE_PARTS.lineHeight };
+
 /**
- * A shadow as the box shadow it draws, from the standard's parts (a color, two offsets, a blur, a spread, and `inset`), or
- * several of them on one token; null when a part it needs is missing or is not one. `color` is followed to what it names.
+ * A shadow as the box shadow it draws, from the standard's parts (a color, two offsets, a blur, a spread, and `inset`) or
+ * Tokens Studio's (`x`, `y`, lengths with no unit, which are pixels, and `innerShadow`), or several of them on one token;
+ * null when a part it needs is missing or is not one. `color` is followed to what it names.
  */
 const boxShadowOf = (value: unknown, resolve: (v: unknown) => unknown): string | null => {
 	const one = (s: unknown): string | null => {
 		const o = s !== null && typeof s === 'object' ? (s as Record<string, unknown>) : {};
 		const color = resolve(o.color);
-		const lengths = [o.offsetX, o.offsetY, o.blur, o.spread].map((l) => lengthOf(resolve(l)));
+		const lengths = [o.offsetX ?? o.x, o.offsetY ?? o.y, o.blur, o.spread].map((l) => lengthOf(resolve(l)));
 		if (typeof color !== 'string' || lengths.some((l) => l === null)) return null;
-		return `${o.inset === true ? 'inset ' : ''}${lengths.join(' ')} ${color}`;
+		return `${o.inset === true || o.type === 'innerShadow' ? 'inset ' : ''}${lengths.join(' ')} ${color}`;
 	};
 	const all = (Array.isArray(value) ? value : [value]).map(one);
 	return all.length > 0 && all.every((s) => s !== null) ? all.join(', ') : null;
@@ -106,12 +134,16 @@ export const tokenFiles: TokenSource = {
 			}
 			const at = entriesOf(text);
 			const lineOf = (path: string[]) => at.get(path.join('.'))?.line ?? 1;
+			// The standard's `$value` and `$type`, or, in a file with none, the `value` and `type` Tokens Studio and Style
+			// Dictionary's older format write.
+			const [VALUE, TYPE] = /"\$value"\s*:/.test(text) ? ['$value', '$type'] : ['value', 'type'];
 			const walk = (node: unknown, path: string[], type: string | undefined) => {
 				if (node === null || typeof node !== 'object') return;
 				const o = node as Record<string, unknown>;
-				const own = typeof o.$type === 'string' ? o.$type : type;
-				if ('$value' in o) {
-					raws.set(path.join('.'), { path, type: own, value: o.$value, file, line: lineOf(path) });
+				const own = typeof o[TYPE] === 'string' ? (o[TYPE] as string) : type;
+				if (VALUE in o) {
+					const named = own === undefined ? undefined : TYPE_NAMES[own];
+					raws.set(path.join('.'), { path, type: named?.type ?? own, named: named?.named, value: o[VALUE], file, line: lineOf(path) });
 					return;
 				}
 				for (const [key, child] of Object.entries(o)) if (!key.startsWith('$')) walk(child, [...path, key], own);
@@ -134,25 +166,30 @@ export const tokenFiles: TokenSource = {
 			};
 			const set = raw.path.slice(0, -1).join('.') || path;
 			const last = raw.path[raw.path.length - 1] as string;
-			if (raw.type === 'fontFamily') {
-				typeToken(path, TYPE_PARTS.family, set, last, familyOf(value));
+			const naming = raw.named ?? path;
+			const part = raw.type === undefined ? undefined : TYPE_PART_OF[raw.type];
+			if (part !== undefined) {
+				typeToken(path, part, set, last, (READ_PART[part] as (v: unknown) => string | null)(value));
 				continue;
 			}
-			if (raw.type === 'fontWeight') {
-				typeToken(path, TYPE_PARTS.weight, set, last, plainOf(value));
-				continue;
-			}
-			if (raw.type === 'dimension' && /font[._-]?size/i.test(path)) {
+			if (raw.type === 'dimension' && /font[._-]?size/i.test(naming)) {
 				typeToken(path, TYPE_PARTS.size, set, last, lengthOf(value));
 				continue;
 			}
-			// Motion (R5): a duration, and an easing as a cubic Bézier; one that cannot be read is named.
+			// Motion (R5): a duration, an easing as a cubic Bézier, and a transition as its duration and its easing; one that
+			// cannot be read is named.
+			const motion = (at: string, kind: 'duration' | 'easing', motionSet: string, name: string, written: string | null) => {
+				if (written === null) problems.push({ file: raw.file, line: raw.line, reason: `${at} is not a duration or an easing that can be read` });
+				else tokens.push({ path: at, kind, category: primitiveOf(kind, at) as string, group: MOTION_PARTS[kind], set: motionSet, name, value: written, source: { file: raw.file, line: raw.line } });
+			};
 			if (raw.type === 'duration' || raw.type === 'cubicBezier') {
-				const kind = raw.type === 'duration' ? 'duration' : 'easing';
-				const written = kind === 'duration' ? durationOf(value) : easingOf(value);
-				if (written === null) problems.push({ file: raw.file, line: raw.line, reason: `${path} is not a duration or an easing that can be read` });
-				else
-					tokens.push({ path, kind, category: primitiveOf(kind, path) as string, group: MOTION_PARTS[kind], set, name: last, value: written, source: { file: raw.file, line: raw.line } });
+				motion(path, raw.type === 'duration' ? 'duration' : 'easing', set, last, raw.type === 'duration' ? durationOf(value) : easingOf(value));
+				continue;
+			}
+			if (raw.type === 'transition') {
+				const o = (value ?? {}) as Record<string, unknown>;
+				motion(`${path}.duration`, 'duration', path, 'duration', durationOf(resolve(o.duration)));
+				motion(`${path}.timingFunction`, 'easing', path, 'timingFunction', easingOf(resolve(o.timingFunction)));
 				continue;
 			}
 			// A shadow (R4), as the box shadow it draws; one that cannot be drawn is named.
@@ -170,9 +207,10 @@ export const tokenFiles: TokenSource = {
 				continue;
 			}
 			const color = raw.type === 'color' && typeof value === 'string' ? value : null;
-			const length = raw.type === 'dimension' ? lengthOf(value) : null;
+			// A border is shown as its width, which is what Borders holds.
+			const length = raw.type === 'dimension' ? lengthOf(value) : raw.type === 'border' ? lengthOf(resolve((value as { width?: unknown } | null)?.width)) : null;
 			const kind = color !== null ? 'color' : length !== null ? 'dimension' : null;
-			const category = kind === null ? null : primitiveOf(kind, path);
+			const category = kind === null ? null : primitiveOf(kind, naming);
 			if (kind === null || category === null) continue;
 			tokens.push({
 				path,
@@ -199,11 +237,15 @@ export const tokenFiles: TokenSource = {
 
 	edit: (text, token, to) => {
 		const at = entriesOf(text);
-		const own = at.get(`${token.path}.$value`);
+		const own = at.get(`${token.path}.$value`) ?? at.get(`${token.path}.value`);
 		if (!own || at.get(token.path)?.line !== token.source.line) throw notWhereRead(token);
 		if ('ref' in to) return replaced(text, own.span, JSON.stringify(`{${to.ref}}`));
-		// A length written as `{ "value": 4, "unit": "px" }` keeps that shape; anything else is written as a string.
-		const length = own.value.kind === 'object' ? lengthParts(to.value) : null;
-		return replaced(text, own.span, length ? `{ "value": ${length.number}, "unit": "${length.unit}" }` : JSON.stringify(to.value));
+		// A length keeps the shape it is written in: `{ "value": 4, "unit": "px" }`, or a number of pixels with no unit; anything
+		// else is written as a string.
+		const length = lengthParts(to.value);
+		if (length && own.value.kind === 'object') return replaced(text, own.span, `{ "value": ${length.number}, "unit": "${length.unit}" }`);
+		const bare = own.value.kind === 'value' && BARE.test(JSON.parse(own.value.text) as string);
+		if (length && bare && length.unit === 'px') return replaced(text, own.span, JSON.stringify(String(length.number)));
+		return replaced(text, own.span, JSON.stringify(to.value));
 	},
 };
