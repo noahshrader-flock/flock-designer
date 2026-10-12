@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import pkg from '../../package.json';
 import { CHANNELS } from '../shared/contract';
 import { registerIpc } from './ipc';
+import { quitWithTheWindow } from './lifecycle';
 import { SessionMemory } from './services/editor';
 import { AgentRunner } from './services/agent';
 import { DESIGN_REPO, DesignRepo } from './services/designRepo';
@@ -263,16 +264,6 @@ void app.whenReady().then(() => {
 			app.exit(1);
 		}, 30_000);
 	}
-
-	app.on('activate', () => {
-		if (BrowserWindow.getAllWindows().length === 0) {
-			createWindow();
-		}
-	});
 });
 
-app.on('window-all-closed', () => {
-	if (process.platform !== 'darwin') {
-		app.quit();
-	}
-});
+quitWithTheWindow(app);
