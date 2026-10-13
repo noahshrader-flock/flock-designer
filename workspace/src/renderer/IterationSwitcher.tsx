@@ -1,12 +1,11 @@
-import { ChevronDownIcon, HistoryIcon } from 'lucide-react';
+import { HistoryIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { byVersion, latestIterationName, parsePrototypeName } from '../shared/prototypeNames';
 import { iterationLabel } from '../shared/work';
 import { stateLabel } from '../shared/prototypeStates';
-import { Button } from './ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { capitalize } from '../shared/titleCase';
+import { ChoiceMenu } from './ChoiceMenu';
 
 /** What the switcher needs to know of an iteration: how it is named, and which it is. */
 export interface Switchable {
@@ -15,16 +14,13 @@ export interface Switchable {
 }
 
 /**
- * One dropdown: a button that says where you are (or an icon, when the menu says it), and the menu of the choices, with
- * this one checked. A long menu scrolls.
+ * One of the switcher's dropdowns: the app's menu of a few choices, named for what it switches ("Version V2: switch
+ * version"), opening from its right, as the switcher sits at the toolbar's right.
  */
 const Pick = ({
 	what,
 	label,
-	value,
-	choices,
-	onChange,
-	icon,
+	...choice
 }: {
 	/** What it picks, for its name for assistive technology: "version", "iteration", "state". */
 	what: 'version' | 'iteration' | 'state';
@@ -35,29 +31,7 @@ const Pick = ({
 	onChange: (value: string) => void;
 	/** Drawn instead of the label, which is then only in its name for assistive technology. */
 	icon?: ReactNode;
-}) => (
-	<DropdownMenu>
-		<DropdownMenuTrigger asChild>
-			<Button variant="outline" size={icon ? 'icon' : 'default'} aria-label={`${capitalize(what)} ${label}: switch ${what}`}>
-				{icon ?? (
-					<>
-						{label}
-						<ChevronDownIcon />
-					</>
-				)}
-			</Button>
-		</DropdownMenuTrigger>
-		<DropdownMenuContent align="end" className="max-h-72 w-auto">
-			<DropdownMenuRadioGroup value={value} onValueChange={(next) => next !== value && onChange(next)}>
-				{choices.map((c) => (
-					<DropdownMenuRadioItem key={c.value} value={c.value}>
-						{c.label}
-					</DropdownMenuRadioItem>
-				))}
-			</DropdownMenuRadioGroup>
-		</DropdownMenuContent>
-	</DropdownMenu>
-);
+}) => <ChoiceMenu name={capitalize(what)} ariaLabel={`${capitalize(what)} ${label}: switch ${what}`} label={label} align="end" {...choice} />;
 
 /** The iteration is picked from its history: a clock icon, the menu newest first with the one shown checked. */
 const HISTORY = { icon: <HistoryIcon /> };

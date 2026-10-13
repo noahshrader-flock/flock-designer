@@ -4,7 +4,6 @@ import {
 	FolderIcon,
 	GitBranchIcon,
 	CopyIcon,
-	EllipsisVerticalIcon,
 	ExternalLinkIcon,
 	MessageSquareShareIcon,
 	Share2Icon,
@@ -19,12 +18,13 @@ import { dialogView, isMine, stepText } from './shareView';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { DropdownMenuItem, DropdownMenuSeparator } from './ui/dropdown-menu';
 import { Spinner } from './ui/spinner';
 import { CHANGE_REQUEST } from '../shared/vocabulary';
 import { ErrorAlert } from './ErrorAlert';
-import { OutLink } from './Links';
+import { MenuLink, OutLink } from './Links';
 import { RetryButton } from './Notice';
+import { MoreMenu } from './MoreMenu';
 
 /**
  * What can be done with this page beyond reviewing it, behind one menu: move a prototype into the code,
@@ -111,92 +111,82 @@ export const ShareControl = ({
 
 	return (
 		<>
-			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<Button size="icon" variant="ghost" aria-label="More" disabled={!canOpen && !documents}>
-						{running ? <Spinner /> : <EllipsisVerticalIcon />}
-					</Button>
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" className="w-auto">
-					{/* What can be done with the work needs its page up; the documents do not. */}
-					{canOpen && (
-						<>
-							{canMove && (
-								<DropdownMenuItem onSelect={onBuildInCodebase}>
-									<CodeIcon />
-									Build
-								</DropdownMenuItem>
-							)}
-							{canShare && (
-								<DropdownMenuItem
-									onSelect={() => {
-										setPhase(running ? 'working' : 'confirm');
-										setError(null);
-										setOpen(true);
-									}}
-								>
-									<Share2Icon />
-									{running ? 'Sharing…' : url ? 'Update shared preview' : 'Share for review'}
-								</DropdownMenuItem>
-							)}
-							{/* No line when the first group is empty. */}
-							{(canMove || canShare) && <DropdownMenuSeparator />}
-							{editor && (
-								<DropdownMenuItem onSelect={editor.openInEditor}>
-									<SquareTerminalIcon />
-									{editor.editor ? 'Open in VS Code' : 'Show in Finder'}
-								</DropdownMenuItem>
-							)}
-							{editor?.session && (
-								<DropdownMenuItem onSelect={editor.continueInClaude}>
-									<MessageSquareShareIcon />
-									Continue in Claude Code
-								</DropdownMenuItem>
-							)}
-							<DropdownMenuItem onSelect={onOpenInBrowser}>
-								<ExternalLinkIcon />
-								Open in browser
+			<MoreMenu busy={running} disabled={!canOpen && !documents}>
+				{/* What can be done with the work needs its page up; the documents do not. */}
+				{canOpen && (
+					<>
+						{canMove && (
+							<DropdownMenuItem onSelect={onBuildInCodebase}>
+								<CodeIcon />
+								Build
 							</DropdownMenuItem>
-							{url && (
-								<DropdownMenuItem onSelect={() => void copy()}>
-									<CopyIcon />
-									{copied ? 'Copied' : 'Copy preview link'}
-								</DropdownMenuItem>
-							)}
-						</>
-					)}
-					{/* Where its codebase work is, and the project's documents, after the ways to look at the work. */}
-					{documents && (
-						<>
-							{canOpen && <DropdownMenuSeparator />}
-							{builtInCode && (
-								<DropdownMenuItem asChild>
-									<a href={builtInCode} target="_blank" rel="noreferrer">
-										<GitBranchIcon />
-										Built in code
-									</a>
-								</DropdownMenuItem>
-							)}
-							{records.map((record) => (
-								<DropdownMenuItem key={record} onSelect={() => onViewRecord?.(record)}>
-									<FileTextIcon />
-									{recordLabel(record)}
-								</DropdownMenuItem>
-							))}
-						</>
-					)}
-					{/* What the project is in, last: it is about the project, not this page. */}
-					{folderable && (
-						<>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem onSelect={onAssignFolder}>
-								<FolderIcon />
-								Assign folder…
+						)}
+						{canShare && (
+							<DropdownMenuItem
+								onSelect={() => {
+									setPhase(running ? 'working' : 'confirm');
+									setError(null);
+									setOpen(true);
+								}}
+							>
+								<Share2Icon />
+								{running ? 'Sharing…' : url ? 'Update shared preview' : 'Share for review'}
 							</DropdownMenuItem>
-						</>
-					)}
-				</DropdownMenuContent>
-			</DropdownMenu>
+						)}
+						{/* No line when the first group is empty. */}
+						{(canMove || canShare) && <DropdownMenuSeparator />}
+						{editor && (
+							<DropdownMenuItem onSelect={editor.openInEditor}>
+								<SquareTerminalIcon />
+								{editor.editor ? 'Open in VS Code' : 'Show in Finder'}
+							</DropdownMenuItem>
+						)}
+						{editor?.session && (
+							<DropdownMenuItem onSelect={editor.continueInClaude}>
+								<MessageSquareShareIcon />
+								Continue in Claude Code
+							</DropdownMenuItem>
+						)}
+						<DropdownMenuItem onSelect={onOpenInBrowser}>
+							<ExternalLinkIcon />
+							Open in browser
+						</DropdownMenuItem>
+						{url && (
+							<DropdownMenuItem onSelect={() => void copy()}>
+								<CopyIcon />
+								{copied ? 'Copied' : 'Copy preview link'}
+							</DropdownMenuItem>
+						)}
+					</>
+				)}
+				{/* Where its codebase work is, and the project's documents, after the ways to look at the work. */}
+				{documents && (
+					<>
+						{canOpen && <DropdownMenuSeparator />}
+						{builtInCode && (
+							<MenuLink href={builtInCode} icon={<GitBranchIcon />}>
+								Built in code
+							</MenuLink>
+						)}
+						{records.map((record) => (
+							<DropdownMenuItem key={record} onSelect={() => onViewRecord?.(record)}>
+								<FileTextIcon />
+								{recordLabel(record)}
+							</DropdownMenuItem>
+						))}
+					</>
+				)}
+				{/* What the project is in, last: it is about the project, not this page. */}
+				{folderable && (
+					<>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem onSelect={onAssignFolder}>
+							<FolderIcon />
+							Assign folder…
+						</DropdownMenuItem>
+					</>
+				)}
+			</MoreMenu>
 
 			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogContent className="sm:max-w-xl">

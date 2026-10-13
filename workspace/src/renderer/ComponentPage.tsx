@@ -1,5 +1,5 @@
 import { BookOpenIcon, CodeIcon, TriangleAlertIcon } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { previewAddress } from '../shared/catalog';
 import type { CatalogComponent, StoryPreview, TokenEdit } from '../shared/contract';
 import { BackButton } from './BackButton';
@@ -11,30 +11,20 @@ import { Page } from './Page';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Card, CardContent } from './ui/card';
 import { Skeleton } from './ui/skeleton';
-import { DropdownMenuItem } from './ui/dropdown-menu';
 import { Notice, RetryButton } from './Notice';
-
-/** A link out, as a menu item. The window opens nothing itself: the app hands an https address to the system's browser. */
-const Out = ({ href, icon, children }: { href: string; icon: ReactNode; children: ReactNode }) => (
-	<DropdownMenuItem asChild>
-		<a href={href} target="_blank" rel="noreferrer">
-			{icon}
-			{children}
-		</a>
-	</DropdownMenuItem>
-);
+import { MenuLink } from './Links';
 
 /** A component's links, Storybook (when it has a hosted one) and Source, in the More menu the project cards use. */
 const ComponentLinks = ({ component }: { component: CatalogComponent }) => (
 	<MoreMenu label={`More for ${component.name}`}>
 		{component.storybook !== null && (
-			<Out href={component.storybook} icon={<BookOpenIcon />}>
+			<MenuLink href={component.storybook} icon={<BookOpenIcon />}>
 				Storybook
-			</Out>
+			</MenuLink>
 		)}
-		<Out href={component.source} icon={<CodeIcon />}>
+		<MenuLink href={component.source} icon={<CodeIcon />}>
 			Source
-		</Out>
+		</MenuLink>
 	</MoreMenu>
 );
 

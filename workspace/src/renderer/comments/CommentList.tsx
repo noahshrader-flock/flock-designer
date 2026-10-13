@@ -1,13 +1,14 @@
-import { CircleCheckIcon, EllipsisVerticalIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react';
+import { CircleCheckIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import type { MarkerState, ReviewComment } from '../../shared/contract';
 import { stateLabel, stateOfQuery } from '../../shared/prototypeStates';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { DropdownMenuItem, DropdownMenuSeparator } from '../ui/dropdown-menu';
 import type { Comments } from './useComments';
 import { cn } from '@/lib/utils';
 import { Item } from '../ui/item';
+import { MoreMenu } from '../MoreMenu';
 
 /** What a card says about where its pin is, when that is worth saying. */
 const NOTE: Record<MarkerState, string | null> = {
@@ -73,20 +74,9 @@ export const CommentList = ({
 								{n > 0 && <Badge variant="secondary">{n}</Badge>}
 								<span className="min-w-0 truncate text-sm font-medium">{comment.author}</span>
 								{comment.resolved && <Badge variant="success">Resolved</Badge>}
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<Button
-											size="icon-sm"
-											variant="ghost"
-											aria-label="Comment actions"
-											className="-my-1 -mr-1.5 ml-auto"
-											onClick={(e: React.MouseEvent) => e.stopPropagation()}
-										>
-											<EllipsisVerticalIcon />
-										</Button>
-									</DropdownMenuTrigger>
-									{/* The menu is drawn outside the card but its clicks still reach the card in React: they must not select it. */}
-									<DropdownMenuContent align="end" className="w-auto" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+								{/* The menu's clicks, its trigger's and its items' (drawn outside the card), still reach the card in React: they must not select it. */}
+								<span className="-my-1 -mr-1.5 ml-auto" onClick={(e) => e.stopPropagation()}>
+									<MoreMenu label="Comment actions" size="icon-sm">
 										{actions?.(comment)}
 										<DropdownMenuItem onSelect={() => void comments.resolve(comment, !comment.resolved)}>
 											{comment.resolved ? <RotateCcwIcon /> : <CircleCheckIcon />}
@@ -97,8 +87,8 @@ export const CommentList = ({
 											<Trash2Icon />
 											Delete
 										</DropdownMenuItem>
-									</DropdownMenuContent>
-								</DropdownMenu>
+									</MoreMenu>
+								</span>
 							</div>
 							{note && <p className="text-muted-foreground text-xs">{note}</p>}
 							{confirmingDelete === comment.id && (

@@ -2,6 +2,7 @@ import { ExternalLinkIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from './ui/button';
+import { DropdownMenuItem } from './ui/dropdown-menu';
 
 /** How a link reads in text: the primary color, underlined, so it is seen as one without a hover. */
 const LINK = 'text-primary underline underline-offset-4';
@@ -30,4 +31,14 @@ export const InlineAction = ({ onClick, disabled, children }: { onClick: () => v
 	>
 		{children}
 	</button>
+);
+
+/** A link out as one of a menu's items, opened in the system's browser as every link out is. */
+export const MenuLink = ({ href, icon, children }: { href: string; icon: ReactNode; children: ReactNode }) => (
+	<DropdownMenuItem asChild>
+		<a href={href} target="_blank" rel="noreferrer">
+			{icon}
+			{children}
+		</a>
+	</DropdownMenuItem>
 );
