@@ -306,8 +306,8 @@ export const TokenEditor = ({ token }: { token: DesignToken }) => {
 
 /**
  * A token's control, opened from what `children` is (the button that is pressed), which says `tip` on hover and on focus when
- * given: beside the panel, over the components it changes, and no taller than the window, scrolling when it is. The one place a token's control is put in a popover, so a row
- * of the palette and a theme's value open it the same way.
+ * given: beside the panel, over the components it changes, and no taller than the window, scrolling when it is. The one place
+ * a token's control is put in a popover, so a row of the palette and a theme's value open it the same way.
  */
 export const TokenEditorPopover = ({ token, tip, children }: { token: DesignToken; tip?: ReactNode; children: ReactNode }) => (
 	<Popover>

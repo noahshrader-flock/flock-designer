@@ -1,3 +1,4 @@
+import { PaletteIcon, TagsIcon } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../shared/contract';
 import { PRIMITIVES, byPrimitive, inOrder, isEditable } from '../shared/primitives';
@@ -14,7 +15,6 @@ import { cn } from '@/lib/utils';
 import { NoMatches } from './NoMatches';
 import { SemanticColors } from './SemanticColors';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
-import { PaletteIcon, TagsIcon } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /**
@@ -24,7 +24,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
  * a tab with several groups (Color has Tones, Light and Dark) has them as an accordion, open until closed; a set is
  * never closed up behind a second one, but a plain heading over its tokens, each a swatch at the left and its value at the
  * right. A tab with one group shows its sets straight away. **Color has two views** (`SemanticColors`, the default, and the
- * palette behind it): the roles by theme, each theme's value its own control; and the families the roles point into, as the
+ * palette behind it), switched by two icons at the left of the search: the roles by theme, each theme's value its own control; and the families the roles point into, as the
  * other tabs are. A library with only one of them has only that. The tabs are the app's line tabs (`Tabs variant="line"`), the same strip as
  * the Design System's own, inset as this panel's content is. What the library has that is not read is not said here: it is
  * a button in the design system's row (`TokenProblems`), so the panel keeps its room.

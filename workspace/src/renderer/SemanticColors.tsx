@@ -14,8 +14,7 @@ import { cn } from '@/lib/utils';
 /**
  * The semantic colors, as a library's roles by theme (the Color tokens plan): a row for each role's variant, a column for
  * each theme the library has (Light, Dark, or more), each value a small square swatch, centered, with what it points at in a
- * tooltip. **Each
- * theme's value is its own button** that opens its own control (`TokenEditor`); the row, and the role's name, open nothing,
+ * tooltip. **Each theme's value is its own button** that opens its own control (`TokenEditor`); the row, and the role's name, open nothing,
  * so a change is always to one theme's token. A role a theme does not have is a dash. Roles are in groups, open until
  * closed, as every list of groups is; a role whose name is its set is a plain row, with no group to say it twice.
  */

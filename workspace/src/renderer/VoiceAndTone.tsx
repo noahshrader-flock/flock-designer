@@ -14,7 +14,7 @@ import { InlineAction } from './Links';
 import { PageHeading } from './PageHeading';
 
 /**
- * The Voice and Tone tab (T9 of the design system plan): Flock's voice and tone, one file in the connected design system's
+ * The Voice and Tone tab (T9 of the design system plan): a product's voice and tone, one file in the connected design system's
  * agent files, which every agent task carries. Read from GitHub when the tab is first shown and on Refresh, so a commit made in the
  * repository shows; edited in one text area, which is always there (blank until the file has been written, so there is
  * nothing to start); saved to a branch of DSNR's, each save one commit, and proposed as a draft
