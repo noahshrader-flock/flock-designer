@@ -2,12 +2,10 @@ import { useEffect, useState } from 'react';
 import type { Context } from '../../src/main/services/findContext';
 import { useWorkspace } from '../../src/renderer/useWorkspace';
 import type { SignInState } from '../../src/shared/contract';
-import type { Project, ProjectIteration } from '../../src/shared/domain/projects';
-import { iterationLabel } from '../../src/shared/work';
 import { type Catalog, DesignSystem } from './DesignSystem';
 import { onHost, workspace } from './host';
 import { Projects, type ProjectsRead } from './Projects';
-import { Account } from './ui/Account';
+import type { Review } from '../src/messages';
 import { Toggle } from './ui/Toggle';
 import { type Tab, vscode } from './vscode';
 
@@ -21,23 +19,23 @@ export interface PanelViewProps {
 	tab: Tab;
 	onTab: (tab: Tab) => void;
 	account: SignInState;
-	onSignIn: () => void;
-	onAccount: () => void;
 	/** What is open, once the extension has said; null until then. */
 	context: Context | null;
 	projects: ProjectsRead;
-	onOpen: (project: Project, iteration: ProjectIteration) => void;
+	onOpen: (review: Review) => void;
 	onNew: () => void;
 	onLocate: () => void;
 	catalog?: Catalog;
 }
 
-/** DSNR's panel: the toggle at its very top with the account at the far right, and under it the view chosen. */
-export const PanelView = ({ tab, onTab, account, onSignIn, onAccount, context, projects, onOpen, onNew, onLocate, catalog }: PanelViewProps) => (
+/**
+ * DSNR's panel: the toggle at its very top, and under it the view chosen. Who is signed in is VS Code's to show, in its
+ * own title bar beside the DSNR mark; the page reads it only to say whose projects these are.
+ */
+export const PanelView = ({ tab, onTab, account, context, projects, onOpen, onNew, onLocate, catalog }: PanelViewProps) => (
 	<main className="panel">
 		<div className="panel-top">
 			<Toggle label="View" options={TABS} value={tab} onChange={onTab} />
-			<Account state={account} onSignIn={onSignIn} onAccount={onAccount} />
 		</div>
 		<section data-tab-body={tab} className="tab-body">
 			{context === null ? (
@@ -90,18 +88,9 @@ export const Panel = () => {
 				vscode().setState({ tab: next });
 			}}
 			account={account}
-			onSignIn={() => vscode().postMessage({ type: 'sign-in' })}
-			onAccount={() => vscode().postMessage({ type: 'account' })}
 			context={context}
-			projects={{ value: read.value, error: read.error, loading: read.loading }}
-			onOpen={(project, iteration) =>
-				vscode().postMessage({
-					type: 'open-review',
-					projectId: project.id,
-					name: iteration.name,
-					title: `${project.title} · ${iterationLabel(iteration)}`,
-				})
-			}
+			projects={{ value: read.value, error: read.error }}
+			onOpen={(review) => vscode().postMessage({ type: 'open-review', ...review })}
 			onNew={() => vscode().postMessage({ type: 'new-prototype' })}
 			onLocate={() => vscode().postMessage({ type: 'locate-design-system' })}
 		/>

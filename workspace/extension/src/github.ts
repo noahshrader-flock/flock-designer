@@ -4,7 +4,7 @@ import type { GitHubAccount } from '../../src/main/services/githubSession';
 import type { DeviceCodeStart, SignInState } from '../../src/shared/contract';
 
 /** What DSNR asks of GitHub: the person's private repositories, and the organizations they are in. */
-export const SCOPES = ['repo', 'read:org'];
+const SCOPES = ['repo', 'read:org'];
 /** Kept by the extension: the person signed out of DSNR, so a session VS Code keeps is not used until they sign in. */
 const SIGNED_OUT = 'dsnr.signedOut';
 
@@ -60,7 +60,7 @@ export class VsCodeGitHub implements GitHubAccount {
 
 	/** The app's own device flow has no place here: VS Code signs the person in. */
 	async startSignIn(): Promise<DeviceCodeStart> {
-		throw new Error("In VS Code, sign in with the button at the top of DSNR's panel.");
+		throw new Error('In VS Code, sign in from the DSNR title bar, or with DSNR: Sign in to GitHub.');
 	}
 
 	cancelSignIn(): void {}

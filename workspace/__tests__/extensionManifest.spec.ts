@@ -17,7 +17,8 @@ interface Manifest {
 	contributes: {
 		viewsContainers: { activitybar: { id: string; title: string; icon: string }[] };
 		views: Record<string, { id: string; name: string; type?: string }[]>;
-		commands: { command: string; title: string }[];
+		commands: { command: string; title: string; category?: string; icon?: string }[];
+		menus: Record<string, { command: string; when?: string; group?: string }[]>;
 	};
 }
 const manifest = (): Manifest => JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as Manifest;
@@ -45,10 +46,27 @@ describe('the extension’s manifest', () => {
 		expect(manifest().contributes.views).toEqual({ dsnr: [{ type: 'webview', id: 'dsnr.panel', name: 'DSNR' }] });
 	});
 
-	it('has its commands: to open it, and to open a prototype for review', () => {
-		expect(manifest().contributes.commands).toEqual([
-			{ command: 'dsnr.open', title: 'DSNR: Open' },
-			{ command: 'dsnr.openReview', title: 'DSNR: Open a prototype for review' },
+	it('has its commands: to open it, to open a prototype for review, and to sign in and see the account', () => {
+		expect(manifest().contributes.commands.map((c) => `${c.category}: ${c.title}`)).toEqual([
+			'DSNR: Open',
+			'DSNR: Open a prototype for review',
+			'DSNR: Sign in to GitHub',
+			'DSNR: Your GitHub account',
+		]);
+	});
+
+	it('signs in from VS Code’s own title bar, at its far right: Sign in when no one is, the account once someone is', () => {
+		const { commands, menus } = manifest().contributes;
+		const icon = (id: string) => commands.find((c) => c.command === id)?.icon;
+		expect(menus['view/title']).toEqual([
+			{ command: 'dsnr.signIn', when: 'view == dsnr.panel && !dsnr.signedIn', group: 'navigation' },
+			{ command: 'dsnr.account', when: 'view == dsnr.panel && dsnr.signedIn', group: 'navigation' },
+		]);
+		expect([icon('dsnr.signIn'), icon('dsnr.account')]).toEqual(['$(sign-in)', '$(account)']);
+		// The same two in the command palette, each only when it means something.
+		expect(menus.commandPalette).toEqual([
+			{ command: 'dsnr.signIn', when: '!dsnr.signedIn' },
+			{ command: 'dsnr.account', when: 'dsnr.signedIn' },
 		]);
 	});
 });

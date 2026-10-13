@@ -37,17 +37,8 @@ body {
 	position: sticky;
 	top: 0;
 	z-index: 1;
-	display: flex;
-	align-items: center;
-	gap: 8px;
 	padding: 8px 12px;
 	background: var(--vscode-sideBar-background);
-}
-
-/* The toggle takes the room there is; the account keeps its own, at the far right. */
-.panel-top .toggle {
-	flex: 1;
-	min-width: 0;
 }
 
 /*
@@ -269,50 +260,9 @@ body {
 	outline-offset: 2px;
 }
 
-/* Who is signed in, at the far right of the top bar: a quiet text button, or their avatar and username. */
-.sign-in,
-.account {
-	display: inline-flex;
-	flex-shrink: 0;
-	align-items: center;
-	gap: 6px;
-	height: 26px;
-	padding: 0 6px;
-	border: 1px solid transparent;
-	border-radius: var(--dsnr-radius-inner);
-	color: var(--vscode-foreground);
-	background: transparent;
-	font: inherit;
-	white-space: nowrap;
-	cursor: pointer;
-}
-
-.sign-in {
-	color: var(--vscode-textLink-foreground);
-}
-
-.sign-in:hover,
-.account:hover {
-	background: var(--dsnr-track);
-}
-
-.sign-in:focus-visible,
-.account:focus-visible,
 .row-button:focus-visible {
 	outline: var(--dsnr-focus);
 	outline-offset: -1px;
-}
-
-.avatar {
-	width: 18px;
-	height: 18px;
-	border-radius: 50%;
-}
-
-.account-name {
-	max-width: 10em;
-	overflow: hidden;
-	text-overflow: ellipsis;
 }
 
 /* A row that opens something: the whole row is the button, drawn as the row, with VS Code's list hover. */

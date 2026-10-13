@@ -2,12 +2,11 @@ import { join } from 'node:path';
 import * as vscode from 'vscode';
 import { served } from '../../src/main/handle';
 import { type Context, findContext } from '../../src/main/services/findContext';
-import type { Project } from '../../src/shared/contract';
-import { parsePrototypeName } from '../../src/shared/prototypeNames';
-import { iterationLabel, workOf } from '../../src/shared/work';
+import type { Project, SignInState } from '../../src/shared/contract';
 import { Panels } from './bridge';
+import { type Review, reviewsOf } from './messages';
 import { startCore } from './core';
-import { PanelProvider } from './panel';
+import { PanelProvider, failed } from './panel';
 import { Reviews, siteIn } from './review';
 
 /** Kept by the extension: the design system the person located, when nothing open holds one. */
@@ -25,7 +24,21 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	if (log) context.subscriptions.push(log);
 
 	const panels = new Panels();
-	const { core, github, shell, storage } = startCore(context, panels);
+	const provider = new PanelProvider({
+		extensionUri: context.extensionUri,
+		panels,
+		context: () => found,
+		locate: () => locate(),
+		openReview: (review) => openReview(review),
+		development,
+		...(log ? { log } : {}),
+	});
+	/** Who is signed in, in VS Code's own title bar: the username beside the DSNR mark, and Sign in or the account at its far right. */
+	const showAccount = (state: SignInState) => {
+		void vscode.commands.executeCommand('setContext', 'dsnr.signedIn', state.state === 'signedIn');
+		provider.showAccount(state.state === 'signedIn' ? state.user.login : undefined);
+	};
+	const { core, github, shell, storage } = startCore(context, panels, showAccount);
 	const folders = () => (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
 	const located = () => context.globalState.get<string>(LOCATED) ?? null;
 
@@ -43,7 +56,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	void github.restore();
 
 	const reviews = new Reviews(vscode, core.prototypeServer, siteIn(storage), join(context.extensionUri.fsPath, 'dist', 'viewer'));
-	const openReview = async ({ projectId, name, title }: { projectId: string; name: string; title: string }) => {
+	const openReview = async ({ projectId, name, title }: Review) => {
 		if (!found.designRepository)
 			throw new Error(found.missing.find((m) => m.startsWith('The design repository')) ?? 'The design repository is not here.');
 		await reviews.open({ records: found.designRepository, projectId, name, title });
@@ -58,23 +71,19 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	};
 
 	context.subscriptions.push(
-		vscode.window.registerWebviewViewProvider(
-			'dsnr.panel',
-			new PanelProvider({
-				extensionUri: context.extensionUri,
-				panels,
-				github,
-				context: () => found,
-				locate,
-				openReview,
-				development,
-				...(log ? { log } : {}),
-			}),
-		),
+		vscode.window.registerWebviewViewProvider('dsnr.panel', provider),
 		vscode.commands.registerCommand('dsnr.open', () => vscode.commands.executeCommand('workbench.view.extension.dsnr')),
 		vscode.commands.registerCommand('dsnr.openReview', async () => {
 			const picked = await pickPrototype();
-			if (picked) await openReview(picked).catch((err: unknown) => void vscode.window.showErrorMessage(String(err)));
+			if (picked) await openReview(picked).catch(failed);
+		}),
+		vscode.commands.registerCommand('dsnr.signIn', () => github.signIn().catch(failed)),
+		vscode.commands.registerCommand('dsnr.account', async () => {
+			const state = github.state();
+			if (state.state !== 'signedIn') return;
+			const signOut = { label: '$(sign-out) Sign out of DSNR', description: 'VS Code keeps your GitHub account in its Accounts menu' };
+			const picked = await vscode.window.showQuickPick([signOut], { placeHolder: `Signed in to GitHub as ${state.user.login}` });
+			if (picked === signOut) github.signOut();
 		}),
 		vscode.workspace.onDidChangeWorkspaceFolders(() => void refresh()),
 		// Coming back to VS Code is a good moment to publish what was done meanwhile, as coming back to the app's window is.
@@ -82,27 +91,17 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	);
 };
 
-/** Each project's prototypes, newest first, to choose one for review: as the panel's rows open them. */
-const pickPrototype = async (): Promise<{ projectId: string; name: string; title: string } | undefined> => {
+/** Each project's prototypes, newest first (`reviewsOf`), to choose one for review: as the panel's rows open them. */
+const pickPrototype = async (): Promise<Review | undefined> => {
 	const listed = (await served().get('listProjects')?.()) as { ok: boolean; value?: Project[]; error?: string } | undefined;
 	if (!listed?.ok) {
 		void vscode.window.showErrorMessage(listed?.error ?? 'The projects could not be read.');
 		return undefined;
 	}
-	const items = (listed.value ?? []).flatMap((p) =>
-		workOf(p.iterations, 'prototype')
-			.filter((i) => parsePrototypeName(i.name) !== null)
-			.map((i) => ({
-				label: p.title,
-				description: iterationLabel(i),
-				review: { projectId: p.id, name: i.name, title: `${p.title} · ${iterationLabel(i)}` },
-			})),
-	);
+	const items = (listed.value ?? []).flatMap(reviewsOf).map((review) => ({ label: review.title, review }));
 	if (items.length === 0) {
 		void vscode.window.showInformationMessage('There is no prototype to review here yet.');
 		return undefined;
 	}
 	return (await vscode.window.showQuickPick(items, { placeHolder: 'Open a prototype for review' }))?.review;
 };
-
-export const deactivate = (): void => undefined;

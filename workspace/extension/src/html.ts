@@ -3,7 +3,8 @@ import { randomBytes } from 'node:crypto';
 /**
  * The page DSNR's panel loads, as tight as VS Code's webview guidance asks: nothing loads unless named here, the one
  * script runs by a nonce made for this page, and styles, fonts and pictures come only from the extension's own build
- * (`cspSource`, which is VS Code's name for it), with GitHub's avatars the one picture from outside. No `vscode` import, so it is tested as plain text.
+ * (`cspSource`, which is VS Code's name for it). No
+ * `vscode` import, so it is tested as plain text.
  */
 export const panelHtml = ({
 	cspSource,
@@ -22,8 +23,7 @@ export const panelHtml = ({
 		"default-src 'none'",
 		`style-src ${cspSource}`,
 		`font-src ${cspSource}`,
-		// The person's avatar, from GitHub, and nothing else from outside.
-		`img-src ${cspSource} data: https://avatars.githubusercontent.com`,
+		`img-src ${cspSource} data:`,
 		`script-src 'nonce-${nonce}'`,
 	].join('; ');
 	return `<!doctype html>

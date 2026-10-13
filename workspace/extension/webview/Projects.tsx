@@ -1,6 +1,6 @@
-import type { Project, ProjectIteration } from '../../src/shared/domain/projects';
+import type { Project } from '../../src/shared/domain/projects';
 import { plural } from '../../src/shared/plural';
-import { workOf } from '../../src/shared/work';
+import { type Review, reviewsOf } from '../src/messages';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
@@ -10,11 +10,10 @@ import { Row } from './ui/Row';
 /** What a project has, in a line: its iterations, and its folder when it is in one. */
 const meta = (p: Project) => [plural(p.iterations.length, 'iteration'), p.folder].filter(Boolean).join(' · ');
 
-/** The projects as the core read them: the list, what went wrong, or that it is still reading. */
+/** The projects as the core read them: the list (null while it is still reading), or what went wrong. */
 export interface ProjectsRead {
 	value: Project[] | null;
 	error: string | null;
-	loading: boolean;
 }
 
 /**
@@ -32,7 +31,7 @@ export const Projects = ({
 	/** Whether a product is open, and if not, what to do (from the context). */
 	product: { open: true } | { open: false; why: string };
 	signedIn: boolean;
-	onOpen: (project: Project, iteration: ProjectIteration) => void;
+	onOpen: (review: Review) => void;
 	onNew: () => void;
 }) => {
 	if (!product.open)
@@ -61,7 +60,7 @@ export const Projects = ({
 				<List label="Projects">
 					{projects.map((p) => {
 						const open = p.iterations.reduce((n, i) => n + i.openComments, 0);
-						const newest = workOf(p.iterations, 'prototype')[0];
+						const newest = reviewsOf(p)[0];
 						return (
 							<Row
 								key={p.id}
@@ -69,7 +68,7 @@ export const Projects = ({
 								name={p.title}
 								meta={meta(p)}
 								end={open > 0 ? <Badge count={open} label={plural(open, 'open comment')} /> : undefined}
-								{...(newest ? { onOpen: () => onOpen(p, newest) } : {})}
+								{...(newest ? { onOpen: () => onOpen(newest) } : {})}
 							/>
 						);
 					})}

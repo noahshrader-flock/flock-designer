@@ -14,7 +14,7 @@ interface VsCodeApi<State> {
 declare function acquireVsCodeApi<State>(): VsCodeApi<State>;
 
 /** The panel's own state. */
-export interface PanelState {
+interface PanelState {
 	tab: Tab;
 }
 

@@ -134,25 +134,12 @@ describe('what is open', () => {
 	});
 });
 
-describe('the account, at the far right of the top bar', () => {
-	const account = () => document.querySelector('.panel-top')?.lastElementChild as HTMLElement;
+describe('the account', () => {
 	const signedIn = { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: 'https://avatars.githubusercontent.com/u/1' } };
 
-	it('is a small Sign in button when no one is, which asks the extension to sign in through VS Code', async () => {
+	it('is not the page’s: signing in is in VS Code’s own title bar, beside the DSNR mark, so the top bar is the toggle alone', async () => {
 		await showOpen();
-		expect(account().textContent).toBe('Sign in');
-		await press(account());
-		expect(panelSaid().at(-1)).toEqual({ type: 'sign-in' });
-	});
-
-	it('is the person’s avatar and username once they are, which opens their account', async () => {
-		await showOpen();
-		await say({ type: 'event', name: 'onSignInChanged', payload: signedIn });
-		expect(account().querySelector('img')?.getAttribute('src')).toBe(signedIn.user.avatarUrl);
-		expect(account().textContent).toBe('noah');
-		expect(account().getAttribute('aria-label')).toBe('Signed in as noah: your account');
-		await press(account());
-		expect(panelSaid().at(-1)).toEqual({ type: 'account' });
+		expect([...(document.querySelector('.panel-top')?.children ?? [])].map((c) => c.className)).toEqual(['toggle']);
 	});
 
 	it('is read from the core when the panel opens, and the projects are read again when it changes', async () => {
@@ -246,10 +233,8 @@ describe('a design system’s catalog, once it is read', () => {
 				tab: 'design-system',
 				onTab: () => undefined,
 				account: { state: 'signedOut' },
-				onSignIn: () => undefined,
-				onAccount: () => undefined,
 				context: OPEN,
-				projects: { value: [], error: null, loading: false },
+				projects: { value: [], error: null },
 				onOpen: () => undefined,
 				onNew: () => undefined,
 				onLocate: () => undefined,

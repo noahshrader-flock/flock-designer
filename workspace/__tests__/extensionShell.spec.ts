@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { VsCodeGitHub } from '../extension/src/github';
 import { vscodePorts } from '../extension/src/vscodePorts';
-import { reviewPath } from '../extension/src/review';
+import { reviewsOf } from '../extension/src/messages';
+import { reviewPage, reviewPath } from '../extension/src/review';
 import { answerCall } from '../extension/src/bridge';
 import type { Route } from '../src/main/handle';
 import type { InvokeName } from '../src/shared/contract';
+import type { ProjectIteration } from '../src/shared/domain/projects';
 
 /**
  * DSNR's shell in VS Code (ELECTRON_MIGRATION_PLAN, Phase 3): the person's GitHub account through VS Code's own sign-in,
@@ -65,7 +67,7 @@ describe('the person’s GitHub account, through VS Code', () => {
 	it('calls GitHub as the person, and asks for sign-in when there is no session', async () => {
 		const github = new VsCodeGitHub(auth(undefined) as never, fetcher as never, memento(), vi.fn());
 		await expect(github.api('/user')).rejects.toThrow(/Sign in/);
-		await expect(github.startSignIn()).rejects.toThrow(/button at the top of DSNR's panel/);
+		await expect(github.startSignIn()).rejects.toThrow(/DSNR: Sign in to GitHub/);
 	});
 });
 
@@ -105,6 +107,32 @@ describe('a prototype’s review', () => {
 		expect(reviewPath('alert-history', 'v2-i1')).toBe('alert-history/v2/i1/');
 		expect(reviewPath('admin-usage', 'i1')).toBe('admin-usage/v1/i1/');
 		expect(() => reviewPath('admin-usage', 'codebase')).toThrow(/not a prototype/);
+	});
+
+	it('is each of a project’s prototypes that has a page, newest first, titled with its project and its label', () => {
+		const record = (name: string, branch: string, createdAt: string) => ({ name, branch, createdAt }) as ProjectIteration;
+		const project = {
+			id: 'alert-history',
+			title: 'Alert history',
+			iterations: [
+				record('v1-i1', 'prototype/alert-history/v1-i1', '2026-10-01'),
+				record('v2-i1', 'prototype/alert-history/v2-i1', '2026-10-03'),
+				record('codebase', 'feature/alert-history', '2026-10-04'),
+				// A prototype whose name the site cannot lay out has no page to open.
+				record('spike', 'fd/alert-history/spike', '2026-10-05'),
+			],
+		};
+		expect(reviewsOf(project)).toEqual([
+			{ projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' },
+			{ projectId: 'alert-history', name: 'v1-i1', title: 'Alert history · V1 · I1' },
+		]);
+	});
+
+	it('frames only the page, from this machine, with its title as text', () => {
+		const page = reviewPage({ src: 'http://127.0.0.1:5000/a/v1/i1/', title: 'Fish & <chips> "now"', nonce: 'n1' });
+		expect(page).toContain("default-src 'none'; frame-src http://127.0.0.1:5000; style-src 'nonce-n1'");
+		expect(page).toContain('<title>Fish &amp; &lt;chips&gt; &quot;now&quot;</title>');
+		expect(page).toContain('<iframe src="http://127.0.0.1:5000/a/v1/i1/" title="Fish &amp; &lt;chips&gt; &quot;now&quot;">');
 	});
 });
 

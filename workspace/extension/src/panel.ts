@@ -5,18 +5,19 @@ import type { Context } from '../../src/main/services/findContext';
 import { errorText } from '../../src/shared/result';
 import { type Panels, answerCall } from './bridge';
 import { afterQuiet, whatChanged } from './devReload';
-import type { VsCodeGitHub } from './github';
 import { newNonce, panelHtml } from './html';
-import { readMessage, replyTo } from './messages';
+import { type Review, readMessage, replyTo } from './messages';
+
+/** Says what went wrong, in VS Code's own error message: its first line. */
+export const failed = (err: unknown): void => void vscode.window.showErrorMessage(errorText(err, { firstLine: true }));
 
 export interface PanelDeps {
 	extensionUri: vscode.Uri;
 	panels: Panels;
-	github: VsCodeGitHub;
 	/** What is open now: the product, its design system, the design repository, and what is missing. */
 	context: () => Context;
 	locate: () => Promise<void>;
-	openReview: (review: { projectId: string; name: string; title: string }) => Promise<void>;
+	openReview: (review: Review) => Promise<void>;
 	/** Run from its source: the panel follows its own build. */
 	development: boolean;
 	/** Where a run from source says what it did: View › Output › DSNR. */
@@ -26,11 +27,21 @@ export interface PanelDeps {
 /**
  * DSNR's panel in the side bar: a webview of the extension's own build, allowed to load from its `dist/` folder and
  * nowhere else. What it asks is read in exactly its shape (`readMessage`): a call is answered from the core's table, and
- * the panel's own requests (sign in, the account, locate the design system, open a review) are the shell's. Run from its
+ * the panel's own requests (locate the design system, open a review) are the shell's. Who is signed in is said beside
+ * the DSNR mark in VS Code's own title bar (`showAccount`), where the Sign in and account actions are. Run from its
  * source, it follows its own build: a rebuilt page reloads the panel, a rebuilt extension restarts the extension host.
  */
 export class PanelProvider implements vscode.WebviewViewProvider {
+	private view: vscode.WebviewView | undefined;
+	private login: string | undefined;
+
 	constructor(private readonly deps: PanelDeps) {}
+
+	/** Who is signed in, beside the DSNR mark; nothing when no one is. Kept until the panel is shown, if it is not yet. */
+	showAccount(login: string | undefined): void {
+		this.login = login;
+		if (this.view) this.view.description = login;
+	}
 
 	private get dist(): vscode.Uri {
 		return vscode.Uri.joinPath(this.deps.extensionUri, 'dist');
@@ -39,8 +50,13 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 	resolveWebviewView(view: vscode.WebviewView): void {
 		view.webview.options = { enableScripts: true, localResourceRoots: [this.dist] };
 		view.webview.html = this.html(view.webview);
+		this.view = view;
+		view.description = this.login;
 		const listening = this.deps.panels.add(view.webview);
-		view.onDidDispose(() => listening.dispose());
+		view.onDidDispose(() => {
+			listening.dispose();
+			this.view = undefined;
+		});
 		view.webview.onDidReceiveMessage((raw: unknown) => void this.receive(view.webview, raw));
 		if (this.deps.development) this.follow(view);
 	}
@@ -55,10 +71,6 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 				case 'ready':
 					// Told once the page listens: a message posted before then is lost.
 					return void (await webview.postMessage({ type: 'context', context: this.deps.context() }));
-				case 'sign-in':
-					return void (await this.deps.github.signIn());
-				case 'account':
-					return await this.account();
 				case 'locate-design-system':
 					return await this.deps.locate();
 				case 'open-review':
@@ -67,17 +79,8 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 					return void vscode.window.showInformationMessage(replyTo(message));
 			}
 		} catch (err) {
-			void vscode.window.showErrorMessage(errorText(err, { firstLine: true }));
+			failed(err);
 		}
-	}
-
-	/** The account, from its avatar: who is signed in, and Sign out, in VS Code's own quick pick. */
-	private async account(): Promise<void> {
-		const state = this.deps.github.state();
-		if (state.state !== 'signedIn') return;
-		const signOut = { label: '$(sign-out) Sign out of DSNR', description: 'VS Code keeps your GitHub account in its Accounts menu' };
-		const picked = await vscode.window.showQuickPick([signOut], { placeHolder: `Signed in to GitHub as ${state.user.login}` });
-		if (picked === signOut) this.deps.github.signOut();
 	}
 
 	/** Reloads the panel, or restarts the extension, when the build in `dist/` changes. Stops when the panel goes. */

@@ -28,11 +28,10 @@ describe('the panel’s page', () => {
 		expect(policy()).not.toMatch(/unsafe-inline|unsafe-eval|\*/);
 	});
 
-	it('takes its styles, fonts and pictures from the extension’s own build, and only avatars from GitHub', () => {
+	it('takes its styles, fonts and pictures from the extension’s own build, and nothing from outside', () => {
 		expect(directive('style-src')).toBe('style-src vscode-resource:');
 		expect(directive('font-src')).toBe('font-src vscode-resource:');
-		// GitHub's avatars are the one picture from outside.
-		expect(directive('img-src')).toBe('img-src vscode-resource: data: https://avatars.githubusercontent.com');
+		expect(directive('img-src')).toBe('img-src vscode-resource: data:');
 	});
 
 	it('has the one script, carrying the nonce, and the two style sheets', () => {

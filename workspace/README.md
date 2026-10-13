@@ -218,8 +218,9 @@ There is nothing to clone or connect: it works on the folders open in VS Code (`
 folder with `.dsnr/workspace.json`, which DSNR trusts as VS Code does; its design system is where the product names it,
 else another open folder that holds one, else one the person locates; the design repository is beside the product, as
 the app finds it. Its panel, in the activity bar, lists the projects (opening one opens its newest prototype for
-review), shows the design system it found, and has Sign in at the far right of its top bar. A prototype's review is
-its page on the site, built from the design repository and served from this machine, in an editor tab.
+review) and shows the design system it found. Sign in is at the far right of VS Code's own DSNR title bar, which shows
+the username beside the mark once signed in. A prototype's review is its page on the site, built from the design
+repository and served from this machine, in an editor tab.
 
 Like the app, it publishes the person's work branches and records when the project list is read and when VS Code is
 focused, so it pushes with their own git credentials.

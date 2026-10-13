@@ -12,8 +12,6 @@ describe('a message from the panel', () => {
 		[{ type: 'call', id: 1, name: 'listProjects', args: [] }],
 		[{ type: 'call', id: 7, name: 'readCheckout', args: ['/a', 2] }],
 		[{ type: 'ready' }],
-		[{ type: 'sign-in' }],
-		[{ type: 'account' }],
 		[{ type: 'locate-design-system' }],
 		[{ type: 'new-prototype' }],
 		[{ type: 'open-review', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
@@ -23,7 +21,7 @@ describe('a message from the panel', () => {
 
 	it.each([
 		[null],
-		['sign-in'],
+		['ready'],
 		[{}],
 		[{ type: 'call', id: 1, name: 'runAnything', args: [] }],
 		[{ type: 'call', id: 0, name: 'listProjects', args: [] }],
@@ -31,7 +29,10 @@ describe('a message from the panel', () => {
 		[{ type: 'call', id: '1', name: 'listProjects', args: [] }],
 		[{ type: 'call', id: 1, name: 'listProjects', args: 'x' }],
 		[{ type: 'call', id: 1, name: 'listProjects', args: [], extra: true }],
-		[{ type: 'sign-in', as: 'someone' }],
+		[{ type: 'ready', as: 'someone' }],
+		// Signing in is VS Code's own, from the title bar: the page cannot ask for it.
+		[{ type: 'sign-in' }],
+		[{ type: 'account' }],
 		[{ type: 'open-review', projectId: 'a', name: 'v1-i1' }],
 		[{ type: 'open-review', projectId: 1, name: 'v1-i1', title: 't' }],
 		[{ type: 'open-review', projectId: 'a', name: 'v1-i1', title: 'x'.repeat(301) }],

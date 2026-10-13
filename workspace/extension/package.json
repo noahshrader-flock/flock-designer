@@ -35,12 +35,50 @@
 		"commands": [
 			{
 				"command": "dsnr.open",
-				"title": "DSNR: Open"
+				"category": "DSNR",
+				"title": "Open"
 			},
 			{
 				"command": "dsnr.openReview",
-				"title": "DSNR: Open a prototype for review"
+				"category": "DSNR",
+				"title": "Open a prototype for review"
+			},
+			{
+				"command": "dsnr.signIn",
+				"category": "DSNR",
+				"title": "Sign in to GitHub",
+				"icon": "$(sign-in)"
+			},
+			{
+				"command": "dsnr.account",
+				"category": "DSNR",
+				"title": "Your GitHub account",
+				"icon": "$(account)"
 			}
-		]
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "dsnr.signIn",
+					"when": "view == dsnr.panel && !dsnr.signedIn",
+					"group": "navigation"
+				},
+				{
+					"command": "dsnr.account",
+					"when": "view == dsnr.panel && dsnr.signedIn",
+					"group": "navigation"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "dsnr.signIn",
+					"when": "!dsnr.signedIn"
+				},
+				{
+					"command": "dsnr.account",
+					"when": "dsnr.signedIn"
+				}
+			]
+		}
 	}
 }
