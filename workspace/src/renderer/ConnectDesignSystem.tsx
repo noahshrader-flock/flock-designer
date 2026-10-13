@@ -19,7 +19,7 @@ import { Item, ItemContent, ItemDescription, ItemTitle } from './ui/item';
  * one. **The first one is this screen; another, when one is connected already, is a modal over what is shown** (`onCancel`,
  * which is there only then, closes it): the same choosing and connecting, in a dialog instead of a page of its own.
  */
-const WHAT_FOR = 'Choose the repository your design system is in. DSNR finds its components and tokens, in any package of a monorepo too.';
+const WHAT_FOR = 'Choose your design system repository.';
 
 export const ConnectDesignSystem = ({ onConnected, onCancel }: { onConnected: () => void; onCancel?: () => void }) => {
 	const listed = useRepositories();
