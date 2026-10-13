@@ -17,6 +17,9 @@ const until = async (what, check, ms = 15000) => {
 exports.run = async () => {
 	const dsnr = vscode.extensions.getExtension('flocksafety.dsnr');
 	assert.ok(dsnr, 'DSNR is installed in this window');
+	// Run from its package: the DSNR installed in this VS Code, not the source.
+	const installed = process.env.DSNR_INSTALLED_IN;
+	if (installed) assert.ok(dsnr.extensionPath.startsWith(installed), `DSNR runs from ${dsnr.extensionPath}, not its package`);
 
 	// Opening its panel starts it: tried until VS Code has its view, which it may not have the moment the window opens.
 	await until('DSNR starting', async () => {

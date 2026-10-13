@@ -24,7 +24,9 @@
 		"extension:build": "node extension/build.mjs",
 		"extension:dev": "node extension/dev.mjs",
 		"extension:test": "node extension/build.mjs && node extension/test/run.mjs",
-		"extension:package": "node extension/build.mjs && cd extension && vsce package --no-dependencies --allow-missing-repository --skip-license --out dsnr.vsix",
+		"extension:test:packaged": "node extension/test/run.mjs --packaged",
+		"extension:package": "node extension/package.mjs",
+		"extension:install": "node extension/package.mjs --install",
 		"smoke": "npm run build && node scripts/smoke.mjs boot",
 		"smoke:page": "npm run build && node scripts/smoke.mjs page",
 		"smoke:local": "npm run build && node scripts/smoke.mjs local"

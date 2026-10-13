@@ -1,22 +1,27 @@
 /**
  * `npm run extension:test`: DSNR in the VS Code installed on this machine, on a throwaway world, checked as a person
- * meets it (`activation.cjs`). Not part of `npm run check`: it opens a VS Code window for a few seconds.
+ * meets it (`activation.cjs`). Not part of `npm run check`: it opens a VS Code window for a minute.
+ *
+ * `npm run extension:test:packaged`: the same, against DSNR as it is handed out, not its source: packaged as
+ * `dsnr.vsix`, installed into the throwaway VS Code, and run as an installed extension runs (VS Code's Production
+ * mode, with nothing of this workspace's `node_modules`).
  *
  * The world is made here and removed after: a product with DSNR's setup and the design repository beside it, with one
  * project and one saved prototype, neither with a remote, so nothing can be pushed anywhere. The product has its design
  * system installed (a stand-in package, and React from this workspace, which a page is built with), and Claude Code is a
- * stand-in on the PATH that writes a page where the agent would, so a prototype is started and built with no agent run. The profile is throwaway
- * too, in the temporary folder (its path is short: VS Code keeps a socket in it), so the person's own VS Code is never
- * touched.
+ * stand-in on the PATH that writes a page where the agent would, so a prototype is started and built with no agent run.
+ * The profile is throwaway too, in the temporary folder (its path is short: VS Code keeps a socket in it), so the
+ * person's own VS Code is never touched.
  */
 import { execFileSync, spawn } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { extensionDir, installVsix, packageVsix, vscodeApp, vscodeEnv } from '../tools.mjs';
 
-const here = dirname(fileURLToPath(import.meta.url));
-const extension = join(here, '..');
+const here = join(extensionDir, 'test');
+const extension = extensionDir;
+const packaged = process.argv.includes('--packaged');
 const base = mkdtempSync(join(tmpdir(), 'dsnrt-'));
 const world = join(base, 'GitHub');
 
@@ -78,27 +83,36 @@ repo(join(world, 'flock-designer'), {
 		'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Fixture</title></head><body><main><h1>Fixture</h1></main></body></html>\n',
 });
 
-const code = () => {
-	if (process.env.CODE_BIN) return process.env.CODE_BIN;
-	const mac = '/Applications/Visual Studio Code.app/Contents/MacOS/Code';
-	return existsSync(mac) ? mac : 'code';
-};
-const env = { ...process.env, PATH: `${bin}:${process.env.PATH}` };
-delete env.ELECTRON_RUN_AS_NODE;
+const profile = { user: join(base, 'u'), extensions: join(base, 'e') };
+// Packaged: DSNR installed from its package, and the tests run from a runner of their own, which is all VS Code's test
+// runner needs to be given. Otherwise: DSNR from its source here.
+let runner = extension;
+if (packaged) {
+	installVsix(packageVsix(), profile);
+	runner = join(base, 'runner');
+	mkdirSync(runner);
+	writeFileSync(
+		join(runner, 'package.json'),
+		JSON.stringify({ name: 'dsnr-test-runner', publisher: 'flocksafety', version: '0.0.0', engines: { vscode: '^1.100.0' } }),
+	);
+}
 const run = spawn(
-	code(),
+	vscodeApp(),
 	[
 		product,
-		`--extensionDevelopmentPath=${extension}`,
+		`--extensionDevelopmentPath=${runner}`,
 		`--extensionTestsPath=${join(here, 'activation.cjs')}`,
-		`--user-data-dir=${join(base, 'u')}`,
-		`--extensions-dir=${join(base, 'e')}`,
+		`--user-data-dir=${profile.user}`,
+		`--extensions-dir=${profile.extensions}`,
 		'--disable-workspace-trust',
 		'--skip-welcome',
 		'--skip-release-notes',
 		'--new-window',
 	],
-	{ env, stdio: ['ignore', 'pipe', 'pipe'] },
+	{
+		env: vscodeEnv({ PATH: `${bin}:${process.env.PATH}`, ...(packaged ? { DSNR_INSTALLED_IN: profile.extensions } : {}) }),
+		stdio: ['ignore', 'pipe', 'pipe'],
+	},
 );
 let said = '';
 run.stdout.on('data', (d) => (said += d));
@@ -111,7 +125,7 @@ run.on('exit', (status) => {
 	clearTimeout(cap);
 	rmSync(base, { recursive: true, force: true });
 	const line = said.split('\n').find((l) => l.includes('dsnr-test:'));
-	if (status === 0 && line) console.log(line.trim());
+	if (status === 0 && line) console.log(`${line.trim()}${packaged ? ' (installed from its package)' : ''}`);
 	else
 		console.error(
 			`dsnr-test: failed (VS Code exited with ${status})\n${said

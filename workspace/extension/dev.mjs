@@ -10,20 +10,11 @@
  * build and leaves the window, which then stops following changes.
  */
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { extensionDir as here, vscodeApp, vscodeEnv } from './tools.mjs';
 
-const here = dirname(fileURLToPath(import.meta.url));
 const profile = join(tmpdir(), 'dsnr-dev');
-
-/** VS Code: `CODE_BIN` when set, the macOS app where it is usually installed, or `code` on the PATH. */
-const vscode = () => {
-	if (process.env.CODE_BIN) return process.env.CODE_BIN;
-	const mac = '/Applications/Visual Studio Code.app/Contents/MacOS/Code';
-	return existsSync(mac) ? mac : 'code';
-};
 
 const build = spawn(process.execPath, [join(here, 'build.mjs'), '--watch'], { stdio: ['ignore', 'pipe', 'inherit'] });
 let opened = false;
@@ -31,11 +22,8 @@ build.stdout.on('data', (chunk) => {
 	process.stdout.write(chunk);
 	if (opened || !String(chunk).includes('dsnr: watching')) return;
 	opened = true;
-	// Editors are Electron apps and may export this, which would make VS Code start as plain Node.
-	const env = { ...process.env };
-	delete env.ELECTRON_RUN_AS_NODE;
 	const window = spawn(
-		vscode(),
+		vscodeApp(),
 		[
 			`--extensionDevelopmentPath=${here}`,
 			`--user-data-dir=${join(profile, 'user')}`,
@@ -44,7 +32,7 @@ build.stdout.on('data', (chunk) => {
 			'--skip-release-notes',
 			'--new-window',
 		],
-		{ stdio: 'ignore', env },
+		{ stdio: 'ignore', env: vscodeEnv() },
 	);
 	window.on('error', (err) => {
 		console.error(`dsnr: VS Code did not start (${err.message}). Set CODE_BIN to its path.`);
