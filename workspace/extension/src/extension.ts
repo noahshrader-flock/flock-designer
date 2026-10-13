@@ -2,7 +2,8 @@ import { join } from 'node:path';
 import * as vscode from 'vscode';
 import { served } from '../../src/main/handle';
 import { type Context, findContext } from '../../src/main/services/findContext';
-import type { SignInState, WorkspaceApi } from '../../src/shared/contract';
+import type { PublishStatus, SignInState, WorkspaceApi } from '../../src/shared/contract';
+import { valueOf } from '../../src/shared/result';
 import { addressComment } from './address';
 import { Panels, hostApi } from './bridge';
 import { type Review, readReview, reviewsOf } from './messages';
@@ -10,7 +11,8 @@ import { newPrototype, readGiven } from './newPrototype';
 import { startCore } from './core';
 import { PanelProvider, failed } from './panel';
 import { Reviews, answerReview, buildReviewSite, siteIn } from './review';
-import { AgentLog, vscodeAsk, vscodeChoose, vscodeProgress } from './ui';
+import { publishedLink, syncItem, syncPicks } from './publishing';
+import { AgentLog, SyncStatus, vscodeAsk, vscodeChoose, vscodeProgress } from './ui';
 
 /** Kept by the extension: the design system the person located, when nothing open holds one. */
 const LOCATED = 'dsnr.located';
@@ -101,7 +103,20 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			void vscode.window.showWarningMessage('That folder holds no design system: no Storybook stories and no tokens were found in it.');
 	};
 
+	const publishing = { api, choose: vscodeChoose, tell: (m: string) => void vscode.window.showInformationMessage(m) };
+	/** What a review tab's title bar does, on the review in front; said when there is none. */
+	const inFront = (act: (review: Review) => Promise<void>) => {
+		const review = reviews.active();
+		if (!review) return void vscode.window.showInformationMessage('Open a prototype for review first.');
+		return act(review).catch(failed);
+	};
+	// The sync in the status bar: as it is now, then as the core says it moves.
+	const sync = new SyncStatus();
+	void api.publishStatus().then((r) => r.ok && sync.show(r.value));
+
 	context.subscriptions.push(
+		sync,
+		{ dispose: panels.listen('onPublishStatus', (status) => sync.show(status as PublishStatus)) },
 		agentLog,
 		vscode.window.registerWebviewViewProvider('dsnr.panel', provider),
 		vscode.commands.registerCommand('dsnr.newPrototype', (raw: unknown) => {
@@ -135,6 +150,28 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			}
 			const picked = await pickPrototype(api);
 			if (picked) await openReview(picked).catch(failed);
+		}),
+		vscode.commands.registerCommand('dsnr.openPublishedPage', () =>
+			inFront(async (review) => {
+				const url = await publishedLink(publishing, review);
+				if (url) await vscode.env.openExternal(vscode.Uri.parse(url));
+			}),
+		),
+		vscode.commands.registerCommand('dsnr.copyPublishedLink', () =>
+			inFront(async (review) => {
+				const url = await publishedLink(publishing, review);
+				if (url === null) return;
+				await vscode.env.clipboard.writeText(url);
+				void vscode.window.showInformationMessage(`Copied the link to ${review.title}.`);
+			}),
+		),
+		vscode.commands.registerCommand('dsnr.sync', async () => {
+			const status = valueOf(await api.publishStatus());
+			const picked = await vscode.window.showQuickPick(syncPicks(status), {
+				title: 'DSNR: your work’s sync',
+				placeHolder: syncItem(status)?.tooltip ?? '',
+			});
+			if (picked?.value === 'sync') sync.show(valueOf(await api.publishNow()));
 		}),
 		vscode.commands.registerCommand('dsnr.signIn', () => github.signIn().catch(failed)),
 		vscode.commands.registerCommand('dsnr.account', async () => {

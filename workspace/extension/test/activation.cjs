@@ -25,7 +25,17 @@ exports.run = async () => {
 		return dsnr.isActive;
 	});
 	const commands = await vscode.commands.getCommands(true);
-	for (const c of ['dsnr.open', 'dsnr.newPrototype', 'dsnr.openReview', 'dsnr.signIn', 'dsnr.account', 'workbench.view.extension.dsnr'])
+	for (const c of [
+		'dsnr.open',
+		'dsnr.newPrototype',
+		'dsnr.openReview',
+		'dsnr.openPublishedPage',
+		'dsnr.copyPublishedLink',
+		'dsnr.sync',
+		'dsnr.signIn',
+		'dsnr.account',
+		'workbench.view.extension.dsnr',
+	])
 		assert.ok(commands.includes(c), `${c} is a command`);
 
 	// A prototype opens for review: the product and the design repository are found from what is open, the core lists

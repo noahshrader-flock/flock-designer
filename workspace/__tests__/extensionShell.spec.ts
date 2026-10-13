@@ -179,14 +179,14 @@ describe('a review tab’s answers to its page', () => {
 
 describe('the review tabs', () => {
 	const fakeVsCode = () => {
-		const panels: { title: string; html: string; revealed: number; disposed: () => void }[] = [];
+		const panels: { title: string; html: string; revealed: number; active: boolean; disposed: () => void }[] = [];
 		return {
 			panels,
 			api: {
 				ViewColumn: { Active: -1 },
 				window: {
 					createWebviewPanel: (_type: string, title: string) => {
-						const panel = { title, html: '', revealed: 0, disposed: (): void => undefined };
+						const panel = { title, html: '', revealed: 0, active: true, disposed: (): void => undefined };
 						panels.push(panel);
 						return {
 							get title() {
@@ -201,6 +201,9 @@ describe('the review tabs', () => {
 								},
 								onDidReceiveMessage: () => ({ dispose: () => undefined }),
 								postMessage: async () => true,
+							},
+							get active() {
+								return panel.active;
 							},
 							reveal: () => void panel.revealed++,
 							onDidDispose: (l: () => void) => {
@@ -233,6 +236,21 @@ describe('the review tabs', () => {
 		vs.panels[0]!.disposed();
 		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' });
 		expect(vs.panels).toHaveLength(2);
+	});
+
+	it('say which review is in front, for what its title bar does', async () => {
+		const vs = fakeVsCode();
+		const reviews = new Reviews({
+			vscode: vs.api as never,
+			build: () => undefined,
+			serve: async () => 'http://127.0.0.1:5000/review/',
+			answer: async () => ({ ok: true, value: null }),
+		});
+		expect(reviews.active()).toBeUndefined();
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1-i2', title: 'Demo · V1 · I2' });
+		await reviews.open({ records: '/d/projects', projectId: 'other', name: 'v1-i1', title: 'Other · V1 · I1' });
+		vs.panels[1]!.active = false;
+		expect(reviews.active()).toEqual({ projectId: 'demo', name: 'v1-i2', title: 'Demo · V1 · I2' });
 	});
 });
 

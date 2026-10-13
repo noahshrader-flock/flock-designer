@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import type { AgentLogLike, Progress } from './agentWork';
+import type { PublishStatus } from '../../src/shared/contract';
 import type { Ask } from './newPrototype';
+import { syncItem } from './publishing';
 
 /** VS Code's own input box and quick pick, as a flow asks them (`Ask`). */
 export const vscodeAsk: Ask = {
@@ -45,5 +47,27 @@ export class AgentLog implements AgentLogLike, vscode.Disposable {
 
 	dispose(): void {
 		this.channel.dispose();
+	}
+}
+
+/** Whether the person's work is synced, in VS Code's status bar (`syncItem`); pressing it is DSNR: Sync your work. */
+export class SyncStatus implements vscode.Disposable {
+	private readonly item = vscode.window.createStatusBarItem('dsnr.sync', vscode.StatusBarAlignment.Left);
+
+	constructor() {
+		this.item.name = 'DSNR sync';
+		this.item.command = 'dsnr.sync';
+	}
+
+	show(status: PublishStatus): void {
+		const shown = syncItem(status);
+		if (shown === null) return void this.item.hide();
+		this.item.text = shown.text;
+		this.item.tooltip = shown.tooltip;
+		this.item.show();
+	}
+
+	dispose(): void {
+		this.item.dispose();
 	}
 }

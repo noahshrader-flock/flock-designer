@@ -76,7 +76,7 @@ export const answerReview = async (answers: ReviewAnswers, review: Review, name:
 	return callRoute(answers.routes(), name, args);
 };
 
-type Panel = Pick<VsCode.WebviewPanel, 'title' | 'reveal' | 'onDidDispose'> & {
+type Panel = Pick<VsCode.WebviewPanel, 'title' | 'active' | 'reveal' | 'onDidDispose'> & {
 	webview: Pick<VsCode.Webview, 'html' | 'onDidReceiveMessage' | 'postMessage'>;
 };
 
@@ -124,6 +124,11 @@ export class Reviews {
 		shown.panel.webview.html = reviewPage({ src: `${base}${path}`, title: review.title, nonce: newNonce() });
 		// A tab already open is brought forward; a new one opens in front.
 		if (open) shown.panel.reveal();
+	}
+
+	/** The review in front, if one is: what its title bar's actions act on. */
+	active(): Review | undefined {
+		return [...this.tabs.values()].find((t) => t.panel.active)?.review;
 	}
 
 	private make(review: Review): { panel: Panel; review: Review } {

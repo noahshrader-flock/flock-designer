@@ -50,6 +50,23 @@
 				"title": "Open a prototype for review"
 			},
 			{
+				"command": "dsnr.openPublishedPage",
+				"category": "DSNR",
+				"title": "Open the published page",
+				"icon": "$(link-external)"
+			},
+			{
+				"command": "dsnr.copyPublishedLink",
+				"category": "DSNR",
+				"title": "Copy the published page’s link",
+				"icon": "$(link)"
+			},
+			{
+				"command": "dsnr.sync",
+				"category": "DSNR",
+				"title": "Sync your work"
+			},
+			{
 				"command": "dsnr.signIn",
 				"category": "DSNR",
 				"title": "Sign in to GitHub",
@@ -88,6 +105,26 @@
 				{
 					"command": "dsnr.account",
 					"when": "dsnr.signedIn"
+				},
+				{
+					"command": "dsnr.openPublishedPage",
+					"when": "activeWebviewPanelId == 'dsnr.review'"
+				},
+				{
+					"command": "dsnr.copyPublishedLink",
+					"when": "activeWebviewPanelId == 'dsnr.review'"
+				}
+			],
+			"editor/title": [
+				{
+					"command": "dsnr.openPublishedPage",
+					"when": "activeWebviewPanelId == 'dsnr.review'",
+					"group": "navigation@1"
+				},
+				{
+					"command": "dsnr.copyPublishedLink",
+					"when": "activeWebviewPanelId == 'dsnr.review'",
+					"group": "navigation@2"
 				}
 			]
 		}

@@ -238,6 +238,10 @@ as a build does (a notification with Stop, its log beside the editor) and then s
 The page listens for DSNR only when it is served from this machine and framed, and takes only a VS Code webview that
 says hello; the published site is unchanged. Each project's reviews share one tab.
 
+**Sync and share:** whether the person's work is synced is in VS Code's status bar (Synced, Syncing, Not synced);
+pressing it shows what is held back and why, and Sync now. A review tab's title bar opens its page on the published site,
+or copies its link; when it is not there yet, it says why and offers Publish.
+
 Like the app, it publishes the person's work branches and records when the project list is read and when VS Code is
 focused, so it pushes with their own git credentials.
 
