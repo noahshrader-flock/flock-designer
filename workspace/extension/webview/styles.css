@@ -74,6 +74,66 @@ body {
 }
 
 .tab-body {
-	padding: 0 12px 12px;
+	padding-bottom: 12px;
+}
+
+/* A list, as VS Code's: rows edge to edge, the text indented as the toggle is. */
+.list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 40px;
+	padding: 4px 12px;
+}
+
+.row-text {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-width: 0;
+	line-height: 18px;
+}
+
+.row-name,
+.row-meta {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.row-meta {
 	color: var(--vscode-descriptionForeground);
+	font-size: 0.92em;
+}
+
+/* Where a project's picture goes: its shape, 16 by 9, until there is one. */
+.picture {
+	flex-shrink: 0;
+	width: 48px;
+	aspect-ratio: 16 / 9;
+	border: 1px solid var(--vscode-widget-border, var(--vscode-contrastBorder, transparent));
+	border-radius: 2px;
+	background: var(--vscode-editorWidget-background);
+}
+
+/* VS Code's badge: the count on a view or a tab. */
+.badge {
+	flex-shrink: 0;
+	min-width: 18px;
+	padding: 0 5px;
+	border: 1px solid var(--vscode-contrastBorder, transparent);
+	border-radius: 9px;
+	color: var(--vscode-badge-foreground);
+	background: var(--vscode-badge-background);
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 16px;
+	text-align: center;
+	box-sizing: border-box;
 }

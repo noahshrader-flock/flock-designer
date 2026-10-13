@@ -17,5 +17,5 @@
 		"isolatedModules": true,
 		"verbatimModuleSyntax": true
 	},
-	"include": ["extension/src/**/*", "extension/webview/**/*"]
+	"include": ["extension/src/**/*", "extension/webview/**/*", "src/shared/**/*"]
 }

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { SAMPLE_PROJECTS } from './fixtures';
+import { Projects } from './Projects';
 import { Toggle } from './ui/Toggle';
 import { type Tab, vscode } from './vscode';
 
@@ -21,7 +23,7 @@ export const Panel = () => {
 		<main className="panel">
 			<Toggle label="View" options={[...TABS]} value={tab} onChange={choose} />
 			<section data-tab-body={tab} className="tab-body">
-				{tab === 'projects' ? 'Projects' : 'Design System'}
+				{tab === 'projects' ? <Projects projects={SAMPLE_PROJECTS} /> : 'Design System'}
 			</section>
 		</main>
 	);

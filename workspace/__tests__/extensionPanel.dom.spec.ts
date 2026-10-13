@@ -83,3 +83,25 @@ describe('the toggle at the top', () => {
 		expect(options().every((o) => o.querySelector('.codicon')?.getAttribute('aria-hidden') === 'true')).toBe(true);
 	});
 });
+
+describe('Projects', () => {
+	const rows = () => [...document.querySelectorAll<HTMLElement>('[data-tab-body="projects"] [role="listitem"]')];
+	const part = (row: HTMLElement, name: string) => row.querySelector(`[data-part="${name}"]`)?.textContent ?? null;
+
+	it('lists each project as a row: a picture, its name, what it has, and its open comments as a badge', async () => {
+		await show();
+		expect(document.querySelector('[data-tab-body="projects"] [role="list"]')?.getAttribute('aria-label')).toBe('Projects');
+		expect(rows().map((r) => part(r, 'name'))).toEqual(['Alert history', 'Admin usage', 'Role comparison', 'Zone coverage']);
+		const first = rows()[0] as HTMLElement;
+		expect(first.querySelector('[data-part="picture"]')).not.toBeNull();
+		expect(part(first, 'meta')).toBe('3 iterations · Admin');
+		expect(part(rows()[2] as HTMLElement, 'meta')).toBe('1 iteration');
+	});
+
+	it('shows the open comments only when there are some, and says what the number is', async () => {
+		await show();
+		const badges = rows().map((r) => r.querySelector('.badge'));
+		expect(badges.map((b) => b?.textContent ?? null)).toEqual(['2', null, '5', null]);
+		expect(badges[0]?.getAttribute('aria-label')).toBe('2 open comments');
+	});
+});
