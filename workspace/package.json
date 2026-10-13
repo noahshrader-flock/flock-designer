@@ -21,9 +21,9 @@
 		"lint": "eslint .",
 		"check:static": "prettier --check . && npm run lint && npm run typecheck",
 		"check": "npm run check:static && npm test",
-		"smoke": "npm run build && node scripts/smoke-boot.mjs",
-		"smoke:page": "npm run build && node scripts/smoke-page.mjs",
-		"smoke:local": "npm run build && node scripts/smoke-local.mjs"
+		"smoke": "npm run build && node scripts/smoke.mjs boot",
+		"smoke:page": "npm run build && node scripts/smoke.mjs page",
+		"smoke:local": "npm run build && node scripts/smoke.mjs local"
 	},
 	"dependencies": {
 		"@tailwindcss/vite": "^4.3.3",
