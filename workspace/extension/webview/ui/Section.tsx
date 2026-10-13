@@ -2,10 +2,10 @@ import { type ReactNode, useId, useState } from 'react';
 import { Icon } from './Icon';
 
 /**
- * A titled part of a list, as VS Code's side bar sections are: a header with a chevron, the title in capitals and how
- * many it holds, open until closed. The header is a button that says whether it is open and which part it opens.
+ * A titled part of a list, as VS Code's side bar sections are: a header with a chevron, the title in capitals and, when
+ * it is a count of things, how many it holds, open until closed. The header is a button that says whether it is open and which part it opens.
  */
-export const Section = ({ title, count, children }: { title: string; count: number; children: ReactNode }) => {
+export const Section = ({ title, count, children }: { title: string; count?: number; children: ReactNode }) => {
 	const [open, setOpen] = useState(true);
 	const body = useId();
 	return (
@@ -15,9 +15,11 @@ export const Section = ({ title, count, children }: { title: string; count: numb
 				<span data-part="title" className="section-title">
 					{title}
 				</span>
-				<span data-part="count" className="section-count">
-					{count}
-				</span>
+				{count !== undefined && (
+					<span data-part="count" className="section-count">
+						{count}
+					</span>
+				)}
 			</button>
 			<div id={body} hidden={!open}>
 				{children}

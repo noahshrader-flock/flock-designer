@@ -36,6 +36,10 @@
 			{
 				"command": "dsnr.open",
 				"title": "DSNR: Open"
+			},
+			{
+				"command": "dsnr.openReview",
+				"title": "DSNR: Open a prototype for review"
 			}
 		]
 	}

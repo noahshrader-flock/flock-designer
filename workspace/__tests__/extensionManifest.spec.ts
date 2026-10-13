@@ -45,7 +45,10 @@ describe('the extension’s manifest', () => {
 		expect(manifest().contributes.views).toEqual({ dsnr: [{ type: 'webview', id: 'dsnr.panel', name: 'DSNR' }] });
 	});
 
-	it('has the one command, to open it', () => {
-		expect(manifest().contributes.commands).toEqual([{ command: 'dsnr.open', title: 'DSNR: Open' }]);
+	it('has its commands: to open it, and to open a prototype for review', () => {
+		expect(manifest().contributes.commands).toEqual([
+			{ command: 'dsnr.open', title: 'DSNR: Open' },
+			{ command: 'dsnr.openReview', title: 'DSNR: Open a prototype for review' },
+		]);
 	});
 });

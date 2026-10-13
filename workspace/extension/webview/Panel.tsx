@@ -1,8 +1,13 @@
-import { useState } from 'react';
-import type { Project } from '../../src/shared/domain/projects';
-import { DesignSystem } from './DesignSystem';
-import { SAMPLE_DESIGN_SYSTEM, SAMPLE_PROJECTS, type SampleDesignSystem } from './fixtures';
-import { Projects } from './Projects';
+import { useEffect, useState } from 'react';
+import type { Context } from '../../src/main/services/findContext';
+import { useWorkspace } from '../../src/renderer/useWorkspace';
+import type { SignInState } from '../../src/shared/contract';
+import type { Project, ProjectIteration } from '../../src/shared/domain/projects';
+import { iterationLabel } from '../../src/shared/work';
+import { type Catalog, DesignSystem } from './DesignSystem';
+import { onHost, workspace } from './host';
+import { Projects, type ProjectsRead } from './Projects';
+import { Account } from './ui/Account';
 import { Toggle } from './ui/Toggle';
 import { type Tab, vscode } from './vscode';
 
@@ -11,31 +16,94 @@ const TABS = [
 	{ value: 'design-system', label: 'Design System', icon: 'symbol-color' },
 ] as const satisfies { value: Tab; label: string; icon: string }[];
 
-/** What the panel shows: sample data until it is connected (Phase 0); a test gives its own. */
-export interface PanelData {
-	projects: Project[];
-	designSystem: SampleDesignSystem | null;
+/** What the panel draws, and what it does when pressed: the container (`Panel`) gives it, and a test gives its own. */
+export interface PanelViewProps {
+	tab: Tab;
+	onTab: (tab: Tab) => void;
+	account: SignInState;
+	onSignIn: () => void;
+	onAccount: () => void;
+	/** What is open, once the extension has said; null until then. */
+	context: Context | null;
+	projects: ProjectsRead;
+	onOpen: (project: Project, iteration: ProjectIteration) => void;
+	onNew: () => void;
+	onLocate: () => void;
+	catalog?: Catalog;
 }
 
-/**
- * DSNR's panel: the Projects and Design System toggle at its very top, and under it the one chosen. The choice is kept in
- * VS Code's state for the panel, so a reload (or the panel being hidden and shown) leaves it where it was.
- */
+/** DSNR's panel: the toggle at its very top with the account at the far right, and under it the view chosen. */
+export const PanelView = ({ tab, onTab, account, onSignIn, onAccount, context, projects, onOpen, onNew, onLocate, catalog }: PanelViewProps) => (
+	<main className="panel">
+		<div className="panel-top">
+			<Toggle label="View" options={TABS} value={tab} onChange={onTab} />
+			<Account state={account} onSignIn={onSignIn} onAccount={onAccount} />
+		</div>
+		<section data-tab-body={tab} className="tab-body">
+			{context === null ? (
+				<p className="note">Looking at what is open…</p>
+			) : tab === 'projects' ? (
+				<Projects
+					read={projects}
+					product={context.product !== null ? { open: true } : { open: false, why: context.missing[0] ?? 'No product is open.' }}
+					signedIn={account.state === 'signedIn'}
+					onOpen={onOpen}
+					onNew={onNew}
+				/>
+			) : (
+				<DesignSystem found={context.designSystem} onLocate={onLocate} {...(catalog ? { catalog } : {})} />
+			)}
+		</section>
+	</main>
+);
 
-export const Panel = ({ projects = SAMPLE_PROJECTS, designSystem = SAMPLE_DESIGN_SYSTEM }: Partial<PanelData>) => {
+/**
+ * The panel, connected: what is open from the extension (`context`), the account and the projects from the core over
+ * the bridge, read again when either changes, and what the person presses sent back. The tab chosen is kept in VS Code's
+ * state for the panel, so a reload leaves it where it was.
+ */
+export const Panel = () => {
 	const [tab, setTab] = useState<Tab>(() => vscode().getState()?.tab ?? 'projects');
-	const choose = (next: Tab) => {
-		setTab(next);
-		vscode().setState({ tab: next });
-	};
+	const [context, setContext] = useState<Context | null>(null);
+	const [account, setAccount] = useState<SignInState>({ state: 'signedOut' });
+	useEffect(() => {
+		const stop = onHost((m) => {
+			if (m.type === 'context') setContext(m.context);
+		});
+		// Said once the page listens, so what is open is never sent before it can be heard.
+		vscode().postMessage({ type: 'ready' });
+		return stop;
+	}, []);
+	useEffect(() => {
+		void workspace()
+			.signInState()
+			.then((r) => r.ok && setAccount(r.value));
+		return workspace().onSignInChanged(setAccount);
+	}, []);
+	const login = account.state === 'signedIn' ? account.user.login : null;
+	const read = useWorkspace(() => workspace().listProjects(), [context?.product ?? null, login], { enabled: context?.product != null });
 	return (
-		<main className="panel">
-			<div className="panel-top">
-				<Toggle label="View" options={TABS} value={tab} onChange={choose} />
-			</div>
-			<section data-tab-body={tab} className="tab-body">
-				{tab === 'projects' ? <Projects projects={projects} /> : <DesignSystem system={designSystem} />}
-			</section>
-		</main>
+		<PanelView
+			tab={tab}
+			onTab={(next) => {
+				setTab(next);
+				vscode().setState({ tab: next });
+			}}
+			account={account}
+			onSignIn={() => vscode().postMessage({ type: 'sign-in' })}
+			onAccount={() => vscode().postMessage({ type: 'account' })}
+			context={context}
+			projects={{ value: read.value, error: read.error, loading: read.loading }}
+			onOpen={(project, iteration) =>
+				vscode().postMessage({
+					type: 'open-review',
+					projectId: project.id,
+					name: iteration.name,
+					title: `${project.title} · ${iterationLabel(iteration)}`,
+				})
+			}
+			onNew={() => vscode().postMessage({ type: 'new-prototype' })}
+			onLocate={() => vscode().postMessage({ type: 'locate-design-system' })}
+		/>
 	);
 };

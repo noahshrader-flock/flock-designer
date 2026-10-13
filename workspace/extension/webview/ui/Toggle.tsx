@@ -55,7 +55,7 @@ export const Toggle = <Value extends string>({
 					onClick={() => onChange(o.value)}
 				>
 					<Icon name={o.icon} />
-					{o.label}
+					<span className="toggle-label">{o.label}</span>
 				</button>
 			))}
 		</div>

@@ -1,35 +1,80 @@
-import type { Project } from '../../src/shared/domain/projects';
+import type { Project, ProjectIteration } from '../../src/shared/domain/projects';
 import { plural } from '../../src/shared/plural';
+import { workOf } from '../../src/shared/work';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
 import { List } from './ui/List';
 import { Row } from './ui/Row';
-import { vscode } from './vscode';
 
 /** What a project has, in a line: its iterations, and its folder when it is in one. */
 const meta = (p: Project) => [plural(p.iterations.length, 'iteration'), p.folder].filter(Boolean).join(' · ');
 
-/** The Projects tab: each project a row, with a place for its picture and its open comments as a badge. */
-export const Projects = ({ projects }: { projects: Project[] }) =>
-	projects.length === 0 ? (
-		<EmptyState icon="folder-library" title="No projects yet">
-			<p>A prototype you start appears here, with its iterations and its open comments.</p>
-			<Button onClick={() => vscode().postMessage({ type: 'new-prototype' })}>New prototype</Button>
-		</EmptyState>
-	) : (
-		<List label="Projects">
-			{projects.map((p) => {
-				const open = p.iterations.reduce((n, i) => n + i.openComments, 0);
-				return (
-					<Row
-						key={p.id}
-						start={<span data-part="picture" aria-hidden="true" className="picture" />}
-						name={p.title}
-						meta={meta(p)}
-						end={open > 0 ? <Badge count={open} label={plural(open, 'open comment')} /> : undefined}
-					/>
-				);
-			})}
-		</List>
+/** The projects as the core read them: the list, what went wrong, or that it is still reading. */
+export interface ProjectsRead {
+	value: Project[] | null;
+	error: string | null;
+	loading: boolean;
+}
+
+/**
+ * The Projects tab: each project a row, with a place for its picture and its open comments as a badge, opening its newest
+ * prototype for review. With no product open, what to open; signed out, a line saying the list is this machine's.
+ */
+export const Projects = ({
+	read,
+	product,
+	signedIn,
+	onOpen,
+	onNew,
+}: {
+	read: ProjectsRead;
+	/** Whether a product is open, and if not, what to do (from the context). */
+	product: { open: true } | { open: false; why: string };
+	signedIn: boolean;
+	onOpen: (project: Project, iteration: ProjectIteration) => void;
+	onNew: () => void;
+}) => {
+	if (!product.open)
+		return (
+			<EmptyState icon="folder-library" title="No product is open">
+				<p>{product.why}</p>
+			</EmptyState>
+		);
+	if (read.error !== null && read.value === null)
+		return (
+			<EmptyState icon="warning" title="The projects could not be read">
+				<p>{read.error}</p>
+			</EmptyState>
+		);
+	if (read.value === null) return <p className="note">Reading the projects…</p>;
+	const projects = read.value;
+	return (
+		<>
+			{!signedIn && <p className="note">These are the projects on this machine. Sign in to see your team's too.</p>}
+			{projects.length === 0 ? (
+				<EmptyState icon="folder-library" title="No projects yet">
+					<p>A prototype you start appears here, with its iterations and its open comments.</p>
+					<Button onClick={onNew}>New prototype</Button>
+				</EmptyState>
+			) : (
+				<List label="Projects">
+					{projects.map((p) => {
+						const open = p.iterations.reduce((n, i) => n + i.openComments, 0);
+						const newest = workOf(p.iterations, 'prototype')[0];
+						return (
+							<Row
+								key={p.id}
+								start={<span data-part="picture" aria-hidden="true" className="picture" />}
+								name={p.title}
+								meta={meta(p)}
+								end={open > 0 ? <Badge count={open} label={plural(open, 'open comment')} /> : undefined}
+								{...(newest ? { onOpen: () => onOpen(p, newest) } : {})}
+							/>
+						);
+					})}
+				</List>
+			)}
+		</>
 	);
+};

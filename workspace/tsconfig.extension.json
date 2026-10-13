@@ -17,5 +17,15 @@
 		"isolatedModules": true,
 		"verbatimModuleSyntax": true
 	},
-	"include": ["extension/src/**/*", "extension/webview/**/*", "src/shared/**/*"]
+	"include": [
+		"extension/src/**/*",
+		"extension/webview/**/*",
+		"src/shared/**/*",
+		"src/host/**/*",
+		"src/main/**/*",
+		"src/site/**/*",
+		"src/page/**/*",
+		"src/renderer/useWorkspace.ts",
+		"src/renderer/workspace.d.ts"
+	]
 }
