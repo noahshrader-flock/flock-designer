@@ -5,6 +5,7 @@ import { plural } from '../../shared/plural';
 import { mergeIterationRecords } from '../../shared/records';
 import { commitOnto, git } from './git';
 import { errorText } from '../../shared/result';
+import { HOST } from '../../shared/vocabulary';
 
 /**
  * Keeping the design repository's project records published, with nobody having to remember.
@@ -51,7 +52,7 @@ export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 	try {
 		upstream = await g('rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}');
 	} catch {
-		return held(`The design repository's branch ${branch} is not tracking a branch on GitHub. Run "git push -u origin ${branch}" in it once.`);
+		return held(`The design repository's branch ${branch} is not tracking a branch on ${HOST}. Run "git push -u origin ${branch}" in it once.`);
 	}
 	if (!upstream.endsWith(`/${branch}`)) {
 		return held(`${branch} tracks ${upstream}, a differently named branch, so records are not published into it.`);
@@ -62,7 +63,7 @@ export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 		try {
 			await g('fetch', '-q', remote, branch);
 		} catch (err) {
-			return held(`Could not reach GitHub, so the records are kept here and will be published when it can: ${message(err)}`);
+			return held(`Could not reach ${HOST}, so the records are kept here and will be published when it can: ${message(err)}`);
 		}
 		const theirs = await g('rev-parse', upstream);
 
@@ -107,7 +108,7 @@ const recordsOnTopOf = async (
 	const g = (args: string[], input?: string) => git(designRoot, args, { input });
 	const blobAt = (rev: string, path: string) => g(['rev-parse', '-q', '--verify', `${rev}:${path}`]).catch(() => null);
 	const base = await g(['merge-base', 'HEAD', theirs]).catch(() => null);
-	if (base === null) return 'The design repository here and on GitHub share no history, so records are not published into it.';
+	if (base === null) return `The design repository here and on ${HOST} share no history, so records are not published into it.`;
 
 	const paths = [
 		...new Set([
@@ -136,11 +137,11 @@ const recordsOnTopOf = async (
 			readFileSync(join(designRoot, path), 'utf8'),
 			await git(designRoot, ['show', `${theirs}:${path}`], { trim: false }),
 		);
-		if (merged === null) return `${path} could not be combined with GitHub's copy, so nothing was changed. Your changes are kept here.`;
+		if (merged === null) return `${path} could not be combined with ${HOST}'s copy, so nothing was changed. Your changes are kept here.`;
 		changes.set(path, await g(['hash-object', '-w', '--stdin'], merged));
 	}
 	if (hopeless.length > 0) {
-		return `${hopeless.join(', ')} changed both here and on GitHub, and git cannot tell which to keep. Nothing was lost: your changes are kept here. Combine them in the design repository, then records will flow again.`;
+		return `${hopeless.join(', ')} changed both here and on ${HOST}, and git cannot tell which to keep. Nothing was lost: your changes are kept here. Combine them in the design repository, then records will flow again.`;
 	}
 	if (changes.size === 0) return { commit: null, ids: [], paths, read };
 

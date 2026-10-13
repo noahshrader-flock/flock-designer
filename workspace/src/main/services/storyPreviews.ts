@@ -15,6 +15,7 @@ import { runFile } from './process';
 import { editedFiles } from './tokenEdits';
 import { errorText } from '../../shared/result';
 import { singleFlight } from './concurrency';
+import { HOST } from '../../shared/vocabulary';
 
 /**
  * Previews of the component library's stories, for the Design System tab (DESIGN_SYSTEM_PLAN.md, P1).
@@ -475,7 +476,7 @@ export class StoryPreviews {
 		if (system === null) return { state: 'no-library' };
 		const { root, branch, folder } = system;
 		const commit = await libraryCommit(root, branch);
-		if (commit === null) return { state: 'failed', error: `The library has no ${branch} branch from GitHub to build.` };
+		if (commit === null) return { state: 'failed', error: `The library has no ${branch} branch from ${HOST} to build.` };
 		// The packages are the repository's, or in a monorepo the design system package's own.
 		if (!hasPackages(root) && !(folder !== '' && hasPackages(join(root, folder)))) return { state: 'no-packages', root };
 		// A build is of one design system at one commit: two packages of one repository are two builds.

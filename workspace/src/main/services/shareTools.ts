@@ -6,6 +6,7 @@ import { type RepoRef, parseRemote, repoRefOf } from '../../shared/repoRef';
 import { ghApi } from './ghCli';
 import { originUrl, pushBranch } from './git';
 import type { ShareTools } from './share';
+import { CHANGE_REQUEST, HOST, needsCli } from '../../shared/vocabulary';
 
 /**
  * The real tools behind sharing: the designer's own git for the push, and the GitHub CLI for
@@ -18,18 +19,16 @@ import type { ShareTools } from './share';
  * whatever they are allowed to do, and the app never sees its token.
  */
 
-const NOT_INSTALLED =
-	'Pull requests are opened with the GitHub CLI (gh), which was not found on this machine. Install it from https://cli.github.com, run `gh auth login` in a terminal, then try again.';
-const NOT_SIGNED_IN = 'The GitHub CLI is installed but not signed in. Run `gh auth login` in a terminal, then try again.';
-
-const NOT_ON_GITHUB = "This repository's origin is not on GitHub, so a pull request cannot be opened for it from here.";
+/** What is said when the person's own command line cannot be used, missing or signed out: sharing goes through it. */
+export const CLI_NEEDED = needsCli(`Opening a ${CHANGE_REQUEST}`);
+const NOT_ON_GITHUB = `This repository's origin is not on ${HOST}, so a ${CHANGE_REQUEST} cannot be opened for it from here.`;
 
 /** The person's own command line, its two failures said as what to do about them. */
 const withAdvice = (gh: GitHubApi): GitHubApi => ({
 	api: (path, init) =>
 		gh.api(path, init).catch((err: unknown) => {
-			if (hostErrorKind(err) === 'missingCli') throw new HostError(NOT_INSTALLED, undefined, 'missingCli');
-			if (hostErrorKind(err) === 'reauth') throw new HostError(NOT_SIGNED_IN, undefined, 'reauth');
+			const kind = hostErrorKind(err);
+			if (kind === 'missingCli' || kind === 'reauth') throw new HostError(CLI_NEEDED, undefined, kind);
 			throw err;
 		}),
 });

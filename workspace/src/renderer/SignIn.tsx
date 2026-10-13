@@ -3,6 +3,7 @@ import type { DeviceCodeStart, SignInState } from '../shared/contract';
 import { CancelButton } from './CancelButton';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
+import { HOST } from '../shared/vocabulary';
 
 /**
  * Sign-in, which for a desktop app means device flow: GitHub shows a code here,
@@ -45,7 +46,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 		return (
 			<div className="w-full max-w-[520px] text-center">
 				<div className="flex flex-col gap-6">
-					<h1 className="text-2xl font-semibold">Enter this code on GitHub</h1>
+					<h1 className="text-2xl font-semibold">Enter this code on {HOST}</h1>
 
 					<div className="rounded-lg border py-4 font-mono text-4xl tracking-[0.3em] select-all">{start.userCode}</div>
 
@@ -60,7 +61,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 						</Button>
 						{/* Opens in the real browser: the main process denies in-window navigation. */}
 						<Button variant="secondary" onClick={() => window.open(start.verificationUri, '_blank')}>
-							Open GitHub
+							Open {HOST}
 						</Button>
 					</div>
 
@@ -78,7 +79,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 			<div className="flex flex-col gap-6">
 				<h1 className="text-2xl font-semibold">DSNR</h1>
 				<p className="text-muted-foreground text-sm">
-					Sign in with GitHub to browse projects and leave comments. You need read access to the design repository — nothing else, and no checkout.
+					Sign in with {HOST} to browse projects and leave comments. You need read access to the design repository — nothing else, and no checkout.
 				</p>
 				{error && (
 					<Alert variant="destructive">
@@ -87,7 +88,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 				)}
 				<div>
 					<Button onClick={begin} disabled={busy}>
-						{busy ? 'Starting…' : 'Sign in with GitHub'}
+						{busy ? 'Starting…' : `Sign in with ${HOST}`}
 					</Button>
 				</div>
 			</div>

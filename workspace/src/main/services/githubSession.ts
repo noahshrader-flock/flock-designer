@@ -13,6 +13,7 @@ import {
 import { singleFlight } from './concurrency';
 import { HostError } from '../../host/hostError';
 import type { TokenStore } from './tokenStore';
+import { HOST } from '../../shared/vocabulary';
 
 /**
  * Holds the signed-in session, and is the only thing that touches the token.
@@ -133,14 +134,14 @@ export class GitHubSession {
 		// finished, and signing out must then still clear what is on disk.
 		this.token ??= this.store.read();
 		if (!this.token) {
-			throw new ReauthRequired('Sign in to GitHub first.');
+			throw new ReauthRequired(`Sign in to ${HOST} first.`);
 		}
 		if (isExpired(this.token, this.now())) {
 			await this.refresh(this.token);
 		}
 		const token = this.token;
 		if (!token) {
-			throw new ReauthRequired('Sign in to GitHub first.');
+			throw new ReauthRequired(`Sign in to ${HOST} first.`);
 		}
 		try {
 			return await fn(token.accessToken);

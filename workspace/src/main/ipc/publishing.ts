@@ -3,6 +3,7 @@ import type { PageStatus } from '../../shared/contract';
 import { arg, handle } from '../handle';
 import { previewIsUp } from '../services/share';
 import type { IpcDeps } from '../ipc';
+import { HOST } from '../../shared/vocabulary';
 
 /**
  * Publishing the records and pages, and whether a page is on the site.
@@ -32,7 +33,7 @@ export const registerPublishing = (d: IpcDeps): void => {
 		return null;
 	});
 	handle('publishPage', [arg.projectId, arg.prototypeName], async (projectId, name): Promise<PageStatus> => {
-		if (github.state().state !== 'signedIn') throw new Error('Sign in to GitHub to publish.');
+		if (github.state().state !== 'signedIn') throw new Error(`Sign in to ${HOST} to publish.`);
 		publishInBackground(projectId, name);
 		return publishedPage(projectId, name);
 	});

@@ -1,4 +1,5 @@
 import { errorText } from '../../shared/result';
+import { HOST } from '../../shared/vocabulary';
 /**
  * Where a change to the library's tokens is kept, and how it is proposed (T4 and T5 of the design system plan).
  *
@@ -114,7 +115,7 @@ export class TokenBranches {
 		const system = this.system();
 		const kept = (await this.kept())?.kept ?? null;
 		const base = kept?.base ?? (await libraryCommit(system.root, system.branch));
-		if (base === null) throw new Error(`The library has no ${system.branch} branch from GitHub to make a change on.`);
+		if (base === null) throw new Error(`The library has no ${system.branch} branch from ${HOST} to make a change on.`);
 		if (kept === null && edits.length === 0) throw new Error('There is no change to save.');
 
 		const reads = await systemReads(system, base);

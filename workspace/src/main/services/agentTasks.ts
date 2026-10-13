@@ -1,6 +1,7 @@
 import type { Iteration } from '../../shared/contract';
 import { NOT_READY_LINE, READY_LINE } from '../../shared/handoff';
 import type { PrototypeBuild, PrototypeSources } from './prototype';
+import { HOST } from '../../shared/vocabulary';
 
 /**
  * Every task an agent is given, put together here, one function per kind of run, so each gets the same parts in the
@@ -124,7 +125,7 @@ export const moveToCodeTask = (
  */
 const addressOpening = (number: number, commentsPath: string, subject: string): string[] => [
 	`Address comment ${number} on ${subject}, and only that one.`,
-	`The comments are in ${commentsPath}, written from GitHub a moment ago. Read it first.`,
+	`The comments are in ${commentsPath}, written from ${HOST} a moment ago. Read it first.`,
 	`Act on comment ${number} alone. The others are listed for context: leave them, and do not mention them except to say you left them.`,
 ];
 

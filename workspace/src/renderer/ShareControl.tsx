@@ -21,6 +21,7 @@ import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Spinner } from './ui/spinner';
+import { CHANGE_REQUEST } from '../shared/vocabulary';
 
 /**
  * What can be done with this page beyond reviewing it, behind one menu: move a prototype into the code,
@@ -203,8 +204,8 @@ export const ShareControl = ({
 						{view === 'confirm' && (
 							<>
 								<p className="text-sm">
-									This pushes <b>{iteration.branch}</b> to the repository and opens a <b>draft pull request</b>, so a preview link can be built for
-									reviewers. The pull request is only there to make the link: it is not meant to be merged.
+									This pushes <b>{iteration.branch}</b> to the repository and opens a <b>draft {CHANGE_REQUEST}</b>, so a preview link can be built
+									for reviewers. The {CHANGE_REQUEST} is only there to make the link: it is not meant to be merged.
 								</p>
 								<p className="text-muted-foreground text-sm">
 									Only committed work is shared. The build takes several minutes, and you can close this and keep working.

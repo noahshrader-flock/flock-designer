@@ -5,6 +5,7 @@ import { coalescingByKey } from './concurrency';
 import { DESIGN_REPO } from '../../host/designRepo';
 import type { GitHubSession } from './githubSession';
 import { pageStatus, publish, recordsFrom, redeploySite, siteBehind } from './pages';
+import { HOST } from '../../shared/vocabulary';
 
 /**
  * The site's deploys, run by the app in the background: a page it just made (a prototype built, a change Address made),
@@ -66,7 +67,7 @@ export const siteDeploys = ({ github, designClone }: { github: Pick<GitHubSessio
 			found = await pageStatus(github, DESIGN_REPO, projectId, name);
 		} catch (err) {
 			// Most often the app's GitHub permission: reading the site and its deploys needs Pages and Deployments.
-			return { state: 'unavailable', why: `GitHub would not say whether this is published: ${errorText(err)}` };
+			return { state: 'unavailable', why: `${HOST} would not say whether this is published: ${errorText(err)}` };
 		}
 		const why = stopped.get(key);
 		return found.state === 'unpublished' && why ? { state: 'unpublished', why } : found;

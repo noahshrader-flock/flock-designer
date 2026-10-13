@@ -23,6 +23,7 @@ import {
 } from './prototype';
 import { bundleCommand, runBundle, sharedFilesOf, writeBundleScript } from './prototypeBundle';
 import { designSystemFile, taskVoice } from './voiceBrief';
+import { HOST } from '../../shared/vocabulary';
 
 /**
  * Making a prototype, with nothing of the app in it: starting one (its record, its brief, its name), what its agent
@@ -286,7 +287,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const html = readFileSync(pageFile, 'utf8');
 		if (html.length > MAX_PAGE) {
 			throw new Error(
-				`This page is ${Math.round(html.length / 1_000_000)} MB, more than GitHub accepts for one file (100 MB), so it cannot be saved. It is still here and still opens on this machine. Large images or fonts embedded in the page are the usual cause.`,
+				`This page is ${Math.round(html.length / 1_000_000)} MB, more than ${HOST} accepts for one file (100 MB), so it cannot be saved. It is still here and still opens on this machine. Large images or fonts embedded in the page are the usual cause.`,
 			);
 		}
 		return html;

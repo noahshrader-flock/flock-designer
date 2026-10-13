@@ -8,6 +8,7 @@ import { RowsSkeleton, SkeletonStatus } from './Skeletons';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
+import { CHANGE_REQUEST, HOST } from '../shared/vocabulary';
 
 /**
  * The Voice and Tone tab (T9 of the design system plan): Flock's voice and tone, one file in the connected design system's
@@ -133,7 +134,7 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 			{theirs && (
 				<Alert>
 					<InfoIcon />
-					<AlertTitle>The voice and tone changed on GitHub since it was opened</AlertTitle>
+					<AlertTitle>The voice and tone changed on {HOST} since it was opened</AlertTitle>
 					<AlertDescription>
 						Nothing was saved. It is below as it is now: use it, or keep your text and save it as a change to it.
 						<pre data-voice-now className="bg-muted mt-2 max-h-64 w-full overflow-auto rounded-md p-3 font-mono text-xs whitespace-pre-wrap">
@@ -185,7 +186,7 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 								{failed.error}
 								{failed.proposing && branch && (
 									<span className="mt-1 block">
-										<OutLink href={branch.compare}>Open the pull request on GitHub</OutLink>
+										<OutLink href={branch.compare}>{`Open the ${CHANGE_REQUEST} on ${HOST}`}</OutLink>
 									</span>
 								)}
 							</>

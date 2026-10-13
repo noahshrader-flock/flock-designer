@@ -25,6 +25,7 @@ import { errorText } from '../shared/result';
 import { plural } from '../shared/plural';
 import { loginFromNoreply } from '../shared/hostUrls';
 import { ReviewThreads } from '../host/reviewThreads';
+import { CLI, HOST, needsCli } from '../shared/vocabulary';
 
 /**
  * `dsnr`: making a prototype from Claude Code in VS Code, with no app running.
@@ -164,7 +165,7 @@ const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): P
 	const built = buildSite({ designRoot, outDir, comments, viewer: viewerDir ? { dir: viewerDir, ref: DESIGN_REPO } : undefined });
 	const pages = built.projects.reduce((n, p) => n + p.pages, 0);
 	deps.out(
-		`Built ${plural(pages, 'page')} in ${plural(built.projects.length, 'project')} at ${outDir}.${noViewer}${comments ? '' : ' Comment counts are left out: GitHub could not be asked (is gh signed in?).'}`,
+		`Built ${plural(pages, 'page')} in ${plural(built.projects.length, 'project')} at ${outDir}.${noViewer}${comments ? '' : ` Comment counts are left out: ${HOST} could not be asked (is ${CLI} signed in?).`}`,
 	);
 	if (values.serve) {
 		const { url } = await serveSite(outDir);
@@ -192,8 +193,7 @@ const savedPage = async (deps: CliDeps, values: { project?: string; name?: strin
 				: `${projectId} ${name} has no saved page in the design repository, so it is not on the site.`,
 		);
 	}
-	if (!deps.github)
-		throw new Error(`${doing} goes through GitHub's command line, gh, which is missing or not signed in here. Run gh auth login, then try again.`);
+	if (!deps.github) throw new Error(needsCli(doing));
 	return {
 		github: deps.github,
 		ref: DESIGN_REPO,
@@ -346,7 +346,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			const text = await buildTask(skill, change.target, change.from.name, note);
 			const where = whereTheChangeGoes(change, name) ?? `The change is made in ${change.target}: change it, rather than starting again.`;
 			const unsaved = change.fresh ? ` ${change.target} is recorded when it is saved.` : '';
-			const signIn = change.unread ? " (GitHub's command line, gh, is missing or not signed in.)" : '';
+			const signIn = change.unread ? ` (${HOST}'s command line, ${CLI}, is missing or not signed in.)` : '';
 			// What people have said about it so far, for the agent to read before it changes anything, and to tell the person.
 			const open = openComments(read.comments ?? []);
 			let said = '';

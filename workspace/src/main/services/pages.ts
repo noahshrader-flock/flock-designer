@@ -7,6 +7,7 @@ import { type SyncResult, syncRecords } from './designSync';
 import { git } from './git';
 import { asArray, asRecord } from '../../shared/json';
 import { type RepoRef, formatRepo } from '../../shared/repoRef';
+import { HOST } from '../../shared/vocabulary';
 
 /**
  * Publishing a prototype to its page on the design repository's GitHub Pages site: the one way it is done, from the
@@ -192,7 +193,7 @@ export const unpublish = async (input: PublishInput & { removePage: () => Promis
 	log(
 		gone
 			? `Taken off the site: ${url} no longer has this iteration. Its record and comments are kept.`
-			: `The site was deployed without it, but ${url} still opens. GitHub can take a few minutes to stop serving it. If it still opens after that, ask a GitHub admin to switch Pages off for the repository.`,
+			: `The site was deployed without it, but ${url} still opens. ${HOST} can take a few minutes to stop serving it. If it still opens after that, ask a ${HOST} admin to switch Pages off for the repository.`,
 	);
 	return { url, gone };
 };
@@ -246,7 +247,7 @@ const deploy = async (
 	// 1. Where it is going, before anything leaves this machine.
 	const visibility = await readVisibility(github, ref);
 	const site = visibility.site?.url;
-	if (!site) throw new Error(`${nothing}: the design repository has no GitHub Pages site.${noLink}`);
+	if (!site) throw new Error(`${nothing}: the design repository has no ${HOST} Pages site.${noLink}`);
 	const branch = visibility.defaultBranch;
 	if (recordsBranch === '') throw new Error(`${nothing}: the design repository here is not on a branch.`);
 	if (recordsBranch !== undefined && recordsBranch !== branch) {
@@ -277,11 +278,11 @@ const deploy = async (
 	} catch (err) {
 		if (forbidden(err))
 			throw new Error(
-				"DSNR's GitHub App is not allowed to start the deploy. Its permissions need Actions: read and write (and Pages and Deployments: read), approved on the installation. Publishing from the command line still works.",
+				`DSNR's ${HOST} App is not allowed to start the deploy. Its permissions need Actions: read and write (and Pages and Deployments: read), approved on the installation. Publishing from the command line still works.`,
 			);
 		if (notFound(err))
 			throw new Error(
-				`The workflow that publishes the site (.github/workflows/${PUBLISH_WORKFLOW}) is not on GitHub yet, on the repository's default branch. Push it, then try again.`,
+				`The workflow that publishes the site (.github/workflows/${PUBLISH_WORKFLOW}) is not on ${HOST} yet, on the repository's default branch. Push it, then try again.`,
 			);
 		throw err;
 	}
@@ -323,10 +324,10 @@ export const publish = async (input: PublishInput): Promise<Published> => {
 		log(`Published. Note that ${why}, so anyone with the link can open this page, signed in or not. ${url}`);
 	} else if (opened) {
 		log(
-			`This page opens for anyone, signed in or not, although GitHub said the site was private. Do not share it; check the repository's Pages settings. ${url}`,
+			`This page opens for anyone, signed in or not, although ${HOST} said the site was private. Do not share it; check the repository's Pages settings. ${url}`,
 		);
 	} else {
-		log(`Published. It opens for people signed in to GitHub with access to ${formatRepo(ref)}: ${url}`);
+		log(`Published. It opens for people signed in to ${HOST} with access to ${formatRepo(ref)}: ${url}`);
 	}
 	return { url, public: opened, first };
 };

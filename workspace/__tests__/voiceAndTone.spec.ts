@@ -385,7 +385,7 @@ describe('proposing it', () => {
 			message: 'To get started with GitHub CLI, please run:  gh auth login',
 			kind: 'reauth',
 		};
-		await expect(file.propose()).rejects.toThrow(/GitHub command line \(gh\)/);
+		await expect(file.propose()).rejects.toThrow(/GitHub's command line, gh,/);
 		gh.refuse = null;
 		expect((await file.current()).branch).toMatchObject({ text: 'two', saves: 1, pullRequest: null });
 	});

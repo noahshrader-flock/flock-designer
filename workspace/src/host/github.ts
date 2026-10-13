@@ -2,6 +2,7 @@ import type { DeviceCodeStart, GitHubUser } from '../shared/contract';
 import { asRecord } from '../shared/json';
 import { errorText } from '../shared/result';
 import { HostError } from './hostError';
+import { HOST } from '../shared/vocabulary';
 
 /**
  * GitHub's device flow, and the slice of the REST API the app uses.
@@ -22,7 +23,7 @@ const API = 'https://api.github.com';
 
 /** Raised when the person must sign in again -- the refresh token is spent or revoked. */
 export class ReauthRequired extends HostError {
-	constructor(message = 'Sign in to GitHub again.') {
+	constructor(message = `Sign in to ${HOST} again.`) {
 		super(message, undefined, 'reauth');
 		this.name = 'ReauthRequired';
 	}
@@ -64,7 +65,7 @@ export const startDeviceFlow = async (clientId: string, fetcher: Fetcher): Promi
 		throw new HostError(
 			typeof body.error_description === 'string'
 				? body.error_description
-				: 'GitHub did not return a device code. Check the client ID, and that device flow is enabled on the app.',
+				: `${HOST} did not return a device code. Check the client ID, and that device flow is enabled on the app.`,
 			res.status,
 		);
 	}
@@ -127,9 +128,9 @@ export const pollForToken = async (
 			case 'expired_token':
 				throw new HostError('The sign-in code expired. Start again.');
 			case 'access_denied':
-				throw new HostError('Sign-in was canceled on GitHub.');
+				throw new HostError(`Sign-in was canceled on ${HOST}.`);
 			default:
-				throw new HostError(typeof body.error_description === 'string' ? body.error_description : 'GitHub refused the sign-in.', res.status);
+				throw new HostError(typeof body.error_description === 'string' ? body.error_description : `${HOST} refused the sign-in.`, res.status);
 		}
 	}
 	throw new HostError('The sign-in code expired. Start again.');
@@ -160,7 +161,7 @@ export const refreshToken = async (
 		if (typeof body.error === 'string') {
 			throw new ReauthRequired();
 		}
-		throw new HostError('GitHub could not renew the sign-in just now. Try again in a moment.', res.status);
+		throw new HostError(`${HOST} could not renew the sign-in just now. Try again in a moment.`, res.status);
 	}
 	return tokenFromResponse(body, now());
 };
@@ -217,7 +218,7 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): P
 						? 'Issues (read and write)'
 						: 'an additional repository permission';
 			throw new HostError(
-				`The GitHub App is missing the ${needed} permission. Add it under the app's ` +
+				`The ${HOST} App is missing the ${needed} permission. Add it under the app's ` +
 					'Permissions & events, then approve the update on the installation.',
 				res.status,
 			);
@@ -231,7 +232,7 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): P
 		const id = res.headers?.get('x-github-request-id');
 		const what = raw ? `: ${raw.replace(/\s+/g, ' ').slice(0, 200)}` : '';
 		const which = `${call.method ?? 'GET'} ${call.path.replace(/\?.*$/, '')}`;
-		throw new HostError(message || `GitHub returned ${res.status} for ${which}${what}${id ? ` (request ${id})` : ''}`, res.status);
+		throw new HostError(message || `${HOST} returned ${res.status} for ${which}${what}${id ? ` (request ${id})` : ''}`, res.status);
 	}
 	// "No Content": a delete worked and there is nothing to read. Parsing it would fail a call that succeeded.
 	if (res.status === 204) return null;

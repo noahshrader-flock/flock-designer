@@ -2,6 +2,7 @@ import { asArray, asRecord } from '../shared/json';
 import type { RepoRef } from '../shared/repoRef';
 import type { GitHubApi } from './designRepo';
 import { hostErrorKind } from './hostError';
+import { HOST } from '../shared/vocabulary';
 
 /** Where a repository is in the host's API: every call about it starts here. */
 export const repoPath = (ref: RepoRef): string => `/repos/${ref.owner}/${ref.repo}`;
@@ -37,7 +38,7 @@ export class RepoFiles {
 	/** The repository's default branch, which is not always `main`. */
 	async defaultBranch(): Promise<string> {
 		const repo = asRecord(await this.session.api(this.base));
-		if (typeof repo.default_branch !== 'string') throw new Error(`GitHub did not say which branch is ${this.ref.repo}’s default.`);
+		if (typeof repo.default_branch !== 'string') throw new Error(`${HOST} did not say which branch is ${this.ref.repo}’s default.`);
 		return repo.default_branch;
 	}
 
@@ -132,7 +133,7 @@ export class RepoFiles {
 	/** The commit a branch is at. */
 	async branchHead(branch: string): Promise<string> {
 		const sha = asRecord(asRecord(await this.session.api(`${this.base}/git/ref/heads/${encodeURIComponent(branch)}`)).object).sha;
-		if (typeof sha !== 'string') throw new Error(`GitHub did not say where ${branch} is.`);
+		if (typeof sha !== 'string') throw new Error(`${HOST} did not say where ${branch} is.`);
 		return sha;
 	}
 

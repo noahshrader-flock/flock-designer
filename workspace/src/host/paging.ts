@@ -1,5 +1,6 @@
 import { asArray } from '../shared/json';
 import type { GitHubApi } from './designRepo';
+import { HOST } from '../shared/vocabulary';
 
 /**
  * Every item of a list the host pages, 100 at a time, read up to the first page that is not full. A first version read
@@ -28,4 +29,4 @@ export const readPages = async (
 	return items;
 };
 
-const tooMany = (maxPages: number) => new Error(`There are more than ${maxPages * 100} of these on GitHub, which is more than this app reads.`);
+const tooMany = (maxPages: number) => new Error(`There are more than ${maxPages * 100} of these on ${HOST}, which is more than this app reads.`);

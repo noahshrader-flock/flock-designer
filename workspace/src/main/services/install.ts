@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { WorkspaceCommand } from './descriptor';
 import { NotStarted, Stopped, runStreamed } from './streamed';
+import { HOST } from '../../shared/vocabulary';
 
 /**
  * Installing a repository's packages from the New modal (C5 of the clone plan).
@@ -31,7 +32,7 @@ const refusal = (output: string): { registry: string | null } | null => {
 export const installProblem = (output: string, node: string | null): string => {
 	const refused = refusal(output);
 	if (refused?.registry?.includes('npm.pkg.github.com')) {
-		return `npm on this computer is not signed in to GitHub Packages, where the private packages are. Sign in with \`npm login --auth-type=legacy --registry=https://npm.pkg.github.com\`, using a GitHub token that can read packages (and is authorized for your organization's single sign-on), then try again.`;
+		return `npm on this computer is not signed in to GitHub Packages, where the private packages are. Sign in with \`npm login --auth-type=legacy --registry=https://npm.pkg.github.com\`, using a ${HOST} token that can read packages (and is authorized for your organization's single sign-on), then try again.`;
 	}
 	if (refused) return `${refused.registry ?? 'The package registry'} refused npm on this computer. Sign in to it as your team does, then try again.`;
 	if (/ENOSPC|no space left/i.test(output)) return 'There is not enough disk space to install the packages. Free some, then try again.';

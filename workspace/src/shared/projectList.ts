@@ -4,6 +4,7 @@ import { matchesWords } from './search';
 import { asCover, asDate } from './validate';
 import { projectCodeLink, workKind, workOf } from './work';
 import { byNewest } from './sort';
+import { HOST } from './vocabulary';
 
 /** The list of projects as screens show it: dated, ordered, searched, merged from GitHub and this machine, with covers. */
 
@@ -167,7 +168,7 @@ export const projectOpening = (project: Pick<Project, 'title' | 'iterations'>): 
 	const newest = workOf(project.iterations, 'prototype')[0];
 	if (newest !== undefined) return { kind: 'app', label: `Open ${project.title}`, iteration: newest };
 	const url = projectCodeLink(project);
-	return url === null ? null : { kind: 'link', label: `Open ${project.title} on GitHub`, url };
+	return url === null ? null : { kind: 'link', label: `Open ${project.title} on ${HOST}`, url };
 };
 
 /** The list with pictures just made taken in, and nothing else changed: the same list when there are none. */

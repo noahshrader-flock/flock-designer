@@ -4,6 +4,7 @@ import type { ShareDescriptor } from './descriptor';
 import { projectDir } from '../../shared/designPaths';
 import { isSafeBranchName } from './git';
 import { errorText } from '../../shared/result';
+import { CHANGE_REQUEST } from '../../shared/vocabulary';
 
 /**
  * Putting an iteration in front of someone who is not on this machine.
@@ -65,7 +66,7 @@ export const previewUrlFor = (share: ShareDescriptor, pr: number): string => sha
 export const pullRequestText = (projectId: string, name: string): { title: string; body: string } => ({
 	title: `Preview: ${projectId} ${name} (not for merge)`,
 	body: [
-		'This is a **draft pull request that exists only to build a preview link** for review in DSNR.',
+		`This is a **draft ${CHANGE_REQUEST} that exists only to build a preview link** for review in DSNR.`,
 		'It is not headed for the trunk and should not be merged or marked ready for review.',
 		'',
 		`The project record, with the brief and the comments, is \`${projectDir(projectId)}\` in the design repository.`,

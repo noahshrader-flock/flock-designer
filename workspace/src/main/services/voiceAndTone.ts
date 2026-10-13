@@ -1,5 +1,6 @@
 import { type RepoRef, formatRepo } from '../../shared/repoRef';
 import { compareUrl } from '../../shared/hostUrls';
+import { needsCli } from '../../shared/vocabulary';
 /**
  * The company's voice and tone (T9 of the design system plan): one file in the design system's agent files
  * (`.dsnr/voice-and-tone.md`, in its folder when it lives in a larger repository), read and changed from the Design System
@@ -237,6 +238,5 @@ export class VoiceAndToneFile {
 	}
 }
 
-/** What is said when the person's GitHub command line cannot be used: everything here goes through it. */
-export const NEEDS_GH =
-	'The voice and tone is read and saved with the GitHub command line (gh), which is not installed or not signed in here. Install it and run `gh auth login`; anything already saved is on its branch.';
+/** What is said when the person's command line for the host cannot be used: everything here goes through it. */
+export const NEEDS_GH = needsCli('Reading and saving the voice and tone', 'Anything already saved is on its branch.');

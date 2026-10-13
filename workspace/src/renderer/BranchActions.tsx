@@ -4,6 +4,7 @@ import { plural } from '../shared/plural';
 import { OutLink } from './OutLink';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
+import { CHANGE_REQUEST } from '../shared/vocabulary';
 
 /** A change kept on a branch of DSNR's, as either kind of change has one: the tokens' (T4, T5) and the voice and tone's (T9). */
 interface KeptBranch {
@@ -51,7 +52,7 @@ export const BranchActions = ({
 		)}
 		{branch?.pullRequest && (
 			<p className="flex flex-wrap items-center gap-x-2 text-xs">
-				<OutLink href={branch.pullRequest.url}>{`Draft pull request #${branch.pullRequest.number}`}</OutLink>
+				<OutLink href={branch.pullRequest.url}>{`Draft ${CHANGE_REQUEST} #${branch.pullRequest.number}`}</OutLink>
 				{pullRequestNote}
 			</p>
 		)}
@@ -68,7 +69,7 @@ export const BranchActions = ({
 			)}
 			{branch && !unsaved && !branch.pullRequest && (
 				<Button size="sm" disabled={busy !== null} onClick={onPropose}>
-					{busy === 'proposing' ? 'Opening a draft pull request…' : 'Propose'}
+					{busy === 'proposing' ? `Opening a draft ${CHANGE_REQUEST}…` : 'Propose'}
 				</Button>
 			)}
 			{branch && (

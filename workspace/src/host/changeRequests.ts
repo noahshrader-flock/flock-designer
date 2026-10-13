@@ -2,6 +2,7 @@ import { asArray, asRecord } from '../shared/json';
 import type { RepoRef } from '../shared/repoRef';
 import type { GitHubApi } from './designRepo';
 import { repoPath } from './repoFiles';
+import { CHANGE_REQUEST, HOST } from '../shared/vocabulary';
 
 /**
  * A repository's change requests (GitHub's pull requests) through the host's API: the one open from a branch, a draft
@@ -66,7 +67,7 @@ export class ChangeRequests {
 	/** Always a draft. Nothing here can open one that is ready for review. */
 	async openDraft({ head, base, title, body }: { head: string; base: string; title: string; body: string }): Promise<PullRequest> {
 		const made = asPullRequest(await this.session.api(`${this.base}/pulls`, { method: 'POST', body: { title, head, base, body, draft: true } }));
-		if (made === null) throw new Error('GitHub did not say which pull request it opened.');
+		if (made === null) throw new Error(`${HOST} did not say which ${CHANGE_REQUEST} it opened.`);
 		return made;
 	}
 
@@ -82,7 +83,7 @@ export class ChangeRequests {
 	 */
 	async checks(number: number): Promise<Check[]> {
 		const sha = asRecord(asRecord(await this.session.api(`${this.base}/pulls/${number}`)).head).sha;
-		if (typeof sha !== 'string') throw new Error(`GitHub did not say what pull request ${number} is at.`);
+		if (typeof sha !== 'string') throw new Error(`${HOST} did not say what ${CHANGE_REQUEST} ${number} is at.`);
 		const [runs, statuses, workflows] = await Promise.all([
 			this.session.api(`${this.base}/commits/${sha}/check-runs?per_page=100`),
 			this.session.api(`${this.base}/commits/${sha}/status?per_page=100`),

@@ -1,3 +1,4 @@
+import { HOST } from '../../shared/vocabulary';
 /**
  * Which tokens each component draws with, and so which components share a token (T6 of the design system plan,
  * decision 29). **Found by tagging, for any library the token writers support:** every token is given a value nothing
@@ -274,7 +275,7 @@ export class ComponentTokens {
 		const system = this.deps.system();
 		if (system === null) return { error: 'There is no design system connected.' };
 		const commit = await libraryCommit(system.root, system.branch);
-		if (commit === null) return { error: `The library has no ${system.branch} branch from GitHub to read.` };
+		if (commit === null) return { error: `The library has no ${system.branch} branch from ${HOST} to read.` };
 		const key = `${commit}:${system.folder}`;
 		if (this.index?.key !== key) {
 			const index: Building = { key, done: null, finished: Promise.resolve() };

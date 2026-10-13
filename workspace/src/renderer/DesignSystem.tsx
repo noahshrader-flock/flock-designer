@@ -51,12 +51,13 @@ import {
 	DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { HOST } from '../shared/vocabulary';
 
 /** Said only when something is wrong, as the Projects screen does: a failed update is a line, never an error. */
 const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
 	typeof update === 'object' ? (
 		<span className="text-warning text-xs" role="status" title={update.failed}>
-			Could not update from GitHub
+			Could not update from {HOST}
 		</span>
 	) : null;
 

@@ -6,6 +6,7 @@ import { CODE_FOLDERS } from './discovery';
 import { FolderMemory } from './folderMemory';
 import { listedAs, originOf } from './repositories';
 import { asRepositoryPath, parseRemote, repoName } from '../../shared/repoRef';
+import { HOST } from '../../shared/vocabulary';
 
 /**
  * Where this person's clones go: one folder, theirs to choose, which discovery looks through first, so a repository the
@@ -70,7 +71,7 @@ export const defaultClonePlaceDeps: ClonePlaceDeps = {
  */
 export const clonePlace = (folder: string, repository: string, deps: ClonePlaceDeps = defaultClonePlaceDeps): ClonePlace => {
 	const checked = asRepositoryPath(repository);
-	if (checked === null) throw new Error(`"${repository}" is not a GitHub repository name.`);
+	if (checked === null) throw new Error(`"${repository}" is not a ${HOST} repository name.`);
 	const at = (deps.paths ?? path).join(folder, repoName(checked));
 	if (!deps.exists(at) || deps.list(at).length === 0) return { state: 'free', path: at };
 	const origin = deps.exists((deps.paths ?? path).join(at, '.git')) ? deps.origin(at) : null;

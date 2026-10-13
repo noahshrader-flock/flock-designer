@@ -5,6 +5,7 @@ import { listedAs } from './repositories';
 import { NotStarted, Stopped, runStreamed } from './streamed';
 import { errorText } from '../../shared/result';
 import { cloneUrl } from '../../shared/hostUrls';
+import { CLI, HOST } from '../../shared/vocabulary';
 
 /**
  * Cloning a repository the person chose from their own GitHub list into their clone folder (C2 of the clone plan).
@@ -62,10 +63,10 @@ export const cloneProblem = (repository: string, stderr: string): string => {
 			stderr,
 		)
 	) {
-		return `GitHub would not let git on this computer clone ${repository}: git is not signed in to GitHub, or this account cannot read it. Run \`gh auth setup-git\` in a terminal (with the GitHub CLI signed in), or sign in to git, then try again.`;
+		return `${HOST} would not let git on this computer clone ${repository}: git is not signed in to ${HOST}, or this account cannot read it. Run \`${CLI} auth setup-git\` in a terminal (with the ${HOST} CLI signed in), or sign in to git, then try again.`;
 	}
 	if (/Could not resolve host|Failed to connect|Connection (timed out|refused|reset)|Network is unreachable|unable to access/i.test(stderr)) {
-		return `Could not reach GitHub to clone ${repository}. Check the internet connection, then try again.`;
+		return `Could not reach ${HOST} to clone ${repository}. Check the internet connection, then try again.`;
 	}
 	if (/No space left on device|disk full/i.test(stderr)) return `There is not enough disk space to clone ${repository}. Free some, then try again.`;
 	return `Could not clone ${repository}: ${said || 'git stopped without saying why.'}`;
@@ -99,7 +100,7 @@ export class Cloner {
 		if (this.running !== null) throw new CloneProblem(`Already cloning ${this.running}. Wait for it to finish.`);
 		// Only a repository the person's own list returned: the window cannot name one.
 		const listed = listedAs(req.visible, req.repository);
-		if (listed === undefined) throw new CloneProblem(`${req.repository} is not one of the repositories your GitHub account can see.`);
+		if (listed === undefined) throw new CloneProblem(`${req.repository} is not one of the repositories your ${HOST} account can see.`);
 		const place = clonePlace(req.folder, listed);
 		if (place.state === 'cloned') return { path: place.path, cloned: false };
 		if (place.state === 'taken') throw new CloneProblem(notClonedOver(place.why));

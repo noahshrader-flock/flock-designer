@@ -56,6 +56,7 @@ import { registerPrototypes } from './ipc/prototypes';
 import { registerPublishing } from './ipc/publishing';
 import { registerReview } from './ipc/review';
 import { formatRepo, repoRefOf } from '../shared/repoRef';
+import { HOST } from '../shared/vocabulary';
 
 export interface IpcContext {
 	window: BrowserWindow;
@@ -309,7 +310,7 @@ export const ipcDeps = ({
 			state.visible = (await reachableRepositories(github, personGitHub, signedInLogin())).names;
 		const listed = listedAs(state.visible, repository);
 		if (listed === undefined)
-			throw new Error(`${repository} is not one of the repositories your GitHub account can see. Sign in to GitHub in DSNR, then try again.`);
+			throw new Error(`${repository} is not one of the repositories your ${HOST} account can see. Sign in to ${HOST} in DSNR, then try again.`);
 		const design = clonePlace(folder, DESIGN);
 		const place = clonePlace(folder, listed);
 		const home = homedir();

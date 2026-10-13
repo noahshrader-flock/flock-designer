@@ -3,6 +3,7 @@ import { classify } from './branchProjects';
 import type { Problem, SyncResult } from './designSync';
 import { branchAuthors, branchCommit, isSamePerson, listBranches, localIdentity, pushBranch, git } from './git';
 import { errorText } from '../../shared/result';
+import { HOST } from '../../shared/vocabulary';
 
 /**
  * Publishing the person's own work branches, so the design repository never points at a branch that
@@ -74,7 +75,7 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 			problems: [
 				problem(
 					'Work branches',
-					`Could not reach GitHub, so ${mine.length === 1 ? 'a branch is' : `${mine.length} branches are`} saved here and will be published when it can: ${why}`,
+					`Could not reach ${HOST}, so ${mine.length === 1 ? 'a branch is' : `${mine.length} branches are`} saved here and will be published when it can: ${why}`,
 				),
 			],
 		};
@@ -95,7 +96,7 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 				problems.push(
 					problem(
 						branch,
-						'It has changes on GitHub that this machine does not have, so it was not pushed. Bring them in (git pull --rebase on the branch), and it will publish.',
+						`It has changes on ${HOST} that this machine does not have, so it was not pushed. Bring them in (git pull --rebase on the branch), and it will publish.`,
 					),
 				);
 				continue;

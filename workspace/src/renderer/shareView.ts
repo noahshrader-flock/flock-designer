@@ -1,4 +1,5 @@
 import type { ShareStatus, ShareStep } from '../shared/contract';
+import { CHANGE_REQUEST } from '../shared/vocabulary';
 
 /**
  * What the sharing dialog shows. Kept out of the component because the rule that matters is
@@ -16,7 +17,7 @@ export const dialogView = (phase: 'confirm' | 'working', status: ShareStatus, mi
 
 const STEPS: Record<ShareStep, string> = {
 	pushing: 'Pushing the branch',
-	opening: 'Opening a draft pull request',
+	opening: `Opening a draft ${CHANGE_REQUEST}`,
 	building: 'Building the preview',
 };
 

@@ -17,6 +17,7 @@ import { type DesignSystemsMemory, defaultBranch, designSystemId, filesOf, findD
 import { git } from './git';
 import { singleFlight } from './concurrency';
 import { errorText } from '../../shared/result';
+import { CLI, HOST } from '../../shared/vocabulary';
 
 /**
  * The connected design system on this machine, for the Design System tab: kept up to date, and read.
@@ -40,16 +41,16 @@ export const fetchProblem = (stderr: string, branch: string): string => {
 			stderr,
 		)
 	) {
-		return 'GitHub would not let git on this computer read the library: git is not signed in to GitHub, or this account cannot read it. Run `gh auth setup-git` in a terminal (with the GitHub CLI signed in), or sign in to git.';
+		return `${HOST} would not let git on this computer read the library: git is not signed in to ${HOST}, or this account cannot read it. Run \`${CLI} auth setup-git\` in a terminal (with the ${HOST} CLI signed in), or sign in to git.`;
 	}
 	if (
 		/Could not resolve host|Failed to connect|Connection (timed out|refused|reset)|Network is unreachable|unable to access|timed out|SIGTERM/i.test(
 			stderr,
 		)
 	) {
-		return 'Could not reach GitHub. Check the internet connection.';
+		return `Could not reach ${HOST}. Check the internet connection.`;
 	}
-	if (/couldn't find remote ref|no such ref/i.test(stderr)) return `GitHub has no ${branch} branch for the library.`;
+	if (/couldn't find remote ref|no such ref/i.test(stderr)) return `${HOST} has no ${branch} branch for the library.`;
 	const said =
 		stderr
 			.trim()
@@ -217,10 +218,10 @@ export class DesignLibrary {
 	 */
 	async connect(repository: string, root: string): Promise<DesignSystemConnection> {
 		const branch = await defaultBranch(root);
-		if (branch === null) throw new Error(`GitHub did not say which branch of ${repository} is its default, so it cannot be read.`);
+		if (branch === null) throw new Error(`${HOST} did not say which branch of ${repository} is its default, so it cannot be read.`);
 		const update = await this.fetch(root, branch);
 		const commit = await libraryCommit(root, branch);
-		if (commit === null) throw new Error(typeof update === 'object' ? update.failed : `${repository} has no ${branch} branch from GitHub to read.`);
+		if (commit === null) throw new Error(typeof update === 'object' ? update.failed : `${repository} has no ${branch} branch from ${HOST} to read.`);
 		const found = await findDesignSystems(libraryReads(root, commit), repository);
 		if (found.length === 0) {
 			throw new Error(
