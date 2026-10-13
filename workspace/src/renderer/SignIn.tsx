@@ -4,6 +4,7 @@ import { CancelButton } from './CancelButton';
 import { Button } from './ui/button';
 import { HOST } from '../shared/vocabulary';
 import { ErrorAlert } from './ErrorAlert';
+import { useCopy } from './useCopy';
 
 /**
  * Sign-in, which for a desktop app means device flow: GitHub shows a code here,
@@ -15,8 +16,8 @@ import { ErrorAlert } from './ErrorAlert';
 export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: () => void }) => {
 	const [start, setStart] = useState<DeviceCodeStart | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const { copied, copy: copyCode } = useCopy(setError, 'The code is shown above: type it in.');
 	const [busy, setBusy] = useState(false);
-	const [copied, setCopied] = useState(false);
 
 	useEffect(() => {
 		if (state.state === 'signedIn' || state.state === 'signedOut') {
@@ -51,14 +52,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 					<div className="rounded-lg border py-4 font-mono text-4xl tracking-[0.3em] select-all">{start.userCode}</div>
 
 					<div className="flex flex-row justify-center gap-4">
-						<Button
-							onClick={() => {
-								void navigator.clipboard.writeText(start.userCode);
-								setCopied(true);
-							}}
-						>
-							{copied ? 'Copied' : 'Copy code'}
-						</Button>
+						<Button onClick={() => void copyCode(start.userCode)}>{copied ? 'Copied' : 'Copy code'}</Button>
 						{/* Opens in the real browser: the main process denies in-window navigation. */}
 						<Button variant="secondary" onClick={() => window.open(start.verificationUri, '_blank')}>
 							Open {HOST}

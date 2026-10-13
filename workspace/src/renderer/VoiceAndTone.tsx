@@ -108,7 +108,7 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 		<Page>
 			<div className="flex items-start justify-between gap-4">
 				<div className="flex min-w-0 flex-col gap-1">
-					<h2 className="text-base font-semibold">Voice and tone</h2>
+					<h2 className="text-base font-semibold">Voice and Tone</h2>
 					<p className="text-muted-foreground text-sm">
 						How Flock&apos;s product speaks. Every agent task carries this file, <span className="font-mono text-xs">{voice.path}</span> in{' '}
 						{voice.repository}, the design system&apos;s agent files; a product&apos;s own conventions win where they differ.

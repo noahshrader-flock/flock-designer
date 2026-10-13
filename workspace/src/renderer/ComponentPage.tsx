@@ -14,7 +14,7 @@ import { Skeleton } from './ui/skeleton';
 import { Notice, RetryButton } from './Notice';
 import { MenuLink } from './Links';
 
-/** A component's links, Storybook (when it has a hosted one) and Source, in the More menu the project cards use. */
+/** A component's links, Storybook (when it has a hosted one) and Source, in its More menu. */
 const ComponentLinks = ({ component }: { component: CatalogComponent }) => (
 	<MoreMenu label={`More for ${component.name}`}>
 		{component.storybook !== null && (
@@ -79,7 +79,9 @@ export const ComponentPage = ({
 			<div className="flex items-start gap-3">
 				<BackButton label="Back to components" className="-ml-2" onClick={onBack} />
 				<div className="flex min-w-0 grow flex-col gap-0.5 pt-1">
-					<h3 className="text-base font-semibold">{component.name}</h3>
+					<h2 data-component-title className="text-base font-semibold">
+						{component.name}
+					</h2>
 					{component.subtitle && <p className="text-muted-foreground text-sm">{component.subtitle}</p>}
 				</div>
 				<ComponentLinks component={component} />

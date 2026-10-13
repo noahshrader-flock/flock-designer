@@ -75,7 +75,7 @@ export const ReviewToolbar = ({
 		<Toolbar>
 			<BackButton label="Back to projects" className="-mr-2 -ml-2" onClick={onBack} />
 			{/* The iteration is named by the switcher beside the comments, which is always shown. */}
-			<h2 className="truncate text-sm font-semibold">{project.title}</h2>
+			<h1 className="truncate text-sm font-semibold">{project.title}</h1>
 			<LocationHint icon={prototype ? FolderIcon : GitBranchIcon} label={`${prototype ? 'Saved at' : 'Branch'} ${where}`} value={where} />
 			{/* What the automated accessibility check found on the page, each time it is opened (T7): beside where it is saved. */}
 			{kind === 'prototype' && <AccessibilityStatus projectId={project.id} name={iteration.name} opened={phase.kind === 'running' ? phase : null} />}

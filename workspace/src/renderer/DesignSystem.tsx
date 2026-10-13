@@ -212,7 +212,10 @@ const DesignSystemRow = ({ ds }: { ds: DesignSystemState }) => {
 	if (catalog.state !== 'ready') return null;
 	return (
 		<Toolbar>
-			<DesignSystemSwitcher systems={systems.systems} shown={shown} onSelect={(id) => void ds.select(id)} onAdd={() => ds.setAdding(true)} />
+			{/* The screen's title is the design system shown, which is also how another is chosen. */}
+			<h1 className="min-w-0">
+				<DesignSystemSwitcher systems={systems.systems} shown={shown} onSelect={(id) => void ds.select(id)} onAdd={() => ds.setAdding(true)} />
+			</h1>
 			<LocationHint icon={GitBranchIcon} label={`Branch ${catalog.branch}`} value={catalog.branch} />
 			<ToolbarEnd>
 				<UpdateProblem update={catalog.update} />

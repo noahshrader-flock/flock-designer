@@ -305,7 +305,9 @@ describe('searching', () => {
 		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual(['tone.red.40']);
 		await typeInto(search('Color') as HTMLInputElement, 'nothing like this');
 		await settle();
-		expect(text()).toContain('No token matches.');
+		// Said as every search that finds nothing is, with a way to clear it.
+		expect(text()).toContain('No token matches “nothing like this”.');
+		expect(button('Clear search')).toBeTruthy();
 	});
 });
 

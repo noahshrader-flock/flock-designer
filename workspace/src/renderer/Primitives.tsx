@@ -8,7 +8,7 @@ import { nameOf, pixelsOf, readsAs, withEdits } from '../shared/tokens';
 import { Page } from './Page';
 import { LinesSkeleton, SkeletonStatus } from './Skeletons';
 import { StoryFrame } from './StoryFrame';
-import { Swatch } from './TokenEditor';
+import { Swatch } from './Swatch';
 import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
 import { Skeleton } from './ui/skeleton';
@@ -143,7 +143,9 @@ const Specimens = ({ tokens, byPath, preview }: Drawing) => (
 				</CardContent>
 			</Card>
 		) : preview.state === 'asking' ? (
-			<Skeleton className="h-32 w-full" />
+			<SkeletonStatus label="Drawing the type specimen…">
+				<Skeleton className="h-32 w-full" />
+			</SkeletonStatus>
 		) : (
 			<p className="text-muted-foreground text-sm">
 				The specimen is drawn in the design system’s preview, which cannot be built here{notBuilt(preview)}.

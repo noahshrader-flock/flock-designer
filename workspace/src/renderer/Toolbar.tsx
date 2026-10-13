@@ -8,7 +8,9 @@ import { cn } from '@/lib/utils';
  * count on, and which a strip of tabs is as tall as too.
  */
 export const Toolbar = ({ children, className }: { children: ReactNode; className?: string }) => (
-	<div className={cn('bg-card flex h-(--toolbar-height) shrink-0 items-center gap-4 border-b px-(--page-padding)', className)}>{children}</div>
+	<div data-toolbar className={cn('bg-card flex h-(--toolbar-height) shrink-0 items-center gap-4 border-b px-(--page-padding)', className)}>
+		{children}
+	</div>
 );
 
 /**

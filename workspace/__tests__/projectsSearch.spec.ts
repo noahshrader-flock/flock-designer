@@ -43,7 +43,7 @@ afterEach(async () => {
 describe('searching the projects', () => {
 	it('has a field right after the name of the screen, in the toolbar', async () => {
 		await open();
-		const heading = [...document.querySelectorAll('h2')].find((h) => h.textContent === 'Projects') as HTMLElement;
+		const heading = [...document.querySelectorAll('h1')].find((h) => h.textContent === 'Projects') as HTMLElement;
 		expect(search().getAttribute('aria-label')).toBe('Search projects');
 		expect(heading.compareDocumentPosition(search()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(heading.parentElement?.contains(search())).toBe(true);
@@ -93,7 +93,7 @@ describe('while the projects are read', () => {
 		(window as unknown as { workspace: unknown }).workspace = app.api;
 		current = await render(createElement(Projects, { hidden: false }));
 		await settle();
-		expect([...document.querySelectorAll('h2')].some((h) => h.textContent === 'Projects')).toBe(true);
+		expect([...document.querySelectorAll('h1')].some((h) => h.textContent === 'Projects')).toBe(true);
 		const status = document.querySelector('[role="status"][aria-busy="true"]') as HTMLElement;
 		expect(status.querySelector('.sr-only')?.textContent).toBe('Loading projects…');
 		expect(status.querySelectorAll('[data-slot="card"]').length).toBeGreaterThan(0);

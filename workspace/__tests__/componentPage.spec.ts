@@ -47,7 +47,7 @@ afterEach(async () => {
 describe('the page', () => {
 	it('names the component, says its line, and has its links in the More menu', async () => {
 		await show(component());
-		expect(document.querySelector('h3')?.textContent).toBe('FSButton');
+		expect(document.querySelector('[data-component-title]')?.textContent).toBe('FSButton');
 		expect(text()).toContain('Buttons allow users to take actions.');
 		const items = await openMenu(button('More for FSButton'));
 		expect(items.map((i) => [i.textContent, i.getAttribute('href')])).toEqual([

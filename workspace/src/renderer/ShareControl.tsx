@@ -25,6 +25,7 @@ import { ErrorAlert } from './ErrorAlert';
 import { MenuLink, OutLink } from './Links';
 import { RetryButton } from './Notice';
 import { MoreMenu } from './MoreMenu';
+import { useCopy } from './useCopy';
 
 /**
  * What can be done with this page beyond reviewing it, behind one menu: move a prototype into the code,
@@ -69,7 +70,6 @@ export const ShareControl = ({
 	const [open, setOpen] = useState(false);
 	const [phase, setPhase] = useState<'confirm' | 'working'>('confirm');
 	const [error, setError] = useState<string | null>(null);
-	const [copied, setCopied] = useState(false);
 
 	useEffect(() => {
 		void window.workspace.shareStatus().then((r) => r.ok && setStatus(r.value));
@@ -98,15 +98,9 @@ export const ShareControl = ({
 		setPhase('working');
 	};
 
+	const { copied, copy: copyText } = useCopy(setError, 'The address is shown in the dialog.');
 	const copy = async () => {
-		if (!url) return;
-		try {
-			await navigator.clipboard.writeText(url);
-			setCopied(true);
-			setTimeout(() => setCopied(false), 1500);
-		} catch {
-			setError('Could not copy to the clipboard. The address is shown in the dialog.');
-		}
+		if (url) await copyText(url);
 	};
 
 	return (

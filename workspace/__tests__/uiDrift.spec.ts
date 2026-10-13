@@ -75,7 +75,7 @@ describe('the window’s own components', () => {
 			// The story frame's measured height.
 			'src/renderer/StoryFrame.tsx': 1,
 			// A color swatch.
-			'src/renderer/TokenEditor.tsx': 1,
+			'src/renderer/Swatch.tsx': 1,
 			// The comment box, at the pin's position in the window.
 			'src/renderer/comments/CommentBox.tsx': 1,
 		};

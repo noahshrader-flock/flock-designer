@@ -8,14 +8,9 @@ import { Settings } from './Settings';
 import { TopNav, type Section } from './TopNav';
 
 /**
- * The window: a fixed top bar, and under it whatever the current section is.
- *
- * Projects: every project in the design repository, with its iterations and
- * comments, read through the API with only a GitHub account. Design System: the
- * component library's components, from its clone's develop branch.
- * The earlier Author view (open a checkout, start the agent, run a preview) is
- * not shown; the services behind it are still in the main process, and it comes
- * back as a GitHub-backed list of repositories rather than a folder picker.
+ * The window: a fixed top bar, and under it whatever the current section is. Projects: every project in the design
+ * repository, and a prototype's review screen when one is opened. Design System: the design system connected, read from
+ * its clone on this machine, on the branch it is read from.
  */
 export const App = () => {
 	const [section, setSection] = useState<Section>('projects');

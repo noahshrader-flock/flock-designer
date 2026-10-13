@@ -2,7 +2,8 @@ import { type ReactNode, useMemo, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../shared/contract';
 import { byPrimitive, inOrder, isEditable } from '../shared/primitives';
 import { contrastPartner, contrastRatio, isForeground } from '../shared/tokens';
-import { ChangedTokens, ContrastNote, Swatch, TokenEditor } from './TokenEditor';
+import { ChangedTokens, ContrastNote, TokenEditor } from './TokenEditor';
+import { Swatch } from './Swatch';
 import type { TokenBranchControls } from './useTokenBranch';
 import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
 import { GroupTrigger, useClosedGroups } from './GroupAccordion';
@@ -11,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { SearchField } from './SearchField';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { cn } from '@/lib/utils';
+import { NoMatches } from './NoMatches';
 
 /**
  * The library's tokens, in the panel at the right of the Design System tab (T2 and T3 of the design system plan): the
@@ -130,7 +132,7 @@ const TokensTab = ({
 		<div className="flex flex-col gap-3 pt-4">
 			<SearchField label={`Search ${category.toLowerCase()}`} value={query} onChange={onQuery} />
 			{shown.length === 0 ? (
-				<p className="text-muted-foreground text-sm">No token matches.</p>
+				<NoMatches thing="token" search={query} onClear={() => onQuery('')} />
 			) : groups.length === 1 ? (
 				// One group would say the tab's own name again, so its sets are shown directly.
 				<Sets tokens={shown} />

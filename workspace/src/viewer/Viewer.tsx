@@ -69,7 +69,7 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 				</TooltipTrigger>
 				<TooltipContent side="bottom">Back to the project</TooltipContent>
 			</Tooltip>
-			<h2 className="truncate text-sm font-semibold">{config.title}</h2>
+			<h1 className="truncate text-sm font-semibold">{config.title}</h1>
 			<div className="grow" />
 			<div className="flex items-center gap-2">
 				<IterationSwitcher

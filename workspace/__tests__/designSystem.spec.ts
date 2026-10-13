@@ -74,7 +74,7 @@ const ACME = { id: 'acme/acme:packages/ui', name: 'Acme UI', repository: 'acme/a
 const SYSTEMS = { systems: [FUI_SYSTEM, ACME], current: FUI_SYSTEM.id };
 const switcher = (name = FUI_SYSTEM.name) => button(`Design system ${name}: switch design system`);
 /** The design system's own row, first under the top bar: the switcher's own. */
-const systemRow = () => switcher().parentElement as HTMLElement;
+const systemRow = () => switcher().closest('[data-toolbar]') as HTMLElement;
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
 const open = async (
@@ -321,9 +321,9 @@ describe('searching the components (T9)', () => {
 	it('opens nothing by itself: a component is opened from its row', async () => {
 		await open(() => ok(ready()));
 		await typeInto(search(), 'popover');
-		expect(document.querySelector('h3')?.textContent).not.toBe('PopoverHeader');
+		expect(document.querySelector('[data-component-title]')?.textContent).not.toBe('PopoverHeader');
 		await press(row('PopoverHeader').querySelector('button')!);
-		expect(document.querySelector('h3')?.textContent).toBe('PopoverHeader');
+		expect(document.querySelector('[data-component-title]')?.textContent).toBe('PopoverHeader');
 	});
 
 	it('is in the second row, with List and Grid at its far right, above the list; it goes with the list and comes back after Back', async () => {
@@ -471,7 +471,7 @@ describe('the design systems connected (P4)', () => {
 		await settle();
 		expect(modal()!.querySelector('[data-slot="dialog-title"]')!.textContent).toBe('Connect a design system');
 		// Not the screen of the first connection: the components are still there, and nothing was read again.
-		expect(document.querySelector('h1')).toBeNull();
+		expect([...document.querySelectorAll('h1')].map((h) => h.textContent)).not.toContain('Connect your design system');
 		expect(rows()).toHaveLength(5);
 		await press(button('Cancel'));
 		await settle();
@@ -559,10 +559,10 @@ describe('the components as a list or a grid (P5)', () => {
 		await open(() => ok(ready()));
 		await press(viewButton('Grid'));
 		await press(cards()[0] as HTMLElement);
-		expect(document.querySelector('h3')?.textContent).toBe('FSButton');
+		expect(document.querySelector('[data-component-title]')?.textContent).toBe('FSButton');
 		await press(button('Back to components'));
 		await act(async () => void (cards()[1] as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
-		expect(document.querySelector('h3')?.textContent).toBe('FSCard');
+		expect(document.querySelector('[data-component-title]')?.textContent).toBe('FSCard');
 	});
 
 	it('remember the view chosen', async () => {
@@ -640,7 +640,7 @@ describe('a thumbnail in each row of the list', () => {
 		await settle();
 		expect(thumb('FSButton')!.querySelectorAll('button, a')).toHaveLength(0);
 		await press(thumb('FSButton')!);
-		expect(document.querySelector('h3')?.textContent).toBe('FSButton');
+		expect(document.querySelector('[data-component-title]')?.textContent).toBe('FSButton');
 	});
 });
 
@@ -825,7 +825,7 @@ describe('opening a component', () => {
 		expect(listShown()).toBe(true);
 		await press(row('FSButton').querySelector('button')!);
 		expect(listShown()).toBe(false);
-		expect(document.querySelector('h3')?.textContent).toBe('FSButton');
+		expect(document.querySelector('[data-component-title]')?.textContent).toBe('FSButton');
 		expect(text()).toContain('Buttons allow users to take actions.');
 	});
 

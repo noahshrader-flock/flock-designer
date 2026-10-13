@@ -12,6 +12,7 @@ import { Input } from './ui/input';
 import { Slider } from './ui/slider';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { cn } from '@/lib/utils';
+import { Swatch } from './Swatch';
 
 /**
  * Changing a token (T3 of the design system plan): what opens from a row of the tokens panel, chosen by what the token is
@@ -28,14 +29,6 @@ import { cn } from '@/lib/utils';
  * Each is applied when it is let go of (the picker closed, the slider released, the hex entered): building again takes
  * about a second, so a change is not built on every movement.
  */
-
-/** What a token is changed to: pointed at another token, by its path, or given a value of its own. */
-export type ChangeTo = { ref: string } | { value: string };
-
-/** A color, as a small square. Its color is the token's own, a runtime value, so it is inline. */
-export const Swatch = ({ value, size = 'size-4' }: { value: string; size?: string }) => (
-	<span data-swatch className={cn(size, 'shrink-0 rounded-sm border')} style={{ backgroundColor: value }} />
-);
 
 /** A pair's contrast as WCAG states it, flagged only where the target asks for more (`textContrast`). */
 export const ContrastNote = ({ ratio, className = '' }: { ratio: number; className?: string }) => {

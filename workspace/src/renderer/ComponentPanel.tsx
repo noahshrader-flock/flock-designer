@@ -5,7 +5,7 @@ import { plural } from '../shared/plural';
 import { AccessibilityFindings } from './AccessibilityStatus';
 import { LinesSkeleton, SkeletonStatus } from './Skeletons';
 import { useTokenChanges } from './tokenChanges';
-import { Swatch } from './TokenEditor';
+import { Swatch } from './Swatch';
 import { inOrder } from '../shared/primitives';
 import { Sets } from './TokensPanel';
 import { Notice, RetryButton } from './Notice';
@@ -48,7 +48,7 @@ export const ComponentPanel = ({ component, components }: { component: CatalogCo
 	return (
 		<div data-panel="component" className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
 			<div className="flex flex-col gap-0.5">
-				<h3 className="text-sm font-semibold">{component.name}</h3>
+				<h2 className="text-base font-semibold">{component.name}</h2>
 				<p className="text-muted-foreground text-sm">{component.subtitle ?? component.group}</p>
 			</div>
 			{answer === null || answer.state === 'building' ? (

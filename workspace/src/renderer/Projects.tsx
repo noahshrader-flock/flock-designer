@@ -26,10 +26,9 @@ import { InlineAction } from './Links';
 const VIEW_KEY = 'dsnr.projectsView';
 
 /**
- * Reviewer mode: every project in the design repository, read through the API.
- *
- * Nothing here needs a checkout, git, or the product's toolchain -- that is the
- * whole point. A PM installs the app, signs in, and sees this.
+ * Every project in the design repository, as cards or rows, searched, sorted and filtered by folder, with New, Sync and
+ * what is not synced in the toolbar. Reading it needs only a GitHub account; making and building work needs the product
+ * repository on this machine, which the screen offers to find when there is none.
  */
 export const Projects = ({ hidden }: { hidden: boolean }) => {
 	const [projects, setProjects] = useState<Project[] | null>(null);
@@ -151,7 +150,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 		<>
 			{/* Stays put while the list scrolls under it, as it does on a prototype's screen. */}
 			<Toolbar className="sticky top-0 z-(--layer-screen)">
-				<h2 className="text-sm font-semibold">Projects</h2>
+				<h1 className="text-sm font-semibold">Projects</h1>
 				{projects !== null && projects.length > 0 && (
 					<div className="flex items-center gap-2">
 						<SearchField label="Search projects" value={search} onChange={setSearch} className="w-64" />
