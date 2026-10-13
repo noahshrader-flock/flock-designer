@@ -92,7 +92,7 @@ const Row = ({ row }: { row: SemanticRow }) => (
 /** A section's rows, under the themes' names: said again in every section, so each reads on its own wherever the list is scrolled to. */
 const Rows = ({ rows, themes }: { rows: SemanticRow[]; themes: string[] }) => (
 	<>
-		<div data-theme-headings className="text-muted-foreground flex items-center gap-1 text-xs">
+		<div data-theme-headings className="text-muted-foreground flex items-center gap-1 pb-2 text-xs">
 			<span className={NAME} />
 			{themes.map((theme) => (
 				<span key={theme} data-theme-heading className={cn(THEME, 'truncate text-center')}>
