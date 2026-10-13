@@ -96,7 +96,7 @@ export const ConnectDesignSystem = ({ onConnected, onCancel }: { onConnected: ()
 			</Dialog>
 		);
 	return (
-		<div className="flex min-h-[calc(100dvh-var(--nav-height))] items-center justify-center p-6 pb-(--nav-height)">
+		<div className="flex min-h-(--content-height) items-center justify-center p-6 pb-(--nav-height)">
 			<div className="flex w-full max-w-md flex-col gap-6 text-center">
 				<h1 className="text-2xl font-semibold">Connect your design system</h1>
 				<p className="text-muted-foreground text-sm">{WHAT_FOR}</p>

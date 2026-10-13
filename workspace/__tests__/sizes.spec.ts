@@ -32,9 +32,11 @@ describe('the agent’s log', () => {
 });
 
 describe('every screen', () => {
-	it('sizes text and widths from the scale, with no pixels written in a class', () => {
+	it('sizes text, widths and the room for the window’s buttons from the scale or index.css, and stacks by named layers', () => {
 		const own = windowSources().flatMap(({ path, text }) =>
-			[...text.matchAll(/\b(?:text|max-w|min-w|w|max-h|h)-\[\d+px\]/g)].map((m) => `${path}: ${m[0]}`),
+			[
+				...text.matchAll(/\b(?:text|max-w|min-w|w|max-h|min-h|h|p[lrtbxy]?)-\[\d+px\]|\bz-\[\d+\]|\bz-40\b|100dvh-var\(--nav-height\)|\bbg-white\b/g),
+			].map((m) => `${path}: ${m[0]}`),
 		);
 		expect(own).toEqual([]);
 	});

@@ -160,9 +160,8 @@ export const Review = ({
 	const page = published.page;
 
 	return (
-		// Under the main bar, and under z-50: tooltips, menus and dialogs are portalled to the page at z-50, so a screen
-		// stacked above that hides all of them (the branch tooltip, the menu, the share dialog).
-		<div className="bg-background fixed inset-x-0 top-(--nav-height) bottom-0 z-40 flex flex-col">
+		// Under what is portalled (--layer-screen): a screen stacked above it would hide every tooltip, menu and dialog.
+		<div className="bg-background fixed inset-x-0 top-(--nav-height) bottom-0 z-(--layer-screen) flex flex-col">
 			<ReviewToolbar
 				project={project}
 				iteration={iteration}

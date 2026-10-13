@@ -36,6 +36,8 @@ const PINNED: [file: string, what: string, why: string][] = [
 	['tabs.tsx', 'data-slot="tabs-scroll"', 'a strip of tabs scrolls sideways when they do not fit'],
 	['tabs.tsx', '--tabs-inset', 'the strip is inset as its content is'],
 	['field.tsx', 'function FieldSet', 'the stock field, with its whole set'],
+	['dialog.tsx', 'dark:bg-black/50', 'a dialog’s scrim that can be seen in dark'],
+	['sheet.tsx', 'dark:bg-black/50', 'a sheet’s scrim that can be seen in dark'],
 ];
 
 describe('the changes to shadcn’s primitives', () => {

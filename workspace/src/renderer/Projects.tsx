@@ -150,7 +150,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 	return (
 		<>
 			{/* Stays put while the list scrolls under it, as it does on a prototype's screen. */}
-			<Toolbar className="sticky top-0 z-40">
+			<Toolbar className="sticky top-0 z-(--layer-screen)">
 				<h2 className="text-sm font-semibold">Projects</h2>
 				{projects !== null && projects.length > 0 && (
 					<div className="flex items-center gap-2">

@@ -161,7 +161,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	// A component a sync removed is closed rather than shown from a list that no longer has it.
 	const opened = ready && open !== null ? ready.components.find((c) => c.id === open) : undefined;
 	return (
-		<div className="flex h-[calc(100dvh-var(--nav-height))] flex-col">
+		<div className="flex h-(--content-height) flex-col">
 			<DesignSystemRow ds={ds} />
 			<div className="flex min-h-0 flex-1">
 				<Tabs variant="line" value={tab} onValueChange={(next) => setTab(next as Tab)} className="min-w-0">

@@ -44,6 +44,8 @@
 	--background: oklch(1 0 0);
 	--foreground: oklch(0.145 0 0);
 	--card: oklch(1 0 0);
+	/* What shows around a picture of a page that does not fill its frame: the page's own white in light, the muted gray in dark. */
+	--picture-backdrop: oklch(1 0 0);
 	--card-foreground: oklch(0.145 0 0);
 	--popover: oklch(1 0 0);
 	--popover-foreground: oklch(0.145 0 0);
@@ -74,6 +76,7 @@
 	--background: oklch(0.145 0 0);
 	--foreground: oklch(0.985 0 0);
 	--card: oklch(0.205 0 0);
+	--picture-backdrop: oklch(0.269 0 0);
 	--card-foreground: oklch(0.985 0 0);
 	--popover: oklch(0.205 0 0);
 	--popover-foreground: oklch(0.985 0 0);
@@ -97,6 +100,7 @@
 @theme inline {
 	--color-warning: var(--warning);
 	--color-success: var(--success);
+	--color-picture-backdrop: var(--picture-backdrop);
 }
 
 /*
@@ -152,6 +156,22 @@
 	--toolbar-height: 2.75rem;
 	/* How far content sits from the window's left and right edges: a screen's cards and its toolbar's name and buttons, so they line up. */
 	--page-padding: 1.5rem;
+	/* What is left under the top bar: the height of a screen. */
+	--content-height: calc(100dvh - var(--nav-height));
+	/*
+	 * Room in the top bar for the window's own buttons: macOS's at the left (they end near 76px, so 108px leaves a clear
+	 * gap), the overlay controls elsewhere at the right.
+	 */
+	--window-buttons-left: 108px;
+	--window-buttons-right: 150px;
+	/*
+	 * Layers, low to high. Tooltips, menus and dialogs are portalled to the page at z-50, so the top bar and a screen
+	 * stacked over the page (the review screen, a sticky toolbar) sit under them, or they would hide every one. The
+	 * comment box is over everything, the preview's picture included: its shade, then the box.
+	 */
+	--layer-screen: 40;
+	--layer-comment-shade: 1100;
+	--layer-comment-box: 1101;
 }
 
 /*

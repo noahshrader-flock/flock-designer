@@ -44,10 +44,10 @@ export const TopNav = ({
 		<header
 			// Three columns, the outer two equal, so the sections are centered on the window whatever is at either side. The
 			// room for the window's own buttons is on the columns, not the bar, or it would move the center.
-			className="app-drag bg-card fixed inset-x-0 top-0 z-40 grid h-(--nav-height) grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center border-b"
+			className="app-drag bg-card fixed inset-x-0 top-0 z-(--layer-screen) grid h-(--nav-height) grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center border-b"
 		>
-			{/* 108px leaves a clear gap after the macOS window buttons (they end near 76px); elsewhere the overlay controls sit on the right. */}
-			<span className={cn('text-base font-bold whitespace-nowrap', onMac ? 'pl-[108px]' : 'pl-6')}>DSNR</span>
+			{/* The room for the window's own buttons: at the left on macOS, at the right elsewhere (index.css). */}
+			<span className={cn('text-base font-bold whitespace-nowrap', onMac ? 'pl-(--window-buttons-left)' : 'pl-6')}>DSNR</span>
 
 			{user ? (
 				<Tabs value={section} onValueChange={(next) => onSectionChange(next as Section)} className="app-no-drag">
@@ -63,7 +63,7 @@ export const TopNav = ({
 				<div />
 			)}
 
-			<div className={cn('justify-self-end', onMac ? 'pr-6' : 'pr-[150px]')}>
+			<div className={cn('justify-self-end', onMac ? 'pr-6' : 'pr-(--window-buttons-right)')}>
 				{user && (
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>

@@ -19,7 +19,7 @@ export const PictureArea = ({ picture, drawing = false, children }: { picture: s
 	// On its way: loading, or not yet taken by a pass that is drawing. One that failed to load is not waited for.
 	const waiting = shown ? loaded !== shown : drawing && picture === undefined;
 	return (
-		<div data-picture-area className={cn('absolute inset-0', shown && loaded === shown ? 'bg-white' : 'bg-muted/40')}>
+		<div data-picture-area className={cn('absolute inset-0', shown && loaded === shown ? 'bg-picture-backdrop' : 'bg-muted/40')}>
 			{waiting && <Skeleton data-picture-waiting className="absolute inset-0 rounded-none" />}
 			{children}
 			{shown && (
