@@ -86,13 +86,14 @@ export const Panel = () => {
 	}, []);
 	const login = account.state === 'signedIn' ? account.user.login : null;
 	const read = useWorkspace(() => workspace().listProjects(), [context?.product ?? null, login, changes], { enabled: context?.product != null });
-	// With the list read: pictures for the prototypes built here that have none current, taken in once made, as the app does.
+	// With the list read: pictures for the prototypes built here that have none current, taken in once made, as the app does;
+	// the newest first, so a picture drawn again is the one shown.
 	const [made, setMade] = useState<MadeCover[]>([]);
 	useEffect(() => {
 		if (read.value === null) return;
 		void workspace()
 			.ensureCovers()
-			.then((r) => r.ok && r.value.length > 0 && setMade((now) => [...now, ...r.value]));
+			.then((r) => r.ok && r.value.length > 0 && setMade((now) => [...r.value, ...now]));
 	}, [read.value]);
 	const projects = read.value === null ? null : withCovers(read.value, made);
 	return (

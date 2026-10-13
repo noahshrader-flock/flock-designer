@@ -6,8 +6,8 @@ import type { Context } from '../src/main/services/findContext';
 import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
 
 /**
- * DSNR's panel (Phases 0 and 3): the Projects and Design System toggle at its very top with the account at the far right,
- * the projects the core reads, opening one for review, and the design system found. Played against as the extension
+ * DSNR's panel (Phases 0, 3 and 4): the Projects and Design System toggle at its very top, the projects the core reads
+ * under their folders with their pictures, opening one for review, and the design system found. Played against as the extension
  * plays it: what is open is said once the page is ready, the core's calls are answered by their ids, and its events
  * arrive by name.
  */
@@ -201,6 +201,15 @@ describe('Projects', () => {
 		expect(rows()[0]!.querySelector('[data-part="picture"]')?.getAttribute('src')).toBe('data:image/jpeg;base64,AAAA');
 		// A project with no picture keeps its place for one.
 		expect(rows()[1]!.querySelector('[data-part="picture"]')?.tagName).toBe('SPAN');
+	});
+
+	it('shows a picture drawn again, not the one before it', async () => {
+		await showOpen();
+		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2-i1', cover: 'aaaaaaaaaaaa' }]);
+		await say({ type: 'projects-changed' });
+		await answer('listProjects', SAMPLE_PROJECTS);
+		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2-i1', cover: 'bbbbbbbbbbbb' }]);
+		expect(sent.filter((m) => m.name === 'projectCover').at(-1)?.args).toEqual(['alert-history', 'v2-i1', 'bbbbbbbbbbbb']);
 	});
 
 	it('groups them by folder, each a section with how many it holds, those in none last', async () => {
