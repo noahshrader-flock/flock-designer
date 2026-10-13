@@ -362,7 +362,7 @@ export const ipcDeps = ({
 	 * The design repository's files (`designStore`). Everything prototypes write goes to one place per machine: the clone
 	 * here when there is one, so the publisher sends it like every other record, and otherwise GitHub directly.
 	 */
-	const store = designStore({ clone: designClone, designRepo, onWrite: () => void publisher.publish(true) });
+	const store = designStore({ clone: designClone, files: designRepo.files, onWrite: () => void publisher.publish(true) });
 	const recordStore = store.records;
 	const readDesignFile = store.readFile;
 	const readDesignBytes = store.readBytes;

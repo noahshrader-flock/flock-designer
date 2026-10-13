@@ -188,7 +188,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 		const skill = await readDesignFile(ADDRESS_SKILL);
 		const prepared = await prepareAddress(
 			{
-				readComments: () => designRepo.readComments(iteration.branch),
+				readComments: () => designRepo.threads.readComments(iteration.branch),
 				checkout: () => readCheckout(canonical),
 				agentRunning: agentBusy,
 				skill: () => skill,

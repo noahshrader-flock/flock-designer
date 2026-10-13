@@ -8,7 +8,7 @@ import { projectPath, prototypePagePath, prototypeSourcePath } from '../shared/d
 import { iterationLabel } from '../shared/work';
 import { writeCommentsExport } from '../main/services/commentsExport';
 import { DESCRIPTOR_PATH } from '../main/services/descriptor';
-import { DESIGN_REPO, DesignRepo, type GitHubApi } from '../main/services/designRepo';
+import { DESIGN_REPO, type GitHubApi } from '../main/services/designRepo';
 import { recordsRootFor } from '../main/services/discovery';
 import { assertUsableProjectId } from '../main/services/iterations';
 import { readCheckout, git } from '../main/services/git';
@@ -24,6 +24,7 @@ import { checkWcagEdition } from './wcagEdition';
 import { errorText } from '../shared/result';
 import { plural } from '../shared/plural';
 import { loginFromNoreply } from '../shared/hostUrls';
+import { ReviewThreads } from '../main/services/reviewThreads';
 
 /**
  * `dsnr`: making a prototype from Claude Code in VS Code, with no app running.
@@ -148,7 +149,7 @@ const designOf = async (cwd: string): Promise<string> => {
 const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): Promise<number> => {
 	const designRoot = await designOf(deps.cwd);
 	const outDir = values.out ? resolve(deps.cwd, values.out) : join(deps.prototypesRoot, '_site');
-	const comments = deps.github ? await new DesignRepo(deps.github, DESIGN_REPO).commentCounts().catch(() => undefined) : undefined;
+	const comments = deps.github ? await new ReviewThreads(deps.github, DESIGN_REPO).commentCounts().catch(() => undefined) : undefined;
 	// The pages work without it, and say nothing is missing: so it is said here when it could not be built.
 	let viewerDir: string | null = null;
 	let noViewer = ' Its pages have no comments: the viewer was not built here.';
@@ -276,7 +277,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		if (records === null) throw new Error(`There is no design repository beside ${root}. Clone flock-designer into the same folder.`);
 		const designRoot = dirname(records);
 		// The clone alone: publishing is its own command here, and there is no app sign-in to read GitHub with.
-		const store = designStore({ clone: () => designRoot, designRepo: null, onWrite: () => undefined });
+		const store = designStore({ clone: () => designRoot, files: null, onWrite: () => undefined });
 		const work = prototypeWork({
 			prototypesRoot: deps.prototypesRoot,
 			productRoot: () => root,
@@ -335,10 +336,10 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			const name = values.name;
 			if (!name) throw new UsageError('Say which prototype, with --name.');
 			// Who has commented, read through GitHub's command line; not known (null) when it is missing or signed out.
-			const repo = deps.github ? new DesignRepo(deps.github, DESIGN_REPO) : null;
+			const threads = deps.github ? new ReviewThreads(deps.github, DESIGN_REPO) : null;
 			const read: { comments: ReviewComment[] | null } = { comments: null };
 			const authorsOf = async (it: Iteration): Promise<string[] | null> => {
-				read.comments = repo ? await repo.readComments(it.branch).catch(() => null) : null;
+				read.comments = threads ? await threads.readComments(it.branch).catch(() => null) : null;
 				return read.comments?.map((c) => c.author) ?? null;
 			};
 			const change = await work.startChange(projectId, name, authorsOf);

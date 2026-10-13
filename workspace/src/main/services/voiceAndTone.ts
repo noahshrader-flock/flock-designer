@@ -20,7 +20,8 @@ import { compareUrl } from '../../shared/hostUrls';
  */
 import type { VoiceAndTone, VoiceBranch, VoiceSave } from '../../shared/contract';
 import { asArray, asRecord } from '../../shared/json';
-import { DesignRepo, type GitHubApi } from './designRepo';
+import type { GitHubApi } from './designRepo';
+import { RepoFiles, repoPath } from './repoFiles';
 import { designSystemId } from './designSystems';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { hostErrorKind } from './hostError';
@@ -50,7 +51,7 @@ export class VoiceAndToneFile {
 	/** The design system's folder in the repository, empty when it is the whole repository. */
 	private readonly folder: string;
 	/** The file, read as every file DSNR reads from GitHub is. */
-	private readonly files: DesignRepo;
+	private readonly files: RepoFiles;
 	private readonly github: GitHubApi;
 	/** The change kept for each design system, by its id. */
 	private readonly file: JsonFile<Record<string, unknown>>;
@@ -76,14 +77,14 @@ export class VoiceAndToneFile {
 		this.repo = repo;
 		this.folder = folder.replace(/\/+$/, '');
 		this.path = this.folder ? `${this.folder}/${VOICE_FILE}` : VOICE_FILE;
-		this.files = new DesignRepo(github, repo);
+		this.files = new RepoFiles(github, repo);
 		this.github = github;
 		this.file = jsonFile(file, { parse: asRecord, fallback: {} });
 		this.now = now;
 	}
 
 	private get base(): string {
-		return `/repos/${this.repo.owner}/${this.repo.repo}`;
+		return repoPath(this.repo);
 	}
 	/**
 	 * Kept by the design system's id, as the token branches are, so two design systems in one repository keep their changes
@@ -114,12 +115,6 @@ export class VoiceAndToneFile {
 	/** Forgets the change, to start again from the default branch's file. The branch and any pull request stay on GitHub. */
 	forget(): void {
 		this.keep(null);
-	}
-
-	private async defaultBranch(): Promise<string> {
-		const repo = asRecord(await this.github.api(this.base));
-		if (typeof repo.default_branch !== 'string') throw new Error('GitHub did not say which branch is the design repository’s default.');
-		return repo.default_branch;
 	}
 
 	/**
@@ -153,7 +148,7 @@ export class VoiceAndToneFile {
 
 	/** The file as the default branch has it now, and the change kept on a branch, if one still is. */
 	async current(): Promise<VoiceAndTone> {
-		const base = await this.defaultBranch();
+		const base = await this.files.defaultBranch();
 		const onDefault = await this.read(base);
 		return {
 			repository: this.key,
@@ -193,7 +188,7 @@ export class VoiceAndToneFile {
 	 * branch's file the text was opened at (null: there was no file); a file there that is not that one refuses the save.
 	 */
 	async save(text: string, against: string | null): Promise<VoiceSave> {
-		const base = await this.defaultBranch();
+		const base = await this.files.defaultBranch();
 		const onDefault = await this.read(base);
 		if ((onDefault?.sha ?? null) !== against) return { state: 'changed', voice: await this.current() };
 		const kept = this.kept();
@@ -207,14 +202,12 @@ export class VoiceAndToneFile {
 			} else {
 				if (onDefault?.text === text) return { state: 'saved', voice: await this.current() };
 				const branch = newDsnrBranch('voice', this.now());
-				const head = asRecord(asRecord(await this.github.api(`${this.base}/git/ref/heads/${encodeURIComponent(base)}`)).object).sha;
-				if (typeof head !== 'string') throw new Error(`GitHub did not say where ${base} is.`);
-				await this.github.api(`${this.base}/git/refs`, { method: 'POST', body: { ref: `refs/heads/${branch}`, sha: head } });
+				await this.files.createBranch(branch, await this.files.branchHead(base));
 				try {
 					await this.put(branch, text, against, onDefault ? 'Voice and tone, saved from DSNR' : 'Voice and tone, started from DSNR');
 				} catch (err) {
 					// The default branch moved between reading it and making the branch: the branch goes, and the save is refused.
-					await this.github.api(`${this.base}/git/refs/heads/${encodeURIComponent(branch)}`, { method: 'DELETE' }).catch(() => undefined);
+					await this.files.deleteBranch(branch).catch(() => undefined);
 					if (hostErrorKind(err) === 'conflict') return { state: 'changed', voice: await this.current() };
 					throw err;
 				}
@@ -232,17 +225,14 @@ export class VoiceAndToneFile {
 	/** One commit of the file on one of DSNR's own branches, never on any other. */
 	private async put(branch: string, text: string, sha: string | null, message: string): Promise<void> {
 		if (!VOICE_BRANCH.test(branch)) throw new Error(`${branch} is not a branch DSNR made, so nothing is written to it.`);
-		await this.github.api(`${this.base}/contents/${this.path}`, {
-			method: 'PUT',
-			body: { message, branch, content: Buffer.from(text, 'utf8').toString('base64'), ...(sha ? { sha } : {}) },
-		});
+		await this.files.putFile(this.path, text, message, { branch, sha });
 	}
 
 	/** Opens a draft pull request for the kept branch, or finds the one open for it already. */
 	async propose(): Promise<VoiceAndTone> {
 		const kept = this.kept();
 		if (kept === null) throw new Error('Save the change before proposing it.');
-		const base = await this.defaultBranch();
+		const base = await this.files.defaultBranch();
 		try {
 			const open = asArray(
 				await this.github.api(`${this.base}/pulls?head=${encodeURIComponent(`${this.repo.owner}:${kept.branch}`)}&state=open`),

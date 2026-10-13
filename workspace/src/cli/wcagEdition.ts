@@ -1,4 +1,5 @@
 import type { RepoRef } from '../shared/repoRef';
+import { repoPath } from '../main/services/repoFiles';
 /**
  * `dsnr wcag-edition` (T7 of the design system plan): asks the W3C which edition of WCAG 2 is its latest published one, and
  * when it is not the one the app's numbers come from (`WCAG_EDITION`), opens an issue on the design repository saying so,
@@ -57,7 +58,7 @@ export const checkWcagEdition = async (deps: WcagEditionDeps): Promise<number> =
 		deps.out('GitHub could not be asked here, so no issue was opened.');
 		return 1;
 	}
-	const base = `/repos/${deps.repo.owner}/${deps.repo.repo}/issues`;
+	const base = `${repoPath(deps.repo)}/issues`;
 	const open = (await deps.github.api(`${base}?state=open&per_page=100`)) as { title?: unknown; html_url?: unknown; pull_request?: unknown }[];
 	const already = open.find((i) => i.title === issue.title && !i.pull_request);
 	if (already) {

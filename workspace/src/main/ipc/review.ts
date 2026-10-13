@@ -74,7 +74,7 @@ export const registerReview = (d: IpcDeps): void => {
 		return shownRecord(name, text).slice(0, MAX_RECORD);
 	});
 	handle('readComments', [arg.projectId, arg.branch], async (projectId, branch): Promise<ReviewComment[]> => {
-		const comments = await designRepo.readComments(branch);
+		const comments = await designRepo.threads.readComments(branch);
 		exportComments(projectId, branch, comments);
 		return comments;
 	});
@@ -82,21 +82,23 @@ export const registerReview = (d: IpcDeps): void => {
 		'postComment',
 		[arg.projectId, arg.branch, arg.words, arg.unknown, arg.unknown],
 		(projectId, branch, body, anchor, picture): Promise<ReviewComment> =>
-			designRepo.postComment(projectId, branch, body, sanitizeAnchor(anchor), sanitizePicture(picture)),
+			designRepo.threads.postComment(projectId, branch, body, sanitizeAnchor(anchor), sanitizePicture(picture)),
 	);
 	handle('moveComment', [arg.commentId, arg.unknown], (commentId, anchor): Promise<ReviewComment> => {
 		const clean = sanitizeAnchor(anchor);
 		if (!clean) throw new Error('That is not a place a pin can be moved to.');
-		return designRepo.moveComment(commentId, clean);
+		return designRepo.threads.moveComment(commentId, clean);
 	});
 	handle('deleteComment', [arg.commentId], async (commentId) => {
-		await designRepo.deleteComment(commentId);
+		await designRepo.threads.deleteComment(commentId);
 		return null;
 	});
-	handle('resolveComment', [arg.commentId, arg.flag], (commentId, resolved): Promise<ReviewComment> => designRepo.setResolved(commentId, resolved));
+	handle('resolveComment', [arg.commentId, arg.flag], (commentId, resolved): Promise<ReviewComment> =>
+		designRepo.threads.setResolved(commentId, resolved),
+	);
 	handle('markAddressed', [arg.commentId, arg.unknown], (commentId, commit): Promise<ReviewComment> => {
 		// A commit, or nothing. Anything else is not written into a comment body.
 		const sha = isCommit(commit) ? commit : null;
-		return designRepo.setAddressed(commentId, sha);
+		return designRepo.threads.setAddressed(commentId, sha);
 	});
 };

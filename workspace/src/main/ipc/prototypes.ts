@@ -69,7 +69,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		const { projectId, change } = pending;
 		const { version, made } = await work.finishChange(projectId, change, me(), `For a comment on ${iterationLabel(change.from)}`);
 		// Either way: a run that changed nothing clears the mark an earlier one left.
-		const comment = await designRepo.setAddressed(commentId, version, version === null ? null : change.target);
+		const comment = await designRepo.threads.setAddressed(commentId, version, version === null ? null : change.target);
 		if (version !== null) publishInBackground(projectId, change.target);
 		return { changed: version !== null, iteration: change.target, made, comment };
 	};
@@ -118,7 +118,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		const addressSkill = await readSkillText(ADDRESS_SKILL);
 		const buildSkill = await readSkillText(BUILD_SKILL);
 		// Read now, not earlier: this is what makes the file current, and what says who has commented.
-		const comments = await designRepo.readComments(prototypeKey(projectId, name));
+		const comments = await designRepo.threads.readComments(prototypeKey(projectId, name));
 		const exported = writeCommentsExport(prototypesRoot, {
 			projectId,
 			title: await work.title(projectId),
@@ -128,7 +128,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		});
 		const number = chooseComment(comments, commentId);
 		const change = await work.startChange(projectId, name, async (it) =>
-			(it.name === name ? comments : await designRepo.readComments(it.branch)).map((c) => c.author),
+			(it.name === name ? comments : await designRepo.threads.readComments(it.branch)).map((c) => c.author),
 		);
 		// Modeled on what the iteration it comes from was: a new one has no record of its own yet.
 		const { build, sources } = await prototypeRun(projectId, change.target, change.from.name);

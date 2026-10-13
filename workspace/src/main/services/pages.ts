@@ -2,6 +2,7 @@ import type { PageStatus } from '../../shared/contract';
 import { prototypePagePath, sitePath } from '../../shared/designPaths';
 import type { GitHubApi } from './designRepo';
 import { hostErrorKind } from './hostError';
+import { repoPath } from './repoFiles';
 import { type SyncResult, syncRecords } from './designSync';
 import { git } from './git';
 import { asArray, asRecord } from '../../shared/json';
@@ -31,7 +32,7 @@ const forbidden = (err: unknown): boolean => hostErrorKind(err) === 'forbidden';
 const notFound = (err: unknown): boolean => hostErrorKind(err) === 'notFound';
 
 export const readVisibility = async (github: GitHubApi, ref: RepoRef): Promise<SiteVisibility> => {
-	const base = `/repos/${ref.owner}/${ref.repo}`;
+	const base = repoPath(ref);
 	const repo = asRecord(await github.api(base));
 	let site: SiteVisibility['site'] = null;
 	try {
@@ -75,7 +76,7 @@ export const pageStatus = async (github: GitHubApi, ref: RepoRef, projectId: str
 	if (path === null) return { state: 'none' };
 	const vis = await readVisibility(github, ref);
 	if (!vis.site?.url) return { state: 'none' };
-	const base = `/repos/${ref.owner}/${ref.repo}`;
+	const base = repoPath(ref);
 	const deployed = await deployedSha(github, base);
 	const [changed] =
 		((await github.api(
@@ -101,7 +102,7 @@ export const pageStatus = async (github: GitHubApi, ref: RepoRef, projectId: str
  */
 const SITE_SOURCES = [
 	/^workspace\/src\/(site|viewer|renderer|shared)\//,
-	/^workspace\/src\/main\/services\/(designRepo|github|hostError|paging)\.ts$/,
+	/^workspace\/src\/main\/services\/(designRepo|github|hostError|paging|repoFiles|reviewThreads)\.ts$/,
 	/^workspace\/src\/cli\/dsnr\.ts$/,
 	/^workspace\/(bin\/|viewer\.vite\.config\.ts$|package-lock\.json$)/,
 	/^\.github\/workflows\/publish-prototypes\.yml$/,
@@ -122,7 +123,7 @@ export type SiteBehind = { kind: 'page'; projectId: string; name: string } | { k
 export const siteBehind = async (github: GitHubApi, ref: RepoRef): Promise<SiteBehind | null> => {
 	const vis = await readVisibility(github, ref);
 	if (!vis.site?.url) return null;
-	const base = `/repos/${ref.owner}/${ref.repo}`;
+	const base = repoPath(ref);
 	const { workflow_runs: runs } = asRecord(await github.api(`${base}/actions/workflows/${PUBLISH_WORKFLOW}/runs?per_page=5`));
 	if (asArray(runs).some((r) => asRecord(r).status !== 'completed')) return null;
 	const deployed = await deployedSha(github, base);
@@ -210,7 +211,7 @@ export interface Published {
  * when GitHub cannot say, it is not the first time, so nothing is made of a guess (a browser tab opened by mistake).
  */
 const isFirstTime = async (github: GitHubApi, ref: RepoRef, projectId: string, name: string): Promise<boolean> => {
-	const base = `/repos/${ref.owner}/${ref.repo}`;
+	const base = repoPath(ref);
 	try {
 		const deployed = await deployedSha(github, base);
 		if (deployed === null) return true;
@@ -239,7 +240,7 @@ const deploy = async (
 	done: 'published' | 'unpublished',
 	change: () => Promise<void> = async () => undefined,
 ): Promise<{ visibility: SiteVisibility; site: string }> => {
-	const base = `/repos/${ref.owner}/${ref.repo}`;
+	const base = repoPath(ref);
 	const nothing = `Nothing was ${done}`;
 	const noLink = done === 'published' ? ' No link was made.' : '';
 

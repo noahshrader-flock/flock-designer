@@ -119,7 +119,7 @@ describe('reading a project’s folder', () => {
 	it('is read from GitHub’s copy of the brief, in the same request as its title', async () => {
 		const b64 = (s: string) => Buffer.from(s, 'utf8').toString('base64');
 		const { github, api } = fakeGitHub({
-			'/repos/acme/design/contents/projects/alpha/brief.md*': { content: b64(FILED) },
+			'/repos/acme/design/contents/projects/alpha/brief.md*': { sha: 'f1', content: b64(FILED) },
 			'/repos/acme/design/contents/projects/alpha*': [{ type: 'file', name: 'brief.md' }],
 			'/repos/acme/design/contents/projects/beta*': [],
 			'/repos/acme/design/contents/projects*': [

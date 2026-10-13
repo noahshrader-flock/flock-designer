@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { DesignRepo } from '../src/main/services/designRepo';
+import { RepoFiles } from '../src/main/services/repoFiles';
 import { ghApi } from '../src/main/services/ghCli';
 import { hostErrorKind } from '../src/main/services/hostError';
 
@@ -58,6 +58,6 @@ describe('ghApi', () => {
 		const gh = join(dir, 'gh');
 		writeFileSync(gh, `#!/bin/sh\ncase "$*" in *PUT*) echo '{}' ;; *) echo 'gh: Not Found (HTTP 404)' >&2; exit 1 ;; esac\n`);
 		chmodSync(gh, 0o755);
-		await expect(new DesignRepo(ghApi(gh), { owner: 'o', repo: 'r' }).writeFile('projects/x/a.md', 'a', 'm')).resolves.toBeUndefined();
+		await expect(new RepoFiles(ghApi(gh), { owner: 'o', repo: 'r' }).writeFile('projects/x/a.md', 'a', 'm')).resolves.toBeUndefined();
 	});
 });

@@ -236,11 +236,8 @@ beforeEach(async () => {
 			github: { state: () => githubState, api: (...a: unknown[]) => githubApi(...a) } as never,
 			designRepo: {
 				listProjects: vi.fn(async () => designRepoProjects),
-				deleteComment,
-				readComments,
-				setAddressed,
-				readFile: vi.fn(async () => null),
-				readBytes: (...a: unknown[]) => readBytes(...a),
+				threads: { deleteComment, readComments, setAddressed },
+				files: { readFile: vi.fn(async () => null), readBytes: (...a: unknown[]) => readBytes(...a) },
 			} as never,
 			page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
 			// No test here shares a preview; sharing is runShare's, tested on its own.

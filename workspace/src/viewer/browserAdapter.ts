@@ -1,4 +1,4 @@
-import { DesignRepo, type GitHubApi } from '../main/services/designRepo';
+import type { GitHubApi } from '../main/services/designRepo';
 import { type Fetcher, callApi } from '../main/services/github';
 import type { PinEvent } from '../shared/contract';
 import { asRecord } from '../shared/json';
@@ -16,10 +16,11 @@ import {
 import type { CommentStore, PageSurface } from '../renderer/comments/surfaces';
 import { toResult } from '../shared/result';
 import type { RepoRef } from '../shared/repoRef';
+import { ReviewThreads } from '../main/services/reviewThreads';
 
 /**
  * The comments experience on a prototype's published page: the browser's side of what the app does through its main
- * process. GitHub is reached with the app's own code (`DesignRepo`, `callApi`), given a token instead of the app's
+ * process. GitHub is reached with the app's own code (`ReviewThreads`, `callApi`), given a token instead of the app's
  * sign-in, so a thread is found, made and written exactly as the app does it. The page is the frame the prototype is
  * in, and the same pick and pin scripts run in it.
  */
@@ -31,7 +32,7 @@ export const tokenApi = (token: string, fetcher: Fetcher = fetch as unknown as F
 
 /** One iteration's comments, on GitHub. `branch` is its key, `prototype/<project>/<name>`, which names its thread. */
 export const browserComments = (github: GitHubApi, ref: RepoRef, { projectId, branch }: { projectId: string; branch: string }): CommentStore => {
-	const repo = new DesignRepo(github, ref);
+	const repo = new ReviewThreads(github, ref);
 	return {
 		read: () => toResult(repo.readComments(branch)),
 		// No picture of the spot: a page cannot take one of itself.

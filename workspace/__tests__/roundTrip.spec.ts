@@ -1,8 +1,8 @@
 import { agentFinished, agentRunning } from './fixtures';
+import { ReviewThreads } from '../src/main/services/reviewThreads';
 // @vitest-environment jsdom
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DesignRepo } from '../src/main/services/designRepo';
 import { Review } from '../src/renderer/Review';
 import type { CommentAnchor, MarkerRequest } from '../src/shared/contract';
 import { Viewer } from '../src/viewer/Viewer';
@@ -28,7 +28,7 @@ import {
 /**
  * The round trip (M8 of the Pages plan): a comment made on a prototype's published page reaches the app, and what the
  * app does with it reaches the page, through one GitHub. Each side is the real thing: the page's viewer, and the app's
- * review screen, whose calls go through the app's own GitHub code (`DesignRepo`) as its main process does. Run on
+ * review screen, whose calls go through the app's own GitHub code (`ReviewThreads`) as its main process does. Run on
  * every change, so the two can never drift apart unnoticed.
  */
 
@@ -55,7 +55,7 @@ const openPage = async () => {
  * and its preview a frame of the same prototype, where the same pin scripts run as in the native preview.
  */
 const openApp = async (address?: { iteration: string }) => {
-	const repo = new DesignRepo(tokenApi('app-token', gh.fetch as never), REF);
+	const repo = new ReviewThreads(tokenApi('app-token', gh.fetch as never), REF);
 	// The app's preview, up before the screen draws its pins on it.
 	document.body.innerHTML = '';
 	const preview = document.createElement('iframe');

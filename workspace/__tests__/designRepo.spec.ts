@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DesignRepo } from '../src/main/services/designRepo';
+import { RepoFiles } from '../src/main/services/repoFiles';
+import { ReviewThreads } from '../src/main/services/reviewThreads';
 import { type RouteCall, fakeGitHub, refusal } from './fakes/github';
 
 const b64 = (s: string) => Buffer.from(s, 'utf8').toString('base64');
@@ -31,8 +33,8 @@ describe('listProjects', () => {
 			{ type: 'file', name: 'README.md' },
 			{ type: 'dir', name: '_template' },
 		],
-		'/repos/acme/design/contents/projects/alpha/brief.md*': { content: b64('# Inactive users\n') },
-		'/repos/acme/design/contents/projects/alpha/iterations.json*': { content: b64(JSON.stringify(ITERATIONS)) },
+		'/repos/acme/design/contents/projects/alpha/brief.md*': { sha: 'f1', content: b64('# Inactive users\n') },
+		'/repos/acme/design/contents/projects/alpha/iterations.json*': { sha: 'f1', content: b64(JSON.stringify(ITERATIONS)) },
 		'/repos/acme/design/issues?state=all*': [{ number: 7, comments: 3, body: 'Review thread for alpha, branch: `fd/alpha/i2`.' }],
 	};
 
@@ -40,6 +42,7 @@ describe('listProjects', () => {
 		const { github: session } = fakeGitHub({
 			...routes,
 			'/repos/acme/design/contents/projects/alpha/iterations.json*': {
+				sha: 'f1',
 				content: b64(JSON.stringify([...ITERATIONS.slice(0, 2).map((i, n) => ({ ...i, createdAt: n === 0 ? '2026-10-01T00:00:00Z' : 'someday' }))])),
 			},
 		});
@@ -54,6 +57,7 @@ describe('listProjects', () => {
 		const { github: session } = fakeGitHub({
 			...routes,
 			'/repos/acme/design/contents/projects/alpha/iterations.json*': {
+				sha: 'f1',
 				content: b64(
 					JSON.stringify([
 						{ ...ITERATIONS[0], cover: 'aaaaaaaaaaaa' },
@@ -134,7 +138,7 @@ describe('listProjects', () => {
 		];
 		const { github: session } = fakeGitHub({
 			...routes,
-			'/repos/acme/design/contents/projects/alpha/iterations.json*': { content: b64(JSON.stringify(records)) },
+			'/repos/acme/design/contents/projects/alpha/iterations.json*': { sha: 'f1', content: b64(JSON.stringify(records)) },
 		});
 		const [alpha] = await new DesignRepo(session, REF).listProjects();
 		expect(alpha?.iterations.find((i) => i.name === 'codebase')).toMatchObject({
@@ -162,7 +166,7 @@ describe('listProjects', () => {
 	it('shows no iterations, not an error, when the record is unreadable', async () => {
 		const { github: session } = fakeGitHub({
 			...routes,
-			'/repos/acme/design/contents/projects/alpha/iterations.json*': { content: b64('{ not json') },
+			'/repos/acme/design/contents/projects/alpha/iterations.json*': { sha: 'f1', content: b64('{ not json') },
 		});
 		expect((await new DesignRepo(session, REF).listProjects())[0]?.iterations).toEqual([]);
 	});
@@ -197,7 +201,7 @@ describe('comments', () => {
 
 	it('reads comments and marks which are resolved', async () => {
 		const { github: session } = fakeGitHub(base);
-		const comments = await new DesignRepo(session, REF).readComments('fd/alpha/i1');
+		const comments = await new ReviewThreads(session, REF).readComments('fd/alpha/i1');
 		expect(comments.map((c) => [c.author, c.resolved])).toEqual([
 			['pm', false],
 			['noah', true],
@@ -207,7 +211,7 @@ describe('comments', () => {
 
 	it('returns nothing for an iteration with no thread yet, rather than failing', async () => {
 		const { github: session } = fakeGitHub({ '/repos/acme/design/issues?state=all*': [] });
-		expect(await new DesignRepo(session, REF).readComments('fd/alpha/i9')).toEqual([]);
+		expect(await new ReviewThreads(session, REF).readComments('fd/alpha/i9')).toEqual([]);
 	});
 
 	it('creates the thread on the first comment, labeled and naming its branch', async () => {
@@ -216,7 +220,7 @@ describe('comments', () => {
 			'/repos/acme/design/issues*': { number: 12 },
 			'/repos/acme/design/issues/12/comments*': { id: 99, user: { login: 'pm' }, body: 'hi', created_at: 'now' },
 		});
-		const posted = await new DesignRepo(session, REF).postComment('alpha', 'fd/alpha/i1', 'hi');
+		const posted = await new ReviewThreads(session, REF).postComment('alpha', 'fd/alpha/i1', 'hi');
 		expect(posted.id).toBe(99);
 
 		const created = writes.find((w) => w.path === '/repos/acme/design/issues');
@@ -231,7 +235,7 @@ describe('comments', () => {
 			...base,
 			'/repos/acme/design/issues/7/comments*': { id: 100, user: { login: 'pm' }, body: 'x', created_at: 'now' },
 		});
-		await new DesignRepo(session, REF).postComment('alpha', 'fd/alpha/i1', 'x');
+		await new ReviewThreads(session, REF).postComment('alpha', 'fd/alpha/i1', 'x');
 		expect(writes.filter((w) => w.path === '/repos/acme/design/issues')).toHaveLength(0);
 	});
 });
@@ -259,7 +263,7 @@ describe('contributors', () => {
 			},
 		];
 		const { github: session } = fakeGitHub({
-			'/repos/acme/design/contents/projects/alpha/iterations.json*': { content: b64(JSON.stringify(records)) },
+			'/repos/acme/design/contents/projects/alpha/iterations.json*': { sha: 'f1', content: b64(JSON.stringify(records)) },
 			'/repos/acme/design/contents/projects/alpha*': [{ type: 'file', name: 'iterations.json' }],
 			'/repos/acme/design/contents/projects*': [{ type: 'dir', name: 'alpha' }],
 			'/repos/acme/design/issues?state=all*': [],
@@ -318,7 +322,7 @@ describe('comment threads and GitHub listing lag', () => {
 				return c;
 			},
 		});
-		return { repo: new DesignRepo(github, REF), created };
+		return { repo: new ReviewThreads(github, REF), created };
 	};
 
 	it('puts a second comment in the same thread even though the listing has not caught up', async () => {
@@ -344,7 +348,7 @@ describe('comment threads and GitHub listing lag', () => {
 			'/repos/acme/design/issues/2/comments*': mk(2, '2026-10-05T10:00:00Z', 'This is cool'),
 			'/repos/acme/design/issues/3/comments*': mk(3, '2026-10-05T10:00:18Z', 'asdasd'),
 		});
-		expect((await new DesignRepo(session, REF).readComments('fd/alpha/i1')).map((c) => c.body)).toEqual(['This is cool', 'asdasd']);
+		expect((await new ReviewThreads(session, REF).readComments('fd/alpha/i1')).map((c) => c.body)).toEqual(['This is cool', 'asdasd']);
 	});
 
 	it('writes to the oldest thread when several exist', async () => {
@@ -355,7 +359,7 @@ describe('comment threads and GitHub listing lag', () => {
 			],
 			'/repos/acme/design/issues/2/comments*': { id: 9, user: { login: 'noah' }, body: 'x', created_at: 'now' },
 		});
-		await new DesignRepo(session, REF).postComment('alpha', 'fd/alpha/i1', 'x');
+		await new ReviewThreads(session, REF).postComment('alpha', 'fd/alpha/i1', 'x');
 		expect(writes.map((w) => w.path)).toEqual(['/repos/acme/design/issues/2/comments']);
 	});
 });
@@ -377,7 +381,7 @@ describe('moveComment', () => {
 		const { github: session, writes } = fakeGitHub({
 			[`${COMMENT}*`]: { id: 55, user: { login: 'noah' }, created_at: 'then', body: composeBody('Make this primary', before) },
 		});
-		const moved = await new DesignRepo(session, REF).moveComment(55, after);
+		const moved = await new ReviewThreads(session, REF).moveComment(55, after);
 		const sent = (writes[0]?.body as { body: string }).body;
 		expect(writes[0]).toMatchObject({ path: COMMENT, method: 'PATCH' });
 		expect(stripAnchor(sent)).toBe('Make this primary');
@@ -391,7 +395,7 @@ describe('moveComment', () => {
 		const { github: session, writes } = fakeGitHub({
 			[`${COMMENT}*`]: { id: 55, user: { login: 'noah' }, created_at: 't', body: composeBody('Make this primary', before, picture) },
 		});
-		await new DesignRepo(session, REF).moveComment(55, after);
+		await new ReviewThreads(session, REF).moveComment(55, after);
 		expect(parsePicture((writes[0]?.body as { body: string }).body)).toBe(picture);
 	});
 
@@ -400,7 +404,7 @@ describe('moveComment', () => {
 		const { github: session, writes } = fakeGitHub({
 			[`${COMMENT}*`]: { id: 55, user: { login: 'noah' }, created_at: 't', body: `${composeBody('done', before)}\n<!-- resolved -->` },
 		});
-		await new DesignRepo(session, REF).moveComment(55, after);
+		await new ReviewThreads(session, REF).moveComment(55, after);
 		expect((writes[0]?.body as { body: string }).body).toContain('<!-- resolved -->');
 	});
 });
@@ -414,7 +418,7 @@ describe('setResolved', () => {
 		const { github: session, writes } = fakeGitHub({
 			[`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body: composeBody('Make this primary', anchor) },
 		});
-		const result = await new DesignRepo(session, REF).setResolved(70, true);
+		const result = await new ReviewThreads(session, REF).setResolved(70, true);
 		const sent = (writes[0]?.body as { body: string }).body;
 		expect(writes[0]).toMatchObject({ path: COMMENT, method: 'PATCH' });
 		expect(sent).toContain('<!-- resolved -->');
@@ -427,14 +431,14 @@ describe('setResolved', () => {
 		const { github: session } = fakeGitHub({
 			[`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body: 'Looks off <!-- resolved -->' },
 		});
-		expect((await new DesignRepo(session, REF).setResolved(70, true)).resolved).toBe(true);
+		expect((await new ReviewThreads(session, REF).setResolved(70, true)).resolved).toBe(true);
 	});
 
 	it('reopens a resolved comment by removing the marker only', async () => {
 		const { github: session, writes } = fakeGitHub({
 			[`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body: 'Looks off\n<!-- resolved -->' },
 		});
-		await new DesignRepo(session, REF).setResolved(70, false);
+		await new ReviewThreads(session, REF).setResolved(70, false);
 		expect((writes[0]?.body as { body: string }).body).toBe('Looks off');
 	});
 
@@ -443,7 +447,7 @@ describe('setResolved', () => {
 		const { github: session, writes } = fakeGitHub({
 			[`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body: withResolved(withAddressed('Looks off', 'abc1234', 'v1-i2'), true) },
 		});
-		await new DesignRepo(session, REF).setResolved(70, false);
+		await new ReviewThreads(session, REF).setResolved(70, false);
 		const sent = (writes[0]?.body as { body: string }).body;
 		expect(isResolved(sent)).toBe(false);
 		expect(addressedAt(sent)).toBeNull();
@@ -452,7 +456,7 @@ describe('setResolved', () => {
 
 	it('writes nothing when the comment is already in the state asked for', async () => {
 		const { github: session, writes } = fakeGitHub({ [`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body: 'Looks off' } });
-		await new DesignRepo(session, REF).setResolved(70, false);
+		await new ReviewThreads(session, REF).setResolved(70, false);
 		expect(writes).toEqual([]);
 	});
 
@@ -463,7 +467,7 @@ describe('setResolved', () => {
 			},
 			[COMMENT]: { id: 70, user: { login: 'pm' }, created_at: 't', body: 'x' },
 		});
-		await expect(new DesignRepo(github, REF).setResolved(70, true)).rejects.toThrow(/not accessible/);
+		await expect(new ReviewThreads(github, REF).setResolved(70, true)).rejects.toThrow(/not accessible/);
 	});
 });
 
@@ -476,7 +480,7 @@ describe('setAddressed', () => {
 	it('resolves the comment in the same write that records the change, so its pin leaves the page at once', async () => {
 		const { isResolved, addressedAt, addressedIn } = await import('../src/shared/anchor');
 		const { github: session, writes } = fakeGitHub(comment('Remove this'));
-		await new DesignRepo(session, REF).setAddressed(70, SHA, 'v1-i2');
+		await new ReviewThreads(session, REF).setAddressed(70, SHA, 'v1-i2');
 		expect(writes).toHaveLength(1);
 		expect(isResolved(sentBody(writes))).toBe(true);
 		expect(addressedAt(sentBody(writes))).toBe(SHA);
@@ -486,7 +490,7 @@ describe('setAddressed', () => {
 	it('resolves a comment on a branch too, which has a commit and no iteration', async () => {
 		const { isResolved, addressedAt } = await import('../src/shared/anchor');
 		const { github: session, writes } = fakeGitHub(comment('Remove this'));
-		await new DesignRepo(session, REF).setAddressed(70, SHA);
+		await new ReviewThreads(session, REF).setAddressed(70, SHA);
 		expect(isResolved(sentBody(writes))).toBe(true);
 		expect(addressedAt(sentBody(writes))).toBe(SHA);
 	});
@@ -494,19 +498,19 @@ describe('setAddressed', () => {
 	it('writes nothing when it is already recorded and resolved', async () => {
 		const { withAddressed, withResolved } = await import('../src/shared/anchor');
 		const { github: session, writes } = fakeGitHub(comment(withResolved(withAddressed('Remove this', SHA, 'v1-i2'), true)));
-		await new DesignRepo(session, REF).setAddressed(70, SHA, 'v1-i2');
+		await new ReviewThreads(session, REF).setAddressed(70, SHA, 'v1-i2');
 		expect(writes).toEqual([]);
 	});
 
 	it('when a run changed nothing, clears the mark and leaves open or resolved as the person had it', async () => {
 		const { isResolved, addressedAt, withAddressed } = await import('../src/shared/anchor');
 		const open = fakeGitHub(comment(withAddressed('Remove this', SHA)));
-		await new DesignRepo(open.github, REF).setAddressed(70, null);
+		await new ReviewThreads(open.github, REF).setAddressed(70, null);
 		expect(addressedAt(sentBody(open.writes))).toBeNull();
 		expect(isResolved(sentBody(open.writes))).toBe(false);
 		// Reopened by the person since: nothing here closes it again.
 		const reopened = fakeGitHub(comment('Remove this'));
-		await new DesignRepo(reopened.github, REF).setAddressed(70, null);
+		await new ReviewThreads(reopened.github, REF).setAddressed(70, null);
 		expect(reopened.writes).toEqual([]);
 	});
 });
@@ -527,7 +531,7 @@ describe('pictures on comments', () => {
 			if (i?.method === 'POST' && i.body) stored[0] = i.body.body;
 			return original(p, i);
 		};
-		const posted = await new DesignRepo(session, REF).postComment('alpha', 'fd/alpha/i1', 'Make this primary', anchor, picture);
+		const posted = await new ReviewThreads(session, REF).postComment('alpha', 'fd/alpha/i1', 'Make this primary', anchor, picture);
 		expect(posted.picture).toBe(picture);
 		expect(posted.body).toBe('Make this primary');
 	});
@@ -537,7 +541,7 @@ describe('pictures on comments', () => {
 			'/repos/acme/design/issues?state=all*': [{ number: 4, comments: 1, body: 'branch: `fd/alpha/i1`' }],
 			'/repos/acme/design/issues/4/comments*': [{ id: 1, user: { login: 'noah' }, body: 'plain', created_at: 'now' }],
 		});
-		expect((await new DesignRepo(session, REF).readComments('fd/alpha/i1'))[0]?.picture).toBeNull();
+		expect((await new ReviewThreads(session, REF).readComments('fd/alpha/i1'))[0]?.picture).toBeNull();
 	});
 });
 
@@ -556,7 +560,7 @@ describe('reading past one page', () => {
 			'/repos/acme/design/issues?state=all*': thread,
 			'/repos/acme/design/issues/4/comments*': ({ path: p }: RouteCall) => (/[&?]page=1$/.test(p) ? many(100) : many(50, 101)),
 		});
-		const comments = await new DesignRepo(session, REF).readComments('fd/alpha/i1');
+		const comments = await new ReviewThreads(session, REF).readComments('fd/alpha/i1');
 		expect(comments).toHaveLength(150);
 		expect(new Set(comments.map((c) => c.id)).size).toBe(150);
 		expect(api.mock.calls.filter(([p]) => String(p).includes('/issues/4/comments')).length).toBe(2);
@@ -567,7 +571,7 @@ describe('reading past one page', () => {
 			'/repos/acme/design/issues?state=all*': thread,
 			'/repos/acme/design/issues/4/comments*': many(30),
 		});
-		await new DesignRepo(session, REF).readComments('fd/alpha/i1');
+		await new ReviewThreads(session, REF).readComments('fd/alpha/i1');
 		expect(api.mock.calls.filter(([p]) => String(p).includes('/issues/4/comments')).length).toBe(1);
 	});
 
@@ -576,12 +580,12 @@ describe('reading past one page', () => {
 			'/repos/acme/design/issues?state=all*': thread,
 			'/repos/acme/design/issues/4/comments*': ({ path: p }: RouteCall) => (/[&?]page=1$/.test(p) ? many(100) : []),
 		});
-		expect(await new DesignRepo(session, REF).readComments('fd/alpha/i1')).toHaveLength(100);
+		expect(await new ReviewThreads(session, REF).readComments('fd/alpha/i1')).toHaveLength(100);
 	});
 
 	it('says so, rather than quietly dropping the rest, when a thread is longer than it will read', async () => {
 		const { github: session } = fakeGitHub({ '/repos/acme/design/issues?state=all*': thread, '/repos/acme/design/issues/4/comments*': many(100) });
-		await expect(new DesignRepo(session, REF).readComments('fd/alpha/i1')).rejects.toThrow(/more than 2000/);
+		await expect(new ReviewThreads(session, REF).readComments('fd/alpha/i1')).rejects.toThrow(/more than 2000/);
 	});
 
 	it('finds a review thread that is on the second page of threads', async () => {
@@ -591,7 +595,7 @@ describe('reading past one page', () => {
 				/[&?]page=1$/.test(p) ? filler : [{ number: 7, comments: 2, body: 'branch: `fd/alpha/i1`' }],
 			'/repos/acme/design/issues/7/comments*': [{ id: 1, user: { login: 'pm' }, body: 'late', created_at: 'now' }],
 		});
-		expect((await new DesignRepo(session, REF).readComments('fd/alpha/i1')).map((c) => c.body)).toEqual(['late']);
+		expect((await new ReviewThreads(session, REF).readComments('fd/alpha/i1')).map((c) => c.body)).toEqual(['late']);
 	});
 });
 
@@ -606,29 +610,29 @@ describe('deleteComment', () => {
 
 	it('deletes by comment id, with a DELETE and nothing else', async () => {
 		const { github: session, writes } = fakeGitHub({ [`${COMMENT}*`]: null });
-		await new DesignRepo(session, REF).deleteComment(70);
+		await new ReviewThreads(session, REF).deleteComment(70);
 		expect(writes).toEqual([{ path: COMMENT, method: 'DELETE' }]);
 	});
 
 	it('counts a comment that is already gone as deleted, because someone else got there first', async () => {
-		await expect(new DesignRepo(failing(404, 'Not found'), REF).deleteComment(70)).resolves.toBeUndefined();
+		await expect(new ReviewThreads(failing(404, 'Not found'), REF).deleteComment(70)).resolves.toBeUndefined();
 	});
 
 	it("says who is allowed when GitHub refuses, in place of GitHub's own wording", async () => {
-		await expect(new DesignRepo(failing(403, 'Must have admin rights to Repository.'), REF).deleteComment(70)).rejects.toThrow(
+		await expect(new ReviewThreads(failing(403, 'Must have admin rights to Repository.'), REF).deleteComment(70)).rejects.toThrow(
 			/author, or someone who can write to the design repository/,
 		);
 	});
 
 	it('lets any other failure through, so a dropped connection is not mistaken for a delete', async () => {
-		await expect(new DesignRepo(failing(502, 'Bad gateway'), REF).deleteComment(70)).rejects.toThrow('Bad gateway');
+		await expect(new ReviewThreads(failing(502, 'Bad gateway'), REF).deleteComment(70)).rejects.toThrow('Bad gateway');
 	});
 });
 
 describe('readRecord', () => {
 	it('reads one file of a project as text', async () => {
 		const { github: session, api } = fakeGitHub({
-			'/repos/acme/design/contents/projects/alpha/review.md*': { content: b64('# Review\nnotes ✓') },
+			'/repos/acme/design/contents/projects/alpha/review.md*': { sha: 'f1', content: b64('# Review\nnotes ✓') },
 		});
 		expect(await new DesignRepo(session, REF).readRecord('alpha', 'review.md')).toBe('# Review\nnotes ✓');
 		expect(api).toHaveBeenCalledWith('/repos/acme/design/contents/projects/alpha/review.md');
@@ -650,18 +654,18 @@ describe('readFile and writeFile', () => {
 			'/repos/acme/design/contents/skills/a.md*': { content: b64('# A'), sha: 'a1' },
 			'/repos/acme/design/contents/skills/b.md*': notFound,
 		});
-		const repo = new DesignRepo(session, REF);
+		const repo = new RepoFiles(session, REF);
 		expect(await repo.readFile('skills/a.md')).toBe('# A');
 		expect(await repo.readFile('skills/b.md')).toBeNull();
 	});
 
 	it('says null for a file that is not there, and fails on anything else', async () => {
 		// Every transport says "not there" one way (`HostError`); the command line's own is checked in ghCli.spec.
-		const repo = new DesignRepo(fakeGitHub({ '*': notFound }).github, REF);
+		const repo = new RepoFiles(fakeGitHub({ '*': notFound }).github, REF);
 		expect(await repo.readFile('skills/none.md')).toBeNull();
 		expect(await repo.readFileAt('skills/none.md', 'some-branch')).toBeNull();
 		expect(await repo.hasFile('skills/none.md')).toBe(false);
-		const failing = new DesignRepo(
+		const failing = new RepoFiles(
 			fakeGitHub({
 				'*': () => {
 					throw refusal(500, 'Server Error');
@@ -680,7 +684,7 @@ describe('readFile and writeFile', () => {
 				sha: 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391',
 			},
 		});
-		const repo = new DesignRepo(session, REF);
+		const repo = new RepoFiles(session, REF);
 		expect(await repo.readFile('standards/flock/voice-and-tone.md')).toBe('');
 		expect(await repo.readFileAt('standards/flock/voice-and-tone.md')).toEqual({ text: '', sha: 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391' });
 	});
@@ -689,15 +693,15 @@ describe('readFile and writeFile', () => {
 		const { github: session } = fakeGitHub({
 			'/repos/acme/design/contents/skills/a.md?ref=dsnr%2Fvoice-20261010-ab12*': { content: b64('# A'), sha: 'a1' },
 		});
-		expect(await new DesignRepo(session, REF).readFileAt('skills/a.md', 'dsnr/voice-20261010-ab12')).toEqual({ text: '# A', sha: 'a1' });
+		expect(await new RepoFiles(session, REF).readFileAt('skills/a.md', 'dsnr/voice-20261010-ab12')).toEqual({ text: '# A', sha: 'a1' });
 	});
 
 	it('reads a file over 1 MB through its blob, as GitHub leaves its content out', async () => {
 		const { github: session } = fakeGitHub({
 			'/repos/acme/design/contents/projects/x/prototypes/i1.html*': { encoding: 'none', content: '', sha: 'big1' },
-			'/repos/acme/design/git/blobs/big1*': { content: b64('<html>a large page</html>'), encoding: 'base64' },
+			'/repos/acme/design/git/blobs/big1*': { sha: 'f1', content: b64('<html>a large page</html>'), encoding: 'base64' },
 		});
-		expect(await new DesignRepo(session, REF).readFile('projects/x/prototypes/i1.html')).toBe('<html>a large page</html>');
+		expect(await new RepoFiles(session, REF).readFile('projects/x/prototypes/i1.html')).toBe('<html>a large page</html>');
 	});
 
 	it('creates a file, and replaces one with the sha it has', async () => {
@@ -706,7 +710,7 @@ describe('readFile and writeFile', () => {
 			'GET /repos/acme/design/contents/projects/x/new.html*': notFound,
 			'GET /repos/acme/design/contents/*': { sha: 'abc' },
 		});
-		const repo = new DesignRepo(github, REF);
+		const repo = new RepoFiles(github, REF);
 		await repo.writeFile('projects/x/new.html', '<p>', 'm');
 		await repo.writeFile('projects/x/old.html', '<p>', 'm');
 		expect(writes).toEqual([
@@ -724,7 +728,7 @@ describe('readFile and writeFile', () => {
 			},
 			'GET /repos/acme/design/contents/*': () => ({ sha: puts === 0 ? 'abc' : 'abd' }),
 		});
-		await new DesignRepo(github, REF).writeFile('projects/x/a.html', '<p>', 'm');
+		await new RepoFiles(github, REF).writeFile('projects/x/a.html', '<p>', 'm');
 		expect(writes.map((w) => (w.body as { sha?: string }).sha)).toEqual(['abc', 'abd']);
 	});
 
@@ -735,7 +739,7 @@ describe('readFile and writeFile', () => {
 			'GET /repos/acme/design/contents/projects/x/covers/there.jpg*': { sha: 's1', content: jpeg.toString('base64'), encoding: 'base64' },
 			'GET /repos/acme/design/contents/*': notFound,
 		});
-		const repo = new DesignRepo(github, REF);
+		const repo = new RepoFiles(github, REF);
 		await repo.writeFile('projects/x/covers/v1-i1-aaaaaaaaaaaa.jpg', jpeg, 'm');
 		expect(writes).toEqual([
 			{
@@ -749,7 +753,7 @@ describe('readFile and writeFile', () => {
 	});
 
 	it('says what access is needed when GitHub refuses the write', async () => {
-		await expect(new DesignRepo(fakeGitHub({ '*': notFound }).github, REF).writeFile('projects/x/a.html', 'x', 'm')).rejects.toThrow(
+		await expect(new RepoFiles(fakeGitHub({ '*': notFound }).github, REF).writeFile('projects/x/a.html', 'x', 'm')).rejects.toThrow(
 			/write access to the design repository/,
 		);
 	});
