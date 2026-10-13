@@ -99,7 +99,8 @@ body {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	padding: 2px 12px 4px;
+	/* The room below is the room at its sides, so the bar sits evenly in its container. */
+	padding: 2px 12px 12px;
 }
 
 /* VS Code's search box: its icon at the start, filling what the toggle beside it leaves. */
