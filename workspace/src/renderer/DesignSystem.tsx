@@ -181,7 +181,7 @@ type Tab = 'components' | 'primitives' | 'voice-and-tone';
  * The Design System tab (DESIGN_SYSTEM_PLAN.md): the company's, not any one library's. Under the top bar, **its first row
  * is the design system itself**, whichever view is shown: its name (to switch to another connected, or connect one), its
  * branch, Sync and More. Under that, at the left, the views as a bar of tabs (T9), Components, Primitives and Voice and
- * Tone, the app's line tabs (`Tabs variant="line"`) as a bar as tall as the toolbar, and each view under it, scrolling on
+ * Tone, the app's line tabs (`Tabs variant="line"`), a strip as tall as the toolbar, and each view under it, scrolling on
  * its own; at the right, beside them, the side panel, which is the Components view's alone. Each view stays mounted while
  * another is shown, as the panel does, so what was typed, scrolled and opened in them is as it was left.
  *
@@ -218,7 +218,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 			<DesignSystemRow ds={ds} />
 			<div className="flex min-h-0 flex-1">
 				<Tabs variant="line" value={tab} onValueChange={(next) => setTab(next as Tab)} className="min-w-0">
-					<TabsList bar aria-label="Design System">
+					<TabsList aria-label="Design System">
 						<TabsTrigger value="components">Components</TabsTrigger>
 						<TabsTrigger value="primitives">Primitives</TabsTrigger>
 						<TabsTrigger value="voice-and-tone">Voice and Tone</TabsTrigger>

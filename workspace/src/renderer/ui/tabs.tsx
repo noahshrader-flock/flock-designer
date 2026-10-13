@@ -10,11 +10,13 @@ type TabsVariant = "default" | "line"
 const TabsVariantContext = React.createContext<TabsVariant>("default")
 
 /**
- * `variant="line"` is the app's tabs for a panel or a screen: the strip runs **edge to edge** across it, resting on a
- * bottom border, each tab an equal share of the width, with nothing padded around it; the padding is the content's, under
- * it, which scrolls on its own so the strip stays at the top. One piece for every row of tabs in the app, so they are the
- * same, with no padding or height of their own to remember. Used as shadcn's Tabs are: a root, a list of triggers, and a
- * content for each. A strip with more tabs than fit scrolls sideways, from the first.
+ * `variant="line"` is the app's tabs for a panel or a screen: **one strip, the same everywhere**. It runs edge to edge
+ * across its box, resting on a bottom border, as tall as a toolbar and on its background; its tabs are as wide as their
+ * labels, at the left, inset by `--tabs-inset` (the page's padding, so the strip lines up with what is under it; a panel
+ * with less padding of its own says so once, on its root, never on the tabs). Never tabs stretched to fill the width, which
+ * makes one strip look unlike the next. A strip with more tabs than fit scrolls sideways, from the first. The content under
+ * it is padded and scrolls on its own, so the strip stays at the top. Used as shadcn's Tabs are: a root, a list of
+ * triggers, and a content for each.
  */
 function Tabs({
   className,
@@ -48,24 +50,26 @@ const tabsListVariants = cva(
         default: "bg-muted",
         // As wide as its tabs and at least its box, starting at the left: when the tabs do not fit, the strip is wider than
         // the box that scrolls it (`TabsList`), never a centered row spilling off both ends with the first out of reach.
-        line: "w-max min-w-full gap-1 border-b bg-transparent justify-start",
+        line: "w-max min-w-full justify-start gap-1 border-b",
       },
       // The sizes of a Button (default and lg), so a row of tabs and a row of buttons beside it are the same height.
       size: {
         default: "group-data-horizontal/tabs:h-8",
         lg: "group-data-horizontal/tabs:h-9",
       },
-      // A line strip as a bar: as tall as a toolbar and inset as one is, on its background, with its tabs as wide as their
-      // labels, at the left, not shares of the width, so it sits over a toolbar as the same bar.
-      bar: {
-        true: "bg-card px-(--page-padding) group-data-horizontal/tabs:h-(--toolbar-height) [&>[role=tab]]:flex-none",
-        false: "",
-      },
     },
+    // A line strip is the same whatever size is asked for: as tall as a toolbar (the Design System's and every panel's), on
+    // its background, inset as the content under it is, its tabs as wide as their labels and not shares of the width.
+    compoundVariants: [
+      {
+        variant: "line",
+        class:
+          "bg-card px-(--tabs-inset,var(--page-padding)) group-data-horizontal/tabs:h-(--toolbar-height) [&>[role=tab]]:flex-none",
+      },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",
-      bar: false,
     },
   }
 )
@@ -74,7 +78,6 @@ function TabsList({
   className,
   variant,
   size = "default",
-  bar = false,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List> &
   VariantProps<typeof tabsListVariants>) {
@@ -85,8 +88,7 @@ function TabsList({
       data-slot="tabs-list"
       data-variant={variant}
       data-size={size}
-      data-bar={bar || undefined}
-      className={cn(tabsListVariants({ variant, size, bar }), className)}
+      className={cn(tabsListVariants({ variant, size }), className)}
       {...props}
     />
   )

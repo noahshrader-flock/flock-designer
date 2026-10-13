@@ -16,17 +16,12 @@ afterEach(async () => {
 	document.body.innerHTML = '';
 });
 
-const show = async (bar = false) => {
+const show = async () => {
 	current = await render(
 		createElement(
 			Tabs,
 			{ variant: 'line', defaultValue: 'a' },
-			createElement(
-				TabsList,
-				bar ? { bar: true } : null,
-				createElement(TabsTrigger, { value: 'a' }, 'One'),
-				createElement(TabsTrigger, { value: 'b' }, 'Two'),
-			),
+			createElement(TabsList, null, createElement(TabsTrigger, { value: 'a' }, 'One'), createElement(TabsTrigger, { value: 'b' }, 'Two')),
 			createElement(TabsContent, { value: 'a' }, 'First'),
 		),
 	);
@@ -54,40 +49,35 @@ describe('line tabs', () => {
 		expect(box.className.split(' ')).toEqual(expect.arrayContaining(['pb-px', '-mb-px']));
 	});
 
-	it('give each tab an equal share of the strip, so they stretch across its width with nothing set on the tabs themselves', async () => {
+	it('are one strip, the same everywhere: as tall as a toolbar, inset as the page is, on its own background, edge to edge on its border', async () => {
 		await show();
-		for (const tab of document.querySelectorAll<HTMLElement>('[role="tab"]')) {
-			expect(tab.className.split(' ')).toContain('flex-1');
-			// Nothing set on the tab at the call site: only what the component itself gives every tab.
-			expect(tab.className).not.toMatch(/(^|\s)(h-full|p-0)(\s|$)/);
-		}
-	});
-
-	it('are as wide as their labels, at the left, in a strip as tall as a toolbar, when it is a bar of tabs: an option of the component, set on nothing else', async () => {
-		await show(true);
 		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
 		const classes = list.className.split(' ');
-		expect(list.hasAttribute('data-bar')).toBe(true);
-		// Still edge to edge on its border, but its tabs are not shares of it, and it is as tall as the bar under it.
 		expect(classes).toEqual(
 			expect.arrayContaining([
 				'min-w-full',
 				'border-b',
 				'justify-start',
+				'bg-card',
+				'px-(--tabs-inset,var(--page-padding))',
 				'group-data-horizontal/tabs:h-(--toolbar-height)',
-				'[&>[role=tab]]:flex-none',
 			]),
 		);
-		// Aligned with what is under it, which is inset by the page's padding, and on the toolbar's own background.
-		expect(classes).toEqual(expect.arrayContaining(['px-(--page-padding)', 'bg-card']));
+		// Not the size of a button, which a row of buttons beside plain tabs is.
 		expect(classes).not.toContain('group-data-horizontal/tabs:h-8');
+		// And no option to make it another: there is nothing to set but the inset, on the root, once.
+		expect(list.hasAttribute('data-bar')).toBe(false);
 	});
 
-	it('are, without the option, the panel’s: equal shares of the strip, and no bar’s height or inset', async () => {
+	it('size each tab to its label, not to a share of the strip, with nothing set on the tabs themselves', async () => {
 		await show();
 		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
-		expect(list.hasAttribute('data-bar')).toBe(false);
-		expect(list.className).not.toMatch(/toolbar-height|page-padding|flex-none/);
+		// Said once, by the strip, for every tab in it: stretching them made one strip look unlike the next.
+		expect(list.className.split(' ')).toContain('[&>[role=tab]]:flex-none');
+		for (const tab of document.querySelectorAll<HTMLElement>('[role="tab"]')) {
+			// Nothing set on the tab at the call site: only what the component itself gives every tab.
+			expect(tab.className).not.toMatch(/(^|\s)(h-full|p-0)(\s|$)/);
+		}
 	});
 
 	it('take the variant from the root, said once, and leave plain tabs as they were', async () => {

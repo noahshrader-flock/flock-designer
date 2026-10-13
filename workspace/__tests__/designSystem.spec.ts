@@ -151,23 +151,24 @@ describe('the tab bar (T9)', () => {
 		expect((app.calls.designSystemCatalog ?? []).length).toBe(reads);
 	});
 
-	it('is the app’s line tabs as a bar of tabs: as tall as the toolbar under it, its tabs as wide as their labels and not stretched, with nothing set on them here', async () => {
+	it('is the app’s line tabs, the same strip as the tokens panel’s: as tall as the toolbar, its tabs as wide as their labels and not stretched, with nothing set on them here', async () => {
 		await open(() => ok(ready()));
 		expect(bar().getAttribute('data-variant')).toBe('line');
-		expect(bar().hasAttribute('data-bar')).toBe(true);
 		expect(bar().closest('[data-slot="tabs"][data-variant="line"]')).not.toBeNull();
-		// The height is the toolbar's own, said once by the component: the same as the row under it and the panel's switch row.
+		// The height is the toolbar's own, said once by the component: the same as the row above it and the panel's switch row.
 		expect(bar().className.split(' ')).toContain('group-data-horizontal/tabs:h-(--toolbar-height)');
 		expect(firstRow().className).toContain('h-(--toolbar-height)');
 		expect(bar().className.split(' ')).toContain('[&>[role=tab]]:flex-none');
 		// Nothing set on the tabs or the list here: not a size, a padding, or a stretch.
 		for (const t of bar().querySelectorAll<HTMLElement>('[role="tab"]')) expect(t.className).not.toMatch(/(^|\s)(h-full|p-0)(\s|$)/);
-		// The tokens panel's Color, Spacing and Shape are the same component without the option: stretched across the panel.
+		// The tokens panel's Color, Spacing and Shape are the very same strip: the same classes, so the same height and tabs.
 		const panelTabs = document
 			.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')!
 			.nextElementSibling!.querySelector('[role="tablist"]') as HTMLElement;
-		expect(panelTabs.hasAttribute('data-bar')).toBe(false);
-		expect(panelTabs.className).not.toContain('[&>[role=tab]]:flex-none');
+		expect(panelTabs.className).toBe(bar().className);
+		// The one difference is the inset, set once on the panel's tabs root, to what its own content is padded by.
+		expect(panelTabs.closest('[data-slot="tabs"]')?.className).toContain('[--tabs-inset:1rem]');
+		expect(bar().closest('[data-slot="tabs"]')?.className).not.toContain('--tabs-inset');
 	});
 
 	it('shows Voice and tone with the design system’s row still above it and no side panel, and Components again as it was left', async () => {

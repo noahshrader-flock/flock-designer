@@ -17,8 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
  * category the library gains is a tab with nothing else changed), each tab with its own search. **One accordion at most:**
  * a tab with several groups (Color has Tones, Light and Dark) has them as an accordion, open until closed; a set is
  * never closed up behind a second one, but a plain heading over its tokens, each a swatch at the left and its value at the
- * right. A tab with one group shows its sets straight away. The tabs are the panel's (`Tabs variant="line"`): edge to edge on a
- * bottom border, the padding on the content under them. What the library has that is not read is not said here: it is
+ * right. A tab with one group shows its sets straight away. The tabs are the app's line tabs (`Tabs variant="line"`), the same strip as
+ * the Design System's own, inset as this panel's content is. What the library has that is not read is not said here: it is
  * a button in the design system's row (`TokenProblems`), so the panel keeps its room.
  *
  * **A change is tried here** (T3): a row opens its token's control (`TokenEditor`), every row shows the tokens as changed,
@@ -180,7 +180,8 @@ export const TokensPanel = ({
 	return (
 		<>
 			<ChangedTokens live={live} branch={branch} />
-			<Tabs variant="line" value={active} onValueChange={setCurrent}>
+			{/* The panel's own inset, 1rem, which its content shares: the strip is the same as any other, aligned with what is under it. */}
+			<Tabs variant="line" value={active} onValueChange={setCurrent} className="[--tabs-inset:1rem]">
 				<TabsList>
 					{categories.map(([category]) => (
 						<TabsTrigger key={category} value={category}>
