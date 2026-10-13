@@ -11,7 +11,7 @@ import { ShareControl } from '../ShareControl';
 import { Toolbar, ToolbarEnd } from '../Toolbar';
 import type { useEditor } from '../useEditor';
 import { Button } from '../ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { LocationHint } from '../LocationHint';
 
 /**
  * The review screen's toolbar: where you are and the way back, what the accessibility check found, and at the right what
@@ -76,18 +76,7 @@ export const ReviewToolbar = ({
 			<BackButton label="Back to projects" className="-mr-2 -ml-2" onClick={onBack} />
 			{/* The iteration is named by the switcher beside the comments, which is always shown. */}
 			<h2 className="truncate text-sm font-semibold">{project.title}</h2>
-			<Tooltip delayDuration={300}>
-				<TooltipTrigger asChild>
-					{prototype ? (
-						<FolderIcon aria-label={`Saved at ${where}`} className="text-muted-foreground size-4 shrink-0" />
-					) : (
-						<GitBranchIcon aria-label={`Branch ${where}`} className="text-muted-foreground size-4 shrink-0" />
-					)}
-				</TooltipTrigger>
-				<TooltipContent side="bottom" className="font-mono">
-					{where}
-				</TooltipContent>
-			</Tooltip>
+			<LocationHint icon={prototype ? FolderIcon : GitBranchIcon} label={`${prototype ? 'Saved at' : 'Branch'} ${where}`} value={where} />
 			{/* What the automated accessibility check found on the page, each time it is opened (T7): beside where it is saved. */}
 			{kind === 'prototype' && <AccessibilityStatus projectId={project.id} name={iteration.name} opened={phase.kind === 'running' ? phase : null} />}
 			<ToolbarEnd>

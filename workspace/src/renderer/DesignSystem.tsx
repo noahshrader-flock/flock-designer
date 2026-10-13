@@ -42,11 +42,11 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { HOST } from '../shared/vocabulary';
 import { ErrorAlert } from './ErrorAlert';
 import { Notice, RetryButton } from './Notice';
 import { InlineAction } from './Links';
+import { LocationHint } from './LocationHint';
 
 /** Said only when the update failed, as the other problems are (`ProblemsDialog`): the list shown is what this computer had, not an error. */
 const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
@@ -243,14 +243,7 @@ const DesignSystemRow = ({ ds }: { ds: DesignSystemState }) => {
 	return (
 		<Toolbar>
 			<DesignSystemSwitcher systems={systems.systems} shown={shown} onSelect={(id) => void ds.select(id)} onAdd={() => ds.setAdding(true)} />
-			<Tooltip delayDuration={300}>
-				<TooltipTrigger asChild>
-					<GitBranchIcon aria-label={`Branch ${catalog.branch}`} className="text-muted-foreground size-4 shrink-0" />
-				</TooltipTrigger>
-				<TooltipContent side="bottom" className="font-mono">
-					{catalog.branch}
-				</TooltipContent>
-			</Tooltip>
+			<LocationHint icon={GitBranchIcon} label={`Branch ${catalog.branch}`} value={catalog.branch} />
 			<ToolbarEnd>
 				<UpdateProblem update={catalog.update} />
 				<TokenProblems problems={catalog.tokens.problems} />
