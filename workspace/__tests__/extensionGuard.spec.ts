@@ -55,4 +55,13 @@ describe('the extension’s sources', () => {
 			/background:\s*linear-gradient\(var\(--vscode-toolbar-hoverBackground\),\s*var\(--vscode-toolbar-hoverBackground\)\),\s*var\(--vscode-editorWidget-background\)/,
 		);
 	});
+
+	it('round a project’s thumbnails: a row’s by the panel’s radius, a card’s by a larger one, never the smallest', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const radius = (selector: string) => /border-radius:\s*([^;]+);/.exec(css.split('}').find((b) => b.trim().startsWith(selector)) ?? '')?.[1];
+		expect(radius('.picture')).toBe('var(--dsnr-radius)');
+		expect(radius('.card-picture')).toBe('var(--dsnr-radius-large)');
+	});
 });

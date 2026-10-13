@@ -16,6 +16,7 @@
 	--dsnr-radius: 6px;
 	--dsnr-radius-inner: 4px;
 	--dsnr-radius-small: 2px;
+	--dsnr-radius-large: 8px;
 }
 
 body {
@@ -215,7 +216,7 @@ body {
 	width: 48px;
 	aspect-ratio: 16 / 9;
 	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
-	border-radius: var(--dsnr-radius-small);
+	border-radius: var(--dsnr-radius);
 	background: var(--vscode-editorWidget-background);
 }
 
@@ -406,7 +407,7 @@ body {
 	width: 100%;
 	aspect-ratio: 2 / 1;
 	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
-	border-radius: var(--dsnr-radius-small);
+	border-radius: var(--dsnr-radius-large);
 	background: var(--vscode-editorWidget-background);
 	object-fit: cover;
 }
