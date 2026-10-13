@@ -1,0 +1,42 @@
+{
+	"name": "dsgn",
+	"displayName": "DSGN",
+	"description": "Prototype from the real design system, beside the code.",
+	"version": "0.0.1",
+	"publisher": "flocksafety",
+	"private": true,
+	"license": "UNLICENSED",
+	"engines": {
+		"vscode": "^1.100.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"main": "./dist/extension.js",
+	"contributes": {
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "dsgn",
+					"title": "DSGN",
+					"icon": "media/dsgn.svg"
+				}
+			]
+		},
+		"views": {
+			"dsgn": [
+				{
+					"type": "webview",
+					"id": "dsgn.panel",
+					"name": "DSGN"
+				}
+			]
+		},
+		"commands": [
+			{
+				"command": "dsgn.open",
+				"title": "DSGN: Open"
+			}
+		]
+	}
+}
