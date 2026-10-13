@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { syncBranches } from '../src/main/services/branchSync';
+import { madeOnce } from './fixtures';
 import type { WorkspaceDescriptor } from '../src/main/services/descriptor';
 
 const descriptor: WorkspaceDescriptor = {
@@ -33,8 +33,9 @@ const commit = (cwd: string, branch: string, file: string, by: 'me' | 'teammate'
 };
 const branchFrom = (cwd: string, name: string, from = 'develop') => git(cwd, 'checkout', '-q', '-b', name, from);
 
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'fdw-bsync-'));
+// The remote and this machine's clone of it, on develop with one commit, as every test starts.
+madeOnce((d) => {
+	dir = d;
 	remote = join(dir, 'remote.git');
 	root = join(dir, 'coke');
 	execFileSync('git', ['init', '-q', '--bare', '-b', 'develop', remote]);
@@ -47,8 +48,6 @@ beforeEach(() => {
 	git(root, 'commit', '-q', '-m', 'base');
 	git(root, 'push', '-q', '-u', 'origin', 'develop');
 });
-
-afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 const sync = (projects: string[] = []) => syncBranches({ root, descriptor, projects: new Set(projects) });
 

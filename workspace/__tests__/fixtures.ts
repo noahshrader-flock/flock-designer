@@ -1,6 +1,7 @@
-import type { Mock } from 'vitest';
+import { afterAll, beforeAll, beforeEach, type Mock } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { CatalogReads } from '../src/main/services/componentCatalog';
 import type { RecordStore } from '../src/main/services/prototype';
@@ -76,6 +77,28 @@ export const agentRunning = (work: string | null = null, purpose: 'handoff' | nu
 	purpose,
 });
 export const agentFinished = (exitCode = 0, work: string | null = null): AgentStatus => ({ state: 'finished', exitCode, work, purpose: null });
+
+/**
+ * Repositories every test in a file starts with: made once, by `make` in `dir`, and put back as made before each test, at
+ * the same path, so a clone's origin still points at the remote beside it. Git is what makes these tests slow; a copy is not.
+ */
+export const madeOnce = (make: (dir: string) => void): { dir: string } => {
+	const at = { dir: '' };
+	let base = '';
+	beforeAll(() => {
+		base = mkdtempSync(join(tmpdir(), 'fdw-once-'));
+		at.dir = join(base, 'repos');
+		mkdirSync(at.dir);
+		make(at.dir);
+		cpSync(at.dir, join(base, 'pristine'), { recursive: true });
+	});
+	beforeEach(() => {
+		rmSync(at.dir, { recursive: true, force: true });
+		cpSync(join(base, 'pristine'), at.dir, { recursive: true });
+	});
+	afterAll(() => rmSync(base, { recursive: true, force: true }));
+	return at;
+};
 
 export const g = (root: string, ...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
 

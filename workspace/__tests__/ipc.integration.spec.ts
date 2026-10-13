@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcContext } from '../src/main/ipc';
 import { CHANNELS } from '../src/shared/contract';
 import type { Ports } from '../src/main/ports';
@@ -162,6 +162,14 @@ let applied: string[] = [];
 let register: (more?: Partial<IpcContext>) => void;
 let prototypeServer: InstanceType<(typeof import('../src/main/services/prototypeServer'))['PrototypeServer']>;
 
+// The product repository every test starts with, made once for the file and copied for each test: git is the slow part.
+let template: string;
+beforeAll(() => {
+	template = mkdtempSync(join(tmpdir(), 'fdw-ipc-product-'));
+	makeProduct(template, [{ id: 'preview', label: 'Run', argv: ['node', '-e', 'setTimeout(()=>{},1e4)'], servesPreviewOn: 3999 }]);
+});
+afterAll(() => rmSync(template, { recursive: true, force: true }));
+
 beforeEach(async () => {
 	handlers.clear();
 	applied = [];
@@ -170,11 +178,10 @@ beforeEach(async () => {
 	mkdirSync(join(home, 'GitHub'), { recursive: true });
 	product = join(home, 'GitHub', 'flock-coke');
 	design = join(home, 'GitHub', 'flock-designer');
-	mkdirSync(product, { recursive: true });
+	cpSync(template, product, { recursive: true });
 	mkdirSync(join(design, '.git'), { recursive: true });
 	mkdirSync(join(design, 'projects'), { recursive: true });
 	addStandards(design);
-	makeProduct(product, [{ id: 'preview', label: 'Run', argv: ['node', '-e', 'setTimeout(()=>{},1e4)'], servesPreviewOn: 3999 }]);
 
 	// Discovery looks under the home directory; point it at a temporary one.
 	vi.doMock('node:os', async () => ({ ...(await vi.importActual<object>('node:os')), homedir: () => home }));

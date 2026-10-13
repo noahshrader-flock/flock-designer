@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { syncRecords } from '../src/main/services/designSync';
+import { madeOnce } from './fixtures';
 
 /**
  * The real thing, against real repositories: a bare "GitHub", this machine's clone, and a teammate's
@@ -42,9 +42,12 @@ const commitAll = (root: string, msg: string) => {
 	git(root, 'commit', '-q', '-m', msg);
 };
 
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'fdw-dsync-'));
+// The three repositories every test starts with: a bare remote, this machine's clone and a teammate's.
+madeOnce((d) => {
+	dir = d;
 	remote = join(dir, 'remote.git');
+	mine = join(dir, 'mine');
+	theirs = join(dir, 'theirs');
 	execFileSync('git', ['init', '-q', '--bare', '-b', 'main', remote]);
 	for (const [name, who] of [
 		['mine', 'Me'],
@@ -55,8 +58,6 @@ beforeEach(() => {
 		git(root, 'config', 'user.email', `${name}@example.test`);
 		git(root, 'config', 'user.name', who);
 	}
-	mine = join(dir, 'mine');
-	theirs = join(dir, 'theirs');
 	write(mine, '.gitignore', 'projects/*/comments.md\nprojects/*/comment-pictures/\n');
 	write(mine, 'README.md', '# design\n');
 	write(mine, 'projects/p/brief.md', '# P\n');
@@ -69,8 +70,6 @@ beforeEach(() => {
 	git(theirs, 'branch', '-q', '-M', 'main');
 	git(theirs, 'branch', '-q', '-u', 'origin/main');
 });
-
-afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 describe('publishing records', () => {
 	it('publishes a new project folder, and the tree is clean afterwards', async () => {
