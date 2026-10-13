@@ -22,6 +22,7 @@
 		"check:static": "prettier --check . && npm run lint && npm run typecheck",
 		"check": "npm run check:static && npm test",
 		"extension:build": "node extension/build.mjs",
+		"extension:dev": "node extension/dev.mjs",
 		"smoke": "npm run build && node scripts/smoke.mjs boot",
 		"smoke:page": "npm run build && node scripts/smoke.mjs page",
 		"smoke:local": "npm run build && node scripts/smoke.mjs local"

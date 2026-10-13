@@ -15,11 +15,17 @@ const here = dirname(fileURLToPath(import.meta.url));
 const dist = join(here, 'dist');
 const watch = process.argv.includes('--watch');
 
+/** The builds not yet finished once: when none is left, watching is said, so what waits for that can open the build. */
+const waiting = new Set(['extension', 'panel']);
+
 /** Says when a build has finished, and what went wrong if it did not. */
 const report = (name) => ({
 	name: 'report',
 	setup: (build) =>
-		build.onEnd((result) => console.log(result.errors.length ? `dsgn: ${name} failed (${result.errors.length} errors)` : `dsgn: ${name} built`)),
+		build.onEnd((result) => {
+			console.log(result.errors.length ? `dsgn: ${name} failed (${result.errors.length} errors)` : `dsgn: ${name} built`);
+			if (watch && waiting.delete(name) && waiting.size === 0) console.log('dsgn: watching for changes');
+		}),
 });
 
 const builds = [
@@ -49,10 +55,8 @@ const codicons = join(here, '../node_modules/@vscode/codicons/dist');
 for (const file of ['codicon.css', 'codicon.ttf']) copyFileSync(join(codicons, file), join(dist, file));
 
 const contexts = await Promise.all(builds.map((b) => context({ bundle: true, sourcemap: watch, minify: !watch, logLevel: 'warning', ...b })));
-if (watch) {
-	await Promise.all(contexts.map((c) => c.watch()));
-	console.log('dsgn: watching for changes');
-} else {
+if (watch) await Promise.all(contexts.map((c) => c.watch()));
+else {
 	await Promise.all(contexts.map((c) => c.rebuild()));
 	await Promise.all(contexts.map((c) => c.dispose()));
 }
