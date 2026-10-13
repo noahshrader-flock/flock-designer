@@ -188,13 +188,13 @@ describe('the groups', () => {
 		expect(group('primary').getAttribute('aria-expanded')).toBe('true');
 	});
 
-	it('open straight to their sets, each its name over its colors, with no second accordion inside', async () => {
+	it('open straight to their steps, in both views, each a group of its own with no second accordion inside', async () => {
 		await show();
 		await choose('Palette');
-		// The palette has one group, so it is its sets, each family a name over its steps, every one listed already.
-		expect(setNames()).toEqual(['pineGreen', 'red']);
+		// Each family is a group, as a role is in the roles' view, and every step of it is listed already.
+		expect(groups().map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['pineGreen', 'red']);
 		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual(['tone.pineGreen.50', 'tone.pineGreen.20', 'tone.red.40']);
-		expect(document.querySelector('[data-slot="accordion"]')).toBeNull();
+		expect(document.querySelectorAll('[data-slot="accordion-item"]')).toHaveLength(2);
 		await choose('Semantic');
 		// The roles are groups, each its variants as rows, and no group inside a group.
 		expect(document.querySelectorAll('[data-token-group] [data-slot="accordion"]')).toHaveLength(0);

@@ -85,7 +85,7 @@ describe('the two views of Color', () => {
 		await settle();
 		expect(views()[1]?.getAttribute('aria-checked')).toBe('true');
 		expect(cells()).toEqual(['tone.pine.90', 'tone.pine.50', 'tone.pine.20', 'tone.red.40', 'tone.red.20']);
-		expect([...document.querySelectorAll('[data-set-name]')].map((n) => n.textContent)).toEqual(['pine', 'red']);
+		expect(groups()).toEqual(['pine', 'red']);
 		await press(views()[0] as HTMLElement);
 		await settle();
 		expect(cells()).not.toContain('tone.pine.50');
@@ -119,6 +119,56 @@ describe('the two views of Color', () => {
 		await press(views()[1] as HTMLElement);
 		await settle();
 		expect(search().value).toBe('primary');
+	});
+});
+
+describe('the palette, by family', () => {
+	const palette = async (tokens: DesignTokens = THEMED) => {
+		await show(tokens);
+		await press(views()[1] as HTMLElement);
+		await settle();
+	};
+	const triggers = () => [...document.querySelectorAll<HTMLElement>('[data-token-group] h3 button')];
+
+	it('is an accordion of its families, as the roles are of theirs: the same trigger, each with its count, all open at first', async () => {
+		await palette();
+		expect(triggers().map((t) => [t.querySelector('[data-name]')?.textContent, t.querySelector('[data-count]')?.textContent])).toEqual([
+			['pine', '3'],
+			['red', '2'],
+		]);
+		expect(triggers().map((t) => t.getAttribute('aria-expanded'))).toEqual(['true', 'true']);
+		expect(cells()).toHaveLength(5);
+	});
+
+	it('closes and opens a family on its own, hiding only its steps', async () => {
+		await palette();
+		await press(triggers()[0] as HTMLElement);
+		await settle();
+		expect(triggers().map((t) => t.getAttribute('aria-expanded'))).toEqual(['false', 'true']);
+		expect(cells()).toEqual(['tone.red.40', 'tone.red.20']);
+		await press(triggers()[0] as HTMLElement);
+		await settle();
+		expect(cells()).toHaveLength(5);
+	});
+
+	it('has headers that stick as the roles’ do', async () => {
+		await palette();
+		expect(document.querySelectorAll('[data-token-group]').length).toBeGreaterThan(0);
+		for (const item of document.querySelectorAll<HTMLElement>('[data-token-group]'))
+			expect(item.className.split(' ')).toEqual(expect.arrayContaining(['[&>h3]:sticky', '[&>h3]:top-0']));
+	});
+
+	it('names the theme a family is in when the library keeps its palette in several, since one family can be in each', async () => {
+		await palette({
+			...THEMED,
+			tokens: [
+				color('css.light.red-500', 'Light', 'red', '500', '#EF4444'),
+				color('css.dark.red-500', 'Dark', 'red', '500', '#F87171'),
+				color('css.light.danger', 'Light', 'danger', 'danger', '#EF4444', { ref: { path: 'css.light.red-500' } }),
+				color('css.dark.danger', 'Dark', 'danger', 'danger', '#F87171', { ref: { path: 'css.dark.red-500' } }),
+			],
+		});
+		expect(triggers().map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['Light · red', 'Dark · red']);
 	});
 });
 

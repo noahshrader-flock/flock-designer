@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../shared/contract';
 import { PRIMITIVES, byPrimitive, inOrder, isEditable } from '../shared/primitives';
-import { contrastPartner, contrastRatio, isForeground } from '../shared/tokens';
+import { contrastPartner, contrastRatio, familyOf, isForeground } from '../shared/tokens';
 import { ChangedTokens, ContrastNote, TokenEditorPopover } from './TokenEditor';
 import { Swatch } from './Swatch';
 import type { TokenBranchControls } from './useTokenBranch';
@@ -108,6 +108,36 @@ export type ColorView = 'semantic' | 'palette';
 const rowKey = (t: DesignToken) => `${t.set}\u0000${t.name}`;
 
 /**
+ * The palette, as its roles are shown: each color family is a group (an accordion item, open until closed, its header sticky,
+ * its steps listed under it), so Palette and Semantic read the same. A library that keeps its palette in several themes has a
+ * family in each, so a group says its theme too.
+ */
+const PaletteFamilies = ({ tokens }: { tokens: DesignToken[] }) => {
+	const closed = useClosedGroups();
+	const families = inOrder(tokens, familyOf);
+	const several = new Set(tokens.map((t) => t.group)).size > 1;
+	return (
+		<Accordion {...closed.accordion(families.map(([family]) => family))}>
+			{families.map(([family, steps]) => {
+				const first = steps[0] as DesignToken;
+				return (
+					<AccordionItem key={family} value={family} data-token-group className={STICKY_GROUP_HEADER}>
+						<GroupTrigger name={several ? `${first.group} · ${first.set}` : first.set} count={steps.length} />
+						<AccordionContent>
+							<ul className="flex flex-col">
+								{steps.map((t) => (
+									<TokenRow key={t.path} token={t} />
+								))}
+							</ul>
+						</AccordionContent>
+					</AccordionItem>
+				);
+			})}
+		</Accordion>
+	);
+};
+
+/**
  * One category's tab: its own search, then its tokens. What is typed is the panel's, so it is there when the tab is back. A
  * category of colors with both roles and a palette has the two views (`view`, the panel's too); with only one, only that.
  */
@@ -175,6 +205,8 @@ const TokensTab = ({
 				<NoMatches thing="token" search={query} onClear={() => onQuery('')} />
 			) : shownView === 'semantic' ? (
 				<SemanticColors tokens={shown} />
+			) : shownView === 'palette' ? (
+				<PaletteFamilies tokens={shown} />
 			) : groups.length === 1 ? (
 				// One group would say the tab's own name again, so its sets are shown directly.
 				<Sets tokens={shown} />
