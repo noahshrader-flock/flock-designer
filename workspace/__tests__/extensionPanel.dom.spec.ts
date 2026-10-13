@@ -142,6 +142,13 @@ describe('the account', () => {
 		expect([...(document.querySelector('.panel-top')?.children ?? [])].map((c) => c.className)).toEqual(['toggle']);
 	});
 
+	it('reads the projects again when the extension says they changed (one was made)', async () => {
+		await showOpen();
+		const reads = sent.filter((m) => m.name === 'listProjects').length;
+		await say({ type: 'projects-changed' });
+		expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
+	});
+
 	it('is read from the core when the panel opens, and the projects are read again when it changes', async () => {
 		await showOpen();
 		expect(sent.some((m) => m.name === 'signInState')).toBe(true);

@@ -3,7 +3,7 @@ import { VsCodeGitHub } from '../extension/src/github';
 import { vscodePorts } from '../extension/src/vscodePorts';
 import { reviewsOf } from '../extension/src/messages';
 import { reviewPage, reviewPath } from '../extension/src/review';
-import { answerCall } from '../extension/src/bridge';
+import { Panels, answerCall, hostApi } from '../extension/src/bridge';
 import type { Route } from '../src/main/handle';
 import type { InvokeName } from '../src/shared/contract';
 import type { ProjectIteration } from '../src/shared/domain/projects';
@@ -155,6 +155,28 @@ describe('the bridge', () => {
 		expect(posted).toEqual([
 			{ type: 'answer', id: 3, result: { ok: true, value: [] } },
 			{ type: 'answer', id: 4, result: { ok: false, error: 'readCheckout is not answered in VS Code yet.' } },
+		]);
+	});
+
+	it('gives the extension the same API the panel has, from the same table, and the core’s events as they are sent', async () => {
+		const line = (text: string) => ({ commandId: 'agent', stream: 'stdout' as const, text });
+		const panels = new Panels();
+		const posted: unknown[] = [];
+		panels.add({ postMessage: async (m: unknown) => void posted.push(m) } as never);
+		const routes = new Map<InvokeName, Route>([['listProjects', async () => ({ ok: true, value: ['p'] })]]);
+		const api = hostApi(() => routes, panels);
+		expect(await api.listProjects()).toEqual({ ok: true, value: ['p'] });
+		expect(await api.readCheckout('/p')).toEqual({ ok: false, error: 'readCheckout is not answered in VS Code yet.' });
+		const heard: unknown[] = [];
+		const stop = api.onAgentLog((l) => void heard.push(l));
+		panels.sink('onAgentLog', line('one'));
+		stop();
+		panels.sink('onAgentLog', line('two'));
+		// The extension hears it once, until it stops; the panels hear every one.
+		expect(heard).toEqual([line('one')]);
+		expect(posted).toEqual([
+			{ type: 'event', name: 'onAgentLog', payload: line('one') },
+			{ type: 'event', name: 'onAgentLog', payload: line('two') },
 		]);
 	});
 });

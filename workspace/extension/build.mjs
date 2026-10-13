@@ -1,13 +1,13 @@
 /**
  * Builds DSNR: the extension's own code for VS Code (Node, with `vscode` left to VS Code), its panel's page (the browser),
  * each into one file under `dist/`, the codicons beside them, and the viewer a prototype's review page carries
- * (`dist/viewer`, once: it is the app's own). `--watch` rebuilds on every change and says
- * when it has.
+ * (`dist/viewer`, once: it is the app's own), and esbuild itself, which builds a prototype's page when it is saved
+ * (`dist/node_modules`). `--watch` rebuilds on every change and says when it has.
  *
  *   node extension/build.mjs          once
  *   node extension/build.mjs --watch  on every change
  */
-import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
+import { copyFileSync, cpSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { context } from 'esbuild';
@@ -36,7 +36,7 @@ const builds = [
 		platform: 'node',
 		format: 'cjs',
 		target: 'node20',
-		// VS Code gives `vscode`; esbuild finds its own native binary when it runs, so it cannot be bundled.
+		// VS Code gives `vscode`; esbuild finds its own native binary when it runs, so it cannot be bundled: it is copied in.
 		external: ['vscode', 'esbuild'],
 		plugins: [report('extension')],
 	},
@@ -57,6 +57,11 @@ mkdirSync(dist, { recursive: true });
 // The codicons, from the package, beside the page that loads them.
 const codicons = join(here, '../node_modules/@vscode/codicons/dist');
 for (const file of ['codicon.css', 'codicon.ttf']) copyFileSync(join(codicons, file), join(dist, file));
+// esbuild, and its binary for this machine, where the extension looks for it (`esbuildEntry`, beside `extension.js`).
+const modules = join(here, '../node_modules');
+cpSync(join(modules, 'esbuild'), join(dist, 'node_modules/esbuild'), { recursive: true });
+for (const binary of readdirSync(join(modules, '@esbuild')))
+	cpSync(join(modules, '@esbuild', binary), join(dist, 'node_modules/@esbuild', binary), { recursive: true });
 
 /** A prototype's review page carries the app's own viewer (its review bar and comments), built with the app's own config. */
 const viewer = async () => {

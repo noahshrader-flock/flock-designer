@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readMessage, replyTo } from '../extension/src/messages';
+import { readMessage, readReview } from '../extension/src/messages';
 
 /**
  * What the panel's page may ask of the extension (Phase 3): a call to the core by its name in the contract's table, or
@@ -40,8 +40,13 @@ describe('a message from the panel', () => {
 	])('%o is dropped', (m) => {
 		expect(readMessage(m)).toBeNull();
 	});
+});
 
-	it('is answered, until what it asks for is built, by saying so', () => {
-		expect(replyTo({ type: 'new-prototype' })).toBe('Starting a prototype from DSNR is not built yet.');
+describe('a review a command is given', () => {
+	it('is read as the panel’s is, in exactly its shape', () => {
+		expect(readReview({ projectId: 'a', name: 'v1-i1', title: 'A · V1 · I1' })).toEqual({ projectId: 'a', name: 'v1-i1', title: 'A · V1 · I1' });
+		expect(readReview({ projectId: 'a', name: 'v1-i1' })).toBeNull();
+		expect(readReview({ projectId: 'a', name: 'v1-i1', title: 'x', type: 'call' })).toBeNull();
+		expect(readReview('a')).toBeNull();
 	});
 });

@@ -6,7 +6,7 @@ import { errorText } from '../../src/shared/result';
 import { type Panels, answerCall } from './bridge';
 import { afterQuiet, whatChanged } from './devReload';
 import { newNonce, panelHtml } from './html';
-import { type Review, readMessage, replyTo } from './messages';
+import { type Review, readMessage } from './messages';
 
 /** Says what went wrong, in VS Code's own error message: its first line. */
 export const failed = (err: unknown): void => void vscode.window.showErrorMessage(errorText(err, { firstLine: true }));
@@ -27,7 +27,7 @@ export interface PanelDeps {
 /**
  * DSNR's panel in the side bar: a webview of the extension's own build, allowed to load from its `dist/` folder and
  * nowhere else. What it asks is read in exactly its shape (`readMessage`): a call is answered from the core's table, and
- * the panel's own requests (locate the design system, open a review) are the shell's. Who is signed in is said beside
+ * the panel's own requests (locate the design system, open a review, start a prototype) are the shell's. Who is signed in is said beside
  * the DSNR mark in VS Code's own title bar (`showAccount`), where the Sign in and account actions are. Run from its
  * source, it follows its own build: a rebuilt page reloads the panel, a rebuilt extension restarts the extension host.
  */
@@ -76,7 +76,7 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 				case 'open-review':
 					return await this.deps.openReview(message);
 				case 'new-prototype':
-					return void vscode.window.showInformationMessage(replyTo(message));
+					return void (await vscode.commands.executeCommand('dsnr.newPrototype'));
 			}
 		} catch (err) {
 			failed(err);

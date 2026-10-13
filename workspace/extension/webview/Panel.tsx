@@ -57,16 +57,19 @@ export const PanelView = ({ tab, onTab, account, context, projects, onOpen, onNe
 
 /**
  * The panel, connected: what is open from the extension (`context`), the account and the projects from the core over
- * the bridge, read again when either changes, and what the person presses sent back. The tab chosen is kept in VS Code's
- * state for the panel, so a reload leaves it where it was.
+ * the bridge, read again when either changes or the extension says the projects did, and what the person presses sent
+ * back. The tab chosen is kept in VS Code's state for the panel, so a reload leaves it where it was.
  */
 export const Panel = () => {
 	const [tab, setTab] = useState<Tab>(() => vscode().getState()?.tab ?? 'projects');
 	const [context, setContext] = useState<Context | null>(null);
 	const [account, setAccount] = useState<SignInState>({ state: 'signedOut' });
+	// Counts the times the extension said the projects changed: each reads them again.
+	const [changes, setChanges] = useState(0);
 	useEffect(() => {
 		const stop = onHost((m) => {
 			if (m.type === 'context') setContext(m.context);
+			if (m.type === 'projects-changed') setChanges((n) => n + 1);
 		});
 		// Said once the page listens, so what is open is never sent before it can be heard.
 		vscode().postMessage({ type: 'ready' });
@@ -79,7 +82,7 @@ export const Panel = () => {
 		return workspace().onSignInChanged(setAccount);
 	}, []);
 	const login = account.state === 'signedIn' ? account.user.login : null;
-	const read = useWorkspace(() => workspace().listProjects(), [context?.product ?? null, login], { enabled: context?.product != null });
+	const read = useWorkspace(() => workspace().listProjects(), [context?.product ?? null, login, changes], { enabled: context?.product != null });
 	return (
 		<PanelView
 			tab={tab}

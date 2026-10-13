@@ -2,12 +2,14 @@ import { join } from 'node:path';
 import * as vscode from 'vscode';
 import { served } from '../../src/main/handle';
 import { type Context, findContext } from '../../src/main/services/findContext';
-import type { Project, SignInState } from '../../src/shared/contract';
-import { Panels } from './bridge';
-import { type Review, reviewsOf } from './messages';
+import type { SignInState, WorkspaceApi } from '../../src/shared/contract';
+import { Panels, hostApi } from './bridge';
+import { type Review, readReview, reviewsOf } from './messages';
+import { newPrototype, readGiven } from './newPrototype';
 import { startCore } from './core';
 import { PanelProvider, failed } from './panel';
 import { Reviews, siteIn } from './review';
+import { AgentLog, vscodeAsk, vscodeChoose, vscodeProgress } from './ui';
 
 /** Kept by the extension: the design system the person located, when nothing open holds one. */
 const LOCATED = 'dsnr.located';
@@ -70,11 +72,42 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			void vscode.window.showWarningMessage('That folder holds no design system: no Storybook stories and no tokens were found in it.');
 	};
 
+	const api = hostApi(served, panels);
+	const agentLog = new AgentLog();
+
 	context.subscriptions.push(
+		agentLog,
 		vscode.window.registerWebviewViewProvider('dsnr.panel', provider),
+		vscode.commands.registerCommand('dsnr.newPrototype', (raw: unknown) => {
+			const given = readGiven(raw);
+			return newPrototype({
+				given,
+				api,
+				product: { root: found.product, why: found.missing[0] ?? 'No product is open.' },
+				ask: vscodeAsk,
+				choose: vscodeChoose,
+				progress: vscodeProgress,
+				log: agentLog,
+				onMade: () => panels.post({ type: 'projects-changed' }),
+				openReview,
+			}).catch((err: unknown) => {
+				failed(err);
+				// Called with its answers, by code rather than a person: the caller is told too.
+				if (raw !== undefined) throw err;
+			});
+		}),
 		vscode.commands.registerCommand('dsnr.open', () => vscode.commands.executeCommand('workbench.view.extension.dsnr')),
-		vscode.commands.registerCommand('dsnr.openReview', async () => {
-			const picked = await pickPrototype();
+		vscode.commands.registerCommand('dsnr.openReview', async (raw: unknown) => {
+			// Given the review, by code rather than a person: opened, and the caller told if it could not be.
+			if (raw !== undefined) {
+				const given = readReview(raw);
+				if (!given) throw new Error('DSNR: Open a prototype for review was given something that is not a review.');
+				return openReview(given).catch((err: unknown) => {
+					failed(err);
+					throw err;
+				});
+			}
+			const picked = await pickPrototype(api);
 			if (picked) await openReview(picked).catch(failed);
 		}),
 		vscode.commands.registerCommand('dsnr.signIn', () => github.signIn().catch(failed)),
@@ -92,13 +125,13 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 };
 
 /** Each project's prototypes, newest first (`reviewsOf`), to choose one for review: as the panel's rows open them. */
-const pickPrototype = async (): Promise<Review | undefined> => {
-	const listed = (await served().get('listProjects')?.()) as { ok: boolean; value?: Project[]; error?: string } | undefined;
-	if (!listed?.ok) {
-		void vscode.window.showErrorMessage(listed?.error ?? 'The projects could not be read.');
+const pickPrototype = async (api: Pick<WorkspaceApi, 'listProjects'>): Promise<Review | undefined> => {
+	const listed = await api.listProjects();
+	if (!listed.ok) {
+		void vscode.window.showErrorMessage(listed.error);
 		return undefined;
 	}
-	const items = (listed.value ?? []).flatMap(reviewsOf).map((review) => ({ label: review.title, review }));
+	const items = listed.value.flatMap(reviewsOf).map((review) => ({ label: review.title, review }));
 	if (items.length === 0) {
 		void vscode.window.showInformationMessage('There is no prototype to review here yet.');
 		return undefined;

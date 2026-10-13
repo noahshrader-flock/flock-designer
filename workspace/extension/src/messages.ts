@@ -33,9 +33,15 @@ export const reviewsOf = (project: Pick<Project, 'id' | 'title' | 'iterations'>)
 		.filter((i) => isPrototypeName(i.name))
 		.map((i) => ({ projectId: project.id, name: i.name, title: `${project.title} · ${iterationLabel(i)}` }));
 
-/** What the extension sends the page: an answer to a call, by its id, an event of the core's, or what is open (`Context`). */
+/**
+ * What the extension sends the page: an answer to a call, by its id, an event of the core's, what is open (`Context`), or
+ * that the projects changed (one was made), so the list is read again.
+ */
 export type HostMessage =
-	{ type: 'answer'; id: number; result: unknown } | { type: 'event'; name: string; payload: unknown } | { type: 'context'; context: Context };
+	| { type: 'answer'; id: number; result: unknown }
+	| { type: 'event'; name: string; payload: unknown }
+	| { type: 'context'; context: Context }
+	| { type: 'projects-changed' };
 
 const CALLS = new Set<string>(INVOKE);
 const BARE = new Set(['ready', 'locate-design-system', 'new-prototype']);
@@ -70,5 +76,9 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 	return typeof m.type === 'string' && BARE.has(m.type) && hasKeys(m, ['type']) ? ({ type: m.type } as PanelMessage) : null;
 };
 
-/** What the person is told, until what the message asks for is built (Phase 4 of the plan). */
-export const replyTo = (_message: { type: 'new-prototype' }): string => 'Starting a prototype from DSNR is not built yet.';
+/** A review a command was given (DSNR: Open a prototype for review, from code), read as the panel's message is, or null. */
+export const readReview = (raw: unknown): Review | null => {
+	if (typeof raw !== 'object' || raw === null || 'type' in raw) return null;
+	const read = readMessage({ ...raw, type: 'open-review' });
+	return read?.type === 'open-review' ? { projectId: read.projectId, name: read.name, title: read.title } : null;
+};

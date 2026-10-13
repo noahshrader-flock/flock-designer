@@ -16,21 +16,27 @@ exports.run = async () => {
 	const dsnr = vscode.extensions.getExtension('flocksafety.dsnr');
 	assert.ok(dsnr, 'DSNR is installed in this window');
 
-	// Opening its panel starts it.
-	await vscode.commands.executeCommand('dsnr.open');
-	await until('DSNR starting', () => dsnr.isActive);
+	// Opening its panel starts it: tried until VS Code has its view, which it may not have the moment the window opens.
+	await until('DSNR starting', async () => {
+		await vscode.commands.executeCommand('dsnr.open').then(
+			() => undefined,
+			() => undefined,
+		);
+		return dsnr.isActive;
+	});
 	const commands = await vscode.commands.getCommands(true);
-	for (const c of ['dsnr.open', 'dsnr.openReview', 'dsnr.signIn', 'dsnr.account', 'workbench.view.extension.dsnr'])
+	for (const c of ['dsnr.open', 'dsnr.newPrototype', 'dsnr.openReview', 'dsnr.signIn', 'dsnr.account', 'workbench.view.extension.dsnr'])
 		assert.ok(commands.includes(c), `${c} is a command`);
 
 	// A prototype opens for review: the product and the design repository are found from what is open, the core lists
-	// the projects, the site is built and served from this machine, and the review is an editor tab.
-	// The prototype is chosen once the list is up, however long reading it takes: choosing with no list open does nothing.
-	void vscode.commands.executeCommand('dsnr.openReview');
+	// the projects, the site is built and served from this machine, and the review is an editor tab. Given the review, as
+	// code can: the quick pick that offers it is VS Code's own.
 	const tabs = () => vscode.window.tabGroups.all.flatMap((g) => g.tabs.map((t) => t.label));
-	await until('the review opening', async () => {
-		await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem');
-		return tabs().includes('Fixture · V1 · I1');
-	});
-	console.log('dsnr-test: activated; its commands are there; Fixture · V1 · I1 opened for review');
+	await vscode.commands.executeCommand('dsnr.openReview', { projectId: 'fixture', name: 'v1-i1', title: 'Fixture · V1 · I1' });
+	await until('the review opening', () => tabs().includes('Fixture · V1 · I1'));
+
+	// A prototype is started, built by the agent (standing in), saved and opened for review: New prototype, given its answers.
+	await vscode.commands.executeCommand('dsnr.newPrototype', { title: 'Made here', task: 'Show a heading.', folder: null });
+	await until('the new prototype opening', () => tabs().includes('Made here · V1 · I1'), 60000);
+	console.log('dsnr-test: activated; its commands are there; Fixture · V1 · I1 opened for review; Made here was started, built and opened');
 };

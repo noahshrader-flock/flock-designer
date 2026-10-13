@@ -46,23 +46,26 @@ describe('the extension’s manifest', () => {
 		expect(manifest().contributes.views).toEqual({ dsnr: [{ type: 'webview', id: 'dsnr.panel', name: 'DSNR' }] });
 	});
 
-	it('has its commands: to open it, to open a prototype for review, and to sign in and see the account', () => {
+	it('has its commands: to open it, to start a prototype, to open one for review, and to sign in and see the account', () => {
 		expect(manifest().contributes.commands.map((c) => `${c.category}: ${c.title}`)).toEqual([
 			'DSNR: Open',
+			'DSNR: New prototype',
 			'DSNR: Open a prototype for review',
 			'DSNR: Sign in to GitHub',
 			'DSNR: Your GitHub account',
 		]);
 	});
 
-	it('signs in from VS Code’s own title bar, at its far right: Sign in when no one is, the account once someone is', () => {
+	it('has New prototype in VS Code’s own title bar, and signs in at its far right: Sign in, or the account once signed in', () => {
 		const { commands, menus } = manifest().contributes;
 		const icon = (id: string) => commands.find((c) => c.command === id)?.icon;
+		// Ordered in the group by the number after @: the account last, so at the far right.
 		expect(menus['view/title']).toEqual([
-			{ command: 'dsnr.signIn', when: 'view == dsnr.panel && !dsnr.signedIn', group: 'navigation' },
-			{ command: 'dsnr.account', when: 'view == dsnr.panel && dsnr.signedIn', group: 'navigation' },
+			{ command: 'dsnr.newPrototype', when: 'view == dsnr.panel', group: 'navigation@1' },
+			{ command: 'dsnr.signIn', when: 'view == dsnr.panel && !dsnr.signedIn', group: 'navigation@9' },
+			{ command: 'dsnr.account', when: 'view == dsnr.panel && dsnr.signedIn', group: 'navigation@9' },
 		]);
-		expect([icon('dsnr.signIn'), icon('dsnr.account')]).toEqual(['$(sign-in)', '$(account)']);
+		expect([icon('dsnr.newPrototype'), icon('dsnr.signIn'), icon('dsnr.account')]).toEqual(['$(add)', '$(sign-in)', '$(account)']);
 		// The same two in the command palette, each only when it means something.
 		expect(menus.commandPalette).toEqual([
 			{ command: 'dsnr.signIn', when: '!dsnr.signedIn' },

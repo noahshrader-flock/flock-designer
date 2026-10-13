@@ -222,6 +222,15 @@ review) and shows the design system it found. Sign in is at the far right of VS 
 the username beside the mark once signed in. A prototype's review is its page on the site, built from the design
 repository and served from this machine, in an editor tab.
 
+**New prototype** (the **+** in its title bar, or **DSNR: New prototype**) says first what stands in the way (no product
+open, Claude Code missing or signed out, the product's packages not installed, with Install packages when it says how),
+then asks the name, what it should explore and its folder in VS Code's own boxes, and builds it from the branch the
+product is on, with the app's own build: its progress is a notification with Stop, the agent's log is in View › Output ›
+DSNR: Agent, and when it is saved its review opens. The command can also be given its answers
+(`{ title, task, folder }`), as **DSNR: Open a prototype for review** can be given its review, so a keybinding or another
+extension can run them; called that way, a failure is also returned to the caller. The `.vsix` carries esbuild, which
+builds a prototype's page, for the machine it was packaged on.
+
 Like the app, it publishes the person's work branches and records when the project list is read and when VS Code is
 focused, so it pushes with their own git credentials.
 
@@ -231,7 +240,7 @@ own (a test fails if one creeps in), so it follows every theme.
 ```bash
 npm run extension:dev       # build it as you edit, in a VS Code window of its own
 npm run extension:build     # build it once, into extension/dist/
-npm run extension:test      # open it in VS Code on a throwaway world and check it works as a person meets it
+npm run extension:test      # open it in VS Code on a throwaway world: a review opens, and a prototype is started, built (by a stand-in agent) and opened
 npm run extension:package   # make extension/dsnr.vsix, to install with Extensions: Install from VSIX
 ```
 

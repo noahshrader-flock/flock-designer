@@ -26,6 +26,8 @@
 		"src/site/**/*",
 		"src/page/**/*",
 		"src/renderer/useWorkspace.ts",
+		"src/renderer/runPrototypeBuild.ts",
+		"src/renderer/localBuild.ts",
 		"src/renderer/workspace.d.ts"
 	]
 }

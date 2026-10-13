@@ -3,12 +3,14 @@
  * meets it (`activation.cjs`). Not part of `npm run check`: it opens a VS Code window for a few seconds.
  *
  * The world is made here and removed after: a product with DSNR's setup and the design repository beside it, with one
- * project and one saved prototype, neither with a remote, so nothing can be pushed anywhere. The profile is throwaway
+ * project and one saved prototype, neither with a remote, so nothing can be pushed anywhere. The product has its design
+ * system installed (a stand-in package, and React from this workspace, which a page is built with), and Claude Code is a
+ * stand-in on the PATH that writes a page where the agent would, so a prototype is started and built with no agent run. The profile is throwaway
  * too, in the temporary folder (its path is short: VS Code keeps a socket in it), so the person's own VS Code is never
  * touched.
  */
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,6 +42,23 @@ repo(product, {
 		designSystem: { package: 'x' },
 	}),
 });
+// Its design system installed, and what a page is built with, from this workspace.
+writeFileSync(join(product, '.gitignore'), 'node_modules\n');
+mkdirSync(join(product, 'node_modules/x'), { recursive: true });
+writeFileSync(join(product, 'node_modules/x/package.json'), JSON.stringify({ name: 'x', version: '1.0.0' }));
+for (const m of ['react', 'react-dom', 'scheduler']) symlinkSync(join(extension, '../node_modules', m), join(product, 'node_modules', m));
+// Claude Code, standing in: signed in, and a run writes the page it was asked for where it runs, then says it is done.
+const bin = join(base, 'bin');
+mkdirSync(bin);
+writeFileSync(
+	join(bin, 'claude'),
+	`#!/bin/sh
+if [ "$1" = auth ]; then echo '{"loggedIn":true}'; exit 0; fi
+printf '%s\n' 'export default function Page() { return <main><h1>Made here</h1></main>; }' > v1-i1.tsx
+echo '{"type":"result","subtype":"success","result":"Built it."}'
+`,
+);
+chmodSync(join(bin, 'claude'), 0o755);
 const record = {
 	projectId: 'fixture',
 	name: 'v1-i1',
@@ -49,6 +68,9 @@ const record = {
 	note: 'A test.',
 };
 repo(join(world, 'flock-designer'), {
+	// What a build gives the agent, standing in: a real design repository has them, so they are not read from GitHub.
+	'skills/build-prototype.md': '# Build a prototype\n',
+	'standards/universal/accessibility.md': '# Accessibility\n',
 	'projects/fixture/brief.md': '# Fixture\n',
 	'projects/fixture/iterations.json': `${JSON.stringify([record], null, 2)}\n`,
 	'projects/fixture/prototypes/v1-i1.html':
@@ -60,7 +82,7 @@ const code = () => {
 	const mac = '/Applications/Visual Studio Code.app/Contents/MacOS/Code';
 	return existsSync(mac) ? mac : 'code';
 };
-const env = { ...process.env };
+const env = { ...process.env, PATH: `${bin}:${process.env.PATH}` };
 delete env.ELECTRON_RUN_AS_NODE;
 const run = spawn(
 	code(),
@@ -81,9 +103,9 @@ let said = '';
 run.stdout.on('data', (d) => (said += d));
 run.stderr.on('data', (d) => (said += d));
 const cap = setTimeout(() => {
-	console.error('dsnr-test: VS Code did not finish within 120 s');
+	console.error('dsnr-test: VS Code did not finish within 180 s');
 	run.kill('SIGKILL');
-}, 120_000);
+}, 180_000);
 run.on('exit', (status) => {
 	clearTimeout(cap);
 	rmSync(base, { recursive: true, force: true });

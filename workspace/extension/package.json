@@ -39,6 +39,12 @@
 				"title": "Open"
 			},
 			{
+				"command": "dsnr.newPrototype",
+				"category": "DSNR",
+				"title": "New prototype",
+				"icon": "$(add)"
+			},
+			{
 				"command": "dsnr.openReview",
 				"category": "DSNR",
 				"title": "Open a prototype for review"
@@ -59,14 +65,19 @@
 		"menus": {
 			"view/title": [
 				{
+					"command": "dsnr.newPrototype",
+					"when": "view == dsnr.panel",
+					"group": "navigation@1"
+				},
+				{
 					"command": "dsnr.signIn",
 					"when": "view == dsnr.panel && !dsnr.signedIn",
-					"group": "navigation"
+					"group": "navigation@9"
 				},
 				{
 					"command": "dsnr.account",
 					"when": "view == dsnr.panel && dsnr.signedIn",
-					"group": "navigation"
+					"group": "navigation@9"
 				}
 			],
 			"commandPalette": [
