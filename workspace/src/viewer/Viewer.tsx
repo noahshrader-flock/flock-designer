@@ -1,6 +1,9 @@
-import { ChevronLeftIcon, LogOutIcon } from 'lucide-react';
+import { ChevronLeftIcon, LogOutIcon, WandSparklesIcon } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { commentRef } from '../shared/comments';
+import type { CommentRef, ReviewComment } from '../shared/contract';
+import type { CommentStore } from '../renderer/comments/surfaces';
 import { prototypeKey } from '../shared/designPaths';
 import { withState } from '../shared/prototypeStates';
 import { prototypeAddressed } from '../renderer/comments/addressed';
@@ -11,8 +14,10 @@ import { IterationSwitcher, StateSwitcher } from '../renderer/IterationSwitcher'
 import { Toolbar } from '../renderer/Toolbar';
 import { Button } from '../renderer/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../renderer/ui/dialog';
+import { DropdownMenuItem } from '../renderer/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../renderer/ui/tooltip';
 import { browserComments, framePage, saveToken, savedToken, tokenApi } from './browserAdapter';
+import { type Relay, loginIn, relayComments } from './relay';
 import { closeUnlessBusy } from '../renderer/dialogClose';
 import { CommentsPanel } from '../renderer/comments/CommentsPanel';
 import { useOpenOnError } from '../renderer/comments/useOpenOnError';
@@ -22,6 +27,10 @@ import { useOpenOnError } from '../renderer/comments/useOpenOnError';
  * iteration switchers, and the page's states when it has more than one), the Comment control and its count, the side
  * panel from the right, the box beside the pin. All of it the app's own parts. Drawn into the page the site built, which
  * holds only a link back to the project until this takes over, so the page still works without it.
+ *
+ * In DSNR's review tab in VS Code (`relay`, ELECTRON_MIGRATION_PLAN 4.2) it comments through the extension: signing in
+ * is VS Code's, the comments are the core's, and an open comment can be addressed. Anywhere else it uses a token kept
+ * in the browser, which only tests leave until signing in from a page is built.
  */
 
 /** What the site writes into each iteration's page for this. */
@@ -88,7 +97,7 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 	);
 };
 
-export const Viewer = ({ config, slots }: { config: ViewerConfig; slots: ViewerSlots }) => {
+export const Viewer = ({ config, slots, relay = null }: { config: ViewerConfig; slots: ViewerSlots; relay?: Relay | null }) => {
 	// A token kept in this browser is what the sign-in will leave; until it exists, only tests leave one.
 	const [token, setToken] = useState<string | null>(savedToken);
 	const [paused, setPaused] = useState(false);
@@ -102,14 +111,32 @@ export const Viewer = ({ config, slots }: { config: ViewerConfig; slots: ViewerS
 			slots.frame.src = withState(slots.frame.getAttribute('src') ?? 'page.html', next);
 		},
 	};
+	const branch = prototypeKey(config.projectId, config.name);
+	const tokenStore = useMemo(
+		() => (token ? browserComments(tokenApi(token), { owner: config.owner, repo: config.repo }, { projectId: config.projectId, branch }) : null),
+		[token, config, branch],
+	);
+	if (relay) return <InDsnr config={config} slots={slots} showing={showing} relay={relay} />;
 	const signOut = () => {
 		saveToken(null);
 		setToken(null);
 	};
 	return (
 		<>
-			{token ? (
-				<Commenting key={token} config={config} slots={slots} showing={showing} token={token} onSignOut={signOut} />
+			{tokenStore ? (
+				<Commenting
+					key={token}
+					config={config}
+					slots={slots}
+					showing={showing}
+					store={tokenStore}
+					heading={
+						<Button size="sm" variant="ghost" title="Forget the token kept in this browser" onClick={signOut}>
+							<LogOutIcon />
+							Sign out
+						</Button>
+					}
+				/>
 			) : (
 				<PageBar config={config} slots={slots} showing={showing}>
 					{/* Not on a phone: commenting needs a computer, and the bar's room goes to the title and the switcher. */}
@@ -123,28 +150,73 @@ export const Viewer = ({ config, slots }: { config: ViewerConfig; slots: ViewerS
 	);
 };
 
+/**
+ * In DSNR's review tab: who is signed in is the extension's, signing in is VS Code's own (from Sign in to comment), and
+ * the comments are the core's, with Address on an open one, run by the extension as it runs a build.
+ */
+const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots: ViewerSlots; showing: Showing; relay: Relay }) => {
+	const [login, setLogin] = useState<string | null | undefined>(undefined);
+	const [addressing, setAddressing] = useState<number | null>(null);
+	useEffect(() => {
+		void relay.ask('signInState', []).then((r) => setLogin(loginIn(r)));
+	}, [relay]);
+	const store = useMemo(
+		() => relayComments(relay, { projectId: config.projectId, branch: prototypeKey(config.projectId, config.name) }),
+		[relay, config],
+	);
+	const signIn = async () => {
+		const signedIn = loginIn(await relay.ask('signIn', []));
+		if (signedIn !== null) setLogin(signedIn);
+	};
+	const address = async (comment: CommentRef) => {
+		setAddressing(comment.id);
+		await relay.ask('address', [comment]);
+		setAddressing(null);
+	};
+	if (login === undefined) return null;
+	if (login === null)
+		return (
+			<PageBar config={config} slots={slots} showing={showing}>
+				<Button variant="outline" onClick={() => void signIn()}>
+					Sign in to comment
+				</Button>
+			</PageBar>
+		);
+	return (
+		<Commenting
+			config={config}
+			slots={slots}
+			showing={showing}
+			store={store}
+			actions={(comment: ReviewComment) =>
+				comment.resolved ? null : (
+					<DropdownMenuItem disabled={addressing !== null} onSelect={() => void address(commentRef(comment))}>
+						<WandSparklesIcon />
+						{addressing === comment.id ? 'Working…' : 'Address'}
+					</DropdownMenuItem>
+				)
+			}
+		/>
+	);
+};
+
 const Commenting = ({
 	config,
 	slots,
 	showing,
-	token,
-	onSignOut,
+	store,
+	heading,
+	actions,
 }: {
 	config: ViewerConfig;
 	slots: ViewerSlots;
 	showing: Showing;
-	token: string;
-	onSignOut: () => void;
+	store: CommentStore;
+	/** What the panel's heading has at its end: Sign out, for a token kept in the browser. */
+	heading?: ReactNode;
+	/** More at the top of an open comment's menu: Address, in DSNR. */
+	actions?: (comment: ReviewComment) => ReactNode;
 }) => {
-	const store = useMemo(
-		() =>
-			browserComments(
-				tokenApi(token),
-				{ owner: config.owner, repo: config.repo },
-				{ projectId: config.projectId, branch: prototypeKey(config.projectId, config.name) },
-			),
-		[token, config],
-	);
 	const page = useMemo(() => framePage(slots.frame), [slots.frame]);
 	const [error, setError] = useState<string | null>(null);
 	const [opened, setOpened] = useState(false);
@@ -187,12 +259,8 @@ const Commenting = ({
 						<CommentsPanel
 							comments={comments}
 							error={error}
-							heading={
-								<Button size="sm" variant="ghost" title="Forget the token kept in this browser" onClick={onSignOut}>
-									<LogOutIcon />
-									Sign out
-								</Button>
-							}
+							heading={heading}
+							{...(actions ? { actions } : {})}
 							states={showing.states}
 							onShowState={showing.onState}
 							addressed={(c) => prototypeAddressed(c, config.projectId, config.name)}

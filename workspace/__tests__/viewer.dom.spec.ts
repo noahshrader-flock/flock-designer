@@ -2,7 +2,9 @@ import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { composeBody } from '../src/shared/anchor';
 import { Viewer } from '../src/viewer/Viewer';
-import { saveToken, savedToken } from '../src/viewer/browserAdapter';
+import { saveToken, savedToken, tokenApi } from '../src/viewer/browserAdapter';
+import type { Relay } from '../src/viewer/relay';
+import { ReviewThreads } from '../src/host/reviewThreads';
 import { PAGE_CONFIG as CONFIG, commentOnPage, fakeGitHub, sitePage } from './pageHarness';
 import {
 	button,
@@ -28,9 +30,9 @@ import { anAnchor } from './fixtures';
 
 let gh: ReturnType<typeof fakeGitHub>;
 let current: Awaited<ReturnType<typeof render>> | null = null;
-const open = async () => {
+const open = async (relay: Relay | null = null) => {
 	const page = sitePage();
-	current = await render(createElement(Viewer, { config: CONFIG, slots: page.slots }));
+	current = await render(createElement(Viewer, { config: CONFIG, slots: page.slots, relay }));
 	return page;
 };
 
@@ -223,5 +225,77 @@ describe('commenting on the page', () => {
 		const { doc } = await open();
 		await settle();
 		expect(doc.querySelector('[data-fd-layer="pins"]')?.textContent).toContain('1');
+	});
+});
+
+describe('in DSNR’s review tab, in VS Code', () => {
+	/** DSNR's tab, answering as the extension does: the core's comment calls over the same GitHub, and its own two. */
+	const tab = (signedIn = true) => {
+		const threads = new ReviewThreads(tokenApi('good-token'), { owner: CONFIG.owner, repo: CONFIG.repo });
+		let account = signedIn ? { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } } : { state: 'signedOut' };
+		const asked: [string, unknown[]][] = [];
+		const result = async <T>(work: Promise<T>) => ({ ok: true as const, value: await work });
+		const relay: Relay = {
+			ask: async (name, args) => {
+				asked.push([name, args]);
+				const [a, b, c, d] = args as [never, never, never, never];
+				switch (name) {
+					case 'signInState':
+						return { ok: true, value: account };
+					case 'signIn':
+						account = { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } };
+						return { ok: true, value: account };
+					case 'readComments':
+						return result(threads.readComments(b));
+					case 'postComment':
+						return result(threads.postComment(a, b, c, d, null));
+					case 'resolveComment':
+						return result(threads.setResolved(a, b));
+					case 'address':
+						return { ok: true, value: null };
+					default:
+						return { ok: false, error: `${name} is not here` };
+				}
+			},
+		};
+		return { relay, asked };
+	};
+
+	it('signs in through VS Code from Sign in to comment, with nothing kept in the page, and then comments', async () => {
+		const { relay, asked } = tab(false);
+		await open(relay);
+		await press(button('Sign in to comment'));
+		await settle();
+		expect(asked.map(([name]) => name)).toContain('signIn');
+		expect(document.body.textContent).not.toContain('Commenting here is coming');
+		expect(savedToken()).toBeNull();
+		expect(button('Comment')).toBeTruthy();
+	});
+
+	it('puts a comment on the iteration’s thread through DSNR, and has no Sign out of its own', async () => {
+		const { relay, asked } = tab();
+		const { doc } = await open(relay);
+		await settle();
+		await commentOnPage(doc, 'h1', 'Bigger');
+		expect(asked.filter(([name]) => name === 'postComment').map(([, args]) => args.slice(0, 3))).toEqual([
+			['demo', 'prototype/demo/v1-i1', 'Bigger'],
+		]);
+		expect(gh.issues[0]?.comments[0]?.body).toContain('Bigger');
+		await press(button(/^Show all comments/));
+		await settle();
+		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Sign out')).toBe(false);
+	});
+
+	it('offers Address on an open comment, which asks DSNR to address it', async () => {
+		const { relay, asked } = tab();
+		const { doc } = await open(relay);
+		await settle();
+		await commentOnPage(doc, 'h1', 'Bigger');
+		await press(button(/^Show all comments/));
+		await settle();
+		await press(menuItem(await openMenu(button('Comment actions')), 'Address'));
+		await settle();
+		const comment = gh.issues[0]!.comments[0]!;
+		expect(asked.at(-1)).toEqual(['address', [{ thread: gh.issues[0]!.number, id: comment.id }]]);
 	});
 });
