@@ -13,12 +13,15 @@ interface VsCodeApi<State> {
 
 declare function acquireVsCodeApi<State>(): VsCodeApi<State>;
 
-/** The panel's own state. */
+/** The panel's own state: what it was left showing, kept while the panel lives, reloads included. */
 interface PanelState {
 	tab: Tab;
+	view: View;
 }
 
 export type Tab = 'projects' | 'design-system';
+/** The projects as a list of rows, or a grid of cards. */
+export type View = 'list' | 'grid';
 
 let api: VsCodeApi<PanelState> | undefined;
 export const vscode = (): VsCodeApi<PanelState> => (api ??= acquireVsCodeApi<PanelState>());

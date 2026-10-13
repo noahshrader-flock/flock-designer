@@ -4,7 +4,8 @@ import { Icon } from './Icon';
 /**
  * A choice of a few views, side by side, one always chosen: VS Code has no control for this in a side bar, so it is drawn
  * as Claude Code's own side bar draws one, a soft track with the chosen view raised in it. A radio group to assistive
- * technology: only the chosen one is in the tab order, and the arrow keys, Home and End move the choice.
+ * technology: only the chosen one is in the tab order, and the arrow keys, Home and End move the choice. `iconOnly` draws
+ * each as its icon alone, still named (its label is the button's, and its tooltip), for a choice whose icons say it.
  */
 export interface ToggleOption<Value extends string> {
 	value: Value;
@@ -18,12 +19,14 @@ export const Toggle = <Value extends string>({
 	options,
 	value,
 	onChange,
+	iconOnly = false,
 }: {
 	/** Its name to assistive technology. */
 	label: string;
 	options: readonly ToggleOption<Value>[];
 	value: Value;
 	onChange: (value: Value) => void;
+	iconOnly?: boolean;
 }) => {
 	const buttons = useRef<(HTMLButtonElement | null)[]>([]);
 	const choose = (index: number) => {
@@ -40,7 +43,7 @@ export const Toggle = <Value extends string>({
 		choose(to);
 	};
 	return (
-		<div role="radiogroup" aria-label={label} className="toggle" onKeyDown={onKeyDown}>
+		<div role="radiogroup" aria-label={label} className={iconOnly ? 'toggle toggle-icons' : 'toggle'} onKeyDown={onKeyDown}>
 			{options.map((o, i) => (
 				<button
 					key={o.value}
@@ -53,9 +56,10 @@ export const Toggle = <Value extends string>({
 					tabIndex={o.value === value ? 0 : -1}
 					className="toggle-option"
 					onClick={() => onChange(o.value)}
+					{...(iconOnly ? { 'aria-label': o.label, title: o.label } : {})}
 				>
 					<Icon name={o.icon} />
-					<span className="toggle-label">{o.label}</span>
+					{!iconOnly && <span className="toggle-label">{o.label}</span>}
 				</button>
 			))}
 		</div>

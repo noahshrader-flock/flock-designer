@@ -8,7 +8,7 @@ import { onHost, workspace } from './host';
 import { Projects, type ProjectsRead } from './Projects';
 import type { Review } from '../src/messages';
 import { Toggle } from './ui/Toggle';
-import { type Tab, vscode } from './vscode';
+import { type Tab, type View, vscode } from './vscode';
 
 const TABS = [
 	{ value: 'projects', label: 'Projects', icon: 'folder-library' },
@@ -19,6 +19,8 @@ const TABS = [
 export interface PanelViewProps {
 	tab: Tab;
 	onTab: (tab: Tab) => void;
+	view: View;
+	onView: (view: View) => void;
 	account: SignInState;
 	/** What is open, once the extension has said; null until then. */
 	context: Context | null;
@@ -34,7 +36,20 @@ export interface PanelViewProps {
  * DSNR's panel: the toggle at its very top, and under it the view chosen. Who is signed in is VS Code's to show, in its
  * own title bar beside the DSNR mark; the page reads it only to say whose projects these are.
  */
-export const PanelView = ({ tab, onTab, account, context, projects, onOpen, onNew, onGetStarted, onLocate, catalog }: PanelViewProps) => (
+export const PanelView = ({
+	tab,
+	onTab,
+	view,
+	onView,
+	account,
+	context,
+	projects,
+	onOpen,
+	onNew,
+	onGetStarted,
+	onLocate,
+	catalog,
+}: PanelViewProps) => (
 	<main className="panel">
 		<div className="panel-top">
 			<Toggle label="View" options={TABS} value={tab} onChange={onTab} />
@@ -50,6 +65,8 @@ export const PanelView = ({ tab, onTab, account, context, projects, onOpen, onNe
 					onOpen={onOpen}
 					onNew={onNew}
 					onGetStarted={onGetStarted}
+					view={view}
+					onView={onView}
 				/>
 			) : (
 				<DesignSystem found={context.designSystem} onLocate={onLocate} {...(catalog ? { catalog } : {})} />
@@ -61,10 +78,12 @@ export const PanelView = ({ tab, onTab, account, context, projects, onOpen, onNe
 /**
  * The panel, connected: what is open from the extension (`context`), the account and the projects from the core over
  * the bridge, read again when either changes or the extension says the projects did, and what the person presses sent
- * back. The tab chosen is kept in VS Code's state for the panel, so a reload leaves it where it was.
+ * back. The tab and the view of the projects chosen are kept in VS Code's state for the panel, so a reload leaves them
+ * where they were.
  */
 export const Panel = () => {
 	const [tab, setTab] = useState<Tab>(() => vscode().getState()?.tab ?? 'projects');
+	const [view, setView] = useState<View>(() => vscode().getState()?.view ?? 'list');
 	const [context, setContext] = useState<Context | null>(null);
 	const [account, setAccount] = useState<SignInState>({ state: 'signedOut' });
 	// Counts the times the extension said the projects changed: each reads them again.
@@ -101,7 +120,12 @@ export const Panel = () => {
 			tab={tab}
 			onTab={(next) => {
 				setTab(next);
-				vscode().setState({ tab: next });
+				vscode().setState({ tab: next, view });
+			}}
+			view={view}
+			onView={(next) => {
+				setView(next);
+				vscode().setState({ tab, view: next });
 			}}
 			account={account}
 			context={context}

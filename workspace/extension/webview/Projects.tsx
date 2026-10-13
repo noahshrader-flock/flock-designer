@@ -6,38 +6,53 @@ import { useCover } from '../../src/renderer/useCover';
 import { type Review, reviewsOf } from '../src/messages';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
+import { Grid } from './ui/Grid';
 import { List } from './ui/List';
 import { Row } from './ui/Row';
 import { Section } from './ui/Section';
+import { Toggle } from './ui/Toggle';
+import type { View } from './vscode';
+
+/** The two ways to see the projects: a list of rows, or a grid of cards. */
+const VIEWS = [
+	{ value: 'list', label: 'List', icon: 'list-unordered' },
+	{ value: 'grid', label: 'Grid', icon: 'layout' },
+] as const satisfies { value: View; label: string; icon: string }[];
 
 /** What a project has, in a line: its iterations. Its folder is the section it is under. */
 const meta = (p: Project) => plural(p.iterations.length, 'iteration');
 
 /** A project's picture, its newest prototype's (`useCover`); its place kept for one until there is one. */
-const Picture = ({ project }: { project: Project }) => {
+const Picture = ({ project, className }: { project: Project; className: string }) => {
 	const { picture } = useCover(project);
 	return picture ? (
-		<img data-part="picture" alt="" className="picture" src={picture} />
+		<img data-part="picture" alt="" className={className} src={picture} />
 	) : (
-		<span data-part="picture" aria-hidden="true" className="picture" />
+		<span data-part="picture" aria-hidden="true" className={className} />
 	);
 };
 
-/** A project as a row: its picture, its name, what it has, its open comments, opening its newest prototype for review. */
-const ProjectRow = ({ project, onOpen }: { project: Project; onOpen: (review: Review) => void }) => {
+/**
+ * A project: its picture, its name, what it has, its open comments, opening its newest prototype for review. As a row in a
+ * list, or a card in a grid (`view`): the same things, in each one's shape.
+ */
+const ProjectItem = ({ project, view, onOpen }: { project: Project; view: View; onOpen: (review: Review) => void }) => {
 	const open = project.iterations.reduce((n, i) => n + i.openComments, 0);
 	const newest = reviewsOf(project)[0];
-	return (
-		<Row
-			start={<Picture project={project} />}
-			name={project.title}
-			meta={meta(project)}
-			end={open > 0 ? <Badge count={open} label={plural(open, 'open comment')} /> : undefined}
-			// What its right-click menu acts on: this project, with none of a webview's own items (Cut, Copy, Paste).
-			context={{ webviewSection: 'project', projectId: project.id, preventDefaultContextMenuItems: true }}
-			{...(newest ? { onOpen: () => onOpen(newest) } : {})}
-		/>
+	const badge = open > 0 ? <Badge count={open} label={plural(open, 'open comment')} /> : undefined;
+	const shared = {
+		name: project.title,
+		meta: meta(project),
+		// What its right-click menu acts on: this project, with none of a webview's own items (Cut, Copy, Paste).
+		context: { webviewSection: 'project', projectId: project.id, preventDefaultContextMenuItems: true },
+		...(newest ? { onOpen: () => onOpen(newest) } : {}),
+	};
+	return view === 'grid' ? (
+		<Card {...shared} picture={<Picture project={project} className="card-picture" />} badge={badge} />
+	) : (
+		<Row {...shared} start={<Picture project={project} className="picture" />} end={badge} />
 	);
 };
 
@@ -72,8 +87,8 @@ export interface ProjectsRead {
 }
 
 /**
- * The Projects tab: each project a row (`ProjectRow`), under its folder (`ByFolder`). With no product open, what to open;
- * signed out, a line saying the list is this machine's.
+ * The Projects tab: each project a row or a card (`ProjectItem`), under its folder (`ByFolder`), as a list or a grid that
+ * the person chooses. With no product open, what to open; signed out, a line saying the list is this machine's.
  */
 export const Projects = ({
 	read,
@@ -82,6 +97,8 @@ export const Projects = ({
 	onOpen,
 	onNew,
 	onGetStarted,
+	view,
+	onView,
 }: {
 	read: ProjectsRead;
 	/** Whether a product is open, and if not, what to do (from the context). */
@@ -91,6 +108,9 @@ export const Projects = ({
 	onNew: () => void;
 	/** Gets a product onto this machine: VS Code's own clone. */
 	onGetStarted: () => void;
+	/** The projects as a list of rows or a grid of cards, and choosing the other. */
+	view: View;
+	onView: (view: View) => void;
 }) => {
 	if (!product.open)
 		return (
@@ -111,6 +131,11 @@ export const Projects = ({
 	return (
 		<>
 			{!signedIn && <p className="note">These are the projects on this machine. Sign in to see your team's too.</p>}
+			{projects.length > 0 && (
+				<div className="view-bar">
+					<Toggle label="Layout" options={VIEWS} value={view} onChange={onView} iconOnly />
+				</div>
+			)}
 			{projects.length === 0 ? (
 				<EmptyState icon="folder-library" title="No projects yet">
 					<p>A prototype you start appears here, with its iterations and its open comments.</p>
@@ -118,13 +143,10 @@ export const Projects = ({
 				</EmptyState>
 			) : (
 				<ByFolder projects={projects}>
-					{(group, label) => (
-						<List label={label}>
-							{group.map((p) => (
-								<ProjectRow key={p.id} project={p} onOpen={onOpen} />
-							))}
-						</List>
-					)}
+					{(group, label) => {
+						const items = group.map((p) => <ProjectItem key={p.id} project={p} view={view} onOpen={onOpen} />);
+						return view === 'grid' ? <Grid label={label}>{items}</Grid> : <List label={label}>{items}</List>;
+					}}
 				</ByFolder>
 			)}
 		</>

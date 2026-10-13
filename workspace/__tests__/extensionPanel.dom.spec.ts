@@ -164,6 +164,87 @@ describe('the account', () => {
 	});
 });
 
+describe('the projects as a list or a grid', () => {
+	const views = () => document.querySelector('[aria-label="Layout"]') as HTMLElement;
+	const view = (name: string) =>
+		[...views().querySelectorAll<HTMLElement>('[role="radio"]')].find((o) => o.getAttribute('aria-label') === name) as HTMLElement;
+	const cards = () => [...body().querySelectorAll<HTMLElement>('.card')];
+
+	it('starts as a list, with icon-only List and Grid to change it, once there are projects to show', async () => {
+		await showOpen();
+		expect(
+			[...views().querySelectorAll('[role="radio"]')].map((o) => [o.getAttribute('aria-label'), o.getAttribute('aria-checked'), o.textContent]),
+		).toEqual([
+			['List', 'true', ''],
+			['Grid', 'false', ''],
+		]);
+		expect(cards()).toHaveLength(0);
+		await act(async () => root?.unmount());
+		await showOpen(OPEN, []);
+		expect(document.querySelector('[aria-label="Layout"]')).toBeNull();
+	});
+
+	it('shows each project as a card in a grid: its picture, its name and what it has, with its comments as a badge', async () => {
+		await showOpen();
+		await press(view('Grid'));
+		expect(view('Grid').getAttribute('aria-checked')).toBe('true');
+		expect(body().querySelectorAll('.row')).toHaveLength(0);
+		expect(cards().map((c) => c.querySelector('[data-part="name"]')?.textContent)).toEqual([
+			'Alert history',
+			'Zone coverage',
+			'Admin usage',
+			'Role comparison',
+		]);
+		expect(cards()[0]!.querySelector('[data-part="meta"]')?.textContent).toBe('3 iterations');
+		expect(cards()[0]!.querySelector('.badge')?.getAttribute('aria-label')).toBe('2 open comments');
+		expect(cards()[1]!.querySelector('.badge')).toBeNull();
+		expect(cards()[0]!.querySelector('[data-part="picture"]')).not.toBeNull();
+	});
+
+	it('keeps the sections, and the cards do what the rows do: open the newest prototype, and take the right-click menu', async () => {
+		await showOpen();
+		await press(view('Grid'));
+		expect([...body().querySelectorAll('.section')].map((x) => x.querySelector('[data-part="title"]')?.textContent)).toEqual([
+			'Admin',
+			'Maps',
+			'No folder',
+		]);
+		await press(cards()[0]!);
+		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' });
+		expect(JSON.parse(cards()[0]!.closest('li')!.dataset.vscodeContext ?? '{}')).toMatchObject({
+			webviewSection: 'project',
+			projectId: 'alert-history',
+		});
+	});
+
+	it('draws the pictures in either', async () => {
+		await showOpen();
+		await press(view('Grid'));
+		// A name of its own: a picture read is kept by its name, as the app keeps it, across the tests of this file.
+		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2-i1', cover: 'fedcba654321' }]);
+		await answer('projectCover', 'data:image/jpeg;base64,BBBB');
+		expect(cards()[0]!.querySelector('[data-part="picture"]')?.getAttribute('src')).toBe('data:image/jpeg;base64,BBBB');
+	});
+
+	it('is kept in the panel’s state, so a reload leaves it where it was, as the tab is', async () => {
+		await showOpen();
+		await press(view('Grid'));
+		expect(state).toMatchObject({ tab: 'projects', view: 'grid' });
+		await act(async () => root?.unmount());
+		sent = [];
+		await showOpen();
+		expect(view('Grid').getAttribute('aria-checked')).toBe('true');
+		expect(cards().length).toBeGreaterThan(0);
+	});
+
+	it('does not lose the tab chosen, nor the layout when the tab is', async () => {
+		await showOpen();
+		await press(view('Grid'));
+		await press(options()[1]!);
+		expect(state).toEqual({ tab: 'design-system', view: 'grid' });
+	});
+});
+
 describe('Projects', () => {
 	const rows = () => [...body().querySelectorAll<HTMLElement>('[role="listitem"]')];
 	const part = (row: HTMLElement, name: string) => row.querySelector(`[data-part="${name}"]`)?.textContent ?? null;
@@ -301,6 +382,8 @@ describe('a design system’s catalog, once it is read', () => {
 				onOpen: () => undefined,
 				onNew: () => undefined,
 				onGetStarted: () => undefined,
+				view: 'list',
+				onView: () => undefined,
 				onLocate: () => undefined,
 				catalog: SAMPLE_CATALOG,
 				...more,

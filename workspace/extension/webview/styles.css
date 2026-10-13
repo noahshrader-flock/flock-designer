@@ -94,6 +94,17 @@ body {
 	outline-offset: -1px;
 }
 
+/* The choice of list or grid, at the right, above the projects: just its icons, so it takes little of the side bar. */
+.view-bar {
+	display: flex;
+	justify-content: flex-end;
+	padding: 2px 12px 4px;
+}
+
+.toggle-icons {
+	grid-auto-columns: auto;
+}
+
 /* A list, as VS Code's: rows edge to edge, the text indented as the toggle is. */
 .list {
 	margin: 0;
@@ -282,6 +293,74 @@ body {
 
 .row-button:hover {
 	background: var(--vscode-list-hoverBackground);
+}
+
+/* A grid of cards: as many columns as the side bar has room for, each a project as its picture and its name. */
+.grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+	gap: 8px;
+	margin: 0;
+	padding: 4px 12px 8px;
+	list-style: none;
+}
+
+.section .grid {
+	padding-left: 28px;
+}
+
+.card-item {
+	min-width: 0;
+	list-style: none;
+}
+
+.card {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	width: 100%;
+	padding: 0;
+	border: none;
+	background: transparent;
+	font: inherit;
+	text-align: start;
+}
+
+.card.row-button:hover .card-picture {
+	border-color: var(--vscode-focusBorder);
+}
+
+.card.row-button:focus-visible {
+	outline: var(--dsnr-focus);
+	outline-offset: 2px;
+}
+
+.card-media {
+	position: relative;
+	display: block;
+}
+
+/* A card's picture is the shape the cover is drawn in, twice as wide as tall. */
+.card-picture {
+	display: block;
+	width: 100%;
+	aspect-ratio: 2 / 1;
+	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius-small);
+	background: var(--vscode-editorWidget-background);
+	object-fit: cover;
+}
+
+.card-badge {
+	position: absolute;
+	top: 4px;
+	right: 4px;
+}
+
+.card-text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
 }
 
 /* A line that says what the list is, or what is happening: quiet, and in line with the rows. */
