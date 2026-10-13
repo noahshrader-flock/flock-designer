@@ -10,10 +10,10 @@ import type { useComments } from '../comments/useComments';
 import { COMMENTS_PANEL } from '../panelWidth';
 import { ResizablePanel } from '../ResizablePanel';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Button } from '../ui/button';
 import { DropdownMenuItem } from '../ui/dropdown-menu';
 import type { AddressState } from './useAddress';
 import { ErrorAlert } from '../ErrorAlert';
+import { InlineAction } from '../Links';
 
 /**
  * The comments, docked beside the preview and resizable: what went wrong, a route that did not load, where an Address
@@ -81,10 +81,7 @@ export const CommentsSidebar = ({
 							{changedElsewhere ? (
 								<>
 									Others had commented on {iterationLabel(iteration)}, so it stays as they saw it. The change is in{' '}
-									{labelOf(changedElsewhere.iteration)}.{' '}
-									<Button size="sm" variant="link" className="h-auto p-0" onClick={openChanged}>
-										Open {labelOf(changedElsewhere.iteration)}
-									</Button>
+									{labelOf(changedElsewhere.iteration)}. <InlineAction onClick={openChanged}>Open {labelOf(changedElsewhere.iteration)}</InlineAction>
 								</>
 							) : address.changed ? (
 								'The agent has finished. Look at the preview and the changes, then resolve what is done.'

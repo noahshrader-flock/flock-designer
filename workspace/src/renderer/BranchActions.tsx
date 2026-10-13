@@ -1,7 +1,7 @@
 import { GitBranchIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { plural } from '../shared/plural';
-import { OutLink } from './OutLink';
+import { OutLink } from './Links';
 import { Button } from './ui/button';
 import { CHANGE_REQUEST } from '../shared/vocabulary';
 import { ErrorAlert } from './ErrorAlert';

@@ -1,8 +1,9 @@
 import Markdown from 'markdown-to-jsx/react';
 import type { ComponentProps } from 'react';
+import { OutLink } from './Links';
 
 /** A link opens in the real browser: the window never navigates, and the main process hands `_blank` to the OS. */
-const Link = (props: ComponentProps<'a'>) => <a {...props} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2" />;
+const Link = ({ href = '', children }: ComponentProps<'a'>) => <OutLink href={href}>{children}</OutLink>;
 
 /**
  * Markdown as rich text, in the app's own type scale. Raw HTML in the file is shown as text rather than parsed:

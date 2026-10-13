@@ -1,5 +1,5 @@
 import { BranchActions } from './BranchActions';
-import { OutLink } from './OutLink';
+import { OutLink } from './Links';
 import type { TokenBranchControls } from './useTokenBranch';
 
 /**

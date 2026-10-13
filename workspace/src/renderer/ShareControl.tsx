@@ -23,6 +23,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Spinner } from './ui/spinner';
 import { CHANGE_REQUEST } from '../shared/vocabulary';
 import { ErrorAlert } from './ErrorAlert';
+import { OutLink } from './Links';
 
 /**
  * What can be done with this page beyond reviewing it, behind one menu: move a prototype into the code,
@@ -228,9 +229,7 @@ export const ShareControl = ({
 									<AlertDescription>The preview is up.</AlertDescription>
 								</Alert>
 								<p className="text-sm break-all">
-									<a className="text-primary underline underline-offset-4" href={status.url} target="_blank" rel="noreferrer">
-										{status.url}
-									</a>
+									<OutLink href={status.url}>{status.url}</OutLink>
 								</p>
 								<p className="text-muted-foreground text-sm">
 									Reviewers will see it on this iteration the next time they open the app. If anything stops it reaching them, the publishing status

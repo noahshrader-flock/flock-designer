@@ -4,6 +4,7 @@ import { Working } from './Clone';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { useWorkspace } from './useWorkspace';
+import { OutLink } from './Links';
 
 /**
  * Whether a repository can build a prototype on this machine: asked as soon as there is one to ask about (`root`), and
@@ -74,10 +75,7 @@ export const ReadinessAlerts = ({
 				<AlertTitle>Claude Code is not installed</AlertTitle>
 				<AlertDescription>
 					New work is built by Claude Code on this machine. Install it from{' '}
-					<a href="https://claude.com/claude-code" target="_blank" rel="noreferrer">
-						claude.com/claude-code
-					</a>
-					, sign in, then open this again.
+					<OutLink href="https://claude.com/claude-code">claude.com/claude-code</OutLink>, sign in, then open this again.
 				</AlertDescription>
 			</Alert>
 		)}

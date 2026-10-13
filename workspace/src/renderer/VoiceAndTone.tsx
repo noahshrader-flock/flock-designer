@@ -2,7 +2,7 @@ import { InfoIcon, RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { VoiceAndTone as Voice } from '../shared/contract';
 import { BranchActions } from './BranchActions';
-import { OutLink } from './OutLink';
+import { OutLink } from './Links';
 import { Page } from './Page';
 import { RowsSkeleton, SkeletonStatus } from './Skeletons';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';

@@ -8,6 +8,7 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, Dia
 import { Spinner } from './ui/spinner';
 import { ErrorAlert } from './ErrorAlert';
 import { useWorkspace } from './useWorkspace';
+import { OutLink } from './Links';
 
 type Check = { state: 'checking' } | { state: 'ready'; result: AccessibilityResult } | { state: 'failed'; error: string };
 
@@ -35,9 +36,7 @@ const Issue = ({ issue }: { issue: AccessibilityIssue }) => (
 			]
 				.filter(Boolean)
 				.join(' · ')}{' '}
-			<a className="text-primary underline underline-offset-4" href={issue.url} target="_blank" rel="noreferrer">
-				{issue.rule}
-			</a>
+			<OutLink href={issue.url}>{issue.rule}</OutLink>
 		</span>
 	</li>
 );

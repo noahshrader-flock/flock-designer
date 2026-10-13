@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Spinner } from './ui/spinner';
 import { repoName } from '../shared/repoRef';
+import { InlineAction } from './Links';
 
 /**
  * Cloning a repository from the app: where it would go, changing that, cloning it with progress, and stopping. One
@@ -92,14 +93,9 @@ export const CloneHere = ({ clone, onClone, action }: { clone: CloneState; onClo
 					</>
 				)}
 				{' · '}
-				<button
-					type="button"
-					className="text-primary underline underline-offset-4"
-					onClick={() => void clone.changeFolder()}
-					disabled={cloning !== null}
-				>
+				<InlineAction onClick={() => void clone.changeFolder()} disabled={cloning !== null}>
 					Change
-				</button>
+				</InlineAction>
 			</p>
 			{cloning === null && error !== null && (
 				<Alert variant="warning">

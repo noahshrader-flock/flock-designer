@@ -18,6 +18,7 @@ import { closeUnlessBusy } from './dialogClose';
 import { useRepositories, useWorkspace } from './useWorkspace';
 import { RepositoryField } from './RepositoryField';
 import { ReadinessAlerts, usePrototypeReadiness } from './PrototypeReadiness';
+import { InlineAction } from './Links';
 
 /** What New makes, said under its title. The app is for prototypes: codebase work is started in the codebase. */
 const ABOUT =
@@ -64,9 +65,9 @@ const StartsFrom = ({
 		<FieldDescription data-starts-from className="flex items-center gap-1.5">
 			<GitBranchIcon aria-hidden className="size-3.5 shrink-0" />
 			<code className="font-mono">{branch}</code>
-			<Button variant="link" className="h-auto p-0 text-sm" disabled={disabled || branches.length === 0} onClick={() => setChanging(true)}>
+			<InlineAction disabled={disabled || branches.length === 0} onClick={() => setChanging(true)}>
 				Change
-			</Button>
+			</InlineAction>
 		</FieldDescription>
 	);
 };
