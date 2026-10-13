@@ -116,7 +116,13 @@ export const Panel = () => {
 		return workspace().onSignInChanged(setAccount);
 	}, []);
 	const login = account.state === 'signedIn' ? account.user.login : null;
-	const read = useWorkspace(() => workspace().listProjects(), [context?.product ?? null, login, changes], { enabled: context?.product != null });
+	const read = useWorkspace(() => workspace().listProjects(), [context?.product ?? null, login], { enabled: context?.product != null });
+	// Told the projects changed: read again, keeping what is shown until the new is there (a comment made in a review
+	// is a number on its project, without the list giving way to a line saying it is reading).
+	const { reload } = read;
+	useEffect(() => {
+		if (changes > 0) reload();
+	}, [changes]); // eslint-disable-line react-hooks/exhaustive-deps
 	// With the list read: pictures for the prototypes built here that have none current, taken in once made, as the app does;
 	// the newest first, so a picture drawn again is the one shown.
 	const [made, setMade] = useState<MadeCover[]>([]);

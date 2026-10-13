@@ -253,6 +253,11 @@ drawn by the browser already on the machine (Chrome, Edge or Chromium, or `CHROM
 `puppeteer-core`, which downloads no browser of its own (`chromeHeadless.ts`); a machine with none is told what to
 install. The panel's rows show the pictures, made once the list is read, as the app makes them.
 
+**The numbers keep up without reloading VS Code:** a comment made, moved, resolved or deleted in a review, or addressed,
+reads the projects again at once, and so does coming back to VS Code after a minute away (for comments made in the app
+or on GitHub); the list stays on screen while it is read, and the badge on each project changes when the new count is
+there.
+
 **Search:** a box at the left of the grid and list icons narrows the projects as you type, as the app's does (every word, in any case, in the name, id, folder or people); Escape clears it.
 
 **Folders:** the panel lists the projects under a section for each folder, those in none last, as a grid of cards, which it

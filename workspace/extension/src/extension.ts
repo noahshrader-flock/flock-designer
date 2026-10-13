@@ -14,6 +14,9 @@ import { publishedLink, syncItem, syncPicks } from './publishing';
 import { Reviews, answerReview, buildReviewSite, siteIn } from './review';
 import { AgentLog, SyncStatus, failed, failedFor, vscodeChoose, vscodeProgress, vscodeTell } from './ui';
 
+/** How long since the projects were last read before coming back to VS Code reads them again: they are read from GitHub. */
+const REREAD_MS = 60_000;
+
 /** Kept by the extension: the design system the person located, when nothing open holds one. */
 const LOCATED = 'dsnr.located';
 
@@ -75,15 +78,9 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				{
 					routes: served,
 					signIn: () => github.signIn(),
+					written: () => projectsChanged(),
 					address: (r, comment) =>
-						addressComment(
-							{ api, progress: vscodeProgress, log: agentLog, tell: (m) => void vscode.window.showInformationMessage(m), openReview },
-							r,
-							comment,
-						).catch((err: unknown) => {
-							failed(err);
-							throw err;
-						}),
+						addressComment({ api, progress: vscodeProgress, log: agentLog, tell: vscodeTell, openReview }, r, comment).catch(failedFor(true)),
 				},
 				review,
 				name,
@@ -130,12 +127,16 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		panels.show(message);
 	};
 	/** The panels are told the projects changed, so each reads them again. */
-	const projectsChanged = () => panels.post({ type: 'projects-changed' });
+	let lastRead = Date.now();
+	const projectsChanged = () => {
+		lastRead = Date.now();
+		panels.post({ type: 'projects-changed' });
+	};
 	const publishing = { api, choose: vscodeChoose, tell: vscodeTell };
 	/** What a review tab's title bar does, on the review in front; said when there is none. */
 	const inFront = (act: (review: Review) => Promise<void>) => {
 		const review = reviews.active();
-		if (!review) return void vscode.window.showInformationMessage('Open a prototype for review first.');
+		if (!review) return vscodeTell('Open a prototype for review first.');
 		return act(review).catch(failed);
 	};
 	// The sync in the status bar: as it is now, then as the core says it moves.
@@ -178,14 +179,13 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				const url = await publishedLink(publishing, review);
 				if (url === null) return;
 				await vscode.env.clipboard.writeText(url);
-				void vscode.window.showInformationMessage(`Copied the link to ${review.title}.`);
+				vscodeTell(`Copied the link to ${review.title}.`);
 			}),
 		),
 		// From a row's right-click menu (its project) or a review tab's menu (the review in front): the panel's dialog.
 		vscode.commands.registerCommand('dsnr.assignFolder', (raw: unknown) => {
 			const projectId = readProjectArg(raw) ?? reviews.active()?.projectId;
-			if (!projectId)
-				return void vscode.window.showInformationMessage('Right-click a project in DSNR, or open one for review, to assign its folder.');
+			if (!projectId) return vscodeTell('Right-click a project in DSNR, or open one for review, to assign its folder.');
 			return inPanel({ type: 'open-assign-folder', projectId });
 		}),
 		vscode.commands.registerCommand('dsnr.sync', async () => {
@@ -206,7 +206,12 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		}),
 		vscode.workspace.onDidChangeWorkspaceFolders(() => void refresh()),
 		// Coming back to VS Code is a good moment to publish what was done meanwhile, as coming back to the app's window is.
-		vscode.window.onDidChangeWindowState((s) => s.focused && void shell.publish()),
+		vscode.window.onDidChangeWindowState((s) => {
+			if (!s.focused) return;
+			void shell.publish();
+			// Comments made elsewhere (the app, GitHub) while away: the counts are read again, not more than once in a while.
+			if (Date.now() - lastRead > REREAD_MS) projectsChanged();
+		}),
 	);
 };
 
@@ -219,7 +224,7 @@ const pickPrototype = async (api: Pick<WorkspaceApi, 'listProjects'>): Promise<R
 	}
 	const items = listed.value.flatMap(reviewsOf).map((review) => ({ label: review.title, review }));
 	if (items.length === 0) {
-		void vscode.window.showInformationMessage('There is no prototype to review here yet.');
+		vscodeTell('There is no prototype to review here yet.');
 		return undefined;
 	}
 	return (await vscode.window.showQuickPick(items, { placeHolder: 'Open a prototype for review' }))?.review;

@@ -147,11 +147,13 @@ describe('a review tab’s answers to its page', () => {
 			['readComments', async (...args) => ({ ok: true, value: ['read', ...args] })],
 			['postComment', async (...args) => ({ ok: true, value: ['posted', ...args] })],
 			['resolveComment', async (...args) => ({ ok: true, value: ['resolved', ...args] })],
+			['deleteComment', async () => ({ ok: false, error: 'GitHub would not.' })],
 		]);
 		return {
 			routes: () => routes,
 			signIn: vi.fn(async () => ({ state: 'signedOut' as const })),
 			address: vi.fn(async () => null),
+			written: vi.fn(),
 		};
 	};
 
@@ -165,6 +167,20 @@ describe('a review tab’s answers to its page', () => {
 		expect(await answerReview(d, review, 'signIn', [])).toEqual({ ok: true, value: { state: 'signedOut' } });
 		await answerReview(d, review, 'address', [{ thread: 1, id: 2 }]);
 		expect(d.address).toHaveBeenCalledWith(review, { thread: 1, id: 2 });
+	});
+
+	it('say a comment was written, once it was, so what shows how many there are is read again', async () => {
+		const d = deps();
+		await answerReview(d, review, 'readComments', ['demo', 'prototype/demo/v1-i1']);
+		expect(d.written).not.toHaveBeenCalled();
+		await answerReview(d, review, 'postComment', ['demo', 'prototype/demo/v1-i1', 'Bigger', null, null]);
+		await answerReview(d, review, 'resolveComment', [{ thread: 1, id: 2 }, true]);
+		expect(d.written).toHaveBeenCalledTimes(2);
+		// One that failed wrote nothing.
+		await answerReview(d, review, 'deleteComment', [{ thread: 1, id: 2 }]);
+		expect(d.written).toHaveBeenCalledTimes(2);
+		await answerReview(d, review, 'address', [{ thread: 1, id: 2 }]);
+		expect(d.written).toHaveBeenCalledTimes(3);
 	});
 
 	it('are only about this review’s project, and say so for anything else', async () => {

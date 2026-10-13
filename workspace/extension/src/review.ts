@@ -56,6 +56,8 @@ export interface ReviewAnswers {
 	routes: () => ReadonlyMap<InvokeName, Route>;
 	signIn: () => Promise<SignInState>;
 	address: (review: Review, comment: CommentRef) => Promise<unknown>;
+	/** Told once a comment was written (made, moved, resolved, deleted, addressed), so what counts them is read again. */
+	written: () => void;
 }
 
 const isRef = (v: unknown): v is CommentRef =>
@@ -66,6 +68,15 @@ const isRef = (v: unknown): v is CommentRef =>
  * on this review's project; signing in by VS Code; Address by the extension, on this review's prototype.
  */
 export const answerReview = async (answers: ReviewAnswers, review: Review, name: RelayCall, args: unknown[]): Promise<Result<unknown>> => {
+	const result = await answered(answers, review, name, args);
+	if (result.ok && WRITES.has(name)) answers.written();
+	return result;
+};
+
+/** The calls that change a comment, or what a comment says of itself (Address): after one, the counts are read again. */
+const WRITES = new Set<RelayCall>(['postComment', 'moveComment', 'resolveComment', 'deleteComment', 'address']);
+
+const answered = async (answers: ReviewAnswers, review: Review, name: RelayCall, args: unknown[]): Promise<Result<unknown>> => {
 	if (name === 'signIn') return toResult(answers.signIn());
 	if (name === 'address') {
 		const [comment] = args;

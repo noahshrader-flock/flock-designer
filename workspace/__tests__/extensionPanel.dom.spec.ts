@@ -148,6 +148,25 @@ describe('the account', () => {
 		expect([...(document.querySelector('.panel-top')?.children ?? [])].map((c) => c.className)).toEqual(['toggle']);
 	});
 
+	it('shows what it has while it reads again, and then what is new: a comment made in a review is a number on its project', async () => {
+		await showOpen();
+		const badge = () => body().querySelector('[data-part="name"]')?.closest('li')?.querySelector('.badge')?.getAttribute('aria-label') ?? null;
+		expect(badge()).toBe('2 open comments');
+		await say({ type: 'projects-changed' });
+		// Still there while it is read: the list does not give way to a line saying it is reading.
+		expect(body().querySelectorAll('[role="listitem"]')).toHaveLength(4);
+		expect(badge()).toBe('2 open comments');
+		await answer(
+			'listProjects',
+			SAMPLE_PROJECTS.map((p) =>
+				p.id === 'alert-history'
+					? { ...p, iterations: p.iterations.map((i, at) => ({ ...i, openComments: i.openComments + (at === 0 ? 1 : 0) })) }
+					: p,
+			),
+		);
+		expect(badge()).toBe('3 open comments');
+	});
+
 	it('reads the projects again when the extension says they changed (one was made)', async () => {
 		await showOpen();
 		const reads = sent.filter((m) => m.name === 'listProjects').length;
@@ -572,7 +591,11 @@ describe('Projects', () => {
 		await showOpen();
 		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2-i1', cover: 'aaaaaaaaaaaa' }]);
 		await say({ type: 'projects-changed' });
-		await answer('listProjects', SAMPLE_PROJECTS);
+		// Read again, so a list of its own, as every read is.
+		await answer(
+			'listProjects',
+			SAMPLE_PROJECTS.map((p) => ({ ...p })),
+		);
 		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2-i1', cover: 'bbbbbbbbbbbb' }]);
 		expect(sent.filter((m) => m.name === 'projectCover').at(-1)?.args).toEqual(['alert-history', 'v2-i1', 'bbbbbbbbbbbb']);
 	});
