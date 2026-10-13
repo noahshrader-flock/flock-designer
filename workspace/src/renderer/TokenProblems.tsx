@@ -1,34 +1,26 @@
 import { TriangleAlertIcon } from 'lucide-react';
 import type { TokenProblem } from '../shared/contract';
 import { plural } from '../shared/plural';
-import { Alert, AlertAction, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 
 /**
- * What the library has that DSNR could not read (T2 of the design system plan): said only when there is something, as
- * shadcn's default alert as it comes (the icon, a title saying how many, and a View action), above the tokens panel's
- * tabs, and in a dialog when View is pressed, each with the file and line it is at. The rest of the tokens are shown; what
- * is listed here is skipped, never guessed.
+ * What the library has that DSNR could not read (T2 of the design system plan): said only when there is something, as a
+ * small ghost button (the warning icon and how many) in the design system's row, beside Sync, wherever the design system
+ * is shown; pressed, it opens a dialog listing each with the file and line it is at. The rest of the tokens are shown;
+ * what is listed here is skipped, never guessed.
  */
-export const TokenProblems = ({ problems, className = 'p-4' }: { problems: TokenProblem[]; className?: string }) => {
+export const TokenProblems = ({ problems }: { problems: TokenProblem[] }) => {
 	if (problems.length === 0) return null;
 	const said = `${plural(problems.length, 'value')} couldn’t be read`;
 	return (
 		<Dialog>
-			<div className={className}>
-				<Alert>
+			<DialogTrigger asChild>
+				<Button variant="ghost" size="sm">
 					<TriangleAlertIcon />
-					<AlertTitle>{said}</AlertTitle>
-					<AlertAction>
-						<DialogTrigger asChild>
-							<Button variant="outline" size="xs">
-								View
-							</Button>
-						</DialogTrigger>
-					</AlertAction>
-				</Alert>
-			</div>
+					{said}
+				</Button>
+			</DialogTrigger>
 			<DialogContent className="sm:max-w-xl" showCloseButton={false}>
 				<DialogHeader>
 					<DialogTitle>{said}</DialogTitle>

@@ -19,6 +19,7 @@ import { ResizablePanel } from './ResizablePanel';
 import { SearchField } from './SearchField';
 import { CardGridSkeleton, RowsSkeleton, SkeletonStatus } from './Skeletons';
 import { SyncButton } from './SyncButton';
+import { TokenProblems } from './TokenProblems';
 import { TokensPanel } from './TokensPanel';
 import { useComponentPictures } from './useComponentPictures';
 import { type DesignSystemState, useDesignSystem } from './useDesignSystem';
@@ -250,7 +251,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 /**
  * The design system's own row, first under the top bar, on every view: its name, which switches between those connected
  * and connects another (P4), the branch it is read from, and at the right Sync, where it is on the Projects screen (the
- * problem, if there is one, beside the button) and More, which removes it. A skeleton while it is first read; nothing when
+ * problems, if there are any, beside the button: a failed update, and what could not be read) and More, which removes it. A skeleton while it is first read; nothing when
  * there is none shown, as there is nothing to name.
  */
 const DesignSystemRow = ({ ds }: { ds: DesignSystemState }) => {
@@ -276,6 +277,7 @@ const DesignSystemRow = ({ ds }: { ds: DesignSystemState }) => {
 			<div className="grow" />
 			<div className="flex items-center gap-2">
 				<UpdateProblem update={catalog.update} />
+				<TokenProblems problems={catalog.tokens.problems} />
 				<SyncButton syncing={ds.syncing} onClick={() => void ds.sync()} />
 				{shown && (
 					<MoreMenu label={`More for ${shown.name}`}>

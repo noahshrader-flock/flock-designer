@@ -3,7 +3,6 @@ import type { DesignToken, DesignTokens } from '../shared/contract';
 import { byPrimitive, inOrder, isEditable } from '../shared/primitives';
 import { contrastPartner, contrastRatio, isForeground } from '../shared/tokens';
 import { ChangedTokens, ContrastNote, Swatch, TokenEditor } from './TokenEditor';
-import { TokenProblems } from './TokenProblems';
 import type { TokenBranchControls } from './useTokenBranch';
 import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
 import { GroupTrigger, useClosedGroups } from './GroupAccordion';
@@ -19,8 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
  * a tab with several groups (Color has Tones, Light and Dark) has them as an accordion, open until closed; a set is
  * never closed up behind a second one, but a plain heading over its tokens, each a swatch at the left and its value at the
  * right. A tab with one group shows its sets straight away. The tabs are the panel's (`Tabs variant="line"`): edge to edge on a
- * bottom border, the padding on the content under them. What the library has that is not read is one alert above the
- * tabs (`TokenProblems`), its details in a dialog, so the panel keeps its room.
+ * bottom border, the padding on the content under them. What the library has that is not read is not said here: it is
+ * a button in the design system's row (`TokenProblems`), so the panel keeps its room.
  *
  * **A change is tried here** (T3): a row opens its token's control (`TokenEditor`), every row shows the tokens as changed,
  * a pair's contrast is on its row, and what has been changed is listed above the tabs with its resets. The change is
@@ -169,7 +168,6 @@ export const TokensPanel = ({
 	if (tokens.source === null || categories.length === 0) {
 		return (
 			<>
-				<TokenProblems problems={tokens.problems} />
 				<div className="p-4">
 					<p className="text-muted-foreground text-sm">No tokens were found in this library. Looked for {tokens.looked.join(', ')}.</p>
 				</div>
@@ -181,7 +179,6 @@ export const TokensPanel = ({
 	const active = categories.some(([c]) => c === current) ? (current as string) : (categories[0] as [string, DesignToken[]])[0];
 	return (
 		<>
-			<TokenProblems problems={tokens.problems} />
 			<ChangedTokens live={live} branch={branch} />
 			<Tabs variant="line" value={active} onValueChange={setCurrent}>
 				<TabsList>

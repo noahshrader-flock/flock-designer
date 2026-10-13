@@ -313,14 +313,13 @@ describe('searching', () => {
 });
 
 describe('what it could not read', () => {
-	it('is one alert above the tabs, its details in a dialog and not in the panel, which keeps its room', async () => {
+	it('is not said in the panel, which keeps its room: it is a button in the design system’s row', async () => {
 		await show({
 			...TOKENS,
 			problems: [{ file: 'src/colors/tones/neutral.ts', line: 10, reason: "neutral 94 is '@ECEEEB', not a hex color, so this step is not read" }],
 		});
-		const alert = document.querySelector('[role="alert"]') as HTMLElement;
-		expect(alert.textContent).toBe('1 value couldn’t be readView');
-		expect(alert.compareDocumentPosition(tabs()[0] as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(document.querySelector('[role="alert"]')).toBeNull();
+		expect(text()).not.toContain('couldn’t be read');
 		expect(text()).not.toContain('neutral.ts:10');
 	});
 

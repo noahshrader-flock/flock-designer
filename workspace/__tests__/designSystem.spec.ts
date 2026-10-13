@@ -372,7 +372,7 @@ describe('searching the components (T9)', () => {
 });
 
 describe('the design system’s first row and the side panel’s top', () => {
-	it('says in an alert at the top of the tokens panel, under the panel’s switch and above its tabs, how many values could not be read, and nothing when all were', async () => {
+	it('says in the first row, as a small ghost button directly left of Sync, how many values could not be read, and nothing when all were', async () => {
 		await open(() => ok(ready()));
 		expect(document.body.textContent).not.toContain('couldn’t be read');
 		await unmountAll(current!.root);
@@ -381,17 +381,20 @@ describe('the design system’s first row and the side panel’s top', () => {
 			{ file: 'src/colors/tones/neutral.ts', line: 15, reason: 'two' },
 		];
 		await open(() => ok({ ...ready(), tokens: { ...TOKENS, problems } }));
-		// In the panel at the right, under its switch and before its tabs; not in the first row, which has only Sync and More
-		// beside the name. (Primitives says the same of its own, in its own view.)
-		const panel = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')?.nextElementSibling as HTMLElement;
-		const alert = panel.querySelector('[role="alert"]') as HTMLElement;
-		expect(alert.querySelector('[data-slot="alert-title"]')?.textContent).toBe('2 values couldn’t be read');
-		expect(alert.compareDocumentPosition(panel.querySelector('[role="tablist"]')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(panelView('Tokens').compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(firstRow().contains(alert)).toBe(false);
+		const problem = button('2 values couldn’t be read');
+		expect(problem.getAttribute('data-variant')).toBe('ghost');
+		expect(problem.getAttribute('data-size')).toBe('sm');
+		// In the first row, on every view, right before Sync; not an alert in the panel or on Primitives.
+		expect(firstRow().contains(problem)).toBe(true);
+		expect(problem.nextElementSibling).toBe(button('Sync'));
+		expect(document.querySelector('[role="alert"]')).toBeNull();
+		await chooseTab('Primitives');
+		expect(firstRow().closest('[hidden]')).toBeNull();
+		expect(document.querySelector('[role="alert"]')).toBeNull();
 		// Its details are in the dialog it opens, not in the panel.
+		const panel = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')?.nextElementSibling as HTMLElement;
 		expect(panel.textContent).not.toContain('neutral.ts');
-		await press(button('View', alert));
+		await press(problem);
 		await settle();
 		expect(document.querySelector('[role="dialog"]')?.textContent).toContain('src/colors/tones/neutral.ts:15');
 	});

@@ -9,7 +9,6 @@ import { Page } from './Page';
 import { LinesSkeleton, SkeletonStatus } from './Skeletons';
 import { StoryFrame } from './StoryFrame';
 import { Swatch } from './TokenEditor';
-import { TokenProblems } from './TokenProblems';
 import { badgeVariants } from './ui/badge';
 import { Card, CardContent } from './ui/card';
 import { Skeleton } from './ui/skeleton';
@@ -291,8 +290,6 @@ export const Primitives = ({ catalog, edits, hidden }: { catalog: Catalog | null
 			{edits.length > 0 && (
 				<p className="text-muted-foreground text-sm">Showing the change being tried on the Components tab ({plural(edits.length, 'token')}).</p>
 			)}
-			{/* In the page's own column: the panel's padding is the panel's. */}
-			<TokenProblems problems={read.problems} className="" />
 			{found.map(([category, list]) => (
 				<section
 					key={category}

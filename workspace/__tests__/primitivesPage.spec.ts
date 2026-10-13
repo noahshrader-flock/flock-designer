@@ -326,9 +326,10 @@ describe('with the rest of the tab', () => {
 		expect(document.body.textContent).toContain('Showing the change being tried on the Components tab');
 	});
 
-	it('says what it could not read, as the side panel does', async () => {
+	it('does not say what it could not read: the design system’s row does, on every view', async () => {
 		await show(ready(tokens(TOKENS, { problems: [{ file: 'src/colors/tones/neutral.ts', line: 10, reason: 'not a literal' }] })));
-		expect(document.body.textContent).toContain('1 value couldn’t be read');
+		expect(document.body.textContent).not.toContain('couldn’t be read');
+		expect(document.querySelector('[role="alert"]')).toBeNull();
 	});
 
 	it('shows the shape of what is coming while the design system is read, and says to connect one when there is none', async () => {
