@@ -8,7 +8,7 @@ import { ProjectCard } from './ProjectCard';
 import { ProjectRow } from './ProjectRow';
 import { FolderFilter } from './FolderFilter';
 import { ProjectSort } from './ProjectSort';
-import { PublishBanner, PublishLine, usePublishStatus } from './PublishStatus';
+import { PublishProblems, usePublishStatus } from './PublishStatus';
 import { Review } from './Review';
 import { SyncButton } from './SyncButton';
 import { Toolbar } from './Toolbar';
@@ -169,8 +169,8 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 				)}
 				<div className="grow" />
 				<div className="flex items-center gap-2">
-					{/* Where syncing is, beside the button that starts it, so the two always read together (as on the Design System). */}
-					<PublishLine status={publishStatus} />
+					{/* What is not synced, beside the button that starts one, so the two read together (as on the Design System). */}
+					<PublishProblems status={publishStatus} />
 					{/* Sync sends what is waiting and reads what is new, rather than waiting for the next trigger. */}
 					<SyncButton
 						syncing={syncing}
@@ -185,7 +185,6 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 				</div>
 			</Toolbar>
 			<Page wide>
-				<PublishBanner status={publishStatus} onChange={setPublishStatus} />
 				{looked && !checkout && suggestion && (
 					<Alert>
 						<AlertDescription className="flex flex-wrap items-center justify-between gap-2">

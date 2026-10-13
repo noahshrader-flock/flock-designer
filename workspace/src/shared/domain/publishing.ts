@@ -13,6 +13,8 @@ export type ShareStep = 'pushing' | 'opening' | 'building';
 export interface PublishProblem {
 	what: string;
 	why: string;
+	/** The files it is about, when there are any, as a list a person can read: a path to each, never run into the sentence. */
+	files?: string[];
 }
 
 /**

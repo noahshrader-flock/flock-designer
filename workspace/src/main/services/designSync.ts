@@ -43,7 +43,7 @@ const message = (err: unknown): string => errorText(err, { firstLine: true });
 
 export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 	const g = (...args: string[]) => git(designRoot, args, { timeoutMs: 120_000 });
-	const held = (why: string, published: string[] = []): SyncResult => ({ published, problems: [{ what: RECORDS, why }] });
+	const held = (why: string, files?: string[]): SyncResult => ({ published: [], problems: [{ what: RECORDS, why, ...(files ? { files } : {}) }] });
 
 	// Where this is going. Without a branch that tracks the same-named branch on GitHub there is nowhere safe to put records.
 	const branch = await g('rev-parse', '--abbrev-ref', 'HEAD').catch(() => 'HEAD');
@@ -71,7 +71,8 @@ export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 		const outside = lines(await g('diff', '--name-only', `${theirs}...HEAD`)).filter((f) => !f.startsWith('projects/'));
 		if (outside.length > 0) {
 			return held(
-				`${plural(outside.length, 'change')} outside the project records (${outside.slice(0, 3).join(', ')}${outside.length > 3 ? ', …' : ''}) are waiting to be pushed. Records are held back; push those yourself, and records will flow again.`,
+				`${plural(outside.length, 'change')} outside the project records ${outside.length === 1 ? 'is' : 'are'} waiting to be pushed. Records are held back; push ${outside.length === 1 ? 'it' : 'those'} yourself, and records will flow again.`,
+				outside,
 			);
 		}
 

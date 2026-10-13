@@ -1,13 +1,10 @@
-import { TriangleAlertIcon } from 'lucide-react';
-import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
-import { Button } from './ui/button';
 import { useEffect, useRef, useState } from 'react';
 import type { PublishStatus as Status } from '../shared/contract';
+import { ProblemsDialog } from './ProblemsDialog';
 
 /**
- * Whether the person's work is synced, said where they will see it. Syncing happens by itself, so this
- * only reports: a line in the top bar on every screen, and, if something could not be published, a banner
- * that names what and why and clears itself on the next run that gets through.
+ * Whether the person's work is synced, said where they will see it. Syncing happens by itself, so this only reports: when
+ * something could not be published, a button beside Sync (`PublishProblems`) that says so and, pressed, names what and why.
  */
 export const usePublishStatus = (): [Status, (s: Status) => void] => {
 	const [status, setStatus] = useState<Status>({ state: 'unavailable' });
@@ -19,78 +16,42 @@ export const usePublishStatus = (): [Status, (s: Status) => void] => {
 };
 
 /**
- * What the banner shows: what was held at the last sync, kept through the next run. The app syncs by itself
- * every few minutes, and hiding the banner for each run made it flicker for as long as something stayed held.
- * It goes only when a sync ends without the problem.
+ * What is shown of the problems: what was held at the last sync, kept through the next run. The app syncs by itself every
+ * few minutes, and hiding the button for each run made it flicker for as long as something stayed held. It goes only when a
+ * sync ends without the problem.
  */
-export const bannerStatus = (current: Status, lastHeld: Status | null): Status =>
+export const shownStatus = (current: Status, lastHeld: Status | null): Status =>
 	current.state === 'working' && lastHeld?.state === 'held' ? lastHeld : current;
 
-export const PublishBanner = ({ status: current, onChange }: { status: Status; onChange: (s: Status) => void }) => {
+/**
+ * What is held back from syncing, as a small ghost button beside Sync that opens a dialog naming each thing, why, and the
+ * files it is about, one to a line. Nothing at all when everything is synced, or there is nothing to sync from here.
+ */
+export const PublishProblems = ({ status: current }: { status: Status }) => {
 	const lastHeld = useRef<Status | null>(null);
-	const status = bannerStatus(current, lastHeld.current);
+	const status = shownStatus(current, lastHeld.current);
 	if (current.state !== 'working') lastHeld.current = current.state === 'held' ? current : null;
-	if (status.state === 'held') {
-		return (
-			<Alert variant="warning">
-				<TriangleAlertIcon />
-				<AlertTitle>Some of your work is not synced yet</AlertTitle>
-				<AlertDescription>
-					{status.problems.map((p) => (
-						<p key={`${p.what}:${p.why}`}>
-							{p.what}: {p.why}
-						</p>
-					))}
-				</AlertDescription>
-				<AlertAction>
-					<Button variant="outline" onClick={() => void window.workspace.publishNow().then((r) => r.ok && onChange(r.value))}>
-						Try again
-					</Button>
-				</AlertAction>
-			</Alert>
-		);
-	}
-	return null;
-};
-
-/**
- * The small line beside the Sync button. It shows only when something is held back; when all is well, or a sync is
- * running (the button says so), there is nothing to say.
- *
- * When something is held back, it names it. "Some work is not published" followed a person across
- * every screen without saying which work or what to do about it, so it read as nagging about
- * something they could not act on -- while the banner that does explain appears only on the project
- * list. One held thing is named outright; several are counted, and the reason for each is there to
- * hover without leaving the screen.
- */
-export const publishLineText = (status: Status): string | null => {
-	if (status.state !== 'held') return null;
-	const held = status.problems;
-	if (held.length === 1) return `Not synced: ${held[0]?.what}`;
-	return held.length > 1 ? `${held.length} things are not synced` : null;
-};
-
-/**
- * What the line beside the Sync button shows: the last result, kept while the next sync runs. The button already
- * says "Syncing…", so the line saying it too was the same word twice; it says "Syncing…" only on the first run,
- * when there is no result yet to show.
- */
-export const lineStatus = (current: Status, last: Status | null): Status =>
-	current.state === 'working' && last !== null && last.state !== 'unavailable' ? last : current;
-
-export const PublishLine = ({ status: current }: { status: Status }) => {
-	const last = useRef<Status | null>(null);
-	const status = lineStatus(current, last.current);
-	if (current.state !== 'working') last.current = current;
-	const held = status.state === 'held' ? status.problems : [];
-	const text = publishLineText(status);
-	if (text === null) return null;
+	if (status.state !== 'held' || status.problems.length === 0) return null;
 	return (
-		<span
-			className={`text-xs ${status.state === 'held' ? 'text-warning' : 'text-muted-foreground'}`}
-			title={held.map((p) => `${p.what}: ${p.why}`).join('\n') || undefined}
+		<ProblemsDialog
+			label="Some of your work is not synced"
+			description="This was held back, and goes up on the next sync once what is in the way is cleared."
 		>
-			{text}
-		</span>
+			<ul className="flex flex-col gap-4">
+				{status.problems.map((p) => (
+					<li key={`${p.what}:${p.why}`} className="flex flex-col gap-1 text-sm">
+						<span className="font-medium">{p.what}</span>
+						<span className="text-muted-foreground">{p.why}</span>
+						{p.files && p.files.length > 0 && (
+							<ul className="bg-muted mt-1 flex flex-col gap-1 rounded-md p-3 font-mono text-xs break-all">
+								{p.files.map((file) => (
+									<li key={file}>{file}</li>
+								))}
+							</ul>
+						)}
+					</li>
+				))}
+			</ul>
+		</ProblemsDialog>
 	);
 };

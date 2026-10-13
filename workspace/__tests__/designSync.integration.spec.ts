@@ -226,7 +226,10 @@ describe('what it refuses to publish', () => {
 		write(mine, 'projects/p/brief.md', '# P, edited\n');
 		const r = await syncRecords(mine);
 		expect(r.published).toEqual([]);
-		expect(r.problems[0]?.why).toMatch(/workspace\/app\.ts/);
+		// The files are a list of their own, in full, so a person can read them; the sentence says only how many and what to do.
+		expect(r.problems[0]?.files).toEqual(['workspace/app.ts']);
+		expect(r.problems[0]?.why).toMatch(/1 change outside the project records is waiting to be pushed/);
+		expect(r.problems[0]?.why).not.toMatch(/workspace\/app\.ts/);
 		expect(r.problems[0]?.why).toMatch(/Records are held back/);
 		expect(remoteHas('workspace/app.ts')).toBe(false);
 		expect(onRemote('projects/p/brief.md')).toBe('# P'); // not even the record went
