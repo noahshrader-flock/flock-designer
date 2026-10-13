@@ -40,7 +40,7 @@ export const ShareControl = ({
 	canOpen,
 	onOpenInBrowser,
 	prototype = false,
-	onMoveToCode,
+	onBuildInCodebase,
 	editor,
 	onViewRecord,
 	onAssignFolder,
@@ -54,7 +54,7 @@ export const ShareControl = ({
 	/** A prototype: already where reviewers see it, so there is no sharing, only moving it into the code. */
 	prototype?: boolean;
 	/** Offered when there is a product repository here to build it in. */
-	onMoveToCode?: () => void;
+	onBuildInCodebase?: () => void;
 	/** Codebase work, handed to the person's editor: the checkout, and the agent's conversation when there is one. */
 	editor?: { editor: boolean; session: boolean; openInEditor: () => unknown; continueInClaude: () => unknown };
 	/** Opens one of the project's documents (`project.records`), which are the last group in the menu. */
@@ -78,7 +78,7 @@ export const ShareControl = ({
 	const url = mine && status.state === 'ready' ? status.url : iteration.previewUrl;
 	const view = dialogView(phase, status, mine);
 	// The menu's two groups: what you do to the work, then where you look at it.
-	const canMove = prototype && onMoveToCode;
+	const canMove = prototype && onBuildInCodebase;
 	const canShare = checkout && !prototype;
 	// Where the project's codebase work is on GitHub, and its documents: always there, whether or not the page is up.
 	const builtInCode = projectCodeLink(project);
@@ -119,7 +119,7 @@ export const ShareControl = ({
 					{canOpen && (
 						<>
 							{canMove && (
-								<DropdownMenuItem onSelect={onMoveToCode}>
+								<DropdownMenuItem onSelect={onBuildInCodebase}>
 									<CodeIcon />
 									Build
 								</DropdownMenuItem>

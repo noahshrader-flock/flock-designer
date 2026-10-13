@@ -5,7 +5,7 @@ import { READY_LINE } from '../shared/handoff';
 import { withState } from '../shared/prototypeStates';
 import { isPrototypeKey, prototypeKey, prototypePagePath } from '../shared/designPaths';
 import { iterationLabel, workKind, workOf } from '../shared/work';
-import { toProjectIteration } from '../shared/records';
+import { toProjectIteration } from '../shared/iterationRecords';
 import { IterationSwitcher, StateSwitcher } from './IterationSwitcher';
 import { CommentBox } from './comments/CommentBox';
 import { CommentControl } from './comments/CommentControl';
@@ -15,7 +15,7 @@ import { prototypeAddressed } from './comments/addressed';
 import { appComments, appPage } from './comments/appAdapter';
 import { useComments } from './comments/useComments';
 import { HandoffDialog } from './HandoffDialog';
-import { MoveToCode } from './MoveToCode';
+import { BuildInCodebaseDialog } from './BuildInCodebaseDialog';
 import { RecordSheet } from './RecordSheet';
 import { AccessibilityStatus } from './AccessibilityStatus';
 import { AgentLog, Loading } from './Loading';
@@ -123,7 +123,7 @@ export const Review = ({
 	// Assign folder's modal, and the folder as last assigned here: the project shown was read before it.
 	const [assigning, setAssigning] = useState(false);
 	const [folder, setFolder] = useState(project.folder ?? null);
-	// Moving a prototype into the code is confirmed first, in a dialog (MoveToCode).
+	// Moving a prototype into the code is confirmed first, in a dialog (BuildInCodebaseDialog).
 	const [moving, setMoving] = useState(false);
 	const kind = workKind(iteration);
 	const codebase = kind === 'codebase';
@@ -470,7 +470,7 @@ export const Review = ({
 						canOpen={opened}
 						onOpenInBrowser={() => void window.workspace.openPreviewInBrowser().then((r) => !r.ok && setError(r.error))}
 						prototype={prototype}
-						onMoveToCode={checkout ? () => setMoving(true) : undefined}
+						onBuildInCodebase={checkout ? () => setMoving(true) : undefined}
 						editor={editor.available ? editor : undefined}
 						onViewRecord={(name) => setViewing({ name, open: true })}
 						onAssignFolder={() => setAssigning(true)}
@@ -505,7 +505,7 @@ export const Review = ({
 				<HandoffDialog open={handingOff} onClose={() => setHandingOff(false)} iteration={iteration} onStart={localBuild.handoff} />
 			)}
 			{checkout && prototype && (
-				<MoveToCode open={moving} onClose={() => setMoving(false)} project={project} iteration={iteration} checkout={checkout} />
+				<BuildInCodebaseDialog open={moving} onClose={() => setMoving(false)} project={project} iteration={iteration} checkout={checkout} />
 			)}
 
 			{/* Under the toolbar: the preview, and beside it the sidebar when it is open. */}

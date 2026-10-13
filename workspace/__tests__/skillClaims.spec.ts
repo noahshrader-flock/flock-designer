@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { codebaseTask, handoffTask, moveToCodeTask, prototypeAddressTask, prototypeBuildTask } from '../src/main/services/agentTasks';
+import { codebaseTask, handoffTask, buildInCodebaseTask, prototypeAddressTask, prototypeBuildTask } from '../src/main/services/agentTasks';
 
 const SKILLS = join(__dirname, '../../skills');
 const skill = (name: string): string => readFileSync(join(SKILLS, name), 'utf8');
@@ -21,7 +21,7 @@ const sources = {
 	nodeModules: null,
 };
 const TASKS: Record<string, (text: string) => string> = {
-	'move-to-code.md': (text) => moveToCodeTask({ skill: text, pageFile: '/p/i1.html', auditFile: '/d/audit-i1.md', name: 'i1' }, parts),
+	'move-to-code.md': (text) => buildInCodebaseTask({ skill: text, pageFile: '/p/i1.html', auditFile: '/d/audit-i1.md', name: 'i1' }, parts),
 	'codebase-work.md': (text) => codebaseTask({ unattended: text, task: 'The task.' }, parts),
 	'handoff.md': (text) => handoffTask({ skill: text, projectId: 'p', branch: 'feature/p', gate: null }, parts),
 	'build-prototype.md': (text) =>

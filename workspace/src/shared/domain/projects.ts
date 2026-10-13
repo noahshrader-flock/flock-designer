@@ -48,7 +48,7 @@ export interface Iteration {
 export type IterationKind = 'prototype' | 'codebase';
 
 /** Where Build in the codebase handed the building: VS Code's Claude Code panel, or a command to start it in a terminal. */
-export interface BuildInClaude {
+export interface BuildInCodebase {
 	editor: boolean;
 	command: string | null;
 }
@@ -60,7 +60,7 @@ export interface OpenedPrototype {
 }
 
 /** What moving a prototype into the code would do here, so the person is told before it does it. */
-export interface MoveToCodePlan {
+export interface BuildInCodebasePlan {
 	/** The project's one codebase branch, as this repository names it. */
 	branch: string;
 	/** That branch already exists in this checkout: the work continues on it rather than starting a new one. */

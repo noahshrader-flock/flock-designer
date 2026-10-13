@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Project, ProjectIteration } from '../src/shared/contract';
 import { isPrototypeKey, prototypeKey, prototypePagePath } from '../src/shared/designPaths';
 import { nextPrototypeName } from '../src/shared/prototypeNames';
-import { cloneStore, moveToCodePrompt, prototypeReadable, recordPrototype, setCover } from '../src/main/services/prototype';
+import { cloneStore, buildInCodebasePrompt, prototypeReadable, recordPrototype, setCover } from '../src/main/services/prototype';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { agentFinished, agentRunning, memoryStore, projectIteration } from './fixtures';
 import { prototypeBuildTask } from '../src/main/services/agentTasks';
@@ -347,13 +347,13 @@ describe('the first line of a Build conversation', () => {
 	const at = { label: 'V2 · I1', projectId: 'alert-history', taskFile: '/app/prototypes/alert-history/v2-i1-into-code.md' };
 
 	it('says what to build and points at the task, for new work', () => {
-		expect(moveToCodePrompt({ ...at, continuing: null })).toBe(
+		expect(buildInCodebasePrompt({ ...at, continuing: null })).toBe(
 			"Build prototype V2 · I1 of alert-history into this codebase. Your task, with the skill to follow and the prototype's files, is in /app/prototypes/alert-history/v2-i1-into-code.md: read it and do what it says.",
 		);
 	});
 
 	it('says to look at what is on the branch first, for work started before', () => {
-		const prompt = moveToCodePrompt({ ...at, continuing: 'feature/alert-history' });
+		const prompt = buildInCodebasePrompt({ ...at, continuing: 'feature/alert-history' });
 		expect(prompt).toMatch(
 			/^Continue building prototype V2 · I1 of alert-history into this codebase, on feature\/alert-history\. Some of it may be done already, so look at the branch and the audit first\./,
 		);

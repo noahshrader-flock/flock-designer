@@ -10,7 +10,7 @@ import type {
 	RepositoryReach,
 } from '../shared/contract';
 import { slugify } from '../shared/validate';
-import { toProjectIteration } from '../shared/records';
+import { toProjectIteration } from '../shared/iterationRecords';
 import { CancelButton } from './CancelButton';
 import { CloneHere, useClone, Working } from './Clone';
 import { FolderField, type FolderPick, pickOf, pickedFolder } from './FolderField';

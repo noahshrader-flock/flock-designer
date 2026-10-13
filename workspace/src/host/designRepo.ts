@@ -4,7 +4,7 @@ import { projectDir, projectPath } from '../shared/designPaths';
 import { isBot, mergePeople } from '../shared/people';
 import { iterationOrder, latestDate } from '../shared/projectList';
 import { asRecord } from '../shared/json';
-import { parseIterations, toProjectIteration } from '../shared/records';
+import { parseIterations, toProjectIteration } from '../shared/iterationRecords';
 import type { RepoRef } from '../shared/repoRef';
 import type { GitHubApi } from './github';
 import { RepoFiles } from './repoFiles';

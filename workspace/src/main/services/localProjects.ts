@@ -4,7 +4,7 @@ import type { Project } from '../../shared/contract';
 import { mergePeople } from '../../shared/people';
 import { fromBrief } from '../../shared/brief';
 import { iterationOrder } from '../../shared/projectList';
-import { parseIterations, toProjectIteration } from '../../shared/records';
+import { parseIterations, toProjectIteration } from '../../shared/iterationRecords';
 
 /**
  * Every project folder in the local copy of the design repository, read straight from disk, with whatever

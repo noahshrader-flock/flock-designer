@@ -7,7 +7,7 @@ import { projectPath, prototypeKey } from '../../shared/designPaths';
 import { isPrototypeName, nextPrototypeName } from '../../shared/prototypeNames';
 import { assertCover } from '../../shared/validate';
 import { resolveInside } from './paths';
-import { parseIterations, serializeIterations } from '../../shared/records';
+import { parseIterations, serializeIterations } from '../../shared/iterationRecords';
 
 /**
  * Prototypes: what is recorded, where the page is kept, and what the agent is told.
@@ -235,7 +235,7 @@ export const prototypeReadable = (s: PrototypeSources | null): string[] =>
  * written beside the prototype. `continuing` is the branch, when the work was started before: then it says to look at
  * what is there first.
  */
-export const moveToCodePrompt = ({
+export const buildInCodebasePrompt = ({
 	label,
 	projectId,
 	taskFile,

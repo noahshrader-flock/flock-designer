@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addressTask, codebaseTask, handoffTask, moveToCodeTask } from '../src/main/services/agentTasks';
+import { addressTask, codebaseTask, handoffTask, buildInCodebaseTask } from '../src/main/services/agentTasks';
 
 const parts = {
 	lightCheck: 'npm run check:iteration',
@@ -17,7 +17,7 @@ describe('every run in a product checkout', () => {
 		'codebase work': codebaseTask({ unattended: '# Codebase work, unattended', task: 'Build it.' }, parts),
 		'an Address on a branch': codebaseTask({ unattended: null, task: 'Address comment 1.' }, parts),
 		Handoff: handoffTask({ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null }, parts),
-		'moving a prototype into the code': moveToCodeTask({ skill: '# Move', pageFile: '/p.html', auditFile: '/a.md', name: 'v1-i1' }, parts),
+		'moving a prototype into the code': buildInCodebaseTask({ skill: '# Move', pageFile: '/p.html', auditFile: '/a.md', name: 'v1-i1' }, parts),
 	};
 
 	it.each(Object.entries(tasks))('ends with the same parts, in the same order: %s', (_kind, task) => {
@@ -78,7 +78,7 @@ describe('addressTask', () => {
 
 describe('moving a prototype into the code', () => {
 	it('asks for the audit before any code changes', () => {
-		const task = moveToCodeTask(
+		const task = buildInCodebaseTask(
 			{ skill: 's', pageFile: '/q/i1.html', auditFile: '/d/projects/users/audit-i1.md', name: 'i1' },
 			{ lightCheck: null, shared: '', accessibility: '', voice: '' },
 		);

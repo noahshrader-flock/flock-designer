@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { BuildInClaude, MoveToCodePlan } from '../../shared/contract';
+import type { BuildInCodebase, BuildInCodebasePlan } from '../../shared/contract';
 import { prototypeKey } from '../../shared/designPaths';
 import { lastVerdict } from '../../shared/handoff';
 import { iterationLabel, workKind } from '../../shared/work';
@@ -9,7 +9,7 @@ import { arg, handle } from '../handle';
 import { A11Y_COMMAND, productTarget, taskAccessibility } from '../services/accessibilityBrief';
 import { ADDRESS_SKILL, prepareAddress } from '../services/address';
 import { type AgentExtras, agentReadiness } from '../services/agent';
-import { type CheckoutParts, codebaseTask, handoffTask, moveToCodeTask } from '../services/agentTasks';
+import { type CheckoutParts, codebaseTask, handoffTask, buildInCodebaseTask } from '../services/agentTasks';
 import { projectTitle } from '../services/commentsExport';
 import { designSystemCheckout, readDescriptor } from '../services/descriptor';
 import { recordsRootFor } from '../services/discovery';
@@ -17,7 +17,7 @@ import { resumeCommand, startCommand } from '../services/editor';
 import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, commandLine } from '../services/engineeringHandoff';
 import { branchCommit, changedSince, headCommit, readCheckout } from '../services/git';
 import { codebaseBranchFor, recordPreview, recordedIteration } from '../services/iterations';
-import { MOVE_SKILL, moveToCodePrompt } from '../services/prototype';
+import { MOVE_SKILL, buildInCodebasePrompt } from '../services/prototype';
 import { pullRequestText } from '../services/share';
 import type { IpcDeps } from '../ipc';
 
@@ -237,7 +237,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 		});
 	});
 	handle('shareStatus', [], () => share.status());
-	handle('moveToCodePlan', [checkout, arg.projectId, arg.prototypeName], async (workIn, projectId, name): Promise<MoveToCodePlan> => {
+	handle('buildInCodebasePlan', [checkout, arg.projectId, arg.prototypeName], async (workIn, projectId, name): Promise<BuildInCodebasePlan> => {
 		const { canonical } = workIn;
 		const { branch, exists, recorded, started, records } = await codebase.of(workIn, projectId);
 		const basedOn = records.find((i) => i.name === name)?.basedOn;
@@ -286,9 +286,9 @@ export const registerCodebase = (d: IpcDeps): void => {
 	 * command that starts it in a terminal is put on the clipboard.
 	 */
 	handle(
-		'buildInClaude',
+		'buildInCodebase',
 		[checkout, arg.projectId, arg.prototypeName, arg.optional(arg.branch)],
-		async (workIn, projectId, name, from): Promise<BuildInClaude> => {
+		async (workIn, projectId, name, from): Promise<BuildInCodebase> => {
 			const { canonical, recordsRoot } = workIn;
 			const skill = await readSkillText(MOVE_SKILL);
 			// The page and its source are copied where the agent can read them, so it works from the version saved.
@@ -308,7 +308,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 			const taskFile = join(dirname(pageFile), `${name}-into-code.md`);
 			writeFileSync(
 				taskFile,
-				moveToCodeTask(
+				buildInCodebaseTask(
 					{
 						skill,
 						pageFile,
@@ -322,7 +322,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 					(await checkoutParts(canonical, projectId, await prototypeAccessibility(projectId, name).catch(() => null))).parts,
 				),
 			);
-			const prompt = moveToCodePrompt({ label, projectId, taskFile, continuing: continuing ? branch : null });
+			const prompt = buildInCodebasePrompt({ label, projectId, taskFile, continuing: continuing ? branch : null });
 			const editor = ports.editor.find();
 			if (editor) {
 				await ports.editor.openPrompt(editor, canonical, prompt);

@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PublishProblem } from '../../shared/contract';
 import { plural } from '../../shared/plural';
-import { mergeIterationRecords } from '../../shared/records';
+import { mergeIterationRecords } from '../../shared/iterationRecords';
 import { commitOnto, git } from './git';
 import { errorText } from '../../shared/result';
 import { HOST } from '../../shared/vocabulary';

@@ -34,10 +34,10 @@ import type {
 	TokenEdit,
 } from '../domain/designSystem';
 import type {
-	BuildInClaude,
+	BuildInCodebase,
 	Iteration,
 	MadeCover,
-	MoveToCodePlan,
+	BuildInCodebasePlan,
 	OpenedPrototype,
 	PageStatus,
 	Project,
@@ -251,7 +251,7 @@ export interface WorkspaceApi {
 	/** Starts the prototype's agent on what its last check found, and nothing else: one round of its own check (T7). */
 	fixAccessibility(projectId: string, name: string): Promise<Result<AgentStatus>>;
 	/** What moving a prototype into the code would do in this checkout, asked before it is offered. */
-	moveToCodePlan(root: string, projectId: string, name: string): Promise<Result<MoveToCodePlan>>;
+	buildInCodebasePlan(root: string, projectId: string, name: string): Promise<Result<BuildInCodebasePlan>>;
 	/** Whether a prototype can be built from this repository on this machine, and with which design system version. */
 	prototypeReadiness(root: string): Promise<Result<PrototypeReadiness>>;
 	/**
@@ -259,7 +259,7 @@ export interface WorkspaceApi {
 	 * hands the building to Claude Code in the repository: VS Code's panel when it is here (`editor`), or the command
 	 * that starts it in a terminal, put on the clipboard (`command`).
 	 */
-	buildInClaude(root: string, projectId: string, name: string, from?: string): Promise<Result<BuildInClaude>>;
+	buildInCodebase(root: string, projectId: string, name: string, from?: string): Promise<Result<BuildInCodebase>>;
 	/** Asked when new work is about to be started: is Claude Code installed here, and signed in? */
 	agentReadiness(): Promise<Result<AgentReadiness>>;
 	/**
@@ -293,7 +293,8 @@ export interface WorkspaceApi {
 	ensureCovers(): Promise<Result<MadeCover[]>>;
 	/** A prototype's picture, by the hash on its record, as a data URL; null when there is none to read. */
 	projectCover(projectId: string, name: string, cover: string): Promise<Result<string | null>>;
-	readComments(projectId: string, iteration: string): Promise<Result<ReviewComment[]>>;
+	/** A review thread's comments. `branch`: the iteration's branch, which its thread is filed under (a prototype's is its key). */
+	readComments(projectId: string, branch: string): Promise<Result<ReviewComment[]>>;
 	/** The text of one file in a project's folder (its brief, its review notes, …): this machine's copy if it has one, else GitHub's. */
 	readRecord(projectId: string, name: string): Promise<Result<string>>;
 	/** The app's appearance (Settings): Auto, Light or Dark. */
@@ -302,13 +303,7 @@ export interface WorkspaceApi {
 	setAppearance(appearance: Appearance): Promise<Result<Appearance>>;
 	/** Puts a project in a folder, or in none for null, in its brief in the design repository (the folders plan). */
 	assignFolder(projectId: string, folder: string | null): Promise<Result<null>>;
-	postComment(
-		projectId: string,
-		iteration: string,
-		body: string,
-		anchor: CommentAnchor | null,
-		picture?: string | null,
-	): Promise<Result<ReviewComment>>;
+	postComment(projectId: string, branch: string, body: string, anchor: CommentAnchor | null, picture?: string | null): Promise<Result<ReviewComment>>;
 
 	/** The preview, shown inside the window at the given place. It cannot call back into the app. */
 	pageOpen(url: string): Promise<Result<null>>;
@@ -422,9 +417,9 @@ export const INVOKE = [
 	'openPrototype',
 	'checkAccessibility',
 	'fixAccessibility',
-	'buildInClaude',
+	'buildInCodebase',
 	'prototypeReadiness',
-	'moveToCodePlan',
+	'buildInCodebasePlan',
 	'addressComments',
 	'shareIteration',
 	'shareStatus',

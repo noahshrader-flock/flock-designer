@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeIterationRecords, parseIterations, serializeIterations, toProjectIteration } from '../src/shared/records';
+import { mergeIterationRecords, parseIterations, serializeIterations, toProjectIteration } from '../src/shared/iterationRecords';
 
 const rec = (name: string, extra: Record<string, unknown> = {}) => ({
 	projectId: 'p',

@@ -86,7 +86,7 @@ describe('the More menus', () => {
 				canOpen: true,
 				onOpenInBrowser: vi.fn(),
 				prototype: true,
-				onMoveToCode: vi.fn(),
+				onBuildInCodebase: vi.fn(),
 				editor: {} as never,
 			}),
 		);

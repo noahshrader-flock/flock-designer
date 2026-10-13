@@ -16,7 +16,7 @@ import {
 import { resolveInside } from './paths';
 import { parsePrototypeName } from '../../shared/prototypeNames';
 import { PROJECT_ID } from '../../shared/validate';
-import { parseIterations, serializeIterations } from '../../shared/records';
+import { parseIterations, serializeIterations } from '../../shared/iterationRecords';
 import { writeAtomic } from './jsonFile';
 import { parseRemote } from '../../shared/repoRef';
 import { loginFromNoreply } from '../../shared/hostUrls';

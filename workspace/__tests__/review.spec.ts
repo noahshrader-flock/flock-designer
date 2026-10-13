@@ -414,7 +414,7 @@ describe('Build', () => {
 	const dialog = async (withSetup: string[], more: Partial<typeof plan> = {}) => {
 		const app = fakeApp({
 			agentReadiness: async () => ok({ state: 'ready' }),
-			moveToCodePlan: async () => ok({ ...plan, ...more }),
+			buildInCodebasePlan: async () => ok({ ...plan, ...more }),
 			branchesWithSetup: async () => ok(withSetup),
 		});
 		await open(app);
@@ -431,22 +431,22 @@ describe('Build', () => {
 
 	it('hands the building to Claude Code in VS Code, and says so, rather than running it here', async () => {
 		const app = await dialog(['develop']);
-		app.impl.buildInClaude = async () => ok({ editor: true, command: null });
+		app.impl.buildInCodebase = async () => ok({ editor: true, command: null });
 		await press(button('Build in Claude Code'));
 		await settle();
-		expect(app.calls.buildInClaude).toEqual([['/c/flock-coke', 'demo', 'v1-i1', 'develop']]);
+		expect(app.calls.buildInCodebase).toEqual([['/c/flock-coke', 'demo', 'v1-i1', 'develop']]);
 		expect(document.body.textContent).toContain('It is in Claude Code in VS Code now, on feature/demo');
 		// The extension types the prompt in; the person sends it.
 		expect(document.body.textContent).toContain('Press Enter there to start it');
 		// Nothing is run, or shown running, in the app.
 		expect(app.calls.startAgent).toBeUndefined();
-		expect(app.calls.prepareMoveToCode).toBeUndefined();
+		expect(app.calls.prepareBuildInCodebase).toBeUndefined();
 		await press(button('Done'));
 	});
 
 	it('gives the command for a terminal when VS Code with Claude Code is not here', async () => {
 		const app = await dialog(['develop']);
-		app.impl.buildInClaude = async () => ok({ editor: false, command: "cd /c/flock-coke && claude 'Build prototype V1 · I1'" });
+		app.impl.buildInCodebase = async () => ok({ editor: false, command: "cd /c/flock-coke && claude 'Build prototype V1 · I1'" });
 		await press(button('Build in Claude Code'));
 		await settle();
 		expect(document.body.textContent).toContain('the command that starts it in a terminal is on your clipboard');
@@ -455,7 +455,7 @@ describe('Build', () => {
 
 	it('says why it could not start, and stays open to try again', async () => {
 		const app = await dialog(['develop']);
-		app.impl.buildInClaude = async () => fail('There are uncommitted changes in flock-coke.');
+		app.impl.buildInCodebase = async () => fail('There are uncommitted changes in flock-coke.');
 		await press(button('Build in Claude Code'));
 		await settle();
 		expect(document.body.textContent).toContain('There are uncommitted changes in flock-coke.');
@@ -463,7 +463,7 @@ describe('Build', () => {
 	});
 
 	it('is called just Build in the menu, and its button says where it goes', async () => {
-		const app = fakeApp({ moveToCodePlan: async () => ok(plan), branchesWithSetup: async () => ok(['develop']) });
+		const app = fakeApp({ buildInCodebasePlan: async () => ok(plan), branchesWithSetup: async () => ok(['develop']) });
 		await open(app);
 		const items = await openMenu(button('More'));
 		const names = items.map((i) => i.textContent?.trim());
@@ -484,11 +484,11 @@ describe('Build', () => {
 			expect(document.body.textContent).toContain('feature/demo already has this project’s codebase work');
 			// No branch to choose: it is that branch.
 			expect(document.getElementById('move-from')).toBeNull();
-			app.impl.buildInClaude = async () => ok({ editor: true, command: null });
+			app.impl.buildInCodebase = async () => ok({ editor: true, command: null });
 			await press(button('Continue in Claude Code'));
 			await settle();
 			// No base branch is sent: nothing is created.
-			expect(app.calls.buildInClaude).toEqual([['/c/flock-coke', 'demo', 'v1-i1', undefined]]);
+			expect(app.calls.buildInCodebase).toEqual([['/c/flock-coke', 'demo', 'v1-i1', undefined]]);
 			expect(document.body.textContent).toContain('It is in Claude Code in VS Code now, on feature/demo');
 		});
 
@@ -532,7 +532,7 @@ describe('there is no selected version', () => {
 		const app = fakeApp({
 			agentReadiness: async () => ok({ state: 'ready' }),
 			branchesWithSetup: async () => ok(['develop']),
-			moveToCodePlan: async () =>
+			buildInCodebasePlan: async () =>
 				ok({
 					branch: 'feature/demo',
 					exists: false,
@@ -548,7 +548,7 @@ describe('there is no selected version', () => {
 		await press(menuItem(await openMenu(button('More')), 'Build'));
 		await settle();
 		expect(document.body.textContent).toContain('This moves V1 · I1 into flock-coke');
-		expect(app.calls.moveToCodePlan?.[0]).toEqual(['/c/flock-coke', 'demo', 'v1-i1']);
+		expect(app.calls.buildInCodebasePlan?.[0]).toEqual(['/c/flock-coke', 'demo', 'v1-i1']);
 	});
 });
 

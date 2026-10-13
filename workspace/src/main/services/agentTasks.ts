@@ -80,7 +80,7 @@ export const handoffTask = (
 	].join('\n');
 
 /** What the agent is told when a prototype moves into the codebase: audit first, then build. */
-export const moveToCodeTask = (
+export const buildInCodebaseTask = (
 	{
 		skill,
 		pageFile,

@@ -6,7 +6,7 @@ import { isPrototypeKey, sitePath } from '../shared/designPaths';
 import { parsePrototypeName } from '../shared/prototypeNames';
 import { iterationLabel, projectCodeLink } from '../shared/work';
 import { statesOf } from '../shared/prototypeStates';
-import { parseIterations } from '../shared/records';
+import { parseIterations } from '../shared/iterationRecords';
 import { plural } from '../shared/plural';
 import { extensionOf } from '../shared/mime';
 import type { RepoRef } from '../shared/repoRef';

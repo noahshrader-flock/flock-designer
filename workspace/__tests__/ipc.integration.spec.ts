@@ -122,7 +122,7 @@ const savedPrototype = async (root = product) => {
 };
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7, 7, 7]);
 /** Build on that prototype, from `from`: how codebase work is started from the window. */
-const build = (root: string, from?: string) => call(CHANNELS.buildInClaude, root, 'demo', 'v1-i1', from);
+const build = (root: string, from?: string) => call(CHANNELS.buildInCodebase, root, 'demo', 'v1-i1', from);
 /** Codebase work for demo, recorded and checked out, as Build or an agent in a terminal would leave it. */
 const codebaseWork = async () => {
 	const { createIteration } = await import('../src/main/services/iterations');
@@ -751,7 +751,7 @@ describe('a repository must be opened before anything acts on it', () => {
 		[CHANNELS.listIterations, () => [product, 'demo']],
 		[CHANNELS.startCommand, () => [product, 'preview', 'demo']],
 		[CHANNELS.startAgent, () => [product, 'demo', 'do it']],
-		[CHANNELS.buildInClaude, () => [product, 'demo', 'v1-i1']],
+		[CHANNELS.buildInCodebase, () => [product, 'demo', 'v1-i1']],
 	])('%s refuses a root this window never opened', async (channel, args) => {
 		const r = await call(channel, ...args());
 		expect(r.ok).toBe(false);
@@ -1532,7 +1532,7 @@ describe('prototypes', () => {
 
 		it('carries what the prototype’s accessibility check left open into the task, to fix in the code (T7)', async () => {
 			await saved();
-			await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop');
+			await call(CHANNELS.buildInCodebase, product, 'demo', 'v1-i1', 'develop');
 			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'), 'utf8');
 			expect(task).toContain("### What the prototype's check left open");
 			expect(task).toContain('- **image-alt** (WCAG 1.1.1): Images must have alternate text. 1 element.');
@@ -1540,13 +1540,13 @@ describe('prototypes', () => {
 			checkPage.mockRejectedValue(new Error('no window'));
 			rmSync(join(home, 'prototype', 'demo', 'v1-i1.accessibility.json'), { force: true });
 			g(product, 'checkout', '-q', 'develop');
-			expect((await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
+			expect((await call(CHANNELS.buildInCodebase, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
 			expect(readFileSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'), 'utf8')).not.toContain('left open');
 		});
 
 		it('tells its agent this product’s light check and where the shared skills and standards are, which nothing else does', async () => {
 			await saved();
-			expect((await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
+			expect((await call(CHANNELS.buildInCodebase, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
 			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'), 'utf8');
 			// The fixture's workspace file names none, so the agent is told what to run instead.
 			expect(task).toContain("This product's workspace file names no light check (`check-iteration`)");
@@ -1558,7 +1558,7 @@ describe('prototypes', () => {
 			await saved();
 			mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });
 			writeFileSync(join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
-			expect((await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
+			expect((await call(CHANNELS.buildInCodebase, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
 			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'), 'utf8');
 			expect(task).toContain('Calm and exact.');
 			expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## Voice and tone'));
@@ -1580,7 +1580,7 @@ describe('prototypes', () => {
 			// A checkout beside the product, which a package-style design system would have, is not what is read.
 			mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });
 			writeFileSync(join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nFrom beside it.\n');
-			expect((await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
+			expect((await call(CHANNELS.buildInCodebase, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
 			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'), 'utf8');
 			expect(task).toContain('From the folder.');
 			expect(task).not.toContain('From beside it.');
@@ -1588,7 +1588,7 @@ describe('prototypes', () => {
 
 		it('makes the branch and the record, writes the task beside the prototype, and gives the command to start it', async () => {
 			await saved();
-			const r = await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop');
+			const r = await call(CHANNELS.buildInCodebase, product, 'demo', 'v1-i1', 'develop');
 			expect(r.ok).toBe(true);
 			// Codebase work, as any: its branch checked out, and its record.
 			expect(g(product, 'branch', '--show-current').trim()).toBe('feature/demo');
@@ -1616,14 +1616,14 @@ describe('prototypes', () => {
 		describe('coming back to codebase work already started', () => {
 			const started = async () => {
 				await saved();
-				expect((await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
+				expect((await call(CHANNELS.buildInCodebase, product, 'demo', 'v1-i1', 'develop')).ok).toBe(true);
 				g(product, 'checkout', '-q', 'develop');
 				copied = '';
 			};
 
 			it('continues on its branch with a prompt that says to look at what is there, and makes no second record', async () => {
 				await started();
-				const r = await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1');
+				const r = await call(CHANNELS.buildInCodebase, product, 'demo', 'v1-i1');
 				expect(r.ok).toBe(true);
 				expect(g(product, 'branch', '--show-current').trim()).toBe('feature/demo');
 				const records = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'iterations.json'), 'utf8')) as { name: string }[];
@@ -1638,7 +1638,7 @@ describe('prototypes', () => {
 				await started();
 				g(product, 'checkout', '-q', 'feature/demo');
 				writeFileSync(join(product, 'README.md'), 'work in progress\n');
-				const r = await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1');
+				const r = await call(CHANNELS.buildInCodebase, product, 'demo', 'v1-i1');
 				expect(r.ok).toBe(true);
 				expect(readFileSync(join(product, 'README.md'), 'utf8')).toBe('work in progress\n');
 			});
@@ -1646,7 +1646,7 @@ describe('prototypes', () => {
 			it('will not move a dirty checkout to the branch from another, and says why', async () => {
 				await started();
 				writeFileSync(join(product, 'README.md'), 'changed\n');
-				const r = await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1');
+				const r = await call(CHANNELS.buildInCodebase, product, 'demo', 'v1-i1');
 				expect(r.error).toMatch(/uncommitted changes/);
 				expect(g(product, 'branch', '--show-current').trim()).toBe('develop');
 				expect(copied).toBe('');
@@ -1661,7 +1661,7 @@ describe('prototypes', () => {
 				g(product, 'push', '-q', 'origin', 'feature/demo', 'develop');
 				g(product, 'fetch', '-q', 'origin');
 				g(product, 'branch', '-q', '-D', 'feature/demo');
-				const r = await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1');
+				const r = await call(CHANNELS.buildInCodebase, product, 'demo', 'v1-i1');
 				expect(r.ok).toBe(true);
 				expect(g(product, 'branch', '--show-current').trim()).toBe('feature/demo');
 			});
@@ -1670,7 +1670,7 @@ describe('prototypes', () => {
 		it('writes nothing for the agent when the work cannot start', async () => {
 			await saved();
 			writeFileSync(join(product, 'README.md'), 'changed\n');
-			const r = await call(CHANNELS.buildInClaude, product, 'demo', 'v1-i1', 'develop');
+			const r = await call(CHANNELS.buildInCodebase, product, 'demo', 'v1-i1', 'develop');
 			expect(r.error).toMatch(/uncommitted changes/);
 			expect(existsSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'))).toBe(false);
 			expect(copied).toBe('');
@@ -1685,7 +1685,7 @@ describe('prototypes', () => {
 
 		it('says what it would do: the branch, whether it exists, and what the prototype was modeled on', async () => {
 			await start();
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'v1-i1')).value).toEqual({
+			expect((await call(CHANNELS.buildInCodebasePlan, product, 'demo', 'v1-i1')).value).toEqual({
 				branch: 'feature/demo',
 				exists: false,
 				recorded: false,
@@ -1700,26 +1700,30 @@ describe('prototypes', () => {
 		it('says when the branch already exists here, so the work continues on it', async () => {
 			await start();
 			g(product, 'branch', 'feature/demo');
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'v1-i1')).value).toMatchObject({ exists: true, recorded: false, started: true });
+			expect((await call(CHANNELS.buildInCodebasePlan, product, 'demo', 'v1-i1')).value).toMatchObject({
+				exists: true,
+				recorded: false,
+				started: true,
+			});
 		});
 
 		it('says when the project already has codebase work recorded', async () => {
 			await start();
 			await codebaseWork();
 			g(product, 'checkout', '-q', 'develop');
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'v1-i1')).value).toMatchObject({ recorded: true, started: true });
+			expect((await call(CHANNELS.buildInCodebasePlan, product, 'demo', 'v1-i1')).value).toMatchObject({ recorded: true, started: true });
 		});
 
 		it('says when uncommitted changes would stop it', async () => {
 			await start();
 			writeFileSync(join(product, 'README.md'), 'changed\n');
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', 'v1-i1')).value).toMatchObject({ clean: false });
+			expect((await call(CHANNELS.buildInCodebasePlan, product, 'demo', 'v1-i1')).value).toMatchObject({ clean: false });
 		});
 
 		it('refuses a name that is not a prototype, and a repository that was not accepted', async () => {
 			await start();
-			expect((await call(CHANNELS.moveToCodePlan, product, 'demo', '../x')).ok).toBe(false);
-			expect((await call(CHANNELS.moveToCodePlan, home, 'demo', 'v1-i1')).ok).toBe(false);
+			expect((await call(CHANNELS.buildInCodebasePlan, product, 'demo', '../x')).ok).toBe(false);
+			expect((await call(CHANNELS.buildInCodebasePlan, home, 'demo', 'v1-i1')).ok).toBe(false);
 		});
 	});
 

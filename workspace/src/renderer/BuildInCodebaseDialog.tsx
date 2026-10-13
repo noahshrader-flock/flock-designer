@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { BuildInClaude, Checkout, MoveToCodePlan, Project, ProjectIteration } from '../shared/contract';
+import type { BuildInCodebase, Checkout, BuildInCodebasePlan, Project, ProjectIteration } from '../shared/contract';
 import { iterationLabel } from '../shared/work';
 import { CancelButton } from './CancelButton';
 import { SearchSelect } from './SearchSelect';
@@ -18,7 +18,7 @@ import { Field, FieldDescription, FieldLabel } from './ui/field';
  * The building is not done here: it is handed to Claude Code in the repository (VS Code's panel, or a terminal), where
  * the person watches the agent work and can step in. This makes the branch and the record, as all codebase work's are.
  */
-export const MoveToCode = ({
+export const BuildInCodebaseDialog = ({
 	open,
 	onClose,
 	project,
@@ -31,12 +31,12 @@ export const MoveToCode = ({
 	iteration: ProjectIteration;
 	checkout: Checkout;
 }) => {
-	const [plan, setPlan] = useState<MoveToCodePlan | null>(null);
+	const [plan, setPlan] = useState<BuildInCodebasePlan | null>(null);
 	const [branches, setBranches] = useState<string[]>([]);
 	const [from, setFrom] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	// Where the building went, once it was handed over.
-	const [handed, setHanded] = useState<BuildInClaude | null>(null);
+	const [handed, setHanded] = useState<BuildInCodebase | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -45,7 +45,7 @@ export const MoveToCode = ({
 		setPlan(null);
 		setError(null);
 		setHanded(null);
-		void window.workspace.moveToCodePlan(checkout.root, project.id, iteration.name).then((r) => {
+		void window.workspace.buildInCodebasePlan(checkout.root, project.id, iteration.name).then((r) => {
 			if (!current) return;
 			if (r.ok) setPlan(r.value);
 			else setError(r.error);
@@ -77,7 +77,7 @@ export const MoveToCode = ({
 		if (!plan) return;
 		setBusy(true);
 		setError(null);
-		const r = await window.workspace.buildInClaude(checkout.root, project.id, iteration.name, continuing ? undefined : (from ?? undefined));
+		const r = await window.workspace.buildInCodebase(checkout.root, project.id, iteration.name, continuing ? undefined : (from ?? undefined));
 		setBusy(false);
 		if (!r.ok) return setError(r.error);
 		setHanded(r.value);
