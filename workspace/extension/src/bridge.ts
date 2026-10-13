@@ -1,6 +1,6 @@
 import type * as VsCode from 'vscode';
 import type { EventSink, Route } from '../../src/main/handle';
-import type { EventName, InvokeName, WorkspaceApi } from '../../src/shared/contract';
+import type { EventName, InvokeName, Result, WorkspaceApi } from '../../src/shared/contract';
 import { createApi } from '../../src/shared/workspaceApi';
 import type { HostMessage, PanelMessage } from './messages';
 
@@ -16,7 +16,7 @@ export const answerCall = async (webview: Webview, routes: ReadonlyMap<InvokeNam
 };
 
 /** A call to the core's table by its name, as the window makes one: its Result, or that nothing answers it here. */
-const callRoute = async (routes: ReadonlyMap<InvokeName, Route>, name: InvokeName, args: unknown[]) => {
+export const callRoute = async (routes: ReadonlyMap<InvokeName, Route>, name: InvokeName, args: unknown[]): Promise<Result<unknown>> => {
 	const route = routes.get(name);
 	return route ? await route(...args) : { ok: false, error: `${name} is not answered in VS Code yet.` };
 };

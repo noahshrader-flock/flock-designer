@@ -3,12 +3,13 @@ import * as vscode from 'vscode';
 import { served } from '../../src/main/handle';
 import { type Context, findContext } from '../../src/main/services/findContext';
 import type { SignInState, WorkspaceApi } from '../../src/shared/contract';
+import { addressComment } from './address';
 import { Panels, hostApi } from './bridge';
 import { type Review, readReview, reviewsOf } from './messages';
 import { newPrototype, readGiven } from './newPrototype';
 import { startCore } from './core';
 import { PanelProvider, failed } from './panel';
-import { Reviews, siteIn } from './review';
+import { Reviews, answerReview, buildReviewSite, siteIn } from './review';
 import { AgentLog, vscodeAsk, vscodeChoose, vscodeProgress } from './ui';
 
 /** Kept by the extension: the design system the person located, when nothing open holds one. */
@@ -57,7 +58,35 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	await trust();
 	void github.restore();
 
-	const reviews = new Reviews(vscode, core.prototypeServer, siteIn(storage), join(context.extensionUri.fsPath, 'dist', 'viewer'));
+	const api = hostApi(served, panels);
+	const agentLog = new AgentLog();
+	const site = siteIn(storage);
+	const reviews = new Reviews({
+		vscode,
+		build: buildReviewSite(site, join(context.extensionUri.fsPath, 'dist', 'viewer')),
+		serve: () => core.prototypeServer.serveFolder('review', site),
+		// What a review's page asks: its comments, signing in, and Address, whose failure is said here as any is.
+		answer: (review, name, args) =>
+			answerReview(
+				{
+					routes: served,
+					signIn: () => github.signIn(),
+					address: (r, comment) =>
+						addressComment(
+							{ api, progress: vscodeProgress, log: agentLog, tell: (m) => void vscode.window.showInformationMessage(m), openReview },
+							r,
+							comment,
+						).catch((err: unknown) => {
+							failed(err);
+							throw err;
+						}),
+				},
+				review,
+				name,
+				args,
+			),
+		...(log ? { log } : {}),
+	});
 	const openReview = async ({ projectId, name, title }: Review) => {
 		if (!found.designRepository)
 			throw new Error(found.missing.find((m) => m.startsWith('The design repository')) ?? 'The design repository is not here.');
@@ -71,9 +100,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		if (found.designSystem?.how !== 'located' && found.designSystem?.root !== chosen)
 			void vscode.window.showWarningMessage('That folder holds no design system: no Storybook stories and no tokens were found in it.');
 	};
-
-	const api = hostApi(served, panels);
-	const agentLog = new AgentLog();
 
 	context.subscriptions.push(
 		agentLog,

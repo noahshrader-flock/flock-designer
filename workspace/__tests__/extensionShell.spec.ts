@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { VsCodeGitHub } from '../extension/src/github';
 import { vscodePorts } from '../extension/src/vscodePorts';
 import { reviewsOf } from '../extension/src/messages';
-import { reviewPage, reviewPath } from '../extension/src/review';
+import { Reviews, answerReview, reviewPage, reviewPath } from '../extension/src/review';
 import { Panels, answerCall, hostApi } from '../extension/src/bridge';
 import type { Route } from '../src/main/handle';
 import type { InvokeName } from '../src/shared/contract';
@@ -128,11 +128,111 @@ describe('a prototype’s review', () => {
 		]);
 	});
 
-	it('frames only the page, from this machine, with its title as text', () => {
+	it('frames only the page, from this machine, with its title as text, and runs only its own script', () => {
 		const page = reviewPage({ src: 'http://127.0.0.1:5000/a/v1/i1/', title: 'Fish & <chips> "now"', nonce: 'n1' });
-		expect(page).toContain("default-src 'none'; frame-src http://127.0.0.1:5000; style-src 'nonce-n1'");
+		expect(page).toContain("default-src 'none'; frame-src http://127.0.0.1:5000; style-src 'nonce-n1'; script-src 'nonce-n1'");
+		expect([...page.matchAll(/<script\b[^>]*>/g)].map((m) => m[0])).toEqual(['<script nonce="n1">']);
+		// It says hello to the page, and passes what the page asks up, and the answers down, to that page's address alone.
+		expect(page).toContain(`const page = "http://127.0.0.1:5000";`);
+		expect(page).toContain("postMessage({ dsnr: 'hello' }, page)");
 		expect(page).toContain('<title>Fish &amp; &lt;chips&gt; &quot;now&quot;</title>');
 		expect(page).toContain('<iframe src="http://127.0.0.1:5000/a/v1/i1/" title="Fish &amp; &lt;chips&gt; &quot;now&quot;">');
+	});
+});
+
+describe('a review tab’s answers to its page', () => {
+	const review = { projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' };
+	const deps = () => {
+		const routes = new Map<InvokeName, Route>([
+			['readComments', async (...args) => ({ ok: true, value: ['read', ...args] })],
+			['postComment', async (...args) => ({ ok: true, value: ['posted', ...args] })],
+			['resolveComment', async (...args) => ({ ok: true, value: ['resolved', ...args] })],
+		]);
+		return {
+			routes: () => routes,
+			signIn: vi.fn(async () => ({ state: 'signedOut' as const })),
+			address: vi.fn(async () => null),
+		};
+	};
+
+	it('are the core’s comment calls, VS Code’s sign-in, and Address on this review’s prototype', async () => {
+		const d = deps();
+		expect(await answerReview(d, review, 'readComments', ['demo', 'prototype/demo/v1-i1'])).toEqual({
+			ok: true,
+			value: ['read', 'demo', 'prototype/demo/v1-i1'],
+		});
+		expect(await answerReview(d, review, 'resolveComment', [{ thread: 1, id: 2 }, true])).toMatchObject({ ok: true });
+		expect(await answerReview(d, review, 'signIn', [])).toEqual({ ok: true, value: { state: 'signedOut' } });
+		await answerReview(d, review, 'address', [{ thread: 1, id: 2 }]);
+		expect(d.address).toHaveBeenCalledWith(review, { thread: 1, id: 2 });
+	});
+
+	it('are only about this review’s project, and say so for anything else', async () => {
+		const d = deps();
+		expect(await answerReview(d, review, 'postComment', ['other', 'prototype/other/v1-i1', 'x', null])).toEqual({
+			ok: false,
+			error: 'This review is of demo, so it comments only on demo.',
+		});
+		expect(await answerReview(d, review, 'address', ['not a comment'])).toEqual({ ok: false, error: 'Address is given one comment.' });
+	});
+});
+
+describe('the review tabs', () => {
+	const fakeVsCode = () => {
+		const panels: { title: string; html: string; revealed: number; disposed: () => void }[] = [];
+		return {
+			panels,
+			api: {
+				ViewColumn: { Active: -1 },
+				window: {
+					createWebviewPanel: (_type: string, title: string) => {
+						const panel = { title, html: '', revealed: 0, disposed: (): void => undefined };
+						panels.push(panel);
+						return {
+							get title() {
+								return panel.title;
+							},
+							set title(t: string) {
+								panel.title = t;
+							},
+							webview: {
+								set html(h: string) {
+									panel.html = h;
+								},
+								onDidReceiveMessage: () => ({ dispose: () => undefined }),
+								postMessage: async () => true,
+							},
+							reveal: () => void panel.revealed++,
+							onDidDispose: (l: () => void) => {
+								panel.disposed = l;
+								return { dispose: () => undefined };
+							},
+						};
+					},
+				},
+			},
+		};
+	};
+
+	it('are one for each project: opening another of its prototypes shows it in the same tab, and a closed tab is made again', async () => {
+		const vs = fakeVsCode();
+		const built: string[] = [];
+		const reviews = new Reviews({
+			vscode: vs.api as never,
+			build: (records) => void built.push(records),
+			serve: async () => 'http://127.0.0.1:5000/review/',
+			answer: async () => ({ ok: true, value: null }),
+		});
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' });
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1-i2', title: 'Demo · V1 · I2' });
+		expect(vs.panels.map((p) => p.title)).toEqual(['Demo · V1 · I2']);
+		expect(vs.panels[0]!.html).toContain('http://127.0.0.1:5000/review/demo/v1/i2/');
+		expect(vs.panels[0]!.revealed).toBe(1);
+		// Built again each time, so it is the records as they are.
+		expect(built).toEqual(['/d/projects', '/d/projects']);
+		vs.panels[0]!.disposed();
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' });
+		expect(vs.panels).toHaveLength(2);
 	});
 });
 

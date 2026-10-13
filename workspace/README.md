@@ -231,6 +231,13 @@ DSNR: Agent, and when it is saved its review opens. The command can also be give
 extension can run them; called that way, a failure is also returned to the caller. The `.vsix` carries esbuild, which
 builds a prototype's page, for the machine it was packaged on.
 
+**Commenting in a review:** the page's own review bar comments through DSNR rather than with a token of its own. The
+page asks DSNR's review tab, and the tab asks the extension (`shared/reviewRelay.ts`): the core's comment calls, only on
+that review's project; signing in, which is VS Code's; and **Address**, on an open comment's menu, which runs the agent
+as a build does (a notification with Stop, its log beside the editor) and then shows the changed page in the same tab.
+The page listens for DSNR only when it is served from this machine and framed, and takes only a VS Code webview that
+says hello; the published site is unchanged. Each project's reviews share one tab.
+
 Like the app, it publishes the person's work branches and records when the project list is read and when VS Code is
 focused, so it pushes with their own git credentials.
 

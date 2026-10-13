@@ -5,6 +5,7 @@ import type { Project, WorkspaceApi } from '../../src/shared/contract';
 import { toProjectIteration } from '../../src/shared/iterationRecords';
 import { valueOf } from '../../src/shared/result';
 import { slugify } from '../../src/shared/validate';
+import { type AgentWorkDeps, agentReady, agentWork } from './agentWork';
 import { type Review, reviewsOf } from './messages';
 
 /** VS Code's own boxes, as the flow asks them: a line of text, and one of a list. Undefined when the person dismisses it. */
@@ -13,13 +14,7 @@ export interface Ask {
 	pick<T>(o: { title: string; placeholder: string; items: { label: string; description?: string; value: T }[] }): Promise<T | undefined>;
 }
 
-/**
- * Work that takes a while, in VS Code's notification: `title`, then what `task` says as it goes; `onStop` when the person
- * presses its Stop.
- */
-export type Progress = (title: string, task: (say: (message: string) => void) => Promise<void>, onStop: () => void) => Promise<void>;
-
-export interface NewPrototypeDeps {
+export interface NewPrototypeDeps extends AgentWorkDeps {
 	api: PrototypeApi &
 		Pick<
 			WorkspaceApi,
@@ -39,9 +34,6 @@ export interface NewPrototypeDeps {
 	ask: Ask;
 	/** A warning with what can be done about it; the action pressed, or undefined. */
 	choose: (message: string, actions: string[]) => Promise<string | undefined>;
-	progress: Progress;
-	/** Where the agent's log is: started afresh, and shown, for a piece of work, then a line at a time. */
-	log: { start: (title: string) => void; line: (text: string) => void };
 	/** Told once it is made, before it is built, so the projects list shows it while it is. */
 	onMade: () => void;
 	openReview: (review: Review) => Promise<void>;
@@ -82,17 +74,6 @@ const PHASE_WORDS: Partial<Record<BuildPhase['kind'], string>> = {
 };
 const wordsFor = (phase: BuildPhase): string | undefined =>
 	phase.kind === 'agent' && phase.accessibility ? 'Fixing what the accessibility check found…' : PHASE_WORDS[phase.kind];
-
-/** Claude Code builds it: said when it is not here, or not signed in. */
-const agentReady = async (api: NewPrototypeDeps['api']): Promise<void> => {
-	const { state } = valueOf(await api.agentReadiness());
-	if (state === 'missing')
-		throw new Error(
-			'Claude Code is not installed. New work is built by Claude Code on this machine: install it from claude.com/claude-code, sign in, then start again.',
-		);
-	if (state === 'signedOut')
-		throw new Error('Claude Code is not signed in. Sign in in the Claude Code panel, or by running claude in a terminal, then start again.');
-};
 
 /** The product's packages, with its design system, installed: installed here when the person asks and the product says how. */
 const packagesReady = async ({ api, choose, progress }: NewPrototypeDeps, root: string): Promise<boolean> => {
@@ -206,39 +187,24 @@ export const newPrototype = async (deps: NewPrototypeDeps): Promise<void> => {
 
 /** The build, said as it goes and stoppable, its log shown: its review opened when it is saved, or how it failed thrown. */
 const build = async (deps: NewPrototypeDeps, project: Project, task: string): Promise<void> => {
-	const { api, progress, log } = deps;
 	const iteration = project.iterations[0]!;
-	let stopped = false;
 	let failed: string | null = null;
 	let opened: string | null = null;
-	log.start(project.title);
-	const listening = api.onAgentLog((l) => log.line(l.text.replace(/\n$/, '')));
-	try {
-		await progress(
-			`Building ${project.title}`,
-			async (say) => {
-				opened = await runPrototypeBuild({
-					api,
-					project,
-					iteration,
-					task,
-					isLive: () => !stopped,
-					onPhase: (phase) => {
-						if (phase.kind === 'failed') failed = phase.message;
-						const words = wordsFor(phase);
-						if (words) say(words);
-					},
-					...(deps.pollMs !== undefined ? { pollMs: deps.pollMs } : {}),
-				});
+	const { stopped } = await agentWork(deps, { title: `Building ${project.title}`, logTitle: project.title }, async (say, isLive) => {
+		opened = await runPrototypeBuild({
+			api: deps.api,
+			project,
+			iteration,
+			task,
+			isLive,
+			onPhase: (phase) => {
+				if (phase.kind === 'failed') failed = phase.message;
+				const words = wordsFor(phase);
+				if (words) say(words);
 			},
-			() => {
-				stopped = true;
-				void api.stopAgent();
-			},
-		);
-	} finally {
-		listening();
-	}
+			...(deps.pollMs !== undefined ? { pollMs: deps.pollMs } : {}),
+		});
+	});
 	if (stopped) return;
 	// Said as any failure is; its log is already beside the editor.
 	if (failed !== null) throw new Error(`${project.title} was not built: ${failed}`);

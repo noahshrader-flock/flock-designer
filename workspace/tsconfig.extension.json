@@ -28,6 +28,7 @@
 		"src/renderer/useWorkspace.ts",
 		"src/renderer/runPrototypeBuild.ts",
 		"src/renderer/localBuild.ts",
+		"src/renderer/address.ts",
 		"src/renderer/workspace.d.ts"
 	]
 }

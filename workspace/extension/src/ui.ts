@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import type { Ask, Progress } from './newPrototype';
+import type { AgentLogLike, Progress } from './agentWork';
+import type { Ask } from './newPrototype';
 
 /** VS Code's own input box and quick pick, as a flow asks them (`Ask`). */
 export const vscodeAsk: Ask = {
@@ -29,7 +30,7 @@ export const vscodeProgress: Progress = (title, task, onStop) =>
 	);
 
 /** The agent's log, in View › Output › DSNR: Agent: started afresh for each piece of work, and shown beside the editor. */
-export class AgentLog implements vscode.Disposable {
+export class AgentLog implements AgentLogLike, vscode.Disposable {
 	private readonly channel = vscode.window.createOutputChannel('DSNR: Agent');
 
 	start(title: string): void {
