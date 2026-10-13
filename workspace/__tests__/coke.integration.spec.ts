@@ -1,3 +1,4 @@
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { expect, it } from 'vitest';
 import { buildContextReceipt } from '../src/main/services/contextReceipt';
@@ -56,5 +57,49 @@ describeWith(cokeMissing, 'against the real Coke checkout', () => {
 		// check-handoff.mjs resolves '../flock-designer/projects/<id>'. If these two
 		// ever disagree, Workspace writes records the gate cannot find.
 		expect(recordsRootFor(COKE)).toBe(join(dirname(COKE), 'flock-designer', 'projects'));
+	});
+});
+
+/**
+ * How every agent reaches the shared rules (09, "any agent"): the product's entry points, read from the checkout, and that
+ * what they point at is there. A pointer that names a file that is not there sends an agent to nothing, silently.
+ */
+describeWith(cokeMissing, 'the entry points of the real Coke checkout', () => {
+	const text = (path: string) => readFileSync(join(COKE, path), 'utf8');
+	const entries = ['AGENTS.md', 'CLAUDE.md', '.github/instructions/dsnr.instructions.md'];
+	const shims = readdirSync(join(COKE, '.claude', 'agents')).map((f) => `.claude/agents/${f}`);
+
+	it('sends every agent that reads AGENTS.md to the guide and to the dsnr agent', () => {
+		const agents = text('AGENTS.md');
+		expect(agents).toContain('../flock-designer/agents/ui-guide.md');
+		expect(agents).toContain('../flock-designer/agents/dsnr.md');
+	});
+
+	it('says it once: CLAUDE.md imports AGENTS.md and holds no section of its own about it', () => {
+		const claude = text('CLAUDE.md');
+		expect(claude).toMatch(/^@AGENTS\.md$/m);
+		expect(claude).not.toMatch(/dsnr|flock-designer/i);
+	});
+
+	it('has the same pointer for Copilot, for the files it writes, without touching its own instructions', () => {
+		const copilot = text('.github/instructions/dsnr.instructions.md');
+		expect(copilot).toMatch(/^applyTo: "\*\*\/\*\.tsx"$/m);
+		expect(copilot).toContain('../flock-designer/agents/ui-guide.md');
+	});
+
+	it('names only files that are there', () => {
+		const missing = [...entries, ...shims].flatMap((file) =>
+			[...text(file).matchAll(/\.\.\/flock-designer\/([\w./-]+\.md)/g)]
+				.map((m) => m[1] as string)
+				.filter((path) => !existsSync(join(dirname(COKE), 'flock-designer', path)))
+				.map((path) => `${file} -> ${path}`),
+		);
+		expect(missing).toEqual([]);
+	});
+
+	it('opens the folders the pointers assume, in one workspace', () => {
+		const folders = (JSON.parse(text('dsnr.code-workspace')) as { folders: { path: string }[] }).folders.map((f) => f.path);
+		expect(folders).toEqual(['.', '../flock-designer', '../flock-react-component-lib']);
+		expect(folders.filter((f) => !existsSync(join(COKE, f)))).toEqual([]);
 	});
 });
