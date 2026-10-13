@@ -11,7 +11,7 @@ import { ProjectSort } from './ProjectSort';
 import { PublishProblems, usePublishStatus } from './PublishStatus';
 import { Review } from './Review';
 import { SyncButton } from './SyncButton';
-import { Toolbar } from './Toolbar';
+import { Toolbar, ToolbarEnd } from './Toolbar';
 import { InfoIcon } from 'lucide-react';
 import { ALL_FOLDERS, type FolderChoice, foldersOf, inFolder } from '../shared/brief';
 import { type ProjectOrder, matchesProject, sortProjects, withCovers } from '../shared/projectList';
@@ -167,8 +167,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 						<ViewSwitcher view={view} onSelect={chooseView} />
 					</div>
 				)}
-				<div className="grow" />
-				<div className="flex items-center gap-2">
+				<ToolbarEnd>
 					{/* What is not synced, beside the button that starts one, so the two read together (as on the Design System). */}
 					<PublishProblems status={publishStatus} />
 					{/* Sync sends what is waiting and reads what is new, rather than waiting for the next trigger. */}
@@ -182,7 +181,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 						}}
 					/>
 					<Button onClick={() => setCreating(true)}>New</Button>
-				</div>
+				</ToolbarEnd>
 			</Toolbar>
 			<Page wide>
 				{looked && !checkout && suggestion && (

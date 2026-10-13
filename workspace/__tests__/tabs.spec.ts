@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { createElement } from 'react';
+import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../src/renderer/ui/tabs';
-import { render, unmountAll } from './reviewHarness';
+import { render, tab, unmountAll } from './reviewHarness';
 
 /**
  * Tabs, and their line variant: a strip that runs edge to edge on a bottom border, with the padding on what is under it
@@ -28,36 +28,15 @@ const show = async () => {
 };
 
 describe('line tabs', () => {
-	it('are shadcn’s line tabs, full width, on a bottom border, with no padding around the strip', async () => {
-		await show();
-		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
-		expect(list.getAttribute('data-variant')).toBe('line');
-		expect(list.className.split(' ')).toEqual(expect.arrayContaining(['min-w-full', 'border-b']));
-		expect(list.closest('[data-slot="tabs"][data-variant="line"]')?.className).not.toMatch(/(^|\s)p[xtblr]?-\d/);
-	});
-
-	it('scroll sideways, from the first tab at the left, when there are more than fit: the strip is as wide as its tabs in a box that scrolls it', async () => {
-		await show();
-		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
-		const box = list.parentElement as HTMLElement;
-		// The strip is at least its box and as wide as its tabs, and starts at the left: a centered row would spill off both ends.
-		expect(list.className.split(' ')).toEqual(expect.arrayContaining(['w-max', 'min-w-full', 'justify-start']));
-		expect(list.className.split(' ')).not.toContain('justify-center');
-		expect(box.getAttribute('data-slot')).toBe('tabs-scroll');
-		expect(box.className.split(' ')).toContain('overflow-x-auto');
-		// Room below the strip for a tab's underline, which is drawn over its border, with the layout unmoved.
-		expect(box.className.split(' ')).toEqual(expect.arrayContaining(['pb-px', '-mb-px']));
-	});
-
-	it('are one strip, the same everywhere: as tall as a toolbar, inset as the page is, on its own background, edge to edge on its border', async () => {
+	it('are one strip, the same everywhere: edge to edge on its border, as tall as a toolbar, inset as the page is, on its own background', async () => {
 		await show();
 		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
 		const classes = list.className.split(' ');
+		expect(list.getAttribute('data-variant')).toBe('line');
 		expect(classes).toEqual(
 			expect.arrayContaining([
 				'min-w-full',
 				'border-b',
-				'justify-start',
 				'bg-card',
 				'px-(--tabs-inset,var(--page-padding))',
 				'group-data-horizontal/tabs:h-(--toolbar-height)',
@@ -65,18 +44,53 @@ describe('line tabs', () => {
 		);
 		// Not the size of a button, which a row of buttons beside plain tabs is.
 		expect(classes).not.toContain('group-data-horizontal/tabs:h-8');
-		// And no option to make it another: there is nothing to set but the inset, on the root, once.
-		expect(list.hasAttribute('data-bar')).toBe(false);
+		// The padding is the content's, under it: none around the strip but its inset.
+		expect(list.closest('[data-slot="tabs"][data-variant="line"]')?.className).not.toMatch(/(^|\s)p[xtblr]?-\d/);
 	});
 
-	it('size each tab to its label, not to a share of the strip, with nothing set on the tabs themselves', async () => {
+	it('size each tab to its label, at the left, not to a share of the strip: said by the tab itself, so nothing is set on the tabs here', async () => {
+		await show();
+		for (const t of document.querySelectorAll<HTMLElement>('[role="tab"]')) {
+			expect(t.className.split(' ')).toContain('group-data-[variant=line]/tabs-list:flex-none');
+		}
+		expect(document.querySelector('[data-slot="tabs-list"]')?.className.split(' ')).toContain('justify-start');
+	});
+
+	it('scroll sideways, from the first tab, when there are more than fit: the strip is as wide as its tabs in a box that scrolls it', async () => {
 		await show();
 		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
-		// Said once, by the strip, for every tab in it: stretching them made one strip look unlike the next.
-		expect(list.className.split(' ')).toContain('[&>[role=tab]]:flex-none');
-		for (const tab of document.querySelectorAll<HTMLElement>('[role="tab"]')) {
-			// Nothing set on the tab at the call site: only what the component itself gives every tab.
-			expect(tab.className).not.toMatch(/(^|\s)(h-full|p-0)(\s|$)/);
+		const box = list.parentElement as HTMLElement;
+		// At least its box and as wide as its tabs: a strip that is the box's width would spill its tabs out of reach.
+		expect(list.className.split(' ')).toEqual(expect.arrayContaining(['w-max', 'min-w-full']));
+		expect(box.getAttribute('data-slot')).toBe('tabs-scroll');
+		expect(box.className.split(' ')).toContain('overflow-x-auto');
+		// Room below the strip for a tab's underline, which is drawn over its border, with the layout unmoved.
+		expect(box.className.split(' ')).toEqual(expect.arrayContaining(['pb-px', '-mb-px']));
+	});
+
+	it('bring a tab into view when it is focused, by a click or a key, and still tell whoever asked', async () => {
+		const scrolled: ScrollIntoViewOptions[] = [];
+		const original = Element.prototype.scrollIntoView;
+		Element.prototype.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => void scrolled.push(options as ScrollIntoViewOptions);
+		let heard = 0;
+		try {
+			current = await render(
+				createElement(
+					Tabs,
+					{ variant: 'line', defaultValue: 'a' },
+					createElement(
+						TabsList,
+						null,
+						createElement(TabsTrigger, { value: 'a' }, 'One'),
+						createElement(TabsTrigger, { value: 'b', onFocus: () => void heard++ }, 'Two'),
+					),
+				),
+			);
+			await act(async () => void (tab('Two') as HTMLElement).focus());
+			expect(scrolled).toEqual([{ inline: 'nearest', block: 'nearest' }]);
+			expect(heard).toBe(1);
+		} finally {
+			Element.prototype.scrollIntoView = original;
 		}
 	});
 

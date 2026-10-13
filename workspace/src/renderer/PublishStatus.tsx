@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PublishStatus as Status } from '../shared/contract';
-import { ProblemsDialog } from './ProblemsDialog';
+import { ProblemList, ProblemsDialog } from './ProblemsDialog';
 
 /**
  * Whether the person's work is synced, said where they will see it. Syncing happens by itself, so this only reports: when
@@ -33,25 +33,8 @@ export const PublishProblems = ({ status: current }: { status: Status }) => {
 	if (current.state !== 'working') lastHeld.current = current.state === 'held' ? current : null;
 	if (status.state !== 'held' || status.problems.length === 0) return null;
 	return (
-		<ProblemsDialog
-			label="Some work isn’t synced"
-			description="This was held back, and goes up on the next sync once what is in the way is cleared."
-		>
-			<ul className="flex flex-col gap-4">
-				{status.problems.map((p) => (
-					<li key={`${p.what}:${p.why}`} className="flex flex-col gap-1 text-sm">
-						<span className="font-medium">{p.what}</span>
-						<span className="text-muted-foreground">{p.why}</span>
-						{p.files && p.files.length > 0 && (
-							<ul className="bg-muted mt-1 flex flex-col gap-1 rounded-md p-3 font-mono text-xs break-all">
-								{p.files.map((file) => (
-									<li key={file}>{file}</li>
-								))}
-							</ul>
-						)}
-					</li>
-				))}
-			</ul>
+		<ProblemsDialog label="Some work isn’t synced" description="This was held back, and goes up on the next sync once what is in the way is cleared.">
+			<ProblemList items={status.problems.map((p) => ({ title: p.what, detail: p.why, files: p.files }))} />
 		</ProblemsDialog>
 	);
 };

@@ -1,7 +1,7 @@
 import { ChevronDownIcon, GitBranchIcon, InfoIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { type ReactNode, useCallback, useState } from 'react';
 import { matchesComponent } from '../shared/catalog';
-import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem, DesignToken } from '../shared/contract';
+import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem } from '../shared/contract';
 import { ComponentPage } from './ComponentPage';
 import { CardGrid } from './CardGrid';
 import { ComponentCard } from './ComponentCard';
@@ -19,6 +19,7 @@ import { ResizablePanel } from './ResizablePanel';
 import { SearchField } from './SearchField';
 import { CardGridSkeleton, RowsSkeleton, SkeletonStatus } from './Skeletons';
 import { SyncButton } from './SyncButton';
+import { ProblemList, ProblemsDialog } from './ProblemsDialog';
 import { TokenProblems } from './TokenProblems';
 import { TokensPanel } from './TokensPanel';
 import { useComponentPictures } from './useComponentPictures';
@@ -26,10 +27,9 @@ import { type DesignSystemState, useDesignSystem } from './useDesignSystem';
 import { useTokenBranch } from './useTokenBranch';
 import { TokenChangesProvider, useTokenChangesFor } from './tokenChanges';
 import { Skeleton } from './ui/skeleton';
-import { undeclared } from '../shared/wcag';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { ViewSwitcher, useRememberedView } from './ViewSwitcher';
-import { Toolbar } from './Toolbar';
+import { Toolbar, ToolbarEnd } from './Toolbar';
 import { VoiceAndTone } from './VoiceAndTone';
 import { Accordion, AccordionContent, AccordionItem } from './ui/accordion';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
@@ -46,12 +46,12 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { HOST } from '../shared/vocabulary';
 
-/** Said only when something is wrong, as the Projects screen does: a failed update is a line, never an error. */
+/** Said only when the update failed, as the other problems are (`ProblemsDialog`): the list shown is what this computer had, not an error. */
 const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
 	typeof update === 'object' ? (
-		<span className="text-warning text-xs" role="status" title={update.failed}>
-			Could not update from {HOST}
-		</span>
+		<ProblemsDialog label={`Could not update from ${HOST}`} description="The library is shown as this computer last had it.">
+			<ProblemList items={[{ detail: update.failed }]} />
+		</ProblemsDialog>
 	) : null;
 
 /**
@@ -129,10 +129,6 @@ type PanelView = 'tokens' | 'component';
 /** The components as a list of rows, or a grid of cards with pictures (P5): chosen with the switch, remembered. */
 const VIEW_KEY = 'dsnr.componentsView';
 
-/** No tokens, the same each time, while the library is not read; and the default target, until it says its own. */
-const NO_TOKENS: DesignToken[] = [];
-const NO_TARGET = undeclared('The design system is not read yet');
-
 /**
  * Which the side panel shows, as a button group like a prototype's states, across the panel's width: the component that is
  * open, or the tokens. Component is first, and off while none is open, as there is nothing to show; the tokens are what the
@@ -180,12 +176,12 @@ type Tab = 'components' | 'primitives' | 'voice-and-tone';
 /**
  * The Design System tab (DESIGN_SYSTEM_PLAN.md): the company's, not any one library's. Under the top bar, **its first row
  * is the design system itself**, whichever view is shown: its name (to switch to another connected, or connect one), its
- * branch, Sync and More. Under that, at the left, the views as a bar of tabs (T9), Components, Primitives and Voice and
- * Tone, the app's line tabs (`Tabs variant="line"`), a strip as tall as the toolbar, and each view under it, scrolling on
- * its own; at the right, beside them, the side panel, which is the Components view's alone. Each view stays mounted while
- * another is shown, as the panel does, so what was typed, scrolled and opened in them is as it was left.
+ * branch, what is wrong with it, Sync and More. Under that, at the left, the views as the app's line tabs (`Tabs
+ * variant="line"`, T9), Components, Primitives and Voice and Tone, and each view under the tab strip, scrolling on its own;
+ * at the right, beside them, the side panel, which is the Components view's alone. Each view stays mounted while another
+ * is shown, as the panel does, so what was typed, scrolled and opened in them is as it was left.
  *
- * What is read and done to the design system is `useDesignSystem`'s, so the header, the views and the panel all see the
+ * What is read and done to the design system is `useDesignSystem`'s, so the row, the views and the panel all see the
  * same one: Primitives draws the tokens Components read, and nothing is read twice. Opening a component switches the panel
  * to it, leaving it switches back to the tokens, and either can be chosen while it is open; the tokens are only hidden
  * meanwhile, so their search, tab and open groups are as they were left. The change being tried is the screen's: the panel
@@ -206,11 +202,8 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 		hidden,
 		useCallback(() => openComponent(null), [openComponent]),
 	);
-	const { catalog, edits, systems } = ds;
+	const { catalog, edits } = ds;
 	const ready = catalog?.state === 'ready' ? catalog : null;
-	// Where it is kept, once saved (T4), and proposed (T5); and the change as every panel that shows tokens sees it.
-	const branch = useTokenBranch(systems.current, edits, ds.setEdits);
-	const changes = useTokenChangesFor(ready ? ready.tokens.tokens : NO_TOKENS, edits, ds.setEdits, ready ? ready.accessibility : NO_TARGET);
 	// A component a sync removed is closed rather than shown from a list that no longer has it.
 	const opened = ready && open !== null ? ready.components.find((c) => c.id === open) : undefined;
 	return (
@@ -238,7 +231,7 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 				{/* The Components view's, and hidden, not left, on the others: its search, tab and open groups are as they were. */}
 				{ready && (
 					<div hidden={tab !== 'components'} className={tab === 'components' ? 'flex min-h-0' : undefined}>
-						<SidePanel catalog={ready} opened={opened} view={opened ? view : 'tokens'} onView={setView} changes={changes} branch={branch} />
+						<SidePanel ds={ds} catalog={ready} opened={opened} view={opened ? view : 'tokens'} onView={setView} />
 					</div>
 				)}
 			</div>
@@ -250,8 +243,8 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 
 /**
  * The design system's own row, first under the top bar, on every view: its name, which switches between those connected
- * and connects another (P4), the branch it is read from, and at the right Sync, where it is on the Projects screen (the
- * problems, if there are any, beside the button: a failed update, and what could not be read) and More, which removes it. A skeleton while it is first read; nothing when
+ * and connects another (P4), the branch it is read from, and at the right what is wrong with it, if anything (a failed
+ * update, what could not be read), then Sync and More, which removes it. A skeleton while it is first read; nothing when
  * there is none shown, as there is nothing to name.
  */
 const DesignSystemRow = ({ ds }: { ds: DesignSystemState }) => {
@@ -274,8 +267,7 @@ const DesignSystemRow = ({ ds }: { ds: DesignSystemState }) => {
 					{catalog.branch}
 				</TooltipContent>
 			</Tooltip>
-			<div className="grow" />
-			<div className="flex items-center gap-2">
+			<ToolbarEnd>
 				<UpdateProblem update={catalog.update} />
 				<TokenProblems problems={catalog.tokens.problems} />
 				<SyncButton syncing={ds.syncing} onClick={() => void ds.sync()} />
@@ -287,44 +279,48 @@ const DesignSystemRow = ({ ds }: { ds: DesignSystemState }) => {
 						</DropdownMenuItem>
 					</MoreMenu>
 				)}
-			</div>
+			</ToolbarEnd>
 		</Toolbar>
 	);
 };
 
 /**
  * The side panel, at the right of the views and the full height under the design system's row (decision 21): at its top, as
- * high as the tab bar beside it so the two read as one line, the switch between the tokens and the open component, and
+ * high as the tab strip beside it so the two read as one line, the switch between the tokens and the open component, and
  * under it whichever is chosen. The tokens are hidden, not left, when the component is shown, so what was typed and
  * opened in them is as it was.
  */
 const SidePanel = ({
+	ds,
 	catalog,
 	opened,
 	view,
 	onView,
-	changes,
-	branch,
 }: {
+	ds: DesignSystemState;
 	catalog: Extract<Catalog, { state: 'ready' }>;
 	opened: CatalogComponent | undefined;
 	view: PanelView;
 	onView: (view: PanelView) => void;
-	changes: ReturnType<typeof useTokenChangesFor>;
-	branch: ReturnType<typeof useTokenBranch>;
-}) => (
-	<ResizablePanel panel={TOKENS_PANEL} label="Resize the tokens panel">
-		<div className="flex h-(--toolbar-height) shrink-0 items-center border-b px-4">
-			<PanelSwitcher view={view} canShowComponent={opened !== undefined} onSelect={onView} />
-		</div>
-		<TokenChangesProvider value={changes}>
-			<div data-panel="tokens" hidden={view !== 'tokens'} className="flex min-h-0 flex-1 flex-col">
-				<TokensPanel tokens={catalog.tokens} live={opened !== undefined} branch={branch} />
+}) => {
+	// Where the change is kept, once saved (T4) and proposed (T5), and the change as every part of the panel that shows tokens
+	// sees it: the panel's own, since nothing else shows them.
+	const branch = useTokenBranch(ds.systems.current, ds.edits, ds.setEdits);
+	const changes = useTokenChangesFor(catalog.tokens.tokens, ds.edits, ds.setEdits, catalog.accessibility);
+	return (
+		<ResizablePanel panel={TOKENS_PANEL} label="Resize the tokens panel">
+			<div className="flex h-(--toolbar-height) shrink-0 items-center border-b px-4">
+				<PanelSwitcher view={view} canShowComponent={opened !== undefined} onSelect={onView} />
 			</div>
-			{view === 'component' && opened && <ComponentPanel key={opened.id} component={opened} components={catalog.components} />}
-		</TokenChangesProvider>
-	</ResizablePanel>
-);
+			<TokenChangesProvider value={changes}>
+				<div data-panel="tokens" hidden={view !== 'tokens'} className="flex min-h-0 flex-1 flex-col">
+					<TokensPanel tokens={catalog.tokens} live={opened !== undefined} branch={branch} />
+				</div>
+				{view === 'component' && opened && <ComponentPanel key={opened.id} component={opened} components={catalog.components} />}
+			</TokenChangesProvider>
+		</ResizablePanel>
+	);
+};
 
 /**
  * The Components view: the design system connected, as its branch has it on GitHub, from a clone on this machine; with none,

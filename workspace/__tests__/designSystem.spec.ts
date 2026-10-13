@@ -3,13 +3,14 @@ import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DesignSystem } from '../src/renderer/DesignSystem';
 import { undeclared } from '../src/shared/wcag';
+import { TOKEN_PROBLEM } from './fixtures';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
 import type { Catalog, CatalogComponent, CatalogUpdate, DesignTokens } from '../src/shared/contract';
-import { button, fail, fakeApp, menuItem, ok, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
+import { button, chooseTab, dialog, fail, fakeApp, menuItem, ok, openMenu, press, render, settle, tab, typeInto, unmountAll } from './reviewHarness';
 
 /**
- * The Design System tab (S3 of the design system plan): the component library's catalog as a grouped list with links
- * out, against a fake app.
+ * The Design System tab (S3 of the design system plan): the design system's own row, its views as tabs, the components as a
+ * grouped list, and the side panel, against a fake app.
  */
 
 /** A component as the catalog gives it: one story file, as Storybook lists it. */
@@ -72,12 +73,8 @@ const FUI_SYSTEM = {
 const ACME = { id: 'acme/acme:packages/ui', name: 'Acme UI', repository: 'acme/acme', root: '/h/GitHub/acme', folder: 'packages/ui', branch: 'main' };
 const SYSTEMS = { systems: [FUI_SYSTEM, ACME], current: FUI_SYSTEM.id };
 const switcher = (name = FUI_SYSTEM.name) => button(`Design system ${name}: switch design system`);
-/** The Components frame's first row (T9): the switcher's own. */
-const firstRow = () => switcher().parentElement as HTMLElement;
-/** The tab bar's tabs (T9), by name; Radix moves to a tab on its mouse down, as a person's press does. */
-const tab = (name: string) => [...document.querySelectorAll<HTMLElement>('[role="tab"]')].find((t) => t.textContent === name) as HTMLElement;
-const chooseTab = (name: 'Components' | 'Primitives' | 'Voice and Tone') =>
-	act(async () => void tab(name).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 })));
+/** The design system's own row, first under the top bar: the switcher's own. */
+const systemRow = () => switcher().parentElement as HTMLElement;
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
 const open = async (
@@ -111,18 +108,18 @@ afterEach(async () => {
 	document.body.innerHTML = '';
 });
 
-describe('the tab bar (T9)', () => {
-	const bar = () => document.querySelector('[role="tablist"][aria-label="Design System"]') as HTMLElement;
+describe('the tab strip (T9)', () => {
+	const tabStrip = () => document.querySelector('[role="tablist"][aria-label="Design System"]') as HTMLElement;
 	const divider = () => document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]');
 	const shown = (name: string) => !(document.querySelector(`[role="tabpanel"][data-tab="${name}"]`) as HTMLElement).hidden;
 
 	it('has Components, Primitives and Voice and tone, in that order, Components chosen', async () => {
 		await open(() => ok(ready()));
-		expect([...bar().querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toEqual(['Components', 'Primitives', 'Voice and Tone']);
+		expect([...tabStrip().querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toEqual(['Components', 'Primitives', 'Voice and Tone']);
 		expect(tab('Components').getAttribute('aria-selected')).toBe('true');
 		// Under the design system's own row, which is first under the top bar and is not part of the tab bar.
-		expect(firstRow().compareDocumentPosition(bar()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(bar().contains(firstRow())).toBe(false);
+		expect(systemRow().compareDocumentPosition(tabStrip()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(tabStrip().contains(systemRow())).toBe(false);
 	});
 
 	it('shows Primitives with the design system’s row still above it and no side panel, between the other two', async () => {
@@ -133,7 +130,7 @@ describe('the tab bar (T9)', () => {
 		expect(shown('components')).toBe(false);
 		expect(shown('voice-and-tone')).toBe(false);
 		expect(divider()?.closest('[hidden]')).not.toBeNull();
-		expect(firstRow().closest('[hidden]')).toBeNull();
+		expect(systemRow().closest('[hidden]')).toBeNull();
 		await chooseTab('Voice and Tone');
 		expect(shown('primitives')).toBe(false);
 		expect(shown('voice-and-tone')).toBe(true);
@@ -151,24 +148,20 @@ describe('the tab bar (T9)', () => {
 		expect((app.calls.designSystemCatalog ?? []).length).toBe(reads);
 	});
 
-	it('is the app’s line tabs, the same strip as the tokens panel’s: as tall as the toolbar, its tabs as wide as their labels and not stretched, with nothing set on them here', async () => {
+	it('is the app’s line tabs, and the very same strip as the tokens panel’s, apart from the inset set once on the panel', async () => {
 		await open(() => ok(ready()));
-		expect(bar().getAttribute('data-variant')).toBe('line');
-		expect(bar().closest('[data-slot="tabs"][data-variant="line"]')).not.toBeNull();
-		// The height is the toolbar's own, said once by the component: the same as the row above it and the panel's switch row.
-		expect(bar().className.split(' ')).toContain('group-data-horizontal/tabs:h-(--toolbar-height)');
-		expect(firstRow().className).toContain('h-(--toolbar-height)');
-		expect(bar().className.split(' ')).toContain('[&>[role=tab]]:flex-none');
-		// Nothing set on the tabs or the list here: not a size, a padding, or a stretch.
-		for (const t of bar().querySelectorAll<HTMLElement>('[role="tab"]')) expect(t.className).not.toMatch(/(^|\s)(h-full|p-0)(\s|$)/);
-		// The tokens panel's Color, Spacing and Shape are the very same strip: the same classes, so the same height and tabs.
+		expect(tabStrip().getAttribute('data-variant')).toBe('line');
+		expect(tabStrip().closest('[data-slot="tabs"][data-variant="line"]')).not.toBeNull();
+		// The same classes, so the same height and tabs: what the strip is, is `tabs.spec`'s to say.
 		const panelTabs = document
 			.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')!
 			.nextElementSibling!.querySelector('[role="tablist"]') as HTMLElement;
-		expect(panelTabs.className).toBe(bar().className);
+		expect(panelTabs.className).toBe(tabStrip().className);
 		// The one difference is the inset, set once on the panel's tabs root, to what its own content is padded by.
 		expect(panelTabs.closest('[data-slot="tabs"]')?.className).toContain('[--tabs-inset:1rem]');
-		expect(bar().closest('[data-slot="tabs"]')?.className).not.toContain('--tabs-inset');
+		expect(tabStrip().closest('[data-slot="tabs"]')?.className).not.toContain('--tabs-inset');
+		// And as high as the row above it and the panel's switch row, which are the toolbar's.
+		expect(systemRow().className).toContain('h-(--toolbar-height)');
 	});
 
 	it('shows Voice and tone with the design system’s row still above it and no side panel, and Components again as it was left', async () => {
@@ -179,7 +172,7 @@ describe('the tab bar (T9)', () => {
 		expect(shown('components')).toBe(false);
 		// The panel is hidden, not left, and the design system's row is on every view: it is the one thing not in a tab.
 		expect(divider()?.closest('[hidden]')).not.toBeNull();
-		expect(firstRow().closest('[hidden]')).toBeNull();
+		expect(systemRow().closest('[hidden]')).toBeNull();
 		await chooseTab('Components');
 		expect(shown('components')).toBe(true);
 		expect(divider()?.closest('[hidden]')).toBeNull();
@@ -190,10 +183,10 @@ describe('the tab bar (T9)', () => {
 		const app = fakeApp({ designSystemCatalog: () => new Promise(() => undefined) });
 		(window as unknown as { workspace: unknown }).workspace = app.api;
 		current = await render(createElement(DesignSystem, { hidden: false }));
-		expect(bar()).not.toBeNull();
+		expect(tabStrip()).not.toBeNull();
 		await unmountAll(current.root);
 		await open(() => ok({ state: 'none' }));
-		expect(bar()).not.toBeNull();
+		expect(tabStrip()).not.toBeNull();
 		expect(text()).toContain('Connect your design system');
 	});
 });
@@ -335,7 +328,7 @@ describe('searching the components (T9)', () => {
 
 	it('is in the second row, with List and Grid at its far right, above the list; it goes with the list and comes back after Back', async () => {
 		await open(() => ok(ready()));
-		const first = firstRow();
+		const first = systemRow();
 		expect(first.contains(search())).toBe(false);
 		const second = search().closest('[data-components-search]') as HTMLElement;
 		expect(second.lastElementChild?.contains(viewButton('Grid'))).toBe(true);
@@ -345,7 +338,7 @@ describe('searching the components (T9)', () => {
 		await press(row('FSButton').querySelector('button')!);
 		expect(search().closest('[hidden]')).not.toBeNull();
 		// The first row stays: it is the frame's, not the list's.
-		expect(firstRow().closest('[hidden]')).toBeNull();
+		expect(systemRow().closest('[hidden]')).toBeNull();
 		await press(button('Back to components'));
 		expect(search().closest('[hidden]')).toBeNull();
 	});
@@ -373,36 +366,28 @@ describe('searching the components (T9)', () => {
 });
 
 describe('the design system’s first row and the side panel’s top', () => {
-	it('says in the first row, as a small ghost button directly left of Sync, how many values could not be read, and nothing when all were', async () => {
+	it('says in the design system’s row, directly left of Sync, how many values could not be read, and nothing when all were', async () => {
 		await open(() => ok(ready()));
 		expect(document.body.textContent).not.toContain('couldn’t be read');
 		await unmountAll(current!.root);
-		const problems = [
-			{ file: 'src/colors/tones/neutral.ts', line: 10, reason: 'one' },
-			{ file: 'src/colors/tones/neutral.ts', line: 15, reason: 'two' },
-		];
-		await open(() => ok({ ...ready(), tokens: { ...TOKENS, problems } }));
+		await open(() => ok({ ...ready(), tokens: { ...TOKENS, problems: [TOKEN_PROBLEM, { ...TOKEN_PROBLEM, line: 15 }] } }));
 		const problem = button('2 values couldn’t be read');
-		expect(problem.getAttribute('data-variant')).toBe('ghost');
-		expect(problem.getAttribute('data-size')).toBe('sm');
-		// In the first row, on every view, right before Sync; not an alert in the panel or on Primitives.
-		expect(firstRow().contains(problem)).toBe(true);
+		// In the row, on every view, right before Sync.
+		expect(systemRow().contains(problem)).toBe(true);
 		expect(problem.nextElementSibling).toBe(button('Sync'));
-		expect(document.querySelector('[role="alert"]')).toBeNull();
 		await chooseTab('Primitives');
-		expect(firstRow().closest('[hidden]')).toBeNull();
-		expect(document.querySelector('[role="alert"]')).toBeNull();
+		expect(systemRow().closest('[hidden]')).toBeNull();
 		// Its details are in the dialog it opens, not in the panel.
 		const panel = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')?.nextElementSibling as HTMLElement;
 		expect(panel.textContent).not.toContain('neutral.ts');
 		await press(problem);
 		await settle();
-		expect(document.querySelector('[role="dialog"]')?.textContent).toContain('src/colors/tones/neutral.ts:15');
+		expect(dialog()?.textContent).toContain('src/colors/tones/neutral.ts:15');
 	});
 
 	it('has, in the first row under the top bar, the design system’s name and branch, then Sync, then More, and nothing else', async () => {
 		await open(() => ok(ready()));
-		const first = firstRow();
+		const first = systemRow();
 		expect(first.textContent).toBe('Flock React Component LibSync');
 		expect(first.contains(document.querySelector('[aria-label="Branch develop"]'))).toBe(true);
 		const inOrder = (a: Element, b: Element) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
@@ -419,9 +404,9 @@ describe('the design system’s first row and the side panel’s top', () => {
 		const panelBox = divider.parentElement!;
 		const views = panelBox.previousElementSibling!;
 		// Under the row, side by side: the tab bar and its views at the left, the panel at the right.
-		expect(firstRow().compareDocumentPosition(views) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(views.contains(firstRow())).toBe(false);
-		expect(panelBox.contains(firstRow())).toBe(false);
+		expect(systemRow().compareDocumentPosition(views) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(views.contains(systemRow())).toBe(false);
+		expect(panelBox.contains(systemRow())).toBe(false);
 		expect(views.querySelector('[role="tablist"][aria-label="Design System"]')).not.toBeNull();
 		expect(panelBox.parentElement).toBe(views.parentElement);
 		// The panel's switch is as high as the tab bar, so the two read as one line.
@@ -899,14 +884,16 @@ describe('keeping it current', () => {
 		expect(button('Sync').disabled).toBe(false);
 	});
 
-	it('keeps the list when the update fails, and says so beside Sync, with the reason on hover', async () => {
+	it('keeps the list when the update fails, and says so in a problems button beside Sync, with the reason in its dialog', async () => {
 		await open(() => ok(ready({ failed: 'Could not reach GitHub. Check the internet connection.' })));
 		expect(rows()).toHaveLength(5);
-		const problem = [...document.querySelectorAll('[role="status"]')].find((e) => e.textContent === 'Could not update from GitHub')!;
-		expect(problem.getAttribute('title')).toBe('Could not reach GitHub. Check the internet connection.');
-		// Beside Sync, which is beside More.
+		const problem = button('Could not update from GitHub');
+		// In the design system's row, before Sync, as the other problems are.
+		expect(systemRow().contains(problem)).toBe(true);
 		expect(problem.nextElementSibling?.textContent).toBe('Sync');
-		expect(switcher().parentElement!.contains(problem)).toBe(true);
+		await press(problem);
+		await settle();
+		expect(dialog()?.textContent).toContain('Could not reach GitHub. Check the internet connection.');
 	});
 
 	it('asks again, waiting for GitHub, when Sync is pressed', async () => {
@@ -1019,5 +1006,26 @@ describe('when there is no list', () => {
 		await press(button('Try again'));
 		await settle();
 		expect(rows()).toHaveLength(5);
+	});
+});
+
+/** What is said in place of the list: shadcn's alert as it is made, with Try again in its own action slot. */
+/** An alert's parts, in order, and what each is: the stock structure and nothing else. */
+const parts = (alert: Element) => [...alert.children].map((c) => (c.tagName === 'svg' ? 'icon' : (c.getAttribute('data-slot') ?? c.tagName)));
+
+describe('the notices in place of the list', () => {
+	it('has Try again in the alert’s action slot, with an icon, title and description, when the read fails', async () => {
+		await open(() => fail('git is not installed'));
+		const alert = document.querySelector('[data-slot="alert"]')!;
+		expect(parts(alert)).toEqual(['icon', 'alert-title', 'alert-description', 'alert-action']);
+		expect(alert.querySelector('[data-slot="alert-description"]')!.textContent).toBe('git is not installed');
+		expect(alert.querySelector('[data-slot="alert-action"]')!.contains(button('Try again'))).toBe(true);
+	});
+
+	it('is the same when the clone has no copy of its branch', async () => {
+		await open(() => ok({ state: 'no-branch', root: '/h/fui', branch: 'develop' }));
+		const alert = document.querySelector('[data-slot="alert"]')!;
+		expect(parts(alert)).toEqual(['icon', 'alert-title', 'alert-description', 'alert-action']);
+		expect(alert.querySelector('[data-slot="alert-title"]')!.textContent).toBe('This clone has no develop branch');
 	});
 });

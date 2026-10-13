@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { RecordStore } from '../src/main/services/prototype';
-import type { AgentStatus, ProjectIteration, ReviewComment } from '../src/shared/contract';
+import type { AgentStatus, ProjectIteration, ReviewComment, TokenProblem } from '../src/shared/contract';
 
 /** A mocked function of any shape, called as the code calls it: vitest's own `Procedure`, which it does not export. */
 export type Fn = Mock<(...args: any[]) => any>;
@@ -24,6 +24,13 @@ export const projectIteration = (over: Pick<ProjectIteration, 'name' | 'branch'>
 	cover: null,
 	...over,
 });
+
+/** Something in a library's files that could not be read as a token. */
+export const TOKEN_PROBLEM: TokenProblem = {
+	file: 'src/colors/tones/neutral.ts',
+	line: 10,
+	reason: "neutral 94 is '@ECEEEB', not a hex color, so this step is not read",
+};
 
 /** A comment as it is read: in thread 1, by `pm`, open, on the page as a whole, unless `over` says otherwise. */
 export const reviewComment = (over: Pick<ReviewComment, 'id'> & Partial<ReviewComment>): ReviewComment => ({

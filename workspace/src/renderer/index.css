@@ -134,8 +134,8 @@
 }
 
 /*
- * The window's fixed layout: the top bar, and the toolbar under it on the review screen. Defined once
- * here, because the screen under the bar has to start exactly where the bar ends.
+ * The window's fixed layout: the top bar, and the toolbar under it on the screens that have one (and the strip of tabs, as tall
+ * as it). Defined once here, because the screen under the bar has to start exactly where the bar ends.
  */
 :root {
 	--nav-height: 3.5rem;

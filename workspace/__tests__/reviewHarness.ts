@@ -223,6 +223,19 @@ export const state = (name: string): HTMLElement => {
 };
 export const press = (el: Element) => act(async () => void el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
 
+/** The tabs on the page, one by name, and choosing one as a press does: Radix switches as the pointer goes down. */
+export const tabs = () => [...document.querySelectorAll<HTMLElement>('[role="tab"]')];
+export const tab = (name: string) => tabs().find((t) => t.textContent === name) as HTMLElement;
+export const chooseTab = (which: string | HTMLElement) =>
+	act(
+		async () =>
+			void (typeof which === 'string' ? tab(which) : which).dispatchEvent(
+				new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }),
+			),
+	);
+/** The dialog that is open, or null. */
+export const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]');
+
 /** Opens a menu as a pointer does, and returns its items. */
 export const openMenu = async (trigger: Element): Promise<HTMLElement[]> => {
 	await act(async () => {

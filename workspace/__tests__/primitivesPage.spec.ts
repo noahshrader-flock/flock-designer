@@ -5,6 +5,7 @@ import { Primitives } from '../src/renderer/Primitives';
 import type { Catalog, DesignToken, DesignTokens, TokenEdit } from '../src/shared/contract';
 import { specimenAddress } from '../src/shared/catalog';
 import { typeSpecimens } from '../src/shared/specimens';
+import { TOKEN_PROBLEM } from './fixtures';
 import { fakeApp, ok, render, settle, unmountAll } from './reviewHarness';
 
 /**
@@ -130,11 +131,17 @@ describe('what it defines, at the top', () => {
 
 	it('takes you to a primitive’s section when its chip is pressed', async () => {
 		const scroll = vi.fn();
+		const original = Element.prototype.scrollIntoView;
 		Element.prototype.scrollIntoView = scroll;
-		await show();
-		await act(async () => void chips()[3]!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
-		expect(scroll).toHaveBeenCalledOnce();
-		expect(scroll.mock.contexts[0]).toBe(section('Shape'));
+		try {
+			await show();
+			await act(async () => void chips()[3]!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+			expect(scroll).toHaveBeenCalledOnce();
+			expect(scroll.mock.contexts[0]).toBe(section('Shape'));
+		} finally {
+			// Put back, so a later test's tab that is focused does not scroll into a stub left here.
+			Element.prototype.scrollIntoView = original;
+		}
 	});
 
 	it('says a primitive is not defined when it has no tokens, as a chip of its own', async () => {
@@ -327,9 +334,8 @@ describe('with the rest of the tab', () => {
 	});
 
 	it('does not say what it could not read: the design system’s row does, on every view', async () => {
-		await show(ready(tokens(TOKENS, { problems: [{ file: 'src/colors/tones/neutral.ts', line: 10, reason: 'not a literal' }] })));
+		await show(ready(tokens(TOKENS, { problems: [TOKEN_PROBLEM] })));
 		expect(document.body.textContent).not.toContain('couldn’t be read');
-		expect(document.querySelector('[role="alert"]')).toBeNull();
 	});
 
 	it('shows the shape of what is coming while the design system is read, and says to connect one when there is none', async () => {

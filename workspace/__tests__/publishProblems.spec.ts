@@ -3,11 +3,11 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { PublishProblems, shownStatus } from '../src/renderer/PublishStatus';
 import type { PublishStatus } from '../src/shared/contract';
-import { button, press, render, settle, unmountAll } from './reviewHarness';
+import { button, dialog, press, render, settle, unmountAll } from './reviewHarness';
 
 /**
- * What is held back from syncing: a small ghost button beside Sync that says so, and a dialog that names each thing, why,
- * and the files it is about, one to a line. Nothing when everything is synced.
+ * What is held back from syncing: a problems button beside Sync (`ProblemsDialog`) and, in its dialog, each thing, why, and
+ * the files it is about, one to a line. Nothing when everything is synced.
  */
 
 const AT = '2026-10-08T10:00:00Z';
@@ -33,7 +33,6 @@ afterEach(async () => {
 	current = null;
 	document.body.innerHTML = '';
 });
-const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]');
 
 describe('what is not synced', () => {
 	it('is nothing when everything is synced, a sync is running with nothing held, there is nothing to sync, or it is held with nothing to name', async () => {
@@ -48,15 +47,6 @@ describe('what is not synced', () => {
 			await unmountAll(current!.root);
 		}
 		current = null;
-	});
-
-	it('is a small ghost button with the warning icon, not an alert across the page', async () => {
-		await show(held);
-		const b = button('Some work isn’t synced');
-		expect(b.getAttribute('data-variant')).toBe('ghost');
-		expect(b.getAttribute('data-size')).toBe('sm');
-		expect(b.querySelector('svg')).not.toBeNull();
-		expect(document.querySelector('[role="alert"]')).toBeNull();
 	});
 
 	it('names each thing in a dialog, with why, and the files it is about as a list of their own, one to a line', async () => {
@@ -74,16 +64,6 @@ describe('what is not synced', () => {
 		expect(things[0]!.querySelector('[data-slot]')).toBeNull();
 		// A thing with no files has no list.
 		expect(things[1]!.querySelector('ul')).toBeNull();
-	});
-
-	it('closes from its one Close button, in the footer', async () => {
-		await show(held);
-		await press(button('Some work isn’t synced'));
-		await settle();
-		expect([...(dialog()?.querySelectorAll('button') ?? [])].map((b) => b.textContent)).toEqual(['Close']);
-		await press(button('Close', dialog()!));
-		await settle();
-		expect(dialog()).toBeNull();
 	});
 });
 

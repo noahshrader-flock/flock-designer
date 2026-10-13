@@ -23,7 +23,7 @@ import { ShareControl } from './ShareControl';
 import { AssignFolder } from './AssignFolder';
 import { useOverlaps } from './overlays';
 import { BackButton } from './BackButton';
-import { Toolbar } from './Toolbar';
+import { Toolbar, ToolbarEnd } from './Toolbar';
 import { useHostedPreview } from './hostedPreview';
 import { type AddressPhase, runAddress, runPrototypeAddress } from './address';
 import { routeWentWrong } from './localBuild';
@@ -414,9 +414,7 @@ export const Review = ({
 				{kind === 'prototype' && (
 					<AccessibilityStatus projectId={project.id} name={iteration.name} opened={local.phase.kind === 'running' ? local.phase : null} />
 				)}
-				<div className="grow" />
-				{/* What you can do here, evenly spaced: tighter than the toolbar's own gap, so it reads as one group. */}
-				<div className="flex items-center gap-2">
+				<ToolbarEnd>
 					{local.phase.kind === 'running' && local.phase.uncommitted && (
 						<Button
 							variant="ghost"
@@ -477,7 +475,7 @@ export const Review = ({
 						onViewRecord={(name) => setViewing({ name, open: true })}
 						onAssignFolder={() => setAssigning(true)}
 					/>
-				</div>
+				</ToolbarEnd>
 			</Toolbar>
 
 			{/* Said where it can be seen: a reason kept only in a disabled button's tooltip goes unread. */}

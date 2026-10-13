@@ -43,7 +43,7 @@ const message = (err: unknown): string => errorText(err, { firstLine: true });
 
 export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 	const g = (...args: string[]) => git(designRoot, args, { timeoutMs: 120_000 });
-	const held = (why: string, files?: string[]): SyncResult => ({ published: [], problems: [{ what: RECORDS, why, ...(files ? { files } : {}) }] });
+	const held = (why: string, files?: string[]): SyncResult => ({ published: [], problems: [{ what: RECORDS, why, files }] });
 
 	// Where this is going. Without a branch that tracks the same-named branch on GitHub there is nowhere safe to put records.
 	const branch = await g('rev-parse', '--abbrev-ref', 'HEAD').catch(() => 'HEAD');

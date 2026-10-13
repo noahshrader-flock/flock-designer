@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
 import { createElement } from 'react';
-import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TopNav } from '../src/renderer/TopNav';
-import { openMenu, press, render, unmountAll } from './reviewHarness';
+import { chooseTab, openMenu, press, render, tabs, unmountAll } from './reviewHarness';
 
 /**
  * The sections in the window's top bar (Projects, Design System): shadcn's Tabs in its default look, the pill with the
@@ -21,11 +20,6 @@ afterEach(async () => {
 	if (current) await unmountAll(current.root);
 	current = null;
 });
-
-const tabs = () => [...document.querySelectorAll<HTMLElement>('[role="tab"]')];
-/** Tabs switch as the pointer goes down, as a person's press does. */
-const choose = (tab: HTMLElement) =>
-	act(async () => void tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 })));
 
 describe('the bar', () => {
 	const header = () => document.querySelector('header') as HTMLElement;
@@ -87,10 +81,10 @@ describe('the sections', () => {
 
 	it('go to the section pressed, and do nothing for the one you are in', async () => {
 		const onSectionChange = await show();
-		await choose(tabs()[1]!);
+		await chooseTab(tabs()[1]!);
 		expect(onSectionChange).toHaveBeenCalledWith('design-system');
 		onSectionChange.mockClear();
-		await choose(tabs()[0]!);
+		await chooseTab(tabs()[0]!);
 		expect(onSectionChange).not.toHaveBeenCalled();
 	});
 

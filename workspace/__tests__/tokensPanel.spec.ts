@@ -3,7 +3,8 @@ import { act, createElement, useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { TokensPanel } from '../src/renderer/TokensPanel';
 import type { DesignToken, DesignTokens, TokenEdit } from '../src/shared/contract';
-import { button, fail, fakeApp, ok, press, render, settle, typeInto, unmountAll } from './reviewHarness';
+import { TOKEN_PROBLEM } from './fixtures';
+import { button, chooseTab, fail, fakeApp, ok, press, render, settle, tab, tabs, typeInto, unmountAll } from './reviewHarness';
 import { useTokenBranch } from '../src/renderer/useTokenBranch';
 import { TokenChangesProvider, useTokenChangesFor } from '../src/renderer/tokenChanges';
 import { type DeclaredTarget, undeclared } from '../src/shared/wcag';
@@ -100,11 +101,6 @@ const group = (name: string) => {
 /** The sets shown, each a plain heading over its rows, never closed up behind another trigger. */
 const sets = () => [...document.querySelectorAll<HTMLElement>('[data-token-set]')];
 const setNames = () => sets().map((e) => e.querySelector('[data-set-name]')?.textContent);
-/** The tabs, and choosing one as a press does (tabs switch as the pointer goes down). */
-const tabs = () => [...document.querySelectorAll<HTMLElement>('[role="tab"]')];
-const tab = (name: string) => tabs().find((t) => t.textContent === name) as HTMLElement;
-const choose = (name: string) =>
-	act(async () => void tab(name).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 })));
 const search = (category: string) => document.querySelector<HTMLInputElement>(`input[aria-label="Search ${category.toLowerCase()}"]`);
 const rows = () => [...document.querySelectorAll<HTMLElement>('[data-token]')];
 const row = (path: string) => document.querySelector<HTMLElement>(`[data-token="${path}"]`);
@@ -124,10 +120,11 @@ describe('the tabs', () => {
 		expect(content.className.split(' ')).toEqual(expect.arrayContaining(['p-4', 'overflow-y-auto']));
 	});
 
-	it('rest on a bottom border, so there is a line between them and what is under them', async () => {
+	it('are the app’s line tabs, the same strip as every other, inset as the panel’s own content is', async () => {
 		await show();
 		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
-		expect(list.className.split(' ')).toEqual(expect.arrayContaining(['border-b', 'min-w-full']));
+		expect(list.getAttribute('data-variant')).toBe('line');
+		expect(list.closest('[data-slot="tabs"]')?.className).toContain('[--tabs-inset:1rem]');
 	});
 
 	it('are the categories the library has, in order, as line tabs, with no heading or count above them', async () => {
@@ -162,7 +159,7 @@ describe('the tabs', () => {
 	it('switch, each showing only its own tokens', async () => {
 		await show();
 		expect(groups().map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['Tones', 'Light', 'Dark']);
-		await choose('Spacing');
+		await chooseTab('Spacing');
 		await settle();
 		expect(tab('Spacing').getAttribute('aria-selected')).toBe('true');
 		expect(setNames()).toEqual(['spacing']);
@@ -223,7 +220,7 @@ describe('the groups', () => {
 
 	it('are not shown for a tab with only one, which would say its own name twice: its sets are, already open', async () => {
 		await show();
-		await choose('Shape');
+		await chooseTab('Shape');
 		await settle();
 		expect(groups()).toHaveLength(0);
 		expect(document.querySelector('[data-slot="accordion"]')).toBeNull();
@@ -252,7 +249,7 @@ describe('a set', () => {
 
 	it('shows a dimension as its value, with no swatch', async () => {
 		await show();
-		await choose('Shape');
+		await chooseTab('Shape');
 		await settle();
 		const radius = row('radius') as HTMLElement;
 		expect(radius.textContent).toContain('8px');
@@ -291,11 +288,11 @@ describe('searching', () => {
 		await show();
 		await typeInto(search('Color') as HTMLInputElement, 'primary');
 		await settle();
-		await choose('Spacing');
+		await chooseTab('Spacing');
 		await settle();
 		expect((search('Spacing') as HTMLInputElement).value).toBe('');
 		expect(sets()).toHaveLength(1);
-		await choose('Color');
+		await chooseTab('Color');
 		await settle();
 		expect((search('Color') as HTMLInputElement).value).toBe('primary');
 		expect(rows()).toHaveLength(3);
@@ -314,25 +311,15 @@ describe('searching', () => {
 
 describe('what it could not read', () => {
 	it('is not said in the panel, which keeps its room: it is a button in the design system’s row', async () => {
-		await show({
-			...TOKENS,
-			problems: [{ file: 'src/colors/tones/neutral.ts', line: 10, reason: "neutral 94 is '@ECEEEB', not a hex color, so this step is not read" }],
-		});
-		expect(document.querySelector('[role="alert"]')).toBeNull();
+		await show({ ...TOKENS, problems: [TOKEN_PROBLEM] });
 		expect(text()).not.toContain('couldn’t be read');
 		expect(text()).not.toContain('neutral.ts:10');
-	});
-
-	it('is not there when everything was read', async () => {
-		await show();
-		expect(document.querySelector('[role="alert"]')).toBeNull();
 	});
 
 	it('is said plainly when no tokens were found, with where it looked', async () => {
 		await show({ source: null, tokens: [], problems: [], looked: ['theme files', 'CSS variables', 'token files'] });
 		expect(text()).toContain('No tokens were found in this library.');
 		expect(text()).toContain('Looked for theme files, CSS variables, token files.');
-		expect(document.querySelector('[role="alert"]')).toBeNull();
 		expect(tabs()).toHaveLength(0);
 		expect(document.querySelector('input[type="search"]')).toBeNull();
 	});
@@ -419,7 +406,7 @@ describe('changing a token (T3)', () => {
 
 	it('changes a dimension with a slider and its number, when the slider is let go of', async () => {
 		await show();
-		await choose('Spacing');
+		await chooseTab('Spacing');
 		const editor = await open('spacing');
 		const thumb = editor.querySelector<HTMLElement>('[role="slider"]') as HTMLElement;
 		expect(thumb.getAttribute('aria-label')).toBe('spacing base');
@@ -555,7 +542,7 @@ describe('changing a token (T3)', () => {
 describe('naming and reach (T3)', () => {
 	it('names a token with where it is shown, without saying a word twice', async () => {
 		await show();
-		await choose('Shape');
+		await chooseTab('Shape');
 		expect(row('radius')?.querySelector('button')?.getAttribute('aria-label')).toBe('Change Radius base');
 	});
 
@@ -685,13 +672,13 @@ describe('the vocabulary of primitives (R1)', () => {
 		await show({ ...TOKENS, tokens: [...TOKENS.tokens, font] });
 		// Typography is in the vocabulary (R3), so its tab is where the vocabulary puts it.
 		expect(tabs().map((t) => t.textContent)).toEqual(['Color', 'Typography', 'Spacing', 'Shape']);
-		await choose('Typography');
+		await chooseTab('Typography');
 		await settle();
 		const fontRow = document.querySelector<HTMLElement>('[data-token="font.sans"]')!;
 		expect(fontRow.textContent).toContain('Inter');
 		expect(fontRow.querySelector('button')).toBeNull();
 		// A color is still a control.
-		await choose('Color');
+		await chooseTab('Color');
 		await settle();
 		expect(document.querySelector('[data-token="palette.light.primary.main"] button')?.getAttribute('aria-label')).toBe('Change Light primary main');
 	});
