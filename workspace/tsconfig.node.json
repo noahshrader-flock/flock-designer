@@ -20,6 +20,7 @@
 	"include": [
 		"package.json",
 		"src/main/**/*",
+		"src/host/**/*",
 		"src/cli/**/*",
 		"src/site/**/*",
 		"src/preload/**/*",

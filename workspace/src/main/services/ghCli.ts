@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
-import type { GitHubApi } from './designRepo';
+import type { GitHubApi } from '../../host/designRepo';
 import { findOnPath } from './paths';
 import { errorText } from '../../shared/result';
-import { HostError } from './hostError';
+import { HostError } from '../../host/hostError';
 import { NotInstalled, ProcessFailed, runFile } from './process';
 
 /** How long one call may take before it is given up on: a stuck one must not hold a screen. */

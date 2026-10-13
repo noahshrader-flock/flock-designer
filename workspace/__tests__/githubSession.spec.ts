@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { type Fetcher, ReauthRequired } from '../src/main/services/github';
+import { type Fetcher, ReauthRequired } from '../src/host/github';
 import { GitHubSession } from '../src/main/services/githubSession';
 import { type SafeStorageLike, TokenStore } from '../src/main/services/tokenStore';
 import type { SignInState } from '../src/shared/contract';

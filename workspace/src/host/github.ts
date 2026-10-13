@@ -1,6 +1,6 @@
-import type { DeviceCodeStart, GitHubUser } from '../../shared/contract';
-import { asRecord } from '../../shared/json';
-import { errorText } from '../../shared/result';
+import type { DeviceCodeStart, GitHubUser } from '../shared/contract';
+import { asRecord } from '../shared/json';
+import { errorText } from '../shared/result';
 import { HostError } from './hostError';
 
 /**

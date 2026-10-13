@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project } from '../src/shared/contract';
-import { DesignRepo } from '../src/main/services/designRepo';
+import { DesignRepo } from '../src/host/designRepo';
 import { readFolderProjects } from '../src/main/services/localProjects';
 import { assignFolder, recordPrototype, type RecordStore } from '../src/main/services/prototype';
 import { briefBody, briefFolder, firstHeading, folderName, foldersOf, inFolder, sameFolder, shownRecord, withFolder } from '../src/shared/brief';

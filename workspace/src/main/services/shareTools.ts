@@ -1,5 +1,5 @@
 import { locateGh } from './ghCli';
-import { HostError } from './hostError';
+import { HostError } from '../../host/hostError';
 import { pushBranch } from './git';
 import { NotInstalled, ProcessFailed, runFile } from './process';
 import type { Check, PullRequest, ShareTools } from './share';

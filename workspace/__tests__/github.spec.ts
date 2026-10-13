@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-	type Fetcher,
-	type StoredToken,
-	ReauthRequired,
-	callApi,
-	isExpired,
-	pollForToken,
-	refreshToken,
-	startDeviceFlow,
-} from '../src/main/services/github';
-import { HostError } from '../src/main/services/hostError';
+import { type Fetcher, type StoredToken, ReauthRequired, callApi, isExpired, pollForToken, refreshToken, startDeviceFlow } from '../src/host/github';
+import { HostError } from '../src/host/hostError';
 
 /** A fetch stub that replays queued responses and records what was sent. */
 const stub = (responses: Array<{ status?: number; body: unknown }>) => {

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import type { Repository, RepositoryReach } from '../../shared/contract';
 import type { GitHubSession } from './githubSession';
-import { readPages } from './paging';
+import { readPages } from '../../host/paging';
 
 /**
  * The repositories new work can start in: every one the signed-in person can see on GitHub, matched to its

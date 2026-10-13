@@ -1,8 +1,8 @@
 import type { PageStatus } from '../../shared/contract';
 import { prototypePagePath, sitePath } from '../../shared/designPaths';
-import type { GitHubApi } from './designRepo';
-import { hostErrorKind } from './hostError';
-import { repoPath } from './repoFiles';
+import type { GitHubApi } from '../../host/designRepo';
+import { hostErrorKind } from '../../host/hostError';
+import { repoPath } from '../../host/repoFiles';
 import { type SyncResult, syncRecords } from './designSync';
 import { git } from './git';
 import { asArray, asRecord } from '../../shared/json';
@@ -96,13 +96,12 @@ export const pageStatus = async (github: GitHubApi, ref: RepoRef, projectId: str
  * generator, the workflow that runs it, and the packages it installs. A change to any of these changes how the pages
  * look and work, so the site needs a deploy as much as it does for a new page. The renderer folder is all of it, not
  * only what the viewer imports: one deploy too many after an edit to a screen the site does not carry costs a minute
- * of the workflow. The services are named one by one, as the viewer imports them; a test follows the viewer's imports
- * (`siteSources.spec.ts`), so a service moved or added without its name here fails there, rather than leaving the site
- * stale without a word.
+ * of the workflow. What the viewer reaches GitHub with is `src/host`, kept out of the main process for this. A test
+ * follows the viewer's imports (`siteSources.spec.ts`), so a file it reaches outside these folders fails there, rather
+ * than leaving the site stale without a word.
  */
 const SITE_SOURCES = [
-	/^workspace\/src\/(site|viewer|renderer|shared)\//,
-	/^workspace\/src\/main\/services\/(designRepo|github|hostError|paging|repoFiles|reviewThreads)\.ts$/,
+	/^workspace\/src\/(site|viewer|renderer|shared|host)\//,
 	/^workspace\/src\/cli\/dsnr\.ts$/,
 	/^workspace\/(bin\/|viewer\.vite\.config\.ts$|package-lock\.json$)/,
 	/^\.github\/workflows\/publish-prototypes\.yml$/,

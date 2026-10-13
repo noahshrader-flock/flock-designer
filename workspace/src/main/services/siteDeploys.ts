@@ -2,7 +2,7 @@ import type { PageStatus } from '../../shared/contract';
 import { prototypeKey } from '../../shared/designPaths';
 import { errorText } from '../../shared/result';
 import { coalescingByKey } from './concurrency';
-import { DESIGN_REPO } from './designRepo';
+import { DESIGN_REPO } from '../../host/designRepo';
 import type { GitHubSession } from './githubSession';
 import { pageStatus, publish, recordsFrom, redeploySite, siteBehind } from './pages';
 

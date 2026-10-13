@@ -1,5 +1,5 @@
-import { asArray, asRecord } from '../../shared/json';
-import type { RepoRef } from '../../shared/repoRef';
+import { asArray, asRecord } from '../shared/json';
+import type { RepoRef } from '../shared/repoRef';
 import type { GitHubApi } from './designRepo';
 import { hostErrorKind } from './hostError';
 

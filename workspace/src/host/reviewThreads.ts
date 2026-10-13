@@ -1,4 +1,4 @@
-import type { CommentAnchor, ReviewComment } from '../../shared/contract';
+import type { CommentAnchor, ReviewComment } from '../shared/contract';
 import {
 	RESOLVED_MARK,
 	addressedAt,
@@ -10,10 +10,10 @@ import {
 	stripAnchor,
 	withAddressed,
 	withResolved,
-} from '../../shared/anchor';
-import { asRecord } from '../../shared/json';
-import { latestDate } from '../../shared/projectList';
-import type { RepoRef } from '../../shared/repoRef';
+} from '../shared/anchor';
+import { asRecord } from '../shared/json';
+import { latestDate } from '../shared/projectList';
+import type { RepoRef } from '../shared/repoRef';
 import type { GitHubApi } from './designRepo';
 import { HostError, hostErrorKind } from './hostError';
 import { readPages } from './paging';

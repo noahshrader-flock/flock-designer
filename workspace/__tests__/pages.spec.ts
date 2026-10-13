@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import type { GitHubApi } from '../src/main/services/designRepo';
+import type { GitHubApi } from '../src/host/designRepo';
 import { type RouteCall, fakeGitHub, refusal } from './fakes/github';
 import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, redeploySite, siteBehind, unpublish, whyPublic } from '../src/main/services/pages';
 
@@ -343,7 +343,7 @@ describe('what GitHub has that the site does not have yet', () => {
 		'workspace/src/renderer/index.css',
 		'workspace/src/shared/projectList.ts',
 		'workspace/src/site/buildSite.ts',
-		'workspace/src/main/services/designRepo.ts',
+		'workspace/src/host/designRepo.ts',
 		'workspace/src/cli/dsnr.ts',
 		'workspace/viewer.vite.config.ts',
 		'workspace/bin/dsnr.mjs',

@@ -1,5 +1,5 @@
-import type { GitHubApi } from '../main/services/designRepo';
-import { type Fetcher, callApi } from '../main/services/github';
+import type { GitHubApi } from '../host/designRepo';
+import { type Fetcher, callApi } from '../host/github';
 import type { PinEvent } from '../shared/contract';
 import { asRecord } from '../shared/json';
 import {
@@ -16,7 +16,7 @@ import {
 import type { CommentStore, PageSurface } from '../renderer/comments/surfaces';
 import { toResult } from '../shared/result';
 import type { RepoRef } from '../shared/repoRef';
-import { ReviewThreads } from '../main/services/reviewThreads';
+import { ReviewThreads } from '../host/reviewThreads';
 
 /**
  * The comments experience on a prototype's published page: the browser's side of what the app does through its main

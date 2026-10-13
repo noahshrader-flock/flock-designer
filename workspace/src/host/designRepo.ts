@@ -1,11 +1,11 @@
-import type { Person, Project, ProjectIteration } from '../../shared/contract';
-import { fromBrief } from '../../shared/brief';
-import { projectDir, projectPath } from '../../shared/designPaths';
-import { isBot, mergePeople } from '../../shared/people';
-import { iterationOrder, latestDate } from '../../shared/projectList';
-import { asRecord } from '../../shared/json';
-import { parseIterations, toProjectIteration } from '../../shared/records';
-import type { RepoRef } from '../../shared/repoRef';
+import type { Person, Project, ProjectIteration } from '../shared/contract';
+import { fromBrief } from '../shared/brief';
+import { projectDir, projectPath } from '../shared/designPaths';
+import { isBot, mergePeople } from '../shared/people';
+import { iterationOrder, latestDate } from '../shared/projectList';
+import { asRecord } from '../shared/json';
+import { parseIterations, toProjectIteration } from '../shared/records';
+import type { RepoRef } from '../shared/repoRef';
 import { RepoFiles } from './repoFiles';
 import { type ReviewThread, ReviewThreads } from './reviewThreads';
 

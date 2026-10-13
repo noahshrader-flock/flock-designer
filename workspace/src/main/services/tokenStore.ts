@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs';
-import type { StoredToken } from './github';
+import type { StoredToken } from '../../host/github';
 import { writeAtomic } from './jsonFile';
 
 /**

@@ -1,4 +1,4 @@
-import { asArray } from '../../shared/json';
+import { asArray } from '../shared/json';
 import type { GitHubApi } from './designRepo';
 
 /**

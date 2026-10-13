@@ -20,11 +20,11 @@ import { compareUrl } from '../../shared/hostUrls';
  */
 import type { VoiceAndTone, VoiceBranch, VoiceSave } from '../../shared/contract';
 import { asArray, asRecord } from '../../shared/json';
-import type { GitHubApi } from './designRepo';
-import { RepoFiles, repoPath } from './repoFiles';
+import type { GitHubApi } from '../../host/designRepo';
+import { RepoFiles, repoPath } from '../../host/repoFiles';
 import { designSystemId } from './designSystems';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
-import { hostErrorKind } from './hostError';
+import { hostErrorKind } from '../../host/hostError';
 import { type JsonFile, jsonFile } from './jsonFile';
 
 /** Where the file is, in a design system's agent files: how Flock speaks is the design system's (Noah, 2026-10-10). */

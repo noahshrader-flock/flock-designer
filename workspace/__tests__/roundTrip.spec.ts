@@ -1,5 +1,5 @@
 import { agentFinished, agentRunning } from './fixtures';
-import { ReviewThreads } from '../src/main/services/reviewThreads';
+import { ReviewThreads } from '../src/host/reviewThreads';
 // @vitest-environment jsdom
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

@@ -1,4 +1,4 @@
-import type { RepoFiles } from './repoFiles';
+import type { RepoFiles } from '../../host/repoFiles';
 import { type RecordStore, cloneStore } from './prototype';
 
 /**

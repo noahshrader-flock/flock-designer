@@ -1,7 +1,17 @@
 import type { DeviceCodeStart, SignInState } from '../../shared/contract';
-import { type Fetcher, type StoredToken, ReauthRequired, callApi, isExpired, pollForToken, readUser, refreshToken, startDeviceFlow } from './github';
+import {
+	type Fetcher,
+	type StoredToken,
+	ReauthRequired,
+	callApi,
+	isExpired,
+	pollForToken,
+	readUser,
+	refreshToken,
+	startDeviceFlow,
+} from '../../host/github';
 import { singleFlight } from './concurrency';
-import { HostError } from './hostError';
+import { HostError } from '../../host/hostError';
 import type { TokenStore } from './tokenStore';
 
 /**

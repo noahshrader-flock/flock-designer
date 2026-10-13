@@ -2,9 +2,9 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { RepoFiles } from '../src/main/services/repoFiles';
+import { RepoFiles } from '../src/host/repoFiles';
 import { ghApi } from '../src/main/services/ghCli';
-import { hostErrorKind } from '../src/main/services/hostError';
+import { hostErrorKind } from '../src/host/hostError';
 
 /** GitHub's command line, as the app runs it. */
 

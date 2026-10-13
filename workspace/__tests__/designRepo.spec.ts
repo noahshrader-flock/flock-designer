@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { DesignRepo } from '../src/main/services/designRepo';
-import { RepoFiles } from '../src/main/services/repoFiles';
-import { ReviewThreads } from '../src/main/services/reviewThreads';
+import { DesignRepo } from '../src/host/designRepo';
+import { RepoFiles } from '../src/host/repoFiles';
+import { ReviewThreads } from '../src/host/reviewThreads';
 import { type RouteCall, fakeGitHub, refusal } from './fakes/github';
 
 const b64 = (s: string) => Buffer.from(s, 'utf8').toString('base64');

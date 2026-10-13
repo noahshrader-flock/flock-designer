@@ -1,5 +1,5 @@
 import { type BrowserWindow, clipboard, dialog, shell } from 'electron';
-import type { GitHubApi } from './services/designRepo';
+import type { GitHubApi } from '../host/designRepo';
 import { type AgentSession, findEditor, openFolder, openPrompt, openSession } from './services/editor';
 import { locateClaude } from './services/agent';
 import { ghApi } from './services/ghCli';
