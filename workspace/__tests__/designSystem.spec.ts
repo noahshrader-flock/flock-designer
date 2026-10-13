@@ -154,7 +154,7 @@ describe('the tab bar (T9)', () => {
 		await open(() => ok(ready()));
 		expect(bar().getAttribute('data-variant')).toBe('line');
 		expect(bar().hasAttribute('data-bar')).toBe(true);
-		expect(bar().closest('[data-slot="line-tabs"]')).not.toBeNull();
+		expect(bar().closest('[data-slot="tabs"][data-variant="line"]')).not.toBeNull();
 		// The height is the toolbar's own, said once by the component: the same as the row under it and the panel's switch row.
 		expect(bar().className.split(' ')).toContain('group-data-horizontal/tabs:h-(--toolbar-height)');
 		expect(firstRow().className).toContain('h-(--toolbar-height)');

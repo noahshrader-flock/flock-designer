@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { LineTabs, LineTabsContent, LineTabsList, LineTabsTrigger } from '../src/renderer/LineTabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../src/renderer/ui/tabs';
 import { render, unmountAll } from './reviewHarness';
 
 /**
- * Line tabs: a strip that runs edge to edge on a bottom border, with the padding on what is under it (which scrolls on its
- * own, so the strip stays at the top). One piece, so every row of tabs in a pane has them the same.
+ * Tabs, and their line variant: a strip that runs edge to edge on a bottom border, with the padding on what is under it
+ * (which scrolls on its own, so the strip stays at the top). One piece, so every row of tabs in a pane has them the same.
  */
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
@@ -19,15 +19,15 @@ afterEach(async () => {
 const show = async (bar = false) => {
 	current = await render(
 		createElement(
-			LineTabs,
-			{ defaultValue: 'a' },
+			Tabs,
+			{ variant: 'line', defaultValue: 'a' },
 			createElement(
-				LineTabsList,
+				TabsList,
 				bar ? { bar: true } : null,
-				createElement(LineTabsTrigger, { value: 'a' }, 'One'),
-				createElement(LineTabsTrigger, { value: 'b' }, 'Two'),
+				createElement(TabsTrigger, { value: 'a' }, 'One'),
+				createElement(TabsTrigger, { value: 'b' }, 'Two'),
 			),
-			createElement(LineTabsContent, { value: 'a' }, 'First'),
+			createElement(TabsContent, { value: 'a' }, 'First'),
 		),
 	);
 };
@@ -38,7 +38,7 @@ describe('line tabs', () => {
 		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
 		expect(list.getAttribute('data-variant')).toBe('line');
 		expect(list.className.split(' ')).toEqual(expect.arrayContaining(['min-w-full', 'border-b']));
-		expect(list.closest('[data-slot="line-tabs"]')?.className).not.toMatch(/(^|\s)p[xtblr]?-\d/);
+		expect(list.closest('[data-slot="tabs"][data-variant="line"]')?.className).not.toMatch(/(^|\s)p[xtblr]?-\d/);
 	});
 
 	it('scroll sideways, from the first tab at the left, when there are more than fit: the strip is as wide as its tabs in a box that scrolls it', async () => {
@@ -90,17 +90,38 @@ describe('line tabs', () => {
 		expect(list.className).not.toMatch(/toolbar-height|page-padding|flex-none/);
 	});
 
+	it('take the variant from the root, said once, and leave plain tabs as they were', async () => {
+		await show();
+		expect((document.querySelector('[data-slot="tabs-list"]') as HTMLElement).getAttribute('data-variant')).toBe('line');
+		await unmountAll(current!.root);
+		document.body.innerHTML = '';
+		current = await render(
+			createElement(
+				Tabs,
+				{ defaultValue: 'a' },
+				createElement(TabsList, null, createElement(TabsTrigger, { value: 'a' }, 'One')),
+				createElement(TabsContent, { value: 'a' }, 'First'),
+			),
+		);
+		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
+		expect(list.getAttribute('data-variant')).toBe('default');
+		expect(list.className).not.toMatch(/border-b|min-w-full/);
+		expect(document.querySelector('[data-slot="tabs-scroll"]')).toBeNull();
+		expect((document.querySelector('[data-slot="tabs-content"]') as HTMLElement).className).not.toMatch(/overflow-y-auto|p-4/);
+		expect(document.querySelector('[data-slot="tabs"]')?.className).not.toMatch(/min-h-0/);
+	});
+
 	it('write each tab’s label in title case, whatever it was written in, and leave a label that is not text as it is', async () => {
 		current = await render(
 			createElement(
-				LineTabs,
-				{ defaultValue: 'a' },
+				Tabs,
+				{ variant: 'line', defaultValue: 'a' },
 				createElement(
-					LineTabsList,
+					TabsList,
 					null,
-					createElement(LineTabsTrigger, { value: 'a' }, 'voice and tone'),
-					createElement(LineTabsTrigger, { value: 'b' }, 'Color'),
-					createElement(LineTabsTrigger, { value: 'c' }, createElement('em', null, 'not text')),
+					createElement(TabsTrigger, { value: 'a' }, 'voice and tone'),
+					createElement(TabsTrigger, { value: 'b' }, 'Color'),
+					createElement(TabsTrigger, { value: 'c' }, createElement('em', null, 'not text')),
 				),
 			),
 		);
@@ -109,7 +130,7 @@ describe('line tabs', () => {
 
 	it('fill the panel from top to bottom, the strip first and what is under it scrolling', async () => {
 		await show();
-		const root = document.querySelector('[data-slot="line-tabs"]') as HTMLElement;
+		const root = document.querySelector('[data-slot="tabs"][data-variant="line"]') as HTMLElement;
 		expect(root.className.split(' ')).toEqual(expect.arrayContaining(['flex', 'min-h-0', 'flex-1']));
 		// A column: the strip on top, the content filling what is left.
 		expect(root.getAttribute('data-orientation')).toBe('horizontal');

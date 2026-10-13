@@ -16,7 +16,7 @@ import { CardGrid } from './CardGrid';
 import { ComponentCard } from './ComponentCard';
 import { ComponentPanel } from './ComponentPanel';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
-import { LineTabs, LineTabsContent, LineTabsList, LineTabsTrigger } from './LineTabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { GroupTrigger, useClosedGroups } from './GroupAccordion';
 import { MoreMenu } from './MoreMenu';
 import { NoMatches } from './NoMatches';
@@ -186,7 +186,7 @@ type Tab = 'components' | 'primitives' | 'voice-and-tone';
 
 /**
  * The Design System tab (DESIGN_SYSTEM_PLAN.md): the company's, not any one library's, so its bar holds only its own tabs,
- * Components, Primitives and Voice and Tone (T9): the app's line tabs (`LineTabs`) as a bar of tabs, as tall as the toolbar
+ * Components, Primitives and Voice and Tone (T9): the app's line tabs (`Tabs variant="line"`) as a bar of tabs, as tall as the toolbar
  * under it. The tab fills the window under the top bar, and each pane scrolls on its own. Each stays mounted while another
  * is shown, so what was typed, scrolled and opened in it is as it was left.
  */
@@ -197,23 +197,23 @@ export const DesignSystem = ({ hidden }: { hidden: boolean }) => {
 	const [catalog, setCatalog] = useState<Catalog | null>(null);
 	const [edits, setEdits] = useState<TokenEdit[]>([]);
 	return (
-		<LineTabs value={tab} onValueChange={(next) => setTab(next as Tab)} className="h-[calc(100dvh-var(--nav-height))]">
-			<LineTabsList bar aria-label="Design System">
-				<LineTabsTrigger value="components">Components</LineTabsTrigger>
-				<LineTabsTrigger value="primitives">Primitives</LineTabsTrigger>
-				<LineTabsTrigger value="voice-and-tone">Voice and Tone</LineTabsTrigger>
-			</LineTabsList>
+		<Tabs variant="line" value={tab} onValueChange={(next) => setTab(next as Tab)} className="h-[calc(100dvh-var(--nav-height))]">
+			<TabsList bar aria-label="Design System">
+				<TabsTrigger value="components">Components</TabsTrigger>
+				<TabsTrigger value="primitives">Primitives</TabsTrigger>
+				<TabsTrigger value="voice-and-tone">Voice and Tone</TabsTrigger>
+			</TabsList>
 			{/* No padding: each pane has its own layout. Kept while another is shown, only hidden. */}
-			<LineTabsContent value="components" forceMount hidden={tab !== 'components'} data-tab="components" className="p-0">
+			<TabsContent value="components" forceMount hidden={tab !== 'components'} data-tab="components" className="p-0">
 				<Components hidden={hidden || tab !== 'components'} catalog={catalog} setCatalog={setCatalog} edits={edits} setEdits={setEdits} />
-			</LineTabsContent>
-			<LineTabsContent value="primitives" forceMount hidden={tab !== 'primitives'} data-tab="primitives" className="p-0">
+			</TabsContent>
+			<TabsContent value="primitives" forceMount hidden={tab !== 'primitives'} data-tab="primitives" className="p-0">
 				<Primitives catalog={catalog} edits={edits} hidden={hidden || tab !== 'primitives'} />
-			</LineTabsContent>
-			<LineTabsContent value="voice-and-tone" forceMount hidden={tab !== 'voice-and-tone'} data-tab="voice-and-tone" className="p-0">
+			</TabsContent>
+			<TabsContent value="voice-and-tone" forceMount hidden={tab !== 'voice-and-tone'} data-tab="voice-and-tone" className="p-0">
 				<VoiceAndTone hidden={hidden || tab !== 'voice-and-tone'} />
-			</LineTabsContent>
-		</LineTabs>
+			</TabsContent>
+		</Tabs>
 	);
 };
 

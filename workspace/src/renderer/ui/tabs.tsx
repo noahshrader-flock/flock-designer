@@ -4,21 +4,39 @@ import { cn } from "@/lib/utils"
 import { titleCase } from "../../shared/titleCase"
 import { Tabs as TabsPrimitive } from "radix-ui"
 
+type TabsVariant = "default" | "line"
+
+/** The variant is said once, on `Tabs`; its list, triggers and content take it from here. */
+const TabsVariantContext = React.createContext<TabsVariant>("default")
+
+/**
+ * `variant="line"` is the app's tabs for a panel or a screen: the strip runs **edge to edge** across it, resting on a
+ * bottom border, each tab an equal share of the width, with nothing padded around it; the padding is the content's, under
+ * it, which scrolls on its own so the strip stays at the top. One piece for every row of tabs in the app, so they are the
+ * same, with no padding or height of their own to remember. Used as shadcn's Tabs are: a root, a list of triggers, and a
+ * content for each. A strip with more tabs than fit scrolls sideways, from the first.
+ */
 function Tabs({
   className,
   orientation = "horizontal",
+  variant = "default",
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.Root>) {
+}: React.ComponentProps<typeof TabsPrimitive.Root> & { variant?: TabsVariant }) {
   return (
-    <TabsPrimitive.Root
-      data-slot="tabs"
-      data-orientation={orientation}
-      className={cn(
-        "group/tabs flex gap-2 data-horizontal:flex-col",
-        className
-      )}
-      {...props}
-    />
+    <TabsVariantContext.Provider value={variant}>
+      <TabsPrimitive.Root
+        data-slot="tabs"
+        data-variant={variant}
+        data-orientation={orientation}
+        className={cn(
+          "group/tabs flex gap-2 data-horizontal:flex-col",
+          // Fills the panel: the strip first, and the content taking what is left.
+          variant === "line" && "min-h-0 flex-1 gap-0",
+          className
+        )}
+        {...props}
+      />
+    </TabsVariantContext.Provider>
   )
 }
 
@@ -30,34 +48,45 @@ const tabsListVariants = cva(
         default: "bg-muted",
         // As wide as its tabs and at least its box, starting at the left: when the tabs do not fit, the strip is wider than
         // the box that scrolls it (`TabsList`), never a centered row spilling off both ends with the first out of reach.
-        line: "w-max min-w-full gap-1 bg-transparent justify-start",
+        line: "w-max min-w-full gap-1 border-b bg-transparent justify-start",
       },
       // The sizes of a Button (default and lg), so a row of tabs and a row of buttons beside it are the same height.
       size: {
         default: "group-data-horizontal/tabs:h-8",
         lg: "group-data-horizontal/tabs:h-9",
       },
+      // A line strip as a bar: as tall as a toolbar and inset as one is, on its background, with its tabs as wide as their
+      // labels, at the left, not shares of the width, so it sits over a toolbar as the same bar.
+      bar: {
+        true: "bg-card px-(--page-padding) group-data-horizontal/tabs:h-(--toolbar-height) [&>[role=tab]]:flex-none",
+        false: "",
+      },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      bar: false,
     },
   }
 )
 
 function TabsList({
   className,
-  variant = "default",
+  variant,
   size = "default",
+  bar = false,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List> &
   VariantProps<typeof tabsListVariants>) {
+  const inherited = React.useContext(TabsVariantContext)
+  variant ??= inherited
   const list = (
     <TabsPrimitive.List
       data-slot="tabs-list"
       data-variant={variant}
       data-size={size}
-      className={cn(tabsListVariants({ variant, size }), className)}
+      data-bar={bar || undefined}
+      className={cn(tabsListVariants({ variant, size, bar }), className)}
       {...props}
     />
   )
@@ -108,10 +137,16 @@ function TabsContent({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Content>) {
+  const variant = React.useContext(TabsVariantContext)
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn("flex-1 text-sm outline-none", className)}
+      className={cn(
+        "flex-1 text-sm outline-none",
+        // Under a line strip it scrolls on its own, so the strip stays at the top, and it is the one with the padding.
+        variant === "line" && "min-h-0 overflow-y-auto p-4",
+        className
+      )}
       {...props}
     />
   )
