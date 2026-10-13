@@ -6,6 +6,7 @@ import { type Panels, answerCall } from './bridge';
 import { afterQuiet, whatChanged } from './devReload';
 import { newNonce, panelHtml } from './html';
 import { type Review, readMessage } from './messages';
+import type { Given } from './newPrototype';
 import { failed } from './ui';
 
 export interface PanelDeps {
@@ -15,6 +16,8 @@ export interface PanelDeps {
 	context: () => Context;
 	locate: () => Promise<void>;
 	openReview: (review: Review) => Promise<void>;
+	/** Starts a prototype from what the panel's dialog asked. */
+	startPrototype: (answers: Given) => Promise<void>;
 	/** Run from its source: the panel follows its own build. */
 	development: boolean;
 	/** Where a run from source says what it did: View › Output › DSNR. */
@@ -55,6 +58,8 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 			this.view = undefined;
 		});
 		view.webview.onDidReceiveMessage((raw: unknown) => void this.receive(view.webview, raw));
+		// Hidden, the page is gone, and loads again when shown: nothing is sent to it until it says it listens.
+		view.onDidChangeVisibility(() => !view.visible && this.deps.panels.unready(view.webview));
 		if (this.deps.development) this.follow(view);
 	}
 
@@ -67,15 +72,19 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 					return await answerCall(webview, served(), message);
 				case 'ready':
 					// Told once the page listens: a message posted before then is lost.
-					return void (await webview.postMessage({ type: 'context', context: this.deps.context() }));
+					await webview.postMessage({ type: 'context', context: this.deps.context() });
+					// And what was held for the page until it listened (a dialog asked for while the panel was hidden).
+					return this.deps.panels.ready(webview);
 				case 'locate-design-system':
 					return await this.deps.locate();
 				case 'open-review':
 					return await this.deps.openReview(message);
 				case 'get-started':
 					return void (await vscode.commands.executeCommand('dsnr.getStarted'));
-				case 'new-prototype':
+				case 'ask-new-prototype':
 					return void (await vscode.commands.executeCommand('dsnr.newPrototype'));
+				case 'new-prototype':
+					return await this.deps.startPrototype(message);
 			}
 		} catch (err) {
 			failed(err);
@@ -85,6 +94,7 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 	/** Reloads the panel, or restarts the extension, when the build in `dist/` changes. Stops when the panel goes. */
 	private follow(view: vscode.WebviewView): void {
 		const reload = afterQuiet(150, () => {
+			this.deps.panels.unready(view.webview);
 			view.webview.html = this.html(view.webview);
 			this.deps.log?.info('The page was rebuilt: the panel reloaded.');
 		});

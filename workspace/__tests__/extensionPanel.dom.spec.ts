@@ -164,6 +164,197 @@ describe('the account', () => {
 	});
 });
 
+/** Types into a field as a person does: the value set, and React told it changed. */
+const type = async (el: HTMLElement, text: string) =>
+	act(async () => {
+		const field = el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+		const proto =
+			field instanceof HTMLSelectElement ? HTMLSelectElement : field instanceof HTMLTextAreaElement ? HTMLTextAreaElement : HTMLInputElement;
+		Object.getOwnPropertyDescriptor(proto.prototype, 'value')!.set!.call(field, text);
+		field.dispatchEvent(new Event(field instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }));
+	});
+
+describe('dialogs and menus, in the panel', () => {
+	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
+	/** A field by its label, as a person finds it. */
+	const field = (name: string) =>
+		[...dialog()!.querySelectorAll('label')].find((l) => l.querySelector('[data-part="label"]')?.textContent === name)!.control as HTMLInputElement;
+	/** The option of a select that says `label`, chosen, as a person chooses it. */
+	const choose = async (select: HTMLElement, label: string) => {
+		const option = [...(select as HTMLSelectElement).options].find((o) => o.textContent === label);
+		if (!option) throw new Error(`no option ${label}`);
+		await type(select, option.value);
+	};
+	const selected = (select: HTMLElement) => (select as HTMLSelectElement).selectedOptions[0]?.textContent;
+	const submit = () => dialog()!.querySelector('button[type="submit"]') as HTMLButtonElement;
+	const cancel = () => [...dialog()!.querySelectorAll('button')].find((b) => b.textContent === 'Cancel') as HTMLButtonElement;
+	const menuFor = (n: number) => [...body().querySelectorAll<HTMLElement>('[aria-label="Project actions"]')][n] as HTMLElement;
+	const items = () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+
+	describe('New prototype', () => {
+		it('opens in the panel, not as a box at the top, when the extension says it can be started (its title bar’s +, or the empty list’s button)', async () => {
+			await showOpen(OPEN, []);
+			await say({ type: 'open-new-prototype' });
+			expect(dialog()?.getAttribute('aria-label')).toBe('New prototype');
+			await press(cancel());
+			expect(dialog()).toBeNull();
+		});
+
+		it('is asked of the extension by the empty list’s button, which says whether it can be started, and opens nothing itself', async () => {
+			await showOpen(OPEN, []);
+			await press(button('New prototype'));
+			expect(panelSaid().at(-1)).toEqual({ type: 'ask-new-prototype' });
+			expect(dialog()).toBeNull();
+		});
+
+		it('asks a name, what it should explore and its folder, and is made only once there is a name and something to explore', async () => {
+			await showOpen();
+			await say({ type: 'open-new-prototype' });
+			expect(submit().disabled).toBe(true);
+			await type(field('Name'), '!!!');
+			await type(field('What should it explore?'), 'A history of alerts.');
+			expect(submit().disabled).toBe(true);
+			await type(field('Name'), 'Alert history 2');
+			expect(submit().disabled).toBe(false);
+			await type(field('What should it explore?'), '   ');
+			expect(submit().disabled).toBe(true);
+		});
+
+		it('offers the folders there are, none and a new one, and sends its answers to the extension, closing', async () => {
+			await showOpen();
+			await say({ type: 'open-new-prototype' });
+			expect([...field('Folder').querySelectorAll('option')].map((o) => o.textContent)).toEqual(['No folder', 'Admin', 'Maps', 'New folder…']);
+			await type(field('Name'), 'Alert history 2');
+			await type(field('What should it explore?'), 'A history of alerts.');
+			await press(submit());
+			expect(panelSaid().at(-1)).toEqual({ type: 'new-prototype', title: 'Alert history 2', task: 'A history of alerts.', folder: null });
+			expect(dialog()).toBeNull();
+		});
+
+		it('takes an existing folder, or a new one named in the dialog', async () => {
+			await showOpen();
+			await say({ type: 'open-new-prototype' });
+			await type(field('Name'), 'One');
+			await type(field('What should it explore?'), 'Two.');
+			await choose(field('Folder'), 'Maps');
+			await press(submit());
+			expect(panelSaid().at(-1)).toMatchObject({ folder: 'Maps' });
+			await say({ type: 'open-new-prototype' });
+			await type(field('Name'), 'One');
+			await type(field('What should it explore?'), 'Two.');
+			await choose(field('Folder'), 'New folder…');
+			expect(submit().disabled).toBe(true);
+			await type(field('New folder'), ' Zones ');
+			await press(submit());
+			expect(panelSaid().at(-1)).toMatchObject({ folder: 'Zones' });
+		});
+
+		it('closes on Escape, nothing sent, and gives the focus back to what opened it', async () => {
+			await showOpen(OPEN, []);
+			const opener = button('New prototype');
+			opener.focus();
+			await say({ type: 'open-new-prototype' });
+			expect(document.activeElement?.closest('[role="dialog"]')).not.toBeNull();
+			await act(async () => void dialog()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+			expect(dialog()).toBeNull();
+			expect(document.activeElement).toBe(opener);
+			expect(panelSaid().some((m) => m.type === 'new-prototype')).toBe(false);
+		});
+	});
+
+	describe('a project’s menu', () => {
+		it('is on each project, a popover with Open for review and Assign folder…, closed by Escape or a press elsewhere', async () => {
+			await showOpen();
+			await press(menuFor(0));
+			expect(items().map((i) => i.textContent)).toEqual(['Open for review', 'Assign folder…']);
+			expect(menuFor(0).getAttribute('aria-expanded')).toBe('true');
+			await act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+			expect(items()).toHaveLength(0);
+			await press(menuFor(0));
+			await act(async () => void document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
+			expect(items()).toHaveLength(0);
+		});
+
+		it('opens a project for review from it', async () => {
+			await showOpen();
+			await press(menuFor(0));
+			await press(items()[0]!);
+			expect(panelSaid().at(-1)).toMatchObject({ type: 'open-review', projectId: 'alert-history' });
+			expect(items()).toHaveLength(0);
+		});
+
+		it('has a menu in a list as in a grid', async () => {
+			await showOpen();
+			await press(
+				[...document.querySelectorAll<HTMLElement>('[aria-label="Layout"] [role="radio"]')].find((o) => o.getAttribute('aria-label') === 'List')!,
+			);
+			await press(menuFor(0));
+			expect(items().map((i) => i.textContent)).toEqual(['Open for review', 'Assign folder…']);
+		});
+	});
+
+	describe('Assign folder', () => {
+		const open = async () => {
+			await showOpen();
+			await press(menuFor(0));
+			await press(items()[1]!);
+		};
+
+		it('is a dialog for the project, with the folder it is in chosen', async () => {
+			await open();
+			expect(dialog()?.getAttribute('aria-label')).toBe('Assign folder');
+			expect(dialog()!.textContent).toContain('Alert history');
+			expect(selected(field('Folder'))).toBe('Admin');
+			expect(submit().disabled).toBe(true);
+		});
+
+		it('puts it in the folder chosen, through the core, closing, and the projects are read again', async () => {
+			await open();
+			const reads = sent.filter((m) => m.name === 'listProjects').length;
+			await choose(field('Folder'), 'Maps');
+			await press(submit());
+			expect(sent.filter((m) => m.name === 'assignFolder').at(-1)?.args).toEqual(['alert-history', 'Maps']);
+			await answer('assignFolder', null);
+			expect(dialog()).toBeNull();
+			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
+		});
+
+		it('takes it out of its folder, or into a new one', async () => {
+			await open();
+			await choose(field('Folder'), 'No folder');
+			await press(submit());
+			expect(sent.filter((m) => m.name === 'assignFolder').at(-1)?.args).toEqual(['alert-history', null]);
+			await answer('assignFolder', null);
+			await answer('listProjects', SAMPLE_PROJECTS);
+			await press(menuFor(1));
+			await press(items()[1]!);
+			await choose(field('Folder'), 'New folder…');
+			await type(field('New folder'), 'Zones');
+			await press(submit());
+			expect(sent.filter((m) => m.name === 'assignFolder').at(-1)?.args).toEqual(['zone-coverage', 'Zones']);
+		});
+
+		it('says why it could not, in the dialog, which stays open', async () => {
+			await open();
+			await choose(field('Folder'), 'Maps');
+			await press(submit());
+			const call = sent.filter((m) => m.name === 'assignFolder').at(-1);
+			await say({ type: 'answer', id: call!.id, result: { ok: false, error: 'There is no brief to put a folder in.' } });
+			expect(dialog()!.textContent).toContain('There is no brief to put a folder in.');
+			expect(dialog()).not.toBeNull();
+		});
+
+		it('opens from the extension too (the right-click menu, a review’s menu), for the project it names', async () => {
+			await showOpen();
+			await say({ type: 'open-assign-folder', projectId: 'admin-usage' });
+			expect(dialog()!.textContent).toContain('Admin usage');
+			await press(cancel());
+			await say({ type: 'open-assign-folder', projectId: 'not-here' });
+			expect(dialog()).toBeNull();
+		});
+	});
+});
+
 describe('the projects as a list or a grid', () => {
 	const views = () => document.querySelector('[aria-label="Layout"]') as HTMLElement;
 	const view = (name: string) =>
@@ -350,7 +541,7 @@ describe('Projects', () => {
 		await showOpen(OPEN, []);
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No projects yet');
 		await press(button('New prototype'));
-		expect(panelSaid().at(-1)).toEqual({ type: 'new-prototype' });
+		expect(panelSaid().at(-1)).toEqual({ type: 'ask-new-prototype' });
 	});
 });
 
@@ -393,6 +584,7 @@ describe('a design system’s catalog, once it is read', () => {
 				onOpen: () => undefined,
 				onNew: () => undefined,
 				onGetStarted: () => undefined,
+				onAssignFolder: () => undefined,
 				view: 'list',
 				onView: () => undefined,
 				onLocate: () => undefined,

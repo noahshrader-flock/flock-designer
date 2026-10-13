@@ -58,5 +58,10 @@ exports.run = async () => {
 	// Its picture, drawn by the browser on this machine once the panel lists it built, and kept in the design repository.
 	const covers = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '../flock-designer/projects/made-here/covers');
 	await until('its picture being drawn', () => fs.existsSync(covers) && fs.readdirSync(covers).some((f) => f.endsWith('.jpg')), 30000);
+	// The dialogs open in the panel, from the commands the title bar and the right-click menu run: shown, and asked of the
+	// panel, without failing. (What the page then draws is tested in its own tests; this cannot see inside a webview.)
+	await vscode.commands.executeCommand('dsnr.newPrototype');
+	await vscode.commands.executeCommand('dsnr.assignFolder', { webviewSection: 'project', projectId: 'made-here' });
+
 	console.log('dsnr-test: activated; its commands are there; Fixture · V1 · I1 opened for review; Made here was started, built, opened and pictured');
 };

@@ -6,14 +6,13 @@ import type { PublishStatus, SignInState, WorkspaceApi } from '../../src/shared/
 import { valueOf } from '../../src/shared/result';
 import { addressComment } from './address';
 import { Panels, hostApi } from './bridge';
-import { assignFolder, readProjectArg } from './folders';
 import { startCore } from './core';
-import { type Review, readReview, reviewsOf } from './messages';
-import { newPrototype, readGiven } from './newPrototype';
+import { type HostMessage, type Review, readProjectArg, readReview, reviewsOf } from './messages';
+import { type Given, newPrototype, readGiven, readyToStart } from './newPrototype';
 import { PanelProvider } from './panel';
 import { publishedLink, syncItem, syncPicks } from './publishing';
 import { Reviews, answerReview, buildReviewSite, siteIn } from './review';
-import { AgentLog, SyncStatus, failed, failedFor, vscodeAsk, vscodeChoose, vscodeProgress, vscodeTell } from './ui';
+import { AgentLog, SyncStatus, failed, failedFor, vscodeChoose, vscodeProgress, vscodeTell } from './ui';
 
 /** Kept by the extension: the design system the person located, when nothing open holds one. */
 const LOCATED = 'dsnr.located';
@@ -36,6 +35,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		context: () => found,
 		locate: () => locate(),
 		openReview: (review) => openReview(review),
+		startPrototype: (answers) => startPrototype(answers).catch(failed),
 		development,
 		...(log ? { log } : {}),
 	});
@@ -104,6 +104,24 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			void vscode.window.showWarningMessage('That folder holds no design system: no Storybook stories and no tokens were found in it.');
 	};
 
+	const productNow = () => ({ root: found.product, why: found.missing[0] ?? 'No product is open.' });
+	/** Makes a prototype from its answers (the panel's dialog, or code), with VS Code's notification, log and sync. */
+	const startPrototype = (given: Given) =>
+		newPrototype({
+			given,
+			api,
+			product: productNow(),
+			choose: vscodeChoose,
+			progress: vscodeProgress,
+			log: agentLog,
+			onChanged: projectsChanged,
+			openReview,
+		});
+	/** Shows DSNR's panel and tells it to open a dialog, held until its page is listening if it is not yet. */
+	const inPanel = async (message: HostMessage) => {
+		await vscode.commands.executeCommand('workbench.view.extension.dsnr');
+		panels.show(message);
+	};
 	/** The panels are told the projects changed, so each reads them again. */
 	const projectsChanged = () => panels.post({ type: 'projects-changed' });
 	const publishing = { api, choose: vscodeChoose, tell: vscodeTell };
@@ -122,20 +140,13 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		{ dispose: panels.listen('onPublishStatus', (status) => sync.show(status as PublishStatus)) },
 		agentLog,
 		vscode.window.registerWebviewViewProvider('dsnr.panel', provider),
-		vscode.commands.registerCommand('dsnr.newPrototype', (raw: unknown) =>
-			newPrototype({
-				given: readGiven(raw),
-				api,
-				product: { root: found.product, why: found.missing[0] ?? 'No product is open.' },
-				ask: vscodeAsk,
-				choose: vscodeChoose,
-				progress: vscodeProgress,
-				log: agentLog,
-				onChanged: projectsChanged,
-				openReview,
-				// Given its answers, it was run by code rather than a person: the caller is told too.
-			}).catch(failedFor(raw !== undefined)),
-		),
+		// Without answers, the panel's dialog asks them, once there is nothing in the way; given them, by code, it starts.
+		vscode.commands.registerCommand('dsnr.newPrototype', async (raw: unknown) => {
+			if (raw === undefined) return readyToStart({ api, product: productNow() }).then(() => inPanel({ type: 'open-new-prototype' }), failed);
+			const given = readGiven(raw);
+			if (!given) throw new Error('DSNR: New prototype was given something that is not a name and what it should explore.');
+			return startPrototype(given).catch(failedFor(true));
+		}),
 		vscode.commands.registerCommand('dsnr.open', () => vscode.commands.executeCommand('workbench.view.extension.dsnr')),
 		// A product onto this machine with VS Code's own clone, which offers to open it; New prototype then offers the install.
 		vscode.commands.registerCommand('dsnr.getStarted', () => vscode.commands.executeCommand('git.clone')),
@@ -163,12 +174,12 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				void vscode.window.showInformationMessage(`Copied the link to ${review.title}.`);
 			}),
 		),
-		// From a row's right-click menu (its project) or a review tab's menu (the review in front).
+		// From a row's right-click menu (its project) or a review tab's menu (the review in front): the panel's dialog.
 		vscode.commands.registerCommand('dsnr.assignFolder', (raw: unknown) => {
 			const projectId = readProjectArg(raw) ?? reviews.active()?.projectId;
 			if (!projectId)
 				return void vscode.window.showInformationMessage('Right-click a project in DSNR, or open one for review, to assign its folder.');
-			return assignFolder({ api, ask: vscodeAsk, onChanged: projectsChanged }, projectId).catch(failed);
+			return inPanel({ type: 'open-assign-folder', projectId });
 		}),
 		vscode.commands.registerCommand('dsnr.sync', async () => {
 			const status = valueOf(await api.publishStatus());

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readMessage, readReview } from '../extension/src/messages';
+import { readMessage, readProjectArg, readReview } from '../extension/src/messages';
 
 /**
  * What the panel's page may ask of the extension (Phase 3): a call to the core by its name in the contract's table, or
@@ -14,7 +14,9 @@ describe('a message from the panel', () => {
 		[{ type: 'ready' }],
 		[{ type: 'locate-design-system' }],
 		[{ type: 'get-started' }],
-		[{ type: 'new-prototype' }],
+		[{ type: 'ask-new-prototype' }],
+		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: null }],
+		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: 'Maps' }],
 		[{ type: 'open-review', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
 	])('%o is read', (m) => {
 		expect(readMessage(m)).toEqual(m);
@@ -37,6 +39,13 @@ describe('a message from the panel', () => {
 		[{ type: 'open-review', projectId: 'a', name: 'v1-i1' }],
 		[{ type: 'open-review', projectId: 1, name: 'v1-i1', title: 't' }],
 		[{ type: 'open-review', projectId: 'a', name: 'v1-i1', title: 'x'.repeat(301) }],
+		[{ type: 'new-prototype' }],
+		[{ type: 'new-prototype', title: 'A', task: 'B' }],
+		[{ type: 'new-prototype', title: 1, task: 'B', folder: null }],
+		[{ type: 'new-prototype', title: 'A', task: 'x'.repeat(4001), folder: null }],
+		[{ type: 'new-prototype', title: 'x'.repeat(301), task: 'B', folder: null }],
+		[{ type: 'new-prototype', title: 'A', task: 'B', folder: 'x'.repeat(101) }],
+		[{ type: 'new-prototype', title: 'A', task: 'B', folder: null, more: 1 }],
 		[{ type: 'run', command: 'rm -rf /' }],
 	])('%o is dropped', (m) => {
 		expect(readMessage(m)).toBeNull();
@@ -49,5 +58,14 @@ describe('a review a command is given', () => {
 		expect(readReview({ projectId: 'a', name: 'v1-i1' })).toBeNull();
 		expect(readReview({ projectId: 'a', name: 'v1-i1', title: 'x', type: 'call' })).toBeNull();
 		expect(readReview('a')).toBeNull();
+	});
+});
+
+describe('a project a command is given', () => {
+	it('is a row’s context, from its right-click menu, or nothing', () => {
+		expect(readProjectArg({ webviewSection: 'project', projectId: 'demo', preventDefaultContextMenuItems: true })).toBe('demo');
+		expect(readProjectArg(undefined)).toBeNull();
+		expect(readProjectArg({ projectId: 3 })).toBeNull();
+		expect(readProjectArg({ projectId: '../etc' })).toBeNull();
 	});
 });

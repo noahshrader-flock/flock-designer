@@ -2,22 +2,7 @@ import * as vscode from 'vscode';
 import { errorText } from '../../src/shared/result';
 import type { AgentLogLike, Progress } from './agentWork';
 import type { PublishStatus } from '../../src/shared/contract';
-import type { Ask } from './ask';
 import { syncItem } from './publishing';
-
-/** VS Code's own input box and quick pick, as a flow asks them (`Ask`). */
-export const vscodeAsk: Ask = {
-	text: async ({ title, prompt, placeholder, validate }) =>
-		vscode.window.showInputBox({
-			title,
-			prompt,
-			ignoreFocusOut: true,
-			...(placeholder !== undefined ? { placeHolder: placeholder } : {}),
-			...(validate ? { validateInput: (v: string) => validate(v) ?? undefined } : {}),
-		}),
-	pick: async ({ title, placeholder, items }) =>
-		(await vscode.window.showQuickPick(items, { title, placeHolder: placeholder, ignoreFocusOut: true }))?.value,
-};
 
 /** Says what went wrong, in VS Code's own error message: its first line. */
 export const failed = (err: unknown): void => void vscode.window.showErrorMessage(errorText(err, { firstLine: true }));

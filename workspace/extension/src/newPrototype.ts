@@ -5,50 +5,45 @@ import { toProjectIteration } from '../../src/shared/iterationRecords';
 import { valueOf } from '../../src/shared/result';
 import { slugify } from '../../src/shared/validate';
 import { type AgentWorkDeps, agentReady, agentWork } from './agentWork';
-import type { Ask } from './ask';
-import { pickFolder } from './folders';
 import { type Review, reviewsOf } from './messages';
 
 export interface NewPrototypeDeps extends AgentWorkDeps {
 	api: AgentWorkDeps['api'] &
 		PrototypeApi &
-		Pick<
-			WorkspaceApi,
-			'prototypeReadiness' | 'installPackages' | 'cancelInstall' | 'onInstallLine' | 'listProjects' | 'readCheckout' | 'createPrototype'
-		>;
+		Pick<WorkspaceApi, 'prototypeReadiness' | 'installPackages' | 'cancelInstall' | 'onInstallLine' | 'readCheckout' | 'createPrototype'>;
 	/** The product folder that is open, or why there is none (from the context). */
 	product: { root: string | null; why: string };
-	ask: Ask;
 	/** A warning with what can be done about it; the action pressed, or undefined. */
 	choose: (message: string, actions: string[]) => Promise<string | undefined>;
 	/** Told when the projects changed: once it is made, so the list shows it while it is built, and once it is built. */
 	onChanged: () => void;
 	openReview: (review: Review) => Promise<void>;
-	/** Answers the command was given (`readGiven`), so only what is not given is asked. */
-	given?: Given;
+	/** What to make: its name, what it explores and its folder, from the panel's dialog or from code (`readGiven`). */
+	given: Given;
 	/** How often the agent is asked how it is getting on. */
 	pollMs?: number;
 }
 
-/** What DSNR: New prototype may be given, from a keybinding, another extension or a test: its answers, as text. */
+/** What a prototype is made from: its name, what it explores, and its folder (none: null). */
 export interface Given {
-	title?: string;
-	task?: string;
-	folder?: string | null;
+	title: string;
+	task: string;
+	folder: string | null;
 }
 
+/** The most a name or what it explores may be, as the panel's message holds them. */
 const LONGEST = 4000;
 const text = (v: unknown): v is string => typeof v === 'string' && v.length <= LONGEST;
 
-/** The answers in what a command was given, each only when it is text of a sensible length; anything else is ignored. */
-export const readGiven = (raw: unknown): Given => {
-	if (typeof raw !== 'object' || raw === null) return {};
+/**
+ * What DSNR: New prototype was given by code (a keybinding, another extension, a test): its name and what it explores,
+ * and its folder if it has one, each as text of a sensible length; null when it lacks either, and anything more is
+ * ignored. The panel's dialog sends the same.
+ */
+export const readGiven = (raw: unknown): Given | null => {
+	if (typeof raw !== 'object' || raw === null) return null;
 	const r = raw as Record<string, unknown>;
-	return {
-		...(text(r.title) ? { title: r.title } : {}),
-		...(text(r.task) ? { task: r.task } : {}),
-		...(r.folder === null || text(r.folder) ? { folder: r.folder } : {}),
-	};
+	return text(r.title) && text(r.task) ? { title: r.title, task: r.task, folder: text(r.folder) ? r.folder : null } : null;
 };
 
 const INSTALL = 'Install packages';
@@ -98,60 +93,38 @@ const packagesReady = async ({ api, choose, progress }: NewPrototypeDeps, root: 
 	return true;
 };
 
-/** Its name and what it explores, as the boxes ask them. */
-type Question = Parameters<Ask['text']>[0] & { validate: (value: string) => string | null };
-const NAME: Question = {
-	title: 'New prototype: its name',
-	prompt: 'Name it',
-	placeholder: 'Alert history',
-	validate: (v) => (slugify(v) ? null : 'Give it a name with a letter or a number.'),
-};
-const TASK: Question = {
-	title: 'New prototype: what it explores',
-	prompt: 'What should it explore?',
-	placeholder: 'A history of alerts, filterable by camera and by day',
-	validate: (v) => (v.trim() ? null : 'Say what it should explore.'),
-};
-
-/** The answer given, held to what the box would take, or asked in the box. Undefined when the person dismisses it. */
-const answer = async (given: string | undefined, question: Question, ask: Ask): Promise<string | undefined> => {
-	if (given === undefined) return ask.text(question);
-	const why = question.validate(given);
-	if (why !== null) throw new Error(why);
-	return given;
+/**
+ * What stands in the way of starting at all, said before the person is asked anything: no product open, Claude Code
+ * missing or signed out. (The product's packages come after, as they can be installed from here.)
+ */
+export const readyToStart = async ({ api, product }: Pick<NewPrototypeDeps, 'api' | 'product'>): Promise<void> => {
+	if (product.root === null) throw new Error(product.why);
+	await agentReady(api);
 };
 
 /**
- * Starting a prototype, the designer's loop in VS Code (ELECTRON_MIGRATION_PLAN 4.1). What stands in the way is said
- * first, before anything is made: no product open, Claude Code missing or signed out, the packages not installed (with
- * Install, when the product says how). Then its name, what it should explore and its folder, in VS Code's own boxes; it
- * starts from the branch the product is on. Then the app's own build (`runPrototypeBuild`), said in a notification with
- * Stop and its log shown as it goes, and when it is saved, its review opens.
+ * Starting a prototype, the designer's loop in VS Code (ELECTRON_MIGRATION_PLAN 4.1), from what the panel's dialog asked
+ * (`given`): what stands in the way is said first (`readyToStart`, then the packages not installed, with Install, when the
+ * product says how). It starts from the branch the product is on. Then the app's own build (`runPrototypeBuild`), said
+ * in a notification with Stop and its log shown as it goes, and when it is saved, its review opens.
  */
 export const newPrototype = async (deps: NewPrototypeDeps): Promise<void> => {
-	const { api, product, ask } = deps;
-	if (product.root === null) throw new Error(product.why);
-	await agentReady(api);
-	if (!(await packagesReady(deps, product.root))) return;
+	const { api, product, given } = deps;
+	await readyToStart(deps);
+	const root = product.root as string;
+	if (slugify(given.title) === '') throw new Error('Give it a name with a letter or a number.');
+	if (given.task.trim() === '') throw new Error('Say what it should explore.');
+	if (!(await packagesReady(deps, root))) return;
 
-	const given = deps.given ?? {};
-	const title = await answer(given.title, NAME, ask);
-	if (title === undefined) return;
-	const task = await answer(given.task, TASK, ask);
-	if (task === undefined) return;
-	const folder =
-		given.folder !== undefined
-			? given.folder
-			: await pickFolder(ask, valueOf(await api.listProjects()), { title: 'New prototype: its folder', placeholder: 'Which folder it goes in' });
-	if (folder === undefined) return;
-
-	const { root, branch } = valueOf(await api.readCheckout(product.root));
-	if (branch === null) throw new Error('The product is not on a branch: check one out, then start again.');
-	const made = valueOf(await api.createPrototype(slugify(title), title.trim(), task.trim(), { root, branch }, folder));
+	const title = given.title.trim();
+	const task = given.task.trim();
+	const checkout = valueOf(await api.readCheckout(root));
+	if (checkout.branch === null) throw new Error('The product is not on a branch: check one out, then start again.');
+	const made = valueOf(await api.createPrototype(slugify(title), title, task, { root: checkout.root, branch: checkout.branch }, given.folder));
 	deps.onChanged();
 	const iteration = toProjectIteration(made);
-	const project: Project = { id: made.projectId, title: title.trim(), folder, records: [], iterations: [iteration], people: [] };
-	await build(deps, project, task.trim());
+	const project: Project = { id: made.projectId, title, folder: given.folder, records: [], iterations: [iteration], people: [] };
+	await build(deps, project, task);
 };
 
 /** The build, said as it goes and stoppable, its log shown: its review opened when it is saved, or how it failed thrown. */

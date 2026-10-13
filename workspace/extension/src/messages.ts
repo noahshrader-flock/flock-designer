@@ -2,6 +2,7 @@ import type { Context } from '../../src/main/services/findContext';
 import { INVOKE, type InvokeName } from '../../src/shared/contract';
 import type { Project } from '../../src/shared/domain/projects';
 import { isPrototypeName } from '../../src/shared/prototypeNames';
+import { PROJECT_ID } from '../../src/shared/validate';
 import { iterationLabel, workOf } from '../../src/shared/work';
 
 /**
@@ -15,7 +16,8 @@ export type PanelMessage =
 	| { type: 'ready' }
 	| { type: 'locate-design-system' }
 	| { type: 'get-started' }
-	| { type: 'new-prototype' }
+	| { type: 'ask-new-prototype' }
+	| { type: 'new-prototype'; title: string; task: string; folder: string | null }
 	| ({ type: 'open-review' } & Review);
 
 /** A prototype to open for review: its project, its name, and the title its tab is given. */
@@ -36,16 +38,20 @@ export const reviewsOf = (project: Pick<Project, 'id' | 'title' | 'iterations'>)
 
 /**
  * What the extension sends the page: an answer to a call, by its id, an event of the core's, what is open (`Context`), or
- * that the projects changed (one was made), so the list is read again.
+ * that the projects changed (one was made), so the list is read again, or to open a dialog (`Panels.show`).
  */
 export type HostMessage =
 	| { type: 'answer'; id: number; result: unknown }
 	| { type: 'event'; name: string; payload: unknown }
 	| { type: 'context'; context: Context }
-	| { type: 'projects-changed' };
+	| { type: 'projects-changed' }
+	| { type: 'open-new-prototype' }
+	| { type: 'open-assign-folder'; projectId: string };
 
 const CALLS = new Set<string>(INVOKE);
-const BARE = new Set(['ready', 'locate-design-system', 'get-started', 'new-prototype']);
+const BARE = new Set(['ready', 'locate-design-system', 'get-started', 'ask-new-prototype']);
+/** The most a name, what a prototype explores, and a folder's name may be: more is not what a person wrote in a box. */
+const MOST = { title: 300, task: 4000, folder: 100 };
 
 const hasKeys = (raw: object, keys: string[]): boolean => {
 	const own = Object.keys(raw).sort();
@@ -74,6 +80,15 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 			m.title.length <= 300
 			? { type: 'open-review', projectId: m.projectId, name: m.name, title: m.title }
 			: null;
+	if (m.type === 'new-prototype')
+		return hasKeys(m, ['type', 'title', 'task', 'folder']) &&
+			typeof m.title === 'string' &&
+			m.title.length <= MOST.title &&
+			typeof m.task === 'string' &&
+			m.task.length <= MOST.task &&
+			(m.folder === null || (typeof m.folder === 'string' && m.folder.length <= MOST.folder))
+			? { type: 'new-prototype', title: m.title, task: m.task, folder: m.folder }
+			: null;
 	return typeof m.type === 'string' && BARE.has(m.type) && hasKeys(m, ['type']) ? ({ type: m.type } as PanelMessage) : null;
 };
 
@@ -82,4 +97,10 @@ export const readReview = (raw: unknown): Review | null => {
 	if (typeof raw !== 'object' || raw === null || 'type' in raw) return null;
 	const read = readMessage({ ...raw, type: 'open-review' });
 	return read?.type === 'open-review' ? { projectId: read.projectId, name: read.name, title: read.title } : null;
+};
+
+/** The project a command was given, from a row's right-click menu (its `data-vscode-context`), or null. */
+export const readProjectArg = (raw: unknown): string | null => {
+	const id = typeof raw === 'object' && raw !== null ? (raw as { projectId?: unknown }).projectId : undefined;
+	return typeof id === 'string' && PROJECT_ID.test(id) ? id : null;
 };

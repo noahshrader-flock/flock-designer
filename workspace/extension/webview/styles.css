@@ -372,3 +372,232 @@ body {
 	color: var(--dsnr-muted);
 	line-height: 1.4;
 }
+
+/* A secondary button, as VS Code's dialogs draw Cancel: the theme's secondary colours. */
+.button-secondary {
+	color: var(--vscode-button-secondaryForeground);
+	background: var(--vscode-button-secondaryBackground);
+}
+
+.button-secondary:hover:not(:disabled) {
+	background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.button:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+/*
+ * A dialog over the panel, as VS Code's own are: a box from the top of the panel, in the widget colours, over a scrim of
+ * the side bar's own colour so what is behind is dimmed, not hidden. A webview cannot draw outside itself.
+ */
+.scrim {
+	position: fixed;
+	inset: 0;
+	z-index: 10;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 12px;
+	overflow-y: auto;
+	background: color-mix(in srgb, var(--vscode-sideBar-background) 70%, transparent);
+}
+
+.dialog {
+	width: 100%;
+	max-width: 420px;
+	padding: 12px;
+	border: 1px solid var(--vscode-editorWidget-border, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius);
+	color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+	background: var(--vscode-editorWidget-background);
+	box-shadow: 0 4px 16px var(--vscode-widget-shadow);
+}
+
+.dialog-title {
+	margin: 0 0 8px;
+	font-size: 1.1em;
+	font-weight: 600;
+}
+
+.dialog-about {
+	margin: 0 0 8px;
+	color: var(--dsnr-muted);
+}
+
+.dialog-error {
+	margin: 8px 0 0;
+	color: var(--vscode-errorForeground);
+}
+
+.dialog-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.dialog-buttons .button {
+	width: auto;
+	min-width: 72px;
+}
+
+/* A labelled field, as VS Code's settings draw one: the label above its control. */
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-bottom: 10px;
+}
+
+.field-label {
+	font-weight: 600;
+}
+
+.field-hint {
+	color: var(--dsnr-muted);
+	font-size: 0.92em;
+}
+
+/* VS Code's input box and dropdown. */
+.input {
+	box-sizing: border-box;
+	width: 100%;
+	padding: 4px 6px;
+	border: 1px solid var(--vscode-input-border, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius-small);
+	color: var(--vscode-input-foreground);
+	background: var(--vscode-input-background);
+	font: inherit;
+}
+
+select.input {
+	color: var(--vscode-dropdown-foreground);
+	border-color: var(--vscode-dropdown-border, var(--dsnr-contrast-border));
+	background: var(--vscode-dropdown-background);
+}
+
+textarea.input {
+	resize: vertical;
+}
+
+.input::placeholder {
+	color: var(--vscode-input-placeholderForeground);
+}
+
+.input:focus {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: -1px;
+}
+
+/*
+ * What more can be done with a project: its ellipsis button, at the end of a row and at a card's corner, which shows on
+ * hover or focus (as VS Code's list actions do) and while its menu is open. The row or card is the button that opens it,
+ * so this sits beside it, not in it.
+ */
+.row-item,
+.card-item {
+	position: relative;
+}
+
+.item-actions {
+	position: absolute;
+	top: 50%;
+	right: 6px;
+	z-index: 1;
+	transform: translateY(-50%);
+}
+
+.card-item .item-actions {
+	top: 4px;
+	right: 4px;
+	transform: none;
+}
+
+.menu-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: var(--dsnr-radius-inner);
+	color: var(--vscode-foreground);
+	background: transparent;
+	cursor: pointer;
+	opacity: 0;
+}
+
+.row-item:hover .menu-button,
+.card-item:hover .menu-button,
+.item-actions:focus-within .menu-button,
+.menu-open .menu-button {
+	opacity: 1;
+}
+
+/* On a card the button is over its picture, so it has a ground of its own. */
+.card-item .menu-button {
+	background: var(--vscode-editorWidget-background);
+	border-color: var(--vscode-editorWidget-border, transparent);
+}
+
+.menu-button:hover {
+	background: var(--vscode-toolbar-hoverBackground);
+}
+
+.menu-button:focus-visible {
+	outline: var(--dsnr-focus);
+	outline-offset: -1px;
+}
+
+/* Under a row's own badge: while its button shows, the badge gives way to it. */
+.row-item:hover .badge,
+.row-item:focus-within .badge {
+	visibility: hidden;
+}
+
+.menu {
+	position: relative;
+	display: inline-block;
+}
+
+.menu-list {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	z-index: 5;
+	display: flex;
+	flex-direction: column;
+	min-width: 170px;
+	margin-top: 2px;
+	padding: 4px;
+	border: 1px solid var(--vscode-menu-border, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius);
+	color: var(--vscode-menu-foreground);
+	background: var(--vscode-menu-background);
+	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+}
+
+.menu-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 8px;
+	border: none;
+	border-radius: var(--dsnr-radius-inner);
+	color: inherit;
+	background: transparent;
+	font: inherit;
+	text-align: start;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+	color: var(--vscode-menu-selectionForeground);
+	background: var(--vscode-menu-selectionBackground);
+	outline: none;
+}

@@ -254,6 +254,47 @@ describe('the review tabs', () => {
 	});
 });
 
+describe('what the extension asks the panel to show', () => {
+	const webview = () => {
+		const posted: unknown[] = [];
+		return { posted, webview: { postMessage: async (m: unknown) => void posted.push(m) } as never };
+	};
+
+	it('is held until the page is listening, then sent once, in order', () => {
+		const panels = new Panels();
+		const a = webview();
+		panels.add(a.webview);
+		panels.show({ type: 'open-assign-folder', projectId: 'demo' });
+		panels.show({ type: 'open-new-prototype' });
+		expect(a.posted).toEqual([]);
+		panels.ready(a.webview);
+		expect(a.posted).toEqual([{ type: 'open-assign-folder', projectId: 'demo' }, { type: 'open-new-prototype' }]);
+		panels.ready(a.webview);
+		expect(a.posted).toHaveLength(2);
+	});
+
+	it('is sent at once to a page that is listening', () => {
+		const panels = new Panels();
+		const a = webview();
+		panels.add(a.webview);
+		panels.ready(a.webview);
+		panels.show({ type: 'open-new-prototype' });
+		expect(a.posted).toEqual([{ type: 'open-new-prototype' }]);
+	});
+
+	it('is held again when the page goes (its view was hidden, and reloads when it is shown)', () => {
+		const panels = new Panels();
+		const a = webview();
+		panels.add(a.webview);
+		panels.ready(a.webview);
+		panels.unready(a.webview);
+		panels.show({ type: 'open-new-prototype' });
+		expect(a.posted).toEqual([]);
+		panels.ready(a.webview);
+		expect(a.posted).toEqual([{ type: 'open-new-prototype' }]);
+	});
+});
+
 describe('the bridge', () => {
 	it('answers a call from the core’s table, by its id, and says when nothing answers it', async () => {
 		const posted: unknown[] = [];

@@ -12,6 +12,7 @@ export const Card = ({
 	badge,
 	onOpen,
 	context,
+	actions,
 }: {
 	picture: ReactNode;
 	name: string;
@@ -19,6 +20,8 @@ export const Card = ({
 	badge?: ReactNode;
 	onOpen?: () => void;
 	context?: Record<string, unknown>;
+	/** What more can be done with it (`Menu`), at the card's corner and not in the button that opens it. */
+	actions?: ReactNode;
 }) => {
 	const parts = (
 		<>
@@ -47,6 +50,7 @@ export const Card = ({
 			) : (
 				<div className="card">{parts}</div>
 			)}
+			{actions && <span className="item-actions">{actions}</span>}
 		</li>
 	);
 };

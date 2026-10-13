@@ -225,10 +225,16 @@ repository and served from this machine, in an editor tab.
 With no product open, the panel says so and offers **Get started** (**DSNR: Get started**): VS Code's own Git: Clone,
 which offers to open what it cloned; New prototype then offers the install.
 
-**New prototype** (the **+** in its title bar, or **DSNR: New prototype**) says first what stands in the way (no product
-open, Claude Code missing or signed out, the product's packages not installed, with Install packages when it says how),
-then asks the name, what it should explore and its folder in VS Code's own boxes, and builds it from the branch the
-product is on, with the app's own build: its progress is a notification with Stop, the agent's log is in View › Output ›
+**Dialogs and menus are in the panel**, in VS Code's own look, rather than boxes at the top of the window: a webview
+cannot draw outside its side bar, so a dialog covers the panel, as Claude Code's popovers are in its own. Each project has
+an ellipsis menu (on hover or focus) with Open for review and Assign folder…, and the right-click items open the same
+dialogs.
+
+**New prototype** (the **+** in its title bar, **DSNR: New prototype**, or the panel's button) says first, before
+anything is asked, what stands in the way (no product open, Claude Code missing or signed out), then opens a dialog in
+the panel for the name, what it should explore (as many lines as it takes) and its folder, then says if the product's
+packages are not installed (with Install packages when it says how), and builds it from the branch the product is on,
+with the app's own build: its progress is a notification with Stop, the agent's log is in View › Output ›
 DSNR: Agent, and when it is saved its review opens. The command can also be given its answers
 (`{ title, task, folder }`), as **DSNR: Open a prototype for review** can be given its review, so a keybinding or another
 extension can run them; called that way, a failure is also returned to the caller. The `.vsix` carries esbuild, which
@@ -247,9 +253,10 @@ drawn by the browser already on the machine (Chrome, Edge or Chromium, or `CHROM
 install. The panel's rows show the pictures, made once the list is read, as the app makes them.
 
 **Folders:** the panel lists the projects under a section for each folder, those in none last, as a grid of cards, which it
-starts in, or a list of rows (the icons at the right above them, remembered with the tab).  **Assign folder…**, on a
-project row's right-click menu or a review tab's menu, puts it in a folder, a new one, or none, with the same choice New
-prototype offers. The app's one setting, its theme, is VS Code's here, so DSNR has no settings of its own.
+starts in, or a list of rows (the icons at the right above them, remembered with the tab). **Assign folder…**, from a
+project's menu, its right-click menu or a review tab's menu, opens a dialog in the panel to put it in a folder, a new
+one, or none, with the same folder choice New prototype has; it uses the projects the panel already has, so it opens at
+once. The app's one setting, its theme, is VS Code's here, so DSNR has no settings of its own.
 
 **Sync and share:** whether the person's work is synced is in VS Code's status bar (Synced, Syncing, Not synced);
 pressing it shows what is held back and why, and Sync now. A review tab's title bar opens its page on the published site,
@@ -315,7 +322,7 @@ Claude Code, so do it on a test project you can delete:
    nothing changed.
 6. The review's title bar: **Open the published page** (once it is published) and **Copy the published page's link**.
    The status bar says whether your work is synced.
-7. In the panel: right-click the project › **Assign folder…**, and check it moves under its folder.
+7. In the panel: the project's **⋯** menu (or right-click it) › **Assign folder…**, and check it moves under its folder.
 8. When you are done: DSNR has no Delete, so remove the project's folder (`projects/dsnr-test`) from the design
    repository and push, and close its review issue on GitHub.
 

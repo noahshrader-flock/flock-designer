@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type NewPrototypeDeps, newPrototype, readGiven } from '../extension/src/newPrototype';
+import { type Given, type NewPrototypeDeps, newPrototype, readGiven, readyToStart } from '../extension/src/newPrototype';
 import type { AgentStatus, Iteration, Project, RunLogLine } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
 /**
- * Starting a prototype from DSNR in VS Code (ELECTRON_MIGRATION_PLAN 4.1): what stands in the way said first (Claude Code,
- * the product's packages, with Install when it says how), then a name, what it should explore and its folder, asked in
- * VS Code's own boxes; then the app's own build, its progress said and its log shown, stoppable; then its review.
+ * Starting a prototype from DSNR in VS Code (ELECTRON_MIGRATION_PLAN 4.1): what stands in the way said first (a product
+ * open, Claude Code, the product's packages, with Install when it says how); then the app's own build of what the panel's
+ * dialog asked (a name, what it explores, its folder), its progress said and its log shown, stoppable; then its review.
  */
 
 const created: Iteration = {
@@ -20,9 +20,8 @@ const created: Iteration = {
 const finished: AgentStatus = { state: 'finished', exitCode: 0, work: 'prototype/alert-history/v1-i1', purpose: null };
 const inFolder = (folder: string) => ({ id: folder, title: folder, folder, records: [], iterations: [], people: [] }) as Project;
 
-/** A world where everything is ready, the person answers `answers` in turn, and the agent finishes at once. */
-const world = (more: { answers?: (string | undefined)[]; api?: Record<string, unknown>; choose?: (string | undefined)[] } = {}) => {
-	const answers = [...(more.answers ?? ['Alert history', 'Explore it.', 'No folder'])];
+/** A world where everything is ready, the answers are given, and the agent finishes at once. */
+const world = (more: { given?: Given; api?: Record<string, unknown>; choose?: (string | undefined)[] } = {}) => {
 	const chosen = [...(more.choose ?? [])];
 	const logged: string[] = [];
 	const said: string[] = [];
@@ -55,18 +54,7 @@ const world = (more: { answers?: (string | undefined)[]; api?: Record<string, un
 	const deps: NewPrototypeDeps = {
 		api: api as unknown as NewPrototypeDeps['api'],
 		product: { root: '/p', why: '' },
-		ask: {
-			text: vi.fn(async ({ validate }) => {
-				const answer = answers.shift();
-				if (answer !== undefined && validate?.(answer)) throw new Error(`refused: ${validate(answer)}`);
-				return answer;
-			}),
-			pick: vi.fn(async ({ items }) => {
-				const answer = answers.shift();
-				// Chosen by its label, as a person sees it.
-				return answer === undefined ? undefined : items.find((i: { label: string }) => i.label === answer)?.value;
-			}),
-		},
+		given: more.given ?? { title: 'Alert history', task: 'Explore it.', folder: null },
 		choose: vi.fn(async (message: string) => {
 			told.push(message);
 			return chosen.shift();
@@ -84,8 +72,8 @@ const world = (more: { answers?: (string | undefined)[]; api?: Record<string, un
 };
 
 describe('starting a prototype from VS Code', () => {
-	it('asks its name, what it should explore and its folder, then builds it from the product’s branch and opens its review', async () => {
-		const { deps, api, said } = world({ answers: ['Alert history', 'Explore it.', 'Maps'] });
+	it('builds it from the product’s branch, with the answers it is given, and opens its review', async () => {
+		const { deps, api, said } = world({ given: { title: 'Alert history', task: 'Explore it.', folder: 'Maps' } });
 		await newPrototype(deps);
 		expect(api.createPrototype).toHaveBeenCalledWith('alert-history', 'Alert history', 'Explore it.', { root: '/p', branch: 'main' }, 'Maps');
 		// Once made, and once built.
@@ -97,47 +85,19 @@ describe('starting a prototype from VS Code', () => {
 		expect(deps.openReview).toHaveBeenCalledWith({ projectId: 'alert-history', name: 'v1-i1', title: 'Alert history · V1 · I1' });
 	});
 
-	it('offers the folders there are, no folder, and a new one', async () => {
-		const { deps } = world({ answers: ['Alert history', 'Explore it.', '$(add) New folder…', 'Zones'] });
+	it('trims its name and what it explores', async () => {
+		const { deps, api } = world({ given: { title: '  Zone coverage ', task: ' Show it.\n', folder: null } });
 		await newPrototype(deps);
-		const { items } = vi.mocked(deps.ask.pick).mock.calls[0]![0];
-		expect(items.map((i) => i.label)).toEqual(['No folder', 'Admin', 'Maps', '$(add) New folder…']);
-		expect(vi.mocked(deps.api.createPrototype).mock.calls[0]![4]).toBe('Zones');
-	});
-
-	it('refuses a name with nothing to make an id of, and what is not said', async () => {
-		const { deps } = world({ answers: ['!!!'] });
-		await expect(newPrototype(deps)).rejects.toThrow(/refused: Give it a name with a letter or a number/);
-		const blank = world({ answers: ['Alert history', '   '] });
-		await expect(newPrototype(blank.deps)).rejects.toThrow(/refused: Say what it should explore/);
-	});
-
-	it('does nothing when a question is dismissed', async () => {
-		for (const answers of [[undefined], ['Alert history', undefined], ['Alert history', 'Explore it.', undefined]]) {
-			const { deps, api } = world({ answers });
-			await newPrototype(deps);
-			expect(api.createPrototype).not.toHaveBeenCalled();
-		}
-	});
-
-	it('takes its answers when the command is given them, and asks only what is not given', async () => {
-		const { deps, api } = world({ answers: [] });
-		deps.given = { title: 'Zone coverage', task: 'Show it.', folder: null };
-		await newPrototype(deps);
-		expect(deps.ask.text).not.toHaveBeenCalled();
-		expect(deps.ask.pick).not.toHaveBeenCalled();
 		expect(api.createPrototype).toHaveBeenCalledWith('zone-coverage', 'Zone coverage', 'Show it.', { root: '/p', branch: 'main' }, null);
-		const some = world({ answers: ['Explore it.', 'No folder'] });
-		some.deps.given = { title: 'Zone coverage' };
-		await newPrototype(some.deps);
-		expect(vi.mocked(some.deps.ask.text).mock.calls.map(([o]) => o.prompt)).toEqual(['What should it explore?']);
 	});
 
-	it('refuses given answers it would not take from the boxes', async () => {
-		const { deps, api } = world({ answers: [] });
-		deps.given = { title: '!!!', task: 'Show it.', folder: null };
+	it('refuses answers the dialog would not take: a name with nothing to make an id of, or nothing to explore', async () => {
+		const { deps, api } = world({ given: { title: '!!!', task: 'Show it.', folder: null } });
 		await expect(newPrototype(deps)).rejects.toThrow('Give it a name with a letter or a number.');
+		const blank = world({ given: { title: 'Zone coverage', task: '   ', folder: null } });
+		await expect(newPrototype(blank.deps)).rejects.toThrow('Say what it should explore.');
 		expect(api.createPrototype).not.toHaveBeenCalled();
+		expect(blank.api.createPrototype).not.toHaveBeenCalled();
 	});
 
 	it('shows the agent’s log as it works', async () => {
@@ -243,13 +203,37 @@ describe('what stands in the way, said first', () => {
 	});
 });
 
+describe('ready to start', () => {
+	it('is a product open and Claude Code usable, said before the person is asked anything', async () => {
+		const { deps, api } = world();
+		await expect(readyToStart(deps)).resolves.toBeUndefined();
+		deps.product = { root: null, why: 'No product is open: open its folder.' };
+		await expect(readyToStart(deps)).rejects.toThrow('No product is open: open its folder.');
+		const missing = world({ api: { agentReadiness: vi.fn(async () => ok({ state: 'missing' })) } });
+		await expect(readyToStart(missing.deps)).rejects.toThrow(/Claude Code is not installed/);
+		expect(api.agentReadiness).toHaveBeenCalledTimes(1);
+	});
+});
+
 describe('what the command may be given', () => {
-	it('is its name, what it explores and its folder, as text, and nothing else', () => {
-		expect(readGiven(undefined)).toEqual({});
+	it('is its name and what it explores, with its folder if it has one, as text, and nothing else', () => {
 		expect(readGiven({ title: 'A', task: 'B', folder: 'Maps' })).toEqual({ title: 'A', task: 'B', folder: 'Maps' });
-		expect(readGiven({ title: 'A', folder: null })).toEqual({ title: 'A', folder: null });
-		expect(readGiven({ title: 3, task: ['x'], run: 'rm -rf /' })).toEqual({});
-		expect(readGiven({ task: 'x'.repeat(4001) })).toEqual({});
-		expect(readGiven('A')).toEqual({});
+		expect(readGiven({ title: 'A', task: 'B' })).toEqual({ title: 'A', task: 'B', folder: null });
+		expect(readGiven({ title: 'A', task: 'B', folder: null })).toEqual({ title: 'A', task: 'B', folder: null });
+		expect(readGiven({ title: 'A', task: 'B', run: 'rm -rf /' })).toEqual({ title: 'A', task: 'B', folder: null });
+	});
+
+	it('is nothing when it lacks either, or they are not text or are too long', () => {
+		for (const raw of [
+			undefined,
+			'A',
+			{},
+			{ title: 'A' },
+			{ task: 'B' },
+			{ title: 3, task: 'B' },
+			{ title: 'A', task: ['x'] },
+			{ title: 'A', task: 'x'.repeat(4001) },
+		])
+			expect(readGiven(raw)).toBeNull();
 	});
 });

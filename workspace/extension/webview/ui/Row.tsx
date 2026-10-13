@@ -13,6 +13,7 @@ export const Row = ({
 	end,
 	onOpen,
 	context,
+	actions,
 }: {
 	start?: ReactNode;
 	name: string;
@@ -20,6 +21,8 @@ export const Row = ({
 	end?: ReactNode;
 	onOpen?: () => void;
 	context?: Record<string, unknown>;
+	/** What more can be done with it (`Menu`), beside the row and not in the button that opens it. */
+	actions?: ReactNode;
 }) => {
 	const parts = (
 		<>
@@ -47,6 +50,7 @@ export const Row = ({
 			) : (
 				parts
 			)}
+			{actions && <span className="item-actions">{actions}</span>}
 		</li>
 	);
 };
