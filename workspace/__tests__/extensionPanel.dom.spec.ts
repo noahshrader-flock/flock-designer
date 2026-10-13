@@ -2,6 +2,7 @@ import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Panel } from '../extension/webview/Panel';
+import type { PanelData } from '../extension/webview/Panel';
 
 /**
  * DSGN's panel (Phase 0.4 and 0.5): the Projects and Design System toggle at its very top, which the person moves with a
@@ -24,10 +25,10 @@ afterEach(async () => {
 	document.body.innerHTML = '';
 });
 
-const show = async () => {
+const show = async (data?: Partial<PanelData>) => {
 	const host = document.body.appendChild(document.createElement('div'));
 	root = createRoot(host);
-	await act(async () => root?.render(createElement(Panel)));
+	await act(async () => root?.render(createElement(Panel, data ?? {})));
 };
 const toggle = () => document.querySelector('[role="radiogroup"]') as HTMLElement;
 const options = () => [...toggle().querySelectorAll<HTMLElement>('[role="radio"]')];
@@ -103,5 +104,59 @@ describe('Projects', () => {
 		const badges = rows().map((r) => r.querySelector('.badge'));
 		expect(badges.map((b) => b?.textContent ?? null)).toEqual(['2', null, '5', null]);
 		expect(badges[0]?.getAttribute('aria-label')).toBe('2 open comments');
+	});
+});
+
+describe('Design System', () => {
+	const open = async (data?: Partial<PanelData>) => {
+		await show(data);
+		await act(async () => options()[1]!.click());
+	};
+	const headers = () => [...document.querySelectorAll<HTMLElement>('[data-tab-body="design-system"] .section-header')];
+	const section = (name: string) => headers().find((h) => h.querySelector('[data-part="title"]')?.textContent === name) as HTMLElement;
+	const rowsUnder = (header: HTMLElement) =>
+		[...(document.getElementById(header.getAttribute('aria-controls') ?? '')?.querySelectorAll('[data-part="name"]') ?? [])].map(
+			(n) => n.textContent,
+		);
+
+	it('groups the components under a header each, with how many, and the tokens last', async () => {
+		await open();
+		expect(headers().map((h) => [h.querySelector('[data-part="title"]')?.textContent, h.querySelector('[data-part="count"]')?.textContent])).toEqual([
+			['Buttons', '3'],
+			['Inputs', '2'],
+			['Feedback', '2'],
+			['Tokens', '3'],
+		]);
+		expect(rowsUnder(section('Buttons'))).toEqual(['FSButton', 'FSIconButton', 'FSSplitButton']);
+		expect(rowsUnder(section('Tokens'))).toEqual(['Color', 'Spacing', 'Shape']);
+	});
+
+	it('closes and opens a section from its header, and says which it is', async () => {
+		await open();
+		const buttons = section('Buttons');
+		expect(buttons.getAttribute('aria-expanded')).toBe('true');
+		await act(async () => buttons.click());
+		expect(buttons.getAttribute('aria-expanded')).toBe('false');
+		expect(document.getElementById(buttons.getAttribute('aria-controls') ?? '')?.hidden).toBe(true);
+		expect(buttons.querySelector('.codicon')?.className).toBe('codicon codicon-chevron-right');
+		await act(async () => buttons.click());
+		expect(buttons.getAttribute('aria-expanded')).toBe('true');
+	});
+
+	it('says, when there is no design system, what DSGN looked for and where', async () => {
+		await open({ designSystem: null });
+		const empty = document.querySelector('[data-tab-body="design-system"] .empty') as HTMLElement;
+		expect(empty.querySelector('[data-part="title"]')?.textContent).toBe('No design system found');
+		expect(empty.textContent).toContain('DSGN looks in the folders open in this window');
+		expect(headers()).toEqual([]);
+	});
+});
+
+describe('Projects, when there are none', () => {
+	it('says so, and what will appear', async () => {
+		await show({ projects: [] });
+		const empty = document.querySelector('[data-tab-body="projects"] .empty') as HTMLElement;
+		expect(empty.querySelector('[data-part="title"]')?.textContent).toBe('No projects yet');
+		expect(document.querySelector('[data-tab-body="projects"] [role="list"]')).toBeNull();
 	});
 });

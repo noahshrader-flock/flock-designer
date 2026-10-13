@@ -1,3 +1,4 @@
+import type { CatalogComponent } from '../../src/shared/domain/designSystem';
 import type { Project, ProjectIteration } from '../../src/shared/domain/projects';
 
 /**
@@ -35,3 +36,37 @@ export const SAMPLE_PROJECTS: Project[] = [
 	project('role-comparison', 'Role comparison', null, [iteration('v1-i1', 5)]),
 	project('zone-coverage', 'Zone coverage', 'Maps', [iteration('v1-i1'), iteration('v1-i2')]),
 ];
+
+/** A design system found beside the product: its components, by their Storybook group, and its tokens by category. */
+export interface SampleDesignSystem {
+	name: string;
+	components: CatalogComponent[];
+	tokens: { category: string; count: number; icon: string }[];
+}
+
+const component = (group: string, name: string): CatalogComponent => ({
+	id: `src/components/${name}/${name}.stories.tsx`,
+	name,
+	group,
+	subtitle: null,
+	storybook: null,
+	source: '',
+});
+
+export const SAMPLE_DESIGN_SYSTEM: SampleDesignSystem = {
+	name: 'Flock React Component Lib',
+	components: [
+		component('Buttons', 'FSButton'),
+		component('Buttons', 'FSIconButton'),
+		component('Buttons', 'FSSplitButton'),
+		component('Inputs', 'FSTextField'),
+		component('Inputs', 'FSSelect'),
+		component('Feedback', 'FSAlert'),
+		component('Feedback', 'FSPulsingBadge'),
+	],
+	tokens: [
+		{ category: 'Color', count: 42, icon: 'symbol-color' },
+		{ category: 'Spacing', count: 9, icon: 'symbol-ruler' },
+		{ category: 'Shape', count: 4, icon: 'symbol-misc' },
+	],
+};

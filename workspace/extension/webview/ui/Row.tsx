@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
  * narrow, never wrapped.
  */
 export const Row = ({ start, name, meta, end }: { start?: ReactNode; name: string; meta?: string; end?: ReactNode }) => (
-	<li role="listitem" className="row">
+	<li role="listitem" className={meta ? 'row row-two-lines' : 'row'}>
 		{start}
 		<span className="row-text">
 			<span data-part="name" className="row-name">

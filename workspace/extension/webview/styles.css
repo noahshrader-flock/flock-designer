@@ -87,9 +87,21 @@ body {
 .row {
 	display: flex;
 	align-items: center;
+	gap: 6px;
+	min-height: 22px;
+	padding: 0 12px;
+}
+
+/* A row with a line under its name, as a project's is: taller, and its picture given room. */
+.row-two-lines {
 	gap: 8px;
 	min-height: 40px;
-	padding: 4px 12px;
+	padding-block: 4px;
+}
+
+/* Under a section's header, as a tree's items are under theirs: in line with its title, past the chevron. */
+.section .row {
+	padding-left: 28px;
 }
 
 .row-text {
@@ -136,4 +148,71 @@ body {
 	line-height: 16px;
 	text-align: center;
 	box-sizing: border-box;
+}
+
+/* A section's header, as VS Code's side bar draws one: a chevron, the title in small capitals, how many it holds. */
+.section-header {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	width: 100%;
+	height: 22px;
+	padding: 0 12px 0 8px;
+	border: none;
+	border-top: 1px solid var(--vscode-sideBarSectionHeader-border, transparent);
+	color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
+	background: var(--vscode-sideBarSectionHeader-background, transparent);
+	font: inherit;
+	font-size: 11px;
+	font-weight: 700;
+	text-align: start;
+	cursor: pointer;
+}
+
+.section-header:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: -1px;
+}
+
+.section-title {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.section-count {
+	color: var(--vscode-descriptionForeground);
+	font-weight: 400;
+}
+
+/* A list's own icon at the start of a row: as a tree's, in the quieter colour. */
+.row-icon {
+	color: var(--vscode-icon-foreground);
+}
+
+/* A view with nothing to show: VS Code's welcome text, left-aligned. */
+.empty {
+	padding: 4px 12px;
+	color: var(--vscode-descriptionForeground);
+}
+
+.empty-title {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 8px 0 4px;
+	color: var(--vscode-foreground);
+}
+
+.empty-body p {
+	margin: 0 0 8px;
+	line-height: 1.4;
+}
+
+.empty code {
+	font-family: var(--vscode-editor-font-family);
+	font-size: 0.92em;
 }
