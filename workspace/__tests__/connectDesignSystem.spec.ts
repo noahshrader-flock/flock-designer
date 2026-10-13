@@ -55,7 +55,7 @@ describe('the screen', () => {
 	it('says what it is for, centered in the window, with the person’s repositories to choose from and nothing chosen', async () => {
 		await open();
 		expect(document.querySelector('h1')?.textContent).toBe('Connect your design system');
-		expect(text()).toContain('Choose the repository your design system is in.');
+		expect(text()).toContain('Choose your design system repository.');
 		const center = document.querySelector('h1')!.parentElement!.parentElement!;
 		expect(center.className.split(' ')).toEqual(expect.arrayContaining(['flex', 'items-center', 'justify-center']));
 		expect(button('Choose a repository')).toBeTruthy();
@@ -143,7 +143,7 @@ describe('as a modal, to connect another when one is connected already', () => {
 	it('is a dialog with its own title and the same repository to choose, not the centered screen', async () => {
 		await open({}, { onCancel: vi.fn() });
 		expect(dialog()!.querySelector('[data-slot="dialog-title"]')!.textContent).toBe('Connect a design system');
-		expect(dialog()!.textContent).toContain('Choose the repository your design system is in.');
+		expect(dialog()!.textContent).toContain('Choose your design system repository.');
 		expect(document.querySelector('h1')).toBeNull();
 		expect(dialog()!.contains(button('Choose a repository'))).toBe(true);
 	});
