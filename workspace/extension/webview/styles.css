@@ -1,0 +1,16 @@
+/*
+ * DSGN's panel, in VS Code's own design language: every colour, font and size is one of the theme's variables, so the
+ * panel follows whatever theme is chosen, high contrast included. No colour is written here.
+ */
+body {
+	margin: 0;
+	padding: 0;
+	color: var(--vscode-foreground);
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size);
+	font-weight: var(--vscode-font-weight);
+}
+
+.panel {
+	padding: 8px 12px;
+}

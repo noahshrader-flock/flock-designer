@@ -1,0 +1,58 @@
+/**
+ * Builds DSGN: the extension's own code for VS Code (Node, with `vscode` left to VS Code), and its panel's page (the
+ * browser), each into one file under `dist/`, with the codicons beside them. `--watch` rebuilds on every change and says
+ * when it has.
+ *
+ *   node extension/build.mjs          once
+ *   node extension/build.mjs --watch  on every change
+ */
+import { copyFileSync, mkdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { context } from 'esbuild';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const dist = join(here, 'dist');
+const watch = process.argv.includes('--watch');
+
+/** Says when a build has finished, and what went wrong if it did not. */
+const report = (name) => ({
+	name: 'report',
+	setup: (build) =>
+		build.onEnd((result) => console.log(result.errors.length ? `dsgn: ${name} failed (${result.errors.length} errors)` : `dsgn: ${name} built`)),
+});
+
+const builds = [
+	{
+		entryPoints: [join(here, 'src/extension.ts')],
+		outfile: join(dist, 'extension.js'),
+		platform: 'node',
+		format: 'cjs',
+		target: 'node20',
+		external: ['vscode'],
+		plugins: [report('extension')],
+	},
+	{
+		entryPoints: [join(here, 'webview/main.tsx')],
+		outfile: join(dist, 'webview.js'),
+		platform: 'browser',
+		format: 'iife',
+		target: 'es2022',
+		jsx: 'automatic',
+		plugins: [report('panel')],
+	},
+];
+
+mkdirSync(dist, { recursive: true });
+// The codicons, from the package, beside the page that loads them.
+const codicons = join(here, '../node_modules/@vscode/codicons/dist');
+for (const file of ['codicon.css', 'codicon.ttf']) copyFileSync(join(codicons, file), join(dist, file));
+
+const contexts = await Promise.all(builds.map((b) => context({ bundle: true, sourcemap: watch, minify: !watch, logLevel: 'warning', ...b })));
+if (watch) {
+	await Promise.all(contexts.map((c) => c.watch()));
+	console.log('dsgn: watching for changes');
+} else {
+	await Promise.all(contexts.map((c) => c.rebuild()));
+	await Promise.all(contexts.map((c) => c.dispose()));
+}
