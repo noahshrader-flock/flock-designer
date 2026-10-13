@@ -39,7 +39,6 @@ export const SAMPLE_PROJECTS: Project[] = [
 
 /** A design system found beside the product: its components, by their Storybook group, and its tokens by category. */
 export interface SampleDesignSystem {
-	name: string;
 	components: CatalogComponent[];
 	tokens: { category: string; count: number; icon: string }[];
 }
@@ -54,7 +53,6 @@ const component = (group: string, name: string): CatalogComponent => ({
 });
 
 export const SAMPLE_DESIGN_SYSTEM: SampleDesignSystem = {
-	name: 'Flock React Component Lib',
 	components: [
 		component('Buttons', 'FSButton'),
 		component('Buttons', 'FSIconButton'),

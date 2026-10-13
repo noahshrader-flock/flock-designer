@@ -3,8 +3,9 @@ import { plural } from '../../src/shared/plural';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
-import { vscode } from './vscode';
+import { List } from './ui/List';
 import { Row } from './ui/Row';
+import { vscode } from './vscode';
 
 /** What a project has, in a line: its iterations, and its folder when it is in one. */
 const meta = (p: Project) => [plural(p.iterations.length, 'iteration'), p.folder].filter(Boolean).join(' · ');
@@ -17,7 +18,7 @@ export const Projects = ({ projects }: { projects: Project[] }) =>
 			<Button onClick={() => vscode().postMessage({ type: 'new-prototype' })}>New prototype</Button>
 		</EmptyState>
 	) : (
-		<ul role="list" aria-label="Projects" className="list">
+		<List label="Projects">
 			{projects.map((p) => {
 				const open = p.iterations.reduce((n, i) => n + i.openComments, 0);
 				return (
@@ -30,5 +31,5 @@ export const Projects = ({ projects }: { projects: Project[] }) =>
 					/>
 				);
 			})}
-		</ul>
+		</List>
 	);

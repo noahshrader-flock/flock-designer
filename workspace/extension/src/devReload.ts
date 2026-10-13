@@ -1,5 +1,5 @@
 /**
- * While DSGN runs from its source (VS Code's Development mode), what a rebuilt file in `dist/` means: the page's files
+ * While DSGN runs from its source (in VS Code's Development mode, or under its test runner), what a rebuilt file in `dist/` means: the page's files
  * reload the panel, the extension's own file restarts the extension host, and everything else (source maps, fonts) means
  * nothing. Plain logic, so it is tested without VS Code.
  */

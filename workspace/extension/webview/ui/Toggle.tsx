@@ -1,9 +1,10 @@
 import { type KeyboardEvent, useRef } from 'react';
+import { Icon } from './Icon';
 
 /**
  * A choice of a few views, side by side, one always chosen: VS Code has no control for this in a side bar, so it is drawn
- * as its buttons are (the chosen one primary, the others secondary) from the theme's own variables. A radio group to
- * assistive technology: only the chosen one is in the tab order, and the arrow keys, Home and End move the choice.
+ * as Claude Code's own side bar draws one, a soft track with the chosen view raised in it. A radio group to assistive
+ * technology: only the chosen one is in the tab order, and the arrow keys, Home and End move the choice.
  */
 export interface ToggleOption<Value extends string> {
 	value: Value;
@@ -20,7 +21,7 @@ export const Toggle = <Value extends string>({
 }: {
 	/** Its name to assistive technology. */
 	label: string;
-	options: ToggleOption<Value>[];
+	options: readonly ToggleOption<Value>[];
 	value: Value;
 	onChange: (value: Value) => void;
 }) => {
@@ -53,7 +54,7 @@ export const Toggle = <Value extends string>({
 					className="toggle-option"
 					onClick={() => onChange(o.value)}
 				>
-					<span aria-hidden="true" className={`codicon codicon-${o.icon}`} />
+					<Icon name={o.icon} />
 					{o.label}
 				</button>
 			))}

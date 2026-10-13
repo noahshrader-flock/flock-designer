@@ -3,6 +3,8 @@ import { plural } from '../../src/shared/plural';
 import type { SampleDesignSystem } from './fixtures';
 import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
+import { Icon } from './ui/Icon';
+import { List } from './ui/List';
 import { Row } from './ui/Row';
 import { Section } from './ui/Section';
 import { vscode } from './vscode';
@@ -33,24 +35,19 @@ export const DesignSystem = ({ system }: { system: SampleDesignSystem | null }) 
 		<>
 			{byGroup(system.components).map(([group, components]) => (
 				<Section key={group} title={group} count={components.length}>
-					<ul role="list" aria-label={group} className="list">
+					<List label={group}>
 						{components.map((c) => (
-							<Row key={c.id} start={<span aria-hidden="true" className="codicon codicon-symbol-misc row-icon" />} name={c.name} />
+							<Row key={c.id} start={<Icon name="symbol-misc" className="row-icon" />} name={c.name} />
 						))}
-					</ul>
+					</List>
 				</Section>
 			))}
 			<Section title="Tokens" count={system.tokens.length}>
-				<ul role="list" aria-label="Tokens" className="list">
+				<List label="Tokens">
 					{system.tokens.map((t) => (
-						<Row
-							key={t.category}
-							start={<span aria-hidden="true" className={`codicon codicon-${t.icon} row-icon`} />}
-							name={t.category}
-							meta={plural(t.count, 'token')}
-						/>
+						<Row key={t.category} start={<Icon name={t.icon} className="row-icon" />} name={t.category} meta={plural(t.count, 'token')} />
 					))}
-				</ul>
+				</List>
 			</Section>
 		</>
 	);

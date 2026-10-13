@@ -1,4 +1,5 @@
 import { type ReactNode, useId, useState } from 'react';
+import { Icon } from './Icon';
 
 /**
  * A titled part of a list, as VS Code's side bar sections are: a header with a chevron, the title in capitals and how
@@ -10,7 +11,7 @@ export const Section = ({ title, count, children }: { title: string; count: numb
 	return (
 		<div className="section">
 			<button type="button" className="section-header" aria-expanded={open} aria-controls={body} onClick={() => setOpen(!open)}>
-				<span aria-hidden="true" className={`codicon codicon-chevron-${open ? 'down' : 'right'}`} />
+				<Icon name={`chevron-${open ? 'down' : 'right'}`} />
 				<span data-part="title" className="section-title">
 					{title}
 				</span>
