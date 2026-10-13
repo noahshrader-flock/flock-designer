@@ -1,7 +1,9 @@
 import type { Project } from '../../src/shared/domain/projects';
 import { plural } from '../../src/shared/plural';
 import { Badge } from './ui/Badge';
+import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
+import { vscode } from './vscode';
 import { Row } from './ui/Row';
 
 /** What a project has, in a line: its iterations, and its folder when it is in one. */
@@ -12,6 +14,7 @@ export const Projects = ({ projects }: { projects: Project[] }) =>
 	projects.length === 0 ? (
 		<EmptyState icon="folder-library" title="No projects yet">
 			<p>A prototype you start appears here, with its iterations and its open comments.</p>
+			<Button onClick={() => vscode().postMessage({ type: 'new-prototype' })}>New prototype</Button>
 		</EmptyState>
 	) : (
 		<ul role="list" aria-label="Projects" className="list">

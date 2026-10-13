@@ -10,13 +10,15 @@ import type { PanelData } from '../extension/webview/Panel';
  */
 
 let state: unknown;
+let sent: unknown[] = [];
 let root: Root | null = null;
 beforeEach(() => {
 	state = undefined;
+	sent = [];
 	(globalThis as { acquireVsCodeApi?: unknown }).acquireVsCodeApi = () => ({
 		getState: () => state,
 		setState: (next: unknown) => (state = next),
-		postMessage: () => undefined,
+		postMessage: (message: unknown) => void sent.push(message),
 	});
 });
 afterEach(async () => {
@@ -158,5 +160,22 @@ describe('Projects, when there are none', () => {
 		const empty = document.querySelector('[data-tab-body="projects"] .empty') as HTMLElement;
 		expect(empty.querySelector('[data-part="title"]')?.textContent).toBe('No projects yet');
 		expect(document.querySelector('[data-tab-body="projects"] [role="list"]')).toBeNull();
+	});
+});
+
+describe('the buttons in an empty view', () => {
+	const button = (name: string) => [...document.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
+
+	it('are VS Code’s, the width of the side bar, and tell the extension what was asked', async () => {
+		await show({ projects: [] });
+		expect(button('New prototype').className).toBe('button');
+		await act(async () => button('New prototype').click());
+		await act(async () => options()[1]!.click());
+		await act(async () => root?.unmount());
+		document.body.innerHTML = '';
+		await show({ designSystem: null });
+		await act(async () => options()[1]!.click());
+		await act(async () => button('Locate design system…').click());
+		expect(sent).toEqual([{ type: 'new-prototype' }, { type: 'locate-design-system' }]);
 	});
 });

@@ -2,6 +2,7 @@ import { watch } from 'node:fs';
 import * as vscode from 'vscode';
 import { afterQuiet, whatChanged } from './devReload';
 import { newNonce, panelHtml } from './html';
+import { readMessage, replyTo } from './messages';
 
 /**
  * DSGN's panel in the side bar: a webview of the extension's own build, allowed to load from its `dist/` folder and
@@ -23,6 +24,11 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 	resolveWebviewView(view: vscode.WebviewView): void {
 		view.webview.options = { enableScripts: true, localResourceRoots: [this.dist] };
 		view.webview.html = this.html(view.webview);
+		// Only what the page may ask, in exactly its shape; anything else is dropped.
+		view.webview.onDidReceiveMessage((raw: unknown) => {
+			const message = readMessage(raw);
+			if (message) void vscode.window.showInformationMessage(replyTo(message));
+		});
 		if (this.development) this.follow(view);
 	}
 

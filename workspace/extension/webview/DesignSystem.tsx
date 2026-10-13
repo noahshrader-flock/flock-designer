@@ -1,9 +1,11 @@
 import type { CatalogComponent } from '../../src/shared/domain/designSystem';
 import { plural } from '../../src/shared/plural';
 import type { SampleDesignSystem } from './fixtures';
+import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
 import { Row } from './ui/Row';
 import { Section } from './ui/Section';
+import { vscode } from './vscode';
 
 /** Components by their group, in the order the library lists them. */
 const byGroup = (components: CatalogComponent[]): [string, CatalogComponent[]][] => {
@@ -24,6 +26,7 @@ export const DesignSystem = ({ system }: { system: SampleDesignSystem | null }) 
 					DSGN looks in the folders open in this window for a design system: the one the product names in its <code>.dsnr/workspace.json</code>, or
 					any folder with stories or tokens.
 				</p>
+				<Button onClick={() => vscode().postMessage({ type: 'locate-design-system' })}>Locate design system…</Button>
 			</EmptyState>
 		);
 	return (

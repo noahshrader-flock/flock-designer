@@ -3,10 +3,12 @@
  * extension a message. Asked for once, as VS Code allows only once per page; asked for when first needed, so a test can
  * stand in for VS Code before then.
  */
+import type { PanelMessage } from '../src/messages';
+
 interface VsCodeApi<State> {
 	getState(): State | undefined;
 	setState(state: State): void;
-	postMessage(message: unknown): void;
+	postMessage(message: PanelMessage): void;
 }
 
 declare function acquireVsCodeApi<State>(): VsCodeApi<State>;
