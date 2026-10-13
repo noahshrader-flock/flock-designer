@@ -1,32 +1,17 @@
-import { useEffect, useState } from 'react';
 import type { Project } from '../shared/contract';
 import { RichText } from './RichText';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from './ui/sheet';
 import { LinesSkeleton, SkeletonStatus } from './Skeletons';
 import { ErrorAlert } from './ErrorAlert';
 import { closeUnlessBusy } from './dialogClose';
+import { useWorkspace } from './useWorkspace';
 
 /**
  * One file from a project's folder, read out in a panel from the side: the brief, the review notes, the
  * list of iterations. Markdown files are shown as rich text; anything else as the text it is.
  */
 export const RecordSheet = ({ project, name, open, onClose }: { project: Project; name: string; open: boolean; onClose: () => void }) => {
-	const [text, setText] = useState<string | null>(null);
-	const [error, setError] = useState<string | null>(null);
-
-	useEffect(() => {
-		setText(null);
-		setError(null);
-		let current = true;
-		void window.workspace.readRecord(project.id, name).then((r) => {
-			if (!current) return;
-			if (r.ok) setText(r.value);
-			else setError(r.error);
-		});
-		return () => {
-			current = false;
-		};
-	}, [project.id, name]);
+	const { value: text, error } = useWorkspace(() => window.workspace.readRecord(project.id, name), [project.id, name]);
 
 	return (
 		<Sheet open={open} onOpenChange={closeUnlessBusy(onClose)}>

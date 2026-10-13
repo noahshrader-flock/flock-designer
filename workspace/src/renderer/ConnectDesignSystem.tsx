@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import type { FoundDesignSystem, Repository, RepositoryReach } from '../shared/contract';
+import { useState } from 'react';
+import type { FoundDesignSystem } from '../shared/contract';
 import { plural } from '../shared/plural';
 import { CancelButton } from './CancelButton';
 import { CloneHere, useClone } from './Clone';
@@ -13,6 +13,7 @@ import { SkeletonStatus } from './Skeletons';
 import { repoName } from '../shared/repoRef';
 import { ErrorAlert } from './ErrorAlert';
 import { closeUnlessBusy } from './dialogClose';
+import { useRepositories } from './useWorkspace';
 
 /**
  * Connecting a design system (P4 of the design system plan), centered in the window like the GitHub sign-in: one of the
@@ -25,20 +26,12 @@ import { closeUnlessBusy } from './dialogClose';
 const WHAT_FOR = 'Choose the repository your design system is in. DSNR finds its components and tokens, in any package of a monorepo too.';
 
 export const ConnectDesignSystem = ({ onConnected, onCancel }: { onConnected: () => void; onCancel?: () => void }) => {
-	const [repos, setRepos] = useState<Repository[] | null>(null);
-	const [reach, setReach] = useState<RepositoryReach | null>(null);
+	const listed = useRepositories();
+	const repos = listed.value?.repositories ?? null;
 	const [picked, setPicked] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	// A repository with several design systems in it, until one is chosen.
 	const [choosing, setChoosing] = useState<{ repository: string; found: FoundDesignSystem[] } | null>(null);
-
-	useEffect(() => {
-		void window.workspace.listRepositories().then((r) => {
-			if (!r.ok) return setError(r.error);
-			setRepos(r.value.repositories);
-			setReach(r.value.reach);
-		});
-	}, []);
 
 	const clone = useClone(picked, setError, true);
 	const connect = async () => {
@@ -75,13 +68,13 @@ export const ConnectDesignSystem = ({ onConnected, onCancel }: { onConnected: ()
 						</Button>
 					))}
 				</>
-			) : repos === null ? (
+			) : listed.loading ? (
 				// The repository field, until the list it chooses from is read.
 				<SkeletonStatus label="Loading your repositories…" className="flex flex-col gap-2">
 					<Skeleton className="h-4 w-20" />
 					<Skeleton className="h-9 w-full" />
 				</SkeletonStatus>
-			) : (
+			) : repos === null ? null : (
 				<Field>
 					<FieldLabel htmlFor="connect-repo">Repository</FieldLabel>
 					<SearchSelect
@@ -94,11 +87,11 @@ export const ConnectDesignSystem = ({ onConnected, onCancel }: { onConnected: ()
 						empty="No repository matches."
 						disabled={clone.cloning !== null}
 					/>
-					<RepositoryReachNote reach={reach} />
+					<RepositoryReachNote reach={listed.value?.reach ?? null} />
 					{picked !== null && <CloneHere clone={clone} onClone={() => void connect()} action="Connect" />}
 				</Field>
 			)}
-			{error && <ErrorAlert error={error} />}
+			{(error ?? listed.error) && <ErrorAlert error={error ?? listed.error} />}
 		</div>
 	);
 

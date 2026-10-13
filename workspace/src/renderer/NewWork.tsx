@@ -1,14 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type {
-	AgentReadiness,
-	Checkout,
-	Project,
-	ProjectIteration,
-	PrototypeReadiness,
-	Repository,
-	RepositoryList,
-	RepositoryReach,
-} from '../shared/contract';
+import type { AgentReadiness, Checkout, Project, ProjectIteration, Repository } from '../shared/contract';
 import { slugify } from '../shared/validate';
 import { toProjectIteration } from '../shared/iterationRecords';
 import { CancelButton } from './CancelButton';
@@ -25,6 +16,9 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { ErrorAlert } from './ErrorAlert';
 import { closeUnlessBusy } from './dialogClose';
+import { Skeleton } from './ui/skeleton';
+import { SkeletonStatus } from './Skeletons';
+import { useRepositories, useWorkspace } from './useWorkspace';
 
 /** What New makes, said under its title. The app is for prototypes: codebase work is started in the codebase. */
 const ABOUT =
@@ -117,41 +111,28 @@ export const NewWork = ({
 	const [inFolder, setInFolder] = useState<FolderPick>(pickOf(folder ?? null));
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [repos, setRepos] = useState<Repository[]>([]);
-	const [reach, setReach] = useState<RepositoryReach | null>(null);
-	const [readiness, setReadiness] = useState<AgentReadiness>({ state: 'unknown' });
 	// The repository chosen, by name. Null means the one in use.
 	const [picked, setPicked] = useState<string | null>(null);
-	const [branches, setBranches] = useState<string[]>([]);
 	const [from, setFrom] = useState<string | null>(null);
 	const id = slugify(name);
-	const showRepos = (list: RepositoryList) => {
-		setRepos(list.repositories);
-		setReach(list.reach);
-	};
+	const listed = useRepositories({ enabled: open });
+	const repos = listed.value?.repositories ?? [];
+	// Asked when it opens, not after the branch is made: an agent that cannot start would leave an empty iteration behind.
+	const readiness: AgentReadiness = useWorkspace(() => window.workspace.agentReadiness(), [], { enabled: open }).value ?? { state: 'unknown' };
 
 	useEffect(() => {
 		if (!open) return;
 		setPicked(null);
 		setInFolder(pickOf(folder ?? null));
 		setError(null);
-		void window.workspace.listRepositories().then((r) => r.ok && showRepos(r.value));
-		// Asked now, not after the branch is made: an agent that cannot start would leave an empty iteration behind.
-		void window.workspace.agentReadiness().then((r) => r.ok && setReadiness(r.value));
 		// Only when it opens: the folder it starts in is the one shown then, and the person's choice after that.
 	}, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// A new repository brings its own branches, and starts on the one it has checked out.
-	useEffect(() => {
-		setBranches([]);
-		setFrom(checkout?.branch ?? null);
-		if (!open || !checkout) return;
-		let current = true;
-		void window.workspace.listBaseBranches(checkout.root).then((r) => current && r.ok && setBranches(r.value));
-		return () => {
-			current = false;
-		};
-	}, [open, checkout?.root, checkout?.branch]); // eslint-disable-line react-hooks/exhaustive-deps
+	const root = checkout?.root ?? '';
+	const branchList = useWorkspace(() => window.workspace.listBaseBranches(root), [root, checkout?.branch], { enabled: open && checkout !== null });
+	const branches = branchList.value ?? [];
+	useEffect(() => setFrom(checkout?.branch ?? null), [open, checkout?.root, checkout?.branch]);
 
 	// The one in use is always offered, even when it was opened by hand from somewhere discovery does not look.
 	const choices: Repository[] =
@@ -175,7 +156,7 @@ export const NewWork = ({
 		// Found and accepted: the form carries on with it, and the list shows it as here now.
 		onCheckout(r.value);
 		setPicked(null);
-		void window.workspace.listRepositories().then((l) => l.ok && showRepos(l.value));
+		listed.refresh();
 	};
 	// Closing while it clones stops the clone, which leaves nothing behind.
 	const closedWhileCloning = useRef(false);
@@ -192,20 +173,11 @@ export const NewWork = ({
 	// Building needs Claude Code; when it is plainly not ready, nothing is created.
 	const blocked = readiness.state === 'missing' || readiness.state === 'signedOut';
 
-	// Whether this repository can build a prototype here, asked as soon as there is one to ask about.
-	const [prototype, setPrototype] = useState<PrototypeReadiness | null>(null);
+	// Whether this repository can build a prototype here, asked as soon as there is one to ask about, and again once its
+	// packages are installed from here.
 	const askRoot = checkout && !elsewhere ? checkout.root : null;
-	// Asked again once its packages are installed from here.
-	const [installed, setInstalled] = useState(0);
-	useEffect(() => {
-		setPrototype(null);
-		if (!open || askRoot === null) return;
-		let current = true;
-		void window.workspace.prototypeReadiness(askRoot).then((r) => current && r.ok && setPrototype(r.value));
-		return () => {
-			current = false;
-		};
-	}, [open, askRoot, installed]);
+	const readying = useWorkspace(() => window.workspace.prototypeReadiness(askRoot ?? ''), [askRoot], { enabled: open && askRoot !== null });
+	const prototype = readying.value;
 
 	// Installing its packages, with the command the repository declares: the last line it printed while it runs.
 	const [installing, setInstalling] = useState<string | null>(null);
@@ -217,7 +189,7 @@ export const NewWork = ({
 		const r = await window.workspace.installPackages(askRoot);
 		setInstalling(null);
 		if (!r.ok) return setError(r.error);
-		setInstalled((n) => n + 1);
+		readying.reload();
 	};
 	// Nothing else decides this: no repository, or one without its packages, cannot make a prototype.
 	const prototypeBlocked = askRoot === null || (prototype !== null && !prototype.ready);
@@ -280,7 +252,15 @@ export const NewWork = ({
 							placeholder="A users list that flags people who have not signed in for 90 days."
 						/>
 					</Field>
-					{checkout || choices.length > 0 ? (
+					{!checkout && listed.loading ? (
+						// The repository field, until the list it chooses from is read: not "none found", which it may not be.
+						<SkeletonStatus label="Loading your repositories…" className="flex flex-col gap-2">
+							<Skeleton className="h-4 w-20" />
+							<Skeleton className="h-9 w-full" />
+						</SkeletonStatus>
+					) : !checkout && listed.error ? (
+						<ErrorAlert error={listed.error} />
+					) : checkout || choices.length > 0 ? (
 						<Field>
 							<FieldLabel htmlFor="new-work-repo">Repository</FieldLabel>
 							<SearchSelect
@@ -293,7 +273,7 @@ export const NewWork = ({
 								empty="No repository matches."
 								disabled={busy || cloning !== null}
 							/>
-							<RepositoryReachNote reach={reach} />
+							<RepositoryReachNote reach={listed.value?.reach ?? null} />
 							{toClone !== null && <CloneHere clone={cloneState} onClone={() => void clone()} />}
 							{/* After the clone, not before: there is nothing to start from until it is here. */}
 							{toClone === null && !elsewhere && from !== null && <StartsFrom branch={from} branches={branches} onChange={setFrom} disabled={busy} />}
@@ -366,7 +346,8 @@ export const NewWork = ({
 							</AlertDescription>
 						</Alert>
 					)}
-					{error && <ErrorAlert error={error} />}
+					{/* What could not be read is said, as what went wrong is: none of it is dropped. */}
+					{[error, checkout ? listed.error : null, branchList.error, readying.error].map((e) => e && <ErrorAlert key={e} error={e} />)}
 				</DialogBody>
 				<DialogFooter>
 					<CancelButton onClick={close} disabled={busy} />

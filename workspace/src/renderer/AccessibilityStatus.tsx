@@ -1,5 +1,5 @@
 import { AccessibilityIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { countsOf, foundIn, summaryOf } from '../shared/accessibility';
 import { plural } from '../shared/plural';
 import type { AccessibilityIssue, AccessibilityResult } from '../shared/contract';
@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Spinner } from './ui/spinner';
 import { ErrorAlert } from './ErrorAlert';
+import { useWorkspace } from './useWorkspace';
 
 type Check = { state: 'checking' } | { state: 'ready'; result: AccessibilityResult } | { state: 'failed'; error: string };
 
@@ -15,19 +16,10 @@ type Check = { state: 'checking' } | { state: 'ready'; result: AccessibilityResu
  * again for the same page is answered at once, and a changed page is checked again.
  */
 const useAccessibility = (projectId: string, name: string, opened: unknown): Check | null => {
-	const [check, setCheck] = useState<Check | null>(null);
-	useEffect(() => {
-		if (opened === null) return;
-		let live = true;
-		setCheck({ state: 'checking' });
-		void window.workspace.checkAccessibility(projectId, name).then((r) => {
-			if (live) setCheck(r.ok ? { state: 'ready', result: r.value } : { state: 'failed', error: r.error });
-		});
-		return () => {
-			live = false;
-		};
-	}, [projectId, name, opened]);
-	return check;
+	const read = useWorkspace(() => window.workspace.checkAccessibility(projectId, name), [projectId, name, opened], { enabled: opened !== null });
+	if (opened === null) return null;
+	if (read.error !== null) return { state: 'failed', error: read.error };
+	return read.loading || read.value === null ? { state: 'checking' } : { state: 'ready', result: read.value };
 };
 
 /** One kind of issue: what it asks, where in WCAG, on how many elements and in which states, and axe's page on it. */

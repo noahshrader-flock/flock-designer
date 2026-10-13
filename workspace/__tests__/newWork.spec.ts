@@ -463,3 +463,49 @@ describe('a repository with no clone on this machine', () => {
 		expect(text()).not.toContain('Clone repository');
 	});
 });
+
+describe('the repositories it chooses from', () => {
+	it('shows the field loading while the list is read, not that there is no repository', async () => {
+		await open({ listRepositories: () => new Promise(() => undefined) }, { checkout: null });
+		expect(text()).not.toContain('No product repository found');
+		expect([...document.querySelectorAll('[role="status"]')].some((e) => e.textContent === 'Loading your repositories…')).toBe(true);
+	});
+
+	it('says there is none only once the list is read and empty', async () => {
+		await open({ listRepositories: async () => ok({ repositories: [], reach: 'account' }) }, { checkout: null });
+		expect(text()).toContain('No product repository found');
+	});
+
+	it('says why the list could not be read, rather than nothing', async () => {
+		await open({ listRepositories: async () => fail('Could not reach GitHub.') }, { checkout: null });
+		expect(text()).toContain('Could not reach GitHub.');
+		expect(text()).not.toContain('No product repository found');
+	});
+
+	it('is read once a session, for New and Connect alike, and again after a clone or a new sign-in', async () => {
+		let signedIn: () => void = () => undefined;
+		const { app } = await open({
+			onSignInChanged: (l: () => void) => {
+				signedIn = l;
+				return () => undefined;
+			},
+		});
+		expect(app.calls.listRepositories).toHaveLength(1);
+		await unmountAll(current!.root);
+		current = await render(
+			createElement(NewWork, {
+				open: true,
+				onClose: () => undefined,
+				checkout: HERE,
+				onChoose: () => undefined,
+				onCheckout: () => undefined,
+				onCreated: () => undefined,
+			}),
+		);
+		await settle();
+		expect(app.calls.listRepositories).toHaveLength(1);
+		await act(async () => signedIn());
+		await settle();
+		expect(app.calls.listRepositories).toHaveLength(2);
+	});
+});

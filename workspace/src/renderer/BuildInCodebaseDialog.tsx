@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import type { BuildInCodebase, Checkout, BuildInCodebasePlan, Project, ProjectIteration } from '../shared/contract';
+import { useEffect, useMemo, useState } from 'react';
+import type { BuildInCodebase, Checkout, Project, ProjectIteration } from '../shared/contract';
 import { iterationLabel } from '../shared/work';
 import { CancelButton } from './CancelButton';
 import { SearchSelect } from './SearchSelect';
@@ -9,6 +9,7 @@ import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTi
 import { Field, FieldDescription, FieldLabel } from './ui/field';
 import { ErrorAlert } from './ErrorAlert';
 import { closeUnlessBusy } from './dialogClose';
+import { useWorkspace } from './useWorkspace';
 
 /**
  * Building a prototype in the codebase, said out loud before it happens.
@@ -33,31 +34,29 @@ export const BuildInCodebaseDialog = ({
 	iteration: ProjectIteration;
 	checkout: Checkout;
 }) => {
-	const [plan, setPlan] = useState<BuildInCodebasePlan | null>(null);
-	const [branches, setBranches] = useState<string[]>([]);
 	const [from, setFrom] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	// Where the building went, once it was handed over.
 	const [handed, setHanded] = useState<BuildInCodebase | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
+	// Asked each time it opens: what it would do here, and the branches it can start from, which are only those with the
+	// DSNR setup, since codebase work cannot start anywhere else.
+	const planned = useWorkspace(
+		() => window.workspace.buildInCodebasePlan(checkout.root, project.id, iteration.name),
+		[open, checkout.root, project.id, iteration.name],
+		{
+			enabled: open,
+		},
+	);
+	const setup = useWorkspace(() => window.workspace.branchesWithSetup(checkout.root), [open, checkout.root], { enabled: open });
+	const plan = planned.value;
+	const branches = useMemo(() => setup.value ?? [], [setup.value]);
 	useEffect(() => {
 		if (!open) return;
-		let current = true;
-		setPlan(null);
 		setError(null);
 		setHanded(null);
-		void window.workspace.buildInCodebasePlan(checkout.root, project.id, iteration.name).then((r) => {
-			if (!current) return;
-			if (r.ok) setPlan(r.value);
-			else setError(r.error);
-		});
-		// Only branches with the DSNR setup: codebase work cannot start anywhere else.
-		void window.workspace.branchesWithSetup(checkout.root).then((r) => current && r.ok && setBranches(r.value));
-		return () => {
-			current = false;
-		};
-	}, [open, checkout.root, project.id, iteration.name]);
+	}, [open]);
 
 	// Starts from what the prototype was modeled on, when that can be started from; else from where the checkout is,
 	// when that can; else from the newest branch that can.
@@ -181,7 +180,7 @@ export const BuildInCodebaseDialog = ({
 								</>
 							)}
 
-							{error && <ErrorAlert error={error} />}
+							{[error, planned.error, setup.error].map((e) => e && <ErrorAlert key={e} error={e} />)}
 						</DialogBody>
 						<DialogFooter>
 							<CancelButton onClick={onClose} disabled={busy} />

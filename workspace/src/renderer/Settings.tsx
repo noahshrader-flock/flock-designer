@@ -22,7 +22,7 @@ export const Settings = ({ open, onClose }: { open: boolean; onClose: () => void
 	useEffect(() => {
 		if (!open) return;
 		setError(null);
-		void window.workspace.appearance().then((r) => r.ok && setAppearance(r.value));
+		void window.workspace.appearance().then((r) => (r.ok ? setAppearance(r.value) : setError(r.error)));
 	}, [open]);
 	const choose = async (next: Appearance) => {
 		const before = appearance;
