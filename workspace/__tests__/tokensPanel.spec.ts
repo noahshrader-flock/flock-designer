@@ -228,8 +228,8 @@ describe('a set', () => {
 	it('says which tone a palette role points at, and its opacity', async () => {
 		await show();
 		const says = (path: string) => row(path)?.querySelector('button')?.getAttribute('aria-description');
-		expect(says('palette.light.primaryBorder.main')).toContain('pineGreen 20 at 40%');
-		expect(says('palette.light.primary.main')).toContain('pineGreen 50');
+		expect(says('palette.light.primaryBorder.main')).toBe('pineGreen 20 at 40%');
+		expect(says('palette.light.primary.main')).toBe('pineGreen 50');
 	});
 
 	it('shows a dimension as its value, with no swatch', async () => {
@@ -355,7 +355,8 @@ describe('changing a token (T3)', () => {
 		await settle();
 		expect(made.at(-1)).toEqual([{ path: 'palette.light.primary.main', ref: 'tone.pineGreen.20' }]);
 		// What it points at and what it resolves to are on the value for whoever hovers or focuses it, and in its popover.
-		expect(row('palette.light.primary.main')?.querySelector('button')?.getAttribute('aria-description')).toBe('pineGreen 20 · #18372F');
+		expect(row('palette.light.primary.main')?.querySelector('button')?.getAttribute('aria-description')).toBe('pineGreen 20');
+		expect(row('palette.light.primary.main')?.querySelector<HTMLElement>('[data-swatch]')?.style.backgroundColor).toBe('rgb(24, 55, 47)');
 		expect(row('palette.light.primary.main')?.hasAttribute('data-changed')).toBe(true);
 	});
 
@@ -385,7 +386,7 @@ describe('changing a token (T3)', () => {
 		expect(made.at(-1)).toEqual([{ path: 'tone.pineGreen.50', value: '#0A6B52' }]);
 		// The role that points at it follows: still pointing at pineGreen 50, now the color it was changed to.
 		await choose('Semantic');
-		expect(row('palette.light.primary.main')?.querySelector('button')?.getAttribute('aria-description')).toBe('pineGreen 50 · #0A6B52');
+		expect(row('palette.light.primary.main')?.querySelector('button')?.getAttribute('aria-description')).toBe('pineGreen 50');
 		expect(row('palette.light.primary.main')?.querySelector<HTMLElement>('[data-swatch]')?.style.backgroundColor).toBe('rgb(10, 107, 82)');
 	});
 

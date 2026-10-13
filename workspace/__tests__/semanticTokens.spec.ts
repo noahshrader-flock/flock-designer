@@ -60,7 +60,7 @@ const groups = () => [...document.querySelectorAll<HTMLElement>('[data-token-gro
 const themes = () => [...document.querySelectorAll('[data-theme-heading]')].map((h) => h.textContent);
 const search = () => document.querySelector<HTMLInputElement>('input[aria-label="Search color"]') as HTMLInputElement;
 const text = () => document.body.textContent ?? '';
-/** What a value says to assistive technology, and in its tooltip: what it points at, and its hex (`pine 50 · #108062`). */
+/** What a value says to assistive technology, and in its tooltip: what it points at (`pine 50`), or its hex when it points at nothing. */
 const reads = (path: string) => cell(path)?.querySelector('button')?.getAttribute('aria-description');
 /** Opens one theme's value, as a press on it does, and returns what opens. */
 const open = async (path: string) => {
@@ -144,16 +144,20 @@ describe('the roles by theme', () => {
 		]);
 	});
 
-	it('are swatches, large enough to compare Light with Dark at a glance, with no words on them', async () => {
+	it('are small square swatches in a small icon button, with no words on them', async () => {
 		await show();
 		const light = cell('palette.light.primary.main') as HTMLElement;
 		const swatch = light.querySelector<HTMLElement>('[data-swatch]') as HTMLElement;
 		expect(swatch.style.backgroundColor).toBe('rgb(16, 128, 98)');
 		// A block, or its size would be ignored inside a plain button (which jsdom, with no layout, cannot show).
-		expect(swatch.className.split(' ')).toEqual(expect.arrayContaining(['h-8', 'w-10', 'block']));
+		expect(swatch.className.split(' ')).toEqual(expect.arrayContaining(['size-5', 'block']));
 		// A border keeps a light color visible on the panel's own background.
 		expect(swatch.className.split(' ')).toContain('border');
 		expect(light.textContent).toBe('');
+		// Square by having one size, in the app's small icon button, which is square too.
+		const trigger = light.querySelector('button') as HTMLElement;
+		expect([trigger.getAttribute('data-variant'), trigger.getAttribute('data-size')]).toEqual(['ghost', 'icon-sm']);
+		expect(swatch.className).not.toMatch(/\b[hw]-\d/);
 	});
 
 	it('are centered under their theme’s heading', async () => {
@@ -162,18 +166,18 @@ describe('the roles by theme', () => {
 		expect(document.querySelector('[data-theme-heading]')?.className).toContain('text-center');
 	});
 
-	it('say what each points at and its hex to assistive technology, with its opacity', async () => {
+	it('say what each points at to assistive technology, with its opacity, and not its hex', async () => {
 		await show();
-		expect(reads('palette.light.primary.main')).toBe('pine 50 · #108062');
-		expect(reads('palette.light.primaryBorder.main')).toBe('pine 20 at 40% · #18372F66');
+		expect(reads('palette.light.primary.main')).toBe('pine 50');
+		expect(reads('palette.light.primaryBorder.main')).toBe('pine 20 at 40%');
 	});
 
-	it('say what a value points at, and its hex, in a tooltip on keyboard focus, as on hover', async () => {
+	it('say what a value points at, and only that, in a tooltip on keyboard focus, as on hover', async () => {
 		await show();
 		await act(async () => void (cell('palette.light.primary.main')?.querySelector('button') as HTMLElement).focus());
 		await settle();
 		const tip = [...document.querySelectorAll('[role="tooltip"]')].map((t) => t.textContent);
-		expect(tip).toEqual(['pine 50#108062']);
+		expect(tip).toEqual(['pine 50']);
 	});
 
 	it('say a color that points at nothing as its hex alone, in its tooltip: there is no reference to say', async () => {
@@ -278,8 +282,8 @@ describe('one theme’s value', () => {
 		await press(editor.querySelector('[aria-label="pine 90"]') as HTMLElement);
 		await settle();
 		expect(made.at(-1)).toEqual([{ path: 'palette.light.primary.main', ref: 'tone.pine.90' }]);
-		expect(reads('palette.light.primary.main')).toBe('pine 90 · #C7E7DD');
-		expect(reads('palette.dark.primary.main')).toBe('pine 20 · #18372F');
+		expect(reads('palette.light.primary.main')).toBe('pine 90');
+		expect(reads('palette.dark.primary.main')).toBe('pine 20');
 		expect(cell('palette.light.primary.main')?.hasAttribute('data-changed')).toBe(true);
 		expect(cell('palette.dark.primary.main')?.hasAttribute('data-changed')).toBe(false);
 	});
@@ -298,7 +302,7 @@ describe('one theme’s value', () => {
 		await press(editor.querySelector('[aria-label="red 40"]') as HTMLElement);
 		await settle();
 		expect(made.at(-1)).toEqual([{ path: 'palette.light.primary.main', ref: 'tone.red.40' }]);
-		expect(reads('palette.light.primary.main')).toBe('red 40 · #BA1A1A');
+		expect(reads('palette.light.primary.main')).toBe('red 40');
 	});
 
 	it('says what it resolves to, with a way to copy it', async () => {
@@ -366,7 +370,7 @@ describe('the palette behind the roles', () => {
 		await settle();
 		const dark = cell('palette.dark.primary.main') as HTMLElement;
 		expect(dark.querySelector<HTMLElement>('[data-swatch]')?.style.backgroundColor).toBe('rgb(0, 0, 0)');
-		expect(reads('palette.dark.primary.main')).toBe('pine 20 · #000000');
+		expect(reads('palette.dark.primary.main')).toBe('pine 20');
 	});
 
 	it('is not touched by a role pointed elsewhere', async () => {

@@ -317,9 +317,7 @@ export const TokenEditorPopover = ({ token, tip, children }: { token: DesignToke
 				<PopoverTrigger asChild>
 					<TooltipTrigger asChild>{children}</TooltipTrigger>
 				</PopoverTrigger>
-				<TooltipContent side="top" className="flex flex-col items-center gap-0.5">
-					{tip}
-				</TooltipContent>
+				<TooltipContent side="top">{tip}</TooltipContent>
 			</Tooltip>
 		) : (
 			<PopoverTrigger asChild>{children}</PopoverTrigger>

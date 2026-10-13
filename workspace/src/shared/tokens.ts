@@ -31,8 +31,20 @@ export const pixelsOf = (value: string): number | null => {
 	return length.unit === 'rem' ? length.number * PX_PER_REM : length.number;
 };
 
-/** A token as a person names it: `primary main`, `pineGreen 50`. */
-export const nameOf = (t: DesignToken): string => `${t.set} ${t.name}`;
+/**
+ * A token as a person names it, **as its library writes it**: its set and name joined the way its path joins them. A
+ * family and a step the library keeps apart (`tone.pineGreen.50`, `palette.light.primary.main`) read with a space
+ * (`pineGreen 50`, `primary main`); one it writes as a single name (`--pine-green-50`, `--pine_green_50`, `--pineGreen50`)
+ * reads as that name, so what is shown is what is in the file. A set that is its own name is said once (`background`).
+ */
+export const nameOf = (t: DesignToken): string => {
+	if (t.set === t.name) return t.name;
+	if (!t.path.endsWith(t.name)) return `${t.set} ${t.name}`;
+	const before = t.path.slice(0, t.path.length - t.name.length);
+	if (before.endsWith(t.set)) return `${t.set}${t.name}`;
+	const joiner = before.slice(-1);
+	return (joiner === '-' || joiner === '_') && before.slice(0, -1).endsWith(t.set) ? `${t.set}${joiner}${t.name}` : `${t.set} ${t.name}`;
+};
 
 /** A token named with where it is shown: `Light primary main`, `Tones pineGreen 50`, `Radius base` (not `Radius radius base`). */
 export const labelOf = (t: DesignToken): string =>

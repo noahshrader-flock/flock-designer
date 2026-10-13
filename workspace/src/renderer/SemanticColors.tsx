@@ -5,6 +5,7 @@ import { contrastPartner, contrastRatio, isForeground, semanticTable, type Seman
 import { textContrast } from '../shared/wcag';
 import { GroupTrigger, STICKY_GROUP_HEADER, useClosedGroups } from './GroupAccordion';
 import { Swatch } from './Swatch';
+import { Button } from './ui/button';
 import { TokenEditorPopover } from './TokenEditor';
 import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
 import { Accordion, AccordionContent, AccordionItem } from './ui/accordion';
@@ -12,7 +13,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * The semantic colors, as a library's roles by theme (the Color tokens plan): a row for each role's variant, a column for
- * each theme the library has (Light, Dark, or more), each value a swatch, centered, with what it points at and its hex in a
+ * each theme the library has (Light, Dark, or more), each value a small square swatch, centered, with what it points at in a
  * tooltip. **Each
  * theme's value is its own button** that opens its own control (`TokenEditor`); the row, and the role's name, open nothing,
  * so a change is always to one theme's token. A role a theme does not have is a dash. Roles are in groups, open until
@@ -22,17 +23,15 @@ import { cn } from '@/lib/utils';
 /** The width of the column of names: the same on every row, and on the header over them, so the themes line up. */
 const NAME = 'w-22 shrink-0';
 
-/** What a value points at (`pineGreen 50`, and its opacity), when it points at something; and what it resolves to, its hex. */
-const reads = (token: DesignToken, target: DesignToken | undefined): { points: string | null; hex: string } => ({
-	points: target ? `${nameOf(target)}${token.ref?.alpha ? ` at ${opacity(token.ref.alpha)}` : ''}` : null,
-	hex: token.value,
-});
+/** What a value says: what it points at (`pineGreen 50`, and its opacity), or its own color when it points at nothing. */
+const reads = (token: DesignToken, target: DesignToken | undefined): string =>
+	target ? `${nameOf(target)}${token.ref?.alpha ? ` at ${opacity(token.ref.alpha)}` : ''}` : token.value;
 
 /**
- * One theme's value of a role: its color as a swatch, large enough to compare Light with Dark at a glance and bordered so a
- * light one shows on the panel, centered under its theme. What it points at and its hex are in a tooltip, on hover and on
- * keyboard focus, and said to assistive technology; pressing it opens its control. Marked when it has been changed, and when
- * its contrast is below the target, as small badges on its corner.
+ * One theme's value of a role: its color as a small square swatch in the app's small icon button, centered under its theme
+ * and bordered so a light one shows on the panel, so Light and Dark can be compared at a glance. What it points at is in a
+ * tooltip, on hover and on keyboard focus, and said to assistive technology: not its hex, which its popover has. Pressing it
+ * opens its control. Marked when it has been changed, and when its contrast is below the target, as badges on its corner.
  */
 const ThemeValue = ({ token }: { token: DesignToken }) => {
 	const changes = useTokenChanges();
@@ -41,25 +40,18 @@ const ThemeValue = ({ token }: { token: DesignToken }) => {
 	const partner = isForeground(token) ? undefined : contrastPartner(token, changes.shown);
 	const ratio = partner ? contrastRatio(token.value, partner.value) : null;
 	const flagged = ratio !== null && textContrast(ratio, changes.accessibility).flag;
-	const { points, hex } = reads(token, target);
+	const says = reads(token, target);
 	return (
 		<div data-token={token.path} data-changed={edited || undefined} className="flex min-w-0 flex-1 justify-center">
-			<TokenEditorPopover
-				token={token}
-				tip={
-					<>
-						{points && <span>{points}</span>}
-						<span className="font-mono">{hex}</span>
-					</>
-				}
-			>
-				<button
-					type="button"
+			<TokenEditorPopover token={token} tip={<span>{says}</span>}>
+				<Button
+					variant="ghost"
+					size="icon-sm"
 					aria-label={`Change ${labelOf(token)}`}
-					aria-description={points ? `${points} · ${hex}` : hex}
-					className="hover:bg-muted/50 data-[state=open]:bg-muted relative rounded-md p-0.5"
+					aria-description={says}
+					className="data-[state=open]:bg-muted relative"
 				>
-					<Swatch value={token.value} size="h-8 w-10" />
+					<Swatch value={token.value} size="size-5" />
 					{(flagged || edited) && (
 						<span className="absolute top-0 right-0 flex items-center gap-0.5">
 							{flagged && (
@@ -70,7 +62,7 @@ const ThemeValue = ({ token }: { token: DesignToken }) => {
 							{edited && <span data-changed-mark aria-label="Changed" className="bg-primary ring-card size-2 rounded-full ring-2" />}
 						</span>
 					)}
-				</button>
+				</Button>
 			</TokenEditorPopover>
 		</div>
 	);

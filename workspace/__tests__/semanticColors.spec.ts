@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DesignToken } from '../src/shared/contract';
-import { paletteFamilies, semanticTable, tokenTitle } from '../src/shared/tokens';
+import { nameOf, paletteFamilies, semanticTable, tokenTitle } from '../src/shared/tokens';
 
 /**
  * Which colors are the design system's palette and which are semantic, and the semantic ones lined up by theme: worked out
@@ -101,6 +101,26 @@ describe('the semantic colors by theme', () => {
 
 	it('are nothing, with no themes, when there are no semantic colors', () => {
 		expect(semanticTable([])).toEqual({ themes: [], flat: [], sets: [] });
+	});
+});
+
+describe('a token’s name', () => {
+	/** A token as a reader gives it: where it is written is its path, which says how its set and name were joined. */
+	const named = (path: string, set: string, name: string) => nameOf(color(path, 'Light', set, name, '#000000'));
+
+	it('is its set and its step as a person says them, when the library writes them as separate things', () => {
+		expect(named('tone.pineGreen.50', 'pineGreen', '50')).toBe('pineGreen 50');
+		expect(named('palette.light.primary.main', 'primary', 'main')).toBe('primary main');
+	});
+
+	it('is as the library wrote it when it joins them in one name: a dash, an underscore, or nothing', () => {
+		expect(named('css.light.pine-green-50', 'pine-green', '50')).toBe('pine-green-50');
+		expect(named('css.light.pine_green_50', 'pine_green', '50')).toBe('pine_green_50');
+		expect(named('css.light.pineGreen50', 'pineGreen', '50')).toBe('pineGreen50');
+	});
+
+	it('is not said twice when the set is the name', () => {
+		expect(named('css.light.background', 'background', 'background')).toBe('background');
 	});
 });
 
