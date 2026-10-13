@@ -3,14 +3,23 @@ import { cn } from "@/lib/utils"
 import { useOverlayRef } from "@/overlays"
 import { Tooltip as TooltipPrimitive } from "radix-ui"
 
+// Changed from stock, which opens a tooltip the instant a pointer touches its trigger, so a quick sweep across a toolbar
+// opens a tooltip on everything it passes, over what is next. The wait is most of a second, as tooltips usually wait; once
+// one is open, the next opens at once for 300ms (Radix's skip), so moving along a row of them is not a wait for each; and
+// the pointer leaving a trigger closes it, so a tooltip is never something to hover into and is never in the way. Keyboard
+// focus opens it at once, whatever this says. Set here, once: no tooltip sets a delay of its own.
 function TooltipProvider({
-  delayDuration = 0,
+  delayDuration = 800,
+  skipDelayDuration = 300,
+  disableHoverableContent = true,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
   return (
     <TooltipPrimitive.Provider
       data-slot="tooltip-provider"
       delayDuration={delayDuration}
+      skipDelayDuration={skipDelayDuration}
+      disableHoverableContent={disableHoverableContent}
       {...props}
     />
   )

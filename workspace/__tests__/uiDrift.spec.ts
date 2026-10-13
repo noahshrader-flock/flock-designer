@@ -37,6 +37,8 @@ const PINNED: [file: string, what: string, why: string][] = [
 	['tabs.tsx', 'data-slot="tabs-scroll"', 'a strip of tabs scrolls sideways when they do not fit'],
 	['tabs.tsx', '--tabs-inset', 'the strip is inset as its content is'],
 	['field.tsx', 'function FieldSet', 'the stock field, with its whole set'],
+	['tooltip.tsx', 'delayDuration = 800', 'a tooltip waits, so a pointer passing over a toolbar opens none'],
+	['tooltip.tsx', 'disableHoverableContent = true', 'a tooltip is never hovered into or in the way'],
 	['dialog.tsx', 'dark:bg-black/50', 'a dialog’s scrim that can be seen in dark'],
 	['sheet.tsx', 'dark:bg-black/50', 'a sheet’s scrim that can be seen in dark'],
 ];

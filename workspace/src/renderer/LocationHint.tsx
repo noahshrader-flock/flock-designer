@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
  * sits in something that can take focus, so the tooltip opens from the keyboard as well as on hover; an icon alone cannot.
  */
 export const LocationHint = ({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) => (
-	<Tooltip delayDuration={300}>
+	<Tooltip>
 		<TooltipTrigger asChild>
 			<span
 				tabIndex={0}
