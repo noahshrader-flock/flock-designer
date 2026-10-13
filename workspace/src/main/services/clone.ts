@@ -63,7 +63,7 @@ export const cloneProblem = (repository: string, stderr: string): string => {
 			stderr,
 		)
 	) {
-		return `${HOST} would not let git on this computer clone ${repository}: git is not signed in to ${HOST}, or this account cannot read it. Run \`${CLI} auth setup-git\` in a terminal (with the ${HOST} CLI signed in), or sign in to git, then try again.`;
+		return `${HOST} would not let git on this computer clone ${repository}: git is not signed in to ${HOST}, or this account cannot read it. Run \`${CLI} auth setup-git\` in a terminal (with ${HOST}'s command line signed in), or sign in to git, then try again.`;
 	}
 	if (/Could not resolve host|Failed to connect|Connection (timed out|refused|reset)|Network is unreachable|unable to access/i.test(stderr)) {
 		return `Could not reach ${HOST} to clone ${repository}. Check the internet connection, then try again.`;

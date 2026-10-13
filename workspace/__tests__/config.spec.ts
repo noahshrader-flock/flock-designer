@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { AVATAR_ORIGIN, CODE_FOLDERS, DEFAULT_CLONE_FOLDER } from '../src/shared/config';
-import { avatarUrl } from '../src/shared/hostUrls';
+import { CODE_FOLDERS, DEFAULT_CLONE_FOLDER } from '../src/shared/config';
+import { AVATAR_ORIGIN, avatarUrl } from '../src/shared/hostUrls';
 
 describe("the app's settings", () => {
 	it("lets the window load the avatars it is shown: its own page's CSP names the host's avatar origin", () => {

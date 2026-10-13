@@ -38,6 +38,3 @@ export const HOSTED_STORYBOOKS: Readonly<Record<string, string>> = {
 export const CODE_FOLDERS = ['Documents/GitHub', 'GitHub', 'github', 'code', 'dev', 'src', 'repos', 'projects', 'workspace', 'Developer'];
 /** Where a clone goes when none of the code folders is there yet, relative to the home folder: the clone makes it. */
 export const DEFAULT_CLONE_FOLDER = 'Documents/GitHub';
-
-/** Where the host serves people's avatars. The window's own page allows it by name (`renderer/index.html`'s CSP). */
-export const AVATAR_ORIGIN = 'https://avatars.githubusercontent.com';

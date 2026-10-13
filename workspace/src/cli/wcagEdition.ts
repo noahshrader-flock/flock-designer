@@ -8,7 +8,7 @@
 import { WCAG_EDITION, WCAG_LATEST, editionOf } from '../shared/wcag';
 import type { RepoRef } from '../shared/repoRef';
 import { repoApiPath } from '../host/repoFiles';
-import { HOST, THREAD } from '../shared/vocabulary';
+import { HOST, ISSUE } from '../shared/vocabulary';
 import type { GitHubApi } from '../host/github';
 import { readPages } from '../host/paging';
 export interface WcagEditionDeps {
@@ -57,7 +57,7 @@ export const checkWcagEdition = async (deps: WcagEditionDeps): Promise<number> =
 	const issue = issueFor(seen);
 	deps.out(issue.title);
 	if (deps.github === null) {
-		deps.out(`${HOST} could not be asked here, so no ${THREAD} was opened.`);
+		deps.out(`${HOST} could not be asked here, so no ${ISSUE} was opened.`);
 		return 1;
 	}
 	const base = `${repoApiPath(deps.repo)}/issues`;

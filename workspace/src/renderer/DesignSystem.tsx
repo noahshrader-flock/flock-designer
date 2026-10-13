@@ -384,8 +384,8 @@ const Components = ({
 	if (catalog.state === 'no-branch') {
 		return (
 			<Notice title={`This clone has no ${catalog.branch} branch`} onRetry={() => void sync()}>
-				The clone at {catalog.root} has no {catalog.branch} branch from GitHub to read, and no other branch is read in its place. Check it is a clone
-				of the library, and that this computer can reach GitHub.
+				The clone at {catalog.root} has no {catalog.branch} branch from {HOST} to read, and no other branch is read in its place. Check it is a clone
+				of the library, and that this computer can reach {HOST}.
 			</Notice>
 		);
 	}

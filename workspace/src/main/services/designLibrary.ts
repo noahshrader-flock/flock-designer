@@ -41,7 +41,7 @@ export const fetchProblem = (stderr: string, branch: string): string => {
 			stderr,
 		)
 	) {
-		return `${HOST} would not let git on this computer read the library: git is not signed in to ${HOST}, or this account cannot read it. Run \`${CLI} auth setup-git\` in a terminal (with the ${HOST} CLI signed in), or sign in to git.`;
+		return `${HOST} would not let git on this computer read the library: git is not signed in to ${HOST}, or this account cannot read it. Run \`${CLI} auth setup-git\` in a terminal (with ${HOST}'s command line signed in), or sign in to git.`;
 	}
 	if (
 		/Could not resolve host|Failed to connect|Connection (timed out|refused|reset)|Network is unreachable|unable to access|timed out|SIGTERM/i.test(

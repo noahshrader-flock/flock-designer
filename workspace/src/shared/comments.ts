@@ -32,6 +32,12 @@ export const openComments = (comments: ReviewComment[]): ReviewComment[] => comm
 export const resolvedComments = (comments: ReviewComment[]): ReviewComment[] => comments.filter((c) => c.resolved);
 
 /**
+ * A comment's reference alone, as the window sends it to act on one: not the comment it was read with, whose picture
+ * can be a large data URL that has no business crossing to the main process again.
+ */
+export const commentRef = ({ thread, id }: CommentRef): CommentRef => ({ thread, id });
+
+/**
  * What number each comment carries: the digit drawn in its pin, and the heading it is filed under
  * in the file an agent reads.
  *
@@ -41,9 +47,6 @@ export const resolvedComments = (comments: ReviewComment[]): ReviewComment[] => 
  * page are numbered first, in the order they were made, so a pin's number is its place among the
  * pins; page-level ones follow. A comment keeps its number when others are resolved.
  */
-/** A comment's reference alone, as the app is sent it to act on one: nothing it was read with besides. */
-export const commentRef = ({ thread, id }: CommentRef): CommentRef => ({ thread, id });
-
 export const numberComments = (comments: ReviewComment[]): Map<number, number> => {
 	const ordered = [...comments].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 	return new Map([...ordered.filter((c) => c.anchor), ...ordered.filter((c) => !c.anchor)].map((c, i) => [c.id, i + 1]));

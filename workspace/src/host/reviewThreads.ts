@@ -18,6 +18,7 @@ import type { GitHubApi } from './github';
 import { HostError, hostErrorKind } from './hostError';
 import { readPages } from './paging';
 import { repoApiPath } from './repoFiles';
+import { ISSUE } from '../shared/vocabulary';
 
 /**
  * The review threads of a repository: comments are its issue comments, one issue per iteration, found by the branch line
@@ -101,7 +102,7 @@ export class ReviewThreads {
 						`Review thread for **${projectId}**, branch: \`${branch}\`.`,
 						'',
 						'Comments here are written by DSNR and exported to the project record.',
-						'Do not change the branch line above — the app finds this issue by it.',
+						`Do not change the branch line above — the app finds this ${ISSUE} by it.`,
 					].join('\n'),
 					labels: [ITERATION_LABEL],
 				},
