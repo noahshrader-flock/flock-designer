@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import type { AgentReadiness, PrototypeReadiness } from '../shared/contract';
 import { Notice } from './Notice';
 import { Spinner } from './ui/spinner';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { useWorkspace } from './useWorkspace';
 import { OutLink } from './Links';
@@ -84,21 +83,15 @@ export const ReadinessAlerts = ({
 			</Notice>
 		)}
 		{agent.state === 'missing' && (
-			<Alert variant="warning">
-				<AlertTitle>Claude Code is not installed</AlertTitle>
-				<AlertDescription>
-					New work is built by Claude Code on this machine. Install it from{' '}
-					<OutLink href="https://claude.com/claude-code">claude.com/claude-code</OutLink>, sign in, then open this again.
-				</AlertDescription>
-			</Alert>
+			<Notice variant="warning" title="Claude Code is not installed">
+				New work is built by Claude Code on this machine. Install it from{' '}
+				<OutLink href="https://claude.com/claude-code">claude.com/claude-code</OutLink>, sign in, then open this again.
+			</Notice>
 		)}
 		{agent.state === 'signedOut' && (
-			<Alert variant="warning">
-				<AlertTitle>Claude Code is not signed in</AlertTitle>
-				<AlertDescription>
-					Sign in with your Claude account, in your editor's Claude panel or by running <code>claude</code> in a terminal. Then open this again.
-				</AlertDescription>
-			</Alert>
+			<Notice variant="warning" title="Claude Code is not signed in">
+				Sign in with your Claude account, in your editor's Claude panel or by running <code>claude</code> in a terminal. Then open this again.
+			</Notice>
 		)}
 	</>
 );

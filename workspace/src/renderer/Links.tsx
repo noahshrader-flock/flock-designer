@@ -11,8 +11,8 @@ const LINK = 'text-primary underline underline-offset-4';
  * A link out, which the app hands to the system's browser: underlined, with the mark that says it leaves the app. The
  * only way a screen links out, so every one looks and opens the same.
  */
-export const OutLink = ({ href, children, className }: { href: string; children: ReactNode; className?: string }) => (
-	<a href={href} target="_blank" rel="noreferrer" className={cn(LINK, 'inline-flex items-center gap-1', className)}>
+export const OutLink = ({ href, children }: { href: string; children: ReactNode }) => (
+	<a href={href} target="_blank" rel="noreferrer" className={cn(LINK, 'inline-flex items-center gap-1')}>
 		{children}
 		<ExternalLinkIcon className="size-3 shrink-0" />
 	</a>

@@ -3,13 +3,13 @@ import type { BuildInCodebase, Checkout, Project, ProjectIteration } from '../sh
 import { iterationLabel } from '../shared/work';
 import { CancelButton } from './CancelButton';
 import { SearchSelect } from './SearchSelect';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Field, FieldDescription, FieldLabel, FieldTitle } from './ui/field';
 import { ErrorAlert } from './ErrorAlert';
 import { closeUnlessBusy } from './dialogClose';
 import { useWorkspace } from './useWorkspace';
+import { Notice } from './Notice';
 
 /**
  * Building a prototype in the codebase, said out loud before it happens.
@@ -121,21 +121,16 @@ export const BuildInCodebaseDialog = ({
 							</p>
 
 							{plan && needsClean && !plan.clean && (
-								<Alert variant="warning">
-									<AlertTitle>There are uncommitted changes in {plan.repository}</AlertTitle>
-									<AlertDescription>
-										{continuing
-											? `Your checkout is on ${plan.current ?? 'no branch'}, and moving it to ${plan.branch} needs a clean checkout. Commit or set them aside first.`
-											: 'The work starts on a new branch, which needs a clean checkout. Commit or set them aside first.'}
-									</AlertDescription>
-								</Alert>
+								<Notice variant="warning" title={`There are uncommitted changes in ${plan.repository}`}>
+									{continuing
+										? `Your checkout is on ${plan.current ?? 'no branch'}, and moving it to ${plan.branch} needs a clean checkout. Commit or set them aside first.`
+										: 'The work starts on a new branch, which needs a clean checkout. Commit or set them aside first.'}
+								</Notice>
 							)}
 							{wrongRepository && plan?.basedOn && (
-								<Alert>
-									<AlertDescription>
-										The prototype was modeled on {plan.basedOn.repository}, and this is {plan.repository}.
-									</AlertDescription>
-								</Alert>
+								<Notice>
+									The prototype was modeled on {plan.basedOn.repository}, and this is {plan.repository}.
+								</Notice>
 							)}
 							{plan && (
 								<>

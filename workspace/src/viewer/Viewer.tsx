@@ -14,7 +14,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tooltip, TooltipContent, TooltipTrigger } from '../renderer/ui/tooltip';
 import { browserComments, framePage, saveToken, savedToken, tokenApi } from './browserAdapter';
 import { closeUnlessBusy } from '../renderer/dialogClose';
-import { CommentsPanel, useOpenOnError } from '../renderer/comments/CommentsPanel';
+import { CommentsPanel } from '../renderer/comments/CommentsPanel';
+import { useOpenOnError } from '../renderer/comments/useOpenOnError';
 
 /**
  * A prototype's published page, as the app shows one: its bar (the app's own toolbar, back button, title, version and

@@ -3,8 +3,9 @@ import { cn } from '@/lib/utils';
 import { Spinner } from './ui/spinner';
 
 /**
- * A job running: a spinner with a line saying what it is doing (building, opening a preview). One piece, so a job looks
- * the same wherever it runs. It is a fragment, to be placed in a centered column. Content that is loading is not a job: it
+ * A job running in a page's own space: a spinner with a line saying what it is doing (a component's previews being
+ * built). It is a fragment, to be placed in a centered column; a screen with nothing else to show says it in its empty
+ * state instead (`review/PreviewStatus`). Content that is loading is not a job: it
  * is drawn in its own shape, as a skeleton (`Skeletons.tsx`).
  */
 export const Loading = ({ children }: { children: ReactNode }) => (

@@ -15,7 +15,6 @@ import { recordLabel } from '../shared/brief';
 import { projectCodeLink } from '../shared/work';
 import { CancelButton } from './CancelButton';
 import { dialogView, isMine, stepText } from './shareView';
-import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { DropdownMenuItem, DropdownMenuSeparator } from './ui/dropdown-menu';
@@ -23,7 +22,7 @@ import { Spinner } from './ui/spinner';
 import { CHANGE_REQUEST } from '../shared/vocabulary';
 import { ErrorAlert } from './ErrorAlert';
 import { MenuLink, OutLink } from './Links';
-import { RetryButton } from './Notice';
+import { Notice, RetryButton } from './Notice';
 import { MoreMenu } from './MoreMenu';
 import { useCopy } from './useCopy';
 
@@ -210,9 +209,7 @@ export const ShareControl = ({
 						)}
 						{view === 'ready' && status.state === 'ready' && (
 							<>
-								<Alert variant="success">
-									<AlertDescription>The preview is up.</AlertDescription>
-								</Alert>
+								<Notice variant="success">The preview is up.</Notice>
 								<p className="text-sm break-all">
 									<OutLink href={status.url}>{status.url}</OutLink>
 								</p>

@@ -1,10 +1,10 @@
 import type { ProjectIteration } from '../shared/contract';
 import { CancelButton } from './CancelButton';
 import { useAgentBusy } from './useAgentBusy';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { closeUnlessBusy } from './dialogClose';
+import { Notice } from './Notice';
 
 /**
  * Handoff, said out loud before it starts.
@@ -38,10 +38,9 @@ export const HandoffDialog = ({
 						The full check of {iteration.branch}, done once, before an engineer picks it up. It runs by itself and takes a while.
 					</p>
 					{agentBusy && (
-						<Alert variant="warning">
-							<AlertTitle>The agent is busy with other work</AlertTitle>
-							<AlertDescription>It does one thing at a time. Open this again when that work has finished.</AlertDescription>
-						</Alert>
+						<Notice variant="warning" title="The agent is busy with other work">
+							It does one thing at a time. Open this again when that work has finished.
+						</Notice>
 					)}
 					<div className="flex flex-col gap-1.5">
 						<p className="text-sm font-medium">What happens</p>

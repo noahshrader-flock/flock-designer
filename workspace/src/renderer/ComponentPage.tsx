@@ -1,4 +1,4 @@
-import { BookOpenIcon, CodeIcon, TriangleAlertIcon } from 'lucide-react';
+import { BookOpenIcon, CodeIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { previewAddress } from '../shared/catalog';
 import type { CatalogComponent, StoryPreview, TokenEdit } from '../shared/contract';
@@ -8,7 +8,6 @@ import { SkeletonStatus } from './Skeletons';
 import { StoryFrame } from './StoryFrame';
 import { MoreMenu } from './MoreMenu';
 import { Page } from './Page';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Card, CardContent } from './ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Notice, RetryButton } from './Notice';
@@ -95,11 +94,9 @@ export const ComponentPage = ({
 			) : preview.state === 'ready' ? (
 				<>
 					{refused && (
-						<Alert variant="destructive">
-							<TriangleAlertIcon />
-							<AlertTitle>This change could not be tried</AlertTitle>
-							<AlertDescription>{refused}</AlertDescription>
-						</Alert>
+						<Notice variant="destructive" title="This change could not be tried">
+							{refused}
+						</Notice>
 					)}
 					<Card className="relative gap-0 overflow-hidden py-0" aria-busy={trying}>
 						<CardContent className="px-0">

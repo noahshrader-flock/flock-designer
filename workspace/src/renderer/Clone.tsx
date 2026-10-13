@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ClonePlan, Result } from '../shared/contract';
-import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Spinner } from './ui/spinner';
 import { repoName } from '../shared/repoRef';
 import { InlineAction } from './Links';
 import { FieldDescription } from './ui/field';
+import { Notice } from './Notice';
 
 /**
  * Cloning a repository from the app: where it would go, changing that, cloning it with progress, and stopping. One
@@ -98,15 +98,9 @@ export const CloneHere = ({ clone, onClone, action }: { clone: CloneState; onClo
 					Change
 				</InlineAction>
 			</FieldDescription>
-			{cloning === null && error !== null && (
-				<Alert variant="warning">
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
-			)}
+			{cloning === null && error !== null && <Notice variant="warning">{error}</Notice>}
 			{cloning === null && taken?.state === 'taken' && (
-				<Alert variant="warning">
-					<AlertDescription>{taken.why} Nothing is cloned over it: change where clones go, or move it.</AlertDescription>
-				</Alert>
+				<Notice variant="warning">{taken.why} Nothing is cloned over it: change where clones go, or move it.</Notice>
 			)}
 			{cloning !== null ? (
 				<Working text={cloning} onStop={clone.stop} />
@@ -121,8 +115,8 @@ export const CloneHere = ({ clone, onClone, action }: { clone: CloneState; onClo
 	);
 };
 
-/** A long job running (a clone, an install): what it is doing now, and a way to stop it. */
-export const Working = ({ text, onStop }: { text: string; onStop: () => void }) => (
+/** A clone running: what it is doing now, and a way to stop it. */
+const Working = ({ text, onStop }: { text: string; onStop: () => void }) => (
 	<div className="flex w-full items-center gap-2 text-xs">
 		<Spinner />
 		<span className="min-w-0 grow truncate">{text}</span>

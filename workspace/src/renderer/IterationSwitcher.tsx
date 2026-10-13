@@ -17,7 +17,7 @@ export interface Switchable {
  * One of the switcher's dropdowns: the app's menu of a few choices, named for what it switches ("Version V2: switch
  * version"), opening from its right, as the switcher sits at the toolbar's right.
  */
-const Pick = ({
+const SwitchMenu = ({
 	what,
 	label,
 	...choice
@@ -68,7 +68,7 @@ export const IterationSwitcher = <T extends Switchable>({
 	const here = parsePrototypeName(current.name);
 	if (!grouped || here === null) {
 		return (
-			<Pick
+			<SwitchMenu
 				what="iteration"
 				{...HISTORY}
 				label={iterationLabel(current)}
@@ -87,7 +87,7 @@ export const IterationSwitcher = <T extends Switchable>({
 		.sort((a, b) => b.version - a.version);
 	return (
 		<>
-			<Pick
+			<SwitchMenu
 				what="version"
 				label={`V${here.version}`}
 				value={String(here.version)}
@@ -103,7 +103,7 @@ export const IterationSwitcher = <T extends Switchable>({
 				}}
 			/>
 			{children}
-			<Pick
+			<SwitchMenu
 				what="iteration"
 				{...HISTORY}
 				label={`I${here.iteration}`}

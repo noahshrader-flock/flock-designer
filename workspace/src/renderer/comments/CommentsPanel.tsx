@@ -1,4 +1,4 @@
-import { type ComponentProps, type ReactNode, useEffect } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { ErrorAlert } from '../ErrorAlert';
 import { COMMENTS_PANEL } from '../panelWidth';
 import { ResizablePanel } from '../ResizablePanel';
@@ -35,10 +35,3 @@ export const CommentsPanel = ({
 		</div>
 	</ResizablePanel>
 );
-
-/** Something gone wrong is said in the comments panel, so it opens to say it: a closed one would say nothing. */
-export const useOpenOnError = (error: string | null, open: () => void) => {
-	useEffect(() => {
-		if (error !== null) open();
-	}, [error]); // eslint-disable-line react-hooks/exhaustive-deps
-};

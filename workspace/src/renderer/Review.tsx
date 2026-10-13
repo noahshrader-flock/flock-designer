@@ -19,10 +19,11 @@ import { useAddress } from './review/useAddress';
 import { useNativePreview } from './review/useNativePreview';
 import { usePublishedPage } from './review/usePublishedPage';
 import { useRouteCheck } from './review/useRouteCheck';
-import { Alert, AlertDescription } from './ui/alert';
 import { useEditor } from './useEditor';
 import { useLocalBuild } from './useLocalBuild';
-import { useOpenOnError } from './comments/CommentsPanel';
+import { useOpenOnError } from './comments/useOpenOnError';
+import { Notice } from './Notice';
+import { useWorkspace } from './useWorkspace';
 
 /**
  * One iteration: a thin toolbar, and the preview taking everything under it.
@@ -93,7 +94,6 @@ export const Review = ({
 	const [folder, setFolder] = useState(project.folder ?? null);
 	const [moving, setMoving] = useState(false);
 	const [handingOff, setHandingOff] = useState(false);
-	const [handoffReady, setHandoffReady] = useState<boolean | null>(null);
 
 	// The comments: read, drawn as pins, and left, against the app's GitHub and its native preview.
 	const commentStore = useMemo(
@@ -148,11 +148,13 @@ export const Review = ({
 		setOpened(false);
 		void window.workspace.pageClose();
 	}, [local.phase.kind]);
-	// The verdict, from the main process: the run's last word, and HANDOFF.md committed since it started.
-	useEffect(() => {
-		if (local.phase.kind !== 'reported' || !checkout) return setHandoffReady(null);
-		void window.workspace.handoffResult(checkout.root).then((r) => setHandoffReady(r.ok ? r.value : null));
-	}, [local.phase.kind, checkout]);
+	// The verdict, from the main process: the run's last word, and HANDOFF.md committed since it started. Not known (null)
+	// while it is read, or when it could not be.
+	const root = checkout?.root ?? '';
+	const verdict = useWorkspace(() => window.workspace.handoffResult(root), [local.phase.kind, root], {
+		enabled: local.phase.kind === 'reported' && checkout !== null,
+	});
+	const handoffReady = verdict.value;
 
 	// Where the comment box goes: from the top left of the preview, in window coordinates.
 	const slotBox = preview.slot.current?.getBoundingClientRect();
@@ -190,11 +192,10 @@ export const Review = ({
 
 			{/* Said where it can be seen: a reason kept only in a disabled button's tooltip goes unread. */}
 			{page.state === 'unpublished' && page.why && (
-				<Alert variant="warning" className="rounded-none border-x-0">
-					<AlertDescription>
-						This is saved, but not on its page yet. It was not published because: {page.why} It is tried again by itself, or press Publish.
-					</AlertDescription>
-				</Alert>
+				// Edge to edge under the toolbar, as a bar of the screen's, not a card in it.
+				<Notice variant="warning" className="rounded-none border-x-0">
+					This is saved, but not on its page yet. It was not published because: {page.why} It is tried again by itself, or press Publish.
+				</Notice>
 			)}
 
 			{viewing && <RecordSheet project={project} name={viewing.name} open={viewing.open} onClose={() => setViewing({ ...viewing, open: false })} />}

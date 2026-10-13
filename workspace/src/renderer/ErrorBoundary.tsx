@@ -1,6 +1,5 @@
 import { Component, type ReactNode } from 'react';
-import { Alert, AlertDescription } from './ui/alert';
-import { RetryButton } from './Notice';
+import { Notice, RetryButton } from './Notice';
 
 /**
  * Keeps one broken screen from taking the whole window with it. Without it a
@@ -18,14 +17,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
 		if (!this.state.error) return this.props.children;
 		return (
 			<div className="mx-auto max-w-2xl p-6 pt-20">
-				<div className="flex flex-col gap-4">
-					<Alert variant="destructive">
-						<AlertDescription>Something on this screen broke: {this.state.error.message}</AlertDescription>
-					</Alert>
-					<div>
-						<RetryButton onClick={() => this.setState({ error: null })} />
-					</div>
-				</div>
+				<Notice variant="destructive" title="Something on this screen broke" action={<RetryButton onClick={() => this.setState({ error: null })} />}>
+					{this.state.error.message}
+				</Notice>
 			</div>
 		);
 	}

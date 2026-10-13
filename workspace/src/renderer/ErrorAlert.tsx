@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { cn } from '@/lib/utils';
 import { Alert, AlertDescription } from './ui/alert';
 
 /**
@@ -8,7 +7,7 @@ import { Alert, AlertDescription } from './ui/alert';
  * link or a name in code, so it is anything a description can.
  */
 export const ErrorAlert = ({ error, className }: { error: ReactNode; className?: string }) => (
-	<Alert variant="destructive" className={cn(className)}>
+	<Alert variant="destructive" className={className}>
 		<AlertDescription className="wrap-anywhere whitespace-pre-wrap">{error}</AlertDescription>
 	</Alert>
 );

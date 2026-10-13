@@ -5,13 +5,13 @@ import { prototypeKey } from '../../shared/designPaths';
 import { iterationLabel } from '../../shared/work';
 import { prototypeAddressed } from '../comments/addressed';
 import type { useComments } from '../comments/useComments';
-import { Alert, AlertDescription } from '../ui/alert';
 import { DropdownMenuItem } from '../ui/dropdown-menu';
 import type { AddressState } from './useAddress';
 import { ErrorAlert } from '../ErrorAlert';
 import { InlineAction } from '../Links';
 import { AgentLog } from '../Loading';
 import { CommentsPanel } from '../comments/CommentsPanel';
+import { Notice } from '../Notice';
 
 /**
  * The review screen's comments panel (`CommentsPanel`), with what this screen adds: a route that did not load, where an
@@ -74,12 +74,10 @@ export const CommentsSidebar = ({
 			{/* The recorded route did not load. Said once, plainly: the page on screen is not the work, so a comment made
 				    here would be about something this iteration never touched. */}
 			{wrongRoute && !composing && (
-				<Alert variant="warning">
-					<AlertDescription>
-						This iteration records its work at <code>{wrongRoute.asked}</code>, but the preview opened <code>{wrongRoute.landedOn}</code>. The page
-						you are looking at may not be the work. The route may have moved, or something redirected it.
-					</AlertDescription>
-				</Alert>
+				<Notice variant="warning">
+					This iteration records its work at <code>{wrongRoute.asked}</code>, but the preview opened <code>{wrongRoute.landedOn}</code>. The page you
+					are looking at may not be the work. The route may have moved, or something redirected it.
+				</Notice>
 			)}
 			{address.kind === 'running' && (
 				<>
@@ -92,22 +90,20 @@ export const CommentsSidebar = ({
 				</>
 			)}
 			{address.kind === 'done' && (
-				<Alert variant={address.changed ? 'success' : 'default'}>
-					<AlertDescription>
-						{changedElsewhere ? (
-							<>
-								Others had commented on {iterationLabel(iteration)}, so it stays as they saw it. The change is in{' '}
-								{labelOf(changedElsewhere.iteration)}. <InlineAction onClick={openChanged}>Open {labelOf(changedElsewhere.iteration)}</InlineAction>
-							</>
-						) : address.changed ? (
-							'The agent has finished. Look at the preview and the changes, then resolve what is done.'
-						) : (
-							'The agent finished without changing anything. What it says below is why — often the change is outside this iteration, or the comment needs a decision from you.'
-						)}
-						{/* When nothing changed, what it said is the whole answer, so less of it is cut. */}
-						<AgentLog lines={log.slice(address.changed ? -25 : -60)} size={address.changed ? 'md' : 'lg'} className="mt-2" />
-					</AlertDescription>
-				</Alert>
+				<Notice variant={address.changed ? 'success' : 'default'}>
+					{changedElsewhere ? (
+						<>
+							Others had commented on {iterationLabel(iteration)}, so it stays as they saw it. The change is in {labelOf(changedElsewhere.iteration)}.{' '}
+							<InlineAction onClick={openChanged}>Open {labelOf(changedElsewhere.iteration)}</InlineAction>
+						</>
+					) : address.changed ? (
+						'The agent has finished. Look at the preview and the changes, then resolve what is done.'
+					) : (
+						'The agent finished without changing anything. What it says below is why — often the change is outside this iteration, or the comment needs a decision from you.'
+					)}
+					{/* When nothing changed, what it said is the whole answer, so less of it is cut. */}
+					<AgentLog lines={log.slice(address.changed ? -25 : -60)} size={address.changed ? 'md' : 'lg'} className="mt-2" />
+				</Notice>
 			)}
 			{address.kind === 'failed' && <ErrorAlert error={address.message} />}
 		</CommentsPanel>
