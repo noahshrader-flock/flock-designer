@@ -4,7 +4,7 @@ import { CLI, HOST } from '../shared/vocabulary';
 import { type CloneState, CloneHere } from './Clone';
 import { SearchSelect } from './SearchSelect';
 import { SkeletonStatus } from './Skeletons';
-import { Field, FieldLabel } from './ui/field';
+import { Field, FieldDescription, FieldLabel } from './ui/field';
 import { Skeleton } from './ui/skeleton';
 
 /**
@@ -54,10 +54,10 @@ export const RepositoryField = ({
 				disabled={disabled}
 			/>
 			{reach === 'app' && (
-				<p className="text-muted-foreground text-xs">
+				<FieldDescription>
 					Only the repositories DSNR’s {HOST} App is installed on are listed. To see every one your account can reach, sign in to {HOST}’s command
 					line as this account (<code>{CLI} auth login</code>), or ask an owner of your organization to install the app on all its repositories.
-				</p>
+				</FieldDescription>
 			)}
 			{clone && <CloneHere clone={clone.state} onClone={clone.onClone} action={clone.action} />}
 			{children}

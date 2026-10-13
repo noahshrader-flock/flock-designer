@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Spinner } from './ui/spinner';
 import { repoName } from '../shared/repoRef';
 import { InlineAction } from './Links';
+import { FieldDescription } from './ui/field';
 
 /**
  * Cloning a repository from the app: where it would go, changing that, cloning it with progress, and stopping. One
@@ -84,7 +85,7 @@ export const CloneHere = ({ clone, onClone, action }: { clone: CloneState; onClo
 	const taken = [place, design].find((p) => p?.state === 'taken');
 	return (
 		<div className="flex flex-col items-start gap-3">
-			<p className="text-muted-foreground text-xs">
+			<FieldDescription>
 				{place.state === 'cloned' ? 'Already in ' : 'Into '}
 				<code className="break-all">{plan.where}</code>
 				{design?.state === 'free' && (
@@ -96,7 +97,7 @@ export const CloneHere = ({ clone, onClone, action }: { clone: CloneState; onClo
 				<InlineAction onClick={() => void clone.changeFolder()} disabled={cloning !== null}>
 					Change
 				</InlineAction>
-			</p>
+			</FieldDescription>
 			{cloning === null && error !== null && (
 				<Alert variant="warning">
 					<AlertDescription>{error}</AlertDescription>

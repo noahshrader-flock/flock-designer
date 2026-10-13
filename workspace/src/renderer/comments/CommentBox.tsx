@@ -3,6 +3,7 @@ import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import type { Comments } from './useComments';
 import { ErrorAlert } from '../ErrorAlert';
+import { Field, FieldDescription, FieldLabel } from '../ui/field';
 
 /** Where the box sits relative to the pin, whose body is drawn above its tip. */
 const BOX_OFFSET = { x: 22, y: -19 } as const;
@@ -38,11 +39,11 @@ export const CommentBox = ({
 		>
 			<div className="flex flex-col gap-3">
 				{error && <ErrorAlert error={error} />}
-				<label htmlFor="comment-draft" className="text-sm font-medium">
-					Comment
-				</label>
-				<Textarea id="comment-draft" rows={3} value={comments.draft} onChange={(e) => comments.setDraft(e.target.value)} autoFocus />
-				{note && <p className="text-muted-foreground text-xs">{note}</p>}
+				<Field>
+					<FieldLabel htmlFor="comment-draft">Comment</FieldLabel>
+					<Textarea id="comment-draft" rows={3} value={comments.draft} onChange={(e) => comments.setDraft(e.target.value)} autoFocus />
+					{note && <FieldDescription>{note}</FieldDescription>}
+				</Field>
 				<div className="flex flex-row justify-end gap-2">
 					<CancelButton onClick={comments.cancelCompose} disabled={comments.posting} />
 					<Button onClick={() => void comments.post()} disabled={comments.posting || !comments.draft.trim()}>

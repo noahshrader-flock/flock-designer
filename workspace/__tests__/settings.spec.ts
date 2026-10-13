@@ -23,7 +23,7 @@ afterEach(async () => {
 	if (current) await unmountAll(current.root);
 	current = null;
 });
-const items = () => [...document.querySelectorAll<HTMLElement>('[aria-label="Theme"] [role="radio"]')];
+const items = () => [...document.querySelectorAll<HTMLElement>('fieldset [role="radio"]')];
 const pressed = () => items().find((i) => i.getAttribute('aria-checked') === 'true')?.textContent;
 const choose = async (label: string) => {
 	await press(items().find((i) => i.textContent === label) as HTMLElement);
@@ -34,7 +34,7 @@ describe('Settings', () => {
 	it('is a modal called Settings, with a Theme of Auto, Light and Dark', async () => {
 		await open();
 		expect(document.querySelector('[data-slot="dialog-title"]')?.textContent).toBe('Settings');
-		expect(document.querySelector('label')?.textContent).toBe('Theme');
+		expect(document.querySelector('fieldset legend')?.textContent).toBe('Theme');
 		expect(items().map((i) => i.textContent)).toEqual(['Auto', 'Light', 'Dark']);
 	});
 

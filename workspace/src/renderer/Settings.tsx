@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { APPEARANCES, type Appearance, isAppearance } from '../shared/appearance';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
-import { Field, FieldLabel } from './ui/field';
+import { FieldLegend, FieldSet } from './ui/field';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { ErrorAlert } from './ErrorAlert';
 import { closeUnlessBusy } from './dialogClose';
@@ -40,14 +40,14 @@ export const Settings = ({ open, onClose }: { open: boolean; onClose: () => void
 					<DialogTitle>Settings</DialogTitle>
 				</DialogHeader>
 				<DialogBody>
-					<Field>
-						<FieldLabel>Theme</FieldLabel>
+					{/* A group of choices, named by its legend: there is no one control for a label to label. */}
+					<FieldSet>
+						<FieldLegend variant="label">Theme</FieldLegend>
 						<ToggleGroup
 							type="single"
 							variant="outline"
 							spacing={0}
 							fullWidth
-							aria-label="Theme"
 							value={appearance}
 							// Pressing the one in use would unpress it, which the group says as an empty value: ignored, so one stays pressed.
 							onValueChange={(next) => isAppearance(next) && void choose(next)}
@@ -62,7 +62,7 @@ export const Settings = ({ open, onClose }: { open: boolean; onClose: () => void
 								);
 							})}
 						</ToggleGroup>
-					</Field>
+					</FieldSet>
 					{error && <ErrorAlert error={error} />}
 				</DialogBody>
 				<DialogFooter>

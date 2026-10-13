@@ -6,7 +6,7 @@ import { SearchSelect } from './SearchSelect';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
-import { Field, FieldDescription, FieldLabel } from './ui/field';
+import { Field, FieldDescription, FieldLabel, FieldTitle } from './ui/field';
 import { ErrorAlert } from './ErrorAlert';
 import { closeUnlessBusy } from './dialogClose';
 import { useWorkspace } from './useWorkspace';
@@ -140,21 +140,27 @@ export const BuildInCodebaseDialog = ({
 							{plan && (
 								<>
 									<Field>
-										<FieldLabel htmlFor="move-from">{continuing ? 'Continues' : 'Starts from'}</FieldLabel>
+										{/* Continuing has nothing to choose, so it is a title over the branch, not a label for a control. */}
 										{continuing ? (
-											<p className="font-mono text-sm">{plan.branch}</p>
+											<>
+												<FieldTitle>Continues</FieldTitle>
+												<p className="font-mono text-sm">{plan.branch}</p>
+											</>
 										) : (
-											<SearchSelect
-												id="move-from"
-												items={branches}
-												value={from}
-												onChange={setFrom}
-												placeholder="Choose a branch"
-												search="Search branches…"
-												empty="No branch matches."
-												disabled={busy}
-												className="font-mono"
-											/>
+											<>
+												<FieldLabel htmlFor="move-from">Starts from</FieldLabel>
+												<SearchSelect
+													id="move-from"
+													items={branches}
+													value={from}
+													onChange={setFrom}
+													placeholder="Choose a branch"
+													search="Search branches…"
+													empty="No branch matches."
+													disabled={busy}
+													className="font-mono"
+												/>
+											</>
 										)}
 										<FieldDescription>
 											{continuing
