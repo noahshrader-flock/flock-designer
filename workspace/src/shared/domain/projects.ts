@@ -28,7 +28,7 @@ export interface Iteration {
 	 */
 	route?: string;
 	/**
-	 * For a prototype: the product code it was modeled on, so moving it into the code later knows
+	 * For a prototype: the product code it was modeled on, so building it in the codebase later knows
 	 * what it was looking at. Absent when it was made without a repository on the machine.
 	 */
 	basedOn?: { repository: string; branch: string; commit: string | null };
@@ -59,7 +59,7 @@ export interface OpenedPrototype {
 	states: string[];
 }
 
-/** What moving a prototype into the code would do here, so the person is told before it does it. */
+/** What building a prototype in the codebase would do here, so the person is told before it does it. */
 export interface BuildInCodebasePlan {
 	/** The project's one codebase branch, as this repository names it. */
 	branch: string;

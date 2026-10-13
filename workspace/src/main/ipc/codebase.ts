@@ -23,7 +23,7 @@ import type { IpcDeps } from '../ipc';
 
 /**
  * Codebase work in a product checkout: the agent's runs, handing work to VS Code, Address on a branch, sharing a
- * preview, moving a prototype into the code, and Handoff.
+ * preview, building a prototype in the codebase, and Handoff.
  */
 export const registerCodebase = (d: IpcDeps): void => {
 	const {

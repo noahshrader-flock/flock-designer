@@ -250,7 +250,7 @@ export interface WorkspaceApi {
 	checkAccessibility(projectId: string, name: string): Promise<Result<AccessibilityResult>>;
 	/** Starts the prototype's agent on what its last check found, and nothing else: one round of its own check (T7). */
 	fixAccessibility(projectId: string, name: string): Promise<Result<AgentStatus>>;
-	/** What moving a prototype into the code would do in this checkout, asked before it is offered. */
+	/** What building a prototype in the codebase would do in this checkout, asked before it is offered. */
 	buildInCodebasePlan(root: string, projectId: string, name: string): Promise<Result<BuildInCodebasePlan>>;
 	/** Whether a prototype can be built from this repository on this machine, and with which design system version. */
 	prototypeReadiness(root: string): Promise<Result<PrototypeReadiness>>;

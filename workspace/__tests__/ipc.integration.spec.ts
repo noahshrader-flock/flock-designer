@@ -1677,7 +1677,7 @@ describe('prototypes', () => {
 		});
 	});
 
-	describe('moving into the code', () => {
+	describe('building in the codebase', () => {
 		const start = async () => {
 			await call(CHANNELS.useCheckout, product);
 			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });

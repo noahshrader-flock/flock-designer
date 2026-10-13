@@ -75,7 +75,7 @@ export const Review = ({
 	task?: string;
 	/** Another section is showing over this screen, so the preview has to step aside. */
 	hidden: boolean;
-	/** Opens other work: where moving a prototype into the code goes next. */
+	/** Opens other work: where building a prototype in the codebase goes next. */
 	onOpen: (project: Project, iteration: ProjectIteration, task?: string) => void;
 	/** The folders in use, to assign this project to one (the folders plan). */
 	folders?: string[];
@@ -123,7 +123,7 @@ export const Review = ({
 	// Assign folder's modal, and the folder as last assigned here: the project shown was read before it.
 	const [assigning, setAssigning] = useState(false);
 	const [folder, setFolder] = useState(project.folder ?? null);
-	// Moving a prototype into the code is confirmed first, in a dialog (BuildInCodebaseDialog).
+	// Building a prototype in the codebase is confirmed first, in a dialog (BuildInCodebaseDialog).
 	const [moving, setMoving] = useState(false);
 	const kind = workKind(iteration);
 	const codebase = kind === 'codebase';

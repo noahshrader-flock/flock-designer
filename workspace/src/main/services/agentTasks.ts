@@ -9,7 +9,7 @@ import { HOST } from '../../shared/vocabulary';
  * check and the shared folders). What goes into a part (a skill's text, the product's target, the voice) is read by
  * the caller; this only says where it goes.
  *
- * - **A run in a product checkout** (codebase work, Address on a branch, Handoff, moving a prototype into the code) ends
+ * - **A run in a product checkout** (codebase work, Address on a branch, Handoff, building a prototype in the codebase) ends
  *   with `CheckoutParts`, always in this order: the product's light check, the shared folders it may read, the
  *   accessibility rules and target, the voice and tone.
  * - **A prototype run** (building one, changing one for a comment) says what it may read, then the accessibility rules

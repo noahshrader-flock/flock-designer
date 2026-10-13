@@ -51,7 +51,7 @@ export const ShareControl = ({
 	/** Whether the page is up, so there is something to open. */
 	canOpen: boolean;
 	onOpenInBrowser: () => void;
-	/** A prototype: already where reviewers see it, so there is no sharing, only moving it into the code. */
+	/** A prototype: already where reviewers see it, so there is no sharing, only building it in the codebase. */
 	prototype?: boolean;
 	/** Offered when there is a product repository here to build it in. */
 	onBuildInCodebase?: () => void;

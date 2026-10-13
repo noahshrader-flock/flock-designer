@@ -9,7 +9,7 @@ import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTi
 import { Field, FieldDescription, FieldLabel } from './ui/field';
 
 /**
- * Moving a prototype into the code, said out loud before it happens.
+ * Building a prototype in the codebase, said out loud before it happens.
  *
  * It changes the person's checkout (a new branch, switched to) and needs the full setup a prototype does not. So it
  * asks first, shows what it will do and what would stop it, and starts from the branch the prototype was modeled on
