@@ -174,8 +174,7 @@ describe('the round trip, through one GitHub', () => {
 		await openApp({ iteration: 'v1-i2' });
 		await sidebar();
 		await press(menuItem(await openMenu(button('Comment actions', cardFor('Remove this'))), 'Address'));
-		await afterAgentCheck();
-		expect(cardFor('Remove this').textContent).toContain('The agent addressed this in V1 · I2');
+		await afterAgentCheck(() => expect(cardFor('Remove this').textContent).toContain('The agent addressed this in V1 · I2'));
 		await close();
 
 		page = await openPage();

@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { act, createElement, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { CommentAnchor, PickedPoint, PinEvent, Project, ProjectIteration, Result, ReviewComment, WorkspaceApi } from '../src/shared/contract';
@@ -268,11 +269,18 @@ export const cardFor = (text: string): HTMLElement => {
 	return c;
 };
 
-/** Long enough for the agent to be asked how it is getting on, which the screens do once a second. */
-export const afterAgentCheck = async () => {
-	await new Promise((r) => setTimeout(r, 1100));
-	await settle();
-};
+/**
+ * Once the agent has been asked how it is getting on (the screens ask once a second) and `check` holds: as soon as it is
+ * so, not after a guess at how long that takes.
+ */
+export const afterAgentCheck = (check: () => void) =>
+	vi.waitFor(
+		async () => {
+			await settle();
+			check();
+		},
+		{ timeout: 5000, interval: 100 },
+	);
 
 /** The cards in the comments sidebar, as their text. */
 export const cards = (): HTMLElement[] =>

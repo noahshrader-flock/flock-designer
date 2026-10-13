@@ -2,7 +2,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentRunner } from '../src/main/services/agent';
 import { buildContextReceipt } from '../src/main/services/contextReceipt';
 import { readDescriptor } from '../src/main/services/descriptor';
@@ -97,9 +97,8 @@ describe('from a request to a running preview', () => {
 			adapter: { name: 'Stub', argvFor: (t) => ['node', '-e', `console.log(${JSON.stringify(t)})`] },
 		});
 		agent.start(root, 'inactive-users', 'Flag users who have not signed in for 90 days.');
-		await new Promise((r) => setTimeout(r, 400));
+		await vi.waitFor(() => expect(agent.status()).toEqual(agentFinished()), { timeout: 5000 });
 		expect(logs.map((l) => l.text).join('')).toContain('Project: inactive-users');
-		expect(agent.status()).toEqual(agentFinished());
 
 		// 5. The agent's work lands on the branch and is committed.
 		writeFileSync(join(product, 'src/prototypes/view.tsx'), 'export const View = () => null;\n');

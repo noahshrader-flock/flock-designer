@@ -762,7 +762,7 @@ describe('Address', () => {
 		await open(app);
 		await sidebar();
 		await choose('Remove this', 'Address');
-		await afterAgentCheck();
+		await afterAgentCheck(() => expect(app.calls.finishPrototypeAddress?.[0]).toEqual([{ thread: 1, id: 1 }]));
 		expect(app.calls.addressPrototype?.[0]).toEqual(['demo', 'v1-i1', { thread: 1, id: 1 }]);
 		expect(app.calls.finishPrototypeAddress?.[0]).toEqual([{ thread: 1, id: 1 }]);
 		expect(cardFor('Remove this').textContent).toContain('Resolved');

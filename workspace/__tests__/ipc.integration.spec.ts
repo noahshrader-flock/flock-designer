@@ -1165,17 +1165,21 @@ describe('prototypes', () => {
 				await call(CHANNELS.useCheckout, product);
 				githubApi.mockClear();
 				await call(CHANNELS.publishNow);
-				await new Promise((r) => setTimeout(r, 400));
-				return githubApi.mock.calls.filter(([path]) => String(path) === base).length;
+				// How many times it has asked where the site is: the deploy that follows runs on after Publish now returns.
+				return () => githubApi.mock.calls.filter(([path]) => String(path) === base).length;
 			};
 
 			it('deploys the site by itself, with no page to name: it asks where the site is again, to deploy', async () => {
 				// Once to find it was behind, once more in the deploy it then starts (which stops there: no branch here).
-				expect(await behindBy('workspace/src/viewer/Viewer.tsx')).toBe(2);
+				const asked = await behindBy('workspace/src/viewer/Viewer.tsx');
+				await vi.waitFor(() => expect(asked()).toBe(2), { timeout: 5000 });
 			});
 
 			it('does nothing for a change the site is not built from', async () => {
-				expect(await behindBy('workspace/src/main/ipc.ts')).toBe(1);
+				const asked = await behindBy('workspace/src/main/ipc.ts');
+				// Nothing to wait for when nothing should follow: long enough for a deploy to have asked.
+				await new Promise((r) => setTimeout(r, 400));
+				expect(asked()).toBe(1);
 			});
 		});
 

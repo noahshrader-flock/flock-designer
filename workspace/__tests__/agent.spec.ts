@@ -8,7 +8,8 @@ import type { RunLogLine } from '../src/shared/contract';
 
 let root: string;
 let logs: RunLogLine[];
-const settle = () => new Promise((r) => setTimeout(r, 300));
+/** As soon as what the run should have done is so, not after a guess at how long a process takes to start. */
+const until = (check: () => void) => vi.waitFor(check, { timeout: 5000 });
 
 beforeEach(() => {
 	root = mkdtempSync(join(tmpdir(), 'fdw-agent-'));
@@ -54,8 +55,7 @@ describe('the adapter boundary', () => {
 			adapter: { name: 'Echo', argvFor: (t) => ['node', '-e', `console.log(${JSON.stringify(t)})`] },
 		});
 		runner.start(root, 'demo', 'hello');
-		await settle();
-		expect(logs.map((l) => l.text).join('')).toContain('Project: demo');
+		await until(() => expect(logs.map((l) => l.text).join('')).toContain('Project: demo'));
 	});
 });
 
@@ -70,9 +70,8 @@ describe('status', () => {
 			adapter: { name: 'Nothing', argvFor: () => ['definitely-not-installed-xyz'] },
 		});
 		runner.start(root, 'demo', 'x');
-		await settle();
+		await until(() => expect(runner.status().state).toBe('unavailable'));
 		const status = runner.status();
-		expect(status.state).toBe('unavailable');
 		expect(status.state === 'unavailable' && status.detail).toMatch(/installed and on PATH/);
 	});
 
@@ -82,8 +81,7 @@ describe('status', () => {
 			adapter: { name: 'Exit', argvFor: () => ['node', '-e', 'process.exit(0)'] },
 		});
 		runner.start(root, 'demo', 'x');
-		await settle();
-		expect(runner.status()).toEqual({ state: 'finished', exitCode: 0, work: null, purpose: null });
+		await until(() => expect(runner.status()).toEqual({ state: 'finished', exitCode: 0, work: null, purpose: null }));
 	});
 
 	it('does not start a second run over a running one: the same work joins it, anything else is told it is busy', async () => {
