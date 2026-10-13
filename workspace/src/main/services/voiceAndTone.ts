@@ -19,9 +19,10 @@ import { compareUrl } from '../../shared/hostUrls';
  * on 2026-10-10 before this was written.
  */
 import type { VoiceAndTone, VoiceBranch, VoiceSave } from '../../shared/contract';
-import { asArray, asRecord } from '../../shared/json';
+import { asRecord } from '../../shared/json';
 import type { GitHubApi } from '../../host/designRepo';
-import { RepoFiles, repoPath } from '../../host/repoFiles';
+import { RepoFiles } from '../../host/repoFiles';
+import { ChangeRequests } from '../../host/changeRequests';
 import { designSystemId } from './designSystems';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { hostErrorKind } from '../../host/hostError';
@@ -52,7 +53,7 @@ export class VoiceAndToneFile {
 	private readonly folder: string;
 	/** The file, read as every file DSNR reads from GitHub is. */
 	private readonly files: RepoFiles;
-	private readonly github: GitHubApi;
+	private readonly requests: ChangeRequests;
 	/** The change kept for each design system, by its id. */
 	private readonly file: JsonFile<Record<string, unknown>>;
 	private readonly now: () => Date;
@@ -78,14 +79,11 @@ export class VoiceAndToneFile {
 		this.folder = folder.replace(/\/+$/, '');
 		this.path = this.folder ? `${this.folder}/${VOICE_FILE}` : VOICE_FILE;
 		this.files = new RepoFiles(github, repo);
-		this.github = github;
+		this.requests = new ChangeRequests(github, repo);
 		this.file = jsonFile(file, { parse: asRecord, fallback: {} });
 		this.now = now;
 	}
 
-	private get base(): string {
-		return repoPath(this.repo);
-	}
 	/**
 	 * Kept by the design system's id, as the token branches are, so two design systems in one repository keep their changes
 	 * apart. For one that is the whole repository the id is the repository's name, the key this file has always used.
@@ -131,16 +129,8 @@ export class VoiceAndToneFile {
 	 */
 	private async pullRequestOf(kept: Kept): Promise<{ number: number; url: string } | 'gone' | null | undefined> {
 		try {
-			if (kept.pullRequest) {
-				const pr = asRecord(await this.github.api(`${this.base}/pulls/${kept.pullRequest.number}`));
-				return pr.state === 'open' && !pr.merged_at ? kept.pullRequest : 'gone';
-			}
-			const found = asArray(
-				await this.github.api(`${this.base}/pulls?head=${encodeURIComponent(`${this.repo.owner}:${kept.branch}`)}&state=all`),
-			).map(asRecord);
-			const open = found.find((p) => p.state === 'open');
-			if (open && typeof open.number === 'number' && typeof open.html_url === 'string') return { number: open.number, url: open.html_url };
-			return found.length > 0 ? 'gone' : null;
+			if (kept.pullRequest) return (await this.requests.isOpen(kept.pullRequest.number)) ? kept.pullRequest : 'gone';
+			return (await this.requests.findOpen(kept.branch)) ?? ((await this.requests.anyFrom(kept.branch)) ? 'gone' : null);
 		} catch {
 			return undefined;
 		}
@@ -234,19 +224,10 @@ export class VoiceAndToneFile {
 		if (kept === null) throw new Error('Save the change before proposing it.');
 		const base = await this.files.defaultBranch();
 		try {
-			const open = asArray(
-				await this.github.api(`${this.base}/pulls?head=${encodeURIComponent(`${this.repo.owner}:${kept.branch}`)}&state=open`),
-			).map(asRecord)[0];
 			const pr =
-				open ??
-				asRecord(
-					await this.github.api(`${this.base}/pulls`, {
-						method: 'POST',
-						body: { title: PROPOSAL_TITLE, head: kept.branch, base, body: PROPOSAL_BODY, draft: true },
-					}),
-				);
-			if (typeof pr.number !== 'number' || typeof pr.html_url !== 'string') throw new Error('GitHub did not say which pull request it opened.');
-			this.keep({ ...kept, pullRequest: { number: pr.number, url: pr.html_url } });
+				(await this.requests.findOpen(kept.branch)) ??
+				(await this.requests.openDraft({ head: kept.branch, base, title: PROPOSAL_TITLE, body: PROPOSAL_BODY }));
+			this.keep({ ...kept, pullRequest: pr });
 		} catch (err) {
 			// A command line not signed in, or gone since: the change stays saved, and GitHub's own page can open the pull request.
 			if (hostErrorKind(err) === 'missingCli' || hostErrorKind(err) === 'reauth') throw new Error(NEEDS_GH);

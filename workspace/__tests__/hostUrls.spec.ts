@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asChangeRequestUrl, avatarUrl, cloneUrl, compareUrl, loginFromNoreply, numberFromChangeRequestUrl, treeUrl } from '../src/shared/hostUrls';
+import { asChangeRequestUrl, avatarUrl, cloneUrl, compareUrl, loginFromNoreply, treeUrl } from '../src/shared/hostUrls';
 
 describe("the host's web addresses", () => {
 	it('names a branch, and a folder on it, each part encoded on its own, so a slash stays a slash', () => {
@@ -9,12 +9,9 @@ describe("the host's web addresses", () => {
 		expect(cloneUrl('acme/ui')).toBe('https://github.com/acme/ui.git');
 	});
 
-	it('knows a change request by its address, and its number', () => {
+	it('knows a change request by its address', () => {
 		expect(asChangeRequestUrl('https://github.com/o/r/pull/12')).toBe('https://github.com/o/r/pull/12');
 		for (const v of ['https://evil.test/o/r/pull/1', 'https://github.com/o/r/issues/1', 3]) expect(asChangeRequestUrl(v)).toBeNull();
-		expect(numberFromChangeRequestUrl('https://github.com/o/r/pull/12')).toBe(12);
-		expect(numberFromChangeRequestUrl('Creating pull request…\nhttps://github.com/o/r/pull/7\n')).toBe(7);
-		expect(numberFromChangeRequestUrl('https://github.com/o/r')).toBeNull();
 	});
 
 	it("is a person's avatar by their login, escaped, or none without one", () => {

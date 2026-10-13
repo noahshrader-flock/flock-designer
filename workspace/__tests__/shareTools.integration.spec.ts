@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -7,7 +7,8 @@ import { pushBranch } from '../src/main/services/git';
 import { recordPreview, readIterations } from '../src/main/services/iterations';
 import { type ShareStatus } from '../src/shared/contract';
 import { ShareRunner, type ShareRequest } from '../src/main/services/share';
-import { locateGh } from '../src/main/services/ghCli';
+import { ghApi, locateGh } from '../src/main/services/ghCli';
+import { fakeGitHub } from './fakes/github';
 import { realShareTools } from '../src/main/services/shareTools';
 
 /**
@@ -19,51 +20,12 @@ import { realShareTools } from '../src/main/services/shareTools';
 let dir: string;
 let work: string;
 let remote: string;
-let fakeGh: string;
 const g = (cwd: string, ...args: string[]) => execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' });
-
-/**
- * A `gh` that logs every call and answers from files in $FAKE_GH_DIR:
- *  - `pr list` prints list.json (default `[]`)
- *  - `pr create` prints the pull request URL
- *  - `pr checks` prints checks-N.json for the Nth call (the last one repeats), exiting 8 while any is pending
- */
-const writeFakeGh = (path: string) => {
-	writeFileSync(
-		path,
-		`#!/bin/bash
-echo "$@" >> "$FAKE_GH_DIR/calls.log"
-case "$1 $2" in
-  "pr list") cat "$FAKE_GH_DIR/list.json" 2>/dev/null || echo '[]' ;;
-  "pr create") echo "https://github.test/o/r/pull/\${FAKE_PR:-42}" ;;
-  "pr checks")
-    n=$(( $(cat "$FAKE_GH_DIR/n" 2>/dev/null || echo 0) + 1 )); echo $n > "$FAKE_GH_DIR/n"
-    f="$FAKE_GH_DIR/checks-$n.json"; [ -f "$f" ] || f=$(ls "$FAKE_GH_DIR"/checks-*.json | sort -V | tail -1)
-    if [ -f "$FAKE_GH_DIR/stderr" ]; then cat "$FAKE_GH_DIR/stderr" >&2; exit 1; fi
-    cat "$f"; grep -q pending "$f" && exit 8; exit 0 ;;
-  *) echo "unexpected: $@" >&2; exit 2 ;;
-esac
-`,
-	);
-	chmodSync(path, 0o755);
-};
-
-const checks = (bucket: string, workflow = 'PR Deployment') =>
-	JSON.stringify([{ name: 'deploy', workflow, bucket, link: 'https://github.test/run/1', startedAt: new Date().toISOString() }]);
-const calls = () =>
-	existsSync(join(dir, 'gh', 'calls.log'))
-		? readFileSync(join(dir, 'gh', 'calls.log'), 'utf8')
-				.trim()
-				.split('\n')
-		: [];
 
 beforeEach(() => {
 	dir = mkdtempSync(join(tmpdir(), 'fdw-share-'));
 	remote = join(dir, 'origin.git');
 	work = join(dir, 'work');
-	mkdirSync(join(dir, 'gh'));
-	process.env.FAKE_GH_DIR = join(dir, 'gh');
-	delete process.env.FAKE_PR;
 	execFileSync('git', ['init', '-q', '--bare', '-b', 'develop', remote]);
 	execFileSync('git', ['init', '-q', '-b', 'develop', work]);
 	g(work, 'config', 'user.email', 'test@example.test');
@@ -77,12 +39,9 @@ beforeEach(() => {
 	writeFileSync(join(work, 'proto.txt'), 'prototype\n');
 	g(work, 'add', '.');
 	g(work, 'commit', '-q', '-m', 'prototype');
-	fakeGh = join(dir, 'fake-gh');
-	writeFakeGh(fakeGh);
 });
 
 afterEach(() => {
-	delete process.env.FAKE_GH_DIR;
 	rmSync(dir, { recursive: true, force: true });
 });
 
@@ -143,10 +102,42 @@ describe('sharing through the real tools', () => {
 		for (let i = 0; i < 400 && runner.status().state === 'running'; i++) await new Promise((r) => setTimeout(r, 10));
 		return runner.status();
 	};
+	const REPO = { owner: 'o', repo: 'r' };
+	const SHA = 'c'.repeat(40);
+	/**
+	 * GitHub, as the person's command line reaches it: `open` pull requests for the branch (none by default), a new one
+	 * numbered 42, and the deploy's check run reading `buckets` one look at a time, the last one repeating.
+	 */
+	const github = ({ open = [] as unknown[], conclusions = ['success'] as (string | null)[] } = {}) => {
+		let looks = 0;
+		return fakeGitHub({
+			'GET /repos/o/r/pulls?*': open,
+			'GET /repos/o/r': { default_branch: 'develop' },
+			'POST /repos/o/r/pulls': { number: 42, html_url: 'https://github.test/o/r/pull/42' },
+			'GET /repos/o/r/pulls/*': { head: { sha: SHA } },
+			[`GET /repos/o/r/commits/${SHA}/check-runs?per_page=100`]: () => {
+				const conclusion = conclusions[Math.min(looks++, conclusions.length - 1)];
+				if (conclusion === undefined) return { check_runs: [] };
+				return {
+					check_runs: [
+						{
+							name: 'deploy',
+							status: conclusion === null ? 'in_progress' : 'completed',
+							conclusion,
+							details_url: 'https://github.test/run/1',
+							started_at: new Date().toISOString(),
+							check_suite: { id: 7 },
+						},
+					],
+				};
+			},
+			[`GET /repos/o/r/commits/${SHA}/status?per_page=100`]: { statuses: [] },
+			[`GET /repos/o/r/actions/runs?head_sha=${SHA}&per_page=100`]: { workflow_runs: [{ check_suite_id: 7, name: 'PR Deployment' }] },
+		});
+	};
 
-	it('pushes, opens a DRAFT pull request, waits through a pending build, records the address', async () => {
-		writeFileSync(join(dir, 'gh', 'checks-1.json'), checks('pending'));
-		writeFileSync(join(dir, 'gh', 'checks-2.json'), checks('pass'));
+	it('pushes, opens a DRAFT pull request onto the default branch, waits through a pending build, records the address', async () => {
+		const gh = github({ conclusions: [null, 'success'] });
 		const records = join(dir, 'records');
 		mkdirSync(join(records, 'demo'), { recursive: true });
 		writeFileSync(
@@ -158,7 +149,7 @@ describe('sharing through the real tools', () => {
 		const runner = new ShareRunner((s) => seen.push(s));
 		runner.start({
 			request,
-			tools: realShareTools(work, fakeGh),
+			tools: realShareTools(work, gh.github, REPO),
 			timings,
 			record: async (url) => void recordPreview(records, 'demo', 'i1', url),
 		});
@@ -166,51 +157,57 @@ describe('sharing through the real tools', () => {
 
 		expect(done).toMatchObject({ state: 'ready', url: 'https://dev-coke-pr-42.example.test', prUrl: 'https://github.test/o/r/pull/42' });
 		expect(g(remote, 'rev-parse', 'refs/heads/fd/demo/i1').trim()).toBe(g(work, 'rev-parse', 'HEAD').trim());
-
-		const create = calls().find((c) => c.startsWith('pr create'));
-		expect(create).toContain('--draft');
-		expect(create).toContain('--head fd/demo/i1');
-		expect(calls().join('\n')).not.toMatch(/--ready|pr ready|pr merge/);
+		// One write, and it is a draft: nothing here marks a pull request ready, or merges one.
+		expect(gh.writes).toEqual([
+			{ method: 'POST', path: '/repos/o/r/pulls', body: { title: request.title, head: 'fd/demo/i1', base: 'develop', body: 'draft', draft: true } },
+		]);
 		expect(seen.map((s) => (s.state === 'running' ? s.step : s.state))).toEqual(expect.arrayContaining(['pushing', 'opening', 'building', 'ready']));
 
 		expect(readIterations(records, 'demo')[0]?.previewUrl).toBe('https://dev-coke-pr-42.example.test');
 	});
 
 	it('does not open a second pull request when one is already open for the branch', async () => {
-		writeFileSync(join(dir, 'gh', 'list.json'), JSON.stringify([{ number: 9, url: 'https://github.test/o/r/pull/9' }]));
-		writeFileSync(join(dir, 'gh', 'checks-1.json'), checks('pass'));
+		const gh = github({ open: [{ number: 9, html_url: 'https://github.test/o/r/pull/9' }] });
 		const runner = new ShareRunner(() => undefined);
-		runner.start({ request, tools: realShareTools(work, fakeGh), timings, record: async () => undefined });
+		runner.start({ request, tools: realShareTools(work, gh.github, REPO), timings, record: async () => undefined });
 		expect(await settle(runner)).toMatchObject({ state: 'ready', url: 'https://dev-coke-pr-9.example.test' });
-		expect(calls().some((c) => c.startsWith('pr create'))).toBe(false);
+		expect(gh.writes).toEqual([]);
 	});
 
 	it('reports a failed deploy with the check and its log', async () => {
-		writeFileSync(join(dir, 'gh', 'checks-1.json'), checks('fail'));
 		const runner = new ShareRunner(() => undefined);
-		runner.start({ request, tools: realShareTools(work, fakeGh), timings, record: async () => undefined });
+		runner.start({ request, tools: realShareTools(work, github({ conclusions: ['failure'] }).github, REPO), timings, record: async () => undefined });
 		expect(await settle(runner)).toMatchObject({ state: 'failed', message: expect.stringContaining('run/1') });
 	});
 
-	it('treats "no checks reported" right after a push as not started yet', async () => {
-		writeFileSync(join(dir, 'gh', 'checks-1.json'), '[]');
-		writeFileSync(join(dir, 'gh', 'stderr'), "no checks reported on the 'fd/demo/i1' branch");
+	it('treats no checks yet, right after a push, as not started, and says so when they never start', async () => {
 		const runner = new ShareRunner(() => undefined);
-		runner.start({ request, tools: realShareTools(work, fakeGh), timings: { ...timings, startupMs: 40 }, record: async () => undefined });
+		runner.start({
+			request,
+			tools: realShareTools(work, github({ conclusions: [] }).github, REPO),
+			timings: { ...timings, startupMs: 40 },
+			record: async () => undefined,
+		});
 		expect(await settle(runner)).toMatchObject({ state: 'failed', message: expect.stringContaining('did not start') });
 	});
 
 	it('says what to install when the GitHub CLI is missing', async () => {
 		const runner = new ShareRunner(() => undefined);
-		runner.start({ request, tools: realShareTools(work, join(dir, 'no-such-gh')), timings, record: async () => undefined });
+		runner.start({ request, tools: realShareTools(work, ghApi(join(dir, 'no-such-gh')), REPO), timings, record: async () => undefined });
 		expect(await settle(runner)).toMatchObject({ state: 'failed', message: expect.stringContaining('https://cli.github.com') });
 	});
 
 	it('still pushes before it finds out gh is unusable, so nothing is lost', async () => {
 		const runner = new ShareRunner(() => undefined);
-		runner.start({ request, tools: realShareTools(work, join(dir, 'no-such-gh')), timings, record: async () => undefined });
+		runner.start({ request, tools: realShareTools(work, ghApi(join(dir, 'no-such-gh')), REPO), timings, record: async () => undefined });
 		await settle(runner);
 		expect(g(remote, 'rev-parse', '--verify', 'refs/heads/fd/demo/i1').trim()).toMatch(/^[0-9a-f]{40}$/);
+	});
+
+	it('says so when the repository is not on GitHub, rather than guessing where its pull requests are', async () => {
+		const runner = new ShareRunner(() => undefined);
+		runner.start({ request, tools: realShareTools(work, github().github), timings, record: async () => undefined });
+		expect(await settle(runner)).toMatchObject({ state: 'failed', message: expect.stringContaining('not on GitHub') });
 	});
 });
 

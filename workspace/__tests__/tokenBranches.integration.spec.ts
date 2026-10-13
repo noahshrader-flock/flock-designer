@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Check, PullRequest, ShareTools } from '../src/main/services/share';
+import type { Check, PullRequest } from '../src/host/changeRequests';
+import type { ShareTools } from '../src/main/services/share';
 import { TOKEN_BRANCH, TokenBranches, proposalText } from '../src/main/services/tokenBranches';
 import { g } from './fixtures';
 import { REAL_LIBRARY as REAL, describeWith, libraryMissing, realDevelop } from './realCheckouts';

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ShareStatus } from '../src/shared/contract';
 import {
-	type Check,
 	DEFAULT_TIMINGS,
 	type ShareRequest,
 	ShareRunner,
@@ -11,6 +10,7 @@ import {
 	pullRequestText,
 	runShare,
 } from '../src/main/services/share';
+import { type Check } from '../src/host/changeRequests';
 
 const share = { url: 'https://dev-coke-pr-<pr>.example.test', workflow: 'PR Deployment', kinds: ['prototype' as const] };
 const request: ShareRequest = {

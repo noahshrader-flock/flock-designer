@@ -26,15 +26,6 @@ const CHANGE_REQUEST = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+$/;
 /** A change request's address as a record gives it, or null when it is not one of the host's. */
 export const asChangeRequestUrl = (v: unknown): string | null => (typeof v === 'string' && CHANGE_REQUEST.test(v) ? v : null);
 
-/**
- * The number of the change request whose address ends `url` (what the host's own command line prints on making one), or
- * null when it ends in none. Its host is not checked here: a record's address is (`asChangeRequestUrl`).
- */
-export const numberFromChangeRequestUrl = (url: string): number | null => {
-	const n = /\/pull\/(\d+)\s*$/.exec(url)?.[1];
-	return n === undefined ? null : Number(n);
-};
-
 /** A person's avatar, which the host serves for any login. Null when only a git name is known. */
 export const avatarUrl = (login: string | null): string | null =>
 	login ? `https://avatars.githubusercontent.com/${encodeURIComponent(login)}?size=64` : null;

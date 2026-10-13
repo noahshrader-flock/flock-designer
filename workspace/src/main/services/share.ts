@@ -1,4 +1,5 @@
 import type { IterationKind, ShareStatus, ShareStep } from '../../shared/contract';
+import type { Check, PullRequest } from '../../host/changeRequests';
 import type { ShareDescriptor } from './descriptor';
 import { projectDir } from '../../shared/designPaths';
 import { isSafeBranchName } from './git';
@@ -17,21 +18,6 @@ import { errorText } from '../../shared/result';
  * because what matters is the order, what each failure says, and what is never done -- and
  * that is testable with no network, no remote and no real pull request.
  */
-
-export interface PullRequest {
-	number: number;
-	url: string;
-}
-
-/** One CI check on a pull request, as the GitHub CLI reports it. */
-export interface Check {
-	name: string;
-	workflow: string;
-	/** `pass`, `fail`, `pending`, `skipping` or `cancel`. */
-	bucket: string;
-	link: string;
-	startedAt: string;
-}
 
 export interface ShareTools {
 	push(branch: string): Promise<{ pushed: boolean }>;
