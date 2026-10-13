@@ -1,6 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Iteration } from '../shared/contract';
+import { escapeHtml } from '../shared/html';
 import { fromBrief } from '../shared/brief';
 import { isPrototypeKey, sitePath } from '../shared/designPaths';
 import { parsePrototypeName } from '../shared/prototypeNames';
@@ -64,9 +65,6 @@ interface SiteProject {
 	builtInCode: string | null;
 }
 
-const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-/** Text as it is safe in HTML, in an element or an attribute. */
-const escape = (s: string): string => s.replace(/[&<>"']/g, (c) => ENTITIES[c] as string);
 const labelOf = (p: Page): string => iterationLabel(p.record);
 const dateOf = (iso: string | undefined): string | null => {
 	const d = iso ? new Date(iso) : null;
@@ -159,10 +157,10 @@ h1 { font-size: 22px; font-weight: 600; margin: 0 0 20px; }
 `;
 
 const shell = (title: string, body: string, head = ''): string =>
-	`<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>${escape(title)}</title>\n${head}<style>${STYLE}</style>\n</head>\n<body>\n${body}\n</body>\n</html>\n`;
+	`<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>${escapeHtml(title)}</title>\n${head}<style>${STYLE}</style>\n</head>\n<body>\n${body}\n</body>\n</html>\n`;
 
 const redirect = (title: string, to: string): string =>
-	shell(title, `<main><p><a href="${to}">${escape(title)}</a></p></main>`, `<meta http-equiv="refresh" content="0; url=${to}">\n`);
+	shell(title, `<main><p><a href="${to}">${escapeHtml(title)}</a></p></main>`, `<meta http-equiv="refresh" content="0; url=${to}">\n`);
 
 const indexPage = (projects: SiteProject[]): string =>
 	shell(
@@ -176,7 +174,7 @@ const indexPage = (projects: SiteProject[]): string =>
 						.sort()
 						.at(-1),
 				);
-				return `<li><a href="${p.id}/"><strong>${escape(p.title)}</strong><br><span class="muted">${plural(n, 'version')}${newest ? ` · ${newest}` : ''}</span></a></li>`;
+				return `<li><a href="${p.id}/"><strong>${escapeHtml(p.title)}</strong><br><span class="muted">${plural(n, 'version')}${newest ? ` · ${newest}` : ''}</span></a></li>`;
 			})
 			.join('\n')}\n</ul>\n</main>`,
 	);
@@ -184,7 +182,7 @@ const indexPage = (projects: SiteProject[]): string =>
 const projectPage = (p: SiteProject, comments: Map<string, number> | undefined): string =>
 	shell(
 		p.title,
-		`<main>\n<p class="muted"><a href="../">All prototypes</a></p>\n<h1>${escape(p.title)}</h1>\n${p.builtInCode ? `<p><a href="${escape(p.builtInCode)}">Built in code</a></p>\n` : ''}<div class="versions">\n${p.versions
+		`<main>\n<p class="muted"><a href="../">All prototypes</a></p>\n<h1>${escapeHtml(p.title)}</h1>\n${p.builtInCode ? `<p><a href="${escapeHtml(p.builtInCode)}">Built in code</a></p>\n` : ''}<div class="versions">\n${p.versions
 			.map(
 				(v) =>
 					`<section class="version">\n<h2>V${v.version}</h2>\n<ul class="list">\n${v.pages
@@ -193,7 +191,7 @@ const projectPage = (p: SiteProject, comments: Map<string, number> | undefined):
 							const author = pg.record.contributors?.[0]?.name;
 							const count = comments?.get(pg.record.branch);
 							const facts = [date, author, count === undefined ? null : plural(count, 'comment')].filter(Boolean);
-							return `<li><a href="${pg.path}"><strong>I${pg.iteration}</strong>${facts.length ? `<br><span class="muted">${facts.map((f) => escape(String(f))).join(' · ')}</span>` : ''}</a></li>`;
+							return `<li><a href="${pg.path}"><strong>I${pg.iteration}</strong>${facts.length ? `<br><span class="muted">${facts.map((f) => escapeHtml(String(f))).join(' · ')}</span>` : ''}</a></li>`;
 						})
 						.join('\n')}\n</ul>\n</section>`,
 			)
@@ -227,7 +225,7 @@ const viewerPage = (p: SiteProject, current: Page, viewer: SiteInput['viewer'], 
 		: '';
 	return shell(
 		`${p.title} · ${labelOf(current)}`,
-		`<div class="viewer">\n<header id="dsnr-bar"><a href="../../">${escape(p.title)}</a></header>\n<p class="small-screen">Best on a computer: this prototype is made for a wider screen. Scroll across to see all of it.</p>\n<div class="stage">\n<iframe id="dsnr-frame" src="page.html" title="${escape(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="dsnr-panel"></aside>\n</div>\n</div>`,
+		`<div class="viewer">\n<header id="dsnr-bar"><a href="../../">${escapeHtml(p.title)}</a></header>\n<p class="small-screen">Best on a computer: this prototype is made for a wider screen. Scroll across to see all of it.</p>\n<div class="stage">\n<iframe id="dsnr-frame" src="page.html" title="${escapeHtml(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="dsnr-panel"></aside>\n</div>\n</div>`,
 		head,
 	);
 };

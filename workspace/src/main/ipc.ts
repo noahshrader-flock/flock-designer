@@ -32,15 +32,6 @@ import { Installer } from './services/install';
 import { recordedIteration } from './services/iterations';
 import { readFolderProjects } from './services/localProjects';
 import type { PageView } from './services/pageView';
-
-/**
- * The live preview, as the core uses it: in the app, a native view over the window (`PageView`); in a shell without one,
- * something that says so.
- */
-export type PreviewPage = Pick<
-	PageView,
-	'open' | 'close' | 'currentUrl' | 'hold' | 'snapshot' | 'pick' | 'cancelPick' | 'showMarkers' | 'focusMarker' | 'setBounds'
->;
 import type { CoverDeps } from './services/projectCovers';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
 import { PrototypeServer } from './services/prototypeServer';
@@ -66,6 +57,15 @@ import { registerReview } from './ipc/review';
 import { formatRepo, repoRefOf } from '../shared/repoRef';
 import { HOST } from '../shared/vocabulary';
 import { DESIGN_REPO } from '../shared/config';
+
+/**
+ * The live preview, as the core uses it: in the app, a native view over the window (`PageView`); in a shell without one,
+ * something that says so.
+ */
+export type PreviewPage = Pick<
+	PageView,
+	'open' | 'close' | 'currentUrl' | 'hold' | 'snapshot' | 'pick' | 'cancelPick' | 'showMarkers' | 'focusMarker' | 'setBounds'
+>;
 
 export interface IpcContext {
 	/** How the core tells the window that something happened: the shell's. */
