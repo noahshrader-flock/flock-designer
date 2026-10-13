@@ -13,6 +13,7 @@ import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
 import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
+import { PageHeading } from './PageHeading';
 
 /** The design system's preview build, which a drawing that needs its own CSS (a type specimen) is drawn in; asked for once. */
 type Preview = StoryPreview | { state: 'asking' };
@@ -268,6 +269,7 @@ export const Primitives = ({ catalog, edits, hidden }: { catalog: Catalog | null
 	const go = (key: string) => sections.current.get(key)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	return (
 		<Page>
+			<PageHeading title="Primitives">The basics: color, type, spacing, shape and more.</PageHeading>
 			<div data-coverage className="flex flex-wrap items-center gap-2">
 				{PRIMITIVES.map((p) => {
 					const list = tokensOf(p.category);

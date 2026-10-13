@@ -42,6 +42,7 @@ import { Notice, RetryButton } from './Notice';
 import { InlineAction } from './Links';
 import { LocationHint } from './LocationHint';
 import { ComponentList } from './ComponentList';
+import { PageHeading } from './PageHeading';
 
 /** Said only when the update failed, as the other problems are (`ProblemsDialog`): the list shown is what this computer had, not an error. */
 const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
@@ -350,6 +351,7 @@ const Components = ({
 			{/* Kept while a component is open, so going back finds the list where it was. */}
 			<div hidden={opened !== undefined}>
 				<Page>
+					<PageHeading title="Components">Every component, with its preview.</PageHeading>
 					{/* The list's own row, so it goes when a component is open: the search, and List or Grid at its right. */}
 					<div data-components-search className="flex items-center justify-between gap-3">
 						<SearchField label="Search components" value={search} onChange={setSearch} className="w-72" />

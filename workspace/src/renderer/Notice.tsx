@@ -50,6 +50,6 @@ export const NoRepositoryAlert = ({ onFind }: { onFind: () => void }) => (
 			</Button>
 		}
 	>
-		DSNR could not find a Flock product repository on this machine. Point it at yours once.
+		DSNR could not find a product repository on this machine. Point it at yours once.
 	</Notice>
 );

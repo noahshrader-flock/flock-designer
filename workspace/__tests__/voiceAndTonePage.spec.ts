@@ -48,6 +48,23 @@ afterEach(async () => {
 	document.body.innerHTML = '';
 });
 
+describe('its heading', () => {
+	it('is the page’s title and one short line that says what it is for, in general words', async () => {
+		await show();
+		const heading = document.querySelector('[data-page-heading]') as HTMLElement;
+		expect(heading.querySelector('h2')?.textContent).toBe('Voice and Tone');
+		expect(heading.querySelector('p')?.textContent).toBe('How the product speaks.');
+		// Refresh is at its right, in the heading's own action slot.
+		expect(heading.querySelector('[data-page-heading-action]')?.textContent).toBe('Refresh');
+	});
+
+	it('does not name a company in what it says, in its text or in its empty box', async () => {
+		await show();
+		expect(text()).not.toMatch(/Flock/);
+		expect(area()?.placeholder).toBe('How the product speaks: its voice, the rules it follows, what it never does.');
+	});
+});
+
 describe('reading it', () => {
 	it('reads nothing while hidden, then once when first shown', async () => {
 		const app = fakeApp({ voiceAndTone: async () => ok(voice()) });
@@ -66,8 +83,10 @@ describe('reading it', () => {
 	it('shows the file in one text area, with where it is, and nothing to save until it is changed', async () => {
 		await show();
 		expect(area()?.value).toBe('# Voice and tone\n\nPlain words.\n');
-		expect(text()).toContain('.dsnr/voice-and-tone.md');
-		expect(text()).toContain('flocksafety/flock-react-component-lib');
+		// Where it is kept is a small line under the text, not a part of the heading's words.
+		const file = document.querySelector('[data-voice-file]') as HTMLElement;
+		expect(file.textContent).toBe('flocksafety/flock-react-component-lib · .dsnr/voice-and-tone.md');
+		expect(file.compareDocumentPosition(area() as HTMLElement) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
 		expect(has('Save to a branch')).toBe(false);
 		expect(has('Propose')).toBe(false);
 	});

@@ -11,6 +11,7 @@ import { CHANGE_REQUEST, HOST } from '../shared/vocabulary';
 import { ErrorAlert } from './ErrorAlert';
 import { Notice, RetryButton } from './Notice';
 import { InlineAction } from './Links';
+import { PageHeading } from './PageHeading';
 
 /**
  * The Voice and Tone tab (T9 of the design system plan): Flock's voice and tone, one file in the connected design system's
@@ -106,19 +107,17 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 	const branch = voice.branch;
 	return (
 		<Page>
-			<div className="flex items-start justify-between gap-4">
-				<div className="flex min-w-0 flex-col gap-1">
-					<h2 className="text-base font-semibold">Voice and Tone</h2>
-					<p className="text-muted-foreground text-sm">
-						How Flock&apos;s product speaks. Every agent task carries this file, <span className="font-mono text-xs">{voice.path}</span> in{' '}
-						{voice.repository}, the design system&apos;s agent files; a product&apos;s own conventions win where they differ.
-					</p>
-				</div>
-				<Button variant="outline" disabled={reading || busy !== null} onClick={() => void read(unsaved)}>
-					<RefreshCwIcon />
-					Refresh
-				</Button>
-			</div>
+			<PageHeading
+				title="Voice and Tone"
+				action={
+					<Button variant="outline" disabled={reading || busy !== null} onClick={() => void read(unsaved)}>
+						<RefreshCwIcon />
+						Refresh
+					</Button>
+				}
+			>
+				How the product speaks.
+			</PageHeading>
 
 			{error && <ErrorAlert error={error} />}
 
@@ -156,12 +155,16 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 
 			<Textarea
 				aria-label="Voice and tone"
-				placeholder="How Flock's product speaks: its voice, the rules it follows, what it never does."
+				placeholder="How the product speaks: its voice, the rules it follows, what it never does."
 				value={draft}
 				onChange={(e) => setDraft(e.target.value)}
 				spellCheck
 				className="min-h-[60vh] font-mono text-sm md:text-sm"
 			/>
+			{/* Where it is kept: every agent task carries this file. */}
+			<p data-voice-file className="text-muted-foreground -mt-2 font-mono text-xs">
+				{voice.repository} · {voice.path}
+			</p>
 
 			{(branch || unsaved || failed) && (
 				<BranchActions

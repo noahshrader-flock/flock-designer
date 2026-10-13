@@ -109,6 +109,16 @@ const sections = () => [...document.querySelectorAll<HTMLElement>('[data-primiti
 const section = (name: string) => document.querySelector<HTMLElement>(`[data-primitive="${name}"]`)!;
 const notDefined = () => document.querySelector<HTMLElement>('[data-not-defined]');
 
+describe('its heading', () => {
+	it('is the page’s title and a line that says what it is for, as the other tabs have, above everything else', async () => {
+		await show();
+		const heading = document.querySelector('[data-page-heading]') as HTMLElement;
+		expect(heading.querySelector('h2')?.textContent).toBe('Primitives');
+		expect(heading.querySelector('p')?.textContent).toBe('The basics: color, type, spacing, shape and more.');
+		expect(heading.compareDocumentPosition(document.querySelector('[data-coverage]') as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+	});
+});
+
 describe('what it defines, at the top', () => {
 	it('is a chip for each primitive, in the vocabulary’s order, with how many tokens it has', async () => {
 		await show(ready(tokens([...TOKENS, ...TYPE, ...ELEVATION])));
