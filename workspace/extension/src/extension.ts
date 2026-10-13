@@ -7,13 +7,13 @@ import { valueOf } from '../../src/shared/result';
 import { addressComment } from './address';
 import { Panels, hostApi } from './bridge';
 import { assignFolder, readProjectArg } from './folders';
+import { startCore } from './core';
 import { type Review, readReview, reviewsOf } from './messages';
 import { newPrototype, readGiven } from './newPrototype';
-import { startCore } from './core';
-import { PanelProvider, failed } from './panel';
-import { Reviews, answerReview, buildReviewSite, siteIn } from './review';
+import { PanelProvider } from './panel';
 import { publishedLink, syncItem, syncPicks } from './publishing';
-import { AgentLog, SyncStatus, vscodeAsk, vscodeChoose, vscodeProgress } from './ui';
+import { Reviews, answerReview, buildReviewSite, siteIn } from './review';
+import { AgentLog, SyncStatus, failed, failedFor, vscodeAsk, vscodeChoose, vscodeProgress, vscodeTell } from './ui';
 
 /** Kept by the extension: the design system the person located, when nothing open holds one. */
 const LOCATED = 'dsnr.located';
@@ -106,7 +106,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 
 	/** The panels are told the projects changed, so each reads them again. */
 	const projectsChanged = () => panels.post({ type: 'projects-changed' });
-	const publishing = { api, choose: vscodeChoose, tell: (m: string) => void vscode.window.showInformationMessage(m) };
+	const publishing = { api, choose: vscodeChoose, tell: vscodeTell };
 	/** What a review tab's title bar does, on the review in front; said when there is none. */
 	const inFront = (act: (review: Review) => Promise<void>) => {
 		const review = reviews.active();
@@ -122,10 +122,9 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		{ dispose: panels.listen('onPublishStatus', (status) => sync.show(status as PublishStatus)) },
 		agentLog,
 		vscode.window.registerWebviewViewProvider('dsnr.panel', provider),
-		vscode.commands.registerCommand('dsnr.newPrototype', (raw: unknown) => {
-			const given = readGiven(raw);
-			return newPrototype({
-				given,
+		vscode.commands.registerCommand('dsnr.newPrototype', (raw: unknown) =>
+			newPrototype({
+				given: readGiven(raw),
 				api,
 				product: { root: found.product, why: found.missing[0] ?? 'No product is open.' },
 				ask: vscodeAsk,
@@ -134,12 +133,9 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				log: agentLog,
 				onChanged: projectsChanged,
 				openReview,
-			}).catch((err: unknown) => {
-				failed(err);
-				// Called with its answers, by code rather than a person: the caller is told too.
-				if (raw !== undefined) throw err;
-			});
-		}),
+				// Given its answers, it was run by code rather than a person: the caller is told too.
+			}).catch(failedFor(raw !== undefined)),
+		),
 		vscode.commands.registerCommand('dsnr.open', () => vscode.commands.executeCommand('workbench.view.extension.dsnr')),
 		// A product onto this machine with VS Code's own clone, which offers to open it; New prototype then offers the install.
 		vscode.commands.registerCommand('dsnr.getStarted', () => vscode.commands.executeCommand('git.clone')),
@@ -148,10 +144,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			if (raw !== undefined) {
 				const given = readReview(raw);
 				if (!given) throw new Error('DSNR: Open a prototype for review was given something that is not a review.');
-				return openReview(given).catch((err: unknown) => {
-					failed(err);
-					throw err;
-				});
+				return openReview(given).catch(failedFor(true));
 			}
 			const picked = await pickPrototype(api);
 			if (picked) await openReview(picked).catch(failed);

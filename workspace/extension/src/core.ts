@@ -33,7 +33,8 @@ export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSi
 		github,
 		page: noPreview,
 		applyAppearance: () => undefined,
-		pictureRecipe: 'vscode, no pictures yet',
+		// Stories are not drawn here yet (Phase 6), so no picture of a component is made this way.
+		pictureRecipe: 'vscode, no story pictures yet',
 	});
 	const shell = registerIpc(core);
 	context.subscriptions.push(github.watch(), { dispose: () => core.prototypeServer.close() }, { dispose: () => void headless.close() });

@@ -2,14 +2,11 @@ import { watch } from 'node:fs';
 import * as vscode from 'vscode';
 import { served } from '../../src/main/handle';
 import type { Context } from '../../src/main/services/findContext';
-import { errorText } from '../../src/shared/result';
 import { type Panels, answerCall } from './bridge';
 import { afterQuiet, whatChanged } from './devReload';
 import { newNonce, panelHtml } from './html';
 import { type Review, readMessage } from './messages';
-
-/** Says what went wrong, in VS Code's own error message: its first line. */
-export const failed = (err: unknown): void => void vscode.window.showErrorMessage(errorText(err, { firstLine: true }));
+import { failed } from './ui';
 
 export interface PanelDeps {
 	extensionUri: vscode.Uri;

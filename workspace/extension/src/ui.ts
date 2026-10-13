@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { errorText } from '../../src/shared/result';
 import type { AgentLogLike, Progress } from './agentWork';
 import type { PublishStatus } from '../../src/shared/contract';
 import type { Ask } from './ask';
@@ -17,6 +18,23 @@ export const vscodeAsk: Ask = {
 	pick: async ({ title, placeholder, items }) =>
 		(await vscode.window.showQuickPick(items, { title, placeHolder: placeholder, ignoreFocusOut: true }))?.value,
 };
+
+/** Says what went wrong, in VS Code's own error message: its first line. */
+export const failed = (err: unknown): void => void vscode.window.showErrorMessage(errorText(err, { firstLine: true }));
+
+/**
+ * Says what went wrong, and, for a command run by code with its answers (a keybinding, another extension, a test), throws
+ * it on, so the caller is told too.
+ */
+export const failedFor =
+	(fromCode: boolean) =>
+	(err: unknown): void => {
+		failed(err);
+		if (fromCode) throw err;
+	};
+
+/** Says how something went, in VS Code's notification, without waiting on anyone. */
+export const vscodeTell = (message: string): void => void vscode.window.showInformationMessage(message);
 
 /** A warning with what can be done about it, as VS Code's notification with buttons: the one pressed, or undefined. */
 export const vscodeChoose = async (message: string, actions: string[]): Promise<string | undefined> =>

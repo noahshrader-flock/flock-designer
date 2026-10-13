@@ -10,19 +10,11 @@ import { pickFolder } from './folders';
 import { type Review, reviewsOf } from './messages';
 
 export interface NewPrototypeDeps extends AgentWorkDeps {
-	api: PrototypeApi &
+	api: AgentWorkDeps['api'] &
+		PrototypeApi &
 		Pick<
 			WorkspaceApi,
-			| 'agentReadiness'
-			| 'prototypeReadiness'
-			| 'installPackages'
-			| 'cancelInstall'
-			| 'onInstallLine'
-			| 'listProjects'
-			| 'readCheckout'
-			| 'createPrototype'
-			| 'stopAgent'
-			| 'onAgentLog'
+			'prototypeReadiness' | 'installPackages' | 'cancelInstall' | 'onInstallLine' | 'listProjects' | 'readCheckout' | 'createPrototype'
 		>;
 	/** The product folder that is open, or why there is none (from the context). */
 	product: { root: string | null; why: string };
