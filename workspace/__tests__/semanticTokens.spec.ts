@@ -160,6 +160,22 @@ describe('the roles by theme', () => {
 		expect(swatch.className).not.toMatch(/\b[hw]-\d/);
 	});
 
+	it('give the room to the names: the themes are columns only as wide as a swatch, together at the right', async () => {
+		await show();
+		const row = document.querySelector('[data-token-row="main"]') as HTMLElement;
+		const [name, ...themesCells] = [...row.children] as HTMLElement[];
+		// The name takes what is left; each theme's column is a fixed width that does not grow with the panel.
+		expect(name!.className.split(' ')).toEqual(expect.arrayContaining(['flex-1', 'min-w-0']));
+		for (const c of themesCells) {
+			expect(c.className).toMatch(/\bw-\d+\b/);
+			expect(c.className).toContain('shrink-0');
+			expect(c.className).not.toContain('flex-1');
+		}
+		// The headings take the same widths, so they stay over their columns.
+		const heads = [...document.querySelectorAll<HTMLElement>('[data-theme-heading]')];
+		expect(heads.map((h) => h.className.match(/\bw-\d+\b/)?.[0])).toEqual(themesCells.map((c) => c.className.match(/\bw-\d+\b/)?.[0]));
+	});
+
 	it('are centered under their theme’s heading', async () => {
 		await show();
 		expect(cell('palette.light.primary.main')?.className).toContain('justify-center');

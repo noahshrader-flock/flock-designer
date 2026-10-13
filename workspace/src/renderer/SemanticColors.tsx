@@ -20,8 +20,12 @@ import { cn } from '@/lib/utils';
  * closed, as every list of groups is; a role whose name is its set is a plain row, with no group to say it twice.
  */
 
-/** The width of the column of names: the same on every row, and on the header over them, so the themes line up. */
-const NAME = 'w-22 shrink-0';
+/**
+ * The columns: the names take the room there is, and each theme's is only as wide as its swatch needs (the same on every row
+ * and on its heading, so they line up), together at the right, so a long name is not cut to give a swatch room it does not use.
+ */
+const NAME = 'min-w-0 flex-1';
+const THEME = 'w-14 shrink-0';
 
 /** What a value says: what it points at (`pineGreen 50`, and its opacity), or its own color when it points at nothing. */
 const reads = (token: DesignToken, target: DesignToken | undefined): string =>
@@ -42,7 +46,7 @@ const ThemeValue = ({ token }: { token: DesignToken }) => {
 	const flagged = ratio !== null && textContrast(ratio, changes.accessibility).flag;
 	const says = reads(token, target);
 	return (
-		<div data-token={token.path} data-changed={edited || undefined} className="flex min-w-0 flex-1 justify-center">
+		<div data-token={token.path} data-changed={edited || undefined} className={cn(THEME, 'flex justify-center')}>
 			<TokenEditorPopover token={token} tip={<span>{says}</span>}>
 				<Button
 					variant="ghost"
@@ -78,7 +82,7 @@ const Row = ({ row }: { row: SemanticRow }) => (
 			token ? (
 				<ThemeValue key={token.path} token={token} />
 			) : (
-				<span key={i} aria-hidden className="text-muted-foreground/60 min-w-0 flex-1 text-center text-xs">
+				<span key={i} aria-hidden className={cn(THEME, 'text-muted-foreground/60 text-center text-xs')}>
 					—
 				</span>
 			),
@@ -102,7 +106,7 @@ export const SemanticColors = ({ tokens }: { tokens: DesignToken[] }) => {
 			<div className="text-muted-foreground flex items-center gap-1 text-xs">
 				<span className={NAME}>Token</span>
 				{table.themes.map((theme) => (
-					<span key={theme} data-theme-heading className="min-w-0 flex-1 truncate text-center">
+					<span key={theme} data-theme-heading className={cn(THEME, 'truncate text-center')}>
 						{theme}
 					</span>
 				))}
