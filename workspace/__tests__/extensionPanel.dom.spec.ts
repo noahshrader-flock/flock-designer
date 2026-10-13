@@ -42,7 +42,10 @@ const key = async (el: HTMLElement, name: string) =>
 describe('the toggle at the top', () => {
 	it('is first in the panel, Projects and Design System, with Projects chosen', async () => {
 		await show();
-		expect(document.querySelector('main')?.firstElementChild).toBe(toggle());
+		// First in the panel, in the bar that stays at the top while the list under it scrolls.
+		const bar = document.querySelector('main')?.firstElementChild;
+		expect(bar?.className).toBe('panel-top');
+		expect(bar?.firstElementChild).toBe(toggle());
 		expect(toggle().getAttribute('aria-label')).toBe('View');
 		expect(options().map((o) => o.textContent)).toEqual(['Projects', 'Design System']);
 		expect(chosen()).toBe('Projects');

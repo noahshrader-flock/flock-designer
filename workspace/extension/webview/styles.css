@@ -2,6 +2,16 @@
  * DSGN's panel, in VS Code's own design language: every colour, font and size is one of the theme's variables, so the
  * panel follows whatever theme is chosen, high contrast included. No colour is written here.
  */
+:root {
+	/* Our own names for the few things the panel is made of, each defined from VS Code's theme: a component uses these, not
+	   the theme's variables directly, so the whole look is changed in one place, as shadcn's tokens are. */
+	--dsgn-track: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
+	--dsgn-raised: var(--vscode-editor-background);
+	--dsgn-muted: var(--vscode-descriptionForeground);
+	--dsgn-radius: 6px;
+	--dsgn-radius-inner: 4px;
+}
+
 body {
 	margin: 0;
 	padding: 0;
@@ -16,17 +26,28 @@ body {
 	flex-direction: column;
 }
 
-/* The toggle: VS Code's buttons, side by side, the chosen one primary. Kept at the top while the list under it scrolls. */
-.toggle {
+/* The bar the toggle sits in: kept at the top while the list under it scrolls. */
+.panel-top {
 	position: sticky;
 	top: 0;
 	z-index: 1;
+	padding: 8px 12px;
+	background: var(--vscode-sideBar-background);
+}
+
+/*
+ * The toggle: a soft track with the chosen view raised in it as a pill, as Claude Code's own side bar draws its Local and
+ * Web. The track and the pill are our tokens (above); in high contrast both are also drawn by their borders.
+ */
+.toggle {
 	display: grid;
 	grid-auto-columns: 1fr;
 	grid-auto-flow: column;
-	gap: 0;
-	padding: 8px 12px;
-	background: var(--vscode-sideBar-background);
+	gap: 2px;
+	padding: 2px;
+	border: 1px solid var(--vscode-contrastBorder, transparent);
+	border-radius: var(--dsgn-radius);
+	background: var(--dsgn-track);
 }
 
 .toggle-option {
@@ -37,44 +58,28 @@ body {
 	min-width: 0;
 	height: 26px;
 	padding: 0 8px;
-	border: 1px solid var(--vscode-button-border, transparent);
-	color: var(--vscode-button-secondaryForeground);
-	background: var(--vscode-button-secondaryBackground);
+	border: 1px solid transparent;
+	border-radius: var(--dsgn-radius-inner);
+	color: var(--dsgn-muted);
+	background: transparent;
 	font: inherit;
 	white-space: nowrap;
 	cursor: pointer;
 }
 
-.toggle-option:first-child {
-	border-radius: 2px 0 0 2px;
-}
-
-.toggle-option:last-child {
-	border-radius: 0 2px 2px 0;
-}
-
 .toggle-option:hover {
-	background: var(--vscode-button-secondaryHoverBackground);
+	color: var(--vscode-foreground);
 }
 
 .toggle-option[aria-checked='true'] {
-	color: var(--vscode-button-foreground);
-	background: var(--vscode-button-background);
-	/* In high contrast the chosen one is also drawn by its border, since its fill may be the same as the rest. */
-	border-color: var(--vscode-contrastActiveBorder, var(--vscode-button-border, transparent));
-}
-
-.toggle-option[aria-checked='true']:hover {
-	background: var(--vscode-button-hoverBackground);
+	border-color: var(--vscode-contrastActiveBorder, transparent);
+	color: var(--vscode-foreground);
+	background: var(--dsgn-raised);
 }
 
 .toggle-option:focus-visible {
 	outline: 1px solid var(--vscode-focusBorder);
 	outline-offset: -1px;
-}
-
-.tab-body {
-	padding-bottom: 12px;
 }
 
 /* A list, as VS Code's: rows edge to edge, the text indented as the toggle is. */

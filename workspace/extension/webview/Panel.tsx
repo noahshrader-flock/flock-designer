@@ -29,7 +29,9 @@ export const Panel = ({ projects = SAMPLE_PROJECTS, designSystem = SAMPLE_DESIGN
 	};
 	return (
 		<main className="panel">
-			<Toggle label="View" options={[...TABS]} value={tab} onChange={choose} />
+			<div className="panel-top">
+				<Toggle label="View" options={[...TABS]} value={tab} onChange={choose} />
+			</div>
 			<section data-tab-body={tab} className="tab-body">
 				{tab === 'projects' ? <Projects projects={projects} /> : <DesignSystem system={designSystem} />}
 			</section>
