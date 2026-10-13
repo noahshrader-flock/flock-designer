@@ -190,6 +190,8 @@ describe('dialogs and menus, in the panel', () => {
 	const cancel = () => [...dialog()!.querySelectorAll('button')].find((b) => b.textContent === 'Cancel') as HTMLButtonElement;
 	const menuFor = (n: number) => [...body().querySelectorAll<HTMLElement>('[aria-label="Project actions"]')][n] as HTMLElement;
 	const items = () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+	/** A menu item by what it says, as a person finds it. */
+	const item = (label: string) => items().find((i) => i.textContent === label)!;
 
 	describe('New prototype', () => {
 		it('opens in the panel, not as a box at the top, when the extension says it can be started (its title bar’s +, or the empty list’s button)', async () => {
@@ -266,7 +268,7 @@ describe('dialogs and menus, in the panel', () => {
 		it('is on each project, a popover with Open for review and Assign folder…, closed by Escape or a press elsewhere', async () => {
 			await showOpen();
 			await press(menuFor(0));
-			expect(items().map((i) => i.textContent)).toEqual(['Open for review', 'Assign folder…']);
+			expect(items().map((i) => i.textContent)).toEqual(['Open for review', 'Open in browser', 'Assign folder…']);
 			expect(menuFor(0).getAttribute('aria-expanded')).toBe('true');
 			await act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
 			expect(items()).toHaveLength(0);
@@ -278,8 +280,21 @@ describe('dialogs and menus, in the panel', () => {
 		it('opens a project for review from it', async () => {
 			await showOpen();
 			await press(menuFor(0));
-			await press(items()[0]!);
+			await press(item('Open for review'));
 			expect(panelSaid().at(-1)).toMatchObject({ type: 'open-review', projectId: 'alert-history' });
+			expect(items()).toHaveLength(0);
+		});
+
+		it('opens a project’s review in the browser from it: the same review, asked of the extension to open outside VS Code', async () => {
+			await showOpen();
+			await press(menuFor(0));
+			await press(item('Open in browser'));
+			expect(panelSaid().at(-1)).toEqual({
+				type: 'open-review-in-browser',
+				projectId: 'alert-history',
+				name: 'v2-i1',
+				title: 'Alert history · V2 · I1',
+			});
 			expect(items()).toHaveLength(0);
 		});
 
@@ -289,7 +304,7 @@ describe('dialogs and menus, in the panel', () => {
 				[...document.querySelectorAll<HTMLElement>('[aria-label="Layout"] [role="radio"]')].find((o) => o.getAttribute('aria-label') === 'List')!,
 			);
 			await press(menuFor(0));
-			expect(items().map((i) => i.textContent)).toEqual(['Open for review', 'Assign folder…']);
+			expect(items().map((i) => i.textContent)).toEqual(['Open for review', 'Open in browser', 'Assign folder…']);
 		});
 	});
 
@@ -297,7 +312,7 @@ describe('dialogs and menus, in the panel', () => {
 		const open = async () => {
 			await showOpen();
 			await press(menuFor(0));
-			await press(items()[1]!);
+			await press(item('Assign folder…'));
 		};
 
 		it('is a dialog for the project, with the folder it is in chosen', async () => {
@@ -327,7 +342,7 @@ describe('dialogs and menus, in the panel', () => {
 			await answer('assignFolder', null);
 			await answer('listProjects', SAMPLE_PROJECTS);
 			await press(menuFor(1));
-			await press(items()[1]!);
+			await press(item('Assign folder…'));
 			await choose(field('Folder'), 'New folder…');
 			await type(field('New folder'), 'Zones');
 			await press(submit());
@@ -649,6 +664,7 @@ describe('a design system’s catalog, once it is read', () => {
 				context: OPEN,
 				projects: { value: [], error: null },
 				onOpen: () => undefined,
+				onOpenInBrowser: () => undefined,
 				onNew: () => undefined,
 				onGetStarted: () => undefined,
 				onAssignFolder: () => undefined,

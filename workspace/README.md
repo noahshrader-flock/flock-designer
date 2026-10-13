@@ -227,8 +227,9 @@ which offers to open what it cloned; New prototype then offers the install.
 
 **Dialogs and menus are in the panel**, in VS Code's own look, rather than boxes at the top of the window: a webview
 cannot draw outside its side bar, so a dialog covers the panel, as Claude Code's popovers are in its own. Each project has
-an ellipsis menu (on hover or focus) with Open for review and Assign folder…, and the right-click items open the same
-dialogs.
+an ellipsis menu (on hover or focus) with Open for review, Open in browser (the same review page, served from this
+machine, in your browser outside VS Code, where commenting is still VS Code's) and Assign folder…; the right-click items
+open the same dialogs.
 
 **New prototype** (the **+** in its title bar, **DSNR: New prototype**, or the panel's button) says first, before
 anything is asked, what stands in the way (no product open, Claude Code missing or signed out), then opens a dialog in

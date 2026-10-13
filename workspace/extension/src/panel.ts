@@ -16,6 +16,7 @@ export interface PanelDeps {
 	context: () => Context;
 	locate: () => Promise<void>;
 	openReview: (review: Review) => Promise<void>;
+	openReviewInBrowser: (review: Review) => Promise<void>;
 	/** Starts a prototype from what the panel's dialog asked. */
 	startPrototype: (answers: Given) => Promise<void>;
 	/** Run from its source: the panel follows its own build. */
@@ -79,6 +80,8 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 					return await this.deps.locate();
 				case 'open-review':
 					return await this.deps.openReview(message);
+				case 'open-review-in-browser':
+					return await this.deps.openReviewInBrowser(message);
 				case 'get-started':
 					return void (await vscode.commands.executeCommand('dsnr.getStarted'));
 				case 'ask-new-prototype':

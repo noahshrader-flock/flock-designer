@@ -238,6 +238,22 @@ describe('the review tabs', () => {
 		expect(vs.panels).toHaveLength(2);
 	});
 
+	it('have an address for the browser: the same page, built from the records and served from this machine, with no tab made', async () => {
+		const vs = fakeVsCode();
+		const built: string[] = [];
+		const reviews = new Reviews({
+			vscode: vs.api as never,
+			build: (records) => void built.push(records),
+			serve: async () => 'http://127.0.0.1:5000/review/',
+			answer: async () => ({ ok: true, value: null }),
+		});
+		expect(await reviews.address({ records: '/d/projects', projectId: 'demo', name: 'v2-i1', title: 'Demo · V2 · I1' })).toBe(
+			'http://127.0.0.1:5000/review/demo/v2/i1/',
+		);
+		expect(built).toEqual(['/d/projects']);
+		expect(vs.panels).toHaveLength(0);
+	});
+
 	it('say which review is in front, for what its title bar does', async () => {
 		const vs = fakeVsCode();
 		const reviews = new Reviews({

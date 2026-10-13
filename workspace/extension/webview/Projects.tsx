@@ -45,11 +45,13 @@ const ProjectItem = ({
 	project,
 	view,
 	onOpen,
+	onOpenInBrowser,
 	onAssignFolder,
 }: {
 	project: Project;
 	view: View;
 	onOpen: (review: Review) => void;
+	onOpenInBrowser: (review: Review) => void;
 	onAssignFolder: (projectId: string) => void;
 }) => {
 	const open = project.iterations.reduce((n, i) => n + i.openComments, 0);
@@ -66,7 +68,12 @@ const ProjectItem = ({
 			<Menu
 				label="Project actions"
 				items={[
-					...(newest ? [{ label: 'Open for review', icon: 'link-external', onSelect: () => onOpen(newest) }] : []),
+					...(newest
+						? [
+								{ label: 'Open for review', icon: 'link-external', onSelect: () => onOpen(newest) },
+								{ label: 'Open in browser', icon: 'globe', onSelect: () => onOpenInBrowser(newest) },
+							]
+						: []),
 					{ label: 'Assign folder…', icon: 'folder', onSelect: () => onAssignFolder(project.id) },
 				]}
 			/>
@@ -118,6 +125,7 @@ export const Projects = ({
 	product,
 	signedIn,
 	onOpen,
+	onOpenInBrowser,
 	onNew,
 	onGetStarted,
 	onAssignFolder,
@@ -129,6 +137,8 @@ export const Projects = ({
 	product: { open: true } | { open: false; why: string };
 	signedIn: boolean;
 	onOpen: (review: Review) => void;
+	/** Opens the review in the person's browser, outside VS Code. */
+	onOpenInBrowser: (review: Review) => void;
 	onNew: () => void;
 	/** Gets a product onto this machine: VS Code's own clone. */
 	onGetStarted: () => void;
@@ -181,7 +191,9 @@ export const Projects = ({
 			) : (
 				<ByFolder projects={matching}>
 					{(group, label) => {
-						const items = group.map((p) => <ProjectItem key={p.id} project={p} view={view} onOpen={onOpen} onAssignFolder={onAssignFolder} />);
+						const items = group.map((p) => (
+							<ProjectItem key={p.id} project={p} view={view} onOpen={onOpen} onOpenInBrowser={onOpenInBrowser} onAssignFolder={onAssignFolder} />
+						));
 						return view === 'grid' ? <Grid label={label}>{items}</Grid> : <List label={label}>{items}</List>;
 					}}
 				</ByFolder>

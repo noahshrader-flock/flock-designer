@@ -18,7 +18,8 @@ export type PanelMessage =
 	| { type: 'get-started' }
 	| { type: 'ask-new-prototype' }
 	| { type: 'new-prototype'; title: string; task: string; folder: string | null }
-	| ({ type: 'open-review' } & Review);
+	| ({ type: 'open-review' } & Review)
+	| ({ type: 'open-review-in-browser' } & Review);
 
 /** A prototype to open for review: its project, its name, and the title its tab is given. */
 export interface Review {
@@ -72,13 +73,13 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 			Array.isArray(m.args)
 			? { type: 'call', id: m.id, name: m.name as InvokeName, args: m.args }
 			: null;
-	if (m.type === 'open-review')
+	if (m.type === 'open-review' || m.type === 'open-review-in-browser')
 		return hasKeys(m, ['type', 'projectId', 'name', 'title']) &&
 			typeof m.projectId === 'string' &&
 			typeof m.name === 'string' &&
 			typeof m.title === 'string' &&
 			m.title.length <= 300
-			? { type: 'open-review', projectId: m.projectId, name: m.name, title: m.title }
+			? { type: m.type, projectId: m.projectId, name: m.name, title: m.title }
 			: null;
 	if (m.type === 'new-prototype')
 		return hasKeys(m, ['type', 'title', 'task', 'folder']) &&

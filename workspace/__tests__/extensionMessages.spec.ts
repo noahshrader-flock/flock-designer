@@ -18,6 +18,7 @@ describe('a message from the panel', () => {
 		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: null }],
 		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: 'Maps' }],
 		[{ type: 'open-review', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
+		[{ type: 'open-review-in-browser', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
 	])('%o is read', (m) => {
 		expect(readMessage(m)).toEqual(m);
 	});
@@ -37,6 +38,8 @@ describe('a message from the panel', () => {
 		[{ type: 'sign-in' }],
 		[{ type: 'account' }],
 		[{ type: 'open-review', projectId: 'a', name: 'v1-i1' }],
+		[{ type: 'open-review-in-browser', projectId: 'a', name: 'v1-i1' }],
+		[{ type: 'open-review-in-browser', projectId: 'a', name: 'v1-i1', title: 'x'.repeat(301) }],
 		[{ type: 'open-review', projectId: 1, name: 'v1-i1', title: 't' }],
 		[{ type: 'open-review', projectId: 'a', name: 'v1-i1', title: 'x'.repeat(301) }],
 		[{ type: 'new-prototype' }],

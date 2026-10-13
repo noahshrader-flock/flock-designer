@@ -35,6 +35,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		context: () => found,
 		locate: () => locate(),
 		openReview: (review) => openReview(review),
+		openReviewInBrowser: (review) => openReviewInBrowser(review),
 		startPrototype: (answers) => startPrototype(answers).catch(failed),
 		development,
 		...(log ? { log } : {}),
@@ -90,10 +91,16 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			),
 		...(log ? { log } : {}),
 	});
-	const openReview = async ({ projectId, name, title }: Review) => {
+	/** Where the projects' records are, or why they are not here. */
+	const records = () => {
 		if (!found.designRepository)
 			throw new Error(found.missing.find((m) => m.startsWith('The design repository')) ?? 'The design repository is not here.');
-		await reviews.open({ records: found.designRepository, projectId, name, title });
+		return found.designRepository;
+	};
+	const openReview = (review: Review) => reviews.open({ records: records(), ...review });
+	/** The review's page in the person's browser, outside VS Code: the same page, from this machine. */
+	const openReviewInBrowser = async (review: Review) => {
+		await vscode.env.openExternal(vscode.Uri.parse(await reviews.address({ records: records(), ...review })));
 	};
 	const locate = async () => {
 		const chosen = await core.ports.chooseFolder({ title: 'Locate design system' });

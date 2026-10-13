@@ -28,6 +28,7 @@ export interface PanelViewProps {
 	context: Context | null;
 	projects: ProjectsRead;
 	onOpen: (review: Review) => void;
+	onOpenInBrowser: (review: Review) => void;
 	onNew: () => void;
 	onGetStarted: () => void;
 	onAssignFolder: (projectId: string) => void;
@@ -48,6 +49,7 @@ export const PanelView = ({
 	context,
 	projects,
 	onOpen,
+	onOpenInBrowser,
 	onNew,
 	onGetStarted,
 	onAssignFolder,
@@ -67,6 +69,7 @@ export const PanelView = ({
 					product={context.product !== null ? { open: true } : { open: false, why: context.missing[0] ?? 'No product is open.' }}
 					signedIn={account.state === 'signedIn'}
 					onOpen={onOpen}
+					onOpenInBrowser={onOpenInBrowser}
 					onNew={onNew}
 					onGetStarted={onGetStarted}
 					onAssignFolder={onAssignFolder}
@@ -147,6 +150,7 @@ export const Panel = () => {
 				context={context}
 				projects={{ value: projects, error: read.error }}
 				onOpen={(review) => vscode().postMessage({ type: 'open-review', ...review })}
+				onOpenInBrowser={(review) => vscode().postMessage({ type: 'open-review-in-browser', ...review })}
 				// Asked of the extension, which knows whether it can be started, and opens the dialog (`open-new-prototype`) if so.
 				onNew={() => vscode().postMessage({ type: 'ask-new-prototype' })}
 				onAssignFolder={(projectId) => setDialog({ kind: 'assign', projectId })}

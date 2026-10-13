@@ -113,15 +113,23 @@ export class Reviews {
 		},
 	) {}
 
-	async open({ records, ...review }: Review & { records: string }): Promise<void> {
-		const path = reviewPath(review.projectId, review.name);
+	/**
+	 * Where a review's page is: built again from the records, so it is as they are, and served from this machine. For a
+	 * tab, and for a browser, which opens the same page outside VS Code (where it has no DSNR to comment through).
+	 */
+	async address({ records, projectId, name }: Review & { records: string }): Promise<string> {
+		const path = reviewPath(projectId, name);
 		this.deps.build(records);
-		const base = await this.deps.serve();
+		return `${await this.deps.serve()}${path}`;
+	}
+
+	async open({ records, ...review }: Review & { records: string }): Promise<void> {
+		const src = await this.address({ records, ...review });
 		const open = this.tabs.get(review.projectId);
 		const shown = open ?? this.make(review);
 		shown.review = review;
 		shown.panel.title = review.title;
-		shown.panel.webview.html = reviewPage({ src: `${base}${path}`, title: review.title, nonce: newNonce() });
+		shown.panel.webview.html = reviewPage({ src, title: review.title, nonce: newNonce() });
 		// A tab already open is brought forward; a new one opens in front.
 		if (open) shown.panel.reveal();
 	}
