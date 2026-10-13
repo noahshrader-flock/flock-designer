@@ -1,12 +1,13 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { alias } from './alias.config';
+import { pageCode } from './pageCode.vite';
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import { resolve } from 'node:path';
 
 export default defineConfig({
 	main: {
-		plugins: [externalizeDepsPlugin()],
+		plugins: [externalizeDepsPlugin(), pageCode()],
 		build: { rollupOptions: { input: resolve(__dirname, 'src/main/index.ts') } },
 	},
 	preload: {

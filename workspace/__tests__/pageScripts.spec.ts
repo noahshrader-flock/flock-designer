@@ -602,3 +602,25 @@ describe('choosing what a pin attaches to', () => {
 		expect(layers(w).every((l) => l.style.visibility === 'hidden')).toBe(true);
 	});
 });
+
+describe('the scripts on the page', () => {
+	it('leave nothing on the page’s window but the hooks the app calls them by', async () => {
+		const w = page(CARD);
+		const before = new Set(Object.keys(w));
+		const picked = w.eval(SINGLE_PAGE + PICK_SCRIPT) as Promise<unknown>;
+		click(w, w.document.querySelector('button')!);
+		await picked;
+		w.eval(
+			resolveScript(
+				[{ id: 1, number: 1, anchor: { route: '/', selector: 'button', nearbyText: 'Save', viewport: { width: 1, height: 1 }, commit: '' } }],
+				'n',
+			),
+		);
+		await w.eval(layerVisibleScript(false));
+		expect(
+			Object.keys(w)
+				.filter((k) => !before.has(k))
+				.sort(),
+		).toEqual(['__fdCancelPick', '__fdMarkers', '__fdSinglePage']);
+	});
+});

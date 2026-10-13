@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
 import { alias } from './alias.config';
+import { pageCode } from './pageCode.vite';
 import { defineConfig } from 'vite';
 
 /**
@@ -11,7 +12,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	root: __dirname,
 	publicDir: false,
-	plugins: [react(), tailwindcss()],
+	plugins: [react(), tailwindcss(), pageCode()],
 	resolve: { alias },
 	logLevel: 'warn',
 	build: {

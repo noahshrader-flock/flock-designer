@@ -26,7 +26,7 @@ export const statesOf = (html: string): string[] => {
  * The state a comment was made in, from the query it recorded (`anchor.state`): the state's name, or `null` for the
  * state the page opens in, whether asked for by name (`?state=default`, as the bars prototypes once drew wrote it) or
  * not at all. Anything else (a real app's query) is given back as it was. The page scripts compare states by the same
- * rule (`pageScripts.ts`).
+ * rule (`page/helpers.ts`).
  */
 export const stateOfQuery = (query: string, states: string[]): string | null => {
 	if (query === '') return null;
