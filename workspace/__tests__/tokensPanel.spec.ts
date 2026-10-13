@@ -242,6 +242,35 @@ describe('a set', () => {
 	});
 });
 
+describe('the color views switch', () => {
+	const toggle = () => document.querySelector('[aria-label="Color view"]') as HTMLElement;
+
+	it('is two icons at the left of the search, Semantic pressed first, with no words on them', async () => {
+		await show();
+		const bar = document.querySelector('[data-color-search]') as HTMLElement;
+		expect(bar.firstElementChild).toBe(toggle());
+		expect(bar.contains(search('Color'))).toBe(true);
+		const [semantic, palette] = [...toggle().querySelectorAll('button')];
+		expect([semantic?.getAttribute('aria-label'), palette?.getAttribute('aria-label')]).toEqual(['Semantic', 'Palette']);
+		expect([semantic?.textContent, palette?.textContent]).toEqual(['', '']);
+		expect(semantic?.getAttribute('data-state')).toBe('on');
+		expect(palette?.getAttribute('data-state')).toBe('off');
+		await choose('Palette');
+		expect(palette?.getAttribute('data-state')).toBe('on');
+		await choose('Palette');
+		expect(palette?.getAttribute('data-state')).toBe('on'); // pressing the one shown leaves it shown
+	});
+
+	it('names each in a tooltip', async () => {
+		await show();
+		for (const name of ['Semantic', 'Palette']) {
+			await act(async () => void button(name).focus());
+			expect(document.querySelector('[data-slot="tooltip-content"]')?.textContent).toBe(name);
+			await act(async () => void button(name).blur());
+		}
+	});
+});
+
 describe('searching', () => {
 	it('is the app’s own search box, with its icon, as on the Projects screen', async () => {
 		await show();

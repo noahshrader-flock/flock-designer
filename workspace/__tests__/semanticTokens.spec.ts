@@ -72,7 +72,7 @@ const open = async (path: string) => {
 describe('the two views of Color', () => {
 	it('start on Semantic, with the palette a press away', async () => {
 		await show();
-		expect(views().map((v) => [v.textContent, v.getAttribute('aria-checked')])).toEqual([
+		expect(views().map((v) => [v.getAttribute('aria-label'), v.getAttribute('aria-checked')])).toEqual([
 			['Semantic', 'true'],
 			['Palette', 'false'],
 		]);

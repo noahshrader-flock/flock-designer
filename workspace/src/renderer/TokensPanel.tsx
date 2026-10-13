@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 import { NoMatches } from './NoMatches';
 import { SemanticColors } from './SemanticColors';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
+import { PaletteIcon, TagsIcon } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 /**
  * The library's tokens, in the panel at the right of the Design System tab (T2 and T3 of the design system plan): the
@@ -101,6 +103,12 @@ export const Sets = ({ tokens, noteFor }: { tokens: DesignToken[]; noteFor?: (to
 	</div>
 );
 
+/** The two views of a color category, as the icons that switch between them: the roles, and the palette they are made from. */
+const VIEWS = [
+	{ value: 'semantic', label: 'Semantic', Icon: TagsIcon },
+	{ value: 'palette', label: 'Palette', Icon: PaletteIcon },
+] as const;
+
 /** The views of a category drawn as swatches: the roles by theme, and the palette they are made from. */
 export type ColorView = 'semantic' | 'palette';
 
@@ -185,22 +193,33 @@ const TokensTab = ({
 	}, [shownView]);
 	return (
 		<div ref={top} className="flex flex-col gap-3 pt-4">
-			{choose && (
-				<ToggleGroup
-					type="single"
-					variant="outline"
-					spacing={0}
-					fullWidth
-					aria-label={`${category} view`}
-					value={view}
-					// Pressing the one shown would unpress it, leaving none shown: it stays.
-					onValueChange={(next) => (next === 'semantic' || next === 'palette') && onView(next)}
-				>
-					<ToggleGroupItem value="semantic">Semantic</ToggleGroupItem>
-					<ToggleGroupItem value="palette">Palette</ToggleGroupItem>
-				</ToggleGroup>
-			)}
-			<SearchField label={`Search ${category.toLowerCase()}`} value={query} onChange={onQuery} />
+			{/* The views at the left of the search, as List and Grid are on the screens that have both. */}
+			<div data-color-search className="flex items-center gap-1.5">
+				{choose && (
+					<ToggleGroup
+						type="single"
+						variant="outline"
+						spacing={0}
+						aria-label={`${category} view`}
+						value={view}
+						// Pressing the one shown would unpress it, leaving none shown: it stays.
+						onValueChange={(next) => (next === 'semantic' || next === 'palette') && onView(next)}
+					>
+						{VIEWS.map(({ value, label, Icon }) => (
+							<Tooltip key={value}>
+								{/* The item outside the trigger: the trigger's own data-state (open or closed) would replace the pressed one. */}
+								<ToggleGroupItem value={value} aria-label={label} asChild>
+									<TooltipTrigger>
+										<Icon />
+									</TooltipTrigger>
+								</ToggleGroupItem>
+								<TooltipContent side="bottom">{label}</TooltipContent>
+							</Tooltip>
+						))}
+					</ToggleGroup>
+				)}
+				<SearchField label={`Search ${category.toLowerCase()}`} value={query} onChange={onQuery} className="min-w-0 flex-1" />
+			</div>
 			{shown.length === 0 ? (
 				<NoMatches thing="token" search={query} onClear={() => onQuery('')} />
 			) : shownView === 'semantic' ? (
