@@ -1,5 +1,6 @@
 import type { Project } from '../../src/shared/domain/projects';
 import { plural } from '../../src/shared/plural';
+import { useCover } from '../../src/renderer/useCover';
 import { type Review, reviewsOf } from '../src/messages';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
@@ -9,6 +10,16 @@ import { Row } from './ui/Row';
 
 /** What a project has, in a line: its iterations, and its folder when it is in one. */
 const meta = (p: Project) => [plural(p.iterations.length, 'iteration'), p.folder].filter(Boolean).join(' · ');
+
+/** A project's picture, its newest prototype's (`useCover`); its place kept for one until there is one. */
+const Picture = ({ project }: { project: Project }) => {
+	const { picture } = useCover(project);
+	return picture ? (
+		<img data-part="picture" alt="" className="picture" src={picture} />
+	) : (
+		<span data-part="picture" aria-hidden="true" className="picture" />
+	);
+};
 
 /** The projects as the core read them: the list (null while it is still reading), or what went wrong. */
 export interface ProjectsRead {
@@ -64,7 +75,7 @@ export const Projects = ({
 						return (
 							<Row
 								key={p.id}
-								start={<span data-part="picture" aria-hidden="true" className="picture" />}
+								start={<Picture project={p} />}
 								name={p.title}
 								meta={meta(p)}
 								end={open > 0 ? <Badge count={open} label={plural(open, 'open comment')} /> : undefined}

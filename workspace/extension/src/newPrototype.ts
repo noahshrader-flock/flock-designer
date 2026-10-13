@@ -34,8 +34,8 @@ export interface NewPrototypeDeps extends AgentWorkDeps {
 	ask: Ask;
 	/** A warning with what can be done about it; the action pressed, or undefined. */
 	choose: (message: string, actions: string[]) => Promise<string | undefined>;
-	/** Told once it is made, before it is built, so the projects list shows it while it is. */
-	onMade: () => void;
+	/** Told when the projects changed: once it is made, so the list shows it while it is built, and once it is built. */
+	onChanged: () => void;
 	openReview: (review: Review) => Promise<void>;
 	/** Answers the command was given (`readGiven`), so only what is not given is asked. */
 	given?: Given;
@@ -179,7 +179,7 @@ export const newPrototype = async (deps: NewPrototypeDeps): Promise<void> => {
 	const { root, branch } = valueOf(await api.readCheckout(product.root));
 	if (branch === null) throw new Error('The product is not on a branch: check one out, then start again.');
 	const made = valueOf(await api.createPrototype(slugify(title), title.trim(), task.trim(), { root, branch }, folder));
-	deps.onMade();
+	deps.onChanged();
 	const iteration = toProjectIteration(made);
 	const project: Project = { id: made.projectId, title: title.trim(), folder, records: [], iterations: [iteration], people: [] };
 	await build(deps, project, task.trim());
@@ -208,6 +208,7 @@ const build = async (deps: NewPrototypeDeps, project: Project, task: string): Pr
 	if (stopped) return;
 	// Said as any failure is; its log is already beside the editor.
 	if (failed !== null) throw new Error(`${project.title} was not built: ${failed}`);
+	deps.onChanged();
 	const review = reviewsOf(project)[0];
 	if (opened !== null && review) await deps.openReview(review);
 };

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { Context } from '../../src/main/services/findContext';
 import { useWorkspace } from '../../src/renderer/useWorkspace';
-import type { SignInState } from '../../src/shared/contract';
+import type { MadeCover, SignInState } from '../../src/shared/contract';
+import { withCovers } from '../../src/shared/projectList';
 import { type Catalog, DesignSystem } from './DesignSystem';
 import { onHost, workspace } from './host';
 import { Projects, type ProjectsRead } from './Projects';
@@ -83,6 +84,15 @@ export const Panel = () => {
 	}, []);
 	const login = account.state === 'signedIn' ? account.user.login : null;
 	const read = useWorkspace(() => workspace().listProjects(), [context?.product ?? null, login, changes], { enabled: context?.product != null });
+	// With the list read: pictures for the prototypes built here that have none current, taken in once made, as the app does.
+	const [made, setMade] = useState<MadeCover[]>([]);
+	useEffect(() => {
+		if (read.value === null) return;
+		void workspace()
+			.ensureCovers()
+			.then((r) => r.ok && r.value.length > 0 && setMade((now) => [...now, ...r.value]));
+	}, [read.value]);
+	const projects = read.value === null ? null : withCovers(read.value, made);
 	return (
 		<PanelView
 			tab={tab}
@@ -92,7 +102,7 @@ export const Panel = () => {
 			}}
 			account={account}
 			context={context}
-			projects={{ value: read.value, error: read.error }}
+			projects={{ value: projects, error: read.error }}
 			onOpen={(review) => vscode().postMessage({ type: 'open-review', ...review })}
 			onNew={() => vscode().postMessage({ type: 'new-prototype' })}
 			onLocate={() => vscode().postMessage({ type: 'locate-design-system' })}

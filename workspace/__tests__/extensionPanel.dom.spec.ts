@@ -184,6 +184,18 @@ describe('Projects', () => {
 		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' });
 	});
 
+	it('draws each project’s picture: those built here are made once the list is read, then each is read by its name', async () => {
+		await showOpen();
+		expect(rows()[0]!.querySelector('img')).toBeNull();
+		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2-i1', cover: 'abc123def456' }]);
+		const asked = sent.filter((m) => m.name === 'projectCover').at(-1);
+		expect(asked?.args).toEqual(['alert-history', 'v2-i1', 'abc123def456']);
+		await answer('projectCover', 'data:image/jpeg;base64,AAAA');
+		expect(rows()[0]!.querySelector('[data-part="picture"]')?.getAttribute('src')).toBe('data:image/jpeg;base64,AAAA');
+		// A project with no picture keeps its place for one.
+		expect(rows()[1]!.querySelector('[data-part="picture"]')?.tagName).toBe('SPAN');
+	});
+
 	it('says, signed out, that the list is this machine’s', async () => {
 		await showOpen();
 		expect(body().querySelector('.note')?.textContent).toBe("These are the projects on this machine. Sign in to see your team's too.");

@@ -76,7 +76,7 @@ const world = (more: { answers?: (string | undefined)[]; api?: Record<string, un
 			await task((m: string) => void said.push(m));
 		}),
 		log: { start: vi.fn(), line: (text) => void logged.push(text) },
-		onMade: vi.fn(),
+		onChanged: vi.fn(),
 		openReview: vi.fn(async () => undefined),
 		pollMs: 0,
 	};
@@ -88,7 +88,8 @@ describe('starting a prototype from VS Code', () => {
 		const { deps, api, said } = world({ answers: ['Alert history', 'Explore it.', 'Maps'] });
 		await newPrototype(deps);
 		expect(api.createPrototype).toHaveBeenCalledWith('alert-history', 'Alert history', 'Explore it.', { root: '/p', branch: 'main' }, 'Maps');
-		expect(deps.onMade).toHaveBeenCalled();
+		// Once made, and once built.
+		expect(deps.onChanged).toHaveBeenCalledTimes(2);
 		expect(api.buildPrototype).toHaveBeenCalledWith('alert-history', 'v1-i1', 'Explore it.');
 		expect(api.savePrototype).toHaveBeenCalled();
 		expect(said[0]).toBe('Building Alert history');

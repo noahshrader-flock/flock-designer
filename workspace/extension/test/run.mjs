@@ -47,14 +47,15 @@ writeFileSync(join(product, '.gitignore'), 'node_modules\n');
 mkdirSync(join(product, 'node_modules/x'), { recursive: true });
 writeFileSync(join(product, 'node_modules/x/package.json'), JSON.stringify({ name: 'x', version: '1.0.0' }));
 for (const m of ['react', 'react-dom', 'scheduler']) symlinkSync(join(extension, '../node_modules', m), join(product, 'node_modules', m));
-// Claude Code, standing in: signed in, and a run writes the page it was asked for where it runs, then says it is done.
+// Claude Code, standing in: signed in, and a run writes the page it was asked for where it runs (with enough on it to
+// be pictured), then says it is done.
 const bin = join(base, 'bin');
 mkdirSync(bin);
 writeFileSync(
 	join(bin, 'claude'),
 	`#!/bin/sh
 if [ "$1" = auth ]; then echo '{"loggedIn":true}'; exit 0; fi
-printf '%s\n' 'export default function Page() { return <main><h1>Made here</h1></main>; }' > v1-i1.tsx
+printf '%s\n' 'export default function Page() { return <main><h1 style={{ background: "#123", color: "#fff", padding: 160 }}>Made here</h1></main>; }' > v1-i1.tsx
 echo '{"type":"result","subtype":"success","result":"Built it."}'
 `,
 );

@@ -29,6 +29,7 @@
 		"src/renderer/runPrototypeBuild.ts",
 		"src/renderer/localBuild.ts",
 		"src/renderer/address.ts",
+		"src/renderer/useCover.ts",
 		"src/renderer/workspace.d.ts"
 	]
 }

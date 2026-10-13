@@ -81,7 +81,7 @@ describe('VS Code’s ports', () => {
 
 	it('are VS Code’s own: its folder picker, its messages, its links, its clipboard, its reveal', async () => {
 		const v = fake();
-		const ports = vscodePorts(v as never);
+		const ports = vscodePorts(v as never, { draw: vi.fn(), scan: vi.fn(), measure: vi.fn() });
 		expect(await ports.chooseFolder({ title: 'Locate design system' })).toBe('/picked');
 		expect(v.window.showOpenDialog.mock.calls[0]?.[0]).toMatchObject({
 			title: 'Locate design system',
@@ -96,9 +96,9 @@ describe('VS Code’s ports', () => {
 		expect(v.commands.executeCommand).toHaveBeenCalledWith('revealFileInOS', { fsPath: '/a' });
 	});
 
-	it('say what is not built yet, rather than failing quietly', async () => {
-		const ports = vscodePorts(fake() as never);
-		await expect(ports.headless.draw('http://127.0.0.1/x')).rejects.toThrow(/later update/);
+	it('draw and check out of sight with the headless browser they are given', () => {
+		const headless = { draw: vi.fn(), scan: vi.fn(), measure: vi.fn() };
+		expect(vscodePorts(fake() as never, headless).headless).toBe(headless);
 	});
 });
 

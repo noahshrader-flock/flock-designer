@@ -238,6 +238,11 @@ as a build does (a notification with Stop, its log beside the editor) and then s
 The page listens for DSNR only when it is served from this machine and framed, and takes only a VS Code webview that
 says hello; the published site is unchanged. Each project's reviews share one tab.
 
+**Pictures and the accessibility check:** with no hidden windows, a prototype's picture and its accessibility check are
+drawn by the browser already on the machine (Chrome, Edge or Chromium, or `CHROME_BIN`), headless, through
+`puppeteer-core`, which downloads no browser of its own (`chromeHeadless.ts`); a machine with none is told what to
+install. The panel's rows show the pictures, made once the list is read, as the app makes them.
+
 **Sync and share:** whether the person's work is synced is in VS Code's status bar (Synced, Syncing, Not synced);
 pressing it shows what is held back and why, and Sync now. A review tab's title bar opens its page on the published site,
 or copies its link; when it is not there yet, it says why and offers Publish.

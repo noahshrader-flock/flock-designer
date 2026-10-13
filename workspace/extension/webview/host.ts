@@ -16,9 +16,17 @@ export const onHost = (listener: (message: HostMessage) => void): (() => void) =
 };
 
 let api: WorkspaceApi | undefined;
-/** The window's API in the panel, over the extension's messages: made once, when first used. */
-export const workspace = (): WorkspaceApi =>
-	(api ??= connectWorkspace(
-		(m) => vscode().postMessage(m),
-		(l) => onHost(l),
-	));
+/**
+ * The window's API in the panel, over the extension's messages: made once, when first used, and kept where the app keeps
+ * it (`window.workspace`), so the app's own hooks (`useCover`) reach it as they do in the app.
+ */
+export const workspace = (): WorkspaceApi => {
+	if (!api) {
+		api = connectWorkspace(
+			(m) => vscode().postMessage(m),
+			(l) => onHost(l),
+		);
+		Object.defineProperty(window, 'workspace', { value: api, configurable: true });
+	}
+	return api;
+};

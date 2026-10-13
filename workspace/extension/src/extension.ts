@@ -129,7 +129,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				choose: vscodeChoose,
 				progress: vscodeProgress,
 				log: agentLog,
-				onMade: () => panels.post({ type: 'projects-changed' }),
+				onChanged: () => panels.post({ type: 'projects-changed' }),
 				openReview,
 			}).catch((err: unknown) => {
 				failed(err);

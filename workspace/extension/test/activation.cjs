@@ -1,5 +1,7 @@
 // The activation test, run inside VS Code (`npm run extension:test`): DSNR as a person meets it, on a throwaway world.
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const vscode = require('vscode');
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -48,5 +50,8 @@ exports.run = async () => {
 	// A prototype is started, built by the agent (standing in), saved and opened for review: New prototype, given its answers.
 	await vscode.commands.executeCommand('dsnr.newPrototype', { title: 'Made here', task: 'Show a heading.', folder: null });
 	await until('the new prototype opening', () => tabs().includes('Made here · V1 · I1'), 60000);
-	console.log('dsnr-test: activated; its commands are there; Fixture · V1 · I1 opened for review; Made here was started, built and opened');
+	// Its picture, drawn by the browser on this machine once the panel lists it built, and kept in the design repository.
+	const covers = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '../flock-designer/projects/made-here/covers');
+	await until('its picture being drawn', () => fs.existsSync(covers) && fs.readdirSync(covers).some((f) => f.endsWith('.jpg')), 30000);
+	console.log('dsnr-test: activated; its commands are there; Fixture · V1 · I1 opened for review; Made here was started, built, opened and pictured');
 };
