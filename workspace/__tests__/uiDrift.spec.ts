@@ -27,6 +27,7 @@ const PINNED: [file: string, what: string, why: string][] = [
 	['alert.tsx', 'warning:', 'work held back'],
 	['alert.tsx', 'success:', 'something finished and did what was asked'],
 	['alert.tsx', 'pr-28', 'room for a Try again in the action slot'],
+	['alert.tsx', 'variant === "destructive" ? "alert" : "status"', 'only an alert that says something went wrong interrupts'],
 	['badge.tsx', 'success:', 'a success badge'],
 	['avatar.tsx', '"2xs"', 'the small avatars on cards and comments'],
 	['slider.tsx', '"aria-label": label', 'the thumb is named, since it is what is focused'],

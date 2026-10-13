@@ -34,7 +34,7 @@ export const CommentControl = ({
 		<Button
 			variant={listOpen ? 'default' : 'outline'}
 			aria-pressed={listOpen}
-			aria-label="Show all comments"
+			aria-label={comments.total > 0 ? `Show all comments (${comments.total})` : 'Show all comments'}
 			disabled={disabled}
 			title={disabled ? undefined : comments.total > 0 ? `All comments (${comments.total})` : 'All comments'}
 			onClick={onToggleList}

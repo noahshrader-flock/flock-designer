@@ -87,7 +87,7 @@ const openApp = async (address?: { iteration: string }) => {
 };
 
 const sidebar = async () => {
-	await press(button('Show all comments'));
+	await press(button(/^Show all comments/));
 	await settle();
 };
 const pinsIn = (doc: Document) => doc.querySelector('[data-fd-layer="pins"]')?.textContent ?? '';
@@ -144,7 +144,7 @@ describe('the round trip, through one GitHub', () => {
 		page = await openPage();
 		await settle();
 		expect(pinsIn(page.doc)).toBe('');
-		await press(button('Show all comments'));
+		await press(button(/^Show all comments/));
 		await settle();
 		expect(cardFor('Bigger title').textContent).toContain('Resolved');
 	});
@@ -153,7 +153,7 @@ describe('the round trip, through one GitHub', () => {
 		const page = await openPage();
 		await commentOnPage(page.doc, 'h1', 'Keep this');
 		await commentOnPage(page.doc, '[data-e2e-ref="clear-filter-button"]', 'Never mind');
-		await press(button('Show all comments'));
+		await press(button(/^Show all comments/));
 		await settle();
 		await press(menuItem(await openMenu(button('Comment actions', cardFor('Never mind'))), 'Delete'));
 		await press(button('Delete', cardFor('Never mind')));
@@ -180,7 +180,7 @@ describe('the round trip, through one GitHub', () => {
 
 		page = await openPage();
 		await settle();
-		await press(button('Show all comments'));
+		await press(button(/^Show all comments/));
 		await settle();
 		expect(cardFor('Remove this').textContent).toContain('Resolved');
 		expect(cardFor('Remove this').textContent).toContain('The agent addressed this in V1 · I2');

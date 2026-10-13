@@ -27,7 +27,7 @@ export const MoreMenu = ({
 	<DropdownMenu>
 		<DropdownMenuTrigger asChild>
 			<Button size={size} variant="ghost" aria-label={label} disabled={disabled} className={className}>
-				{busy ? <Spinner /> : <EllipsisVerticalIcon />}
+				{busy ? <Spinner aria-hidden /> : <EllipsisVerticalIcon />}
 			</Button>
 		</DropdownMenuTrigger>
 		<DropdownMenuContent align="end" className="w-auto">

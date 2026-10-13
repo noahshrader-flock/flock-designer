@@ -69,7 +69,7 @@ export const TopNav = ({
 						<DropdownMenuTrigger asChild>
 							<Button variant="ghost" className="app-no-drag h-auto gap-3 py-1 font-normal">
 								<Avatar size="sm">
-									<AvatarImage src={user.avatarUrl ?? undefined} alt={user.name ?? user.login} />
+									<AvatarImage src={user.avatarUrl ?? undefined} alt="" />
 									<AvatarFallback>{(user.name ?? user.login).charAt(0).toUpperCase()}</AvatarFallback>
 								</Avatar>
 								{user.name ?? user.login}

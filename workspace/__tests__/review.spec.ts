@@ -47,7 +47,7 @@ afterEach(async () => {
 });
 
 const sidebar = async () => {
-	await press(button('Show all comments'));
+	await press(button(/^Show all comments/));
 	await settle();
 };
 /** The pins the screen last asked the page to draw. */
@@ -70,7 +70,7 @@ describe('reading comments', () => {
 			[2, 2, true],
 		]);
 		// The count is of open comments; resolved ones stay listed, marked, and keep their number.
-		expect(button('Show all comments').textContent).toBe('2');
+		expect(button(/^Show all comments/).textContent).toBe('2');
 		await sidebar();
 		expect(document.body.textContent).toContain('Comments (2)');
 		expect(cards()).toHaveLength(3);
@@ -80,7 +80,7 @@ describe('reading comments', () => {
 
 	it('says why when they cannot be read on opening, opening the sidebar to say it', async () => {
 		await open(fakeApp({ readComments: async () => fail('GitHub is down') }));
-		expect(button('Show all comments').getAttribute('aria-pressed')).toBe('true');
+		expect(button(/^Show all comments/).getAttribute('aria-pressed')).toBe('true');
 		expect(document.body.textContent).toContain('GitHub is down');
 	});
 

@@ -1,18 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PublishStatus as Status } from '../shared/contract';
 import { ProblemList, ProblemsDialog } from './ProblemsDialog';
 
 /**
  * Whether the person's work is synced, said where they will see it. Syncing happens by itself, so this only reports: when
  * something could not be published, a button beside Sync (`PublishProblems`) that says so and, pressed, names what and why.
+ * What it gives is what is shown (`shownStatus`): what was held is kept here through the next run, as state, so nothing
+ * is written while the button is drawn.
  */
 export const usePublishStatus = (): [Status, (s: Status) => void] => {
-	const [status, setStatus] = useState<Status>({ state: 'unavailable' });
+	const [{ current, lastHeld }, setSeen] = useState<{ current: Status; lastHeld: Status | null }>({
+		current: { state: 'unavailable' },
+		lastHeld: null,
+	});
+	const set = (next: Status) =>
+		setSeen((seen) => ({ current: next, lastHeld: next.state === 'working' ? seen.lastHeld : next.state === 'held' ? next : null }));
 	useEffect(() => {
-		void window.workspace.publishStatus().then((r) => r.ok && setStatus(r.value));
-		return window.workspace.onPublishStatus(setStatus);
+		void window.workspace.publishStatus().then((r) => r.ok && set(r.value));
+		return window.workspace.onPublishStatus(set);
 	}, []);
-	return [status, setStatus];
+	return [shownStatus(current, lastHeld), set];
 };
 
 /**
@@ -27,10 +34,7 @@ export const shownStatus = (current: Status, lastHeld: Status | null): Status =>
  * What is held back from syncing, as a small ghost button beside Sync that opens a dialog naming each thing, why, and the
  * files it is about, one to a line. Nothing at all when everything is synced, or there is nothing to sync from here.
  */
-export const PublishProblems = ({ status: current }: { status: Status }) => {
-	const lastHeld = useRef<Status | null>(null);
-	const status = shownStatus(current, lastHeld.current);
-	if (current.state !== 'working') lastHeld.current = current.state === 'held' ? current : null;
+export const PublishProblems = ({ status }: { status: Status }) => {
 	if (status.state !== 'held' || status.problems.length === 0) return null;
 	return (
 		<ProblemsDialog label="Some work isn’t synced" description="This was held back, and goes up on the next sync once what is in the way is cleared.">

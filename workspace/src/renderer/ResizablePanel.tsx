@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import { PANEL_STEP, type PanelWidths, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
+import { PANEL_MIN, PANEL_STEP, type PanelWidths, clampPanelWidth, loadPanelWidth, panelMax, savePanelWidth } from './panelWidth';
 import { cn } from '@/lib/utils';
 
 /**
@@ -73,6 +73,8 @@ export const ResizablePanel = ({
 				aria-orientation="vertical"
 				aria-label={label}
 				aria-valuenow={width}
+				aria-valuemin={PANEL_MIN}
+				aria-valuemax={panelMax(window.innerWidth, panel)}
 				tabIndex={0}
 				onPointerDown={start}
 				onPointerMove={move}

@@ -121,7 +121,7 @@ describe('the states of the page', () => {
 		});
 		const { frame } = await withStates(['default', 'panel']);
 		await settle();
-		await press(button('Show all comments'));
+		await press(button(/^Show all comments/));
 		await settle();
 		const card = cards().find((c) => c.textContent?.includes('On the panel')) as HTMLElement;
 		await press(button('Show in Panel', card));
@@ -156,7 +156,7 @@ describe('signing in', () => {
 	it('forgets the token on signing out', async () => {
 		saveToken('good-token');
 		await open();
-		await press(button('Show all comments'));
+		await press(button(/^Show all comments/));
 		await settle();
 		await press(button('Sign out'));
 		await settle();
@@ -189,8 +189,8 @@ describe('commenting on the page', () => {
 
 		// The numbered pin in the prototype, and the card in the side panel.
 		expect(doc.querySelector('[data-fd-layer="pins"]')?.textContent).toContain('1');
-		expect(button('Show all comments').textContent).toBe('1');
-		await press(button('Show all comments'));
+		expect(button(/^Show all comments/).textContent).toBe('1');
+		await press(button(/^Show all comments/));
 		await settle();
 		expect(cards().map((c) => c.textContent)).toEqual([expect.stringContaining('Make this primary')]);
 	});
@@ -198,7 +198,7 @@ describe('commenting on the page', () => {
 	it('resolves a comment from its card, taking its pin off the prototype', async () => {
 		const { doc } = await open();
 		await commentOnPage(doc, 'h1', 'Bigger');
-		await press(button('Show all comments'));
+		await press(button(/^Show all comments/));
 		await settle();
 		await press(menuItem(await openMenu(button('Comment actions')), 'Resolve'));
 		await settle();

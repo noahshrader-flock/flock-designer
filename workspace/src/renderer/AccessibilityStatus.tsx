@@ -88,7 +88,7 @@ export const AccessibilityStatus = ({ projectId, name, opened }: { projectId: st
 	if (check.state === 'checking')
 		return (
 			<Button variant="ghost" size="icon" disabled aria-label="Checking accessibility…">
-				<Spinner />
+				<Spinner aria-hidden />
 			</Button>
 		);
 	// Why it could not be checked is said where it can be read: a disabled button would never show it.

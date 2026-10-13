@@ -31,7 +31,9 @@ function Alert({
   return (
     <div
       data-slot="alert"
-      role="alert"
+      // Changed from stock, which makes every alert assertive: only one that says something went wrong interrupts; a
+      // notice, a warning or a success is a status, read when the person gets to it.
+      role={variant === "destructive" ? "alert" : "status"}
       className={cn(alertVariants({ variant }), className)}
       {...props}
     />
