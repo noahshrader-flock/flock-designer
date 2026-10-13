@@ -1,5 +1,5 @@
 import type { MarkerRequest, MarkerResult } from '../shared/contract';
-import { INK, asState, collapse, describe, doc, hoverOutline, pageState, place, route, underlying } from './helpers';
+import { INK, asState, collapse, describe, hoverOutline, pageState, place, route, underlying } from './helpers';
 import { MESSAGE_PREFIX } from '../shared/pinMessage';
 
 interface Placed {
@@ -32,7 +32,7 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 	window.__fdMarkers?.stop();
 	// The pins' own layer, not the first of the app's layers: comment mode keeps an outline on the page too, and a redraw
 	// that took that one left the old pins behind (a deleted comment's pin stayed on the page).
-	doc.querySelector('[data-fd-layer="pins"]')?.remove();
+	document.querySelector('[data-fd-layer="pins"]')?.remove();
 	const say = (msg: Record<string, unknown>) => console.debug(MESSAGE_PREFIX + JSON.stringify({ ...msg, n: nonce }));
 	const results: MarkerResult[] = [];
 	const placed: Placed[] = [];
@@ -51,7 +51,7 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 		let el: Element | null = null;
 		let state: MarkerResult['state'] = 'found';
 		try {
-			const hits = doc.querySelectorAll(a.selector);
+			const hits = document.querySelectorAll(a.selector);
 			if (hits.length === 1) el = hits[0] ?? null;
 		} catch {
 			// A selector the page cannot read is one that matches nothing.
@@ -67,7 +67,7 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 			const head = want.slice(0, Math.max(12, Math.min(40, want.length)));
 			let best: Element | null = null;
 			let bestLen = Infinity;
-			for (const candidate of doc.body ? doc.body.querySelectorAll('*') : []) {
+			for (const candidate of document.body ? document.body.querySelectorAll('*') : []) {
 				const t = collapse(candidate.textContent);
 				if (t.length === 0) continue;
 				// Either side may be the longer: the stored text is a prefix of the live text, or the element's text was
@@ -95,7 +95,7 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 		return results;
 	}
 
-	const layer = doc.createElement('div');
+	const layer = document.createElement('div');
 	layer.setAttribute('data-fd-layer', 'pins');
 	layer.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;z-index:2147483647;pointer-events:none';
 
@@ -121,11 +121,11 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 	// A teardrop pin whose tip is the point that was clicked. The wrapper has no size and sits exactly on that point; the
 	// pin hangs above it.
 	for (const p of placed) {
-		const m = doc.createElement('div');
+		const m = document.createElement('div');
 		m.style.cssText = 'position:fixed;width:0;height:0;pointer-events:none';
-		const pin = doc.createElement('div');
+		const pin = document.createElement('div');
 		pin.style.cssText = `position:absolute;left:-14px;top:-33px;width:28px;height:28px;border-radius:50% 50% 50% 0;background:${p.draft ? INK.draft : INK.pin};border:2px solid ${INK.on};box-shadow:0 2px 6px ${INK.shadow};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;pointer-events:auto;cursor:${p.movable ? 'grab' : 'pointer'}`;
-		const label = doc.createElement('span');
+		const label = document.createElement('span');
 		label.textContent = String(p.number);
 		label.style.cssText = `transform:rotate(45deg);color:${INK.on};font:700 12px/1 sans-serif;pointer-events:none`;
 		pin.appendChild(label);
@@ -189,7 +189,7 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 			pin.addEventListener('pointerup', up);
 		});
 	}
-	doc.documentElement.appendChild(layer);
+	document.documentElement.appendChild(layer);
 	positionPins();
 	window.addEventListener('scroll', positionPins, true);
 	window.addEventListener('resize', positionPins);
@@ -221,6 +221,6 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
  * earlier pin.
  */
 export const setLayersVisible = (visible: boolean): Promise<true> => {
-	for (const layer of doc.querySelectorAll<HTMLElement>('[data-fd-layer]')) layer.style.visibility = visible ? 'visible' : 'hidden';
+	for (const layer of document.querySelectorAll<HTMLElement>('[data-fd-layer]')) layer.style.visibility = visible ? 'visible' : 'hidden';
 	return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))));
 };

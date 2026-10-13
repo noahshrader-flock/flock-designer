@@ -26,8 +26,6 @@ export const INK = {
 	shadow: 'rgba(0,0,0,.45)',
 } as const;
 
-export const doc = document;
-
 export const collapse = (t: unknown): string =>
 	String(t || '')
 		.replace(/\s+/g, ' ')
@@ -35,7 +33,7 @@ export const collapse = (t: unknown): string =>
 const esc = (v: string): string => (window.CSS && CSS.escape ? CSS.escape(v) : String(v).replace(/[^\w-]/g, '\\$&'));
 const unique = (sel: string): boolean => {
 	try {
-		return doc.querySelectorAll(sel).length === 1;
+		return document.querySelectorAll(sel).length === 1;
 	} catch {
 		return false;
 	}
@@ -57,7 +55,7 @@ export const route = (): string => place(location.pathname + location.hash);
 // first being the page as it opens; that one asked for by name (?state=default, as the bars prototypes once drew wrote
 // it) is the same as no query (stateOfQuery in shared/prototypeStates says so for the app). A page with no tag is
 // compared as it is.
-const statesTag = doc.querySelector(`meta[name="${STATES_META}"]`);
+const statesTag = document.querySelector(`meta[name="${STATES_META}"]`);
 const firstState = statesTag ? String(statesTag.getAttribute('content') || '').split(',')[0] : null;
 export const asState = (q: string): string => (firstState && q === '?state=' + firstState ? '' : q);
 export const pageState = (): string => asState(location.search.slice(0, 200));
@@ -78,7 +76,7 @@ const segment = (el: Element): string => {
 /** The nearest ancestor with a stable name, which is the part of the page least likely to be rearranged. */
 const namedScope = (el: Element): Element | null => {
 	let cur = el.parentElement;
-	while (cur && cur !== doc.body && cur !== doc.documentElement) {
+	while (cur && cur !== document.body && cur !== document.documentElement) {
 		if (cur.getAttribute('data-e2e-ref')) return cur;
 		cur = cur.parentElement;
 	}
@@ -107,14 +105,14 @@ const selectorFor = (el: Element): string => {
 			if (same[i] === el) {
 				const nth = head + tag + ':nth-of-type(' + (i + 1) + ')';
 				// nth-of-type counts among siblings, not among matches, so it only means this element when it agrees.
-				if (doc.querySelectorAll(nth).length === 1 && doc.querySelector(nth) === el) return nth;
+				if (document.querySelectorAll(nth).length === 1 && document.querySelector(nth) === el) return nth;
 				break;
 			}
 		}
 	}
 	const parts: string[] = [];
 	let cur: Element | null = el;
-	while (cur && cur.nodeType === 1 && cur !== doc.documentElement) {
+	while (cur && cur.nodeType === 1 && cur !== document.documentElement) {
 		parts.unshift(segment(cur));
 		if (unique(parts.join(' > '))) return parts.join(' > ');
 		cur = cur.parentElement;
@@ -124,7 +122,7 @@ const selectorFor = (el: Element): string => {
 
 /** The page's own element at a point, ignoring this app's pins. */
 export const underlying = (x: number, y: number): Element | null => {
-	const stack = doc.elementsFromPoint ? doc.elementsFromPoint(x, y) : [];
+	const stack = document.elementsFromPoint ? document.elementsFromPoint(x, y) : [];
 	return stack.find((el) => !el.closest('[data-fd-layer]')) ?? null;
 };
 
@@ -148,7 +146,7 @@ const containers = (el: Element): string[] => {
 	const found: string[] = [];
 	const own = collapse(el.textContent).slice(0, 60);
 	let cur = el.parentElement;
-	while (cur && cur !== doc.body && cur !== doc.documentElement && found.length < 3) {
+	while (cur && cur !== document.body && cur !== document.documentElement && found.length < 3) {
 		const label = (collapse(cur.getAttribute('aria-label') || '') || headingOf(cur) || collapse(cur.getAttribute('data-e2e-ref') || '')).slice(0, 60);
 		if (label && label !== own && found.indexOf(label) < 0) found.push(label);
 		cur = cur.parentElement;
@@ -182,14 +180,14 @@ export const describe = (el: Element, x: number, y: number): CommentAnchor => {
  * it with; remove() takes it off the page again.
  */
 export const hoverOutline = () => {
-	const outline = doc.createElement('div');
+	const outline = document.createElement('div');
 	outline.setAttribute('data-fd-layer', 'hover');
 	outline.style.cssText = `position:fixed;pointer-events:none;z-index:2147483646;display:none;border:2px solid ${INK.pin};background:${INK.pinWash};border-radius:2px;box-sizing:border-box`;
-	const chip = doc.createElement('div');
+	const chip = document.createElement('div');
 	chip.setAttribute('data-fd-layer', 'hover');
 	chip.style.cssText = `position:fixed;pointer-events:none;z-index:2147483647;display:none;background:${INK.pin};color:${INK.on};font:600 11px/1.4 sans-serif;padding:2px 6px;border-radius:3px;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`;
-	doc.documentElement.appendChild(outline);
-	doc.documentElement.appendChild(chip);
+	document.documentElement.appendChild(outline);
+	document.documentElement.appendChild(chip);
 	const hide = () => {
 		outline.style.display = 'none';
 		chip.style.display = 'none';

@@ -1,5 +1,5 @@
 import type { CommentAnchor } from '../shared/contract';
-import { describe, doc, hoverOutline, underlying } from './helpers';
+import { describe, hoverOutline, underlying } from './helpers';
 
 /** Where the click landed, as `readPick` takes it. */
 type Picked = CommentAnchor & { at: { x: number; y: number }; box: { x: number; y: number; width: number; height: number } };
@@ -14,10 +14,10 @@ type Picked = CommentAnchor & { at: { x: number; y: number }; box: { x: number; 
  */
 export const pick = (): Promise<Picked | null> =>
 	new Promise((resolve) => {
-		const style = doc.createElement('style');
+		const style = document.createElement('style');
 		style.setAttribute('data-fd', 'pick');
 		style.textContent = 'html, html * { cursor: crosshair !important }';
-		doc.head.appendChild(style);
+		document.head.appendChild(style);
 
 		// What the pin will attach to is shown before the click: the element under the pointer is outlined and named. Up
 		// and Down arrows climb to its container and back, for a comment about a section and not a line. What is recorded
@@ -28,7 +28,7 @@ export const pick = (): Promise<Picked | null> =>
 		const paint = () => {
 			const el = chosen();
 			if (!el) return hover.hide();
-			const up = el.parentElement && el.parentElement !== doc.body && el.parentElement !== doc.documentElement;
+			const up = el.parentElement && el.parentElement !== document.body && el.parentElement !== document.documentElement;
 			hover.show(el, up ? '    ↑ container' : '');
 		};
 		const move = (e: MouseEvent) => {
@@ -47,11 +47,11 @@ export const pick = (): Promise<Picked | null> =>
 		const done = (value: Picked | null) => {
 			style.remove();
 			hover.remove();
-			doc.removeEventListener('click', click, true);
-			doc.removeEventListener('mousedown', swallow, true);
-			doc.removeEventListener('mouseup', swallow, true);
-			doc.removeEventListener('keydown', key, true);
-			doc.removeEventListener('mousemove', move, true);
+			document.removeEventListener('click', click, true);
+			document.removeEventListener('mousedown', swallow, true);
+			document.removeEventListener('mouseup', swallow, true);
+			document.removeEventListener('keydown', key, true);
+			document.removeEventListener('mousemove', move, true);
 			window.removeEventListener('scroll', paint, true);
 			window.__fdCancelPick = undefined;
 			resolve(value);
@@ -82,7 +82,7 @@ export const pick = (): Promise<Picked | null> =>
 				swallow(e);
 				if (e.key === 'ArrowUp') {
 					const p = chosen()?.parentElement;
-					if (p && p !== doc.body && p !== doc.documentElement) {
+					if (p && p !== document.body && p !== document.documentElement) {
 						stack.push(p);
 						paint();
 					}
@@ -93,10 +93,10 @@ export const pick = (): Promise<Picked | null> =>
 			}
 		};
 		window.__fdCancelPick = () => done(null);
-		doc.addEventListener('click', click, true);
-		doc.addEventListener('mousedown', swallow, true);
-		doc.addEventListener('mouseup', swallow, true);
-		doc.addEventListener('keydown', key, true);
-		doc.addEventListener('mousemove', move, true);
+		document.addEventListener('click', click, true);
+		document.addEventListener('mousedown', swallow, true);
+		document.addEventListener('mouseup', swallow, true);
+		document.addEventListener('keydown', key, true);
+		document.addEventListener('mousemove', move, true);
 		window.addEventListener('scroll', paint, true);
 	});
