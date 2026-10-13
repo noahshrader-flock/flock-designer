@@ -2,7 +2,7 @@ import { act, createElement, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { CommentAnchor, PickedPoint, PinEvent, Project, ProjectIteration, Result, ReviewComment, WorkspaceApi } from '../src/shared/contract';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
-import { agentRunning, projectIteration } from './fixtures';
+import { agentRunning, projectIteration, reviewComment } from './fixtures';
 
 /**
  * The review screen, rendered for real in jsdom against a fake app: every call the window can make answers, the ones
@@ -112,19 +112,14 @@ export const fakeApp = (overrides: Impl = {}) => {
 	};
 };
 
-export const comment = (id: number, body: string, more: Partial<ReviewComment> = {}): ReviewComment => ({
-	id,
-	author: 'pm',
-	authorAvatarUrl: null,
-	body,
-	createdAt: `2026-10-08T00:00:0${id % 10}Z`,
-	resolved: false,
-	addressedAt: null,
-	addressedIn: null,
-	anchor: { route: '/', selector: `#c${id}`, nearbyText: body, viewport: { width: 1, height: 1 }, commit: '' },
-	picture: null,
-	...more,
-});
+export const comment = (id: number, body: string, more: Partial<ReviewComment> = {}): ReviewComment =>
+	reviewComment({
+		id,
+		body,
+		createdAt: `2026-10-08T00:00:0${id % 10}Z`,
+		anchor: { route: '/', selector: `#c${id}`, nearbyText: body, viewport: { width: 1, height: 1 }, commit: '' },
+		...more,
+	});
 
 export const PROJECT: Project = {
 	id: 'demo',

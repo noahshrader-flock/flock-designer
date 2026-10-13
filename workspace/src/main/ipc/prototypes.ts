@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { folderName } from '../../shared/brief';
-import type { OpenedPrototype, PrototypeAddressed, PrototypeReadiness } from '../../shared/contract';
+import type { CommentRef, OpenedPrototype, PrototypeAddressed, PrototypeReadiness } from '../../shared/contract';
 import { coverPath, prototypeKey, prototypePagePath } from '../../shared/designPaths';
 import { statesOf } from '../../shared/prototypeStates';
 import { iterationLabel } from '../../shared/work';
@@ -55,30 +55,32 @@ export const registerPrototypes = (d: IpcDeps): void => {
 	 * folder, where it was built, and nothing is committed. What others commented on is never changed under them: the
 	 * service says which iteration the change goes in (`startChange`), and `finishPrototypeAddress` records and saves it.
 	 */
-	const prototypeChanges = new Map<number, { projectId: string; change: PrototypeChange }>();
+	const prototypeChanges = new Map<string, { comment: CommentRef; projectId: string; change: PrototypeChange }>();
+	/** A comment's key among them: its thread and its number, which together name one. */
+	const keyOf = (comment: CommentRef) => `${comment.thread}/${comment.id}`;
 	/**
 	 * Finishes one: a changed prototype built, recorded when new, and saved, and the comment marked with where the change
 	 * is. Run by the screen when the agent ends, and when the prototype is opened again, so a change made while the screen
 	 * was left is never stranded.
 	 */
-	const finishPrototypeChange = async (commentId: number): Promise<PrototypeAddressed> => {
-		const pending = prototypeChanges.get(commentId);
+	const finishPrototypeChange = async (comment: CommentRef): Promise<PrototypeAddressed> => {
+		const pending = prototypeChanges.get(keyOf(comment));
 		if (!pending) throw new Error('There is no change to this comment waiting to be saved.');
 		refuseWhileBusy();
-		prototypeChanges.delete(commentId);
+		prototypeChanges.delete(keyOf(comment));
 		const { projectId, change } = pending;
 		const { version, made } = await work.finishChange(projectId, change, me(), `For a comment on ${iterationLabel(change.from)}`);
 		// Either way: a run that changed nothing clears the mark an earlier one left.
-		const comment = await designRepo.threads.setAddressed(commentId, version, version === null ? null : change.target);
+		const marked = await designRepo.threads.setAddressed(comment, version, version === null ? null : change.target);
 		if (version !== null) publishInBackground(projectId, change.target);
-		return { changed: version !== null, iteration: change.target, made, comment };
+		return { changed: version !== null, iteration: change.target, made, comment: marked };
 	};
 	const finishPrototypeChanges = async (projectId: string): Promise<void> => {
 		if (agentBusy()) return;
-		for (const [commentId, pending] of [...prototypeChanges]) {
+		for (const pending of [...prototypeChanges.values()]) {
 			// One that does not build is left as it is on this machine, unrecorded: nobody is watching to be told why, and
 			// the next Address on it starts again from what people saw.
-			if (pending.projectId === projectId) await finishPrototypeChange(commentId).catch(() => undefined);
+			if (pending.projectId === projectId) await finishPrototypeChange(pending.comment).catch(() => undefined);
 		}
 	};
 	/** Pictures read this session, by path: what is at a picture's path never changes, so it is read once. */
@@ -111,7 +113,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		const voice = await work.voice();
 		return startPrototypeAgent(projectId, name, sources, prototypeBuildTask({ skill, build, sources, accessibility, voice, request }));
 	});
-	handle('addressPrototype', [arg.projectId, arg.prototypeName, arg.commentId], async (projectId, name, commentId) => {
+	handle('addressPrototype', [arg.projectId, arg.prototypeName, arg.comment], async (projectId, name, comment) => {
 		refuseWhileBusy();
 		// One left from a run whose screen was closed is finished first, or this run would start from the same copy.
 		await finishPrototypeChanges(projectId);
@@ -126,13 +128,13 @@ export const registerPrototypes = (d: IpcDeps): void => {
 			comments,
 			generatedAt: new Date(),
 		});
-		const number = chooseComment(comments, commentId);
+		const number = chooseComment(comments, comment);
 		const change = await work.startChange(projectId, name, async (it) =>
 			(it.name === name ? comments : await designRepo.threads.readComments(it.branch)).map((c) => c.author),
 		);
 		// Modeled on what the iteration it comes from was: a new one has no record of its own yet.
 		const { build, sources } = await prototypeRun(projectId, change.target, change.from.name);
-		prototypeChanges.set(commentId, { projectId, change });
+		prototypeChanges.set(keyOf(comment), { comment, projectId, change });
 		const where = whereTheChangeGoes(change, name);
 		const accessibility = await work.accessibility(projectId, change.from.name);
 		const voice = await work.voice();
@@ -143,7 +145,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 			prototypeAddressTask({ addressSkill, buildSkill, build, sources, accessibility, voice, commentsPath: exported.path, number, name, where }),
 		);
 	});
-	handle('finishPrototypeAddress', [arg.commentId], (commentId): Promise<PrototypeAddressed> => finishPrototypeChange(commentId));
+	handle('finishPrototypeAddress', [arg.comment], (comment): Promise<PrototypeAddressed> => finishPrototypeChange(comment));
 	handle('savePrototype', [arg.projectId, arg.iterationName], async (projectId, name): Promise<null> => {
 		await work.save(projectId, name);
 		publishInBackground(projectId, name);

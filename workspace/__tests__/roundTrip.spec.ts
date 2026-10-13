@@ -4,7 +4,7 @@ import { ReviewThreads } from '../src/host/reviewThreads';
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Review } from '../src/renderer/Review';
-import type { CommentAnchor, MarkerRequest } from '../src/shared/contract';
+import type { CommentAnchor, CommentRef, MarkerRequest } from '../src/shared/contract';
 import { Viewer } from '../src/viewer/Viewer';
 import { browserComments, framePage, saveToken, tokenApi } from '../src/viewer/browserAdapter';
 import { toResult } from '../src/shared/result';
@@ -66,19 +66,19 @@ const openApp = async (address?: { iteration: string }) => {
 		readComments: (_projectId: string, branch: string) => toResult(repo.readComments(branch)),
 		postComment: (projectId: string, branch: string, body: string, anchor: CommentAnchor | null) =>
 			toResult(repo.postComment(projectId, branch, body, anchor, null)),
-		resolveComment: (id: number, resolved: boolean) => toResult(repo.setResolved(id, resolved)),
-		deleteComment: (id: number) => toResult(repo.deleteComment(id).then(() => null)),
-		moveComment: (id: number, anchor: CommentAnchor) => toResult(repo.moveComment(id, anchor)),
+		resolveComment: (comment: CommentRef, resolved: boolean) => toResult(repo.setResolved(comment, resolved)),
+		deleteComment: (comment: CommentRef) => toResult(repo.deleteComment(comment).then(() => null)),
+		moveComment: (comment: CommentRef, anchor: CommentAnchor) => toResult(repo.moveComment(comment, anchor)),
 		pageShowMarkers: (items: MarkerRequest[]) => framePage(preview).showMarkers(items),
 		// Address, as the main process finishes it: the change made, and the comment marked (and resolved) where it is.
 		addressPrototype: async () => ok(agentRunning()),
 		agentStatus: async () => ok(agentFinished()),
-		finishPrototypeAddress: async (id: number) =>
+		finishPrototypeAddress: async (comment: CommentRef) =>
 			ok({
 				changed: true,
 				iteration: address?.iteration ?? 'v1-i1',
 				made: null,
-				comment: await repo.setAddressed(id, 'abc1234def56', address?.iteration ?? 'v1-i1'),
+				comment: await repo.setAddressed(comment, 'abc1234def56', address?.iteration ?? 'v1-i1'),
 			}),
 	});
 	(window as unknown as { workspace: unknown }).workspace = app.api;

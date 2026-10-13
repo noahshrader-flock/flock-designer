@@ -348,7 +348,13 @@ describe('comment threads and GitHub listing lag', () => {
 			'/repos/acme/design/issues/2/comments*': mk(2, '2026-10-05T10:00:00Z', 'This is cool'),
 			'/repos/acme/design/issues/3/comments*': mk(3, '2026-10-05T10:00:18Z', 'asdasd'),
 		});
-		expect((await new ReviewThreads(session, REF).readComments('fd/alpha/i1')).map((c) => c.body)).toEqual(['This is cool', 'asdasd']);
+		const comments = await new ReviewThreads(session, REF).readComments('fd/alpha/i1');
+		expect(comments.map((c) => c.body)).toEqual(['This is cool', 'asdasd']);
+		// Each with the thread it was read from, not the oldest of them: a host that finds a comment by its thread needs it.
+		expect(comments.map((c) => [c.thread, c.id])).toEqual([
+			[2, 2],
+			[3, 3],
+		]);
 	});
 
 	it('writes to the oldest thread when several exist', async () => {
@@ -381,7 +387,7 @@ describe('moveComment', () => {
 		const { github: session, writes } = fakeGitHub({
 			[`${COMMENT}*`]: { id: 55, user: { login: 'noah' }, created_at: 'then', body: composeBody('Make this primary', before) },
 		});
-		const moved = await new ReviewThreads(session, REF).moveComment(55, after);
+		const moved = await new ReviewThreads(session, REF).moveComment({ thread: 1, id: 55 }, after);
 		const sent = (writes[0]?.body as { body: string }).body;
 		expect(writes[0]).toMatchObject({ path: COMMENT, method: 'PATCH' });
 		expect(stripAnchor(sent)).toBe('Make this primary');
@@ -395,7 +401,7 @@ describe('moveComment', () => {
 		const { github: session, writes } = fakeGitHub({
 			[`${COMMENT}*`]: { id: 55, user: { login: 'noah' }, created_at: 't', body: composeBody('Make this primary', before, picture) },
 		});
-		await new ReviewThreads(session, REF).moveComment(55, after);
+		await new ReviewThreads(session, REF).moveComment({ thread: 1, id: 55 }, after);
 		expect(parsePicture((writes[0]?.body as { body: string }).body)).toBe(picture);
 	});
 
@@ -404,7 +410,7 @@ describe('moveComment', () => {
 		const { github: session, writes } = fakeGitHub({
 			[`${COMMENT}*`]: { id: 55, user: { login: 'noah' }, created_at: 't', body: `${composeBody('done', before)}\n<!-- resolved -->` },
 		});
-		await new ReviewThreads(session, REF).moveComment(55, after);
+		await new ReviewThreads(session, REF).moveComment({ thread: 1, id: 55 }, after);
 		expect((writes[0]?.body as { body: string }).body).toContain('<!-- resolved -->');
 	});
 });
@@ -418,7 +424,7 @@ describe('setResolved', () => {
 		const { github: session, writes } = fakeGitHub({
 			[`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body: composeBody('Make this primary', anchor) },
 		});
-		const result = await new ReviewThreads(session, REF).setResolved(70, true);
+		const result = await new ReviewThreads(session, REF).setResolved({ thread: 1, id: 70 }, true);
 		const sent = (writes[0]?.body as { body: string }).body;
 		expect(writes[0]).toMatchObject({ path: COMMENT, method: 'PATCH' });
 		expect(sent).toContain('<!-- resolved -->');
@@ -431,14 +437,14 @@ describe('setResolved', () => {
 		const { github: session } = fakeGitHub({
 			[`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body: 'Looks off <!-- resolved -->' },
 		});
-		expect((await new ReviewThreads(session, REF).setResolved(70, true)).resolved).toBe(true);
+		expect((await new ReviewThreads(session, REF).setResolved({ thread: 1, id: 70 }, true)).resolved).toBe(true);
 	});
 
 	it('reopens a resolved comment by removing the marker only', async () => {
 		const { github: session, writes } = fakeGitHub({
 			[`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body: 'Looks off\n<!-- resolved -->' },
 		});
-		await new ReviewThreads(session, REF).setResolved(70, false);
+		await new ReviewThreads(session, REF).setResolved({ thread: 1, id: 70 }, false);
 		expect((writes[0]?.body as { body: string }).body).toBe('Looks off');
 	});
 
@@ -447,7 +453,7 @@ describe('setResolved', () => {
 		const { github: session, writes } = fakeGitHub({
 			[`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body: withResolved(withAddressed('Looks off', 'abc1234', 'v1-i2'), true) },
 		});
-		await new ReviewThreads(session, REF).setResolved(70, false);
+		await new ReviewThreads(session, REF).setResolved({ thread: 1, id: 70 }, false);
 		const sent = (writes[0]?.body as { body: string }).body;
 		expect(isResolved(sent)).toBe(false);
 		expect(addressedAt(sent)).toBeNull();
@@ -456,7 +462,7 @@ describe('setResolved', () => {
 
 	it('writes nothing when the comment is already in the state asked for', async () => {
 		const { github: session, writes } = fakeGitHub({ [`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body: 'Looks off' } });
-		await new ReviewThreads(session, REF).setResolved(70, false);
+		await new ReviewThreads(session, REF).setResolved({ thread: 1, id: 70 }, false);
 		expect(writes).toEqual([]);
 	});
 
@@ -467,7 +473,7 @@ describe('setResolved', () => {
 			},
 			[COMMENT]: { id: 70, user: { login: 'pm' }, created_at: 't', body: 'x' },
 		});
-		await expect(new ReviewThreads(github, REF).setResolved(70, true)).rejects.toThrow(/not accessible/);
+		await expect(new ReviewThreads(github, REF).setResolved({ thread: 1, id: 70 }, true)).rejects.toThrow(/not accessible/);
 	});
 });
 
@@ -480,7 +486,7 @@ describe('setAddressed', () => {
 	it('resolves the comment in the same write that records the change, so its pin leaves the page at once', async () => {
 		const { isResolved, addressedAt, addressedIn } = await import('../src/shared/anchor');
 		const { github: session, writes } = fakeGitHub(comment('Remove this'));
-		await new ReviewThreads(session, REF).setAddressed(70, SHA, 'v1-i2');
+		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA, 'v1-i2');
 		expect(writes).toHaveLength(1);
 		expect(isResolved(sentBody(writes))).toBe(true);
 		expect(addressedAt(sentBody(writes))).toBe(SHA);
@@ -490,7 +496,7 @@ describe('setAddressed', () => {
 	it('resolves a comment on a branch too, which has a commit and no iteration', async () => {
 		const { isResolved, addressedAt } = await import('../src/shared/anchor');
 		const { github: session, writes } = fakeGitHub(comment('Remove this'));
-		await new ReviewThreads(session, REF).setAddressed(70, SHA);
+		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA);
 		expect(isResolved(sentBody(writes))).toBe(true);
 		expect(addressedAt(sentBody(writes))).toBe(SHA);
 	});
@@ -498,19 +504,19 @@ describe('setAddressed', () => {
 	it('writes nothing when it is already recorded and resolved', async () => {
 		const { withAddressed, withResolved } = await import('../src/shared/anchor');
 		const { github: session, writes } = fakeGitHub(comment(withResolved(withAddressed('Remove this', SHA, 'v1-i2'), true)));
-		await new ReviewThreads(session, REF).setAddressed(70, SHA, 'v1-i2');
+		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA, 'v1-i2');
 		expect(writes).toEqual([]);
 	});
 
 	it('when a run changed nothing, clears the mark and leaves open or resolved as the person had it', async () => {
 		const { isResolved, addressedAt, withAddressed } = await import('../src/shared/anchor');
 		const open = fakeGitHub(comment(withAddressed('Remove this', SHA)));
-		await new ReviewThreads(open.github, REF).setAddressed(70, null);
+		await new ReviewThreads(open.github, REF).setAddressed({ thread: 1, id: 70 }, null);
 		expect(addressedAt(sentBody(open.writes))).toBeNull();
 		expect(isResolved(sentBody(open.writes))).toBe(false);
 		// Reopened by the person since: nothing here closes it again.
 		const reopened = fakeGitHub(comment('Remove this'));
-		await new ReviewThreads(reopened.github, REF).setAddressed(70, null);
+		await new ReviewThreads(reopened.github, REF).setAddressed({ thread: 1, id: 70 }, null);
 		expect(reopened.writes).toEqual([]);
 	});
 });
@@ -610,22 +616,22 @@ describe('deleteComment', () => {
 
 	it('deletes by comment id, with a DELETE and nothing else', async () => {
 		const { github: session, writes } = fakeGitHub({ [`${COMMENT}*`]: null });
-		await new ReviewThreads(session, REF).deleteComment(70);
+		await new ReviewThreads(session, REF).deleteComment({ thread: 1, id: 70 });
 		expect(writes).toEqual([{ path: COMMENT, method: 'DELETE' }]);
 	});
 
 	it('counts a comment that is already gone as deleted, because someone else got there first', async () => {
-		await expect(new ReviewThreads(failing(404, 'Not found'), REF).deleteComment(70)).resolves.toBeUndefined();
+		await expect(new ReviewThreads(failing(404, 'Not found'), REF).deleteComment({ thread: 1, id: 70 })).resolves.toBeUndefined();
 	});
 
 	it("says who is allowed when GitHub refuses, in place of GitHub's own wording", async () => {
-		await expect(new ReviewThreads(failing(403, 'Must have admin rights to Repository.'), REF).deleteComment(70)).rejects.toThrow(
+		await expect(new ReviewThreads(failing(403, 'Must have admin rights to Repository.'), REF).deleteComment({ thread: 1, id: 70 })).rejects.toThrow(
 			/author, or someone who can write to the design repository/,
 		);
 	});
 
 	it('lets any other failure through, so a dropped connection is not mistaken for a delete', async () => {
-		await expect(new ReviewThreads(failing(502, 'Bad gateway'), REF).deleteComment(70)).rejects.toThrow('Bad gateway');
+		await expect(new ReviewThreads(failing(502, 'Bad gateway'), REF).deleteComment({ thread: 1, id: 70 })).rejects.toThrow('Bad gateway');
 	});
 });
 

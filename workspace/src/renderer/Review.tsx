@@ -1,6 +1,6 @@
 import { CloudUploadIcon, ExternalLinkIcon, FolderIcon, GitBranchIcon, PackageCheckIcon, TriangleAlertIcon, WandSparklesIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Checkout, PageStatus, Project, ProjectIteration } from '../shared/contract';
+import type { Checkout, CommentRef, PageStatus, Project, ProjectIteration } from '../shared/contract';
 import { READY_LINE } from '../shared/handoff';
 import { withState } from '../shared/prototypeStates';
 import { isPrototypeKey, prototypeKey, prototypePagePath } from '../shared/designPaths';
@@ -36,6 +36,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { DropdownMenuItem } from './ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { commentRef } from '../shared/comments';
 
 /**
  * One iteration: a thin toolbar, and the preview taking everything under it.
@@ -343,10 +344,10 @@ export const Review = ({
 	};
 
 	/** The agent is asked for one comment, from that comment's own button: never for a batch. */
-	const addressComment = async (commentId: number) => {
+	const addressComment = async (comment: CommentRef) => {
 		if (!checkout) return;
 		setAddressLog([]);
-		setAddressing(commentId);
+		setAddressing(comment.id);
 		// Typed wider than it is assigned: the compiler cannot see that the callback below runs.
 		let outcome = { kind: 'idle' } as AddressPhase;
 		const isLive = () => addressLive.current;
@@ -357,7 +358,7 @@ export const Review = ({
 		if (prototype) {
 			// A prototype has no branch. The main process says where the change went (this iteration, or its next one
 			// when others had commented on this), builds and saves it, and marks the comment with where it is.
-			await runPrototypeAddress({ api: window.workspace, projectId: project.id, name: iteration.name, commentId, isLive, onPhase });
+			await runPrototypeAddress({ api: window.workspace, projectId: project.id, name: iteration.name, comment, isLive, onPhase });
 			if (!addressLive.current) return;
 			if (outcome.kind === 'done' && outcome.prototype) {
 				comments.showChanged(outcome.prototype.comment);
@@ -366,7 +367,7 @@ export const Review = ({
 			}
 			return void load(true);
 		}
-		await runAddress({ api: window.workspace, root: checkout.root, projectId: project.id, name: iteration.name, commentId, isLive, onPhase });
+		await runAddress({ api: window.workspace, root: checkout.root, projectId: project.id, name: iteration.name, comment, isLive, onPhase });
 		if (!addressLive.current) return;
 		// A change was made. Marked on the comment itself, and resolved with it, so it survives the app closing,
 		// whoever wrote the comment can see it was acted on, and its pin does not stay behind pointing at what was
@@ -374,7 +375,7 @@ export const Review = ({
 		if (outcome.kind === 'done') {
 			// Either way: a later run that changed nothing clears the mark an earlier one left, so a
 			// card never shows a change waiting that is no longer there.
-			const marked = await window.workspace.markAddressed(commentId, outcome.changed ? outcome.commit : null);
+			const marked = await window.workspace.markAddressed(comment, outcome.changed ? outcome.commit : null);
 			if (marked.ok) comments.showChanged(marked.value);
 		}
 		// The agent may have changed the code, and a reviewer may have written meanwhile.
@@ -717,7 +718,7 @@ export const Review = ({
 								actions={(comment) =>
 									// The agent runs on this machine, against the product repository: without it there is nothing to build with.
 									!comment.resolved && checkout ? (
-										<DropdownMenuItem disabled={address.kind === 'running'} onSelect={() => void addressComment(comment.id)}>
+										<DropdownMenuItem disabled={address.kind === 'running'} onSelect={() => void addressComment(commentRef(comment))}>
 											<WandSparklesIcon />
 											{addressing === comment.id && address.kind === 'running' ? 'Working…' : 'Address'}
 										</DropdownMenuItem>

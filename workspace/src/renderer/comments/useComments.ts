@@ -175,6 +175,9 @@ export const useComments = ({
 	// function each render; everything else here changes only with the iteration, which listens afresh.
 	const pinClick = useRef(onPinClick);
 	pinClick.current = onPinClick;
+	// The comments as last read, for a pin that was dragged: its thread, which the host finds it by, is on the comment.
+	const shown = useRef(comments);
+	shown.current = comments;
 	useEffect(
 		() =>
 			// Stopped on leaving: the handler for an iteration the person has left must not act on its comment ids.
@@ -189,7 +192,9 @@ export const useComments = ({
 					// The unsaved pin: just remember where it now is.
 					setPending((p) => (p ? { ...e.anchor, commit: p.commit } : p));
 				} else {
-					void store.move(e.id, e.anchor).then((r) => {
+					const moved = shown.current?.find((c) => c.id === e.id);
+					if (!moved) return setRedraw((n) => n + 1);
+					void store.move(moved, e.anchor).then((r) => {
 						if (r.ok) {
 							showChanged(r.value);
 							// The comment now points somewhere else, and the file the agent reads says where.
@@ -302,7 +307,7 @@ export const useComments = ({
 	/** Deletes a comment for good. Says whether it went. */
 	const remove = async (comment: ReviewComment): Promise<boolean> => {
 		setError(null);
-		const r = await store.remove(comment.id);
+		const r = await store.remove(comment);
 		if (!r.ok) {
 			setError(r.error);
 			return false;
@@ -319,7 +324,7 @@ export const useComments = ({
 
 	const resolve = async (comment: ReviewComment, resolved: boolean) => {
 		setError(null);
-		const r = await store.resolve(comment.id, resolved);
+		const r = await store.resolve(comment, resolved);
 		if (!r.ok) return setError(r.error);
 		showChanged(r.value);
 		// Same as deleting: the file the agent reads lists the open comments, and this is no longer one.

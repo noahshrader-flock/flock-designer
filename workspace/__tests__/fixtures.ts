@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { RecordStore } from '../src/main/services/prototype';
-import type { AgentStatus, ProjectIteration } from '../src/shared/contract';
+import type { AgentStatus, ProjectIteration, ReviewComment } from '../src/shared/contract';
 
 /** A mocked function of any shape, called as the code calls it: vitest's own `Procedure`, which it does not export. */
 export type Fn = Mock<(...args: any[]) => any>;
@@ -22,6 +22,21 @@ export const projectIteration = (over: Pick<ProjectIteration, 'name' | 'branch'>
 	repository: null,
 	pullRequest: null,
 	cover: null,
+	...over,
+});
+
+/** A comment as it is read: in thread 1, by `pm`, open, on the page as a whole, unless `over` says otherwise. */
+export const reviewComment = (over: Pick<ReviewComment, 'id'> & Partial<ReviewComment>): ReviewComment => ({
+	thread: 1,
+	author: 'pm',
+	authorAvatarUrl: null,
+	body: `comment ${over.id}`,
+	createdAt: '2026-10-05T10:00:00Z',
+	resolved: false,
+	addressedAt: null,
+	addressedIn: null,
+	anchor: null,
+	picture: null,
 	...over,
 });
 

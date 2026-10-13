@@ -14,6 +14,7 @@ import type {
 } from '../domain/checkout';
 import type {
 	CommentAnchor,
+	CommentRef,
 	MarkerRequest,
 	MarkerResult,
 	PageBounds,
@@ -198,7 +199,7 @@ export interface WorkspaceApi {
 	 * picks the one that is a clear change. Refused if the agent is busy, the checkout is not on this iteration's branch,
 	 * the tree is dirty, or the comment is not open. Progress is the agent's own (`agentStatus`, `onAgentLog`).
 	 */
-	addressComments(root: string, projectId: string, name: string, commentId: number): Promise<Result<AgentStatus>>;
+	addressComments(root: string, projectId: string, name: string, comment: CommentRef): Promise<Result<AgentStatus>>;
 
 	/** Hands the task to the locally installed agent. Never bundles credentials. */
 	startAgent(root: string, projectId: string, task: string): Promise<Result<AgentStatus>>;
@@ -224,13 +225,13 @@ export interface WorkspaceApi {
 	 * Starts the agent on one comment on a prototype. There is no batch. The change goes in the newest iteration of the
 	 * prototype's version, or, when others have commented on that, in the next one.
 	 */
-	addressPrototype(projectId: string, name: string, commentId: number): Promise<Result<AgentStatus>>;
+	addressPrototype(projectId: string, name: string, comment: CommentRef): Promise<Result<AgentStatus>>;
 	/**
 	 * Once that agent has finished: a changed prototype is built, recorded when it is a new iteration, and saved, and the
 	 * comment is marked with where the change is. Says whether anything changed, in which iteration, the new
 	 * iteration's record when one was made, and the comment as it is marked now.
 	 */
-	finishPrototypeAddress(commentId: number): Promise<Result<PrototypeAddressed>>;
+	finishPrototypeAddress(comment: CommentRef): Promise<Result<PrototypeAddressed>>;
 	/** Whether the iteration is on its published page, asked of GitHub. */
 	publishedPage(projectId: string, name: string): Promise<Result<PageStatus>>;
 	/** Opens the iteration's published page in the person's browser. Its address is worked out there, not taken from here. */
@@ -339,16 +340,16 @@ export interface WorkspaceApi {
 	/** A pin on the page was clicked or moved. */
 	onPinEvent(listener: (event: PinEvent) => void): () => void;
 	/** Saves where a comment's pin now is. Only the comment's author can. */
-	moveComment(commentId: number, anchor: CommentAnchor): Promise<Result<ReviewComment>>;
+	moveComment(comment: CommentRef, anchor: CommentAnchor): Promise<Result<ReviewComment>>;
 	/** Deletes a comment for good. GitHub decides who is allowed, and keeps no copy. */
-	deleteComment(commentId: number): Promise<Result<null>>;
+	deleteComment(comment: CommentRef): Promise<Result<null>>;
 	/** Marks a comment resolved, or open again. GitHub decides who is allowed. */
-	resolveComment(commentId: number, resolved: boolean): Promise<Result<ReviewComment>>;
+	resolveComment(comment: CommentRef, resolved: boolean): Promise<Result<ReviewComment>>;
 	/**
 	 * Records that the agent acted on a comment, with the commit it made, or clears that with null.
 	 * Never resolves it: that is the person's to say, after looking at the change.
 	 */
-	markAddressed(commentId: number, commit: string | null): Promise<Result<ReviewComment>>;
+	markAddressed(comment: CommentRef, commit: string | null): Promise<Result<ReviewComment>>;
 	/** The commit an iteration's branch is at on this machine, to say what a comment was made against. Null if unknown. */
 	iterationCommit(root: string, projectId: string, name: string): Promise<Result<string | null>>;
 }

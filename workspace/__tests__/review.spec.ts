@@ -3,7 +3,7 @@ import { agentFinished, agentRunning } from './fixtures';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Review } from '../src/renderer/Review';
-import type { MarkerRequest, ReviewComment } from '../src/shared/contract';
+import type { CommentRef, MarkerRequest, ReviewComment } from '../src/shared/contract';
 import {
 	PROJECT,
 	PROTOTYPE,
@@ -176,16 +176,16 @@ describe('resolving and deleting', () => {
 		let c = comment(1, 'First');
 		const app = fakeApp({
 			readComments: async () => ok([c]),
-			resolveComment: async (_id: number, resolved: boolean) => ok((c = { ...c, resolved })),
+			resolveComment: async (_comment: CommentRef, resolved: boolean) => ok((c = { ...c, resolved })),
 		});
 		await open(app);
 		await sidebar();
 		await choose('First', 'Resolve');
-		expect(app.calls.resolveComment?.[0]).toEqual([1, true]);
+		expect(app.calls.resolveComment?.[0]).toEqual([{ thread: 1, id: 1 }, true]);
 		expect(cardFor('First').textContent).toContain('Resolved');
 		expect(pins(app)).toEqual([]);
 		await choose('First', 'Reopen');
-		expect(app.calls.resolveComment?.[1]).toEqual([1, false]);
+		expect(app.calls.resolveComment?.[1]).toEqual([{ thread: 1, id: 1 }, false]);
 		expect(cardFor('First').textContent).not.toContain('Resolved');
 	});
 
@@ -216,7 +216,7 @@ describe('resolving and deleting', () => {
 		let all = [comment(1, 'First'), comment(2, 'Second')];
 		const app = fakeApp({
 			readComments: async () => ok(all),
-			deleteComment: async (id: number) => ok((all = all.filter((c) => c.id !== id)) && null),
+			deleteComment: async ({ id }: CommentRef) => ok((all = all.filter((c) => c.id !== id)) && null),
 		});
 		await open(app);
 		await sidebar();
@@ -228,7 +228,7 @@ describe('resolving and deleting', () => {
 		await choose('First', 'Delete');
 		await press(button('Delete', cardFor('First')));
 		await settle();
-		expect(app.calls.deleteComment?.[0]).toEqual([1]);
+		expect(app.calls.deleteComment?.[0]).toEqual([{ thread: 1, id: 1 }]);
 		expect(cards().map((c) => c.textContent)).toEqual([expect.stringContaining('Second')]);
 	});
 
@@ -260,7 +260,7 @@ describe('pins and cards', () => {
 		await open(app);
 		await app.pin({ kind: 'move', id: 2, anchor: moved });
 		await settle();
-		expect(app.calls.moveComment?.[0]).toEqual([2, moved]);
+		expect(app.calls.moveComment?.[0]).toEqual([{ thread: 1, id: 2 }, moved]);
 		expect(pins(app)[0]?.anchor.selector).toBe('#elsewhere');
 	});
 
@@ -661,8 +661,8 @@ describe('Address', () => {
 		await sidebar();
 		await choose('Remove this', 'Address');
 		await afterAgentCheck();
-		expect(app.calls.addressPrototype?.[0]).toEqual(['demo', 'v1-i1', 1]);
-		expect(app.calls.finishPrototypeAddress?.[0]).toEqual([1]);
+		expect(app.calls.addressPrototype?.[0]).toEqual(['demo', 'v1-i1', { thread: 1, id: 1 }]);
+		expect(app.calls.finishPrototypeAddress?.[0]).toEqual([{ thread: 1, id: 1 }]);
 		expect(cardFor('Remove this').textContent).toContain('Resolved');
 		expect(cardFor('Remove this').textContent).toContain('The agent addressed this in V1 · I2');
 		expect(document.body.textContent).toContain('The change is in V1 · I2');

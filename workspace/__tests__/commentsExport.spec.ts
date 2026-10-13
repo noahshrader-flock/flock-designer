@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { projectTitle, renderComments, writeCommentsExport } from '../src/main/services/commentsExport';
 import { numberComments } from '../src/shared/comments';
 import type { CommentAnchor, ReviewComment } from '../src/shared/contract';
+import { reviewComment } from './fixtures';
 
 const picture = (text: string) => `data:image/jpeg;base64,${Buffer.from(text).toString('base64')}`;
 const anchor = (over: Partial<CommentAnchor> = {}): CommentAnchor => ({
@@ -16,19 +17,8 @@ const anchor = (over: Partial<CommentAnchor> = {}): CommentAnchor => ({
 	state: '?state=error',
 	...over,
 });
-const comment = (id: number, over: Partial<ReviewComment> = {}): ReviewComment => ({
-	id,
-	author: 'alice',
-	authorAvatarUrl: null,
-	body: `comment ${id}`,
-	createdAt: `2026-10-05T10:0${id}:00Z`,
-	resolved: false,
-	addressedAt: null,
-	addressedIn: null,
-	anchor: anchor(),
-	picture: null,
-	...over,
-});
+const comment = (id: number, over: Partial<ReviewComment> = {}): ReviewComment =>
+	reviewComment({ id, author: 'alice', createdAt: `2026-10-05T10:0${id}:00Z`, anchor: anchor(), ...over });
 const input = (comments: ReviewComment[]) => ({
 	projectId: 'demo',
 	title: 'Demo project',

@@ -1,20 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, resolvedComments, sameComments } from '../src/shared/comments';
 import type { CommentAnchor, ReviewComment } from '../src/shared/contract';
+import { reviewComment } from './fixtures';
 
-const c = (id: number, over: Partial<ReviewComment> = {}): ReviewComment => ({
-	id,
-	author: 'a',
-	authorAvatarUrl: null,
-	body: `c${id}`,
-	createdAt: `2026-10-05T10:${String(id).padStart(2, '0')}:00Z`,
-	resolved: false,
-	addressedAt: null,
-	addressedIn: null,
-	anchor: null,
-	picture: null,
-	...over,
-});
+const c = (id: number, over: Partial<ReviewComment> = {}): ReviewComment =>
+	reviewComment({ id, author: 'a', body: `c${id}`, createdAt: `2026-10-05T10:${String(id).padStart(2, '0')}:00Z`, ...over });
 
 describe('mergeComments', () => {
 	it('shows a comment just posted from this window until the read includes it', () => {

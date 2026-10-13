@@ -43,5 +43,5 @@ export const registerPage = (d: IpcDeps): void => {
 		});
 		return page.showMarkers(clean);
 	});
-	handle('pageFocusMarker', [arg.commentId], async (id) => nothing(await page.focusMarker(id)));
+	handle('pageFocusMarker', [arg.markerId], async (id) => nothing(await page.focusMarker(id)));
 };

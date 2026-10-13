@@ -26,15 +26,15 @@ const fakes = (initial: ReviewComment[]) => {
 			saved = [...saved, made];
 			return ok(made);
 		},
-		resolve: async (id, resolved) => {
+		resolve: async ({ id }, resolved) => {
 			saved = saved.map((c) => (c.id === id ? { ...c, resolved } : c));
 			return ok(saved.find((c) => c.id === id) as ReviewComment);
 		},
-		remove: async (id) => {
+		remove: async ({ id }) => {
 			saved = saved.filter((c) => c.id !== id);
 			return ok(null);
 		},
-		move: async (id, anchor) => ok({ ...(saved.find((c) => c.id === id) as ReviewComment), anchor }),
+		move: async ({ id }, anchor) => ok({ ...(saved.find((c) => c.id === id) as ReviewComment), anchor }),
 		viewer: async () => 'reviewer',
 		version: async () => 'abc1234',
 	};

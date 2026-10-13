@@ -1,5 +1,14 @@
 import { type BrowserWindow, ipcMain } from 'electron';
-import { type Answer, type EventName, type InvokeName, type Payload, type Result, eventChannel, invokeChannel } from '../shared/contract';
+import {
+	type Answer,
+	type CommentRef,
+	type EventName,
+	type InvokeName,
+	type Payload,
+	type Result,
+	eventChannel,
+	invokeChannel,
+} from '../shared/contract';
 import { asRecord } from '../shared/json';
 import { isPrototypeName } from '../shared/prototypeNames';
 import { fail, ok } from '../shared/result';
@@ -44,6 +53,8 @@ export const handle = <K extends InvokeName, Args extends unknown[]>(
 		guard((...sent: unknown[]) => fn(...((checks as Check<unknown>[]).map((check, i) => check(sent[i])) as Args))),
 	);
 
+const isPositiveInteger = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v > 0;
+
 const text =
 	(what: string, max: number): Check<string> =>
 	(v) => {
@@ -76,8 +87,15 @@ export const arg = {
 		if (typeof v !== 'string' || !isSafeBranchName(v)) throw new Error(`"${String(v)}" is not a branch name.`);
 		return v;
 	}) as Check<string>,
-	commentId: ((v) => {
-		if (typeof v !== 'number' || !Number.isSafeInteger(v) || v <= 0) throw new Error('That is not a comment.');
+	/** A comment, by the review thread it is in and its own number. */
+	comment: ((v) => {
+		const r = asRecord(v);
+		if (![r.thread, r.id].every(isPositiveInteger)) throw new Error('That is not a comment.');
+		return { thread: r.thread as number, id: r.id as number };
+	}) as Check<CommentRef>,
+	/** A pin on the page: its comment's number alone, as the page knows it. */
+	markerId: ((v) => {
+		if (!isPositiveInteger(v)) throw new Error('That is not a comment.');
 		return v;
 	}) as Check<number>,
 	/** Yes only for `true`; anything else is no. */

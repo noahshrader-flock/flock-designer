@@ -5,25 +5,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { prepareAddress } from '../src/main/services/address';
 import { type AddressPhase, runAddress, runPrototypeAddress } from '../src/renderer/address';
 import type { AgentStatus, ReviewComment, Result } from '../src/shared/contract';
-import { agentFinished, agentRunning } from './fixtures';
+import { agentFinished, agentRunning, reviewComment } from './fixtures';
 
-const comment = (id: number, over: Partial<ReviewComment> = {}): ReviewComment => ({
-	id,
-	author: 'pm',
-	authorAvatarUrl: null,
-	body: `comment ${id}`,
-	createdAt: `2026-10-05T10:0${id}:00Z`,
-	resolved: false,
-	addressedAt: null,
-	addressedIn: null,
-	anchor: { route: '/users', selector: 'main', nearbyText: 'x', viewport: { width: 1, height: 1 }, commit: '', state: '' },
-	picture: null,
-	...over,
-});
+const comment = (id: number, over: Partial<ReviewComment> = {}): ReviewComment =>
+	reviewComment({
+		id,
+		createdAt: `2026-10-05T10:0${id}:00Z`,
+		anchor: { route: '/users', selector: 'main', nearbyText: 'x', viewport: { width: 1, height: 1 }, commit: '', state: '' },
+		...over,
+	});
 
 describe('prepareAddress', () => {
 	let records: string;
-	const target = (commentId = 1) => ({ recordsRoot: records, projectId: 'demo', iteration: { name: 'i1', branch: 'fd/demo/i1' }, commentId });
+	const target = (id = 1) => ({
+		recordsRoot: records,
+		projectId: 'demo',
+		iteration: { name: 'i1', branch: 'fd/demo/i1' },
+		comment: { thread: 1, id },
+	});
 	const deps = (over: Partial<Parameters<typeof prepareAddress>[0]> = {}) => ({
 		readComments: vi.fn(async () => [comment(1), comment(2)]),
 		checkout: vi.fn(async () => ({ branch: 'fd/demo/i1' as string | null, clean: true })),
@@ -69,7 +68,7 @@ describe('prepareAddress', () => {
 	it('acts on one comment when the designer picked one, naming it by the number on its pin', async () => {
 		// The file still holds every comment -- it is the project's file, and its pictures are kept in
 		// step with it -- so which one to act on is said in the task.
-		const out = await prepareAddress(deps(), { ...target(), commentId: 2 });
+		const out = await prepareAddress(deps(), { ...target(), comment: { thread: 1, id: 2 } });
 		expect(out.task).toContain('Address comment 2 on this project, and only that one.');
 		expect(out.task).toContain('Act on comment 2 alone.');
 		// The others are still in the file, as context.
@@ -77,9 +76,11 @@ describe('prepareAddress', () => {
 	});
 
 	it('refuses a comment that has gone or been resolved since the screen was read', async () => {
-		await expect(prepareAddress(deps(), { ...target(), commentId: 99 })).rejects.toThrow(/no longer there/);
+		await expect(prepareAddress(deps(), { ...target(), comment: { thread: 1, id: 99 } })).rejects.toThrow(/no longer there/);
+		// A comment is its thread and its number together: the same number in another thread is another comment.
+		await expect(prepareAddress(deps(), { ...target(), comment: { thread: 2, id: 1 } })).rejects.toThrow(/no longer there/);
 		const d = deps({ readComments: async () => [comment(1), comment(2, { resolved: true })] });
-		await expect(prepareAddress(d, { ...target(), commentId: 2 })).rejects.toThrow(/resolved already/);
+		await expect(prepareAddress(d, { ...target(), comment: { thread: 1, id: 2 } })).rejects.toThrow(/resolved already/);
 	});
 
 	it('refuses while the agent is working, before reading or writing anything', async () => {
@@ -148,7 +149,7 @@ describe('runAddress', () => {
 			root: '/c',
 			projectId: 'demo',
 			name: 'i1',
-			commentId: 7,
+			comment: { thread: 1, id: 7 },
 			isLive,
 			onPhase: (p) => phases.push(p),
 			pollMs: 1,
@@ -200,7 +201,7 @@ describe('runAddress', () => {
 			root: '/c',
 			projectId: 'demo',
 			name: 'i1',
-			commentId: 7,
+			comment: { thread: 1, id: 7 },
 			isLive: () => true,
 			onPhase: (p) => phases.push(p),
 			pollMs: 1,
@@ -244,7 +245,7 @@ describe('runPrototypeAddress', () => {
 			},
 			projectId: 'demo',
 			name: 'v1-i1',
-			commentId: 7,
+			comment: { thread: 1, id: 7 },
 			isLive,
 			onPhase: (p) => phases.push(p),
 			pollMs: 1,
@@ -255,7 +256,7 @@ describe('runPrototypeAddress', () => {
 	it('waits for the agent, then says where the change went, as the main process found it', async () => {
 		const finish = vi.fn(async () => ok(addressed));
 		const phases = await run({ finishPrototypeAddress: finish });
-		expect(finish).toHaveBeenCalledWith(7);
+		expect(finish).toHaveBeenCalledWith({ thread: 1, id: 7 });
 		expect(phases).toEqual([{ kind: 'running' }, { kind: 'done', changed: true, commit: null, prototype: addressed }]);
 	});
 

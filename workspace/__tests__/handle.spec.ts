@@ -13,9 +13,12 @@ const through = <T>(check: (v: unknown) => T, sent: unknown): T | string => {
 };
 
 describe('what the window sends, checked', () => {
-	it('takes a comment by its number, and nothing else', () => {
-		expect(through(arg.commentId, 3)).toBe(3);
-		for (const sent of [0, -1, 1.5, '3', null]) expect(through(arg.commentId, sent)).toBe('That is not a comment.');
+	it('takes a comment by its thread and its number, and nothing else', () => {
+		expect(through(arg.comment, { thread: 4, id: 3 })).toEqual({ thread: 4, id: 3 });
+		for (const sent of [3, { id: 3 }, { thread: 4, id: 0 }, { thread: -1, id: 3 }, { thread: 4, id: '3' }, null])
+			expect(through(arg.comment, sent)).toBe('That is not a comment.');
+		// A pin on the page is its comment's number alone: the page knows nothing of threads.
+		expect(through(arg.markerId, 3)).toBe(3);
 	});
 
 	it("takes an iteration's name, a prototype's or codebase, and a prototype's only where one is meant", () => {

@@ -84,21 +84,19 @@ export const registerReview = (d: IpcDeps): void => {
 		(projectId, branch, body, anchor, picture): Promise<ReviewComment> =>
 			designRepo.threads.postComment(projectId, branch, body, sanitizeAnchor(anchor), sanitizePicture(picture)),
 	);
-	handle('moveComment', [arg.commentId, arg.unknown], (commentId, anchor): Promise<ReviewComment> => {
+	handle('moveComment', [arg.comment, arg.unknown], (comment, anchor): Promise<ReviewComment> => {
 		const clean = sanitizeAnchor(anchor);
 		if (!clean) throw new Error('That is not a place a pin can be moved to.');
-		return designRepo.threads.moveComment(commentId, clean);
+		return designRepo.threads.moveComment(comment, clean);
 	});
-	handle('deleteComment', [arg.commentId], async (commentId) => {
-		await designRepo.threads.deleteComment(commentId);
+	handle('deleteComment', [arg.comment], async (comment) => {
+		await designRepo.threads.deleteComment(comment);
 		return null;
 	});
-	handle('resolveComment', [arg.commentId, arg.flag], (commentId, resolved): Promise<ReviewComment> =>
-		designRepo.threads.setResolved(commentId, resolved),
-	);
-	handle('markAddressed', [arg.commentId, arg.unknown], (commentId, commit): Promise<ReviewComment> => {
+	handle('resolveComment', [arg.comment, arg.flag], (comment, resolved): Promise<ReviewComment> => designRepo.threads.setResolved(comment, resolved));
+	handle('markAddressed', [arg.comment, arg.unknown], (comment, commit): Promise<ReviewComment> => {
 		// A commit, or nothing. Anything else is not written into a comment body.
 		const sha = isCommit(commit) ? commit : null;
-		return designRepo.threads.setAddressed(commentId, sha);
+		return designRepo.threads.setAddressed(comment, sha);
 	});
 };

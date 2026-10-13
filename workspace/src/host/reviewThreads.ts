@@ -1,4 +1,4 @@
-import type { CommentAnchor, ReviewComment } from '../shared/contract';
+import type { CommentAnchor, CommentRef, ReviewComment } from '../shared/contract';
 import {
 	RESOLVED_MARK,
 	addressedAt,
@@ -115,10 +115,11 @@ export class ReviewThreads {
 	}
 
 	/** One GitHub comment as the app knows it. The one place a comment's body is taken apart. */
-	private toComment(raw: Record<string, unknown>): ReviewComment {
+	private toComment(raw: Record<string, unknown>, thread: number): ReviewComment {
 		const body = String(raw.body ?? '');
 		const user = asRecord(raw.user);
 		return {
+			thread,
 			id: Number(raw.id),
 			author: String(user.login ?? 'unknown'),
 			authorAvatarUrl: typeof user.avatar_url === 'string' ? user.avatar_url : null,
@@ -140,12 +141,13 @@ export class ReviewThreads {
 	async readComments(branch: string): Promise<ReviewComment[]> {
 		const issue = (await this.byBranch()).get(branch);
 		if (!issue) return [];
-		const threads = await Promise.all(issue.numbers.map((n) => readPages(this.session, `${this.base}/issues/${n}/comments`, { maxPages: 20 })));
-		return threads
-			.flat()
-			.map(asRecord)
-			.sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')))
-			.map((c) => this.toComment(c));
+		// Each comment with the thread it was read from: never the oldest one's, which would mix up a branch with several.
+		const threads = await Promise.all(
+			issue.numbers.map(async (n) =>
+				(await readPages(this.session, `${this.base}/issues/${n}/comments`, { maxPages: 20 })).map((c) => this.toComment(asRecord(c), n)),
+			),
+		);
+		return threads.flat().sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 	}
 
 	/**
@@ -153,8 +155,8 @@ export class ReviewThreads {
 	 * a person edit their own comment and refuses anyone else, which is exactly
 	 * the rule wanted: you can move your own pins, not someone else's.
 	 */
-	async moveComment(commentId: number, anchor: CommentAnchor): Promise<ReviewComment> {
-		const path = `${this.base}/issues/comments/${commentId}`;
+	async moveComment(comment: CommentRef, anchor: CommentAnchor): Promise<ReviewComment> {
+		const path = `${this.base}/issues/comments/${comment.id}`;
 		const current = asRecord(await this.session.api(path));
 		const body = String(current.body ?? '');
 		const old = parseAnchor(body);
@@ -162,7 +164,10 @@ export class ReviewThreads {
 		// The commit is when the comment was made, not when it was moved.
 		// The picture is of where the comment was first placed, so it goes with the comment, not with the pin.
 		const next = composeBody(text, { ...anchor, commit: old?.commit ?? anchor.commit }, parsePicture(body));
-		return this.toComment(asRecord(await this.session.api(path, { method: 'PATCH', body: { body: withResolved(next, isResolved(body)) } })));
+		return this.toComment(
+			asRecord(await this.session.api(path, { method: 'PATCH', body: { body: withResolved(next, isResolved(body)) } })),
+			comment.thread,
+		);
 	}
 
 	/**
@@ -172,14 +177,14 @@ export class ReviewThreads {
 	 * Reopening also clears the agent's mark: a comment reopened is one whose change was not what was meant, so it is
 	 * open as any other, with its pin, and Address can be run on it again.
 	 */
-	async setResolved(commentId: number, resolved: boolean): Promise<ReviewComment> {
-		const path = `${this.base}/issues/comments/${commentId}`;
+	async setResolved(comment: CommentRef, resolved: boolean): Promise<ReviewComment> {
+		const path = `${this.base}/issues/comments/${comment.id}`;
 		const current = asRecord(await this.session.api(path));
 		const body = String(current.body ?? '');
 		const next = resolved ? withResolved(body, true) : withAddressed(withResolved(body, false), null);
-		if (isResolved(next) === isResolved(body) && addressedAt(next) === addressedAt(body)) return this.toComment(current);
+		if (isResolved(next) === isResolved(body) && addressedAt(next) === addressedAt(body)) return this.toComment(current, comment.thread);
 		const updated = await this.session.api(path, { method: 'PATCH', body: { body: next } });
-		return this.toComment(asRecord(updated));
+		return this.toComment(asRecord(updated), comment.thread);
 	}
 
 	/**
@@ -190,8 +195,8 @@ export class ReviewThreads {
 	 * Clears the mark when the commit is null, which is what re-addressing a comment that changed nothing should do. That
 	 * leaves the comment open or resolved as the person had it.
 	 */
-	async setAddressed(commentId: number, commit: string | null, iteration: string | null = null): Promise<ReviewComment> {
-		const path = `${this.base}/issues/comments/${commentId}`;
+	async setAddressed(comment: CommentRef, commit: string | null, iteration: string | null = null): Promise<ReviewComment> {
+		const path = `${this.base}/issues/comments/${comment.id}`;
 		const current = asRecord(await this.session.api(path));
 		const body = String(current.body ?? '');
 		const addressed = withAddressed(body, commit, iteration);
@@ -199,9 +204,9 @@ export class ReviewThreads {
 		const marked = addressedAt(addressed) === null ? addressed : withResolved(addressed, true);
 		// Judged by what the marks say, not by the text: rewriting them can reorder a body that already says it.
 		const same = addressedAt(marked) === addressedAt(body) && addressedIn(marked) === addressedIn(body) && isResolved(marked) === isResolved(body);
-		if (same) return this.toComment(current);
+		if (same) return this.toComment(current, comment.thread);
 		const updated = await this.session.api(path, { method: 'PATCH', body: { body: marked } });
-		return this.toComment(asRecord(updated));
+		return this.toComment(asRecord(updated), comment.thread);
 	}
 
 	/**
@@ -209,9 +214,9 @@ export class ReviewThreads {
 	 * anyone who can write to the repository), and its refusal is put in words a person can act on.
 	 * A comment that is already gone counts as deleted: someone else got there first.
 	 */
-	async deleteComment(commentId: number): Promise<void> {
+	async deleteComment(comment: CommentRef): Promise<void> {
 		try {
-			await this.session.api(`${this.base}/issues/comments/${commentId}`, { method: 'DELETE' });
+			await this.session.api(`${this.base}/issues/comments/${comment.id}`, { method: 'DELETE' });
 		} catch (err) {
 			if (hostErrorKind(err) === 'notFound') return;
 			if (hostErrorKind(err) === 'forbidden') {
@@ -236,6 +241,6 @@ export class ReviewThreads {
 			}),
 		);
 		// Read back from what GitHub stored, so what the window shows is what was saved.
-		return this.toComment(created);
+		return this.toComment(created, number);
 	}
 }

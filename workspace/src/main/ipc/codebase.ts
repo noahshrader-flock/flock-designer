@@ -181,7 +181,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 	handle('agentReadiness', [], () => agentReadiness());
 	// One click: read the comments now, write the file from that read, then start the agent. Nothing
 	// a reviewer wrote is put in the task; it reaches the agent only through the file.
-	handle('addressComments', [checkout, arg.projectId, arg.iterationName, arg.commentId], async (workIn, projectId, name, commentId) => {
+	handle('addressComments', [checkout, arg.projectId, arg.iterationName, arg.comment], async (workIn, projectId, name, comment) => {
 		// There is no batch: a request with no comment is a mistake, not a request for all of them.
 		const { canonical, recordsRoot } = workIn;
 		const iteration = await recordedIteration(canonical, recordsRoot, workIn.descriptor, projectId, name);
@@ -194,7 +194,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 				skill: () => skill,
 				title: projectTitle(recordsRoot, projectId),
 			},
-			{ recordsRoot, projectId, iteration, commentId },
+			{ recordsRoot, projectId, iteration, comment },
 		);
 		const { parts, readOnly } = await checkoutParts(canonical, projectId);
 		return startTracked(canonical, projectId, codebaseTask({ unattended: null, task: prepared.task }, parts), {

@@ -1,4 +1,4 @@
-import type { PrototypeAddressed, WorkspaceApi } from '../shared/contract';
+import type { CommentRef, PrototypeAddressed, WorkspaceApi } from '../shared/contract';
 import { waitForAgent } from './localBuild';
 
 /**
@@ -27,7 +27,7 @@ export const runAddress = async ({
 	root,
 	projectId,
 	name,
-	commentId,
+	comment,
 	isLive,
 	onPhase,
 	pollMs,
@@ -37,7 +37,7 @@ export const runAddress = async ({
 	projectId: string;
 	name: string;
 	/** The one comment to act on. There is no batch. */
-	commentId: number;
+	comment: CommentRef;
 	isLive: () => boolean;
 	onPhase: (phase: AddressPhase) => void;
 	pollMs?: number;
@@ -46,7 +46,7 @@ export const runAddress = async ({
 	// Where the branch stood before the agent touched it. A failure to read it is not a reason to
 	// refuse to run: it only means this cannot tell afterwards whether anything was committed.
 	const before = await api.iterationCommit(root, projectId, name);
-	const started = await api.addressComments(root, projectId, name, commentId);
+	const started = await api.addressComments(root, projectId, name, comment);
 	if (!started.ok) return onPhase({ kind: 'failed', message: started.error });
 	if (started.value.state === 'unavailable') return onPhase({ kind: 'failed', message: started.value.detail });
 
@@ -71,7 +71,7 @@ export const runPrototypeAddress = async ({
 	api,
 	projectId,
 	name,
-	commentId,
+	comment,
 	isLive,
 	onPhase,
 	pollMs,
@@ -79,13 +79,13 @@ export const runPrototypeAddress = async ({
 	api: PrototypeAddressApi;
 	projectId: string;
 	name: string;
-	commentId: number;
+	comment: CommentRef;
 	isLive: () => boolean;
 	onPhase: (phase: AddressPhase) => void;
 	pollMs?: number;
 }): Promise<void> => {
 	onPhase({ kind: 'running' });
-	const started = await api.addressPrototype(projectId, name, commentId);
+	const started = await api.addressPrototype(projectId, name, comment);
 	if (!started.ok) return onPhase({ kind: 'failed', message: started.error });
 	if (started.value.state === 'unavailable') return onPhase({ kind: 'failed', message: started.value.detail });
 
@@ -93,7 +93,7 @@ export const runPrototypeAddress = async ({
 	// Left before it ended: the change is finished when the prototype is next opened.
 	if (outcome.kind === 'stopped') return;
 	if (outcome.kind === 'failed') return onPhase({ kind: 'failed', message: outcome.message });
-	const finished = await api.finishPrototypeAddress(commentId);
+	const finished = await api.finishPrototypeAddress(comment);
 	if (!finished.ok) return onPhase({ kind: 'failed', message: finished.error });
 	onPhase({ kind: 'done', changed: finished.value.changed, commit: null, prototype: finished.value });
 };

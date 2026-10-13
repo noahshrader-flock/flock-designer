@@ -37,9 +37,9 @@ export const browserComments = (github: GitHubApi, ref: RepoRef, { projectId, br
 		read: () => toResult(repo.readComments(branch)),
 		// No picture of the spot: a page cannot take one of itself.
 		post: (body, anchor) => toResult(repo.postComment(projectId, branch, body, anchor, null)),
-		resolve: (id, resolved) => toResult(repo.setResolved(id, resolved)),
-		remove: (id) => toResult(repo.deleteComment(id).then(() => null)),
-		move: (id, anchor) => toResult(repo.moveComment(id, anchor)),
+		resolve: (comment, resolved) => toResult(repo.setResolved(comment, resolved)),
+		remove: (comment) => toResult(repo.deleteComment(comment).then(() => null)),
+		move: (comment, anchor) => toResult(repo.moveComment(comment, anchor)),
 		viewer: async () => {
 			try {
 				const login = asRecord(await github.api('/user')).login;

@@ -1,4 +1,4 @@
-import type { CommentAnchor, MarkerRequest, MarkerResult, PickedPoint, PinEvent, Result, ReviewComment } from '../../shared/contract';
+import type { CommentAnchor, CommentRef, MarkerRequest, MarkerResult, PickedPoint, PinEvent, Result, ReviewComment } from '../../shared/contract';
 
 /**
  * What the comments experience needs from where it runs, in two parts, so it can run in the app today and on a
@@ -12,10 +12,10 @@ import type { CommentAnchor, MarkerRequest, MarkerResult, PickedPoint, PinEvent,
 export interface CommentStore {
 	read(): Promise<Result<ReviewComment[]>>;
 	post(body: string, anchor: CommentAnchor, picture: string | null): Promise<Result<ReviewComment>>;
-	resolve(id: number, resolved: boolean): Promise<Result<ReviewComment>>;
-	remove(id: number): Promise<Result<null>>;
+	resolve(comment: CommentRef, resolved: boolean): Promise<Result<ReviewComment>>;
+	remove(comment: CommentRef): Promise<Result<null>>;
 	/** A pin dragged somewhere new: the comment now points there. */
-	move(id: number, anchor: CommentAnchor): Promise<Result<ReviewComment>>;
+	move(comment: CommentRef, anchor: CommentAnchor): Promise<Result<ReviewComment>>;
 	/** The viewer's GitHub login, or null when not signed in: only their own pins can be dragged. */
 	viewer(): Promise<string | null>;
 	/** What the work is at now, written into a new comment so it says what it was made against; '' when not known. */

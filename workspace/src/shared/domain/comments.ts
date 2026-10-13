@@ -1,8 +1,16 @@
 /** Review comments and where they are pinned on a page, and the page's own messages about them. */
 
-/** One reviewer comment, stored as a GitHub issue comment. */
-export interface ReviewComment {
+/**
+ * A comment as the host finds one: the review thread it is in (its issue), and its own number. What the window sends
+ * back to act on a comment, and what every comment is.
+ */
+export interface CommentRef {
+	thread: number;
 	id: number;
+}
+
+/** One reviewer comment, stored as a GitHub issue comment, in the thread it was read from. */
+export interface ReviewComment extends CommentRef {
 	author: string;
 	authorAvatarUrl: string | null;
 	body: string;

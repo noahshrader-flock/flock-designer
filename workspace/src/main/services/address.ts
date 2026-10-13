@@ -1,6 +1,6 @@
 import { AGENT_BUSY } from './agent';
 import { addressTask } from './agentTasks';
-import type { ReviewComment } from '../../shared/contract';
+import type { CommentRef, ReviewComment } from '../../shared/contract';
 import { type ExportInput, writeCommentsExport } from './commentsExport';
 import { numberComments, openComments } from '../../shared/comments';
 
@@ -33,7 +33,7 @@ export interface AddressTarget {
 	projectId: string;
 	iteration: { name: string; branch: string };
 	/** The one comment to act on. There is no batch. */
-	commentId: number;
+	comment: CommentRef;
 }
 
 /** The skill, relative to the design repository. Shared by every product. */
@@ -43,19 +43,19 @@ export const ADDRESS_SKILL = 'skills/address-comments.md';
  * The number of the one comment to act on, from a read made just now. The fresh read is what catches a comment
  * someone resolved or deleted a moment ago, rather than the agent being sent after one that is no longer there.
  */
-export const chooseComment = (comments: ReviewComment[], commentId: number): number => {
+export const chooseComment = (comments: ReviewComment[], comment: CommentRef): number => {
 	if (openComments(comments).length === 0) throw new Error('There are no open comments to address.');
-	const chosen = comments.find((c) => c.id === commentId);
+	const chosen = comments.find((c) => c.thread === comment.thread && c.id === comment.id);
 	if (!chosen) throw new Error('That comment is no longer there. It may have been deleted since this screen was last read.');
 	if (chosen.resolved) throw new Error('That comment has been resolved already, so there is nothing to act on.');
-	const number = numberComments(comments).get(commentId);
+	const number = numberComments(comments).get(chosen.id);
 	if (number === undefined) throw new Error('That comment could not be numbered, so the agent cannot be told which one to act on.');
 	return number;
 };
 
 export const prepareAddress = async (
 	deps: AddressDeps,
-	{ recordsRoot, projectId, iteration, commentId }: AddressTarget,
+	{ recordsRoot, projectId, iteration, comment }: AddressTarget,
 ): Promise<{ task: string; path: string }> => {
 	if (deps.agentRunning()) {
 		throw new Error(AGENT_BUSY);
@@ -89,6 +89,6 @@ export const prepareAddress = async (
 	};
 	// Written even when nothing is open, so the file never keeps listing comments that have since been resolved.
 	const written = writeCommentsExport(recordsRoot, input);
-	const number = chooseComment(comments, commentId);
+	const number = chooseComment(comments, comment);
 	return { task: addressTask(written.path, iteration.branch, skill, number), path: written.path };
 };

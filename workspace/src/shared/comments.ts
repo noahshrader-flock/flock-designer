@@ -1,4 +1,4 @@
-import type { CommentAnchor, MarkerRequest, ReviewComment } from './contract';
+import type { CommentAnchor, CommentRef, MarkerRequest, ReviewComment } from './contract';
 
 /**
  * What is read back from GitHub, plus what was just posted from this window.
@@ -41,6 +41,9 @@ export const resolvedComments = (comments: ReviewComment[]): ReviewComment[] => 
  * page are numbered first, in the order they were made, so a pin's number is its place among the
  * pins; page-level ones follow. A comment keeps its number when others are resolved.
  */
+/** A comment's reference alone, as the app is sent it to act on one: nothing it was read with besides. */
+export const commentRef = ({ thread, id }: CommentRef): CommentRef => ({ thread, id });
+
 export const numberComments = (comments: ReviewComment[]): Map<number, number> => {
 	const ordered = [...comments].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 	return new Map([...ordered.filter((c) => c.anchor), ...ordered.filter((c) => !c.anchor)].map((c, i) => [c.id, i + 1]));
