@@ -134,6 +134,7 @@ const codebaseWork = async () => {
 };
 
 let registerIpc: (typeof import('../src/main/ipc'))['registerIpc'];
+let serveOverIpc: (typeof import('../src/main/electronIpc'))['serveOverIpc'];
 let OpenedCheckouts: (typeof import('../src/main/services/session'))['OpenedCheckouts'];
 let opened: InstanceType<typeof OpenedCheckouts>;
 let agentStart: Fn;
@@ -190,6 +191,8 @@ beforeEach(async () => {
 	ports = fakePorts();
 
 	({ registerIpc } = await import('../src/main/ipc'));
+	// The app's own transport, over the Electron mocked above: what the window calls is answered as in the app.
+	({ serveOverIpc } = await import('../src/main/electronIpc'));
 	({ OpenedCheckouts } = await import('../src/main/services/session'));
 	opened = new OpenedCheckouts();
 	agentStart = vi.fn(() => ({ state: 'idle' }));
@@ -237,9 +240,9 @@ beforeEach(async () => {
 	const { Installer } = await import('../src/main/services/install');
 	const { DesignSystemsMemory } = await import('../src/main/services/designSystems');
 	const { SessionMemory } = await import('../src/main/services/editor');
-	register = (more: Partial<IpcContext> = {}) =>
-		registerIpc({
-			window: { webContents: { send: vi.fn() } } as never,
+	register = (more: Partial<IpcContext> = {}) => {
+		const publishing = registerIpc({
+			emit: vi.fn(),
 			ports,
 			opened,
 			runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
@@ -283,16 +286,21 @@ beforeEach(async () => {
 			componentPicturesRoot: join(home, 'component-pictures'),
 			// What is got ready in the background is only counted here, never drawn.
 			componentTokens: { of: ask, warm, pictures: async () => ({ drawing: false, pictures: {}, issues: {} }) } as never,
-			checkPage,
-			drawCover,
-			installer: new Installer(),
-			// Stories are drawn only in the app: a test that reaches for it says so.
-			measureStories: async () => {
-				throw new Error('Stories are drawn only in the app.');
+			headless: {
+				scan: checkPage,
+				draw: drawCover,
+				// Stories are drawn only in the app: a test that reaches for it says so.
+				measure: async () => {
+					throw new Error('Stories are drawn only in the app.');
+				},
 			},
+			installer: new Installer(),
 			componentPictureRecipe: 'for tests',
 			...more,
 		});
+		serveOverIpc();
+		return publishing;
+	};
 	register();
 });
 

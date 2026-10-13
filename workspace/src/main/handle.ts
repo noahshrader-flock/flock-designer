@@ -1,14 +1,4 @@
-import { type BrowserWindow, ipcMain } from 'electron';
-import {
-	type Answer,
-	type CommentRef,
-	type EventName,
-	type InvokeName,
-	type Payload,
-	type Result,
-	eventChannel,
-	invokeChannel,
-} from '../shared/contract';
+import { type Answer, type CommentRef, type EventName, type InvokeName, type Payload, type Result } from '../shared/contract';
 import { asRecord } from '../shared/json';
 import { isPrototypeName } from '../shared/prototypeNames';
 import { fail, ok } from '../shared/result';
@@ -17,8 +7,9 @@ import { assertUsableProjectId } from './services/iterations';
 import { assertPrototypeName } from './services/prototype';
 
 /**
- * How the main process meets the window: each call registered by its name in the contract's table, its answer checked
- * against `WorkspaceApi`, and each event sent by name with the payload its listener expects.
+ * How the core meets the window, whichever shell holds it: each call registered by its name in the contract's table, its
+ * answer checked against `WorkspaceApi`, into a table of the core's own that the shell serves (`served`: Electron's IPC in
+ * the app, `electronIpc.ts`), and each event sent by name through the shell's sink (`EventSink`).
  *
  * A handler returns its answer or throws a sentence for a person; it never returns a Result itself. An exception
  * crossing IPC arrives as a shapeless string, which is how a real problem turns into "something went wrong", so this is
@@ -27,13 +18,25 @@ import { assertPrototypeName } from './services/prototype';
 
 const guard =
 	<Args extends unknown[], T>(fn: (...args: Args) => Promise<T> | T) =>
-	async (_event: Electron.IpcMainInvokeEvent, ...args: Args): Promise<Result<T>> => {
+	async (...args: Args): Promise<Result<T>> => {
 		try {
 			return ok(await fn(...args));
 		} catch (err) {
 			return fail(err);
 		}
 	};
+
+/** A call the window may make, as the core answers it: what it sent, untrusted, in; a Result out, never a throw. */
+export type Route = (...sent: unknown[]) => Promise<Result<unknown>>;
+
+/** Every call registered, by its name: what the shell serves, and nothing else. */
+const routes = new Map<InvokeName, Route>();
+
+/** Starts the table again: a registration is the whole of it (`registerIpc`), so registering again replaces it. */
+export const clearRoutes = (): void => routes.clear();
+
+/** The calls registered, for the shell to serve. */
+export const served = (): ReadonlyMap<InvokeName, Route> => routes;
 
 /** Turns what the window sent into what a handler takes, or throws a sentence saying why it will not. */
 export type Check<T> = (value: unknown) => T;
@@ -47,11 +50,14 @@ export const handle = <K extends InvokeName, Args extends unknown[]>(
 	name: K,
 	checks: { [I in keyof Args]: Check<Args[I]> },
 	fn: (...args: Args) => Answer<K> | Promise<Answer<K>>,
-): void =>
-	ipcMain.handle(
-		invokeChannel(name),
+): void => {
+	// As Electron's IPC refuses a second handler for a channel: one place answers each call.
+	if (routes.has(name)) throw new Error(`${name} is answered twice.`);
+	routes.set(
+		name,
 		guard((...sent: unknown[]) => fn(...((checks as Check<unknown>[]).map((check, i) => check(sent[i])) as Args))),
 	);
+};
 
 const isPositiveInteger = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v > 0;
 
@@ -121,6 +127,5 @@ export const arg = {
 			v === undefined || v === null ? null : check(v),
 };
 
-/** Tells the window that `name` happened. */
-export const emit = <K extends EventName>(window: BrowserWindow, name: K, payload: Payload<K>): void =>
-	window.webContents.send(eventChannel(name), payload);
+/** How the core tells the window that `name` happened: the shell's (Electron's IPC in the app). */
+export type EventSink = <K extends EventName>(name: K, payload: Payload<K>) => void;

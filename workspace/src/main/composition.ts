@@ -1,9 +1,9 @@
 import { type BrowserWindow, nativeTheme, safeStorage } from 'electron';
 import type { AppPaths } from './appPaths';
-import { emit } from './handle';
 import type { IpcContext } from './ipc';
+import { sendOverIpc } from './electronIpc';
 import { electronPorts } from './ports';
-import { checkInWindow } from './services/accessibilityCheck';
+import { checkInWindow } from './services/accessibilityWindow';
 import { AgentRunner } from './services/agent';
 import { AppearanceMemory } from './services/appearance';
 import { CheckoutMemory } from './services/checkoutMemory';
@@ -31,28 +31,29 @@ import { DESIGN_REPO } from '../shared/config';
  * to nothing real; a test builds its own from a temporary folder and fakes.
  */
 export const createServices = (window: BrowserWindow, paths: AppPaths, githubClientId: string): IpcContext => {
+	const emit = sendOverIpc(window);
 	const github = new GitHubSession(githubClientId, new TokenStore(paths.githubToken, safeStorage), networkFetch, (state) =>
-		emit(window, 'onSignInChanged', state),
+		emit('onSignInChanged', state),
 	);
 	return {
-		window,
+		emit,
 		ports: electronPorts(window),
 		opened: new OpenedCheckouts(),
 		runtime: new RuntimeManager({
-			onLog: (line) => emit(window, 'onRunLog', line),
-			onStatus: (status) => emit(window, 'onPreviewStatus', status),
+			onLog: (line) => emit('onRunLog', line),
+			onStatus: (status) => emit('onPreviewStatus', status),
 		}),
-		agent: new AgentRunner((line) => emit(window, 'onAgentLog', line)),
-		share: new ShareRunner((status) => emit(window, 'onShareStatus', status)),
+		agent: new AgentRunner((line) => emit('onAgentLog', line)),
+		share: new ShareRunner((status) => emit('onShareStatus', status)),
 		github,
 		designRepo: new DesignRepo(github, DESIGN_REPO),
 		page: new PageView(
 			window,
-			(route) => emit(window, 'onPageRoute', route),
-			(e) => emit(window, 'onPinEvent', e),
+			(route) => emit('onPageRoute', route),
+			(e) => emit('onPinEvent', e),
 		),
 		memory: new CheckoutMemory(paths.checkout),
-		onPublishStatus: (status) => emit(window, 'onPublishStatus', status),
+		onPublishStatus: (status) => emit('onPublishStatus', status),
 		prototypesRoot: paths.prototypes,
 		prototypeServer: new PrototypeServer(),
 		sessions: new SessionMemory(paths.agentSessions),
@@ -65,9 +66,7 @@ export const createServices = (window: BrowserWindow, paths: AppPaths, githubCli
 		storyPreviewsRoot: paths.storyPreviews,
 		tokenBranchesFile: paths.tokenBranches,
 		voiceBranchFile: paths.voiceBranch,
-		measureStories: measureInWindows,
-		checkPage: checkInWindow,
-		drawCover: coverInWindow,
+		headless: { measure: measureInWindows, scan: checkInWindow, draw: coverInWindow },
 		componentPicturesRoot: paths.componentPictures,
 		componentPictureRecipe: PICTURE_RECIPE,
 		// A little after the window is up, so opening the app is not slowed by getting the design system ready.

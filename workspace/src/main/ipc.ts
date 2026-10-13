@@ -1,11 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, join, sep } from 'node:path';
-import type { BrowserWindow } from 'electron';
 import type { Appearance } from '../shared/appearance';
 import type { AccessibilityResult, Checkout, ClonePlan, Person, PublishStatus } from '../shared/contract';
 import { statesOf } from '../shared/prototypeStates';
-import { type Check, arg, emit } from './handle';
+import { type Check, type EventSink, arg, clearRoutes } from './handle';
 import type { Ports } from './ports';
 import { type CheckPage, accessibilityOf } from './services/accessibilityCheck';
 import { AGENT_BUSY, AgentRunner } from './services/agent';
@@ -59,8 +58,22 @@ import { formatRepo, repoRefOf } from '../shared/repoRef';
 import { HOST } from '../shared/vocabulary';
 import { DESIGN_REPO } from '../shared/config';
 
+/**
+ * What only the shell can do for the core without being seen: draw a page out of sight. In the app, hidden windows
+ * (`storyMeasure.ts`, `accessibilityWindow.ts`, `coverWindow.ts`); in another shell, its own headless browser.
+ */
+export interface Headless {
+	/** How stories are drawn to read what they draw (T6). */
+	measure: Measure;
+	/** How a page is checked for accessibility (T7): axe-core in each of its states. */
+	scan: CheckPage;
+	/** How a prototype's page is drawn as its picture on its project's card. */
+	draw: DrawCover;
+}
+
 export interface IpcContext {
-	window: BrowserWindow;
+	/** How the core tells the window that something happened: the shell's. */
+	emit: EventSink;
 	/** Everything reached outside the app: dialogs, other applications, the clipboard, the network, the person's own tools. */
 	ports: Ports;
 	opened: OpenedCheckouts;
@@ -96,12 +109,8 @@ export interface IpcContext {
 	tokenBranchesFile: string;
 	/** Which branch a change to the voice and tone is kept on (T9). */
 	voiceBranchFile: string;
-	/** How stories are drawn to read what they draw (T6): hidden windows, in the app. */
-	measureStories: Measure;
-	/** How a page is checked for accessibility (T7): axe-core in a hidden window, in the app. */
-	checkPage: CheckPage;
-	/** How a prototype's page is drawn as its picture on its project's card: a hidden window, in the app. */
-	drawCover: DrawCover;
+	/** Drawing out of sight: the shell's. */
+	headless: Headless;
 	/**
 	 * Which tokens each component draws with (T6), and so what is got ready in the background: given for tests.
 	 */
@@ -116,7 +125,7 @@ export interface IpcContext {
 
 /** Everything the handlers share: the context, and what is made from it once, for the window's whole session. */
 export const ipcDeps = ({
-	window,
+	emit,
 	ports,
 	opened,
 	runtime,
@@ -140,9 +149,7 @@ export const ipcDeps = ({
 	storyPreviewsRoot,
 	tokenBranchesFile,
 	voiceBranchFile,
-	measureStories,
-	checkPage,
-	drawCover,
+	headless,
 	componentTokens: injectedComponentTokens,
 	componentPicturesRoot,
 	componentPictureRecipe,
@@ -277,7 +284,7 @@ export const ipcDeps = ({
 	// Which tokens each component draws with (T6), and its picture (P5), from one drawing pass.
 	const componentPictures = new ComponentPictures({ folder: componentPicturesRoot, server: prototypeServer, recipe: componentPictureRecipe });
 	const componentTokens =
-		injectedComponentTokens ?? new ComponentTokens({ system: shownSystem, previews, measure: measureStories, pictures: componentPictures });
+		injectedComponentTokens ?? new ComponentTokens({ system: shownSystem, previews, measure: headless.measure, pictures: componentPictures });
 	// The previews and the index are got ready in the background, so a component opened later is drawn at once: as the app
 	// opens, and whenever the library has been read (it may have moved). For a commit already ready it is nothing.
 	const warm = () => void componentTokens.warm();
@@ -329,7 +336,7 @@ export const ipcDeps = ({
 		// Both asked first, so the product is not cloned only for the design repository to be in the way.
 		for (const p of [plan.place, plan.design]) if (p?.state === 'taken') throw new Error(notClonedOver(p.why));
 		const stop = (state.cloning = new AbortController());
-		const progress = (of: string) => (p: GitProgress) => emit(window, 'onCloneProgress', { repository: of, ...p });
+		const progress = (of: string) => (p: GitProgress) => emit('onCloneProgress', { repository: of, ...p });
 		try {
 			const cloned = await cloner.clone({ repository: plan.repository, visible: state.visible, folder }, progress(plan.repository), stop.signal);
 			// The design repository is the app's own, named here, never by the window: it is the whole list it may clone.
@@ -421,7 +428,7 @@ export const ipcDeps = ({
 		if (html === null) throw new Error('This prototype has no page yet.');
 		const url = await servePrototype(projectId, name, html);
 		const file = join(dirname(work.file(projectId, name)), `${name}.accessibility.json`);
-		return accessibilityOf({ file, html, url, states: statesOf(html), target: await work.target(projectId, name), check: checkPage });
+		return accessibilityOf({ file, html, url, states: statesOf(html), target: await work.target(projectId, name), check: headless.scan });
 	};
 	/**
 	 * The picture of each prototype on its project's card (PROJECT_PICTURES_PLAN.md). Asked for by the list once it is on
@@ -435,12 +442,12 @@ export const ipcDeps = ({
 			return existsSync(file) ? readFileSync(file, 'utf8') : null;
 		},
 		serve: servePrototype,
-		draw: drawCover,
+		draw: headless.draw,
 		tried: new Set(),
 	};
 
 	return {
-		window,
+		emit,
 		ports,
 		opened,
 		runtime,
@@ -504,6 +511,7 @@ export type IpcDeps = ReturnType<typeof ipcDeps>;
  * actually opened, and its answer returned as a Result.
  */
 export const registerIpc = (context: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
+	clearRoutes();
 	const d = ipcDeps(context);
 	registerCheckout(d);
 	registerClone(d);

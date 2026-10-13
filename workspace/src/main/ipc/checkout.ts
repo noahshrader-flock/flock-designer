@@ -1,6 +1,6 @@
 import { basename } from 'node:path';
 import type { Checkout, CheckoutSuggestion, RepositoryList } from '../../shared/contract';
-import { arg, emit, handle } from '../handle';
+import { arg, handle } from '../handle';
 import { buildContextReceipt } from '../services/contextReceipt';
 import { DESCRIPTOR_PATH, findCommand, readDescriptor } from '../services/descriptor';
 import { branchCommit, branchesWithFile, readCheckout, recentBranches } from '../services/git';
@@ -31,7 +31,7 @@ export const registerCheckout = (d: IpcDeps): void => {
 		signedInLogin,
 		state,
 		trustedRoot,
-		window,
+		emit,
 		written,
 	} = d;
 
@@ -116,7 +116,7 @@ export const registerCheckout = (d: IpcDeps): void => {
 		const command = findCommand(workIn.descriptor, INSTALL_COMMAND);
 		const stop = (state.installing = new AbortController());
 		try {
-			await installer.install(canonical, command, (line) => emit(window, 'onInstallLine', line), stop.signal);
+			await installer.install(canonical, command, (line) => emit('onInstallLine', line), stop.signal);
 		} finally {
 			state.installing = null;
 		}

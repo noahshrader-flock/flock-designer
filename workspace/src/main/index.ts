@@ -4,6 +4,7 @@ import pkg from '../../package.json';
 import { appPaths } from './appPaths';
 import { registerIpc } from './ipc';
 import { createServices } from './composition';
+import { serveOverIpc } from './electronIpc';
 import { quitWithTheWindow } from './lifecycle';
 import { AppearanceMemory } from './services/appearance';
 import { MIN_WINDOW, type WindowState, WindowMemory, restoreState } from './services/windowMemory';
@@ -121,6 +122,7 @@ void app.whenReady().then(() => {
 	const services = createServices(window, paths(), CLIENT_ID);
 	const { runtime, agent, share, github, page, prototypeServer } = services;
 	const publishing = registerIpc(services);
+	serveOverIpc();
 	window.on('closed', () => prototypeServer.close());
 	// Coming back to the window is a good moment to publish whatever was done while it was away.
 	window.on('focus', () => void publishing.publish());
