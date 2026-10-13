@@ -83,7 +83,7 @@ export const PanelView = ({
  */
 export const Panel = () => {
 	const [tab, setTab] = useState<Tab>(() => vscode().getState()?.tab ?? 'projects');
-	const [view, setView] = useState<View>(() => vscode().getState()?.view ?? 'list');
+	const [view, setView] = useState<View>(() => vscode().getState()?.view ?? 'grid');
 	const [context, setContext] = useState<Context | null>(null);
 	const [account, setAccount] = useState<SignInState>({ state: 'signedOut' });
 	// Counts the times the extension said the projects changed: each reads them again.

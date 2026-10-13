@@ -170,15 +170,16 @@ describe('the projects as a list or a grid', () => {
 		[...views().querySelectorAll<HTMLElement>('[role="radio"]')].find((o) => o.getAttribute('aria-label') === name) as HTMLElement;
 	const cards = () => [...body().querySelectorAll<HTMLElement>('.card')];
 
-	it('starts as a list, with icon-only List and Grid to change it, once there are projects to show', async () => {
+	it('starts as a grid, the first of icon-only Grid and List to change it, once there are projects to show', async () => {
 		await showOpen();
 		expect(
 			[...views().querySelectorAll('[role="radio"]')].map((o) => [o.getAttribute('aria-label'), o.getAttribute('aria-checked'), o.textContent]),
 		).toEqual([
-			['List', 'true', ''],
-			['Grid', 'false', ''],
+			['Grid', 'true', ''],
+			['List', 'false', ''],
 		]);
-		expect(cards()).toHaveLength(0);
+		expect(body().querySelectorAll('.row')).toHaveLength(0);
+		expect(cards()).toHaveLength(4);
 		await act(async () => root?.unmount());
 		await showOpen(OPEN, []);
 		expect(document.querySelector('[aria-label="Layout"]')).toBeNull();
@@ -186,9 +187,6 @@ describe('the projects as a list or a grid', () => {
 
 	it('shows each project as a card in a grid: its picture, its name and what it has, with its comments as a badge', async () => {
 		await showOpen();
-		await press(view('Grid'));
-		expect(view('Grid').getAttribute('aria-checked')).toBe('true');
-		expect(body().querySelectorAll('.row')).toHaveLength(0);
 		expect(cards().map((c) => c.querySelector('[data-part="name"]')?.textContent)).toEqual([
 			'Alert history',
 			'Zone coverage',
@@ -201,9 +199,23 @@ describe('the projects as a list or a grid', () => {
 		expect(cards()[0]!.querySelector('[data-part="picture"]')).not.toBeNull();
 	});
 
+	it('shows each as a row in a list, once List is chosen', async () => {
+		await showOpen();
+		await press(view('List'));
+		expect(view('List').getAttribute('aria-checked')).toBe('true');
+		expect(cards()).toHaveLength(0);
+		expect([...body().querySelectorAll('.row [data-part="name"]')].map((n) => n.textContent)).toEqual([
+			'Alert history',
+			'Zone coverage',
+			'Admin usage',
+			'Role comparison',
+		]);
+		expect(body().querySelector('.row [data-part="picture"]')?.className).toBe('picture');
+		expect(body().querySelector('.card-picture')).toBeNull();
+	});
+
 	it('keeps the sections, and the cards do what the rows do: open the newest prototype, and take the right-click menu', async () => {
 		await showOpen();
-		await press(view('Grid'));
 		expect([...body().querySelectorAll('.section')].map((x) => x.querySelector('[data-part="title"]')?.textContent)).toEqual([
 			'Admin',
 			'Maps',
@@ -219,7 +231,6 @@ describe('the projects as a list or a grid', () => {
 
 	it('draws the pictures in either', async () => {
 		await showOpen();
-		await press(view('Grid'));
 		// A name of its own: a picture read is kept by its name, as the app keeps it, across the tests of this file.
 		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2-i1', cover: 'fedcba654321' }]);
 		await answer('projectCover', 'data:image/jpeg;base64,BBBB');
@@ -228,20 +239,20 @@ describe('the projects as a list or a grid', () => {
 
 	it('is kept in the panel’s state, so a reload leaves it where it was, as the tab is', async () => {
 		await showOpen();
-		await press(view('Grid'));
-		expect(state).toMatchObject({ tab: 'projects', view: 'grid' });
+		await press(view('List'));
+		expect(state).toMatchObject({ tab: 'projects', view: 'list' });
 		await act(async () => root?.unmount());
 		sent = [];
 		await showOpen();
-		expect(view('Grid').getAttribute('aria-checked')).toBe('true');
-		expect(cards().length).toBeGreaterThan(0);
+		expect(view('List').getAttribute('aria-checked')).toBe('true');
+		expect(cards()).toHaveLength(0);
 	});
 
 	it('does not lose the tab chosen, nor the layout when the tab is', async () => {
 		await showOpen();
-		await press(view('Grid'));
+		await press(view('List'));
 		await press(options()[1]!);
-		expect(state).toEqual({ tab: 'design-system', view: 'grid' });
+		expect(state).toEqual({ tab: 'design-system', view: 'list' });
 	});
 });
 

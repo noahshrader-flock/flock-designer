@@ -246,8 +246,8 @@ drawn by the browser already on the machine (Chrome, Edge or Chromium, or `CHROM
 `puppeteer-core`, which downloads no browser of its own (`chromeHeadless.ts`); a machine with none is told what to
 install. The panel's rows show the pictures, made once the list is read, as the app makes them.
 
-**Folders:** the panel lists the projects under a section for each folder, those in none last, as a list of rows or a
-grid of cards (the icons at the right above them, remembered with the tab).  **Assign folder…**, on a
+**Folders:** the panel lists the projects under a section for each folder, those in none last, as a grid of cards, which it
+starts in, or a list of rows (the icons at the right above them, remembered with the tab).  **Assign folder…**, on a
 project row's right-click menu or a review tab's menu, puts it in a folder, a new one, or none, with the same choice New
 prototype offers. The app's one setting, its theme, is VS Code's here, so DSNR has no settings of its own.
 

@@ -15,10 +15,10 @@ import { Section } from './ui/Section';
 import { Toggle } from './ui/Toggle';
 import type { View } from './vscode';
 
-/** The two ways to see the projects: a list of rows, or a grid of cards. */
+/** The two ways to see the projects, as the app has them: a grid of cards, which it starts in, or a list of rows. */
 const VIEWS = [
-	{ value: 'list', label: 'List', icon: 'list-unordered' },
 	{ value: 'grid', label: 'Grid', icon: 'layout' },
+	{ value: 'list', label: 'List', icon: 'list-unordered' },
 ] as const satisfies { value: View; label: string; icon: string }[];
 
 /** What a project has, in a line: its iterations. Its folder is the section it is under. */
