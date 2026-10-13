@@ -351,7 +351,7 @@ const Components = ({
 			{/* Kept while a component is open, so going back finds the list where it was. */}
 			<div hidden={opened !== undefined}>
 				<Page>
-					<PageHeading title="Components">Every component, with its preview.</PageHeading>
+					<PageHeading title="Components" />
 					{/* The list's own row, so it goes when a component is open: the search, and List or Grid at its right. */}
 					<div data-components-search className="flex items-center justify-between gap-3">
 						<SearchField label="Search components" value={search} onChange={setSearch} className="w-72" />

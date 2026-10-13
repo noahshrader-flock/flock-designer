@@ -208,11 +208,11 @@ describe('the tab strip (T9)', () => {
 });
 
 describe('the Components heading', () => {
-	it('is the page’s title and a line that says what it is for, as the other tabs have, above the search', async () => {
+	it('is the page’s title alone, as the other tabs have, above the search', async () => {
 		await open(() => ok(ready()));
 		const heading = document.querySelector('[data-page-heading]') as HTMLElement;
 		expect(heading.querySelector('h2')?.textContent).toBe('Components');
-		expect(heading.querySelector('p')?.textContent).toBe('Every component, with its preview.');
+		expect(heading.querySelector('p')).toBeNull();
 		expect(
 			heading.compareDocumentPosition(document.querySelector('[data-components-search]') as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING,
 		).toBeTruthy();

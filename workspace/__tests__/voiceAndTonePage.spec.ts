@@ -49,11 +49,11 @@ afterEach(async () => {
 });
 
 describe('its heading', () => {
-	it('is the page’s title and one short line that says what it is for, in general words', async () => {
+	it('is the page’s title, with Refresh at its right, and no line under it', async () => {
 		await show();
 		const heading = document.querySelector('[data-page-heading]') as HTMLElement;
 		expect(heading.querySelector('h2')?.textContent).toBe('Voice and Tone');
-		expect(heading.querySelector('p')?.textContent).toBe('How the product speaks.');
+		expect(heading.querySelector('p')).toBeNull();
 		// Refresh is at its right, in the heading's own action slot.
 		expect(heading.querySelector('[data-page-heading-action]')?.textContent).toBe('Refresh');
 	});

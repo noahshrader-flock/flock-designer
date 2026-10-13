@@ -269,7 +269,7 @@ export const Primitives = ({ catalog, edits, hidden }: { catalog: Catalog | null
 	const go = (key: string) => sections.current.get(key)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	return (
 		<Page>
-			<PageHeading title="Primitives">The basics: color, type, spacing, shape and more.</PageHeading>
+			<PageHeading title="Primitives" />
 			<div data-coverage className="flex flex-wrap items-center gap-2">
 				{PRIMITIVES.map((p) => {
 					const list = tokensOf(p.category);

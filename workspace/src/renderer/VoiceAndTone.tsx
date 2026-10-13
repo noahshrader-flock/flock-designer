@@ -115,9 +115,7 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 						Refresh
 					</Button>
 				}
-			>
-				How the product speaks.
-			</PageHeading>
+			/>
 
 			{error && <ErrorAlert error={error} />}
 
