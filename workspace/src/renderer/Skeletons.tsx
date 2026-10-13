@@ -5,6 +5,7 @@ import { ROW_LAYOUT, RowList, THUMBNAIL } from './ListRow';
 import { Card, CardFooter } from './ui/card';
 import { COMPONENT_FOOTER, PROJECT_FOOTER } from './cardFooters';
 import { Skeleton } from './ui/skeleton';
+import { cn } from '@/lib/utils';
 
 /**
  * Content on its way, drawn as shadcn's `Skeleton` in the shape of what is coming, so nothing jumps when it arrives. The
@@ -66,7 +67,7 @@ export const RowsSkeleton = ({ count = 6, thumbnails = false }: { count?: number
 	<RowList>
 		{Array.from({ length: count }, (_, i) => (
 			<li key={i} className={ROW_LAYOUT}>
-				{thumbnails && <Skeleton data-thumbnail-skeleton className={`rounded-md ${THUMBNAIL}`} />}
+				{thumbnails && <Skeleton data-thumbnail-skeleton className={cn('rounded-md', THUMBNAIL)} />}
 				<div className="flex grow flex-col gap-1.5">
 					<Skeleton className="h-4 w-1/4" />
 					<Skeleton className="h-4 w-2/5" />
@@ -80,7 +81,7 @@ export const RowsSkeleton = ({ count = 6, thumbnails = false }: { count?: number
 export const LinesSkeleton = ({ count = 4 }: { count?: number }) => (
 	<div className="flex flex-col gap-2">
 		{Array.from({ length: count }, (_, i) => (
-			<Skeleton key={i} className={`h-4 ${i === count - 1 ? 'w-3/5' : 'w-full'}`} />
+			<Skeleton key={i} className={cn('h-4', i === count - 1 ? 'w-3/5' : 'w-full')} />
 		))}
 	</div>
 );

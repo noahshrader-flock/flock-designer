@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
 /**
  * A screen's content under its toolbar: one centered column, the same width and padding on every screen. A screen of
@@ -6,5 +7,5 @@ import type { ReactNode } from 'react';
  * readable line.
  */
 export const Page = ({ children, wide = false }: { children: ReactNode; wide?: boolean }) => (
-	<div className={`mx-auto flex flex-col gap-4 p-(--page-padding) ${wide ? '' : 'max-w-page'}`}>{children}</div>
+	<div className={cn('mx-auto flex flex-col gap-4 p-(--page-padding)', !wide && 'max-w-page')}>{children}</div>
 );

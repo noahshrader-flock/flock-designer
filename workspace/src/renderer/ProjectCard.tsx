@@ -8,6 +8,7 @@ import { PeopleLine } from './People';
 import { FolderBadge, ProjectAside, openingOf, useCover } from './ProjectParts';
 import { Badge } from './ui/badge';
 import { Card, CardFooter, CardTitle } from './ui/card';
+import { cn } from '@/lib/utils';
 
 /**
  * A project in the Projects grid, shaped as a component's is (`ComponentCard`): the cover is the picture of its newest
@@ -27,7 +28,7 @@ export const ProjectCard = ({ project, onOpen }: { project: Project; onOpen: (it
 	const opening = openingOf(project, onOpen);
 	const way = opening === null ? {} : pressableCard(opening.label, opening.press, opening.role);
 	return (
-		<Card className={`pt-0 ${opening ? PRESSABLE_CARD : ''}`} {...way}>
+		<Card className={cn('pt-0', opening && PRESSABLE_CARD)} {...way}>
 			{/* The picture of its newest prototype: it fills the cover, as a component's does. */}
 			<CardCover>
 				<PictureArea picture={cover.picture} drawing={cover.waiting} />

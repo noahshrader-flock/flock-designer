@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
+import { cn } from '@/lib/utils';
 
 export type Section = 'projects' | 'design-system';
 
@@ -46,7 +47,7 @@ export const TopNav = ({
 			className="app-drag bg-card fixed inset-x-0 top-0 z-40 grid h-(--nav-height) grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center border-b"
 		>
 			{/* 108px leaves a clear gap after the macOS window buttons (they end near 76px); elsewhere the overlay controls sit on the right. */}
-			<span className={`text-base font-bold whitespace-nowrap ${onMac ? 'pl-[108px]' : 'pl-6'}`}>DSNR</span>
+			<span className={cn('text-base font-bold whitespace-nowrap', onMac ? 'pl-[108px]' : 'pl-6')}>DSNR</span>
 
 			{user ? (
 				<Tabs value={section} onValueChange={(next) => onSectionChange(next as Section)} className="app-no-drag">
@@ -62,7 +63,7 @@ export const TopNav = ({
 				<div />
 			)}
 
-			<div className={`justify-self-end ${onMac ? 'pr-6' : 'pr-[150px]'}`}>
+			<div className={cn('justify-self-end', onMac ? 'pr-6' : 'pr-[150px]')}>
 				{user && (
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>

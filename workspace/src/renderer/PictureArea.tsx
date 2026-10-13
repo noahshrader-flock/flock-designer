@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { Skeleton } from './ui/skeleton';
+import { cn } from '@/lib/utils';
 
 /** The shape of a picture, twice as wide as it is tall (1920 by 960): the cover of a card and a row's thumbnail alike, so a thumbnail is the card's picture, smaller. */
 export const PICTURE_SHAPE = 'aspect-[1920/960]';
@@ -18,7 +19,7 @@ export const PictureArea = ({ picture, drawing = false, children }: { picture: s
 	// On its way: loading, or not yet taken by a pass that is drawing. One that failed to load is not waited for.
 	const waiting = shown ? loaded !== shown : drawing && picture === undefined;
 	return (
-		<div data-picture-area className={`absolute inset-0 ${shown && loaded === shown ? 'bg-white' : 'bg-muted/40'}`}>
+		<div data-picture-area className={cn('absolute inset-0', shown && loaded === shown ? 'bg-white' : 'bg-muted/40')}>
 			{waiting && <Skeleton data-picture-waiting className="absolute inset-0 rounded-none" />}
 			{children}
 			{shown && (
@@ -28,7 +29,10 @@ export const PictureArea = ({ picture, drawing = false, children }: { picture: s
 					decoding="async"
 					onLoad={() => setLoaded(shown)}
 					onError={() => setFailed(shown)}
-					className={`size-full object-contain transition-opacity duration-200 motion-reduce:transition-none ${loaded === shown ? 'opacity-100' : 'opacity-0'}`}
+					className={cn(
+						'size-full object-contain transition-opacity duration-200 motion-reduce:transition-none',
+						loaded === shown ? 'opacity-100' : 'opacity-0',
+					)}
 				/>
 			)}
 		</div>

@@ -11,6 +11,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Slider } from './ui/slider';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
+import { cn } from '@/lib/utils';
 
 /**
  * Changing a token (T3 of the design system plan): what opens from a row of the tokens panel, chosen by what the token is
@@ -33,14 +34,14 @@ export type ChangeTo = { ref: string } | { value: string };
 
 /** A color, as a small square. Its color is the token's own, a runtime value, so it is inline. */
 export const Swatch = ({ value, size = 'size-4' }: { value: string; size?: string }) => (
-	<span data-swatch className={`${size} shrink-0 rounded-sm border`} style={{ backgroundColor: value }} />
+	<span data-swatch className={cn(size, 'shrink-0 rounded-sm border')} style={{ backgroundColor: value }} />
 );
 
 /** A pair's contrast as WCAG states it, flagged only where the target asks for more (`textContrast`). */
 export const ContrastNote = ({ ratio, className = '' }: { ratio: number; className?: string }) => {
 	const { accessibility } = useTokenChanges();
 	return (
-		<span data-contrast={ratio} className={`${textContrast(ratio, accessibility).flag ? 'text-warning' : 'text-muted-foreground'} ${className}`}>
+		<span data-contrast={ratio} className={cn(textContrast(ratio, accessibility).flag ? 'text-warning' : 'text-muted-foreground', className)}>
 			{ratio}:1
 		</span>
 	);

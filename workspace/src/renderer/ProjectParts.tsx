@@ -7,6 +7,7 @@ import { byVersion } from '../shared/prototypeNames';
 import { workOf } from '../shared/work';
 import { CARD_DETAIL } from './cardFooters';
 import { Badge } from './ui/badge';
+import { cn } from '@/lib/utils';
 
 /**
  * What a project's card and its row in the list have in common, so neither says it twice: its picture, what it has (its
@@ -46,7 +47,7 @@ export const useCover = (project: Project): { picture: string | undefined; waiti
 const commentsOn = (prototypes: ProjectIteration[]): number => prototypes.reduce((n, it) => n + it.openComments, 0);
 
 /** What a card's footer and a row say at their right, in the gray of the details. */
-const Aside = ({ children }: { children: ReactNode }) => <span className={`${CARD_DETAIL} flex shrink-0 items-center gap-1.5`}>{children}</span>;
+const Aside = ({ children }: { children: ReactNode }) => <span className={cn(CARD_DETAIL, 'flex shrink-0 items-center gap-1.5')}>{children}</span>;
 
 /**
  * What a project has, at the right: how many versions and how many comments its prototypes have; or Built in code; or

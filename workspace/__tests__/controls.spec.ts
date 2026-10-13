@@ -40,3 +40,10 @@ describe('a comment’s card', () => {
 		expect(own.map((f) => f.path)).toEqual([]);
 	});
 });
+
+describe('classes', () => {
+	it('are joined with cn(), never a template string, so one given by a caller or a condition merges as it should', () => {
+		const own = windowSources().filter(({ text }) => /className=\{`/.test(text));
+		expect(own.map((f) => f.path)).toEqual([]);
+	});
+});

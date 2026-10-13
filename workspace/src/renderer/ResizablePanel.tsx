@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { PANEL_STEP, type PanelWidths, clampPanelWidth, loadPanelWidth, savePanelWidth } from './panelWidth';
+import { cn } from '@/lib/utils';
 
 /**
  * A side panel at the right of a screen, with a divider to resize it: drag it, or focus it and use the arrow keys. Its
@@ -84,9 +85,10 @@ export const ResizablePanel = ({
 					setWidth(next);
 					savePanelWidth(next, panel);
 				}}
-				className={`relative w-px shrink-0 touch-none outline-none transition-colors after:absolute after:inset-y-0 after:left-0 after:w-1.75 after:cursor-col-resize after:content-[''] hover:bg-primary focus-visible:bg-primary ${
-					resizing ? 'bg-primary' : 'bg-border'
-				}`}
+				className={cn(
+					"relative w-px shrink-0 touch-none outline-none transition-colors after:absolute after:inset-y-0 after:left-0 after:w-1.75 after:cursor-col-resize after:content-[''] hover:bg-primary focus-visible:bg-primary",
+					resizing ? 'bg-primary' : 'bg-border',
+				)}
 			/>
 			{/* Inline on purpose: the width is wherever the person dragged the divider, a runtime value. */}
 			<div className="bg-card flex min-h-0 shrink-0 flex-col" style={{ width }}>

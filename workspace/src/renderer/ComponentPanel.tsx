@@ -9,6 +9,7 @@ import { Swatch } from './TokenEditor';
 import { inOrder } from '../shared/primitives';
 import { Sets } from './TokensPanel';
 import { Notice, RetryButton } from './Notice';
+import { cn } from '@/lib/utils';
 
 /** How often the panel asks again while every story is being drawn. */
 const ASK_EVERY_MS = 3000;
@@ -159,7 +160,7 @@ const Uses = ({
 					<p className="text-muted-foreground text-xs">Not checked: its stories did not finish drawing for the check.</p>
 				) : (
 					<>
-						<p data-accessibility-summary className={`text-sm ${answer.accessibility.violations.length ? 'text-warning' : ''}`}>
+						<p data-accessibility-summary className={cn('text-sm', answer.accessibility.violations.length && 'text-warning')}>
 							{summaryOf(countsOf(answer.accessibility))}
 						</p>
 						<AccessibilityFindings result={answer.accessibility} />

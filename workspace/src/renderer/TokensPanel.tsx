@@ -10,6 +10,7 @@ import { Accordion, AccordionContent, AccordionItem } from './ui/accordion';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { SearchField } from './SearchField';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { cn } from '@/lib/utils';
 
 /**
  * The library's tokens, in the panel at the right of the Design System tab (T2 and T3 of the design system plan): the
@@ -48,7 +49,7 @@ export const TokenRow = ({ token, note }: { token: DesignToken; note?: ReactNode
 	const content = (
 		<>
 			{token.kind === 'color' && <Swatch value={token.value} />}
-			<span className={`min-w-0 truncate ${edited ? 'font-medium' : ''}`}>{token.name}</span>
+			<span className={cn('min-w-0 truncate', edited && 'font-medium')}>{token.name}</span>
 			{target && (
 				<span className="text-muted-foreground truncate text-xs">
 					{nameOf(target)}
@@ -65,7 +66,7 @@ export const TokenRow = ({ token, note }: { token: DesignToken; note?: ReactNode
 			{isEditable(token) ? (
 				<Popover>
 					<PopoverTrigger asChild>
-						<button type="button" aria-label={`Change ${labelOf(token)}`} className={`hover:bg-muted/50 data-[state=open]:bg-muted ${ROW}`}>
+						<button type="button" aria-label={`Change ${labelOf(token)}`} className={cn('hover:bg-muted/50 data-[state=open]:bg-muted', ROW)}>
 							{content}
 						</button>
 					</PopoverTrigger>

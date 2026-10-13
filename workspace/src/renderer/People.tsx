@@ -3,6 +3,7 @@ import { CARD_DETAIL } from './cardFooters';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { avatarUrl } from '../shared/hostUrls';
+import { cn } from '@/lib/utils';
 
 /**
  * Who a project is by: the first person's picture and name, in the card's gray, and how many others there are, whose names
@@ -17,7 +18,7 @@ export const PeopleLine = ({ people }: { people: Person[] }) => {
 				<AvatarImage src={avatarUrl(first.login) ?? undefined} alt="" />
 				<AvatarFallback>{first.name.charAt(0).toUpperCase()}</AvatarFallback>
 			</Avatar>
-			<span className={`${CARD_DETAIL} truncate`}>{first.name}</span>
+			<span className={cn(CARD_DETAIL, 'truncate')}>{first.name}</span>
 			{others.length > 0 && (
 				<Tooltip>
 					<TooltipTrigger asChild>

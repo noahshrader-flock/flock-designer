@@ -1,6 +1,7 @@
 import { ChevronRightIcon, ExternalLinkIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { PICTURE_SHAPE, PictureArea } from './PictureArea';
+import { cn } from '@/lib/utils';
 
 /** What a row's picture is, reduced: the card's picture in the same shape, 40 pixels high. Rows still loading take the same. */
 export const THUMBNAIL = `h-10 shrink-0 ${PICTURE_SHAPE}`;
@@ -50,10 +51,10 @@ export const ListRow = ({
 				type="button"
 				aria-label={label}
 				disabled={onOpen === null}
-				className={`${ROW_LAYOUT} w-full text-left ${onOpen === null ? '' : 'hover:bg-muted/50'}`}
+				className={cn(ROW_LAYOUT, 'w-full text-left', onOpen !== null && 'hover:bg-muted/50')}
 				onClick={onOpen ?? undefined}
 			>
-				<span data-thumbnail className={`relative overflow-hidden rounded-md border ${THUMBNAIL}`}>
+				<span data-thumbnail className={cn('relative overflow-hidden rounded-md border', THUMBNAIL)}>
 					<PictureArea picture={picture} drawing={drawing} />
 				</span>
 				<span className="flex min-w-0 grow flex-col gap-0.5">

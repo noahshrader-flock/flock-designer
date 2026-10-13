@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { PICTURE_SHAPE } from './PictureArea';
+import { cn } from '@/lib/utils';
 
 /**
  * The top of a card, where its picture goes: an area twice as wide as it is tall (1920 by 960), whatever the card's width, so
@@ -11,7 +12,7 @@ export const CardCover = ({ children }: { children?: ReactNode }) => (
 	<div
 		data-slot="card-cover"
 		// The card puts a gap under its cover; a picture runs through it to the footer.
-		className={`relative mb-[calc(var(--card-spacing)*-1)] ${PICTURE_SHAPE} w-full overflow-hidden`}
+		className={cn('relative mb-[calc(var(--card-spacing)*-1)]', PICTURE_SHAPE, 'w-full overflow-hidden')}
 	>
 		{children}
 	</div>

@@ -7,6 +7,7 @@ import { PictureArea } from './PictureArea';
 import { PRESSABLE_CARD, pressableCard } from './pressableCard';
 import { Badge } from './ui/badge';
 import { Card, CardFooter, CardTitle } from './ui/card';
+import { cn } from '@/lib/utils';
 
 /**
  * A component in the grid view (P5 of the design system plan, decision 31): the Projects card, its cover the component's
@@ -32,7 +33,7 @@ export const ComponentCard = ({
 	return (
 		<Card
 			data-component-card={component.id}
-			className={`pt-0 ${PRESSABLE_CARD}`}
+			className={cn('pt-0', PRESSABLE_CARD)}
 			{...pressableCard(`Open ${component.name}${issues?.violations ? `, ${summaryOf(issues)}` : ''}`, onOpen)}
 		>
 			<CardCover>
@@ -52,7 +53,7 @@ export const ComponentCard = ({
 			</CardCover>
 			<CardFooter className={COMPONENT_FOOTER}>
 				<CardTitle className={CARD_NAME}>{component.name}</CardTitle>
-				<span className={`${CARD_DETAIL} shrink-0 truncate`}>{component.group}</span>
+				<span className={cn(CARD_DETAIL, 'shrink-0 truncate')}>{component.group}</span>
 			</CardFooter>
 		</Card>
 	);
