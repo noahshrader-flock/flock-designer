@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { EVENTS, type EventName, INVOKE, type WorkspaceApi, eventChannel, invokeChannel } from '../src/shared/contract';
 
-/** The preload as the window gets it: what it puts in the page, and what each method sends where. */
+/** The preload as the window gets it: the API put in the page, and each method carried on its own channel by Electron's IPC. */
 const sent: unknown[][] = [];
 const heard: string[] = [];
 let exposed: Record<string, (...args: unknown[]) => unknown> = {};
@@ -18,9 +18,10 @@ beforeAll(async () => {
 	await import('../src/preload/index');
 });
 
-describe('what the window can reach', () => {
-	it('is every method of the API, and nothing else', () => {
-		expect(Object.keys(exposed).sort()).toEqual([...INVOKE, ...Object.keys(EVENTS)].sort());
+// That the API is every method in the table, and nothing else, is the builder's (workspaceApi.spec): here, what carries it.
+describe('what carries the window’s calls', () => {
+	it('puts the API in the page', () => {
+		expect(Object.keys(exposed)).toContain('readCheckout');
 	});
 
 	it('sends each call on its own channel, with its arguments as given', async () => {
