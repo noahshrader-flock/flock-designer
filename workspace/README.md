@@ -261,18 +261,62 @@ It is drawn in VS Code's own design language, with none of the app's shadcn comp
 own (a test fails if one creeps in), so it follows every theme.
 
 ```bash
-npm run extension:dev       # build it as you edit, in a VS Code window of its own
-npm run extension:build     # build it once, into extension/dist/
-npm run extension:test      # open it in VS Code on a throwaway world: a review opens, and a prototype is started, built (by a stand-in agent) and opened
-npm run extension:package   # make extension/dsnr.vsix, to install with Extensions: Install from VSIX
+npm run extension:dev            # build it as you edit, in a VS Code window of its own
+npm run extension:build          # build it once, into extension/dist/
+npm run extension:test           # run it from source in VS Code, on a throwaway world (below)
+npm run extension:test:packaged  # the same, installed from its package, as it runs for everyone else
+npm run extension:package        # make extension/dsnr.vsix, for this machine's platform
+npm run extension:install        # make it, and install it into your own VS Code
 ```
 
 `extension:dev` opens a second VS Code window with DSNR loaded from here, on a throwaway profile in the
 temporary folder, so your own VS Code, its settings and its extensions are never touched. Saving a file
 rebuilds it: a change to the panel reloads it in place, and a change to the extension restarts it (both
 are said in View › Output › DSNR). Quit that window with ⌘Q to stop the build: on a Mac, closing its last
-window leaves it running. `extension:test` is not part of `npm run check`, since it opens a VS Code window for a few
-seconds; it makes its own product and design repository, with no remotes, so nothing can be pushed.
+window leaves it running.
+
+### Installing DSNR in VS Code
+
+1. From `workspace/`, run `npm run extension:install`. It builds DSNR, packages it as `extension/dsnr.vsix`, and installs
+   it into your VS Code, replacing any DSNR already there. (Or run `npm run extension:package` and install the file from
+   VS Code: Extensions › … › Install from VSIX….)
+2. Reload VS Code's windows: **Developer: Reload Window** from the command palette.
+3. Open a product's folder, one with `.dsnr/workspace.json`, with `flock-designer` checked out beside it. DSNR's icon is
+   in the activity bar. If the product is not on this machine, the panel's **Get started** clones it.
+4. Sign in at the far right of DSNR's title bar.
+
+The package is for the platform it was made on (this is said when it is made, for example `darwin-arm64`), since it
+carries esbuild's binary: make it on a Mac with Apple silicon for one, on an Intel Mac for another. It needs, on the
+machine it runs on, Claude Code (to build), and Chrome, Edge or Chromium (for pictures and the accessibility check). To
+install it somewhere VS Code is not in `/Applications`, set `CODE_CLI` to its `code` command. To remove it: Extensions ›
+DSNR › Uninstall.
+
+### Testing it
+
+**Automatically.** `npm run extension:test` runs DSNR from its source in the VS Code installed here, and
+`npm run extension:test:packaged` runs it installed from its package, in VS Code's production mode, which is what proves
+it works outside development. Each takes about a minute and opens a VS Code window of its own, on a throwaway profile and
+a throwaway world: a product and a design repository made for the run, with no remotes, so nothing is pushed, and a
+stand-in for Claude Code, so no agent runs. It checks that DSNR starts and has its commands, opens a saved prototype's
+review, then starts a new prototype, builds it, checks it and pictures it with the real browser, saves it and opens its
+review. Neither is part of `npm run check`.
+
+**By hand, on purpose (Phase 4.6 of the plan): the comments test.** It publishes to the real design repository and runs
+Claude Code, so do it on a test project you can delete:
+
+1. Install DSNR (above) and open a product. Sign in.
+2. **New prototype** (the **+** in DSNR's title bar): name it something like "DSNR test", say what it explores, and choose
+   no folder. Watch the notification and View › Output › DSNR: Agent. When it is built, its review opens.
+3. In the review: **Sign in to comment** if it asks, then **Comment**, click something on the page, write a comment, and
+   save it. Check the comment is on the design repository's GitHub issues, and in the app.
+4. On the comment's menu: **Resolve**, then **Reopen**.
+5. On the comment's menu: **Address**. When the agent has finished, the review shows the changed page, or says why
+   nothing changed.
+6. The review's title bar: **Open the published page** (once it is published) and **Copy the published page's link**.
+   The status bar says whether your work is synced.
+7. In the panel: right-click the project › **Assign folder…**, and check it moves under its folder.
+8. When you are done: DSNR has no Delete, so remove the project's folder (`projects/dsnr-test`) from the design
+   repository and push, and close its review issue on GitHub.
 
 ## If the window shows "Invalid hook call" while developing
 
