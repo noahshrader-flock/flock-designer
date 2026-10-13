@@ -243,6 +243,10 @@ drawn by the browser already on the machine (Chrome, Edge or Chromium, or `CHROM
 `puppeteer-core`, which downloads no browser of its own (`chromeHeadless.ts`); a machine with none is told what to
 install. The panel's rows show the pictures, made once the list is read, as the app makes them.
 
+**Folders:** the panel lists the projects under a section for each folder, those in none last. **Assign folder…**, on a
+project row's right-click menu or a review tab's menu, puts it in a folder, a new one, or none, with the same choice New
+prototype offers. The app's one setting, its theme, is VS Code's here, so DSNR has no settings of its own.
+
 **Sync and share:** whether the person's work is synced is in VS Code's status bar (Synced, Syncing, Not synced);
 pressing it shows what is held back and why, and Sync now. A review tab's title bar opens its page on the published site,
 or copies its link; when it is not there yet, it says why and offers Publish.

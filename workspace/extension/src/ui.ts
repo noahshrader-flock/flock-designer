@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { AgentLogLike, Progress } from './agentWork';
 import type { PublishStatus } from '../../src/shared/contract';
-import type { Ask } from './newPrototype';
+import type { Ask } from './ask';
 import { syncItem } from './publishing';
 
 /** VS Code's own input box and quick pick, as a flow asks them (`Ask`). */

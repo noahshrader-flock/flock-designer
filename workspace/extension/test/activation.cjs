@@ -33,6 +33,7 @@ exports.run = async () => {
 		'dsnr.openReview',
 		'dsnr.openPublishedPage',
 		'dsnr.copyPublishedLink',
+		'dsnr.assignFolder',
 		'dsnr.sync',
 		'dsnr.signIn',
 		'dsnr.account',

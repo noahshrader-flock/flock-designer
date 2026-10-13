@@ -46,24 +46,37 @@ describe('the extension’s manifest', () => {
 		expect(manifest().contributes.views).toEqual({ dsnr: [{ type: 'webview', id: 'dsnr.panel', name: 'DSNR' }] });
 	});
 
-	it('has its commands: to open it, to start a prototype, to open one for review, its published page, the sync, and the account', () => {
+	it('has its commands: to open it, to start a prototype, to open one for review, its published page, its folder, the sync, and the account', () => {
 		expect(manifest().contributes.commands.map((c) => `${c.category}: ${c.title}`)).toEqual([
 			'DSNR: Open',
 			'DSNR: New prototype',
 			'DSNR: Open a prototype for review',
 			'DSNR: Open the published page',
 			'DSNR: Copy the published page’s link',
+			'DSNR: Assign folder…',
 			'DSNR: Sync your work',
 			'DSNR: Sign in to GitHub',
 			'DSNR: Your GitHub account',
 		]);
 	});
 
+	it('assigns a project’s folder from its row’s right-click menu, and from a review tab’s own menu', () => {
+		const { menus } = manifest().contributes;
+		const inReview = "activeWebviewPanelId == 'dsnr.review'";
+		expect(menus['webview/context']).toEqual([{ command: 'dsnr.assignFolder', when: "webviewId == 'dsnr.panel' && webviewSection == 'project'" }]);
+		expect(menus['editor/title']?.find((m) => m.command === 'dsnr.assignFolder')).toEqual({
+			command: 'dsnr.assignFolder',
+			when: inReview,
+			group: '1_project',
+		});
+		expect(menus.commandPalette?.find((m) => m.command === 'dsnr.assignFolder')).toEqual({ command: 'dsnr.assignFolder', when: inReview });
+	});
+
 	it('puts the published page, to open and to share, in a review tab’s own title bar, and only there', () => {
 		const { commands, menus } = manifest().contributes;
 		const icon = (id: string) => commands.find((c) => c.command === id)?.icon;
 		const inReview = "activeWebviewPanelId == 'dsnr.review'";
-		expect(menus['editor/title']).toEqual([
+		expect(menus['editor/title']?.filter((m) => m.group?.startsWith('navigation'))).toEqual([
 			{ command: 'dsnr.openPublishedPage', when: inReview, group: 'navigation@1' },
 			{ command: 'dsnr.copyPublishedLink', when: inReview, group: 'navigation@2' },
 		]);
@@ -71,6 +84,7 @@ describe('the extension’s manifest', () => {
 		expect(menus.commandPalette?.filter((m) => m.when === inReview).map((m) => m.command)).toEqual([
 			'dsnr.openPublishedPage',
 			'dsnr.copyPublishedLink',
+			'dsnr.assignFolder',
 		]);
 	});
 

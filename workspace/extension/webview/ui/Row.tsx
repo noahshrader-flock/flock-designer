@@ -3,9 +3,24 @@ import type { ReactNode } from 'react';
 /**
  * One thing in a list, as a row of VS Code's own lists: a picture or an icon at its start, a name, a quieter line under
  * it, and whatever belongs at its end (a badge). The name and the line are cut with an ellipsis when the side bar is
- * narrow, never wrapped. With `onOpen`, the whole row is a button.
+ * narrow, never wrapped. With `onOpen`, the whole row is a button. `context` is what VS Code's right-click menu for the
+ * row is given (its `data-vscode-context`), which its `webview/context` items are chosen by.
  */
-export const Row = ({ start, name, meta, end, onOpen }: { start?: ReactNode; name: string; meta?: string; end?: ReactNode; onOpen?: () => void }) => {
+export const Row = ({
+	start,
+	name,
+	meta,
+	end,
+	onOpen,
+	context,
+}: {
+	start?: ReactNode;
+	name: string;
+	meta?: string;
+	end?: ReactNode;
+	onOpen?: () => void;
+	context?: Record<string, unknown>;
+}) => {
 	const parts = (
 		<>
 			{start}
@@ -24,7 +39,7 @@ export const Row = ({ start, name, meta, end, onOpen }: { start?: ReactNode; nam
 	);
 	const shape = meta ? 'row row-two-lines' : 'row';
 	return (
-		<li role="listitem" className={onOpen ? 'row-item' : shape}>
+		<li role="listitem" className={onOpen ? 'row-item' : shape} {...(context ? { 'data-vscode-context': JSON.stringify(context) } : {})}>
 			{onOpen ? (
 				<button type="button" className={`${shape} row-button`} onClick={onOpen}>
 					{parts}

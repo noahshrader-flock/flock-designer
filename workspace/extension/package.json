@@ -62,6 +62,11 @@
 				"icon": "$(link)"
 			},
 			{
+				"command": "dsnr.assignFolder",
+				"category": "DSNR",
+				"title": "Assign folder…"
+			},
+			{
 				"command": "dsnr.sync",
 				"category": "DSNR",
 				"title": "Sync your work"
@@ -113,6 +118,10 @@
 				{
 					"command": "dsnr.copyPublishedLink",
 					"when": "activeWebviewPanelId == 'dsnr.review'"
+				},
+				{
+					"command": "dsnr.assignFolder",
+					"when": "activeWebviewPanelId == 'dsnr.review'"
 				}
 			],
 			"editor/title": [
@@ -125,6 +134,17 @@
 					"command": "dsnr.copyPublishedLink",
 					"when": "activeWebviewPanelId == 'dsnr.review'",
 					"group": "navigation@2"
+				},
+				{
+					"command": "dsnr.assignFolder",
+					"when": "activeWebviewPanelId == 'dsnr.review'",
+					"group": "1_project"
+				}
+			],
+			"webview/context": [
+				{
+					"command": "dsnr.assignFolder",
+					"when": "webviewId == 'dsnr.panel' && webviewSection == 'project'"
 				}
 			]
 		}

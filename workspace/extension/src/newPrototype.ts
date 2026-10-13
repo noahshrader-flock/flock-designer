@@ -1,18 +1,13 @@
 import { runPrototypeBuild, type PrototypeApi } from '../../src/renderer/runPrototypeBuild';
 import type { BuildPhase } from '../../src/renderer/localBuild';
-import { foldersOf } from '../../src/shared/brief';
 import type { Project, WorkspaceApi } from '../../src/shared/contract';
 import { toProjectIteration } from '../../src/shared/iterationRecords';
 import { valueOf } from '../../src/shared/result';
 import { slugify } from '../../src/shared/validate';
 import { type AgentWorkDeps, agentReady, agentWork } from './agentWork';
+import type { Ask } from './ask';
+import { pickFolder } from './folders';
 import { type Review, reviewsOf } from './messages';
-
-/** VS Code's own boxes, as the flow asks them: a line of text, and one of a list. Undefined when the person dismisses it. */
-export interface Ask {
-	text(o: { title: string; prompt: string; placeholder?: string; validate?: (value: string) => string | null }): Promise<string | undefined>;
-	pick<T>(o: { title: string; placeholder: string; items: { label: string; description?: string; value: T }[] }): Promise<T | undefined>;
-}
 
 export interface NewPrototypeDeps extends AgentWorkDeps {
 	api: PrototypeApi &
@@ -65,7 +60,6 @@ export const readGiven = (raw: unknown): Given => {
 };
 
 const INSTALL = 'Install packages';
-const NEW_FOLDER = '$(add) New folder…';
 
 /** What the notification says at each step of the build. */
 const PHASE_WORDS: Partial<Record<BuildPhase['kind'], string>> = {
@@ -135,26 +129,6 @@ const answer = async (given: string | undefined, question: Question, ask: Ask): 
 	return given;
 };
 
-/** Its folder: one there is, none, or a new one named here. Undefined when the person dismisses it. */
-const folderFor = async (ask: Ask, projects: Project[]): Promise<string | null | undefined> => {
-	const picked = await ask.pick<string | null | typeof NEW_FOLDER>({
-		title: 'New prototype: its folder',
-		placeholder: 'Which folder it goes in',
-		items: [
-			{ label: 'No folder', value: null },
-			...foldersOf(projects).map((f) => ({ label: f, value: f })),
-			{ label: NEW_FOLDER, value: NEW_FOLDER },
-		],
-	});
-	if (picked !== NEW_FOLDER) return picked;
-	const named = await ask.text({
-		title: 'New prototype: a new folder',
-		prompt: 'Name the folder',
-		validate: (v) => (v.trim() ? null : 'Name the folder.'),
-	});
-	return named === undefined ? undefined : named.trim();
-};
-
 /**
  * Starting a prototype, the designer's loop in VS Code (ELECTRON_MIGRATION_PLAN 4.1). What stands in the way is said
  * first, before anything is made: no product open, Claude Code missing or signed out, the packages not installed (with
@@ -173,7 +147,10 @@ export const newPrototype = async (deps: NewPrototypeDeps): Promise<void> => {
 	if (title === undefined) return;
 	const task = await answer(given.task, TASK, ask);
 	if (task === undefined) return;
-	const folder = given.folder !== undefined ? given.folder : await folderFor(ask, valueOf(await api.listProjects()));
+	const folder =
+		given.folder !== undefined
+			? given.folder
+			: await pickFolder(ask, valueOf(await api.listProjects()), { title: 'New prototype: its folder', placeholder: 'Which folder it goes in' });
 	if (folder === undefined) return;
 
 	const { root, branch } = valueOf(await api.readCheckout(product.root));

@@ -1,4 +1,6 @@
 import type { Project } from '../../src/shared/domain/projects';
+import type { ReactNode } from 'react';
+import { foldersOf, inFolder } from '../../src/shared/brief';
 import { plural } from '../../src/shared/plural';
 import { useCover } from '../../src/renderer/useCover';
 import { type Review, reviewsOf } from '../src/messages';
@@ -7,9 +9,10 @@ import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
 import { List } from './ui/List';
 import { Row } from './ui/Row';
+import { Section } from './ui/Section';
 
-/** What a project has, in a line: its iterations, and its folder when it is in one. */
-const meta = (p: Project) => [plural(p.iterations.length, 'iteration'), p.folder].filter(Boolean).join(' · ');
+/** What a project has, in a line: its iterations. Its folder is the section it is under. */
+const meta = (p: Project) => plural(p.iterations.length, 'iteration');
 
 /** A project's picture, its newest prototype's (`useCover`); its place kept for one until there is one. */
 const Picture = ({ project }: { project: Project }) => {
@@ -21,6 +24,47 @@ const Picture = ({ project }: { project: Project }) => {
 	);
 };
 
+/** A project as a row: its picture, its name, what it has, its open comments, opening its newest prototype for review. */
+const ProjectRow = ({ project, onOpen }: { project: Project; onOpen: (review: Review) => void }) => {
+	const open = project.iterations.reduce((n, i) => n + i.openComments, 0);
+	const newest = reviewsOf(project)[0];
+	return (
+		<Row
+			start={<Picture project={project} />}
+			name={project.title}
+			meta={meta(project)}
+			end={open > 0 ? <Badge count={open} label={plural(open, 'open comment')} /> : undefined}
+			// What its right-click menu acts on: this project, with none of a webview's own items (Cut, Copy, Paste).
+			context={{ webviewSection: 'project', projectId: project.id, preventDefaultContextMenuItems: true }}
+			{...(newest ? { onOpen: () => onOpen(newest) } : {})}
+		/>
+	);
+};
+
+/**
+ * The projects under a section for each folder they are in, then those in none, each section saying how many it holds;
+ * or one list when none is in a folder.
+ */
+const ByFolder = ({ projects, children }: { projects: Project[]; children: (group: Project[], label: string) => ReactNode }) => {
+	const folders = foldersOf(projects);
+	if (folders.length === 0) return <>{children(projects, 'Projects')}</>;
+	const groups: [string, Project[]][] = [
+		...folders.map((f): [string, Project[]] => [f, projects.filter((p) => inFolder(p, { kind: 'folder', name: f }))]),
+		['No folder', projects.filter((p) => inFolder(p, { kind: 'none' }))],
+	];
+	return (
+		<>
+			{groups
+				.filter(([, group]) => group.length > 0)
+				.map(([title, group]) => (
+					<Section key={title} title={title} count={group.length}>
+						{children(group, title)}
+					</Section>
+				))}
+		</>
+	);
+};
+
 /** The projects as the core read them: the list (null while it is still reading), or what went wrong. */
 export interface ProjectsRead {
 	value: Project[] | null;
@@ -28,8 +72,8 @@ export interface ProjectsRead {
 }
 
 /**
- * The Projects tab: each project a row, with a place for its picture and its open comments as a badge, opening its newest
- * prototype for review. With no product open, what to open; signed out, a line saying the list is this machine's.
+ * The Projects tab: each project a row (`ProjectRow`), under its folder (`ByFolder`). With no product open, what to open;
+ * signed out, a line saying the list is this machine's.
  */
 export const Projects = ({
 	read,
@@ -68,22 +112,15 @@ export const Projects = ({
 					<Button onClick={onNew}>New prototype</Button>
 				</EmptyState>
 			) : (
-				<List label="Projects">
-					{projects.map((p) => {
-						const open = p.iterations.reduce((n, i) => n + i.openComments, 0);
-						const newest = reviewsOf(p)[0];
-						return (
-							<Row
-								key={p.id}
-								start={<Picture project={p} />}
-								name={p.title}
-								meta={meta(p)}
-								end={open > 0 ? <Badge count={open} label={plural(open, 'open comment')} /> : undefined}
-								{...(newest ? { onOpen: () => onOpen(newest) } : {})}
-							/>
-						);
-					})}
-				</List>
+				<ByFolder projects={projects}>
+					{(group, label) => (
+						<List label={label}>
+							{group.map((p) => (
+								<ProjectRow key={p.id} project={p} onOpen={onOpen} />
+							))}
+						</List>
+					)}
+				</ByFolder>
 			)}
 		</>
 	);

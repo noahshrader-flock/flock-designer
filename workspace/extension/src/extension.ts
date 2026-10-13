@@ -6,6 +6,7 @@ import type { PublishStatus, SignInState, WorkspaceApi } from '../../src/shared/
 import { valueOf } from '../../src/shared/result';
 import { addressComment } from './address';
 import { Panels, hostApi } from './bridge';
+import { assignFolder, readProjectArg } from './folders';
 import { type Review, readReview, reviewsOf } from './messages';
 import { newPrototype, readGiven } from './newPrototype';
 import { startCore } from './core';
@@ -103,6 +104,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			void vscode.window.showWarningMessage('That folder holds no design system: no Storybook stories and no tokens were found in it.');
 	};
 
+	/** The panels are told the projects changed, so each reads them again. */
+	const projectsChanged = () => panels.post({ type: 'projects-changed' });
 	const publishing = { api, choose: vscodeChoose, tell: (m: string) => void vscode.window.showInformationMessage(m) };
 	/** What a review tab's title bar does, on the review in front; said when there is none. */
 	const inFront = (act: (review: Review) => Promise<void>) => {
@@ -129,7 +132,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				choose: vscodeChoose,
 				progress: vscodeProgress,
 				log: agentLog,
-				onChanged: () => panels.post({ type: 'projects-changed' }),
+				onChanged: projectsChanged,
 				openReview,
 			}).catch((err: unknown) => {
 				failed(err);
@@ -165,6 +168,13 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				void vscode.window.showInformationMessage(`Copied the link to ${review.title}.`);
 			}),
 		),
+		// From a row's right-click menu (its project) or a review tab's menu (the review in front).
+		vscode.commands.registerCommand('dsnr.assignFolder', (raw: unknown) => {
+			const projectId = readProjectArg(raw) ?? reviews.active()?.projectId;
+			if (!projectId)
+				return void vscode.window.showInformationMessage('Right-click a project in DSNR, or open one for review, to assign its folder.');
+			return assignFolder({ api, ask: vscodeAsk, onChanged: projectsChanged }, projectId).catch(failed);
+		}),
 		vscode.commands.registerCommand('dsnr.sync', async () => {
 			const status = valueOf(await api.publishStatus());
 			const picked = await vscode.window.showQuickPick(syncPicks(status), {

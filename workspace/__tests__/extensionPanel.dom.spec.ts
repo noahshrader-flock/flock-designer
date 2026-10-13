@@ -164,17 +164,18 @@ describe('Projects', () => {
 
 	it('lists each project as a row: a picture, its name, what it has, and its open comments as a badge', async () => {
 		await showOpen();
-		expect(body().querySelector('[role="list"]')?.getAttribute('aria-label')).toBe('Projects');
-		expect(rows().map((r) => part(r, 'name'))).toEqual(['Alert history', 'Admin usage', 'Role comparison', 'Zone coverage']);
+		// Each list is named for its folder, as its section is.
+		expect([...body().querySelectorAll('[role="list"]')].map((l) => l.getAttribute('aria-label'))).toEqual(['Admin', 'Maps', 'No folder']);
+		expect(rows().map((r) => part(r, 'name'))).toEqual(['Alert history', 'Zone coverage', 'Admin usage', 'Role comparison']);
 		expect(rows()[0]!.querySelector('[data-part="picture"]')).not.toBeNull();
-		expect(part(rows()[0]!, 'meta')).toBe('3 iterations · Admin');
-		expect(part(rows()[2]!, 'meta')).toBe('1 iteration');
+		expect(part(rows()[0]!, 'meta')).toBe('3 iterations');
+		expect(part(rows()[3]!, 'meta')).toBe('1 iteration');
 	});
 
 	it('shows the open comments only when there are some, and says what the number is', async () => {
 		await showOpen();
 		const badges = rows().map((r) => r.querySelector('.badge'));
-		expect(badges.map((b) => b?.textContent ?? null)).toEqual(['2', null, '5', null]);
+		expect(badges.map((b) => b?.textContent ?? null)).toEqual(['2', null, null, '5']);
 		expect(badges[0]?.getAttribute('aria-label')).toBe('2 open comments');
 	});
 
@@ -194,6 +195,34 @@ describe('Projects', () => {
 		expect(rows()[0]!.querySelector('[data-part="picture"]')?.getAttribute('src')).toBe('data:image/jpeg;base64,AAAA');
 		// A project with no picture keeps its place for one.
 		expect(rows()[1]!.querySelector('[data-part="picture"]')?.tagName).toBe('SPAN');
+	});
+
+	it('groups them by folder, each a section with how many it holds, those in none last', async () => {
+		await showOpen();
+		const sections = [...body().querySelectorAll<HTMLElement>('.section')];
+		expect(sections.map((x) => [x.querySelector('[data-part="title"]')?.textContent, x.querySelector('[data-part="count"]')?.textContent])).toEqual([
+			['Admin', '1'],
+			['Maps', '1'],
+			['No folder', '2'],
+		]);
+	});
+
+	it('is one list when no project is in a folder', async () => {
+		await showOpen(
+			OPEN,
+			SAMPLE_PROJECTS.map((p) => ({ ...p, folder: null })),
+		);
+		expect(body().querySelectorAll('.section')).toHaveLength(0);
+		expect(rows()).toHaveLength(4);
+	});
+
+	it('gives each row VS Code’s context for its right-click menu: the project, and none of a webview’s own items', async () => {
+		await showOpen();
+		expect(JSON.parse(rows()[0]!.dataset.vscodeContext ?? '{}')).toEqual({
+			webviewSection: 'project',
+			projectId: 'alert-history',
+			preventDefaultContextMenuItems: true,
+		});
 	});
 
 	it('says, signed out, that the list is this machine’s', async () => {
