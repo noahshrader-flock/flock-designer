@@ -355,6 +355,73 @@ describe('dialogs and menus, in the panel', () => {
 	});
 });
 
+describe('searching the projects', () => {
+	const search = () => document.querySelector('input[aria-label="Search projects"]') as HTMLInputElement;
+	const names = () => [...body().querySelectorAll('[data-part="name"]')].map((n) => n.textContent);
+	const sections = () =>
+		[...body().querySelectorAll('.section')].map((x) => [
+			x.querySelector('[data-part="title"]')?.textContent,
+			x.querySelector('[data-part="count"]')?.textContent,
+		]);
+
+	it('is a box at the left of the grid and list toggle, in the same bar, both across the width the top toggle has', async () => {
+		await showOpen();
+		const bar = document.querySelector('.view-bar') as HTMLElement;
+		expect([...bar.children].map((c) => (c.querySelector('input') ? 'search' : c.getAttribute('aria-label')))).toEqual(['search', 'Layout']);
+		expect(search().placeholder).toBe('Search projects');
+	});
+
+	it('narrows the projects as it is typed in: every word, in any case, in the name, the folder or the id', async () => {
+		await showOpen();
+		await type(search(), 'ZONE');
+		expect(names()).toEqual(['Zone coverage']);
+		await type(search(), 'role comp');
+		expect(names()).toEqual(['Role comparison']);
+		await type(search(), 'admin');
+		expect(names()).toEqual(['Alert history', 'Admin usage']);
+		await type(search(), '');
+		expect(names()).toHaveLength(4);
+	});
+
+	it('keeps the folders that still have a project, with how many they hold', async () => {
+		await showOpen();
+		await type(search(), 'admin');
+		expect(sections()).toEqual([
+			['Admin', '1'],
+			['No folder', '1'],
+		]);
+	});
+
+	it('says when nothing matches, and clears from there; and Escape clears it too', async () => {
+		await showOpen();
+		await type(search(), 'zzz');
+		expect(names()).toEqual([]);
+		expect(body().textContent).toContain('No project matches “zzz”.');
+		await press(button('Clear search'));
+		expect(search().value).toBe('');
+		expect(names()).toHaveLength(4);
+		await type(search(), 'zone');
+		await key(search(), 'Escape');
+		expect(search().value).toBe('');
+		expect(names()).toHaveLength(4);
+	});
+
+	it('is kept when the view changes between grid and list', async () => {
+		await showOpen();
+		await type(search(), 'zone');
+		await press(
+			[...document.querySelectorAll<HTMLElement>('[aria-label="Layout"] [role="radio"]')].find((o) => o.getAttribute('aria-label') === 'List')!,
+		);
+		expect(search().value).toBe('zone');
+		expect(names()).toEqual(['Zone coverage']);
+	});
+
+	it('is not there when there is nothing to search', async () => {
+		await showOpen(OPEN, []);
+		expect(search()).toBeNull();
+	});
+});
+
 describe('the projects as a list or a grid', () => {
 	const views = () => document.querySelector('[aria-label="Layout"]') as HTMLElement;
 	const view = (name: string) =>

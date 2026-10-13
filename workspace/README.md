@@ -252,6 +252,8 @@ drawn by the browser already on the machine (Chrome, Edge or Chromium, or `CHROM
 `puppeteer-core`, which downloads no browser of its own (`chromeHeadless.ts`); a machine with none is told what to
 install. The panel's rows show the pictures, made once the list is read, as the app makes them.
 
+**Search:** a box at the left of the grid and list icons narrows the projects as you type, as the app's does (every word, in any case, in the name, id, folder or people); Escape clears it.
+
 **Folders:** the panel lists the projects under a section for each folder, those in none last, as a grid of cards, which it
 starts in, or a list of rows (the icons at the right above them, remembered with the tab). **Assign folder…**, from a
 project's menu, its right-click menu or a review tab's menu, opens a dialog in the panel to put it in a folder, a new

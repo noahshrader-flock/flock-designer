@@ -1,8 +1,9 @@
 import type { Project } from '../../src/shared/domain/projects';
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { foldersOf, inFolder } from '../../src/shared/brief';
 import { plural } from '../../src/shared/plural';
 import { useCover } from '../../src/renderer/useCover';
+import { matchesProject } from '../../src/shared/projectList';
 import { type Review, reviewsOf } from '../src/messages';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
@@ -12,6 +13,7 @@ import { Grid } from './ui/Grid';
 import { List } from './ui/List';
 import { Menu } from './ui/Menu';
 import { Row } from './ui/Row';
+import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
 import { Toggle } from './ui/Toggle';
 import type { View } from './vscode';
@@ -136,6 +138,8 @@ export const Projects = ({
 	view: View;
 	onView: (view: View) => void;
 }) => {
+	// What is typed in the search: the projects are narrowed to what matches, as the app's are.
+	const [search, setSearch] = useState('');
 	if (!product.open)
 		return (
 			<EmptyState icon="folder-library" title="No product is open">
@@ -152,11 +156,13 @@ export const Projects = ({
 		);
 	if (read.value === null) return <p className="note">Reading the projects…</p>;
 	const projects = read.value;
+	const matching = projects.filter((p) => matchesProject(p, search));
 	return (
 		<>
 			{!signedIn && <p className="note">These are the projects on this machine. Sign in to see your team's too.</p>}
 			{projects.length > 0 && (
 				<div className="view-bar">
+					<SearchBox label="Search projects" value={search} onChange={setSearch} />
 					<Toggle label="Layout" options={VIEWS} value={view} onChange={onView} iconOnly />
 				</div>
 			)}
@@ -165,8 +171,15 @@ export const Projects = ({
 					<p>A prototype you start appears here, with its iterations and its open comments.</p>
 					<Button onClick={onNew}>New prototype</Button>
 				</EmptyState>
+			) : matching.length === 0 ? (
+				<p className="note">
+					No project matches “{search.trim()}”.{' '}
+					<button type="button" className="link" onClick={() => setSearch('')}>
+						Clear search
+					</button>
+				</p>
 			) : (
-				<ByFolder projects={projects}>
+				<ByFolder projects={matching}>
 					{(group, label) => {
 						const items = group.map((p) => <ProjectItem key={p.id} project={p} view={view} onOpen={onOpen} onAssignFolder={onAssignFolder} />);
 						return view === 'grid' ? <Grid label={label}>{items}</Grid> : <List label={label}>{items}</List>;
