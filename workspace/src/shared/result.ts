@@ -6,6 +6,12 @@ import type { Result } from './contract';
  */
 export const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 export const fail = (err: unknown): Result<never> => ({ ok: false, error: errorText(err) });
+/** A Result's value, or its error thrown: for a caller that says what went wrong in one place. */
+export const valueOf = <T>(result: Result<T>): T => {
+	if (!result.ok) throw new Error(result.error);
+	return result.value;
+};
+
 /** The value of `work`, or what went wrong: never a throw. */
 export const toResult = <T>(work: Promise<T>): Promise<Result<T>> => work.then(ok, fail);
 

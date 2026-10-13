@@ -10,7 +10,7 @@ import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { agentFinished, agentRunning, memoryStore, projectIteration } from './fixtures';
 import { prototypeBuildTask } from '../src/main/services/agentTasks';
 import { claudeCodeAdapter } from '../src/main/services/agent';
-import { FIX_ROUNDS, type PrototypeApi, runPrototypeBuild } from '../src/renderer/prototypeBuild';
+import { FIX_ROUNDS, type PrototypeApi, runPrototypeBuild } from '../src/renderer/runPrototypeBuild';
 import type { BuildPhase } from '../src/renderer/localBuild';
 
 describe('what a prototype is called', () => {

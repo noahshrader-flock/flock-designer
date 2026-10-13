@@ -206,6 +206,8 @@ export interface WorkspaceApi {
 	agentStatus(): Promise<Result<AgentStatus>>;
 	/** The current or last run's recent lines, so a screen opened again can show where the agent has got to. */
 	agentRecent(): Promise<Result<AgentRecent>>;
+	/** Stops the agent's run, whatever it is doing: Stop on a build, where a shell shows one (the VS Code extension). */
+	stopAgent(): Promise<Result<null>>;
 	// Prototypes: one page, no product repository needed. Recording one makes the project too when it is new; building
 	// runs the agent in the app's own folder; saving puts the page in the design repository; opening serves it to the
 	// preview from this machine.
@@ -397,6 +399,7 @@ export const INVOKE = [
 	'startAgent',
 	'agentStatus',
 	'agentRecent',
+	'stopAgent',
 	'agentReadiness',
 	'editorState',
 	'startHandoff',

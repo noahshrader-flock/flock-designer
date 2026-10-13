@@ -178,6 +178,10 @@ export const registerCodebase = (d: IpcDeps): void => {
 	});
 	handle('agentStatus', [], () => agent.status());
 	handle('agentRecent', [], () => agent.recentLines());
+	handle('stopAgent', [], () => {
+		agent.stop();
+		return null;
+	});
 	handle('agentReadiness', [], () => agentReadiness());
 	// One click: read the comments now, write the file from that read, then start the agent. Nothing
 	// a reviewer wrote is put in the task; it reaches the agent only through the file.

@@ -2011,6 +2011,12 @@ describe('one agent, one piece of work', () => {
 		expect(copied).toContain(`--resume ${session}`);
 	});
 
+	it('stops the run when asked: Stop on a build, in a shell that shows one', async () => {
+		const r = await call(CHANNELS.stopAgent);
+		expect(r).toEqual({ ok: true, value: null });
+		expect(agentStop).toHaveBeenCalledTimes(1);
+	});
+
 	it("leaves another work's run alone, and says when there is nothing to continue", async () => {
 		await call(CHANNELS.useCheckout, product);
 		runningSession = 'aaaaaaaa-46ac-4823-9acb-716bcb37aa64';
