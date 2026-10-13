@@ -1,6 +1,6 @@
 import { agentFinished, agentRunning } from './fixtures';
 // @vitest-environment jsdom
-import { createElement } from 'react';
+import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Review } from '../src/renderer/Review';
 import type { CommentRef, MarkerRequest, ReviewComment } from '../src/shared/contract';
@@ -88,6 +88,97 @@ describe('reading comments', () => {
 		await open(fakeApp());
 		await sidebar();
 		expect(document.body.textContent).toContain('No comments yet');
+	});
+});
+
+describe('the preview stepping aside for the comment box', () => {
+	/** What the screen asks of the native preview, in order: drawing pins, a picture of it, and holding it hidden. */
+	const watched = (more: Parameters<typeof fakeApp>[0] = {}) => {
+		const log: string[] = [];
+		const app = fakeApp({
+			pageShowMarkers: async (items: { id: number }[]) => {
+				log.push('pins');
+				return ok(items.map((i) => ({ id: i.id, state: 'found' })));
+			},
+			pageSnapshot: async () => {
+				log.push('picture');
+				return ok('data:image/png;base64,AAAA');
+			},
+			pageHold: async (reason: string, on: boolean) => {
+				log.push(`${reason} ${on ? 'held' : 'let go'}`);
+				return ok(null);
+			},
+			...more,
+		});
+		return { app, log };
+	};
+	const picture = () => document.querySelector('img[alt="The preview, paused while a comment is written"]');
+	const startComment = async (app: ReturnType<typeof fakeApp>) => {
+		await press(button('Comment'));
+		await settle();
+		await app.click();
+		await settle();
+	};
+
+	it('draws the pin, then takes a picture, then hides the live view, and only then shows the box', async () => {
+		const { app, log } = watched();
+		await open(app);
+		await settle();
+		log.length = 0;
+		await startComment(app);
+		// The pin is in the picture, and the picture is on screen before the live view goes: nothing flashes.
+		const pinned = log.lastIndexOf('pins');
+		expect(log.slice(pinned)).toEqual(['pins', 'picture', 'popover held']);
+		expect(picture()).not.toBeNull();
+		expect(document.querySelector('#comment-draft')).not.toBeNull();
+	});
+
+	it('brings the live view back when the box closes, and takes the picture away a moment after', async () => {
+		const { app, log } = watched();
+		await open(app);
+		await startComment(app);
+		await key('Escape');
+		await settle();
+		expect(log.at(-1)).toBe('popover let go');
+		await act(async () => void (await new Promise((r) => setTimeout(r, 150))));
+		expect(picture()).toBeNull();
+	});
+
+	it('does not hide the preview after all when the box closed before the picture was ready', async () => {
+		let release: (v: unknown) => void = () => undefined;
+		const { app, log } = watched({
+			pageSnapshot: () => new Promise((r) => (release = () => r(ok('data:image/png;base64,AAAA')))),
+		});
+		await open(app);
+		await press(button('Comment'));
+		await settle();
+		await app.click();
+		await settle(2);
+		await key('Escape');
+		await settle();
+		release(null);
+		await settle();
+		// The freeze was overtaken: it must not hold the preview hidden behind a box that is gone.
+		expect(log.filter((l) => l.startsWith('popover')).at(-1)).toBe('popover let go');
+		expect(document.querySelector('#comment-draft')).toBeNull();
+	});
+
+	it('lets go of the preview when the screen is left, so the next one is not left hidden', async () => {
+		const { app, log } = watched();
+		await open(app);
+		await startComment(app);
+		await unmountAll(current!.root);
+		current = null;
+		expect(log).toEqual(expect.arrayContaining(['popover let go', 'resize let go']));
+		expect(log.filter((l) => l.startsWith('popover')).at(-1)).toBe('popover let go');
+		expect(app.calls.pageClose).toBeDefined();
+	});
+
+	it('keeps the native view on its slot once the page is open', async () => {
+		const { app } = watched();
+		await open(app);
+		await settle();
+		expect(app.calls.pageSetBounds?.length).toBeGreaterThan(0);
 	});
 });
 
