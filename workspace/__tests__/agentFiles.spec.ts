@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -43,5 +43,30 @@ describe('the guide for building UI', () => {
 	it('shares no section with the workflow: each rule is said in one of the two', () => {
 		const both = headings(guide).filter((h) => headings(workflow).includes(h));
 		expect(both).toEqual([]);
+	});
+});
+
+describe('what the shared files say about one tool', () => {
+	const root = join(__dirname, '../..');
+	const skills = readdirSync(join(root, 'skills'))
+		.filter((f) => f.endsWith('.md'))
+		.map((f) => ({ file: `skills/${f}`, text: readFileSync(join(root, 'skills', f), 'utf8') }));
+
+	it('never makes a skill one only Claude Code can start: "from an agent", not "from Claude Code"', () => {
+		expect(skills.filter(({ text }) => /from Claude Code/.test(text)).map((s) => s.file)).toEqual([]);
+		// A title is what a skill is called wherever it is listed.
+		expect(skills.filter(({ text }) => /^# .*Claude Code/.test(text)).map((s) => s.file)).toEqual([]);
+	});
+
+	it('says the ask tool once, with what any other agent does in its place', () => {
+		const workflow = read('dsnr.md');
+		expect(workflow).toMatch(/AskUserQuestion/);
+		expect(workflow).toMatch(/another agent[^.]*plain question/i);
+	});
+
+	it('runs the reviewers as subagents only where there are subagents, and says what to do otherwise', () => {
+		const handoff = skills.find((s) => s.file === 'skills/handoff.md')?.text ?? '';
+		expect(handoff).toMatch(/[Ww]here (the agent runs )?subagents/);
+		expect(handoff).toMatch(/not available, read each definition/);
 	});
 });

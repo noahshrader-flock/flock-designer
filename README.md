@@ -70,8 +70,11 @@ repository, nothing beside it: `designSystem.folder` says which folder), and pro
 | `.dsnr/skills/` | Its part of a shared skill (what its gate checks, what its engineers pick up), and any path only it has |
 | `.dsnr/knowledge/` | Its gap and setup-friction logs, rows only (`knowledge/README.md` here says how) |
 | Its patterns | Whatever folders it needs (Coke: `composition/`, `product-patterns/`), listed in its README |
-| `.claude/agents/<name>.md` | One shim per shared agent: frontmatter, then one line naming `../flock-designer/agents/<name>.md` |
-| `CLAUDE.md` (or `AGENTS.md`) | A short section sending product UI work to the `dsnr` subagent |
+| `AGENTS.md` | A short section sending product UI work to `ui-guide.md` and building to the `dsnr` agent (below). Read by Claude Code, Copilot and any other agent that reads `AGENTS.md` |
+| `CLAUDE.md` | Claude Code's: it imports `AGENTS.md`, so the section is said once |
+| `.claude/agents/<name>.md` | Claude Code's: one shim per shared agent: frontmatter, then one line naming `../flock-designer/agents/<name>.md` |
+| `.github/instructions/dsnr.instructions.md` | Copilot's: the same two lines as the section, scoped to the product's UI paths. A new file: the product's own Copilot instructions are not touched |
+| `dsnr.code-workspace` | Opens the product with `flock-designer` and the design system beside it, which every pointer above assumes. An agent that cannot read them says so and does not guess |
 
 **The commands** in `workspace.json`, by id: `preview` (an older prototype branch) and `design-mode` (the real product
 on mock data), each with `servesPreviewOn`; `check-iteration`, the **light check**, fast, run after every step;
@@ -79,18 +82,20 @@ on mock data), each with `servesPreviewOn`; `check-iteration`, the **light check
 `lint`, `a11y` and `boundary`, which the reviewers run; and `install` (`npm ci`), run from the New modal when packages
 are missing. Commands run through `npm`, `npx` or `node`.
 
-**The `CLAUDE.md` section**, as Coke has it:
+**The `AGENTS.md` section**, which every agent reads (`CLAUDE.md` imports it, `dsnr.instructions.md` repeats it):
 
 ```markdown
 ## Product UI and prototype work
 
-Route requests to build, prototype, mock up, recreate, or critique a product view or UI through the **dsnr** subagent,
-deciding the path first as its definition says (`../flock-designer/agents/dsnr.md`, "Which path") and naming it in the
-task you hand over. If `dsnr`, or a reviewer, is not available as a subagent, read its shim in `.claude/agents/` and
-follow it directly, saying so. Wait for whatever you hand to a subagent, in the foreground.
+For any product UI work, read `../flock-designer/agents/ui-guide.md` in full first: what to read, the rules, and what to
+say when you finish. To build, prototype, mock up, recreate, or critique a product view or UI, use the **dsnr** agent if
+you can run one (in Claude Code, a subagent), deciding the path first as its definition says
+(`../flock-designer/agents/dsnr.md`, "Which path") and naming it in the task you hand over; otherwise read that
+definition and follow it directly, saying so. If you cannot read `../flock-designer`, say so before building and ask for
+it to be opened: do not guess at its rules. Wait for whatever you hand to a subagent, in the foreground.
 ```
 
-**Coke (`flock-coke`, branch `noah/dsnr`) is the worked example.** Copy the shape of its `.dsnr/`, its shims and its
+**Coke (`flock-coke`, branch `noah/dsnr`) is the worked example.** Copy the shape of its `.dsnr/`, its entry points and its
 check scripts, and replace what is Coke's. Nothing here, or in the design system, changes for a new product.
 
 ## What is not here

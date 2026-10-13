@@ -36,10 +36,11 @@ top of it: the two paths, projects and receipts, the reviews, Handoff. Each rule
 (`branchPattern.codebase`) with a request about that project, it is codebase work. A request that says "prototype" is a
 prototype wherever the repository is checked out: a prototype changes nothing there.
 
-**When the request does not say, ask as a choice, never in prose.** Use the `AskUserQuestion` tool: one question,
-"Prototype or codebase?", the two options above with their one line each, **neither marked recommended**: only the
-requester knows how settled the decision is. **A subagent cannot ask:** stop before changing anything and reply with one
-line beginning `NEEDS PATH:` saying the request does not name one; the caller puts the choice to the person.
+**When the request does not say, ask as a choice, never in prose.** In Claude Code that is the
+`AskUserQuestion` tool; in another agent, one plain question. Either way: one question, "Prototype or codebase?", the two
+options above with their one line each, **neither marked recommended**: only the requester knows how settled the decision
+is. **An agent that cannot ask** (a subagent, or a run nobody is there to answer): stop before changing anything and reply
+with one line beginning `NEEDS PATH:` saying the request does not name one; the caller puts the choice to the person.
 
 **Do not ask about anything else you can decide.** The project's id is a short kebab-case name from the request: pick it.
 **Check the environment can support the answer first:** without the product's installed packages, neither path can

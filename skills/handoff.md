@@ -23,9 +23,9 @@ it pass.
 
 Two reviews, because *does this read as the product* and *is it built correctly* are different questions
 with different evidence. The reviewers are shared, `../agents/product-parity-reviewer.md` and
-`../agents/implementation-reviewer.md`, and the product's shims make them subagents.
+`../agents/implementation-reviewer.md`, and, in Claude Code, the product's shims make them subagents.
 
-- **Run them as subagents, in the foreground,** one after the other or together, and wait for both. Never
+- **Where the agent runs subagents, run them as subagents, in the foreground,** one after the other or together, and wait for both. Never
   in the background, and never with a reminder to check later: this run ends when you stop, and a review
   still going is lost.
 - If subagents are not available, read each definition and follow it directly, one at a time, and say
