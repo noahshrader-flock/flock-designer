@@ -15,7 +15,7 @@
 		"start": "electron-vite preview",
 		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.viewer.json && tsc --noEmit -p tsconfig.test.json",
 		"test": "npm run test:unit && npm run test:integration",
-		"test:unit": "vitest run --project unit",
+		"test:unit": "vitest run --project unit --project dom",
 		"test:integration": "vitest run --project integration",
 		"format": "prettier --write .",
 		"lint": "eslint .",

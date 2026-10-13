@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { type DOMWindow, JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import { sanitizeAnchor } from '../src/shared/anchor';
