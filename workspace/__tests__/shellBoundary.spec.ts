@@ -17,7 +17,7 @@ const src = join(workspace, 'src');
 const ELECTRON_SHELL = [
 	'main/index.ts',
 	'main/composition.ts',
-	'main/ports.ts',
+	'main/electronPorts.ts',
 	'main/electronIpc.ts',
 	'main/smokeLocal.ts',
 	'main/smokePage.ts',
@@ -95,7 +95,7 @@ describe('the shell boundary', () => {
 			.filter((f) => loads(readFileSync(f, 'utf8')).some((s) => /^electron(\/|$)/.test(s)))
 			.map((f) => relative(src, f))
 			.sort();
-		expect(importing.every((f) => shell.has(join(src, f)))).toBe(true);
+		expect(importing.filter((f) => !shell.has(join(src, f)))).toEqual([]);
 	});
 
 	it('keeps Electron out of the VS Code extension', () => {

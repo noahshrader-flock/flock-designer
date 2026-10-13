@@ -2,14 +2,12 @@ import { type BrowserWindow, nativeTheme, safeStorage } from 'electron';
 import type { AppPaths } from './appPaths';
 import type { IpcContext } from './ipc';
 import { sendOverIpc } from './electronIpc';
-import { electronPorts } from './ports';
-import { checkInWindow } from './services/accessibilityWindow';
+import { electronPorts } from './electronPorts';
 import { AgentRunner } from './services/agent';
 import { AppearanceMemory } from './services/appearance';
 import { CheckoutMemory } from './services/checkoutMemory';
 import { Cloner } from './services/clone';
 import { CloneFolderMemory } from './services/cloneFolder';
-import { coverInWindow } from './services/coverWindow';
 import { DesignRepo } from '../host/designRepo';
 import { DesignSystemsMemory } from './services/designSystems';
 import { SessionMemory } from './services/editor';
@@ -21,7 +19,7 @@ import { PrototypeServer } from './services/prototypeServer';
 import { RuntimeManager } from './services/runtime';
 import { OpenedCheckouts } from './services/session';
 import { ShareRunner } from './services/share';
-import { PICTURE_RECIPE, measureInWindows } from './services/storyMeasure';
+import { PICTURE_RECIPE } from './services/storyMeasure';
 import { TokenStore } from './services/tokenStore';
 import { DESIGN_REPO } from '../shared/config';
 
@@ -66,7 +64,6 @@ export const createServices = (window: BrowserWindow, paths: AppPaths, githubCli
 		storyPreviewsRoot: paths.storyPreviews,
 		tokenBranchesFile: paths.tokenBranches,
 		voiceBranchFile: paths.voiceBranch,
-		headless: { measure: measureInWindows, scan: checkInWindow, draw: coverInWindow },
 		componentPicturesRoot: paths.componentPictures,
 		componentPictureRecipe: PICTURE_RECIPE,
 		// A little after the window is up, so opening the app is not slowed by getting the design system ready.

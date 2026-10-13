@@ -67,6 +67,14 @@ const fakePorts = () =>
 		shareTools: vi.fn(() => {
 			throw new Error('Sharing is not faked in this test.');
 		}),
+		headless: {
+			scan: (...a: Parameters<Ports['headless']['scan']>) => checkPage(...a),
+			draw: (url: string) => drawCover(url),
+			// Stories are drawn only in the app: a test that reaches for it says so.
+			measure: async () => {
+				throw new Error('Stories are drawn only in the app.');
+			},
+		},
 	}) satisfies Ports;
 let ports: ReturnType<typeof fakePorts>;
 /** Where each repository is cloned from in a test: this machine, standing in for GitHub. */
@@ -286,14 +294,6 @@ beforeEach(async () => {
 			componentPicturesRoot: join(home, 'component-pictures'),
 			// What is got ready in the background is only counted here, never drawn.
 			componentTokens: { of: ask, warm, pictures: async () => ({ drawing: false, pictures: {}, issues: {} }) } as never,
-			headless: {
-				scan: checkPage,
-				draw: drawCover,
-				// Stories are drawn only in the app: a test that reaches for it says so.
-				measure: async () => {
-					throw new Error('Stories are drawn only in the app.');
-				},
-			},
 			installer: new Installer(),
 			componentPictureRecipe: 'for tests',
 			...more,

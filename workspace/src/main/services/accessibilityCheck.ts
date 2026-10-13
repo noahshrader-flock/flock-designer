@@ -1,8 +1,8 @@
 /**
  * Measuring accessibility (T7 of the design system plan, part B; decision 30): axe-core run on a page in each of its
  * states, with the target's tags only, by whatever the shell gives to run it (`CheckPage`: in the app, a hidden window,
- * `accessibilityWindow.ts`). What it found is kept with what it was made with (the page, axe-core's version, the tags, the target), and
- * a result made with anything else is never given as current: it is made again.
+ * `accessibilityWindow.ts`). What it found is kept with what it was made with (the page, axe-core's version, the tags,
+ * the target), and a result made with anything else is never given as current: it is made again.
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';

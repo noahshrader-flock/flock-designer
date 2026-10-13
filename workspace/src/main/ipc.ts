@@ -6,7 +6,7 @@ import type { AccessibilityResult, Checkout, ClonePlan, Person, PublishStatus } 
 import { statesOf } from '../shared/prototypeStates';
 import { type Check, type EventSink, arg, clearRoutes } from './handle';
 import type { Ports } from './ports';
-import { type CheckPage, accessibilityOf } from './services/accessibilityCheck';
+import { accessibilityOf } from './services/accessibilityCheck';
 import { AGENT_BUSY, AgentRunner } from './services/agent';
 import { AppearanceMemory } from './services/appearance';
 import { classify } from './services/branchProjects';
@@ -16,7 +16,7 @@ import { type Cloned, Cloner, type GitProgress, notClonedOver } from './services
 import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { codebaseWork } from './services/codebaseWork';
 import { ComponentPictures } from './services/componentPictures';
-import { ComponentTokens, type Measure } from './services/componentTokens';
+import { ComponentTokens } from './services/componentTokens';
 import { singleFlight } from './services/concurrency';
 import { DESCRIPTOR_PATH, readDescriptor, type WorkspaceDescriptor } from './services/descriptor';
 import { DesignLibrary } from './services/designLibrary';
@@ -32,7 +32,7 @@ import { Installer } from './services/install';
 import { recordedIteration } from './services/iterations';
 import { readFolderProjects } from './services/localProjects';
 import type { PageView } from './services/pageView';
-import { type CoverDeps, type DrawCover } from './services/projectCovers';
+import type { CoverDeps } from './services/projectCovers';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
 import { PrototypeServer } from './services/prototypeServer';
 import { localPrototypeFile, prototypeWork } from './services/prototypeWork';
@@ -57,19 +57,6 @@ import { registerReview } from './ipc/review';
 import { formatRepo, repoRefOf } from '../shared/repoRef';
 import { HOST } from '../shared/vocabulary';
 import { DESIGN_REPO } from '../shared/config';
-
-/**
- * What only the shell can do for the core without being seen: draw a page out of sight. In the app, hidden windows
- * (`storyMeasure.ts`, `accessibilityWindow.ts`, `coverWindow.ts`); in another shell, its own headless browser.
- */
-export interface Headless {
-	/** How stories are drawn to read what they draw (T6). */
-	measure: Measure;
-	/** How a page is checked for accessibility (T7): axe-core in each of its states. */
-	scan: CheckPage;
-	/** How a prototype's page is drawn as its picture on its project's card. */
-	draw: DrawCover;
-}
 
 export interface IpcContext {
 	/** How the core tells the window that something happened: the shell's. */
@@ -109,8 +96,6 @@ export interface IpcContext {
 	tokenBranchesFile: string;
 	/** Which branch a change to the voice and tone is kept on (T9). */
 	voiceBranchFile: string;
-	/** Drawing out of sight: the shell's. */
-	headless: Headless;
 	/**
 	 * Which tokens each component draws with (T6), and so what is got ready in the background: given for tests.
 	 */
@@ -149,7 +134,6 @@ export const ipcDeps = ({
 	storyPreviewsRoot,
 	tokenBranchesFile,
 	voiceBranchFile,
-	headless,
 	componentTokens: injectedComponentTokens,
 	componentPicturesRoot,
 	componentPictureRecipe,
@@ -284,7 +268,7 @@ export const ipcDeps = ({
 	// Which tokens each component draws with (T6), and its picture (P5), from one drawing pass.
 	const componentPictures = new ComponentPictures({ folder: componentPicturesRoot, server: prototypeServer, recipe: componentPictureRecipe });
 	const componentTokens =
-		injectedComponentTokens ?? new ComponentTokens({ system: shownSystem, previews, measure: headless.measure, pictures: componentPictures });
+		injectedComponentTokens ?? new ComponentTokens({ system: shownSystem, previews, measure: ports.headless.measure, pictures: componentPictures });
 	// The previews and the index are got ready in the background, so a component opened later is drawn at once: as the app
 	// opens, and whenever the library has been read (it may have moved). For a commit already ready it is nothing.
 	const warm = () => void componentTokens.warm();
@@ -428,7 +412,7 @@ export const ipcDeps = ({
 		if (html === null) throw new Error('This prototype has no page yet.');
 		const url = await servePrototype(projectId, name, html);
 		const file = join(dirname(work.file(projectId, name)), `${name}.accessibility.json`);
-		return accessibilityOf({ file, html, url, states: statesOf(html), target: await work.target(projectId, name), check: headless.scan });
+		return accessibilityOf({ file, html, url, states: statesOf(html), target: await work.target(projectId, name), check: ports.headless.scan });
 	};
 	/**
 	 * The picture of each prototype on its project's card (PROJECT_PICTURES_PLAN.md). Asked for by the list once it is on
@@ -442,7 +426,7 @@ export const ipcDeps = ({
 			return existsSync(file) ? readFileSync(file, 'utf8') : null;
 		},
 		serve: servePrototype,
-		draw: headless.draw,
+		draw: ports.headless.draw,
 		tried: new Set(),
 	};
 

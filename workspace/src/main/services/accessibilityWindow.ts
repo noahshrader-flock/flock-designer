@@ -1,10 +1,10 @@
 /**
  * The app's way to check a page for accessibility (`CheckPage`): axe-core in a hidden window, held as every page of
  * someone else's code is (`sandboxedPage.ts`), in each of the page's states. Electron's, so the shell gives it to the core
- * (`composition.ts`); what is done with what it finds is `accessibilityCheck.ts`.
+ * (`electronPorts.ts`); what is done with what it finds is `accessibilityCheck.ts`.
  */
 import axe from 'axe-core';
-import { type AxeRun } from '../../shared/accessibility';
+import type { AxeRun } from '../../shared/accessibility';
 import { withState } from '../../shared/prototypeStates';
 import { type CheckPage, axeFound, axeRun } from './accessibilityCheck';
 import { hiddenWindow, within } from './sandboxedPage';
