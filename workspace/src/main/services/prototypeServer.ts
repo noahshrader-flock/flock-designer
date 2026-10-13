@@ -78,7 +78,9 @@ export class PrototypeServer {
 		if (dir === undefined) return null;
 		try {
 			// A malformed address is not found, like any other that is not a file under the folder.
-			const file = normalize(join(dir, decodeURIComponent(rest.join('/')) || 'index.html'));
+			// A folder's address (`proj/v2/i1/`, or the root) is its index page, as a built site addresses its pages.
+			const named = decodeURIComponent(rest.join('/'));
+			const file = normalize(join(dir, named === '' || named.endsWith('/') ? `${named}index.html` : named));
 			const type = TYPES[extname(file)];
 			if (!file.startsWith(dir + sep) || type === undefined) return null;
 			return { type, body: await readFile(file) };

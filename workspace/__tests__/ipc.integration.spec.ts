@@ -171,7 +171,7 @@ let drawCover: Fn;
 let readBytes: Fn;
 /** What the window is told its appearance is, as the app tells the system's theme setting: the calls, in order. */
 let applied: string[] = [];
-let register: (more?: Partial<IpcContext>) => void;
+let register: (more?: Partial<IpcContext>) => ReturnType<typeof registerIpc>;
 let prototypeServer: InstanceType<(typeof import('../src/main/services/prototypeServer'))['PrototypeServer']>;
 
 // The home every test starts with: a product repository and the design repository beside it, under GitHub/.
@@ -802,6 +802,17 @@ describe('discovery suggests; it does not trust', () => {
 		expect((await call(CHANNELS.lastCheckout)).value).toBeNull();
 		await call(CHANNELS.useCheckout, product);
 		expect(await call(CHANNELS.readCheckout, product)).toMatchObject({ ok: true, value: { root: realpathSync(product) } });
+		rmSync(elsewhere, { recursive: true, force: true });
+	});
+
+	it('lets the shell open what the person opened in it (an editor’s trusted folder), which the window cannot name', async () => {
+		const elsewhere = mkdtempSync(join(tmpdir(), 'fdw-opened-'));
+		makeProduct(elsewhere);
+		expect((await call(CHANNELS.useCheckout, elsewhere)).ok).toBe(false);
+		const shell = register();
+		await shell.open(elsewhere);
+		expect(opened.has(elsewhere)).toBe(true);
+		expect(await call(CHANNELS.readCheckout, elsewhere)).toMatchObject({ ok: true, value: { root: realpathSync(elsewhere) } });
 		rmSync(elsewhere, { recursive: true, force: true });
 	});
 

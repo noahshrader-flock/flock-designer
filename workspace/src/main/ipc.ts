@@ -503,7 +503,16 @@ export type IpcDeps = ReturnType<typeof ipcDeps>;
  * passthrough: each handler is named, its arguments checked (`handle.ts`), its root resolved against what the person
  * actually opened, and its answer returned as a Result.
  */
-export const registerIpc = (context: IpcContext): { publish: (force?: boolean) => Promise<void> } => {
+export const registerIpc = (
+	context: IpcContext,
+): {
+	publish: (force?: boolean) => Promise<void>;
+	/**
+	 * Opens and trusts a product checkout: the shell's own way, for the folder the person opened in it (an editor's trusted
+	 * workspace folder). Never reachable from the window, which can only accept what discovery found (`useCheckout`).
+	 */
+	open: (root: string) => Promise<Checkout>;
+} => {
 	clearRoutes();
 	const d = ipcDeps(context);
 	registerCheckout(d);
@@ -515,5 +524,5 @@ export const registerIpc = (context: IpcContext): { publish: (force?: boolean) =
 	registerPublishing(d);
 	registerPage(d);
 	registerAccount(d);
-	return { publish: (force = false) => d.publisher.publish(force) };
+	return { publish: (force = false) => d.publisher.publish(force), open: (root) => d.openRepository(root) };
 };

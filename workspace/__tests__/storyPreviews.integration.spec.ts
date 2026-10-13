@@ -567,6 +567,15 @@ describe('serving a built folder', () => {
 		expect((await fetch(base)).status).toBe(404);
 	});
 
+	it('answers a folder’s address with its index page, at any depth, as a built site addresses its pages', async () => {
+		const dir = join(home, 'site');
+		write(dir, { 'index.html': '<p>home</p>', 'proj/v2/i1/index.html': '<p>review</p>', 'proj/v2/i1/page.html': '<p>page</p>' });
+		const base = await server.serveFolder('k1', dir);
+		expect(await (await fetch(`${base}proj/v2/i1/`)).text()).toBe('<p>review</p>');
+		expect(await (await fetch(`${base}proj/v2/i1/page.html`)).text()).toBe('<p>page</p>');
+		expect((await fetch(`${base}proj/v2/`)).status).toBe(404);
+	});
+
 	it('shares its files with no other origin', async () => {
 		const dir = join(home, 'site');
 		write(dir, { 'entry.js': 'x' });
