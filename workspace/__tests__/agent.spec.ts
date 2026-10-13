@@ -5,11 +5,10 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AGENT_BUSY, AgentRunner, agentReadiness, claudeCodeAdapter, claudeStreamFormatter, locateClaude } from '../src/main/services/agent';
 import type { RunLogLine } from '../src/shared/contract';
+import { eventually } from './fixtures';
 
 let root: string;
 let logs: RunLogLine[];
-/** As soon as what the run should have done is so, not after a guess at how long a process takes to start. */
-const until = (check: () => void) => vi.waitFor(check, { timeout: 5000 });
 
 beforeEach(() => {
 	root = mkdtempSync(join(tmpdir(), 'fdw-agent-'));
@@ -55,7 +54,7 @@ describe('the adapter boundary', () => {
 			adapter: { name: 'Echo', argvFor: (t) => ['node', '-e', `console.log(${JSON.stringify(t)})`] },
 		});
 		runner.start(root, 'demo', 'hello');
-		await until(() => expect(logs.map((l) => l.text).join('')).toContain('Project: demo'));
+		await eventually(() => expect(logs.map((l) => l.text).join('')).toContain('Project: demo'));
 	});
 });
 
@@ -70,7 +69,7 @@ describe('status', () => {
 			adapter: { name: 'Nothing', argvFor: () => ['definitely-not-installed-xyz'] },
 		});
 		runner.start(root, 'demo', 'x');
-		await until(() => expect(runner.status().state).toBe('unavailable'));
+		await eventually(() => expect(runner.status().state).toBe('unavailable'));
 		const status = runner.status();
 		expect(status.state === 'unavailable' && status.detail).toMatch(/installed and on PATH/);
 	});
@@ -81,7 +80,7 @@ describe('status', () => {
 			adapter: { name: 'Exit', argvFor: () => ['node', '-e', 'process.exit(0)'] },
 		});
 		runner.start(root, 'demo', 'x');
-		await until(() => expect(runner.status()).toEqual({ state: 'finished', exitCode: 0, work: null, purpose: null }));
+		await eventually(() => expect(runner.status()).toEqual({ state: 'finished', exitCode: 0, work: null, purpose: null }));
 	});
 
 	it('does not start a second run over a running one: the same work joins it, anything else is told it is busy', async () => {

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, type Mock } from 'vitest';
+import { afterAll, beforeAll, beforeEach, type Mock, vi } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -99,6 +99,12 @@ export const madeOnce = (make: (dir: string) => void): { dir: string } => {
 	afterAll(() => rmSync(base, { recursive: true, force: true }));
 	return at;
 };
+
+/** As soon as `check` holds, rather than after a guess at how long a process takes: what a test waits for, it names. */
+export const eventually = (check: () => void | Promise<void>) => vi.waitFor(check, { timeout: 5000 });
+
+/** For what must *not* happen there is nothing to wait for: a pause long enough for a process to have done it. */
+export const nothingFollows = () => new Promise((r) => setTimeout(r, 400));
 
 export const g = (root: string, ...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
 

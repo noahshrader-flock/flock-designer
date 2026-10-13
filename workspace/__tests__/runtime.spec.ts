@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Fn } from './fixtures';
+import { eventually, type Fn, nothingFollows } from './fixtures';
 import { RuntimeManager, fillProjectId, type RuntimeDeps } from '../src/main/services/runtime';
 import type { PreviewStatus, RunLogLine } from '../src/shared/contract';
 import type { WorkspaceDescriptor } from '../src/main/services/descriptor';
@@ -35,11 +35,6 @@ const deps = (over: Partial<RuntimeDeps> = {}): RuntimeDeps => ({
 	...over,
 });
 
-/** As soon as what the command should have done is so, not after a guess at how long a process takes to start. */
-const until = (check: () => void) => vi.waitFor(check, { timeout: 5000 });
-/** For what must *not* happen, there is nothing to wait for: long enough for a process to have done it. */
-const quiet = () => new Promise((r) => setTimeout(r, 300));
-
 beforeEach(() => {
 	root = mkdtempSync(join(tmpdir(), 'fdw-run-'));
 	logs = [];
@@ -62,7 +57,7 @@ describe('the allowlist', () => {
 	it('runs a declared command and reports its output', async () => {
 		manager = make();
 		await manager.start(root, descriptor, 'echo');
-		await until(() => expect(logs.map((l) => l.text).join('')).toContain('hello from the command'));
+		await eventually(() => expect(logs.map((l) => l.text).join('')).toContain('hello from the command'));
 	});
 
 	it('cannot be given a shell string, because there is no shell', async () => {
@@ -74,7 +69,7 @@ describe('the allowlist', () => {
 		};
 		manager = make();
 		await manager.start(root, sneaky, 'x');
-		await quiet();
+		await nothingFollows();
 		expect(existsSync(marker)).toBe(false);
 	});
 });
@@ -83,13 +78,13 @@ describe('process lifecycle', () => {
 	it('reports a non-zero exit as failed, with the code', async () => {
 		manager = make();
 		await manager.start(root, descriptor, 'fail');
-		await until(() => expect(statuses.some((s) => s.state === 'failed' && s.detail.includes('3'))).toBe(true));
+		await eventually(() => expect(statuses.some((s) => s.state === 'failed' && s.detail.includes('3'))).toBe(true));
 	});
 
 	it('reports a binary that does not exist rather than hanging', async () => {
 		manager = make();
 		await manager.start(root, descriptor, 'missing-binary');
-		await until(() => expect(statuses.some((s) => s.state === 'failed')).toBe(true));
+		await eventually(() => expect(statuses.some((s) => s.state === 'failed')).toBe(true));
 	});
 
 	it('does not start the same command twice', async () => {
@@ -131,7 +126,7 @@ describe('preview', () => {
 		manager = make({ probe: async () => true });
 		await manager.start(root, descriptor, 'preview');
 		await manager.stop('preview');
-		await quiet();
+		await nothingFollows();
 		expect(statuses.filter((s) => s.state === 'failed')).toEqual([]);
 	});
 });

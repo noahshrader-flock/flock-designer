@@ -10,6 +10,7 @@ import { ShareRunner, type ShareRequest } from '../src/main/services/share';
 import { ghApi, locateGh } from '../src/main/services/ghCli';
 import { fakeGitHub } from './fakes/github';
 import { realShareTools } from '../src/main/services/shareTools';
+import { g } from './fixtures';
 
 /**
  * The real git push and the real way of running `gh`, against a throwaway bare repository as
@@ -20,7 +21,6 @@ import { realShareTools } from '../src/main/services/shareTools';
 let dir: string;
 let work: string;
 let remote: string;
-const g = (cwd: string, ...args: string[]) => execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' });
 
 beforeEach(() => {
 	dir = mkdtempSync(join(tmpdir(), 'fdw-share-'));

@@ -2,7 +2,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AgentRunner } from '../src/main/services/agent';
 import { buildContextReceipt } from '../src/main/services/contextReceipt';
 import { readDescriptor } from '../src/main/services/descriptor';
@@ -11,7 +11,7 @@ import { continueIteration, createIteration, readIterations } from '../src/main/
 import { RuntimeManager } from '../src/main/services/runtime';
 import { OpenedCheckouts } from '../src/main/services/session';
 import type { PreviewStatus, RunLogLine } from '../src/shared/contract';
-import { agentFinished } from './fixtures';
+import { agentFinished, eventually } from './fixtures';
 
 /**
  * The journey step 13 owes, start to finish.
@@ -97,7 +97,7 @@ describe('from a request to a running preview', () => {
 			adapter: { name: 'Stub', argvFor: (t) => ['node', '-e', `console.log(${JSON.stringify(t)})`] },
 		});
 		agent.start(root, 'inactive-users', 'Flag users who have not signed in for 90 days.');
-		await vi.waitFor(() => expect(agent.status()).toEqual(agentFinished()), { timeout: 5000 });
+		await eventually(() => expect(agent.status()).toEqual(agentFinished()));
 		expect(logs.map((l) => l.text).join('')).toContain('Project: inactive-users');
 
 		// 5. The agent's work lands on the branch and is committed.

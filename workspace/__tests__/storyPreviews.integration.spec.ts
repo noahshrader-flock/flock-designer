@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PREVIEW_HEIGHT, previewAddress } from '../src/shared/catalog';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { buildPreviews, hasPackages, notInstalled, previewEntry, StoryPreviews, unresolved } from '../src/main/services/storyPreviews';
-import { g } from './fixtures';
+import { eventually, g } from './fixtures';
 import { REAL_LIBRARY as REAL, describeWith, libraryMissing } from './realCheckouts';
 
 /**
@@ -150,7 +150,7 @@ const render = async (base: string, file: string): Promise<HTMLElement> => {
 	const { build } = await import('esbuild');
 	const joined = await build({ entryPoints: [entry], bundle: true, write: false, format: 'iife', logLevel: 'silent' });
 	(0, eval)(joined.outputFiles[0]!.text);
-	await vi.waitFor(() => expect(document.querySelector('#root')!.children.length).toBeGreaterThan(0), { timeout: 5000 });
+	await eventually(() => expect(document.querySelector('#root')!.children.length).toBeGreaterThan(0));
 	return document.querySelector('#root') as HTMLElement;
 };
 

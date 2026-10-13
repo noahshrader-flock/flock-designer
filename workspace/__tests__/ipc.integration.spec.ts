@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcContext } from '../src/main/ipc';
 import { CHANNELS } from '../src/shared/contract';
 import type { Ports } from '../src/main/ports';
@@ -11,10 +11,13 @@ import { type Answer, fakeGitHub } from './fakes/github';
 import {
 	addStandards,
 	agentRunning,
+	eventually,
 	g,
 	installDesignSystem,
 	makeProduct,
 	makeProductFiles,
+	madeOnce,
+	nothingFollows,
 	projectIteration,
 	reviewComment,
 	type Fn,
@@ -162,26 +165,24 @@ let applied: string[] = [];
 let register: (more?: Partial<IpcContext>) => void;
 let prototypeServer: InstanceType<(typeof import('../src/main/services/prototypeServer'))['PrototypeServer']>;
 
-// The product repository every test starts with, made once for the file and copied for each test: git is the slow part.
-let template: string;
-beforeAll(() => {
-	template = mkdtempSync(join(tmpdir(), 'fdw-ipc-product-'));
-	makeProduct(template, [{ id: 'preview', label: 'Run', argv: ['node', '-e', 'setTimeout(()=>{},1e4)'], servesPreviewOn: 3999 }]);
+// The home every test starts with: a product repository and the design repository beside it, under GitHub/.
+const world = madeOnce((d) => {
+	makeProduct(join(d, 'GitHub', 'flock-coke'), [
+		{ id: 'preview', label: 'Run', argv: ['node', '-e', 'setTimeout(()=>{},1e4)'], servesPreviewOn: 3999 },
+	]);
+	const designRepo = join(d, 'GitHub', 'flock-designer');
+	mkdirSync(join(designRepo, '.git'), { recursive: true });
+	mkdirSync(join(designRepo, 'projects'), { recursive: true });
+	addStandards(designRepo);
 });
-afterAll(() => rmSync(template, { recursive: true, force: true }));
 
 beforeEach(async () => {
 	handlers.clear();
 	applied = [];
 	vi.resetModules();
-	home = mkdtempSync(join(tmpdir(), 'fdw-ipc-home-'));
-	mkdirSync(join(home, 'GitHub'), { recursive: true });
+	home = world.dir;
 	product = join(home, 'GitHub', 'flock-coke');
 	design = join(home, 'GitHub', 'flock-designer');
-	cpSync(template, product, { recursive: true });
-	mkdirSync(join(design, '.git'), { recursive: true });
-	mkdirSync(join(design, 'projects'), { recursive: true });
-	addStandards(design);
 
 	// Discovery looks under the home directory; point it at a temporary one.
 	vi.doMock('node:os', async () => ({ ...(await vi.importActual<object>('node:os')), homedir: () => home }));
@@ -297,7 +298,6 @@ beforeEach(async () => {
 
 afterEach(() => {
 	prototypeServer.close();
-	rmSync(home, { recursive: true, force: true });
 });
 
 describe('the Design System tab', () => {
@@ -1179,13 +1179,12 @@ describe('prototypes', () => {
 			it('deploys the site by itself, with no page to name: it asks where the site is again, to deploy', async () => {
 				// Once to find it was behind, once more in the deploy it then starts (which stops there: no branch here).
 				const asked = await behindBy('workspace/src/viewer/Viewer.tsx');
-				await vi.waitFor(() => expect(asked()).toBe(2), { timeout: 5000 });
+				await eventually(() => expect(asked()).toBe(2));
 			});
 
 			it('does nothing for a change the site is not built from', async () => {
 				const asked = await behindBy('workspace/src/main/ipc.ts');
-				// Nothing to wait for when nothing should follow: long enough for a deploy to have asked.
-				await new Promise((r) => setTimeout(r, 400));
+				await nothingFollows();
 				expect(asked()).toBe(1);
 			});
 		});

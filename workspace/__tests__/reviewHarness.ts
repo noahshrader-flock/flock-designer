@@ -1,9 +1,8 @@
-import { vi } from 'vitest';
 import { act, createElement, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { CommentAnchor, PickedPoint, PinEvent, Project, ProjectIteration, Result, ReviewComment, WorkspaceApi } from '../src/shared/contract';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
-import { agentRunning, anAnchor, aProject, projectIteration, reviewComment } from './fixtures';
+import { agentRunning, anAnchor, aProject, eventually, projectIteration, reviewComment } from './fixtures';
 
 /**
  * The review screen, rendered for real in jsdom against a fake app: every call the window can make answers, the ones
@@ -274,13 +273,10 @@ export const cardFor = (text: string): HTMLElement => {
  * so, not after a guess at how long that takes.
  */
 export const afterAgentCheck = (check: () => void) =>
-	vi.waitFor(
-		async () => {
-			await settle();
-			check();
-		},
-		{ timeout: 5000, interval: 100 },
-	);
+	eventually(async () => {
+		await settle();
+		check();
+	});
 
 /** The cards in the comments sidebar, as their text. */
 export const cards = (): HTMLElement[] =>
