@@ -227,8 +227,9 @@ describe('a set', () => {
 
 	it('says which tone a palette role points at, and its opacity', async () => {
 		await show();
-		expect(row('palette.light.primaryBorder.main')?.textContent).toContain('pineGreen 20 · 40%');
-		expect(row('palette.light.primary.main')?.textContent).toContain('pineGreen 50');
+		const says = (path: string) => row(path)?.querySelector('button')?.getAttribute('aria-description');
+		expect(says('palette.light.primaryBorder.main')).toContain('pineGreen 20 at 40%');
+		expect(says('palette.light.primary.main')).toContain('pineGreen 50');
 	});
 
 	it('shows a dimension as its value, with no swatch', async () => {
@@ -353,9 +354,8 @@ describe('changing a token (T3)', () => {
 		await press(steps[1] as HTMLButtonElement);
 		await settle();
 		expect(made.at(-1)).toEqual([{ path: 'palette.light.primary.main', ref: 'tone.pineGreen.20' }]);
-		expect(row('palette.light.primary.main')?.textContent).toContain('pineGreen 20');
-		// What it resolves to is on the value for whoever hovers it, and in its popover.
-		expect(row('palette.light.primary.main')?.getAttribute('title')).toContain('#18372F');
+		// What it points at and what it resolves to are on the value for whoever hovers or focuses it, and in its popover.
+		expect(row('palette.light.primary.main')?.querySelector('button')?.getAttribute('aria-description')).toBe('pineGreen 20 · #18372F');
 		expect(row('palette.light.primary.main')?.hasAttribute('data-changed')).toBe(true);
 	});
 
@@ -385,9 +385,8 @@ describe('changing a token (T3)', () => {
 		expect(made.at(-1)).toEqual([{ path: 'tone.pineGreen.50', value: '#0A6B52' }]);
 		// The role that points at it follows: still pointing at pineGreen 50, now the color it was changed to.
 		await choose('Semantic');
-		expect(row('palette.light.primary.main')?.textContent).toContain('pineGreen 50');
+		expect(row('palette.light.primary.main')?.querySelector('button')?.getAttribute('aria-description')).toBe('pineGreen 50 · #0A6B52');
 		expect(row('palette.light.primary.main')?.querySelector<HTMLElement>('[data-swatch]')?.style.backgroundColor).toBe('rgb(10, 107, 82)');
-		expect(row('palette.light.primary.main')?.getAttribute('title')).toContain('#0A6B52');
 	});
 
 	it('refuses a hex that is not one, and keeps what it was', async () => {
@@ -536,7 +535,8 @@ describe('changing a token (T3)', () => {
 			expect(editor.textContent).toContain('Also changes Dark info main: written in one place.');
 			await pick(editor.querySelector('input[type="color"]') as HTMLInputElement, '#00FF00');
 			expect(row('palette.dark.info.main')?.hasAttribute('data-changed')).toBe(true);
-			expect(row('palette.dark.info.main')?.textContent).toContain('#00FF00');
+			expect(row('palette.dark.info.main')?.querySelector('button')?.getAttribute('aria-description')).toBe('#00FF00');
+			expect(row('palette.dark.info.main')?.querySelector<HTMLElement>('[data-swatch]')?.style.backgroundColor).toBe('rgb(0, 255, 0)');
 		});
 	});
 });

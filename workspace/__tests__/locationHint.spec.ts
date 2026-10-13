@@ -26,6 +26,6 @@ describe('where it is kept', () => {
 	});
 
 	it('is the only tooltip on a bare icon: an icon cannot take focus, so its tooltip would need a mouse', () => {
-		expect(offenders(/<TooltipTrigger asChild>\s*(\{|<\w+Icon\b)/, 'LocationHint.tsx')).toEqual([]);
+		expect(offenders(/<TooltipTrigger asChild>\s*(\{(?!children\})|<\w+Icon\b)/, 'LocationHint.tsx')).toEqual([]);
 	});
 });
