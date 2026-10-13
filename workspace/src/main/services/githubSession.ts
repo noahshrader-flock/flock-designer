@@ -22,6 +22,12 @@ import { HOST } from '../../shared/vocabulary';
  * close to expiry. GitHub's user tokens last 8 hours -- verified 2026-10-05 --
  * so without this a reviewer would be interrupted part way through a session.
  */
+/**
+ * The person's GitHub account as the core uses it, whichever shell signs them in: the app's own device flow
+ * (`GitHubSession`), or the editor's (the VS Code extension's).
+ */
+export type GitHubAccount = Pick<GitHubSession, 'restore' | 'state' | 'startSignIn' | 'cancelSignIn' | 'signOut' | 'api'>;
+
 export class GitHubSession {
 	private token: StoredToken | null = null;
 	private user: SignInState = { state: 'signedOut' };

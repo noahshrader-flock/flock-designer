@@ -27,11 +27,20 @@ import { DesignSystemsMemory } from './services/designSystems';
 import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
 import { SessionMemory } from './services/editor';
 import { isRepository, readCheckout } from './services/git';
-import type { GitHubSession } from './services/githubSession';
+import type { GitHubAccount } from './services/githubSession';
 import { Installer } from './services/install';
 import { recordedIteration } from './services/iterations';
 import { readFolderProjects } from './services/localProjects';
 import type { PageView } from './services/pageView';
+
+/**
+ * The live preview, as the core uses it: in the app, a native view over the window (`PageView`); in a shell without one,
+ * something that says so.
+ */
+export type PreviewPage = Pick<
+	PageView,
+	'open' | 'close' | 'currentUrl' | 'hold' | 'snapshot' | 'pick' | 'cancelPick' | 'showMarkers' | 'focusMarker' | 'setBounds'
+>;
 import type { CoverDeps } from './services/projectCovers';
 import { esbuildEntry, sharedFilesOf } from './services/prototypeBundle';
 import { PrototypeServer } from './services/prototypeServer';
@@ -67,9 +76,9 @@ export interface IpcContext {
 	runtime: RuntimeManager;
 	agent: AgentRunner;
 	share: ShareRunner;
-	github: GitHubSession;
+	github: GitHubAccount;
 	designRepo: DesignRepo;
-	page: PageView;
+	page: PreviewPage;
 	memory: CheckoutMemory;
 	/** Told whenever publishing moves, so the window can show it. */
 	onPublishStatus: (status: PublishStatus) => void;
