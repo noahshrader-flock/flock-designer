@@ -73,7 +73,6 @@ repository, nothing beside it: `designSystem.folder` says which folder), and pro
 | `AGENTS.md` | A short section sending product UI work to `ui-guide.md` and building to the `dsnr` agent (below). Read by Claude Code, Copilot and any other agent that reads `AGENTS.md` |
 | `CLAUDE.md` | Claude Code's: it imports `AGENTS.md`, so the section is said once |
 | `.claude/agents/<name>.md` | Claude Code's: one shim per shared agent: frontmatter, then one line naming `../flock-designer/agents/<name>.md` |
-| `.github/instructions/dsnr.instructions.md` | Copilot's: the same two lines as the section, scoped to the product's UI paths. A new file: the product's own Copilot instructions are not touched |
 | `dsnr.code-workspace` | Opens the product with `flock-designer` and the design system beside it, which every pointer above assumes. An agent that cannot read them says so and does not guess |
 
 **The commands** in `workspace.json`, by id: `preview` (an older prototype branch) and `design-mode` (the real product
@@ -82,7 +81,7 @@ on mock data), each with `servesPreviewOn`; `check-iteration`, the **light check
 `lint`, `a11y` and `boundary`, which the reviewers run; and `install` (`npm ci`), run from the New modal when packages
 are missing. Commands run through `npm`, `npx` or `node`.
 
-**The `AGENTS.md` section**, which every agent reads (`CLAUDE.md` imports it, `dsnr.instructions.md` repeats it):
+**The `AGENTS.md` section**, which every agent reads: Claude Code through `CLAUDE.md`, which imports it, and Copilot directly. It is said in one place; a Copilot instructions file would be a second copy, to be added only if Copilot is shown not to read `AGENTS.md`:
 
 ```markdown
 ## Product UI and prototype work

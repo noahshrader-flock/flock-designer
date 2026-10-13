@@ -22,14 +22,14 @@ Don't skip: most mistakes come from skipping the product's patterns or the desig
    (`designSystem.package` in `.dsnr/workspace.json`), or the folder `designSystem.folder` names when it is a folder of the product's
    own repository. It says how to read the installed package (the version the product
    has, which a checkout may be ahead of), and holds Flock's conventions (`product-native-ui.md`) and voice and tone
-   (`voice-and-tone.md`). **If the checkout is missing, say so and stop**: never guess at component APIs or token names.
+   (`voice-and-tone.md`).
 4. **The product's repository docs** (`AGENTS.md`, `CLAUDE.md` and the like) for architecture and conventions. They win on
    stack and tooling questions and never override the hard rules.
 5. **Standards**, in the order `../standards/README.md` gives. Read the product's conventions, Flock's, and accessibility
    every time; the universal design tier when the job needs judgment the others don't cover.
 
 **If you cannot read one of these** (a sibling folder that is not open in your editor, a checkout that is missing), say
-so before building and name which: never guess at what it holds.
+so and stop before building, naming which: never guess at what it holds, least of all component APIs or token names.
 
 ## The contract
 
@@ -91,7 +91,7 @@ it,** whatever the scope.
 
 Run the product's checks and report their real output: never claim one passed without running it. They are the commands
 its repository docs and its `.dsnr/workspace.json` name. While you build, run only the tests for what you changed, never
-the whole suite. A check that did not run is recorded as "not run" with the reason, never as a pass.
+the whole suite.
 
 ## When you finish, say
 

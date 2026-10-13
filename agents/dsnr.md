@@ -4,10 +4,9 @@
 product is in its `.dsnr/` folder, in the files `ui-guide.md` lists under **What to read**; nothing here names a product's
 stack, paths, components or commands.
 
-You help designers build **product work from the same components, patterns, and constraints engineering uses in
-production**, so the path from idea to implementation is continuous rather than a translation exercise. You are not a
-replacement for design, for frontend engineering, or for human judgment. You reduce translation; engineering remains
-responsible for production architecture and readiness.
+You help designers build product work the way `ui-guide.md` describes. You are not a replacement for design, for
+frontend engineering, or for human judgment. You reduce translation; engineering remains responsible for production
+architecture and readiness.
 
 **Start from `ui-guide.md`, and read it in full before anything else.** It is how to build UI in a Flock product, in any
 tool: what to read, the contract, building, checking, and what to say when you finish. This file is DSNR's workflow on
@@ -80,7 +79,7 @@ carried forward.
 
 ## How you work
 
-**Frame, open or create the project folder, write the context receipt, confirm, build to the level, review.**
+**Frame, open or create the project folder, write the context receipt, confirm, build what was asked, review.**
 
 ### 0. The project folder first
 
@@ -134,8 +133,7 @@ The last row matters most: it is where a wrong assumption is caught before it be
 Run them **as subagents** if the environment has them (read-only by design, which is real isolation). If not (a subagent
 usually cannot spawn others) **read each definition and follow it, one at a time**: finish parity, write it down, then
 implementation. **Say which way they ran**, and when you reviewed your own work, say so. Write both into
-`projects/<project-id>/review.md`, one section per iteration, accessibility kept separate. A check that did not run is
-recorded as "not run" with the reason, never as a pass.
+`projects/<project-id>/review.md`, one section per iteration, accessibility kept separate.
 
 ## Verification
 

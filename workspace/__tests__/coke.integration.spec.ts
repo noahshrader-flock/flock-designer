@@ -66,7 +66,7 @@ describeWith(cokeMissing, 'against the real Coke checkout', () => {
  */
 describeWith(cokeMissing, 'the entry points of the real Coke checkout', () => {
 	const text = (path: string) => readFileSync(join(COKE, path), 'utf8');
-	const entries = ['AGENTS.md', 'CLAUDE.md', '.github/instructions/dsnr.instructions.md'];
+	const entries = ['AGENTS.md', 'CLAUDE.md'];
 	const shims = readdirSync(join(COKE, '.claude', 'agents')).map((f) => `.claude/agents/${f}`);
 
 	it('sends every agent that reads AGENTS.md to the guide and to the dsnr agent', () => {
@@ -81,10 +81,10 @@ describeWith(cokeMissing, 'the entry points of the real Coke checkout', () => {
 		expect(claude).not.toMatch(/dsnr|flock-designer/i);
 	});
 
-	it('has the same pointer for Copilot, for the files it writes, without touching its own instructions', () => {
-		const copilot = text('.github/instructions/dsnr.instructions.md');
-		expect(copilot).toMatch(/^applyTo: "\*\*\/\*\.tsx"$/m);
-		expect(copilot).toContain('../flock-designer/agents/ui-guide.md');
+	it('says it in one place for Copilot too: it reads AGENTS.md, so no instructions file repeats it', () => {
+		// Add one for Copilot only if it is shown not to read AGENTS.md (09, AGENT-ANY-1): a second copy is a second thing to keep true.
+		const copilot = readdirSync(join(COKE, '.github'), { recursive: true, encoding: 'utf8' }).filter((f) => f.endsWith('.md'));
+		expect(copilot.filter((f) => /flock-designer/.test(text(`.github/${f}`)))).toEqual([]);
 	});
 
 	it('names only files that are there', () => {
