@@ -15,6 +15,7 @@ import type { DesignToken, TokenProblem } from '../../../shared/contract';
 import { type Entry, arrayItems, entryAt, exportedObjects, lineAt, literal, parseObject, replaced } from './objectLiteral';
 import { MOTION_PARTS, SHADOWS, TYPE_KEYS, TYPE_PARTS, primitiveOf } from '../../../shared/primitives';
 import { capitalize } from '../../../shared/titleCase';
+import { PALETTE_GROUP } from '../../../shared/tokens';
 import { type TokenSource, notWhereRead, semanticFirst } from './source';
 
 const SCRIPT = /\.(ts|tsx|js|jsx|mjs)$/;
@@ -230,7 +231,7 @@ export const themeFiles: TokenSource = {
 					path: `tone.${name}.${e.key}`,
 					kind: 'color',
 					category: primitiveOf('color', name) as string,
-					group: 'Tones',
+					group: PALETTE_GROUP,
 					set: name,
 					name: e.key as string,
 					value: hex.toUpperCase(),
@@ -325,7 +326,7 @@ export const themeFiles: TokenSource = {
 			}
 		}
 		// The tones are the primitives the palettes are made from: after them.
-		return { source: themeFiles.name, tokens: semanticFirst(tokens, (t) => t.group === 'Tones'), problems };
+		return { source: themeFiles.name, tokens: semanticFirst(tokens, (t) => t.group === PALETTE_GROUP), problems };
 	},
 
 	edit: (text, token, to) => {

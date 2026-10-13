@@ -38,6 +38,67 @@ export const nameOf = (t: DesignToken): string => `${t.set} ${t.name}`;
 export const labelOf = (t: DesignToken): string =>
 	t.set.toLowerCase() === t.group.toLowerCase() ? `${t.group} ${t.name}` : `${t.group} ${nameOf(t)}`;
 
+/** What a token is called with where it is: `Light · primary.main`, `Dark · background`; the title of its control. */
+export const tokenTitle = (t: DesignToken): string => `${t.group} · ${t.set === t.name ? t.name : `${t.set}.${t.name}`}`;
+
+/** Where a token's family is: its group (the theme a role is in, the palette) and its set (`primary`, `pineGreen`). */
+export const familyOf = (t: DesignToken): string => `${t.group}/${t.set}`;
+
+/** The group a reader gives a library's palette (the families its roles are made from), when the library names one. */
+export const PALETTE_GROUP = 'Tones';
+
+/**
+ * The color families that are the palette: those the reader puts in the palette group (an unused one too), and any whose
+ * steps a role points at, which finds the scales of a library that does not say (CSS variables, a token file). A step a
+ * role points at is a palette's only if it has nothing it points at itself: a role that is an alias of another is a role.
+ * From the tokens as the library has them, so a change that points a role elsewhere does not move a family.
+ */
+export const paletteFamilies = (library: DesignToken[]): Set<string> => {
+	const byPath = new Map(library.map((t) => [t.path, t]));
+	const families = new Set(library.filter((t) => t.kind === 'color' && t.group === PALETTE_GROUP).map(familyOf));
+	for (const t of library) {
+		const target = t.ref && byPath.get(t.ref.path);
+		if (target && target.kind === 'color' && target.ref === undefined && familyOf(target) !== familyOf(t)) families.add(familyOf(target));
+	}
+	return families;
+};
+
+/** One semantic color across the themes: its role's set, its name, and the token it is in each theme (none where it has none). */
+export interface SemanticRow {
+	set: string;
+	name: string;
+	cells: (DesignToken | undefined)[];
+}
+
+/**
+ * The semantic colors lined up by theme (`themes`, each a group, in the order they come): a column for each, a row for each
+ * role's variant, those of a set together. A role whose name is its set (`--primary`) is a plain row in `flat`, since a
+ * heading over each would say the same word twice. However many themes a library has, there is a column for each.
+ */
+export interface SemanticTable {
+	themes: string[];
+	flat: SemanticRow[];
+	sets: { set: string; rows: SemanticRow[] }[];
+}
+
+export const semanticTable = (tokens: DesignToken[]): SemanticTable => {
+	const themes = [...new Set(tokens.map((t) => t.group))];
+	const rows = new Map<string, SemanticRow>();
+	for (const t of tokens) {
+		const key = `${t.set}\u0000${t.name}`;
+		let row = rows.get(key);
+		if (!row) rows.set(key, (row = { set: t.set, name: t.name, cells: themes.map(() => undefined) }));
+		row.cells[themes.indexOf(t.group)] = t;
+	}
+	const sets = new Map<string, SemanticRow[]>();
+	const flat: SemanticRow[] = [];
+	for (const row of rows.values()) {
+		if (row.set === row.name) flat.push(row);
+		else sets.set(row.set, [...(sets.get(row.set) ?? []), row]);
+	}
+	return { themes, flat, sets: [...sets].map(([set, inSet]) => ({ set, rows: inSet })) };
+};
+
 /** What a token reads as, in a word: the token it points at (`pineGreen 40`), or its value (`12px`). */
 export const readsAs = (t: DesignToken, byPath: Map<string, DesignToken>): string => {
 	const pointed = t.ref && byPath.get(t.ref.path);
