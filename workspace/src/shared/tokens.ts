@@ -38,8 +38,11 @@ export const nameOf = (t: DesignToken): string => `${t.set} ${t.name}`;
 export const labelOf = (t: DesignToken): string =>
 	t.set.toLowerCase() === t.group.toLowerCase() ? `${t.group} ${t.name}` : `${t.group} ${nameOf(t)}`;
 
+/** A token's role and variant, without saying a word twice: `primary.main`, `background` (a role whose name is its set). */
+export const roleOf = (t: DesignToken): string => (t.set === t.name ? t.name : `${t.set}.${t.name}`);
+
 /** What a token is called with where it is: `Light · primary.main`, `Dark · background`; the title of its control. */
-export const tokenTitle = (t: DesignToken): string => `${t.group} · ${t.set === t.name ? t.name : `${t.set}.${t.name}`}`;
+export const tokenTitle = (t: DesignToken): string => `${t.group} · ${roleOf(t)}`;
 
 /** Where a token's family is: its group (the theme a role is in, the palette) and its set (`primary`, `pineGreen`). */
 export const familyOf = (t: DesignToken): string => `${t.group}/${t.set}`;

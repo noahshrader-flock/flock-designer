@@ -3,12 +3,11 @@ import { useMemo } from 'react';
 import type { DesignToken } from '../shared/contract';
 import { contrastPartner, contrastRatio, isForeground, semanticTable, type SemanticRow } from '../shared/tokens';
 import { textContrast } from '../shared/wcag';
-import { GroupTrigger, useClosedGroups } from './GroupAccordion';
+import { GroupTrigger, STICKY_GROUP_HEADER, useClosedGroups } from './GroupAccordion';
 import { Swatch } from './Swatch';
-import { TokenEditor } from './TokenEditor';
+import { TokenEditorPopover } from './TokenEditor';
 import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
 import { Accordion, AccordionContent, AccordionItem } from './ui/accordion';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { cn } from '@/lib/utils';
 
 /**
@@ -23,7 +22,7 @@ import { cn } from '@/lib/utils';
 const NAME = 'w-22 shrink-0';
 
 /** What a value says: what it points at (`pineGreen 50`), or its own color when it points at nothing; and its opacity, apart. */
-const readsAs = (token: DesignToken, target: DesignToken | undefined): { says: string; alpha: string | null } => ({
+const reads = (token: DesignToken, target: DesignToken | undefined): { says: string; alpha: string | null } => ({
 	says: target ? nameOf(target) : token.value,
 	alpha: target && token.ref?.alpha ? opacity(token.ref.alpha) : null,
 });
@@ -36,7 +35,7 @@ const ThemeValue = ({ token }: { token: DesignToken }) => {
 	const partner = isForeground(token) ? undefined : contrastPartner(token, changes.shown);
 	const ratio = partner ? contrastRatio(token.value, partner.value) : null;
 	const flagged = ratio !== null && textContrast(ratio, changes.accessibility).flag;
-	const { says, alpha } = readsAs(token, target);
+	const { says, alpha } = reads(token, target);
 	return (
 		<div
 			data-token={token.path}
@@ -44,27 +43,22 @@ const ThemeValue = ({ token }: { token: DesignToken }) => {
 			title={`${says}${alpha ? ` at ${alpha}` : ''} · ${token.value}`}
 			className="min-w-0 flex-1"
 		>
-			<Popover>
-				<PopoverTrigger asChild>
-					<button
-						type="button"
-						aria-label={`Change ${labelOf(token)}`}
-						className="hover:bg-muted/50 data-[state=open]:bg-muted flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-left text-xs"
-					>
-						<Swatch value={token.value} />
-						{/* The opacity is kept when the name is cut to fit: it is what tells two values of one color apart. */}
-						<span className={cn('text-muted-foreground flex min-w-0 items-baseline gap-1', edited && 'text-foreground font-medium')}>
-							<span className="truncate">{says}</span>
-							{alpha && <span className="shrink-0">{` · ${alpha}`}</span>}
-						</span>
-						{flagged && <TriangleAlertIcon aria-label="Contrast below the target" className="text-warning size-3 shrink-0" />}
-						{edited && <span data-changed-mark aria-label="Changed" className="bg-primary ml-auto size-1.5 shrink-0 rounded-full" />}
-					</button>
-				</PopoverTrigger>
-				<PopoverContent side="left" align="start" className="max-h-(--radix-popover-content-available-height) w-80 overflow-y-auto">
-					<TokenEditor token={token} />
-				</PopoverContent>
-			</Popover>
+			<TokenEditorPopover token={token}>
+				<button
+					type="button"
+					aria-label={`Change ${labelOf(token)}`}
+					className="hover:bg-muted/50 data-[state=open]:bg-muted flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-left text-xs"
+				>
+					<Swatch value={token.value} />
+					{/* The opacity is kept when the name is cut to fit: it is what tells two values of one color apart. */}
+					<span className={cn('text-muted-foreground flex min-w-0 items-baseline gap-1', edited && 'text-foreground font-medium')}>
+						<span className="truncate">{says}</span>
+						{alpha && <span className="shrink-0">{` · ${alpha}`}</span>}
+					</span>
+					{flagged && <TriangleAlertIcon aria-label="Contrast below the target" className="text-warning size-3 shrink-0" />}
+					{edited && <span data-changed-mark aria-label="Changed" className="bg-primary ml-auto size-1.5 shrink-0 rounded-full" />}
+				</button>
+			</TokenEditorPopover>
 		</div>
 	);
 };
@@ -95,9 +89,6 @@ const Rows = ({ rows }: { rows: SemanticRow[] }) => (
 	</ul>
 );
 
-/** A group's header stays at the top of the panel's scroll while its roles are shown (the tokens panel's own). */
-const STICKY_HEADER = '[&>h3]:bg-card [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10';
-
 export const SemanticColors = ({ tokens }: { tokens: DesignToken[] }) => {
 	const closed = useClosedGroups();
 	const table = useMemo(() => semanticTable(tokens), [tokens]);
@@ -115,7 +106,7 @@ export const SemanticColors = ({ tokens }: { tokens: DesignToken[] }) => {
 			{table.sets.length > 0 && (
 				<Accordion {...closed.accordion(table.sets.map((s) => s.set))}>
 					{table.sets.map(({ set, rows }) => (
-						<AccordionItem key={set} value={set} data-token-group className={STICKY_HEADER}>
+						<AccordionItem key={set} value={set} data-token-group className={STICKY_GROUP_HEADER}>
 							<GroupTrigger name={set} count={rows.length} />
 							<AccordionContent>
 								<Rows rows={rows} />

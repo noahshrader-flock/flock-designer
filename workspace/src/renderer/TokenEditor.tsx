@@ -1,9 +1,9 @@
 import { ArrowRightIcon, CheckIcon, CopyIcon, RotateCcwIcon } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import type { DesignToken } from '../shared/contract';
 import { plural } from '../shared/plural';
 import { inOrder } from '../shared/primitives';
-import { contrastPartner, contrastRatio, lengthParts, pointingAt, readsAs, tokenTitle, writtenWith } from '../shared/tokens';
+import { contrastPartner, contrastRatio, lengthParts, pointingAt, readsAs, roleOf, tokenTitle, writtenWith } from '../shared/tokens';
 import { textContrast } from '../shared/wcag';
 import { ChoiceMenu } from './ChoiceMenu';
 import { TokenBranchActions } from './TokenBranchActions';
@@ -12,6 +12,7 @@ import type { TokenBranchControls } from './useTokenBranch';
 import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Slider } from './ui/slider';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { cn } from '@/lib/utils';
@@ -260,7 +261,7 @@ export const TokenEditor = ({ token }: { token: DesignToken }) => {
 						<p className="text-muted-foreground text-xs">Reference</p>
 						{token.ref ? (
 							<p data-reference className="bg-muted/50 flex w-fit max-w-full flex-wrap items-center gap-x-2 rounded-md px-2 py-1 text-sm">
-								<span className="break-all">{token.set === token.name ? token.name : `${token.set}.${token.name}`}</span>
+								<span className="break-all">{roleOf(token)}</span>
 								<ArrowRightIcon className="size-3.5 shrink-0" />
 								<span className="font-medium break-all">
 									{nameOf(target)}
@@ -301,6 +302,20 @@ export const TokenEditor = ({ token }: { token: DesignToken }) => {
 		</div>
 	);
 };
+
+/**
+ * A token's control, opened from what `children` is (the button that is pressed): beside the panel, over the components it
+ * changes, and no taller than the window, scrolling when it is. The one place a token's control is put in a popover, so a row
+ * of the palette and a theme's value open it the same way.
+ */
+export const TokenEditorPopover = ({ token, children }: { token: DesignToken; children: ReactNode }) => (
+	<Popover>
+		<PopoverTrigger asChild>{children}</PopoverTrigger>
+		<PopoverContent side="left" align="start" className="max-h-(--radix-popover-content-available-height) w-80 overflow-y-auto">
+			<TokenEditor token={token} />
+		</PopoverContent>
+	</Popover>
+);
 
 /**
  * What has been changed, above the tabs: each change, from what the library has to what it is now, with a reset for each

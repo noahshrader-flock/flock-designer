@@ -3,6 +3,7 @@ import { TokensPanel } from '../src/renderer/TokensPanel';
 import { TokenChangesProvider, useTokenChangesFor } from '../src/renderer/tokenChanges';
 import { useTokenBranch } from '../src/renderer/useTokenBranch';
 import type { DesignToken, DesignTokens, TokenEdit } from '../src/shared/contract';
+import { PALETTE_GROUP } from '../src/shared/tokens';
 import type { DeclaredTarget } from '../src/shared/wcag';
 
 /** A color token as a reader gives one: where it is written follows its group (the tones' files, a theme's file). */
@@ -14,7 +15,7 @@ export const color = (path: string, group: string, set: string, name: string, va
 	set,
 	name,
 	value,
-	source: { file: group === 'Tones' ? `src/colors/tones/${set}.ts` : `src/colors/theme/${group.toLowerCase()}.ts`, line: 3 },
+	source: { file: group === PALETTE_GROUP ? `src/colors/tones/${set}.ts` : `src/colors/theme/${group.toLowerCase()}.ts`, line: 3 },
 	...more,
 });
 

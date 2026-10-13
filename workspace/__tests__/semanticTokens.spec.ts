@@ -288,6 +288,16 @@ describe('one theme’s value', () => {
 		expect(copied).toBe('#108062');
 	});
 
+	it('says where to read the value when the clipboard refuses it', async () => {
+		Object.defineProperty(navigator, 'clipboard', { value: { writeText: async () => Promise.reject(new Error('denied')) }, configurable: true });
+		await show();
+		const resolved = (await open('palette.light.primary.main')).querySelector('[data-resolved]') as HTMLElement;
+		await press(button('Copy #108062', resolved));
+		await settle();
+		expect(resolved.textContent).toContain('Could not copy to the clipboard. Select the value to copy it.');
+		expect(resolved.textContent).toContain('#108062');
+	});
+
 	it('says the contrast it leaves with the color it is read with, and whether that is enough', async () => {
 		await show();
 		const editor = await open('palette.light.primary.main');

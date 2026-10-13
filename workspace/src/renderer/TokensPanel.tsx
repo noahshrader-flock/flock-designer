@@ -2,13 +2,12 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../shared/contract';
 import { PRIMITIVES, byPrimitive, inOrder, isEditable } from '../shared/primitives';
 import { contrastPartner, contrastRatio, isForeground } from '../shared/tokens';
-import { ChangedTokens, ContrastNote, TokenEditor } from './TokenEditor';
+import { ChangedTokens, ContrastNote, TokenEditorPopover } from './TokenEditor';
 import { Swatch } from './Swatch';
 import type { TokenBranchControls } from './useTokenBranch';
 import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
-import { GroupTrigger, useClosedGroups } from './GroupAccordion';
+import { GroupTrigger, STICKY_GROUP_HEADER, useClosedGroups } from './GroupAccordion';
 import { Accordion, AccordionContent, AccordionItem } from './ui/accordion';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { SearchField } from './SearchField';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { cn } from '@/lib/utils';
@@ -71,16 +70,11 @@ export const TokenRow = ({ token, note }: { token: DesignToken; note?: ReactNode
 	return (
 		<li data-token={token.path} data-changed={edited || undefined} title={`${token.source.file}:${token.source.line}`}>
 			{isEditable(token) ? (
-				<Popover>
-					<PopoverTrigger asChild>
-						<button type="button" aria-label={`Change ${labelOf(token)}`} className={cn('hover:bg-muted/50 data-[state=open]:bg-muted', ROW)}>
-							{content}
-						</button>
-					</PopoverTrigger>
-					<PopoverContent side="left" align="start" className="max-h-(--radix-popover-content-available-height) w-80 overflow-y-auto">
-						<TokenEditor token={token} />
-					</PopoverContent>
-				</Popover>
+				<TokenEditorPopover token={token}>
+					<button type="button" aria-label={`Change ${labelOf(token)}`} className={cn('hover:bg-muted/50 data-[state=open]:bg-muted', ROW)}>
+						{content}
+					</button>
+				</TokenEditorPopover>
 			) : (
 				<div className={ROW}>{content}</div>
 			)}
@@ -106,14 +100,6 @@ export const Sets = ({ tokens, noteFor }: { tokens: DesignToken[]; noteFor?: (to
 		))}
 	</div>
 );
-
-/**
- * A group's header stays at the top of the panel's scroll for as long as the group's tokens are shown, and is pushed off by
- * the next group's, as a section header is on iOS: it sticks within its own item, so it leaves when the item does. It
- * sticks at 0, flush under the tabs, because the scrolling content has no padding above it (`pt-0` below; the tab's own
- * `pt-4` is what is scrolled), so nothing shows above it.
- */
-const STICKY_HEADER = '[&>h3]:bg-card [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10';
 
 /** The views of a category drawn as swatches: the roles by theme, and the palette they are made from. */
 export type ColorView = 'semantic' | 'palette';
@@ -195,7 +181,7 @@ const TokensTab = ({
 			) : (
 				<Accordion {...closed.accordion(names)}>
 					{groups.map(([group, inGroup]) => (
-						<AccordionItem key={group} value={group} data-token-group className={STICKY_HEADER}>
+						<AccordionItem key={group} value={group} data-token-group className={STICKY_GROUP_HEADER}>
 							<GroupTrigger name={group} count={inGroup.length} />
 							<AccordionContent>
 								<Sets tokens={inGroup} />

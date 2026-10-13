@@ -33,3 +33,11 @@ export const GroupTrigger = ({ name, count }: { name: string; count: number }) =
 		</span>
 	</AccordionTrigger>
 );
+
+/**
+ * A group's header stays at the top of the panel's scroll for as long as the group's tokens are shown, and is pushed off by
+ * the next group's, as a section header is on iOS: it sticks within its own item, so it leaves when the item does. It
+ * sticks at 0, flush under the tabs, because the scrolling content has no padding above it (`pt-0` on the tab), so nothing
+ * shows above it. For an `AccordionItem` whose first child is the header.
+ */
+export const STICKY_GROUP_HEADER = '[&>h3]:bg-card [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10';
