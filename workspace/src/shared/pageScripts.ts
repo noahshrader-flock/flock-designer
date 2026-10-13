@@ -78,7 +78,8 @@ const MARKER_STATES = new Set(['found', 'moved', 'missing', 'elsewhere', 'otherS
 export const readMarkers = (raw: unknown, items: MarkerRequest[]): MarkerResult[] => {
 	const wanted = new Set(items.map((i) => i.id));
 	return (Array.isArray(raw) ? raw : []).flatMap((r): MarkerResult[] => {
-		const rec = r as { id?: unknown; state?: unknown };
+		// A page can answer anything in the list, `null` included, so an entry is read only when it is an object.
+		const rec = (typeof r === 'object' && r !== null ? r : {}) as { id?: unknown; state?: unknown };
 		return typeof rec.id === 'number' && wanted.has(rec.id) && typeof rec.state === 'string' && MARKER_STATES.has(rec.state)
 			? [{ id: rec.id, state: rec.state as MarkerResult['state'] }]
 			: [];
