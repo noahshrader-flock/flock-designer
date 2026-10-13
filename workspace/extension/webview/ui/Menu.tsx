@@ -2,7 +2,7 @@ import { type KeyboardEvent as KeyEvent, useEffect, useId, useRef, useState } fr
 import { Icon } from './Icon';
 
 /** One thing a menu offers: what it says, its codicon, and what it does. */
-export interface MenuItem {
+interface MenuItem {
 	label: string;
 	icon: string;
 	onSelect: () => void;
@@ -15,10 +15,16 @@ export interface MenuItem {
 export const Menu = ({ label, items }: { label: string; items: MenuItem[] }) => {
 	const [open, setOpen] = useState(false);
 	const wrap = useRef<HTMLSpanElement>(null);
+	const button = useRef<HTMLButtonElement>(null);
 	const list = useId();
 	useEffect(() => {
 		if (!open) return;
-		const escape = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+		// Escape closes it, and the keyboard goes on from the button it opened from.
+		const escape = (e: KeyboardEvent) => {
+			if (e.key !== 'Escape') return;
+			setOpen(false);
+			button.current?.focus();
+		};
 		const close = (e: MouseEvent) => !wrap.current?.contains(e.target as Node) && setOpen(false);
 		document.addEventListener('keydown', escape);
 		document.addEventListener('mousedown', close);
@@ -39,12 +45,13 @@ export const Menu = ({ label, items }: { label: string; items: MenuItem[] }) => 
 	return (
 		<span ref={wrap} className={open ? 'menu menu-open' : 'menu'} onKeyDown={onKeyDown}>
 			<button
+				ref={button}
 				type="button"
 				className="menu-button"
 				aria-label={label}
 				aria-haspopup="menu"
 				aria-expanded={open}
-				aria-controls={list}
+				{...(open ? { 'aria-controls': list } : {})}
 				onClick={() => setOpen(!open)}
 			>
 				<Icon name="ellipsis" />
@@ -59,6 +66,8 @@ export const Menu = ({ label, items }: { label: string; items: MenuItem[] }) => 
 							className="menu-item"
 							onClick={() => {
 								setOpen(false);
+								// What it opens (a dialog) gives the focus back to what had it: the button, not a menu that is gone.
+								button.current?.focus();
 								item.onSelect();
 							}}
 						>

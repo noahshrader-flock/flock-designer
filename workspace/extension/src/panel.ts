@@ -9,7 +9,7 @@ import { type Review, readMessage } from './messages';
 import type { Given } from './newPrototype';
 import { failed } from './ui';
 
-export interface PanelDeps {
+interface PanelDeps {
 	extensionUri: vscode.Uri;
 	panels: Panels;
 	/** What is open now: the product, its design system, the design repository, and what is missing. */

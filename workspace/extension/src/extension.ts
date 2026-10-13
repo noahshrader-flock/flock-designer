@@ -150,7 +150,10 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		vscode.window.registerWebviewViewProvider('dsnr.panel', provider),
 		// Without answers, the panel's dialog asks them, once there is nothing in the way; given them, by code, it starts.
 		vscode.commands.registerCommand('dsnr.newPrototype', async (raw: unknown) => {
-			if (raw === undefined) return readyToStart({ api, product: productNow() }).then(() => inPanel({ type: 'open-new-prototype' }), failed);
+			if (raw === undefined)
+				return readyToStart({ api, product: productNow() })
+					.then(() => inPanel({ type: 'open-new-prototype' }))
+					.catch(failed);
 			const given = readGiven(raw);
 			if (!given) throw new Error('DSNR: New prototype was given something that is not a name and what it should explore.');
 			return startPrototype(given).catch(failedFor(true));
@@ -219,7 +222,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 const pickPrototype = async (api: Pick<WorkspaceApi, 'listProjects'>): Promise<Review | undefined> => {
 	const listed = await api.listProjects();
 	if (!listed.ok) {
-		void vscode.window.showErrorMessage(listed.error);
+		failed(listed.error);
 		return undefined;
 	}
 	const items = listed.value.flatMap(reviewsOf).map((review) => ({ label: review.title, review }));

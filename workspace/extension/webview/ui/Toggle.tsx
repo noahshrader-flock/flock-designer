@@ -7,7 +7,7 @@ import { Icon } from './Icon';
  * technology: only the chosen one is in the tab order, and the arrow keys, Home and End move the choice. `iconOnly` draws
  * each as its icon alone, still named (its label is the button's, and its tooltip), for a choice whose icons say it.
  */
-export interface ToggleOption<Value extends string> {
+interface ToggleOption<Value extends string> {
 	value: Value;
 	label: string;
 	/** A codicon's name: `folder-library` for `codicon-folder-library`. */

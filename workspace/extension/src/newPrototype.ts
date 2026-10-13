@@ -5,7 +5,7 @@ import { toProjectIteration } from '../../src/shared/iterationRecords';
 import { valueOf } from '../../src/shared/result';
 import { slugify } from '../../src/shared/validate';
 import { type AgentWorkDeps, agentReady, agentWork } from './agentWork';
-import { type Review, reviewsOf } from './messages';
+import { LIMITS, type Review, reviewsOf } from './messages';
 
 export interface NewPrototypeDeps extends AgentWorkDeps {
 	api: AgentWorkDeps['api'] &
@@ -31,19 +31,19 @@ export interface Given {
 	folder: string | null;
 }
 
-/** The most a name or what it explores may be, as the panel's message holds them. */
-const LONGEST = 4000;
-const text = (v: unknown): v is string => typeof v === 'string' && v.length <= LONGEST;
+/** Text of at most `most` characters, or not. */
+const within = (v: unknown, most: number): v is string => typeof v === 'string' && v.length <= most;
 
 /**
  * What DSNR: New prototype was given by code (a keybinding, another extension, a test): its name and what it explores,
- * and its folder if it has one, each as text of a sensible length; null when it lacks either, and anything more is
- * ignored. The panel's dialog sends the same.
+ * and its folder if it has one, each as text within the limits the panel's message has (`LIMITS`); null when it lacks
+ * either, or any is over, and anything more is ignored. The panel's dialog sends the same.
  */
 export const readGiven = (raw: unknown): Given | null => {
 	if (typeof raw !== 'object' || raw === null) return null;
 	const r = raw as Record<string, unknown>;
-	return text(r.title) && text(r.task) ? { title: r.title, task: r.task, folder: text(r.folder) ? r.folder : null } : null;
+	const folder = r.folder === undefined || r.folder === null ? null : within(r.folder, LIMITS.folder) ? r.folder : undefined;
+	return within(r.title, LIMITS.title) && within(r.task, LIMITS.task) && folder !== undefined ? { title: r.title, task: r.task, folder } : null;
 };
 
 const INSTALL = 'Install packages';

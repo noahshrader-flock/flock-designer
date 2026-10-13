@@ -23,21 +23,24 @@ export const isChosen = (pick: FolderPick): boolean => pick.kind !== 'new' || pi
 export const FolderField = ({ folders, pick, onPick }: { folders: string[]; pick: FolderPick; onPick: (pick: FolderPick) => void }) => (
 	<>
 		<Field label="Folder">
-			<Select
-				value={pick.kind === 'none' ? NONE : pick.kind === 'new' ? NEW : `${EXISTING}${pick.name}`}
-				onChange={(v) =>
-					onPick(v === NONE ? { kind: 'none' } : v === NEW ? { kind: 'new', name: '' } : { kind: 'existing', name: v.slice(EXISTING.length) })
-				}
-				options={[
-					{ value: NONE, label: 'No folder' },
-					...folders.map((f) => ({ value: `${EXISTING}${f}`, label: f })),
-					{ value: NEW, label: 'New folder…' },
-				]}
-			/>
+			{(control) => (
+				<Select
+					control={control}
+					value={pick.kind === 'none' ? NONE : pick.kind === 'new' ? NEW : `${EXISTING}${pick.name}`}
+					onChange={(v) =>
+						onPick(v === NONE ? { kind: 'none' } : v === NEW ? { kind: 'new', name: '' } : { kind: 'existing', name: v.slice(EXISTING.length) })
+					}
+					options={[
+						{ value: NONE, label: 'No folder' },
+						...folders.map((f) => ({ value: `${EXISTING}${f}`, label: f })),
+						{ value: NEW, label: 'New folder…' },
+					]}
+				/>
+			)}
 		</Field>
 		{pick.kind === 'new' && (
 			<Field label="New folder">
-				<TextInput value={pick.name} onChange={(name) => onPick({ kind: 'new', name })} placeholder="Zones" />
+				{(control) => <TextInput control={control} value={pick.name} onChange={(name) => onPick({ kind: 'new', name })} placeholder="Zones" />}
 			</Field>
 		)}
 	</>

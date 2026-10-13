@@ -52,7 +52,7 @@ window.addEventListener('message', (e) => {
 };
 
 /** How the extension answers a review page: the core's table, VS Code's sign-in, and Address. */
-export interface ReviewAnswers {
+interface ReviewAnswers {
 	routes: () => ReadonlyMap<InvokeName, Route>;
 	signIn: () => Promise<SignInState>;
 	address: (review: Review, comment: CommentRef) => Promise<unknown>;

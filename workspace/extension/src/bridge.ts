@@ -29,7 +29,7 @@ export class Panels {
 	private readonly open = new Set<Webview>();
 	/** The pages that have said they listen, and what is for them until one does (`show`). */
 	private readonly listening = new Set<Webview>();
-	private held: HostMessage[] = [];
+	private held: HostMessage | null = null;
 	private readonly listeners = new Map<string, Set<(payload: unknown) => void>>();
 
 	add(webview: Webview): VsCode.Disposable {
@@ -44,10 +44,11 @@ export class Panels {
 
 	/**
 	 * Something for the panel to show (a dialog): sent to a page that is listening, else held for the first that does, as
-	 * a message posted before then is lost. The view is shown first by whoever asks.
+	 * a message posted before then is lost. A later request replaces one held that no page saw: only the latest is wanted.
+	 * The view is shown first by whoever asks.
 	 */
 	show(message: HostMessage): void {
-		if (this.listening.size === 0) this.held.push(message);
+		if (this.listening.size === 0) this.held = message;
 		else for (const w of this.listening) void w.postMessage(message);
 	}
 
@@ -55,8 +56,8 @@ export class Panels {
 	ready(webview: Webview): void {
 		this.listening.add(webview);
 		const held = this.held;
-		this.held = [];
-		for (const message of held) void webview.postMessage(message);
+		this.held = null;
+		if (held) void webview.postMessage(held);
 	}
 
 	/** A page is gone (its view was hidden, and loads again when shown): nothing is sent until it says it listens. */

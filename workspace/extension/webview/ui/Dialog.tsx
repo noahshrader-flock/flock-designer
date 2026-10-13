@@ -1,6 +1,6 @@
 import { type KeyboardEvent as KeyEvent, type ReactNode, useEffect, useRef } from 'react';
 
-const FOCUSABLE = 'input, textarea, select, button:not(:disabled), [href]';
+const FOCUSABLE = 'input, textarea, select, button:not(:disabled)';
 
 /**
  * A dialog over the panel, as VS Code's own are: a title, what it asks, and its buttons below, over a scrim that dims

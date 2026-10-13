@@ -64,4 +64,16 @@ describe('the extension’s sources', () => {
 		expect(radius('.picture')).toBe('var(--dsnr-radius)');
 		expect(radius('.card-picture')).toBe('var(--dsnr-radius-large)');
 	});
+
+	it('hide a row’s badge only when the ellipsis button takes its place, not whenever the row has focus', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const selectors = css
+			.split('}')
+			.filter((b) => /visibility:\s*hidden/.test(b) && b.includes('.badge'))
+			.map((b) => b.split('{')[0]!.trim());
+		expect(selectors.join(' ')).not.toMatch(/\.row-item:focus-within/);
+		expect(selectors.join(' ')).toMatch(/:has\(\.item-actions:focus-within\)/);
+	});
 });

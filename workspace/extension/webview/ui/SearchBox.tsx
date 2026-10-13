@@ -9,7 +9,7 @@ export const SearchBox = ({ label, value, onChange }: { label: string; value: st
 	<span className="search">
 		<Icon name="search" />
 		<input
-			className="search-input"
+			className="input search-input"
 			type="text"
 			aria-label={label}
 			placeholder={label}

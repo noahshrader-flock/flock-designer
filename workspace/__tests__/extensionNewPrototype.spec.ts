@@ -233,6 +233,8 @@ describe('what the command may be given', () => {
 			{ title: 3, task: 'B' },
 			{ title: 'A', task: ['x'] },
 			{ title: 'A', task: 'x'.repeat(4001) },
+			{ title: 'x'.repeat(301), task: 'B' },
+			{ title: 'A', task: 'B', folder: 'x'.repeat(101) },
 		])
 			expect(readGiven(raw)).toBeNull();
 	});

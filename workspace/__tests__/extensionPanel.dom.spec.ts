@@ -196,8 +196,7 @@ const type = async (el: HTMLElement, text: string) =>
 describe('dialogs and menus, in the panel', () => {
 	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
 	/** A field by its label, as a person finds it. */
-	const field = (name: string) =>
-		[...dialog()!.querySelectorAll('label')].find((l) => l.querySelector('[data-part="label"]')?.textContent === name)!.control as HTMLInputElement;
+	const field = (name: string) => [...dialog()!.querySelectorAll('label')].find((l) => l.textContent === name)!.control as HTMLInputElement;
 	/** The option of a select that says `label`, chosen, as a person chooses it. */
 	const choose = async (select: HTMLElement, label: string) => {
 		const option = [...(select as HTMLSelectElement).options].find((o) => o.textContent === label);
@@ -226,6 +225,16 @@ describe('dialogs and menus, in the panel', () => {
 			await press(button('New prototype'));
 			expect(panelSaid().at(-1)).toEqual({ type: 'ask-new-prototype' });
 			expect(dialog()).toBeNull();
+		});
+
+		it('names each field by its label alone, and gives its hint as a description: a hint is not part of a name', async () => {
+			await showOpen();
+			await say({ type: 'open-new-prototype' });
+			const task = field('What should it explore?');
+			expect(task.labels?.[0]?.textContent).toBe('What should it explore?');
+			const hint = document.getElementById(task.getAttribute('aria-describedby')!);
+			expect(hint?.textContent).toContain('DSNR builds it from this');
+			expect(field('Name').hasAttribute('aria-describedby')).toBe(false);
 		});
 
 		it('asks a name, what it should explore and its folder, and is made only once there is a name and something to explore', async () => {
@@ -317,6 +326,24 @@ describe('dialogs and menus, in the panel', () => {
 			expect(items()).toHaveLength(0);
 		});
 
+		it('gives the focus back to its button when it closes, so a keyboard goes on from where it was', async () => {
+			await showOpen();
+			await press(menuFor(0));
+			expect(document.activeElement?.getAttribute('role')).toBe('menuitem');
+			await act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+			expect(document.activeElement).toBe(menuFor(0));
+			await press(menuFor(0));
+			await press(item('Open for review'));
+			expect(document.activeElement).toBe(menuFor(0));
+		});
+
+		it('names the menu it controls only while there is one', async () => {
+			await showOpen();
+			expect(menuFor(0).hasAttribute('aria-controls')).toBe(false);
+			await press(menuFor(0));
+			expect(document.getElementById(menuFor(0).getAttribute('aria-controls')!)?.getAttribute('role')).toBe('menu');
+		});
+
 		it('has a menu in a list as in a grid', async () => {
 			await showOpen();
 			await press(
@@ -333,6 +360,19 @@ describe('dialogs and menus, in the panel', () => {
 			await press(menuFor(0));
 			await press(item('Assign folder…'));
 		};
+
+		it('has the folder it is in chosen however it was spelled, as the list spells it', async () => {
+			// Two projects, one folder, spelled two ways: the list has the one spelling, and both show it chosen.
+			await showOpen(
+				OPEN,
+				SAMPLE_PROJECTS.map((p) => (p.id === 'role-comparison' ? { ...p, folder: 'maps' } : p)),
+			);
+			await say({ type: 'open-assign-folder', projectId: 'zone-coverage' });
+			// The list has `maps`, the first spelling it met; this project's own `Maps` is not an option, and is shown as it.
+			expect([...field('Folder').querySelectorAll('option')].map((o) => o.textContent)).toEqual(['No folder', 'Admin', 'maps', 'New folder…']);
+			expect(selected(field('Folder'))).toBe('maps');
+			expect(submit().disabled).toBe(true);
+		});
 
 		it('is a dialog for the project, with the folder it is in chosen', async () => {
 			await open();

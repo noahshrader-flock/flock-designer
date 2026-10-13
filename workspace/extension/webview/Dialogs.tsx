@@ -21,7 +21,7 @@ const Buttons = ({ onClose, doing, disabled }: { onClose: () => void; doing: str
 );
 
 /** What a prototype is started from, as the extension takes it: its name, what it explores, and its folder. */
-export interface NewPrototypeAnswers {
+interface NewPrototypeAnswers {
 	title: string;
 	task: string;
 	folder: string | null;
@@ -54,11 +54,11 @@ export const NewPrototypeDialog = ({
 	return (
 		<Dialog title="New prototype" onClose={onClose}>
 			<form onSubmit={start}>
-				<Field label="Name">
-					<TextInput value={title} onChange={setTitle} placeholder="Alert history" />
-				</Field>
+				<Field label="Name">{(control) => <TextInput control={control} value={title} onChange={setTitle} placeholder="Alert history" />}</Field>
 				<Field label="What should it explore?" hint="DSNR builds it from this, with the real design system.">
-					<TextArea value={task} onChange={setTask} placeholder="A history of alerts, filterable by camera and by day" rows={5} />
+					{(control) => (
+						<TextArea control={control} value={task} onChange={setTask} placeholder="A history of alerts, filterable by camera and by day" rows={5} />
+					)}
 				</Field>
 				<FolderField folders={folders} pick={pick} onPick={setPick} />
 				<Buttons onClose={onClose} doing="Create prototype" disabled={!ready} />
@@ -82,7 +82,10 @@ export const AssignFolderDialog = ({
 	onAssigned: () => void;
 	onClose: () => void;
 }) => {
-	const [pick, setPick] = useState<FolderPick>(pickOf(project.folder));
+	// The folder it is in, as the list of folders spells it (they are one folder whatever the case), so it is one of the options.
+	const [pick, setPick] = useState<FolderPick>(
+		pickOf(project.folder === null ? null : (folders.find((f) => sameFolder(f, project.folder as string)) ?? project.folder)),
+	);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const same = project.folder === null ? pick.kind === 'none' : pick.kind !== 'none' && sameFolder(folderOf(pick) ?? '', project.folder);

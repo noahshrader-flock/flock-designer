@@ -52,7 +52,7 @@ export type HostMessage =
 const CALLS = new Set<string>(INVOKE);
 const BARE = new Set(['ready', 'locate-design-system', 'get-started', 'ask-new-prototype']);
 /** The most a name, what a prototype explores, and a folder's name may be: more is not what a person wrote in a box. */
-const MOST = { title: 300, task: 4000, folder: 100 };
+export const LIMITS = { title: 300, task: 4000, folder: 100 };
 
 const hasKeys = (raw: object, keys: string[]): boolean => {
 	const own = Object.keys(raw).sort();
@@ -84,10 +84,10 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 	if (m.type === 'new-prototype')
 		return hasKeys(m, ['type', 'title', 'task', 'folder']) &&
 			typeof m.title === 'string' &&
-			m.title.length <= MOST.title &&
+			m.title.length <= LIMITS.title &&
 			typeof m.task === 'string' &&
-			m.task.length <= MOST.task &&
-			(m.folder === null || (typeof m.folder === 'string' && m.folder.length <= MOST.folder))
+			m.task.length <= LIMITS.task &&
+			(m.folder === null || (typeof m.folder === 'string' && m.folder.length <= LIMITS.folder))
 			? { type: 'new-prototype', title: m.title, task: m.task, folder: m.folder }
 			: null;
 	return typeof m.type === 'string' && BARE.has(m.type) && hasKeys(m, ['type']) ? ({ type: m.type } as PanelMessage) : null;

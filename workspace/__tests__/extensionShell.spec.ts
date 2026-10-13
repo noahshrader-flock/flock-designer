@@ -292,7 +292,7 @@ describe('what the extension asks the panel to show', () => {
 		return { posted, webview: { postMessage: async (m: unknown) => void posted.push(m) } as never };
 	};
 
-	it('is held until the page is listening, then sent once, in order', () => {
+	it('is held until the page is listening, then sent once: a later request replaces an earlier one it never saw', () => {
 		const panels = new Panels();
 		const a = webview();
 		panels.add(a.webview);
@@ -300,9 +300,9 @@ describe('what the extension asks the panel to show', () => {
 		panels.show({ type: 'open-new-prototype' });
 		expect(a.posted).toEqual([]);
 		panels.ready(a.webview);
-		expect(a.posted).toEqual([{ type: 'open-assign-folder', projectId: 'demo' }, { type: 'open-new-prototype' }]);
+		expect(a.posted).toEqual([{ type: 'open-new-prototype' }]);
 		panels.ready(a.webview);
-		expect(a.posted).toHaveLength(2);
+		expect(a.posted).toHaveLength(1);
 	});
 
 	it('is sent at once to a page that is listening', () => {
