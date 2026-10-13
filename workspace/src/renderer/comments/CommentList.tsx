@@ -60,39 +60,30 @@ export const CommentList = ({
 						key={comment.id}
 						variant="outline"
 						ref={(el: HTMLDivElement | null) => comments.registerCard(comment.id, el)}
-						onClick={() => comments.select(comment)}
 						// The selected one stands out as the pin on the page does; a resolved one recedes.
-						className={cn(
-							'block p-3',
-							comments.selected === comment.id && 'border-primary bg-accent border-2',
-							comment.anchor && 'cursor-pointer',
-							comment.resolved && 'opacity-65',
-						)}
+						className={cn('block p-3', comments.selected === comment.id && 'border-primary bg-accent border-2', comment.resolved && 'opacity-65')}
 					>
 						<div className="flex flex-col gap-1.5">
 							<div className="flex flex-row items-center gap-2">
 								{n > 0 && <Badge variant="secondary">{n}</Badge>}
 								<span className="min-w-0 truncate text-sm font-medium">{comment.author}</span>
 								{comment.resolved && <Badge variant="success">Resolved</Badge>}
-								{/* The menu's clicks, its trigger's and its items' (drawn outside the card), still reach the card in React: they must not select it. */}
-								<span className="-my-1 -mr-1.5 ml-auto" onClick={(e) => e.stopPropagation()}>
-									<MoreMenu label="Comment actions" size="icon-sm">
-										{actions?.(comment)}
-										<DropdownMenuItem onSelect={() => void comments.resolve(comment, !comment.resolved)}>
-											{comment.resolved ? <RotateCcwIcon /> : <CircleCheckIcon />}
-											{comment.resolved ? 'Reopen' : 'Resolve'}
-										</DropdownMenuItem>
-										<DropdownMenuSeparator />
-										<DropdownMenuItem variant="destructive" onSelect={() => setConfirmingDelete(comment.id)}>
-											<Trash2Icon />
-											Delete
-										</DropdownMenuItem>
-									</MoreMenu>
-								</span>
+								<MoreMenu label="Comment actions" size="icon-sm" className="-my-1 -mr-1.5 ml-auto">
+									{actions?.(comment)}
+									<DropdownMenuItem onSelect={() => void comments.resolve(comment, !comment.resolved)}>
+										{comment.resolved ? <RotateCcwIcon /> : <CircleCheckIcon />}
+										{comment.resolved ? 'Reopen' : 'Resolve'}
+									</DropdownMenuItem>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem variant="destructive" onSelect={() => setConfirmingDelete(comment.id)}>
+										<Trash2Icon />
+										Delete
+									</DropdownMenuItem>
+								</MoreMenu>
 							</div>
 							{note && <p className="text-muted-foreground text-xs">{note}</p>}
 							{confirmingDelete === comment.id && (
-								<div className="flex flex-row items-center gap-2" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+								<div className="flex flex-row items-center gap-2">
 									<span className="text-destructive grow text-xs">Delete this comment for good? It cannot be brought back.</span>
 									<Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(null)}>
 										Keep
@@ -106,22 +97,21 @@ export const CommentList = ({
 									</Button>
 								</div>
 							)}
-							<p className="text-sm">{comment.body}</p>
+							{/* Choosing a comment shows its pin: by its own text, a button, so the keyboard can do it too. */}
+							<button
+								type="button"
+								aria-current={comments.selected === comment.id ? 'true' : undefined}
+								className="focus-visible:ring-ring/50 cursor-pointer rounded-sm text-left text-sm outline-none focus-visible:ring-[3px]"
+								onClick={() => comments.select(comment)}
+							>
+								{comment.body}
+							</button>
 							{comment.picture && <img className="max-w-60 rounded border" src={comment.picture} alt={`The spot comment ${n || ''} was made on`} />}
 							{madeIn && <span className="text-muted-foreground text-xs">State: {stateLabel(madeIn)}</span>}
 							{comment.anchor && state === 'elsewhere' && <span className="text-muted-foreground text-xs">On {comment.anchor.route}</span>}
 							{state && NOTE[state] && <span className="text-warning text-xs">{NOTE[state]}</span>}
 							{showIn && (
-								<Button
-									size="sm"
-									variant="outline"
-									className="self-start"
-									onClick={(e: React.MouseEvent) => {
-										// Showing the page in its state is not choosing the comment.
-										e.stopPropagation();
-										onShowState?.(madeIn);
-									}}
-								>
+								<Button size="sm" variant="outline" className="self-start" onClick={() => onShowState?.(madeIn)}>
 									Show in {stateLabel(showIn)}
 								</Button>
 							)}

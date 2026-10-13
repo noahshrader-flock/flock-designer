@@ -6,8 +6,6 @@ import { withState } from '../shared/prototypeStates';
 import { prototypeAddressed } from '../renderer/comments/addressed';
 import { CommentBox } from '../renderer/comments/CommentBox';
 import { CommentControl } from '../renderer/comments/CommentControl';
-import { CommentList } from '../renderer/comments/CommentList';
-import { CommentsHeading } from '../renderer/comments/CommentsHeading';
 import { useComments } from '../renderer/comments/useComments';
 import { IterationSwitcher, StateSwitcher } from '../renderer/IterationSwitcher';
 import { Toolbar } from '../renderer/Toolbar';
@@ -15,8 +13,8 @@ import { Button } from '../renderer/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../renderer/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../renderer/ui/tooltip';
 import { browserComments, framePage, saveToken, savedToken, tokenApi } from './browserAdapter';
-import { ErrorAlert } from '../renderer/ErrorAlert';
 import { closeUnlessBusy } from '../renderer/dialogClose';
+import { CommentsPanel, useOpenOnError } from '../renderer/comments/CommentsPanel';
 
 /**
  * A prototype's published page, as the app shows one: its bar (the app's own toolbar, back button, title, version and
@@ -173,10 +171,7 @@ const Commenting = ({
 	}, [slots.frame, page]);
 
 	const comments = useComments({ store, page, opened, route, setError, onPinClick: () => setListOpen(true) });
-	// Something went wrong is only useful if it can be seen: it is said in the panel, so the panel opens.
-	useEffect(() => {
-		if (error !== null) setListOpen(true);
-	}, [error]);
+	useOpenOnError(error, () => setListOpen(true));
 
 	const frameBox = slots.frame.getBoundingClientRect();
 	return (
@@ -186,16 +181,17 @@ const Commenting = ({
 			</PageBar>
 			{listOpen &&
 				createPortal(
-					<div className="bg-card flex h-full w-90 flex-col gap-4 overflow-y-auto border-l p-4">
-						<CommentsHeading comments={comments}>
-							<Button size="sm" variant="ghost" title="Forget the token kept in this browser" onClick={onSignOut}>
-								<LogOutIcon />
-								Sign out
-							</Button>
-						</CommentsHeading>
-						{error && !comments.composing && <ErrorAlert error={error} />}
-						<CommentList
+					// The page's panel slot holds the same panel as the app's: its divider, then the panel, side by side.
+					<div className="flex h-full">
+						<CommentsPanel
 							comments={comments}
+							error={error}
+							heading={
+								<Button size="sm" variant="ghost" title="Forget the token kept in this browser" onClick={onSignOut}>
+									<LogOutIcon />
+									Sign out
+								</Button>
+							}
 							states={showing.states}
 							onShowState={showing.onState}
 							addressed={(c) => prototypeAddressed(c, config.projectId, config.name)}

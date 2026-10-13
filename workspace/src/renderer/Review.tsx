@@ -22,6 +22,7 @@ import { useRouteCheck } from './review/useRouteCheck';
 import { Alert, AlertDescription } from './ui/alert';
 import { useEditor } from './useEditor';
 import { useLocalBuild } from './useLocalBuild';
+import { useOpenOnError } from './comments/CommentsPanel';
 
 /**
  * One iteration: a thin toolbar, and the preview taking everything under it.
@@ -64,9 +65,7 @@ export const Review = ({
 	// The sidebar: closed until asked for. Its width is the person's to set, and is remembered. Anything that goes wrong
 	// opens it to say so: errors are shown there, and a failed pin drag or delete otherwise said nothing at all.
 	const [sidebarOpen, setSidebarOpen] = useState(false);
-	useEffect(() => {
-		if (error !== null) setSidebarOpen(true);
-	}, [error]);
+	useOpenOnError(error, () => setSidebarOpen(true));
 
 	// Someone with the product repository builds it here, so what they see is their latest work. Everyone else, and anyone
 	// whose local build cannot run (a colleague's iteration they do not have), opens the shared preview, which may still be

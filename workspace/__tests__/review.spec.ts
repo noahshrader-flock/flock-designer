@@ -355,13 +355,24 @@ describe('pins and cards', () => {
 		expect(pins(app)[0]?.anchor.selector).toBe('#elsewhere');
 	});
 
-	it('focuses the pin of a card that is clicked', async () => {
+	it('focuses the pin of a comment chosen by its own text, which is a button, so the keyboard can choose it too', async () => {
 		const app = fakeApp({ readComments: async () => ok([comment(1, 'First')]) });
 		await open(app);
 		await sidebar();
-		await press(cardFor('First'));
+		const chooser = button('First', cardFor('First'));
+		await press(chooser);
 		expect(app.calls.pageFocusMarker?.[0]).toEqual([1]);
+		expect(chooser.getAttribute('aria-current')).toBe('true');
 		expect(cardFor('First').className).toContain('border-primary');
+	});
+
+	it('is not chosen by opening its menu: nothing else on the card chooses it', async () => {
+		const app = fakeApp({ readComments: async () => ok([comment(1, 'First')]) });
+		await open(app);
+		await sidebar();
+		await openMenu(button('Comment actions', cardFor('First')));
+		await press(cardFor('First'));
+		expect(app.calls.pageFocusMarker).toBeUndefined();
 	});
 
 	it('says, on the card, when its element is gone or it was made in another state', async () => {
