@@ -295,10 +295,13 @@ body {
 	background: var(--vscode-list-hoverBackground);
 }
 
-/* A grid of cards: as many columns as the side bar has room for, each a project as its picture and its name. */
+/*
+ * A grid of cards, each a project as its picture and its name: one column in the side bar's usual widths, and a second
+ * only once there is room for two cards of at least 190px (about a 430px side bar), then a third, and so on.
+ */
 .grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
 	gap: 8px;
 	margin: 0;
 	padding: 4px 12px 8px;
