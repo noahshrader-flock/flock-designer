@@ -3,9 +3,8 @@ import type { AgentReadiness, Checkout, Project, ProjectIteration, Repository } 
 import { slugify } from '../shared/validate';
 import { toProjectIteration } from '../shared/iterationRecords';
 import { CancelButton } from './CancelButton';
-import { CloneHere, useClone, Working } from './Clone';
+import { useClone } from './Clone';
 import { FolderField, type FolderPick, pickOf, pickedFolder } from './FolderField';
-import { RepositoryReachNote } from './RepositoryReachNote';
 import { SearchSelect } from './SearchSelect';
 import { GitBranchIcon, InfoIcon } from 'lucide-react';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
@@ -16,9 +15,9 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { ErrorAlert } from './ErrorAlert';
 import { closeUnlessBusy } from './dialogClose';
-import { Skeleton } from './ui/skeleton';
-import { SkeletonStatus } from './Skeletons';
 import { useRepositories, useWorkspace } from './useWorkspace';
+import { RepositoryField } from './RepositoryField';
+import { ReadinessAlerts, usePrototypeReadiness } from './PrototypeReadiness';
 
 /** What New makes, said under its title. The app is for prototypes: codebase work is started in the codebase. */
 const ABOUT =
@@ -173,24 +172,9 @@ export const NewWork = ({
 	// Building needs Claude Code; when it is plainly not ready, nothing is created.
 	const blocked = readiness.state === 'missing' || readiness.state === 'signedOut';
 
-	// Whether this repository can build a prototype here, asked as soon as there is one to ask about, and again once its
-	// packages are installed from here.
+	// Whether this repository can build a prototype here, asked as soon as there is one to ask about.
 	const askRoot = checkout && !elsewhere ? checkout.root : null;
-	const readying = useWorkspace(() => window.workspace.prototypeReadiness(askRoot ?? ''), [askRoot], { enabled: open && askRoot !== null });
-	const prototype = readying.value;
-
-	// Installing its packages, with the command the repository declares: the last line it printed while it runs.
-	const [installing, setInstalling] = useState<string | null>(null);
-	useEffect(() => window.workspace.onInstallLine((line) => setInstalling((now) => (now === null ? null : line))), []);
-	const install = async () => {
-		if (askRoot === null) return;
-		setError(null);
-		setInstalling('Starting…');
-		const r = await window.workspace.installPackages(askRoot);
-		setInstalling(null);
-		if (!r.ok) return setError(r.error);
-		readying.reload();
-	};
+	const { prototype, error: readinessError, installing, install } = usePrototypeReadiness(askRoot, open, setError);
 	// Nothing else decides this: no repository, or one without its packages, cannot make a prototype.
 	const prototypeBlocked = askRoot === null || (prototype !== null && !prototype.ready);
 
@@ -252,32 +236,23 @@ export const NewWork = ({
 							placeholder="A users list that flags people who have not signed in for 90 days."
 						/>
 					</Field>
-					{!checkout && listed.loading ? (
-						// The repository field, until the list it chooses from is read: not "none found", which it may not be.
-						<SkeletonStatus label="Loading your repositories…" className="flex flex-col gap-2">
-							<Skeleton className="h-4 w-20" />
-							<Skeleton className="h-9 w-full" />
-						</SkeletonStatus>
-					) : !checkout && listed.error ? (
+					{!checkout && listed.error ? (
 						<ErrorAlert error={listed.error} />
-					) : checkout || choices.length > 0 ? (
-						<Field>
-							<FieldLabel htmlFor="new-work-repo">Repository</FieldLabel>
-							<SearchSelect
-								id="new-work-repo"
-								items={choices.map((r) => r.name)}
-								value={chosen?.name ?? null}
-								onChange={(v) => void pickRepo(v)}
-								placeholder="Choose a repository"
-								search="Search repositories…"
-								empty="No repository matches."
-								disabled={busy || cloning !== null}
-							/>
-							<RepositoryReachNote reach={listed.value?.reach ?? null} />
-							{toClone !== null && <CloneHere clone={cloneState} onClone={() => void clone()} />}
+					) : checkout || choices.length > 0 || listed.loading ? (
+						// While the list is read, the field loading: not "none found", which it may not be.
+						<RepositoryField
+							id="new-work-repo"
+							names={choices.map((r) => r.name)}
+							reach={listed.value?.reach ?? null}
+							loading={!checkout && listed.loading}
+							value={chosen?.name ?? null}
+							onChange={(v) => void pickRepo(v)}
+							disabled={busy || cloning !== null}
+							clone={toClone !== null ? { state: cloneState, onClone: () => void clone() } : undefined}
+						>
 							{/* After the clone, not before: there is nothing to start from until it is here. */}
 							{toClone === null && !elsewhere && from !== null && <StartsFrom branch={from} branches={branches} onChange={setFrom} disabled={busy} />}
-						</Field>
+						</RepositoryField>
 					) : (
 						<Alert>
 							<InfoIcon />
@@ -298,56 +273,9 @@ export const NewWork = ({
 						onChange={setInFolder}
 						disabled={busy}
 					/>
-					{prototype && !prototype.ready && (
-						<Alert variant="warning">
-							<AlertTitle>
-								{prototype.why === 'not-installed' ? "The real components aren't installed here" : 'The page builder is missing'}
-							</AlertTitle>
-							<AlertDescription>
-								{prototype.why === 'not-installed' && prototype.canInstall ? (
-									<div className="flex flex-col items-start gap-3">
-										<span>
-											A prototype is built from {prototype.designSystem}, and {prototype.repository}'s packages are not installed on this machine yet.
-										</span>
-										{installing === null ? (
-											<Button onClick={() => void install()}>Install packages</Button>
-										) : (
-											<Working text={installing} onStop={() => void window.workspace.cancelInstall()} />
-										)}
-									</div>
-								) : prototype.why === 'not-installed' ? (
-									<>
-										A prototype is built from {prototype.designSystem}, and it is not installed in {prototype.repository} on this machine. Run{' '}
-										<code>npm ci</code> in it (this needs access to the private packages), then open this again.
-									</>
-								) : (
-									'DSNR cannot build pages on this machine. Reinstall the app and try again.'
-								)}
-							</AlertDescription>
-						</Alert>
-					)}
-					{readiness.state === 'missing' && (
-						<Alert variant="warning">
-							<AlertTitle>Claude Code is not installed</AlertTitle>
-							<AlertDescription>
-								New work is built by Claude Code on this machine. Install it from{' '}
-								<a href="https://claude.com/claude-code" target="_blank" rel="noreferrer">
-									claude.com/claude-code
-								</a>
-								, sign in, then open this again.
-							</AlertDescription>
-						</Alert>
-					)}
-					{readiness.state === 'signedOut' && (
-						<Alert variant="warning">
-							<AlertTitle>Claude Code is not signed in</AlertTitle>
-							<AlertDescription>
-								Sign in with your Claude account, in your editor's Claude panel or by running <code>claude</code> in a terminal. Then open this again.
-							</AlertDescription>
-						</Alert>
-					)}
+					<ReadinessAlerts prototype={prototype} installing={installing} onInstall={() => void install()} agent={readiness} />
 					{/* What could not be read is said, as what went wrong is: none of it is dropped. */}
-					{[error, checkout ? listed.error : null, branchList.error, readying.error].map((e) => e && <ErrorAlert key={e} error={e} />)}
+					{[error, checkout ? listed.error : null, branchList.error, readinessError].map((e) => e && <ErrorAlert key={e} error={e} />)}
 				</DialogBody>
 				<DialogFooter>
 					<CancelButton onClick={close} disabled={busy} />

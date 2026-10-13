@@ -72,3 +72,10 @@ describe('Done', () => {
 		expect(own.map((f) => f.path)).toEqual([]);
 	});
 });
+
+describe('choosing a repository', () => {
+	it('is one field wherever it is asked (New, Connect): no screen builds its own list of repositories', () => {
+		const own = windowSources('RepositoryField.tsx').filter(({ text }) => /Search repositories…/.test(text));
+		expect(own.map((f) => f.path)).toEqual([]);
+	});
+});
