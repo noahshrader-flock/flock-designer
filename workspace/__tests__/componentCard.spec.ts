@@ -70,7 +70,7 @@ describe('a component’s card', () => {
 		expect(img.className).toContain('motion-reduce:transition-none');
 		await act(async () => void img.dispatchEvent(new Event('load')));
 		expect(img.className).toContain('opacity-100');
-		// White behind it once it is there, as the stories are drawn on white; the placeholder's gray until then.
+		// The picture's backdrop behind it once it is there (the page's white, in light); the placeholder's gray until then.
 		expect(document.querySelector('[data-picture-area]')?.className).toContain('bg-picture-backdrop');
 	});
 });

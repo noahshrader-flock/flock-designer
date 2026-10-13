@@ -233,6 +233,19 @@ export const chooseTab = (which: string | HTMLElement) =>
 				new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }),
 			),
 	);
+/** An alert's parts, in order, and what each is: an icon, then its slots (`alert-title`, `alert-description`, `alert-action`). */
+export const alertParts = (alert: Element): string[] =>
+	[...alert.children].map((c) => (c.tagName === 'svg' ? 'icon' : (c.getAttribute('data-slot') ?? c.tagName)));
+/** A hook rendered on its own, and what it gave the last time it ran (`now`), for a test to drive it and read it. */
+export const probeHook = async <T>(use: () => T) => {
+	let seen: { value: T } | null = null;
+	const Probe = () => {
+		seen = { value: use() };
+		return null;
+	};
+	const rendered = await render(createElement(Probe));
+	return { ...rendered, now: (): T => (seen as { value: T } | null)!.value };
+};
 /** The dialog that is open, or null. */
 export const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]');
 

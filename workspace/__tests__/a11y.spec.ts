@@ -9,8 +9,8 @@ import { COMMENTS_PANEL } from '../src/renderer/panelWidth';
 import { Alert } from '../src/renderer/ui/alert';
 import { DropdownMenuItem } from '../src/renderer/ui/dropdown-menu';
 import type { PublishStatus } from '../src/shared/contract';
-import { button, fakeApp, ok, render, settle, unmountAll } from './reviewHarness';
-import { windowSources } from './windowSources';
+import { button, fakeApp, ok, probeHook, render, settle, unmountAll } from './reviewHarness';
+import { badTags, offenders, windowSources } from './windowSources';
 
 /** What assistive technology is told: only what it needs, assertively only when something went wrong. */
 
@@ -47,8 +47,7 @@ describe('a button that is working', () => {
 	});
 
 	it('nowhere has a spinner left to say Loading inside it', () => {
-		const own = windowSources().filter(({ text }) => /<Button\b[^>]*>\s*(?:\{[^}]*?)?<Spinner(?![^>]*aria-hidden)/.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		expect(badTags(/^Button$/, (_tag, after) => /^\s*(?:\{[^<]*)?<Spinner(?![^>]*aria-hidden)/.test(after))).toEqual([]);
 	});
 });
 
@@ -71,8 +70,7 @@ describe('the divider of a panel', () => {
 
 describe('the account’s picture', () => {
 	it('says nothing, since the name is beside it', () => {
-		const own = windowSources().filter(({ text }) => /<AvatarImage\b[^>]*alt=\{/.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		expect(offenders(/<AvatarImage\b[^>]*alt=\{/)).toEqual([]);
 	});
 });
 
@@ -86,19 +84,18 @@ describe('what is not synced', () => {
 				return () => undefined;
 			},
 		}).api;
-		let shown: PublishStatus | null = null;
-		const Probe = () => {
-			shown = usePublishStatus()[0];
-			return null;
-		};
-		current = await render(createElement(Probe));
+		const probe = await probeHook(() => usePublishStatus()[0]);
+		current = probe;
 		await settle();
 		const held: PublishStatus = { state: 'held', at: 'x', problems: [{ what: 'Project records', why: 'y' }] };
 		await act(async () => push(held));
 		await act(async () => push({ state: 'working' }));
-		expect(shown).toEqual(held);
+		expect(probe.now()).toEqual(held);
 		await act(async () => push({ state: 'shared', at: 'z' }));
-		expect(shown).toEqual({ state: 'shared', at: 'z' });
+		expect(probe.now()).toEqual({ state: 'shared', at: 'z' });
+	});
+
+	it('is shown by a button that keeps nothing of its own: what it shows is the hook’s', () => {
 		expect(windowSources().find((f) => f.path.endsWith('PublishStatus.tsx'))!.text).not.toMatch(/useRef/);
 	});
 });

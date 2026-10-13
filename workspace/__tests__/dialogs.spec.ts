@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-import { createElement } from 'react';
+import { act, createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { closeUnlessBusy } from '../src/renderer/dialogClose';
 import { ErrorAlert } from '../src/renderer/ErrorAlert';
 import { Alert } from '../src/renderer/ui/alert';
 import { render, unmountAll } from './reviewHarness';
-import { windowSources } from './windowSources';
+import { Dialog, DialogContent, DialogTitle } from '../src/renderer/ui/dialog';
+import { TooltipProvider } from '../src/renderer/ui/tooltip';
+import { badTags, offenders, windowSources } from './windowSources';
 
 /**
  * Dialogs and what goes wrong in them, said one way on every screen: an error is one `ErrorAlert`, which wraps a long git
@@ -52,30 +54,46 @@ describe('closing a dialog', () => {
 	});
 
 	it('is one way on every dialog or sheet a screen opens: none writes its own', () => {
-		const sources = windowSources();
-		expect(sources.length).toBeGreaterThan(50);
-		const own = sources.filter(({ text }) => /<(Dialog|Sheet)\b[^>]*onOpenChange=\{\(\w+\) =>/.test(text)).map((f) => f.path);
-		expect(own).toEqual([]);
+		expect(windowSources().length).toBeGreaterThan(50);
+		// A dialog the screen opens closes through closeUnlessBusy; one that keeps its own open state hands it setOpen.
+		expect(badTags(/^(Dialog|Sheet)$/, (tag) => /onOpenChange=/.test(tag) && !/onOpenChange=\{(closeUnlessBusy\(|setOpen\})/.test(tag))).toEqual([]);
 	});
 });
 
 describe('a dialog’s body', () => {
 	it('is laid out by DialogBody, so no dialog gives it the same column again', () => {
-		const own = windowSources().filter(({ text }) => /<DialogBody className="flex flex-col/.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		expect(offenders(/<DialogBody className="flex flex-col/)).toEqual([]);
 	});
 });
 
 describe('Done', () => {
 	it('is a filled button wherever a dialog ends with it', () => {
-		const own = windowSources().filter(({ text }) => /<Button variant="(outline|secondary|ghost)"[^>]*>\s*Done\s*</.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		expect(badTags(/^Button$/, (tag, after) => /^\s*Done\s*</.test(after) && /variant="(outline|secondary|ghost)"/.test(tag))).toEqual([]);
 	});
 });
 
 describe('choosing a repository', () => {
 	it('is one field wherever it is asked (New, Connect): no screen builds its own list of repositories', () => {
-		const own = windowSources('RepositoryField.tsx').filter(({ text }) => /Search repositories…/.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		expect(offenders(/Search repositories…/, 'RepositoryField.tsx')).toEqual([]);
+	});
+});
+
+describe('a dialog that is working', () => {
+	it('stays open on Escape while it works, and closes on it after', async () => {
+		const onClose = vi.fn();
+		const show = (busy: boolean) =>
+			createElement(
+				Dialog,
+				{ open: true, onOpenChange: closeUnlessBusy(onClose, busy) },
+				createElement(DialogContent, null, createElement(DialogTitle, null, 'Assign folder')),
+			);
+		// Radix listens for Escape on the document, where a key pressed in the dialog arrives.
+		const escape = () => act(async () => void document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+		current = await render(show(true));
+		await escape();
+		expect(onClose).not.toHaveBeenCalled();
+		await act(async () => current!.root.render(createElement(TooltipProvider, null, show(false))));
+		await escape();
+		expect(onClose).toHaveBeenCalledOnce();
 	});
 });

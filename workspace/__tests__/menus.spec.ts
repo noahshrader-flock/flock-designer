@@ -6,7 +6,7 @@ import { MenuLink } from '../src/renderer/Links';
 import { MoreMenu } from '../src/renderer/MoreMenu';
 import { DropdownMenuItem } from '../src/renderer/ui/dropdown-menu';
 import { button, openMenu, press, render, unmountAll } from './reviewHarness';
-import { windowSources } from './windowSources';
+import { offenders } from './windowSources';
 
 /**
  * Menus, one way each: the More menu (a ghost ellipsis, which can say it is working and come smaller), the menu of one
@@ -24,6 +24,8 @@ describe('the More menu', () => {
 	it('says it is working with a spinner in place of its ellipsis, and comes in a smaller size', async () => {
 		current = await render(createElement(MoreMenu, { busy: true, size: 'icon-sm', children: createElement(DropdownMenuItem, null, 'Resolve') }));
 		const trigger = button('More');
+		// The same ghost ellipsis wherever something has more to offer.
+		expect(trigger.getAttribute('data-variant')).toBe('ghost');
 		expect(trigger.getAttribute('data-size')).toBe('icon-sm');
 		expect(trigger.querySelector('[role="status"], [data-slot="spinner"], .animate-spin')).not.toBeNull();
 	});
@@ -72,10 +74,28 @@ describe('a link in a menu', () => {
 
 describe('every menu', () => {
 	it('is one of these: no screen builds its own ellipsis menu, radio menu, or link out', () => {
-		const sources = windowSources('MoreMenu.tsx', 'ChoiceMenu.tsx', 'Links.tsx', 'DesignSystem.tsx');
-		const ellipsis = sources.filter(({ text }) => /<EllipsisVerticalIcon/.test(text)).map((f) => f.path);
-		const radios = sources.filter(({ text }) => /<DropdownMenuRadioGroup/.test(text)).map((f) => f.path);
-		const anchors = sources.filter(({ text }) => /<a\b[^>]*target="_blank"/.test(text)).map((f) => f.path);
+		const ellipsis = offenders(/<EllipsisVerticalIcon/, 'MoreMenu.tsx');
+		// The design system switcher stays its own: two-line items, and a Connect that is not one of the choices.
+		const radios = offenders(/<DropdownMenuRadioGroup/, 'ChoiceMenu.tsx', 'DesignSystem.tsx');
+		const anchors = offenders(/<a\b[^>]*target="_blank"/, 'Links.tsx');
 		expect({ ellipsis, radios, anchors }).toEqual({ ellipsis: [], radios: [], anchors: [] });
+	});
+});
+
+describe('the button of a choice', () => {
+	it('says the words it is given, when they are not the choice’s own (V2 for the second version)', async () => {
+		current = await render(
+			createElement(ChoiceMenu, {
+				name: 'Version',
+				label: 'V2',
+				value: '2',
+				choices: [
+					{ value: '2', label: 'V2 · the newest' },
+					{ value: '1', label: 'V1' },
+				],
+				onChange: () => undefined,
+			}),
+		);
+		expect(button('Version: V2').textContent).toBe('V2');
 	});
 });

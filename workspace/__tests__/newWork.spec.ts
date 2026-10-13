@@ -374,6 +374,8 @@ describe('a repository with no clone on this machine', () => {
 		await settle();
 		expect(app.calls.cloneRepository).toEqual([['flocksafety/flock-ops']]);
 		expect(seen.checkout).toEqual([made]);
+		// And the list is read again, which has it here now.
+		expect(app.calls.listRepositories).toHaveLength(2);
 		expect(() => button('Stop')).toThrow(/0 buttons/);
 	});
 
@@ -482,7 +484,7 @@ describe('the repositories it chooses from', () => {
 		expect(text()).not.toContain('No product repository found');
 	});
 
-	it('is read once a session, for New and Connect alike, and again after a clone or a new sign-in', async () => {
+	it('is read once a session, for New and Connect alike, and again after a new sign-in (and after a clone, above)', async () => {
 		let signedIn: () => void = () => undefined;
 		const { app } = await open({
 			onSignInChanged: (l: () => void) => {

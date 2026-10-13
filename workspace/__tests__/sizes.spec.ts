@@ -35,7 +35,9 @@ describe('every screen', () => {
 	it('sizes text, widths and the room for the window’s buttons from the scale or index.css, and stacks by named layers', () => {
 		const own = windowSources().flatMap(({ path, text }) =>
 			[
-				...text.matchAll(/\b(?:text|max-w|min-w|w|max-h|min-h|h|p[lrtbxy]?)-\[\d+px\]|\bz-\[\d+\]|\bz-40\b|100dvh-var\(--nav-height\)|\bbg-white\b/g),
+				...text.matchAll(
+					/\b(?:text|max-w|min-w|w|max-h|min-h|h|size|gap|[mp][lrtbxy]?)-\[\d+(?:\.\d+)?(?:px|rem)\]|\bz-\[\d+\]|\bz-40\b|100dvh-var\(--nav-height\)|\bbg-white\b/g,
+				),
 			].map((m) => `${path}: ${m[0]}`),
 		);
 		expect(own).toEqual([]);

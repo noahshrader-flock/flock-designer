@@ -3,7 +3,7 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { InlineAction, OutLink } from '../src/renderer/Links';
 import { button, press, render, unmountAll } from './reviewHarness';
-import { windowSources } from './windowSources';
+import { offenders } from './windowSources';
 
 /**
  * A link is drawn one way: a link out of the app is an OutLink, underlined with the mark that says it leaves, and a
@@ -43,7 +43,6 @@ describe('an action in a sentence', () => {
 
 describe('every link', () => {
 	it('is drawn by one of the two: no screen styles a link of its own', () => {
-		const own = windowSources('Links.tsx').filter(({ text }) => /underline-offset|variant="link"/.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		expect(offenders(/underline-offset|variant="link"/, 'Links.tsx')).toEqual([]);
 	});
 });

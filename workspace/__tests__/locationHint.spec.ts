@@ -4,7 +4,7 @@ import { GitBranchIcon } from 'lucide-react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { LocationHint } from '../src/renderer/LocationHint';
 import { render, settle, unmountAll } from './reviewHarness';
-import { windowSources } from './windowSources';
+import { offenders } from './windowSources';
 
 /** Where something is kept (a branch, a saved page), as an icon whose tooltip says it: reachable by keyboard, not only a mouse. */
 
@@ -26,7 +26,6 @@ describe('where it is kept', () => {
 	});
 
 	it('is the only tooltip on a bare icon: an icon cannot take focus, so its tooltip would need a mouse', () => {
-		const own = windowSources('LocationHint.tsx').filter(({ text }) => /<TooltipTrigger asChild>\s*(\{|<\w+Icon\b)/.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		expect(offenders(/<TooltipTrigger asChild>\s*(\{|<\w+Icon\b)/, 'LocationHint.tsx')).toEqual([]);
 	});
 });

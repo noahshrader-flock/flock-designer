@@ -171,7 +171,7 @@ describe('the preview stepping aside for the comment box', () => {
 		current = null;
 		expect(log).toEqual(expect.arrayContaining(['popover let go', 'resize let go']));
 		expect(log.filter((l) => l.startsWith('popover')).at(-1)).toBe('popover let go');
-		expect(app.calls.pageClose).toBeDefined();
+		expect(app.calls.pageClose?.length).toBeGreaterThan(0);
 	});
 
 	it('keeps the native view on its slot once the page is open', async () => {

@@ -41,7 +41,8 @@ describe('a group of choices', () => {
 describe('a field’s description', () => {
 	it('is a FieldDescription, the one size, never a line of its own made smaller', () => {
 		const own = windowSources().filter(
-			({ text }) => /<p className="text-muted-foreground text-xs">/.test(text) && /<Field\b|FieldDescription/.test(text),
+			// A line of its own in a smaller muted size, whatever the order of its classes, on a screen with fields.
+			({ text }) => /<p className="(?=[^"]*\btext-muted-foreground\b)(?=[^"]*\btext-xs\b)[^"]*"/.test(text) && /<Field\b|FieldDescription/.test(text),
 		);
 		expect(own.map((f) => f.path)).toEqual([]);
 	});

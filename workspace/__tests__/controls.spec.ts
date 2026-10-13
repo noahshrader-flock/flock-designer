@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { windowSources } from './windowSources';
+import { badTags, offenders, windowSources } from './windowSources';
 
 /**
  * Where shadcn has the control, the window uses it rather than building one: a split button is a ButtonGroup, a row of
@@ -9,28 +9,21 @@ import { windowSources } from './windowSources';
 
 describe('controls shadcn has', () => {
 	it('join buttons with a ButtonGroup, not by taking their corners off by hand', () => {
-		const own = windowSources().filter(({ text }) => /rounded-[lr]-none|border-l-0/.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		expect(offenders(/rounded-[lr]-none|border-l-0/)).toEqual([]);
 	});
 
 	it('mark a pressed choice in a ToggleGroup, not a raw button with aria-pressed', () => {
-		const own = windowSources().filter(({ text }) => /<button\b[^>]*aria-pressed/.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		// A Button that turns a mode on and off (comment mode) is a toggle button, and says so with aria-pressed; a row of
+		// raw buttons pressed one at a time is a set of choices, which is a ToggleGroup's.
+		expect(badTags(/^button$/, (tag) => /aria-pressed/.test(tag))).toEqual([]);
 	});
 
 	it('take a badge’s look from Badge, never by pasting its classes into another element', () => {
-		const own = windowSources().filter(({ text }) => /\$\{badgeVariants\(/.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		expect(offenders(/\$\{badgeVariants\(/)).toEqual([]);
 	});
 
 	it('draw a list of choices as Items, not outline buttons made into tiles', () => {
-		const own = windowSources().filter(({ text }) => /<Button\b[^>]*variant="outline"[^>]*className="h-auto justify-start/.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
-	});
-
-	it('draw a comment as an Item, not a bordered box of its own', () => {
-		const own = windowSources().filter(({ path, text }) => path.endsWith('CommentList.tsx') && /className=\{`rounded-lg border p-3/.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		expect(badTags(/^Button$/, (tag) => /variant="outline"/.test(tag) && /className="[^"]*h-auto[^"]*justify-start/.test(tag))).toEqual([]);
 	});
 });
 
@@ -43,7 +36,6 @@ describe('a comment’s card', () => {
 
 describe('classes', () => {
 	it('are joined with cn(), never a template string, so one given by a caller or a condition merges as it should', () => {
-		const own = windowSources().filter(({ text }) => /className=\{`/.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		expect(offenders(/className=\{`/)).toEqual([]);
 	});
 });

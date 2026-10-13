@@ -3,8 +3,8 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NoRepositoryAlert, Notice, RetryButton } from '../src/renderer/Notice';
 import { Alert } from '../src/renderer/ui/alert';
-import { button, press, render, unmountAll } from './reviewHarness';
-import { windowSources } from './windowSources';
+import { button, press, render, unmountAll, alertParts } from './reviewHarness';
+import { offenders } from './windowSources';
 
 /**
  * A notice is shadcn's alert as it is made: an icon, a title, what it says, and its one button in the alert's own action
@@ -17,8 +17,6 @@ afterEach(async () => {
 	if (current) await unmountAll(current.root);
 	current = null;
 });
-/** An alert's parts, in order, and what each is. */
-const parts = (alert: Element) => [...alert.children].map((c) => (c.tagName === 'svg' ? 'icon' : (c.getAttribute('data-slot') ?? c.tagName)));
 
 describe('a notice', () => {
 	it('is the stock alert: icon, title, description and the action in its slot', async () => {
@@ -27,7 +25,7 @@ describe('a notice', () => {
 			createElement(Notice, { title: 'Could not read it', action: createElement(RetryButton, { onClick: onRetry }), children: 'git is missing' }),
 		);
 		const alert = document.querySelector('[data-slot="alert"]')!;
-		expect(parts(alert)).toEqual(['icon', 'alert-title', 'alert-description', 'alert-action']);
+		expect(alertParts(alert)).toEqual(['icon', 'alert-title', 'alert-description', 'alert-action']);
 		await press(button('Try again'));
 		expect(onRetry).toHaveBeenCalledOnce();
 	});
@@ -55,17 +53,21 @@ describe('a notice', () => {
 
 describe('every alert', () => {
 	it('keeps buttons out of what it says: a Button in an AlertDescription is laid out by hand', () => {
-		const own = windowSources().filter(({ text }) => /<AlertDescription[^>]*>(?:(?!<\/AlertDescription>)[\s\S])*<Button\b/.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		expect(offenders(/<AlertDescription[^>]*>(?:(?!<\/AlertDescription>)[\s\S])*<Button\b/)).toEqual([]);
 	});
 
 	it('lays nothing of its own over the action slot or the description', () => {
-		const own = windowSources('ErrorAlert.tsx').filter(({ text }) => /<(AlertAction|AlertDescription) className=/.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		expect(offenders(/<(AlertAction|AlertDescription) className=/, 'ErrorAlert.tsx')).toEqual([]);
 	});
 
 	it('says Try again with the one RetryButton, and No product repository found with the one alert', () => {
-		const own = windowSources('Notice.tsx').filter(({ text }) => /^\s*Try again\s*$|>Try again<|No product repository found/m.test(text));
-		expect(own.map((f) => f.path)).toEqual([]);
+		expect(offenders(/^\s*Try again\s*$|>Try again<|No product repository found/m, 'Notice.tsx')).toEqual([]);
+	});
+});
+
+describe('a notice with nothing to call it', () => {
+	it('is its icon and what it says, with no empty title', async () => {
+		current = await render(createElement(Notice, { variant: 'warning', children: 'Nothing is cloned over it.' }));
+		expect(alertParts(document.querySelector('[data-slot="alert"]')!)).toEqual(['icon', 'alert-description']);
 	});
 });

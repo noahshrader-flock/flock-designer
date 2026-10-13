@@ -6,7 +6,23 @@ import { undeclared } from '../src/shared/wcag';
 import { TOKEN_PROBLEM } from './fixtures';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
 import type { Catalog, CatalogComponent, CatalogUpdate, DesignTokens } from '../src/shared/contract';
-import { button, chooseTab, dialog, fail, fakeApp, menuItem, ok, openMenu, press, render, settle, tab, typeInto, unmountAll } from './reviewHarness';
+import {
+	button,
+	chooseTab,
+	dialog,
+	fail,
+	fakeApp,
+	menuItem,
+	ok,
+	openMenu,
+	press,
+	render,
+	settle,
+	tab,
+	typeInto,
+	unmountAll,
+	alertParts,
+} from './reviewHarness';
 
 /**
  * The Design System tab (S3 of the design system plan): the design system's own row, its views as tabs, the components as a
@@ -1010,14 +1026,12 @@ describe('when there is no list', () => {
 });
 
 /** What is said in place of the list: shadcn's alert as it is made, with Try again in its own action slot. */
-/** An alert's parts, in order, and what each is: the stock structure and nothing else. */
-const parts = (alert: Element) => [...alert.children].map((c) => (c.tagName === 'svg' ? 'icon' : (c.getAttribute('data-slot') ?? c.tagName)));
 
 describe('the notices in place of the list', () => {
 	it('has Try again in the alert’s action slot, with an icon, title and description, when the read fails', async () => {
 		await open(() => fail('git is not installed'));
 		const alert = document.querySelector('[data-slot="alert"]')!;
-		expect(parts(alert)).toEqual(['icon', 'alert-title', 'alert-description', 'alert-action']);
+		expect(alertParts(alert)).toEqual(['icon', 'alert-title', 'alert-description', 'alert-action']);
 		expect(alert.querySelector('[data-slot="alert-description"]')!.textContent).toBe('git is not installed');
 		expect(alert.querySelector('[data-slot="alert-action"]')!.contains(button('Try again'))).toBe(true);
 	});
@@ -1025,7 +1039,15 @@ describe('the notices in place of the list', () => {
 	it('is the same when the clone has no copy of its branch', async () => {
 		await open(() => ok({ state: 'no-branch', root: '/h/fui', branch: 'develop' }));
 		const alert = document.querySelector('[data-slot="alert"]')!;
-		expect(parts(alert)).toEqual(['icon', 'alert-title', 'alert-description', 'alert-action']);
+		expect(alertParts(alert)).toEqual(['icon', 'alert-title', 'alert-description', 'alert-action']);
 		expect(alert.querySelector('[data-slot="alert-title"]')!.textContent).toBe('This clone has no develop branch');
+	});
+});
+
+describe('where the design system is read from', () => {
+	it('is a hint the keyboard can reach, named by its branch', async () => {
+		await open(() => ok(ready()));
+		const hint = systemRow().querySelector<HTMLElement>('[aria-label="Branch develop"]')!;
+		expect(hint.tabIndex).toBe(0);
 	});
 });

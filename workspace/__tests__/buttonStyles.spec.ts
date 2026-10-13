@@ -4,11 +4,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CancelButton } from '../src/renderer/CancelButton';
 import { SyncButton } from '../src/renderer/SyncButton';
 import { button, press, render, unmountAll } from './reviewHarness';
-import { windowSources } from './windowSources';
+import { badTags, windowSources } from './windowSources';
 
 /**
  * How two buttons look wherever they appear: every Cancel is a ghost button, and every Sync is an outline one. Each is
- * one component, so the style is set once, and a guard fails if a screen builds a Cancel of its own.
+ * one component, so the style is set once, and a guard fails if a screen builds a Cancel of its own. The ellipsis is
+ * MoreMenu's alone (`menus.spec`).
  */
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
@@ -40,20 +41,6 @@ describe('Cancel', () => {
 	});
 });
 
-describe('the vertical ellipsis', () => {
-	it('is a ghost button wherever one is drawn: the Button holding the icon says variant="ghost"', () => {
-		const wrong: string[] = [];
-		for (const { path, text } of windowSources()) {
-			for (const m of text.matchAll(/<EllipsisVerticalIcon/g)) {
-				// The Button that holds it: the last one opened before the icon.
-				const tag = text.slice(text.lastIndexOf('<Button', m.index), m.index);
-				if (!/variant="ghost"/.test(tag)) wrong.push(path);
-			}
-		}
-		expect(wrong).toEqual([]);
-	});
-});
-
 describe('Sync', () => {
 	it('is an outline button, spinning and disabled while it runs', async () => {
 		current = await render(createElement(SyncButton, { syncing: false, onClick: () => undefined }));
@@ -67,28 +54,7 @@ describe('Sync', () => {
 
 describe('a button that is always off', () => {
 	it('never keeps something to say in its title: a disabled button cannot be hovered, so its title is never shown', () => {
-		/** Each `<Button …>` or `<button …>` opening tag, read to its closing `>` outside any `{…}`. */
-		const tags = (text: string): string[] => {
-			const found: string[] = [];
-			for (const m of text.matchAll(/<(Button|button)\b/g)) {
-				let depth = 0;
-				for (let i = m.index ?? 0; i < text.length; i++) {
-					const c = text[i];
-					if (c === '{') depth++;
-					else if (c === '}') depth--;
-					else if (c === '>' && depth === 0) {
-						found.push(text.slice(m.index ?? 0, i + 1));
-						break;
-					}
-				}
-			}
-			return found;
-		};
-		const offWithTitle = windowSources().flatMap(({ path, text }) =>
-			tags(text)
-				.filter((t) => /\sdisabled(\s|\/?>)/.test(t) && /\stitle=/.test(t))
-				.map((t) => `${path}: ${t.slice(0, 80)}`),
-		);
+		const offWithTitle = badTags(/^(Button|button)$/, (tag) => /\sdisabled(\s|\/?>)/.test(tag) && /\stitle=/.test(tag));
 		expect(offWithTitle).toEqual([]);
 	});
 });
