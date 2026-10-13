@@ -29,6 +29,21 @@ export const axeRun = (context: string, tags: string[]): string => `(async () =>
 	return { violations: r.violations.map(trim), incomplete: r.incomplete.map(trim) };
 })()`;
 
+/** The size a page is checked at, a desktop's; how long it is given to settle after it has loaded, before axe reads it. */
+export const CHECK_WINDOW = { width: 1280, height: 900 } as const;
+const SETTLE_MS = 300;
+
+/**
+ * What runs in a prototype's page to check it, whichever browser it is in (the app's hidden window, a shell's headless
+ * browser): once it has settled, axe-core itself, then a run over the whole page with `tags`.
+ */
+export const axeInPage = (tags: string[]): string => `(async () => {
+	await document.fonts.ready;
+	await new Promise((r) => setTimeout(r, ${SETTLE_MS}));
+	${axe.source}
+	return await ${axeRun('document', tags)};
+})()`;
+
 /** Whether what a page gave back for `axeRun` is its results: a page's word, checked before it is used. */
 export const axeFound = (v: unknown): v is AxeFound =>
 	typeof v === 'object' &&

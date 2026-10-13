@@ -1,7 +1,8 @@
 import type { Project, ProjectIteration } from '../shared/contract';
 import { ListRow } from './ListRow';
 import { PeopleLine } from './People';
-import { FolderBadge, ProjectAside, openingOf, useCover } from './ProjectParts';
+import { FolderBadge, ProjectAside, openingOf } from './ProjectParts';
+import { useCover } from './useCover';
 import { Badge } from './ui/badge';
 
 /**

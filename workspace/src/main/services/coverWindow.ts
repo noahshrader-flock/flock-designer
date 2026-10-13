@@ -7,7 +7,8 @@
  */
 import { COVER_BUDGET, COVER_STEPS, COVER_WINDOW, type DrawCover, isBlank, settleScript } from './projectCovers';
 import { fitJpeg } from './picture';
-import { hiddenWindow, setColorScheme, within } from './sandboxedPage';
+import { hiddenWindow, setColorScheme } from './sandboxedPage';
+import { within } from './within';
 
 /** The windows' session: their own, in memory only. */
 const SESSION = 'dsnr-cover';

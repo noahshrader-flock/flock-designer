@@ -5,6 +5,7 @@
  * accessibility check, `accessibilityCheck.ts`, and a prototype's picture, `coverWindow.ts`) are held the same way, by this.
  */
 import { BrowserWindow, type WebContents, type WebPreferences } from 'electron';
+import { within } from './within';
 
 /** A page's settings: nothing exposed to it, in `partition` (no `persist:` prefix, so in memory only). */
 export const sandboxedPreferences = (partition: string): WebPreferences => ({
@@ -42,10 +43,6 @@ export const hiddenWindow = (partition: string, origin: string, size: { width: n
 	keepToOrigin(win.webContents, () => origin);
 	return win;
 };
-
-/** A page's answer, or null after `ms`, or when it fails: a page out of sight may never answer. */
-export const within = <T>(ms: number, p: Promise<T>): Promise<T | null> =>
-	Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
 
 /**
  * Sets a hidden window's `prefers-color-scheme` for its pages, for that window alone, so the app's own appearance is never

@@ -12,7 +12,8 @@ import { PREVIEW_SHOW, previewAddress } from '../../shared/catalog';
 import type { Drawn, Measure, Mode } from './componentTokens';
 import { COMPOSITION, composeOnWhite } from './pictureComposition';
 import { axeFound, axeRun } from './accessibilityCheck';
-import { hiddenWindow, setColorScheme, within } from './sandboxedPage';
+import { hiddenWindow, setColorScheme } from './sandboxedPage';
+import { within } from './within';
 
 /** How many windows draw a run's files at once, how long one story may take, and each window's size. */
 const WINDOWS_PER_RUN = 3;
