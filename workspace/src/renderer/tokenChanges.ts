@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo } from 'react';
 import type { DesignToken, TokenChange, TokenEdit } from '../shared/contract';
 import type { DeclaredTarget } from '../shared/wcag';
-import { placeOf, sameChange, withEdits } from '../shared/tokens';
+import { familyOf, paletteFamilies, placeOf, sameChange, withEdits } from '../shared/tokens';
 
 /**
  * The change to the tokens as the tokens panel holds it (T3 of the design system plan): the tokens as changed, and how to
@@ -21,6 +21,8 @@ export interface TokenChanges {
 	isChanged: (token: DesignToken) => boolean;
 	/** Whether a token's family is one some token points into (a tone roles use). */
 	isPointedInto: (token: DesignToken) => boolean;
+	/** Whether a color is part of the design system's palette (`paletteFamilies`), not a semantic color: what roles point at. */
+	isPalette: (token: DesignToken) => boolean;
 	/** Changes a token, by its path (`null`: back as it was). A change back to what the library has is no change. */
 	change: (token: DesignToken, to: TokenChange | null) => void;
 	/** Every token back as the library has it. */
@@ -37,8 +39,6 @@ export const useTokenChanges = (): TokenChanges => {
 	if (!changes) throw new Error('A token row is shown only in the tokens panel.');
 	return changes;
 };
-
-const familyOf = (t: DesignToken): string => `${t.group}/${t.set}`;
 
 /**
  * `edits` with `token` changed to `to`: the edit of its place replaced, and none kept that leaves it as the library has
@@ -74,6 +74,7 @@ export const useTokenChangesFor = (
 		const target = (t: DesignToken) => (t.ref ? byPath.get(t.ref.path) : undefined);
 		const changedPlaces = new Set(edits.flatMap((e) => (read.has(e.path) ? [placeOf(read.get(e.path) as DesignToken)] : [])));
 		const pointedInto = new Set(shown.flatMap((t) => (target(t) ? [familyOf(target(t) as DesignToken)] : [])));
+		const palette = paletteFamilies(tokens);
 		return {
 			shown,
 			byPath,
@@ -82,6 +83,7 @@ export const useTokenChangesFor = (
 			target,
 			isChanged: (t) => changedPlaces.has(placeOf(t)),
 			isPointedInto: (t) => pointedInto.has(familyOf(t)),
+			isPalette: (t) => palette.has(familyOf(t)),
 			// Always against the token as the library has it, whichever way it is shown.
 			change: (t, to) => {
 				const next = changed(edits, read, read.get(t.path) ?? t, to);

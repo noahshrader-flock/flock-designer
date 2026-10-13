@@ -1,10 +1,13 @@
-import { RotateCcwIcon } from 'lucide-react';
+import { ArrowRightIcon, CheckIcon, CopyIcon, RotateCcwIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { DesignToken } from '../shared/contract';
 import { plural } from '../shared/plural';
-import { contrastPartner, contrastRatio, lengthParts, pointingAt, readsAs, writtenWith } from '../shared/tokens';
+import { inOrder } from '../shared/primitives';
+import { contrastPartner, contrastRatio, lengthParts, pointingAt, readsAs, tokenTitle, writtenWith } from '../shared/tokens';
 import { textContrast } from '../shared/wcag';
+import { ChoiceMenu } from './ChoiceMenu';
 import { TokenBranchActions } from './TokenBranchActions';
+import { useCopy } from './useCopy';
 import type { TokenBranchControls } from './useTokenBranch';
 import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
 import { Button } from './ui/button';
@@ -112,36 +115,82 @@ const DimensionField = ({ token, value, onCommit }: { token: DesignToken; value:
 };
 
 /**
- * Another step of the tone a token points at, as swatches: pressing one points the token at it. The step it points at
- * now is pressed.
+ * The scale a token is chosen from: the families the library's palette has in the token's own theme to choose between
+ * (`Color family`, a menu when there is more than one), and the steps of the one shown as swatches, the one the token
+ * points at now chosen. Pressing a step points the token at it, which keeps the link and changes only this token; choosing
+ * another family changes nothing until one of its steps is chosen.
  */
-const StepPicker = ({ token, target }: { token: DesignToken; target: DesignToken }) => {
-	const { shown, change } = useTokenChanges();
-	const steps = shown.filter((t) => t.group === target.group && t.set === target.set);
+const ColorScale = ({ token, target }: { token: DesignToken; target: DesignToken }) => {
+	const { shown, change, isPalette } = useTokenChanges();
+	const [family, setFamily] = useState(target.set);
+	// Another token's pointer goes only within its own group (a theme, the palette), so the families are that group's.
+	const families = inOrder(
+		shown.filter((t) => t.kind === token.kind && t.group === target.group && (isPalette(t) || t.set === target.set)),
+		(t) => t.set,
+	);
+	const steps = families.find(([set]) => set === family)?.[1] ?? [];
 	return (
-		// One group of choices, so arrow keys move between the steps; each a swatch tile, sized for the swatch, not a button.
-		<ToggleGroup
-			type="single"
-			spacing={1}
-			aria-label={`Steps of ${target.set}`}
-			value={token.ref?.path ?? ''}
-			// Pressing the one pointed at would unpress it, which the group says as an empty value: ignored.
-			onValueChange={(path) => path && change(token, { ref: path })}
-			className="flex-wrap"
-		>
-			{steps.map((s) => (
-				<ToggleGroupItem
-					key={s.path}
-					value={s.path}
-					aria-label={nameOf(s)}
-					title={`${nameOf(s)} · ${s.value}`}
-					className="data-[state=on]:ring-ring h-auto w-9 flex-col gap-0.5 text-2xs p-1 data-[state=on]:bg-transparent data-[state=on]:ring-2"
-				>
-					<Swatch value={s.value} size="size-6" />
-					{s.name}
-				</ToggleGroupItem>
-			))}
-		</ToggleGroup>
+		<div className="flex flex-col gap-2">
+			<div className="flex items-center justify-between gap-2">
+				<p className="text-muted-foreground text-xs">Color scale</p>
+				{families.length > 1 ? (
+					<ChoiceMenu
+						name="Color family"
+						value={family}
+						choices={families.map(([set]) => ({ value: set, label: set }))}
+						onChange={setFamily}
+						align="end"
+					/>
+				) : (
+					<p className="text-sm font-medium">{family}</p>
+				)}
+			</div>
+			{/* One group of choices, so arrow keys move between the steps; each a swatch tile, sized for the swatch, not a button. */}
+			<ToggleGroup
+				type="single"
+				spacing={1}
+				aria-label={`Steps of ${family}`}
+				value={token.ref?.path ?? ''}
+				// Pressing the one pointed at would unpress it, which the group says as an empty value: ignored.
+				onValueChange={(path) => path && change(token, { ref: path })}
+				className="flex-wrap"
+			>
+				{steps.map((s) => (
+					<ToggleGroupItem
+						key={s.path}
+						value={s.path}
+						aria-label={nameOf(s)}
+						title={`${nameOf(s)} · ${s.value}`}
+						className="data-[state=on]:ring-ring text-2xs h-auto w-9 flex-col gap-0.5 p-1 data-[state=on]:bg-transparent data-[state=on]:ring-2"
+					>
+						<Swatch value={s.value} size="size-6" />
+						{s.name}
+					</ToggleGroupItem>
+				))}
+			</ToggleGroup>
+		</div>
+	);
+};
+
+/** What a token resolves to: the color it points at (when it does) and its hex, which can be copied. */
+const Resolved = ({ token, target }: { token: DesignToken; target?: DesignToken }) => {
+	const [problem, setProblem] = useState<string | null>(null);
+	const { copied, copy } = useCopy(setProblem, 'Select the value to copy it.');
+	return (
+		<div data-resolved className="flex flex-col gap-1">
+			<p className="text-muted-foreground text-xs">Resolved value</p>
+			<div className="bg-muted/50 flex items-center gap-2 rounded-md p-2">
+				<Swatch value={token.value} size="size-6" />
+				<div className="flex min-w-0 flex-col">
+					{target && <span className="truncate text-sm font-medium">{nameOf(target)}</span>}
+					<span className="font-mono text-xs">{token.value}</span>
+				</div>
+				<Button variant="ghost" size="icon-sm" className="ml-auto" aria-label={`Copy ${token.value}`} onClick={() => void copy(token.value)}>
+					{copied ? <CheckIcon /> : <CopyIcon />}
+				</Button>
+			</div>
+			{problem && <p className="text-destructive text-xs">{problem}</p>}
+		</div>
 	);
 };
 
@@ -177,7 +226,12 @@ const Contrast = ({ token }: { token: DesignToken }) => {
 	);
 };
 
-/** What opens from a row: the token, its control, what it reaches and the contrast it leaves, and Reset when changed. */
+/**
+ * What opens from a value: the token, its title and source, its control, what it reaches and the contrast it leaves, and Reset
+ * when changed. **A color that points at another** (a role at a palette step) shows what it references, the scale it is chosen
+ * from and what it resolves to; the second choice is its own color, which cuts the pointer. A color that points at nothing
+ * (a palette step, a role with a literal color) is a color picker and its hex; a dimension a slider.
+ */
 export const TokenEditor = ({ token }: { token: DesignToken }) => {
 	const { read, byPath, change, isChanged } = useTokenChanges();
 	const asRead = read.get(token.path) ?? token;
@@ -187,38 +241,57 @@ export const TokenEditor = ({ token }: { token: DesignToken }) => {
 	const [custom, setCustom] = useState(token.ref === undefined);
 	return (
 		<div className="flex flex-col gap-3" data-token-editor={token.path}>
-			<div className="flex flex-col gap-0.5">
-				<p className="text-sm font-medium">{labelOf(token)}</p>
-				<p className="text-muted-foreground font-mono text-xs">
-					{token.source.file}:{token.source.line}
-				</p>
+			<div className="flex items-center gap-2">
+				{token.kind === 'color' && <Swatch value={token.value} size="size-8" />}
+				<div className="flex min-w-0 flex-col gap-0.5">
+					<p data-token-title className="text-sm font-medium">
+						{tokenTitle(token)}
+					</p>
+					<p className="text-muted-foreground truncate font-mono text-xs" title={`${token.source.file}:${token.source.line}`}>
+						{token.source.file}:{token.source.line}
+					</p>
+				</div>
 			</div>
 			{token.kind === 'dimension' ? (
 				<DimensionField token={asRead} value={token.value} onCommit={(value) => change(token, { value })} />
 			) : target ? (
-				<div className="flex flex-col gap-2">
-					<p className="text-muted-foreground text-xs">
-						{token.ref
-							? `Points at ${nameOf(target)}${pointer?.alpha ? ` at ${opacity(pointer.alpha)}` : ''}`
-							: `Was ${nameOf(target)}; now a color of its own`}
-					</p>
-					<StepPicker token={token} target={target} />
-					{custom ? (
-						<div className="flex flex-col gap-1.5">
-							<ColorField value={token.value} onCommit={(value) => change(token, { value })} />
-							<p className="text-muted-foreground text-xs">A custom color replaces the pointer: a later change to {target.set} will not reach it.</p>
-						</div>
-					) : (
-						<Button variant="ghost" size="sm" className="-ml-2 self-start" onClick={() => setCustom(true)}>
-							Use a custom color
-						</Button>
-					)}
-				</div>
+				<>
+					<div className="flex flex-col gap-1">
+						<p className="text-muted-foreground text-xs">Reference</p>
+						{token.ref ? (
+							<p data-reference className="bg-muted/50 flex w-fit max-w-full flex-wrap items-center gap-x-2 rounded-md px-2 py-1 text-sm">
+								<span className="break-all">{token.set === token.name ? token.name : `${token.set}.${token.name}`}</span>
+								<ArrowRightIcon className="size-3.5 shrink-0" />
+								<span className="font-medium break-all">
+									{nameOf(target)}
+									{pointer?.alpha && ` at ${opacity(pointer.alpha)}`}
+								</span>
+							</p>
+						) : (
+							<p className="text-sm">Was {nameOf(target)}; now a color of its own</p>
+						)}
+					</div>
+					<ColorScale token={token} target={target} />
+					<Resolved token={token} target={token.ref ? target : undefined} />
+				</>
 			) : (
 				<ColorField value={token.value} onCommit={(value) => change(token, { value })} />
 			)}
 			<Contrast token={token} />
 			<Reach token={token} />
+			{/* The second choice, after what is known of the color: its own, which cuts the pointer. */}
+			{target &&
+				token.kind !== 'dimension' &&
+				(custom ? (
+					<div className="flex flex-col gap-1.5">
+						<ColorField value={token.value} onCommit={(value) => change(token, { value })} />
+						<p className="text-muted-foreground text-xs">A custom color replaces the pointer: a later change to {target.set} will not reach it.</p>
+					</div>
+				) : (
+					<Button variant="ghost" size="sm" className="-ml-2 self-start" onClick={() => setCustom(true)}>
+						Use a custom color
+					</Button>
+				))}
 			{isChanged(token) && (
 				<Button variant="outline" size="sm" className="self-start" onClick={() => change(token, null)}>
 					<RotateCcwIcon />

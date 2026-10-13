@@ -1,12 +1,10 @@
 // @vitest-environment jsdom
-import { act, createElement, useState } from 'react';
+import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { TokensPanel } from '../src/renderer/TokensPanel';
 import type { DesignToken, DesignTokens, TokenEdit } from '../src/shared/contract';
 import { TOKEN_PROBLEM } from './fixtures';
+import { color, TokensHarness } from './tokensHarness';
 import { button, chooseTab, fail, fakeApp, ok, press, render, settle, tab, tabs, typeInto, unmountAll } from './reviewHarness';
-import { useTokenBranch } from '../src/renderer/useTokenBranch';
-import { TokenChangesProvider, useTokenChangesFor } from '../src/renderer/tokenChanges';
 import { type DeclaredTarget, undeclared } from '../src/shared/wcag';
 
 /**
@@ -14,17 +12,6 @@ import { type DeclaredTarget, undeclared } from '../src/shared/wcag';
  * tokens with its swatches and where it is written, and a search. Against the panel on its own.
  */
 
-const color = (path: string, group: string, set: string, name: string, value: string, more: Partial<DesignToken> = {}): DesignToken => ({
-	path,
-	kind: 'color',
-	category: 'Color',
-	group,
-	set,
-	name,
-	value,
-	source: { file: group === 'Tones' ? `src/colors/tones/${set}.ts` : `src/colors/theme/${group.toLowerCase()}.ts`, line: 3 },
-	...more,
-});
 const TOKENS: DesignTokens = {
 	source: 'theme files',
 	looked: ['src/colors/tones/index.ts'],
@@ -64,14 +51,8 @@ let current: Awaited<ReturnType<typeof render>> | null = null;
 let made: TokenEdit[][] = [];
 /** What the panel's contrast is judged at: the default unless a test gives the library's own. */
 let target: DeclaredTarget = undeclared('Acme has no .dsnr/manifest.md');
-const Tab = ({ tokens, live }: { tokens: DesignTokens; live: boolean }) => {
-	const [edits, setEdits] = useState<TokenEdit[]>([]);
-	const onEdits = (e: TokenEdit[]) => (made.push(e), setEdits(e));
-	const branch = useTokenBranch('acme/ui', edits, onEdits);
-	// The change is the tab's, given to the panel as `DesignSystem` gives it.
-	const changes = useTokenChangesFor(tokens.tokens, edits, onEdits, target);
-	return createElement(TokenChangesProvider, { value: changes }, createElement(TokensPanel, { tokens, live, branch }));
-};
+const Tab = ({ tokens, live }: { tokens: DesignTokens; live: boolean }) =>
+	createElement(TokensHarness, { tokens, live, accessibility: target, onEdits: (e) => void made.push(e) });
 /** The app the panel saves and proposes through: a stand-in, so nothing is written or opened. */
 let app: ReturnType<typeof fakeApp>;
 const show = async (tokens: DesignTokens = TOKENS, live = true, more: Record<string, (...a: never[]) => unknown> = {}) => {
@@ -105,6 +86,11 @@ const search = (category: string) => document.querySelector<HTMLInputElement>(`i
 const rows = () => [...document.querySelectorAll<HTMLElement>('[data-token]')];
 const row = (path: string) => document.querySelector<HTMLElement>(`[data-token="${path}"]`);
 const text = () => document.body.textContent ?? '';
+/** The Color tab's two views, as a person chooses between them. */
+const choose = async (name: 'Semantic' | 'Palette') => {
+	await press(button(name));
+	await settle();
+};
 
 describe('the tabs', () => {
 	it('run edge to edge across the panel: nothing around them is padded, only the content under them is', async () => {
@@ -158,7 +144,7 @@ describe('the tabs', () => {
 
 	it('switch, each showing only its own tokens', async () => {
 		await show();
-		expect(groups().map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['Tones', 'Light', 'Dark']);
+		expect(groups().map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['primary', 'primaryBorder']);
 		await chooseTab('Spacing');
 		await settle();
 		expect(tab('Spacing').getAttribute('aria-selected')).toBe('true');
@@ -168,15 +154,15 @@ describe('the tabs', () => {
 });
 
 describe('the groups', () => {
-	it('on the Color tab are the library’s, in order, each with its count, and all open at first', async () => {
+	it('on the Color tab are its roles, in order, each with its count, and all open at first', async () => {
 		await show();
 		expect(groups().map((t) => [t.querySelector('[data-name]')?.textContent, t.querySelector('[data-count]')?.textContent])).toEqual([
-			['Tones', '3'],
-			['Light', '2'],
-			['Dark', '1'],
+			['primary', '1'],
+			['primaryBorder', '1'],
 		]);
-		expect(groups().map((t) => t.getAttribute('aria-expanded'))).toEqual(['true', 'true', 'true']);
-		expect(rows()).toHaveLength(6);
+		expect(groups().map((t) => t.getAttribute('aria-expanded'))).toEqual(['true', 'true']);
+		// Each theme's value of each role: Light and Dark of primary, Light of primaryBorder.
+		expect(rows()).toHaveLength(3);
 	});
 
 	it('have headers that stick to the top of the panel while the group is shown, each within its own group', async () => {
@@ -193,29 +179,26 @@ describe('the groups', () => {
 
 	it('close and open again on a press, each on its own', async () => {
 		await show();
-		await press(group('Light'));
+		await press(group('primary'));
 		await settle();
-		expect(groups().map((t) => t.getAttribute('aria-expanded'))).toEqual(['true', 'false', 'true']);
+		expect(groups().map((t) => t.getAttribute('aria-expanded'))).toEqual(['false', 'true']);
 		expect(rows().map((r) => r.getAttribute('data-token'))).not.toContain('palette.light.primary.main');
-		await press(group('Light'));
+		await press(group('primary'));
 		await settle();
-		expect(group('Light').getAttribute('aria-expanded')).toBe('true');
+		expect(group('primary').getAttribute('aria-expanded')).toBe('true');
 	});
 
 	it('open straight to their sets, each its name over its colors, with no second accordion inside', async () => {
 		await show();
-		expect(setNames()).toEqual(['pineGreen', 'red', 'primary', 'primaryBorder', 'primary']);
-		// Every color of every set is listed already: nothing is left to open.
-		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual([
-			'tone.pineGreen.50',
-			'tone.pineGreen.20',
-			'tone.red.40',
-			'palette.light.primary.main',
-			'palette.light.primaryBorder.main',
-			'palette.dark.primary.main',
-		]);
+		await choose('Palette');
+		// The palette has one group, so it is its sets, each family a name over its steps, every one listed already.
+		expect(setNames()).toEqual(['pineGreen', 'red']);
+		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual(['tone.pineGreen.50', 'tone.pineGreen.20', 'tone.red.40']);
+		expect(document.querySelector('[data-slot="accordion"]')).toBeNull();
+		await choose('Semantic');
+		// The roles are groups, each its variants as rows, and no group inside a group.
 		expect(document.querySelectorAll('[data-token-group] [data-slot="accordion"]')).toHaveLength(0);
-		expect(document.querySelectorAll('[data-slot="accordion-item"]')).toHaveLength(3);
+		expect(document.querySelectorAll('[data-slot="accordion-item"]')).toHaveLength(2);
 	});
 
 	it('are not shown for a tab with only one, which would say its own name twice: its sets are, already open', async () => {
@@ -232,6 +215,7 @@ describe('the groups', () => {
 describe('a set', () => {
 	it('lists its tokens: a swatch of the color at the left, its name, and the value at the right', async () => {
 		await show();
+		await choose('Palette');
 		const step = row('tone.pineGreen.50')?.querySelector('button') as HTMLElement;
 		expect(step.firstElementChild?.getAttribute('data-swatch')).not.toBeNull();
 		expect(step.querySelector<HTMLElement>('[data-swatch]')?.style.backgroundColor).toBe('rgb(16, 128, 98)');
@@ -243,7 +227,7 @@ describe('a set', () => {
 
 	it('says which tone a palette role points at, and its opacity', async () => {
 		await show();
-		expect(row('palette.light.primaryBorder.main')?.textContent).toContain('pineGreen 20 at 40%');
+		expect(row('palette.light.primaryBorder.main')?.textContent).toContain('pineGreen 20 · 40%');
 		expect(row('palette.light.primary.main')?.textContent).toContain('pineGreen 50');
 	});
 
@@ -276,11 +260,11 @@ describe('searching', () => {
 		await show();
 		await typeInto(search('Color') as HTMLInputElement, 'primary');
 		await settle();
-		expect(groups().map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['Light', 'Dark']);
+		expect(groups().map((t) => t.querySelector('[data-name]')?.textContent)).toEqual(['primary', 'primaryBorder']);
 		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual([
 			'palette.light.primary.main',
-			'palette.light.primaryBorder.main',
 			'palette.dark.primary.main',
+			'palette.light.primaryBorder.main',
 		]);
 	});
 
@@ -300,6 +284,7 @@ describe('searching', () => {
 
 	it('finds a color by its value, and says when nothing matches', async () => {
 		await show();
+		await choose('Palette');
 		await typeInto(search('Color') as HTMLInputElement, '#ba1a1a');
 		await settle();
 		expect(rows().map((r) => r.getAttribute('data-token'))).toEqual(['tone.red.40']);
@@ -330,6 +315,8 @@ describe('what it could not read', () => {
 describe('changing a token (T3)', () => {
 	/** Opens a token's control from its row, as a press does. */
 	const open = async (path: string) => {
+		// A palette step is in the palette view, the roles in the default one: the view that has the token is shown.
+		if (!row(path)) await choose(path.startsWith('tone.') ? 'Palette' : 'Semantic');
 		await press(row(path)?.querySelector('button') as HTMLElement);
 		await settle();
 		return document.querySelector<HTMLElement>(`[data-token-editor="${path}"]`) as HTMLElement;
@@ -347,14 +334,14 @@ describe('changing a token (T3)', () => {
 		await show();
 		expect(document.querySelector('input[type="color"]')).toBeNull();
 		const editor = await open('palette.light.primary.main');
-		expect(editor.textContent).toContain('Light primary main');
+		expect(editor.textContent).toContain('Light · primary.main');
 		expect(editor.textContent).toContain('src/colors/theme/light.ts:3');
 	});
 
 	it('points a role at another step of its tone by default, which keeps the link', async () => {
 		await show();
 		const editor = await open('palette.light.primary.main');
-		expect(editor.textContent).toContain('Points at pineGreen 50');
+		expect(editor.querySelector('[data-reference]')?.textContent).toContain('pineGreen 50');
 		// One group of choices, shadcn's: arrow keys move between the steps, and the one pointed at is checked.
 		const picker = editor.querySelector('[aria-label="Steps of pineGreen"]')!;
 		expect(picker.getAttribute('data-slot')).toBe('toggle-group');
@@ -367,7 +354,8 @@ describe('changing a token (T3)', () => {
 		await settle();
 		expect(made.at(-1)).toEqual([{ path: 'palette.light.primary.main', ref: 'tone.pineGreen.20' }]);
 		expect(row('palette.light.primary.main')?.textContent).toContain('pineGreen 20');
-		expect(row('palette.light.primary.main')?.textContent).toContain('#18372F');
+		// What it resolves to is on the value for whoever hovers it, and in its popover.
+		expect(row('palette.light.primary.main')?.getAttribute('title')).toContain('#18372F');
 		expect(row('palette.light.primary.main')?.hasAttribute('data-changed')).toBe(true);
 	});
 
@@ -395,7 +383,11 @@ describe('changing a token (T3)', () => {
 		expect(made).toEqual([]);
 		await pick(picker, '#0a6b52');
 		expect(made.at(-1)).toEqual([{ path: 'tone.pineGreen.50', value: '#0A6B52' }]);
-		expect(row('palette.light.primary.main')?.textContent).toContain('#0A6B52');
+		// The role that points at it follows: still pointing at pineGreen 50, now the color it was changed to.
+		await choose('Semantic');
+		expect(row('palette.light.primary.main')?.textContent).toContain('pineGreen 50');
+		expect(row('palette.light.primary.main')?.querySelector<HTMLElement>('[data-swatch]')?.style.backgroundColor).toBe('rgb(10, 107, 82)');
+		expect(row('palette.light.primary.main')?.getAttribute('title')).toContain('#0A6B52');
 	});
 
 	it('refuses a hex that is not one, and keeps what it was', async () => {
@@ -490,20 +482,24 @@ describe('changing a token (T3)', () => {
 			],
 		};
 
-		it('shows a pair’s contrast on the row read under the other, and warns below AA', async () => {
+		/** The warning on a value, which says only that its contrast is below what the target asks for. */
+		const flag = (path: string) => row(path)?.querySelector('[aria-label="Contrast below the target"]');
+
+		it('puts a pair’s contrast in the popover of the value read under the other, and flags the value below AA', async () => {
 			await show(PAIR);
-			const ratio = () => row('palette.light.primary.main')?.querySelector<HTMLElement>('[data-contrast]');
-			expect(ratio()?.textContent).toBe('4.8:1');
-			expect(ratio()?.className).toContain('text-muted-foreground');
-			expect(row('palette.light.primary.contrastText')?.querySelector('[data-contrast]')).toBeNull();
+			expect(row('palette.light.primary.main')?.querySelector('[data-contrast]')).toBeNull();
+			expect(flag('palette.light.primary.main')).toBeNull();
 			const editor = await open('palette.light.primary.main');
+			expect(editor.querySelector<HTMLElement>('[data-contrast]')?.textContent).toBe('4.8:1');
+			expect(editor.querySelector('[data-contrast]')?.className).toContain('text-muted-foreground');
 			expect(editor.textContent).toContain('Contrast with contrastText: 4.8:1, meets the 4.5:1 WCAG 1.4.3 asks for text');
 			await pick(editor.querySelector('input[type="color"]') as HTMLInputElement, '#BBBBBB');
-			expect(ratio()?.textContent).toBe('1.9:1');
-			expect(ratio()?.className).toContain('text-warning');
-			expect(document.querySelector('[data-token-editor]')?.textContent).toContain(
-				'below the 4.5:1 WCAG 1.4.3 asks for text (informational: no target declared)',
-			);
+			expect(editor.querySelector('[data-contrast]')?.textContent).toBe('1.9:1');
+			expect(editor.querySelector('[data-contrast]')?.className).toContain('text-warning');
+			expect(flag('palette.light.primary.main')).not.toBeNull();
+			// The color it is read with is not itself flagged: its pair's value says it.
+			expect(flag('palette.light.primary.contrastText')).toBeNull();
+			expect(editor.textContent).toContain('below the 4.5:1 WCAG 1.4.3 asks for text (informational: no target declared)');
 		});
 
 		it('judges a pair at the target the library declares: below 4.5:1 is not flagged at Level A, which asks for no contrast', async () => {
@@ -512,7 +508,8 @@ describe('changing a token (T3)', () => {
 				await show(PAIR);
 				const editor = await open('palette.light.primary.main');
 				await pick(editor.querySelector('input[type="color"]') as HTMLInputElement, '#BBBBBB');
-				expect(row('palette.light.primary.main')?.querySelector('[data-contrast]')?.className).toContain('text-muted-foreground');
+				expect(flag('palette.light.primary.main')).toBeNull();
+				expect(editor.querySelector('[data-contrast]')?.className).toContain('text-muted-foreground');
 				expect(document.querySelector('[data-token-editor]')?.textContent).toContain(
 					'below the 4.5:1 WCAG 1.4.3 asks for text, not required at your target, WCAG 2.0 Level A',
 				);
@@ -527,7 +524,7 @@ describe('changing a token (T3)', () => {
 				await show(PAIR);
 				const editor = await open('palette.light.primary.main');
 				expect(editor.textContent).toContain('4.8:1, below the 7:1 WCAG 1.4.6 asks for text');
-				expect(row('palette.light.primary.main')?.querySelector('[data-contrast]')?.className).toContain('text-warning');
+				expect(flag('palette.light.primary.main')).not.toBeNull();
 			} finally {
 				target = undeclared('Acme has no .dsnr/manifest.md');
 			}
@@ -553,6 +550,7 @@ describe('naming and reach (T3)', () => {
 
 	it('says a step of a family roles point at is used by none, when none points at it', async () => {
 		await show();
+		await choose('Palette');
 		await press(row('tone.pineGreen.20')?.querySelector('button') as HTMLElement);
 		await settle();
 		// primaryBorder points at pineGreen 20; red is a family no role points into, so it says nothing.
@@ -568,6 +566,7 @@ describe('saving and proposing a change (T4, T5)', () => {
 	const branchShown = () => document.querySelector<HTMLElement>('[data-branch-actions]');
 	const changedList = () => document.querySelector<HTMLElement>('[data-changed-tokens]');
 	const changeTone = async () => {
+		await choose('Palette');
 		await press(row('tone.pineGreen.50')?.querySelector('button') as HTMLElement);
 		await settle();
 		const picker = document.querySelector('[data-token-editor="tone.pineGreen.50"] input[type="color"]') as HTMLInputElement;

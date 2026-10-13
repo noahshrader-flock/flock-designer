@@ -1,6 +1,6 @@
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../shared/contract';
-import { byPrimitive, inOrder, isEditable } from '../shared/primitives';
+import { PRIMITIVES, byPrimitive, inOrder, isEditable } from '../shared/primitives';
 import { contrastPartner, contrastRatio, isForeground } from '../shared/tokens';
 import { ChangedTokens, ContrastNote, TokenEditor } from './TokenEditor';
 import { Swatch } from './Swatch';
@@ -13,6 +13,8 @@ import { SearchField } from './SearchField';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { cn } from '@/lib/utils';
 import { NoMatches } from './NoMatches';
+import { SemanticColors } from './SemanticColors';
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 
 /**
  * The library's tokens, in the panel at the right of the Design System tab (T2 and T3 of the design system plan): the
@@ -20,7 +22,9 @@ import { NoMatches } from './NoMatches';
  * category the library gains is a tab with nothing else changed), each tab with its own search. **One accordion at most:**
  * a tab with several groups (Color has Tones, Light and Dark) has them as an accordion, open until closed; a set is
  * never closed up behind a second one, but a plain heading over its tokens, each a swatch at the left and its value at the
- * right. A tab with one group shows its sets straight away. The tabs are the app's line tabs (`Tabs variant="line"`), the same strip as
+ * right. A tab with one group shows its sets straight away. **Color has two views** (`SemanticColors`, the default, and the
+ * palette behind it): the roles by theme, each theme's value its own control; and the families the roles point into, as the
+ * other tabs are. A library with only one of them has only that. The tabs are the app's line tabs (`Tabs variant="line"`), the same strip as
  * the Design System's own, inset as this panel's content is. What the library has that is not read is not said here: it is
  * a button in the design system's row (`TokenProblems`), so the panel keeps its room.
  *
@@ -31,8 +35,9 @@ import { NoMatches } from './NoMatches';
 
 const setKey = (t: DesignToken) => `${t.group}/${t.set}`;
 
-/** What a token is, in words, for the search to look through: what it points at too. */
-const searchable = (t: DesignToken) => [t.path, t.group, t.set, t.name, t.value, t.ref?.path ?? ''].join(' ').toLowerCase();
+/** What a token is, in words, for the search to look through: what it points at too, as it is named on screen (`pineGreen 50`). */
+const searchable = (t: DesignToken, target?: DesignToken) =>
+	[t.path, t.group, t.set, t.name, t.value, t.ref?.path ?? '', target ? nameOf(target) : ''].join(' ').toLowerCase();
 
 /** A row's layout: the same whether it can be pressed or not, so a row that is only shown lines up with the others. */
 const ROW = '-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left text-sm';
@@ -72,7 +77,7 @@ export const TokenRow = ({ token, note }: { token: DesignToken; note?: ReactNode
 							{content}
 						</button>
 					</PopoverTrigger>
-					<PopoverContent side="left" align="start" className="w-72">
+					<PopoverContent side="left" align="start" className="max-h-(--radix-popover-content-available-height) w-80 overflow-y-auto">
 						<TokenEditor token={token} />
 					</PopoverContent>
 				</Popover>
@@ -110,29 +115,80 @@ export const Sets = ({ tokens, noteFor }: { tokens: DesignToken[]; noteFor?: (to
  */
 const STICKY_HEADER = '[&>h3]:bg-card [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10';
 
-/** One category's tab: its own search, then its tokens. What is typed is the panel's, so it is there when the tab is back. */
+/** The views of a category drawn as swatches: the roles by theme, and the palette they are made from. */
+export type ColorView = 'semantic' | 'palette';
+
+/** A role's variant, whichever theme it is in: what a search keeps together, so a match in one theme keeps the others' value. */
+const rowKey = (t: DesignToken) => `${t.set}\u0000${t.name}`;
+
+/**
+ * One category's tab: its own search, then its tokens. What is typed is the panel's, so it is there when the tab is back. A
+ * category of colors with both roles and a palette has the two views (`view`, the panel's too); with only one, only that.
+ */
 const TokensTab = ({
 	category,
 	tokens,
+	view,
+	onView,
 	query,
 	onQuery,
 }: {
 	category: string;
 	tokens: DesignToken[];
+	view: ColorView;
+	onView: (view: ColorView) => void;
 	query: string;
 	onQuery: (query: string) => void;
 }) => {
 	const closed = useClosedGroups();
+	const { isPalette, target } = useTokenChanges();
 	const q = query.trim().toLowerCase();
-	const shown = useMemo(() => (q === '' ? tokens : tokens.filter((t) => searchable(t).includes(q))), [tokens, q]);
+	const colors = PRIMITIVES.find((p) => p.category === category)?.drawn === 'swatches';
+	const split = useMemo(
+		() => (colors ? { semantic: tokens.filter((t) => !isPalette(t)), palette: tokens.filter(isPalette) } : null),
+		[colors, tokens, isPalette],
+	);
+	const choose = split !== null && split.semantic.length > 0 && split.palette.length > 0;
+	const shownView: ColorView | null = split === null ? null : choose ? view : split.semantic.length > 0 ? 'semantic' : 'palette';
+	const pool = split && shownView ? split[shownView] : tokens;
+	const shown = useMemo(() => {
+		if (q === '') return pool;
+		const found = pool.filter((t) => searchable(t, target(t)).includes(q));
+		if (shownView !== 'semantic') return found;
+		const rows = new Set(found.map(rowKey));
+		return pool.filter((t) => rows.has(rowKey(t)));
+	}, [pool, q, shownView, target]);
 
 	const groups = inOrder(shown, (t) => t.group);
 	const names = groups.map(([group]) => group);
+	// Another view starts at its top: what was scrolled to in the other is somewhere else in this one.
+	const top = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		const scroller = top.current?.closest<HTMLElement>('[data-slot="tabs-content"]');
+		if (scroller) scroller.scrollTop = 0;
+	}, [shownView]);
 	return (
-		<div className="flex flex-col gap-3 pt-4">
+		<div ref={top} className="flex flex-col gap-3 pt-4">
+			{choose && (
+				<ToggleGroup
+					type="single"
+					variant="outline"
+					spacing={0}
+					fullWidth
+					aria-label={`${category} view`}
+					value={view}
+					// Pressing the one shown would unpress it, leaving none shown: it stays.
+					onValueChange={(next) => (next === 'semantic' || next === 'palette') && onView(next)}
+				>
+					<ToggleGroupItem value="semantic">Semantic</ToggleGroupItem>
+					<ToggleGroupItem value="palette">Palette</ToggleGroupItem>
+				</ToggleGroup>
+			)}
 			<SearchField label={`Search ${category.toLowerCase()}`} value={query} onChange={onQuery} />
 			{shown.length === 0 ? (
 				<NoMatches thing="token" search={query} onClear={() => onQuery('')} />
+			) : shownView === 'semantic' ? (
+				<SemanticColors tokens={shown} />
 			) : groups.length === 1 ? (
 				// One group would say the tab's own name again, so its sets are shown directly.
 				<Sets tokens={shown} />
@@ -165,6 +221,7 @@ export const TokensPanel = ({
 }) => {
 	const [current, setCurrent] = useState<string | null>(null);
 	const [queries, setQueries] = useState<Record<string, string>>({});
+	const [views, setViews] = useState<Record<string, ColorView>>({});
 	const changes = useTokenChanges();
 	const categories = useMemo(() => byPrimitive(changes.shown), [changes.shown]);
 
@@ -197,6 +254,8 @@ export const TokensPanel = ({
 						<TokensTab
 							category={category}
 							tokens={inCategory}
+							view={views[category] ?? 'semantic'}
+							onView={(view) => setViews((all) => ({ ...all, [category]: view }))}
 							query={queries[category] ?? ''}
 							onQuery={(query) => setQueries((all) => ({ ...all, [category]: query }))}
 						/>
