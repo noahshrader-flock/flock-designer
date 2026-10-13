@@ -7,7 +7,7 @@
  *   node extension/build.mjs          once
  *   node extension/build.mjs --watch  on every change
  */
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { context } from 'esbuild';
@@ -51,6 +51,8 @@ const builds = [
 	},
 ];
 
+// A build made once starts from nothing, so what is packaged is what was just built (a watch build leaves source maps).
+if (!watch) rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });
 // The codicons, from the package, beside the page that loads them.
 const codicons = join(here, '../node_modules/@vscode/codicons/dist');

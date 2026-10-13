@@ -210,21 +210,36 @@ cannot express: the sidebar width a person has dragged to, and the position of t
 ## DSNR, the VS Code extension
 
 DSNR is moving into VS Code as an extension, which lives in `extension/` with its own manifest
-(`extension/package.json`, which VS Code reads for its icon, views and commands). For now it is the shell
-only: its icon in the activity bar, a panel with a Projects and Design System toggle, sample data, and no
-services. It is drawn in VS Code's own design language, with none of the app's shadcn components or
-Tailwind and no colour of its own (a test fails if one creeps in), so it follows every theme.
+(`extension/package.json`, which VS Code reads for its icon, views and commands). It runs the same core as the app
+(`createCore`), with VS Code's shell: its dialogs and clipboard, the person's GitHub account through VS Code's own
+sign-in, no native preview, and its files in the extension's own storage, never the app's settings folder.
+
+There is nothing to clone or connect: it works on the folders open in VS Code (`findContext`). The product is the open
+folder with `.dsnr/workspace.json`, which DSNR trusts as VS Code does; its design system is where the product names it,
+else another open folder that holds one, else one the person locates; the design repository is beside the product, as
+the app finds it. Its panel, in the activity bar, lists the projects (opening one opens its newest prototype for
+review), shows the design system it found, and has Sign in at the far right of its top bar. A prototype's review is
+its page on the site, built from the design repository and served from this machine, in an editor tab.
+
+Like the app, it publishes the person's work branches and records when the project list is read and when VS Code is
+focused, so it pushes with their own git credentials.
+
+It is drawn in VS Code's own design language, with none of the app's shadcn components or Tailwind and no colour of its
+own (a test fails if one creeps in), so it follows every theme.
 
 ```bash
-npm run extension:dev     # build it as you edit, in a VS Code window of its own
-npm run extension:build   # build it once, into extension/dist/
+npm run extension:dev       # build it as you edit, in a VS Code window of its own
+npm run extension:build     # build it once, into extension/dist/
+npm run extension:test      # open it in VS Code on a throwaway world and check it works as a person meets it
+npm run extension:package   # make extension/dsnr.vsix, to install with Extensions: Install from VSIX
 ```
 
 `extension:dev` opens a second VS Code window with DSNR loaded from here, on a throwaway profile in the
 temporary folder, so your own VS Code, its settings and its extensions are never touched. Saving a file
 rebuilds it: a change to the panel reloads it in place, and a change to the extension restarts it (both
 are said in View › Output › DSNR). Quit that window with ⌘Q to stop the build: on a Mac, closing its last
-window leaves it running.
+window leaves it running. `extension:test` is not part of `npm run check`, since it opens a VS Code window for a few
+seconds; it makes its own product and design repository, with no remotes, so nothing can be pushed.
 
 ## If the window shows "Invalid hook call" while developing
 
