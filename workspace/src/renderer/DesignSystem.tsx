@@ -1,18 +1,13 @@
 import { ChevronDownIcon, GitBranchIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { matchesComponent } from '../shared/catalog';
 import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem } from '../shared/contract';
 import { ComponentPage } from './ComponentPage';
-import { CardGrid } from './CardGrid';
-import { ComponentCard } from './ComponentCard';
 import { ComponentPanel } from './ComponentPanel';
 import { ConnectDesignSystem } from './ConnectDesignSystem';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { GroupTrigger, useClosedGroups } from './GroupAccordion';
+import { useClosedGroups } from './GroupAccordion';
 import { MoreMenu } from './MoreMenu';
-import { NoMatches } from './NoMatches';
 import { Page } from './Page';
-import { ListRow, RowList } from './ListRow';
 import { Primitives } from './Primitives';
 import { TOKENS_PANEL } from './panelWidth';
 import { ResizablePanel } from './ResizablePanel';
@@ -31,7 +26,6 @@ import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { ViewSwitcher, useRememberedView } from './ViewSwitcher';
 import { Toolbar, ToolbarEnd } from './Toolbar';
 import { VoiceAndTone } from './VoiceAndTone';
-import { Accordion, AccordionContent, AccordionItem } from './ui/accordion';
 import { Button } from './ui/button';
 import {
 	DropdownMenu,
@@ -47,6 +41,7 @@ import { ErrorAlert } from './ErrorAlert';
 import { Notice, RetryButton } from './Notice';
 import { InlineAction } from './Links';
 import { LocationHint } from './LocationHint';
+import { ComponentList } from './ComponentList';
 
 /** Said only when the update failed, as the other problems are (`ProblemsDialog`): the list shown is what this computer had, not an error. */
 const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
@@ -55,31 +50,6 @@ const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
 			<ProblemList items={[{ detail: update.failed }]} />
 		</ProblemsDialog>
 	) : null;
-
-/**
- * A component in the list: its picture reduced at the left (a thumbnail, the grid's picture in the same shape), then its name
- * and description. The whole row opens it, and the chevron says so. Its links are on its own page.
- */
-const Row = ({
-	component,
-	picture,
-	drawing,
-	onOpen,
-}: {
-	component: CatalogComponent;
-	picture: string | undefined;
-	drawing: boolean;
-	onOpen: () => void;
-}) => (
-	<ListRow
-		data={{ 'data-component': component.id }}
-		name={component.name}
-		detail={component.subtitle && <span className="text-muted-foreground text-sm">{component.subtitle}</span>}
-		picture={picture}
-		drawing={drawing}
-		onOpen={onOpen}
-	/>
-);
 
 /**
  * Which design system is shown (P4): its name (its Storybook's brand, else its package's or repository's), the
@@ -371,14 +341,6 @@ const Components = ({
 		);
 	}
 
-	// The groups of what the search finds, in the catalog's order: a group with nothing found is left out.
-	const groups: { group: string; rows: CatalogComponent[] }[] = [];
-	for (const c of catalog.components.filter((each) => matchesComponent(each, search))) {
-		const last = groups[groups.length - 1];
-		if (last?.group === c.group) last.rows.push(c);
-		else groups.push({ group: c.group, rows: [c] });
-	}
-
 	return (
 		<div className="h-full overflow-y-auto">
 			{opened && <ComponentPage component={opened} commit={catalog.commit} edits={edits} onBack={() => onOpen(null)} />}
@@ -395,38 +357,16 @@ const Components = ({
 						<p className="text-muted-foreground text-sm">
 							The library's Storybook has no stories on {catalog.branch}, so there are no components to list.
 						</p>
-					) : groups.length === 0 ? (
-						<NoMatches thing="component" search={search} onClear={() => setSearch('')} />
 					) : (
-						<Accordion {...closed.accordion(groups.map((g) => g.group))}>
-							{groups.map(({ group, rows }) => (
-								<AccordionItem key={group} value={group} data-component-group={group}>
-									<GroupTrigger name={group} count={rows.length} />
-									<AccordionContent>
-										{componentsView === 'grid' ? (
-											<CardGrid>
-												{rows.map((c) => (
-													<ComponentCard
-														key={c.id}
-														component={c}
-														picture={pictures.pictures[c.id]}
-														drawing={pictures.drawing}
-														issues={pictures.issues[c.id]}
-														onOpen={() => onOpen(c.id)}
-													/>
-												))}
-											</CardGrid>
-										) : (
-											<RowList>
-												{rows.map((c) => (
-													<Row key={c.id} component={c} picture={pictures.pictures[c.id]} drawing={pictures.drawing} onOpen={() => onOpen(c.id)} />
-												))}
-											</RowList>
-										)}
-									</AccordionContent>
-								</AccordionItem>
-							))}
-						</Accordion>
+						<ComponentList
+							components={catalog.components}
+							search={search}
+							onClearSearch={() => setSearch('')}
+							view={componentsView}
+							closed={closed}
+							pictures={pictures}
+							onOpen={onOpen}
+						/>
 					)}
 				</Page>
 			</div>
