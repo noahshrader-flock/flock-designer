@@ -3,10 +3,10 @@ import { useEffect, useState } from 'react';
 import { countsOf, foundIn, summaryOf } from '../shared/accessibility';
 import { plural } from '../shared/plural';
 import type { AccessibilityIssue, AccessibilityResult } from '../shared/contract';
-import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Spinner } from './ui/spinner';
+import { ErrorAlert } from './ErrorAlert';
 
 type Check = { state: 'checking' } | { state: 'ready'; result: AccessibilityResult } | { state: 'failed'; error: string };
 
@@ -113,10 +113,8 @@ export const AccessibilityStatus = ({ projectId, name, opened }: { projectId: st
 							<DialogTitle>Accessibility</DialogTitle>
 							<DialogDescription>Not checked</DialogDescription>
 						</DialogHeader>
-						<DialogBody className="flex flex-col gap-3">
-							<Alert variant="destructive">
-								<AlertDescription className="wrap-anywhere whitespace-pre-wrap">{check.error}</AlertDescription>
-							</Alert>
+						<DialogBody>
+							<ErrorAlert error={check.error} />
 						</DialogBody>
 					</DialogContent>
 				</Dialog>
@@ -143,7 +141,7 @@ export const AccessibilityStatus = ({ projectId, name, opened }: { projectId: st
 						<DialogTitle>Accessibility</DialogTitle>
 						<DialogDescription>{summary}</DialogDescription>
 					</DialogHeader>
-					<DialogBody className="flex flex-col gap-3">
+					<DialogBody>
 						<AccessibilityFindings result={result} />
 					</DialogBody>
 				</DialogContent>

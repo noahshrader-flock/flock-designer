@@ -23,6 +23,8 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, Dia
 import { Field, FieldDescription, FieldLabel } from './ui/field';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
+import { ErrorAlert } from './ErrorAlert';
+import { closeUnlessBusy } from './dialogClose';
 
 /** What New makes, said under its title. The app is for prototypes: codebase work is started in the codebase. */
 const ABOUT =
@@ -257,13 +259,13 @@ export const NewWork = ({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={(next) => !next && close()}>
+		<Dialog open={open} onOpenChange={closeUnlessBusy(close, busy)}>
 			<DialogContent className="sm:max-w-xl" showCloseButton={!busy}>
 				<DialogHeader>
 					<DialogTitle>New prototype</DialogTitle>
 					<DialogDescription>{ABOUT}</DialogDescription>
 				</DialogHeader>
-				<DialogBody className="flex flex-col gap-4">
+				<DialogBody>
 					<Field>
 						<FieldLabel htmlFor="new-work-name">Name</FieldLabel>
 						<Input id="new-work-name" placeholder="Users — inactivity signal" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
@@ -364,11 +366,7 @@ export const NewWork = ({
 							</AlertDescription>
 						</Alert>
 					)}
-					{error && (
-						<Alert variant="destructive">
-							<AlertDescription>{error}</AlertDescription>
-						</Alert>
-					)}
+					{error && <ErrorAlert error={error} />}
 				</DialogBody>
 				<DialogFooter>
 					<CancelButton onClick={close} disabled={busy} />

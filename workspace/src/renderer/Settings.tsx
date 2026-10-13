@@ -1,11 +1,12 @@
 import { MonitorIcon, MoonIcon, SunIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { APPEARANCES, type Appearance, isAppearance } from '../shared/appearance';
-import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Field, FieldLabel } from './ui/field';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
+import { ErrorAlert } from './ErrorAlert';
+import { closeUnlessBusy } from './dialogClose';
 
 const ICONS = { system: MonitorIcon, light: SunIcon, dark: MoonIcon } as const;
 
@@ -33,12 +34,12 @@ export const Settings = ({ open, onClose }: { open: boolean; onClose: () => void
 		setError(r.error);
 	};
 	return (
-		<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+		<Dialog open={open} onOpenChange={closeUnlessBusy(onClose)}>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
 					<DialogTitle>Settings</DialogTitle>
 				</DialogHeader>
-				<DialogBody className="flex flex-col gap-4">
+				<DialogBody>
 					<Field>
 						<FieldLabel>Theme</FieldLabel>
 						<ToggleGroup
@@ -62,16 +63,10 @@ export const Settings = ({ open, onClose }: { open: boolean; onClose: () => void
 							})}
 						</ToggleGroup>
 					</Field>
-					{error && (
-						<Alert variant="destructive">
-							<AlertDescription>{error}</AlertDescription>
-						</Alert>
-					)}
+					{error && <ErrorAlert error={error} />}
 				</DialogBody>
 				<DialogFooter>
-					<Button variant="outline" onClick={onClose}>
-						Done
-					</Button>
+					<Button onClick={onClose}>Done</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

@@ -1,8 +1,8 @@
 import { CancelButton } from '../CancelButton';
-import { Alert, AlertDescription } from '../ui/alert';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import type { Comments } from './useComments';
+import { ErrorAlert } from '../ErrorAlert';
 
 /** Where the box sits relative to the pin, whose body is drawn above its tip. */
 const BOX_OFFSET = { x: 22, y: -19 } as const;
@@ -37,11 +37,7 @@ export const CommentBox = ({
 			style={{ top: origin.top + comments.pendingAt.y + BOX_OFFSET.y, left: origin.left + comments.pendingAt.x + BOX_OFFSET.x }}
 		>
 			<div className="flex flex-col gap-3">
-				{error && (
-					<Alert variant="destructive">
-						<AlertDescription>{error}</AlertDescription>
-					</Alert>
-				)}
+				{error && <ErrorAlert error={error} />}
 				<label htmlFor="comment-draft" className="text-sm font-medium">
 					Comment
 				</label>

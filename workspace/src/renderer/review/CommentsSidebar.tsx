@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { Button } from '../ui/button';
 import { DropdownMenuItem } from '../ui/dropdown-menu';
 import type { AddressState } from './useAddress';
+import { ErrorAlert } from '../ErrorAlert';
 
 /**
  * The comments, docked beside the preview and resizable: what went wrong, a route that did not load, where an Address
@@ -49,11 +50,7 @@ export const CommentsSidebar = ({
 		<ResizablePanel panel={COMMENTS_PANEL} label="Resize the comments sidebar" onResizing={(r) => void window.workspace.pageHold('resize', r)}>
 			<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
 				<CommentsHeading comments={comments} />
-				{error && !composing && (
-					<Alert variant="destructive">
-						<AlertDescription>{error}</AlertDescription>
-					</Alert>
-				)}
+				{error && !composing && <ErrorAlert error={error} />}
 				{/* The recorded route did not load. Said once, plainly: the page on screen is not the work, so a comment made
 				    here would be about something this iteration never touched. */}
 				{wrongRoute && !composing && (
@@ -105,11 +102,7 @@ export const CommentsSidebar = ({
 						</AlertDescription>
 					</Alert>
 				)}
-				{address.kind === 'failed' && (
-					<Alert variant="destructive">
-						<AlertDescription>{address.message}</AlertDescription>
-					</Alert>
-				)}
+				{address.kind === 'failed' && <ErrorAlert error={address.message} />}
 				<CommentList
 					comments={comments}
 					states={states}

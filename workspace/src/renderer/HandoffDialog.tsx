@@ -4,6 +4,7 @@ import { useAgentBusy } from './useAgentBusy';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { closeUnlessBusy } from './dialogClose';
 
 /**
  * Handoff, said out loud before it starts.
@@ -27,12 +28,12 @@ export const HandoffDialog = ({
 	const agentBusy = useAgentBusy(open);
 
 	return (
-		<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+		<Dialog open={open} onOpenChange={closeUnlessBusy(onClose)}>
 			<DialogContent className="sm:max-w-xl">
 				<DialogHeader>
 					<DialogTitle>Hand off</DialogTitle>
 				</DialogHeader>
-				<DialogBody className="flex flex-col gap-4">
+				<DialogBody>
 					<p className="text-muted-foreground text-sm">
 						The full check of {iteration.branch}, done once, before an engineer picks it up. It runs by itself and takes a while.
 					</p>

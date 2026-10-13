@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { Project } from '../shared/contract';
 import { RichText } from './RichText';
-import { Alert, AlertDescription } from './ui/alert';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from './ui/sheet';
 import { LinesSkeleton, SkeletonStatus } from './Skeletons';
+import { ErrorAlert } from './ErrorAlert';
+import { closeUnlessBusy } from './dialogClose';
 
 /**
  * One file from a project's folder, read out in a panel from the side: the brief, the review notes, the
@@ -28,18 +29,14 @@ export const RecordSheet = ({ project, name, open, onClose }: { project: Project
 	}, [project.id, name]);
 
 	return (
-		<Sheet open={open} onOpenChange={(next) => !next && onClose()}>
+		<Sheet open={open} onOpenChange={closeUnlessBusy(onClose)}>
 			<SheetContent className="data-[side=right]:inset-y-auto data-[side=right]:top-(--nav-height) data-[side=right]:h-[calc(100dvh-var(--nav-height))] data-[side=right]:w-full data-[side=right]:sm:max-w-2xl">
 				<SheetHeader>
 					<SheetTitle className="font-mono">{name}</SheetTitle>
 					<SheetDescription>{project.title}</SheetDescription>
 				</SheetHeader>
 				<div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-					{error && (
-						<Alert variant="destructive">
-							<AlertDescription>{error}</AlertDescription>
-						</Alert>
-					)}
+					{error && <ErrorAlert error={error} />}
 					{text === null && !error && (
 						<SkeletonStatus label="Loading the file…">
 							<LinesSkeleton count={8} />

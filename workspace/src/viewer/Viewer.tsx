@@ -11,11 +11,12 @@ import { CommentsHeading } from '../renderer/comments/CommentsHeading';
 import { useComments } from '../renderer/comments/useComments';
 import { IterationSwitcher, StateSwitcher } from '../renderer/IterationSwitcher';
 import { Toolbar } from '../renderer/Toolbar';
-import { Alert, AlertDescription } from '../renderer/ui/alert';
 import { Button } from '../renderer/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../renderer/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../renderer/ui/tooltip';
 import { browserComments, framePage, saveToken, savedToken, tokenApi } from './browserAdapter';
+import { ErrorAlert } from '../renderer/ErrorAlert';
+import { closeUnlessBusy } from '../renderer/dialogClose';
 
 /**
  * A prototype's published page, as the app shows one: its bar (the app's own toolbar, back button, title, version and
@@ -192,11 +193,7 @@ const Commenting = ({
 								Sign out
 							</Button>
 						</CommentsHeading>
-						{error && !comments.composing && (
-							<Alert variant="destructive">
-								<AlertDescription>{error}</AlertDescription>
-							</Alert>
-						)}
+						{error && !comments.composing && <ErrorAlert error={error} />}
 						<CommentList
 							comments={comments}
 							states={showing.states}
@@ -223,7 +220,7 @@ const Commenting = ({
  * kept where it will be, and says where to comment meanwhile.
  */
 const CommentingPaused = ({ open, onClose }: { open: boolean; onClose: () => void }) => (
-	<Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+	<Dialog open={open} onOpenChange={closeUnlessBusy(onClose)}>
 		<DialogContent className="sm:max-w-md">
 			<DialogHeader>
 				<DialogTitle>Commenting here is coming</DialogTitle>

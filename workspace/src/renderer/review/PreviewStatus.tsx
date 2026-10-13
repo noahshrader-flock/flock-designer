@@ -3,8 +3,8 @@ import { READY_LINE } from '../../shared/handoff';
 import type { BuildPhase } from '../localBuild';
 import { AgentLog, Loading } from '../Loading';
 import type { useEditor } from '../useEditor';
-import { Alert, AlertDescription } from '../ui/alert';
 import { Button } from '../ui/button';
+import { ErrorAlert } from '../ErrorAlert';
 
 type Editor = ReturnType<typeof useEditor>;
 
@@ -100,9 +100,7 @@ const Status = ({
 	if (phase.kind === 'failed' && !hosted.shown)
 		return (
 			<>
-				<Alert variant="destructive" className="max-w-[560px] text-left">
-					<AlertDescription>{phase.message}</AlertDescription>
-				</Alert>
+				<ErrorAlert error={phase.message} className="max-w-[560px] text-left" />
 				<AgentLog lines={log} />
 				<div className="flex gap-2">
 					{editor.available && (
@@ -119,12 +117,7 @@ const Status = ({
 				</div>
 			</>
 		);
-	if (error)
-		return (
-			<Alert variant="destructive" className="max-w-[560px] text-left">
-				<AlertDescription>{error}</AlertDescription>
-			</Alert>
-		);
+	if (error) return <ErrorAlert error={error} className="max-w-[560px] text-left" />;
 	if (hosted.shown && !hosted.up)
 		return (
 			<>

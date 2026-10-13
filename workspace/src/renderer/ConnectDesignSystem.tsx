@@ -5,13 +5,14 @@ import { CancelButton } from './CancelButton';
 import { CloneHere, useClone } from './Clone';
 import { RepositoryReachNote } from './RepositoryReachNote';
 import { SearchSelect } from './SearchSelect';
-import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Field, FieldLabel } from './ui/field';
 import { Skeleton } from './ui/skeleton';
 import { SkeletonStatus } from './Skeletons';
 import { repoName } from '../shared/repoRef';
+import { ErrorAlert } from './ErrorAlert';
+import { closeUnlessBusy } from './dialogClose';
 
 /**
  * Connecting a design system (P4 of the design system plan), centered in the window like the GitHub sign-in: one of the
@@ -97,18 +98,14 @@ export const ConnectDesignSystem = ({ onConnected, onCancel }: { onConnected: ()
 					{picked !== null && <CloneHere clone={clone} onClone={() => void connect()} action="Connect" />}
 				</Field>
 			)}
-			{error && (
-				<Alert variant="destructive">
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
-			)}
+			{error && <ErrorAlert error={error} />}
 		</div>
 	);
 
 	// Another, over what is shown: closed by Cancel or the dialog's own close, and not while it is cloning.
 	if (onCancel)
 		return (
-			<Dialog open onOpenChange={(open) => !open && clone.cloning === null && onCancel()}>
+			<Dialog open onOpenChange={closeUnlessBusy(onCancel, clone.cloning !== null)}>
 				<DialogContent className="sm:max-w-md" showCloseButton={clone.cloning === null}>
 					<DialogHeader>
 						<DialogTitle>Connect a design system</DialogTitle>

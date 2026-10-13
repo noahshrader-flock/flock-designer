@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { sameFolder } from '../shared/brief';
 import { CancelButton } from './CancelButton';
 import { FolderField, type FolderPick, pickOf, pickedFolder } from './FolderField';
-import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { ErrorAlert } from './ErrorAlert';
+import { closeUnlessBusy } from './dialogClose';
 
 /**
  * Assign folder, from a project's More menu (the folders plan): the same folder field as New, on the folder the project
@@ -47,18 +48,14 @@ export const AssignFolder = ({
 		onAssigned(chosen);
 	};
 	return (
-		<Dialog open={open} onOpenChange={(next) => !next && !busy && onClose()}>
+		<Dialog open={open} onOpenChange={closeUnlessBusy(onClose, busy)}>
 			<DialogContent className="sm:max-w-md" showCloseButton={!busy}>
 				<DialogHeader>
 					<DialogTitle>Assign folder</DialogTitle>
 				</DialogHeader>
-				<DialogBody className="flex flex-col gap-4">
+				<DialogBody>
 					<FolderField id="assign-folder" label="Folder" folders={folders} value={chosen} onChange={setChoice} disabled={busy} />
-					{error && (
-						<Alert variant="destructive">
-							<AlertDescription>{error}</AlertDescription>
-						</Alert>
-					)}
+					{error && <ErrorAlert error={error} />}
 				</DialogBody>
 				<DialogFooter>
 					<CancelButton onClick={onClose} disabled={busy} />

@@ -7,6 +7,8 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Field, FieldDescription, FieldLabel } from './ui/field';
+import { ErrorAlert } from './ErrorAlert';
+import { closeUnlessBusy } from './dialogClose';
 
 /**
  * Building a prototype in the codebase, said out loud before it happens.
@@ -84,14 +86,14 @@ export const BuildInCodebaseDialog = ({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={(next) => !next && !busy && onClose()}>
+		<Dialog open={open} onOpenChange={closeUnlessBusy(onClose, busy)}>
 			<DialogContent className="sm:max-w-xl" showCloseButton={!busy}>
 				<DialogHeader>
 					<DialogTitle>Build in the codebase</DialogTitle>
 				</DialogHeader>
 				{handed ? (
 					<>
-						<DialogBody className="flex flex-col gap-3">
+						<DialogBody>
 							{handed.editor ? (
 								<p className="text-sm">
 									It is in Claude Code in VS Code now, on {plan?.branch}: a new conversation there has the task typed in. Press Enter there to start
@@ -113,7 +115,7 @@ export const BuildInCodebaseDialog = ({
 					</>
 				) : (
 					<>
-						<DialogBody className="flex flex-col gap-4">
+						<DialogBody>
 							<p className="text-muted-foreground text-sm">
 								This moves {iterationLabel(iteration)} into {checkout.name} as real work, built by Claude Code in the repository. It needs the full
 								setup: packages, environment variables, and the app able to run.
@@ -179,11 +181,7 @@ export const BuildInCodebaseDialog = ({
 								</>
 							)}
 
-							{error && (
-								<Alert variant="destructive">
-									<AlertDescription className="wrap-anywhere whitespace-pre-wrap">{error}</AlertDescription>
-								</Alert>
-							)}
+							{error && <ErrorAlert error={error} />}
 						</DialogBody>
 						<DialogFooter>
 							<CancelButton onClick={onClose} disabled={busy} />

@@ -45,6 +45,7 @@ import {
 } from './ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { HOST } from '../shared/vocabulary';
+import { ErrorAlert } from './ErrorAlert';
 
 /** Said only when the update failed, as the other problems are (`ProblemsDialog`): the list shown is what this computer had, not an error. */
 const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
@@ -407,11 +408,7 @@ const Components = ({
 						<SearchField label="Search components" value={search} onChange={setSearch} className="w-72" />
 						<ViewSwitcher view={componentsView} onSelect={chooseView} />
 					</div>
-					{error && (
-						<Alert variant="destructive">
-							<AlertDescription>{error}</AlertDescription>
-						</Alert>
-					)}
+					{error && <ErrorAlert error={error} />}
 					{catalog.components.length === 0 ? (
 						<p className="text-muted-foreground text-sm">
 							The library's Storybook has no stories on {catalog.branch}, so there are no components to list.

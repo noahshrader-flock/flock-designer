@@ -9,6 +9,7 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { CHANGE_REQUEST, HOST } from '../shared/vocabulary';
+import { ErrorAlert } from './ErrorAlert';
 
 /**
  * The Voice and Tone tab (T9 of the design system plan): Flock's voice and tone, one file in the connected design system's
@@ -125,11 +126,7 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 				</Button>
 			</div>
 
-			{error && (
-				<Alert variant="destructive">
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
-			)}
+			{error && <ErrorAlert error={error} />}
 
 			{theirs && (
 				<Alert>

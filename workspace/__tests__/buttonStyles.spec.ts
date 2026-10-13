@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CancelButton } from '../src/renderer/CancelButton';
 import { SyncButton } from '../src/renderer/SyncButton';
 import { button, press, render, unmountAll } from './reviewHarness';
+import { windowSources } from './windowSources';
 
 /**
  * How two buttons look wherever they appear: every Cancel is a ghost button, and every Sync is an outline one. Each is
@@ -33,31 +32,22 @@ describe('Cancel', () => {
 	});
 
 	it('is the only place a Cancel button is made: no screen builds its own', () => {
-		const files = (dir: string): string[] =>
-			readdirSync(dir).flatMap((n) => (statSync(join(dir, n)).isDirectory() ? files(join(dir, n)) : n.endsWith('.tsx') ? [join(dir, n)] : []));
-		const own = ['src/renderer', 'src/viewer']
-			.flatMap((d) => files(join(__dirname, '..', d)))
-			.filter((f) => !f.endsWith('CancelButton.tsx') && !f.includes(`${join('renderer', 'ui')}`))
+		const own = windowSources('CancelButton.tsx')
 			// A line that is only the word Cancel, inside a button.
-			.filter((f) => /^\s*Cancel\s*$/m.test(readFileSync(f, 'utf8')));
+			.filter((f) => /^\s*Cancel\s*$/m.test(f.text))
+			.map((f) => f.path);
 		expect(own).toEqual([]);
 	});
 });
 
 describe('the vertical ellipsis', () => {
-	const files = (dir: string): string[] =>
-		readdirSync(dir).flatMap((n) => (statSync(join(dir, n)).isDirectory() ? files(join(dir, n)) : n.endsWith('.tsx') ? [join(dir, n)] : []));
-
 	it('is a ghost button wherever one is drawn: the Button holding the icon says variant="ghost"', () => {
 		const wrong: string[] = [];
-		for (const f of ['src/renderer', 'src/viewer']
-			.flatMap((d) => files(join(__dirname, '..', d)))
-			.filter((p) => !p.includes(join('renderer', 'ui')))) {
-			const text = readFileSync(f, 'utf8');
+		for (const { path, text } of windowSources()) {
 			for (const m of text.matchAll(/<EllipsisVerticalIcon/g)) {
 				// The Button that holds it: the last one opened before the icon.
 				const tag = text.slice(text.lastIndexOf('<Button', m.index), m.index);
-				if (!/variant="ghost"/.test(tag)) wrong.push(f.replace(`${join(__dirname, '..')}/`, ''));
+				if (!/variant="ghost"/.test(tag)) wrong.push(path);
 			}
 		}
 		expect(wrong).toEqual([]);
@@ -77,8 +67,6 @@ describe('Sync', () => {
 
 describe('a button that is always off', () => {
 	it('never keeps something to say in its title: a disabled button cannot be hovered, so its title is never shown', () => {
-		const files = (dir: string): string[] =>
-			readdirSync(dir).flatMap((n) => (statSync(join(dir, n)).isDirectory() ? files(join(dir, n)) : n.endsWith('.tsx') ? [join(dir, n)] : []));
 		/** Each `<Button …>` or `<button …>` opening tag, read to its closing `>` outside any `{…}`. */
 		const tags = (text: string): string[] => {
 			const found: string[] = [];
@@ -96,14 +84,11 @@ describe('a button that is always off', () => {
 			}
 			return found;
 		};
-		const offWithTitle = ['src/renderer', 'src/viewer']
-			.flatMap((d) => files(join(__dirname, '..', d)))
-			.filter((f) => !f.includes(`${join('renderer', 'ui')}`))
-			.flatMap((f) =>
-				tags(readFileSync(f, 'utf8'))
-					.filter((t) => /\sdisabled(\s|\/?>)/.test(t) && /\stitle=/.test(t))
-					.map((t) => `${f}: ${t.slice(0, 80)}`),
-			);
+		const offWithTitle = windowSources().flatMap(({ path, text }) =>
+			tags(text)
+				.filter((t) => /\sdisabled(\s|\/?>)/.test(t) && /\stitle=/.test(t))
+				.map((t) => `${path}: ${t.slice(0, 80)}`),
+		);
 		expect(offWithTitle).toEqual([]);
 	});
 });

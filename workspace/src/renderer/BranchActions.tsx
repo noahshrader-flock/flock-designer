@@ -2,9 +2,9 @@ import { GitBranchIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { plural } from '../shared/plural';
 import { OutLink } from './OutLink';
-import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { CHANGE_REQUEST } from '../shared/vocabulary';
+import { ErrorAlert } from './ErrorAlert';
 
 /** A change kept on a branch of DSNR's, as either kind of change has one: the tokens' (T4, T5) and the voice and tone's (T9). */
 interface KeptBranch {
@@ -56,11 +56,7 @@ export const BranchActions = ({
 				{pullRequestNote}
 			</p>
 		)}
-		{error && (
-			<Alert variant="destructive">
-				<AlertDescription>{error}</AlertDescription>
-			</Alert>
-		)}
+		{error && <ErrorAlert error={error} />}
 		<div className="flex items-center gap-2">
 			{unsaved && (
 				<Button size="sm" disabled={busy !== null || !canSave} onClick={onSave}>

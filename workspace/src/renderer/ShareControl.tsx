@@ -22,6 +22,7 @@ import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTi
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Spinner } from './ui/spinner';
 import { CHANGE_REQUEST } from '../shared/vocabulary';
+import { ErrorAlert } from './ErrorAlert';
 
 /**
  * What can be done with this page beyond reviewing it, behind one menu: move a prototype into the code,
@@ -200,7 +201,7 @@ export const ShareControl = ({
 					<DialogHeader>
 						<DialogTitle>{url && view === 'confirm' ? 'Update the shared preview' : 'Share for review'}</DialogTitle>
 					</DialogHeader>
-					<DialogBody className="flex flex-col gap-4">
+					<DialogBody>
 						{view === 'confirm' && (
 							<>
 								<p className="text-sm">
@@ -237,16 +238,8 @@ export const ShareControl = ({
 								</p>
 							</>
 						)}
-						{view === 'failed' && status.state === 'failed' && (
-							<Alert variant="destructive">
-								<AlertDescription className="wrap-anywhere whitespace-pre-wrap">{status.message}</AlertDescription>
-							</Alert>
-						)}
-						{error && (
-							<Alert variant="destructive">
-								<AlertDescription>{error}</AlertDescription>
-							</Alert>
-						)}
+						{view === 'failed' && status.state === 'failed' && <ErrorAlert error={status.message} />}
+						{error && <ErrorAlert error={error} />}
 					</DialogBody>
 					<DialogFooter>
 						{view === 'confirm' ? (

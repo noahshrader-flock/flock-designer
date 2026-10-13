@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { DeviceCodeStart, SignInState } from '../shared/contract';
 import { CancelButton } from './CancelButton';
-import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { HOST } from '../shared/vocabulary';
+import { ErrorAlert } from './ErrorAlert';
 
 /**
  * Sign-in, which for a desktop app means device flow: GitHub shows a code here,
@@ -81,11 +81,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 				<p className="text-muted-foreground text-sm">
 					Sign in with {HOST} to browse projects and leave comments. You need read access to the design repository — nothing else, and no checkout.
 				</p>
-				{error && (
-					<Alert variant="destructive">
-						<AlertDescription>{error}</AlertDescription>
-					</Alert>
-				)}
+				{error && <ErrorAlert error={error} />}
 				<div>
 					<Button onClick={begin} disabled={busy}>
 						{busy ? 'Starting…' : `Sign in with ${HOST}`}

@@ -21,6 +21,7 @@ import { NoMatches } from './NoMatches';
 import { SearchField } from './SearchField';
 import { CardGridSkeleton, RowsSkeleton, SkeletonStatus } from './Skeletons';
 import { ViewSwitcher, useRememberedView } from './ViewSwitcher';
+import { ErrorAlert } from './ErrorAlert';
 
 /** Where the screen's choice of list or grid is kept: its own, apart from the Design System's. */
 const VIEW_KEY = 'dsnr.projectsView';
@@ -106,9 +107,7 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 	if (error) {
 		return (
 			<Page>
-				<Alert variant="destructive">
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
+				<ErrorAlert error={error} />
 				<div>
 					<Button variant="secondary" onClick={load}>
 						Try again
