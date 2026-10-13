@@ -7,8 +7,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcContext } from '../src/main/ipc';
 import { CHANNELS } from '../src/shared/contract';
 import type { Ports } from '../src/main/ports';
-import { fakeGitHub } from './fakes/github';
-import { addStandards, agentRunning, g, installDesignSystem, makeProduct, makeProductFiles, reviewComment, type Fn } from './fixtures';
+import { type Answer, fakeGitHub } from './fakes/github';
+import {
+	addStandards,
+	agentRunning,
+	g,
+	installDesignSystem,
+	makeProduct,
+	makeProductFiles,
+	projectIteration,
+	reviewComment,
+	type Fn,
+} from './fixtures';
 
 /**
  * The IPC layer itself: which handlers demand that a repository was actually
@@ -76,7 +86,7 @@ const signedIn = (repos: string[]) => {
 	answer({ '/user/repos*': repos.map((full_name) => ({ full_name })) });
 };
 /** The app's own GitHub answers from `routes` (`fakes/github.ts`); `githubApi` still has every call it was asked. */
-const answer = (routes: Record<string, unknown>) => githubApi.mockImplementation(fakeGitHub(routes).api);
+const answer = (routes: Record<string, Answer>) => githubApi.mockImplementation(fakeGitHub(routes).api);
 
 /** The real runner, so its one-run rule is what is tested, over a stand-in agent that runs until the test ends. */
 const realRunner = async () => {
@@ -806,17 +816,8 @@ describe('discovery suggests; it does not trust', () => {
 
 describe('listProjects', () => {
 	it('names every person by their GitHub profile, however git named them, and joins them when they are one account', async () => {
-		const iteration = (people: { name: string; login: string | null }[]) => ({
-			name: 'i1',
-			branch: 'fd/alpha/i1',
-			issueNumber: null,
-			openComments: 0,
-			previewUrl: null,
-			commit: null,
-			contributors: people,
-			createdAt: null,
-			route: null,
-		});
+		const iteration = (people: { name: string; login: string | null }[]) =>
+			projectIteration({ name: 'i1', branch: 'fd/alpha/i1', contributors: people });
 		const shared = {
 			id: 'alpha',
 			title: 'Alpha',

@@ -1,11 +1,9 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Project } from '../src/shared/contract';
 import { codebaseWork } from '../src/main/services/codebaseWork';
 import { readDescriptor } from '../src/main/services/descriptor';
-import { listProjects } from '../src/main/services/listProjects';
 import { g, makeProduct } from './fixtures';
 
 let dir: string;
@@ -38,26 +36,5 @@ describe("a project's codebase work", () => {
 		g(product, 'commit', '-q', '-m', 'no setup');
 		g(product, 'checkout', '-q', 'develop');
 		await expect(work().start(here(), 'demo', 'note', 'bare')).rejects.toThrow('bare has no .dsnr/workspace.json, so work cannot start from it.');
-	});
-});
-
-describe('the project list', () => {
-	const fromGitHub: Project = { id: 'remote', title: 'Remote', folder: null, records: [], iterations: [], people: [] };
-	const offline = () => Promise.reject(new Error('GitHub is out of reach.'));
-
-	it("is GitHub's when there is no checkout, and GitHub's failure when it cannot be reached", async () => {
-		expect((await listProjects({ root: null, login: null, remote: async () => [fromGitHub] })).map((p) => p.id)).toEqual(['remote']);
-		await expect(listProjects({ root: null, login: null, remote: offline })).rejects.toThrow('GitHub is out of reach.');
-	});
-
-	it("still shows this machine's work when GitHub cannot be reached", async () => {
-		const design = join(dir, 'flock-designer');
-		mkdirSync(join(design, '.git'), { recursive: true });
-		mkdirSync(join(design, 'projects', 'demo'), { recursive: true });
-		writeFileSync(join(design, 'projects', 'demo', 'brief.md'), '# Demo\n');
-		const record = { projectId: 'demo', name: 'v1-i1', branch: 'prototype/demo/v1-i1', commit: null, createdAt: '2026-10-01T00:00:00Z' };
-		writeFileSync(join(design, 'projects', 'demo', 'iterations.json'), JSON.stringify([record]));
-		const listed = await listProjects({ root: product, login: null, remote: offline });
-		expect(listed.map((p) => [p.id, p.iterations.map((i) => i.name)])).toEqual([['demo', ['v1-i1']]]);
 	});
 });

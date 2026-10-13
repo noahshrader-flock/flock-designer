@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mergeRepositories, originOf, reachableRepositories, visibleRepositories } from '../src/main/services/repositories';
-import { type RouteCall, fakeGitHub } from './fakes/github';
+import { fakeGitHub, refusal } from './fakes/github';
 
 describe('originOf', () => {
 	it('reads the origin remote from .git/config, and only origin', () => {
@@ -43,7 +43,7 @@ describe('visibleRepositories', () => {
 
 	it('reads every page GitHub has, up to the first that is not full, in order', async () => {
 		const { github, api } = fakeGitHub({
-			'/user/repos*': ({ query }: RouteCall) => {
+			'/user/repos*': ({ query }) => {
 				const n = Number(query.get('page'));
 				return n <= 2 ? page(n, 100) : n === 3 ? page(3, 3) : page(n, 100);
 			},
@@ -62,7 +62,7 @@ describe('visibleRepositories', () => {
 		let running = 0;
 		let most = 0;
 		const full = fakeGitHub({
-			'/user/repos*': async ({ query }: RouteCall) => {
+			'/user/repos*': async ({ query }) => {
 				running++;
 				most = Math.max(most, running);
 				await new Promise((r) => setTimeout(r, 5));
@@ -105,9 +105,10 @@ describe('reachableRepositories', () => {
 	});
 
 	it('is the app’s list alone when the person’s GitHub command line is missing or signed out, or nobody is signed in to the app', async () => {
+		// As the real one fails (ghCli.spec): the command line is not on this machine.
 		const missing = fakeGitHub({
 			'*': () => {
-				throw new Error('gh: command not found');
+				throw refusal(undefined, 'gh is not installed here', 'missingCli');
 			},
 		}).github;
 		// And says so: the list reaches only what the app's GitHub App is installed on.

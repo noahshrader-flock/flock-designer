@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { GitHubApi } from '../src/host/github';
 
-import { type RouteCall, fakeGitHub, refusal } from './fakes/github';
+import { type Answer, fakeGitHub, notFound, refusal } from './fakes/github';
 import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, redeploySite, siteBehind, unpublish, whyPublic } from '../src/main/services/pages';
 
 /**
@@ -14,17 +14,13 @@ import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, redeploySite, si
 const REF = { owner: 'acme', repo: 'design' };
 const SITE = 'https://acme.github.io/design/';
 
-const notFound = () => {
-	throw refusal(404);
-};
-
 /**
  * GitHub as its API answers. Runs appear one poll after the dispatch, and finish on the next. `more` replaces any of its
  * routes, for a test of one refusal.
  */
 const fakeSite = (
 	{ repoPrivate = true, sitePublic = false, pages = true, conclusion = 'success', workflow = true, onSite = true as boolean | 'no-deploy' } = {},
-	more: Record<string, unknown> = {},
+	more: Record<string, Answer> = {},
 ) => {
 	const runs: { id: number; status: string; conclusion: string | null; html_url: string }[] = [
 		{ id: 1, status: 'completed', conclusion: 'success', html_url: 'run/1' },
@@ -218,7 +214,7 @@ describe('whether an iteration is on its page', () => {
 				: [],
 			'/repos/acme/design/deployments/7/statuses?per_page=1': [{ state: 'in_progress' }],
 			'/repos/acme/design/deployments/6/statuses?per_page=1': [{ state: 'success' }],
-			'/repos/acme/design/commits?*': ({ query }: RouteCall) => {
+			'/repos/acme/design/commits?*': ({ query }) => {
 				expect(query.get('path')).toBe('projects/demo/prototypes/v1-i2.html');
 				expect(query.get('sha')).toBe('main');
 				return changed ? [{ sha: changed }] : [];

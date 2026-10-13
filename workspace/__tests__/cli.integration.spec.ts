@@ -8,7 +8,7 @@ import { main } from '../src/cli/dsnr';
 import { g, installDesignSystem, makeProduct, addStandards } from './fixtures';
 import type { GitHubApi } from '../src/host/github';
 
-import { type RouteCall, fakeGitHub, refusal } from './fakes/github';
+import { type Answer, fakeGitHub, refusal } from './fakes/github';
 import { DESIGN_REPO } from '../src/shared/config';
 
 /**
@@ -169,7 +169,7 @@ describe('change-prototype', () => {
 		github = fakeGitHub({
 			'/user': { login: 'test-person' },
 			[`${REPO}/issues?*`]: names.map((name, i) => ({ number: i + 1, body: `branch: \`prototype/demo/${name}\``, comments: 1 })),
-			[`${REPO}/issues/*`]: ({ path }: RouteCall) =>
+			[`${REPO}/issues/*`]: ({ path }) =>
 				(threads[names[Number(/\/issues\/(\d+)\/comments/.exec(path)?.[1]) - 1] as string] ?? []).map((login, i) => ({
 					id: i + 1,
 					body: 'x',
@@ -309,7 +309,7 @@ describe('publish opens the page the first time', () => {
 		return branch;
 	};
 	/** A GitHub whose site is deployed at once, and either already has the page or does not. */
-	const site = (branch: string, onSite: boolean, more: Record<string, unknown> = {}) => {
+	const site = (branch: string, onSite: boolean, more: Record<string, Answer> = {}) => {
 		let dispatched = false;
 		return fakeGitHub({
 			[REPO]: { private: true, default_branch: branch },

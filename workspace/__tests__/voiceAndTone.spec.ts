@@ -7,7 +7,7 @@ import type { GitHubApi } from '../src/host/github';
 
 import { VOICE_BRANCH, VOICE_FILE, VoiceAndToneFile } from '../src/main/services/voiceAndTone';
 import type { HostErrorKind } from '../src/host/hostError';
-import { type RouteCall, fakeGitHub, refusal } from './fakes/github';
+import { fakeGitHub, refusal } from './fakes/github';
 
 /**
  * The voice and tone file (T9 of the design system plan): in the design system's agent files, read from its default branch,
@@ -38,7 +38,7 @@ const BASE = `/repos/${REPO.owner}/${REPO.repo}`;
 const fileOf = (path: string) => decodeURIComponent(path.slice(`${BASE}/contents/`.length).split('?')[0] as string);
 
 /** GitHub, as far as the voice and tone needs it: branches of files, commits counted, pull requests. */
-class FakeGitHub {
+class DesignSystemRepo {
 	branches = new Map<string, { files: Map<string, { text: string; sha: string }>; commits: number }>();
 	pulls: Pull[] = [];
 	/** Every call, with who made it: the app's own session, or the person's command line. */
@@ -81,12 +81,12 @@ class FakeGitHub {
 	private static route = (path: string) => path.slice(BASE.length).split('?')[0] as string;
 	private readonly host = fakeGitHub({
 		[`GET ${BASE}`]: { default_branch: DEFAULT },
-		[`GET ${BASE}/contents/*`]: ({ path, query }: RouteCall) => {
+		[`GET ${BASE}/contents/*`]: ({ path, query }) => {
 			const f = this.branches.get(query.get('ref') ?? DEFAULT)?.files.get(fileOf(path));
 			if (!f) throw refusal(404);
 			return { content: Buffer.from(f.text).toString('base64'), encoding: 'base64', sha: f.sha };
 		},
-		[`PUT ${BASE}/contents/*`]: ({ path, body }: RouteCall) => {
+		[`PUT ${BASE}/contents/*`]: ({ path, body }) => {
 			const file = fileOf(path);
 			const put = body as Record<string, unknown>;
 			const b = this.branches.get(String(put.branch));
@@ -99,13 +99,13 @@ class FakeGitHub {
 			b.commits += 1;
 			return { content: { sha: made.sha } };
 		},
-		[`GET ${BASE}/git/ref/heads/*`]: ({ path }: RouteCall) => {
-			const name = decodeURIComponent(FakeGitHub.route(path).slice('/git/ref/heads/'.length));
+		[`GET ${BASE}/git/ref/heads/*`]: ({ path }) => {
+			const name = decodeURIComponent(DesignSystemRepo.route(path).slice('/git/ref/heads/'.length));
 			const b = this.branches.get(name);
 			if (!b) throw refusal(404);
 			return { object: { sha: `${name}@${b.commits}` } };
 		},
-		[`POST ${BASE}/git/refs`]: ({ body }: RouteCall) => {
+		[`POST ${BASE}/git/refs`]: ({ body }) => {
 			const ref = String((body as { ref: string }).ref);
 			const name = ref.replace(/^refs\/heads\//, '');
 			if (this.branches.has(name)) throw refusal(422, 'Reference already exists');
@@ -113,20 +113,20 @@ class FakeGitHub {
 			this.branches.set(name, { files: new Map(from.files), commits: from.commits });
 			return { ref };
 		},
-		[`DELETE ${BASE}/git/refs/heads/*`]: ({ path }: RouteCall) => {
-			this.branches.delete(decodeURIComponent(FakeGitHub.route(path).slice('/git/refs/heads/'.length)));
+		[`DELETE ${BASE}/git/refs/heads/*`]: ({ path }) => {
+			this.branches.delete(decodeURIComponent(DesignSystemRepo.route(path).slice('/git/refs/heads/'.length)));
 			return null;
 		},
-		[`GET ${BASE}/pulls?*`]: ({ query }: RouteCall) => {
+		[`GET ${BASE}/pulls?*`]: ({ query }) => {
 			const head = query.get('head')?.split(':')[1];
 			return this.pulls.filter((p) => p.head === head && (query.get('state') === 'all' || p.state === (query.get('state') ?? 'open')));
 		},
-		[`GET ${BASE}/pulls/*`]: ({ path }: RouteCall) => {
-			const found = this.pulls.find((p) => p.number === Number(FakeGitHub.route(path).slice('/pulls/'.length)));
+		[`GET ${BASE}/pulls/*`]: ({ path }) => {
+			const found = this.pulls.find((p) => p.number === Number(DesignSystemRepo.route(path).slice('/pulls/'.length)));
 			if (!found) throw refusal(404);
 			return found;
 		},
-		[`POST ${BASE}/pulls`]: ({ body }: RouteCall) => {
+		[`POST ${BASE}/pulls`]: ({ body }) => {
 			const asked = body as Record<string, unknown>;
 			if (this.pulls.some((p) => p.head === asked.head && p.state === 'open')) throw refusal(422, 'A pull request already exists');
 			const made: Pull = {
@@ -141,7 +141,7 @@ class FakeGitHub {
 			this.pulls.push(made);
 			return made;
 		},
-		'*': ({ method, path }: RouteCall) => {
+		'*': ({ method, path }) => {
 			throw refusal(404, path.startsWith(BASE) ? `No stand-in for ${method} ${path}` : 'Not Found');
 		},
 	});
@@ -149,7 +149,7 @@ class FakeGitHub {
 
 let home: string;
 let memory: string;
-let gh: FakeGitHub;
+let gh: DesignSystemRepo;
 const NOW = () => new Date('2026-10-10T15:00:00Z');
 const make = (folder = '') => new VoiceAndToneFile({ repo: REPO, folder, github: gh.as('person'), file: memory, now: NOW });
 const writes = () => gh.asked.filter((a) => !/ GET /.test(a));
@@ -157,7 +157,7 @@ const writes = () => gh.asked.filter((a) => !/ GET /.test(a));
 beforeEach(() => {
 	home = mkdtempSync(join(tmpdir(), 'dsnr-voice-'));
 	memory = join(home, 'voice-branch.json');
-	gh = new FakeGitHub();
+	gh = new DesignSystemRepo();
 });
 afterEach(() => rmSync(home, { recursive: true, force: true }));
 

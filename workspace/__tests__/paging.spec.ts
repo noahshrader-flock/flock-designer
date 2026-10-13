@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { readPages } from '../src/host/paging';
-import { type RouteCall, fakeGitHub } from './fakes/github';
+import { fakeGitHub } from './fakes/github';
 
 /** A list of `total` items the host pages 100 at a time, keeping which pages were asked for, and how many at once. */
 const listOf = (total: number) => {
 	let running = 0;
 	let most = 0;
 	const host = fakeGitHub({
-		'/list*': async ({ query }: RouteCall) => {
+		'/list*': async ({ query }) => {
 			running++;
 			most = Math.max(most, running);
 			await new Promise((r) => setTimeout(r, 2));

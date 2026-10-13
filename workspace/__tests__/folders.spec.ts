@@ -9,7 +9,7 @@ import { assignFolder, recordPrototype, type RecordStore } from '../src/main/ser
 import { briefBody, briefFolder, firstHeading, folderName, foldersOf, inFolder, sameFolder, shownRecord, withFolder } from '../src/shared/brief';
 import { projectDir, projectPath } from '../src/shared/designPaths';
 import { mergeProjects } from '../src/shared/projectList';
-import { fakeGitHub } from './fakes/github';
+import { b64, fakeGitHub } from './fakes/github';
 import { memoryStore } from './fixtures';
 
 /**
@@ -117,7 +117,6 @@ describe('reading a project’s folder', () => {
 	});
 
 	it('is read from GitHub’s copy of the brief, in the same request as its title', async () => {
-		const b64 = (s: string) => Buffer.from(s, 'utf8').toString('base64');
 		const { github, api } = fakeGitHub({
 			'/repos/acme/design/contents/projects/alpha/brief.md*': { sha: 'f1', content: b64(FILED) },
 			'/repos/acme/design/contents/projects/alpha*': [{ type: 'file', name: 'brief.md' }],

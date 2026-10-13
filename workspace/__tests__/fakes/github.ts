@@ -14,6 +14,15 @@ import { HostError, type HostErrorKind } from '../../src/host/hostError';
  */
 export const refusal = (status: number | undefined, message = REASONS[status ?? 0] ?? `HTTP ${status}`, kind?: HostErrorKind): Error =>
 	new HostError(message, status, kind);
+/** A route that refuses every call it answers, as the host does with `status`. */
+export const refusing = (status: number, message?: string) => (): never => {
+	throw refusal(status, message);
+};
+/** A route for what is not there. */
+export const notFound = refusing(404);
+/** Text as the contents API carries it. */
+export const b64 = (text: string): string => Buffer.from(text, 'utf8').toString('base64');
+
 const REASONS: Record<number, string> = { 403: 'Forbidden', 404: 'Not Found', 409: 'Conflict', 422: 'Validation Failed' };
 
 /** One call, as the app made it. */
@@ -23,11 +32,14 @@ export interface HostCall {
 	body?: unknown;
 }
 
-/** A route's answer: a value, given as it is; or a function of the call, whose return (or throw, or rejection) is the answer. */
-export type Answer = unknown;
 /** A call as a route's function is given it: its query read out. */
 export type RouteCall = HostCall & { query: URLSearchParams };
 type Route = (call: RouteCall) => unknown;
+/**
+ * A route's answer: a function of the call, whose return (or throw, or rejection) is the answer; or a value, given as it
+ * is. Written as a union with the function first, so a route's function needs no type of its own for its call.
+ */
+export type Answer = Route | Record<string, unknown> | unknown[] | string | number | boolean | null;
 
 /**
  * A GitHub that answers from `routes`. A route is `'<path>'` or `'<METHOD> <path>'`: matched whole, query included, or,
