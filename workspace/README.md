@@ -207,6 +207,25 @@ called `cn`. After running it: `npm uninstall cn`, and change that import to `"@
 Styling is classes, not inline styles. The only two inline `style` props are runtime values Tailwind
 cannot express: the sidebar width a person has dragged to, and the position of the comment box.
 
+## DSGN, the VS Code extension
+
+DSNR is moving into VS Code as an extension, DSGN, which lives in `extension/` with its own manifest
+(`extension/package.json`, which VS Code reads for its icon, views and commands). For now it is the shell
+only: its icon in the activity bar, a panel with a Projects and Design System toggle, sample data, and no
+services. It is drawn in VS Code's own design language, with none of the app's shadcn components or
+Tailwind and no colour of its own (a test fails if one creeps in), so it follows every theme.
+
+```bash
+npm run extension:dev     # build it as you edit, in a VS Code window of its own
+npm run extension:build   # build it once, into extension/dist/
+```
+
+`extension:dev` opens a second VS Code window with DSGN loaded from here, on a throwaway profile in the
+temporary folder, so your own VS Code, its settings and its extensions are never touched. Saving a file
+rebuilds it: a change to the panel reloads it in place, and a change to the extension restarts it (both
+are said in View › Output › DSGN). Quit that window with ⌘Q to stop the build: on a Mac, closing its last
+window leaves it running.
+
 ## If the window shows "Invalid hook call" while developing
 
 Only under `npm run dev`, and never in a built app. Vite pre-bundles each package the first
