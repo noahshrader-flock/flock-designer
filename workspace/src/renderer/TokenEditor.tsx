@@ -141,7 +141,7 @@ const StepPicker = ({ token, target }: { token: DesignToken; target: DesignToken
 					value={s.path}
 					aria-label={nameOf(s)}
 					title={`${nameOf(s)} · ${s.value}`}
-					className="data-[state=on]:ring-ring h-auto w-9 flex-col gap-0.5 p-1 text-[10px] data-[state=on]:bg-transparent data-[state=on]:ring-2"
+					className="data-[state=on]:ring-ring h-auto w-9 flex-col gap-0.5 text-2xs p-1 data-[state=on]:bg-transparent data-[state=on]:ring-2"
 				>
 					<Swatch value={s.value} size="size-6" />
 					{s.name}

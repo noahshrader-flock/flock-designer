@@ -14,6 +14,7 @@ import { DropdownMenuItem } from '../ui/dropdown-menu';
 import type { AddressState } from './useAddress';
 import { ErrorAlert } from '../ErrorAlert';
 import { InlineAction } from '../Links';
+import { AgentLog } from '../Loading';
 
 /**
  * The comments, docked beside the preview and resizable: what went wrong, a route that did not load, where an Address
@@ -68,11 +69,7 @@ export const CommentsSidebar = ({
 								? 'The agent is working on that comment. The page is rebuilt and saved when it finishes.'
 								: 'The agent is working on that comment. The preview updates as it changes the code.'}
 						</p>
-						{log.length > 0 && (
-							<pre className="bg-background m-0 max-h-[140px] overflow-auto rounded-md border p-2 text-[11px] wrap-anywhere whitespace-pre-wrap">
-								{log.slice(-8).join('\n')}
-							</pre>
-						)}
+						<AgentLog lines={log.slice(-8)} size="sm" />
 					</>
 				)}
 				{address.kind === 'done' && (
@@ -88,14 +85,8 @@ export const CommentsSidebar = ({
 							) : (
 								'The agent finished without changing anything. What it says below is why — often the change is outside this iteration, or the comment needs a decision from you.'
 							)}
-							{log.length > 0 && (
-								<pre
-									className={`m-0 mt-2 overflow-auto text-[11px] wrap-anywhere whitespace-pre-wrap ${address.changed ? 'max-h-[200px]' : 'max-h-[320px]'}`}
-								>
-									{/* When nothing changed, what it said is the whole answer, so less of it is cut. */}
-									{log.slice(address.changed ? -25 : -60).join('\n')}
-								</pre>
-							)}
+							{/* When nothing changed, what it said is the whole answer, so less of it is cut. */}
+							<AgentLog lines={log.slice(address.changed ? -25 : -60)} size={address.changed ? 'md' : 'lg'} className="mt-2" />
 						</AlertDescription>
 					</Alert>
 				)}

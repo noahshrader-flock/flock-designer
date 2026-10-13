@@ -84,7 +84,7 @@ export const ResizablePanel = ({
 					setWidth(next);
 					savePanelWidth(next, panel);
 				}}
-				className={`relative w-px shrink-0 touch-none outline-none transition-colors after:absolute after:inset-y-0 after:left-0 after:w-[7px] after:cursor-col-resize after:content-[''] hover:bg-primary focus-visible:bg-primary ${
+				className={`relative w-px shrink-0 touch-none outline-none transition-colors after:absolute after:inset-y-0 after:left-0 after:w-1.75 after:cursor-col-resize after:content-[''] hover:bg-primary focus-visible:bg-primary ${
 					resizing ? 'bg-primary' : 'bg-border'
 				}`}
 			/>

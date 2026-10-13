@@ -44,7 +44,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 
 	if (state.state === 'awaitingDevice' && start) {
 		return (
-			<div className="w-full max-w-[520px] text-center">
+			<div className="w-full max-w-lg text-center">
 				<div className="flex flex-col gap-6">
 					<h1 className="text-2xl font-semibold">Enter this code on {HOST}</h1>
 
@@ -75,7 +75,7 @@ export const SignIn = ({ state, onChanged }: { state: SignInState; onChanged: ()
 	}
 
 	return (
-		<div className="w-full max-w-[460px] text-center">
+		<div className="w-full max-w-md text-center">
 			<div className="flex flex-col gap-6">
 				<h1 className="text-2xl font-semibold">DSNR</h1>
 				<p className="text-muted-foreground text-sm">

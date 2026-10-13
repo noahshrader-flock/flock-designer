@@ -186,7 +186,7 @@ const Commenting = ({
 			</PageBar>
 			{listOpen &&
 				createPortal(
-					<div className="bg-card flex h-full w-[360px] flex-col gap-4 overflow-y-auto border-l p-4">
+					<div className="bg-card flex h-full w-90 flex-col gap-4 overflow-y-auto border-l p-4">
 						<CommentsHeading comments={comments}>
 							<Button size="sm" variant="ghost" title="Forget the token kept in this browser" onClick={onSignOut}>
 								<LogOutIcon />

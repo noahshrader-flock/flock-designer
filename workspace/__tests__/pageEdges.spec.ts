@@ -45,7 +45,7 @@ describe('the edges of a screen', () => {
 		expect(document.querySelector('p')!.parentElement!.className).not.toContain('max-w');
 		await unmountAll(current.root);
 		current = await render(createElement(Page, null, createElement('p', null, 'x')));
-		expect(document.querySelector('p')!.parentElement!.className).toContain('max-w-[1400px]');
+		expect(document.querySelector('p')!.parentElement!.className).toContain('max-w-page');
 	});
 });
 

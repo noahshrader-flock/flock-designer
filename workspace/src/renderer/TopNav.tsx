@@ -74,7 +74,7 @@ export const TopNav = ({
 								{user.name ?? user.login}
 							</Button>
 						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end" className="min-w-[200px]">
+						<DropdownMenuContent align="end" className="min-w-50">
 							<div className="px-2 py-1.5">
 								<p className="text-sm font-medium">{user.name ?? user.login}</p>
 								<p className="text-muted-foreground text-xs">@{user.login}</p>

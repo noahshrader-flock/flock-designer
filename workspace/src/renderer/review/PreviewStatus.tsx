@@ -1,11 +1,14 @@
+import type { ReactNode } from 'react';
 import type { Checkout, Project, ProjectIteration } from '../../shared/contract';
 import { READY_LINE } from '../../shared/handoff';
 import type { BuildPhase } from '../localBuild';
-import { AgentLog, Loading } from '../Loading';
+import { AgentLog } from '../Loading';
 import type { useEditor } from '../useEditor';
 import { Button } from '../ui/button';
 import { ErrorAlert } from '../ErrorAlert';
 import { RetryButton } from '../Notice';
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '../ui/empty';
+import { Spinner } from '../ui/spinner';
 
 type Editor = ReturnType<typeof useEditor>;
 
@@ -35,9 +38,47 @@ export const PreviewStatus = (props: {
 	onSkipAgent: () => void;
 	onChoose: () => void;
 }) => (
-	<div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
+	<Empty className="absolute inset-0">
 		<Status {...props} />
-	</div>
+	</Empty>
+);
+
+/** What a state says: its title, and what to know, in shadcn's empty state. */
+const Says = ({ title, children, working }: { title: ReactNode; children?: ReactNode; working?: boolean }) => (
+	<EmptyHeader>
+		{working && (
+			<EmptyMedia>
+				<Spinner className="size-6" />
+			</EmptyMedia>
+		)}
+		<EmptyTitle>{title}</EmptyTitle>
+		{children && <EmptyDescription>{children}</EmptyDescription>}
+	</EmptyHeader>
+);
+
+/** Open the work in the person's editor, and carry on the agent's conversation there, when they can be. */
+const InEditor = ({ editor, takeOver }: { editor: Editor; takeOver?: (to: 'editor' | 'terminal' | null) => void }) => (
+	<>
+		{editor.available && (
+			<Button variant="secondary" onClick={() => void editor.openInEditor()}>
+				{editor.editor ? 'Open in VS Code' : 'Show in Finder'}
+			</Button>
+		)}
+		{editor.session &&
+			(takeOver ? (
+				<Button
+					variant="secondary"
+					title="Stops the agent here and continues the same conversation in VS Code"
+					onClick={() => void editor.continueInClaude().then(takeOver)}
+				>
+					Take over in Claude Code
+				</Button>
+			) : (
+				<Button variant="secondary" onClick={() => void editor.continueInClaude()}>
+					Continue in Claude Code
+				</Button>
+			))}
+	</>
 );
 
 const Status = ({
@@ -60,83 +101,80 @@ const Status = ({
 	if (handedOff)
 		return (
 			<>
-				<p className="text-sm">
-					{handedOff === 'editor'
-						? 'The conversation continues in VS Code.'
-						: 'The command to continue the conversation is copied: paste it into a terminal.'}
-				</p>
-				<p className="text-muted-foreground max-w-[480px] text-sm">When the work is done there, open the preview to see it here and share it.</p>
-				<Button
-					onClick={() => {
-						onHandedOff(null);
-						onSkipAgent();
-					}}
+				<Says
+					title={
+						handedOff === 'editor'
+							? 'The conversation continues in VS Code.'
+							: 'The command to continue the conversation is copied: paste it into a terminal.'
+					}
 				>
-					Open the preview
-				</Button>
+					When the work is done there, open the preview to see it here and share it.
+				</Says>
+				<EmptyContent>
+					<Button
+						onClick={() => {
+							onHandedOff(null);
+							onSkipAgent();
+						}}
+					>
+						Open the preview
+					</Button>
+				</EmptyContent>
 			</>
 		);
 	if (phase.kind === 'reported')
 		return (
 			<>
-				<p className="text-sm font-semibold">
-					{handoffReady === null ? 'Handoff finished' : handoffReady ? READY_LINE : 'Not ready for engineering yet'}
-				</p>
-				<p className="text-muted-foreground max-w-[480px] text-sm">
+				<Says title={handoffReady === null ? 'Handoff finished' : handoffReady ? READY_LINE : 'Not ready for engineering yet'}>
 					{handoffReady
 						? `HANDOFF.md is on ${iteration.branch}. Give the branch to an engineer when you are ready; nothing was pushed.`
 						: 'What the agent said is below: what it fixed, and what still stands in the way.'}
-				</p>
+				</Says>
 				<AgentLog lines={log} />
-				<div className="flex gap-2">
+				<EmptyContent className="flex-row justify-center">
 					{editor.session && (
 						<Button variant="secondary" onClick={() => void editor.continueInClaude()}>
 							Continue in Claude Code
 						</Button>
 					)}
 					<Button onClick={onSkipAgent}>Open the preview</Button>
-				</div>
+				</EmptyContent>
 			</>
 		);
 	if (phase.kind === 'failed' && !hosted.shown)
 		return (
 			<>
-				<ErrorAlert error={phase.message} className="max-w-[560px] text-left" />
+				<ErrorAlert error={phase.message} className="max-w-xl text-left" />
 				<AgentLog lines={log} />
-				<div className="flex gap-2">
-					{editor.available && (
-						<Button variant="secondary" onClick={() => void editor.openInEditor()}>
-							{editor.editor ? 'Open in VS Code' : 'Show in Finder'}
-						</Button>
-					)}
-					{editor.session && (
-						<Button variant="secondary" onClick={() => void editor.continueInClaude()}>
-							Continue in Claude Code
-						</Button>
-					)}
+				<EmptyContent className="flex-row justify-center">
+					<InEditor editor={editor} />
 					<RetryButton onClick={onRetry} />
-				</div>
+				</EmptyContent>
 			</>
 		);
-	if (error) return <ErrorAlert error={error} className="max-w-[560px] text-left" />;
+	if (error) return <ErrorAlert error={error} className="max-w-xl text-left" />;
 	if (hosted.shown && !hosted.up)
 		return (
 			<>
-				<Loading>This preview is still being built.</Loading>
-				<p className="text-muted-foreground max-w-[480px] text-sm">
+				<Says working title="This preview is still being built.">
 					It opens here by itself as soon as it is ready. A new share takes a few minutes.
-				</p>
-				<Button variant="secondary" onClick={hosted.openAnyway}>
-					Open it anyway
-				</Button>
+				</Says>
+				<EmptyContent>
+					<Button variant="secondary" onClick={hosted.openAnyway}>
+						Open it anyway
+					</Button>
+				</EmptyContent>
 			</>
 		);
 	if (!prototype && !iteration.previewUrl && !checkout)
 		return (
 			<>
-				<p className="text-sm">DSNR needs the product repository to show this.</p>
-				<p className="text-muted-foreground text-sm">It could not find one on this machine. Point it at your product repository once.</p>
-				<Button onClick={onChoose}>Find it</Button>
+				<Says title="DSNR needs the product repository to show this.">
+					It could not find one on this machine. Point it at your product repository once.
+				</Says>
+				<EmptyContent>
+					<Button onClick={onChoose}>Find it</Button>
+				</EmptyContent>
 			</>
 		);
 	const handingOff = phase.kind === 'agent' && phase.handoff === true;
@@ -151,34 +189,25 @@ const Status = ({
 					: 'Opening the preview…';
 	return (
 		<>
-			<Loading>{doing}</Loading>
+			<Says working title={doing}>
+				{phase.kind === 'agent'
+					? handingOff
+						? 'The agent is running the full check, both reviews and the fixes they call for. This takes a while.'
+						: 'The agent is writing it from your request. This takes a few minutes.'
+					: phase.kind === 'preview' && !prototype
+						? 'The first time can take a minute.'
+						: undefined}
+			</Says>
 			{phase.kind === 'agent' && (
 				<>
-					<p className="text-muted-foreground max-w-[480px] text-sm">
-						{handingOff
-							? 'The agent is running the full check, both reviews and the fixes they call for. This takes a while.'
-							: 'The agent is writing it from your request. This takes a few minutes.'}
-					</p>
 					<AgentLog lines={log} />
 					{editor.available && (
-						<div className="flex gap-2">
-							<Button variant="secondary" onClick={() => void editor.openInEditor()}>
-								{editor.editor ? 'Open in VS Code' : 'Show in Finder'}
-							</Button>
-							{editor.session && (
-								<Button
-									variant="secondary"
-									title="Stops the agent here and continues the same conversation in VS Code"
-									onClick={() => void editor.continueInClaude().then(onHandedOff)}
-								>
-									Take over in Claude Code
-								</Button>
-							)}
-						</div>
+						<EmptyContent className="flex-row justify-center">
+							<InEditor editor={editor} takeOver={onHandedOff} />
+						</EmptyContent>
 					)}
 				</>
 			)}
-			{phase.kind === 'preview' && !prototype && <p className="text-muted-foreground text-sm">The first time can take a minute.</p>}
 		</>
 	);
 };

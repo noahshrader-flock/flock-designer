@@ -33,7 +33,7 @@ export const CommentBox = ({
 				// Cmd or Ctrl and Enter saves, as in the tools people already use. Escape is the screen's, as everywhere.
 				if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void comments.post();
 			}}
-			className="bg-popover fixed z-[1101] w-[300px] max-w-[calc(100vw-16px)] rounded-lg border p-4 shadow-lg"
+			className="bg-popover fixed z-[1101] w-75 max-w-[calc(100vw-16px)] rounded-lg border p-4 shadow-lg"
 			// Inline on purpose: measured from the pin.
 			style={{ top: origin.top + comments.pendingAt.y + BOX_OFFSET.y, left: origin.left + comments.pendingAt.x + BOX_OFFSET.x }}
 		>

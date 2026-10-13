@@ -99,6 +99,16 @@
 	--color-success: var(--success);
 }
 
+/*
+ * Sizes the scale does not have, named once: the smallest text (an agent's log, a swatch tile's step), and how wide a
+ * page grows before it centers.
+ */
+@theme {
+	--text-2xs: 0.6875rem;
+	--text-2xs--line-height: 1rem;
+	--container-page: 87.5rem;
+}
+
 @layer base {
 	* {
 		@apply border-border outline-ring/50;
