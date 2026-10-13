@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newNonce, panelHtml } from '../extension/src/html';
 
 /**
- * The page DSGN's panel loads (Phase 0.2), as tight as VS Code's webview guidance asks: nothing loads unless named, the
+ * The page DSNR's panel loads (Phase 0.2), as tight as VS Code's webview guidance asks: nothing loads unless named, the
  * one script runs by its nonce, and what it may load comes from the extension's own build only.
  */
 

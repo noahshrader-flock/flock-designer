@@ -3,7 +3,7 @@ import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * DSGN is drawn in VS Code's own design language (ELECTRON_MIGRATION_PLAN, §1.4, decision 6): none of the app's shadcn
+ * DSNR is drawn in VS Code's own design language (ELECTRON_MIGRATION_PLAN, §1.4, decision 6): none of the app's shadcn
  * components or Tailwind, and no colour of its own, only VS Code's theme variables, so it follows every theme, high
  * contrast included.
  */

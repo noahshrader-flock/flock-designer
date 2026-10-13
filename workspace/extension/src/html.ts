@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 
 /**
- * The page DSGN's panel loads, as tight as VS Code's webview guidance asks: nothing loads unless named here, the one
+ * The page DSNR's panel loads, as tight as VS Code's webview guidance asks: nothing loads unless named here, the one
  * script runs by a nonce made for this page, and styles, fonts and pictures come only from the extension's own build
  * (`cspSource`, which is VS Code's name for it). No `vscode` import, so it is tested as plain text.
  */
@@ -33,7 +33,7 @@ export const panelHtml = ({
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="${codicons}">
 <link rel="stylesheet" href="${style}">
-<title>DSGN</title>
+<title>DSNR</title>
 </head>
 <body>
 <div id="root"></div>

@@ -1,6 +1,6 @@
 {
-	"name": "dsgn",
-	"displayName": "DSGN",
+	"name": "dsnr",
+	"displayName": "DSNR",
 	"description": "Prototype from the real design system, beside the code.",
 	"version": "0.0.1",
 	"publisher": "flocksafety",
@@ -17,25 +17,25 @@
 		"viewsContainers": {
 			"activitybar": [
 				{
-					"id": "dsgn",
-					"title": "DSGN",
-					"icon": "media/dsgn.svg"
+					"id": "dsnr",
+					"title": "DSNR",
+					"icon": "media/dsnr.svg"
 				}
 			]
 		},
 		"views": {
-			"dsgn": [
+			"dsnr": [
 				{
 					"type": "webview",
-					"id": "dsgn.panel",
-					"name": "DSGN"
+					"id": "dsnr.panel",
+					"name": "DSNR"
 				}
 			]
 		},
 		"commands": [
 			{
-				"command": "dsgn.open",
-				"title": "DSGN: Open"
+				"command": "dsnr.open",
+				"title": "DSNR: Open"
 			}
 		]
 	}

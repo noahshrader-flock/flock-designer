@@ -18,14 +18,14 @@ const byGroup = (components: CatalogComponent[]): [string, CatalogComponent[]][]
 
 /**
  * The Design System tab: the components under a section for each group, and the tokens last. With no design system found,
- * what DSGN looked for and where (ELECTRON_MIGRATION_PLAN, §1.6).
+ * what DSNR looked for and where (ELECTRON_MIGRATION_PLAN, §1.6).
  */
 export const DesignSystem = ({ system }: { system: SampleDesignSystem | null }) => {
 	if (!system)
 		return (
 			<EmptyState icon="symbol-color" title="No design system found">
 				<p>
-					DSGN looks in the folders open in this window for a design system: the one the product names in its <code>.dsnr/workspace.json</code>, or
+					DSNR looks in the folders open in this window for a design system: the one the product names in its <code>.dsnr/workspace.json</code>, or
 					any folder with stories or tokens.
 				</p>
 				<Button onClick={() => vscode().postMessage({ type: 'locate-design-system' })}>Locate design system…</Button>

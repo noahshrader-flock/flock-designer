@@ -5,7 +5,7 @@ import { Panel } from '../extension/webview/Panel';
 import type { PanelData } from '../extension/webview/Panel';
 
 /**
- * DSGN's panel (Phase 0.4 and 0.5): the Projects and Design System toggle at its very top, which the person moves with a
+ * DSNR's panel (Phase 0.4 and 0.5): the Projects and Design System toggle at its very top, which the person moves with a
  * click or the arrow keys, and which keeps its choice when the panel reloads (VS Code's webview state).
  */
 
@@ -148,11 +148,11 @@ describe('Design System', () => {
 		expect(buttons.getAttribute('aria-expanded')).toBe('true');
 	});
 
-	it('says, when there is no design system, what DSGN looked for and where', async () => {
+	it('says, when there is no design system, what DSNR looked for and where', async () => {
 		await open({ designSystem: null });
 		const empty = document.querySelector('[data-tab-body="design-system"] .empty') as HTMLElement;
 		expect(empty.querySelector('[data-part="title"]')?.textContent).toBe('No design system found');
-		expect(empty.textContent).toContain('DSGN looks in the folders open in this window');
+		expect(empty.textContent).toContain('DSNR looks in the folders open in this window');
 		expect(headers()).toEqual([]);
 	});
 });

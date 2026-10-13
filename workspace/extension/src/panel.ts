@@ -5,7 +5,7 @@ import { newNonce, panelHtml } from './html';
 import { readMessage, replyTo } from './messages';
 
 /**
- * DSGN's panel in the side bar: a webview of the extension's own build, allowed to load from its `dist/` folder and
+ * DSNR's panel in the side bar: a webview of the extension's own build, allowed to load from its `dist/` folder and
  * nowhere else (Phase 0.2). Run from its source (`development`), it follows its own build: a rebuilt page reloads the
  * panel, which keeps its place, and a rebuilt extension restarts the extension host (Phase 0.3).
  */
@@ -13,7 +13,7 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 	constructor(
 		private readonly extensionUri: vscode.Uri,
 		private readonly development: boolean,
-		/** Where a run from source says what it did: View › Output › DSGN. */
+		/** Where a run from source says what it did: View › Output › DSNR. */
 		private readonly log?: vscode.LogOutputChannel,
 	) {}
 

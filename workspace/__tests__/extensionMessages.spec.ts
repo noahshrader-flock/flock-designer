@@ -16,7 +16,7 @@ describe('a message from the panel', () => {
 	});
 
 	it('is answered, until what it asks for is built, by saying so', () => {
-		expect(replyTo({ type: 'new-prototype' })).toBe('Starting a prototype from DSGN is not built yet.');
-		expect(replyTo({ type: 'locate-design-system' })).toBe('Locating a design system from DSGN is not built yet.');
+		expect(replyTo({ type: 'new-prototype' })).toBe('Starting a prototype from DSNR is not built yet.');
+		expect(replyTo({ type: 'locate-design-system' })).toBe('Locating a design system from DSNR is not built yet.');
 	});
 });

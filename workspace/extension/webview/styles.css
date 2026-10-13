@@ -1,5 +1,5 @@
 /*
- * DSGN's panel, in VS Code's own design language: every colour and font comes from the theme, so the panel follows
+ * DSNR's panel, in VS Code's own design language: every colour and font comes from the theme, so the panel follows
  * whatever theme is chosen, high contrast included. No colour is written here.
  *
  * The tokens are our own names for what more than one part of the panel shares, each defined from VS Code's theme, so the
@@ -7,15 +7,15 @@
  * badge's, the button's, a section header's) is used by that part directly: a token for it would only rename it.
  */
 :root {
-	--dsgn-track: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
-	--dsgn-raised: var(--vscode-editor-background);
-	--dsgn-muted: var(--vscode-descriptionForeground);
+	--dsnr-track: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
+	--dsnr-raised: var(--vscode-editor-background);
+	--dsnr-muted: var(--vscode-descriptionForeground);
 	/* Drawn only in high contrast, where VS Code sets it: a border nothing else needs. */
-	--dsgn-contrast-border: var(--vscode-contrastBorder, transparent);
-	--dsgn-focus: 1px solid var(--vscode-focusBorder);
-	--dsgn-radius: 6px;
-	--dsgn-radius-inner: 4px;
-	--dsgn-radius-small: 2px;
+	--dsnr-contrast-border: var(--vscode-contrastBorder, transparent);
+	--dsnr-focus: 1px solid var(--vscode-focusBorder);
+	--dsnr-radius: 6px;
+	--dsnr-radius-inner: 4px;
+	--dsnr-radius-small: 2px;
 }
 
 body {
@@ -51,9 +51,9 @@ body {
 	grid-auto-flow: column;
 	gap: 2px;
 	padding: 2px;
-	border: 1px solid var(--dsgn-contrast-border);
-	border-radius: var(--dsgn-radius);
-	background: var(--dsgn-track);
+	border: 1px solid var(--dsnr-contrast-border);
+	border-radius: var(--dsnr-radius);
+	background: var(--dsnr-track);
 }
 
 .toggle-option {
@@ -65,8 +65,8 @@ body {
 	height: 26px;
 	padding: 0 8px;
 	border: 1px solid transparent;
-	border-radius: var(--dsgn-radius-inner);
-	color: var(--dsgn-muted);
+	border-radius: var(--dsnr-radius-inner);
+	color: var(--dsnr-muted);
 	background: transparent;
 	font: inherit;
 	white-space: nowrap;
@@ -80,11 +80,11 @@ body {
 .toggle-option[aria-checked='true'] {
 	border-color: var(--vscode-contrastActiveBorder, transparent);
 	color: var(--vscode-foreground);
-	background: var(--dsgn-raised);
+	background: var(--dsnr-raised);
 }
 
 .toggle-option:focus-visible {
-	outline: var(--dsgn-focus);
+	outline: var(--dsnr-focus);
 	outline-offset: -1px;
 }
 
@@ -131,7 +131,7 @@ body {
 }
 
 .row-meta {
-	color: var(--dsgn-muted);
+	color: var(--dsnr-muted);
 	font-size: 0.92em;
 }
 
@@ -140,8 +140,8 @@ body {
 	flex-shrink: 0;
 	width: 48px;
 	aspect-ratio: 16 / 9;
-	border: 1px solid var(--vscode-widget-border, var(--dsgn-contrast-border));
-	border-radius: var(--dsgn-radius-small);
+	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius-small);
 	background: var(--vscode-editorWidget-background);
 }
 
@@ -150,7 +150,7 @@ body {
 	flex-shrink: 0;
 	min-width: 18px;
 	padding: 0 5px;
-	border: 1px solid var(--dsgn-contrast-border);
+	border: 1px solid var(--dsnr-contrast-border);
 	border-radius: 9px;
 	color: var(--vscode-badge-foreground);
 	background: var(--vscode-badge-background);
@@ -181,7 +181,7 @@ body {
 }
 
 .section-header:focus-visible {
-	outline: var(--dsgn-focus);
+	outline: var(--dsnr-focus);
 	outline-offset: -1px;
 }
 
@@ -195,7 +195,7 @@ body {
 }
 
 .section-count {
-	color: var(--dsgn-muted);
+	color: var(--dsnr-muted);
 	font-weight: 400;
 }
 
@@ -207,7 +207,7 @@ body {
 /* A view with nothing to show: VS Code's welcome text, left-aligned. */
 .empty {
 	padding: 4px 12px;
-	color: var(--dsgn-muted);
+	color: var(--dsnr-muted);
 }
 
 .empty-title {
@@ -236,7 +236,7 @@ body {
 	margin: 4px 0 8px;
 	padding: 4px;
 	border: 1px solid var(--vscode-button-border, transparent);
-	border-radius: var(--dsgn-radius-small);
+	border-radius: var(--dsnr-radius-small);
 	color: var(--vscode-button-foreground);
 	background: var(--vscode-button-background);
 	font: inherit;
@@ -250,6 +250,6 @@ body {
 }
 
 .button:focus-visible {
-	outline: var(--dsgn-focus);
+	outline: var(--dsnr-focus);
 	outline-offset: 2px;
 }

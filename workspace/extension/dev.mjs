@@ -1,8 +1,8 @@
 /**
- * `npm run extension:dev`: DSGN from its source, in a VS Code window of its own, rebuilt as it is edited.
+ * `npm run extension:dev`: DSNR from its source, in a VS Code window of its own, rebuilt as it is edited.
  *
  * Builds the extension and its page in watch mode, then opens an Extension Development Host (a second VS Code window with
- * DSGN loaded from here) on a throwaway profile in the system's temporary folder, so the person's own VS Code, its
+ * DSNR loaded from here) on a throwaway profile in the system's temporary folder, so the person's own VS Code, its
  * settings and its extensions are never touched. The profile is kept between runs, so the panel stays where it was put.
  * Its path is short on purpose: VS Code keeps a socket in it, and a socket's path may be no longer than 103 characters.
  *
@@ -16,7 +16,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const profile = join(tmpdir(), 'dsgn-dev');
+const profile = join(tmpdir(), 'dsnr-dev');
 
 /** VS Code: `CODE_BIN` when set, the macOS app where it is usually installed, or `code` on the PATH. */
 const vscode = () => {
@@ -29,7 +29,7 @@ const build = spawn(process.execPath, [join(here, 'build.mjs'), '--watch'], { st
 let opened = false;
 build.stdout.on('data', (chunk) => {
 	process.stdout.write(chunk);
-	if (opened || !String(chunk).includes('dsgn: watching')) return;
+	if (opened || !String(chunk).includes('dsnr: watching')) return;
 	opened = true;
 	// Editors are Electron apps and may export this, which would make VS Code start as plain Node.
 	const env = { ...process.env };
@@ -47,15 +47,15 @@ build.stdout.on('data', (chunk) => {
 		{ stdio: 'ignore', env },
 	);
 	window.on('error', (err) => {
-		console.error(`dsgn: VS Code did not start (${err.message}). Set CODE_BIN to its path.`);
+		console.error(`dsnr: VS Code did not start (${err.message}). Set CODE_BIN to its path.`);
 		build.kill();
 		process.exit(1);
 	});
 	window.on('exit', () => {
-		console.log('dsgn: the window closed; stopping the build');
+		console.log('dsnr: the window closed; stopping the build');
 		build.kill();
 	});
-	console.log(`dsgn: opened VS Code with DSGN (profile ${profile})`);
+	console.log(`dsnr: opened VS Code with DSNR (profile ${profile})`);
 });
 build.on('exit', (code) => process.exit(code ?? 0));
 process.on('SIGINT', () => build.kill());

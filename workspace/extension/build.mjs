@@ -1,5 +1,5 @@
 /**
- * Builds DSGN: the extension's own code for VS Code (Node, with `vscode` left to VS Code), and its panel's page (the
+ * Builds DSNR: the extension's own code for VS Code (Node, with `vscode` left to VS Code), and its panel's page (the
  * browser), each into one file under `dist/`, with the codicons beside them. `--watch` rebuilds on every change and says
  * when it has.
  *
@@ -23,8 +23,8 @@ const report = (name) => ({
 	name: 'report',
 	setup: (build) =>
 		build.onEnd((result) => {
-			console.log(result.errors.length ? `dsgn: ${name} failed (${result.errors.length} errors)` : `dsgn: ${name} built`);
-			if (watch && waiting.delete(name) && waiting.size === 0) console.log('dsgn: watching for changes');
+			console.log(result.errors.length ? `dsnr: ${name} failed (${result.errors.length} errors)` : `dsnr: ${name} built`);
+			if (watch && waiting.delete(name) && waiting.size === 0) console.log('dsnr: watching for changes');
 		}),
 });
 

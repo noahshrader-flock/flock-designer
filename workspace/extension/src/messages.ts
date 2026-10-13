@@ -17,4 +17,4 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 
 /** What the person is told, until what the message asks for is built (Phases 3 and 4 of the plan). */
 export const replyTo = (message: PanelMessage): string =>
-	message.type === 'new-prototype' ? 'Starting a prototype from DSGN is not built yet.' : 'Locating a design system from DSGN is not built yet.';
+	message.type === 'new-prototype' ? 'Starting a prototype from DSNR is not built yet.' : 'Locating a design system from DSNR is not built yet.';

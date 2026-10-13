@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * DSGN, the VS Code extension (ELECTRON_MIGRATION_PLAN, Phase 0): what VS Code reads from its manifest to put it in the
+ * DSNR, the VS Code extension (ELECTRON_MIGRATION_PLAN, Phase 0): what VS Code reads from its manifest to put it in the
  * activity bar. The manifest is the extension's own, not the app's: VS Code takes the icon, the views and the commands
  * from it, and the app's `package.json` describes an Electron app.
  */
@@ -23,15 +23,15 @@ interface Manifest {
 const manifest = (): Manifest => JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as Manifest;
 
 describe('the extension’s manifest', () => {
-	it('is DSGN, with a minimum VS Code and its built entry point', () => {
+	it('is DSNR, with a minimum VS Code and its built entry point', () => {
 		const m = manifest();
-		expect([m.name, m.displayName, m.main]).toEqual(['dsgn', 'DSGN', './dist/extension.js']);
+		expect([m.name, m.displayName, m.main]).toEqual(['dsnr', 'DSNR', './dist/extension.js']);
 		expect(m.engines.vscode).toMatch(/^\^1\.\d+\.0$/);
 	});
 
-	it('puts one container in the activity bar, titled DSGN, with an icon that is there', () => {
+	it('puts one container in the activity bar, titled DSNR, with an icon that is there', () => {
 		const { activitybar } = manifest().contributes.viewsContainers;
-		expect(activitybar.map((c) => [c.id, c.title])).toEqual([['dsgn', 'DSGN']]);
+		expect(activitybar.map((c) => [c.id, c.title])).toEqual([['dsnr', 'DSNR']]);
 		expect(existsSync(join(root, activitybar[0]!.icon))).toBe(true);
 	});
 
@@ -42,10 +42,10 @@ describe('the extension’s manifest', () => {
 	});
 
 	it('has one view in it, a webview: without that type VS Code draws a static placeholder', () => {
-		expect(manifest().contributes.views).toEqual({ dsgn: [{ type: 'webview', id: 'dsgn.panel', name: 'DSGN' }] });
+		expect(manifest().contributes.views).toEqual({ dsnr: [{ type: 'webview', id: 'dsnr.panel', name: 'DSNR' }] });
 	});
 
 	it('has the one command, to open it', () => {
-		expect(manifest().contributes.commands).toEqual([{ command: 'dsgn.open', title: 'DSGN: Open' }]);
+		expect(manifest().contributes.commands).toEqual([{ command: 'dsnr.open', title: 'DSNR: Open' }]);
 	});
 });

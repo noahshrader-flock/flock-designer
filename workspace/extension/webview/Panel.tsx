@@ -18,7 +18,7 @@ export interface PanelData {
 }
 
 /**
- * DSGN's panel: the Projects and Design System toggle at its very top, and under it the one chosen. The choice is kept in
+ * DSNR's panel: the Projects and Design System toggle at its very top, and under it the one chosen. The choice is kept in
  * VS Code's state for the panel, so a reload (or the panel being hidden and shown) leaves it where it was.
  */
 
