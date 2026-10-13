@@ -604,6 +604,11 @@ textarea.input {
 	background: var(--vscode-toolbar-hoverBackground);
 }
 
+/* The hover tint is see-through, so over a picture it is laid on the widget's solid colour, not on the picture. */
+.card-item .menu-button:hover {
+	background: linear-gradient(var(--vscode-toolbar-hoverBackground), var(--vscode-toolbar-hoverBackground)), var(--vscode-editorWidget-background);
+}
+
 .menu-button:focus-visible {
 	outline: var(--dsnr-focus);
 	outline-offset: -1px;

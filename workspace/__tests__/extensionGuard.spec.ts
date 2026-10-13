@@ -44,4 +44,15 @@ describe('the extension’s sources', () => {
 			);
 		expect(said).toEqual([]);
 	});
+
+	it('keep a card’s ellipsis button opaque on hover: it is over a picture, and the toolbar’s hover colour is see-through', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const rule = (selector: string) => css.split('}').find((block) => block.trim().startsWith(selector)) ?? '';
+		// The tint is a layer over the widget's own colour, which is solid; a plain tint would let the picture through.
+		expect(rule('.card-item .menu-button:hover')).toMatch(
+			/background:\s*linear-gradient\(var\(--vscode-toolbar-hoverBackground\),\s*var\(--vscode-toolbar-hoverBackground\)\),\s*var\(--vscode-editorWidget-background\)/,
+		);
+	});
 });
