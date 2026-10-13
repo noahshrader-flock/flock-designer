@@ -28,8 +28,6 @@ beforeEach(() => {
 	work = join(dir, 'work');
 	execFileSync('git', ['init', '-q', '--bare', '-b', 'develop', remote]);
 	execFileSync('git', ['init', '-q', '-b', 'develop', work]);
-	g(work, 'config', 'user.email', 'test@example.test');
-	g(work, 'config', 'user.name', 'Test');
 	writeFileSync(join(work, 'a.txt'), 'one\n');
 	g(work, 'add', '.');
 	g(work, 'commit', '-q', '-m', 'first');

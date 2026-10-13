@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Project, ProjectIteration } from '../src/shared/contract';
+import type { ProjectIteration } from '../src/shared/contract';
 import { type BuildApi, type BuildPhase, previewAddress, previewCommandFor, routeWentWrong, runLocalBuild } from '../src/renderer/localBuild';
-import { agentFinished, agentRunning, projectIteration } from './fixtures';
+import { agentFinished, agentRunning, aProject, projectIteration } from './fixtures';
 
 const iteration = (over: Partial<ProjectIteration> = {}): ProjectIteration => projectIteration({ name: 'i1', branch: 'fd/users/i1', ...over });
-const project: Project = { id: 'users', title: 'Users', folder: null, records: [], iterations: [], people: [] };
+const project = aProject({ id: 'users', title: 'Users' });
 
 /** A workspace that does what a healthy one does, with any step overridable. */
 const api = (over: Partial<Record<keyof BuildApi, unknown>> = {}) => {

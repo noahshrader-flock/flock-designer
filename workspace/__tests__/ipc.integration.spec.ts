@@ -382,8 +382,8 @@ describe('the Design System tab', () => {
 
 	describe('connecting one (P4)', () => {
 		const commitAll = (d: string) => {
-			g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'add', '.');
-			g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'first');
+			g(d, 'add', '.');
+			g(d, 'commit', '-q', '-m', 'first');
 		};
 		/** A repository on GitHub, as a bare one here, with these files on its default branch. */
 		const repository = (name: string, files: Record<string, string>, branch = 'develop') =>
@@ -564,8 +564,8 @@ describe('where clones go', () => {
 					mkdirSync(join(d, 'projects'), { recursive: true });
 					writeFileSync(join(d, 'projects', '.keep'), '');
 					g(d, 'init', '-q', '-b', 'main');
-					g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'add', '.');
-					g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'records');
+					g(d, 'add', '.');
+					g(d, 'commit', '-q', '-m', 'records');
 				}),
 			};
 			await elsewhere();
@@ -598,15 +598,14 @@ describe('where clones go', () => {
 		/** A repository like Coke: `develop` (its default) without the setup, and a branch with it. */
 		const likeCoke = (d: string) => {
 			mkdirSync(d, { recursive: true });
-			const c = (...a: string[]) => g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', ...a);
 			g(d, 'init', '-q', '-b', 'develop');
 			writeFileSync(join(d, 'README.md'), '# coke\n');
-			c('add', '.');
-			c('commit', '-q', '-m', 'first');
+			g(d, 'add', '.');
+			g(d, 'commit', '-q', '-m', 'first');
 			g(d, 'checkout', '-q', '-b', 'noah/flock-designer');
 			makeProductFiles(d);
-			c('add', '.');
-			c('commit', '-q', '-m', 'setup');
+			g(d, 'add', '.');
+			g(d, 'commit', '-q', '-m', 'setup');
 			g(d, 'checkout', '-q', 'develop');
 		};
 		const designBeside = () =>
@@ -665,8 +664,8 @@ describe('where clones go', () => {
 					mkdirSync(d, { recursive: true });
 					writeFileSync(join(d, 'README.md'), '# plain\n');
 					g(d, 'init', '-q', '-b', 'develop');
-					g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'add', '.');
-					g(d, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'first');
+					g(d, 'add', '.');
+					g(d, 'commit', '-q', '-m', 'first');
 				}),
 			};
 			designBeside();
@@ -2086,7 +2085,7 @@ describe('Handoff', () => {
 	const commitHandoff = () => {
 		writeFileSync(join(product, 'HANDOFF.md'), '# Handoff\n');
 		g(product, 'add', 'HANDOFF.md');
-		g(product, '-c', 'user.name=t', '-c', 'user.email=t@x', 'commit', '-q', '-m', 'handoff');
+		g(product, 'commit', '-q', '-m', 'handoff');
 	};
 
 	it("starts the shared skill on the work's own branch, tagged as a Handoff, and says when the product names no gate", async () => {
@@ -2129,7 +2128,7 @@ describe('Handoff', () => {
 		recent = { work: 'feature/demo', lines: ['Fixed it.', '**Ready for engineering**', 'The gate passes.'] };
 		expect((await call(CHANNELS.handoffResult, product)).value).toBe(false);
 		writeFileSync(join(product, 'HANDOFF.md'), '# Handoff, rewritten\n');
-		g(product, '-c', 'user.name=t', '-c', 'user.email=t@x', 'commit', '-q', '-am', 'handoff again');
+		g(product, 'commit', '-q', '-am', 'handoff again');
 		expect((await call(CHANNELS.handoffResult, product)).value).toBe(true);
 	});
 });

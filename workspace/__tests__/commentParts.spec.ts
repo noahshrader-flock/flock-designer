@@ -8,6 +8,7 @@ import type { CommentStore, PageSurface } from '../src/renderer/comments/surface
 import { useComments } from '../src/renderer/comments/useComments';
 import type { CommentAnchor, MarkerRequest, PinEvent, ReviewComment } from '../src/shared/contract';
 import { button, cards, comment, menuItem, ok, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
+import { anAnchor } from './fixtures';
 
 /**
  * The comments experience on its own, through a store and a page that are not the app's: what a prototype's own page
@@ -59,7 +60,7 @@ const fakes = (initial: ReviewComment[]) => {
 		click: (anchor: Partial<CommentAnchor> = {}) =>
 			clicked?.(
 				ok({
-					anchor: { route: '/', selector: '#hero', nearbyText: 'Hero', viewport: { width: 1, height: 1 }, commit: '', ...anchor },
+					anchor: anAnchor({ selector: '#hero', nearbyText: 'Hero', ...anchor }),
 					at: { x: 5, y: 5 },
 					box: null,
 					picture: null,

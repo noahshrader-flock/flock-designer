@@ -38,7 +38,7 @@ const write = (root: string, files: Record<string, string>) => {
 };
 const commit = (root: string, message: string) => {
 	g(root, 'add', '-A');
-	g(root, '-c', 'user.name=T', '-c', 'user.email=t@example.com', 'commit', '-q', '-m', message);
+	g(root, 'commit', '-q', '-m', message);
 };
 const pushDevelop = (files: Record<string, string>, message = 'change') => {
 	write(upstream, files);
@@ -323,7 +323,7 @@ describe('reading the library’s files exactly', () => {
 				writeFileSync(join(dir, path), text);
 			}
 			g(dir, 'add', '-A');
-			g(dir, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'files');
+			g(dir, 'commit', '-q', '-m', 'files');
 			const reads = libraryReads(dir, 'develop');
 			// Listing reads every story in one batch; the theme file is read on its own.
 			await reads.listFiles('');

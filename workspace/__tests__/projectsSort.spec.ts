@@ -3,12 +3,12 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Projects } from '../src/renderer/Projects';
 import type { Project } from '../src/shared/contract';
+import { aProject } from './fixtures';
 import { button, fakeApp, ok, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
 /** Ordering the Projects screen: a dropdown beside the search, last updated first unless it is changed. */
 
-const project = (id: string, title: string, updatedAt: string | null): Project =>
-	({ id, title, records: [], iterations: [], people: [], updatedAt }) as unknown as Project;
+const project = (id: string, title: string, updatedAt: string | null): Project => aProject({ id, title, updatedAt });
 const PROJECTS = [
 	project('banana', 'Banana', '2026-10-05T00:00:00Z'),
 	project('cherry', 'Cherry', '2026-10-08T00:00:00Z'),

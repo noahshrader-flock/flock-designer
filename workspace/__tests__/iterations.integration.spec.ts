@@ -34,8 +34,6 @@ beforeEach(() => {
 	root = mkdtempSync(join(tmpdir(), 'fdw-iter-'));
 	records = mkdtempSync(join(tmpdir(), 'fdw-records-'));
 	g('init', '-q', '-b', 'develop');
-	g('config', 'user.email', 'test@example.test');
-	g('config', 'user.name', 'Test');
 	writeFileSync(join(root, 'README.md'), '# repo\n');
 	g('add', '.');
 	g('commit', '-q', '-m', 'first');

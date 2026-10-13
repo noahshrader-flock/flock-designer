@@ -1,4 +1,4 @@
-import { agentFinished, agentRunning } from './fixtures';
+import { agentFinished, agentRunning, anAnchor } from './fixtures';
 // @vitest-environment jsdom
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -675,7 +675,7 @@ describe('the prototype’s states', () => {
 	});
 
 	it('name the state a comment was made in, on its card, and nothing for the first', async () => {
-		const anchor = { route: '/', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
+		const anchor = anAnchor();
 		const app = fakeApp({
 			openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1/', states: ['default', 'panel'] }),
 			readComments: async () =>
@@ -695,7 +695,7 @@ describe('the prototype’s states', () => {
 	});
 
 	describe('a comment made in another of them', () => {
-		const anchor = { route: '/', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
+		const anchor = anAnchor();
 		// As the page says on this view: made in another state, so not drawn.
 		const elsewhere = (madeIn: string) =>
 			fakeApp({

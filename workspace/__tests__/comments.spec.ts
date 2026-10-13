@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, resolvedComments, sameComments } from '../src/shared/comments';
 import type { CommentAnchor, ReviewComment } from '../src/shared/contract';
-import { reviewComment } from './fixtures';
+import { anAnchor, reviewComment } from './fixtures';
 
 const c = (id: number, over: Partial<ReviewComment> = {}): ReviewComment =>
 	reviewComment({ id, author: 'a', body: `c${id}`, createdAt: `2026-10-05T10:${String(id).padStart(2, '0')}:00Z`, ...over });
@@ -43,7 +43,7 @@ describe('sameComments', () => {
 		['one fewer', [c(1)]],
 		['one resolved', [c(1), c(2, { resolved: true })]],
 		['one edited', [c(1), c(2, { body: 'changed' })]],
-		['a pin moved', [c(1), c(2, { anchor: { route: '/a', selector: 'x', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' } })]],
+		['a pin moved', [c(1), c(2, { anchor: anAnchor({ route: '/a', selector: 'x' }) })]],
 		['a picture added', [c(1), c(2, { picture: 'data:image/jpeg;base64,AA' })]],
 	])('is false when there is %s', (_label, next) => {
 		expect(sameComments([c(1), c(2)], next)).toBe(false);
@@ -55,7 +55,7 @@ describe('sameComments', () => {
 });
 
 describe('markersFor', () => {
-	const at = (route = '/users'): CommentAnchor => ({ route, selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' });
+	const at = (route = '/users'): CommentAnchor => anAnchor({ route });
 	const pinned = (id: number, over: Partial<ReviewComment> = {}) => c(id, { anchor: at(), ...over });
 	const numbers = (list: ReviewComment[]) => numberComments(list);
 
@@ -126,8 +126,7 @@ describe('openComments / resolvedComments', () => {
 	});
 
 	it('is the same question the pins ask, so a pin and the count cannot disagree', () => {
-		const withPin = (id: number, over = {}) =>
-			c(id, { anchor: { route: '/r', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' }, ...over });
+		const withPin = (id: number, over = {}) => c(id, { anchor: anAnchor({ route: '/r' }), ...over });
 		const list = [withPin(1), withPin(2, { resolved: true })];
 		expect(markersFor(list, numberComments(list), 'a', null).map((m) => m.id)).toEqual(openComments(list).map((x) => x.id));
 	});

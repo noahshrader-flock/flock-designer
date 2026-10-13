@@ -77,7 +77,7 @@ const write = (root: string, files: Record<string, string>) => {
 };
 const commit = (root: string, message: string) => {
 	g(root, 'add', '-A');
-	g(root, '-c', 'user.name=T', '-c', 'user.email=t@example.com', 'commit', '-q', '-m', message);
+	g(root, 'commit', '-q', '-m', message);
 };
 const story = (title: string, body: string) => `const meta = { title: '${title}' };\nexport default meta;\n${body}\n`;
 /** Library files: two components, one of them with Sass; and the library's own preview set-up. */

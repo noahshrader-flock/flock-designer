@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Projects } from '../src/renderer/Projects';
 import { Review } from '../src/renderer/Review';
 import { Viewer } from '../src/viewer/Viewer';
-import type { Project } from '../src/shared/contract';
+import { aProject } from './fixtures';
 import { PAGE_CONFIG, sitePage } from './pageHarness';
 import { fakeApp, ok, render, reviewProps, settle, unmountAll } from './reviewHarness';
 
@@ -30,7 +30,7 @@ const size = (el: HTMLElement) => (el.getAttribute('data-slot') === 'input-group
 
 describe('the top bar', () => {
 	it('has controls of one size on the Projects screen', async () => {
-		const project = { id: 'alpha', title: 'Alpha', records: [], iterations: [], people: [], openComments: 0 } as unknown as Project;
+		const project = aProject({ id: 'alpha', title: 'Alpha' });
 		const app = fakeApp({
 			listProjects: async () => ok([project]),
 			lastCheckout: async () => ok(null),

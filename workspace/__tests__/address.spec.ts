@@ -5,13 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { prepareAddress } from '../src/main/services/address';
 import { type AddressPhase, runAddress, runPrototypeAddress } from '../src/renderer/address';
 import type { AgentStatus, ReviewComment, Result } from '../src/shared/contract';
-import { agentFinished, agentRunning, reviewComment } from './fixtures';
+import { agentFinished, agentRunning, anAnchor, reviewComment } from './fixtures';
 
 const comment = (id: number, over: Partial<ReviewComment> = {}): ReviewComment =>
 	reviewComment({
 		id,
 		createdAt: `2026-10-05T10:0${id}:00Z`,
-		anchor: { route: '/users', selector: 'main', nearbyText: 'x', viewport: { width: 1, height: 1 }, commit: '', state: '' },
+		anchor: anAnchor({ route: '/users', nearbyText: 'x', state: '' }),
 		...over,
 	});
 

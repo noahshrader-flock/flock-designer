@@ -1,4 +1,4 @@
-import { projectIteration } from './fixtures';
+import { aProject, projectIteration } from './fixtures';
 // @vitest-environment jsdom
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -8,14 +8,8 @@ import { fakeApp, ok, press, render, settle, typeInto, unmountAll } from './revi
 
 /** The Projects screen as a list or a grid: a switch in the toolbar, after the filters, and the choice kept. */
 
-const project = (id: string, title: string): Project => ({
-	id,
-	title,
-	folder: null,
-	records: [],
-	iterations: [projectIteration({ name: 'v1-i1', branch: `prototype/${id}/v1-i1`, createdAt: '2026-10-01T00:00:00Z' })],
-	people: [],
-});
+const project = (id: string, title: string): Project =>
+	aProject({ id, title, iterations: [projectIteration({ name: 'v1-i1', branch: `prototype/${id}/v1-i1`, createdAt: '2026-10-01T00:00:00Z' })] });
 const PROJECTS = [project('alert-history', 'Alert history'), project('admin-usage', 'Admin usage')];
 
 let current: Awaited<ReturnType<typeof render>> | null = null;

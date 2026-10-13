@@ -3,23 +3,15 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { CatalogReads } from '../src/main/services/componentCatalog';
 import { DesignSystemsMemory, defaultBranch, designSystemId, filesOf, findDesignSystems, nameOf, within } from '../src/main/services/designSystems';
 import type { ConnectedDesignSystem } from '../src/shared/contract';
+import { memoryReads } from './fixtures';
 
 /**
  * Connecting any repository (P4 of the design system plan): what a design system is (stories or tokens), where it is in a
  * monorepo, what it is called, its default branch, and the ones connected, remembered.
  */
 
-const reads = (files: Record<string, string>): CatalogReads => ({
-	listFiles: async (dir) => Object.keys(files).filter((f) => dir === '' || f.startsWith(`${dir}/`)),
-	readFile: async (path) => {
-		const text = files[path];
-		if (text === undefined) throw new Error(`no ${path}`);
-		return text;
-	},
-});
 const story = (title: string) => `export default { title: '${title}' };\n`;
 const tones = "export const blue = {\n  50: '#0000FF',\n};\n";
 
@@ -31,7 +23,7 @@ describe('finding the design systems in a repository', () => {
 			'src/Card.stories.tsx': story('Cards/Card'),
 			'src/colors/tones.ts': tones,
 		};
-		expect(await findDesignSystems(reads(repo), 'acme/ui')).toEqual([{ folder: '', components: 2, tokens: 1, name: 'ui' }]);
+		expect(await findDesignSystems(memoryReads(repo), 'acme/ui')).toEqual([{ folder: '', components: 2, tokens: 1, name: 'ui' }]);
 	});
 
 	it('finds the package that has them in a monorepo, and not the app beside it', async () => {
@@ -43,7 +35,7 @@ describe('finding the design systems in a repository', () => {
 			'packages/ui/src/Button.stories.tsx': story('Buttons/Button'),
 			'packages/ui/src/theme/tones.ts': tones,
 		};
-		expect(await findDesignSystems(reads(repo), 'acme/acme')).toEqual([{ folder: 'packages/ui', components: 1, tokens: 1, name: 'design' }]);
+		expect(await findDesignSystems(memoryReads(repo), 'acme/acme')).toEqual([{ folder: 'packages/ui', components: 1, tokens: 1, name: 'design' }]);
 	});
 
 	it('finds each package that has its own, so the person can choose', async () => {
@@ -54,16 +46,16 @@ describe('finding the design systems in a repository', () => {
 			'packages/brand/package.json': '{ "name": "brand" }',
 			'packages/brand/styles.css': ':root {\n  --primary: #ff0000;\n}\n',
 		};
-		expect((await findDesignSystems(reads(repo), 'acme/acme')).map((f) => [f.folder, f.components, f.tokens])).toEqual([
+		expect((await findDesignSystems(memoryReads(repo), 'acme/acme')).map((f) => [f.folder, f.components, f.tokens])).toEqual([
 			['packages/brand', 0, 1],
 			['packages/ui', 1, 0],
 		]);
 	});
 
 	it('takes one with stories only, or tokens only, and finds none where there is neither', async () => {
-		expect(await findDesignSystems(reads({ 'a.stories.tsx': story('A/A') }), 'x/a')).toHaveLength(1);
-		expect(await findDesignSystems(reads({ 'styles.css': ':root { --primary: #ff0000; }\n' }), 'x/b')).toHaveLength(1);
-		expect(await findDesignSystems(reads({ 'package.json': '{}', 'src/index.ts': 'export {};\n' }), 'x/c')).toEqual([]);
+		expect(await findDesignSystems(memoryReads({ 'a.stories.tsx': story('A/A') }), 'x/a')).toHaveLength(1);
+		expect(await findDesignSystems(memoryReads({ 'styles.css': ':root { --primary: #ff0000; }\n' }), 'x/b')).toHaveLength(1);
+		expect(await findDesignSystems(memoryReads({ 'package.json': '{}', 'src/index.ts': 'export {};\n' }), 'x/c')).toEqual([]);
 	});
 });
 
@@ -75,7 +67,7 @@ describe('one package of a repository', () => {
 	});
 
 	it('is read as if it were the repository', async () => {
-		const scoped = within(reads({ 'a.ts': 'a', 'packages/ui/b.ts': 'b' }), ['packages/ui/b.ts']);
+		const scoped = within(memoryReads({ 'a.ts': 'a', 'packages/ui/b.ts': 'b' }), ['packages/ui/b.ts']);
 		expect(await scoped.listFiles('')).toEqual(['packages/ui/b.ts']);
 		expect(await scoped.readFile('packages/ui/b.ts')).toBe('b');
 	});
@@ -87,14 +79,16 @@ describe('what a design system is called', () => {
 			'.storybook/theme.ts': "create({ brandTitle: 'Flock React Component Lib' })",
 			'package.json': '{ "name": "@flocksafety/flock-react-component-lib" }',
 		};
-		expect(await nameOf(reads(withBrand), Object.keys(withBrand), 'flocksafety/flock-react-component-lib', '')).toBe('Flock React Component Lib');
-		expect(await nameOf(reads({ 'package.json': '{ "name": "@acme/ui" }' }), ['package.json'], 'acme/ui-kit', '')).toBe('ui');
-		expect(await nameOf(reads({}), [], 'acme/ui-kit', '')).toBe('ui-kit');
+		expect(await nameOf(memoryReads(withBrand), Object.keys(withBrand), 'flocksafety/flock-react-component-lib', '')).toBe(
+			'Flock React Component Lib',
+		);
+		expect(await nameOf(memoryReads({ 'package.json': '{ "name": "@acme/ui" }' }), ['package.json'], 'acme/ui-kit', '')).toBe('ui');
+		expect(await nameOf(memoryReads({}), [], 'acme/ui-kit', '')).toBe('ui-kit');
 	});
 
 	it('in a monorepo, is the package’s own Storybook brand first, then the repository’s', async () => {
 		const files = { '.storybook/manager.ts': "brandTitle: 'Acme'", 'packages/ui/package.json': '{ "name": "ui" }' };
-		expect(await nameOf(reads(files), Object.keys(files), 'acme/acme', 'packages/ui')).toBe('Acme');
+		expect(await nameOf(memoryReads(files), Object.keys(files), 'acme/acme', 'packages/ui')).toBe('Acme');
 	});
 });
 
@@ -113,7 +107,7 @@ describe('the branch read', () => {
 		g(dir, 'clone', '-q', remote, work);
 		writeFileSync(join(work, 'a'), 'a');
 		g(work, 'add', '.');
-		g(work, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'a');
+		g(work, 'commit', '-q', '-m', 'a');
 		g(work, 'push', '-q', 'origin', 'develop');
 		const clone = join(dir, 'clone');
 		g(dir, 'clone', '-q', remote, clone);
@@ -127,7 +121,7 @@ describe('the branch read', () => {
 		g(dir, 'clone', '-q', remote, work);
 		writeFileSync(join(work, 'a'), 'a');
 		g(work, 'add', '.');
-		g(work, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'a');
+		g(work, 'commit', '-q', '-m', 'a');
 		g(work, 'push', '-q', 'origin', 'main');
 		g(work, 'remote', 'set-head', 'origin', '--delete');
 		expect(await defaultBranch(work)).toBe('main');

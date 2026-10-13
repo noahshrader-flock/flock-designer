@@ -25,8 +25,6 @@ const g = (...args: string[]) => execFileSync('git', ['-C', root, ...args], { en
 beforeEach(() => {
 	root = mkdtempSync(join(tmpdir(), 'fdw-git-'));
 	g('init', '-q', '-b', 'develop');
-	g('config', 'user.email', 'test@example.test');
-	g('config', 'user.name', 'Test');
 	writeFileSync(join(root, 'README.md'), '# repo\n');
 	g('add', '.');
 	g('commit', '-q', '-m', 'first');

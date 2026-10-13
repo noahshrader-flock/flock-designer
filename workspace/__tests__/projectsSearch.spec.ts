@@ -3,12 +3,12 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Projects } from '../src/renderer/Projects';
 import type { Project } from '../src/shared/contract';
+import { aProject } from './fixtures';
 import { fakeApp, ok, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
 /** Searching the Projects screen: a field beside its name that narrows the cards as you type. */
 
-const project = (id: string, title: string, people: Project['people'] = []): Project =>
-	({ id, title, records: [], iterations: [], people, openComments: 0 }) as unknown as Project;
+const project = (id: string, title: string, people: Project['people'] = []): Project => aProject({ id, title, people });
 const PROJECTS = [
 	project('alert-history', 'Alert history', [{ name: 'Noah Shrader', login: 'noah' }]),
 	project('admin-usage', 'Admin usage'),

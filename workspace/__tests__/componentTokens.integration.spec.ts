@@ -193,7 +193,7 @@ describe('the index', () => {
 			writeFileSync(join(upstream, path), text);
 		}
 		g(upstream, 'add', '-A');
-		g(upstream, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'library');
+		g(upstream, 'commit', '-q', '-m', 'library');
 		g(upstream, 'remote', 'add', 'origin', join(home, 'remote.git'));
 		g(upstream, 'push', '-q', 'origin', 'develop');
 		g(home, 'clone', '-q', join(home, 'remote.git'), clone);
@@ -336,7 +336,7 @@ describe('the index', () => {
 	it('still draws and pictures a library with no tokens it can tag, as it is, once, and says it draws with none', async () => {
 		// The theme files hold no tone and no palette, so nothing can be tagged: a Storybook library with no tokens read.
 		g(clone, 'rm', '-q', 'src/colors/tones/brand.ts', 'src/colors/theme/light.ts');
-		g(clone, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'no tokens');
+		g(clone, 'commit', '-q', '-m', 'no tokens');
 		g(clone, 'update-ref', 'refs/remotes/origin/develop', 'HEAD');
 		const shot = Buffer.from('jpeg');
 		const i = index({
@@ -380,7 +380,7 @@ describe('the index', () => {
 			'## Accessibility conformance target\n\n| | |\n|---|---|\n| **Target** | WCAG 2.1 Level AA |\n',
 		);
 		g(clone, 'add', '-A');
-		g(clone, '-c', 'user.name=T', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'target');
+		g(clone, 'commit', '-q', '-m', 'target');
 		g(clone, 'update-ref', 'refs/remotes/origin/develop', 'HEAD');
 		const found = {
 			violations: [

@@ -1,4 +1,4 @@
-import { projectIteration } from './fixtures';
+import { aProject, projectIteration } from './fixtures';
 // @vitest-environment jsdom
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -20,15 +20,7 @@ const iteration = (more: Partial<ProjectIteration> = {}): ProjectIteration =>
 const NEWEST = iteration({ name: 'v1-i2', branch: 'prototype/admin-usage/v1-i2', createdAt: '2026-10-05T10:00:00Z' });
 const OLDER = iteration({ name: 'v1-i1', createdAt: '2026-09-01T10:00:00Z' });
 const CODEBASE = iteration({ name: 'codebase', branch: 'feature/admin-usage', repository: 'flocksafety/flock-coke' });
-const project = (more: Partial<Project> = {}): Project => ({
-	id: 'admin-usage',
-	title: 'Admin usage',
-	folder: null,
-	records: [],
-	iterations: [],
-	people: [],
-	...more,
-});
+const project = (more: Partial<Project> = {}): Project => aProject({ id: 'admin-usage', title: 'Admin usage', ...more });
 const NOAH = { name: 'Noah Shrader', login: 'noah' };
 
 let current: Awaited<ReturnType<typeof render>> | null = null;

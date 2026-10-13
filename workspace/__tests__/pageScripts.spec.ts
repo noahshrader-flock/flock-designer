@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { sanitizeAnchor } from '../src/shared/anchor';
 import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, SINGLE_PAGE, layerVisibleScript, readPinMessage, resolveScript } from '../src/shared/pageScripts';
 import type { CommentAnchor, MarkerRequest } from '../src/shared/contract';
+import { anAnchor } from './fixtures';
 
 const page = (html: string, url = 'http://localhost:3000/users#/list', head = '') => {
 	const dom = new JSDOM(`<!doctype html><html><head>${head}</head><body>${html}</body></html>`, {
@@ -127,7 +128,7 @@ describe('picking an element', () => {
 const req = (id: number, anchor: Partial<CommentAnchor>): MarkerRequest => ({
 	id,
 	number: id,
-	anchor: { route: '/users#/list', selector: 'x', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '', ...anchor },
+	anchor: anAnchor({ route: '/users#/list', selector: 'x', ...anchor }),
 });
 
 describe('a prototype, which is one page wherever it is served', () => {
@@ -610,12 +611,7 @@ describe('the scripts on the page', () => {
 		const picked = w.eval(SINGLE_PAGE + PICK_SCRIPT) as Promise<unknown>;
 		click(w, w.document.querySelector('button')!);
 		await picked;
-		w.eval(
-			resolveScript(
-				[{ id: 1, number: 1, anchor: { route: '/', selector: 'button', nearbyText: 'Save', viewport: { width: 1, height: 1 }, commit: '' } }],
-				'n',
-			),
-		);
+		w.eval(resolveScript([{ id: 1, number: 1, anchor: anAnchor({ selector: 'button', nearbyText: 'Save' }) }], 'n'));
 		await w.eval(layerVisibleScript(false));
 		expect(
 			Object.keys(w)

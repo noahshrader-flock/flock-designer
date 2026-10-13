@@ -29,18 +29,10 @@ import {
 import { PROJECT_ID, asDate, asRoute, isRecordName, slugify, asCover } from '../src/shared/validate';
 import { codeLink, iterationLabel, workOf } from '../src/shared/work';
 import { readFolderProjects } from '../src/main/services/localProjects';
-import { projectIteration } from './fixtures';
+import { aProject, projectIteration } from './fixtures';
 
 const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => projectIteration({ name: 'i1', branch: 'fd/alpha/i1', ...over });
-const project = (id: string, over: Partial<Project> = {}): Project => ({
-	id,
-	title: id,
-	folder: null,
-	records: [],
-	iterations: [it1({ branch: `fd/${id}/i1` })],
-	people: [],
-	...over,
-});
+const project = (id: string, over: Partial<Project> = {}): Project => aProject({ id, iterations: [it1({ branch: `fd/${id}/i1` })], ...over });
 
 describe('mergeProjects', () => {
 	it('shows work built here that GitHub has never heard of, and says so', () => {

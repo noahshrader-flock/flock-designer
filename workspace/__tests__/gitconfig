@@ -1,0 +1,10 @@
+# The git configuration every test runs with, in place of the person's own (vitest.config.ts points git at it): the same
+# on every machine and in CI, so a test's commits never carry the person's name and never ask for a signing key. A test
+# that is about who made a commit sets that itself, in its repository.
+[user]
+	name = Test
+	email = test@example.test
+[commit]
+	gpgsign = false
+[tag]
+	gpgsign = false

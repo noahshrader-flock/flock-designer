@@ -15,6 +15,7 @@ import {
 	withResolved,
 } from '../src/shared/anchor';
 import type { CommentAnchor } from '../src/shared/contract';
+import { anAnchor } from './fixtures';
 
 const anchor: CommentAnchor = {
 	route: '/users#/list',
@@ -90,8 +91,7 @@ describe('assertPreviewUrl', () => {
 });
 
 describe('addressed marker', () => {
-	const anchored = () =>
-		composeBody('Remove this text', { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' });
+	const anchored = () => composeBody('Remove this text', anAnchor({ route: '/a' }));
 
 	it('records the commit the agent made, without touching the comment or its anchor', () => {
 		const body = anchored();
@@ -152,7 +152,7 @@ describe('addressed marker', () => {
 
 describe('resolved marker', () => {
 	it('sets and clears the marker without touching the comment or its anchor', () => {
-		const body = composeBody('Make this primary', { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' });
+		const body = composeBody('Make this primary', anAnchor({ route: '/a' }));
 		const done = withResolved(body, true);
 		expect(isResolved(done)).toBe(true);
 		expect(done.startsWith(body)).toBe(true);
@@ -167,7 +167,7 @@ describe('resolved marker', () => {
 });
 
 describe('page state in an anchor', () => {
-	const base = { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
+	const base = anAnchor({ route: '/a' });
 
 	it('keeps a query string, and keeps an empty one, which means the default state', () => {
 		expect(sanitizeAnchor({ ...base, state: '?state=error' })?.state).toBe('?state=error');
@@ -191,7 +191,7 @@ describe('page state in an anchor', () => {
 });
 
 describe('a picture in a comment', () => {
-	const sample = { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
+	const sample = anAnchor({ route: '/a' });
 	const picture = `data:image/jpeg;base64,${Buffer.from('not really a jpeg but shaped like one').toString('base64')}`;
 
 	it('is written into the comment, read back, and does not show up as part of the words', () => {
@@ -240,7 +240,7 @@ describe('a picture in a comment', () => {
 });
 
 describe('what kind of element, and where it sits', () => {
-	const base = { route: '/a', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
+	const base = anAnchor({ route: '/a' });
 
 	it('keeps the kind of element and the containers it is inside, and they survive a comment round trip', () => {
 		const a = sanitizeAnchor({ ...base, tag: 'p', inside: ['Notification Preferences', 'Hotlist Hits'] });

@@ -2,7 +2,7 @@ import { act, createElement, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { CommentAnchor, PickedPoint, PinEvent, Project, ProjectIteration, Result, ReviewComment, WorkspaceApi } from '../src/shared/contract';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
-import { agentRunning, projectIteration, reviewComment } from './fixtures';
+import { agentRunning, anAnchor, aProject, projectIteration, reviewComment } from './fixtures';
 
 /**
  * The review screen, rendered for real in jsdom against a fake app: every call the window can make answers, the ones
@@ -102,7 +102,7 @@ export const fakeApp = (overrides: Impl = {}) => {
 			act(async () =>
 				picked?.(
 					ok({
-						anchor: { route: '/', selector: 'main', nearbyText: 'Main', viewport: { width: 1, height: 1 }, commit: '', ...anchor },
+						anchor: anAnchor({ nearbyText: 'Main', ...anchor }),
 						at: { x: 10, y: 10 },
 						box: null,
 						picture: null,
@@ -117,18 +117,11 @@ export const comment = (id: number, body: string, more: Partial<ReviewComment> =
 		id,
 		body,
 		createdAt: `2026-10-08T00:00:0${id % 10}Z`,
-		anchor: { route: '/', selector: `#c${id}`, nearbyText: body, viewport: { width: 1, height: 1 }, commit: '' },
+		anchor: anAnchor({ selector: `#c${id}`, nearbyText: body }),
 		...more,
 	});
 
-export const PROJECT: Project = {
-	id: 'demo',
-	title: 'Demo',
-	records: [],
-	iterations: [],
-	people: [],
-	createdAt: null,
-} as unknown as Project;
+export const PROJECT: Project = aProject({ id: 'demo', title: 'Demo' });
 
 export const PROTOTYPE: ProjectIteration = projectIteration({ name: 'v1-i1', branch: 'prototype/demo/v1-i1', issueNumber: 1 });
 

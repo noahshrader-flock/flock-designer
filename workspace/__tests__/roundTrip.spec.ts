@@ -1,4 +1,4 @@
-import { agentFinished, agentRunning } from './fixtures';
+import { agentFinished, agentRunning, anAnchor } from './fixtures';
 import { ReviewThreads } from '../src/host/reviewThreads';
 // @vitest-environment jsdom
 import { createElement } from 'react';
@@ -122,7 +122,7 @@ describe('the round trip, through one GitHub', () => {
 		expect(document.body.textContent).toContain('No comments yet');
 		// Meanwhile, on the page.
 		const store = browserComments(tokenApi('good-token', gh.fetch as never), REF, { projectId: PAGE_CONFIG.projectId, branch: BRANCH });
-		const anchor = { route: '/', selector: 'h1', nearbyText: 'Alert history', viewport: { width: 1, height: 1 }, commit: '' };
+		const anchor = anAnchor({ selector: 'h1', nearbyText: 'Alert history' });
 		expect((await store.post('Bigger title', anchor, null)).ok).toBe(true);
 		window.dispatchEvent(new Event('focus'));
 		await settle();

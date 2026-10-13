@@ -99,8 +99,6 @@ describe('work found in a real repository, with no record written', () => {
 		root = mkdtempSync(join(tmpdir(), 'fdw-found-'));
 		records = mkdtempSync(join(tmpdir(), 'fdw-found-rec-'));
 		g('init', '-q', '-b', 'develop');
-		g('config', 'user.email', 't@example.test');
-		g('config', 'user.name', 'Test');
 		writeFileSync(join(root, 'a.txt'), 'a');
 		g('add', '.');
 		g('commit', '-q', '-m', 'first');

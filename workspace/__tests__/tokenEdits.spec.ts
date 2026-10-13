@@ -1,25 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import type { CatalogReads } from '../src/main/services/componentCatalog';
 import { readTokens } from '../src/main/services/designTokens';
 import { editProblem, editedFiles, tokenEditsOf } from '../src/main/services/tokenEdits';
 import type { DesignToken, TokenEdit } from '../src/shared/contract';
 import { contrastPartner, contrastRatio, fitsKind, pointingAt, sameChange, withEdits } from '../src/shared/tokens';
 import { CONTRAST_TEXT } from '../src/shared/wcag';
+import { memoryReads } from './fixtures';
 
 /**
  * A change to the library's tokens (T3 of the design system plan, decisions 19, 26 and 27): what it does to the list,
  * worked out once; and how it is written into the library's files, by each source in its own way, read back and checked
  * against that. Against fixtures of each way a library keeps its tokens.
  */
-
-const reads = (files: Record<string, string>): CatalogReads => ({
-	listFiles: async (dir) => Object.keys(files).filter((f) => dir === '' || f.startsWith(`${dir}/`)),
-	readFile: async (path) => {
-		const text = files[path];
-		if (text === undefined) throw new Error(`no ${path}`);
-		return text;
-	},
-});
 
 /** A theme as FUI keeps one: tone files, a palette pointing at them (one role with an opacity), the spacing and radius. */
 const THEME = {
@@ -42,8 +33,8 @@ export const lightPalette = {
 
 /** The files a change writes, and the tokens as the library would then read. */
 const change = async (files: Record<string, string>, edits: TokenEdit[]) => {
-	const written = await editedFiles(reads(files), edits);
-	const after = await readTokens(reads({ ...files, ...Object.fromEntries(written) }));
+	const written = await editedFiles(memoryReads(files), edits);
+	const after = await readTokens(memoryReads({ ...files, ...Object.fromEntries(written) }));
 	return { written, find: (path: string) => after.tokens.find((t) => t.path === path) as DesignToken };
 };
 
@@ -121,11 +112,13 @@ describe('contrast', () => {
 	});
 
 	it('pairs a role’s main with its contrastText, and a variable with its -foreground, in the same mode', async () => {
-		const theme = (await readTokens(reads(THEME))).tokens;
+		const theme = (await readTokens(memoryReads(THEME))).tokens;
 		const main = theme.find((t) => t.path === 'palette.light.primary.main') as DesignToken;
 		expect(contrastPartner(main, theme)?.path).toBe('palette.light.primary.contrastText');
 		const css = (
-			await readTokens(reads({ 'a.css': ':root { --primary: #000000; --primary-foreground: #ffffff; }\n.dark { --primary-foreground: #eeeeee; }' }))
+			await readTokens(
+				memoryReads({ 'a.css': ':root { --primary: #000000; --primary-foreground: #ffffff; }\n.dark { --primary-foreground: #eeeeee; }' }),
+			)
 		).tokens;
 		expect(contrastPartner(css.find((t) => t.path === 'css.light.primary') as DesignToken, css)?.path).toBe('css.light.primary-foreground');
 		// A color with no pair says nothing.
@@ -183,12 +176,12 @@ describe('writing a change into theme files', () => {
 			{ path: 'palette.light.info.main', value: '#00FF00' },
 			{ path: 'palette.dark.info.main', value: '#FF0000' },
 		];
-		await expect(editedFiles(reads(shared), apart)).rejects.toThrow('each token once');
+		await expect(editedFiles(memoryReads(shared), apart)).rejects.toThrow('each token once');
 	});
 
 	it('refuses what the theme cannot say: a radius in rem, or a role pointed at something not a tone step', async () => {
-		await expect(editedFiles(reads(THEME), [{ path: 'radius', value: '0.5rem' }])).rejects.toThrow('whole number of pixels');
-		await expect(editedFiles(reads(THEME), [{ path: 'palette.light.primary.main', ref: 'palette.light.surface.main' }])).rejects.toThrow(
+		await expect(editedFiles(memoryReads(THEME), [{ path: 'radius', value: '0.5rem' }])).rejects.toThrow('whole number of pixels');
+		await expect(editedFiles(memoryReads(THEME), [{ path: 'palette.light.primary.main', ref: 'palette.light.surface.main' }])).rejects.toThrow(
 			'only at a tone step',
 		);
 	});
@@ -244,7 +237,7 @@ describe('writing a change into token files', () => {
 	};
 
 	it('reads each token’s line exactly, not by where its name first appears', async () => {
-		const list = await readTokens(reads(JSON_FILE));
+		const list = await readTokens(memoryReads(JSON_FILE));
 		expect(list.tokens.find((t) => t.path === 'color.blue.500')?.source.line).toBe(5);
 		expect(list.tokens.find((t) => t.path === 'radius.md')?.source.line).toBe(10);
 		expect(list.tokens.find((t) => t.path === 'color.danger')?.ref).toEqual({ path: 'color.red.500' });
@@ -266,29 +259,29 @@ describe('writing a change into token files', () => {
 
 describe('what is refused', () => {
 	it('a token the library does not have, a value not of the token’s kind, and a token edited twice', async () => {
-		await expect(editedFiles(reads(THEME), [{ path: 'tone.nope.1', value: '#000000' }])).rejects.toThrow('no token tone.nope.1');
-		await expect(editedFiles(reads(THEME), [{ path: 'tone.pineGreen.50', value: 'red' }])).rejects.toThrow('not a hex color');
-		await expect(editedFiles(reads(THEME), [{ path: 'spacing', value: '#000000' }])).rejects.toThrow('not a length');
+		await expect(editedFiles(memoryReads(THEME), [{ path: 'tone.nope.1', value: '#000000' }])).rejects.toThrow('no token tone.nope.1');
+		await expect(editedFiles(memoryReads(THEME), [{ path: 'tone.pineGreen.50', value: 'red' }])).rejects.toThrow('not a hex color');
+		await expect(editedFiles(memoryReads(THEME), [{ path: 'spacing', value: '#000000' }])).rejects.toThrow('not a length');
 		const twice = [
 			{ path: 'spacing', value: '4px' },
 			{ path: 'spacing', value: '6px' },
 		];
-		await expect(editedFiles(reads(THEME), twice)).rejects.toThrow('each token once');
+		await expect(editedFiles(memoryReads(THEME), twice)).rejects.toThrow('each token once');
 	});
 
 	it('anything that would put code into a file: only a hex or a length is ever written', async () => {
-		await expect(editedFiles(reads(THEME), [{ path: 'tone.pineGreen.50', value: "#108062', evil(), '" }])).rejects.toThrow('not a hex color');
-		await expect(editedFiles(reads(THEME), [{ path: 'spacing', value: '8px; evil()' }])).rejects.toThrow('not a length');
+		await expect(editedFiles(memoryReads(THEME), [{ path: 'tone.pineGreen.50', value: "#108062', evil(), '" }])).rejects.toThrow('not a hex color');
+		await expect(editedFiles(memoryReads(THEME), [{ path: 'spacing', value: '8px; evil()' }])).rejects.toThrow('not a length');
 	});
 
 	it('pointing a token that has a value of its own: it is given a value instead', async () => {
-		await expect(editedFiles(reads(THEME), [{ path: 'tone.pineGreen.50', ref: 'tone.pineGreen.20' }])).rejects.toThrow('a value of its own');
+		await expect(editedFiles(memoryReads(THEME), [{ path: 'tone.pineGreen.50', ref: 'tone.pineGreen.20' }])).rejects.toThrow('a value of its own');
 	});
 
 	it('a change that would not read back as it says: nothing is written', async () => {
 		// In dark mode, `var(--accent)` is dark's own --accent, so the light one cannot be pointed at from there in CSS.
 		const css = { 'a.css': ':root {\n  --accent: #111111;\n}\n.dark {\n  --accent: #222222;\n  --ring: var(--accent);\n}\n' };
-		await expect(editedFiles(reads(css), [{ path: 'css.dark.ring', ref: 'css.light.accent' }])).rejects.toThrow(
+		await expect(editedFiles(memoryReads(css), [{ path: 'css.dark.ring', ref: 'css.light.accent' }])).rejects.toThrow(
 			/The change was not made, because written into the library's files css\.dark\.ring would be #222222, not #111111/,
 		);
 	});

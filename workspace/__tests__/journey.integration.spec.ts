@@ -58,8 +58,6 @@ beforeEach(() => {
 	);
 
 	g('init', '-q', '-b', 'develop');
-	g('config', 'user.email', 'test@example.test');
-	g('config', 'user.name', 'Test');
 	g('add', '.');
 	g('commit', '-q', '-m', 'baseline');
 });

@@ -15,7 +15,7 @@ let clone: string;
 const commit = (dir: string, file: string, message: string) => {
 	writeFileSync(join(dir, file), message);
 	g(dir, 'add', '.');
-	g(dir, '-c', 'commit.gpgsign=false', 'commit', '-q', '-m', message);
+	g(dir, 'commit', '-q', '-m', message);
 };
 
 beforeEach(() => {

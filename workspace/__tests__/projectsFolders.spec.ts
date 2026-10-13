@@ -3,6 +3,7 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Projects } from '../src/renderer/Projects';
 import type { Project } from '../src/shared/contract';
+import { aProject } from './fixtures';
 import { button, fakeApp, ok, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
 /**
@@ -10,8 +11,7 @@ import { button, fakeApp, ok, openMenu, press, render, settle, typeInto, unmount
  * is in a folder, and each project's folder said quietly on its card and its row.
  */
 
-const project = (id: string, title: string, updatedAt: string, folder: string | null): Project =>
-	({ id, title, records: [], iterations: [], people: [], updatedAt, folder }) as unknown as Project;
+const project = (id: string, title: string, updatedAt: string, folder: string | null): Project => aProject({ id, title, updatedAt, folder });
 const PROJECTS = [
 	project('alerts', 'Alert history', '2026-10-08T00:00:00Z', 'Admin'),
 	project('usage', 'Admin usage', '2026-10-07T00:00:00Z', 'admin'),

@@ -2,8 +2,9 @@ import type { Mock } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { CatalogReads } from '../src/main/services/componentCatalog';
 import type { RecordStore } from '../src/main/services/prototype';
-import type { AgentStatus, ProjectIteration, ReviewComment, TokenProblem } from '../src/shared/contract';
+import type { AgentStatus, CommentAnchor, Project, ProjectIteration, ReviewComment, TokenProblem } from '../src/shared/contract';
 
 /** A mocked function of any shape, called as the code calls it: vitest's own `Procedure`, which it does not export. */
 export type Fn = Mock<(...args: any[]) => any>;
@@ -26,6 +27,26 @@ export const projectIteration = (over: Pick<ProjectIteration, 'name' | 'branch'>
 });
 
 /** Something in a library's files that could not be read as a token. */
+/** A project as the window is given one: `id`, its title the id, and no folder, records, iterations or people unless `over` says. */
+export const aProject = (over: Pick<Project, 'id'> & Partial<Project>): Project => ({
+	title: over.id,
+	folder: null,
+	records: [],
+	iterations: [],
+	people: [],
+	...over,
+});
+
+/** Where a comment points: the page's `main` at `/`, on a 1 by 1 viewport, at no commit, unless `over` says. */
+export const anAnchor = (over: Partial<CommentAnchor> = {}): CommentAnchor => ({
+	route: '/',
+	selector: 'main',
+	nearbyText: '',
+	viewport: { width: 1, height: 1 },
+	commit: '',
+	...over,
+});
+
 export const TOKEN_PROBLEM: TokenProblem = {
 	file: 'src/colors/tones/neutral.ts',
 	line: 10,
@@ -79,8 +100,6 @@ export const makeProductFiles = (dir: string, commands: unknown[] = []) => {
 export const makeProduct = (dir: string, commands: unknown[] = []) => {
 	makeProductFiles(dir, commands);
 	g(dir, 'init', '-q', '-b', 'develop');
-	g(dir, 'config', 'user.email', 't@example.test');
-	g(dir, 'config', 'user.name', 'Test');
 	writeFileSync(join(dir, 'README.md'), '# r\n');
 	g(dir, 'add', '.');
 	g(dir, 'commit', '-q', '-m', 'first');
@@ -106,6 +125,16 @@ export const addStandards = (design: string) => {
 	mkdirSync(join(design, 'standards', 'universal'), { recursive: true });
 	copyFileSync(join(__dirname, '../../standards/universal/accessibility.md'), join(design, 'standards', 'universal', 'accessibility.md'));
 };
+
+/** A design system's files held in memory, as the catalog and token readers read a library: a missing file throws, as a real read does. */
+export const memoryReads = (files: Record<string, string>): CatalogReads => ({
+	listFiles: async (dir) => Object.keys(files).filter((f) => dir === '' || f.startsWith(`${dir}/`)),
+	readFile: async (path) => {
+		const text = files[path];
+		if (text === undefined) throw new Error(`no ${path}`);
+		return text;
+	},
+});
 
 /**
  * A design repository held in memory, as a `RecordStore`: text and the bytes of pictures, with the paths written, in the

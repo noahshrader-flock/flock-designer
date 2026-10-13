@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ReviewThreads } from '../src/host/reviewThreads';
 import { fakeGitHub, refusal, refusing } from './fakes/github';
+import { anAnchor } from './fixtures';
 
 const REF = { owner: 'acme', repo: 'design' };
 
@@ -131,14 +132,7 @@ describe('comment threads and GitHub listing lag', () => {
 
 describe('moveComment', () => {
 	const COMMENT = '/repos/acme/design/issues/comments/55';
-	const before = {
-		route: '/users',
-		selector: 'main',
-		nearbyText: 'x',
-		viewport: { width: 1, height: 1 },
-		commit: 'abc1234',
-		offset: { x: 0.1, y: 0.1 },
-	};
+	const before = anAnchor({ route: '/users', nearbyText: 'x', commit: 'abc1234', offset: { x: 0.1, y: 0.1 } });
 	const after = { ...before, selector: '#new', commit: '', offset: { x: 0.9, y: 0.5 } };
 
 	it("rewrites the pin's position, keeps the words, and keeps the commit it was made against", async () => {
@@ -176,7 +170,7 @@ describe('moveComment', () => {
 
 describe('setResolved', () => {
 	const COMMENT = '/repos/acme/design/issues/comments/70';
-	const anchor = { route: '/users', selector: 'main', nearbyText: 'x', viewport: { width: 1, height: 1 }, commit: 'abc1234' };
+	const anchor = anAnchor({ route: '/users', nearbyText: 'x', commit: 'abc1234' });
 
 	it('marks an open comment resolved, and changes nothing else about it', async () => {
 		const { composeBody, parseAnchor, stripAnchor } = await import('../src/shared/anchor');
@@ -282,7 +276,7 @@ describe('setAddressed', () => {
 
 describe('pictures on comments', () => {
 	const picture = `data:image/jpeg;base64,${Buffer.from('a small picture').toString('base64')}`;
-	const anchor = { route: '/users', selector: 'main', nearbyText: 'x', viewport: { width: 1, height: 1 }, commit: '' };
+	const anchor = anAnchor({ route: '/users', nearbyText: 'x' });
 
 	it('posts the picture with the comment, and reads it back', async () => {
 		const stored: string[] = [];
