@@ -163,14 +163,14 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 						<ProjectSort order={order} onChange={setOrder} />
 						{/* Only once a project is in a folder: before that it would only say All folders. */}
 						{folders.length > 0 && <FolderFilter folders={folders} unfiled={unfiled} folder={shown} onChange={setFolder} />}
+						{/* List or grid, with the other ways of looking at the list: Sync's side is for what syncing says. */}
+						<ViewSwitcher view={view} onSelect={chooseView} />
 					</div>
 				)}
 				<div className="grow" />
 				<div className="flex items-center gap-2">
-					{/* Where syncing is, beside the button that starts it, so the two always read together. */}
+					{/* Where syncing is, beside the button that starts it, so the two always read together (as on the Design System). */}
 					<PublishLine status={publishStatus} />
-					{/* List or grid, at the immediate left of Sync; nothing to switch while there are no projects. */}
-					{projects !== null && projects.length > 0 && <ViewSwitcher view={view} onSelect={chooseView} />}
 					{/* Sync sends what is waiting and reads what is new, rather than waiting for the next trigger. */}
 					<SyncButton
 						syncing={syncing}

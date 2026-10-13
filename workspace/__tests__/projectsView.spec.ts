@@ -6,7 +6,7 @@ import { Projects } from '../src/renderer/Projects';
 import type { Project } from '../src/shared/contract';
 import { fakeApp, ok, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 
-/** The Projects screen as a list or a grid: a switch in the toolbar, at the left of Sync, and the choice kept. */
+/** The Projects screen as a list or a grid: a switch in the toolbar, after the filters, and the choice kept. */
 
 const project = (id: string, title: string): Project => ({
 	id,
@@ -43,16 +43,21 @@ afterEach(async () => {
 });
 
 describe('the switch', () => {
-	it('is in the toolbar at the immediate left of Sync', async () => {
-		await open();
+	it('is in the toolbar at the immediate right of the folders filter, with the search and the sort: not beside Sync', async () => {
+		await open(async () => ok([{ ...PROJECTS[0]!, folder: 'Admin' }, PROJECTS[1]!]));
 		const toolbar = document.querySelector('[class*="h-(--toolbar-height)"]')!;
 		const sync = [...toolbar.querySelectorAll('button')].find((b) => b.textContent?.includes('Sync'))!;
 		const group = document.querySelector('[aria-label="View"]')!;
 		expect(toolbar.contains(group)).toBe(true);
+		// Last of the controls that change what the list shows, right after the folders filter, which is after the search.
+		const controls = group.parentElement!;
+		expect(controls.lastElementChild).toBe(group);
+		expect(group.previousElementSibling?.textContent).toContain('All folders');
+		expect(controls.querySelector('input[aria-label="Search projects"]')).not.toBeNull();
+		// Sync's side is for what syncing says, so the switch is before it and not beside it.
+		expect(controls.contains(sync)).toBe(false);
 		expect(group.compareDocumentPosition(sync) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		// Nothing between them: the next control after the switch is Sync.
-		const controls = [...toolbar.querySelectorAll('button')];
-		expect(controls[controls.indexOf(sync) - 1]!.closest('[aria-label="View"]')).toBe(group);
+		expect(sync.parentElement!.contains(group)).toBe(false);
 	});
 
 	it('is a grid at first, as the screen has always been, with Grid pressed', async () => {
