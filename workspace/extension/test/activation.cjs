@@ -29,6 +29,7 @@ exports.run = async () => {
 	const commands = await vscode.commands.getCommands(true);
 	for (const c of [
 		'dsnr.open',
+		'dsnr.getStarted',
 		'dsnr.newPrototype',
 		'dsnr.openReview',
 		'dsnr.openPublishedPage',

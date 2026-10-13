@@ -49,6 +49,7 @@ describe('the extension’s manifest', () => {
 	it('has its commands: to open it, to start a prototype, to open one for review, its published page, its folder, the sync, and the account', () => {
 		expect(manifest().contributes.commands.map((c) => `${c.category}: ${c.title}`)).toEqual([
 			'DSNR: Open',
+			'DSNR: Get started',
 			'DSNR: New prototype',
 			'DSNR: Open a prototype for review',
 			'DSNR: Open the published page',

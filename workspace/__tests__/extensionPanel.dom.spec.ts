@@ -132,6 +132,12 @@ describe('what is open', () => {
 		expect(body().textContent).toContain('No product is open: open its folder.');
 		expect(sent.some((m) => m.name === 'listProjects')).toBe(false);
 	});
+
+	it('offers Get started there, which asks the extension to get a product onto this machine', async () => {
+		await showOpen({ ...OPEN, product: null, missing: ['No product is open: open its folder.'] });
+		await press(button('Get started'));
+		expect(panelSaid().at(-1)).toEqual({ type: 'get-started' });
+	});
 });
 
 describe('the account', () => {
@@ -285,6 +291,7 @@ describe('a design system’s catalog, once it is read', () => {
 				projects: { value: [], error: null },
 				onOpen: () => undefined,
 				onNew: () => undefined,
+				onGetStarted: () => undefined,
 				onLocate: () => undefined,
 				catalog: SAMPLE_CATALOG,
 				...more,

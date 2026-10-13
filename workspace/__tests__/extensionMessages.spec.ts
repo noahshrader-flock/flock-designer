@@ -13,6 +13,7 @@ describe('a message from the panel', () => {
 		[{ type: 'call', id: 7, name: 'readCheckout', args: ['/a', 2] }],
 		[{ type: 'ready' }],
 		[{ type: 'locate-design-system' }],
+		[{ type: 'get-started' }],
 		[{ type: 'new-prototype' }],
 		[{ type: 'open-review', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
 	])('%o is read', (m) => {

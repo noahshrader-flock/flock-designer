@@ -27,7 +27,7 @@ export interface PanelDeps {
 /**
  * DSNR's panel in the side bar: a webview of the extension's own build, allowed to load from its `dist/` folder and
  * nowhere else. What it asks is read in exactly its shape (`readMessage`): a call is answered from the core's table, and
- * the panel's own requests (locate the design system, open a review, start a prototype) are the shell's. Who is signed in is said beside
+ * the panel's own requests (locate the design system, get started, open a review, start a prototype) are the shell's. Who is signed in is said beside
  * the DSNR mark in VS Code's own title bar (`showAccount`), where the Sign in and account actions are. Run from its
  * source, it follows its own build: a rebuilt page reloads the panel, a rebuilt extension restarts the extension host.
  */
@@ -75,6 +75,8 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 					return await this.deps.locate();
 				case 'open-review':
 					return await this.deps.openReview(message);
+				case 'get-started':
+					return void (await vscode.commands.executeCommand('dsnr.getStarted'));
 				case 'new-prototype':
 					return void (await vscode.commands.executeCommand('dsnr.newPrototype'));
 			}

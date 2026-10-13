@@ -25,6 +25,7 @@ export interface PanelViewProps {
 	projects: ProjectsRead;
 	onOpen: (review: Review) => void;
 	onNew: () => void;
+	onGetStarted: () => void;
 	onLocate: () => void;
 	catalog?: Catalog;
 }
@@ -33,7 +34,7 @@ export interface PanelViewProps {
  * DSNR's panel: the toggle at its very top, and under it the view chosen. Who is signed in is VS Code's to show, in its
  * own title bar beside the DSNR mark; the page reads it only to say whose projects these are.
  */
-export const PanelView = ({ tab, onTab, account, context, projects, onOpen, onNew, onLocate, catalog }: PanelViewProps) => (
+export const PanelView = ({ tab, onTab, account, context, projects, onOpen, onNew, onGetStarted, onLocate, catalog }: PanelViewProps) => (
 	<main className="panel">
 		<div className="panel-top">
 			<Toggle label="View" options={TABS} value={tab} onChange={onTab} />
@@ -48,6 +49,7 @@ export const PanelView = ({ tab, onTab, account, context, projects, onOpen, onNe
 					signedIn={account.state === 'signedIn'}
 					onOpen={onOpen}
 					onNew={onNew}
+					onGetStarted={onGetStarted}
 				/>
 			) : (
 				<DesignSystem found={context.designSystem} onLocate={onLocate} {...(catalog ? { catalog } : {})} />
@@ -105,6 +107,7 @@ export const Panel = () => {
 			projects={{ value: projects, error: read.error }}
 			onOpen={(review) => vscode().postMessage({ type: 'open-review', ...review })}
 			onNew={() => vscode().postMessage({ type: 'new-prototype' })}
+			onGetStarted={() => vscode().postMessage({ type: 'get-started' })}
 			onLocate={() => vscode().postMessage({ type: 'locate-design-system' })}
 		/>
 	);

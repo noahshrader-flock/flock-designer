@@ -14,6 +14,7 @@ export type PanelMessage =
 	| { type: 'call'; id: number; name: InvokeName; args: unknown[] }
 	| { type: 'ready' }
 	| { type: 'locate-design-system' }
+	| { type: 'get-started' }
 	| { type: 'new-prototype' }
 	| ({ type: 'open-review' } & Review);
 
@@ -44,7 +45,7 @@ export type HostMessage =
 	| { type: 'projects-changed' };
 
 const CALLS = new Set<string>(INVOKE);
-const BARE = new Set(['ready', 'locate-design-system', 'new-prototype']);
+const BARE = new Set(['ready', 'locate-design-system', 'get-started', 'new-prototype']);
 
 const hasKeys = (raw: object, keys: string[]): boolean => {
 	const own = Object.keys(raw).sort();

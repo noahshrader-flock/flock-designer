@@ -39,6 +39,11 @@
 				"title": "Open"
 			},
 			{
+				"command": "dsnr.getStarted",
+				"category": "DSNR",
+				"title": "Get started"
+			},
+			{
 				"command": "dsnr.newPrototype",
 				"category": "DSNR",
 				"title": "New prototype",

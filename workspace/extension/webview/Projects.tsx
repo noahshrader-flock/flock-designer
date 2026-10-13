@@ -81,6 +81,7 @@ export const Projects = ({
 	signedIn,
 	onOpen,
 	onNew,
+	onGetStarted,
 }: {
 	read: ProjectsRead;
 	/** Whether a product is open, and if not, what to do (from the context). */
@@ -88,11 +89,15 @@ export const Projects = ({
 	signedIn: boolean;
 	onOpen: (review: Review) => void;
 	onNew: () => void;
+	/** Gets a product onto this machine: VS Code's own clone. */
+	onGetStarted: () => void;
 }) => {
 	if (!product.open)
 		return (
 			<EmptyState icon="folder-library" title="No product is open">
 				<p>{product.why}</p>
+				<p>Not on this machine yet? Get started clones it with VS Code, then open it here.</p>
+				<Button onClick={onGetStarted}>Get started</Button>
 			</EmptyState>
 		);
 	if (read.error !== null && read.value === null)

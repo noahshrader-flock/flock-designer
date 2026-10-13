@@ -141,6 +141,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			});
 		}),
 		vscode.commands.registerCommand('dsnr.open', () => vscode.commands.executeCommand('workbench.view.extension.dsnr')),
+		// A product onto this machine with VS Code's own clone, which offers to open it; New prototype then offers the install.
+		vscode.commands.registerCommand('dsnr.getStarted', () => vscode.commands.executeCommand('git.clone')),
 		vscode.commands.registerCommand('dsnr.openReview', async (raw: unknown) => {
 			// Given the review, by code rather than a person: opened, and the caller told if it could not be.
 			if (raw !== undefined) {

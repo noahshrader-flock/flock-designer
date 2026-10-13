@@ -222,6 +222,9 @@ review) and shows the design system it found. Sign in is at the far right of VS 
 the username beside the mark once signed in. A prototype's review is its page on the site, built from the design
 repository and served from this machine, in an editor tab.
 
+With no product open, the panel says so and offers **Get started** (**DSNR: Get started**): VS Code's own Git: Clone,
+which offers to open what it cloned; New prototype then offers the install.
+
 **New prototype** (the **+** in its title bar, or **DSNR: New prototype**) says first what stands in the way (no product
 open, Claude Code missing or signed out, the product's packages not installed, with Install packages when it says how),
 then asks the name, what it should explore and its folder in VS Code's own boxes, and builds it from the branch the
