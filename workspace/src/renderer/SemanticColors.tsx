@@ -89,12 +89,23 @@ const Row = ({ row }: { row: SemanticRow }) => (
 	</li>
 );
 
-const Rows = ({ rows }: { rows: SemanticRow[] }) => (
-	<ul className="flex flex-col">
-		{rows.map((row) => (
-			<Row key={`${row.set}/${row.name}`} row={row} />
-		))}
-	</ul>
+/** A section's rows, under the themes' names: said again in every section, so each reads on its own wherever the list is scrolled to. */
+const Rows = ({ rows, themes }: { rows: SemanticRow[]; themes: string[] }) => (
+	<>
+		<div data-theme-headings className="text-muted-foreground flex items-center gap-1 text-xs">
+			<span className={NAME} />
+			{themes.map((theme) => (
+				<span key={theme} data-theme-heading className={cn(THEME, 'truncate text-center')}>
+					{theme}
+				</span>
+			))}
+		</div>
+		<ul className="flex flex-col">
+			{rows.map((row) => (
+				<Row key={`${row.set}/${row.name}`} row={row} />
+			))}
+		</ul>
+	</>
 );
 
 export const SemanticColors = ({ tokens }: { tokens: DesignToken[] }) => {
@@ -102,22 +113,14 @@ export const SemanticColors = ({ tokens }: { tokens: DesignToken[] }) => {
 	const table = useMemo(() => semanticTable(tokens), [tokens]);
 	return (
 		<div className="flex flex-col gap-1">
-			<div className="text-muted-foreground flex items-center gap-1 text-xs">
-				<span className={NAME}>Token</span>
-				{table.themes.map((theme) => (
-					<span key={theme} data-theme-heading className={cn(THEME, 'truncate text-center')}>
-						{theme}
-					</span>
-				))}
-			</div>
-			{table.flat.length > 0 && <Rows rows={table.flat} />}
+			{table.flat.length > 0 && <Rows rows={table.flat} themes={table.themes} />}
 			{table.sets.length > 0 && (
 				<Accordion {...closed.accordion(table.sets.map((s) => s.set))}>
 					{table.sets.map(({ set, rows }) => (
 						<AccordionItem key={set} value={set} data-token-group className={STICKY_GROUP_HEADER}>
 							<GroupTrigger name={set} count={rows.length} />
 							<AccordionContent>
-								<Rows rows={rows} />
+								<Rows rows={rows} themes={table.themes} />
 							</AccordionContent>
 						</AccordionItem>
 					))}

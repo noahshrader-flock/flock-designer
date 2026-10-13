@@ -57,7 +57,9 @@ const views = () => [...(view()?.querySelectorAll<HTMLElement>('[role="radio"]')
 const cell = (path: string) => document.querySelector<HTMLElement>(`[data-token="${path}"]`);
 const cells = () => [...document.querySelectorAll<HTMLElement>('[data-token]')].map((c) => c.getAttribute('data-token'));
 const groups = () => [...document.querySelectorAll<HTMLElement>('[data-token-group] [data-name]')].map((n) => n.textContent);
-const themes = () => [...document.querySelectorAll('[data-theme-heading]')].map((h) => h.textContent);
+const headingsOf = (scope: ParentNode) => [...scope.querySelectorAll('[data-theme-heading]')].map((h) => h.textContent);
+/** The themes named in the first section: every section names them again (see 'name the themes in every section'). */
+const themes = () => headingsOf(document.querySelector('[data-theme-headings]') as HTMLElement);
 const search = () => document.querySelector<HTMLInputElement>('input[aria-label="Search color"]') as HTMLInputElement;
 const text = () => document.body.textContent ?? '';
 /** What a value says to assistive technology, and in its tooltip: what it points at (`pine 50`), or its hex when it points at nothing. */
@@ -222,8 +224,25 @@ describe('the roles by theme', () => {
 			expect(c.className).not.toContain('flex-1');
 		}
 		// The headings take the same widths, so they stay over their columns.
-		const heads = [...document.querySelectorAll<HTMLElement>('[data-theme-heading]')];
+		const heads = [...(document.querySelector('[data-theme-headings]') as HTMLElement).querySelectorAll<HTMLElement>('[data-theme-heading]')];
 		expect(heads.map((h) => h.className.match(/\bw-\d+\b/)?.[0])).toEqual(themesCells.map((c) => c.className.match(/\bw-\d+\b/)?.[0]));
+	});
+
+	it('name the themes in every section, under its title, and not as a column titled Token', async () => {
+		await show();
+		const sections = [...document.querySelectorAll<HTMLElement>('[data-token-group]')];
+		expect(sections.length).toBeGreaterThan(1);
+		for (const section of sections) {
+			expect(headingsOf(section)).toEqual(['Light', 'Dark']);
+			// Under the section's title, above its first row.
+			const headings = section.querySelector('[data-theme-headings]') as HTMLElement;
+			const first = section.querySelector('[data-token-row]') as HTMLElement;
+			expect(headings.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+			expect(section.querySelector('[data-name]')?.compareDocumentPosition(headings)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+		}
+		expect([...document.querySelectorAll('[data-theme-headings] > span:not([data-theme-heading])')].map((s) => s.textContent)).toEqual(
+			sections.map(() => ''),
+		);
 	});
 
 	it('are centered under their theme’s heading', async () => {
