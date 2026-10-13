@@ -34,7 +34,7 @@ export const PublishProblems = ({ status: current }: { status: Status }) => {
 	if (status.state !== 'held' || status.problems.length === 0) return null;
 	return (
 		<ProblemsDialog
-			label="Some of your work is not synced"
+			label="Some work isn’t synced"
 			description="This was held back, and goes up on the next sync once what is in the way is cleared."
 		>
 			<ul className="flex flex-col gap-4">

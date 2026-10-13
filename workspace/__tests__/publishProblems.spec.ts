@@ -52,7 +52,7 @@ describe('what is not synced', () => {
 
 	it('is a small ghost button with the warning icon, not an alert across the page', async () => {
 		await show(held);
-		const b = button('Some of your work is not synced');
+		const b = button('Some work isn’t synced');
 		expect(b.getAttribute('data-variant')).toBe('ghost');
 		expect(b.getAttribute('data-size')).toBe('sm');
 		expect(b.querySelector('svg')).not.toBeNull();
@@ -62,10 +62,10 @@ describe('what is not synced', () => {
 	it('names each thing in a dialog, with why, and the files it is about as a list of their own, one to a line', async () => {
 		await show(held);
 		expect(dialog()).toBeNull();
-		await press(button('Some of your work is not synced'));
+		await press(button('Some work isn’t synced'));
 		await settle();
 		const d = dialog()!;
-		expect(d.querySelector('[data-slot="dialog-title"]')?.textContent).toBe('Some of your work is not synced');
+		expect(d.querySelector('[data-slot="dialog-title"]')?.textContent).toBe('Some work isn’t synced');
 		const things = [...d.querySelectorAll(':scope [data-slot="dialog-body"] > ul > li')];
 		expect(things.map((li) => li.firstElementChild?.textContent)).toEqual(['Project records', 'feature/role-comparison']);
 		expect(things[0]!.textContent).toContain('3 changes outside the project records are waiting to be pushed.');
@@ -78,7 +78,7 @@ describe('what is not synced', () => {
 
 	it('closes from its one Close button, in the footer', async () => {
 		await show(held);
-		await press(button('Some of your work is not synced'));
+		await press(button('Some work isn’t synced'));
 		await settle();
 		expect([...(dialog()?.querySelectorAll('button') ?? [])].map((b) => b.textContent)).toEqual(['Close']);
 		await press(button('Close', dialog()!));
