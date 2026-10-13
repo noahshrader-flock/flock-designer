@@ -8,6 +8,7 @@ import { quitWithTheWindow } from './lifecycle';
 import { AppearanceMemory } from './services/appearance';
 import { MIN_WINDOW, type WindowState, WindowMemory, restoreState } from './services/windowMemory';
 import { errorText } from '../shared/result';
+import { CLIENT_ID } from '../shared/config';
 
 /**
  * The application shell.
@@ -25,19 +26,6 @@ app.setPath('userData', join(app.getPath('appData'), pkg.settingsFolder));
 
 /** Set by the smoke check: boot, prove the window exists, exit. */
 const smokeMode = process.argv.includes('--smoke');
-
-/**
- * The GitHub App this signs in through.
- *
- * A client ID is not a secret -- the device flow exists precisely so a desktop
- * app needs no client secret -- so it is committed rather than configured. The
- * environment variable is for pointing a development build at another app.
- *
- * The matching app must have device flow enabled and Issues write permission,
- * and must be installed on the design repository. A token it issues cannot see
- * a repository the app is not installed on; verified 2026-10-05.
- */
-const GITHUB_CLIENT_ID = process.env.DSNR_CLIENT_ID ?? 'Iv23li2z9ayhXhGdFXCm';
 
 const DEFAULT_SIZE = { width: 1160, height: 700 };
 /** The window's color until the page is drawn, as the page's own dark background (`--background` in `index.css`). */
@@ -130,7 +118,7 @@ const createWindow = (): BrowserWindow => {
 
 void app.whenReady().then(() => {
 	const window = createWindow();
-	const services = createServices(window, paths(), GITHUB_CLIENT_ID);
+	const services = createServices(window, paths(), CLIENT_ID);
 	const { runtime, agent, share, github, page, prototypeServer } = services;
 	const publishing = registerIpc(services);
 	window.on('closed', () => prototypeServer.close());

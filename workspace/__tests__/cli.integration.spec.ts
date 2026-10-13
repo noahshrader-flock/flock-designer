@@ -6,8 +6,9 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { main } from '../src/cli/dsnr';
 import { g, installDesignSystem, makeProduct, addStandards } from './fixtures';
-import { DESIGN_REPO, type GitHubApi } from '../src/host/designRepo';
+import { type GitHubApi } from '../src/host/designRepo';
 import { type RouteCall, fakeGitHub, refusal } from './fakes/github';
+import { DESIGN_REPO } from '../src/shared/config';
 
 /**
  * `dsnr`, the command an agent runs from Claude Code in VS Code to make a prototype with no app running. Against a

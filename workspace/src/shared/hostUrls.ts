@@ -1,3 +1,4 @@
+import { AVATAR_ORIGIN } from './config';
 /**
  * The host's web addresses, built and recognised in one place: what a person opens in a browser (a branch, a comparison,
  * an avatar) and what a record keeps (a change request's address). Every part a person or a branch names is encoded the
@@ -27,8 +28,7 @@ const CHANGE_REQUEST = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+$/;
 export const asChangeRequestUrl = (v: unknown): string | null => (typeof v === 'string' && CHANGE_REQUEST.test(v) ? v : null);
 
 /** A person's avatar, which the host serves for any login. Null when only a git name is known. */
-export const avatarUrl = (login: string | null): string | null =>
-	login ? `https://avatars.githubusercontent.com/${encodeURIComponent(login)}?size=64` : null;
+export const avatarUrl = (login: string | null): string | null => (login ? `${AVATAR_ORIGIN}/${encodeURIComponent(login)}?size=64` : null);
 
 /** The login in the host's private email for a person, `12345+login@users.noreply.github.com` or `login@…`; null for any other. */
 export const loginFromNoreply = (email: string): string | null =>

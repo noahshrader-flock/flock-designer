@@ -21,7 +21,7 @@ import { ComponentTokens, type Measure } from './services/componentTokens';
 import { singleFlight } from './services/concurrency';
 import { DESCRIPTOR_PATH, readDescriptor, type WorkspaceDescriptor } from './services/descriptor';
 import { DesignLibrary } from './services/designLibrary';
-import { DESIGN_REPO, DesignRepo } from '../host/designRepo';
+import { DesignRepo } from '../host/designRepo';
 import { designStore } from './services/designStore';
 import { syncRecords } from './services/designSync';
 import { DesignSystemsMemory } from './services/designSystems';
@@ -57,6 +57,7 @@ import { registerPublishing } from './ipc/publishing';
 import { registerReview } from './ipc/review';
 import { formatRepo, repoRefOf } from '../shared/repoRef';
 import { HOST } from '../shared/vocabulary';
+import { DESIGN_REPO } from '../shared/config';
 
 export interface IpcContext {
 	window: BrowserWindow;

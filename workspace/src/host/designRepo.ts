@@ -17,14 +17,6 @@ import { type ReviewThread, ReviewThreads } from './reviewThreads';
  * having git installed. Authors still use a real checkout -- that is the only difference between the two modes.
  */
 
-/** Where projects and review threads live, for the app and the dsnr command alike. */
-const env: Record<string, string | undefined> = typeof process === 'undefined' ? {} : process.env;
-/** (In a browser, where the published site's comments run this, there is no environment: the page says which.) */
-export const DESIGN_REPO: RepoRef = {
-	owner: env.DSNR_REPO_OWNER ?? 'noahshrader-flock',
-	repo: env.DSNR_REPO_NAME ?? 'flock-designer',
-};
-
 /**
  * All this needs of GitHub: a signed-in call to its API. The app's session is one; so is `gh` on the command line, and a
  * token in a browser on the published site.

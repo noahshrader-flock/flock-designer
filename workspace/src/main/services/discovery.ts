@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { CODE_FOLDERS } from '../../shared/config';
 
 /**
  * Finding the product repository without being told where it is.
@@ -12,8 +13,6 @@ import { join } from 'node:path';
  * most recently used match wins; the person can change it, but is not asked.
  */
 
-/** Folders, relative to the home folder, that hold nothing but code. Where a clone goes when none is chosen. */
-export const CODE_FOLDERS = ['Documents/GitHub', 'GitHub', 'github', 'code', 'dev', 'src', 'repos', 'projects', 'workspace', 'Developer'];
 /** Where discovery looks, relative to the home folder: the code folders, then Documents and the home folder itself. */
 const ROOTS = [...CODE_FOLDERS, 'Documents', ''];
 

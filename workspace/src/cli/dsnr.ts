@@ -8,7 +8,7 @@ import { projectPath, prototypePagePath, prototypeSourcePath } from '../shared/d
 import { iterationLabel } from '../shared/work';
 import { writeCommentsExport } from '../main/services/commentsExport';
 import { DESCRIPTOR_PATH } from '../main/services/descriptor';
-import { DESIGN_REPO, type GitHubApi } from '../host/designRepo';
+import { type GitHubApi } from '../host/designRepo';
 import { recordsRootFor } from '../main/services/discovery';
 import { assertUsableProjectId } from '../main/services/iterations';
 import { readCheckout, git } from '../main/services/git';
@@ -26,6 +26,7 @@ import { plural } from '../shared/plural';
 import { loginFromNoreply } from '../shared/hostUrls';
 import { ReviewThreads } from '../host/reviewThreads';
 import { CLI, HOST, needsCli } from '../shared/vocabulary';
+import { DESIGN_REPO } from '../shared/config';
 
 /**
  * `dsnr`: making a prototype from Claude Code in VS Code, with no app running.

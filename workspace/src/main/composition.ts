@@ -10,7 +10,7 @@ import { CheckoutMemory } from './services/checkoutMemory';
 import { Cloner } from './services/clone';
 import { CloneFolderMemory } from './services/cloneFolder';
 import { coverInWindow } from './services/coverWindow';
-import { DESIGN_REPO, DesignRepo } from '../host/designRepo';
+import { DesignRepo } from '../host/designRepo';
 import { DesignSystemsMemory } from './services/designSystems';
 import { SessionMemory } from './services/editor';
 import { networkFetch } from '../host/github';
@@ -23,6 +23,7 @@ import { OpenedCheckouts } from './services/session';
 import { ShareRunner } from './services/share';
 import { PICTURE_RECIPE, measureInWindows } from './services/storyMeasure';
 import { TokenStore } from './services/tokenStore';
+import { DESIGN_REPO } from '../shared/config';
 
 /**
  * The app's services, made in one place for one window: the composition root. Everything a handler reaches is made

@@ -1,4 +1,5 @@
 import { matchesWords } from './search';
+import { HOSTED_STORYBOOKS } from './config';
 
 /**
  * The design system the Design System tab reads, as the catalog needs it: the repository, the branch that is its source
@@ -13,14 +14,6 @@ export interface DesignSystem {
 	/** The hosted Storybook's address, ending in `/`, or null when it has none: the Storybook links are then left out. */
 	storybook: string | null;
 }
-
-/**
- * Where a repository's Storybook is hosted, for the ones the app knows: a hint, since a library does not say it in its
- * files. Any other design system has no Storybook links, and is read the same in every other way.
- */
-const HOSTED_STORYBOOKS: Record<string, string> = {
-	'flocksafety/flock-react-component-lib': 'https://develop--6617f3c579abb5c5e780fddc.chromatic.com/',
-};
 
 /** The design system the catalog reads, from what was connected. */
 export const designSystemOf = ({ repository, branch }: { repository: string; branch: string }): DesignSystem => ({

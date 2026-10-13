@@ -2,11 +2,11 @@ import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import type { ClonePlace } from '../../shared/contract';
-import { CODE_FOLDERS } from './discovery';
 import { FolderMemory } from './folderMemory';
 import { listedAs, originOf } from './repositories';
 import { asRepositoryPath, parseRemote, repoName } from '../../shared/repoRef';
 import { HOST } from '../../shared/vocabulary';
+import { CODE_FOLDERS, DEFAULT_CLONE_FOLDER } from '../../shared/config';
 
 /**
  * Where this person's clones go: one folder, theirs to choose, which discovery looks through first, so a repository the
@@ -36,7 +36,7 @@ export interface CloneFolderDeps {
 export const defaultCloneFolder = ({ home, exists, clones }: CloneFolderDeps): string => {
 	const beside = clones[0];
 	if (beside !== undefined) return path.dirname(beside);
-	return CODE_FOLDERS.map((f) => path.join(home, f)).find(exists) ?? path.join(home, 'Documents', 'GitHub');
+	return CODE_FOLDERS.map((f) => path.join(home, f)).find(exists) ?? path.join(home, DEFAULT_CLONE_FOLDER);
 };
 
 /** The folder in use: the one chosen, else the default. */
