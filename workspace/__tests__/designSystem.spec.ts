@@ -120,12 +120,12 @@ describe('the tab bar (T9)', () => {
 		await open(() => ok(ready()));
 		expect([...bar().querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toEqual(['Components', 'Primitives', 'Voice and Tone']);
 		expect(tab('Components').getAttribute('aria-selected')).toBe('true');
-		// Above the frame's first row, which is the Components tab's own.
-		expect(bar().compareDocumentPosition(firstRow()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		// Under the design system's own row, which is first under the top bar and is not part of the tab bar.
+		expect(firstRow().compareDocumentPosition(bar()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(bar().contains(firstRow())).toBe(false);
 	});
 
-	it('shows Primitives with no first row and no side panel either, between the other two', async () => {
+	it('shows Primitives with the design system’s row still above it and no side panel, between the other two', async () => {
 		await open(() => ok(ready()));
 		await chooseTab('Primitives');
 		expect(tab('Primitives').getAttribute('aria-selected')).toBe('true');
@@ -133,6 +133,7 @@ describe('the tab bar (T9)', () => {
 		expect(shown('components')).toBe(false);
 		expect(shown('voice-and-tone')).toBe(false);
 		expect(divider()?.closest('[hidden]')).not.toBeNull();
+		expect(firstRow().closest('[hidden]')).toBeNull();
 		await chooseTab('Voice and Tone');
 		expect(shown('primitives')).toBe(false);
 		expect(shown('voice-and-tone')).toBe(true);
@@ -169,15 +170,15 @@ describe('the tab bar (T9)', () => {
 		expect(panelTabs.className).not.toContain('[&>[role=tab]]:flex-none');
 	});
 
-	it('shows Voice and tone with no first row and no side panel, and Components again as it was left', async () => {
+	it('shows Voice and tone with the design system’s row still above it and no side panel, and Components again as it was left', async () => {
 		await open(() => ok(ready()));
 		await chooseTab('Voice and Tone');
 		expect(tab('Voice and Tone').getAttribute('aria-selected')).toBe('true');
 		expect(shown('voice-and-tone')).toBe(true);
 		expect(shown('components')).toBe(false);
-		// The Components tab is hidden, not left: its row and panel are in it, so neither is seen.
+		// The panel is hidden, not left, and the design system's row is on every view: it is the one thing not in a tab.
 		expect(divider()?.closest('[hidden]')).not.toBeNull();
-		expect(firstRow().closest('[hidden]')).not.toBeNull();
+		expect(firstRow().closest('[hidden]')).toBeNull();
 		await chooseTab('Components');
 		expect(shown('components')).toBe(true);
 		expect(divider()?.closest('[hidden]')).toBeNull();
@@ -370,7 +371,7 @@ describe('searching the components (T9)', () => {
 	});
 });
 
-describe('the components frame’s first row and the side panel’s top', () => {
+describe('the design system’s first row and the side panel’s top', () => {
 	it('says in an alert at the top of the tokens panel, under the panel’s switch and above its tabs, how many values could not be read, and nothing when all were', async () => {
 		await open(() => ok(ready()));
 		expect(document.body.textContent).not.toContain('couldn’t be read');
@@ -380,12 +381,11 @@ describe('the components frame’s first row and the side panel’s top', () => 
 			{ file: 'src/colors/tones/neutral.ts', line: 15, reason: 'two' },
 		];
 		await open(() => ok({ ...ready(), tokens: { ...TOKENS, problems } }));
-		const alert = document.querySelector('[role="alert"]') as HTMLElement;
-		expect(alert.querySelector('[data-slot="alert-title"]')?.textContent).toBe('2 values couldn’t be read');
 		// In the panel at the right, under its switch and before its tabs; not in the first row, which has only Sync and More
-		// beside the name.
+		// beside the name. (Primitives says the same of its own, in its own view.)
 		const panel = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')?.nextElementSibling as HTMLElement;
-		expect(panel.contains(alert)).toBe(true);
+		const alert = panel.querySelector('[role="alert"]') as HTMLElement;
+		expect(alert.querySelector('[data-slot="alert-title"]')?.textContent).toBe('2 values couldn’t be read');
 		expect(alert.compareDocumentPosition(panel.querySelector('[role="tablist"]')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(panelView('Tokens').compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(firstRow().contains(alert)).toBe(false);
@@ -396,7 +396,7 @@ describe('the components frame’s first row and the side panel’s top', () => 
 		expect(document.querySelector('[role="dialog"]')?.textContent).toContain('src/colors/tones/neutral.ts:15');
 	});
 
-	it('has, in the first row, the design system’s name and branch, then Sync, then More, and nothing else', async () => {
+	it('has, in the first row under the top bar, the design system’s name and branch, then Sync, then More, and nothing else', async () => {
 		await open(() => ok(ready()));
 		const first = firstRow();
 		expect(first.textContent).toBe('Flock React Component LibSync');
@@ -409,11 +409,19 @@ describe('the components frame’s first row and the side panel’s top', () => 
 		expect(first.querySelector('[aria-label="Side panel"]')).toBeNull();
 	});
 
-	it('is in the components frame, at the left of the side panel, which runs the height of the tab beside it', async () => {
+	it('is above the views and the side panel alike, which are side by side under it, the panel running the height beside the tab bar', async () => {
 		await open(() => ok(ready()));
 		const divider = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')!;
-		expect(divider.previousElementSibling?.contains(firstRow())).toBe(true);
-		expect(divider.nextElementSibling?.contains(firstRow())).toBe(false);
+		const panelBox = divider.parentElement!;
+		const views = panelBox.previousElementSibling!;
+		// Under the row, side by side: the tab bar and its views at the left, the panel at the right.
+		expect(firstRow().compareDocumentPosition(views) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(views.contains(firstRow())).toBe(false);
+		expect(panelBox.contains(firstRow())).toBe(false);
+		expect(views.querySelector('[role="tablist"][aria-label="Design System"]')).not.toBeNull();
+		expect(panelBox.parentElement).toBe(views.parentElement);
+		// The panel's switch is as high as the tab bar, so the two read as one line.
+		expect((divider.nextElementSibling!.firstElementChild as HTMLElement).className).toContain('h-(--toolbar-height)');
 	});
 
 	it('has the panel’s Component and Tokens as the first thing in the panel, Component first, across the whole panel', async () => {
@@ -434,7 +442,7 @@ describe('the components frame’s first row and the side panel’s top', () => 
 	it('has no switcher between components and composites, and no count', async () => {
 		await open(() => ok(ready()));
 		// Not in the list: the tabs are the tab bar's, above it, and the tokens panel's, at the right of the divider.
-		const list = document.querySelector('[role="separator"][aria-label="Resize the tokens panel"]')!.previousElementSibling!;
+		const list = document.querySelector('[data-tab="components"]')!;
 		expect(list.querySelector('[role="tablist"]')).toBeNull();
 		expect(document.querySelectorAll('[role="tablist"]')).toHaveLength(2);
 		expect(text()).not.toMatch(/\d+ components/);
@@ -750,7 +758,7 @@ describe('the tokens panel', () => {
 		expect(panel()?.querySelector('input[aria-label="Search color"]')).not.toBeNull();
 		// The last thing on the row, at the right, with the list before it.
 		expect(divider()?.parentElement?.lastElementChild).toBe(panel());
-		expect(divider()?.previousElementSibling?.contains(document.querySelector('[data-component]'))).toBe(true);
+		expect(divider()?.parentElement?.previousElementSibling?.contains(document.querySelector('[data-component]'))).toBe(true);
 	});
 
 	it('stays when a component is opened, and when it is closed again, as one panel', async () => {
@@ -758,7 +766,7 @@ describe('the tokens panel', () => {
 		const before = panel();
 		await press(row('FSButton').querySelector('button')!);
 		expect(panel()).toBe(before);
-		expect(divider()?.previousElementSibling?.textContent).toContain('FSButton');
+		expect(divider()?.parentElement?.previousElementSibling?.textContent).toContain('FSButton');
 		await press(button('Back to components'));
 		expect(panel()).toBe(before);
 	});
