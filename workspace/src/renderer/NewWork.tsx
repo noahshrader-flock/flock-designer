@@ -6,8 +6,7 @@ import { CancelButton } from './CancelButton';
 import { useClone } from './Clone';
 import { FolderField, type FolderPick, pickOf, pickedFolder } from './FolderField';
 import { SearchSelect } from './SearchSelect';
-import { GitBranchIcon, InfoIcon } from 'lucide-react';
-import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
+import { GitBranchIcon } from 'lucide-react';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Field, FieldDescription, FieldLabel } from './ui/field';
@@ -19,6 +18,7 @@ import { useRepositories, useWorkspace } from './useWorkspace';
 import { RepositoryField } from './RepositoryField';
 import { ReadinessAlerts, usePrototypeReadiness } from './PrototypeReadiness';
 import { InlineAction } from './Links';
+import { NoRepositoryAlert } from './Notice';
 
 /** What New makes, said under its title. The app is for prototypes: codebase work is started in the codebase. */
 const ABOUT =
@@ -255,16 +255,7 @@ export const NewWork = ({
 							{toClone === null && !elsewhere && from !== null && <StartsFrom branch={from} branches={branches} onChange={setFrom} disabled={busy} />}
 						</RepositoryField>
 					) : (
-						<Alert>
-							<InfoIcon />
-							<AlertTitle>No product repository found</AlertTitle>
-							<AlertDescription>DSNR could not find a Flock product repository on this machine.</AlertDescription>
-							<AlertAction>
-								<Button variant="outline" onClick={onChoose}>
-									Find it
-								</Button>
-							</AlertAction>
-						</Alert>
+						<NoRepositoryAlert onFind={onChoose} />
 					)}
 					<FolderField
 						id="new-work-folder"

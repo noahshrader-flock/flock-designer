@@ -8,11 +8,11 @@ import { SkeletonStatus } from './Skeletons';
 import { StoryFrame } from './StoryFrame';
 import { MoreMenu } from './MoreMenu';
 import { Page } from './Page';
-import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
-import { Button } from './ui/button';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Card, CardContent } from './ui/card';
 import { Skeleton } from './ui/skeleton';
 import { DropdownMenuItem } from './ui/dropdown-menu';
+import { Notice, RetryButton } from './Notice';
 
 /** A link out, as a menu item. The window opens nothing itself: the app hands an https address to the system's browser. */
 const Out = ({ href, icon, children }: { href: string; icon: ReactNode; children: ReactNode }) => (
@@ -121,22 +121,17 @@ export const ComponentPage = ({
 					</Card>
 				</>
 			) : (
-				<Alert variant={preview.state === 'no-packages' ? 'warning' : 'destructive'}>
-					<TriangleAlertIcon />
-					<AlertTitle>Previews could not be built</AlertTitle>
-					<AlertDescription>
-						{preview.state === 'no-packages'
-							? `The library's packages are not installed in ${preview.root}. Run npm install there, then try again.`
-							: preview.state === 'no-library'
-								? 'There is no design system library connected.'
-								: preview.error}
-					</AlertDescription>
-					<AlertAction>
-						<Button variant="outline" onClick={() => void build(edits, true)}>
-							Try again
-						</Button>
-					</AlertAction>
-				</Alert>
+				<Notice
+					variant={preview.state === 'no-packages' ? 'warning' : 'destructive'}
+					title="Previews could not be built"
+					action={<RetryButton onClick={() => void build(edits, true)} />}
+				>
+					{preview.state === 'no-packages'
+						? `The library's packages are not installed in ${preview.root}. Run npm install there, then try again.`
+						: preview.state === 'no-library'
+							? 'There is no design system library connected.'
+							: preview.error}
+				</Notice>
 			)}
 		</Page>
 	);

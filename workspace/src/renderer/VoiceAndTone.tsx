@@ -1,15 +1,16 @@
-import { InfoIcon, RefreshCwIcon } from 'lucide-react';
+import { RefreshCwIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { VoiceAndTone as Voice } from '../shared/contract';
 import { BranchActions } from './BranchActions';
 import { OutLink } from './Links';
 import { Page } from './Page';
 import { RowsSkeleton, SkeletonStatus } from './Skeletons';
-import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { CHANGE_REQUEST, HOST } from '../shared/vocabulary';
 import { ErrorAlert } from './ErrorAlert';
+import { Notice, RetryButton } from './Notice';
+import { InlineAction } from './Links';
 
 /**
  * The Voice and Tone tab (T9 of the design system plan): Flock's voice and tone, one file in the connected design system's
@@ -86,16 +87,9 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 	if (voice === null && error !== null) {
 		return (
 			<Page>
-				<Alert>
-					<InfoIcon />
-					<AlertTitle>Could not read the voice and tone</AlertTitle>
-					<AlertDescription>{error}</AlertDescription>
-					<AlertAction>
-						<Button variant="outline" onClick={() => void read(false)}>
-							Try again
-						</Button>
-					</AlertAction>
-				</Alert>
+				<Notice variant="destructive" title="Could not read the voice and tone" action={<RetryButton onClick={() => void read(false)} />}>
+					{error}
+				</Notice>
 			</Page>
 		);
 	}
@@ -129,16 +123,9 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 			{error && <ErrorAlert error={error} />}
 
 			{theirs && (
-				<Alert>
-					<InfoIcon />
-					<AlertTitle>The voice and tone changed on {HOST} since it was opened</AlertTitle>
-					<AlertDescription>
-						Nothing was saved. It is below as it is now: use it, or keep your text and save it as a change to it.
-						<pre data-voice-now className="bg-muted mt-2 max-h-64 w-full overflow-auto rounded-md p-3 font-mono text-xs whitespace-pre-wrap">
-							{theirs.text ?? ''}
-						</pre>
-					</AlertDescription>
-					<AlertAction className="flex gap-2">
+				<Notice
+					title={`The voice and tone changed on ${HOST} since it was opened`}
+					action={
 						<Button
 							variant="outline"
 							onClick={() => {
@@ -149,17 +136,22 @@ export const VoiceAndTone = ({ hidden }: { hidden: boolean }) => {
 						>
 							Use theirs
 						</Button>
-						<Button
-							variant="outline"
-							onClick={() => {
-								setAgainst(theirs.sha);
-								setTheirs(null);
-							}}
-						>
-							Keep mine
-						</Button>
-					</AlertAction>
-				</Alert>
+					}
+				>
+					Nothing was saved. It is below as it is now: use it, or{' '}
+					<InlineAction
+						onClick={() => {
+							setAgainst(theirs.sha);
+							setTheirs(null);
+						}}
+					>
+						keep mine
+					</InlineAction>{' '}
+					and save it as a change to it.
+					<pre data-voice-now className="bg-muted mt-2 max-h-64 w-full overflow-auto rounded-md p-3 font-mono text-xs whitespace-pre-wrap">
+						{theirs.text ?? ''}
+					</pre>
+				</Notice>
 			)}
 
 			<Textarea

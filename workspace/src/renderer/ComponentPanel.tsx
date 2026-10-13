@@ -8,8 +8,7 @@ import { useTokenChanges } from './tokenChanges';
 import { Swatch } from './TokenEditor';
 import { inOrder } from '../shared/primitives';
 import { Sets } from './TokensPanel';
-import { Alert, AlertAction, AlertDescription } from './ui/alert';
-import { Button } from './ui/button';
+import { Notice, RetryButton } from './Notice';
 
 /** How often the panel asks again while every story is being drawn. */
 const ASK_EVERY_MS = 3000;
@@ -61,14 +60,9 @@ export const ComponentPanel = ({ component, components }: { component: CatalogCo
 					</p>
 				</div>
 			) : answer.state === 'failed' ? (
-				<Alert variant="destructive">
-					<AlertDescription>{answer.error}</AlertDescription>
-					<AlertAction>
-						<Button variant="outline" size="xs" onClick={() => setAsks((n) => n + 1)}>
-							Try again
-						</Button>
-					</AlertAction>
-				</Alert>
+				<Notice variant="destructive" action={<RetryButton size="xs" onClick={() => setAsks((n) => n + 1)} />}>
+					{answer.error}
+				</Notice>
 			) : (
 				<Uses component={component} components={components} answer={answer} />
 			)}

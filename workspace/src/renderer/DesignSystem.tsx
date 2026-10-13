@@ -1,5 +1,5 @@
-import { ChevronDownIcon, GitBranchIcon, InfoIcon, PlusIcon, Trash2Icon } from 'lucide-react';
-import { type ReactNode, useCallback, useState } from 'react';
+import { ChevronDownIcon, GitBranchIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import { matchesComponent } from '../shared/catalog';
 import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem } from '../shared/contract';
 import { ComponentPage } from './ComponentPage';
@@ -32,7 +32,6 @@ import { ViewSwitcher, useRememberedView } from './ViewSwitcher';
 import { Toolbar, ToolbarEnd } from './Toolbar';
 import { VoiceAndTone } from './VoiceAndTone';
 import { Accordion, AccordionContent, AccordionItem } from './ui/accordion';
-import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import {
 	DropdownMenu,
@@ -46,6 +45,8 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { HOST } from '../shared/vocabulary';
 import { ErrorAlert } from './ErrorAlert';
+import { Notice, RetryButton } from './Notice';
+import { InlineAction } from './Links';
 
 /** Said only when the update failed, as the other problems are (`ProblemsDialog`): the list shown is what this computer had, not an error. */
 const UpdateProblem = ({ update }: { update: CatalogUpdate }) =>
@@ -151,24 +152,6 @@ const PanelSwitcher = ({ view, canShowComponent, onSelect }: { view: PanelView; 
 		</ToggleGroupItem>
 		<ToggleGroupItem value="tokens">Tokens</ToggleGroupItem>
 	</ToggleGroup>
-);
-
-/** What a person sees in place of the list when there is no list, and, when there is a way to, a Try again. */
-const Notice = ({ title, children, onRetry }: { title: string; children: ReactNode; onRetry?: () => void }) => (
-	<Page>
-		<Alert>
-			<InfoIcon />
-			<AlertTitle>{title}</AlertTitle>
-			<AlertDescription>{children}</AlertDescription>
-			{onRetry && (
-				<AlertAction>
-					<Button variant="outline" onClick={onRetry}>
-						Try again
-					</Button>
-				</AlertAction>
-			)}
-		</Alert>
-	</Page>
 );
 
 /** The Design System tab's own tabs (T9): the company's design system, as its components, its primitives, and its voice and tone. */
@@ -352,9 +335,11 @@ const Components = ({
 
 	if (error && catalog === null) {
 		return (
-			<Notice title="Could not read the component library" onRetry={() => void ds.sync()}>
-				{error}
-			</Notice>
+			<Page>
+				<Notice variant="destructive" title="Could not read the component library" action={<RetryButton onClick={() => void ds.sync()} />}>
+					{error}
+				</Notice>
+			</Page>
 		);
 	}
 	// The view's shape until the library is read: the components as the list or grid last chosen.
@@ -367,25 +352,29 @@ const Components = ({
 	if (catalog.state === 'none') return <ConnectDesignSystem onConnected={() => void ds.showAnother()} />;
 	if (catalog.state === 'lost') {
 		return (
-			<Notice title={`${catalog.name} is no longer on this computer`}>
-				Its copy was at {catalog.root}. Remove it, then connect it again, or connect another.
-				<div className="mt-3 flex gap-2">
-					<Button variant="outline" onClick={() => shown && void ds.remove(shown.id)}>
-						Remove
-					</Button>
-					<Button variant="ghost" onClick={() => ds.setAdding(true)}>
-						Connect a design system
-					</Button>
-				</div>
-			</Notice>
+			<Page>
+				<Notice
+					title={`${catalog.name} is no longer on this computer`}
+					action={
+						<Button variant="outline" onClick={() => shown && void ds.remove(shown.id)}>
+							Remove
+						</Button>
+					}
+				>
+					Its copy was at {catalog.root}. Remove it, then connect it again, or{' '}
+					<InlineAction onClick={() => ds.setAdding(true)}>connect another</InlineAction>.
+				</Notice>
+			</Page>
 		);
 	}
 	if (catalog.state === 'no-branch') {
 		return (
-			<Notice title={`This clone has no ${catalog.branch} branch`} onRetry={() => void ds.sync()}>
-				The clone at {catalog.root} has no {catalog.branch} branch from {HOST} to read, and no other branch is read in its place. Check it is a clone
-				of the library, and that this computer can reach {HOST}.
-			</Notice>
+			<Page>
+				<Notice title={`This clone has no ${catalog.branch} branch`} action={<RetryButton onClick={() => void ds.sync()} />}>
+					The clone at {catalog.root} has no {catalog.branch} branch from {HOST} to read, and no other branch is read in its place. Check it is a
+					clone of the library, and that this computer can reach {HOST}.
+				</Notice>
+			</Page>
 		);
 	}
 

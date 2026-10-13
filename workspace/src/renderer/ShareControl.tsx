@@ -24,6 +24,7 @@ import { Spinner } from './ui/spinner';
 import { CHANGE_REQUEST } from '../shared/vocabulary';
 import { ErrorAlert } from './ErrorAlert';
 import { OutLink } from './Links';
+import { RetryButton } from './Notice';
 
 /**
  * What can be done with this page beyond reviewing it, behind one menu: move a prototype into the code,
@@ -248,11 +249,7 @@ export const ShareControl = ({
 							</>
 						) : (
 							<>
-								{view === 'failed' && (
-									<Button variant="secondary" onClick={() => setPhase('confirm')}>
-										Try again
-									</Button>
-								)}
+								{view === 'failed' && <RetryButton onClick={() => setPhase('confirm')} />}
 								{view === 'ready' && (
 									<Button variant="secondary" onClick={() => void copy()}>
 										{copied ? 'Copied' : 'Copy link'}

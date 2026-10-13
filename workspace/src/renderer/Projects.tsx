@@ -12,16 +12,15 @@ import { PublishProblems, usePublishStatus } from './PublishStatus';
 import { Review } from './Review';
 import { SyncButton } from './SyncButton';
 import { Toolbar, ToolbarEnd } from './Toolbar';
-import { InfoIcon } from 'lucide-react';
 import { ALL_FOLDERS, type FolderChoice, foldersOf, inFolder } from '../shared/brief';
 import { type ProjectOrder, matchesProject, sortProjects, withCovers } from '../shared/projectList';
-import { Alert, AlertAction, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { NoMatches } from './NoMatches';
 import { SearchField } from './SearchField';
 import { CardGridSkeleton, RowsSkeleton, SkeletonStatus } from './Skeletons';
 import { ViewSwitcher, useRememberedView } from './ViewSwitcher';
-import { ErrorAlert } from './ErrorAlert';
+import { NoRepositoryAlert, Notice, RetryButton } from './Notice';
+import { InlineAction } from './Links';
 
 /** Where the screen's choice of list or grid is kept: its own, apart from the Design System's. */
 const VIEW_KEY = 'dsnr.projectsView';
@@ -107,12 +106,9 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 	if (error) {
 		return (
 			<Page>
-				<ErrorAlert error={error} />
-				<div>
-					<Button variant="secondary" onClick={load}>
-						Try again
-					</Button>
-				</div>
+				<Notice variant="destructive" title="Could not read the projects" action={<RetryButton onClick={load} />}>
+					{error}
+				</Notice>
 			</Page>
 		);
 	}
@@ -184,34 +180,18 @@ export const Projects = ({ hidden }: { hidden: boolean }) => {
 			</Toolbar>
 			<Page wide>
 				{looked && !checkout && suggestion && (
-					<Alert>
-						<AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-							<span>
-								Found {suggestion.product} at {suggestion.root}. Use it for building and previewing here?
-							</span>
-							<span className="flex flex-row gap-2">
-								<Button size="sm" variant="secondary" onClick={chooseCheckout}>
-									Choose another
-								</Button>
-								<Button size="sm" onClick={() => void acceptSuggestion(suggestion.root)}>
-									Use this one
-								</Button>
-							</span>
-						</AlertDescription>
-					</Alert>
-				)}
-				{looked && !checkout && !suggestion && (
-					<Alert>
-						<InfoIcon />
-						<AlertTitle>No product repository found</AlertTitle>
-						<AlertDescription>DSNR could not find a Flock product repository on this machine. Point it at yours once.</AlertDescription>
-						<AlertAction>
-							<Button variant="outline" onClick={chooseCheckout}>
-								Find it
+					<Notice
+						title={`Found ${suggestion.product}`}
+						action={
+							<Button variant="outline" onClick={() => void acceptSuggestion(suggestion.root)}>
+								Use this one
 							</Button>
-						</AlertAction>
-					</Alert>
+						}
+					>
+						At {suggestion.root}. Use it for building and previewing here, or <InlineAction onClick={chooseCheckout}>choose another</InlineAction>.
+					</Notice>
 				)}
+				{looked && !checkout && !suggestion && <NoRepositoryAlert onFind={chooseCheckout} />}
 				<NewWork
 					open={creating}
 					onClose={() => setCreating(false)}

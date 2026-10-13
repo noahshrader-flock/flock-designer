@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { AgentReadiness, PrototypeReadiness } from '../shared/contract';
-import { Working } from './Clone';
+import { Notice } from './Notice';
+import { Spinner } from './ui/spinner';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { useWorkspace } from './useWorkspace';
@@ -45,30 +46,42 @@ export const ReadinessAlerts = ({
 }) => (
 	<>
 		{prototype && !prototype.ready && (
-			<Alert variant="warning">
-				<AlertTitle>{prototype.why === 'not-installed' ? "The real components aren't installed here" : 'The page builder is missing'}</AlertTitle>
-				<AlertDescription>
-					{prototype.why === 'not-installed' && prototype.canInstall ? (
-						<div className="flex flex-col items-start gap-3">
-							<span>
-								A prototype is built from {prototype.designSystem}, and {prototype.repository}'s packages are not installed on this machine yet.
-							</span>
-							{installing === null ? (
-								<Button onClick={onInstall}>Install packages</Button>
-							) : (
-								<Working text={installing} onStop={() => void window.workspace.cancelInstall()} />
-							)}
-						</div>
-					) : prototype.why === 'not-installed' ? (
-						<>
-							A prototype is built from {prototype.designSystem}, and it is not installed in {prototype.repository} on this machine. Run{' '}
-							<code>npm ci</code> in it (this needs access to the private packages), then open this again.
-						</>
+			<Notice
+				variant="warning"
+				title={prototype.why === 'not-installed' ? "The real components aren't installed here" : 'The page builder is missing'}
+				action={
+					prototype.why === 'not-installed' &&
+					prototype.canInstall &&
+					(installing === null ? (
+						<Button variant="outline" onClick={onInstall}>
+							Install packages
+						</Button>
 					) : (
-						'DSNR cannot build pages on this machine. Reinstall the app and try again.'
-					)}
-				</AlertDescription>
-			</Alert>
+						<Button variant="outline" onClick={() => void window.workspace.cancelInstall()}>
+							Stop
+						</Button>
+					))
+				}
+			>
+				{prototype.why === 'not-installed' && prototype.canInstall ? (
+					<>
+						A prototype is built from {prototype.designSystem}, and {prototype.repository}'s packages are not installed on this machine yet.
+						{installing !== null && (
+							<span className="mt-2 flex items-center gap-2 text-xs">
+								<Spinner />
+								<span className="min-w-0 truncate">{installing}</span>
+							</span>
+						)}
+					</>
+				) : prototype.why === 'not-installed' ? (
+					<>
+						A prototype is built from {prototype.designSystem}, and it is not installed in {prototype.repository} on this machine. Run{' '}
+						<code>npm ci</code> in it (this needs access to the private packages), then open this again.
+					</>
+				) : (
+					'DSNR cannot build pages on this machine. Reinstall the app and try again.'
+				)}
+			</Notice>
 		)}
 		{agent.state === 'missing' && (
 			<Alert variant="warning">

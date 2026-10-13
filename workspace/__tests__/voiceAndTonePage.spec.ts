@@ -219,12 +219,12 @@ describe('when it changed on GitHub meanwhile', () => {
 		expect((document.querySelector('[data-voice-now]') as HTMLElement).textContent).toBe('A colleague’s.\n');
 	});
 
-	it('takes the new version with Use theirs, or keeps the person’s with Keep mine, saved against the new one', async () => {
+	it('takes the new version with Use theirs, or keeps the person’s with keep mine, saved against the new one', async () => {
 		const app = await changed();
 		await typeInto(area()!, 'Mine.\n');
 		await press(button('Save to a branch'));
 		await settle();
-		await press(button('Keep mine'));
+		await press(button('keep mine'));
 		expect(document.querySelector('[data-voice-now]')).toBeNull();
 		await press(button('Save to a branch'));
 		await settle();

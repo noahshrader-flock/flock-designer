@@ -5,6 +5,7 @@ import { AgentLog, Loading } from '../Loading';
 import type { useEditor } from '../useEditor';
 import { Button } from '../ui/button';
 import { ErrorAlert } from '../ErrorAlert';
+import { RetryButton } from '../Notice';
 
 type Editor = ReturnType<typeof useEditor>;
 
@@ -113,7 +114,7 @@ const Status = ({
 							Continue in Claude Code
 						</Button>
 					)}
-					<Button onClick={onRetry}>Try again</Button>
+					<RetryButton onClick={onRetry} />
 				</div>
 			</>
 		);
