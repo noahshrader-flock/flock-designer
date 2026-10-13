@@ -127,7 +127,7 @@ describe('the tabs', () => {
 	it('rest on a bottom border, so there is a line between them and what is under them', async () => {
 		await show();
 		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
-		expect(list.className.split(' ')).toEqual(expect.arrayContaining(['border-b', 'w-full']));
+		expect(list.className.split(' ')).toEqual(expect.arrayContaining(['border-b', 'min-w-full']));
 	});
 
 	it('are the categories the library has, in order, as line tabs, with no heading or count above them', async () => {

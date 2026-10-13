@@ -22,7 +22,7 @@ export const LineTabs = ({ className, ...props }: ComponentProps<typeof Tabs>) =
 const BAR = 'justify-start bg-card px-(--page-padding) group-data-horizontal/tabs:h-(--toolbar-height) [&>[role=tab]]:flex-none';
 
 export const LineTabsList = ({ className, bar = false, ...props }: ComponentProps<typeof TabsList> & { bar?: boolean }) => (
-	<TabsList variant="line" data-bar={bar || undefined} className={cn('w-full border-b', bar && BAR, className)} {...props} />
+	<TabsList variant="line" data-bar={bar || undefined} className={cn('border-b', bar && BAR, className)} {...props} />
 );
 
 export const LineTabsTrigger = TabsTrigger;

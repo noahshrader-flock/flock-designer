@@ -37,8 +37,21 @@ describe('line tabs', () => {
 		await show();
 		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
 		expect(list.getAttribute('data-variant')).toBe('line');
-		expect(list.className.split(' ')).toEqual(expect.arrayContaining(['w-full', 'border-b']));
+		expect(list.className.split(' ')).toEqual(expect.arrayContaining(['min-w-full', 'border-b']));
 		expect(list.closest('[data-slot="line-tabs"]')?.className).not.toMatch(/(^|\s)p[xtblr]?-\d/);
+	});
+
+	it('scroll sideways, from the first tab at the left, when there are more than fit: the strip is as wide as its tabs in a box that scrolls it', async () => {
+		await show();
+		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
+		const box = list.parentElement as HTMLElement;
+		// The strip is at least its box and as wide as its tabs, and starts at the left: a centered row would spill off both ends.
+		expect(list.className.split(' ')).toEqual(expect.arrayContaining(['w-max', 'min-w-full', 'justify-start']));
+		expect(list.className.split(' ')).not.toContain('justify-center');
+		expect(box.getAttribute('data-slot')).toBe('tabs-scroll');
+		expect(box.className.split(' ')).toContain('overflow-x-auto');
+		// Room below the strip for a tab's underline, which is drawn over its border, with the layout unmoved.
+		expect(box.className.split(' ')).toEqual(expect.arrayContaining(['pb-px', '-mb-px']));
 	});
 
 	it('give each tab an equal share of the strip, so they stretch across its width with nothing set on the tabs themselves', async () => {
@@ -57,7 +70,13 @@ describe('line tabs', () => {
 		expect(list.hasAttribute('data-bar')).toBe(true);
 		// Still edge to edge on its border, but its tabs are not shares of it, and it is as tall as the bar under it.
 		expect(classes).toEqual(
-			expect.arrayContaining(['w-full', 'border-b', 'justify-start', 'group-data-horizontal/tabs:h-(--toolbar-height)', '[&>[role=tab]]:flex-none']),
+			expect.arrayContaining([
+				'min-w-full',
+				'border-b',
+				'justify-start',
+				'group-data-horizontal/tabs:h-(--toolbar-height)',
+				'[&>[role=tab]]:flex-none',
+			]),
 		);
 		// Aligned with what is under it, which is inset by the page's padding, and on the toolbar's own background.
 		expect(classes).toEqual(expect.arrayContaining(['px-(--page-padding)', 'bg-card']));
@@ -68,7 +87,7 @@ describe('line tabs', () => {
 		await show();
 		const list = document.querySelector('[data-slot="tabs-list"]') as HTMLElement;
 		expect(list.hasAttribute('data-bar')).toBe(false);
-		expect(list.className).not.toMatch(/toolbar-height|page-padding|flex-none|justify-start/);
+		expect(list.className).not.toMatch(/toolbar-height|page-padding|flex-none/);
 	});
 
 	it('write each tab’s label in title case, whatever it was written in, and leave a label that is not text as it is', async () => {

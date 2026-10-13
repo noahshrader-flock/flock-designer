@@ -28,7 +28,9 @@ const tabsListVariants = cva(
     variants: {
       variant: {
         default: "bg-muted",
-        line: "gap-1 bg-transparent",
+        // As wide as its tabs and at least its box, starting at the left: when the tabs do not fit, the strip is wider than
+        // the box that scrolls it (`TabsList`), never a centered row spilling off both ends with the first out of reach.
+        line: "w-max min-w-full gap-1 bg-transparent justify-start",
       },
       // The sizes of a Button (default and lg), so a row of tabs and a row of buttons beside it are the same height.
       size: {
@@ -50,7 +52,7 @@ function TabsList({
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List> &
   VariantProps<typeof tabsListVariants>) {
-  return (
+  const list = (
     <TabsPrimitive.List
       data-slot="tabs-list"
       data-variant={variant}
@@ -59,16 +61,34 @@ function TabsList({
       {...props}
     />
   )
+  if (variant !== "line") return list
+  // A line strip is carried by a box that scrolls it sideways when its tabs do not fit; the scrollbar is hidden, as what is
+  // cut off at the edge says there is more. The box has a pixel of room below the strip, taken back by its margin: a tab's
+  // underline is drawn over the strip's bottom border, and a box that clips would otherwise cut it off there.
+  return (
+    <div
+      data-slot="tabs-scroll"
+      className="-mb-px shrink-0 overflow-x-auto pb-px [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
+      {list}
+    </div>
+  )
 }
 
 function TabsTrigger({
   className,
   children,
+  onFocus,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
+      // A tab chosen by click or key is brought into view in a strip that scrolls, never left half cut off.
+      onFocus={(event) => {
+        onFocus?.(event)
+        event.currentTarget.scrollIntoView?.({ inline: "nearest", block: "nearest" })
+      }}
       className={cn(
         "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 dark:text-muted-foreground dark:hover:text-foreground group-data-[variant=default]/tabs-list:data-active:shadow-sm group-data-[variant=line]/tabs-list:data-active:shadow-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent",
