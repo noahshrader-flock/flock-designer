@@ -6,6 +6,8 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import type { Comments } from './useComments';
+import { cn } from '@/lib/utils';
+import { Item } from '../ui/item';
 
 /** What a card says about where its pin is, when that is worth saying. */
 const NOTE: Record<MarkerState, string | null> = {
@@ -53,13 +55,18 @@ export const CommentList = ({
 				const target = madeIn ?? states[0];
 				const showIn = state === 'otherState' && onShowState && target !== undefined && states.includes(target) ? target : null;
 				return (
-					<div
+					<Item
 						key={comment.id}
+						variant="outline"
 						ref={(el: HTMLDivElement | null) => comments.registerCard(comment.id, el)}
 						onClick={() => comments.select(comment)}
-						className={`rounded-lg border p-3 ${comments.selected === comment.id ? 'border-primary bg-accent border-2' : ''} ${
-							comment.anchor ? 'cursor-pointer' : ''
-						} ${comment.resolved ? 'opacity-65' : ''}`}
+						// The selected one stands out as the pin on the page does; a resolved one recedes.
+						className={cn(
+							'block p-3',
+							comments.selected === comment.id && 'border-primary bg-accent border-2',
+							comment.anchor && 'cursor-pointer',
+							comment.resolved && 'opacity-65',
+						)}
 					>
 						<div className="flex flex-col gap-1.5">
 							<div className="flex flex-row items-center gap-2">
@@ -131,7 +138,7 @@ export const CommentList = ({
 								</Button>
 							)}
 						</div>
-					</div>
+					</Item>
 				);
 			})}
 		</>

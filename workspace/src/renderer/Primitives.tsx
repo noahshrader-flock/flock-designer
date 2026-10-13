@@ -9,9 +9,10 @@ import { Page } from './Page';
 import { LinesSkeleton, SkeletonStatus } from './Skeletons';
 import { StoryFrame } from './StoryFrame';
 import { Swatch } from './TokenEditor';
-import { badgeVariants } from './ui/badge';
+import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
 import { Skeleton } from './ui/skeleton';
+import { cn } from '@/lib/utils';
 
 /** The design system's preview build, which a drawing that needs its own CSS (a type specimen) is drawn in; asked for once. */
 type Preview = StoryPreview | { state: 'asking' };
@@ -193,15 +194,17 @@ const listed = (words: string[]): string => (words.length < 2 ? (words[0] ?? '')
 
 /** A chip in the line at the top: a way to a primitive's section, or to the list of what is not defined. */
 const Chip = ({ defined, onPress, children }: { defined: boolean; onPress: () => void; children: ReactNode }) => (
-	<button
-		type="button"
-		data-primitive-chip
-		data-defined={defined}
-		className={`${badgeVariants({ variant: defined ? 'secondary' : 'outline' })} cursor-pointer ${defined ? '' : 'text-muted-foreground'}`}
-		onClick={onPress}
-	>
-		{children}
-	</button>
+	<Badge asChild variant={defined ? 'secondary' : 'outline'}>
+		<button
+			type="button"
+			data-primitive-chip
+			data-defined={defined}
+			className={cn('cursor-pointer', !defined && 'text-muted-foreground')}
+			onClick={onPress}
+		>
+			{children}
+		</button>
+	</Badge>
 );
 
 /**

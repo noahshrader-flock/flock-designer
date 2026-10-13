@@ -353,9 +353,12 @@ describe('changing a token (T3)', () => {
 		await show();
 		const editor = await open('palette.light.primary.main');
 		expect(editor.textContent).toContain('Points at pineGreen 50');
-		const steps = [...editor.querySelectorAll<HTMLButtonElement>('[aria-label="Steps of pineGreen"] button')];
+		// One group of choices, shadcn's: arrow keys move between the steps, and the one pointed at is checked.
+		const picker = editor.querySelector('[aria-label="Steps of pineGreen"]')!;
+		expect(picker.getAttribute('data-slot')).toBe('toggle-group');
+		const steps = [...picker.querySelectorAll<HTMLButtonElement>('button')];
 		expect(steps.map((s) => s.getAttribute('aria-label'))).toEqual(['pineGreen 50', 'pineGreen 20']);
-		expect(steps.map((s) => s.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+		expect(steps.map((s) => s.getAttribute('aria-checked'))).toEqual(['true', 'false']);
 		// No color picker until it is asked for: a custom color is the second choice.
 		expect(editor.querySelector('input[type="color"]')).toBeNull();
 		await press(steps[1] as HTMLButtonElement);

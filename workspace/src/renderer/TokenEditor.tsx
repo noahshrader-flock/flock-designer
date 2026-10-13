@@ -10,6 +10,7 @@ import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Slider } from './ui/slider';
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 
 /**
  * Changing a token (T3 of the design system plan): what opens from a row of the tokens panel, chosen by what the token is
@@ -124,22 +125,29 @@ const StepPicker = ({ token, target }: { token: DesignToken; target: DesignToken
 	const { shown, change } = useTokenChanges();
 	const steps = shown.filter((t) => t.group === target.group && t.set === target.set);
 	return (
-		<div role="group" aria-label={`Steps of ${target.set}`} className="flex flex-wrap gap-1">
+		// One group of choices, so arrow keys move between the steps; each a swatch tile, sized for the swatch, not a button.
+		<ToggleGroup
+			type="single"
+			spacing={1}
+			aria-label={`Steps of ${target.set}`}
+			value={token.ref?.path ?? ''}
+			// Pressing the one pointed at would unpress it, which the group says as an empty value: ignored.
+			onValueChange={(path) => path && change(token, { ref: path })}
+			className="flex-wrap"
+		>
 			{steps.map((s) => (
-				<button
+				<ToggleGroupItem
 					key={s.path}
-					type="button"
+					value={s.path}
 					aria-label={nameOf(s)}
-					aria-pressed={token.ref?.path === s.path}
 					title={`${nameOf(s)} · ${s.value}`}
-					onClick={() => change(token, { ref: s.path })}
-					className="hover:bg-muted aria-pressed:ring-ring flex w-9 flex-col items-center gap-0.5 rounded-md p-1 text-[10px] aria-pressed:ring-2"
+					className="data-[state=on]:ring-ring h-auto w-9 flex-col gap-0.5 p-1 text-[10px] data-[state=on]:bg-transparent data-[state=on]:ring-2"
 				>
 					<Swatch value={s.value} size="size-6" />
 					{s.name}
-				</button>
+				</ToggleGroupItem>
 			))}
-		</div>
+		</ToggleGroup>
 	);
 };
 

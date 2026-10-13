@@ -3,13 +3,13 @@ import type { FoundDesignSystem } from '../shared/contract';
 import { plural } from '../shared/plural';
 import { CancelButton } from './CancelButton';
 import { useClone } from './Clone';
-import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { repoName } from '../shared/repoRef';
 import { ErrorAlert } from './ErrorAlert';
 import { closeUnlessBusy } from './dialogClose';
 import { useRepositories } from './useWorkspace';
 import { RepositoryField } from './RepositoryField';
+import { Item, ItemContent, ItemDescription, ItemTitle } from './ui/item';
 
 /**
  * Connecting a design system (P4 of the design system plan), centered in the window like the GitHub sign-in: one of the
@@ -53,14 +53,16 @@ export const ConnectDesignSystem = ({ onConnected, onCancel }: { onConnected: ()
 						{choosing.repository} has {plural(choosing.found.length, 'design system')} in it. Choose one:
 					</p>
 					{choosing.found.map((f) => (
-						<Button key={f.folder} variant="outline" className="h-auto justify-start py-2 text-left" onClick={() => void choose(f.folder)}>
-							<span className="flex flex-col gap-0.5">
-								<span className="font-medium">{f.name}</span>
-								<span className="text-muted-foreground text-xs font-normal">
-									{f.folder === '' ? 'The whole repository' : f.folder} · {plural(f.components, 'component')} · {plural(f.tokens, 'token')}
-								</span>
-							</span>
-						</Button>
+						<Item key={f.folder} asChild variant="outline" className="hover:bg-muted cursor-pointer text-left">
+							<button type="button" onClick={() => void choose(f.folder)}>
+								<ItemContent>
+									<ItemTitle>{f.name}</ItemTitle>
+									<ItemDescription>
+										{f.folder === '' ? 'The whole repository' : f.folder} · {plural(f.components, 'component')} · {plural(f.tokens, 'token')}
+									</ItemDescription>
+								</ItemContent>
+							</button>
+						</Item>
 					))}
 				</>
 			) : listed.loading || listed.value !== null ? (
