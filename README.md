@@ -8,8 +8,9 @@ stand" block. **[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)** is what is 
 
 **`projects/`** — one folder per project. Drop in whatever context you have.
 
-**`agents/`** — the builder (`dsnr.md`) and its two read-only reviewers, the same in every product. A product
-carries only a three-line shim for each, so Claude Code finds them.
+**`agents/`** — how to build UI in a Flock product, for any agent (`ui-guide.md`); the builder (`dsnr.md`, DSNR's
+workflow on top of that) and its two read-only reviewers, the same in every product. A product carries only a
+three-line shim for each, so Claude Code finds them.
 
 **`skills/`** — workflows the agent follows that are the same in every product, such as acting on a
 reviewer's comments. The app puts the right one in the agent's task, so nobody has to find or install
