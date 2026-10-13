@@ -115,7 +115,7 @@ describe('line tabs', () => {
 		expect(document.querySelector('[data-slot="tabs"]')?.className).not.toMatch(/min-h-0/);
 	});
 
-	it('write each tab’s label in title case, whatever it was written in, and leave a label that is not text as it is', async () => {
+	it('show each tab’s label as it is given: how it is cased is said by whoever names the tab (uiDrift.spec)', async () => {
 		current = await render(
 			createElement(
 				Tabs,
@@ -123,13 +123,12 @@ describe('line tabs', () => {
 				createElement(
 					TabsList,
 					null,
-					createElement(TabsTrigger, { value: 'a' }, 'voice and tone'),
-					createElement(TabsTrigger, { value: 'b' }, 'Color'),
-					createElement(TabsTrigger, { value: 'c' }, createElement('em', null, 'not text')),
+					createElement(TabsTrigger, { value: 'a' }, 'Voice and Tone'),
+					createElement(TabsTrigger, { value: 'b' }, 'gRPC'),
 				),
 			),
 		);
-		expect([...document.querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toEqual(['Voice and Tone', 'Color', 'not text']);
+		expect([...document.querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toEqual(['Voice and Tone', 'gRPC']);
 	});
 
 	it('fill the panel from top to bottom, the strip first and what is under it scrolling', async () => {
