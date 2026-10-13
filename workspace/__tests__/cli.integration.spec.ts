@@ -6,7 +6,8 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { main } from '../src/cli/dsnr';
 import { g, installDesignSystem, makeProduct, addStandards } from './fixtures';
-import { type GitHubApi } from '../src/host/designRepo';
+import type { GitHubApi } from '../src/host/github';
+
 import { type RouteCall, fakeGitHub, refusal } from './fakes/github';
 import { DESIGN_REPO } from '../src/shared/config';
 

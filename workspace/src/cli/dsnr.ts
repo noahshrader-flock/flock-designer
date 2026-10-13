@@ -8,7 +8,9 @@ import { projectPath, prototypePagePath, prototypeSourcePath } from '../shared/d
 import { iterationLabel } from '../shared/work';
 import { writeCommentsExport } from '../main/services/commentsExport';
 import { DESCRIPTOR_PATH } from '../main/services/descriptor';
-import { type GitHubApi } from '../host/designRepo';
+import type { GitHubApi } from '../host/github';
+import { loginOf } from '../host/github';
+
 import { recordsRootFor } from '../main/services/discovery';
 import { assertUsableProjectId } from '../main/services/iterations';
 import { readCheckout, git } from '../main/services/git';
@@ -102,13 +104,8 @@ const meOf = async (designRoot: string, github: GitHubApi | null): Promise<Perso
 	const read = async (key: string) => (await git(designRoot, ['config', key]).catch(() => '')).trim();
 	const name = await read('user.name');
 	if (!name) return null;
-	const login =
-		loginFromNoreply(await read('user.email')) ??
-		(await github
-			?.api('/user')
-			.then((u) => (u as { login?: unknown }).login)
-			.catch(() => null));
-	return { name, login: typeof login === 'string' ? login : null };
+	const login = loginFromNoreply(await read('user.email')) ?? (github ? await loginOf(github).catch(() => null) : null);
+	return { name, login };
 };
 
 const OPTIONS = {

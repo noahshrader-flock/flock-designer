@@ -21,6 +21,20 @@ const DEVICE_CODE_URL = 'https://github.com/login/device/code';
 const TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const API = 'https://api.github.com';
 
+/**
+ * All the app needs of the host's API: a signed-in call to its API. The app's session is one; so is `gh` on the command line, and a
+ * token in a browser on the published site.
+ */
+export interface GitHubApi {
+	api(path: string, init?: { method?: string; body?: unknown }): Promise<unknown>;
+}
+
+/** Who `api` is signed in as, by their login, or null when it does not say. Throws when it cannot be asked. */
+export const loginOf = async (api: GitHubApi): Promise<string | null> => {
+	const login = asRecord(await api.api('/user')).login;
+	return typeof login === 'string' ? login : null;
+};
+
 /** Raised when the person must sign in again -- the refresh token is spent or revoked. */
 export class ReauthRequired extends HostError {
 	constructor(message = `Sign in to ${HOST} again.`) {

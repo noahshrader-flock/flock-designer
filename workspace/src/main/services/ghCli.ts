@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
-import type { GitHubApi } from '../../host/designRepo';
+import type { GitHubApi } from '../../host/github';
+
 import { findOnPath } from './paths';
 import { errorText } from '../../shared/result';
 import { HostError } from '../../host/hostError';
@@ -29,7 +30,8 @@ export const ghError = (err: unknown): HostError => {
  * GitHub's API through its own command line, `gh`, signed in as the person: what their account can reach, every
  * organization's repositories included. The app's own sign-in is a GitHub App, which GitHub lets see only the
  * repositories it is installed on; the command line is not limited that way. Used by the `dsnr` command, and by the app
- * to list the repositories a design system can be connected from, and by sharing (`shareTools.ts`) to find it. Fails, as
+ * to list the repositories a design system can be connected from, and by sharing and the voice and tone, whose pull
+ * requests and saves are the person's own. Fails, as
  * GitHub would, when `gh` is missing or signed out, and after a minute rather than hanging.
  */
 export const ghApi = (bin: string = locateGh()): GitHubApi => ({

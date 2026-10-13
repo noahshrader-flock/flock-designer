@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { NEEDS_GH } from '../src/main/services/voiceAndTone';
-import { CLI_NEEDED } from '../src/main/services/shareTools';
+import { VOICE_NEEDS_CLI } from '../src/main/services/voiceAndTone';
+import { SHARE_NEEDS_CLI } from '../src/main/services/shareTools';
 import { needsCli } from '../src/shared/vocabulary';
 
 describe("the host's words", () => {
@@ -12,7 +12,7 @@ describe("the host's words", () => {
 	});
 
 	it('are what every message about it says', () => {
-		for (const said of [NEEDS_GH, CLI_NEEDED])
+		for (const said of [VOICE_NEEDS_CLI, SHARE_NEEDS_CLI])
 			expect(said).toContain("goes through GitHub's command line, gh, which is missing or not signed in here.");
 	});
 });

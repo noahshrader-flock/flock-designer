@@ -1,5 +1,5 @@
 import { asArray } from '../shared/json';
-import type { GitHubApi } from './designRepo';
+import type { GitHubApi } from './github';
 import { HOST } from '../shared/vocabulary';
 
 /**

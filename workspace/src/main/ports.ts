@@ -1,5 +1,6 @@
 import { type BrowserWindow, clipboard, dialog, shell } from 'electron';
-import type { GitHubApi } from '../host/designRepo';
+import type { GitHubApi } from '../host/github';
+
 import { type AgentSession, findEditor, openFolder, openPrompt, openSession } from './services/editor';
 import { locateClaude } from './services/agent';
 import { ghApi } from './services/ghCli';
@@ -38,30 +39,34 @@ export interface Ports {
 	shareTools(root: string): ShareTools;
 }
 
-export const electronPorts = (window: BrowserWindow): Ports => ({
-	chooseFolder: async ({ title, defaultPath, canCreate = false }) => {
-		const { canceled, filePaths } = await dialog.showOpenDialog(window, {
-			title,
-			...(defaultPath !== undefined ? { defaultPath } : {}),
-			properties: canCreate ? ['openDirectory', 'createDirectory'] : ['openDirectory'],
-		});
-		return canceled ? null : (filePaths[0] ?? null);
-	},
-	tell: async ({ message, detail }) => {
-		await dialog.showMessageBox({ type: 'info', message, detail });
-	},
-	openExternal: (url) => shell.openExternal(url),
-	openPath: async (path) => {
-		await shell.openPath(path);
-	},
-	copy: (text) => clipboard.writeText(text),
-	httpStatus: async (url) => {
-		const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(6000) });
-		await res.body?.cancel();
-		return res.status;
-	},
-	editor: { find: () => findEditor(), openFolder, openPrompt, openSession },
-	claude: () => locateClaude(),
-	personGitHub: ghApi(),
-	shareTools: (root) => realShareTools(root),
-});
+export const electronPorts = (window: BrowserWindow): Ports => {
+	// One for both: the person's own command line, which lists their repositories and opens their pull requests.
+	const person = ghApi();
+	return {
+		chooseFolder: async ({ title, defaultPath, canCreate = false }) => {
+			const { canceled, filePaths } = await dialog.showOpenDialog(window, {
+				title,
+				...(defaultPath !== undefined ? { defaultPath } : {}),
+				properties: canCreate ? ['openDirectory', 'createDirectory'] : ['openDirectory'],
+			});
+			return canceled ? null : (filePaths[0] ?? null);
+		},
+		tell: async ({ message, detail }) => {
+			await dialog.showMessageBox({ type: 'info', message, detail });
+		},
+		openExternal: (url) => shell.openExternal(url),
+		openPath: async (path) => {
+			await shell.openPath(path);
+		},
+		copy: (text) => clipboard.writeText(text),
+		httpStatus: async (url) => {
+			const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(6000) });
+			await res.body?.cancel();
+			return res.status;
+		},
+		editor: { find: () => findEditor(), openFolder, openPrompt, openSession },
+		claude: () => locateClaude(),
+		personGitHub: person,
+		shareTools: (root) => realShareTools(root, person),
+	};
+};

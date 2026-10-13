@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
-import type { GitHubApi } from '../../src/host/designRepo';
+import type { GitHubApi } from '../../src/host/github';
+
 import { HostError, type HostErrorKind } from '../../src/host/hostError';
 
 /**

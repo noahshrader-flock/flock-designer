@@ -14,10 +14,10 @@ import {
 import { asRecord } from '../shared/json';
 import { latestDate } from '../shared/projectList';
 import type { RepoRef } from '../shared/repoRef';
-import type { GitHubApi } from './designRepo';
+import type { GitHubApi } from './github';
 import { HostError, hostErrorKind } from './hostError';
 import { readPages } from './paging';
-import { repoPath } from './repoFiles';
+import { repoApiPath } from './repoFiles';
 
 /**
  * The review threads of a repository: comments are its issue comments, one issue per iteration, found by the branch line
@@ -42,8 +42,8 @@ export class ReviewThreads {
 		private readonly ref: RepoRef,
 	) {}
 
-	private get base(): string {
-		return repoPath(this.ref);
+	private get apiPath(): string {
+		return repoApiPath(this.ref);
 	}
 
 	/**
@@ -59,7 +59,7 @@ export class ReviewThreads {
 	/** The review threads, by the branch they carry comments for. */
 	async byBranch(): Promise<Map<string, ReviewThread>> {
 		const issues = (
-			await readPages(this.session, `${this.base}/issues?state=all&labels=${encodeURIComponent(ITERATION_LABEL)}`, { maxPages: 10 })
+			await readPages(this.session, `${this.apiPath}/issues?state=all&labels=${encodeURIComponent(ITERATION_LABEL)}`, { maxPages: 10 })
 		).map(asRecord);
 
 		// More than one thread can exist for a branch (the listing lag above made
@@ -93,7 +93,7 @@ export class ReviewThreads {
 		// Listings lag, so a thread made seconds ago may not be in `existing`.
 
 		const created = asRecord(
-			await this.session.api(`${this.base}/issues`, {
+			await this.session.api(`${this.apiPath}/issues`, {
 				method: 'POST',
 				body: {
 					title: `Review — ${projectId} (${branch})`,
@@ -144,7 +144,7 @@ export class ReviewThreads {
 		// Each comment with the thread it was read from: never the oldest one's, which would mix up a branch with several.
 		const threads = await Promise.all(
 			issue.numbers.map(async (n) =>
-				(await readPages(this.session, `${this.base}/issues/${n}/comments`, { maxPages: 20 })).map((c) => this.toComment(asRecord(c), n)),
+				(await readPages(this.session, `${this.apiPath}/issues/${n}/comments`, { maxPages: 20 })).map((c) => this.toComment(asRecord(c), n)),
 			),
 		);
 		return threads.flat().sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -156,7 +156,7 @@ export class ReviewThreads {
 	 * the rule wanted: you can move your own pins, not someone else's.
 	 */
 	async moveComment(comment: CommentRef, anchor: CommentAnchor): Promise<ReviewComment> {
-		const path = `${this.base}/issues/comments/${comment.id}`;
+		const path = `${this.apiPath}/issues/comments/${comment.id}`;
 		const current = asRecord(await this.session.api(path));
 		const body = String(current.body ?? '');
 		const old = parseAnchor(body);
@@ -178,7 +178,7 @@ export class ReviewThreads {
 	 * open as any other, with its pin, and Address can be run on it again.
 	 */
 	async setResolved(comment: CommentRef, resolved: boolean): Promise<ReviewComment> {
-		const path = `${this.base}/issues/comments/${comment.id}`;
+		const path = `${this.apiPath}/issues/comments/${comment.id}`;
 		const current = asRecord(await this.session.api(path));
 		const body = String(current.body ?? '');
 		const next = resolved ? withResolved(body, true) : withAddressed(withResolved(body, false), null);
@@ -196,7 +196,7 @@ export class ReviewThreads {
 	 * leaves the comment open or resolved as the person had it.
 	 */
 	async setAddressed(comment: CommentRef, commit: string | null, iteration: string | null = null): Promise<ReviewComment> {
-		const path = `${this.base}/issues/comments/${comment.id}`;
+		const path = `${this.apiPath}/issues/comments/${comment.id}`;
 		const current = asRecord(await this.session.api(path));
 		const body = String(current.body ?? '');
 		const addressed = withAddressed(body, commit, iteration);
@@ -216,7 +216,7 @@ export class ReviewThreads {
 	 */
 	async deleteComment(comment: CommentRef): Promise<void> {
 		try {
-			await this.session.api(`${this.base}/issues/comments/${comment.id}`, { method: 'DELETE' });
+			await this.session.api(`${this.apiPath}/issues/comments/${comment.id}`, { method: 'DELETE' });
 		} catch (err) {
 			if (hostErrorKind(err) === 'notFound') return;
 			if (hostErrorKind(err) === 'forbidden') {
@@ -235,7 +235,7 @@ export class ReviewThreads {
 	): Promise<ReviewComment> {
 		const number = await this.ensureIssue(projectId, branch);
 		const created = asRecord(
-			await this.session.api(`${this.base}/issues/${number}/comments`, {
+			await this.session.api(`${this.apiPath}/issues/${number}/comments`, {
 				method: 'POST',
 				body: { body: composeBody(body, anchor, picture) },
 			}),

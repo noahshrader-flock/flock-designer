@@ -3,6 +3,7 @@ import { basename, join } from 'node:path';
 import type { Repository, RepositoryReach } from '../../shared/contract';
 import type { GitHubSession } from './githubSession';
 import { readPages } from '../../host/paging';
+import { loginOf } from '../../host/github';
 
 /**
  * The repositories new work can start in: every one the signed-in person can see on GitHub, matched to its
@@ -78,10 +79,8 @@ export const reachableRepositories = async (
 	// Null when the command line's list is not this person's: missing, signed out, or another account.
 	const theirs = async (): Promise<string[] | null> => {
 		if (person === null || login === null) return null;
-		const [who, names] = await Promise.all([person.api('/user').catch(() => null), visibleRepositories(person).catch(() => [])]);
-		const same =
-			typeof (who as { login?: unknown } | null)?.login === 'string' && (who as { login: string }).login.toLowerCase() === login.toLowerCase();
-		return same && who !== null ? names : null;
+		const [who, names] = await Promise.all([loginOf(person).catch(() => null), visibleRepositories(person).catch(() => [])]);
+		return who !== null && who.toLowerCase() === login.toLowerCase() ? names : null;
 	};
 	const [mine, apps] = await Promise.all([theirs(), visibleRepositories(app).catch(() => [])]);
 	const seen = new Set<string>();

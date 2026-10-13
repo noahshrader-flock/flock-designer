@@ -1,8 +1,9 @@
 import type { PageStatus } from '../../shared/contract';
 import { prototypePagePath, sitePath } from '../../shared/designPaths';
-import type { GitHubApi } from '../../host/designRepo';
+import type { GitHubApi } from '../../host/github';
+
 import { hostErrorKind } from '../../host/hostError';
-import { repoPath } from '../../host/repoFiles';
+import { RepoFiles, repoApiPath } from '../../host/repoFiles';
 import { type SyncResult, syncRecords } from './designSync';
 import { git } from './git';
 import { asArray, asRecord } from '../../shared/json';
@@ -29,11 +30,8 @@ export interface SiteVisibility {
 	site: { url: string; public: boolean } | null;
 }
 
-const forbidden = (err: unknown): boolean => hostErrorKind(err) === 'forbidden';
-const notFound = (err: unknown): boolean => hostErrorKind(err) === 'notFound';
-
 export const readVisibility = async (github: GitHubApi, ref: RepoRef): Promise<SiteVisibility> => {
-	const base = repoPath(ref);
+	const base = repoApiPath(ref);
 	const repo = asRecord(await github.api(base));
 	let site: SiteVisibility['site'] = null;
 	try {
@@ -41,7 +39,7 @@ export const readVisibility = async (github: GitHubApi, ref: RepoRef): Promise<S
 		// Unknown counts as public: a site is private only when GitHub says so.
 		site = { url: String(pages.html_url ?? ''), public: pages.public !== false };
 	} catch (err) {
-		if (!notFound(err)) throw err;
+		if (hostErrorKind(err) !== 'notFound') throw err;
 	}
 	// Unknown counts as public here too.
 	return { repoPrivate: repo.private === true, defaultBranch: String(repo.default_branch ?? ''), site };
@@ -77,12 +75,11 @@ export const pageStatus = async (github: GitHubApi, ref: RepoRef, projectId: str
 	if (path === null) return { state: 'none' };
 	const vis = await readVisibility(github, ref);
 	if (!vis.site?.url) return { state: 'none' };
-	const base = repoPath(ref);
+	const base = repoApiPath(ref);
 	const deployed = await deployedSha(github, base);
-	const [changed] =
-		((await github.api(
-			`${base}/commits?path=${encodeURIComponent(prototypePagePath(projectId, name))}&sha=${encodeURIComponent(vis.defaultBranch)}&per_page=1`,
-		)) as { sha: string }[] | null) ?? [];
+	const [changed] = (await new RepoFiles(github, ref).commits(prototypePagePath(projectId, name), { at: vis.defaultBranch, limit: 1 })) as {
+		sha: string;
+	}[];
 	if (deployed === null || !changed) return { state: 'unpublished' };
 	if (changed.sha !== deployed) {
 		const { status } = asRecord(await github.api(`${base}/compare/${changed.sha}...${deployed}`));
@@ -123,7 +120,7 @@ export type SiteBehind = { kind: 'page'; projectId: string; name: string } | { k
 export const siteBehind = async (github: GitHubApi, ref: RepoRef): Promise<SiteBehind | null> => {
 	const vis = await readVisibility(github, ref);
 	if (!vis.site?.url) return null;
-	const base = repoPath(ref);
+	const base = repoApiPath(ref);
 	const { workflow_runs: runs } = asRecord(await github.api(`${base}/actions/workflows/${PUBLISH_WORKFLOW}/runs?per_page=5`));
 	if (asArray(runs).some((r) => asRecord(r).status !== 'completed')) return null;
 	const deployed = await deployedSha(github, base);
@@ -211,12 +208,11 @@ export interface Published {
  * when GitHub cannot say, it is not the first time, so nothing is made of a guess (a browser tab opened by mistake).
  */
 const isFirstTime = async (github: GitHubApi, ref: RepoRef, projectId: string, name: string): Promise<boolean> => {
-	const base = repoPath(ref);
+	const base = repoApiPath(ref);
 	try {
 		const deployed = await deployedSha(github, base);
 		if (deployed === null) return true;
-		const onIt = await github.api(`${base}/commits?sha=${deployed}&path=${encodeURIComponent(prototypePagePath(projectId, name))}&per_page=1`);
-		return asArray(onIt).length === 0;
+		return (await new RepoFiles(github, ref).commits(prototypePagePath(projectId, name), { at: deployed, limit: 1 })).length === 0;
 	} catch {
 		return false;
 	}
@@ -240,7 +236,7 @@ const deploy = async (
 	done: 'published' | 'unpublished',
 	change: () => Promise<void> = async () => undefined,
 ): Promise<{ visibility: SiteVisibility; site: string }> => {
-	const base = repoPath(ref);
+	const base = repoApiPath(ref);
 	const nothing = `Nothing was ${done}`;
 	const noLink = done === 'published' ? ' No link was made.' : '';
 
@@ -276,11 +272,11 @@ const deploy = async (
 			body: { ref: branch },
 		});
 	} catch (err) {
-		if (forbidden(err))
+		if (hostErrorKind(err) === 'forbidden')
 			throw new Error(
 				`DSNR's ${HOST} App is not allowed to start the deploy. Its permissions need Actions: read and write (and Pages and Deployments: read), approved on the installation. Publishing from the command line still works.`,
 			);
-		if (notFound(err))
+		if (hostErrorKind(err) === 'notFound')
 			throw new Error(
 				`The workflow that publishes the site (.github/workflows/${PUBLISH_WORKFLOW}) is not on ${HOST} yet, on the repository's default branch. Push it, then try again.`,
 			);

@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import type { GitHubApi } from '../src/host/designRepo';
+import type { GitHubApi } from '../src/host/github';
+
 import { type RouteCall, fakeGitHub, refusal } from './fakes/github';
 import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, redeploySite, siteBehind, unpublish, whyPublic } from '../src/main/services/pages';
 
@@ -101,9 +102,8 @@ describe('publishing', () => {
 		// Asked of the last deploy, with the commits that touched this page.
 		const gh = fakeSite({ onSite: false });
 		await run(gh).done;
-		expect(gh.calls.map((c) => c.path).find((p) => p.startsWith('/repos/acme/design/commits?'))).toContain(
-			`sha=${'d'.repeat(40)}&path=projects%2Fdemo%2Fprototypes%2Fv1-i2.html`,
-		);
+		const asked = new URLSearchParams(gh.calls.find((c) => c.path.startsWith('/repos/acme/design/commits?'))?.path.split('?')[1]);
+		expect([asked.get('sha'), asked.get('path')]).toEqual(['d'.repeat(40), 'projects/demo/prototypes/v1-i2.html']);
 	});
 
 	it('does not count it as the first time when it cannot tell, so nothing opens by mistake', async () => {

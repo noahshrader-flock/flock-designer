@@ -1,6 +1,3 @@
-import { type RepoRef, formatRepo } from '../../shared/repoRef';
-import { compareUrl } from '../../shared/hostUrls';
-import { needsCli } from '../../shared/vocabulary';
 /**
  * The company's voice and tone (T9 of the design system plan): one file in the design system's agent files
  * (`.dsnr/voice-and-tone.md`, in its folder when it lives in a larger repository), read and changed from the Design System
@@ -21,14 +18,17 @@ import { needsCli } from '../../shared/vocabulary';
  */
 import type { VoiceAndTone, VoiceBranch, VoiceSave } from '../../shared/contract';
 import { asRecord } from '../../shared/json';
-import type { GitHubApi } from '../../host/designRepo';
-import { RepoFiles } from '../../host/repoFiles';
-import { ChangeRequests } from '../../host/changeRequests';
+
+import { RepoFiles, noWriteAccess } from '../../host/repoFiles';
+import { ChangeRequests, type PullRequest } from '../../host/changeRequests';
 import { designSystemId } from './designSystems';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { hostErrorKind } from '../../host/hostError';
 import { type JsonFile, jsonFile } from './jsonFile';
-
+import { type RepoRef, formatRepo } from '../../shared/repoRef';
+import { compareUrl } from '../../shared/hostUrls';
+import { needsCli } from '../../shared/vocabulary';
+import type { GitHubApi } from '../../host/github';
 /** Where the file is, in a design system's agent files: how Flock speaks is the design system's (Noah, 2026-10-10). */
 export const VOICE_FILE = '.dsnr/voice-and-tone.md';
 
@@ -39,7 +39,7 @@ export const VOICE_BRANCH = dsnrBranchPattern('voice');
 interface Kept {
 	branch: string;
 	saves: number;
-	pullRequest: { number: number; url: string } | null;
+	pullRequest: PullRequest | null;
 }
 
 const PROPOSAL_TITLE = 'Voice and tone';
@@ -206,8 +206,7 @@ export class VoiceAndToneFile {
 			}
 		} catch (err) {
 			const kind = hostErrorKind(err);
-			if (kind === 'forbidden' || kind === 'notFound')
-				throw new Error('Saving needs write access to the design repository. Ask someone who has it to add you.');
+			if (kind === 'forbidden' || kind === 'notFound') throw noWriteAccess(this.repo);
 			throw err;
 		}
 		return { state: 'saved', voice: await this.current() };
@@ -231,7 +230,7 @@ export class VoiceAndToneFile {
 			this.keep({ ...kept, pullRequest: pr });
 		} catch (err) {
 			// A command line not signed in, or gone since: the change stays saved, and GitHub's own page can open the pull request.
-			if (hostErrorKind(err) === 'missingCli' || hostErrorKind(err) === 'reauth') throw new Error(NEEDS_GH);
+			if (hostErrorKind(err) === 'missingCli' || hostErrorKind(err) === 'reauth') throw new Error(VOICE_NEEDS_CLI);
 			throw err;
 		}
 		return this.current();
@@ -239,4 +238,4 @@ export class VoiceAndToneFile {
 }
 
 /** What is said when the person's command line for the host cannot be used: everything here goes through it. */
-export const NEEDS_GH = needsCli('Reading and saving the voice and tone', 'Anything already saved is on its branch.');
+export const VOICE_NEEDS_CLI = needsCli('Reading and saving the voice and tone', 'Anything already saved is on its branch.');

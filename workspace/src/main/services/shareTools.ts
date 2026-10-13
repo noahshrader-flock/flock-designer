@@ -1,5 +1,5 @@
 import { ChangeRequests } from '../../host/changeRequests';
-import type { GitHubApi } from '../../host/designRepo';
+import type { GitHubApi } from '../../host/github';
 import { HostError, hostErrorKind } from '../../host/hostError';
 import { RepoFiles } from '../../host/repoFiles';
 import { type RepoRef, parseRemote, repoRefOf } from '../../shared/repoRef';
@@ -9,8 +9,8 @@ import type { ShareTools } from './share';
 import { CHANGE_REQUEST, HOST, needsCli } from '../../shared/vocabulary';
 
 /**
- * The real tools behind sharing: the designer's own git for the push, and the GitHub CLI for
- * the pull request.
+ * The real tools behind sharing: the designer's own git for the push, and their own GitHub CLI (`gh api`) for the pull
+ * request (`ChangeRequests`).
  *
  * **Why the GitHub CLI and not this app's own sign-in.** The app's GitHub App is installed on
  * the design repository only, and is deliberately limited to it; the pull request lives in the
@@ -20,15 +20,15 @@ import { CHANGE_REQUEST, HOST, needsCli } from '../../shared/vocabulary';
  */
 
 /** What is said when the person's own command line cannot be used, missing or signed out: sharing goes through it. */
-export const CLI_NEEDED = needsCli(`Opening a ${CHANGE_REQUEST}`);
-const NOT_ON_GITHUB = `This repository's origin is not on ${HOST}, so a ${CHANGE_REQUEST} cannot be opened for it from here.`;
+export const SHARE_NEEDS_CLI = needsCli(`Opening a ${CHANGE_REQUEST}`);
+const NOT_ON_HOST = `This repository's origin is not on ${HOST}, so a ${CHANGE_REQUEST} cannot be opened for it from here.`;
 
 /** The person's own command line, its two failures said as what to do about them. */
 const withAdvice = (gh: GitHubApi): GitHubApi => ({
 	api: (path, init) =>
 		gh.api(path, init).catch((err: unknown) => {
 			const kind = hostErrorKind(err);
-			if (kind === 'missingCli' || kind === 'reauth') throw new HostError(CLI_NEEDED, undefined, kind);
+			if (kind === 'missingCli' || kind === 'reauth') throw new HostError(SHARE_NEEDS_CLI, undefined, kind);
 			throw err;
 		}),
 });
@@ -39,20 +39,23 @@ const withAdvice = (gh: GitHubApi): GitHubApi => ({
  */
 export const realShareTools = (root: string, host: GitHubApi = ghApi(), repo?: RepoRef): ShareTools => {
 	const gh = withAdvice(host);
-	const where = async (): Promise<RepoRef> => {
-		if (repo) return repo;
-		const origin = await originUrl(root);
-		const path = origin === null ? null : parseRemote(origin);
-		if (path === null) throw new Error(NOT_ON_GITHUB);
-		return repoRefOf(path);
-	};
-	const requests = async () => new ChangeRequests(gh, await where());
+	// Where the pull requests are, worked out once for this checkout: it is asked again on every look at the checks.
+	let where: Promise<RepoRef> | null = null;
+	const repository = (): Promise<RepoRef> =>
+		(where ??= (async () => {
+			if (repo) return repo;
+			const origin = await originUrl(root);
+			const path = origin === null ? null : parseRemote(origin);
+			if (path === null) throw new Error(NOT_ON_HOST);
+			return repoRefOf(path);
+		})());
+	const requests = async () => new ChangeRequests(gh, await repository());
 	return {
 		push: (branch) => pushBranch(root, branch),
 		findPr: async (branch) => (await requests()).findOpen(branch),
-		// Onto the repository's default branch, as `gh pr create` opens one.
+		// Onto the repository's default branch, which is what a pull request is opened onto when none is named.
 		createDraftPr: async (branch, title, body) =>
-			(await requests()).openDraft({ head: branch, base: await new RepoFiles(gh, await where()).defaultBranch(), title, body }),
+			(await requests()).openDraft({ head: branch, base: await new RepoFiles(gh, await repository()).defaultBranch(), title, body }),
 		checks: async (pr) => (await requests()).checks(pr),
 		sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
 		now: () => Date.now(),

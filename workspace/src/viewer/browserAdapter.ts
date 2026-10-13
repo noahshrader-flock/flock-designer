@@ -1,7 +1,5 @@
-import type { GitHubApi } from '../host/designRepo';
-import { type Fetcher, callApi } from '../host/github';
+import { type Fetcher, type GitHubApi, callApi, loginOf } from '../host/github';
 import type { PinEvent } from '../shared/contract';
-import { asRecord } from '../shared/json';
 import {
 	CANCEL_PICK_SCRIPT,
 	PICK_SCRIPT,
@@ -32,21 +30,16 @@ export const tokenApi = (token: string, fetcher: Fetcher = fetch as unknown as F
 
 /** One iteration's comments, on GitHub. `branch` is its key, `prototype/<project>/<name>`, which names its thread. */
 export const browserComments = (github: GitHubApi, ref: RepoRef, { projectId, branch }: { projectId: string; branch: string }): CommentStore => {
-	const repo = new ReviewThreads(github, ref);
+	const threads = new ReviewThreads(github, ref);
 	return {
-		read: () => toResult(repo.readComments(branch)),
+		read: () => toResult(threads.readComments(branch)),
 		// No picture of the spot: a page cannot take one of itself.
-		post: (body, anchor) => toResult(repo.postComment(projectId, branch, body, anchor, null)),
-		resolve: (comment, resolved) => toResult(repo.setResolved(comment, resolved)),
-		remove: (comment) => toResult(repo.deleteComment(comment).then(() => null)),
-		move: (comment, anchor) => toResult(repo.moveComment(comment, anchor)),
+		post: (body, anchor) => toResult(threads.postComment(projectId, branch, body, anchor, null)),
+		resolve: (comment, resolved) => toResult(threads.setResolved(comment, resolved)),
+		remove: (comment) => toResult(threads.deleteComment(comment).then(() => null)),
+		move: (comment, anchor) => toResult(threads.moveComment(comment, anchor)),
 		viewer: async () => {
-			try {
-				const login = asRecord(await github.api('/user')).login;
-				return typeof login === 'string' ? login : null;
-			} catch {
-				return null;
-			}
+			return loginOf(github).catch(() => null);
 		},
 		// A prototype has no commit; what it was made against is its iteration, which the thread already says.
 		version: async () => '',

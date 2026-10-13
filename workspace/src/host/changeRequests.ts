@@ -1,7 +1,7 @@
 import { asArray, asRecord } from '../shared/json';
 import type { RepoRef } from '../shared/repoRef';
-import type { GitHubApi } from './designRepo';
-import { repoPath } from './repoFiles';
+import type { GitHubApi } from './github';
+import { repoApiPath } from './repoFiles';
 import { CHANGE_REQUEST, HOST } from '../shared/vocabulary';
 
 /**
@@ -26,11 +26,11 @@ export interface Check {
 	startedAt: string;
 }
 
-/** A check run's outcome in one word, as `gh pr checks` puts it: anything not finished is pending. */
+/** A check run's outcome in one word, as `gh pr checks` puts it: anything not finished, or gone stale, is pending. */
 const runBucket = (status: unknown, conclusion: unknown): string => {
-	if (status !== 'completed') return 'pending';
-	if (conclusion === 'success' || conclusion === 'neutral') return 'pass';
-	if (conclusion === 'skipped') return 'skipping';
+	if (status !== 'completed' || conclusion === 'stale') return 'pending';
+	if (conclusion === 'success') return 'pass';
+	if (conclusion === 'skipped' || conclusion === 'neutral') return 'skipping';
 	if (conclusion === 'cancelled') return 'cancel';
 	return 'fail';
 };
@@ -49,31 +49,36 @@ export class ChangeRequests {
 		private readonly ref: RepoRef,
 	) {}
 
-	private get base(): string {
-		return repoPath(this.ref);
+	private get apiPath(): string {
+		return repoApiPath(this.ref);
 	}
 
 	/** The one open from `head` (a branch of this repository), or null. */
+	/** The change requests from `head`, a branch of this repository, in `state`. */
+	private async from(head: string, state: 'open' | 'all'): Promise<unknown[]> {
+		return asArray(await this.session.api(`${this.apiPath}/pulls?head=${encodeURIComponent(`${this.ref.owner}:${head}`)}&state=${state}`));
+	}
+
 	async findOpen(head: string): Promise<PullRequest | null> {
-		const open = asArray(await this.session.api(`${this.base}/pulls?head=${encodeURIComponent(`${this.ref.owner}:${head}`)}&state=open`));
+		const open = await this.from(head, 'open');
 		return asPullRequest(open[0]);
 	}
 
 	/** Whether any was ever opened from `head`, open or not. */
 	async anyFrom(head: string): Promise<boolean> {
-		return asArray(await this.session.api(`${this.base}/pulls?head=${encodeURIComponent(`${this.ref.owner}:${head}`)}&state=all`)).length > 0;
+		return (await this.from(head, 'all')).length > 0;
 	}
 
 	/** Always a draft. Nothing here can open one that is ready for review. */
 	async openDraft({ head, base, title, body }: { head: string; base: string; title: string; body: string }): Promise<PullRequest> {
-		const made = asPullRequest(await this.session.api(`${this.base}/pulls`, { method: 'POST', body: { title, head, base, body, draft: true } }));
+		const made = asPullRequest(await this.session.api(`${this.apiPath}/pulls`, { method: 'POST', body: { title, head, base, body, draft: true } }));
 		if (made === null) throw new Error(`${HOST} did not say which ${CHANGE_REQUEST} it opened.`);
 		return made;
 	}
 
 	/** Whether it is still open: not once it is merged or closed. */
 	async isOpen(number: number): Promise<boolean> {
-		const pr = asRecord(await this.session.api(`${this.base}/pulls/${number}`));
+		const pr = asRecord(await this.session.api(`${this.apiPath}/pulls/${number}`));
 		return pr.state === 'open' && !pr.merged_at;
 	}
 
@@ -82,12 +87,12 @@ export class ChangeRequests {
 	 * commit status (Chromatic reports as one). The first hundred of each, which is more than any repository here runs.
 	 */
 	async checks(number: number): Promise<Check[]> {
-		const sha = asRecord(asRecord(await this.session.api(`${this.base}/pulls/${number}`)).head).sha;
+		const sha = asRecord(asRecord(await this.session.api(`${this.apiPath}/pulls/${number}`)).head).sha;
 		if (typeof sha !== 'string') throw new Error(`${HOST} did not say what ${CHANGE_REQUEST} ${number} is at.`);
 		const [runs, statuses, workflows] = await Promise.all([
-			this.session.api(`${this.base}/commits/${sha}/check-runs?per_page=100`),
-			this.session.api(`${this.base}/commits/${sha}/status?per_page=100`),
-			this.session.api(`${this.base}/actions/runs?head_sha=${sha}&per_page=100`),
+			this.session.api(`${this.apiPath}/commits/${sha}/check-runs?per_page=100`),
+			this.session.api(`${this.apiPath}/commits/${sha}/status?per_page=100`),
+			this.session.api(`${this.apiPath}/actions/runs?head_sha=${sha}&per_page=100`),
 		]);
 		const workflowOf = new Map(asArray(asRecord(workflows).workflow_runs).map((w) => [asRecord(w).check_suite_id, String(asRecord(w).name ?? '')]));
 		return [

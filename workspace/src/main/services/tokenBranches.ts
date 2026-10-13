@@ -1,5 +1,3 @@
-import { errorText } from '../../shared/result';
-import { HOST } from '../../shared/vocabulary';
 /**
  * Where a change to the library's tokens is kept, and how it is proposed (T4 and T5 of the design system plan).
  *
@@ -28,7 +26,8 @@ import { type JsonFile, jsonFile } from './jsonFile';
 import type { CatalogReads } from './componentCatalog';
 import type { ShareTools } from './share';
 import { editedFiles } from './tokenEdits';
-
+import { errorText } from '../../shared/result';
+import { HOST } from '../../shared/vocabulary';
 /** The branches DSNR saves a change to: its own, so a save can never land on anyone's work. */
 export const TOKEN_BRANCH = dsnrBranchPattern('tokens');
 

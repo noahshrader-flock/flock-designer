@@ -6,6 +6,7 @@ import { iterationOrder, latestDate } from '../shared/projectList';
 import { asRecord } from '../shared/json';
 import { parseIterations, toProjectIteration } from '../shared/records';
 import type { RepoRef } from '../shared/repoRef';
+import type { GitHubApi } from './github';
 import { RepoFiles } from './repoFiles';
 import { type ReviewThread, ReviewThreads } from './reviewThreads';
 
@@ -16,14 +17,6 @@ import { type ReviewThread, ReviewThreads } from './reviewThreads';
  * This is what makes reviewer mode possible: a PM opens the app and sees every project without cloning anything or
  * having git installed. Authors still use a real checkout -- that is the only difference between the two modes.
  */
-
-/**
- * All this needs of GitHub: a signed-in call to its API. The app's session is one; so is `gh` on the command line, and a
- * token in a browser on the published site.
- */
-export interface GitHubApi {
-	api(path: string, init?: { method?: string; body?: unknown }): Promise<unknown>;
-}
 
 export class DesignRepo {
 	readonly files: RepoFiles;

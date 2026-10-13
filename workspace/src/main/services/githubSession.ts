@@ -11,7 +11,7 @@ import {
 	startDeviceFlow,
 } from '../../host/github';
 import { singleFlight } from './concurrency';
-import { HostError } from '../../host/hostError';
+import { HostError, hostErrorKind } from '../../host/hostError';
 import type { TokenStore } from './tokenStore';
 import { HOST } from '../../shared/vocabulary';
 
@@ -51,7 +51,7 @@ export class GitHubSession {
 		} catch (err) {
 			// Expired or revoked while the app was closed: start signed out rather than showing a broken session. Offline
 			// or a GitHub outage is not that: the token is kept for the next launch, and calls made meanwhile still use it.
-			if (err instanceof ReauthRequired) {
+			if (hostErrorKind(err) === 'reauth') {
 				this.signOut();
 			}
 		}
@@ -146,7 +146,7 @@ export class GitHubSession {
 		try {
 			return await fn(token.accessToken);
 		} catch (err) {
-			if (err instanceof ReauthRequired) {
+			if (hostErrorKind(err) === 'reauth') {
 				this.signOut();
 			}
 			throw err;
@@ -163,7 +163,7 @@ export class GitHubSession {
 					return fresh;
 				},
 				(err: unknown) => {
-					if (err instanceof ReauthRequired) {
+					if (hostErrorKind(err) === 'reauth') {
 						this.signOut();
 					}
 					throw err;

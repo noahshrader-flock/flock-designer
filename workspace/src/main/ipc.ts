@@ -45,7 +45,7 @@ import { type ShareRunner } from './services/share';
 import { siteDeploys } from './services/siteDeploys';
 import { StoryPreviews } from './services/storyPreviews';
 import { TokenBranches } from './services/tokenBranches';
-import { NEEDS_GH, VoiceAndToneFile } from './services/voiceAndTone';
+import { VOICE_NEEDS_CLI, VoiceAndToneFile } from './services/voiceAndTone';
 import { registerAccount } from './ipc/account';
 import { registerCheckout } from './ipc/checkout';
 import { registerClone } from './ipc/clone';
@@ -287,7 +287,7 @@ export const ipcDeps = ({
 	const voiceFile = (): VoiceAndToneFile => {
 		const system = shownSystem();
 		if (system === null) throw new Error('No design system is connected. Connect one in Components: its voice and tone is in its agent files.');
-		if (personGitHub === null) throw new Error(NEEDS_GH);
+		if (personGitHub === null) throw new Error(VOICE_NEEDS_CLI);
 		return new VoiceAndToneFile({ repo: repoRefOf(system.repository), folder: system.folder, github: personGitHub, file: voiceBranchFile });
 	};
 

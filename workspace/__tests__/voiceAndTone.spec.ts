@@ -3,7 +3,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { GitHubApi } from '../src/host/designRepo';
+import type { GitHubApi } from '../src/host/github';
+
 import { VOICE_BRANCH, VOICE_FILE, VoiceAndToneFile } from '../src/main/services/voiceAndTone';
 import type { HostErrorKind } from '../src/host/hostError';
 import { type RouteCall, fakeGitHub, refusal } from './fakes/github';
@@ -299,7 +300,7 @@ describe('saving a change', () => {
 		gh.commit('one');
 		gh.refuse = { when: (m) => m !== 'GET', status: 403, message: 'Resource not accessible by integration' };
 		const file = make();
-		await expect(file.save('two', (await file.current()).sha)).rejects.toThrow(/write access to the design repository/);
+		await expect(file.save('two', (await file.current()).sha)).rejects.toThrow(/write access to acme\/design\./);
 	});
 
 	it('remembers the branch when the app is closed and opened again', async () => {

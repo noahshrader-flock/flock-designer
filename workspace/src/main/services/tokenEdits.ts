@@ -1,4 +1,3 @@
-import { asRecord } from '../../shared/json';
 /**
  * A change to the library's tokens, written into its files (T3 of the design system plan, decisions 19 and 26): what the
  * previews are built from to try a change, and what T4 will commit to a branch. **One writer for both.**
@@ -14,7 +13,7 @@ import { isEditable } from '../../shared/primitives';
 import { fitsKind, placeOf, withEdits } from '../../shared/tokens';
 import type { CatalogReads } from './componentCatalog';
 import { readTokens, sourceNamed } from './designTokens';
-
+import { asRecord } from '../../shared/json';
 /** At most this many edits in a change: a person changes a few tokens at a time, never thousands. */
 const MOST_EDITS = 500;
 

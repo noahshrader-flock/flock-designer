@@ -1,15 +1,16 @@
-import type { RepoRef } from '../shared/repoRef';
-import { repoPath } from '../host/repoFiles';
-import { HOST, THREAD } from '../shared/vocabulary';
 /**
  * `dsnr wcag-edition` (T7 of the design system plan): asks the W3C which edition of WCAG 2 is its latest published one, and
  * when it is not the one the app's numbers come from (`WCAG_EDITION`), opens an issue on the design repository saying so,
  * once. Run every week by `.github/workflows/wcag-edition.yml`, so a new version, or a corrected edition, is seen the week
  * it is published. What it means for the app is a person's to decide; this makes sure one is asked.
  */
-import type { GitHubApi } from '../host/designRepo';
-import { WCAG_EDITION, WCAG_LATEST, editionOf } from '../shared/wcag';
 
+import { WCAG_EDITION, WCAG_LATEST, editionOf } from '../shared/wcag';
+import type { RepoRef } from '../shared/repoRef';
+import { repoApiPath } from '../host/repoFiles';
+import { HOST, THREAD } from '../shared/vocabulary';
+import type { GitHubApi } from '../host/github';
+import { readPages } from '../host/paging';
 export interface WcagEditionDeps {
 	fetchText: (url: string) => Promise<string>;
 	/** GitHub, to open the issue on `repo`; null where it cannot be asked, and then the difference is only printed. */
@@ -59,8 +60,12 @@ export const checkWcagEdition = async (deps: WcagEditionDeps): Promise<number> =
 		deps.out(`${HOST} could not be asked here, so no ${THREAD} was opened.`);
 		return 1;
 	}
-	const base = `${repoPath(deps.repo)}/issues`;
-	const open = (await deps.github.api(`${base}?state=open&per_page=100`)) as { title?: unknown; html_url?: unknown; pull_request?: unknown }[];
+	const base = `${repoApiPath(deps.repo)}/issues`;
+	const open = (await readPages(deps.github, `${base}?state=open`, { maxPages: 5, atMost: 'stop' })) as {
+		title?: unknown;
+		html_url?: unknown;
+		pull_request?: unknown;
+	}[];
 	const already = open.find((i) => i.title === issue.title && !i.pull_request);
 	if (already) {
 		deps.out(`Already said: ${String(already.html_url)}`);

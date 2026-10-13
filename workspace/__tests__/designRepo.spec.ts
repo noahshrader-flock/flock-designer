@@ -75,12 +75,12 @@ describe('listProjects', () => {
 			{ commit: { author: { name: 'Noah' }, committer: { date: '2026-10-06T12:00:00Z' } } },
 			{ commit: { author: { name: 'Pat' }, committer: { date: '2026-10-02T12:00:00Z' } } },
 		];
-		const later = fakeGitHub({ ...routes, '/repos/acme/design/commits?path=projects/alpha*': commits });
+		const later = fakeGitHub({ ...routes, '/repos/acme/design/commits?path=projects%2Falpha*': commits });
 		expect((await new DesignRepo(later.github, REF).listProjects())[0]?.updatedAt).toBe('2026-10-06T12:00:00Z');
 		// A comment made after: GitHub dates the thread by its latest comment.
 		const commented = fakeGitHub({
 			...routes,
-			'/repos/acme/design/commits?path=projects/alpha*': commits,
+			'/repos/acme/design/commits?path=projects%2Falpha*': commits,
 			'/repos/acme/design/issues?state=all*': [
 				{ number: 7, comments: 3, updated_at: '2026-10-08T08:00:00Z', body: 'Review thread for alpha, branch: `fd/alpha/i2`.' },
 			],
@@ -91,7 +91,7 @@ describe('listProjects', () => {
 	it('has no date for activity it cannot read, and does not fail the list for it', async () => {
 		const { github: session } = fakeGitHub({
 			...routes,
-			'/repos/acme/design/commits?path=projects/alpha*': () => {
+			'/repos/acme/design/commits?path=projects%2Falpha*': () => {
 				throw new Error('rate limited');
 			},
 		});
@@ -267,7 +267,7 @@ describe('contributors', () => {
 			'/repos/acme/design/contents/projects/alpha*': [{ type: 'file', name: 'iterations.json' }],
 			'/repos/acme/design/contents/projects*': [{ type: 'dir', name: 'alpha' }],
 			'/repos/acme/design/issues?state=all*': [],
-			'/repos/acme/design/commits?path=projects/alpha*': [
+			'/repos/acme/design/commits?path=projects%2Falpha*': [
 				{ commit: { author: { name: 'Noah Shrader' } }, author: { login: 'noahshrader-flock' } },
 				{ commit: { author: { name: 'github-actions[bot]' } }, author: { login: 'github-actions[bot]' } },
 				{ commit: { author: { name: 'Ada Lovelace' } }, author: { login: 'ada' } },
@@ -287,7 +287,7 @@ describe('contributors', () => {
 			'/repos/acme/design/contents/projects/alpha*': [],
 			'/repos/acme/design/contents/projects*': [{ type: 'dir', name: 'alpha' }],
 			'/repos/acme/design/issues?state=all*': [],
-			'/repos/acme/design/commits?path=projects/alpha*': () => {
+			'/repos/acme/design/commits?path=projects%2Falpha*': () => {
 				throw new Error('rate limited');
 			},
 		});
@@ -760,7 +760,7 @@ describe('readFile and writeFile', () => {
 
 	it('says what access is needed when GitHub refuses the write', async () => {
 		await expect(new RepoFiles(fakeGitHub({ '*': notFound }).github, REF).writeFile('projects/x/a.html', 'x', 'm')).rejects.toThrow(
-			/write access to the design repository/,
+			/write access to acme\/design/,
 		);
 	});
 });

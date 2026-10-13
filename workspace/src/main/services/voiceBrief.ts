@@ -1,4 +1,3 @@
-import { errorText } from '../../shared/result';
 /**
  * What every agent task says about the company's voice and tone (T9 of the design system plan, step 4): the file's own
  * words, read from the design system's agent files each time a task is made, as the accessibility standard is (T7, part A), and put
@@ -10,7 +9,7 @@ import { join } from 'node:path';
 import { voiceIsWritten, voiceWithoutComments } from '../../shared/voice';
 import { designSystemCheckout } from './descriptor';
 import { VOICE_FILE } from './voiceAndTone';
-
+import { errorText } from '../../shared/result';
 /** The task's heading for the section, whichever way it is made. */
 const HEADING = '## Voice and tone';
 

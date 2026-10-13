@@ -1,4 +1,3 @@
-import { asRepositoryPath, parseRemote, repoName } from '../../shared/repoRef';
 /**
  * The design systems a person connected, for the Design System tab (P4 of the design system plan): any repository they
  * can reach, **accepted by what is found in it, not by its name** (decision 23). A design system is a folder with
@@ -14,7 +13,7 @@ import { readTokens } from './designTokens';
 import { git } from './git';
 import { type JsonFile, jsonFile } from './jsonFile';
 import { originOf } from './repositories';
-
+import { asRepositoryPath, parseRemote, repoName } from '../../shared/repoRef';
 const REMOTE_TIMEOUT_MS = 30_000;
 
 /** A design system's id: its repository, and in a monorepo the folder it is in. */

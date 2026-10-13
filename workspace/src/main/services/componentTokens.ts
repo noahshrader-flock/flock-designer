@@ -1,4 +1,3 @@
-import { HOST } from '../../shared/vocabulary';
 /**
  * Which tokens each component draws with, and so which components share a token (T6 of the design system plan,
  * decision 29). **Found by tagging, for any library the token writers support:** every token is given a value nothing
@@ -22,6 +21,7 @@ import type {
 	StoryPreview,
 	TokenEdit,
 } from '../../shared/contract';
+import { HOST } from '../../shared/vocabulary';
 import type { ComponentPictures } from './componentPictures';
 import { type AxeFound, countsOf } from '../../shared/accessibility';
 import { designSystemOf } from '../../shared/catalog';

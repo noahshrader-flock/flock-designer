@@ -74,7 +74,7 @@ describe('change requests, over the API', () => {
 		});
 		expect(await new ChangeRequests(github, REF).checks(42)).toEqual([
 			{ name: 'deploy', workflow: 'PR Deployment', bucket: 'pass', link: 'https://ci.test/deploy', startedAt: '2026-10-10T12:00:00Z' },
-			{ name: 'lint', workflow: 'PR Deployment', bucket: 'pass', link: 'https://ci.test/lint', startedAt: '2026-10-10T12:00:00Z' },
+			{ name: 'lint', workflow: 'PR Deployment', bucket: 'skipping', link: 'https://ci.test/lint', startedAt: '2026-10-10T12:00:00Z' },
 			{ name: 'e2e', workflow: 'PR Deployment', bucket: 'pending', link: 'https://ci.test/e2e', startedAt: '2026-10-10T12:00:00Z' },
 			{ name: 'build', workflow: 'CI', bucket: 'fail', link: 'https://ci.test/build', startedAt: '2026-10-10T12:00:00Z' },
 			{ name: 'slow', workflow: 'CI', bucket: 'fail', link: 'https://ci.test/slow', startedAt: '2026-10-10T12:00:00Z' },
