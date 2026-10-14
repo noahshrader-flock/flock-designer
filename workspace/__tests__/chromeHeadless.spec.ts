@@ -1,6 +1,6 @@
 import { deflateSync } from 'node:zlib';
 import { describe, expect, it, vi } from 'vitest';
-import { NO_BROWSER, chromeHeadless, findChrome } from '../src/main/services/chromeHeadless';
+import { HEADLESS_PICTURE_RECIPE, NO_BROWSER, chromeHeadless, findChrome } from '../src/main/services/chromeHeadless';
 import { fitJpegBy } from '../src/main/services/picture';
 import { decodePng } from '../src/main/services/png';
 
@@ -210,5 +210,90 @@ describe('a machine with no browser', () => {
 		await expect(headless.scan('http://x/', [], [])).rejects.toThrow(NO_BROWSER);
 		expect(launch).not.toHaveBeenCalled();
 		expect(NO_BROWSER).toMatch(/Chrome, Edge or Chromium/);
+	});
+});
+
+describe('drawing stories, headless (6.1, the Design System tab’s pictures and its index of tokens)', () => {
+	/** A page that draws what it is told: each story file read as `drawn`, axe when it is in the page. */
+	const storyBrowser = ({ fails = [] as string[], axe = false, painted = lit } = {}) => {
+		const done = { pages: 0, visited: [] as string[], scheme: [] as unknown[], scale: [] as number[], axeLoaded: 0, encoded: 0 };
+		const browser = {
+			newPage: async () => {
+				done.pages++;
+				return {
+					setViewport: async (v: { deviceScaleFactor: number }) => void done.scale.push(v.deviceScaleFactor),
+					emulateMediaFeatures: async (f: unknown) => void done.scheme.push(f),
+					goto: async (url: string) => void done.visited.push(url),
+					evaluate: async (code: string) => {
+						if (code.includes('OffscreenCanvas')) return (done.encoded++, Buffer.from('jpeg').toString('base64'));
+						const file = /^\(async \(file, picture\)[\s\S]*\}\)\(("[^"]*")/.exec(code)?.[1];
+						if (file === undefined) return (done.axeLoaded++, true);
+						const name = JSON.parse(file) as string;
+						if (fails.includes(name)) throw new Error('did not draw');
+						return { colors: { [name]: 1 }, radii: {}, spacing: {}, ...(axe ? { accessibility: { violations: [], incomplete: [] } } : {}) };
+					},
+					screenshot: async () => painted,
+					close: async () => undefined,
+				};
+			},
+			close: async () => undefined,
+		};
+		return { headless: chromeHeadless({ find: () => '/chrome', launch: (async () => browser) as never }), done };
+	};
+	const files = ['a.stories.tsx', 'b.stories.tsx', 'c.stories.tsx', 'd.stories.tsx'];
+
+	it('draws each run’s files in a few pages, each page loaded once, in the run’s mode, and gives them back in order', async () => {
+		const { headless, done } = storyBrowser();
+		const [light, dark] = await headless.measure([
+			{ base: 'http://127.0.0.1:1/p/', mode: 'light', files },
+			{ base: 'http://127.0.0.1:1/p/', mode: 'dark', files: files.slice(0, 1) },
+		]);
+		expect(light?.map((d) => Object.keys(d?.colors ?? {})[0])).toEqual(files);
+		expect(dark?.map((d) => Object.keys(d?.colors ?? {})[0])).toEqual(['a.stories.tsx']);
+		// Three pages for the first run (every third file each), one for the second; each loaded at its share's first file.
+		expect(done.pages).toBe(4);
+		expect(done.visited).toEqual([
+			'http://127.0.0.1:1/p/?file=a.stories.tsx',
+			'http://127.0.0.1:1/p/?file=b.stories.tsx',
+			'http://127.0.0.1:1/p/?file=c.stories.tsx',
+			'http://127.0.0.1:1/p/?file=a.stories.tsx',
+		]);
+		expect(done.scheme.slice(-1)).toEqual([[{ name: 'prefers-color-scheme', value: 'dark' }]]);
+		expect(done.scale).toEqual([1, 1, 1, 1]);
+	});
+
+	it('takes a picture of each, at twice the size, as a JPEG, only when asked; none of one that painted nothing', async () => {
+		const { headless, done } = storyBrowser();
+		const [drawn] = await headless.measure([{ base: 'http://x/', mode: 'light', files: files.slice(0, 2), pictures: true }]);
+		expect(drawn?.map((d) => d?.picture?.toString())).toEqual(['jpeg', 'jpeg']);
+		expect(done.scale).toEqual([2, 2]);
+		const none = storyBrowser({ painted: blank });
+		const [unpainted] = await none.headless.measure([{ base: 'http://x/', mode: 'light', files: files.slice(0, 1), pictures: true }]);
+		expect(unpainted?.[0]?.picture).toBeUndefined();
+		expect(none.done.encoded).toBe(0);
+	});
+
+	it('loads axe once a page when the run checks accessibility, and gives what it found', async () => {
+		const { headless, done } = storyBrowser({ axe: true });
+		const [drawn] = await headless.measure([{ base: 'http://x/', mode: 'light', files: files.slice(0, 1), accessibility: ['wcag2a'] }]);
+		expect(drawn?.[0]?.accessibility).toEqual({ violations: [], incomplete: [] });
+		expect(done.axeLoaded).toBe(1);
+		const without = storyBrowser({ axe: true });
+		await without.headless.measure([{ base: 'http://x/', mode: 'light', files: files.slice(0, 1) }]);
+		expect(without.done.axeLoaded).toBe(0);
+	});
+
+	it('says null for a story that does not draw, and draws the rest', async () => {
+		const { headless } = storyBrowser({ fails: ['b.stories.tsx'] });
+		const [drawn] = await headless.measure([{ base: 'http://x/', mode: 'light', files: files.slice(0, 2) }]);
+		expect(drawn?.map((d) => (d === null ? null : Object.keys(d.colors)[0]))).toEqual(['a.stories.tsx', null]);
+	});
+
+	it('says what to install when there is no browser', async () => {
+		await expect(chromeHeadless({ find: () => null }).measure([{ base: 'http://x/', mode: 'light', files }])).rejects.toThrow(NO_BROWSER);
+	});
+
+	it('has a recipe of its own, so the app’s pictures and these are never mistaken for each other', () => {
+		expect(HEADLESS_PICTURE_RECIPE).toMatch(/^[0-9a-f]{12}$/);
 	});
 });

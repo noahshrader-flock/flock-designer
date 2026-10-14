@@ -3,7 +3,16 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { DesignSystemsMemory, defaultBranch, designSystemId, filesOf, findDesignSystems, nameOf, within } from '../src/main/services/designSystems';
+import {
+	DesignSystemsMemory,
+	defaultBranch,
+	designSystemId,
+	filesOf,
+	findDesignSystems,
+	nameOf,
+	systemAt,
+	within,
+} from '../src/main/services/designSystems';
 import type { ConnectedDesignSystem } from '../src/shared/contract';
 import { memoryReads } from './fixtures';
 
@@ -201,5 +210,62 @@ describe('the ones connected', () => {
 		const bad = { ...system('acme/ui'), id: 'bad', repository: '../../etc' };
 		writeFileSync(file, JSON.stringify({ systems: [bad, system('acme/ui')], current: 'bad' }));
 		expect(new DesignSystemsMemory(file).read()).toMatchObject({ systems: [{ id: 'acme/ui' }], current: 'acme/ui' });
+	});
+});
+
+describe('a design system found in a folder on this machine (VS Code, ELECTRON_MIGRATION_PLAN §1.6)', () => {
+	let home: string;
+	beforeEach(() => (home = mkdtempSync(join(tmpdir(), 'dsnr-found-'))));
+	afterEach(() => rmSync(home, { recursive: true, force: true }));
+	const git = (root: string, ...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+	/** A clone of `repository`, its default branch recorded as git records one, with `files` committed. */
+	const cloneOf = (repository: string, files: Record<string, string>, branch = 'develop') => {
+		const root = join(home, repository.split('/')[1] as string);
+		mkdirSync(root, { recursive: true });
+		git(root, 'init', '-q', '-b', branch);
+		for (const [path, text] of Object.entries(files)) {
+			mkdirSync(join(root, path, '..'), { recursive: true });
+			writeFileSync(join(root, path), text);
+		}
+		git(root, 'add', '-A');
+		git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'first');
+		git(root, 'remote', 'add', 'origin', `git@github.com:${repository}.git`);
+		git(root, 'update-ref', `refs/remotes/origin/${branch}`, 'HEAD');
+		git(root, 'symbolic-ref', 'refs/remotes/origin/HEAD', `refs/remotes/origin/${branch}`);
+		return root;
+	};
+
+	it('is read as connecting it would keep it: its repository, its default branch, its name, the whole repository', async () => {
+		const root = cloneOf('acme/ui', { 'package.json': '{ "name": "@acme/ui" }', 'src/Button.stories.tsx': story('Buttons/Button') });
+		expect(await systemAt(root)).toEqual({ id: 'acme/ui', name: 'ui', repository: 'acme/ui', root, folder: '', branch: 'develop' });
+	});
+
+	it('in a monorepo, is the package found, in its repository', async () => {
+		const root = cloneOf(
+			'acme/acme',
+			{ 'package.json': '{ "name": "acme" }', 'packages/ui/package.json': '{ "name": "@acme/design" }', 'packages/ui/B.stories.tsx': story('A/B') },
+			'main',
+		);
+		expect(await systemAt(join(root, 'packages', 'ui'))).toEqual({
+			id: designSystemId('acme/acme', 'packages/ui'),
+			name: 'design',
+			repository: 'acme/acme',
+			root,
+			folder: 'packages/ui',
+			branch: 'main',
+		});
+	});
+
+	it('says why it cannot be read when it is not a clone of a repository on GitHub, since its branch there is what is read', async () => {
+		const plain = join(home, 'plain');
+		mkdirSync(plain);
+		await expect(systemAt(plain)).rejects.toThrow(
+			`${plain} is not a git repository. The design system is read from its branch on GitHub, so open a clone of it.`,
+		);
+		const local = cloneOf('acme/local', { 'a.stories.tsx': story('A/A') });
+		git(local, 'remote', 'remove', 'origin');
+		await expect(systemAt(local)).rejects.toThrow(
+			`${local} is not a clone of a repository on GitHub (it has no origin there), so its branch on GitHub cannot be read.`,
+		);
 	});
 });

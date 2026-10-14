@@ -52,7 +52,8 @@ export const reviewsOf = (project: Pick<Project, 'id' | 'title' | 'iterations'>)
 export type HostMessage =
 	| { type: 'answer'; id: number; result: unknown }
 	| { type: 'event'; name: string; payload: unknown }
-	| { type: 'context'; context: Context }
+	/** What is open, and why its design system cannot be read when it cannot (`showFound`). */
+	| { type: 'context'; context: Context; unreadable?: string }
 	| { type: 'projects-changed' }
 	| { type: 'open-dialog'; dialog: PanelDialog };
 

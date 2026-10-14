@@ -1,19 +1,18 @@
 import { watch } from 'node:fs';
 import * as vscode from 'vscode';
 import { served } from '../../src/main/handle';
-import type { Context } from '../../src/main/services/findContext';
 import { type Panels, answerCall } from './bridge';
 import { afterQuiet, whatChanged } from './devReload';
 import { newNonce, panelHtml } from './html';
-import { type CodebaseAction, type Review, readMessage } from './messages';
+import { type CodebaseAction, type HostMessage, type Review, readMessage } from './messages';
 import type { Given } from './newPrototype';
 import { failed } from './ui';
 
 interface PanelDeps {
 	extensionUri: vscode.Uri;
 	panels: Panels;
-	/** What is open now: the product, its design system, the design repository, and what is missing. */
-	context: () => Context;
+	/** What is open now (the product, its design system, the design repository, and what is missing), as the page is told it. */
+	context: () => Extract<HostMessage, { type: 'context' }>;
 	locate: () => Promise<void>;
 	openReview: (review: Review) => Promise<void>;
 	openReviewInBrowser: (review: Review) => Promise<void>;
@@ -75,7 +74,7 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 					return await answerCall(webview, served(), message);
 				case 'ready':
 					// Told once the page listens: a message posted before then is lost.
-					await webview.postMessage({ type: 'context', context: this.deps.context() });
+					await webview.postMessage(this.deps.context());
 					// And what was held for the page until it listened (a dialog asked for while the panel was hidden).
 					return this.deps.panels.ready(webview);
 				case 'locate-design-system':

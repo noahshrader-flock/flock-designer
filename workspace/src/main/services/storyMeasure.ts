@@ -8,74 +8,16 @@
 import { createHash } from 'node:crypto';
 import axe from 'axe-core';
 import { nativeImage } from 'electron';
-import { PREVIEW_SHOW, previewAddress } from '../../shared/catalog';
+import { previewAddress } from '../../shared/catalog';
 import type { Drawn, Measure, Mode } from './componentTokens';
 import { COMPOSITION, composeOnWhite } from './pictureComposition';
-import { axeFound, axeRun } from './accessibilityCheck';
+import { axeFound } from './accessibilityCheck';
 import { hiddenWindow, setColorScheme } from './sandboxedPage';
+import { PICTURE_MOST_ACROSS, PICTURE_QUALITY, PICTURE_SCALE, PICTURE_TOP, STORY_MS, WINDOW, inOrder, readDrawn, sharesOf } from './storyDrawing';
 import { within } from './within';
-
-/** How many windows draw a run's files at once, how long one story may take, and each window's size. */
-const WINDOWS_PER_RUN = 3;
-const STORY_MS = 15_000;
-const WINDOW = { width: 1200, height: 900 };
-/**
- * A picture (P5): the top of the page this many pixels down, drawn at twice the size (`PICTURE_SCALE`) so it is sharp,
- * is what `composeOnWhite` finds the story in; it is kept at most this many pixels across, as JPEG. How long the page is
- * given to repaint before one is taken.
- */
-const PICTURE_TOP = 640;
-const PICTURE_SCALE = 2;
-const PICTURE_MOST_ACROSS = 1440;
-const PICTURE_QUALITY = 85;
-const REPAINT_MS = 150;
 
 /** The windows' session: their own, in memory only. */
 const SESSION = 'dsnr-story-measure';
-
-/**
- * What a story file draws, read in the page once it has drawn: the page draws the file in place of the last
- * (`PREVIEW_SHOW`), so the page is loaded once for many. Then its fonts, and what animates in, settle, and its stories'
- * elements that take up room are read: each one's background, text and border colors, its radius, and its padding,
- * margins and gaps, counted by computed value. With `tags`, axe (in the page already) checks the stories' accessibility
- * at them (T7), before anything is hidden for a picture, since axe passes over what is hidden.
- */
-const readDrawn = (file: string, picture: boolean, tags: string[] | null = null): string => `(async (file, picture) => {
-	const until = Date.now() + ${STORY_MS - 3000};
-	while (typeof window[${JSON.stringify(PREVIEW_SHOW)}] !== 'function' && Date.now() < until) await new Promise((r) => setTimeout(r, 50));
-	await window[${JSON.stringify(PREVIEW_SHOW)}](file);
-	await document.fonts.ready;
-	const settled = Date.now() + 600;
-	while (document.getAnimations().some((a) => a.playState === 'running') && Date.now() < settled) await new Promise((r) => setTimeout(r, 25));
-	const drawn = { colors: {}, radii: {}, spacing: {} };
-	const add = (m, k) => { if (k) m[k] = (m[k] || 0) + 1; };
-	for (const el of document.querySelectorAll('#root *')) {
-		const box = el.getBoundingClientRect();
-		if (box.width === 0 || box.height === 0) continue;
-		const s = getComputedStyle(el);
-		add(drawn.colors, s.backgroundColor);
-		add(drawn.colors, s.color);
-		if (parseFloat(s.borderTopWidth) > 0) add(drawn.colors, s.borderTopColor);
-		add(drawn.radii, s.borderTopLeftRadius);
-		for (const k of ['paddingTop', 'paddingLeft', 'marginTop', 'marginLeft', 'rowGap', 'columnGap']) add(drawn.spacing, s[k]);
-	}${
-		tags
-			? `
-	// The stories only: not the page they are drawn on, nor the names it gives them.
-	drawn.accessibility = window.axe ? await ${axeRun("{ include: [['#root']], exclude: [['.fd-name']] }", tags)} : null;`
-			: ''
-	}
-	if (!picture) return drawn;
-	// A picture (P5): the first story alone, at the top of the page, which is white. Everything else is hidden first (hidden,
-	// so nothing moves), or a short story would have the next one, and its own name, in its picture. A hidden window paints
-	// a moment after a change, and the picture is of what it has painted.
-	const first = document.querySelector('[data-story]');
-	for (const el of document.querySelectorAll('[data-story]')) if (el !== first) el.style.visibility = 'hidden';
-	const name = first?.querySelector('.fd-name');
-	if (name) name.style.visibility = 'hidden';
-	await new Promise((r) => setTimeout(r, ${REPAINT_MS}));
-	return drawn;
-})(${JSON.stringify(file)}, ${picture})`;
 
 /** The picture of a story's first story from a capture of the top of its page; nothing when it painted nothing. */
 const pictureOf = async (wc: Electron.WebContents): Promise<Buffer | undefined> => {
@@ -141,10 +83,8 @@ const drawShare = async (base: string, mode: Mode, files: string[], pictures: bo
 export const measureInWindows: Measure = async (runs) => {
 	const results: (Drawn | null)[][] = [];
 	for (const { base, mode, files, pictures = false, accessibility = null } of runs) {
-		// Each window takes every third file, so the slow ones are spread out.
-		const shares = Array.from({ length: Math.min(WINDOWS_PER_RUN, files.length) }, (_, w) => files.filter((_file, i) => i % WINDOWS_PER_RUN === w));
-		const drawn = await Promise.all(shares.map((share) => drawShare(base, mode, share, pictures, accessibility)));
-		results.push(files.map((_, i) => drawn[i % WINDOWS_PER_RUN]?.[Math.floor(i / WINDOWS_PER_RUN)] ?? null));
+		const drawn = await Promise.all(sharesOf(files).map((share) => drawShare(base, mode, share, pictures, accessibility)));
+		results.push(inOrder(files, drawn));
 	}
 	return results;
 };

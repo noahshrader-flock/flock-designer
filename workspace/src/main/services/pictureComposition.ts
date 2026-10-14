@@ -40,15 +40,27 @@ const painted = ({ data, width, height }: Bitmap): { x: number; y: number; width
 	return right < 0 ? null : { x: left, y: top, width: right - left + 1, height: bottom - top + 1 };
 };
 
-/** The picture: what `capture` painted, centered on white, twice as wide as it is tall; null when it painted nothing. */
-export const composeOnWhite = (capture: Bitmap): Bitmap | null => {
+/**
+ * Where the picture puts what `capture` painted (its `box`): its size, twice as wide as it is tall, and the box's place in
+ * it, centered; null when it painted nothing. For a shell that draws the picture itself (a browser's canvas).
+ */
+export const placeOnWhite = (
+	capture: Bitmap,
+): { box: NonNullable<ReturnType<typeof painted>>; width: number; height: number; left: number; top: number } | null => {
 	const box = painted(capture);
 	if (box === null) return null;
 	// Wide enough for it and its room, and tall enough that the half of that width holds it too.
 	const width = Math.ceil(Math.max(LEAST, box.width + 2 * MARGIN, 2 * (box.height + 2 * MARGIN)) / 2) * 2;
 	const height = width / 2;
+	return { box, width, height, left: Math.floor((width - box.width) / 2), top: Math.floor((height - box.height) / 2) };
+};
+
+/** The picture: what `capture` painted, centered on white, twice as wide as it is tall; null when it painted nothing. */
+export const composeOnWhite = (capture: Bitmap): Bitmap | null => {
+	const place = placeOnWhite(capture);
+	if (place === null) return null;
+	const { box, width, height, left, top } = place;
 	const data = Buffer.alloc(width * height * 4, 0xff);
-	const [left, top] = [Math.floor((width - box.width) / 2), Math.floor((height - box.height) / 2)];
 	for (let y = 0; y < box.height; y++) {
 		const from = ((box.y + y) * capture.width + box.x) * 4;
 		capture.data.copy(data, ((top + y) * width + left) * 4, from, from + box.width * 4);
@@ -57,4 +69,4 @@ export const composeOnWhite = (capture: Bitmap): Bitmap | null => {
 };
 
 /** All of how a picture is composed, for the fingerprint of how pictures are taken (`PICTURE_RECIPE`). */
-export const COMPOSITION = `${isPaint}${painted}${composeOnWhite}${[MARGIN, LEAST]}`;
+export const COMPOSITION = `${isPaint}${painted}${placeOnWhite}${composeOnWhite}${[MARGIN, LEAST]}`;

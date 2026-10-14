@@ -1,12 +1,18 @@
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import axe from 'axe-core';
 import type { AxeRun } from '../../shared/accessibility';
+import { previewAddress } from '../../shared/catalog';
 import { withState } from '../../shared/prototypeStates';
 import type { Headless } from '../ports';
 import { CHECK_WINDOW, type CheckPage, axeFound, axeInPage } from './accessibilityCheck';
+import type { Drawn, Measure, Mode } from './componentTokens';
 import { fitJpegBy } from './picture';
+import { COMPOSITION, placeOnWhite } from './pictureComposition';
 import { decodePng } from './png';
 import { COVER_BUDGET, COVER_STEPS, COVER_WINDOW, type DrawCover, isBlank, settleScript } from './projectCovers';
+import { PICTURE_MOST_ACROSS, PICTURE_QUALITY, PICTURE_SCALE, PICTURE_TOP, STORY_MS, WINDOW, inOrder, readDrawn, sharesOf } from './storyDrawing';
 import { within } from './within';
 
 /** Said when there is no browser to draw or check with: what to install, or where to point. */
@@ -61,6 +67,45 @@ const launchChrome = async (path: string): Promise<BrowserLike> => {
 	return (await puppeteer.launch({ executablePath: path, headless: true, args: ['--hide-scrollbars', '--mute-audio'] })) as unknown as BrowserLike;
 };
 
+/**
+ * A story's picture, from a PNG of the top of its page (`PICTURE_TOP` down, at `PICTURE_SCALE`): what it painted, placed
+ * on white as the app's are (`placeOnWhite`), then drawn by the page's own canvas at most `PICTURE_MOST_ACROSS` across, as
+ * JPEG. Only the PNG and where it goes are handed to the page, never the pixels; nothing when it painted nothing.
+ */
+const encodeInPage = (png: Buffer, place: NonNullable<ReturnType<typeof placeOnWhite>>): string => `(async (png, p, most, quality) => {
+	const bytes = Uint8Array.from(atob(png), (c) => c.charCodeAt(0));
+	const image = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+	const scale = Math.min(1, most / p.width);
+	const canvas = new OffscreenCanvas(Math.round(p.width * scale), Math.round(p.height * scale));
+	const g = canvas.getContext('2d');
+	g.fillStyle = '#fff';
+	g.fillRect(0, 0, canvas.width, canvas.height);
+	g.imageSmoothingQuality = 'high';
+	g.drawImage(image, p.box.x, p.box.y, p.box.width, p.box.height, p.left * scale, p.top * scale, p.box.width * scale, p.box.height * scale);
+	const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality });
+	const read = new Uint8Array(await blob.arrayBuffer());
+	let text = '';
+	for (let i = 0; i < read.length; i += 0x8000) text += String.fromCharCode(...read.subarray(i, i + 0x8000));
+	return btoa(text);
+})(${JSON.stringify(png.toString('base64'))}, ${JSON.stringify(place)}, ${PICTURE_MOST_ACROSS}, ${PICTURE_QUALITY / 100})`;
+
+const pictureOf = async (page: PageLike): Promise<Buffer | undefined> => {
+	const png = Buffer.from(await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: WINDOW.width, height: PICTURE_TOP } }));
+	const { width, height, rgba } = decodePng(png);
+	const place = placeOnWhite({ data: Buffer.from(rgba.buffer, rgba.byteOffset, rgba.byteLength), width, height });
+	if (place === null) return undefined;
+	const jpeg = await page.evaluate(encodeInPage(png, place));
+	return typeof jpeg === 'string' && jpeg !== '' ? Buffer.from(jpeg, 'base64') : undefined;
+};
+
+/** How pictures are taken here, as a fingerprint of the code that takes them: never the same as the app's (`PICTURE_RECIPE`). */
+export const HEADLESS_PICTURE_RECIPE = createHash('sha256')
+	.update(
+		`headless${readDrawn('', true)}${encodeInPage.toString()}${pictureOf}${COMPOSITION}${[WINDOW.width, PICTURE_TOP, PICTURE_SCALE, PICTURE_MOST_ACROSS, PICTURE_QUALITY]}`,
+	)
+	.digest('hex')
+	.slice(0, 12);
+
 /** The most loading the page, and then its getting ready, may take, as the app's hidden windows allow. */
 const LOAD_MS = 15_000;
 const READY_MS = 12_000;
@@ -70,8 +115,8 @@ const STATE_MS = 20_000;
  * Drawing out of sight with the browser already on the machine (`Headless`, ELECTRON_MIGRATION_PLAN 2B), for a shell
  * with no hidden windows: a prototype's picture and its accessibility check, done as the app's hidden windows do them
  * (`coverWindow.ts`, `accessibilityWindow.ts`), one page at a time. The browser is started when first needed and kept,
- * as starting it takes a second; `close` ends it. With no browser here, each says what to install. Drawing stories
- * (`measure`) is the Design System tab's, and comes with it.
+ * as starting it takes a second; `close` ends it. With no browser here, each says what to install. And the Design System
+ * tab's stories (`measure`), drawn as the app's `storyMeasure.ts` draws them, from the same script (`storyDrawing.ts`).
  */
 export const chromeHeadless = ({
 	find = () => findChrome(),
@@ -134,12 +179,62 @@ export const chromeHeadless = ({
 			return runs;
 		});
 
+	/**
+	 * One page's share of a run (as the app's `storyMeasure.ts` draws one window's): loaded once, in the run's mode, at twice
+	 * the size for pictures, with axe in it when the run checks accessibility, then each file drawn in turn. A story that
+	 * does not draw in time is null, and the rest go on; a page that does not load is null for all of its share.
+	 */
+	const drawShare = (base: string, mode: Mode, files: string[], pictures: boolean, tags: string[] | null): Promise<(Drawn | null)[]> =>
+		onPage(async (page) => {
+			await page.setViewport({ ...WINDOW, deviceScaleFactor: pictures ? PICTURE_SCALE : 1 });
+			await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: mode }]);
+			const loaded = await within(STORY_MS, page.goto(previewAddress(base, files[0] as string), { waitUntil: 'load', timeout: STORY_MS }));
+			if (loaded === null) return files.map(() => null);
+			if (tags) await within(STORY_MS, page.evaluate(`${axe.source};true`));
+			const drawn: (Drawn | null)[] = [];
+			for (const file of files) {
+				const read = (await within(
+					STORY_MS,
+					page.evaluate(readDrawn(file, pictures, tags)).catch(() => null),
+				)) as (Drawn & { accessibility?: unknown }) | null;
+				if (read === null) {
+					drawn.push(null);
+					continue;
+				}
+				// What the page says it found, only when it is axe's results.
+				const { accessibility, ...measured } = read;
+				const picture = pictures
+					? await within(
+							STORY_MS,
+							pictureOf(page).catch(() => undefined),
+						)
+					: undefined;
+				drawn.push({ ...measured, ...(picture ? { picture } : {}), ...(axeFound(accessibility) ? { accessibility } : {}) });
+			}
+			return drawn;
+		});
+
+	/** One run after another, each in a few pages at once, as the app's hidden windows draw them. */
+	const measure: Measure = async (runs) => {
+		const results: (Drawn | null)[][] = [];
+		for (const { base, mode, files, pictures = false, accessibility = null } of runs) {
+			const drawn = await Promise.all(
+				sharesOf(files).map((share) =>
+					drawShare(base, mode, share, pictures, accessibility).catch((err: unknown) => {
+						if (err instanceof Error && err.message === NO_BROWSER) throw err;
+						return share.map(() => null);
+					}),
+				),
+			);
+			results.push(inOrder(files, drawn));
+		}
+		return results;
+	};
+
 	return {
 		draw,
 		scan,
-		measure: async () => {
-			throw new Error('Drawing stories comes to DSNR in VS Code with the Design System tab.');
-		},
+		measure,
 		close: async () => {
 			const open = browser;
 			browser = null;

@@ -8,6 +8,7 @@ import { addressComment } from './address';
 import { Panels, hostApi } from './bridge';
 import { handOff, openCode, previewCodebase, shareCodebase } from './codebase';
 import { startCore } from './core';
+import { showFound } from './designSystem';
 import { type CodebaseAction, type HostMessage, type Review, readProjectArg, readReview, reviewsOf } from './messages';
 import { type Given, newPrototype, readGiven, readyToStart } from './newPrototype';
 import { PanelProvider } from './panel';
@@ -36,7 +37,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	const provider = new PanelProvider({
 		extensionUri: context.extensionUri,
 		panels,
-		context: () => found,
+		context: () => said(),
 		locate: () => locate(),
 		openReview: (review) => openReview(review),
 		openReviewInBrowser: (review) => openReviewInBrowser(review),
@@ -55,14 +56,19 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	const located = () => context.globalState.get<string>(LOCATED) ?? null;
 
 	let found: Context = await findContext({ folders: folders(), located: located() });
+	// Why the design system found cannot be read, when it cannot; else it is the one the core shows.
+	let unreadable = await showFound(core.designSystems, found.designSystem);
+	/** What is open, as the panel is told it. */
+	const said = (): Extract<HostMessage, { type: 'context' }> => ({ type: 'context', context: found, ...(unreadable === null ? {} : { unreadable }) });
 	/** The product folder the person opened: VS Code trusts it, so DSNR does, as the app trusts a checkout accepted. */
 	const trust = async () => {
 		if (found.product) await shell.open(found.product).catch((err: unknown) => log?.warn(`The product could not be opened: ${String(err)}`));
 	};
 	const refresh = async () => {
 		found = await findContext({ folders: folders(), located: located() });
+		unreadable = await showFound(core.designSystems, found.designSystem);
 		await trust();
-		panels.post({ type: 'context', context: found });
+		panels.post(said());
 	};
 	await trust();
 	void github.restore();

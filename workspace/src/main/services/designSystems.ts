@@ -5,11 +5,12 @@
  * and when several do, the person chooses. Its branch is the repository's default (decision 24). Several can be
  * connected, one shown at a time, and each is remembered.
  */
-import { dirname, isAbsolute } from 'node:path';
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import type { ConnectedDesignSystem, ConnectedDesignSystems, FoundDesignSystem } from '../../shared/contract';
 import { asArray, asRecord } from '../../shared/json';
 import { isStoryFile, type CatalogReads } from './componentCatalog';
 import { readTokens } from './designTokens';
+import { folderReads } from './folderReads';
 import { git } from './git';
 import { type JsonFile, jsonFile } from './jsonFile';
 import { originOf } from './repositories';
@@ -108,6 +109,32 @@ export const defaultBranch = async (root: string): Promise<string | null> => {
 const repositoryAt = (root: string): string | null => {
 	const remote = originOf(root);
 	return remote === null ? null : parseRemote(remote);
+};
+
+/**
+ * The design system in a folder found on this machine (VS Code, ELECTRON_MIGRATION_PLAN §1.6), as connecting it would
+ * keep it: its repository on GitHub, the folder in it, the repository's default branch, and its name. What is read is
+ * that branch as git has it from GitHub, as for one connected, so a folder that is not a clone of a repository there
+ * cannot be read, and says why.
+ */
+export const systemAt = async (root: string): Promise<ConnectedDesignSystem> => {
+	let up: string;
+	try {
+		up = await git(root, ['rev-parse', '--show-cdup']);
+	} catch {
+		throw new Error(`${root} is not a git repository. The design system is read from its branch on GitHub, so open a clone of it.`);
+	}
+	// The repository's top, written as the folder was (not git's real path, which differs on macOS's /var).
+	const top = up === '' ? root : resolve(root, up);
+	const repository = repositoryAt(top);
+	if (repository === null)
+		throw new Error(`${root} is not a clone of a repository on GitHub (it has no origin there), so its branch on GitHub cannot be read.`);
+	const folder = relative(top, root).split(sep).join('/');
+	const branch = await defaultBranch(top);
+	if (branch === null) throw new Error(`GitHub did not say which branch of ${repository} is its default, so it cannot be read.`);
+	const reads = folderReads(top);
+	const name = await nameOf(reads, await reads.listFiles(''), repository, folder);
+	return { id: designSystemId(repository, folder), name, repository, root: top, folder, branch };
 };
 
 /**
