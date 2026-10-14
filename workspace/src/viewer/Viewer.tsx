@@ -101,7 +101,18 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 	);
 };
 
-export const Viewer = ({ config, slots, relay = null }: { config: ViewerConfig; slots: ViewerSlots; relay?: Relay | null }) => {
+export const Viewer = ({
+	config,
+	slots,
+	relay = null,
+	openedHere = false,
+}: {
+	config: ViewerConfig;
+	slots: ViewerSlots;
+	relay?: Relay | null;
+	/** Served from this machine with no way to ask DSNR: opened some other way than DSNR's Open in browser. */
+	openedHere?: boolean;
+}) => {
 	// Only tests leave a token in this browser; the sign-in will keep it where a page cannot reach (M9's rule).
 	const [token, setToken] = useState<string | null>(savedToken);
 	const [paused, setPaused] = useState(false);
@@ -149,13 +160,13 @@ export const Viewer = ({ config, slots, relay = null }: { config: ViewerConfig; 
 					</Button>
 				</PageBar>
 			)}
-			<CommentingPaused open={paused} onClose={() => setPaused(false)} />
+			<CommentingPaused open={paused} openedHere={openedHere} onClose={() => setPaused(false)} />
 		</>
 	);
 };
 
 /**
- * In DSNR's review tab: who is signed in is the extension's, signing in is VS Code's own (from Sign in to comment), and
+ * Through DSNR, in its review tab or a page opened from it in the browser: who is signed in is the extension's, signing in is VS Code's own (from Sign in to comment), and
  * the comments are the core's, with Address on an open one, run by the extension as it runs a build.
  */
 const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots: ViewerSlots; showing: Showing; relay: Relay }) => {
@@ -168,8 +179,12 @@ const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots
 		() => relayComments(relay, { projectId: config.projectId, branch: prototypeKey(config.projectId, config.name) }),
 		[relay, config],
 	);
+	// Signing in is VS Code's own, in its window: while it is open there, the page says so and waits.
+	const [signingIn, setSigningIn] = useState(false);
 	const signIn = async () => {
+		setSigningIn(true);
 		const signedIn = loginIn(await relay.ask('signIn', []));
+		setSigningIn(false);
 		if (signedIn !== null) setLogin(signedIn);
 	};
 	const address = async (comment: CommentRef) => {
@@ -181,8 +196,8 @@ const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots
 	if (login === null)
 		return (
 			<PageBar config={config} slots={slots} showing={showing}>
-				<Button variant="outline" onClick={() => void signIn()}>
-					Sign in to comment
+				<Button variant="outline" disabled={signingIn} onClick={() => void signIn()}>
+					{signingIn ? 'Continue in VS Code…' : 'Sign in to comment'}
 				</Button>
 			</PageBar>
 		);
@@ -294,15 +309,20 @@ const Commenting = ({
 };
 
 /**
- * Commenting from a page is paused until signing in with GitHub works from one (M9 of the Pages plan): the button is
- * kept where it will be, and says where to comment meanwhile.
+ * Commenting from a published page is paused until signing in with GitHub works from one (M9 of the Pages plan): the
+ * button is kept where it will be, and says where to comment meanwhile. A page from this machine (`openedHere`) comments
+ * once it is opened from DSNR, which gives it the way to ask: said so.
  */
-const CommentingPaused = ({ open, onClose }: { open: boolean; onClose: () => void }) => (
+const CommentingPaused = ({ open, openedHere, onClose }: { open: boolean; openedHere: boolean; onClose: () => void }) => (
 	<Dialog open={open} onOpenChange={closeUnlessBusy(onClose)}>
 		<DialogContent className="sm:max-w-md">
 			<DialogHeader>
-				<DialogTitle>Commenting here is coming</DialogTitle>
-				<DialogDescription>For now, comment on this prototype in DSNR.</DialogDescription>
+				<DialogTitle>{openedHere ? 'Open this page from DSNR to comment' : 'Commenting here is coming'}</DialogTitle>
+				<DialogDescription>
+					{openedHere
+						? 'In VS Code, use Open in browser on the prototype: the page it opens comments through DSNR, signed in as you are there.'
+						: 'For now, comment on this prototype in DSNR.'}
+				</DialogDescription>
 			</DialogHeader>
 			<DialogFooter>
 				<Button onClick={onClose}>OK</Button>

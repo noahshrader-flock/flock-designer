@@ -5,6 +5,7 @@ import { composeBody } from '../src/shared/anchor';
 import { Viewer } from '../src/viewer/Viewer';
 import { saveToken, savedToken, tokenApi } from '../src/viewer/browserAdapter';
 import type { Relay } from '../src/viewer/relay';
+import type { Result } from '../src/shared/contract';
 import { ReviewThreads } from '../src/host/reviewThreads';
 import { PAGE_CONFIG as CONFIG, commentOnPage, fakeGitHub, sitePage } from './pageHarness';
 import {
@@ -75,6 +76,16 @@ describe('a page built without the page agent', () => {
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+});
+
+describe('a page from this machine with no key of DSNR’s (BROWSER_COMMENTS_PLAN 2.2)', () => {
+	it('says how to comment: open it from DSNR in VS Code', async () => {
+		current = await render(createElement(Viewer, { config: CONFIG, slots: sitePage().slots, relay: null, openedHere: true }));
+		await press(button('Sign in to comment'));
+		await settle();
+		expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Open in browser');
+		expect(document.body.textContent).not.toContain('Commenting here is coming');
 	});
 });
 
@@ -301,6 +312,21 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		expect(document.body.textContent).not.toContain('Commenting here is coming');
 		expect(savedToken()).toBeNull();
 		expect(button('Comment')).toBeTruthy();
+	});
+
+	it('says to continue in VS Code while its sign-in is open there, and offers nothing else meanwhile (BROWSER_COMMENTS_PLAN 2.2)', async () => {
+		let signedIn: (r: Result<unknown>) => void = () => undefined;
+		const relay: Relay = {
+			ask: (name) =>
+				name === 'signIn' ? new Promise((resolve) => (signedIn = resolve)) : Promise.resolve({ ok: true, value: { state: 'signedOut' } }),
+		};
+		await open(relay);
+		await press(button('Sign in to comment'));
+		expect(button('Continue in VS Code…').disabled).toBe(true);
+		await act(async () => signedIn({ ok: true, value: { state: 'signedOut' } }));
+		await settle();
+		// Not signed in after all (closed in VS Code): the way to sign in again.
+		expect(button('Sign in to comment').disabled).toBe(false);
 	});
 
 	it('puts a comment on the iteration’s thread through DSNR, and has no Sign out of its own', async () => {

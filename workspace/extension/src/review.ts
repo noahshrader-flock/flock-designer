@@ -9,7 +9,7 @@ import { escapeHtml } from '../../src/shared/html';
 import { prototypeKey } from '../../src/shared/designPaths';
 import { isPrototypeName, parsePrototypeName } from '../../src/shared/prototypeNames';
 import { toResult, valueOf } from '../../src/shared/result';
-import { type RelayCall, type RelayTell, readRelayAsk } from '../../src/shared/reviewRelay';
+import { KEY_FRAGMENT, type RelayCall, type RelayTell, readRelayAsk } from '../../src/shared/reviewRelay';
 import { buildSite } from '../../src/site/buildSite';
 import { callRoute } from './bridge';
 import { newNonce } from './html';
@@ -225,9 +225,6 @@ export class Reviews {
 		return shown;
 	}
 }
-
-/** What a review's address for the browser has before its key, in its fragment (`inBrowser`). */
-export const KEY_FRAGMENT = 'dsnr-key-';
 
 /** A key as it is kept: its hash, so the key itself is never kept or compared. */
 const hashOf = (key: string): string => createHash('sha256').update(key).digest('hex');

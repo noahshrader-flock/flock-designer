@@ -1,5 +1,5 @@
 import type { CommentAnchor, CommentRef, Result, ReviewComment, SignInState } from '../shared/contract';
-import { type RelayAsk, type RelayCall, readRelayTell } from '../shared/reviewRelay';
+import { ASK_PATH, KEY_FRAGMENT, KEY_HEADER, type RelayAsk, type RelayCall, isKey, readRelayTell } from '../shared/reviewRelay';
 import type { CommentStore } from '../renderer/comments/surfaces';
 
 /** DSNR's review tab in VS Code, as the page asks it: a call by name, answered with its Result. */
@@ -13,8 +13,9 @@ type PageWindow = Pick<Window, 'addEventListener' | 'removeEventListener' | 'loc
 
 /** A VS Code webview's origin: where DSNR's review tab is. */
 const WEBVIEW = 'vscode-webview://';
-/** Served from this machine: only such a page is a review DSNR frames; a published page never is. */
+/** Served from this machine: only such a page is a review DSNR frames or opens; a published page never is. */
 const LOCAL = new Set(['127.0.0.1', 'localhost']);
+export const isServedHere = (location: Pick<Location, 'hostname'>): boolean => LOCAL.has(location.hostname);
 
 /**
  * Listens for DSNR's review tab, when this page is served from this machine and in a frame, and gives `onRelay` the way
@@ -47,6 +48,76 @@ export const listenForDsnr = (win: PageWindow, onRelay: (relay: Relay) => void):
 	};
 	win.addEventListener('message', heard);
 	return () => win.removeEventListener('message', heard);
+};
+
+/** Where a page opened in the browser keeps its key: this tab only, on the bar's own address, which no prototype's page is on. */
+const KEPT = 'dsnr.review-key';
+
+type OpenedWindow = {
+	location: Pick<Location, 'hostname' | 'hash' | 'pathname' | 'search'>;
+	history: Pick<History, 'replaceState'>;
+	sessionStorage: Pick<Storage, 'getItem' | 'setItem'>;
+};
+
+/**
+ * The key a review opened in the browser from DSNR carries (BROWSER_COMMENTS_PLAN 2.1), or null: in its link's fragment
+ * the first time, then kept for this tab, since moving to another iteration loses the fragment. Taken out of the address
+ * once kept, so it is in no address that is copied or kept. Only on a page served from this machine.
+ */
+export const keyFromAddress = (win: OpenedWindow): string | null => {
+	if (!isServedHere(win.location)) return null;
+	const given = win.location.hash.startsWith(`#${KEY_FRAGMENT}`) ? win.location.hash.slice(KEY_FRAGMENT.length + 1) : null;
+	if (isKey(given)) {
+		try {
+			win.sessionStorage.setItem(KEPT, given);
+		} catch {
+			// A browser that keeps nothing: the key is still this page's, until it moves to another iteration.
+		}
+		win.history.replaceState(null, '', `${win.location.pathname}${win.location.search}`);
+		return given;
+	}
+	let kept: string | null = null;
+	try {
+		kept = win.sessionStorage.getItem(KEPT);
+	} catch {
+		kept = null;
+	}
+	return isKey(kept) ? kept : null;
+};
+
+/** What a page opened in the browser says when DSNR did not answer it, by why. */
+const NOT_ANSWERED = {
+	refused: 'DSNR in VS Code no longer knows this page: VS Code was reloaded since it was opened. Use Open in browser on the prototype again.',
+	closed: 'DSNR in VS Code is not answering: it may have been closed. Open VS Code, then use Open in browser on the prototype again.',
+	garbled: 'DSNR in VS Code answered with something this page cannot read.',
+};
+
+/**
+ * DSNR, asked through this machine's server by a page opened in the browser from it (BROWSER_COMMENTS_PLAN 2.1), as a
+ * review tab asks it through VS Code: the same asks, by the same names, answered with VS Code's sign-in, so no token is
+ * ever here. Each answer is taken only if it is exactly the answer to that ask; anything else is said, in words.
+ */
+export const serverRelay = (key: string, fetcher: typeof fetch = fetch): Relay => {
+	let next = 0;
+	return {
+		ask: async (name, args) => {
+			const id = ++next;
+			let res: Response;
+			try {
+				res = await fetcher(ASK_PATH, {
+					method: 'POST',
+					headers: { 'content-type': 'application/json', [KEY_HEADER]: key },
+					body: JSON.stringify({ dsnr: 'ask', id, name, args } satisfies RelayAsk),
+				});
+			} catch {
+				return { ok: false, error: NOT_ANSWERED.closed };
+			}
+			if (res.status === 403) return { ok: false, error: NOT_ANSWERED.refused };
+			if (!res.ok) return { ok: false, error: `${NOT_ANSWERED.garbled} (${res.status})` };
+			const tell = readRelayTell(await res.json().catch(() => null));
+			return tell?.dsnr === 'answer' && tell.id === id ? tell.result : { ok: false, error: NOT_ANSWERED.garbled };
+		},
+	};
 };
 
 /** Who a sign-in answer says is signed in: their login, or null. */

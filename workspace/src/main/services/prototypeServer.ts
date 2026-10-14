@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from 'node:http';
 import { basename, extname, join, normalize, sep } from 'node:path';
 import { MIME_TYPES } from '../../shared/mime';
+import { ASK_PATH, KEY_HEADER, isKey } from '../../shared/reviewRelay';
 
 /**
  * The fonts and pictures a built folder may hold, by extension: what a build may write as files beside its page. A list
@@ -39,11 +40,6 @@ type Listener = { server: Server | null; port: number; starting: Promise<void> |
  */
 export type AskHandler = (key: string, ask: unknown) => Promise<unknown | null>;
 
-/** Where a browser's ask is made: on the server's own address, by the review bar, from its own page. */
-export const ASK_PATH = '/_dsnr/ask';
-/** The header its key comes in, and what a key looks like (base64url, 128 bits or more). */
-const KEY_HEADER = 'x-dsnr-key';
-const KEY_SHAPE = /^[A-Za-z0-9_-]{22,64}$/;
 /** The most an ask may be: a comment and its anchor, never a file. */
 const MOST_ASK = 256 * 1024;
 type Where = 'app' | 'pages';
@@ -84,7 +80,7 @@ export class PrototypeServer {
 		const key = req.headers[KEY_HEADER];
 		if (req.headers.origin !== own) return refuse(403, 'Not from here');
 		if (!/^application\/json(;|$)/.test(req.headers['content-type'] ?? '')) return refuse(415, 'Not JSON');
-		if (typeof key !== 'string' || !KEY_SHAPE.test(key)) return refuse(403, 'No key');
+		if (!isKey(key)) return refuse(403, 'No key');
 		let size = 0;
 		const parts: Buffer[] = [];
 		for await (const part of req as AsyncIterable<Buffer>) {

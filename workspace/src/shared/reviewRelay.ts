@@ -61,3 +61,13 @@ export const readRelayTell = (raw: unknown): RelayTell | null => {
 		? { dsnr: 'answer', id: m.id, result: m.result }
 		: null;
 };
+
+/**
+ * A review opened in the browser from VS Code asks the same way, through this machine's server (BROWSER_COMMENTS_PLAN):
+ * a `POST` at `ASK_PATH` on the bar's own address, with the key its link carried (after `KEY_FRAGMENT` in its fragment)
+ * in `KEY_HEADER`. A key is base64url, 128 bits or more: only characters no link is ever re-encoded in.
+ */
+export const ASK_PATH = '/_dsnr/ask';
+export const KEY_HEADER = 'x-dsnr-key';
+export const KEY_FRAGMENT = 'dsnr-key-';
+export const isKey = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{22,64}$/.test(v);

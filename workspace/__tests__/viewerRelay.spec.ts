@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { listenForDsnr, relayComments } from '../src/viewer/relay';
+import { keyFromAddress, listenForDsnr, relayComments, serverRelay } from '../src/viewer/relay';
 
 /**
  * The review page's side of commenting through DSNR (4.2): it listens only when it is served from this machine and in a
@@ -85,5 +85,75 @@ describe('the comments, through DSNR', () => {
 		]);
 		expect(await store.viewer()).toBe('noah');
 		expect(await store.version()).toBe('');
+	});
+});
+
+/** A page opened in the browser from VS Code (BROWSER_COMMENTS_PLAN 2.1): its key in its fragment, then in its tab's keeping. */
+const opened = (host: string, hash: string, kept: string | null = null) => {
+	const store = new Map<string, string>(kept === null ? [] : [['dsnr.review-key', kept]]);
+	const replaced: string[] = [];
+	const win = {
+		location: { hostname: host, hash, pathname: '/review/demo/v1/i1/', search: '' },
+		history: { replaceState: (_: unknown, __: string, url: string) => void replaced.push(url) },
+		sessionStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) },
+	};
+	return { win, store, replaced };
+};
+const KEY = 'AbC-_x9yZAbC-_x9yZAbCd';
+
+describe('the key a page opened from DSNR carries', () => {
+	it('is taken from the fragment, kept for this tab, and taken out of the address', () => {
+		const page = opened('127.0.0.1', `#dsnr-key-${KEY}`);
+		expect(keyFromAddress(page.win)).toBe(KEY);
+		expect(page.store.get('dsnr.review-key')).toBe(KEY);
+		expect(page.replaced).toEqual(['/review/demo/v1/i1/']);
+	});
+
+	it('is the one kept, after the page moves to another iteration (whose address has none)', () => {
+		const page = opened('127.0.0.1', '', KEY);
+		expect(keyFromAddress(page.win)).toBe(KEY);
+		expect(page.replaced).toEqual([]);
+	});
+
+	it('is none on a page not served from this machine, or for what is not a key', () => {
+		expect(keyFromAddress(opened('noahshrader-flock.github.io', `#dsnr-key-${KEY}`).win)).toBeNull();
+		expect(keyFromAddress(opened('127.0.0.1', '#dsnr-key-short').win)).toBeNull();
+		expect(keyFromAddress(opened('127.0.0.1', '#/route').win)).toBeNull();
+		expect(keyFromAddress(opened('127.0.0.1', '', 'not a key!').win)).toBeNull();
+	});
+});
+
+describe('asking DSNR through this machine’s server', () => {
+	const answering = (respond: (init: RequestInit) => Promise<Response>) => {
+		const sent: { url: string; init: RequestInit }[] = [];
+		const fetcher = vi.fn(async (url: string, init: RequestInit) => {
+			sent.push({ url, init });
+			return respond(init);
+		});
+		return { relay: serverRelay(KEY, fetcher as unknown as typeof fetch), sent };
+	};
+	const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } });
+
+	it('asks as a tab does, at the server’s ask, with its key, and takes the answer to that ask', async () => {
+		const { relay, sent } = answering(async (init) => {
+			const ask = JSON.parse(init.body as string) as { id: number };
+			return json({ dsnr: 'answer', id: ask.id, result: { ok: true, value: 'signed in' } });
+		});
+		expect(await relay.ask('signInState', [])).toEqual({ ok: true, value: 'signed in' });
+		expect(sent[0]!.url).toBe('/_dsnr/ask');
+		expect(sent[0]!.init.method).toBe('POST');
+		expect(sent[0]!.init.headers).toEqual({ 'content-type': 'application/json', 'x-dsnr-key': KEY });
+		expect(JSON.parse(sent[0]!.init.body as string)).toEqual({ dsnr: 'ask', id: 1, name: 'signInState', args: [] });
+	});
+
+	it('says why, in words, when it was not answered: an old key, DSNR closed, or an answer that is not one', async () => {
+		const refused = answering(async () => new Response('Not yours', { status: 403 }));
+		expect(await refused.relay.ask('readComments', [])).toEqual({ ok: false, error: expect.stringMatching(/Open in browser/) });
+		const closed = answering(async () => Promise.reject(new TypeError('Failed to fetch')));
+		expect(await closed.relay.ask('readComments', [])).toEqual({ ok: false, error: expect.stringMatching(/VS Code/) });
+		const wrong = answering(async () => json({ dsnr: 'answer', id: 99, result: { ok: true, value: 'another’s' } }));
+		expect(await wrong.relay.ask('readComments', [])).toEqual({ ok: false, error: expect.any(String) });
+		const garbled = answering(async () => new Response('<html>', { status: 200 }));
+		expect(await garbled.relay.ask('readComments', [])).toEqual({ ok: false, error: expect.any(String) });
 	});
 });
