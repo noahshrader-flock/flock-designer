@@ -2,7 +2,7 @@ import { type BuildApi, type BuildPhase, previewCommandFor, runLocalBuild } from
 import type { Project, ProjectIteration, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 import { codeLink, workOf } from '../../src/shared/work';
-import { type AgentWorkDeps, agentReady, agentWork } from './agentWork';
+import { type AgentWorkDeps, agentReady, agentWork, pollOf } from './agentWork';
 
 export interface CodebaseDeps extends AgentWorkDeps {
 	api: AgentWorkDeps['api'] & BuildApi & Pick<WorkspaceApi, 'listProjects' | 'handoffResult' | 'shareIteration' | 'onShareStatus' | 'stopCommand'>;
@@ -53,7 +53,7 @@ export const handOff = async (deps: CodebaseDeps, projectId: string): Promise<vo
 				if (phase.kind === 'failed') failed = phase.message;
 				if (phase.kind === 'reported') reported = true;
 			},
-			...(deps.pollMs !== undefined ? { pollMs: deps.pollMs } : {}),
+			...pollOf(deps),
 		});
 	});
 	if (stopped) return;
@@ -98,7 +98,7 @@ export const previewCodebase = async (deps: CodebaseDeps, projectId: string): Pr
 					if (phase.kind === 'preview') say('Starting its dev server…');
 					if (phase.kind === 'failed') failed = phase.message;
 				},
-				...(deps.pollMs !== undefined ? { pollMs: deps.pollMs } : {}),
+				...pollOf(deps),
 			});
 		},
 		() => {
@@ -119,6 +119,8 @@ const SHARE_WORDS: Record<ShareStep, string> = {
 	opening: 'Opening a draft pull request…',
 	building: 'Building the preview…',
 };
+/** How sharing ended: ready, with its pull request and preview, or failed, with why. */
+type Shared = Extract<ShareStatus, { state: 'ready' | 'failed' }>;
 const OPEN_IT = 'Open the pull request';
 const COPY_IT = 'Copy the preview link';
 
@@ -130,36 +132,33 @@ const COPY_IT = 'Copy the preview link';
 export const shareCodebase = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
 	const { api, root } = deps;
 	const { project, iteration } = await codebaseOf(api, projectId);
-	let ended: Extract<ShareStatus, { state: 'ready' | 'failed' }> | null = null;
+	let outcome: Shared | null = null;
 	await deps.progress(`Sharing ${project.title} for review`, async (say) => {
-		await new Promise<void>((resolve, reject) => {
-			const show = (status: ShareStatus) => {
-				if (status.state === 'running') say(SHARE_WORDS[status.step]);
-				if (status.state === 'ready' || status.state === 'failed') {
-					ended = status;
-					stop();
-					resolve();
-				}
-			};
-			// Listened for before it starts, so no step is missed.
-			const stop = api.onShareStatus((s) => s.state !== 'idle' && s.projectId === project.id && s.name === iteration.name && show(s));
-			void api.shareIteration(root, project.id, iteration.name).then((started) => {
-				if (!started.ok) {
-					stop();
-					return reject(new Error(started.error));
-				}
-				show(started.value);
-			}, reject);
-		}).catch((err: unknown) => {
-			ended = { state: 'failed', projectId: project.id, name: iteration.name, message: err instanceof Error ? err.message : String(err) };
+		const show = (status: ShareStatus) => status.state === 'running' && say(SHARE_WORDS[status.step]);
+		// Listened for before it starts, so no step is missed; only this work's.
+		let stop = (): void => undefined;
+		const ended = new Promise<Shared>((resolve) => {
+			stop = api.onShareStatus((status) => {
+				if (status.state === 'idle' || status.projectId !== project.id || status.name !== iteration.name) return;
+				show(status);
+				if (status.state === 'ready' || status.state === 'failed') resolve(status);
+			});
 		});
+		try {
+			const started = await api.shareIteration(root, project.id, iteration.name);
+			if (!started.ok) throw new Error(`${project.title} was not shared: ${started.error}`);
+			show(started.value);
+			outcome = started.value.state === 'ready' || started.value.state === 'failed' ? started.value : await ended;
+		} finally {
+			stop();
+		}
 	});
-	const outcome = ended as Extract<ShareStatus, { state: 'ready' | 'failed' }> | null;
-	if (outcome === null) return;
-	if (outcome.state === 'failed') throw new Error(`${project.title} was not shared: ${outcome.message}`);
+	const shared = outcome as Shared | null;
+	if (shared === null) return;
+	if (shared.state === 'failed') throw new Error(`${project.title} was not shared: ${shared.message}`);
 	const next = await deps.offer(`${project.title} is shared: a draft pull request, with a preview.`, [OPEN_IT, COPY_IT]);
-	if (next === OPEN_IT) await deps.openExternal(outcome.prUrl);
-	if (next === COPY_IT) await deps.copy(outcome.url);
+	if (next === OPEN_IT) await deps.openExternal(shared.prUrl);
+	if (next === COPY_IT) await deps.copy(shared.url);
 };
 
 /** Codebase work on GitHub: its pull request when it has one, else its branch, in the person's browser. */

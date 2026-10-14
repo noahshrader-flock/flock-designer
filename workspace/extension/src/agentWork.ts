@@ -57,3 +57,6 @@ export const agentWork = async (
 	}
 	return { stopped };
 };
+
+/** How often to ask the agent how it is getting on, passed to the app's own run as its option: only when one is set. */
+export const pollOf = ({ pollMs }: { pollMs?: number }): { pollMs?: number } => (pollMs !== undefined ? { pollMs } : {});

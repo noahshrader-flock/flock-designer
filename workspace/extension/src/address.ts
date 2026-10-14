@@ -3,7 +3,7 @@ import { prototypeKey } from '../../src/shared/designPaths';
 import type { CommentRef, WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 import { iterationLabel } from '../../src/shared/work';
-import { type AgentWorkDeps, agentReady, agentWork } from './agentWork';
+import { type AgentWorkDeps, agentReady, agentWork, pollOf } from './agentWork';
 import { type Review, reviewsOf } from './messages';
 
 export interface AddressDeps extends AgentWorkDeps {
@@ -41,7 +41,7 @@ export const addressComment = async (deps: AddressDeps, review: Review, comment:
 				onPhase: (phase) => {
 					if (phase.kind === 'done' || phase.kind === 'failed') ended = phase;
 				},
-				...(deps.pollMs !== undefined ? { pollMs: deps.pollMs } : {}),
+				...pollOf(deps),
 			});
 		},
 	);

@@ -4,7 +4,7 @@ import type { Project, WorkspaceApi } from '../../src/shared/contract';
 import { toProjectIteration } from '../../src/shared/iterationRecords';
 import { valueOf } from '../../src/shared/result';
 import { slugify } from '../../src/shared/validate';
-import { type AgentWorkDeps, agentReady, agentWork } from './agentWork';
+import { type AgentWorkDeps, agentReady, agentWork, pollOf } from './agentWork';
 import { LIMITS, type Review, reviewsOf } from './messages';
 
 export interface NewPrototypeDeps extends AgentWorkDeps {
@@ -144,7 +144,7 @@ const build = async (deps: NewPrototypeDeps, project: Project, task: string): Pr
 				const words = wordsFor(phase);
 				if (words) say(words);
 			},
-			...(deps.pollMs !== undefined ? { pollMs: deps.pollMs } : {}),
+			...pollOf(deps),
 		});
 	});
 	if (stopped) return;
