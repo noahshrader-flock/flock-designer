@@ -1,12 +1,12 @@
 import { PaletteIcon, TagsIcon } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../shared/contract';
-import { PRIMITIVES, byPrimitive, inOrder, isEditable } from '../shared/primitives';
-import { contrastPartner, contrastRatio, familyOf, isForeground } from '../shared/tokens';
+import { byPrimitive, drawnAs, inOrder, isEditable } from '../shared/primitives';
+import { type ColorView, familyOf, isForeground, tokensShown } from '../shared/tokens';
 import { ChangedTokens, ContrastNote, TokenEditorPopover } from './TokenEditor';
 import { Swatch } from './Swatch';
 import type { TokenBranchControls } from './useTokenBranch';
-import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
+import { labelOf, pairContrast, pointsAt, useTokenChanges } from './tokenChanges';
 import { GroupTrigger, STICKY_GROUP_HEADER, useClosedGroups } from './GroupAccordion';
 import { Accordion, AccordionContent, AccordionItem } from './ui/accordion';
 import { SearchField } from './SearchField';
@@ -36,10 +36,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 const setKey = (t: DesignToken) => `${t.group}/${t.set}`;
 
-/** What a token is, in words, for the search to look through: what it points at too, as it is named on screen (`pineGreen 50`). */
-const searchable = (t: DesignToken, target?: DesignToken) =>
-	[t.path, t.group, t.set, t.name, t.value, t.ref?.path ?? '', target ? nameOf(target) : ''].join(' ').toLowerCase();
-
 /** A row's layout: the same whether it can be pressed or not, so a row that is only shown lines up with the others. */
 const ROW = '-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left text-sm';
 
@@ -51,19 +47,13 @@ const ROW = '-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 p
 export const TokenRow = ({ token, note }: { token: DesignToken; note?: ReactNode }) => {
 	const changes = useTokenChanges();
 	const target = changes.target(token);
-	const partner = isForeground(token) ? undefined : contrastPartner(token, changes.shown);
-	const ratio = partner ? contrastRatio(token.value, partner.value) : null;
+	const ratio = isForeground(token) ? null : (pairContrast(token, changes)?.ratio ?? null);
 	const edited = changes.isChanged(token);
 	const content = (
 		<>
 			{token.kind === 'color' && <Swatch value={token.value} />}
 			<span className={cn('min-w-0 truncate', edited && 'font-medium')}>{token.name}</span>
-			{target && (
-				<span className="text-muted-foreground truncate text-xs">
-					{nameOf(target)}
-					{token.ref?.alpha && ` at ${opacity(token.ref.alpha)}`}
-				</span>
-			)}
+			{target && <span className="text-muted-foreground truncate text-xs">{pointsAt(token, target)}</span>}
 			{ratio !== null && <ContrastNote ratio={ratio} className="shrink-0 text-xs" />}
 			<span className="text-muted-foreground ml-auto shrink-0 font-mono text-xs">{token.value}</span>
 			{edited && <span data-changed-mark aria-label="Changed" className="bg-primary size-1.5 shrink-0 rounded-full" />}
@@ -108,12 +98,6 @@ const VIEWS = [
 	{ value: 'semantic', label: 'Semantic', Icon: TagsIcon },
 	{ value: 'palette', label: 'Palette', Icon: PaletteIcon },
 ] as const;
-
-/** The views of a category drawn as swatches: the roles by theme, and the palette they are made from. */
-export type ColorView = 'semantic' | 'palette';
-
-/** A role's variant, whichever theme it is in: what a search keeps together, so a match in one theme keeps the others' value. */
-const rowKey = (t: DesignToken) => `${t.set}\u0000${t.name}`;
 
 /**
  * The palette, as its roles are shown: each color family is a group (an accordion item, open until closed, its header sticky,
@@ -166,22 +150,14 @@ const TokensTab = ({
 }) => {
 	const closed = useClosedGroups();
 	const { isPalette, target } = useTokenChanges();
-	const q = query.trim().toLowerCase();
-	const colors = PRIMITIVES.find((p) => p.category === category)?.drawn === 'swatches';
-	const split = useMemo(
-		() => (colors ? { semantic: tokens.filter((t) => !isPalette(t)), palette: tokens.filter(isPalette) } : null),
-		[colors, tokens, isPalette],
+	const {
+		choose,
+		view: shownView,
+		shown,
+	} = useMemo(
+		() => tokensShown(tokens, { colors: drawnAs(category) === 'swatches', isPalette, view, query, target }),
+		[tokens, category, isPalette, view, query, target],
 	);
-	const choose = split !== null && split.semantic.length > 0 && split.palette.length > 0;
-	const shownView: ColorView | null = split === null ? null : choose ? view : split.semantic.length > 0 ? 'semantic' : 'palette';
-	const pool = split && shownView ? split[shownView] : tokens;
-	const shown = useMemo(() => {
-		if (q === '') return pool;
-		const found = pool.filter((t) => searchable(t, target(t)).includes(q));
-		if (shownView !== 'semantic') return found;
-		const rows = new Set(found.map(rowKey));
-		return pool.filter((t) => rows.has(rowKey(t)));
-	}, [pool, q, shownView, target]);
 
 	const groups = inOrder(shown, (t) => t.group);
 	const names = groups.map(([group]) => group);

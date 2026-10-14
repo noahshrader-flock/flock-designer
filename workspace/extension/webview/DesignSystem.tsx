@@ -97,7 +97,7 @@ const Ready = ({
 	// Where the change is kept once saved, and proposed (T4, T5): a change DSNR was closed with comes back in the panel.
 	const branch = useTokenBranch(id, edits, does.setEdits);
 	const [problems, setProblems] = useState(false);
-	// The token whose control is open, by its path: the row pressed.
+	// The token whose control is open: the one whose row or swatch was pressed.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
 	const notRead = catalog.tokens.problems.length;
 	return (

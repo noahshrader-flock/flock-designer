@@ -558,6 +558,11 @@ textarea.input {
 	transform: none;
 }
 
+/*
+ * A button that is an icon alone, as VS Code's toolbars draw one: a row's menu button (shown on hover, below) and any
+ * other (Sync, a token's file, a reset).
+ */
+.icon-button,
 .menu-button {
 	display: inline-flex;
 	align-items: center;
@@ -570,6 +575,9 @@ textarea.input {
 	color: var(--vscode-foreground);
 	background: transparent;
 	cursor: pointer;
+}
+
+.menu-button {
 	opacity: 0;
 }
 
@@ -586,7 +594,8 @@ textarea.input {
 	border-color: var(--vscode-editorWidget-border, transparent);
 }
 
-.menu-button:hover {
+.menu-button:hover,
+.icon-button:hover:not(:disabled) {
 	background: var(--vscode-toolbar-hoverBackground);
 }
 
@@ -595,7 +604,8 @@ textarea.input {
 	background: linear-gradient(var(--vscode-toolbar-hoverBackground), var(--vscode-toolbar-hoverBackground)), var(--vscode-editorWidget-background);
 }
 
-.menu-button:focus-visible {
+.menu-button:focus-visible,
+.icon-button:focus-visible {
 	outline: var(--dsnr-focus);
 	outline-offset: -1px;
 }
@@ -765,30 +775,6 @@ textarea.input {
 	vertical-align: text-bottom;
 }
 
-/* A button that is an icon alone, as VS Code's toolbars draw one. */
-.icon-button {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 22px;
-	height: 22px;
-	padding: 0;
-	border: 1px solid transparent;
-	border-radius: var(--dsnr-radius-inner);
-	color: var(--vscode-foreground);
-	background: transparent;
-	cursor: pointer;
-}
-
-.icon-button:hover:not(:disabled) {
-	background: var(--vscode-toolbar-hoverBackground);
-}
-
-.icon-button:focus-visible {
-	outline: var(--dsnr-focus);
-	outline-offset: -1px;
-}
-
 .icon-button:disabled {
 	opacity: 0.5;
 	cursor: default;
@@ -884,6 +870,10 @@ textarea.input {
 	font-size: 0.92em;
 }
 
+.token-uses {
+	margin-left: 8px;
+}
+
 .token-ref {
 	flex-shrink: 1;
 	overflow: hidden;
@@ -904,12 +894,9 @@ textarea.input {
 	font-size: 0.92em;
 }
 
-.token-uses {
-	margin-left: 8px;
-}
-
-/* A changed token's mark: a dot in the theme's own modified colour, as VS Code marks a changed file. */
-.token-changed {
+/* A changed token's mark, on its row or its theme's swatch: a dot in the theme's own modified colour, as VS Code marks a changed file. */
+.token-changed,
+.theme-changed {
 	flex-shrink: 0;
 	width: 6px;
 	height: 6px;
@@ -1512,8 +1499,4 @@ textarea.input {
 	position: absolute;
 	top: 0;
 	right: 0;
-	width: 7px;
-	height: 7px;
-	border-radius: 50%;
-	background: var(--vscode-gitDecoration-modifiedResourceForeground, var(--vscode-focusBorder));
 }

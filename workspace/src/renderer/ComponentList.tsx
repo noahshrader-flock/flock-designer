@@ -1,4 +1,4 @@
-import { matchesComponent } from '../shared/catalog';
+import { groupsFound } from '../shared/catalog';
 import type { CatalogComponent } from '../shared/contract';
 import { CardGrid } from './CardGrid';
 import { ComponentCard } from './ComponentCard';
@@ -56,16 +56,11 @@ export const ComponentList = ({
 	pictures: ReturnType<typeof useComponentPictures>;
 	onOpen: (id: string) => void;
 }) => {
-	const groups: { group: string; rows: CatalogComponent[] }[] = [];
-	for (const c of components.filter((each) => matchesComponent(each, search))) {
-		const last = groups[groups.length - 1];
-		if (last?.group === c.group) last.rows.push(c);
-		else groups.push({ group: c.group, rows: [c] });
-	}
+	const groups = groupsFound(components, search);
 	if (groups.length === 0) return <NoMatches thing="component" search={search} onClear={onClearSearch} />;
 	return (
 		<Accordion {...closed.accordion(groups.map((g) => g.group))}>
-			{groups.map(({ group, rows }) => (
+			{groups.map(({ group, components: rows }) => (
 				<AccordionItem key={group} value={group} data-component-group={group}>
 					<GroupTrigger name={group} count={rows.length} />
 					<AccordionContent>

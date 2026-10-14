@@ -1,8 +1,8 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import { specimenAddress } from '../shared/catalog';
+import { notBuilt, specimenAddress } from '../shared/catalog';
 import type { Catalog, DesignToken, StoryPreview, TokenEdit } from '../shared/contract';
 import { plural } from '../shared/plural';
-import { PRIMITIVES, type Primitive, byPrimitive, inOrder, missingParts } from '../shared/primitives';
+import { PRIMITIVES, type Primitive, byPrimitive, coverageOf, drawnAs, inOrder, listed } from '../shared/primitives';
 import { typeSpecimens } from '../shared/specimens';
 import { nameOf, pixelsOf, readsAs, withEdits } from '../shared/tokens';
 import { Page } from './Page';
@@ -122,14 +122,6 @@ const Table = ({ tokens }: Drawing) => (
 	</table>
 );
 
-/** Why a specimen cannot be drawn, from what the preview build said. */
-const notBuilt = (preview: StoryPreview): string =>
-	preview.state === 'no-packages'
-		? `: its packages are not installed (run npm install in ${preview.root})`
-		: preview.state === 'failed'
-			? `: ${preview.error}`
-			: '';
-
 /**
  * Typography: a specimen of each family and style, drawn in the design system's own preview so its fonts are its own (the
  * page says when one is not there), and under it the values as written, to read off.
@@ -189,11 +181,7 @@ const Drawn = ({ primitive, tokens, byPath, preview }: { primitive: Primitive | 
 };
 
 /** Whether the design system has a primitive the preview build draws: only then is it asked for. */
-const drawnInPreview = (tokens: DesignToken[]): boolean =>
-	tokens.some((t) => PRIMITIVES.find((p) => p.category === t.category)?.drawn === 'specimens');
-
-/** "theme files, CSS variables and design token files". */
-const listed = (words: string[]): string => (words.length < 2 ? (words[0] ?? '') : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`);
+const drawnInPreview = (tokens: DesignToken[]): boolean => tokens.some((t) => drawnAs(t.category) === 'specimens');
 
 /** A chip in the line at the top: a way to a primitive's section, or to the list of what is not defined. */
 const Chip = ({ defined, onPress, children }: { defined: boolean; onPress: () => void; children: ReactNode }) => (
@@ -257,42 +245,18 @@ export const Primitives = ({ catalog, edits, hidden }: { catalog: Catalog | null
 	const byPath = new Map(tokens.map((t) => [t.path, t]));
 	const found = byPrimitive(tokens);
 	const primitive = (category: string) => PRIMITIVES.find((p) => p.category === category);
-	// A primitive's tokens, by its name: undefined when it has none.
-	const tokensOf = (category: string) => found.find(([c]) => c === category)?.[1];
-	// What the design system leaves out: a primitive it has no tokens for, or the parts of one it has.
-	const missing = PRIMITIVES.flatMap((p) => {
-		const list = tokensOf(p.category);
-		if (list === undefined) return [{ key: p.category, said: p.category }];
-		const parts = missingParts(p, list);
-		return parts.length === 0 ? [] : [{ key: p.category, said: `${p.category} ${listed(parts).toLowerCase()}` }];
-	});
+	// Each primitive's chip, and what the design system leaves out: a primitive it has no tokens for, or the parts of one it has.
+	const { chips, missing } = coverageOf(found);
 	const go = (key: string) => sections.current.get(key)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	return (
 		<Page>
 			<PageHeading title="Primitives" />
 			<div data-coverage className="flex flex-wrap items-center gap-2">
-				{PRIMITIVES.map((p) => {
-					const list = tokensOf(p.category);
-					const n = list?.length;
-					const lacks = missingParts(p, list ?? []);
-					const has = (p.parts ?? []).filter((part) => !lacks.includes(part));
-					return (
-						<Chip key={p.category} defined={n !== undefined} onPress={() => go(n === undefined ? 'not-defined' : p.category)}>
-							{n === undefined
-								? `${p.category} not defined`
-								: lacks.length > 0 && has.length > 0
-									? `${p.category} ${n} · ${listed(has).toLowerCase()} only`
-									: `${p.category} ${n}`}
-						</Chip>
-					);
-				})}
-				{found
-					.filter(([category]) => primitive(category) === undefined)
-					.map(([category, list]) => (
-						<Chip key={category} defined onPress={() => go(category)}>
-							{category} {list.length}
-						</Chip>
-					))}
+				{chips.map((c) => (
+					<Chip key={c.key} defined={c.defined} onPress={() => go(c.defined ? c.key : 'not-defined')}>
+						{c.words}
+					</Chip>
+				))}
 			</div>
 			{edits.length > 0 && (
 				<p className="text-muted-foreground text-sm">Showing the change being tried on the Components tab ({plural(edits.length, 'token')}).</p>

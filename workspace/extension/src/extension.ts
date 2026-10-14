@@ -350,7 +350,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	);
 };
 
-/** Each project's prototypes, newest first (`reviewsOf`), to choose one for review: as the panel's rows open them. */
 /** A component of the design system shown, chosen from its catalog in VS Code's quick pick, by its story file. */
 const pickComponent = async (api: Pick<WorkspaceApi, 'designSystemCatalog'>): Promise<string | undefined> => {
 	const read = await api.designSystemCatalog(false);
@@ -360,6 +359,7 @@ const pickComponent = async (api: Pick<WorkspaceApi, 'designSystemCatalog'>): Pr
 	return (await vscode.window.showQuickPick(items, { placeHolder: 'Open a component', matchOnDescription: true }))?.id;
 };
 
+/** Each project's prototypes, newest first (`reviewsOf`), to choose one for review: as the panel's rows open them. */
 const pickPrototype = async (api: Pick<WorkspaceApi, 'listProjects'>): Promise<Review | undefined> => {
 	const listed = await api.listProjects();
 	if (!listed.ok) {

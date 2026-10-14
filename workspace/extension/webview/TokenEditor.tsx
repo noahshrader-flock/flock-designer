@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DesignToken } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
-import { inOrder } from '../../src/shared/primitives';
-import { contrastPartner, contrastRatio, labelOf, lengthParts, nameOf, pointingAt, roleOf, tokenTitle, writtenWith } from '../../src/shared/tokens';
-import { textContrast } from '../../src/shared/wcag';
-import { opacity, useTokenChanges } from '../../src/renderer/tokenChanges';
+import { isHex, labelOf, lengthRange, nameOf, pointingAt, roleOf, scaleFamilies, tokenTitle, typedHex, writtenWith } from '../../src/shared/tokens';
+import { useTokenChanges } from '../../src/renderer/tokenChanges';
+import { pairContrast, pointsAt } from '../../src/renderer/tokenChanges';
 import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
 import { Swatch } from './ui/Swatch';
@@ -17,8 +16,6 @@ import { Swatch } from './ui/Swatch';
  * released, the hex entered): building again takes about a second.
  */
 
-const HEX6 = /^#[0-9a-f]{6}$/i;
-
 /** A color picker and its hex: the picker applies when it is closed, the hex when Enter is pressed or it is left. An opacity is kept. */
 const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string) => void }) => {
 	const alpha = value.length === 9 ? value.slice(7) : '';
@@ -28,12 +25,16 @@ const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string
 	// The browser's own `change`: when the picker is closed, not on every color it passes through.
 	useEffect(() => {
 		const el = picker.current;
-		const done = () => el && onCommit(`${el.value.toUpperCase()}${alpha}`);
+		const done = () => {
+			const picked = el && typedHex(el.value, alpha);
+			if (picked) onCommit(picked);
+		};
 		el?.addEventListener('change', done);
 		return () => el?.removeEventListener('change', done);
 	}, [onCommit, alpha]);
 	const commit = () => {
-		if (HEX6.test(hex.trim())) onCommit(`${hex.trim().toUpperCase()}${alpha}`);
+		const typed = typedHex(hex, alpha);
+		if (typed) onCommit(typed);
 		else setHex(value.slice(0, 7));
 	};
 	return (
@@ -43,7 +44,7 @@ const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string
 				type="color"
 				aria-label="Pick a color"
 				className="color-picker"
-				value={(HEX6.test(hex) ? hex : value.slice(0, 7)).toLowerCase()}
+				value={(isHex(hex) ? hex : value.slice(0, 7)).toLowerCase()}
 				onChange={(e) => setHex(e.target.value.toUpperCase())}
 			/>
 			<input
@@ -61,11 +62,9 @@ const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string
 
 /** A length as a slider and its number, applied when the slider is let go of: from nothing to twice what the design system has. */
 const DimensionField = ({ token, value, onCommit }: { token: DesignToken; value: string; onCommit: (length: string) => void }) => {
-	const { number, unit } = lengthParts(value) ?? { number: 0, unit: 'px' };
+	const { number, unit, max, step } = lengthRange(token, value);
 	const [n, setN] = useState(number);
 	useEffect(() => setN(number), [number]);
-	const px = unit === 'px';
-	const max = Math.max(px ? 32 : 2, (lengthParts(token.value)?.number ?? number) * 2);
 	const commit = () => n !== number && onCommit(`${n}${unit}`);
 	return (
 		<div className="dimension-field">
@@ -74,7 +73,7 @@ const DimensionField = ({ token, value, onCommit }: { token: DesignToken; value:
 				aria-label={nameOf(token)}
 				min={0}
 				max={max}
-				step={px ? 1 : 0.125}
+				step={step}
 				value={n}
 				onChange={(e) => setN(Number(e.target.value))}
 				onPointerUp={commit}
@@ -96,10 +95,7 @@ const DimensionField = ({ token, value, onCommit }: { token: DesignToken; value:
 const ColorScale = ({ token, target }: { token: DesignToken; target: DesignToken }) => {
 	const { shown, change, isPalette } = useTokenChanges();
 	const [family, setFamily] = useState(target.set);
-	const families = inOrder(
-		shown.filter((t) => t.kind === token.kind && t.group === target.group && (isPalette(t) || t.set === target.set)),
-		(t) => t.set,
-	);
+	const families = scaleFamilies(shown, token, target, isPalette);
 	const steps = families.find(([set]) => set === family)?.[1] ?? [];
 	return (
 		<div className="field">
@@ -136,14 +132,12 @@ const ColorScale = ({ token, target }: { token: DesignToken; target: DesignToken
 
 /** The contrast a color leaves with the one it is read with, and whether that is enough for text at the design system's target. */
 const Contrast = ({ token }: { token: DesignToken }) => {
-	const { shown, accessibility } = useTokenChanges();
-	const partner = contrastPartner(token, shown);
-	const ratio = partner ? contrastRatio(token.value, partner.value) : null;
-	if (!partner || ratio === null) return null;
-	const { flag, words } = textContrast(ratio, accessibility);
+	const contrast = pairContrast(token, useTokenChanges());
+	if (contrast === null) return null;
 	return (
 		<p data-editor-contrast className="quiet">
-			Contrast with {partner.name}: <strong className={flag ? 'warning-text' : undefined}>{ratio}:1</strong>, {words}
+			Contrast with {contrast.partner.name}: <strong className={contrast.flag ? 'warning-text' : undefined}>{contrast.ratio}:1</strong>,{' '}
+			{contrast.words}
 		</p>
 	);
 };
@@ -194,8 +188,7 @@ export const TokenEditor = ({ token, onClose }: { token: DesignToken; onClose: (
 						<p data-reference>
 							{now.ref ? (
 								<>
-									{roleOf(now)} → <strong>{nameOf(target)}</strong>
-									{pointer?.alpha && ` at ${opacity(pointer.alpha)}`}
+									{roleOf(now)} → <strong>{pointsAt(now, target)}</strong>
 								</>
 							) : (
 								`Was ${nameOf(target)}; now a color of its own`

@@ -1,6 +1,7 @@
 import type { Context } from '../../src/main/services/findContext';
 import { INVOKE, type InvokeName } from '../../src/shared/contract';
 import type { TokenEdit } from '../../src/shared/domain/designSystem';
+import { MOST_EDITS } from '../../src/shared/tokens';
 import type { Project } from '../../src/shared/domain/projects';
 import { isPrototypeName } from '../../src/shared/prototypeNames';
 import { PROJECT_ID } from '../../src/shared/validate';
@@ -86,9 +87,8 @@ export type PanelDialog =
 
 const CALLS = new Set<string>(INVOKE);
 const BARE = new Set(['ready', 'locate-design-system', 'get-started', 'ask-new-prototype', 'open-primitives', 'open-voice-and-tone']);
-/** The longest a path in the design system is (a story file, a token's file), and the most edits a change is. */
+/** The longest a path in the design system is (a story file, a token's file); a change is at most `MOST_EDITS` edits. */
 const MOST_PATH = 500;
-const MOST_EDITS = 500;
 const isPath = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= MOST_PATH;
 
 /** The most a name, what a prototype explores, and a folder's name may be: more is not what a person wrote in a box. */

@@ -1,14 +1,9 @@
-import { useMemo } from 'react';
 import type { DesignToken } from '../../src/shared/contract';
-import { contrastPartner, contrastRatio, isForeground, labelOf, nameOf, semanticTable, type SemanticRow } from '../../src/shared/tokens';
-import { textContrast } from '../../src/shared/wcag';
-import { opacity, useTokenChanges } from '../../src/renderer/tokenChanges';
+import { isForeground, labelOf, semanticTable, type SemanticRow } from '../../src/shared/tokens';
+import { useTokenChanges } from '../../src/renderer/tokenChanges';
+import { pairContrast, pointsAt } from '../../src/renderer/tokenChanges';
 import { Icon } from './ui/Icon';
 import { Swatch } from './ui/Swatch';
-
-/** What a value says: what it points at (`pineGreen 50`, and its opacity), or its own color when it points at nothing. */
-const reads = (token: DesignToken, target: DesignToken | undefined): string =>
-	target ? `${nameOf(target)}${token.ref?.alpha ? ` at ${opacity(token.ref.alpha)}` : ''}` : token.value;
 
 /**
  * One theme's value of a role, as the app's (`SemanticColors`): its color as a swatch, centered under its theme, what it
@@ -19,10 +14,9 @@ const ThemeValue = ({ token, onEdit }: { token: DesignToken; onEdit: (token: Des
 	const changes = useTokenChanges();
 	const target = changes.target(token);
 	const edited = changes.isChanged(token);
-	const partner = isForeground(token) ? undefined : contrastPartner(token, changes.shown);
-	const ratio = partner ? contrastRatio(token.value, partner.value) : null;
-	const flagged = ratio !== null && textContrast(ratio, changes.accessibility).flag;
-	const says = reads(token, target);
+	const flagged = !isForeground(token) && pairContrast(token, changes)?.flag === true;
+	// What it points at, or its own color when it points at nothing.
+	const says = target ? pointsAt(token, target) : token.value;
 	return (
 		<span data-token={token.path} data-changed={edited || undefined} className="theme-cell">
 			<button
@@ -84,7 +78,7 @@ const Rows = ({ title, rows, themes, onEdit }: { title?: string; rows: SemanticR
  * a role whose name is its set is a plain row, with no heading to say it twice.
  */
 export const SemanticColors = ({ tokens, onEdit }: { tokens: DesignToken[]; onEdit: (token: DesignToken) => void }) => {
-	const table = useMemo(() => semanticTable(tokens), [tokens]);
+	const table = semanticTable(tokens);
 	return (
 		<>
 			{table.flat.length > 0 && <Rows rows={table.flat} themes={table.themes} onEdit={onEdit} />}

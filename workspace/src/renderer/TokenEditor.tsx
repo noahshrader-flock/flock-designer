@@ -2,14 +2,13 @@ import { ArrowRightIcon, CheckIcon, CopyIcon, RotateCcwIcon } from 'lucide-react
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import type { DesignToken } from '../shared/contract';
 import { plural } from '../shared/plural';
-import { inOrder } from '../shared/primitives';
-import { contrastPartner, contrastRatio, lengthParts, pointingAt, readsAs, roleOf, tokenTitle, writtenWith } from '../shared/tokens';
+import { isHex, lengthRange, pointingAt, readsAs, roleOf, scaleFamilies, tokenTitle, typedHex, writtenWith } from '../shared/tokens';
 import { textContrast } from '../shared/wcag';
 import { ChoiceMenu } from './ChoiceMenu';
 import { TokenBranchActions } from './TokenBranchActions';
 import { useCopy } from './useCopy';
 import type { TokenBranchControls } from './useTokenBranch';
-import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
+import { labelOf, nameOf, pairContrast, pointsAt, useTokenChanges } from './tokenChanges';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -49,7 +48,6 @@ export const ContrastNote = ({ ratio, className = '' }: { ratio: number; classNa
  * A color picker and its hex. The picker applies when it is closed; the hex when Enter is pressed or it is left, and only
  * a hex is applied. An opacity the color had is kept: the picker has none.
  */
-const HEX6 = /^#[0-9a-f]{6}$/i;
 const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string) => void }) => {
 	const alpha = value.length === 9 ? value.slice(7) : '';
 	const [hex, setHex] = useState(value.slice(0, 7));
@@ -58,12 +56,16 @@ const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string
 	// The browser's own `change`: when the picker is closed, not on every color it passes through.
 	useEffect(() => {
 		const el = picker.current;
-		const done = () => el && onCommit(`${el.value.toUpperCase()}${alpha}`);
+		const done = () => {
+			const picked = el && typedHex(el.value, alpha);
+			if (picked) onCommit(picked);
+		};
 		el?.addEventListener('change', done);
 		return () => el?.removeEventListener('change', done);
 	}, [onCommit, alpha]);
 	const commit = () => {
-		if (HEX6.test(hex.trim())) onCommit(`${hex.trim().toUpperCase()}${alpha}`);
+		const typed = typedHex(hex, alpha);
+		if (typed) onCommit(typed);
 		else setHex(value.slice(0, 7));
 	};
 	return (
@@ -72,7 +74,7 @@ const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string
 				ref={picker}
 				type="color"
 				aria-label="Pick a color"
-				value={(HEX6.test(hex) ? hex : value.slice(0, 7)).toLowerCase()}
+				value={(isHex(hex) ? hex : value.slice(0, 7)).toLowerCase()}
 				onChange={(e) => setHex(e.target.value.toUpperCase())}
 				className="size-8 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
 			/>
@@ -91,19 +93,16 @@ const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string
 
 /** A length as a slider and its number, applied when the slider is let go of. Its range is from its kind, not the token. */
 const DimensionField = ({ token, value, onCommit }: { token: DesignToken; value: string; onCommit: (length: string) => void }) => {
-	const { number, unit } = lengthParts(value) ?? { number: 0, unit: 'px' };
+	const { number, unit, max, step } = lengthRange(token, value);
 	const [n, setN] = useState(number);
 	useEffect(() => setN(number), [number]);
-	// From nothing to twice what the library has, at least a useful span: whole pixels, or eighths of a rem.
-	const px = unit === 'px';
-	const max = Math.max(px ? 32 : 2, (lengthParts(token.value)?.number ?? number) * 2);
 	return (
 		<div className="flex items-center gap-3">
 			<Slider
 				aria-label={nameOf(token)}
 				min={0}
 				max={max}
-				step={px ? 1 : 0.125}
+				step={step}
 				value={[n]}
 				onValueChange={([v]) => setN(v as number)}
 				onValueCommit={([v]) => onCommit(`${v}${unit}`)}
@@ -125,11 +124,7 @@ const DimensionField = ({ token, value, onCommit }: { token: DesignToken; value:
 const ColorScale = ({ token, target }: { token: DesignToken; target: DesignToken }) => {
 	const { shown, change, isPalette } = useTokenChanges();
 	const [family, setFamily] = useState(target.set);
-	// Another token's pointer goes only within its own group (a theme, the palette), so the families are that group's.
-	const families = inOrder(
-		shown.filter((t) => t.kind === token.kind && t.group === target.group && (isPalette(t) || t.set === target.set)),
-		(t) => t.set,
-	);
+	const families = scaleFamilies(shown, token, target, isPalette);
 	const steps = families.find(([set]) => set === family)?.[1] ?? [];
 	return (
 		<div className="flex flex-col gap-2">
@@ -216,14 +211,12 @@ const Reach = ({ token }: { token: DesignToken }) => {
 
 /** The contrast a color leaves with the one it is read with, and whether that is enough for text. */
 const Contrast = ({ token }: { token: DesignToken }) => {
-	const { shown, accessibility } = useTokenChanges();
-	const partner = contrastPartner(token, shown);
-	const ratio = partner ? contrastRatio(token.value, partner.value) : null;
-	if (!partner || ratio === null) return null;
+	const contrast = pairContrast(token, useTokenChanges());
+	if (contrast === null) return null;
 	return (
 		<p className="text-xs">
-			Contrast with {partner.name}: <ContrastNote ratio={ratio} className="font-medium" />
-			<span className="text-muted-foreground">, {textContrast(ratio, accessibility).words}</span>
+			Contrast with {contrast.partner.name}: <ContrastNote ratio={contrast.ratio} className="font-medium" />
+			<span className="text-muted-foreground">, {contrast.words}</span>
 		</p>
 	);
 };
@@ -264,10 +257,7 @@ export const TokenEditor = ({ token }: { token: DesignToken }) => {
 							<p data-reference className="bg-muted/50 flex w-fit max-w-full flex-wrap items-center gap-x-2 rounded-md px-2 py-1 text-sm">
 								<span className="break-all">{roleOf(token)}</span>
 								<ArrowRightIcon className="size-3.5 shrink-0" />
-								<span className="font-medium break-all">
-									{nameOf(target)}
-									{pointer?.alpha && ` at ${opacity(pointer.alpha)}`}
-								</span>
+								<span className="font-medium break-all">{pointsAt(token, target)}</span>
 							</p>
 						) : (
 							<p className="text-sm">Was {nameOf(target)}; now a color of its own</p>

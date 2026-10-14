@@ -10,12 +10,11 @@
  */
 import type { DesignToken, TokenEdit } from '../../shared/contract';
 import { isEditable } from '../../shared/primitives';
-import { fitsKind, placeOf, withEdits } from '../../shared/tokens';
+import { MOST_EDITS, fitsKind, placeOf, withEdits } from '../../shared/tokens';
 import type { CatalogReads } from './componentCatalog';
 import { readTokens, sourceNamed } from './designTokens';
 import { asRecord } from '../../shared/json';
 /** At most this many edits in a change: a person changes a few tokens at a time, never thousands. */
-const MOST_EDITS = 500;
 
 /** The edits the window sent, as edits, or an error: only what the contract says an edit is. */
 export const tokenEditsOf = (sent: unknown): TokenEdit[] => {

@@ -92,6 +92,9 @@ export const byPrimitive = (tokens: DesignToken[]): [string, DesignToken[]][] =>
 	return inOrder(tokens, (t) => t.category).sort(([a], [b]) => rank(a) - rank(b));
 };
 
+/** How the vocabulary draws a category (`swatches` for Color), or undefined for one it does not know. */
+export const drawnAs = (category: string): Primitive['drawn'] | undefined => PRIMITIVES.find((p) => p.category === category)?.drawn;
+
 /**
  * Whether a token can be changed in the app: a color or a length of a primitive the vocabulary says is changed here (Color,
  * Spacing, Shape), which the controls, the writers and the tagging pass are made for. Every other token is shown and never
@@ -103,3 +106,42 @@ export const isEditable = (token: Pick<DesignToken, 'kind' | 'category'>): boole
 /** The parts of a primitive its tokens leave out, in the vocabulary's order: none for one that is not made of parts. */
 export const missingParts = (primitive: Primitive, tokens: DesignToken[]): string[] =>
 	(primitive.parts ?? []).filter((part) => !tokens.some((t) => t.group === part));
+
+/** Words as a list a person reads: "theme files, CSS variables and design token files". */
+export const listed = (words: string[]): string => (words.length < 2 ? (words[0] ?? '') : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`);
+
+/**
+ * What a design system has of the vocabulary, as the Primitives tab says it at its top and its end, in the app and in
+ * VS Code: a chip for each primitive in the vocabulary's order (how many tokens it has, the part it has of one made of
+ * parts, or that it is not defined), then one for each category the vocabulary does not know; and what it leaves out, each
+ * primitive or part of one. `found` is its tokens by primitive (`byPrimitive`).
+ */
+export const coverageOf = (
+	found: [string, DesignToken[]][],
+): { chips: { key: string; defined: boolean; words: string }[]; missing: { key: string; said: string }[] } => {
+	const tokensOf = (category: string) => found.find(([c]) => c === category)?.[1];
+	const chips = [
+		...PRIMITIVES.map((p) => {
+			const n = tokensOf(p.category)?.length;
+			const lacks = missingParts(p, tokensOf(p.category) ?? []);
+			const has = (p.parts ?? []).filter((part) => !lacks.includes(part));
+			const words =
+				n === undefined
+					? `${p.category} not defined`
+					: lacks.length > 0 && has.length > 0
+						? `${p.category} ${n} · ${listed(has).toLowerCase()} only`
+						: `${p.category} ${n}`;
+			return { key: p.category, defined: n !== undefined, words };
+		}),
+		...found
+			.filter(([category]) => !PRIMITIVES.some((p) => p.category === category))
+			.map(([key, list]) => ({ key, defined: true, words: `${key} ${list.length}` })),
+	];
+	const missing = PRIMITIVES.flatMap((p) => {
+		const list = tokensOf(p.category);
+		if (list === undefined) return [{ key: p.category, said: p.category }];
+		const parts = missingParts(p, list);
+		return parts.length === 0 ? [] : [{ key: p.category, said: `${p.category} ${listed(parts).toLowerCase()}` }];
+	});
+	return { chips, missing };
+};

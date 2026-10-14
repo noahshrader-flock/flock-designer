@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { summaryOf } from '../../src/shared/accessibility';
-import { matchesComponent } from '../../src/shared/catalog';
+import { groupsFound } from '../../src/shared/catalog';
 import type { AccessibilityCounts, CatalogComponent, ComponentPictures } from '../../src/shared/contract';
 import type { ComponentLink } from '../src/messages';
 import { Badge } from './ui/Badge';
@@ -12,13 +12,9 @@ import { Row } from './ui/Row';
 import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
 import { Toggle } from './ui/Toggle';
+import { NoMatches } from './ui/NoMatches';
+import { LAYOUTS } from './layouts';
 import type { View } from './vscode';
-
-/** The two ways to see the components, as the projects have them: a grid of cards, which it starts in, or a list of rows. */
-const VIEWS = [
-	{ value: 'grid', label: 'Grid', icon: 'layout' },
-	{ value: 'list', label: 'List', icon: 'list-unordered' },
-] as const satisfies { value: View; label: string; icon: string }[];
 
 /**
  * A component's picture (P5 of the design system plan): its first story, drawn by the browser on this machine; its place
@@ -56,12 +52,7 @@ export const ComponentsView = ({
 	onLink: (id: string, link: ComponentLink) => void;
 }) => {
 	const [search, setSearch] = useState('');
-	const groups: [string, CatalogComponent[]][] = [];
-	for (const c of components.filter((each) => matchesComponent(each, search))) {
-		const last = groups.at(-1);
-		if (last?.[0] === c.group) last[1].push(c);
-		else groups.push([c.group, [c]]);
-	}
+	const groups = groupsFound(components, search);
 	const item = (c: CatalogComponent) => {
 		const items: MenuItem[] = [
 			{ label: 'Open', icon: 'preview', onSelect: () => onOpen(c.id) },
@@ -95,17 +86,12 @@ export const ComponentsView = ({
 		<>
 			<div className="view-bar">
 				<SearchBox label="Search components" value={search} onChange={setSearch} />
-				<Toggle label="Layout" options={VIEWS} value={view} onChange={onView} iconOnly />
+				<Toggle label="Layout" options={LAYOUTS} value={view} onChange={onView} iconOnly />
 			</div>
 			{groups.length === 0 ? (
-				<p className="note">
-					No component matches “{search.trim()}”.{' '}
-					<button type="button" className="link" onClick={() => setSearch('')}>
-						Clear search
-					</button>
-				</p>
+				<NoMatches thing="component" search={search} onClear={() => setSearch('')} />
 			) : (
-				groups.map(([group, inGroup]) => (
+				groups.map(({ group, components: inGroup }) => (
 					<Section key={group} title={group} count={inGroup.length}>
 						{view === 'grid' ? <Grid label={group}>{inGroup.map(item)}</Grid> : <List label={group}>{inGroup.map(item)}</List>}
 					</Section>

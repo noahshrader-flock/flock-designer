@@ -1,5 +1,6 @@
 import { matchesWords } from './search';
 import { HOSTED_STORYBOOKS } from './config';
+import type { StoryPreview } from './contract';
 
 /**
  * The design system the Design System tab reads, as the catalog needs it: the repository, the branch that is its source
@@ -58,3 +59,22 @@ export const PREVIEW_SPECIMEN = 'specimen';
 /** A preview page that draws `lines` as a type specimen, in the build served at `base`. */
 export const specimenAddress = (base: string, lines: SpecimenLine[]): string =>
 	`${base}?${PREVIEW_SPECIMEN}=${encodeURIComponent(JSON.stringify(lines))}`;
+
+/** Why something drawn in the preview build (a type specimen) cannot be, from what the build said, after a colon; or nothing. */
+export const notBuilt = (preview: StoryPreview): string =>
+	preview.state === 'no-packages'
+		? `: its packages are not installed (run npm install in ${preview.root})`
+		: preview.state === 'failed'
+			? `: ${preview.error}`
+			: '';
+
+/** The components a search finds, in their groups in the order the library lists them; a group with nothing found is left out. */
+export const groupsFound = <C extends { name: string; group: string }>(components: C[], search: string): { group: string; components: C[] }[] => {
+	const groups: { group: string; components: C[] }[] = [];
+	for (const c of components.filter((each) => matchesComponent(each, search))) {
+		const last = groups.at(-1);
+		if (last?.group === c.group) last.components.push(c);
+		else groups.push({ group: c.group, components: [c] });
+	}
+	return groups;
+};

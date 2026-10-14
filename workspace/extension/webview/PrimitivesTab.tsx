@@ -1,15 +1,15 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import { specimenAddress } from '../../src/shared/catalog';
-import type { Catalog, DesignToken, StoryPreview } from '../../src/shared/contract';
+import { notBuilt, specimenAddress } from '../../src/shared/catalog';
+import type { DesignToken, StoryPreview } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
-import { PRIMITIVES, type Primitive, byPrimitive, inOrder, missingParts } from '../../src/shared/primitives';
+import { PRIMITIVES, type Primitive, byPrimitive, coverageOf, drawnAs, inOrder, listed } from '../../src/shared/primitives';
 import { typeSpecimens } from '../../src/shared/specimens';
 import { nameOf, pixelsOf, readsAs, withEdits } from '../../src/shared/tokens';
 import { workspace } from './host';
 import { StoryFrame } from './StoryFrame';
+import { useTabCatalog } from './useCatalog';
 import { useTrial } from './useTrial';
 import { Swatch } from './ui/Swatch';
-import { vscode } from './vscode';
 
 /** The design system's preview build, which a type specimen is drawn in, so its fonts are its own; asked for once. */
 type Preview = StoryPreview | { state: 'asking' };
@@ -106,14 +106,6 @@ const Table = ({ tokens }: Drawing) => (
 	</table>
 );
 
-/** Why a specimen cannot be drawn, from what the preview build said. */
-const notBuilt = (preview: StoryPreview): string =>
-	preview.state === 'no-packages'
-		? `: its packages are not installed (run npm install in ${preview.root})`
-		: preview.state === 'failed'
-			? `: ${preview.error}`
-			: '';
-
 /** Typography: a specimen of each family and style, drawn in the design system's own preview, then the values as written. */
 const Specimens = ({ tokens, byPath, preview }: Drawing) => (
 	<div className="drawn-sets">
@@ -158,9 +150,6 @@ const Drawn = ({ primitive, tokens, byPath, preview }: { primitive: Primitive | 
 	);
 };
 
-/** "theme files, CSS variables and design token files". */
-const listed = (words: string[]): string => (words.length < 2 ? (words[0] ?? '') : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`);
-
 /**
  * The Primitives tab (ELECTRON_MIGRATION_PLAN 6.1, the app's R2): the design system seen whole, from the same list the
  * panel shows, as the change being tried there leaves it. A chip for each primitive at the top, how many tokens it has or
@@ -168,19 +157,12 @@ const listed = (words: string[]): string => (words.length < 2 ? (words[0] ?? '')
  * with where DSNR looked. For looking: nothing here changes a token.
  */
 export const PrimitivesTab = () => {
-	const [catalog, setCatalog] = useState<Catalog | null>(null);
-	const [error, setError] = useState<string | null>(null);
+	const { catalog, error } = useTabCatalog();
 	const [edits] = useTrial();
 	const [preview, setPreview] = useState<Preview>({ state: 'asking' });
 	const sections = useRef(new Map<string, HTMLElement | null>());
-	useEffect(() => {
-		vscode().postMessage({ type: 'ready' });
-		void workspace()
-			.designSystemCatalog(false)
-			.then((r) => (r.ok ? setCatalog(r.value) : setError(r.error)));
-	}, []);
 	const ready = catalog?.state === 'ready' ? catalog : null;
-	const specimens = ready?.tokens.tokens.some((t) => PRIMITIVES.find((p) => p.category === t.category)?.drawn === 'specimens') ?? false;
+	const specimens = ready?.tokens.tokens.some((t) => drawnAs(t.category) === 'specimens') ?? false;
 	useEffect(() => {
 		if (!specimens) return;
 		void workspace()
@@ -196,49 +178,26 @@ export const PrimitivesTab = () => {
 	const byPath = new Map(tokens.map((t) => [t.path, t]));
 	const found = byPrimitive(tokens);
 	const primitive = (category: string) => PRIMITIVES.find((p) => p.category === category);
-	const tokensOf = (category: string) => found.find(([c]) => c === category)?.[1];
-	const missing = PRIMITIVES.flatMap((p) => {
-		const list = tokensOf(p.category);
-		if (list === undefined) return [{ key: p.category, said: p.category }];
-		const parts = missingParts(p, list);
-		return parts.length === 0 ? [] : [{ key: p.category, said: `${p.category} ${listed(parts).toLowerCase()}` }];
-	});
+	const { chips, missing } = coverageOf(found);
 	const go = (key: string) => sections.current.get(key)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-	const chip = (key: string, defined: boolean, words: string) => (
-		<button
-			key={key}
-			type="button"
-			data-primitive-chip
-			data-defined={defined}
-			className={defined ? 'chip' : 'chip chip-undefined'}
-			onClick={() => go(defined ? key : 'not-defined')}
-		>
-			{words}
-		</button>
-	);
 	return (
 		<main className="tab">
 			<header className="tab-header">
 				<h1 className="tab-title">Primitives</h1>
 			</header>
 			<div data-coverage className="chips">
-				{PRIMITIVES.map((p) => {
-					const n = tokensOf(p.category)?.length;
-					const lacks = missingParts(p, tokensOf(p.category) ?? []);
-					const has = (p.parts ?? []).filter((part) => !lacks.includes(part));
-					return chip(
-						p.category,
-						n !== undefined,
-						n === undefined
-							? `${p.category} not defined`
-							: lacks.length > 0 && has.length > 0
-								? `${p.category} ${n} · ${listed(has).toLowerCase()} only`
-								: `${p.category} ${n}`,
-					);
-				})}
-				{found
-					.filter(([category]) => primitive(category) === undefined)
-					.map(([category, list]) => chip(category, true, `${category} ${list.length}`))}
+				{chips.map((c) => (
+					<button
+						key={c.key}
+						type="button"
+						data-primitive-chip
+						data-defined={c.defined}
+						className={c.defined ? 'chip' : 'chip chip-undefined'}
+						onClick={() => go(c.defined ? c.key : 'not-defined')}
+					>
+						{c.words}
+					</button>
+				))}
 			</div>
 			{edits.length > 0 && <p className="quiet">Showing the change being tried in the panel ({plural(edits.length, 'token')}).</p>}
 			{found.map(([category, list]) => (

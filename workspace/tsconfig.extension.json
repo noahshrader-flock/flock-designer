@@ -33,6 +33,9 @@
 		"src/renderer/useComponentPictures.ts",
 		"src/renderer/tokenChanges.ts",
 		"src/renderer/useTokenBranch.ts",
+		"src/renderer/useFrameHeight.ts",
+		"src/renderer/useStoryPreview.ts",
+		"src/renderer/useComponentTokens.ts",
 		"src/renderer/workspace.d.ts"
 	]
 }

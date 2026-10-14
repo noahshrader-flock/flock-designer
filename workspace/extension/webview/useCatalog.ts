@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Catalog } from '../../src/shared/contract';
 import { workspace } from './host';
+import { vscode } from './vscode';
 
 /** The design system as the panel reads it: its catalog (null while it is first read), its name, and what went wrong. */
 export interface CatalogRead {
@@ -60,4 +61,20 @@ export const useCatalog = (enabled: boolean, root: string | null): CatalogRead &
 	}, [enabled, root, ask, sync]);
 
 	return { catalog, id: shown?.id ?? null, name: shown?.name ?? null, error, syncing, sync };
+};
+
+/**
+ * The design system shown, as a design system's tab reads it: once, when it opens, after saying it is ready (so the
+ * extension tells it the change being tried). Null while it is read; what went wrong, if it could not be.
+ */
+export const useTabCatalog = (): { catalog: Catalog | null; error: string | null } => {
+	const [catalog, setCatalog] = useState<Catalog | null>(null);
+	const [error, setError] = useState<string | null>(null);
+	useEffect(() => {
+		vscode().postMessage({ type: 'ready' });
+		void workspace()
+			.designSystemCatalog(false)
+			.then((r) => (r.ok ? setCatalog(r.value) : setError(r.error)));
+	}, []);
+	return { catalog, error };
 };

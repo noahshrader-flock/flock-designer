@@ -17,13 +17,9 @@ import { Row } from './ui/Row';
 import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
 import { Toggle } from './ui/Toggle';
+import { NoMatches } from './ui/NoMatches';
+import { LAYOUTS } from './layouts';
 import type { View } from './vscode';
-
-/** The two ways to see the projects, as the app has them: a grid of cards, which it starts in, or a list of rows. */
-const VIEWS = [
-	{ value: 'grid', label: 'Grid', icon: 'layout' },
-	{ value: 'list', label: 'List', icon: 'list-unordered' },
-] as const satisfies { value: View; label: string; icon: string }[];
 
 /** What a project has, in a line: its iterations. Its folder is the section it is under. */
 const meta = (p: Project) => plural(p.iterations.length, 'iteration');
@@ -190,7 +186,7 @@ export const Projects = ({
 			{projects.length > 0 && (
 				<div className="view-bar">
 					<SearchBox label="Search projects" value={search} onChange={setSearch} />
-					<Toggle label="Layout" options={VIEWS} value={view} onChange={onView} iconOnly />
+					<Toggle label="Layout" options={LAYOUTS} value={view} onChange={onView} iconOnly />
 				</div>
 			)}
 			{projects.length === 0 ? (
@@ -199,12 +195,7 @@ export const Projects = ({
 					<Button onClick={onNew}>New prototype</Button>
 				</EmptyState>
 			) : matching.length === 0 ? (
-				<p className="note">
-					No project matches “{search.trim()}”.{' '}
-					<button type="button" className="link" onClick={() => setSearch('')}>
-						Clear search
-					</button>
-				</p>
+				<NoMatches thing="project" search={search} onClear={() => setSearch('')} />
 			) : (
 				<ByFolder projects={matching}>
 					{(group, label) => {

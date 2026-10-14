@@ -1,7 +1,7 @@
 import { BookOpenIcon, CodeIcon } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { previewAddress } from '../shared/catalog';
-import type { CatalogComponent, StoryPreview, TokenEdit } from '../shared/contract';
+import type { CatalogComponent, TokenEdit } from '../shared/contract';
+import { useStoryPreview } from './useStoryPreview';
 import { BackButton } from './BackButton';
 import { Loading } from './Loading';
 import { SkeletonStatus } from './Skeletons';
@@ -47,31 +47,7 @@ export const ComponentPage = ({
 	edits: TokenEdit[];
 	onBack: () => void;
 }) => {
-	const [preview, setPreview] = useState<StoryPreview | { state: 'building' }>({ state: 'building' });
-	const [trying, setTrying] = useState(false);
-	const [refused, setRefused] = useState<string | null>(null);
-	const asked = useRef(0);
-
-	const build = useCallback(async (change: TokenEdit[], afresh: boolean) => {
-		const ask = ++asked.current;
-		if (afresh) setPreview({ state: 'building' });
-		setTrying(true);
-		const r = await window.workspace.storyPreview(change);
-		if (ask !== asked.current) return;
-		const next: StoryPreview = r.ok ? r.value : { state: 'failed', error: r.error };
-		setTrying(false);
-		// A change that could not be tried leaves the stories as they were, and says why.
-		const keep = change.length > 0 && next.state === 'failed';
-		setRefused(keep ? next.error : null);
-		setPreview((shown) => (keep && shown.state === 'ready' ? shown : next));
-	}, []);
-	// Afresh for a commit not shown yet; a change to the tokens is built over the stories shown.
-	const shownCommit = useRef<string | null>(null);
-	useEffect(() => {
-		const afresh = shownCommit.current !== commit;
-		shownCommit.current = commit;
-		void build(edits, afresh);
-	}, [build, commit, edits]);
+	const { preview, trying, refused, retry } = useStoryPreview(commit, edits);
 
 	return (
 		<Page>
@@ -113,7 +89,7 @@ export const ComponentPage = ({
 				<Notice
 					variant={preview.state === 'no-packages' ? 'warning' : 'destructive'}
 					title="Previews could not be built"
-					action={<RetryButton onClick={() => void build(edits, true)} />}
+					action={<RetryButton onClick={retry} />}
 				>
 					{preview.state === 'no-packages'
 						? `The library's packages are not installed in ${preview.root}. Run npm install there, then try again.`

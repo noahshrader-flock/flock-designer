@@ -5,6 +5,7 @@
  * disagree.
  */
 import type { DesignToken, TokenEdit } from './contract';
+import { inOrder } from './primitives';
 
 /** A color a change can give: a hex, with an opacity when it has eight digits. */
 export const HEX_COLOR = /^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/i;
@@ -134,6 +135,9 @@ export const describeChange = (tokens: DesignToken[], edits: TokenEdit[]): strin
 	});
 };
 
+/** The most edits a change is: more is not a person's change to a design system. */
+export const MOST_EDITS = 500;
+
 /** Whether two changes are the same, whatever their order: the same tokens, each pointed at or given the same. */
 export const sameChange = (a: TokenEdit[], b: TokenEdit[]): boolean => {
 	const key = (edits: TokenEdit[]) =>
@@ -232,3 +236,80 @@ export const contrastRatio = (a: string, b: string): number | null => {
 	const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
 	return Math.floor(((light + 0.05) / (dark + 0.05)) * 10) / 10;
 };
+
+/** The two views of a category drawn as swatches: the roles by theme, and the palette they are made from. */
+export type ColorView = 'semantic' | 'palette';
+
+/** What a token is, in words, for a search to look through: what it points at too, as it is named on screen (`pineGreen 50`). */
+export const searchText = (t: DesignToken, target?: DesignToken): string =>
+	[t.path, t.group, t.set, t.name, t.value, t.ref?.path ?? '', target ? nameOf(target) : ''].join(' ').toLowerCase();
+
+/** A role's variant, whichever theme it is in: what a search keeps together, so a match in one theme keeps the others'. */
+const roleKey = (t: DesignToken): string => `${t.set}\u0000${t.name}`;
+
+/**
+ * A category's tokens as the tokens panel shows them, in the app and in VS Code. For colors (`colors`): the roles, or the
+ * palette they point into (`isPalette`), as `view` asks when it has both (`choose`), else the one it has; null for any
+ * other category. Then what `query` finds, by `searchText`; in the roles, one found in a theme is kept in every theme.
+ */
+export const tokensShown = (
+	tokens: DesignToken[],
+	{
+		colors,
+		isPalette,
+		view,
+		query,
+		target,
+	}: {
+		colors: boolean;
+		isPalette: (t: DesignToken) => boolean;
+		view: ColorView;
+		query: string;
+		target: (t: DesignToken) => DesignToken | undefined;
+	},
+): { choose: boolean; view: ColorView | null; shown: DesignToken[] } => {
+	const semantic = colors ? tokens.filter((t) => !isPalette(t)) : [];
+	const palette = colors ? tokens.filter(isPalette) : [];
+	const choose = semantic.length > 0 && palette.length > 0;
+	const shownView: ColorView | null = !colors ? null : choose ? view : semantic.length > 0 ? 'semantic' : 'palette';
+	const pool = shownView === 'semantic' ? semantic : shownView === 'palette' ? palette : tokens;
+	const q = query.trim().toLowerCase();
+	if (q === '') return { choose, view: shownView, shown: pool };
+	const found = pool.filter((t) => searchText(t, target(t)).includes(q));
+	if (shownView !== 'semantic') return { choose, view: shownView, shown: found };
+	const roles = new Set(found.map(roleKey));
+	return { choose, view: shownView, shown: pool.filter((t) => roles.has(roleKey(t))) };
+};
+
+const HEX6 = /^#[0-9a-f]{6}$/i;
+
+/** A color a person typed, as a token is given it: a six-digit hex, in capitals, with the opacity it had kept; else null. */
+export const typedHex = (typed: string, alpha: string): string | null => (HEX6.test(typed.trim()) ? `${typed.trim().toUpperCase()}${alpha}` : null);
+
+/** Whether what is in a hex field is a whole hex yet, so a color picker can show it. */
+export const isHex = (typed: string): boolean => HEX6.test(typed);
+
+/**
+ * A length's slider (T3): its number and unit now, and its range, from nothing to twice what the design system has (`asRead`),
+ * at least a useful span; whole pixels, or eighths of a rem.
+ */
+export const lengthRange = (asRead: DesignToken, value: string): { number: number; unit: 'px' | 'rem' | 'em'; max: number; step: number } => {
+	const { number, unit } = lengthParts(value) ?? { number: 0, unit: 'px' };
+	const px = unit === 'px';
+	return { number, unit, max: Math.max(px ? 32 : 2, (lengthParts(asRead.value)?.number ?? number) * 2), step: px ? 1 : 0.125 };
+};
+
+/**
+ * The families a role can be pointed into, each with its steps: the palette's families in its target's own group (a
+ * theme, the palette), and the one it points into now. Another token's pointer goes only within its own group.
+ */
+export const scaleFamilies = (
+	shown: DesignToken[],
+	token: DesignToken,
+	target: DesignToken,
+	isPalette: (t: DesignToken) => boolean,
+): [string, DesignToken[]][] =>
+	inOrder(
+		shown.filter((t) => t.kind === token.kind && t.group === target.group && (isPalette(t) || t.set === target.set)),
+		(t) => t.set,
+	);

@@ -1,22 +1,15 @@
-import { useEffect, useState } from 'react';
 import type { CatalogComponent, ComponentTokens, DesignToken } from '../shared/contract';
 import { countsOf, summaryOf } from '../shared/accessibility';
 import { plural } from '../shared/plural';
 import { AccessibilityFindings } from './AccessibilityStatus';
 import { LinesSkeleton, SkeletonStatus } from './Skeletons';
 import { useTokenChanges } from './tokenChanges';
+import { MOST_LISTED, sharedWith, useComponentTokens } from './useComponentTokens';
 import { Swatch } from './Swatch';
 import { inOrder } from '../shared/primitives';
 import { Sets } from './TokensPanel';
 import { Notice, RetryButton } from './Notice';
 import { cn } from '@/lib/utils';
-
-/** How often the panel asks again while every story is being drawn. */
-const ASK_EVERY_MS = 3000;
-/** How many of the values a component sets itself are listed before the rest are counted. */
-const MOST_LISTED = 8;
-/** How many of the other components that share a token are named on its row. */
-const MOST_NAMED = 3;
 
 /**
  * The side panel's view of the open component (T6 of the design system plan, decision 29): **Made from**, the library's
@@ -26,24 +19,7 @@ const MOST_NAMED = 3;
  * worked out from a token. Found by drawing every story with the tokens tagged, the first time for each commit.
  */
 export const ComponentPanel = ({ component, components }: { component: CatalogComponent; components: CatalogComponent[] }) => {
-	const [answer, setAnswer] = useState<ComponentTokens | null>(null);
-	const [asks, setAsks] = useState(0);
-	useEffect(() => {
-		let live = true;
-		let timer: ReturnType<typeof setTimeout> | undefined;
-		const ask = async () => {
-			const r = await window.workspace.componentTokens(component.id);
-			if (!live) return;
-			const next: ComponentTokens = r.ok ? r.value : { state: 'failed', error: r.error };
-			setAnswer(next);
-			if (next.state === 'building') timer = setTimeout(() => void ask(), ASK_EVERY_MS);
-		};
-		void ask();
-		return () => {
-			live = false;
-			clearTimeout(timer);
-		};
-	}, [component.id, asks]);
+	const { answer, retry } = useComponentTokens(component.id);
 
 	return (
 		<div data-panel="component" className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
@@ -61,7 +37,7 @@ export const ComponentPanel = ({ component, components }: { component: CatalogCo
 					</p>
 				</div>
 			) : answer.state === 'failed' ? (
-				<Notice variant="destructive" action={<RetryButton size="xs" onClick={() => setAsks((n) => n + 1)} />}>
+				<Notice variant="destructive" action={<RetryButton size="xs" onClick={retry} />}>
 					{answer.error}
 				</Notice>
 			) : (
@@ -89,13 +65,9 @@ const Uses = ({
 	const others = (t: DesignToken) => (answer.sharedWith[t.path] ?? []).map((f) => names.get(f) ?? f);
 	const note = (t: DesignToken) => {
 		const also = others(t);
-		const shared =
-			also.length === 0
-				? 'no other component'
-				: `also ${also.slice(0, MOST_NAMED).join(', ')}${also.length > MOST_NAMED ? ` and ${also.length - MOST_NAMED} more` : ''}`;
 		return (
 			<span data-token-use title={also.join('\n')}>
-				{plural(used.get(t.path) ?? 0, 'use')} · {shared}
+				{plural(used.get(t.path) ?? 0, 'use')} · {sharedWith(also)}
 			</span>
 		);
 	};

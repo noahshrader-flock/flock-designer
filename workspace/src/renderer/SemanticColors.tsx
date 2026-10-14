@@ -1,13 +1,12 @@
 import { TriangleAlertIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import type { DesignToken } from '../shared/contract';
-import { contrastPartner, contrastRatio, isForeground, semanticTable, type SemanticRow } from '../shared/tokens';
-import { textContrast } from '../shared/wcag';
+import { isForeground, semanticTable, type SemanticRow } from '../shared/tokens';
 import { GroupTrigger, STICKY_GROUP_HEADER, useClosedGroups } from './GroupAccordion';
 import { Swatch } from './Swatch';
 import { Button } from './ui/button';
 import { TokenEditorPopover } from './TokenEditor';
-import { labelOf, nameOf, opacity, useTokenChanges } from './tokenChanges';
+import { labelOf, pairContrast, pointsAt, useTokenChanges } from './tokenChanges';
 import { Accordion, AccordionContent, AccordionItem } from './ui/accordion';
 import { cn } from '@/lib/utils';
 
@@ -26,10 +25,6 @@ import { cn } from '@/lib/utils';
 const NAME = 'min-w-0 flex-1';
 const THEME = 'w-14 shrink-0';
 
-/** What a value says: what it points at (`pineGreen 50`, and its opacity), or its own color when it points at nothing. */
-const reads = (token: DesignToken, target: DesignToken | undefined): string =>
-	target ? `${nameOf(target)}${token.ref?.alpha ? ` at ${opacity(token.ref.alpha)}` : ''}` : token.value;
-
 /**
  * One theme's value of a role: its color as a small square swatch in the app's small icon button, centered under its theme
  * and bordered so a light one shows on the panel, so Light and Dark can be compared at a glance. What it points at is in a
@@ -40,10 +35,9 @@ const ThemeValue = ({ token }: { token: DesignToken }) => {
 	const changes = useTokenChanges();
 	const target = changes.target(token);
 	const edited = changes.isChanged(token);
-	const partner = isForeground(token) ? undefined : contrastPartner(token, changes.shown);
-	const ratio = partner ? contrastRatio(token.value, partner.value) : null;
-	const flagged = ratio !== null && textContrast(ratio, changes.accessibility).flag;
-	const says = reads(token, target);
+	const flagged = !isForeground(token) && pairContrast(token, changes)?.flag === true;
+	// What it points at, or its own color when it points at nothing.
+	const says = target ? pointsAt(token, target) : token.value;
 	return (
 		<div data-token={token.path} data-changed={edited || undefined} className={cn(THEME, 'flex justify-center')}>
 			<TokenEditorPopover token={token} tip={<span>{says}</span>}>
