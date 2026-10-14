@@ -37,6 +37,13 @@ export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSi
 		pictureRecipe: 'vscode, no story pictures yet',
 	});
 	const shell = registerIpc(core);
-	context.subscriptions.push(github.watch(), { dispose: () => core.prototypeServer.close() }, { dispose: () => void headless.close() });
+	context.subscriptions.push(
+		github.watch(),
+		{ dispose: () => core.prototypeServer.close() },
+		{ dispose: () => void headless.close() },
+		// As the app does when it quits: the dev servers it started, and the agent's run, end with DSNR.
+		{ dispose: () => core.runtime.stopAll() },
+		{ dispose: () => core.agent.stop() },
+	);
 	return { core, github, shell, storage };
 };

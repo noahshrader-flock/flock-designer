@@ -74,10 +74,13 @@ describe('the person’s GitHub account, through VS Code', () => {
 describe('VS Code’s ports', () => {
 	const fake = () => ({
 		window: { showOpenDialog: vi.fn(async (_options: unknown) => [{ fsPath: '/picked' }]), showInformationMessage: vi.fn(async () => undefined) },
-		env: { openExternal: vi.fn(async () => true), clipboard: { writeText: vi.fn(async () => undefined) } },
+		env: { openExternal: vi.fn(async (_uri: unknown) => true), clipboard: { writeText: vi.fn(async () => undefined) } },
 		commands: { executeCommand: vi.fn(async () => undefined) },
 		Uri: { file: (p: string) => ({ fsPath: p }), parse: (u: string) => ({ toString: () => u }) },
+		extensions: { getExtension: vi.fn((id: string) => (id === 'anthropic.claude-code' ? { id } : undefined)) },
+		workspace: { workspaceFolders: [{ uri: { fsPath: '/work/coke' } }] },
 	});
+	const none = { draw: vi.fn(), scan: vi.fn(), measure: vi.fn() };
 
 	it('are VS Code’s own: its folder picker, its messages, its links, its clipboard, its reveal', async () => {
 		const v = fake();
@@ -94,6 +97,31 @@ describe('VS Code’s ports', () => {
 		expect(v.env.clipboard.writeText).toHaveBeenCalledWith('x');
 		await ports.openPath('/a');
 		expect(v.commands.executeCommand).toHaveBeenCalledWith('revealFileInOS', { fsPath: '/a' });
+	});
+
+	it('hand work to Claude Code in this window: VS Code is the editor here, when Claude Code is installed in it', async () => {
+		const v = fake();
+		const { editor } = vscodePorts(v as never, none);
+		expect(editor.find()).toBe('vscode');
+		await editor.openPrompt('vscode', '/work/coke', 'Build it.');
+		// The product is open in this window, so no other is opened: the conversation starts in this one's Claude Code.
+		expect(v.commands.executeCommand).not.toHaveBeenCalled();
+		expect(String(v.env.openExternal.mock.calls.at(-1)?.[0])).toBe('vscode://anthropic.claude-code/open?prompt=Build+it.');
+		const then = vi.fn();
+		await editor.openSession('vscode', { session: '0b2e5b8e-46ac-4823-9acb-716bcb37aa64', root: '/work/coke' } as never, then);
+		expect(then).toHaveBeenCalled();
+		expect(String(v.env.openExternal.mock.calls.at(-1)?.[0])).toBe(
+			'vscode://anthropic.claude-code/open?session=0b2e5b8e-46ac-4823-9acb-716bcb37aa64',
+		);
+	});
+
+	it('open a folder that is not in this window in a window of its own, and say there is no editor without Claude Code', async () => {
+		const v = fake();
+		const { editor } = vscodePorts(v as never, none);
+		await editor.openFolder('vscode', '/work/other');
+		expect(v.commands.executeCommand).toHaveBeenCalledWith('vscode.openFolder', { fsPath: '/work/other' }, { forceNewWindow: true });
+		v.extensions.getExtension.mockReturnValue(undefined as never);
+		expect(vscodePorts(v as never, none).editor.find()).toBeNull();
 	});
 
 	it('draw and check out of sight with the headless browser they are given', () => {
@@ -296,11 +324,11 @@ describe('what the extension asks the panel to show', () => {
 		const panels = new Panels();
 		const a = webview();
 		panels.add(a.webview);
-		panels.show({ type: 'open-assign-folder', projectId: 'demo' });
-		panels.show({ type: 'open-new-prototype' });
+		panels.show({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'demo' } });
+		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
 		expect(a.posted).toEqual([]);
 		panels.ready(a.webview);
-		expect(a.posted).toEqual([{ type: 'open-new-prototype' }]);
+		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
 		panels.ready(a.webview);
 		expect(a.posted).toHaveLength(1);
 	});
@@ -310,8 +338,8 @@ describe('what the extension asks the panel to show', () => {
 		const a = webview();
 		panels.add(a.webview);
 		panels.ready(a.webview);
-		panels.show({ type: 'open-new-prototype' });
-		expect(a.posted).toEqual([{ type: 'open-new-prototype' }]);
+		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
+		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
 	});
 
 	it('is held again when the page goes (its view was hidden, and reloads when it is shown)', () => {
@@ -320,10 +348,10 @@ describe('what the extension asks the panel to show', () => {
 		panels.add(a.webview);
 		panels.ready(a.webview);
 		panels.unready(a.webview);
-		panels.show({ type: 'open-new-prototype' });
+		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
 		expect(a.posted).toEqual([]);
 		panels.ready(a.webview);
-		expect(a.posted).toEqual([{ type: 'open-new-prototype' }]);
+		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
 	});
 });
 
