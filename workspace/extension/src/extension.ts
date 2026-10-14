@@ -239,10 +239,11 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	/** Makes a prototype from its answers (the panel's dialog, or code), its build handed to Claude Code and watched for. */
 	/**
 	 * A Figma link in a request: offered, once, to let Claude Code read Figma without asking before each call (`figmaAccess`).
-	 * The build waits for the answer only a few seconds, so an offer left alone never holds it up; it is still acted on later.
+	 * The build waits for the answer: Claude Code reads its permissions only when a conversation starts, so one opened before
+	 * the rules are written would ask on every Figma call until it ends.
 	 */
 	const figmaFirst = async (request: string): Promise<void> => {
-		const offered = offerFigmaAccess(request, {
+		await offerFigmaAccess(request, {
 			...diskSettingsFile,
 			path: settingsPath(homedir(), process.env),
 			declined: {
@@ -252,7 +253,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			offer: vscodeOffer,
 			tell: vscodeTell,
 		}).catch(failed);
-		await Promise.race([offered, new Promise((resolve) => setTimeout(resolve, 8000))]);
 	};
 	const startPrototype = (given: Given) =>
 		newPrototype({ ...here, given, product: productNow(), onChanged: projectsChanged, watchBuild: watchPrototype, beforeHandOver: figmaFirst });
