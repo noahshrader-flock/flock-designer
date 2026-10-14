@@ -1,7 +1,7 @@
 import type * as VsCode from 'vscode';
 import type { VoiceAndTone, WorkspaceApi } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
-import { valueOf } from '../../src/shared/result';
+import { errorText, valueOf } from '../../src/shared/result';
 import { CHANGE_REQUEST, HOST } from '../../src/shared/vocabulary';
 
 /** Where the voice and tone is in VS Code: a document of DSNR's own, and the file as GitHub has it, to compare with. */
@@ -110,7 +110,7 @@ export class VoiceDocument {
 	}
 }
 
-type VsCodeFs = Pick<typeof VsCode, 'EventEmitter' | 'FileType' | 'FileSystemError' | 'FilePermission' | 'Disposable'>;
+type VsCodeFs = Pick<typeof VsCode, 'EventEmitter' | 'FileType' | 'FileChangeType' | 'FileSystemError' | 'FilePermission' | 'Disposable'>;
 
 /**
  * The voice and tone as files VS Code opens, edits and saves: the document (`VOICE_PATH`), read and saved through
@@ -145,7 +145,7 @@ export const voiceFileSystem = (vscode: VsCodeFs, voice: VoiceDocument, onRefuse
 			try {
 				return encode(uri.path === THEIRS_PATH ? voice.theirsText() : await voice.read());
 			} catch (err) {
-				throw vscode.FileSystemError.Unavailable(err instanceof Error ? err.message : String(err));
+				throw vscode.FileSystemError.Unavailable(errorText(err));
 			}
 		},
 		writeFile: async (uri, content) => {
@@ -154,9 +154,11 @@ export const voiceFileSystem = (vscode: VsCodeFs, voice: VoiceDocument, onRefuse
 			try {
 				outcome = await voice.save(new TextDecoder().decode(content));
 			} catch (err) {
-				throw vscode.FileSystemError.Unavailable(err instanceof Error ? err.message : String(err));
+				throw vscode.FileSystemError.Unavailable(errorText(err));
 			}
 			if (outcome === 'changed') {
+				// GitHub's file as this save found it: an open copy of it, from a refusal before, is read again.
+				changed.fire([{ type: vscode.FileChangeType.Changed, uri: uri.with({ path: THEIRS_PATH }) }]);
 				onRefused();
 				throw vscode.FileSystemError.Unavailable(`The voice and tone changed on ${HOST} since it was opened, so nothing was saved.`);
 			}

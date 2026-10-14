@@ -93,6 +93,17 @@ describe('a component’s tab', () => {
 		expect(document.querySelector('iframe')?.getAttribute('src')).toBe(previewAddress('http://127.0.0.1:4321/trial-1/', BUTTON));
 	});
 
+	it('builds nothing again when it is told the change it already has (the extension says every change to every page)', async () => {
+		await open();
+		await answer('storyPreview', { state: 'ready', base: BASE });
+		await say({ type: 'token-edits', edits: [] });
+		expect(calls('storyPreview')).toHaveLength(1);
+		const edits = [{ path: 'tone.pineGreen.50', value: '#000000' }];
+		await say({ type: 'token-edits', edits });
+		await say({ type: 'token-edits', edits: [...edits] });
+		expect(calls('storyPreview')).toHaveLength(2);
+	});
+
 	it('says why its previews could not be built, with a way to try again', async () => {
 		await open();
 		await answer('storyPreview', { state: 'no-packages', root: '/work/lib' });

@@ -97,10 +97,13 @@ describe('the voice and tone, as a document', () => {
 });
 
 /** VS Code's file system pieces, standing in. */
+const fired: unknown[] = [];
 const fake = {
 	EventEmitter: class {
 		event = () => ({ dispose: () => undefined });
+		fire = (e: unknown) => void fired.push(e);
 	},
+	FileChangeType: { Changed: 1 },
 	FileType: { File: 1 },
 	FilePermission: { Readonly: 1 },
 	Disposable: class {
@@ -112,7 +115,7 @@ const fake = {
 		Unavailable: (m: string) => new Error(m),
 	},
 };
-const uri = (path: string) => ({ path }) as never;
+const uri = (path: string): never => ({ path, with: ({ path: to }: { path: string }) => uri(to) }) as never;
 
 describe('the voice and tone’s files in VS Code', () => {
 	it('reads the document from GitHub, and GitHub’s file as a refused save found it, read only', async () => {
@@ -146,6 +149,8 @@ describe('the voice and tone’s files in VS Code', () => {
 			Promise.resolve(fs.writeFile(uri(VOICE_PATH), new TextEncoder().encode('# Mine\n'), { create: false, overwrite: true })),
 		).rejects.toThrow('The voice and tone changed on GitHub since it was opened, so nothing was saved.');
 		expect(refused).toHaveBeenCalled();
+		// An open copy of GitHub's file, from a refusal before, is told to read it again.
+		expect(fired.at(-1)).toEqual([{ type: 1, uri: expect.objectContaining({ path: THEIRS_PATH }) }]);
 		expect(new TextDecoder().decode((await fs.readFile(uri(THEIRS_PATH))) as Uint8Array)).toBe('# Theirs\n');
 	});
 

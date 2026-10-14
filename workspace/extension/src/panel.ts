@@ -120,7 +120,7 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 
 	resolveWebviewView(view: vscode.WebviewView): void {
 		view.webview.options = { enableScripts: true, localResourceRoots: [this.dist] };
-		void this.load(view.webview);
+		void this.load(view.webview).catch(failed);
 		this.view = view;
 		view.description = this.login;
 		const listening = this.deps.panels.add(view.webview);
@@ -170,7 +170,7 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 	private follow(view: vscode.WebviewView): void {
 		const reload = afterQuiet(150, () => {
 			this.deps.panels.unready(view.webview);
-			void this.load(view.webview);
+			void this.load(view.webview).catch(failed);
 			this.deps.log?.info('The page was rebuilt: the panel reloaded.');
 		});
 		const restart = afterQuiet(150, () => {
