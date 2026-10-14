@@ -111,9 +111,16 @@ const Ready = ({
 					</span>
 				</span>
 				<span className="ds-actions">
-					<IconButton icon={syncing ? 'sync' : 'refresh'} label={syncing ? 'Syncing…' : `Sync with ${HOST}`} disabled={syncing} onClick={does.sync} />
+					<IconButton
+						size="small"
+						icon={syncing ? 'sync' : 'refresh'}
+						label={syncing ? 'Syncing…' : `Sync with ${HOST}`}
+						disabled={syncing}
+						onClick={does.sync}
+					/>
 					<Menu
 						label="Design system actions"
+						size="small"
 						sections={[
 							{
 								items: [

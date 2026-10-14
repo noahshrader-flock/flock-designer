@@ -23,7 +23,8 @@ const ENTRIES = '[role^="menuitem"]';
 
 /**
  * A menu in a popover, from a button of its own, drawn under it in the panel: the ellipsis by default, as VS Code's lists
- * have one, shown only on hover or focus; or another `icon` shown always (`always`, the cog of a view's options). Its
+ * have one, shown only on hover or focus; or another `icon` shown always (`always`, the cog of a view's options). The
+ * button is the default size, the search box's, or `small` for a row, a card or a header. Its
  * sections are separated by a divider. The button says whether it is open; Escape or a press elsewhere closes it, and the
  * arrow keys move through it.
  */
@@ -32,11 +33,13 @@ export const Menu = ({
 	sections,
 	icon = 'ellipsis',
 	always = false,
+	size = 'default',
 }: {
 	label: string;
 	sections: MenuSection[];
 	icon?: string;
 	always?: boolean;
+	size?: 'default' | 'small';
 }) => {
 	const [open, setOpen] = useState(false);
 	const wrap = useRef<HTMLSpanElement>(null);
@@ -91,7 +94,7 @@ export const Menu = ({
 			<button
 				ref={button}
 				type="button"
-				className={always ? 'menu-button menu-button-shown' : 'menu-button'}
+				className={['menu-button', ...(size === 'small' ? ['menu-button-small'] : []), ...(always ? ['menu-button-shown'] : [])].join(' ')}
 				aria-label={label}
 				title={label}
 				aria-haspopup="menu"

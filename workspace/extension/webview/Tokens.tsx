@@ -66,7 +66,7 @@ const TokenRow = ({ token, note, onEdit, onSource }: { token: DesignToken; note?
 				<div className="token-line">{parts}</div>
 			)}
 			<span className="item-actions">
-				<IconButton icon="go-to-file" label={`Open ${where}`} onClick={() => onSource(token.source)} />
+				<IconButton size="small" icon="go-to-file" label={`Open ${where}`} onClick={() => onSource(token.source)} />
 			</span>
 			{note && <div className="token-note">{note}</div>}
 		</li>

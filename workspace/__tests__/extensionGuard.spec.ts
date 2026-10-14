@@ -87,6 +87,22 @@ describe('the extension’s sources', () => {
 		expect(shown).toBeGreaterThan(hidden);
 	});
 
+	it('size every control from two tokens: the default (the search, the toggle, a button, an icon button) and the small (a row’s, a header’s)', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const token = (name: string) => new RegExp(`--dsnr-${name}:\\s*(\\d+)px`).exec(css)?.[1];
+		expect(token('control')).toBe('32');
+		expect(token('control-small')).toBe('22');
+		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
+		// Each takes its size from the token, never a number of its own.
+		expect(rule('.search .search-input')).toMatch(/height:\s*var\(--dsnr-control\)/);
+		expect(rule('.button {')).toMatch(/min-height:\s*var\(--dsnr-control\)/);
+		expect(rule('.icon-button,')).toMatch(/width:\s*var\(--dsnr-control\)[\s\S]*height:\s*var\(--dsnr-control\)/);
+		expect(rule('.toggle-option')).toMatch(/height:\s*calc\(var\(--dsnr-control\)/);
+		expect(rule('.icon-button-small,')).toMatch(/width:\s*var\(--dsnr-control-small\)[\s\S]*height:\s*var\(--dsnr-control-small\)/);
+	});
+
 	it('hide a row’s badge only when the ellipsis button takes its place, not whenever the row has focus', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!

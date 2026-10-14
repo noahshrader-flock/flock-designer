@@ -18,6 +18,12 @@
 	--dsnr-radius-inner: 4px;
 	--dsnr-radius-small: 2px;
 	--dsnr-radius-large: 8px;
+	/*
+	 * Control sizes, two: the default (the search box, the toggle, a button, an icon button) and the small, for what sits in
+	 * a row, a card or a header. A new control takes one of them, never a number of its own.
+	 */
+	--dsnr-control: 32px;
+	--dsnr-control-small: 22px;
 	/* DSNR's brand: its primary action, in every theme but high contrast (below). */
 	--dsnr-brand: #7c3aed;
 	--dsnr-brand-hover: color-mix(in srgb, var(--dsnr-brand) 86%, black);
@@ -79,7 +85,8 @@ body {
 	justify-content: center;
 	gap: 6px;
 	min-width: 0;
-	height: 26px;
+	/* The track's height less its padding and border: the toggle is the default control's height. */
+	height: calc(var(--dsnr-control) - 6px);
 	padding: 0 8px;
 	border: 1px solid transparent;
 	border-radius: var(--dsnr-radius-inner);
@@ -137,7 +144,7 @@ body {
 }
 
 .search .search-input {
-	height: 32px;
+	height: var(--dsnr-control);
 	padding: 0 8px 0 28px;
 	border-radius: var(--dsnr-radius);
 }
@@ -309,7 +316,10 @@ body {
 	width: 100%;
 	max-width: 300px;
 	margin: 4px 0 8px;
-	padding: 5px 12px;
+	/* The default control's height, from its padding and line when it is one line; a longer one grows. */
+	box-sizing: border-box;
+	min-height: var(--dsnr-control);
+	padding: 6px 12px;
 	border: 1px solid transparent;
 	border-radius: var(--dsnr-radius-inner);
 	font: inherit;
@@ -595,14 +605,22 @@ textarea.input {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 22px;
-	height: 22px;
+	width: var(--dsnr-control);
+	height: var(--dsnr-control);
 	padding: 0;
 	border: 1px solid transparent;
-	border-radius: var(--dsnr-radius-inner);
+	border-radius: var(--dsnr-radius);
 	color: var(--vscode-foreground);
 	background: transparent;
 	cursor: pointer;
+}
+
+/* The small size: what sits in a row, a card or a header. */
+.icon-button-small,
+.menu-button-small {
+	width: var(--dsnr-control-small);
+	height: var(--dsnr-control-small);
+	border-radius: var(--dsnr-radius-inner);
 }
 
 .menu-button {

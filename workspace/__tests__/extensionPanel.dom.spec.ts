@@ -1069,6 +1069,12 @@ describe('Projects, focused on the product open', () => {
 		expect(body().querySelector('[role="radiogroup"]')).toBeNull();
 	});
 
+	it('draws the options button at the default size, the search’s, and a project’s own actions small', async () => {
+		await showOpen(OPEN, PROJECTS);
+		expect(viewMenu()!.className).toBe('menu-button menu-button-shown');
+		expect([...body().querySelectorAll('[aria-label="Project actions"]')].every((b) => b.classList.contains('menu-button-small'))).toBe(true);
+	});
+
 	it('moves the check to what is chosen, and closes', async () => {
 		await showOpen(OPEN, PROJECTS);
 		await choose('Everyone’s');

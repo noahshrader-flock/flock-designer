@@ -104,7 +104,7 @@ const ProjectItem = ({
 		// What its right-click menu acts on: this project, with none of a webview's own items (Cut, Copy, Paste).
 		context: { webviewSection: 'project', projectId: id, preventDefaultContextMenuItems: true },
 		...(press ? { onOpen: press } : {}),
-		actions: <Menu label="Project actions" sections={[{ items }]} />,
+		actions: <Menu label="Project actions" size="small" sections={[{ items }]} />,
 	};
 	return view === 'grid' ? (
 		<Card {...shared} picture={<Picture project={project} className="card-picture" />} badge={badge} />

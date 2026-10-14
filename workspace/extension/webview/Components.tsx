@@ -63,7 +63,7 @@ export const ComponentsView = ({
 			name: c.name,
 			meta: c.subtitle ?? c.group,
 			onOpen: () => onOpen(c.id),
-			actions: <Menu label={`${c.name} actions`} sections={[{ items }]} />,
+			actions: <Menu label={`${c.name} actions`} size="small" sections={[{ items }]} />,
 		};
 		const picture = pictures.pictures[c.id];
 		return view === 'grid' ? (

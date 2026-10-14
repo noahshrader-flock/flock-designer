@@ -1,6 +1,8 @@
 import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { Button } from '../extension/webview/ui/Button';
+import { IconButton } from '../extension/webview/ui/IconButton';
+import { Menu } from '../extension/webview/ui/Menu';
 import { DialogButtons } from '../extension/webview/ui/Dialog';
 import { button, mount } from './webviewHarness';
 
@@ -29,5 +31,23 @@ describe('the panel’s buttons', () => {
 		expect(button('Cancel').className).toBe('button button-ghost');
 		expect(button('Assign').className).toBe('button button-primary');
 		expect(button('Close').className).toBe('button button-secondary');
+	});
+});
+
+describe('icon buttons and menus', () => {
+	it('are the default size, the search’s, unless a row or a header makes them small', async () => {
+		await mount(
+			createElement('div', null, [
+				createElement(IconButton, { key: 'a', icon: 'refresh', label: 'Default', onClick: () => undefined }),
+				createElement(IconButton, { key: 'b', icon: 'refresh', label: 'Small', size: 'small', onClick: () => undefined }),
+				createElement(Menu, { key: 'c', label: 'Menu default', sections: [{ items: [] }] }),
+				createElement(Menu, { key: 'd', label: 'Menu small', size: 'small', sections: [{ items: [] }] }),
+			]),
+		);
+		const classOf = (label: string) => document.querySelector(`[aria-label="${label}"]`)?.className;
+		expect(classOf('Default')).toBe('icon-button');
+		expect(classOf('Small')).toBe('icon-button icon-button-small');
+		expect(classOf('Menu default')).toBe('menu-button');
+		expect(classOf('Menu small')).toBe('menu-button menu-button-small');
 	});
 });

@@ -100,7 +100,7 @@ export const Changed = ({ controls }: { controls: TokenBranchControls }) => {
 										{readsAs(was, read)} → {readsAs(now, byPath)}
 									</span>
 									<span className="item-actions">
-										<IconButton icon="discard" label={`Reset ${labelOf(was)}`} onClick={() => change(was, null)} />
+										<IconButton size="small" icon="discard" label={`Reset ${labelOf(was)}`} onClick={() => change(was, null)} />
 									</span>
 								</li>
 							);
