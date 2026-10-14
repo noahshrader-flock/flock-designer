@@ -530,6 +530,23 @@ describe('the review tabs', () => {
 		expect(vs.panels).toHaveLength(1);
 	});
 
+	it('say which projects are in use, by a tab or a browser’s key, so nothing they show is removed under them', async () => {
+		const vs = fakeVsCode();
+		const reviews = new Reviews({
+			vscode: vs.api as never,
+			build: () => undefined,
+			serve: async () => 'http://127.0.0.1:5000/review/',
+			answer: async () => ({ ok: true, value: null }),
+		});
+		expect(reviews.inUse()).toEqual([]);
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' });
+		await reviews.inBrowser({ records: '/d/projects', projectId: 'other', name: 'v1-i1', title: 'Other · V1 · I1' });
+		expect(reviews.inUse().sort()).toEqual(['demo', 'other']);
+		// A tab closed is no longer in use; a browser's key is, until VS Code reloads.
+		vs.panels[0]!.disposed();
+		expect(reviews.inUse()).toEqual(['other']);
+	});
+
 	it('say which review is in front, for what its title bar does', async () => {
 		const vs = fakeVsCode();
 		const reviews = new Reviews({

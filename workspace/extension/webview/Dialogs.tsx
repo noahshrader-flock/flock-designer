@@ -1,7 +1,8 @@
 import type { SignInState } from '../../src/shared/contract';
 import type { Project } from '../../src/shared/domain/projects';
 import { foldersOf } from '../../src/shared/brief';
-import { workOf } from '../../src/shared/work';
+import { productsOf, workOf } from '../../src/shared/work';
+import { needsProduct } from '../../src/shared/projectScope';
 import { type CodebaseAction, type PanelDialog, reviewsOf } from '../src/messages';
 import { AccountDialog, SyncDialog } from './AccountDialogs';
 import { Dialog, DialogButtons } from './ui/Dialog';
@@ -53,9 +54,7 @@ export const PanelDialogs = ({
 				<BuildInCodebaseDialog root={root} project={project} name={newest.name} onBuilt={onChanged} onClose={onClose} />
 			) : (
 				<Dialog title="Build in the codebase" onClose={onClose}>
-					<p className="dialog-about">
-						Open the product {project.title} was made on: it is built in that product’s own code, so DSNR needs it open here.
-					</p>
+					<p className="dialog-about">{needsProduct(productsOf(project), null)} It is built in that product’s own code.</p>
 					<DialogButtons onClose={onClose} />
 				</Dialog>
 			);

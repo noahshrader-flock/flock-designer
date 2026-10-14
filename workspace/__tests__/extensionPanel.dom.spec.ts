@@ -99,7 +99,7 @@ describe('what is open', () => {
 		missing: ['No product is open: open its folder.'],
 	};
 
-	it('lists everyone’s projects when no product is open, with no switch, and says what a product is for (PROJECT_SCOPE_PLAN 3.1)', async () => {
+	it('lists everyone’s projects when no product is open, with no switch, and says what a product is for', async () => {
 		await showOpen(NONE);
 		expect(sent.some((m) => m.name === 'listProjects')).toBe(true);
 		expect([...body().querySelectorAll('[role="listitem"] [data-part="name"]')].map((n) => n.textContent)).toEqual([
@@ -904,7 +904,7 @@ describe('the projects as a list or a grid', () => {
 	});
 });
 
-describe('Projects, focused on the product open (PROJECT_SCOPE_PLAN Phase 2)', () => {
+describe('Projects, focused on the product open', () => {
 	const COKE = 'flocksafety/flock-coke';
 	const PEPSI = 'flocksafety/flock-pepsi';
 	const rows = () => [...body().querySelectorAll<HTMLElement>('[role="listitem"]')];
@@ -977,6 +977,30 @@ describe('Projects, focused on the product open (PROJECT_SCOPE_PLAN Phase 2)', (
 		expect(body().textContent).toContain('No projects in flock-coke yet');
 		await press(button('Show everyone’s'));
 		expect(names()).toEqual(['Maps']);
+	});
+
+	it('says a search found nothing here, not that the product has no projects, when what it found is another product’s', async () => {
+		await showOpen(OPEN, PROJECTS);
+		await type(document.querySelector('input[aria-label="Search projects"]')!, 'Maps');
+		expect(body().textContent).not.toContain('No projects in flock-coke yet');
+		expect(body().textContent).toContain('No project matches');
+	});
+
+	it('names a product the same in a section’s title and in another project’s Also in', async () => {
+		const ACME = 'acme/flock-coke';
+		await showOpen(OPEN, [...PROJECTS, made('acme', 'Acme', null, [ACME, '2026-10-01T10:00:00Z'], [PEPSI, '2026-10-06T10:00:00Z'])]);
+		await choose('Everyone’s');
+		// Two products called flock-coke: each by its owner too, in titles and labels alike.
+		expect(sections()).toEqual(['flocksafety/flock-coke', 'flock-pepsi', 'No product']);
+		expect(meta('Acme')).toBe('2 iterations · Also in acme/flock-coke');
+	});
+
+	it('goes back to the product’s own when another product is opened', async () => {
+		await showOpen(OPEN, PROJECTS);
+		await choose('Everyone’s');
+		await say({ type: 'context', context: { ...OPEN, product: '/work/flock-pepsi', productRepository: PEPSI } });
+		await answer('listProjects', PROJECTS);
+		expect([...whose()!.querySelectorAll('[role="radio"]')].map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false']);
 	});
 
 	it('has no switch when the product open has no repository it can say, and shows everyone’s', async () => {

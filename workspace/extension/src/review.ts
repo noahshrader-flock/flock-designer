@@ -233,6 +233,11 @@ export class Reviews {
 		tab.panel.webview.html = reviewPage({ src, title: review.title, nonce: newNonce() });
 	}
 
+	/** The projects a review is open on, in a tab or by a browser's key: what is built for them must stay. */
+	inUse(): string[] {
+		return [...new Set([...this.tabs.keys(), ...[...this.keys.values()].map((k) => k.review.projectId)])];
+	}
+
 	/** The review in front, if one is: what its title bar's actions act on. */
 	active(): Review | undefined {
 		return [...this.tabs.values()].find((t) => t.panel.active)?.review;

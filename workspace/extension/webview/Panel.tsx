@@ -87,8 +87,11 @@ export const PanelView = ({
 			) : tab === 'projects' ? (
 				<Projects
 					read={projects}
-					product={context.product !== null ? { open: true } : { open: false, why: context.missing[0] ?? 'No product is open.' }}
-					productRepository={context.productRepository}
+					product={
+						context.product !== null
+							? { open: true, repository: context.productRepository }
+							: { open: false, why: context.missing[0] ?? 'No product is open.' }
+					}
 					signedIn={account.state === 'signedIn'}
 					onOpen={onOpen}
 					onOpenInBrowser={onOpenInBrowser}
@@ -161,7 +164,7 @@ export const Panel = () => {
 		return workspace().onSignInChanged(setAccount);
 	}, []);
 	const login = account.state === 'signedIn' ? account.user.login : null;
-	// Read once what is open is known, a product or none (with none, everyone's projects are listed: PROJECT_SCOPE_PLAN 3.1).
+	// Read once what is open is known, a product or none (with none, everyone's projects are listed: the workspace README's "Projects, by product").
 	const read = useWorkspace(() => workspace().listProjects(), [context?.product ?? null, login], { enabled: context !== null });
 	// Told the projects changed: read again, keeping what is shown until the new is there (a comment made in a review
 	// is a number on its project, without the list giving way to a line saying it is reading).

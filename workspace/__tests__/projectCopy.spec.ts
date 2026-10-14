@@ -7,7 +7,7 @@ import { buildReviewSite } from '../extension/src/review';
 
 /**
  * One project, read from the design repository through GitHub into a folder of the extension's own, so its review can be
- * built with no checkout on the machine (PROJECT_SCOPE_PLAN 3.2): its brief, its records, the pages they name, and only
+ * built with no checkout on the machine (the workspace README's "Projects, by product"): its brief, its records, the pages they name, and only
  * the shared files those pages use.
  */
 
@@ -47,7 +47,7 @@ describe('copying one project for its review', () => {
 			'projects/_shared/ffffffffffffffff.datauri': 'data:font/woff2;base64,BBBB',
 		});
 		const at = await copyProject(files, 'demo', into);
-		expect(at).toBe(join(into, 'flock-designer', 'projects'));
+		expect(at).toBe(join(into, 'projects'));
 		expect(readFileSync(join(at, 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n');
 		expect(readFileSync(join(at, 'demo', 'prototypes', 'v1-i1.html'), 'utf8')).toContain('One');
 		expect(readdirSync(join(at, 'demo', 'prototypes')).sort()).toEqual(['v1-i1.html', 'v1-i2.html']);
@@ -73,13 +73,29 @@ describe('copying one project for its review', () => {
 		expect(existsSync(join(at, 'demo', 'iterations.json'))).toBe(true);
 	});
 
+	it('keeps no other project’s copy but those still in use, and no shared file a kept page does not name', async () => {
+		const other = (id: string, font: string) => ({
+			[`projects/${id}/iterations.json`]: JSON.stringify([
+				{ projectId: id, name: 'v1-i1', branch: `prototype/${id}/v1-i1`, createdAt: '2026-10-01T10:00:00Z' },
+			]),
+			[`projects/${id}/prototypes/v1-i1.html`]: `<style>@font-face{src:url(/_shared/${font})}</style>`,
+			[`projects/_shared/${font}.datauri`]: 'data:font/woff2;base64,AAAA',
+		});
+		const { files } = repo({ ...other('one', '1111111111111111'), ...other('two', '2222222222222222'), ...other('three', '3333333333333333') });
+		await copyProject(files, 'one', into);
+		await copyProject(files, 'two', into, ['one']);
+		const at = await copyProject(files, 'three', into, ['two']);
+		expect(readdirSync(at).sort()).toEqual(['_shared', 'three', 'two']);
+		expect(readdirSync(join(at, '_shared')).sort()).toEqual(['2222222222222222.datauri', '3333333333333333.datauri']);
+	});
+
 	it('refuses what is not a project’s id, and says when the project has no records to review', async () => {
 		await expect(copyProject(repo({}).files, '../../etc', into)).rejects.toThrow(/not a project/);
 		await expect(copyProject(repo({}).files, 'demo', into)).rejects.toThrow(/demo has no prototypes on GitHub/);
 	});
 });
 
-describe('a review built from the copy, with no checkout on the machine (PROJECT_SCOPE_PLAN 3.3)', () => {
+describe('a review built from the copy, with no checkout on the machine', () => {
 	it('has the project’s page, its bar, and the shared file the page uses, as from a checkout', async () => {
 		const { files } = repo({
 			'projects/demo/brief.md': '# Demo\n',

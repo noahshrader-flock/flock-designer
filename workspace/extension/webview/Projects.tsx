@@ -1,12 +1,12 @@
 import type { Project } from '../../src/shared/domain/projects';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { foldersOf, inFolder } from '../../src/shared/brief';
 import { plural } from '../../src/shared/plural';
 import { useCover } from '../../src/renderer/useCover';
 import { matchesProject, openCommentsOf } from '../../src/shared/projectList';
 import { type CodebaseAction, type PanelDialog, type Review, reviewsOf } from '../src/messages';
-import { productsOf, workOf } from '../../src/shared/work';
-import { type ProductGroup, byProduct, inThisProduct, productNames } from '../../src/shared/projectScope';
+import { workOf } from '../../src/shared/work';
+import { type ProductGroup, byProduct, inThisProduct, productNames, productsByProject } from '../../src/shared/projectScope';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -131,9 +131,17 @@ const ByFolder = ({ projects, children }: { projects: Project[]; children: (grou
  * The projects under a section for each product they have work in, across products (`byProduct`): the open one first,
  * "No product" last; one list when they are all in one.
  */
-const ByProduct = ({ groups, children }: { groups: ProductGroup[]; children: (group: ProductGroup, label: string) => ReactNode }) => {
-	const named = productNames(groups.flatMap((g) => (g.product === null ? [] : [g.product])));
-	const titleOf = (g: ProductGroup) => (g.product === null ? 'No product' : (named.get(g.product) ?? g.product));
+const ByProduct = ({
+	groups,
+	nameOf,
+	children,
+}: {
+	groups: ProductGroup[];
+	/** A product's name on screen, the same in a title as in another project's "Also in". */
+	nameOf: (product: string) => string;
+	children: (group: ProductGroup, label: string) => ReactNode;
+}) => {
+	const titleOf = (g: ProductGroup) => (g.product === null ? 'No product' : nameOf(g.product));
 	const only = groups[0];
 	if (groups.length === 1 && only) return <>{children(only, 'Projects')}</>;
 	return (
@@ -162,15 +170,14 @@ export interface ProjectsRead {
 
 /**
  * The Projects tab: each project a row or a card (`ProjectItem`), as a list or a grid that the person chooses. **Focused on
- * the product open** (PROJECT_SCOPE_PLAN): its projects, and those with no product on record, by folder; or everyone's, by
- * product (`ByProduct`), each with its folder. Either way every project can be opened and commented on: the view chooses
- * what is first, not what is allowed. With no product open, what to open; signed out, a line saying the list is this
- * machine's.
+ * the product open** (the workspace README's "Projects, by product"): its projects, and those with no product on record, by
+ * folder; or everyone's, by product (`ByProduct`), each with its folder. Either way every project can be opened and
+ * commented on: the view chooses what is first, not what is allowed. With no product open, everyone's, and what a product
+ * is for; with no projects either, what to open. Signed out, a line saying the list is this machine's.
  */
 export const Projects = ({
 	read,
 	product,
-	productRepository,
 	signedIn,
 	onOpen,
 	onOpenInBrowser,
@@ -182,10 +189,11 @@ export const Projects = ({
 	onView,
 }: {
 	read: ProjectsRead;
-	/** Whether a product is open, and if not, what to do (from the context). */
-	product: { open: true } | { open: false; why: string };
-	/** Which repository the product open is (`owner/repo`), what the view is focused on; null when it cannot be said. */
-	productRepository: string | null;
+	/**
+	 * The product open, from the context: which repository it is (`owner/repo`, what the view focuses on; null when it
+	 * cannot be said), or, with none, what to do.
+	 */
+	product: { open: true; repository: string | null } | { open: false; why: string };
 	signedIn: boolean;
 	onOpen: (review: Review) => void;
 	/** Opens the review in the person's browser, outside VS Code. */
@@ -204,13 +212,9 @@ export const Projects = ({
 	// What is typed in the search: the projects are narrowed to what matches, as the app's are.
 	const [search, setSearch] = useState('');
 	const [scope, setScope] = useState<Scope>('here');
-	const noProduct = (
-		<EmptyState icon="folder-library" title="No product is open">
-			<p>{product.open ? '' : product.why}</p>
-			<p>Not on this machine yet? Get started clones it with VS Code, then open it here.</p>
-			<Button onClick={onGetStarted}>Get started</Button>
-		</EmptyState>
-	);
+	const productRepository = product.open ? product.repository : null;
+	// Another product opened: its own first again.
+	useEffect(() => setScope('here'), [productRepository]);
 	if (read.error !== null && read.value === null)
 		return (
 			<EmptyState icon="warning" title="The projects could not be read">
@@ -219,16 +223,26 @@ export const Projects = ({
 		);
 	if (read.value === null) return <p className="note">Reading the projects…</p>;
 	const projects = read.value;
-	// With nothing open but VS Code: everyone's projects, by product, and what a product is for (PROJECT_SCOPE_PLAN 3.1).
-	if (!product.open && projects.length === 0) return noProduct;
+	// With nothing open but VS Code and no projects either: what to open.
+	if (!product.open && projects.length === 0)
+		return (
+			<EmptyState icon="folder-library" title="No product is open">
+				<p>{product.why}</p>
+				<p>Not on this machine yet? Get started clones it with VS Code, then open it here.</p>
+				<Button onClick={onGetStarted}>Get started</Button>
+			</EmptyState>
+		);
+	// Each project's products, worked out once; and each product's name, the same wherever it is said.
+	const products = productsByProject(projects);
+	const productsOfIt = (p: Project) => products.get(p) ?? [];
+	const named = productNames([...new Set([...[...products.values()].flat(), ...(productRepository ? [productRepository] : [])])]);
+	const nameOf = (repository: string) => named.get(repository) ?? repository;
 	const matching = projects.filter((p) => matchesProject(p, search));
 	// With a product to focus on, its own first; otherwise, or when asked, everyone's.
 	const focused = productRepository !== null && scope === 'here';
-	const here = focused ? matching.filter((p) => inThisProduct(p, productRepository)) : matching;
-	const named = productNames([...new Set([...projects.flatMap(productsOf), ...(productRepository ? [productRepository] : [])])]);
+	const here = focused ? matching.filter((p) => inThisProduct(productsOfIt(p), productRepository)) : matching;
 	// "No product" says something only once some projects have one: before, it would be on every project.
-	const anyProduct = projects.some((p) => productsOf(p).length > 0);
-	const nameOf = (repository: string) => named.get(repository) ?? repository;
+	const anyProduct = [...products.values()].some((ps) => ps.length > 0);
 	const item = (p: Project, labels: string[]) => (
 		<ProjectItem
 			key={p.id}
@@ -269,7 +283,7 @@ export const Projects = ({
 					<p>A prototype you start appears here, with its iterations and its open comments.</p>
 					<Button onClick={onNew}>New prototype</Button>
 				</EmptyState>
-			) : matching.length === 0 ? (
+			) : matching.length === 0 || (here.length === 0 && search.trim() !== '') ? (
 				<NoMatches thing="project" search={search} onClear={() => setSearch('')} />
 			) : here.length === 0 ? (
 				<EmptyState icon="repo" title={`No projects in ${nameOf(productRepository ?? '')} yet`}>
@@ -282,19 +296,18 @@ export const Projects = ({
 				<ByFolder projects={here}>
 					{(group, label) =>
 						shown(
-							group.map((p) => item(p, anyProduct && productsOf(p).length === 0 ? ['No product'] : [])),
+							group.map((p) => item(p, anyProduct && productsOfIt(p).length === 0 ? ['No product'] : [])),
 							label,
 						)
 					}
 				</ByFolder>
 			) : (
-				<ByProduct groups={byProduct(here, productRepository)}>
+				<ByProduct groups={byProduct(here, products, productRepository)} nameOf={nameOf}>
 					{(group, label) =>
 						shown(
-							group.projects.map((p) => {
-								const also = group.alsoIn(p);
-								return item(p, [...(p.folder ? [p.folder] : []), ...(also.length > 0 ? [`Also in ${also.map(nameOf).join(', ')}`] : [])]);
-							}),
+							group.projects.map(({ project: p, alsoIn }) =>
+								item(p, [...(p.folder ? [p.folder] : []), ...(alsoIn.length > 0 ? [`Also in ${alsoIn.map(nameOf).join(', ')}`] : [])]),
+							),
 							label,
 						)
 					}

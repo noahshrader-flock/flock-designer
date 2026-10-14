@@ -16,6 +16,8 @@ import { type Given, newPrototype, readGiven, readyToStart } from './newPrototyp
 import { PanelProvider } from './panel';
 import { publishedLink } from './publishing';
 import { copyProject } from '../../src/main/services/projectCopy';
+import { needsProduct } from '../../src/shared/projectScope';
+import { productsOf } from '../../src/shared/work';
 import { REVIEW_KEY, Reviews, answerReview, buildReviewSite, pickReview, siteIn } from './review';
 import { AgentLog, SyncStatus, failed, failedFor, vscodeChoose, vscodeCopy, vscodeOffer, vscodeOpen, vscodeProgress, vscodeTell } from './ui';
 
@@ -133,17 +135,21 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 					routes: served,
 					signIn: () => github.signIn(),
 					written: () => projectsChanged(),
-					address: async (r, comment, asked): Promise<string | null | void> => {
-						// Address changes the prototype's code, which is with the product it was made on.
-						if (found.product === null)
-							return failedFor(true)(
-								new Error('Open the product this prototype was made on to Address its comments: Address changes its code, which is there.'),
-							);
+					address: (r, comment, asked): Promise<string | null | void> => {
 						const show: (shown: Review) => Promise<void> =
 							asked === 'browser'
 								? async (shown: Review) => reviews.showIfOpen({ records: await recordsFor(shown.projectId), ...shown })
 								: openReview;
-						return addressComment({ ...here, show }, await titled(r), comment).catch(failedFor(true));
+						const run = async () => {
+							const project = valueOf(await api.listProjects()).find((p) => p.id === r.projectId);
+							// Address changes the prototype's code, which is with the product it was made on: that one, open here.
+							const why = needsProduct(project ? productsOf(project) : [], found.product === null ? null : found.productRepository);
+							if (why !== null) throw new Error(why);
+							// Titled as the project's records title it: a browser's page may have moved to another of its iterations.
+							return addressComment({ ...here, show }, (project && reviewsOf(project).find((x) => x.name === r.name)) || r, comment);
+						};
+						// One place says what went wrong, a refusal included.
+						return run().catch(failedFor(true));
 					},
 				},
 				review,
@@ -156,18 +162,15 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	});
 	/**
 	 * Where a project's records are, to build its review from: the design repository's checkout beside the product, or with
-	 * none (only VS Code open), that project alone, read through GitHub into DSNR's own storage (PROJECT_SCOPE_PLAN 3.2).
+	 * none (only VS Code open), that project alone, read through GitHub into DSNR's own storage, kept while a review uses it.
+	 * That storage is VS Code's for the extension, shared by every window, as the review site's folder already is: two
+	 * windows opening reviews at once write the same folders.
 	 */
 	const recordsFor = (projectId: string): Promise<string> =>
 		found.designRepository !== null
 			? Promise.resolve(found.designRepository)
-			: copyProject(core.designRepo.files, projectId, join(storage, 'review-copy'));
+			: copyProject(core.designRepo.files, projectId, join(storage, 'review-copy'), reviews.inUse());
 	const openReview = async (review: Review): Promise<void> => reviews.open({ records: await recordsFor(review.projectId), ...review });
-	/** A review as its project's records title it: a browser's page may have moved to another of its iterations. */
-	const titled = async (review: Review): Promise<Review> => {
-		const project = valueOf(await api.listProjects()).find((p) => p.id === review.projectId);
-		return (project && reviewsOf(project).find((r) => r.name === review.name)) || review;
-	};
 	/**
 	 * The review's page in the person's browser, outside VS Code: the same page, from this machine, with a key of its own,
 	 * so it comments through DSNR as a tab does (BROWSER_COMMENTS_PLAN).
