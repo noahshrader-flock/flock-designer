@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type * as VsCode from 'vscode';
@@ -124,6 +125,12 @@ type Panel = Pick<VsCode.WebviewPanel, 'title' | 'active' | 'reveal' | 'onDidDis
  */
 export class Reviews {
 	private readonly tabs = new Map<string, { panel: Panel; review: Review }>();
+	/**
+	 * The keys made for the browser (`inBrowser`), each for one review, with what it has been shown, by the key's hash: a
+	 * key is found without comparing it, so how long a wrong one takes says nothing of a right one. Kept until VS Code
+	 * reloads (BROWSER_COMMENTS_PLAN D2).
+	 */
+	private readonly keys = new Map<string, { review: Review; seen: Set<number> }>();
 
 	constructor(
 		private readonly deps: {
@@ -157,6 +164,30 @@ export class Reviews {
 		const path = reviewPath(projectId, name);
 		await this.deps.build(records);
 		return `${await this.deps.serve()}${path}`;
+	}
+
+	/**
+	 * Where a review's page is for the browser, with a key of its own in the fragment (`#dsnr-key-<key>`, only characters no
+	 * link is ever re-encoded in, as VS Code's opener may), which a browser never sends to a server: the bar asks DSNR through this machine's server with it (`answerBrowser`), as a tab asks through VS Code.
+	 * A new key each time, for this review alone, with its own list of what it has been shown.
+	 */
+	async inBrowser({ records, ...review }: Review & { records: string }): Promise<string> {
+		const url = await this.address({ records, ...review });
+		const key = randomBytes(16).toString('base64url');
+		this.keys.set(hashOf(key), { review, seen: new Set() });
+		return `${url}#${KEY_FRAGMENT}${key}`;
+	}
+
+	/**
+	 * A browser's ask, with its key, answered as that review's tab is answered (`answer`, with what this key has been
+	 * shown); null when the key is none made here, or what was asked is not exactly an ask, which the server refuses.
+	 */
+	async answerBrowser(key: string, raw: unknown): Promise<RelayTell | null> {
+		const held = this.keys.get(hashOf(key));
+		const ask = held ? readRelayAsk(raw) : null;
+		if (!held || ask === null) return null;
+		this.deps.log?.info(`The review of ${held.review.title}, in the browser, asked ${ask.name}.`);
+		return { dsnr: 'answer', id: ask.id, result: await this.deps.answer(held.review, ask.name, ask.args, held.seen) };
 	}
 
 	async open({ records, ...review }: Review & { records: string }): Promise<void> {
@@ -194,6 +225,12 @@ export class Reviews {
 		return shown;
 	}
 }
+
+/** What a review's address for the browser has before its key, in its fragment (`inBrowser`). */
+export const KEY_FRAGMENT = 'dsnr-key-';
+
+/** A key as it is kept: its hash, so the key itself is never kept or compared. */
+const hashOf = (key: string): string => createHash('sha256').update(key).digest('hex');
 
 /**
  * Builds the site for reviews from the design repository's records, with the viewer the extension carries; its pages are

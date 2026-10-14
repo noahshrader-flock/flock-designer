@@ -146,10 +146,14 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		return found.designRepository;
 	};
 	const openReview = (review: Review) => reviews.open({ records: records(), ...review });
-	/** The review's page in the person's browser, outside VS Code: the same page, from this machine. */
+	/**
+	 * The review's page in the person's browser, outside VS Code: the same page, from this machine, with a key of its own,
+	 * so it comments through DSNR as a tab does (BROWSER_COMMENTS_PLAN).
+	 */
 	const openReviewInBrowser = async (review: Review) => {
-		await vscodeOpen(await reviews.address({ records: records(), ...review }));
+		await vscodeOpen(await reviews.inBrowser({ records: records(), ...review }));
 	};
+	core.prototypeServer.answerAsks((key, ask) => reviews.answerBrowser(key, ask));
 	/** Locate design system: a folder that holds one is remembered and shown; one that does not is refused, and not kept. */
 	const locate = async () => {
 		const chosen = await core.ports.chooseFolder({ title: 'Locate design system' });

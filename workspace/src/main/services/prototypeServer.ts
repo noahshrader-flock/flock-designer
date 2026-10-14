@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { type Server, createServer } from 'node:http';
+import { type IncomingMessage, type Server, type ServerResponse, createServer } from 'node:http';
 import { basename, extname, join, normalize, sep } from 'node:path';
 import { MIME_TYPES } from '../../shared/mime';
 
@@ -32,6 +32,20 @@ const TYPES = typesOf(['.html', '.js', '.css', ...ASSETS]);
  * and says what each file is, so no browser takes it for anything else (`nosniff`). See the README's "Review isolation".
  */
 type Listener = { server: Server | null; port: number; starting: Promise<void> | null };
+
+/**
+ * What answers a browser's ask (`answerAsks`): given the key it came with and what it asked, the answer to send back, or
+ * null when the key is none it made or the ask is not one, which is refused.
+ */
+export type AskHandler = (key: string, ask: unknown) => Promise<unknown | null>;
+
+/** Where a browser's ask is made: on the server's own address, by the review bar, from its own page. */
+export const ASK_PATH = '/_dsnr/ask';
+/** The header its key comes in, and what a key looks like (base64url, 128 bits or more). */
+const KEY_HEADER = 'x-dsnr-key';
+const KEY_SHAPE = /^[A-Za-z0-9_-]{22,64}$/;
+/** The most an ask may be: a comment and its anchor, never a file. */
+const MOST_ASK = 256 * 1024;
 type Where = 'app' | 'pages';
 
 /** The one page a folder may hold on the server's own address: DSNR's own (a built site's bar and lists). */
@@ -53,6 +67,41 @@ export class PrototypeServer {
 	private readonly folders = new Map<string, { dir: string; code: boolean }>();
 	/** Large files pages share (fonts, mostly), by content name, as the data they were embedded as. */
 	private readonly shared = new Map<string, { type: string; body: Buffer }>();
+	private asks: AskHandler | null = null;
+
+	/**
+	 * Answers a browser's ask (BROWSER_COMMENTS_PLAN 1.1): `POST /_dsnr/ask` on the server's own address, and only from a
+	 * page on it (its `Origin`), as JSON, with a key (`X-DSNR-Key`), no bigger than a comment. The handler is given only a
+	 * request with every part right, and decides whether the key is one. No answer says another origin may read it, and the
+	 * header makes another origin's browser ask first, which is refused: so no other page can ask at all.
+	 */
+	answerAsks(handler: AskHandler): void {
+		this.asks = handler;
+	}
+
+	private async ask(req: IncomingMessage, res: ServerResponse, own: string): Promise<void> {
+		const refuse = (status: number, why: string) => void res.writeHead(status, { 'Content-Type': 'text/plain' }).end(why);
+		const key = req.headers[KEY_HEADER];
+		if (req.headers.origin !== own) return refuse(403, 'Not from here');
+		if (!/^application\/json(;|$)/.test(req.headers['content-type'] ?? '')) return refuse(415, 'Not JSON');
+		if (typeof key !== 'string' || !KEY_SHAPE.test(key)) return refuse(403, 'No key');
+		let size = 0;
+		const parts: Buffer[] = [];
+		for await (const part of req as AsyncIterable<Buffer>) {
+			size += part.length;
+			if (size > MOST_ASK) return refuse(413, 'Too big');
+			parts.push(part);
+		}
+		let asked: unknown;
+		try {
+			asked = JSON.parse(Buffer.concat(parts).toString('utf8'));
+		} catch {
+			return refuse(400, 'Not JSON');
+		}
+		const answer = await (this.asks as AskHandler)(key, asked).catch(() => null);
+		if (answer === null) return refuse(403, 'Not yours');
+		res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }).end(JSON.stringify(answer));
+	}
 
 	hasShared(name: string): boolean {
 		return this.shared.has(name);
@@ -145,6 +194,13 @@ export class PrototypeServer {
 				if (req.headers.host !== `127.0.0.1:${l.port}`) return void res.writeHead(403, { 'Content-Type': 'text/plain' }).end('Not here');
 				const path = (req.url ?? '/').split('?')[0] ?? '/';
 				const notFound = () => void res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
+				// A browser's ask, on the server's own address alone, once something answers them.
+				if (where === 'app' && path === ASK_PATH && this.asks !== null) {
+					if (req.method !== 'POST') return notFound();
+					return void this.ask(req, res, `http://127.0.0.1:${l.port}`).catch(() => {
+						if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'text/plain' }).end('Not answered');
+					});
+				}
 				if (req.method !== 'GET') return notFound();
 				// Prototypes given whole, and the files they share, on the pages' address.
 				if (where === 'pages') {

@@ -5,6 +5,7 @@ import { reviewsOf } from '../extension/src/messages';
 import { Reviews, answerReview, reviewPage, reviewPath } from '../extension/src/review';
 import { Panels, answerCall, hostApi } from '../extension/src/bridge';
 import type { Route } from '../src/main/handle';
+import { PrototypeServer } from '../src/main/services/prototypeServer';
 import type { InvokeName } from '../src/shared/contract';
 import type { ProjectIteration } from '../src/shared/domain/projects';
 
@@ -399,6 +400,91 @@ describe('the review tabs', () => {
 		);
 		expect(built).toEqual(['/d/projects']);
 		expect(vs.panels).toHaveLength(0);
+	});
+
+	it('open in the browser with a key of their own, for that review alone, each with what it has been shown (BROWSER_COMMENTS_PLAN 1.2)', async () => {
+		const answered: { review: unknown; name: string; args: unknown[]; seen: Set<number> }[] = [];
+		const reviews = new Reviews({
+			vscode: fakeVsCode().api as never,
+			build: () => undefined,
+			serve: async () => 'http://127.0.0.1:5000/review/',
+			answer: async (review, name, args, seen) => {
+				answered.push({ review, name, args, seen });
+				return { ok: true, value: [] };
+			},
+		});
+		const demo = { projectId: 'demo', name: 'v1-i2', title: 'Demo · V1 · I2' };
+		const first = await reviews.inBrowser({ records: '/d/projects', ...demo });
+		const second = await reviews.inBrowser({ records: '/d/projects', ...demo });
+		// The page's address, its key in the fragment (never sent to a server), new each time.
+		const keyOf = (url: string) => /^http:\/\/127\.0\.0\.1:5000\/review\/demo\/v1\/i2\/#dsnr-key-([A-Za-z0-9_-]{22,})$/.exec(url)?.[1];
+		const [a, b] = [keyOf(first), keyOf(second)];
+		expect(a).toBeDefined();
+		expect(b).toBeDefined();
+		expect(a).not.toBe(b);
+		// An ask with a key is answered as the review's tab is, as that review, in the answer's shape.
+		const ask = { dsnr: 'ask', id: 3, name: 'readComments', args: ['demo', 'prototype/demo/v1-i2'] };
+		expect(await reviews.answerBrowser(a as string, ask)).toEqual({ dsnr: 'answer', id: 3, result: { ok: true, value: [] } });
+		await reviews.answerBrowser(b as string, ask);
+		expect(answered.map((x) => [x.review, x.name, x.args])).toEqual([
+			[demo, 'readComments', ['demo', 'prototype/demo/v1-i2']],
+			[demo, 'readComments', ['demo', 'prototype/demo/v1-i2']],
+		]);
+		// Each key has its own list of what it has been shown: what one browser tab saw, another may not change.
+		expect(answered[0]!.seen).not.toBe(answered[1]!.seen);
+		await reviews.answerBrowser(a as string, { ...ask, id: 4 });
+		expect(answered[2]!.seen).toBe(answered[0]!.seen);
+	});
+
+	it('answer no browser ask without a key they made, or that is not an ask', async () => {
+		let answers = 0;
+		const reviews = new Reviews({
+			vscode: fakeVsCode().api as never,
+			build: () => undefined,
+			serve: async () => 'http://127.0.0.1:5000/review/',
+			answer: async () => {
+				answers += 1;
+				return { ok: true, value: null };
+			},
+		});
+		const url = await reviews.inBrowser({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' });
+		const key = url.split('#dsnr-key-')[1] as string;
+		const ask = { dsnr: 'ask', id: 1, name: 'readComments', args: [] };
+		expect(await reviews.answerBrowser('A'.repeat(22), ask)).toBeNull();
+		expect(await reviews.answerBrowser(`${key}x`, ask)).toBeNull();
+		expect(await reviews.answerBrowser(key, { ...ask, name: 'removeDesignSystem' })).toBeNull();
+		expect(await reviews.answerBrowser(key, { ...ask, extra: true })).toBeNull();
+		expect(await reviews.answerBrowser(key, 'readComments')).toBeNull();
+		expect(answers).toBe(0);
+		// Opening it in a tab makes no key.
+		expect(await reviews.address({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' })).not.toContain('#');
+	});
+
+	it('answer a browser that asks with its key through this machine’s server, as the review’s tab is answered', async () => {
+		const server = new PrototypeServer();
+		try {
+			const app = await server.origin();
+			const reviews = new Reviews({
+				vscode: fakeVsCode().api as never,
+				build: () => undefined,
+				serve: async () => `${app}/review/`,
+				answer: async (review, name) => ({ ok: true, value: `${name} on ${review.projectId}` }),
+			});
+			server.answerAsks((key, ask) => reviews.answerBrowser(key, ask));
+			const url = await reviews.inBrowser({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' });
+			const key = url.split('#dsnr-key-')[1] as string;
+			const asked = (k: string) =>
+				fetch(`${app}/_dsnr/ask`, {
+					method: 'POST',
+					headers: { origin: app, 'content-type': 'application/json', 'x-dsnr-key': k },
+					body: JSON.stringify({ dsnr: 'ask', id: 1, name: 'readComments', args: ['demo', 'prototype/demo/v1-i1'] }),
+				});
+			const r = await asked(key);
+			expect(await r.json()).toEqual({ dsnr: 'answer', id: 1, result: { ok: true, value: 'readComments on demo' } });
+			expect((await asked('B'.repeat(22))).status).toBe(403);
+		} finally {
+			server.close();
+		}
 	});
 
 	it('say which review is in front, for what its title bar does', async () => {

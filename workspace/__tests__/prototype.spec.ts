@@ -284,6 +284,104 @@ describe('PrototypeServer', () => {
 		}
 	});
 
+	describe('a browser’s ask (BROWSER_COMMENTS_PLAN 1.1)', () => {
+		const KEY = 'k'.repeat(22);
+		const ASK = { dsnr: 'ask', id: 1, name: 'readComments', args: [] };
+		/** A request as a browser, or anything else on this machine, could make it: every part of it named. */
+		const post = (
+			port: string,
+			{
+				path = '/_dsnr/ask',
+				method = 'POST',
+				headers = {},
+				body = JSON.stringify(ASK),
+			}: { path?: string; method?: string; headers?: Record<string, string>; body?: string } = {},
+		) =>
+			new Promise<{ status: number; headers: Record<string, unknown>; text: string }>((resolve, reject) => {
+				const req = request({ host: '127.0.0.1', port, path, method, headers }, (res) => {
+					let text = '';
+					res.on('data', (d) => (text += d));
+					res.on('end', () => resolve({ status: res.statusCode ?? 0, headers: res.headers, text }));
+				});
+				req.on('error', reject);
+				req.end(body);
+			});
+		const asked: { key: string; body: unknown }[] = [];
+		const served = async () => {
+			const server = new PrototypeServer();
+			server.answerAsks(async (key, body) => {
+				asked.push({ key, body });
+				return key === KEY ? { dsnr: 'answer', id: 1, result: { ok: true, value: [] } } : null;
+			});
+			const app = await server.origin();
+			const pages = await server.pagesOrigin();
+			const port = new URL(app).port;
+			const right = { host: `127.0.0.1:${port}`, origin: app, 'content-type': 'application/json', 'x-dsnr-key': KEY };
+			return { server, app, pages, port, right };
+		};
+
+		it('is answered on the bar’s own address, from its own page, with its key: the answer as JSON, kept nowhere', async () => {
+			asked.length = 0;
+			const { server, port, right } = await served();
+			try {
+				const r = await post(port, { headers: right });
+				expect(r.status).toBe(200);
+				expect(JSON.parse(r.text)).toEqual({ dsnr: 'answer', id: 1, result: { ok: true, value: [] } });
+				expect(r.headers['content-type']).toContain('application/json');
+				expect(r.headers['cache-control']).toBe('no-store');
+				expect(asked).toEqual([{ key: KEY, body: ASK }]);
+			} finally {
+				server.close();
+			}
+		});
+
+		it('refuses any other: another name, another origin or none, no key or another, not JSON, too big, not a POST, and on the pages’ address', async () => {
+			asked.length = 0;
+			const { server, app, pages, port, right } = await served();
+			const pagesPort = new URL(pages).port;
+			try {
+				const without = (name: string) => Object.fromEntries(Object.entries(right).filter(([k]) => k !== name));
+				const refused = [
+					await post(port, { headers: { ...right, host: `localhost:${port}` } }),
+					await post(port, { headers: { ...right, origin: pages } }),
+					await post(port, { headers: { ...right, origin: 'https://attacker.example' } }),
+					await post(port, { headers: { ...right, origin: 'null' } }),
+					await post(port, { headers: without('origin') }),
+					await post(port, { headers: without('x-dsnr-key') }),
+					await post(port, { headers: { ...right, 'x-dsnr-key': 'short' } }),
+					await post(port, { headers: { ...right, 'x-dsnr-key': 'x'.repeat(22) } }),
+					await post(port, { headers: { ...right, 'content-type': 'text/plain' } }),
+					await post(port, { headers: right, body: 'not json' }),
+					await post(port, { headers: right, body: JSON.stringify({ ...ASK, args: ['x'.repeat(300_000)] }) }),
+					await post(port, { headers: right, method: 'GET', body: '' }),
+					// A preflight, as a browser sends one for another origin's ask with its header: refused, so it never asks.
+					await post(port, { headers: { host: right.host, origin: pages, 'access-control-request-method': 'POST' }, method: 'OPTIONS', body: '' }),
+					await post(pagesPort, { headers: { ...right, host: `127.0.0.1:${pagesPort}`, origin: pages } }),
+				];
+				expect(refused.map((r) => r.status >= 400)).toEqual(refused.map(() => true));
+				// No other origin is ever told it may read an answer.
+				expect(refused.filter((r) => Object.keys(r.headers).some((h) => h.startsWith('access-control-')))).toEqual([]);
+				// Only a request with every part right reaches the handler, which is how a key is found to be no key.
+				expect(asked.map((a) => a.key)).toEqual(['x'.repeat(22)]);
+				expect(app).not.toBe(pages);
+			} finally {
+				server.close();
+			}
+		});
+
+		it('is not answered before something answers asks', async () => {
+			const server = new PrototypeServer();
+			try {
+				const app = await server.origin();
+				const port = new URL(app).port;
+				const r = await post(port, { headers: { host: `127.0.0.1:${port}`, origin: app, 'content-type': 'application/json', 'x-dsnr-key': KEY } });
+				expect(r.status).toBe(404);
+			} finally {
+				server.close();
+			}
+		});
+	});
+
 	it('serves a page it was given on this machine only, and nothing else', async () => {
 		const server = new PrototypeServer();
 		try {
