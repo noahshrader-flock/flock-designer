@@ -49,6 +49,7 @@ const world = (more: { given?: Given; api?: Record<string, unknown>; choose?: (s
 		}),
 		onChanged: vi.fn(),
 		watchBuild: vi.fn(),
+		beforeHandOver: vi.fn(async () => undefined),
 	};
 	return { deps, api, said, told, toldDone };
 };
@@ -77,6 +78,18 @@ describe('starting a prototype from VS Code', () => {
 		await newPrototype(deps);
 		expect(toldDone[0]).toContain('Claude Code is not in this VS Code');
 		expect(toldDone[0]).toContain('on your clipboard');
+	});
+
+	it('lets the extension prepare for what was asked before the build is handed over, and waits for it', async () => {
+		const order: string[] = [];
+		const { deps, api } = world({ given: { title: 'Alert history', task: 'Rebuild https://figma.com/design/x/y?node-id=1-2', folder: null } });
+		deps.beforeHandOver = vi.fn(async (task: string) => void order.push(`prepare:${task}`));
+		api.handPrototypeBuild.mockImplementation(async () => {
+			order.push('hand over');
+			return ok({ editor: true, command: null });
+		});
+		await newPrototype(deps);
+		expect(order).toEqual(['prepare:Rebuild https://figma.com/design/x/y?node-id=1-2', 'hand over']);
 	});
 
 	it('starts watching for the build once it is handed over, by the prototype’s name, and not before', async () => {

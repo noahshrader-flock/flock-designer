@@ -17,6 +17,8 @@ export interface NewPrototypeDeps extends Pick<AgentWorkDeps, 'progress'> {
 	tell: Tell;
 	/** Told when the projects changed: once it is made, so the list shows it while it is built. */
 	onChanged: () => void;
+	/** Gets ready for what was asked, before its build is handed over (a Figma link: offering to let Claude Code read it without asking). */
+	beforeHandOver: (request: string) => Promise<void>;
 	/**
 	 * Starts watching for its build to be done: to save it, have the list read again, and run its accessibility check
 	 * (`watchBuild`, `checkBuilt`); not waited for.
@@ -128,6 +130,7 @@ export const newPrototype = async (deps: NewPrototypeDeps): Promise<void> => {
 	if (checkout.branch === null) throw new Error('The product is not on a branch: check one out, then start again.');
 	const made = valueOf(await api.createPrototype(slugify(title), title, task, { root: checkout.root, branch: checkout.branch }, given.folder));
 	deps.onChanged();
+	await deps.beforeHandOver(task);
 	const handed = valueOf(await api.handPrototypeBuild(root, made.projectId, made.name, task));
 	deps.watchBuild(made.projectId, made.name, title);
 	deps.tell(`${handedTo(handed, title)} DSNR saves it when it is built, checks it, and its picture appears in the list.`);
