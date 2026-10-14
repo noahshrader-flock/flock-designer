@@ -34,6 +34,18 @@ const toggle = () => document.querySelector('[role="radiogroup"]') as HTMLElemen
 const options = () => [...toggle().querySelectorAll<HTMLElement>('[role="radio"]')];
 const chosen = () => options().find((o) => o.getAttribute('aria-checked') === 'true')?.textContent;
 const body = () => document.querySelector('[data-tab-body]') as HTMLElement;
+/** The Projects tab's View options menu: one button for whose projects and the layout, drawn as the row menus are. */
+const viewMenu = () => body().querySelector('button[aria-label="View options"]') as HTMLButtonElement | null;
+/** Its choices, the menu opened if it is not: each a radio in its group, named for what it says. */
+const viewChoices = async () => {
+	if (viewMenu()?.getAttribute('aria-expanded') !== 'true') await press(viewMenu()!);
+	return [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
+};
+const viewChoice = async (label: string) => press((await viewChoices()).find((o) => o.textContent === label)!);
+/** Whether a choice is the one chosen in its group, as the menu says it. */
+const checked = async (label: string) => (await viewChoices()).find((o) => o.textContent === label)?.getAttribute('aria-checked');
+/** Whose projects can be chosen: the choices in the menu's Projects group. */
+const scopeChoices = async () => (await viewChoices()).filter((o) => o.closest('[role="group"]')?.getAttribute('aria-label') === 'Projects');
 
 describe('the toggle at the top', () => {
 	it('is first in the panel, Projects and Design System, with Projects chosen', async () => {
@@ -110,7 +122,8 @@ describe('what is open', () => {
 			'Role comparison',
 			'Zone coverage',
 		]);
-		expect(document.querySelector('[aria-label="Whose projects"]')).toBeNull();
+		// Only everyone's is there to be chosen, signed out with no product: no group for a choice of one.
+		expect(await scopeChoices()).toEqual([]);
 		expect(body().textContent).toContain('No product is open, so these are everyone’s projects');
 	});
 
@@ -405,9 +418,7 @@ describe('dialogs and menus, in the panel', () => {
 
 		it('has a menu in a list as in a grid', async () => {
 			await showOpen();
-			await press(
-				[...document.querySelectorAll<HTMLElement>('[aria-label="Layout"] [role="radio"]')].find((o) => o.getAttribute('aria-label') === 'List')!,
-			);
+			await viewChoice('List');
 			await press(menuFor(0));
 			expect(items().map((i) => i.textContent)).toEqual(['Open for review', 'Open in browser', 'Build in the codebase…', 'Assign folder…']);
 		});
@@ -800,10 +811,13 @@ describe('searching the projects', () => {
 			x.querySelector('[data-part="count"]')?.textContent,
 		]);
 
-	it('is a box at the left of the grid and list toggle, in the same bar, both across the width the top toggle has', async () => {
+	it('is a box at the left of the view options button, in the same bar', async () => {
 		await showOpen();
 		const bar = document.querySelector('.view-bar') as HTMLElement;
-		expect([...bar.children].map((c) => (c.querySelector('input') ? 'search' : c.getAttribute('aria-label')))).toEqual(['search', 'Layout']);
+		expect([...bar.children].map((c) => (c.querySelector('input') ? 'search' : c.querySelector('button')?.getAttribute('aria-label')))).toEqual([
+			'search',
+			'View options',
+		]);
 		expect(search().placeholder).toBe('Search projects');
 	});
 
@@ -845,9 +859,7 @@ describe('searching the projects', () => {
 	it('is kept when the view changes between grid and list', async () => {
 		await showOpen();
 		await type(search(), 'zone');
-		await press(
-			[...document.querySelectorAll<HTMLElement>('[aria-label="Layout"] [role="radio"]')].find((o) => o.getAttribute('aria-label') === 'List')!,
-		);
+		await viewChoice('List');
 		expect(search().value).toBe('zone');
 		expect(names()).toEqual(['Zone coverage']);
 	});
@@ -859,24 +871,17 @@ describe('searching the projects', () => {
 });
 
 describe('the projects as a list or a grid', () => {
-	const views = () => document.querySelector('[aria-label="Layout"]') as HTMLElement;
-	const view = (name: string) =>
-		[...views().querySelectorAll<HTMLElement>('[role="radio"]')].find((o) => o.getAttribute('aria-label') === name) as HTMLElement;
 	const cards = () => [...body().querySelectorAll<HTMLElement>('.card')];
 
-	it('starts as a grid, the first of icon-only Grid and List to change it, once there are projects to show', async () => {
+	it('starts as a grid, Grid and List to choose between in the view options, once there are projects to show', async () => {
 		await showOpen();
-		expect(
-			[...views().querySelectorAll('[role="radio"]')].map((o) => [o.getAttribute('aria-label'), o.getAttribute('aria-checked'), o.textContent]),
-		).toEqual([
-			['Grid', 'true', ''],
-			['List', 'false', ''],
-		]);
+		expect(await checked('Grid')).toBe('true');
+		expect(await checked('List')).toBe('false');
 		expect(body().querySelectorAll('.row')).toHaveLength(0);
 		expect(cards()).toHaveLength(4);
 		await unmount();
 		await showOpen(OPEN, []);
-		expect(document.querySelector('[aria-label="Layout"]')).toBeNull();
+		expect(viewMenu()).toBeNull();
 	});
 
 	it('shows each project as a card in a grid: its picture, its name and what it has, with its comments as a badge', async () => {
@@ -895,8 +900,8 @@ describe('the projects as a list or a grid', () => {
 
 	it('shows each as a row in a list, once List is chosen', async () => {
 		await showOpen();
-		await press(view('List'));
-		expect(view('List').getAttribute('aria-checked')).toBe('true');
+		await viewChoice('List');
+		expect(await checked('List')).toBe('true');
 		expect(cards()).toHaveLength(0);
 		expect([...body().querySelectorAll('.row [data-part="name"]')].map((n) => n.textContent)).toEqual([
 			'Alert history',
@@ -933,18 +938,18 @@ describe('the projects as a list or a grid', () => {
 
 	it('is kept in the panel’s state, so a reload leaves it where it was, as the tab is', async () => {
 		await showOpen();
-		await press(view('List'));
+		await viewChoice('List');
 		expect(kept.state).toMatchObject({ tab: 'projects', view: 'list' });
 		await unmount();
 		sent.length = 0;
 		await showOpen();
-		expect(view('List').getAttribute('aria-checked')).toBe('true');
+		expect(await checked('List')).toBe('true');
 		expect(cards()).toHaveLength(0);
 	});
 
 	it('does not lose the tab chosen, nor the layout when the tab is', async () => {
 		await showOpen();
-		await press(view('List'));
+		await viewChoice('List');
 		await press(options()[1]!);
 		expect(kept.state).toEqual({ tab: 'design-system', view: 'list', part: 'components', componentsView: 'grid' });
 	});
@@ -960,9 +965,7 @@ describe('Projects, focused on the product open', () => {
 			.find((r) => r.querySelector('[data-part="name"]')?.textContent === name)
 			?.querySelector('[data-part="meta"]')?.textContent;
 	const sections = () => [...body().querySelectorAll('[role="list"]')].map((l) => l.getAttribute('aria-label'));
-	const whose = () => document.querySelector('[role="radiogroup"][aria-label="Whose projects"]') as HTMLElement | null;
-	const choose = (label: string) =>
-		press([...(whose() as HTMLElement).querySelectorAll<HTMLElement>('[role="radio"]')].find((o) => o.textContent === label)!);
+	const choose = viewChoice;
 	const made = (id: string, title: string, folder: string | null, ...on: [string | null, string][]) => ({
 		id,
 		title,
@@ -986,7 +989,7 @@ describe('Projects, focused on the product open', () => {
 
 	it('shows the open product’s projects first, by folder, and those with no product on record, marked', async () => {
 		await showOpen(OPEN, PROJECTS);
-		expect([...whose()!.querySelectorAll('[role="radio"]')].map((o) => [o.textContent, o.getAttribute('aria-checked')])).toEqual([
+		expect((await scopeChoices()).map((o) => [o.textContent, o.getAttribute('aria-checked')])).toEqual([
 			['This product', 'true'],
 			['Everyone’s', 'false'],
 		]);
@@ -1046,12 +1049,93 @@ describe('Projects, focused on the product open', () => {
 		await choose('Everyone’s');
 		await say({ type: 'context', context: { ...OPEN, product: '/work/flock-pepsi', productRepository: PEPSI } });
 		await answer('listProjects', PROJECTS);
-		expect([...whose()!.querySelectorAll('[role="radio"]')].map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false']);
+		expect((await scopeChoices()).map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false']);
+	});
+
+	it('has one button for it all: Projects (whose) above a divider, Layout below, an icon on the left of each and a check on the right of the one chosen', async () => {
+		await showOpen(OPEN, PROJECTS);
+		await press(viewMenu()!);
+		const menu = document.querySelector('[role="menu"]') as HTMLElement;
+		expect(menu.getAttribute('aria-label')).toBe('View options');
+		expect([...menu.querySelectorAll('.menu-heading')].map((h) => h.textContent)).toEqual(['Projects', 'Layout']);
+		expect(menu.querySelectorAll('[role="separator"]')).toHaveLength(1);
+		const choices = [...menu.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
+		expect(choices.map((c) => c.textContent)).toEqual(['This product', 'Everyone’s', 'Grid', 'List']);
+		// An icon at the start of each; a check at the end of the one chosen in its group only.
+		expect(choices.every((c) => c.firstElementChild?.classList.contains('codicon'))).toBe(true);
+		expect(choices.map((c) => c.lastElementChild?.classList.contains('menu-check'))).toEqual([true, false, true, false]);
+		expect(choices.map((c) => c.getAttribute('aria-checked'))).toEqual(['true', 'false', 'true', 'false']);
+		// The old toggles are gone from the tab.
+		expect(body().querySelector('[role="radiogroup"]')).toBeNull();
+	});
+
+	it('moves the check to what is chosen, and closes', async () => {
+		await showOpen(OPEN, PROJECTS);
+		await choose('Everyone’s');
+		expect(document.querySelector('[role="menu"]')).toBeNull();
+		expect(await checked('Everyone’s')).toBe('true');
+		expect(await checked('This product')).toBe('false');
+		expect(await checked('Grid')).toBe('true');
+	});
+
+	describe('mine', () => {
+		const signedIn = { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } };
+		/** Signing in or out reads the projects again, as it always has: the same ones, answered. */
+		const become = async (payload: unknown, projects: unknown[]) => {
+			await say({ type: 'event', name: 'onSignInChanged', payload });
+			await answer('listProjects', projects);
+		};
+		const mine = [
+			{ ...made('alerts', 'Alerts', 'Admin', [COKE, '2026-10-01T10:00:00Z']), people: [{ name: 'Noah', login: 'Noah' }] },
+			{ ...made('maps', 'Maps', null, [PEPSI, '2026-10-02T10:00:00Z']), people: [{ name: 'Someone', login: 'someone' }] },
+			{ ...made('both', 'Both', null, [COKE, '2026-10-01T10:00:00Z'], [PEPSI, '2026-10-05T10:00:00Z']), people: [{ name: 'Noah', login: 'noah' }] },
+		];
+
+		it('is offered once signed in, and not before: nothing says whose they would be', async () => {
+			await showOpen(OPEN, mine);
+			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['This product', 'Everyone’s']);
+			await press(document.body);
+			await become(signedIn, mine);
+			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['This product', 'Everyone’s', 'Mine']);
+		});
+
+		it('shows the projects I have worked on, whatever product, by product as everyone’s are, and nothing else', async () => {
+			await showOpen(OPEN, mine);
+			await become(signedIn, mine);
+			await choose('Mine');
+			expect(await checked('Mine')).toBe('true');
+			expect(names()).toEqual(['Alerts', 'Both']);
+			expect(sections()).toEqual(['flock-coke', 'flock-pepsi']);
+		});
+
+		it('says when none is mine yet, and how to see everyone’s', async () => {
+			await showOpen(OPEN, [mine[1]!]);
+			await become(signedIn, [mine[1]!]);
+			await choose('Mine');
+			expect(body().textContent).toContain('None of these projects has your work in it yet');
+			await press(button('Show everyone’s'));
+			expect(names()).toEqual(['Maps']);
+		});
+
+		it('goes back to the open product’s when I sign out, rather than showing a list of nobody’s', async () => {
+			await showOpen(OPEN, mine);
+			await become(signedIn, mine);
+			await choose('Mine');
+			await become({ state: 'signedOut' }, mine);
+			expect(names()).toEqual(['Alerts', 'Both']);
+			expect(await checked('This product')).toBe('true');
+		});
+
+		it('is offered with no product open too, among everyone’s', async () => {
+			await showOpen({ ...OPEN, product: null, productRepository: null, designRepository: null, missing: ['No product is open.'] }, mine);
+			await become(signedIn, mine);
+			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['Everyone’s', 'Mine']);
+		});
 	});
 
 	it('has no switch when the product open has no repository it can say, and shows everyone’s', async () => {
 		await showOpen({ ...OPEN, productRepository: null }, PROJECTS);
-		expect(whose()).toBeNull();
+		expect(await scopeChoices()).toEqual([]);
 		expect(sections()).toEqual(['flock-coke', 'flock-pepsi', 'No product']);
 	});
 });

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { byProduct, inThisProduct, needsProduct, productNames, productsByProject } from '../src/shared/projectScope';
+import {
+	byProduct,
+	inThisProduct,
+	isMine,
+	needsProduct,
+	productNames,
+	productsByProject,
+	scopeShown,
+	scopesOffered,
+} from '../src/shared/projectScope';
 import { productsOf } from '../src/shared/work';
 import { aProject, projectIteration } from './fixtures';
 
@@ -68,5 +77,33 @@ describe('where a prototype’s comment is Addressed', () => {
 		expect(needsProduct([], null)).toBe('Open the product this prototype was made on: what changes it is there.');
 		expect(needsProduct([], PEPSI)).toBeNull();
 		expect(needsProduct([PEPSI, COKE], COKE)).toBeNull();
+	});
+});
+
+describe('my projects', () => {
+	const by = (id: string, ...people: { name: string; login: string | null }[]) => ({ ...aProject({ id }), people });
+
+	it('are those I have worked on, by my login in any case, and none without one', () => {
+		expect(isMine(by('a', { name: 'Noah', login: 'noah' }), 'noah')).toBe(true);
+		expect(isMine(by('b', { name: 'Someone', login: 'someone' }, { name: 'Noah', login: 'Noah' }), 'NOAH')).toBe(true);
+		expect(isMine(by('c', { name: 'Someone', login: 'someone' }), 'noah')).toBe(false);
+		// A name alone is not an account: only a login says who it was.
+		expect(isMine(by('d', { name: 'noah', login: null }), 'noah')).toBe(false);
+		expect(isMine(by('e', { name: 'Noah', login: 'noah' }), null)).toBe(false);
+	});
+});
+
+describe('whose projects can be chosen', () => {
+	it('offers the open product’s only with one open, and mine only signed in', () => {
+		expect(scopesOffered({ hasProduct: true, signedIn: true })).toEqual(['here', 'everyone', 'mine']);
+		expect(scopesOffered({ hasProduct: true, signedIn: false })).toEqual(['here', 'everyone']);
+		expect(scopesOffered({ hasProduct: false, signedIn: true })).toEqual(['everyone', 'mine']);
+		expect(scopesOffered({ hasProduct: false, signedIn: false })).toEqual(['everyone']);
+	});
+
+	it('shows what was chosen while it is offered, and else the first: signing out, or another product, ends a choice', () => {
+		expect(scopeShown('mine', ['here', 'everyone', 'mine'])).toBe('mine');
+		expect(scopeShown('mine', ['here', 'everyone'])).toBe('here');
+		expect(scopeShown('here', ['everyone', 'mine'])).toBe('everyone');
 	});
 });

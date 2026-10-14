@@ -92,7 +92,7 @@ export const PanelView = ({
 							? { open: true, repository: context.productRepository }
 							: { open: false, why: context.missing[0] ?? 'No product is open.' }
 					}
-					signedIn={account.state === 'signedIn'}
+					login={account.state === 'signedIn' ? account.user.login : null}
 					onOpen={onOpen}
 					onOpenInBrowser={onOpenInBrowser}
 					onNew={onNew}

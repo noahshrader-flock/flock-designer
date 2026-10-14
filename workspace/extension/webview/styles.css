@@ -120,11 +120,6 @@ body {
 	padding: 2px 12px 12px;
 }
 
-/* Whose projects (This product, Everyone's): the toggle across the width, above the search and layout. */
-.scope-bar {
-	padding: 2px 12px 8px;
-}
-
 /* VS Code's search box: its icon at the start, filling what the toggle beside it leaves; the box itself is `.input`. */
 .search {
 	position: relative;
@@ -614,6 +609,11 @@ textarea.input {
 	opacity: 0;
 }
 
+/* A menu that is a view's own (its options), not a row's: always there. */
+.menu-button-shown {
+	opacity: 1;
+}
+
 .row-item:hover .menu-button,
 .card-item:hover .menu-button,
 .item-actions:focus-within .menu-button,
@@ -685,6 +685,31 @@ textarea.input {
 	text-align: start;
 	white-space: nowrap;
 	cursor: pointer;
+}
+
+/* A choice's chosen one: its check at the end. */
+.menu-check {
+	margin-left: auto;
+	padding-left: 12px;
+}
+
+/* A section's name, and the line between sections. */
+.menu-heading {
+	padding: 4px 8px 2px;
+	color: var(--dsnr-muted);
+	font-size: 0.9em;
+	font-weight: 600;
+}
+
+.menu-divider {
+	height: 1px;
+	margin: 4px 0;
+	background: var(--vscode-menu-separatorBackground, var(--dsnr-outline));
+}
+
+.menu-group {
+	display: flex;
+	flex-direction: column;
 }
 
 .menu-item:hover,

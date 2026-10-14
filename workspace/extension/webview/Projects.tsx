@@ -6,18 +6,27 @@ import { useCover } from '../../src/renderer/useCover';
 import { matchesProject, openCommentsOf } from '../../src/shared/projectList';
 import { type CodebaseAction, type PanelDialog, type Review, reviewsOf } from '../src/messages';
 import { workOf } from '../../src/shared/work';
-import { type ProductGroup, byProduct, inThisProduct, productNames, productsByProject } from '../../src/shared/projectScope';
+import {
+	type ProductGroup,
+	type Scope,
+	byProduct,
+	inThisProduct,
+	isMine,
+	productNames,
+	productsByProject,
+	scopeShown,
+	scopesOffered,
+} from '../../src/shared/projectScope';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
 import { Grid } from './ui/Grid';
 import { List } from './ui/List';
-import { type MenuItem, Menu } from './ui/Menu';
+import { type MenuItem, type MenuSection, Menu } from './ui/Menu';
 import { Row } from './ui/Row';
 import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
-import { Toggle } from './ui/Toggle';
 import { NoMatches } from './ui/NoMatches';
 import { LAYOUTS } from './layouts';
 import type { View } from './vscode';
@@ -95,7 +104,7 @@ const ProjectItem = ({
 		// What its right-click menu acts on: this project, with none of a webview's own items (Cut, Copy, Paste).
 		context: { webviewSection: 'project', projectId: id, preventDefaultContextMenuItems: true },
 		...(press ? { onOpen: press } : {}),
-		actions: <Menu label="Project actions" items={items} />,
+		actions: <Menu label="Project actions" sections={[{ items }]} />,
 	};
 	return view === 'grid' ? (
 		<Card {...shared} picture={<Picture project={project} className="card-picture" />} badge={badge} />
@@ -156,12 +165,12 @@ const ByProduct = ({
 	);
 };
 
-/** Whose projects are shown: the open product's (the default), or everyone's. A focus, not a lock. */
-type Scope = 'here' | 'everyone';
-const SCOPES = [
-	{ value: 'here', label: 'This product', icon: 'repo' },
-	{ value: 'everyone', label: 'Everyone’s', icon: 'organization' },
-] as const satisfies { value: Scope; label: string; icon: string }[];
+/** How each way of choosing whose projects is shown in the view options: a focus, not a lock. */
+const SCOPES = {
+	here: { label: 'This product', icon: 'repo' },
+	everyone: { label: 'Everyone’s', icon: 'organization' },
+	mine: { label: 'Mine', icon: 'person' },
+} as const satisfies Record<Scope, { label: string; icon: string }>;
 
 /** The projects as the core read them: the list (null while it is still reading), or what went wrong. */
 export interface ProjectsRead {
@@ -172,14 +181,15 @@ export interface ProjectsRead {
 /**
  * The Projects tab: each project a row or a card (`ProjectItem`), as a list or a grid that the person chooses. **Focused on
  * the product open** (the workspace README's "Projects, by product"): its projects, and those with no product on record, by
- * folder; or everyone's, by product (`ByProduct`), each with its folder. Either way every project can be opened and
- * commented on: the view chooses what is first, not what is allowed. With no product open, everyone's, and what a product
- * is for; with no projects either, what to open. Signed out, a line saying the list is this machine's.
+ * folder; or everyone's, or mine (those I have worked on), by product (`ByProduct`), each with its folder. Either way every
+ * project can be opened and commented on: the view chooses what is first, not what is allowed. Whose, and the layout, are one
+ * menu (the cog beside the search). With no product open, everyone's, and what a product is for; with no projects either,
+ * what to open. Signed out, a line saying the list is this machine's.
  */
 export const Projects = ({
 	read,
 	product,
-	signedIn,
+	login,
 	onOpen,
 	onOpenInBrowser,
 	onNew,
@@ -195,7 +205,8 @@ export const Projects = ({
 	 * cannot be said), or, with none, what to do.
 	 */
 	product: { open: true; repository: string | null } | { open: false; why: string };
-	signedIn: boolean;
+	/** Who is signed in, by login: whose are the projects that are mine; null when nobody is. */
+	login: string | null;
 	onOpen: (review: Review) => void;
 	/** Opens the review in the person's browser, outside VS Code. */
 	onOpenInBrowser: (review: Review) => void;
@@ -214,6 +225,8 @@ export const Projects = ({
 	const [search, setSearch] = useState('');
 	const [scope, setScope] = useState<Scope>('here');
 	const productRepository = product.open ? product.repository : null;
+	const offered = scopesOffered({ hasProduct: productRepository !== null, signedIn: login !== null });
+	const shownScope = scopeShown(scope, offered);
 	// Another product opened: its own first again.
 	useEffect(() => setScope('here'), [productRepository]);
 	if (read.error !== null && read.value === null)
@@ -239,9 +252,26 @@ export const Projects = ({
 	const named = productNames([...new Set([...[...products.values()].flat(), ...(productRepository ? [productRepository] : [])])]);
 	const nameOf = (repository: string) => named.get(repository) ?? repository;
 	const matching = projects.filter((p) => matchesProject(p, search));
-	// With a product to focus on, its own first; otherwise, or when asked, everyone's.
-	const focused = productRepository !== null && scope === 'here';
-	const here = focused ? matching.filter((p) => inThisProduct(productsOfIt(p), productRepository)) : matching;
+	// With a product to focus on, its own first; otherwise, or when asked, everyone's, or mine.
+	const focused = productRepository !== null && shownScope === 'here';
+	const here =
+		shownScope === 'mine'
+			? matching.filter((p) => isMine(p, login))
+			: focused
+				? matching.filter((p) => inThisProduct(productsOfIt(p), productRepository))
+				: matching;
+	/** What the view options offer: whose projects, when there is a choice of them, then the layout. */
+	const options: MenuSection[] = [
+		...(offered.length > 1
+			? [
+					{
+						heading: 'Projects',
+						items: offered.map((value) => ({ ...SCOPES[value], checked: value === shownScope, onSelect: () => setScope(value) })),
+					},
+				]
+			: []),
+		{ heading: 'Layout', items: LAYOUTS.map(({ value, label, icon }) => ({ label, icon, checked: value === view, onSelect: () => onView(value) })) },
+	];
 	// "No product" says something only once some projects have one: before, it would be on every project.
 	const anyProduct = [...products.values()].some((ps) => ps.length > 0);
 	const item = (p: Project, labels: string[]) => (
@@ -259,7 +289,7 @@ export const Projects = ({
 	const shown = (items: ReactNode[], label: string) => (view === 'grid' ? <Grid label={label}>{items}</Grid> : <List label={label}>{items}</List>);
 	return (
 		<>
-			{!signedIn && <p className="note">These are the projects on this machine. Sign in to see your team's too.</p>}
+			{login === null && <p className="note">These are the projects on this machine. Sign in to see your team's too.</p>}
 			{!product.open && (
 				<div className="note no-product-note">
 					<p>No product is open, so these are everyone’s projects. Open a product to make a prototype, or to build or Address one.</p>
@@ -268,15 +298,10 @@ export const Projects = ({
 					</Button>
 				</div>
 			)}
-			{projects.length > 0 && productRepository !== null && (
-				<div className="scope-bar">
-					<Toggle label="Whose projects" options={SCOPES} value={scope} onChange={setScope} />
-				</div>
-			)}
 			{projects.length > 0 && (
 				<div className="view-bar">
 					<SearchBox label="Search projects" value={search} onChange={setSearch} />
-					<Toggle label="Layout" options={LAYOUTS} value={view} onChange={onView} iconOnly />
+					<Menu label="View options" icon="settings-gear" always sections={options} />
 				</div>
 			)}
 			{projects.length === 0 ? (
@@ -286,6 +311,13 @@ export const Projects = ({
 				</EmptyState>
 			) : matching.length === 0 || (here.length === 0 && search.trim() !== '') ? (
 				<NoMatches thing="project" search={search} onClear={() => setSearch('')} />
+			) : here.length === 0 && shownScope === 'mine' ? (
+				<EmptyState icon="person" title="No projects of yours yet">
+					<p>None of these projects has your work in it yet. Everyone’s shows what is being made.</p>
+					<Button variant="secondary" onClick={() => setScope('everyone')}>
+						Show everyone’s
+					</Button>
+				</EmptyState>
 			) : here.length === 0 ? (
 				<EmptyState icon="repo" title={`No projects in ${nameOf(productRepository ?? '')} yet`}>
 					<p>Prototypes made on it appear here. Everyone’s shows what is being made on other products.</p>

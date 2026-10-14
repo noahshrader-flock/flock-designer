@@ -114,9 +114,13 @@ const Ready = ({
 					<IconButton icon={syncing ? 'sync' : 'refresh'} label={syncing ? 'Syncing…' : `Sync with ${HOST}`} disabled={syncing} onClick={does.sync} />
 					<Menu
 						label="Design system actions"
-						items={[
-							{ label: 'Open Primitives', icon: 'symbol-ruler', onSelect: does.openPrimitives },
-							{ label: 'Open Voice and Tone', icon: 'quote', onSelect: does.openVoiceAndTone },
+						sections={[
+							{
+								items: [
+									{ label: 'Open Primitives', icon: 'symbol-ruler', onSelect: does.openPrimitives },
+									{ label: 'Open Voice and Tone', icon: 'quote', onSelect: does.openVoiceAndTone },
+								],
+							},
 						]}
 					/>
 				</span>

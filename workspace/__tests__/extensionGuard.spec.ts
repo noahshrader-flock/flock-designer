@@ -77,6 +77,16 @@ describe('the extension’s sources', () => {
 		expect(radius('.card-picture')).toBe('var(--dsnr-radius-large)');
 	});
 
+	it('show a view’s own menu button always, after the rule that hides a row’s until it is hovered, so it wins', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const hidden = css.search(/\.menu-button\s*\{\s*opacity:\s*0/);
+		const shown = css.search(/\.menu-button-shown\s*\{\s*opacity:\s*1/);
+		expect(hidden).toBeGreaterThan(-1);
+		expect(shown).toBeGreaterThan(hidden);
+	});
+
 	it('hide a row’s badge only when the ellipsis button takes its place, not whenever the row has focus', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!

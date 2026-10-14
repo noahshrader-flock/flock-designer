@@ -7,11 +7,31 @@ import { productsOf } from './work';
  * choose what is shown first, and under what.
  */
 
+/** Whose projects the panel shows: the open product's, everyone's, or mine. */
+export type Scope = 'here' | 'everyone' | 'mine';
+
+/** What can be chosen: the open product's only with one open; mine only signed in (nothing says whose they would be). */
+export const scopesOffered = ({ hasProduct, signedIn }: { hasProduct: boolean; signedIn: boolean }): Scope[] => [
+	...(hasProduct ? (['here'] as const) : []),
+	'everyone',
+	...(signedIn ? (['mine'] as const) : []),
+];
+
+/** What is shown: what was chosen while it is still offered (signing out, or another product, can end that), else the first. */
+export const scopeShown = (chosen: Scope, offered: Scope[]): Scope => (offered.includes(chosen) ? chosen : (offered[0] ?? 'everyone'));
+
 /** Each project's products (`productsOf`), worked out once for every rule below to read. */
 export const productsByProject = (projects: Project[]): Map<Project, string[]> => new Map(projects.map((p) => [p, productsOf(p)]));
 
 /** Whether a project with these products is the open product's: it has work in it, or it has none on record, which nothing hides. */
 export const inThisProduct = (products: string[], open: string): boolean => products.length === 0 || products.includes(open);
+
+/**
+ * Whether a project is mine: I have worked on it (code on any iteration, or its folder in the design repository), by my
+ * login. A name alone is not an account, and with no login, signed out, none is.
+ */
+export const isMine = (project: Project, login: string | null): boolean =>
+	login !== null && project.people.some((person) => person.login?.toLowerCase() === login.toLowerCase());
 
 /** One product's projects, in the by-product view (`product` null for those with none on record), each with where else it is. */
 export interface ProductGroup {
