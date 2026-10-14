@@ -228,8 +228,11 @@ which offers to open what it cloned; New prototype then offers the install.
 **Dialogs and menus are in the panel**, in VS Code's own look, rather than boxes at the top of the window: a webview
 cannot draw outside its side bar, so a dialog covers the panel, as Claude Code's popovers are in its own. Each project has
 an ellipsis menu (on hover or focus) with Open for review, Open in browser (the same review page, served from this
-machine, in your browser outside VS Code, where commenting is still VS Code's) and Assign folder…; the right-click items
-open the same dialogs.
+machine, in your browser outside VS Code, where commenting is still VS Code's), Build in the codebase…, its codebase
+work's items when it has some (below) and Assign folder…; the right-click items open the same dialogs. The account (the
+title bar's account action: Sign out of DSNR) and the sync (the status bar's item) are dialogs in the panel too. The
+quick pick at the top is kept for the command palette's lists of many: **Open a component…** and **Open a prototype for
+review**.
 
 **New prototype** (the **+** in its title bar, **DSNR: New prototype**, or the panel's button) says first, before
 anything is asked, what stands in the way (no product open, Claude Code missing or signed out), then opens a dialog in
@@ -243,7 +246,7 @@ builds a prototype's page, for the machine it was packaged on.
 
 **Commenting in a review:** the page's own review bar comments through DSNR rather than with a token of its own. The
 page asks DSNR's review tab, and the tab asks the extension (`shared/reviewRelay.ts`): the core's comment calls, only on
-that review's project; signing in, which is VS Code's; and **Address**, on an open comment's menu, which runs the agent
+that review's project's prototypes and only on comments the tab has been shown or made; signing in, which is VS Code's; and **Address**, on an open comment's menu, which runs the agent
 as a build does (a notification with Stop, its log beside the editor) and then shows the changed page in the same tab.
 The page listens for DSNR only when it is served from this machine and framed, and takes only a VS Code webview that
 says hello; the published site is unchanged. Each project's reviews share one tab.
@@ -264,7 +267,8 @@ there.
 starts in, or a list of rows (the icons at the right above them, remembered with the tab). **Assign folder…**, from a
 project's menu, its right-click menu or a review tab's menu, opens a dialog in the panel to put it in a folder, a new
 one, or none, with the same folder choice New prototype has; it uses the projects the panel already has, so it opens at
-once. The app's one setting, its theme, is VS Code's here, so DSNR has no settings of its own.
+once. The app's one setting, its theme, is VS Code's here; DSNR's one setting is where Claude Code opens what it is handed
+(`dsnr.claudeCode.location`, below).
 
 **Moving into the code (Phase 5):** a prototype's menu has **Build in the codebase…** (and a review tab's menu does,
 for the prototype in front): a dialog says what it would do in the product open here (the branch, where it starts
@@ -280,8 +284,22 @@ product parity and the full gate stay at Handoff. VS Code is the editor here: wo
 default, or in an editor tab if you set `dsnr.claudeCode.location` to `editor`; it uses Claude Code's own commands for
 this, and a Claude Code without them opens an editor tab through its link.
 
+**The Design System tab (Phase 6):** the design system found beside the product (the one it names, any open folder
+with stories or tokens, or **Locate design system…**), read from its branch on GitHub as its clone has it. **Components**,
+as a grid or a list with a search, under their groups, with pictures drawn by the browser here and what axe found;
+pressed, a component opens in an editor tab with its stories live, what it is made from, what it sets itself and its
+accessibility, and its menu has Storybook and Source. **Tokens**, by primitive: colors as the app has them, **Semantic**
+first (a row for each role, a column for Light and Dark, each swatch its own control) and **Palette** a press away (each
+step with its value, and a button that opens its own file at its line). A token's control points a role at another step
+of its tone, gives a color a picker and a hex, or a length a slider, and says the contrast it leaves and what else it
+moves; the change is tried in every component tab open and in **Primitives** (the design system drawn whole, from the
+tab's menu, or **DSNR: Open Primitives**), then **Save to a branch**, **Propose** (a draft pull request) and **Start
+over**. **Voice and Tone** (the menu, or **DSNR: Open Voice and Tone**) is a Markdown document in the editor: ⌘S saves it
+to DSNR's branch; a save refused because the file changed on GitHub meanwhile offers Compare, Keep mine and Use theirs;
+Propose and Start over are in its title bar.
+
 **Sync and share:** whether the person's work is synced is in VS Code's status bar (Synced, Syncing, Not synced);
-pressing it shows what is held back and why, and Sync now. A review tab's title bar opens its page on the published site,
+pressing it opens a dialog in the panel with what is held back and why, and Sync now. A review tab's title bar opens its page on the published site,
 or copies its link; when it is not there yet, it says why and offers Publish.
 
 Like the app, it publishes the person's work branches and records when the project list is read and when VS Code is
@@ -327,9 +345,11 @@ DSNR › Uninstall.
 `npm run extension:test:packaged` runs it installed from its package, in VS Code's production mode, which is what proves
 it works outside development. Each takes about a minute and opens a VS Code window of its own, on a throwaway profile and
 a throwaway world: a product and a design repository made for the run, with no remotes, so nothing is pushed, and a
-stand-in for Claude Code, so no agent runs. It checks that DSNR starts and has its commands, opens a saved prototype's
-review, then starts a new prototype, builds it, checks it and pictures it with the real browser, saves it and opens its
-review. Neither is part of `npm run check`.
+stand-in for Claude Code, so no agent runs. It checks that DSNR starts and has every command its manifest declares, opens a saved
+prototype's review, then starts a new prototype, builds it, checks it and pictures it with the real browser, saves it and
+opens its review. When the design system the tests use is on this machine (Flock's FUI beside this repository, or
+`FUI_ROOT`), a copy of it is in the world too, its fetches pointed at the clone here: it is read, FSButton and Primitives
+open in their tabs, and its components are pictured. Neither is part of `npm run check`.
 
 **By hand, on purpose (Phase 4.6 of the plan): the comments test.** It publishes to the real design repository and runs
 Claude Code, so do it on a test project you can delete:
