@@ -18,6 +18,17 @@ export const failedFor =
 		if (fromCode) throw err;
 	};
 
+/** Opens an address in the person's browser, outside VS Code. */
+export const vscodeOpen = async (url: string): Promise<void> => {
+	await vscode.env.openExternal(vscode.Uri.parse(url));
+};
+
+/** Puts a link on the clipboard, and says so. */
+export const vscodeCopy = async (text: string): Promise<void> => {
+	await vscode.env.clipboard.writeText(text);
+	vscodeTell('Copied the link.');
+};
+
 /** Says how something went, in VS Code's notification, without waiting on anyone. */
 export const vscodeTell = (message: string): void => void vscode.window.showInformationMessage(message);
 

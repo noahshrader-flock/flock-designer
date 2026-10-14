@@ -37,7 +37,7 @@ interface NewPrototypeAnswers {
  * Made once it has a name with a letter or a number in it and something to explore; what is asked is then the
  * extension's, which builds it and says how it goes.
  */
-export const NewPrototypeDialog = ({
+const NewPrototypeDialog = ({
 	folders,
 	onStart,
 	onClose,
@@ -76,7 +76,7 @@ export const NewPrototypeDialog = ({
  * Assign folder, as a dialog in the panel: the project's folder, with the one it is in chosen, to change or to take it
  * out of. Kept in its brief by the core; what the core says if it cannot is said in the dialog, which stays open.
  */
-export const AssignFolderDialog = ({
+const AssignFolderDialog = ({
 	project,
 	folders,
 	onAssigned,
@@ -126,46 +126,47 @@ export const AssignFolderDialog = ({
  * Hand off to engineering, said before it starts (ELECTRON_MIGRATION_PLAN 5.2): what the run does, on the work's branch,
  * and that nothing is pushed. Start handoff asks the extension, which runs it as a build is run, with Stop and its log.
  */
-export const HandoffDialog = ({
-	project,
-	branch,
-	onStart,
-	onClose,
-}: {
-	project: Project;
-	branch: string;
-	onStart: () => void;
-	onClose: () => void;
-}) => (
-	<Dialog title="Hand off to engineering" onClose={onClose}>
-		<form
-			onSubmit={(e) => {
-				e.preventDefault();
-				onStart();
-				onClose();
-			}}
-		>
-			<p className="dialog-about">
-				This checks <strong>{project.title}</strong>’s codebase work on <code>{branch}</code>, and gets it ready for an engineer.
-			</p>
-			<p className="field-label">What happens</p>
-			<ol className="dialog-steps">
-				<li>The product’s handoff gate runs: every test, accessibility, the app bundling, the standards.</li>
-				<li>Two independent reviews: does it read as the product, and is it built correctly.</li>
-				<li>What they block on is fixed and committed on {branch}, one fix at a time.</li>
-				<li>A note for the engineer, HANDOFF.md, is written on the branch. Nothing is pushed.</li>
-			</ol>
-			<Buttons onClose={onClose} doing="Start handoff" disabled={false} />
-		</form>
-	</Dialog>
-);
+const HandoffDialog = ({ project, branch, onStart, onClose }: { project: Project; branch: string; onStart: () => void; onClose: () => void }) => {
+	// It does one thing at a time: busy with other work, it says so, and does not start.
+	const status = useWorkspace(() => workspace().agentStatus(), []);
+	const busy = status.value?.state === 'running';
+	return (
+		<Dialog title="Hand off to engineering" onClose={onClose}>
+			<form
+				onSubmit={(e) => {
+					e.preventDefault();
+					if (busy) return;
+					onStart();
+					onClose();
+				}}
+			>
+				<p className="dialog-about">
+					This checks <strong>{project.title}</strong>’s codebase work on <code>{branch}</code>, and gets it ready for an engineer.
+				</p>
+				<p className="field-label">What happens</p>
+				<ol className="dialog-steps">
+					<li>The product’s handoff gate runs: every test, accessibility, the app bundling, the standards.</li>
+					<li>Two independent reviews: does it read as the product, and is it built correctly.</li>
+					<li>What they block on is fixed and committed on {branch}, one fix at a time.</li>
+					<li>A note for the engineer, HANDOFF.md, is written on the branch. Nothing is pushed.</li>
+				</ol>
+				{busy && (
+					<p role="alert" className="dialog-error">
+						The agent is busy with other work. It does one thing at a time: open this again when that work has finished.
+					</p>
+				)}
+				<Buttons onClose={onClose} doing="Start handoff" disabled={busy} />
+			</form>
+		</Dialog>
+	);
+};
 
 /**
  * The comments on codebase work, read only (ELECTRON_MIGRATION_PLAN 5.3, §1.4): there are no pins on a real product's
  * page, so new feedback goes on the pull request; what was said before is kept and shown, each with who said it and
  * whether it was resolved.
  */
-export const CodebaseCommentsDialog = ({
+const CodebaseCommentsDialog = ({
 	project,
 	branch,
 	onOpenCode,
@@ -217,7 +218,7 @@ export const CodebaseCommentsDialog = ({
  * it would do, read first (the branch, where it starts from, a clean checkout), then handed to Claude Code in this window,
  * which writes the audit and builds it. The app's own plan and hand-over (`buildInCodebasePlan`, `buildInCodebase`).
  */
-export const BuildInCodebaseDialog = ({
+const BuildInCodebaseDialog = ({
 	root,
 	project,
 	name,
@@ -241,11 +242,12 @@ export const BuildInCodebaseDialog = ({
 	const [handed, setHanded] = useState<BuildInCodebase | null>(null);
 	// Starts from what the prototype was modeled on, when that can be started from; else from where the checkout is; else
 	// from the first branch that can.
+	const listed = setup.value;
 	useEffect(() => {
-		if (!plan) return;
-		const startable = [plan.basedOn?.branch, plan.current].find((b): b is string => typeof b === 'string' && branches.includes(b));
-		setFrom(startable ?? branches[0] ?? null);
-	}, [plan, branches.join('\n')]); // eslint-disable-line react-hooks/exhaustive-deps
+		if (!plan || !listed) return;
+		const startable = [plan.basedOn?.branch, plan.current].find((b): b is string => typeof b === 'string' && listed.includes(b));
+		setFrom(startable ?? listed[0] ?? null);
+	}, [plan, listed]);
 	const continuing = plan?.started ?? false;
 	// A new branch, or moving to the branch from another, needs a clean checkout; already on it, what is uncommitted is the work.
 	const needsClean = plan !== null && (!continuing || plan.current !== plan.branch);

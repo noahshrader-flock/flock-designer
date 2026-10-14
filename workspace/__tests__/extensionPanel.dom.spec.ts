@@ -515,6 +515,15 @@ describe('codebase work, in the panel', () => {
 		expect(dialog()).toBeNull();
 	});
 
+	it('says when the agent is busy with other work, and does not start a handoff then', async () => {
+		await showOpen(OPEN, WITH_CODE);
+		await press(menuOf('Zone coverage'));
+		await press(item('Hand off to engineering…'));
+		await answer('agentStatus', { state: 'running', startedAt: '', work: 'prototype/alert-history/v2-i1', purpose: null });
+		expect(dialog()!.textContent).toContain('The agent is busy with other work');
+		expect(inDialog('Start handoff').disabled).toBe(true);
+	});
+
 	it('lists the comments on codebase work read only, and says they go on its pull request', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(menuOf('Zone coverage'));

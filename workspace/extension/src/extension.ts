@@ -13,7 +13,7 @@ import { type Given, newPrototype, readGiven, readyToStart } from './newPrototyp
 import { PanelProvider } from './panel';
 import { publishedLink, syncItem, syncPicks } from './publishing';
 import { Reviews, answerReview, buildReviewSite, siteIn } from './review';
-import { AgentLog, SyncStatus, failed, failedFor, vscodeChoose, vscodeOffer, vscodeProgress, vscodeTell } from './ui';
+import { AgentLog, SyncStatus, failed, failedFor, vscodeChoose, vscodeCopy, vscodeOffer, vscodeOpen, vscodeProgress, vscodeTell } from './ui';
 
 /** How long since the projects were last read before coming back to VS Code reads them again: they are read from GitHub. */
 const REREAD_MS = 60_000;
@@ -69,6 +69,17 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 
 	const api = hostApi(served, panels);
 	const agentLog = new AgentLog();
+	/** What every flow is given of VS Code: the core's API, its notifications, the agent's log, the browser and the clipboard. */
+	const here = {
+		api,
+		progress: vscodeProgress,
+		log: agentLog,
+		tell: vscodeTell,
+		offer: vscodeOffer,
+		choose: vscodeChoose,
+		openExternal: vscodeOpen,
+		copy: vscodeCopy,
+	};
 	const site = siteIn(storage);
 	const reviews = new Reviews({
 		vscode,
@@ -81,8 +92,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 					routes: served,
 					signIn: () => github.signIn(),
 					written: () => projectsChanged(),
-					address: (r, comment) =>
-						addressComment({ api, progress: vscodeProgress, log: agentLog, tell: vscodeTell, openReview }, r, comment).catch(failedFor(true)),
+					address: (r, comment) => addressComment({ ...here, openReview }, r, comment).catch(failedFor(true)),
 				},
 				review,
 				name,
@@ -99,7 +109,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	const openReview = (review: Review) => reviews.open({ records: records(), ...review });
 	/** The review's page in the person's browser, outside VS Code: the same page, from this machine. */
 	const openReviewInBrowser = async (review: Review) => {
-		await vscode.env.openExternal(vscode.Uri.parse(await reviews.address({ records: records(), ...review })));
+		await vscodeOpen(await reviews.address({ records: records(), ...review }));
 	};
 	const locate = async () => {
 		const chosen = await core.ports.chooseFolder({ title: 'Locate design system' });
@@ -112,17 +122,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 
 	const productNow = () => ({ root: found.product, why: found.missing[0] ?? 'No product is open.' });
 	/** Makes a prototype from its answers (the panel's dialog, or code), with VS Code's notification, log and sync. */
-	const startPrototype = (given: Given) =>
-		newPrototype({
-			given,
-			api,
-			product: productNow(),
-			choose: vscodeChoose,
-			progress: vscodeProgress,
-			log: agentLog,
-			onChanged: projectsChanged,
-			openReview,
-		});
+	const startPrototype = (given: Given) => newPrototype({ ...here, given, product: productNow(), onChanged: projectsChanged, openReview });
 	/**
 	 * What the panel asked of a project's codebase work (ELECTRON_MIGRATION_PLAN 5.2, 5.3), in the product open here, with
 	 * VS Code's notifications, the agent's log and the browser. Handoff and Share change its records: the list is read again.
@@ -130,22 +130,9 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	const codebaseWork = async (action: CodebaseAction, projectId: string) => {
 		const root = found.product;
 		if (root === null) throw new Error(productNow().why);
-		const deps = {
-			api,
-			root,
-			progress: vscodeProgress,
-			log: agentLog,
-			tell: vscodeTell,
-			offer: vscodeOffer,
-			openExternal: async (url: string) => void (await vscode.env.openExternal(vscode.Uri.parse(url))),
-			copy: async (text: string) => {
-				await vscode.env.clipboard.writeText(text);
-				vscodeTell('Copied the link.');
-			},
-		};
 		const run = { preview: previewCodebase, 'hand-off': handOff, share: shareCodebase, 'open-code': openCode }[action];
 		try {
-			await run(deps, projectId);
+			await run({ ...here, root }, projectId);
 		} finally {
 			if (action === 'hand-off' || action === 'share') projectsChanged();
 		}
@@ -161,7 +148,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		lastRead = Date.now();
 		panels.post({ type: 'projects-changed' });
 	};
-	const publishing = { api, choose: vscodeChoose, tell: vscodeTell };
 	/** What a review tab's title bar does, on the review in front; said when there is none. */
 	const inFront = (act: (review: Review) => Promise<void>) => {
 		const review = reviews.active();
@@ -202,16 +188,14 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		}),
 		vscode.commands.registerCommand('dsnr.openPublishedPage', () =>
 			inFront(async (review) => {
-				const url = await publishedLink(publishing, review);
-				if (url) await vscode.env.openExternal(vscode.Uri.parse(url));
+				const url = await publishedLink(here, review);
+				if (url) await vscodeOpen(url);
 			}),
 		),
 		vscode.commands.registerCommand('dsnr.copyPublishedLink', () =>
 			inFront(async (review) => {
-				const url = await publishedLink(publishing, review);
-				if (url === null) return;
-				await vscode.env.clipboard.writeText(url);
-				vscodeTell(`Copied the link to ${review.title}.`);
+				const url = await publishedLink(here, review);
+				if (url !== null) await vscodeCopy(url);
 			}),
 		),
 		// From a row's right-click menu (its project) or a review tab's menu (the review in front): the panel's dialog.
