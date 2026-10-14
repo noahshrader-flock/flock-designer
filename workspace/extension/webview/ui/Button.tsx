@@ -1,23 +1,28 @@
 import type { ReactNode } from 'react';
 
 /**
- * VS Code's button, as its welcome views and dialogs use one: primary, in the theme's button colours, or `secondary`
- * (Cancel). The width of the side bar, unless it is in a row of them. `type="submit"` is a form's own.
+ * DSNR's three buttons, laid out as VS Code's welcome views and dialogs lay theirs out, drawn as Claude Code draws its own:
+ * - `primary` (the default), what a place is for, in DSNR's brand: one to a place.
+ * - `secondary`, outlined: another thing that can be done there (Source, Reset), or the one way out of a dialog that only
+ *   says something (Close).
+ * - `ghost`, nothing but its words: the way out, beside what is done (Cancel), or leaving a change (Start over).
+ *
+ * The width of the side bar, unless it is in a row of them. `type="submit"` is a form's own.
  */
 export const Button = ({
 	onClick,
 	type = 'button',
-	secondary = false,
+	variant = 'primary',
 	disabled = false,
 	children,
 }: {
 	onClick?: () => void;
 	type?: 'button' | 'submit';
-	secondary?: boolean;
+	variant?: 'primary' | 'secondary' | 'ghost';
 	disabled?: boolean;
 	children: ReactNode;
 }) => (
-	<button type={type} className={secondary ? 'button button-secondary' : 'button'} disabled={disabled} {...(onClick ? { onClick } : {})}>
+	<button type={type} className={`button button-${variant}`} disabled={disabled} {...(onClick ? { onClick } : {})}>
 		{children}
 	</button>
 );

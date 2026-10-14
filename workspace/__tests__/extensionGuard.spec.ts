@@ -32,7 +32,7 @@ describe('the extension’s sources', () => {
 		).toEqual([]);
 	});
 
-	it('write no colour of their own: every colour is one of VS Code’s theme variables', () => {
+	it('write one colour of their own, DSNR’s brand: every other is one of VS Code’s theme variables, and high contrast gives way to the theme’s button', () => {
 		const colour = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|\boklch\(/;
 		const said = files()
 			.filter(({ path }) => /\.(tsx|css)$/.test(path))
@@ -40,9 +40,13 @@ describe('the extension’s sources', () => {
 				text
 					.split('\n')
 					.filter((line) => colour.test(line))
-					.map((line) => `${path}: ${line.trim()}`),
+					.map((line) => `${path.split('/').at(-1)}: ${line.trim()}`),
 			);
-		expect(said).toEqual([]);
+		expect(said).toEqual(['styles.css: --dsnr-brand: #8b5cf6;', 'styles.css: --dsnr-on-brand: #ffffff;']);
+		const css = files().find((f) => f.path.endsWith('styles.css'))!.text;
+		const highContrast = css.split('}').find((b) => b.includes('body.vscode-high-contrast')) ?? '';
+		expect(highContrast).toMatch(/--dsnr-brand:\s*var\(--vscode-button-background\)/);
+		expect(highContrast).toMatch(/--dsnr-on-brand:\s*var\(--vscode-button-foreground\)/);
 	});
 
 	it('keep a card’s ellipsis button opaque on hover: it is over a picture, and the toolbar’s hover colour is see-through', () => {

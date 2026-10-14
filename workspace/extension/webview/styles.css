@@ -1,6 +1,7 @@
 /*
  * DSNR's panel, in VS Code's own design language: every colour and font comes from the theme, so the panel follows
- * whatever theme is chosen, high contrast included. No colour is written here.
+ * whatever theme is chosen, high contrast included. The one colour written here is DSNR's brand (`--dsnr-brand`), which
+ * its primary action is drawn in; in high contrast that gives way to the theme's own button.
  *
  * The tokens are our own names for what more than one part of the panel shares, each defined from VS Code's theme, so the
  * look is changed in one place, as shadcn's tokens are. A theme variable that already names one part's colour (the
@@ -17,6 +18,21 @@
 	--dsnr-radius-inner: 4px;
 	--dsnr-radius-small: 2px;
 	--dsnr-radius-large: 8px;
+	/* DSNR's brand: its primary action, in every theme but high contrast (below). */
+	--dsnr-brand: #8b5cf6;
+	--dsnr-brand-hover: color-mix(in srgb, var(--dsnr-brand) 86%, black);
+	--dsnr-on-brand: #ffffff;
+	/* A secondary button's outline: the text's colour, faint, so it reads in a light theme and a dark one. */
+	--dsnr-outline: color-mix(in srgb, var(--vscode-foreground) 24%, transparent);
+}
+
+/* High contrast: the theme's own button and borders, which are what that theme is for. */
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+	--dsnr-brand: var(--vscode-button-background);
+	--dsnr-brand-hover: var(--vscode-button-hoverBackground, var(--vscode-button-background));
+	--dsnr-on-brand: var(--vscode-button-foreground);
+	--dsnr-outline: var(--vscode-contrastBorder);
 }
 
 body {
@@ -283,25 +299,52 @@ body {
 	font-size: 0.92em;
 }
 
-/* VS Code's button, as a welcome view's: primary, the width of the side bar. */
+/*
+ * DSNR's buttons (`ui/Button.tsx`), laid out as a welcome view's (the width of the side bar, unless in a row) and drawn
+ * as Claude Code's: primary in the brand, secondary outlined, ghost only its words. Each has a border, transparent where
+ * it draws none, so the three are the same size side by side; high contrast draws them all (above).
+ */
 .button {
 	display: block;
 	width: 100%;
 	max-width: 300px;
 	margin: 4px 0 8px;
-	padding: 4px;
-	border: 1px solid var(--vscode-button-border, transparent);
-	border-radius: var(--dsnr-radius-small);
-	color: var(--vscode-button-foreground);
-	background: var(--vscode-button-background);
+	padding: 5px 12px;
+	border: 1px solid transparent;
+	border-radius: var(--dsnr-radius-inner);
 	font: inherit;
+	font-weight: 500;
 	line-height: 18px;
 	text-align: center;
 	cursor: pointer;
 }
 
-.button:hover {
-	background: var(--vscode-button-hoverBackground);
+.button-primary {
+	border-color: var(--vscode-contrastBorder, transparent);
+	color: var(--dsnr-on-brand);
+	background: var(--dsnr-brand);
+}
+
+.button-primary:hover:not(:disabled) {
+	background: var(--dsnr-brand-hover);
+}
+
+.button-secondary {
+	border-color: var(--dsnr-outline);
+	color: var(--vscode-foreground);
+	background: transparent;
+}
+
+.button-ghost {
+	border-color: var(--vscode-contrastBorder, transparent);
+	color: var(--dsnr-muted);
+	background: transparent;
+}
+
+.button-secondary:hover:not(:disabled),
+.button-ghost:hover:not(:disabled) {
+	color: var(--vscode-foreground);
+	background: var(--dsnr-track);
 }
 
 .button:focus-visible {
@@ -409,16 +452,6 @@ body {
 	margin: 4px 12px 8px;
 	color: var(--dsnr-muted);
 	line-height: 1.4;
-}
-
-/* A secondary button, as VS Code's dialogs draw Cancel: the theme's secondary colours. */
-.button-secondary {
-	color: var(--vscode-button-secondaryForeground);
-	background: var(--vscode-button-secondaryBackground);
-}
-
-.button-secondary:hover:not(:disabled) {
-	background: var(--vscode-button-secondaryHoverBackground);
 }
 
 .button:disabled {
@@ -1289,7 +1322,7 @@ textarea.input {
 
 .dimension-field input[type='range'] {
 	flex: 1;
-	accent-color: var(--vscode-button-background);
+	accent-color: var(--dsnr-brand);
 }
 
 .steps {

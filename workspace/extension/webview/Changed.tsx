@@ -52,7 +52,7 @@ const BranchActions = ({ controls }: { controls: TokenBranchControls }) => {
 					</Button>
 				)}
 				{offered.startOver && (
-					<Button secondary disabled={offered.startOver.disabled} onClick={startOver}>
+					<Button variant="ghost" disabled={offered.startOver.disabled} onClick={startOver}>
 						Start over
 					</Button>
 				)}

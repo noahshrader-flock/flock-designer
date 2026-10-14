@@ -42,12 +42,13 @@ export const ErrorLine = ({ error }: { error: string | null | undefined }) =>
 	) : null;
 
 /**
- * A dialog's buttons, in a row, as VS Code's are: the way out (Cancel, or Close for one that only says something), then
- * what it does (`children`), the primary. One with nothing to do has only its way out, as the primary.
+ * A dialog's buttons, in a row, as VS Code's are: the way out, then what it does (`children`), the primary. Beside what it
+ * does, the way out (Cancel) is the ghost; a dialog with nothing to do closes with the secondary (Close), so the only
+ * button there is still not the brand's, which is for doing something.
  */
 export const DialogButtons = ({ onClose, close = 'Close', children }: { onClose: () => void; close?: string; children?: ReactNode }) => (
 	<div className="dialog-buttons">
-		<Button secondary={children !== undefined} onClick={onClose}>
+		<Button variant={children === undefined ? 'secondary' : 'ghost'} onClick={onClose}>
 			{close}
 		</Button>
 		{children}

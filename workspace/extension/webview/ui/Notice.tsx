@@ -9,7 +9,12 @@ export const Notice = ({ title, children, onRetry }: { title?: string; children:
 	<div className="notice">
 		{title && <p className="notice-title">{title}</p>}
 		<p>{children}</p>
-		{onRetry && <Button onClick={onRetry}>Try again</Button>}
+		{/* Outlined: the notice is the warning, and what is done about it should not outshout the page around it. */}
+		{onRetry && (
+			<Button variant="secondary" onClick={onRetry}>
+				Try again
+			</Button>
+		)}
 	</div>
 );
 

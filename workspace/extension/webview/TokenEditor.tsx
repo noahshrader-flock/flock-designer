@@ -187,7 +187,7 @@ export const TokenEditor = ({ token, onClose }: { token: DesignToken; onClose: (
 			</div>
 			<div className="dialog-buttons">
 				{isChanged(now) && (
-					<Button secondary onClick={() => change(now, null)}>
+					<Button variant="secondary" onClick={() => change(now, null)}>
 						Reset
 					</Button>
 				)}
