@@ -37,11 +37,12 @@ export const mount = async (element: ReturnType<typeof createElement>) => {
 };
 
 /**
- * A message to the page, as it is posted: by default the extension's, which VS Code posts from the window above the page,
- * on the page's own origin. A test of what the page refuses names another sender.
+ * A message to the page, as it is posted: by default the extension's, which VS Code posts on the page's own origin, from
+ * its host frame, which the page cannot name (VS Code's own script makes `window.parent` the page itself). A test of what
+ * the page refuses names another sender.
  */
 export const say = async (data: unknown, from: { source?: MessageEventSource | null; origin?: string } = {}) =>
-	act(async () => void window.dispatchEvent(new MessageEvent('message', { data, source: window.parent, origin: location.origin, ...from })));
+	act(async () => void window.dispatchEvent(new MessageEvent('message', { data, source: null, origin: location.origin, ...from })));
 /** The page's calls to the core by `name`, in order. */
 export const calls = (name: string) => sent.filter((m) => m.type === 'call' && m.name === name);
 /** What the page asked of the extension itself, not the core. */

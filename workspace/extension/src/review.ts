@@ -43,11 +43,12 @@ const vscode = acquireVsCodeApi();
 const frame = document.querySelector('iframe');
 const page = ${JSON.stringify(origin)};
 frame.addEventListener('load', () => frame.contentWindow.postMessage({ dsnr: 'hello' }, page));
-// Only the bar may ask the extension, and only VS Code, which posts from the window above, answers it: nothing from the
-// prototype's page in the bar, or any frame that page makes, goes either way.
+// Only the bar may ask the extension, and only VS Code answers it: its host frame posts on this tab's own origin, which no
+// frame inside it has (the bar and the prototype's page are this machine's, any frame they make theirs or none). VS Code
+// makes window.parent this window itself, so the origin is what says who sent it.
 window.addEventListener('message', (e) => {
 	if (e.source === frame.contentWindow && e.origin === page) vscode.postMessage(e.data);
-	else if (e.source === window.parent && e.origin === location.origin) frame.contentWindow.postMessage(e.data, page);
+	else if (e.origin === location.origin) frame.contentWindow.postMessage(e.data, page);
 });
 </script>
 </body>

@@ -35,13 +35,14 @@ if (location.search.includes('copy')) {
 	attempt('read the bar storage', () => parent.localStorage.length);
 	attempt('its own cookie', () => ((document.cookie = 'mine=1'), document.cookie));
 	attempt('its own storage', () => (localStorage.setItem('k', 'v'), localStorage.getItem('k')));
-	// As the bar asks the extension, and as VS Code answers the bar.
-	top.postMessage({ dsnr: 'ask', id: 99, name: 'address', args: [{ thread: 1, id: 1 }] }, '*');
-	top.postMessage({ dsnr: 'answer', id: 99, result: { ok: true, value: 'forged' } }, '*');
+	// To the review tab (the bar's parent), as the bar asks the extension, and as VS Code answers the bar.
+	parent.parent.postMessage({ dsnr: 'ask', id: 99, name: 'address', args: [{ thread: 1, id: 1 }] }, '*');
+	parent.parent.postMessage({ dsnr: 'answer', id: 99, result: { ok: true, value: 'forged' } }, '*');
 	console.log('HOSTILE ' + JSON.stringify(tried));
-	// The same answer from ten frames down, deeper than anything that looks for it.
+	// The same answer from ten frames down, deeper than anything that looks for it: up ten frames to the page, then the
+	// bar, then the tab.
 	const deep = (n) => n === 0
-		? "<script>top.postMessage({ dsnr: 'answer', id: 98, result: { ok: true, value: 'deep' } }, '*'); console.log('DONE deep')<\\/script>"
+		? "<script>let w = window; for (let i = 0; i < 12; i++) w = w.parent; w.postMessage({ dsnr: 'answer', id: 98, result: { ok: true, value: 'deep' } }, '*'); console.log('DONE deep')<\\/script>"
 		: '<iframe srcdoc="' + deep(n - 1).replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"></iframe>';
 	document.body.insertAdjacentHTML('beforeend', deep(10));
 	// Its copy on the bar's address, its name spelled as a Mac's disk does not care about.
@@ -99,10 +100,17 @@ const open: Server[] = [];
 beforeAll(async () => {
 	root = mkdtempSync(join(tmpdir(), 'dsnr-isolation-'));
 	server = new PrototypeServer();
-	// The review tab's page, as VS Code would show it: served from an address of its own, framing the bar.
+	// The review tab's page, as VS Code shows it: served from an address of its own, framing the bar, and framed by VS
+	// Code's host frame on that same address (`/host`), which posts the extension's messages into it.
 	tabs = createServer((req, res) => {
-		const src = new URL(req.url ?? '/', 'http://x').searchParams.get('src') ?? '';
-		res.writeHead(200, { 'content-type': 'text/html' }).end(reviewPage({ src, title: 'Review', nonce: 'n0nce' }));
+		const at = new URL(req.url ?? '/', 'http://x');
+		if (at.pathname === '/favicon.ico') return void res.writeHead(404).end();
+		const src = at.searchParams.get('src') ?? '';
+		const html =
+			at.pathname === '/host'
+				? `<!doctype html><title>VS Code</title><iframe id="tab" src="/?src=${encodeURIComponent(src)}"></iframe>`
+				: reviewPage({ src, title: 'Review', nonce: 'n0nce' });
+		res.writeHead(200, { 'content-type': 'text/html' }).end(html);
 	});
 	await new Promise<void>((r) => tabs.listen(0, '127.0.0.1', r));
 	tabsAt = `http://127.0.0.1:${(tabs.address() as AddressInfo).port}`;
@@ -127,24 +135,35 @@ const review = (bar: string, steps: string[]) =>
 			if (m.text().startsWith('HOSTILE ')) tried = JSON.parse(m.text().slice('HOSTILE '.length));
 			if (m.text().startsWith('DONE ')) made.add(m.text().slice('DONE '.length));
 		});
-		// VS Code's API, standing in: what the tab passes up to the extension.
-		await tab.evaluateOnNewDocument(() => {
-			const w = window as unknown as { toExtension: unknown[]; acquireVsCodeApi: () => unknown };
+		// VS Code's API in the tab, standing in: what the tab passes up to the extension. And, as VS Code's own script does,
+		// the tab's `parent` and `top` are the tab itself.
+		await tab.evaluateOnNewDocument((tabsOrigin: string) => {
+			if (location.origin !== tabsOrigin || location.pathname !== '/') return;
+			const w = window as unknown as { toExtension: unknown[]; acquireVsCodeApi: () => unknown; parent: unknown; top: unknown };
 			w.toExtension = [];
 			w.acquireVsCodeApi = () => ({ postMessage: (m: unknown) => w.toExtension.push(m) });
-		});
-		await tab.goto(`${tabsAt}/?src=${encodeURIComponent(bar)}`, { waitUntil: 'load' });
+			w.parent = window;
+			w.top = window;
+		}, tabsAt);
+		await tab.goto(`${tabsAt}/host?src=${encodeURIComponent(bar)}`, { waitUntil: 'load' });
 		const until = Date.now() + 20_000;
 		while (!steps.every((s) => made.has(s))) {
 			if (Date.now() > until) throw new Error(`the hostile page made only ${[...made].join(', ') || 'nothing'} of ${steps.join(', ')}`);
 			await new Promise((r) => setTimeout(r, 50));
 		}
-		// VS Code answers, as it does, from the window above the tab's page (here the tab is the top, its own window above).
-		await tab.evaluate(() => window.postMessage({ dsnr: 'answer', id: 1, result: { ok: true, value: 'from VS Code' } }, location.origin));
+		// VS Code answers, as its host frame does: into the tab, on its own origin.
+		await tab.evaluate(() =>
+			(document.getElementById('tab') as HTMLIFrameElement).contentWindow?.postMessage(
+				{ dsnr: 'answer', id: 1, result: { ok: true, value: 'from VS Code' } },
+				location.origin,
+			),
+		);
 		// What was posted is delivered after it is: a round trip through the tab's own queue lets each arrive first.
 		await tab.evaluate(() => new Promise((r) => setTimeout(r, 100)));
 		const at = tab.url();
-		const ended = at.includes('hijacked') ? null : await tab.evaluate(() => (window as unknown as { toExtension: unknown[] }).toExtension);
+		const tabFrame = tab.frames().find((f) => f.url().startsWith(`${tabsAt}/?`));
+		const ended =
+			at.includes('hijacked') || !tabFrame ? null : await tabFrame.evaluate(() => (window as unknown as { toExtension: unknown[] }).toExtension);
 		const barFrame = tab.frames().find((f) => f.url().startsWith(bar));
 		const heard = barFrame ? await barFrame.evaluate(() => (window as unknown as { heard: unknown[] }).heard) : null;
 		const [owned, copied] = barFrame

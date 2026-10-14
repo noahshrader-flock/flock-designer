@@ -75,7 +75,7 @@ describe('a component’s tab', () => {
 		expect(calls('storyPreview')).toHaveLength(2);
 	});
 
-	it('hears only the window above it: no story it frames, nor any frame inside one, can pass itself off as the extension', async () => {
+	it('hears only VS Code, on its own origin: no story it frames, nor any frame inside one, can pass itself off as the extension', async () => {
 		await open();
 		await answer('storyPreview', { state: 'ready', base: BASE });
 		const forged = { type: 'token-edits', edits: [{ path: 'tone.pineGreen.50', value: '#000000' }] };
@@ -86,7 +86,6 @@ describe('a component’s tab', () => {
 		const inner = outer.contentDocument?.body.appendChild(outer.contentDocument.createElement('iframe'));
 		await say(forged, { source: inner?.contentWindow ?? null, origin: 'null' });
 		outer.remove();
-		await say(forged, { source: null });
 		expect(calls('storyPreview')).toHaveLength(1);
 		// What the extension says is still heard.
 		await say(forged);
