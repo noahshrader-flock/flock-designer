@@ -17,7 +17,6 @@ describe('a message from the panel', () => {
 		[{ type: 'ask-new-prototype' }],
 		[{ type: 'codebase', action: 'preview', projectId: 'zone-coverage' }],
 		[{ type: 'codebase', action: 'hand-off', projectId: 'zone-coverage' }],
-		[{ type: 'codebase', action: 'share', projectId: 'zone-coverage' }],
 		[{ type: 'codebase', action: 'open-code', projectId: 'zone-coverage' }],
 		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: null }],
 		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: 'Maps' }],
@@ -40,6 +39,8 @@ describe('a message from the panel', () => {
 		[null],
 		['ready'],
 		[{}],
+		// Sharing code is the end of a handoff, not something the panel asks for.
+		[{ type: 'codebase', action: 'share', projectId: 'zone-coverage' }],
 		[{ type: 'call', id: 1, name: 'runAnything', args: [] }],
 		[{ type: 'call', id: 0, name: 'listProjects', args: [] }],
 		[{ type: 'call', id: 1.5, name: 'listProjects', args: [] }],

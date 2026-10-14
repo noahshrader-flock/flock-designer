@@ -66,7 +66,8 @@ const ProjectItem = ({
 	const badge = open > 0 ? <Badge count={open} label={plural(open, 'open comment')} /> : undefined;
 	const id = project.id;
 	// What it offers, by what it has: its prototypes', then its codebase work's (no pins on that: its preview is in the
-	// browser, its comments are read here and go on its pull request), then its folder.
+	// browser, its comments are read here and go on its pull request), then its folder. Sharing code is not an item: a
+	// prototype is not shared for review, it is built in the codebase, and the handoff that follows offers the pull request.
 	const items: MenuItem[] = [
 		...(newest
 			? [
@@ -81,7 +82,6 @@ const ProjectItem = ({
 					{ label: 'Open on GitHub', icon: 'github', onSelect: () => onCodebase('open-code', id) },
 					{ label: 'Comments…', icon: 'comment', onSelect: () => onDialog({ kind: 'comments', projectId: id }) },
 					{ label: 'Hand off to engineering…', icon: 'checklist', onSelect: () => onDialog({ kind: 'hand-off', projectId: id }) },
-					{ label: 'Share for review', icon: 'git-pull-request', onSelect: () => onCodebase('share', id) },
 				]
 			: []),
 		{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) },

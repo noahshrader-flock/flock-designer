@@ -44,7 +44,7 @@ export type DesignTab = { kind: 'component'; id: string; name: string } | { kind
  * What can be done with a project's codebase work from the panel: its preview, Handoff, Share, and the work on GitHub.
  * The page names the project only; the extension finds the work, and where it is, itself.
  */
-export const CODEBASE_ACTIONS = ['preview', 'hand-off', 'share', 'open-code'] as const;
+export const CODEBASE_ACTIONS = ['preview', 'hand-off', 'open-code'] as const;
 export type CodebaseAction = (typeof CODEBASE_ACTIONS)[number];
 
 /** A prototype to open for review: its project, its name, and the title its tab is given. */

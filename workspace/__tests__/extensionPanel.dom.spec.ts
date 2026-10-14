@@ -529,7 +529,6 @@ describe('codebase work, in the panel', () => {
 			'Open on GitHub',
 			'Comments…',
 			'Hand off to engineering…',
-			'Share for review',
 			'Assign folder…',
 		]);
 		await elsewhere();
@@ -537,14 +536,16 @@ describe('codebase work, in the panel', () => {
 		expect(items()).toEqual(['Open for review', 'Open in browser', 'Build in the codebase…', 'Assign folder…']);
 		await elsewhere();
 		await press(menuOf('Roles in code'));
-		expect(items()).toEqual(['Open the preview', 'Open on GitHub', 'Comments…', 'Hand off to engineering…', 'Share for review', 'Assign folder…']);
+		expect(items()).toEqual(['Open the preview', 'Open on GitHub', 'Comments…', 'Hand off to engineering…', 'Assign folder…']);
 	});
 
-	it('asks the extension for the preview, Share and the work on GitHub, naming the project only', async () => {
+	it('asks the extension for the preview and the work on GitHub, naming the project only; sharing is the end of a handoff, not a menu item', async () => {
 		await showOpen(OPEN, WITH_CODE);
+		await press(menuOf('Zone coverage'));
+		expect(items().some((label) => /share/i.test(label))).toBe(false);
+		await elsewhere();
 		for (const [label, action] of [
 			['Open the preview', 'preview'],
-			['Share for review', 'share'],
 			['Open on GitHub', 'open-code'],
 		]) {
 			await press(menuOf('Zone coverage'));
