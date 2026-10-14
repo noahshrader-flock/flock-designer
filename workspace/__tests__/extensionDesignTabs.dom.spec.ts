@@ -135,7 +135,7 @@ describe('the Primitives tab', () => {
 	it('has a chip for each primitive, how many it has or that it is not defined, in the vocabulary’s order', async () => {
 		await open();
 		expect([...document.querySelectorAll('[data-primitive-chip]')].map((c) => c.textContent)).toEqual([
-			'Color 4',
+			'Color 5',
 			'Typography 1 · family only',
 			'Spacing 1',
 			'Shape 1',
@@ -154,7 +154,7 @@ describe('the Primitives tab', () => {
 			'Spacing',
 			'Shape',
 		]);
-		expect(document.querySelectorAll('[data-primitive="Color"] [data-swatch]')).toHaveLength(4);
+		expect(document.querySelectorAll('[data-primitive="Color"] [data-swatch]')).toHaveLength(5);
 		expect(document.querySelector('[data-spacing-bar]')).not.toBeNull();
 		expect(document.querySelector('[data-radius-sample]')).not.toBeNull();
 		expect(document.querySelector('[data-not-defined]')?.textContent).toContain('Elevation Not defined in its theme files.');

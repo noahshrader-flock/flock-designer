@@ -1423,3 +1423,97 @@ textarea.input {
 	font-size: 0.92em;
 	overflow-wrap: anywhere;
 }
+
+/*
+ * The semantic colors as the app lays them out: a row for each role's variant, its name taking the room there is, and a
+ * column for each theme, as wide as its swatch needs, the same on every row and its heading so they line up.
+ */
+.theme-set {
+	margin-bottom: 6px;
+}
+
+.theme-row {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	min-height: 26px;
+	padding-right: 4px;
+}
+
+.theme-headings {
+	min-height: 22px;
+	color: var(--dsnr-muted);
+	font-size: 0.92em;
+}
+
+.theme-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.theme-headings .theme-name {
+	color: var(--vscode-foreground);
+}
+
+.theme-cell {
+	display: flex;
+	flex-shrink: 0;
+	justify-content: center;
+	width: 48px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.theme-none {
+	color: var(--dsnr-muted);
+}
+
+.theme-value {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: var(--dsnr-radius-inner);
+	background: transparent;
+	cursor: pointer;
+}
+
+.theme-value .swatch {
+	width: 18px;
+	height: 18px;
+}
+
+.theme-value:hover {
+	background: var(--vscode-toolbar-hoverBackground);
+}
+
+.theme-value:focus-visible {
+	outline: var(--dsnr-focus);
+	outline-offset: -1px;
+}
+
+.theme-flag {
+	position: absolute;
+	top: -3px;
+	right: -3px;
+	color: var(--vscode-editorWarning-foreground);
+	font-size: 11px !important;
+}
+
+.theme-changed {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--vscode-gitDecoration-modifiedResourceForeground, var(--vscode-focusBorder));
+}

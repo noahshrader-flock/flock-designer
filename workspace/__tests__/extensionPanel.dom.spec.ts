@@ -1054,38 +1054,71 @@ describe('Design System', () => {
 		expect(body().querySelector('.note')?.textContent).toContain('No component matches “nothing like it”.');
 	});
 
-	it('shows its tokens by primitive, each with its swatch, what it points at, its pair’s contrast and its value', async () => {
+	/** The tokens part, and the colors' Palette view when asked for. */
+	const tokens = async (palette = false) => {
 		await read();
 		await press([...parts().querySelectorAll<HTMLElement>('[role="radio"]')][1]!);
+		if (palette) await press(body().querySelector('[aria-label="Color view"] [aria-label="Palette"]') as HTMLElement);
+	};
+
+	it('shows its tokens by primitive, and its colors as the app does: a row for each role, a column for each theme', async () => {
+		await tokens();
 		expect(titles()).toEqual([
-			['Color', '4'],
+			['Color', '3'],
 			['Typography', '1'],
 			['Spacing', '1'],
 			['Shape', '1'],
 		]);
-		const main = body().querySelector('[data-token="palette.light.primary.main"]') as HTMLElement;
-		expect(main.querySelector('[data-swatch]')).not.toBeNull();
-		expect(main.querySelector('[data-part="ref"]')?.textContent).toBe('pineGreen 50');
-		expect(main.querySelector('[data-contrast]')?.textContent).toMatch(/^\d+(\.\d+)?:1$/);
-		expect(main.querySelector('[data-part="value"]')?.textContent).toBe('#1F6F5C');
-		expect(main.title).toBe('src/colors/theme/light.ts:10');
-		// Its file, at its line, in the editor.
-		await press(main.querySelector('[aria-label="Open src/colors/theme/light.ts:10"]') as HTMLElement);
-		expect(panelSaid().at(-1)).toEqual({ type: 'open-token-source', file: 'src/colors/theme/light.ts', line: 10 });
-		// Primitives, in its own tab.
+		const set = body().querySelector('[data-token-set="primary"]') as HTMLElement;
+		expect([...set.querySelectorAll('[data-theme-heading]')].map((h) => h.textContent)).toEqual(['Light', 'Dark']);
+		const rows = [...set.querySelectorAll<HTMLElement>('[data-token-row]')];
+		expect(rows.map((r) => r.dataset.tokenRow)).toEqual(['main', 'contrastText']);
+		// Each theme's value is a swatch of its own, saying what it points at; a theme without the role is a dash.
+		const light = rows[0]!.querySelector('[data-token="palette.light.primary.main"] button') as HTMLElement;
+		expect(light.getAttribute('title')).toBe('pineGreen 50');
+		expect(rows[0]!.querySelector('[data-token="palette.dark.primary.main"] button')?.getAttribute('title')).toBe('pineGreen 60');
+		expect(rows[1]!.querySelector('.theme-none')?.textContent).toBe('—');
+		// Pressed, one theme's value opens its own control.
+		await press(light);
+		expect(document.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('Light · primary.main');
+	});
+
+	it('shows the palette behind the roles, a press away: each step with its value, and its own file', async () => {
+		await tokens(true);
+		expect(titles()[0]).toEqual(['Color', '2']);
+		const step = body().querySelector('[data-token="tone.pineGreen.50"]') as HTMLElement;
+		expect(step.querySelector('[data-swatch]')).not.toBeNull();
+		expect(step.querySelector('[data-part="value"]')?.textContent).toBe('#1F6F5C');
+		expect(step.title).toBe('src/colors/tones.ts:3');
+		await press(step.querySelector('[aria-label="Open src/colors/tones.ts:3"]') as HTMLElement);
+		expect(panelSaid().at(-1)).toEqual({ type: 'open-token-source', file: 'src/colors/tones.ts', line: 3 });
 		await press(button('See them drawn in Primitives'));
 		expect(panelSaid().at(-1)).toEqual({ type: 'open-primitives' });
 	});
 
+	it('keeps a role’s themes together when the search finds it in one', async () => {
+		await tokens();
+		const search = body().querySelector('input[aria-label="Search tokens"]') as HTMLInputElement;
+		await act(async () => {
+			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, 'pineGreen 60');
+			search.dispatchEvent(new Event('input', { bubbles: true }));
+		});
+		// Only Dark's main points at pineGreen 60; Light's is beside it.
+		expect([...body().querySelectorAll<HTMLElement>('[data-token-row]')].map((r) => r.dataset.tokenRow)).toEqual(['main']);
+		expect(body().querySelectorAll('[data-token-row="main"] [data-token]')).toHaveLength(2);
+	});
+
 	it('shows the tokens as the change the extension keeps changes them, marked', async () => {
-		await read();
-		await press([...parts().querySelectorAll<HTMLElement>('[role="radio"]')][1]!);
+		await tokens(true);
 		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.50', value: '#000000' }] });
 		const step = body().querySelector('[data-token="tone.pineGreen.50"]') as HTMLElement;
 		expect(step.dataset.changed).toBe('true');
 		expect(step.querySelector('[data-part="value"]')?.textContent).toBe('#000000');
-		// The role pointing at it reads as changed too.
-		expect(body().querySelector('[data-token="palette.light.primary.main"] [data-part="value"]')?.textContent).toBe('#000000');
+		// The role pointing at it shows the change too.
+		await press(body().querySelector('[aria-label="Color view"] [aria-label="Semantic"]') as HTMLElement);
+		expect((body().querySelector('[data-token="palette.light.primary.main"] [data-swatch]') as HTMLElement).style.backgroundColor).toBe(
+			'rgb(0, 0, 0)',
+		);
 	});
 
 	it('says an update that failed, and what its token files have that is not read, in a dialog', async () => {
@@ -1148,6 +1181,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 
 	it('gives a color of its own a picker and its hex, applied when entered; a length a slider, applied when let go', async () => {
 		await tokensOpen();
+		await press(document.querySelector('[aria-label="Color view"] [aria-label="Palette"]') as HTMLElement);
 		await press(document.querySelector('[aria-label="Change Tones pineGreen 60"]') as HTMLElement);
 		const hex = dialog().querySelector('input[aria-label="Hex"]') as HTMLInputElement;
 		await enter(hex, '#00aa00');

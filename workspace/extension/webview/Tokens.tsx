@@ -1,6 +1,6 @@
 import { type ReactNode, useMemo, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../../src/shared/contract';
-import { byPrimitive, inOrder, isEditable } from '../../src/shared/primitives';
+import { PRIMITIVES, byPrimitive, inOrder, isEditable } from '../../src/shared/primitives';
 import { contrastPartner, contrastRatio, isForeground, labelOf, nameOf } from '../../src/shared/tokens';
 import { textContrast } from '../../src/shared/wcag';
 import { opacity, useTokenChanges } from '../../src/renderer/tokenChanges';
@@ -8,6 +8,8 @@ import { EmptyState } from './ui/EmptyState';
 import { IconButton } from './ui/IconButton';
 import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
+import { Toggle } from './ui/Toggle';
+import { SemanticColors } from './SemanticColors';
 import { Swatch } from './ui/Swatch';
 
 /** What a token row can do: open its control (a token that can be changed), and open its own file at its line. */
@@ -111,28 +113,68 @@ export const Grouped = ({ tokens, noteFor, ...actions }: { tokens: DesignToken[]
 const searchable = (t: DesignToken, target?: DesignToken) =>
 	[t.path, t.category, t.group, t.set, t.name, t.value, t.ref?.path ?? '', target ? nameOf(target) : ''].join(' ').toLowerCase();
 
+/** The two views of the colors, as the app switches them: the roles by theme, and the palette they are made from. */
+const COLOR_VIEWS = [
+	{ value: 'semantic', label: 'Semantic', icon: 'tag' },
+	{ value: 'palette', label: 'Palette', icon: 'symbol-color' },
+] as const satisfies { value: ColorView; label: string; icon: string }[];
+type ColorView = 'semantic' | 'palette';
+
+/** A role's variant, whichever theme it is in: what a search keeps together, so a match in one theme keeps the others'. */
+const rowKey = (t: DesignToken) => `${t.set}\u0000${t.name}`;
+const isColors = (category: string) => PRIMITIVES.find((p) => p.category === category)?.drawn === 'swatches';
+
 /**
- * The design system's tokens in the panel (T2, T3 of the design system plan, rebuilt in VS Code's language): a search, then
- * a section for each primitive in the vocabulary's order, each with how many it has, its groups and sets under it, as
- * changed. With none, what was looked for.
+ * The design system's tokens in the panel, as the app's tokens panel has them (T2, T3): a search, then a section for each
+ * primitive in the vocabulary's order, as changed. **Colors have two views,** switched at the left of the search: the
+ * roles by theme (`SemanticColors`, the default), a row for each and a column for Light and Dark; and the palette behind
+ * them, each tone's steps with their values. A design system with only one of them has only that. With none, what was
+ * looked for.
  */
 export const TokensView = ({ tokens, ...actions }: { tokens: DesignTokens } & TokenActions) => {
 	const changes = useTokenChanges();
+	const { isPalette, target } = changes;
 	const [search, setSearch] = useState('');
+	const [view, setView] = useState<ColorView>('semantic');
 	const q = search.trim().toLowerCase();
-	const shown = useMemo(() => (q === '' ? changes.shown : changes.shown.filter((t) => searchable(t, changes.target(t)).includes(q))), [changes, q]);
+	const matches = (t: DesignToken) => q === '' || searchable(t, target(t)).includes(q);
+	const sections = useMemo(
+		() =>
+			byPrimitive(changes.shown).map(([category, all]) => {
+				if (!isColors(category)) return { category, all, semantic: [], palette: [], shown: all.filter(matches) };
+				const semantic = all.filter((t) => !isPalette(t));
+				const palette = all.filter(isPalette);
+				return { category, all, semantic, palette, shown: [] as DesignToken[] };
+			}),
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[changes, q],
+	);
 	if (tokens.source === null || changes.shown.length === 0)
 		return (
 			<EmptyState icon="symbol-color" title="No tokens were found">
 				<p>Looked for {tokens.looked.join(', ')}.</p>
 			</EmptyState>
 		);
+	const choose = sections.some((s) => s.semantic.length > 0 && s.palette.length > 0);
+	const drawn = sections.flatMap((s) => {
+		if (!isColors(s.category)) return s.shown.length > 0 ? [{ ...s, body: <Grouped tokens={s.shown} {...actions} /> }] : [];
+		const which: ColorView = s.semantic.length > 0 && s.palette.length > 0 ? view : s.semantic.length > 0 ? 'semantic' : 'palette';
+		if (which === 'palette') {
+			const found = s.palette.filter(matches);
+			return found.length > 0 ? [{ ...s, shown: found, body: <Grouped tokens={found} {...actions} /> }] : [];
+		}
+		// A role found in one theme is shown in every theme, so Light and Dark stay side by side.
+		const rows = new Set(s.semantic.filter(matches).map(rowKey));
+		const found = s.semantic.filter((t) => rows.has(rowKey(t)));
+		return found.length > 0 ? [{ ...s, shown: found, body: <SemanticColors tokens={found} onEdit={actions.onEdit ?? (() => undefined)} /> }] : [];
+	});
 	return (
 		<>
 			<div className="view-bar">
+				{choose && <Toggle label="Color view" options={COLOR_VIEWS} value={view} onChange={setView} iconOnly />}
 				<SearchBox label="Search tokens" value={search} onChange={setSearch} />
 			</div>
-			{shown.length === 0 ? (
+			{drawn.length === 0 ? (
 				<p className="note">
 					No token matches “{search.trim()}”.{' '}
 					<button type="button" className="link" onClick={() => setSearch('')}>
@@ -140,11 +182,9 @@ export const TokensView = ({ tokens, ...actions }: { tokens: DesignTokens } & To
 					</button>
 				</p>
 			) : (
-				byPrimitive(shown).map(([category, inCategory]) => (
-					<Section key={category} title={category} count={inCategory.length}>
-						<div className="token-body">
-							<Grouped tokens={inCategory} {...actions} />
-						</div>
+				drawn.map(({ category, shown, body }) => (
+					<Section key={category} title={category} count={shown.length}>
+						<div className="token-body">{body}</div>
 					</Section>
 				))
 			)}

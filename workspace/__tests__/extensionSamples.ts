@@ -66,6 +66,16 @@ export const SAMPLE_TOKENS: DesignToken[] = [
 	}),
 	token({ path: 'palette.light.primary.contrastText', category: 'Color', group: 'Light', set: 'primary', name: 'contrastText', value: '#FFFFFF' }),
 	token({
+		path: 'palette.dark.primary.main',
+		category: 'Color',
+		group: 'Dark',
+		set: 'primary',
+		name: 'main',
+		value: '#15584A',
+		ref: { path: 'tone.pineGreen.60' },
+		source: { file: 'src/colors/theme/dark.ts', line: 10 },
+	}),
+	token({
 		path: 'tone.pineGreen.50',
 		category: 'Color',
 		group: 'Tones',
