@@ -41,10 +41,10 @@ export type ComponentLink = (typeof COMPONENT_LINKS)[number];
 export type DesignTab = { kind: 'component'; id: string; name: string } | { kind: 'primitives' };
 
 /**
- * What can be done with a project's codebase work from the panel: its preview, Handoff, Share, and the work on GitHub.
- * The page names the project only; the extension finds the work, and where it is, itself.
+ * What can be done with a project's codebase work from the panel: its preview, Handoff, its draft pull request (from the
+ * Hand off dialog once a handoff found the work ready: never a menu item), and the work on GitHub. The page names the
+ * project only; the extension finds the work, and where it is, itself.
  */
-/** What the panel asks of codebase work: its preview, a handoff, its draft pull request (from the Hand off dialog, once ready), GitHub. */
 export const CODEBASE_ACTIONS = ['preview', 'hand-off', 'share', 'open-code'] as const;
 export type CodebaseAction = (typeof CODEBASE_ACTIONS)[number];
 

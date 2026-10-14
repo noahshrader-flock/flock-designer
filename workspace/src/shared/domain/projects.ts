@@ -160,8 +160,9 @@ export interface ProjectIteration {
 	 */
 	product: string | null;
 	/**
-	 * For codebase work: the commit a handoff found it ready for engineering at, while its branch is still at that commit
-	 * in the checkout open here (`listProjects`); null otherwise, so a commit since makes it a handoff to run again.
+	 * For codebase work: the commit a handoff found it ready for engineering at, as the list gives it only while its
+	 * branch is still at that commit in the checkout open here (`listProjects`); null otherwise, so a commit since makes it
+	 * a handoff to run again.
 	 */
 	readyAt: string | null;
 	/** True when this iteration exists only on this machine. */

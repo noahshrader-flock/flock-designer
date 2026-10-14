@@ -169,3 +169,20 @@ describe('the product a prototype was made on', () => {
 		expect(read({ repository: 'coke', branch: 'develop', commit: null })).toEqual({ repository: 'coke', branch: 'develop', commit: null });
 	});
 });
+
+describe('the commit a handoff found codebase work ready at', () => {
+	const read = (readyAt: unknown) =>
+		parseIterations(
+			JSON.stringify([{ projectId: 'demo', name: 'codebase', branch: 'feature/demo', createdAt: '2026-10-14T10:00:00Z', readyAt }]),
+		)?.[0];
+
+	it('is kept when it is a commit, and given to the list as the record says it', () => {
+		expect(read('a1b2c3d')?.readyAt).toBe('a1b2c3d');
+		expect(toProjectIteration(read('a1b2c3d')!).readyAt).toBe('a1b2c3d');
+	});
+
+	it('is left out when it is not one', () => {
+		for (const readyAt of ['main', 'a1b2', 'A1B2C3D', 42, null]) expect(read(readyAt)?.readyAt, String(readyAt)).toBeUndefined();
+		expect(toProjectIteration(read('nope')!).readyAt).toBeNull();
+	});
+});

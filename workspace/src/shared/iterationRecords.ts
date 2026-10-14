@@ -4,6 +4,7 @@ import { asPeople, mergePeople } from './people';
 import { asCover, asDate, asRoute } from './validate';
 import { asRepositoryPath } from './repoRef';
 import { asChangeRequestUrl } from './hostUrls';
+import { isCommit } from './sha';
 
 /**
  * Two copies of one project's `iterations.json`, made on different machines, as one.
@@ -86,12 +87,9 @@ const checked = (r: Rec): Iteration => {
 		...(route !== null ? { route } : {}),
 		...(basedOn ? { basedOn } : {}),
 		...(cover !== null ? { cover } : {}),
-		...(typeof r.readyAt === 'string' && COMMIT.test(r.readyAt) ? { readyAt: r.readyAt } : {}),
+		...(isCommit(r.readyAt) ? { readyAt: r.readyAt } : {}),
 	};
 };
-
-/** A commit's id, as git writes one. */
-const COMMIT = /^[0-9a-f]{7,64}$/;
 
 export const parseIterations = (text: string): Iteration[] | null => rawRecords(text)?.map(checked) ?? null;
 
@@ -113,8 +111,8 @@ export const toProjectIteration = (r: Iteration, thread?: { number: number; open
 	route: r.route ?? null,
 	cover: r.cover ?? null,
 	product: r.basedOn?.product ?? null,
-	// Said only once it is known to be the branch's commit still (`listProjects`).
-	readyAt: null,
+	// As the record says; `listProjects` keeps it only once it is known to be the branch's commit still.
+	readyAt: r.readyAt ?? null,
 });
 
 const earliest = (a: unknown, b: unknown): unknown => {

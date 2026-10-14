@@ -67,7 +67,8 @@ const ProjectItem = ({
 	const id = project.id;
 	// What it offers, by what it has: its prototypes', then its codebase work's (no pins on that: its preview is in the
 	// browser, its comments are read here and go on its pull request), then its folder. Sharing code is not an item: a
-	// prototype is not shared for review, it is built in the codebase, and the handoff that follows offers the pull request.
+	// prototype is not shared for review, it is built in the codebase, and once a handoff finds that ready, the Hand off
+	// dialog offers its pull request.
 	const items: MenuItem[] = [
 		...(newest
 			? [
