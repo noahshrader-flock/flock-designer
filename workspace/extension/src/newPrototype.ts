@@ -4,7 +4,7 @@ import type { Project, WorkspaceApi } from '../../src/shared/contract';
 import { toProjectIteration } from '../../src/shared/iterationRecords';
 import { valueOf } from '../../src/shared/result';
 import { slugify } from '../../src/shared/validate';
-import { type AgentWorkDeps, agentReady, agentWork, pollOf } from './agentWork';
+import { type AgentWorkDeps, type Offer, agentReady, agentWork, pollOf } from './agentWork';
 import { LIMITS, type Review, reviewsOf } from './messages';
 
 export interface NewPrototypeDeps extends AgentWorkDeps {
@@ -13,15 +13,13 @@ export interface NewPrototypeDeps extends AgentWorkDeps {
 		Pick<WorkspaceApi, 'prototypeReadiness' | 'installPackages' | 'cancelInstall' | 'onInstallLine' | 'readCheckout' | 'createPrototype'>;
 	/** The product folder that is open, or why there is none (from the context). */
 	product: { root: string | null; why: string };
-	/** A warning with what can be done about it; the action pressed, or undefined. */
-	choose: (message: string, actions: string[]) => Promise<string | undefined>;
+	/** A warning with what can be done about it. */
+	choose: Offer;
 	/** Told when the projects changed: once it is made, so the list shows it while it is built, and once it is built. */
 	onChanged: () => void;
 	openReview: (review: Review) => Promise<void>;
 	/** What to make: its name, what it explores and its folder, from the panel's dialog or from code (`readGiven`). */
 	given: Given;
-	/** How often the agent is asked how it is getting on. */
-	pollMs?: number;
 }
 
 /** What a prototype is made from: its name, what it explores, and its folder (none: null). */

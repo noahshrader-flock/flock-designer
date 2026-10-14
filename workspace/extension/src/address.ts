@@ -3,16 +3,13 @@ import { prototypeKey } from '../../src/shared/designPaths';
 import type { CommentRef, WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 import { iterationLabel } from '../../src/shared/work';
-import { type AgentWorkDeps, agentReady, agentWork, pollOf } from './agentWork';
+import { type AgentWorkDeps, type Tell, agentReady, agentWork, pollOf } from './agentWork';
 import { type Review, reviewsOf } from './messages';
 
 export interface AddressDeps extends AgentWorkDeps {
 	api: AgentWorkDeps['api'] & PrototypeAddressApi & Pick<WorkspaceApi, 'listProjects'>;
-	/** Says how it went, in VS Code's notification, without waiting on anyone. */
-	tell: (message: string) => void;
+	tell: Tell;
 	openReview: (review: Review) => Promise<void>;
-	/** How often the agent is asked how it is getting on. */
-	pollMs?: number;
 }
 
 const labelOf = (projectId: string, name: string): string => iterationLabel({ name, branch: prototypeKey(projectId, name) });

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { THEIRS_PATH, VOICE_PATH, VoiceDocument, voiceFileSystem } from '../extension/src/voice';
 import type { VoiceAndTone } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
@@ -39,6 +39,8 @@ const world = (api: Record<string, unknown> = {}) => {
 			...api,
 		},
 		offer: vi.fn(async (message: string, actions: string[]) => (offered.push([message, actions]), presses.shift())),
+		// A warning, with what can be done about it: said beside the rest, marked as one.
+		choose: vi.fn(async (message: string, actions: string[]) => (offered.push([`warning: ${message}`, actions]), presses.shift())),
 		openExternal: vi.fn(async () => undefined),
 	};
 	return { doc: new VoiceDocument(deps as never), deps, offered, presses };
@@ -85,19 +87,29 @@ describe('the voice and tone, as a document', () => {
 		await refused.doc.read();
 		refused.presses.push('Open on GitHub');
 		await refused.doc.propose();
-		expect(refused.offered.at(-1)).toEqual(['The voice and tone was not proposed: gh is not signed in.', ['Open on GitHub']]);
+		expect(refused.offered.at(-1)).toEqual(['warning: The voice and tone was not proposed: gh is not signed in.', ['Open on GitHub']]);
 		expect(refused.deps.openExternal).toHaveBeenCalledWith(kept().compare);
 	});
 
-	it('starts over by forgetting its branch, which stays on GitHub', async () => {
-		const { doc, deps } = world();
+	it('starts over by forgetting its branch, which stays on GitHub; once forgotten, a save starts a new one', async () => {
+		const { doc, deps, offered } = world({ voiceAndTone: vi.fn(async () => ok(voice({ branch: kept() }))) });
+		await doc.read();
 		await doc.startOver();
 		expect(deps.api.forgetVoiceBranch).toHaveBeenCalled();
+		// Said after a save, with no branch kept: nothing about the old one.
+		await doc.afterSave();
+		expect(offered).toEqual([]);
+	});
+
+	it('does not start over when its branch could not be forgotten, and says why', async () => {
+		const { doc } = world({ forgetVoiceBranch: vi.fn(async () => ({ ok: false, error: 'Could not forget it.' })) });
+		await expect(doc.startOver()).rejects.toThrow('Could not forget it.');
 	});
 });
 
 /** VS Code's file system pieces, standing in. */
 const fired: unknown[] = [];
+beforeEach(() => void (fired.length = 0));
 const fake = {
 	EventEmitter: class {
 		event = () => ({ dispose: () => undefined });

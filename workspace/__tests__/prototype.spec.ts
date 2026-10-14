@@ -1,3 +1,4 @@
+import { request } from 'node:http';
 import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -194,6 +195,25 @@ describe('what the agent is told', () => {
 });
 
 describe('PrototypeServer', () => {
+	it('answers only what is asked of its own address: a page with another name for this machine gets nothing', async () => {
+		const server = new PrototypeServer();
+		try {
+			const url = await server.serve('x', '<p>x</p>');
+			const port = new URL(url).port;
+			const ask = (host: string) =>
+				new Promise<number>((resolve, reject) =>
+					request({ host: '127.0.0.1', port, path: '/x/', headers: { host } }, (res) => resolve(res.statusCode ?? 0))
+						.on('error', reject)
+						.end(),
+				);
+			expect(await ask(`127.0.0.1:${port}`)).toBe(200);
+			expect(await ask(`attacker.example:${port}`)).toBe(403);
+			expect(await ask(`localhost:${port}`)).toBe(403);
+		} finally {
+			server.close();
+		}
+	});
+
 	it('says its origin, starting once however many ask at once, so a page can name it as the one place it frames', async () => {
 		const server = new PrototypeServer();
 		try {

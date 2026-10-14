@@ -2,6 +2,7 @@ import type * as VsCode from 'vscode';
 import type { VoiceAndTone, WorkspaceApi } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { errorText, valueOf } from '../../src/shared/result';
+import type { Offer } from './agentWork';
 import { CHANGE_REQUEST, HOST } from '../../src/shared/vocabulary';
 
 /** Where the voice and tone is in VS Code: a document of DSNR's own, and the file as GitHub has it, to compare with. */
@@ -18,8 +19,9 @@ const OPEN_IT = `Open the ${CHANGE_REQUEST}`;
 
 export interface VoiceDeps {
 	api: Pick<WorkspaceApi, 'voiceAndTone' | 'saveVoiceAndTone' | 'proposeVoiceAndTone' | 'forgetVoiceBranch'>;
-	/** Says how something went, with what can be done next; the action pressed, or undefined. */
-	offer: (message: string, actions: string[]) => Promise<string | undefined>;
+	offer: Offer;
+	/** A warning, with what can be done about it: a proposal that failed, a save refused. */
+	choose: Offer;
 	openExternal: (url: string) => Promise<void>;
 }
 
@@ -93,7 +95,7 @@ export class VoiceDocument {
 		const r = await this.deps.api.proposeVoiceAndTone();
 		if (!r.ok) {
 			const compare = this.voice?.branch?.compare;
-			const next = await this.deps.offer(`The voice and tone was not proposed: ${r.error}`, compare ? [`Open on ${HOST}`] : []);
+			const next = await this.deps.choose(`The voice and tone was not proposed: ${r.error}`, compare ? [`Open on ${HOST}`] : []);
 			if (next && compare) await this.deps.openExternal(compare);
 			return;
 		}
@@ -117,7 +119,12 @@ type VsCodeFs = Pick<typeof VsCode, 'EventEmitter' | 'FileType' | 'FileChangeTyp
  * `VoiceDocument`, and GitHub's file as a refused save found it (`THEIRS_PATH`), read only. A refused save leaves the
  * document unsaved and says why (`onRefused`), so what was typed is never lost.
  */
-export const voiceFileSystem = (vscode: VsCodeFs, voice: VoiceDocument, onRefused: () => void): VsCode.FileSystemProvider => {
+export const voiceFileSystem = (
+	vscode: VsCodeFs,
+	voice: VoiceDocument,
+	onRefused: () => void,
+	onFailed: (err: unknown) => void = () => undefined,
+): VsCode.FileSystemProvider => {
 	const changed = new vscode.EventEmitter<VsCode.FileChangeEvent[]>();
 	const encode = (text: string) => new TextEncoder().encode(text);
 	const known = (uri: VsCode.Uri) => {
@@ -160,9 +167,9 @@ export const voiceFileSystem = (vscode: VsCodeFs, voice: VoiceDocument, onRefuse
 				// GitHub's file as this save found it: an open copy of it, from a refusal before, is read again.
 				changed.fire([{ type: vscode.FileChangeType.Changed, uri: uri.with({ path: THEIRS_PATH }) }]);
 				onRefused();
-				throw vscode.FileSystemError.Unavailable(`The voice and tone changed on ${HOST} since it was opened, so nothing was saved.`);
+				throw vscode.FileSystemError.Unavailable(REFUSED);
 			}
-			void voice.afterSave();
+			void voice.afterSave().catch(onFailed);
 		},
 		delete: (uri) => {
 			throw vscode.FileSystemError.NoPermissions(uri);
@@ -170,5 +177,64 @@ export const voiceFileSystem = (vscode: VsCodeFs, voice: VoiceDocument, onRefuse
 		rename: (uri) => {
 			throw vscode.FileSystemError.NoPermissions(uri);
 		},
+	};
+};
+
+/** What a save refused because GitHub's file changed meanwhile says: the file system's failure, and the offer after it. */
+export const REFUSED = `The voice and tone changed on ${HOST} since it was opened, so nothing was saved.`;
+
+/**
+ * The voice and tone in VS Code (6.3), wired: its file system, the document VS Code opens from it, and its commands. A save
+ * refused because GitHub's file changed meanwhile offers to compare, keep the person's text, or take GitHub's; Propose
+ * saves what is unsaved first; Start over forgets the branch, then reads the document again from GitHub, only once it is
+ * forgotten. What goes wrong is said (`failed`). Returns how to open it, and what to dispose of.
+ */
+export const registerVoice = (
+	vscode: typeof VsCode,
+	deps: VoiceDeps & { failed: (err: unknown) => void },
+): { open: () => Promise<void>; disposables: VsCode.Disposable[] } => {
+	const voiceUri = vscode.Uri.from({ scheme: VOICE_SCHEME, path: VOICE_PATH });
+	const theirsUri = vscode.Uri.from({ scheme: VOICE_SCHEME, path: THEIRS_PATH });
+	const voice = new VoiceDocument(deps);
+	const opened = () => vscode.workspace.textDocuments.find((d) => d.uri.toString() === voiceUri.toString());
+	/** The document read again from GitHub, as VS Code's Revert does: what is unsaved in it is dropped. */
+	const readAgain = async () => {
+		if (!opened()) return;
+		await vscode.window.showTextDocument(voiceUri);
+		await vscode.commands.executeCommand('workbench.action.files.revert');
+	};
+	const refused = async () => {
+		const next = await deps.choose(REFUSED, [COMPARE, KEEP_MINE, USE_THEIRS]);
+		if (next === COMPARE) await vscode.commands.executeCommand('vscode.diff', theirsUri, voiceUri, `Voice and tone: on ${HOST} ↔ yours`);
+		if (next === KEEP_MINE) {
+			voice.keepMine();
+			await opened()?.save();
+		}
+		if (next === USE_THEIRS) await readAgain();
+	};
+	const said = (work: () => Promise<unknown>) => () => work().catch(deps.failed);
+	const open = async () => void (await vscode.window.showTextDocument(voiceUri, { preview: false }));
+	return {
+		open,
+		disposables: [
+			vscode.workspace.registerFileSystemProvider(VOICE_SCHEME, voiceFileSystem(vscode, voice, said(refused), deps.failed)),
+			vscode.commands.registerCommand('dsnr.openVoiceAndTone', said(open)),
+			// What is saved is proposed: unsaved text is saved first, as a person would expect of a document.
+			vscode.commands.registerCommand(
+				'dsnr.proposeVoiceAndTone',
+				said(async () => {
+					const doc = opened();
+					if (doc?.isDirty && !(await doc.save())) return;
+					await voice.propose();
+				}),
+			),
+			vscode.commands.registerCommand(
+				'dsnr.startOverVoiceAndTone',
+				said(async () => {
+					await voice.startOver();
+					await readAgain();
+				}),
+			),
+		],
 	};
 };

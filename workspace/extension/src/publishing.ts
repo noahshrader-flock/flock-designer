@@ -1,5 +1,6 @@
 import type { PublishStatus, WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
+import type { Offer, Tell } from './agentWork';
 import type { Review } from './messages';
 
 /** Whether the person's work is synced, in a sentence: said by the status bar's tooltip and by the sync dialog in the panel. */
@@ -46,8 +47,8 @@ export const publishedLink = async (
 		tell,
 	}: {
 		api: Pick<WorkspaceApi, 'publishedPage' | 'publishPage'>;
-		choose: (message: string, actions: string[]) => Promise<string | undefined>;
-		tell: (message: string) => void;
+		choose: Offer;
+		tell: Tell;
 	},
 	{ projectId, name, title }: Review,
 ): Promise<string | null> => {

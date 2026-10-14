@@ -77,3 +77,20 @@ export const tokenFileIn = (system: Pick<ConnectedDesignSystem, 'root'>, file: s
 	const path = resolve(system.root, file);
 	return path.startsWith(system.root + sep) ? path : null;
 };
+
+/**
+ * The design system to show, from what is open: the one found (`found`), told to the core (`show`, `showFound`); or, when
+ * it cannot be read and the person located one, that one instead, since locating it is how they said which. With neither
+ * readable, the one found, and why it cannot be read.
+ */
+export const shownFrom = async (
+	found: Context['designSystem'],
+	located: string | null,
+	{ show, at }: { show: (found: Context['designSystem']) => Promise<string | null>; at: (root: string) => Promise<Context['designSystem']> },
+): Promise<{ designSystem: Context['designSystem']; unreadable: string | null }> => {
+	const why = await show(found);
+	if (why === null || located === null || found?.how === 'located') return { designSystem: found, unreadable: why };
+	const instead = await at(located);
+	if (instead === null || (await show(instead)) !== null) return { designSystem: found, unreadable: why };
+	return { designSystem: instead, unreadable: null };
+};

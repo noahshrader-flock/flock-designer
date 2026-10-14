@@ -1,8 +1,8 @@
 import type * as VsCode from 'vscode';
-import type { EventSink, Route } from '../../src/main/handle';
-import type { EventName, InvokeName, Result, WorkspaceApi } from '../../src/shared/contract';
+import { type EventSink, type Route, served } from '../../src/main/handle';
+import type { EventName, InvokeName, Result, TokenEdit, WorkspaceApi } from '../../src/shared/contract';
 import { createApi } from '../../src/shared/workspaceApi';
-import type { HostMessage, PanelMessage } from './messages';
+import type { ComponentLink, HostMessage, PanelMessage } from './messages';
 
 type Webview = Pick<VsCode.Webview, 'postMessage'>;
 type Call = Extract<PanelMessage, { type: 'call' }>;
@@ -18,7 +18,7 @@ export const answerCall = async (webview: Webview, routes: ReadonlyMap<InvokeNam
 /** A call to the core's table by its name, as the window makes one: its Result, or that nothing answers it here. */
 export const callRoute = async (routes: ReadonlyMap<InvokeName, Route>, name: InvokeName, args: unknown[]): Promise<Result<unknown>> => {
 	const route = routes.get(name);
-	return route ? await route(...args) : { ok: false, error: `${name} is not answered in VS Code yet.` };
+	return route ? await route(...args) : { ok: false, error: `${name} is not answered in VS Code.` };
 };
 
 /**
@@ -91,3 +91,50 @@ export const hostApi = (routes: () => ReadonlyMap<InvokeName, Route>, events: Pi
 		(name, args) => callRoute(routes(), name, args),
 		(name, listener) => events.listen(name, listener),
 	);
+
+/**
+ * What the design system's pages ask (ELECTRON_MIGRATION_PLAN 6.1 to 6.3), from the panel or a design system's tab: a
+ * component's tab and its links, Primitives, the voice and tone, a token's own file, and the change to the tokens being
+ * tried (`TokenTrial`), which is the extension's.
+ */
+export interface DesignSystemAsks {
+	openComponent: (id: string) => Promise<void>;
+	componentLink: (id: string, link: ComponentLink) => Promise<void>;
+	openPrimitives: () => Promise<void>;
+	openVoiceAndTone: () => Promise<void>;
+	openTokenSource: (file: string, line: number) => Promise<void>;
+	edits: () => TokenEdit[];
+	setEdits: (edits: unknown[]) => void;
+}
+
+/**
+ * What any DSNR page may ask, the panel or a design system's tab: a call to the core, answered from its table, and the
+ * design system's own asks. Says whether it was one of these; the rest are the panel's alone.
+ */
+export const answerPage = async (webview: Webview, message: PanelMessage, asks: DesignSystemAsks): Promise<boolean> => {
+	switch (message.type) {
+		case 'call':
+			await answerCall(webview, served(), message);
+			return true;
+		case 'open-component':
+			await asks.openComponent(message.id);
+			return true;
+		case 'component-link':
+			await asks.componentLink(message.id, message.link);
+			return true;
+		case 'open-primitives':
+			await asks.openPrimitives();
+			return true;
+		case 'open-voice-and-tone':
+			await asks.openVoiceAndTone();
+			return true;
+		case 'open-token-source':
+			await asks.openTokenSource(message.file, message.line);
+			return true;
+		case 'token-edits':
+			asks.setEdits(message.edits);
+			return true;
+		default:
+			return false;
+	}
+};

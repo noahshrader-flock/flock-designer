@@ -119,9 +119,11 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 	if (m.type === 'open-review' || m.type === 'open-review-in-browser')
 		return hasKeys(m, ['type', 'projectId', 'name', 'title']) &&
 			typeof m.projectId === 'string' &&
+			PROJECT_ID.test(m.projectId) &&
 			typeof m.name === 'string' &&
+			isPrototypeName(m.name) &&
 			typeof m.title === 'string' &&
-			m.title.length <= 300
+			m.title.length <= LIMITS.title
 			? { type: m.type, projectId: m.projectId, name: m.name, title: m.title }
 			: null;
 	if (m.type === 'codebase')

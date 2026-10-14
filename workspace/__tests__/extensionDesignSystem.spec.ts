@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { TokenTrial, componentLink, componentOf, showFound, tokenFileIn } from '../extension/src/designSystem';
+import { TokenTrial, componentLink, componentOf, showFound, shownFrom, tokenFileIn } from '../extension/src/designSystem';
 import type { Catalog, CatalogComponent, ConnectedDesignSystem } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
@@ -60,12 +60,15 @@ describe('the change to the tokens being tried', () => {
 		const post = vi.fn();
 		const trial = new TokenTrial(post);
 		expect(trial.current()).toEqual([]);
-		const edits = [{ path: 'palette.light.primary.main', value: '#112233' }];
+		const edits = [
+			{ path: 'palette.light.primary.main', value: '#112233' },
+			{ path: 'spacing', value: '12px' },
+		];
 		trial.set(edits);
 		expect(post).toHaveBeenCalledWith({ type: 'token-edits', edits });
 		expect(trial.current()).toEqual(edits);
 		// The same change in another order is the same change: nothing is told.
-		trial.set([...edits]);
+		trial.set([...edits].reverse());
 		expect(post).toHaveBeenCalledTimes(1);
 		trial.set([]);
 		expect(post).toHaveBeenLastCalledWith({ type: 'token-edits', edits: [] });
@@ -105,5 +108,32 @@ describe('a token’s own file', () => {
 		expect(tokenFileIn(system, '../secrets.ts')).toBeNull();
 		expect(tokenFileIn(system, '/etc/passwd')).toBeNull();
 		expect(tokenFileIn(system, '')).toBeNull();
+	});
+});
+
+describe('the design system shown, when the one found cannot be read', () => {
+	const named = { root: '/w/plain', how: 'named' as const };
+	const located = { root: '/w/flock-react-component-lib', how: 'located' as const };
+	const readable = (roots: string[]) =>
+		vi.fn(async (f: { root: string } | null) => (f === null || roots.includes(f.root) ? null : `${f.root} cannot be read.`));
+
+	it('is the one the person located instead, when that can be read: locating it is how they said which', async () => {
+		const show = readable([located.root]);
+		expect(await shownFrom(named, located.root, { show, at: async () => located })).toEqual({ designSystem: located, unreadable: null });
+		expect(show).toHaveBeenLastCalledWith(located);
+	});
+
+	it('is the one found, and why, when nothing was located or what was cannot be read either', async () => {
+		const why = { designSystem: named, unreadable: '/w/plain cannot be read.' };
+		expect(await shownFrom(named, null, { show: readable([]), at: async () => located })).toEqual(why);
+		expect(await shownFrom(named, located.root, { show: readable([]), at: async () => located })).toEqual(why);
+		expect(await shownFrom(named, '/w/empty', { show: readable([]), at: async () => null })).toEqual(why);
+	});
+
+	it('is the one found when it can be read, whatever was located', async () => {
+		const at = vi.fn();
+		const open = { root: '/w/ui', how: 'open' as const };
+		expect(await shownFrom(open, located.root, { show: readable(['/w/ui']), at })).toEqual({ designSystem: open, unreadable: null });
+		expect(at).not.toHaveBeenCalled();
 	});
 });

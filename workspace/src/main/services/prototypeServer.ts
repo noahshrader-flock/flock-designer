@@ -108,6 +108,9 @@ export class PrototypeServer {
 	private listen(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			const server = createServer((req, res) => {
+				// Only what is asked of this machine's own address: a page elsewhere that has a name resolving here (DNS
+				// rebinding) gets nothing.
+				if (req.headers.host !== `127.0.0.1:${this.port}`) return void res.writeHead(403, { 'Content-Type': 'text/plain' }).end('Not here');
 				const path = (req.url ?? '/').split('?')[0] ?? '/';
 				const file = req.method === 'GET' ? this.shared.get(path.replace(/^\/_shared\//, '')) : undefined;
 				if (path.startsWith('/_shared/') && file) {

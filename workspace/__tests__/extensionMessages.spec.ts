@@ -55,6 +55,9 @@ describe('a message from the panel', () => {
 		[{ type: 'open-review-in-browser', projectId: 'a', name: 'v1-i1', title: 'x'.repeat(301) }],
 		[{ type: 'open-review', projectId: 1, name: 'v1-i1', title: 't' }],
 		[{ type: 'open-review', projectId: 'a', name: 'v1-i1', title: 'x'.repeat(301) }],
+		// A review is of a project, by its id, and a prototype, by its name: nothing that would be a path to something else.
+		[{ type: 'open-review', projectId: 'a/../../previews-x', name: 'v1-i1', title: 't' }],
+		[{ type: 'open-review', projectId: 'a', name: '../../x', title: 't' }],
 		[{ type: 'new-prototype' }],
 		[{ type: 'new-prototype', title: 'A', task: 'B' }],
 		[{ type: 'new-prototype', title: 1, task: 'B', folder: null }],

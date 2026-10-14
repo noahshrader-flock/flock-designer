@@ -2,16 +2,17 @@ import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type * as VsCode from 'vscode';
 import type { Route } from '../../src/main/handle';
-import type { CommentRef, InvokeName, Result, SignInState } from '../../src/shared/contract';
+import type { CommentRef, InvokeName, Result, SignInState, WorkspaceApi } from '../../src/shared/contract';
 import { DESIGN_REPO } from '../../src/shared/config';
 import { escapeHtml } from '../../src/shared/html';
-import { parsePrototypeName } from '../../src/shared/prototypeNames';
-import { toResult } from '../../src/shared/result';
+import { prototypeKey } from '../../src/shared/designPaths';
+import { isPrototypeName, parsePrototypeName } from '../../src/shared/prototypeNames';
+import { toResult, valueOf } from '../../src/shared/result';
 import { type RelayCall, type RelayTell, readRelayAsk } from '../../src/shared/reviewRelay';
 import { buildSite } from '../../src/site/buildSite';
 import { callRoute } from './bridge';
 import { newNonce } from './html';
-import type { Review } from './messages';
+import { type Review, reviewsOf } from './messages';
 
 /** Where a prototype's review is on the site, as the site lays it out: `<project>/v<version>/i<iteration>/`. */
 export const reviewPath = (projectId: string, name: string): string => {
@@ -64,26 +65,46 @@ const isRef = (v: unknown): v is CommentRef =>
 	typeof v === 'object' && v !== null && Number.isSafeInteger((v as CommentRef).thread) && Number.isSafeInteger((v as CommentRef).id);
 
 /**
- * What a review page asked (`RelayCall`), answered: a comment call by the core, as the app's window is answered, and only
- * on this review's project; signing in by VS Code; Address by the extension, on this review's prototype.
+ * What a review page asked (`RelayCall`), answered: a comment call by the core, as the app's window is answered; signing
+ * in by VS Code; Address by the extension. **Only on this review's own comments:** read and made only on its project's
+ * prototypes (whatever the page says its project is, the branch is what is read), and changed or Addressed only when it is
+ * one this tab has been shown or has made (`seen`, the tab's own threads). A page that is not what it should be can then
+ * reach no other project's comments.
  */
-export const answerReview = async (answers: ReviewAnswers, review: Review, name: RelayCall, args: unknown[]): Promise<Result<unknown>> => {
-	const result = await answered(answers, review, name, args);
+export const answerReview = async (
+	answers: ReviewAnswers,
+	review: Review,
+	name: RelayCall,
+	args: unknown[],
+	seen: Set<number>,
+): Promise<Result<unknown>> => {
+	const result = await answered(answers, review, name, args, seen);
 	if (result.ok && WRITES.has(name)) answers.written();
+	if (result.ok && (name === 'readComments' || name === 'postComment'))
+		for (const c of Array.isArray(result.value) ? result.value : [result.value]) if (isRef(c)) seen.add(c.thread);
 	return result;
 };
+
+/** Whether a branch is one of a project's prototypes (`prototype/<project>/<name>`): its own, by its name. */
+const isPrototypeOf = (projectId: string, branch: unknown): boolean => {
+	const prefix = prototypeKey(projectId, '');
+	return typeof branch === 'string' && branch.startsWith(prefix) && isPrototypeName(branch.slice(prefix.length));
+};
+
+/** The calls that act on one comment, by its reference, first. */
+const ON_A_COMMENT = new Set<RelayCall>(['moveComment', 'resolveComment', 'deleteComment', 'address']);
 
 /** The calls that change a comment, or what a comment says of itself (Address): after one, the counts are read again. */
 const WRITES = new Set<RelayCall>(['postComment', 'moveComment', 'resolveComment', 'deleteComment', 'address']);
 
-const answered = async (answers: ReviewAnswers, review: Review, name: RelayCall, args: unknown[]): Promise<Result<unknown>> => {
+const answered = async (answers: ReviewAnswers, review: Review, name: RelayCall, args: unknown[], seen: Set<number>): Promise<Result<unknown>> => {
 	if (name === 'signIn') return toResult(answers.signIn());
-	if (name === 'address') {
-		const [comment] = args;
-		return args.length === 1 && isRef(comment) ? toResult(answers.address(review, comment)) : { ok: false, error: 'Address is given one comment.' };
-	}
-	if ((name === 'readComments' || name === 'postComment') && args[0] !== review.projectId)
-		return { ok: false, error: `This review is of ${review.projectId}, so it comments only on ${review.projectId}.` };
+	if (name === 'address' && !(args.length === 1 && isRef(args[0]))) return { ok: false, error: 'Address is given one comment.' };
+	if (ON_A_COMMENT.has(name) && !(isRef(args[0]) && seen.has(args[0].thread)))
+		return { ok: false, error: 'That comment is not one of this review’s.' };
+	if (name === 'address') return toResult(answers.address(review, args[0] as CommentRef));
+	if ((name === 'readComments' || name === 'postComment') && !(args[0] === review.projectId && isPrototypeOf(review.projectId, args[1])))
+		return { ok: false, error: `This review is of ${review.projectId}, so it comments only on ${review.projectId}’s prototypes.` };
 	return callRoute(answers.routes(), name, args);
 };
 
@@ -118,7 +139,8 @@ export class Reviews {
 			build: (records: string) => void;
 			/** Serves the built site from this machine, and says its address. */
 			serve: () => Promise<string>;
-			answer: (review: Review, name: RelayCall, args: unknown[]) => Promise<Result<unknown>>;
+			/** What a tab's page asked, answered with what that tab has been shown (`seen`). */
+			answer: (review: Review, name: RelayCall, args: unknown[], seen: Set<number>) => Promise<Result<unknown>>;
 			/** Where a run from source says what each page asked: View › Output › DSNR. */
 			log?: Pick<VsCode.LogOutputChannel, 'info'>;
 		},
@@ -156,11 +178,13 @@ export class Reviews {
 		});
 		const shown = { panel, review };
 		this.tabs.set(review.projectId, shown);
+		// The comments this tab has been shown or has made, by thread: the only ones its page may change.
+		const seen = new Set<number>();
 		panel.webview.onDidReceiveMessage(async (raw: unknown) => {
 			const ask = readRelayAsk(raw);
 			if (ask === null) return;
 			this.deps.log?.info(`The review of ${shown.review.title} asked ${ask.name}.`);
-			const result = await this.deps.answer(shown.review, ask.name, ask.args);
+			const result = await this.deps.answer(shown.review, ask.name, ask.args, seen);
 			await panel.webview.postMessage({ dsnr: 'answer', id: ask.id, result } satisfies RelayTell);
 		});
 		panel.onDidDispose(() => this.tabs.delete(review.projectId));
@@ -176,3 +200,19 @@ export const buildReviewSite = (siteDir: string, viewerDir: string) => (records:
 
 /** Where the extension keeps the site it builds for reviews. */
 export const siteIn = (storage: string): string => join(storage, 'review-site');
+
+/**
+ * A prototype to review, chosen in VS Code's quick pick (the natural form for one of many): each project's prototypes,
+ * newest first (`reviewsOf`), as the panel's rows open them. Said when there is none.
+ */
+export const pickReview = async (
+	window: Pick<typeof VsCode.window, 'showQuickPick'>,
+	api: Pick<WorkspaceApi, 'listProjects'>,
+	tell: (message: string) => void,
+): Promise<Review | undefined> => {
+	const items = valueOf(await api.listProjects())
+		.flatMap(reviewsOf)
+		.map((review) => ({ label: review.title, review }));
+	if (items.length === 0) return void tell('There is no prototype to review here yet.');
+	return (await window.showQuickPick(items, { placeHolder: 'Open a prototype for review' }))?.review;
+};

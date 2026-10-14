@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { errorText } from '../../src/shared/result';
-import type { AgentLogLike, Progress } from './agentWork';
+import type { AgentLogLike, Offer, Progress, Tell } from './agentWork';
 import type { PublishStatus } from '../../src/shared/contract';
 import { syncItem } from './publishing';
+import { openLink } from './vscodePorts';
 
 /** Says what went wrong, in VS Code's own error message: its first line. */
 export const failed = (err: unknown): void => void vscode.window.showErrorMessage(errorText(err, { firstLine: true }));
@@ -19,9 +20,7 @@ export const failedFor =
 	};
 
 /** Opens an address in the person's browser, outside VS Code. */
-export const vscodeOpen = async (url: string): Promise<void> => {
-	await vscode.env.openExternal(vscode.Uri.parse(url));
-};
+export const vscodeOpen = (url: string): Promise<void> => openLink(vscode, url);
 
 /** Puts a link on the clipboard, and says so. */
 export const vscodeCopy = async (text: string): Promise<void> => {
@@ -30,15 +29,13 @@ export const vscodeCopy = async (text: string): Promise<void> => {
 };
 
 /** Says how something went, in VS Code's notification, without waiting on anyone. */
-export const vscodeTell = (message: string): void => void vscode.window.showInformationMessage(message);
+export const vscodeTell: Tell = (message) => void vscode.window.showInformationMessage(message);
 
 /** How something went, with what can be done next, as VS Code's notification with buttons: the one pressed, or undefined. */
-export const vscodeOffer = async (message: string, actions: string[]): Promise<string | undefined> =>
-	vscode.window.showInformationMessage(message, ...actions);
+export const vscodeOffer: Offer = async (message, actions) => vscode.window.showInformationMessage(message, ...actions);
 
 /** A warning with what can be done about it, as VS Code's notification with buttons: the one pressed, or undefined. */
-export const vscodeChoose = async (message: string, actions: string[]): Promise<string | undefined> =>
-	vscode.window.showWarningMessage(message, ...actions);
+export const vscodeChoose: Offer = async (message, actions) => vscode.window.showWarningMessage(message, ...actions);
 
 /** Work that takes a while, in VS Code's notification, with a Stop (its cancel button) when it can be stopped. */
 export const vscodeProgress: Progress = (title, task, onStop) =>

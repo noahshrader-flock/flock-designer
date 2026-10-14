@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VsCodeGitHub } from '../extension/src/github';
-import { vscodePorts } from '../extension/src/vscodePorts';
+import { openableLink, vscodePorts } from '../extension/src/vscodePorts';
 import { reviewsOf } from '../extension/src/messages';
 import { Reviews, answerReview, reviewPage, reviewPath } from '../extension/src/review';
 import { Panels, answerCall, hostApi } from '../extension/src/bridge';
@@ -100,12 +100,25 @@ describe('VS Code’s ports', () => {
 			canSelectFolders: true,
 			canSelectFiles: false,
 		});
-		await ports.tell({ message: 'Done', detail: 'It is.' });
-		expect(v.window.showInformationMessage).toHaveBeenCalledWith('Done', { modal: true, detail: 'It is.' });
+		// A notification, never a box that stops the window.
+		await ports.tell({ message: 'Done.', detail: 'It is.' });
+		expect(v.window.showInformationMessage).toHaveBeenCalledWith('Done. It is.');
 		await ports.copy('x');
 		expect(v.env.clipboard.writeText).toHaveBeenCalledWith('x');
 		await ports.openPath('/a');
 		expect(v.commands.executeCommand).toHaveBeenCalledWith('revealFileInOS', { fsPath: '/a' });
+	});
+
+	it('open only web pages and this machine’s own in the browser: no other scheme a page might hand them', async () => {
+		const v = fake();
+		const ports = vscodePorts(v as never, { draw: vi.fn(), scan: vi.fn(), measure: vi.fn() });
+		for (const url of ['https://github.com/x/y/pull/1', 'http://127.0.0.1:4321/review/a/']) expect(openableLink(url), url).toBe(true);
+		for (const url of ['http://example.com/', 'file:///etc/passwd', 'command:workbench.action.reloadWindow', 'vscode://x/y', 'not a link'])
+			expect(openableLink(url), url).toBe(false);
+		await ports.openExternal('https://github.com/x/y');
+		expect(v.env.openExternal).toHaveBeenCalledTimes(1);
+		await expect(ports.openExternal('command:workbench.action.reloadWindow')).rejects.toThrow(/opens only web pages/);
+		expect(v.env.openExternal).toHaveBeenCalledTimes(1);
 	});
 
 	/** Claude Code's own commands: show its side panel (which it then remembers as where it is kept), and open a conversation. */
@@ -232,10 +245,11 @@ describe('a prototype’s review', () => {
 
 describe('a review tab’s answers to its page', () => {
 	const review = { projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' };
+	const comment = (thread: number, id: number) => ({ thread, id, body: 'Bigger' });
 	const deps = () => {
 		const routes = new Map<InvokeName, Route>([
-			['readComments', async (...args) => ({ ok: true, value: ['read', ...args] })],
-			['postComment', async (...args) => ({ ok: true, value: ['posted', ...args] })],
+			['readComments', async () => ({ ok: true, value: [comment(1, 2)] })],
+			['postComment', async () => ({ ok: true, value: comment(1, 3) })],
 			['resolveComment', async (...args) => ({ ok: true, value: ['resolved', ...args] })],
 			['deleteComment', async () => ({ ok: false, error: 'GitHub would not.' })],
 		]);
@@ -246,40 +260,67 @@ describe('a review tab’s answers to its page', () => {
 			written: vi.fn(),
 		};
 	};
+	/** A tab's answers, as the tab gives them: the comments it has been shown are its own. */
+	const tab = () => {
+		const d = deps();
+		const seen = new Set<number>();
+		return { d, ask: (name: Parameters<typeof answerReview>[2], args: unknown[]) => answerReview(d, review, name, args, seen) };
+	};
 
 	it('are the core’s comment calls, VS Code’s sign-in, and Address on this review’s prototype', async () => {
-		const d = deps();
-		expect(await answerReview(d, review, 'readComments', ['demo', 'prototype/demo/v1-i1'])).toEqual({
-			ok: true,
-			value: ['read', 'demo', 'prototype/demo/v1-i1'],
-		});
-		expect(await answerReview(d, review, 'resolveComment', [{ thread: 1, id: 2 }, true])).toMatchObject({ ok: true });
-		expect(await answerReview(d, review, 'signIn', [])).toEqual({ ok: true, value: { state: 'signedOut' } });
-		await answerReview(d, review, 'address', [{ thread: 1, id: 2 }]);
+		const { d, ask } = tab();
+		expect(await ask('readComments', ['demo', 'prototype/demo/v1-i1'])).toEqual({ ok: true, value: [comment(1, 2)] });
+		expect(await ask('resolveComment', [{ thread: 1, id: 2 }, true])).toMatchObject({ ok: true });
+		expect(await ask('signIn', [])).toEqual({ ok: true, value: { state: 'signedOut' } });
+		await ask('address', [{ thread: 1, id: 2 }]);
 		expect(d.address).toHaveBeenCalledWith(review, { thread: 1, id: 2 });
 	});
 
-	it('say a comment was written, once it was, so what shows how many there are is read again', async () => {
-		const d = deps();
-		await answerReview(d, review, 'readComments', ['demo', 'prototype/demo/v1-i1']);
-		expect(d.written).not.toHaveBeenCalled();
-		await answerReview(d, review, 'postComment', ['demo', 'prototype/demo/v1-i1', 'Bigger', null, null]);
-		await answerReview(d, review, 'resolveComment', [{ thread: 1, id: 2 }, true]);
-		expect(d.written).toHaveBeenCalledTimes(2);
-		// One that failed wrote nothing.
-		await answerReview(d, review, 'deleteComment', [{ thread: 1, id: 2 }]);
-		expect(d.written).toHaveBeenCalledTimes(2);
-		await answerReview(d, review, 'address', [{ thread: 1, id: 2 }]);
-		expect(d.written).toHaveBeenCalledTimes(3);
+	it('read and comment only on this review’s project, on any of its prototypes: not another project’s, whatever it is called', async () => {
+		const { ask } = tab();
+		expect(await ask('readComments', ['demo', 'prototype/demo/v2-i1'])).toMatchObject({ ok: true });
+		for (const args of [
+			['other', 'prototype/other/v1-i1'],
+			// Its own id, with another project's branch: refused too.
+			['demo', 'prototype/other/v1-i1'],
+			['demo', 'prototype/demo/../other/v1-i1'],
+			['demo', 'feature/demo'],
+		])
+			expect(await ask('readComments', args), JSON.stringify(args)).toEqual({
+				ok: false,
+				error: 'This review is of demo, so it comments only on demo’s prototypes.',
+			});
+		expect(await ask('postComment', ['demo', 'prototype/other/v1-i1', 'x', null, null])).toMatchObject({ ok: false });
 	});
 
-	it('are only about this review’s project, and say so for anything else', async () => {
-		const d = deps();
-		expect(await answerReview(d, review, 'postComment', ['other', 'prototype/other/v1-i1', 'x', null])).toEqual({
-			ok: false,
-			error: 'This review is of demo, so it comments only on demo.',
-		});
-		expect(await answerReview(d, review, 'address', ['not a comment'])).toEqual({ ok: false, error: 'Address is given one comment.' });
+	it('change, and Address, only a comment the review has been shown or made: none of another thread', async () => {
+		const { d, ask } = tab();
+		const refused = { ok: false, error: 'That comment is not one of this review’s.' };
+		// Nothing read yet: no comment is this review's.
+		expect(await ask('resolveComment', [{ thread: 1, id: 2 }, true])).toEqual(refused);
+		expect(await ask('address', [{ thread: 1, id: 2 }])).toEqual(refused);
+		expect(d.address).not.toHaveBeenCalled();
+		await ask('readComments', ['demo', 'prototype/demo/v1-i1']);
+		expect(await ask('resolveComment', [{ thread: 1, id: 2 }, true])).toMatchObject({ ok: true });
+		expect(await ask('deleteComment', [{ thread: 9, id: 2 }])).toEqual(refused);
+		// One it made is its own too.
+		await ask('postComment', ['demo', 'prototype/demo/v1-i1', 'Bigger', null, null]);
+		expect(await ask('address', [{ thread: 1, id: 3 }])).toMatchObject({ ok: true });
+		expect(await ask('address', ['not a comment'])).toEqual({ ok: false, error: 'Address is given one comment.' });
+	});
+
+	it('say a comment was written, once it was, so what shows how many there are is read again', async () => {
+		const { d, ask } = tab();
+		await ask('readComments', ['demo', 'prototype/demo/v1-i1']);
+		expect(d.written).not.toHaveBeenCalled();
+		await ask('postComment', ['demo', 'prototype/demo/v1-i1', 'Bigger', null, null]);
+		await ask('resolveComment', [{ thread: 1, id: 2 }, true]);
+		expect(d.written).toHaveBeenCalledTimes(2);
+		// One that failed wrote nothing.
+		await ask('deleteComment', [{ thread: 1, id: 2 }]);
+		expect(d.written).toHaveBeenCalledTimes(2);
+		await ask('address', [{ thread: 1, id: 2 }]);
+		expect(d.written).toHaveBeenCalledTimes(3);
 	});
 });
 
@@ -435,7 +476,7 @@ describe('the bridge', () => {
 		});
 		expect(posted).toEqual([
 			{ type: 'answer', id: 3, result: { ok: true, value: [] } },
-			{ type: 'answer', id: 4, result: { ok: false, error: 'readCheckout is not answered in VS Code yet.' } },
+			{ type: 'answer', id: 4, result: { ok: false, error: 'readCheckout is not answered in VS Code.' } },
 		]);
 	});
 
@@ -447,7 +488,7 @@ describe('the bridge', () => {
 		const routes = new Map<InvokeName, Route>([['listProjects', async () => ({ ok: true, value: ['p'] })]]);
 		const api = hostApi(() => routes, panels);
 		expect(await api.listProjects()).toEqual({ ok: true, value: ['p'] });
-		expect(await api.readCheckout('/p')).toEqual({ ok: false, error: 'readCheckout is not answered in VS Code yet.' });
+		expect(await api.readCheckout('/p')).toEqual({ ok: false, error: 'readCheckout is not answered in VS Code.' });
 		const heard: unknown[] = [];
 		const stop = api.onAgentLog((l) => void heard.push(l));
 		panels.sink('onAgentLog', line('one'));

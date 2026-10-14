@@ -1,60 +1,11 @@
 import { watch } from 'node:fs';
 import * as vscode from 'vscode';
-import { served } from '../../src/main/handle';
-import { type Panels, answerCall } from './bridge';
+import { type DesignSystemAsks, type Panels, answerPage } from './bridge';
 import { afterQuiet, whatChanged } from './devReload';
 import { newNonce, panelHtml } from './html';
-import type { TokenEdit } from '../../src/shared/contract';
-import { type CodebaseAction, type ComponentLink, type DesignTab, type HostMessage, type PanelMessage, type Review, readMessage } from './messages';
+import { type CodebaseAction, type DesignTab, type HostMessage, type Review, readMessage } from './messages';
 import type { Given } from './newPrototype';
 import { failed } from './ui';
-
-/**
- * What the design system's pages ask (ELECTRON_MIGRATION_PLAN 6.1 to 6.3), from the panel or a design system's tab: a
- * component's tab and its links, Primitives, the voice and tone, a token's own file, and the change to the tokens being
- * tried (`TokenTrial`), which is the extension's.
- */
-export interface DesignSystemAsks {
-	openComponent: (id: string) => Promise<void>;
-	componentLink: (id: string, link: ComponentLink) => Promise<void>;
-	openPrimitives: () => Promise<void>;
-	openVoiceAndTone: () => Promise<void>;
-	openTokenSource: (file: string, line: number) => Promise<void>;
-	edits: () => TokenEdit[];
-	setEdits: (edits: unknown[]) => void;
-}
-
-/**
- * What any DSNR page may ask, the panel or a design system's tab: a call to the core, answered from its table, and the
- * design system's own asks. Says whether it was one of these; the rest are the panel's alone.
- */
-export const answerPage = async (webview: vscode.Webview, message: PanelMessage, asks: DesignSystemAsks): Promise<boolean> => {
-	switch (message.type) {
-		case 'call':
-			await answerCall(webview, served(), message);
-			return true;
-		case 'open-component':
-			await asks.openComponent(message.id);
-			return true;
-		case 'component-link':
-			await asks.componentLink(message.id, message.link);
-			return true;
-		case 'open-primitives':
-			await asks.openPrimitives();
-			return true;
-		case 'open-voice-and-tone':
-			await asks.openVoiceAndTone();
-			return true;
-		case 'open-token-source':
-			await asks.openTokenSource(message.file, message.line);
-			return true;
-		case 'token-edits':
-			asks.setEdits(message.edits);
-			return true;
-		default:
-			return false;
-	}
-};
 
 /**
  * A DSNR page in `webview`: the panel, or a design system's tab (`tab`), from the extension's own build in `dist`,
@@ -97,9 +48,10 @@ interface PanelDeps {
 
 /**
  * DSNR's panel in the side bar: a webview of the extension's own build, allowed to load from its `dist/` folder and
- * nowhere else. What it asks is read in exactly its shape (`readMessage`): a call is answered from the core's table, and
- * the panel's own requests (locate the design system, get started, open a review, start a prototype) are the shell's. Who is signed in is said beside
- * the DSNR mark in VS Code's own title bar (`showAccount`), where the Sign in and account actions are. Run from its
+ * nowhere else. What it asks is read in exactly its shape (`readMessage`): a call is answered from the core's table, the
+ * design system's asks as any DSNR page's are (`answerPage`), and the panel's own (locate the design system, get started,
+ * a review in a tab or the browser, New prototype and starting one, a project's codebase work) are the shell's. Who is
+ * signed in is said beside the DSNR mark in VS Code's own title bar (`showAccount`), where Sign in and the account are. Run from its
  * source, it follows its own build: a rebuilt page reloads the panel, a rebuilt extension restarts the extension host.
  */
 export class PanelProvider implements vscode.WebviewViewProvider {

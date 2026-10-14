@@ -2,20 +2,16 @@ import { type BuildApi, type BuildPhase, previewCommandFor, runLocalBuild } from
 import type { Project, ProjectIteration, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 import { codeLink, workOf } from '../../src/shared/work';
-import { type AgentWorkDeps, agentReady, agentWork, pollOf } from './agentWork';
+import { type AgentWorkDeps, type Offer, type Tell, agentReady, agentWork, pollOf } from './agentWork';
 
 export interface CodebaseDeps extends AgentWorkDeps {
 	api: AgentWorkDeps['api'] & BuildApi & Pick<WorkspaceApi, 'listProjects' | 'handoffResult' | 'shareIteration' | 'onShareStatus' | 'stopCommand'>;
 	/** The product folder that is open: where the codebase work is. */
 	root: string;
-	/** Says how something went, without waiting on anyone. */
-	tell: (message: string) => void;
-	/** Says how something went, with what can be done next; the action pressed, or undefined. */
-	offer: (message: string, actions: string[]) => Promise<string | undefined>;
+	tell: Tell;
+	offer: Offer;
 	openExternal: (url: string) => Promise<void>;
 	copy: (text: string) => Promise<void>;
-	/** How often the agent is asked how it is getting on. */
-	pollMs?: number;
 }
 
 /** A project's codebase work, read as the list has it: the project, and the iteration that is its work in the code. */

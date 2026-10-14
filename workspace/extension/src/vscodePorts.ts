@@ -13,6 +13,26 @@ export interface VsCodeApi {
 	workspace: Pick<typeof VsCode.workspace, 'workspaceFolders' | 'getConfiguration'>;
 }
 
+/**
+ * Whether DSNR opens a link in the person's browser: only a page on the web (`https:`) or one this machine's own server
+ * serves (`http://127.0.0.1`). Every link DSNR opens is one of those; anything else (`file:`, `command:`, another scheme a
+ * page might hand it) is refused.
+ */
+export const openableLink = (url: string): boolean => {
+	try {
+		const u = new URL(url);
+		return u.protocol === 'https:' || (u.protocol === 'http:' && u.hostname === '127.0.0.1');
+	} catch {
+		return false;
+	}
+};
+
+/** Opens a link in the person's browser, once it is one DSNR opens (`openableLink`); refused, in words, otherwise. */
+export const openLink = async (vscode: Pick<VsCodeApi, 'env' | 'Uri'>, url: string): Promise<void> => {
+	if (!openableLink(url)) throw new Error(`DSNR opens only web pages and this machine's own, not ${url.slice(0, 80)}.`);
+	await vscode.env.openExternal(vscode.Uri.parse(url));
+};
+
 /** Claude Code's extension, which work is handed to. */
 const CLAUDE_CODE = 'anthropic.claude-code';
 
@@ -96,12 +116,11 @@ export const vscodePorts = (vscode: VsCodeApi, headless: Headless): Ports => ({
 				...(defaultPath !== undefined ? { defaultUri: vscode.Uri.file(defaultPath) } : {}),
 			})
 		)?.[0]?.fsPath ?? null,
+	// A notification, as everything DSNR says in VS Code is: never a box that stops the window.
 	tell: async ({ message, detail }) => {
-		await vscode.window.showInformationMessage(message, { modal: true, detail });
+		await vscode.window.showInformationMessage(detail ? `${message} ${detail}` : message);
 	},
-	openExternal: async (url) => {
-		await vscode.env.openExternal(vscode.Uri.parse(url));
-	},
+	openExternal: (url) => openLink(vscode, url),
 	openPath: async (path) => {
 		await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(path));
 	},

@@ -13,10 +13,17 @@ export interface AgentLogLike {
 	line: (text: string) => void;
 }
 
+/** Says how something went, in VS Code's notification, without waiting on anyone. */
+export type Tell = (message: string) => void;
+/** Says how something went (or, as a warning, what stands in the way) with what can be done next: the action pressed, or undefined. */
+export type Offer = (message: string, actions: string[]) => Promise<string | undefined>;
+
 export interface AgentWorkDeps {
 	api: Pick<WorkspaceApi, 'agentReadiness' | 'stopAgent' | 'onAgentLog'>;
 	progress: Progress;
 	log: AgentLogLike;
+	/** How often the agent is asked how it is getting on (a test's is 0). */
+	pollMs?: number;
 }
 
 /** Claude Code does the work: said when it is not here, or not signed in, before anything is started. */
