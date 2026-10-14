@@ -24,11 +24,12 @@ import { EmptyState } from './ui/EmptyState';
 import { Grid } from './ui/Grid';
 import { List } from './ui/List';
 import { type MenuItem, type MenuSection, Menu } from './ui/Menu';
+import { ViewOptions } from './ui/ViewOptions';
 import { Row } from './ui/Row';
 import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
 import { NoMatches } from './ui/NoMatches';
-import { LAYOUTS } from './layouts';
+import { layoutSection } from './layouts';
 import type { View } from './vscode';
 
 /**
@@ -72,7 +73,7 @@ const ProjectItem = ({
 	const open = openCommentsOf(project.iterations);
 	const newest = reviewsOf(project)[0];
 	const inCode = workOf(project.iterations, 'codebase').length > 0;
-	const badge = open > 0 ? <Badge count={open} label={plural(open, 'open comment')} /> : undefined;
+	const badge = open > 0 ? <Badge tone="brand" count={open} label={plural(open, 'open comment')} /> : undefined;
 	const id = project.id;
 	// What it offers, by what it has: its prototypes', then its codebase work's (no pins on that: its preview is in the
 	// browser, its comments are read here and go on its pull request), then its folder. Sharing code is not an item: a
@@ -270,7 +271,7 @@ export const Projects = ({
 					},
 				]
 			: []),
-		{ heading: 'Layout', items: LAYOUTS.map(({ value, label, icon }) => ({ label, icon, checked: value === view, onSelect: () => onView(value) })) },
+		layoutSection(view, onView),
 	];
 	// "No product" says something only once some projects have one: before, it would be on every project.
 	const anyProduct = [...products.values()].some((ps) => ps.length > 0);
@@ -301,7 +302,7 @@ export const Projects = ({
 			{projects.length > 0 && (
 				<div className="view-bar">
 					<SearchBox label="Search projects" value={search} onChange={setSearch} />
-					<Menu label="View options" icon="settings-gear" always sections={options} />
+					<ViewOptions sections={options} />
 				</div>
 			)}
 			{projects.length === 0 ? (

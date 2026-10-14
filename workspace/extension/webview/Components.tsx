@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import { summaryOf } from '../../src/shared/accessibility';
 import { groupsFound } from '../../src/shared/catalog';
-import type { AccessibilityCounts, CatalogComponent, ComponentPictures } from '../../src/shared/contract';
+import type { CatalogComponent, ComponentPictures } from '../../src/shared/contract';
 import type { ComponentLink } from '../src/messages';
-import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 import { Grid } from './ui/Grid';
 import { List } from './ui/List';
@@ -11,9 +9,9 @@ import { type MenuItem, Menu } from './ui/Menu';
 import { Row } from './ui/Row';
 import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
-import { Toggle } from './ui/Toggle';
+import { ViewOptions } from './ui/ViewOptions';
 import { NoMatches } from './ui/NoMatches';
-import { LAYOUTS } from './layouts';
+import { layoutSection } from './layouts';
 import type { View } from './vscode';
 
 /**
@@ -27,14 +25,10 @@ const Picture = ({ src, drawing, className }: { src: string | undefined; drawing
 		<span data-part="picture" data-drawing={drawing || undefined} aria-hidden="true" className={className} />
 	);
 
-/** How many issues axe found in its stories (T7), as its card says: none is shown as nothing, never as a pass. */
-const Issues = ({ issues }: { issues: AccessibilityCounts | undefined }) =>
-	issues && issues.violations > 0 ? <Badge count={issues.violations} label={summaryOf(issues)} /> : undefined;
-
 /**
  * The design system's components (6.1): a search and Grid or List, as the projects have, then a section for each group in
  * the order the library lists them (a group with nothing found is left out), each component a card or a row with its
- * picture and what axe found. Pressed, a component opens in its own tab; its menu has its links too.
+ * picture. Pressed, a component opens in its own tab; its menu has its links too.
  */
 export const ComponentsView = ({
 	components,
@@ -67,26 +61,16 @@ export const ComponentsView = ({
 		};
 		const picture = pictures.pictures[c.id];
 		return view === 'grid' ? (
-			<Card
-				key={c.id}
-				{...shared}
-				picture={<Picture src={picture} drawing={pictures.drawing} className="card-picture" />}
-				badge={<Issues issues={pictures.issues[c.id]} />}
-			/>
+			<Card key={c.id} {...shared} picture={<Picture src={picture} drawing={pictures.drawing} className="card-picture" />} />
 		) : (
-			<Row
-				key={c.id}
-				{...shared}
-				start={<Picture src={picture} drawing={pictures.drawing} className="picture" />}
-				end={<Issues issues={pictures.issues[c.id]} />}
-			/>
+			<Row key={c.id} {...shared} start={<Picture src={picture} drawing={pictures.drawing} className="picture" />} />
 		);
 	};
 	return (
 		<>
 			<div className="view-bar">
 				<SearchBox label="Search components" value={search} onChange={setSearch} />
-				<Toggle label="Layout" options={LAYOUTS} value={view} onChange={onView} iconOnly />
+				<ViewOptions sections={[layoutSection(view, onView)]} />
 			</div>
 			{groups.length === 0 ? (
 				<NoMatches thing="component" search={search} onClear={() => setSearch('')} />

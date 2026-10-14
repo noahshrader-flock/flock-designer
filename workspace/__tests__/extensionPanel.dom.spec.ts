@@ -894,6 +894,7 @@ describe('the projects as a list or a grid', () => {
 		]);
 		expect(cards()[0]!.querySelector('[data-part="meta"]')?.textContent).toBe('3 iterations');
 		expect(cards()[0]!.querySelector('.badge')?.getAttribute('aria-label')).toBe('2 open comments');
+		expect(cards()[0]!.querySelector('.badge')?.classList.contains('badge-brand')).toBe(true);
 		expect(cards()[1]!.querySelector('.badge')).toBeNull();
 		expect(cards()[0]!.querySelector('[data-part="picture"]')).not.toBeNull();
 	});
@@ -1304,6 +1305,8 @@ describe('Design System', () => {
 		await read();
 		expect(body().querySelector('.ds-name')?.textContent).toBe('FUI');
 		expect(body().querySelector('.ds-branch')?.textContent).toBe('develop');
+		// The branch's icon is extra small, beside its words.
+		expect(body().querySelector('.ds-branch .codicon')?.classList.contains('icon-xs')).toBe(true);
 		expect([...parts().querySelectorAll('[role="radio"]')].map((o) => [o.textContent, o.getAttribute('aria-checked')])).toEqual([
 			['Components', 'true'],
 			['Tokens', 'false'],
@@ -1311,6 +1314,8 @@ describe('Design System', () => {
 		await press(body().querySelector('[aria-label="Sync with GitHub"]') as HTMLElement);
 		expect(calls('designSystemCatalog').at(-1)?.args).toEqual([true]);
 		// Its menu opens what needs the editor's room: Primitives, and the voice and tone, a document of its own.
+		// Always there, small, not only on hover as a row's is.
+		expect(body().querySelector('[aria-label="Design system actions"]')?.className).toBe('menu-button menu-button-small menu-button-shown');
 		await press(body().querySelector('[aria-label="Design system actions"]') as HTMLElement);
 		const items = [...body().querySelectorAll<HTMLElement>('.ds-actions [role="menuitem"]')];
 		expect(items.map((i) => i.textContent)).toEqual(['Open Primitives', 'Open Voice and Tone']);
@@ -1318,7 +1323,7 @@ describe('Design System', () => {
 		expect(panelSaid().at(-1)).toEqual({ type: 'open-voice-and-tone' });
 	});
 
-	it('lists its components under their groups, as cards with their pictures, the first view, and what axe found', async () => {
+	it('lists its components under their groups, as cards with their pictures, the first view, and no count of what axe found on them', async () => {
 		const picture = 'http://127.0.0.1:4321/pictures/fsbutton.jpg';
 		await read(SAMPLE_CATALOG, {
 			pictures: { 'src/components/FSButton/FSButton.stories.tsx': picture },
@@ -1332,7 +1337,8 @@ describe('Design System', () => {
 		expect(namesUnder(section('Buttons'))).toEqual(['FSButton', 'FSIconButton', 'FSSplitButton']);
 		expect(under(section('Buttons')).firstElementChild?.className).toBe('grid');
 		expect(under(section('Buttons')).querySelector('img')?.getAttribute('src')).toBe(picture);
-		expect(under(section('Feedback')).querySelector('.badge')?.getAttribute('aria-label')).toBe('2 automated issues, 1 needs a person');
+		// What axe found is read, but not drawn on the card: nothing counts on a component for now.
+		expect(body().querySelector('.badge')).toBeNull();
 	});
 
 	it('opens a component in its own tab when pressed, and its links from its menu, naming it only', async () => {
@@ -1350,14 +1356,34 @@ describe('Design System', () => {
 		expect([...other.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Open', 'Source on GitHub']);
 	});
 
+	it('keeps the Components and Tokens toggle and the search bar together, as siblings, which the stylesheet stacks at the top', async () => {
+		await read();
+		expect(body().querySelector('.ds-part ~ .view-bar')).not.toBeNull();
+		await press(parts().querySelectorAll<HTMLElement>('[role="radio"]')[1]!);
+		expect(body().querySelector('.ds-part ~ .view-bar')).not.toBeNull();
+	});
+
+	it('has the same search and view options as Projects, with only the layout to choose: the toolbar is one pattern', async () => {
+		await read();
+		const bar = body().querySelector('.view-bar') as HTMLElement;
+		expect([...bar.children].map((c) => (c.querySelector('input') ? 'search' : c.querySelector('button')?.getAttribute('aria-label')))).toEqual([
+			'search',
+			'View options',
+		]);
+		expect(await checked('Grid')).toBe('true');
+		expect(await checked('List')).toBe('false');
+		const menu = document.querySelector('[role="menu"]') as HTMLElement;
+		expect([...menu.querySelectorAll('.menu-heading')].map((h) => h.textContent)).toEqual(['Layout']);
+		expect(menu.querySelectorAll('[role="separator"]')).toHaveLength(0);
+		expect(body().querySelector('[aria-label="Layout"][role="radiogroup"]')).toBeNull();
+	});
+
 	it('finds components by the search, says when none matches, and is a list when chosen', async () => {
 		await read();
 		const search = body().querySelector('input[aria-label="Search components"]') as HTMLInputElement;
 		await type(search, 'select');
 		expect(titles()).toEqual([['Inputs', '1']]);
-		await press(
-			[...body().querySelectorAll<HTMLElement>('[aria-label="Layout"] [role="radio"]')].find((o) => o.getAttribute('aria-label') === 'List')!,
-		);
+		await viewChoice('List');
 		expect(under(section('Inputs')).firstElementChild?.className).toBe('list');
 		await type(search, 'nothing like it');
 		expect(body().querySelector('.note')?.textContent).toContain('No component matches “nothing like it”.');
@@ -1432,9 +1458,19 @@ describe('Design System', () => {
 			tokens: { ...SAMPLE_CATALOG.tokens, problems: [{ file: 'src/colors/tones.ts', line: 9, reason: 'A value worked out as it runs.' }] },
 		});
 		expect(body().querySelector('[data-update-failed]')?.textContent).toContain('Could not update from GitHub: Could not reach GitHub.');
-		await press(button('1 value in its token files is not read'));
+		// What is not read is a count beside Sync, the bubble a button that says it, not a line of its own.
+		const bubble = body().querySelector('.ds-actions [aria-label="1 value in its token files is not read"]') as HTMLElement;
+		expect(bubble.textContent).toBe('1');
+		expect(bubble.className).toBe('badge badge-warning badge-button');
+		expect(body().querySelector('.note .link')).toBeNull();
+		await press(bubble);
 		const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
 		expect(dialog.textContent).toContain('src/colors/tones.ts:9 A value worked out as it runs.');
+	});
+
+	it('has no bubble when every value is read', async () => {
+		await read();
+		expect(body().querySelector('.ds-actions .badge')).toBeNull();
 	});
 
 	it('says when the design system is no longer on this computer, and offers to locate it', async () => {

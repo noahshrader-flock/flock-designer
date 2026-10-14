@@ -11,6 +11,7 @@ import type { ComponentLink } from '../src/messages';
 import { ComponentsView } from './Components';
 import { TokensView } from './Tokens';
 import type { CatalogRead } from './useCatalog';
+import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Dialog, DialogButtons } from './ui/Dialog';
 import { EmptyState } from './ui/EmptyState';
@@ -61,8 +62,9 @@ const Problems = ({ problems, onClose }: { problems: Extract<Catalog, { state: '
 );
 
 /**
- * The design system, read (6.1): its name and branch, Sync and its menu (Primitives, the voice and tone), what is wrong with it if anything (an
- * update that failed, values not read), what has been changed and its branch, then Components or Tokens. The change to
+ * The design system, read (6.1): its name, its branch under it, Sync and its menu (Primitives, the voice and tone) beside the
+ * name, with a count of the values not read as a button that opens them; what else is wrong with it if anything (an
+ * update that failed), what has been changed and its branch, then Components or Tokens. The change to
  * the tokens being tried is the extension's (`edits`), so its tabs see it too; every token row here shows the tokens as
  * changed, and a token that can be changed opens its control when pressed (6.2).
  */
@@ -106,11 +108,19 @@ const Ready = ({
 						{name}
 					</span>
 					<span data-part="branch" className="ds-branch" title={`Read from ${catalog.branch} on ${HOST}`}>
-						<Icon name="git-branch" />
+						<Icon name="git-branch" size="xs" />
 						{catalog.branch}
 					</span>
 				</span>
 				<span className="ds-actions">
+					{notRead > 0 && (
+						<Badge
+							tone="warning"
+							count={notRead}
+							label={`${plural(notRead, 'value')} in its token files ${notRead === 1 ? 'is' : 'are'} not read`}
+							onPress={() => setProblems(true)}
+						/>
+					)}
 					<IconButton
 						size="small"
 						icon={syncing ? 'sync' : 'refresh'}
@@ -121,6 +131,7 @@ const Ready = ({
 					<Menu
 						label="Design system actions"
 						size="small"
+						always
 						sections={[
 							{
 								items: [
@@ -135,13 +146,6 @@ const Ready = ({
 			{typeof catalog.update === 'object' && (
 				<p data-update-failed className="note note-warning">
 					<Icon name="warning" /> Could not update from {HOST}: {catalog.update.failed} It is shown as this computer last had it.
-				</p>
-			)}
-			{notRead > 0 && (
-				<p className="note">
-					<button type="button" className="link" onClick={() => setProblems(true)}>
-						{plural(notRead, 'value')} in its token files {notRead === 1 ? 'is' : 'are'} not read
-					</button>
 				</p>
 			)}
 			<Changed controls={branch} />
