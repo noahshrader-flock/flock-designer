@@ -1,4 +1,5 @@
 import type { Result } from './contract';
+import { hasExactly } from './validate';
 
 /**
  * A prototype's review page, framed in DSNR's review tab in VS Code, comments through the extension's sign-in rather than
@@ -31,7 +32,6 @@ export interface RelayAsk {
 export type RelayTell = { dsnr: 'hello' } | { dsnr: 'answer'; id: number; result: Result<unknown> };
 
 const CALLS = new Set<string>(RELAY_CALLS);
-const exactly = (raw: object, keys: string[]): boolean => Object.keys(raw).length === keys.length && keys.every((k) => k in raw);
 const isId = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v > 0;
 const isResult = (v: unknown): v is Result<unknown> =>
 	typeof v === 'object' &&
@@ -43,7 +43,7 @@ export const readRelayAsk = (raw: unknown): RelayAsk | null => {
 	if (typeof raw !== 'object' || raw === null) return null;
 	const m = raw as Record<string, unknown>;
 	return m.dsnr === 'ask' &&
-		exactly(m, ['dsnr', 'id', 'name', 'args']) &&
+		hasExactly(m, ['dsnr', 'id', 'name', 'args']) &&
 		isId(m.id) &&
 		typeof m.name === 'string' &&
 		CALLS.has(m.name) &&
@@ -56,8 +56,8 @@ export const readRelayAsk = (raw: unknown): RelayAsk | null => {
 export const readRelayTell = (raw: unknown): RelayTell | null => {
 	if (typeof raw !== 'object' || raw === null) return null;
 	const m = raw as Record<string, unknown>;
-	if (m.dsnr === 'hello') return exactly(m, ['dsnr']) ? { dsnr: 'hello' } : null;
-	return m.dsnr === 'answer' && exactly(m, ['dsnr', 'id', 'result']) && isId(m.id) && isResult(m.result)
+	if (m.dsnr === 'hello') return hasExactly(m, ['dsnr']) ? { dsnr: 'hello' } : null;
+	return m.dsnr === 'answer' && hasExactly(m, ['dsnr', 'id', 'result']) && isId(m.id) && isResult(m.result)
 		? { dsnr: 'answer', id: m.id, result: m.result }
 		: null;
 };

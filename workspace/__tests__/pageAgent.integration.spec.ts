@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { build } from 'esbuild';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import PAGE_AGENT from '../src/page/agentMain?page';
-import { findChrome } from '../src/main/services/chromeHeadless';
+import { NO_CHROME, inChrome } from './realChrome';
 
 /**
  * The review bar and a prototype's page, talking by message in the real browser (REVIEW_ISOLATION_PLAN 1.4): the bar's
@@ -73,16 +73,14 @@ afterAll(async () => {
 	await new Promise((r) => pages.close(r));
 });
 
-describe.skipIf(findChrome() === null)('the bar and the page, by message, in the real browser', () => {
+describe.skipIf(NO_CHROME)('the bar and the page, by message, in the real browser', () => {
 	it.each([
 		['beside its bar (the published site)', '/bar.html'],
 		['on the pages’ own address, sandboxed (VS Code, REVIEW_ISOLATION_PLAN 2.5)', '/bar-apart.html'],
 	])(
 		'picks a spot, draws its pin, hears the pin clicked and the route move, the page %s',
 		async (_where, at) => {
-			const { default: puppeteer } = await import('puppeteer-core');
-			const browser = await puppeteer.launch({ executablePath: findChrome() as string, headless: true });
-			try {
+			await inChrome(async (browser) => {
 				const tab = await browser.newPage();
 				await tab.goto(`${base}${at}`, { waitUntil: 'load' });
 				// The bar's driver on its frame, and what it hears.
@@ -102,8 +100,10 @@ describe.skipIf(findChrome() === null)('the bar and the page, by message, in the
 				// A pick, made by a click on the page.
 				await tab.evaluate(() => void ((window as any).picking = (window as any).page.pick()));
 				const frame = tab.frames().find((f) => f.url().endsWith('page.html'));
-				await new Promise((r) => setTimeout(r, 200));
-				await frame?.click('button');
+				if (!frame) throw new Error('the prototype’s frame is not on the tab');
+				// Pick mode is on once the page has its crosshair.
+				await frame.waitForSelector('style[data-fd="pick"]');
+				await frame.click('button');
 				const picked = await tab.evaluate(() => (window as any).picking);
 				expect(picked.ok).toBe(true);
 				expect(picked.value.anchor).toMatchObject({ route: '/', selector: '[data-e2e-ref="clear-filter-button"]', nearbyText: 'Clear Filter' });
@@ -116,17 +116,15 @@ describe.skipIf(findChrome() === null)('the bar and the page, by message, in the
 				expect(drawn).toEqual({ ok: true, value: [{ id: 7, state: 'found' }] });
 				// The pin: a teardrop on its own layer, over the page (`pins.ts`), numbered as asked.
 				const pin = '[data-fd-layer="pins"] > div > div';
-				expect(await frame?.$eval(pin, (el) => el.textContent)).toBe('1');
-				await frame?.click(pin);
+				expect(await frame.$eval(pin, (el) => el.textContent)).toBe('1');
+				await frame.click(pin);
 				// The page's route moving within it.
-				await frame?.evaluate(() => void (location.hash = '#/other'));
-				await new Promise((r) => setTimeout(r, 300));
+				await frame.evaluate(() => void (location.hash = '#/other'));
+				await tab.waitForFunction(() => (window as any).heard.some((h: { route?: string }) => h.route?.endsWith('#/other')));
 				const heard = await tab.evaluate(() => (window as any).heard);
 				expect(heard).toContainEqual({ kind: 'click', id: 7 });
 				expect(heard).toContainEqual({ route: '/review/alpha/v1/i1/page.html#/other' });
-			} finally {
-				await browser.close();
-			}
+			});
 		},
 		60_000,
 	);

@@ -2,6 +2,12 @@ import { randomBytes } from 'node:crypto';
 import { escapeHtml } from '../../src/shared/html';
 import type { DesignTab } from './messages';
 
+/** This machine's server's two addresses, as DSNR's pages name them: pictures from its own, frames (a repository's code) from the pages'. */
+export interface LocalAddresses {
+	images: string;
+	frames: string;
+}
+
 /**
  * The page DSNR's panel loads, as tight as VS Code's webview guidance asks: nothing loads unless named here, the one
  * script runs by a nonce made for this page, and styles, fonts and pictures come only from the extension's own build
@@ -23,8 +29,7 @@ export const panelHtml = ({
 	script: string;
 	style: string;
 	codicons: string;
-	/** This machine's server's two addresses: pictures from its own, frames (a library's code) from the pages'. */
-	local: { images: string; frames: string };
+	local: LocalAddresses;
 	tab?: DesignTab;
 }): string => {
 	const policy = [

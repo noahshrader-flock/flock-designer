@@ -42,11 +42,9 @@ describe('a prototype’s page agent', () => {
 		send({ dsnr: 'page-ask', id: 1, call: 'draw-pins', args: [[{ id: 1, number: 1 }]] });
 		expect(page.drawPins).toHaveBeenCalledWith([{ id: 1, number: 1 }], 'n1');
 		send({ dsnr: 'page-ask', id: 2, call: 'pick', args: [] });
-		send({ dsnr: 'page-ask', id: 3, call: 'route', args: [] });
 		await settle();
 		expect(told().slice(1)).toEqual([
 			[{ dsnr: 'page-answer', n: 'n1', id: 1, value: [{ id: 1, state: 'found' }] }, BAR],
-			[{ dsnr: 'page-answer', n: 'n1', id: 3, value: '/review/a/v1/i1/page.html#/alerts' }, BAR],
 			[{ dsnr: 'page-answer', n: 'n1', id: 2, value: { selector: 'main', at: { x: 1, y: 2 } } }, BAR],
 		]);
 	});

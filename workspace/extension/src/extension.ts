@@ -109,7 +109,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		api,
 		panels,
 		systems: core.designSystems,
-		origin: () => localAddresses(),
+		local: () => localAddresses(),
 		openVoiceAndTone: voice.open,
 		openExternal: vscodeOpen,
 		tell: vscodeTell,

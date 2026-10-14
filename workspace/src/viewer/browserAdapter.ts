@@ -42,7 +42,6 @@ const ANSWER_MS = 10_000;
 
 /** What the review bar knows of the page in its frame: what it can be asked (`PageSurface`), and when it is up or moved. */
 export type FramePage = PageSurface & {
-	route(): Promise<string>;
 	/** Told each time the page is up (each load), with its route, and at once when it is up already: its pins are drawn then. */
 	onReady(listener: (route: string) => void): () => void;
 	/** Told when the page's route moves within it: the pins are drawn again. */
@@ -134,7 +133,6 @@ export const framePage = (frame: HTMLIFrameElement, win: Window = window): Frame
 		showMarkers: (items) => toResult(ask<unknown>('draw-pins', [items]).then((raw) => readMarkers(raw, items))),
 		focusMarker: (id) => ask('focus', [id]),
 		onPinEvent: on(pins),
-		route: async () => String((await ask<unknown>('route')) ?? ''),
 		onReady: (listener) => {
 			if (ready) listener(readyAt);
 			return on(readies)(listener);

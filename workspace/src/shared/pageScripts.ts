@@ -8,7 +8,7 @@ import type { MarkerRequest } from './contract';
  *
  * Text, not functions: a script is run in another process, so it is sent as source. Each script returns its result to
  * the app. The page is given no function to call; the one thing a pin needs to say back ("I was clicked", "I was moved")
- * goes out as a console message carrying a per-preview secret, which the app listens for and validates. The page can see
+ * goes out as a console message carrying a per-preview secret, which the app listens for and validates (`pageReaders.ts`, as the review bar's answers are). The page can see
  * these scripts and could tamper with them or forge a message, which is why everything that comes back is validated, and
  * why the worst a forged message can do is move or select a pin that exists.
  */
@@ -34,6 +34,3 @@ export const ROUTE_SCRIPT = 'location.pathname + location.hash';
  * address it happens to be served at. The same comment then has its pin in the app and on the published site.
  */
 export const SINGLE_PAGE = 'window.__fdSinglePage = true;';
-
-// What the scripts answer is read by the same readers wherever a page is driven (`pageReaders.ts`).
-export { type PickedSpot, readMarkers, readPick, readPinMessage } from './pageReaders';

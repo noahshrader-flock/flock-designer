@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import PAGE_AGENT from '../src/page/agentMain?page';
 import { reviewPage } from '../extension/src/review';
-import { findChrome } from '../src/main/services/chromeHeadless';
+import { NO_CHROME, inChrome } from './realChrome';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { buildSite } from '../src/site/buildSite';
 import { serveSite } from '../src/site/serveSite';
@@ -118,10 +118,8 @@ afterAll(async () => {
  * A review tab open on `bar`, once the hostile page has made each of its `steps`: what it managed, what reached VS Code,
  * what reached the bar, and where the tab ended.
  */
-const review = async (bar: string, steps: string[]) => {
-	const { default: puppeteer } = await import('puppeteer-core');
-	const browser = await puppeteer.launch({ executablePath: findChrome() as string, headless: true });
-	try {
+const review = (bar: string, steps: string[]) =>
+	inChrome(async (browser) => {
 		const tab = await browser.newPage();
 		let tried: Record<string, string> = {};
 		const made = new Set<string>();
@@ -158,15 +156,12 @@ const review = async (bar: string, steps: string[]) => {
 				.find((f) => f.url().endsWith('page.html'))
 				?.url() ?? null;
 		return { tried, toExtension: ended, heard, owned, copied, made, hijacked: at.includes('hijacked'), pageAt };
-	} finally {
-		await browser.close();
-	}
-};
+	});
 
 /** What the hostile page does in every review, before what is asked of it is read. */
 const STEPS = ['deep', 'copy loaded'];
 
-describe.skipIf(findChrome() === null)('a hostile prototype in a review, in the real browser', () => {
+describe.skipIf(NO_CHROME)('a hostile prototype in a review, in the real browser', () => {
 	it('on the pages’ own address, reaches nothing of the bar, the tab or the extension, and still works as itself', async () => {
 		const base = await site(true);
 		const r = await review(`${base}alpha/v1/i1/`, STEPS);

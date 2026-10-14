@@ -4,7 +4,7 @@ import type { TokenEdit } from '../../src/shared/domain/designSystem';
 import { MOST_EDITS } from '../../src/shared/tokens';
 import type { Project } from '../../src/shared/domain/projects';
 import { isPrototypeName } from '../../src/shared/prototypeNames';
-import { PROJECT_ID } from '../../src/shared/validate';
+import { PROJECT_ID, hasExactly } from '../../src/shared/validate';
 import { iterationLabel, workOf } from '../../src/shared/work';
 
 /**
@@ -97,17 +97,12 @@ const isPath = (v: unknown): v is string => typeof v === 'string' && v.length > 
 /** The most a name, what a prototype explores, and a folder's name may be: more is not what a person wrote in a box. */
 export const LIMITS = { title: 300, task: 4000, folder: 100 };
 
-const hasKeys = (raw: object, keys: string[]): boolean => {
-	const own = Object.keys(raw).sort();
-	return own.length === keys.length && own.every((k, i) => k === [...keys].sort()[i]);
-};
-
 /** The message, or null for anything that is not one exactly. */
 export const readMessage = (raw: unknown): PanelMessage | null => {
 	if (typeof raw !== 'object' || raw === null) return null;
 	const m = raw as Record<string, unknown>;
 	if (m.type === 'call')
-		return hasKeys(m, ['type', 'id', 'name', 'args']) &&
+		return hasExactly(m, ['type', 'id', 'name', 'args']) &&
 			typeof m.id === 'number' &&
 			Number.isSafeInteger(m.id) &&
 			m.id > 0 &&
@@ -117,7 +112,7 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 			? { type: 'call', id: m.id, name: m.name as InvokeName, args: m.args }
 			: null;
 	if (m.type === 'open-review' || m.type === 'open-review-in-browser')
-		return hasKeys(m, ['type', 'projectId', 'name', 'title']) &&
+		return hasExactly(m, ['type', 'projectId', 'name', 'title']) &&
 			typeof m.projectId === 'string' &&
 			PROJECT_ID.test(m.projectId) &&
 			typeof m.name === 'string' &&
@@ -127,7 +122,7 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 			? { type: m.type, projectId: m.projectId, name: m.name, title: m.title }
 			: null;
 	if (m.type === 'codebase')
-		return hasKeys(m, ['type', 'action', 'projectId']) &&
+		return hasExactly(m, ['type', 'action', 'projectId']) &&
 			typeof m.action === 'string' &&
 			(CODEBASE_ACTIONS as readonly string[]).includes(m.action) &&
 			typeof m.projectId === 'string' &&
@@ -135,7 +130,7 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 			? { type: 'codebase', action: m.action as CodebaseAction, projectId: m.projectId }
 			: null;
 	if (m.type === 'new-prototype')
-		return hasKeys(m, ['type', 'title', 'task', 'folder']) &&
+		return hasExactly(m, ['type', 'title', 'task', 'folder']) &&
 			typeof m.title === 'string' &&
 			m.title.length <= LIMITS.title &&
 			typeof m.task === 'string' &&
@@ -143,18 +138,20 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 			(m.folder === null || (typeof m.folder === 'string' && m.folder.length <= LIMITS.folder))
 			? { type: 'new-prototype', title: m.title, task: m.task, folder: m.folder }
 			: null;
-	if (m.type === 'open-component') return hasKeys(m, ['type', 'id']) && isPath(m.id) ? { type: 'open-component', id: m.id } : null;
+	if (m.type === 'open-component') return hasExactly(m, ['type', 'id']) && isPath(m.id) ? { type: 'open-component', id: m.id } : null;
 	if (m.type === 'component-link')
-		return hasKeys(m, ['type', 'id', 'link']) && isPath(m.id) && (COMPONENT_LINKS as readonly unknown[]).includes(m.link)
+		return hasExactly(m, ['type', 'id', 'link']) && isPath(m.id) && (COMPONENT_LINKS as readonly unknown[]).includes(m.link)
 			? { type: 'component-link', id: m.id, link: m.link as ComponentLink }
 			: null;
 	if (m.type === 'open-token-source')
-		return hasKeys(m, ['type', 'file', 'line']) && isPath(m.file) && Number.isSafeInteger(m.line) && (m.line as number) > 0
+		return hasExactly(m, ['type', 'file', 'line']) && isPath(m.file) && Number.isSafeInteger(m.line) && (m.line as number) > 0
 			? { type: 'open-token-source', file: m.file, line: m.line as number }
 			: null;
 	if (m.type === 'token-edits')
-		return hasKeys(m, ['type', 'edits']) && Array.isArray(m.edits) && m.edits.length <= MOST_EDITS ? { type: 'token-edits', edits: m.edits } : null;
-	return typeof m.type === 'string' && BARE.has(m.type) && hasKeys(m, ['type']) ? ({ type: m.type } as PanelMessage) : null;
+		return hasExactly(m, ['type', 'edits']) && Array.isArray(m.edits) && m.edits.length <= MOST_EDITS
+			? { type: 'token-edits', edits: m.edits }
+			: null;
+	return typeof m.type === 'string' && BARE.has(m.type) && hasExactly(m, ['type']) ? ({ type: m.type } as PanelMessage) : null;
 };
 
 /** A review a command was given (DSNR: Open a prototype for review, from code), read as the panel's message is, or null. */

@@ -2,7 +2,7 @@ import { watch } from 'node:fs';
 import * as vscode from 'vscode';
 import { type DesignSystemAsks, type Panels, answerPage } from './bridge';
 import { afterQuiet, whatChanged } from './devReload';
-import { newNonce, panelHtml } from './html';
+import { type LocalAddresses, newNonce, panelHtml } from './html';
 import { type CodebaseAction, type DesignTab, type HostMessage, type Review, readMessage } from './messages';
 import type { Given } from './newPrototype';
 import { failed } from './ui';
@@ -11,7 +11,7 @@ import { failed } from './ui';
  * A DSNR page in `webview`: the panel, or a design system's tab (`tab`), from the extension's own build in `dist`,
  * framing and showing pictures from this machine's server (`local`) alone.
  */
-export const dsnrPage = (webview: vscode.Webview, dist: vscode.Uri, local: { images: string; frames: string }, tab?: DesignTab): string => {
+export const dsnrPage = (webview: vscode.Webview, dist: vscode.Uri, local: LocalAddresses, tab?: DesignTab): string => {
 	const asset = (name: string) => webview.asWebviewUri(vscode.Uri.joinPath(dist, name)).toString();
 	return panelHtml({
 		cspSource: webview.cspSource,
@@ -27,8 +27,7 @@ export const dsnrPage = (webview: vscode.Webview, dist: vscode.Uri, local: { ima
 interface PanelDeps {
 	extensionUri: vscode.Uri;
 	panels: Panels;
-	/** This machine's server's addresses: pictures from its own, stories framed from the pages'. */
-	local: () => Promise<{ images: string; frames: string }>;
+	local: () => Promise<LocalAddresses>;
 	/** The design system's asks, made once the core is: the page asks them only once it is shown. */
 	design: () => DesignSystemAsks;
 	/** What is open now (the product, its design system, the design repository, and what is missing), as the page is told it. */

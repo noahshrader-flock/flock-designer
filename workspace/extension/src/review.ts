@@ -198,14 +198,14 @@ export class Reviews {
  * Builds the site for reviews from the design repository's records, with the viewer the extension carries; its pages are
  * served from `pagesAt`, the pages' own address (REVIEW_ISOLATION_PLAN 2.2), not beside their bar.
  */
-export const buildReviewSite = (siteDir: string, viewerDir: string) => (records: string, pagesAt?: string) => {
+export const buildReviewSite = (siteDir: string, viewerDir: string) => (records: string, pagesAt: string) => {
 	mkdirSync(dirname(siteDir), { recursive: true });
 	buildSite({
 		designRoot: dirname(records),
 		outDir: siteDir,
 		comments: undefined,
 		viewer: { dir: viewerDir, ref: DESIGN_REPO },
-		...(pagesAt ? { pagesAt } : {}),
+		pagesAt,
 	});
 };
 

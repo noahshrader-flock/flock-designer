@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MarkerRequest } from '../src/shared/contract';
-import { readMarkers, readPick, readPinMessage } from '../src/shared/pageScripts';
+import { readMarkers, readPick, readPinMessage } from '../src/shared/pageReaders';
 import { MESSAGE_PREFIX } from '../src/shared/pinMessage';
 import { type PrototypeChange, whereTheChangeGoes } from '../src/main/services/prototypeWork';
 

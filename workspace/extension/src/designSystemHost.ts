@@ -10,6 +10,7 @@ import { DesignTabs } from './designTabs';
 import { type HostMessage, readComponentArg, readMessage } from './messages';
 import { type DesignSystemAsks, answerPage } from './bridge';
 import { dsnrPage } from './panel';
+import type { LocalAddresses } from './html';
 
 /**
  * The design system in VS Code (6.1, 6.2), wired: the change to its tokens being tried, kept here for every page
@@ -23,7 +24,7 @@ export const designSystemHost = ({
 	api,
 	panels,
 	systems,
-	origin,
+	local,
 	openVoiceAndTone,
 	openExternal,
 	tell,
@@ -37,8 +38,7 @@ export const designSystemHost = ({
 	panels: Panels;
 	/** The design system the core shows, whose clone a token's file is in. */
 	systems: Pick<DesignSystemsMemory, 'current'>;
-	/** This machine's server's addresses: pictures from its own, stories framed from the pages'. */
-	origin: () => Promise<{ images: string; frames: string }>;
+	local: () => Promise<LocalAddresses>;
 	openVoiceAndTone: () => Promise<void>;
 	openExternal: (url: string) => Promise<void>;
 	tell: Tell;
@@ -54,7 +54,7 @@ export const designSystemHost = ({
 				// Its stories stay drawn while another tab is in front, rather than being built and drawn again.
 				retainContextWhenHidden: true,
 			}),
-		page: async (webview, tab) => dsnrPage(webview as VsCode.Webview, dist, await origin(), tab),
+		page: async (webview, tab) => dsnrPage(webview as VsCode.Webview, dist, await local(), tab),
 		panels,
 		receive: async (webview, raw) => {
 			const message = readMessage(raw);

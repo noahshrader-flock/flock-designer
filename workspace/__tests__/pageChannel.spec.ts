@@ -17,13 +17,14 @@ describe('what the bar asks the page', () => {
 		[{ dsnr: 'page-ask', id: 4, call: 'cancel-pick', args: [] }],
 		[{ dsnr: 'page-ask', id: 5, call: 'draw-pins', args: [[{ id: 1, number: 1 }]] }],
 		[{ dsnr: 'page-ask', id: 6, call: 'focus', args: [7] }],
-		[{ dsnr: 'page-ask', id: 7, call: 'route', args: [] }],
 	])('%o is read', (m) => expect(readPageAsk(m)).toEqual(m));
 
 	it.each([
 		[null],
 		['pick'],
 		[{ dsnr: 'page-ask', id: 1, call: 'eval', args: ['alert(1)'] }],
+		// The route is told, when the page is up and when it moves; never asked.
+		[{ dsnr: 'page-ask', id: 7, call: 'route', args: [] }],
 		[{ dsnr: 'page-ask', id: -1, call: 'pick', args: [] }],
 		[{ dsnr: 'page-ask', id: 1.5, call: 'pick', args: [] }],
 		[{ dsnr: 'page-ask', id: 1, call: 'pick', args: 'x' }],

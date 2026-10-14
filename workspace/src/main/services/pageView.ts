@@ -2,18 +2,8 @@ import { type BrowserWindow, WebContentsView, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
 import type { MarkerRequest, MarkerResult, PageBounds, PageHoldReason, PickedPoint, PinEvent } from '../../shared/contract';
 import { assertPreviewUrl } from '../../shared/anchor';
-import {
-	CANCEL_PICK_SCRIPT,
-	PICK_SCRIPT,
-	ROUTE_SCRIPT,
-	SINGLE_PAGE,
-	focusScript,
-	layerVisibleScript,
-	readMarkers,
-	readPick,
-	readPinMessage,
-	resolveScript,
-} from '../../shared/pageScripts';
+import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, ROUTE_SCRIPT, SINGLE_PAGE, focusScript, layerVisibleScript, resolveScript } from '../../shared/pageScripts';
+import { readMarkers, readPick, readPinMessage } from '../../shared/pageReaders';
 import { type Box, cropRect, frameRect, jpegDataUrl, toPicture } from './picture';
 import { keepToOrigin, sandboxedPreferences } from './sandboxedPage';
 import { errorText } from '../../shared/result';

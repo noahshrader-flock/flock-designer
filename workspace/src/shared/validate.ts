@@ -1,5 +1,9 @@
 /** Values read from a file or the window, checked: each is what it should be, or nothing. Ids and slugs too. */
 
+/** Whether a message read from elsewhere has these keys of its own and no others: what is read is exactly what was meant. */
+export const hasExactly = (raw: object, keys: readonly string[]): boolean =>
+	Object.keys(raw).length === keys.length && keys.every((k) => Object.hasOwn(raw, k));
+
 /** The only shape a project id may take: lower-case words joined by single hyphens. */
 export const PROJECT_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 

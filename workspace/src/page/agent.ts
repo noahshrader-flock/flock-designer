@@ -2,12 +2,9 @@ import { type PageAsk, readPageAsk } from '../shared/pageChannel';
 import type { MarkerRequest } from '../shared/contract';
 
 /** What the agent uses of the page's window: its parent, its address, its events, and the page code's hooks. */
-export type AgentWindow = Pick<Window, 'addEventListener'> & {
+export type AgentWindow = Pick<Window, 'addEventListener' | '__fdCancelPick' | '__fdMarkers' | '__fdReport'> & {
 	parent: { postMessage(message: unknown, targetOrigin: string): void };
 	location: { pathname: string; hash: string };
-	__fdCancelPick?: () => void;
-	__fdMarkers?: { stop: () => void; focus: (id: number) => void };
-	__fdReport?: (text: string) => void;
 };
 
 /** The page code the agent runs (`src/page`): given, so a test can stand in for it. */
@@ -56,8 +53,6 @@ export const installAgent = (win: AgentWindow, page: PageCode): void => {
 				case 'focus':
 					win.__fdMarkers?.focus(Number.isInteger(ask.args[0]) ? (ask.args[0] as number) : -1);
 					return done(null);
-				case 'route':
-					return done(route());
 			}
 		} catch {
 			done(null);
