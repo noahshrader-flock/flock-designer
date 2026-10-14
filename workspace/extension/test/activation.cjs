@@ -65,6 +65,9 @@ exports.run = async () => {
 	// panel, without failing. (What the page then draws is tested in its own tests; this cannot see inside a webview.)
 	await vscode.commands.executeCommand('dsnr.newPrototype');
 	await vscode.commands.executeCommand('dsnr.assignFolder', { webviewSection: 'project', projectId: 'made-here' });
+	// …and so are the sync's, from the status bar, and the account's, from the title bar (nobody is signed in here, so it does nothing).
+	await vscode.commands.executeCommand('dsnr.sync');
+	await vscode.commands.executeCommand('dsnr.account');
 
 	// The design system (6.1), when the world has one: found beside the product, read from its develop, a component opened
 	// in its own tab and Primitives in another, and its components pictured by the browser here, in DSNR's own storage.

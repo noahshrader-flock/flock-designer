@@ -1,7 +1,8 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { useWorkspace } from '../../src/renderer/useWorkspace';
 import { stripAnchor } from '../../src/shared/anchor';
-import type { BuildInCodebase } from '../../src/shared/contract';
+import type { BuildInCodebase, PublishStatus, SignInState } from '../../src/shared/contract';
+import { syncWords } from '../src/publishing';
 import type { Project } from '../../src/shared/domain/projects';
 import { foldersOf, sameFolder } from '../../src/shared/brief';
 import { buildSteps, noSetupNote, workOf } from '../../src/shared/work';
@@ -351,6 +352,102 @@ const BuildInCodebaseDialog = ({
 };
 
 /**
+ * The GitHub account, as a dialog in the panel (the title bar's account action opens it): who is signed in, and Sign out.
+ * VS Code keeps the account itself in its Accounts menu, so only DSNR's use of it ends. What went wrong is said, and it stays.
+ */
+const AccountDialog = ({ login, onClose }: { login: string; onClose: () => void }) => {
+	const [error, setError] = useState<string | null>(null);
+	const [busy, setBusy] = useState(false);
+	const signOut = async () => {
+		setBusy(true);
+		setError(null);
+		const r = await workspace().signOut();
+		setBusy(false);
+		if (r.ok) onClose();
+		else setError(r.error);
+	};
+	return (
+		<Dialog title="GitHub account" onClose={onClose}>
+			<p className="dialog-about">
+				Signed in to GitHub as <strong>{login}</strong>.
+			</p>
+			<p className="dialog-about">VS Code keeps your GitHub account in its Accounts menu. Signing out here ends only DSNR’s use of it.</p>
+			{error && (
+				<p role="alert" className="dialog-error">
+					{error}
+				</p>
+			)}
+			<div className="dialog-buttons">
+				<Button secondary onClick={onClose}>
+					Close
+				</Button>
+				<Button disabled={busy} onClick={() => void signOut()}>
+					{busy ? 'Signing out…' : 'Sign out of DSNR'}
+				</Button>
+			</div>
+		</Dialog>
+	);
+};
+
+/**
+ * Whether the person's work is synced, as a dialog in the panel (the status bar's item opens it): said in the status
+ * bar's own words (`syncWords`), what is held back with why and its files, and Sync now. It follows the sync while it is
+ * open, so a sync that finishes is seen finishing.
+ */
+const SyncDialog = ({ onClose }: { onClose: () => void }) => {
+	const [status, setStatus] = useState<PublishStatus | null>(null);
+	const [error, setError] = useState<string | null>(null);
+	useEffect(() => {
+		void workspace()
+			.publishStatus()
+			.then((r) => (r.ok ? setStatus(r.value) : setError(r.error)));
+		return workspace().onPublishStatus(setStatus);
+	}, []);
+	const syncNow = async () => {
+		setError(null);
+		const r = await workspace().publishNow();
+		if (r.ok) setStatus(r.value);
+		else setError(r.error);
+	};
+	return (
+		<Dialog title="Your work’s sync" onClose={onClose}>
+			{status === null ? (
+				<p className="dialog-about">{error ?? 'Reading how your work is synced…'}</p>
+			) : (
+				<>
+					<p className="dialog-about">{syncWords(status)}</p>
+					{status.state === 'held' && (
+						<ul className="problem-list">
+							{status.problems.map((p) => (
+								<li key={p.what} data-held>
+									<strong>{p.what}</strong>
+									<span>{[p.why, ...(p.files ?? [])].join(' ')}</span>
+								</li>
+							))}
+						</ul>
+					)}
+				</>
+			)}
+			{status !== null && error && (
+				<p role="alert" className="dialog-error">
+					{error}
+				</p>
+			)}
+			<div className="dialog-buttons">
+				<Button secondary onClick={onClose}>
+					Close
+				</Button>
+				{status !== null && status.state !== 'unavailable' && (
+					<Button disabled={status.state === 'working'} onClick={() => void syncNow()}>
+						Sync now
+					</Button>
+				)}
+			</div>
+		</Dialog>
+	);
+};
+
+/**
  * The dialog open over the panel, if one is, drawn for the project it is about as the list has it: none for a project
  * not in the list. What each does is given: what is the extension's is asked of it (`onStart`, `onCodebase`), what is
  * the core's is done here, and what changes the projects reads them again (`onChanged`).
@@ -359,6 +456,7 @@ export const PanelDialogs = ({
 	dialog,
 	projects,
 	root,
+	account,
 	onStart,
 	onCodebase,
 	onChanged,
@@ -368,6 +466,8 @@ export const PanelDialogs = ({
 	projects: Project[] | null;
 	/** The product open here, which codebase work is in. */
 	root: string | null;
+	/** Who is signed in: the account dialog is only for someone who is, and goes when they are not. */
+	account: SignInState;
 	onStart: (answers: NewPrototypeAnswers) => void;
 	onCodebase: (action: CodebaseAction, projectId: string) => void;
 	onChanged: () => void;
@@ -376,6 +476,8 @@ export const PanelDialogs = ({
 	const folders = projects ? foldersOf(projects) : [];
 	if (dialog === null) return null;
 	if (dialog.kind === 'new') return <NewPrototypeDialog folders={folders} onStart={onStart} onClose={onClose} />;
+	if (dialog.kind === 'sync') return <SyncDialog onClose={onClose} />;
+	if (dialog.kind === 'account') return account.state === 'signedIn' ? <AccountDialog login={account.user.login} onClose={onClose} /> : null;
 	const project = projects?.find((p) => p.id === dialog.projectId);
 	if (!project) return null;
 	const codebase = workOf(project.iterations, 'codebase')[0];

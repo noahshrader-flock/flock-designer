@@ -177,7 +177,7 @@ export const Panel = () => {
 	}, [read.value]);
 	const projects = read.value === null ? null : withCovers(read.value, made);
 	// A project that is not in the list once it is read is not one to open a dialog about.
-	const about = dialog !== null && dialog.kind !== 'new' ? dialog.projectId : null;
+	const about = dialog !== null && 'projectId' in dialog ? dialog.projectId : null;
 	useEffect(() => {
 		if (about !== null && projects !== null && !projects.some((p) => p.id === about)) setDialog(null);
 	}, [about, projects]);
@@ -241,6 +241,7 @@ export const Panel = () => {
 				dialog={dialog}
 				projects={projects}
 				root={context?.product ?? null}
+				account={account}
 				onStart={(answers) => vscode().postMessage({ type: 'new-prototype', ...answers })}
 				onCodebase={codebase}
 				onChanged={() => setChanges((n) => n + 1)}

@@ -2,30 +2,36 @@ import type { PublishStatus, WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 import type { Review } from './messages';
 
+/** Whether the person's work is synced, in a sentence: said by the status bar's tooltip and by the sync dialog in the panel. */
+export const syncWords = (status: PublishStatus): string => {
+	switch (status.state) {
+		case 'unavailable':
+			return 'Nothing to sync from here: no product and design repository are open side by side.';
+		case 'working':
+			return 'DSNR is syncing your work.';
+		case 'shared':
+			return 'Your work is synced.';
+		case 'held':
+			return 'Some work isn’t synced.';
+	}
+};
+
 /**
  * Whether the person's work is synced, as VS Code's status bar says it (ELECTRON_MIGRATION_PLAN 4.3): it syncs by
- * itself, so this only reports. Nothing when there is nothing to sync from here.
+ * itself, so this only reports; pressed, it opens the sync dialog in the panel. Nothing when there is nothing to sync from here.
  */
 export const syncItem = (status: PublishStatus): { text: string; tooltip: string } | null => {
 	switch (status.state) {
 		case 'unavailable':
 			return null;
 		case 'working':
-			return { text: '$(sync~spin) Syncing', tooltip: 'DSNR is syncing your work.' };
+			return { text: '$(sync~spin) Syncing', tooltip: syncWords(status) };
 		case 'shared':
-			return { text: '$(cloud) Synced', tooltip: 'Your work is synced.' };
+			return { text: '$(cloud) Synced', tooltip: syncWords(status) };
 		case 'held':
-			return { text: '$(warning) Not synced', tooltip: 'Some work isn’t synced: click to see why.' };
+			return { text: '$(warning) Not synced', tooltip: `${syncWords(status).slice(0, -1)}: click to see why.` };
 	}
 };
-
-/** What the status bar's item offers: what is held back, each with why and its files, then Sync now. */
-export const syncPicks = (status: PublishStatus): { label: string; detail?: string; value: 'sync' | null }[] => [
-	...(status.state === 'held'
-		? status.problems.map((p) => ({ label: `$(warning) ${p.what}`, detail: [p.why, ...(p.files ?? [])].join(' '), value: null }))
-		: []),
-	{ label: '$(sync) Sync now', value: 'sync' as const },
-];
 
 const PUBLISH = 'Publish';
 

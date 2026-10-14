@@ -83,7 +83,10 @@ export type PanelDialog =
 	| { kind: 'assign'; projectId: string }
 	| { kind: 'build'; projectId: string }
 	| { kind: 'hand-off'; projectId: string }
-	| { kind: 'comments'; projectId: string };
+	| { kind: 'comments'; projectId: string }
+	// Not about a project: the GitHub account's Sign out, and the sync's what is held back and Sync now.
+	| { kind: 'account' }
+	| { kind: 'sync' };
 
 const CALLS = new Set<string>(INVOKE);
 const BARE = new Set(['ready', 'locate-design-system', 'get-started', 'ask-new-prototype', 'open-primitives', 'open-voice-and-tone']);

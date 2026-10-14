@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { publishedLink, syncItem, syncPicks } from '../extension/src/publishing';
+import { publishedLink, syncItem } from '../extension/src/publishing';
 import { ok } from '../src/shared/result';
 
 /**
@@ -16,16 +16,6 @@ describe('the sync, in the status bar', () => {
 			text: '$(warning) Not synced',
 			tooltip: 'Some work isn’t synced: click to see why.',
 		});
-	});
-
-	it('offers what is held back, each with why, and Sync now', () => {
-		expect(syncPicks({ state: 'held', problems: [{ what: 'feature/x', why: 'It has changes nobody committed.', files: ['a.ts'] }], at: '' })).toEqual(
-			[
-				{ label: '$(warning) feature/x', detail: 'It has changes nobody committed. a.ts', value: null },
-				{ label: '$(sync) Sync now', value: 'sync' },
-			],
-		);
-		expect(syncPicks({ state: 'shared', at: '' })).toEqual([{ label: '$(sync) Sync now', value: 'sync' }]);
 	});
 });
 

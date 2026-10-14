@@ -1500,3 +1500,14 @@ textarea.input {
 	top: 0;
 	right: 0;
 }
+
+/* What the sync holds back: what it is, and why under it. */
+.problem-list li {
+	display: flex;
+	flex-direction: column;
+}
+
+.problem-list li span {
+	color: var(--dsnr-muted);
+	overflow-wrap: anywhere;
+}

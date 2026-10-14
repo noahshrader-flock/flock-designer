@@ -184,6 +184,85 @@ describe('the account', () => {
 	});
 });
 
+describe('the account and the sync, in the panel, not as a box at the top (their title bar and status bar items open them)', () => {
+	const signedIn = { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: 'https://avatars.githubusercontent.com/u/1' } };
+	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
+	const inDialog = (name: string) => [...dialog()!.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
+	const heard = (name: string) => sent.filter((m) => m.type === 'call' && m.name === name);
+
+	it('says who is signed in, and signs out when asked, then closes', async () => {
+		await showOpen();
+		await say({ type: 'event', name: 'onSignInChanged', payload: signedIn });
+		await say({ type: 'open-dialog', dialog: { kind: 'account' } });
+		expect(dialog()?.getAttribute('aria-label')).toBe('GitHub account');
+		expect(dialog()?.textContent).toContain('Signed in to GitHub as noah');
+		expect(dialog()?.textContent).toContain('VS Code keeps your GitHub account in its Accounts menu');
+		await press(inDialog('Sign out of DSNR'));
+		expect(heard('signOut')).toHaveLength(1);
+		await answer('signOut', null);
+		expect(dialog()).toBeNull();
+	});
+
+	it('is closed without signing out by Close, and goes by itself when the person has signed out meanwhile', async () => {
+		await showOpen();
+		await say({ type: 'event', name: 'onSignInChanged', payload: signedIn });
+		await say({ type: 'open-dialog', dialog: { kind: 'account' } });
+		await press(inDialog('Close'));
+		expect(dialog()).toBeNull();
+		expect(heard('signOut')).toHaveLength(0);
+		await say({ type: 'open-dialog', dialog: { kind: 'account' } });
+		await say({ type: 'event', name: 'onSignInChanged', payload: { state: 'signedOut' } });
+		expect(dialog()).toBeNull();
+	});
+
+	it('says why signing out failed, and stays', async () => {
+		await showOpen();
+		await say({ type: 'event', name: 'onSignInChanged', payload: signedIn });
+		await say({ type: 'open-dialog', dialog: { kind: 'account' } });
+		await press(inDialog('Sign out of DSNR'));
+		await say({ type: 'answer', id: heard('signOut')[0]?.id, result: { ok: false, error: 'VS Code would not sign out.' } });
+		expect(dialog()?.querySelector('[role="alert"]')?.textContent).toBe('VS Code would not sign out.');
+	});
+
+	it('says whether the work is synced, what is held back and why, and syncs now when asked', async () => {
+		await showOpen();
+		await say({ type: 'open-dialog', dialog: { kind: 'sync' } });
+		expect(dialog()?.getAttribute('aria-label')).toBe('Your work’s sync');
+		await answer('publishStatus', {
+			state: 'held',
+			problems: [{ what: 'feature/x', why: 'It has changes nobody committed.', files: ['a.ts', 'b.ts'] }],
+			at: '',
+		});
+		expect(dialog()?.textContent).toContain('Some work isn’t synced');
+		const held = dialog()!.querySelector('[data-held]') as HTMLElement;
+		expect(held.textContent).toBe('feature/xIt has changes nobody committed. a.ts b.ts');
+		await press(inDialog('Sync now'));
+		expect(heard('publishNow')).toHaveLength(1);
+		await answer('publishNow', { state: 'shared', at: '' });
+		expect(dialog()?.textContent).toContain('Your work is synced.');
+		expect(dialog()?.querySelector('[data-held]')).toBeNull();
+	});
+
+	it('follows the sync while it is open: working, then synced', async () => {
+		await showOpen();
+		await say({ type: 'open-dialog', dialog: { kind: 'sync' } });
+		await answer('publishStatus', { state: 'shared', at: '' });
+		await say({ type: 'event', name: 'onPublishStatus', payload: { state: 'working' } });
+		expect(dialog()?.textContent).toContain('DSNR is syncing your work.');
+		expect(inDialog('Sync now').disabled).toBe(true);
+		await say({ type: 'event', name: 'onPublishStatus', payload: { state: 'shared', at: '' } });
+		expect(inDialog('Sync now').disabled).toBe(false);
+	});
+
+	it('says when there is nothing to sync from here', async () => {
+		await showOpen();
+		await say({ type: 'open-dialog', dialog: { kind: 'sync' } });
+		await answer('publishStatus', { state: 'unavailable' });
+		expect(dialog()?.textContent).toContain('Nothing to sync from here');
+		expect(button('Sync now')).toBeUndefined();
+	});
+});
+
 /** Types into a field as a person does: the value set, and React told it changed. */
 const type = async (el: HTMLElement, text: string) =>
 	act(async () => {

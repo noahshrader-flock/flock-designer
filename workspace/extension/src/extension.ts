@@ -3,7 +3,6 @@ import * as vscode from 'vscode';
 import { served } from '../../src/main/handle';
 import { type Context, findContext } from '../../src/main/services/findContext';
 import type { PublishStatus, SignInState, WorkspaceApi } from '../../src/shared/contract';
-import { valueOf } from '../../src/shared/result';
 import { HOST } from '../../src/shared/vocabulary';
 import { tokenEditsOf } from '../../src/main/services/tokenEdits';
 import { addressComment } from './address';
@@ -16,7 +15,7 @@ import { COMPARE, KEEP_MINE, THEIRS_PATH, USE_THEIRS, VOICE_PATH, VOICE_SCHEME, 
 import { type CodebaseAction, type HostMessage, type Review, readComponentArg, readMessage, readProjectArg, readReview, reviewsOf } from './messages';
 import { type Given, newPrototype, readGiven, readyToStart } from './newPrototype';
 import { type DesignSystemAsks, PanelProvider, answerPage, dsnrPage } from './panel';
-import { publishedLink, syncItem, syncPicks } from './publishing';
+import { publishedLink } from './publishing';
 import { Reviews, answerReview, buildReviewSite, siteIn } from './review';
 import { AgentLog, SyncStatus, failed, failedFor, vscodeChoose, vscodeCopy, vscodeOffer, vscodeOpen, vscodeProgress, vscodeTell } from './ui';
 
@@ -323,21 +322,12 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			if (!review) return vscodeTell('Open a prototype for review first.');
 			return inPanel({ type: 'open-dialog', dialog: { kind: 'build', projectId: review.projectId } });
 		}),
-		vscode.commands.registerCommand('dsnr.sync', async () => {
-			const status = valueOf(await api.publishStatus());
-			const picked = await vscode.window.showQuickPick(syncPicks(status), {
-				title: 'DSNR: your work’s sync',
-				placeHolder: syncItem(status)?.tooltip ?? '',
-			});
-			if (picked?.value === 'sync') sync.show(valueOf(await api.publishNow()));
-		}),
+		// From the status bar: whether the work is synced, what is held back and Sync now, in the panel's dialog.
+		vscode.commands.registerCommand('dsnr.sync', () => inPanel({ type: 'open-dialog', dialog: { kind: 'sync' } })),
 		vscode.commands.registerCommand('dsnr.signIn', () => github.signIn().catch(failed)),
-		vscode.commands.registerCommand('dsnr.account', async () => {
-			const state = github.state();
-			if (state.state !== 'signedIn') return;
-			const signOut = { label: '$(sign-out) Sign out of DSNR', description: 'VS Code keeps your GitHub account in its Accounts menu' };
-			const picked = await vscode.window.showQuickPick([signOut], { placeHolder: `Signed in to GitHub as ${state.user.login}` });
-			if (picked === signOut) github.signOut();
+		// From the title bar: who is signed in, and Sign out, in the panel's dialog.
+		vscode.commands.registerCommand('dsnr.account', () => {
+			if (github.state().state === 'signedIn') return inPanel({ type: 'open-dialog', dialog: { kind: 'account' } });
 		}),
 		vscode.workspace.onDidChangeWorkspaceFolders(() => void refresh()),
 		// Coming back to VS Code is a good moment to publish what was done meanwhile, as coming back to the app's window is.
