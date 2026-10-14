@@ -2,17 +2,18 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
 import { alias } from './alias.config';
-import { pageCode } from './pageCode.vite';
+import { pageAgent, pageCode } from './pageCode.vite';
 import { defineConfig } from 'vite';
 
 /**
  * The comments on a prototype's published page (src/viewer): the app's own comments experience and look, built as one
- * script and one stylesheet with fixed names, which the site copies beside every page (see buildSite).
+ * script and one stylesheet with fixed names, and the page agent each prototype's page carries, which the site copies
+ * beside every page (see buildSite).
  */
 export default defineConfig({
 	root: __dirname,
 	publicDir: false,
-	plugins: [react(), tailwindcss(), pageCode()],
+	plugins: [react(), tailwindcss(), pageCode(), pageAgent()],
 	resolve: { alias },
 	logLevel: 'warn',
 	build: {

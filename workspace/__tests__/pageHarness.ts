@@ -1,3 +1,4 @@
+import PAGE_AGENT from '../src/page/agentMain?page';
 import { vi } from 'vitest';
 import { button, press, settle, typeInto } from './reviewHarness';
 
@@ -95,10 +96,30 @@ export const prototypeIn = (frame: HTMLIFrameElement): Document => {
 	const doc = frame.contentDocument as Document;
 	doc.body.innerHTML = '<main><h1>Alert history</h1><button data-e2e-ref="clear-filter-button">Clear Filter</button></main>';
 	// What the pin scripts reach for that jsdom does not have.
-	const fw = frame.contentWindow as unknown as { Element: { prototype: Record<string, unknown> } };
+	const fw = frame.contentWindow as unknown as Window & { Element: { prototype: Record<string, unknown> }; eval(code: string): unknown };
 	fw.Element.prototype.scrollIntoView = () => undefined;
 	fw.Element.prototype.animate = () => undefined;
+	wireMessages(fw);
+	// The page agent, as the site adds it to every page it builds: the real one, the page code with it.
+	fw.eval(PAGE_AGENT);
 	return doc;
+};
+
+/**
+ * Messages between this window and a frame's, as a browser delivers them: jsdom's `postMessage` says neither who sent a
+ * message nor from where, which the bar and the page's agent both check (REVIEW_ISOLATION_PLAN 1.2, 1.3). Here each says
+ * its sender and this page's address; the real browser does the same, and the real-Chrome test proves it.
+ */
+const wireMessages = (fw: Window) => {
+	const origin = window.location.origin;
+	/** A message event as a browser fires one: what was sent, who sent it, from where. */
+	const fire = (to: Window, data: unknown, source: unknown) =>
+		void setTimeout(() => to.dispatchEvent(Object.assign(new Event('message'), { data, source, origin })), 0);
+	// jsdom's frame has one parent object for every frame, so each frame is given its own: what it sends goes to this
+	// page from it, and what this page sends it comes from that parent.
+	const parent = { postMessage: (data: unknown) => fire(window, data, fw) };
+	Object.defineProperty(fw, 'parent', { value: parent, configurable: true });
+	fw.postMessage = ((data: unknown) => fire(fw, data, parent)) as Window['postMessage'];
 };
 
 /** The page the site builds, as far as the viewer is concerned: the bar's slot, the panel, and the prototype's frame. */

@@ -60,6 +60,8 @@ const openApp = async (address?: { iteration: string }) => {
 	const preview = document.createElement('iframe');
 	document.body.append(preview);
 	const doc = prototypeIn(preview);
+	// The app's preview, as a page the screen asks: one, as the app has one preview.
+	const previewPage = framePage(preview);
 	const app = fakeApp({
 		signInState: async () => ok({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
 		readComments: (_projectId: string, branch: string) => toResult(repo.readComments(branch)),
@@ -68,7 +70,7 @@ const openApp = async (address?: { iteration: string }) => {
 		resolveComment: (comment: CommentRef, resolved: boolean) => toResult(repo.setResolved(comment, resolved)),
 		deleteComment: (comment: CommentRef) => toResult(repo.deleteComment(comment).then(() => null)),
 		moveComment: (comment: CommentRef, anchor: CommentAnchor) => toResult(repo.moveComment(comment, anchor)),
-		pageShowMarkers: (items: MarkerRequest[]) => framePage(preview).showMarkers(items),
+		pageShowMarkers: (items: MarkerRequest[]) => previewPage.showMarkers(items),
 		// Address, as the main process finishes it: the change made, and the comment marked (and resolved) where it is.
 		addressPrototype: async () => ok(agentRunning()),
 		agentStatus: async () => ok(agentFinished()),

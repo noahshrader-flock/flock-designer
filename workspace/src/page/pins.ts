@@ -33,7 +33,12 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 	// The pins' own layer, not the first of the app's layers: comment mode keeps an outline on the page too, and a redraw
 	// that took that one left the old pins behind (a deleted comment's pin stayed on the page).
 	document.querySelector('[data-fd-layer="pins"]')?.remove();
-	const say = (msg: Record<string, unknown>) => console.debug(MESSAGE_PREFIX + JSON.stringify({ ...msg, n: nonce }));
+	// To the page agent when there is one (the published site, VS Code), else the console, which the app listens to.
+	const say = (msg: Record<string, unknown>) => {
+		const text = MESSAGE_PREFIX + JSON.stringify({ ...msg, n: nonce });
+		if (window.__fdReport) window.__fdReport(text);
+		else console.debug(text);
+	};
 	const results: MarkerResult[] = [];
 	const placed: Placed[] = [];
 	const current = route();

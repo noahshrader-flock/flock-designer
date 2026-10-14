@@ -1,16 +1,7 @@
 import { type Fetcher, type GitHubApi, callApi, loginOf } from '../host/github';
 import type { PinEvent } from '../shared/contract';
-import {
-	CANCEL_PICK_SCRIPT,
-	PICK_SCRIPT,
-	ROUTE_SCRIPT,
-	SINGLE_PAGE,
-	focusScript,
-	readMarkers,
-	readPick,
-	readPinMessage,
-	resolveScript,
-} from '../shared/pageScripts';
+import { type PageCall, readPageTell } from '../shared/pageChannel';
+import { readMarkers, readPick, readPinMessage } from '../shared/pageReaders';
 import type { CommentStore, PageSurface } from '../renderer/comments/surfaces';
 import { toResult } from '../shared/result';
 import type { RepoRef } from '../shared/repoRef';
@@ -20,7 +11,7 @@ import { ReviewThreads } from '../host/reviewThreads';
  * The comments experience on a prototype's published page: the browser's side of what the app does through its main
  * process. GitHub is reached with the app's own code (`ReviewThreads`, `callApi`), given a token instead of the app's
  * sign-in, so a thread is found, made and written exactly as the app does it. The page is the frame the prototype is
- * in, and the same pick and pin scripts run in it.
+ * in, whose agent runs the same pick and pin code there when it is asked.
  */
 
 /** GitHub's API, as the person whose token this is. */
@@ -46,53 +37,113 @@ export const browserComments = (github: GitHubApi, ref: RepoRef, { projectId, br
 	};
 };
 
-type FrameWindow = Window & { eval(code: string): unknown; console: Console; __fdHeard?: boolean };
+/** How long the page is given to answer an ask (all but a pick, which waits for the person): a page that does not answer has none. */
+const ANSWER_MS = 10_000;
+
+/** What the review bar knows of the page in its frame: what it can be asked (`PageSurface`), and when it is up or moved. */
+export type FramePage = PageSurface & {
+	route(): Promise<string>;
+	/** Told each time the page is up (each load), with its route, and at once when it is up already: its pins are drawn then. */
+	onReady(listener: (route: string) => void): () => void;
+	/** Told when the page's route moves within it: the pins are drawn again. */
+	onRoute(listener: (route: string) => void): () => void;
+	/** Stops listening, for a frame that is gone. */
+	stop(): void;
+};
 
 /**
- * The prototype's frame, as the page the comments are left on. It is served from the same site as this, so the scripts
- * run in it directly; the pins report through its console, as they do in the app, and are listened for here.
+ * The prototype's frame, as the page the comments are left on (REVIEW_ISOLATION_PLAN, Phase 1): **asked, by message**, as
+ * the page's agent answers (`shared/pageChannel.ts`, `src/page/agent.ts`), never reached into. The bar says hello with a
+ * secret each time the frame loads; the page says it is ready, then answers and reports with that secret. Only messages
+ * from the frame's own window and address are heard, and what they say is read by the readers it always went through.
  */
-export const framePage = (frame: HTMLIFrameElement): PageSurface & { route(): Promise<string> } => {
+export const framePage = (frame: HTMLIFrameElement, win: Window = window): FramePage => {
 	const nonce = crypto.randomUUID();
-	const listeners = new Set<(e: PinEvent) => void>();
-	const win = (): FrameWindow | null => frame.contentWindow as FrameWindow | null;
-	/** The pins' reports, heard from the frame's console. Once per document: a reload is a new one. */
-	const listen = (w: FrameWindow) => {
-		if (w.__fdHeard) return;
-		w.__fdHeard = true;
-		const original = w.console.debug.bind(w.console);
-		w.console.debug = (...args: unknown[]) => {
-			const event = typeof args[0] === 'string' ? readPinMessage(args[0], nonce) : null;
-			if (event) for (const l of listeners) l(event);
-			else original(...args);
-		};
-	};
-	const run = async <T>(code: string): Promise<T | undefined> => {
-		const w = win();
-		if (!w) return undefined;
-		listen(w);
+	/** The page's address: where its frame's `src` points, or this page's own for a frame with none. */
+	const origin = (): string => {
+		const src = frame.getAttribute('src');
 		try {
-			return (await w.eval(SINGLE_PAGE + code)) as T;
+			return src ? new URL(src, win.location.href).origin : win.location.origin;
 		} catch {
-			return undefined;
+			return win.location.origin;
 		}
 	};
+	const pins = new Set<(e: PinEvent) => void>();
+	const readies = new Set<(route: string) => void>();
+	const routes = new Set<(route: string) => void>();
+	const waiting = new Map<number, (value: unknown) => void>();
+	let ready = false;
+	/** The route the page said when it was last up: told to a listener that comes after it said so. */
+	let readyAt = '';
+	let next = 1;
+
+	const heard = (e: MessageEvent) => {
+		if (e.source !== frame.contentWindow || e.origin !== origin()) return;
+		const tell = readPageTell(e.data, nonce);
+		if (!tell) return;
+		if (tell.dsnr === 'page-ready') {
+			ready = true;
+			readyAt = tell.route;
+			for (const l of readies) l(tell.route);
+		} else if (tell.dsnr === 'page-route') for (const l of routes) l(tell.route);
+		else if (tell.dsnr === 'page-answer') waiting.get(tell.id)?.(tell.value);
+		else {
+			const event = readPinMessage(tell.text, nonce);
+			if (event) for (const l of pins) l(event);
+		}
+	};
+	const hello = () => frame.contentWindow?.postMessage({ dsnr: 'page-ask', id: 0, call: 'hello', args: [nonce] }, origin());
+	const loaded = () => {
+		// A new document: its agent knows nothing until it is said hello to, and nothing waits on the last one.
+		ready = false;
+		for (const resolve of waiting.values()) resolve(undefined);
+		waiting.clear();
+		hello();
+	};
+	win.addEventListener('message', heard);
+	frame.addEventListener('load', loaded);
+	// Already up, if it loaded before the bar: said hello to now.
+	hello();
+
+	const ask = <T>(call: PageCall, args: unknown[] = [], wait: number | null = ANSWER_MS): Promise<T | undefined> =>
+		new Promise((resolve) => {
+			const target = frame.contentWindow;
+			if (!target || !ready) return resolve(undefined);
+			const id = next++;
+			waiting.set(id, (value) => {
+				waiting.delete(id);
+				resolve(value as T);
+			});
+			target.postMessage({ dsnr: 'page-ask', id, call, args }, origin());
+			if (wait !== null) setTimeout(() => waiting.get(id)?.(undefined), wait);
+		});
+	const on =
+		<L>(set: Set<L>) =>
+		(listener: L) => {
+			set.add(listener);
+			return () => void set.delete(listener);
+		};
 	return {
 		pick: () =>
 			toResult(
-				run<unknown>(PICK_SCRIPT)
+				ask<unknown>('pick', [], null)
 					.then((raw) => readPick(raw))
 					.then((spot) => (spot ? { ...spot, picture: null } : null)),
 			),
-		cancelPick: () => run(CANCEL_PICK_SCRIPT),
-		showMarkers: (items) => toResult(run<unknown>(resolveScript(items, nonce)).then((raw) => readMarkers(raw, items))),
-		focusMarker: (id) => run(focusScript(id)),
-		onPinEvent: (listener) => {
-			listeners.add(listener);
-			return () => void listeners.delete(listener);
+		cancelPick: () => ask('cancel-pick'),
+		showMarkers: (items) => toResult(ask<unknown>('draw-pins', [items]).then((raw) => readMarkers(raw, items))),
+		focusMarker: (id) => ask('focus', [id]),
+		onPinEvent: on(pins),
+		route: async () => String((await ask<unknown>('route')) ?? ''),
+		onReady: (listener) => {
+			if (ready) listener(readyAt);
+			return on(readies)(listener);
 		},
-		/** Where the frame is now: when it changes, the pins are drawn again. */
-		route: async () => String((await run<unknown>(ROUTE_SCRIPT)) ?? ''),
+		onRoute: on(routes),
+		stop: () => {
+			win.removeEventListener('message', heard);
+			frame.removeEventListener('load', loaded);
+		},
 	};
 };
 

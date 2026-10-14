@@ -230,6 +230,9 @@ const viewerPage = (p: SiteProject, current: Page, viewer: SiteInput['viewer'], 
 	);
 };
 
+/** The page agent's file, built with the viewer and copied beside it. */
+const PAGE_AGENT = 'page-agent.js';
+
 /** Clears `outDir` for a fresh build, refusing anything that is not a site this wrote, or empty. */
 const clearOut = (outDir: string): void => {
 	if (existsSync(outDir) && readdirSync(outDir).length > 0) {
@@ -246,11 +249,28 @@ export const buildSite = ({ designRoot, outDir, comments, viewer }: SiteInput): 
 	const shared = writeShared(designRoot, outDir);
 	if (viewer) {
 		mkdirSync(join(outDir, '_viewer'), { recursive: true });
-		for (const f of ['viewer.js', 'viewer.css']) copyFileSync(join(viewer.dir, f), join(outDir, '_viewer', f));
+		// The page agent with them: every prototype's page carries it, so the bar asks it for the page's pins.
+		for (const f of ['viewer.js', 'viewer.css', PAGE_AGENT]) {
+			if (!existsSync(join(viewer.dir, f)))
+				throw new Error(`The viewer at ${viewer.dir} has no ${f}: build it again (its pages would have no pins).`);
+			copyFileSync(join(viewer.dir, f), join(outDir, '_viewer', f));
+		}
 	}
 	// A page sits three folders down (<project>/v1/i2/), and finds the shared files from there.
 	const relink = (html: string): string =>
-		html.replace(/\/_shared\/([0-9a-f]{16})\b/g, (whole, hash: string) => (shared.has(hash) ? `../../../_shared/${shared.get(hash)}` : whole));
+		withAgent(
+			html.replace(/\/_shared\/([0-9a-f]{16})\b/g, (whole, hash: string) => (shared.has(hash) ? `../../../_shared/${shared.get(hash)}` : whole)),
+		);
+	/**
+	 * With the viewer, the page agent first in the page's head (REVIEW_ISOLATION_PLAN 1.2), before the prototype's own code,
+	 * so the review bar asks it for the page's pins rather than reaching into the page.
+	 */
+	const withAgent = (html: string): string => {
+		if (!viewer) return html;
+		const tag = `<script src="../../../_viewer/${PAGE_AGENT}"></script>`;
+		const head = /<head\b[^>]*>/i.exec(html);
+		return head ? html.slice(0, head.index + head[0].length) + tag + html.slice(head.index + head[0].length) : tag + html;
+	};
 
 	writeFileSync(join(outDir, 'index.html'), indexPage(projects));
 	for (const p of projects) {

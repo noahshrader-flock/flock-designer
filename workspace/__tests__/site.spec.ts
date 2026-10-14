@@ -228,8 +228,10 @@ describe('comments on the page', () => {
 		mkdirSync(viewer);
 		writeFileSync(join(viewer, 'viewer.js'), 'console.log(1)');
 		writeFileSync(join(viewer, 'viewer.css'), 'a{}');
+		writeFileSync(join(viewer, 'page-agent.js'), 'agent()');
 		build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } });
 		expect(readFileSync(join(out, '_viewer', 'viewer.js'), 'utf8')).toBe('console.log(1)');
+		expect(readFileSync(join(out, '_viewer', 'page-agent.js'), 'utf8')).toBe('agent()');
 		const html = read('alpha/v1/i2/index.html');
 		expect(html).toContain('<script type="module" src="../../../_viewer/viewer.js"></script>');
 		expect(html).toContain('href="../../../_viewer/viewer.css"');
@@ -256,7 +258,7 @@ describe('comments on the page', () => {
 	it('tells it the states the page has, for its bar to offer', () => {
 		const viewer = join(root, 'viewer');
 		mkdirSync(viewer);
-		for (const f of ['viewer.js', 'viewer.css']) writeFileSync(join(viewer, f), '');
+		for (const f of ['viewer.js', 'viewer.css', 'page-agent.js']) writeFileSync(join(viewer, f), '');
 		writeFileSync(
 			join(design, 'projects', 'alpha', 'prototypes', 'v2-i1.html'),
 			page('Alpha two').replace('<head>', '<head><meta name="dsnr-states" content="default,filtered,panel">'),
@@ -268,8 +270,30 @@ describe('comments on the page', () => {
 		expect(config.states).toEqual(['default', 'filtered', 'panel']);
 	});
 
+	it('puts the page agent first in every prototype’s page, so the bar can ask it for its pins (REVIEW_ISOLATION_PLAN 1.2)', () => {
+		const viewer = join(root, 'viewer');
+		mkdirSync(viewer);
+		for (const f of ['viewer.js', 'viewer.css', 'page-agent.js']) writeFileSync(join(viewer, f), '');
+		build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } });
+		const agent = '<script src="../../../_viewer/page-agent.js"></script>';
+		const saved = read('alpha/v1/i2/page.html');
+		// First in its head, before the prototype's own code, and once.
+		expect(saved.indexOf(agent)).toBeGreaterThan(-1);
+		expect(saved.indexOf(agent)).toBeLessThan(saved.indexOf('Alpha one, refined'));
+		expect(saved.split(agent)).toHaveLength(2);
+		expect(saved).toMatch(new RegExp(`<head[^>]*>${agent.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}`));
+	});
+
+	it('cannot be built with a viewer that has no page agent: its pages would have no pins', () => {
+		const viewer = join(root, 'viewer');
+		mkdirSync(viewer);
+		for (const f of ['viewer.js', 'viewer.css']) writeFileSync(join(viewer, f), '');
+		expect(() => build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } })).toThrow(/page-agent\.js/);
+	});
+
 	it('leaves the pages as they were without it', () => {
 		build();
+		expect(read('alpha/v1/i2/page.html')).not.toContain('page-agent.js');
 		expect(read('alpha/v1/i2/index.html')).not.toContain('viewer.js');
 		expect(existsSync(join(out, '_viewer'))).toBe(false);
 	});

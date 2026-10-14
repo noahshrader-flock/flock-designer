@@ -9,4 +9,6 @@ interface Window {
 	__fdCancelPick?: () => void;
 	/** The pins drawn last: stopped before the next are drawn, and one brought into view by its comment's id. */
 	__fdMarkers?: { stop: () => void; focus: (id: number) => void };
+	/** Where a pin's report goes on a page with the agent (`agent.ts`); the console, which the app listens to, without one. */
+	__fdReport?: (text: string) => void;
 }

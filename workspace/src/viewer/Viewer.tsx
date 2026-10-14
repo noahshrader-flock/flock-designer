@@ -61,6 +61,10 @@ export interface ViewerSlots {
  */
 type Showing = { states: string[]; state: string | null; onState: (state: string | null) => void };
 
+/** How long a loaded page is given to say it is up before the bar says it has no pins. */
+const NO_AGENT_MS = 8000;
+const NO_AGENT = 'This page cannot show its comments’ pins: it was built without DSNR’s page agent. Build the site again.';
+
 /** The page's bar. `children` is what comes last: the Comment control, or signing in. */
 const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; slots: ViewerSlots; showing: Showing; children: ReactNode }) => {
 	const iterations = useMemo(
@@ -223,23 +227,28 @@ const Commenting = ({
 	const [route, setRoute] = useState<string | null>(null);
 	const [listOpen, setListOpen] = useState(false);
 
-	// The prototype is up once its frame has loaded, and again after every load: its pins are drawn then.
+	// The prototype is up once its page's agent says so, after every load, and its pins are drawn then; and again when its
+	// route moves. A page that loads and never says so has no agent (a site built before it): said, not left without pins.
 	useEffect(() => {
 		const frame = slots.frame;
-		const moved = () => void page.route().then(setRoute);
-		// Each load is a new document, listened to for moves within it; the last is let go on leaving.
-		let listening: Window | null = null;
-		const loaded = () => {
+		let waitingFor: ReturnType<typeof setTimeout> | undefined;
+		const stopReady = page.onReady((at) => {
+			clearTimeout(waitingFor);
 			setOpened(true);
-			moved();
-			listening = frame.contentWindow;
-			listening?.addEventListener('hashchange', moved);
+			setRoute(at);
+		});
+		const stopRoute = page.onRoute(setRoute);
+		const loaded = () => {
+			clearTimeout(waitingFor);
+			waitingFor = setTimeout(() => setError(NO_AGENT), NO_AGENT_MS);
 		};
-		if (frame.contentDocument?.readyState === 'complete') loaded();
 		frame.addEventListener('load', loaded);
 		return () => {
+			clearTimeout(waitingFor);
+			stopReady();
+			stopRoute();
 			frame.removeEventListener('load', loaded);
-			listening?.removeEventListener('hashchange', moved);
+			page.stop();
 		};
 	}, [slots.frame, page]);
 
