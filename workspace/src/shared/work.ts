@@ -1,4 +1,4 @@
-import type { BuildInCodebasePlan, IterationKind, ProjectIteration } from './contract';
+import type { BuildInCodebasePlan, IterationKind, Project, ProjectIteration } from './contract';
 import { isPrototypeKey } from './designPaths';
 import { byNewest } from './sort';
 import { parsePrototypeName } from './prototypeNames';
@@ -43,6 +43,20 @@ const newestStarted = byNewest<ProjectIteration>(
  */
 export const workOf = (iterations: ProjectIteration[], kind: IterationKind): ProjectIteration[] =>
 	iterations.filter((i) => workKind(i) === kind).sort(newestStarted);
+
+/**
+ * The products a project has work in (PROJECT_SCOPE_PLAN 1.2), each once, its newest work's first: a prototype's the
+ * product it was made on, codebase work's its repository, both `owner/repo` on the host. None for work recorded before
+ * products were kept: a clone's folder name is never taken for one, since it differs from machine to machine.
+ */
+export const productsOf = (project: Pick<Project, 'iterations'>): string[] => {
+	const found: string[] = [];
+	for (const it of [...project.iterations].sort(newestStarted)) {
+		const product = workKind(it) === 'codebase' ? it.repository : it.product;
+		if (product && !found.includes(product)) found.push(product);
+	}
+	return found;
+};
 
 /**
  * How an iteration is named on screen: `V2 · I3`. A project's codebase work is one branch, so it is its first

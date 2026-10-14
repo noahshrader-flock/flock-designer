@@ -36,9 +36,10 @@ const rawRecords = (text: string): Rec[] | null => {
 
 const basedOnOf = (v: unknown): Iteration['basedOn'] | undefined => {
 	const b = asRecord(v);
-	return typeof b.repository === 'string' && typeof b.branch === 'string' && (typeof b.commit === 'string' || b.commit === null)
-		? { repository: b.repository, branch: b.branch, commit: b.commit }
-		: undefined;
+	if (!(typeof b.repository === 'string' && typeof b.branch === 'string' && (typeof b.commit === 'string' || b.commit === null))) return undefined;
+	// The product, only as a repository's path: a record never names anything else as one.
+	const product = asRepositoryPath(b.product);
+	return { repository: b.repository, branch: b.branch, commit: b.commit, ...(product ? { product } : {}) };
 };
 
 /**
@@ -106,6 +107,7 @@ export const toProjectIteration = (r: Iteration, thread?: { number: number; open
 	createdAt: asDate(r.createdAt),
 	route: r.route ?? null,
 	cover: r.cover ?? null,
+	product: r.basedOn?.product ?? null,
 });
 
 const earliest = (a: unknown, b: unknown): unknown => {

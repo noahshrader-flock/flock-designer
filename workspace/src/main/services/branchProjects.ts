@@ -80,6 +80,8 @@ export const readBranchProjects = async (
 					repository: null,
 					pullRequest: null,
 					cover: null,
+					// Found as a branch, with no record to say which product it was made on.
+					product: null,
 				};
 				return { id: it.projectId, iteration };
 			}),

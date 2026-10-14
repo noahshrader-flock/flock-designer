@@ -8,7 +8,8 @@ import { hasOutsideComments, latestIterationName, nextIterationName, parseProtot
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from './accessibilityBrief';
 import { designSystemCheckout, readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
-import { branchCommit, branchExists, git, isSafeBranchName, readCheckout, readTreeAt } from './git';
+import { branchCommit, branchExists, git, isSafeBranchName, originUrl, readCheckout, readTreeAt } from './git';
+import { parseRemote } from '../../shared/repoRef';
 import { assertUsableProjectId } from './iterations';
 import {
 	MAX_PAGE,
@@ -188,7 +189,15 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (why !== null) throw new Error(why);
 		if (typeof name !== 'string' || !name.trim()) throw new Error('A prototype needs a name.');
 		if (!(await branchExists(root, branch))) throw new Error(`There is no branch called ${branch} in ${basename(root)}.`);
-		const basedOn = { repository: basename(root), branch, commit: await branchCommit(root, branch).catch(() => null) };
+		// The clone's folder, as this machine names it, and the repository it is a clone of, as every machine does.
+		const origin = await originUrl(root);
+		const product = origin === null ? null : parseRemote(origin);
+		const basedOn = {
+			repository: basename(root),
+			branch,
+			commit: await branchCommit(root, branch).catch(() => null),
+			...(product ? { product } : {}),
+		};
 		return recordPrototype(ctx.store(), { projectId, title: name.slice(0, 200), note: String(note).slice(0, 8000), me, basedOn, folder });
 	};
 

@@ -24,6 +24,7 @@ export const projectIteration = (over: Pick<ProjectIteration, 'name' | 'branch'>
 	repository: null,
 	pullRequest: null,
 	cover: null,
+	product: null,
 	...over,
 });
 

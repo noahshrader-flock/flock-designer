@@ -29,9 +29,11 @@ export interface Iteration {
 	route?: string;
 	/**
 	 * For a prototype: the product code it was modeled on, so building it in the codebase later knows
-	 * what it was looking at. Absent when it was made without a repository on the machine.
+	 * what it was looking at. Absent when it was made without a repository on the machine. `repository` is the clone's
+	 * folder name, as this machine has it; `product` is the repository itself on its host (`owner/repo`, from the clone's
+	 * remote), the same on every machine, and absent for a prototype recorded before 2026-10-14 or made in a clone with none.
 	 */
-	basedOn?: { repository: string; branch: string; commit: string | null };
+	basedOn?: { repository: string; branch: string; commit: string | null; product?: string };
 	/**
 	 * For a prototype: which picture of it is kept, as the hash of the page it was drawn from. The picture is the file
 	 * `covers/<name>-<cover>.jpg` in the project's folder (`coverPath`), so it is current exactly when this is the page's
@@ -146,6 +148,12 @@ export interface ProjectIteration {
 	 * was changed instead of the app's front door. Null when the record does not say.
 	 */
 	route: string | null;
+	/**
+	 * For a prototype: the product it was made on, as its repository on its host (`owner/repo`, the record's
+	 * `basedOn.product`); null for one recorded before that was kept, or found only as a branch. Codebase work's product is
+	 * its `repository`. Both are read by `productsOf`.
+	 */
+	product: string | null;
 	/** True when this iteration exists only on this machine. */
 	localOnly?: boolean;
 	/** Codebase work: its repository on GitHub (`owner/repo`) and its pull request, when the record says. Read with `codeLink`. */

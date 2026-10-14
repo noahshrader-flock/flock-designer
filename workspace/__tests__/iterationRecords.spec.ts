@@ -143,3 +143,29 @@ describe('reading iterations.json', () => {
 		});
 	});
 });
+
+describe('the product a prototype was made on (PROJECT_SCOPE_PLAN 1.1)', () => {
+	const read = (basedOn: unknown) =>
+		parseIterations(
+			JSON.stringify([{ projectId: 'demo', name: 'v1-i1', branch: 'prototype/demo/v1-i1', createdAt: '2026-10-14T10:00:00Z', basedOn }]),
+		)?.[0]?.basedOn;
+
+	it('is kept as a repository on its host, beside the clone’s own name', () => {
+		expect(read({ repository: 'coke', branch: 'develop', commit: null, product: 'flocksafety/flock-coke' })).toEqual({
+			repository: 'coke',
+			branch: 'develop',
+			commit: null,
+			product: 'flocksafety/flock-coke',
+		});
+	});
+
+	it('is left out when it is not one, and a record without it reads as before', () => {
+		for (const product of ['../flock-coke', 'flock-coke', 'a/b/c', 42])
+			expect(read({ repository: 'coke', branch: 'develop', commit: null, product }), String(product)).toEqual({
+				repository: 'coke',
+				branch: 'develop',
+				commit: null,
+			});
+		expect(read({ repository: 'coke', branch: 'develop', commit: null })).toEqual({ repository: 'coke', branch: 'develop', commit: null });
+	});
+});

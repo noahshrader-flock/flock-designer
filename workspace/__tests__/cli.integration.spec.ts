@@ -109,6 +109,26 @@ describe('new-prototype', () => {
 		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe(brief);
 	});
 
+	it('records the product it was made on as its repository, whatever the clone is called (PROJECT_SCOPE_PLAN 1.1)', async () => {
+		// No remote: the folder's name is all there is, and no product is claimed.
+		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(0);
+		expect((iterations()[0] as { basedOn?: { product?: string } }).basedOn?.product).toBeUndefined();
+		// Its remote says which repository it is, so one clone or another, named anything, is the same product.
+		g(product, 'remote', 'add', 'origin', 'git@github.com:flocksafety/flock-coke.git');
+		expect(await run('new-prototype', '--project', 'demo', '--note', 'Another idea')).toBe(0);
+		const other = join(home, 'coke');
+		mkdirSync(other);
+		makeProduct(other);
+		installDesignSystem(other);
+		g(other, 'remote', 'add', 'origin', 'https://github.com/flocksafety/flock-coke.git');
+		expect(await main(['new-prototype', '--project', 'demo', '--note', 'A third'], deps(other))).toBe(0);
+		expect(iterations().map((i) => (i as { basedOn?: unknown }).basedOn)).toMatchObject([
+			{ repository: 'flock-coke' },
+			{ repository: 'flock-coke', product: 'flocksafety/flock-coke' },
+			{ repository: 'coke', product: 'flocksafety/flock-coke' },
+		]);
+	});
+
 	it('is modeled on the branch named, when there is one', async () => {
 		g(product, 'branch', 'noah/baseline');
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list', '--from', 'noah/baseline')).toBe(0);
