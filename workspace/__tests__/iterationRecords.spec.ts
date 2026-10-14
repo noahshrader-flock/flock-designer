@@ -144,7 +144,7 @@ describe('reading iterations.json', () => {
 	});
 });
 
-describe('the product a prototype was made on (PROJECT_SCOPE_PLAN 1.1)', () => {
+describe('the product a prototype was made on', () => {
 	const read = (basedOn: unknown) =>
 		parseIterations(
 			JSON.stringify([{ projectId: 'demo', name: 'v1-i1', branch: 'prototype/demo/v1-i1', createdAt: '2026-10-14T10:00:00Z', basedOn }]),

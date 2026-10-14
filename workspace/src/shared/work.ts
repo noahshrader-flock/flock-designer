@@ -45,7 +45,7 @@ export const workOf = (iterations: ProjectIteration[], kind: IterationKind): Pro
 	iterations.filter((i) => workKind(i) === kind).sort(newestStarted);
 
 /**
- * The products a project has work in (PROJECT_SCOPE_PLAN 1.2), each once, its newest work's first: a prototype's the
+ * The products a project has work in (the workspace README's "Projects, by product"), each once, its newest work's first: a prototype's the
  * product it was made on, codebase work's its repository, both `owner/repo` on the host. None for work recorded before
  * products were kept: a clone's folder name is never taken for one, since it differs from machine to machine.
  */

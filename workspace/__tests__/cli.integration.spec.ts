@@ -109,7 +109,7 @@ describe('new-prototype', () => {
 		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe(brief);
 	});
 
-	it('records the product it was made on as its repository, whatever the clone is called (PROJECT_SCOPE_PLAN 1.1)', async () => {
+	it('records the product it was made on as its repository, whatever the clone is called', async () => {
 		// No remote: the folder's name is all there is, and no product is claimed.
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(0);
 		expect((iterations()[0] as { basedOn?: { product?: string } }).basedOn?.product).toBeUndefined();

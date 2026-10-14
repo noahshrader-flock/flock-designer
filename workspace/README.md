@@ -286,6 +286,18 @@ prototype's own page in the bar's frame (`page.html`), which is a repository's c
 `__tests__/reviewIsolation.integration.spec.ts` proves this in real Chrome, nested as VS Code nests it, with a hostile
 page; `pageAgent.integration.spec.ts` proves the pins on both kinds of address.
 
+**Projects, by product.** DSNR in VS Code is scoped to what is open, so the Projects tab focuses on the product open:
+**This product** (the default) shows its projects, by folder, and **Everyone's** shows every project, by product, the open one
+first and "No product" last. It is a focus, not a lock: every project can be opened and commented on from either, since who can
+see what is the design repository's permission on GitHub. A project's products are worked out from its work (`productsOf`): a
+prototype records the product it was made on as `basedOn.product`, the `owner/repo` its clone's `origin` names (the same on every
+machine; `basedOn.repository` is still the clone's folder name, which this machine compares with the open folder), and codebase
+work its `repository`. A project with none on record (made before products were recorded) is never hidden: it is in This
+product, marked "No product" once any project has one. The rules are `shared/projectScope.ts`. **With no product open**, the
+tab lists everyone's, by product, and a review opens with no checkout: that project alone is read through GitHub into DSNR's
+storage (`copyProject`) and kept only while a review uses it. What changes a prototype's code (Build in the codebase, Address)
+says to open the product it was made on (`needsProduct`).
+
 **Pictures and the accessibility check:** with no hidden windows, a prototype's picture and its accessibility check are
 drawn by the browser already on the machine (Chrome, Edge or Chromium, or `CHROME_BIN`), headless, through
 `puppeteer-core`, which downloads no browser of its own (`chromeHeadless.ts`); a machine with none is told what to

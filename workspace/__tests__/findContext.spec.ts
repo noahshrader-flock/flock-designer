@@ -57,7 +57,7 @@ describe('the context, from the open folders', () => {
 		});
 	});
 
-	it('says which repository the product is, from its remote, whatever its folder is called (PROJECT_SCOPE_PLAN 2.1)', async () => {
+	it('says which repository the product is, from its remote, whatever its folder is called', async () => {
 		const coke = product(at('GitHub', 'my-coke'), '@acme/ui');
 		execFileSync('git', ['init', '-q', coke]);
 		execFileSync('git', ['-C', coke, 'remote', 'add', 'origin', 'git@github.com:flocksafety/flock-coke.git']);

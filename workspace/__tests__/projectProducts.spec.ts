@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { productsOf } from '../src/shared/work';
 import { aProject, projectIteration } from './fixtures';
 
-/** Which products a project has work in (PROJECT_SCOPE_PLAN 1.2): what the panel will focus and group by. */
+/** Which products a project has work in (the workspace README's "Projects, by product"): what the panel will focus and group by. */
 describe('productsOf', () => {
 	const prototype = (name: string, product: string | null, createdAt: string) =>
 		projectIteration({ name, branch: `prototype/demo/${name}`, product, createdAt });
