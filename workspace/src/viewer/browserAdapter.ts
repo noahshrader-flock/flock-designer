@@ -147,7 +147,10 @@ export const framePage = (frame: HTMLIFrameElement, win: Window = window): Frame
 	};
 };
 
-/** Where the token is kept: this browser only, for this site. */
+/**
+ * Where the token is kept: this browser only, for this site. Only tests keep one yet. A prototype's page shares the
+ * published site's address, so it could read this: replaced before sign-in ships (PAGES_PLAN.md, M9's rule).
+ */
 const TOKEN_KEY = 'dsnr.github-token';
 export const savedToken = (): string | null => {
 	try {

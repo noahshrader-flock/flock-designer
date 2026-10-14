@@ -102,7 +102,7 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 };
 
 export const Viewer = ({ config, slots, relay = null }: { config: ViewerConfig; slots: ViewerSlots; relay?: Relay | null }) => {
-	// A token kept in this browser is what the sign-in will leave; until it exists, only tests leave one.
+	// Only tests leave a token in this browser; the sign-in will keep it where a page cannot reach (M9's rule).
 	const [token, setToken] = useState<string | null>(savedToken);
 	const [paused, setPaused] = useState(false);
 	// The frame opens in the page's first state; another is the same page, asked for in it.
