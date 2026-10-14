@@ -9,11 +9,21 @@ import { createHash } from 'node:crypto';
 import axe from 'axe-core';
 import { nativeImage } from 'electron';
 import { previewAddress } from '../../shared/catalog';
-import type { Drawn, Measure, Mode } from './componentTokens';
+import type { Drawn, Measure } from './componentTokens';
 import { COMPOSITION, composeOnWhite } from './pictureComposition';
-import { axeFound } from './accessibilityCheck';
 import { hiddenWindow, setColorScheme } from './sandboxedPage';
-import { PICTURE_MOST_ACROSS, PICTURE_QUALITY, PICTURE_SCALE, PICTURE_TOP, STORY_MS, WINDOW, inOrder, readDrawn, sharesOf } from './storyDrawing';
+import {
+	PICTURE_MOST_ACROSS,
+	PICTURE_QUALITY,
+	PICTURE_SCALE,
+	PICTURE_TOP,
+	STORY_MS,
+	type Share,
+	WINDOW,
+	drawEach,
+	measureWith,
+	readDrawn,
+} from './storyDrawing';
 import { within } from './within';
 
 /** The windows' session: their own, in memory only. */
@@ -39,7 +49,8 @@ export const PICTURE_RECIPE = createHash('sha256')
 	.slice(0, 12);
 
 /** One window's share of a run: the page loaded once, in the run's mode, then each file drawn in turn. */
-const drawShare = async (base: string, mode: Mode, files: string[], pictures: boolean, tags: string[] | null): Promise<(Drawn | null)[]> => {
+const drawShare = async (share: Share): Promise<(Drawn | null)[]> => {
+	const { base, mode, files, pictures, tags } = share;
 	const win = hiddenWindow(SESSION, new URL(base).origin, WINDOW);
 	try {
 		const wc = win.webContents;
@@ -50,7 +61,6 @@ const drawShare = async (base: string, mode: Mode, files: string[], pictures: bo
 					wc.loadURL(previewAddress(base, files[0] as string)).then(() => true),
 				);
 		if (loaded === null) return files.map(() => null);
-		const drawn: (Drawn | null)[] = [];
 		// Pictures are drawn at twice the size, whatever the screen, so they are sharp.
 		if (pictures)
 			await within(
@@ -59,18 +69,11 @@ const drawShare = async (base: string, mode: Mode, files: string[], pictures: bo
 			);
 		// axe-core, once for every file the page draws (T7).
 		if (tags) await within(STORY_MS, wc.executeJavaScript(`${axe.source};true`));
-		for (const file of files) {
-			const read = await within(STORY_MS, wc.executeJavaScript(readDrawn(file, pictures, tags)) as Promise<Drawn & { accessibility?: unknown }>);
-			if (read === null) {
-				drawn.push(null);
-				continue;
-			}
-			// What the page says it found, only when it is axe's results.
-			const { accessibility, ...measured } = read;
-			const picture = pictures ? await within(STORY_MS, pictureOf(wc)) : undefined;
-			drawn.push({ ...measured, ...(picture ? { picture } : {}), ...(axeFound(accessibility) ? { accessibility } : {}) });
-		}
-		return drawn;
+		return await drawEach(
+			share,
+			(code) => wc.executeJavaScript(code),
+			() => pictureOf(wc),
+		);
 	} finally {
 		win.destroy();
 	}
@@ -80,11 +83,4 @@ const drawShare = async (base: string, mode: Mode, files: string[], pictures: bo
  * One run after another, each in a few windows: this runs in the background as the app opens, so it takes a few windows at
  * a time and not all of them at once.
  */
-export const measureInWindows: Measure = async (runs) => {
-	const results: (Drawn | null)[][] = [];
-	for (const { base, mode, files, pictures = false, accessibility = null } of runs) {
-		const drawn = await Promise.all(sharesOf(files).map((share) => drawShare(base, mode, share, pictures, accessibility)));
-		results.push(inOrder(files, drawn));
-	}
-	return results;
-};
+export const measureInWindows: Measure = measureWith(drawShare);

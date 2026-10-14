@@ -4,10 +4,12 @@
  * drawn at, and how long a story may take; and how a run's files are shared between a few pages and put back in order.
  */
 import { PREVIEW_SHOW } from '../../shared/catalog';
-import { axeRun } from './accessibilityCheck';
+import { axeFound, axeRun } from './accessibilityCheck';
+import type { Drawn, Measure, Mode } from './componentTokens';
+import { within } from './within';
 
 /** How many windows draw a run's files at once, how long one story may take, and each window's size. */
-export const WINDOWS_PER_RUN = 3;
+const WINDOWS_PER_RUN = 3;
 export const STORY_MS = 15_000;
 export const WINDOW = { width: 1200, height: 900 };
 /**
@@ -19,7 +21,7 @@ export const PICTURE_TOP = 640;
 export const PICTURE_SCALE = 2;
 export const PICTURE_MOST_ACROSS = 1440;
 export const PICTURE_QUALITY = 85;
-export const REPAINT_MS = 150;
+const REPAINT_MS = 150;
 
 /**
  * What a story file draws, read in the page once it has drawn: the page draws the file in place of the last
@@ -72,3 +74,59 @@ export const sharesOf = <T>(files: T[], pages: number = WINDOWS_PER_RUN): T[][] 
 /** What each page drew, back in the order of the run's files (`sharesOf`'s order undone); null for any not drawn. */
 export const inOrder = <T>(files: unknown[], drawn: (T | null)[][], pages: number = WINDOWS_PER_RUN): (T | null)[] =>
 	files.map((_, i) => drawn[i % pages]?.[Math.floor(i / pages)] ?? null);
+
+/** What one page is given of a run to draw: the build, its mode, its share of the files, and whether it pictures and checks them. */
+export interface Share {
+	base: string;
+	mode: Mode;
+	files: string[];
+	pictures: boolean;
+	tags: string[] | null;
+}
+
+/**
+ * One run after another, each shared between a few pages at once, drawn by the shell's own page (`drawShare`), and put
+ * back in the order of the run's files: how both shells measure (`Measure`).
+ */
+export const measureWith =
+	(drawShare: (share: Share) => Promise<(Drawn | null)[]>): Measure =>
+	async (runs) => {
+		const results: (Drawn | null)[][] = [];
+		for (const { base, mode, files, pictures = false, accessibility = null } of runs) {
+			const drawn = await Promise.all(sharesOf(files).map((share) => drawShare({ base, mode, files: share, pictures, tags: accessibility })));
+			results.push(inOrder(files, drawn));
+		}
+		return results;
+	};
+
+/**
+ * Each file of a page's share drawn in turn, once the page is loaded (with axe in it when the run checks accessibility):
+ * `run` runs a script in the page, `picture` takes the first story's picture. A story that does not draw in time is null,
+ * and the rest go on; what the page says it found is kept only when it is axe's results.
+ */
+export const drawEach = async (
+	{ files, pictures, tags }: Share,
+	run: (code: string) => Promise<unknown>,
+	picture: () => Promise<Buffer | undefined>,
+): Promise<(Drawn | null)[]> => {
+	const drawn: (Drawn | null)[] = [];
+	for (const file of files) {
+		const read = (await within(
+			STORY_MS,
+			run(readDrawn(file, pictures, tags)).catch(() => null),
+		)) as (Drawn & { accessibility?: unknown }) | null;
+		if (read === null) {
+			drawn.push(null);
+			continue;
+		}
+		const { accessibility, ...measured } = read;
+		const taken = pictures
+			? await within(
+					STORY_MS,
+					picture().catch(() => undefined),
+				)
+			: undefined;
+		drawn.push({ ...measured, ...(taken ? { picture: taken } : {}), ...(axeFound(accessibility) ? { accessibility } : {}) });
+	}
+	return drawn;
+};

@@ -7,12 +7,23 @@ import { previewAddress } from '../../shared/catalog';
 import { withState } from '../../shared/prototypeStates';
 import type { Headless } from '../ports';
 import { CHECK_WINDOW, type CheckPage, axeFound, axeInPage } from './accessibilityCheck';
-import type { Drawn, Measure, Mode } from './componentTokens';
+import type { Drawn, Measure } from './componentTokens';
 import { fitJpegBy } from './picture';
 import { COMPOSITION, placeOnWhite } from './pictureComposition';
 import { decodePng } from './png';
 import { COVER_BUDGET, COVER_STEPS, COVER_WINDOW, type DrawCover, isBlank, settleScript } from './projectCovers';
-import { PICTURE_MOST_ACROSS, PICTURE_QUALITY, PICTURE_SCALE, PICTURE_TOP, STORY_MS, WINDOW, inOrder, readDrawn, sharesOf } from './storyDrawing';
+import {
+	PICTURE_MOST_ACROSS,
+	PICTURE_QUALITY,
+	PICTURE_SCALE,
+	PICTURE_TOP,
+	STORY_MS,
+	type Share,
+	WINDOW,
+	drawEach,
+	measureWith,
+	readDrawn,
+} from './storyDrawing';
 import { within } from './within';
 
 /** Said when there is no browser to draw or check with: what to install, or where to point. */
@@ -184,52 +195,27 @@ export const chromeHeadless = ({
 	 * the size for pictures, with axe in it when the run checks accessibility, then each file drawn in turn. A story that
 	 * does not draw in time is null, and the rest go on; a page that does not load is null for all of its share.
 	 */
-	const drawShare = (base: string, mode: Mode, files: string[], pictures: boolean, tags: string[] | null): Promise<(Drawn | null)[]> =>
+	const drawShare = (share: Share): Promise<(Drawn | null)[]> =>
 		onPage(async (page) => {
+			const { base, mode, files, pictures, tags } = share;
 			await page.setViewport({ ...WINDOW, deviceScaleFactor: pictures ? PICTURE_SCALE : 1 });
 			await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: mode }]);
 			const loaded = await within(STORY_MS, page.goto(previewAddress(base, files[0] as string), { waitUntil: 'load', timeout: STORY_MS }));
 			if (loaded === null) return files.map(() => null);
 			if (tags) await within(STORY_MS, page.evaluate(`${axe.source};true`));
-			const drawn: (Drawn | null)[] = [];
-			for (const file of files) {
-				const read = (await within(
-					STORY_MS,
-					page.evaluate(readDrawn(file, pictures, tags)).catch(() => null),
-				)) as (Drawn & { accessibility?: unknown }) | null;
-				if (read === null) {
-					drawn.push(null);
-					continue;
-				}
-				// What the page says it found, only when it is axe's results.
-				const { accessibility, ...measured } = read;
-				const picture = pictures
-					? await within(
-							STORY_MS,
-							pictureOf(page).catch(() => undefined),
-						)
-					: undefined;
-				drawn.push({ ...measured, ...(picture ? { picture } : {}), ...(axeFound(accessibility) ? { accessibility } : {}) });
-			}
-			return drawn;
+			return drawEach(
+				share,
+				(code) => page.evaluate(code),
+				() => pictureOf(page),
+			);
+		}).catch((err: unknown) => {
+			// No browser is said; any other failure is its share not drawn, as a window that fails is in the app.
+			if (err instanceof Error && err.message === NO_BROWSER) throw err;
+			return share.files.map(() => null);
 		});
 
 	/** One run after another, each in a few pages at once, as the app's hidden windows draw them. */
-	const measure: Measure = async (runs) => {
-		const results: (Drawn | null)[][] = [];
-		for (const { base, mode, files, pictures = false, accessibility = null } of runs) {
-			const drawn = await Promise.all(
-				sharesOf(files).map((share) =>
-					drawShare(base, mode, share, pictures, accessibility).catch((err: unknown) => {
-						if (err instanceof Error && err.message === NO_BROWSER) throw err;
-						return share.map(() => null);
-					}),
-				),
-			);
-			results.push(inOrder(files, drawn));
-		}
-		return results;
-	};
+	const measure: Measure = measureWith(drawShare);
 
 	return {
 		draw,
