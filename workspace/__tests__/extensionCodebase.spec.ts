@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type CodebaseDeps, handOff, openCode, previewCodebase, shareCodebase } from '../extension/src/codebase';
+import { type CodebaseDeps, handOff, openCode, shareCodebase } from '../extension/src/codebase';
 import type { AgentStatus, Project, ShareStatus } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
@@ -121,36 +121,6 @@ describe('Handoff, from VS Code', () => {
 	it('says how a run that failed failed', async () => {
 		const { deps } = world({ startHandoff: vi.fn(async () => ({ ok: false, error: 'Open feature/zone-coverage first.' })) });
 		await expect(handOff(deps, 'zone-coverage')).rejects.toThrow('The handoff of Zone coverage did not finish: Open feature/zone-coverage first.');
-	});
-});
-
-describe('the preview of codebase work', () => {
-	it('starts the branch’s own dev server, at its recorded route, and opens it in the browser, with Stop', async () => {
-		const { deps, api, said, offered } = world();
-		await previewCodebase(deps, 'zone-coverage');
-		expect(api.startCommand).toHaveBeenCalledWith('/p', 'design-mode', 'zone-coverage');
-		expect(said[0]).toBe('Starting the preview of Zone coverage');
-		expect(deps.openExternal).toHaveBeenCalledWith('http://localhost:5173/zones');
-		expect(offered).toEqual([['The preview of Zone coverage is running at http://localhost:5173/zones.', ['Stop it']]]);
-	});
-
-	it('stops the dev server when asked', async () => {
-		const { deps, api } = world();
-		deps.offer = vi.fn(async () => 'Stop it');
-		await previewCodebase(deps, 'zone-coverage');
-		expect(api.stopCommand).toHaveBeenCalledWith('/p', 'design-mode');
-	});
-
-	it('moves the checkout to the work’s branch first, as the app does', async () => {
-		const { deps, api } = world({ readCheckout: vi.fn(async () => ok({ root: '/p', name: 'p', branch: 'main', clean: true })) });
-		await previewCodebase(deps, 'zone-coverage');
-		expect(api.continueIteration).toHaveBeenCalledWith('/p', 'zone-coverage', 'codebase');
-	});
-
-	it('says why it could not start', async () => {
-		const { deps } = world({ startCommand: vi.fn(async () => ({ ok: false, error: 'The dev server did not start.' })) });
-		await expect(previewCodebase(deps, 'zone-coverage')).rejects.toThrow('The preview of Zone coverage did not start: The dev server did not start.');
-		expect(deps.openExternal).not.toHaveBeenCalled();
 	});
 });
 

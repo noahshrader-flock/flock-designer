@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newNonce, panelHtml } from '../extension/src/html';
+import { PANEL_VIEW_OPTIONS } from '../extension/src/panelOptions';
 
 /**
  * The page DSNR's panel loads (Phase 0.2), as tight as VS Code's webview guidance asks: nothing loads unless named, the
@@ -80,5 +81,11 @@ describe('the panel’s page', () => {
 		const a = newNonce();
 		expect(a).toMatch(/^[A-Za-z0-9_-]{32,}$/);
 		expect(newNonce()).not.toBe(a);
+	});
+});
+
+describe('how the panel is registered', () => {
+	it('is kept alive while another tab is in front, so coming back is not a first load', () => {
+		expect(PANEL_VIEW_OPTIONS.webviewOptions.retainContextWhenHidden).toBe(true);
 	});
 });

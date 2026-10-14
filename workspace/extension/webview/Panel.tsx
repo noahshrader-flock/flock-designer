@@ -32,6 +32,7 @@ export interface PanelViewProps {
 	projects: ProjectsRead;
 	onOpen: (review: Review) => void;
 	onOpenInBrowser: (review: Review) => void;
+	onCopyLink: (review: Review) => void;
 	onNew: () => void;
 	onGetStarted: () => void;
 	onDialog: (dialog: PanelDialog) => void;
@@ -63,6 +64,7 @@ export const PanelView = ({
 	projects,
 	onOpen,
 	onOpenInBrowser,
+	onCopyLink,
 	onNew,
 	onGetStarted,
 	onDialog,
@@ -95,6 +97,7 @@ export const PanelView = ({
 					login={account.state === 'signedIn' ? account.user.login : null}
 					onOpen={onOpen}
 					onOpenInBrowser={onOpenInBrowser}
+					onCopyLink={onCopyLink}
 					onNew={onNew}
 					onGetStarted={onGetStarted}
 					onDialog={onDialog}
@@ -232,6 +235,7 @@ export const Panel = () => {
 				projects={{ value: projects, error: read.error }}
 				onOpen={(review) => vscode().postMessage({ type: 'open-review', ...review })}
 				onOpenInBrowser={(review) => vscode().postMessage({ type: 'open-review-in-browser', ...review })}
+				onCopyLink={(review) => vscode().postMessage({ type: 'copy-review-link', ...review })}
 				// Asked of the extension, which knows whether it can be started, and opens the dialog (`open-dialog`) if so.
 				onNew={() => vscode().postMessage({ type: 'ask-new-prototype' })}
 				onDialog={setDialog}

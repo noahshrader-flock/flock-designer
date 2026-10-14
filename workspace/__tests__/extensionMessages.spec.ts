@@ -15,7 +15,6 @@ describe('a message from the panel', () => {
 		[{ type: 'locate-design-system' }],
 		[{ type: 'get-started' }],
 		[{ type: 'ask-new-prototype' }],
-		[{ type: 'codebase', action: 'preview', projectId: 'zone-coverage' }],
 		[{ type: 'codebase', action: 'hand-off', projectId: 'zone-coverage' }],
 		// The draft pull request, from the Hand off dialog once a handoff found the work ready.
 		[{ type: 'codebase', action: 'share', projectId: 'zone-coverage' }],
@@ -24,6 +23,7 @@ describe('a message from the panel', () => {
 		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: 'Maps' }],
 		[{ type: 'open-review', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
 		[{ type: 'open-review-in-browser', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
+		[{ type: 'copy-review-link', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
 		// The Design System tab's (6.1 to 6.3): a component's tab, its links, Primitives, the voice and tone, a token's file, the change tried.
 		[{ type: 'open-component', id: 'src/components/FSButton/FSButton.stories.tsx' }],
 		[{ type: 'component-link', id: 'src/components/FSButton/FSButton.stories.tsx', link: 'storybook' }],
@@ -53,6 +53,10 @@ describe('a message from the panel', () => {
 		[{ type: 'account' }],
 		[{ type: 'open-review', projectId: 'a', name: 'v1-i1' }],
 		[{ type: 'open-review-in-browser', projectId: 'a', name: 'v1-i1' }],
+		[{ type: 'copy-review-link', projectId: 'a', name: 'v1-i1' }],
+		[{ type: 'copy-review-link', projectId: '../a', name: 'v1-i1', title: 'x' }],
+		// Removed: the panel no longer asks for a code preview.
+		[{ type: 'codebase', action: 'preview', projectId: 'zone-coverage' }],
 		[{ type: 'open-review-in-browser', projectId: 'a', name: 'v1-i1', title: 'x'.repeat(301) }],
 		[{ type: 'open-review', projectId: 1, name: 'v1-i1', title: 't' }],
 		[{ type: 'open-review', projectId: 'a', name: 'v1-i1', title: 'x'.repeat(301) }],

@@ -365,10 +365,10 @@ describe('dialogs and menus, in the panel', () => {
 	});
 
 	describe('a project’s menu', () => {
-		it('is on each project, a popover with Open for review and Assign folder…, closed by Escape or a press elsewhere', async () => {
+		it('is on each project, a popover of what it offers, closed by Escape or a press elsewhere', async () => {
 			await showOpen();
 			await press(menuFor(0));
-			expect(items().map((i) => i.textContent)).toEqual(['Open for review', 'Open in browser', 'Build in the codebase…', 'Assign folder…']);
+			expect(items().map((i) => i.textContent)).toEqual(['Open in browser', 'Copy link', 'Build', 'Assign folder…']);
 			expect(menuFor(0).getAttribute('aria-expanded')).toBe('true');
 			await act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
 			expect(items()).toHaveLength(0);
@@ -377,11 +377,11 @@ describe('dialogs and menus, in the panel', () => {
 			expect(items()).toHaveLength(0);
 		});
 
-		it('opens a project for review from it', async () => {
+		it('copies the published page’s link from the menu: asked of the extension, which says if there is none yet', async () => {
 			await showOpen();
 			await press(menuFor(0));
-			await press(item('Open for review'));
-			expect(panelSaid().at(-1)).toMatchObject({ type: 'open-review', projectId: 'alert-history' });
+			await press(item('Copy link'));
+			expect(panelSaid().at(-1)).toEqual({ type: 'copy-review-link', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' });
 			expect(items()).toHaveLength(0);
 		});
 
@@ -405,7 +405,7 @@ describe('dialogs and menus, in the panel', () => {
 			await act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
 			expect(document.activeElement).toBe(menuFor(0));
 			await press(menuFor(0));
-			await press(item('Open for review'));
+			await press(item('Copy link'));
 			expect(document.activeElement).toBe(menuFor(0));
 		});
 
@@ -420,7 +420,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await viewChoice('List');
 			await press(menuFor(0));
-			expect(items().map((i) => i.textContent)).toEqual(['Open for review', 'Open in browser', 'Build in the codebase…', 'Assign folder…']);
+			expect(items().map((i) => i.textContent)).toEqual(['Open in browser', 'Copy link', 'Build', 'Assign folder…']);
 		});
 	});
 
@@ -517,40 +517,32 @@ describe('codebase work, in the panel', () => {
 	const elsewhere = async () => act(async () => void document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
 	const inDialog = (name: string) => [...dialog()!.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
 
-	it('offers what a project has: its prototypes’ actions, its codebase work’s, and its folder', async () => {
+	it('offers what a project has, in groups: what opens it, its link, the next stage (build, or handoff, never both), and its folder', async () => {
 		await showOpen(OPEN, WITH_CODE);
+		const dividers = () => document.querySelectorAll('[role="separator"]').length;
 		await press(menuOf('Zone coverage'));
-		expect(items()).toEqual([
-			'Open for review',
-			'Open in browser',
-			'Build in the codebase…',
-			'Open the preview',
-			'Open on GitHub',
-			'Comments…',
-			'Hand off to engineering…',
-			'Assign folder…',
-		]);
+		// A prototype that is in code too: it is built, so Handoff, not Build.
+		expect(items()).toEqual(['Open in browser', 'Open on GitHub', 'Copy link', 'Build', 'Assign folder…']);
+		expect(dividers()).toBe(3);
 		await elsewhere();
 		await press(menuOf('Alert history'));
-		expect(items()).toEqual(['Open for review', 'Open in browser', 'Build in the codebase…', 'Assign folder…']);
+		// A prototype only: not built yet, so Build, and no GitHub to open.
+		expect(items()).toEqual(['Open in browser', 'Copy link', 'Build', 'Assign folder…']);
+		expect(dividers()).toBe(3);
 		await elsewhere();
 		await press(menuOf('Roles in code'));
-		expect(items()).toEqual(['Open the preview', 'Open on GitHub', 'Comments…', 'Hand off to engineering…', 'Assign folder…']);
+		// Code only: nothing of a prototype to open or link, and Handoff.
+		expect(items()).toEqual(['Open on GitHub', 'Build', 'Assign folder…']);
+		expect(dividers()).toBe(2);
+		// No item opens it in VS Code: pressing it does, and nothing is said twice.
+		expect(items().some((label) => /open for review|preview|comments|share/i.test(label))).toBe(false);
 	});
 
-	it('asks the extension for the preview and the work on GitHub, naming the project only; sharing is the end of a handoff, not a menu item', async () => {
+	it('asks the extension for the work on GitHub, naming the project only', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(menuOf('Zone coverage'));
-		expect(items().some((label) => /share/i.test(label))).toBe(false);
-		await elsewhere();
-		for (const [label, action] of [
-			['Open the preview', 'preview'],
-			['Open on GitHub', 'open-code'],
-		]) {
-			await press(menuOf('Zone coverage'));
-			await press(item(label!));
-			expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action, projectId: 'zone-coverage' });
-		}
+		await press(item('Open on GitHub'));
+		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'open-code', projectId: 'zone-coverage' });
 	});
 
 	it('opens a project that is only in the code on GitHub when it is pressed, as the app does', async () => {
@@ -562,7 +554,7 @@ describe('codebase work, in the panel', () => {
 	it('hands off after saying what happens, and only once Start handoff is pressed', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(menuOf('Zone coverage'));
-		await press(item('Hand off to engineering…'));
+		await press(item('Build'));
 		expect(dialog()?.getAttribute('aria-label')).toBe('Hand off to engineering');
 		expect(dialog()!.textContent).toContain('HANDOFF.md');
 		expect(dialog()!.textContent).toContain('feature/zone-coverage');
@@ -588,7 +580,7 @@ describe('codebase work, in the panel', () => {
 			);
 		await showOpen(OPEN, ready({}) as typeof SAMPLE_PROJECTS);
 		await press(menuOf('Zone coverage'));
-		await press(item('Hand off to engineering…'));
+		await press(item('Build'));
 		await answer('agentStatus', { state: 'idle' });
 		expect(dialog()!.textContent).toContain('ready for engineering');
 		expect(inDialog('Open a draft pull request').className).toContain('button-primary');
@@ -611,7 +603,7 @@ describe('codebase work, in the panel', () => {
 		);
 		await showOpen(OPEN, ready as typeof SAMPLE_PROJECTS);
 		await press(menuOf('Zone coverage'));
-		await press(item('Hand off to engineering…'));
+		await press(item('Build'));
 		await answer('agentStatus', { state: 'idle' });
 		expect([...dialog()!.querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Open a draft pull request');
 		await press(inDialog('Open on GitHub'));
@@ -628,7 +620,7 @@ describe('codebase work, in the panel', () => {
 			) as typeof SAMPLE_PROJECTS,
 		);
 		await press(menuOf('Zone coverage'));
-		await press(item('Hand off to engineering…'));
+		await press(item('Build'));
 		await answer('agentStatus', { state: 'idle' });
 		await press(inDialog('Run again'));
 		await answer('agentStatus', { state: 'idle' });
@@ -638,7 +630,7 @@ describe('codebase work, in the panel', () => {
 	it('does not start a handoff when the agent was given other work since the dialog opened', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(menuOf('Zone coverage'));
-		await press(item('Hand off to engineering…'));
+		await press(item('Build'));
 		await answer('agentStatus', { state: 'idle' });
 		await press(inDialog('Start handoff'));
 		await answer('agentStatus', { state: 'running', startedAt: '', work: 'prototype/alert-history/v2-i1', purpose: null });
@@ -649,64 +641,10 @@ describe('codebase work, in the panel', () => {
 	it('says when the agent is busy with other work, and does not start a handoff then', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(menuOf('Zone coverage'));
-		await press(item('Hand off to engineering…'));
+		await press(item('Build'));
 		await answer('agentStatus', { state: 'running', startedAt: '', work: 'prototype/alert-history/v2-i1', purpose: null });
 		expect(dialog()!.textContent).toContain('The agent is busy with other work');
 		expect(inDialog('Start handoff').disabled).toBe(true);
-	});
-
-	it('lists the comments on codebase work read only, and says they go on its pull request', async () => {
-		await showOpen(OPEN, WITH_CODE);
-		await press(menuOf('Zone coverage'));
-		await press(item('Comments…'));
-		expect(dialog()?.getAttribute('aria-label')).toBe('Comments on Zone coverage’s codebase work');
-		expect(sent.filter((m) => m.name === 'readComments').at(-1)?.args).toEqual(['zone-coverage', 'feature/zone-coverage']);
-		await answer('readComments', [
-			{
-				thread: 1,
-				id: 10,
-				author: 'patreeya',
-				authorAvatarUrl: null,
-				body: 'Bigger, please.\n\n<!-- fd-anchor: {} -->',
-				createdAt: '2026-10-12T11:00:00Z',
-				resolved: false,
-				addressedAt: null,
-				addressedIn: null,
-				anchor: null,
-				picture: null,
-			},
-			{
-				thread: 1,
-				id: 11,
-				author: 'noah',
-				authorAvatarUrl: null,
-				body: 'Done.',
-				createdAt: '2026-10-12T12:00:00Z',
-				resolved: true,
-				addressedAt: null,
-				addressedIn: null,
-				anchor: null,
-				picture: null,
-			},
-		]);
-		const comments = [...dialog()!.querySelectorAll('[data-part="comment"]')].map((c) => c.textContent);
-		expect(comments).toEqual([expect.stringContaining('Bigger, please.'), expect.stringContaining('Done.')]);
-		expect(comments[0]).toContain('patreeya');
-		expect(comments[1]).toContain('Resolved');
-		expect(comments.join('')).not.toContain('fd-anchor');
-		expect(dialog()!.textContent).toContain('Comments on codebase work go on its pull request');
-		// Read only: nothing to resolve or reply with.
-		expect([...dialog()!.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Close', 'Open on GitHub']);
-		await press(inDialog('Open on GitHub'));
-		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'open-code', projectId: 'zone-coverage' });
-	});
-
-	it('says when there are no comments on it', async () => {
-		await showOpen(OPEN, WITH_CODE);
-		await press(menuOf('Zone coverage'));
-		await press(item('Comments…'));
-		await answer('readComments', []);
-		expect(dialog()!.textContent).toContain('No comments on it.');
 	});
 
 	describe('Build in the codebase', () => {
@@ -725,7 +663,7 @@ describe('codebase work, in the panel', () => {
 		const open = async (more: Record<string, unknown> = {}) => {
 			await showOpen(OPEN, WITH_CODE);
 			await press(menuOf('Alert history'));
-			await press(item('Build in the codebase…'));
+			await press(item('Build'));
 			await answer('buildInCodebasePlan', plan(more));
 			await answer('branchesWithSetup', ['main', 'develop']);
 		};

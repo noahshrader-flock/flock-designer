@@ -1,11 +1,11 @@
-import { type BuildApi, type BuildPhase, previewCommandFor, runLocalBuild } from '../../src/renderer/localBuild';
+import { type BuildApi, type BuildPhase, runLocalBuild } from '../../src/renderer/localBuild';
 import type { Project, ProjectIteration, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 import { codeLink, workOf } from '../../src/shared/work';
 import { type AgentWorkDeps, type Offer, type Tell, agentReady, agentWork, pollOf } from './agentWork';
 
 export interface CodebaseDeps extends AgentWorkDeps {
-	api: AgentWorkDeps['api'] & BuildApi & Pick<WorkspaceApi, 'listProjects' | 'handoffResult' | 'shareIteration' | 'onShareStatus' | 'stopCommand'>;
+	api: AgentWorkDeps['api'] & BuildApi & Pick<WorkspaceApi, 'listProjects' | 'handoffResult' | 'shareIteration' | 'onShareStatus'>;
 	/** The product folder that is open: where the codebase work is. */
 	root: string;
 	tell: Tell;
@@ -65,48 +65,6 @@ export const handOff = async (deps: CodebaseDeps, projectId: string): Promise<vo
 				? `${project.title} is not ready for engineering yet: its log says why.`
 				: `The handoff of ${project.title} finished: its log says how it went.`,
 		);
-};
-
-const STOP = 'Stop it';
-
-/**
- * The preview of codebase work (ELECTRON_MIGRATION_PLAN 5.3): the branch's own dev server, started as the app starts it
- * (`runLocalBuild`: the checkout moved to the branch first, at its recorded route), opened in the person's browser, since
- * there are no pins on codebase work. Said, with Stop, until it is up; then where it is, and Stop it.
- */
-export const previewCodebase = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
-	const { api, root } = deps;
-	const { project, iteration } = await codebaseOf(api, projectId);
-	const command = previewCommandFor(iteration);
-	let url: string | null = null;
-	let failed: string | null = null;
-	let stopped = false;
-	await deps.progress(
-		`Starting the preview of ${project.title}`,
-		async (say) => {
-			url = await runLocalBuild({
-				api,
-				root,
-				project,
-				iteration,
-				isLive: () => !stopped,
-				onPhase: (phase: BuildPhase) => {
-					if (phase.kind === 'preview') say('Starting its dev server…');
-					if (phase.kind === 'failed') failed = phase.message;
-				},
-				...pollOf(deps),
-			});
-		},
-		() => {
-			stopped = true;
-			void api.stopCommand(root, command);
-		},
-	);
-	if (stopped) return;
-	if (failed !== null || url === null) throw new Error(`The preview of ${project.title} did not start: ${failed ?? 'it gave no address.'}`);
-	const at: string = url;
-	await deps.openExternal(at);
-	if ((await deps.offer(`The preview of ${project.title} is running at ${at}.`, [STOP])) === STOP) valueOf(await api.stopCommand(root, command));
 };
 
 /** What sharing says at each step: it is a push, a pull request and a build. */

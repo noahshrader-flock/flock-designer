@@ -98,6 +98,26 @@ describe('the extension’s sources', () => {
 		expect(/pinWash:\s*'([^']+)'/.exec(palette)?.[1]).toBe(`rgba(${r},${g},${b},.08)`);
 	});
 
+	it('pad the text under a card’s picture on all four sides, from one name, for every card (projects and components alike)', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		expect(css).toMatch(/--dsnr-card-text-pad:\s*8px/);
+		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
+		expect(rule('.card-text')).toMatch(/padding:\s*var\(--dsnr-card-text-pad\);/);
+	});
+
+	it('space a grid’s cards by one named gap, across and down alike', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		expect(css).toMatch(/--dsnr-grid-gap:\s*16px/);
+		const grid = css.split('}').find((b) => b.trim().startsWith('.grid {')) ?? '';
+		// One value for both directions: `gap` alone, never a row and a column of their own.
+		expect(grid).toMatch(/\sgap:\s*var\(--dsnr-grid-gap\);/);
+		expect(grid).not.toMatch(/row-gap|column-gap/);
+	});
+
 	it('lay a design system’s header out in two lines: its name, with Sync and its menu centred on that line, and its branch under the name', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!

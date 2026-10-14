@@ -23,6 +23,7 @@ export type PanelMessage =
 	| { type: 'new-prototype'; title: string; task: string; folder: string | null }
 	| ({ type: 'open-review' } & Review)
 	| ({ type: 'open-review-in-browser' } & Review)
+	| ({ type: 'copy-review-link' } & Review)
 	// The Design System tab's: a component's tab, by its story file, and its links, which the extension finds itself; the
 	// Primitives tab; the voice and tone; a token's own file, at its line; and the change to the tokens being tried, which
 	// the extension keeps for every DSNR page (each edit read again where it is used, `tokenEditsOf`).
@@ -41,11 +42,11 @@ export type ComponentLink = (typeof COMPONENT_LINKS)[number];
 export type DesignTab = { kind: 'component'; id: string; name: string } | { kind: 'primitives' };
 
 /**
- * What can be done with a project's codebase work from the panel: its preview, Handoff, its draft pull request (from the
+ * What can be done with a project's codebase work from the panel: Handoff, its draft pull request (from the
  * Hand off dialog once a handoff found the work ready: never a menu item), and the work on GitHub. The page names the
  * project only; the extension finds the work, and where it is, itself.
  */
-export const CODEBASE_ACTIONS = ['preview', 'hand-off', 'share', 'open-code'] as const;
+export const CODEBASE_ACTIONS = ['hand-off', 'share', 'open-code'] as const;
 export type CodebaseAction = (typeof CODEBASE_ACTIONS)[number];
 
 /** A prototype to open for review: its project, its name, and the title its tab is given. */
@@ -84,7 +85,6 @@ export type PanelDialog =
 	| { kind: 'assign'; projectId: string }
 	| { kind: 'build'; projectId: string }
 	| { kind: 'hand-off'; projectId: string }
-	| { kind: 'comments'; projectId: string }
 	// Not about a project: the GitHub account's Sign out, and the sync's what is held back and Sync now.
 	| { kind: 'account' }
 	| { kind: 'sync' };
@@ -112,7 +112,7 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 			Array.isArray(m.args)
 			? { type: 'call', id: m.id, name: m.name as InvokeName, args: m.args }
 			: null;
-	if (m.type === 'open-review' || m.type === 'open-review-in-browser')
+	if (m.type === 'open-review' || m.type === 'open-review-in-browser' || m.type === 'copy-review-link')
 		return hasExactly(m, ['type', 'projectId', 'name', 'title']) &&
 			typeof m.projectId === 'string' &&
 			PROJECT_ID.test(m.projectId) &&

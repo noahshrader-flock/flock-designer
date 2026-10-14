@@ -6,7 +6,7 @@ import { needsProduct } from '../../src/shared/projectScope';
 import { type CodebaseAction, type PanelDialog, reviewsOf } from '../src/messages';
 import { AccountDialog, SyncDialog } from './AccountDialogs';
 import { Dialog, DialogButtons } from './ui/Dialog';
-import { BuildInCodebaseDialog, CodebaseCommentsDialog, HandoffDialog } from './CodebaseDialogs';
+import { BuildInCodebaseDialog, HandoffDialog } from './CodebaseDialogs';
 import { AssignFolderDialog, NewPrototypeDialog, type NewPrototypeAnswers } from './ProjectDialogs';
 
 /**
@@ -70,10 +70,6 @@ export const PanelDialogs = ({
 					onOpenCode={() => onCodebase('open-code', project.id)}
 					onClose={onClose}
 				/>
-			) : null;
-		case 'comments':
-			return codebase ? (
-				<CodebaseCommentsDialog project={project} branch={codebase.branch} onOpenCode={() => onCodebase('open-code', project.id)} onClose={onClose} />
 			) : null;
 	}
 };

@@ -35,7 +35,9 @@ interface PanelDeps {
 	locate: () => Promise<void>;
 	openReview: (review: Review) => Promise<void>;
 	openReviewInBrowser: (review: Review) => Promise<void>;
-	/** Does what the panel asked of a project's codebase work: its preview, Handoff, Share, or the work on GitHub. */
+	/** Copies the link of the review's published page, or says it is not published yet. */
+	copyReviewLink: (review: Review) => Promise<void>;
+	/** Does what the panel asked of a project's codebase work: Handoff, Share, or the work on GitHub. */
 	codebase: (action: CodebaseAction, projectId: string) => Promise<void>;
 	/** Starts a prototype from what the panel's dialog asked. */
 	startPrototype: (answers: Given) => Promise<void>;
@@ -103,6 +105,8 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 					return await this.deps.openReview(message);
 				case 'open-review-in-browser':
 					return await this.deps.openReviewInBrowser(message);
+				case 'copy-review-link':
+					return await this.deps.copyReviewLink(message);
 				case 'codebase':
 					return await this.deps.codebase(message.action, message.projectId);
 				case 'get-started':

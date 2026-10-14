@@ -5,7 +5,7 @@ import { type Context, findContext } from '../../src/main/services/findContext';
 import type { PublishStatus, SignInState } from '../../src/shared/contract';
 import { addressComment } from './address';
 import { Panels, hostApi } from './bridge';
-import { handOff, openCode, previewCodebase, shareCodebase } from './codebase';
+import { handOff, openCode, shareCodebase } from './codebase';
 import { startCore } from './core';
 import { showFound, shownFrom } from './designSystem';
 import { designSystemHost } from './designSystemHost';
@@ -14,6 +14,7 @@ import { valueOf } from '../../src/shared/result';
 import { type CodebaseAction, type HostMessage, type Review, readProjectArg, readReview, reviewsOf } from './messages';
 import { type Given, newPrototype, readGiven, readyToStart } from './newPrototype';
 import { PanelProvider } from './panel';
+import { PANEL_VIEW_OPTIONS } from './panelOptions';
 import { publishedLink } from './publishing';
 import { copyProject } from '../../src/main/services/projectCopy';
 import { needsProduct } from '../../src/shared/projectScope';
@@ -48,6 +49,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		locate: () => locate(),
 		openReview: (review) => openReview(review),
 		openReviewInBrowser: (review) => openReviewInBrowser(review),
+		copyReviewLink: (review) => copyPublishedLink(review),
 		startPrototype: (answers) => startPrototype(answers).catch(failed),
 		codebase: (action, projectId) => codebaseWork(action, projectId).catch(failed),
 		development,
@@ -178,6 +180,11 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	const openReviewInBrowser = async (review: Review) => {
 		await vscodeOpen(await reviews.inBrowser({ records: await recordsFor(review.projectId), ...review }));
 	};
+	/** The link of the review's published page onto the clipboard; when there is none, what says so (`publishedLink`). */
+	const copyPublishedLink = async (review: Review) => {
+		const url = await publishedLink(here, review);
+		if (url !== null) await vscodeCopy(url);
+	};
 	core.prototypeServer.answerAsks((key, ask) => reviews.answerBrowser(key, ask));
 	/** Locate design system: a folder that holds one is remembered and shown; one that does not is refused, and not kept. */
 	const locate = async () => {
@@ -200,7 +207,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	const codebaseWork = async (action: CodebaseAction, projectId: string) => {
 		const root = found.product;
 		if (root === null) throw new Error(productNow().why);
-		const run = { preview: previewCodebase, 'hand-off': handOff, share: shareCodebase, 'open-code': openCode }[action];
+		const run = { 'hand-off': handOff, share: shareCodebase, 'open-code': openCode }[action];
 		try {
 			await run({ ...here, root }, projectId);
 		} finally {
@@ -234,7 +241,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		agentLog,
 		...voice.disposables,
 		...design.disposables,
-		vscode.window.registerWebviewViewProvider('dsnr.panel', provider),
+		vscode.window.registerWebviewViewProvider('dsnr.panel', provider, PANEL_VIEW_OPTIONS),
 		// Without answers, the panel's dialog asks them, once there is nothing in the way; given them, by code, it starts.
 		vscode.commands.registerCommand('dsnr.newPrototype', async (raw: unknown) => {
 			if (raw === undefined)
@@ -264,12 +271,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				if (url) await vscodeOpen(url);
 			}),
 		),
-		vscode.commands.registerCommand('dsnr.copyPublishedLink', () =>
-			inFront(async (review) => {
-				const url = await publishedLink(here, review);
-				if (url !== null) await vscodeCopy(url);
-			}),
-		),
+		vscode.commands.registerCommand('dsnr.copyPublishedLink', () => inFront(copyPublishedLink)),
 		// From a row's right-click menu (its project) or a review tab's menu (the review in front): the panel's dialog.
 		vscode.commands.registerCommand('dsnr.assignFolder', (raw: unknown) => {
 			const projectId = readProjectArg(raw) ?? reviews.active()?.projectId;

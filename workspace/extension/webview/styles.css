@@ -26,6 +26,10 @@
 	--dsnr-control-small: 22px;
 	/* An icon beside a line of small text: the icon font's own size is 16px. */
 	--dsnr-icon-xs: 12px;
+	/* The room around the text under a card's picture, on all four sides, for every card. */
+	--dsnr-card-text-pad: 8px;
+	/* The space between a grid's cards, across and down. */
+	--dsnr-grid-gap: 16px;
 	/* What is kept at the top while a list scrolls: the toggle's bar, then the bar of the tab under it (search and options). */
 	--dsnr-top-pad: 8px;
 	--dsnr-top-height: calc(var(--dsnr-control) + 2 * var(--dsnr-top-pad));
@@ -455,7 +459,7 @@ body {
 .grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
-	gap: 8px;
+	gap: var(--dsnr-grid-gap);
 	margin: 0;
 	padding: 4px 12px 8px;
 	list-style: none;
@@ -517,6 +521,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	min-width: 0;
+	padding: var(--dsnr-card-text-pad);
 }
 
 /* A line that says what the list is, or what is happening: quiet, and in line with the rows. */
@@ -823,9 +828,7 @@ textarea.input {
 	background: var(--vscode-textCodeBlock-background);
 }
 
-/* Comments read only: who said each, whether it was resolved, and what was said. */
-/* A dialog's list of things (comments, what is not read, what is held back): scrolling inside it, never past it. */
-.comment-list,
+/* A dialog's list of things (what is not read, what is held back): scrolling inside it, never past it. */
 .problem-list {
 	display: flex;
 	flex-direction: column;
@@ -835,28 +838,6 @@ textarea.input {
 	padding: 0;
 	overflow-y: auto;
 	list-style: none;
-}
-
-.comment {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	padding: 6px 8px;
-	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
-	border-radius: var(--dsnr-radius-small);
-}
-
-.comment-by {
-	font-weight: 600;
-}
-
-.comment-resolved {
-	color: var(--dsnr-muted);
-	font-weight: normal;
-}
-
-.comment-text {
-	white-space: pre-wrap;
 }
 
 /*

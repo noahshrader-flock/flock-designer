@@ -1,6 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { useWorkspace } from '../../src/renderer/useWorkspace';
-import { stripAnchor } from '../../src/shared/anchor';
 import type { BuildInCodebase } from '../../src/shared/contract';
 import type { Project } from '../../src/shared/domain/projects';
 import { buildStart, buildSteps, noSetupNote, startBranch } from '../../src/shared/work';
@@ -98,50 +97,6 @@ export const HandoffDialog = ({
 					)}
 				</DialogButtons>
 			</form>
-		</Dialog>
-	);
-};
-
-/**
- * The comments on codebase work, read only: there are no pins on a real product's page, so new feedback goes on the pull
- * request; what was said before is kept and shown, each with who said it and whether it was resolved.
- */
-export const CodebaseCommentsDialog = ({
-	project,
-	branch,
-	onOpenCode,
-	onClose,
-}: {
-	project: Project;
-	branch: string;
-	onOpenCode: () => void;
-	onClose: () => void;
-}) => {
-	const read = useWorkspace(() => workspace().readComments(project.id, branch), [project.id, branch]);
-	return (
-		<Dialog title={`Comments on ${project.title}’s codebase work`} onClose={onClose}>
-			<p className="dialog-about">Comments on codebase work go on its pull request. These were made before, and are kept as they were.</p>
-			<ErrorLine error={read.error} />
-			{read.value === null ? (
-				read.error === null && <p className="note">Reading them…</p>
-			) : read.value.length === 0 ? (
-				<p className="note">No comments on it.</p>
-			) : (
-				<ul className="comment-list">
-					{read.value.map((c) => (
-						<li key={c.id} data-part="comment" className="comment">
-							<span className="comment-by">
-								{c.author}
-								{c.resolved && <span className="comment-resolved"> · Resolved</span>}
-							</span>
-							<span className="comment-text">{stripAnchor(c.body).trim()}</span>
-						</li>
-					))}
-				</ul>
-			)}
-			<DialogButtons onClose={onClose}>
-				<Button onClick={onOpenCode}>Open on GitHub</Button>
-			</DialogButtons>
 		</Dialog>
 	);
 };
