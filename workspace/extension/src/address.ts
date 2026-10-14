@@ -9,7 +9,8 @@ import { type Review, reviewsOf } from './messages';
 export interface AddressDeps extends AgentWorkDeps {
 	api: AgentWorkDeps['api'] & PrototypeAddressApi & Pick<WorkspaceApi, 'listProjects'>;
 	tell: Tell;
-	openReview: (review: Review) => Promise<void>;
+	/** Shows the iteration the change is in, as whoever asked shows it: a review tab, or a page in the browser (and an open tab). */
+	show: (review: Review) => Promise<void>;
 }
 
 const labelOf = (projectId: string, name: string): string => iterationLabel({ name, branch: prototypeKey(projectId, name) });
@@ -17,10 +18,11 @@ const labelOf = (projectId: string, name: string): string => iterationLabel({ na
 /**
  * Address on one of a prototype's comments, from its review in VS Code (ELECTRON_MIGRATION_PLAN 4.2): the app's own
  * Address (`runPrototypeAddress`), said and stoppable as a build is, its log beside the editor. The change goes where
- * the core puts it: this iteration, or the next when others had commented on this one; the review then shows that page,
- * and says which. An agent that changed nothing says why in its log, and the review is left as it is.
+ * the core puts it: this iteration, or the next when others had commented on this one; that page is then shown (`show`),
+ * and which it is said, and returned, so a page in the browser can go to it. An agent that changed nothing says why in its
+ * log, and the review is left as it is (null).
  */
-export const addressComment = async (deps: AddressDeps, review: Review, comment: CommentRef): Promise<null> => {
+export const addressComment = async (deps: AddressDeps, review: Review, comment: CommentRef): Promise<string | null> => {
 	const { api } = deps;
 	await agentReady(api);
 	let ended: AddressPhase | null = null;
@@ -60,6 +62,6 @@ export const addressComment = async (deps: AddressDeps, review: Review, comment:
 			: `Others had commented on ${labelOf(review.projectId, review.name)}, so it stays as they saw it. The change is in ${labelOf(review.projectId, where)}.`,
 	);
 	const project = valueOf(await api.listProjects()).find((p) => p.id === review.projectId);
-	await deps.openReview((project ? reviewsOf(project).find((r) => r.name === where) : undefined) ?? review);
-	return null;
+	await deps.show((project ? reviewsOf(project).find((r) => r.name === where) : undefined) ?? review);
+	return where;
 };

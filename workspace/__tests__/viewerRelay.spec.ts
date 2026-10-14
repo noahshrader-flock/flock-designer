@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { keyFromAddress, listenForDsnr, relayComments, serverRelay } from '../src/viewer/relay';
+import { iterationAddress, keyFromAddress, listenForDsnr, relayComments, serverRelay } from '../src/viewer/relay';
 
 /**
  * The review page's side of commenting through DSNR (4.2): it listens only when it is served from this machine and in a
@@ -155,5 +155,18 @@ describe('asking DSNR through this machine’s server', () => {
 		expect(await wrong.relay.ask('readComments', [])).toEqual({ ok: false, error: expect.any(String) });
 		const garbled = answering(async () => new Response('<html>', { status: 200 }));
 		expect(await garbled.relay.ask('readComments', [])).toEqual({ ok: false, error: expect.any(String) });
+	});
+});
+
+describe('where a page in the browser goes after Address (BROWSER_COMMENTS_PLAN 3.2)', () => {
+	const here = 'http://127.0.0.1:5000/review/demo/v1/i1/';
+	it('is the iteration it showed, under the same project, as the site lays them out', () => {
+		expect(iterationAddress('../../', 'v1-i2', here)).toBe('http://127.0.0.1:5000/review/demo/v1/i2/');
+		expect(iterationAddress('../../', 'v2-i1', here)).toBe('http://127.0.0.1:5000/review/demo/v2/i1/');
+	});
+
+	it('is this page again when the change is in it, and nowhere for what is not an iteration', () => {
+		expect(iterationAddress('../../', 'v1-i1', here)).toBe(here);
+		expect(iterationAddress('../../', '../../etc', here)).toBeNull();
 	});
 });

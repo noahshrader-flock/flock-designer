@@ -274,7 +274,24 @@ describe('a review tab’s answers to its page', () => {
 		expect(await ask('resolveComment', [{ thread: 1, id: 2 }, true])).toMatchObject({ ok: true });
 		expect(await ask('signIn', [])).toEqual({ ok: true, value: { state: 'signedOut' } });
 		await ask('address', [{ thread: 1, id: 2 }]);
-		expect(d.address).toHaveBeenCalledWith(review, { thread: 1, id: 2 });
+		expect(d.address).toHaveBeenCalledWith(review, { thread: 1, id: 2 }, 'tab');
+	});
+
+	it('Address the iteration the page is on, when it says which, and say who asked (BROWSER_COMMENTS_PLAN 3.1)', async () => {
+		const d = deps();
+		const seen = new Set<number>();
+		const ask = (args: unknown[]) => answerReview(d, review, 'address', args, seen, 'browser');
+		await answerReview(d, review, 'readComments', ['demo', 'prototype/demo/v1-i2'], seen, 'browser');
+		await ask([{ thread: 1, id: 2 }, 'prototype/demo/v1-i2']);
+		expect(d.address).toHaveBeenCalledWith({ ...review, name: 'v1-i2' }, { thread: 1, id: 2 }, 'browser');
+		// Only one of this review's project's prototypes, and only one comment.
+		for (const branch of ['prototype/other/v1-i1', 'prototype/demo/../other/v1-i1', 'feature/demo'])
+			expect(await ask([{ thread: 1, id: 2 }, branch]), branch).toEqual({
+				ok: false,
+				error: 'This review is of demo, so it comments only on demo’s prototypes.',
+			});
+		expect(await ask([{ thread: 1, id: 2 }, 'prototype/demo/v1-i2', 'more'])).toEqual({ ok: false, error: 'Address is given one comment.' });
+		expect(d.address).toHaveBeenCalledTimes(1);
 	});
 
 	it('read and comment only on this review’s project, on any of its prototypes: not another project’s, whatever it is called', async () => {
@@ -403,13 +420,13 @@ describe('the review tabs', () => {
 	});
 
 	it('open in the browser with a key of their own, for that review alone, each with what it has been shown (BROWSER_COMMENTS_PLAN 1.2)', async () => {
-		const answered: { review: unknown; name: string; args: unknown[]; seen: Set<number> }[] = [];
+		const answered: { review: unknown; name: string; args: unknown[]; seen: Set<number>; from: unknown }[] = [];
 		const reviews = new Reviews({
 			vscode: fakeVsCode().api as never,
 			build: () => undefined,
 			serve: async () => 'http://127.0.0.1:5000/review/',
-			answer: async (review, name, args, seen) => {
-				answered.push({ review, name, args, seen });
+			answer: async (review, name, args, seen, from) => {
+				answered.push({ review, name, args, seen, from });
 				return { ok: true, value: [] };
 			},
 		});
@@ -430,6 +447,8 @@ describe('the review tabs', () => {
 			[demo, 'readComments', ['demo', 'prototype/demo/v1-i2']],
 			[demo, 'readComments', ['demo', 'prototype/demo/v1-i2']],
 		]);
+		// Asked from the browser, as the answer says, for what Address shows.
+		expect(answered.map((x) => x.from)).toEqual(['browser', 'browser']);
 		// Each key has its own list of what it has been shown: what one browser tab saw, another may not change.
 		expect(answered[0]!.seen).not.toBe(answered[1]!.seen);
 		await reviews.answerBrowser(a as string, { ...ask, id: 4 });
@@ -485,6 +504,30 @@ describe('the review tabs', () => {
 		} finally {
 			server.close();
 		}
+	});
+
+	it('show a review in its project’s tab if one is open, without bringing it in front, and open none (BROWSER_COMMENTS_PLAN 3.3)', async () => {
+		const vs = fakeVsCode();
+		const built: string[] = [];
+		const reviews = new Reviews({
+			vscode: vs.api as never,
+			build: (records) => void built.push(records),
+			serve: async () => 'http://127.0.0.1:5000/review/',
+			answer: async () => ({ ok: true, value: null }),
+		});
+		// None open: nothing opened, but the site is built, so the browser has the page to go to.
+		await reviews.showIfOpen({ records: '/d/projects', projectId: 'demo', name: 'v1-i2', title: 'Demo · V1 · I2' });
+		expect(vs.panels).toHaveLength(0);
+		expect(built).toEqual(['/d/projects']);
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' });
+		await reviews.showIfOpen({ records: '/d/projects', projectId: 'demo', name: 'v1-i2', title: 'Demo · V1 · I2' });
+		expect(vs.panels).toHaveLength(1);
+		expect(vs.panels[0]!.title).toBe('Demo · V1 · I2');
+		expect(vs.panels[0]!.html).toContain('http://127.0.0.1:5000/review/demo/v1/i2/');
+		expect(vs.panels[0]!.revealed).toBe(0);
+		// Another project's tab is not this one's.
+		await reviews.showIfOpen({ records: '/d/projects', projectId: 'other', name: 'v1-i1', title: 'Other · V1 · I1' });
+		expect(vs.panels).toHaveLength(1);
 	});
 
 	it('say which review is in front, for what its title bar does', async () => {

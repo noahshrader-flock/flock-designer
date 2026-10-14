@@ -343,7 +343,7 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Sign out')).toBe(false);
 	});
 
-	it('offers Address on an open comment, which asks DSNR to address it', async () => {
+	it('offers Address on an open comment, which asks DSNR to address it, on the iteration this page is', async () => {
 		const { relay, asked } = tab();
 		const { doc } = await open(relay);
 		await settle();
@@ -353,6 +353,21 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		await press(menuItem(await openMenu(button('Comment actions')), 'Address'));
 		await settle();
 		const comment = gh.issues[0]!.comments[0]!;
-		expect(asked.at(-1)).toEqual(['address', [{ thread: gh.issues[0]!.number, id: comment.id }]]);
+		expect(asked.at(-1)).toEqual(['address', [{ thread: gh.issues[0]!.number, id: comment.id }, 'prototype/demo/v1-i1']]);
+	});
+
+	it('is told which iteration Address shows its change in, for a page in the browser to go to (BROWSER_COMMENTS_PLAN 3.2)', async () => {
+		const { relay } = tab();
+		const addressed = vi.fn();
+		const answering: Relay = { ask: (name, args) => (name === 'address' ? Promise.resolve({ ok: true, value: 'v1-i2' }) : relay.ask(name, args)) };
+		const page = sitePage();
+		current = await render(createElement(Viewer, { config: CONFIG, slots: page.slots, relay: answering, onAddressed: addressed }));
+		await settle();
+		await commentOnPage(page.doc, 'h1', 'Bigger');
+		await press(button(/^Show all comments/));
+		await settle();
+		await press(menuItem(await openMenu(button('Comment actions')), 'Address'));
+		await settle();
+		expect(addressed).toHaveBeenCalledWith('v1-i2');
 	});
 });

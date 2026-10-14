@@ -10,7 +10,8 @@ import { startCore } from './core';
 import { showFound, shownFrom } from './designSystem';
 import { designSystemHost } from './designSystemHost';
 import { registerVoice } from './voice';
-import { type CodebaseAction, type HostMessage, type Review, readProjectArg, readReview } from './messages';
+import { valueOf } from '../../src/shared/result';
+import { type CodebaseAction, type HostMessage, type Review, readProjectArg, readReview, reviewsOf } from './messages';
 import { type Given, newPrototype, readGiven, readyToStart } from './newPrototype';
 import { PanelProvider } from './panel';
 import { publishedLink } from './publishing';
@@ -123,19 +124,25 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		// The bar on this machine's server's own address, and each prototype's page on the pages' address, another origin.
 		build: async (records) => buildReview(records, `${await core.prototypeServer.pagesOrigin()}/${REVIEW_KEY}/`),
 		serve: () => core.prototypeServer.serveFolder(REVIEW_KEY, site),
-		// What a review's page asks: its comments, signing in, and Address, whose failure is said here as any is.
-		answer: (review, name, args, seen) =>
+		// What a review's page asks: its comments, signing in, and Address, whose failure is said here as any is. Address shows
+		// its change where it was asked from: in the tab; or in the browser, which goes to it, and a tab open on the project.
+		answer: (review, name, args, seen, from) =>
 			answerReview(
 				{
 					routes: served,
 					signIn: () => github.signIn(),
 					written: () => projectsChanged(),
-					address: (r, comment) => addressComment({ ...here, openReview }, r, comment).catch(failedFor(true)),
+					address: async (r, comment, asked): Promise<string | null | void> => {
+						const show: (shown: Review) => Promise<void> =
+							asked === 'browser' ? (shown: Review) => reviews.showIfOpen({ records: records(), ...shown }) : openReview;
+						return addressComment({ ...here, show }, await titled(r), comment).catch(failedFor(true));
+					},
 				},
 				review,
 				name,
 				args,
 				seen,
+				from,
 			),
 		...(log ? { log } : {}),
 	});
@@ -145,7 +152,12 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			throw new Error(found.missing.find((m) => m.startsWith('The design repository')) ?? 'The design repository is not here.');
 		return found.designRepository;
 	};
-	const openReview = (review: Review) => reviews.open({ records: records(), ...review });
+	const openReview = (review: Review): Promise<void> => reviews.open({ records: records(), ...review });
+	/** A review as its project's records title it: a browser's page may have moved to another of its iterations. */
+	const titled = async (review: Review): Promise<Review> => {
+		const project = valueOf(await api.listProjects()).find((p) => p.id === review.projectId);
+		return (project && reviewsOf(project).find((r) => r.name === review.name)) || review;
+	};
 	/**
 	 * The review's page in the person's browser, outside VS Code: the same page, from this machine, with a key of its own,
 	 * so it comments through DSNR as a tab does (BROWSER_COMMENTS_PLAN).

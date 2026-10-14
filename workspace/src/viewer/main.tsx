@@ -2,7 +2,7 @@ import './viewer.css';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { TooltipProvider } from '../renderer/ui/tooltip';
-import { type Relay, isServedHere, keyFromAddress, listenForDsnr, serverRelay } from './relay';
+import { type Relay, isServedHere, iterationAddress, keyFromAddress, listenForDsnr, serverRelay } from './relay';
 import { Viewer, type ViewerConfig, type ViewerSlots } from './Viewer';
 
 /**
@@ -19,8 +19,22 @@ const framed = window.parent !== window;
 const InPage = ({ config, slots }: { config: ViewerConfig; slots: ViewerSlots }) => {
 	const [relay, setRelay] = useState<Relay | null>(() => (key === null ? null : serverRelay(key)));
 	useEffect(() => (key === null ? listenForDsnr(window, setRelay) : undefined), []);
+	// Opened from DSNR in the browser: after Address, to the iteration it showed its change in (the tab shows it in VS Code).
+	const onAddressed = (name: string) => {
+		const to = iterationAddress(config.projectHref, name, location.href.split('#')[0] as string);
+		if (to === location.href.split('#')[0]) location.reload();
+		else if (to !== null) location.assign(to);
+	};
 	// From this machine, not in DSNR's tab, and with no key: opened some other way than Open in browser.
-	return <Viewer config={config} slots={slots} relay={relay} openedHere={key === null && !framed && isServedHere(location)} />;
+	return (
+		<Viewer
+			config={config}
+			slots={slots}
+			relay={relay}
+			openedHere={key === null && !framed && isServedHere(location)}
+			{...(key === null ? {} : { onAddressed })}
+		/>
+	);
 };
 
 const config = document.getElementById('dsnr-config');

@@ -106,12 +106,15 @@ export const Viewer = ({
 	slots,
 	relay = null,
 	openedHere = false,
+	onAddressed,
 }: {
 	config: ViewerConfig;
 	slots: ViewerSlots;
 	relay?: Relay | null;
 	/** Served from this machine with no way to ask DSNR: opened some other way than DSNR's Open in browser. */
 	openedHere?: boolean;
+	/** Told the iteration Address showed its change in: a page in the browser goes to it (BROWSER_COMMENTS_PLAN D1). */
+	onAddressed?: (name: string) => void;
 }) => {
 	// Only tests leave a token in this browser; the sign-in will keep it where a page cannot reach (M9's rule).
 	const [token, setToken] = useState<string | null>(savedToken);
@@ -131,7 +134,7 @@ export const Viewer = ({
 		() => (token ? browserComments(tokenApi(token), { owner: config.owner, repo: config.repo }, { projectId: config.projectId, branch }) : null),
 		[token, config, branch],
 	);
-	if (relay) return <InDsnr config={config} slots={slots} showing={showing} relay={relay} />;
+	if (relay) return <InDsnr config={config} slots={slots} showing={showing} relay={relay} {...(onAddressed ? { onAddressed } : {})} />;
 	const signOut = () => {
 		saveToken(null);
 		setToken(null);
@@ -169,7 +172,19 @@ export const Viewer = ({
  * Through DSNR, in its review tab or a page opened from it in the browser: who is signed in is the extension's, signing in is VS Code's own (from Sign in to comment), and
  * the comments are the core's, with Address on an open one, run by the extension as it runs a build.
  */
-const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots: ViewerSlots; showing: Showing; relay: Relay }) => {
+const InDsnr = ({
+	config,
+	slots,
+	showing,
+	relay,
+	onAddressed,
+}: {
+	config: ViewerConfig;
+	slots: ViewerSlots;
+	showing: Showing;
+	relay: Relay;
+	onAddressed?: (name: string) => void;
+}) => {
 	const [login, setLogin] = useState<string | null | undefined>(undefined);
 	const [addressing, setAddressing] = useState<number | null>(null);
 	useEffect(() => {
@@ -189,8 +204,10 @@ const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots
 	};
 	const address = async (comment: CommentRef) => {
 		setAddressing(comment.id);
-		await relay.ask('address', [comment]);
+		// On this page's own iteration: in the browser, the page may have moved to another since it was opened.
+		const r = await relay.ask('address', [comment, prototypeKey(config.projectId, config.name)]);
 		setAddressing(null);
+		if (r.ok && typeof r.value === 'string') onAddressed?.(r.value);
 	};
 	if (login === undefined) return null;
 	if (login === null)

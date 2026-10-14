@@ -28,6 +28,7 @@ let server: PrototypeServer;
 let base: string;
 let gh: ReturnType<typeof fakeGitHub>;
 const asked: string[] = [];
+const addressed: unknown[][] = [];
 
 beforeAll(async () => {
 	root = mkdtempSync(join(tmpdir(), 'dsnr-browser-'));
@@ -39,9 +40,19 @@ beforeAll(async () => {
 	writeFileSync(join(design, 'projects', 'demo', 'brief.md'), '# Demo\n');
 	writeFileSync(
 		join(design, 'projects', 'demo', 'iterations.json'),
-		JSON.stringify([{ projectId: 'demo', name: 'v1-i1', branch: 'prototype/demo/v1-i1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
+		JSON.stringify(
+			['v1-i1', 'v1-i2'].map((name, i) => ({
+				projectId: 'demo',
+				name,
+				branch: `prototype/demo/${name}`,
+				commit: null,
+				note: '',
+				createdAt: `2026-10-0${i + 1}T10:00:00Z`,
+			})),
+		),
 	);
 	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), PAGE);
+	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i2.html'), PAGE.replace('Alert history</h1>', 'Alert history, addressed</h1>'));
 	server = new PrototypeServer();
 	const out = join(root, 'site');
 	buildSite({
@@ -59,14 +70,14 @@ beforeAll(async () => {
 		if (key !== KEY || ask === null) return null;
 		asked.push(ask.name);
 		const [a, b, c, d] = ask.args as [never, never, never, never];
-		const value =
-			ask.name === 'signInState'
-				? { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }
-				: ask.name === 'readComments'
-					? await threads.readComments(b)
-					: ask.name === 'postComment'
-						? await threads.postComment(a, b, c, d, null)
-						: null;
+		const answers: Record<string, () => Promise<unknown> | unknown> = {
+			signInState: () => ({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
+			readComments: () => threads.readComments(b),
+			postComment: () => threads.postComment(a, b, c, d, null),
+			// Address, as the extension answers it: the change made in the next iteration, which it names.
+			address: () => (addressed.push(ask.args), 'v1-i2'),
+		};
+		const value = await (answers[ask.name] ?? (() => null))();
 		return { dsnr: 'answer', id: ask.id, result: { ok: true, value } };
 	});
 }, 120_000);
@@ -74,6 +85,19 @@ afterAll(() => {
 	server.close();
 	rmSync(root, { recursive: true, force: true });
 });
+
+/** Presses what is named `label` (an icon's button, a menu's item) in `at`, once there is one. */
+const pressNamed = async (at: Page, label: string) => {
+	const found = await at.waitForFunction(
+		(l) =>
+			[...document.querySelectorAll<HTMLElement>('[aria-label], [role="menuitem"]')].find((e) =>
+				(e.getAttribute('aria-label') ?? e.textContent ?? '').trim().startsWith(l),
+			),
+		{},
+		label,
+	);
+	await (found.asElement() as Awaited<ReturnType<Page['$']>>)?.click();
+};
 
 /** Presses the button that says `text` in `at`, once there is one. */
 const press = async (at: Page | Frame, text: string) => {
@@ -104,6 +128,18 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 			while (!gh.issues[0]?.comments.length && Date.now() < until) await new Promise((r) => setTimeout(r, 50));
 			expect(gh.issues[0]?.comments.map((c) => c.body).join('\n')).toContain('Bigger, please');
 			expect(asked).toContain('postComment');
+
+			// Address, from the browser: asked of this page's own iteration, then the page goes to the one that has the change.
+			await pressNamed(tab, 'Show all comments');
+			await pressNamed(tab, 'Comment actions');
+			await pressNamed(tab, 'Address');
+			await tab.waitForFunction(() => location.pathname.endsWith('/v1/i2/'));
+			expect(addressed[0]?.[1]).toBe('prototype/demo/v1-i1');
+			const moved = await tab.waitForFrame((f) => f.url().endsWith('/v1/i2/page.html'));
+			await moved.waitForFunction(() => document.querySelector('h1')?.textContent === 'Alert history, addressed');
+			// Still DSNR's there: the key kept for the tab, not in its address.
+			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
+			expect(tab.url()).not.toContain('dsnr-key');
 
 			// Loaded again, with no key in its address (as moving to another iteration is): still DSNR's, the comment there.
 			await tab.goto(`${base}demo/v1/i1/`, { waitUntil: 'load' });

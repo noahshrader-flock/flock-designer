@@ -1,6 +1,7 @@
 import type { CommentAnchor, CommentRef, Result, ReviewComment, SignInState } from '../shared/contract';
 import { ASK_PATH, KEY_FRAGMENT, KEY_HEADER, type RelayAsk, type RelayCall, isKey, readRelayTell } from '../shared/reviewRelay';
 import type { CommentStore } from '../renderer/comments/surfaces';
+import { parsePrototypeName } from '../shared/prototypeNames';
 
 /** DSNR's review tab in VS Code, as the page asks it: a call by name, answered with its Result. */
 export interface Relay {
@@ -118,6 +119,16 @@ export const serverRelay = (key: string, fetcher: typeof fetch = fetch): Relay =
 			return tell?.dsnr === 'answer' && tell.id === id ? tell.result : { ok: false, error: NOT_ANSWERED.garbled };
 		},
 	};
+};
+
+/**
+ * Where a page in the browser goes after Address (BROWSER_COMMENTS_PLAN 3.2): the iteration it showed its change in, as the
+ * site lays them out under the project (`projectHref`, from this page, `here`); this page again when the change is in it;
+ * null for what is not an iteration's name.
+ */
+export const iterationAddress = (projectHref: string, name: string, here: string): string | null => {
+	const parsed = parsePrototypeName(name);
+	return parsed ? new URL(`${projectHref}v${parsed.version}/i${parsed.iteration}/`, here).href : null;
 };
 
 /** Who a sign-in answer says is signed in: their login, or null. */

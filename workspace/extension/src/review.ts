@@ -60,10 +60,14 @@ window.addEventListener('message', (e) => {
 interface ReviewAnswers {
 	routes: () => ReadonlyMap<InvokeName, Route>;
 	signIn: () => Promise<SignInState>;
-	address: (review: Review, comment: CommentRef) => Promise<unknown>;
+	/** Address, on the iteration the page is on, shown where it was asked from (BROWSER_COMMENTS_PLAN D1): the iteration it shows. */
+	address: (review: Review, comment: CommentRef, from: AskedFrom) => Promise<unknown>;
 	/** Told once a comment was written (made, moved, resolved, deleted, addressed), so what counts them is read again. */
 	written: () => void;
 }
+
+/** Where a review's page asked from: its tab in VS Code, or the browser, by a key (`Reviews.inBrowser`). */
+export type AskedFrom = 'tab' | 'browser';
 
 const isRef = (v: unknown): v is CommentRef =>
 	typeof v === 'object' && v !== null && Number.isSafeInteger((v as CommentRef).thread) && Number.isSafeInteger((v as CommentRef).id);
@@ -81,8 +85,9 @@ export const answerReview = async (
 	name: RelayCall,
 	args: unknown[],
 	seen: Set<number>,
+	from: AskedFrom = 'tab',
 ): Promise<Result<unknown>> => {
-	const result = await answered(answers, review, name, args, seen);
+	const result = await answered(answers, review, name, args, seen, from);
 	if (result.ok && WRITES.has(name)) answers.written();
 	if (result.ok && (name === 'readComments' || name === 'postComment'))
 		for (const c of Array.isArray(result.value) ? result.value : [result.value]) if (isRef(c)) seen.add(c.thread);
@@ -101,12 +106,26 @@ const ON_A_COMMENT = new Set<RelayCall>(['moveComment', 'resolveComment', 'delet
 /** The calls that change a comment, or what a comment says of itself (Address): after one, the counts are read again. */
 const WRITES = new Set<RelayCall>(['postComment', 'moveComment', 'resolveComment', 'deleteComment', 'address']);
 
-const answered = async (answers: ReviewAnswers, review: Review, name: RelayCall, args: unknown[], seen: Set<number>): Promise<Result<unknown>> => {
+const answered = async (
+	answers: ReviewAnswers,
+	review: Review,
+	name: RelayCall,
+	args: unknown[],
+	seen: Set<number>,
+	from: AskedFrom,
+): Promise<Result<unknown>> => {
 	if (name === 'signIn') return toResult(answers.signIn());
-	if (name === 'address' && !(args.length === 1 && isRef(args[0]))) return { ok: false, error: 'Address is given one comment.' };
+	// Address is given one comment, and may say which of the review's prototypes the page is on (a browser's moves).
+	if (name === 'address' && !((args.length === 1 || args.length === 2) && isRef(args[0])))
+		return { ok: false, error: 'Address is given one comment.' };
+	if (name === 'address' && args.length === 2 && !isPrototypeOf(review.projectId, args[1]))
+		return { ok: false, error: `This review is of ${review.projectId}, so it comments only on ${review.projectId}’s prototypes.` };
 	if (ON_A_COMMENT.has(name) && !(isRef(args[0]) && seen.has(args[0].thread)))
 		return { ok: false, error: 'That comment is not one of this review’s.' };
-	if (name === 'address') return toResult(answers.address(review, args[0] as CommentRef));
+	if (name === 'address') {
+		const on = args.length === 2 ? { ...review, name: (args[1] as string).slice(prototypeKey(review.projectId, '').length) } : review;
+		return toResult(answers.address(on, args[0] as CommentRef, from));
+	}
 	if ((name === 'readComments' || name === 'postComment') && !(args[0] === review.projectId && isPrototypeOf(review.projectId, args[1])))
 		return { ok: false, error: `This review is of ${review.projectId}, so it comments only on ${review.projectId}’s prototypes.` };
 	return callRoute(answers.routes(), name, args);
@@ -149,8 +168,8 @@ export class Reviews {
 			build: (records: string) => void | Promise<void>;
 			/** Serves the built site from this machine, and says its address. */
 			serve: () => Promise<string>;
-			/** What a tab's page asked, answered with what that tab has been shown (`seen`). */
-			answer: (review: Review, name: RelayCall, args: unknown[], seen: Set<number>) => Promise<Result<unknown>>;
+			/** What a review's page asked, answered with what it has been shown (`seen`), and where it asked from. */
+			answer: (review: Review, name: RelayCall, args: unknown[], seen: Set<number>, from: AskedFrom) => Promise<Result<unknown>>;
 			/** Where a run from source says what each page asked: View › Output › DSNR. */
 			log?: Pick<VsCode.LogOutputChannel, 'info'>;
 		},
@@ -187,18 +206,31 @@ export class Reviews {
 		const ask = held ? readRelayAsk(raw) : null;
 		if (!held || ask === null) return null;
 		this.deps.log?.info(`The review of ${held.review.title}, in the browser, asked ${ask.name}.`);
-		return { dsnr: 'answer', id: ask.id, result: await this.deps.answer(held.review, ask.name, ask.args, held.seen) };
+		return { dsnr: 'answer', id: ask.id, result: await this.deps.answer(held.review, ask.name, ask.args, held.seen, 'browser') };
 	}
 
 	async open({ records, ...review }: Review & { records: string }): Promise<void> {
 		const src = await this.address({ records, ...review });
 		const open = this.tabs.get(review.projectId);
-		const shown = open ?? this.make(review);
-		shown.review = review;
-		shown.panel.title = review.title;
-		shown.panel.webview.html = reviewPage({ src, title: review.title, nonce: newNonce() });
+		this.shows(open ?? this.make(review), review, src);
 		// A tab already open is brought forward; a new one opens in front.
-		if (open) shown.panel.reveal();
+		if (open) open.panel.reveal();
+	}
+
+	/**
+	 * A review shown in its project's tab if one is open, as Address from the browser keeps VS Code in step (BROWSER_COMMENTS_PLAN
+	 * D1): not brought in front of the browser, and none opened. The site is built either way, so the browser has the page.
+	 */
+	async showIfOpen({ records, ...review }: Review & { records: string }): Promise<void> {
+		const src = await this.address({ records, ...review });
+		const open = this.tabs.get(review.projectId);
+		if (open) this.shows(open, review, src);
+	}
+
+	private shows(tab: { panel: Panel; review: Review }, review: Review, src: string): void {
+		tab.review = review;
+		tab.panel.title = review.title;
+		tab.panel.webview.html = reviewPage({ src, title: review.title, nonce: newNonce() });
 	}
 
 	/** The review in front, if one is: what its title bar's actions act on. */
@@ -218,7 +250,7 @@ export class Reviews {
 			const ask = readRelayAsk(raw);
 			if (ask === null) return;
 			this.deps.log?.info(`The review of ${shown.review.title} asked ${ask.name}.`);
-			const result = await this.deps.answer(shown.review, ask.name, ask.args, seen);
+			const result = await this.deps.answer(shown.review, ask.name, ask.args, seen, 'tab');
 			await panel.webview.postMessage({ dsnr: 'answer', id: ask.id, result } satisfies RelayTell);
 		});
 		panel.onDidDispose(() => this.tabs.delete(review.projectId));
