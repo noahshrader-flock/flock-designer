@@ -12,13 +12,13 @@ import { buildSite } from '../src/site/buildSite';
 import { serveSite } from '../src/site/serveSite';
 
 /**
- * A hostile prototype in a review, in the real browser (REVIEW_ISOLATION_PLAN 2.4), nested as VS Code nests it: DSNR's
+ * A hostile prototype in a review, in the real browser (the README's Review isolation), nested as VS Code nests it: DSNR's
  * review tab (its own page, with a stand-in for VS Code's API), the review bar's page built by the site builder and served
  * by this machine's server, and the prototype's page in it. The prototype tries to read and rewrite the bar, read its
  * storage, ask the extension to Address a comment, answer the bar as if it were VS Code (from ten frames down too), open its
  * own copy on the bar's address, and take the whole window away.
- * On the pages' own address, none of it works and the prototype still works as itself; on one address (as before
- * Phase 2) it does, which is what shows the test can fail.
+ * On the pages' own address, none of it works and the prototype still works as itself; on one address (as the
+ * published site still is) it does, which is what shows the test can fail.
  */
 
 const HOSTILE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Hostile</title></head><body><main><h1>Alerts</h1></main><script>

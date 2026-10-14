@@ -572,7 +572,7 @@ describe('serving a built folder', () => {
 		write(dir, { 'index.html': '<p>home</p>', 'proj/v2/i1/index.html': '<p>review</p>', 'proj/v2/i1/page.html': '<p>page</p>' });
 		const base = await server.serveFolder('k1', dir);
 		expect(await (await fetch(`${base}proj/v2/i1/`)).text()).toBe('<p>review</p>');
-		// The prototype's page itself, on the pages' address alone (REVIEW_ISOLATION_PLAN 2.1).
+		// The prototype's page itself, on the pages' address alone (the README's Review isolation).
 		expect((await fetch(`${base}proj/v2/i1/page.html`)).status).toBe(404);
 		expect(await (await fetch(`${await server.pagesOrigin()}/k1/proj/v2/i1/page.html`)).text()).toBe('<p>page</p>');
 		expect((await fetch(`${base}proj/v2/`)).status).toBe(404);

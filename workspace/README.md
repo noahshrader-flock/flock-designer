@@ -173,10 +173,14 @@ source and page are in its project folder.
   direction. Everything the page returns is validated before use. A page cannot navigate the view
   elsewhere (other origins open in the real browser), and only `https` or a local `http` address can
   be opened. `npm run smoke:page` checks all of this in real Electron, against a real click.
-- A pin reports a click or a drop back through the page's console, tagged with a secret that is new for
-  every preview. The app accepts a message only if it carries that secret and has exactly the shape of
-  a click or a move; `smoke:page` checks that a forged message is ignored. The worst a page that learned
-  the secret could do is select a pin, or move one of the viewer's own pins.
+- In the app's preview, a pin reports a click or a drop back through the page's console, tagged with a
+  secret that is new for every preview. The app accepts a message only if it carries that secret and has
+  exactly the shape of a click or a move; `smoke:page` checks that a forged message is ignored. The worst a
+  page that learned the secret could do is select a pin, or move one of the viewer's own pins. On the
+  published site and in VS Code the bar and the page talk by message instead (Review isolation, below).
+- **In VS Code, a prototype's page cannot reach its review bar** (Review isolation, below): it is served
+  from another address than the bar and sandboxed; the bar's address serves nothing a repository wrote
+  that could open as a page; and the review tab, the panel and the Design System tabs hear only VS Code.
 - The window may load images from `avatars.githubusercontent.com`, and nothing else from the network.
 
 ## The app's interface is not the product's design system
@@ -248,8 +252,39 @@ builds a prototype's page, for the machine it was packaged on.
 page asks DSNR's review tab, and the tab asks the extension (`shared/reviewRelay.ts`): the core's comment calls, only on
 that review's project's prototypes and only on comments the tab has been shown or made; signing in, which is VS Code's; and **Address**, on an open comment's menu, which runs the agent
 as a build does (a notification with Stop, its log beside the editor) and then shows the changed page in the same tab.
-The page listens for DSNR only when it is served from this machine and framed, and takes only a VS Code webview that
-says hello; the published site is unchanged. Each project's reviews share one tab.
+The bar listens for DSNR only when it is served from this machine and framed, and takes only a VS Code webview that
+says hello; on the published site it comments with GitHub itself (once sign-in is there). Each project's reviews share
+one tab.
+
+**Review isolation: how a review's page and its bar talk.** A review is three windows, one inside the other: DSNR's
+review tab (VS Code's webview), the review bar (`src/viewer`, the site's `index.html` for that prototype), and the
+prototype's own page in the bar's frame (`page.html`), which is a repository's code and is not trusted.
+
+- **The bar asks the page, by message, and never reaches into it** (`shared/pageChannel.ts`). Every page the site builds
+  loads the page agent first (`src/page/agent.ts`, built as `_viewer/page-agent.js`), which runs the same page code the
+  app's preview runs (`src/page`). The bar (`framePage` in `src/viewer/browserAdapter.ts`) says hello with a new secret
+  each time the frame loads; the agent answers only the window above it, only at the address that said hello, and every
+  message back carries the secret: ready (with its route), an answer to a pick or to drawing the pins, the route moving,
+  a pin clicked or moved. Each side reads what it is told through the same readers (`shared/pageReaders.ts`). A page
+  with no agent (a site built before it) has no pins, and the bar says so after eight seconds.
+- **In VS Code the page is on an address of its own.** This machine's server (`PrototypeServer`) answers on two ports.
+  Its own (`origin`) serves only what DSNR wrote: a site's index pages, the bar among them, its scripts, styles, fonts
+  and raster pictures. The pages' (`pagesOrigin`) serves everything that came from a repository: a site's `page.html`
+  and its SVGs, a prototype given whole (the app's preview, covers, checks), and story previews. So the page is another
+  origin than the bar: it cannot read or script it, and opening its own copy on the bar's address finds nothing there.
+  Each port answers only to its own name, and every file says what it is (`nosniff`).
+- **The bar frames the page sandboxed** there (`buildSite`'s `pagesAt`): scripts, its own origin (its cookies and
+  storage, which a design system's code uses), forms, pop-ups and alerts, and never the window above.
+- **The review tab passes on only the bar's messages, up, and VS Code's, down** (`reviewPage` in
+  `extension/src/review.ts`): nothing the page or any frame it makes posts goes to the extension or reaches the bar as
+  if VS Code had said it. The relay acts only on that review's project, and on comments the tab was shown or made. The
+  panel and the Design System tabs likewise hear only VS Code (`extension/webview/host.ts`), not the stories they frame.
+- **The published site frames the page beside its bar**, on GitHub Pages' one address, as before: it holds no token and
+  has no relay, so there is nothing for a page to take. When sign-in comes, the token must not be where the page can
+  reach it, which on one address is anywhere; the page then needs an address of its own there too.
+
+`__tests__/reviewIsolation.integration.spec.ts` proves this in real Chrome, nested as VS Code nests it, with a hostile
+page; `pageAgent.integration.spec.ts` proves the pins on both kinds of address.
 
 **Pictures and the accessibility check:** with no hidden windows, a prototype's picture and its accessibility check are
 drawn by the browser already on the machine (Chrome, Edge or Chromium, or `CHROME_BIN`), headless, through

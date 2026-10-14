@@ -51,7 +51,7 @@ export type FramePage = PageSurface & {
 };
 
 /**
- * The prototype's frame, as the page the comments are left on (REVIEW_ISOLATION_PLAN, Phase 1): **asked, by message**, as
+ * The prototype's frame, as the page the comments are left on (the README's Review isolation): **asked, by message**, as
  * the page's agent answers (`shared/pageChannel.ts`, `src/page/agent.ts`), never reached into. The bar says hello with a
  * secret each time the frame loads; the page says it is ready, then answers and reports with that secret. Only messages
  * from the frame's own window and address are heard, and what they say is read by the readers it always went through.

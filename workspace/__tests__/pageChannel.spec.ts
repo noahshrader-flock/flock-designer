@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readPageAsk, readPageTell } from '../src/shared/pageChannel';
 
 /**
- * How the review bar and a prototype's page talk (REVIEW_ISOLATION_PLAN, Phase 1): the bar asks, by message, what it used
+ * How the review bar and a prototype's page talk (the README's Review isolation): the bar asks, by message, what it used
  * to do from outside the page (pick a spot, draw the pins, focus one, say the route), and the page's agent answers and
  * reports, every message carrying the secret the bar gave it. Each side reads the other's messages in exactly their shape,
  * as anything else could be from a page that is not what it should be.

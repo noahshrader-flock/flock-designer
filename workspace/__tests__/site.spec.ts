@@ -270,7 +270,7 @@ describe('comments on the page', () => {
 		expect(config.states).toEqual(['default', 'filtered', 'panel']);
 	});
 
-	it('puts the page agent first in every prototype’s page, so the bar can ask it for its pins (REVIEW_ISOLATION_PLAN 1.2)', () => {
+	it('puts the page agent first in every prototype’s page, so the bar can ask it for its pins', () => {
 		const viewer = join(root, 'viewer');
 		mkdirSync(viewer);
 		for (const f of ['viewer.js', 'viewer.css', 'page-agent.js']) writeFileSync(join(viewer, f), '');
@@ -291,7 +291,7 @@ describe('comments on the page', () => {
 		expect(() => build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } })).toThrow(/page-agent\.js/);
 	});
 
-	it('frames each page from the pages’ address when told one, sandboxed, so the page cannot reach the bar (REVIEW_ISOLATION_PLAN 2.2)', () => {
+	it('frames each page from the pages’ address when told one, sandboxed, so the page cannot reach the bar', () => {
 		build({ pagesAt: 'http://127.0.0.1:4100/review/' });
 		const frame = /<iframe id="dsnr-frame"[^>]*>/.exec(read('alpha/v1/i2/index.html'))?.[0] ?? '';
 		expect(frame).toContain('src="http://127.0.0.1:4100/review/alpha/v1/i2/page.html"');

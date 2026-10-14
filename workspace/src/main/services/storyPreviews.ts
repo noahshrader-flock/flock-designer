@@ -402,7 +402,7 @@ const copyAt = async (root: string, commit: string, library: string, folder: str
 	}
 };
 
-/** A build runs the library's code: served on the pages' address, never the review bar's (REVIEW_ISOLATION_PLAN 2.1). */
+/** A build runs the library's code: served on the pages' address, never the review bar's (the README's Review isolation). */
 const CODE = { code: true };
 
 /** The address a commit's build is served at, under the app's local server. */

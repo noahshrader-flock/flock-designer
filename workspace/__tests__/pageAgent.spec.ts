@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { type AgentWindow, installAgent } from '../src/page/agent';
 
 /**
- * A prototype's page agent (REVIEW_ISOLATION_PLAN 1.2): what the review bar used to do from outside the page, done inside
+ * A prototype's page agent (the README's Review isolation): what the review bar used to do from outside the page, done inside
  * it when the bar asks, and the page's own news (ready, a route moved, a pin's report) told to the bar. It answers only
  * its parent, and only the address that said hello first; everything carries the bar's secret.
  */

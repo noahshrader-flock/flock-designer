@@ -7,7 +7,7 @@ import PAGE_AGENT from '../src/page/agentMain?page';
 import { NO_CHROME, inChrome } from './realChrome';
 
 /**
- * The review bar and a prototype's page, talking by message in the real browser (REVIEW_ISOLATION_PLAN 1.4): the bar's
+ * The review bar and a prototype's page, talking by message in the real browser (the README's Review isolation): the bar's
  * own driver (`framePage`) and the page's own agent, as the site builds them, served from this machine. A pick made by a
  * click, its pin drawn, the pin clicked, and the page's route moving, all without the bar reaching into the page.
  */
@@ -76,7 +76,7 @@ afterAll(async () => {
 describe.skipIf(NO_CHROME)('the bar and the page, by message, in the real browser', () => {
 	it.each([
 		['beside its bar (the published site)', '/bar.html'],
-		['on the pages’ own address, sandboxed (VS Code, REVIEW_ISOLATION_PLAN 2.5)', '/bar-apart.html'],
+		['on the pages’ own address, sandboxed (VS Code)', '/bar-apart.html'],
 	])(
 		'picks a spot, draws its pin, hears the pin clicked and the route move, the page %s',
 		async (_where, at) => {

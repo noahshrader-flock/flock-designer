@@ -41,7 +41,7 @@ export interface SiteInput {
 	 */
 	viewer?: { dir: string; ref: RepoRef };
 	/**
-	 * Where the site's pages are served when that is not beside the bar (REVIEW_ISOLATION_PLAN 2.2): the address its root
+	 * Where the site's pages are served when that is not beside the bar (the README's Review isolation): the address its root
 	 * is at on the pages' own origin, ending in `/`. The bar's frame then loads each page from there, sandboxed, so the page
 	 * is another origin than the bar. Without it, as on the published site, each page is beside its bar.
 	 */
@@ -278,7 +278,7 @@ export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt }: Sit
 			html.replace(/\/_shared\/([0-9a-f]{16})\b/g, (whole, hash: string) => (shared.has(hash) ? `../../../_shared/${shared.get(hash)}` : whole)),
 		);
 	/**
-	 * With the viewer, the page agent first in the page's head (REVIEW_ISOLATION_PLAN 1.2), before the prototype's own code,
+	 * With the viewer, the page agent first in the page's head (the README's Review isolation), before the prototype's own code,
 	 * so the review bar asks it for the page's pins rather than reaching into the page.
 	 */
 	const withAgent = (html: string): string => {

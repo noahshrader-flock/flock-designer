@@ -108,7 +108,7 @@ export const prototypeIn = (frame: HTMLIFrameElement, { agent = true }: { agent?
 
 /**
  * Messages between this window and a frame's, as a browser delivers them: jsdom's `postMessage` says neither who sent a
- * message nor from where, which the bar and the page's agent both check (REVIEW_ISOLATION_PLAN 1.2, 1.3). Here each says
+ * message nor from where, which the bar and the page's agent both check (the README's Review isolation). Here each says
  * its sender and this page's address; the real browser does the same, and the real-Chrome test proves it.
  */
 const wireMessages = (fw: Window) => {

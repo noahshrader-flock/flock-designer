@@ -41,7 +41,7 @@ export const pageCode = (): Plugin => ({
 });
 
 /**
- * The page agent (`src/page/agentMain.ts`, REVIEW_ISOLATION_PLAN 1.2), emitted beside the viewer as `page-agent.js`: the
+ * The page agent (`src/page/agentMain.ts`; the README's Review isolation), emitted beside the viewer as `page-agent.js`: the
  * site copies it with the viewer and adds it to every prototype's page, so the bar asks the page for its pins.
  */
 export const pageAgent = (): Plugin => ({

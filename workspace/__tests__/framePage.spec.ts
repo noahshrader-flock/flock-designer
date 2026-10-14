@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { framePage } from '../src/viewer/browserAdapter';
 
 /**
- * The review bar's side (REVIEW_ISOLATION_PLAN 1.3): it hears its frame's page only from that frame's own window and
+ * The review bar's side (the README's Review isolation): it hears its frame's page only from that frame's own window and
  * address, and only with the secret it said hello with; it asks nothing of a page that has not said it is up.
  */
 
