@@ -143,7 +143,8 @@ const STYLE = `
 body { margin: 0; }
 a { color: inherit; }
 main { max-width: 1080px; margin: 0 auto; padding: 32px 24px; }
-h1 { font-size: 22px; font-weight: 600; margin: 0 0 20px; }
+/* The lists' own headings, in their <main>: never a bare heading, which would also size the review bar's title. */
+main h1 { font-size: 22px; font-weight: 600; margin: 0 0 20px; }
 .muted { opacity: 0.65; font-size: 13px; }
 .list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .list a { display: block; padding: 12px 14px; border: 1px solid #8884; border-radius: 8px; text-decoration: none; }

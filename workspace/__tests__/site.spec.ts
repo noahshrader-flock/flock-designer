@@ -284,6 +284,21 @@ describe('comments on the page', () => {
 		expect(saved).toMatch(new RegExp(`<head[^>]*>${agent.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}`));
 	});
 
+	it('sets no heading’s size for the whole page: the review bar’s title is the app’s own, and a rule outside its styles’ layer would override it', () => {
+		const viewer = join(root, 'viewer');
+		mkdirSync(viewer);
+		for (const f of ['viewer.js', 'viewer.css', 'page-agent.js']) writeFileSync(join(viewer, f), '');
+		build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } });
+		const rules = (html: string) =>
+			[...(/<style>([\s\S]*?)<\/style>/.exec(html)?.[1] ?? '').replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/(^|\})\s*([^{}@]+)\{/g)].map((m) =>
+				(m[2] as string).trim(),
+			);
+		// The review page: nothing selects a bare heading, which would reach the bar's title.
+		expect(rules(read('alpha/v1/i2/index.html')).filter((r) => /^h[1-6]\b/.test(r))).toEqual([]);
+		// The lists' own headings are still sized, inside their own page.
+		expect(rules(read('index.html'))).toContain('main h1');
+	});
+
 	it('cannot be built with a viewer that has no page agent: its pages would have no pins', () => {
 		const viewer = join(root, 'viewer');
 		mkdirSync(viewer);
