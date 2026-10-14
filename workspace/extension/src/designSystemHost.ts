@@ -37,8 +37,8 @@ export const designSystemHost = ({
 	panels: Panels;
 	/** The design system the core shows, whose clone a token's file is in. */
 	systems: Pick<DesignSystemsMemory, 'current'>;
-	/** This machine's server's origin, which the pages frame stories from. */
-	origin: () => Promise<string>;
+	/** This machine's server's addresses: pictures from its own, stories framed from the pages'. */
+	origin: () => Promise<{ images: string; frames: string }>;
 	openVoiceAndTone: () => Promise<void>;
 	openExternal: (url: string) => Promise<void>;
 	tell: Tell;

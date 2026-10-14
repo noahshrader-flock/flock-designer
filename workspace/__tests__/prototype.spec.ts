@@ -1,5 +1,5 @@
 import { request } from 'node:http';
-import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -195,6 +195,42 @@ describe('what the agent is told', () => {
 });
 
 describe('PrototypeServer', () => {
+	it('serves what runs a repository’s code on an address of its own: a prototype’s page, and story previews (REVIEW_ISOLATION_PLAN 2.1)', async () => {
+		const server = new PrototypeServer();
+		const site = mkdtempSync(join(tmpdir(), 'dsnr-site-'));
+		const previews = mkdtempSync(join(tmpdir(), 'dsnr-previews-'));
+		try {
+			mkdirSync(join(site, 'a', 'v1', 'i1'), { recursive: true });
+			mkdirSync(join(site, '_shared'), { recursive: true });
+			writeFileSync(join(site, 'a', 'v1', 'i1', 'index.html'), '<p>the bar</p>');
+			writeFileSync(join(site, 'a', 'v1', 'i1', 'page.html'), '<p>the prototype</p>');
+			writeFileSync(join(site, '_shared', 'font.woff2'), 'font');
+			writeFileSync(join(previews, 'index.html'), '<p>stories</p>');
+			const app = await server.origin();
+			const pages = await server.pagesOrigin();
+			expect(pages).not.toBe(app);
+			expect(await server.serveFolder('review', site)).toBe(`${app}/review/`);
+			expect(await server.serveFolder('previews-x', previews, { code: true })).toBe(`${pages}/previews-x/`);
+			const status = async (url: string) => (await fetch(url)).status;
+			// The bar on the app's address; the page it frames, and what the page loads, on the pages' address only.
+			expect(await status(`${app}/review/a/v1/i1/`)).toBe(200);
+			expect(await status(`${app}/review/a/v1/i1/page.html`)).toBe(404);
+			expect(await (await fetch(`${pages}/review/a/v1/i1/page.html`)).text()).toBe('<p>the prototype</p>');
+			expect(await status(`${pages}/review/_shared/font.woff2`)).toBe(200);
+			// Story previews, a library's code, on the pages' address only.
+			expect(await status(`${app}/previews-x/`)).toBe(404);
+			expect(await status(`${pages}/previews-x/`)).toBe(200);
+			// The app's own prototype pages (its native preview) stay on its address.
+			const own = await server.serve('p/i1', '<h1>Hi</h1>');
+			expect(own.startsWith(app)).toBe(true);
+			expect(await status(own.replace(app, pages))).toBe(404);
+		} finally {
+			server.close();
+			rmSync(site, { recursive: true, force: true });
+			rmSync(previews, { recursive: true, force: true });
+		}
+	});
+
 	it('answers only what is asked of its own address: a page with another name for this machine gets nothing', async () => {
 		const server = new PrototypeServer();
 		try {
@@ -209,6 +245,16 @@ describe('PrototypeServer', () => {
 			expect(await ask(`127.0.0.1:${port}`)).toBe(200);
 			expect(await ask(`attacker.example:${port}`)).toBe(403);
 			expect(await ask(`localhost:${port}`)).toBe(403);
+			// The pages' address answers only to its own name too, and not to the other's.
+			const pagesPort = new URL(await server.pagesOrigin()).port;
+			const askPages = (host: string) =>
+				new Promise<number>((resolve, reject) =>
+					request({ host: '127.0.0.1', port: pagesPort, path: '/x/', headers: { host } }, (res) => resolve(res.statusCode ?? 0))
+						.on('error', reject)
+						.end(),
+				);
+			expect(await askPages(`attacker.example:${pagesPort}`)).toBe(403);
+			expect(await askPages(`127.0.0.1:${port}`)).toBe(403);
 		} finally {
 			server.close();
 		}

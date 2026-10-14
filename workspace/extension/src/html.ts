@@ -5,8 +5,8 @@ import type { DesignTab } from './messages';
 /**
  * The page DSNR's panel loads, as tight as VS Code's webview guidance asks: nothing loads unless named here, the one
  * script runs by a nonce made for this page, and styles, fonts and pictures come only from the extension's own build
- * (`cspSource`, which is VS Code's name for it), and the design system's stories and pictures from this machine's own
- * server (`local`, its exact origin) and nowhere else. The same page is the panel or a design system's tab (`tab`), which
+ * (`cspSource`, which is VS Code's name for it), the design system's stories framed from this machine's pages' address
+ * and its pictures from the server's own (`local`, each an exact origin), and nowhere else. The same page is the panel or a design system's tab (`tab`), which
  * it reads from its body. No `vscode` import, so it is tested as plain text.
  */
 export const panelHtml = ({
@@ -23,15 +23,16 @@ export const panelHtml = ({
 	script: string;
 	style: string;
 	codicons: string;
-	local: string;
+	/** This machine's server's two addresses: pictures from its own, frames (a library's code) from the pages'. */
+	local: { images: string; frames: string };
 	tab?: DesignTab;
 }): string => {
 	const policy = [
 		"default-src 'none'",
 		`style-src ${cspSource}`,
 		`font-src ${cspSource}`,
-		`img-src ${cspSource} data: ${local}`,
-		`frame-src ${local}`,
+		`img-src ${cspSource} data: ${local.images}`,
+		`frame-src ${local.frames}`,
 		`script-src 'nonce-${nonce}'`,
 	].join('; ');
 	return `<!doctype html>

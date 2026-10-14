@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { type Server, createServer } from 'node:http';
-import { extname, join, normalize, sep } from 'node:path';
+import { basename, extname, join, normalize, sep } from 'node:path';
 import { MIME_TYPES } from '../../shared/mime';
 
 /**
@@ -22,15 +22,29 @@ const TYPES = typesOf(['.html', '.js', '.css', ...ASSETS]);
  * is handed to this and given an address. It answers only on the loopback address, only for pages it
  * was given, and keeps nothing on disk. The preview shows it in its own sandboxed view, like any other.
  * The component previews are a built folder, served whole (`serveFolder`) and read from disk.
+ *
+ * **Two addresses** (REVIEW_ISOLATION_PLAN 2.1). What runs a repository's code is served on an address of its own, the
+ * pages' (`pagesOrigin`): a built site's prototype pages (`page.html`) and folders marked as code (story previews). Its
+ * own address (`origin`) serves the rest, the review bar among it, and refuses those. A page on the pages' address is
+ * then another origin than the bar that frames it, and can neither read nor script it. Each answers only to its own name.
  */
+type Listener = { server: Server | null; port: number; starting: Promise<void> | null };
+type Where = 'app' | 'pages';
+
+/** A built site's prototype page, by its file's name: served on the pages' address alone. */
+const PAGE_FILE = 'page.html';
+
 export class PrototypeServer {
-	private server: Server | null = null;
-	private port = 0;
-	/** Its start, once: every ask before it is listening waits for the same one. */
-	private starting: Promise<void> | null = null;
+	private readonly listeners: Record<Where, Listener> = {
+		app: { server: null, port: 0, starting: null },
+		pages: { server: null, port: 0, starting: null },
+	};
+	private get port(): number {
+		return this.listeners.app.port;
+	}
 	private readonly pages = new Map<string, string>();
-	/** Built folders served whole (the component previews), by the key their address starts with. */
-	private readonly folders = new Map<string, string>();
+	/** Built folders served whole, by the key their address starts with, and whether they run a repository's code. */
+	private readonly folders = new Map<string, { dir: string; code: boolean }>();
 	/** Large files pages share (fonts, mostly), by content name, as the data they were embedded as. */
 	private readonly shared = new Map<string, { type: string; body: Buffer }>();
 
@@ -54,19 +68,18 @@ export class PrototypeServer {
 
 	async serve(key: string, html: string): Promise<string> {
 		this.pages.set(`/${key}/`, html);
-		await this.start();
-		return `http://127.0.0.1:${this.port}/${key}/`;
+		return `${await this.origin()}/${key}/`;
 	}
 
 	/**
 	 * Serves a built folder at `/<key>/`, its `index.html` at the root, every other file by its path under it. Nothing
 	 * outside the folder is reachable. A preview frame loads it from this origin, which is not the app window's, so the
-	 * page and its scripts are same-origin to the frame and nothing has to be shared with any other origin.
+	 * page and its scripts are same-origin to the frame and nothing has to be shared with any other origin. A folder of a
+	 * repository's code (`code`: story previews) is served on the pages' address alone, and its address is that one.
 	 */
-	async serveFolder(key: string, dir: string): Promise<string> {
-		this.folders.set(key, dir);
-		await this.start();
-		return `http://127.0.0.1:${this.port}/${key}/`;
+	async serveFolder(key: string, dir: string, { code = false }: { code?: boolean } = {}): Promise<string> {
+		this.folders.set(key, { dir, code });
+		return `${code ? await this.pagesOrigin() : await this.origin()}/${key}/`;
 	}
 
 	/** Stops serving a folder: its address answers 404 from now on. */
@@ -74,10 +87,12 @@ export class PrototypeServer {
 		this.folders.delete(key);
 	}
 
-	private async fromFolder(path: string): Promise<{ type: string; body: Buffer } | null> {
+	private async fromFolder(path: string, where: Where): Promise<{ type: string; body: Buffer } | null> {
 		const [, key, ...rest] = path.split('/');
-		const dir = key === undefined ? undefined : this.folders.get(key);
-		if (dir === undefined) return null;
+		const folder = key === undefined ? undefined : this.folders.get(key);
+		// A folder of code, on the pages' address alone.
+		if (folder === undefined || (folder.code && where === 'app')) return null;
+		const { dir } = folder;
 		try {
 			// A malformed address is not found, like any other that is not a file under the folder.
 			// A folder's address (`proj/v2/i1/`, or the root) is its index page, as a built site addresses its pages.
@@ -85,6 +100,8 @@ export class PrototypeServer {
 			const file = normalize(join(dir, named === '' || named.endsWith('/') ? `${named}index.html` : named));
 			const type = TYPES[extname(file)];
 			if (!file.startsWith(dir + sep) || type === undefined) return null;
+			// A built site's prototype page, on the pages' address alone.
+			if (where === 'app' && basename(file) === PAGE_FILE) return null;
 			return { type, body: await readFile(file) };
 		} catch {
 			return null;
@@ -93,57 +110,65 @@ export class PrototypeServer {
 
 	/** This server's origin, started first if it is not yet: what a page that frames or shows what it serves names. */
 	async origin(): Promise<string> {
-		await this.start();
-		return `http://127.0.0.1:${this.port}`;
+		await this.start('app');
+		return `http://127.0.0.1:${this.listeners.app.port}`;
 	}
 
-	private start(): Promise<void> {
-		this.starting ??= this.listen().catch((err: unknown) => {
-			this.starting = null;
+	/** The pages' origin, started first if it is not yet: where a prototype's page and story previews are served. */
+	async pagesOrigin(): Promise<string> {
+		await this.start('pages');
+		return `http://127.0.0.1:${this.listeners.pages.port}`;
+	}
+
+	private start(where: Where): Promise<void> {
+		const l = this.listeners[where];
+		l.starting ??= this.listen(where).catch((err: unknown) => {
+			l.starting = null;
 			throw err;
 		});
-		return this.starting;
+		return l.starting;
 	}
 
-	private listen(): Promise<void> {
+	private listen(where: Where): Promise<void> {
+		const l = this.listeners[where];
 		return new Promise((resolve, reject) => {
 			const server = createServer((req, res) => {
-				// Only what is asked of this machine's own address: a page elsewhere that has a name resolving here (DNS
-				// rebinding) gets nothing.
-				if (req.headers.host !== `127.0.0.1:${this.port}`) return void res.writeHead(403, { 'Content-Type': 'text/plain' }).end('Not here');
+				// Only what is asked of this listener's own address: a page elsewhere that has a name resolving here (DNS
+				// rebinding), or the other address's name, gets nothing.
+				if (req.headers.host !== `127.0.0.1:${l.port}`) return void res.writeHead(403, { 'Content-Type': 'text/plain' }).end('Not here');
 				const path = (req.url ?? '/').split('?')[0] ?? '/';
-				const file = req.method === 'GET' ? this.shared.get(path.replace(/^\/_shared\//, '')) : undefined;
-				if (path.startsWith('/_shared/') && file) {
-					res.writeHead(200, { 'Content-Type': file.type, 'Cache-Control': 'max-age=31536000, immutable' }).end(file.body);
-					return;
+				const notFound = () => void res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
+				if (req.method !== 'GET') return notFound();
+				// The app's own prototype pages (its native preview), and the files they share, on its own address.
+				if (where === 'app') {
+					const file = this.shared.get(path.replace(/^\/_shared\//, ''));
+					if (path.startsWith('/_shared/') && file)
+						return void res.writeHead(200, { 'Content-Type': file.type, 'Cache-Control': 'max-age=31536000, immutable' }).end(file.body);
+					const html = this.pages.get(path);
+					if (html !== undefined)
+						return void res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }).end(html);
 				}
-				const html = req.method === 'GET' ? this.pages.get(path) : undefined;
-				if (html === undefined && req.method === 'GET' && this.folders.size > 0) {
-					void this.fromFolder(path).then((found) => {
-						if (found === null) return void res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
-						res.writeHead(200, { 'Content-Type': found.type, 'Cache-Control': 'no-store' }).end(found.body);
-					});
-					return;
-				}
-				if (html === undefined) {
-					res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
-					return;
-				}
-				res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }).end(html);
+				if (this.folders.size === 0) return notFound();
+				void this.fromFolder(path, where).then((found) => {
+					if (found === null) return notFound();
+					res.writeHead(200, { 'Content-Type': found.type, 'Cache-Control': 'no-store' }).end(found.body);
+				});
 			});
 			server.once('error', reject);
 			server.listen(0, '127.0.0.1', () => {
 				const address = server.address();
-				this.port = typeof address === 'object' && address ? address.port : 0;
-				this.server = server;
+				l.port = typeof address === 'object' && address ? address.port : 0;
+				l.server = server;
 				resolve();
 			});
 		});
 	}
 
 	close(): void {
-		this.server?.close();
-		this.server = null;
-		this.starting = null;
+		for (const l of Object.values(this.listeners)) {
+			l.server?.close();
+			l.server = null;
+			l.starting = null;
+		}
 	}
 }

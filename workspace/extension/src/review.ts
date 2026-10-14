@@ -24,7 +24,8 @@ export const reviewPath = (projectId: string, name: string): string => {
 /**
  * The tab's page: only the review, framed from this machine, and its one script, which says hello to the page once it
  * has loaded (so the page knows DSNR frames it), passes what the page asks up to the extension and the answers back
- * down, to the page's own address and nothing else (`shared/reviewRelay`). Each side reads what it is sent.
+ * down, to the page's own address and nothing else (`shared/reviewRelay`). Each side reads what it is sent. A message
+ * from inside its frame that is not the bar's own (the prototype's page in it, REVIEW_ISOLATION_PLAN 2.3) goes nowhere.
  */
 export const reviewPage = ({ src, title, nonce }: { src: string; title: string; nonce: string }): string => {
 	const origin = new URL(src).origin;
@@ -42,10 +43,13 @@ const vscode = acquireVsCodeApi();
 const frame = document.querySelector('iframe');
 const page = ${JSON.stringify(origin)};
 frame.addEventListener('load', () => frame.contentWindow.postMessage({ dsnr: 'hello' }, page));
+// Every window under the frame: the bar, the prototype's page in it, and any frame that page makes. Only the bar may ask
+// the extension; and nothing from any of them is passed to the bar as if VS Code had said it.
+const inside = (w, s, depth) => w === s || (depth < 8 && Array.from({ length: w.frames.length }, (_, i) => w.frames[i]).some((f) => inside(f, s, depth + 1)));
 window.addEventListener('message', (e) => {
 	if (e.source === frame.contentWindow) {
 		if (e.origin === page) vscode.postMessage(e.data);
-	} else frame.contentWindow.postMessage(e.data, page);
+	} else if (!inside(frame.contentWindow, e.source, 0)) frame.contentWindow.postMessage(e.data, page);
 });
 </script>
 </body>
@@ -136,7 +140,7 @@ export class Reviews {
 				ViewColumn: typeof VsCode.ViewColumn;
 			};
 			/** Builds the site from the design repository's records, into the folder `serve` serves. */
-			build: (records: string) => void;
+			build: (records: string) => void | Promise<void>;
 			/** Serves the built site from this machine, and says its address. */
 			serve: () => Promise<string>;
 			/** What a tab's page asked, answered with what that tab has been shown (`seen`). */
@@ -152,7 +156,7 @@ export class Reviews {
 	 */
 	async address({ records, projectId, name }: Review & { records: string }): Promise<string> {
 		const path = reviewPath(projectId, name);
-		this.deps.build(records);
+		await this.deps.build(records);
 		return `${await this.deps.serve()}${path}`;
 	}
 
@@ -192,11 +196,23 @@ export class Reviews {
 	}
 }
 
-/** Builds the site for reviews from the design repository's records, with the viewer the extension carries. */
-export const buildReviewSite = (siteDir: string, viewerDir: string) => (records: string) => {
+/**
+ * Builds the site for reviews from the design repository's records, with the viewer the extension carries; its pages are
+ * served from `pagesAt`, the pages' own address (REVIEW_ISOLATION_PLAN 2.2), not beside their bar.
+ */
+export const buildReviewSite = (siteDir: string, viewerDir: string) => (records: string, pagesAt?: string) => {
 	mkdirSync(dirname(siteDir), { recursive: true });
-	buildSite({ designRoot: dirname(records), outDir: siteDir, comments: undefined, viewer: { dir: viewerDir, ref: DESIGN_REPO } });
+	buildSite({
+		designRoot: dirname(records),
+		outDir: siteDir,
+		comments: undefined,
+		viewer: { dir: viewerDir, ref: DESIGN_REPO },
+		...(pagesAt ? { pagesAt } : {}),
+	});
 };
+
+/** Where the review site is served, under this machine's server, on both its addresses. */
+export const REVIEW_KEY = 'review';
 
 /** Where the extension keeps the site it builds for reviews. */
 export const siteIn = (storage: string): string => join(storage, 'review-site');

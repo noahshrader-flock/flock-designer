@@ -402,6 +402,9 @@ const copyAt = async (root: string, commit: string, library: string, folder: str
 	}
 };
 
+/** A build runs the library's code: served on the pages' address, never the review bar's (REVIEW_ISOLATION_PLAN 2.1). */
+const CODE = { code: true };
+
 /** The address a commit's build is served at, under the app's local server. */
 const serveKey = (build: string): string => `previews-${build.slice(0, 26)}`;
 
@@ -515,7 +518,7 @@ export class StoryPreviews {
 				this.deps.server.stopServing(serveKey(old));
 				rmSync(join(this.deps.folder, old), { recursive: true, force: true });
 			}
-			return { state: 'ready', base: await this.deps.server.serveFolder(serveKey(basename(dir)), site) };
+			return { state: 'ready', base: await this.deps.server.serveFolder(serveKey(basename(dir)), site, CODE) };
 		} catch (err) {
 			rmSync(dir, { recursive: true, force: true });
 			return { state: 'failed', error: errorText(err) };
@@ -546,7 +549,7 @@ export class StoryPreviews {
 			await trial.builder.build(files);
 			// A new address for each, so a frame showing the last one loads this one.
 			const key = `trial-${++trial.tries}-${basename(at.dir).slice(0, 12)}`;
-			const base = await this.deps.server.serveFolder(key, join(at.dir, 'trial'));
+			const base = await this.deps.server.serveFolder(key, join(at.dir, 'trial'), CODE);
 			if (trial.served !== null) this.deps.server.stopServing(trial.served);
 			trial.served = key;
 			return { state: 'ready', base };
@@ -574,7 +577,7 @@ export class StoryPreviews {
 			const key = `tagged-${basename(at.dir).slice(0, 12)}`;
 			if (this.taggedServed !== null && this.taggedServed !== key) this.deps.server.stopServing(this.taggedServed);
 			this.taggedServed = key;
-			return { state: 'ready', base: await this.deps.server.serveFolder(key, join(at.dir, 'tagged')) };
+			return { state: 'ready', base: await this.deps.server.serveFolder(key, join(at.dir, 'tagged'), CODE) };
 		} catch (err) {
 			return { state: 'failed', error: errorText(err) };
 		}

@@ -291,6 +291,23 @@ describe('comments on the page', () => {
 		expect(() => build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } })).toThrow(/page-agent\.js/);
 	});
 
+	it('frames each page from the pages’ address when told one, sandboxed, so the page cannot reach the bar (REVIEW_ISOLATION_PLAN 2.2)', () => {
+		build({ pagesAt: 'http://127.0.0.1:4100/review/' });
+		const frame = /<iframe id="dsnr-frame"[^>]*>/.exec(read('alpha/v1/i2/index.html'))?.[0] ?? '';
+		expect(frame).toContain('src="http://127.0.0.1:4100/review/alpha/v1/i2/page.html"');
+		// Its own scripts, its own origin (its cookies and storage), forms, pop-ups and alerts; never the window above it.
+		expect(frame).toContain('sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"');
+		expect(frame).not.toContain('allow-top-navigation');
+	});
+
+	it('frames each page from beside it, as the published site does, when told none', () => {
+		build();
+		const frame = /<iframe id="dsnr-frame"[^>]*>/.exec(read('alpha/v1/i2/index.html'))?.[0] ?? '';
+		expect(frame).toContain('src="page.html"');
+		// On one address a sandbox protects nothing: the page could take it off through the bar.
+		expect(frame).not.toContain('sandbox');
+	});
+
 	it('leaves the pages as they were without it', () => {
 		build();
 		expect(read('alpha/v1/i2/page.html')).not.toContain('page-agent.js');

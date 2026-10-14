@@ -40,7 +40,16 @@ export interface SiteInput {
 	 * threads they are. Without it the pages are as they were, with nothing to comment with.
 	 */
 	viewer?: { dir: string; ref: RepoRef };
+	/**
+	 * Where the site's pages are served when that is not beside the bar (REVIEW_ISOLATION_PLAN 2.2): the address its root
+	 * is at on the pages' own origin, ending in `/`. The bar's frame then loads each page from there, sandboxed, so the page
+	 * is another origin than the bar. Without it, as on the published site, each page is beside its bar.
+	 */
+	pagesAt?: string;
 }
+
+/** A page on another origin than its bar: its own scripts, origin (cookies, storage), forms, pop-ups and alerts; never the window above. */
+const PAGE_SANDBOX = 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals';
 
 export interface SiteSummary {
 	projects: { id: string; title: string; pages: number }[];
@@ -215,17 +224,24 @@ const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: strin
 	}).replace(/</g, '\\u003c');
 
 /**
+ * Where the bar's frame loads its page: beside it, or from the pages' address, sandboxed (only on another origin does a
+ * sandbox hold: on one, the page could take it off through the bar).
+ */
+const frameAt = (p: SiteProject, page: Page, pagesAt: string | undefined): string =>
+	pagesAt ? `src="${escapeHtml(`${pagesAt}${p.id}/${page.path}page.html`)}" sandbox="${PAGE_SANDBOX}"` : 'src="page.html"';
+
+/**
  * One iteration: its page in a frame, so the page's own styles never reach the bar, under the bar. The bar is the
  * app's own, drawn by the viewer (the switcher, comments); until it takes over, and where it never does, the bar is a
  * link back to the project, and nothing about it is styled here.
  */
-const viewerPage = (p: SiteProject, current: Page, viewer: SiteInput['viewer'], states: string[]): string => {
+const viewerPage = (p: SiteProject, current: Page, viewer: SiteInput['viewer'], states: string[], pagesAt: string | undefined): string => {
 	const head = viewer
 		? `<link rel="stylesheet" href="../../../_viewer/viewer.css">\n<script type="application/json" id="dsnr-config">${viewerConfig(viewer.ref, p, current, states)}</script>\n<script type="module" src="../../../_viewer/viewer.js"></script>\n`
 		: '';
 	return shell(
 		`${p.title} · ${labelOf(current)}`,
-		`<div class="viewer">\n<header id="dsnr-bar"><a href="../../">${escapeHtml(p.title)}</a></header>\n<p class="small-screen">Best on a computer: this prototype is made for a wider screen. Scroll across to see all of it.</p>\n<div class="stage">\n<iframe id="dsnr-frame" src="page.html" title="${escapeHtml(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="dsnr-panel"></aside>\n</div>\n</div>`,
+		`<div class="viewer">\n<header id="dsnr-bar"><a href="../../">${escapeHtml(p.title)}</a></header>\n<p class="small-screen">Best on a computer: this prototype is made for a wider screen. Scroll across to see all of it.</p>\n<div class="stage">\n<iframe id="dsnr-frame" ${frameAt(p, current, pagesAt)} title="${escapeHtml(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="dsnr-panel"></aside>\n</div>\n</div>`,
 		head,
 	);
 };
@@ -243,7 +259,7 @@ const clearOut = (outDir: string): void => {
 	writeFileSync(join(outDir, MARK), 'Built by DSNR. This folder is cleared and rebuilt each time.\n');
 };
 
-export const buildSite = ({ designRoot, outDir, comments, viewer }: SiteInput): SiteSummary => {
+export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt }: SiteInput): SiteSummary => {
 	const projects = readProjects(designRoot);
 	clearOut(outDir);
 	const shared = writeShared(designRoot, outDir);
@@ -282,7 +298,7 @@ export const buildSite = ({ designRoot, outDir, comments, viewer }: SiteInput): 
 				const at = join(dir, pg.path);
 				mkdirSync(at, { recursive: true });
 				const html = readFileSync(join(designRoot, 'projects', p.id, 'prototypes', `${pg.record.name}.html`), 'utf8');
-				writeFileSync(join(at, 'index.html'), viewerPage(p, pg, viewer, statesOf(html)));
+				writeFileSync(join(at, 'index.html'), viewerPage(p, pg, viewer, statesOf(html), pagesAt));
 				writeFileSync(join(at, 'page.html'), relink(html));
 			}
 			const newest = v.pages[0] as Page;

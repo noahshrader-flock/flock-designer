@@ -13,7 +13,7 @@ const page = () =>
 		script: 'vscode-resource:/dist/webview.js',
 		style: 'vscode-resource:/dist/webview.css',
 		codicons: 'vscode-resource:/dist/codicon.css',
-		local: 'http://127.0.0.1:4321',
+		local: { images: 'http://127.0.0.1:4321', frames: 'http://127.0.0.1:4322' },
 	});
 const policy = () => /<meta http-equiv="Content-Security-Policy" content="([^"]+)"/.exec(page())?.[1] ?? '';
 const directive = (name: string) =>
@@ -35,9 +35,9 @@ describe('the panel’s page', () => {
 		expect(directive('img-src')).toBe('img-src vscode-resource: data: http://127.0.0.1:4321');
 	});
 
-	it('frames, and shows pictures from, this machine’s own server alone: the design system’s stories and its components’ pictures', () => {
-		expect(directive('frame-src')).toBe('frame-src http://127.0.0.1:4321');
-		expect(page()).not.toMatch(/frame-src[^;]*https?:\/\/(?!127\.0\.0\.1:4321)/);
+	it('frames this machine’s pages’ address alone (the design system’s stories, a library’s code), and shows pictures from its own', () => {
+		expect(directive('frame-src')).toBe('frame-src http://127.0.0.1:4322');
+		expect(directive('img-src')).toBe('img-src vscode-resource: data: http://127.0.0.1:4321');
 	});
 
 	it('says which DSNR page it is, read by the page as text', () => {
@@ -47,7 +47,7 @@ describe('the panel’s page', () => {
 			script: 's',
 			style: 'y',
 			codicons: 'i',
-			local: 'http://127.0.0.1:1',
+			local: { images: 'http://127.0.0.1:1', frames: 'http://127.0.0.1:2' },
 			tab: { kind: 'component', id: 'src/"<b>".stories.tsx', name: 'B' },
 		});
 		const said = /<body data-tab="([^"]*)">/.exec(tab)?.[1] ?? '';

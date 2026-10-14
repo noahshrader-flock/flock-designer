@@ -14,7 +14,7 @@ import { type CodebaseAction, type HostMessage, type Review, readProjectArg, rea
 import { type Given, newPrototype, readGiven, readyToStart } from './newPrototype';
 import { PanelProvider } from './panel';
 import { publishedLink } from './publishing';
-import { Reviews, answerReview, buildReviewSite, pickReview, siteIn } from './review';
+import { REVIEW_KEY, Reviews, answerReview, buildReviewSite, pickReview, siteIn } from './review';
 import { AgentLog, SyncStatus, failed, failedFor, vscodeChoose, vscodeCopy, vscodeOffer, vscodeOpen, vscodeProgress, vscodeTell } from './ui';
 
 /** How long since the projects were last read before coming back to VS Code reads them again: they are read from GitHub. */
@@ -39,7 +39,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		extensionUri: context.extensionUri,
 		panels,
 		context: () => said(),
-		local: () => core.prototypeServer.origin(),
+		local: () => localAddresses(),
 		design: () => design.asks,
 		locate: () => locate(),
 		openReview: (review) => openReview(review),
@@ -55,6 +55,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		provider.showAccount(state.state === 'signedIn' ? state.user.login : undefined);
 	};
 	const { core, github, shell, storage } = startCore(context, panels, showAccount);
+	/** This machine's server's addresses, as DSNR's pages name them: pictures from its own, a library's code from the pages'. */
+	const localAddresses = async () => ({ images: await core.prototypeServer.origin(), frames: await core.prototypeServer.pagesOrigin() });
 	const folders = () => (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
 	const located = () => context.globalState.get<string>(LOCATED) ?? null;
 
@@ -107,7 +109,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		api,
 		panels,
 		systems: core.designSystems,
-		origin: () => core.prototypeServer.origin(),
+		origin: () => localAddresses(),
 		openVoiceAndTone: voice.open,
 		openExternal: vscodeOpen,
 		tell: vscodeTell,
@@ -115,10 +117,12 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		failedFor,
 	});
 	const site = siteIn(storage);
+	const buildReview = buildReviewSite(site, join(context.extensionUri.fsPath, 'dist', 'viewer'));
 	const reviews = new Reviews({
 		vscode,
-		build: buildReviewSite(site, join(context.extensionUri.fsPath, 'dist', 'viewer')),
-		serve: () => core.prototypeServer.serveFolder('review', site),
+		// The bar on this machine's server's own address, and each prototype's page on the pages' address, another origin.
+		build: async (records) => buildReview(records, `${await core.prototypeServer.pagesOrigin()}/${REVIEW_KEY}/`),
+		serve: () => core.prototypeServer.serveFolder(REVIEW_KEY, site),
 		// What a review's page asks: its comments, signing in, and Address, whose failure is said here as any is.
 		answer: (review, name, args, seen) =>
 			answerReview(

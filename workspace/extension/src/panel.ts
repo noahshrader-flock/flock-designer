@@ -11,7 +11,7 @@ import { failed } from './ui';
  * A DSNR page in `webview`: the panel, or a design system's tab (`tab`), from the extension's own build in `dist`,
  * framing and showing pictures from this machine's server (`local`) alone.
  */
-export const dsnrPage = (webview: vscode.Webview, dist: vscode.Uri, local: string, tab?: DesignTab): string => {
+export const dsnrPage = (webview: vscode.Webview, dist: vscode.Uri, local: { images: string; frames: string }, tab?: DesignTab): string => {
 	const asset = (name: string) => webview.asWebviewUri(vscode.Uri.joinPath(dist, name)).toString();
 	return panelHtml({
 		cspSource: webview.cspSource,
@@ -27,8 +27,8 @@ export const dsnrPage = (webview: vscode.Webview, dist: vscode.Uri, local: strin
 interface PanelDeps {
 	extensionUri: vscode.Uri;
 	panels: Panels;
-	/** This machine's server's origin, which the page frames stories from and shows pictures from. */
-	local: () => Promise<string>;
+	/** This machine's server's addresses: pictures from its own, stories framed from the pages'. */
+	local: () => Promise<{ images: string; frames: string }>;
 	/** The design system's asks, made once the core is: the page asks them only once it is shown. */
 	design: () => DesignSystemAsks;
 	/** What is open now (the product, its design system, the design repository, and what is missing), as the page is told it. */
