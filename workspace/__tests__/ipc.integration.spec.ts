@@ -2176,6 +2176,32 @@ describe('Handoff', () => {
 		g(product, 'commit', '-q', '-am', 'handoff again');
 		expect((await call(CHANNELS.handoffResult, product)).value).toBe(true);
 	});
+
+	it('keeps the verdict on the work’s record, with the commit it was ready at, and the list says it only while the branch is still there', async () => {
+		const { readIterations } = await import('../src/main/services/iterations');
+		const codebase = () => readIterations(join(design, 'projects'), 'demo').find((work) => work.name === 'codebase');
+		const listed = async () =>
+			((await call(CHANNELS.listProjects)).value as { id: string; iterations: { name: string; readyAt: string | null }[] }[])
+				.find((p) => p.id === 'demo')
+				?.iterations.find((work) => work.name === 'codebase')?.readyAt;
+		await ready();
+		await call(CHANNELS.startHandoff, product, 'demo');
+		commitHandoff();
+		recent = { work: 'feature/demo', lines: ['**Ready for engineering**'] };
+		expect((await call(CHANNELS.handoffResult, product)).value).toBe(true);
+		const head = g(product, 'rev-parse', 'HEAD').trim();
+		expect(codebase()?.readyAt).toBe(head);
+		expect(await listed()).toBe(head);
+		// A commit since: no longer what was found ready.
+		writeFileSync(join(product, 'more.txt'), 'more\n');
+		g(product, 'add', 'more.txt');
+		g(product, 'commit', '-q', '-m', 'more');
+		expect(await listed()).toBeNull();
+		// A verdict of not ready takes it off the record.
+		recent = { work: 'feature/demo', lines: ['Not ready'] };
+		expect((await call(CHANNELS.handoffResult, product)).value).toBe(false);
+		expect(codebase()?.readyAt).toBeUndefined();
+	});
 });
 
 describe('moveComment validates its arguments', () => {

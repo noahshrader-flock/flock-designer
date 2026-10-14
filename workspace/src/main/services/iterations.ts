@@ -160,6 +160,23 @@ export const recordPreview = (
 };
 
 /**
+ * Keeps a handoff's verdict on a project's codebase work: the commit it was found ready at, or none once it was found not
+ * ready. Written only when it changes, so asking again writes nothing. Publishing it is the caller's step, as a preview's is.
+ */
+export const recordHandoff = (recordsRoot: string, projectId: string, readyAt: string | null): void => {
+	const iterations = readIterations(recordsRoot, projectId);
+	const found = iterations.find((i) => i.name === 'codebase');
+	if (!found || (found.readyAt ?? null) === readyAt) return;
+	const { readyAt: _was, ...rest } = found;
+	const updated = readyAt === null ? rest : { ...rest, readyAt };
+	writeIterations(
+		recordsRoot,
+		projectId,
+		iterations.map((i) => (i === found ? updated : i)),
+	);
+};
+
+/**
  * Work started outside the app (an agent in a terminal, or by hand) has a branch and no record. The branch is
  * the evidence, so the record is made from it rather than refusing the work: null only if the branch is not there.
  */

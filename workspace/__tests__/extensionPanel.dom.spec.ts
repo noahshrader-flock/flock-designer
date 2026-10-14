@@ -2,8 +2,9 @@ import { act, createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { Panel } from '../extension/webview/Panel';
 import type { Context } from '../src/main/services/findContext';
-import type { Catalog, ComponentPictures } from '../src/shared/contract';
+import type { Catalog, ComponentPictures, ProjectIteration } from '../src/shared/contract';
 import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
+import { projectIteration } from './fixtures';
 import { answer, button, key, kept, mount, panelSaid, press, say, sent, type, unmount } from './webviewHarness';
 
 /**
@@ -488,21 +489,8 @@ describe('dialogs and menus, in the panel', () => {
 });
 
 describe('codebase work, in the panel', () => {
-	const codebase = (branch: string, more: Record<string, unknown> = {}) => ({
-		name: 'codebase',
-		branch,
-		issueNumber: null,
-		openComments: 0,
-		previewUrl: null,
-		commit: null,
-		contributors: [],
-		createdAt: '2026-10-12T10:00:00Z',
-		route: null,
-		cover: null,
-		repository: 'flocksafety/flock-coke',
-		pullRequest: null,
-		...more,
-	});
+	const codebase = (branch: string, more: Partial<ProjectIteration> = {}): ProjectIteration =>
+		projectIteration({ name: 'codebase', branch, createdAt: '2026-10-12T10:00:00Z', repository: 'flocksafety/flock-coke', ...more });
 	/** Zone coverage built in the code too, and a project that is only in the code. */
 	const WITH_CODE = [
 		...SAMPLE_PROJECTS.map((p) => (p.id === 'zone-coverage' ? { ...p, iterations: [...p.iterations, codebase('feature/zone-coverage')] } : p)),
@@ -577,6 +565,63 @@ describe('codebase work, in the panel', () => {
 		await answer('agentStatus', { state: 'idle' });
 		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'hand-off', projectId: 'zone-coverage' });
 		expect(dialog()).toBeNull();
+	});
+
+	it('offers the draft pull request when a handoff found the work ready and nothing has changed since, with Run again', async () => {
+		const READY = 'a1b2c3d';
+		const ready = (more: Record<string, unknown>) =>
+			WITH_CODE.map((p) =>
+				p.id === 'zone-coverage'
+					? { ...p, iterations: p.iterations.map((work) => (work.name === 'codebase' ? { ...work, readyAt: READY, ...more } : work)) }
+					: p,
+			);
+		await showOpen(OPEN, ready({}) as typeof SAMPLE_PROJECTS);
+		await press(menuOf('Zone coverage'));
+		await press(item('Hand off to engineering…'));
+		await answer('agentStatus', { state: 'idle' });
+		expect(dialog()!.textContent).toContain('ready for engineering');
+		expect(inDialog('Open a draft pull request').className).toContain('button-primary');
+		expect(inDialog('Run again').className).toContain('button-secondary');
+		await press(inDialog('Open a draft pull request'));
+		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'share', projectId: 'zone-coverage' });
+		expect(dialog()).toBeNull();
+	});
+
+	it('offers the way to its pull request when the handoff found it ready and one is open, not a second one', async () => {
+		const ready = WITH_CODE.map((p) =>
+			p.id === 'zone-coverage'
+				? {
+						...p,
+						iterations: p.iterations.map((work) =>
+							work.name === 'codebase' ? { ...work, readyAt: 'a1b2c3d', pullRequest: 'https://github.com/flocksafety/flock-coke/pull/9' } : work,
+						),
+					}
+				: p,
+		);
+		await showOpen(OPEN, ready as typeof SAMPLE_PROJECTS);
+		await press(menuOf('Zone coverage'));
+		await press(item('Hand off to engineering…'));
+		await answer('agentStatus', { state: 'idle' });
+		expect([...dialog()!.querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Open a draft pull request');
+		await press(inDialog('Open on GitHub'));
+		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'open-code', projectId: 'zone-coverage' });
+	});
+
+	it('runs a handoff again from there, as a first one runs', async () => {
+		await showOpen(
+			OPEN,
+			WITH_CODE.map((p) =>
+				p.id === 'zone-coverage'
+					? { ...p, iterations: p.iterations.map((work) => (work.name === 'codebase' ? { ...work, readyAt: 'a1b2c3d' } : work)) }
+					: p,
+			) as typeof SAMPLE_PROJECTS,
+		);
+		await press(menuOf('Zone coverage'));
+		await press(item('Hand off to engineering…'));
+		await answer('agentStatus', { state: 'idle' });
+		await press(inDialog('Run again'));
+		await answer('agentStatus', { state: 'idle' });
+		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'hand-off', projectId: 'zone-coverage' });
 	});
 
 	it('does not start a handoff when the agent was given other work since the dialog opened', async () => {

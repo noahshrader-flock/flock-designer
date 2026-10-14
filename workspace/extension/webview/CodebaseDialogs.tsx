@@ -15,17 +15,30 @@ const BUSY = 'The agent is busy with other work. It does one thing at a time: op
 /**
  * Hand off to engineering, said before it starts: what the run does, on the work's branch, and that nothing is pushed.
  * Start handoff asks the extension, which runs it as a build is run, with Stop and its log. It starts only once it is
- * known the agent is free, asked again when it is pressed.
+ * known the agent is free, asked again when it is pressed. **When a handoff already found the work ready** and nothing has
+ * changed on its branch since (`readyAt`), what is next is offered instead: its draft pull request (or the way to it,
+ * once open), with Run again beside it, so a dismissed offer at the end of a run is never a dead end.
  */
 export const HandoffDialog = ({
 	project,
 	branch,
+	readyAt,
+	pullRequest,
 	onStart,
+	onShare,
+	onOpenCode,
 	onClose,
 }: {
 	project: Project;
 	branch: string;
+	/** The commit a handoff found the work ready at, while its branch is still there; null when it has to be run. */
+	readyAt: string | null;
+	/** Its pull request, once one is open. */
+	pullRequest: string | null;
 	onStart: () => void;
+	/** Opens its draft pull request, with a preview built from it. */
+	onShare: () => void;
+	onOpenCode: () => void;
 	onClose: () => void;
 }) => {
 	const status = useWorkspace(() => workspace().agentStatus(), []);
@@ -39,24 +52,50 @@ export const HandoffDialog = ({
 		onStart();
 		onClose();
 	};
+	const then = (act: () => void) => () => {
+		act();
+		onClose();
+	};
 	return (
 		<Dialog title="Hand off to engineering" onClose={onClose}>
 			<form onSubmit={(e) => void start(e)}>
-				<p className="dialog-about">
-					This checks <strong>{project.title}</strong>’s codebase work on <code>{branch}</code>, and gets it ready for an engineer.
-				</p>
-				<p className="field-label">What happens</p>
-				<ol className="dialog-steps">
-					<li>The product’s handoff gate runs: every test, accessibility, the app bundling, the standards.</li>
-					<li>Two independent reviews: does it read as the product, and is it built correctly.</li>
-					<li>What they block on is fixed and committed on {branch}, one fix at a time.</li>
-					<li>A note for the engineer, HANDOFF.md, is written on the branch. Nothing is pushed.</li>
-				</ol>
+				{readyAt !== null ? (
+					<p className="dialog-about">
+						A handoff found <strong>{project.title}</strong>’s codebase work ready for engineering, and nothing has changed on <code>{branch}</code>{' '}
+						since. {pullRequest ? 'Its draft pull request is open.' : 'Open a draft pull request for an engineer to take it.'}
+					</p>
+				) : (
+					<>
+						<p className="dialog-about">
+							This checks <strong>{project.title}</strong>’s codebase work on <code>{branch}</code>, and gets it ready for an engineer.
+						</p>
+						<p className="field-label">What happens</p>
+						<ol className="dialog-steps">
+							<li>The product’s handoff gate runs: every test, accessibility, the app bundling, the standards.</li>
+							<li>Two independent reviews: does it read as the product, and is it built correctly.</li>
+							<li>What they block on is fixed and committed on {branch}, one fix at a time.</li>
+							<li>A note for the engineer, HANDOFF.md, is written on the branch. Nothing is pushed.</li>
+						</ol>
+					</>
+				)}
 				<ErrorLine error={busy ? BUSY : null} />
 				<DialogButtons onClose={onClose} close="Cancel">
-					<Button type="submit" disabled={busy || !known}>
-						Start handoff
-					</Button>
+					{readyAt !== null ? (
+						<>
+							<Button type="submit" variant="secondary" disabled={busy || !known}>
+								Run again
+							</Button>
+							{pullRequest ? (
+								<Button onClick={then(onOpenCode)}>Open on GitHub</Button>
+							) : (
+								<Button onClick={then(onShare)}>Open a draft pull request</Button>
+							)}
+						</>
+					) : (
+						<Button type="submit" disabled={busy || !known}>
+							Start handoff
+						</Button>
+					)}
 				</DialogButtons>
 			</form>
 		</Dialog>

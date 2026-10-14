@@ -60,7 +60,16 @@ export const PanelDialogs = ({
 			);
 		case 'hand-off':
 			return codebase ? (
-				<HandoffDialog project={project} branch={codebase.branch} onStart={() => onCodebase('hand-off', project.id)} onClose={onClose} />
+				<HandoffDialog
+					project={project}
+					branch={codebase.branch}
+					readyAt={codebase.readyAt}
+					pullRequest={codebase.pullRequest}
+					onStart={() => onCodebase('hand-off', project.id)}
+					onShare={() => onCodebase('share', project.id)}
+					onOpenCode={() => onCodebase('open-code', project.id)}
+					onClose={onClose}
+				/>
 			) : null;
 		case 'comments':
 			return codebase ? (

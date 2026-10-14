@@ -16,7 +16,7 @@ import { recordsRootFor } from '../services/discovery';
 import { resumeCommand, startCommand } from '../services/editor';
 import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, commandLine } from '../services/engineeringHandoff';
 import { branchCommit, changedSince, headCommit, readCheckout } from '../services/git';
-import { codebaseBranchFor, recordPreview, recordedIteration } from '../services/iterations';
+import { codebaseBranchFor, recordHandoff, recordPreview, recordedIteration } from '../services/iterations';
 import { MOVE_SKILL, buildInCodebasePrompt } from '../services/prototype';
 import { pullRequestText } from '../services/share';
 import type { IpcDeps } from '../ipc';
@@ -126,7 +126,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 
 	// Handoff: the heavy pass on codebase work, started here so the checks and the start are one step. Where the
 	// branch stood when it started is kept, so the verdict can tell a handoff written now from one left from before.
-	const handoffStarts = new Map<string, { branch: string; head: string }>();
+	const handoffStarts = new Map<string, { projectId: string; branch: string; head: string }>();
 
 	handle('startAgent', [checkout, arg.projectId, arg.words], async (workIn, projectId, task) => {
 		const { canonical, descriptor } = workIn;
@@ -267,21 +267,25 @@ export const registerCodebase = (d: IpcDeps): void => {
 		const skill = await readSkillText(HANDOFF_SKILL);
 		const { parts, readOnly } = await checkoutParts(canonical, projectId);
 		const task = handoffTask({ skill, projectId, branch: iteration.branch, gate: commandLine(descriptor.commands, 'handoff', projectId) }, parts);
-		handoffStarts.set(canonical, { branch: iteration.branch, head: await headCommit(canonical) });
+		handoffStarts.set(canonical, { projectId, branch: iteration.branch, head: await headCommit(canonical) });
 		return startTracked(canonical, projectId, task, { branch: iteration.branch, addDirs: [recordsRoot], readOnly, purpose: 'handoff' });
 	});
 	/**
 	 * Whether the last Handoff here found the work ready: the run's own last verdict says so, and HANDOFF.md was
-	 * committed since it started. Null when this app did not start one on this branch (it was restarted since).
+	 * committed since it started. Null when this app did not start one on this branch (it was restarted since). A verdict
+	 * is kept on the work's record (`recordHandoff`), with the commit it was ready at, so it outlives this run and this
+	 * machine: what the Hand off dialog offers later, while the branch is still there.
 	 */
 	handle('handoffResult', [checkout], async (workIn): Promise<boolean | null> => {
-		const { canonical } = workIn;
+		const { canonical, recordsRoot } = workIn;
 		const started = handoffStarts.get(canonical);
 		const here = await readCheckout(canonical);
 		const recent = agent.recentLines();
 		if (!started || started.branch !== here.branch || recent.work !== here.branch) return null;
 		const committed = await changedSince(canonical, started.head, HANDOFF_FILE);
-		return committed && lastVerdict(recent.lines) === 'ready';
+		const ready = committed && lastVerdict(recent.lines) === 'ready';
+		recordHandoff(recordsRoot, started.projectId, ready ? await headCommit(canonical) : null);
+		return ready;
 	});
 	/**
 	 * Build, from a prototype: its branch and record are made here, as all codebase work's are (or, when the work was

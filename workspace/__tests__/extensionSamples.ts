@@ -21,6 +21,7 @@ const iteration = (name: string, openComments = 0, day = 1): ProjectIteration =>
 	pullRequest: null,
 	cover: null,
 	product: null,
+	readyAt: null,
 });
 
 const project = (id: string, title: string, folder: string | null, iterations: ProjectIteration[]): Project => ({

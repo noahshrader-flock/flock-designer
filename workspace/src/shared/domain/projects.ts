@@ -18,6 +18,11 @@ export interface Iteration {
 	previewUrl?: string;
 	/** Codebase work's pull request, once it has been shared: what the project's page links to as built in code. */
 	pullRequest?: string;
+	/**
+	 * Codebase work's last handoff, when it found the work ready for engineering: the commit it was ready at. Absent once a
+	 * handoff found it not ready, or before one did. Kept on the record, so a restart or a teammate sees it too.
+	 */
+	readyAt?: string;
 	/** Codebase work's repository on GitHub (`owner/repo`), from the checkout it was started in, so it can be linked to. */
 	repository?: string;
 	/**
@@ -154,6 +159,11 @@ export interface ProjectIteration {
 	 * its `repository`. Both are read by `productsOf`.
 	 */
 	product: string | null;
+	/**
+	 * For codebase work: the commit a handoff found it ready for engineering at, while its branch is still at that commit
+	 * in the checkout open here (`listProjects`); null otherwise, so a commit since makes it a handoff to run again.
+	 */
+	readyAt: string | null;
 	/** True when this iteration exists only on this machine. */
 	localOnly?: boolean;
 	/** Codebase work: its repository on GitHub (`owner/repo`) and its pull request, when the record says. Read with `codeLink`. */

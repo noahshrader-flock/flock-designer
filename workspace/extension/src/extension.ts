@@ -5,7 +5,7 @@ import { type Context, findContext } from '../../src/main/services/findContext';
 import type { PublishStatus, SignInState } from '../../src/shared/contract';
 import { addressComment } from './address';
 import { Panels, hostApi } from './bridge';
-import { handOff, openCode, previewCodebase } from './codebase';
+import { handOff, openCode, previewCodebase, shareCodebase } from './codebase';
 import { startCore } from './core';
 import { showFound, shownFrom } from './designSystem';
 import { designSystemHost } from './designSystemHost';
@@ -194,17 +194,17 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	const startPrototype = (given: Given) => newPrototype({ ...here, given, product: productNow(), onChanged: projectsChanged, openReview });
 	/**
 	 * What the panel asked of a project's codebase work (ELECTRON_MIGRATION_PLAN 5.2, 5.3), in the product open here, with
-	 * VS Code's notifications, the agent's log and the browser. Handoff changes its records (and ends by offering the pull
-	 * request): the list is read again.
+	 * VS Code's notifications, the agent's log and the browser. Handoff and its draft pull request change its records: the
+	 * list is read again.
 	 */
 	const codebaseWork = async (action: CodebaseAction, projectId: string) => {
 		const root = found.product;
 		if (root === null) throw new Error(productNow().why);
-		const run = { preview: previewCodebase, 'hand-off': handOff, 'open-code': openCode }[action];
+		const run = { preview: previewCodebase, 'hand-off': handOff, share: shareCodebase, 'open-code': openCode }[action];
 		try {
 			await run({ ...here, root }, projectId);
 		} finally {
-			if (action === 'hand-off') projectsChanged();
+			if (action === 'hand-off' || action === 'share') projectsChanged();
 		}
 	};
 	/** Shows DSNR's panel and tells it to open a dialog, held until its page is listening if it is not yet. */
