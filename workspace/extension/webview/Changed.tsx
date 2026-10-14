@@ -2,6 +2,7 @@ import type { DesignToken } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { labelOf, readsAs } from '../../src/shared/tokens';
 import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
+import { branchButtons } from '../../src/shared/branchButtons';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import type { TokenBranchControls } from '../../src/renderer/useTokenBranch';
 import { Button } from './ui/Button';
@@ -13,12 +14,13 @@ import { Swatch } from './ui/Swatch';
 /**
  * What can be done with the change once it is tried (6.2, the app's T4 and T5): its branch and how many saves, its draft
  * pull request once proposed, with Chromatic's build when the design system's CI has linked one, what went wrong, then Save
- * (to a branch, the first time), Propose and Start over. Save is offered only when the change is not the one last saved;
- * Propose only once it is; Start over forgets the branch, which stays on GitHub with any pull request.
+ * (to a branch, the first time), Propose and Start over, as the app offers them (`branchButtons`); Start over forgets the
+ * branch, which stays on GitHub with any pull request.
  */
 const BranchActions = ({ controls }: { controls: TokenBranchControls }) => {
 	const { branch, unsaved, busy, error, save, propose, startOver } = controls;
 	const chromatic = branch?.pullRequest?.chromatic;
+	const offered = branchButtons({ branch, unsaved, busy });
 	return (
 		<div data-branch-actions className="branch-actions">
 			{branch && (
@@ -39,18 +41,18 @@ const BranchActions = ({ controls }: { controls: TokenBranchControls }) => {
 			)}
 			<ErrorLine error={error} />
 			<div className="branch-buttons">
-				{unsaved && (
-					<Button disabled={busy !== null} onClick={save}>
-						{busy === 'saving' ? 'Saving…' : branch ? 'Save' : 'Save to a branch'}
+				{offered.save && (
+					<Button disabled={offered.save.disabled} onClick={save}>
+						{offered.save.label}
 					</Button>
 				)}
-				{branch && !unsaved && !branch.pullRequest && (
-					<Button disabled={busy !== null} onClick={propose}>
-						{busy === 'proposing' ? `Opening a draft ${CHANGE_REQUEST}…` : 'Propose'}
+				{offered.propose && (
+					<Button disabled={offered.propose.disabled} onClick={propose}>
+						{offered.propose.label}
 					</Button>
 				)}
-				{branch && (
-					<Button secondary disabled={busy !== null} onClick={startOver}>
+				{offered.startOver && (
+					<Button secondary disabled={offered.startOver.disabled} onClick={startOver}>
 						Start over
 					</Button>
 				)}

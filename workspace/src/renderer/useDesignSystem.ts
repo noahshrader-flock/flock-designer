@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Catalog, ConnectedDesignSystems, Result, TokenEdit } from '../shared/contract';
+import type { ConnectedDesignSystems, Result, TokenEdit } from '../shared/contract';
+import { editsKept } from '../shared/tokens';
+import { useCatalogRead } from './useCatalogRead';
 
 /**
  * The design system shown on the Design System tab, and everything done to it that is not about one view of it: the
@@ -13,44 +15,14 @@ import type { Catalog, ConnectedDesignSystems, Result, TokenEdit } from '../shar
  * another is shown, for what the screen keeps of the last one (the component it had open).
  */
 export const useDesignSystem = (hidden: boolean, onChanged: () => void) => {
-	const [catalog, setCatalog] = useState<Catalog | null>(null);
 	const [edits, setEdits] = useState<TokenEdit[]>([]);
-	const [error, setError] = useState<string | null>(null);
-	const [syncing, setSyncing] = useState(false);
+	const { catalog, error, setError, syncing, sync, firstRead, forget } = useCatalogRead((read) => setEdits((all) => editsKept(all, read)));
 	// The design systems connected, and which is shown; and whether another is being connected.
 	const [systems, setSystems] = useState<ConnectedDesignSystems>({ systems: [], current: null });
 	const [adding, setAdding] = useState(false);
 	// How many times another has been shown: a view keyed by it starts over for each (its search, its closed groups).
 	const [generation, setGeneration] = useState(0);
 	const started = useRef(false);
-
-	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {
-		const r = await window.workspace.designSystemCatalog(refresh);
-		if (!r.ok) {
-			setError(r.error);
-			return null;
-		}
-		setError(null);
-		setCatalog(r.value);
-		const paths = new Set(r.value.state === 'ready' ? r.value.tokens.tokens.map((t) => t.path) : []);
-		setEdits((all) => (all.every((e) => paths.has(e.path)) ? all : all.filter((e) => paths.has(e.path))));
-		return r.value;
-	}, []);
-
-	const sync = useCallback(async () => {
-		setSyncing(true);
-		try {
-			await ask(true);
-		} finally {
-			setSyncing(false);
-		}
-	}, [ask]);
-
-	// The first answer is what the clone already has; the second is after GitHub was asked for changes.
-	const firstRead = useCallback(async () => {
-		const first = await ask(false);
-		if (first?.state === 'ready' && first.update === 'updating') void sync();
-	}, [ask, sync]);
 
 	const listSystems = useCallback(async () => {
 		const r = await window.workspace.designSystems();
@@ -69,11 +41,11 @@ export const useDesignSystem = (hidden: boolean, onChanged: () => void) => {
 		setAdding(false);
 		setGeneration((n) => n + 1);
 		onChanged();
-		setCatalog(null);
+		forget();
 		setEdits([]);
 		await listSystems();
 		await firstRead();
-	}, [onChanged, listSystems, firstRead]);
+	}, [onChanged, listSystems, firstRead, forget]);
 
 	// Switching to one, or removing the one shown: either way another is shown, or what went wrong is said.
 	const thenShow = async (done: Promise<Result<null>>) => {

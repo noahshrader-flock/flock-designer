@@ -14,7 +14,7 @@ export const Notice = ({ title, children, onRetry }: { title?: string; children:
 );
 
 /** A design system tab's whole page, while it cannot show what it is for: reading, or why not and Try again. */
-export const TabNote = ({ note, onRetry }: { note: string; onRetry?: () => void }) => (
+export const TabNote = ({ note, onRetry = null }: { note: string; onRetry?: (() => void) | null }) => (
 	<div className="tab-note">
 		<p className="quiet">{note}</p>
 		{onRetry && <Button onClick={onRetry}>Try again</Button>}

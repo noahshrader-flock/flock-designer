@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useCatalogRead } from '../../src/renderer/useCatalogRead';
 import type { Catalog } from '../../src/shared/contract';
 import { workspace } from './host';
 import { vscode } from './vscode';
@@ -14,64 +15,42 @@ export interface CatalogRead {
 }
 
 /**
- * The design system the core shows (the one VS Code found, `showFound`), read as the app's tab reads it (`useDesignSystem`):
+ * The design system the core shows (the one VS Code found, `showFound`), read as the app's tab reads it (`useCatalogRead`):
  * once `enabled`, at once from what its clone has, then again once GitHub has been asked for changes; after that only on
- * `sync`. Read afresh when another is found (`root`). Its name is the core's, as connecting it would name it.
+ * `sync`. Read afresh when another is found (`root`). Its name is the core's, as connecting it would name it. `onRead` is
+ * told each catalog read, for what is kept of the change being tried.
  */
-export const useCatalog = (enabled: boolean, root: string | null): CatalogRead & { sync: () => Promise<void> } => {
-	const [catalog, setCatalog] = useState<Catalog | null>(null);
+export const useCatalog = (
+	enabled: boolean,
+	root: string | null,
+	onRead: (catalog: Catalog) => void,
+): CatalogRead & { sync: () => Promise<void> } => {
+	const { catalog, error, syncing, sync, firstRead, forget } = useCatalogRead(onRead);
 	const [shown, setShown] = useState<{ id: string; name: string } | null>(null);
-	const [error, setError] = useState<string | null>(null);
-	const [syncing, setSyncing] = useState(false);
 	// The root it was last read for: another found is read afresh, the same one is not read again when shown again.
 	const readFor = useRef<string | null>(null);
-
-	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {
-		const r = await workspace().designSystemCatalog(refresh);
-		if (!r.ok) {
-			setError(r.error);
-			return null;
-		}
-		setError(null);
-		setCatalog(r.value);
-		return r.value;
-	}, []);
-
-	const sync = useCallback(async () => {
-		setSyncing(true);
-		try {
-			await ask(true);
-		} finally {
-			setSyncing(false);
-		}
-	}, [ask]);
 
 	useEffect(() => {
 		if (!enabled || root === null || readFor.current === root) return;
 		readFor.current = root;
-		setCatalog(null);
-		setError(null);
+		forget();
 		void workspace()
 			.designSystems()
 			.then((r) => setShown(r.ok ? (r.value.systems.find((s) => s.id === r.value.current) ?? null) : null));
-		void ask(false).then((first) => {
-			// The first answer is what the clone already has; the second is after GitHub was asked for changes.
-			if (first?.state === 'ready' && first.update === 'updating') void sync();
-		});
-	}, [enabled, root, ask, sync]);
+		void firstRead();
+	}, [enabled, root, firstRead, forget]);
 
 	return { catalog, id: shown?.id ?? null, name: shown?.name ?? null, error, syncing, sync };
 };
 
 /**
  * The design system shown, as a design system's tab reads it: once, when it opens, after saying it is ready (so the
- * extension tells it the change being tried), and again on `retry`. `ready` once it is read and can be shown; else `note`,
+ * extension tells it the change being tried), and again on the note's Try again. `ready` once it is read and can be shown; else `note`,
  * what the tab says instead: that it is being read, what went wrong, or that it cannot be read (the panel says why).
  */
 export const useTabCatalog = (): {
 	ready: Extract<Catalog, { state: 'ready' }> | null;
-	note: { says: string; retry: boolean } | null;
-	retry: () => void;
+	note: TabNoteOf | null;
 } => {
 	const [catalog, setCatalog] = useState<Catalog | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -84,13 +63,20 @@ export const useTabCatalog = (): {
 			.then((r) => (r.ok ? setCatalog(r.value) : setError(r.error)));
 	}, [asks]);
 	const ready = catalog?.state === 'ready' ? catalog : null;
+	const retry = () => setAsks((n) => n + 1);
 	const note =
 		error !== null
-			? { says: error, retry: true }
+			? { says: error, onRetry: retry }
 			: catalog === null
-				? { says: 'Reading the design system…', retry: false }
+				? { says: 'Reading the design system…', onRetry: null }
 				: ready === null
-					? { says: 'The design system cannot be read here: the DSNR panel says why.', retry: true }
+					? { says: 'The design system cannot be read here: the DSNR panel says why.', onRetry: retry }
 					: null;
-	return { ready, note, retry: () => setAsks((n) => n + 1) };
+	return { ready, note };
 };
+
+/** What a tab says instead of its design system, and how to read it again when that can help. */
+export interface TabNoteOf {
+	says: string;
+	onRetry: (() => void) | null;
+}

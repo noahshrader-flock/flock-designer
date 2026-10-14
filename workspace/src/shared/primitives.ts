@@ -92,8 +92,14 @@ export const byPrimitive = (tokens: DesignToken[]): [string, DesignToken[]][] =>
 	return inOrder(tokens, (t) => t.category).sort(([a], [b]) => rank(a) - rank(b));
 };
 
+/** The primitive a category is, if it is one of the vocabulary's. */
+export const primitiveNamed = (category: string): Primitive | undefined => PRIMITIVES.find((p) => p.category === category);
+
 /** How the vocabulary draws a category (`swatches` for Color), or undefined for one it does not know. */
-export const drawnAs = (category: string): Primitive['drawn'] | undefined => PRIMITIVES.find((p) => p.category === category)?.drawn;
+export const drawnAs = (category: string): Primitive['drawn'] | undefined => primitiveNamed(category)?.drawn;
+
+/** Whether some tokens have a primitive drawn in the design system's own preview (a type specimen): only then is it built. */
+export const drawsSpecimens = (tokens: DesignToken[]): boolean => tokens.some((t) => drawnAs(t.category) === 'specimens');
 
 /**
  * Whether a token can be changed in the app: a color or a length of a primitive the vocabulary says is changed here (Color,

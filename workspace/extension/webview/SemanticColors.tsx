@@ -1,6 +1,6 @@
 import type { DesignToken } from '../../src/shared/contract';
-import { isForeground, labelOf, semanticTable, type SemanticRow } from '../../src/shared/tokens';
-import { pairContrast, pointsAt, useTokenChanges } from '../../src/renderer/tokenChanges';
+import { labelOf, pointsAt, rowContrast, semanticTable, type SemanticRow } from '../../src/shared/tokens';
+import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import { Icon } from './ui/Icon';
 import { Swatch } from './ui/Swatch';
 
@@ -13,7 +13,7 @@ const ThemeValue = ({ token, onEdit }: { token: DesignToken; onEdit: (token: Des
 	const changes = useTokenChanges();
 	const target = changes.target(token);
 	const edited = changes.isChanged(token);
-	const flagged = !isForeground(token) && pairContrast(token, changes)?.flag === true;
+	const flagged = rowContrast(token, changes)?.flag === true;
 	// What it points at, or its own color when it points at nothing.
 	const says = target ? pointsAt(token, target) : token.value;
 	return (

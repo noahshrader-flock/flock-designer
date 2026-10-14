@@ -1,8 +1,7 @@
 import { createContext, useContext, useMemo } from 'react';
 import type { DesignToken, TokenChange, TokenEdit } from '../shared/contract';
 import type { DeclaredTarget } from '../shared/wcag';
-import { contrastPartner, contrastRatio, familyOf, nameOf, paletteFamilies, placeOf, sameChange, withEdits } from '../shared/tokens';
-import { textContrast } from '../shared/wcag';
+import { familyOf, paletteFamilies, placeOf, sameChange, withEdits } from '../shared/tokens';
 
 /**
  * The change to the tokens as the tokens panel holds it (T3 of the design system plan): the tokens as changed, and how to
@@ -94,26 +93,3 @@ export const useTokenChangesFor = (
 			accessibility,
 		};
 	}, [tokens, edits, onEdits, accessibility]);
-
-export { labelOf, nameOf } from '../shared/tokens';
-
-/** An opacity written after a tone (`66`), as a person reads it (`40%`). */
-export const opacity = (alpha: string): string => `${Math.round((parseInt(alpha, 16) / 255) * 100)}%`;
-
-/** What a token points at, as a person reads it: `pineGreen 50`, and the opacity written after it (`at 40%`). */
-export const pointsAt = (token: DesignToken, target: DesignToken): string =>
-	`${nameOf(target)}${token.ref?.alpha ? ` at ${opacity(token.ref.alpha)}` : ''}`;
-
-/**
- * The contrast a color leaves with the one it is read with (its pair: `main` and `contrastText`), as changed, and whether
- * that is enough for text at the design system's target (`textContrast`); null when it has no pair. The one rule for every
- * place a token is shown, in the app and in VS Code: its row, its theme's swatch, and its control.
- */
-export const pairContrast = (
-	token: DesignToken,
-	{ shown, accessibility }: Pick<TokenChanges, 'shown' | 'accessibility'>,
-): { partner: DesignToken; ratio: number; flag: boolean; words: string } | null => {
-	const partner = contrastPartner(token, shown);
-	const ratio = partner ? contrastRatio(token.value, partner.value) : null;
-	return partner && ratio !== null ? { partner, ratio, ...textContrast(ratio, accessibility) } : null;
-};

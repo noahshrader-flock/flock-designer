@@ -139,13 +139,13 @@ const MadeFrom = ({ component, components, actions }: { component: CatalogCompon
  * lists it now; the change to the tokens being tried is the extension's, so a change made in the panel is seen here.
  */
 export const ComponentTab = ({ id }: { id: string }) => {
-	const { ready, note, retry } = useTabCatalog();
+	const { ready, note } = useTabCatalog();
 	const [edits, setEdits] = useTrial();
 	// The token whose control is open: Made from's rows change a token as the panel's do, and every page sees it.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
 	const changes = useTokenChangesFor(ready?.tokens.tokens ?? [], edits, setEdits, ready?.accessibility ?? NOT_READ);
 	const component = ready?.components.find((c) => c.id === id);
-	if (note) return <TabNote note={note.says} {...(note.retry ? { onRetry: retry } : {})} />;
+	if (note) return <TabNote note={note.says} onRetry={note.onRetry} />;
 	if (!ready || !component) return <TabNote note="The design system shown no longer has this component. Close this tab." />;
 	const actions: TokenActions = { onEdit: setEditing, onSource: ({ file, line }) => vscode().postMessage({ type: 'open-token-source', file, line }) };
 	const link = (to: ComponentLink) => vscode().postMessage({ type: 'component-link', id, link: to });

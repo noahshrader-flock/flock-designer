@@ -1,25 +1,24 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useRef } from 'react';
 import { notBuilt, specimenAddress } from '../../src/shared/catalog';
-import type { DesignToken, StoryPreview } from '../../src/shared/contract';
-import { PRIMITIVES, type Primitive, byPrimitive, coverageOf, drawnAs, inOrder, listed } from '../../src/shared/primitives';
+import type { DesignToken } from '../../src/shared/contract';
+import { type Primitive, byPrimitive, coverageOf, inOrder, listed, primitiveNamed } from '../../src/shared/primitives';
 import { typeSpecimens } from '../../src/shared/specimens';
 import { nameOf, pixelsOf, readsAs, withEdits } from '../../src/shared/tokens';
-import { workspace } from './host';
 import { StoryFrame } from './StoryFrame';
 import { useTabCatalog } from './useCatalog';
 import { useTrial } from './useTrial';
 import { TabNote } from './ui/Notice';
 import { TryingNote } from './Changed';
 import { Swatch } from './ui/Swatch';
+import { type SpecimenPreview, useSpecimenPreview } from '../../src/renderer/useSpecimenPreview';
 
 /** The design system's preview build, which a type specimen is drawn in, so its fonts are its own; asked for once. */
-type Preview = StoryPreview | { state: 'asking' };
 
 /** What every drawing is given: its tokens, every token by its path (to say what one points at), and the preview build. */
 interface Drawing {
 	tokens: DesignToken[];
 	byPath: Map<string, DesignToken>;
-	preview: Preview;
+	preview: SpecimenPreview;
 }
 
 /** Colors: each set in a row of swatches, each captioned with its name and what it points at, or its value. */
@@ -158,24 +157,16 @@ const Drawn = ({ primitive, tokens, byPath, preview }: { primitive: Primitive | 
  * with where DSNR looked. For looking: nothing here changes a token.
  */
 export const PrimitivesTab = () => {
-	const { ready, note, retry } = useTabCatalog();
+	const { ready, note } = useTabCatalog();
 	const [edits] = useTrial();
-	const [preview, setPreview] = useState<Preview>({ state: 'asking' });
 	const sections = useRef(new Map<string, HTMLElement | null>());
-	const specimens = ready?.tokens.tokens.some((t) => drawnAs(t.category) === 'specimens') ?? false;
-	useEffect(() => {
-		if (!specimens) return;
-		void workspace()
-			.storyPreview([])
-			.then((r) => setPreview(r.ok ? r.value : { state: 'failed', error: r.error }));
-	}, [specimens]);
-	if (note || !ready) return <TabNote note={note?.says ?? ''} {...(note?.retry ? { onRetry: retry } : {})} />;
+	const preview = useSpecimenPreview(ready, true);
+	if (note || !ready) return <TabNote note={note?.says ?? ''} onRetry={note?.onRetry ?? null} />;
 
 	const read = ready.tokens;
 	const tokens = withEdits(read.tokens, edits);
 	const byPath = new Map(tokens.map((t) => [t.path, t]));
 	const found = byPrimitive(tokens);
-	const primitive = (category: string) => PRIMITIVES.find((p) => p.category === category);
 	const { chips, missing } = coverageOf(found);
 	const go = (key: string) => sections.current.get(key)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	return (
@@ -207,7 +198,7 @@ export const PrimitivesTab = () => {
 					className="primitive"
 				>
 					<h2 className="primitive-title">{category}</h2>
-					<Drawn primitive={primitive(category)} tokens={list} byPath={byPath} preview={preview} />
+					<Drawn primitive={primitiveNamed(category)} tokens={list} byPath={byPath} preview={preview} />
 				</section>
 			))}
 			{missing.length > 0 && (

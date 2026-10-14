@@ -1,8 +1,8 @@
 import { type ReactNode, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../../src/shared/contract';
 import { byPrimitive, drawnAs, inOrder, isEditable, listed } from '../../src/shared/primitives';
-import { type ColorView, isForeground, labelOf, tokensShown } from '../../src/shared/tokens';
-import { pairContrast, pointsAt, useTokenChanges } from '../../src/renderer/tokenChanges';
+import { type ColorView, labelOf, pointsAt, rowContrast, tokensShown } from '../../src/shared/tokens';
+import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import { NoMatches } from './ui/NoMatches';
 import { EmptyState } from './ui/EmptyState';
 import { IconButton } from './ui/IconButton';
@@ -27,7 +27,7 @@ export interface TokenActions {
 const TokenRow = ({ token, note, onEdit, onSource }: { token: DesignToken; note?: ReactNode } & TokenActions) => {
 	const changes = useTokenChanges();
 	const target = changes.target(token);
-	const contrast = isForeground(token) ? null : pairContrast(token, changes);
+	const contrast = rowContrast(token, changes);
 	const edited = changes.isChanged(token);
 	const where = `${token.source.file}:${token.source.line}`;
 	const parts = (

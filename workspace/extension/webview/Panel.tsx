@@ -13,6 +13,7 @@ import { Toggle } from './ui/Toggle';
 import { type CatalogRead, useCatalog } from './useCatalog';
 import { useTrial } from './useTrial';
 import { type Part, type Tab, type View, vscode } from './vscode';
+import { editsKept } from '../../src/shared/tokens';
 
 const TABS = [
 	{ value: 'projects', label: 'Projects', icon: 'folder-library' },
@@ -191,7 +192,11 @@ export const Panel = () => {
 	// The design system, read once its tab is first shown, and read afresh when another is found; its pictures while it is.
 	const found = context?.designSystem ?? null;
 	const showsDesign = tab === 'design-system' && found !== null && unreadable === null;
-	const design = useCatalog(showsDesign, found?.root ?? null);
+	// A sync keeps only what was tried on tokens the library still has, as the app does.
+	const design = useCatalog(showsDesign, found?.root ?? null, (catalog) => {
+		const still = editsKept(edits, catalog);
+		if (still !== edits) setEdits(still);
+	});
 	const ready = design.catalog?.state === 'ready' ? design.catalog : null;
 	const pictures = useComponentPictures(showsDesign && part === 'components' && ready !== null, ready?.commit ?? null);
 	const does: DesignSystemDoes = {

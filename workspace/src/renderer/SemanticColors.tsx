@@ -1,12 +1,12 @@
 import { TriangleAlertIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import type { DesignToken } from '../shared/contract';
-import { isForeground, semanticTable, type SemanticRow } from '../shared/tokens';
+import { labelOf, pointsAt, rowContrast, semanticTable, type SemanticRow } from '../shared/tokens';
 import { GroupTrigger, STICKY_GROUP_HEADER, useClosedGroups } from './GroupAccordion';
 import { Swatch } from './Swatch';
 import { Button } from './ui/button';
 import { TokenEditorPopover } from './TokenEditor';
-import { labelOf, pairContrast, pointsAt, useTokenChanges } from './tokenChanges';
+import { useTokenChanges } from './tokenChanges';
 import { Accordion, AccordionContent, AccordionItem } from './ui/accordion';
 import { cn } from '@/lib/utils';
 
@@ -35,7 +35,7 @@ const ThemeValue = ({ token }: { token: DesignToken }) => {
 	const changes = useTokenChanges();
 	const target = changes.target(token);
 	const edited = changes.isChanged(token);
-	const flagged = !isForeground(token) && pairContrast(token, changes)?.flag === true;
+	const flagged = rowContrast(token, changes)?.flag === true;
 	// What it points at, or its own color when it points at nothing.
 	const says = target ? pointsAt(token, target) : token.value;
 	return (

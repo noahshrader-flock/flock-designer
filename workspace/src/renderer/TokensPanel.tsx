@@ -2,11 +2,11 @@ import { PaletteIcon, TagsIcon } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../shared/contract';
 import { byPrimitive, drawnAs, inOrder, isEditable } from '../shared/primitives';
-import { type ColorView, familyOf, isForeground, tokensShown } from '../shared/tokens';
+import { type ColorView, familyOf, labelOf, pointsAt, rowContrast, tokensShown } from '../shared/tokens';
 import { ChangedTokens, ContrastNote, TokenEditorPopover } from './TokenEditor';
 import { Swatch } from './Swatch';
 import type { TokenBranchControls } from './useTokenBranch';
-import { labelOf, pairContrast, pointsAt, useTokenChanges } from './tokenChanges';
+import { useTokenChanges } from './tokenChanges';
 import { GroupTrigger, STICKY_GROUP_HEADER, useClosedGroups } from './GroupAccordion';
 import { Accordion, AccordionContent, AccordionItem } from './ui/accordion';
 import { SearchField } from './SearchField';
@@ -47,7 +47,7 @@ const ROW = '-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 p
 export const TokenRow = ({ token, note }: { token: DesignToken; note?: ReactNode }) => {
 	const changes = useTokenChanges();
 	const target = changes.target(token);
-	const ratio = isForeground(token) ? null : (pairContrast(token, changes)?.ratio ?? null);
+	const ratio = rowContrast(token, changes)?.ratio ?? null;
 	const edited = changes.isChanged(token);
 	const content = (
 		<>

@@ -36,6 +36,9 @@
 		"src/renderer/useFrameHeight.ts",
 		"src/renderer/useStoryPreview.ts",
 		"src/renderer/useComponentTokens.ts",
+		"src/renderer/useCatalogRead.ts",
+		"src/renderer/useColorField.ts",
+		"src/renderer/useSpecimenPreview.ts",
 		"src/renderer/workspace.d.ts"
 	]
 }

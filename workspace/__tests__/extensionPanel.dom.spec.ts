@@ -1196,6 +1196,17 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 			.filter((m) => m.type === 'token-edits')
 			.at(-1)?.edits;
 
+	it('drops, after a sync, what was tried on a token the library no longer has, as the app does', async () => {
+		await tokensOpen();
+		const gone = { path: 'tone.pineGreen.50', value: '#000000' };
+		await say({ type: 'token-edits', edits: [gone, { path: 'spacing', value: '12px' }] });
+		await press(document.querySelector('[aria-label="Sync with GitHub"]') as HTMLElement);
+		const ready = SAMPLE_CATALOG as Extract<Catalog, { state: 'ready' }>;
+		const without = { ...ready, tokens: { ...ready.tokens, tokens: ready.tokens.tokens.filter((t) => t.path !== gone.path) } };
+		await answer('designSystemCatalog', without);
+		expect(edited()).toEqual([{ path: 'spacing', value: '12px' }]);
+	});
+
 	it('opens a role’s control: what it points at, and its tone’s steps to point it at another, which keeps the link', async () => {
 		await tokensOpen();
 		await press(document.querySelector('[aria-label="Change Light primary main"]') as HTMLElement);

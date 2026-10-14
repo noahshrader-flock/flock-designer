@@ -4,8 +4,10 @@
  * this says, and the writer checks what it wrote against it (`tokenEdits.ts`), so what is seen and what is built cannot
  * disagree.
  */
-import type { DesignToken, TokenEdit } from './contract';
+import type { Catalog, DesignToken, TokenEdit } from './contract';
+import { plural } from './plural';
 import { inOrder } from './primitives';
+import { type DeclaredTarget, textContrast } from './wcag';
 
 /** A color a change can give: a hex, with an opacity when it has eight digits. */
 export const HEX_COLOR = /^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/i;
@@ -319,3 +321,62 @@ export const hexAndAlpha = (value: string): { hex: string; alpha: string } => ({
 	hex: value.slice(0, 7),
 	alpha: value.length === 9 ? value.slice(7) : '',
 });
+
+/** An opacity written after a tone (`66`), as a person reads it (`40%`). */
+const opacity = (alpha: string): string => `${Math.round((parseInt(alpha, 16) / 255) * 100)}%`;
+
+/** What a token points at, as a person reads it: `pineGreen 50`, and the opacity written after it (`at 40%`). */
+export const pointsAt = (token: DesignToken, target: DesignToken): string =>
+	`${nameOf(target)}${token.ref?.alpha ? ` at ${opacity(token.ref.alpha)}` : ''}`;
+
+/** A pair's contrast: the color read with this one, the ratio between them, and whether it is enough for text. */
+export interface PairContrast {
+	partner: DesignToken;
+	ratio: number;
+	flag: boolean;
+	words: string;
+}
+
+/**
+ * The contrast a color leaves with the one it is read with (its pair: `main` and `contrastText`), among the tokens as
+ * changed (`shown`), and whether that is enough for text at the design system's target (`textContrast`); null when it has
+ * no pair. What a token's control says, in the app and in VS Code.
+ */
+export const pairContrast = (
+	token: DesignToken,
+	{ shown, accessibility }: { shown: DesignToken[]; accessibility: DeclaredTarget },
+): PairContrast | null => {
+	const partner = contrastPartner(token, shown);
+	const ratio = partner ? contrastRatio(token.value, partner.value) : null;
+	return partner && ratio !== null ? { partner, ratio, ...textContrast(ratio, accessibility) } : null;
+};
+
+/** The contrast a token's row and its theme's swatch say: its pair's, on the one read under the other only, not on both. */
+export const rowContrast: typeof pairContrast = (token, changes) => (isForeground(token) ? null : pairContrast(token, changes));
+
+/** What a change being tried keeps once the design system is read again (a sync): the edits of tokens it still has. */
+export const editsKept = (edits: TokenEdit[], catalog: Catalog): TokenEdit[] => {
+	const paths = new Set(catalog.state === 'ready' ? catalog.tokens.tokens.map((t) => t.path) : []);
+	return edits.every((e) => paths.has(e.path)) ? edits : edits.filter((e) => paths.has(e.path));
+};
+
+/**
+ * What changing a token reaches, as its control says it, in the app and in VS Code: the roles that point at it, by name
+ * (or that none does, for a step of a family roles point into: it can be changed freely), and the tokens written in the
+ * same place, which change with it. Null when it reaches neither.
+ */
+export const reachOf = (
+	token: DesignToken,
+	{ shown, isPointedInto }: { shown: DesignToken[]; isPointedInto: (token: DesignToken) => boolean },
+): { used: { says: string; who: string } | null; also: string | null } | null => {
+	const users = pointingAt(shown, token.path);
+	const also = writtenWith(shown, token);
+	const pointedInto = users.length > 0 || isPointedInto(token);
+	if (!pointedInto && also.length === 0) return null;
+	return {
+		used: pointedInto
+			? { says: users.length > 0 ? `Used by ${plural(users.length, 'role')}` : 'Not used by any role', who: users.map(labelOf).join('\n') }
+			: null,
+		also: also.length > 0 ? `Also changes ${also.map(labelOf).join(', ')}: written in one place.` : null,
+	};
+};

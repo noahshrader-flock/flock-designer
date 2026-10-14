@@ -1,8 +1,8 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useRef } from 'react';
 import { notBuilt, specimenAddress } from '../shared/catalog';
-import type { Catalog, DesignToken, StoryPreview, TokenEdit } from '../shared/contract';
+import type { Catalog, DesignToken, TokenEdit } from '../shared/contract';
 import { plural } from '../shared/plural';
-import { PRIMITIVES, type Primitive, byPrimitive, coverageOf, drawnAs, inOrder, listed } from '../shared/primitives';
+import { type Primitive, byPrimitive, coverageOf, inOrder, listed, primitiveNamed } from '../shared/primitives';
 import { typeSpecimens } from '../shared/specimens';
 import { nameOf, pixelsOf, readsAs, withEdits } from '../shared/tokens';
 import { Page } from './Page';
@@ -14,9 +14,9 @@ import { Card, CardContent } from './ui/card';
 import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
 import { PageHeading } from './PageHeading';
+import { type SpecimenPreview, useSpecimenPreview } from './useSpecimenPreview';
 
 /** The design system's preview build, which a drawing that needs its own CSS (a type specimen) is drawn in; asked for once. */
-type Preview = StoryPreview | { state: 'asking' };
 
 /**
  * What every drawing is given: the tokens it draws, every token by its path (to say what one points at), and the design
@@ -25,7 +25,7 @@ type Preview = StoryPreview | { state: 'asking' };
 interface Drawing {
 	tokens: DesignToken[];
 	byPath: Map<string, DesignToken>;
-	preview: Preview;
+	preview: SpecimenPreview;
 }
 
 /** A token's name and what it reads as, under its drawing: the tone it points at, or its value. */
@@ -180,9 +180,6 @@ const Drawn = ({ primitive, tokens, byPath, preview }: { primitive: Primitive | 
 	);
 };
 
-/** Whether the design system has a primitive the preview build draws: only then is it asked for. */
-const drawnInPreview = (tokens: DesignToken[]): boolean => tokens.some((t) => drawnAs(t.category) === 'specimens');
-
 /** A chip in the line at the top: a way to a primitive's section, or to the list of what is not defined. */
 const Chip = ({ defined, onPress, children }: { defined: boolean; onPress: () => void; children: ReactNode }) => (
 	<Badge asChild variant={defined ? 'secondary' : 'outline'}>
@@ -210,17 +207,7 @@ const Chip = ({ defined, onPress, children }: { defined: boolean; onPress: () =>
  */
 export const Primitives = ({ catalog, edits, hidden }: { catalog: Catalog | null; edits: TokenEdit[]; hidden: boolean }) => {
 	const sections = useRef(new Map<string, HTMLElement | null>());
-	const [preview, setPreview] = useState<Preview>({ state: 'asking' });
-	const commit = catalog?.state === 'ready' && drawnInPreview(catalog.tokens.tokens) ? catalog.commit : null;
-	const askedFor = useRef<string | null>(null);
-	useEffect(() => {
-		if (hidden || commit === null || askedFor.current === commit) return;
-		askedFor.current = commit;
-		setPreview({ state: 'asking' });
-		void window.workspace
-			.storyPreview([])
-			.then((r) => setPreview(r.ok && r.value !== null ? r.value : { state: 'failed', error: r.ok ? 'it gave no answer' : r.error }));
-	}, [hidden, commit]);
+	const preview = useSpecimenPreview(catalog, !hidden);
 	if (catalog === null)
 		return (
 			<SkeletonStatus label="Reading the design system…">
@@ -244,7 +231,6 @@ export const Primitives = ({ catalog, edits, hidden }: { catalog: Catalog | null
 	const tokens = withEdits(read.tokens, edits);
 	const byPath = new Map(tokens.map((t) => [t.path, t]));
 	const found = byPrimitive(tokens);
-	const primitive = (category: string) => PRIMITIVES.find((p) => p.category === category);
 	// Each primitive's chip, and what the design system leaves out: a primitive it has no tokens for, or the parts of one it has.
 	const { chips, missing } = coverageOf(found);
 	const go = (key: string) => sections.current.get(key)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -270,7 +256,7 @@ export const Primitives = ({ catalog, edits, hidden }: { catalog: Catalog | null
 					className="flex scroll-mt-4 flex-col gap-4 border-t pt-6"
 				>
 					<h2 className="text-base font-semibold">{category}</h2>
-					<Drawn primitive={primitive(category)} tokens={list} byPath={byPath} preview={preview} />
+					<Drawn primitive={primitiveNamed(category)} tokens={list} byPath={byPath} preview={preview} />
 				</section>
 			))}
 			{missing.length > 0 && (

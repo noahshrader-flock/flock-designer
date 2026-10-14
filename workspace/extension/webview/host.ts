@@ -38,3 +38,5 @@ export const workspace = (): WorkspaceApi => {
 	}
 	return api;
 };
+// Made at once, so what reads `window.workspace` (the app's hooks) never runs before it is there.
+workspace();

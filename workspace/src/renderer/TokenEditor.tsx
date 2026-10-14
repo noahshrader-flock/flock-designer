@@ -1,14 +1,14 @@
+import { useColorField } from './useColorField';
 import { ArrowRightIcon, CheckIcon, CopyIcon, RotateCcwIcon } from 'lucide-react';
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import type { DesignToken } from '../shared/contract';
-import { plural } from '../shared/plural';
-import { hexAndAlpha, isHex, lengthRange, pointingAt, readsAs, roleOf, scaleFamilies, tokenTitle, typedHex, writtenWith } from '../shared/tokens';
+import { labelOf, lengthRange, nameOf, pairContrast, pointsAt, reachOf, readsAs, roleOf, scaleFamilies, tokenTitle } from '../shared/tokens';
 import { textContrast } from '../shared/wcag';
 import { ChoiceMenu } from './ChoiceMenu';
 import { TokenBranchActions } from './TokenBranchActions';
 import { useCopy } from './useCopy';
 import type { TokenBranchControls } from './useTokenBranch';
-import { labelOf, nameOf, pairContrast, pointsAt, useTokenChanges } from './tokenChanges';
+import { useTokenChanges } from './tokenChanges';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -49,35 +49,10 @@ export const ContrastNote = ({ ratio, className = '' }: { ratio: number; classNa
  * a hex is applied. An opacity the color had is kept: the picker has none.
  */
 const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string) => void }) => {
-	const { hex: own, alpha } = hexAndAlpha(value);
-	const [hex, setHex] = useState(own);
-	const picker = useRef<HTMLInputElement>(null);
-	useEffect(() => setHex(own), [own]);
-	// The browser's own `change`: when the picker is closed, not on every color it passes through.
-	useEffect(() => {
-		const el = picker.current;
-		const done = () => {
-			const picked = el && typedHex(el.value, alpha);
-			if (picked) onCommit(picked);
-		};
-		el?.addEventListener('change', done);
-		return () => el?.removeEventListener('change', done);
-	}, [onCommit, alpha]);
-	const commit = () => {
-		const typed = typedHex(hex, alpha);
-		if (typed) onCommit(typed);
-		else setHex(own);
-	};
+	const { picker, hex, setHex, commit } = useColorField(value, onCommit);
 	return (
 		<div className="flex items-center gap-2">
-			<input
-				ref={picker}
-				type="color"
-				aria-label="Pick a color"
-				value={(isHex(hex) ? hex : own).toLowerCase()}
-				onChange={(e) => setHex(e.target.value.toUpperCase())}
-				className="size-8 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
-			/>
+			<input {...picker} type="color" aria-label="Pick a color" className="size-8 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5" />
 			<Input
 				aria-label="Hex"
 				value={hex}
@@ -193,18 +168,12 @@ const Resolved = ({ token, target }: { token: DesignToken; target?: DesignToken 
 
 /** What changing a token also moves: the tokens that point at it, and any written in the same place. */
 const Reach = ({ token }: { token: DesignToken }) => {
-	const { shown, isPointedInto } = useTokenChanges();
-	const users = pointingAt(shown, token.path);
-	const also = writtenWith(shown, token);
-	// A step of a family roles point at says so even when none points at this one: it can be changed freely.
-	const pointedInto = users.length > 0 || isPointedInto(token);
-	if (!pointedInto && also.length === 0) return null;
+	const reach = reachOf(token, useTokenChanges());
+	if (reach === null) return null;
 	return (
 		<div data-reach className="text-muted-foreground flex flex-col gap-1 text-xs">
-			{pointedInto && (
-				<p title={users.map(labelOf).join('\n')}>{users.length > 0 ? `Used by ${plural(users.length, 'role')}` : 'Not used by any role'}</p>
-			)}
-			{also.length > 0 && <p>Also changes {also.map(labelOf).join(', ')}: written in one place.</p>}
+			{reach.used && <p title={reach.used.who}>{reach.used.says}</p>}
+			{reach.also && <p>{reach.also}</p>}
 		</div>
 	);
 };

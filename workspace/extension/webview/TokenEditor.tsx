@@ -1,20 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { DesignToken } from '../../src/shared/contract';
-import { plural } from '../../src/shared/plural';
-import {
-	hexAndAlpha,
-	isHex,
-	labelOf,
-	lengthRange,
-	nameOf,
-	pointingAt,
-	roleOf,
-	scaleFamilies,
-	tokenTitle,
-	typedHex,
-	writtenWith,
-} from '../../src/shared/tokens';
-import { pairContrast, pointsAt, useTokenChanges } from '../../src/renderer/tokenChanges';
+import { lengthRange, nameOf, pairContrast, pointsAt, reachOf, roleOf, scaleFamilies, tokenTitle } from '../../src/shared/tokens';
+import { useTokenChanges } from '../../src/renderer/tokenChanges';
+import { useColorField } from '../../src/renderer/useColorField';
 import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
 import { Field, Select } from './ui/Field';
@@ -30,35 +18,10 @@ import { Swatch } from './ui/Swatch';
 
 /** A color picker and its hex: the picker applies when it is closed, the hex when Enter is pressed or it is left. An opacity is kept. */
 const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string) => void }) => {
-	const { hex: own, alpha } = hexAndAlpha(value);
-	const [hex, setHex] = useState(own);
-	const picker = useRef<HTMLInputElement>(null);
-	useEffect(() => setHex(own), [own]);
-	// The browser's own `change`: when the picker is closed, not on every color it passes through.
-	useEffect(() => {
-		const el = picker.current;
-		const done = () => {
-			const picked = el && typedHex(el.value, alpha);
-			if (picked) onCommit(picked);
-		};
-		el?.addEventListener('change', done);
-		return () => el?.removeEventListener('change', done);
-	}, [onCommit, alpha]);
-	const commit = () => {
-		const typed = typedHex(hex, alpha);
-		if (typed) onCommit(typed);
-		else setHex(own);
-	};
+	const { picker, hex, setHex, commit } = useColorField(value, onCommit);
 	return (
 		<div className="color-field">
-			<input
-				ref={picker}
-				type="color"
-				aria-label="Pick a color"
-				className="color-picker"
-				value={(isHex(hex) ? hex : own).toLowerCase()}
-				onChange={(e) => setHex(e.target.value.toUpperCase())}
-			/>
+			<input {...picker} type="color" aria-label="Pick a color" className="color-picker" />
 			<input
 				className="input token-hex"
 				aria-label="Hex"
@@ -154,17 +117,12 @@ const Contrast = ({ token }: { token: DesignToken }) => {
 
 /** What changing a token also moves: the roles that point at it, and any written in the same place. */
 const Reach = ({ token }: { token: DesignToken }) => {
-	const { shown, isPointedInto } = useTokenChanges();
-	const users = pointingAt(shown, token.path);
-	const also = writtenWith(shown, token);
-	const pointedInto = users.length > 0 || isPointedInto(token);
-	if (!pointedInto && also.length === 0) return null;
+	const reach = reachOf(token, useTokenChanges());
+	if (reach === null) return null;
 	return (
 		<div data-reach className="quiet">
-			{pointedInto && (
-				<p title={users.map(labelOf).join('\n')}>{users.length > 0 ? `Used by ${plural(users.length, 'role')}` : 'Not used by any role'}</p>
-			)}
-			{also.length > 0 && <p>Also changes {also.map(labelOf).join(', ')}: written in one place.</p>}
+			{reach.used && <p title={reach.used.who}>{reach.used.says}</p>}
+			{reach.also && <p>{reach.also}</p>}
 		</div>
 	);
 };
