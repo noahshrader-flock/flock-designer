@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -50,8 +51,18 @@ describe('the context, from the open folders', () => {
 			product: coke,
 			designSystem: { root: at('GitHub', 'ui'), how: 'named' },
 			designRepository: at('GitHub', 'flock-designer', 'projects'),
+			// No remote: which repository it is is not known.
+			productRepository: null,
 			missing: [],
 		});
+	});
+
+	it('says which repository the product is, from its remote, whatever its folder is called (PROJECT_SCOPE_PLAN 2.1)', async () => {
+		const coke = product(at('GitHub', 'my-coke'), '@acme/ui');
+		execFileSync('git', ['init', '-q', coke]);
+		execFileSync('git', ['-C', coke, 'remote', 'add', 'origin', 'git@github.com:flocksafety/flock-coke.git']);
+		expect((await findContext({ folders: [coke] })).productRepository).toBe('flocksafety/flock-coke');
+		expect((await findContext({ folders: [] })).productRepository).toBeNull();
 	});
 
 	it('finds a design system that is a folder of the product, as its descriptor says (a monorepo)', async () => {
@@ -98,6 +109,7 @@ describe('the context, from the open folders', () => {
 			product: null,
 			designSystem: null,
 			designRepository: null,
+			productRepository: null,
 			missing: [
 				expect.stringMatching(/^No product is open/),
 				expect.stringMatching(/^No design system/),

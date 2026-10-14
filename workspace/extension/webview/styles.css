@@ -120,6 +120,11 @@ body {
 	padding: 2px 12px 12px;
 }
 
+/* Whose projects (This product, Everyone's): the toggle across the width, above the search and layout. */
+.scope-bar {
+	padding: 2px 12px 8px;
+}
+
 /* VS Code's search box: its icon at the start, filling what the toggle beside it leaves; the box itself is `.input`. */
 .search {
 	position: relative;

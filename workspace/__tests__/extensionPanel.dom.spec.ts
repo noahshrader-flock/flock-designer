@@ -17,6 +17,7 @@ const OPEN: Context = {
 	product: '/work/flock-coke',
 	designSystem: { root: '/work/flock-react-component-lib', how: 'named' },
 	designRepository: '/work/flock-designer/projects',
+	productRepository: 'flocksafety/flock-coke',
 	missing: [],
 };
 /** The panel as the extension starts it. */
@@ -869,6 +870,88 @@ describe('the projects as a list or a grid', () => {
 		await press(view('List'));
 		await press(options()[1]!);
 		expect(kept.state).toEqual({ tab: 'design-system', view: 'list', part: 'components', componentsView: 'grid' });
+	});
+});
+
+describe('Projects, focused on the product open (PROJECT_SCOPE_PLAN Phase 2)', () => {
+	const COKE = 'flocksafety/flock-coke';
+	const PEPSI = 'flocksafety/flock-pepsi';
+	const rows = () => [...body().querySelectorAll<HTMLElement>('[role="listitem"]')];
+	const names = () => rows().map((r) => r.querySelector('[data-part="name"]')?.textContent);
+	const meta = (name: string) =>
+		rows()
+			.find((r) => r.querySelector('[data-part="name"]')?.textContent === name)
+			?.querySelector('[data-part="meta"]')?.textContent;
+	const sections = () => [...body().querySelectorAll('[role="list"]')].map((l) => l.getAttribute('aria-label'));
+	const whose = () => document.querySelector('[role="radiogroup"][aria-label="Whose projects"]') as HTMLElement | null;
+	const choose = (label: string) =>
+		press([...(whose() as HTMLElement).querySelectorAll<HTMLElement>('[role="radio"]')].find((o) => o.textContent === label)!);
+	const made = (id: string, title: string, folder: string | null, ...on: [string | null, string][]) => ({
+		id,
+		title,
+		folder,
+		records: [],
+		people: [],
+		iterations: on.map(([product, createdAt], i) => ({
+			...SAMPLE_PROJECTS[0]!.iterations[0]!,
+			name: `v1-i${i + 1}`,
+			branch: `prototype/${id}/v1-i${i + 1}`,
+			product,
+			createdAt,
+		})),
+	});
+	const PROJECTS = [
+		made('alerts', 'Alerts', 'Admin', [COKE, '2026-10-01T10:00:00Z']),
+		made('maps', 'Maps', null, [PEPSI, '2026-10-02T10:00:00Z']),
+		made('both', 'Both', 'Admin', [COKE, '2026-10-01T10:00:00Z'], [PEPSI, '2026-10-05T10:00:00Z']),
+		made('old', 'Old', null, [null, '2026-09-01T10:00:00Z']),
+	];
+
+	it('shows the open product’s projects first, by folder, and those with no product on record, marked', async () => {
+		await showOpen(OPEN, PROJECTS);
+		expect([...whose()!.querySelectorAll('[role="radio"]')].map((o) => [o.textContent, o.getAttribute('aria-checked')])).toEqual([
+			['This product', 'true'],
+			['Everyone’s', 'false'],
+		]);
+		expect(sections()).toEqual(['Admin', 'No folder']);
+		expect(names()).toEqual(['Alerts', 'Both', 'Old']);
+		expect(meta('Old')).toBe('1 iteration · No product');
+		expect(meta('Alerts')).toBe('1 iteration');
+	});
+
+	it('shows everyone’s by product, the open one first and No product last, each project once with its folder and where else it is', async () => {
+		await showOpen(OPEN, PROJECTS);
+		await choose('Everyone’s');
+		expect(sections()).toEqual(['flock-coke', 'flock-pepsi', 'No product']);
+		expect(names()).toEqual(['Alerts', 'Maps', 'Both', 'Old']);
+		// Both's newest work is Pepsi's, so it is under Pepsi, once, and says it is in Coke too.
+		expect(rows()[2]!.closest('[role="list"]')?.getAttribute('aria-label')).toBe('flock-pepsi');
+		expect(meta('Both')).toBe('2 iterations · Admin · Also in flock-coke');
+		expect(meta('Alerts')).toBe('1 iteration · Admin');
+	});
+
+	it('changes nothing of what can be done: a project of another product opens for review as any does', async () => {
+		await showOpen(OPEN, PROJECTS);
+		await choose('Everyone’s');
+		await press(
+			rows()
+				.find((r) => r.querySelector('[data-part="name"]')?.textContent === 'Maps')!
+				.querySelector('button')!,
+		);
+		expect(panelSaid().at(-1)).toMatchObject({ type: 'open-review', projectId: 'maps' });
+	});
+
+	it('says when the open product has none of its own yet, and how to see everyone’s', async () => {
+		await showOpen(OPEN, [PROJECTS[1]!]);
+		expect(body().textContent).toContain('No projects in flock-coke yet');
+		await press(button('Show everyone’s'));
+		expect(names()).toEqual(['Maps']);
+	});
+
+	it('has no switch when the product open has no repository it can say, and shows everyone’s', async () => {
+		await showOpen({ ...OPEN, productRepository: null }, PROJECTS);
+		expect(whose()).toBeNull();
+		expect(sections()).toEqual(['flock-coke', 'flock-pepsi', 'No product']);
 	});
 });
 

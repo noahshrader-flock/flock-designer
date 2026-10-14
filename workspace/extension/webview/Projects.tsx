@@ -5,7 +5,8 @@ import { plural } from '../../src/shared/plural';
 import { useCover } from '../../src/renderer/useCover';
 import { matchesProject, openCommentsOf } from '../../src/shared/projectList';
 import { type CodebaseAction, type PanelDialog, type Review, reviewsOf } from '../src/messages';
-import { workOf } from '../../src/shared/work';
+import { productsOf, workOf } from '../../src/shared/work';
+import { type ProductGroup, byProduct, inThisProduct, productNames } from '../../src/shared/projectScope';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -21,8 +22,11 @@ import { NoMatches } from './ui/NoMatches';
 import { LAYOUTS } from './layouts';
 import type { View } from './vscode';
 
-/** What a project has, in a line: its iterations. Its folder is the section it is under. */
-const meta = (p: Project) => plural(p.iterations.length, 'iteration');
+/**
+ * What a project has, in a line: its iterations, then what its section does not say of it (its folder, across products;
+ * that it has no product, or where else it is).
+ */
+const meta = (p: Project, labels: string[]) => [plural(p.iterations.length, 'iteration'), ...labels].join(' · ');
 
 /** A project's picture, its newest prototype's (`useCover`); its place kept for one until there is one. */
 const Picture = ({ project, className }: { project: Project; className: string }) => {
@@ -40,6 +44,7 @@ const Picture = ({ project, className }: { project: Project; className: string }
  */
 const ProjectItem = ({
 	project,
+	labels,
 	view,
 	onOpen,
 	onOpenInBrowser,
@@ -47,6 +52,8 @@ const ProjectItem = ({
 	onCodebase,
 }: {
 	project: Project;
+	/** What its line says beside its iterations: what its section does not. */
+	labels: string[];
 	view: View;
 	onOpen: (review: Review) => void;
 	onOpenInBrowser: (review: Review) => void;
@@ -83,7 +90,7 @@ const ProjectItem = ({
 	const press = newest ? () => onOpen(newest) : inCode ? () => onCodebase('open-code', id) : undefined;
 	const shared = {
 		name: project.title,
-		meta: meta(project),
+		meta: meta(project, labels),
 		// What its right-click menu acts on: this project, with none of a webview's own items (Cut, Copy, Paste).
 		context: { webviewSection: 'project', projectId: id, preventDefaultContextMenuItems: true },
 		...(press ? { onOpen: press } : {}),
@@ -120,6 +127,33 @@ const ByFolder = ({ projects, children }: { projects: Project[]; children: (grou
 	);
 };
 
+/**
+ * The projects under a section for each product they have work in, across products (`byProduct`): the open one first,
+ * "No product" last; one list when they are all in one.
+ */
+const ByProduct = ({ groups, children }: { groups: ProductGroup[]; children: (group: ProductGroup, label: string) => ReactNode }) => {
+	const named = productNames(groups.flatMap((g) => (g.product === null ? [] : [g.product])));
+	const titleOf = (g: ProductGroup) => (g.product === null ? 'No product' : (named.get(g.product) ?? g.product));
+	const only = groups[0];
+	if (groups.length === 1 && only) return <>{children(only, 'Projects')}</>;
+	return (
+		<>
+			{groups.map((g) => (
+				<Section key={titleOf(g)} title={titleOf(g)} count={g.projects.length}>
+					{children(g, titleOf(g))}
+				</Section>
+			))}
+		</>
+	);
+};
+
+/** Whose projects are shown: the open product's (the default), or everyone's. A focus, not a lock. */
+type Scope = 'here' | 'everyone';
+const SCOPES = [
+	{ value: 'here', label: 'This product', icon: 'repo' },
+	{ value: 'everyone', label: 'Everyone’s', icon: 'organization' },
+] as const satisfies { value: Scope; label: string; icon: string }[];
+
 /** The projects as the core read them: the list (null while it is still reading), or what went wrong. */
 export interface ProjectsRead {
 	value: Project[] | null;
@@ -127,12 +161,16 @@ export interface ProjectsRead {
 }
 
 /**
- * The Projects tab: each project a row or a card (`ProjectItem`), under its folder (`ByFolder`), as a list or a grid that
- * the person chooses. With no product open, what to open; signed out, a line saying the list is this machine's.
+ * The Projects tab: each project a row or a card (`ProjectItem`), as a list or a grid that the person chooses. **Focused on
+ * the product open** (PROJECT_SCOPE_PLAN): its projects, and those with no product on record, by folder; or everyone's, by
+ * product (`ByProduct`), each with its folder. Either way every project can be opened and commented on: the view chooses
+ * what is first, not what is allowed. With no product open, what to open; signed out, a line saying the list is this
+ * machine's.
  */
 export const Projects = ({
 	read,
 	product,
+	productRepository,
 	signedIn,
 	onOpen,
 	onOpenInBrowser,
@@ -146,6 +184,8 @@ export const Projects = ({
 	read: ProjectsRead;
 	/** Whether a product is open, and if not, what to do (from the context). */
 	product: { open: true } | { open: false; why: string };
+	/** Which repository the product open is (`owner/repo`), what the view is focused on; null when it cannot be said. */
+	productRepository: string | null;
 	signedIn: boolean;
 	onOpen: (review: Review) => void;
 	/** Opens the review in the person's browser, outside VS Code. */
@@ -163,6 +203,7 @@ export const Projects = ({
 }) => {
 	// What is typed in the search: the projects are narrowed to what matches, as the app's are.
 	const [search, setSearch] = useState('');
+	const [scope, setScope] = useState<Scope>('here');
 	if (!product.open)
 		return (
 			<EmptyState icon="folder-library" title="No product is open">
@@ -180,9 +221,34 @@ export const Projects = ({
 	if (read.value === null) return <p className="note">Reading the projects…</p>;
 	const projects = read.value;
 	const matching = projects.filter((p) => matchesProject(p, search));
+	// With a product to focus on, its own first; otherwise, or when asked, everyone's.
+	const focused = productRepository !== null && scope === 'here';
+	const here = focused ? matching.filter((p) => inThisProduct(p, productRepository)) : matching;
+	const named = productNames([...new Set([...projects.flatMap(productsOf), ...(productRepository ? [productRepository] : [])])]);
+	// "No product" says something only once some projects have one: before, it would be on every project.
+	const anyProduct = projects.some((p) => productsOf(p).length > 0);
+	const nameOf = (repository: string) => named.get(repository) ?? repository;
+	const item = (p: Project, labels: string[]) => (
+		<ProjectItem
+			key={p.id}
+			project={p}
+			labels={labels}
+			view={view}
+			onOpen={onOpen}
+			onOpenInBrowser={onOpenInBrowser}
+			onDialog={onDialog}
+			onCodebase={onCodebase}
+		/>
+	);
+	const shown = (items: ReactNode[], label: string) => (view === 'grid' ? <Grid label={label}>{items}</Grid> : <List label={label}>{items}</List>);
 	return (
 		<>
 			{!signedIn && <p className="note">These are the projects on this machine. Sign in to see your team's too.</p>}
+			{projects.length > 0 && productRepository !== null && (
+				<div className="scope-bar">
+					<Toggle label="Whose projects" options={SCOPES} value={scope} onChange={setScope} />
+				</div>
+			)}
 			{projects.length > 0 && (
 				<div className="view-bar">
 					<SearchBox label="Search projects" value={search} onChange={setSearch} />
@@ -196,23 +262,34 @@ export const Projects = ({
 				</EmptyState>
 			) : matching.length === 0 ? (
 				<NoMatches thing="project" search={search} onClear={() => setSearch('')} />
-			) : (
-				<ByFolder projects={matching}>
-					{(group, label) => {
-						const items = group.map((p) => (
-							<ProjectItem
-								key={p.id}
-								project={p}
-								view={view}
-								onOpen={onOpen}
-								onOpenInBrowser={onOpenInBrowser}
-								onDialog={onDialog}
-								onCodebase={onCodebase}
-							/>
-						));
-						return view === 'grid' ? <Grid label={label}>{items}</Grid> : <List label={label}>{items}</List>;
-					}}
+			) : here.length === 0 ? (
+				<EmptyState icon="repo" title={`No projects in ${nameOf(productRepository ?? '')} yet`}>
+					<p>Prototypes made on it appear here. Everyone’s shows what is being made on other products.</p>
+					<Button variant="secondary" onClick={() => setScope('everyone')}>
+						Show everyone’s
+					</Button>
+				</EmptyState>
+			) : focused ? (
+				<ByFolder projects={here}>
+					{(group, label) =>
+						shown(
+							group.map((p) => item(p, anyProduct && productsOf(p).length === 0 ? ['No product'] : [])),
+							label,
+						)
+					}
 				</ByFolder>
+			) : (
+				<ByProduct groups={byProduct(here, productRepository)}>
+					{(group, label) =>
+						shown(
+							group.projects.map((p) => {
+								const also = group.alsoIn(p);
+								return item(p, [...(p.folder ? [p.folder] : []), ...(also.length > 0 ? [`Also in ${also.map(nameOf).join(', ')}`] : [])]);
+							}),
+							label,
+						)
+					}
+				</ByProduct>
 			)}
 		</>
 	);

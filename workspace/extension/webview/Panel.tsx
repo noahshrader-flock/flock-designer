@@ -88,6 +88,7 @@ export const PanelView = ({
 				<Projects
 					read={projects}
 					product={context.product !== null ? { open: true } : { open: false, why: context.missing[0] ?? 'No product is open.' }}
+					productRepository={context.productRepository}
 					signedIn={account.state === 'signedIn'}
 					onOpen={onOpen}
 					onOpenInBrowser={onOpenInBrowser}
