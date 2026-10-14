@@ -1,10 +1,15 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
+import { useWorkspace } from '../../src/renderer/useWorkspace';
+import { stripAnchor } from '../../src/shared/anchor';
+import type { BuildInCodebase } from '../../src/shared/contract';
 import type { Project } from '../../src/shared/domain/projects';
-import { sameFolder } from '../../src/shared/brief';
+import { foldersOf, sameFolder } from '../../src/shared/brief';
+import { workOf } from '../../src/shared/work';
+import { type CodebaseAction, type PanelDialog, reviewsOf } from '../src/messages';
 import { slugify } from '../../src/shared/validate';
 import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
-import { Field, TextArea, TextInput } from './ui/Field';
+import { Field, Select, TextArea, TextInput } from './ui/Field';
 import { FolderField, type FolderPick, folderOf, isChosen, pickOf } from './ui/FolderField';
 import { workspace } from './host';
 
@@ -115,4 +120,274 @@ export const AssignFolderDialog = ({
 			</form>
 		</Dialog>
 	);
+};
+
+/**
+ * Hand off to engineering, said before it starts (ELECTRON_MIGRATION_PLAN 5.2): what the run does, on the work's branch,
+ * and that nothing is pushed. Start handoff asks the extension, which runs it as a build is run, with Stop and its log.
+ */
+export const HandoffDialog = ({
+	project,
+	branch,
+	onStart,
+	onClose,
+}: {
+	project: Project;
+	branch: string;
+	onStart: () => void;
+	onClose: () => void;
+}) => (
+	<Dialog title="Hand off to engineering" onClose={onClose}>
+		<form
+			onSubmit={(e) => {
+				e.preventDefault();
+				onStart();
+				onClose();
+			}}
+		>
+			<p className="dialog-about">
+				This checks <strong>{project.title}</strong>’s codebase work on <code>{branch}</code>, and gets it ready for an engineer.
+			</p>
+			<p className="field-label">What happens</p>
+			<ol className="dialog-steps">
+				<li>The product’s handoff gate runs: every test, accessibility, the app bundling, the standards.</li>
+				<li>Two independent reviews: does it read as the product, and is it built correctly.</li>
+				<li>What they block on is fixed and committed on {branch}, one fix at a time.</li>
+				<li>A note for the engineer, HANDOFF.md, is written on the branch. Nothing is pushed.</li>
+			</ol>
+			<Buttons onClose={onClose} doing="Start handoff" disabled={false} />
+		</form>
+	</Dialog>
+);
+
+/**
+ * The comments on codebase work, read only (ELECTRON_MIGRATION_PLAN 5.3, §1.4): there are no pins on a real product's
+ * page, so new feedback goes on the pull request; what was said before is kept and shown, each with who said it and
+ * whether it was resolved.
+ */
+export const CodebaseCommentsDialog = ({
+	project,
+	branch,
+	onOpenCode,
+	onClose,
+}: {
+	project: Project;
+	branch: string;
+	onOpenCode: () => void;
+	onClose: () => void;
+}) => {
+	const read = useWorkspace(() => workspace().readComments(project.id, branch), [project.id, branch]);
+	return (
+		<Dialog title={`Comments on ${project.title}’s codebase work`} onClose={onClose}>
+			<p className="dialog-about">Comments on codebase work go on its pull request. These were made before, and are kept as they were.</p>
+			{read.error !== null && (
+				<p role="alert" className="dialog-error">
+					{read.error}
+				</p>
+			)}
+			{read.value === null ? (
+				read.error === null && <p className="note">Reading them…</p>
+			) : read.value.length === 0 ? (
+				<p className="note">No comments on it.</p>
+			) : (
+				<ul className="comment-list">
+					{read.value.map((c) => (
+						<li key={c.id} data-part="comment" className="comment">
+							<span className="comment-by">
+								{c.author}
+								{c.resolved && <span className="comment-resolved"> · Resolved</span>}
+							</span>
+							<span className="comment-text">{stripAnchor(c.body).trim()}</span>
+						</li>
+					))}
+				</ul>
+			)}
+			<div className="dialog-buttons">
+				<Button secondary onClick={onClose}>
+					Close
+				</Button>
+				<Button onClick={onOpenCode}>Open on GitHub</Button>
+			</div>
+		</Dialog>
+	);
+};
+
+/**
+ * Build in the codebase (ELECTRON_MIGRATION_PLAN 5.1), for a project's newest prototype, in the product open here: what
+ * it would do, read first (the branch, where it starts from, a clean checkout), then handed to Claude Code in this window,
+ * which writes the audit and builds it. The app's own plan and hand-over (`buildInCodebasePlan`, `buildInCodebase`).
+ */
+export const BuildInCodebaseDialog = ({
+	root,
+	project,
+	name,
+	onBuilt,
+	onClose,
+}: {
+	root: string;
+	project: Project;
+	/** The prototype built: the project's newest. */
+	name: string;
+	onBuilt: () => void;
+	onClose: () => void;
+}) => {
+	const planned = useWorkspace(() => workspace().buildInCodebasePlan(root, project.id, name), [root, project.id, name]);
+	const setup = useWorkspace(() => workspace().branchesWithSetup(root), [root]);
+	const plan = planned.value;
+	const branches = setup.value ?? [];
+	const [from, setFrom] = useState<string | null>(null);
+	const [busy, setBusy] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const [handed, setHanded] = useState<BuildInCodebase | null>(null);
+	// Starts from what the prototype was modeled on, when that can be started from; else from where the checkout is; else
+	// from the first branch that can.
+	useEffect(() => {
+		if (!plan) return;
+		const startable = [plan.basedOn?.branch, plan.current].find((b): b is string => typeof b === 'string' && branches.includes(b));
+		setFrom(startable ?? branches[0] ?? null);
+	}, [plan, branches.join('\n')]); // eslint-disable-line react-hooks/exhaustive-deps
+	const continuing = plan?.started ?? false;
+	// A new branch, or moving to the branch from another, needs a clean checkout; already on it, what is uncommitted is the work.
+	const needsClean = plan !== null && (!continuing || plan.current !== plan.branch);
+	const canStart = plan !== null && (!needsClean || plan.clean) && (continuing || from !== null) && !busy;
+	const start = async (e: FormEvent) => {
+		e.preventDefault();
+		if (!canStart) return;
+		setBusy(true);
+		setError(null);
+		const r = await workspace().buildInCodebase(root, project.id, name, ...(continuing || from === null ? [] : [from]));
+		setBusy(false);
+		if (!r.ok) return setError(r.error);
+		setHanded(r.value);
+		onBuilt();
+	};
+	if (handed && plan)
+		return (
+			<Dialog title="Build in the codebase" onClose={onClose}>
+				{handed.editor ? (
+					<p className="dialog-about">
+						It is in Claude Code in this window now, on <code>{plan.branch}</code>: a new conversation there has the task typed in. Press Enter there
+						to start it, then watch the agent write the audit and then the code, and step in when you like.
+					</p>
+				) : (
+					<>
+						<p className="dialog-about">Claude Code is not in this VS Code, so the command that starts it in a terminal is on your clipboard:</p>
+						<pre className="dialog-command">{handed.command}</pre>
+					</>
+				)}
+				<div className="dialog-buttons">
+					<Button onClick={onClose}>Done</Button>
+				</div>
+			</Dialog>
+		);
+	return (
+		<Dialog title="Build in the codebase" onClose={onClose}>
+			<form onSubmit={(e) => void start(e)}>
+				<p className="dialog-about">
+					This moves <strong>{project.title}</strong> into the product as real work, built by Claude Code in the repository. It needs the full setup:
+					packages, environment variables, and the app able to run.
+				</p>
+				{plan === null && planned.error === null && <p className="note">Reading what it would do…</p>}
+				{plan && needsClean && !plan.clean && (
+					<p role="alert" className="dialog-error">
+						There are uncommitted changes in {plan.repository}.{' '}
+						{continuing
+							? `Your checkout is on ${plan.current ?? 'no branch'}, and moving it to ${plan.branch} needs a clean checkout. Commit or set them aside first.`
+							: 'The work starts on a new branch, which needs a clean checkout. Commit or set them aside first.'}
+					</p>
+				)}
+				{plan?.basedOn && plan.basedOn.repository !== plan.repository && (
+					<p className="dialog-about">
+						The prototype was modeled on {plan.basedOn.repository}, and this is {plan.repository}.
+					</p>
+				)}
+				{plan &&
+					(continuing ? (
+						<div className="field">
+							<span className="field-label">Continues</span>
+							<code>{plan.branch}</code>
+							<span className="field-hint">
+								{plan.branch} already has this project’s codebase work, so Claude Code picks it up there.
+								{plan.current === plan.branch ? '' : ' Your checkout moves to it.'}
+							</span>
+						</div>
+					) : (
+						<Field label="Starts from" hint={`Creates ${plan.branch} from this branch and moves your checkout to it.`}>
+							{(control) => (
+								<Select control={control} value={from ?? ''} onChange={setFrom} options={branches.map((b) => ({ value: b, label: b }))} />
+							)}
+						</Field>
+					))}
+				{plan && (
+					<>
+						<p className="field-label">What happens</p>
+						<ol className="dialog-steps">
+							<li>Claude Code opens in this window on {plan.branch}, with the task in a new conversation.</li>
+							<li>
+								{continuing
+									? 'The agent looks at what is already on the branch and its audit, then carries on from there.'
+									: "The agent reads the prototype's source and its marks, and writes an audit first: a decision for each stand-in, a data task for each mock, a deletion for each removal."}
+							</li>
+							<li>Then it builds the real thing in the files where it belongs, and commits on {plan.branch}. You see all of it there.</li>
+						</ol>
+					</>
+				)}
+				{[error, planned.error, setup.error].map(
+					(e) =>
+						e && (
+							<p key={e} role="alert" className="dialog-error">
+								{e}
+							</p>
+						),
+				)}
+				<Buttons onClose={onClose} doing={busy ? 'Opening…' : continuing ? 'Continue in Claude Code' : 'Build in Claude Code'} disabled={!canStart} />
+			</form>
+		</Dialog>
+	);
+};
+
+/**
+ * The dialog open over the panel, if one is, drawn for the project it is about as the list has it: none for a project
+ * not in the list. What each does is given: what is the extension's is asked of it (`onStart`, `onCodebase`), what is
+ * the core's is done here, and what changes the projects reads them again (`onChanged`).
+ */
+export const PanelDialogs = ({
+	dialog,
+	projects,
+	root,
+	onStart,
+	onCodebase,
+	onChanged,
+	onClose,
+}: {
+	dialog: PanelDialog | null;
+	projects: Project[] | null;
+	/** The product open here, which codebase work is in. */
+	root: string | null;
+	onStart: (answers: NewPrototypeAnswers) => void;
+	onCodebase: (action: CodebaseAction, projectId: string) => void;
+	onChanged: () => void;
+	onClose: () => void;
+}) => {
+	const folders = projects ? foldersOf(projects) : [];
+	if (dialog === null) return null;
+	if (dialog.kind === 'new') return <NewPrototypeDialog folders={folders} onStart={onStart} onClose={onClose} />;
+	const project = projects?.find((p) => p.id === dialog.projectId);
+	if (!project) return null;
+	const codebase = workOf(project.iterations, 'codebase')[0];
+	const newest = reviewsOf(project)[0];
+	switch (dialog.kind) {
+		case 'assign':
+			return <AssignFolderDialog project={project} folders={folders} onAssigned={onChanged} onClose={onClose} />;
+		case 'build':
+			return root && newest ? <BuildInCodebaseDialog root={root} project={project} name={newest.name} onBuilt={onChanged} onClose={onClose} /> : null;
+		case 'hand-off':
+			return codebase ? (
+				<HandoffDialog project={project} branch={codebase.branch} onStart={() => onCodebase('hand-off', project.id)} onClose={onClose} />
+			) : null;
+		case 'comments':
+			return codebase ? (
+				<CodebaseCommentsDialog project={project} branch={codebase.branch} onOpenCode={() => onCodebase('open-code', project.id)} onClose={onClose} />
+			) : null;
+	}
 };

@@ -6,13 +6,14 @@ import type { PublishStatus, SignInState, WorkspaceApi } from '../../src/shared/
 import { valueOf } from '../../src/shared/result';
 import { addressComment } from './address';
 import { Panels, hostApi } from './bridge';
+import { handOff, openCode, previewCodebase, shareCodebase } from './codebase';
 import { startCore } from './core';
-import { type HostMessage, type Review, readProjectArg, readReview, reviewsOf } from './messages';
+import { type CodebaseAction, type HostMessage, type Review, readProjectArg, readReview, reviewsOf } from './messages';
 import { type Given, newPrototype, readGiven, readyToStart } from './newPrototype';
 import { PanelProvider } from './panel';
 import { publishedLink, syncItem, syncPicks } from './publishing';
 import { Reviews, answerReview, buildReviewSite, siteIn } from './review';
-import { AgentLog, SyncStatus, failed, failedFor, vscodeChoose, vscodeProgress, vscodeTell } from './ui';
+import { AgentLog, SyncStatus, failed, failedFor, vscodeChoose, vscodeOffer, vscodeProgress, vscodeTell } from './ui';
 
 /** How long since the projects were last read before coming back to VS Code reads them again: they are read from GitHub. */
 const REREAD_MS = 60_000;
@@ -40,6 +41,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		openReview: (review) => openReview(review),
 		openReviewInBrowser: (review) => openReviewInBrowser(review),
 		startPrototype: (answers) => startPrototype(answers).catch(failed),
+		codebase: (action, projectId) => codebaseWork(action, projectId).catch(failed),
 		development,
 		...(log ? { log } : {}),
 	});
@@ -121,6 +123,33 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			onChanged: projectsChanged,
 			openReview,
 		});
+	/**
+	 * What the panel asked of a project's codebase work (ELECTRON_MIGRATION_PLAN 5.2, 5.3), in the product open here, with
+	 * VS Code's notifications, the agent's log and the browser. Handoff and Share change its records: the list is read again.
+	 */
+	const codebaseWork = async (action: CodebaseAction, projectId: string) => {
+		const root = found.product;
+		if (root === null) throw new Error(productNow().why);
+		const deps = {
+			api,
+			root,
+			progress: vscodeProgress,
+			log: agentLog,
+			tell: vscodeTell,
+			offer: vscodeOffer,
+			openExternal: async (url: string) => void (await vscode.env.openExternal(vscode.Uri.parse(url))),
+			copy: async (text: string) => {
+				await vscode.env.clipboard.writeText(text);
+				vscodeTell('Copied the link.');
+			},
+		};
+		const run = { preview: previewCodebase, 'hand-off': handOff, share: shareCodebase, 'open-code': openCode }[action];
+		try {
+			await run(deps, projectId);
+		} finally {
+			if (action === 'hand-off' || action === 'share') projectsChanged();
+		}
+	};
 	/** Shows DSNR's panel and tells it to open a dialog, held until its page is listening if it is not yet. */
 	const inPanel = async (message: HostMessage) => {
 		await vscode.commands.executeCommand('workbench.view.extension.dsnr');
@@ -152,7 +181,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		vscode.commands.registerCommand('dsnr.newPrototype', async (raw: unknown) => {
 			if (raw === undefined)
 				return readyToStart({ api, product: productNow() })
-					.then(() => inPanel({ type: 'open-new-prototype' }))
+					.then(() => inPanel({ type: 'open-dialog', dialog: { kind: 'new' } }))
 					.catch(failed);
 			const given = readGiven(raw);
 			if (!given) throw new Error('DSNR: New prototype was given something that is not a name and what it should explore.');
@@ -189,7 +218,13 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		vscode.commands.registerCommand('dsnr.assignFolder', (raw: unknown) => {
 			const projectId = readProjectArg(raw) ?? reviews.active()?.projectId;
 			if (!projectId) return vscodeTell('Right-click a project in DSNR, or open one for review, to assign its folder.');
-			return inPanel({ type: 'open-assign-folder', projectId });
+			return inPanel({ type: 'open-dialog', dialog: { kind: 'assign', projectId } });
+		}),
+		// From a review tab's menu: Build in the codebase, for the prototype in front, in the panel's dialog.
+		vscode.commands.registerCommand('dsnr.buildInCodebase', () => {
+			const review = reviews.active();
+			if (!review) return vscodeTell('Open a prototype for review first.');
+			return inPanel({ type: 'open-dialog', dialog: { kind: 'build', projectId: review.projectId } });
 		}),
 		vscode.commands.registerCommand('dsnr.sync', async () => {
 			const status = valueOf(await api.publishStatus());

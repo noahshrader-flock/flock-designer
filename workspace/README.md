@@ -266,6 +266,16 @@ project's menu, its right-click menu or a review tab's menu, opens a dialog in t
 one, or none, with the same folder choice New prototype has; it uses the projects the panel already has, so it opens at
 once. The app's one setting, its theme, is VS Code's here, so DSNR has no settings of its own.
 
+**Moving into the code (Phase 5):** a prototype's menu has **Build in the codebase…** (and a review tab's menu does,
+for the prototype in front): a dialog says what it would do in the product open here (the branch, where it starts
+from, a clean checkout), then hands the task to Claude Code in this window, which writes the audit and builds it.
+Codebase work's menu has **Open the preview** (the branch's own dev server, at its recorded route, in your browser, with
+Stop), **Open on GitHub** (its pull request, else its branch), **Comments…** (read only: comments on codebase work go on
+its pull request, and there are no pins on it), **Hand off to engineering…** (the product's gate, both reviews, the
+fixes and HANDOFF.md, as a notification with Stop and its log, then the verdict; nothing is pushed) and **Share for
+review** (a draft pull request, with a preview, said step by step). A project only in the code opens on GitHub when
+pressed. VS Code is the editor here: work handed to Claude Code goes to this window's Claude Code panel.
+
 **Sync and share:** whether the person's work is synced is in VS Code's status bar (Synced, Syncing, Not synced);
 pressing it shows what is held back and why, and Sync now. A review tab's title bar opens its page on the published site,
 or copies its link; when it is not there yet, it says why and offers Publish.

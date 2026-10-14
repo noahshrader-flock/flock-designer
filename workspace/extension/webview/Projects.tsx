@@ -4,14 +4,15 @@ import { foldersOf, inFolder } from '../../src/shared/brief';
 import { plural } from '../../src/shared/plural';
 import { useCover } from '../../src/renderer/useCover';
 import { matchesProject } from '../../src/shared/projectList';
-import { type Review, reviewsOf } from '../src/messages';
+import { type CodebaseAction, type PanelDialog, type Review, reviewsOf } from '../src/messages';
+import { workOf } from '../../src/shared/work';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
 import { Grid } from './ui/Grid';
 import { List } from './ui/List';
-import { Menu } from './ui/Menu';
+import { type MenuItem, Menu } from './ui/Menu';
 import { Row } from './ui/Row';
 import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
@@ -46,38 +47,51 @@ const ProjectItem = ({
 	view,
 	onOpen,
 	onOpenInBrowser,
-	onAssignFolder,
+	onDialog,
+	onCodebase,
 }: {
 	project: Project;
 	view: View;
 	onOpen: (review: Review) => void;
 	onOpenInBrowser: (review: Review) => void;
-	onAssignFolder: (projectId: string) => void;
+	onDialog: (dialog: PanelDialog) => void;
+	onCodebase: (action: CodebaseAction, projectId: string) => void;
 }) => {
 	const open = project.iterations.reduce((n, i) => n + i.openComments, 0);
 	const newest = reviewsOf(project)[0];
+	const inCode = workOf(project.iterations, 'codebase').length > 0;
 	const badge = open > 0 ? <Badge count={open} label={plural(open, 'open comment')} /> : undefined;
+	const id = project.id;
+	// What it offers, by what it has: its prototypes', then its codebase work's (no pins on that: its preview is in the
+	// browser, its comments are read here and go on its pull request), then its folder.
+	const items: MenuItem[] = [
+		...(newest
+			? [
+					{ label: 'Open for review', icon: 'link-external', onSelect: () => onOpen(newest) },
+					{ label: 'Open in browser', icon: 'globe', onSelect: () => onOpenInBrowser(newest) },
+					{ label: 'Build in the codebase…', icon: 'code', onSelect: () => onDialog({ kind: 'build', projectId: id }) },
+				]
+			: []),
+		...(inCode
+			? [
+					{ label: 'Open the preview', icon: 'play', onSelect: () => onCodebase('preview', id) },
+					{ label: 'Open on GitHub', icon: 'github', onSelect: () => onCodebase('open-code', id) },
+					{ label: 'Comments…', icon: 'comment', onSelect: () => onDialog({ kind: 'comments', projectId: id }) },
+					{ label: 'Hand off to engineering…', icon: 'checklist', onSelect: () => onDialog({ kind: 'hand-off', projectId: id }) },
+					{ label: 'Share for review', icon: 'git-pull-request', onSelect: () => onCodebase('share', id) },
+				]
+			: []),
+		{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) },
+	];
+	// Pressed, it opens its newest prototype for review; a project only in the code opens its work on GitHub, as the app's does.
+	const press = newest ? () => onOpen(newest) : inCode ? () => onCodebase('open-code', id) : undefined;
 	const shared = {
 		name: project.title,
 		meta: meta(project),
 		// What its right-click menu acts on: this project, with none of a webview's own items (Cut, Copy, Paste).
-		context: { webviewSection: 'project', projectId: project.id, preventDefaultContextMenuItems: true },
-		...(newest ? { onOpen: () => onOpen(newest) } : {}),
-		// What more can be done with it, in a popover of its own: the same as the right-click menu has.
-		actions: (
-			<Menu
-				label="Project actions"
-				items={[
-					...(newest
-						? [
-								{ label: 'Open for review', icon: 'link-external', onSelect: () => onOpen(newest) },
-								{ label: 'Open in browser', icon: 'globe', onSelect: () => onOpenInBrowser(newest) },
-							]
-						: []),
-					{ label: 'Assign folder…', icon: 'folder', onSelect: () => onAssignFolder(project.id) },
-				]}
-			/>
-		),
+		context: { webviewSection: 'project', projectId: id, preventDefaultContextMenuItems: true },
+		...(press ? { onOpen: press } : {}),
+		actions: <Menu label="Project actions" items={items} />,
 	};
 	return view === 'grid' ? (
 		<Card {...shared} picture={<Picture project={project} className="card-picture" />} badge={badge} />
@@ -128,7 +142,8 @@ export const Projects = ({
 	onOpenInBrowser,
 	onNew,
 	onGetStarted,
-	onAssignFolder,
+	onDialog,
+	onCodebase,
 	view,
 	onView,
 }: {
@@ -142,8 +157,10 @@ export const Projects = ({
 	onNew: () => void;
 	/** Gets a product onto this machine: VS Code's own clone. */
 	onGetStarted: () => void;
-	/** Opens the dialog that puts a project in a folder. */
-	onAssignFolder: (projectId: string) => void;
+	/** Opens a dialog about a project: its folder, Build in the codebase, Handoff, its codebase work's comments. */
+	onDialog: (dialog: PanelDialog) => void;
+	/** Asks the extension to do something with a project's codebase work. */
+	onCodebase: (action: CodebaseAction, projectId: string) => void;
 	/** The projects as a list of rows or a grid of cards, and choosing the other. */
 	view: View;
 	onView: (view: View) => void;
@@ -192,7 +209,15 @@ export const Projects = ({
 				<ByFolder projects={matching}>
 					{(group, label) => {
 						const items = group.map((p) => (
-							<ProjectItem key={p.id} project={p} view={view} onOpen={onOpen} onOpenInBrowser={onOpenInBrowser} onAssignFolder={onAssignFolder} />
+							<ProjectItem
+								key={p.id}
+								project={p}
+								view={view}
+								onOpen={onOpen}
+								onOpenInBrowser={onOpenInBrowser}
+								onDialog={onDialog}
+								onCodebase={onCodebase}
+							/>
 						));
 						return view === 'grid' ? <Grid label={label}>{items}</Grid> : <List label={label}>{items}</List>;
 					}}

@@ -17,9 +17,17 @@ export type PanelMessage =
 	| { type: 'locate-design-system' }
 	| { type: 'get-started' }
 	| { type: 'ask-new-prototype' }
+	| { type: 'codebase'; action: CodebaseAction; projectId: string }
 	| { type: 'new-prototype'; title: string; task: string; folder: string | null }
 	| ({ type: 'open-review' } & Review)
 	| ({ type: 'open-review-in-browser' } & Review);
+
+/**
+ * What can be done with a project's codebase work from the panel: its preview, Handoff, Share, and the work on GitHub.
+ * The page names the project only; the extension finds the work, and where it is, itself.
+ */
+export const CODEBASE_ACTIONS = ['preview', 'hand-off', 'share', 'open-code'] as const;
+export type CodebaseAction = (typeof CODEBASE_ACTIONS)[number];
 
 /** A prototype to open for review: its project, its name, and the title its tab is given. */
 export interface Review {
@@ -39,15 +47,22 @@ export const reviewsOf = (project: Pick<Project, 'id' | 'title' | 'iterations'>)
 
 /**
  * What the extension sends the page: an answer to a call, by its id, an event of the core's, what is open (`Context`), or
- * that the projects changed (one was made), so the list is read again, or to open a dialog (`Panels.show`).
+ * that the projects changed (one was made), so the list is read again, or to open one of its dialogs (`Panels.show`).
  */
 export type HostMessage =
 	| { type: 'answer'; id: number; result: unknown }
 	| { type: 'event'; name: string; payload: unknown }
 	| { type: 'context'; context: Context }
 	| { type: 'projects-changed' }
-	| { type: 'open-new-prototype' }
-	| { type: 'open-assign-folder'; projectId: string };
+	| { type: 'open-dialog'; dialog: PanelDialog };
+
+/** The dialogs the panel has: each is opened for what it is about, by the panel or by the extension (`open-dialog`). */
+export type PanelDialog =
+	| { kind: 'new' }
+	| { kind: 'assign'; projectId: string }
+	| { kind: 'build'; projectId: string }
+	| { kind: 'hand-off'; projectId: string }
+	| { kind: 'comments'; projectId: string };
 
 const CALLS = new Set<string>(INVOKE);
 const BARE = new Set(['ready', 'locate-design-system', 'get-started', 'ask-new-prototype']);
@@ -80,6 +95,14 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 			typeof m.title === 'string' &&
 			m.title.length <= 300
 			? { type: m.type, projectId: m.projectId, name: m.name, title: m.title }
+			: null;
+	if (m.type === 'codebase')
+		return hasKeys(m, ['type', 'action', 'projectId']) &&
+			typeof m.action === 'string' &&
+			(CODEBASE_ACTIONS as readonly string[]).includes(m.action) &&
+			typeof m.projectId === 'string' &&
+			PROJECT_ID.test(m.projectId)
+			? { type: 'codebase', action: m.action as CodebaseAction, projectId: m.projectId }
 			: null;
 	if (m.type === 'new-prototype')
 		return hasKeys(m, ['type', 'title', 'task', 'folder']) &&

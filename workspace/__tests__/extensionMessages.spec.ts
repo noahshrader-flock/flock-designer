@@ -15,6 +15,10 @@ describe('a message from the panel', () => {
 		[{ type: 'locate-design-system' }],
 		[{ type: 'get-started' }],
 		[{ type: 'ask-new-prototype' }],
+		[{ type: 'codebase', action: 'preview', projectId: 'zone-coverage' }],
+		[{ type: 'codebase', action: 'hand-off', projectId: 'zone-coverage' }],
+		[{ type: 'codebase', action: 'share', projectId: 'zone-coverage' }],
+		[{ type: 'codebase', action: 'open-code', projectId: 'zone-coverage' }],
 		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: null }],
 		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: 'Maps' }],
 		[{ type: 'open-review', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
@@ -49,6 +53,10 @@ describe('a message from the panel', () => {
 		[{ type: 'new-prototype', title: 'x'.repeat(301), task: 'B', folder: null }],
 		[{ type: 'new-prototype', title: 'A', task: 'B', folder: 'x'.repeat(101) }],
 		[{ type: 'new-prototype', title: 'A', task: 'B', folder: null, more: 1 }],
+		[{ type: 'codebase', action: 'push', projectId: 'zone-coverage' }],
+		[{ type: 'codebase', action: 'preview', projectId: '../etc' }],
+		[{ type: 'codebase', action: 'preview' }],
+		[{ type: 'codebase', action: 'open-code', projectId: 'zone-coverage', url: 'https://evil.example' }],
 		[{ type: 'run', command: 'rm -rf /' }],
 	])('%o is dropped', (m) => {
 		expect(readMessage(m)).toBeNull();

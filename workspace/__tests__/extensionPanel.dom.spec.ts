@@ -214,7 +214,7 @@ describe('dialogs and menus, in the panel', () => {
 	describe('New prototype', () => {
 		it('opens in the panel, not as a box at the top, when the extension says it can be started (its title bar’s +, or the empty list’s button)', async () => {
 			await showOpen(OPEN, []);
-			await say({ type: 'open-new-prototype' });
+			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
 			expect(dialog()?.getAttribute('aria-label')).toBe('New prototype');
 			await press(cancel());
 			expect(dialog()).toBeNull();
@@ -229,7 +229,7 @@ describe('dialogs and menus, in the panel', () => {
 
 		it('names each field by its label alone, and gives its hint as a description: a hint is not part of a name', async () => {
 			await showOpen();
-			await say({ type: 'open-new-prototype' });
+			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
 			const task = field('What should it explore?');
 			expect(task.labels?.[0]?.textContent).toBe('What should it explore?');
 			const hint = document.getElementById(task.getAttribute('aria-describedby')!);
@@ -239,7 +239,7 @@ describe('dialogs and menus, in the panel', () => {
 
 		it('asks a name, what it should explore and its folder, and is made only once there is a name and something to explore', async () => {
 			await showOpen();
-			await say({ type: 'open-new-prototype' });
+			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
 			expect(submit().disabled).toBe(true);
 			await type(field('Name'), '!!!');
 			await type(field('What should it explore?'), 'A history of alerts.');
@@ -252,7 +252,7 @@ describe('dialogs and menus, in the panel', () => {
 
 		it('offers the folders there are, none and a new one, and sends its answers to the extension, closing', async () => {
 			await showOpen();
-			await say({ type: 'open-new-prototype' });
+			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
 			expect([...field('Folder').querySelectorAll('option')].map((o) => o.textContent)).toEqual(['No folder', 'Admin', 'Maps', 'New folder…']);
 			await type(field('Name'), 'Alert history 2');
 			await type(field('What should it explore?'), 'A history of alerts.');
@@ -263,13 +263,13 @@ describe('dialogs and menus, in the panel', () => {
 
 		it('takes an existing folder, or a new one named in the dialog', async () => {
 			await showOpen();
-			await say({ type: 'open-new-prototype' });
+			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
 			await type(field('Name'), 'One');
 			await type(field('What should it explore?'), 'Two.');
 			await choose(field('Folder'), 'Maps');
 			await press(submit());
 			expect(panelSaid().at(-1)).toMatchObject({ folder: 'Maps' });
-			await say({ type: 'open-new-prototype' });
+			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
 			await type(field('Name'), 'One');
 			await type(field('What should it explore?'), 'Two.');
 			await choose(field('Folder'), 'New folder…');
@@ -283,7 +283,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen(OPEN, []);
 			const opener = button('New prototype');
 			opener.focus();
-			await say({ type: 'open-new-prototype' });
+			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
 			expect(document.activeElement?.closest('[role="dialog"]')).not.toBeNull();
 			await act(async () => void dialog()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
 			expect(dialog()).toBeNull();
@@ -296,7 +296,7 @@ describe('dialogs and menus, in the panel', () => {
 		it('is on each project, a popover with Open for review and Assign folder…, closed by Escape or a press elsewhere', async () => {
 			await showOpen();
 			await press(menuFor(0));
-			expect(items().map((i) => i.textContent)).toEqual(['Open for review', 'Open in browser', 'Assign folder…']);
+			expect(items().map((i) => i.textContent)).toEqual(['Open for review', 'Open in browser', 'Build in the codebase…', 'Assign folder…']);
 			expect(menuFor(0).getAttribute('aria-expanded')).toBe('true');
 			await act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
 			expect(items()).toHaveLength(0);
@@ -350,7 +350,7 @@ describe('dialogs and menus, in the panel', () => {
 				[...document.querySelectorAll<HTMLElement>('[aria-label="Layout"] [role="radio"]')].find((o) => o.getAttribute('aria-label') === 'List')!,
 			);
 			await press(menuFor(0));
-			expect(items().map((i) => i.textContent)).toEqual(['Open for review', 'Open in browser', 'Assign folder…']);
+			expect(items().map((i) => i.textContent)).toEqual(['Open for review', 'Open in browser', 'Build in the codebase…', 'Assign folder…']);
 		});
 	});
 
@@ -367,7 +367,7 @@ describe('dialogs and menus, in the panel', () => {
 				OPEN,
 				SAMPLE_PROJECTS.map((p) => (p.id === 'role-comparison' ? { ...p, folder: 'maps' } : p)),
 			);
-			await say({ type: 'open-assign-folder', projectId: 'zone-coverage' });
+			await say({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'zone-coverage' } });
 			// The list has `maps`, the first spelling it met; this project's own `Maps` is not an option, and is shown as it.
 			expect([...field('Folder').querySelectorAll('option')].map((o) => o.textContent)).toEqual(['No folder', 'Admin', 'maps', 'New folder…']);
 			expect(selected(field('Folder'))).toBe('maps');
@@ -420,11 +420,232 @@ describe('dialogs and menus, in the panel', () => {
 
 		it('opens from the extension too (the right-click menu, a review’s menu), for the project it names', async () => {
 			await showOpen();
-			await say({ type: 'open-assign-folder', projectId: 'admin-usage' });
+			await say({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'admin-usage' } });
 			expect(dialog()!.textContent).toContain('Admin usage');
 			await press(cancel());
-			await say({ type: 'open-assign-folder', projectId: 'not-here' });
+			await say({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'not-here' } });
 			expect(dialog()).toBeNull();
+		});
+	});
+});
+
+describe('codebase work, in the panel', () => {
+	const codebase = (branch: string, more: Record<string, unknown> = {}) => ({
+		name: 'codebase',
+		branch,
+		issueNumber: null,
+		openComments: 0,
+		previewUrl: null,
+		commit: null,
+		contributors: [],
+		createdAt: '2026-10-12T10:00:00Z',
+		route: null,
+		cover: null,
+		repository: 'flocksafety/flock-coke',
+		pullRequest: null,
+		...more,
+	});
+	/** Zone coverage built in the code too, and a project that is only in the code. */
+	const WITH_CODE = [
+		...SAMPLE_PROJECTS.map((p) => (p.id === 'zone-coverage' ? { ...p, iterations: [...p.iterations, codebase('feature/zone-coverage')] } : p)),
+		{ id: 'roles-in-code', title: 'Roles in code', folder: null, records: [], people: [], iterations: [codebase('feature/roles-in-code')] },
+	] as typeof SAMPLE_PROJECTS;
+	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
+	const named = (title: string) =>
+		[...body().querySelectorAll<HTMLElement>('[role="listitem"]')].find((r) => r.querySelector('[data-part="name"]')?.textContent === title)!;
+	const menuOf = (title: string) => named(title).querySelector<HTMLElement>('[aria-label="Project actions"]')!;
+	const items = () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].map((i) => i.textContent);
+	const item = (label: string) => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((i) => i.textContent === label)!;
+	/** A press elsewhere, as a person's click on another button is first: it closes a menu that is open. */
+	const elsewhere = async () => act(async () => void document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
+	const inDialog = (name: string) => [...dialog()!.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
+
+	it('offers what a project has: its prototypes’ actions, its codebase work’s, and its folder', async () => {
+		await showOpen(OPEN, WITH_CODE);
+		await press(menuOf('Zone coverage'));
+		expect(items()).toEqual([
+			'Open for review',
+			'Open in browser',
+			'Build in the codebase…',
+			'Open the preview',
+			'Open on GitHub',
+			'Comments…',
+			'Hand off to engineering…',
+			'Share for review',
+			'Assign folder…',
+		]);
+		await elsewhere();
+		await press(menuOf('Alert history'));
+		expect(items()).toEqual(['Open for review', 'Open in browser', 'Build in the codebase…', 'Assign folder…']);
+		await elsewhere();
+		await press(menuOf('Roles in code'));
+		expect(items()).toEqual(['Open the preview', 'Open on GitHub', 'Comments…', 'Hand off to engineering…', 'Share for review', 'Assign folder…']);
+	});
+
+	it('asks the extension for the preview, Share and the work on GitHub, naming the project only', async () => {
+		await showOpen(OPEN, WITH_CODE);
+		for (const [label, action] of [
+			['Open the preview', 'preview'],
+			['Share for review', 'share'],
+			['Open on GitHub', 'open-code'],
+		]) {
+			await press(menuOf('Zone coverage'));
+			await press(item(label!));
+			expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action, projectId: 'zone-coverage' });
+		}
+	});
+
+	it('opens a project that is only in the code on GitHub when it is pressed, as the app does', async () => {
+		await showOpen(OPEN, WITH_CODE);
+		await press(named('Roles in code').querySelector('button') as HTMLElement);
+		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'open-code', projectId: 'roles-in-code' });
+	});
+
+	it('hands off after saying what happens, and only once Start handoff is pressed', async () => {
+		await showOpen(OPEN, WITH_CODE);
+		await press(menuOf('Zone coverage'));
+		await press(item('Hand off to engineering…'));
+		expect(dialog()?.getAttribute('aria-label')).toBe('Hand off to engineering');
+		expect(dialog()!.textContent).toContain('HANDOFF.md');
+		expect(dialog()!.textContent).toContain('feature/zone-coverage');
+		expect(dialog()!.textContent).toContain('Nothing is pushed');
+		expect(panelSaid().some((m) => m.type === 'codebase')).toBe(false);
+		await press(inDialog('Start handoff'));
+		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'hand-off', projectId: 'zone-coverage' });
+		expect(dialog()).toBeNull();
+	});
+
+	it('lists the comments on codebase work read only, and says they go on its pull request', async () => {
+		await showOpen(OPEN, WITH_CODE);
+		await press(menuOf('Zone coverage'));
+		await press(item('Comments…'));
+		expect(dialog()?.getAttribute('aria-label')).toBe('Comments on Zone coverage’s codebase work');
+		expect(sent.filter((m) => m.name === 'readComments').at(-1)?.args).toEqual(['zone-coverage', 'feature/zone-coverage']);
+		await answer('readComments', [
+			{
+				thread: 1,
+				id: 10,
+				author: 'patreeya',
+				authorAvatarUrl: null,
+				body: 'Bigger, please.\n\n<!-- fd-anchor: {} -->',
+				createdAt: '2026-10-12T11:00:00Z',
+				resolved: false,
+				addressedAt: null,
+				addressedIn: null,
+				anchor: null,
+				picture: null,
+			},
+			{
+				thread: 1,
+				id: 11,
+				author: 'noah',
+				authorAvatarUrl: null,
+				body: 'Done.',
+				createdAt: '2026-10-12T12:00:00Z',
+				resolved: true,
+				addressedAt: null,
+				addressedIn: null,
+				anchor: null,
+				picture: null,
+			},
+		]);
+		const comments = [...dialog()!.querySelectorAll('[data-part="comment"]')].map((c) => c.textContent);
+		expect(comments).toEqual([expect.stringContaining('Bigger, please.'), expect.stringContaining('Done.')]);
+		expect(comments[0]).toContain('patreeya');
+		expect(comments[1]).toContain('Resolved');
+		expect(comments.join('')).not.toContain('fd-anchor');
+		expect(dialog()!.textContent).toContain('Comments on codebase work go on its pull request');
+		// Read only: nothing to resolve or reply with.
+		expect([...dialog()!.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Close', 'Open on GitHub']);
+		await press(inDialog('Open on GitHub'));
+		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'open-code', projectId: 'zone-coverage' });
+	});
+
+	it('says when there are no comments on it', async () => {
+		await showOpen(OPEN, WITH_CODE);
+		await press(menuOf('Zone coverage'));
+		await press(item('Comments…'));
+		await answer('readComments', []);
+		expect(dialog()!.textContent).toContain('No comments on it.');
+	});
+
+	describe('Build in the codebase', () => {
+		const plan = (more: Record<string, unknown> = {}) => ({
+			branch: 'feature/alert-history',
+			exists: false,
+			recorded: false,
+			started: false,
+			repository: 'flock-coke',
+			basedOn: { repository: 'flock-coke', branch: 'develop' },
+			current: 'main',
+			clean: true,
+			...more,
+		});
+		const open = async (more: Record<string, unknown> = {}) => {
+			await showOpen(OPEN, WITH_CODE);
+			await press(menuOf('Alert history'));
+			await press(item('Build in the codebase…'));
+			await answer('buildInCodebasePlan', plan(more));
+			await answer('branchesWithSetup', ['main', 'develop']);
+		};
+		const select = () => dialog()!.querySelector('select') as HTMLSelectElement;
+
+		it('reads what it would do in the product open here, for the project’s newest prototype', async () => {
+			await open();
+			expect(dialog()?.getAttribute('aria-label')).toBe('Build in the codebase');
+			expect(sent.filter((m) => m.name === 'buildInCodebasePlan').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2-i1']);
+			expect(sent.filter((m) => m.name === 'branchesWithSetup').at(-1)?.args).toEqual(['/work/flock-coke']);
+			expect(dialog()!.textContent).toContain('Creates feature/alert-history from this branch and moves your checkout to it.');
+		});
+
+		it('starts from what the prototype was modeled on, from the branches that have DSNR’s setup, and hands it to Claude Code here', async () => {
+			await open();
+			expect([...select().options].map((o) => o.textContent)).toEqual(['main', 'develop']);
+			expect(select().value).toBe('develop');
+			await press(inDialog('Build in Claude Code'));
+			expect(sent.filter((m) => m.name === 'buildInCodebase').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2-i1', 'develop']);
+			const reads = sent.filter((m) => m.name === 'listProjects').length;
+			await answer('buildInCodebase', { editor: true, command: null });
+			expect(dialog()!.textContent).toContain('It is in Claude Code in this window now, on feature/alert-history');
+			// The project's codebase work is recorded: the list is read again.
+			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
+			await press(inDialog('Done'));
+			expect(dialog()).toBeNull();
+		});
+
+		it('gives the command for a terminal when Claude Code is not in this VS Code', async () => {
+			await open();
+			await press(inDialog('Build in Claude Code'));
+			await answer('buildInCodebase', { editor: false, command: "cd /work/flock-coke && claude 'Build it.'" });
+			expect(dialog()!.textContent).toContain('on your clipboard');
+			expect(dialog()!.querySelector('pre')?.textContent).toBe("cd /work/flock-coke && claude 'Build it.'");
+		});
+
+		it('will not start with uncommitted changes, and says so', async () => {
+			await open({ clean: false });
+			expect(dialog()!.textContent).toContain('There are uncommitted changes in flock-coke');
+			expect(inDialog('Build in Claude Code').disabled).toBe(true);
+		});
+
+		it('continues work already started, with nothing to choose', async () => {
+			await open({ started: true, exists: true, current: 'feature/alert-history' });
+			expect(select()).toBeNull();
+			expect(dialog()!.textContent).toContain('Continues');
+			await press(inDialog('Continue in Claude Code'));
+			expect(sent.filter((m) => m.name === 'buildInCodebase').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2-i1']);
+		});
+
+		it('says why it could not, and stays open', async () => {
+			await open();
+			await press(inDialog('Build in Claude Code'));
+			const call = sent.filter((m) => m.name === 'buildInCodebase').at(-1);
+			await say({ type: 'answer', id: call!.id, result: { ok: false, error: 'This prototype has no page yet.' } });
+			expect(dialog()!.textContent).toContain('This prototype has no page yet.');
+		});
+
+		it('says when the prototype was modeled on another repository', async () => {
+			await open({ basedOn: { repository: 'flock-pepsi', branch: 'main' } });
+			expect(dialog()!.textContent).toContain('The prototype was modeled on flock-pepsi, and this is flock-coke.');
 		});
 	});
 });
@@ -730,7 +951,8 @@ describe('a design system’s catalog, once it is read', () => {
 				onOpenInBrowser: () => undefined,
 				onNew: () => undefined,
 				onGetStarted: () => undefined,
-				onAssignFolder: () => undefined,
+				onDialog: () => undefined,
+				onCodebase: () => undefined,
 				view: 'list',
 				onView: () => undefined,
 				onLocate: () => undefined,

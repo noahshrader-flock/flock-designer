@@ -2,7 +2,7 @@ import { type KeyboardEvent as KeyEvent, useEffect, useId, useRef, useState } fr
 import { Icon } from './Icon';
 
 /** One thing a menu offers: what it says, its codicon, and what it does. */
-interface MenuItem {
+export interface MenuItem {
 	label: string;
 	icon: string;
 	onSelect: () => void;

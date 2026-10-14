@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react';
 import type { Context } from '../../src/main/services/findContext';
 import { useWorkspace } from '../../src/renderer/useWorkspace';
 import type { MadeCover, SignInState } from '../../src/shared/contract';
-import { foldersOf } from '../../src/shared/brief';
 import { withCovers } from '../../src/shared/projectList';
 import { type Catalog, DesignSystem } from './DesignSystem';
-import { AssignFolderDialog, NewPrototypeDialog } from './Dialogs';
+import { PanelDialogs } from './Dialogs';
 import { onHost, workspace } from './host';
 import { Projects, type ProjectsRead } from './Projects';
-import type { Review } from '../src/messages';
+import type { CodebaseAction, PanelDialog, Review } from '../src/messages';
 import { Toggle } from './ui/Toggle';
 import { type Tab, type View, vscode } from './vscode';
 
@@ -31,7 +30,8 @@ export interface PanelViewProps {
 	onOpenInBrowser: (review: Review) => void;
 	onNew: () => void;
 	onGetStarted: () => void;
-	onAssignFolder: (projectId: string) => void;
+	onDialog: (dialog: PanelDialog) => void;
+	onCodebase: (action: CodebaseAction, projectId: string) => void;
 	onLocate: () => void;
 	catalog?: Catalog;
 }
@@ -52,7 +52,8 @@ export const PanelView = ({
 	onOpenInBrowser,
 	onNew,
 	onGetStarted,
-	onAssignFolder,
+	onDialog,
+	onCodebase,
 	onLocate,
 	catalog,
 }: PanelViewProps) => (
@@ -72,7 +73,8 @@ export const PanelView = ({
 					onOpenInBrowser={onOpenInBrowser}
 					onNew={onNew}
 					onGetStarted={onGetStarted}
-					onAssignFolder={onAssignFolder}
+					onDialog={onDialog}
+					onCodebase={onCodebase}
 					view={view}
 					onView={onView}
 				/>
@@ -97,13 +99,12 @@ export const Panel = () => {
 	// Counts the times the extension said the projects changed: each reads them again.
 	const [changes, setChanges] = useState(0);
 	// The dialog over the panel, if one is open: opened by what is pressed here or by the extension (its title bar's +).
-	const [dialog, setDialog] = useState<{ kind: 'new' } | { kind: 'assign'; projectId: string } | null>(null);
+	const [dialog, setDialog] = useState<PanelDialog | null>(null);
 	useEffect(() => {
 		const stop = onHost((m) => {
 			if (m.type === 'context') setContext(m.context);
 			if (m.type === 'projects-changed') setChanges((n) => n + 1);
-			if (m.type === 'open-new-prototype') setDialog({ kind: 'new' });
-			if (m.type === 'open-assign-folder') setDialog({ kind: 'assign', projectId: m.projectId });
+			if (m.type === 'open-dialog') setDialog(m.dialog);
 		});
 		// Said once the page listens, so what is open is never sent before it can be heard.
 		vscode().postMessage({ type: 'ready' });
@@ -133,12 +134,12 @@ export const Panel = () => {
 			.then((r) => r.ok && r.value.length > 0 && setMade((now) => [...r.value, ...now]));
 	}, [read.value]);
 	const projects = read.value === null ? null : withCovers(read.value, made);
-	const assigning = dialog?.kind === 'assign' ? projects?.find((p) => p.id === dialog.projectId) : undefined;
-	// A project that is not in the list once it is read is not one to assign a folder to.
+	// A project that is not in the list once it is read is not one to open a dialog about.
+	const about = dialog !== null && dialog.kind !== 'new' ? dialog.projectId : null;
 	useEffect(() => {
-		if (dialog?.kind === 'assign' && projects !== null && !assigning) setDialog(null);
-	}, [dialog, projects, assigning]);
-	const folders = projects ? foldersOf(projects) : [];
+		if (about !== null && projects !== null && !projects.some((p) => p.id === about)) setDialog(null);
+	}, [about, projects]);
+	const codebase = (action: CodebaseAction, projectId: string) => vscode().postMessage({ type: 'codebase', action, projectId });
 	return (
 		<>
 			<PanelView
@@ -157,22 +158,22 @@ export const Panel = () => {
 				projects={{ value: projects, error: read.error }}
 				onOpen={(review) => vscode().postMessage({ type: 'open-review', ...review })}
 				onOpenInBrowser={(review) => vscode().postMessage({ type: 'open-review-in-browser', ...review })}
-				// Asked of the extension, which knows whether it can be started, and opens the dialog (`open-new-prototype`) if so.
+				// Asked of the extension, which knows whether it can be started, and opens the dialog (`open-dialog`) if so.
 				onNew={() => vscode().postMessage({ type: 'ask-new-prototype' })}
-				onAssignFolder={(projectId) => setDialog({ kind: 'assign', projectId })}
+				onDialog={setDialog}
+				onCodebase={codebase}
 				onGetStarted={() => vscode().postMessage({ type: 'get-started' })}
 				onLocate={() => vscode().postMessage({ type: 'locate-design-system' })}
 			/>
-			{dialog?.kind === 'new' && (
-				<NewPrototypeDialog
-					folders={folders}
-					onStart={(answers) => vscode().postMessage({ type: 'new-prototype', ...answers })}
-					onClose={() => setDialog(null)}
-				/>
-			)}
-			{assigning && (
-				<AssignFolderDialog project={assigning} folders={folders} onAssigned={() => setChanges((n) => n + 1)} onClose={() => setDialog(null)} />
-			)}
+			<PanelDialogs
+				dialog={dialog}
+				projects={projects}
+				root={context?.product ?? null}
+				onStart={(answers) => vscode().postMessage({ type: 'new-prototype', ...answers })}
+				onCodebase={codebase}
+				onChanged={() => setChanges((n) => n + 1)}
+				onClose={() => setDialog(null)}
+			/>
 		</>
 	);
 };

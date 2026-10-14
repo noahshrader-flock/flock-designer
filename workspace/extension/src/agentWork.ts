@@ -3,9 +3,9 @@ import { valueOf } from '../../src/shared/result';
 
 /**
  * Work that takes a while, in VS Code's notification: `title`, then what `task` says as it goes; `onStop` when the person
- * presses its Stop.
+ * presses its Stop, which it has only when it can be stopped.
  */
-export type Progress = (title: string, task: (say: (message: string) => void) => Promise<void>, onStop: () => void) => Promise<void>;
+export type Progress = (title: string, task: (say: (message: string) => void) => Promise<void>, onStop?: () => void) => Promise<void>;
 
 /** Where the agent's log is: started afresh, and shown, for a piece of work, then a line at a time. */
 export interface AgentLogLike {

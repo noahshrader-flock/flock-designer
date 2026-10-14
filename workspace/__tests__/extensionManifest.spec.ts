@@ -55,10 +55,22 @@ describe('the extension’s manifest', () => {
 			'DSNR: Open the published page',
 			'DSNR: Copy the published page’s link',
 			'DSNR: Assign folder…',
+			'DSNR: Build in the codebase…',
 			'DSNR: Sync your work',
 			'DSNR: Sign in to GitHub',
 			'DSNR: Your GitHub account',
 		]);
+	});
+
+	it('builds the prototype in front in the codebase from a review tab’s own menu', () => {
+		const { menus } = manifest().contributes;
+		const inReview = "activeWebviewPanelId == 'dsnr.review'";
+		expect(menus['editor/title']?.find((m) => m.command === 'dsnr.buildInCodebase')).toEqual({
+			command: 'dsnr.buildInCodebase',
+			when: inReview,
+			group: '1_project',
+		});
+		expect(menus.commandPalette?.find((m) => m.command === 'dsnr.buildInCodebase')).toEqual({ command: 'dsnr.buildInCodebase', when: inReview });
 	});
 
 	it('assigns a project’s folder from its row’s right-click menu, and from a review tab’s own menu', () => {
@@ -86,6 +98,7 @@ describe('the extension’s manifest', () => {
 			'dsnr.openPublishedPage',
 			'dsnr.copyPublishedLink',
 			'dsnr.assignFolder',
+			'dsnr.buildInCodebase',
 		]);
 	});
 

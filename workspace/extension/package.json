@@ -72,6 +72,11 @@
 				"title": "Assign folder…"
 			},
 			{
+				"command": "dsnr.buildInCodebase",
+				"category": "DSNR",
+				"title": "Build in the codebase…"
+			},
+			{
 				"command": "dsnr.sync",
 				"category": "DSNR",
 				"title": "Sync your work"
@@ -127,6 +132,10 @@
 				{
 					"command": "dsnr.assignFolder",
 					"when": "activeWebviewPanelId == 'dsnr.review'"
+				},
+				{
+					"command": "dsnr.buildInCodebase",
+					"when": "activeWebviewPanelId == 'dsnr.review'"
 				}
 			],
 			"editor/title": [
@@ -142,6 +151,11 @@
 				},
 				{
 					"command": "dsnr.assignFolder",
+					"when": "activeWebviewPanelId == 'dsnr.review'",
+					"group": "1_project"
+				},
+				{
+					"command": "dsnr.buildInCodebase",
 					"when": "activeWebviewPanelId == 'dsnr.review'",
 					"group": "1_project"
 				}

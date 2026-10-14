@@ -21,17 +21,24 @@ export const failedFor =
 /** Says how something went, in VS Code's notification, without waiting on anyone. */
 export const vscodeTell = (message: string): void => void vscode.window.showInformationMessage(message);
 
+/** How something went, with what can be done next, as VS Code's notification with buttons: the one pressed, or undefined. */
+export const vscodeOffer = async (message: string, actions: string[]): Promise<string | undefined> =>
+	vscode.window.showInformationMessage(message, ...actions);
+
 /** A warning with what can be done about it, as VS Code's notification with buttons: the one pressed, or undefined. */
 export const vscodeChoose = async (message: string, actions: string[]): Promise<string | undefined> =>
 	vscode.window.showWarningMessage(message, ...actions);
 
-/** Work that takes a while, in VS Code's notification with a Stop (its cancel button). */
+/** Work that takes a while, in VS Code's notification, with a Stop (its cancel button) when it can be stopped. */
 export const vscodeProgress: Progress = (title, task, onStop) =>
 	Promise.resolve(
-		vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title, cancellable: true }, async (progress, token) => {
-			token.onCancellationRequested(onStop);
-			await task((message) => progress.report({ message }));
-		}),
+		vscode.window.withProgress(
+			{ location: vscode.ProgressLocation.Notification, title, cancellable: onStop !== undefined },
+			async (progress, token) => {
+				if (onStop) token.onCancellationRequested(onStop);
+				await task((message) => progress.report({ message }));
+			},
+		),
 	);
 
 /** The agent's log, in View › Output › DSNR: Agent: started afresh for each piece of work, and shown beside the editor. */
