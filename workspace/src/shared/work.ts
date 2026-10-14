@@ -53,3 +53,10 @@ export const iterationLabel = (i: Pick<ProjectIteration, 'name' | 'branch'>): st
 	const p = parsePrototypeName(i.name);
 	return p ? `V${p.version} · I${p.iteration}` : i.name.toUpperCase();
 };
+
+/**
+ * What a person is told when codebase work's branch has no DSNR setup: DSNR could not read what it may run in the branch
+ * it moved the checkout to, so it does not move it. One sentence for every screen that says it.
+ */
+export const noSetupNote = (branch: string): string =>
+	`${branch} has no DSNR setup (.dsnr/workspace.json), so DSNR cannot work in it. Merge a branch that has the DSNR setup into it first.`;

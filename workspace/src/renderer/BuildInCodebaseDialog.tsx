@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { BuildInCodebase, Checkout, Project, ProjectIteration } from '../shared/contract';
-import { iterationLabel } from '../shared/work';
+import { iterationLabel, noSetupNote } from '../shared/work';
 import { CancelButton } from './CancelButton';
 import { SearchSelect } from './SearchSelect';
 import { Button } from './ui/button';
@@ -72,7 +72,7 @@ export const BuildInCodebaseDialog = ({
 	// A new branch, or moving to the branch from another, needs a clean checkout. Already on it, whatever is uncommitted
 	// is the work in progress, and is left alone.
 	const needsClean = plan !== null && (!continuing || plan.current !== plan.branch);
-	const canStart = plan !== null && (!needsClean || plan.clean) && (continuing || from !== null) && !busy;
+	const canStart = plan !== null && plan.setup && (!needsClean || plan.clean) && (continuing || from !== null) && !busy;
 
 	const start = async () => {
 		if (!plan) return;
@@ -120,6 +120,11 @@ export const BuildInCodebaseDialog = ({
 								setup: packages, environment variables, and the app able to run.
 							</p>
 
+							{plan && !plan.setup && (
+								<Notice variant="warning" title="DSNR cannot work in this branch">
+									{noSetupNote(plan.branch)}
+								</Notice>
+							)}
 							{plan && needsClean && !plan.clean && (
 								<Notice variant="warning" title={`There are uncommitted changes in ${plan.repository}`}>
 									{continuing

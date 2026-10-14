@@ -511,6 +511,7 @@ describe('Build', () => {
 		basedOn: { repository: 'flock-coke', branch: 'develop' },
 		current: 'develop',
 		clean: true,
+		setup: true,
 	};
 	const dialog = async (withSetup: string[], more: Partial<typeof plan> = {}) => {
 		const app = fakeApp({
@@ -604,6 +605,13 @@ describe('Build', () => {
 			expect(document.body.textContent).not.toContain('uncommitted changes');
 		});
 
+		it('will not continue work on a branch with no DSNR setup, and says so before anything moves', async () => {
+			await dialog(['develop'], { ...started, current: 'develop', setup: false });
+			expect(button('Continue in Claude Code').disabled).toBe(true);
+			expect(document.body.textContent).toContain('feature/demo has no DSNR setup (.dsnr/workspace.json), so DSNR cannot work in it.');
+			expect(document.body.textContent).toContain('Merge a branch that has the DSNR setup into it first');
+		});
+
 		it('says a clean checkout is needed to move it to that branch from another', async () => {
 			await dialog(['develop'], { ...started, current: 'develop', clean: false });
 			expect(button('Continue in Claude Code').disabled).toBe(true);
@@ -643,6 +651,7 @@ describe('there is no selected version', () => {
 					basedOn: null,
 					current: 'develop',
 					clean: true,
+					setup: true,
 				}),
 		});
 		await open(app, { project: { ...PROJECT, iterations: prototypes } });

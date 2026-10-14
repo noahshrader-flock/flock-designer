@@ -588,6 +588,7 @@ describe('codebase work, in the panel', () => {
 			basedOn: { repository: 'flock-coke', branch: 'develop' },
 			current: 'main',
 			clean: true,
+			setup: true,
 			...more,
 		});
 		const open = async (more: Record<string, unknown> = {}) => {
@@ -642,6 +643,14 @@ describe('codebase work, in the panel', () => {
 			expect(dialog()!.textContent).toContain('Continues');
 			await press(inDialog('Continue in Claude Code'));
 			expect(sent.filter((m) => m.name === 'buildInCodebase').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2-i1']);
+		});
+
+		it('will not continue work on a branch with no DSNR setup, and says what to do, before it moves anything', async () => {
+			await open({ started: true, exists: true, setup: false, current: 'noah/dsnr' });
+			expect(dialog()!.textContent).toContain('feature/alert-history has no DSNR setup (.dsnr/workspace.json), so DSNR cannot work in it.');
+			expect(dialog()!.textContent).toContain('Merge a branch that has the DSNR setup into it first');
+			expect(inDialog('Continue in Claude Code').disabled).toBe(true);
+			expect(sent.some((m) => m.name === 'buildInCodebase')).toBe(false);
 		});
 
 		it('says why it could not, and stays open', async () => {

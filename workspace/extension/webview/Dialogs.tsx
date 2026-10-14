@@ -4,7 +4,7 @@ import { stripAnchor } from '../../src/shared/anchor';
 import type { BuildInCodebase } from '../../src/shared/contract';
 import type { Project } from '../../src/shared/domain/projects';
 import { foldersOf, sameFolder } from '../../src/shared/brief';
-import { workOf } from '../../src/shared/work';
+import { noSetupNote, workOf } from '../../src/shared/work';
 import { type CodebaseAction, type PanelDialog, reviewsOf } from '../src/messages';
 import { slugify } from '../../src/shared/validate';
 import { Button } from './ui/Button';
@@ -251,7 +251,7 @@ const BuildInCodebaseDialog = ({
 	const continuing = plan?.started ?? false;
 	// A new branch, or moving to the branch from another, needs a clean checkout; already on it, what is uncommitted is the work.
 	const needsClean = plan !== null && (!continuing || plan.current !== plan.branch);
-	const canStart = plan !== null && (!needsClean || plan.clean) && (continuing || from !== null) && !busy;
+	const canStart = plan !== null && plan.setup && (!needsClean || plan.clean) && (continuing || from !== null) && !busy;
 	const start = async (e: FormEvent) => {
 		e.preventDefault();
 		if (!canStart) return;
@@ -290,6 +290,11 @@ const BuildInCodebaseDialog = ({
 					packages, environment variables, and the app able to run.
 				</p>
 				{plan === null && planned.error === null && <p className="note">Reading what it would do…</p>}
+				{plan && !plan.setup && (
+					<p role="alert" className="dialog-error">
+						{noSetupNote(plan.branch)}
+					</p>
+				)}
 				{plan && needsClean && !plan.clean && (
 					<p role="alert" className="dialog-error">
 						There are uncommitted changes in {plan.repository}.{' '}

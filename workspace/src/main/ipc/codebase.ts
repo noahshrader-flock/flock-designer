@@ -243,7 +243,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 	handle('shareStatus', [], () => share.status());
 	handle('buildInCodebasePlan', [checkout, arg.projectId, arg.prototypeName], async (workIn, projectId, name): Promise<BuildInCodebasePlan> => {
 		const { canonical } = workIn;
-		const { branch, exists, recorded, started, records } = await codebase.of(workIn, projectId);
+		const { branch, exists, recorded, started, setup, records } = await codebase.of(workIn, projectId);
 		const basedOn = records.find((i) => i.name === name)?.basedOn;
 		const here = await readCheckout(canonical);
 		return {
@@ -255,6 +255,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 			basedOn: basedOn ? { repository: basedOn.repository, branch: basedOn.branch } : null,
 			current: here.branch,
 			clean: here.clean,
+			setup,
 		};
 	});
 	handle('startHandoff', [checkout, arg.projectId], async (workIn, projectId) => {

@@ -75,6 +75,11 @@ export interface BuildInCodebasePlan {
 	/** The checkout's current branch, and whether it is free of uncommitted changes (which blocks creating a branch). */
 	current: string | null;
 	clean: boolean;
+	/**
+	 * The work's branch has the product's DSNR setup (or is not made yet, and is made from one that does). Without it the
+	 * work cannot be picked up there: DSNR could not read what it may run in the branch it moved to.
+	 */
+	setup: boolean;
 }
 
 /** Whether a prototype can be built from a repository here: its design system installed, and the bundler present. */

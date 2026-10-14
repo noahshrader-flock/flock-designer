@@ -1722,7 +1722,17 @@ describe('prototypes', () => {
 				basedOn: { repository: 'flock-coke', branch: 'develop' },
 				current: 'develop',
 				clean: true,
+				setup: true,
 			});
+		});
+
+		it('says when the work’s branch has no DSNR setup, which would leave the checkout on a branch it cannot work in', async () => {
+			await start();
+			g(product, 'checkout', '-q', '-b', 'feature/demo', 'develop');
+			g(product, 'rm', '-q', '-r', '.dsnr');
+			g(product, 'commit', '-q', '-m', 'made before the setup');
+			g(product, 'checkout', '-q', 'develop');
+			expect((await call(CHANNELS.buildInCodebasePlan, product, 'demo', 'v1-i1')).value).toMatchObject({ exists: true, started: true, setup: false });
 		});
 
 		it('says when the branch already exists here, so the work continues on it', async () => {

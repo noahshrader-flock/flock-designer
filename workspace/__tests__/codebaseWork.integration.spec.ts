@@ -37,4 +37,23 @@ describe("a project's codebase work", () => {
 		g(product, 'checkout', '-q', 'develop');
 		await expect(work().start(here(), 'demo', 'note', 'bare')).rejects.toThrow('bare has no .dsnr/workspace.json, so work cannot start from it.');
 	});
+
+	it('is not picked up from a branch without the DSNR setup, and the checkout is left where it was', async () => {
+		g(product, 'checkout', '-q', '-b', 'feature/demo', 'develop');
+		g(product, 'rm', '-q', '-r', '.dsnr');
+		g(product, 'commit', '-q', '-m', 'made before the setup');
+		g(product, 'checkout', '-q', 'develop');
+		const at = here();
+		expect(await work().of(at, 'demo')).toMatchObject({ exists: true, setup: false });
+		await expect(work().resume(at, 'demo', 'feature/demo')).rejects.toThrow(
+			'feature/demo has no .dsnr/workspace.json, so DSNR cannot work in it. Merge a branch that has the DSNR setup into it first.',
+		);
+		expect(g(product, 'branch', '--show-current').toString().trim()).toBe('develop');
+	});
+
+	it('is picked up from a branch that has it, which is also what a branch not made yet counts as', async () => {
+		expect(await work().of(here(), 'demo')).toMatchObject({ exists: false, setup: true });
+		g(product, 'branch', 'feature/demo', 'develop');
+		expect(await work().of(here(), 'demo')).toMatchObject({ exists: true, setup: true });
+	});
 });

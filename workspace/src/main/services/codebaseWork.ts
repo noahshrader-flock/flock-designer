@@ -46,8 +46,14 @@ export const codebaseWork = ({
 		const known = await records(projectId);
 		const exists = await branchExists(canonical, branch);
 		const recorded = known.some((i) => i.name === 'codebase');
-		return { branch, exists, recorded, started: exists || recorded, records: known };
+		// A branch that is here but has no DSNR setup cannot be worked in: moving the checkout to it would leave DSNR
+		// unable to read what it may run. One not made yet is made from a branch that has it (`start` checks).
+		const setup = !exists || (await hasSetup(canonical, branch));
+		return { branch, exists, recorded, started: exists || recorded, setup, records: known };
 	};
+
+	/** Whether a branch here carries the product's DSNR setup, which is what says what DSNR may run in it. */
+	const hasSetup = (canonical: string, branch: string): Promise<boolean> => hasFileAt(canonical, `refs/heads/${branch}`, DESCRIPTOR_PATH);
 
 	/**
 	 * Codebase work's branch, checked out, and its record: from `from`, or the branch the checkout is on. Only Build
@@ -63,7 +69,7 @@ export const codebaseWork = ({
 		if (branch === null) throw new Error('This repository has a detached HEAD. Check out a branch first.');
 		// Work is built where the product's DSNR setup is. A branch without it (develop, before the
 		// setup is merged there) would leave the checkout on a branch this app can no longer work in.
-		if (!(await hasFileAt(canonical, `refs/heads/${branch}`, DESCRIPTOR_PATH))) {
+		if (!(await hasSetup(canonical, branch))) {
 			throw new Error(`${branch} has no ${DESCRIPTOR_PATH}, so work cannot start from it. Start from a branch that has the DSNR setup.`);
 		}
 		return written(await createIteration(canonical, at.recordsRoot, at.descriptor, projectId, note, branch));
@@ -79,6 +85,10 @@ export const codebaseWork = ({
 		assertAgentNotHere(canonical);
 		await ensureLocalBranch(canonical, branch);
 		if ((await readCheckout(canonical)).branch === branch) return;
+		// Before the checkout moves, not after: a branch without the setup would leave it somewhere DSNR cannot work.
+		if (!(await hasSetup(canonical, branch))) {
+			throw new Error(`${branch} has no ${DESCRIPTOR_PATH}, so DSNR cannot work in it. Merge a branch that has the DSNR setup into it first.`);
+		}
 		await continueIteration(canonical, at.recordsRoot, projectId, 'codebase', login(), at.descriptor);
 	};
 
