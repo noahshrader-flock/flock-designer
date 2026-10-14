@@ -153,15 +153,7 @@ const Ready = ({
 					/>
 				)
 			) : (
-				<>
-					<p className="note">
-						Every token, as its files have it on {catalog.branch}.{' '}
-						<button type="button" className="link" onClick={does.openPrimitives}>
-							See them drawn in Primitives
-						</button>
-					</p>
-					<TokensView tokens={catalog.tokens} onEdit={setEditing} onSource={does.openTokenSource} />
-				</>
+				<TokensView tokens={catalog.tokens} onEdit={setEditing} onSource={does.openTokenSource} />
 			)}
 			{editing && <TokenEditor token={editing} onClose={() => setEditing(null)} />}
 			{problems && <Problems problems={catalog.tokens.problems} onClose={() => setProblems(false)} />}

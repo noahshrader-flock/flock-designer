@@ -1092,8 +1092,6 @@ describe('Design System', () => {
 		expect(step.title).toBe('src/colors/tones.ts:3');
 		await press(step.querySelector('[aria-label="Open src/colors/tones.ts:3"]') as HTMLElement);
 		expect(panelSaid().at(-1)).toEqual({ type: 'open-token-source', file: 'src/colors/tones.ts', line: 3 });
-		await press(button('See them drawn in Primitives'));
-		expect(panelSaid().at(-1)).toEqual({ type: 'open-primitives' });
 	});
 
 	it('keeps a role’s themes together when the search finds it in one', async () => {
