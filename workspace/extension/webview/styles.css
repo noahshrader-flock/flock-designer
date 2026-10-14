@@ -19,7 +19,7 @@
 	--dsnr-radius-small: 2px;
 	--dsnr-radius-large: 8px;
 	/* DSNR's brand: its primary action, in every theme but high contrast (below). */
-	--dsnr-brand: #8b5cf6;
+	--dsnr-brand: #7c3aed;
 	--dsnr-brand-hover: color-mix(in srgb, var(--dsnr-brand) 86%, black);
 	--dsnr-on-brand: #ffffff;
 	/* A secondary button's outline: the text's colour, faint, so it reads in a light theme and a dark one. */

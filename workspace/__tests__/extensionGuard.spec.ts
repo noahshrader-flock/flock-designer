@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { contrastRatio } from '../src/shared/tokens';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -42,7 +43,14 @@ describe('the extension’s sources', () => {
 					.filter((line) => colour.test(line))
 					.map((line) => `${path.split('/').at(-1)}: ${line.trim()}`),
 			);
-		expect(said).toEqual(['styles.css: --dsnr-brand: #8b5cf6;', 'styles.css: --dsnr-on-brand: #ffffff;']);
+		expect(said).toEqual(['styles.css: --dsnr-brand: #7c3aed;', 'styles.css: --dsnr-on-brand: #ffffff;']);
+		// The words on the brand are readable: WCAG AA's 4.5:1 for text, on the fill and on its darker hover.
+		const css0 = files().find((f) => f.path.endsWith('styles.css'))!.text;
+		const brand = /--dsnr-brand:\s*(#[0-9a-f]{6})/i.exec(css0)![1]!;
+		const hover = /--dsnr-brand-hover:\s*color-mix\(in srgb,\s*var\(--dsnr-brand\)\s*(\d+)%,\s*black\)/.exec(css0);
+		expect(contrastRatio('#ffffff', brand)).toBeGreaterThanOrEqual(4.5);
+		// Hover is the brand mixed toward black, so it is only darker, and white on it only more readable.
+		expect(hover).not.toBeNull();
 		const css = files().find((f) => f.path.endsWith('styles.css'))!.text;
 		const highContrast = css.split('}').find((b) => b.includes('body.vscode-high-contrast')) ?? '';
 		expect(highContrast).toMatch(/--dsnr-brand:\s*var\(--vscode-button-background\)/);
