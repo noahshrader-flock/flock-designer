@@ -30,23 +30,9 @@ exports.run = async () => {
 		return dsnr.isActive;
 	});
 	const commands = await vscode.commands.getCommands(true);
-	for (const c of [
-		'dsnr.open',
-		'dsnr.getStarted',
-		'dsnr.newPrototype',
-		'dsnr.openReview',
-		'dsnr.openPublishedPage',
-		'dsnr.copyPublishedLink',
-		'dsnr.assignFolder',
-		'dsnr.buildInCodebase',
-		'dsnr.openComponent',
-		'dsnr.openPrimitives',
-		'dsnr.sync',
-		'dsnr.signIn',
-		'dsnr.account',
-		'workbench.view.extension.dsnr',
-	])
-		assert.ok(commands.includes(c), `${c} is a command`);
+	// Every command the manifest declares is there, as its view's own command is.
+	const declared = JSON.parse(fs.readFileSync(path.join(dsnr.extensionPath, 'package.json'), 'utf8')).contributes.commands.map((c) => c.command);
+	for (const c of [...declared, 'workbench.view.extension.dsnr']) assert.ok(commands.includes(c), `${c} is a command`);
 
 	// A prototype opens for review: the product and the design repository are found from what is open, the core lists
 	// the projects, the site is built and served from this machine, and the review is an editor tab. Given the review, as

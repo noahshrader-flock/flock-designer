@@ -24,7 +24,18 @@ export default defineConfig({
 			{ extends: true, test: { name: 'dom', include: ['__tests__/**/*.dom.spec.ts'], environment: 'jsdom' } },
 			// Real git, esbuild and the real library. Fewer at once and more time each: they share one machine's disk and
 			// processor, and a test that waits on a busy machine is not a test that failed.
-			{ extends: true, test: { name: 'integration', include: ['__tests__/**/*.integration.spec.ts'], maxWorkers: '50%', testTimeout: 30_000 } },
+			// They run after the rest (their own group), so one filter can name both kinds of file: vitest refuses projects
+			// that share a group but not how many run at once.
+			{
+				extends: true,
+				test: {
+					name: 'integration',
+					include: ['__tests__/**/*.integration.spec.ts'],
+					maxWorkers: '50%',
+					testTimeout: 30_000,
+					sequence: { groupOrder: 1 },
+				},
+			},
 		],
 	},
 });

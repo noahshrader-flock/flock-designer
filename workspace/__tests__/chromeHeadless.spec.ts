@@ -293,7 +293,7 @@ describe('drawing stories, headless (6.1, the Design System tab’s pictures and
 		await expect(chromeHeadless({ find: () => null }).measure([{ base: 'http://x/', mode: 'light', files }])).rejects.toThrow(NO_BROWSER);
 	});
 
-	it('has a recipe of its own, so the app’s pictures and these are never mistaken for each other', () => {
+	it('has a fingerprint of how it pictures, so a picture drawn another way (the app’s) is drawn again rather than shown', () => {
 		expect(HEADLESS_PICTURE_RECIPE).toMatch(/^[0-9a-f]{12}$/);
 	});
 });
