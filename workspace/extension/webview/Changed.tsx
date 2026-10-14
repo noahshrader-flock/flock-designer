@@ -5,6 +5,7 @@ import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import type { TokenBranchControls } from '../../src/renderer/useTokenBranch';
 import { Button } from './ui/Button';
+import { ErrorLine } from './ui/Dialog';
 import { Icon } from './ui/Icon';
 import { IconButton } from './ui/IconButton';
 import { Swatch } from './ui/Swatch';
@@ -36,11 +37,7 @@ const BranchActions = ({ controls }: { controls: TokenBranchControls }) => {
 					)}
 				</p>
 			)}
-			{error && (
-				<p role="alert" className="dialog-error">
-					{error}
-				</p>
-			)}
+			<ErrorLine error={error} />
 			<div className="branch-buttons">
 				{unsaved && (
 					<Button disabled={busy !== null} onClick={save}>
@@ -114,3 +111,7 @@ export const Changed = ({ controls }: { controls: TokenBranchControls }) => {
 		</section>
 	);
 };
+
+/** Said on a design system tab while a change is being tried in the panel: what it shows is as changed. */
+export const TryingNote = ({ count }: { count: number }) =>
+	count > 0 ? <p className="quiet">Showing the change being tried in the panel ({plural(count, 'token')}).</p> : null;

@@ -1,5 +1,5 @@
 import { BookOpenIcon, CodeIcon } from 'lucide-react';
-import { previewAddress } from '../shared/catalog';
+import { previewAddress, previewProblem } from '../shared/catalog';
 import type { CatalogComponent, TokenEdit } from '../shared/contract';
 import { useStoryPreview } from './useStoryPreview';
 import { BackButton } from './BackButton';
@@ -91,11 +91,7 @@ export const ComponentPage = ({
 					title="Previews could not be built"
 					action={<RetryButton onClick={retry} />}
 				>
-					{preview.state === 'no-packages'
-						? `The library's packages are not installed in ${preview.root}. Run npm install there, then try again.`
-						: preview.state === 'no-library'
-							? 'There is no design system library connected.'
-							: preview.error}
+					{previewProblem(preview)}
 				</Notice>
 			)}
 		</Page>

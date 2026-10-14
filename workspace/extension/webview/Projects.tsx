@@ -3,7 +3,7 @@ import { type ReactNode, useState } from 'react';
 import { foldersOf, inFolder } from '../../src/shared/brief';
 import { plural } from '../../src/shared/plural';
 import { useCover } from '../../src/renderer/useCover';
-import { matchesProject } from '../../src/shared/projectList';
+import { matchesProject, openCommentsOf } from '../../src/shared/projectList';
 import { type CodebaseAction, type PanelDialog, type Review, reviewsOf } from '../src/messages';
 import { workOf } from '../../src/shared/work';
 import { Badge } from './ui/Badge';
@@ -53,7 +53,7 @@ const ProjectItem = ({
 	onDialog: (dialog: PanelDialog) => void;
 	onCodebase: (action: CodebaseAction, projectId: string) => void;
 }) => {
-	const open = project.iterations.reduce((n, i) => n + i.openComments, 0);
+	const open = openCommentsOf(project.iterations);
 	const newest = reviewsOf(project)[0];
 	const inCode = workOf(project.iterations, 'codebase').length > 0;
 	const badge = open > 0 ? <Badge count={open} label={plural(open, 'open comment')} /> : undefined;

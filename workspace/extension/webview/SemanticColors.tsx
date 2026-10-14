@@ -1,7 +1,6 @@
 import type { DesignToken } from '../../src/shared/contract';
 import { isForeground, labelOf, semanticTable, type SemanticRow } from '../../src/shared/tokens';
-import { useTokenChanges } from '../../src/renderer/tokenChanges';
-import { pairContrast, pointsAt } from '../../src/renderer/tokenChanges';
+import { pairContrast, pointsAt, useTokenChanges } from '../../src/renderer/tokenChanges';
 import { Icon } from './ui/Icon';
 import { Swatch } from './ui/Swatch';
 

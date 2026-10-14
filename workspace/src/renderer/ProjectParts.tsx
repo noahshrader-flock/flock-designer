@@ -2,7 +2,7 @@ import { MessageSquareIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { Project, ProjectIteration } from '../shared/contract';
 import { plural } from '../shared/plural';
-import { projectOpening } from '../shared/projectList';
+import { openCommentsOf, projectOpening } from '../shared/projectList';
 import { byVersion } from '../shared/prototypeNames';
 import { workOf } from '../shared/work';
 import { CARD_DETAIL } from './cardFooters';
@@ -14,9 +14,6 @@ import { cn } from '@/lib/utils';
  * versions and comments), its folder, and what pressing it does.
  */
 
-/** How many comments a project's prototypes have, all of them together. */
-const commentsOn = (prototypes: ProjectIteration[]): number => prototypes.reduce((n, it) => n + it.openComments, 0);
-
 /** What a card's footer and a row say at their right, in the gray of the details. */
 const Aside = ({ children }: { children: ReactNode }) => <span className={cn(CARD_DETAIL, 'flex shrink-0 items-center gap-1.5')}>{children}</span>;
 
@@ -27,7 +24,7 @@ const Aside = ({ children }: { children: ReactNode }) => <span className={cn(CAR
 export const ProjectAside = ({ project }: { project: Project }) => {
 	const prototypes = workOf(project.iterations, 'prototype');
 	if (prototypes.length > 0) {
-		const comments = commentsOn(prototypes);
+		const comments = openCommentsOf(prototypes);
 		return (
 			<Aside>
 				<span>{plural(byVersion(prototypes).length, 'version')}</span>

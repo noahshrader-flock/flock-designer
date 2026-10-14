@@ -259,11 +259,6 @@ body {
 	font-weight: 400;
 }
 
-/* A list's own icon at the start of a row: as a tree's, in the quieter colour. */
-.row-icon {
-	color: var(--vscode-icon-foreground);
-}
-
 /* A view with nothing to show: VS Code's welcome text, left-aligned. */
 .empty {
 	padding: 4px 12px;
@@ -686,12 +681,14 @@ textarea.input {
 }
 
 /* Comments read only: who said each, whether it was resolved, and what was said. */
-.comment-list {
+/* A dialog's list of things (comments, what is not read, what is held back): scrolling inside it, never past it. */
+.comment-list,
+.problem-list {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
 	max-height: 50vh;
-	margin: 0;
+	margin: 0 0 8px;
 	padding: 0;
 	overflow-y: auto;
 	list-style: none;
@@ -886,12 +883,17 @@ textarea.input {
 	color: var(--vscode-editorWarning-foreground);
 }
 
-.token-value {
-	flex-shrink: 0;
-	margin-left: auto;
+/* A value as it is written: a token's on its row, and under each drawing on Primitives. */
+.token-value,
+.drawn-value {
 	color: var(--dsnr-muted);
 	font-family: var(--vscode-editor-font-family);
 	font-size: 0.92em;
+}
+
+.token-value {
+	flex-shrink: 0;
+	margin-left: auto;
 }
 
 /* A changed token's mark, on its row or its theme's swatch: a dot in the theme's own modified colour, as VS Code marks a changed file. */
@@ -919,17 +921,6 @@ textarea.input {
 	padding: 0 4px 4px 24px;
 	color: var(--dsnr-muted);
 	font-size: 0.92em;
-}
-
-.problem-list {
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-	max-height: 50vh;
-	margin: 0 0 8px;
-	padding: 0;
-	overflow-y: auto;
-	list-style: none;
 }
 
 /*
@@ -1182,9 +1173,6 @@ textarea.input {
 }
 
 .drawn-value {
-	color: var(--dsnr-muted);
-	font-family: var(--vscode-editor-font-family);
-	font-size: 0.92em;
 	overflow-wrap: anywhere;
 }
 
@@ -1502,12 +1490,12 @@ textarea.input {
 }
 
 /* What the sync holds back: what it is, and why under it. */
-.problem-list li {
+.held {
 	display: flex;
 	flex-direction: column;
 }
 
-.problem-list li span {
+.held span {
 	color: var(--dsnr-muted);
 	overflow-wrap: anywhere;
 }

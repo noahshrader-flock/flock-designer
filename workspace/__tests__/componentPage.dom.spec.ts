@@ -113,7 +113,7 @@ describe('the previews', () => {
 	it('says why previews could not be built, and tries again', async () => {
 		let answer: ReturnType<typeof ok<StoryPreview>> | ReturnType<typeof fail> = ok({ state: 'no-packages', root: '/h/fui' });
 		const { app } = await show(component(), async () => answer);
-		expect(text()).toContain('The library’s packages are not installed in /h/fui'.replace('’', "'"));
+		expect(text()).toContain("The design system's packages are not installed in /h/fui");
 		answer = ok({ state: 'failed', error: 'src/components/FSButton/index.tsx: Unexpected "}"' });
 		await press(button('Try again'));
 		await settle();

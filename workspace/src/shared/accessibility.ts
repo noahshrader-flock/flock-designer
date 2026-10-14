@@ -3,7 +3,7 @@
  * results for each state of a page, merged by rule, with the WCAG success criteria each rule checks, and said in the same
  * words wherever they are shown. Never as a pass: at most, no issues found by automated checks.
  */
-import type { AccessibilityCounts, AccessibilityFindings, AccessibilityIssue } from './contract';
+import type { AccessibilityCounts, AccessibilityFindings, AccessibilityIssue, AccessibilityResult } from './contract';
 import { plural } from './plural';
 
 /** One rule's results in one axe run, as the page gives them back: trimmed to what is kept. */
@@ -95,3 +95,22 @@ export const summaryOf = ({ violations, incomplete }: AccessibilityCounts): stri
 	const found = violations ? plural(violations, 'automated issue') : 'No issues found by automated checks';
 	return incomplete ? `${found}, ${incomplete} ${incomplete === 1 ? 'needs' : 'need'} a person` : found;
 };
+
+/** An issue, in a line: where in WCAG, how bad, on how many elements and in which states. Its rule's page goes after it. */
+export const issueLine = (i: AccessibilityIssue): string =>
+	[
+		i.criteria.length ? `WCAG ${i.criteria.join(', ')}` : null,
+		i.impact,
+		plural(i.nodes, 'element'),
+		foundIn(i).length ? `in ${foundIn(i).join(', ')}` : null,
+	]
+		.filter(Boolean)
+		.join(' · ');
+
+/** What a check was made with, and that it is never a pass: said above what it found, wherever that is listed. */
+export const checkedWith = (r: AccessibilityResult): string =>
+	`Checked with axe-core ${r.ran.axe} at ${r.ran.target}${r.ran.states.length > 1 ? `, in ${r.ran.states.join(', ')}` : ''}. Automated checks find about half of the problems WCAG covers: this is not a pass, and the manual checklist is a person’s.`;
+
+/** What no automated check covers, for a person to check; null when every criterion has one. */
+export const notAutomatedLine = (r: AccessibilityResult): string | null =>
+	r.notAutomated.length > 0 ? `No automated check covers ${r.notAutomated.join(' or ')}: those criteria are a person’s to check.` : null;

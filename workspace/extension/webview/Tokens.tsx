@@ -1,9 +1,8 @@
 import { type ReactNode, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../../src/shared/contract';
-import { byPrimitive, drawnAs, inOrder, isEditable } from '../../src/shared/primitives';
+import { byPrimitive, drawnAs, inOrder, isEditable, listed } from '../../src/shared/primitives';
 import { type ColorView, isForeground, labelOf, tokensShown } from '../../src/shared/tokens';
-import { useTokenChanges } from '../../src/renderer/tokenChanges';
-import { pairContrast, pointsAt } from '../../src/renderer/tokenChanges';
+import { pairContrast, pointsAt, useTokenChanges } from '../../src/renderer/tokenChanges';
 import { NoMatches } from './ui/NoMatches';
 import { EmptyState } from './ui/EmptyState';
 import { IconButton } from './ui/IconButton';
@@ -126,7 +125,7 @@ export const TokensView = ({ tokens, ...actions }: { tokens: DesignTokens } & To
 	if (tokens.source === null || changes.shown.length === 0)
 		return (
 			<EmptyState icon="symbol-color" title="No tokens were found">
-				<p>Looked for {tokens.looked.join(', ')}.</p>
+				<p>Looked for {listed(tokens.looked)}.</p>
 			</EmptyState>
 		);
 	const categories = byPrimitive(changes.shown).map(([category, all]) => ({

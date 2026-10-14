@@ -1,11 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DesignToken } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
-import { isHex, labelOf, lengthRange, nameOf, pointingAt, roleOf, scaleFamilies, tokenTitle, typedHex, writtenWith } from '../../src/shared/tokens';
-import { useTokenChanges } from '../../src/renderer/tokenChanges';
-import { pairContrast, pointsAt } from '../../src/renderer/tokenChanges';
+import {
+	hexAndAlpha,
+	isHex,
+	labelOf,
+	lengthRange,
+	nameOf,
+	pointingAt,
+	roleOf,
+	scaleFamilies,
+	tokenTitle,
+	typedHex,
+	writtenWith,
+} from '../../src/shared/tokens';
+import { pairContrast, pointsAt, useTokenChanges } from '../../src/renderer/tokenChanges';
 import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
+import { Field, Select } from './ui/Field';
 import { Swatch } from './ui/Swatch';
 
 /**
@@ -18,10 +30,10 @@ import { Swatch } from './ui/Swatch';
 
 /** A color picker and its hex: the picker applies when it is closed, the hex when Enter is pressed or it is left. An opacity is kept. */
 const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string) => void }) => {
-	const alpha = value.length === 9 ? value.slice(7) : '';
-	const [hex, setHex] = useState(value.slice(0, 7));
+	const { hex: own, alpha } = hexAndAlpha(value);
+	const [hex, setHex] = useState(own);
 	const picker = useRef<HTMLInputElement>(null);
-	useEffect(() => setHex(value.slice(0, 7)), [value]);
+	useEffect(() => setHex(own), [own]);
 	// The browser's own `change`: when the picker is closed, not on every color it passes through.
 	useEffect(() => {
 		const el = picker.current;
@@ -35,7 +47,7 @@ const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string
 	const commit = () => {
 		const typed = typedHex(hex, alpha);
 		if (typed) onCommit(typed);
-		else setHex(value.slice(0, 7));
+		else setHex(own);
 	};
 	return (
 		<div className="color-field">
@@ -44,7 +56,7 @@ const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string
 				type="color"
 				aria-label="Pick a color"
 				className="color-picker"
-				value={(isHex(hex) ? hex : value.slice(0, 7)).toLowerCase()}
+				value={(isHex(hex) ? hex : own).toLowerCase()}
 				onChange={(e) => setHex(e.target.value.toUpperCase())}
 			/>
 			<input
@@ -101,13 +113,11 @@ const ColorScale = ({ token, target }: { token: DesignToken; target: DesignToken
 		<div className="field">
 			<span className="field-label">Color scale</span>
 			{families.length > 1 && (
-				<select className="input" aria-label="Color family" value={family} onChange={(e) => setFamily(e.target.value)}>
-					{families.map(([set]) => (
-						<option key={set} value={set}>
-							{set}
-						</option>
-					))}
-				</select>
+				<Field label="Color family">
+					{(control) => (
+						<Select control={control} value={family} onChange={setFamily} options={families.map(([set]) => ({ value: set, label: set }))} />
+					)}
+				</Field>
 			)}
 			<div role="radiogroup" aria-label={`Steps of ${family}`} className="steps">
 				{steps.map((s) => (

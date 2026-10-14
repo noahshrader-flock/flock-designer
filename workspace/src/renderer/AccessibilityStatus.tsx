@@ -1,7 +1,6 @@
 import { AccessibilityIcon } from 'lucide-react';
 import { useState } from 'react';
-import { countsOf, foundIn, summaryOf } from '../shared/accessibility';
-import { plural } from '../shared/plural';
+import { checkedWith, countsOf, issueLine, notAutomatedLine, summaryOf } from '../shared/accessibility';
 import type { AccessibilityIssue, AccessibilityResult } from '../shared/contract';
 import { Button } from './ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
@@ -28,15 +27,7 @@ const Issue = ({ issue }: { issue: AccessibilityIssue }) => (
 	<li className="flex flex-col gap-0.5 py-2">
 		<span className="text-sm font-medium">{issue.help}</span>
 		<span className="text-muted-foreground text-xs">
-			{[
-				issue.criteria.length ? `WCAG ${issue.criteria.join(', ')}` : null,
-				issue.impact,
-				plural(issue.nodes, 'element'),
-				foundIn(issue).length ? `in ${foundIn(issue).join(', ')}` : null,
-			]
-				.filter(Boolean)
-				.join(' · ')}{' '}
-			<OutLink href={issue.url}>{issue.rule}</OutLink>
+			{issueLine(issue)} <OutLink href={issue.url}>{issue.rule}</OutLink>
 		</span>
 	</li>
 );
@@ -59,18 +50,10 @@ const Issues = ({ title, issues }: { title: string; issues: AccessibilityIssue[]
  */
 export const AccessibilityFindings = ({ result }: { result: AccessibilityResult }) => (
 	<>
-		<p className="text-muted-foreground text-xs">
-			Checked with axe-core {result.ran.axe} at {result.ran.target}
-			{result.ran.states.length > 1 ? `, in ${result.ran.states.join(', ')}` : ''}. Automated checks find about half of the problems WCAG covers: this
-			is not a pass, and the manual checklist is a person&rsquo;s.
-		</p>
+		<p className="text-muted-foreground text-xs">{checkedWith(result)}</p>
 		<Issues title="Found by axe" issues={result.violations} />
 		<Issues title="For a person to judge (axe could not decide)" issues={result.incomplete} />
-		{result.notAutomated.length > 0 && (
-			<p className="text-muted-foreground text-xs">
-				No automated check covers {result.notAutomated.join(' or ')}: those criteria are a person&rsquo;s to check.
-			</p>
-		)}
+		{notAutomatedLine(result) && <p className="text-muted-foreground text-xs">{notAutomatedLine(result)}</p>}
 	</>
 );
 

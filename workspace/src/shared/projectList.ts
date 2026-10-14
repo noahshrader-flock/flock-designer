@@ -179,3 +179,6 @@ export const withCovers = (projects: Project[], made: MadeCover[]): Project[] =>
 		made.some((m) => m.projectId === p.id) ? { ...p, iterations: p.iterations.map((i) => ({ ...i, cover: cover(p.id, i.name) ?? i.cover })) } : p,
 	);
 };
+
+/** How many open comments a project's prototypes have, all together: what its card and row say on its badge. */
+export const openCommentsOf = (iterations: Pick<ProjectIteration, 'openComments'>[]): number => iterations.reduce((n, i) => n + i.openComments, 0);

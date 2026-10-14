@@ -313,3 +313,9 @@ export const scaleFamilies = (
 		shown.filter((t) => t.kind === token.kind && t.group === target.group && (isPalette(t) || t.set === target.set)),
 		(t) => t.set,
 	);
+
+/** A color's own six hex digits, and the opacity written after them (two more, or nothing), as its hex field edits them apart. */
+export const hexAndAlpha = (value: string): { hex: string; alpha: string } => ({
+	hex: value.slice(0, 7),
+	alpha: value.length === 9 ? value.slice(7) : '',
+});

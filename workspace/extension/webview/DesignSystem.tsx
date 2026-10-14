@@ -12,7 +12,7 @@ import { ComponentsView } from './Components';
 import { TokensView } from './Tokens';
 import type { CatalogRead } from './useCatalog';
 import { Button } from './ui/Button';
-import { Dialog } from './ui/Dialog';
+import { Dialog, DialogButtons } from './ui/Dialog';
 import { EmptyState } from './ui/EmptyState';
 import { Icon } from './ui/Icon';
 import { IconButton } from './ui/IconButton';
@@ -56,9 +56,7 @@ const Problems = ({ problems, onClose }: { problems: Extract<Catalog, { state: '
 				</li>
 			))}
 		</ul>
-		<div className="dialog-buttons">
-			<Button onClick={onClose}>Close</Button>
-		</div>
+		<DialogButtons onClose={onClose} />
 	</Dialog>
 );
 
@@ -155,7 +153,7 @@ const Ready = ({
 			) : (
 				<TokensView tokens={catalog.tokens} onEdit={setEditing} onSource={does.openTokenSource} />
 			)}
-			{editing && <TokenEditor token={editing} onClose={() => setEditing(null)} />}
+			{editing && <TokenEditor key={editing.path} token={editing} onClose={() => setEditing(null)} />}
 			{problems && <Problems problems={catalog.tokens.problems} onClose={() => setProblems(false)} />}
 		</TokenChangesProvider>
 	);

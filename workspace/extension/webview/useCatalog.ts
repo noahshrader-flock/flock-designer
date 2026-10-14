@@ -65,16 +65,32 @@ export const useCatalog = (enabled: boolean, root: string | null): CatalogRead &
 
 /**
  * The design system shown, as a design system's tab reads it: once, when it opens, after saying it is ready (so the
- * extension tells it the change being tried). Null while it is read; what went wrong, if it could not be.
+ * extension tells it the change being tried), and again on `retry`. `ready` once it is read and can be shown; else `note`,
+ * what the tab says instead: that it is being read, what went wrong, or that it cannot be read (the panel says why).
  */
-export const useTabCatalog = (): { catalog: Catalog | null; error: string | null } => {
+export const useTabCatalog = (): {
+	ready: Extract<Catalog, { state: 'ready' }> | null;
+	note: { says: string; retry: boolean } | null;
+	retry: () => void;
+} => {
 	const [catalog, setCatalog] = useState<Catalog | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [asks, setAsks] = useState(0);
+	useEffect(() => vscode().postMessage({ type: 'ready' }), []);
 	useEffect(() => {
-		vscode().postMessage({ type: 'ready' });
+		setError(null);
 		void workspace()
 			.designSystemCatalog(false)
 			.then((r) => (r.ok ? setCatalog(r.value) : setError(r.error)));
-	}, []);
-	return { catalog, error };
+	}, [asks]);
+	const ready = catalog?.state === 'ready' ? catalog : null;
+	const note =
+		error !== null
+			? { says: error, retry: true }
+			: catalog === null
+				? { says: 'Reading the design system…', retry: false }
+				: ready === null
+					? { says: 'The design system cannot be read here: the DSNR panel says why.', retry: true }
+					: null;
+	return { ready, note, retry: () => setAsks((n) => n + 1) };
 };

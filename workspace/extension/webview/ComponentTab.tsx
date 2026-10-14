@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { countsOf, summaryOf } from '../../src/shared/accessibility';
-import { previewAddress } from '../../src/shared/catalog';
+import { previewAddress, previewProblem } from '../../src/shared/catalog';
 import type { CatalogComponent, DesignToken, TokenEdit } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { undeclared } from '../../src/shared/wcag';
@@ -16,6 +16,8 @@ import { Sets, type TokenActions } from './Tokens';
 import { useTabCatalog } from './useCatalog';
 import { useTrial } from './useTrial';
 import { Button } from './ui/Button';
+import { Notice, TabNote } from './ui/Notice';
+import { TryingNote } from './Changed';
 import { Swatch } from './ui/Swatch';
 import { vscode } from './vscode';
 
@@ -31,26 +33,13 @@ const Stories = ({ component, commit, edits }: { component: CatalogComponent; co
 	if (preview.state === 'building') return <p className="quiet">Building its previews…</p>;
 	if (preview.state !== 'ready')
 		return (
-			<div className="notice notice-warning">
-				<p className="notice-title">Its previews could not be built</p>
-				<p>
-					{preview.state === 'no-packages'
-						? `The design system's packages are not installed in ${preview.root}. Run npm install there, then try again.`
-						: preview.state === 'no-library'
-							? 'No design system is shown.'
-							: preview.error}
-				</p>
-				<Button onClick={retry}>Try again</Button>
-			</div>
+			<Notice title="Its previews could not be built" onRetry={retry}>
+				{previewProblem(preview)}
+			</Notice>
 		);
 	return (
 		<>
-			{refused && (
-				<div className="notice notice-warning">
-					<p className="notice-title">This change could not be tried</p>
-					<p>{refused}</p>
-				</div>
-			)}
+			{refused && <Notice title="This change could not be tried">{refused}</Notice>}
 			<div className="stories" aria-busy={trying}>
 				<StoryFrame src={previewAddress(preview.base, component.id)} title={component.name} />
 				{trying && <p className="stories-building">Building…</p>}
@@ -75,13 +64,7 @@ const MadeFrom = ({ component, components, actions }: { component: CatalogCompon
 				marked, which takes a few seconds.
 			</p>
 		);
-	if (answer.state === 'failed')
-		return (
-			<div className="notice notice-warning">
-				<p>{answer.error}</p>
-				<Button onClick={retry}>Try again</Button>
-			</div>
-		);
+	if (answer.state === 'failed') return <Notice onRetry={retry}>{answer.error}</Notice>;
 	const names = new Map(components.map((c) => [c.id, c.name]));
 	const used = new Map(answer.uses.map((u) => [u.path, u.uses]));
 	const tokens = answer.uses.flatMap((u) => (byPath.has(u.path) ? [byPath.get(u.path) as DesignToken] : []));
@@ -156,16 +139,14 @@ const MadeFrom = ({ component, components, actions }: { component: CatalogCompon
  * lists it now; the change to the tokens being tried is the extension's, so a change made in the panel is seen here.
  */
 export const ComponentTab = ({ id }: { id: string }) => {
-	const { catalog, error } = useTabCatalog();
+	const { ready, note, retry } = useTabCatalog();
 	const [edits, setEdits] = useTrial();
 	// The token whose control is open: Made from's rows change a token as the panel's do, and every page sees it.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
-	const ready = catalog?.state === 'ready' ? catalog : null;
 	const changes = useTokenChangesFor(ready?.tokens.tokens ?? [], edits, setEdits, ready?.accessibility ?? NOT_READ);
 	const component = ready?.components.find((c) => c.id === id);
-	if (error !== null) return <p className="tab-note">{error}</p>;
-	if (catalog === null) return <p className="tab-note">Reading the design system…</p>;
-	if (!ready || !component) return <p className="tab-note">The design system shown no longer has this component. Close this tab.</p>;
+	if (note) return <TabNote note={note.says} {...(note.retry ? { onRetry: retry } : {})} />;
+	if (!ready || !component) return <TabNote note="The design system shown no longer has this component. Close this tab." />;
 	const actions: TokenActions = { onEdit: setEditing, onSource: ({ file, line }) => vscode().postMessage({ type: 'open-token-source', file, line }) };
 	const link = (to: ComponentLink) => vscode().postMessage({ type: 'component-link', id, link: to });
 	return (
@@ -187,7 +168,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 						</Button>
 					</div>
 				</header>
-				{edits.length > 0 && <p className="quiet">With the change being tried in the panel ({plural(edits.length, 'token')}).</p>}
+				<TryingNote count={edits.length} />
 				<div className="component-layout">
 					<div className="component-stories">
 						<Stories component={component} commit={ready.commit} edits={edits} />
@@ -197,7 +178,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 					</aside>
 				</div>
 			</main>
-			{editing && <TokenEditor token={editing} onClose={() => setEditing(null)} />}
+			{editing && <TokenEditor key={editing.path} token={editing} onClose={() => setEditing(null)} />}
 		</TokenChangesProvider>
 	);
 };

@@ -2,7 +2,7 @@ import { ArrowRightIcon, CheckIcon, CopyIcon, RotateCcwIcon } from 'lucide-react
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import type { DesignToken } from '../shared/contract';
 import { plural } from '../shared/plural';
-import { isHex, lengthRange, pointingAt, readsAs, roleOf, scaleFamilies, tokenTitle, typedHex, writtenWith } from '../shared/tokens';
+import { hexAndAlpha, isHex, lengthRange, pointingAt, readsAs, roleOf, scaleFamilies, tokenTitle, typedHex, writtenWith } from '../shared/tokens';
 import { textContrast } from '../shared/wcag';
 import { ChoiceMenu } from './ChoiceMenu';
 import { TokenBranchActions } from './TokenBranchActions';
@@ -49,10 +49,10 @@ export const ContrastNote = ({ ratio, className = '' }: { ratio: number; classNa
  * a hex is applied. An opacity the color had is kept: the picker has none.
  */
 const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string) => void }) => {
-	const alpha = value.length === 9 ? value.slice(7) : '';
-	const [hex, setHex] = useState(value.slice(0, 7));
+	const { hex: own, alpha } = hexAndAlpha(value);
+	const [hex, setHex] = useState(own);
 	const picker = useRef<HTMLInputElement>(null);
-	useEffect(() => setHex(value.slice(0, 7)), [value]);
+	useEffect(() => setHex(own), [own]);
 	// The browser's own `change`: when the picker is closed, not on every color it passes through.
 	useEffect(() => {
 		const el = picker.current;
@@ -66,7 +66,7 @@ const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string
 	const commit = () => {
 		const typed = typedHex(hex, alpha);
 		if (typed) onCommit(typed);
-		else setHex(value.slice(0, 7));
+		else setHex(own);
 	};
 	return (
 		<div className="flex items-center gap-2">
@@ -74,7 +74,7 @@ const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string
 				ref={picker}
 				type="color"
 				aria-label="Pick a color"
-				value={(isHex(hex) ? hex : value.slice(0, 7)).toLowerCase()}
+				value={(isHex(hex) ? hex : own).toLowerCase()}
 				onChange={(e) => setHex(e.target.value.toUpperCase())}
 				className="size-8 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
 			/>

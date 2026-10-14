@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { BuildInCodebase, Checkout, Project, ProjectIteration } from '../shared/contract';
-import { buildSteps, iterationLabel, noSetupNote } from '../shared/work';
+import { buildStart, buildSteps, iterationLabel, noSetupNote, startBranch } from '../shared/work';
 import { CancelButton } from './CancelButton';
 import { SearchSelect } from './SearchSelect';
 import { Button } from './ui/button';
@@ -61,18 +61,13 @@ export const BuildInCodebaseDialog = ({
 	// Starts from what the prototype was modeled on, when that can be started from; else from where the checkout is,
 	// when that can; else from the newest branch that can.
 	useEffect(() => {
-		if (!plan) return;
-		const startable = [plan.basedOn?.branch, plan.current].find((b): b is string => b !== undefined && b !== null && branches.includes(b));
-		setFrom(startable ?? branches[0] ?? null);
+		if (plan) setFrom(startBranch(plan, branches));
 	}, [plan, branches]);
 
 	const wrongRepository = plan !== null && plan.basedOn !== null && plan.basedOn.repository !== plan.repository;
-	// Work already started is continued where it is: not started a second time.
-	const continuing = plan?.started ?? false;
-	// A new branch, or moving to the branch from another, needs a clean checkout. Already on it, whatever is uncommitted
-	// is the work in progress, and is left alone.
-	const needsClean = plan !== null && (!continuing || plan.current !== plan.branch);
-	const canStart = plan !== null && plan.setup && (!needsClean || plan.clean) && (continuing || from !== null) && !busy;
+	// Whether it can start, and what stands in the way, as VS Code's dialog reads it too (`buildStart`).
+	const { continuing, canStart: startable, uncommitted } = plan ? buildStart(plan, from) : { continuing: false, canStart: false, uncommitted: null };
+	const canStart = startable && !busy;
 
 	const start = async () => {
 		if (!plan) return;
@@ -125,11 +120,9 @@ export const BuildInCodebaseDialog = ({
 									{noSetupNote(plan.branch)}
 								</Notice>
 							)}
-							{plan && needsClean && !plan.clean && (
+							{plan && uncommitted && (
 								<Notice variant="warning" title={`There are uncommitted changes in ${plan.repository}`}>
-									{continuing
-										? `Your checkout is on ${plan.current ?? 'no branch'}, and moving it to ${plan.branch} needs a clean checkout. Commit or set them aside first.`
-										: 'The work starts on a new branch, which needs a clean checkout. Commit or set them aside first.'}
+									{uncommitted}
 								</Notice>
 							)}
 							{wrongRepository && plan?.basedOn && (

@@ -1,10 +1,10 @@
 import { act, createElement } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { Panel } from '../extension/webview/Panel';
 import type { Context } from '../src/main/services/findContext';
 import type { Catalog, ComponentPictures } from '../src/shared/contract';
 import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
+import { answer, button, key, kept, mount, panelSaid, press, say, sent, type, unmount } from './webviewHarness';
 
 /**
  * DSNR's panel (Phases 0, 3 and 4): the Projects and Design System toggle at its very top, the projects the core reads
@@ -13,45 +13,14 @@ import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
  * arrive by name.
  */
 
-let state: unknown;
-let sent: { type: string; id?: number; name?: string; [key: string]: unknown }[] = [];
-let root: Root | null = null;
-beforeEach(() => {
-	state = undefined;
-	sent = [];
-	(globalThis as { acquireVsCodeApi?: unknown }).acquireVsCodeApi = () => ({
-		getState: () => state,
-		setState: (next: unknown) => (state = next),
-		postMessage: (message: never) => void sent.push(message),
-	});
-});
-afterEach(async () => {
-	await act(async () => root?.unmount());
-	root = null;
-	document.body.innerHTML = '';
-});
-
 const OPEN: Context = {
 	product: '/work/flock-coke',
 	designSystem: { root: '/work/flock-react-component-lib', how: 'named' },
 	designRepository: '/work/flock-designer/projects',
 	missing: [],
 };
-const mount = async (element: ReturnType<typeof createElement>) => {
-	const host = document.body.appendChild(document.createElement('div'));
-	root = createRoot(host);
-	await act(async () => root?.render(element));
-};
 /** The panel as the extension starts it. */
 const show = () => mount(createElement(Panel));
-/** What the extension says, as it says it. */
-const say = async (data: unknown) => act(async () => void window.dispatchEvent(new MessageEvent('message', { data })));
-/** Answers the panel's latest call to `name` with `value`. */
-const answer = async (name: string, value: unknown) => {
-	const call = sent.filter((m) => m.type === 'call' && m.name === name).at(-1);
-	if (!call) throw new Error(`the panel made no ${name} call: ${JSON.stringify(sent)}`);
-	await say({ type: 'answer', id: call.id, result: { ok: true, value } });
-};
 /** The panel open on a product, its projects read. */
 const showOpen = async (context: Context = OPEN, projects = SAMPLE_PROJECTS) => {
 	await show();
@@ -63,11 +32,6 @@ const toggle = () => document.querySelector('[role="radiogroup"]') as HTMLElemen
 const options = () => [...toggle().querySelectorAll<HTMLElement>('[role="radio"]')];
 const chosen = () => options().find((o) => o.getAttribute('aria-checked') === 'true')?.textContent;
 const body = () => document.querySelector('[data-tab-body]') as HTMLElement;
-const button = (name: string) => [...document.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
-const press = async (el: HTMLElement) => act(async () => el.click());
-const key = async (el: HTMLElement, name: string) =>
-	act(async () => void el.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true })));
-const panelSaid = () => sent.filter((m) => m.type !== 'call');
 
 describe('the toggle at the top', () => {
 	it('is first in the panel, Projects and Design System, with Projects chosen', async () => {
@@ -107,8 +71,7 @@ describe('the toggle at the top', () => {
 	it('keeps its choice when the panel reloads', async () => {
 		await show();
 		await press(options()[1]!);
-		await act(async () => root?.unmount());
-		document.body.innerHTML = '';
+		await unmount();
 		await show();
 		expect(chosen()).toBe('Design System');
 	});
@@ -141,7 +104,7 @@ describe('what is open', () => {
 	});
 });
 
-describe('the account', () => {
+describe('the account, and reading the projects again', () => {
 	const signedIn = { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: 'https://avatars.githubusercontent.com/u/1' } };
 
 	it('is not the page’s: signing in is in VS Code’s own title bar, beside the DSNR mark, so the top bar is the toggle alone', async () => {
@@ -166,13 +129,6 @@ describe('the account', () => {
 			),
 		);
 		expect(badge()).toBe('3 open comments');
-	});
-
-	it('reads the projects again when the extension says they changed (one was made)', async () => {
-		await showOpen();
-		const reads = sent.filter((m) => m.name === 'listProjects').length;
-		await say({ type: 'projects-changed' });
-		expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
 	});
 
 	it('is read from the core when the panel opens, and the projects are read again when it changes', async () => {
@@ -262,16 +218,6 @@ describe('the account and the sync, in the panel, not as a box at the top (their
 		expect(button('Sync now')).toBeUndefined();
 	});
 });
-
-/** Types into a field as a person does: the value set, and React told it changed. */
-const type = async (el: HTMLElement, text: string) =>
-	act(async () => {
-		const field = el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-		const proto =
-			field instanceof HTMLSelectElement ? HTMLSelectElement : field instanceof HTMLTextAreaElement ? HTMLTextAreaElement : HTMLInputElement;
-		Object.getOwnPropertyDescriptor(proto.prototype, 'value')!.set!.call(field, text);
-		field.dispatchEvent(new Event(field instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }));
-	});
 
 describe('dialogs and menus, in the panel', () => {
 	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
@@ -590,9 +536,25 @@ describe('codebase work, in the panel', () => {
 		expect(dialog()!.textContent).toContain('feature/zone-coverage');
 		expect(dialog()!.textContent).toContain('Nothing is pushed');
 		expect(panelSaid().some((m) => m.type === 'codebase')).toBe(false);
+		// Not until it is known the agent is free.
+		expect(inDialog('Start handoff').disabled).toBe(true);
+		await answer('agentStatus', { state: 'idle' });
 		await press(inDialog('Start handoff'));
+		// Asked again as it is pressed: free still, so it starts.
+		await answer('agentStatus', { state: 'idle' });
 		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'hand-off', projectId: 'zone-coverage' });
 		expect(dialog()).toBeNull();
+	});
+
+	it('does not start a handoff when the agent was given other work since the dialog opened', async () => {
+		await showOpen(OPEN, WITH_CODE);
+		await press(menuOf('Zone coverage'));
+		await press(item('Hand off to engineering…'));
+		await answer('agentStatus', { state: 'idle' });
+		await press(inDialog('Start handoff'));
+		await answer('agentStatus', { state: 'running', startedAt: '', work: 'prototype/alert-history/v2-i1', purpose: null });
+		expect(panelSaid().some((m) => m.type === 'codebase')).toBe(false);
+		expect(dialog()!.textContent).toContain('The agent is busy with other work');
 	});
 
 	it('says when the agent is busy with other work, and does not start a handoff then', async () => {
@@ -702,7 +664,7 @@ describe('codebase work, in the panel', () => {
 			expect(dialog()!.textContent).toContain('It is in Claude Code in this window now, on feature/alert-history');
 			// The project's codebase work is recorded: the list is read again.
 			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
-			await press(inDialog('Done'));
+			await press(inDialog('Close'));
 			expect(dialog()).toBeNull();
 		});
 
@@ -834,7 +796,7 @@ describe('the projects as a list or a grid', () => {
 		]);
 		expect(body().querySelectorAll('.row')).toHaveLength(0);
 		expect(cards()).toHaveLength(4);
-		await act(async () => root?.unmount());
+		await unmount();
 		await showOpen(OPEN, []);
 		expect(document.querySelector('[aria-label="Layout"]')).toBeNull();
 	});
@@ -894,9 +856,9 @@ describe('the projects as a list or a grid', () => {
 	it('is kept in the panel’s state, so a reload leaves it where it was, as the tab is', async () => {
 		await showOpen();
 		await press(view('List'));
-		expect(state).toMatchObject({ tab: 'projects', view: 'list' });
-		await act(async () => root?.unmount());
-		sent = [];
+		expect(kept.state).toMatchObject({ tab: 'projects', view: 'list' });
+		await unmount();
+		sent.length = 0;
 		await showOpen();
 		expect(view('List').getAttribute('aria-checked')).toBe('true');
 		expect(cards()).toHaveLength(0);
@@ -906,7 +868,7 @@ describe('the projects as a list or a grid', () => {
 		await showOpen();
 		await press(view('List'));
 		await press(options()[1]!);
-		expect(state).toEqual({ tab: 'design-system', view: 'list', part: 'components', componentsView: 'grid' });
+		expect(kept.state).toEqual({ tab: 'design-system', view: 'list', part: 'components', componentsView: 'grid' });
 	});
 });
 
@@ -914,7 +876,7 @@ describe('Projects', () => {
 	const rows = () => [...body().querySelectorAll<HTMLElement>('[role="listitem"]')];
 	const part = (row: HTMLElement, name: string) => row.querySelector(`[data-part="${name}"]`)?.textContent ?? null;
 
-	it('lists each project as a row: a picture, its name, what it has, and its open comments as a badge', async () => {
+	it('lists each project with a picture, its name, what it has, and its open comments as a badge', async () => {
 		await showOpen();
 		// Each list is named for its folder, as its section is.
 		expect([...body().querySelectorAll('[role="list"]')].map((l) => l.getAttribute('aria-label'))).toEqual(['Admin', 'Maps', 'No folder']);
@@ -1117,19 +1079,13 @@ describe('Design System', () => {
 	it('finds components by the search, says when none matches, and is a list when chosen', async () => {
 		await read();
 		const search = body().querySelector('input[aria-label="Search components"]') as HTMLInputElement;
-		await act(async () => {
-			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, 'select');
-			search.dispatchEvent(new Event('input', { bubbles: true }));
-		});
+		await type(search, 'select');
 		expect(titles()).toEqual([['Inputs', '1']]);
 		await press(
 			[...body().querySelectorAll<HTMLElement>('[aria-label="Layout"] [role="radio"]')].find((o) => o.getAttribute('aria-label') === 'List')!,
 		);
 		expect(under(section('Inputs')).firstElementChild?.className).toBe('list');
-		await act(async () => {
-			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, 'nothing like it');
-			search.dispatchEvent(new Event('input', { bubbles: true }));
-		});
+		await type(search, 'nothing like it');
 		expect(body().querySelector('.note')?.textContent).toContain('No component matches “nothing like it”.');
 	});
 
@@ -1176,10 +1132,7 @@ describe('Design System', () => {
 	it('keeps a role’s themes together when the search finds it in one', async () => {
 		await tokens();
 		const search = body().querySelector('input[aria-label="Search tokens"]') as HTMLInputElement;
-		await act(async () => {
-			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, 'pineGreen 60');
-			search.dispatchEvent(new Event('input', { bubbles: true }));
-		});
+		await type(search, 'pineGreen 60');
 		// Only Dark's main points at pineGreen 60; Light's is beside it.
 		expect([...body().querySelectorAll<HTMLElement>('[data-token-row]')].map((r) => r.dataset.tokenRow)).toEqual(['main']);
 		expect(body().querySelectorAll('[data-token-row="main"] [data-token]')).toHaveLength(2);
@@ -1210,6 +1163,13 @@ describe('Design System', () => {
 		expect(dialog.textContent).toContain('src/colors/tones.ts:9 A value worked out as it runs.');
 	});
 
+	it('says when the design system is no longer on this computer, and offers to locate it', async () => {
+		await read({ state: 'lost', name: 'FUI', root: '/work/flock-react-component-lib' });
+		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('FUI is no longer on this computer');
+		await press(button('Locate design system…'));
+		expect(panelSaid().at(-1)).toEqual({ type: 'locate-design-system' });
+	});
+
 	it('says why a clone with no copy of its branch cannot be read, with a way to try again', async () => {
 		await read({ state: 'no-branch', root: '/work/flock-react-component-lib', branch: 'develop' });
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('This clone has no develop branch');
@@ -1235,11 +1195,6 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		panelSaid()
 			.filter((m) => m.type === 'token-edits')
 			.at(-1)?.edits;
-	const enter = async (input: HTMLInputElement, value: string) =>
-		act(async () => {
-			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value);
-			input.dispatchEvent(new Event('input', { bubbles: true }));
-		});
 
 	it('opens a role’s control: what it points at, and its tone’s steps to point it at another, which keeps the link', async () => {
 		await tokensOpen();
@@ -1261,14 +1216,14 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await press(document.querySelector('[aria-label="Color view"] [aria-label="Palette"]') as HTMLElement);
 		await press(document.querySelector('[aria-label="Change Tones pineGreen 60"]') as HTMLElement);
 		const hex = dialog().querySelector('input[aria-label="Hex"]') as HTMLInputElement;
-		await enter(hex, '#00aa00');
+		await type(hex, '#00aa00');
 		await act(async () => void hex.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
 		expect(edited()).toEqual([{ path: 'tone.pineGreen.60', value: '#00AA00' }]);
 		await press(button('Done'));
 		expect(document.querySelector('[role="dialog"]')).toBeNull();
 		await press(document.querySelector('[aria-label="Change Spacing spacing"]') as HTMLElement);
 		const slider = dialog().querySelector('input[type="range"]') as HTMLInputElement;
-		await enter(slider, '12');
+		await type(slider, '12');
 		await act(async () => void slider.dispatchEvent(new Event('pointerup', { bubbles: true })));
 		// A change is every token changed: this one joins the first.
 		expect(edited()).toEqual([

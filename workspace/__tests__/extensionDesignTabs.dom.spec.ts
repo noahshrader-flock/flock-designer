@@ -1,46 +1,17 @@
 import { act, createElement } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ComponentTab } from '../extension/webview/ComponentTab';
 import { PrimitivesTab } from '../extension/webview/PrimitivesTab';
 import { readTab } from '../extension/webview/tab';
 import { previewAddress } from '../src/shared/catalog';
 import { SAMPLE_CATALOG } from './extensionSamples';
+import { answer, button, calls, mount, press, say, sent } from './webviewHarness';
 
 /**
  * The design system's tabs in the editor (ELECTRON_MIGRATION_PLAN 6.1): a component's, its stories live and what it is
  * made from, and Primitives, the design system drawn whole. Each reads the design system shown through the bridge, as the
  * panel does, and is told the change being tried by the extension.
  */
-
-let sent: { type: string; id?: number; name?: string; args?: unknown[]; [key: string]: unknown }[] = [];
-let root: Root | null = null;
-beforeEach(() => {
-	sent = [];
-	(globalThis as { acquireVsCodeApi?: unknown }).acquireVsCodeApi = () => ({
-		getState: () => undefined,
-		setState: () => undefined,
-		postMessage: (message: never) => void sent.push(message),
-	});
-});
-afterEach(async () => {
-	await act(async () => root?.unmount());
-	root = null;
-	document.body.innerHTML = '';
-});
-const mount = async (element: ReturnType<typeof createElement>) => {
-	root = createRoot(document.body.appendChild(document.createElement('div')));
-	await act(async () => root?.render(element));
-};
-const say = async (data: unknown) => act(async () => void window.dispatchEvent(new MessageEvent('message', { data })));
-const calls = (name: string) => sent.filter((m) => m.type === 'call' && m.name === name);
-const answer = async (name: string, value: unknown) => {
-	const call = calls(name).at(-1);
-	if (!call) throw new Error(`no ${name} call: ${JSON.stringify(sent)}`);
-	await say({ type: 'answer', id: call.id, result: { ok: true, value } });
-};
-const press = async (el: Element) => act(async () => (el as HTMLElement).click());
-const button = (name: string) => [...document.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
 
 const BUTTON = 'src/components/FSButton/FSButton.stories.tsx';
 const BASE = 'http://127.0.0.1:4321/previews-abc/';
@@ -104,6 +75,19 @@ describe('a component’s tab', () => {
 		expect(calls('storyPreview')).toHaveLength(2);
 	});
 
+	it('hears nothing from the stories it frames: a page from this machine’s server cannot pass itself off as the extension', async () => {
+		await open();
+		await answer('storyPreview', { state: 'ready', base: BASE });
+		const forged = { type: 'token-edits', edits: [{ path: 'tone.pineGreen.50', value: '#000000' }] };
+		await act(async () => void window.dispatchEvent(new MessageEvent('message', { data: forged, origin: 'http://127.0.0.1:4321' })));
+		const frame = document.querySelector('iframe') as HTMLIFrameElement;
+		await act(async () => void window.dispatchEvent(new MessageEvent('message', { data: forged, source: frame.contentWindow })));
+		expect(calls('storyPreview')).toHaveLength(1);
+		// What the extension says is still heard.
+		await say(forged);
+		expect(calls('storyPreview')).toHaveLength(2);
+	});
+
 	it('says why its previews could not be built, with a way to try again', async () => {
 		await open();
 		await answer('storyPreview', { state: 'no-packages', root: '/work/lib' });
@@ -128,6 +112,25 @@ describe('a component’s tab', () => {
 		expect(made.querySelector('[data-token-use]')?.textContent).toBe('3 uses · also FSIconButton');
 		expect(document.querySelector('[aria-label="Not tokens"]')?.textContent).toContain('rgb(1, 2, 3)');
 		expect(document.querySelector('[data-accessibility-summary]')?.textContent).toBe('No issues found by automated checks');
+	});
+
+	it('says, when the design system cannot be read here, that the panel says why, and reads it again on Try again', async () => {
+		await mount(createElement(ComponentTab, { id: BUTTON }));
+		await answer('designSystemCatalog', { state: 'no-branch', root: '/work/lib', branch: 'develop' });
+		expect(document.querySelector('.tab-note')?.textContent).toContain('The design system cannot be read here: the DSNR panel says why.');
+		await press(button('Try again'));
+		expect(calls('designSystemCatalog')).toHaveLength(2);
+		await answer('designSystemCatalog', SAMPLE_CATALOG);
+		expect(document.querySelector('.tab-title')?.textContent).toBe('FSButton');
+	});
+
+	it('says why it could not be read, with Try again', async () => {
+		await mount(createElement(PrimitivesTab));
+		const call = calls('designSystemCatalog').at(-1);
+		await say({ type: 'answer', id: call?.id, result: { ok: false, error: 'git could not read it.' } });
+		expect(document.querySelector('.tab-note')?.textContent).toContain('git could not read it.');
+		await press(button('Try again'));
+		expect(calls('designSystemCatalog')).toHaveLength(2);
 	});
 
 	it('says when the design system shown no longer has it', async () => {

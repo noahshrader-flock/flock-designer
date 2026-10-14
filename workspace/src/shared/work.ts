@@ -1,4 +1,4 @@
-import type { IterationKind, ProjectIteration } from './contract';
+import type { BuildInCodebasePlan, IterationKind, ProjectIteration } from './contract';
 import { isPrototypeKey } from './designPaths';
 import { byNewest } from './sort';
 import { parsePrototypeName } from './prototypeNames';
@@ -73,3 +73,27 @@ export const buildSteps = (continuing: boolean, branch: string): string[] => [
 	`Then it builds the real thing in the files where it belongs, and commits on ${branch}. You see all of it there.`,
 	'Before it reports, the implementation reviewer checks the work once, and what blocks is fixed. Product parity, the full reviews and the gate are Handoff’s.',
 ];
+
+/** Where a new branch starts from: what the prototype was modeled on, when that can be; else where the checkout is; else the first that can. */
+export const startBranch = (plan: Pick<BuildInCodebasePlan, 'basedOn' | 'current'>, startable: string[]): string | null =>
+	[plan.basedOn?.branch, plan.current].find((b): b is string => typeof b === 'string' && startable.includes(b)) ?? startable[0] ?? null;
+
+/**
+ * Whether Build in the codebase can start, as both its dialogs (the app's, VS Code's) read its plan. Work already started
+ * is continued where it is. A new branch, or moving to the branch from another, needs a clean checkout; already on it,
+ * what is uncommitted is the work in progress, and is left alone. `uncommitted` says what to do, when it stands in the way.
+ */
+export const buildStart = (
+	plan: Pick<BuildInCodebasePlan, 'branch' | 'current' | 'clean' | 'setup' | 'started'>,
+	from: string | null,
+): { continuing: boolean; canStart: boolean; uncommitted: string | null } => {
+	const continuing = plan.started;
+	const needsClean = !continuing || plan.current !== plan.branch;
+	const uncommitted =
+		needsClean && !plan.clean
+			? continuing
+				? `Your checkout is on ${plan.current ?? 'no branch'}, and moving it to ${plan.branch} needs a clean checkout. Commit or set them aside first.`
+				: 'The work starts on a new branch, which needs a clean checkout. Commit or set them aside first.'
+			: null;
+	return { continuing, canStart: plan.setup && uncommitted === null && (continuing || from !== null), uncommitted };
+};

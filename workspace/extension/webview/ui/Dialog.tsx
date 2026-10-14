@@ -1,4 +1,5 @@
 import { type KeyboardEvent as KeyEvent, type ReactNode, useEffect, useRef } from 'react';
+import { Button } from './Button';
 
 const FOCUSABLE = 'input, textarea, select, button:not(:disabled)';
 
@@ -31,3 +32,24 @@ export const Dialog = ({ title, onClose, children }: { title: string; onClose: (
 		</div>
 	);
 };
+
+/** What went wrong, said where it happened, as every dialog and panel part says it; nothing when nothing did. */
+export const ErrorLine = ({ error }: { error: string | null | undefined }) =>
+	error ? (
+		<p role="alert" className="dialog-error">
+			{error}
+		</p>
+	) : null;
+
+/**
+ * A dialog's buttons, in a row, as VS Code's are: the way out (Cancel, or Close for one that only says something), then
+ * what it does (`children`), the primary. One with nothing to do has only its way out, as the primary.
+ */
+export const DialogButtons = ({ onClose, close = 'Close', children }: { onClose: () => void; close?: string; children?: ReactNode }) => (
+	<div className="dialog-buttons">
+		<Button secondary={children !== undefined} onClick={onClose}>
+			{close}
+		</Button>
+		{children}
+	</div>
+);

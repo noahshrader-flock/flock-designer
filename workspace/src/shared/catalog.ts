@@ -78,3 +78,11 @@ export const groupsFound = <C extends { name: string; group: string }>(component
 	}
 	return groups;
 };
+
+/** Why a component's previews could not be built, in words a person can act on: what the build said. */
+export const previewProblem = (preview: Exclude<StoryPreview, { state: 'ready' }>): string =>
+	preview.state === 'no-packages'
+		? `The design system's packages are not installed in ${preview.root}. Run npm install there, then try again.`
+		: preview.state === 'no-library'
+			? 'No design system is shown.'
+			: preview.error;

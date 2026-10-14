@@ -1,7 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { notBuilt, specimenAddress } from '../../src/shared/catalog';
 import type { DesignToken, StoryPreview } from '../../src/shared/contract';
-import { plural } from '../../src/shared/plural';
 import { PRIMITIVES, type Primitive, byPrimitive, coverageOf, drawnAs, inOrder, listed } from '../../src/shared/primitives';
 import { typeSpecimens } from '../../src/shared/specimens';
 import { nameOf, pixelsOf, readsAs, withEdits } from '../../src/shared/tokens';
@@ -9,6 +8,8 @@ import { workspace } from './host';
 import { StoryFrame } from './StoryFrame';
 import { useTabCatalog } from './useCatalog';
 import { useTrial } from './useTrial';
+import { TabNote } from './ui/Notice';
+import { TryingNote } from './Changed';
 import { Swatch } from './ui/Swatch';
 
 /** The design system's preview build, which a type specimen is drawn in, so its fonts are its own; asked for once. */
@@ -157,11 +158,10 @@ const Drawn = ({ primitive, tokens, byPath, preview }: { primitive: Primitive | 
  * with where DSNR looked. For looking: nothing here changes a token.
  */
 export const PrimitivesTab = () => {
-	const { catalog, error } = useTabCatalog();
+	const { ready, note, retry } = useTabCatalog();
 	const [edits] = useTrial();
 	const [preview, setPreview] = useState<Preview>({ state: 'asking' });
 	const sections = useRef(new Map<string, HTMLElement | null>());
-	const ready = catalog?.state === 'ready' ? catalog : null;
 	const specimens = ready?.tokens.tokens.some((t) => drawnAs(t.category) === 'specimens') ?? false;
 	useEffect(() => {
 		if (!specimens) return;
@@ -169,9 +169,7 @@ export const PrimitivesTab = () => {
 			.storyPreview([])
 			.then((r) => setPreview(r.ok ? r.value : { state: 'failed', error: r.error }));
 	}, [specimens]);
-	if (error !== null) return <p className="tab-note">{error}</p>;
-	if (catalog === null) return <p className="tab-note">Reading the design system…</p>;
-	if (!ready) return <p className="tab-note">The design system could not be read: the panel says why.</p>;
+	if (note || !ready) return <TabNote note={note?.says ?? ''} {...(note?.retry ? { onRetry: retry } : {})} />;
 
 	const read = ready.tokens;
 	const tokens = withEdits(read.tokens, edits);
@@ -199,7 +197,7 @@ export const PrimitivesTab = () => {
 					</button>
 				))}
 			</div>
-			{edits.length > 0 && <p className="quiet">Showing the change being tried in the panel ({plural(edits.length, 'token')}).</p>}
+			<TryingNote count={edits.length} />
 			{found.map(([category, list]) => (
 				<section
 					key={category}

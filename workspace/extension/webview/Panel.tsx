@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Context } from '../../src/main/services/findContext';
 import { useComponentPictures } from '../../src/renderer/useComponentPictures';
 import { useWorkspace } from '../../src/renderer/useWorkspace';
@@ -50,7 +50,7 @@ export interface PanelViewProps {
 
 /**
  * DSNR's panel: the toggle at its very top, and under it the view chosen. Who is signed in is VS Code's to show, in its
- * own title bar beside the DSNR mark; the page reads it only to say whose projects these are.
+ * own title bar beside the DSNR mark; the page reads it to say whose projects these are, and for the account dialog.
  */
 export const PanelView = ({
 	tab,
@@ -118,8 +118,8 @@ export const PanelView = ({
 /**
  * The panel, connected: what is open from the extension (`context`), the account and the projects from the core over
  * the bridge, read again when either changes or the extension says the projects did, and what the person presses sent
- * back. The tab and the view of the projects chosen are kept in VS Code's state for the panel, so a reload leaves them
- * where they were.
+ * back. What is chosen (the tab, the projects' view, the design system's part and its components' view) is kept in VS
+ * Code's state for the panel, so a reload leaves it where it was.
  */
 export const Panel = () => {
 	const kept = vscode().getState();
@@ -173,9 +173,15 @@ export const Panel = () => {
 		if (read.value === null) return;
 		void workspace()
 			.ensureCovers()
-			.then((r) => r.ok && r.value.length > 0 && setMade((now) => [...r.value, ...now]));
+			.then(
+				(r) =>
+					r.ok &&
+					r.value.length > 0 &&
+					// One for each prototype: a picture drawn again replaces the last.
+					setMade((now) => [...r.value, ...now.filter((m) => !r.value.some((n) => n.projectId === m.projectId && n.name === m.name))]),
+			);
 	}, [read.value]);
-	const projects = read.value === null ? null : withCovers(read.value, made);
+	const projects = useMemo(() => (read.value === null ? null : withCovers(read.value, made)), [read.value, made]);
 	// A project that is not in the list once it is read is not one to open a dialog about.
 	const about = dialog !== null && 'projectId' in dialog ? dialog.projectId : null;
 	useEffect(() => {
