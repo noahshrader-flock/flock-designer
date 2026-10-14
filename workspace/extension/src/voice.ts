@@ -6,14 +6,14 @@ import type { Offer } from './agentWork';
 import { CHANGE_REQUEST, HOST } from '../../src/shared/vocabulary';
 
 /** Where the voice and tone is in VS Code: a document of DSNR's own, and the file as GitHub has it, to compare with. */
-export const VOICE_SCHEME = 'dsnr-voice';
+const VOICE_SCHEME = 'dsnr-voice';
 export const VOICE_PATH = '/Voice and tone.md';
 export const THEIRS_PATH = `/On ${HOST}/Voice and tone.md`;
 
 /** What a refused save offers: the two side by side, the person's text kept as a change to GitHub's, or GitHub's taken. */
-export const COMPARE = 'Compare';
-export const KEEP_MINE = 'Keep mine';
-export const USE_THEIRS = 'Use theirs';
+const COMPARE = 'Compare';
+const KEEP_MINE = 'Keep mine';
+const USE_THEIRS = 'Use theirs';
 const PROPOSE = 'Propose';
 const OPEN_IT = `Open the ${CHANGE_REQUEST}`;
 
@@ -181,7 +181,7 @@ export const voiceFileSystem = (
 };
 
 /** What a save refused because GitHub's file changed meanwhile says: the file system's failure, and the offer after it. */
-export const REFUSED = `The voice and tone changed on ${HOST} since it was opened, so nothing was saved.`;
+const REFUSED = `The voice and tone changed on ${HOST} since it was opened, so nothing was saved.`;
 
 /**
  * The voice and tone in VS Code (6.3), wired: its file system, the document VS Code opens from it, and its commands. A save

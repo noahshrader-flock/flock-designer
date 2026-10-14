@@ -243,7 +243,7 @@ export const contrastRatio = (a: string, b: string): number | null => {
 export type ColorView = 'semantic' | 'palette';
 
 /** What a token is, in words, for a search to look through: what it points at too, as it is named on screen (`pineGreen 50`). */
-export const searchText = (t: DesignToken, target?: DesignToken): string =>
+const searchText = (t: DesignToken, target?: DesignToken): string =>
 	[t.path, t.group, t.set, t.name, t.value, t.ref?.path ?? '', target ? nameOf(target) : ''].join(' ').toLowerCase();
 
 /** A role's variant, whichever theme it is in: what a search keeps together, so a match in one theme keeps the others'. */

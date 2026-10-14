@@ -30,7 +30,7 @@ export const designSystemOf = ({ repository, branch }: { repository: string; bra
 export const isTokenGroup = (group: string): boolean => /\btokens?\b/i.test(group);
 
 /** Whether a component is one the Components tab's search finds (T9): by its name or its group, as `matchesWords` finds. */
-export const matchesComponent = (component: { name: string; group: string }, search: string): boolean =>
+const matchesComponent = (component: { name: string; group: string }, search: string): boolean =>
 	matchesWords(`${component.name}\n${component.group}`, search);
 
 /** The one thing a preview page tells the frame holding it: its height, under this name. */

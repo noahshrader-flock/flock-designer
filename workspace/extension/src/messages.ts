@@ -34,7 +34,7 @@ export type PanelMessage =
 	| { type: 'token-edits'; edits: unknown[] };
 
 /** A component's links, which the extension finds for it from the catalog: its docs on Storybook, and its source on GitHub. */
-export const COMPONENT_LINKS = ['storybook', 'source'] as const;
+const COMPONENT_LINKS = ['storybook', 'source'] as const;
 export type ComponentLink = (typeof COMPONENT_LINKS)[number];
 
 /** A design system's tab in VS Code's editor, as its page is told it: a component's, by its story file, or Primitives. */

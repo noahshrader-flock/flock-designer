@@ -68,12 +68,12 @@ export const readDrawn = (file: string, picture: boolean, tags: string[] | null 
 })(${JSON.stringify(file)}, ${picture})`;
 
 /** A run's files shared between `pages` pages: each takes every so many, so the slow ones are spread out. */
-export const sharesOf = <T>(files: T[], pages: number = WINDOWS_PER_RUN): T[][] =>
-	Array.from({ length: Math.min(pages, files.length) }, (_, w) => files.filter((_file, i) => i % pages === w));
+const sharesOf = <T>(files: T[]): T[][] =>
+	Array.from({ length: Math.min(WINDOWS_PER_RUN, files.length) }, (_, w) => files.filter((_file, i) => i % WINDOWS_PER_RUN === w));
 
 /** What each page drew, back in the order of the run's files (`sharesOf`'s order undone); null for any not drawn. */
-export const inOrder = <T>(files: unknown[], drawn: (T | null)[][], pages: number = WINDOWS_PER_RUN): (T | null)[] =>
-	files.map((_, i) => drawn[i % pages]?.[Math.floor(i / pages)] ?? null);
+const backInOrder = <T>(files: unknown[], drawn: (T | null)[][]): (T | null)[] =>
+	files.map((_, i) => drawn[i % WINDOWS_PER_RUN]?.[Math.floor(i / WINDOWS_PER_RUN)] ?? null);
 
 /** What one page is given of a run to draw: the build, its mode, its share of the files, and whether it pictures and checks them. */
 export interface Share {
@@ -94,7 +94,7 @@ export const measureWith =
 		const results: (Drawn | null)[][] = [];
 		for (const { base, mode, files, pictures = false, accessibility = null } of runs) {
 			const drawn = await Promise.all(sharesOf(files).map((share) => drawShare({ base, mode, files: share, pictures, tags: accessibility })));
-			results.push(inOrder(files, drawn));
+			results.push(backInOrder(files, drawn));
 		}
 		return results;
 	};
