@@ -26,7 +26,7 @@ const show = () => mount(createElement(Panel));
 const showOpen = async (context: Context = OPEN, projects = SAMPLE_PROJECTS) => {
 	await show();
 	await say({ type: 'context', context });
-	if (context.product) await answer('listProjects', projects);
+	await answer('listProjects', projects);
 };
 
 const toggle = () => document.querySelector('[role="radiogroup"]') as HTMLElement;
@@ -91,15 +91,46 @@ describe('what is open', () => {
 		expect(body().textContent).toBe('Looking at what is open…');
 	});
 
-	it('says what to open when no product is', async () => {
-		await showOpen({ ...OPEN, product: null, missing: ['No product is open: open its folder.'] });
-		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No product is open');
-		expect(body().textContent).toContain('No product is open: open its folder.');
-		expect(sent.some((m) => m.name === 'listProjects')).toBe(false);
+	const NONE: Context = {
+		...OPEN,
+		product: null,
+		productRepository: null,
+		designRepository: null,
+		missing: ['No product is open: open its folder.'],
+	};
+
+	it('lists everyone’s projects when no product is open, with no switch, and says what a product is for (PROJECT_SCOPE_PLAN 3.1)', async () => {
+		await showOpen(NONE);
+		expect(sent.some((m) => m.name === 'listProjects')).toBe(true);
+		expect([...body().querySelectorAll('[role="listitem"] [data-part="name"]')].map((n) => n.textContent)).toEqual([
+			// One group (none has a product yet), in the list's own order; a project's folder is on its line.
+			'Alert history',
+			'Admin usage',
+			'Role comparison',
+			'Zone coverage',
+		]);
+		expect(document.querySelector('[aria-label="Whose projects"]')).toBeNull();
+		expect(body().textContent).toContain('No product is open, so these are everyone’s projects');
 	});
 
-	it('offers Get started there, which asks the extension to get a product onto this machine', async () => {
-		await showOpen({ ...OPEN, product: null, missing: ['No product is open: open its folder.'] });
+	it('says what to open when no product is and there are no projects, and offers Get started', async () => {
+		await showOpen(NONE, []);
+		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No product is open');
+		expect(body().textContent).toContain('No product is open: open its folder.');
+		await press(button('Get started'));
+		expect(panelSaid().at(-1)).toEqual({ type: 'get-started' });
+	});
+
+	it('says why Build in the codebase cannot be done with no product open, rather than opening nothing', async () => {
+		await showOpen(NONE);
+		await say({ type: 'open-dialog', dialog: { kind: 'build', projectId: 'alert-history' } });
+		const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+		expect(dialog.textContent).toContain('Open the product');
+		expect(sent.some((m) => m.name === 'buildInCodebasePlan')).toBe(false);
+	});
+
+	it('offers Get started beside everyone’s projects too', async () => {
+		await showOpen(NONE);
 		await press(button('Get started'));
 		expect(panelSaid().at(-1)).toEqual({ type: 'get-started' });
 	});

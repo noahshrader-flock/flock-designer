@@ -15,6 +15,7 @@ import { type CodebaseAction, type HostMessage, type Review, readProjectArg, rea
 import { type Given, newPrototype, readGiven, readyToStart } from './newPrototype';
 import { PanelProvider } from './panel';
 import { publishedLink } from './publishing';
+import { copyProject } from '../../src/main/services/projectCopy';
 import { REVIEW_KEY, Reviews, answerReview, buildReviewSite, pickReview, siteIn } from './review';
 import { AgentLog, SyncStatus, failed, failedFor, vscodeChoose, vscodeCopy, vscodeOffer, vscodeOpen, vscodeProgress, vscodeTell } from './ui';
 
@@ -133,8 +134,15 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 					signIn: () => github.signIn(),
 					written: () => projectsChanged(),
 					address: async (r, comment, asked): Promise<string | null | void> => {
+						// Address changes the prototype's code, which is with the product it was made on.
+						if (found.product === null)
+							return failedFor(true)(
+								new Error('Open the product this prototype was made on to Address its comments: Address changes its code, which is there.'),
+							);
 						const show: (shown: Review) => Promise<void> =
-							asked === 'browser' ? (shown: Review) => reviews.showIfOpen({ records: records(), ...shown }) : openReview;
+							asked === 'browser'
+								? async (shown: Review) => reviews.showIfOpen({ records: await recordsFor(shown.projectId), ...shown })
+								: openReview;
 						return addressComment({ ...here, show }, await titled(r), comment).catch(failedFor(true));
 					},
 				},
@@ -146,13 +154,15 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			),
 		...(log ? { log } : {}),
 	});
-	/** Where the projects' records are, or why they are not here. */
-	const records = () => {
-		if (!found.designRepository)
-			throw new Error(found.missing.find((m) => m.startsWith('The design repository')) ?? 'The design repository is not here.');
-		return found.designRepository;
-	};
-	const openReview = (review: Review): Promise<void> => reviews.open({ records: records(), ...review });
+	/**
+	 * Where a project's records are, to build its review from: the design repository's checkout beside the product, or with
+	 * none (only VS Code open), that project alone, read through GitHub into DSNR's own storage (PROJECT_SCOPE_PLAN 3.2).
+	 */
+	const recordsFor = (projectId: string): Promise<string> =>
+		found.designRepository !== null
+			? Promise.resolve(found.designRepository)
+			: copyProject(core.designRepo.files, projectId, join(storage, 'review-copy'));
+	const openReview = async (review: Review): Promise<void> => reviews.open({ records: await recordsFor(review.projectId), ...review });
 	/** A review as its project's records title it: a browser's page may have moved to another of its iterations. */
 	const titled = async (review: Review): Promise<Review> => {
 		const project = valueOf(await api.listProjects()).find((p) => p.id === review.projectId);
@@ -163,7 +173,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	 * so it comments through DSNR as a tab does (BROWSER_COMMENTS_PLAN).
 	 */
 	const openReviewInBrowser = async (review: Review) => {
-		await vscodeOpen(await reviews.inBrowser({ records: records(), ...review }));
+		await vscodeOpen(await reviews.inBrowser({ records: await recordsFor(review.projectId), ...review }));
 	};
 	core.prototypeServer.answerAsks((key, ask) => reviews.answerBrowser(key, ask));
 	/** Locate design system: a folder that holds one is remembered and shown; one that does not is refused, and not kept. */

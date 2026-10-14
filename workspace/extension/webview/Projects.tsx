@@ -204,14 +204,13 @@ export const Projects = ({
 	// What is typed in the search: the projects are narrowed to what matches, as the app's are.
 	const [search, setSearch] = useState('');
 	const [scope, setScope] = useState<Scope>('here');
-	if (!product.open)
-		return (
-			<EmptyState icon="folder-library" title="No product is open">
-				<p>{product.why}</p>
-				<p>Not on this machine yet? Get started clones it with VS Code, then open it here.</p>
-				<Button onClick={onGetStarted}>Get started</Button>
-			</EmptyState>
-		);
+	const noProduct = (
+		<EmptyState icon="folder-library" title="No product is open">
+			<p>{product.open ? '' : product.why}</p>
+			<p>Not on this machine yet? Get started clones it with VS Code, then open it here.</p>
+			<Button onClick={onGetStarted}>Get started</Button>
+		</EmptyState>
+	);
 	if (read.error !== null && read.value === null)
 		return (
 			<EmptyState icon="warning" title="The projects could not be read">
@@ -220,6 +219,8 @@ export const Projects = ({
 		);
 	if (read.value === null) return <p className="note">Reading the projects…</p>;
 	const projects = read.value;
+	// With nothing open but VS Code: everyone's projects, by product, and what a product is for (PROJECT_SCOPE_PLAN 3.1).
+	if (!product.open && projects.length === 0) return noProduct;
 	const matching = projects.filter((p) => matchesProject(p, search));
 	// With a product to focus on, its own first; otherwise, or when asked, everyone's.
 	const focused = productRepository !== null && scope === 'here';
@@ -244,6 +245,14 @@ export const Projects = ({
 	return (
 		<>
 			{!signedIn && <p className="note">These are the projects on this machine. Sign in to see your team's too.</p>}
+			{!product.open && (
+				<div className="note no-product-note">
+					<p>No product is open, so these are everyone’s projects. Open a product to make a prototype, or to build or Address one.</p>
+					<Button variant="secondary" onClick={onGetStarted}>
+						Get started
+					</Button>
+				</div>
+			)}
 			{projects.length > 0 && productRepository !== null && (
 				<div className="scope-bar">
 					<Toggle label="Whose projects" options={SCOPES} value={scope} onChange={setScope} />

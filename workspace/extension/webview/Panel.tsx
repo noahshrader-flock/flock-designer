@@ -161,7 +161,8 @@ export const Panel = () => {
 		return workspace().onSignInChanged(setAccount);
 	}, []);
 	const login = account.state === 'signedIn' ? account.user.login : null;
-	const read = useWorkspace(() => workspace().listProjects(), [context?.product ?? null, login], { enabled: context?.product != null });
+	// Read once what is open is known, a product or none (with none, everyone's projects are listed: PROJECT_SCOPE_PLAN 3.1).
+	const read = useWorkspace(() => workspace().listProjects(), [context?.product ?? null, login], { enabled: context !== null });
 	// Told the projects changed: read again, keeping what is shown until the new is there (a comment made in a review
 	// is a number on its project, without the list giving way to a line saying it is reading).
 	const { reload } = read;

@@ -4,6 +4,7 @@ import { foldersOf } from '../../src/shared/brief';
 import { workOf } from '../../src/shared/work';
 import { type CodebaseAction, type PanelDialog, reviewsOf } from '../src/messages';
 import { AccountDialog, SyncDialog } from './AccountDialogs';
+import { Dialog, DialogButtons } from './ui/Dialog';
 import { BuildInCodebaseDialog, CodebaseCommentsDialog, HandoffDialog } from './CodebaseDialogs';
 import { AssignFolderDialog, NewPrototypeDialog, type NewPrototypeAnswers } from './ProjectDialogs';
 
@@ -46,7 +47,18 @@ export const PanelDialogs = ({
 		case 'assign':
 			return <AssignFolderDialog project={project} folders={folders} onAssigned={onChanged} onClose={onClose} />;
 		case 'build':
-			return root && newest ? <BuildInCodebaseDialog root={root} project={project} name={newest.name} onBuilt={onChanged} onClose={onClose} /> : null;
+			if (!newest) return null;
+			// Built in the product's own code: with none open, said, not a dialog that never comes.
+			return root ? (
+				<BuildInCodebaseDialog root={root} project={project} name={newest.name} onBuilt={onChanged} onClose={onClose} />
+			) : (
+				<Dialog title="Build in the codebase" onClose={onClose}>
+					<p className="dialog-about">
+						Open the product {project.title} was made on: it is built in that product’s own code, so DSNR needs it open here.
+					</p>
+					<DialogButtons onClose={onClose} />
+				</Dialog>
+			);
 		case 'hand-off':
 			return codebase ? (
 				<HandoffDialog project={project} branch={codebase.branch} onStart={() => onCodebase('hand-off', project.id)} onClose={onClose} />
