@@ -1,5 +1,6 @@
 import type { Context } from '../../src/main/services/findContext';
 import { INVOKE, type InvokeName } from '../../src/shared/contract';
+import type { TokenEdit } from '../../src/shared/domain/designSystem';
 import type { Project } from '../../src/shared/domain/projects';
 import { isPrototypeName } from '../../src/shared/prototypeNames';
 import { PROJECT_ID } from '../../src/shared/validate';
@@ -20,7 +21,23 @@ export type PanelMessage =
 	| { type: 'codebase'; action: CodebaseAction; projectId: string }
 	| { type: 'new-prototype'; title: string; task: string; folder: string | null }
 	| ({ type: 'open-review' } & Review)
-	| ({ type: 'open-review-in-browser' } & Review);
+	| ({ type: 'open-review-in-browser' } & Review)
+	// The Design System tab's: a component's tab, by its story file, and its links, which the extension finds itself; the
+	// Primitives tab; the voice and tone; a token's own file, at its line; and the change to the tokens being tried, which
+	// the extension keeps for every DSNR page (each edit read again where it is used, `tokenEditsOf`).
+	| { type: 'open-component'; id: string }
+	| { type: 'component-link'; id: string; link: ComponentLink }
+	| { type: 'open-primitives' }
+	| { type: 'open-voice-and-tone' }
+	| { type: 'open-token-source'; file: string; line: number }
+	| { type: 'token-edits'; edits: unknown[] };
+
+/** A component's links, which the extension finds for it from the catalog: its docs on Storybook, and its source on GitHub. */
+export const COMPONENT_LINKS = ['storybook', 'source'] as const;
+export type ComponentLink = (typeof COMPONENT_LINKS)[number];
+
+/** A design system's tab in VS Code's editor, as its page is told it: a component's, by its story file, or Primitives. */
+export type DesignTab = { kind: 'component'; id: string; name: string } | { kind: 'primitives' };
 
 /**
  * What can be done with a project's codebase work from the panel: its preview, Handoff, Share, and the work on GitHub.
@@ -55,7 +72,9 @@ export type HostMessage =
 	/** What is open, and why its design system cannot be read when it cannot (`showFound`). */
 	| { type: 'context'; context: Context; unreadable?: string }
 	| { type: 'projects-changed' }
-	| { type: 'open-dialog'; dialog: PanelDialog };
+	| { type: 'open-dialog'; dialog: PanelDialog }
+	/** The change to the tokens being tried, as the extension keeps it: told to every DSNR page whenever it changes. */
+	| { type: 'token-edits'; edits: TokenEdit[] };
 
 /** The dialogs the panel has: each is opened for what it is about, by the panel or by the extension (`open-dialog`). */
 export type PanelDialog =
@@ -66,7 +85,12 @@ export type PanelDialog =
 	| { kind: 'comments'; projectId: string };
 
 const CALLS = new Set<string>(INVOKE);
-const BARE = new Set(['ready', 'locate-design-system', 'get-started', 'ask-new-prototype']);
+const BARE = new Set(['ready', 'locate-design-system', 'get-started', 'ask-new-prototype', 'open-primitives', 'open-voice-and-tone']);
+/** The longest a path in the design system is (a story file, a token's file), and the most edits a change is. */
+const MOST_PATH = 500;
+const MOST_EDITS = 500;
+const isPath = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= MOST_PATH;
+
 /** The most a name, what a prototype explores, and a folder's name may be: more is not what a person wrote in a box. */
 export const LIMITS = { title: 300, task: 4000, folder: 100 };
 
@@ -114,6 +138,17 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 			(m.folder === null || (typeof m.folder === 'string' && m.folder.length <= LIMITS.folder))
 			? { type: 'new-prototype', title: m.title, task: m.task, folder: m.folder }
 			: null;
+	if (m.type === 'open-component') return hasKeys(m, ['type', 'id']) && isPath(m.id) ? { type: 'open-component', id: m.id } : null;
+	if (m.type === 'component-link')
+		return hasKeys(m, ['type', 'id', 'link']) && isPath(m.id) && (COMPONENT_LINKS as readonly unknown[]).includes(m.link)
+			? { type: 'component-link', id: m.id, link: m.link as ComponentLink }
+			: null;
+	if (m.type === 'open-token-source')
+		return hasKeys(m, ['type', 'file', 'line']) && isPath(m.file) && Number.isSafeInteger(m.line) && (m.line as number) > 0
+			? { type: 'open-token-source', file: m.file, line: m.line as number }
+			: null;
+	if (m.type === 'token-edits')
+		return hasKeys(m, ['type', 'edits']) && Array.isArray(m.edits) && m.edits.length <= MOST_EDITS ? { type: 'token-edits', edits: m.edits } : null;
 	return typeof m.type === 'string' && BARE.has(m.type) && hasKeys(m, ['type']) ? ({ type: m.type } as PanelMessage) : null;
 };
 
@@ -122,6 +157,13 @@ export const readReview = (raw: unknown): Review | null => {
 	if (typeof raw !== 'object' || raw === null || 'type' in raw) return null;
 	const read = readMessage({ ...raw, type: 'open-review' });
 	return read?.type === 'open-review' ? { projectId: read.projectId, name: read.name, title: read.title } : null;
+};
+
+/** The component a command was given (DSNR: Open a component, from code), by its story file, read as the panel's is, or null. */
+export const readComponentArg = (raw: unknown): string | null => {
+	if (typeof raw !== 'object' || raw === null || 'type' in raw) return null;
+	const read = readMessage({ ...raw, type: 'open-component' });
+	return read?.type === 'open-component' ? read.id : null;
 };
 
 /** The project a command was given, from a row's right-click menu (its `data-vscode-context`), or null. */

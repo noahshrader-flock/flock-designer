@@ -1,10 +1,13 @@
 import { randomBytes } from 'node:crypto';
+import { escapeHtml } from '../../src/shared/html';
+import type { DesignTab } from './messages';
 
 /**
  * The page DSNR's panel loads, as tight as VS Code's webview guidance asks: nothing loads unless named here, the one
  * script runs by a nonce made for this page, and styles, fonts and pictures come only from the extension's own build
- * (`cspSource`, which is VS Code's name for it). No
- * `vscode` import, so it is tested as plain text.
+ * (`cspSource`, which is VS Code's name for it), and the design system's stories and pictures from this machine's own
+ * server (`local`, its exact origin) and nowhere else. The same page is the panel or a design system's tab (`tab`), which
+ * it reads from its body. No `vscode` import, so it is tested as plain text.
  */
 export const panelHtml = ({
 	cspSource,
@@ -12,18 +15,23 @@ export const panelHtml = ({
 	script,
 	style,
 	codicons,
+	local,
+	tab,
 }: {
 	cspSource: string;
 	nonce: string;
 	script: string;
 	style: string;
 	codicons: string;
+	local: string;
+	tab?: DesignTab;
 }): string => {
 	const policy = [
 		"default-src 'none'",
 		`style-src ${cspSource}`,
 		`font-src ${cspSource}`,
-		`img-src ${cspSource} data:`,
+		`img-src ${cspSource} data: ${local}`,
+		`frame-src ${local}`,
 		`script-src 'nonce-${nonce}'`,
 	].join('; ');
 	return `<!doctype html>
@@ -36,7 +44,7 @@ export const panelHtml = ({
 <link rel="stylesheet" href="${style}">
 <title>DSNR</title>
 </head>
-<body>
+<body${tab ? ` data-tab="${escapeHtml(JSON.stringify(tab))}"` : ''}>
 <div id="root"></div>
 <script nonce="${nonce}" src="${script}"></script>
 </body>

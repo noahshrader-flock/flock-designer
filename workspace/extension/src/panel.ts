@@ -4,13 +4,82 @@ import { served } from '../../src/main/handle';
 import { type Panels, answerCall } from './bridge';
 import { afterQuiet, whatChanged } from './devReload';
 import { newNonce, panelHtml } from './html';
-import { type CodebaseAction, type HostMessage, type Review, readMessage } from './messages';
+import type { TokenEdit } from '../../src/shared/contract';
+import { type CodebaseAction, type ComponentLink, type DesignTab, type HostMessage, type PanelMessage, type Review, readMessage } from './messages';
 import type { Given } from './newPrototype';
 import { failed } from './ui';
+
+/**
+ * What the design system's pages ask (ELECTRON_MIGRATION_PLAN 6.1 to 6.3), from the panel or a design system's tab: a
+ * component's tab and its links, Primitives, the voice and tone, a token's own file, and the change to the tokens being
+ * tried (`TokenTrial`), which is the extension's.
+ */
+export interface DesignSystemAsks {
+	openComponent: (id: string) => Promise<void>;
+	componentLink: (id: string, link: ComponentLink) => Promise<void>;
+	openPrimitives: () => Promise<void>;
+	openVoiceAndTone: () => Promise<void>;
+	openTokenSource: (file: string, line: number) => Promise<void>;
+	edits: () => TokenEdit[];
+	setEdits: (edits: unknown[]) => void;
+}
+
+/**
+ * What any DSNR page may ask, the panel or a design system's tab: a call to the core, answered from its table, and the
+ * design system's own asks. Says whether it was one of these; the rest are the panel's alone.
+ */
+export const answerPage = async (webview: vscode.Webview, message: PanelMessage, asks: DesignSystemAsks): Promise<boolean> => {
+	switch (message.type) {
+		case 'call':
+			await answerCall(webview, served(), message);
+			return true;
+		case 'open-component':
+			await asks.openComponent(message.id);
+			return true;
+		case 'component-link':
+			await asks.componentLink(message.id, message.link);
+			return true;
+		case 'open-primitives':
+			await asks.openPrimitives();
+			return true;
+		case 'open-voice-and-tone':
+			await asks.openVoiceAndTone();
+			return true;
+		case 'open-token-source':
+			await asks.openTokenSource(message.file, message.line);
+			return true;
+		case 'token-edits':
+			asks.setEdits(message.edits);
+			return true;
+		default:
+			return false;
+	}
+};
+
+/**
+ * A DSNR page in `webview`: the panel, or a design system's tab (`tab`), from the extension's own build in `dist`,
+ * framing and showing pictures from this machine's server (`local`) alone.
+ */
+export const dsnrPage = (webview: vscode.Webview, dist: vscode.Uri, local: string, tab?: DesignTab): string => {
+	const asset = (name: string) => webview.asWebviewUri(vscode.Uri.joinPath(dist, name)).toString();
+	return panelHtml({
+		cspSource: webview.cspSource,
+		nonce: newNonce(),
+		script: asset('webview.js'),
+		style: asset('webview.css'),
+		codicons: asset('codicon.css'),
+		local,
+		...(tab ? { tab } : {}),
+	});
+};
 
 interface PanelDeps {
 	extensionUri: vscode.Uri;
 	panels: Panels;
+	/** This machine's server's origin, which the page frames stories from and shows pictures from. */
+	local: () => Promise<string>;
+	/** The design system's asks, made once the core is: the page asks them only once it is shown. */
+	design: () => DesignSystemAsks;
 	/** What is open now (the product, its design system, the design repository, and what is missing), as the page is told it. */
 	context: () => Extract<HostMessage, { type: 'context' }>;
 	locate: () => Promise<void>;
@@ -51,7 +120,7 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 
 	resolveWebviewView(view: vscode.WebviewView): void {
 		view.webview.options = { enableScripts: true, localResourceRoots: [this.dist] };
-		view.webview.html = this.html(view.webview);
+		void this.load(view.webview);
 		this.view = view;
 		view.description = this.login;
 		const listening = this.deps.panels.add(view.webview);
@@ -69,12 +138,12 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 		const message = readMessage(raw);
 		if (!message) return;
 		try {
+			if (await answerPage(webview, message, this.deps.design())) return;
 			switch (message.type) {
-				case 'call':
-					return await answerCall(webview, served(), message);
 				case 'ready':
-					// Told once the page listens: a message posted before then is lost.
+					// Told once the page listens: a message posted before then is lost. And the change to the tokens being tried.
 					await webview.postMessage(this.deps.context());
+					await webview.postMessage({ type: 'token-edits', edits: this.deps.design().edits() } satisfies HostMessage);
 					// And what was held for the page until it listened (a dialog asked for while the panel was hidden).
 					return this.deps.panels.ready(webview);
 				case 'locate-design-system':
@@ -101,7 +170,7 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 	private follow(view: vscode.WebviewView): void {
 		const reload = afterQuiet(150, () => {
 			this.deps.panels.unready(view.webview);
-			view.webview.html = this.html(view.webview);
+			void this.load(view.webview);
 			this.deps.log?.info('The page was rebuilt: the panel reloaded.');
 		});
 		const restart = afterQuiet(150, () => {
@@ -117,14 +186,8 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 		this.deps.log?.info(`Following the build in ${this.dist.fsPath}.`);
 	}
 
-	private html(webview: vscode.Webview): string {
-		const asset = (name: string) => webview.asWebviewUri(vscode.Uri.joinPath(this.dist, name)).toString();
-		return panelHtml({
-			cspSource: webview.cspSource,
-			nonce: newNonce(),
-			script: asset('webview.js'),
-			style: asset('webview.css'),
-			codicons: asset('codicon.css'),
-		});
+	/** The page, once this machine's server says where it is. */
+	private async load(webview: vscode.Webview): Promise<void> {
+		webview.html = dsnrPage(webview, this.dist, await this.deps.local());
 	}
 }

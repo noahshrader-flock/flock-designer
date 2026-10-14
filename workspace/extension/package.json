@@ -13,6 +13,9 @@
 		"Other"
 	],
 	"main": "./dist/extension.js",
+	"activationEvents": [
+		"onFileSystem:dsnr-voice"
+	],
 	"contributes": {
 		"viewsContainers": {
 			"activitybar": [
@@ -77,6 +80,33 @@
 				"title": "Build in the codebase…"
 			},
 			{
+				"command": "dsnr.openComponent",
+				"title": "Open a component…",
+				"category": "DSNR"
+			},
+			{
+				"command": "dsnr.openPrimitives",
+				"title": "Open Primitives",
+				"category": "DSNR"
+			},
+			{
+				"command": "dsnr.openVoiceAndTone",
+				"title": "Open Voice and Tone",
+				"category": "DSNR"
+			},
+			{
+				"command": "dsnr.proposeVoiceAndTone",
+				"title": "Propose the voice and tone",
+				"category": "DSNR",
+				"icon": "$(git-pull-request)"
+			},
+			{
+				"command": "dsnr.startOverVoiceAndTone",
+				"title": "Start over on the voice and tone",
+				"category": "DSNR",
+				"icon": "$(discard)"
+			},
+			{
 				"command": "dsnr.sync",
 				"category": "DSNR",
 				"title": "Sync your work"
@@ -136,6 +166,14 @@
 				{
 					"command": "dsnr.buildInCodebase",
 					"when": "activeWebviewPanelId == 'dsnr.review'"
+				},
+				{
+					"command": "dsnr.proposeVoiceAndTone",
+					"when": "resourceScheme == dsnr-voice && !activeEditorIsReadonly"
+				},
+				{
+					"command": "dsnr.startOverVoiceAndTone",
+					"when": "resourceScheme == dsnr-voice && !activeEditorIsReadonly"
 				}
 			],
 			"editor/title": [
@@ -158,6 +196,16 @@
 					"command": "dsnr.buildInCodebase",
 					"when": "activeWebviewPanelId == 'dsnr.review'",
 					"group": "1_project"
+				},
+				{
+					"command": "dsnr.proposeVoiceAndTone",
+					"when": "resourceScheme == dsnr-voice && !activeEditorIsReadonly",
+					"group": "navigation@1"
+				},
+				{
+					"command": "dsnr.startOverVoiceAndTone",
+					"when": "resourceScheme == dsnr-voice && !activeEditorIsReadonly",
+					"group": "navigation@2"
 				}
 			],
 			"webview/context": [

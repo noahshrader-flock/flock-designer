@@ -1,5 +1,5 @@
-import type { Catalog } from '../extension/webview/DesignSystem';
-import type { CatalogComponent } from '../src/shared/domain/designSystem';
+import type { Catalog, CatalogComponent, DesignToken } from '../src/shared/domain/designSystem';
+import { undeclared } from '../src/shared/wcag';
 import type { Project, ProjectIteration } from '../src/shared/domain/projects';
 
 /**
@@ -38,18 +38,92 @@ export const SAMPLE_PROJECTS: Project[] = [
 	project('zone-coverage', 'Zone coverage', 'Maps', [iteration('v1-i1'), iteration('v1-i2')]),
 ];
 
-const component = (group: string, name: string): CatalogComponent => ({
+const component = (group: string, name: string, storybook: string | null = null): CatalogComponent => ({
 	id: `src/components/${name}/${name}.stories.tsx`,
 	name,
 	group,
 	subtitle: null,
-	storybook: null,
-	source: '',
+	storybook,
+	source: `https://github.com/flocksafety/flock-react-component-lib/tree/develop/src/components/${name}`,
 });
 
-export const SAMPLE_CATALOG: Catalog = {
+const token = (t: Partial<DesignToken> & Pick<DesignToken, 'path' | 'category' | 'group' | 'set' | 'name' | 'value'>): DesignToken => ({
+	kind: 'color',
+	source: { file: 'src/colors/theme/light.ts', line: 10 },
+	...t,
+});
+
+/** A design system's tokens, as its readers give them: a tone, a role pointing at it with its pair, a spacing and a radius. */
+export const SAMPLE_TOKENS: DesignToken[] = [
+	token({
+		path: 'palette.light.primary.main',
+		category: 'Color',
+		group: 'Light',
+		set: 'primary',
+		name: 'main',
+		value: '#1F6F5C',
+		ref: { path: 'tone.pineGreen.50' },
+	}),
+	token({ path: 'palette.light.primary.contrastText', category: 'Color', group: 'Light', set: 'primary', name: 'contrastText', value: '#FFFFFF' }),
+	token({
+		path: 'tone.pineGreen.50',
+		category: 'Color',
+		group: 'Tones',
+		set: 'pineGreen',
+		name: '50',
+		value: '#1F6F5C',
+		source: { file: 'src/colors/tones.ts', line: 3 },
+	}),
+	token({
+		path: 'tone.pineGreen.60',
+		category: 'Color',
+		group: 'Tones',
+		set: 'pineGreen',
+		name: '60',
+		value: '#15584A',
+		source: { file: 'src/colors/tones.ts', line: 4 },
+	}),
+	token({
+		path: 'spacing',
+		kind: 'dimension',
+		category: 'Spacing',
+		group: 'Spacing',
+		set: 'Spacing',
+		name: 'spacing',
+		value: '8px',
+		source: { file: 'src/theme.ts', line: 20 },
+	}),
+	token({
+		path: 'radius',
+		kind: 'dimension',
+		category: 'Shape',
+		group: 'Radius',
+		set: 'Radius',
+		name: 'radius',
+		value: '4px',
+		source: { file: 'src/theme.ts', line: 21 },
+	}),
+	token({
+		path: 'typography.fontFamily',
+		kind: 'font',
+		category: 'Typography',
+		group: 'Family',
+		set: 'Family',
+		name: 'fontFamily',
+		value: 'Inter',
+		source: { file: 'src/theme.ts', line: 30 },
+	}),
+];
+
+/** A design system's catalog as the core reads it: its components in groups, its tokens, on develop. */
+export const SAMPLE_CATALOG: Extract<Catalog, { state: 'ready' }> = {
+	state: 'ready',
+	branch: 'develop',
+	commit: 'abc123',
+	committedAt: '2026-10-12T10:00:00Z',
+	update: 'unchanged',
 	components: [
-		component('Buttons', 'FSButton'),
+		component('Buttons', 'FSButton', 'https://storybook.example/?path=/docs/buttons-fsbutton--docs'),
 		component('Buttons', 'FSIconButton'),
 		component('Buttons', 'FSSplitButton'),
 		component('Inputs', 'FSTextField'),
@@ -57,9 +131,6 @@ export const SAMPLE_CATALOG: Catalog = {
 		component('Feedback', 'FSAlert'),
 		component('Feedback', 'FSPulsingBadge'),
 	],
-	tokens: [
-		{ category: 'Color', count: 42, icon: 'symbol-color' },
-		{ category: 'Spacing', count: 9, icon: 'symbol-ruler' },
-		{ category: 'Shape', count: 4, icon: 'symbol-misc' },
-	],
+	tokens: { source: 'theme files', tokens: SAMPLE_TOKENS, problems: [], looked: ['theme files', 'CSS variables', 'design token files'] },
+	accessibility: undeclared('none declared'),
 };

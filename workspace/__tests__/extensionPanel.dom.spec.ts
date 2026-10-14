@@ -1,8 +1,9 @@
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Panel, PanelView, type PanelViewProps } from '../extension/webview/Panel';
+import { Panel } from '../extension/webview/Panel';
 import type { Context } from '../src/main/services/findContext';
+import type { Catalog, ComponentPictures } from '../src/shared/contract';
 import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
 
 /**
@@ -826,7 +827,7 @@ describe('the projects as a list or a grid', () => {
 		await showOpen();
 		await press(view('List'));
 		await press(options()[1]!);
-		expect(state).toEqual({ tab: 'design-system', view: 'list' });
+		expect(state).toEqual({ tab: 'design-system', view: 'list', part: 'components', componentsView: 'grid' });
 	});
 });
 
@@ -933,22 +934,32 @@ describe('Projects', () => {
 });
 
 describe('Design System', () => {
-	const open = async (context: Context = OPEN) => {
-		await showOpen(context);
+	/** The panel open on the Design System tab, with what the extension said is open. */
+	const open = async (context: Context = OPEN, unreadable?: string) => {
+		await show();
+		await say({ type: 'context', context, ...(unreadable ? { unreadable } : {}) });
+		if (context.product) await answer('listProjects', SAMPLE_PROJECTS);
 		await press(options()[1]!);
 	};
-	const headers = () => [...body().querySelectorAll<HTMLElement>('.section-header')];
-
-	it('says which design system was found and how, and that its components and tokens come later', async () => {
+	/** …and the design system read: its name, its catalog, and its components' pictures. */
+	const read = async (catalog: Catalog = SAMPLE_CATALOG, pictures: Partial<ComponentPictures> = {}) => {
 		await open();
-		expect(headers().map((h) => h.querySelector('[data-part="title"]')?.textContent)).toEqual(['Design system']);
-		const row = body().querySelector('[role="listitem"]') as HTMLElement;
-		expect([row.querySelector('[data-part="name"]')?.textContent, row.querySelector('[data-part="meta"]')?.textContent]).toEqual([
-			'flock-react-component-lib',
-			'Named by the product',
-		]);
-		expect(body().querySelector('.note')?.textContent).toBe('Its components and tokens come to DSNR in VS Code in a later update.');
-	});
+		await answer('designSystems', {
+			systems: [{ id: 'flocksafety/flock-react-component-lib', name: 'FUI' }],
+			current: 'flocksafety/flock-react-component-lib',
+		});
+		await answer('designSystemCatalog', catalog);
+		if (catalog.state === 'ready' && sent.some((m) => m.name === 'componentPictures'))
+			await answer('componentPictures', { drawing: false, pictures: {}, issues: {}, ...pictures });
+	};
+	const headers = () => [...body().querySelectorAll<HTMLElement>('.section-header')];
+	const titles = () =>
+		headers().map((h) => [h.querySelector('[data-part="title"]')?.textContent, h.querySelector('[data-part="count"]')?.textContent ?? null]);
+	const section = (name: string) => headers().find((h) => h.querySelector('[data-part="title"]')?.textContent === name) as HTMLElement;
+	const under = (header: HTMLElement) => document.getElementById(header.getAttribute('aria-controls') ?? '') as HTMLElement;
+	const namesUnder = (header: HTMLElement) => [...under(header).querySelectorAll('[data-part="name"]')].map((n) => n.textContent);
+	const parts = () => document.querySelector('[aria-label="Part"]') as HTMLElement;
+	const calls = (name: string) => sent.filter((m) => m.type === 'call' && m.name === name);
 
 	it('says, when there is none, what DSNR looked for and where, and offers to locate it', async () => {
 		await open({ ...OPEN, designSystem: null });
@@ -956,62 +967,270 @@ describe('Design System', () => {
 		expect(body().textContent).toContain('DSNR looks in the folders open in this window');
 		await press(button('Locate design system…'));
 		expect(panelSaid().at(-1)).toEqual({ type: 'locate-design-system' });
+		expect(calls('designSystemCatalog')).toEqual([]);
 	});
-});
 
-describe('a design system’s catalog, once it is read', () => {
-	const view = (more: Partial<PanelViewProps> = {}) =>
-		mount(
-			createElement(PanelView, {
-				tab: 'design-system',
-				onTab: () => undefined,
-				account: { state: 'signedOut' },
-				context: OPEN,
-				projects: { value: [], error: null },
-				onOpen: () => undefined,
-				onOpenInBrowser: () => undefined,
-				onNew: () => undefined,
-				onGetStarted: () => undefined,
-				onDialog: () => undefined,
-				onCodebase: () => undefined,
-				view: 'list',
-				onView: () => undefined,
-				onLocate: () => undefined,
-				catalog: SAMPLE_CATALOG,
-				...more,
-			}),
-		);
-	const headers = () => [...body().querySelectorAll<HTMLElement>('.section-header')];
-	const section = (name: string) => headers().find((h) => h.querySelector('[data-part="title"]')?.textContent === name) as HTMLElement;
-	const rowsUnder = (header: HTMLElement) =>
-		[...(document.getElementById(header.getAttribute('aria-controls') ?? '')?.querySelectorAll('[data-part="name"]') ?? [])].map(
-			(n) => n.textContent,
-		);
+	it('says why the one found cannot be read, reads nothing, and offers to locate another', async () => {
+		await open(OPEN, '/work/plain is not a git repository.');
+		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('The design system cannot be read');
+		expect(body().textContent).toContain('/work/plain is not a git repository.');
+		expect(calls('designSystemCatalog')).toEqual([]);
+	});
 
-	it('groups the components under a header each, with how many, and the tokens last', async () => {
-		await view();
-		expect(
-			headers().map((h) => [h.querySelector('[data-part="title"]')?.textContent, h.querySelector('[data-part="count"]')?.textContent ?? null]),
-		).toEqual([
-			['Design system', null],
+	it('is read once its tab is shown, at once from what its clone has, then again once GitHub has been asked', async () => {
+		await open();
+		expect(body().textContent).toBe('Reading the design system…');
+		expect(calls('designSystemCatalog').map((c) => c.args)).toEqual([[false]]);
+		await answer('designSystemCatalog', { ...SAMPLE_CATALOG, update: 'updating' });
+		expect(calls('designSystemCatalog').map((c) => c.args)).toEqual([[false], [true]]);
+	});
+
+	it('names the design system and its branch, with Sync and its menu, and starts on its components', async () => {
+		await read();
+		expect(body().querySelector('.ds-name')?.textContent).toBe('FUI');
+		expect(body().querySelector('.ds-branch')?.textContent).toBe('develop');
+		expect([...parts().querySelectorAll('[role="radio"]')].map((o) => [o.textContent, o.getAttribute('aria-checked')])).toEqual([
+			['Components', 'true'],
+			['Tokens', 'false'],
+		]);
+		await press(body().querySelector('[aria-label="Sync with GitHub"]') as HTMLElement);
+		expect(calls('designSystemCatalog').at(-1)?.args).toEqual([true]);
+		// Its menu opens what needs the editor's room: Primitives, and the voice and tone, a document of its own.
+		await press(body().querySelector('[aria-label="Design system actions"]') as HTMLElement);
+		const items = [...body().querySelectorAll<HTMLElement>('.ds-actions [role="menuitem"]')];
+		expect(items.map((i) => i.textContent)).toEqual(['Open Primitives', 'Open Voice and Tone']);
+		await press(items[1]!);
+		expect(panelSaid().at(-1)).toEqual({ type: 'open-voice-and-tone' });
+	});
+
+	it('lists its components under their groups, as cards with their pictures, the first view, and what axe found', async () => {
+		const picture = 'http://127.0.0.1:4321/pictures/fsbutton.jpg';
+		await read(SAMPLE_CATALOG, {
+			pictures: { 'src/components/FSButton/FSButton.stories.tsx': picture },
+			issues: { 'src/components/FSAlert/FSAlert.stories.tsx': { violations: 2, incomplete: 1 } },
+		});
+		expect(titles()).toEqual([
 			['Buttons', '3'],
 			['Inputs', '2'],
 			['Feedback', '2'],
-			['Tokens', '3'],
 		]);
-		expect(rowsUnder(section('Buttons'))).toEqual(['FSButton', 'FSIconButton', 'FSSplitButton']);
-		expect(rowsUnder(section('Tokens'))).toEqual(['Color', 'Spacing', 'Shape']);
+		expect(namesUnder(section('Buttons'))).toEqual(['FSButton', 'FSIconButton', 'FSSplitButton']);
+		expect(under(section('Buttons')).firstElementChild?.className).toBe('grid');
+		expect(under(section('Buttons')).querySelector('img')?.getAttribute('src')).toBe(picture);
+		expect(under(section('Feedback')).querySelector('.badge')?.getAttribute('aria-label')).toBe('2 automated issues, 1 needs a person');
 	});
 
-	it('closes and opens a section from its header, and says which it is', async () => {
-		await view();
-		const buttons = section('Buttons');
-		expect(buttons.getAttribute('aria-expanded')).toBe('true');
-		await press(buttons);
-		expect(buttons.getAttribute('aria-expanded')).toBe('false');
-		expect(document.getElementById(buttons.getAttribute('aria-controls') ?? '')?.hidden).toBe(true);
-		expect(buttons.querySelector('.codicon')?.className).toBe('codicon codicon-chevron-right');
-		await press(buttons);
-		expect(buttons.getAttribute('aria-expanded')).toBe('true');
+	it('opens a component in its own tab when pressed, and its links from its menu, naming it only', async () => {
+		await read();
+		const card = [...body().querySelectorAll<HTMLElement>('.card-item')].find((c) => c.textContent?.includes('FSButton')) as HTMLElement;
+		await press(card.querySelector('.card') as HTMLElement);
+		expect(panelSaid().at(-1)).toEqual({ type: 'open-component', id: 'src/components/FSButton/FSButton.stories.tsx' });
+		await press(card.querySelector('.menu-button') as HTMLElement);
+		expect([...card.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Open', 'Open in Storybook', 'Source on GitHub']);
+		await press([...card.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((i) => i.textContent === 'Open in Storybook')!);
+		expect(panelSaid().at(-1)).toEqual({ type: 'component-link', id: 'src/components/FSButton/FSButton.stories.tsx', link: 'storybook' });
+		// One with no hosted Storybook offers none.
+		const other = [...body().querySelectorAll<HTMLElement>('.card-item')].find((c) => c.textContent?.includes('FSSelect')) as HTMLElement;
+		await press(other.querySelector('.menu-button') as HTMLElement);
+		expect([...other.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Open', 'Source on GitHub']);
+	});
+
+	it('finds components by the search, says when none matches, and is a list when chosen', async () => {
+		await read();
+		const search = body().querySelector('input[aria-label="Search components"]') as HTMLInputElement;
+		await act(async () => {
+			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, 'select');
+			search.dispatchEvent(new Event('input', { bubbles: true }));
+		});
+		expect(titles()).toEqual([['Inputs', '1']]);
+		await press(
+			[...body().querySelectorAll<HTMLElement>('[aria-label="Layout"] [role="radio"]')].find((o) => o.getAttribute('aria-label') === 'List')!,
+		);
+		expect(under(section('Inputs')).firstElementChild?.className).toBe('list');
+		await act(async () => {
+			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, 'nothing like it');
+			search.dispatchEvent(new Event('input', { bubbles: true }));
+		});
+		expect(body().querySelector('.note')?.textContent).toContain('No component matches “nothing like it”.');
+	});
+
+	it('shows its tokens by primitive, each with its swatch, what it points at, its pair’s contrast and its value', async () => {
+		await read();
+		await press([...parts().querySelectorAll<HTMLElement>('[role="radio"]')][1]!);
+		expect(titles()).toEqual([
+			['Color', '4'],
+			['Typography', '1'],
+			['Spacing', '1'],
+			['Shape', '1'],
+		]);
+		const main = body().querySelector('[data-token="palette.light.primary.main"]') as HTMLElement;
+		expect(main.querySelector('[data-swatch]')).not.toBeNull();
+		expect(main.querySelector('[data-part="ref"]')?.textContent).toBe('pineGreen 50');
+		expect(main.querySelector('[data-contrast]')?.textContent).toMatch(/^\d+(\.\d+)?:1$/);
+		expect(main.querySelector('[data-part="value"]')?.textContent).toBe('#1F6F5C');
+		expect(main.title).toBe('src/colors/theme/light.ts:10');
+		// Its file, at its line, in the editor.
+		await press(main.querySelector('[aria-label="Open src/colors/theme/light.ts:10"]') as HTMLElement);
+		expect(panelSaid().at(-1)).toEqual({ type: 'open-token-source', file: 'src/colors/theme/light.ts', line: 10 });
+		// Primitives, in its own tab.
+		await press(button('See them drawn in Primitives'));
+		expect(panelSaid().at(-1)).toEqual({ type: 'open-primitives' });
+	});
+
+	it('shows the tokens as the change the extension keeps changes them, marked', async () => {
+		await read();
+		await press([...parts().querySelectorAll<HTMLElement>('[role="radio"]')][1]!);
+		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.50', value: '#000000' }] });
+		const step = body().querySelector('[data-token="tone.pineGreen.50"]') as HTMLElement;
+		expect(step.dataset.changed).toBe('true');
+		expect(step.querySelector('[data-part="value"]')?.textContent).toBe('#000000');
+		// The role pointing at it reads as changed too.
+		expect(body().querySelector('[data-token="palette.light.primary.main"] [data-part="value"]')?.textContent).toBe('#000000');
+	});
+
+	it('says an update that failed, and what its token files have that is not read, in a dialog', async () => {
+		await read({
+			...SAMPLE_CATALOG,
+			update: { failed: 'Could not reach GitHub.' },
+			tokens: { ...SAMPLE_CATALOG.tokens, problems: [{ file: 'src/colors/tones.ts', line: 9, reason: 'A value worked out as it runs.' }] },
+		});
+		expect(body().querySelector('[data-update-failed]')?.textContent).toContain('Could not update from GitHub: Could not reach GitHub.');
+		await press(button('1 value in its token files is not read'));
+		const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+		expect(dialog.textContent).toContain('src/colors/tones.ts:9 A value worked out as it runs.');
+	});
+
+	it('says why a clone with no copy of its branch cannot be read, with a way to try again', async () => {
+		await read({ state: 'no-branch', root: '/work/flock-react-component-lib', branch: 'develop' });
+		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('This clone has no develop branch');
+		await press(button('Try again'));
+		expect(calls('designSystemCatalog').at(-1)?.args).toEqual([true]);
+	});
+});
+
+describe('trying a change to the tokens, saving it to a branch, and proposing it (6.2)', () => {
+	const ID = 'flocksafety/flock-react-component-lib';
+	const tokensOpen = async () => {
+		await show();
+		await say({ type: 'context', context: OPEN });
+		await answer('listProjects', SAMPLE_PROJECTS);
+		await press(options()[1]!);
+		await answer('designSystems', { systems: [{ id: ID, name: 'FUI' }], current: ID });
+		await answer('designSystemCatalog', SAMPLE_CATALOG);
+		await answer('tokenBranch', null);
+		await press([...document.querySelectorAll<HTMLElement>('[aria-label="Part"] [role="radio"]')][1]!);
+	};
+	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement;
+	const edited = () =>
+		panelSaid()
+			.filter((m) => m.type === 'token-edits')
+			.at(-1)?.edits;
+	const enter = async (input: HTMLInputElement, value: string) =>
+		act(async () => {
+			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value);
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+		});
+
+	it('opens a role’s control: what it points at, and its tone’s steps to point it at another, which keeps the link', async () => {
+		await tokensOpen();
+		await press(document.querySelector('[aria-label="Change Light primary main"]') as HTMLElement);
+		expect(dialog().getAttribute('aria-label')).toBe('Light · primary.main');
+		expect(dialog().querySelector('[data-reference]')?.textContent).toBe('primary.main → pineGreen 50');
+		const steps = [...dialog().querySelectorAll<HTMLElement>('[aria-label="Steps of pineGreen"] [role="radio"]')];
+		expect(steps.map((s) => [s.textContent, s.getAttribute('aria-checked')])).toEqual([
+			['50', 'true'],
+			['60', 'false'],
+		]);
+		expect(dialog().querySelector('[data-editor-contrast]')?.textContent).toMatch(/^Contrast with contrastText: \d/);
+		await press(steps[1]!);
+		expect(edited()).toEqual([{ path: 'palette.light.primary.main', ref: 'tone.pineGreen.60' }]);
+	});
+
+	it('gives a color of its own a picker and its hex, applied when entered; a length a slider, applied when let go', async () => {
+		await tokensOpen();
+		await press(document.querySelector('[aria-label="Change Tones pineGreen 60"]') as HTMLElement);
+		const hex = dialog().querySelector('input[aria-label="Hex"]') as HTMLInputElement;
+		await enter(hex, '#00aa00');
+		await act(async () => void hex.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+		expect(edited()).toEqual([{ path: 'tone.pineGreen.60', value: '#00AA00' }]);
+		await press(button('Done'));
+		expect(document.querySelector('[role="dialog"]')).toBeNull();
+		await press(document.querySelector('[aria-label="Change Spacing spacing"]') as HTMLElement);
+		const slider = dialog().querySelector('input[type="range"]') as HTMLInputElement;
+		await enter(slider, '12');
+		await act(async () => void slider.dispatchEvent(new Event('pointerup', { bubbles: true })));
+		// A change is every token changed: this one joins the first.
+		expect(edited()).toEqual([
+			{ path: 'tone.pineGreen.60', value: '#00AA00' },
+			{ path: 'spacing', value: '12px' },
+		]);
+	});
+
+	it('changes only what can be changed here: a font is shown, with nothing to press', async () => {
+		await tokensOpen();
+		const font = document.querySelector('[data-token="typography.fontFamily"]') as HTMLElement;
+		expect(font.querySelector('button.token-button')).toBeNull();
+		expect(font.querySelector('[data-part="value"]')?.textContent).toBe('Inter');
+	});
+
+	it('lists what has been changed, from what it was to what it is, with a reset for each and for all', async () => {
+		await tokensOpen();
+		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.60', value: '#000000' }] });
+		const changed = document.querySelector('[data-changed-tokens]') as HTMLElement;
+		expect(changed.querySelector('.changed-title')?.textContent).toBe('Changed 1');
+		expect(changed.querySelector('[data-change="tone.pineGreen.60"] .change-values')?.textContent).toBe('#15584A → #000000');
+		await press(changed.querySelector('[aria-label="Reset Tones pineGreen 60"]') as HTMLElement);
+		expect(edited()).toEqual([]);
+		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.60', value: '#000000' }] });
+		await press(button('Reset all'));
+		expect(edited()).toEqual([]);
+	});
+
+	it('saves the change to a branch, proposes it as a draft pull request, and starts over, as the core does them', async () => {
+		await tokensOpen();
+		const edits = [{ path: 'tone.pineGreen.60', value: '#000000' }];
+		await say({ type: 'token-edits', edits });
+		await press(button('Save to a branch'));
+		expect(sent.filter((m) => m.name === 'saveTokens').at(-1)?.args).toEqual([edits]);
+		await answer('saveTokens', { branch: 'dsnr/tokens-1012-abc123', saved: edits, saves: 1, pullRequest: null });
+		const actions = document.querySelector('[data-branch-actions]') as HTMLElement;
+		expect(actions.querySelector('.branch-line')?.textContent).toBe('dsnr/tokens-1012-abc123 · 1 save');
+		expect(button('Save to a branch')).toBeUndefined();
+		await press(button('Propose'));
+		expect(sent.some((m) => m.name === 'proposeTokens')).toBe(true);
+		await answer('proposeTokens', {
+			branch: 'dsnr/tokens-1012-abc123',
+			saved: edits,
+			saves: 1,
+			pullRequest: { number: 12, url: 'https://github.com/flocksafety/flock-react-component-lib/pull/12', chromatic: null },
+		});
+		const link = [...document.querySelectorAll('a')].find((a) => a.textContent === 'Draft pull request #12');
+		expect(link?.getAttribute('href')).toBe('https://github.com/flocksafety/flock-react-component-lib/pull/12');
+		await press(button('Start over'));
+		await answer('forgetTokenBranch', null);
+		expect(edited()).toEqual([]);
+		expect(document.querySelector('[data-changed-tokens]')).toBeNull();
+	});
+
+	it('says why a save failed, and keeps the change', async () => {
+		await tokensOpen();
+		await say({ type: 'token-edits', edits: [{ path: 'spacing', value: '12px' }] });
+		await press(button('Save to a branch'));
+		const call = sent.filter((m) => m.name === 'saveTokens').at(-1);
+		await say({ type: 'answer', id: call?.id, result: { ok: false, error: 'git is not signed in to GitHub.' } });
+		expect(document.querySelector('[data-branch-actions] [role="alert"]')?.textContent).toBe('git is not signed in to GitHub.');
+		expect(document.querySelector('[data-changed-tokens] .changed-title')?.textContent).toBe('Changed 1');
+	});
+
+	it('puts back a change saved before DSNR was last closed, when none is being tried', async () => {
+		await show();
+		await say({ type: 'context', context: OPEN });
+		await answer('listProjects', SAMPLE_PROJECTS);
+		await press(options()[1]!);
+		await answer('designSystems', { systems: [{ id: ID, name: 'FUI' }], current: ID });
+		await answer('designSystemCatalog', SAMPLE_CATALOG);
+		const saved = [{ path: 'radius', value: '8px' }];
+		await answer('tokenBranch', { branch: 'dsnr/tokens-1012-abc123', saved, saves: 2, pullRequest: null });
+		expect(edited()).toEqual(saved);
 	});
 });

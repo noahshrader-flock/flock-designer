@@ -43,6 +43,23 @@ describe('the extension’s manifest', () => {
 		expect([...svg.matchAll(/(?:fill|stroke)="([^"]+)"/g)].map((m) => m[1]).filter((c) => c !== 'none' && c !== 'currentColor')).toEqual([]);
 	});
 
+	it('starts when a voice and tone tab is opened again, as VS Code restores one: its file system is DSNR’s', () => {
+		expect((manifest() as { activationEvents?: string[] }).activationEvents).toEqual(['onFileSystem:dsnr-voice']);
+	});
+
+	it('puts Propose and Start over in the voice and tone’s own title bar, and only there', () => {
+		const { menus } = manifest().contributes;
+		const voice = 'resourceScheme == dsnr-voice && !activeEditorIsReadonly';
+		expect(menus['editor/title']?.filter((m) => m.when === voice).map((m) => m.command)).toEqual([
+			'dsnr.proposeVoiceAndTone',
+			'dsnr.startOverVoiceAndTone',
+		]);
+		expect(menus.commandPalette?.filter((m) => m.when === voice).map((m) => m.command)).toEqual([
+			'dsnr.proposeVoiceAndTone',
+			'dsnr.startOverVoiceAndTone',
+		]);
+	});
+
 	it('has one view in it, a webview: without that type VS Code draws a static placeholder', () => {
 		expect(manifest().contributes.views).toEqual({ dsnr: [{ type: 'webview', id: 'dsnr.panel', name: 'DSNR' }] });
 	});
@@ -57,6 +74,11 @@ describe('the extension’s manifest', () => {
 			'DSNR: Copy the published page’s link',
 			'DSNR: Assign folder…',
 			'DSNR: Build in the codebase…',
+			'DSNR: Open a component…',
+			'DSNR: Open Primitives',
+			'DSNR: Open Voice and Tone',
+			'DSNR: Propose the voice and tone',
+			'DSNR: Start over on the voice and tone',
 			'DSNR: Sync your work',
 			'DSNR: Sign in to GitHub',
 			'DSNR: Your GitHub account',
@@ -97,7 +119,7 @@ describe('the extension’s manifest', () => {
 		const { commands, menus } = manifest().contributes;
 		const icon = (id: string) => commands.find((c) => c.command === id)?.icon;
 		const inReview = "activeWebviewPanelId == 'dsnr.review'";
-		expect(menus['editor/title']?.filter((m) => m.group?.startsWith('navigation'))).toEqual([
+		expect(menus['editor/title']?.filter((m) => m.group?.startsWith('navigation') && m.when === inReview)).toEqual([
 			{ command: 'dsnr.openPublishedPage', when: inReview, group: 'navigation@1' },
 			{ command: 'dsnr.copyPublishedLink', when: inReview, group: 'navigation@2' },
 		]);

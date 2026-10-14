@@ -708,3 +708,718 @@ textarea.input {
 .comment-text {
 	white-space: pre-wrap;
 }
+
+/*
+ * The Design System tab (6.1, 6.2): the design system's own row, its parts, and its tokens as rows, a swatch at the start
+ * and the value at the end, as the app's tokens panel draws them.
+ */
+.ds-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 6px 4px 12px;
+}
+
+.ds-title {
+	display: flex;
+	flex: 1;
+	align-items: baseline;
+	gap: 8px;
+	min-width: 0;
+}
+
+.ds-name {
+	overflow: hidden;
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ds-branch {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: 2px;
+	color: var(--dsnr-muted);
+	font-size: 0.92em;
+}
+
+.ds-actions {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: 2px;
+}
+
+/* In the design system's own row its menu is always there, not only on hover as a row's is. */
+.ds-actions .menu-button {
+	opacity: 1;
+}
+
+.ds-part {
+	padding: 4px 12px 8px;
+}
+
+.note-warning .codicon {
+	color: var(--vscode-editorWarning-foreground);
+	vertical-align: text-bottom;
+}
+
+/* A button that is an icon alone, as VS Code's toolbars draw one. */
+.icon-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: var(--dsnr-radius-inner);
+	color: var(--vscode-foreground);
+	background: transparent;
+	cursor: pointer;
+}
+
+.icon-button:hover:not(:disabled) {
+	background: var(--vscode-toolbar-hoverBackground);
+}
+
+.icon-button:focus-visible {
+	outline: var(--dsnr-focus);
+	outline-offset: -1px;
+}
+
+.icon-button:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.swatch {
+	display: block;
+	flex-shrink: 0;
+	width: 14px;
+	height: 14px;
+	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius-small);
+	box-sizing: border-box;
+}
+
+.swatch-wide {
+	width: 100%;
+	height: 40px;
+	border-radius: var(--dsnr-radius-inner);
+}
+
+.token-body {
+	padding: 0 0 4px 28px;
+}
+
+.token-group-name {
+	margin: 8px 0 2px;
+	color: var(--dsnr-muted);
+	font-size: 0.92em;
+	font-weight: 600;
+}
+
+.token-set-name {
+	margin: 6px 0 0;
+	font-size: 1em;
+	font-weight: 600;
+}
+
+.tokens {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.token {
+	position: relative;
+}
+
+.token-line {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: 100%;
+	min-height: 22px;
+	padding: 0 34px 0 4px;
+	box-sizing: border-box;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+}
+
+.token-button {
+	border: none;
+	border-radius: var(--dsnr-radius-inner);
+	background: transparent;
+	cursor: pointer;
+}
+
+.token-button:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.token-button:focus-visible {
+	outline: var(--dsnr-focus);
+	outline-offset: -1px;
+}
+
+.token-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.token[data-changed] .token-name {
+	font-weight: 600;
+}
+
+.token-ref,
+.token-contrast,
+.token-uses {
+	flex-shrink: 0;
+	color: var(--dsnr-muted);
+	font-size: 0.92em;
+}
+
+.token-ref {
+	flex-shrink: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.token-contrast-low,
+.warning-text {
+	color: var(--vscode-editorWarning-foreground);
+}
+
+.token-value {
+	flex-shrink: 0;
+	margin-left: auto;
+	color: var(--dsnr-muted);
+	font-family: var(--vscode-editor-font-family);
+	font-size: 0.92em;
+}
+
+.token-uses {
+	margin-left: 8px;
+}
+
+/* A changed token's mark: a dot in the theme's own modified colour, as VS Code marks a changed file. */
+.token-changed {
+	flex-shrink: 0;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--vscode-gitDecoration-modifiedResourceForeground, var(--vscode-focusBorder));
+}
+
+.token .item-actions {
+	top: 11px;
+	right: 4px;
+	opacity: 0;
+}
+
+.token:hover .item-actions,
+.token .item-actions:focus-within {
+	opacity: 1;
+}
+
+.token-note {
+	padding: 0 4px 4px 24px;
+	color: var(--dsnr-muted);
+	font-size: 0.92em;
+}
+
+.problem-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	max-height: 50vh;
+	margin: 0 0 8px;
+	padding: 0;
+	overflow-y: auto;
+	list-style: none;
+}
+
+/*
+ * A design system's tab in the editor (a component, Primitives): the editor's own colours, its content in a column with
+ * room at the sides, as VS Code's own editors that are pages (Settings, an extension's details) have.
+ */
+.tab {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	max-width: 1200px;
+	padding: 16px 24px 32px;
+	color: var(--vscode-editor-foreground);
+}
+
+.tab-note {
+	padding: 16px 24px;
+	color: var(--dsnr-muted);
+}
+
+.tab-header {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+}
+
+.tab-heading {
+	flex: 1;
+	min-width: 0;
+}
+
+.tab-title {
+	margin: 0;
+	font-size: 1.6em;
+	font-weight: 600;
+}
+
+.tab-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.tab-actions .button {
+	width: auto;
+}
+
+.quiet {
+	margin: 0;
+	color: var(--dsnr-muted);
+	line-height: 1.4;
+}
+
+.notice {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 8px 12px;
+	border: 1px solid var(--vscode-inputValidation-warningBorder, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius);
+	background: var(--vscode-inputValidation-warningBackground, transparent);
+}
+
+.notice p {
+	margin: 0;
+}
+
+.notice .button {
+	width: auto;
+	align-self: flex-start;
+}
+
+.notice-title {
+	font-weight: 600;
+}
+
+/* A component's stories beside what it is made from, when there is room for both; one under the other when not. */
+.component-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 24px;
+}
+
+@media (min-width: 900px) {
+	.component-layout {
+		grid-template-columns: minmax(0, 1fr) 340px;
+	}
+}
+
+.component-stories {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+}
+
+.stories {
+	position: relative;
+	overflow: hidden;
+	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius-large);
+}
+
+.story-frame {
+	display: block;
+	width: 100%;
+	border: 0;
+}
+
+.stories-building {
+	position: absolute;
+	top: 12px;
+	left: 50%;
+	margin: 0;
+	padding: 2px 8px;
+	border-radius: var(--dsnr-radius);
+	color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+	background: var(--vscode-editorWidget-background);
+	transform: translateX(-50%);
+}
+
+.component-aside {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	min-width: 0;
+}
+
+.aside-section {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.aside-title {
+	margin: 0;
+	font-size: 1.1em;
+	font-weight: 600;
+}
+
+.issues-title {
+	margin: 8px 0 2px;
+	font-weight: 600;
+}
+
+.issue-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.issue {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 6px 0;
+	border-bottom: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+}
+
+.issue-meta {
+	color: var(--dsnr-muted);
+	font-size: 0.92em;
+}
+
+.tab a {
+	color: var(--vscode-textLink-foreground);
+}
+
+/* Primitives: a chip for each at the top, then each drawn as the vocabulary says. */
+.chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.chip {
+	padding: 2px 10px;
+	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	border-radius: 12px;
+	color: var(--vscode-badge-foreground);
+	background: var(--vscode-badge-background);
+	font: inherit;
+	cursor: pointer;
+}
+
+.chip-undefined {
+	color: var(--dsnr-muted);
+	background: transparent;
+}
+
+.chip:focus-visible {
+	outline: var(--dsnr-focus);
+	outline-offset: 1px;
+}
+
+.primitive {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding-top: 20px;
+	border-top: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	scroll-margin-top: 16px;
+}
+
+.primitive-title {
+	margin: 0;
+	font-size: 1.2em;
+	font-weight: 600;
+}
+
+.drawn-sets,
+.drawn-group {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.drawn-set {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.drawn-swatches,
+.drawn-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+}
+
+.drawn-swatch {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	width: 112px;
+}
+
+.drawn-item {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.drawn-item-wide {
+	width: 160px;
+}
+
+.drawn-name {
+	font-size: 0.92em;
+	font-weight: 600;
+}
+
+.drawn-value {
+	color: var(--dsnr-muted);
+	font-family: var(--vscode-editor-font-family);
+	font-size: 0.92em;
+	overflow-wrap: anywhere;
+}
+
+.drawn-bars {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.drawn-bar-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.drawn-bar-name {
+	flex-shrink: 0;
+	width: 128px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.drawn-bar {
+	height: 12px;
+	border-radius: var(--dsnr-radius-small);
+	background: var(--vscode-progressBar-background);
+}
+
+.drawn-corner {
+	width: 64px;
+	height: 64px;
+	border: 1px solid var(--vscode-widget-border, var(--vscode-foreground));
+	background: var(--vscode-editorWidget-background);
+}
+
+.drawn-shadow {
+	height: 80px;
+	border-radius: var(--dsnr-radius-large);
+	background: var(--vscode-editorWidget-background);
+}
+
+.drawn-table {
+	width: 100%;
+	max-width: 560px;
+	border-collapse: collapse;
+}
+
+.drawn-table th {
+	color: var(--dsnr-muted);
+	font-weight: 600;
+	text-align: start;
+}
+
+.drawn-table td,
+.drawn-table th {
+	padding: 4px 0;
+	border-bottom: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+}
+
+.drawn-table td:last-child,
+.drawn-table th:last-child {
+	text-align: end;
+}
+
+.not-defined {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* A token's control (6.2), in a dialog: a picker and its hex, a slider, a tone's steps as swatches to choose from. */
+.token-editor {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin-bottom: 8px;
+}
+
+.token-source {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	overflow-wrap: anywhere;
+}
+
+.color-field,
+.dimension-field {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.color-picker {
+	flex-shrink: 0;
+	width: 28px;
+	height: 26px;
+	padding: 0;
+	border: 1px solid var(--vscode-input-border, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius-small);
+	background: transparent;
+	cursor: pointer;
+}
+
+.token-hex {
+	font-family: var(--vscode-editor-font-family);
+}
+
+.dimension-field input[type='range'] {
+	flex: 1;
+	accent-color: var(--vscode-button-background);
+}
+
+.steps {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.step {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	width: 38px;
+	padding: 3px 0;
+	border: 1px solid transparent;
+	border-radius: var(--dsnr-radius-inner);
+	color: inherit;
+	background: transparent;
+	font: inherit;
+	font-size: 0.85em;
+	cursor: pointer;
+}
+
+.step .swatch {
+	width: 22px;
+	height: 22px;
+}
+
+.step:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.step[aria-checked='true'] {
+	border-color: var(--vscode-focusBorder);
+}
+
+.step:focus-visible {
+	outline: var(--dsnr-focus);
+	outline-offset: -1px;
+}
+
+/* What has been changed, at the top of the tab, and what can be done with it. */
+.changed {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin: 0 12px 8px;
+	padding: 8px;
+	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius);
+	background: var(--vscode-editorWidget-background);
+}
+
+.changed-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.changed-title {
+	font-weight: 600;
+}
+
+.changed .token .item-actions {
+	opacity: 1;
+}
+
+.branch-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.branch-line {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 8px;
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+.branch-line a {
+	color: var(--vscode-textLink-foreground);
+}
+
+.branch-buttons {
+	display: flex;
+	gap: 8px;
+}
+
+.branch-buttons .button {
+	width: auto;
+}
+
+.token-editor .link {
+	align-self: flex-start;
+}
+
+.change-values {
+	display: block;
+	padding: 0 34px 2px 24px;
+	color: var(--dsnr-muted);
+	font-family: var(--vscode-editor-font-family);
+	font-size: 0.92em;
+	overflow-wrap: anywhere;
+}

@@ -39,6 +39,8 @@ exports.run = async () => {
 		'dsnr.copyPublishedLink',
 		'dsnr.assignFolder',
 		'dsnr.buildInCodebase',
+		'dsnr.openComponent',
+		'dsnr.openPrimitives',
 		'dsnr.sync',
 		'dsnr.signIn',
 		'dsnr.account',
@@ -64,5 +66,21 @@ exports.run = async () => {
 	await vscode.commands.executeCommand('dsnr.newPrototype');
 	await vscode.commands.executeCommand('dsnr.assignFolder', { webviewSection: 'project', projectId: 'made-here' });
 
-	console.log('dsnr-test: activated; its commands are there; Fixture · V1 · I1 opened for review; Made here was started, built, opened and pictured');
+	// The design system (6.1), when the world has one: found beside the product, read from its develop, a component opened
+	// in its own tab and Primitives in another, and its components pictured by the browser here, in DSNR's own storage.
+	let designSystem = '';
+	if (process.env.DSNR_TEST_DESIGN_SYSTEM) {
+		await vscode.commands.executeCommand('dsnr.openComponent', { id: 'src/components/FSButton/FSButton.stories.tsx' });
+		await until('FSButton opening in its own tab', () => tabs().includes('FSButton'), 30000);
+		await vscode.commands.executeCommand('dsnr.openPrimitives');
+		await until('Primitives opening in its own tab', () => tabs().includes('Primitives'));
+		const pictures = path.join(process.env.DSNR_TEST_PROFILE, 'User/globalStorage/flocksafety.dsnr/component-pictures');
+		const drawn = () => (fs.existsSync(pictures) ? fs.readdirSync(pictures, { recursive: true }).filter((f) => String(f).endsWith('.jpg')) : []);
+		await until('its components being pictured', () => drawn().length >= 10, 150000);
+		designSystem = `; FUI was read, FSButton and Primitives opened in their tabs, and ${drawn().length} components pictured`;
+	}
+
+	console.log(
+		`dsnr-test: activated; its commands are there; Fixture · V1 · I1 opened for review; Made here was started, built, opened and pictured${designSystem}`,
+	);
 };

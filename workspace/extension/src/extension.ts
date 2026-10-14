@@ -4,14 +4,18 @@ import { served } from '../../src/main/handle';
 import { type Context, findContext } from '../../src/main/services/findContext';
 import type { PublishStatus, SignInState, WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
+import { HOST } from '../../src/shared/vocabulary';
+import { tokenEditsOf } from '../../src/main/services/tokenEdits';
 import { addressComment } from './address';
 import { Panels, hostApi } from './bridge';
 import { handOff, openCode, previewCodebase, shareCodebase } from './codebase';
 import { startCore } from './core';
-import { showFound } from './designSystem';
-import { type CodebaseAction, type HostMessage, type Review, readProjectArg, readReview, reviewsOf } from './messages';
+import { TokenTrial, componentLink, componentOf, showFound, tokenFileIn } from './designSystem';
+import { DesignTabs } from './designTabs';
+import { COMPARE, KEEP_MINE, THEIRS_PATH, USE_THEIRS, VOICE_PATH, VOICE_SCHEME, VoiceDocument, voiceFileSystem } from './voice';
+import { type CodebaseAction, type HostMessage, type Review, readComponentArg, readMessage, readProjectArg, readReview, reviewsOf } from './messages';
 import { type Given, newPrototype, readGiven, readyToStart } from './newPrototype';
-import { PanelProvider } from './panel';
+import { type DesignSystemAsks, PanelProvider, answerPage, dsnrPage } from './panel';
 import { publishedLink, syncItem, syncPicks } from './publishing';
 import { Reviews, answerReview, buildReviewSite, siteIn } from './review';
 import { AgentLog, SyncStatus, failed, failedFor, vscodeChoose, vscodeCopy, vscodeOffer, vscodeOpen, vscodeProgress, vscodeTell } from './ui';
@@ -38,6 +42,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		extensionUri: context.extensionUri,
 		panels,
 		context: () => said(),
+		local: () => core.prototypeServer.origin(),
+		design: () => design,
 		locate: () => locate(),
 		openReview: (review) => openReview(review),
 		openReviewInBrowser: (review) => openReviewInBrowser(review),
@@ -66,7 +72,13 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	};
 	const refresh = async () => {
 		found = await findContext({ folders: folders(), located: located() });
+		const before = core.designSystems.current()?.id;
 		unreadable = await showFound(core.designSystems, found.designSystem);
+		// Another design system shown: no change is being tried on it, and the last one's components' tabs are closed.
+		if (core.designSystems.current()?.id !== before) {
+			trial.set([]);
+			designTabs.closeComponents();
+		}
 		await trust();
 		panels.post(said());
 	};
@@ -85,6 +97,75 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		choose: vscodeChoose,
 		openExternal: vscodeOpen,
 		copy: vscodeCopy,
+	};
+	// The design system (ELECTRON_MIGRATION_PLAN 6.1, 6.2): the change to its tokens being tried, kept here for every page;
+	// its tabs in the editor, each DSNR's own page answered as the panel is; and what its pages ask.
+	const trial = new TokenTrial((m) => panels.post(m));
+	const dist = vscode.Uri.joinPath(context.extensionUri, 'dist');
+	const designTabs = new DesignTabs({
+		create: (title) =>
+			vscode.window.createWebviewPanel('dsnr.designSystem', title, vscode.ViewColumn.Active, {
+				enableScripts: true,
+				localResourceRoots: [dist],
+				// Its stories stay drawn while another tab is in front, rather than being built and drawn again.
+				retainContextWhenHidden: true,
+			}),
+		page: async (webview, tab) => dsnrPage(webview as vscode.Webview, dist, await core.prototypeServer.origin(), tab),
+		panels,
+		receive: async (webview, raw) => {
+			const message = readMessage(raw);
+			if (!message) return;
+			try {
+				if (message.type === 'ready') await webview.postMessage({ type: 'token-edits', edits: trial.current() } satisfies HostMessage);
+				else await answerPage(webview as vscode.Webview, message, design);
+			} catch (err) {
+				failed(err);
+			}
+		},
+	});
+	const design: DesignSystemAsks = {
+		openComponent: async (id) => {
+			const component = await componentOf(api, id);
+			await designTabs.open({ kind: 'component', id: component.id, name: component.name });
+		},
+		componentLink: async (id, link) => vscodeOpen(componentLink(await componentOf(api, id), link)),
+		openPrimitives: () => designTabs.open({ kind: 'primitives' }),
+		openVoiceAndTone: async () => void (await vscode.window.showTextDocument(voiceUri, { preview: false })),
+		// The token's own file, as the person's clone has it, at its line.
+		openTokenSource: async (file, line) => {
+			const system = core.designSystems.current();
+			const path = system === null ? null : tokenFileIn(system, file);
+			if (path === null) throw new Error(`${file} is not a file of the design system shown.`);
+			const at = new vscode.Position(line - 1, 0);
+			await vscode.window.showTextDocument(vscode.Uri.file(path), { selection: new vscode.Range(at, at), preview: true });
+		},
+		edits: () => trial.current(),
+		setEdits: (edits) => trial.set(tokenEditsOf(edits)),
+	};
+	// The voice and tone (6.3): a document in the editor, read from GitHub and saved (⌘S) to DSNR's branch; a save refused
+	// because GitHub's file changed meanwhile offers to compare, keep the person's text, or take GitHub's.
+	const voiceUri = vscode.Uri.from({ scheme: VOICE_SCHEME, path: VOICE_PATH });
+	const theirsUri = vscode.Uri.from({ scheme: VOICE_SCHEME, path: THEIRS_PATH });
+	const voice = new VoiceDocument({ api, offer: vscodeOffer, openExternal: vscodeOpen });
+	const voiceOpen = () => vscode.workspace.textDocuments.find((d) => d.uri.toString() === voiceUri.toString());
+	/** The document read again from GitHub, as VS Code's Revert does: what is unsaved in it is dropped. */
+	const voiceAgain = async () => {
+		if (!voiceOpen()) return;
+		await vscode.window.showTextDocument(voiceUri);
+		await vscode.commands.executeCommand('workbench.action.files.revert');
+	};
+	const voiceRefused = async () => {
+		const next = await vscodeOffer(`The voice and tone changed on ${HOST} since it was opened, so nothing was saved.`, [
+			COMPARE,
+			KEEP_MINE,
+			USE_THEIRS,
+		]);
+		if (next === COMPARE) await vscode.commands.executeCommand('vscode.diff', theirsUri, voiceUri, `Voice and tone: on ${HOST} ↔ yours`);
+		if (next === KEEP_MINE) {
+			voice.keepMine();
+			await voiceOpen()?.save();
+		}
+		if (next === USE_THEIRS) await voiceAgain();
 	};
 	const site = siteIn(storage);
 	const reviews = new Reviews({
@@ -192,6 +273,32 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			const picked = await pickPrototype(api);
 			if (picked) await openReview(picked).catch(failed);
 		}),
+		// A design system's component in its own tab: given one by its story file, by code, or chosen from the design system shown.
+		vscode.commands.registerCommand('dsnr.openComponent', async (raw: unknown) => {
+			if (raw !== undefined) {
+				const id = readComponentArg(raw);
+				if (id === null) throw new Error('DSNR: Open a component was given something that is not a component.');
+				return design.openComponent(id).catch(failedFor(true));
+			}
+			const picked = await pickComponent(api);
+			if (picked) await design.openComponent(picked).catch(failed);
+		}),
+		vscode.commands.registerCommand('dsnr.openPrimitives', () => design.openPrimitives().catch(failed)),
+		vscode.workspace.registerFileSystemProvider(
+			VOICE_SCHEME,
+			voiceFileSystem(vscode, voice, () => void voiceRefused().catch(failed)),
+		),
+		vscode.commands.registerCommand('dsnr.openVoiceAndTone', () => design.openVoiceAndTone().catch(failed)),
+		// What is saved is proposed: unsaved text is saved first, as a person would expect of a document.
+		vscode.commands.registerCommand('dsnr.proposeVoiceAndTone', async () => {
+			const open = voiceOpen();
+			if (open?.isDirty && !(await open.save())) return;
+			await voice.propose().catch(failed);
+		}),
+		vscode.commands.registerCommand('dsnr.startOverVoiceAndTone', async () => {
+			await voice.startOver().catch(failed);
+			await voiceAgain();
+		}),
 		vscode.commands.registerCommand('dsnr.openPublishedPage', () =>
 			inFront(async (review) => {
 				const url = await publishedLink(here, review);
@@ -244,6 +351,15 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 };
 
 /** Each project's prototypes, newest first (`reviewsOf`), to choose one for review: as the panel's rows open them. */
+/** A component of the design system shown, chosen from its catalog in VS Code's quick pick, by its story file. */
+const pickComponent = async (api: Pick<WorkspaceApi, 'designSystemCatalog'>): Promise<string | undefined> => {
+	const read = await api.designSystemCatalog(false);
+	if (!read.ok) return void failed(read.error);
+	if (read.value.state !== 'ready') return void vscodeTell('There is no design system shown here: the Design System tab says why.');
+	const items = read.value.components.map((c) => ({ label: c.name, description: c.group, id: c.id }));
+	return (await vscode.window.showQuickPick(items, { placeHolder: 'Open a component', matchOnDescription: true }))?.id;
+};
+
 const pickPrototype = async (api: Pick<WorkspaceApi, 'listProjects'>): Promise<Review | undefined> => {
 	const listed = await api.listProjects();
 	if (!listed.ok) {

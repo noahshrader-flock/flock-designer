@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readMessage, readProjectArg, readReview } from '../extension/src/messages';
+import { readComponentArg, readMessage, readProjectArg, readReview } from '../extension/src/messages';
 
 /**
  * What the panel's page may ask of the extension (Phase 3): a call to the core by its name in the contract's table, or
@@ -23,6 +23,15 @@ describe('a message from the panel', () => {
 		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: 'Maps' }],
 		[{ type: 'open-review', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
 		[{ type: 'open-review-in-browser', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
+		// The Design System tab's (6.1 to 6.3): a component's tab, its links, Primitives, the voice and tone, a token's file, the change tried.
+		[{ type: 'open-component', id: 'src/components/FSButton/FSButton.stories.tsx' }],
+		[{ type: 'component-link', id: 'src/components/FSButton/FSButton.stories.tsx', link: 'storybook' }],
+		[{ type: 'component-link', id: 'src/components/FSButton/FSButton.stories.tsx', link: 'source' }],
+		[{ type: 'open-primitives' }],
+		[{ type: 'open-voice-and-tone' }],
+		[{ type: 'open-token-source', file: 'src/colors/theme/light.ts', line: 12 }],
+		[{ type: 'token-edits', edits: [] }],
+		[{ type: 'token-edits', edits: [{ path: 'palette.light.primary.main', value: '#112233' }] }],
 	])('%o is read', (m) => {
 		expect(readMessage(m)).toEqual(m);
 	});
@@ -58,8 +67,29 @@ describe('a message from the panel', () => {
 		[{ type: 'codebase', action: 'preview' }],
 		[{ type: 'codebase', action: 'open-code', projectId: 'zone-coverage', url: 'https://evil.example' }],
 		[{ type: 'run', command: 'rm -rf /' }],
+		[{ type: 'open-component' }],
+		[{ type: 'open-component', id: '' }],
+		[{ type: 'open-component', id: 'x'.repeat(501) }],
+		[{ type: 'component-link', id: 'a.stories.tsx', link: 'https://evil.example' }],
+		[{ type: 'component-link', id: 'a.stories.tsx', link: 'source', url: 'https://evil.example' }],
+		[{ type: 'open-token-source', file: 'a.ts', line: 0 }],
+		[{ type: 'open-token-source', file: 'a.ts', line: 1.5 }],
+		[{ type: 'open-token-source', file: '', line: 1 }],
+		[{ type: 'token-edits', edits: 'all' }],
+		[{ type: 'token-edits', edits: new Array(501).fill({ path: 'a', value: '#000000' }) }],
+		[{ type: 'open-primitives', which: 'all' }],
 	])('%o is dropped', (m) => {
 		expect(readMessage(m)).toBeNull();
+	});
+});
+
+describe('a component a command is given', () => {
+	it('is its story file, read as the panel’s is, or nothing', () => {
+		expect(readComponentArg({ id: 'src/FSButton.stories.tsx' })).toBe('src/FSButton.stories.tsx');
+		expect(readComponentArg({ id: '' })).toBeNull();
+		expect(readComponentArg({ id: 'a', more: 1 })).toBeNull();
+		expect(readComponentArg('src/FSButton.stories.tsx')).toBeNull();
+		expect(readComponentArg({ type: 'open-component', id: 'a' })).toBeNull();
 	});
 });
 

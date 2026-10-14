@@ -17,11 +17,16 @@ declare function acquireVsCodeApi<State>(): VsCodeApi<State>;
 interface PanelState {
 	tab: Tab;
 	view: View;
+	/** The design system's part shown, and how its components are seen: kept apart from the projects' view. */
+	part?: Part;
+	componentsView?: View;
 }
 
 export type Tab = 'projects' | 'design-system';
 /** The projects as a list of rows, or a grid of cards. */
 export type View = 'list' | 'grid';
+/** The design system's two parts in the panel. */
+export type Part = 'components' | 'tokens';
 
 let api: VsCodeApi<PanelState> | undefined;
 export const vscode = (): VsCodeApi<PanelState> => (api ??= acquireVsCodeApi<PanelState>());

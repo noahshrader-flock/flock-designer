@@ -30,6 +30,9 @@
 		"src/renderer/localBuild.ts",
 		"src/renderer/address.ts",
 		"src/renderer/useCover.ts",
+		"src/renderer/useComponentPictures.ts",
+		"src/renderer/tokenChanges.ts",
+		"src/renderer/useTokenBranch.ts",
 		"src/renderer/workspace.d.ts"
 	]
 }

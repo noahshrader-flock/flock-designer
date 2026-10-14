@@ -194,6 +194,18 @@ describe('what the agent is told', () => {
 });
 
 describe('PrototypeServer', () => {
+	it('says its origin, starting once however many ask at once, so a page can name it as the one place it frames', async () => {
+		const server = new PrototypeServer();
+		try {
+			const [a, b] = await Promise.all([server.origin(), server.origin()]);
+			expect(a).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+			expect(b).toBe(a);
+			expect(await server.serve('x', '<p>x</p>')).toBe(`${a}/x/`);
+		} finally {
+			server.close();
+		}
+	});
+
 	it('serves a page it was given on this machine only, and nothing else', async () => {
 		const server = new PrototypeServer();
 		try {

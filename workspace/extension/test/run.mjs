@@ -12,9 +12,14 @@
  * stand-in on the PATH that writes a page where the agent would, so a prototype is started and built with no agent run.
  * The profile is throwaway too, in the temporary folder (its path is short: VS Code keeps a socket in it), so the
  * person's own VS Code is never touched.
+ *
+ * When the design system the tests use is on this machine (Flock's FUI, beside this repository, or `FUI_ROOT`), the world
+ * has a copy of it beside the product, named by it as Coke names its own: its develop as GitHub had it when the clone last
+ * fetched, its packages linked in, and its origin GitHub's address with fetches from it pointed back at that clone, so
+ * nothing is fetched from GitHub and the clone is only read. Its components are then opened and pictured (6.1).
  */
 import { execFileSync, spawn } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { extensionDir, installVsix, packageVsix, vscodeApp, vscodeEnv } from '../tools.mjs';
@@ -83,6 +88,28 @@ repo(join(world, 'flock-designer'), {
 		'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Fixture</title></head><body><main><h1>Fixture</h1></main></body></html>\n',
 });
 
+// The design system, when it is here: a copy of FUI at `x`, the package the product names.
+const FUI_URL = 'https://github.com/flocksafety/flock-react-component-lib.git';
+const fui = process.env.FUI_ROOT ?? join(extension, '../../../flock-react-component-lib');
+const hasFui = (() => {
+	try {
+		execFileSync('git', ['-C', fui, 'rev-parse', '--verify', '--quiet', 'refs/remotes/origin/develop'], { stdio: 'ignore' });
+		return existsSync(join(fui, 'node_modules'));
+	} catch {
+		return false;
+	}
+})();
+if (hasFui) {
+	const copy = join(world, 'x');
+	execFileSync('git', ['init', '-q', copy]);
+	git(copy, 'fetch', '-q', '--no-tags', fui, '+refs/remotes/origin/develop:refs/remotes/origin/develop');
+	git(copy, 'remote', 'add', 'origin', FUI_URL);
+	git(copy, 'config', `url.${fui}.insteadOf`, FUI_URL);
+	git(copy, 'symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/develop');
+	git(copy, 'checkout', '-q', '-b', 'develop', 'refs/remotes/origin/develop');
+	symlinkSync(join(fui, 'node_modules'), join(copy, 'node_modules'));
+} else console.log(`dsnr-test: no clone of the design system with develop and its packages at ${fui} (set FUI_ROOT): its part is not run`);
+
 const profile = { user: join(base, 'u'), extensions: join(base, 'e') };
 // Packaged: DSNR installed from its package, and the tests run from a runner of their own, which is all VS Code's test
 // runner needs to be given. Otherwise: DSNR from its source here.
@@ -110,7 +137,12 @@ const run = spawn(
 		'--new-window',
 	],
 	{
-		env: vscodeEnv({ PATH: `${bin}:${process.env.PATH}`, ...(packaged ? { DSNR_INSTALLED_IN: profile.extensions } : {}) }),
+		env: vscodeEnv({
+			PATH: `${bin}:${process.env.PATH}`,
+			DSNR_TEST_PROFILE: profile.user,
+			...(hasFui ? { DSNR_TEST_DESIGN_SYSTEM: '1' } : {}),
+			...(packaged ? { DSNR_INSTALLED_IN: profile.extensions } : {}),
+		}),
 		stdio: ['ignore', 'pipe', 'pipe'],
 	},
 );
@@ -118,9 +150,9 @@ let said = '';
 run.stdout.on('data', (d) => (said += d));
 run.stderr.on('data', (d) => (said += d));
 const cap = setTimeout(() => {
-	console.error('dsnr-test: VS Code did not finish within 180 s');
+	console.error('dsnr-test: VS Code did not finish within 300 s');
 	run.kill('SIGKILL');
-}, 180_000);
+}, 300_000);
 run.on('exit', (status) => {
 	clearTimeout(cap);
 	rmSync(base, { recursive: true, force: true });

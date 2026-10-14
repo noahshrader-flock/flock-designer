@@ -26,6 +26,8 @@ const TYPES = typesOf(['.html', '.js', '.css', ...ASSETS]);
 export class PrototypeServer {
 	private server: Server | null = null;
 	private port = 0;
+	/** Its start, once: every ask before it is listening waits for the same one. */
+	private starting: Promise<void> | null = null;
 	private readonly pages = new Map<string, string>();
 	/** Built folders served whole (the component previews), by the key their address starts with. */
 	private readonly folders = new Map<string, string>();
@@ -52,7 +54,7 @@ export class PrototypeServer {
 
 	async serve(key: string, html: string): Promise<string> {
 		this.pages.set(`/${key}/`, html);
-		if (!this.server) await this.listen();
+		await this.start();
 		return `http://127.0.0.1:${this.port}/${key}/`;
 	}
 
@@ -63,7 +65,7 @@ export class PrototypeServer {
 	 */
 	async serveFolder(key: string, dir: string): Promise<string> {
 		this.folders.set(key, dir);
-		if (!this.server) await this.listen();
+		await this.start();
 		return `http://127.0.0.1:${this.port}/${key}/`;
 	}
 
@@ -87,6 +89,20 @@ export class PrototypeServer {
 		} catch {
 			return null;
 		}
+	}
+
+	/** This server's origin, started first if it is not yet: what a page that frames or shows what it serves names. */
+	async origin(): Promise<string> {
+		await this.start();
+		return `http://127.0.0.1:${this.port}`;
+	}
+
+	private start(): Promise<void> {
+		this.starting ??= this.listen().catch((err: unknown) => {
+			this.starting = null;
+			throw err;
+		});
+		return this.starting;
 	}
 
 	private listen(): Promise<void> {
@@ -125,5 +141,6 @@ export class PrototypeServer {
 	close(): void {
 		this.server?.close();
 		this.server = null;
+		this.starting = null;
 	}
 }

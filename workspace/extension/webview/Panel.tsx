@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import type { Context } from '../../src/main/services/findContext';
+import { useComponentPictures } from '../../src/renderer/useComponentPictures';
 import { useWorkspace } from '../../src/renderer/useWorkspace';
-import type { MadeCover, SignInState } from '../../src/shared/contract';
+import type { ComponentPictures, MadeCover, SignInState, TokenEdit } from '../../src/shared/contract';
 import { withCovers } from '../../src/shared/projectList';
-import { type Catalog, DesignSystem } from './DesignSystem';
+import { DesignSystem, type DesignSystemDoes } from './DesignSystem';
 import { PanelDialogs } from './Dialogs';
 import { onHost, workspace } from './host';
 import { Projects, type ProjectsRead } from './Projects';
 import type { CodebaseAction, PanelDialog, Review } from '../src/messages';
 import { Toggle } from './ui/Toggle';
-import { type Tab, type View, vscode } from './vscode';
+import { type CatalogRead, useCatalog } from './useCatalog';
+import { useTrial } from './useTrial';
+import { type Part, type Tab, type View, vscode } from './vscode';
 
 const TABS = [
 	{ value: 'projects', label: 'Projects', icon: 'folder-library' },
@@ -32,8 +35,17 @@ export interface PanelViewProps {
 	onGetStarted: () => void;
 	onDialog: (dialog: PanelDialog) => void;
 	onCodebase: (action: CodebaseAction, projectId: string) => void;
-	onLocate: () => void;
-	catalog?: Catalog;
+	/** Why the design system found cannot be read, when it cannot. */
+	unreadable: string | null;
+	/** The design system as it is read, its pictures, its part shown and how its components are seen, and the change tried. */
+	design: CatalogRead;
+	pictures: ComponentPictures;
+	part: Part;
+	onPart: (part: Part) => void;
+	componentsView: View;
+	onComponentsView: (view: View) => void;
+	edits: TokenEdit[];
+	does: DesignSystemDoes;
 }
 
 /**
@@ -54,8 +66,15 @@ export const PanelView = ({
 	onGetStarted,
 	onDialog,
 	onCodebase,
-	onLocate,
-	catalog,
+	unreadable,
+	design,
+	pictures,
+	part,
+	onPart,
+	componentsView,
+	onComponentsView,
+	edits,
+	does,
 }: PanelViewProps) => (
 	<main className="panel">
 		<div className="panel-top">
@@ -79,7 +98,18 @@ export const PanelView = ({
 					onView={onView}
 				/>
 			) : (
-				<DesignSystem found={context.designSystem} onLocate={onLocate} {...(catalog ? { catalog } : {})} />
+				<DesignSystem
+					found={context.designSystem}
+					unreadable={unreadable}
+					read={design}
+					pictures={pictures}
+					part={part}
+					onPart={onPart}
+					view={componentsView}
+					onView={onComponentsView}
+					edits={edits}
+					does={does}
+				/>
 			)}
 		</section>
 	</main>
@@ -92,9 +122,18 @@ export const PanelView = ({
  * where they were.
  */
 export const Panel = () => {
-	const [tab, setTab] = useState<Tab>(() => vscode().getState()?.tab ?? 'projects');
-	const [view, setView] = useState<View>(() => vscode().getState()?.view ?? 'grid');
+	const kept = vscode().getState();
+	const [tab, setTab] = useState<Tab>(() => kept?.tab ?? 'projects');
+	const [view, setView] = useState<View>(() => kept?.view ?? 'grid');
+	const [part, setPart] = useState<Part>(() => kept?.part ?? 'components');
+	const [componentsView, setComponentsView] = useState<View>(() => kept?.componentsView ?? 'grid');
+	// What is chosen is kept for the panel, so a reload leaves it where it was.
+	const keep = (next: Partial<{ tab: Tab; view: View; part: Part; componentsView: View }>) =>
+		vscode().setState({ tab, view, part, componentsView, ...next });
 	const [context, setContext] = useState<Context | null>(null);
+	const [unreadable, setUnreadable] = useState<string | null>(null);
+	// The change to the tokens being tried: the extension's, heard before the page says it is ready.
+	const [edits, setEdits] = useTrial();
 	const [account, setAccount] = useState<SignInState>({ state: 'signedOut' });
 	// Counts the times the extension said the projects changed: each reads them again.
 	const [changes, setChanges] = useState(0);
@@ -102,7 +141,10 @@ export const Panel = () => {
 	const [dialog, setDialog] = useState<PanelDialog | null>(null);
 	useEffect(() => {
 		const stop = onHost((m) => {
-			if (m.type === 'context') setContext(m.context);
+			if (m.type === 'context') {
+				setContext(m.context);
+				setUnreadable(m.unreadable ?? null);
+			}
 			if (m.type === 'projects-changed') setChanges((n) => n + 1);
 			if (m.type === 'open-dialog') setDialog(m.dialog);
 		});
@@ -140,18 +182,34 @@ export const Panel = () => {
 		if (about !== null && projects !== null && !projects.some((p) => p.id === about)) setDialog(null);
 	}, [about, projects]);
 	const codebase = (action: CodebaseAction, projectId: string) => vscode().postMessage({ type: 'codebase', action, projectId });
+	// The design system, read once its tab is first shown, and read afresh when another is found; its pictures while it is.
+	const found = context?.designSystem ?? null;
+	const showsDesign = tab === 'design-system' && found !== null && unreadable === null;
+	const design = useCatalog(showsDesign, found?.root ?? null);
+	const ready = design.catalog?.state === 'ready' ? design.catalog : null;
+	const pictures = useComponentPictures(showsDesign && part === 'components' && ready !== null, ready?.commit ?? null);
+	const does: DesignSystemDoes = {
+		sync: () => void design.sync(),
+		locate: () => vscode().postMessage({ type: 'locate-design-system' }),
+		openComponent: (id) => vscode().postMessage({ type: 'open-component', id }),
+		componentLink: (id, link) => vscode().postMessage({ type: 'component-link', id, link }),
+		openPrimitives: () => vscode().postMessage({ type: 'open-primitives' }),
+		openVoiceAndTone: () => vscode().postMessage({ type: 'open-voice-and-tone' }),
+		openTokenSource: ({ file, line }) => vscode().postMessage({ type: 'open-token-source', file, line }),
+		setEdits,
+	};
 	return (
 		<>
 			<PanelView
 				tab={tab}
 				onTab={(next) => {
 					setTab(next);
-					vscode().setState({ tab: next, view });
+					keep({ tab: next });
 				}}
 				view={view}
 				onView={(next) => {
 					setView(next);
-					vscode().setState({ tab, view: next });
+					keep({ view: next });
 				}}
 				account={account}
 				context={context}
@@ -163,7 +221,21 @@ export const Panel = () => {
 				onDialog={setDialog}
 				onCodebase={codebase}
 				onGetStarted={() => vscode().postMessage({ type: 'get-started' })}
-				onLocate={() => vscode().postMessage({ type: 'locate-design-system' })}
+				unreadable={unreadable}
+				design={design}
+				pictures={pictures}
+				part={part}
+				onPart={(next) => {
+					setPart(next);
+					keep({ part: next });
+				}}
+				componentsView={componentsView}
+				onComponentsView={(next) => {
+					setComponentsView(next);
+					keep({ componentsView: next });
+				}}
+				edits={edits}
+				does={does}
 			/>
 			<PanelDialogs
 				dialog={dialog}
