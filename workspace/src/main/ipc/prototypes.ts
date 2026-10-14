@@ -1,20 +1,22 @@
-import { existsSync } from 'node:fs';
+import { existsSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { folderName } from '../../shared/brief';
-import type { CommentRef, OpenedPrototype, PrototypeAddressed, PrototypeReadiness } from '../../shared/contract';
+import type { BuildInCodebase, CommentRef, OpenedPrototype, PrototypeAddressed, PrototypeReadiness } from '../../shared/contract';
 import { coverPath, prototypeKey, prototypePagePath } from '../../shared/designPaths';
 import { statesOf } from '../../shared/prototypeStates';
 import { iterationLabel } from '../../shared/work';
 import { arg, handle } from '../handle';
 import { fixRequest } from '../services/accessibilityBrief';
 import { ADDRESS_SKILL, chooseComment } from '../services/address';
-import { prototypeAddressTask, prototypeBuildTask } from '../services/agentTasks';
+import { guidePart, prototypeAddressTask, prototypeBuildTask } from '../services/agentTasks';
 import { writeCommentsExport } from '../services/commentsExport';
 import { readDescriptor } from '../services/descriptor';
+import { handToClaude } from '../services/editor';
 import { ensureLocalBranch } from '../services/git';
 import { INSTALL_COMMAND } from '../services/install';
 import { jpegDataUrl } from '../services/picture';
 import { builtHere, ensureCovers } from '../services/projectCovers';
-import { BUILD_SKILL, type PrototypeSources, assignFolder, prototypeReadable } from '../services/prototype';
+import { BUILD_SKILL, GUIDE, type PrototypeSources, assignFolder, prototypeBuildPrompt, prototypeReadable } from '../services/prototype';
 import { type PrototypeChange, whereTheChangeGoes } from '../services/prototypeWork';
 import type { IpcDeps } from '../ipc';
 
@@ -30,6 +32,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		me,
 		once,
 		opened,
+		ports,
 		prototypeAccessibility,
 		prototypePage,
 		prototypesRoot,
@@ -45,6 +48,26 @@ export const registerPrototypes = (d: IpcDeps): void => {
 	/** What building a prototype and changing one share: what it is modeled on, read once, and how it is built. */
 	const prototypeRun = async (projectId: string, name: string, modeledOn = name) =>
 		work.buildPlan(projectId, name, await once(`source:${projectId}`, () => work.sources(projectId, modeledOn)));
+	/** The builder's guide for a prototype run, its links pointed at the shared folder beside the standards it may read. */
+	const guideFor = async (sources: PrototypeSources): Promise<string> =>
+		guidePart(await readSkillText(GUIDE), sources.sharedStandards === null ? null : dirname(sources.sharedStandards));
+	/**
+	 * A prototype's whole build task, as every build gets it: the guide, the build skill, where to write and how to check it
+	 * builds, what it may read, its accessibility target, the voice, and the request last. With what it may read, for a run here.
+	 */
+	const buildTask = async (projectId: string, name: string, request: string): Promise<{ task: string; sources: PrototypeSources }> => {
+		const skill = await readSkillText(BUILD_SKILL);
+		const { build, sources } = await prototypeRun(projectId, name);
+		const accessibility = await work.accessibility(projectId, name);
+		const voice = await work.voice();
+		return { task: prototypeBuildTask({ guide: await guideFor(sources), skill, build, sources, accessibility, voice, request }), sources };
+	};
+	/** What a prototype's own accessibility check found (T7), as the request to fix it: refused when it found nothing. */
+	const fixRequestFor = async (projectId: string, name: string): Promise<string> => {
+		const result = await prototypeAccessibility(projectId, name);
+		if (result.violations.length === 0) throw new Error('The accessibility check found nothing to fix.');
+		return fixRequest(result);
+	};
 	/** Its agent, in the folder it was built in, reading the product read-only, and nothing committed. */
 	const startPrototypeAgent = (projectId: string, name: string, sources: PrototypeSources, task: string) =>
 		agent.start(work.dir(projectId), projectId, task, { bare: true, readOnly: prototypeReadable(sources), work: prototypeKey(projectId, name) });
@@ -107,11 +130,30 @@ export const registerPrototypes = (d: IpcDeps): void => {
 	handle('buildPrototype', [arg.projectId, arg.prototypeName, arg.words], async (projectId, name, request) => {
 		// The screen can ask twice (it is opened twice in development, and Try again asks again): the runner joins
 		// this prototype's run, and refuses while it is working on anything else.
-		const skill = await readSkillText(BUILD_SKILL);
-		const { build, sources } = await prototypeRun(projectId, name);
-		const accessibility = await work.accessibility(projectId, name);
-		const voice = await work.voice();
-		return startPrototypeAgent(projectId, name, sources, prototypeBuildTask({ skill, build, sources, accessibility, voice, request }));
+		const { task, sources } = await buildTask(projectId, name, request);
+		return startPrototypeAgent(projectId, name, sources, task);
+	});
+	/**
+	 * A prototype's run handed to Claude Code in the repository `root` instead of run here (`handToClaude`): its whole task
+	 * written beside the prototype, and the conversation's first line pointing at it. Its build, and the fix of what its check
+	 * found (`fix`), are both this.
+	 */
+	const handOver = async (root: string, projectId: string, name: string, request: string, fix: boolean): Promise<BuildInCodebase> => {
+		// In the repository this person opened: where the conversation starts, as Build in the codebase's does.
+		const canonical = opened.require(root);
+		const { task } = await buildTask(projectId, name, request);
+		const taskFile = join(dirname(work.file(projectId, name)), `${name}-${fix ? 'fix' : 'build'}.md`);
+		writeFileSync(taskFile, task);
+		const label = iterationLabel({ name, branch: prototypeKey(projectId, name) });
+		return handToClaude(ports, canonical, prototypeBuildPrompt({ label, projectId, taskFile, fix }));
+	};
+	handle('handPrototypeBuild', [arg.root, arg.projectId, arg.prototypeName, arg.words], (root, projectId, name, request) =>
+		handOver(root, projectId, name, request, false),
+	);
+	handle('handPrototypeFix', [arg.root, arg.projectId, arg.prototypeName], async (root, projectId, name) => {
+		// Refused before the page is checked, for a repository this window never opened.
+		opened.require(root);
+		return handOver(root, projectId, name, await fixRequestFor(projectId, name), true);
 	});
 	handle('addressPrototype', [arg.projectId, arg.prototypeName, arg.comment], async (projectId, name, comment) => {
 		refuseWhileBusy();
@@ -142,7 +184,19 @@ export const registerPrototypes = (d: IpcDeps): void => {
 			projectId,
 			name,
 			sources,
-			prototypeAddressTask({ addressSkill, buildSkill, build, sources, accessibility, voice, commentsPath: exported.path, number, name, where }),
+			prototypeAddressTask({
+				guide: await guideFor(sources),
+				addressSkill,
+				buildSkill,
+				build,
+				sources,
+				accessibility,
+				voice,
+				commentsPath: exported.path,
+				number,
+				name,
+				where,
+			}),
 		);
 	});
 	handle('finishPrototypeAddress', [arg.comment], (comment): Promise<PrototypeAddressed> => finishPrototypeChange(comment));
@@ -150,6 +204,10 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		await work.save(projectId, name);
 		publishInBackground(projectId, name);
 		return null;
+	});
+	handle('prototypeProgress', [arg.projectId, arg.prototypeName], (projectId, name) => {
+		const at = (file: string): number | null => (existsSync(file) ? statSync(file).mtimeMs : null);
+		return { sourceAt: at(work.sourceFile(projectId, name)), pageAt: at(work.file(projectId, name)) };
 	});
 	handle('openPrototype', [arg.projectId, arg.prototypeName], async (projectId, name): Promise<OpenedPrototype> => {
 		await finishPrototypeChanges(projectId);
@@ -179,17 +237,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 	// One round of the prototype's own check: its agent given what the check found, as a build error is given (T7).
 	handle('fixAccessibility', [arg.projectId, arg.iterationName], async (projectId, name) => {
 		refuseWhileBusy();
-		const result = await prototypeAccessibility(projectId, name);
-		if (result.violations.length === 0) throw new Error('The accessibility check found nothing to fix.');
-		const skill = await readSkillText(BUILD_SKILL);
-		const { build, sources } = await prototypeRun(projectId, name);
-		const accessibility = await work.accessibility(projectId, name);
-		const voice = await work.voice();
-		return startPrototypeAgent(
-			projectId,
-			name,
-			sources,
-			prototypeBuildTask({ skill, build, sources, accessibility, voice, request: fixRequest(result) }),
-		);
+		const { task, sources } = await buildTask(projectId, name, await fixRequestFor(projectId, name));
+		return startPrototypeAgent(projectId, name, sources, task);
 	});
 };

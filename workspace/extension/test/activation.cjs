@@ -41,12 +41,31 @@ exports.run = async () => {
 	await vscode.commands.executeCommand('dsnr.openReview', { projectId: 'fixture', name: 'v1-i1', title: 'Fixture · V1 · I1' });
 	await until('the review opening', () => tabs().includes('Fixture · V1 · I1'));
 
-	// A prototype is started, built by the agent (standing in), saved and opened for review: New prototype, given its answers.
+	// A prototype is started: made, and its building handed to Claude Code as Build in the codebase's is. This VS Code has no
+	// Claude Code in it, so what the person is given is the command that starts it in a terminal, on the clipboard, pointing
+	// at the task written beside the prototype. The agent is then stood in for: its page written where it would write it,
+	// and the review opened, which saves what it built.
 	await vscode.commands.executeCommand('dsnr.newPrototype', { title: 'Made here', task: 'Show a heading.', folder: null });
-	await until('the new prototype opening', () => tabs().includes('Made here · V1 · I1'), 60000);
-	// Its picture, drawn by the browser on this machine once the panel lists it built, and kept in the design repository.
+	let command = '';
+	await until('the build being handed over', async () => /claude/.test((command = await vscode.env.clipboard.readText())), 60000);
+	const task = /(\S+made-here\/v1-i1-build\.md)/.exec(command);
+	assert.ok(task && fs.existsSync(task[1]), 'its task is written beside the prototype');
+	assert.ok(fs.readFileSync(task[1], 'utf8').includes('Show a heading.'), 'its task has what it should explore');
+	fs.writeFileSync(
+		path.join(path.dirname(task[1]), 'v1-i1.tsx'),
+		'export default function Page() { return <main><h1 style={{ background: "#123", color: "#fff", padding: 160 }}>Made here</h1></main>; }\n',
+	);
+	// Nobody opens it: DSNR sees the build is done, saves it and has the list read again, so its picture is drawn by the browser
+	// on this machine and kept in the design repository.
 	const covers = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '../flock-designer/projects/made-here/covers');
-	await until('its picture being drawn', () => fs.existsSync(covers) && fs.readdirSync(covers).some((f) => f.endsWith('.jpg')), 30000);
+	await until(
+		'its picture being drawn, with nobody opening it',
+		() => fs.existsSync(covers) && fs.readdirSync(covers).some((f) => f.endsWith('.jpg')),
+		90000,
+	);
+	// …and it opens for review, as saved.
+	await vscode.commands.executeCommand('dsnr.openReview', { projectId: 'made-here', name: 'v1-i1', title: 'Made here · V1 · I1' });
+	await until('the new prototype opening', () => tabs().includes('Made here · V1 · I1'), 60000);
 	// The dialogs open in the panel, from the commands the title bar and the right-click menu run: shown, and asked of the
 	// panel, without failing. (What the page then draws is tested in its own tests; this cannot see inside a webview.)
 	await vscode.commands.executeCommand('dsnr.newPrototype');
@@ -70,6 +89,6 @@ exports.run = async () => {
 	}
 
 	console.log(
-		`dsnr-test: activated; its commands are there; Fixture · V1 · I1 opened for review; Made here was started, built, opened and pictured${designSystem}`,
+		`dsnr-test: activated; its commands are there; Fixture · V1 · I1 opened for review; Made here was started, handed to Claude Code, saved when built, pictured and opened${designSystem}`,
 	);
 };

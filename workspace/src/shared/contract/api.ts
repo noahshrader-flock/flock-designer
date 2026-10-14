@@ -224,6 +224,15 @@ export interface WorkspaceApi {
 	): Promise<Result<Iteration>>;
 	buildPrototype(projectId: string, name: string, request: string): Promise<Result<AgentStatus>>;
 	/**
+	 * The same build, handed to Claude Code in the repository `root` instead of run here, as Build in the codebase is: its
+	 * whole task is written beside the prototype, and a conversation starts with a line pointing at it: in VS Code's panel
+	 * when it is here (`editor`), or the command that starts it in a terminal, put on the clipboard (`command`). Nothing is
+	 * saved or checked from here: the prototype is saved when it is opened.
+	 */
+	handPrototypeBuild(root: string, projectId: string, name: string, request: string): Promise<Result<BuildInCodebase>>;
+	/** What a prototype's accessibility check found, handed to Claude Code to fix, the same way as its build (`handPrototypeBuild`). */
+	handPrototypeFix(root: string, projectId: string, name: string): Promise<Result<BuildInCodebase>>;
+	/**
 	 * Starts the agent on one comment on a prototype. There is no batch. The change goes in the newest iteration of the
 	 * prototype's version, or, when others have commented on that, in the next one.
 	 */
@@ -244,6 +253,11 @@ export interface WorkspaceApi {
 	 */
 	publishPage(projectId: string, name: string): Promise<Result<PageStatus>>;
 	savePrototype(projectId: string, name: string): Promise<Result<null>>;
+	/**
+	 * When a prototype's source and page were last written on this machine (milliseconds, null when there is none): for what
+	 * watches a build that Claude Code does, to save it once it has stopped changing.
+	 */
+	prototypeProgress(projectId: string, name: string): Promise<Result<{ sourceAt: number | null; pageAt: number | null }>>;
 	openPrototype(projectId: string, name: string): Promise<Result<OpenedPrototype>>;
 	/**
 	 * A prototype's saved page checked for accessibility at its product's target (T7): kept, and made again only when the
@@ -411,12 +425,15 @@ export const INVOKE = [
 	'appearance',
 	'setAppearance',
 	'buildPrototype',
+	'handPrototypeBuild',
+	'handPrototypeFix',
 	'addressPrototype',
 	'finishPrototypeAddress',
 	'publishedPage',
 	'openPublishedPage',
 	'publishPage',
 	'savePrototype',
+	'prototypeProgress',
 	'openPrototype',
 	'checkAccessibility',
 	'fixAccessibility',

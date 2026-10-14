@@ -766,6 +766,8 @@ describe('a repository must be opened before anything acts on it', () => {
 		[CHANNELS.startCommand, () => [product, 'preview', 'demo']],
 		[CHANNELS.startAgent, () => [product, 'demo', 'do it']],
 		[CHANNELS.buildInCodebase, () => [product, 'demo', 'v1-i1']],
+		[CHANNELS.handPrototypeBuild, () => [product, 'demo', 'v1-i1', 'A list']],
+		[CHANNELS.handPrototypeFix, () => [product, 'demo', 'v1-i1']],
 	])('%s refuses a root this window never opened', async (channel, args) => {
 		const r = await call(channel, ...args());
 		expect(r.ok).toBe(false);
@@ -944,6 +946,62 @@ describe('prototypes', () => {
 		expect(task).toContain("This product's target, from Test Product's .dsnr/manifest.md: **WCAG 2.0 Level A**, checked with the axe tags `wcag2a`.");
 		expect(task).toContain('#### Names');
 		expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## What the person asked for'));
+	});
+
+	describe('handed to Claude Code in the editor, as Build in the codebase is', () => {
+		const made = async () => {
+			writeSkill();
+			await call(CHANNELS.useCheckout, product);
+			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		};
+
+		it('says when its source and page were last written, for what watches a build Claude Code does', async () => {
+			await made();
+			const none = await call(CHANNELS.prototypeProgress, 'demo', 'v1-i1');
+			expect(none).toEqual({ ok: true, value: { sourceAt: null, pageAt: null } });
+			writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.tsx'), 'export default () => null;');
+			const written = (await call(CHANNELS.prototypeProgress, 'demo', 'v1-i1')).value as { sourceAt: number | null; pageAt: number | null };
+			expect(written.pageAt).toBeNull();
+			expect(Math.abs((written.sourceAt as number) - Date.now())).toBeLessThan(10_000);
+			writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<html></html>');
+			expect(((await call(CHANNELS.prototypeProgress, 'demo', 'v1-i1')).value as { pageAt: number }).pageAt).toBeGreaterThan(0);
+			expect((await call(CHANNELS.prototypeProgress, '../x', 'v1-i1')).ok).toBe(false);
+		});
+
+		it('refuses, starting nothing, when the design repository has no builder’s guide to put in the task', async () => {
+			await made();
+			rmSync(join(design, 'agents', 'ui-guide.md'));
+			const r = await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1-i1', 'A list');
+			expect(r.ok).toBe(false);
+			expect(r.error).toMatch(/agents\/ui-guide\.md/);
+			expect(copied).toBe('');
+		});
+
+		it('writes the whole task beside the prototype and gives the command that starts it, running no agent here', async () => {
+			await made();
+			const r = await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1-i1', 'A list of alerts');
+			expect(r.ok).toBe(true);
+			const taskFile = join(home, 'prototype', 'demo', 'v1-i1-build.md');
+			const task = readFileSync(taskFile, 'utf8');
+			// The builder's guide first, always, its links pointed at this machine's shared folder.
+			expect(task.startsWith('## How to build UI here: always, before anything else')).toBe(true);
+			expect(task).toContain('# Building UI in a Flock product');
+			expect(task).toContain(`\`${realpathSync(design)}/standards/non-negotiables.md\``);
+			expect(task.indexOf('# Building UI in a Flock product')).toBeLessThan(task.indexOf('# Build\n'));
+			// What the headless build is told, since the work is the same: the skill, where to write, the check, the request last.
+			expect(task).toContain('# Build');
+			expect(task).toContain('## Accessibility');
+			expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## What the person asked for'));
+			expect(task.trim().endsWith('A list of alerts')).toBe(true);
+			// No VS Code in a test: the command, on the clipboard, pointing at the task; its prompt names the prototype.
+			const { value } = r as { value: { editor: boolean; command: string } };
+			expect(value.editor).toBe(false);
+			expect(copied).toBe(value.command);
+			expect(value.command).toMatch(new RegExp(`^cd .*${basename(product)} && .*claude `));
+			expect(value.command).toContain(taskFile);
+			expect(value.command).toContain('V1 · I1');
+			expect(agentStart).not.toHaveBeenCalled();
+		});
 	});
 
 	it('never let a branch named in the shared records be read by git as an option', async () => {
@@ -1558,6 +1616,25 @@ describe('prototypes', () => {
 			expect(task).toContain('Change nothing else');
 		});
 
+		it('hands what the check found to Claude Code to fix, as the build was handed: the guide first, the findings as the request, no agent here', async () => {
+			await saved();
+			writeFileSync(join(design, 'skills', 'build-prototype.md'), '# Build');
+			installDesignSystem(product);
+			await call(CHANNELS.useCheckout, product);
+			const r = await call(CHANNELS.handPrototypeFix, product, 'demo', 'v1-i1');
+			expect(r.ok).toBe(true);
+			const taskFile = join(home, 'prototype', 'demo', 'v1-i1-fix.md');
+			const task = readFileSync(taskFile, 'utf8');
+			expect(task.startsWith('## How to build UI here: always, before anything else')).toBe(true);
+			expect(task.slice(task.indexOf('## What the person asked for'))).toContain('- **image-alt** (WCAG 1.1.1)');
+			expect(task).toContain('Change nothing else');
+			const { value } = r as { value: { editor: boolean; command: string } };
+			expect(value.editor).toBe(false);
+			expect(copied).toBe(value.command);
+			expect(value.command).toContain(taskFile);
+			expect(agentStart).not.toHaveBeenCalled();
+		});
+
 		it('carries what the prototype’s accessibility check left open into the task, to fix in the code (T7)', async () => {
 			await saved();
 			await call(CHANNELS.buildInCodebase, product, 'demo', 'v1-i1', 'develop');
@@ -1625,6 +1702,8 @@ describe('prototypes', () => {
 			// The task: the skill, the page to start from, where the audit goes.
 			const taskFile = join(home, 'prototype', 'demo', 'v1-i1-into-code.md');
 			const task = readFileSync(taskFile, 'utf8');
+			// The builder's guide first, as in every task.
+			expect(task.startsWith('## How to build UI here: always, before anything else')).toBe(true);
 			expect(task).toContain('Audit first.');
 			expect(task).toContain(join(home, 'prototype', 'demo', 'v1-i1.html'));
 			expect(task).toContain(join(design, 'projects', 'demo', 'audit-v1-i1.md'));

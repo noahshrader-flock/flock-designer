@@ -9,6 +9,8 @@ import { HOST } from '../../shared/vocabulary';
  * check and the shared folders). What goes into a part (a skill's text, the product's target, the voice) is read by
  * the caller; this only says where it goes.
  *
+ * - **Every run begins with the builder's guide** (`guidePart`): how to build UI in a Flock product, carried in the task
+ *   itself so that no run depends on an agent choosing to open it.
  * - **A run in a product checkout** (codebase work, Address on a branch, Handoff, building a prototype in the codebase) ends
  *   with `CheckoutParts`, always in this order: the product's light check, the shared folders it may read, the
  *   accessibility rules and target, the voice and tone.
@@ -16,8 +18,29 @@ import { HOST } from '../../shared/vocabulary';
  *   and target and the voice and tone, and the person's request last, after everything that frames it.
  */
 
+/**
+ * The builder's guide (`agents/ui-guide.md`) as the first section of a task: said to be followed always, with the run's
+ * own skill winning where it is more specific, and what to do when nobody is there to answer. Its links (`../standards/…`)
+ * are pointed at the shared folder on this machine (`sharedRoot`, the folder that holds `agents/`), so the task names real
+ * files wherever it is read; with none known they are left as written.
+ */
+export const guidePart = (guide: string, sharedRoot: string | null): string =>
+	[
+		'## How to build UI here: always, before anything else',
+		'',
+		'This is part of every task, so it is never skipped. Follow it in full. Where the skill below says something more specific for this run, the skill below wins.',
+		'If nobody is there to answer a question, do not stop to ask: make the call, and list it under the product questions you had to guess at when you finish.',
+		'',
+		(sharedRoot === null ? guide : guide.replaceAll('`../', `\`${sharedRoot}/`)).trim(),
+		'',
+		'---',
+		'',
+	].join('\n');
+
 /** What every run in a product checkout is given besides its own task. */
 export interface CheckoutParts {
+	/** The builder's guide, as `guidePart` makes it: the first thing in every task. */
+	guide: string;
 	/** The product's light check (its workspace file's `check-iteration`), or null when it names none. */
 	lightCheck: string | null;
 	/** What else it may read, read only (`sharedGuidance().note`): opened in the editor, it is given no other folders. */
@@ -47,7 +70,7 @@ const checkoutEnding = ({ lightCheck, shared, accessibility, voice }: CheckoutPa
  * codebase work, given on the project's codebase branch, before the task.
  */
 export const codebaseTask = ({ unattended, task }: { unattended: string | null; task: string }, parts: CheckoutParts): string =>
-	[...(unattended ? [unattended.trim(), '', '---', ''] : []), task.trim(), '', ...checkoutEnding(parts)].join('\n');
+	parts.guide + [...(unattended ? [unattended.trim(), '', '---', ''] : []), task.trim(), '', ...checkoutEnding(parts)].join('\n');
 
 export const handoffTask = (
 	{
@@ -63,6 +86,7 @@ export const handoffTask = (
 	},
 	parts: CheckoutParts,
 ): string =>
+	parts.guide +
 	[
 		`Hand ${projectId} to engineering.`,
 		'',
@@ -99,6 +123,7 @@ export const buildInCodebaseTask = (
 	},
 	parts: CheckoutParts,
 ): string =>
+	parts.guide +
 	[
 		`Build prototype ${name} of this project into the codebase.`,
 		'',
@@ -169,6 +194,7 @@ const readableLines = (sources: PrototypeSources): string[] => {
  * request is the person's own words, and comes last, after everything that frames it.
  */
 export const prototypeBuildTask = ({
+	guide,
 	skill,
 	build,
 	sources,
@@ -176,6 +202,8 @@ export const prototypeBuildTask = ({
 	voice,
 	request,
 }: {
+	/** The builder's guide, as `guidePart` makes it: the first thing in the task. */
+	guide: string;
 	skill: string;
 	build: PrototypeBuild;
 	sources: PrototypeSources;
@@ -185,6 +213,7 @@ export const prototypeBuildTask = ({
 	voice: string;
 	request: string;
 }): string =>
+	guide +
 	[
 		skill.trim(),
 		'',
@@ -210,6 +239,7 @@ export const prototypeBuildTask = ({
  * of what the reviewer wrote: their words reach the agent only through the file.
  */
 export const prototypeAddressTask = ({
+	guide,
 	addressSkill,
 	buildSkill,
 	build,
@@ -221,6 +251,8 @@ export const prototypeAddressTask = ({
 	name,
 	where = null,
 }: {
+	/** The builder's guide, as `guidePart` makes it: the first thing in the task. */
+	guide: string;
 	addressSkill: string;
 	buildSkill: string;
 	build: PrototypeBuild;
@@ -237,6 +269,7 @@ export const prototypeAddressTask = ({
 	/** Where the change is made, when that is not the iteration commented on: see `whereTheChangeGoes`. */
 	where?: string | null;
 }): string =>
+	guide +
 	[
 		...addressOpening(number, commentsPath, `prototype ${name}`),
 		'',

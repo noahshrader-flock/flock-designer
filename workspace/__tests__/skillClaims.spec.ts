@@ -10,7 +10,7 @@ const skill = (name: string): string => readFileSync(join(SKILLS, name), 'utf8')
  * The task each skill is given in, built from the real skill. A skill that says another file is "in your task" is
  * believed by the agent; when it is not there, the agent works without it and never knows.
  */
-const parts = { lightCheck: null, shared: '', accessibility: '', voice: '' };
+const parts = { guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' };
 const prototypeBuild = { source: '/p/i1.tsx', page: '/p/i1.html', buildCommand: 'node build' };
 const sources = {
 	code: '/p/code',
@@ -25,9 +25,10 @@ const TASKS: Record<string, (text: string) => string> = {
 	'codebase-work.md': (text) => codebaseTask({ unattended: text, task: 'The task.' }, parts),
 	'handoff.md': (text) => handoffTask({ skill: text, projectId: 'p', branch: 'feature/p', gate: null }, parts),
 	'build-prototype.md': (text) =>
-		prototypeBuildTask({ skill: text, build: prototypeBuild, sources, accessibility: '', voice: '', request: 'A list' }),
+		prototypeBuildTask({ guide: '', skill: text, build: prototypeBuild, sources, accessibility: '', voice: '', request: 'A list' }),
 	'address-comments.md': (text) =>
 		prototypeAddressTask({
+			guide: '',
 			addressSkill: text,
 			buildSkill: '',
 			build: prototypeBuild,

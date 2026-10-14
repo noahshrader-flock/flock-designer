@@ -46,6 +46,8 @@ export const cloneStore = (designRoot: string, published: () => void): RecordSto
 	},
 });
 
+/** How to build UI in a Flock product: the builder's guide, the first part of every task (`guidePart`). */
+export const GUIDE = 'agents/ui-guide.md';
 export const BUILD_SKILL = 'skills/build-prototype.md';
 export const MOVE_SKILL = 'skills/move-to-code.md';
 
@@ -251,4 +253,24 @@ export const buildInCodebasePrompt = ({
 			? `Continue building prototype ${label} of ${projectId} into this codebase, on ${continuing}. Some of it may be done already, so look at the branch and the audit first.`
 			: `Build prototype ${label} of ${projectId} into this codebase.`,
 		`Your task, with the skill to follow and the prototype's files, is in ${taskFile}: read it and do what it says.`,
+	].join(' ');
+
+/**
+ * The first line of the conversation that builds a new prototype, or fixes what its check found (`fix`), in Claude Code: short,
+ * pointing at the task written beside it, which is complete.
+ */
+export const prototypeBuildPrompt = ({
+	label,
+	projectId,
+	taskFile,
+	fix = false,
+}: {
+	label: string;
+	projectId: string;
+	taskFile: string;
+	fix?: boolean;
+}): string =>
+	[
+		fix ? `Fix what the accessibility check found in prototype ${label} of ${projectId}.` : `Build prototype ${label} of ${projectId}.`,
+		`Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.`,
 	].join(' ');

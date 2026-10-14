@@ -81,6 +81,8 @@ const record = {
 repo(join(world, 'flock-designer'), {
 	// What a build gives the agent, standing in: a real design repository has them, so they are not read from GitHub.
 	'skills/build-prototype.md': '# Build a prototype\n',
+	// The builder's guide, which every task begins with: a run without it is refused.
+	'agents/ui-guide.md': '# Building UI in a Flock product\n',
 	'standards/universal/accessibility.md': '# Accessibility\n',
 	'projects/fixture/brief.md': '# Fixture\n',
 	'projects/fixture/iterations.json': `${JSON.stringify([record], null, 2)}\n`,

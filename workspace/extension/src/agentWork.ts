@@ -67,3 +67,12 @@ export const agentWork = async (
 
 /** How often to ask the agent how it is getting on, passed to the app's own run as its option: only when one is set. */
 export const pollOf = ({ pollMs }: { pollMs?: number }): { pollMs?: number } => (pollMs !== undefined ? { pollMs } : {});
+
+/**
+ * Where work handed to Claude Code went, said the same way for each hand-over (a new prototype's build, the fix of what its
+ * check found): `what` is what was handed, as a sentence starts it ("Alert history", "The fix for Alert history").
+ */
+export const handedTo = ({ editor }: { editor: boolean }, what: string): string =>
+	editor
+		? `${what} is in Claude Code in this window now: a new conversation there has the task typed in. Press Enter there to start it.`
+		: `Claude Code is not in this VS Code, so the command that starts ${what.charAt(0).toLowerCase()}${what.slice(1)} in a terminal is on your clipboard.`;

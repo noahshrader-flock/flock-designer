@@ -14,9 +14,9 @@ import { loginOf } from '../host/github';
 import { recordsRootFor } from '../main/services/discovery';
 import { assertUsableProjectId } from '../main/services/iterations';
 import { readCheckout, git } from '../main/services/git';
-import { prototypeBuildTask } from '../main/services/agentTasks';
+import { guidePart, prototypeBuildTask } from '../main/services/agentTasks';
 import { designStore } from '../main/services/designStore';
-import { BUILD_SKILL, assertPrototypeName } from '../main/services/prototype';
+import { BUILD_SKILL, GUIDE, assertPrototypeName } from '../main/services/prototype';
 import { shellLine } from '../main/services/prototypeBundle';
 import { localPrototypeFile, prototypeWork, whereTheChangeGoes } from '../main/services/prototypeWork';
 import { publish, recordsFrom, unpublish } from '../main/services/pages';
@@ -289,6 +289,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		const buildTask = async (skill: string, name: string, modeledOn: string, request: string): Promise<string> => {
 			const { build, sources } = work.buildPlan(projectId, name, await work.sources(projectId, modeledOn));
 			return prototypeBuildTask({
+				guide: guidePart(await work.skill(GUIDE), designRoot),
 				skill,
 				build,
 				sources,

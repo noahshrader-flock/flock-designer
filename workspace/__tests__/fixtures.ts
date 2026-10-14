@@ -155,6 +155,9 @@ export const installDesignSystem = (product: string) => {
 export const addStandards = (design: string) => {
 	mkdirSync(join(design, 'standards', 'universal'), { recursive: true });
 	copyFileSync(join(__dirname, '../../standards/universal/accessibility.md'), join(design, 'standards', 'universal', 'accessibility.md'));
+	// The builder's guide, which every task begins with: a design repository has it, as it has the standards.
+	mkdirSync(join(design, 'agents'), { recursive: true });
+	copyFileSync(join(__dirname, '../../agents/ui-guide.md'), join(design, 'agents', 'ui-guide.md'));
 };
 
 /** A design system's files held in memory, as the catalog and token readers read a library: a missing file throws, as a real read does. */

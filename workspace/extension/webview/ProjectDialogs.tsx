@@ -18,7 +18,7 @@ export interface NewPrototypeAnswers {
 /**
  * New prototype, as a dialog in the panel: a name, what it should explore (as many lines as it takes), and its folder.
  * Made once it has a name with a letter or a number in it and something to explore; what is asked is then the
- * extension's, which builds it and says how it goes.
+ * extension's, which makes it and hands its building to Claude Code, as Build in the codebase is handed.
  */
 export const NewPrototypeDialog = ({
 	folders,
@@ -43,7 +43,7 @@ export const NewPrototypeDialog = ({
 		<Dialog title="New prototype" onClose={onClose}>
 			<form onSubmit={start}>
 				<Field label="Name">{(control) => <TextInput control={control} value={title} onChange={setTitle} placeholder="Alert history" />}</Field>
-				<Field label="What should it explore?" hint="DSNR builds it from this, with the real design system.">
+				<Field label="What should it explore?" hint="Claude Code builds it from this, with the real design system, in this window.">
 					{(control) => (
 						<TextArea control={control} value={task} onChange={setTask} placeholder="A history of alerts, filterable by camera and by day" rows={5} />
 					)}

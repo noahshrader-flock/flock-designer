@@ -9,15 +9,15 @@ import { arg, handle } from '../handle';
 import { A11Y_COMMAND, productTarget, taskAccessibility } from '../services/accessibilityBrief';
 import { ADDRESS_SKILL, prepareAddress } from '../services/address';
 import { type AgentExtras, agentReadiness } from '../services/agent';
-import { type CheckoutParts, codebaseTask, handoffTask, buildInCodebaseTask } from '../services/agentTasks';
+import { type CheckoutParts, codebaseTask, guidePart, handoffTask, buildInCodebaseTask } from '../services/agentTasks';
 import { projectTitle } from '../services/commentsExport';
 import { designSystemCheckout, readDescriptor } from '../services/descriptor';
 import { recordsRootFor } from '../services/discovery';
-import { resumeCommand, startCommand } from '../services/editor';
+import { handToClaude, resumeCommand } from '../services/editor';
 import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, commandLine } from '../services/engineeringHandoff';
 import { branchCommit, changedSince, headCommit, readCheckout } from '../services/git';
 import { codebaseBranchFor, recordHandoff, recordPreview, recordedIteration } from '../services/iterations';
-import { MOVE_SKILL, buildInCodebasePrompt } from '../services/prototype';
+import { GUIDE, MOVE_SKILL, buildInCodebasePrompt } from '../services/prototype';
 import { pullRequestText } from '../services/share';
 import type { IpcDeps } from '../ipc';
 
@@ -53,19 +53,25 @@ export const registerCodebase = (d: IpcDeps): void => {
 		return taskAccessibility(readSkillText, productTarget(join(canonical, descriptor.contextDir), descriptor.product), findings, check);
 	};
 
+	/** The design repository's own folder beside this product (the one holding `agents/`, `skills/`, `standards/`), if found. */
+	const sharedRoot = (canonical: string): string | null => {
+		const records = recordsRootFor(canonical);
+		return records === null ? null : dirname(records);
+	};
+
 	/**
 	 * What a codebase run may read besides the checkout: the shared skills and standards the product's guidance
 	 * points at, and the design system's own guidance (`designSystemCheckout`). Read only, and named in the task, since a folder
 	 * the agent has not been told about is one it never opens.
 	 */
 	const sharedGuidance = (canonical: string): { dirs: string[]; note: string } => {
-		const designRoot = recordsRootFor(canonical);
+		const root = sharedRoot(canonical);
 		const designSystem = readDescriptor(canonical).designSystem;
 		const named: Array<[string, string | null]> = [
-			["Shared agents (the product's shims point here)", designRoot === null ? null : join(dirname(designRoot), 'agents')],
-			['Shared skills (a `skills/…` path in any guidance is here)', designRoot === null ? null : join(dirname(designRoot), 'skills')],
-			['Shared standards', designRoot === null ? null : join(dirname(designRoot), 'standards')],
-			['Shared logging (how the product logs what went wrong)', designRoot === null ? null : join(dirname(designRoot), 'knowledge')],
+			["Shared agents (the product's shims point here)", root === null ? null : join(root, 'agents')],
+			['Shared skills (a `skills/…` path in any guidance is here)', root === null ? null : join(root, 'skills')],
+			['Shared standards', root === null ? null : join(root, 'standards')],
+			['Shared logging (how the product logs what went wrong)', root === null ? null : join(root, 'knowledge')],
 			["The design system's checkout (its guidance and source)", designSystemCheckout(canonical, designSystem)],
 		];
 		const found = named.filter((n): n is [string, string] => n[1] !== null && existsSync(n[1]));
@@ -89,6 +95,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 		return {
 			readOnly: shared.dirs,
 			parts: {
+				guide: guidePart(await readSkillText(GUIDE), sharedRoot(canonical)),
 				lightCheck: commandLine(readDescriptor(canonical).commands, 'check-iteration', projectId),
 				shared: shared.note,
 				accessibility: await codebaseAccessibility(canonical, findings),
@@ -332,14 +339,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 				),
 			);
 			const prompt = buildInCodebasePrompt({ label, projectId, taskFile, continuing: continuing ? branch : null });
-			const editor = ports.editor.find();
-			if (editor) {
-				await ports.editor.openPrompt(editor, canonical, prompt);
-				return { editor: true, command: null };
-			}
-			const command = startCommand(ports.claude(), canonical, prompt);
-			await ports.copy(command);
-			return { editor: false, command };
+			return handToClaude(ports, canonical, prompt);
 		},
 	);
 };

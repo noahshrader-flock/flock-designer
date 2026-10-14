@@ -305,7 +305,7 @@ describe('dialogs and menus, in the panel', () => {
 			const task = field('What should it explore?');
 			expect(task.labels?.[0]?.textContent).toBe('What should it explore?');
 			const hint = document.getElementById(task.getAttribute('aria-describedby')!);
-			expect(hint?.textContent).toContain('DSNR builds it from this');
+			expect(hint?.textContent).toContain('Claude Code builds it from this');
 			expect(field('Name').hasAttribute('aria-describedby')).toBe(false);
 		});
 

@@ -106,3 +106,27 @@ export const resumeCommand = (claude: string, { session, root }: AgentSession, p
 /** Without VS Code: a new conversation, from a terminal, in `root`, with its first prompt. */
 export const startCommand = (claude: string, root: string, prompt: string, platform: NodeJS.Platform = process.platform): string =>
 	terminalLine(root, claude, quote(prompt, platform), platform);
+
+/**
+ * Work handed to Claude Code in the repository `root`, its conversation starting with `prompt`: a new conversation in VS
+ * Code when VS Code with Claude Code is here (`editor`), else the command that starts it in a terminal, put on the clipboard
+ * (`command`). Every hand-over is this one: a prototype's build, the fix of what its check found, Build in the codebase.
+ */
+export const handToClaude = async (
+	ports: {
+		editor: { find(): string | null; openPrompt(editor: string, root: string, prompt: string): Promise<void> };
+		claude(): string;
+		copy(text: string): Promise<void>;
+	},
+	root: string,
+	prompt: string,
+): Promise<{ editor: boolean; command: string | null }> => {
+	const editor = ports.editor.find();
+	if (editor) {
+		await ports.editor.openPrompt(editor, root, prompt);
+		return { editor: true, command: null };
+	}
+	const command = startCommand(ports.claude(), root, prompt);
+	await ports.copy(command);
+	return { editor: false, command };
+};

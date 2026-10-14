@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { addressTask, codebaseTask, handoffTask, buildInCodebaseTask } from '../src/main/services/agentTasks';
+import {
+	addressTask,
+	codebaseTask,
+	guidePart,
+	handoffTask,
+	buildInCodebaseTask,
+	prototypeAddressTask,
+	prototypeBuildTask,
+} from '../src/main/services/agentTasks';
+
+/** The builder's guide, as every task carries it (`guidePart`). */
+const GUIDE = guidePart('# Building UI in a Flock product\n\n1. **Hard rules:** `../standards/non-negotiables.md`.', '/d');
 
 const parts = {
+	guide: GUIDE,
 	lightCheck: 'npm run check:iteration',
 	shared: '## Also yours to read (never change)\n\n- Shared standards: `/d/standards`',
 	accessibility: '## Accessibility\n\nThe rules.',
@@ -80,8 +92,57 @@ describe('building a prototype in the codebase', () => {
 	it('asks for the audit before any code changes', () => {
 		const task = buildInCodebaseTask(
 			{ skill: 's', pageFile: '/q/i1.html', auditFile: '/d/projects/users/audit-i1.md', name: 'i1' },
-			{ lightCheck: null, shared: '', accessibility: '', voice: '' },
+			{ guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' },
 		);
 		expect(task).toContain('Write the audit to `/d/projects/users/audit-i1.md` before you change any code.');
+	});
+});
+
+describe('the builder’s guide, in every task (so no run depends on an agent choosing to read it)', () => {
+	const build = { source: '/p/v1-i1.tsx', page: '/p/v1-i1.html', buildCommand: 'node build.mjs' };
+	const sources = {
+		code: '/c',
+		productGuidance: null,
+		designSystemGuidance: null,
+		installedDesignSystem: null,
+		sharedStandards: null,
+		nodeModules: null,
+	};
+	const tasks = {
+		'building a prototype': prototypeBuildTask({ guide: GUIDE, skill: '# Build', build, sources, accessibility: '', voice: '', request: 'A list' }),
+		'changing a prototype for a comment': prototypeAddressTask({
+			guide: GUIDE,
+			addressSkill: '# Address',
+			buildSkill: '# Build',
+			build,
+			sources,
+			accessibility: '',
+			voice: '',
+			commentsPath: '/c.md',
+			number: 1,
+			name: 'v1-i1',
+			where: 'here',
+		}),
+		'building a prototype in the codebase': buildInCodebaseTask({ skill: '# Move', pageFile: '/p.html', auditFile: '/a.md', name: 'v1-i1' }, parts),
+		'codebase work': codebaseTask({ unattended: '# Codebase work, unattended', task: 'Build it.' }, parts),
+		Handoff: handoffTask({ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null }, parts),
+	};
+
+	it.each(Object.entries(tasks))('comes first, before anything else: %s', (_kind, task) => {
+		expect(task.startsWith(GUIDE)).toBe(true);
+		expect(task.indexOf('# Building UI in a Flock product')).toBeLessThan(task.indexOf('#', GUIDE.length));
+	});
+
+	it('says it is always followed, that the run’s own skill wins where it is more specific, and what to do with nobody to ask', () => {
+		expect(GUIDE).toMatch(/^## How to build UI here: always, before anything else/);
+		expect(GUIDE).toContain('the skill below wins');
+		expect(GUIDE).toContain('If nobody is there to answer a question');
+	});
+
+	it('points its links at the shared folder on this machine, so a task copied anywhere still names real files', () => {
+		expect(GUIDE).toContain('`/d/standards/non-negotiables.md`');
+		expect(GUIDE).not.toContain('`../');
+		// Not known (no design repository found): the links are left as written, never pointed somewhere wrong.
+		expect(guidePart('See `../standards/x.md`.', null)).toContain('`../standards/x.md`');
 	});
 });

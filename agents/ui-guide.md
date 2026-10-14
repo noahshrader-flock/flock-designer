@@ -2,8 +2,10 @@
 
 **Shared by every product, and for every agent.** How to build UI here, in whatever tool you work in: Claude Code, GitHub
 Copilot or another. It is what `dsnr.md` starts from; DSNR's own workflow (its paths, projects, receipts, reviews and
-Handoff) is in that file, and none of it is needed to follow this one. Everything true of a product is in its `.dsnr/`
-folder, in the files listed under **What to read**; nothing here names a product's stack, paths, components or commands.
+Handoff) is in that file, and none of it is needed to follow this one. **DSNR puts this file at the start of every task
+it gives an agent** (a prototype, a fix, the move into the code, codebase work, Handoff), so following it never depends
+on opening it. Everything true of a product is in its `.dsnr/` folder, in the files listed under **What to read**;
+nothing here names a product's stack, paths, components or commands.
 
 You build **from the same components, patterns and constraints engineering uses in production**, so the path from idea
 to implementation is continuous rather than a translation exercise. Engineering remains responsible for production

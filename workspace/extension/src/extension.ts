@@ -12,7 +12,9 @@ import { designSystemHost } from './designSystemHost';
 import { registerVoice } from './voice';
 import { valueOf } from '../../src/shared/result';
 import { type CodebaseAction, type HostMessage, type Review, readProjectArg, readReview, reviewsOf } from './messages';
-import { type Given, newPrototype, readGiven, readyToStart } from './newPrototype';
+import { type Given, newPrototype, readAsked, readyToStart } from './newPrototype';
+import { checkBuilt } from './afterBuild';
+import { watchBuild } from './watchBuild';
 import { PanelProvider } from './panel';
 import { PANEL_VIEW_OPTIONS } from './panelOptions';
 import { publishedLink } from './publishing';
@@ -172,7 +174,16 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		found.designRepository !== null
 			? Promise.resolve(found.designRepository)
 			: copyProject(core.designRepo.files, projectId, join(storage, 'review-copy'), reviews.inUse());
-	const openReview = async (review: Review): Promise<void> => reviews.open({ records: await recordsFor(review.projectId), ...review });
+	/**
+	 * A prototype Claude Code built is saved when it is opened, as the app saves it (`openPrototype`): its page built from
+	 * its source, and kept in the design repository, so what the review shows is what reviewers get. Nothing then, and no
+	 * error, for one with nothing built here. The list is read again, for the picture a built page now has.
+	 */
+	const openReview = async (review: Review): Promise<void> => {
+		await api.openPrototype(review.projectId, review.name);
+		await reviews.open({ records: await recordsFor(review.projectId), ...review });
+		projectsChanged();
+	};
 	/**
 	 * The review's page in the person's browser, outside VS Code: the same page, from this machine, with a key of its own,
 	 * so it comments through DSNR as a tab does (BROWSER_COMMENTS_PLAN).
@@ -197,8 +208,33 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	};
 
 	const productNow = () => ({ root: found.product, why: found.missing[0] ?? 'No product is open.' });
-	/** Makes a prototype from its answers (the panel's dialog, or code), with VS Code's notification, log and sync. */
-	const startPrototype = (given: Given) => newPrototype({ ...here, given, product: productNow(), onChanged: projectsChanged, openReview });
+	/** Watching builds Claude Code does ends with the window: nothing is saved after it is gone. */
+	let watching = true;
+	context.subscriptions.push({ dispose: () => void (watching = false) });
+	const watchPrototype = (projectId: string, name: string, title: string) => {
+		// Where it was handed over: where a fix of what its check finds goes too.
+		const root = found.product;
+		if (root === null) return;
+		void watchBuild({
+			read: async () => valueOf(await api.prototypeProgress(projectId, name)),
+			save: async () => (await api.savePrototype(projectId, name)).ok,
+			// Saved: the list read again for its picture, and its own check run here, whatever the agent did.
+			onSaved: () => {
+				projectsChanged();
+				void checkBuilt({ api, root, projectId, name, title, tell: vscodeTell, offer: vscodeOffer }).catch(failed);
+			},
+			since: Date.now(),
+			now: Date.now,
+			sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+			pollMs: 2000,
+			settleMs: 6000,
+			giveUpMs: 2 * 60 * 60 * 1000,
+			isLive: () => watching,
+		});
+	};
+	/** Makes a prototype from its answers (the panel's dialog, or code), its build handed to Claude Code and watched for. */
+	const startPrototype = (given: Given) =>
+		newPrototype({ ...here, given, product: productNow(), onChanged: projectsChanged, watchBuild: watchPrototype });
 	/**
 	 * What the panel asked of a project's codebase work (ELECTRON_MIGRATION_PLAN 5.2, 5.3), in the product open here, with
 	 * VS Code's notifications, the agent's log and the browser. Handoff and its draft pull request change its records: the
@@ -244,13 +280,13 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		vscode.window.registerWebviewViewProvider('dsnr.panel', provider, PANEL_VIEW_OPTIONS),
 		// Without answers, the panel's dialog asks them, once there is nothing in the way; given them, by code, it starts.
 		vscode.commands.registerCommand('dsnr.newPrototype', async (raw: unknown) => {
-			if (raw === undefined)
-				return readyToStart({ api, product: productNow() })
+			const asked = readAsked(raw);
+			if (asked === 'ask')
+				return readyToStart({ product: productNow() })
 					.then(() => inPanel({ type: 'open-dialog', dialog: { kind: 'new' } }))
 					.catch(failed);
-			const given = readGiven(raw);
-			if (!given) throw new Error('DSNR: New prototype was given something that is not a name and what it should explore.');
-			return startPrototype(given).catch(failedFor(true));
+			if (!asked) throw new Error('DSNR: New prototype was given something that is not a name and what it should explore.');
+			return startPrototype(asked).catch(failedFor(true));
 		}),
 		vscode.commands.registerCommand('dsnr.open', () => vscode.commands.executeCommand('workbench.view.extension.dsnr')),
 		// A product onto this machine with VS Code's own clone, which offers to open it; New prototype then offers the install.

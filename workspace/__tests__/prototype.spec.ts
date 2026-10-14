@@ -163,7 +163,7 @@ describe('what the agent is told', () => {
 	};
 
 	it('names the source to write, the exact command that checks it builds, and every folder it may read, read-only', () => {
-		const task = prototypeBuildTask({ skill: '# Skill', build, sources, accessibility: '', voice: '', request: 'A users list' });
+		const task = prototypeBuildTask({ guide: '', skill: '# Skill', build, sources, accessibility: '', voice: '', request: 'A users list' });
 		expect(task.startsWith('# Skill')).toBe(true);
 		expect(task).toContain('Write `/q/users/i1.tsx`');
 		expect(task).toContain(`\`${build.buildCommand}\``);
@@ -173,7 +173,7 @@ describe('what the agent is told', () => {
 	});
 
 	it('says what is missing rather than leaving the agent to guess', () => {
-		expect(prototypeBuildTask({ skill: 's', build, sources, accessibility: '', voice: '', request: 'r' })).toContain(
+		expect(prototypeBuildTask({ guide: '', skill: 's', build, sources, accessibility: '', voice: '', request: 'r' })).toContain(
 			'The design system as installed:** not on this machine',
 		);
 	});

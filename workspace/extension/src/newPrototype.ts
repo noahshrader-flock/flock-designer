@@ -1,23 +1,27 @@
-import { runPrototypeBuild, type PrototypeApi } from '../../src/renderer/runPrototypeBuild';
-import type { BuildPhase } from '../../src/renderer/localBuild';
-import type { Project, WorkspaceApi } from '../../src/shared/contract';
-import { toProjectIteration } from '../../src/shared/iterationRecords';
+import type { WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 import { slugify } from '../../src/shared/validate';
-import { type AgentWorkDeps, type Offer, agentReady, agentWork, pollOf } from './agentWork';
-import { LIMITS, type Review, reviewsOf } from './messages';
+import { type AgentWorkDeps, type Offer, type Tell, handedTo } from './agentWork';
+import { LIMITS } from './messages';
 
-export interface NewPrototypeDeps extends AgentWorkDeps {
-	api: AgentWorkDeps['api'] &
-		PrototypeApi &
-		Pick<WorkspaceApi, 'prototypeReadiness' | 'installPackages' | 'cancelInstall' | 'onInstallLine' | 'readCheckout' | 'createPrototype'>;
+export interface NewPrototypeDeps extends Pick<AgentWorkDeps, 'progress'> {
+	api: Pick<
+		WorkspaceApi,
+		'prototypeReadiness' | 'installPackages' | 'cancelInstall' | 'onInstallLine' | 'readCheckout' | 'createPrototype' | 'handPrototypeBuild'
+	>;
 	/** The product folder that is open, or why there is none (from the context). */
 	product: { root: string | null; why: string };
 	/** A warning with what can be done about it. */
 	choose: Offer;
-	/** Told when the projects changed: once it is made, so the list shows it while it is built, and once it is built. */
+	/** Says where the build went, in VS Code's notification, without waiting on anyone. */
+	tell: Tell;
+	/** Told when the projects changed: once it is made, so the list shows it while it is built. */
 	onChanged: () => void;
-	openReview: (review: Review) => Promise<void>;
+	/**
+	 * Starts watching for its build to be done: to save it, have the list read again, and run its accessibility check
+	 * (`watchBuild`, `checkBuilt`); not waited for.
+	 */
+	watchBuild: (projectId: string, name: string, title: string) => void;
 	/** What to make: its name, what it explores and its folder, from the panel's dialog or from code (`readGiven`). */
 	given: Given;
 }
@@ -44,15 +48,18 @@ export const readGiven = (raw: unknown): Given | null => {
 	return within(r.title, LIMITS.title) && within(r.task, LIMITS.task) && folder !== undefined ? { title: r.title, task: r.task, folder } : null;
 };
 
-const INSTALL = 'Install packages';
-
-/** What the notification says at each step of the build. */
-const PHASE_WORDS: Partial<Record<BuildPhase['kind'], string>> = {
-	agent: 'The agent is writing it from your request. This takes a few minutes.',
-	preview: 'Opening it…',
+/**
+ * What DSNR: New prototype was called with: the dialog to ask (`'ask'`), the answers code gave (`Given`), or null when code
+ * meant to give answers and they are wrong. **Anything that is not an attempt at answers is a request to ask:** VS Code hands a
+ * command run from a title bar or a menu an argument of its own (a view's, a context's), and that must never be taken for a
+ * request that was badly made.
+ */
+export const readAsked = (raw: unknown): 'ask' | Given | null => {
+	const meant = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && ('title' in raw || 'task' in raw);
+	return meant ? readGiven(raw) : 'ask';
 };
-const wordsFor = (phase: BuildPhase): string | undefined =>
-	phase.kind === 'agent' && phase.accessibility ? 'Fixing what the accessibility check found…' : PHASE_WORDS[phase.kind];
+
+const INSTALL = 'Install packages';
 
 /** The product's packages, with its design system, installed: installed here when the person asks and the product says how. */
 const packagesReady = async ({ api, choose, progress }: NewPrototypeDeps, root: string): Promise<boolean> => {
@@ -92,19 +99,20 @@ const packagesReady = async ({ api, choose, progress }: NewPrototypeDeps, root: 
 };
 
 /**
- * What stands in the way of starting at all, said before the person is asked anything: no product open, Claude Code
- * missing or signed out. (The product's packages come after, as they can be installed from here.)
+ * What stands in the way of starting at all, said before the person is asked anything: no product open. (The product's
+ * packages come after, as they can be installed from here. Claude Code is not asked after: with none in this VS Code, the
+ * command that starts it in a terminal is what the person is given.)
  */
-export const readyToStart = async ({ api, product }: Pick<NewPrototypeDeps, 'api' | 'product'>): Promise<void> => {
+export const readyToStart = async ({ product }: Pick<NewPrototypeDeps, 'product'>): Promise<void> => {
 	if (product.root === null) throw new Error(product.why);
-	await agentReady(api);
 };
 
 /**
  * Starting a prototype, the designer's loop in VS Code (ELECTRON_MIGRATION_PLAN 4.1), from what the panel's dialog asked
  * (`given`): what stands in the way is said first (`readyToStart`, then the packages not installed, with Install, when the
- * product says how). It starts from the branch the product is on. Then the app's own build (`runPrototypeBuild`), said
- * in a notification with Stop and its log shown as it goes, and when it is saved, its review opens.
+ * product says how). It starts from the branch the product is on. Then its building is handed to Claude Code in this
+ * window, as Build in the codebase's is: a conversation with the task typed in, for the person to start and watch. Nothing
+ * is built from here; DSNR watches for the build to be done and saves it (`watchBuild`), and opening it saves it too.
  */
 export const newPrototype = async (deps: NewPrototypeDeps): Promise<void> => {
 	const { api, product, given } = deps;
@@ -120,35 +128,7 @@ export const newPrototype = async (deps: NewPrototypeDeps): Promise<void> => {
 	if (checkout.branch === null) throw new Error('The product is not on a branch: check one out, then start again.');
 	const made = valueOf(await api.createPrototype(slugify(title), title, task, { root: checkout.root, branch: checkout.branch }, given.folder));
 	deps.onChanged();
-	const iteration = toProjectIteration(made);
-	const project: Project = { id: made.projectId, title, folder: given.folder, records: [], iterations: [iteration], people: [] };
-	await build(deps, project, task);
-};
-
-/** The build, said as it goes and stoppable, its log shown: its review opened when it is saved, or how it failed thrown. */
-const build = async (deps: NewPrototypeDeps, project: Project, task: string): Promise<void> => {
-	const iteration = project.iterations[0]!;
-	let failed: string | null = null;
-	let opened: string | null = null;
-	const { stopped } = await agentWork(deps, { title: `Building ${project.title}`, logTitle: project.title }, async (say, isLive) => {
-		opened = await runPrototypeBuild({
-			api: deps.api,
-			project,
-			iteration,
-			task,
-			isLive,
-			onPhase: (phase) => {
-				if (phase.kind === 'failed') failed = phase.message;
-				const words = wordsFor(phase);
-				if (words) say(words);
-			},
-			...pollOf(deps),
-		});
-	});
-	if (stopped) return;
-	// Said as any failure is; its log is already beside the editor.
-	if (failed !== null) throw new Error(`${project.title} was not built: ${failed}`);
-	deps.onChanged();
-	const review = reviewsOf(project)[0];
-	if (opened !== null && review) await deps.openReview(review);
+	const handed = valueOf(await api.handPrototypeBuild(root, made.projectId, made.name, task));
+	deps.watchBuild(made.projectId, made.name, title);
+	deps.tell(`${handedTo(handed, title)} DSNR saves it when it is built, checks it, and its picture appears in the list.`);
 };
