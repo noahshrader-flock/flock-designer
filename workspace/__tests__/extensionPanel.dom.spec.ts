@@ -606,6 +606,9 @@ describe('codebase work, in the panel', () => {
 			expect(sent.filter((m) => m.name === 'buildInCodebasePlan').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2-i1']);
 			expect(sent.filter((m) => m.name === 'branchesWithSetup').at(-1)?.args).toEqual(['/work/flock-coke']);
 			expect(dialog()!.textContent).toContain('Creates feature/alert-history from this branch and moves your checkout to it.');
+			// What happens ends with the check it makes of its own work, and says what is left to Handoff.
+			expect(dialog()!.textContent).toContain('Before it reports, the implementation reviewer checks the work once');
+			expect(dialog()!.textContent).toContain('the full reviews and the gate are Handoff’s');
 		});
 
 		it('starts from what the prototype was modeled on, from the branches that have DSNR’s setup, and hands it to Claude Code here', async () => {

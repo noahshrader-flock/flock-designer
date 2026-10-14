@@ -64,6 +64,49 @@ describe('what the shared files say about one tool', () => {
 		expect(workflow).toMatch(/another agent[^.]*plain question/i);
 	});
 
+	describe('Build in the codebase checks its own work once, before it reports', () => {
+		const build = skills.find((s) => s.file === 'skills/move-to-code.md')?.text ?? '';
+		const section = /## Before you report[^\n]*\n([\s\S]*?)\n## /.exec(build)?.[1] ?? '';
+
+		it('has the section, between the work and the report', () => {
+			expect(section).not.toBe('');
+			expect(build.indexOf('## Then: the work')).toBeLessThan(build.indexOf('## Before you report'));
+			expect(build.indexOf('## Before you report')).toBeLessThan(build.indexOf('## When you have finished'));
+		});
+
+		it('asks the implementation reviewer, which is code and boundary, and leaves product parity to Handoff', () => {
+			expect(section).toContain('../agents/implementation-reviewer.md');
+			expect(section).toMatch(/product parity[^.]*Handoff/i);
+		});
+
+		it('runs it as a subagent where there are subagents, in the foreground, and itself where there are not, saying so', () => {
+			expect(section).toMatch(/[Ww]here (the agent runs )?subagents, run it as a subagent, in the foreground/);
+			expect(section).toMatch(/not available, read the definition and follow it directly, and say that you did/);
+		});
+
+		it('fixes what blocks, one commit each with the light check passing, and checks again once at most', () => {
+			expect(section).toMatch(/[Ff]ix every (finding|blocking)/);
+			expect(section).toMatch(/[Cc]ommit after each\s+fix/);
+			expect(section).toMatch(/once more/);
+			expect(section).toMatch(/still open/);
+		});
+
+		it('records a check that could not run as not run, never as a pass', () => {
+			expect(section).toMatch(/not run/);
+		});
+
+		it('is in the report, which still says the full reviews and the gate are Handoff’s', () => {
+			const report = build.slice(build.indexOf('## When you have finished'));
+			expect(report).toMatch(/implementation check/);
+			expect(report).toMatch(/Handoff/);
+			expect(build).not.toMatch(/The reviews and the full checks are not this run's/);
+		});
+
+		it('is said by DSNR’s workflow too: the reviews run at Handoff, except this one check', () => {
+			expect(read('dsnr.md')).toMatch(/run at Handoff[^.]*\.[^.]*Build in the codebase[^.]*one implementation check/s);
+		});
+	});
+
 	it('runs the reviewers as subagents only where there are subagents, and says what to do otherwise', () => {
 		const handoff = skills.find((s) => s.file === 'skills/handoff.md')?.text ?? '';
 		expect(handoff).toMatch(/[Ww]here (the agent runs )?subagents/);

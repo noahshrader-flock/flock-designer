@@ -60,3 +60,16 @@ export const iterationLabel = (i: Pick<ProjectIteration, 'name' | 'branch'>): st
  */
 export const noSetupNote = (branch: string): string =>
 	`${branch} has no DSNR setup (.dsnr/workspace.json), so DSNR cannot work in it. Merge a branch that has the DSNR setup into it first.`;
+
+/**
+ * What Build in the codebase does once Claude Code has the task, after the step that is each screen's own (where Claude
+ * Code opens): said the same in the app and in VS Code, since the work is the same. Ends with the check it makes of its
+ * own work, and what is left to Handoff.
+ */
+export const buildSteps = (continuing: boolean, branch: string): string[] => [
+	continuing
+		? 'The agent looks at what is already on the branch and its audit, then carries on from there.'
+		: "The agent reads the prototype's source and its marks, and writes an audit first: a decision for each stand-in, a data task for each mock, a deletion for each removal.",
+	`Then it builds the real thing in the files where it belongs, and commits on ${branch}. You see all of it there.`,
+	'Before it reports, the implementation reviewer checks the work once, and what blocks is fixed. Product parity, the full reviews and the gate are Handoff’s.',
+];

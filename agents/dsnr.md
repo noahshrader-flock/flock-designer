@@ -123,7 +123,7 @@ The last row matters most: it is where a wrong assumption is caught before it be
 
 ### 2. The two reviews
 
-**On the codebase path they run at Handoff, not while you build.** Elsewhere, before you report anything:
+**On the codebase path they run at Handoff, not while you build.** The one exception is the implementation review: Build in the codebase has one implementation check of its own before it reports (`../skills/move-to-code.md`), so a boundary or wiring failure is found while it is cheap to fix. Elsewhere, before you report anything:
 
 | Review | Asks | Definition |
 |---|---|---|

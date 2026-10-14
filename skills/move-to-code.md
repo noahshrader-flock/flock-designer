@@ -11,9 +11,9 @@ takes for a person to check, and then build it properly.
 
 **This is codebase work, with the person watching** (it opens in their editor). Check each step with the
 product's light check, named in this task, and fix what it finds. Commit as you go, on this branch, with
-**no `Co-Authored-By` or other attribution line**; never push, never switch branches. The reviews and the
-full checks are not this run's: they happen at **Handoff**. What follows is only what moving a prototype
-adds.
+**no `Co-Authored-By` or other attribution line**; never push, never switch branches. The full checks and
+the two full reviews are not this run's: they happen at **Handoff**. This run has one check of its own,
+before it reports (**Before you report**). What follows is only what moving a prototype adds.
 
 - **The agent that builds writes the audit.** If this repository hands the work to another agent, give it
   this file unchanged, with the paths the task names; do not paraphrase it.
@@ -84,7 +84,29 @@ there: fix each in the code, or say in the audit why not.
 - **When the work changes after the audit** (something found while building, later a review finding),
   update the audit to match in the same commit. It is what people check the work against.
 
+## Before you report: check your own work once
+
+The light check says the work compiles and its tests pass. It does not say the work stayed inside its
+boundary, or is wired the way this product does it: that fails quietly, and costs more to fix at Handoff.
+So check it once now, with the implementation reviewer, `../agents/implementation-reviewer.md`. It
+covers code and boundary only; **product parity stays at Handoff.**
+
+- **Commit what you have first,** with the light check passing, so the review sees all of it. It reviews
+  this branch's changes against the branch it started from, with the audit and the project's brief
+  (its change boundary) as what the work is checked against.
+- **Where the agent runs subagents, run it as a subagent, in the foreground,** and wait for it. Never in
+  the background: this run ends when you stop, and a review still going is lost.
+- If subagents are not available, read the definition and follow it directly, and say that you did. A
+  review of your own work is weaker than a second reader, and much stronger than none.
+- **Fix every finding it calls blocking,** and the quick, clearly right should-fix ones. **Commit after each
+  fix,** with the light check passing, and update the audit in the same commit when the work changed.
+- If you fixed anything, check **once more,** the same way, and no more than that. What still blocks after
+  the second check is **still open**: say so, and never make a check pass by editing it.
+- A check that could not run is **not run**, with what would make it runnable, never a pass.
+- The check's words are for your report, not for the project's review record: that is Handoff's.
+
 ## When you have finished
 
-Say what you built, where, the light check's result, and what is still open: what is waiting in **Needs a
-decision**, and where the audit is. Say that the reviews run at Handoff.
+Say what you built, where, the light check's result, **how the implementation check ran** (a subagent, or
+yourself) **and what it found: what you fixed, and what is still open**, and what else is waiting: what is
+in **Needs a decision**, and where the audit is. Say that product parity and the full gate run at Handoff.

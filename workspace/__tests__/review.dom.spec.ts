@@ -605,6 +605,12 @@ describe('Build', () => {
 			expect(document.body.textContent).not.toContain('uncommitted changes');
 		});
 
+		it('says what happens ends with the check it makes of its own work, and what is left to Handoff', async () => {
+			await dialog(['develop']);
+			expect(document.body.textContent).toContain('Before it reports, the implementation reviewer checks the work once');
+			expect(document.body.textContent).toContain('the full reviews and the gate are Handoff’s');
+		});
+
 		it('will not continue work on a branch with no DSNR setup, and says so before anything moves', async () => {
 			await dialog(['develop'], { ...started, current: 'develop', setup: false });
 			expect(button('Continue in Claude Code').disabled).toBe(true);

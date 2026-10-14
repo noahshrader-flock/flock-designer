@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { BuildInCodebase, Checkout, Project, ProjectIteration } from '../shared/contract';
-import { iterationLabel, noSetupNote } from '../shared/work';
+import { buildSteps, iterationLabel, noSetupNote } from '../shared/work';
 import { CancelButton } from './CancelButton';
 import { SearchSelect } from './SearchSelect';
 import { Button } from './ui/button';
@@ -175,12 +175,9 @@ export const BuildInCodebaseDialog = ({
 											<li>
 												Claude Code opens in {checkout.name} on {plan.branch}, with the task in a new conversation.
 											</li>
-											<li>
-												{continuing
-													? 'The agent looks at what is already on the branch and its audit, then carries on from there.'
-													: "The agent reads the prototype's source and its marks, and writes an audit first: a decision for each stand-in, a data task for each mock, a deletion for each removal."}
-											</li>
-											<li>Then it builds the real thing in the files where it belongs, and commits on {plan.branch}. You see all of it there.</li>
+											{buildSteps(continuing, plan.branch).map((step) => (
+												<li key={step}>{step}</li>
+											))}
 										</ol>
 									</div>
 								</>

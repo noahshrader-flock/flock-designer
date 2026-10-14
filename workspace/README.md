@@ -274,7 +274,9 @@ Stop), **Open on GitHub** (its pull request, else its branch), **Comments…** (
 its pull request, and there are no pins on it), **Hand off to engineering…** (the product's gate, both reviews, the
 fixes and HANDOFF.md, as a notification with Stop and its log, then the verdict; nothing is pushed) and **Share for
 review** (a draft pull request, with a preview, said step by step). A project only in the code opens on GitHub when
-pressed. VS Code is the editor here: work handed to Claude Code opens in this window's Claude Code, in its side panel by
+pressed. Build in the codebase checks its own work once before it reports: Claude Code asks the implementation reviewer
+(a read-only subagent, where there are subagents) about the branch's changes, fixes what blocks, and checks once more;
+product parity and the full gate stay at Handoff. VS Code is the editor here: work handed to Claude Code opens in this window's Claude Code, in its side panel by
 default, or in an editor tab if you set `dsnr.claudeCode.location` to `editor`; it uses Claude Code's own commands for
 this, and a Claude Code without them opens an editor tab through its link.
 

@@ -4,7 +4,7 @@ import { stripAnchor } from '../../src/shared/anchor';
 import type { BuildInCodebase } from '../../src/shared/contract';
 import type { Project } from '../../src/shared/domain/projects';
 import { foldersOf, sameFolder } from '../../src/shared/brief';
-import { noSetupNote, workOf } from '../../src/shared/work';
+import { buildSteps, noSetupNote, workOf } from '../../src/shared/work';
 import { type CodebaseAction, type PanelDialog, reviewsOf } from '../src/messages';
 import { slugify } from '../../src/shared/validate';
 import { Button } from './ui/Button';
@@ -330,12 +330,9 @@ const BuildInCodebaseDialog = ({
 						<p className="field-label">What happens</p>
 						<ol className="dialog-steps">
 							<li>Claude Code opens in this window on {plan.branch}, with the task in a new conversation.</li>
-							<li>
-								{continuing
-									? 'The agent looks at what is already on the branch and its audit, then carries on from there.'
-									: "The agent reads the prototype's source and its marks, and writes an audit first: a decision for each stand-in, a data task for each mock, a deletion for each removal."}
-							</li>
-							<li>Then it builds the real thing in the files where it belongs, and commits on {plan.branch}. You see all of it there.</li>
+							{buildSteps(continuing, plan.branch).map((step) => (
+								<li key={step}>{step}</li>
+							))}
 						</ol>
 					</>
 				)}
