@@ -344,6 +344,23 @@ Claude Code, so do it on a test project you can delete:
 8. When you are done: DSNR has no Delete, so remove the project's folder (`projects/dsnr-test`) from the design
    repository and push, and close its review issue on GitHub.
 
+**By hand, on purpose (Phase 5): into the code, and Handoff.** It makes a branch in the product, runs Claude Code
+there, and pushes a draft pull request at the end, so use the same test project, and a product checkout with no
+uncommitted changes:
+
+1. The test project's **⋯** menu › **Build in the codebase…**. Check the branch it names and where it starts from, then
+   **Build in Claude Code**. Claude Code's panel in this window should open with the task typed in, on that branch:
+   press Enter there, and let it write the audit, then the code, and commit.
+2. When it has committed, the project's menu has codebase work: **Open the preview** opens the branch's own dev server
+   in your browser (then **Stop it**), and **Open on GitHub** opens the branch.
+3. **Hand off to engineering…** › **Start handoff**. Watch the notification and View › Output › DSNR: Agent while it
+   runs the product's gate, both reviews and the fixes, and writes HANDOFF.md. It ends with the verdict.
+4. When it is **Ready for engineering**, **Open a draft pull request** (or the menu's **Share for review**): it pushes the
+   branch, opens a draft pull request and builds its preview, then offers both.
+5. **Comments…** lists the comments on the codebase work, read only.
+6. When you are done: close the draft pull request, delete the branch, and remove the project from the design
+   repository, as above.
+
 ## If the window shows "Invalid hook call" while developing
 
 Only under `npm run dev`, and never in a built app. Vite pre-bundles each package the first
