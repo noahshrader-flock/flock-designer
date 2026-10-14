@@ -274,7 +274,9 @@ Stop), **Open on GitHub** (its pull request, else its branch), **Comments…** (
 its pull request, and there are no pins on it), **Hand off to engineering…** (the product's gate, both reviews, the
 fixes and HANDOFF.md, as a notification with Stop and its log, then the verdict; nothing is pushed) and **Share for
 review** (a draft pull request, with a preview, said step by step). A project only in the code opens on GitHub when
-pressed. VS Code is the editor here: work handed to Claude Code goes to this window's Claude Code panel.
+pressed. VS Code is the editor here: work handed to Claude Code opens in this window's Claude Code where you keep it (its side
+panel, or the editor, as you last chose), through Claude Code's own open command; a Claude Code without that command
+opens an editor tab through its link.
 
 **Sync and share:** whether the person's work is synced is in VS Code's status bar (Synced, Syncing, Not synced);
 pressing it shows what is held back and why, and Sync now. A review tab's title bar opens its page on the published site,

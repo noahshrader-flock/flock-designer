@@ -75,7 +75,7 @@ describe('VS Code’s ports', () => {
 	const fake = () => ({
 		window: { showOpenDialog: vi.fn(async (_options: unknown) => [{ fsPath: '/picked' }]), showInformationMessage: vi.fn(async () => undefined) },
 		env: { openExternal: vi.fn(async (_uri: unknown) => true), clipboard: { writeText: vi.fn(async () => undefined) } },
-		commands: { executeCommand: vi.fn(async () => undefined) },
+		commands: { executeCommand: vi.fn(async (_id: string, ..._args: unknown[]) => undefined) },
 		Uri: { file: (p: string) => ({ fsPath: p }), parse: (u: string) => ({ toString: () => u }) },
 		extensions: { getExtension: vi.fn((id: string) => (id === 'anthropic.claude-code' ? { id } : undefined)) },
 		workspace: { workspaceFolders: [{ uri: { fsPath: '/work/coke' } }] },
@@ -99,20 +99,56 @@ describe('VS Code’s ports', () => {
 		expect(v.commands.executeCommand).toHaveBeenCalledWith('revealFileInOS', { fsPath: '/a' });
 	});
 
-	it('hand work to Claude Code in this window: VS Code is the editor here, when Claude Code is installed in it', async () => {
+	/** Claude Code's own open command, as it is given where the person keeps Claude Code: its side panel, or the editor. */
+	const WHERE = { programmatic: 'honor-preferred-location' };
+
+	it('hand work to Claude Code in this window, where the person keeps it (its side panel), when Claude Code is installed in it', async () => {
 		const v = fake();
 		const { editor } = vscodePorts(v as never, none);
 		expect(editor.find()).toBe('vscode');
 		await editor.openPrompt('vscode', '/work/coke', 'Build it.');
-		// The product is open in this window, so no other is opened: the conversation starts in this one's Claude Code.
-		expect(v.commands.executeCommand).not.toHaveBeenCalled();
-		expect(String(v.env.openExternal.mock.calls.at(-1)?.[0])).toBe('vscode://anthropic.claude-code/open?prompt=Build+it.');
-		const then = vi.fn();
-		await editor.openSession('vscode', { session: '0b2e5b8e-46ac-4823-9acb-716bcb37aa64', root: '/work/coke' } as never, then);
-		expect(then).toHaveBeenCalled();
-		expect(String(v.env.openExternal.mock.calls.at(-1)?.[0])).toBe(
-			'vscode://anthropic.claude-code/open?session=0b2e5b8e-46ac-4823-9acb-716bcb37aa64',
+		// The product is open in this window, so no other is opened; Claude Code opens the conversation where it is kept.
+		expect(v.commands.executeCommand).toHaveBeenCalledTimes(1);
+		expect(v.commands.executeCommand).toHaveBeenCalledWith(
+			'claude-vscode.editor.open',
+			undefined,
+			'Build it.',
+			undefined,
+			undefined,
+			undefined,
+			WHERE,
 		);
+		expect(v.env.openExternal).not.toHaveBeenCalled();
+		const then = vi.fn();
+		const session = '0b2e5b8e-46ac-4823-9acb-716bcb37aa64';
+		await editor.openSession('vscode', { session, root: '/work/coke' } as never, then);
+		expect(then).toHaveBeenCalled();
+		expect(v.commands.executeCommand).toHaveBeenLastCalledWith(
+			'claude-vscode.editor.open',
+			session,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			WHERE,
+		);
+	});
+
+	it('fall back to Claude Code’s link (an editor tab) when its open command is not there, as in another version', async () => {
+		const v = fake();
+		v.commands.executeCommand.mockImplementation(async (id: string) => {
+			if (id === 'claude-vscode.editor.open') throw new Error(`command '${id}' not found`);
+		});
+		const { editor } = vscodePorts(v as never, none);
+		await editor.openPrompt('vscode', '/work/coke', 'Build it.');
+		expect(String(v.env.openExternal.mock.calls.at(-1)?.[0])).toBe('vscode://anthropic.claude-code/open?prompt=Build+it.');
+	});
+
+	it('refuse what is not a session, before asking Claude Code anything', async () => {
+		const v = fake();
+		const { editor } = vscodePorts(v as never, none);
+		await expect(editor.openSession('vscode', { session: '../x', root: '/work/coke' } as never, vi.fn())).rejects.toThrow('That is not a session.');
+		expect(v.commands.executeCommand).not.toHaveBeenCalled();
 	});
 
 	it('open a folder that is not in this window in a window of its own, and say there is no editor without Claude Code', async () => {

@@ -268,8 +268,8 @@ const BuildInCodebaseDialog = ({
 			<Dialog title="Build in the codebase" onClose={onClose}>
 				{handed.editor ? (
 					<p className="dialog-about">
-						It is in Claude Code in this window now, on <code>{plan.branch}</code>: a new conversation there has the task typed in. Press Enter there
-						to start it, then watch the agent write the audit and then the code, and step in when you like.
+						It is in Claude Code in this window now (where you keep it), on <code>{plan.branch}</code>: a new conversation there has the task typed
+						in. Press Enter there to start it, then watch the agent write the audit and then the code, and step in when you like.
 					</p>
 				) : (
 					<>
