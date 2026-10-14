@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VsCodeGitHub } from '../extension/src/github';
 import { vscodePorts } from '../extension/src/vscodePorts';
 import { reviewsOf } from '../extension/src/messages';
@@ -71,7 +71,13 @@ describe('the person’s GitHub account, through VS Code', () => {
 	});
 });
 
+/** The person's settings, as the fake VS Code reads them, by section and key. */
+let settings: Record<string, unknown> = {};
+
 describe('VS Code’s ports', () => {
+	beforeEach(() => {
+		settings = {};
+	});
 	const fake = () => ({
 		window: { showOpenDialog: vi.fn(async (_options: unknown) => [{ fsPath: '/picked' }]), showInformationMessage: vi.fn(async () => undefined) },
 		env: { openExternal: vi.fn(async (_uri: unknown) => true), clipboard: { writeText: vi.fn(async () => undefined) } },
@@ -80,7 +86,7 @@ describe('VS Code’s ports', () => {
 		extensions: { getExtension: vi.fn((id: string) => (id === 'anthropic.claude-code' ? { id } : undefined)) },
 		workspace: {
 			workspaceFolders: [{ uri: { fsPath: '/work/coke' } }],
-			getConfiguration: vi.fn(() => ({ get: (_key: string, fallback: unknown) => fallback })),
+			getConfiguration: vi.fn((section: string) => ({ get: (key: string, fallback?: unknown) => settings[`${section}.${key}`] ?? fallback })),
 		},
 	});
 	const none = { draw: vi.fn(), scan: vi.fn(), measure: vi.fn() };
@@ -106,28 +112,48 @@ describe('VS Code’s ports', () => {
 	const SIDEBAR = 'claude-vscode.sidebar.open';
 	const OPEN = 'claude-vscode.editor.open';
 	const WHERE = { programmatic: 'honor-preferred-location' };
-	const location = (v: ReturnType<typeof fake>, value: string) =>
-		v.workspace.getConfiguration.mockReturnValue({ get: (_key: string, fallback: unknown) => (_key === 'location' ? value : fallback) });
+	/** Claude Code's sidebar command, as it is: it saves its own setting as the sidebar a moment later, without waiting. */
+	const savesLater = (v: ReturnType<typeof fake>) =>
+		v.commands.executeCommand.mockImplementation(async (id: string) => {
+			if (id === SIDEBAR) setTimeout(() => (settings['claudeCode.preferredLocation'] = 'sidebar'), 30);
+		});
 
-	it('hand work to Claude Code in this window, in its side panel by default, when Claude Code is installed in it', async () => {
+	it('hand work to Claude Code in this window, in its side panel by default: shown first, and opened once Claude Code has it as its place', async () => {
 		const v = fake();
+		savesLater(v);
+		let placeWhenOpened: unknown;
+		const opened = v.commands.executeCommand.getMockImplementation()!;
+		v.commands.executeCommand.mockImplementation(async (id: string, ...args: unknown[]) => {
+			if (id === OPEN) placeWhenOpened = settings['claudeCode.preferredLocation'];
+			return opened(id, ...args);
+		});
 		const { editor } = vscodePorts(v as never, none);
 		expect(editor.find()).toBe('vscode');
 		await editor.openPrompt('vscode', '/work/coke', 'Build it.');
-		// The side panel is shown first, which makes it the place Claude Code keeps conversations; then the conversation opens there.
-		expect(v.workspace.getConfiguration).toHaveBeenCalledWith('dsnr.claudeCode');
 		expect(v.commands.executeCommand.mock.calls).toEqual([[SIDEBAR], [OPEN, undefined, 'Build it.', undefined, undefined, undefined, WHERE]]);
+		// Opened only once Claude Code had saved the sidebar as its place: before, it would read its old place, an editor tab.
+		expect(placeWhenOpened).toBe('sidebar');
 		expect(v.env.openExternal).not.toHaveBeenCalled();
+	});
+
+	it('open it there at once when Claude Code already keeps its conversations in its side panel, and continue a session the same way', async () => {
+		const v = fake();
+		settings['claudeCode.preferredLocation'] = 'sidebar';
+		const { editor } = vscodePorts(v as never, none);
+		await editor.openPrompt('vscode', '/work/coke', 'Build it.');
 		const then = vi.fn();
 		const session = '0b2e5b8e-46ac-4823-9acb-716bcb37aa64';
 		await editor.openSession('vscode', { session, root: '/work/coke' } as never, then);
 		expect(then).toHaveBeenCalled();
-		expect(v.commands.executeCommand.mock.calls.slice(2)).toEqual([[SIDEBAR], [OPEN, session, undefined, undefined, undefined, undefined, WHERE]]);
+		expect(v.commands.executeCommand.mock.calls).toEqual([
+			[OPEN, undefined, 'Build it.', undefined, undefined, undefined, WHERE],
+			[OPEN, session, undefined, undefined, undefined, undefined, WHERE],
+		]);
 	});
 
 	it('hand it to an editor tab instead, when that is the person’s setting', async () => {
 		const v = fake();
-		location(v, 'editor');
+		settings['dsnr.claudeCode.location'] = 'editor';
 		const { editor } = vscodePorts(v as never, none);
 		await editor.openPrompt('vscode', '/work/coke', 'Build it.');
 		// No side panel is shown, and Claude Code is not asked to honour a place: an editor tab, as its own command opens one.

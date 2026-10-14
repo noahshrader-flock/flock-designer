@@ -35,6 +35,18 @@ const editorHere = (vscode: VsCodeApi): Ports['editor'] => {
 		const here = (vscode.workspace.workspaceFolders ?? []).some((f) => f.uri.fsPath === folder);
 		if (!here) await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(folder), { forceNewWindow: true });
 	};
+	/** Where Claude Code keeps its conversations: its own setting, which its sidebar command saves. */
+	const place = () => vscode.workspace.getConfiguration('claudeCode').get<string>('preferredLocation');
+	/**
+	 * Claude Code keeping its conversations in its side panel: shown, when it is not already its place, and then waited for,
+	 * since its sidebar command saves that setting a moment later without waiting, and asked at once it would still read
+	 * the old place (an editor tab). Within a second; then it opens wherever Claude Code says.
+	 */
+	const keptInSidebar = async () => {
+		if (place() === 'sidebar') return;
+		await vscode.commands.executeCommand(SHOW_SIDEBAR);
+		for (let waited = 0; place() !== 'sidebar' && waited < 1000; waited += 25) await new Promise((r) => setTimeout(r, 25));
+	};
 	/** The conversation, in Claude Code: a session to continue, or a prompt to start with. The link also checks a session. */
 	const open = async (what: { session: string } | { prompt: string }) => {
 		const link = claudeLink(what);
@@ -44,7 +56,7 @@ const editorHere = (vscode: VsCodeApi): Ports['editor'] => {
 			if (vscode.workspace.getConfiguration('dsnr.claudeCode').get<string>('location', 'sidebar') === 'editor')
 				await vscode.commands.executeCommand(OPEN_CONVERSATION, session, prompt);
 			else {
-				await vscode.commands.executeCommand(SHOW_SIDEBAR);
+				await keptInSidebar();
 				await vscode.commands.executeCommand(OPEN_CONVERSATION, session, prompt, undefined, undefined, undefined, {
 					programmatic: 'honor-preferred-location',
 				});
