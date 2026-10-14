@@ -78,7 +78,10 @@ describe('VS Code’s ports', () => {
 		commands: { executeCommand: vi.fn(async (_id: string, ..._args: unknown[]) => undefined) },
 		Uri: { file: (p: string) => ({ fsPath: p }), parse: (u: string) => ({ toString: () => u }) },
 		extensions: { getExtension: vi.fn((id: string) => (id === 'anthropic.claude-code' ? { id } : undefined)) },
-		workspace: { workspaceFolders: [{ uri: { fsPath: '/work/coke' } }] },
+		workspace: {
+			workspaceFolders: [{ uri: { fsPath: '/work/coke' } }],
+			getConfiguration: vi.fn(() => ({ get: (_key: string, fallback: unknown) => fallback })),
+		},
 	});
 	const none = { draw: vi.fn(), scan: vi.fn(), measure: vi.fn() };
 
@@ -99,45 +102,42 @@ describe('VS Code’s ports', () => {
 		expect(v.commands.executeCommand).toHaveBeenCalledWith('revealFileInOS', { fsPath: '/a' });
 	});
 
-	/** Claude Code's own open command, as it is given where the person keeps Claude Code: its side panel, or the editor. */
+	/** Claude Code's own commands: show its side panel (which it then remembers as where it is kept), and open a conversation. */
+	const SIDEBAR = 'claude-vscode.sidebar.open';
+	const OPEN = 'claude-vscode.editor.open';
 	const WHERE = { programmatic: 'honor-preferred-location' };
+	const location = (v: ReturnType<typeof fake>, value: string) =>
+		v.workspace.getConfiguration.mockReturnValue({ get: (_key: string, fallback: unknown) => (_key === 'location' ? value : fallback) });
 
-	it('hand work to Claude Code in this window, where the person keeps it (its side panel), when Claude Code is installed in it', async () => {
+	it('hand work to Claude Code in this window, in its side panel by default, when Claude Code is installed in it', async () => {
 		const v = fake();
 		const { editor } = vscodePorts(v as never, none);
 		expect(editor.find()).toBe('vscode');
 		await editor.openPrompt('vscode', '/work/coke', 'Build it.');
-		// The product is open in this window, so no other is opened; Claude Code opens the conversation where it is kept.
-		expect(v.commands.executeCommand).toHaveBeenCalledTimes(1);
-		expect(v.commands.executeCommand).toHaveBeenCalledWith(
-			'claude-vscode.editor.open',
-			undefined,
-			'Build it.',
-			undefined,
-			undefined,
-			undefined,
-			WHERE,
-		);
+		// The side panel is shown first, which makes it the place Claude Code keeps conversations; then the conversation opens there.
+		expect(v.workspace.getConfiguration).toHaveBeenCalledWith('dsnr.claudeCode');
+		expect(v.commands.executeCommand.mock.calls).toEqual([[SIDEBAR], [OPEN, undefined, 'Build it.', undefined, undefined, undefined, WHERE]]);
 		expect(v.env.openExternal).not.toHaveBeenCalled();
 		const then = vi.fn();
 		const session = '0b2e5b8e-46ac-4823-9acb-716bcb37aa64';
 		await editor.openSession('vscode', { session, root: '/work/coke' } as never, then);
 		expect(then).toHaveBeenCalled();
-		expect(v.commands.executeCommand).toHaveBeenLastCalledWith(
-			'claude-vscode.editor.open',
-			session,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			WHERE,
-		);
+		expect(v.commands.executeCommand.mock.calls.slice(2)).toEqual([[SIDEBAR], [OPEN, session, undefined, undefined, undefined, undefined, WHERE]]);
+	});
+
+	it('hand it to an editor tab instead, when that is the person’s setting', async () => {
+		const v = fake();
+		location(v, 'editor');
+		const { editor } = vscodePorts(v as never, none);
+		await editor.openPrompt('vscode', '/work/coke', 'Build it.');
+		// No side panel is shown, and Claude Code is not asked to honour a place: an editor tab, as its own command opens one.
+		expect(v.commands.executeCommand.mock.calls).toEqual([[OPEN, undefined, 'Build it.']]);
 	});
 
 	it('fall back to Claude Code’s link (an editor tab) when its open command is not there, as in another version', async () => {
 		const v = fake();
 		v.commands.executeCommand.mockImplementation(async (id: string) => {
-			if (id === 'claude-vscode.editor.open') throw new Error(`command '${id}' not found`);
+			if (id.startsWith('claude-vscode.')) throw new Error(`command '${id}' not found`);
 		});
 		const { editor } = vscodePorts(v as never, none);
 		await editor.openPrompt('vscode', '/work/coke', 'Build it.');

@@ -19,6 +19,7 @@ interface Manifest {
 		views: Record<string, { id: string; name: string; type?: string }[]>;
 		commands: { command: string; title: string; category?: string; icon?: string }[];
 		menus: Record<string, { command: string; when?: string; group?: string }[]>;
+		configuration: { properties: Record<string, { type: string; enum?: string[]; default?: string; description: string }> };
 	};
 }
 const manifest = (): Manifest => JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as Manifest;
@@ -60,6 +61,13 @@ describe('the extension’s manifest', () => {
 			'DSNR: Sign in to GitHub',
 			'DSNR: Your GitHub account',
 		]);
+	});
+
+	it('lets the person choose where Claude Code opens what DSNR hands it: its side panel, or an editor tab', () => {
+		const { properties } = manifest().contributes.configuration;
+		expect(Object.keys(properties)).toEqual(['dsnr.claudeCode.location']);
+		expect(properties['dsnr.claudeCode.location']).toMatchObject({ type: 'string', enum: ['sidebar', 'editor'], default: 'sidebar' });
+		expect(properties['dsnr.claudeCode.location']!.description).toMatch(/Claude Code/);
 	});
 
 	it('builds the prototype in front in the codebase from a review tab’s own menu', () => {

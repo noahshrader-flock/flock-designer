@@ -616,7 +616,7 @@ describe('codebase work, in the panel', () => {
 			expect(sent.filter((m) => m.name === 'buildInCodebase').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2-i1', 'develop']);
 			const reads = sent.filter((m) => m.name === 'listProjects').length;
 			await answer('buildInCodebase', { editor: true, command: null });
-			expect(dialog()!.textContent).toContain('It is in Claude Code in this window now (where you keep it), on feature/alert-history');
+			expect(dialog()!.textContent).toContain('It is in Claude Code in this window now, on feature/alert-history');
 			// The project's codebase work is recorded: the list is read again.
 			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
 			await press(inDialog('Done'));
