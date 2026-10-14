@@ -23,25 +23,31 @@ const TYPES = typesOf(['.html', '.js', '.css', ...ASSETS]);
  * was given, and keeps nothing on disk. The preview shows it in its own sandboxed view, like any other.
  * The component previews are a built folder, served whole (`serveFolder`) and read from disk.
  *
- * **Two addresses** (REVIEW_ISOLATION_PLAN 2.1). What runs a repository's code is served on an address of its own, the
- * pages' (`pagesOrigin`): a built site's prototype pages (`page.html`) and folders marked as code (story previews). Its
- * own address (`origin`) serves the rest, the review bar among it, and refuses those. A page on the pages' address is
- * then another origin than the bar that frames it, and can neither read nor script it. Each answers only to its own name.
+ * **Two addresses.** What came from a repository is served on an address of its own, the pages' (`pagesOrigin`): a
+ * prototype given whole (`serve`) and what it shares, a built site's prototype pages (`page.html`), and folders of a
+ * repository's code (story previews). The server's own address (`origin`) serves only what DSNR wrote: a built site's
+ * index pages (the review bar among them), its scripts, styles, fonts and raster pictures; never a page or an SVG a
+ * repository wrote, which a page could open in its own frame to be on the bar's address. A page on the pages' address is
+ * then another origin than the bar that frames it, and can neither read nor script it. Each answers only to its own name,
+ * and says what each file is, so no browser takes it for anything else (`nosniff`). See the README's "Review isolation".
  */
 type Listener = { server: Server | null; port: number; starting: Promise<void> | null };
 type Where = 'app' | 'pages';
 
-/** A built site's prototype page, by its file's name: served on the pages' address alone. */
-const PAGE_FILE = 'page.html';
+/** The one page a folder may hold on the server's own address: DSNR's own (a built site's bar and lists). */
+const OWN_PAGE = 'index.html';
+
+/** Whether a folder's file is DSNR's, to serve on its own address: anything but a page a repository wrote, or an SVG. */
+const isOwn = (file: string): boolean => {
+	const ext = extname(file).toLowerCase();
+	return ext !== '.svg' && (ext !== '.html' || basename(file).toLowerCase() === OWN_PAGE);
+};
 
 export class PrototypeServer {
 	private readonly listeners: Record<Where, Listener> = {
 		app: { server: null, port: 0, starting: null },
 		pages: { server: null, port: 0, starting: null },
 	};
-	private get port(): number {
-		return this.listeners.app.port;
-	}
 	private readonly pages = new Map<string, string>();
 	/** Built folders served whole, by the key their address starts with, and whether they run a repository's code. */
 	private readonly folders = new Map<string, { dir: string; code: boolean }>();
@@ -52,7 +58,7 @@ export class PrototypeServer {
 		return this.shared.has(name);
 	}
 
-	/** Makes a shared file available to every page, at `/_shared/<name>`. */
+	/** Makes a shared file available to every page given whole, at `/_shared/<name>` on the pages' address. */
 	share(name: string, dataUri: string): void {
 		const m = /^data:([^;,]+)(;base64)?,(.*)$/s.exec(dataUri);
 		if (!m) return;
@@ -60,15 +66,16 @@ export class PrototypeServer {
 		this.shared.set(name, { type: m[1] as string, body });
 	}
 
-	/** The address the page can be opened at. Serving it again replaces what was there. */
 	/** Whether an address is one of the pages this serves: a prototype, which is one page. */
 	owns(url: string): boolean {
-		return this.port !== 0 && url.startsWith(`http://127.0.0.1:${this.port}/`);
+		const { port } = this.listeners.pages;
+		return port !== 0 && url.startsWith(`http://127.0.0.1:${port}/`);
 	}
 
+	/** Serves a prototype given whole, on the pages' address: the address it can be opened at. Serving it again replaces it. */
 	async serve(key: string, html: string): Promise<string> {
 		this.pages.set(`/${key}/`, html);
-		return `${await this.origin()}/${key}/`;
+		return `${await this.pagesOrigin()}/${key}/`;
 	}
 
 	/**
@@ -100,8 +107,7 @@ export class PrototypeServer {
 			const file = normalize(join(dir, named === '' || named.endsWith('/') ? `${named}index.html` : named));
 			const type = TYPES[extname(file)];
 			if (!file.startsWith(dir + sep) || type === undefined) return null;
-			// A built site's prototype page, on the pages' address alone.
-			if (where === 'app' && basename(file) === PAGE_FILE) return null;
+			if (where === 'app' && !isOwn(file)) return null;
 			return { type, body: await readFile(file) };
 		} catch {
 			return null;
@@ -135,12 +141,13 @@ export class PrototypeServer {
 			const server = createServer((req, res) => {
 				// Only what is asked of this listener's own address: a page elsewhere that has a name resolving here (DNS
 				// rebinding), or the other address's name, gets nothing.
+				res.setHeader('X-Content-Type-Options', 'nosniff');
 				if (req.headers.host !== `127.0.0.1:${l.port}`) return void res.writeHead(403, { 'Content-Type': 'text/plain' }).end('Not here');
 				const path = (req.url ?? '/').split('?')[0] ?? '/';
 				const notFound = () => void res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
 				if (req.method !== 'GET') return notFound();
-				// The app's own prototype pages (its native preview), and the files they share, on its own address.
-				if (where === 'app') {
+				// Prototypes given whole, and the files they share, on the pages' address.
+				if (where === 'pages') {
 					const file = this.shared.get(path.replace(/^\/_shared\//, ''));
 					if (path.startsWith('/_shared/') && file)
 						return void res.writeHead(200, { 'Content-Type': file.type, 'Cache-Control': 'max-age=31536000, immutable' }).end(file.body);

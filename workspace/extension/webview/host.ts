@@ -4,12 +4,11 @@ import { vscode } from './vscode';
 import { connectWorkspace } from './workspace';
 
 /**
- * Whether a message is the extension's: not one from a page this one frames (a design system's story, its type
- * specimen), which runs the library's code and could otherwise pass itself off as the extension. Those are served from
- * this machine's server, an `http:` origin; VS Code's own messages never are.
+ * Whether a message is the extension's: VS Code posts it from the window above this page, on this page's own origin.
+ * Nothing a page this one frames posts (a design system's story, its type specimen, which run the library's code), nor
+ * any frame inside one, comes from there.
  */
-export const fromExtension = (e: Pick<MessageEvent, 'origin' | 'source'>): boolean =>
-	!/^https?:/.test(e.origin) && ![...document.querySelectorAll('iframe')].some((f) => f.contentWindow !== null && f.contentWindow === e.source);
+const fromExtension = (e: MessageEvent): boolean => e.source === window.parent && e.origin === location.origin;
 
 /** Everything the extension sends the page, to each listener, as it comes; nothing a framed page sends. */
 const listeners = new Set<(message: HostMessage) => void>();

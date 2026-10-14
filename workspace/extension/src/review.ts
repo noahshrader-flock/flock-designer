@@ -25,7 +25,7 @@ export const reviewPath = (projectId: string, name: string): string => {
  * The tab's page: only the review, framed from this machine, and its one script, which says hello to the page once it
  * has loaded (so the page knows DSNR frames it), passes what the page asks up to the extension and the answers back
  * down, to the page's own address and nothing else (`shared/reviewRelay`). Each side reads what it is sent. A message
- * from inside its frame that is not the bar's own (the prototype's page in it, REVIEW_ISOLATION_PLAN 2.3) goes nowhere.
+ * from anywhere else (the prototype's page in the bar, a frame it makes) goes nowhere.
  */
 export const reviewPage = ({ src, title, nonce }: { src: string; title: string; nonce: string }): string => {
 	const origin = new URL(src).origin;
@@ -43,13 +43,11 @@ const vscode = acquireVsCodeApi();
 const frame = document.querySelector('iframe');
 const page = ${JSON.stringify(origin)};
 frame.addEventListener('load', () => frame.contentWindow.postMessage({ dsnr: 'hello' }, page));
-// Every window under the frame: the bar, the prototype's page in it, and any frame that page makes. Only the bar may ask
-// the extension; and nothing from any of them is passed to the bar as if VS Code had said it.
-const inside = (w, s, depth) => w === s || (depth < 8 && Array.from({ length: w.frames.length }, (_, i) => w.frames[i]).some((f) => inside(f, s, depth + 1)));
+// Only the bar may ask the extension, and only VS Code, which posts from the window above, answers it: nothing from the
+// prototype's page in the bar, or any frame that page makes, goes either way.
 window.addEventListener('message', (e) => {
-	if (e.source === frame.contentWindow) {
-		if (e.origin === page) vscode.postMessage(e.data);
-	} else if (!inside(frame.contentWindow, e.source, 0)) frame.contentWindow.postMessage(e.data, page);
+	if (e.source === frame.contentWindow && e.origin === page) vscode.postMessage(e.data);
+	else if (e.source === window.parent && e.origin === location.origin) frame.contentWindow.postMessage(e.data, page);
 });
 </script>
 </body>

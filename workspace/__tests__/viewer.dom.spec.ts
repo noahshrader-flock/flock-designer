@@ -1,4 +1,5 @@
 import { createElement } from 'react';
+import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { composeBody } from '../src/shared/anchor';
 import { Viewer } from '../src/viewer/Viewer';
@@ -45,6 +46,36 @@ afterEach(async () => {
 	if (current) await unmountAll(current.root);
 	current = null;
 	vi.unstubAllGlobals();
+});
+
+describe('a page built without the page agent', () => {
+	it('says so, rather than showing no pins without a word, once it has had time to say it is there', async () => {
+		saveToken('good-token');
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true });
+		try {
+			current = await render(createElement(Viewer, { config: CONFIG, slots: sitePage({ agent: false }).slots, relay: null }));
+			const says = () => document.body.textContent?.includes('built without DSNR’s page agent');
+			await act(async () => void vi.advanceTimersByTime(7_000));
+			expect(says()).toBe(false);
+			await act(async () => void vi.advanceTimersByTime(1_000));
+			expect(says()).toBe(true);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('says nothing of it for a page that has one, however long it is open', async () => {
+		saveToken('good-token');
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true });
+		try {
+			current = await render(createElement(Viewer, { config: CONFIG, slots: sitePage().slots, relay: null }));
+			await settle();
+			await act(async () => void vi.advanceTimersByTime(20_000));
+			expect(document.body.textContent).not.toContain('built without DSNR’s page agent');
+		} finally {
+			vi.useRealTimers();
+		}
+	});
 });
 
 describe("the page's bar", () => {

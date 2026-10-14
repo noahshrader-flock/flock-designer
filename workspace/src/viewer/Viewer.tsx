@@ -228,26 +228,30 @@ const Commenting = ({
 	const [listOpen, setListOpen] = useState(false);
 
 	// The prototype is up once its page's agent says so, after every load, and its pins are drawn then; and again when its
-	// route moves. A page that loads and never says so has no agent (a site built before it): said, not left without pins.
+	// route moves. A page that never says so, from when the bar starts (it may have loaded first, as in VS Code) or from
+	// its next load, has no agent (a site built before it): said, not left without pins, until it does say so.
 	useEffect(() => {
 		const frame = slots.frame;
 		let waitingFor: ReturnType<typeof setTimeout> | undefined;
+		const wait = () => {
+			clearTimeout(waitingFor);
+			waitingFor = setTimeout(() => setError(NO_AGENT), NO_AGENT_MS);
+		};
+		// First: a ready the driver heard before the bar started is told at once, and ends the wait.
+		wait();
 		const stopReady = page.onReady((at) => {
 			clearTimeout(waitingFor);
+			setError((was) => (was === NO_AGENT ? null : was));
 			setOpened(true);
 			setRoute(at);
 		});
 		const stopRoute = page.onRoute(setRoute);
-		const loaded = () => {
-			clearTimeout(waitingFor);
-			waitingFor = setTimeout(() => setError(NO_AGENT), NO_AGENT_MS);
-		};
-		frame.addEventListener('load', loaded);
+		frame.addEventListener('load', wait);
 		return () => {
 			clearTimeout(waitingFor);
 			stopReady();
 			stopRoute();
-			frame.removeEventListener('load', loaded);
+			frame.removeEventListener('load', wait);
 			page.stop();
 		};
 	}, [slots.frame, page]);

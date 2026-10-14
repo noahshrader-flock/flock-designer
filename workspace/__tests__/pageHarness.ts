@@ -92,7 +92,7 @@ export const fakeGitHub = () => {
 };
 
 /** A prototype in a frame, as the page and the app's preview both show one: a heading, and a named button. */
-export const prototypeIn = (frame: HTMLIFrameElement): Document => {
+export const prototypeIn = (frame: HTMLIFrameElement, { agent = true }: { agent?: boolean } = {}): Document => {
 	const doc = frame.contentDocument as Document;
 	doc.body.innerHTML = '<main><h1>Alert history</h1><button data-e2e-ref="clear-filter-button">Clear Filter</button></main>';
 	// What the pin scripts reach for that jsdom does not have.
@@ -100,8 +100,9 @@ export const prototypeIn = (frame: HTMLIFrameElement): Document => {
 	fw.Element.prototype.scrollIntoView = () => undefined;
 	fw.Element.prototype.animate = () => undefined;
 	wireMessages(fw);
-	// The page agent, as the site adds it to every page it builds: the real one, the page code with it.
-	fw.eval(PAGE_AGENT);
+	// The page agent, as the site adds it to every page it builds: the real one, the page code with it. A page built
+	// before there was one has none.
+	if (agent) fw.eval(PAGE_AGENT);
 	return doc;
 };
 
@@ -123,10 +124,10 @@ const wireMessages = (fw: Window) => {
 };
 
 /** The page the site builds, as far as the viewer is concerned: the bar's slot, the panel, and the prototype's frame. */
-export const sitePage = () => {
+export const sitePage = (built: { agent?: boolean } = {}) => {
 	document.body.innerHTML = '<header id="dsnr-bar"></header><div><iframe id="dsnr-frame"></iframe><aside id="dsnr-panel"></aside></div>';
 	const frame = document.getElementById('dsnr-frame') as HTMLIFrameElement;
-	const doc = prototypeIn(frame);
+	const doc = prototypeIn(frame, built);
 	return {
 		frame,
 		doc,

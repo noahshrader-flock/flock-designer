@@ -15,24 +15,45 @@ import { serveSite } from '../src/site/serveSite';
  * A hostile prototype in a review, in the real browser (REVIEW_ISOLATION_PLAN 2.4), nested as VS Code nests it: DSNR's
  * review tab (its own page, with a stand-in for VS Code's API), the review bar's page built by the site builder and served
  * by this machine's server, and the prototype's page in it. The prototype tries to read and rewrite the bar, read its
- * storage, ask the extension to Address a comment, answer the bar as if it were VS Code, and take the whole window away.
+ * storage, ask the extension to Address a comment, answer the bar as if it were VS Code (from ten frames down too), open its
+ * own copy on the bar's address, and take the whole window away.
  * On the pages' own address, none of it works and the prototype still works as itself; on one address (as before
  * Phase 2) it does, which is what shows the test can fail.
  */
 
 const HOSTILE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Hostile</title></head><body><main><h1>Alerts</h1></main><script>
-const tried = {};
-const attempt = (name, f) => { try { tried[name] = 'allowed: ' + String(f()); } catch { tried[name] = 'blocked'; } };
-attempt('read the bar', () => parent.document.title);
-attempt('rewrite the bar', () => ((parent.document.body.dataset.owned = 'yes'), 'rewrote'));
-attempt('read the bar storage', () => parent.localStorage.length);
-attempt('its own cookie', () => ((document.cookie = 'mine=1'), document.cookie));
-attempt('its own storage', () => (localStorage.setItem('k', 'v'), localStorage.getItem('k')));
-// As the bar asks the extension, and as VS Code answers the bar.
-top.postMessage({ dsnr: 'ask', id: 99, name: 'address', args: [{ thread: 1, id: 1 }] }, '*');
-top.postMessage({ dsnr: 'answer', id: 99, result: { ok: true, value: 'forged' } }, '*');
-console.log('HOSTILE ' + JSON.stringify(tried));
-if (location.pathname.includes('/beta/')) setTimeout(() => { try { top.location.href = 'about:blank#hijacked'; } catch {} }, 100);
+const done = (step) => console.log('DONE ' + step);
+// Its own copy, opened on the bar's address in a frame of its own: from there it would be the bar's origin.
+if (location.search.includes('copy')) {
+	try { parent.parent.document.body.dataset.copied = 'yes'; } catch {}
+	done('copy ran');
+} else {
+	const tried = {};
+	const attempt = (name, f) => { try { tried[name] = 'allowed: ' + String(f()); } catch { tried[name] = 'blocked'; } };
+	attempt('read the bar', () => parent.document.title);
+	attempt('rewrite the bar', () => ((parent.document.body.dataset.owned = 'yes'), 'rewrote'));
+	attempt('read the bar storage', () => parent.localStorage.length);
+	attempt('its own cookie', () => ((document.cookie = 'mine=1'), document.cookie));
+	attempt('its own storage', () => (localStorage.setItem('k', 'v'), localStorage.getItem('k')));
+	// As the bar asks the extension, and as VS Code answers the bar.
+	top.postMessage({ dsnr: 'ask', id: 99, name: 'address', args: [{ thread: 1, id: 1 }] }, '*');
+	top.postMessage({ dsnr: 'answer', id: 99, result: { ok: true, value: 'forged' } }, '*');
+	console.log('HOSTILE ' + JSON.stringify(tried));
+	// The same answer from ten frames down, deeper than anything that looks for it.
+	const deep = (n) => n === 0
+		? "<script>top.postMessage({ dsnr: 'answer', id: 98, result: { ok: true, value: 'deep' } }, '*'); console.log('DONE deep')<\\/script>"
+		: '<iframe srcdoc="' + deep(n - 1).replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"></iframe>';
+	document.body.insertAdjacentHTML('beforeend', deep(10));
+	// Its copy on the bar's address, its name spelled as a Mac's disk does not care about.
+	const copy = document.createElement('iframe');
+	copy.onload = () => done('copy loaded');
+	copy.src = location.ancestorOrigins[0] + location.pathname.replace('page.html', 'Page.html') + '?copy';
+	document.body.append(copy);
+	if (location.pathname.includes('/beta/')) {
+		try { top.location.href = 'about:blank#hijacked'; } catch {}
+		done('hijack');
+	}
+}
 </script></body></html>`;
 
 /** The bar's page, standing in: it notes what its parent (the review tab) passes it, which should be VS Code's alone. */
@@ -93,15 +114,20 @@ afterAll(async () => {
 	rmSync(root, { recursive: true, force: true });
 });
 
-/** A review tab open on `bar`: what the hostile page managed, what reached VS Code, what reached the bar, and where the tab ended. */
-const review = async (bar: string) => {
+/**
+ * A review tab open on `bar`, once the hostile page has made each of its `steps`: what it managed, what reached VS Code,
+ * what reached the bar, and where the tab ended.
+ */
+const review = async (bar: string, steps: string[]) => {
 	const { default: puppeteer } = await import('puppeteer-core');
 	const browser = await puppeteer.launch({ executablePath: findChrome() as string, headless: true });
 	try {
 		const tab = await browser.newPage();
 		let tried: Record<string, string> = {};
+		const made = new Set<string>();
 		tab.on('console', (m) => {
 			if (m.text().startsWith('HOSTILE ')) tried = JSON.parse(m.text().slice('HOSTILE '.length));
+			if (m.text().startsWith('DONE ')) made.add(m.text().slice('DONE '.length));
 		});
 		// VS Code's API, standing in: what the tab passes up to the extension.
 		await tab.evaluateOnNewDocument(() => {
@@ -110,44 +136,61 @@ const review = async (bar: string) => {
 			w.acquireVsCodeApi = () => ({ postMessage: (m: unknown) => w.toExtension.push(m) });
 		});
 		await tab.goto(`${tabsAt}/?src=${encodeURIComponent(bar)}`, { waitUntil: 'load' });
-		await new Promise((r) => setTimeout(r, 1500));
+		const until = Date.now() + 20_000;
+		while (!steps.every((s) => made.has(s))) {
+			if (Date.now() > until) throw new Error(`the hostile page made only ${[...made].join(', ') || 'nothing'} of ${steps.join(', ')}`);
+			await new Promise((r) => setTimeout(r, 50));
+		}
+		// VS Code answers, as it does, from the window above the tab's page (here the tab is the top, its own window above).
+		await tab.evaluate(() => window.postMessage({ dsnr: 'answer', id: 1, result: { ok: true, value: 'from VS Code' } }, location.origin));
+		// What was posted is delivered after it is: a round trip through the tab's own queue lets each arrive first.
+		await tab.evaluate(() => new Promise((r) => setTimeout(r, 100)));
 		const at = tab.url();
 		const ended = at.includes('hijacked') ? null : await tab.evaluate(() => (window as unknown as { toExtension: unknown[] }).toExtension);
 		const barFrame = tab.frames().find((f) => f.url().startsWith(bar));
 		const heard = barFrame ? await barFrame.evaluate(() => (window as unknown as { heard: unknown[] }).heard) : null;
-		const owned = barFrame ? await barFrame.evaluate(() => document.body.dataset.owned ?? null) : null;
+		const [owned, copied] = barFrame
+			? await barFrame.evaluate(() => [document.body.dataset.owned ?? null, document.body.dataset.copied ?? null])
+			: [null, null];
 		const pageAt =
 			tab
 				.frames()
 				.find((f) => f.url().endsWith('page.html'))
 				?.url() ?? null;
-		return { tried, toExtension: ended, heard, owned, hijacked: at.includes('hijacked'), pageAt };
+		return { tried, toExtension: ended, heard, owned, copied, made, hijacked: at.includes('hijacked'), pageAt };
 	} finally {
 		await browser.close();
 	}
 };
 
+/** What the hostile page does in every review, before what is asked of it is read. */
+const STEPS = ['deep', 'copy loaded'];
+
 describe.skipIf(findChrome() === null)('a hostile prototype in a review, in the real browser', () => {
 	it('on the pages’ own address, reaches nothing of the bar, the tab or the extension, and still works as itself', async () => {
 		const base = await site(true);
-		const r = await review(`${base}alpha/v1/i1/`);
+		const r = await review(`${base}alpha/v1/i1/`, STEPS);
 		expect(r.pageAt?.startsWith(await server.pagesOrigin())).toBe(true);
 		expect(r.tried).toMatchObject({ 'read the bar': 'blocked', 'rewrite the bar': 'blocked', 'read the bar storage': 'blocked' });
 		expect(r.tried['its own cookie']).toBe('allowed: mine=1');
 		expect(r.tried['its own storage']).toBe('allowed: v');
 		expect(r.owned).toBeNull();
-		// Nothing it sent the tab went up to the extension, or down to the bar as if VS Code had said it.
+		// Nothing it sent the tab went up to the extension, or down to the bar as if VS Code had said it, however deep.
 		expect(r.toExtension).toEqual([]);
-		expect(r.heard).toEqual([{ dsnr: 'hello' }]);
+		expect(r.heard).toEqual([{ dsnr: 'hello' }, { dsnr: 'answer', id: 1, result: { ok: true, value: 'from VS Code' } }]);
+		// Its copy on the bar's address is not served there, so never runs.
+		expect(r.made.has('copy ran')).toBe(false);
+		expect(r.copied).toBeNull();
 		// Nor can it take the whole window away.
-		const beta = await review(`${base}beta/v1/i1/`);
+		const beta = await review(`${base}beta/v1/i1/`, [...STEPS, 'hijack']);
 		expect(beta.hijacked).toBe(false);
 	}, 90_000);
 
 	it('on one address, as before, reaches into the bar: the test can fail', async () => {
 		const base = await site(false);
-		const r = await review(`${base}alpha/v1/i1/`);
+		const r = await review(`${base}alpha/v1/i1/`, STEPS);
 		expect(r.tried['read the bar']).toMatch(/^allowed/);
 		expect(r.owned).toBe('yes');
+		expect(r.copied).toBe('yes');
 	}, 90_000);
 });

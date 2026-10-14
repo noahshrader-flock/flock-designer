@@ -195,16 +195,19 @@ describe('what the agent is told', () => {
 });
 
 describe('PrototypeServer', () => {
-	it('serves what runs a repository’s code on an address of its own: a prototype’s page, and story previews (REVIEW_ISOLATION_PLAN 2.1)', async () => {
+	it('serves what came from a repository on an address of its own: the bar’s address serves only what DSNR wrote', async () => {
 		const server = new PrototypeServer();
 		const site = mkdtempSync(join(tmpdir(), 'dsnr-site-'));
 		const previews = mkdtempSync(join(tmpdir(), 'dsnr-previews-'));
 		try {
 			mkdirSync(join(site, 'a', 'v1', 'i1'), { recursive: true });
 			mkdirSync(join(site, '_shared'), { recursive: true });
+			mkdirSync(join(site, '_viewer'), { recursive: true });
 			writeFileSync(join(site, 'a', 'v1', 'i1', 'index.html'), '<p>the bar</p>');
 			writeFileSync(join(site, 'a', 'v1', 'i1', 'page.html'), '<p>the prototype</p>');
+			writeFileSync(join(site, '_viewer', 'viewer.js'), 'bar();');
 			writeFileSync(join(site, '_shared', 'font.woff2'), 'font');
+			writeFileSync(join(site, '_shared', 'logo.svg'), '<svg onload="alert(1)"/>');
 			writeFileSync(join(previews, 'index.html'), '<p>stories</p>');
 			const app = await server.origin();
 			const pages = await server.pagesOrigin();
@@ -212,18 +215,30 @@ describe('PrototypeServer', () => {
 			expect(await server.serveFolder('review', site)).toBe(`${app}/review/`);
 			expect(await server.serveFolder('previews-x', previews, { code: true })).toBe(`${pages}/previews-x/`);
 			const status = async (url: string) => (await fetch(url)).status;
-			// The bar on the app's address; the page it frames, and what the page loads, on the pages' address only.
+			// The bar and its own files on the app's address.
 			expect(await status(`${app}/review/a/v1/i1/`)).toBe(200);
-			expect(await status(`${app}/review/a/v1/i1/page.html`)).toBe(404);
+			expect(await status(`${app}/review/_viewer/viewer.js`)).toBe(200);
+			expect(await status(`${app}/review/_shared/font.woff2`)).toBe(200);
+			// Nothing a repository wrote that opens as a page: the prototype, however it is spelled (a Mac's disk ignores
+			// case), and a picture that can carry a script.
+			for (const named of ['page.html', 'Page.html', 'PAGE.HTML']) expect(await status(`${app}/review/a/v1/i1/${named}`)).toBe(404);
+			expect(await status(`${app}/review/_shared/logo.svg`)).toBe(404);
+			// All of it on the pages' address.
 			expect(await (await fetch(`${pages}/review/a/v1/i1/page.html`)).text()).toBe('<p>the prototype</p>');
-			expect(await status(`${pages}/review/_shared/font.woff2`)).toBe(200);
+			expect(await status(`${pages}/review/_shared/logo.svg`)).toBe(200);
 			// Story previews, a library's code, on the pages' address only.
 			expect(await status(`${app}/previews-x/`)).toBe(404);
 			expect(await status(`${pages}/previews-x/`)).toBe(200);
-			// The app's own prototype pages (its native preview) stay on its address.
+			// A prototype given whole (the app's preview, a cover, a check) and what it shares, on the pages' address only.
 			const own = await server.serve('p/i1', '<h1>Hi</h1>');
-			expect(own.startsWith(app)).toBe(true);
-			expect(await status(own.replace(app, pages))).toBe(404);
+			server.share('0123456789abcdef', 'data:text/html,<script>bar()</script>');
+			expect(own).toBe(`${pages}/p/i1/`);
+			expect(await status(`${app}/p/i1/`)).toBe(404);
+			expect(await status(`${app}/_shared/0123456789abcdef`)).toBe(404);
+			expect(await status(`${pages}/_shared/0123456789abcdef`)).toBe(200);
+			// No browser takes a file for something else than it is said to be.
+			expect((await fetch(`${app}/review/a/v1/i1/`)).headers.get('x-content-type-options')).toBe('nosniff');
+			expect((await fetch(own)).headers.get('x-content-type-options')).toBe('nosniff');
 		} finally {
 			server.close();
 			rmSync(site, { recursive: true, force: true });
@@ -236,37 +251,34 @@ describe('PrototypeServer', () => {
 		try {
 			const url = await server.serve('x', '<p>x</p>');
 			const port = new URL(url).port;
-			const ask = (host: string) =>
+			const appPort = new URL(await server.origin()).port;
+			const ask = (at: string, host: string) =>
 				new Promise<number>((resolve, reject) =>
-					request({ host: '127.0.0.1', port, path: '/x/', headers: { host } }, (res) => resolve(res.statusCode ?? 0))
+					request({ host: '127.0.0.1', port: at, path: '/x/', headers: { host } }, (res) => resolve(res.statusCode ?? 0))
 						.on('error', reject)
 						.end(),
 				);
-			expect(await ask(`127.0.0.1:${port}`)).toBe(200);
-			expect(await ask(`attacker.example:${port}`)).toBe(403);
-			expect(await ask(`localhost:${port}`)).toBe(403);
-			// The pages' address answers only to its own name too, and not to the other's.
-			const pagesPort = new URL(await server.pagesOrigin()).port;
-			const askPages = (host: string) =>
-				new Promise<number>((resolve, reject) =>
-					request({ host: '127.0.0.1', port: pagesPort, path: '/x/', headers: { host } }, (res) => resolve(res.statusCode ?? 0))
-						.on('error', reject)
-						.end(),
-				);
-			expect(await askPages(`attacker.example:${pagesPort}`)).toBe(403);
-			expect(await askPages(`127.0.0.1:${port}`)).toBe(403);
+			expect(await ask(port, `127.0.0.1:${port}`)).toBe(200);
+			expect(await ask(port, `attacker.example:${port}`)).toBe(403);
+			expect(await ask(port, `localhost:${port}`)).toBe(403);
+			expect(await ask(port, `127.0.0.1:${appPort}`)).toBe(403);
+			// The app's address answers only to its own name too.
+			expect(await ask(appPort, `attacker.example:${appPort}`)).toBe(403);
+			expect(await ask(appPort, `127.0.0.1:${port}`)).toBe(403);
 		} finally {
 			server.close();
 		}
 	});
 
-	it('says its origin, starting once however many ask at once, so a page can name it as the one place it frames', async () => {
+	it('says its origins, starting each once however many ask at once, so a page can name them as the places it frames', async () => {
 		const server = new PrototypeServer();
 		try {
 			const [a, b] = await Promise.all([server.origin(), server.origin()]);
 			expect(a).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
 			expect(b).toBe(a);
-			expect(await server.serve('x', '<p>x</p>')).toBe(`${a}/x/`);
+			const [c, d] = await Promise.all([server.pagesOrigin(), server.pagesOrigin()]);
+			expect(d).toBe(c);
+			expect(await server.serve('x', '<p>x</p>')).toBe(`${c}/x/`);
 		} finally {
 			server.close();
 		}

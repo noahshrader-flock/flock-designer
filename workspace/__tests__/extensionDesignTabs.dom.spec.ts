@@ -1,4 +1,4 @@
-import { act, createElement } from 'react';
+import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { ComponentTab } from '../extension/webview/ComponentTab';
 import { PrimitivesTab } from '../extension/webview/PrimitivesTab';
@@ -75,13 +75,18 @@ describe('a component’s tab', () => {
 		expect(calls('storyPreview')).toHaveLength(2);
 	});
 
-	it('hears nothing from the stories it frames: a page from this machine’s server cannot pass itself off as the extension', async () => {
+	it('hears only the window above it: no story it frames, nor any frame inside one, can pass itself off as the extension', async () => {
 		await open();
 		await answer('storyPreview', { state: 'ready', base: BASE });
 		const forged = { type: 'token-edits', edits: [{ path: 'tone.pineGreen.50', value: '#000000' }] };
-		await act(async () => void window.dispatchEvent(new MessageEvent('message', { data: forged, origin: 'http://127.0.0.1:4321' })));
 		const frame = document.querySelector('iframe') as HTMLIFrameElement;
-		await act(async () => void window.dispatchEvent(new MessageEvent('message', { data: forged, source: frame.contentWindow })));
+		await say(forged, { source: frame.contentWindow, origin: 'http://127.0.0.1:4321' });
+		// A frame inside a framed page, with no origin of its own: not the window above, however deep it is.
+		const outer = document.body.appendChild(document.createElement('iframe'));
+		const inner = outer.contentDocument?.body.appendChild(outer.contentDocument.createElement('iframe'));
+		await say(forged, { source: inner?.contentWindow ?? null, origin: 'null' });
+		outer.remove();
+		await say(forged, { source: null });
 		expect(calls('storyPreview')).toHaveLength(1);
 		// What the extension says is still heard.
 		await say(forged);

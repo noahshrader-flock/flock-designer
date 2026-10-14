@@ -105,6 +105,8 @@ if (hasFui) {
 	git(copy, 'fetch', '-q', '--no-tags', fui, '+refs/remotes/origin/develop:refs/remotes/origin/develop');
 	git(copy, 'remote', 'add', 'origin', FUI_URL);
 	git(copy, 'config', `url.${fui}.insteadOf`, FUI_URL);
+	// Fetched from the clone here, never pushed to it, nor to GitHub: insteadOf would send a push there too.
+	git(copy, 'config', 'remote.origin.pushurl', 'no-push://dsnr-test');
 	git(copy, 'symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/develop');
 	git(copy, 'checkout', '-q', '-b', 'develop', 'refs/remotes/origin/develop');
 	symlinkSync(join(fui, 'node_modules'), join(copy, 'node_modules'));
