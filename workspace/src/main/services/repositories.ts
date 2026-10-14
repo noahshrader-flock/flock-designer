@@ -1,3 +1,4 @@
+import { parseRemote } from '../../shared/repoRef';
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import type { Repository, RepositoryReach } from '../../shared/contract';
@@ -26,6 +27,12 @@ export const originOf = (root: string, read: (path: string) => string = (p) => r
 	}
 	const section = /\[remote "origin"\]([^[]*)/.exec(config)?.[1] ?? '';
 	return /^\s*url\s*=\s*(.+)$/m.exec(section)?.[1]?.trim() ?? null;
+};
+
+/** The repository a clone is of, on its host (`owner/repo`), from its `.git/config` (`originOf`), or null. */
+export const repositoryAt = (root: string): string | null => {
+	const origin = originOf(root);
+	return origin === null ? null : parseRemote(origin);
 };
 
 /** `repository` as `list` names it, matched without case as GitHub matches names, or undefined when it is not there. */

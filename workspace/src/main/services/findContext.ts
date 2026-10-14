@@ -4,8 +4,7 @@ import { DESCRIPTOR_PATH, designSystemCheckout, readDescriptor } from './descrip
 import { findDesignSystems } from './designSystems';
 import { recordsRootFor } from './discovery';
 import { folderReads } from './folderReads';
-import { originUrl } from './git';
-import { parseRemote } from '../../shared/repoRef';
+import { repositoryOf } from './git';
 
 /** How the design system was found, in the order it is looked for. */
 export type FoundHow = 'named' | 'open' | 'located';
@@ -19,7 +18,7 @@ export interface Context {
 	designRepository: string | null;
 	/**
 	 * Which repository the product is, on its host (`owner/repo`, from its `origin`), the same on every machine whatever its
-	 * folder is called: what the Projects panel focuses on (PROJECT_SCOPE_PLAN). Null with no product, or one with no remote.
+	 * folder is called: what the Projects panel focuses on (the workspace README's "Projects, by product"). Null with no product, or one with no remote.
 	 */
 	productRepository: string | null;
 	missing: string[];
@@ -73,7 +72,6 @@ export const findContext = async ({ folders, located = null }: { folders: string
 			? ['The design repository (flock-designer) is not beside the product, so its projects are read from GitHub when you are signed in.']
 			: []),
 	];
-	const origin = product === null ? null : await originUrl(product);
-	const productRepository = origin === null ? null : parseRemote(origin);
+	const productRepository = product === null ? null : await repositoryOf(product);
 	return { product, designSystem, designRepository, productRepository, missing };
 };

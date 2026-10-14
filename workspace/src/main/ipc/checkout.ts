@@ -6,9 +6,8 @@ import { DESCRIPTOR_PATH, findCommand, readDescriptor } from '../services/descri
 import { branchCommit, branchesWithFile, readCheckout, recentBranches } from '../services/git';
 import { INSTALL_COMMAND } from '../services/install';
 import { continueIteration, readIterations, recordedIteration } from '../services/iterations';
-import { mergeRepositories, originOf, reachableRepositories } from '../services/repositories';
+import { mergeRepositories, reachableRepositories, repositoryAt } from '../services/repositories';
 import type { IpcDeps } from '../ipc';
-import { parseRemote } from '../../shared/repoRef';
 
 /**
  * How the window opens a product checkout and works in it: choosing or accepting one, its branches and iterations,
@@ -75,8 +74,7 @@ export const registerCheckout = (d: IpcDeps): void => {
 	});
 	handle('listRepositories', [], async (): Promise<RepositoryList> => {
 		const clones = productCheckouts().map((root) => {
-			const origin = originOf(root);
-			return { root, repo: origin === null ? null : parseRemote(origin) };
+			return { root, repo: repositoryAt(root) };
 		});
 		// Signed out, or GitHub out of reach: what is on this machine can still be started in.
 		const remote =

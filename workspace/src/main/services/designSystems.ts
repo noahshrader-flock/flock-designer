@@ -13,8 +13,8 @@ import { readTokens } from './designTokens';
 import { folderReads } from './folderReads';
 import { git } from './git';
 import { type JsonFile, jsonFile } from './jsonFile';
-import { originOf } from './repositories';
-import { asRepositoryPath, parseRemote, repoName } from '../../shared/repoRef';
+import { repositoryAt } from './repositories';
+import { asRepositoryPath, repoName } from '../../shared/repoRef';
 const REMOTE_TIMEOUT_MS = 30_000;
 
 /** A design system's id: its repository, and in a monorepo the folder it is in. */
@@ -103,12 +103,6 @@ export const defaultBranch = async (root: string): Promise<string | null> => {
 	} catch {
 		return null;
 	}
-};
-
-/** The repository a clone's `origin` is on GitHub (`owner/repo`), or null. */
-const repositoryAt = (root: string): string | null => {
-	const remote = originOf(root);
-	return remote === null ? null : parseRemote(remote);
 };
 
 /**

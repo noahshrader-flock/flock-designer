@@ -2,7 +2,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { bundleCommand, esbuildEntry, runBundle, sharedFilesOf, writeBundleScript } from '../src/main/services/prototypeBundle';
+import { bundleCommand, esbuildEntry, runBundle, writeBundleScript } from '../src/main/services/prototypeBundle';
+import { sharedFilesOf } from '../src/shared/designPaths';
 import { statesOf } from '../src/shared/prototypeStates';
 
 // The app's own React stands in for the product's installed packages; a one-file package stands in for its design system.

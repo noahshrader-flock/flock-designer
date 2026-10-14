@@ -1,3 +1,4 @@
+import { parseRemote } from '../../shared/repoRef';
 import { randomBytes } from 'node:crypto';
 import { existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -325,6 +326,12 @@ export const localIdentity = async (root: string): Promise<Author> => {
  * none. For one repository; a scan of many reads `.git/config` itself (`originOf`), sparing a process per folder.
  */
 export const originUrl = async (root: string): Promise<string | null> => (await git(root, ['remote', 'get-url', 'origin']).catch(() => '')) || null;
+
+/** The repository a clone is of, on its host (`owner/repo`, from its `origin`), or null: the same on every machine. */
+export const repositoryOf = async (root: string): Promise<string | null> => {
+	const origin = await originUrl(root);
+	return origin === null ? null : parseRemote(origin);
+};
 
 /** Whether `path` is in `ref` (a commit, or a branch's full ref). */
 export const hasFileAt = (root: string, ref: string, path: string): Promise<boolean> =>

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import type { Iteration } from '../shared/contract';
 import { escapeHtml } from '../shared/html';
 import { fromBrief } from '../shared/brief';
-import { isPrototypeKey, sitePath } from '../shared/designPaths';
+import { SHARED_DIR, SHARED_REF, isPrototypeKey, sitePath } from '../shared/designPaths';
 import { parsePrototypeName } from '../shared/prototypeNames';
 import { iterationLabel, projectCodeLink } from '../shared/work';
 import { statesOf } from '../shared/prototypeStates';
@@ -123,7 +123,7 @@ const readProjects = (designRoot: string): SiteProject[] => {
 /** The design system's large files, written as the files they are, by name. */
 const writeShared = (designRoot: string, outDir: string): Map<string, string> => {
 	const names = new Map<string, string>();
-	const dir = join(designRoot, 'projects', '_shared');
+	const dir = join(designRoot, SHARED_DIR);
 	if (!existsSync(dir)) return names;
 	for (const f of readdirSync(dir)) {
 		const hash = /^([0-9a-f]{16})\.datauri$/.exec(f)?.[1];
@@ -275,9 +275,7 @@ export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt }: Sit
 	}
 	// A page sits three folders down (<project>/v1/i2/), and finds the shared files from there.
 	const relink = (html: string): string =>
-		withAgent(
-			html.replace(/\/_shared\/([0-9a-f]{16})\b/g, (whole, hash: string) => (shared.has(hash) ? `../../../_shared/${shared.get(hash)}` : whole)),
-		);
+		withAgent(html.replace(SHARED_REF, (whole, hash: string) => (shared.has(hash) ? `../../../_shared/${shared.get(hash)}` : whole)));
 	/**
 	 * With the viewer, the page agent first in the page's head (the README's Review isolation), before the prototype's own code,
 	 * so the review bar asks it for the page's pins rather than reaching into the page.

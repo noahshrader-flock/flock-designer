@@ -2,9 +2,9 @@ import { ChangeRequests } from '../../host/changeRequests';
 import type { GitHubApi } from '../../host/github';
 import { HostError, hostErrorKind } from '../../host/hostError';
 import { RepoFiles } from '../../host/repoFiles';
-import { type RepoRef, parseRemote, repoRefOf } from '../../shared/repoRef';
+import { type RepoRef, repoRefOf } from '../../shared/repoRef';
 import { ghApi } from './ghCli';
-import { originUrl, pushBranch } from './git';
+import { pushBranch, repositoryOf } from './git';
 import type { ShareTools } from './share';
 import { CHANGE_REQUEST, HOST, needsCli } from '../../shared/vocabulary';
 
@@ -44,8 +44,7 @@ export const realShareTools = (root: string, host: GitHubApi = ghApi(), repo?: R
 	const repository = (): Promise<RepoRef> =>
 		(where ??= (async () => {
 			if (repo) return repo;
-			const origin = await originUrl(root);
-			const path = origin === null ? null : parseRemote(origin);
+			const path = await repositoryOf(root);
 			if (path === null) throw new Error(NOT_ON_HOST);
 			return repoRefOf(path);
 		})());

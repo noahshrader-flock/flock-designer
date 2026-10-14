@@ -3,13 +3,12 @@ import { basename, dirname, join } from 'node:path';
 import type { Iteration, Person, PrototypeReadiness } from '../../shared/contract';
 import { type DeclaredTarget, undeclared } from '../../shared/wcag';
 import { fromBrief } from '../../shared/brief';
-import { projectPath, prototypePagePath, prototypeSourcePath } from '../../shared/designPaths';
+import { projectPath, prototypePagePath, prototypeSourcePath, sharedFilePath, sharedFilesOf } from '../../shared/designPaths';
 import { hasOutsideComments, latestIterationName, nextIterationName, parsePrototypeName } from '../../shared/prototypeNames';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from './accessibilityBrief';
 import { designSystemCheckout, readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
-import { branchCommit, branchExists, git, isSafeBranchName, originUrl, readCheckout, readTreeAt } from './git';
-import { parseRemote } from '../../shared/repoRef';
+import { branchCommit, branchExists, git, isSafeBranchName, readCheckout, readTreeAt, repositoryOf } from './git';
 import { assertUsableProjectId } from './iterations';
 import {
 	MAX_PAGE,
@@ -22,7 +21,7 @@ import {
 	recordPrototype,
 	readRecords,
 } from './prototype';
-import { bundleCommand, runBundle, sharedFilesOf, writeBundleScript } from './prototypeBundle';
+import { bundleCommand, runBundle, writeBundleScript } from './prototypeBundle';
 import { designSystemFile, taskVoice } from './voiceBrief';
 import { HOST } from '../../shared/vocabulary';
 
@@ -121,11 +120,10 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 * and in the design repository beside the projects, where `_` keeps them off the list.
 	 */
 	const sharedDir = join(prototypesRoot, '_shared');
-	const sharedPath = (n: string): string => `projects/_shared/${n}.datauri`;
 	/** A shared file's content: this machine's copy, else the design repository's. */
 	const sharedText = async (n: string): Promise<string | null> => {
 		const local = join(sharedDir, `${n}.datauri`);
-		return existsSync(local) ? readFileSync(local, 'utf8') : ctx.readDesignFile(sharedPath(n));
+		return existsSync(local) ? readFileSync(local, 'utf8') : ctx.readDesignFile(sharedFilePath(n));
 	};
 
 	/** A shared skill, which an agent's task is built from. Only an out-of-date design repository can lack one. */
@@ -190,8 +188,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (typeof name !== 'string' || !name.trim()) throw new Error('A prototype needs a name.');
 		if (!(await branchExists(root, branch))) throw new Error(`There is no branch called ${branch} in ${basename(root)}.`);
 		// The clone's folder, as this machine names it, and the repository it is a clone of, as every machine does.
-		const origin = await originUrl(root);
-		const product = origin === null ? null : parseRemote(origin);
+		const product = await repositoryOf(root);
 		const basedOn = {
 			repository: basename(root),
 			branch,
@@ -280,7 +277,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const store = ctx.store();
 		for (const n of sharedFilesOf(html)) {
 			const local = join(sharedDir, `${n}.datauri`);
-			if (existsSync(local) && !(await store.has(sharedPath(n)))) await store.write(sharedPath(n), readFileSync(local, 'utf8'), `Shared file ${n}`);
+			if (existsSync(local) && !(await store.has(sharedFilePath(n))))
+				await store.write(sharedFilePath(n), readFileSync(local, 'utf8'), `Shared file ${n}`);
 		}
 		const source = sourceFile(projectId, name);
 		if (existsSync(source))

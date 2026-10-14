@@ -46,3 +46,14 @@ export const sitePath = (projectId: string, name: string): string | null => {
 	const p = parsePrototypeName(name);
 	return p ? `${projectId}/v${p.version}/i${p.iteration}/` : null;
 };
+
+/**
+ * The large files pages share (fonts, mostly), kept once in the design repository as the data they were embedded as, each
+ * named by its content's hash; a page names one as `/_shared/<hash>` (`SHARED_REF`), and every reader finds them by these.
+ */
+export const SHARED_DIR = 'projects/_shared';
+export const sharedFilePath = (hash: string): string => `${SHARED_DIR}/${hash}.datauri`;
+export const SHARED_REF = /\/_shared\/([0-9a-f]{16})\b/g;
+
+/** The shared files a page points at, by hash, so they can be kept with it and served beside it. */
+export const sharedFilesOf = (html: string): string[] => [...new Set([...html.matchAll(SHARED_REF)].map((m) => m[1] as string))];

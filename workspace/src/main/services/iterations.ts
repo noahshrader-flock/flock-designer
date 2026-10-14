@@ -11,14 +11,13 @@ import {
 	headCommit,
 	isSamePerson,
 	localIdentity,
-	originUrl,
+	repositoryOf,
 } from './git';
 import { resolveInside } from './paths';
 import { parsePrototypeName } from '../../shared/prototypeNames';
 import { PROJECT_ID } from '../../shared/validate';
 import { parseIterations, serializeIterations } from '../../shared/iterationRecords';
 import { writeAtomic } from './jsonFile';
-import { parseRemote } from '../../shared/repoRef';
 import { loginFromNoreply } from '../../shared/hostUrls';
 
 /**
@@ -105,8 +104,7 @@ export const createIteration = async (
 	}
 
 	// Where it is on GitHub, so the project links to it for people without the repository.
-	const origin = await originUrl(productRoot);
-	const repository = origin === null ? null : parseRemote(origin);
+	const repository = await repositoryOf(productRoot);
 	const iteration: Iteration = {
 		projectId,
 		name,
