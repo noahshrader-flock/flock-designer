@@ -11,15 +11,15 @@ import { STATES_META } from '../shared/prototypeStates';
  *
  * Written as literals on purpose, and the only place in the app where that is right: these live in the previewed
  * product's document, which has its own stylesheet and cannot see this app's theme. They are Tailwind's own values
- * rather than anything chosen by hand (blue-600 for a pin and the outline that shows what it will attach to, amber-500
- * for one not yet saved) so they match the app around them. White and a plain shadow keep a pin legible on whatever it
- * lands on.
+ * rather than anything chosen by hand (violet-600, DSNR's brand, for a pin and the outline that shows what it will attach
+ * to, amber-500 for one not yet saved) so they match the app around them. White and a plain shadow keep a pin legible on
+ * whatever it lands on. The brand is also in the extension's stylesheet (`--dsnr-brand`), which a guard test says agrees.
  */
 export const INK = {
-	/** tailwind blue-600 */
-	pin: '#2563eb',
-	/** tailwind blue-600 at 8% */
-	pinWash: 'rgba(37,99,235,.08)',
+	/** tailwind violet-600: DSNR's brand */
+	pin: '#7c3aed',
+	/** tailwind violet-600 at 8% */
+	pinWash: 'rgba(124,58,237,.08)',
 	/** tailwind amber-500: a pin being placed, not yet saved */
 	draft: '#f59e0b',
 	on: '#fff',
@@ -173,7 +173,7 @@ export const describe = (el: Element, x: number, y: number): CommentAnchor => {
 };
 
 /**
- * The blue outline and its label, which show what a pin will attach to.
+ * The outline and its label, in the pin's colour, which show what a pin will attach to.
  *
  * Shared by placing a pin and dragging one: a pin that is dropped re-attaches to whatever is under it, so the person
  * moving it needs to see the same thing as the person placing it, looking the same way. Returns what the caller drives

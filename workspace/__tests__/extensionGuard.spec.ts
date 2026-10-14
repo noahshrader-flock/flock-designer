@@ -87,6 +87,64 @@ describe('the extension’s sources', () => {
 		expect(shown).toBeGreaterThan(hidden);
 	});
 
+	it('draw the pins on a prototype’s page in the brand’s purple: the page cannot read the theme, so its palette says it again, and agrees', () => {
+		const css = files().find((f) => f.path.endsWith('styles.css'))!.text;
+		const brand = /--dsnr-brand:\s*(#[0-9a-f]{6})/i.exec(css)![1]!.toLowerCase();
+		// Read as text: the page's code needs a browser window to load.
+		const palette = readFileSync(join(__dirname, '../src/page/helpers.ts'), 'utf8');
+		expect(/pin:\s*'(#[0-9a-f]{6})'/i.exec(palette)?.[1]?.toLowerCase()).toBe(brand);
+		// Its wash is the same colour at 8%.
+		const [r, g, b] = [1, 3, 5].map((i) => parseInt(brand.slice(i, i + 2), 16));
+		expect(/pinWash:\s*'([^']+)'/.exec(palette)?.[1]).toBe(`rgba(${r},${g},${b},.08)`);
+	});
+
+	it('lay a design system’s header out in two lines: its name, with Sync and its menu centred on that line, and its branch under the name', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
+		expect(rule('.ds-header')).toMatch(/display:\s*grid/);
+		expect(rule('.ds-title')).toMatch(/display:\s*contents/);
+		expect(rule('.ds-name')).toMatch(/grid-row:\s*1/);
+		expect(rule('.ds-actions {')).toMatch(/grid-row:\s*1/);
+		expect(rule('.ds-branch')).toMatch(/grid-row:\s*2/);
+		// Its icon is the extra small size, a name for it, set over the icon font's own size.
+		expect(css).toMatch(/--dsnr-icon-xs:\s*12px/);
+		expect(rule('.codicon.icon-xs')).toMatch(/font-size:\s*var\(--dsnr-icon-xs\)/);
+	});
+
+	it('layer what is above what by names: the bars kept at the top above a row’s actions a list scrolls under, a dialog above all', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const layer = (name: string) => Number(new RegExp(`--dsnr-layer-${name}:\\s*(\\d+)`).exec(css)?.[1]);
+		expect(layer('actions')).toBeLessThan(layer('top'));
+		expect(layer('top')).toBeLessThan(layer('dialog'));
+		// No layer is a number of its own: each rule says which, by name.
+		expect([...css.matchAll(/z-index:\s*([^;]+);/g)].map((m) => m[1]).filter((v) => !v!.startsWith('var(--dsnr-layer-'))).toEqual([]);
+		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
+		// The bars share one rule: sticky, above the actions, with the sidebar behind them.
+		const bars = css.split('}').find((b) => b.includes('.panel-top,') && b.includes('.ds-part,') && b.includes('.tab-body .view-bar')) ?? '';
+		expect(bars).toMatch(/position:\s*sticky/);
+		expect(bars).toMatch(/z-index:\s*var\(--dsnr-layer-top\)/);
+		expect(bars).toMatch(/background:\s*var\(--vscode-sideBar-background\)/);
+		expect(rule('.item-actions {')).toMatch(/z-index:\s*var\(--dsnr-layer-actions\)/);
+		// The tab's bar is kept under the toggle's: its top is the toggle's bar's height.
+		expect(rule('.tab-body .view-bar')).toMatch(/top:\s*var\(--dsnr-top-height\)/);
+	});
+
+	it('keep the design system’s Components and Tokens toggle at the top too, with the search bar stacked under it', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
+		expect(rule('.ds-part {')).toMatch(/top:\s*var\(--dsnr-top-height\)/);
+		// Its height is its own padding and the control's, named, so the bar under it starts where it ends.
+		expect(css).toMatch(/--dsnr-part-height:\s*calc\(var\(--dsnr-control\)\s*\+\s*var\(--dsnr-part-pad-top\)\s*\+\s*var\(--dsnr-part-pad-bottom\)\)/);
+		expect(rule('.ds-part {')).toMatch(/padding:\s*var\(--dsnr-part-pad-top\)[^;]*var\(--dsnr-part-pad-bottom\)/);
+		expect(rule('.tab-body .ds-part ~ .view-bar')).toMatch(/top:\s*calc\(var\(--dsnr-top-height\)\s*\+\s*var\(--dsnr-part-height\)\)/);
+	});
+
 	it('size every control from two tokens: the default (the search, the toggle, a button, an icon button) and the small (a row’s, a header’s)', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!

@@ -24,6 +24,23 @@
 	 */
 	--dsnr-control: 32px;
 	--dsnr-control-small: 22px;
+	/* An icon beside a line of small text: the icon font's own size is 16px. */
+	--dsnr-icon-xs: 12px;
+	/* What is kept at the top while a list scrolls: the toggle's bar, then the bar of the tab under it (search and options). */
+	--dsnr-top-pad: 8px;
+	--dsnr-top-height: calc(var(--dsnr-control) + 2 * var(--dsnr-top-pad));
+	/* The design system's Components and Tokens toggle, kept under the top bar: its search bar is kept under it. */
+	--dsnr-part-pad-top: 4px;
+	--dsnr-part-pad-bottom: 8px;
+	--dsnr-part-height: calc(var(--dsnr-control) + var(--dsnr-part-pad-top) + var(--dsnr-part-pad-bottom));
+	/*
+	 * What is above what, from the back: a row's or card's actions, the bars kept at the top (which a list scrolls under, so
+	 * they are above the actions), an open menu, a dialog.
+	 */
+	--dsnr-layer-actions: 1;
+	--dsnr-layer-top: 3;
+	--dsnr-layer-menu: 5;
+	--dsnr-layer-dialog: 10;
 	/* DSNR's brand: its primary action, in every theme but high contrast (below). */
 	--dsnr-brand: #7c3aed;
 	--dsnr-brand-hover: color-mix(in srgb, var(--dsnr-brand) 86%, black);
@@ -41,6 +58,11 @@ body.vscode-high-contrast-light {
 	--dsnr-outline: var(--vscode-contrastBorder);
 }
 
+/* An icon's extra small size, over the icon font's own (its rule is first, with the same weight). */
+.codicon.icon-xs {
+	font-size: var(--dsnr-icon-xs);
+}
+
 body {
 	margin: 0;
 	padding: 0;
@@ -56,12 +78,25 @@ body {
 }
 
 /* The bar the toggle sits in: kept at the top while the list under it scrolls. */
-.panel-top {
+/*
+ * Bars kept at the top while a list scrolls under them, each under the one before: the toggle's, then the design system's
+ * Components and Tokens toggle, then a tab's search and options.
+ */
+.panel-top,
+.ds-part,
+.tab-body .view-bar {
 	position: sticky;
-	top: 0;
-	z-index: 1;
-	padding: 8px 12px;
+	z-index: var(--dsnr-layer-top);
 	background: var(--vscode-sideBar-background);
+}
+
+.panel-top {
+	top: 0;
+	padding: var(--dsnr-top-pad) 12px;
+}
+
+.tab-body .view-bar {
+	top: var(--dsnr-top-height);
 }
 
 /*
@@ -242,6 +277,33 @@ body {
 	line-height: 16px;
 	text-align: center;
 	box-sizing: border-box;
+}
+
+/* A count of comments: in the brand. In high contrast the brand is the theme's own button (above). */
+.badge-brand {
+	color: var(--dsnr-on-brand);
+	background: var(--dsnr-brand);
+}
+
+/* A count of what is wrong: the warning's colour, with the editor's behind its number. */
+.badge-warning {
+	color: var(--vscode-editor-background);
+	background: var(--vscode-editorWarning-foreground);
+}
+
+/* A count that opens what it counts. */
+.badge-button {
+	font-family: inherit;
+	cursor: pointer;
+}
+
+.badge-button:hover {
+	filter: brightness(1.1);
+}
+
+.badge-button:focus-visible {
+	outline: var(--dsnr-focus);
+	outline-offset: 1px;
 }
 
 /* A section's header, as VS Code's side bar draws one: a chevron, the title in small capitals, how many it holds. */
@@ -476,7 +538,7 @@ body {
 .scrim {
 	position: fixed;
 	inset: 0;
-	z-index: 10;
+	z-index: var(--dsnr-layer-dialog);
 	display: flex;
 	align-items: flex-start;
 	justify-content: center;
@@ -586,7 +648,7 @@ textarea.input {
 	position: absolute;
 	top: 50%;
 	right: 6px;
-	z-index: 1;
+	z-index: var(--dsnr-layer-actions);
 	transform: translateY(-50%);
 }
 
@@ -677,7 +739,7 @@ textarea.input {
 	position: absolute;
 	top: 100%;
 	right: 0;
-	z-index: 5;
+	z-index: var(--dsnr-layer-menu);
 	display: flex;
 	flex-direction: column;
 	min-width: 170px;
@@ -713,7 +775,7 @@ textarea.input {
 
 /* A section's name, and the line between sections. */
 .menu-heading {
-	padding: 4px 8px 2px;
+	padding: 4px 8px 6px;
 	color: var(--dsnr-muted);
 	font-size: 0.9em;
 	font-weight: 600;
@@ -802,21 +864,21 @@ textarea.input {
  * and the value at the end, as the app's tokens panel draws them.
  */
 .ds-header {
-	display: flex;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
-	gap: 8px;
+	column-gap: 8px;
 	padding: 4px 6px 4px 12px;
 }
 
+/* Its children sit in the header's own grid: the name on the first line, the branch under it. */
 .ds-title {
-	display: flex;
-	flex: 1;
-	align-items: baseline;
-	gap: 8px;
-	min-width: 0;
+	display: contents;
 }
 
 .ds-name {
+	grid-row: 1;
+	grid-column: 1;
 	overflow: hidden;
 	font-weight: 600;
 	text-overflow: ellipsis;
@@ -825,27 +887,32 @@ textarea.input {
 
 .ds-branch {
 	display: inline-flex;
-	flex-shrink: 0;
+	grid-row: 2;
+	grid-column: 1;
 	align-items: center;
-	gap: 2px;
+	gap: 4px;
+	min-width: 0;
 	color: var(--dsnr-muted);
 	font-size: 0.92em;
 }
 
+/* Sync, its menu and the count not read, centred on the name's line. */
 .ds-actions {
 	display: inline-flex;
-	flex-shrink: 0;
+	grid-row: 1;
+	grid-column: 2;
 	align-items: center;
-	gap: 2px;
-}
-
-/* In the design system's own row its menu is always there, not only on hover as a row's is. */
-.ds-actions .menu-button {
-	opacity: 1;
+	gap: 4px;
 }
 
 .ds-part {
-	padding: 4px 12px 8px;
+	top: var(--dsnr-top-height);
+	padding: var(--dsnr-part-pad-top) 12px var(--dsnr-part-pad-bottom);
+}
+
+/* With the toggle above it, the search bar is kept under that too, not under the top bar alone. */
+.tab-body .ds-part ~ .view-bar {
+	top: calc(var(--dsnr-top-height) + var(--dsnr-part-height));
 }
 
 .note-warning .codicon {
