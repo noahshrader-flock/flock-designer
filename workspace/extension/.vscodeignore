@@ -1,5 +1,4 @@
-# What the packaged extension carries: its manifest, its icon and its build (dist/), nothing else.
+# What the packaged extension carries: its manifest and its build (dist/), nothing else.
 **
 !package.json
-!media/**
 !dist/**

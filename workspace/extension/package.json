@@ -22,7 +22,7 @@
 				{
 					"id": "dsnr",
 					"title": "DSNR",
-					"icon": "media/dsnr.svg"
+					"icon": "$(rocket)"
 				}
 			]
 		},

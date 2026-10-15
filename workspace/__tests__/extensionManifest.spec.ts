@@ -31,16 +31,12 @@ describe('the extension’s manifest', () => {
 		expect(m.engines.vscode).toMatch(/^\^1\.\d+\.0$/);
 	});
 
-	it('puts one container in the activity bar, titled DSNR, with an icon that is there', () => {
+	it('puts one container in the activity bar, titled DSNR, with VS Code’s own rocket icon', () => {
 		const { activitybar } = manifest().contributes.viewsContainers;
-		expect(activitybar.map((c) => [c.id, c.title])).toEqual([['dsnr', 'DSNR']]);
-		expect(existsSync(join(root, activitybar[0]!.icon))).toBe(true);
-	});
-
-	it('draws the icon in one colour, which VS Code recolours to the theme: no fill or stroke of its own', () => {
-		const svg = readFileSync(join(root, manifest().contributes.viewsContainers.activitybar[0]!.icon), 'utf8');
-		expect(svg).toMatch(/^<svg[^>]*viewBox="0 0 24 24"/);
-		expect([...svg.matchAll(/(?:fill|stroke)="([^"]+)"/g)].map((m) => m[1]).filter((c) => c !== 'none' && c !== 'currentColor')).toEqual([]);
+		expect(activitybar.map((c) => [c.id, c.title, c.icon])).toEqual([['dsnr', 'DSNR', '$(rocket)']]);
+		// One of VS Code's codicons, which it draws in the theme's own colour: there is no icon file of ours to carry.
+		expect(existsSync(join(root, 'media'))).toBe(false);
+		expect(readFileSync(join(root, '.vscodeignore'), 'utf8')).not.toContain('media');
 	});
 
 	it('starts when a voice and tone tab is opened again, as VS Code restores one: its file system is DSNR’s', () => {
