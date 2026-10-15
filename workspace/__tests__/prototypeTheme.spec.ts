@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isTheme, themeOfQuery, withTheme, withoutTheme } from '../src/shared/prototypeTheme';
+import { DEFAULT_THEME, isTheme, themeOfQuery, withTheme, withoutTheme } from '../src/shared/prototypeTheme';
 import { withState } from '../src/shared/prototypeStates';
 
 /**
@@ -20,15 +20,18 @@ describe('an address in a theme', () => {
 	it('adds, replaces and takes off the theme, keeping the state', () => {
 		expect(withTheme('page.html', 'dark')).toBe('page.html?theme=dark');
 		expect(withTheme('page.html?state=panel', 'dark')).toBe('page.html?state=panel&theme=dark');
-		expect(withTheme('page.html?state=panel&theme=dark', 'light')).toBe('page.html?state=panel&theme=light');
+		// Light is the prototype's default (Noah, 2026-10-14), so its address does not say it: one address per page and theme.
+		expect(DEFAULT_THEME).toBe('light');
+		expect(withTheme('page.html?state=panel&theme=dark', 'light')).toBe('page.html?state=panel');
+		expect(withTheme('page.html', 'light')).toBe('page.html');
 		expect(withTheme('page.html?state=panel&theme=dark', null)).toBe('page.html?state=panel');
 		expect(withTheme('page.html?theme=dark', null)).toBe('page.html');
 	});
 
 	it('keeps its theme when its state changes', () => {
 		expect(withState('page.html?theme=dark', 'panel')).toBe('page.html?state=panel&theme=dark');
-		expect(withState('page.html?state=panel&theme=light', null)).toBe('page.html?theme=light');
-		expect(withState('page.html?state=panel&theme=light', 'filtered')).toBe('page.html?state=filtered&theme=light');
+		expect(withState('page.html?state=panel&theme=dark', null)).toBe('page.html?theme=dark');
+		expect(withState('page.html?state=panel&theme=dark', 'filtered')).toBe('page.html?state=filtered&theme=dark');
 	});
 });
 

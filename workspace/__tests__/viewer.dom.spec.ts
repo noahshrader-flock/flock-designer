@@ -180,9 +180,10 @@ describe('the states of the page', () => {
 		await press(state('Panel'));
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?state=panel&theme=dark');
+		// Back to light, the default: the address says nothing.
 		await press(themeButton('Light'));
 		await settle();
-		expect(frame.getAttribute('src')).toBe('page.html?state=panel&theme=light');
+		expect(frame.getAttribute('src')).toBe('page.html?state=panel');
 	});
 
 	it('open a comment made in dark in dark, by the button on its card', async () => {

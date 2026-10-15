@@ -158,7 +158,7 @@ export const StateSwitcher = ({
 
 /**
  * Light and Dark, beside the states (PROTOTYPE_THEME_PLAN): the prototype in either theme, whatever the machine is set to.
- * The one shown is pressed: the system's until one is chosen.
+ * The one shown is pressed: light, the default, until the other is chosen.
  */
 export const ThemeSwitcher = ({ shown }: { shown: ShownTheme }) => (
 	<ToggleGroup

@@ -38,26 +38,34 @@ describe('the page in a chosen theme', () => {
 		expect(document.documentElement.style.colorScheme).toBe('dark');
 	});
 
-	it('leaves the page to follow the system, as the product does, when no theme is asked for', () => {
+	it('opens a prototype in light when no theme is asked for, whatever the machine is set to (its default)', () => {
 		document.documentElement.style.colorScheme = '';
-		const { win } = fakeWindow('?state=panel');
-		const before = win.matchMedia;
+		const { win, asked } = fakeWindow('?state=panel');
 		applyTheme(win);
-		expect(win.matchMedia).toBe(before);
-		expect(document.documentElement.style.colorScheme).toBe('');
+		expect(win.matchMedia('(prefers-color-scheme: dark)').matches).toBe(false);
+		expect(win.matchMedia('(prefers-color-scheme: light)').matches).toBe(true);
+		expect(asked).toEqual(['(max-width: -1px)', '(min-width: 0px)']);
+		expect(document.documentElement.style.colorScheme).toBe('light');
 	});
 });
 
 describe('what a comment records of the page', () => {
-	it('is its state without the theme, so one comment is on the same state in either theme, and the theme on its own', () => {
+	it('is its state without the theme, so one comment is on the same state in either theme', () => {
 		history.replaceState(null, '', '/demo/v1-i1/?state=panel&theme=dark');
 		expect(pageState()).toBe('?state=panel');
-		expect(pageTheme()).toBe('dark');
 		history.replaceState(null, '', '/demo/v1-i1/?theme=light');
 		expect(pageState()).toBe('');
-		expect(pageTheme()).toBe('light');
-		// Asked for none: the system's (light, where nothing says dark).
+	});
+
+	it('is the theme a prototype opened in; a page DSNR did not theme (codebase work: the real app) is the system’s', () => {
+		history.replaceState(null, '', '/demo/v1-i1/?theme=dark');
+		applyTheme(window);
+		expect(pageTheme()).toBe('dark');
 		history.replaceState(null, '', '/demo/v1-i1/');
+		applyTheme(window);
+		expect(pageTheme()).toBe('light');
+		// The real app's preview: no theme put on it, so what it follows is what it was seen in (light, where nothing says dark).
+		document.documentElement.removeAttribute('data-dsnr-theme');
 		expect(pageTheme()).toBe('light');
 	});
 });

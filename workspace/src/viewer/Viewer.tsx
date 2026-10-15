@@ -124,7 +124,7 @@ export const Viewer = ({
 	const [paused, setPaused] = useState(false);
 	// The frame opens in the page's first state; another is the same page, asked for in it.
 	const [shownState, setShownState] = useState<string | null>(null);
-	// The theme it is shown in: the system's, until one is chosen, which the page is then asked for.
+	// The theme it is shown in: light, the page's own address, until dark is chosen, which the page is then asked for.
 	const shownTheme = useShownTheme((theme) => {
 		slots.frame.src = withTheme(slots.frame.getAttribute('src') ?? 'page.html', theme);
 	});

@@ -141,12 +141,12 @@ export const Review = ({
 	// When the preview is up, show it, in the state chosen: the first, which is the page's own address, until another is.
 	const states = local.phase.kind === 'running' ? (local.phase.states ?? []) : [];
 	const [shownState, setShownState] = useState<string | null>(null);
-	// And in the theme chosen: the system's, which is the page's own address, until one is (PROTOTYPE_THEME_PLAN).
+	// And in the theme chosen: light, the page's own address, until dark is (PROTOTYPE_THEME_PLAN).
 	const shownTheme = useShownTheme();
-	const chosenTheme = shownTheme.chosen;
+	const theme = shownTheme.theme;
 	useEffect(() => {
-		if (local.phase.kind === 'running') void open(withTheme(withState(local.phase.url, shownState), chosenTheme));
-	}, [local.phase, shownState, chosenTheme, open]);
+		if (local.phase.kind === 'running') void open(withTheme(withState(local.phase.url, shownState), theme));
+	}, [local.phase, shownState, theme, open]);
 	// While the agent works on an open page (Handoff), and when it reports, the screen is its, not the page's.
 	useEffect(() => {
 		if (local.phase.kind !== 'agent' && local.phase.kind !== 'reported') return;

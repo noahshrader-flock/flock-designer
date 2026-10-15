@@ -1,4 +1,4 @@
-import { type Theme, themeOfQuery, withoutTheme } from '../shared/prototypeTheme';
+import { type Theme, isTheme, withoutTheme } from '../shared/prototypeTheme';
 import type { CommentAnchor } from '../shared/contract';
 import { STATES_META } from '../shared/prototypeStates';
 
@@ -60,9 +60,15 @@ const statesTag = document.querySelector(`meta[name="${STATES_META}"]`);
 const firstState = statesTag ? String(statesTag.getAttribute('content') || '').split(',')[0] : null;
 export const asState = (q: string): string => (firstState && q === '?state=' + firstState ? '' : q);
 export const pageState = (): string => asState(withoutTheme(location.search).slice(0, 200));
-/** The theme the page is shown in: the one its address asks for, else the system's (PROTOTYPE_THEME_PLAN). */
-export const pageTheme = (): Theme =>
-	themeOfQuery(location.search) ?? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+/**
+ * The theme the page was seen in: the one a prototype was put in (`page/theme.ts` says it on the page), else, on a page DSNR
+ * did not theme (codebase work: the real app), the system's, which is what that page follows.
+ */
+export const pageTheme = (): Theme => {
+	const themed = document.documentElement.getAttribute('data-dsnr-theme');
+	if (isTheme(themed)) return themed;
+	return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+};
 
 const segment = (el: Element): string => {
 	const ref = el.getAttribute('data-e2e-ref');

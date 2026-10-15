@@ -1,10 +1,11 @@
-import { themeOfQuery, type Theme } from '../shared/prototypeTheme';
+import { DEFAULT_THEME, themeOfQuery, type Theme } from '../shared/prototypeTheme';
 
 /**
- * The page in the theme its address asks for (`?theme=light|dark`, PROTOTYPE_THEME_PLAN), run before the prototype's own code.
- * A prototype follows the system's light or dark setting, as the product does: through `matchMedia` (MUI's `useMediaQuery`, in
- * `FSApp`) and through `prefers-color-scheme` rules in its stylesheets (the design system's). Both are answered here with the
- * chosen theme, so a person sees the theme they chose whatever their machine is set to. With none asked for, nothing is changed.
+ * A prototype's page in its theme (PROTOTYPE_THEME_PLAN), run before the prototype's own code: the one its address asks for
+ * (`?theme=dark`), else light, the default. Built as the product is, a prototype would follow the machine's light or dark
+ * setting: through `matchMedia` (MUI's `useMediaQuery`, in `FSApp`) and through `prefers-color-scheme` rules in its
+ * stylesheets (the design system's). Both are answered here with the theme, so every reviewer sees the same page whatever
+ * their machine is set to. Only prototypes carry this: codebase work is the real app, and follows what its codebase does.
  */
 
 const SCHEME = /\(\s*prefers-color-scheme\s*:\s*(light|dark)\s*\)/gi;
@@ -31,18 +32,24 @@ const themeSheet = (sheet: CSSStyleSheet | CSSGroupingRule, theme: Theme): void 
 	}
 };
 
-/** Puts the page in the theme its address asks for, if it asks for one: before the prototype runs, and as its styles arrive. */
+/** Where the page says the theme it was put in, for what records a comment (`page/helpers.ts`). */
+export const THEMED = 'data-dsnr-theme';
+
+/** Puts the page in its theme: before the prototype runs, and as its styles arrive. */
 export const applyTheme = (win: Window): void => {
-	const theme = themeOfQuery(win.location.search);
-	if (theme === null) return;
-	const real = win.matchMedia.bind(win);
-	win.matchMedia = (query: string) => real(themedQuery(String(query), theme));
+	const theme = themeOfQuery(win.location.search) ?? DEFAULT_THEME;
+	// Every browser a page is seen in has it; a page without it has nothing that reads it to answer.
+	if (typeof win.matchMedia === 'function') {
+		const real = win.matchMedia.bind(win);
+		win.matchMedia = (query: string) => real(themedQuery(String(query), theme));
+	}
 	const doc = win.document;
 	const all = () => Array.from(doc.styleSheets).forEach((sheet) => themeSheet(sheet, theme));
 	new MutationObserver(all).observe(doc, { childList: true, subtree: true });
 	doc.addEventListener('DOMContentLoaded', all);
 	// The browser's own controls (scroll bars, form fields) in it too.
 	doc.documentElement.style.colorScheme = theme;
+	doc.documentElement.setAttribute(THEMED, theme);
 };
 
 applyTheme(window);
