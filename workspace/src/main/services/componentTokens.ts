@@ -15,11 +15,13 @@
 import type {
 	AccessibilityResult,
 	ComponentTokens as Answer,
+	ComponentValues,
 	ComponentPictures as Pictures,
 	ConnectedDesignSystem,
 	DesignToken,
 	StoryPreview,
 	TokenEdit,
+	ValueProperty,
 } from '../../shared/contract';
 import { HOST } from '../../shared/vocabulary';
 import type { ComponentPictures } from './componentPictures';
@@ -31,6 +33,7 @@ import { readCatalog } from './componentCatalog';
 import { libraryCommit, libraryTarget, listedComponents, systemReads } from './designLibrary';
 import { resultOf } from './accessibilityCheck';
 import { readTokens } from './designTokens';
+import { readValues } from './componentValues';
 
 /**
  * What a story draws, as counts of each computed value: its colors (background, text, border), radii and spacing; and,
@@ -43,6 +46,18 @@ export interface Drawn {
 	spacing: Record<string, number>;
 	picture?: Buffer;
 	accessibility?: AxeFound;
+	/** Whether the story file names the component it is of, and each instance of it drawn (Phase 1 of adjusting a component). */
+	component?: boolean;
+	instances?: Instance[];
+	/** The props the story file names as its controls (its default export's `args` and `argTypes`). */
+	controls?: string[];
+}
+
+/** One instance of a component as a story drew it: its story, the props that say its variant, and its values as computed. */
+export interface Instance {
+	story: string;
+	props: Record<string, string>;
+	values: Partial<Record<ValueProperty, string>>;
 }
 
 export type Mode = 'light' | 'dark';
@@ -110,21 +125,21 @@ export const tagsFor = (tokens: DesignToken[]): Tags => {
 };
 
 /** A computed color (`rgb(0, 1, 90)`, `rgba(0, 1, 90, 0.4)`) as the tag it would be, whatever its opacity. */
-const asTag = (color: string): string | null => {
+export const asTag = (color: string): string | null => {
 	const m = /^rgba?\((\d+), (\d+), (\d+)/.exec(color);
 	if (!m || Number(m[3]) !== TAG_BLUE) return null;
 	return `#${[m[1], m[2], m[3]].map((c) => Number(c).toString(16).padStart(2, '0')).join('')}`.toUpperCase();
 };
 
 /** The size tag a computed size (`26px`) is a whole multiple of, if any. */
-const sizeToken = (value: string, sizes: Tags['sizes']): string | null => {
+export const sizeToken = (value: string, sizes: Tags['sizes']): string | null => {
 	const px = Math.abs(Number(/^(-?[\d.]+)px$/.exec(value)?.[1] ?? NaN));
 	if (!Number.isFinite(px) || px === 0) return null;
 	return sizes.find((s) => px % s.px === 0 && px / s.px <= MOST_MULTIPLE)?.path ?? null;
 };
 
 /** Nothing worth saying: no color, no size, or a gap left as CSS has it (`normal`). */
-const isNothing = (value: string): boolean => ['rgba(0, 0, 0, 0)', 'transparent', '0px', 'normal', 'auto', ''].includes(value);
+export const isNothing = (value: string): boolean => ['rgba(0, 0, 0, 0)', 'transparent', '0px', 'normal', 'auto', ''].includes(value);
 
 const add = (m: Map<string, number>, k: string, n: number) => m.set(k, (m.get(k) ?? 0) + n);
 
@@ -201,10 +216,10 @@ export interface ComponentTokensDeps {
 }
 
 /**
- * Each story file's tokens, or null for one that did not draw, of which nothing can be said; and what axe found in each
- * that drew, at the design system's target (T7).
+ * Each story file's tokens, or null for one that did not draw, of which nothing can be said; its drawn values, from the
+ * same drawings (Phase 1 of adjusting a component); and what axe found in each that drew, at the design system's target (T7).
  */
-type Built = { files: Map<string, FileUse | null>; accessibility: Map<string, AccessibilityResult> };
+type Built = { files: Map<string, FileUse | null>; values: Map<string, ComponentValues>; accessibility: Map<string, AccessibilityResult> };
 type Index = Built | { error: string };
 
 /** The index for one commit: `done` once it is built or has failed, and `finished` for whoever waits for that. */
@@ -242,6 +257,7 @@ export class ComponentTokens {
 			notTokens: use.notTokens,
 			derived: use.derived,
 			accessibility: done.accessibility.get(file) ?? null,
+			values: done.values.get(file) ?? { state: 'none-drawn' },
 		};
 	}
 
@@ -336,6 +352,12 @@ export class ComponentTokens {
 				return [f, asDrawn ? decode({ light: asDrawn, dark: dark?.[i] ?? undefined }, asIs?.[i] ?? undefined, tags, tokens) : null];
 			}),
 		);
-		return { files: uses, accessibility };
+		// Its values, from the same two drawings: as the library has it, and with the tags in light.
+		const values = new Map<string, ComponentValues>();
+		files.forEach((f, i) => {
+			const asDrawn = asIs?.[i];
+			if (asDrawn) values.set(f, readValues(asDrawn, tagged === null ? null : (light?.[i] ?? null), tagged === null ? null : tags));
+		});
+		return { files: uses, values, accessibility };
 	}
 }

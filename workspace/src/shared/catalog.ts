@@ -39,6 +39,11 @@ export const PREVIEW_HEIGHT = 'flockPreviewHeight';
 export const PREVIEW_FILE = 'file';
 /** What the preview page is told to draw another story file in place of the last with, without loading again (T6). */
 export const PREVIEW_SHOW = '__dsnrShow';
+/**
+ * Where the preview page keeps the component the story file it draws is of (its default export's `component`), with the
+ * props it names as controls (its `args` and `argTypes`), or null when it names none.
+ */
+export const PREVIEW_COMPONENT = '__dsnrComponent';
 /** A story file's preview page, in the build served at `base`. */
 export const previewAddress = (base: string, file: string): string => `${base}?${PREVIEW_FILE}=${encodeURIComponent(file)}`;
 

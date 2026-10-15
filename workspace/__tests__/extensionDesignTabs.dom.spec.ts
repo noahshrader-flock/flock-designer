@@ -168,6 +168,33 @@ describe('a component’s tab', () => {
 			notAutomated: ['2.4.7'],
 			ran: { axe: '4.10', target: 'WCAG 2.2 AA', states: ['default'] },
 		},
+		values: {
+			state: 'read',
+			instances: 12,
+			rows: [
+				{
+					property: 'height',
+					by: 'size',
+					cells: ['sm', 'md', 'lg', 'xl'].map((variant, i) => ({
+						variant,
+						value: ['28px', '36px', '48px', '56px'][i],
+						kind: 'own',
+						tokens: [],
+						instances: 3,
+					})),
+				},
+				{ property: 'radius', by: null, cells: [{ variant: null, value: '8px', kind: 'token', tokens: ['radius'], instances: 12 }] },
+				{
+					property: 'background',
+					by: 'variant',
+					cells: [
+						{ variant: 'primary', value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['palette.light.primary.main'], instances: 6 },
+						{ variant: 'ghost', value: 'none', kind: 'own', tokens: [], instances: 6 },
+					],
+				},
+				{ property: 'fontSize', by: null, cells: [{ variant: null, value: '16px', kind: 'unchecked', tokens: [], instances: 12 }] },
+			],
+		},
 		...over,
 	});
 	const analysed = async (over: Record<string, unknown> = {}) => {
@@ -179,6 +206,7 @@ describe('a component’s tab', () => {
 	it('reads in six parts, in an order that goes from what it is made of to what is wrong with it', async () => {
 		await analysed();
 		expect([...document.querySelectorAll('.component-aside > [aria-label]')].map((e) => e.getAttribute('aria-label'))).toEqual([
+			'Values',
 			'Made from',
 			'Color tokens',
 			'Usage',
@@ -187,6 +215,46 @@ describe('a component’s tab', () => {
 		]);
 		// The sixth, its name and links, is the header above.
 		expect(document.querySelector('.tab-title')?.textContent).toBe('FSButton');
+	});
+
+	it('lists its drawn values first, by variant, said as its stories draw them on the version shown', async () => {
+		await analysed();
+		const values = section('Values')!;
+		expect(values.querySelector('[data-values-from]')?.textContent).toBe('As its stories draw it, in light: 12 instances, on develop at abc123.');
+		expect([...values.querySelectorAll('[data-value-row]')].map((r) => r.getAttribute('data-value-row'))).toEqual([
+			'height',
+			'radius',
+			'background',
+			'fontSize',
+		]);
+		const height = values.querySelector('[data-value-row="height"]') as HTMLElement;
+		expect(height.querySelector('h3')?.textContent).toBe('Height · by sizeIts own');
+		expect([...height.querySelectorAll('[data-value-cell]')].map((c) => c.textContent)).toEqual(['sm28px', 'md36px', 'lg48px', 'xl56px']);
+		// What a row's values are is said once when they are all one kind, not on each.
+		expect(height.querySelectorAll('[data-value-cell] [data-value-kind]')).toHaveLength(0);
+	});
+
+	it('says which token a value is and which other components share it, or that it is its own, or that it was not checked', async () => {
+		await analysed();
+		const values = section('Values')!;
+		expect(values.querySelector('[data-value-row="radius"] h3 [data-value-kind="token"]')?.textContent).toBe(
+			'Radius · also FSIconButton, FSSplitButton',
+		);
+		// Values of different kinds in one row each say what they are; a colour that draws nothing is said as none.
+		const background = [...values.querySelectorAll('[data-value-row="background"] [data-value-cell]')].map((c) => c.textContent);
+		// A value that draws nothing is said as none, with no swatch and nothing said of what it is.
+		expect(background).toEqual(['primaryrgb(16, 128, 98)Light primary main · also FSIconButton', 'ghostnone']);
+		expect(values.querySelector('[data-value-row="fontSize"] [data-value-kind="unchecked"]')?.textContent).toBe('Not checked');
+	});
+
+	it('says why it has no values when its stories name no component', async () => {
+		await analysed({ values: { state: 'no-component' } });
+		expect(section('Values')?.textContent).toContain('Its stories do not say which component they are of');
+	});
+
+	it('says why it has no values when its stories draw none of it', async () => {
+		await analysed({ values: { state: 'none-drawn' } });
+		expect(section('Values')?.textContent).toContain('Its stories draw no FSButton, so its values cannot be read.');
 	});
 
 	it('breaks what it is made from down by kind, compactly, apart from its colours, with each token’s uses and who shares it', async () => {

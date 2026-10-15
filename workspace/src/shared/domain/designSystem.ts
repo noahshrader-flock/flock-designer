@@ -93,7 +93,50 @@ export type ComponentTokens =
 			derived: number;
 			/** What axe found in its stories, at the design system's target (T7); null when it could not be checked. */
 			accessibility: AccessibilityResult | null;
+			/** Its drawn values, by variant (Phase 1 of adjusting a component). */
+			values: ComponentValues;
 	  };
+
+/** What is read of each instance a component's stories draw, in this order. */
+export const VALUE_PROPERTIES = ['height', 'padding', 'radius', 'gap', 'fontSize', 'background', 'text', 'border'] as const;
+export type ValueProperty = (typeof VALUE_PROPERTIES)[number];
+
+/**
+ * What a drawn value is: a token's (`tokens` names it, or them for a value of several parts), the component's own,
+ * worked out from a token (a hover's shade, a height that grows with a token's padding), partly a token and partly its own,
+ * or not checked (a kind of value no token is tagged for, such as a font size, or drawings that did not pair up).
+ */
+export type ValueKind = 'token' | 'own' | 'derived' | 'mixed' | 'unchecked';
+
+/**
+ * One value of a row: for one variant (`variant`, null when the row has one value for all), and how many instances draw it.
+ * A colour that draws nothing (clear, or no border) is `none`.
+ */
+export interface ValueCell {
+	variant: string | null;
+	value: string;
+	kind: ValueKind;
+	tokens: string[];
+	instances: number;
+}
+
+/**
+ * One property's values across the instances drawn. `by` is the prop, or two props, that tell its values apart ("size"),
+ * so each cell is one of its values; null when the row has one value, or when no prop explains the difference, in which
+ * case each cell is one distinct value.
+ */
+export interface ValueRow {
+	property: ValueProperty;
+	by: string | null;
+	cells: ValueCell[];
+}
+
+/**
+ * A component's drawn values (Phase 1 of adjusting a component), measured on the top element of each instance of the
+ * component its stories draw, in light: found by the stories' own `component` (their default export's), so a story file
+ * that does not name one says so, as does one whose stories draw none.
+ */
+export type ComponentValues = { state: 'no-component' } | { state: 'none-drawn' } | { state: 'read'; instances: number; rows: ValueRow[] };
 
 /**
  * The pictures of the shown design system's components, for the grid view (P5): each component's picture by its story

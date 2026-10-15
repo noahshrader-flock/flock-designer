@@ -1359,6 +1359,25 @@ textarea.input {
 	font-weight: 600;
 }
 
+/* A component's drawn values: a row's name with what tells its values apart, and what they are when all are one kind. */
+.value-row-name {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+/* A value's variant, then the value as drawn. */
+.value-variant {
+	min-width: 4ch;
+	color: var(--dsnr-muted);
+}
+
+.value-drawn {
+	font-family: var(--vscode-editor-font-family);
+	font-size: 0.92em;
+}
+
 /* How far a component's tokens reach, in two numbers side by side. */
 .usage {
 	display: grid;

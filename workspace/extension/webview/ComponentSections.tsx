@@ -5,6 +5,7 @@ import { inOrder } from '../../src/shared/primitives';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import { MOST_LISTED, sharedWith, useComponentTokens } from '../../src/renderer/useComponentTokens';
 import { AccessibilityFindings } from './Accessibility';
+import { ComponentValues } from './ComponentValues';
 import { SemanticColors } from './SemanticColors';
 import { Sets, TokenRow, type TokenActions } from './Tokens';
 import { Disclosure } from './ui/Disclosure';
@@ -143,7 +144,8 @@ const NotTokens = ({ answer }: { answer: Ready }) => (
 );
 
 /**
- * What the analysis of a component says, in parts (T6, decision 29, T7): what it is made from, its colours, how far its
+ * What the analysis of a component says, in parts (T6, decision 29, T7): its drawn values, by variant (Phase 1 of adjusting
+ * a component), what it is made from, its colours, how far its
  * tokens reach, the values it sets itself, and what axe found. Found by drawing every story with the tokens tagged, the first
  * time for each commit, said while that is done.
  */
@@ -151,10 +153,13 @@ export const ComponentSections = ({
 	component,
 	components,
 	actions,
+	version,
 }: {
 	component: CatalogComponent;
 	components: CatalogComponent[];
 	actions: TokenActions;
+	/** The version of the design system shown, which its values are read on. */
+	version: { branch: string; commit: string };
 }) => {
 	const { byPath, isPalette } = useTokenChanges();
 	const { answer, retry } = useComponentTokens(component.id);
@@ -181,6 +186,7 @@ export const ComponentSections = ({
 	const colors = tokens.filter((t) => t.kind === 'color');
 	return (
 		<>
+			<ComponentValues answer={answer} name={component.name} version={version} byPath={byPath} names={names} />
 			<MadeFrom tokens={tokens.filter((t) => t.kind !== 'color')} note={note} actions={actions} />
 			{colors.length > 0 && (
 				<ColorTokens semantic={colors.filter((t) => !isPalette(t))} palette={colors.filter(isPalette)} note={note} actions={actions} />

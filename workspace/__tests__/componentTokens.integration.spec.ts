@@ -150,13 +150,18 @@ describe('the index', () => {
 		// The library's own token page, which the list leaves out while the panel shows the tokens (decision 22).
 		'src/uxDocs/Palette.stories.tsx': "export default { title: 'Design Tokens/Palette' };\nexport const Default = () => null;\n",
 	};
-	/** A drawn A with primary's tag, B with the tone's and a hardcoded gray: what each page is, by its address. */
+	/**
+	 * A drawn A with primary's tag, B with the tone's and a hardcoded gray: what each page is, by its address. B's stories
+	 * draw one instance of the component they name, its background the brand green, the tone's tag when tagged.
+	 */
+	const instanceOfB = (background: string) => ({ component: true, instances: [{ story: 'Default', props: {}, values: { background } }] });
 	const measure: Measure = async (runs) => {
 		asked.push(runs);
 		return runs.map((run) =>
 			run.files.map((f) => {
-				if (run.base.includes('plain')) return drawn({ 'rgb(107, 114, 128)': 1 });
-				return f.includes('A.stories') ? drawn({ 'rgb(0, 1, 90)': 3 }) : drawn({ 'rgb(0, 2, 90)': 1, 'rgb(107, 114, 128)': 1 });
+				const b = f.includes('B.stories');
+				if (run.base.includes('plain')) return { ...drawn({ 'rgb(107, 114, 128)': 1 }), ...(b ? instanceOfB('rgb(16, 128, 98)') : {}) };
+				return b ? { ...drawn({ 'rgb(0, 2, 90)': 1, 'rgb(107, 114, 128)': 1 }), ...instanceOfB('rgb(0, 2, 90)') } : drawn({ 'rgb(0, 1, 90)': 3 });
 			}),
 		);
 	};
@@ -237,6 +242,18 @@ describe('the index', () => {
 			notTokens: [{ kind: 'color', value: 'rgb(107, 114, 128)', uses: 1 }],
 			derived: 0,
 			accessibility: null,
+			// Its values, from the same two drawings paired: the green its instance draws is the tone, as its tag says.
+			values: {
+				state: 'read',
+				instances: 1,
+				rows: [
+					{
+						property: 'background',
+						by: null,
+						cells: [{ variant: null, value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['tone.brand.50'], instances: 1 }],
+					},
+				],
+			},
 		});
 		const a = await i.of('src/components/A/A.stories.tsx');
 		expect(a).toMatchObject({ state: 'ready', uses: [{ path: 'palette.light.primary.main', uses: 6 }] });
@@ -369,6 +386,7 @@ describe('the index', () => {
 			notTokens: [{ kind: 'color', value: 'rgb(107, 114, 128)', uses: 2 }],
 			derived: 0,
 			accessibility: null,
+			values: { state: 'no-component' },
 		});
 	});
 

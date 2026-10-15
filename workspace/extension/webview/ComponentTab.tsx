@@ -84,7 +84,12 @@ export const ComponentTab = ({ id }: { id: string }) => {
 						<Stories component={component} commit={ready.commit} edits={edits} />
 					</div>
 					<aside className="component-aside">
-						<ComponentSections component={component} components={ready.components} actions={actions} />
+						<ComponentSections
+							component={component}
+							components={ready.components}
+							actions={actions}
+							version={{ branch: ready.branch, commit: ready.commit }}
+						/>
 					</aside>
 				</div>
 			</main>

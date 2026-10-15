@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { PREVIEW_FILE, PREVIEW_HEIGHT, PREVIEW_SHOW, PREVIEW_SPECIMEN } from '../../shared/catalog';
+import { PREVIEW_COMPONENT, PREVIEW_FILE, PREVIEW_HEIGHT, PREVIEW_SHOW, PREVIEW_SPECIMEN } from '../../shared/catalog';
 import { designSystemOf } from '../../shared/catalog';
 import type { ConnectedDesignSystem, StoryPreview, TokenEdit } from '../../shared/contract';
 import { type CatalogReads, PREVIEW_CANDIDATES, readCatalog } from './componentCatalog';
@@ -187,6 +187,10 @@ const show = (file) => {
 	const load = files[file];
 	if (!load) return Promise.resolve(fail('There is no such story file in this build.'));
 	return load().then((m) => {
+		// The component the stories are of, as their default export names it, and the props it names as controls: what reads its
+		// values finds its instances by it, and tells them apart by those.
+		const meta = m.default ?? {};
+		window[${JSON.stringify(PREVIEW_COMPONENT)}] = meta.component ? { component: meta.component, controls: Object.keys({ ...meta.args, ...meta.argTypes }) } : null;
 		const stories = Object.entries(composeStories(m));
 		const drawsItself = (name) => typeof m[name] === 'function' || typeof m[name]?.render === 'function' || typeof m.default?.render === 'function';
 		// Drawn at once, not at the next frame: a page drawn where nobody sees it gets no frames.
