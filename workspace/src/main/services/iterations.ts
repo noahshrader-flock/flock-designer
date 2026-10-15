@@ -50,7 +50,8 @@ export const assertUsableProjectId = (projectId: string): void => {
 	}
 };
 
-const recordPath = (recordsRoot: string, projectId: string): string => {
+/** A project's records file, `iterations.json`, inside the records folder. */
+export const recordPath = (recordsRoot: string, projectId: string): string => {
 	assertUsableProjectId(projectId);
 	return resolveInside(recordsRoot, join(projectId, 'iterations.json'));
 };

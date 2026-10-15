@@ -56,6 +56,13 @@ const lightCheckLine = (lightCheck: string | null): string =>
 		? `This product's light check is \`${lightCheck}\`.`
 		: "This product's workspace file names no light check (`check-iteration`): run its type check, lint and the tests for what you changed.";
 
+/**
+ * Where the route goes, said the same way in every task that carries the route skill: the record's path is the one thing
+ * the skill cannot know. When to leave it out is the skill's to say.
+ */
+const routeLine = (recordFile: string): string =>
+	`Record the work's route on the \`codebase\` entry of \`${recordFile}\`, as the route skill above says.`;
+
 /** How every run in a product checkout ends, the same way for each. */
 const checkoutEnding = ({ lightCheck, shared, accessibility, voice }: CheckoutParts): string[] => [
 	lightCheckLine(lightCheck),
@@ -99,11 +106,7 @@ export const handoffTask = (
 		'## This run',
 		'',
 		`The work is on \`${branch}\`, and the checkout is on it. Stay on it.`,
-		...(missingRoute
-			? [
-					`The work's record has no route, so it opens at the app's front door. First, record it on the \`codebase\` entry of \`${missingRoute.recordFile}\`, as the section above says, or say why you could not in your summary.`,
-				]
-			: []),
+		...(missingRoute ? [`The work's record has no route, so it opens at the app's front door. First: ${routeLine(missingRoute.recordFile)}`] : []),
 		gate
 			? `This product's gate is \`${gate}\`. Run it first, and last, once HANDOFF.md is committed.`
 			: "This product's workspace file names no handoff gate. Say so first in your summary, then follow its guidance for what a handoff checks.",
@@ -158,7 +161,7 @@ export const buildInCodebaseTask = (
 			? `It was modeled on \`${basedOn.branch}\` of ${basedOn.repository}${basedOn.commit ? ` at ${basedOn.commit.slice(0, 7)}` : ''}; the code may have moved on since.`
 			: 'It was made without the product code to look at, so expect more of it to differ from how the product really works.',
 		`Write the audit to \`${auditFile}\` before you change any code.`,
-		`Record its route on the \`codebase\` entry of \`${recordFile}\` once the view loads, as the section above says. The work is not finished without it: if you cannot tell which route is right, leave it out and say why in your report.`,
+		routeLine(recordFile),
 		'',
 		...checkoutEnding(parts),
 	].join('\n');

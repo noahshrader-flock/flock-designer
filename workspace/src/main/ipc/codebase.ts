@@ -16,7 +16,7 @@ import { recordsRootFor } from '../services/discovery';
 import { handToClaude, resumeCommand } from '../services/editor';
 import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, commandLine } from '../services/engineeringHandoff';
 import { branchCommit, changedSince, headCommit, readCheckout } from '../services/git';
-import { codebaseBranchFor, recordHandoff, recordPreview, recordedIteration } from '../services/iterations';
+import { codebaseBranchFor, recordHandoff, recordPath, recordPreview, recordedIteration } from '../services/iterations';
 import { GUIDE, MOVE_SKILL, ROUTE_SKILL, buildInCodebasePrompt } from '../services/prototype';
 import { pullRequestText } from '../services/share';
 import type { IpcDeps } from '../ipc';
@@ -273,9 +273,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 		refuseWhileBusy();
 		const skill = await readSkillText(HANDOFF_SKILL);
 		const { parts, readOnly } = await checkoutParts(canonical, projectId);
-		const missingRoute = iteration.route
-			? null
-			: { skill: await readSkillText(ROUTE_SKILL), recordFile: join(recordsRoot, projectId, 'iterations.json') };
+		const missingRoute = iteration.route ? null : { skill: await readSkillText(ROUTE_SKILL), recordFile: recordPath(recordsRoot, projectId) };
 		const task = handoffTask(
 			{ skill, projectId, branch: iteration.branch, gate: commandLine(descriptor.commands, 'handoff', projectId), missingRoute },
 			parts,
@@ -337,7 +335,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 						pageFile,
 						sourceFile: source !== null ? sourceFile : null,
 						auditFile: join(recordsRoot, projectId, `audit-${name}.md`),
-						recordFile: join(recordsRoot, projectId, 'iterations.json'),
+						recordFile: recordPath(recordsRoot, projectId),
 						name,
 						basedOn: (await work.record(projectId, name))?.basedOn,
 					},

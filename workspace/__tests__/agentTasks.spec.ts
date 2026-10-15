@@ -107,7 +107,7 @@ describe('building a prototype in the codebase', () => {
 		expect(task).toContain('Write the audit to `/d/projects/users/audit-i1.md` before you change any code.');
 	});
 
-	it('requires the route, on the work’s record, with how to choose it (test-dsnr was built without one)', () => {
+	it('carries the route skill, and where the route goes', () => {
 		const task = buildInCodebaseTask(
 			{
 				skill: 's',
@@ -120,8 +120,7 @@ describe('building a prototype in the codebase', () => {
 			{ guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' },
 		);
 		expect(task).toContain('# Record where the work is');
-		expect(task).toMatch(/Record its route on the `codebase` entry of `\/d\/projects\/users\/iterations.json`/);
-		expect(task).toMatch(/say why in your report/);
+		expect(task).toContain("Record the work's route on the `codebase` entry of `/d/projects/users/iterations.json`");
 	});
 });
 

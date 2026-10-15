@@ -1692,7 +1692,7 @@ describe('prototypes', () => {
 			expect(task).toContain(join(design, 'projects', 'demo', 'audit-v1-i1.md'));
 			// Where the work is, on its record: a Build that leaves none opens at the app's front door.
 			expect(task).toContain('# Record where the work is');
-			expect(task).toMatch(/Record its route on the `codebase` entry of `[^`]*projects\/demo\/iterations\.json`/);
+			expect(task).toMatch(/Record the work's route on the `codebase` entry of `[^`]*projects\/demo\/iterations\.json`/);
 			// Built toward the product's accessibility target from the start (T7).
 			expect(task).toContain('## Accessibility');
 			expect(task).toContain('Build toward the target as you go, not at the end');

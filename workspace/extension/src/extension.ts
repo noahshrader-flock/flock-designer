@@ -231,11 +231,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		});
 	const startPrototype = (given: Given) =>
 		newPrototype({ ...here, given, product: productNow(), onChanged: projectsChanged, watchBuild: watchPrototype });
-	/**
-	 * What the panel asked of a project's codebase work (ELECTRON_MIGRATION_PLAN 5.2, 5.3), in the product open here, with
-	 * VS Code's notifications, the agent's log and the browser. Handoff and its draft pull request change its records: the
-	 * list is read again.
-	 */
 	/** How the product open here runs on this machine (its own `.dsnr/workspace.json`), for View locally. */
 	const localRun = (root: string): LocalRun => {
 		const declared = () => readDescriptor(root).commands;
@@ -249,6 +244,11 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			loads: (url) => headless.loads(url),
 		};
 	};
+	/**
+	 * What the panel asked of a project's codebase work (ELECTRON_MIGRATION_PLAN 5.2, 5.3), in the product open here, with
+	 * VS Code's notifications, the agent's log and the browser. Handoff and its draft pull request change its records: the
+	 * list is read again.
+	 */
 	const codebaseWork = async (action: CodebaseAction, projectId: string) => {
 		const root = found.product;
 		if (root === null) throw new Error(productNow().why);

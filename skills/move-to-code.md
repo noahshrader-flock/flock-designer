@@ -110,10 +110,9 @@ covers code and boundary only; **product parity stays at Handoff.**
 **Leave nothing running.** If you started the product's dev server, or anything else that keeps running, to look at your
 work, stop it before you report: one left behind holds the product's port, and DSNR's View locally will not start over it.
 
-**Record where the work is,** as `record-the-route.md`, in your task, says: the route on the project's `codebase`
-record, once the view loads, so DSNR's View locally and the review open on the page that changed. If you cannot tell which
-route is right, leave it out and say why.
+**Record where the work is,** as `record-the-route.md`, in your task, says. The work is not finished without it: a record
+with no route opens at the app's front door, not on the page that changed.
 
-Say what you built, where, the route you recorded (or why there is none), the light check's result, **how the implementation check ran** (a subagent, or
-yourself) **and what it found: what you fixed, and what is still open**, and what else is waiting: what is
+Say what you built, where, the route you recorded (or why there is none), the light check's result, **how the
+implementation check ran** (a subagent, or yourself) **and what it found: what you fixed, and what is still open**, and what else is waiting: what is
 in **Needs a decision**, and where the audit is. Say that product parity and the full gate run at Handoff.
